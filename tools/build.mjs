@@ -23,8 +23,9 @@ const BAUD = 4800;
 const VERSION = { major: 0, minor: 1 };
 
 export const PROFILES = {
-  debug80: { id: 1, nbanks: 9, description: "Debug80 TEC-1G model: nine expansion banks" },
-  board: { id: 2, nbanks: 1, description: "TEC-1G as documented: one upper U9 half" },
+  debug80: { id: 1, nbanks: 9, tmsCols: 40, description: "Debug80 TEC-1G model: nine expansion banks, TMS9918 40 columns" },
+  debug80g32: { id: 3, nbanks: 9, tmsCols: 32, description: "Debug80 TEC-1G model: nine expansion banks, TMS9918 32 columns" },
+  board: { id: 2, nbanks: 1, tmsCols: 40, description: "TEC-1G as documented: one upper U9 half, TMS9918 40 columns" },
 };
 
 const hex = (value, width = 4) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
@@ -34,7 +35,8 @@ function serialTiming() {
   const bit = CPU_HZ / BAUD;
   const txdly = Math.round((bit - 49) / 16); // TXB loop: 49 + 16n T-states
   const rxdly = Math.round((bit - 38) / 16); // RXB loop: 38 + 16n
-  const rxhalf = Math.round((1.5 * bit - 51) / 16); // edge to the middle of bit 0
+  const kbLate = 280; // longest gap between start-bit polls: one keyboard row scan
+  const rxhalf = Math.round((1.5 * bit - 51 - kbLate / 2) / 16); // edge to the middle of bit 0
   const txstop = Math.round((2 * bit) / 16) + 1;
   const rxpoll = Math.ceil((3.5 * bit) / 38); // CSTPOLL loop: 38 T-states
   for (const [name, n] of Object.entries({ txdly, rxdly, rxhalf, txstop, rxpoll })) {
@@ -69,6 +71,7 @@ TXSTOP  EQU     ${s.txstop}
 RXDLY   EQU     ${s.rxdly}
 RXHALF  EQU     ${s.rxhalf}
 RXPOLL  EQU     ${s.rxpoll}
+TMSCOLS EQU     ${profile.tmsCols}
 `,
   );
   const h = format.header.fields;
@@ -122,11 +125,41 @@ GEOESZ  EQU     6
     );
   }
   writeFileSync(resolve(GEN, "geom.asm"), lines.join("\n") + "\n");
+  writeFileSync(resolve(GEN, "font.asm"), fontSource());
   return s;
 }
 
+/** The console font from format/font5x7.txt as DB rows, 96 glyphs. */
+function fontSource() {
+  const text = readFileSync(resolve(ROOT, "format/font5x7.txt"), "utf8");
+  const glyphs = new Map();
+  let code;
+  let rows;
+  for (const line of text.split(/\r?\n/)) {
+    if (line.trim() === "" || (line.startsWith("#") && !/^[#.]{5}$/.test(line))) continue;
+    const head = /^= ([0-9A-F]{2})$/.exec(line);
+    if (head) {
+      code = parseInt(head[1], 16);
+      rows = [];
+      glyphs.set(code, rows);
+      continue;
+    }
+    if (!/^[#.]{5}$/.test(line)) throw new Error(`font: bad row ${JSON.stringify(line)}`);
+    rows.push(parseInt(line.replace(/#/g, "1").replace(/\./g, "0"), 2) << 3);
+  }
+  const out = ["; Generated from format/font5x7.txt. Do not edit.", "FONT:"];
+  for (let c = 0x20; c < 0x80; c += 1) {
+    const g = glyphs.get(c);
+    if (!g || g.length !== 8) throw new Error(`font: glyph ${c.toString(16)} missing or not 8 rows`);
+    out.push(`        DB      ${g.map((v) => "$" + v.toString(16).toUpperCase().padStart(2, "0")).join(",")}`);
+  }
+  return out.join("\n") + "\n";
+}
+
+let currentDefinitions = {};
+
 async function assemble() {
-  const result = await assembleAtomProject({ root: SRC, entry: "rom.asm" });
+  const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions });
   const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
   const symbols = new Map();
   for (const symbol of d8.symbols) symbols.set(symbol.name, symbol.address ?? symbol.value);
@@ -149,6 +182,7 @@ let workspaceBytes;
 
 async function buildProfile(name) {
   const profile = { name, ...PROFILES[name] };
+  currentDefinitions = { TMS32: profile.tmsCols === 32 ? 1 : 0 };
   if (workspaceBytes === undefined) {
     writeGenerated(profile, 0x8000);
     const probe = await assemble();

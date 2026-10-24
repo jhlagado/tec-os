@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
+import { assembleProgram } from "../../tools/lib/assemble.mjs";
 import { Machine, loadSymbols } from "./machine.mjs";
 import { createContainer, parseContainer, findVolume, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
@@ -29,9 +29,7 @@ export async function program(name, { base = 0x100 } = {}) {
   if (existsSync(out)) {
     return { bytes: readFileSync(out), symbols: JSON.parse(readFileSync(`${out}.json`, "utf8")) };
   }
-  const r = await assembleAtomProject({ root: dirname(src), entry: basename(src) });
-  const { bytes } = materializeAtomGeneration(r.generation, { base });
-  const symbols = Object.fromEntries(writeAtomD8(r.project, r.generation, { base }).symbols.map((s) => [s.name, s.address ?? s.value]));
+  const { bytes, symbols } = await assembleProgram(src, { base });
   mkdirSync(cacheDir, { recursive: true });
   writeFileSync(out, bytes);
   writeFileSync(`${out}.json`, JSON.stringify(symbols));
@@ -54,9 +52,9 @@ export function volume(image, drive) {
 }
 
 /** Boot a machine to the first CCP prompt. */
-export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true } = {}) {
+export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false } = {}) {
   const { rom, symbols } = romFor(profile);
-  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity });
+  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   return m;
 }

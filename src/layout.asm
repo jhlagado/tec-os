@@ -33,6 +33,20 @@ OSMODE  EQU     $0041           ; 0 classic, 1 native
 RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
 RXCHAR  EQU     $0043
 CURBANK EQU     $0044           ; logical bank shown in the window
+CONDEV  EQU     $0045           ; console devices present (CD* bits)
+VROW    EQU     $0046           ; video terminal cursor row
+VCOL    EQU     $0047           ; and column
+VWID    EQU     $0048           ; video columns
+VHGT    EQU     $0049           ; video rows
+ESCST   EQU     $004A           ; escape parser state
+ESCP1   EQU     $004B           ; first and second numeric parameters
+ESCP2   EQU     $004C
+KBLAST  EQU     $004D           ; matrix key held at the last poll, FFh none
+VATTR   EQU     $004E           ; 80h while reverse video is on
+VCURV   EQU     $004F           ; 1 while the cursor cell is inverted
+
+CDMTX   EQU     $01             ; matrix keyboard enabled
+CDVID   EQU     $02             ; a video display is the console screen
 
 ; ---- Classic resident region (top of the classic bank) ----------------------
 BOOTSTK EQU     $8000           ; cold-boot stack top, fixed RAM
@@ -52,6 +66,10 @@ NXBUF   EQU     $0500           ; bank-copy bounce buffer, 256 bytes
 NXBUFSZ EQU     $0100
 NAPBASE EQU     $0600           ; native application fixed area 0600h-7FFFh
 NAPEND  EQU     $8000
+
+; ---- Resident stack sizes (measured: see docs/acceptance.md) --------------
+BDOSSTN EQU     64
+CCPSTN  EQU     48
 
 ; ---- Disk geometry limits ---------------------------------------------------
 MAXDRV  EQU     4               ; drives A-D

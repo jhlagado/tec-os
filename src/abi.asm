@@ -8,4 +8,5 @@ ABITAB: DB      "TNA"           ; FF00h signature
         DB      0               ; FF04h ABI minor version
         DB      NBANKS          ; FF05h native banks
         JP      NATSVC          ; FF06h service entry: C = service
+        DW      VWID            ; FF09h console columns, then rows; 0 = serial only
 ABIEND:

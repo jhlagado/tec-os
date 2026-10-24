@@ -2260,7 +2260,7 @@ ZEROBN: DS      2
 DIRTRK: DS      2
 DIRSEC: DS      2
 STKBASE:
-        DS      64
+        DS      BDOSSTN
 STKTOP:
 BDOSRME:
         ORG     BDOSROM

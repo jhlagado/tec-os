@@ -11,6 +11,9 @@ import { createTec1gRuntime, normalizeTec1gConfig } from "@jhlagado/debug80-runt
 import { createTec1gMemoryHooks } from "@jhlagado/debug80-runtime/platforms/tec1g/tec1g-memory";
 import { SdSpi } from "@jhlagado/debug80-runtime/platforms/tec1g/sd-spi";
 import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
+import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap";
+
+const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
 const SD_PORT = 0xfd;
 
@@ -22,7 +25,7 @@ export function loadSymbols(path) {
 }
 
 export class Machine {
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00 }) {
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false }) {
     this.symbols = symbols;
     this.output = [];
     this.violations = [];
@@ -39,12 +42,15 @@ export class Machine {
       appStart: 0xc000,
       entry: 0x0000,
       sdEnabled: false,
+      tms9918Active: tms,
+      matrixMode: matrix,
     });
     this.tec1g = createTec1gRuntime(
       config,
       () => {},
       (byte) => this.output.push(byte),
     );
+    if (tms) this.tec1g.setTms9918Active(true);
     const base = this.tec1g.ioHandlers;
     const io = {
       read: (port) => ((port & 0xff) === SD_PORT ? (this.sd ? this.sd.read() : 0xff) : base.read(port)),
@@ -133,16 +139,24 @@ export class Machine {
   /** True while the console input routine is waiting for a start bit. */
   waitingForInput() {
     const pc = this.pc;
-    const start = this.sym("CINWT");
-    return pc >= start && pc < start + 6;
+    return pc >= this.sym("CINLP") && pc < this.sym("CINWE");
   }
 
-  /** Type text one character at a time, as a terminal user would. */
+  /** Type text one character at a time, as a terminal user would: each byte
+   *  is sent only when TEC-OS is waiting and the next waits until it has been
+   *  received. */
   type(text, maxCycles = 100_000_000) {
+    const cin = this.sym("CINRX");
+    const cst = this.sym("CSTRX");
     for (const ch of text) {
+      const code = ch.charCodeAt(0);
       this.runUntil(() => this.waitingForInput(), maxCycles, `input request for ${JSON.stringify(ch)}`);
-      this.tec1g.queueSerial([ch.charCodeAt(0)]);
-      this.runUntil(() => !this.waitingForInput(), maxCycles, `reception of ${JSON.stringify(ch)}`);
+      this.tec1g.queueSerial([code]);
+      this.runUntil(
+        () => (this.pc === cin || this.pc === cst) && (this.cpu.cpu.a & 0x7f) === (code & 0x7f),
+        maxCycles,
+        `reception of ${JSON.stringify(ch)}`,
+      );
     }
   }
 
@@ -151,6 +165,43 @@ export class Machine {
     this.mark = this.output.length;
     this.type(`${line}\r`);
     return this.expect(prompt, { maxCycles });
+  }
+
+  /** The TMS9918 name table as text rows (reverse-video cells shown plain). */
+  screen(cols = 40, rows = 24, base = 0x0800) {
+    const vram = this.tec1g.state.display.tms9918.stateSnapshot().vram;
+    const lines = [];
+    for (let r = 0; r < rows; r += 1) {
+      let line = "";
+      for (let c = 0; c < cols; c += 1) {
+        const v = vram[base + r * cols + c] & 0x7f;
+        line += v >= 0x20 && v < 0x7f ? String.fromCharCode(v) : " ";
+      }
+      lines.push(line.trimEnd());
+    }
+    return lines;
+  }
+
+  /** The raw name-table byte at row r, column c. */
+  cell(r, c, cols = 40, base = 0x0800) {
+    return this.tec1g.state.display.tms9918.stateSnapshot().vram[base + r * cols + c];
+  }
+
+  /** Type text on the matrix keyboard: each key goes down until TEC-OS takes it. */
+  typeMatrix(text, maxCycles = 50_000_000) {
+    const kblast = this.sym("KBLAST");
+    for (const ch of text) {
+      const combo = getMatrixCombosForAscii(ch.charCodeAt(0)).find((c) => !c.capsLock && c.modifier !== "alt");
+      if (!combo) throw new Error(`no matrix key for ${JSON.stringify(ch)}`);
+      const key = combo.row * 8 + combo.col;
+      const mod = combo.modifier === undefined ? undefined : MODIFIER_KEY[combo.modifier];
+      if (mod !== undefined) this.tec1g.applyMatrixKey(0, mod, true);
+      this.tec1g.applyMatrixKey(combo.row, combo.col, true);
+      this.runUntil(() => this.read(kblast) === key, maxCycles, `matrix key ${JSON.stringify(ch)}`);
+      this.tec1g.applyMatrixKey(combo.row, combo.col, false);
+      if (mod !== undefined) this.tec1g.applyMatrixKey(0, mod, false);
+      this.runUntil(() => this.read(kblast) === 0xff, maxCycles, `release of ${JSON.stringify(ch)}`);
+    }
   }
 
   /** The reset button: CPU and latches reset, RAM and the card keep their contents. */

@@ -35,6 +35,15 @@ SDERR:  DS      1               ; last error code
 MNTCNT: DS      1
 MNTEND: DS      4*8             ; exclusive end block of each descriptor
 
+; ---- Video terminal ---------------------------------------------------------
+LINEBUF:DS      80              ; one display row, for scrolling
+
+; ---- Matrix keyboard scan state ----------------------------------------------
+KBMASK: DS      1               ; row select for the next row, one bit low
+KBBASE: DS      1               ; key number of that row's bit 0
+KBE:    DS      1               ; last key seen in this scan, FFh none
+KBD:    DS      1               ; the key seen before it
+
 ; ---- BIOS stack used by warm boot and the diagnostic console ----------------
 BSTKB:  DS      64
 BSTK:

@@ -1084,7 +1084,7 @@ STKGUARD:
         DS      16
 STKGUEND:
 CSTKBAS:
-        DS      48
+        DS      CCPSTN
 CSTKTOP:
 CCPRME:
         ORG     CCPROM

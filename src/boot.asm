@@ -31,9 +31,16 @@ COLD:   DI
         LD      A,LATCLAS
         OUT     (SYSLAT),A      ; overlay off, classic bank; execution is at C0xxh
         IM      1
-        LD      HL,0            ; clear page zero, then record the latch
+        LD      HL,$45ED        ; RETN at 0066h before anything else in page
+        LD      (NMIVEC),HL     ; zero changes: an NMI may arrive at any time
+        LD      HL,0            ; clear the rest of page zero
         LD      DE,1
-        LD      BC,$FF
+        LD      BC,NMIVEC-1
+        LD      (HL),L
+        LDIR
+        LD      HL,NMIVEC+2
+        LD      DE,NMIVEC+3
+        LD      BC,$FF-NMIVEC-2
         LD      (HL),L
         LDIR
         LD      A,LATCLAS
@@ -61,6 +68,8 @@ COLDERR:JP      DIAG
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
 ; stack, because the BIOS stack is in that bank.
 WBOOTR: DI
+        LD      HL,$45ED        ; the program that ended may have used 0066h
+        LD      (NMIVEC),HL
         LD      A,LATCLAS
         LD      (LATCHV),A
         OUT     (SYSLAT),A
@@ -94,8 +103,6 @@ PZINIT: LD      A,$C3
         LD      (RST7+1),HL
         LD      A,$FB
         LD      (RST7),A
-        LD      HL,$45ED        ; RETN at 0066h
-        LD      (NMIVEC),HL
         RET
 
 ; Reset the CCP and BDOS writable state as a fresh disk load would, and

@@ -434,17 +434,26 @@ NBERR:  SCF
 ; ---- Console and files ------------------------------------------------------------
 ;
 NCOUT:  LD      C,E             ; E = character
-        CALL    BCONOUT
+        LD      HL,BCONOUT
+        JR      NCCLAS
+NCIN:   LD      HL,BCONIN       ; returns B = character
+        JR      NCCLAS
+NCST:   LD      HL,BCONST       ; returns B = 0 or FFh
+; Run the console routine at HL with the classic bank in the window, where
+; the terminal keeps its line buffer. Returns its A in B.
+NCCLAS: LD      A,(CURBANK)
+        PUSH    AF
         XOR     A
-        RET
-NCIN:   CALL    BCONIN          ; returns B = character
+        CALL    SETBANK
+        CALL    JPHL
         LD      B,A
+        POP     AF
+        PUSH    BC
+        CALL    SETBANK
+        POP     BC
         XOR     A
         RET
-NCST:   CALL    BCONST          ; returns B = 0 or FFh
-        LD      B,A
-        XOR     A
-        RET
+JPHL:   JP      (HL)
 
 ; FILE: B = BDOS function, DE = argument, HL = record buffer for the
 ; functions that transfer a record. Pointers must lie in fixed RAM with room
@@ -649,6 +658,8 @@ NRDONE: LD      DE,DEFDMA
         ; Native profile: kernel state cleared, guards set, classic bank in the
         ; window as the OS bank, application stack in fixed low RAM.
         DI
+        LD      HL,$45ED        ; the native profile owns page zero: reclaim
+        LD      (NMIVEC),HL     ; the NMI vector from the CCP's default FCB
         LD      DE,(NHDR+TXENTRY) ; NHDR is inside the page cleared next
         LD      HL,NKSTATE
         LD      B,0

@@ -70,12 +70,16 @@ legacy pages 0 and 1 (bit 3); upper selector values 1–7 give physical banks
 these are writable RAM in Debug80. The window therefore has ten distinct
 16 KiB backings: base memory plus nine expansion banks.
 
-TEC-OS names these mappings by a logical bank number:
+TEC-OS names these mappings by a logical bank number. Debug80 ignores bit 3
+whenever bits 4–6 are nonzero, so the field values that reach distinct
+physical banks are not consecutive; `SETBANK` takes the latch bits from a
+table:
 
 | Logical bank | Latch bits 2–6 | Debug80 backing |
 | --- | --- | --- |
-| classic (`0`) | `EXPAND=0`, field 0 | base memory |
-| native 1–9 | `EXPAND=1`, field `n−1` | physical banks 0–8 |
+| classic (0) | `00h` | base memory |
+| 1, 2 | `04h`, `0Ch` | legacy pages 0, 1 |
+| 3–9 | `14h`, `24h`, `34h`, `44h`, `54h`, `64h`, `74h` | physical banks 2–8 |
 
 The board documentation describes U9 as always mapped, with bit 2 choosing its
 half and bits 3–6 unassigned. Under that reading the classic bank is the lower
@@ -106,20 +110,38 @@ documented residual risk.
 4 MHz, the TEC-1G standard and Debug80's fast mode. Serial and SD delay loops
 derive from the `CPUHZ` build constant.
 
-## D06 Interrupts and NMI (Q09) — Adopted 2026-10-24
+## D06 Interrupts and NMI (Q09) — Adopted 2026-10-24, revised 2026-10-25
 
 TEC-OS runs with maskable interrupts disabled. `IM 1` is selected so a stray
-enable cannot jump through an undefined vector table. The RST 38h vector holds
-`EI; RETI` as a guard.
+enable cannot jump through an undefined vector table, and `0038h` holds
+`EI; RETI`. TEC-OS owns both vectors.
 
-NMI sources in Debug80 are a keypad press (74C923 data available) and the
-TMS9918 frame interrupt when that card is active. `DI` does not mask them.
-The ROM image has `RETN` at offset `0066h`, so NMI is harmless while the
-overlay is on; boot installs `RETN` at RAM `0066h`. In the classic profile,
-`0066h` lies inside the default FCB at `005Ch`, so a CP/M program that writes
-that FCB also overwrites the NMI vector. A keypad press while such a program
-runs can therefore crash it. TEC-OS cannot mask this in software. Whether the
-board can disable keypad NMI is **Open**.
+NMI can occur and cannot be masked (confirmed 2026-10-25). Its sources in
+Debug80 are a hex-keypad press (74C923 data available) and the TMS9918 frame
+interrupt. TEC-OS prevents the second by keeping the TMS9918's interrupt
+enable (register 1 bit 5) clear. The keypad remains. TEC-OS handles it with a
+fixed vector and a stable stack everywhere it controls memory:
+
+- The first instruction at reset loads SP with fixed RAM. The ROM image holds
+  `RETN` at `0066h`, which serves while the overlay is on. An NMI in the ten
+  T-states before SP is loaded would push to an undefined SP; that window is
+  accepted.
+- Cold boot writes `RETN` to RAM `0066h` before clearing the rest of page
+  zero. Warm boot rewrites it first thing, because the program that just
+  ended may have used those bytes. Starting a native program reclaims it.
+- Every bank change runs with SP in fixed RAM, so the return address an NMI
+  pushes is never in the window being switched.
+
+Tests press the keypad every 1,000–4,000 T-states through cold boot and
+through the whole native bank-call proof (`test/nmi.test.mjs`).
+
+**Classic profile hazard (accepted, open).** `0066h` is byte 10 of the
+default FCB at `005Ch`, its second file-type character. The CCP fills that FCB
+for every command, and a CP/M program owns it while it runs. An NMI then
+executes whatever the FCB holds. Software cannot prevent this. Options: a
+board change that lets software disable keypad NMI, or the rule that the hex
+keypad is not pressed while a CP/M program runs. The rule is documented in
+[compatibility.md](compatibility.md); the board option is open item O2.
 
 ## D07 Console (Q03) — Adopted 2026-10-24
 
@@ -137,10 +159,9 @@ busy is lost. Console input is reliable only when the remote end sends one
 character at a time while TEC-OS waits for it. The harness does this. A human
 typist on a terminal at 4800 baud is normally slow enough.
 
-The terminal convention is plain ASCII with CR/LF line endings and backspace;
-no cursor addressing is assumed. LCD, GLCD and keypad are not used as the
-console in the first release. MON-3 is not resident: TEC-OS owns the whole
-16 KiB ROM and reuses no MON-3 RAM reservation or service.
+Serial is always a console device; D14 adds the matrix keyboard and video
+displays alongside it. MON-3 is not resident: TEC-OS owns the whole 16 KiB ROM
+and reuses no MON-3 RAM reservation or service.
 
 ## D08 SD interface (Q04) — Adopted 2026-10-24
 
@@ -201,11 +222,63 @@ journal; see [recovery.md](recovery.md) for the corruption window.
 No CP/M 3 features in the first release. The classic profile reports
 version 2.2.
 
+## D14 Console devices — Adopted 2026-10-25
+
+The console is a set of devices: serial and the matrix keyboard for input,
+serial and one video display for output, all active together. The video
+terminal implements an ANSI subset (cursor moves, positioning, erase, reverse
+video) so programs written for ANSI terminals draw correctly on it, and the
+display's size is published at `FF09h`. The first display is the TMS9918, in
+40-column text mode or, with the `debug80g32` profile, 32-column Graphics I.
+GLCD, the 20 × 4 LCD and a V9938 in 80-column TEXT2 mode follow; the terminal
+layer takes any width and height. Details in [console.md](console.md).
+
+The matrix keyboard is implemented from Debug80's documented layout, not from
+MON-3 source, because MON-3 is GPL-2.0 and TEC-OS is GPL-3.0-or-later.
+
+## D15 Native executable and ABI (Q09, Q10) — Adopted 2026-10-25
+
+As specified in [native-abi.md](native-abi.md): a fixed table at `FF00h`, one
+service entry with the service in `C`, managed bank reservation, copy and
+call, file access through the classic bank with fixed-RAM buffers only, and
+`.TNX` files with a 128-byte header. The header stores the image's end
+address because a single-pass assembler cannot emit a forward difference. The
+CCP falls back to `NAME.TNX` when `NAME.COM` is absent.
+
+The classic bank stays in the window during native execution and holds the
+operating system's disk workspace, so it is never given to a program.
+
+## D16 Emulator and web host — Adopted 2026-10-25
+
+The test harness and the planned web page both run on the published Debug80
+runtime now. The interface between them and the runtime is kept narrow (CPU
+step, port and memory access, device state) so a Rust machine compiled to
+WebAssembly can replace it later without changing the tests or the page.
+
+## D17 BDOS drive rebinding — Adopted 2026-10-25
+
+Portable CP/M rescanned a drive's whole directory whenever the BDOS changed
+drive. On an 8 MiB volume that is 32 SD block reads per change, about 2.5 s,
+so copying between drives took that long per record. The adapted BDOS keeps
+each drive's directory high-water mark in its DPH and skips the rescan for a
+drive that is already logged in, as DR's BDOS does
+([src/cpm/PROVENANCE.md](../src/cpm/PROVENANCE.md)).
+
+## D18 Recipes — Adopted 2026-10-25
+
+Programs reach a card the way they reach a Triptych disk: a
+`tecos-file-recipe-v1` document lists each file by CP/M name, source URL,
+byte count and SHA-256, the volumes to create and the drive for each file.
+`tecvol recipe` fetches and verifies every file and builds a fresh card.
+`npm run media` writes the starter recipe and card.
+
 ## Open decisions
 
 | ID | Open item | Blocks |
 | --- | --- | --- |
 | O1 | Physical decoding of latch bits 2–6 and the fitted U9 device | Physical-board native banking claim |
-| O2 | Whether keypad NMI can be disabled on the board | Classic-mode robustness claim |
+| O2 | A board change to let software disable keypad NMI | Classic-mode NMI robustness |
 | O3 | Behaviour of writes to `0000h–07FFh` with the overlay on | Nothing; TEC-OS avoids them |
 | O4 | Physical SD card timing at 4 MHz bit-bang rates | Physical-board storage claim |
+| O5 | TMS9918 VRAM access timing on the board (no delays are inserted) | Physical-board video claim |
+| O6 | Compare an `ADVENT.COM` built on TEC-OS with one built on another CP/M 2.2 system | Byte-identity claim for the BASIE qualification |

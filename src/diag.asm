@@ -14,7 +14,7 @@ DGLOOP: LD      HL,DGPROM
         CALL    BCONIN
         AND     $DF             ; upper case
         PUSH    AF
-        CALL    TXBYTE
+        CALL    PUTA
         CALL    PUTCRLF
         POP     AF
         CP      'R'
@@ -29,7 +29,7 @@ DGCOL:  LD      A,(HL)
         PUSH    HL
         CALL    PUTHEX
         LD      A,' '
-        CALL    TXBYTE
+        CALL    PUTA
         POP     HL
         POP     BC
         INC     HL

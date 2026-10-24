@@ -1,0 +1,54 @@
+// Console devices on the Debug80 TEC-1G model: TMS9918 screen, matrix
+// keyboard and serial together. Emulator evidence.
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
+
+test("with a TMS9918 the session appears on screen and on serial", () => {
+  const m = boot(standardCard(), { tms: true });
+  const screen = m.screen();
+  assert.equal(screen[1], "TEC-OS 0.1 for TEC-1G");
+  assert.equal(screen[2], "A: SYSTEM");
+  assert.equal(screen[5], "A>");
+  assert.equal(m.cell(5, 2), 0xa0, "cursor is the reverse image of a space");
+  assert.match(m.bootText, /A: SYSTEM/);
+});
+
+test("the matrix keyboard and serial both type at the prompt", () => {
+  const m = boot(standardCard(), { tms: true, matrix: true });
+  m.mark = m.output.length;
+  m.typeMatrix("save 1 key.com\r");
+  m.expect(/A>$/);
+  m.command("DIR");
+  assert.match(m.screen().join("\n"), /KEY\s+COM/);
+  m.mark = m.output.length;
+  m.typeMatrix("Era \"key.com\r");
+  assert.match(m.expect(/A>$/), /Era "key\.com/);
+  assert.deepEqual(m.violations, []);
+});
+
+test("the video terminal implements its ANSI subset", async () => {
+  const image = standardCard();
+  volume(image, "A").write("TERM.COM", (await program("term")).bytes);
+  const m = boot(image, { tms: true });
+  m.command("TERM");
+  const s = m.screen();
+  assert.equal(s[0], "AB");
+  assert.equal(s[4], "         XR");
+  assert.equal(m.cell(4, 9), 0x58);
+  assert.equal(m.cell(4, 10), 0xd2, "reverse R");
+  m.command("TERM S");
+  const t = m.screen();
+  assert.equal(t[21], "L29");
+  assert.equal(t[0], "L08");
+  assert.equal(t[23], "A>");
+});
+
+test("the 32-column profile uses TMS9918 Graphics I", () => {
+  const m = boot(standardCard(), { tms: true, profile: "debug80g32" });
+  const s = m.screen(32);
+  assert.equal(s[1], "TEC-OS 0.1 for TEC-1G");
+  assert.equal(s[5], "A>");
+  assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[1], 0xc0);
+});

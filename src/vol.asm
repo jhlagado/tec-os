@@ -395,11 +395,11 @@ SHV:    PUSH    BC
         CP      DUNMNT
         JR      Z,SHVN
         ADD     A,'A'
-        CALL    TXBYTE
+        CALL    PUTA
         LD      A,':'
-        CALL    TXBYTE
+        CALL    PUTA
         LD      A,' '
-        CALL    TXBYTE
+        CALL    PUTA
         PUSH    IX
         POP     HL
         LD      DE,DLABEL
@@ -408,7 +408,7 @@ SHV:    PUSH    BC
 SHVL:   LD      A,(HL)
         PUSH    BC
         PUSH    HL
-        CALL    TXBYTE
+        CALL    PUTA
         POP     HL
         POP     BC
         INC     HL
