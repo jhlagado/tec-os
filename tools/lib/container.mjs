@@ -3,11 +3,12 @@
 // module accepts will mount.
 
 import { format, geometryById, geometryByName } from "./format.mjs";
+import { fromLatin1, sameBytes, toLatin1 } from "./bytes.mjs";
 
 const H = format.header.fields;
 const D = format.descriptor.fields;
 const BLOCK = format.blockBytes;
-const MAGIC = Buffer.from(format.header.magic, "ascii");
+const MAGIC = fromLatin1(format.header.magic);
 export const DEFAULT_ALIGN = 2048; // 1 MiB, a common SD erase-block multiple
 
 export class ContainerError extends Error {}
@@ -84,7 +85,7 @@ export function createContainer(volumes, { align = DEFAULT_ALIGN } = {}) {
     header[o + D.geometry.offset] = v.g.id;
     header[o + D.flags.offset] = v.readOnly ? format.descriptor.flags.readOnly : 0;
     header[o + D.mount.offset] = driveIndex(v.mount);
-    const label = Buffer.from(String(v.label ?? `VOLUME${i + 1}`).toUpperCase().padEnd(11, " ").slice(0, 11), "ascii");
+    const label = fromLatin1(String(v.label ?? `VOLUME${i + 1}`).toUpperCase().padEnd(11, " ").slice(0, 11));
     header.set(label, o + D.label.offset);
     image.fill(0xe5, v.start * BLOCK, (v.start + v.g.payloadBlocks) * BLOCK);
   });
@@ -100,7 +101,7 @@ export function parseContainer(image, { requireLength = true } = {}) {
   };
   if (image.length < BLOCK) fail("image is shorter than one block");
   const h = image.subarray(0, BLOCK);
-  if (!Buffer.from(h.subarray(0, 8)).equals(MAGIC)) fail("bad magic");
+  if (!sameBytes(h.subarray(0, 8), MAGIC)) fail("bad magic");
   if (h[H.major.offset] !== format.formatVersion.major) fail(`unsupported major version ${h[H.major.offset]}`);
   if (u16(h, H.headerBytes.offset) !== format.header.bytes) fail("bad header size");
   if (u16(h, H.descriptorBytes.offset) !== format.descriptor.bytes) fail("bad descriptor size");
@@ -122,7 +123,7 @@ export function parseContainer(image, { requireLength = true } = {}) {
       geometry: h[o + D.geometry.offset],
       flags: h[o + D.flags.offset],
       mount: h[o + D.mount.offset],
-      label: Buffer.from(h.subarray(o + D.label.offset, o + D.label.offset + 11)).toString("latin1").trimEnd(),
+      label: toLatin1(h.subarray(o + D.label.offset, o + D.label.offset + 11)).trimEnd(),
     };
     const g = geometryById(v.geometry);
     if (v.id === 0) fail(`volume ${i}: zero id`);

@@ -12,7 +12,8 @@ to the TEC-1G's banked RAM.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
 - A console made of the serial port, the matrix keyboard and a TMS9918
-  display, used together.
+  display, used together, with a status display on the 20 × 4 LCD.
+- A web page that runs the whole system in a browser.
 
 Everything described here has run only in the Debug80 TEC-1G model; it has
 not yet run on a physical board. See [docs/acceptance.md](docs/acceptance.md).
@@ -35,6 +36,22 @@ The ROM is assembled with ATOM. Profiles:
 | `debug80` | 9 | TMS9918, 40 columns | Debug80's TEC-1G model |
 | `debug80g32` | 9 | TMS9918, 32 columns | As above, Graphics I |
 | `board` | 1 | TMS9918, 40 columns | The TEC-1G as its documentation describes U9 |
+
+## In a web page
+
+```sh
+npm run build && npm run media && npm run web
+python3 -m http.server 8765 --directory web/dist
+```
+
+Open `http://localhost:8765`. The page runs the same Debug80 TEC-1G model
+the tests use, at 4 MHz, with a TMS9918 screen, the 7-segment digits, the
+20 × 4 LCD, the 8 × 8 RGB LEDs, the GLCD and a serial terminal. Click the
+screen and type: keys go to the matrix keyboard, or to the serial port if you
+choose. The card lives in the browser's IndexedDB and survives reloads.
+"New starter card" builds one from `starter.recipe.json`, checking every
+file's SHA-256. Files can be copied onto and off the card from the page,
+which resets the TEC-1G so CP/M sees the change.
 
 ## Cards
 

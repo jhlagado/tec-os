@@ -9,6 +9,7 @@
 %INCLUDE "term.asm"
 %INCLUDE "tms.asm"
 %INCLUDE "gen/font.asm"
+%INCLUDE "lcd.asm"
 %INCLUDE "sd.asm"
 %INCLUDE "vol.asm"
 %INCLUDE "gen/geom.asm"

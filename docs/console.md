@@ -12,7 +12,7 @@ console either way.
 | TMS9918/TMS9929, 40 × 24 text | out | the card answers at ports BEh/BFh | Implemented |
 | TMS9918/TMS9929, 32 × 24 Graphics I | out | as above, with the `debug80g32` profile | Implemented |
 | ST7920 GLCD, 128 × 64 | out | — | Planned |
-| HD44780 LCD, 20 × 4 | out | — | Planned |
+| HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
 | V9938, 80 × 24 TEXT2 | out | — | Planned; needs Debug80 emulation first |
 
 ## Video terminal

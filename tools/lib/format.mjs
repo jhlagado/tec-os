@@ -1,12 +1,9 @@
 // The container and geometry contract, loaded from format/format.json. Both
 // the ROM build and the host tools use this module, so they cannot disagree.
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import formatJson from "../../format/format.json" with { type: "json" };
 
-const FORMAT_PATH = fileURLToPath(new URL("../../format/format.json", import.meta.url));
-
-export const format = JSON.parse(readFileSync(FORMAT_PATH, "utf8"));
+export const format = formatJson;
 
 /** Derived figures for one geometry, checked against the firmware limits. */
 export function geometryInfo(geometry) {

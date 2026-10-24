@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { createContainer, parseContainer, headerChecksum, ContainerError } from "../tools/lib/container.mjs";
 import { CpmVolume } from "../tools/lib/cpmfs.mjs";
 import { format, geometryByName } from "../tools/lib/format.mjs";
-import { buildRecipe } from "../tools/tecvol.mjs";
+import { buildRecipe } from "../tools/lib/recipe.mjs";
 import { ROOT, standardCard, volume } from "./lib/fixtures.mjs";
 
 const D = format.descriptor.fields;
@@ -146,10 +146,10 @@ test("a recipe builds a verified card and rejects a wrong digest", async () => {
     ],
   };
   const fetcher = async () => files["HELLO.TXT"];
-  const image = await buildRecipe(recipe, ".", fetcher);
+  const image = await buildRecipe(recipe, fetcher);
   assert.equal(Buffer.from(volume(image, "A").read("HELLO.TXT").subarray(0, 7)).toString(), "hello\r\n");
   recipe.components[0].files[0].sha256 = "0".repeat(64);
-  await assert.rejects(buildRecipe(recipe, ".", fetcher), /SHA-256/);
+  await assert.rejects(buildRecipe(recipe, fetcher), /SHA-256/);
 });
 
 test("CpmVolume refuses writes to a read-only volume", () => {

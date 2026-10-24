@@ -3,6 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 test("with a TMS9918 the session appears on screen and on serial", () => {
@@ -51,4 +52,13 @@ test("the 32-column profile uses TMS9918 Graphics I", () => {
   assert.equal(s[1], "TEC-OS 0.1 for TEC-1G");
   assert.equal(s[5], "A>");
   assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[1], 0xc0);
+});
+
+test("the 20 x 4 LCD shows the banner and mounted drives", () => {
+  const m = boot(standardCard());
+  const lcd = serializeTec1gUpdateFromRuntimeState(m.tec1g.state).lcd;
+  const row = (r) => String.fromCharCode(...lcd.slice(r * 20, r * 20 + 20)).trimEnd();
+  assert.equal(row(0), "TEC-OS 0.1  TEC-1G");
+  assert.equal(row(1), "A: SYSTEM");
+  assert.equal(row(2), "B: WORK");
 });

@@ -38,7 +38,8 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | M4 | Errors leave state unchanged: bad bank, unreserved bank, ranges, zero length, depth | `native`: N07–N09, N12 | Emulator | Pass |
 | M4 | Damaged stack guard detected, recovery path independent of the damaged stack | `native`: guard | Emulator | Pass |
 | M4 | NMI during overlay exit and bank transitions | `nmi` | Emulator | Pass: hundreds of NMIs taken in each run |
-| — | TMS9918 40 and 32 columns, ANSI subset, matrix keyboard | `console` | Emulator | Pass |
+| — | TMS9918 40 and 32 columns, ANSI subset, matrix keyboard, LCD status | `console` | Emulator | Pass |
+| — | Web page: boot, TMS9918 text and Graphics I screens, matrix typing, TERM | Browser check, 2026-10-25 | Emulator in a browser | Pass; not automated |
 | M5 | Reproducible image, size census, compatibility matrix, instructions | `npm run build`, `npm run media`; [memory-map.md](memory-map.md), [compatibility.md](compatibility.md) | Host | Done |
 
 ## Qualifying application
@@ -59,7 +60,7 @@ compiler. That comparison is still to do.
 
 ## Measured costs
 
-ROM, `debug80` profile: 10,647 of 16,384 bytes used, 5,737 free. The region
+ROM, `debug80` profile: 10,813 of 16,384 bytes used, 5,571 free. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.

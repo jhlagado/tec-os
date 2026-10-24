@@ -52,6 +52,10 @@ COLD:   DI
         LDIR
         LD      SP,BSTK
         CALL    CONINIT
+        CALL    LCDINIT
+        LD      HL,LCDBAN
+        LD      B,0
+        CALL    LCDROW
         LD      HL,BANNER
         CALL    PUTS
 COLDRT: CALL    SDINIT
@@ -59,6 +63,7 @@ COLDRT: CALL    SDINIT
         CALL    MOUNT
         JR      NZ,COLDERR
         CALL    SHOWVOL
+        CALL    LCDVOLS
         XOR     A               ; drive A, user 0
         LD      (PZDU),A
         JP      WBOOTR

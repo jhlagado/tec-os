@@ -17,10 +17,9 @@
 
 import { readFileSync, writeFileSync, renameSync, existsSync, openSync, writeSync, closeSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
-import { createHash } from "node:crypto";
 import { createContainer, parseContainer, volumePayload, findVolume } from "./lib/container.mjs";
 import { CpmVolume } from "./lib/cpmfs.mjs";
-import { format } from "./lib/format.mjs";
+import { buildRecipe } from "./lib/recipe.mjs";
 
 function usage(message) {
   if (message) console.error(`tecvol: ${message}`);
@@ -59,6 +58,8 @@ export function openImage(path) {
   return { image, info: parseContainer(image) };
 }
 
+export { buildRecipe, fileFetcher };
+
 export function openVolume(image, info, drive) {
   const v = findVolume(info, drive);
   return { v, fs: new CpmVolume(volumePayload(image, v), v.g, { readOnly: v.readOnly }) };
@@ -70,48 +71,15 @@ function parseVolumeSpec(spec) {
 }
 
 /** Fetch a recipe file from a URL or a path relative to the recipe. */
-async function fetchFile(ref, recipeDir) {
-  if (/^https?:\/\//.test(ref)) {
-    const response = await fetch(ref);
-    if (!response.ok) throw new Error(`${ref}: HTTP ${response.status}`);
-    return new Uint8Array(await response.arrayBuffer());
-  }
-  return new Uint8Array(readFileSync(resolve(recipeDir, ref)));
-}
-
-/** Build a fresh container from a tecos-file-recipe-v1 document. */
-export async function buildRecipe(recipe, recipeDir, fetcher = fetchFile) {
-  if (recipe.schema !== "tecos-file-recipe-v1") throw new Error(`unsupported recipe schema ${recipe.schema}`);
-  const image = createContainer(recipe.volumes.map((v) => ({ ...v, readOnly: false })));
-  const info = parseContainer(image);
-  for (const component of recipe.components) {
-    for (const file of component.files) {
-      const bytes = await fetcher(file.url, recipeDir);
-      if (bytes.length !== file.bytes) throw new Error(`${file.name}: ${bytes.length} bytes, recipe says ${file.bytes}`);
-      const digest = createHash("sha256").update(bytes).digest("hex");
-      if (digest !== file.sha256) throw new Error(`${file.name}: SHA-256 mismatch`);
-      const { fs } = openVolume(image, info, file.drive ?? "A");
-      fs.write(file.name, bytes, { user: file.user ?? 0 });
+function fileFetcher(recipeDir) {
+  return async (ref) => {
+    if (/^https?:\/\//.test(ref)) {
+      const response = await fetch(ref);
+      if (!response.ok) throw new Error(`${ref}: HTTP ${response.status}`);
+      return new Uint8Array(await response.arrayBuffer());
     }
-  }
-  // Apply read-only flags last, so files can be written first.
-  const header = image.subarray(0, format.blockBytes);
-  let changed = false;
-  recipe.volumes.forEach((v, i) => {
-    if (v.readOnly) {
-      header[format.header.descriptorsOffset + i * format.descriptor.bytes + format.descriptor.fields.flags.offset] |=
-        format.descriptor.flags.readOnly;
-      changed = true;
-    }
-  });
-  if (changed) {
-    const { headerChecksum } = await import("./lib/container.mjs");
-    const sum = headerChecksum(header);
-    header[format.header.fields.checksum.offset] = sum & 0xff;
-    header[format.header.fields.checksum.offset + 1] = sum >> 8;
-  }
-  parseContainer(image);
-  return image;
+    return new Uint8Array(readFileSync(resolve(recipeDir, ref)));
+  };
 }
 
 async function main(argv) {
@@ -183,7 +151,7 @@ async function main(argv) {
       const [, recipePath, out] = args;
       if (!out) usage("recipe needs RECIPE.json IMAGE");
       const recipe = JSON.parse(readFileSync(recipePath, "utf8"));
-      saveImage(out, await buildRecipe(recipe, dirname(resolve(recipePath))));
+      saveImage(out, await buildRecipe(recipe, fileFetcher(dirname(resolve(recipePath)))));
       break;
     }
     case "install": {

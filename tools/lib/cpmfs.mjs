@@ -4,6 +4,8 @@
 // Records are numbered linearly from the start of the payload (OFF is 0), so
 // allocation block n starts at byte n * blockBytes.
 
+import { fromLatin1, toLatin1 } from "./bytes.mjs";
+
 export class CpmError extends Error {}
 
 const ENTRY = 32;
@@ -14,13 +16,13 @@ const EOF = 0x1a;
 export function cpmName(name) {
   const m = /^([A-Za-z0-9_$#@!%&'()\-^{}~]{1,8})(?:\.([A-Za-z0-9_$#@!%&'()\-^{}~]{0,3}))?$/.exec(name);
   if (!m) throw new CpmError(`invalid CP/M 8.3 filename ${JSON.stringify(name)}`);
-  return Buffer.from(m[1].toUpperCase().padEnd(8, " ") + (m[2] ?? "").toUpperCase().padEnd(3, " "), "ascii");
+  return fromLatin1(m[1].toUpperCase().padEnd(8, " ") + (m[2] ?? "").toUpperCase().padEnd(3, " "));
 }
 
 function displayName(bytes) {
-  const raw = Buffer.from(bytes.map((b) => b & 0x7f));
-  const base = raw.subarray(0, 8).toString("latin1").trimEnd();
-  const ext = raw.subarray(8, 11).toString("latin1").trimEnd();
+  const raw = toLatin1(bytes.map((b) => b & 0x7f));
+  const base = raw.slice(0, 8).trimEnd();
+  const ext = raw.slice(8, 11).trimEnd();
   return ext ? `${base}.${ext}` : base;
 }
 
@@ -59,7 +61,7 @@ export class CpmVolume {
       out.push({
         index: i,
         user: e[0],
-        key: Buffer.from(e.subarray(1, 12).map((b) => b & 0x7f)).toString("latin1"),
+        key: toLatin1(e.subarray(1, 12).map((b) => b & 0x7f)),
         name: displayName(e.subarray(1, 12)),
         extent: (e[12] & 0x1f) | (e[14] << 5),
         rc: e[15],
@@ -112,7 +114,7 @@ export class CpmVolume {
   }
 
   find(name, user = 0) {
-    const key = cpmName(name).toString("latin1");
+    const key = toLatin1(cpmName(name));
     return this.list({ user }).find((f) => f.key === key);
   }
 
@@ -133,12 +135,12 @@ export class CpmVolume {
     }
     if (!text) return out;
     const z = out.indexOf(EOF);
-    return Buffer.from(Buffer.from(z < 0 ? out : out.subarray(0, z)).toString("latin1").replace(/\r\n/g, "\n"), "latin1");
+    return fromLatin1(toLatin1(z < 0 ? out : out.subarray(0, z)).replace(/\r\n/g, "\n"));
   }
 
   erase(name, user = 0) {
     this.assertWritable();
-    const key = cpmName(name).toString("latin1");
+    const key = toLatin1(cpmName(name));
     let n = 0;
     for (const e of this.scan()) {
       if (e.user === user && e.key === key) {
@@ -161,8 +163,8 @@ export class CpmVolume {
     this.assertWritable();
     if (user < 0 || user > 15) throw new CpmError(`user ${user} outside 0-15`);
     const key = cpmName(name);
-    let body = Buffer.from(bytes);
-    if (text) body = Buffer.concat([Buffer.from(body.toString("latin1").replace(/\r?\n/g, "\r\n"), "latin1"), Buffer.from([EOF])]);
+    let body = Uint8Array.from(bytes);
+    if (text) body = fromLatin1(toLatin1(body).replace(/\r?\n/g, "\r\n") + String.fromCharCode(EOF));
     const records = Math.ceil(body.length / RECORD);
     const padded = new Uint8Array(records * RECORD).fill(text ? EOF : 0);
     padded.set(body);

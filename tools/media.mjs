@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
-import { buildRecipe, saveImage } from "./tecvol.mjs";
+import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
 import { PROFILES } from "./build.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -139,7 +139,7 @@ async function main() {
     })),
   };
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
-  saveImage(resolve(DIST, "starter.img"), await buildRecipe(recipe, DIST));
+  saveImage(resolve(DIST, "starter.img"), await buildRecipe(recipe, fileFetcher(DIST)));
   writeFileSync(resolve(ROOT, "docs/memory-map.md"), memoryMap(censuses.debug80));
   const manifest = Object.fromEntries(
     Object.entries(censuses).map(([k, c]) => [k, { sha256: c.sha256, romUsed: c.rom.used, tpaBytes: c.ram.tpa.bytes, nbanks: c.nbanks }]),
