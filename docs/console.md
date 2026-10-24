@@ -57,6 +57,9 @@ overlap it, so no 1 KiB pixel buffer is needed. Writing a character redraws
 the words its cell touches; scrolling redraws the screen, about 0.25 s at
 4 MHz. Every access waits for the busy flag, bounded at 256 polls.
 
+The CCP's `TYPE` and `DIR` use the display size to pause with `[more]` one
+line short of a full screen (decision D19).
+
 The display size is published in the ABI table at `FF00h` (word at `FF09h`
 points to columns, then rows), so programs such as an editor can lay out
 their screen without being rebuilt for each display.

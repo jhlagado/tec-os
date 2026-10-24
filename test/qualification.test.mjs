@@ -23,7 +23,7 @@ test(
     const release = openIbm3740(new Uint8Array(dsk));
     for (const f of release.list()) a.write(f.name, release.read(f.name));
 
-    let m = boot(image);
+    let m = boot(image, { tms: true });
     const compile = m.command("BASIE ADVENT", { maxCycles: 3_000_000_000 });
     assert.doesNotMatch(compile, /error|Bdos Err/i, compile);
     assert.match(m.command("DIR"), /ADVENT\.COM/);

@@ -336,6 +336,7 @@ DIRWSET:
         INC     A
 DIRWOK:
         LD      (DIRNCOL),A
+        CALL    PGINIT
         LD      DE,CMDFCB
         LD      C,17
         CALL    BDOS
@@ -371,8 +372,8 @@ DIRHEAD:
         LD      A,(DIRANY)
         OR      A
         JR      Z,DIRNAME
-        LD      DE,CRLFMSG
-        CALL    PUTSTR
+        CALL    PGCRLF
+        JP      C,STARTED       ; stopped at a page pause
 
 ; One entry as NAME.EXT, padded to 12 unless it ends the line.
 DIRNAME:
@@ -437,8 +438,8 @@ DIRDONE:
 
 ; Footer: "n files, nK free" for the drive listed.
 DIRSUM:
-        LD      DE,CRLFMSG
-        CALL    PUTSTR
+        CALL    PGCRLF
+        JP      C,STARTED
         LD      HL,(DIRNUM)
         CALL    PUTDEC
         LD      DE,FILESMSG
@@ -508,6 +509,121 @@ DIRFKB:
         LD      C,14
         CALL    BDOS
         JP      STARTED
+
+; ---- Page pauses (TEC-OS) --------------------------------------------------
+; TYPE and DIR count the lines they print, including lines that wrap at the
+; console width. One line short of a full screen they show [more] and wait for
+; a key: ^C, Esc or Q stops the listing, anything else shows the next screen.
+; The size comes from the console geometry; a serial-only console is 80 x 24.
+
+PGINIT:
+        XOR     A
+        LD      (PGLINE),A
+        LD      (PGCOL),A
+        LD      A,(VHGT)
+        OR      A
+        JR      NZ,PGIH
+        LD      A,24
+PGIH:
+        DEC     A               ; the last row holds the pause prompt
+        LD      (PGROWS),A
+        LD      A,(VWID)
+        OR      A
+        JR      NZ,PGIW
+        LD      A,80
+PGIW:
+        LD      (PGWID),A
+        RET
+
+; Print CR LF through the pager. Carry set when the user stops the listing.
+PGCRLF:
+        LD      E,CR
+        CALL    PGPUT
+        RET     C
+        LD      E,LF
+
+; Print E, counting lines and pausing when the screen is full. Carry set
+; when the user stops the listing.
+PGPUT:
+        LD      A,E
+        CP      LF
+        JR      Z,PGLF
+        CP      CR
+        JR      Z,PGCR
+        CP      8
+        JR      Z,PGBS
+        CP      9
+        JR      Z,PGTAB
+        CP      SPACE
+        JR      C,PGOUT         ; other control bytes take no room
+        LD      A,(PGCOL)
+        LD      HL,PGWID
+        CP      (HL)
+        JR      C,PGINC
+        PUSH    DE              ; this character starts a wrapped line
+        CALL    PGNEWL
+        POP     DE
+        RET     C
+        XOR     A
+PGINC:
+        INC     A
+PGSETC:
+        LD      (PGCOL),A
+PGOUT:
+        CALL    PUTCHAR
+        OR      A               ; carry clear
+        RET
+PGCR:
+        XOR     A
+        JR      PGSETC
+PGBS:
+        LD      A,(PGCOL)
+        OR      A
+        JR      Z,PGOUT
+        DEC     A
+        JR      PGSETC
+PGTAB:
+        LD      A,(PGCOL)
+        OR      7
+        INC     A
+        JR      PGSETC
+PGLF:
+        CALL    PUTCHAR
+; A new line begins. Pause first if the screen is full.
+PGNEWL:
+        LD      A,(PGLINE)
+        INC     A
+        LD      HL,PGROWS
+        CP      (HL)
+        JR      C,PGNL1
+        LD      DE,MOREMSG
+        CALL    PUTSTR
+PGWAIT:
+        LD      E,$FF           ; direct console input, no echo
+        LD      C,6
+        CALL    BDOS
+        OR      A
+        JR      Z,PGWAIT
+        PUSH    AF
+        LD      DE,UNMORE
+        CALL    PUTSTR
+        POP     AF
+        AND     $DF             ; upper case; ^C and Esc are unaffected
+        CP      3
+        JR      Z,PGSTOP
+        CP      $1B
+        JR      Z,PGSTOP
+        CP      'Q'
+        JR      Z,PGSTOP
+        XOR     A
+PGNL1:
+        LD      (PGLINE),A
+        XOR     A
+        LD      (PGCOL),A
+        RET
+PGSTOP:
+        SCF
+        RET
 
 ; Print up to B characters from HL, stopping at a space; count them in C.
 ; Leaves HL after the field.
@@ -614,6 +730,7 @@ CMDTYPE:
         LD      DE,LOADBUF
         LD      C,26
         CALL    BDOS
+        CALL    PGINIT
 
 TYPEREAD:
         LD      DE,CMDFCB
@@ -631,9 +748,10 @@ TYPEBYTE:
         LD      E,A
         PUSH    BC
         PUSH    HL
-        CALL    PUTCHAR
+        CALL    PGPUT
         POP     HL
         POP     BC
+        JR      C,TYPEEND       ; stopped at a page pause
         INC     HL
         DJNZ    TYPEBYTE
         JR      TYPEREAD
@@ -1199,6 +1317,10 @@ FILEMSG:
         DB      " file, ",'$'
 FREEMSG:
         DB      "K free",'$'
+MOREMSG:
+        DB      "[more]",'$'
+UNMORE:
+        DB      CR,"      ",CR,'$'
 DIRKEY:
         DB      "DIR",0
 TYPEKEY:
@@ -1247,6 +1369,14 @@ DIRNCOL:
         DS      1
 DIRNUM:
         DS      2
+PGLINE:
+        DS      1
+PGCOL:
+        DS      1
+PGROWS:
+        DS      1
+PGWID:
+        DS      1
 DIRANY:
         DS      1
 DIRENTP:

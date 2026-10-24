@@ -282,6 +282,12 @@ published at `FF09h` (80 when the console is serial only): 6 columns at 80,
 3 at 40, 2 at 32, 1 on the 21-column GLCD. It hides system files as before
 and ends with the file count and the free space on the listed drive.
 
+`TYPE` and `DIR` pause a screen at a time. They count the lines they print,
+including lines that wrap at the console width, and one line short of a full
+screen show `[more]` and wait for a key: ^C, Esc or Q stops the listing,
+anything else shows the next screen. The 8-row GLCD pauses every 7 lines and
+a 24-row screen every 23; a serial-only console is taken as 80 × 24.
+
 `DIR` does not sort, because the CCP has no buffer outside the TPA, and the
 CP/M habit of `SAVE`ing memory a program left behind means built-in commands
 must not touch the TPA.

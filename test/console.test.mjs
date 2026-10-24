@@ -93,3 +93,64 @@ test("the GLCD is the console when no TMS9918 answers", () => {
   assert.ok(m.glcdScreen().includes("G.COM"));
   assert.deepEqual(m.violations, []);
 });
+
+function numberedLines(n) {
+  return Array.from({ length: n }, (_, i) => `line ${String(i + 1).padStart(2, "0")}`).join("\n") + "\n";
+}
+
+test("TYPE pauses a screen at a time on the 8-row GLCD and can be stopped", () => {
+  const image = standardCard();
+  volume(image, "A").write("LINES.TXT", Buffer.from(numberedLines(20)), { text: true });
+  const m = boot(image);
+  m.mark = m.output.length;
+  m.type("TYPE LINES.TXT\r");
+  m.expect(/\[more\]$/);
+  let screen = m.glcdScreen();
+  assert.equal(screen[6], "line 07");
+  assert.equal(screen[7], "[more]");
+  m.type(" ");
+  m.expect(/\[more\]$/);
+  screen = m.glcdScreen();
+  assert.equal(screen[6], "line 14");
+  m.type("q");
+  m.expect(/A>$/);
+  assert.doesNotMatch(m.text(m.mark), /line 15/);
+  assert.deepEqual(m.violations, []);
+});
+
+test("TYPE fills a 24-row TMS9918 screen before pausing, and long lines count as wrapped", () => {
+  const image = standardCard();
+  const long = "x".repeat(70);
+  volume(image, "A").write("WIDE.TXT", Buffer.from(`${long}\n${numberedLines(40)}`), { text: true });
+  const m = boot(image, { tms: true });
+  m.mark = m.output.length;
+  m.type("TYPE WIDE.TXT\r");
+  m.expect(/\[more\]$/);
+  const s = m.screen();
+  assert.equal(s[23], "[more]");
+  assert.equal(s[22], "line 21", "70 characters take two 40-column lines");
+  m.type(" ");
+  assert.match(m.expect(/A>$/, { maxCycles: 400_000_000 }), /line 40/);
+});
+
+test("a long DIR pauses too", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  for (let i = 0; i < 30; i += 1) a.write(`F${i}.DAT`, new Uint8Array(1));
+  const m = boot(image);
+  m.mark = m.output.length;
+  m.type("DIR\r");
+  m.expect(/\[more\]$/);
+  assert.equal(m.glcdScreen()[7], "[more]");
+  let all = "";
+  let pauses = 1;
+  for (;;) {
+    m.type(" ");
+    const page = m.expect(/(\[more\]|A>)$/, { maxCycles: 400_000_000 });
+    all += page;
+    if (page.endsWith("A>")) break;
+    pauses += 1;
+  }
+  assert.equal(pauses, 4, "31 lines at 7 lines a screen");
+  assert.match(all, /30 files/);
+});

@@ -40,6 +40,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | M4 | NMI during overlay exit and bank transitions | `nmi` | Emulator | Pass: hundreds of NMIs taken in each run |
 | — | TMS9918 40 and 32 columns, ANSI subset, matrix keyboard, LCD status | `console` | Emulator | Pass |
 | — | GLCD 21 × 8 console when no TMS9918 answers; DIR fitted to 40 and 21 columns | `console` | Emulator | Pass |
+| — | TYPE and DIR pause per screen on 8 and 24 rows, count wrapped lines, stop on Q | `console` | Emulator | Pass |
 | — | Web page: boot, TMS9918 text and Graphics I screens, matrix typing, TERM | Browser check, 2026-10-25 | Emulator in a browser | Pass; not automated |
 | M5 | Reproducible image, size census, compatibility matrix, instructions | `npm run build`, `npm run media`; [memory-map.md](memory-map.md), [compatibility.md](compatibility.md) | Host | Done |
 
@@ -61,7 +62,7 @@ compiler. That comparison is still to do.
 
 ## Measured costs
 
-ROM, `debug80` profile: 11,701 of 16,384 bytes used, 4,683 free. The region
+ROM, `debug80` profile: 11,892 of 16,384 bytes used, 4,492 free. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.

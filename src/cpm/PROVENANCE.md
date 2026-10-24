@@ -38,3 +38,6 @@ Changes made for ROM residency in TEC-OS:
   `VWID` allows, followed by the file count and the free space on the listed
   drive (`PUTTRIM`, `PUTDEC`). It still hides system files and uses no TPA
   memory.
+- `TYPE` and `DIR` print through a pager (`PGINIT`, `PGPUT`, `PGCRLF`,
+  `PGNEWL`) that counts lines, including wrapped ones, against the console
+  size and pauses with `[more]`; ^C, Esc or Q stops the listing.

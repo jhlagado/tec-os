@@ -139,7 +139,7 @@ export class Machine {
   /** True while the console input routine is waiting for a start bit. */
   waitingForInput() {
     const pc = this.pc;
-    return pc >= this.sym("CINLP") && pc < this.sym("CINWE");
+    return (pc >= this.sym("CINLP") && pc < this.sym("CINWE")) || (pc >= this.sym("CSTPOLL") && pc < this.sym("CSTGOT"));
   }
 
   /** Type text one character at a time, as a terminal user would: each byte
