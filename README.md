@@ -12,7 +12,8 @@ to the TEC-1G's banked RAM.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
 - A console made of the serial port, the matrix keyboard and a TMS9918
-  display, used together, with a status display on the 20 × 4 LCD.
+  (or, without one, the 128 × 64 GLCD), used together, with a status display
+  on the 20 × 4 LCD.
 - A web page that runs the whole system in a browser.
 
 Everything described here has run only in the Debug80 TEC-1G model; it has

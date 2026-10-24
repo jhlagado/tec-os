@@ -13,8 +13,9 @@ TNAME   EQU     $0800
 TCOLOR  EQU     $2000
 TSPRITE EQU     $1B00
 
-; Detect and initialise the display. Z when present.
-VIDINIT:LD      HL,$3FFF        ; VRAM answers with what was written
+; Detect and initialise the display. Z when present. VIDINIT has already
+; pointed the terminal's driver vectors here.
+TMSINIT:LD      HL,$3FFF        ; VRAM answers with what was written
         LD      A,$5A
         CALL    TMSPOKE
         CALL    TMSPEEK
@@ -126,7 +127,7 @@ TMSCL:  ADD     HL,DE
         RET
 
 ; Put A at row B, column C. Destroys AF, DE, HL.
-VPUT:   PUSH    AF
+TMSPUT: PUSH    AF
         CALL    TMSCELL
         CALL    TMSWA
         POP     AF
@@ -134,32 +135,32 @@ VPUT:   PUSH    AF
         RET
 
 ; A = the character at row B, column C. Destroys DE, HL.
-VGET:   CALL    TMSCELL
+TMSGET: CALL    TMSCELL
         JR      TMSPEEK
 
 ; Clear row B from column C to the end of the line.
-VCLREOL:CALL    TMSCELL
+TMSCLR: CALL    TMSCELL
         CALL    TMSWA
         LD      A,TMSCOLS
         SUB     C
         LD      B,A
-VCLR:   LD      A,' '
+TMSCLL: LD      A,' '
         OUT     (VDPDAT),A
-        DJNZ    VCLR
+        DJNZ    TMSCLL
         RET
 
 ; Move rows 1-23 up one row through LINEBUF and clear the last row.
-VSCROLL:LD      B,1
-VSCR:   PUSH    BC
+TMSSCR: LD      B,1
+TMSSCL: PUSH    BC
         LD      C,0
         CALL    TMSCELL
         CALL    TMSRA
         LD      HL,LINEBUF
         LD      B,TMSCOLS
-VSCRR:  IN      A,(VDPDAT)
+TMSSRR: IN      A,(VDPDAT)
         LD      (HL),A
         INC     HL
-        DJNZ    VSCRR
+        DJNZ    TMSSRR
         POP     BC
         PUSH    BC
         DEC     B
@@ -168,18 +169,18 @@ VSCRR:  IN      A,(VDPDAT)
         CALL    TMSWA
         LD      HL,LINEBUF
         LD      B,TMSCOLS
-VSCRW:  LD      A,(HL)
+TMSSRW: LD      A,(HL)
         OUT     (VDPDAT),A
         INC     HL
-        DJNZ    VSCRW
+        DJNZ    TMSSRW
         POP     BC
         INC     B
         LD      A,B
         CP      24
-        JR      NZ,VSCR
+        JR      NZ,TMSSCL
         LD      B,23
         LD      C,0
-        JR      VCLREOL
+        JR      TMSCLR
 
 ; Registers 0-7. Text mode: M1, 16K, display on, interrupts off, white on
 ; dark blue. Graphics I: patterns 0000h, colours 2000h, sprites 1B00h/3800h.

@@ -56,5 +56,6 @@ export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity =
   const { rom, symbols } = romFor(profile);
   const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
   return m;
 }

@@ -71,6 +71,10 @@ NAPEND  EQU     $8000
 BDOSSTN EQU     64
 CCPSTN  EQU     48
 
+; ---- GLCD console geometry: 6 x 8 cells on 128 x 64 pixels ------------------
+GLCOLS  EQU     21
+GLROWS  EQU     8
+
 ; ---- Disk geometry limits ---------------------------------------------------
 MAXDRV  EQU     4               ; drives A-D
 ALVSZ   EQU     256             ; allocation vector bytes per drive (DSM <= 2047)

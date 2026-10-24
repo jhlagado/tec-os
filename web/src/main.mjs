@@ -15,6 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 const state = {
   profile: localStorageGet("tecos.profile") ?? "debug80",
+  display: localStorageGet("tecos.display") ?? "tms",
   machine: null,
   card: null,
   cardDirty: false,
@@ -66,7 +67,7 @@ async function powerOn() {
     rom,
     symbols,
     sdImage: state.card,
-    tms: true,
+    tms: state.display === "tms",
     matrix: true,
     onSdWrite: () => {
       state.cardDirty = true;
@@ -318,6 +319,8 @@ function onKey(route) {
 $("tms").addEventListener("keydown", onKey(() => $("keyroute").value));
 $("serial").addEventListener("keydown", onKey(() => "serial"));
 $("tms").addEventListener("click", () => $("tms").focus());
+$("glcd").addEventListener("keydown", onKey(() => $("keyroute").value));
+$("glcd").addEventListener("click", () => $("glcd").focus());
 
 // ---- Card ---------------------------------------------------------------------------
 
@@ -419,6 +422,13 @@ $("drive").addEventListener("change", refreshFiles);
 
 // ---- Controls -------------------------------------------------------------------------
 
+$("display").value = state.display;
+$("display").addEventListener("change", async (e) => {
+  state.display = e.target.value;
+  localStorageSet("tecos.display", state.display);
+  await powerOn();
+  (state.display === "tms" ? $("tms") : $("glcd")).focus();
+});
 $("profile").value = state.profile;
 $("profile").addEventListener("change", async (e) => {
   state.profile = e.target.value;

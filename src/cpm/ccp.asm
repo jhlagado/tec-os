@@ -315,13 +315,34 @@ DIRREADY:
         XOR     A
         LD      (DIRCOL),A
         LD      (DIRANY),A
+        LD      H,A
+        LD      L,A
+        LD      (DIRNUM),HL
+        LD      A,(VWID)        ; TEC-OS: columns of 13 that fit the console
+        OR      A
+        JR      NZ,DIRWID
+        LD      A,80            ; serial only: assume 80
+DIRWID:
+        LD      B,0
+DIRWDIV:
+        SUB     13
+        JR      C,DIRWSET
+        INC     B
+        JR      DIRWDIV
+DIRWSET:
+        LD      A,B
+        OR      A
+        JR      NZ,DIRWOK
+        INC     A
+DIRWOK:
+        LD      (DIRNCOL),A
         LD      DE,CMDFCB
         LD      C,17
         CALL    BDOS
 
 DIRLOOP:
         INC     A
-        JR      Z,DIRDONE
+        JP      Z,DIRDONE
         DEC     A
         LD      L,A
         LD      H,0
@@ -339,63 +360,221 @@ DIRLOOP:
         POP     HL
         JR      NZ,DIRNEXT
         LD      (DIRENTP),HL
-
         LD      A,(DIRCOL)
         OR      A
         JR      Z,DIRHEAD
-        LD      DE,DIRSEP
-        CALL    PUTSTR
+        LD      E,SPACE
+        CALL    PUTCHAR
         JR      DIRNAME
 
 DIRHEAD:
         LD      A,(DIRANY)
         OR      A
-        JR      Z,DIRPREF
+        JR      Z,DIRNAME
         LD      DE,CRLFMSG
         CALL    PUTSTR
 
-DIRPREF:
-        LD      A,(CURDSK)
-        AND     $0F
-        ADD     A,'A'
-        LD      E,A
-        CALL    PUTCHAR
-        LD      DE,DIRDRV
-        CALL    PUTSTR
-
+; One entry as NAME.EXT, padded to 12 unless it ends the line.
 DIRNAME:
-        LD      HL,(DIRENTP)
         LD      A,1
         LD      (DIRANY),A
+        LD      HL,(DIRNUM)
+        INC     HL
+        LD      (DIRNUM),HL
+        LD      HL,(DIRENTP)
         INC     HL
         LD      B,8
-        CALL    PUTNAME
-        LD      E,SPACE
+        LD      C,0             ; characters printed
+        CALL    PUTTRIM
+        LD      A,(HL)
+        AND     $7F
+        CP      SPACE
+        JR      Z,DIRPAD
         PUSH    HL
+        PUSH    BC
+        LD      E,'.'
         CALL    PUTCHAR
+        POP     BC
         POP     HL
+        INC     C
         LD      B,3
-        CALL    PUTNAME
+        CALL    PUTTRIM
+DIRPAD:
         LD      A,(DIRCOL)
         INC     A
-        AND     3
+        LD      HL,DIRNCOL
+        CP      (HL)
+        JR      C,DIRPADL
+        XOR     A
         LD      (DIRCOL),A
+        JR      DIRNEXT
+DIRPADL:
+        LD      (DIRCOL),A
+DIRPADC:
+        LD      A,C
+        CP      12
+        JR      NC,DIRNEXT
+        PUSH    BC
+        LD      E,SPACE
+        CALL    PUTCHAR
+        POP     BC
+        INC     C
+        JR      DIRPADC
 
 DIRNEXT:
         LD      DE,CMDFCB
         LD      C,18
         CALL    BDOS
-        JR      DIRLOOP
+        JP      DIRLOOP
 
 DIRDONE:
         LD      A,(DIRANY)
         OR      A
-        JR      NZ,DIRNL
+        JR      NZ,DIRSUM
         LD      DE,NOFILE
         CALL    PUTSTR
-
-DIRNL:
         JP      STARTED
+
+; Footer: "n files, nK free" for the drive listed.
+DIRSUM:
+        LD      DE,CRLFMSG
+        CALL    PUTSTR
+        LD      HL,(DIRNUM)
+        CALL    PUTDEC
+        LD      DE,FILESMSG
+        LD      HL,(DIRNUM)
+        DEC     HL
+        LD      A,H
+        OR      L
+        JR      NZ,DIRSUM2
+        LD      DE,FILEMSG
+DIRSUM2:
+        CALL    PUTSTR
+        LD      A,(CMDFCB)      ; count free blocks on the listed drive
+        OR      A
+        JR      Z,DIRFREE
+        DEC     A
+        LD      E,A
+        LD      C,14
+        CALL    BDOS
+DIRFREE:
+        LD      C,31
+        CALL    BDOS
+        PUSH    HL
+        POP     IX              ; IX -> DPB
+        LD      C,27
+        CALL    BDOS            ; HL -> allocation vector
+        LD      E,(IX+5)
+        LD      D,(IX+6)
+        INC     DE              ; DE = blocks on the drive
+        LD      BC,0            ; free blocks
+        LD      A,$80           ; bit within the current byte
+DIRFBIT:
+        PUSH    AF
+        AND     (HL)
+        JR      NZ,DIRFUSED
+        INC     BC
+DIRFUSED:
+        POP     AF
+        RRCA
+        JR      NC,DIRFSAME
+        INC     HL
+DIRFSAME:
+        DEC     DE
+        PUSH    AF
+        LD      A,D
+        OR      E
+        JR      Z,DIRFEND
+        POP     AF
+        JR      DIRFBIT
+DIRFEND:
+        POP     AF
+        LD      H,B             ; kilobytes = blocks << (BSH - 3)
+        LD      L,C
+        LD      A,(IX+2)
+        SUB     3
+        JR      Z,DIRFKB
+DIRFSH:
+        ADD     HL,HL
+        DEC     A
+        JR      NZ,DIRFSH
+DIRFKB:
+        CALL    PUTDEC
+        LD      DE,FREEMSG
+        CALL    PUTSTR
+        LD      A,(CURDSK)      ; back to the current drive
+        AND     $0F
+        LD      E,A
+        LD      C,14
+        CALL    BDOS
+        JP      STARTED
+
+; Print up to B characters from HL, stopping at a space; count them in C.
+; Leaves HL after the field.
+PUTTRIM:
+        LD      A,(HL)
+        AND     $7F
+        CP      SPACE
+        JR      Z,PUTTSK
+        PUSH    BC
+        PUSH    HL
+        LD      E,A
+        CALL    PUTCHAR
+        POP     HL
+        POP     BC
+        INC     C
+PUTTSK:
+        INC     HL
+        DJNZ    PUTTRIM
+        RET
+
+; Print HL in decimal without leading zeros.
+PUTDEC:
+        LD      DE,DECTAB
+        LD      B,5             ; digits left
+        LD      C,0             ; nonzero once a digit has been printed
+PUTDL:
+        PUSH    BC
+        LD      A,(DE)
+        LD      C,A
+        INC     DE
+        LD      A,(DE)
+        INC     DE
+        PUSH    DE
+        LD      D,A
+        LD      E,C             ; DE = this power of ten
+        LD      A,'0'-1
+PUTDS:
+        INC     A
+        OR      A
+        SBC     HL,DE
+        JR      NC,PUTDS
+        ADD     HL,DE
+        POP     DE
+        POP     BC
+        CP      '0'
+        JR      NZ,PUTDO
+        BIT     0,C
+        JR      NZ,PUTDO
+        LD      A,B             ; the units digit always prints
+        CP      1
+        LD      A,'0'
+        JR      NZ,PUTDN
+PUTDO:
+        LD      C,1
+        PUSH    BC
+        PUSH    DE
+        PUSH    HL
+        LD      E,A
+        CALL    PUTCHAR
+        POP     HL
+        POP     DE
+        POP     BC
+PUTDN:
+        DJNZ    PUTDL
+        RET
+DECTAB:
+        DW      10000,1000,100,10,1
 
 PUTNAME:
         LD      A,(HL)
@@ -1012,12 +1191,14 @@ PUTCHAR:
 
 CRLFMSG:
         DB      CR,LF,'$'
-DIRSEP:
-        DB      " : ",'$'
-DIRDRV:
-        DB      ": ",'$'
 NOFILE:
         DB      "NO FILE",'$'
+FILESMSG:
+        DB      " files, ",'$'
+FILEMSG:
+        DB      " file, ",'$'
+FREEMSG:
+        DB      "K free",'$'
 DIRKEY:
         DB      "DIR",0
 TYPEKEY:
@@ -1062,6 +1243,10 @@ FCBBASE:
         DS      2
 DIRCOL:
         DS      1
+DIRNCOL:
+        DS      1
+DIRNUM:
+        DS      2
 DIRANY:
         DS      1
 DIRENTP:

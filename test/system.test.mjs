@@ -46,7 +46,7 @@ test("warm boot by ^C keeps the drive and user number", () => {
   m.command("SAVE 1 U3.COM");
   m.type("\x03");
   m.expect(/B>$/);
-  assert.match(m.command("DIR"), /U3\s+COM/);
+  assert.match(m.command("DIR"), /U3\.COM/);
   m.command("USER 0");
   assert.match(m.command("DIR"), /NO FILE/);
   noViolations(m);
@@ -95,7 +95,7 @@ test("the ROM rejects an invalid container before mounting anything", () => {
 test("a standard-capacity card (byte addressing) works", () => {
   const m = boot(standardCard(), { highCapacity: false });
   m.command("SAVE 3 SC.COM");
-  assert.match(m.command("DIR"), /SC\s+COM/);
+  assert.match(m.command("DIR"), /SC\.COM/);
   noViolations(m);
 });
 
@@ -132,8 +132,8 @@ test("text and binary files cross between the PC and TEC-OS, and survive power l
   // Power cycle: new RAM full of HALT opcodes, same card.
   m = boot(image, { ramFill: 0x76 });
   const dir = m.command("DIR");
-  assert.match(dir, /NOTES\s+OLD/);
-  assert.doesNotMatch(dir, /COPY\s+COM/);
+  assert.match(dir, /NOTES\.OLD/);
+  assert.doesNotMatch(dir, /COPY\.COM/);
   assert.match(m.command("TYPE NOTES.OLD"), /Second line/);
 
   const b = volume(image, "B");

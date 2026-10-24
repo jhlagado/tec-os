@@ -39,7 +39,7 @@ test("a damaged native stack guard is reported and the system recovers", { timeo
   const m = boot(image);
   assert.match(m.command("NATGUARD", { maxCycles: 200_000_000 }), /Native stack guard damaged/);
   assert.equal(m.sysCtrl, 0x01);
-  assert.match(m.command("DIR"), /NATGUARD TNX/);
+  assert.match(m.command("DIR"), /NATGUARD\.TNX/);
 });
 
 test("a missing or invalid native program is an unknown command", { timeout: 300_000 }, async () => {

@@ -182,6 +182,43 @@ export class Machine {
     return lines;
   }
 
+  /**
+   * The GLCD console as text: each 6 x 8 cell of the 128 x 64 graphics RAM
+   * is matched against the ROM font. Reverse cells read as their character;
+   * unknown patterns read as "?".
+   */
+  glcdScreen(cols = 21, rows = 8) {
+    const gdram = this.tec1g.state.display.glcdCtrl.glcd;
+    const font = this.sym("FONT");
+    const pixel = (x, y) => (gdram[y * 16 + (x >> 3)] >> (7 - (x & 7))) & 1;
+    const glyphs = new Map();
+    for (let code = 0x20; code < 0x80; code += 1) {
+      let key = "";
+      let rev = "";
+      for (let r = 0; r < 8; r += 1) {
+        const bits = this.read(font + (code - 0x20) * 8 + r);
+        for (let px = 0; px < 6; px += 1) {
+          const on = (bits >> (7 - px)) & 1;
+          key += on;
+          rev += on ^ 1;
+        }
+      }
+      if (!glyphs.has(key)) glyphs.set(key, String.fromCharCode(code));
+      if (!glyphs.has(rev)) glyphs.set(rev, String.fromCharCode(code));
+    }
+    const lines = [];
+    for (let row = 0; row < rows; row += 1) {
+      let line = "";
+      for (let col = 0; col < cols; col += 1) {
+        let key = "";
+        for (let r = 0; r < 8; r += 1) for (let px = 0; px < 6; px += 1) key += pixel(col * 6 + px, row * 8 + r);
+        line += glyphs.get(key) ?? "?";
+      }
+      lines.push(line.trimEnd());
+    }
+    return lines;
+  }
+
   /** The raw name-table byte at row r, column c. */
   cell(r, c, cols = 40, base = 0x0800) {
     return this.tec1g.state.display.tms9918.stateSnapshot().vram[base + r * cols + c];

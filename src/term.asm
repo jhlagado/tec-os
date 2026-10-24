@@ -2,12 +2,16 @@
 ; VWID columns by VHGT rows. Serial output is passed through untouched; the
 ; remote terminal does its own interpretation.
 ;
+; A character in the last column leaves the cursor past the edge; the line
+; wraps only when another printable character follows, as on a VT100.
+;
 ; Supported: printable ASCII, CR, LF, BS, HT (8-column stops), FF (clear and
 ; home), and these ANSI sequences: ESC [ n A/B/C/D (cursor moves), ESC [ r;c H
 ; and f (position, 1-based), ESC [ J and 2J (clear to end, clear screen),
 ; ESC [ K (clear to end of line), ESC [ 0 m and 7 m (normal, reverse). Other
 ; sequences are consumed and ignored. Characters at 80h-FFh are the reverse
-; images of 00h-7Fh, which also draws the cursor.
+; images of 00h-7Fh, which also draws the cursor. The cursor is shown only
+; while console input is awaited, so output does not pay for redrawing it.
 ;
 ; The driver supplies VIDINIT (Z when a display is present), VPUT (A at row
 ; B, column C), VGET, VSCROLL and VCLREOL (from row B, column C).
@@ -24,21 +28,25 @@ VTOUT:  CALL    CURHIDE
         JP      NC,VTDONE
         LD      HL,VATTR
         OR      (HL)
+        LD      E,A
+        LD      A,(VCOL)        ; a pending wrap happens before the character
+        LD      HL,VWID
+        CP      (HL)
+        JR      C,VTNOWR
+        XOR     A
+        LD      (VCOL),A
+        PUSH    DE
+        CALL    VTLF
+        POP     DE
+VTNOWR: LD      A,E
         LD      HL,(VROW)       ; L = row, H = column
         LD      B,L
         LD      C,H
         CALL    VPUT
-        LD      A,(VCOL)
+        LD      A,(VCOL)        ; may reach VWID: the wrap waits for the next one
         INC     A
-        LD      HL,VWID
-        CP      (HL)
-        JP      C,VTCOL
-        XOR     A
-        LD      (VCOL),A
-        CALL    VTLF
-        JP      VTDONE
 VTCOL:  LD      (VCOL),A
-VTDONE: JP      CURSHOW
+VTDONE: RET
 
 VTCTL:  CP      13
         JP      Z,VTCR
@@ -61,7 +69,11 @@ VTCR:   XOR     A
 VTLF0:  CALL    VTLF
         JP      VTDONE
 VTBS:   LD      A,(VCOL)
-        OR      A
+        LD      HL,VWID         ; from a pending wrap, back to the last column
+        CP      (HL)
+        JR      C,VTBS1
+        LD      A,(HL)
+VTBS1:  OR      A
         JP      Z,VTDONE
         DEC     A
         LD      (VCOL),A
@@ -279,7 +291,11 @@ CURHIDE:LD      A,(VCURV)
         RET     Z
         XOR     A
         LD      (VCURV),A
-CURFLIP:PUSH    BC
+CURFLIP:LD      A,(VCOL)        ; no cursor cell while a wrap is pending
+        LD      HL,VWID
+        CP      (HL)
+        RET     NC
+        PUSH    BC
         LD      HL,(VROW)
         LD      B,L
         LD      C,H

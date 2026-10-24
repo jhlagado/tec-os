@@ -26,7 +26,7 @@ test(
     let m = boot(image);
     const compile = m.command("BASIE ADVENT", { maxCycles: 3_000_000_000 });
     assert.doesNotMatch(compile, /error|Bdos Err/i, compile);
-    assert.match(m.command("DIR"), /ADVENT\s+COM/);
+    assert.match(m.command("DIR"), /ADVENT\.COM/);
     assert.deepEqual(m.violations, []);
     const cycles = m.cycles;
 

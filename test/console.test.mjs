@@ -22,7 +22,7 @@ test("the matrix keyboard and serial both type at the prompt", () => {
   m.typeMatrix("save 1 key.com\r");
   m.expect(/A>$/);
   m.command("DIR");
-  assert.match(m.screen().join("\n"), /KEY\s+COM/);
+  assert.match(m.screen().join("\n"), /KEY\.COM/);
   m.mark = m.output.length;
   m.typeMatrix("Era \"key.com\r");
   assert.match(m.expect(/A>$/), /Era "key\.com/);
@@ -61,4 +61,35 @@ test("the 20 x 4 LCD shows the banner and mounted drives", () => {
   assert.equal(row(0), "TEC-OS 0.1  TEC-1G");
   assert.equal(row(1), "A: SYSTEM");
   assert.equal(row(2), "B: WORK");
+});
+
+test("DIR lays out names to fit the display and reports free space", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "NATDEMO.TNX", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
+  const tms = boot(image, { tms: true });
+  tms.command("DIR");
+  const s = tms.screen();
+  const at = s.indexOf("A>DIR");
+  assert.deepEqual(s.slice(at + 1, at + 5), [
+    "COPY.COM     TERM.COM     PROBE.COM",
+    "NATDEMO.TNX  README.TXT   X",
+    "6 files, 1004K free",
+    "A>",
+  ]);
+  const glcd = boot(image);
+  glcd.command("DIR *.COM");
+  assert.deepEqual(glcd.glcdScreen().slice(-5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1004K free", "A>"]);
+  assert.match(tms.command("DIR B:"), /NO FILE/);
+});
+
+test("the GLCD is the console when no TMS9918 answers", () => {
+  const m = boot(standardCard(), { matrix: true });
+  assert.deepEqual(m.glcdScreen().slice(0, 6), ["", "TEC-OS 0.1 for TEC-1G", "A: SYSTEM", "B: WORK", "", "A>"]);
+  m.mark = m.output.length;
+  m.typeMatrix("save 1 g.com\r");
+  m.expect(/A>$/);
+  m.command("DIR");
+  assert.ok(m.glcdScreen().includes("G.COM"));
+  assert.deepEqual(m.violations, []);
 });

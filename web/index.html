@@ -16,6 +16,12 @@
             <option value="debug80g32">TMS9918, 32 columns</option>
           </select>
         </label>
+        <label>Display
+          <select id="display">
+            <option value="tms">TMS9918 card</option>
+            <option value="glcd">GLCD only</option>
+          </select>
+        </label>
         <button id="reset" title="Press the reset button: RAM and card keep their contents">Reset</button>
         <button id="power" title="Power cycle: RAM is lost, the card is kept">Power cycle</button>
         <button id="pause">Pause</button>
@@ -40,7 +46,7 @@
         <div class="lcd" id="lcd" aria-label="20 by 4 LCD"></div>
         <div class="row">
           <div class="leds" id="leds" aria-label="8 by 8 RGB LEDs"></div>
-          <canvas id="glcd" width="256" height="128" aria-label="128 by 64 GLCD"></canvas>
+          <canvas id="glcd" width="256" height="128" tabindex="0" aria-label="128 by 64 GLCD: click to type"></canvas>
         </div>
         <div class="latch" id="latch"></div>
       </section>

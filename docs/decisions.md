@@ -229,9 +229,10 @@ serial and one video display for output, all active together. The video
 terminal implements an ANSI subset (cursor moves, positioning, erase, reverse
 video) so programs written for ANSI terminals draw correctly on it, and the
 display's size is published at `FF09h`. The first display is the TMS9918, in
-40-column text mode or, with the `debug80g32` profile, 32-column Graphics I.
-GLCD, the 20 × 4 LCD and a V9938 in 80-column TEXT2 mode follow; the terminal
-layer takes any width and height. Details in [console.md](console.md).
+40-column text mode or, with the `debug80g32` profile, 32-column Graphics I;
+without a TMS9918 the ST7920 GLCD becomes a 21 × 8 console. The 20 × 4 LCD is
+a status display. A V9938 in 80-column TEXT2 mode follows; the terminal layer
+takes any width and height. Details in [console.md](console.md).
 
 The matrix keyboard is implemented from Debug80's documented layout, not from
 MON-3 source, because MON-3 is GPL-2.0 and TEC-OS is GPL-3.0-or-later.
@@ -271,6 +272,19 @@ Programs reach a card the way they reach a Triptych disk: a
 byte count and SHA-256, the volumes to create and the drive for each file.
 `tecvol recipe` fetches and verifies every file and builds a fresh card.
 `npm run media` writes the starter recipe and card.
+
+## D19 Command processor improvements — Adopted 2026-10-25
+
+TEC-OS improves its own adapted CCP rather than keeping Portable CP/M's
+output byte for byte. Listings follow the console: `DIR` prints compact
+`NAME.EXT` entries in 13-character columns, as many as fit the width
+published at `FF09h` (80 when the console is serial only): 6 columns at 80,
+3 at 40, 2 at 32, 1 on the 21-column GLCD. It hides system files as before
+and ends with the file count and the free space on the listed drive.
+
+`DIR` does not sort, because the CCP has no buffer outside the TPA, and the
+CP/M habit of `SAVE`ing memory a program left behind means built-in commands
+must not touch the TPA.
 
 ## Open decisions
 

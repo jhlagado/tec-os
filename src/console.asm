@@ -67,11 +67,22 @@ CSTYES: LD      A,$FF
 ; NUL is not delivered (Debug80 sends one ahead of its first input byte).
 BCONIN: LD      A,(RXFULL)
         OR      A
-        JR      Z,CINLP
+        JR      NZ,CINTAKE
+        LD      A,(CONDEV)      ; the video cursor shows only while waiting
+        AND     CDVID
+        CALL    NZ,CURSHOW
+        CALL    CINLP
+        PUSH    AF
+        LD      A,(CONDEV)
+        AND     CDVID
+        CALL    NZ,CURHIDE
+        POP     AF
+        RET
 CINTAKE:XOR     A
         LD      (RXFULL),A
         LD      A,(RXCHAR)
         RET
+; Wait for a character from either input device.
 CINLP:  LD      E,KBEVERY
 CINWT:  IN      A,(KEYPORT)
         IN      A,(STSPORT)

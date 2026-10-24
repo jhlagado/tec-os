@@ -37,6 +37,17 @@ MNTEND: DS      4*8             ; exclusive end block of each descriptor
 
 ; ---- Video terminal ---------------------------------------------------------
 LINEBUF:DS      80              ; one display row, for scrolling
+VPUTV:  DS      2               ; driver vectors set by VIDINIT
+VGETV:  DS      2
+VCLRV:  DS      2
+VSCRV:  DS      2
+
+; ---- GLCD text console --------------------------------------------------------
+GLTEXT: DS      GLCOLS*GLROWS   ; characters on screen, row by row
+GLY:    DS      1               ; pixel row being drawn, 0-63
+GLW:    DS      1               ; 16-pixel word being drawn, 0-7
+GLROWP: DS      2               ; GLTEXT address of the text row being drawn
+GLOFF:  DS      1               ; pixel offset of a character within the word
 
 ; ---- Matrix keyboard scan state ----------------------------------------------
 KBMASK: DS      1               ; row select for the next row, one bit low

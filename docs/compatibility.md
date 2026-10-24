@@ -26,7 +26,9 @@ with their documented conventions; 38 and 39 return zero, and functions above
 ## Command processor
 
 `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the
-syntax of the CP/M 2.2 CCP. `SUBMIT` and batch files are not supported. When
+syntax of the CP/M 2.2 CCP. `DIR`'s output is TEC-OS's own: `NAME.EXT`
+columns that fit the display, then the file count and free space (decision
+D19). Programs that parse DR's `DIR` layout will not find it. `SUBMIT` and batch files are not supported. When
 no `NAME.COM` exists the CCP runs `NAME.TNX`, a native program.
 
 ## Base page

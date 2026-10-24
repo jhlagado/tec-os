@@ -188,7 +188,7 @@ pre:focus {
 #glcd {
   background: #c8d8f0;
   border-radius: 4px;
-  width: 256px;
+  width: 384px;
   max-width: 100%;
   image-rendering: pixelated;
 }

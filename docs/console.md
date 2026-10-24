@@ -11,7 +11,7 @@ console either way.
 | Matrix keyboard | in | the board's Matrix configuration switch (port 03h bit 0) is on | Implemented |
 | TMS9918/TMS9929, 40 × 24 text | out | the card answers at ports BEh/BFh | Implemented |
 | TMS9918/TMS9929, 32 × 24 Graphics I | out | as above, with the `debug80g32` profile | Implemented |
-| ST7920 GLCD, 128 × 64 | out | — | Planned |
+| ST7920 GLCD, 128 × 64 as 21 × 8 | out | when no TMS9918 answers and the controller's busy flag clears | Implemented |
 | HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
 | V9938, 80 × 24 TEXT2 | out | — | Planned; needs Debug80 emulation first |
 
@@ -33,9 +33,29 @@ subset:
 | `ESC [ K` | Clear to the end of the line |
 | `ESC [ 7 m`, `ESC [ 0 m` | Reverse video on; off |
 
-Other escape sequences are read and ignored. Characters 80h–FFh in the
-display's pattern table are reverse images of 00h–7Fh; the cursor is drawn as
-the reverse image of the cell under it.
+Other escape sequences are read and ignored. Characters 80h–FFh are reverse
+images of 00h–7Fh. The cursor is the reverse image of the cell under it and
+is shown only while TEC-OS waits for console input, so output never pays for
+redrawing it. A character written in the last column leaves the cursor past
+the edge; the line wraps only when another printable character follows, as
+on a VT100, so a full-width line followed by CR LF does not leave a blank
+line.
+
+## Choosing the display
+
+At cold boot TEC-OS uses the TMS9918 when VRAM answers at ports BEh/BFh, and
+otherwise the GLCD when its busy flag clears. The terminal reaches the chosen
+display through four driver vectors (put, get, clear to end of line, scroll),
+so another display needs only those four routines and an initialiser.
+
+## GLCD
+
+The ST7920 runs in its extended instruction set with graphics on. TEC-OS
+keeps the 168 characters on screen in RAM and draws each 16-pixel graphics
+word by composing the glyph rows of the two to four 6-pixel cells that
+overlap it, so no 1 KiB pixel buffer is needed. Writing a character redraws
+the words its cell touches; scrolling redraws the screen, about 0.25 s at
+4 MHz. Every access waits for the busy flag, bounded at 256 polls.
 
 The display size is published in the ABI table at `FF00h` (word at `FF09h`
 points to columns, then rows), so programs such as an editor can lay out
