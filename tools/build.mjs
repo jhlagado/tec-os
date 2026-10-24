@@ -143,11 +143,18 @@ function check(condition, message) {
   if (!condition) throw new Error(`placement check failed: ${message}`);
 }
 
+// The resident workspace does not depend on the profile, so one probe
+// assembly sizes it for every profile.
+let workspaceBytes;
+
 async function buildProfile(name) {
   const profile = { name, ...PROFILES[name] };
-  writeGenerated(profile, 0x8000);
-  const probe = await assemble();
-  const workspace = need(probe.symbols, "WSEND") - 0x8000;
+  if (workspaceBytes === undefined) {
+    writeGenerated(profile, 0x8000);
+    const probe = await assemble();
+    workspaceBytes = need(probe.symbols, "WSEND") - 0x8000;
+  }
+  const workspace = workspaceBytes;
   const tpatop = (0xc000 - workspace) & 0xff00;
   const serial = writeGenerated(profile, tpatop);
   const { result, d8, symbols } = await assemble();
@@ -165,7 +172,8 @@ async function buildProfile(name) {
   check(at("INT38") === 0xc038, "INT38 must be at C038h");
   check(at("NMIROM") === 0xc066, "NMIROM must be at C066h");
   check(at("COLD") < 0xc800, "cold boot entry must be inside the overlay window");
-  check(at("CODEEND") <= 0x10000, "code overruns the ROM");
+  check(at("CODEEND") <= at("ABITAB"), "code overruns the native ABI table at FF00h");
+  check(at("ABITAB") === 0xff00, "ABI table must be at FF00h");
   check(at("WSBASE") === tpatop + 0x100 + 51, "workspace starts after the RAM BIOS table");
   check(at("WSEND") <= 0xc000, `workspace ends at ${hex(at("WSEND"))}`);
   check(at("RAMBIOS") % 256 === 0, "RAM BIOS table must be page aligned");
@@ -185,8 +193,8 @@ async function buildProfile(name) {
     serial,
     rom: {
       bytes: ROM_SIZE,
-      used: at("CODEEND") - ROM_START,
-      free: 0x10000 - at("CODEEND"),
+      used: at("CODEEND") - ROM_START + (at("ABIEND") - at("ABITAB")),
+      free: at("ABITAB") - at("CODEEND") + (0x10000 - at("ABIEND")),
       regions: [
         ["vectors and boot", at("RESET"), at("BIOSBAS")],
         ["BIOS", at("BIOSBAS"), at("CONINIT")],
@@ -197,7 +205,8 @@ async function buildProfile(name) {
         ["diagnostics", at("DIAG"), at("CCPBAS")],
         ["CCP", at("CCPBAS"), at("CCPROM")],
         ["BDOS", at("BDOSBAS"), at("BDOSROM")],
-        ["tail", at("BDOSROM"), at("CODEEND")],
+        ["native ABI", at("SETBANK"), at("CODEEND")],
+        ["ABI table", at("ABITAB"), at("ABIEND")],
       ].map(([label, start, end]) => ({ label, start, end, bytes: end - start })),
     },
     ram: {

@@ -13,4 +13,6 @@
 %INCLUDE "cpm/ccp.asm"
 %INCLUDE "cpmlink.asm"
 %INCLUDE "cpm/bdos.asm"
+%INCLUDE "native.asm"
 %INCLUDE "end.asm"
+%INCLUDE "abi.asm"

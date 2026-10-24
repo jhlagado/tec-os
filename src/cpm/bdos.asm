@@ -595,6 +595,7 @@ MAKECOPY:
         JR      C,MAKEUSED
         LD      HL,(SRCHIDX)
         LD      (DIRUSED),HL
+        CALL    DUSAVE
 
 MAKEUSED:
         CALL    WRITEDIR
@@ -1692,7 +1693,8 @@ LOGOK:
         LD      (ALVPTR),DE
 
         POP     AF
-        CALL    Z,INITALV
+        JR      NZ,LOGFAST
+        CALL    INITALV
         CALL    DRVMASK
         EX      DE,HL
         LD      HL,(LOGINV)
@@ -1731,7 +1733,7 @@ DIRSCAN:
         LD      HL,(DIRLEFT)
         LD      A,H
         OR      L
-        RET     Z
+        JR      Z,DUSAVE
         CALL    READDIR
         CALL    PARDIR
 
@@ -1739,6 +1741,41 @@ DIRSCAN:
         DEC     HL
         LD      (DIRLEFT),HL
         JR      DIRSCAN
+
+; TEC-OS: a drive that is already logged in keeps its allocation vector, so
+; only its directory high-water mark is restored, from the third DPH scratch
+; word where DR's BDOS keeps the same value. DIRCNT covers every entry, as it
+; does after a full scan.
+LOGFAST:
+        CALL    DUPTR
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        LD      (DIRUSED),DE
+        LD      HL,(DPBPTR)
+        LD      BC,7
+        ADD     HL,BC
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        INC     DE
+        LD      (DIRCNT),DE
+        JP      NEWSRCH
+
+; Record DIRUSED for the current drive in its DPH.
+DUSAVE:
+        CALL    DUPTR
+        LD      DE,(DIRUSED)
+        LD      (HL),E
+        INC     HL
+        LD      (HL),D
+        RET
+
+DUPTR:
+        LD      HL,(DPHPTR)
+        LD      BC,6
+        ADD     HL,BC
+        RET
 
 ; Clear the BIOS-owned allocation vector and copy the reserved-directory
 ; bits supplied by the selected drive's DPB.

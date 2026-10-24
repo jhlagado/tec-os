@@ -26,3 +26,10 @@ Changes made for ROM residency in TEC-OS:
 - The CCP now keeps the CP/M 2.2 user/drive byte at `0004h` (user in bits 4–7)
   through `SAVEDU`, restores the user number on entry, and masks the user bits
   when printing the drive in `DIR`.
+- `LOGIN` no longer rescans the directory when the BDOS rebinds a drive that
+  is already logged in. Portable CP/M rescanned on every change of drive,
+  which is correct but cost 32 SD block reads per switch on an 8 MiB volume.
+  The directory high-water mark `DIRUSED` is now kept per drive in the third
+  DPH scratch word (`DUSAVE`, `LOGFAST`), as DR's BDOS keeps its equivalent.
+  The allocation vector was already per drive and is maintained by the BDOS
+  between logins.

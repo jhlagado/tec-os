@@ -33,10 +33,12 @@ CCPENT:
         RRCA
         RRCA
         AND     $0F
+        PUSH    AF
+        LD      C,13
+        CALL    BDOS
+        POP     AF
         LD      E,A
         LD      C,32
-        CALL    BDOS
-        LD      C,13
         CALL    BDOS
         LD      A,(BOOTDRV)
         OR      A
@@ -169,7 +171,7 @@ NOTDRIVE:
         LD      A,'M'
         LD      (CMDFCB+11),A
         CALL    LOADCOM
-        JR      C,BADCMD
+        JR      C,TRYTNX
         CALL    PREPPAGE
         ; Keep the return word outside default DMA ($0080..$00FF). The
         ; resident stack supplies 46 free bytes beneath this two-byte word.
@@ -177,6 +179,25 @@ NOTDRIVE:
         LD      HL,WBOOT
         PUSH    HL
         JP      TPA
+
+; No runnable NAME.COM: try NAME.TNX, a TEC-OS native program. NATRUN
+; returns only when that file is missing or invalid.
+TRYTNX:
+        LD      A,'T'
+        LD      (CMDFCB+9),A
+        LD      A,'N'
+        LD      (CMDFCB+10),A
+        LD      A,'X'
+        LD      (CMDFCB+11),A
+        LD      HL,CMDFCB+12
+        LD      B,24
+TNXCLR:
+        LD      (HL),0
+        INC     HL
+        DJNZ    TNXCLR
+        CALL    PREPPAGE
+        LD      DE,CMDFCB
+        CALL    NATRUN
 
 BADCMD:
         LD      HL,(CMDSTRT)
