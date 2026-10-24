@@ -1,0 +1,122 @@
+; Reset, interrupt vectors, cold boot and warm boot.
+;
+; At reset the latch is 00h, so the first 2 KiB of this image also appear at
+; 0000h. The CPU starts there, loads SP with fixed RAM, then jumps to the same
+; code at its C000h alias before removing the overlay. TEC-OS never writes
+; 0000h-07FFh while the overlay is on.
+
+        ORG     $C000
+RESET:  LD      SP,BOOTSTK
+        DI
+        JP      COLD
+
+        DS      RST7-($-$C000),$FF
+        ; RST 38h while the overlay is on. Interrupts stay disabled, so this
+        ; runs only if a program executes RST 38h; it returns at once.
+INT38:  EI
+        RETI
+
+        DS      NMIVEC-($-$C000),$FF
+        ; NMI while the overlay is on: return with no stack use beyond the
+        ; return address the CPU pushed.
+NMIROM: RETN
+
+ROMSIG: DB      "TEC-OS",0
+ROMVERS:DW      ROMVER
+
+; ---- Cold boot ----------------------------------------------------------------
+; Entered from RESET (stack in fixed RAM) or BIOS function 0.
+COLD:   DI
+        LD      SP,BOOTSTK
+        LD      A,LATCLAS
+        OUT     (SYSLAT),A      ; overlay off, classic bank; execution is at C0xxh
+        IM      1
+        LD      HL,0            ; clear page zero, then record the latch
+        LD      DE,1
+        LD      BC,$FF
+        LD      (HL),L
+        LDIR
+        LD      A,LATCLAS
+        LD      (LATCHV),A
+        LD      HL,TPATOP       ; clear the resident workspace
+        LD      DE,TPATOP+1
+        LD      BC,(WSCLRN)
+        LD      (HL),0
+        LDIR
+        LD      SP,BSTK
+        CALL    CONINIT
+        LD      HL,BANNER
+        CALL    PUTS
+COLDRT: CALL    SDINIT
+        JR      NZ,COLDERR
+        CALL    MOUNT
+        JR      NZ,COLDERR
+        CALL    SHOWVOL
+        XOR     A               ; drive A, user 0
+        LD      (PZDU),A
+        JP      WBOOTR
+COLDERR:JP      DIAG
+
+; ---- Warm boot ----------------------------------------------------------------
+; BIOS function 1 and the JP at 0000h. Select the classic bank before the
+; stack, because the BIOS stack is in that bank.
+WBOOTR: DI
+        LD      A,LATCLAS
+        LD      (LATCHV),A
+        OUT     (SYSLAT),A
+        XOR     A
+        LD      (CURBANK),A
+        LD      (OSMODE),A
+        LD      SP,BSTK
+        CALL    PZINIT
+        CALL    CPMINIT
+        LD      A,(PZDU)
+        LD      C,A
+        JP      CCPENT
+
+; Rebuild the classic page-zero vectors, BDOS stub and RAM BIOS table.
+; IOBYTE and the drive/user byte are left alone.
+PZINIT: LD      A,$C3
+        LD      ($0000),A
+        LD      HL,RAMBIOS+3
+        LD      ($0001),HL
+        LD      (PZBDOS),A
+        LD      HL,BDOSSTB
+        LD      (PZBDOS+1),HL
+        LD      (BDOSSTB),A
+        LD      HL,BENTRY
+        LD      (BDOSSTB+1),HL
+        LD      HL,BIOSBAS
+        LD      DE,RAMBIOS
+        LD      BC,BIOSLEN
+        LDIR
+        LD      HL,$4DED        ; RETI after EI at 0038h
+        LD      (RST7+1),HL
+        LD      A,$FB
+        LD      (RST7),A
+        LD      HL,$45ED        ; RETN at 0066h
+        LD      (NMIVEC),HL
+        RET
+
+; Reset the CCP and BDOS writable state as a fresh disk load would, and
+; forget the deblocking buffer so a changed card is reread.
+CPMINIT:LD      HL,CCPRAM
+        LD      DE,CCPRAM+1
+        LD      BC,(CPMCLRN)
+        LD      (HL),0
+        LDIR
+        LD      HL,DEFDMA
+        LD      (CURDMA),HL
+        LD      A,127
+        LD      (CMDBUF),A
+        LD      HL,STKGUARD
+        LD      A,(GUARDN)
+        LD      B,A
+CPMIG:  LD      (HL),$A5
+        INC     HL
+        DJNZ    CPMIG
+        XOR     A
+        LD      (BUFOK),A
+        RET
+
+BANNER: DB      13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0

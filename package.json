@@ -1,0 +1,23 @@
+{
+  "name": "tec-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ROM-resident CP/M 2.2 compatible operating system for the TEC-1G",
+  "license": "GPL-3.0-or-later",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "tecvol": "tools/tecvol.mjs"
+  },
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "test": "node --test test/",
+    "check": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "@jhlagado/debug80-runtime": "0.2.0",
+    "atom-z80": "0.3.7"
+  }
+}

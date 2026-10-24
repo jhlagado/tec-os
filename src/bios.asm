@@ -1,0 +1,221 @@
+; CP/M 2.2 BIOS. The ROM table below is the one the BDOS calls; warm boot
+; copies it to RAMBIOS so programs that follow the vector at 0001h find a
+; page-aligned table in RAM.
+;
+; Disk records map to volumes linearly: record = track * 64 + sector. Every
+; version 1 geometry has 64 records per track and no reserved tracks; the
+; build checks this against format.json. Four records share one 512-byte SD
+; block. Writes go through to the card before success is reported.
+
+BIOSBAS:JP      COLD            ; 00 cold boot
+        JP      WBOOTR          ; 03 warm boot
+        JP      BCONST          ; 06
+        JP      BCONIN          ; 09
+        JP      BCONOUT         ; 0C
+        JP      BLIST           ; 0F
+        JP      BPUNCH          ; 12
+        JP      BREADER         ; 15
+        JP      BHOME           ; 18
+        JP      BSELDSK         ; 1B
+        JP      BSETTRK         ; 1E
+        JP      BSETSEC         ; 21
+        JP      BSETDMA         ; 24
+        JP      BREAD           ; 27
+        JP      BWRITE          ; 2A
+        JP      BLISTST         ; 2D
+        JP      BSECTRN         ; 30
+
+BHOME:  LD      BC,0
+BSETTRK:LD      (DSKTRK),BC
+        RET
+BSETSEC:LD      (DSKSEC),BC
+        RET
+BSETDMA:LD      (DSKDMA),BC
+        RET
+BSECTRN:LD      H,B             ; no skew
+        LD      L,C
+        RET
+
+; C = drive. Returns HL = DPH, or 0 when the drive has no mounted volume.
+BSELDSK:LD      A,C
+        CP      MAXDRV
+        JR      NC,SELBAD
+        CALL    DRVENT
+        LD      A,(HL)          ; HL points at the geometry byte
+        OR      A
+        JR      Z,SELBAD
+        LD      A,C
+        LD      (DSKCUR),A
+        LD      L,A             ; HL = DPHTAB + 16 * drive
+        LD      H,0
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        LD      DE,DPHTAB
+        ADD     HL,DE
+        RET
+SELBAD: LD      HL,0
+        RET
+
+; A = drive. Returns HL = address of its drive-table geometry byte (offset 6),
+; and preserves BC.
+DRVENT: ADD     A,A
+        ADD     A,A
+        ADD     A,A
+        ADD     A,6
+        LD      E,A
+        LD      D,0
+        LD      HL,DRVTAB
+        ADD     HL,DE
+        RET
+
+; Translate DSKTRK/DSKSEC on DSKCUR into BLKOFF, BLKSLOT and SDLBA. Returns Z
+; when the record lies inside the volume.
+MAPREC: LD      HL,(DSKSEC)
+        LD      A,H
+        OR      A
+        JR      NZ,MAPBAD
+        LD      A,L
+        CP      64
+        JR      NC,MAPBAD
+        LD      HL,(DSKTRK)
+        LD      A,H             ; tracks above 1023 overflow 16-bit records
+        CP      4
+        JR      NC,MAPBAD
+        ADD     HL,HL           ; record = track * 64 + sector
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        LD      A,(DSKSEC)
+        OR      L
+        LD      L,A
+        AND     3
+        LD      (BLKSLOT),A
+        SRL     H               ; block = record / 4
+        RR      L
+        SRL     H
+        RR      L
+        LD      (BLKOFF),HL
+        LD      A,(DSKCUR)      ; compare with the volume length
+        CALL    DRVENT
+        DEC     HL
+        LD      D,(HL)
+        DEC     HL
+        LD      E,(HL)          ; DE = length in blocks
+        PUSH    HL
+        LD      HL,(BLKOFF)
+        OR      A
+        SBC     HL,DE
+        POP     HL
+        JR      NC,MAPBAD
+        DEC     HL              ; HL -> start block byte 3
+        LD      DE,SDLBA+3
+        LD      BC,(BLKOFF)
+        LD      A,(HL)          ; SDLBA = start + block, little-endian
+        DEC     HL
+        LD      (DE),A
+        DEC     DE
+        LD      A,(HL)
+        DEC     HL
+        LD      (DE),A
+        DEC     DE
+        LD      A,(HL)
+        DEC     HL
+        LD      (DE),A
+        DEC     DE
+        LD      A,(HL)
+        LD      (DE),A          ; SDLBA now holds the start block
+        LD      HL,(SDLBA)
+        ADD     HL,BC
+        LD      (SDLBA),HL
+        LD      HL,(SDLBA+2)
+        LD      BC,0
+        ADC     HL,BC
+        LD      (SDLBA+2),HL
+        XOR     A
+        RET
+MAPBAD: OR      1
+        RET
+
+; Make BLKBUF hold the mapped block. Returns Z on success.
+GETBLK: LD      A,(BUFOK)
+        OR      A
+        JR      Z,GETRD
+        LD      A,(BUFDRV)
+        LD      B,A
+        LD      A,(DSKCUR)
+        CP      B
+        JR      NZ,GETRD
+        LD      HL,(BUFBLK)
+        LD      DE,(BLKOFF)
+        OR      A
+        SBC     HL,DE
+        RET     Z
+GETRD:  XOR     A
+        LD      (BUFOK),A
+        LD      HL,BLKBUF
+        CALL    SDREAD
+        RET     NZ
+        LD      A,(DSKCUR)
+        LD      (BUFDRV),A
+        LD      HL,(BLKOFF)
+        LD      (BUFBLK),HL
+        LD      A,1
+        LD      (BUFOK),A
+        XOR     A
+        RET
+
+; HL = address of the mapped 128-byte record inside BLKBUF.
+SLOTADR:LD      A,(BLKSLOT)
+        RRCA                    ; A * 128 as a 16-bit offset
+        LD      H,A
+        AND     $80
+        LD      L,A
+        LD      A,H
+        AND     $01
+        LD      H,A
+        LD      DE,BLKBUF
+        ADD     HL,DE
+        RET
+
+; BIOS READ: copy the record to DSKDMA. A = 0 on success, 1 on error.
+BREAD:  CALL    MAPREC
+        JR      NZ,DSKERR
+        CALL    GETBLK
+        JR      NZ,DSKERR
+        CALL    SLOTADR
+        LD      DE,(DSKDMA)
+        LD      BC,128
+        LDIR
+        XOR     A
+        RET
+DSKERR: LD      A,1
+        RET
+
+; BIOS WRITE: merge the record into its block and write the block through.
+; The write type in C is not used: every partial block is read first.
+BWRITE: CALL    MAPREC
+        JR      NZ,DSKERR
+        LD      A,(DSKCUR)      ; read-only volumes refuse before any change
+        CALL    DRVENT
+        INC     HL
+        BIT     0,(HL)
+        JR      NZ,DSKERR
+        CALL    GETBLK
+        JR      NZ,DSKERR
+        CALL    SLOTADR
+        EX      DE,HL
+        LD      HL,(DSKDMA)
+        LD      BC,128
+        LDIR
+        LD      HL,BLKBUF
+        CALL    SDWRITE
+        JR      Z,BWOK
+        XOR     A               ; the buffer no longer matches the card
+        LD      (BUFOK),A
+        JR      DSKERR
+BWOK:   XOR     A
+        RET

@@ -1,0 +1,55 @@
+{
+  "formatVersion": { "major": 1, "minor": 0 },
+  "blockBytes": 512,
+  "header": {
+    "magic": "TECOSVOL",
+    "bytes": 512,
+    "fields": {
+      "magic": { "offset": 0, "size": 8 },
+      "major": { "offset": 8, "size": 1 },
+      "minor": { "offset": 9, "size": 1 },
+      "headerBytes": { "offset": 10, "size": 2 },
+      "descriptorBytes": { "offset": 12, "size": 2 },
+      "volumeCount": { "offset": 14, "size": 2 },
+      "containerBlocks": { "offset": 16, "size": 4 },
+      "checksum": { "offset": 20, "size": 2 },
+      "reserved": { "offset": 22, "size": 10 }
+    },
+    "descriptorsOffset": 32,
+    "maxVolumes": 8
+  },
+  "descriptor": {
+    "bytes": 32,
+    "fields": {
+      "volumeId": { "offset": 0, "size": 4 },
+      "startBlock": { "offset": 4, "size": 4 },
+      "lengthBlocks": { "offset": 8, "size": 4 },
+      "geometry": { "offset": 12, "size": 1 },
+      "flags": { "offset": 13, "size": 1 },
+      "mount": { "offset": 14, "size": 1 },
+      "reserved0": { "offset": 15, "size": 1 },
+      "label": { "offset": 16, "size": 11 },
+      "reserved1": { "offset": 27, "size": 5 }
+    },
+    "flags": { "readOnly": 1 },
+    "unmounted": 255,
+    "startAlignBlocks": 8
+  },
+  "maxDrives": 4,
+  "geometries": [
+    {
+      "id": 1,
+      "name": "G8M",
+      "description": "8 MiB, 4 KiB allocation blocks, 512 directory entries",
+      "payloadBlocks": 16384,
+      "dpb": { "spt": 64, "bsh": 5, "blm": 31, "exm": 1, "dsm": 2047, "drm": 511, "al0": 240, "al1": 0, "cks": 0, "off": 0 }
+    },
+    {
+      "id": 2,
+      "name": "G1M",
+      "description": "1 MiB, 2 KiB allocation blocks, 256 directory entries",
+      "payloadBlocks": 2048,
+      "dpb": { "spt": 64, "bsh": 4, "blm": 15, "exm": 0, "dsm": 511, "drm": 255, "al0": 240, "al1": 0, "cks": 0, "off": 0 }
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+; TEC-OS memory and port contract.
+;
+; Fixed RAM is 0000h-7FFFh, the bank window is 8000h-BFFFh and ROM is
+; C000h-FFFFh. TPATOP comes from the generated configuration: it is the
+; page-aligned boundary between the classic transient program area and the
+; resident workspace at the top of the classic bank.
+
+; ---- Ports ----------------------------------------------------------------
+KEYPORT EQU     $00             ; keypad encoder; read pumps Debug80 serial RX
+DIGPORT EQU     $01             ; bit 6 serial TX, bits 0-5 digit select
+STSPORT EQU     $03             ; status input; bit 7 serial RX
+SDIO    EQU     $FD             ; SD SPI: bit 0 MOSI, 1 CLK, 2 /CS; in bit 7 MISO
+SYSLAT  EQU     $FF             ; write-only system latch
+
+; ---- System latch values ----------------------------------------------------
+LATSHAD EQU     $01             ; /SHADOW high: boot overlay removed
+LATKEEP EQU     $83             ; bits preserved by bank changes (/SHADOW, PROTECT, CAPS)
+LATEXP  EQU     $04             ; EXPAND: window shows an expansion bank
+LATCLAS EQU     LATSHAD         ; classic profile: overlay off, base window
+
+; ---- Page zero (CP/M 2.2 base page) -----------------------------------------
+IOBYTE  EQU     $0003
+PZDU    EQU     $0004           ; user number (bits 4-7) and drive (bits 0-3)
+PZBDOS  EQU     $0005           ; JP to the BDOS stub
+RST7    EQU     $0038
+NMIVEC  EQU     $0066
+DEFDMA  EQU     $0080
+
+; CP/M reserves 0040h-004Fh for BIOS scratch. TEC-OS keeps the state that must
+; stay visible whatever the bank window shows here.
+LATCHV  EQU     $0040           ; shadow copy of the system latch
+OSMODE  EQU     $0041           ; 0 classic, 1 native
+RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
+RXCHAR  EQU     $0043
+CURBANK EQU     $0044           ; logical bank shown in the window
+
+; ---- Classic resident region (top of the classic bank) ----------------------
+BOOTSTK EQU     $8000           ; cold-boot stack top, fixed RAM
+STUBPG  EQU     TPATOP          ; stub page: BDOS entry at +6
+BDOSSTB EQU     TPATOP+6        ; value stored at 0006h
+RAMBIOS EQU     TPATOP+$100     ; page-aligned RAM copy of the BIOS jump table
+BIOSLEN EQU     17*3
+WSBASE  EQU     RAMBIOS+BIOSLEN ; first resident workspace byte
+
+; ---- Native profile fixed RAM -------------------------------------------------
+NKSTATE EQU     $0100           ; kernel state, 256 bytes
+NOSSTKB EQU     $0200           ; OS stack 0200h-02FFh
+NOSSTK  EQU     $0300
+NAPSTKB EQU     $0300           ; application stack 0300h-04FFh
+NAPSTK  EQU     $0500
+NXBUF   EQU     $0500           ; bank-copy bounce buffer, 256 bytes
+NXBUFSZ EQU     $0100
+NAPBASE EQU     $0600           ; native application fixed area 0600h-7FFFh
+NAPEND  EQU     $8000
+
+; ---- Disk geometry limits ---------------------------------------------------
+MAXDRV  EQU     4               ; drives A-D
+ALVSZ   EQU     256             ; allocation vector bytes per drive (DSM <= 2047)
+DPHSZ   EQU     16
+DRVESZ  EQU     8               ; drive table entry size
