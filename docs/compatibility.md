@@ -56,7 +56,7 @@ The user number survives warm boot.
 | --- | --- | --- | --- |
 | BASIE compiler and BLINK linker | Basie release disk, SHA-256 `7d70f1c0…` | Runs | Compiles and links `ADVENT.BSI`; the result runs after a power cycle |
 | Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file at 40 × 24 (TMS9918) and 21 × 8 (GLCD), sizing itself from `FF09h`; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`) |
-| ATOM.COM | build that sizes its workspace from `0006h` | Not yet run here | Needs the BDOS at `78C4h` or higher |
+| ATOM.COM | build that sizes its workspace from `0006h` | Runs | Assembles `HELLO.ASM` into `HELLO.COM` on TEC-OS, which then runs (`test/atom.test.mjs`); needs the BDOS at `78C4h` or higher |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
 | EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |
 

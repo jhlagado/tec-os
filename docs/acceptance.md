@@ -43,6 +43,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | TYPE and DIR pause per screen on 8 and 24 rows, count wrapped lines, stop on Q | `console` | Emulator | Pass |
 | — | Matrix arrow keys arrive as ANSI cursor sequences | `console` | Emulator | Pass |
 | — | Edit edits, saves and reopens on TMS9918 40 × 24 and GLCD 21 × 8, and on Triptych CP/M 2.2 80 × 24 | `edit` | Emulator | Pass with the configurable Edit build |
+| — | ATOM assembles a program on TEC-OS and it runs | `atom` | Emulator | Pass with the ATOM build that sizes itself from `0006h` |
 | — | Web page: boot, TMS9918 text and Graphics I screens, matrix typing, TERM | Browser check, 2026-10-25 | Emulator in a browser | Pass; not automated |
 | M5 | Reproducible image, size census, compatibility matrix, instructions | `npm run build`, `npm run media`; [memory-map.md](memory-map.md), [compatibility.md](compatibility.md) | Host | Done |
 
