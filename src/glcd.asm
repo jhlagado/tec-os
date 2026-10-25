@@ -79,6 +79,20 @@ GLCZB:  XOR     A
 ; Basic set, display on, clear text, extended set, graphics on.
 GLCSEQ: DB      $30,$0C,$01,$34,$36
 
+; Warm boot through VREST: put the controller back in graphics mode with the
+; display on. Graphics RAM keeps whatever a program drew until the console
+; next writes over it.
+GLCRST: CALL    GLCWAIT
+        RET     NZ
+        LD      HL,GLCMOD
+        LD      B,4
+GLCRSL: LD      A,(HL)
+        CALL    GLCC
+        INC     HL
+        DJNZ    GLCRSL
+        RET
+GLCMOD: DB      $30,$0C,$34,$36
+
 ; HL = GLTEXT address of row B, column C. Preserves BC, DE.
 GLCADR: PUSH    DE
         LD      HL,GLTEXT

@@ -192,12 +192,21 @@ PUTNIB: AND     $0F
 
 ; List, punch and reader devices are not fitted. Output is discarded and the
 ; reader returns end of file, so programs do not hang.
-BLIST:
-BPUNCH: RET
+BLIST:  RET
 BLISTST:LD      A,$FF
         RET
-BREADER:LD      A,$1A
-        RET
+
+; BIOS PUNCH and READER are the serial port, eight bits, whatever the console
+; routing. A byte the console has already taken stays with the console.
+BPUNCH: LD      A,C
+        JP      TXBYTE
+BREADER:
+BRDWT:  IN      A,(KEYPORT)
+        IN      A,(STSPORT)
+        RLCA
+        JR      C,BRDWT
+        CALL    RXBITS
+BRDRX:  RET
 
 ; ---- Matrix keyboard ------------------------------------------------------------
 

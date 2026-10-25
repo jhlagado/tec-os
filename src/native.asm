@@ -33,6 +33,7 @@ NEFUNC  EQU     7               ; BDOS function not offered
 NEPTR   EQU     8               ; buffer outside fixed RAM
 NEHDR   EQU     9               ; bad .TNX header
 NELOAD  EQU     10              ; .TNX image does not fit or cannot be read
+NEMODE  EQU     11              ; called from a CP/M program, not a native one
 
 NDEPTH  EQU     8               ; bank-call frames
 
@@ -97,7 +98,17 @@ SETB1:  POP     BC
 ; status with Z set on success; results as each service documents. IX, IY and
 ; the alternate registers are preserved; BC, DE and HL are results or are
 ; destroyed.
-NATSVC: LD      (NARGA),A
+NATSVC: PUSH    AF              ; a CP/M program owns 0100h-0500h, where the
+        LD      A,(OSMODE)      ; arguments and the OS stack go: refuse before
+        OR      A               ; touching them, with carry set as BANKCALL
+        JR      NZ,NATSVN       ; reports its errors
+        POP     AF
+        LD      A,NEMODE
+        OR      A
+        SCF
+        RET
+NATSVN: POP     AF
+        LD      (NARGA),A
         LD      A,B
         LD      (NARGB),A
         LD      (NARGDE),DE

@@ -41,13 +41,20 @@ Warm boot at `0000h`, BDOS vector at `0005h` (target `B406h`), IOBYTE at
 `0001h`. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
 The user number survives warm boot.
 
+Warm boot puts the video display back into its console mode: on the
+PICO9918 it reloads registers 0–7 and the font, and on the GLCD it turns the
+display and graphics back on. What a program left on the screen stays until
+the console writes over it. The restore costs 143,044 T-states (36 ms) per
+warm boot on the PICO9918 and 1,447 on the GLCD.
+
 ## Devices
 
 | Device | Behaviour |
 | --- | --- |
 | Console | Serial and matrix keyboard in; serial and video out ([console.md](console.md)) |
-| List, punch | Output discarded; `LISTST` reports ready |
-| Reader | Returns `1Ah` (end of file) |
+| List | Output discarded; `LISTST` reports ready |
+| Punch | The serial port, 8 bits, whatever the console routing |
+| Reader | The serial port, 8 bits; waits for a byte. A byte the console has already taken stays with the console |
 | IOBYTE | Stored, ignored |
 
 ## Applications

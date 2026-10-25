@@ -85,6 +85,9 @@ WBOOTR: DI
         LD      SP,BSTK
         CALL    PZINIT
         CALL    CPMINIT
+        LD      A,(CONDEV)      ; a program may have changed the display mode
+        AND     CDVID
+        CALL    NZ,VREST
         LD      A,(PZDU)
         LD      C,A
         JP      CCPENT

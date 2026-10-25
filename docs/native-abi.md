@@ -103,6 +103,11 @@ OS stack.
 | 8 | Buffer outside fixed RAM |
 | 9 | Bad `.TNX` header |
 | 10 | `.TNX` image does not fit or cannot be read |
+| 11 | Called from a CP/M program; carry is also set |
+
+A CP/M program that calls `FF06h` gets status 11 with carry set, and
+nothing in its memory changes: the entry checks the profile before it
+stores any argument or moves to the OS stack.
 
 ### Banks and pointers
 

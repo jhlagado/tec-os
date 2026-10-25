@@ -3,7 +3,7 @@
 Status: **Proposed**, 2026-10-25. Nothing here is built yet. Sizes marked
 "est." are estimates; the others come from the `debug80` build census.
 
-The ROM is 16 KiB. It holds 12,048 bytes today and has 4,336 free. This
+The ROM is 16 KiB. It holds 12,115 bytes today and has 4,269 free. This
 document sets out what earns a place in it, adds one entry point that gives
 programs the TEC-1G's hardware, and lists what belongs on the card instead.
 
@@ -104,8 +104,7 @@ without the TEC-1G's devices.
 | 9 | `SERIAL` | Send a byte, or wait a set time for one, whatever the console routing | 2, 3 | 35 |
 | 10 | `BLOCK` | Read one raw 512-byte card block | 1 | 25 |
 | 11 | `DELAY` | Wait a number of milliseconds at 4 MHz | 4 | 15 |
-| — | Guard in `NATSVC` (see below) | | | 6 |
-| | **Total** | | | **about 380** |
+| | **Total** | | | **about 370** |
 
 Notes:
 
@@ -118,29 +117,27 @@ Notes:
   BDOS call plus the ANSI parser; `PUTAT` costs only the cell write (1,029
   T-states on the PICO9918).
 - `SERIAL` is what a file-transfer program needs on real hardware before
-  card utilities exist. The BIOS punch and reader devices should also map to
-  the serial port; today they are null devices, so `PIP PUN:=FILE` goes
-  nowhere.
+  card utilities exist. The BIOS punch and reader devices are now the
+  serial port too, so `PIP PUN:=FILE` sends a file.
 - `BLOCK` reads only. A card backup or verify tool needs reads. Writes to raw
   blocks bypass the volume rules and stay out until a tool needs them.
-- `VIDEO` exposes a gap that exists today: a program that switches the
-  PICO9918 to a graphics mode leaves it there after it exits, because warm
-  boot does not restore the video mode.
+- `VIDEO` builds on the warm-boot restore: once a program has claimed the
+  display, console output stays off the screen until the claim ends.
 
-## Fixes this exposes
+## Fixes found on the way
 
-These are worth doing whether or not the services land:
+Writing this proposal turned up three faults. All three are fixed (67 bytes
+of ROM) and covered by `test/devices`:
 
-1. **`NATSVC` writes into the TPA when a CP/M program calls it.** It stores
-   its arguments in kernel state at `0100h` and switches to a stack at
-   `0300h` before it checks anything. Under CP/M that is the running
-   program's memory. It should refuse with an error, before touching memory,
-   when `OSMODE` is classic (6 bytes).
-2. **Warm boot does not restore the video mode.** It should re-run the
-   console setup when a program has claimed or changed the display (part of
-   `VIDEO`).
-3. **List, punch and reader are null devices.** Punch and reader should be
-   the serial port, as on most CP/M machines with one serial line.
+1. **`NATSVC` wrote into the TPA when a CP/M program called it.** It stored
+   its arguments in kernel state at `0100h` and moved to a stack at `0300h`
+   before checking anything. It now refuses with status 11 and carry set
+   before touching memory when the classic profile is running.
+2. **Warm boot did not restore the video mode.** It now reloads the
+   PICO9918's registers and font, or turns the GLCD's display and graphics
+   back on (36 ms per warm boot on the PICO9918).
+3. **Punch and reader were null devices.** They are now the serial port,
+   as on most CP/M machines with one serial line. List stays null.
 
 ## What lives on the card
 
@@ -168,8 +165,8 @@ Programs:
 
 | Resource | Today | After | Change |
 | --- | ---: | ---: | ---: |
-| ROM used | 12,048 | about 12,430 | +380 (est.) |
-| ROM free | 4,336 | about 3,950 | |
+| ROM used | 12,115 | about 12,490 | +370 (est.) |
+| ROM free | 4,269 | about 3,890 | |
 | TPA | 45,830 | 45,830 | none |
 | Resident workspace | | | +4 bytes (est.): video claim, serial timeout |
 | Caller's stack per service | — | 16 bytes or less (est.) | measured by the tests |

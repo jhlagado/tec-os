@@ -27,7 +27,23 @@ TMSINIT:LD      HL,$3FFF        ; VRAM answers with what was written
         CALL    TMSPEEK
         CP      $A5
         RET     NZ
-        LD      HL,TMSREGS      ; registers 0-7
+        CALL    TMSSET
+        LD      A,TMSCOLS
+        LD      (VWID),A
+        LD      A,24
+        LD      (VHGT),A
+        XOR     A
+        LD      (VROW),A
+        LD      (VCOL),A
+        CALL    VTCLS
+        XOR     A
+        RET
+
+; Load registers 0-7, the font and its reverse images, and in Graphics I the
+; colours and an empty sprite table. Warm boot calls this through VREST, so
+; a program that changed the mode or the patterns leaves a working console.
+; The name table, and so the text on the screen, is left alone.
+TMSSET: LD      HL,TMSREGS
         LD      B,8
         LD      C,$80
 TMSR:   LD      A,(HL)
@@ -75,15 +91,6 @@ TMSCOL: LD      A,$F1
         LD      A,$D0
         OUT     (VDPDAT),A
 %ENDIF
-        LD      A,TMSCOLS
-        LD      (VWID),A
-        LD      A,24
-        LD      (VHGT),A
-        XOR     A
-        LD      (VROW),A
-        LD      (VCOL),A
-        CALL    VTCLS
-        XOR     A
         RET
 
 ; Write A to VRAM address HL.

@@ -41,6 +41,7 @@ VPUTV:  DS      2               ; driver vectors set by VIDINIT
 VGETV:  DS      2
 VCLRV:  DS      2
 VSCRV:  DS      2
+VRSTV:  DS      2
 
 ; ---- GLCD text console --------------------------------------------------------
 GLTEXT: DS      GLCOLS*GLROWS   ; characters on screen, row by row
