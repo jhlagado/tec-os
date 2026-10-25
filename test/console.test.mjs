@@ -254,3 +254,27 @@ test("the cursor shows while a program polls for a key, and goes with the next o
   m.expect(/A>$/);
   assert.notEqual(m.cell(row, col), 0xa0, "removed before the next output");
 });
+
+test("a scroll region scrolls only its own rows", async () => {
+  const image = standardCard();
+  volume(image, "A").write("REGION.COM", (await program("region")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  m.command("REGION");
+  assert.deepEqual(m.screen().slice(0, 5), ["top", "b", "c", "d", "bottom"]);
+  assert.deepEqual(m.violations, []);
+});
+
+test("a row move on the PICO9918 is built out of sight and shown when the program asks for a key", async () => {
+  const image = standardCard();
+  volume(image, "A").write("FLIP.COM", (await program("flip")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  m.mark = m.output.length;
+  m.typeMatrix("flip\r");
+  m.runUntil(() => m.pc === m.sym("VTMEND"), 100_000_000, "the end of the move");
+  assert.deepEqual(m.screen().slice(0, 3), ["L1", "L2", "L3"], "the shown page is untouched");
+  const page = m.tmsLayout().base;
+  m.runUntil(() => m.tmsLayout().base !== page, 100_000_000, "the flip");
+  assert.deepEqual(m.screen().slice(0, 3), ["L2", "L3", ""], "the moved rows appear at once");
+  m.expect(/A>$/);
+  assert.deepEqual(m.violations, []);
+});

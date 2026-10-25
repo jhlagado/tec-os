@@ -11,6 +11,13 @@
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
 TNAME   EQU     TMSNAME         ; 0800h, or 1000h for 80 columns (4 KiB aligned)
+; A second name table one page up (2000h for 80 columns, 0C00h otherwise)
+; lets row moves be built out of sight and shown with one register write.
+%IF TMS80
+TPGOFF  EQU     $10
+%ELSE
+TPGOFF  EQU     $04
+%ENDIF
 TCOLOR  EQU     $2000
 TSPRITE EQU     $1B00
 
@@ -53,6 +60,11 @@ TMSR:   LD      A,(HL)
         INC     HL
         INC     C
         DJNZ    TMSR
+        XOR     A               ; show the latest page, any move finished
+        LD      (TMVCOPY),A
+        LD      A,(TPDRAW)
+        LD      (TPSHOW),A
+        CALL    TMSR2
         LD      HL,0            ; 256 patterns: font, then its reverse
         CALL    TMSWA
         LD      D,0             ; character code
@@ -120,7 +132,7 @@ TMSRA:  LD      A,L
         OUT     (VDPCTL),A
         RET
 
-; HL = name-table address of row B, column C. Destroys AF, DE.
+; HL = address of row B, column C in the page being drawn. Destroys AF, DE.
 TMSCELL:LD      A,B
         ADD     A,A
         LD      E,A
@@ -131,6 +143,9 @@ TMSCELL:LD      A,B
         INC     HL
         LD      H,(HL)
         LD      L,A
+        LD      A,(TPDRAW)
+        ADD     A,H
+        LD      H,A
         LD      E,C
         ADD     HL,DE
         RET
@@ -142,8 +157,20 @@ TMSROWT:DW      TNAME,TNAME+TMSCOLS,TNAME+2*TMSCOLS,TNAME+3*TMSCOLS
         DW      TNAME+20*TMSCOLS,TNAME+21*TMSCOLS,TNAME+22*TMSCOLS,TNAME+23*TMSCOLS
 
 ; Copy row B to LINEBUF, or LINEBUF to row B, as one block. Destroy AF, BC,
-; DE, HL.
-TMSRDR: LD      C,0
+; DE, HL. While a move builds the hidden page, rows are read from the page
+; on show.
+TMSRDR: LD      A,(TMVCOPY)
+        OR      A
+        JR      Z,TMSRD1
+        LD      A,(TPDRAW)
+        PUSH    AF
+        LD      A,(TPSHOW)
+        LD      (TPDRAW),A
+        CALL    TMSRD1
+        POP     AF
+        LD      (TPDRAW),A
+        RET
+TMSRD1: LD      C,0
         CALL    TMSCELL
         CALL    TMSRA
         LD      HL,LINEBUF
@@ -181,22 +208,63 @@ TMSCLL: LD      A,' '
         DJNZ    TMSCLL
         RET
 
-; Move rows 1-23 up one row through LINEBUF and clear the last row.
-TMSSCR: LD      B,1
-TMSSCL: PUSH    BC
-        CALL    TMSRDR
-        POP     BC
+; Start a move of rows B to C. If the page drawn is already the page shown,
+; draw the other one from now on, copying the rows outside B to C across;
+; the move then reads the shown page and writes the hidden one. A move still
+; waiting to be shown is shown first, so output is never more than one move
+; behind.
+TMSMBEG:LD      A,(TPDRAW)
+        LD      HL,TPSHOW
+        CP      (HL)
+        JR      Z,TMSMB1
         PUSH    BC
-        DEC     B
-        CALL    TMSWRR
+        CALL    TMSFLIP
         POP     BC
-        INC     B
-        LD      A,B
+TMSMB1: LD      A,(TPSHOW)
+        XOR     TPGOFF
+        LD      (TPDRAW),A
+        LD      A,1
+        LD      (TMVCOPY),A
+        LD      D,0
+TMSMBL: LD      A,D
+        CP      B
+        JR      C,TMSMBC
+        CP      C
+        JR      C,TMSMBN
+        JR      Z,TMSMBN
+TMSMBC: PUSH    BC
+        PUSH    DE
+        LD      B,D
+        CALL    TMSRDR
+        POP     DE
+        PUSH    DE
+        LD      B,D
+        CALL    TMSWRR
+        POP     DE
+        POP     BC
+TMSMBN: INC     D
+        LD      A,D
         CP      24
-        JR      NZ,TMSSCL
-        LD      B,23
-        LD      C,0
-        JR      TMSCLR
+        JR      NZ,TMSMBL
+        RET
+
+; Show the page drawn, if it is not already shown. Called when a program asks
+; for a key, so a finished move appears in one frame. Destroys AF, HL.
+TMSFLIP:LD      A,(TPDRAW)
+        LD      HL,TPSHOW
+        CP      (HL)
+        RET     Z
+        LD      (HL),A
+; Point register 2 at the page shown.
+TMSR2:  LD      A,(TPSHOW)
+        RRCA
+        RRCA
+        LD      HL,TMSREGS+2
+        ADD     A,(HL)
+        OUT     (VDPCTL),A
+        LD      A,$82
+        OUT     (VDPCTL),A
+        RET
 
 ; Registers 0-7.
 ; - 80 columns (PICO9918 TEXT80, also the V9938 TEXT2 and F18A T80 mode):

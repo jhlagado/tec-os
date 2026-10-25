@@ -10,14 +10,15 @@
 ; and f (position, 1-based), ESC [ J and 2J (clear to end, clear screen),
 ; ESC [ K (clear to end of line), ESC [ 0 m and 7 m (normal, reverse),
 ; ESC [ n @ and n P (insert and delete characters at the cursor, shifting the
-; rest of the line), ESC [ n L and n M (insert and delete lines at the
-; cursor row, shifting the rows below; the cursor goes to column 1). Other
-; sequences are consumed and ignored. Characters at 80h-FFh are the reverse
+; rest of the line), ESC [ t ; b r (scroll region), ESC [ n L and n M (insert
+; and delete lines at the cursor row within the scroll region; the cursor
+; goes to column 1). Other sequences are consumed and ignored. Characters at 80h-FFh are the reverse
 ; images of 00h-7Fh, which also draws the cursor. The cursor is shown only
 ; while console input is awaited, so output does not pay for redrawing it.
 ;
 ; The driver supplies VIDINIT (Z when a display is present), VPUT (A at row
-; B, column C), VGET, VSCROLL and VCLREOL (from row B, column C).
+; B, column C), VGET, VCLREOL (from row B, column C), and VRDROW and VWRROW
+; (row B to and from LINEBUF).
 
 ; Output C to the video terminal. Destroys AF, BC, DE, HL.
 VTOUT:  CALL    CURHIDE
@@ -96,15 +97,30 @@ VTFF:   CALL    VTCLS
         LD      (VCOL),A
         JP      VTDONE
 
-; Move down a line, scrolling at the bottom.
+; Move down a line. At the bottom of the scroll region the region scrolls up
+; a line; below the region the cursor stops at the last row.
 VTLF:   LD      A,(VROW)
+        LD      HL,VSBOT
+        CP      (HL)
+        JR      Z,VTLFS
         INC     A
         LD      HL,VHGT
         CP      (HL)
-        JR      NC,VTSCRL
+        RET     NC
         LD      (VROW),A
         RET
-VTSCRL: JP      VSCROLL
+VTLFS:  LD      A,(VSTOP)
+        LD      C,A
+        LD      B,1
+        JP      VTDLR
+
+; The scroll region is the whole screen.
+VTREGR: XOR     A
+        LD      (VSTOP),A
+        LD      A,(VHGT)
+        DEC     A
+        LD      (VSBOT),A
+        RET
 
 ; Clear the whole screen.
 VTCLS:  LD      B,0
@@ -193,6 +209,39 @@ VTPFIN: CP      '?'             ; private marker: ignore
         JP      Z,VTIL
         CP      'M'
         JP      Z,VTDL
+        CP      'r'
+        JP      Z,VTREG
+        JP      VTDONE
+
+; ESC [ t ; b r: scroll region rows t to b (1-based; absent or 0 means the
+; screen's first or last row). The region must cover two rows or more; the
+; cursor goes home, as on a VT100.
+VTREG:  LD      A,(ESCP1)
+        OR      A
+        JR      Z,VTREG1
+        DEC     A
+VTREG1: LD      C,A             ; top
+        LD      A,(ESCP2)
+        INC     A               ; FFh (absent) and 0 both mean the last row
+        JR      Z,VTREGB
+        DEC     A
+        JR      Z,VTREGB
+        DEC     A
+        JR      VTREGC
+VTREGB: LD      A,(VHGT)
+        DEC     A
+VTREGC: LD      HL,VHGT
+        CP      (HL)
+        JP      NC,VTDONE
+        CP      C
+        JP      C,VTDONE
+        JP      Z,VTDONE
+        LD      (VSBOT),A
+        LD      A,C
+        LD      (VSTOP),A
+        XOR     A
+        LD      (VROW),A
+        LD      (VCOL),A
         JP      VTDONE
 
 ; Count from ESCP1, at least 1, in B.
@@ -375,69 +424,92 @@ VTDCF:  POP     BC
         SUB     B
         JR      VTBLNK
 
-; B = count clipped to the rows from the cursor row to the bottom.
-VTNR:   LD      A,(VHGT)
-        LD      HL,VROW
-        SUB     (HL)
+; ESC [ n L and ESC [ n M work from the cursor row to the bottom of the
+; scroll region, and do nothing when the cursor is outside it. B = the count
+; clipped to those rows, C = the cursor row; Z when outside.
+VTNR:   LD      A,(VROW)
+        LD      HL,VSTOP
+        CP      (HL)
+        JR      C,VTNRNO
         LD      C,A
+        LD      A,(VSBOT)
+        SUB     C
+        JR      C,VTNRNO
+        INC     A
+        LD      E,A
         CALL    VTN
         LD      A,B
-        CP      C
-        RET     C
-        LD      B,C
+        CP      E
+        JR      C,VTNR1
+        LD      B,E
+VTNR1:  XOR     A
+        LD      (VCOL),A
+        INC     A               ; NZ
+        RET
+VTNRNO: XOR     A
         RET
 
 VTIL:   CALL    VTNR
-        XOR     A
-        LD      (VCOL),A
-        LD      A,(VHGT)        ; C = destination row, from the bottom up
-        DEC     A
-        LD      C,A
-VTILL:  LD      A,(VROW)
-        ADD     A,B
-        LD      E,A
-        LD      A,C
-        CP      E
-        JR      C,VTILC         ; rows above cursor + count stay
-        PUSH    BC
-        SUB     B
-        LD      B,A
-        CALL    VRDROW
-        POP     BC
-        PUSH    BC
-        LD      B,C
-        CALL    VWRROW
-        POP     BC
-        DEC     C
-        JR      VTILL
-VTILC:  LD      A,(VROW)        ; blank the inserted rows
-        LD      C,A
-        JR      VTCLRN
-
+        CALL    NZ,VTILR
+        JP      VTDONE
 VTDL:   CALL    VTNR
-        XOR     A
-        LD      (VCOL),A
-        LD      A,(VROW)        ; C = destination row, from the cursor down
-        LD      C,A
-VTDLL:  LD      A,(VHGT)
+        CALL    NZ,VTDLR
+        JP      VTDONE
+
+; Insert B blank lines at row C: rows C to VSBOT move down, the last B lost.
+VTILR:  PUSH    BC
+        CALL    VTMBEG
+        POP     BC
+        LD      A,(VSBOT)       ; D = destination row, from the bottom up
+        LD      D,A
+VTILL:  LD      A,C
+        ADD     A,B
+        LD      E,A
+        LD      A,D
+        CP      E
+        JR      C,VTCLRN        ; the B rows from C are blanked
+        PUSH    BC
+        PUSH    DE
+        SUB     B
+        LD      B,A
+        CALL    VRDROW
+        POP     DE
+        PUSH    DE
+        LD      B,D
+        CALL    VWRROW
+        POP     DE
+        POP     BC
+        DEC     D
+        JR      VTILL
+
+; Delete B lines at row C: rows below move up to VSBOT, blanks fill in.
+VTDLR:  PUSH    BC
+        CALL    VTMBEG
+        POP     BC
+        LD      D,C             ; D = destination row, from C down
+VTDLL:  LD      A,(VSBOT)
+        INC     A
         SUB     B
         LD      E,A
-        LD      A,C
+        LD      A,D
         CP      E
-        JR      NC,VTCLRN       ; the last count rows are blanked
+        JR      NC,VTDLC
         PUSH    BC
+        PUSH    DE
         ADD     A,B
         LD      B,A
         CALL    VRDROW
-        POP     BC
-        PUSH    BC
-        LD      B,C
+        POP     DE
+        PUSH    DE
+        LD      B,D
         CALL    VWRROW
+        POP     DE
         POP     BC
-        INC     C
+        INC     D
         JR      VTDLL
+VTDLC:  LD      C,D
 
-; Clear B rows from row C.
+; Clear B rows from row C, then end the move.
 VTCLRN: PUSH    BC
         LD      B,C
         LD      C,0
@@ -445,7 +517,7 @@ VTCLRN: PUSH    BC
         POP     BC
         INC     C
         DJNZ    VTCLRN
-        JP      VTDONE
+        JP      VTMEND
 
 ; Limit A to one less than (HL).
 VTCLIP: CP      (HL)

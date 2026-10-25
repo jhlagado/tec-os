@@ -112,6 +112,7 @@ CONSWV: PUSH    BC              ; B = the video mode
         CALL    VIDSET
         POP     DE
         LD      (VWID),DE       ; columns, then rows
+        CALL    VTREGR
         POP     BC
         LD      A,B
         LD      (CONMOD),A
@@ -137,6 +138,9 @@ BCONSTC:CALL    BCONST
         RET
 
 BCONST: CALL    CONSEL
+        LD      A,(CONMOD)      ; a program asking for a key sees the screen
+        CP      CMCRT           ; it has drawn: show a finished row move
+        CALL    Z,TMSFLIP
         LD      A,(RXFULL)
         OR      A
         JR      NZ,CSTYES
@@ -169,6 +173,9 @@ CSTYES: LD      A,$FF
 ; BIOS CONIN: wait for a character and return it in A with bit 7 clear.
 ; NUL is not delivered (Debug80 sends one ahead of its first input byte).
 BCONIN: CALL    CONSEL
+        LD      A,(CONMOD)
+        CP      CMCRT
+        CALL    Z,TMSFLIP
         LD      A,(RXFULL)
         OR      A
         JR      NZ,CINTAKE

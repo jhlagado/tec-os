@@ -47,7 +47,12 @@ interprets this subset:
 | `ESC [ K` | Clear to the end of the line |
 | `ESC [ 7 m`, `ESC [ 0 m` | Reverse video on; off |
 | `ESC [ n @`, `ESC [ n P` | Insert n blanks, or delete n characters, at the cursor; the rest of the line moves |
-| `ESC [ n L`, `ESC [ n M` | Insert or delete n lines at the cursor row; the rows below move, and the cursor goes to column 1 |
+| `ESC [ t ; b r`, `ESC [ r` | Scroll region rows t to b; the whole screen; the cursor goes home |
+| `ESC [ n L`, `ESC [ n M` | Insert or delete n lines at the cursor row within the scroll region; the rows below it move, and the cursor goes to column 1 |
+
+A line feed at the bottom of the scroll region scrolls the region; below the
+region it stops at the last row. The region resets to the whole screen when
+the console changes and at warm boot.
 
 Other escape sequences are read and ignored. Characters 80h–FFh are reverse
 images of 00h–7Fh. The cursor is the reverse image of the cell under it. It
@@ -59,7 +64,18 @@ output does not draw it.
 Insert and delete move whole rows inside the display. On the PICO9918 a row
 is read and written back as one block of VRAM transfers, so inserting a
 character near the start of an 80-column line costs a few thousand T-states
-instead of a redraw. A character written in the last column leaves the cursor past
+instead of a redraw.
+
+Moving rows (line insert and delete, and scrolling) takes longer than one
+video frame, so on the PICO9918 it is done out of sight. The card's VRAM
+holds two name tables (`1000h` and `2000h` at 80 columns, `0800h` and `0C00h`
+otherwise). The first move after the screen was last shown is built in the
+hidden table, copying the rows that do not move; later output goes there too.
+The hidden table is shown, by one write to register 2, when a program asks
+for a key through BIOS `CONST` or `CONIN`, which includes the BDOS's check for
+`^S` after each character it prints. A second move before that shows the first
+one first, so output is never more than one move behind. The effect is that a
+scroll appears in one frame instead of sweeping down the screen. A character written in the last column leaves the cursor past
 the edge; the line wraps only when another printable character follows, as
 on a VT100, so a full-width line followed by CR LF does not leave a blank
 line.
@@ -80,8 +96,8 @@ The ST7920 runs in its extended instruction set with graphics on. TEC-OS
 keeps the 168 characters on screen in RAM and draws each 16-pixel graphics
 word by composing the glyph rows of the two to four 6-pixel cells that
 overlap it, so no 1 KiB pixel buffer is needed. Writing a character redraws
-the words its cell touches; scrolling redraws the screen, about 0.25 s at
-4 MHz. Every access waits for the busy flag, bounded at 256 polls.
+the words its cell touches; scrolling moves the text and redraws each row,
+about 0.25 s at 4 MHz. Every access waits for the busy flag, bounded at 256 polls.
 
 The CCP's `TYPE` and `DIR` use the display size to pause with `[more]` one
 line short of a full screen (decision D19).

@@ -355,6 +355,19 @@ as well as in `CONIN`, so programs that poll (Edit, through BDOS function 6)
 show it. The video terminal gains insert and delete for characters and lines
 so full-screen programs need not redraw shifted text.
 
+## D24 Row moves shown in one frame — Adopted 2026-10-25
+
+Moving the PICO9918's rows goes through its data port a row at a time and
+takes about 21 ms for a full screen, longer than a 60 Hz frame, so a scroll
+was seen sweeping down the screen. TEC-OS now builds a row move in a second
+name table in VRAM and switches register 2 to it when a program next asks
+for a key (or prints its next character through the BDOS), so every frame
+shows a whole screen. The terminal also gains VT100 scroll regions
+(`ESC [ t ; b r`), so a full-screen program can scroll its text rows in one
+operation without touching a status row; Edit sets rows 1 to 23 on TEC-OS.
+Rendering the emulated screen frame by frame shows no torn or partial frame
+while Edit scrolls.
+
 ## Open decisions
 
 | ID | Open item | Blocks |

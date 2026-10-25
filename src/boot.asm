@@ -89,6 +89,7 @@ WBOOTR: DI
         LD      A,(CONMOD)      ; a program may have changed the display mode
         RRCA
         CALL    C,VREST
+        CALL    VTREGR          ; and left a scroll region set
         LD      A,(PZDU)
         LD      C,A
         JP      CCPENT

@@ -40,10 +40,14 @@ LINEBUF:DS      80              ; one display row, for scrolling
 VPUTV:  DS      2               ; driver vectors set by VIDINIT
 VGETV:  DS      2
 VCLRV:  DS      2
-VSCRV:  DS      2
 VRSTV:  DS      2
 VRDRV:  DS      2               ; read row B into LINEBUF
 VWRRV:  DS      2               ; write LINEBUF to row B
+VSTOP:  DS      1               ; scroll region, first and last row
+VSBOT:  DS      1
+TPDRAW: DS      1               ; PICO9918 page drawn and page shown: offset
+TPSHOW: DS      1               ; high byte, 0 or TPGOFF
+TMVCOPY:DS      1               ; 1 while a row move builds the hidden page
 CONACT: DS      1               ; IOBYTE CON: field last acted on
 CONMOD: DS      1               ; console mode in effect (CMTTY..CMUC1)
 

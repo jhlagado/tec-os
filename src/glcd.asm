@@ -197,27 +197,6 @@ GLCCL:  LD      (HL),' '
         JR      NZ,GLCCL
         JR      GLCROW
 
-; Move every text row up one, clear the last, and redraw the screen.
-GLCSCR: LD      HL,GLTEXT+GLCOLS
-        LD      DE,GLTEXT
-        LD      BC,GLCOLS*(GLROWS-1)
-        LDIR
-        LD      B,GLCOLS
-GLCSB:  LD      A,' '
-        LD      (DE),A
-        INC     DE
-        DJNZ    GLCSB
-; Redraw every text row.
-GLCALL: LD      B,0
-GLCAL:  PUSH    BC
-        CALL    GLCROW
-        POP     BC
-        INC     B
-        LD      A,B
-        CP      GLROWS
-        JR      NZ,GLCAL
-        RET
-
 ; Redraw text row B: eight pixel rows, each streamed as eight words.
 GLCROW: LD      C,0
         CALL    GLCADR

@@ -46,6 +46,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | Warm boot restores the PICO9918 mode and font and the GLCD display after a program changes them | `devices` | Emulator | Pass |
 | — | One console device by IOBYTE: PICO9918 or GLCD with the matrix keyboard, serial terminal without it; `CON` switches, a missing device falls back to serial, serial stays quiet on a video console | `console` | Emulator | Pass |
 | — | Insert and delete characters and lines; the cursor shows while a program polls BDOS function 6 | `console` | Emulator | Pass |
+| — | Scroll regions; a row move is built in the hidden VRAM page and shown in one step when the program asks for a key | `console` | Emulator | Pass; Edit scrolling rendered frame by frame shows no torn frame |
 | — | Punch and reader carry 8-bit bytes over the serial port | `devices` | Emulator | Pass |
 | M4 | A CP/M program calling the native entry is refused without touching its memory | `devices` | Emulator | Pass: status 0Bh, carry set |
 | — | PICO9918 80 × 24 console: registers, DIR in 6 columns, 80-character lines | `console` | Emulator (Debug80 TMS9918 model; VRAM checked, not pixels) | Pass |
@@ -95,10 +96,10 @@ keystroke in a 20-line file (2026-10-25):
 | --- | ---: | ---: |
 | Cursor right or down | 278 ms | 23 ms |
 | Insert a character near the start of a line | 518 ms | 58–68 ms |
-| Move the view one line (scroll) | not measured | 961 ms, 107 bytes sent |
+| Move the view one line (scroll) | not measured | 129–139 ms, about 100 bytes sent, shown in one frame |
 
-The scroll now sends only the new line, but Edit still renders every text
-row when the view moves; that rendering is most of the remaining time.
+A scroll shifts Edit's cached rows and draws only the new line; TEC-OS moves
+the rows in the hidden VRAM page and shows it whole.
 
 Timings at 4 MHz in the emulator: cold boot to the prompt about 1.8 million
 T-states (0.45 s); one 512-byte SD block read about 330,000 T-states; serial
