@@ -5,7 +5,7 @@
 //
 // Run after npm run build.
 
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -32,6 +32,7 @@ COPY SOURCE DEST   copy a file, for example COPY TERM.COM B:TERM.COM
 TERM               draw on the video console; TERM S also scrolls
 PROBE              exercise the BDOS file functions
 NATDEMO            native bank-aware program: type NATDEMO
+EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
 
 B: is an empty work disk.
 `;
@@ -115,6 +116,18 @@ async function main() {
     const { bytes } = await assembleProgram(resolve(ROOT, p.source), { base: p.base ?? 0x100 });
     writeFileSync(resolve(FILES, p.name), bytes);
     files.push({ ...p, bytes });
+  }
+  // Edit joins the card when a build that sizes itself to the TPA and the
+  // display is available (configuration tag "ECFG" at 0103h).
+  const editPath = process.env.EDIT_COM ?? resolve(ROOT, "../edit/dist/EDIT.COM");
+  if (existsSync(editPath)) {
+    const bytes = new Uint8Array(readFileSync(editPath));
+    if (Buffer.from(bytes.subarray(3, 7)).toString("latin1") === "ECFG") {
+      writeFileSync(resolve(FILES, "EDIT.COM"), bytes);
+      files.push({ name: "EDIT.COM", description: "Edit, the full-screen editor: EDIT NAME.TXT, ^S save, ^Q quit", bytes });
+    } else {
+      console.log(`media: ${editPath} predates the screen configuration; Edit left off the card`);
+    }
   }
   const readme = Buffer.from(README.replace(/\n/g, "\r\n") + "\x1a");
   writeFileSync(resolve(FILES, "README.TXT"), readme);

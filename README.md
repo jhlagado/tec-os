@@ -30,6 +30,11 @@ npm test         # host and emulator tests, about 90 seconds
 npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 ```
 
+`npm run media` puts Edit on the starter card when `../edit/dist/EDIT.COM`
+(or the file named by `EDIT_COM`) is a build with the screen configuration
+block. `npm test` runs Edit on TEC-OS and on Triptych's CP/M when those are
+present beside this repository.
+
 The ROM is assembled with ATOM. Profiles:
 
 | Profile | Banks | Display | Use |
