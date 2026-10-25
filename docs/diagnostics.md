@@ -219,6 +219,51 @@ T-states. It reports the frame length and the CPU clock that follows for a
 50 Hz and a 60 Hz refresh. The PICO9918's refresh rate is a setting of its
 own, so the right figure is the one near 4 MHz.
 
+### T35 VDPPAGE: page select
+
+TEC-OS page-flips in 80 columns ([decisions.md](decisions.md) D24). The
+console's name table is at `1000h` (R2 = `07h`). Row moves are built in a
+second table at `2000h` (R2 = `0Bh`) and shown by rewriting R2. T35 fills
+`2000h` with 2s under the title `PAGE 2: NAMES AT 2000h, R2 = 0Bh`, leaves
+the T17 test screen at `1000h`, and switches R2 between `0Bh` and `07h`
+three times, a second each. R2 is left at `07h`. TEC-OS and the emulator
+renderers take the page as `(R2 & 0Ch) << 10`, so the board must show page
+2 for `0Bh` and the test screen for `07h`. Registers are write-only, so only
+the operator can confirm what the screen shows. In an automatic run the
+result is `LOOK`.
+
+### T36 F18A: identity and vertical scroll
+
+The PICO9918 firmware's VDP core (`vrEmuTms9918.c` in
+[vrEmuTms9918](https://github.com/visrealm/vrEmuTms9918), the PICO9918
+submodule) keeps registers above 7 locked until `1Ch` is written to register
+57 twice in a row. Unlocked, VR15 selects the status register read at `BFh`.
+SR1 reads `E8h`: `E0h` is the F18A identity and the firmware sets `08h` to
+mark a PICO9918. SR14 holds the version, `1Ah` in that source. VR28 scrolls
+80-column text up by that many pixel lines, wrapping at 192 (240 with the
+30-row bit in VR49). Writing VR50 with bit 7 set resets every register and
+locks them again.
+
+T36 reads SR1 through VR15 while locked, unlocks, reads SR1 and SR14, and
+reports them. A value of SR1 outside `E0h–EFh` means the VDP is not
+F18A-compatible, and T36 reports `INFO` with what it read. A plain TMS9918
+takes the unlock and VR15 writes as writes to R1 and R7, so the test sets
+registers 0–7 back to TEC-OS's values either way. On an F18A-compatible
+answer it sets VR28 to 8 for 2 s, which moves the text up one row with the
+top row wrapping to the bottom. It then clears VR28, writes VR50 bit 7 and
+rewrites registers 0–7. Reading SR1 once more shows whether the reset locked
+the registers again, and a line ending `STILL UNLOCKED` is a `FAIL`. TEC-OS
+never unlocks, so a reset of the board also leaves the console locked.
+
+Unlocked, the firmware decodes R2 in 80 columns with mask `0Fh` instead of
+`0Ch`, so R2 = `07h` would select names at `1C00h`. T36 sets R2 to `04h`
+during the scroll check, which means `1000h` under either mask. A program
+that unlocks the PICO9918 under TEC-OS needs the same care.
+
+On the board, T36 needs the operator for the scroll check and settles the
+identity, version and relocking from the readings. On the Debug80 model it
+reports `not F18A-compatible`, because the model has only registers 0–7.
+
 ### T19 SD and T20 SDBLKS (O4)
 
 T19 initialises the card with TEC-OS's driver and records each answer: the
@@ -337,9 +382,11 @@ fitted the line also gives the RTC's elapsed seconds.
 | O3 writes under the overlay | T08 | Reaches RAM or dropped |
 | O4 SD timing | T19, T20, T34 | Card, token polls, errors and read rate |
 | O5 VRAM timing | T17, T18 | Errors at 16 and 104 T-states a byte |
+| D24 page flipping | T35 | Which page R2 = `07h` and `0Bh` show |
 
 T11 settles the meaning of the port `03h` bits and T18, T21 and T33 give the
-real clock behind every T-state figure.
+real clock behind every T-state figure. T36 records whether the card answers
+as an F18A and which firmware version it reports.
 
 ## Recording a board run
 
@@ -354,8 +401,12 @@ they affect.
 `test/diag.test.mjs` builds the ROM and runs it on the Debug80 model:
 
 - the automatic run with the PICO9918, matrix keyboard and a card, checking
-  every result and the model's answers to O1 and O3, the frame length and
-  the 80-column screen;
+  every result and the model's answers to O1 and O3, the frame length, the
+  80-column screen, the page the harness decodes while R2 is `0Bh` and `07h`
+  and the registers T36 leaves behind;
+- the F18A probe against a stub of the firmware's register behaviour: the
+  unlock, the VR15 reads, VR28 set to 8 and back to 0, R2 = `04h` during the
+  scroll, the VR50 reset and TEC-OS's registers afterwards;
 - a stuck bit in the variables page, which must give the stackless T01
   message and nothing else;
 - no RAM in the window, which must fail T03, skip T04 and report no banks;
@@ -364,3 +415,6 @@ they affect.
 
 The only memory writes the ROM makes to ROM or under the overlay are the two
 deliberate ones in T06 and T08, and the test checks that too.
+
+None of this shows what a real PICO9918 displays. The page shown for each R2
+value, the scroll and the identity and version a card reports need a board.

@@ -721,3 +721,191 @@ TVCN:   LD      A,RFAIL
         CALL    PRI
         DB      "frame flag never set",0
         JP      REND
+
+; ---- T35 page select ------------------------------------------------------------
+
+; Write A to VDP register C (0-63; above 7 only once the F18A registers are
+; unlocked). Preserves BC, DE, HL.
+VREG:   OUT     (VDPCTL),A
+        LD      A,C
+        OR      $80
+        OUT     (VDPCTL),A
+        RET
+
+; Read status register A through VR15, then select status register 0 again.
+; Only an unlocked F18A-compatible VDP takes VR15; a plain TMS9918 takes the
+; write as register 7, so the caller rewrites registers 0-7 afterwards.
+VSTAT:  LD      C,15
+        CALL    VREG
+        IN      A,(VDPCTL)
+        PUSH    AF
+        XOR     A
+        CALL    VREG
+        POP     AF
+        RET
+
+; Wait about a second. Destroys AF, BC.
+WAIT1S: LD      A,10
+        JP      WAITDS
+
+; TEC-OS page-flips in 80 columns (D24): the console's names are at 1000h
+; (R2 = 07h) and row moves are built at 2000h (R2 = 0Bh). The page is
+; (R2 & 0Ch) << 10 as TEC-OS and the emulator decode it. Page 2 is filled
+; with 2s under its own title, then R2 alternates three times and is left
+; at 07h.
+TVPAGE: CALL    TBEGIN
+        DB      35,"VDPPAGE","PICO9918 80-column pages: R2 07h shows 1000h, 0Bh shows 2000h",0
+        LD      A,(VDPOK)
+        OR      A
+        JR      NZ,TVPG1
+        LD      A,RNONE
+        CALL    RESULT
+        CALL    PRI
+        DB      "no PICO9918",0
+        JP      REND
+TVPG1:  LD      HL,VPAGE2
+        CALL    VWA
+        LD      DE,80*24
+TVPG2:  LD      A,'2'
+        OUT     (VDPDAT),A
+        DEC     DE
+        LD      A,D
+        OR      E
+        JR      NZ,TVPG2
+        LD      HL,VPAGE2
+        CALL    VWA
+        LD      HL,VPG2T
+TVPG3:  LD      A,(HL)
+        OR      A
+        JR      Z,TVPG4
+        OUT     (VDPDAT),A
+        INC     HL
+        JR      TVPG3
+TVPG4:  CALL    PRI
+        DB      "Watch the screen: the test screen and a page of 2s in turn, three times.",13,10,0
+        LD      B,3
+TVPG5:  PUSH    BC
+        LD      A,$0B
+        LD      C,2
+        CALL    VREG
+        CALL    WAIT1S
+        LD      A,$07
+        LD      C,2
+        CALL    VREG
+        CALL    WAIT1S
+        POP     BC
+        DJNZ    TVPG5
+        CALL    VISUAL
+        DB      "Did the screen switch to the page of 2s and back, three times?",0
+        CALL    RESULT
+        CALL    PRI
+        DB      "R2 0Bh for page 2000h, 07h for 1000h; left at 07h",0
+        JP      REND
+VPAGE2  EQU     $2000
+VPG2T:  DB      "PAGE 2: NAMES AT 2000h, R2 = 0Bh ",0
+
+; ---- T36 F18A identity and vertical scroll ------------------------------------
+
+; Unlock as the F18A does (1Ch to register 57, twice), read status registers
+; 1 (identity) and 14 (version) through VR15, set VR28 to 8 to scroll the
+; 80-column text up one row, then clear VR28 and write VR50 bit 7, which
+; resets every register and locks them again. Registers 0-7 are then set
+; back to TEC-OS's 80-column values. Unlocked, the PICO9918 decodes R2 with
+; mask 0Fh instead of 0Ch, so the names are selected with R2 = 04h, which
+; means 1000h under either mask.
+TF18A:  CALL    TBEGIN
+        DB      36,"F18A   ","F18A registers: identity (SR1), version (SR14), VR28 vertical scroll",0
+        LD      A,(VDPOK)
+        OR      A
+        JR      NZ,TF181
+        LD      A,RNONE
+        CALL    RESULT
+        CALL    PRI
+        DB      "no PICO9918",0
+        JP      REND
+TF181:  LD      A,1             ; locked: SR1 must not be readable
+        CALL    VSTAT
+        LD      (SAVE),A
+        CALL    VUNLOCK
+        LD      A,1
+        CALL    VSTAT
+        LD      (SAVE+1),A
+        LD      A,14
+        CALL    VSTAT
+        LD      (SAVE+2),A
+        LD      A,(SAVE+1)
+        AND     $E0
+        CP      $E0
+        JR      Z,TF182
+        CALL    VREGS           ; a plain TMS9918 took those writes as R1 and R7
+        LD      A,RINFO
+        CALL    RESULT
+        CALL    PRI
+        DB      "not F18A-compatible: SR1 read ",0
+        LD      A,(SAVE+1)
+        CALL    PRHEX
+        CALL    PRI
+        DB      " (F18A E0h-EFh), locked ",0
+        LD      A,(SAVE)
+        CALL    PRHEX
+        JP      REND
+TF182:  LD      A,$04           ; names at 1000h under either mask
+        LD      C,2
+        CALL    VREG
+        CALL    PRI
+        DB      "Watch the screen: it moves up one text row for 2 s.",13,10,0
+        LD      A,8
+        LD      C,28
+        CALL    VREG
+        CALL    WAIT1S
+        CALL    WAIT1S
+        XOR     A
+        LD      C,28
+        CALL    VREG
+        CALL    VISUAL
+        DB      "Did the text move up one row, the top row wrapping to the bottom?",0
+        LD      (SAVE+3),A
+        LD      A,$80           ; VR50 bit 7: reset the registers, locked
+        LD      C,50
+        CALL    VREG
+        LD      A,1
+        CALL    VSTAT
+        LD      (SAVE+4),A
+        CALL    VREGS
+        LD      A,(SAVE+1)      ; still unlocked if SR1 reads back
+        LD      HL,SAVE+4
+        CP      (HL)
+        LD      A,RFAIL
+        JR      Z,TF183
+        LD      A,(SAVE+3)
+TF183:  CALL    RESULT
+        CALL    PRI
+        DB      "SR1 ",0
+        LD      A,(SAVE+1)
+        CALL    PRHEX
+        CALL    PRI
+        DB      " (E0h F18A, +08h PICO9918), SR14 version ",0
+        LD      A,(SAVE+2)
+        CALL    PRHEX
+        CALL    PRI
+        DB      ", locked SR1 read ",0
+        LD      A,(SAVE)
+        CALL    PRHEX
+        CALL    PRI
+        DB      ", after VR50 reset ",0
+        LD      A,(SAVE+4)
+        CALL    PRHEX
+        LD      A,(SAVE+1)
+        LD      HL,SAVE+4
+        CP      (HL)
+        JP      NZ,REND
+        CALL    PRI
+        DB      " STILL UNLOCKED",0
+        JP      REND
+
+; The F18A unlock: value 1Ch to register 57, twice in a row.
+VUNLOCK:LD      C,57
+        LD      A,$1C
+        CALL    VREG
+        LD      A,$1C
+        JP      VREG

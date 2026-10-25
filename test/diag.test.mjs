@@ -87,18 +87,30 @@ function deliberateWrites(m) {
 
 test("the automatic tests pass on the Debug80 model and the report lists them", SLOW, () => {
   const m = diag();
+  // T35: while R2 is 0Bh the harness decodes the page at 2000h.
+  m.wait(/-- T35 /);
+  const vdp = m.tec1g.state.display.tms9918;
+  m.runUntil(() => vdp.stateSnapshot().registers[2] === 0x0b, 50_000_000, "R2 = 0Bh");
+  assert.equal(m.tmsLayout().base, 0x2000);
+  assert.equal(m.screen(80, 24)[0], "PAGE 2: NAMES AT 2000h, R2 = 0Bh " + "2".repeat(47));
+  m.runUntil(() => vdp.stateSnapshot().registers[2] === 0x07, 50_000_000, "R2 = 07h");
+  assert.equal(m.tmsLayout().base, 0x1000);
   m.wait(/==== END ====\r\n/);
   const r = report(m.serialText());
   const expected = {
     PASS: [1, 2, 3, 4, 5, 6, 7, 9, 13, 15, 19, 20, 26],
-    INFO: [8, 10, 11, 12, 18],
-    LOOK: [14, 16, 17, 22, 23, 24, 25],
+    INFO: [8, 10, 11, 12, 18, 36],
+    LOOK: [14, 16, 17, 22, 23, 24, 25, 35],
     NONE: [21],
   };
   for (const [result, ids] of Object.entries(expected)) {
     for (const id of ids) assert.equal(r.get(id)?.result, result, `T${id} ${JSON.stringify(r.get(id))}`);
   }
-  assert.equal(r.size, 26);
+  assert.equal(r.size, 28);
+  // The model is a plain TMS9918: the unlock and VR15 writes land in R1 and
+  // R7, and the probe puts registers 0-7 back.
+  assert.match(r.get(36).detail, /^not F18A-compatible: SR1 read [0-9A-F]{2} \(F18A E0h-EFh\)/);
+  assert.deepEqual([...vdp.stateSnapshot().registers.slice(0, 8)], [0x04, 0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0xf4]);
   // The model's answers to the open items.
   assert.match(r.get(8).detail, /^reaches the RAM underneath/, "O3 in Debug80");
   assert.match(r.get(12).detail, /^field 0-F: 0122446688AACCEE .* 9 banks \+ base$/, "O1 in Debug80");
@@ -114,6 +126,82 @@ test("the automatic tests pass on the Debug80 model and the report lists them", 
   assert.equal(screen[23], "1234567890".repeat(8));
   assert.equal(m.read(m.sym("NMICNT")), 0);
   deliberateWrites(m);
+});
+
+/**
+ * Give the model's TMS9918 the F18A register behaviour of the PICO9918
+ * firmware (vrEmuTms9918.c): registers 0-63 once 1Ch has been written to
+ * register 57 twice in a row, status registers selected by VR15 (SR1 = E8h,
+ * SR14 = 1Ah), VR50 bit 7 resetting and locking. Unlocked, R2 is decoded
+ * with mask 0Fh. Returns the extended registers and a log of writes.
+ */
+function f18a(m) {
+  const vdp = m.tec1g.state.display.tms9918;
+  const { writeControl, readStatus } = vdp;
+  const ext = new Uint8Array(64);
+  const log = [];
+  const state = { unlocked: false, count: 0, latch: null, ext, log };
+  vdp.writeControl = (value) => {
+    if (state.latch === null) {
+      state.latch = value;
+      return;
+    }
+    const first = state.latch;
+    state.latch = null;
+    if ((value & 0x80) === 0) {
+      writeControl(first);
+      writeControl(value);
+      return;
+    }
+    if (value === 0xb9 && (first & 0xfc) === 0x1c) {
+      if (++state.count === 2) {
+        state.count = 0;
+        state.unlocked = true;
+      }
+      return;
+    }
+    state.count = 0;
+    const reg = value & (state.unlocked ? 0x3f : 0x07);
+    if (!state.unlocked && (value & 0x78) !== 0) return;
+    log.push([reg, first]);
+    if (reg < 8) {
+      writeControl(first);
+      writeControl(0x80 | reg);
+      return;
+    }
+    ext[reg] = first;
+    if (reg === 50 && first & 0x80) {
+      ext.fill(0);
+      state.unlocked = false;
+    }
+  };
+  vdp.readStatus = () => {
+    state.latch = null;
+    const sr = state.unlocked ? ext[15] & 0x0f : 0;
+    if (sr === 1) return 0xe8;
+    if (sr === 14) return 0x1a;
+    return readStatus();
+  };
+  return state;
+}
+
+test("on an F18A-compatible VDP the probe reads the identity, scrolls one row and locks again", SLOW, () => {
+  const m = diag();
+  const f = f18a(m);
+  m.wait(/-- T36 /);
+  m.runUntil(() => f.ext[28] === 8, 50_000_000, "VR28 = 8");
+  assert.equal(f.unlocked, true);
+  assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[2], 0x04, "names at 1000h under mask 0Fh");
+  const text = m.wait(/T36 F18A .*\r\n/);
+  assert.match(text, /T36 F18A    LOOK  SR1 E8 \(E0h F18A, \+08h PICO9918\), SR14 version 1A, locked SR1 read [0-9A-F]{2}, after VR50 reset [0-9A-F]{2}\r\n/);
+  assert.doesNotMatch(text, /STILL UNLOCKED/);
+  assert.equal(f.unlocked, false);
+  const writes = f.log.filter(([reg]) => reg >= 8);
+  assert.deepEqual(writes, [[15, 1], [15, 0], [15, 14], [15, 0], [28, 8], [28, 0], [50, 0x80]]);
+  assert.deepEqual(
+    [...m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 8)],
+    [0x04, 0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0xf4],
+  );
 });
 
 test("a bad bit in the variables page is reported without a stack, and nothing more runs", SLOW, () => {

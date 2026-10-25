@@ -72,6 +72,8 @@ STRAM:  CALL    PRI
         CALL    TLCD
         CALL    TGLCD
         CALL    TVDP
+        CALL    TVPAGE
+        CALL    TF18A
         CALL    TSD
         CALL    TSDBLK
         CALL    TRTC
