@@ -45,6 +45,7 @@ COLD:   DI
         LDIR
         LD      A,LATCLAS
         LD      (LATCHV),A
+        CALL    RAMCHK          ; does not return without RAM at 8000h-BFFFh
         LD      HL,TPATOP       ; clear the resident workspace
         LD      DE,TPATOP+1
         LD      BC,(WSCLRN)
@@ -130,5 +131,30 @@ CPMIG:  LD      (HL),$A5
         XOR     A
         LD      (BUFOK),A
         RET
+
+;---- RAM check -----------------------------------------------------------------
+; TEC-OS needs RAM at 8000h-BFFFh: the resident workspace and the CP/M stacks
+; live there. Write both ends of the window before reading either, so a
+; floating bus cannot hand back the byte just written. Without that RAM,
+; report on the serial console (CONDEV is still 0) and stop. The boot stack
+; is in fixed RAM.
+RAMCHK: LD      DE,$55AA
+        CALL    RAMPAT
+        LD      DE,$AA55
+RAMPAT: LD      HL,$8000
+        LD      (HL),D
+        LD      A,E
+        LD      ($BFFF),A
+        LD      A,(HL)
+        CP      D
+        JR      NZ,RAMBAD
+        LD      A,($BFFF)
+        CP      E
+        RET     Z
+RAMBAD: LD      HL,RAMMSG
+        CALL    PUTS
+RAMSTOP:JR      RAMSTOP         ; NMI returns here through 0066h
+
+RAMMSG: DB      13,10,"TEC-OS needs 48K RAM: none at 8000h-BFFFh",13,10,0
 
 BANNER: DB      13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0

@@ -25,7 +25,7 @@ export function symbolsFromD8(d8) {
 }
 
 export class Machine {
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, onSdWrite }) {
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, onSdWrite }) {
     this.symbols = symbols;
     this.output = [];
     this.violations = [];
@@ -70,7 +70,10 @@ export class Machine {
     this.banks = hooks.expandBanks;
     for (const bank of this.banks) bank.fill(ramFill);
     const system = this.tec1g.state.system;
-    this.cpu.hardware.memRead = hooks.memRead;
+    // windowRam false models a board with nothing at 8000h-BFFFh: reads
+    // float high and writes go nowhere.
+    const empty = (a) => !windowRam && a >= 0x8000 && a < 0xc000;
+    this.cpu.hardware.memRead = (addr) => (empty(addr & 0xffff) ? 0xff : hooks.memRead(addr));
     this.cpu.hardware.forceMemWrite = hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     this.cpu.hardware.memWrite = (addr, value) => {
@@ -79,7 +82,7 @@ export class Machine {
       else if (a < 0x0800 && system.shadowEnabled) {
         this.violations.push({ kind: "overlay-write", addr: a, pc: this.cpu.cpu.pc });
       }
-      hooks.memWrite(a, value);
+      if (!empty(a)) hooks.memWrite(a, value);
     };
     this.read = (addr) => hooks.memRead(addr & 0xffff);
     this.write = (addr, value) => hooks.memWrite(addr & 0xffff, value & 0xff);

@@ -20,9 +20,10 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 
 | Milestone | Requirement | Test | Class | Result |
 | --- | --- | --- | --- | --- |
-| M0 | Hardware and source contract | [decisions.md](decisions.md) D01–D18 | — | Adopted, with open items O1–O4 |
+| M0 | Hardware and source contract | [decisions.md](decisions.md) D01–D22 | — | Adopted, with open items O1–O4 |
 | M1 | Reset through the overlay, overlay exit, fixed stack | `system`: cold boot; `nmi`: cold boot | Emulator | Pass: latch 01h, no write to ROM or under the overlay |
 | M1 | Repeated cold and warm starts, reset from a non-default bank | `system`: reset from dirty latch ×4, ^C warm boot | Emulator | Pass |
+| M1 | Missing RAM at `8000h–BFFFh` reported at boot | `system`: without RAM at 8000h | Emulator | Pass: serial message, then stops |
 | M1 | Diagnostic console without a card | `system`: no card | Emulator | Pass: error 01, retry works |
 | M2 | Container round trip, geometry checks, corrupt and truncated input | `host-tools` | Host | Pass: 12 corruptions rejected |
 | M2 | ROM rejects invalid containers | `system`: invalid container | Emulator | Pass: codes 21h, 25h, 28h |
@@ -66,7 +67,7 @@ compiler. That comparison is still to do.
 
 ## Measured costs
 
-ROM, `debug80` profile: 11,965 of 16,384 bytes used, 4,419 free. The region
+ROM, `debug80` profile: 12,048 of 16,384 bytes used, 4,336 free. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.

@@ -8,7 +8,9 @@ to the TEC-1G's banked RAM.
   reset. It holds the BIOS, the CCP and BDOS, the SD and console drivers and
   the native interface.
 - 32 KiB fixed RAM at `0000h–7FFFh` and a 16 KiB bank window at
-  `8000h–BFFFh`. CP/M programs get a 45,830-byte TPA from `0100h`.
+  `8000h–BFFFh`. CP/M programs get a 45,830-byte TPA from `0100h`. RAM in
+  the window is required: TEC-OS needs 48K RAM and says so at boot if it is
+  missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
 - A console made of the serial port, the matrix keyboard and an 80-column

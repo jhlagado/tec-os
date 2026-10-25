@@ -60,6 +60,15 @@ test("without a card the diagnostic console reports and retries", () => {
   assert.match(m.expect(/R retry, H header> $/), /error 01/);
 });
 
+test("without RAM at 8000h-BFFFh the boot says so on the serial console and stops", () => {
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols, sdImage: standardCard(), windowRam: false });
+  m.expect(/needs 48K RAM: none at 8000h-BFFFh\r\n$/, { from: 0, maxCycles: 20_000_000 });
+  const stop = m.cycles + 2_000_000;
+  m.runUntil(() => m.cycles >= stop);
+  assert.equal(m.pc, m.sym("RAMSTOP"));
+});
+
 test("the ROM rejects an invalid container before mounting anything", () => {
   const cases = [
     ["checksum", (b) => (b[200] ^= 1), "25"],

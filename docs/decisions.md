@@ -316,6 +316,21 @@ The emulation target is PICO9918's own VDP core (MIT, from
 and shipped in `debug80-runtime`. Until that lands, Debug80's TMS9918 model
 keeps the registers and VRAM and the web page draws 80-column text itself.
 
+## D22 48K RAM is the minimum — Adopted 2026-10-25
+
+TEC-OS requires RAM at `8000h–BFFFh` as well as the fixed 32K at
+`0000h–7FFFh`. No other memory configuration is supported: there is no 32K
+build and no ROM in the `8000h` window. A 32K TPA (about 29K after the
+resident workspace) runs small tools, but ATOM alone is 22.7K and much
+established CP/M software expects 48K or more. A ROM in the window would add
+16K of resident code but halve the TPA, and every change to it would mean
+burning a new chip, where programs on the card update with a file copy.
+
+Cold boot checks the window before it clears the workspace. Without RAM
+there, it reports `TEC-OS needs 48K RAM: none at 8000h-BFFFh` on the serial
+console and stops. The check runs on the boot stack in fixed RAM and costs
+83 bytes of ROM.
+
 ## Open decisions
 
 | ID | Open item | Blocks |
