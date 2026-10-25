@@ -1,25 +1,39 @@
 # Console
 
-The console is a set of devices rather than one port. Input comes from the
-serial port and, when enabled, the matrix keyboard. Output goes to the serial
-port and, when one is present, a video display. Programs see one CP/M
-console either way.
+The console is one device at a time, chosen by the CP/M IOBYTE's `CON:`
+field at `0003h` (decision D23):
 
-| Device | Direction | Enabled when | Status |
+| IOBYTE CON: | Device | Keys from | Output to | Size at `0048h` |
+| --- | --- | --- | --- | --- |
+| `TTY:` (0) | Serial terminal | Serial | Serial | 0 × 0 (programs assume 80 × 24) |
+| `CRT:` (1) | PICO9918 | Matrix keyboard | PICO9918 | 80, 40 or 32 × 24 by profile |
+| `BAT:` (2) | CP/M batch | Reader (serial) | List (discarded) | 0 × 0 |
+| `UC1:` (3) | GLCD | Matrix keyboard | GLCD | 21 × 8 |
+
+Cold boot picks `CRT:` when the PICO9918 answers and the Matrix switch is on,
+otherwise `UC1:` when the GLCD answers and the switch is on, otherwise `TTY:`.
+The CCP's `CON` command shows the console in use; `CON TTY`, `CON CRT`,
+`CON BAT` and `CON UC1` (a colon may follow) change it, as `STAT CON:=CRT:`
+or any program writing the IOBYTE does. The BIOS acts on a change at the
+next console call: it clears and homes the new screen. `CRT:` or `UC1:`
+without its display or the keyboard falls back to the serial terminal, so
+there is always a console. The 20 × 4 LCD is never the console.
+
+| Device | Direction | Present when | Status |
 | --- | --- | --- | --- |
 | FTDI serial, 4800 8N2 | in, out | always | Implemented |
 | Matrix keyboard | in | the board's Matrix configuration switch (port 03h bit 0) is on | Implemented |
 | PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh; `debug80` and `board` profiles | Implemented |
 | PICO9918, 40 × 24 text | out | as above, with the `debug80t40` profile | Implemented |
 | PICO9918, 32 × 24 Graphics I | out | as above, with the `debug80g32` profile | Implemented |
-| ST7920 GLCD, 128 × 64 as 21 × 8 | out | when no TMS9918 answers and the controller's busy flag clears | Implemented |
+| ST7920 GLCD, 128 × 64 as 21 × 8 | out | the controller's busy flag clears | Implemented |
 | HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
 
 ## Video terminal
 
-Serial output is passed through unchanged, so a terminal program on the PC
-does its own interpretation. On a video display TEC-OS interprets this
-subset:
+On the serial terminal, output is passed through unchanged and the terminal
+program on the PC does its own interpretation. On a video display TEC-OS
+interprets this subset:
 
 | Bytes | Effect |
 | --- | --- |
@@ -32,22 +46,33 @@ subset:
 | `ESC [ J`, `ESC [ 2 J` | Clear to the end of the screen; clear the screen |
 | `ESC [ K` | Clear to the end of the line |
 | `ESC [ 7 m`, `ESC [ 0 m` | Reverse video on; off |
+| `ESC [ n @`, `ESC [ n P` | Insert n blanks, or delete n characters, at the cursor; the rest of the line moves |
+| `ESC [ n L`, `ESC [ n M` | Insert or delete n lines at the cursor row; the rows below move, and the cursor goes to column 1 |
 
 Other escape sequences are read and ignored. Characters 80h–FFh are reverse
-images of 00h–7Fh. The cursor is the reverse image of the cell under it and
-is shown only while TEC-OS waits for console input, so output never pays for
-redrawing it. A character written in the last column leaves the cursor past
+images of 00h–7Fh. The cursor is the reverse image of the cell under it. It
+is drawn while a program waits for a key, through BIOS `CONIN` or by polling
+BIOS `CONST` (as BDOS functions 6 and 11 do), and removed by the next output,
+so output never pays for redrawing it. The BDOS's own check for `^S` during
+output does not draw it.
+
+Insert and delete move whole rows inside the display. On the PICO9918 a row
+is read and written back as one block of VRAM transfers, so inserting a
+character near the start of an 80-column line costs a few thousand T-states
+instead of a redraw. A character written in the last column leaves the cursor past
 the edge; the line wraps only when another printable character follows, as
 on a VT100, so a full-width line followed by CR LF does not leave a blank
 line.
 
-## Choosing the display
+## Displays
 
-The video card is always a PICO9918 (decision D21). At cold boot TEC-OS uses
-it when VRAM answers at ports BEh/BFh, and
-otherwise the GLCD when its busy flag clears. The terminal reaches the chosen
-display through four driver vectors (put, get, clear to end of line, scroll),
-so another display needs only those four routines and an initialiser.
+The video card is always a PICO9918 (decision D21). At cold boot TEC-OS sets
+up every display that answers: the PICO9918 when VRAM answers at ports
+BEh/BFh, the GLCD when its busy flag clears. The terminal reaches the
+display in use through seven driver vectors (put, get, clear to end of line,
+scroll, restore after a program, read a row, write a row), so another display
+needs only those routines and an initialiser. Warm boot restores the mode of
+the display in use (see [compatibility.md](compatibility.md)).
 
 ## GLCD
 
@@ -79,9 +104,8 @@ it goes down; holding it does not repeat.
 
 ## Polling and timing
 
-There is no interrupt or receive buffer. While waiting for input TEC-OS polls
-the serial line continuously and scans one keyboard row every eighth poll. A
-row scan can delay start-bit detection by up to about 280 T-states, so the
-receiver samples earlier in each bit to keep every sample between a third and
-two thirds of the bit. Input typed while a program is busy and not polling is
-lost.
+There is no interrupt or receive buffer. On the serial terminal TEC-OS polls
+the serial line continuously while waiting for input; a start bit is seen at
+most 38 T-states late, and the receiver allows for half of that. On `CRT:`
+and `UC1:` it scans the matrix keyboard and does not poll the serial line.
+Input typed while a program is busy and not polling is lost.

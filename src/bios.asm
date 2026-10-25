@@ -9,7 +9,7 @@
 
 BIOSBAS:JP      COLD            ; 00 cold boot
         JP      WBOOTR          ; 03 warm boot
-        JP      BCONST          ; 06
+        JP      BCONSTC         ; 06
         JP      BCONIN          ; 09
         JP      BCONOUT         ; 0C
         JP      BLIST           ; 0F

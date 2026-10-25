@@ -268,10 +268,10 @@ function drawGlcd(bytes, glcdState) {
 // ---- Serial terminal ---------------------------------------------------------------
 
 function pullSerial(m) {
-  if (m.output.length === state.serialSeen) return;
+  if (m.serial.length === state.serialSeen) return;
   let text = "";
-  for (let i = state.serialSeen; i < m.output.length; i += 1) {
-    const b = m.output[i];
+  for (let i = state.serialSeen; i < m.serial.length; i += 1) {
+    const b = m.serial[i];
     if (state.escape) {
       // Skip ANSI sequences: ESC [ parameters final.
       if (state.escape === 1) state.escape = b === 0x5b ? 2 : 0;
@@ -283,7 +283,7 @@ function pullSerial(m) {
     else if (b === 0x08) text += "\b";
     else if (b >= 0x20 && b < 0x7f) text += String.fromCharCode(b);
   }
-  state.serialSeen = m.output.length;
+  state.serialSeen = m.serial.length;
   appendSerial(text);
 }
 
@@ -332,10 +332,10 @@ function onKey(route) {
   };
 }
 
-$("tms").addEventListener("keydown", onKey(() => $("keyroute").value));
+$("tms").addEventListener("keydown", onKey(() => "matrix"));
 $("serial").addEventListener("keydown", onKey(() => "serial"));
 $("tms").addEventListener("click", () => $("tms").focus());
-$("glcd").addEventListener("keydown", onKey(() => $("keyroute").value));
+$("glcd").addEventListener("keydown", onKey(() => "matrix"));
 $("glcd").addEventListener("click", () => $("glcd").focus());
 
 // ---- Card ---------------------------------------------------------------------------

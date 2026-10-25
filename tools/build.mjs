@@ -36,7 +36,7 @@ function serialTiming() {
   const bit = CPU_HZ / BAUD;
   const txdly = Math.round((bit - 49) / 16); // TXB loop: 49 + 16n T-states
   const rxdly = Math.round((bit - 38) / 16); // RXB loop: 38 + 16n
-  const kbLate = 280; // longest gap between start-bit polls: one keyboard row scan
+  const kbLate = 38; // longest gap between start-bit polls in the serial loops
   const rxhalf = Math.round((1.5 * bit - 51 - kbLate / 2) / 16); // edge to the middle of bit 0
   const txstop = Math.round((2 * bit) / 16) + 1;
   const rxpoll = Math.ceil((3.5 * bit) / 38); // CSTPOLL loop: 38 T-states

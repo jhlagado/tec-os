@@ -8,7 +8,10 @@
 ; Supported: printable ASCII, CR, LF, BS, HT (8-column stops), FF (clear and
 ; home), and these ANSI sequences: ESC [ n A/B/C/D (cursor moves), ESC [ r;c H
 ; and f (position, 1-based), ESC [ J and 2J (clear to end, clear screen),
-; ESC [ K (clear to end of line), ESC [ 0 m and 7 m (normal, reverse). Other
+; ESC [ K (clear to end of line), ESC [ 0 m and 7 m (normal, reverse),
+; ESC [ n @ and n P (insert and delete characters at the cursor, shifting the
+; rest of the line), ESC [ n L and n M (insert and delete lines at the
+; cursor row, shifting the rows below; the cursor goes to column 1). Other
 ; sequences are consumed and ignored. Characters at 80h-FFh are the reverse
 ; images of 00h-7Fh, which also draws the cursor. The cursor is shown only
 ; while console input is awaited, so output does not pay for redrawing it.
@@ -182,6 +185,14 @@ VTPFIN: CP      '?'             ; private marker: ignore
         JP      Z,VTEL
         CP      'm'
         JP      Z,VTSGR
+        CP      '@'
+        JP      Z,VTICH
+        CP      'P'
+        JP      Z,VTDCH
+        CP      'L'
+        JP      Z,VTIL
+        CP      'M'
+        JP      Z,VTDL
         JP      VTDONE
 
 ; Count from ESCP1, at least 1, in B.
@@ -271,6 +282,170 @@ VTSGR1: CP      $FF             ; absent
 VTSGRS: LD      A,B
         LD      (VATTR),A
         RET
+
+; ---- Insert and delete -------------------------------------------------------
+; The cursor row is edited in LINEBUF and written back as one row.
+
+; B = count clipped to the cells from the cursor to the end of the line, C =
+; those cells. Z when the cursor is past the edge.
+VTNC:   LD      A,(VWID)
+        LD      HL,VCOL
+        SUB     (HL)
+        JR      Z,VTNCZ
+        JR      C,VTNCZ
+        LD      C,A
+        CALL    VTN
+        LD      A,B
+        CP      C
+        JR      C,VTNC1
+        LD      B,C
+VTNC1:  OR      1
+        RET
+VTNCZ:  XOR     A
+        RET
+
+; HL = LINEBUF + A. Preserves BC, DE.
+LBADR:  PUSH    DE
+        LD      E,A
+        LD      D,0
+        LD      HL,LINEBUF
+        ADD     HL,DE
+        POP     DE
+        RET
+
+VTRDC:  LD      A,(VROW)
+        LD      B,A
+        JP      VRDROW
+
+VTICH:  CALL    VTNC
+        JP      Z,VTDONE
+        PUSH    BC
+        CALL    VTRDC
+        POP     BC
+        PUSH    BC
+        LD      A,C             ; cells that move right
+        SUB     B
+        JR      Z,VTICF
+        PUSH    AF
+        LD      A,(VWID)
+        DEC     A
+        CALL    LBADR
+        EX      DE,HL           ; DE = last cell
+        LD      A,(VWID)
+        DEC     A
+        SUB     B
+        CALL    LBADR           ; HL = the cell that lands there
+        POP     AF
+        LD      C,A
+        LD      B,0
+        LDDR
+VTICF:  POP     BC
+        LD      A,(VCOL)
+VTBLNK: CALL    LBADR           ; B blanks from LINEBUF + A
+VTBLL:  LD      (HL),' '
+        INC     HL
+        DJNZ    VTBLL
+        LD      A,(VROW)
+        LD      B,A
+        CALL    VWRROW
+        JP      VTDONE
+
+VTDCH:  CALL    VTNC
+        JP      Z,VTDONE
+        PUSH    BC
+        CALL    VTRDC
+        POP     BC
+        PUSH    BC
+        LD      A,C             ; cells that move left
+        SUB     B
+        JR      Z,VTDCF
+        PUSH    AF
+        LD      A,(VCOL)
+        CALL    LBADR
+        EX      DE,HL           ; DE = the cursor cell
+        LD      A,(VCOL)
+        ADD     A,B
+        CALL    LBADR           ; HL = the first cell kept
+        POP     AF
+        LD      C,A
+        LD      B,0
+        LDIR
+VTDCF:  POP     BC
+        LD      A,(VWID)
+        SUB     B
+        JR      VTBLNK
+
+; B = count clipped to the rows from the cursor row to the bottom.
+VTNR:   LD      A,(VHGT)
+        LD      HL,VROW
+        SUB     (HL)
+        LD      C,A
+        CALL    VTN
+        LD      A,B
+        CP      C
+        RET     C
+        LD      B,C
+        RET
+
+VTIL:   CALL    VTNR
+        XOR     A
+        LD      (VCOL),A
+        LD      A,(VHGT)        ; C = destination row, from the bottom up
+        DEC     A
+        LD      C,A
+VTILL:  LD      A,(VROW)
+        ADD     A,B
+        LD      E,A
+        LD      A,C
+        CP      E
+        JR      C,VTILC         ; rows above cursor + count stay
+        PUSH    BC
+        SUB     B
+        LD      B,A
+        CALL    VRDROW
+        POP     BC
+        PUSH    BC
+        LD      B,C
+        CALL    VWRROW
+        POP     BC
+        DEC     C
+        JR      VTILL
+VTILC:  LD      A,(VROW)        ; blank the inserted rows
+        LD      C,A
+        JR      VTCLRN
+
+VTDL:   CALL    VTNR
+        XOR     A
+        LD      (VCOL),A
+        LD      A,(VROW)        ; C = destination row, from the cursor down
+        LD      C,A
+VTDLL:  LD      A,(VHGT)
+        SUB     B
+        LD      E,A
+        LD      A,C
+        CP      E
+        JR      NC,VTCLRN       ; the last count rows are blanked
+        PUSH    BC
+        ADD     A,B
+        LD      B,A
+        CALL    VRDROW
+        POP     BC
+        PUSH    BC
+        LD      B,C
+        CALL    VWRROW
+        POP     BC
+        INC     C
+        JR      VTDLL
+
+; Clear B rows from row C.
+VTCLRN: PUSH    BC
+        LD      B,C
+        LD      C,0
+        CALL    VCLREOL
+        POP     BC
+        INC     C
+        DJNZ    VTCLRN
+        JP      VTDONE
 
 ; Limit A to one less than (HL).
 VTCLIP: CP      (HL)

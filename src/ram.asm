@@ -42,6 +42,10 @@ VGETV:  DS      2
 VCLRV:  DS      2
 VSCRV:  DS      2
 VRSTV:  DS      2
+VRDRV:  DS      2               ; read row B into LINEBUF
+VWRRV:  DS      2               ; write LINEBUF to row B
+CONACT: DS      1               ; IOBYTE CON: field last acted on
+CONMOD: DS      1               ; console mode in effect (CMTTY..CMUC1)
 
 ; ---- GLCD text console --------------------------------------------------------
 GLTEXT: DS      GLCOLS*GLROWS   ; characters on screen, row by row

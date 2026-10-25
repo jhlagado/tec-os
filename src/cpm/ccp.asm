@@ -161,6 +161,9 @@ NOTDRIVE:
         LD      DE,USERKEY
         CALL    ISCMD
         JP      Z,CMDUSER
+        LD      DE,CONKEY
+        CALL    ISCMD
+        JP      Z,CMDCON
         LD      DE,CMDFCB
         CALL    UNAMBIG
         JP      C,BADCMD
@@ -889,6 +892,70 @@ RENEXIST:
         CALL    PUTSTR
         JP      STARTED
 
+; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon
+; may follow) sets the IOBYTE CON: field. The BIOS switches at the next
+; console call, so the report appears on the new console, and names the
+; serial terminal when the chosen display or keyboard is missing.
+CMDCON:
+        LD      HL,(ARGSTRT)
+        CALL    SKIPSP
+        LD      (CMDSTRT),HL    ; an error names the argument
+        OR      A
+        JR      Z,CONSHOW
+        LD      DE,CONNAMS
+        LD      B,0
+CONNXT:
+        PUSH    HL
+        LD      C,3
+CONCMP:
+        LD      A,(DE)
+        CP      (HL)
+        JR      NZ,CONNO
+        INC     HL
+        INC     DE
+        DEC     C
+        JR      NZ,CONCMP
+        POP     AF              ; matched: drop the saved text pointer
+        LD      A,(HL)
+        CP      ':'
+        JR      NZ,CONEND
+        INC     HL
+CONEND:
+        CALL    SKIPSP
+        OR      A
+        JP      NZ,BADCMD
+        LD      A,(IOBYTE)
+        AND     $FC
+        OR      B
+        LD      (IOBYTE),A
+CONSHOW:
+        LD      DE,CONHDR
+        CALL    PUTSTR
+        LD      A,(CONMOD)
+        ADD     A,A
+        LD      L,A
+        LD      H,0
+        LD      DE,CONMSGS
+        ADD     HL,DE
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        CALL    PUTSTR
+        LD      DE,CRLFMSG
+        CALL    PUTSTR
+        JP      MAINLOOP
+CONNO:
+        POP     HL
+CONSKIP:
+        INC     DE              ; to the next name
+        DEC     C
+        JR      NZ,CONSKIP
+        INC     B
+        LD      A,B
+        CP      4
+        JR      NZ,CONNXT
+        JP      BADCMD
+
 ; USER accepts one decimal user number in the CP/M 2.2 range 0..15.
 CMDUSER:
         LD      HL,(ARGSTRT)
@@ -1333,6 +1400,22 @@ SAVEKEY:
         DB      "SAVE",0
 USERKEY:
         DB      "USER",0
+CONKEY:
+        DB      "CON",0
+CONNAMS:
+        DB      "TTYCRTBATUC1"
+CONHDR:
+        DB      "CON: ",'$'
+CONTTY:
+        DB      "TTY: serial terminal",'$'
+CONCRT:
+        DB      "CRT: PICO9918",'$'
+CONBAT:
+        DB      "BAT: reader and list",'$'
+CONUC1:
+        DB      "UC1: GLCD",'$'
+CONMSGS:
+        DW      CONTTY,CONCRT,CONBAT,CONUC1
 FILEEX:
         DB      "FILE EXISTS",'$'
 NOSPACE:

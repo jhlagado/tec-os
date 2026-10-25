@@ -3,7 +3,7 @@
 Status: **Proposed**, 2026-10-25. Nothing here is built yet. Sizes marked
 "est." are estimates; the others come from the `debug80` build census.
 
-The ROM is 16 KiB. It holds 12,115 bytes today and has 4,269 free. This
+The ROM is 16 KiB. It holds 12,869 bytes today and has 3,515 free. This
 document sets out what earns a place in it, adds one entry point that gives
 programs the TEC-1G's hardware, and lists what belongs on the card instead.
 
@@ -165,8 +165,8 @@ Programs:
 
 | Resource | Today | After | Change |
 | --- | ---: | ---: | ---: |
-| ROM used | 12,115 | about 12,490 | +370 (est.) |
-| ROM free | 4,269 | about 3,890 | |
+| ROM used | 12,869 | about 13,240 | +370 (est.) |
+| ROM free | 3,515 | about 3,140 | |
 | TPA | 45,830 | 45,830 | none |
 | Resident workspace | | | +4 bytes (est.): video claim, serial timeout |
 | Caller's stack per service | — | 16 bytes or less (est.) | measured by the tests |

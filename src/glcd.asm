@@ -79,6 +79,23 @@ GLCZB:  XOR     A
 ; Basic set, display on, clear text, extended set, graphics on.
 GLCSEQ: DB      $30,$0C,$01,$34,$36
 
+; Copy row B to LINEBUF, or LINEBUF to row B and redraw it.
+GLRDR:  LD      C,0
+        CALL    GLCADR
+        LD      DE,LINEBUF
+        LD      BC,GLCOLS
+        LDIR
+        RET
+GLWRR:  PUSH    BC
+        LD      C,0
+        CALL    GLCADR
+        EX      DE,HL
+        LD      HL,LINEBUF
+        LD      BC,GLCOLS
+        LDIR
+        POP     BC
+        JP      GLCROW
+
 ; Warm boot through VREST: put the controller back in graphics mode with the
 ; display on. Graphics RAM keeps whatever a program drew until the console
 ; next writes over it.

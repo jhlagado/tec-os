@@ -46,7 +46,15 @@ VATTR   EQU     $004E           ; 80h while reverse video is on
 VCURV   EQU     $004F           ; 1 while the cursor cell is inverted
 
 CDMTX   EQU     $01             ; matrix keyboard enabled
-CDVID   EQU     $02             ; a video display is the console screen
+CDTMS   EQU     $02             ; PICO9918 answered at cold boot
+CDGLC   EQU     $04             ; GLCD answered at cold boot
+
+; Console modes: the IOBYTE CON: field in effect (CONMOD). Odd means a video
+; display with the matrix keyboard.
+CMTTY   EQU     0               ; serial terminal
+CMCRT   EQU     1               ; PICO9918 and matrix keyboard
+CMBAT   EQU     2               ; reader in, list out
+CMUC1   EQU     3               ; GLCD and matrix keyboard
 
 ; ---- Classic resident region (top of the classic bank) ----------------------
 BOOTSTK EQU     $8000           ; cold-boot stack top, fixed RAM

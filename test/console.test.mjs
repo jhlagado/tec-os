@@ -6,17 +6,54 @@ import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
-test("with a TMS9918 the session appears on screen and on serial", () => {
-  const m = boot(standardCard(), { tms: true });
+test("with a PICO9918 and the matrix keyboard, the screen is the console and serial is quiet", () => {
+  const m = boot(standardCard(), { tms: true, matrix: true });
   const screen = m.screen();
   assert.equal(screen[1], "TEC-OS 0.1 for TEC-1G");
   assert.equal(screen[2], "A: SYSTEM");
   assert.equal(screen[5], "A>");
   assert.equal(m.cell(5, 2), 0xa0, "cursor is the reverse image of a space");
   assert.match(m.bootText, /A: SYSTEM/);
+  assert.equal(m.serialText(), "", "nothing goes to the serial port");
+  assert.equal(m.read(3) & 3, 1, "IOBYTE CON: is CRT:");
 });
 
-test("the matrix keyboard and serial both type at the prompt", () => {
+test("without the matrix keyboard the serial terminal is the console, even with a display", () => {
+  const m = boot(standardCard(), { tms: true });
+  assert.match(m.serialText(), /B: WORK *\r\n\r\nA>$/);
+  assert.equal(m.read(3) & 3, 0, "IOBYTE CON: is TTY:");
+  assert.equal(m.read(m.sym("VWID")), 0, "no screen geometry");
+  assert.ok(m.screen().every((line) => line === ""), "the PICO9918 stays blank");
+});
+
+test("CON switches the console between devices and falls back to serial", () => {
+  const m = boot(standardCard(), { tms: true, matrix: true });
+  assert.match(m.command("CON"), /CON: CRT: PICO9918/);
+  m.mark = m.output.length;
+  m.typeMatrix("con uc1:\r");
+  m.expect(/A>$/);
+  assert.equal(m.read(3) & 3, 3);
+  assert.deepEqual(m.glcdScreen().slice(0, 3), ["CON: UC1: GLCD", "A>", ""]);
+  m.mark = m.output.length;
+  m.typeMatrix("con tty\r");
+  assert.match(m.expect(/A>$/), /CON: TTY: serial terminal/);
+  assert.match(m.serialText(), /CON: TTY: serial terminal\r\nA>$/);
+  m.command("CON CRT");
+  assert.ok(m.screen().some((line) => line === "CON: CRT: PICO9918"));
+  assert.match(m.command("CON XYZ"), /\r\nXYZ\?/);
+  assert.deepEqual(m.violations, []);
+});
+
+test("CRT: without a PICO9918 falls back to the serial terminal", () => {
+  const m = boot(standardCard(), { matrix: true });
+  assert.equal(m.read(3) & 3, 3, "the GLCD is chosen at boot");
+  m.mark = m.output.length;
+  m.typeMatrix("con crt\r");
+  m.expect(/A>$/);
+  assert.match(m.serialText(), /CON: TTY: serial terminal/);
+});
+
+test("the matrix keyboard types at the prompt", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
   m.mark = m.output.length;
   m.typeMatrix("save 1 key.com\r");
@@ -32,7 +69,7 @@ test("the matrix keyboard and serial both type at the prompt", () => {
 test("the video terminal implements its ANSI subset", async () => {
   const image = standardCard();
   volume(image, "A").write("TERM.COM", (await program("term")).bytes);
-  const m = boot(image, { tms: true });
+  const m = boot(image, { tms: true, matrix: true });
   m.command("TERM");
   const s = m.screen();
   assert.equal(s[0], "AB");
@@ -47,7 +84,7 @@ test("the video terminal implements its ANSI subset", async () => {
 });
 
 test("the 32-column profile uses TMS9918 Graphics I", () => {
-  const m = boot(standardCard(), { tms: true, profile: "debug80g32" });
+  const m = boot(standardCard(), { tms: true, matrix: true, profile: "debug80g32" });
   const s = m.screen(32);
   assert.equal(s[1], "TEC-OS 0.1 for TEC-1G");
   assert.equal(s[5], "A>");
@@ -67,7 +104,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const image = standardCard();
   const a = volume(image, "A");
   for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "NATDEMO.TNX", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
-  const tms = boot(image, { tms: true, profile: "debug80t40" });
+  const tms = boot(image, { tms: true, matrix: true, profile: "debug80t40" });
   tms.command("DIR");
   const s = tms.screen();
   const at = s.indexOf("A>DIR");
@@ -77,7 +114,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
     "6 files, 1004K free",
     "A>",
   ]);
-  const glcd = boot(image);
+  const glcd = boot(image, { matrix: true });
   glcd.command("DIR *.COM");
   assert.deepEqual(glcd.glcdScreen().slice(-5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1004K free", "A>"]);
   assert.match(tms.command("DIR B:"), /NO FILE/);
@@ -101,7 +138,7 @@ function numberedLines(n) {
 test("TYPE pauses a screen at a time on the 8-row GLCD and can be stopped", () => {
   const image = standardCard();
   volume(image, "A").write("LINES.TXT", Buffer.from(numberedLines(20)), { text: true });
-  const m = boot(image);
+  const m = boot(image, { matrix: true });
   m.mark = m.output.length;
   m.type("TYPE LINES.TXT\r");
   m.expect(/\[more\]$/);
@@ -122,7 +159,7 @@ test("TYPE fills a 24-row, 40-column screen before pausing, and long lines count
   const image = standardCard();
   const long = "x".repeat(70);
   volume(image, "A").write("WIDE.TXT", Buffer.from(`${long}\n${numberedLines(40)}`), { text: true });
-  const m = boot(image, { tms: true, profile: "debug80t40" });
+  const m = boot(image, { tms: true, matrix: true, profile: "debug80t40" });
   m.mark = m.output.length;
   m.type("TYPE WIDE.TXT\r");
   m.expect(/\[more\]$/);
@@ -137,7 +174,7 @@ test("a long DIR pauses too", () => {
   const image = standardCard();
   const a = volume(image, "A");
   for (let i = 0; i < 30; i += 1) a.write(`F${i}.DAT`, new Uint8Array(1));
-  const m = boot(image);
+  const m = boot(image, { matrix: true });
   m.mark = m.output.length;
   m.type("DIR\r");
   m.expect(/\[more\]$/);
@@ -170,7 +207,7 @@ test("the default console is the PICO9918's 80 x 24 text mode", () => {
   const a = volume(image, "A");
   for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "NATDEMO.TNX", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
   a.write("WIDE.TXT", Buffer.from(`${"y".repeat(79)}Z\n${"w".repeat(85)}\n`), { text: true });
-  const m = boot(image, { tms: true });
+  const m = boot(image, { tms: true, matrix: true });
   const r = m.tec1g.state.display.tms9918.stateSnapshot().registers;
   assert.equal(r[0], 0x04, "R0: 80-column text");
   assert.equal(r[1], 0x50, "R1: display on, text mode");
@@ -187,4 +224,33 @@ test("the default console is the PICO9918's 80 x 24 text mode", () => {
   assert.equal(s[at + 2], "w".repeat(80));
   assert.equal(s[at + 3], "wwwww");
   assert.equal(s[at + 5], "A>");
+});
+
+test("the video terminal inserts and deletes characters and lines", async () => {
+  const image = standardCard();
+  volume(image, "A").write("INSDEL.COM", (await program("insdel")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  m.command("INSDEL");
+  const s = m.screen();
+  assert.deepEqual(s.slice(0, 4), ["ABxyCDE", "", "row3", "row4"]);
+  assert.deepEqual(m.violations, []);
+});
+
+test("the cursor shows while a program polls for a key, and goes with the next output", async () => {
+  const image = standardCard();
+  volume(image, "A").write("POLL.COM", (await program("poll")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  m.mark = m.output.length;
+  m.typeMatrix("poll\r");
+  const shown = m.sym("VCURV");
+  m.runUntil(() => m.pc >= 0x0100 && m.pc < 0x0110, 100_000_000, "POLL running");
+  m.runUntil(() => m.read(shown) === 1, 50_000_000, "the cursor");
+  m.runUntil(() => m.waitingForInput(), 50_000_000, "the next poll");
+  const row = m.read(m.sym("VROW"));
+  const col = m.read(m.sym("VCOL"));
+  assert.equal(m.read(m.sym("VCURV")), 1);
+  assert.equal(m.cell(row, col), 0xa0, "the reverse image of a space");
+  m.typeMatrix("x");
+  m.expect(/A>$/);
+  assert.notEqual(m.cell(row, col), 0xa0, "removed before the next output");
 });

@@ -331,6 +331,30 @@ there, it reports `TEC-OS needs 48K RAM: none at 8000h-BFFFh` on the serial
 console and stops. The check runs on the boot stack in fixed RAM and costs
 83 bytes of ROM.
 
+## D23 One console device, chosen by the IOBYTE — Adopted 2026-10-25
+
+The console used to be every device at once: keys from serial and the matrix
+keyboard, output to serial and the display. Copying every character to the
+4800-baud serial line cost 9,177 T-states each, 82% of the time Edit took to
+redraw a line on the PICO9918. TEC-OS now follows CP/M 2.2: the IOBYTE's
+`CON:` field names one logical device, and the BIOS maps it to one physical
+device. `TTY:` is the serial terminal, `CRT:` the PICO9918 with the matrix
+keyboard, `UC1:` the GLCD with the matrix keyboard, and `BAT:` the CP/M batch
+pairing of reader and list. Cold boot picks `CRT:`, then `UC1:`, then `TTY:`
+by what answers and whether the Matrix switch is on. A display without the
+keyboard is not a console, and a choice whose device is missing falls back
+to the serial terminal.
+
+The CCP gains a resident `CON` command (about 150 bytes) so the console can
+be changed without a file on the card; `STAT CON:=` works too. The console
+size at `0048h` describes the console in use and is 0 for the serial
+terminal.
+
+The cursor is drawn when a program polls BIOS `CONST` with nothing waiting,
+as well as in `CONIN`, so programs that poll (Edit, through BDOS function 6)
+show it. The video terminal gains insert and delete for characters and lines
+so full-screen programs need not redraw shifted text.
+
 ## Open decisions
 
 | ID | Open item | Blocks |

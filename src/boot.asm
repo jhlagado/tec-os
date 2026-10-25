@@ -53,7 +53,8 @@ COLD:   DI
         LDIR
         LD      SP,BSTK
         CALL    CONINIT
-        CALL    LCDINIT
+        CALL    CONPICK
+COLDCON:CALL    LCDINIT
         LD      HL,LCDBAN
         LD      B,0
         CALL    LCDROW
@@ -85,9 +86,9 @@ WBOOTR: DI
         LD      SP,BSTK
         CALL    PZINIT
         CALL    CPMINIT
-        LD      A,(CONDEV)      ; a program may have changed the display mode
-        AND     CDVID
-        CALL    NZ,VREST
+        LD      A,(CONMOD)      ; a program may have changed the display mode
+        RRCA
+        CALL    C,VREST
         LD      A,(PZDU)
         LD      C,A
         JP      CCPENT

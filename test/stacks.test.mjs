@@ -16,7 +16,7 @@ test("measured stack depths stay inside their reservations", { timeout: 900_000 
   a.write("COPY.COM", (await program("copy")).bytes);
   a.write("NATDEMO.TNX", (await program("natdemo", { base: 0x0780 })).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
-  const m = boot(image, { tms: true });
+  const m = boot(image, { tms: true, matrix: true });
   const s = (n) => m.sym(n);
   const stacks = {
     bdos: [s("STKBASE"), s("STKTOP")],

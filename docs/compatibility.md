@@ -51,11 +51,11 @@ warm boot on the PICO9918 and 1,447 on the GLCD.
 
 | Device | Behaviour |
 | --- | --- |
-| Console | Serial and matrix keyboard in; serial and video out ([console.md](console.md)) |
+| Console | One device chosen by the IOBYTE `CON:` field: serial terminal, PICO9918 with the matrix keyboard, batch, or GLCD with the matrix keyboard ([console.md](console.md)) |
 | List | Output discarded; `LISTST` reports ready |
 | Punch | The serial port, 8 bits, whatever the console routing |
 | Reader | The serial port, 8 bits; waits for a byte. A byte the console has already taken stays with the console |
-| IOBYTE | Stored, ignored |
+| IOBYTE | `CON:` field selects the console; the other fields are stored and ignored |
 
 ## Applications
 

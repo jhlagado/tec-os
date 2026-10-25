@@ -13,9 +13,10 @@ to the TEC-1G's banked RAM.
   missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
-- A console made of the serial port, the matrix keyboard and an 80-column
-  PICO9918 video card (or, without one, the 128 × 64 GLCD), used together,
-  with a status display on the 20 × 4 LCD.
+- A console that is one device at a time, chosen by the CP/M IOBYTE: the
+  80-column PICO9918 with the matrix keyboard, the 128 × 64 GLCD with the
+  matrix keyboard, or a serial terminal. `CON` shows or changes it. The
+  20 × 4 LCD shows boot status.
 - A web page that runs the whole system in a browser.
 
 Everything described here has run only in the Debug80 TEC-1G model; it has
@@ -56,8 +57,8 @@ python3 -m http.server 8765 --directory web/dist
 Open `http://localhost:8765`. The page runs the same Debug80 TEC-1G model
 the tests use, at 4 MHz, with a TMS9918 screen, the 7-segment digits, the
 20 × 4 LCD, the 8 × 8 RGB LEDs, the GLCD and a serial terminal. Click the
-screen and type: keys go to the matrix keyboard, or to the serial port if you
-choose. The card lives in the browser's IndexedDB and survives reloads.
+screen and type on the matrix keyboard; after `CON TTY`, type in the serial
+terminal instead. The card lives in the browser's IndexedDB and survives reloads.
 "New starter card" builds one from `starter.recipe.json`, checking every
 file's SHA-256. Files can be copied onto and off the card from the page,
 which resets the TEC-1G so CP/M sees the change.
@@ -79,10 +80,11 @@ to TEC-OS. Never change a card on the PC while the TEC-1G is using it.
 
 ## Using it
 
-TEC-OS boots to the CP/M prompt `A>`. Connect a terminal to the FTDI port at
-4800 baud, 8 data bits, no parity, 2 stop bits, or use the matrix keyboard
-and a TMS9918 card. CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`,
-`USER`, `B:`. A command that names a `.COM` file runs it; one that names a
+TEC-OS boots to the CP/M prompt `A>` on the PICO9918 or the GLCD when the
+board's Matrix switch is on, and on the serial terminal otherwise: connect
+the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
+moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
+CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `B:`. A command that names a `.COM` file runs it; one that names a
 `.TNX` file runs a native program. If the card is missing or invalid, a
 diagnostic prompt shows the error code and offers a retry.
 

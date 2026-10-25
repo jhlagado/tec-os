@@ -27,7 +27,10 @@ export function symbolsFromD8(d8) {
 export class Machine {
   constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, onSdWrite }) {
     this.symbols = symbols;
+    // output: every byte the BIOS was asked to put on the console, whichever
+    // device is in use. serial: the bytes that left the serial port.
     this.output = [];
+    this.serial = [];
     this.violations = [];
     this.cycles = 0;
     this.sdImage = sdImage;
@@ -48,7 +51,7 @@ export class Machine {
     this.tec1g = createTec1gRuntime(
       config,
       () => {},
-      (byte) => this.output.push(byte),
+      (byte) => this.serial.push(byte),
     );
     if (tms) this.tec1g.setTms9918Active(true);
     const base = this.tec1g.ioHandlers;
@@ -84,6 +87,7 @@ export class Machine {
       }
       if (!empty(a)) hooks.memWrite(a, value);
     };
+    this.conout = symbols.get("BCONOUT");
     this.read = (addr) => hooks.memRead(addr & 0xffff);
     this.write = (addr, value) => hooks.memWrite(addr & 0xffff, value & 0xff);
   }
@@ -108,6 +112,7 @@ export class Machine {
   }
 
   step() {
+    if (this.cpu.cpu.pc === this.conout) this.output.push(this.cpu.cpu.c);
     const result = this.cpu.step();
     const cycles = result.cycles ?? 0;
     this.tec1g.recordCycles(cycles);
@@ -134,7 +139,7 @@ export class Machine {
     const limit = this.cycles + maxCycles;
     while (!predicate()) {
       const next = this.cycles + every;
-      this.runUntil(() => this.cycles >= next, every * 2, what);
+      this.runUntil(() => this.cycles >= next, every + 1_000_000, what); // LDIR of a few KiB is one step
       if (this.cycles > limit) {
         throw new Error(`no ${what} within ${maxCycles} cycles; pc=${this.pc.toString(16)}`);
       }
@@ -148,21 +153,44 @@ export class Machine {
   /** Run until the console output since `from` matches pattern. */
   expect(pattern, { from = this.mark ?? 0, maxCycles = 100_000_000 } = {}) {
     this.runUntil(() => pattern.test(this.text(from)), maxCycles, `output ${pattern}`);
+    // Output is recorded as the BIOS is asked for it; let the last character
+    // reach the screen, normally by running on until the console waits.
+    const settle = this.cycles + 2_000_000;
+    this.runUntil(() => this.waitingForInput() || this.cycles > settle, 3_000_000, "console output");
     const out = this.text(from);
     this.mark = this.output.length;
     return out;
   }
 
-  /** True while the console input routine is waiting for a start bit. */
+  /** True while the console is waiting for, or polling for, a key. */
   waitingForInput() {
     const pc = this.pc;
-    return (pc >= this.sym("CINLP") && pc < this.sym("CINWE")) || (pc >= this.sym("CSTPOLL") && pc < this.sym("CSTGOT"));
+    this.inputRanges ??= [
+      ["CINLP", "CINWE"],
+      ["CSTPOLL", "CSTGOT"],
+      ["CINMX", "CINME"],
+      ["CSTMX", "CSTMXE"],
+      ["KBPOLL", "KBDELIV"], // scanning the matrix keyboard for a key
+    ].map(([a, b]) => [this.sym(a), this.sym(b)]);
+    for (const [a, b] of this.inputRanges) if (pc >= a && pc < b) return true;
+    return false;
+  }
+
+  /** True while a video display and the matrix keyboard are the console. */
+  videoConsole() {
+    return (this.read(this.sym("CONMOD")) & 1) === 1;
+  }
+
+  /** Serial bytes as text. */
+  serialText(from = 0) {
+    return Buffer.from(this.serial.slice(from)).toString("latin1");
   }
 
   /** Type text one character at a time, as a terminal user would: each byte
    *  is sent only when TEC-OS is waiting and the next waits until it has been
    *  received. */
   type(text, maxCycles = 100_000_000) {
+    if (this.videoConsole()) return this.typeMatrix(text, maxCycles);
     const cin = this.sym("CINRX");
     const cst = this.sym("CSTRX");
     for (const ch of text) {

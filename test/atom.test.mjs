@@ -17,7 +17,7 @@ test("ATOM assembles a program on TEC-OS and the program runs", { skip: !existsS
   const a = volume(image, "A");
   a.write("ATOM.COM", new Uint8Array(readFileSync(ATOM)));
   a.write("HELLO.ASM", Buffer.from(HELLO), { text: true });
-  const m = boot(image, { tms: true });
+  const m = boot(image, { tms: true, matrix: true });
   const out = m.command("ATOM HELLO", { maxCycles: 2_000_000_000 });
   if (!/HELLO\.COM written/.test(out)) {
     t.skip(`${ATOM} did not run here: ${out.trim().split("\n").pop()}`);

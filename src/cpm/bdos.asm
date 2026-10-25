@@ -2086,6 +2086,12 @@ CONSTAT:
         RET     NZ
         JP      BIOCST
 
+CONSTQ:
+        LD      A,(PENDING)
+        OR      A
+        RET     NZ
+        JP      BCONST
+
 OUTCHAR:
         LD      A,C
         CP      TAB
@@ -2154,7 +2160,7 @@ COLBACK:
         RET
 
 CHKKEY:
-        CALL    CONSTAT
+        CALL    CONSTQ          ; TEC-OS: the check draws no cursor
         OR      A
         RET     Z
         CALL    GETCHAR

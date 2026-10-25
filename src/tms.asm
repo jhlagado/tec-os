@@ -120,18 +120,42 @@ TMSRA:  LD      A,L
         OUT     (VDPCTL),A
         RET
 
-; HL = name-table address of row B, column C. Destroys DE.
-TMSCELL:LD      HL,TNAME
-        LD      E,C
+; HL = name-table address of row B, column C. Destroys AF, DE.
+TMSCELL:LD      A,B
+        ADD     A,A
+        LD      E,A
         LD      D,0
+        LD      HL,TMSROWT
         ADD     HL,DE
-        LD      A,B
-        OR      A
-        RET     Z
-        LD      E,TMSCOLS
-TMSCL:  ADD     HL,DE
-        DEC     A
-        JR      NZ,TMSCL
+        LD      A,(HL)
+        INC     HL
+        LD      H,(HL)
+        LD      L,A
+        LD      E,C
+        ADD     HL,DE
+        RET
+TMSROWT:DW      TNAME,TNAME+TMSCOLS,TNAME+2*TMSCOLS,TNAME+3*TMSCOLS
+        DW      TNAME+4*TMSCOLS,TNAME+5*TMSCOLS,TNAME+6*TMSCOLS,TNAME+7*TMSCOLS
+        DW      TNAME+8*TMSCOLS,TNAME+9*TMSCOLS,TNAME+10*TMSCOLS,TNAME+11*TMSCOLS
+        DW      TNAME+12*TMSCOLS,TNAME+13*TMSCOLS,TNAME+14*TMSCOLS,TNAME+15*TMSCOLS
+        DW      TNAME+16*TMSCOLS,TNAME+17*TMSCOLS,TNAME+18*TMSCOLS,TNAME+19*TMSCOLS
+        DW      TNAME+20*TMSCOLS,TNAME+21*TMSCOLS,TNAME+22*TMSCOLS,TNAME+23*TMSCOLS
+
+; Copy row B to LINEBUF, or LINEBUF to row B, as one block. Destroy AF, BC,
+; DE, HL.
+TMSRDR: LD      C,0
+        CALL    TMSCELL
+        CALL    TMSRA
+        LD      HL,LINEBUF
+        LD      BC,TMSCOLS*256+VDPDAT
+        INIR
+        RET
+TMSWRR: LD      C,0
+        CALL    TMSCELL
+        CALL    TMSWA
+        LD      HL,LINEBUF
+        LD      BC,TMSCOLS*256+VDPDAT
+        OTIR
         RET
 
 ; Put A at row B, column C. Destroys AF, DE, HL.
@@ -144,7 +168,7 @@ TMSPUT: PUSH    AF
 
 ; A = the character at row B, column C. Destroys DE, HL.
 TMSGET: CALL    TMSCELL
-        JR      TMSPEEK
+        JP      TMSPEEK
 
 ; Clear row B from column C to the end of the line.
 TMSCLR: CALL    TMSCELL
@@ -160,27 +184,11 @@ TMSCLL: LD      A,' '
 ; Move rows 1-23 up one row through LINEBUF and clear the last row.
 TMSSCR: LD      B,1
 TMSSCL: PUSH    BC
-        LD      C,0
-        CALL    TMSCELL
-        CALL    TMSRA
-        LD      HL,LINEBUF
-        LD      B,TMSCOLS
-TMSSRR: IN      A,(VDPDAT)
-        LD      (HL),A
-        INC     HL
-        DJNZ    TMSSRR
+        CALL    TMSRDR
         POP     BC
         PUSH    BC
         DEC     B
-        LD      C,0
-        CALL    TMSCELL
-        CALL    TMSWA
-        LD      HL,LINEBUF
-        LD      B,TMSCOLS
-TMSSRW: LD      A,(HL)
-        OUT     (VDPDAT),A
-        INC     HL
-        DJNZ    TMSSRW
+        CALL    TMSWRR
         POP     BC
         INC     B
         LD      A,B

@@ -1,5 +1,16 @@
-; Console: input from the serial port and, when enabled, the matrix
-; keyboard; output to the serial port and, when present, a video terminal.
+; Console: one device at a time, chosen by the IOBYTE CON: field.
+;
+;   TTY: (0)  serial terminal: keys and output on the serial port
+;   CRT: (1)  PICO9918 screen and the matrix keyboard
+;   BAT: (2)  CP/M batch: keys from the reader, output to the list device
+;   UC1: (3)  GLCD screen and the matrix keyboard
+;
+; Cold boot picks CRT:, then UC1:, then TTY:, by what answered and whether
+; the Matrix switch is on. A program or the CCP's CON command may change the
+; IOBYTE at any time; the next console call acts on it, clearing and homing
+; the new screen. CRT: or UC1: without its display or keyboard falls back to
+; the serial terminal. VWID and VHGT give the size of the console in use, 0
+; for the serial terminal.
 ;
 ; Serial is bit-banged at 4800 baud, 8 data bits, no parity, 2 stop bits. TX
 ; is port 01h bit 6 (idle high), RX is port 03h bit 7. Reception has no
@@ -8,10 +19,8 @@
 ; the board it reads the keypad encoder and has no effect. The delay counts
 ; (TXDLY, TXSTOP, RXHALF, RXDLY, RXPOLL) come from the generated configuration.
 
-; A keyboard row scan delays start-bit detection by up to KBLATE T-states.
-; RXHALF is reduced by half of that, so every sample lands between about a
-; third and two thirds of its bit whichever poll sees the start bit.
-KBEVERY EQU     8
+; The serial polling loops see a start bit up to 38 T-states late. RXHALF
+; allows for half of that, so the samples land near the middle of each bit.
 
 CONINIT:LD      A,$40
         OUT     (DIGPORT),A
@@ -21,6 +30,7 @@ CONINIT:LD      A,$40
         LD      (VATTR),A
         LD      (VCURV),A
         LD      (ESCST),A
+        LD      (CONMOD),A
         LD      (KBBASE),A
         DEC     A
         LD      (KBLAST),A
@@ -31,20 +41,113 @@ CONINIT:LD      A,$40
         IN      A,(STSPORT)     ; the board's Matrix switch enables the keyboard
         AND     CDMTX
         LD      (CONDEV),A
-        CALL    VIDINIT
-        RET     NZ
-        LD      A,(CONDEV)
-        OR      CDVID
-        LD      (CONDEV),A
+        JP      VIDINIT
+
+; Pick the cold-boot console from what answered and act on it.
+CONPICK:LD      A,(CONDEV)
+        LD      C,A
+        LD      B,CMCRT
+        AND     CDTMS+CDMTX
+        CP      CDTMS+CDMTX
+        JR      Z,CONPK1
+        LD      B,CMUC1
+        LD      A,C
+        AND     CDGLC+CDMTX
+        CP      CDGLC+CDMTX
+        JR      Z,CONPK1
+        LD      B,CMTTY
+CONPK1: LD      A,(IOBYTE)
+        AND     $FC
+        OR      B
+        LD      (IOBYTE),A
+        LD      A,$FF
+        LD      (CONACT),A
+        ; fall through
+
+; Act on a changed IOBYTE CON: field. Preserves BC and DE.
+CONSEL: LD      A,(IOBYTE)
+        AND     3
+        LD      HL,CONACT
+        CP      (HL)
+        RET     Z
+        LD      (HL),A
+        PUSH    BC
+        PUSH    DE
+        CALL    CONSW
+        POP     DE
+        POP     BC
         RET
 
-; BIOS CONST: A = FFh if a character is ready, else 00h.
-BCONST: LD      A,(RXFULL)
+CONSW:  LD      B,A
+        LD      A,(CONDEV)
+        LD      C,A
+        LD      A,B
+        CP      CMCRT
+        JR      NZ,CONSW3
+        LD      A,C
+        AND     CDTMS+CDMTX
+        CP      CDTMS+CDMTX
+        JR      NZ,CONSWT
+        LD      HL,TMSVEC
+        LD      DE,TMSCOLS+256*24
+        JR      CONSWV
+CONSW3: CP      CMUC1
+        JR      NZ,CONSW2
+        LD      A,C
+        AND     CDGLC+CDMTX
+        CP      CDGLC+CDMTX
+        JR      NZ,CONSWT
+        LD      HL,GLCVEC
+        LD      DE,GLCOLS+256*GLROWS
+        JR      CONSWV
+CONSW2: CP      CMBAT
+        JR      Z,CONSWN
+CONSWT: LD      A,CMTTY         ; the serial terminal, also the fallback
+CONSWN: LD      (CONMOD),A
+        LD      HL,0            ; no screen geometry
+        LD      (VWID),HL
+        RET
+CONSWV: PUSH    BC              ; B = the video mode
+        PUSH    DE
+        CALL    VIDSET
+        POP     DE
+        LD      (VWID),DE       ; columns, then rows
+        POP     BC
+        LD      A,B
+        LD      (CONMOD),A
+        XOR     A
+        LD      (VROW),A
+        LD      (VCOL),A
+        LD      (VATTR),A
+        LD      (ESCST),A
+        LD      (VCURV),A
+        JP      VTCLS
+
+; BIOS CONST: A = FFh if a character is ready, else 00h. With nothing ready
+; on a video console the cursor is drawn, since a program that polls is
+; waiting for a key; the next output removes it. The BDOS's own check for ^S
+; during output uses BCONST, which draws nothing.
+BCONSTC:CALL    BCONST
+        OR      A
+        RET     NZ
+        LD      A,(CONMOD)
+        RRCA
+        CALL    C,CURSHOW
+        XOR     A
+        RET
+
+BCONST: CALL    CONSEL
+        LD      A,(RXFULL)
         OR      A
         JR      NZ,CSTYES
-        CALL    KBPOLL
-        JR      NZ,CSTYES
-        IN      A,(KEYPORT)
+        LD      A,(CONMOD)
+        RRCA
+        JR      NC,CSTSER
+CSTMX:  CALL    KBPOLL
+CSTMXE: JR      NZ,CSTYES
+        XOR     A
+        RET
+CSTSER: IN      A,(KEYPORT)
         LD      E,RXPOLL
 CSTPOLL:IN      A,(STSPORT)
         RLCA
@@ -65,17 +168,19 @@ CSTYES: LD      A,$FF
 
 ; BIOS CONIN: wait for a character and return it in A with bit 7 clear.
 ; NUL is not delivered (Debug80 sends one ahead of its first input byte).
-BCONIN: LD      A,(RXFULL)
+BCONIN: CALL    CONSEL
+        LD      A,(RXFULL)
         OR      A
         JR      NZ,CINTAKE
-        LD      A,(CONDEV)      ; the video cursor shows only while waiting
-        AND     CDVID
-        CALL    NZ,CURSHOW
-        CALL    CINLP
+        LD      A,(CONMOD)
+        RRCA
+        JR      NC,CINLP
+        CALL    CURSHOW         ; video: the cursor shows while waiting
+CINMX:  CALL    KBSTEP          ; scan the matrix a row at a time
+CINME:  JR      Z,CINMX
+        CALL    CINTAKE
         PUSH    AF
-        LD      A,(CONDEV)
-        AND     CDVID
-        CALL    NZ,CURHIDE
+        CALL    CURHIDE
         POP     AF
         RET
 CINTAKE:LD      A,(KBTN)        ; bytes of an arrow sequence still to come
@@ -94,21 +199,12 @@ CINTAIL:DEC     A               ; deliver this byte, move the next one up
         LD      (KBT1),A
         POP     AF
         RET
-; Wait for a character from either input device.
-CINLP:  LD      E,KBEVERY
-CINWT:  IN      A,(KEYPORT)
+; Wait for a byte from the serial port (TTY: and BAT:).
+CINLP:  IN      A,(KEYPORT)
         IN      A,(STSPORT)
         RLCA
-        JR      NC,CINSER
-        DEC     E
-        JR      NZ,CINWT
-        LD      A,(CONDEV)
-        AND     CDMTX
-        JR      Z,CINLP
-        CALL    KBSTEP          ; one keyboard row every KBEVERY serial polls
-        JR      Z,CINLP
-CINWE:  JR      CINTAKE
-CINSER: CALL    RXBITS
+        JR      C,CINLP
+CINWE:  CALL    RXBITS
 CINRX:  AND     $7F
         JR      Z,CINLP
         RET
@@ -130,12 +226,12 @@ RXD:    DEC     D
         RET
 
 ; BIOS CONOUT: send C to the serial port and the video terminal.
-BCONOUT:LD      A,(CONDEV)
-        AND     CDVID
-        JR      Z,BCOSER
-        PUSH    BC
-        CALL    VTOUT
-        POP     BC
+BCONOUT:CALL    CONSEL
+        LD      A,(CONMOD)
+        RRCA
+        JP      C,VTOUT         ; CRT: or UC1:
+        RRCA
+        RET     C               ; BAT: output goes to the list device
 BCOSER: LD      A,C
 ; Send A. Each bit takes 49+16*TXDLY T-states. Destroys AF, BDE.
 TXBYTE: LD      E,A

@@ -44,3 +44,9 @@ Changes made for ROM residency in TEC-OS:
 - `CHKKEY` keeps a key that arrives during console output, other than ^S and
   ^P, as the pending character for the next read. Portable CP/M discarded it,
   so typing while a program was drawing its screen was lost; CP/M 2.2 keeps it.
+- The BDOS's check for `^S` and `^P` during output (`CHKKEY`) calls the
+  BIOS's `BCONST` directly through `CONSTQ`. The BIOS table's `CONST` entry
+  draws the video cursor when no key is waiting, because a program that polls
+  is waiting for a key; the check made for every printed character must not.
+- The CCP has a built-in `CON` command that reports or sets the IOBYTE
+  `CON:` field (TTY, CRT, BAT or UC1).

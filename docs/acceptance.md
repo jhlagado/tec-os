@@ -44,10 +44,12 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | TYPE and DIR pause per screen on 8 and 24 rows, count wrapped lines, stop on Q | `console` | Emulator | Pass |
 | — | Matrix arrow keys arrive as ANSI cursor sequences | `console` | Emulator | Pass |
 | — | Warm boot restores the PICO9918 mode and font and the GLCD display after a program changes them | `devices` | Emulator | Pass |
+| — | One console device by IOBYTE: PICO9918 or GLCD with the matrix keyboard, serial terminal without it; `CON` switches, a missing device falls back to serial, serial stays quiet on a video console | `console` | Emulator | Pass |
+| — | Insert and delete characters and lines; the cursor shows while a program polls BDOS function 6 | `console` | Emulator | Pass |
 | — | Punch and reader carry 8-bit bytes over the serial port | `devices` | Emulator | Pass |
 | M4 | A CP/M program calling the native entry is refused without touching its memory | `devices` | Emulator | Pass: status 0Bh, carry set |
 | — | PICO9918 80 × 24 console: registers, DIR in 6 columns, 80-character lines | `console` | Emulator (Debug80 TMS9918 model; VRAM checked, not pixels) | Pass |
-| — | Edit edits, saves and reopens on TMS9918 40 × 24 and GLCD 21 × 8, and on Triptych CP/M 2.2 80 × 24 | `edit` | Emulator | Pass with the configurable Edit build |
+| — | Edit edits, saves and reopens on the PICO9918 80 × 24 and GLCD 21 × 8, and on Triptych CP/M 2.2 80 × 24 | `edit` | Emulator | Pass with the shadow-screen Edit build |
 | — | ATOM assembles a program on TEC-OS and it runs | `atom` | Emulator | Pass with the ATOM build that sizes itself from `0006h` |
 | — | Web page: boot, TMS9918 text and Graphics I screens, matrix typing, TERM | Browser check, 2026-10-25 | Emulator in a browser | Pass; not automated |
 | M5 | Reproducible image, size census, compatibility matrix, instructions | `npm run build`, `npm run media`; [memory-map.md](memory-map.md), [compatibility.md](compatibility.md) | Host | Done |
@@ -70,7 +72,7 @@ compiler. That comparison is still to do.
 
 ## Measured costs
 
-ROM, `debug80` profile: 12,115 of 16,384 bytes used, 4,269 free. The region
+ROM, `debug80` profile: 12,869 of 16,384 bytes used, 3,515 free. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.
@@ -86,6 +88,18 @@ SAVE, TYPE, ERA and NATDEMO, with the TMS9918 console on (`test/stacks`):
 | Native OS | 256 | 20 |
 | Native application, 8 nested bank calls | 496 | 42 |
 
+Edit on the 80 × 24 PICO9918 console, emulator time at 4 MHz for one
+keystroke in a 20-line file (2026-10-25):
+
+| Keystroke | Edit 0.2.0, console copied to serial | Shadow-screen Edit, one console device |
+| --- | ---: | ---: |
+| Cursor right or down | 278 ms | 23 ms |
+| Insert a character near the start of a line | 518 ms | 58–68 ms |
+| Move the view one line (scroll) | not measured | 961 ms, 107 bytes sent |
+
+The scroll now sends only the new line, but Edit still renders every text
+row when the view moves; that rendering is most of the remaining time.
+
 Timings at 4 MHz in the emulator: cold boot to the prompt about 1.8 million
 T-states (0.45 s); one 512-byte SD block read about 330,000 T-states; serial
 4800 baud.
@@ -95,5 +109,3 @@ T-states (0.45 s); one 512-byte SD block read about 330,000 T-states; serial
 - Any physical TEC-1G run: reset, latch decoding of bits 2–6, SD timing,
   serial timing, NMI from the real keypad, TMS9918 access timing.
 - The V9938 console.
-- A full-screen editor on TEC-OS: Edit 0.2.0 needs the TPA changes listed in
-  [compatibility.md](compatibility.md).

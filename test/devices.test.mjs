@@ -19,7 +19,7 @@ test("a CP/M program calling the native service entry is refused and keeps its m
 test("warm boot restores the PICO9918 text mode and font after a program changes them", async () => {
   const image = standardCard();
   volume(image, "A").write("VIDMODE.COM", (await program("vidmode")).bytes);
-  const m = boot(image, { tms: true });
+  const m = boot(image, { tms: true, matrix: true });
   m.command("VIDMODE");
   const vdp = m.tec1g.state.display.tms9918.stateSnapshot();
   assert.deepEqual([...vdp.registers.slice(0, 8)], [0x04, 0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0xf4]);
@@ -34,7 +34,7 @@ test("warm boot restores the PICO9918 text mode and font after a program changes
 test("warm boot turns the GLCD display and graphics back on", async () => {
   const image = standardCard();
   volume(image, "A").write("VIDMODE.COM", (await program("vidmode")).bytes);
-  const m = boot(image, { tms: false });
+  const m = boot(image, { matrix: true });
   m.command("VIDMODE");
   const g = m.tec1g.state.display.glcdCtrl;
   assert.equal(g.glcdDisplayOn, true);
@@ -58,6 +58,7 @@ test("punch and reader are the serial port, eight bits wide", async () => {
     assert.equal(m.cpu.cpu.a, code);
   }
   const text = m.expect(/\r\nA>$/);
-  assert.match(text, /PUN41 C3 0D \r\n/);
+  assert.match(text, /41 C3 0D \r\n/);
+  assert.match(m.serialText(), /PUN41 C3 0D /, "punch and console share the serial line");
   noViolations(m);
 });
