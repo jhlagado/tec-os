@@ -2164,7 +2164,13 @@ CHKKEY:
 
 CHKPRN:
         CP      CTRLP
-        RET     NZ
+        JR      Z,TOGLIST
+        ; TEC-OS: any other key is kept for the next console read, as CP/M 2.2
+        ; does, so typing during output is not lost.
+        LD      (PENDCHR),A
+        LD      A,1
+        LD      (PENDING),A
+        RET
 
 TOGLIST:
         LD      A,(LISTEN)

@@ -70,8 +70,11 @@ The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows.
 
 Keys follow the TEC-1G matrix layout as Debug80 documents it: key k is row
 k / 8, bit k % 8 of port FEh. Keys 0, 1 and 2 are Shift, Ctrl and Fn; key 7
-toggles Caps Lock, shown on the latch's CAPS lamp. A key is delivered once
-when it goes down; holding it does not repeat.
+toggles Caps Lock, shown on the latch's CAPS lamp. Keys 3–6 are the arrow
+keys; TEC-OS delivers them as `ESC [ A`, `ESC [ B`, `ESC [ D` and `ESC [ C`
+(up, down, left, right), the sequences ANSI-terminal programs such as Edit
+expect, so the up arrow no longer reads as ^C. A key is delivered once when
+it goes down; holding it does not repeat.
 
 ## Polling and timing
 

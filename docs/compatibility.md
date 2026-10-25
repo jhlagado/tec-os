@@ -55,11 +55,14 @@ The user number survives warm boot.
 | Program | Version | Result | Notes |
 | --- | --- | --- | --- |
 | BASIE compiler and BLINK linker | Basie release disk, SHA-256 `7d70f1c0…` | Runs | Compiles and links `ADVENT.BSI`; the result runs after a power cycle |
+| Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file at 40 × 24 (TMS9918) and 21 × 8 (GLCD), sizing itself from `FF09h`; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`) |
+| ATOM.COM | build that sizes its workspace from `0006h` | Not yet run here | Needs the BDOS at `78C4h` or higher |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
-| EDIT.COM | 0.2.0 | Not run | Uses a fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |
+| EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |
 
-ATOM.COM and EDIT.COM assume a 64 KiB system. Programs written to the CP/M
-convention, which take every limit from the word at `0006h`, run.
+Released ATOM.COM 0.3.7 and Edit 0.2.0 assume a 64 KiB system; their newer
+builds take every limit from the word at `0006h`, as CP/M programs should,
+and run.
 
 ## Known incompatibilities
 
@@ -76,4 +79,5 @@ convention, which take every limit from the word at `0006h`, run.
 - **CCP overwrite.** Programs that expect to reclaim CCP memory below the BDOS
   gain nothing: the CCP is in ROM and its workspace is above the TPA.
 - **Bit-banged serial.** Input that arrives while a program is busy and not
-  polling the console is lost.
+  polling the console is lost. Keys typed while the BDOS is printing are kept
+  for the next read, as in CP/M 2.2.

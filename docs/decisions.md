@@ -292,6 +292,14 @@ a 24-row screen every 23; a serial-only console is taken as 80 × 24.
 CP/M habit of `SAVE`ing memory a program left behind means built-in commands
 must not touch the TPA.
 
+## D20 Console type-ahead — Adopted 2026-10-25
+
+While it prints, the BDOS reads any waiting key to look for ^S and ^P.
+Portable CP/M then discarded any other key, so typing while a program drew
+its screen was lost; Edit missed keystrokes. The adapted BDOS keeps that key
+for the next console read, as CP/M 2.2 does. Triptych's BDOS, built from the
+same source, has the same fault.
+
 ## Open decisions
 
 | ID | Open item | Blocks |

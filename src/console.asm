@@ -78,9 +78,21 @@ BCONIN: LD      A,(RXFULL)
         CALL    NZ,CURHIDE
         POP     AF
         RET
-CINTAKE:XOR     A
+CINTAKE:LD      A,(KBTN)        ; bytes of an arrow sequence still to come
+        OR      A
+        JR      NZ,CINTAIL
         LD      (RXFULL),A
         LD      A,(RXCHAR)
+        RET
+CINTAIL:DEC     A               ; deliver this byte, move the next one up
+        LD      (KBTN),A
+        LD      A,(RXCHAR)
+        PUSH    AF
+        LD      A,(KBT1)
+        LD      (RXCHAR),A
+        LD      A,(KBT2)
+        LD      (KBT1),A
+        POP     AF
         RET
 ; Wait for a character from either input device.
 CINLP:  LD      E,KBEVERY
@@ -264,10 +276,26 @@ KBMOD:  LD      A,E
         JR      C,KBNONE        ; a modifier alone
         CP      7
         JR      Z,KBCAPS
-        CALL    KBASCII
+        CP      7               ; keys 3-6 are the arrows: send ESC [ A-D
+        JR      NC,KBNOARR
+        SUB     3
+        LD      HL,KBARROW
+        ADD     A,L
+        LD      L,A
+        JR      NC,KBARR1
+        INC     H
+KBARR1: LD      A,(HL)
+        LD      (KBT2),A
+        LD      A,'['
+        LD      (KBT1),A
+        LD      A,2
+        LD      (KBTN),A
+        LD      A,$1B
+        JR      KBDELIV
+KBNOARR:CALL    KBASCII
         OR      A
         JR      Z,KBNONE
-        LD      (RXCHAR),A
+KBDELIV:LD      (RXCHAR),A
         LD      A,$FF
         LD      (RXFULL),A
         OR      A
@@ -338,5 +366,6 @@ KBIDX:  ADD     A,L
 KBIDX1: LD      A,(HL)
         RET
 
+KBARROW:DB      "ABDC"          ; up, down, left, right
 KBSPEC: DB      $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
 KBSHIFT:DB      "<_>?)!@#$%^&*( : +"

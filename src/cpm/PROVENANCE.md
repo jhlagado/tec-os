@@ -41,3 +41,6 @@ Changes made for ROM residency in TEC-OS:
 - `TYPE` and `DIR` print through a pager (`PGINIT`, `PGPUT`, `PGCRLF`,
   `PGNEWL`) that counts lines, including wrapped ones, against the console
   size and pauses with `[more]`; ^C, Esc or Q stops the listing.
+- `CHKKEY` keeps a key that arrives during console output, other than ^S and
+  ^P, as the pending character for the next read. Portable CP/M discarded it,
+  so typing while a program was drawing its screen was lost; CP/M 2.2 keeps it.

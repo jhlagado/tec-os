@@ -124,6 +124,20 @@ export class Machine {
     }
   }
 
+  /** Run until predicate() holds, checking it every `every` cycles. For
+   *  predicates too costly to test after each instruction, such as reading a
+   *  screen. */
+  runUntilChecked(predicate, maxCycles = 400_000_000, what = "condition", every = 20_000) {
+    const limit = this.cycles + maxCycles;
+    while (!predicate()) {
+      const next = this.cycles + every;
+      this.runUntil(() => this.cycles >= next, every * 2, what);
+      if (this.cycles > limit) {
+        throw new Error(`no ${what} within ${maxCycles} cycles; pc=${this.pc.toString(16)}`);
+      }
+    }
+  }
+
   text(from = 0) {
     return Buffer.from(this.output.slice(from)).toString("latin1");
   }
@@ -191,8 +205,9 @@ export class Machine {
     const gdram = this.tec1g.state.display.glcdCtrl.glcd;
     const font = this.sym("FONT");
     const pixel = (x, y) => (gdram[y * 16 + (x >> 3)] >> (7 - (x & 7))) & 1;
-    const glyphs = new Map();
-    for (let code = 0x20; code < 0x80; code += 1) {
+    this.glyphCache ??= new Map();
+    const glyphs = this.glyphCache;
+    for (let code = glyphs.size ? 0x80 : 0x20; code < 0x80; code += 1) {
       let key = "";
       let rev = "";
       for (let r = 0; r < 8; r += 1) {

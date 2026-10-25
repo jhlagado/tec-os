@@ -54,6 +54,9 @@ KBMASK: DS      1               ; row select for the next row, one bit low
 KBBASE: DS      1               ; key number of that row's bit 0
 KBE:    DS      1               ; last key seen in this scan, FFh none
 KBD:    DS      1               ; the key seen before it
+KBTN:   DS      1               ; arrow-sequence bytes still to deliver
+KBT1:   DS      1               ; and the bytes themselves
+KBT2:   DS      1
 
 ; ---- BIOS stack used by warm boot and the diagnostic console ----------------
 BSTKB:  DS      64

@@ -306,12 +306,17 @@ function keyText(e) {
   return e.key;
 }
 
+// The TEC-1G matrix keyboard's own arrow keys; TEC-OS turns them into ESC [ A-D.
+const MATRIX_ARROWS = { ArrowUp: "\x03", ArrowDown: "\x04", ArrowLeft: "\x05", ArrowRight: "\x06" };
+
 function onKey(route) {
   return (e) => {
-    const text = keyText(e);
+    let text = keyText(e);
     if (text === null || !state.machine) return;
     e.preventDefault();
-    const via = route() === "matrix" && text.length === 1 ? "matrix" : "serial";
+    const matrix = route() === "matrix";
+    if (matrix && MATRIX_ARROWS[e.key]) text = MATRIX_ARROWS[e.key];
+    const via = matrix && text.length === 1 ? "matrix" : "serial";
     state.machine.enqueueInput(text, via);
   };
 }

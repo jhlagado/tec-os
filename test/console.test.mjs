@@ -154,3 +154,13 @@ test("a long DIR pauses too", () => {
   assert.equal(pauses, 4, "31 lines at 7 lines a screen");
   assert.match(all, /30 files/);
 });
+
+test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
+  const image = standardCard();
+  volume(image, "A").write("KEYS.COM", (await program("keys")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  m.mark = m.output.length;
+  m.typeMatrix("keys\r");
+  m.typeMatrix("\x03\x05"); // up, left
+  assert.match(m.expect(/A>$/), /1B 5B 41 1B 5B 44 /);
+});
