@@ -11,7 +11,7 @@ import { build } from "esbuild";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = resolve(ROOT, "web");
 const OUT = resolve(WEB, "dist");
-const PROFILES = ["debug80", "debug80g32"];
+const PROFILES = ["debug80", "debug80t40", "debug80g32"];
 
 mkdirSync(resolve(OUT, "roms"), { recursive: true });
 mkdirSync(resolve(OUT, "files"), { recursive: true });

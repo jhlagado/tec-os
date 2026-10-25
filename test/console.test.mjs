@@ -67,7 +67,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const image = standardCard();
   const a = volume(image, "A");
   for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "NATDEMO.TNX", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
-  const tms = boot(image, { tms: true });
+  const tms = boot(image, { tms: true, profile: "debug80t40" });
   tms.command("DIR");
   const s = tms.screen();
   const at = s.indexOf("A>DIR");
@@ -118,11 +118,11 @@ test("TYPE pauses a screen at a time on the 8-row GLCD and can be stopped", () =
   assert.deepEqual(m.violations, []);
 });
 
-test("TYPE fills a 24-row TMS9918 screen before pausing, and long lines count as wrapped", () => {
+test("TYPE fills a 24-row, 40-column screen before pausing, and long lines count as wrapped", () => {
   const image = standardCard();
   const long = "x".repeat(70);
   volume(image, "A").write("WIDE.TXT", Buffer.from(`${long}\n${numberedLines(40)}`), { text: true });
-  const m = boot(image, { tms: true });
+  const m = boot(image, { tms: true, profile: "debug80t40" });
   m.mark = m.output.length;
   m.type("TYPE WIDE.TXT\r");
   m.expect(/\[more\]$/);
@@ -163,4 +163,28 @@ test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
   m.typeMatrix("keys\r");
   m.typeMatrix("\x03\x05"); // up, left
   assert.match(m.expect(/A>$/), /1B 5B 41 1B 5B 44 /);
+});
+
+test("the default console is the PICO9918's 80 x 24 text mode", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "NATDEMO.TNX", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
+  a.write("WIDE.TXT", Buffer.from(`${"y".repeat(79)}Z\n${"w".repeat(85)}\n`), { text: true });
+  const m = boot(image, { tms: true });
+  const r = m.tec1g.state.display.tms9918.stateSnapshot().registers;
+  assert.equal(r[0], 0x04, "R0: 80-column text");
+  assert.equal(r[1], 0x50, "R1: display on, text mode");
+  assert.equal(r[2], 0x07, "R2: names at 1000h");
+  assert.equal(m.read(m.sym("VWID")), 80);
+  m.command("DIR");
+  let s = m.screen();
+  let at = s.indexOf("A>DIR");
+  assert.equal(s[at + 1], "COPY.COM     TERM.COM     PROBE.COM    NATDEMO.TNX  README.TXT   X");
+  m.command("TYPE WIDE.TXT");
+  s = m.screen();
+  at = s.indexOf("A>TYPE WIDE.TXT");
+  assert.equal(s[at + 1], `${"y".repeat(79)}Z`, "80 characters fill one line");
+  assert.equal(s[at + 2], "w".repeat(80));
+  assert.equal(s[at + 3], "wwwww");
+  assert.equal(s[at + 5], "A>");
 });

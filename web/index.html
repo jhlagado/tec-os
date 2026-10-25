@@ -12,13 +12,14 @@
       <div class="controls">
         <label>ROM
           <select id="profile">
-            <option value="debug80">TMS9918, 40 columns</option>
-            <option value="debug80g32">TMS9918, 32 columns</option>
+            <option value="debug80">PICO9918, 80 columns</option>
+            <option value="debug80t40">PICO9918, 40 columns</option>
+            <option value="debug80g32">PICO9918, 32 columns</option>
           </select>
         </label>
         <label>Display
           <select id="display">
-            <option value="tms">TMS9918 card</option>
+            <option value="tms">PICO9918 card</option>
             <option value="glcd">GLCD only</option>
           </select>
         </label>
@@ -31,7 +32,7 @@
 
     <main>
       <section class="monitor">
-        <canvas id="tms" width="512" height="384" tabindex="0" aria-label="TMS9918 screen: click to type"></canvas>
+        <canvas id="tms" width="1024" height="768" tabindex="0" aria-label="PICO9918 screen: click to type"></canvas>
         <div class="hint">
           Click the screen to type. Keys go to the
           <select id="keyroute">

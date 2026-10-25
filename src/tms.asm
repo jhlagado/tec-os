@@ -1,15 +1,16 @@
-; TMS9918/TMS9929 console display on the TEC-Deck video card.
+; PICO9918 console display on the TEC-Deck video card. The PICO9918 is a
+; TMS9918A-compatible VDP with the F18A's 80-column text mode.
 ;
 ; Port BEh is VRAM data and BFh is control. TMSCOLS from the configuration
-; selects text mode (40 x 24, 6-pixel cells) or Graphics I (32 x 24, 8-pixel
-; cells). VRAM: patterns at 0000h, names at 0800h, Graphics I colours at
+; selects 80-column text (80 x 24, 6-pixel cells), 40-column text or
+; Graphics I (32 x 24, 8-pixel cells). VRAM: patterns at 0000h, names at 0800h, Graphics I colours at
 ; 2000h and sprite attributes at 1B00h. Patterns 00h-7Fh are the console font
 ; and 80h-FFh their reverse images. No VRAM access timing is enforced; the
 ; board's limits are an open item.
 
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
-TNAME   EQU     $0800
+TNAME   EQU     TMSNAME         ; 0800h, or 1000h for 80 columns (4 KiB aligned)
 TCOLOR  EQU     $2000
 TSPRITE EQU     $1B00
 
@@ -182,10 +183,19 @@ TMSSRW: LD      A,(HL)
         LD      C,0
         JR      TMSCLR
 
-; Registers 0-7. Text mode: M1, 16K, display on, interrupts off, white on
-; dark blue. Graphics I: patterns 0000h, colours 2000h, sprites 1B00h/3800h.
+; Registers 0-7.
+; - 80 columns (PICO9918 TEXT80, also the V9938 TEXT2 and F18A T80 mode):
+;   R0 bit 2 with text mode, names at a 4 KiB boundary (R2 low bits set as
+;   the V9938 requires), patterns at 0000h, white on dark blue. No unlock is
+;   needed.
+; - 40 columns: text mode, the same colours.
+; - Graphics I: patterns 0000h, colours 2000h, sprites 1B00h/3800h.
 %IF TMS32
 TMSREGS:DB      $00,$C0,TNAME/$400,TCOLOR/$40,$00,TSPRITE/$80,$07,$F1
 %ELSE
+%IF TMS80
+TMSREGS:DB      $04,$50,TNAME/$400+3,$00,$00,$00,$00,$F4
+%ELSE
 TMSREGS:DB      $00,$D0,TNAME/$400,$00,$00,$00,$00,$F4
+%ENDIF
 %ENDIF

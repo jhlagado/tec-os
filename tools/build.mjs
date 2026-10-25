@@ -23,9 +23,10 @@ const BAUD = 4800;
 const VERSION = { major: 0, minor: 1 };
 
 export const PROFILES = {
-  debug80: { id: 1, nbanks: 9, tmsCols: 40, description: "Debug80 TEC-1G model: nine expansion banks, TMS9918 40 columns" },
-  debug80g32: { id: 3, nbanks: 9, tmsCols: 32, description: "Debug80 TEC-1G model: nine expansion banks, TMS9918 32 columns" },
-  board: { id: 2, nbanks: 1, tmsCols: 40, description: "TEC-1G as documented: one upper U9 half, TMS9918 40 columns" },
+  debug80: { id: 1, nbanks: 9, tmsCols: 80, description: "Debug80 TEC-1G model: nine expansion banks, PICO9918 80 columns" },
+  debug80t40: { id: 4, nbanks: 9, tmsCols: 40, description: "Debug80 TEC-1G model: nine expansion banks, PICO9918 40 columns" },
+  debug80g32: { id: 3, nbanks: 9, tmsCols: 32, description: "Debug80 TEC-1G model: nine expansion banks, PICO9918 Graphics I, 32 columns" },
+  board: { id: 2, nbanks: 1, tmsCols: 80, description: "TEC-1G as documented: one upper U9 half, PICO9918 80 columns" },
 };
 
 const hex = (value, width = 4) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
@@ -72,6 +73,7 @@ RXDLY   EQU     ${s.rxdly}
 RXHALF  EQU     ${s.rxhalf}
 RXPOLL  EQU     ${s.rxpoll}
 TMSCOLS EQU     ${profile.tmsCols}
+TMSNAME EQU     ${profile.tmsCols === 80 ? "$1000" : "$0800"}
 `,
   );
   const h = format.header.fields;
@@ -182,7 +184,7 @@ let workspaceBytes;
 
 async function buildProfile(name) {
   const profile = { name, ...PROFILES[name] };
-  currentDefinitions = { TMS32: profile.tmsCols === 32 ? 1 : 0 };
+  currentDefinitions = { TMS32: profile.tmsCols === 32 ? 1 : 0, TMS80: profile.tmsCols === 80 ? 1 : 0 };
   if (workspaceBytes === undefined) {
     writeGenerated(profile, 0x8000);
     const probe = await assemble();

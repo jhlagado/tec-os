@@ -9,11 +9,11 @@ console either way.
 | --- | --- | --- | --- |
 | FTDI serial, 4800 8N2 | in, out | always | Implemented |
 | Matrix keyboard | in | the board's Matrix configuration switch (port 03h bit 0) is on | Implemented |
-| TMS9918/TMS9929, 40 × 24 text | out | the card answers at ports BEh/BFh | Implemented |
-| TMS9918/TMS9929, 32 × 24 Graphics I | out | as above, with the `debug80g32` profile | Implemented |
+| PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh; `debug80` and `board` profiles | Implemented |
+| PICO9918, 40 × 24 text | out | as above, with the `debug80t40` profile | Implemented |
+| PICO9918, 32 × 24 Graphics I | out | as above, with the `debug80g32` profile | Implemented |
 | ST7920 GLCD, 128 × 64 as 21 × 8 | out | when no TMS9918 answers and the controller's busy flag clears | Implemented |
 | HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
-| V9938, 80 × 24 TEXT2 | out | — | Planned; needs Debug80 emulation first |
 
 ## Video terminal
 
@@ -43,7 +43,8 @@ line.
 
 ## Choosing the display
 
-At cold boot TEC-OS uses the TMS9918 when VRAM answers at ports BEh/BFh, and
+The video card is always a PICO9918 (decision D21). At cold boot TEC-OS uses
+it when VRAM answers at ports BEh/BFh, and
 otherwise the GLCD when its busy flag clears. The terminal reaches the chosen
 display through four driver vectors (put, get, clear to end of line, scroll),
 so another display needs only those four routines and an initialiser.

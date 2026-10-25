@@ -8,7 +8,7 @@ import { parseContainer, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { buildRecipe } from "../../tools/lib/recipe.mjs";
 import { loadCard, saveCard } from "./store.mjs";
-import { renderTms } from "./tms.mjs";
+import { isText80, renderText80, renderTms } from "./tms.mjs";
 
 const CPU_HZ = 4_000_000;
 const $ = (id) => document.getElementById(id);
@@ -128,6 +128,11 @@ tmsBitmap.width = 256;
 tmsBitmap.height = 192;
 const tmsBitmapCtx = tmsBitmap.getContext("2d");
 const tmsImage = tmsBitmapCtx.createImageData(256, 192);
+const wideBitmap = document.createElement("canvas");
+wideBitmap.width = 512;
+wideBitmap.height = 192;
+const wideBitmapCtx = wideBitmap.getContext("2d");
+const wideImage = wideBitmapCtx.createImageData(512, 192);
 
 const glcdCanvas = $("glcd");
 const glcdCtx = glcdCanvas.getContext("2d");
@@ -162,10 +167,16 @@ function drawTms(tms, device) {
   }
   const snapshot = device.stateSnapshot();
   const r = snapshot.registers;
+  tmsCtx.imageSmoothingEnabled = false;
+  if (isText80(r)) {
+    renderText80(wideImage, snapshot);
+    wideBitmapCtx.putImageData(wideImage, 0, 0);
+    tmsCtx.drawImage(wideBitmap, 0, 0, tmsCanvas.width, tmsCanvas.height);
+    return;
+  }
   const ownMode = (r[1] & 0x10) !== 0 || ((r[1] & 0x18) === 0 && (r[0] & 0x02) === 0);
   renderTms(tmsImage, snapshot, ownMode ? null : tms.framebuffer);
   tmsBitmapCtx.putImageData(tmsImage, 0, 0);
-  tmsCtx.imageSmoothingEnabled = false;
   tmsCtx.drawImage(tmsBitmap, 0, 0, tmsCanvas.width, tmsCanvas.height);
 }
 

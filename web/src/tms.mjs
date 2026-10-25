@@ -15,6 +15,48 @@ function put(d, x, y, rgb) {
   d[o + 3] = 255;
 }
 
+/** True when the registers select the PICO9918's 80-column text mode. */
+export function isText80(registers) {
+  return (registers[0] & 0x04) !== 0 && (registers[1] & 0x10) !== 0;
+}
+
+/**
+ * Fill a 512 x 192 image for 80-column text: 80 cells of 6 pixels between
+ * 16-pixel borders, names at a 4 KiB boundary, colours from register 7.
+ */
+export function renderText80(image, snapshot) {
+  const d = image.data;
+  const r = snapshot.registers;
+  const vram = snapshot.vram;
+  const backdrop = PALETTE[r[7] & 0x0f];
+  const fg = PALETTE[r[7] >> 4];
+  const names = (r[2] & 0x0c) << 10;
+  const patterns = (r[4] & 0x07) * 0x800;
+  const put80 = (x, y, rgb) => {
+    const o = (y * 512 + x) * 4;
+    d[o] = (rgb >> 16) & 0xff;
+    d[o + 1] = (rgb >> 8) & 0xff;
+    d[o + 2] = rgb & 0xff;
+    d[o + 3] = 255;
+  };
+  for (let y = 0; y < 192; y += 1) {
+    for (let x = 0; x < 16; x += 1) {
+      put80(x, y, backdrop);
+      put80(496 + x, y, backdrop);
+    }
+  }
+  const on = (r[1] & 0x40) !== 0;
+  for (let row = 0; row < 24; row += 1) {
+    for (let col = 0; col < 80; col += 1) {
+      const code = vram[names + row * 80 + col];
+      for (let line = 0; line < 8; line += 1) {
+        const bits = on ? vram[patterns + code * 8 + line] : 0;
+        for (let px = 0; px < 6; px += 1) put80(16 + col * 6 + px, row * 8 + line, bits & (0x80 >> px) ? fg : backdrop);
+      }
+    }
+  }
+}
+
 /** Fill image data (256 x 192) for the current mode. Returns false if blank. */
 export function renderTms(image, snapshot, fallbackFramebuffer) {
   const d = image.data;

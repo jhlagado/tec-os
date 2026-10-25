@@ -56,7 +56,7 @@ function editOnTecOs({ tms }) {
   m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => l.startsWith("A>")), 400_000_000, "the prompt");
 }
 
-test("Edit edits, saves and reopens a file on TEC-OS with the TMS9918 (40 x 24)", { skip: edit.skip, timeout: 900_000 }, () => {
+test("Edit edits, saves and reopens a file on TEC-OS with the PICO9918 (80 x 24)", { skip: edit.skip, timeout: 900_000 }, () => {
   editOnTecOs({ tms: true });
 });
 

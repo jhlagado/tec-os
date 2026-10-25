@@ -181,8 +181,19 @@ export class Machine {
     return this.expect(prompt, { maxCycles });
   }
 
-  /** The TMS9918 name table as text rows (reverse-video cells shown plain). */
-  screen(cols = 40, rows = 24, base = 0x0800) {
+  /** Name-table address and width of the PICO9918's current text layout. */
+  tmsLayout() {
+    const r = this.tec1g.state.display.tms9918.stateSnapshot().registers;
+    if (r[0] & 0x04) return { cols: 80, base: (r[2] & 0x0c) << 10 }; // TEXT80, 4 KiB aligned
+    if (r[1] & 0x10) return { cols: 40, base: (r[2] & 0x0f) << 10 };
+    return { cols: 32, base: (r[2] & 0x0f) << 10 };
+  }
+
+  /** The video screen as text rows (reverse-video cells shown plain). */
+  screen(cols, rows = 24, base) {
+    const layout = this.tmsLayout();
+    cols ??= layout.cols;
+    base ??= layout.base;
     const vram = this.tec1g.state.display.tms9918.stateSnapshot().vram;
     const lines = [];
     for (let r = 0; r < rows; r += 1) {
@@ -194,6 +205,12 @@ export class Machine {
       lines.push(line.trimEnd());
     }
     return lines;
+  }
+
+  /** The raw name-table byte at row r, column c. */
+  cell(r, c) {
+    const { cols, base } = this.tmsLayout();
+    return this.tec1g.state.display.tms9918.stateSnapshot().vram[base + r * cols + c];
   }
 
   /**
@@ -234,10 +251,6 @@ export class Machine {
     return lines;
   }
 
-  /** The raw name-table byte at row r, column c. */
-  cell(r, c, cols = 40, base = 0x0800) {
-    return this.tec1g.state.display.tms9918.stateSnapshot().vram[base + r * cols + c];
-  }
 
   /** Type text on the matrix keyboard: each key goes down until TEC-OS takes it. */
   typeMatrix(text, maxCycles = 50_000_000) {

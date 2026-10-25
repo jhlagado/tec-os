@@ -300,6 +300,22 @@ its screen was lost; Edit missed keystrokes. The adapted BDOS keeps that key
 for the next console read, as CP/M 2.2 does. Triptych's BDOS, built from the
 same source, has the same fault.
 
+## D21 Video is the PICO9918 — Adopted 2026-10-25
+
+The TEC-1G's video card is always a PICO9918, never a genuine TMS9918, so
+TEC-OS may rely on its F18A-compatible features. The default console is its
+80-column text mode: R0 = 04h, R1 = 50h, names at 1000h (R2 = 07h), patterns
+at 0000h, colours from R7. The same setup is the V9938's TEXT2 and the
+F18A's T80 mode, and needs no F18A unlock. Profiles `debug80` and `board`
+use 80 columns; `debug80t40` keeps 40-column text and `debug80g32` Graphics
+I. Thirty-row mode, per-cell colour and other unlocked features are not used
+yet.
+
+The emulation target is PICO9918's own VDP core (MIT, from
+`github.com/visrealm/pico9918`), compiled to WebAssembly through a Rust crate
+and shipped in `debug80-runtime`. Until that lands, Debug80's TMS9918 model
+keeps the registers and VRAM and the web page draws 80-column text itself.
+
 ## Open decisions
 
 | ID | Open item | Blocks |

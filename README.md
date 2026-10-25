@@ -11,9 +11,9 @@ to the TEC-1G's banked RAM.
   `8000h–BFFFh`. CP/M programs get a 45,830-byte TPA from `0100h`.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
-- A console made of the serial port, the matrix keyboard and a TMS9918
-  (or, without one, the 128 × 64 GLCD), used together, with a status display
-  on the 20 × 4 LCD.
+- A console made of the serial port, the matrix keyboard and an 80-column
+  PICO9918 video card (or, without one, the 128 × 64 GLCD), used together,
+  with a status display on the 20 × 4 LCD.
 - A web page that runs the whole system in a browser.
 
 Everything described here has run only in the Debug80 TEC-1G model; it has
@@ -39,9 +39,10 @@ The ROM is assembled with ATOM. Profiles:
 
 | Profile | Banks | Display | Use |
 | --- | ---: | --- | --- |
-| `debug80` | 9 | TMS9918, 40 columns | Debug80's TEC-1G model |
-| `debug80g32` | 9 | TMS9918, 32 columns | As above, Graphics I |
-| `board` | 1 | TMS9918, 40 columns | The TEC-1G as its documentation describes U9 |
+| `debug80` | 9 | PICO9918, 80 columns | Debug80's TEC-1G model |
+| `debug80t40` | 9 | PICO9918, 40 columns | As above |
+| `debug80g32` | 9 | PICO9918, 32 columns | As above, Graphics I |
+| `board` | 1 | PICO9918, 80 columns | The TEC-1G as its documentation describes U9 |
 
 ## In a web page
 
