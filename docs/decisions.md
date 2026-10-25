@@ -341,3 +341,6 @@ console and stops. The check runs on the boot stack in fixed RAM and costs
 | O4 | Physical SD card timing at 4 MHz bit-bang rates | Physical-board storage claim |
 | O5 | TMS9918 VRAM access timing on the board (no delays are inserted) | Physical-board video claim |
 | O6 | Compare an `ADVENT.COM` built on TEC-OS with one built on another CP/M 2.2 system | Byte-identity claim for the BASIE qualification |
+| O7 | Keep or remove the native bank services while banking waits for its own design ([rom-services.md](rom-services.md)) | ROM space for hardware services |
+| O8 | Whether the hardware service `BLOCK` ever writes raw card blocks | A card repair tool |
+| O9 | Whether the hardware service `KEYS` reports the whole matrix or one row per call | The `KEYS` service |
