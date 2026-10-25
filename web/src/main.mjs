@@ -41,7 +41,7 @@ function localStorageSet(key, value) {
 }
 
 async function fetchBytes(url) {
-  const response = await fetch(url);
+  const response = await fetch(url, { cache: "no-cache" }); // a rebuilt ROM or file is never served stale
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
   return new Uint8Array(await response.arrayBuffer());
 }
@@ -49,13 +49,13 @@ async function fetchBytes(url) {
 async function loadRom(profile) {
   const [rom, symbols] = await Promise.all([
     fetchBytes(`roms/tecos-${profile}.rom`),
-    fetch(`roms/tecos-${profile}.symbols.json`).then((r) => r.json()),
+    fetch(`roms/tecos-${profile}.symbols.json`, { cache: "no-cache" }).then((r) => r.json()),
   ]);
   return { rom, symbols: symbolsFromD8({ symbols }) };
 }
 
 async function starterCard() {
-  const recipe = await fetch("starter.recipe.json").then((r) => r.json());
+  const recipe = await fetch("starter.recipe.json", { cache: "no-cache" }).then((r) => r.json());
   return buildRecipe(recipe, fetchBytes);
 }
 
