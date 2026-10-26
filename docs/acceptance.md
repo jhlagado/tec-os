@@ -30,10 +30,10 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | M2 | Block and byte addressed cards | `system`: standard-capacity card | Emulator | Pass |
 | M3 | COM load, arguments, file create, read, write, close, directory | `system`: BDOS probe (16 checks) | Emulator | Pass |
 | M3 | Partial SD block updates keep neighbouring records | probe T07 | Emulator | Pass |
-| M3 | Persistence across reset and power loss | `system`: exchange; `qualification` | Emulator | Pass; RAM refilled with 76h |
+| M3 | Persistence across reset and power loss | `system`: exchange; `edit` | Emulator | Pass; RAM refilled with 76h |
 | M3 | PC to TEC and TEC to PC, text and binary | `system`: exchange | Emulator + host | Pass |
 | M3 | Read-only media | `system`: read-only volume | Emulator | Pass: error reported, card unchanged |
-| M3 | Unmodified application saves a file that reopens after reset | `qualification`: BASIE | Emulator | Pass |
+| M3 | Unmodified application saves a file that reopens after reset | `edit`: Edit saves, power cycle, reopens | Emulator | Pass |
 | M4 | Distinct bank contents, nested calls, bank copies | `native`: N04–N10 | Emulator | Pass |
 | M4 | Fixed stack; bank, SP, return PC and interrupt state restored | `native`: N06–N08, N13 | Emulator | Pass |
 | M4 | Errors leave state unchanged: bad bank, unreserved bank, ranges, zero length, depth | `native`: N07–N09, N12 | Emulator | Pass |
@@ -54,22 +54,6 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | ATOM assembles a program on TEC-OS and it runs | `atom` | Emulator | Pass with the ATOM build that sizes itself from `0006h` |
 | — | Web page: boot, TMS9918 text and Graphics I screens, matrix typing, TERM | Browser check, 2026-10-25 | Emulator in a browser | Pass; not automated |
 | M5 | Reproducible image, size census, compatibility matrix, instructions | `npm run build`, `npm run media`; [memory-map.md](memory-map.md), [compatibility.md](compatibility.md) | Host | Done |
-
-## Qualifying application
-
-BASIE, the Basie compiler, with its BLINK linker and runtime library, taken
-unmodified from the Basie release disk `BASIE.DSK` (SHA-256
-`7d70f1c07dcf123db2affd86fe37153cb0c43ab3f4322e9481e8f8c114de2fe2`), imported
-with `tecvol`'s 8-inch disk reader. On TEC-OS with the serial console:
-`BASIE ADVENT` compiles `ADVENT.BSI`, chains to BLINK through its loader below
-the BDOS entry, and writes `ADVENT.COM` and `ADVENT.LIN` (317 million
-T-states, about 79 seconds at 4 MHz). After a power cycle with RAM refilled
-with `HALT` opcodes, `ADVENT` runs, shows its opening room and quits back to
-the CCP. The card verifies clean afterwards.
-
-The test does not compare `ADVENT.COM` with an output made on another CP/M
-system, because the copy in the Basie build directory comes from an older
-compiler. That comparison is still to do.
 
 ## Measured costs
 

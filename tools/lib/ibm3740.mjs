@@ -1,7 +1,7 @@
 // Read-only access to standard 8-inch single-density CP/M 2.2 disk images
 // (IBM 3740: 77 tracks of 26 records, two system tracks, 1 KiB blocks, 64
-// directory entries), stored in logical record order as Debug80, Triptych
-// and the Basie release produce them.
+// directory entries), stored in logical record order as Debug80 and Triptych
+// produce them.
 
 import { CpmVolume } from "./cpmfs.mjs";
 

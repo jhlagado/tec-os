@@ -21,13 +21,6 @@
       "source": "triptych f74de0b, packages/triptych-headless with its built dist",
       "tree": ["src", "dist"],
       "sha256": "fa022e404a144524905b63d232ace989da36173f72434cd47d5faa541d99fc82"
-    },
-    "BASIE.DSK": {
-      "env": "BASIE_DSK",
-      "default": "../basie/build/BASIE.DSK",
-      "source": "basie 1fef4b5, build/BASIE.DSK",
-      "bytes": 256512,
-      "sha256": "7d70f1c07dcf123db2affd86fe37153cb0c43ab3f4322e9481e8f8c114de2fe2"
     }
   }
 }
