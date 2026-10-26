@@ -428,7 +428,9 @@ an entry there catches everything that passes through it, the BDOS's own
 console output and `^C` included. Hooks replace entries and chain to the
 ones they replaced. Each call through the table costs one more `JP`, about
 10 T-states. The BDOS's check for `^S` while it writes still calls the
-ROM's console status, which draws no cursor.
+ROM's console status, which draws no cursor. Cold boot builds the table and
+warm boot leaves it alone, as CP/M 2.2 does, so a replaced entry survives a
+warm boot; reset puts the ROM's entries back.
 
 ## Open decisions
 

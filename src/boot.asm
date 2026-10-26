@@ -65,6 +65,10 @@ COLDRT: CALL    SDINIT
         CALL    MOUNT
         JR      NZ,COLDERR
         CALL    ALVINIT
+        LD      HL,BIOSBAS      ; the RAM BIOS table, at cold boot only: warm
+        LD      DE,RAMBIOS      ; boot leaves it, and any entry a program has
+        LD      BC,BIOSLEN      ; replaced, alone, as CP/M 2.2 does
+        LDIR
         CALL    SHOWVOL
         CALL    LCDVOLS
         XOR     A               ; drive A, user 0
@@ -149,7 +153,7 @@ PGCOPY: LD      A,D
 PGSET:  LD      (PAGES),A
         RET
 
-; Rebuild the classic page-zero vectors, BDOS stub and RAM BIOS table, and
+; Rebuild the classic page-zero vectors and the BDOS entry jump, and
 ; put the restart vectors back as a clean boot leaves them. IOBYTE and the
 ; drive/user byte are left alone.
 PZINIT: LD      A,$C3
@@ -164,10 +168,6 @@ PZINIT: LD      A,$C3
         LD      (HL),LOW(BENTRY)
         INC     HL
         LD      (HL),HIGH(BENTRY)
-        LD      HL,BIOSBAS
-        LD      DE,RAMBIOS
-        LD      BC,BIOSLEN
-        LDIR
         LD      HL,$4DED        ; RETI after EI at 0038h
         LD      (RST7+1),HL
         LD      A,$FB

@@ -1,7 +1,8 @@
 // The BDOS calls the BIOS through the RAM BIOS table, so a program that
 // replaces an entry there sees everything that passes through it: the
 // BDOS's own console output and input, and its warm boots after ^C and a
-// disk error. Emulator evidence.
+// disk error. Warm boot leaves the table alone, so a replaced entry stays.
+// Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -33,6 +34,23 @@ test("replaced CONOUT, CONIN and CONST see the BDOS's console traffic, and ^C re
   assert.equal(inp, "xyhi\r\x03", "functions 1, 6 and 10 read through CONIN");
   assert.ok(word(m, 0x4002) > 0, "the BDOS polls through CONST");
   assert.equal(m.read(0x4000), 1, "^C at a line read warm boots through the replaced WBOOT");
+  assert.deepEqual(m.violations, []);
+});
+
+test("replaced CONOUT and WBOOT stay in the table across a ^C warm boot", async () => {
+  const m = await machine();
+  m.mark = m.output.length;
+  m.type("HOOK\r");
+  m.expect(/ABCD$/);
+  for (const keys of ["x", "y", "hi\r", "\x03"]) m.type(keys);
+  m.expect(/\r\nA>$/);
+  assert.equal(m.read(0x4000), 1);
+  const before = word(m, 0x4004);
+  m.command("DIR"); // built in, so HOOK.COM stays in the TPA
+  assert.match(record(m, before, 0x4004), /HOOK\.COM/, "the CCP's DIR after the warm boot writes through the replaced CONOUT");
+  m.type("\x03");
+  m.expect(/\r\nA>$/);
+  assert.equal(m.read(0x4000), 2, "a second ^C warm boots through the replaced WBOOT");
   assert.deepEqual(m.violations, []);
 });
 

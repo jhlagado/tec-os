@@ -48,7 +48,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | The old native entry at `FF06h` refuses every call without touching memory | `devices` | Emulator | Pass: status 1, carry set |
 | — | On the 96K paged memory: cold boot counts the low pages, page 1 gets page zero and is otherwise untouched, and an exit from low page 1 or U9 half 1 warm boots into page 0 and half 0 | `paged` | Emulator (harness option `paged`) | Pass |
 | — | The workspace sized for the card: each allocation vector `DSM / 8 + 1` bytes, packed, the BDOS entry jump at an `xx06h` address below them; four 8 MiB volumes boot and pass the BDOS probe; `SAVE` reaches the entry's page and no further | `system` | Emulator | Pass |
-| — | A program that replaces CONOUT, CONIN, CONST and WBOOT in the RAM BIOS table sees BDOS functions 2, 6 and 9 written and 1, 6 and 10 read through them, and `^C` and a BDOS disk error warm boot through its WBOOT | `hooks` | Emulator | Pass |
+| — | A program that replaces CONOUT, CONIN, CONST and WBOOT in the RAM BIOS table sees BDOS functions 2, 6 and 9 written and 1, 6 and 10 read through them, and `^C` and a BDOS disk error warm boot through its WBOOT; the replaced entries survive a `^C` warm boot | `hooks` | Emulator | Pass |
 | — | PICO9918 80 × 24 console: registers, DIR in 6 columns, 80-character lines | `console` | Emulator (Debug80 TMS9918 model; VRAM checked, not pixels) | Pass |
 | — | Edit edits, saves and reopens on the PICO9918 80 × 24 and GLCD 21 × 8, and on Triptych CP/M 2.2 80 × 24 | `edit` | Emulator | Pass with the shadow-screen Edit build |
 | — | ATOM assembles a program on TEC-OS and it runs | `atom` | Emulator | Pass with the ATOM build that sizes itself from `0006h` |

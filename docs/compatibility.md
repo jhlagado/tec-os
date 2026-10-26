@@ -44,7 +44,9 @@ Warm boot at `0000h`, BDOS vector at `0005h` (target `B806h` on the starter card
 reached through `0001h`. The BDOS calls the BIOS through it, as CP/M 2.2
 does, so a program that replaces an entry there sees the BDOS's own calls,
 its console output, its console reads and the warm boot after `^C` or a disk
-error. Warm boot rebuilds the table. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
+error. Cold boot builds the table and warm boot leaves it alone, so a
+replaced entry stays until reset. A program that damages the table can stop
+warm boot working; reset rebuilds it. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
 The user number survives warm boot.
 
 Warm boot puts the video display back into its console mode: on the
