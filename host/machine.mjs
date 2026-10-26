@@ -47,7 +47,15 @@ export class Machine {
    * whose clock was set; a Date starts the clock there and advances it with
    * the emulated cycles at 4 MHz, so a run reads the same time on any host.
    */
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, rtc = true, clock, onSdWrite }) {
+  /*
+   * paged: decode the system latch as the TEC-1G documentation's 96K scheme
+   * instead of the runtime's bank field (D03): bit 3 (LOWPAGE) picks one of
+   * two 32 KiB pages at 0000h-7FFFh and bit 2 (EXPAND) one of U9's two
+   * 16 KiB halves at 8000h-BFFFh. lowPages: 1 when the second low page is
+   * not fitted, so bit 3 changes nothing. ROM, the boot overlay and PROTECT
+   * (4000h-7FFFh) behave as before.
+   */
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, rtc = true, clock, paged = false, lowPages = 2, onSdWrite }) {
     this.symbols = symbols;
     // output: every byte the BIOS was asked to put on the console, whichever
     // device is in use. serial: the bytes that left the serial port.
@@ -127,8 +135,29 @@ export class Machine {
     // windowRam false models a board with nothing at 8000h-BFFFh: reads
     // float high and writes go nowhere.
     const empty = (a) => !windowRam && a >= 0x8000 && a < 0xc000;
-    this.cpu.hardware.memRead = (addr) => (empty(addr & 0xffff) ? 0xff : hooks.memRead(addr));
-    this.cpu.hardware.forceMemWrite = hooks.forceMemWrite;
+    let ram = hooks;
+    if (paged) {
+      this.lowPages = Array.from({ length: lowPages }, () => new Uint8Array(0x8000).fill(ramFill));
+      this.halves = [0, 1].map(() => new Uint8Array(0x4000).fill(ramFill));
+      const low = () => this.lowPages[system.sysCtrl & 0x08 ? lowPages - 1 : 0];
+      const half = () => this.halves[(system.sysCtrl >> 2) & 1];
+      ram = {
+        memRead: (addr) => {
+          const a = addr & 0xffff;
+          if (a >= 0xc000 || (system.shadowEnabled && a < 0x0800)) return hooks.memRead(a);
+          return a < 0x8000 ? low()[a] : half()[a - 0x8000];
+        },
+        memWrite: (addr, value) => {
+          const a = addr & 0xffff;
+          if (a >= 0xc000) return hooks.memWrite(a, value);
+          if (a < 0x8000) {
+            if (!(system.protectEnabled && a >= 0x4000)) low()[a] = value & 0xff;
+          } else half()[a - 0x8000] = value & 0xff;
+        },
+      };
+    }
+    this.cpu.hardware.memRead = (addr) => (empty(addr & 0xffff) ? 0xff : ram.memRead(addr));
+    this.cpu.hardware.forceMemWrite = paged ? ram.memWrite : hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     this.cpu.hardware.memWrite = (addr, value) => {
       const a = addr & 0xffff;
@@ -136,11 +165,11 @@ export class Machine {
       else if (a < 0x0800 && system.shadowEnabled) {
         this.violations.push({ kind: "overlay-write", addr: a, pc: this.cpu.cpu.pc });
       }
-      if (!empty(a)) hooks.memWrite(a, value);
+      if (!empty(a)) ram.memWrite(a, value);
     };
     this.conout = symbols.get("BCONOUT");
-    this.read = (addr) => hooks.memRead(addr & 0xffff);
-    this.write = (addr, value) => hooks.memWrite(addr & 0xffff, value & 0xff);
+    this.read = (addr) => ram.memRead(addr & 0xffff);
+    this.write = (addr, value) => ram.memWrite(addr & 0xffff, value & 0xff);
   }
 
   sym(name) {
