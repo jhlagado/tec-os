@@ -86,6 +86,7 @@ WBOOTR: DI
         LD      SP,BSTK
         CALL    PZINIT
         CALL    CPMINIT
+        CALL    HWVREL          ; a program that claimed the PICO9918 gives it back
         LD      A,(CONMOD)      ; a program may have changed the display mode
         RRCA
         CALL    C,VREST

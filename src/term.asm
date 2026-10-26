@@ -526,14 +526,31 @@ VTCLIP: CP      (HL)
         DEC     A
         RET
 
+; NZ while a program has claimed the PICO9918 and it is the console screen:
+; the terminal then leaves it alone.
+VTOWN:  LD      A,(VCLAIM)
+        OR      A
+        RET     Z
+        LD      A,(CONMOD)
+        XOR     CMCRT
+        JR      Z,VTOWN1
+        XOR     A
+        RET
+VTOWN1: INC     A
+        RET
+
 ; Draw or remove the cursor: the cell at the cursor shows its reverse image.
-CURSHOW:LD      A,(VCURV)
+CURSHOW:CALL    VTOWN
+        RET     NZ
+        LD      A,(VCURV)
         OR      A
         RET     NZ
         INC     A
         LD      (VCURV),A
         JR      CURFLIP
-CURHIDE:LD      A,(VCURV)
+CURHIDE:CALL    VTOWN
+        RET     NZ
+        LD      A,(VCURV)
         OR      A
         RET     Z
         XOR     A

@@ -70,13 +70,12 @@ N01:    LD      HL,$FF00
         CP      1
 .F:     CALL    RESULT
 
-; N02 QUERY: ABI 1.0 and at least two banks
+; N02 QUERY: ABI 1.x and at least two banks
 N02:    LD      C,0
         CALL    SVC
         JR      NZ,.F
-        LD      DE,$0100
-        OR      A
-        SBC     HL,DE
+        LD      A,H
+        CP      1
         JR      NZ,.F
         LD      A,B
         CP      2

@@ -73,7 +73,7 @@ compiler. That comparison is still to do.
 
 ## Measured costs
 
-ROM, `debug80` profile: 12,869 of 16,384 bytes used, 3,515 free. The region
+ROM, `debug80` profile: 13,366 of 16,384 bytes used, 3,018 free. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.

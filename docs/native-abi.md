@@ -12,10 +12,11 @@ The ROM table at `FF00h` is fixed for ABI 1:
 | --- | ---: | --- |
 | `FF00h` | 3 | `"TNA"` |
 | `FF03h` | 1 | ABI major version, 1 |
-| `FF04h` | 1 | ABI minor version, 0 |
+| `FF04h` | 1 | ABI minor version, 1 (1.1 adds `FF0Bh`) |
 | `FF05h` | 1 | Native banks in this build (`NBANKS`) |
 | `FF06h` | 3 | `JP` to the service entry |
 | `FF09h` | 2 | Address of the console geometry: columns, then rows; 0 when the console is serial only |
+| `FF0Bh` | 3 | `JP` to the hardware services, for any program ([rom-services.md](rom-services.md)) |
 
 The ROM is visible at every bank setting, so the table can be read by classic
 programs too, for example to learn the console size.
@@ -61,7 +62,7 @@ against.
 
 ## Entry conditions for the program
 
-`A = 0`, `HL` = ABI version (`0100h`), `DE = 0080h` (command tail).
+`A = 0`, `HL` = ABI version (`0101h`), `DE = 0080h` (command tail).
 Interrupts are disabled.
 
 ## Calling a service

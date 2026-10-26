@@ -49,6 +49,8 @@ TPDRAW: DS      1               ; PICO9918 page drawn and page shown: offset
 TPSHOW: DS      1               ; high byte, 0 or TPGOFF
 TMVCOPY:DS      1               ; 1 while a row move builds the hidden page
 CONACT: DS      1               ; IOBYTE CON: field last acted on
+VCLAIM: DS      1               ; 1 while a program owns the PICO9918
+HWARGA: DS      1               ; hardware services: A on entry
 CONMOD: DS      1               ; console mode in effect (CMTTY..CMUC1)
 
 ; ---- GLCD text console --------------------------------------------------------

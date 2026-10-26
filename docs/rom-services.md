@@ -1,9 +1,33 @@
 # ROM services
 
-Status: **Proposed**, 2026-10-25. Nothing here is built yet. Sizes marked
-"est." are estimates; the others come from the `debug80` build census.
+Status: **Partly built**, 2026-10-26. The entry at `FF0Bh` exists (ABI 1.1)
+with the first six services: `INFO`, `DIGITS`, `HEXSEG`, `LEDS`, `LCDROW`
+and `VIDEO` (`src/hwsvc.asm`). `DEMO.COM` on the starter card uses them all.
+The rest of the list below is still proposed; sizes marked "est." are
+estimates.
 
-The ROM is 16 KiB. It holds 12,869 bytes today and has 3,515 free. This
+## Built: services 0-5
+
+| C | Service | Arguments | Results |
+| ---: | --- | --- | --- |
+| 0 | `INFO` | — | `B` devices (bit 0 matrix keyboard, bit 1 PICO9918, bit 2 GLCD), `DE` ROM version, `L` console columns, `H` rows (0 for serial) |
+| 1 | `DIGITS` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off; the serial line stays idle |
+| 2 | `HEXSEG` | `A` = 0-15 | `B` = its segment pattern (MON3's layout) |
+| 3 | `LEDS` | `HL` → 8 rows of red, green, blue bytes | One scan of the 8 × 8 matrix, about 0.4 ms a row, then off |
+| 4 | `LCDROW` | `B` = row 0-3, `HL` → 20 characters | The row written |
+| 5 | `VIDEO` | `B` = 1 claim, 0 release | Status 2 without a PICO9918 |
+
+Status 0 is success (Z, carry clear), 1 an unknown service or argument, 2 a
+missing device. The digits and LEDs are multiplexed, so a program calls
+`DIGITS` and `LEDS` in its main loop. While the PICO9918 is claimed the
+console drops output to it, draws no cursor and does not flip pages, and the
+program may set any mode and use all of VRAM; releasing it, or a warm boot,
+restores the 80-column text mode, font and page and clears the screen. The
+services use at most 6 bytes of the caller's stack and preserve IX, IY and
+the alternate registers.
+
+The ROM is 16 KiB. It holds 13,366 bytes with these services and has 3,018
+free. This
 document sets out what earns a place in it, adds one entry point that gives
 programs the TEC-1G's hardware, and lists what belongs on the card instead.
 

@@ -1,6 +1,7 @@
 // TMS9918 screen rendering from VRAM and registers: text mode (40 columns of
-// 6-pixel cells) and Graphics I (32 columns), the modes the TEC-OS console
-// uses. Other modes use the framebuffer the runtime renders itself.
+// 6-pixel cells) and Graphics I (32 columns) with its sprites, the modes the
+// TEC-OS console and its programs use. Other modes use the framebuffer the
+// runtime renders itself.
 
 const PALETTE = [
   0x000000, 0x000000, 0x21c842, 0x5edc78, 0x5455ed, 0x7d76fc, 0xd4524d, 0x42ebf5,
@@ -13,6 +14,41 @@ function put(d, x, y, rgb) {
   d[o + 1] = (rgb >> 8) & 0xff;
   d[o + 2] = rgb & 0xff;
   d[o + 3] = 255;
+}
+
+/**
+ * Sprites over the background: up to 32 from the attribute table, ending at
+ * a Y of D0h, 8 x 8 or 16 x 16 (register 1 bit 1), doubled with bit 0. Sprite
+ * 0 is in front. The early clock bit moves a sprite 32 pixels left. The
+ * four-per-line limit and collision flag are not modelled.
+ */
+function drawSprites(d, r, vram) {
+  const attrs = (r[5] & 0x7f) * 0x80;
+  const pats = (r[6] & 0x07) * 0x800;
+  const size = r[1] & 0x02 ? 16 : 8;
+  const mag = r[1] & 0x01 ? 2 : 1;
+  let count = 0;
+  while (count < 32 && vram[attrs + count * 4] !== 0xd0) count += 1;
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const a = attrs + i * 4;
+    let y = (vram[a] + 1) & 0xff;
+    if (y > 0xe0) y -= 256;
+    const colourByte = vram[a + 3];
+    const x = vram[a + 1] - (colourByte & 0x80 ? 32 : 0);
+    const colour = colourByte & 0x0f;
+    if (colour === 0) continue;
+    const name = size === 16 ? vram[a + 2] & 0xfc : vram[a + 2];
+    for (let py = 0; py < size; py += 1) {
+      for (let px = 0; px < size; px += 1) {
+        const byte = vram[pats + name * 8 + (px >> 3) * 16 + py];
+        if (!(byte & (0x80 >> (px & 7)))) continue;
+        for (let my = 0; my < mag; my += 1) for (let mx = 0; mx < mag; mx += 1) {
+          const sx = x + px * mag + mx, sy = y + py * mag + my;
+          if (sx >= 0 && sx < 256 && sy >= 0 && sy < 192) put(d, sx, sy, PALETTE[colour]);
+        }
+      }
+    }
+  }
 }
 
 /** True when the registers select the PICO9918's 80-column text mode. */
@@ -107,6 +143,7 @@ export function renderTms(image, snapshot, fallbackFramebuffer) {
         }
       }
     }
+    drawSprites(d, r, vram);
     return true;
   }
   if (fallbackFramebuffer) {

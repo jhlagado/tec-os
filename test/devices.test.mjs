@@ -3,6 +3,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
@@ -61,4 +62,29 @@ test("punch and reader are the serial port, eight bits wide", async () => {
   assert.match(text, /41 C3 0D \r\n/);
   assert.match(m.serialText(), /PUN41 C3 0D /, "punch and console share the serial line");
   noViolations(m);
+});
+
+test("the hardware services drive the LCD, digits, LEDs and a claimed PICO9918 (DEMO.COM)", async () => {
+  const image = standardCard();
+  volume(image, "A").write("DEMO.COM", (await program("demo")).bytes);
+  const m = boot(image, { tms: true, matrix: true });
+  assert.equal(m.read(0xff04), 1, "ABI minor version 1");
+  m.mark = m.output.length;
+  m.typeMatrix("demo\r");
+  const t = m.cycles + 8_000_000;
+  m.runUntil(() => m.cycles > t, 9_000_000, "the demo running");
+  assert.match(m.text(m.mark), /PICO9918: yes/);
+  const p = serializeTec1gUpdateFromRuntimeState(m.tec1g.state);
+  assert.equal(String.fromCharCode(...p.lcd.slice(0, 20)), "TEC-OS hardware demo");
+  assert.ok(p.digits.some((d) => d !== 0), "the counter is on the digits");
+  assert.ok((p.matrixScanCycles?.length ?? 0) > 0, "complete scans of the 8 x 8 LEDs");
+  const vdp = m.tec1g.state.display.tms9918.stateSnapshot();
+  assert.deepEqual([...vdp.registers.slice(0, 8)], [0x00, 0xc2, 0x06, 0x80, 0x00, 0x36, 0x07, 0x01], "Graphics I while claimed");
+  m.typeMatrix("x");
+  m.expect(/A>$/);
+  const after = m.tec1g.state.display.tms9918.stateSnapshot();
+  assert.deepEqual([...after.registers.slice(0, 2)], [0x04, 0x50], "80-column text again");
+  assert.ok(m.screen().includes("Demo stopped."));
+  assert.deepEqual(serializeTec1gUpdateFromRuntimeState(m.tec1g.state).digits, [0, 0, 0, 0, 0, 0]);
+  assert.deepEqual(m.violations, []);
 });

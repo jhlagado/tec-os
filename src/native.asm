@@ -6,7 +6,7 @@
 ; their own banks only through BANKCOPY and BANKCALL. Services are not
 ; re-entrant and must not be called from interrupt handlers.
 
-NABIVER EQU     $0100           ; ABI 1.0
+NABIVER EQU     $0101           ; ABI 1.1
 
 ; Service numbers (register C at NATSVC).
 NSQUERY EQU     0

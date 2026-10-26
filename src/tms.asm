@@ -250,7 +250,10 @@ TMSMBN: INC     D
 
 ; Show the page drawn, if it is not already shown. Called when a program asks
 ; for a key, so a finished move appears in one frame. Destroys AF, HL.
-TMSFLIP:LD      A,(TPDRAW)
+TMSFLIP:LD      A,(VCLAIM)         ; a program owns the registers
+        OR      A
+        RET     NZ
+        LD      A,(TPDRAW)
         LD      HL,TPSHOW
         CP      (HL)
         RET     Z

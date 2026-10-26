@@ -24,6 +24,7 @@ const PROGRAMS = [
   { name: "TERM.COM", source: "test/programs/term.asm", description: "draws with the video terminal's ANSI subset" },
   { name: "PROBE.COM", source: "test/programs/probe.asm", description: "BDOS file-function probe" },
   { name: "NATDEMO.TNX", source: "test/programs/natdemo.asm", base: 0x0780, description: "native ABI demonstration" },
+  { name: "DEMO.COM", source: "test/programs/demo.asm", description: "hardware services demonstration: LCD, digits, LEDs, PICO9918" },
 ];
 
 const README = `TEC-OS starter disk
@@ -32,6 +33,7 @@ COPY SOURCE DEST   copy a file, for example COPY TERM.COM B:TERM.COM
 TERM               draw on the video console; TERM S also scrolls
 PROBE              exercise the BDOS file functions
 NATDEMO            native bank-aware program: type NATDEMO
+DEMO               the LCD, digits, 8x8 LEDs and PICO9918; any key stops
 EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
 
 B: is an empty work disk.

@@ -234,6 +234,8 @@ RXD:    DEC     D
 
 ; BIOS CONOUT: send C to the serial port and the video terminal.
 BCONOUT:CALL    CONSEL
+        CALL    VTOWN           ; a program owns the PICO9918: drop the output
+        RET     NZ
         LD      A,(CONMOD)
         RRCA
         JP      C,VTOUT         ; CRT: or UC1:

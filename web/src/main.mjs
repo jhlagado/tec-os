@@ -218,13 +218,24 @@ for (let i = 0; i < 64; i += 1) {
   $("leds").appendChild(dot);
   ledEls.push(dot);
 }
+// The matrix is multiplexed: a program lights one row at a time. While it
+// keeps scanning, show the last complete scan; when it stops, the row latched.
+let ledScan = { id: -1, at: 0, rows: null };
 function drawLeds(p) {
+  const last = p.matrixScanCycles?.at(-1);
+  if (last && last.id !== ledScan.id) ledScan = { id: last.id, at: performance.now(), rows: last.rows };
+  const scanning = ledScan.rows && performance.now() - ledScan.at < 100;
+  const plane = (name, row) => {
+    if (!scanning) return p[name]?.[row] ?? 0;
+    const image = ledScan.rows.find((r) => r.row === row);
+    return image ? image[{ matrix: "red", matrixGreen: "green", matrixBlue: "blue" }[name]] : 0;
+  };
   for (let row = 0; row < 8; row += 1) {
     for (let col = 0; col < 8; col += 1) {
       const bit = 1 << col;
-      const r = (p.matrix?.[row] ?? 0) & bit ? 255 : 0;
-      const g = (p.matrixGreen?.[row] ?? 0) & bit ? 220 : 0;
-      const b = (p.matrixBlue?.[row] ?? 0) & bit ? 255 : 0;
+      const r = plane("matrix", row) & bit ? 255 : 0;
+      const g = plane("matrixGreen", row) & bit ? 220 : 0;
+      const b = plane("matrixBlue", row) & bit ? 255 : 0;
       ledEls[row * 8 + col].style.background = r || g || b ? `rgb(${r},${g},${b})` : "";
     }
   }
