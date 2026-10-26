@@ -40,8 +40,11 @@ Warm boot at `0000h`, BDOS vector at `0005h` (target `B806h` on the starter card
 `xx06h` address), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
-`0100h`. The BIOS jump table is at `BF00h`, the top page of the bank window, and
-reached through `0001h`. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
+`0100h`. The BIOS jump table is at `BF00h`, the top page of EXPAND 0, and
+reached through `0001h`. The BDOS calls the BIOS through it, as CP/M 2.2
+does, so a program that replaces an entry there sees the BDOS's own calls,
+its console output, its console reads and the warm boot after `^C` or a disk
+error. Warm boot rebuilds the table. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
 The user number survives warm boot.
 
 Warm boot puts the video display back into its console mode: on the
@@ -84,8 +87,9 @@ and run.
   the FCB holds. Do not press the hex keypad while a CP/M program runs.
   TEC-OS restores the vector at every warm boot. See decision D06.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
-  in ROM. Programs that write to the BIOS jump table in RAM change only that
-  copy; the BDOS calls the ROM table.
+  in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
+  that does not go through it is the check for `^S` while the BDOS writes,
+  which calls the ROM's console status directly so that it draws no cursor.
 - **CCP overwrite.** Programs that expect to reclaim CCP memory below the BDOS
   gain nothing: the CCP is in ROM and its workspace is above the TPA.
 - **Bit-banged serial.** Input that arrives while a program is busy and not

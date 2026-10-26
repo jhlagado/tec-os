@@ -420,6 +420,16 @@ resident stack is its deepest use, measured from reset with an NMI taken at
 its deepest point, and a quarter more; the CCP's also keeps CP/M's eight
 levels for a transient on it.
 
+## D29 The BDOS calls the BIOS through the RAM table — Adopted 2026-10-27
+
+The BDOS reaches the BIOS through the RAM copy of its jump table at `BF00h`,
+as CP/M 2.2 does with its BIOS in RAM, so a program or module that replaces
+an entry there catches everything that passes through it, the BDOS's own
+console output and `^C` included. Hooks replace entries and chain to the
+ones they replaced. Each call through the table costs one more `JP`, about
+10 T-states. The BDOS's check for `^S` while it writes still calls the
+ROM's console status, which draws no cursor.
+
 ## Open decisions
 
 | ID | Open item | Blocks |
