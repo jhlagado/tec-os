@@ -762,6 +762,12 @@ READSEQ:
         LD      A,(HL)
         CP      128
         JR      C,READCHK
+        ; Close before moving on, as CP/M 2.2's open_reel does: the reopen
+        ; replaces the allocation map, so blocks written through this FCB
+        ; since its open must reach the directory first.
+        CALL    CLOSEFCB
+        INC     A
+        JP      Z,READ_EOF
         CALL    NEXTEXT
         OR      A
         JP      NZ,READ_EOF
@@ -1506,8 +1512,10 @@ OPENHIT:
         LD      HL,(SRCHFCB)
         LD      DE,12
         ADD     HL,DE
+        LD      A,(HL)
+        AND     $1F
+        LD      C,A             ; the entry's extent
         POP     AF
-        LD      C,(HL)          ; the entry's extent
         LD      (HL),A
         CP      C
         JR      Z,OPENRC

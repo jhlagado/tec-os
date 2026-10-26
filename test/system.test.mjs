@@ -198,6 +198,98 @@ test("files over 16 KiB cross between TEC-OS and the PC on a volume whose entrie
   noViolations(m);
 });
 
+/** Call BDOS function c from the prompt with DE, returning A; the FCB is at 1000h, the DMA record at 2000h. */
+function bdosCall(m, c, de = 0) {
+  const cpu = m.cpu.cpu;
+  const saved = { pc: cpu.pc, sp: cpu.sp };
+  m.write(0x0efe, 0x00);
+  m.write(0x0eff, 0x0f);
+  Object.assign(cpu, { c, d: de >> 8, e: de & 0xff, sp: 0x0efe, pc: 0x0005 });
+  m.runUntil(() => m.pc === 0x0f00, 400_000_000, `BDOS ${c}`);
+  const a = cpu.a;
+  Object.assign(cpu, saved);
+  return a;
+}
+
+test("sparse files and a block written after a reopen survive on both volumes", SLOW, () => {
+  // Record r carries r in its first two bytes, so a record read from the
+  // wrong place shows. A: has an extent mask of 0, B: of 1.
+  const rec = (r) => Uint8Array.from({ length: 128 }, (_, k) => (k < 2 ? (r >> (8 * k)) & 0xff : (r * 131 + k * 7) & 0xff));
+  const FCB = 0x1000;
+  const DMA = 0x2000;
+  const image = standardCard();
+  const m = boot(image);
+  const fcb = (drive, name) => {
+    [drive, ...Buffer.from(name.padEnd(11))].forEach((b, i) => m.write(FCB + i, b));
+    for (let i = 12; i < 36; i += 1) m.write(FCB + i, 0);
+  };
+  const setR = (r) => [r & 0xff, r >> 8, 0].forEach((b, i) => m.write(FCB + 33 + i, b));
+  const fill = (r) => rec(r).forEach((b, k) => m.write(DMA + k, b));
+  const holds = (r) => rec(r).every((b, k) => m.read(DMA + k) === b);
+  bdosCall(m, 26, DMA);
+  for (const [drive, d] of [[1, "A"], [2, "B"]]) {
+    // Sparse: random writes in no order, with holes.
+    const sparse = [300, 10, 200, 140, 70];
+    fcb(drive, "SPARSE  DAT");
+    bdosCall(m, 22, FCB);
+    for (const r of sparse) {
+      setR(r);
+      fill(r);
+      assert.equal(bdosCall(m, 34, FCB), 0, `${d}: write record ${r}`);
+    }
+    bdosCall(m, 16, FCB);
+    // KE-36: a block written through a reopened FCB, then a sequential read
+    // across the extent boundary before the close.
+    fcb(drive, "REOPEN  DAT");
+    bdosCall(m, 22, FCB);
+    for (const r of [127, 200]) {
+      setR(r);
+      fill(r);
+      bdosCall(m, 34, FCB);
+    }
+    bdosCall(m, 16, FCB);
+    fcb(drive, "REOPEN  DAT");
+    bdosCall(m, 15, FCB);
+    setR(40);
+    fill(40);
+    bdosCall(m, 34, FCB);
+    setR(126);
+    bdosCall(m, 33, FCB);
+    for (let i = 0; i < 3; i += 1) bdosCall(m, 20, FCB);
+    bdosCall(m, 16, FCB);
+    // Exactly 16 KiB and 32 KiB, sequentially.
+    for (const [name, n] of [["K16     DAT", 128], ["K32     DAT", 256]]) {
+      fcb(drive, name);
+      bdosCall(m, 22, FCB);
+      for (let r = 0; r < n; r += 1) {
+        fill(r);
+        bdosCall(m, 21, FCB);
+      }
+      bdosCall(m, 16, FCB);
+    }
+    // Read back on TEC-OS.
+    for (const [name, records] of [["SPARSE  DAT", sparse], ["REOPEN  DAT", [40, 127, 200]]]) {
+      fcb(drive, name);
+      bdosCall(m, 15, FCB);
+      for (const r of records) {
+        setR(r);
+        assert.equal(bdosCall(m, 33, FCB), 0, `${d}:${name.trim()} record ${r} on TEC-OS`);
+        assert.ok(holds(r), `${d}:${name.trim()} record ${r} on TEC-OS`);
+      }
+    }
+    // And on the PC.
+    const v = volume(image, d);
+    assert.deepEqual(v.verify(), [], `${d}: verifies`);
+    for (const [name, records] of [["SPARSE.DAT", sparse], ["REOPEN.DAT", [40, 127, 200]], ["K16.DAT", [...Array(128).keys()]], ["K32.DAT", [...Array(256).keys()]]]) {
+      const bytes = v.read(name);
+      for (const r of records) assert.ok(Buffer.from(bytes.subarray(r * 128, r * 128 + 128)).equals(Buffer.from(rec(r))), `${d}:${name} record ${r} on the PC`);
+    }
+    assert.equal(v.read("K16.DAT").length, 16384);
+    assert.equal(v.read("K32.DAT").length, 32768);
+  }
+  noViolations(m);
+});
+
 test("a read-only volume refuses writes without changing it", () => {
   const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
   const before = Buffer.from(image);
