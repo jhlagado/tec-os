@@ -57,7 +57,8 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 
 ## Measured costs
 
-ROM, `debug80` profile: 13,868 of 16,384 bytes used, 2,516 free. The region
+ROM, `debug80` profile: 13,906 of 16,384 bytes used, 2,478 free: 2,236 below
+the table at `FF00h`, where code goes, and 242 above it. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.

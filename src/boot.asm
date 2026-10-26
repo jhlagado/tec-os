@@ -116,12 +116,14 @@ PZINIT: LD      A,$C3
         LD      (RST7+1),HL
         LD      A,$FB
         LD      (RST7),A
-; 0008h-0037h back to zero, as a cold boot leaves them, except a vector that
-; is a jump into ROM, whose three bytes stay. A program's vector into the TPA
-; does not outlive it: an RST through a cleared vector slides through NOPs
-; to 0038h and returns.
+; The restart vectors 0008h-0037h: each one that is not a jump into ROM
+; becomes seven zeros and a RET, so an RST through it returns at once, with
+; the interrupt state unchanged, and never runs into the next vector. A jump
+; into ROM keeps its three bytes and the rest of its vector is cleared. A
+; program's vector into the TPA does not outlive it, and a cold boot leaves
+; the same bytes.
         LD      HL,$0008
-RSTCLR: LD      B,8
+RSTCLR: LD      BC,7*256+$C9    ; seven zeros, then RET
         LD      A,(HL)
         CP      $C3
         JR      NZ,RSTZERO
@@ -132,13 +134,15 @@ RSTCLR: LD      B,8
         DEC     HL
         CP      $C0
         JR      C,RSTZERO
-        INC     HL              ; keep JP nn into ROM
+        INC     HL              ; keep JP nn into ROM, then five zeros
         INC     HL
         INC     HL
-        LD      B,5
+        LD      BC,4*256+0
 RSTZERO:LD      (HL),0
         INC     HL
         DJNZ    RSTZERO
+        LD      (HL),C
+        INC     HL
         LD      A,L
         CP      $38
         JR      NZ,RSTCLR

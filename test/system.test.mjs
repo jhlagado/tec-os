@@ -52,6 +52,35 @@ test("warm boot by ^C keeps the drive and user number", () => {
   noViolations(m);
 });
 
+test("warm boot clears the restart vectors except jumps into ROM, and a stale RST returns", () => {
+  // SETV leaves 0008h jumping into the TPA, 0010h jumping into ROM (FF0Bh)
+  // and stray bytes in the tail of 0018h, then ends with JP 0000h.
+  const set = { 0x08: [0xc3, 0x08, 0x40], 0x10: [0xc3, 0x0b, 0xff], 0x1b: [0xc3, 0x00, 0x40] };
+  const code = Object.entries(set).flatMap(([at, bytes]) =>
+    bytes.flatMap((b, i) => [0x3e, b, 0x32, (Number(at) + i) & 0xff, 0x00]),
+  );
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("SETV.COM", new Uint8Array([...code, 0xc3, 0x00, 0x00]));
+  for (const v of [0x08, 0x10, 0x18]) a.write(`RST${v.toString(16).padStart(2, "0")}.COM`, new Uint8Array([0xc7 | v, 0xc9]));
+  const m = boot(image);
+  m.command("SETV");
+  const want = new Array(0x30).fill(0);
+  for (let v = 0x08; v < 0x38; v += 8) want[v - 0x08 + 7] = 0xc9;
+  want.splice(0x10 - 0x08, 8, 0xc3, 0x0b, 0xff, 0, 0, 0, 0, 0);
+  assert.deepEqual(Array.from({ length: 0x30 }, (_, i) => m.read(0x08 + i)), want, "0008h-0037h after the warm boot");
+  for (const v of [0x08, 0x18]) {
+    m.type(`RST${v.toString(16).padStart(2, "0")}\r`);
+    m.runUntil(() => m.pc === 0x0101 || m.pc === 0x4000 + v || m.pc === 0x4000, 50_000_000, `RST ${v.toString(16)}h`);
+    assert.equal(m.pc, 0x0101, `RST ${v.toString(16)}h returns to its caller`);
+    m.expect(/\r\nA>$/);
+  }
+  m.type("RST10\r");
+  m.runUntil(() => m.pc === 0xff0b || m.pc === 0x0101, 50_000_000, "RST 10h");
+  assert.equal(m.pc, 0xff0b, "the kept jump into ROM is taken");
+  noViolations(m);
+});
+
 test("without a card the diagnostic console reports and retries", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols });

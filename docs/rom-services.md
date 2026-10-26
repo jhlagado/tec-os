@@ -5,8 +5,9 @@ services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. It holds 13,868 bytes with these services and has 2,516
-free. This document sets out what earns a place in it, the entry point that
+The ROM is 16 KiB. It holds 13,906 bytes (`debug80`) and has 2,478 free:
+2,236 below the table at `FF00h`, where code can go, and 242 above it. This
+document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
 ## Calling the services
@@ -172,7 +173,7 @@ Programs:
 
 ## Costs
 
-| Resource | Before the services | After | Change |
+| Resource | Before the services | After the services | Change |
 | --- | ---: | ---: | ---: |
 | ROM used | 13,079 | 13,868 | +789: the services and the console's claim hooks |
 | ROM free | 3,305 | 2,516 | |
@@ -186,7 +187,7 @@ that uses them.
 
 ## Next in the ROM
 
-In order, for the 2,516 bytes left: integer arithmetic (16 × 16 multiply,
+In order, for the 2,236 bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
 32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
 resident monitor with Intel HEX loading. A disassembler does not fit, and
 floating point and drawing stay on the card.
@@ -196,8 +197,11 @@ floating point and drawing stay on the card.
 - **MON3's API.** MON3 programs call through `RST 10h` and keep state in
   RAM at `0800h–0FFFh` (the clock buffer is at `0900h`). Under CP/M both
   belong to the program: page zero's restart vectors are left to programs and
-  debuggers, and `0100h` up is the TPA. A warm boot clears the restart
-  vectors at `0008h–0037h` that do not jump into ROM. MON3's list also carries its own UI
+  debuggers, and `0100h` up is the TPA. A warm boot, like a cold boot, puts
+  seven zeros and a `RET` in each restart vector at `0008h–0037h` that does
+  not jump into ROM, so an RST through it returns at once with the
+  interrupt state unchanged. A kept jump into ROM is left as it is; one into
+  unused ROM or into the table at `FF00h` is not an entry point. MON3's list also carries its own UI
   (menus, parameter entry, disassembly), which is application code.
 - **Extra BIOS jump-table entries.** Many CP/M 2.2 vendors added entries
   after `SECTRAN`. A program cannot tell whether they exist without a
