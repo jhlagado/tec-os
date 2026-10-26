@@ -43,11 +43,12 @@ export class CpmVolume {
     return this.data.subarray(i * ENTRY, (i + 1) * ENTRY);
   }
 
-  blocksOf(e) {
+  /** The entry's allocated blocks as [slot, block], skipping empty slots. */
+  slotsOf(e) {
     const list = [];
     for (let k = 0; k < this.pointers; k += 1) {
       const b = this.wide ? e[16 + 2 * k] | (e[17 + 2 * k] << 8) : e[16 + k];
-      if (b !== 0) list.push(b);
+      if (b !== 0) list.push([k, b]);
     }
     return list;
   }
@@ -63,12 +64,13 @@ export class CpmVolume {
         user: e[0],
         key: toLatin1(e.subarray(1, 12).map((b) => b & 0x7f)),
         name: displayName(e.subarray(1, 12)),
-        extent: (e[12] & 0x1f) | (e[14] << 5),
+        extent: (e[12] & 0x1f) | ((e[14] & 0x3f) << 5),
         rc: e[15],
         readOnly: (e[9] & 0x80) !== 0,
         system: (e[10] & 0x80) !== 0,
-        blocks: this.blocksOf(e),
+        slots: this.slotsOf(e),
       });
+      out.at(-1).blocks = out.at(-1).slots.map(([, b]) => b);
     }
     return out;
   }
@@ -126,12 +128,13 @@ export class CpmVolume {
     const recordsPerBlock = this.blockBytes / RECORD;
     for (const e of f.entries) {
       const firstLogical = e.extent - (e.extent % this.extentsPerEntry);
-      e.blocks.forEach((b, k) => {
+      // A slot's place in the entry fixes its records, holes included.
+      for (const [k, b] of e.slots) {
         const record0 = firstLogical * 128 + k * recordsPerBlock;
         const n = Math.min(recordsPerBlock, f.records - record0);
-        if (n <= 0) return;
+        if (n <= 0) continue;
         out.set(this.data.subarray(b * this.blockBytes, b * this.blockBytes + n * RECORD), record0 * RECORD);
-      });
+      }
     }
     if (!text) return out;
     const z = out.indexOf(EOF);
@@ -221,11 +224,23 @@ export class CpmVolume {
     } catch (e) {
       problems.push(e.message);
     }
+    // Gaps between entries are legal: random writes leave them. Each entry
+    // must be the only one for its group of logical extents, have a record
+    // count of at most 128, and hold no block beyond the records it claims.
+    const recordsPerBlock = this.blockBytes / RECORD;
     for (const f of this.list()) {
-      const ext = f.entries.map((e) => Math.floor(e.extent / this.extentsPerEntry));
-      ext.forEach((x, i) => {
-        if (x !== i) problems.push(`${f.user}/${f.name}: missing directory entry ${i}`);
-      });
+      const groups = new Set();
+      for (const e of f.entries) {
+        const group = Math.floor(e.extent / this.extentsPerEntry);
+        if (groups.has(group)) problems.push(`${f.user}/${f.name}: two directory entries for extent group ${group}`);
+        groups.add(group);
+        if (e.rc > 128) problems.push(`${f.user}/${f.name}: extent ${e.extent} has record count ${e.rc}`);
+        const records = (e.extent % this.extentsPerEntry) * 128 + Math.min(e.rc, 128);
+        const slots = Math.ceil(records / recordsPerBlock);
+        for (const [k] of e.slots) {
+          if (k >= slots) problems.push(`${f.user}/${f.name}: extent ${e.extent} has a block in slot ${k}, beyond its ${records} records`);
+        }
+      }
     }
     return problems;
   }
