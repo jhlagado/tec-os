@@ -20,7 +20,6 @@ const hex = (v, w = 4) => v.toString(16).toUpperCase().padStart(w, "0") + "h";
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
 const PROGRAMS = [
-  { name: "COPY.COM", source: "test/programs/copy.asm", description: "COPY SOURCE DEST copies a file" },
   { name: "TERM.COM", source: "test/programs/term.asm", description: "draws with the video terminal's ANSI subset" },
   { name: "PROBE.COM", source: "test/programs/probe.asm", description: "BDOS file-function probe" },
   { name: "NATDEMO.TNX", source: "test/programs/natdemo.asm", base: 0x0780, description: "native ABI demonstration" },
@@ -29,7 +28,7 @@ const PROGRAMS = [
 
 const README = `TEC-OS starter disk
 
-COPY SOURCE DEST   copy a file, for example COPY TERM.COM B:TERM.COM
+COPY SOURCE DEST   copy a file (built in), for example COPY TERM.COM B:TERM.COM
 TERM               draw on the video console; TERM S also scrolls
 PROBE              exercise the BDOS file functions
 NATDEMO            native bank-aware program: type NATDEMO

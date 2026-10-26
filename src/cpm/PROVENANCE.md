@@ -50,3 +50,8 @@ Changes made for ROM residency in TEC-OS:
   is waiting for a key; the check made for every printed character must not.
 - The CCP has a built-in `CON` command that reports or sets the IOBYTE
   `CON:` field (TTY, CRT, BAT or UC1).
+- `COPY SOURCE DEST` is a TEC-OS built-in (`CMDCOPY`), with the steps and
+  messages of `test/programs/copy.asm`: open the source, erase and make the
+  destination, copy record by record through the default DMA record, close,
+  and print `COPIED nnnn` in hex. It keeps its state in the CCP's existing
+  FCBs and `DIRNUM` and writes nothing in the TPA.

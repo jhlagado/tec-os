@@ -169,7 +169,7 @@ Programs:
 | `XFER.COM` | Send and receive files over the serial port with checksums |
 | `CARDINFO.COM` | Show the container and volumes from raw card blocks |
 | `TUNE.COM`, `LEDS.COM`, `JOY.COM` | Speaker, LED and joystick tests and demos |
-| `TERM.COM`, `COPY.COM`, `PROBE.COM` | Already on the starter card |
+| `TERM.COM`, `PROBE.COM` | Already on the starter card; `COPY` is built into the CCP |
 
 ## Costs
 

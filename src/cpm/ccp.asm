@@ -164,6 +164,9 @@ NOTDRIVE:
         LD      DE,CONKEY
         CALL    ISCMD
         JP      Z,CMDCON
+        LD      DE,COPYKEY
+        CALL    ISCMD
+        JP      Z,CMDCOPY
         LD      DE,CMDFCB
         CALL    UNAMBIG
         JP      C,BADCMD
@@ -892,6 +895,99 @@ RENEXIST:
         CALL    PUTSTR
         JP      STARTED
 
+; TEC-OS: COPY SOURCE DEST copies a file a record at a time through the
+; default DMA record, as COPY.COM does: open the source, erase and make the
+; destination, read and write to the end, close, and print COPIED nnnn
+; (records, hex) or the same error text. Nothing in the TPA is touched.
+CMDCOPY:
+        LD      HL,(ARGSTRT)
+        LD      DE,CMDFCB
+        CALL    CPNAME
+        LD      DE,RENFCB
+        CALL    CPNAME
+        LD      DE,DEFDMA
+        LD      C,26
+        CALL    BDOS
+        LD      C,15
+        CALL    CPSRC
+        INC     A
+        LD      DE,CPNOSRC
+        JR      Z,CPFAIL
+        LD      C,19
+        CALL    CPDST
+        LD      C,22
+        CALL    CPDST
+        INC     A
+        LD      DE,CPNODST
+        JR      Z,CPFAIL
+        LD      HL,0
+        LD      (DIRNUM),HL
+CPLOOP:
+        LD      C,20
+        CALL    CPSRC
+        OR      A
+        JR      NZ,CPDONE
+        LD      C,21
+        CALL    CPDST
+        OR      A
+        LD      DE,CPWRITE
+        JR      NZ,CPFAIL
+        LD      HL,(DIRNUM)
+        INC     HL
+        LD      (DIRNUM),HL
+        JR      CPLOOP
+CPDONE:
+        LD      C,16
+        CALL    CPDST
+        INC     A
+        LD      DE,CPCLOSE
+        JR      Z,CPFAIL
+        LD      DE,CPCOPIED
+        CALL    PUTSTR
+        LD      A,(DIRNUM+1)
+        CALL    CPHEX
+        LD      A,(DIRNUM)
+        CALL    CPHEX
+        LD      DE,CRLFMSG
+CPFAIL:
+        CALL    PUTSTR
+        JP      STARTED
+
+; BDOS function C on the source or the destination.
+CPSRC:
+        LD      DE,CMDFCB
+        JP      BDOS
+CPDST:
+        LD      DE,RENFCB
+        JP      BDOS
+
+; Parse the next name at HL into the FCB at DE: unambiguous, or a bad
+; command. PARSEFCB clears the rest of the FCB.
+CPNAME:
+        CALL    SKIPSP
+        CALL    PARSEFCB
+        JP      C,BADCMD
+        CALL    UNAMBIG
+        JP      C,BADCMD
+        RET
+
+CPHEX:
+        PUSH    AF
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        CALL    CPNIB
+        POP     AF
+CPNIB:
+        AND     $0F
+        ADD     A,$90
+        DAA
+        ADC     A,$40
+        DAA
+        LD      E,A
+        JP      PUTCHAR
+
 ; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon
 ; may follow) sets the IOBYTE CON: field. The BIOS switches at the next
 ; console call, so the report appears on the new console, and names the
@@ -1402,6 +1498,18 @@ USERKEY:
         DB      "USER",0
 CONKEY:
         DB      "CON",0
+COPYKEY:
+        DB      "COPY",0
+CPNOSRC:
+        DB      "NO SOURCE",CR,LF,'$'
+CPNODST:
+        DB      "CANNOT MAKE DEST",CR,LF,'$'
+CPWRITE:
+        DB      "WRITE ERROR",CR,LF,'$'
+CPCLOSE:
+        DB      "CLOSE ERROR",CR,LF,'$'
+CPCOPIED:
+        DB      "COPIED ",'$'
 CONNAMS:
         DB      "TTYCRTBATUC1"
 CONHDR:

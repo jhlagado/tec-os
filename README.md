@@ -84,7 +84,7 @@ TEC-OS boots to the CP/M prompt `A>` on the PICO9918 or the GLCD when the
 board's Matrix switch is on, and on the serial terminal otherwise: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
-CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `B:`.
+CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `DEMO` on the starter card shows the hardware services: the LCD, the
 7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I. A command that names a `.COM` file runs it; one that names a
 `.TNX` file runs a native program. If the card is missing or invalid, a
