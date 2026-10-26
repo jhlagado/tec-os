@@ -429,6 +429,9 @@ CLOSEFCB:
         XOR     A
         RET
 
+; An FCB on an earlier extent than its entry's writes back only the
+; allocation map: the entry's extent and record count describe its last
+; extent.
 CLOSEDIR:
         CALL    FINDEXCT
         CP      $FF
@@ -440,7 +443,21 @@ CLOSEDIR:
         EX      DE,HL
         ADD     HL,BC
         EX      DE,HL
+        LD      A,(DE)
+        AND     $1F
+        LD      C,A
+        LD      A,(HL)
+        AND     $1F
+        CP      C
         LD      BC,20
+        JR      NC,CLOSECP
+        LD      C,4             ; skip EX, S1, S2 and RC
+        ADD     HL,BC
+        EX      DE,HL
+        ADD     HL,BC
+        EX      DE,HL
+        LD      C,16
+CLOSECP:
         LDIR
         CALL    WRITEDIR
         LD      A,(RETCODE)
@@ -940,22 +957,31 @@ FCBOFF:
         ADD     HL,DE
         RET
 
-; Return the allocation-map cell for SEQREC in HL.
+; Return the allocation-map cell for SEQREC in HL. The record's place in the
+; entry is (EX AND EXM) * 128 + SEQREC, shifted right by BSH.
 FCBADDR:
-        LD      A,(SEQREC)
         LD      HL,(DPBPTR)
         INC     HL
         INC     HL
-        LD      B,(HL)
-        LD      C,A
-        LD      A,B
-        OR      A
-        LD      A,C
-        JR      Z,BLOCKIDX
-
+        LD      B,(HL)          ; BSH
+        INC     HL
+        INC     HL
+        LD      C,(HL)          ; EXM
+        LD      DE,12
+        CALL    FCBOFF
+        LD      A,(HL)
+        AND     C
+        LD      H,A
+        LD      A,(SEQREC)
+        ADD     A,A
+        LD      L,A
+        SRL     H               ; HL = extent in entry * 128 + SEQREC
+        RR      L
 RECSHFT:
-        SRL     A
+        SRL     H
+        RR      L
         DJNZ    RECSHFT
+        LD      A,L
 
 BLOCKIDX:
         LD      C,A
@@ -1414,7 +1440,7 @@ FULLDIR:
 FINDLIM:
         OR      A
         SBC     HL,DE
-        JR      NC,NOENTRY
+        JP      NC,NOENTRY
         LD      HL,(SRCHIDX)
         LD      A,L
         AND     3
@@ -1459,9 +1485,18 @@ COPYDIR:
         LD      A,(RETCODE)
         RET
 
+; The FCB keeps the logical extent it asked for. The entry's extent byte is
+; the highest it holds, and its record count is that extent's: an earlier
+; extent in the entry is full (128 records), a later one empty.
 OPENHIT:
         CP      1
         JR      NZ,NOCOPY
+        LD      HL,(SRCHFCB)
+        LD      DE,12
+        ADD     HL,DE
+        LD      A,(HL)
+        AND     $1F
+        PUSH    AF
         LD      HL,(MATCHPTR)
         INC     HL
         LD      DE,(SRCHFCB)
@@ -1469,8 +1504,27 @@ OPENHIT:
         LD      BC,31
         LDIR
         LD      HL,(SRCHFCB)
-        LD      DE,14
+        LD      DE,12
         ADD     HL,DE
+        POP     AF
+        LD      C,(HL)          ; the entry's extent
+        LD      (HL),A
+        CP      C
+        JR      Z,OPENRC
+        LD      B,$80           ; earlier than the entry's: full
+        JR      C,OPENSET
+        LD      B,0             ; later: nothing in it yet
+OPENSET:
+        INC     HL
+        INC     HL
+        INC     HL
+        LD      (HL),B
+        DEC     HL
+        DEC     HL
+        DEC     HL
+OPENRC:
+        INC     HL
+        INC     HL
         LD      A,(HL)
         OR      $80
         LD      (HL),A
@@ -1487,7 +1541,8 @@ NOENTRY:
 
 ; Match the current user and 8.3 name. Question marks in the FCB are
 ; single-character wildcards. Directory attribute bits are not name bits.
-; Open also requires the requested logical extent.
+; Open also requires the requested logical extent: an entry holds EXM + 1
+; logical extents, so the extent bytes are compared outside the EXM bits.
 MATCHFCB:
         LD      A,(OPENMOD)
         CP      5
@@ -1531,12 +1586,22 @@ NAMEOK:
         LD      A,(DE)
         CP      '?'
         JR      Z,ISMATCH
+        XOR     (HL)            ; extents differ only in the bits EXM masks
         AND     $1F
+        JR      Z,EXSAME
+        PUSH    HL
         LD      C,A
-        LD      A,(HL)
-        AND     $1F
-        CP      C
+        LD      HL,(DPBPTR)
+        INC     HL
+        INC     HL
+        INC     HL
+        INC     HL
+        LD      A,(HL)          ; EXM
+        CPL
+        AND     C
+        POP     HL
         JR      NZ,NOMATCH
+EXSAME:
         INC     HL
         INC     HL
         INC     DE

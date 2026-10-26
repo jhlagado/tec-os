@@ -181,6 +181,23 @@ test("text and binary files cross between the PC and TEC-OS, and survive power l
   noViolations(m);
 });
 
+test("files over 16 KiB cross between TEC-OS and the PC on a volume whose entries hold two extents", SLOW, async () => {
+  // B: is G8M: 4 KiB blocks, extent mask 1, so one directory entry holds 32 KiB.
+  const data = new Uint8Array(40064).map((_, i) => (i * 7 + (i >> 7)) & 0xff);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("COPY.COM", (await program("copy")).bytes);
+  a.write("DATA.BIN", data);
+  volume(image, "B").write("PC.BIN", data);
+  const m = boot(image);
+  assert.match(m.command("COPY DATA.BIN B:TEC.BIN", { maxCycles: 4_000_000_000 }), /COPIED 0139/);
+  assert.match(m.command("COPY B:PC.BIN A:BACK.BIN", { maxCycles: 4_000_000_000 }), /COPIED 0139/);
+  assert.ok(Buffer.from(volume(image, "B").read("TEC.BIN")).equals(Buffer.from(data)), "TEC-OS's file on B: read on the PC");
+  assert.ok(Buffer.from(volume(image, "A").read("BACK.BIN")).equals(Buffer.from(data)), "the PC's file on B: read by TEC-OS");
+  for (const d of ["A", "B"]) assert.deepEqual(volume(image, d).verify(), [], `${d}: verifies`);
+  noViolations(m);
+});
+
 test("a read-only volume refuses writes without changing it", () => {
   const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
   const before = Buffer.from(image);
