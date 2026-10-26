@@ -97,8 +97,13 @@ TRTC3:  CALL    RTCCAL
         DB      " seconds do not advance",0
         JP      REND
 TRTC4:  PUSH    HL
+        CALL    RTCSET
+        LD      (SAVE+8),A      ; 0, or what went wrong
+        OR      A
         LD      A,RINFO
-        CALL    RESULT
+        JR      Z,TRTC5
+        LD      A,RFAIL
+TRTC5:  CALL    RESULT
         CALL    PRTIME
         CALL    PRI
         DB      "; 1 s = ",0
@@ -111,8 +116,163 @@ TRTC4:  PUSH    HL
         CALL    RTCHZ
         CALL    PRD32
         CALL    PRI
-        DB      " Hz",0
+        DB      " Hz; set 2099-12-31 23:59:58: ",0
+        LD      A,(SAVE+8)
+        LD      HL,RTCSTXT
+        CALL    PRSN
         JP      REND
+
+; Print the A'th of the zero-terminated strings at HL.
+PRSN:   OR      A
+        JP      Z,PRS
+        DEC     A
+        PUSH    AF
+PRSN1:  LD      A,(HL)
+        INC     HL
+        OR      A
+        JR      NZ,PRSN1
+        POP     AF
+        JR      PRSN
+RTCSTXT:DB      "read back, rolled over, restored",0
+        DB      "read back wrong",0
+        DB      "stopped after the set",0
+        DB      "restore read back wrong",0
+
+; Write E to DS1302 register D (a write command, even). Destroys AF, BC, D.
+RTCWR:  LD      C,RTCPORT
+        LD      A,$10
+        OUT     (C),A
+        CALL    RTCOUT
+        LD      D,E
+        CALL    RTCOUT
+        XOR     A
+        OUT     (C),A
+        RET
+RTCOUT: LD      B,8
+RTCO1:  SRL     D
+        LD      A,$20
+        RRA
+        OUT     (C),A
+        OR      $40
+        OUT     (C),A
+        DJNZ    RTCO1
+        RET
+
+; Read the seven time registers into HL. Destroys AF, BC, DE.
+RTCGET: LD      D,$81
+RTCG1:  PUSH    DE
+        PUSH    HL
+        CALL    RTCRD
+        POP     HL
+        POP     DE
+        LD      (HL),A
+        INC     HL
+        INC     D
+        INC     D
+        LD      A,D
+        CP      $8F
+        JR      NZ,RTCG1
+        RET
+; Write the seven time registers from HL, seconds last.
+RTCPUT: LD      DE,6
+        ADD     HL,DE
+        LD      D,$8C
+RTCP1:  LD      E,(HL)
+        PUSH    DE
+        PUSH    HL
+        CALL    RTCWR
+        POP     HL
+        POP     DE
+        DEC     HL
+        DEC     D
+        DEC     D
+        BIT     7,D
+        JR      NZ,RTCP1
+        RET
+
+; T21's set: wait until the seconds are below 50, keep the time and the
+; write-protect bit, set 2099-12-31 23:59:58, read it back, wait 2.5 s for
+; the roll-over to 2100, then write back the kept time plus the seconds the
+; set took and the write-protect bit, and read it back. The trickle charger
+; is not touched. Returns A = 0, or 1 read back wrong, 2 no roll-over, 3
+; restore read back wrong.
+RTCSET: LD      D,$81
+        CALL    RTCRD
+        AND     $7F
+        CP      $50
+        JR      NC,RTCSET
+        LD      HL,RTCORG
+        CALL    RTCGET
+        LD      D,$8F
+        CALL    RTCRD
+        LD      (RTCORG+7),A
+        LD      DE,$8E00        ; write-protect off
+        CALL    RTCWR
+        LD      HL,RTCTST
+        CALL    RTCPUT
+        LD      HL,RTCBUF
+        CALL    RTCGET
+        LD      A,(RTCBUF)      ; 58 or 59 seconds, the rest exact
+        AND     $FE
+        CP      $58
+        LD      C,1
+        JR      NZ,RTCS9
+        LD      HL,RTCBUF+1
+        LD      DE,RTCTST+1
+        LD      B,6
+        CALL    RTCCMP
+        LD      C,1
+        JR      NZ,RTCS9
+        LD      A,25
+        CALL    WAITDS
+        LD      HL,RTCBUF
+        CALL    RTCGET
+        LD      HL,RTCBUF+1     ; 2100-01-01 00:00, any seconds below 10
+        LD      DE,RTCNEW
+        LD      B,4
+        CALL    RTCCMP
+        LD      C,2
+        LD      A,3             ; the seconds the set took, at a guess
+        JR      NZ,RTCS8
+        LD      A,(RTCBUF)
+        CP      $10
+        JR      NC,RTCS8B
+        ADD     A,2             ; 58 -> 00 is two seconds
+        DAA
+        LD      C,0
+        JR      RTCS8
+RTCS8B: LD      A,3
+RTCS8:  LD      HL,RTCORG       ; seconds + elapsed, in BCD, below 60
+        ADD     A,(HL)
+        DAA
+        LD      (HL),A
+        PUSH    BC
+        CALL    RTCPUT
+        LD      A,(RTCORG+7)
+        LD      E,A
+        LD      D,$8E
+        CALL    RTCWR
+        LD      HL,RTCBUF
+        CALL    RTCGET
+        LD      HL,RTCBUF+1
+        LD      DE,RTCORG+1
+        LD      B,5
+        CALL    RTCCMP
+        POP     BC
+        JR      Z,RTCS9
+        LD      C,3
+RTCS9:  LD      A,C
+        RET
+; Compare B bytes at HL and DE. Z if equal.
+RTCCMP: LD      A,(DE)
+        CP      (HL)
+        RET     NZ
+        INC     HL
+        INC     DE
+        DJNZ    RTCCMP
+        RET
+RTCTST: DB      $58,$59,$23,$31,$12,$04,$99 ; a Thursday
+RTCNEW: DB      $00,$00,$01,$01
 
 ; DEHL = HL x 1282.
 RTCHZ:  LD      DE,0

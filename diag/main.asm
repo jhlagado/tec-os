@@ -76,6 +76,7 @@ STRAM:  CALL    PRI
         CALL    TF18A
         CALL    TSD
         CALL    TSDBLK
+        CALL    TSDWR
         CALL    TRTC
         CALL    TSEG7
         CALL    TSPKR

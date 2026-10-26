@@ -86,7 +86,7 @@ Dividing a T-state count by that clock gives seconds.
 | `0066h` | NMI handler that counts NMIs (after the RAM tests) |
 | `07FFh–0800h` | Overlay probes (T07, T08) |
 | `0C00h–0DFFh` | SD block buffer |
-| `0E00h–0FFFh` | VRAM test pages, second SD block buffer |
+| `0E00h–0FFFh` | VRAM test pages, second SD block buffer, T37's kept block |
 | `1000h–2FFFh` | Report text |
 | `7E00h–7EFFh` | Variables |
 | `7F00h–7FFFh` | Stack |
@@ -275,17 +275,43 @@ One block costs 354,216 T-states plus 678 for each poll, about 89 ms at
 4 MHz. Open item O4 asks whether cards keep up with the bit-bang rate, and
 these two lines answer it for the card fitted.
 
-The card is only read.
+T37 writes one block, outside every volume, and puts it back. Every other
+test only reads the card.
+
+### T37 SDWRITE
+
+TEC-OS writes blocks, so the write path needs a test of its own, on a block
+that no container uses. Block 0 is the header and every volume starts at a
+nonzero multiple of 8 ([container-format.md](container-format.md)), so
+blocks 1–7 belong to nothing. T37 writes only when block 0 holds the
+`TECOSVOL` magic, so a card holding anything else is left alone and the line
+says so. It keeps block 7 in RAM, writes a pattern there (byte i is the low
+byte of i xor its high byte xor `5Ah`), reads it back, writes the kept block
+back and reads that back. The line gives the card's busy polls after the last
+write. If the pattern reads back wrong the block is still written back. A
+power cut during T37 is the only way it can leave block 7 changed, and
+nothing reads block 7. T37 runs straight after T20.
 
 ### T21 RTC
 
 The DS1302 add-on on port `FCh`. The ROM detects it with MON-3's checks, a
 valid seconds value and a weekday from 1 to 7. MON-3 first clears the
-write-protect and trickle-charge registers. The ROM writes nothing, so the
-time, the write-protect bit and the trickle charger keep their settings. With the
+write-protect and trickle-charge registers, and the ROM does not. With the
 clock running, T21 counts polls of the seconds register across one second.
 Each poll is 1,282 T-states, which gives the CPU clock directly. A halted
 clock (CH set) is reported and left halted.
+
+TEC-OS's hardware services set the clock, so T21 then sets it too. It waits
+until the seconds are below 50, keeps the seven time registers and the
+write-protect bit, clears write-protect and sets 2099-12-31 23:59:58, a
+Thursday. It reads the time back, waits 2.5 s and expects 2100-01-01 00:00.
+Then it writes back the kept time plus the seconds the set took and the
+write-protect bit as it was, and reads the time back. The wait below 50
+seconds means the seconds added back never carry into the minutes. The
+trickle-charge register is never written. The line ends with `read back,
+rolled over, restored`, or with the step that went wrong, which is a `FAIL`.
+The restored clock is behind by at most the fraction of a second between
+reading the kept time and setting the test time.
 
 ### T22 SEG7 and T23 SPEAKER
 
@@ -339,8 +365,13 @@ terminal disagree on 4800 baud, whatever the cause.
 Pressing each of the 20 keypad keys prints its code from port `00h` and
 whether bit 5 (Shift) was low. `AD` twice in a row ends the test. T29 passes
 when all 20 codes were seen. T30 compares the NMIs counted at `0066h` with
-the presses. Open item O2 assumes one NMI per press, and T30 shows whether
-the board does that.
+the presses. The 74C923 raises its data-available output once for each key
+press and drops it on release, so a press of the same key again strobes it
+again, and with the NMI on that edge each press gives one NMI. Open item O2
+assumes this, and T30 shows whether the board does it. T29 clears its counts
+before it prints the instructions, so a key pressed while they print still
+counts. Before that order was fixed, a press arriving within the last line
+of the prompt was lost, which showed as 20 NMIs for 21 presses.
 
 ### T31 MATRIX
 
@@ -380,7 +411,7 @@ fitted the line also gives the RTC's elapsed seconds.
 | O1 bank field decoding | T12, T13 | The field map and bank count; set `NBANKS` for the board profile |
 | O2 keypad NMI | T29, T30 | NMIs per press |
 | O3 writes under the overlay | T08 | Reaches RAM or dropped |
-| O4 SD timing | T19, T20, T34 | Card, token polls, errors and read rate |
+| O4 SD timing | T19, T20, T34, T37 | Card, token polls, errors, read rate and busy polls after a write |
 | O5 VRAM timing | T17, T18 | Errors at 16 and 104 T-states a byte |
 | D24 page flipping | T35 | Which page R2 = `07h` and `0Bh` show |
 
@@ -404,6 +435,12 @@ they affect.
   every result and the model's answers to O1 and O3, the frame length, the
   80-column screen, the page the harness decodes while R2 is `0Bh` and `07h`
   and the registers T36 leaves behind;
+- T21's set against a DS1302 that counts on from a written time, which
+  checks the read-back, the roll-over to 2100 and that the restored clock is
+  within 2 s of where it would have been. Runtime 0.2.0's DS1302 stops
+  counting once a time register is written, so the test keeps it counting;
+- T37's write, checking the card image's block 7 is unchanged after two
+  writes;
 - the F18A probe against a stub of the firmware's register behaviour: the
   unlock, the VR15 reads, VR28 set to 8 and back to 0, R2 = `04h` during the
   scroll, the VR50 reset and TEC-OS's registers afterwards;

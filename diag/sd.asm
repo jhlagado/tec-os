@@ -556,3 +556,181 @@ SDRN5:  LD      HL,(SDLBA)
         POP     BC
         DJNZ    SDRN1
         RET
+
+; Write the 512 bytes at HL to block SDLBA, as TEC-OS's SDWRITE does, waiting
+; until the card has finished; the busy polls go in SDBSY. Z on success.
+SDWR:   PUSH    HL
+        CALL    LBAARG
+        LD      A,24
+        CALL    SDCMD
+        POP     HL
+        OR      A
+        JP      NZ,SDRCMD
+        LD      C,$FF           ; one idle byte, then the start token
+        CALL    SPIW
+        LD      C,$FE
+        CALL    SPIW
+        LD      D,2
+SDWO:   LD      E,0
+SDWI:   LD      C,(HL)
+        CALL    SPIW
+        INC     HL
+        DEC     E
+        JR      NZ,SDWI
+        DEC     D
+        JR      NZ,SDWO
+        LD      C,$FF           ; CRC, ignored in SPI mode
+        CALL    SPIW
+        CALL    SPIW
+        LD      D,16            ; data response token
+SDWRS:  PUSH    DE
+        CALL    SPIR
+        POP     DE
+        CP      $FF
+        JR      NZ,SDWRG
+        DEC     D
+        JR      NZ,SDWRS
+SDWRG:  AND     $1F
+        CP      $05
+        JR      NZ,SDWNO
+        LD      BC,0            ; busy while the card returns 00h
+SDWB:   PUSH    BC
+        CALL    SPIR
+        POP     BC
+        INC     BC
+        OR      A
+        JR      NZ,SDWDON
+        LD      A,B
+        OR      C
+        JR      NZ,SDWB
+SDWNO:  CALL    SPIEND
+        OR      1
+        RET
+SDWDON: LD      (SDBSY),BC
+        CALL    SPIEND
+        XOR     A
+        RET
+
+; T37: TEC-OS writes blocks, so the write path is tested on a block no
+; container uses. Block 0 is the header and every volume starts at a nonzero
+; multiple of 8 (docs/container-format.md), so blocks 1-7 belong to nothing.
+; Only a card whose block 0 has the TEC-OS magic is written. Block 7 is read,
+; written with a pattern, read back, written with what it held and read back
+; again.
+TSDWR:  CALL    TBEGIN
+        DB      37,"SDWRITE","SD write on block 7, outside every volume, then restored",0
+        LD      A,(SDOK)
+        OR      A
+        JR      Z,TSW0
+        LD      HL,0
+        CALL    SDBLK
+        JR      NZ,TSW0
+        LD      HL,SDBUF        ; the container magic
+        LD      DE,SDMAGIC
+        LD      B,8
+        CALL    RTCCMP
+        JR      Z,TSW1
+        LD      A,RSKIP
+        CALL    RESULT
+        CALL    PRI
+        DB      "not a TEC-OS card: nothing written",0
+        JP      REND
+TSW0:   LD      A,RSKIP
+        CALL    RESULT
+        CALL    PRI
+        DB      "no card",0
+        JP      REND
+TSW1:   LD      HL,7            ; keep block 7 in VBUFA
+        LD      (SDLBA),HL
+        LD      HL,VBUFA
+        CALL    SDREAD
+        LD      C,1
+        JR      NZ,TSW9
+        CALL    SWPAT           ; the pattern into SDBUF, written
+        LD      HL,SDBUF
+        CALL    SDWR
+        LD      C,2
+        JR      NZ,TSW9
+        LD      HL,SDBUF        ; read back and checked
+        CALL    SDREAD
+        LD      C,3
+        JR      NZ,TSW9
+        CALL    SWCHK
+        LD      C,3
+        JR      NZ,TSW8
+        LD      HL,VBUFA        ; what it held, written back
+        CALL    SDWR
+        LD      C,4
+        JR      NZ,TSW9
+        LD      HL,SDBUF
+        CALL    SDREAD
+        LD      C,4
+        JR      NZ,TSW9
+        LD      HL,SDBUF
+        LD      DE,VBUFA
+        LD      BC,512
+TSW2:   LD      A,(DE)
+        CP      (HL)
+        JR      NZ,TSW3
+        INC     HL
+        INC     DE
+        DEC     BC
+        LD      A,B
+        OR      C
+        JR      NZ,TSW2
+        JR      TSW9            ; C = 0
+TSW3:   LD      C,5
+TSW9:   LD      A,C
+        OR      A
+        PUSH    AF
+        CALL    RESZ
+        POP     AF
+        LD      HL,SWTXT
+        CALL    PRSN
+        CALL    PRI
+        DB      "; busy polls ",0
+        LD      HL,(SDBSY)
+        CALL    PRDEC
+        JP      REND
+TSW8:   LD      HL,VBUFA        ; the pattern did not read back: put the
+        CALL    SDWR            ; block back all the same
+        LD      C,3
+        JR      TSW9
+SWTXT:  DB      "pattern read back, block restored",0
+        DB      "first read failed",0
+        DB      "pattern write failed",0
+        DB      "pattern read back wrong",0
+        DB      "restore failed",0
+        DB      "restore read back wrong",0
+
+; Read block HL into SDBUF.
+SDBLK:  LD      (SDLBA),HL
+        LD      HL,0
+        LD      (SDLBA+2),HL
+        LD      HL,SDBUF
+        JP      SDREAD
+
+; The pattern for byte i: low byte of i xor high byte xor 5Ah. SWPAT fills
+; SDBUF with it; SWCHK checks SDBUF against it, NZ on a difference.
+SWPAT:  LD      HL,SDBUF
+SWP1:   CALL    SWVAL
+        LD      (HL),A
+        INC     HL
+        LD      A,H
+        CP      HIGH(SDBUF+512)
+        JR      NZ,SWP1
+        RET
+SWCHK:  LD      HL,SDBUF
+SWC1:   CALL    SWVAL
+        CP      (HL)
+        RET     NZ
+        INC     HL
+        LD      A,H
+        CP      HIGH(SDBUF+512)
+        JR      NZ,SWC1
+        RET
+SWVAL:  LD      A,L
+        XOR     H
+        XOR     $5A
+        RET
+SDMAGIC:DB      "TECOSVOL"

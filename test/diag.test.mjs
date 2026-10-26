@@ -88,7 +88,10 @@ function deliberateWrites(m) {
 }
 
 test("the automatic tests pass on the Debug80 model and the report lists them", SLOW, () => {
-  const m = diag();
+  const card = standardCard();
+  const block7 = card.slice(7 * 512, 8 * 512);
+  const written = [];
+  const m = diag({ sdImage: card, onSdWrite: () => written.push(m.cycles) });
   // T35: while R2 is 0Bh the harness decodes the page at 2000h.
   m.wait(/-- T35 /);
   const vdp = m.tec1g.state.display.tms9918;
@@ -100,7 +103,7 @@ test("the automatic tests pass on the Debug80 model and the report lists them", 
   m.wait(/==== END ====\r\n/);
   const r = report(m.serialText());
   const expected = {
-    PASS: [1, 2, 3, 4, 5, 6, 7, 9, 13, 15, 19, 20, 26],
+    PASS: [1, 2, 3, 4, 5, 6, 7, 9, 13, 15, 19, 20, 26, 37],
     INFO: [8, 10, 11, 12, 18, 36],
     LOOK: [14, 16, 17, 22, 23, 24, 25, 35],
     NONE: [21],
@@ -108,7 +111,7 @@ test("the automatic tests pass on the Debug80 model and the report lists them", 
   for (const [result, ids] of Object.entries(expected)) {
     for (const id of ids) assert.equal(r.get(id)?.result, result, `T${id} ${JSON.stringify(r.get(id))}`);
   }
-  assert.equal(r.size, 28);
+  assert.equal(r.size, 29);
   // The model is a plain TMS9918: the unlock and VR15 writes land in R1 and
   // R7, and the probe puts registers 0-7 back.
   assert.match(r.get(36).detail, /^not F18A-compatible: SR1 read [0-9A-F]{2} \(F18A E0h-EFh\)/);
@@ -127,6 +130,10 @@ test("the automatic tests pass on the Debug80 model and the report lists them", 
   assert.equal(screen[1], "1234567890".repeat(8));
   assert.equal(screen[23], "1234567890".repeat(8));
   assert.equal(m.read(m.sym("NMICNT")), 0);
+  // T37 wrote block 7 twice, the pattern then what it held, and nothing else.
+  assert.match(r.get(37).detail, /^pattern read back, block restored; busy polls \d+$/);
+  assert.equal(written.length, 2);
+  assert.deepEqual([...card.slice(7 * 512, 8 * 512)], [...block7], "the card's own array, written in place");
   deliberateWrites(m);
 });
 
@@ -204,6 +211,50 @@ test("on an F18A-compatible VDP the probe reads the identity, scrolls one row an
     [...m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 8)],
     [0x04, 0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0xf4],
   );
+});
+
+/**
+ * Keep the model's DS1302 counting after a write. Runtime 0.2.0 freezes its
+ * time registers once one is written; the chip counts on from the time
+ * written. The clock runs at 4 MHz cycles, from `start`.
+ */
+function countingRtc(m, start) {
+  const rtc = m.rtc;
+  const bcd = (v) => (v >> 4) * 10 + (v & 15);
+  let base = start.getTime();
+  let at = 0;
+  rtc.refreshTimeRegisters = function () {
+    const now = new Date(base + Math.floor(((m.cycles - at) * 1000) / 4_000_000));
+    const day = now.getUTCDay() === 0 ? 7 : now.getUTCDay();
+    [now.getUTCSeconds(), now.getUTCMinutes(), now.getUTCHours(), now.getUTCDate(), now.getUTCMonth() + 1, day, now.getUTCFullYear() % 100].forEach(
+      (v, i) => (this.registers[i] = this.toBcd(v)),
+    );
+  };
+  const write = rtc.writeRegister;
+  rtc.writeRegister = function (addr, value) {
+    write.call(this, addr, value);
+    if (addr > 6) return;
+    this.timeFrozen = false;
+    const r = this.registers;
+    base = Date.UTC(2000 + bcd(r[6]), bcd(r[4]) - 1, bcd(r[3]), bcd(r[2] & 0x3f), bcd(r[1]), bcd(r[0] & 0x7f));
+    at = m.cycles;
+  };
+}
+
+test("T21 sets the DS1302, sees it roll over and puts the time back", SLOW, () => {
+  const m = diag({ rtc: true });
+  const start = Date.UTC(2026, 9, 26, 9, 30, 15);
+  countingRtc(m, new Date(start));
+  const text = m.wait(/T21 RTC .*\r\n/);
+  assert.match(text, /T21 RTC     INFO  2026-10-26 09:3\d:\d\d; 1 s = 31\d\d x 1282 T = (3999|4000)\d{3} Hz; set 2099-12-31 23:59:58: read back, rolled over, restored\r\n/);
+  // Afterwards the clock reads what it would have read untouched: the set
+  // cost only its own seconds, which were added back.
+  m.rtc.refreshTimeRegisters();
+  const r = m.rtc.registers;
+  const bcd = (v) => (v >> 4) * 10 + (v & 15);
+  const read = Date.UTC(2000 + bcd(r[6]), bcd(r[4]) - 1, bcd(r[3]), bcd(r[2]), bcd(r[1]), bcd(r[0]));
+  const untouched = start + Math.floor((m.cycles * 1000) / 4_000_000);
+  assert.ok(Math.abs(read - untouched) <= 2000, `clock off by ${(read - untouched) / 1000} s`);
 });
 
 test("a bad bit in the variables page is reported without a stack, and nothing more runs", SLOW, () => {
@@ -323,6 +374,7 @@ test("the interactive tests run from the serial terminal, keypad, matrix and joy
   assert.ok(Math.abs(bit - 4_000_000 / 4800) <= 4, `bit time ${bit}`);
   assert.equal(r.get(29).result, "PASS");
   assert.equal(r.get(29).detail, "20/20 keys seen, 21 presses");
+  assert.equal(r.get(30).detail, "21 NMIs for 21 presses: one per press", "the 74C923 strobes once for every press");
   assert.equal(r.get(31).detail, "3 keys seen; rows 0-7 01 04 00 00 00 00 00 10");
   assert.match(r.get(32).detail, /^bits seen 43 /);
   assert.match(r.get(33).detail, /^60\.1 s for 240400396 T: CPU 400000\d Hz$/);

@@ -214,15 +214,15 @@ TKEYPAD:CALL    TBEGIN
         DB      29,"KEYPAD ","Hex keypad on 00h: every key, Shift, and the NMI per press",0
         CALL    RUNIT
         RET     NZ
-        CALL    PRI
-        DB      "Press each of the 20 keypad keys once; hold Shift for one of them.",13,10
-        DB      "AD twice in a row ends, as do 15 s with no key.",13,10,0
-        XOR     A
-        LD      (PRESS),A
+        XOR     A               ; counts start before the prompt: a key
+        LD      (PRESS),A       ; pressed while it prints still counts
         LD      HL,0
         LD      (PSEEN),HL
         LD      (PSEEN+1),HL
         LD      (NMICNT),HL
+        CALL    PRI
+        DB      "Press each of the 20 keypad keys once; hold Shift for one of them.",13,10
+        DB      "AD twice in a row ends, as do 15 s with no key.",13,10,0
         LD      A,$FF
         LD      (SAVE),A        ; the last key
 TKP1:   LD      C,40            ; 40 x 0.5 s
