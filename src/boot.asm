@@ -95,8 +95,9 @@ WBOOTR: DI
         LD      C,A
         JP      CCPENT
 
-; Rebuild the classic page-zero vectors, BDOS stub and RAM BIOS table.
-; IOBYTE and the drive/user byte are left alone.
+; Rebuild the classic page-zero vectors, BDOS stub and RAM BIOS table, and
+; put the restart vectors back as a clean boot leaves them. IOBYTE and the
+; drive/user byte are left alone.
 PZINIT: LD      A,$C3
         LD      ($0000),A
         LD      HL,RAMBIOS+3
@@ -115,6 +116,32 @@ PZINIT: LD      A,$C3
         LD      (RST7+1),HL
         LD      A,$FB
         LD      (RST7),A
+; 0008h-0037h back to zero, as a cold boot leaves them, except a vector that
+; is a jump into ROM, whose three bytes stay. A program's vector into the TPA
+; does not outlive it: an RST through a cleared vector slides through NOPs
+; to 0038h and returns.
+        LD      HL,$0008
+RSTCLR: LD      B,8
+        LD      A,(HL)
+        CP      $C3
+        JR      NZ,RSTZERO
+        INC     HL
+        INC     HL
+        LD      A,(HL)          ; the target's high byte
+        DEC     HL
+        DEC     HL
+        CP      $C0
+        JR      C,RSTZERO
+        INC     HL              ; keep JP nn into ROM
+        INC     HL
+        INC     HL
+        LD      B,5
+RSTZERO:LD      (HL),0
+        INC     HL
+        DJNZ    RSTZERO
+        LD      A,L
+        CP      $38
+        JR      NZ,RSTCLR
         RET
 
 ; Reset the CCP and BDOS writable state as a fresh disk load would, and

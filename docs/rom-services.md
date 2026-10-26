@@ -196,7 +196,8 @@ floating point and drawing stay on the card.
 - **MON3's API.** MON3 programs call through `RST 10h` and keep state in
   RAM at `0800h–0FFFh` (the clock buffer is at `0900h`). Under CP/M both
   belong to the program: page zero's restart vectors are left to programs and
-  debuggers, and `0100h` up is the TPA. MON3's list also carries its own UI
+  debuggers, and `0100h` up is the TPA. A warm boot clears the restart
+  vectors at `0008h–0037h` that do not jump into ROM. MON3's list also carries its own UI
   (menus, parameter entry, disassembly), which is application code.
 - **Extra BIOS jump-table entries.** Many CP/M 2.2 vendors added entries
   after `SECTRAN`. A program cannot tell whether they exist without a
