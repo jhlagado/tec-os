@@ -202,6 +202,19 @@ test("on a card of four 8 MiB volumes the BDOS probe passes", SLOW, async () => 
   noViolations(m);
 });
 
+test("DIR with only a drive lists that drive, and SAVE writes to a drive named", () => {
+  const image = standardCard();
+  volume(image, "B").write("PC.DAT", new Uint8Array(128));
+  const m = boot(image);
+  assert.match(m.command("DIR B:"), /PC\.DAT/, "a file the PC put on B:");
+  m.command("SAVE 2 B:X.COM");
+  assert.match(m.command("DIR B:"), /PC\.DAT\s+X\.COM/);
+  assert.match(m.command("DIR B:*.COM"), /X\.COM/);
+  assert.match(m.command("DIR"), /NO FILE/, "A: is untouched");
+  assert.equal(volume(image, "B").read("X.COM").length, 512);
+  noViolations(m);
+});
+
 test("text and binary files cross between the PC and TEC-OS, and survive power loss", SLOW, async () => {
   const image = standardCard();
   const a = volume(image, "A");

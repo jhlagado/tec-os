@@ -281,10 +281,8 @@ CMDDIR:
         LD      A,(HL)
         OR      A
         JP      NZ,BADCMD
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      A,(HL)
-        OR      A
+        LD      A,(CMDFCB+1)    ; no name, with or without a drive: every file
+        CP      SPACE
         JR      NZ,DIRREADY
         LD      HL,CMDFCB+1
         LD      B,11
