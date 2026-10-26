@@ -15,6 +15,7 @@
     "build": "node tools/build.mjs",
     "diag": "node tools/diag.mjs",
     "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "test:strict": "STRICT=1 npm test",
     "media": "node tools/media.mjs",
     "check": "npm run build && npm test && npm run media && npm run web",
     "web": "node web/build.mjs"

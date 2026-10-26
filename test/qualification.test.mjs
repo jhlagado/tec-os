@@ -1,23 +1,22 @@
 // Qualification with an unmodified CP/M application: the Basie compiler and
-// linker, taken from the Basie release disk. Emulator evidence. Skipped when
-// the disk is not present beside this repository.
+// linker, taken from the Basie release disk, a pinned input (test/inputs.json).
+// Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { openIbm3740 } from "../tools/lib/ibm3740.mjs";
-import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { check, pinned } from "./lib/inputs.mjs";
 
-const DISK = process.env.BASIE_DSK ?? resolve(ROOT, "../basie/build/BASIE.DSK");
+const DISK = pinned("BASIE.DSK");
 
 test(
   "BASIE compiles and links ADVENT on TEC-OS; the program runs after power loss",
-  { skip: !existsSync(DISK) && `no ${DISK}`, timeout: 1_800_000 },
+  { skip: DISK.skip, timeout: 1_800_000 },
   () => {
-    const dsk = readFileSync(DISK);
-    const digest = createHash("sha256").update(dsk).digest("hex");
+    check(DISK);
+    const dsk = readFileSync(DISK.path);
     const image = standardCard();
     const a = volume(image, "A");
     const release = openIbm3740(new Uint8Array(dsk));
@@ -37,6 +36,6 @@ test(
     m.type("QUIT\r");
     m.expect(/A>$/, { maxCycles: 200_000_000 });
     assert.deepEqual(volume(image, "A").verify(), []);
-    console.log(`BASIE.DSK sha256 ${digest}; compile and link took ${cycles} T-states`);
+    console.log(`BASIE.DSK as pinned; compile and link took ${cycles} T-states`);
   },
 );
