@@ -34,11 +34,8 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | M3 | PC to TEC and TEC to PC, text and binary | `system`: exchange | Emulator + host | Pass |
 | M3 | Read-only media | `system`: read-only volume | Emulator | Pass: error reported, card unchanged |
 | M3 | Unmodified application saves a file that reopens after reset | `edit`: Edit saves, power cycle, reopens | Emulator | Pass |
-| M4 | Distinct bank contents, nested calls, bank copies | `native`: N04–N10 | Emulator | Pass |
-| M4 | Fixed stack; bank, SP, return PC and interrupt state restored | `native`: N06–N08, N13 | Emulator | Pass |
-| M4 | Errors leave state unchanged: bad bank, unreserved bank, ranges, zero length, depth | `native`: N07–N09, N12 | Emulator | Pass |
-| M4 | Damaged stack guard detected, recovery path independent of the damaged stack | `native`: guard | Emulator | Pass |
-| M4 | NMI during overlay exit and bank transitions | `nmi` | Emulator | Pass: hundreds of NMIs taken in each run |
+| M4 | Native banking | — | — | Withdrawn 2026-10-27: the native services are removed (D25) |
+| M4 | NMI through cold boot and the overlay exit | `nmi` | Emulator | Pass: hundreds of NMIs taken in each run |
 | — | TMS9918 40 and 32 columns, ANSI subset, matrix keyboard, LCD status | `console` | Emulator | Pass |
 | — | GLCD 21 × 8 console when no TMS9918 answers; DIR fitted to 40 and 21 columns | `console` | Emulator | Pass |
 | — | TYPE and DIR pause per screen on 8 and 24 rows, count wrapped lines, stop on Q | `console` | Emulator | Pass |
@@ -48,7 +45,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | Insert and delete characters and lines; the cursor shows while a program polls BDOS function 6 | `console` | Emulator | Pass |
 | — | Scroll regions; a row move is built in the hidden VRAM page and shown in one step when the program asks for a key | `console` | Emulator | Pass; Edit scrolling rendered frame by frame shows no torn frame |
 | — | Punch and reader carry 8-bit bytes over the serial port | `devices` | Emulator | Pass |
-| M4 | A CP/M program calling the native entry is refused without touching its memory | `devices` | Emulator | Pass: status 0Bh, carry set |
+| — | The old native entry at `FF06h` refuses every call without touching memory | `devices` | Emulator | Pass: status 1, carry set |
 | — | PICO9918 80 × 24 console: registers, DIR in 6 columns, 80-character lines | `console` | Emulator (Debug80 TMS9918 model; VRAM checked, not pixels) | Pass |
 | — | Edit edits, saves and reopens on the PICO9918 80 × 24 and GLCD 21 × 8, and on Triptych CP/M 2.2 80 × 24 | `edit` | Emulator | Pass with the shadow-screen Edit build |
 | — | ATOM assembles a program on TEC-OS and it runs | `atom` | Emulator | Pass with the ATOM build that sizes itself from `0006h` |
@@ -57,22 +54,20 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 
 ## Measured costs
 
-ROM, `debug80` profile: 13,906 of 16,384 bytes used, 2,478 free: 2,236 below
+ROM, `debug80` profile: 13,065 of 16,384 bytes used, 3,319 free: 3,077 below
 the table at `FF00h`, where code goes, and 242 above it. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.
 
 Stack high-water marks under PROBE, a 20,000-byte copy from A: to B:, DIR,
-SAVE, TYPE, ERA and NATDEMO, with the TMS9918 console on (`test/stacks`):
+SAVE, TYPE and ERA, with the TMS9918 console on (`test/stacks`):
 
 | Stack | Reserved | Deepest use |
 | --- | ---: | ---: |
 | BDOS | 64 | 22 |
 | CCP (also the default stack of transients that keep it) | 48 | 14 |
 | BIOS (warm boot, diagnostics) | 64 | 2 |
-| Native OS | 256 | 20 |
-| Native application, 8 nested bank calls | 496 | 42 |
 
 The 19 hardware services at `FF0Bh` use at most 16 bytes of the caller's
 stack (`PUTAT`, which hides the cursor through the video driver); most use 4

@@ -1,19 +1,19 @@
 # ROM services
 
-Status: **Built**, 2026-10-26. The entry at `FF0Bh` (ABI 1.1) has 19
+Status: **Built**, 2026-10-26. The entry at `FF0Bh` (ABI 1.1, unchanged in 2.0) has 19
 services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. It holds 13,906 bytes (`debug80`) and has 2,478 free:
-2,236 below the table at `FF00h`, where code can go, and 242 above it. This
+The ROM is 16 KiB. It holds 13,065 bytes (`debug80`) and has 3,319 free:
+3,077 below the table at `FF00h`, where code can go, and 242 above it. This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
 ## Calling the services
 
-A program checks for `"TNA"` at `FF00h` and a minor version of at least 1 at
-`FF04h`, then calls `FF0Bh` with the service number in C and arguments in A,
+A program checks for `"TNA"` at `FF00h` and an ABI version of 2.0 or later,
+or 1.1 or later (major at `FF03h`, minor at `FF04h`), then calls `FF0Bh` with the service number in C and arguments in A,
 B, DE and HL. On return A holds the status, with Z set and carry clear on
 success; results come back as each service lists. IX, IY and the alternate
 registers are preserved. A CP/M program that finds no signature is on
@@ -130,11 +130,10 @@ that programs share as ATOM include files.
 | Format tables, diagnostics | 176 | 1 | Stays |
 | CCP | 2,166 | 2 | Stays |
 | BDOS | 3,491 | 2 | Stays |
-| Native ABI: banks, copies, calls, loader | 1,132 | — | Open decision O7 |
 | Hardware services | 755 | 3, 4 | Stays |
 
-Nothing in the ROM today belongs on the card. The native ABI is the only
-part without a current user.
+Nothing in the ROM today belongs on the card. The native program services,
+which had no user, were removed (D25).
 
 ## Fixes found on the way
 
@@ -187,7 +186,7 @@ that uses them.
 
 ## Next in the ROM
 
-In order, for the 2,236 bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
+In order, for the 3,077 bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
 32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
 resident monitor with Intel HEX loading. A disassembler does not fit, and
 floating point and drawing stay on the card.
@@ -213,5 +212,5 @@ floating point and drawing stay on the card.
 
 | ID | Open item |
 | --- | --- |
-| O7 | Keep the native bank services (1,132 bytes) while banking waits for its own design, or take them out and get the space back until then. My recommendation: keep them unchanged and add nothing, because the specification requires the native ABI and the tests prove it. |
+| O7 | Closed by D25: the native bank services are removed, and their bytes are free. |
 | O8 | Whether `BLOCK` should ever write. |

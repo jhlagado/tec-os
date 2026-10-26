@@ -80,9 +80,6 @@ WBOOTR: DI
         LD      A,LATCLAS
         LD      (LATCHV),A
         OUT     (SYSLAT),A
-        XOR     A
-        LD      (CURBANK),A
-        LD      (OSMODE),A
         LD      SP,BSTK
         CALL    PZINIT
         CALL    CPMINIT

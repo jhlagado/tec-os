@@ -103,14 +103,14 @@ test("the 20 x 4 LCD shows the banner and mounted drives", () => {
 test("DIR lays out names to fit the display and reports free space", () => {
   const image = standardCard();
   const a = volume(image, "A");
-  for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "NATDEMO.TNX", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
+  for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
   const tms = boot(image, { tms: true, matrix: true, profile: "debug80t40" });
   tms.command("DIR");
   const s = tms.screen();
   const at = s.indexOf("A>DIR");
   assert.deepEqual(s.slice(at + 1, at + 5), [
     "COPY.COM     TERM.COM     PROBE.COM",
-    "NATDEMO.TNX  README.TXT   X",
+    "MANUAL.TXT   README.TXT   X",
     "6 files, 1004K free",
     "A>",
   ]);
@@ -205,7 +205,7 @@ test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
 test("the default console is the PICO9918's 80 x 24 text mode", () => {
   const image = standardCard();
   const a = volume(image, "A");
-  for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "NATDEMO.TNX", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
+  for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
   a.write("WIDE.TXT", Buffer.from(`${"y".repeat(79)}Z\n${"w".repeat(85)}\n`), { text: true });
   const m = boot(image, { tms: true, matrix: true });
   const r = m.tec1g.state.display.tms9918.stateSnapshot().registers;
@@ -216,7 +216,7 @@ test("the default console is the PICO9918's 80 x 24 text mode", () => {
   m.command("DIR");
   let s = m.screen();
   let at = s.indexOf("A>DIR");
-  assert.equal(s[at + 1], "COPY.COM     TERM.COM     PROBE.COM    NATDEMO.TNX  README.TXT   X");
+  assert.equal(s[at + 1], "COPY.COM     TERM.COM     PROBE.COM    MANUAL.TXT   README.TXT   X");
   m.command("TYPE WIDE.TXT");
   s = m.screen();
   at = s.indexOf("A>TYPE WIDE.TXT");

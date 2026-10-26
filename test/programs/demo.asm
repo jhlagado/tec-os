@@ -11,7 +11,7 @@ VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
 
         ORG     $0100
-        LD      HL,$FF00        ; TEC-OS's ABI table, version 1.1 or later
+        LD      HL,$FF00        ; TEC-OS's table: hardware services from 1.1
         LD      DE,ABITAG
         LD      B,3
 CHKTAG: LD      A,(DE)
@@ -20,9 +20,13 @@ CHKTAG: LD      A,(DE)
         INC     HL
         INC     DE
         DJNZ    CHKTAG
+        LD      A,($FF03)       ; ABI 2.0 and later have them all
+        CP      2
+        JR      NC,HASHW
         LD      A,($FF04)
         OR      A
         JP      Z,NOHW
+HASHW:
 
         LD      C,0             ; INFO: which devices answered
         CALL    HWSVC
@@ -394,7 +398,7 @@ NOMSG:  DB      "no$"
 KEYMSG: DB      13,10,"Watch the LCD, the digits, the LEDs and the screen.",13,10
         DB      "Press any key to stop.",13,10,"$"
 BYE:    DB      13,10,"Demo stopped.",13,10,"$"
-NOHWMSG:DB      13,10,"DEMO needs TEC-OS with hardware services (ABI 1.1).",13,10,"$"
+NOHWMSG:DB      13,10,"DEMO needs TEC-OS with hardware services (ABI 1.1 or later).",13,10,"$"
 LCDTXT: DB      "TEC-OS hardware demo"
         DB      "7-seg: hex counter  "
         DB      "8x8: moving rainbow "

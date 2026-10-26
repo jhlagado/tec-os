@@ -1,4 +1,4 @@
-// BIOS devices and the boundary between CP/M programs and the native ABI.
+// BIOS devices, the hardware services and the table at FF00h.
 // Emulator evidence.
 
 import { test } from "node:test";
@@ -8,12 +8,21 @@ import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
 
-test("a CP/M program calling the native service entry is refused and keeps its memory", async () => {
-  const image = standardCard();
-  volume(image, "A").write("NATCALL.COM", (await program("natcall")).bytes);
-  const m = boot(image);
-  // Status 0Bh (not a native program), carry set, 0200h-05FFh untouched.
-  assert.match(m.command("NATCALL"), /0BC OK\r\n/);
+test("the old native service entry at FF06h refuses every call and touches no memory", () => {
+  const m = boot(standardCard());
+  assert.deepEqual([m.read(0xff03), m.read(0xff04), m.read(0xff05)], [2, 0, 0], "ABI 2.0, no native banks");
+  const fill = (a) => (a * 7 + 3) & 0xff;
+  for (let a = 0x0100; a < 0x0600; a += 1) m.write(a, fill(a));
+  const cpu = m.cpu.cpu;
+  for (const c of [0, 1, 3, 12, 0xff]) {
+    m.write(0x0efe, 0x00);
+    m.write(0x0eff, 0x0f);
+    Object.assign(cpu, { c, a: 0x55, sp: 0x0efe, pc: 0xff06 });
+    m.runUntil(() => m.pc === 0x0f00, 1_000_000, `FF06h with C = ${c}`);
+    assert.equal(cpu.a, 1, `status 1 for C = ${c}`);
+    assert.equal(cpu.flags.C, 1, `carry for C = ${c}`);
+  }
+  for (let a = 0x0100; a < 0x0600; a += 1) assert.equal(m.read(a), fill(a), `${a.toString(16)} untouched`);
   noViolations(m);
 });
 
@@ -68,7 +77,7 @@ test("the hardware services drive the LCD, clock, digits, LEDs and a claimed PIC
   const image = standardCard();
   volume(image, "A").write("DEMO.COM", (await program("demo")).bytes);
   const m = boot(image, { tms: true, matrix: true });
-  assert.equal(m.read(0xff04), 1, "ABI minor version 1");
+  assert.equal(m.read(0xff03), 2, "ABI 2, with the hardware services");
   m.mark = m.output.length;
   m.typeMatrix("demo\r");
   const t = m.cycles + 8_000_000;

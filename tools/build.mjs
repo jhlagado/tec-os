@@ -208,7 +208,7 @@ async function buildProfile(name) {
   check(at("INT38") === 0xc038, "INT38 must be at C038h");
   check(at("NMIROM") === 0xc066, "NMIROM must be at C066h");
   check(at("COLD") < 0xc800, "cold boot entry must be inside the overlay window");
-  check(at("CODEEND") <= at("ABITAB"), "code overruns the native ABI table at FF00h");
+  check(at("CODEEND") <= at("ABITAB"), "code overruns the table at FF00h");
   check(at("ABITAB") === 0xff00, "ABI table must be at FF00h");
   check(at("WSBASE") === tpatop + 0x100 + 51, "workspace starts after the RAM BIOS table");
   check(at("WSEND") <= 0xc000, `workspace ends at ${hex(at("WSEND"))}`);
@@ -241,7 +241,6 @@ async function buildProfile(name) {
         ["diagnostics", at("DIAG"), at("CCPBAS")],
         ["CCP", at("CCPBAS"), at("CCPROM")],
         ["BDOS", at("BDOSBAS"), at("BDOSROM")],
-        ["native ABI", at("SETBANK"), at("HWSVC")],
         ["hardware services", at("HWSVC"), at("CODEEND")],
         ["ABI table", at("ABITAB"), at("ABIEND")],
       ].map(([label, start, end]) => ({ label, start, end, bytes: end - start })),

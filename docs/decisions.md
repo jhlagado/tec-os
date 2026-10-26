@@ -237,9 +237,9 @@ takes any width and height. Details in [console.md](console.md).
 The matrix keyboard is implemented from Debug80's documented layout, not from
 MON-3 source, because MON-3 is GPL-2.0 and TEC-OS is GPL-3.0-or-later.
 
-## D15 Native executable and ABI (Q09, Q10) — Adopted 2026-10-25
+## D15 Native executable and ABI (Q09, Q10) — Adopted 2026-10-25, superseded by D25
 
-As specified in [native-abi.md](native-abi.md): a fixed table at `FF00h`, one
+As then specified in `docs/native-abi.md`: a fixed table at `FF00h`, one
 service entry with the service in `C`, managed bank reservation, copy and
 call, file access through the classic bank with fixed-RAM buffers only, and
 `.TNX` files with a 128-byte header. The header stores the image's end
@@ -368,6 +368,18 @@ operation without touching a status row; Edit sets rows 1 to 23 on TEC-OS.
 Rendering the emulated screen frame by frame shows no torn or partial frame
 while Edit scrolls.
 
+
+## D25 Native programs dropped — Adopted 2026-10-27
+
+The native program interface of D15 is removed: the `.TNX` format and its
+loader, the bank services at `FF06h`, the native memory layout and stacks,
+and the CCP's fallback from `NAME.COM` to `NAME.TNX`. It had no users, and
+its 1,132 bytes of ROM go back to the free space. The table at `FF00h` keeps
+its layout: `FF06h` stays and answers every call with status 1 (no such
+service) and carry set, `FF05h` reports no native banks, and the ABI version
+becomes 2.0. The hardware services at `FF0Bh` are unchanged; a program that
+checks for them accepts ABI 2.0 or later, or 1.1 or later. Open item O7 is
+closed by this decision.
 ## Open decisions
 
 | ID | Open item | Blocks |
@@ -378,6 +390,6 @@ while Edit scrolls.
 | O4 | Physical SD card timing at 4 MHz bit-bang rates | Physical-board storage claim |
 | O5 | TMS9918 VRAM access timing on the board (no delays are inserted) | Physical-board video claim |
 | O6 | Withdrawn 2026-10-26: the qualification it served is no longer in the suite | — |
-| O7 | Keep or remove the native bank services while banking waits for its own design ([rom-services.md](rom-services.md)) | ROM space for hardware services |
+| O7 | Closed by D25: the native bank services are removed | — |
 | O8 | Whether the hardware service `BLOCK` ever writes raw card blocks | A card repair tool |
 | O9 | Whether the hardware service `KEYS` reports the whole matrix or one row per call | The `KEYS` service |

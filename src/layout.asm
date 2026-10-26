@@ -29,10 +29,10 @@ DEFDMA  EQU     $0080
 ; CP/M reserves 0040h-004Fh for BIOS scratch. TEC-OS keeps the state that must
 ; stay visible whatever the bank window shows here.
 LATCHV  EQU     $0040           ; shadow copy of the system latch
-OSMODE  EQU     $0041           ; 0 classic, 1 native
+                                ; 0041h free
 RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
 RXCHAR  EQU     $0043
-CURBANK EQU     $0044           ; logical bank shown in the window
+                                ; 0044h free
 CONDEV  EQU     $0045           ; console devices present (CD* bits)
 VROW    EQU     $0046           ; video terminal cursor row
 VCOL    EQU     $0047           ; and column
@@ -63,17 +63,6 @@ BDOSSTB EQU     TPATOP+6        ; value stored at 0006h
 RAMBIOS EQU     TPATOP+$100     ; page-aligned RAM copy of the BIOS jump table
 BIOSLEN EQU     17*3
 WSBASE  EQU     RAMBIOS+BIOSLEN ; first resident workspace byte
-
-; ---- Native profile fixed RAM -------------------------------------------------
-NKSTATE EQU     $0100           ; kernel state, 256 bytes
-NOSSTKB EQU     $0200           ; OS stack 0200h-02FFh
-NOSSTK  EQU     $0300
-NAPSTKB EQU     $0300           ; application stack 0300h-04FFh
-NAPSTK  EQU     $0500
-NXBUF   EQU     $0500           ; bank-copy bounce buffer, 256 bytes
-NXBUFSZ EQU     $0100
-NAPBASE EQU     $0600           ; native application fixed area 0600h-7FFFh
-NAPEND  EQU     $8000
 
 ; ---- Resident stack sizes (measured: see docs/acceptance.md) --------------
 BDOSSTN EQU     64

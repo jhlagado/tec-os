@@ -1,8 +1,8 @@
 ; Hardware services, ABI 1.1 (docs/rom-services.md). CALL FF0Bh with the
 ; service in C and arguments in A, B, DE and HL. Returns A = status with Z
 ; and carry clear on success; results as each service says. IX, IY and the
-; alternate registers are preserved. Any program may call them, CP/M or
-; native: they run on the caller's stack (at most 16 bytes) and keep their
+; alternate registers are preserved. Any program may call them: they run on
+; the caller's stack (at most 16 bytes) and keep their
 ; state in the resident workspace.
 ;
 ; These are the services that would otherwise fight the OS for a port: the
@@ -69,6 +69,8 @@ HWSVC:  LD      (HWARGA),A
         EX      (SP),HL         ; the service is the return address
         LD      A,(HWARGA)
         RET
+; FF06h, once the native services' entry: no such service.
+NONATSV:LD      A,HWEBAD
 HWERR:  OR      A
         SCF
         RET

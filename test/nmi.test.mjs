@@ -1,11 +1,11 @@
 // NMI from the hex keypad (74C923) cannot be masked. These tests press the
-// keypad repeatedly through cold boot, the overlay exit and the native bank
-// calls and copies. Emulator evidence.
+// keypad repeatedly through cold boot and the overlay exit. Emulator
+// evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
-import { program, romFor, standardCard, volume, boot } from "./lib/fixtures.mjs";
+import { romFor, standardCard } from "./lib/fixtures.mjs";
 
 /** Step until done(), pressing a keypad key every `every` cycles from `start`. */
 function runWithNmis(m, done, { every, start = 0, enabled = () => true, maxCycles = 2_000_000_000 }) {
@@ -35,22 +35,4 @@ test("cold boot survives NMIs from the first instruction after LD SP onwards", (
     assert.equal(m.sysCtrl, 0x01);
     assert.deepEqual(m.violations, []);
   }
-});
-
-test("native bank calls and copies survive NMIs", { timeout: 900_000 }, async () => {
-  const image = standardCard();
-  volume(image, "A").write("NATDEMO.TNX", (await program("natdemo", { base: 0x0780 })).bytes);
-  const m = boot(image);
-  m.mark = m.output.length;
-  m.type("NATDEMO\r");
-  const osmode = m.sym("OSMODE");
-  const taken = runWithNmis(m, () => /NATIVE DONE\r\n\r\nA>$/.test(m.text(m.mark)), {
-    every: 2003,
-    enabled: () => m.read(osmode) === 1,
-  });
-  const out = m.text(m.mark);
-  assert.ok(taken > 500, `only ${taken} NMIs taken`);
-  assert.deepEqual(out.match(/N\d\d FAIL/g) ?? [], []);
-  assert.equal((out.match(/N\d\d ok/g) ?? []).length, 13);
-  assert.deepEqual(m.violations, []);
 });

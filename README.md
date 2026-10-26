@@ -1,12 +1,12 @@
 # TEC-OS
 
 TEC-OS is a ROM-resident operating system for the TEC-1G. It runs CP/M 2.2
-programs from SD-card volumes and offers native programs a separate interface
-to the TEC-1G's banked RAM.
+programs from SD-card volumes and gives them the TEC-1G's hardware through a
+table of services at `FF00h`.
 
 - 16 KiB ROM at `C000h–FFFFh`, entered through the 2 KiB boot overlay at
   reset. It holds the BIOS, the CCP and BDOS, the SD and console drivers and
-  the native interface.
+  the hardware services.
 - 32 KiB fixed RAM at `0000h–7FFFh` and a 16 KiB bank window at
   `8000h–BFFFh`. CP/M programs get a 45,830-byte TPA from `0100h`. RAM in
   the window is required: TEC-OS needs 48K RAM and says so at boot if it is
@@ -86,8 +86,8 @@ the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `DEMO` on the starter card shows the hardware services: the LCD, the
-7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I. A command that names a `.COM` file runs it; one that names a
-`.TNX` file runs a native program. If the card is missing or invalid, a
+7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
+that names a `.COM` file runs it. If the card is missing or invalid, a
 diagnostic prompt shows the error code and offers a retry.
 
 Do not press the hex keypad while a CP/M program is running; see
@@ -98,7 +98,6 @@ Do not press the hex keypad while a CP/M program is running; see
 - [Specification](docs/specification.md) and [decisions](docs/decisions.md)
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
-- [Native ABI](docs/native-abi.md)
 - [ROM services](docs/rom-services.md) (the 19 hardware services at `FF0Bh`)
 - [Console](docs/console.md)
 - [CP/M compatibility](docs/compatibility.md)
