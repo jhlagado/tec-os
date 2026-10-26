@@ -47,6 +47,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | Punch and reader carry 8-bit bytes over the serial port | `devices` | Emulator | Pass |
 | — | The old native entry at `FF06h` refuses every call without touching memory | `devices` | Emulator | Pass: status 1, carry set |
 | — | On the 96K paged memory: cold boot counts the low pages, page 1 gets page zero and is otherwise untouched, and an exit from low page 1 or U9 half 1 warm boots into page 0 and half 0 | `paged` | Emulator (harness option `paged`) | Pass |
+| — | The workspace sized for the card: each allocation vector `DSM / 8 + 1` bytes, packed, the BDOS entry jump at an `xx06h` address below them; four 8 MiB volumes boot and pass the BDOS probe; `SAVE` reaches the entry's page and no further | `system` | Emulator | Pass |
 | — | PICO9918 80 × 24 console: registers, DIR in 6 columns, 80-character lines | `console` | Emulator (Debug80 TMS9918 model; VRAM checked, not pixels) | Pass |
 | — | Edit edits, saves and reopens on the PICO9918 80 × 24 and GLCD 21 × 8, and on Triptych CP/M 2.2 80 × 24 | `edit` | Emulator | Pass with the shadow-screen Edit build |
 | — | ATOM assembles a program on TEC-OS and it runs | `atom` | Emulator | Pass with the ATOM build that sizes itself from `0006h` |
@@ -59,21 +60,28 @@ ROM, `debug80` profile: 13,155 of 16,384 bytes used, 3,229 free: 2,989 below
 the table at `FF00h`, where code goes, and 240 above it. The region
 breakdown is in [memory-map.md](memory-map.md).
 
-Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.
+Classic TPA: 46,854 bytes (`0100h–B805h`) on the starter card, 46,086 with
+four 8 MiB volumes. Resident workspace: from the BDOS entry jump to `BFFFh`.
 
-Stack high-water marks under PROBE, a 20,000-byte copy from A: to B:, DIR,
-SAVE, TYPE and ERA, with the TMS9918 console on (`test/stacks`):
+Stack high-water marks from reset, with a keypad NMI taken at each new depth,
+on the serial console, the PICO9918 and the GLCD, and on the diagnostic
+console without a card (`test/stacks`):
 
-| Stack | Reserved | Deepest use |
+| Stack | Reserved | Deepest use, NMI included |
 | --- | ---: | ---: |
-| BDOS | 64 | 22 |
-| CCP (also the default stack of transients that keep it) | 48 | 14 |
-| BIOS (warm boot, diagnostics) | 64 | 2 |
+| BDOS | 54 | 40 |
+| CCP (also the default stack of transients that keep it) | 27 | 14 |
+| BIOS (cold and warm boot, diagnostics) | 38 | 28 |
+
+Each reservation keeps at least a quarter free. The CCP's also gives a
+transient on it CP/M's eight levels, its return word and an NMI, with a
+quarter free.
 
 The 19 hardware services at `FF0Bh` use at most 16 bytes of the caller's
 stack (`PUTAT`, which hides the cursor through the video driver); most use 4
 (`test/hwsvc`, figures in `build/hwsvc-stacks.json`). A transient on the CCP
-stack has room for the deepest of them.
+stack has room for any of them beside CP/M's eight levels, or for the
+deepest with 7 bytes of its own.
 
 Edit on the 80 × 24 PICO9918 console, emulator time at 4 MHz for one
 keystroke in a 20-line file (2026-10-25):

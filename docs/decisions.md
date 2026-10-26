@@ -404,6 +404,22 @@ warm-boot clear of the CCP and BDOS blocks never reaches the table; the GLCD
 text console sits above it. The TPA is unchanged at 45,830 bytes. Programs
 that follow `0001h` see no change.
 
+## D28 The workspace sized for the card — Adopted 2026-10-27
+
+What TEC-OS needs to boot, read the card, show a console and run CP/M
+programs stays in the ROM and the workspace, as small as it can be. The
+fixed workspace ends at the RAM BIOS table at `BF00h`; the SD, keyboard and
+GLCD state sit above the table. Cold boot packs each mounted drive's
+allocation vector below the fixed workspace, `DSM / 8 + 1` bytes in drive
+order, and puts the BDOS entry jump at the highest `xx06h` address below
+them, so the word at `0006h` depends on the card: `B806h` on the starter
+card (46,854 bytes of TPA, 1,024 more than before), `B506h` with four 8 MiB
+volumes. Warm boot rebuilds the jump from the address saved at cold boot.
+The CCP's load ceiling and `SAVE` limit follow the byte at `0007h`. Each
+resident stack is its deepest use, measured from reset with an NMI taken at
+its deepest point, and a quarter more; the CCP's also keeps CP/M's eight
+levels for a transient on it.
+
 ## Open decisions
 
 | ID | Open item | Blocks |

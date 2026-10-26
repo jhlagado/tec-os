@@ -1,6 +1,6 @@
 ; Resident workspace in the classic bank, from WSBASE upwards. The CCP and
-; BDOS blocks follow this one (CCPRAM, then BDOSRAM) and end below the RAM
-; BIOS table at BF00h; the GLCD text console sits above the table. Nothing
+; BDOS blocks follow this one (CCPRAM, then BDOSRAM) and end at the RAM
+; BIOS table at BF00h; the SD, keyboard and GLCD state sit above the table. Nothing
 ; here is initialised by the image: cold and warm boot clear and set it.
 
         ORG     WSBASE
@@ -24,13 +24,7 @@ DRVTAB: DS      MAXDRV*DRVESZ
 DPHTAB: DS      MAXDRV*DPHSZ
 DIRBUF: DS      128
 CSVDUM: DS      2               ; check vector placeholder; CKS is zero
-ALVTAB: DS      MAXDRV*ALVSZ
-
-; ---- SD card state ----------------------------------------------------------
-SDBYTE: DS      1               ; 1 when the card takes byte addresses
-SDARG:  DS      4               ; command argument, big-endian
-SDLBA:  DS      4               ; block address, little-endian
-SDERR:  DS      1               ; last error code
+STUBAD: DS      2               ; BDOS entry jump, the word at 0006h
 
 ; ---- Mount scratch ----------------------------------------------------------
 MNTCNT: DS      1
@@ -55,6 +49,20 @@ HWARGA: DS      1               ; hardware services: A on entry
 RNDST:  DS      2               ; RANDOM's state
 CONMOD: DS      1               ; console mode in effect (CMTTY..CMUC1)
 
+; ---- BIOS stack used by warm boot and the diagnostic console ----------------
+BSTKB:  DS      BIOSSTN
+BSTK:
+
+BIOSRME:
+CCPRAM  EQU     BIOSRME
+
+        ORG     RAMBIOS+BIOSLEN
+; ---- SD card state ----------------------------------------------------------
+SDBYTE: DS      1               ; 1 when the card takes byte addresses
+SDARG:  DS      4               ; command argument, big-endian
+SDLBA:  DS      4               ; block address, little-endian
+SDERR:  DS      1               ; last error code
+
 ; ---- Matrix keyboard scan state ----------------------------------------------
 KBMASK: DS      1               ; row select for the next row, one bit low
 KBBASE: DS      1               ; key number of that row's bit 0
@@ -64,14 +72,6 @@ KBTN:   DS      1               ; arrow-sequence bytes still to deliver
 KBT1:   DS      1               ; and the bytes themselves
 KBT2:   DS      1
 
-; ---- BIOS stack used by warm boot and the diagnostic console ----------------
-BSTKB:  DS      64
-BSTK:
-
-BIOSRME:
-CCPRAM  EQU     BIOSRME
-
-        ORG     RAMBIOS+BIOSLEN
 ; ---- GLCD text console --------------------------------------------------------
 GLTEXT: DS      GLCOLS*GLROWS   ; characters on screen, row by row
 GLY:    DS      1               ; pixel row being drawn, 0-63

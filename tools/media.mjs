@@ -52,12 +52,14 @@ in [decisions.md](decisions.md).
 | 0000h–07FFh at reset | Boot overlay: ROM C000h–C7FFh |
 | 0000h–00FFh | CP/M page zero; 0040h–004Fh TEC-OS fixed state |
 | 0100h–${hex(census.ram.tpa.end - 1)} | Classic TPA, ${census.ram.tpa.bytes} bytes |
-| ${hex(census.ram.stubPage)}–BFFFh | Resident workspace in the classic bank |
-| 8000h–BFFFh | Bank window |
+| ${hex(census.ram.bdosVector)}–BFFFh | BDOS entry jump and resident workspace in EXPAND 0 |
+| 8000h–BFFFh | EXPAND 0 (classic workspace and TPA) or EXPAND 1 |
 | C000h–FFFFh | TEC-OS ROM |
 
-The word at 0006h is ${hex(census.ram.bdosVector)}; the word at 0001h points
-into the RAM BIOS table at ${hex(census.ram.ramBios)}.
+The word at 0006h is ${hex(census.ram.bdosVector)} on the starter card; cold boot sets it
+for the volumes mounted, below their allocation vectors (four 8 MiB volumes
+give ${hex(census.ram.cards.fourG8M.entry)}). The word at 0001h points into the RAM BIOS table at
+${hex(census.ram.ramBios)}.
 
 ## ROM (${census.rom.used} of ${census.rom.bytes} bytes used, ${census.rom.free} free)
 
@@ -65,7 +67,7 @@ into the RAM BIOS table at ${hex(census.ram.ramBios)}.
 | --- | ---: | --- |
 ${rows(census.rom.regions)}
 
-## Classic resident RAM
+## Classic resident RAM, starter card
 
 | Addresses | Bytes | Region |
 | --- | ---: | --- |

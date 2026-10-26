@@ -1,9 +1,9 @@
 ; TEC-OS memory and port contract.
 ;
 ; Fixed RAM is 0000h-7FFFh, the bank window is 8000h-BFFFh and ROM is
-; C000h-FFFFh. TPATOP comes from the generated configuration: it is the
-; page-aligned boundary between the classic transient program area and the
-; resident workspace at the top of the classic bank.
+; C000h-FFFFh. The classic transient program area runs from 0100h to the
+; BDOS entry jump, which cold boot places below the resident workspace at
+; the top of EXPAND 0.
 
 ; ---- Ports ----------------------------------------------------------------
 KEYPORT EQU     $00             ; keypad encoder; read pumps Debug80 serial RX
@@ -60,15 +60,20 @@ CMUC1   EQU     3               ; GLCD and matrix keyboard
 
 ; ---- Classic resident region (top of the classic bank) ----------------------
 BOOTSTK EQU     $8000           ; cold-boot stack top, fixed RAM
-STUBPG  EQU     TPATOP          ; stub page: BDOS entry at +6
-BDOSSTB EQU     TPATOP+6        ; value stored at 0006h
-WSBASE  EQU     TPATOP+$100     ; first resident workspace byte
+; WSBASE, the first byte of the fixed workspace, comes from the generated
+; configuration: the build places it so that the workspace ends at RAMBIOS.
+; Below it, cold boot packs the allocation vectors and the BDOS entry jump
+; (STUBAD) for the volumes mounted.
 RAMBIOS EQU     $BF00           ; RAM copy of the BIOS jump table, top page
 BIOSLEN EQU     17*3
 
 ; ---- Resident stack sizes (measured: see docs/acceptance.md) --------------
-BDOSSTN EQU     64
-CCPSTN  EQU     48
+; Each is its deepest use, with an NMI taken there, and a quarter more. The
+; CCP stack is also a transient's default stack: CP/M's eight levels, the
+; return word and an NMI need 20 bytes of it.
+BDOSSTN EQU     54
+CCPSTN  EQU     27
+BIOSSTN EQU     38
 
 ; ---- GLCD console geometry: 6 x 8 cells on 128 x 64 pixels ------------------
 GLCOLS  EQU     21
@@ -76,6 +81,5 @@ GLROWS  EQU     8
 
 ; ---- Disk geometry limits ---------------------------------------------------
 MAXDRV  EQU     4               ; drives A-D
-ALVSZ   EQU     256             ; allocation vector bytes per drive (DSM <= 2047)
 DPHSZ   EQU     16
 DRVESZ  EQU     8               ; drive table entry size

@@ -21,8 +21,8 @@ Changes made for ROM residency in TEC-OS:
 - The CCP's duplicate `CR`, `LF` and `SPACE` equates were removed, its stack
   labels were renamed `CSTKBAS` and `CSTKTOP` to avoid clashing with the BDOS,
   and the BDOS's `IOBYTE` equate now comes from `src/layout.asm`.
-- The transient load ceiling and the `SAVE` page limit use `TPATOP` (the stub
-  page) instead of the CCP origin.
+- The transient load ceiling and the `SAVE` page limit use the page of the
+  BDOS entry jump, the byte at `0007h`, instead of the CCP origin.
 - The CCP now keeps the CP/M 2.2 user/drive byte at `0004h` (user in bits 4–7)
   through `SAVEDU`, restores the user number on entry, and masks the user bits
   when printing the drive in `DIR`.

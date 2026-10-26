@@ -311,12 +311,67 @@ MNZ:    LD      (HL),0
         INC     HL
         LD      (HL),D
         INC     HL
-        POP     AF              ; ALV = ALVTAB + 256 * drive
-        ADD     A,HIGH(ALVTAB)
-        LD      (HL),LOW(ALVTAB)
-        INC     HL
-        LD      (HL),A
+        POP     AF              ; ALVINIT sets the allocation vector
         POP     BC
+        RET
+
+; Pack the allocation vectors of the mounted drives down from WSBASE, in
+; drive order, each DSM / 8 + 1 bytes, and put each one's address in its
+; DPH. The BDOS entry jump goes at the highest xx06h address below them.
+ALVINIT:LD      HL,WSBASE
+        LD      (STUBAD),HL     ; the lowest vector so far
+        LD      C,0
+ALVNX:  LD      A,C
+        CALL    DRVENT
+        LD      A,(HL)
+        OR      A
+        JR      Z,ALVSKP        ; not mounted
+        LD      A,C             ; HL = the DPH's DPB word, at +10
+        ADD     A,A
+        ADD     A,A
+        ADD     A,A
+        ADD     A,A
+        ADD     A,10
+        LD      L,A
+        LD      H,0
+        LD      DE,DPHTAB
+        ADD     HL,DE
+        PUSH    HL
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        LD      HL,5            ; DSM
+        ADD     HL,DE
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        LD      B,3
+ALVSH:  SRL     D
+        RR      E
+        DJNZ    ALVSH
+        INC     DE
+        LD      HL,(STUBAD)
+        OR      A
+        SBC     HL,DE
+        LD      (STUBAD),HL
+        EX      DE,HL
+        POP     HL
+        INC     HL              ; the ALV word, at +14
+        INC     HL
+        INC     HL
+        INC     HL
+        LD      (HL),E
+        INC     HL
+        LD      (HL),D
+ALVSKP: INC     C
+        LD      A,C
+        CP      MAXDRV
+        JR      C,ALVNX
+        LD      HL,(STUBAD)
+        LD      DE,-9           ; the JP and six free bytes below the vectors
+        ADD     HL,DE
+        LD      L,6
+        LD      (STUBAD),HL
         RET
 
 ; Forget every mounted volume.

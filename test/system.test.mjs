@@ -21,7 +21,8 @@ test("cold boot leaves the overlay off, the classic bank selected and the CCP pr
   assert.equal(m.physicalBank, -1);
   const bdosVector = m.read(6) | (m.read(7) << 8);
   assert.equal(bdosVector & 0xff, 0x06);
-  assert.equal(bdosVector, m.sym("BDOSSTB"));
+  assert.equal(bdosVector, m.read(m.sym("STUBAD")) | (m.read(m.sym("STUBAD") + 1) << 8));
+  assert.equal(bdosVector, 0xb806, "the starter card's BDOS entry");
   assert.equal(m.read(0), 0xc3);
   assert.equal((m.read(1) | (m.read(2) << 8)) - 3, m.sym("RAMBIOS"));
   assert.equal(m.sym("RAMBIOS"), 0xbf00, "the RAM BIOS table is in the top page");
@@ -149,6 +150,55 @@ test("BDOS file functions pass the probe", SLOW, async () => {
   assert.deepEqual(results.filter((r) => r.endsWith("FAIL")), []);
   assert.deepEqual(volume(image, "A").verify(), []);
   assert.deepEqual(volume(image, "B").verify(), []);
+  noViolations(m);
+});
+
+const G1M = (mount, label) => ({ geometry: "G1M", label, mount });
+const G8M = (mount, label) => ({ geometry: "G8M", label, mount });
+const CARDS = [
+  { name: "the starter card", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK")], entry: 0xb806 },
+  { name: "the starter card with C:", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK"), G1M("C", "MORE")], entry: 0xb706 },
+  { name: "four 8 MiB volumes", volumes: ["A", "B", "C", "D"].map((d) => G8M(d, `VOL${d}`)), entry: 0xb506 },
+];
+const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
+
+test("cold boot packs each drive's allocation vector, DSM / 8 + 1 bytes, below the workspace and puts the BDOS entry below them", () => {
+  for (const card of CARDS) {
+    const m = boot(createContainer(card.volumes));
+    const entry = word(m, 6);
+    assert.equal(entry, card.entry, card.name);
+    assert.equal(m.read(entry), 0xc3, `${card.name}: JP at the entry`);
+    assert.equal(word(m, entry + 1), m.sym("BENTRY"));
+    let end = m.sym("WSBASE");
+    card.volumes.forEach((_, d) => {
+      const dph = m.sym("DPHTAB") + 16 * d;
+      const dsm = word(m, word(m, dph + 10) + 5);
+      const alv = word(m, dph + 14);
+      assert.equal(alv, end - ((dsm >> 3) + 1), `${card.name}: drive ${d}'s vector ends where the one above starts`);
+      end = alv;
+    });
+    assert.ok(entry + 3 <= end, `${card.name}: the entry jump is below every vector`);
+    assert.ok(entry - 6 >= 0x100, `${card.name}: the six bytes below the entry are in the TPA`);
+    const page = entry >> 8;
+    assert.doesNotMatch(m.command(`SAVE ${page - 1} TOP.COM`), /\?/, `${card.name}: SAVE up to the entry's page`);
+    assert.match(m.command(`SAVE ${page} OVER.COM`), /\r\n\d+\?\r\n/, `${card.name}: SAVE of the entry's page refused`);
+    m.command("TOP");
+    noViolations(m);
+  }
+});
+
+test("on a card of four 8 MiB volumes the BDOS probe passes", SLOW, async () => {
+  const image = createContainer(CARDS[2].volumes);
+  volume(image, "A").write("PROBE.COM", (await program("probe")).bytes);
+  const m = boot(image);
+  const out = m.command("PROBE", { maxCycles: 2_000_000_000 });
+  const results = out.match(/T\d\d (ok|FAIL)/g);
+  assert.equal(results.length, 16);
+  assert.deepEqual(results.filter((r) => r.endsWith("FAIL")), []);
+  m.command("D:", { prompt: /\r\nD>$/ });
+  m.command("SAVE 2 X.COM", { prompt: /\r\nD>$/ });
+  assert.match(m.command("DIR", { prompt: /\r\nD>$/ }), /X\.COM/);
+  for (const d of ["A", "B", "C", "D"]) assert.deepEqual(volume(image, d).verify(), []);
   noViolations(m);
 });
 

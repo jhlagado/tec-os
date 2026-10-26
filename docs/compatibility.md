@@ -1,8 +1,10 @@
 # CP/M 2.2 compatibility
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
-interfaces, size themselves from the BDOS address at `0006h` and fit the TPA
-of 45,830 bytes (`0100h–B405h`). It reports version 2.2.
+interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
+46,854 bytes (`0100h–B805h`) on the starter card, and at least 46,086 on any
+card, since cold boot places the BDOS entry below the allocation vectors of
+the volumes mounted. It reports version 2.2.
 
 ## BDOS functions
 
@@ -34,7 +36,8 @@ not supported. `COPY SOURCE DEST` is a TEC-OS built-in.
 
 ## Base page
 
-Warm boot at `0000h`, BDOS vector at `0005h` (target `B406h`), IOBYTE at
+Warm boot at `0000h`, BDOS vector at `0005h` (target `B806h` on the starter card, always an
+`xx06h` address), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
 `0100h`. The BIOS jump table is at `BF00h`, the top page of the bank window, and
@@ -73,7 +76,8 @@ and run.
 ## Known incompatibilities
 
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 45,830 bytes of TPA, fail.
+  more than 46,086 bytes of TPA, may fail; how much a card gives depends on
+  its volumes.
 - **NMI and the default FCB.** The Z80 NMI vector `0066h` lies inside the
   default FCB at `005Ch` (its file-type field). While a CP/M program runs it
   owns those bytes, so a hex-keypad press during that time executes whatever

@@ -46,8 +46,8 @@ COLD:   DI
         LD      A,LATCLAS
         LD      (LATCHV),A
         CALL    RAMCHK          ; does not return without RAM at 8000h-BFFFh
-        LD      HL,TPATOP       ; clear the resident workspace
-        LD      DE,TPATOP+1
+        LD      HL,WSBASE       ; clear the resident workspace
+        LD      DE,WSBASE+1
         LD      BC,(WSCLRN)
         LD      (HL),0
         LDIR
@@ -64,6 +64,7 @@ COLDRT: CALL    SDINIT
         JR      NZ,COLDERR
         CALL    MOUNT
         JR      NZ,COLDERR
+        CALL    ALVINIT
         CALL    SHOWVOL
         CALL    LCDVOLS
         XOR     A               ; drive A, user 0
@@ -156,11 +157,13 @@ PZINIT: LD      A,$C3
         LD      HL,RAMBIOS+3
         LD      ($0001),HL
         LD      (PZBDOS),A
-        LD      HL,BDOSSTB
+        LD      HL,(STUBAD)
         LD      (PZBDOS+1),HL
-        LD      (BDOSSTB),A
-        LD      HL,BENTRY
-        LD      (BDOSSTB+1),HL
+        LD      (HL),A
+        INC     HL
+        LD      (HL),LOW(BENTRY)
+        INC     HL
+        LD      (HL),HIGH(BENTRY)
         LD      HL,BIOSBAS
         LD      DE,RAMBIOS
         LD      BC,BIOSLEN

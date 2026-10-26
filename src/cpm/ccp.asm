@@ -5,8 +5,8 @@
 ;
 ; TEC-OS ROM-resident adaptation (see PROVENANCE.md). The code and text are in
 ; ROM; the command buffers, scratch FCBs and stack are in the RAM block at the
-; end of this file. The transient ceiling is TPATOP, the stub page boundary,
-; rather than the CCP origin.
+; end of this file. The transient ceiling is the page of the BDOS entry jump
+; (the byte at 0007h), rather than the CCP origin.
 
 CCPBAS:
 
@@ -180,7 +180,7 @@ NOTDRIVE:
         JR      C,BADCMD
         CALL    PREPPAGE
         ; Keep the return word outside default DMA ($0080..$00FF). The
-        ; resident stack supplies 46 free bytes beneath this two-byte word.
+        ; resident stack supplies 25 free bytes beneath this two-byte word.
         LD      SP,CSTKTOP
         LD      HL,WBOOT
         PUSH    HL
@@ -221,8 +221,8 @@ LOADCOM:
         LD      HL,TPA
 
 LOADLOOP:
-        LD      A,H
-        CP      TPATOP/256
+        LD      A,(PZBDOS+2)    ; up to the BDOS entry's page
+        CP      H
         JR      Z,LOADLIM
         PUSH    HL
         EX      DE,HL
@@ -1071,8 +1071,8 @@ USERDONE:
         CALL    BDOS
         JP      MAINLOOP
 
-; SAVE writes 256-byte pages from the TPA. A count reaching the TPATOP page is
-; rejected rather than saving the resident stub page or workspace.
+; SAVE writes 256-byte pages from the TPA. A count reaching the page of the
+; BDOS entry jump is rejected rather than saving it or the workspace.
 CMDSAVE:
         LD      HL,(ARGSTRT)
         CALL    SKIPSP
@@ -1109,8 +1109,10 @@ SAVENUM:
 SAVENEND:
         CP      SPACE
         JP      NZ,BADCMD
+        LD      A,(PZBDOS+2)
+        LD      C,A
         LD      A,B
-        CP      TPATOP/256
+        CP      C
         JP      NC,BADCMD
         LD      (SAVEPGS),A
         CALL    SKIPSP
