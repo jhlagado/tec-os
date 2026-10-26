@@ -22,7 +22,9 @@ before(async () => {
 /** A machine running the diagnostics ROM, with helpers that talk to it over
  *  the serial port as a terminal user would. */
 function diag(options = {}) {
-  const m = new Machine({ rom, symbols, sdImage: standardCard(), tms: true, matrix: true, ramFill: 0x76, ...options });
+  // No DS1302 by default: the model keeps host time, which a short emulated
+  // run does not see advance.
+  const m = new Machine({ rom, symbols, sdImage: standardCard(), tms: true, matrix: true, ramFill: 0x76, rtc: false, ...options });
   let mark = 0;
   m.wait = (pattern, maxCycles = 900_000_000) => {
     let seen = -1;

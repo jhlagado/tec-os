@@ -1,35 +1,94 @@
 # ROM services
 
-Status: **Partly built**, 2026-10-26. The entry at `FF0Bh` exists (ABI 1.1)
-with the first six services: `INFO`, `DIGITS`, `HEXSEG`, `LEDS`, `LCDROW`
-and `VIDEO` (`src/hwsvc.asm`). `DEMO.COM` on the starter card uses them all.
-The rest of the list below is still proposed; sizes marked "est." are
-estimates.
+Status: **Built**, 2026-10-26. The entry at `FF0Bh` (ABI 1.1) has 19
+services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
+`test/hwsvc.test.mjs` calls each one with its arguments in the registers and
+measures its stack. `DEMO.COM` on the starter card shows them.
 
-## Built: services 0-5
+The ROM is 16 KiB. It holds 13,868 bytes with these services and has 2,516
+free. This document sets out what earns a place in it, the entry point that
+gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
-| C | Service | Arguments | Results |
-| ---: | --- | --- | --- |
-| 0 | `INFO` | — | `B` devices (bit 0 matrix keyboard, bit 1 PICO9918, bit 2 GLCD), `DE` ROM version, `L` console columns, `H` rows (0 for serial) |
-| 1 | `DIGITS` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off; the serial line stays idle |
-| 2 | `HEXSEG` | `A` = 0-15 | `B` = its segment pattern (MON3's layout) |
-| 3 | `LEDS` | `HL` → 8 rows of red, green, blue bytes | One scan of the 8 × 8 matrix, about 0.4 ms a row, then off |
-| 4 | `LCDROW` | `B` = row 0-3, `HL` → 20 characters | The row written |
-| 5 | `VIDEO` | `B` = 1 claim, 0 release | Status 2 without a PICO9918 |
+## Calling the services
 
-Status 0 is success (Z, carry clear), 1 an unknown service or argument, 2 a
-missing device. The digits and LEDs are multiplexed, so a program calls
-`DIGITS` and `LEDS` in its main loop. While the PICO9918 is claimed the
-console drops output to it, draws no cursor and does not flip pages, and the
-program may set any mode and use all of VRAM; releasing it, or a warm boot,
-restores the 80-column text mode, font and page and clears the screen. The
-services use at most 6 bytes of the caller's stack and preserve IX, IY and
-the alternate registers.
+A program checks for `"TNA"` at `FF00h` and a minor version of at least 1 at
+`FF04h`, then calls `FF0Bh` with the service number in C and arguments in A,
+B, DE and HL. On return A holds the status, with Z set and carry clear on
+success; results come back as each service lists. IX, IY and the alternate
+registers are preserved. A CP/M program that finds no signature is on
+another system and carries on without the TEC-1G's devices.
 
-The ROM is 16 KiB. It holds 13,366 bytes with these services and has 3,018
-free. This
-document sets out what earns a place in it, adds one entry point that gives
-programs the TEC-1G's hardware, and lists what belongs on the card instead.
+| Status | Meaning |
+| ---: | --- |
+| 0 | Success |
+| 1 | No such service, or an argument out of range |
+| 2 | The device is not fitted, or not the console |
+| 3 | Nothing arrived in time |
+| 4 | The card did not read |
+| 5 | The PICO9918 is not claimed |
+
+The rules that make the services safe for CP/M programs:
+
+- **The caller's stack.** No service switches stacks or touches the TPA
+  beyond the buffers it is given. The deepest takes 16 bytes of the caller's
+  stack, counting the dispatcher but not the `CALL`.
+- **Resident state only.** The services keep their state in the resident
+  workspace: the claim flag, a saved argument and the random number seed,
+  4 bytes in all.
+- **Never the BDOS.** Services do not call the BDOS, so a program can call
+  them from inside its own BDOS-heavy code without re-entry.
+- **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
+  the serial transmit line, high.
+
+## Services
+
+| C | Service | Arguments | Results | Stack | ROM |
+| ---: | --- | --- | --- | ---: | ---: |
+| — | Dispatcher, exits, table | | | 4 | 75 |
+| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock; `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 20 |
+| 1 | `DIGITS` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
+| 2 | `HEXSEG` | `A` = 0-15 (the low four bits) | `B` = its segment pattern, MON3's layout | 4 | 29 |
+| 3 | `LEDS` | `HL` → 8 rows of red, green, blue bytes | One scan of the 8 × 8 matrix, about 0.4 ms a row, then off | 4 | 31 |
+| 4 | `LCDROW` | `B` = row 0-3, `HL` → 20 characters | The row written | 10 | 35 |
+| 5 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 8 | 65 |
+| 6 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 59 T-states | 4 | 29 |
+| 7 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
+| 8 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
+| 9 | `SERIAL` | `B` = 0: send `A`. `B` = 1: wait up to `DE` ms | `B` = the byte received, or status 3 | 4 | 40 |
+| 10 | `BLOCK` | `HL` → block number (4 bytes, least significant first), `DE` → 512-byte buffer | The raw card block, or status 4 | 8 | 21 |
+| 11 | `DELAY` | `DE` = milliseconds | About 4,000 T-states a millisecond | 4 | 16 |
+| 12 | `VREG` | `B` = register, `A` = value | Claimed PICO9918 register written | 4 | 26 |
+| 13 | `VFILL` | `HL` = VRAM address, `DE` = count, `A` = value | Claimed PICO9918 VRAM filled | 4 | 23 |
+| 14 | `VWRITE` | `HL` → VRAM address, RAM address, count (three words) | RAM copied to VRAM | 4 | 36 |
+| 15 | `VREAD` | The same | VRAM copied to RAM | 4 | 22 |
+| 16 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 16 | 63 |
+| 17 | `RANDOM` | — | `HL` = the next number from a 16-bit xorshift, period 65,535 | 4 | 30 |
+| 18 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 143 |
+| | **Total** | | | | **755** |
+
+Stack is the deepest measured use of the caller's stack below the return
+address. The `VREG` row includes the claim check shared by services 12-15.
+
+Notes:
+
+- The digits, LEDs and speaker are multiplexed or timed by the CPU, so a
+  program calls `DIGITS` and `LEDS` in its main loop.
+- While the PICO9918 is claimed the console drops output to it, draws no
+  cursor and does not flip pages, and the program may set any mode and use
+  all of VRAM. Releasing it, or a warm boot, restores the 80-column text
+  mode, font and page and clears the screen.
+- `PUTAT` is a fast path for full-screen programs: it costs only the cell
+  writes, against a BDOS call and the ANSI parser for each character. Edit
+  stays a portable CP/M program and can use it when it finds the signature.
+- `SERIAL` works whatever the console routing, at 4800 baud with eight bits,
+  which is what a file-transfer program needs. All eight bits come through,
+  NUL included.
+- `BLOCK` reads only, into the caller's buffer; the BIOS's own buffer is not
+  touched.
+- `RTC` uses the same bit sequence as MON3. Debug80 runtime 0.2.0 puts the
+  clock's data bits out on the rising clock edge, where the DS1302 uses the
+  falling one, so reads come back shifted by a bit; `host/machine.mjs`
+  corrects the model until the runtime is fixed.
 
 ## What earns ROM space
 
@@ -71,86 +130,14 @@ that programs share as ATOM include files.
 | CCP | 2,166 | 2 | Stays |
 | BDOS | 3,491 | 2 | Stays |
 | Native ABI: banks, copies, calls, loader | 1,132 | — | Open decision O7 |
+| Hardware services | 755 | 3, 4 | Stays |
 
-Nothing in the ROM today belongs on the card. The services the TEC-1G's
-other hardware needs are missing instead, and the native ABI is the only part
-without a current user.
-
-## One entry point for the hardware
-
-The native ABI table at `FF00h` grows one field. Its minor version goes from
-0 to 1, so ABI 1 programs keep working.
-
-| Address | Contents |
-| --- | --- |
-| `FF00h` | `"TNA"` signature |
-| `FF03h` | ABI major version, 1 |
-| `FF04h` | ABI minor version, **1** |
-| `FF05h` | Native bank count |
-| `FF06h` | `JP NATSVC`: native services (native programs only) |
-| `FF09h` | Address of the console size, columns then rows |
-| **`FF0Bh`** | **`JP HWSVC`: hardware services (any program)** |
-
-A program checks for `"TNA"` at `FF00h` and a minor version of at least 1,
-then calls `FF0Bh` with the service number in C and arguments in A, B, DE and
-HL. On return A holds a status with Z set on success, and results come back
-as each service documents. IX, IY and the alternate registers are preserved.
-
-The rules that make it safe for CP/M programs:
-
-- **The caller's stack.** No service switches stacks or touches the TPA.
-  Each service has a documented stack use, at most 16 bytes (est.), measured
-  by the test suite the same way the BDOS stack is.
-- **Resident state only.** Services keep their state in the resident
-  workspace and page zero's OS block, never in program memory.
-- **Interrupt state kept.** A service that needs exact timing (tones, serial
-  bits) disables interrupts and restores the caller's state on return.
-- **Never the BDOS.** Services do not call the BDOS, so a program can call
-  them from inside its own BDOS-heavy code without re-entry.
-
-A CP/M program that finds no signature is on another system and carries on
-without the TEC-1G's devices.
-
-### Services
-
-| C | Service | What it does | Rule | ROM bytes (est.) |
-| ---: | --- | --- | --- | ---: |
-| — | Dispatcher and table | | | 40 |
-| 0 | `INFO` | Devices present (PICO9918, GLCD, card mounted), ROM version, console size | 4 | 25 |
-| 1 | `CAPS` | Read or set the caps-lock bit; the OS keeps the rest of the latch | 3 | 20 |
-| 2 | `TONE` | Square wave on the speaker for a period and count, serial line held idle | 3 | 35 |
-| 3 | `DIGITS` | One multiplex pass of the six 7-segment digits from a 6-byte buffer, serial line held idle | 3 | 40 |
-| 4 | `JOY` | Read the joystick (port FEh with A11 low) | 4 | 10 |
-| 5 | `KEYS` | Raw matrix key state for games: which keys are down now, not characters | 2, 3 | 25 |
-| 6 | `LCDROW` | Write a 20-character row to the 20 × 4 LCD | 2 | 10 |
-| 7 | `VIDEO` | Claim the PICO9918 for graphics, or give it back; console output goes to serial only while claimed, and warm boot restores the text screen | 2, 3 | 35 |
-| 8 | `PUTAT` | Write a run of characters at a row and column with no ANSI parsing | 2 | 40 |
-| 9 | `SERIAL` | Send a byte, or wait a set time for one, whatever the console routing | 2, 3 | 35 |
-| 10 | `BLOCK` | Read one raw 512-byte card block | 1 | 25 |
-| 11 | `DELAY` | Wait a number of milliseconds at 4 MHz | 4 | 15 |
-| | **Total** | | | **about 370** |
-
-Notes:
-
-- `DIGITS` and `TONE` exist to keep port 01h bit 6 high. That is the reason
-  they are in the ROM; the 7-segment character table (96 bytes) is not, and
-  goes in an include file.
-- `PUTAT` is an optional fast path for full-screen programs. Edit stays a
-  portable CP/M program that works through the BDOS, and can use `PUTAT`
-  when it finds the signature. Through the BDOS each character costs the
-  BDOS call plus the ANSI parser; `PUTAT` costs only the cell write (1,029
-  T-states on the PICO9918).
-- `SERIAL` is what a file-transfer program needs on real hardware before
-  card utilities exist. The BIOS punch and reader devices are now the
-  serial port too, so `PIP PUN:=FILE` sends a file.
-- `BLOCK` reads only. A card backup or verify tool needs reads. Writes to raw
-  blocks bypass the volume rules and stay out until a tool needs them.
-- `VIDEO` builds on the warm-boot restore: once a program has claimed the
-  display, console output stays off the screen until the claim ends.
+Nothing in the ROM today belongs on the card. The native ABI is the only
+part without a current user.
 
 ## Fixes found on the way
 
-Writing this proposal turned up three faults. All three are fixed (67 bytes
+Writing the proposal for these services turned up three faults. All three are fixed (67 bytes
 of ROM) and covered by `test/devices`:
 
 1. **`NATSVC` wrote into the TPA when a CP/M program called it.** It stored
@@ -170,8 +157,6 @@ Include files, assembled into the programs that need them:
 | File | Contents | Why not ROM |
 | --- | --- | --- |
 | `SEGFONT.ASM` | ASCII to 7-segment table | 96 bytes; only display programs need it |
-| `LED8X8.ASM` | Multiplex scan of the 8 × 8 RGB matrix (ports 05h, 06h, F8h, F9h) | Shares nothing with the OS |
-| `DS1302.ASM` | Real-time clock on the GPIO card (port FCh) | An add-on; CP/M 2.2 keeps no dates |
 | `GLCDGFX.ASM` | GLCD pixels, lines and boxes | The OS uses the GLCD only as text |
 | `VDPGFX.ASM` | PICO9918 graphics modes and sprites, after `VIDEO` claims the card | The OS uses only text modes |
 
@@ -187,16 +172,24 @@ Programs:
 
 ## Costs
 
-| Resource | Today | After | Change |
+| Resource | Before the services | After | Change |
 | --- | ---: | ---: | ---: |
-| ROM used | 12,869 | about 13,240 | +370 (est.) |
-| ROM free | 3,515 | about 3,140 | |
+| ROM used | 13,079 | 13,868 | +789: the services and the console's claim hooks |
+| ROM free | 3,305 | 2,516 | |
 | TPA | 45,830 | 45,830 | none |
-| Resident workspace | | | +4 bytes (est.): video claim, serial timeout |
-| Caller's stack per service | — | 16 bytes or less (est.) | measured by the tests |
+| Resident workspace | | | +4 bytes |
+| Caller's stack per service | — | 16 bytes or less | measured by the tests |
 
-The TPA does not change: the services' state fits in the existing resident
-workspace page.
+The 8 × 8 LED scan and the clock driver were planned as include files on the
+card; at 31 and 143 bytes they cost less in the ROM than in every program
+that uses them.
+
+## Next in the ROM
+
+In order, for the 2,516 bytes left: integer arithmetic (16 × 16 multiply,
+32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
+resident monitor with Intel HEX loading. A disassembler does not fit, and
+floating point and drawing stay on the card.
 
 ## Options I rejected
 
@@ -217,4 +210,3 @@ workspace page.
 | --- | --- |
 | O7 | Keep the native bank services (1,132 bytes) while banking waits for its own design, or take them out and get the space back until then. My recommendation: keep them unchanged and add nothing, because the specification requires the native ABI and the tests prove it. |
 | O8 | Whether `BLOCK` should ever write. |
-| O9 | Whether `KEYS` reports the whole matrix or one row per call. |

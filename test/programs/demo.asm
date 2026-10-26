@@ -1,7 +1,9 @@
-; DEMO.COM: the visual hardware services. Until a key is pressed: a title on
-; the 20 x 4 LCD, a hex counter on the 7-segment digits, a moving rainbow on
-; the 8 x 8 LEDs and, on a PICO9918, colour bars with a bouncing ball in
-; Graphics I. The screen goes back to the console when it stops.
+; DEMO.COM: the hardware services. A beep, then until a key is pressed: a
+; title on the 20 x 4 LCD with the time on its last row when a DS1302 clock
+; answers, a hex counter on the 7-segment digits, a moving rainbow on the
+; 8 x 8 LEDs and, on a PICO9918, colour bars with a bouncing ball in
+; Graphics I that takes a random colour at each bounce. The screen goes back
+; to the console when it stops.
 
 BDOS    EQU     $0005
 HWSVC   EQU     $FF0B           ; hardware services, ABI 1.1
@@ -36,8 +38,16 @@ CHKTAG: LD      A,(DE)
         LD      A,(DEVS)
         AND     4
         CALL    YESNO
+        LD      DE,CLKMSG
+        LD      A,(DEVS)
+        AND     8
+        CALL    YESNO
         LD      DE,KEYMSG
         CALL    PRINT
+        LD      B,120           ; TONE: about 1 kHz for 0.2 s
+        LD      DE,400
+        LD      C,6
+        CALL    HWSVC
 
         LD      HL,LCDTXT       ; the LCD's four rows
         LD      B,0
@@ -66,6 +76,9 @@ LCDLP:  PUSH    BC
 
 LOOP:   LD      HL,FR
         INC     (HL)
+        LD      A,(HL)
+        AND     31
+        CALL    Z,CLOCK
         CALL    COUNT
         CALL    MKDIG
         LD      HL,DIGBUF       ; DIGITS: one scan
@@ -112,6 +125,44 @@ YESNO:  PUSH    AF
         JR      NZ,PRINT
         LD      DE,NOMSG
         JR      PRINT
+
+; ---- Clock ---------------------------------------------------------------------
+
+; LCD row 3 = the DS1302's time, when there is one.
+CLOCK:  LD      A,(DEVS)
+        AND     8
+        RET     Z
+        LD      HL,TIME         ; RTC: seconds, minutes, hours, ...
+        LD      B,0
+        LD      C,18
+        CALL    HWSVC
+        RET     NZ
+        LD      HL,CLKROW+9
+        LD      A,(TIME+2)
+        CALL    BCD2
+        INC     HL
+        LD      A,(TIME+1)
+        CALL    BCD2
+        INC     HL
+        LD      A,(TIME)
+        CALL    BCD2
+        LD      HL,CLKROW       ; LCDROW 3
+        LD      B,3
+        LD      C,4
+        JP      HWSVC
+; (HL), (HL+1) = the two BCD digits of A; HL moves past them.
+BCD2:   PUSH    AF
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        CALL    BCD1
+        POP     AF
+BCD1:   AND     $0F
+        ADD     A,'0'
+        LD      (HL),A
+        INC     HL
+        RET
 
 ; ---- 7-segment counter ------------------------------------------------------
 
@@ -293,6 +344,21 @@ BALL:   LD      HL,BX
         OUT     (VDPDAT),A
         LD      A,(BX)
         OUT     (VDPDAT),A
+        LD      A,(BOUNCE)
+        OR      A
+        RET     Z
+        XOR     A
+        LD      (BOUNCE),A
+        LD      C,17            ; RANDOM: a new colour, 8-15
+        CALL    HWSVC
+        LD      A,L
+        AND     7
+        OR      8
+        PUSH    AF
+        LD      HL,$1B03
+        CALL    VWA
+        POP     AF
+        OUT     (VDPDAT),A
         RET
 ; (HL) += (DE), reversing (DE) at 0 and at C.
 STEP:   LD      A,(DE)
@@ -305,6 +371,7 @@ STEP:   LD      A,(DE)
 STEPR:  LD      A,(DE)
         NEG
         LD      (DE),A
+        LD      (BOUNCE),A
         RET
 
 ; Set the VRAM write address to HL.
@@ -321,6 +388,7 @@ ABITAG: DB      "TNA"
 TITLE:  DB      13,10,"TEC-OS hardware services demo",13,10,"$"
 PICOMSG:DB      "PICO9918: $"
 GLCDMSG:DB      "   GLCD: $"
+CLKMSG: DB      "   clock: $"
 YESMSG: DB      "yes$"
 NOMSG:  DB      "no$"
 KEYMSG: DB      13,10,"Watch the LCD, the digits, the LEDs and the screen.",13,10
@@ -347,6 +415,9 @@ DY:     DB      2
 ZEROS:  DB      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DEVS:   DB      0
 CLAIMED:DB      0
+BOUNCE: DB      0
+CLKROW: DB      "Time     00:00:00   "
+TIME:   DS      7
 FR:     DB      0
 PH:     DB      0
 CNT:    DB      0,0,0

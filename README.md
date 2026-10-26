@@ -99,7 +99,7 @@ Do not press the hex keypad while a CP/M program is running; see
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
 - [Native ABI](docs/native-abi.md)
-- [ROM services](docs/rom-services.md) (hardware services at `FF0Bh`, partly built)
+- [ROM services](docs/rom-services.md) (the 19 hardware services at `FF0Bh`)
 - [Console](docs/console.md)
 - [CP/M compatibility](docs/compatibility.md)
 - [Write policy and recovery](docs/recovery.md)

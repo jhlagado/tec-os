@@ -73,7 +73,7 @@ compiler. That comparison is still to do.
 
 ## Measured costs
 
-ROM, `debug80` profile: 13,366 of 16,384 bytes used, 3,018 free. The region
+ROM, `debug80` profile: 13,868 of 16,384 bytes used, 2,516 free. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.
@@ -88,6 +88,11 @@ SAVE, TYPE, ERA and NATDEMO, with the TMS9918 console on (`test/stacks`):
 | BIOS (warm boot, diagnostics) | 64 | 2 |
 | Native OS | 256 | 20 |
 | Native application, 8 nested bank calls | 496 | 42 |
+
+The 19 hardware services at `FF0Bh` use at most 16 bytes of the caller's
+stack (`PUTAT`, which hides the cursor through the video driver); most use 4
+(`test/hwsvc`, figures in `build/hwsvc-stacks.json`). A transient on the CCP
+stack has room for the deepest of them.
 
 Edit on the 80 × 24 PICO9918 console, emulator time at 4 MHz for one
 keystroke in a 20-line file (2026-10-25):
