@@ -10,7 +10,7 @@ const noViolations = (m) => assert.deepEqual(m.violations, []);
 
 test("the old native service entry at FF06h refuses every call and touches no memory", () => {
   const m = boot(standardCard());
-  assert.deepEqual([m.read(0xff03), m.read(0xff04), m.read(0xff05)], [2, 0, 0], "ABI 2.0, no native banks");
+  assert.deepEqual([m.read(0xff03), m.read(0xff05)], [2, 0], "ABI 2, no native banks");
   const fill = (a) => (a * 7 + 3) & 0xff;
   for (let a = 0x0100; a < 0x0600; a += 1) m.write(a, fill(a));
   const cpu = m.cpu.cpu;

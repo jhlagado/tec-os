@@ -68,6 +68,8 @@ COLDRT: CALL    SDINIT
         CALL    LCDVOLS
         XOR     A               ; drive A, user 0
         LD      (PZDU),A
+        CALL    PZINIT
+        CALL    LOWINIT
         JP      WBOOTR
 COLDERR:JP      DIAG
 
@@ -77,7 +79,13 @@ COLDERR:JP      DIAG
 WBOOTR: DI
         LD      HL,$45ED        ; the program that ended may have used 0066h
         LD      (NMIVEC),HL
-        LD      A,LATCLAS
+        LD      A,LATCLAS+LATEXP ; U9 half 1: its warm-boot jump, for an
+        OUT     (SYSLAT),A      ; exit from a program that left it in
+        LD      A,$C3
+        LD      (RAMBIOS+3),A
+        LD      HL,WBOOTR
+        LD      (RAMBIOS+4),HL
+        LD      A,LATCLAS       ; low page 0, U9 half 0
         LD      (LATCHV),A
         OUT     (SYSLAT),A
         LD      SP,BSTK
@@ -91,6 +99,54 @@ WBOOTR: DI
         LD      A,(PZDU)
         LD      C,A
         JP      CCPENT
+
+; Cold boot: count the low pages, and give low page 1 a copy of page zero.
+; With LOWPAGE set, the complement of page 0's byte at DETADR is written; if
+; page 0 then still holds its own byte, a second page is fitted. Both bytes
+; are put back. The copy switches the latch for every byte and uses no stack,
+; and gives page 1 its NMI vector first. Page 1's 0000h then reaches the RAM
+; BIOS table in the window, so an exit from page 1 warm boots into page 0.
+LOWINIT:LD      A,(LATCHV)
+        LD      D,A             ; page 0
+        OR      LATLOW1
+        LD      E,A             ; page 1
+        LD      HL,DETADR
+        LD      B,(HL)          ; page 0's byte
+        OUT     (SYSLAT),A
+        LD      C,(HL)          ; page 1's byte, or page 0's again
+        LD      A,B
+        CPL
+        LD      (HL),A
+        LD      A,D
+        OUT     (SYSLAT),A
+        LD      A,(HL)
+        LD      (HL),B
+        CP      B
+        LD      A,1
+        JR      NZ,PGSET        ; page 0 saw the write: one page
+        LD      A,E
+        OUT     (SYSLAT),A
+        LD      (HL),C
+        LD      HL,$45ED        ; RETN at 0066h in page 1
+        LD      (NMIVEC),HL
+        LD      A,D
+        OUT     (SYSLAT),A
+        LD      A,2
+        LD      (PAGES),A
+        LD      HL,0
+PGCOPY: LD      A,D
+        OUT     (SYSLAT),A
+        LD      C,(HL)
+        LD      A,E
+        OUT     (SYSLAT),A
+        LD      (HL),C
+        INC     L
+        JR      NZ,PGCOPY
+        LD      A,D
+        OUT     (SYSLAT),A
+        RET
+PGSET:  LD      (PAGES),A
+        RET
 
 ; Rebuild the classic page-zero vectors, BDOS stub and RAM BIOS table, and
 ; put the restart vectors back as a clean boot leaves them. IOBYTE and the

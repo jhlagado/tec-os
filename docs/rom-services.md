@@ -5,10 +5,25 @@ services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. It holds 13,065 bytes (`debug80`) and has 3,319 free:
-3,077 below the table at `FF00h`, where code can go, and 242 above it. This
+The ROM is 16 KiB. It holds 13,155 bytes (`debug80`) and has 3,229 free:
+2,989 below the table at `FF00h`, where code can go, and 240 above it. This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
+
+## The table at `FF00h`
+
+Its layout is fixed; entries are only added, with the minor version raised.
+
+| Address | Contents |
+| --- | --- |
+| `FF00h` | `"TNA"` signature |
+| `FF03h` | ABI major version, 2 |
+| `FF04h` | ABI minor version, 1 |
+| `FF05h` | Native banks: 0 since ABI 2.0 |
+| `FF06h` | `JP` to a routine that refuses every call: status 1, carry set (the native services until ABI 2.0) |
+| `FF09h` | Address of the console size, columns then rows |
+| `FF0Bh` | `JP` to the hardware services |
+| `FF0Eh` | Address of the low-page count, 1 or 2 (ABI 2.1) |
 
 ## Calling the services
 
@@ -186,7 +201,7 @@ that uses them.
 
 ## Next in the ROM
 
-In order, for the 3,077 bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
+In order, for the 2,989 bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
 32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
 resident monitor with Intel HEX loading. A disassembler does not fit, and
 floating point and drawing stay on the card.

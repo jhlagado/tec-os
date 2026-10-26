@@ -46,6 +46,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | Scroll regions; a row move is built in the hidden VRAM page and shown in one step when the program asks for a key | `console` | Emulator | Pass; Edit scrolling rendered frame by frame shows no torn frame |
 | — | Punch and reader carry 8-bit bytes over the serial port | `devices` | Emulator | Pass |
 | — | The old native entry at `FF06h` refuses every call without touching memory | `devices` | Emulator | Pass: status 1, carry set |
+| — | On the 96K paged memory: cold boot counts the low pages, page 1 gets page zero and is otherwise untouched, and an exit from low page 1 or U9 half 1 warm boots into page 0 and half 0 | `paged` | Emulator (harness option `paged`) | Pass |
 | — | PICO9918 80 × 24 console: registers, DIR in 6 columns, 80-character lines | `console` | Emulator (Debug80 TMS9918 model; VRAM checked, not pixels) | Pass |
 | — | Edit edits, saves and reopens on the PICO9918 80 × 24 and GLCD 21 × 8, and on Triptych CP/M 2.2 80 × 24 | `edit` | Emulator | Pass with the shadow-screen Edit build |
 | — | ATOM assembles a program on TEC-OS and it runs | `atom` | Emulator | Pass with the ATOM build that sizes itself from `0006h` |
@@ -54,8 +55,8 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 
 ## Measured costs
 
-ROM, `debug80` profile: 13,065 of 16,384 bytes used, 3,319 free: 3,077 below
-the table at `FF00h`, where code goes, and 242 above it. The region
+ROM, `debug80` profile: 13,155 of 16,384 bytes used, 3,229 free: 2,989 below
+the table at `FF00h`, where code goes, and 240 above it. The region
 breakdown is in [memory-map.md](memory-map.md).
 
 Classic TPA: 45,830 bytes (`0100h–B405h`). Resident workspace: `B400h–BFFFh`.

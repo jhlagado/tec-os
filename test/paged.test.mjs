@@ -8,7 +8,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
-import { romFor } from "./lib/fixtures.mjs";
+import { boot, romFor, standardCard } from "./lib/fixtures.mjs";
 
 const paged = process.env.TEST_PAGED !== "0";
 const LOWPAGE = 0x08;
@@ -54,4 +54,48 @@ test("without the second low page, bit 3 changes nothing", () => {
   const m = machine(1);
   const seen = marks(m, [0, LOWPAGE]);
   assert.deepEqual(seen[0], seen[LOWPAGE]);
+});
+
+// TEC-OS on the paged model (KS9 items 1 and 2): cold boot counts the low
+// pages and gives low page 1 a copy of page zero; a warm boot from page 1 or
+// from U9 half 1 comes back in page 0 and half 0.
+const FILL = 0x76;
+const pagesAt = (m) => m.read(m.read(0xff0e) | (m.read(0xff0f) << 8));
+const defined = [0x00, 0x01, 0x02, 0x05, 0x06, 0x07, ...Array.from({ length: 0x33 }, (_, i) => 0x08 + i), 0x41, 0x66, 0x67];
+
+test("cold boot counts the low pages and leaves page 1 as it found it, but for page zero", { skip: !paged }, () => {
+  for (const lowPages of [1, 2]) {
+    const m = boot(standardCard(), { paged: true, lowPages, ramFill: FILL });
+    assert.deepEqual([m.read(0xff03), m.read(0xff04)], [2, 1], "ABI 2.1");
+    assert.equal(pagesAt(m), lowPages, `${lowPages} low page(s) found`);
+    if (lowPages === 2) {
+      const p1 = m.lowPages[1];
+      const changed = [];
+      for (let a = 0x0100; a < 0x8000; a += 1) if (p1[a] !== FILL) changed.push(a);
+      assert.deepEqual(changed, [], "page 1 untouched above page zero");
+      for (const a of defined) assert.equal(p1[a], m.lowPages[0][a], `page zero byte ${a.toString(16)}h copied`);
+    }
+    const h1 = m.halves[1];
+    const touched = [];
+    for (let a = 0; a < 0x4000; a += 1) if (h1[a] !== FILL) touched.push(a + 0x8000);
+    assert.deepEqual(touched, [0xb503, 0xb504, 0xb505], "U9 half 1: only its warm-boot jump");
+    assert.deepEqual(m.violations, []);
+  }
+});
+
+test("a warm boot from low page 1 or from U9 half 1 returns to page 0 and half 0", { skip: !paged }, () => {
+  // Each stub selects the other memory and jumps to 0000h: from 9000h for low
+  // page 1 (code must sit above 8000h), from 0200h for half 1 (below it).
+  for (const [at, latch, what] of [
+    [0x9000, 0x09, "low page 1"],
+    [0x0200, 0x05, "U9 half 1"],
+  ]) {
+    const m = boot(standardCard(), { paged: true });
+    [0x3e, latch, 0xd3, 0xff, 0xc3, 0x00, 0x00].forEach((b, i) => m.write(at + i, b));
+    m.mark = m.output.length;
+    m.cpu.cpu.pc = at;
+    m.runUntil(() => m.waitingForInput() && /A>$/.test(m.text(m.mark)), 200_000_000, `the prompt after an exit from ${what}`);
+    assert.equal(m.sysCtrl & 0x0c, 0, `page 0 and half 0 after an exit from ${what}`);
+    assert.deepEqual(m.violations, []);
+  }
 });

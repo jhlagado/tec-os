@@ -380,6 +380,18 @@ service) and carry set, `FF05h` reports no native banks, and the ABI version
 becomes 2.0. The hardware services at `FF0Bh` are unchanged; a program that
 checks for them accepts ABI 2.0 or later, or 1.1 or later. Open item O7 is
 closed by this decision.
+
+## D26 The 96K paged memory: detection and page zero — Adopted 2026-10-27
+
+The TEC-1G's latch documentation leaves bits 3–6 unallocated; bit 3 becomes
+LOWPAGE, which of two 32 KiB pages is at `0000h–7FFFh`, beside bit 2 EXPAND,
+which half of a 32 KiB U9 is at `8000h–BFFFh`. Cold boot counts the low
+pages and publishes the count through `FF0Eh` (ABI 2.1), and copies page
+zero into low page 1, so an exit from page 1 reaches the warm boot. Every
+boot also puts the warm-boot jump at `B503h` in U9 half 1, for an exit from
+a program that left that half in. Warm boot selects page 0 and half 0. The
+calls that move between pages follow separately. The harness models the
+scheme as the option `paged`.
 ## Open decisions
 
 | ID | Open item | Blocks |

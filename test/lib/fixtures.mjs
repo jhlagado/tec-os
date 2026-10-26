@@ -55,9 +55,9 @@ export function volume(image, drive) {
 export const TEST_CLOCK = new Date(2026, 0, 1, 12, 0, 0);
 
 /** Boot a machine to the first CCP prompt. Its clock starts at TEST_CLOCK. */
-export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false } = {}) {
+export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false, paged = false, lowPages = 2 } = {}) {
   const { rom, symbols } = romFor(profile);
-  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, clock: TEST_CLOCK });
+  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, paged, lowPages, clock: TEST_CLOCK });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
   return m;
