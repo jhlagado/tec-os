@@ -221,12 +221,11 @@ test("hardware services: the claimed PICO9918 and text at a position", () => {
 test("hardware services: the DS1302 clock", () => {
   const m = boot(standardCard());
   ok(svc(m, 18, { b: 0, hl: BUF }));
-  const now = new Date();
-  const bcd = (n) => ((n / 10) << 4) | n % 10;
+  // The test clock starts at 12:00:00 on Thursday 1 January 2026 and runs
+  // with the emulated cycles, so the boot has used a second or two of it.
   const got = bytes(m, BUF, 7);
-  assert.equal(got[3], bcd(now.getDate()), "date");
-  assert.equal(got[4], bcd(now.getMonth() + 1), "month");
-  assert.equal(got[6], bcd(now.getFullYear() % 100), "year");
+  assert.ok(got[0] <= 0x05, `seconds ${got[0].toString(16)}`);
+  assert.deepEqual(got.slice(1), [0x00, 0x12, 0x01, 0x01, 0x04, 0x26], "minutes, hours, date, month, weekday, year");
   put(m, BUF, [0x30, 0x59, 0x12, 0x25, 0x12, 0x04, 0x26]);
   ok(svc(m, 18, { b: 1, hl: BUF }));
   ok(svc(m, 18, { b: 0, hl: BUF + 0x10 }));

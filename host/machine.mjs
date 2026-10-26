@@ -32,6 +32,7 @@ Ds1302.prototype.write = function (value) {
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
 const SD_PORT = 0xfd;
+const RTC_PORT = 0xfc;
 
 /** Symbol map (name to address) from a Debug80 D8 debug map object. */
 export function symbolsFromD8(d8) {
@@ -41,7 +42,12 @@ export function symbolsFromD8(d8) {
 }
 
 export class Machine {
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, rtc = true, onSdWrite }) {
+  /**
+   * clock: the DS1302's time. Left out, it is the host's time, as on a board
+   * whose clock was set; a Date starts the clock there and advances it with
+   * the emulated cycles at 4 MHz, so a run reads the same time on any host.
+   */
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, rtc = true, clock, onSdWrite }) {
     this.symbols = symbols;
     // output: every byte the BIOS was asked to put on the console, whichever
     // device is in use. serial: the bytes that left the serial port.
@@ -63,7 +69,7 @@ export class Machine {
       sdEnabled: false,
       tms9918Active: tms,
       matrixMode: matrix,
-      rtcEnabled: rtc, // the DS1302 add-on, keeping host time
+      rtcEnabled: false, // the DS1302 is this machine's own, on port FCh below
     });
     this.tec1g = createTec1gRuntime(
       config,
@@ -71,12 +77,40 @@ export class Machine {
       (byte) => this.serial.push(byte),
     );
     if (tms) this.tec1g.setTms9918Active(true);
+    // The runtime sends display updates on a wall-clock schedule and clears
+    // the queued LED and digit scans with each one, so what a test reads
+    // would depend on how fast the host ran. Nothing here listens for those
+    // updates; the harness and the page read the state directly.
+    this.tec1g.state.timing.updateMs = Infinity;
+    this.rtc = rtc ? new Ds1302() : null;
+    const machine = this;
+    if (this.rtc && clock) {
+      const start = clock.getTime();
+      const rtcHz = 4_000_000;
+      this.rtc.refreshTimeRegisters = function () {
+        if (this.timeFrozen) return;
+        const now = new Date(start + Math.floor((machine.cycles * 1000) / rtcHz));
+        const day = now.getDay() === 0 ? 7 : now.getDay();
+        [now.getSeconds(), now.getMinutes(), now.getHours(), now.getDate(), now.getMonth() + 1, day, now.getFullYear() % 100].forEach(
+          (v, i) => (this.registers[i] = this.toBcd(v)),
+        );
+      };
+    }
     const base = this.tec1g.ioHandlers;
     const io = {
-      read: (port) => ((port & 0xff) === SD_PORT ? (this.sd ? this.sd.read() : 0xff) : base.read(port)),
+      read: (port) => {
+        const p = port & 0xff;
+        if (p === SD_PORT) return this.sd ? this.sd.read() : 0xff;
+        if (p === RTC_PORT) return this.rtc ? this.rtc.read() : 0xff;
+        return base.read(port);
+      },
       write: (port, value) => {
         if ((port & 0xff) === SD_PORT) {
           if (this.sd) this.sd.write(value);
+          return;
+        }
+        if ((port & 0xff) === RTC_PORT) {
+          if (this.rtc) this.rtc.write(value & 0xff);
           return;
         }
         base.write(port, value);

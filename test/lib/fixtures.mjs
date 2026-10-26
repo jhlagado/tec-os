@@ -51,10 +51,13 @@ export function volume(image, drive) {
   return new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
 }
 
-/** Boot a machine to the first CCP prompt. */
+/** The DS1302's time when a test machine starts: 1 January 2026, 12:00:00. */
+export const TEST_CLOCK = new Date(2026, 0, 1, 12, 0, 0);
+
+/** Boot a machine to the first CCP prompt. Its clock starts at TEST_CLOCK. */
 export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false } = {}) {
   const { rom, symbols } = romFor(profile);
-  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix });
+  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, clock: TEST_CLOCK });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
   return m;

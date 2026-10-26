@@ -77,8 +77,7 @@ test("the hardware services drive the LCD, clock, digits, LEDs and a claimed PIC
   assert.match(m.text(m.mark), /clock: yes/);
   const p = serializeTec1gUpdateFromRuntimeState(m.tec1g.state);
   assert.equal(String.fromCharCode(...p.lcd.slice(0, 20)), "TEC-OS hardware demo");
-  const hours = String(new Date().getHours()).padStart(2, "0");
-  assert.match(String.fromCharCode(...p.lcd.slice(60, 80)), new RegExp(`^Time     ${hours}:\\d\\d:\\d\\d   $`), "the clock on the last row");
+  assert.match(String.fromCharCode(...p.lcd.slice(60, 80)), /^Time     12:00:0\d   $/, "the clock on the last row, from TEST_CLOCK");
   assert.ok(p.digits.some((d) => d !== 0), "the counter is on the digits");
   assert.ok((p.matrixScanCycles?.length ?? 0) > 0, "complete scans of the 8 x 8 LEDs");
   const vdp = m.tec1g.state.display.tms9918.stateSnapshot();
