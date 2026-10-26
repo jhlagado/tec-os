@@ -78,7 +78,8 @@ test("cold boot counts the low pages and leaves page 1 as it found it, but for p
     const h1 = m.halves[1];
     const touched = [];
     for (let a = 0; a < 0x4000; a += 1) if (h1[a] !== FILL) touched.push(a + 0x8000);
-    assert.deepEqual(touched, [0xb503, 0xb504, 0xb505], "U9 half 1: only its warm-boot jump");
+    const warm = m.sym("RAMBIOS") + 3;
+    assert.deepEqual(touched, [warm, warm + 1, warm + 2], "U9 half 1: only its warm-boot jump");
     assert.deepEqual(m.violations, []);
   }
 });

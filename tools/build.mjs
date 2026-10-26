@@ -18,6 +18,7 @@ const SRC = resolve(ROOT, "src");
 const GEN = resolve(SRC, "gen");
 const ROM_START = 0xc000;
 const ROM_SIZE = 0x4000;
+const RAMBIOS = 0xbf00; // src/layout.asm; the workspace below it sets TPATOP
 const CPU_HZ = 4_000_000;
 const BAUD = 4800;
 const VERSION = { major: 0, minor: 1 };
@@ -178,8 +179,8 @@ function check(condition, message) {
   if (!condition) throw new Error(`placement check failed: ${message}`);
 }
 
-// The resident workspace does not depend on the profile, so one probe
-// assembly sizes it for every profile.
+// The resident workspace below the RAM BIOS table does not depend on the
+// profile, so one probe assembly sizes it for every profile.
 let workspaceBytes;
 
 async function buildProfile(name) {
@@ -188,10 +189,10 @@ async function buildProfile(name) {
   if (workspaceBytes === undefined) {
     writeGenerated(profile, 0x8000);
     const probe = await assemble();
-    workspaceBytes = need(probe.symbols, "WSEND") - 0x8000;
+    workspaceBytes = need(probe.symbols, "BDOSRME") - 0x8000;
   }
   const workspace = workspaceBytes;
-  const tpatop = (0xc000 - workspace) & 0xff00;
+  const tpatop = (RAMBIOS - workspace) & 0xff00;
   const serial = writeGenerated(profile, tpatop);
   const { result, d8, symbols } = await assemble();
 
@@ -210,9 +211,11 @@ async function buildProfile(name) {
   check(at("COLD") < 0xc800, "cold boot entry must be inside the overlay window");
   check(at("CODEEND") <= at("ABITAB"), "code overruns the table at FF00h");
   check(at("ABITAB") === 0xff00, "ABI table must be at FF00h");
-  check(at("WSBASE") === tpatop + 0x100 + 51, "workspace starts after the RAM BIOS table");
+  check(at("WSBASE") === tpatop + 0x100, "workspace starts after the stub page");
+  check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);
+  check(at("BDOSRME") <= RAMBIOS, `CP/M workspace runs into the RAM BIOS table at ${hex(at("BDOSRME"))}`);
+  check(at("GLTEXT") === RAMBIOS + 51, "GLCD text follows the RAM BIOS table");
   check(at("WSEND") <= 0xc000, `workspace ends at ${hex(at("WSEND"))}`);
-  check(at("RAMBIOS") % 256 === 0, "RAM BIOS table must be page aligned");
   check((at("BENTRY") - at("BDOSBAS")) === 6, "BDOS entry is six bytes into the BDOS");
   check(at("BSTK") <= at("CCPRAM"), "BIOS stack overlaps the CCP workspace");
 
@@ -252,12 +255,14 @@ async function buildProfile(name) {
       ramBios: at("RAMBIOS"),
       regions: [
         ["stub page", tpatop, tpatop + 0x100],
-        ["RAM BIOS table", at("RAMBIOS"), at("WSBASE")],
         ["BIOS disk state and buffers", at("WSBASE"), at("SDBYTE")],
-        ["SD and mount state", at("SDBYTE"), at("BSTKB")],
+        ["SD, mount, video and keyboard state", at("SDBYTE"), at("BSTKB")],
         ["BIOS stack", at("BSTKB"), at("BSTK")],
         ["CCP state and stack", at("CCPRAM"), at("CCPRME")],
         ["BDOS state and stack", at("BDOSRAM"), at("BDOSRME")],
+        ["unused", at("BDOSRME"), at("RAMBIOS")],
+        ["RAM BIOS table", at("RAMBIOS"), at("GLTEXT")],
+        ["GLCD text console", at("GLTEXT"), at("WSEND")],
         ["unused", at("WSEND"), 0xc000],
       ].map(([label, start, end]) => ({ label, start, end, bytes: end - start })),
       stacks: {

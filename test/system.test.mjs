@@ -24,6 +24,7 @@ test("cold boot leaves the overlay off, the classic bank selected and the CCP pr
   assert.equal(bdosVector, m.sym("BDOSSTB"));
   assert.equal(m.read(0), 0xc3);
   assert.equal((m.read(1) | (m.read(2) << 8)) - 3, m.sym("RAMBIOS"));
+  assert.equal(m.sym("RAMBIOS"), 0xbf00, "the RAM BIOS table is in the top page");
   assert.equal(m.read(0x66), 0xed);
   noViolations(m);
 });

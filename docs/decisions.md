@@ -388,10 +388,22 @@ LOWPAGE, which of two 32 KiB pages is at `0000h–7FFFh`, beside bit 2 EXPAND,
 which half of a 32 KiB U9 is at `8000h–BFFFh`. Cold boot counts the low
 pages and publishes the count through `FF0Eh` (ABI 2.1), and copies page
 zero into low page 1, so an exit from page 1 reaches the warm boot. Every
-boot also puts the warm-boot jump at `B503h` in U9 half 1, for an exit from
+boot also puts the warm-boot jump at `B503h` (`BF03h` since D27) in U9 half 1, for an exit from
 a program that left that half in. Warm boot selects page 0 and half 0. The
 calls that move between pages follow separately. The harness models the
 scheme as the option `paged`.
+
+## D27 The RAM BIOS table at BF00h — Adopted 2026-10-27
+
+The RAM copy of the BIOS jump table moves from `B500h`, just above the stub
+page, to `BF00h`, so the warm-boot entry that `0001h` names is `BF03h`, and
+so is the jump every boot puts in U9 half 1. A program that uses half 1
+then loses only its top page to TEC-OS. The workspace below the table holds
+the BIOS, CCP and BDOS state in one run, which ends below `BF00h`, so the
+warm-boot clear of the CCP and BDOS blocks never reaches the table; the GLCD
+text console sits above it. The TPA is unchanged at 45,830 bytes. Programs
+that follow `0001h` see no change.
+
 ## Open decisions
 
 | ID | Open item | Blocks |

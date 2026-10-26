@@ -62,9 +62,9 @@ CMUC1   EQU     3               ; GLCD and matrix keyboard
 BOOTSTK EQU     $8000           ; cold-boot stack top, fixed RAM
 STUBPG  EQU     TPATOP          ; stub page: BDOS entry at +6
 BDOSSTB EQU     TPATOP+6        ; value stored at 0006h
-RAMBIOS EQU     TPATOP+$100     ; page-aligned RAM copy of the BIOS jump table
+WSBASE  EQU     TPATOP+$100     ; first resident workspace byte
+RAMBIOS EQU     $BF00           ; RAM copy of the BIOS jump table, top page
 BIOSLEN EQU     17*3
-WSBASE  EQU     RAMBIOS+BIOSLEN ; first resident workspace byte
 
 ; ---- Resident stack sizes (measured: see docs/acceptance.md) --------------
 BDOSSTN EQU     64

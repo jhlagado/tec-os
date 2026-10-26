@@ -37,8 +37,8 @@ not supported. `COPY SOURCE DEST` is a TEC-OS built-in.
 Warm boot at `0000h`, BDOS vector at `0005h` (target `B406h`), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
-`0100h`. The BIOS jump table is page-aligned at `B500h` and reached through
-`0001h`. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
+`0100h`. The BIOS jump table is at `BF00h`, the top page of the bank window, and
+reached through `0001h`. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
 The user number survives warm boot.
 
 Warm boot puts the video display back into its console mode: on the

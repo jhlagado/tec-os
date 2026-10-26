@@ -79,19 +79,6 @@ ${rows(census.ram.regions)}
 | BIOS (warm boot, diagnostics) | ${hex(s.bios.base)}–${hex(s.bios.top - 1)} | ${s.bios.bytes} |
 | CCP | ${hex(s.ccp.base)}–${hex(s.ccp.top - 1)} | ${s.ccp.bytes} |
 | BDOS | ${hex(s.bdos.base)}–${hex(s.bdos.top - 1)} | ${s.bdos.bytes} |
-| Native OS | 0200h–02FFh | 256 |
-| Native application | 0300h–04FFh (guard 0300h–030Fh) | 512 |
-
-## Native profile fixed RAM
-
-| Addresses | Contents |
-| --- | --- |
-| 0000h–00FFh | Page zero, owned by TEC-OS |
-| 0100h–01FFh | Kernel state: bank ownership, call frames, service arguments |
-| 0200h–02FFh | OS stack |
-| 0300h–04FFh | Application stack |
-| 0500h–05FFh | Bank-copy bounce buffer |
-| 0600h–7FFFh | Application image and data |
 
 ## Serial timing
 

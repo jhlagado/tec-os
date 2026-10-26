@@ -1,6 +1,7 @@
 ; Resident workspace in the classic bank, from WSBASE upwards. The CCP and
-; BDOS blocks follow this one (CCPRAM, then BDOSRAM). Nothing here is
-; initialised by the image: cold and warm boot clear and set it.
+; BDOS blocks follow this one (CCPRAM, then BDOSRAM) and end below the RAM
+; BIOS table at BF00h; the GLCD text console sits above the table. Nothing
+; here is initialised by the image: cold and warm boot clear and set it.
 
         ORG     WSBASE
 
@@ -54,13 +55,6 @@ HWARGA: DS      1               ; hardware services: A on entry
 RNDST:  DS      2               ; RANDOM's state
 CONMOD: DS      1               ; console mode in effect (CMTTY..CMUC1)
 
-; ---- GLCD text console --------------------------------------------------------
-GLTEXT: DS      GLCOLS*GLROWS   ; characters on screen, row by row
-GLY:    DS      1               ; pixel row being drawn, 0-63
-GLW:    DS      1               ; 16-pixel word being drawn, 0-7
-GLROWP: DS      2               ; GLTEXT address of the text row being drawn
-GLOFF:  DS      1               ; pixel offset of a character within the word
-
 ; ---- Matrix keyboard scan state ----------------------------------------------
 KBMASK: DS      1               ; row select for the next row, one bit low
 KBBASE: DS      1               ; key number of that row's bit 0
@@ -76,3 +70,12 @@ BSTK:
 
 BIOSRME:
 CCPRAM  EQU     BIOSRME
+
+        ORG     RAMBIOS+BIOSLEN
+; ---- GLCD text console --------------------------------------------------------
+GLTEXT: DS      GLCOLS*GLROWS   ; characters on screen, row by row
+GLY:    DS      1               ; pixel row being drawn, 0-63
+GLW:    DS      1               ; 16-pixel word being drawn, 0-7
+GLROWP: DS      2               ; GLTEXT address of the text row being drawn
+GLOFF:  DS      1               ; pixel offset of a character within the word
+HIRME:
