@@ -425,7 +425,7 @@ of TEC-OS it affects.
   and the registers T36 leaves behind;
 - T21's set against a DS1302 that counts on from a written time, which
   checks the read-back, the roll-over to 2100 and that the restored clock is
-  within 2 s of where it would have been. Runtime 0.2.0's DS1302 stops
+  within 2 s of where it would have been. The runtime's DS1302 (0.3.0) stops
   counting once a time register is written, so the test keeps it counting;
 - T37's write, checking the card image's block 7 is unchanged after two
   writes;

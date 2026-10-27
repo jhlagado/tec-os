@@ -14,21 +14,6 @@ import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
 import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap";
 import { Ds1302 } from "@jhlagado/debug80-runtime/platforms/tec1g/ds1302";
 
-// The DS1302 puts each data bit out on a falling clock edge, the first one on
-// the fall after the last command bit; runtime 0.2.0 does it on rising edges,
-// which shifts every byte MON3 or TEC-OS reads by one bit. Until the runtime
-// is fixed, reads advance on the fall here.
-const ds1302Rise = Ds1302.prototype.handleClockRise;
-Ds1302.prototype.handleClockRise = function (ioIn) {
-  if (this.mode !== "read") ds1302Rise.call(this, ioIn);
-};
-const ds1302Write = Ds1302.prototype.write;
-Ds1302.prototype.write = function (value) {
-  const fall = this.ce && (value & 0x10) !== 0 && this.clk && (value & 0x40) === 0;
-  ds1302Write.call(this, value);
-  if (fall && this.mode === "read") ds1302Rise.call(this, 0);
-};
-
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
 const SD_PORT = 0xfd;

@@ -214,7 +214,7 @@ test("on an F18A-compatible VDP the probe reads the identity, scrolls one row an
 });
 
 /**
- * Keep the model's DS1302 counting after a write. Runtime 0.2.0 freezes its
+ * Keep the model's DS1302 counting after a write. Runtime 0.3.0 freezes its
  * time registers once one is written; the chip counts on from the time
  * written. The clock runs at 4 MHz cycles, from `start`.
  */

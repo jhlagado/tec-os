@@ -140,10 +140,8 @@ Notes:
   NUL included.
 - `BLOCK` reads only, into the caller's buffer; the BIOS's own buffer is not
   touched.
-- `RTC` uses the same bit sequence as MON3. Debug80 runtime 0.2.0 puts the
-  clock's data bits out on the rising clock edge, where the DS1302 uses the
-  falling one, so reads come back shifted by a bit; `host/machine.mjs`
-  corrects the model until the runtime is fixed.
+- `RTC` uses the same bit sequence as MON3: the DS1302 puts each data bit
+  out on a falling clock edge, as Debug80 runtime 0.3.0 models it.
 
 ## What earns ROM space
 
