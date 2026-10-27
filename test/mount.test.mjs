@@ -48,6 +48,9 @@ test("MOUNT takes a volume by label or index, refuses one in use, A: left empty 
   assert.match(m.command("MOUNT C: 5"), /Cannot mount/, "C: has no slot on a two-drive card");
   assert.match(m.command("MOUNT B: NOSUCH"), /No such volume/);
   assert.match(m.command("MOUNT B: 4"), /B: V4/);
+  const again = m.command("MOUNT B: 4");
+  assert.match(again, /B: V4 *\r\n/, "already there: said plainly");
+  assert.doesNotMatch(again, /Cannot/);
   assert.match(m.command("MOUNT B:"), /Unmounted/);
   assert.deepEqual(drvidx(m), [1, 0, 0, 0]);
   assert.deepEqual(m.violations, []);

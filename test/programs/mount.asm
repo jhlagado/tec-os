@@ -2,7 +2,8 @@
 ;   MOUNT B: NAME   the volume labelled NAME, found through describe
 ;   MOUNT B: 5      the volume at container index 5, as VOLS numbers them
 ;   MOUNT B:        unmounts B: (A: is never left empty)
-; Prints the drive and the volume's label, or the reason it would not.
+; Prints the drive and the volume's label (also when it is there already),
+; or the reason it would not.
 
 BDOS    EQU     $0005
 VOLSVC  EQU     $FF20
@@ -99,6 +100,18 @@ FIND2:  LD      HL,IDX
 
 MOUNTA: LD      E,A             ; mount index A on the drive
         LD      (IDX),A
+        LD      A,2             ; already there? then say so, not an error
+        LD      HL,DESC
+        CALL    VOLSVC
+        OR      A
+        LD      DE,NOVOL
+        JP      NZ,SAY
+        LD      A,(DRIVE)
+        LD      HL,DESC+14
+        CP      (HL)
+        JR      Z,SHOW
+        LD      A,(IDX)
+        LD      E,A
         LD      A,(DRIVE)
         LD      C,A
         XOR     A
@@ -111,7 +124,7 @@ MOUNTA: LD      E,A             ; mount index A on the drive
         LD      A,2
         LD      HL,DESC
         CALL    VOLSVC
-        LD      A,(DRIVE)
+SHOW:   LD      A,(DRIVE)
         ADD     A,'A'
         LD      (MNTD),A
         LD      HL,DESC+16
