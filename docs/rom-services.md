@@ -36,8 +36,9 @@ Its layout is fixed; entries are only added, with the minor version raised.
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. Bank 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; bank 1
 is EXPAND 1 from `8000h` up to its low mark, read at each call: cold boot
-sets the mark to `BFh`, so bank 1 is `8000h–BEFFh` until TEC-OS allocates
-part of EXPAND 1 for itself, top down, in whole pages. `MOVE` copies
+sets the mark to `BFh` and then takes `BE00h` for the CCP's levels and
+`BD00h` for the command history, so bank 1 is `8000h–BCFFh` until TEC-OS
+allocates more of EXPAND 1 for itself, top down, in whole pages. `MOVE` copies
 forward as `LDIR` does and returns `A = 0`, or `A = FFh` with nothing
 copied when an end lies outside its bank. A copy returns with the latch
 and the interrupt state as it found them. Cold boot clears EXPAND 1; its

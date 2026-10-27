@@ -45,6 +45,15 @@ supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   nest six deep.
 - `UNLOAD` removes the lowest resident.
 
+The prompt keeps a history of the lines typed at it. ^W puts the line before
+in the buffer, erasing the one shown, and ^N the line after; past the newest
+the line is empty. The line recalled can be edited and sent like a typed
+one. The history is a 256-byte ring at `BD00h` in EXPAND 1, shared by every
+CCP level, kept by warm boot and emptied by a reset. A line equal to the
+newest is not stored again, and nor is one holding a 0. Function 10 called by
+a program is CP/M 2.2's: ^W and ^N go into its buffer as characters, and its
+lines are not kept.
+
 `MOUNT B: NAME` (or an index, as `VOLS` lists them) puts another of the
 card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
 empty, and a volume is never on two drives. Both are programs on the starter

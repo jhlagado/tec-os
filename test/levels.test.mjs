@@ -38,7 +38,7 @@ test("a program shells out, its child level changes drive and user, and at EXIT 
   const out = cmd(m, "EXIT", /\r\nA>$/);
   assert.match(out, /SHELL OK 0007/, "stack, code, drive, user and the return code");
   assert.equal(level(m), 0);
-  assert.equal(m.read(m.sym("XMARK")), 0xbe, "the image's pages freed");
+  assert.equal(m.read(m.sym("XMARK")), 0xbd, "the image's pages freed");
   assert.deepEqual(m.violations, []);
 });
 
@@ -106,10 +106,11 @@ test("EXIT at level 0 and UNLOAD with no resident are refused; UNLOAD removes re
   assert.deepEqual(m.violations, []);
 });
 
-test("cold boot gives ABI 2.4 and takes the records' page first", async () => {
+test("cold boot gives ABI 2.4 and takes the records' page first, then the history's", async () => {
   const m = await machine({ ram96: true });
   assert.ok(m.read(0xff03) === 2 && m.read(0xff04) >= 4, "ABI 2.4 or later");
-  assert.equal(m.read(m.sym("XMARK")), m.sym("LVBASE") >> 8, "the records' page is the first allocation");
+  assert.equal(m.read(m.sym("XMARK")), m.sym("HRING") >> 8, "the records' page and the ring's are the first allocations");
+  assert.equal(m.sym("HRING"), m.sym("LVBASE") - 0x100, "the ring just below the records");
   cmd(m, "CCP");
   assert.equal(m.expand[1][(m.sym("LVBASE") - 0x8000) + 3], 0, "level 1's record holds drive and user");
   cmd(m, "EXIT");

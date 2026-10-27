@@ -113,8 +113,8 @@ MEMINIT:LD      A,LATEXP
         OUT     (SYSLAT),A
         LD      A,XMTOP         ; nothing allocated but the reserved page
         LD      (XMARK),A
-        LD      A,1             ; then the CCP's level records, at LVBASE
-        CALL    XALLOC
+        LD      A,2             ; then the CCP's level records, at LVBASE,
+        CALL    XALLOC          ; and the history ring below them, HRING
         LD      A,LATMAIN
         LD      HL,DETADR
         CALL    DETECT

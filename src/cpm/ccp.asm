@@ -77,6 +77,8 @@ MLREAD: CALL    SAVEDU
         LD      E,'>'
         CALL    PUTCHAR
         LD      DE,CMDBUF
+        LD      HL,HFLAG        ; history for this line
+        LD      (HL),$FF
         LD      C,10
         CALL    BDOS
 

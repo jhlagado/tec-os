@@ -85,7 +85,8 @@ function check(m, c, accepted) {
 }
 
 // The low mark after cold boot comes from the build: cold boot takes the CCP's
-// level records' page first, at LVBASE, so bank 1 is 8000h up to LVBASE.
+// level records' page at LVBASE and the history ring's below it, at HRING, so
+// bank 1 is 8000h up to HRING.
 const copies = (top) => [
 
   { label: "MAIN 0 to bank 1, 513 bytes", dst: 1, src: 0, hl: 0x9000, de: 0x1000, bc: 513 },
@@ -105,16 +106,16 @@ test("the FF00h table gives the EXPAND count at FF10h, XMOVE at FF12h, MOVE at F
     const m = boot(standardCard(), { ram96: true, mains });
     assert.ok(m.read(0xff03) === 2 && m.read(0xff04) >= 3, "ABI 2.3 or later");
     const at = (a) => m.read(m.read(a) | (m.read(a + 1) << 8));
-    assert.deepEqual([at(0xff0e), at(0xff10), at(0xff18)], [mains, 2, m.sym("LVBASE") >> 8], `MAIN ${mains}`);
+    assert.deepEqual([at(0xff0e), at(0xff10), at(0xff18)], [mains, 2, m.sym("HRING") >> 8], `MAIN ${mains}`);
     assert.deepEqual([m.read(0xff12), m.read(0xff15)], [0xc3, 0xc3]);
   }
 });
 
 test("MOVE copies between bank 0 and bank 1 as LDIR does, and changes nothing else", { timeout: 600_000 }, () => {
   for (const expandOnly of [false, true])
-    for (const c of copies(0xbe00)) {
+    for (const c of copies(0xbd00)) {
       const m = machine({ mains: expandOnly ? 1 : 2, seed: c.hl ^ c.de ^ c.bc });
-      assert.equal(m.read(m.sym("XMARK")) << 8, 0xbe00, "the post-cold-boot mark");
+      assert.equal(m.read(m.sym("XMARK")) << 8, 0xbd00, "the post-cold-boot mark");
       check(m, c, true);
     }
 });
@@ -142,7 +143,7 @@ test("without EXPAND 1, cold boot says TEC-OS needs 64K and stops", () => {
 
 test("MOVE refuses a bank-1 byte outside 8000h up to the low mark or a bank-0 byte at or above (0006h)", () => {
   const entry = 0xb806;
-  const top = 0xbe00; // the post-cold-boot mark, checked in the copies above
+  const top = 0xbd00; // the post-cold-boot mark, checked in the copies above
   for (const [c, ok] of [
     [{ label: "bank 1 from 7FFFh", dst: 0, src: 1, hl: 0x1000, de: 0x7fff, bc: 2 }, false],
     [{ label: "bank 1 past the mark", dst: 1, src: 0, hl: top - 0x100, de: 0x1000, bc: 0x101 }, false],
@@ -185,7 +186,7 @@ test("BDOS function 50 reaches the RAM BIOS table, XMOVE and MOVE, and refuses S
 test("cold boot clears EXPAND 1 and sets the low mark below its own first allocation; warm boot leaves both", () => {
   const m = boot(standardCard(), { ram96: true, ramFill: 0x76 });
   const mark = m.sym("XMARK");
-  assert.equal(m.read(mark), m.sym("LVBASE") >> 8);
+  assert.equal(m.read(mark), m.sym("HRING") >> 8);
   const wb = m.sym("WBOOTR");
   const want = (i) => (i === 0x3f03 ? 0xc3 : i === 0x3f04 ? wb & 0xff : i === 0x3f05 ? wb >> 8 : 0);
   assert.deepEqual(Array.from(m.expand[1]).flatMap((v, i) => (v === want(i) ? [] : [i + 0x8000])).slice(0, 4), [], "EXPAND 1 zero but for the jump at BF03h");

@@ -38,6 +38,8 @@ CTRLR   EQU     18
 CTRLS   EQU     19
 CTRLU   EQU     21
 CTRLX   EQU     24
+CTRLW   EQU     23
+CTRLN   EQU     14
 SPACE   EQU     32
 DELETE  EQU     $7F
 
@@ -225,6 +227,8 @@ PRLOOP:
         JR      PRLOOP
 
 FNLINE:
+        LD      A,(HHEAD)       ; no line shown from the history yet
+        LD      (HPOS),A
         LD      HL,(PARAM)
         LD      A,(HL)
         LD      (LINMAX),A
@@ -249,7 +253,7 @@ LINLOOP:
         CP      DELETE
         JR      Z,LINDEL
         CP      CTRLC
-        JR      Z,LINABRT
+        JP      Z,LINABRT
         CP      CTRLE
         JP      Z,LINEOL
         CP      CTRLR
@@ -258,6 +262,11 @@ LINLOOP:
         JP      Z,LINCTU
         CP      CTRLX
         JP      Z,LINCLEAR
+        CP      CTRLW
+        JR      Z,LINHIST
+        CP      CTRLN
+        JR      Z,LINHIST
+LINCHR:
         LD      A,(LINCNT)
         LD      B,A
         LD      A,(LINMAX)
@@ -283,6 +292,13 @@ LINLOOP:
 LINTGL:
         CALL    TOGLIST
         JR      LINLOOP
+
+LINHIST:
+        LD      A,(HFLAG)
+        OR      A
+        JR      Z,LINCHR        ; a program's call: a character
+        CALL    HREC
+        JP      LINLOOP
 
 LINBACK:
         LD      A,(LINCNT)
@@ -371,9 +387,12 @@ LINCTU:
         JP      LINLOOP
 
 LINCLEAR:
+        CALL    LINERASE
+        JP      LINLOOP
+LINERASE:
         LD      A,(LINCNT)
         OR      A
-        JP      Z,LINLOOP
+        RET     Z
         CALL    ERASE1
         LD      A,(LINCNT)
         DEC     A
@@ -381,7 +400,7 @@ LINCLEAR:
         LD      HL,(LINPTR)
         DEC     HL
         LD      (LINPTR),HL
-        JR      LINCLEAR
+        JR      LINERASE
 
 LINDONE:
         CALL    ECHOCHAR
@@ -389,6 +408,14 @@ LINDONE:
         INC     HL
         LD      A,(LINCNT)
         LD      (HL),A
+        INC     HL
+        EX      DE,HL
+        LD      B,A
+        LD      HL,HFLAG        ; the CCP's line, once: warm boot clears it too
+        LD      A,(HL)
+        LD      (HL),0
+        AND     B
+        CALL    NZ,HSTORE       ; a CCP line of at least one byte
         JP      RETZERO
 
 FNSTAT:
@@ -2372,6 +2399,8 @@ PENDCHR: DS      1
 LINPTR: DS      2
 LINMAX: DS      1
 LINCNT: DS      1
+HFLAG:  DS      1               ; FFh: the CCP's prompt, with history
+HPOS:   DS      1               ; the history line shown: its terminator
 CURDRV: DS      1
 DEFDRV: DS      1
 DEFDPB: DS      2

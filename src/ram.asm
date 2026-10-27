@@ -84,6 +84,9 @@ GLCWANT:DS      1               ; 1: a GLCD answered; the CCP's first entry load
 DRVPG:  DS      1               ; the installed driver's EXPAND 1 page, 0 for none
 DRVNP:  DS      1               ; and its pages
 
+; ---- Command-line history ------------------------------------------------------
+HHEAD:  DS      1               ; the offset the next line goes in at
+
 ; ---- XMOVE's banks for the next MOVE ------------------------------------------
 XMDST:  DS      1
 XMSRC:  DS      1
