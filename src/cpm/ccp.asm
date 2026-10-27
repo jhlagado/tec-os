@@ -53,7 +53,23 @@ STARTED:
 
 MAINLOOP:
         LD      SP,CSTKTOP
-        CALL    SAVEDU
+        LD      A,(CCPFLG)      ; a one-command level: run its line, then exit
+        OR      A
+        JR      Z,MLREAD
+        DEC     A
+        JP      NZ,XEXIT
+        LD      A,2
+        LD      (CCPFLG),A
+        LD      HL,(PRLN)
+        LD      DE,CMDLEN
+        LD      C,(HL)
+        LD      B,A
+        DEC     B
+        DEC     B
+        INC     BC
+        LDIR
+        JR      MLGOT
+MLREAD: CALL    SAVEDU
         ADD     A,'A'
         LD      E,A
         CALL    PUTCHAR
@@ -63,7 +79,7 @@ MAINLOOP:
         LD      C,10
         CALL    BDOS
 
-        LD      A,(CMDLEN)
+MLGOT:  LD      A,(CMDLEN)
         OR      A
         JP      Z,STARTED
         LD      B,A
@@ -167,6 +183,15 @@ NOTDRIVE:
         LD      DE,COPYKEY
         CALL    ISCMD
         JP      Z,CMDCOPY
+        LD      DE,CCPKEY
+        CALL    ISCMD
+        JP      Z,CMDCCP
+        LD      DE,EXITKEY
+        CALL    ISCMD
+        JP      Z,XEXIT
+        LD      DE,UNLKEY
+        CALL    ISCMD
+        JP      Z,CMDUNL
         LD      DE,CMDFCB
         CALL    UNAMBIG
         JP      C,BADCMD
@@ -1491,6 +1516,12 @@ CONKEY:
         DB      "CON",0
 COPYKEY:
         DB      "COPY",0
+CCPKEY:
+        DB      "CCP",0
+EXITKEY:
+        DB      "EXIT",0
+UNLKEY:
+        DB      "UNLOAD",0
 CPNOSRC:
         DB      "NO SOURCE",CR,LF,'$'
 CPNODST:

@@ -38,7 +38,20 @@ syntax of the CP/M 2.2 CCP. `DIR`'s output is TEC-OS's own: `NAME.EXT`
 columns that fit the display, then the file count and free space. `TYPE`
 and `DIR` pause with `[more]` when the screen fills. Programs that parse
 DR's `DIR` layout will not find it. `SUBMIT` and batch files are not
-supported. `COPY SOURCE DEST` is a TEC-OS built-in.
+supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
+
+- `CCP` starts a nested command processor; `EXIT` returns to the level that
+  started it, with that level's drive, user and warm-boot entry back. Levels
+  nest six deep.
+- `UNLOAD` removes the lowest resident.
+
+A program can shell out the same way, through `FF1Ah` (an interactive
+nested CCP) or `FF1Dh` (one command line, run with no prompt), passing the
+end of its own image in HL. TEC-OS keeps that much of the TPA in EXPAND 1
+while the nested level runs, puts it back at `EXIT` with the program's
+stack, drive and user, and returns the last program's BDOS function 108
+code in HL. Page zero is rebuilt by the nested level: a program keeps for
+itself whatever it needs from the default FCBs and the command tail.
 
 A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
 a relocatable file in Digital Research's PRL format. A PRL that begins with

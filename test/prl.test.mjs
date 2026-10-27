@@ -148,10 +148,11 @@ test("a driver is placed in EXPAND 1 below the low mark, relocated for its page"
   const m = await machine({ "DRV.PRL": await prl("drv") }, { ram96: true });
   const main = m.main[0].slice(0x1000);
   const stub = word(m, 6);
+  const t = m.read(m.sym("XMARK")); // the post-cold-boot mark
   m.command("DRV");
-  assert.equal(m.read(m.sym("XMARK")), 0xbd, "two pages taken");
-  const at = await programAt("drv", 0xbd00);
-  assert.deepEqual(Array.from(m.expand[1].slice(0x3d00, 0x3d00 + at.length)), Array.from(at), "the driver equals its source assembled at BD00h");
+  assert.equal(m.read(m.sym("XMARK")), t - 2, "two pages taken");
+  const at = await programAt("drv", (t - 2) << 8);
+  assert.deepEqual(Array.from(m.expand[1].slice(((t - 2) << 8) - 0x8000, ((t - 2) << 8) - 0x8000 + at.length)), Array.from(at), "the driver equals its source assembled at its base");
   assert.deepEqual(Array.from(m.main[0].slice(0x1000)).flatMap((v, i) => (v === main[i] ? [] : [i])).slice(0, 3), [], "MAIN 0 above the loader's scratch is untouched");
   assert.equal(word(m, 6), stub, "a driver does not move (0006h)");
   assert.deepEqual(m.violations, []);

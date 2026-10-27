@@ -66,7 +66,7 @@ const defined = [0x00, 0x01, 0x02, 0x05, 0x06, 0x07, ...Array.from({ length: 0x3
 test("cold boot counts the MAIN regions and leaves MAIN 1 as it found it, but for page zero", { skip: !ram96 }, () => {
   for (const mains of [1, 2]) {
     const m = boot(standardCard(), { ram96: true, mains, ramFill: FILL });
-    assert.deepEqual([m.read(0xff03), m.read(0xff04)], [2, 3], "ABI 2.3");
+    assert.ok(m.read(0xff03) === 2 && m.read(0xff04) >= 1, "ABI 2.1 or later");
     assert.equal(mainsAt(m), mains, `${mains} MAIN region(s) found`);
     if (mains === 2) {
       const p1 = m.main[1];

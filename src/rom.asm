@@ -22,5 +22,6 @@
 %INCLUDE "hwsvc.asm"
 %INCLUDE "xmove.asm"
 %INCLUDE "prl.asm"
+%INCLUDE "levels.asm"
 %INCLUDE "end.asm"
 %INCLUDE "abi.asm"
