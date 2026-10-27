@@ -101,9 +101,7 @@ write `0000h–07FFh` while the overlay is on, so neither behaviour matters.
 
 The reset path executes from the overlay alias at `0000h`, loads SP with an
 address in `0800h–7FFFh`, jumps to the same code at its `C000h` alias and only
-then clears the overlay. NMI can arrive before SP is loaded; the first
-instruction is `LD SP`, which leaves a ten-T-state window. That window is a
-documented residual risk.
+then clears the overlay.
 
 ## D05 Clock (Q03) — Adopted 2026-10-24
 
@@ -123,11 +121,9 @@ by keeping the TMS9918's interrupt enable (register 1 bit 5) clear.
 **Keypad NMI (revised 2026-10-27).** On the board the keypad drives NMI only
 through an optional jumper, fitted for compatibility with the original
 monitor alone. TEC-OS makes no provision for a keypad NMI, and the jumper
-stays off on a board that runs it. A program owes nothing at `0066h`, which
-is byte 10 of the default FCB at `005Ch`. The `RETN` the ROM still writes to
-`0066h` at reset, cold boot and warm boot is left from the earlier rule;
-nothing relies on it. `test/nmi.test.mjs` still presses the keypad through
-cold boot.
+stays off on a board that runs it. Neither the ROM nor page zero holds a
+handler at `0066h`, and a program owes nothing there; it is byte 10 of the
+default FCB at `005Ch`.
 
 ## D07 Console (Q03) — Adopted 2026-10-24
 
@@ -302,7 +298,7 @@ The emulation target is PICO9918's own VDP core (MIT, from
 and shipped in `debug80-runtime`. Until that lands, Debug80's TMS9918 model
 keeps the registers and VRAM and the web page draws 80-column text itself.
 
-## D22 48K RAM is the minimum — Adopted 2026-10-25
+## D22 48K RAM is the minimum — Adopted 2026-10-25, revised 2026-10-27
 
 TEC-OS requires RAM at `8000h–BFFFh` as well as the fixed 32K at
 `0000h–7FFFh`. No other memory configuration is supported: there is no 32K
@@ -313,9 +309,14 @@ established CP/M software expects 48K or more. A ROM in the window would add
 burning a new chip, where programs on the card update with a file copy.
 
 Cold boot checks the window before it clears the workspace. Without RAM
-there, it reports `TEC-OS needs 48K RAM: none at 8000h-BFFFh` on the serial
-console and stops. The check runs on the boot stack in fixed RAM and costs
-83 bytes of ROM.
+there, it reports `TEC-OS needs 48K RAM: none at 8000h-BFFFh` and stops. The
+check runs on the boot stack in fixed RAM, and the message goes straight to
+the serial port, because the console's state is in the missing RAM.
+
+The rest of the 96K paged memory (D26), MAIN 1 at `0000h–7FFFh` and
+EXPAND 1 at `8000h–BFFFh`, is optional. Cold boot detects it, and what uses
+it is present only when it is fitted; without it the page count reports no
+extra memory and TEC-OS works as on 48K.
 
 ## D23 One console device, chosen by the IOBYTE — Adopted 2026-10-25
 

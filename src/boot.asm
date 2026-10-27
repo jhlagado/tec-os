@@ -16,11 +16,6 @@ RESET:  LD      SP,BOOTSTK
 INT38:  EI
         RETI
 
-        DS      NMIVEC-($-$C000),$FF
-        ; NMI while the overlay is on: return with no stack use beyond the
-        ; return address the CPU pushed.
-NMIROM: RETN
-
 ROMSIG: DB      "TEC-OS",0
 ROMVERS:DW      ROMVER
 
@@ -31,16 +26,9 @@ COLD:   DI
         LD      A,LATCLAS
         OUT     (SYSLAT),A      ; overlay off, classic bank; execution is at C0xxh
         IM      1
-        LD      HL,$45ED        ; RETN at 0066h before anything else in page
-        LD      (NMIVEC),HL     ; zero changes: an NMI may arrive at any time
-        LD      HL,0            ; clear the rest of page zero
+        LD      HL,0            ; clear page zero
         LD      DE,1
-        LD      BC,NMIVEC-1
-        LD      (HL),L
-        LDIR
-        LD      HL,NMIVEC+2
-        LD      DE,NMIVEC+3
-        LD      BC,$FF-NMIVEC-2
+        LD      BC,$FF
         LD      (HL),L
         LDIR
         LD      A,LATCLAS
@@ -82,8 +70,6 @@ COLDERR:JP      DIAG
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
 ; stack, because the BIOS stack is in that bank.
 WBOOTR: DI
-        LD      HL,$45ED        ; the program that ended may have used 0066h
-        LD      (NMIVEC),HL
         LD      A,LATCLAS+LATEXP ; U9 half 1: its warm-boot jump, for an
         OUT     (SYSLAT),A      ; exit from a program that left it in
         LD      A,$C3
@@ -108,8 +94,7 @@ WBOOTR: DI
 ; Cold boot: count the low pages, and give low page 1 a copy of page zero.
 ; With LOWPAGE set, the complement of page 0's byte at DETADR is written; if
 ; page 0 then still holds its own byte, a second page is fitted. Both bytes
-; are put back. The copy switches the latch for every byte and uses no stack,
-; and gives page 1 its NMI vector first. Page 1's 0000h then reaches the RAM
+; are put back. The copy switches the latch for every byte and uses no stack. Page 1's 0000h then reaches the RAM
 ; BIOS table in the window, so an exit from page 1 warm boots into page 0.
 LOWINIT:LD      A,(LATCHV)
         LD      D,A             ; page 0
@@ -132,8 +117,6 @@ LOWINIT:LD      A,(LATCHV)
         LD      A,E
         OUT     (SYSLAT),A
         LD      (HL),C
-        LD      HL,$45ED        ; RETN at 0066h in page 1
-        LD      (NMIVEC),HL
         LD      A,D
         OUT     (SYSLAT),A
         LD      A,2
@@ -244,9 +227,17 @@ RAMPAT: LD      HL,$8000
         LD      A,($BFFF)
         CP      E
         RET     Z
-RAMBAD: LD      HL,RAMMSG
-        CALL    PUTS
-RAMSTOP:JR      RAMSTOP         ; NMI returns here through 0066h
+; Straight to the serial port: the console's state is in the missing RAM.
+RAMBAD: LD      A,$40           ; serial idle, for the first start bit
+        OUT     (DIGPORT),A
+        LD      HL,RAMMSG
+RAMOUT: LD      A,(HL)
+        OR      A
+        JR      Z,RAMSTOP
+        CALL    TXBYTE
+        INC     HL
+        JR      RAMOUT
+RAMSTOP:JR      RAMSTOP
 
 RAMMSG: DB      13,10,"TEC-OS needs 48K RAM: none at 8000h-BFFFh",13,10,0
 

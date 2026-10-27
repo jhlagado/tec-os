@@ -3,10 +3,10 @@
 // keyboard, and on the diagnostic console without a card. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
-// whenever SP reaches a new low in a stack, so each depth includes the NMI's
-// frame. NMIs are pressed only while 0066h holds RETN: the default FCB at
-// 005Ch-007Fh covers 0066h, so a program that uses it leaves no handler
-// there. Emulator evidence; the figures go to build/stack-census.json.
+// whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
+// writes no handler there (D06), so none is taken; a ROM with one would have
+// each depth include the NMI's frame. Emulator evidence; the figures go to
+// build/stack-census.json.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -113,7 +113,7 @@ function diagnosticRun() {
   return depths();
 }
 
-test("each stack keeps a quarter of its reservation free, with an NMI at its deepest point", { timeout: 1_800_000 }, async () => {
+test("each stack keeps a quarter of its reservation free", { timeout: 1_800_000 }, async () => {
   const runs = {
     serial: await consoleRun({}),
     pico9918: await consoleRun({ tms: true, matrix: true }),
@@ -125,7 +125,7 @@ test("each stack keeps a quarter of its reservation free, with an NMI at its dee
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; and the diagnostic console without a card. An NMI at each new depth.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; and the diagnostic console without a card. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

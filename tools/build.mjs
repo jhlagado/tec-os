@@ -218,7 +218,6 @@ async function buildProfile(name) {
   const at = (n) => need(symbols, n);
   check(at("RESET") === 0xc000, "RESET must be at C000h");
   check(at("INT38") === 0xc038, "INT38 must be at C038h");
-  check(at("NMIROM") === 0xc066, "NMIROM must be at C066h");
   check(at("COLD") < 0xc800, "cold boot entry must be inside the overlay window");
   check(at("CODEEND") <= at("ABITAB"), "code overruns the table at FF00h");
   check(at("ABITAB") === 0xff00, "ABI table must be at FF00h");

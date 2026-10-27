@@ -25,7 +25,6 @@ IOBYTE  EQU     $0003
 PZDU    EQU     $0004           ; user number (bits 4-7) and drive (bits 0-3)
 PZBDOS  EQU     $0005           ; JP to the BDOS stub
 RST7    EQU     $0038
-NMIVEC  EQU     $0066
 DEFDMA  EQU     $0080
 
 ; CP/M reserves 0040h-004Fh for BIOS scratch. TEC-OS keeps the state that must
@@ -68,9 +67,9 @@ RAMBIOS EQU     $BF00           ; RAM copy of the BIOS jump table, top page
 BIOSLEN EQU     17*3
 
 ; ---- Resident stack sizes (measured: see docs/acceptance.md) --------------
-; Each is its deepest use, with an NMI taken there, and a quarter more. The
-; CCP stack is also a transient's default stack: CP/M's eight levels, the
-; return word and an NMI need 20 bytes of it.
+; Each is its deepest use, as measured with an NMI frame on it, and a quarter
+; more. The CCP stack is also a transient's default stack: CP/M's eight
+; levels, the return word and an NMI frame need 20 bytes of it.
 BDOSSTN EQU     54
 CCPSTN  EQU     27
 BIOSSTN EQU     38

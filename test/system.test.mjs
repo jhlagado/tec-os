@@ -26,7 +26,6 @@ test("cold boot leaves the overlay off, the classic bank selected and the CCP pr
   assert.equal(m.read(0), 0xc3);
   assert.equal((m.read(1) | (m.read(2) << 8)) - 3, m.sym("RAMBIOS"));
   assert.equal(m.sym("RAMBIOS"), 0xbf00, "the RAM BIOS table is in the top page");
-  assert.equal(m.read(0x66), 0xed);
   noViolations(m);
 });
 
@@ -94,9 +93,10 @@ test("without a card the diagnostic console reports and retries", () => {
 test("without RAM at 8000h-BFFFh the boot says so on the serial console and stops", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: standardCard(), windowRam: false });
-  m.expect(/needs 48K RAM: none at 8000h-BFFFh\r\n$/, { from: 0, maxCycles: 20_000_000 });
+  m.runUntil(() => m.pc === m.sym("RAMSTOP"), 20_000_000, "RAMSTOP");
   const stop = m.cycles + 2_000_000;
   m.runUntil(() => m.cycles >= stop);
+  assert.equal(m.serialText(), "\r\nTEC-OS needs 48K RAM: none at 8000h-BFFFh\r\n");
   assert.equal(m.pc, m.sym("RAMSTOP"));
 });
 

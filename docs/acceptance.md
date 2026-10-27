@@ -21,7 +21,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | Milestone | Requirement | Test | Class | Result |
 | --- | --- | --- | --- | --- |
 | M0 | Hardware and source contract | [decisions.md](decisions.md) D01–D22 | — | Adopted, with open items O1–O4 |
-| M1 | Reset through the overlay, overlay exit, fixed stack | `system`: cold boot; `nmi`: cold boot | Emulator | Pass: latch 01h, no write to ROM or under the overlay |
+| M1 | Reset through the overlay, overlay exit, fixed stack | `system`: cold boot | Emulator | Pass: latch 01h, no write to ROM or under the overlay |
 | M1 | Repeated cold and warm starts, reset from a non-default bank | `system`: reset from dirty latch ×4, ^C warm boot | Emulator | Pass |
 | M1 | Missing RAM at `8000h–BFFFh` reported at boot | `system`: without RAM at 8000h | Emulator | Pass: serial message, then stops |
 | M1 | Diagnostic console without a card | `system`: no card | Emulator | Pass: error 01, retry works |
@@ -35,7 +35,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | M3 | Read-only media | `system`: read-only volume | Emulator | Pass: error reported, card unchanged |
 | M3 | Unmodified application saves a file that reopens after reset | `edit`: Edit saves, power cycle, reopens | Emulator | Pass |
 | M4 | Native banking | — | — | Withdrawn 2026-10-27: the native services are removed (D25) |
-| M4 | NMI through cold boot and the overlay exit | `nmi` | Emulator | Pass: hundreds of NMIs taken in each run |
+| M4 | NMI through cold boot and the overlay exit | — | — | Withdrawn 2026-10-27: TEC-OS makes no provision for a keypad NMI (D06) |
 | — | TMS9918 40 and 32 columns, ANSI subset, matrix keyboard, LCD status | `console` | Emulator | Pass |
 | — | GLCD 21 × 8 console when no TMS9918 answers; DIR fitted to 40 and 21 columns | `console` | Emulator | Pass |
 | — | TYPE and DIR pause per screen on 8 and 24 rows, count wrapped lines, stop on Q | `console` | Emulator | Pass |
@@ -64,17 +64,18 @@ breakdown is in [memory-map.md](memory-map.md).
 Classic TPA: 46,854 bytes (`0100h–B805h`) on the starter card, 46,086 with
 four 8 MiB volumes. Resident workspace: from the BDOS entry jump to `BFFFh`.
 
-Stack high-water marks from reset, with a keypad NMI taken at each new depth,
-on the serial console, the PICO9918 and the GLCD, and on the diagnostic
+Stack high-water marks from reset on the serial console, the PICO9918 and the GLCD, and on the diagnostic
 console without a card (`test/stacks`):
 
-| Stack | Reserved | Deepest use, NMI included |
+| Stack | Reserved | Deepest use |
 | --- | ---: | ---: |
-| BDOS | 54 | 40 |
+| BDOS | 54 | 38 |
 | CCP (also the default stack of transients that keep it) | 27 | 14 |
-| BIOS (cold and warm boot, diagnostics) | 38 | 28 |
+| BIOS (cold and warm boot, diagnostics) | 38 | 26 |
 
-Each reservation keeps at least a quarter free. The CCP's also gives a
+TEC-OS takes no NMI (D06). The reservations were set with an NMI frame
+taken at each stack's deepest point (BDOS 40, CCP 14, BIOS 28), and each
+keeps at least a quarter free. The CCP's also gives a
 transient on it CP/M's eight levels, its return word and an NMI, with a
 quarter free.
 
