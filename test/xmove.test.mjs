@@ -173,10 +173,12 @@ test("BDOS function 50 reaches the RAM BIOS table, XMOVE and MOVE, and refuses S
 test("without EXPAND 1, warm boot leaves the RAM BIOS table's warm-boot entry alone", () => {
   const m = boot(standardCard(), { ram96: true, expands: 1 });
   const at = m.sym("RAMBIOS") + 4;
-  const hook = m.read(at) | (m.read(at + 1) << 8);
-  m.command("DIR");
+  const old = m.read(at) | (m.read(at + 1) << 8);
+  [0xc3, old & 0xff, old >> 8].forEach((v, i) => m.write(0x4000 + i, v)); // a hook that chains on
+  [m.write(at, 0x00), m.write(at + 1, 0x40)];
+  m.mark = m.output.length;
   m.type("\x03");
   m.expect(/\r\nA>$/);
-  assert.equal(m.read(at) | (m.read(at + 1) << 8), hook);
+  assert.equal(m.read(at) | (m.read(at + 1) << 8), 0x4000, "the hooked entry survives the warm boot");
   assert.deepEqual(m.violations, []);
 });
