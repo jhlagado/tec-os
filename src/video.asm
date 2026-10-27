@@ -5,12 +5,10 @@
 ; them, leaving the picture alone, and VRDROW and VWRROW, which copy row B to
 ; and from LINEBUF. Scrolling is a line delete in the terminal.
 
-VIDINIT:LD      HL,GLCVEC
-        CALL    VIDSET
-        CALL    GLCINIT
+VIDINIT:CALL    GLCPRB          ; a GLCD: its driver, GLCD.PRL, is loaded later
         JR      NZ,VIDT
-        LD      HL,CONDEV
-        SET     2,(HL)          ; CDGLC
+        LD      A,1
+        LD      (GLCWANT),A
 VIDT:   LD      HL,TMSVEC
         CALL    VIDSET
         CALL    TMSINIT
@@ -38,7 +36,19 @@ VWRROW: LD      HL,(VWRRV)
         JP      (HL)
 
 TMSVEC: DW      TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR
-GLCVEC: DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
+
+; Whether the ST7920 GLCD answers on port 07h: Z when its busy flag clears
+; within 256 polls. The GLCD console itself is a driver in EXPAND 1.
+GLCCMD  EQU     $07
+GLCPRB: LD      B,0
+GLCPL:  IN      A,(GLCCMD)
+        RLCA
+        JR      NC,GLCPOK
+        DJNZ    GLCPL
+        OR      1
+        RET
+GLCPOK: XOR     A
+        RET
 
 ; Around a row move of rows C to VSBOT (the rest of the screen stays): on the
 ; PICO9918 the move is built in the hidden page, shown at the next flip.

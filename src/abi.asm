@@ -5,7 +5,7 @@
         ORG     $FF00
 ABITAB: DB      "TNA"           ; FF00h signature
         DB      2               ; FF03h ABI major version
-        DB      5               ; FF04h ABI minor version: 1 adds FF0Eh, 2 FF10h-FF17h, 3 FF18h, 4 FF1Ah-FF1Fh, 5 FF20h
+        DB      6               ; FF04h ABI minor version: 1 adds FF0Eh, 2 FF10h-FF17h, 3 FF18h, 4 FF1Ah-FF1Fh, 5 FF20h, 6 FF23h
         DB      0               ; FF05h native banks: none since 2.0
         JP      NONATSV         ; FF06h no services: status 1, carry set
         DW      VWID            ; FF09h console columns, then rows; 0 = serial only
@@ -18,4 +18,5 @@ ABITAB: DB      "TNA"           ; FF00h signature
         JP      XCCP            ; FF1Ah a nested CCP: HL = image end (ABI 2.4)
         JP      XCMD            ; FF1Dh one command line at DE, the same
         JP      VOLSVC          ; FF20h mount, unmount and describe (ABI 2.5)
+        DW      FONT            ; FF23h the console font, 8 bytes a character from 20h (ABI 2.6)
 ABIEND:

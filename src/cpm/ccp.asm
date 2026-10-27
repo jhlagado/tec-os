@@ -40,6 +40,7 @@ CCPENT:
         LD      E,A
         LD      C,32
         CALL    BDOS
+        CALL    GLCBOOT         ; once after cold boot, on a GLCD board
         LD      A,(BOOTDRV)
         OR      A
         JR      Z,STARTED
@@ -1034,6 +1035,11 @@ CONEND:
         CALL    SKIPSP
         OR      A
         JP      NZ,BADCMD
+        LD      A,B             ; UC1: the GLCD's driver, if it is not in
+        CP      CMUC1
+        PUSH    BC
+        CALL    Z,GLCLD
+        POP     BC
         LD      A,(IOBYTE)
         AND     $FC
         OR      B

@@ -79,12 +79,10 @@ KBTN:   DS      1               ; arrow-sequence bytes still to deliver
 KBT1:   DS      1               ; and the bytes themselves
 KBT2:   DS      1
 
-; ---- GLCD text console --------------------------------------------------------
-GLTEXT: DS      GLCOLS*GLROWS   ; characters on screen, row by row
-GLY:    DS      1               ; pixel row being drawn, 0-63
-GLW:    DS      1               ; 16-pixel word being drawn, 0-7
-GLROWP: DS      2               ; GLTEXT address of the text row being drawn
-GLOFF:  DS      1               ; pixel offset of a character within the word
+; ---- The GLCD driver -------------------------------------------------------
+GLCWANT:DS      1               ; 1: a GLCD answered; the CCP's first entry loads GLCD.PRL
+DRVPG:  DS      1               ; the installed driver's EXPAND 1 page, 0 for none
+DRVNP:  DS      1               ; and its pages
 
 ; ---- XMOVE's banks for the next MOVE ------------------------------------------
 XMDST:  DS      1

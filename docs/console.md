@@ -92,8 +92,20 @@ the display in use (see [compatibility.md](compatibility.md)).
 
 ## GLCD
 
-The ST7920 runs in its extended instruction set with graphics on. TEC-OS
-keeps the 168 characters on screen in RAM and draws each 16-pixel graphics
+The GLCD console is a driver, `GLCD.PRL` on the starter card, not part of
+the ROM. Its code, its screen text and its stack are all in EXPAND 1, so it
+takes nothing from programs; the terminal reaches it through `XCALL` (see
+[rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
+keyboard and no PICO9918, cold boot shows its banner and volumes on the
+serial terminal and the 20 × 4 LCD, and the CCP's first entry loads
+`A:GLCD.PRL` and makes the GLCD the console from the first prompt; without
+the file the console stays serial and the LCD shows `GLCD?`. `CON UC1:`
+loads it too, on a board that has both displays. Warm boot keeps it;
+`UNLOAD`, with no resident left, removes it and the console goes back to
+serial.
+
+The ST7920 runs in its extended instruction set with graphics on. The
+driver keeps the 168 characters on screen and draws each 16-pixel graphics
 word by composing the glyph rows of the two to four 6-pixel cells that
 overlap it, so no 1 KiB pixel buffer is needed. Writing a character redraws
 the words its cell touches; scrolling moves the text and redraws each row,

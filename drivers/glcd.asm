@@ -1,14 +1,34 @@
-; ST7920 128 x 64 GLCD console display: 21 columns x 8 rows of 6 x 8 cells.
-;
-; Port 07h is commands and 87h data. The controller runs in its extended
-; instruction set with graphics on. A graphics address is two commands, the
-; pixel row (80h + y, with y-32 for the lower half) then the 16-pixel word
-; (80h + x, plus 8 for the lower half), followed by the word's two data bytes.
-; Every access first waits for the busy flag, at most 256 polls.
-;
-; GLTEXT holds the characters on screen. A 16-pixel word is drawn by composing
-; the glyph rows of the two to four characters that overlap it, so no pixel
-; buffer is kept.
+; GLCD.PRL: the ST7920 128 x 64 GLCD console as a port driver in EXPAND 1,
+; 21 columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. The
+; ROM's terminal calls it through XCALL, the slot in L: its six hooks are the
+; video entries, in the order of the hook list below. It keeps its screen
+; text and counters here, reads the font in ROM through FF23h, moves rows
+; through the transfer buffer in EXPAND 1's reserved page, and touches
+; nothing in EXPAND 0.
+
+GLCOLS  EQU     21
+GLROWS  EQU     8
+XFER    EQU     $BF30           ; the row transfer buffer, 80 bytes
+
+        ORG     $0100
+HDR:    DB      "TNM",1,2,0     ; a driver
+        JP      0
+        DW      NOP,NOP         ; INIT and REMOVE: nothing to do
+        DB      "GLCD    "
+        DB      6               ; hooks: video entry, routine
+        DB      0
+        DW      GLCPUT
+        DB      1
+        DW      GLCGET
+        DB      2
+        DW      GLCCLR
+        DB      3
+        DW      GLCRST
+        DB      4
+        DW      GLRDR
+        DB      5
+        DW      GLWRR
+NOP:    RET
 
 GLCCMD  EQU     $07
 GLCDAT  EQU     $87
@@ -40,49 +60,11 @@ GLCDW:  PUSH    AF
         OUT     (GLCDAT),A
         RET
 
-; Detect the display and start it in graphics mode with a blank screen.
-; Z when present.
-GLCINIT:CALL    GLCWAIT
-        RET     NZ
-        LD      HL,GLCSEQ
-        LD      B,5
-GLCI:   LD      A,(HL)
-        CALL    GLCC
-        INC     HL
-        DJNZ    GLCI
-        LD      HL,GLTEXT
-        LD      (HL),' '
-        LD      DE,GLTEXT+1
-        LD      BC,GLCOLS*GLROWS-1
-        LDIR
-        LD      A,GLCOLS
-        LD      (VWID),A
-        LD      A,GLROWS
-        LD      (VHGT),A
-        XOR     A
-        LD      (VROW),A
-        LD      (VCOL),A
-        LD      (GLY),A         ; blank graphics RAM: 64 rows of 16 zero bytes
-        LD      (GLW),A
-GLCZR:  CALL    GLCSETA
-        LD      B,16
-GLCZB:  XOR     A
-        CALL    GLCDW
-        DJNZ    GLCZB
-        LD      HL,GLY
-        INC     (HL)
-        LD      A,(HL)
-        CP      64
-        JR      NZ,GLCZR
-        XOR     A
-        RET
-; Basic set, display on, clear text, extended set, graphics on.
-GLCSEQ: DB      $30,$0C,$01,$34,$36
-
-; Copy row B to LINEBUF, or LINEBUF to row B and redraw it.
+; Copy row B to the transfer buffer, or the transfer buffer to row B and
+; redraw it. The ROM moves the buffer to and from LINEBUF around the call.
 GLRDR:  LD      C,0
         CALL    GLCADR
-        LD      DE,LINEBUF
+        LD      DE,XFER
         LD      BC,GLCOLS
         LDIR
         RET
@@ -90,25 +72,25 @@ GLWRR:  PUSH    BC
         LD      C,0
         CALL    GLCADR
         EX      DE,HL
-        LD      HL,LINEBUF
+        LD      HL,XFER
         LD      BC,GLCOLS
         LDIR
         POP     BC
         JP      GLCROW
 
-; Warm boot through VREST: put the controller back in graphics mode with the
-; display on. Graphics RAM keeps whatever a program drew until the console
-; next writes over it.
+; VREST, at install and at warm boot: put the controller in graphics mode
+; with the display on and its text layer clear. Graphics RAM keeps whatever
+; a program drew until the console next writes over it.
 GLCRST: CALL    GLCWAIT
         RET     NZ
         LD      HL,GLCMOD
-        LD      B,4
+        LD      B,5
 GLCRSL: LD      A,(HL)
         CALL    GLCC
         INC     HL
         DJNZ    GLCRSL
         RET
-GLCMOD: DB      $30,$0C,$34,$36
+GLCMOD: DB      $30,$0C,$01,$34,$36
 
 ; HL = GLTEXT address of row B, column C. Preserves BC, DE.
 GLCADR: PUSH    DE
@@ -325,7 +307,7 @@ GLGL1:  LD      L,A
         AND     7
         ADD     A,L
         LD      L,A
-        LD      BC,FONT
+        LD      BC,($FF23)      ; the ROM's font, through the FF00h table
         ADD     HL,BC
         LD      A,(HL)
         BIT     7,E
@@ -337,3 +319,10 @@ GLGL2:  POP     DE
 
 ; For each word: the first character it touches and how many.
 GLCSPAN:DB      0,3, 2,4, 5,3, 8,3, 10,4, 13,3, 16,3, 18,3
+
+; ---- State: the screen's characters and the drawing counters -----------------
+GLTEXT: DS      GLCOLS*GLROWS,' '
+GLY:    DS      1
+GLW:    DS      1
+GLROWP: DS      2
+GLOFF:  DS      1

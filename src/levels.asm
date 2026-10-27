@@ -192,5 +192,20 @@ CMDCCP: XOR     A
 CMDUNL: LD      HL,(PZTOP)
         LD      L,0
         CALL    PRLREM
+        JP      NC,STARTED
+        LD      A,(DRVPG)       ; no resident: the driver, if there is one
+        OR      A
+        JP      Z,BADCMD
+        LD      H,A
+        LD      L,0
+        LD      A,(DRVNP)
+        CALL    XFREE
         JP      C,BADCMD
+        XOR     A
+        LD      (DRVPG),A
+        LD      HL,CONDEV       ; the console back to serial, the vector off
+        RES     2,(HL)          ; the freed driver
+        LD      HL,TMSVEC
+        CALL    VIDSET
+        CALL    SERCON
         JP      STARTED

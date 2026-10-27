@@ -4,7 +4,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
+import { Machine } from "./lib/machine.mjs";
+import { GLCD_PRL, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 test("with a PICO9918 and the matrix keyboard, the screen is the console and serial is quiet", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
@@ -27,7 +28,9 @@ test("without the matrix keyboard the serial terminal is the console, even with 
 });
 
 test("CON switches the console between devices and falls back to serial", () => {
-  const m = boot(standardCard(), { tms: true, matrix: true });
+  const image = standardCard();
+  volume(image, "A").write("GLCD.PRL", GLCD_PRL); // CON UC1: loads the GLCD's driver
+  const m = boot(image, { tms: true, matrix: true });
   assert.match(m.command("CON"), /CON: CRT: PICO9918/);
   m.mark = m.output.length;
   m.typeMatrix("con uc1:\r");
@@ -116,13 +119,18 @@ test("DIR lays out names to fit the display and reports free space", () => {
   ]);
   const glcd = boot(image, { matrix: true });
   glcd.command("DIR *.COM");
-  assert.deepEqual(glcd.glcdScreen().slice(-5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1004K free", "A>"]);
+  const g = glcd.glcdScreen();
+  const from = g.indexOf("COPY.COM"); // GLCD.PRL, the GLCD's driver, is on A: too
+  assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1002K free", "A>"]);
   assert.match(tms.command("DIR B:"), /NO FILE/);
 });
 
 test("the GLCD is the console when no TMS9918 answers", () => {
   const m = boot(standardCard(), { matrix: true });
-  assert.deepEqual(m.glcdScreen().slice(0, 6), ["", "TEC-OS 0.1 for TEC-1G", "A: SYSTEM", "B: WORK", "", "A>"]);
+  // The banner and the volumes go to serial and the LCD; the CCP's first
+  // entry loads GLCD.PRL, and the GLCD is the console from its first prompt.
+  assert.match(m.serialText(), /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK/);
+  assert.equal(m.glcdScreen().find((l) => l !== ""), "A>");
   m.mark = m.output.length;
   m.typeMatrix("save 1 g.com\r");
   m.expect(/A>$/);
@@ -189,7 +197,7 @@ test("a long DIR pauses too", () => {
     pauses += 1;
   }
   assert.equal(pauses, 4, "31 lines at 7 lines a screen");
-  assert.match(all, /30 files/);
+  assert.match(all, /31 files/);
 });
 
 test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
@@ -276,5 +284,27 @@ test("a row move on the PICO9918 is built out of sight and shown when the progra
   m.runUntil(() => m.tmsLayout().base !== page, 100_000_000, "the flip");
   assert.deepEqual(m.screen().slice(0, 3), ["L2", "L3", ""], "the moved rows appear at once");
   m.expect(/A>$/);
+  assert.deepEqual(m.violations, []);
+});
+
+test("a GLCD board without GLCD.PRL keeps the serial console, and the LCD says so", () => {
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });
+  m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  assert.equal(m.read(3) & 3, 0, "TTY:");
+  assert.match(m.serialText(), /A>$/);
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "GLCD?");
+});
+
+test("UNLOAD removes the GLCD's driver and the console goes back to serial", () => {
+  const m = boot(standardCard(), { matrix: true });
+  assert.equal(m.read(3) & 3, 3);
+  const mark = m.read(m.sym("XMARK"));
+  m.mark = m.output.length;
+  m.typeMatrix("unload\r");
+  m.expect(/A>$/);
+  assert.equal(m.read(3) & 3, 0, "TTY:");
+  assert.ok(m.read(m.sym("XMARK")) > mark, "its pages freed");
+  assert.notEqual(m.read(m.sym("VPUTV")) | (m.read(m.sym("VPUTV") + 1) << 8), m.sym("THK0"), "the vector off the driver");
   assert.deepEqual(m.violations, []);
 });

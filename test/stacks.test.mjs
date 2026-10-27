@@ -13,7 +13,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, program, romFor, standardCard, volume, withGlcd } from "./lib/fixtures.mjs";
 
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode"];
 const COMMANDS = [
@@ -91,6 +91,7 @@ async function consoleRun(opts) {
   for (const n of PROGRAMS) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
+  withGlcd(image, { tms: false, matrix: false, ...opts });
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });

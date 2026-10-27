@@ -97,7 +97,7 @@ CONSW3: CP      CMUC1
         AND     CDGLC+CDMTX
         CP      CDGLC+CDMTX
         JR      NZ,CONSWT
-        LD      HL,GLCVEC
+        LD      HL,DRVVEC       ; CDGLC: GLCD.PRL is installed
         LD      DE,GLCOLS+256*GLROWS
         JR      CONSWV
 CONSW2: CP      CMBAT
@@ -110,6 +110,7 @@ CONSWN: LD      (CONMOD),A
 CONSWV: PUSH    BC              ; B = the video mode
         PUSH    DE
         CALL    VIDSET
+        CALL    VREST           ; the display in its mode before the clear
         POP     DE
         LD      (VWID),DE       ; columns, then rows
         CALL    VTREGR

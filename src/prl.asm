@@ -94,6 +94,7 @@ PRLJP:  JP      (HL)
 
 ; A driver: B pages from XALLOC, copied into EXPAND 1 by the copy core.
 PRLDRV: LD      A,B
+        LD      (DRVNP),A
         CALL    XALLOC
         RET     C
         LD      A,H
@@ -107,7 +108,31 @@ PRLDRV: LD      A,B
         LD      DE,PRLCODE
         LD      BC,(PRLN)
         CALL    MVCOPY          ; past MOVE's range check: the pages are ours
-        JR      PRLDONE
+        LD      A,(PRLPG)
+        LD      (DRVPG),A
+        LD      HL,PRLCODE+21   ; its hooks: a count, then entry and address
+        LD      B,(HL)
+        INC     HL
+PRLHK:  LD      A,B             ; each address into the call table's slot
+        OR      A
+        JR      Z,PRLDONE
+        LD      A,(HL)
+        INC     HL
+        PUSH    BC
+        PUSH    HL
+        EX      DE,HL
+        ADD     A,A
+        ADD     A,XTABLE-$BF00
+        LD      L,A
+        LD      H,XTABLE>>8
+        LD      BC,2
+        CALL    LVTO1
+        POP     HL
+        INC     HL
+        INC     HL
+        POP     BC
+        DEC     B
+        JR      PRLHK
 
 ; Relocate the n bytes at 0200h for page A, by the bitmap after them.
 PRLREL: LD      (PRLPG),A

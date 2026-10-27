@@ -5,8 +5,8 @@ services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,900 bytes (`debug80`) and has 1,484 free:
-1,263 below the table at `FF00h`, where code can go, and 221 above it.<!-- end --> This
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,699 bytes (`debug80`) and has 1,685 free:
+1,466 below the table at `FF00h`, where code can go, and 219 above it.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
@@ -18,7 +18,7 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | --- | --- |
 | `FF00h` | `"TNA"` signature |
 | `FF03h` | ABI major version, 2 |
-| `FF04h` | ABI minor version, 5 |
+| `FF04h` | ABI minor version, 6 |
 | `FF05h` | Native banks: 0 since ABI 2.0 |
 | `FF06h` | `JP` to a routine that refuses every call: status 1, carry set (the native services until ABI 2.0) |
 | `FF09h` | Address of the console size, columns then rows |
@@ -31,6 +31,7 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | `FF1Ah` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = the end of the caller's image in, function 108's code out (ABI 2.4) |
 | `FF1Dh` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt (ABI 2.4) |
 | `FF20h` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed (ABI 2.5) |
+| `FF23h` | Address of the console font, 8 bytes a character from 20h, for drivers (ABI 2.6) |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. Bank 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; bank 1
@@ -72,6 +73,21 @@ The rules that make the services safe for CP/M programs:
   them from inside its own BDOS-heavy code without re-entry.
 - **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
   the serial transmit line, high.
+
+## Drivers in EXPAND 1
+
+A port driver, such as the GLCD console, lives in EXPAND 1 with its data and
+its stack, and is loaded from a PRL whose module header (kind 2) lists the
+entries it hooks. The ROM reaches its routines through `XCALL`: a thunk in
+ROM loads `L` with the routine's slot in the call table in EXPAND 1's
+reserved page and jumps to `XCALL`, which switches EXPAND 1 in with
+interrupts off, moves to the driver stack, calls the routine with `A`, `BC`
+and `DE` as given, and switches back. The routine's `A`, `BC`, `DE` and `HL`
+come back as it left them; `SP`, the latch and the interrupt state are as
+they were; `XCALL` destroys `AF'`. A driver never touches EXPAND 0; rows the
+terminal moves through `LINEBUF` reach it through a transfer buffer in the
+reserved page. One display driver hooks the six video entries, slots 0–5;
+slots 6 and 7 are for another device.
 
 Page zero's restart vectors at `0008h–0037h` are left to programs and
 debuggers. A warm boot, like a cold boot, puts seven zeros and a `RET` in
@@ -159,8 +175,8 @@ that programs share as ATOM include files.
 | ANSI terminal | 579 | 2 | Stays |
 | Video switch | 60 | 2 | Stays |
 | PICO9918 text console | 292 | 1, 2 | Stays |
-| GLCD text console | 472 | 1, 2 | Stays: the console when no video card answers |
-| Font, 96 characters | 768 | 1 | Stays: both consoles need it before the card is read |
+| GLCD text console | — | 1, 2 | Moved to `GLCD.PRL`, a driver in EXPAND 1, loaded at the CCP's first entry |
+| Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD driver reads it through `FF23h` |
 | 20 × 4 LCD | 152 | 2 | Stays |
 | SD driver | 554 | 1 | Stays |
 | Container mount and checks | 757 | 1 | Stays |
@@ -223,7 +239,7 @@ that uses them.
 
 ## Next in the ROM
 
-In order, for the <!-- media: below-ff00 -->1,263<!-- end --> bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
+In order, for the <!-- media: below-ff00 -->1,466<!-- end --> bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
 32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
 resident monitor with Intel HEX loading. A disassembler does not fit, and
 floating point and drawing stay on the card.

@@ -6,6 +6,7 @@ import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { assembleProgram } from "../../tools/lib/assemble.mjs";
+import { makePrl } from "../../tools/lib/prl.mjs";
 import { Machine, loadSymbols } from "./machine.mjs";
 import { createContainer, parseContainer, findVolume, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
@@ -95,9 +96,23 @@ export function volume(image, drive) {
 /** The DS1302's time when a test machine starts: 1 January 2026, 12:00:00. */
 export const TEST_CLOCK = new Date(2026, 0, 1, 12, 0, 0);
 
+/** GLCD.PRL, the GLCD console driver, built from drivers/glcd.asm. */
+export const GLCD_PRL = await makePrl(resolve(ROOT, "drivers/glcd.asm"), resolve(ROOT, "build/prl"));
+
+/**
+ * Put GLCD.PRL on drive A of IMAGE when the machine has the matrix keyboard
+ * and no PICO9918, as a GLCD board's card has it, so the CCP's first entry
+ * makes the GLCD the console.
+ */
+export function withGlcd(image, { tms = false, matrix = false } = {}) {
+  if (matrix && !tms && !volume(image, "A").list().some((f) => f.name === "GLCD.PRL")) volume(image, "A").write("GLCD.PRL", GLCD_PRL);
+  return image;
+}
+
 /** Boot a machine to the first CCP prompt. Its clock starts at TEST_CLOCK. */
 export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false, ram96 = false, mains = 2, expands = 2 } = {}) {
   const { rom, symbols } = romFor(profile);
+  if (sdImage) withGlcd(sdImage, { tms, matrix });
   const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, ram96, mains, expands, clock: TEST_CLOCK });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");

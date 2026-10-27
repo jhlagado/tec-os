@@ -13,6 +13,7 @@ HDR:    DB      "TNM",1,2,0
         DW      INIT
         DW      INIT
         DB      "DRV     "
+        DB      0               ; no hooks
 
 INIT:   LD      HL,TABLE
         LD      DE,FAR
