@@ -68,7 +68,9 @@ MOVE:   LD      A,(XMDST)
         CALL    MVRANGE
         EX      DE,HL
         JP      C,MVBAD
-        LD      A,B
+; MVCOPY: the copy without the range check, for the ROM's own copies into
+; pages it has allocated (XMDST and XMSRC set, HL, DE and BC as MOVE's).
+MVCOPY: LD      A,B
         OR      C
         JP      Z,MVOK
         LD      A,I             ; P/V = the interrupt state

@@ -51,6 +51,8 @@ BENTRY:
         LD      A,C
         CP      50
         JR      Z,FNBIOS
+        CP      108
+        JR      Z,FNRETC
         CP      41
         JR      NC,RETZERO
         ADD     A,A
@@ -139,6 +141,20 @@ FNBIOSG:
 FNBIOSR:
         LD      SP,(OLDSP)
         RET
+
+; Function 108, CP/M 3's program return code: DE = FFFFh gets it into HL;
+; any other DE sets it. One code for every level.
+FNRETC:
+        LD      HL,(PARAM)
+        LD      A,H
+        AND     L
+        INC     A
+        JR      Z,FNRETG
+        LD      (PRGCODE),HL
+        JP      RETZERO
+FNRETG:
+        LD      HL,(PRGCODE)
+        JP      RETWORD
 
 FNCIN:
         CALL    GETCHAR

@@ -10,11 +10,13 @@ the volumes mounted. It reports version 2.2.
 
 The BDOS is an adaptation of Portable CP/M, which implements functions 0–40
 with their documented conventions; 38 and 39 return zero, and functions above
-40 return zero, except 50. Function 50 is CP/M 3's direct BIOS call: `DE`
+40 return zero, except 50 and 108. Function 50 is CP/M 3's direct BIOS call: `DE`
 points at the BIOSPB (function, A, BC, DE, HL). Functions 0–16 go through
 the RAM BIOS table, so hooks apply; 25 is `MOVE` and 29 `XMOVE`, for copies
 to and from EXPAND 1 (see rom-services.md); any other, `SELMEM` (27) among them,
-returns `A = FFh`. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
+returns `A = FFh`. Function 108 is CP/M 3's program return code: `DE =
+FFFFh` gets it into `HL`, any other `DE` sets it; one code serves every
+program, and it is 0 after a reset. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
 
 | Area | Functions | Result |
 | --- | --- | --- |
@@ -33,10 +35,24 @@ returns `A = FFh`. Function 12 still reports 2.2. The probe in `test/programs/pr
 
 `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the
 syntax of the CP/M 2.2 CCP. `DIR`'s output is TEC-OS's own: `NAME.EXT`
-columns that fit the display, then the file count and free space (decision
-D19). `TYPE` and `DIR` pause with `[more]` when the screen fills. Programs
-that parse DR's `DIR` layout will not find it. `SUBMIT` and batch files are
-not supported. `COPY SOURCE DEST` is a TEC-OS built-in.
+columns that fit the display, then the file count and free space. `TYPE`
+and `DIR` pause with `[more]` when the screen fills. Programs that parse
+DR's `DIR` layout will not find it. `SUBMIT` and batch files are not
+supported. `COPY SOURCE DEST` is a TEC-OS built-in.
+
+A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
+a relocatable file in Digital Research's PRL format. A PRL that begins with
+TEC-OS's module header (`"TNM"`, a version and a kind) is installed rather
+than run:
+
+- **A resident** goes in whole pages just below the BDOS entry, and the
+  word at `0006h` moves down to the jump at its offset 6, which leads on to
+  the old entry; warm boot keeps it there. Programs that size themselves
+  from `0006h` never reach it. Residents are removed last in, first out,
+  and a reset clears them.
+- **A driver** goes into EXPAND 1, below its low mark.
+
+Any other PRL is a program, loaded at `0100h` as its `.COM` would be.
 
 ## Base page
 

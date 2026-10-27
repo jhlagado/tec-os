@@ -53,6 +53,8 @@ COLDRT: CALL    SDINIT
         CALL    MOUNT
         JR      NZ,COLDERR
         CALL    ALVINIT
+        LD      HL,(STUBAD)     ; no residents yet
+        LD      (PZTOP),HL
         LD      HL,BIOSBAS      ; the RAM BIOS table, at cold boot only: warm
         LD      DE,RAMBIOS      ; boot leaves it, and any entry a program has
         LD      BC,BIOSLEN      ; replaced, alone, as CP/M 2.2 does
@@ -168,8 +170,9 @@ PZINIT: LD      A,$C3
         LD      HL,RAMBIOS+3
         LD      ($0001),HL
         LD      (PZBDOS),A
-        LD      HL,(STUBAD)
+        LD      HL,(PZTOP)      ; the lowest resident's entry, or the stub
         LD      (PZBDOS+1),HL
+        LD      HL,(STUBAD)
         LD      (HL),A
         INC     HL
         LD      (HL),LOW(BENTRY)

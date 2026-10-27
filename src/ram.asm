@@ -84,4 +84,8 @@ XMDST:  DS      1
 XMSRC:  DS      1
 MVREST: DS      2               ; MOVE: the bytes left for the byte loop
 XMARK:  DS      1               ; EXPAND 1's low mark (FF18h points here)
+PZTOP:  DS      2               ; the current top, which warm boot puts at 0006h
+PRGCODE:DS      2               ; BDOS function 108's program return code
+PRLN:   DS      2               ; the PRL loader: code length
+PRLPG:  DS      1               ; and destination page
 HIRME:

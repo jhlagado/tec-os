@@ -177,8 +177,18 @@ NOTDRIVE:
         LD      A,'M'
         LD      (CMDFCB+11),A
         CALL    LOADCOM
+        JR      NC,CMDRUN
+        JR      NZ,BADCMD       ; there, but it would not load
+        LD      HL,'R'*256+'P'  ; no NAME.COM: NAME.PRL
+        LD      (CMDFCB+9),HL
+        LD      A,'L'
+        LD      (CMDFCB+11),A
+        CALL    LOADCOM
         JR      C,BADCMD
-        CALL    PREPPAGE
+        CALL    PRLGO
+        JR      C,BADCMD
+        JP      NZ,STARTED      ; a module installed
+CMDRUN: CALL    PREPPAGE
         ; Keep the return word outside default DMA ($0080..$00FF). The
         ; resident stack supplies 25 free bytes beneath this two-byte word.
         LD      SP,CSTKTOP
