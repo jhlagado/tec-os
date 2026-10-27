@@ -5,6 +5,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
 import { TEST_CLOCK, boot, program, romFor, volume } from "./lib/fixtures.mjs";
 import { createContainer, descriptorAt, headerChecksum, tableSum } from "../tools/lib/container.mjs";
@@ -108,3 +109,12 @@ test("cold boot refuses a table out of order, an overlap, a payload past the con
   sum.set([h & 0xff, h >> 8], 20);
   assert.equal(errorOf(sum), "25", "the table sum");
 });
+
+test("on a card of more than 15 volumes, the boot lists and the LCD show each drive's own volume", async () => {
+  const m = await machine();
+  assert.match(m.bootText, /A: SYSTEM *\r\nB: WORK *\r\n/, "the console's list, in drive order");
+  const lcd = serializeTec1gUpdateFromRuntimeState(m.tec1g.state).lcd;
+  const row = (r) => String.fromCharCode(...lcd.slice(r * 20, r * 20 + 20)).trimEnd();
+  assert.deepEqual([row(1), row(2)], ["A: SYSTEM", "B: WORK"]);
+});
+

@@ -55,12 +55,12 @@ LCDS:   LD      A,(HL)
 LCDROWS:DB      $80,$C0,$94,$D4
 
 ; Show the drive letters and labels of drives A and B on rows 1 and 2.
-LCDVOLS:LD      IX,BLKBUF+HDESC
-        LD      A,(MNTCNT)
-        LD      B,A
-LCDV:   LD      A,(IX+DMOUNT)
-        CP      2
-        JR      NC,LCDVN        ; only A and B fit
+LCDVOLS:LD      C,0
+LCDV:   PUSH    BC
+        CALL    DRVDESC
+        POP     BC
+        JR      NZ,LCDVN
+        LD      A,C
         PUSH    BC
         LD      HL,LINEBUF
         ADD     A,'A'
@@ -79,15 +79,18 @@ LCDV:   LD      A,(IX+DMOUNT)
         LDIR
         XOR     A
         LD      (DE),A
-        LD      A,(IX+DMOUNT)
+        POP     BC
+        PUSH    BC
+        LD      A,C
         INC     A
         LD      B,A
         LD      HL,LINEBUF
         CALL    LCDROW
         POP     BC
-LCDVN:  LD      DE,DSCSZ
-        ADD     IX,DE
-        DJNZ    LCDV
+LCDVN:  INC     C
+        LD      A,C
+        CP      2               ; only A and B fit
+        JR      C,LCDV
         RET
 
 LCDBAN: DB      "TEC-OS ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0

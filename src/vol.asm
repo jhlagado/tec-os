@@ -648,14 +648,11 @@ HSSUB:  LD      C,A
         RET
 
 ; Print the mounted drives: letter, label and size.
-SHOWVOL:LD      C,0
-        LD      IX,BLKBUF+HDESC ; the header is still in BLKBUF after MOUNT
-        LD      A,(MNTCNT)
-        LD      B,A
+SHOWVOL:LD      C,0             ; each mounted drive, in drive order
 SHV:    PUSH    BC
+        CALL    DRVDESC
+        JR      NZ,SHVN
         LD      A,(IX+DMOUNT)
-        CP      DUNMNT
-        JR      Z,SHVN
         ADD     A,'A'
         CALL    PUTA
         LD      A,':'
@@ -681,10 +678,24 @@ SHVL:   LD      A,(HL)
         LD      HL,ROTXT
         CALL    PUTS
 SHVRW:  CALL    PUTCRLF
-SHVN:   LD      DE,DSCSZ
-        ADD     IX,DE
+SHVN:   POP     BC
+        INC     C
+        LD      A,C
+        CP      MAXDRV
+        JR      C,SHV
+        RET
+
+; IX -> the descriptor of the volume on drive C, read from its block of the
+; table. NZ if the drive has none or the block does not read. Keeps C.
+DRVDESC:LD      HL,DRVIDX
+        LD      B,0
+        ADD     HL,BC
+        LD      A,(HL)
+        SUB     1
+        RET     C               ; NZ as well: none here
+        PUSH    BC
+        CALL    DESCIX
         POP     BC
-        DJNZ    SHV
         RET
 
 ROTXT:  DB      " (read-only)",0
