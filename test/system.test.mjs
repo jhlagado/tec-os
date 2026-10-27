@@ -96,7 +96,7 @@ test("without RAM at 8000h-BFFFh the boot says so on the serial console and stop
   m.runUntil(() => m.pc === m.sym("RAMSTOP"), 20_000_000, "RAMSTOP");
   const stop = m.cycles + 2_000_000;
   m.runUntil(() => m.cycles >= stop);
-  assert.equal(m.serialText(), "\r\nTEC-OS needs 48K RAM: none at 8000h-BFFFh\r\n");
+  assert.equal(m.serialText(), "\r\nTEC-OS needs 64K RAM\r\n");
   assert.equal(m.pc, m.sym("RAMSTOP"));
 });
 
@@ -180,6 +180,7 @@ test("cold boot packs each drive's allocation vector, DSM / 8 + 1 bytes, below t
     assert.ok(entry + 3 <= end, `${card.name}: the entry jump is below every vector`);
     assert.ok(entry - 6 >= 0x100, `${card.name}: the six bytes below the entry are in the TPA`);
     const page = entry >> 8;
+    m.write(0x0100, 0xc9); // TOP.COM returns at once: the rest is whatever cold boot left
     assert.doesNotMatch(m.command(`SAVE ${page - 1} TOP.COM`), /\?/, `${card.name}: SAVE up to the entry's page`);
     assert.match(m.command(`SAVE ${page} OVER.COM`), /\r\n\d+\?\r\n/, `${card.name}: SAVE of the entry's page refused`);
     m.command("TOP");

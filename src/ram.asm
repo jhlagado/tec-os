@@ -83,4 +83,5 @@ GLOFF:  DS      1               ; pixel offset of a character within the word
 XMDST:  DS      1
 XMSRC:  DS      1
 MVREST: DS      2               ; MOVE: the bytes left for the byte loop
+XMARK:  DS      1               ; EXPAND 1's low mark (FF18h points here)
 HIRME:

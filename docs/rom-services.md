@@ -5,8 +5,8 @@ services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 13,742 bytes (`debug80`) and has 2,642 free:
-2,410 below the table at `FF00h`, where code can go, and 232 above it.<!-- end --> This
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 13,786 bytes (`debug80`) and has 2,598 free:
+2,368 below the table at `FF00h`, where code can go, and 230 above it.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
@@ -18,22 +18,26 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | --- | --- |
 | `FF00h` | `"TNA"` signature |
 | `FF03h` | ABI major version, 2 |
-| `FF04h` | ABI minor version, 2 |
+| `FF04h` | ABI minor version, 3 |
 | `FF05h` | Native banks: 0 since ABI 2.0 |
 | `FF06h` | `JP` to a routine that refuses every call: status 1, carry set (the native services until ABI 2.0) |
 | `FF09h` | Address of the console size, columns then rows |
 | `FF0Bh` | `JP` to the hardware services |
 | `FF0Eh` | Address of the MAIN count, 1 or 2 (ABI 2.1) |
-| `FF10h` | Address of the EXPAND count, 1 or 2 (ABI 2.2) |
+| `FF10h` | Address of the EXPAND count, always 2 since TEC-OS needs EXPAND 1 (ABI 2.2) |
 | `FF12h` | `JP XMOVE`: B = destination bank, C = source bank, for the next `MOVE` (ABI 2.2) |
 | `FF15h` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied (ABI 2.2) |
+| `FF18h` | Address of EXPAND 1's low mark: the page below which bank 1 is free (ABI 2.3) |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. Bank 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; bank 1
-is EXPAND 1 at `8000h–BEFFh`. `MOVE` copies forward as `LDIR` does and
-returns `A = 0`, or `A = FFh` with nothing copied when an end lies outside
-its bank or EXPAND 1 is not fitted. A copy returns with the latch and the
-interrupt state as it found them.
+is EXPAND 1 from `8000h` up to its low mark, read at each call: cold boot
+sets the mark to `BFh`, so bank 1 is `8000h–BEFFh` until TEC-OS allocates
+part of EXPAND 1 for itself, top down, in whole pages. `MOVE` copies
+forward as `LDIR` does and returns `A = 0`, or `A = FFh` with nothing
+copied when an end lies outside its bank. A copy returns with the latch
+and the interrupt state as it found them. Cold boot clears EXPAND 1; its
+contents do not survive a reset, and warm boot leaves them.
 
 ## Calling the services
 
@@ -216,7 +220,7 @@ that uses them.
 
 ## Next in the ROM
 
-In order, for the <!-- media: below-ff00 -->2,410<!-- end --> bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
+In order, for the <!-- media: below-ff00 -->2,368<!-- end --> bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
 32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
 resident monitor with Intel HEX loading. A disassembler does not fit, and
 floating point and drawing stay on the card.

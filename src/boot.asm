@@ -70,16 +70,13 @@ COLDERR:JP      DIAG
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
 ; stack, because the BIOS stack is in that bank.
 WBOOTR: DI
-        LD      A,(EXPANDS)     ; without EXPAND 1 this would be the table
-        CP      2
-        JR      NZ,WBMAIN0
         LD      A,LATCLAS+LATEXP ; EXPAND 1: its warm-boot jump, for an
         OUT     (SYSLAT),A      ; exit from a program that left it in
         LD      A,$C3
         LD      (RAMBIOS+3),A
         LD      HL,WBOOTR
         LD      (RAMBIOS+4),HL
-WBMAIN0:LD      A,LATCLAS       ; MAIN 0, EXPAND 0
+        LD      A,LATCLAS       ; MAIN 0, EXPAND 0
         LD      (LATCHV),A
         OUT     (SYSLAT),A
         LD      SP,BSTK
@@ -101,6 +98,19 @@ MEMINIT:LD      A,LATEXP
         LD      HL,DETEXP
         CALL    DETECT
         LD      (EXPANDS),A
+        CP      2
+        JP      NZ,RAMBAD       ; no EXPAND 1: TEC-OS needs 64K
+        LD      A,E             ; EXPAND 1 in view, no stack: clear it all
+        OUT     (SYSLAT),A
+        LD      HL,$8000
+        LD      DE,$8001
+        LD      BC,$3FFF
+        LD      (HL),0
+        LDIR
+        LD      A,(LATCHV)
+        OUT     (SYSLAT),A
+        LD      A,XMTOP         ; nothing allocated but the reserved page
+        LD      (XMARK),A
         LD      A,LATMAIN
         LD      HL,DETADR
         CALL    DETECT
@@ -241,10 +251,10 @@ RAMPAT: LD      HL,$8000
         LD      A,($BFFF)
         CP      E
         RET     Z
-; Straight to the serial port: the console's state is in the missing RAM.
-RAMBAD: LD      A,$40           ; serial idle, for the first start bit
+; Straight to the serial port, which needs nothing above 8000h.
+RAMBAD: LD      HL,RAMMSG
+        LD      A,$40           ; serial idle, for the first start bit
         OUT     (DIGPORT),A
-        LD      HL,RAMMSG
 RAMOUT: LD      A,(HL)
         OR      A
         JR      Z,RAMSTOP
@@ -253,6 +263,6 @@ RAMOUT: LD      A,(HL)
         JR      RAMOUT
 RAMSTOP:JR      RAMSTOP
 
-RAMMSG: DB      13,10,"TEC-OS needs 48K RAM: none at 8000h-BFFFh",13,10,0
+RAMMSG: DB      13,10,"TEC-OS needs 64K RAM",13,10,0
 
 BANNER: DB      13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0

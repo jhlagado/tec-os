@@ -7,11 +7,11 @@ table of services at `FF00h`.
 - 16 KiB ROM at `C000h–FFFFh`, entered through the 2 KiB boot overlay at
   reset. It holds the BIOS, the CCP and BDOS, the SD and console drivers and
   the hardware services.
-- 32 KiB fixed RAM at `0000h–7FFFh` and a 16 KiB bank window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,854 bytes on the starter card
-  and at least 46,086 on any card. RAM in
-  the window is required: TEC-OS needs 48K RAM and says so at boot if it is
-  missing.
+- 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
+  whose two halves, EXPAND 0 and EXPAND 1, share the window at
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,854 bytes on the
+  starter card and at least 46,086 on any card, and reach EXPAND 1 by
+  copying. TEC-OS says so at boot and stops if either half is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
 - A console that is one device at a time, chosen by the CP/M IOBYTE: the

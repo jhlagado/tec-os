@@ -66,7 +66,7 @@ const defined = [0x00, 0x01, 0x02, 0x05, 0x06, 0x07, ...Array.from({ length: 0x3
 test("cold boot counts the MAIN regions and leaves MAIN 1 as it found it, but for page zero", { skip: !ram96 }, () => {
   for (const mains of [1, 2]) {
     const m = boot(standardCard(), { ram96: true, mains, ramFill: FILL });
-    assert.deepEqual([m.read(0xff03), m.read(0xff04)], [2, 2], "ABI 2.2");
+    assert.deepEqual([m.read(0xff03), m.read(0xff04)], [2, 3], "ABI 2.3");
     assert.equal(mainsAt(m), mains, `${mains} MAIN region(s) found`);
     if (mains === 2) {
       const p1 = m.main[1];
@@ -77,9 +77,9 @@ test("cold boot counts the MAIN regions and leaves MAIN 1 as it found it, but fo
     }
     const h1 = m.expand[1];
     const touched = [];
-    for (let a = 0; a < 0x4000; a += 1) if (h1[a] !== FILL) touched.push(a + 0x8000);
     const warm = m.sym("RAMBIOS") + 3;
-    assert.deepEqual(touched, [warm, warm + 1, warm + 2], "EXPAND 1: only its warm-boot jump");
+    for (let a = 0; a < 0x4000; a += 1) if (h1[a] !== 0 && a + 0x8000 !== warm && a + 0x8000 !== warm + 1 && a + 0x8000 !== warm + 2) touched.push(a + 0x8000);
+    assert.deepEqual(touched, [], "EXPAND 1 cleared but for its warm-boot jump");
     assert.deepEqual(m.violations, []);
   }
 });

@@ -1,7 +1,45 @@
+; EXPAND 1's allocator. XMARK is the high byte of the lowest allocated
+; address; cold boot sets it to XMTOP, so the reserved page BF00h-BFFFh is
+; the first allocation, and warm boot leaves it. Blocks are whole pages,
+; since a relocated module must start on a page boundary, and are freed last
+; in, first out. Neither routine writes EXPAND 1.
+
+; A = pages: HL = the new block's base with carry clear, or carry set and
+; nothing changed when it would go below XMFLOOR. Destroys A, L.
+XALLOC: LD      L,A
+        LD      A,(XMARK)
+        SUB     L
+        JR      C,XAFAIL
+        CP      XMFLOOR
+        JR      C,XAFAIL
+        LD      (XMARK),A
+        LD      H,A
+        LD      L,0
+        RET
+XAFAIL: SCF
+        RET
+
+; HL = a block's base, A = its pages: carry clear and the block freed if it
+; is the lowest; carry set and nothing changed otherwise. Destroys A, E.
+XFREE:  LD      E,A
+        LD      A,L
+        OR      A
+        JR      NZ,XAFAIL
+        LD      A,(XMARK)
+        CP      H
+        JR      NZ,XAFAIL
+        ADD     A,E
+        JR      C,XAFAIL
+        CP      XMTOP+1
+        JR      NC,XAFAIL
+        LD      (XMARK),A
+        OR      A
+        RET
+
 ; XMOVE and MOVE, with CP/M 3's names and registers, at FF12h and
 ; FF15h and through BDOS function 50. Bank 0 is the program's view, MAIN 0
-; and EXPAND 0 below the BDOS entry at (0006h); bank 1 is EXPAND 1 at
-; 8000h-BEFFh. A copy never switches MAIN, and returns with the latch and the
+; and EXPAND 0 below the BDOS entry at (0006h); bank 1 is EXPAND 1 from
+; 8000h up to its low mark. A copy never switches MAIN, and returns with the latch and the
 ; interrupt state as it found them.
 
 ; XMOVE: B = destination bank, C = source bank, for the next MOVE only.
@@ -141,7 +179,7 @@ MVCLR:  PUSH    AF
         RET
 
 ; Carry set unless bank A holds BC bytes from HL: bank 0 below (0006h), bank
-; 1 in 8000h-BEFFh with EXPAND 1 fitted. Keeps BC, DE and HL.
+; 1 from 8000h up to the low mark. Keeps BC, DE and HL.
 MVRANGE:PUSH    DE
         PUSH    HL
         CP      2
@@ -151,10 +189,9 @@ MVRANGE:PUSH    DE
         JR      NZ,MVR0
         BIT     7,H
         JR      Z,MVRBAD
-        LD      A,(EXPANDS)
-        CP      2
-        JR      NZ,MVRBAD
-        LD      DE,$BF00
+        LD      A,(XMARK)       ; bank 1 ends at the low mark
+        LD      D,A
+        LD      E,0
 MVR0:   ADD     HL,BC           ; the end
         JR      C,MVRBAD
         EX      DE,HL
