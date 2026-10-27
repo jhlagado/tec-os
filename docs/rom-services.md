@@ -5,8 +5,8 @@ services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,699 bytes (`debug80`) and has 1,685 free:
-1,466 below the table at `FF00h`, where code can go, and 219 above it.<!-- end --> This
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,003 bytes (`debug80`) and has 1,381 free:
+1,162 below the table at `FF00h`, where code can go, and 219 above it.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
@@ -170,21 +170,31 @@ that programs share as ATOM include files.
 
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
-| Vectors, cold and warm boot | 461 | 1 | Stays |
-| BIOS | 379 | 2 | Stays |
-| Serial and matrix keyboard | 598 | 1, 2 | Stays |
-| ANSI terminal | 579 | 2 | Stays |
-| Video switch | 60 | 2 | Stays |
-| PICO9918 text console | 292 | 1, 2 | Stays |
+| Vectors, cold and warm boot | 572 | 1 | Stays |
+| BIOS | 452 | 2 | Stays |
+| Serial and matrix keyboard | 789 | 1, 2 | Stays |
+| ANSI terminal | 988 | 2 | Stays |
+| Video switch | 104 | 2 | Stays |
+| PICO9918 text console | 419 | 1, 2 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.PRL`, a driver in EXPAND 1, loaded at the CCP's first entry |
+| `XCALL` and loading the GLCD's driver | 228 | 2 | Stays |
 | Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD driver reads it through `FF23h` |
-| 20 × 4 LCD | 152 | 2 | Stays |
-| SD driver | 554 | 1 | Stays |
-| Container mount and checks | 757 | 1 | Stays |
+| 20 × 4 LCD | 146 | 2 | Stays |
+| SD driver | 795 | 1 | Stays |
+| Container mount and checks | 1,192 | 1 | Stays |
 | Format tables, diagnostics | 176 | 1 | Stays |
-| CCP | 2,166 | 2 | Stays |
-| BDOS | 3,491 | 2 | Stays |
+| CCP | 2,664 | 2 | Stays |
+| CCP levels: `XCCP`, `XCMD`, `EXIT` and `UNLOAD` | 398 | 2 | Stays |
+| PRL loader | 301 | 2 | Stays |
+| Command history | 210 | 2 | Stays |
+| BDOS | 3,736 | 2 | Stays |
+| `XMOVE` and `MOVE` | 271 | 3 | Stays |
 | Hardware services | 755 | 3, 4 | Stays |
+| ABI table at `FF00h` | 37 | 1 | Stays |
+
+Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
+and the regions as `docs/memory-map.md` gives them, the parts within the
+console and services regions by source file.
 
 Nothing in the ROM today belongs on the card. The native program services,
 which had no user, were removed.
@@ -240,7 +250,9 @@ that uses them.
 
 ## Next in the ROM
 
-In order, for the <!-- media: below-ff00 -->1,466<!-- end --> bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
-32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
-resident monitor with Intel HEX loading. A disassembler does not fit, and
-floating point and drawing stay on the card.
+For the <!-- media: below-ff00 -->1,162<!-- end --> bytes left below `FF00h`: a resident monitor with Intel HEX
+loading. The integer arithmetic once planned here was settled by what calls
+it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
+numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
+divide and CRC-16 have no caller in the ROM and go in include files on the
+card, beside floating point and drawing. A disassembler does not fit.
