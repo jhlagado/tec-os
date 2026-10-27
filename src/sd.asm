@@ -253,31 +253,165 @@ SDRCMD: CALL    SPIEND
 
 ; Receive 512 bytes into the buffer at HL, sending FFh, after the start
 ; token; HL ends 512 bytes on. /CS low and CLK low on entry and on return.
-; Destroys AF, BC, DE.
-SDRBLK: LD      D,2
-SDRO:   LD      C,0
-SDRI:   PUSH    DE
-        CALL    SPIR
-        POP     DE
-        LD      (HL),A
+; Two bytes a pass, each bit unrolled; I counts the 256 passes. Destroys AF,
+; BC, DE, I.
+SDRBLK: LD      C,SDIO
+        LD      DE,$0103        ; D: CLK low, E: CLK high; MOSI high, /CS low
+        XOR     A
+        LD      I,A
+SDRB2:
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        LD      (HL),B
         INC     HL
-        DEC     C
-        JR      NZ,SDRI
-        DEC     D
-        JR      NZ,SDRO
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        OUT     (C),D
+        OUT     (C),E
+        IN      A,(C)
+        RLA
+        RL      B
+        LD      (HL),B
+        INC     HL
+        LD      A,I
+        DEC     A
+        LD      I,A
+        JP      NZ,SDRB2
+        OUT     (C),D
         RET
 
 ; Send the 512 bytes at HL after the start token; HL ends 512 bytes on. /CS
-; low and CLK low on entry and on return. Destroys AF, BC, DE.
-SDWBLK: LD      D,2
-SDWO:   LD      E,0
-SDWI:   LD      C,(HL)
-        CALL    SPIW
+; low and CLK low on entry and on return. Each bit unrolled; MOSI changes
+; with CLK low. Destroys AF, BC, DE.
+SDWBLK: LD      C,SDIO
+        LD      DE,$0200        ; 2 passes of 256 bytes
+SDWB2:  LD      B,(HL)
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
+        XOR     A
+        RL      B
+        RLA
+        OUT     (C),A
+        OR      2
+        OUT     (C),A
         INC     HL
         DEC     E
-        JR      NZ,SDWI
+        JP      NZ,SDWB2
         DEC     D
-        JR      NZ,SDWO
+        JP      NZ,SDWB2
+        AND     $FD             ; CLK low
+        OUT     (C),A
         RET
 
 ; Write the 512 bytes at HL to block SDLBA, waiting until the card has

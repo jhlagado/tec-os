@@ -99,7 +99,8 @@ A scroll shifts Edit's cached rows and draws only the new line; TEC-OS moves
 the rows in the hidden VRAM page and shows it whole.
 
 Timings at 4 MHz in the emulator: cold boot to the prompt about 1.8 million
-T-states (0.45 s); one 512-byte SD block read about 330,000 T-states; serial
+T-states (0.45 s); one 512-byte SD block read about 219,000 T-states and a
+block write about 215,000 to the card's data response; serial
 4800 baud.
 
 ## Not yet shown
