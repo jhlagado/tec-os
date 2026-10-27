@@ -5,6 +5,8 @@
 ;           function 6 polls for one, function 10 reads a line, and a second
 ;           function 10 waits for ^C.
 ;   HOOK E  makes a file on the read-only C:, for the BDOS's error.
+;   HOOK J  ends by JP 0000h.
+;   HOOK B  ends by BDOS function 0.
 ; The record is at 4000h, where the test reads it after the warm boot:
 ;   4000h   warm boots through the replaced WBOOT
 ;   4002h   calls of the replaced CONST (word)
@@ -42,9 +44,17 @@ CIREC   EQU     $4200
         LD      DE,OLDCO
         LD      BC,MYCO
         CALL    PATCH
-        LD      A,($0080)       ; any command tail: the disk error
+        LD      A,($0080)       ; a command tail picks the ending
         OR      A
+        JR      Z,CONS
+        LD      A,($0082)
+        CP      'J'
+        JP      Z,0
+        CP      'B'
         JR      NZ,DISK
+        LD      C,0
+        JP      BDOS
+CONS:
         LD      E,'A'
         LD      C,2
         CALL    BDOS
