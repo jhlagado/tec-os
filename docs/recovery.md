@@ -7,7 +7,10 @@ block and stopped reporting busy. Nothing is cached dirty: the deblocking
 buffer always matches the card, or is marked invalid after a failed write.
 Writing one 128-byte record reads its block first (unless the buffer already
 holds it), merges the record and writes the whole block back, so neighbouring
-records are never replaced by stale data.
+records are never replaced by stale data. The exception is a block that holds
+nothing yet: the first write to a newly allocated block (CP/M's write type 2),
+and the next blocks of that allocation block as a program writes on into
+them. Such a block is not read; its records not yet written are zeros.
 
 Whether a card that has reported completion has also made the data durable
 against power loss is up to the card. That is not verified.

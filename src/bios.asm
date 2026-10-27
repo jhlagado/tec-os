@@ -140,8 +140,11 @@ MAPREC: LD      HL,(DSKSEC)
 MAPBAD: OR      1
         RET
 
-; Make BLKBUF hold the mapped block. Returns Z on success.
-GETBLK: LD      A,(BUFOK)
+; Make BLKBUF hold the mapped block. Returns Z on success. GETBLKW with C
+; not 0 does not read a block it lacks: it clears BLKBUF to zeros instead,
+; and BUFOK is 2 while it holds that block.
+GETBLK: LD      C,0
+GETBLKW:LD      A,(BUFOK)
         OR      A
         JR      Z,GETRD
         LD      A,(BUFDRV)
@@ -157,16 +160,25 @@ GETBLK: LD      A,(BUFOK)
 GETRD:  XOR     A
         LD      (BUFOK),A
         LD      HL,BLKBUF
+        OR      C
+        JR      NZ,GETZ
         CALL    SDREAD
         RET     NZ
-        LD      A,(DSKCUR)
+        LD      C,1             ; BUFOK 1: read
+GETKEY: LD      A,(DSKCUR)
         LD      (BUFDRV),A
         LD      HL,(BLKOFF)
         LD      (BUFBLK),HL
-        LD      A,1
+        LD      A,C
         LD      (BUFOK),A
         XOR     A
         RET
+GETZ:   LD      DE,BLKBUF+1     ; BUFOK 2: cleared, not read
+        LD      BC,511
+        LD      (HL),0
+        LDIR
+        LD      C,2
+        JR      GETKEY
 
 ; HL = address of the mapped 128-byte record inside BLKBUF.
 SLOTADR:LD      A,(BLKSLOT)
@@ -196,15 +208,47 @@ DSKERR: LD      A,1
         RET
 
 ; BIOS WRITE: merge the record into its block and write the block through.
-; The write type in C is not used: every partial block is read first.
-BWRITE: CALL    MAPREC
+; A block not in BLKBUF is read first, unless nothing in it is the card's to
+; keep: the write is of type 2 (C), the first to a newly allocated block, or
+; BLKBUF holds the block before, cleared rather than read, on this drive and
+; in the same allocation block.
+BWRITE: PUSH    BC
+        CALL    MAPREC
+        POP     BC
         JR      NZ,DSKERR
         LD      A,(DSKCUR)      ; read-only volumes refuse before any change
         CALL    DRVENT
         INC     HL
         BIT     0,(HL)
         JR      NZ,DSKERR
-        CALL    GETBLK
+        DEC     HL
+        LD      A,C
+        CP      2
+        JR      Z,BWNEW
+        LD      C,0
+        LD      A,(BUFOK)
+        CP      2
+        JR      NZ,BWGET
+        LD      A,(BUFDRV)
+        LD      E,A
+        LD      A,(DSKCUR)
+        CP      E
+        JR      NZ,BWGET
+        LD      B,(HL)          ; the geometry: 1 G8M, 2 G1M
+        LD      A,16
+BWMASK: SRL     A               ; SD blocks in an allocation block
+        DJNZ    BWMASK
+        DEC     A
+        LD      HL,(BLKOFF)
+        AND     L
+        JR      Z,BWGET         ; the first of its allocation block
+        DEC     HL
+        LD      DE,(BUFBLK)
+        OR      A
+        SBC     HL,DE
+        JR      NZ,BWGET
+BWNEW:  LD      C,1
+BWGET:  CALL    GETBLKW
         JR      NZ,DSKERR
         CALL    SLOTADR
         EX      DE,HL
