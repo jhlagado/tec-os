@@ -34,6 +34,8 @@ CCPENT:
         RRCA
         AND     $0F
         PUSH    AF
+        LD      HL,WRFLAG       ; the reset that keeps unchanged drives logged
+        LD      (HL),$FF
         LD      C,13
         CALL    BDOS
         POP     AF

@@ -441,11 +441,20 @@ FNVERS:
 ; Reset to drive A, restore the standard DMA address, and discover all disk
 ; geometry and work areas through the public BIOS DPH/DPB boundary.
 FNRESET:
-        XOR     A
+        LD      HL,WRFLAG       ; the CCP's reset at its entry: WRESET
+        LD      A,(HL)
+        LD      (HL),0
+        OR      A
+        JR      NZ,WRESET
+        LD      H,A
+        LD      L,A
+        LD      (LOGINV),HL
+        LD      (WARMV),HL
+RSTAIL: XOR     A
         LD      (CURDRV),A
         LD      (USERNO),A
-        LD      HL,0
-        LD      (LOGINV),HL
+        LD      H,A
+        LD      L,A
         LD      (ROVEC),HL
         LD      HL,$0080
         LD      (CURDMA),HL
@@ -454,6 +463,47 @@ FNRESET:
         CALL    BIODMA
         CALL    LOGIN
         JR      SETDEF
+
+; TEC-OS: the CCP's reset keeps each logged drive whose allocation vector
+; nothing has changed since its last scan and that still sums as it did
+; then. A drive the BDOS or a BIOS directory write has changed (its DPH's
+; dirty flag) is rebuilt, at its next selection, from the entries up to its
+; mark (WARMV); any other is scanned in full. ROVEC is cleared, as CP/M 2.2's
+; warm boot clears it.
+WRESET: XOR     A
+WRLOOP: LD      (CURDRV),A
+        CALL    LOGTEST
+        JR      Z,WRNEXT
+        CALL    LOGIN           ; logged: its pointers bound, nothing read
+        LD      HL,(DPHPTR)
+        LD      BC,4
+        ADD     HL,BC
+        LD      A,(HL)
+        OR      A
+        JR      NZ,WRDIRTY
+        CALL    ALVSUM
+        LD      HL,(DPHPTR)
+        INC     HL
+        INC     HL
+        LD      A,(HL)
+        CP      E
+        JR      NZ,WRFULL
+        INC     HL
+        LD      A,(HL)
+        CP      D
+        JR      Z,WRNEXT
+WRFULL: LD      HL,LOGINV
+        CALL    VCLR
+        JR      WRNEXT
+WRDIRTY:LD      HL,LOGINV
+        CALL    VCLR
+        LD      HL,WARMV
+        CALL    VSET
+WRNEXT: LD      A,(CURDRV)
+        INC     A
+        CP      16
+        JR      NZ,WRLOOP
+        JR      RSTAIL
 
 FNSEL:
         LD      A,(PARAM)
@@ -1138,6 +1188,14 @@ ALFOUND:
         LD      A,(HL)
         OR      C
         LD      (HL),A
+        PUSH    HL              ; TEC-OS: the vector changed, the drive dirty
+        LD      HL,(DPHPTR)
+        INC     HL
+        INC     HL
+        INC     HL
+        INC     HL
+        LD      (HL),1
+        POP     HL
         PUSH    DE
         CALL    FCBADDR
         POP     DE
@@ -1506,22 +1564,12 @@ FNRESETD:
         LD      A,D
         CPL
         LD      B,A
-        LD      HL,(LOGINV)
-        LD      A,L
-        AND     C
-        LD      L,A
-        LD      A,H
-        AND     B
-        LD      H,A
-        LD      (LOGINV),HL
-        LD      HL,(ROVEC)
-        LD      A,L
-        AND     C
-        LD      L,A
-        LD      A,H
-        AND     B
-        LD      H,A
-        LD      (ROVEC),HL
+        LD      HL,LOGINV
+        CALL    ANDV
+        LD      HL,ROVEC
+        CALL    ANDV
+        LD      HL,WARMV
+        CALL    ANDV
         JP      RETZERO
 
 NEWSRCH:
@@ -1878,16 +1926,8 @@ LOGOK:
         POP     AF
         JR      NZ,LOGFAST
         CALL    INITALV
-        CALL    DRVMASK
-        EX      DE,HL
-        LD      HL,(LOGINV)
-        LD      A,L
-        OR      E
-        LD      L,A
-        LD      A,H
-        OR      D
-        LD      H,A
-        LD      (LOGINV),HL
+        LD      HL,LOGINV
+        CALL    VSET
 
         LD      HL,0
         LD      (DIRCNT),HL
@@ -1906,6 +1946,22 @@ LOGOK:
         RR      L
         INC     HL
         LD      (DIRLEFT),HL
+        LD      DE,(WARMV)      ; TEC-OS: a rebuild, to the mark only
+        CALL    VTEST
+        JR      Z,LOGNEW
+        CALL    DUPTR
+        LD      A,(HL)
+        INC     HL
+        LD      H,(HL)
+        LD      L,A
+        LD      DE,3
+        ADD     HL,DE
+        SRL     H
+        RR      L
+        SRL     H
+        RR      L
+        LD      (DIRLEFT),HL
+LOGNEW:
 
         ; Binding a disk replaces directory iteration state. Reuse the same
         ; initial position as a new file search; default-pointer queries do
@@ -1916,7 +1972,7 @@ DIRSCAN:
         LD      HL,(DIRLEFT)
         LD      A,H
         OR      L
-        JR      Z,DUSAVE
+        JR      Z,LOGDONE
         CALL    READDIR
         CALL    PARDIR
 
@@ -1935,7 +1991,7 @@ LOGFAST:
         INC     HL
         LD      D,(HL)
         LD      (DIRUSED),DE
-        LD      HL,(DPBPTR)
+LOGCNT: LD      HL,(DPBPTR)
         LD      BC,7
         ADD     HL,BC
         LD      E,(HL)
@@ -1945,13 +2001,69 @@ LOGFAST:
         LD      (DIRCNT),DE
         JP      NEWSRCH
 
-; Record DIRUSED for the current drive in its DPH.
-DUSAVE:
-        CALL    DUPTR
-        LD      DE,(DIRUSED)
+; TEC-OS: the end of a scan. The mark saved, the vector's sum taken for the
+; next warm boot, the dirty flag and WARMV's bit cleared.
+LOGDONE:
+        CALL    DUSAVE
+        CALL    ALVSUM
+        LD      HL,(DPHPTR)
+        INC     HL
+        INC     HL
         LD      (HL),E
         INC     HL
         LD      (HL),D
+        INC     HL
+        LD      (HL),0
+        LD      HL,WARMV
+        CALL    VCLR
+        JR      LOGCNT
+
+; Record DIRUSED for the current drive in its DPH, unless the mark there is
+; higher already: a BIOS directory write may have raised it.
+DUSAVE:
+        CALL    DUPTR
+        LD      DE,(DIRUSED)
+        LD      C,(HL)
+        INC     HL
+        LD      B,(HL)
+        PUSH    HL
+        LD      H,B
+        LD      L,C
+        OR      A
+        SBC     HL,DE
+        POP     HL
+        RET     NC
+        LD      (HL),D
+        DEC     HL
+        LD      (HL),E
+        RET
+
+; DE = the sum of the current drive's allocation vector, DSM / 8 + 1 bytes.
+ALVSUM: LD      HL,(DPBPTR)
+        LD      BC,5
+        ADD     HL,BC
+        LD      C,(HL)
+        INC     HL
+        LD      B,(HL)
+        SRL     B
+        RR      C
+        SRL     B
+        RR      C
+        SRL     B
+        RR      C
+        INC     BC
+        LD      HL,(ALVPTR)
+        LD      DE,0
+ALVSL:  LD      A,(HL)
+        ADD     A,E
+        LD      E,A
+        JR      NC,ALVS1
+        INC     D
+ALVS1:  INC     HL
+        DEC     BC
+        LD      A,B
+        OR      C
+        JR      NZ,ALVSL
         RET
 
 DUPTR:
@@ -2177,15 +2289,48 @@ CHKBLK:
 
 ; Z means the current drive needs its allocation vector rebuilt. The BIOS
 ; receives the normalized result separately in E; the mask itself may be wide.
+; NZ if the current drive's bit is set in LOGINV (LOGTEST) or in DE (VTEST).
 LOGTEST:
-        CALL    DRVMASK
         LD      DE,(LOGINV)
+VTEST:  CALL    DRVMASK
         LD      A,L
         AND     E
         LD      L,A
         LD      A,H
         AND     D
         OR      L
+        RET
+
+; The current drive's bit cleared (VCLR) or set (VSET) in the vector at HL;
+; ANDV ands the vector at HL with BC.
+VCLR:   PUSH    HL
+        CALL    DRVMASK
+        LD      A,L
+        CPL
+        LD      C,A
+        LD      A,H
+        CPL
+        LD      B,A
+        POP     HL
+ANDV:   LD      A,(HL)
+        AND     C
+        LD      (HL),A
+        INC     HL
+        LD      A,(HL)
+        AND     B
+        LD      (HL),A
+        RET
+VSET:   PUSH    HL
+        CALL    DRVMASK
+        EX      DE,HL
+        POP     HL
+        LD      A,(HL)
+        OR      E
+        LD      (HL),A
+        INC     HL
+        LD      A,(HL)
+        OR      D
+        LD      (HL),A
         RET
 
 DRVMASK:
@@ -2418,7 +2563,8 @@ DEFDRV: DS      1
 DEFDPB: DS      2
 DEFALV: DS      2
 USERNO: DS      1
-LOGINV: DS      2
+WRFLAG: DS      1               ; set by the CCP for its reset at entry
+WARMV:  DS      2               ; drives to rebuild to their mark
 ROVEC:  DS      2
 CURDMA: DS      2
 DPHPTR: DS      2

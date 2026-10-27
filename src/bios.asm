@@ -46,7 +46,7 @@ BSELDSK:LD      A,C
         JR      Z,SELBAD
         LD      A,C
         LD      (DSKCUR),A
-        LD      L,A             ; HL = DPHTAB + 16 * drive
+DPHADR: LD      L,A             ; HL = DPHTAB + 16 * drive A; destroys DE
         LD      H,0
         ADD     HL,HL
         ADD     HL,HL
@@ -222,6 +222,47 @@ BWRITE: PUSH    BC
         BIT     0,(HL)
         JR      NZ,DSKERR
         DEC     HL
+        PUSH    HL              ; a directory block: its drive dirty, its mark
+        PUSH    BC              ; raised over the block (KS18)
+        LD      B,(HL)
+        LD      A,64
+BWDN:   SRL     A               ; the directory's SD blocks: 32 G8M, 16 G1M
+        DJNZ    BWDN
+        LD      BC,(BLKOFF)
+        INC     B
+        DEC     B
+        JR      NZ,BWND
+        CP      C
+        JR      C,BWND
+        JR      Z,BWND
+        LD      A,(DSKCUR)
+        CALL    DPHADR
+        LD      DE,4
+        ADD     HL,DE
+        LD      (HL),1
+        INC     HL
+        INC     HL
+        LD      A,C             ; DE = (SD block + 1) * 16: the block's
+        INC     A               ; entries, all of them under the mark
+        LD      E,A
+        LD      D,0
+        EX      DE,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        ADD     HL,HL
+        EX      DE,HL
+        LD      A,E             ; the mark at HL: raised to DE if lower
+        SUB     (HL)
+        INC     HL
+        LD      A,D
+        SBC     A,(HL)
+        JR      C,BWND
+        LD      (HL),D
+        DEC     HL
+        LD      (HL),E
+BWND:   POP     BC
+        POP     HL
         LD      A,C
         CP      2
         JR      Z,BWNEW
@@ -249,7 +290,7 @@ BWMASK: SRL     A               ; SD blocks in an allocation block
         JR      NZ,BWGET
 BWNEW:  LD      C,1
 BWGET:  CALL    GETBLKW
-        JR      NZ,DSKERR
+        JP      NZ,DSKERR
         CALL    SLOTADR
         EX      DE,HL
         LD      HL,(DSKDMA)
@@ -260,6 +301,6 @@ BWGET:  CALL    GETBLKW
         JR      Z,BWOK
         XOR     A               ; the buffer no longer matches the card
         LD      (BUFOK),A
-        JR      DSKERR
+        JP      DSKERR
 BWOK:   XOR     A
         RET

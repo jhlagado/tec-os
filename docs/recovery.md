@@ -46,7 +46,18 @@ the card from the TEC-1G, or hold it in reset, while the PC has it.
 
 ## Card removal
 
-Removing the card while TEC-OS runs is an I/O error. The next disk access
-fails, the BDOS reports `Bad Sector` and warm boots. Warm boot forgets the
-deblocking buffer but keeps the mount, so a different card is not detected:
-press reset after changing cards.
+**A changed card needs a reset.** The TEC-1G has no card-detect line, and
+TEC-OS initialises the card only at cold boot. Removing the card while
+TEC-OS runs is an I/O error: the next disk access fails, the BDOS reports
+`Bad Sector` and warm boots. A warm boot keeps the mounts and keeps each
+drive logged in with its allocation vector, so it cannot see that the card
+is a different one. A card put in after that answers no read until reset.
+Press reset after changing cards.
+
+A warm boot rebuilds a drive's allocation vector from its directory when
+anything has changed it since its last scan: a file written, closed or
+erased, or any BIOS write into its directory blocks. It scans as far as the
+directory's highest entry in use. A drive nothing has changed keeps its
+vector, after a check that a program has not written over it, so a warm
+boot reads no block. A program's BDOS function 13 still scans every drive in
+full, as CP/M 2.2 does.

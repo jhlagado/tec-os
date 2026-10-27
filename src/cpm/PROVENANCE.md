@@ -67,3 +67,11 @@ Changes made for ROM residency in TEC-OS:
   times at the end of an 8 MiB volume. `PUTDEC` in the CCP divides by 10
   with it and prints the remainders in reverse, in place of a table of
   powers of ten.
+- The CCP's reset at its entry (`WRFLAG` with function 13) keeps each logged
+  drive whose allocation vector nothing has changed since its last scan and
+  that still sums as it did then (`WRESET`, `ALVSUM`); `LOGINV` lives in the
+  BIOS's workspace so that it survives the warm boot. A drive that has
+  changed (`ALFOUND`, or the BIOS's mark on a directory write, both in the
+  DPH's second scratch word) is rebuilt at its next selection from the
+  entries up to its directory mark (`WARMV`); `DUSAVE` keeps the higher of
+  the two marks. Function 13 from a program and function 37 are CP/M 2.2's.

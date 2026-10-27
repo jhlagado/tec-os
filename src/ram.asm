@@ -24,6 +24,7 @@ DRVTAB: DS      MAXDRV*DRVESZ
 DRVIDX: DS      MAXDRV          ; each drive's volume: container index + 1, 0 for none
 DRVSLOT:DS      MAXDRV          ; each drive's vector slot: 0 none, 1 G1M's, 2 G8M's
 DPHTAB: DS      MAXDRV*DPHSZ
+LOGINV: DS      2               ; the BDOS's logged drives, kept across a warm boot
 DIRBUF: DS      128
 CSVDUM: DS      2               ; check vector placeholder; CKS is zero
 STUBAD: DS      2               ; BDOS entry jump, the word at 0006h
