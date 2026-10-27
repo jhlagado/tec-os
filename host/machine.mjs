@@ -46,6 +46,7 @@ export class Machine {
     // output: every byte the BIOS was asked to put on the console, whichever
     // device is in use. serial: the bytes that left the serial port.
     this.output = [];
+    this.outputText = ""; // output decoded, extended as text() is asked for more
     this.serial = [];
     this.violations = [];
     this.cycles = 0;
@@ -213,12 +214,24 @@ export class Machine {
   }
 
   text(from = 0) {
-    return Buffer.from(this.output.slice(from)).toString("latin1");
+    const done = this.outputText.length;
+    if (done < this.output.length) this.outputText += Buffer.from(this.output.slice(done)).toString("latin1");
+    return this.outputText.slice(from);
   }
 
-  /** Run until the console output since `from` matches pattern. */
+  /** Run until the console output since `from` matches pattern. The pattern is
+   *  tested again only when the output has grown, not at every instruction. */
   expect(pattern, { from = this.mark ?? 0, maxCycles = 100_000_000 } = {}) {
-    this.runUntil(() => pattern.test(this.text(from)), maxCycles, `output ${pattern}`);
+    let seen = -1;
+    this.runUntil(
+      () => {
+        if (this.output.length === seen) return false;
+        seen = this.output.length;
+        return pattern.test(this.text(from));
+      },
+      maxCycles,
+      `output ${pattern}`,
+    );
     // Output is recorded as the BIOS is asked for it; let the last character
     // reach the screen, normally by running on until the console waits.
     const settle = this.cycles + 2_000_000;
