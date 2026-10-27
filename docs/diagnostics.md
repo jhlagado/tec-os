@@ -407,20 +407,6 @@ counts it from the speaker edges on every run.
 stopwatch reading gives the read rate in bytes per second. With the RTC
 fitted the line also gives the RTC's elapsed seconds.
 
-## Open items
-
-| Open item | Tests | What to record |
-| --- | --- | --- |
-| O1 bank field decoding | T12, T13 | The field map and bank count; set `NBANKS` for the board profile |
-| O3 writes under the overlay | T08 | Reaches RAM or dropped |
-| O4 SD timing | T19, T20, T34, T37 | Card, token polls, errors, read rate and busy polls after a write |
-| O5 VRAM timing | T17, T18 | Errors at 16 and 104 T-states a byte |
-| D24 page flipping | T35 | Which page R2 = `07h` and `0Bh` show |
-
-T11 settles the meaning of the port `03h` bits and T18, T21 and T33 give the
-real clock behind every T-state figure. T36 records whether the card answers
-as an F18A and which firmware version it reports.
-
 ## Recording a board run
 
 Keep the terminal log with the board revision, the CPU clock from T33 (or

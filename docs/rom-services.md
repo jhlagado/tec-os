@@ -220,27 +220,3 @@ In order, for the 2,989 bytes left below `FF00h`: integer arithmetic (16 × 16 m
 32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
 resident monitor with Intel HEX loading. A disassembler does not fit, and
 floating point and drawing stay on the card.
-
-## Options I rejected
-
-- **MON3's API.** MON3 programs call through `RST 10h` and keep state in
-  RAM at `0800h–0FFFh` (the clock buffer is at `0900h`). Under CP/M both
-  belong to the program: page zero's restart vectors are left to programs and
-  debuggers, and `0100h` up is the TPA. A warm boot, like a cold boot, puts
-  seven zeros and a `RET` in each restart vector at `0008h–0037h` that does
-  not jump into ROM, so an RST through it returns at once with the
-  interrupt state unchanged. A kept jump into ROM is left as it is; one into
-  unused ROM or into the table at `FF00h` is not an entry point. MON3's list also carries its own UI
-  (menus, parameter entry, disassembly), which is application code.
-- **Extra BIOS jump-table entries.** Many CP/M 2.2 vendors added entries
-  after `SECTRAN`. A program cannot tell whether they exist without a
-  signature, and the RAM copy of the table would grow. The `FF00h` table
-  already has a signature and a version and sits at a fixed ROM address.
-- **A ROM in `8000h–BFFFh` for resident tools.** Rejected in D22.
-
-## Open decisions
-
-| ID | Open item |
-| --- | --- |
-| O7 | Closed by D25: the native bank services are removed, and their bytes are free. |
-| O8 | Whether `BLOCK` should ever write. |
