@@ -10,5 +10,5 @@ ABITAB: DB      "TNA"           ; FF00h signature
         JP      NONATSV         ; FF06h no services: status 1, carry set
         DW      VWID            ; FF09h console columns, then rows; 0 = serial only
         JP      HWSVC           ; FF0Bh hardware services: C = service
-        DW      PAGES           ; FF0Eh low pages fitted, 1 or 2 (ABI 2.1)
+        DW      MAINS           ; FF0Eh MAIN regions fitted, 1 or 2 (ABI 2.1)
 ABIEND:

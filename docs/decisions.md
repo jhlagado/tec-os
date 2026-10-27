@@ -313,7 +313,7 @@ there, it reports `TEC-OS needs 48K RAM: none at 8000h-BFFFh` and stops. The
 check runs on the boot stack in fixed RAM, and the message goes straight to
 the serial port, because the console's state is in the missing RAM.
 
-The rest of the 96K paged memory (D26), MAIN 1 at `0000h–7FFFh` and
+The rest of the 96K memory (D26), MAIN 1 at `0000h–7FFFh` and
 EXPAND 1 at `8000h–BFFFh`, is optional. Cold boot detects it, and what uses
 it is present only when it is fitted; without it the page count reports no
 extra memory and TEC-OS works as on 48K.
@@ -368,23 +368,24 @@ becomes 2.0. The hardware services at `FF0Bh` are unchanged; a program that
 checks for them accepts ABI 2.0 or later, or 1.1 or later. Open item O7 is
 closed by this decision.
 
-## D26 The 96K paged memory: detection and page zero — Adopted 2026-10-27
+## D26 The 96K memory: detection and page zero — Adopted 2026-10-27
 
 The TEC-1G's latch documentation leaves bits 3–6 unallocated; bit 3 becomes
-LOWPAGE, which of two 32 KiB pages is at `0000h–7FFFh`, beside bit 2 EXPAND,
-which half of a 32 KiB U9 is at `8000h–BFFFh`. Cold boot counts the low
-pages and publishes the count through `FF0Eh` (ABI 2.1), and copies page
-zero into low page 1, so an exit from page 1 reaches the warm boot. Every
-boot also puts the warm-boot jump at `B503h` (`BF03h` since D27) in U9 half 1, for an exit from
-a program that left that half in. Warm boot selects page 0 and half 0. The
-calls that move between pages follow separately. The harness models the
-scheme as the option `paged`.
+MAIN, which of MAIN 0 and MAIN 1 (32 KiB each) is at `0000h–7FFFh`, beside
+bit 2 EXPAND, which of EXPAND 0 and EXPAND 1 (16 KiB each) is at
+`8000h–BFFFh`. Cold boot counts the MAIN regions and publishes the count
+through `FF0Eh` (ABI 2.1), and copies page zero into MAIN 1, so an exit from
+MAIN 1 reaches the warm boot. Every boot also puts the warm-boot jump at
+`B503h` (`BF03h` since D27) in EXPAND 1, for an exit from a program that
+left it in. Warm boot selects MAIN 0 and EXPAND 0. The calls that copy to
+and from EXPAND 1 follow separately. The harness models the scheme as the
+option `ram96`.
 
 ## D27 The RAM BIOS table at BF00h — Adopted 2026-10-27
 
 The RAM copy of the BIOS jump table moves from `B500h`, just above the stub
 page, to `BF00h`, so the warm-boot entry that `0001h` names is `BF03h`, and
-so is the jump every boot puts in U9 half 1. A program that uses half 1
+so is the jump every boot puts in EXPAND 1. A program that uses EXPAND 1
 then loses only its top page to TEC-OS. The workspace below the table holds
 the BIOS, CCP and BDOS state in one run, which ends below `BF00h`, so the
 warm-boot clear of the CCP and BDOS blocks never reaches the table; the GLCD

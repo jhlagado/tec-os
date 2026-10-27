@@ -46,7 +46,7 @@ Reproduce with `npm ci && npm run build && npm test`. The suite takes about
 | — | Scroll regions; a row move is built in the hidden VRAM page and shown in one step when the program asks for a key | `console` | Emulator | Pass; Edit scrolling rendered frame by frame shows no torn frame |
 | — | Punch and reader carry 8-bit bytes over the serial port | `devices` | Emulator | Pass |
 | — | The old native entry at `FF06h` refuses every call without touching memory | `devices` | Emulator | Pass: status 1, carry set |
-| — | On the 96K paged memory: cold boot counts the low pages, page 1 gets page zero and is otherwise untouched, and an exit from low page 1 or U9 half 1 warm boots into page 0 and half 0 | `paged` | Emulator (harness option `paged`) | Pass |
+| — | On the 96K memory: cold boot counts the MAIN regions, MAIN 1 gets page zero and is otherwise untouched, and an exit from MAIN 1 or EXPAND 1 warm boots into MAIN 0 and EXPAND 0 | `ram96` | Emulator (harness option `ram96`) | Pass |
 | — | The workspace sized for the card: each allocation vector `DSM / 8 + 1` bytes, packed, the BDOS entry jump at an `xx06h` address below them; four 8 MiB volumes boot and pass the BDOS probe; `SAVE` reaches the entry's page and no further | `system` | Emulator | Pass |
 | — | A program that replaces CONOUT, CONIN, CONST and WBOOT in the RAM BIOS table sees BDOS functions 2, 6 and 9 written and 1, 6 and 10 read through them, and `^C` and a BDOS disk error warm boot through its WBOOT; the replaced entries survive a `^C` warm boot | `hooks` | Emulator | Pass |
 | — | PICO9918 80 × 24 console: registers, DIR in 6 columns, 80-character lines | `console` | Emulator (Debug80 TMS9918 model; VRAM checked, not pixels) | Pass |

@@ -62,7 +62,7 @@ COLDRT: CALL    SDINIT
         XOR     A               ; drive A, user 0
         LD      (PZDU),A
         CALL    PZINIT
-        CALL    LOWINIT
+        CALL    MAININIT
         JP      WBOOTR
 COLDERR:JP      DIAG
 
@@ -70,13 +70,13 @@ COLDERR:JP      DIAG
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
 ; stack, because the BIOS stack is in that bank.
 WBOOTR: DI
-        LD      A,LATCLAS+LATEXP ; U9 half 1: its warm-boot jump, for an
+        LD      A,LATCLAS+LATEXP ; EXPAND 1: its warm-boot jump, for an
         OUT     (SYSLAT),A      ; exit from a program that left it in
         LD      A,$C3
         LD      (RAMBIOS+3),A
         LD      HL,WBOOTR
         LD      (RAMBIOS+4),HL
-        LD      A,LATCLAS       ; low page 0, U9 half 0
+        LD      A,LATCLAS       ; MAIN 0, EXPAND 0
         LD      (LATCHV),A
         OUT     (SYSLAT),A
         LD      SP,BSTK
@@ -91,19 +91,20 @@ WBOOTR: DI
         LD      C,A
         JP      CCPENT
 
-; Cold boot: count the low pages, and give low page 1 a copy of page zero.
-; With LOWPAGE set, the complement of page 0's byte at DETADR is written; if
-; page 0 then still holds its own byte, a second page is fitted. Both bytes
-; are put back. The copy switches the latch for every byte and uses no stack. Page 1's 0000h then reaches the RAM
-; BIOS table in the window, so an exit from page 1 warm boots into page 0.
-LOWINIT:LD      A,(LATCHV)
-        LD      D,A             ; page 0
-        OR      LATLOW1
-        LD      E,A             ; page 1
+; Cold boot: count the MAIN regions, and give MAIN 1 a copy of page zero.
+; With MAIN set, the complement of MAIN 0's byte at DETADR is written; if
+; MAIN 0 then still holds its own byte, MAIN 1 is fitted. Both bytes are put
+; back. The copy switches the latch for every byte and uses no stack. MAIN
+; 1's 0000h then reaches the RAM BIOS table in EXPAND 0, so an exit from
+; MAIN 1 warm boots into MAIN 0.
+MAININIT:LD     A,(LATCHV)
+        LD      D,A             ; MAIN 0
+        OR      LATMAIN
+        LD      E,A             ; MAIN 1
         LD      HL,DETADR
-        LD      B,(HL)          ; page 0's byte
+        LD      B,(HL)          ; MAIN 0's byte
         OUT     (SYSLAT),A
-        LD      C,(HL)          ; page 1's byte, or page 0's again
+        LD      C,(HL)          ; MAIN 1's byte, or MAIN 0's again
         LD      A,B
         CPL
         LD      (HL),A
@@ -113,27 +114,27 @@ LOWINIT:LD      A,(LATCHV)
         LD      (HL),B
         CP      B
         LD      A,1
-        JR      NZ,PGSET        ; page 0 saw the write: one page
+        JR      NZ,MNSET        ; MAIN 0 saw the write: no MAIN 1
         LD      A,E
         OUT     (SYSLAT),A
         LD      (HL),C
         LD      A,D
         OUT     (SYSLAT),A
         LD      A,2
-        LD      (PAGES),A
+        LD      (MAINS),A
         LD      HL,0
-PGCOPY: LD      A,D
+MNCOPY: LD      A,D
         OUT     (SYSLAT),A
         LD      C,(HL)
         LD      A,E
         OUT     (SYSLAT),A
         LD      (HL),C
         INC     L
-        JR      NZ,PGCOPY
+        JR      NZ,MNCOPY
         LD      A,D
         OUT     (SYSLAT),A
         RET
-PGSET:  LD      (PAGES),A
+MNSET:  LD      (MAINS),A
         RET
 
 ; Rebuild the classic page-zero vectors and the BDOS entry jump, and
