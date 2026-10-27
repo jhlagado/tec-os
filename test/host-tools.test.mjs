@@ -158,3 +158,17 @@ test("CpmVolume refuses writes to a read-only volume", () => {
   const fs = new CpmVolume(image.subarray(v.start * 512, (v.start + v.length) * 512), v.g, { readOnly: true });
   assert.throws(() => fs.write("X.COM", new Uint8Array(1)), /read-only/);
 });
+
+test("tecvol makes and reads format 1.1: more than 8 volumes, a drives field, unique labels", () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-11-"));
+  const img = resolve(dir, "big.img");
+  const vols = Array.from({ length: 12 }, (_, i) => ["--volume", `G1M:V${i}:${i < 2 ? "AB"[i] : "-"}`]).flat();
+  execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "create", img, ...vols, "--drives", "3"]);
+  const info = execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "verify", img], { encoding: "utf8" });
+  assert.match(info, /format 1\.1, .* 12 volume\(s\), 3 drive\(s\) wanted/);
+  const parsed = parseContainer(readFileSync(img));
+  assert.deepEqual([parsed.minor, parsed.drives, parsed.volumes.length, parsed.volumes[11].label], [1, 3, 12, "V11"]);
+  assert.throws(() => createContainer([{ geometry: "G1M", label: "SAME", mount: "A" }, { geometry: "G1M", label: "SAME" }]), ContainerError, "duplicate labels");
+  assert.throws(() => createContainer(Array.from({ length: 128 }, (_, i) => ({ geometry: "G1M", label: `V${i}`, mount: i ? "-" : "A" }))), ContainerError, "128 volumes");
+  assert.equal(parseContainer(standardCard()).minor, 0, "a card of 8 or fewer with no drives field stays 1.0");
+});

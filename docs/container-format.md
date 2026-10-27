@@ -1,4 +1,4 @@
-# Container format, version 1.0
+# Container format, version 1.1
 
 A TEC-OS card holds one container: a contiguous image whose block 0 is the
 header. The PC tool `tecvol` builds and edits it as an ordinary file and
@@ -15,14 +15,16 @@ are relative to the start of the container.
 | --- | ---: | --- |
 | 0 | 8 | Magic `"TECOSVOL"` |
 | 8 | 1 | Major version, 1. Any other value is rejected |
-| 9 | 1 | Minor version, 0. Later minors are accepted |
+| 9 | 1 | Minor version: 0 or 1. Later minors are accepted |
 | 10 | 2 | Header bytes, 512 |
 | 12 | 2 | Descriptor bytes, 32 |
-| 14 | 2 | Volume count, 1–8 |
+| 14 | 2 | Volume count: 1–8 in version 1.0, 1–127 in 1.1 |
 | 16 | 4 | Container length in blocks |
 | 20 | 2 | Checksum: 16-bit sum of all 512 header bytes except these two |
-| 22 | 10 | Reserved, zero |
-| 32 | 32 × n | Volume descriptors |
+| 22 | 1 | 1.1: the drives the card wants, 1–4 (0: as many as it mounts); reserved in 1.0 |
+| 23 | 2 | 1.1: 16-bit sum of the table's blocks after block 0 (see below); reserved in 1.0 |
+| 25 | 7 | Reserved, zero |
+| 32 | 32 × n | Volume descriptors, the first 15 |
 
 ## Volume descriptor
 
@@ -41,6 +43,27 @@ are relative to the start of the container.
 The drive letter is a mount assignment, not an identity; the volume id is
 the stable name.
 
+## The volume table beyond block 0 (1.1)
+
+Block 0 holds the header and the first 15 descriptors. A 1.1 card of more
+volumes continues the table in blocks 1–7, 16 descriptors to a block, up to
+127 in all; no volume can start below block 8, so those blocks are always
+free. The header's table sum is the 16-bit sum of every byte of the blocks
+that hold descriptors (`count / 16` of them, rounded down). In 1.1 the
+descriptors are in ascending order of start block, and labels are unique.
+A ROM that reads only 1.0 refuses a card of more than 8 volumes on its
+count, and mounts a 1.1 card of 8 or fewer as before.
+
+## Allocation vectors
+
+At cold boot each drive gets its allocation vector below the resident
+workspace. A 1.1 card that asks for N drives gets a G8M-sized vector (256
+bytes) for each of drives A to the Nth, mounted or not, so that any of them
+can take any volume at run time. Any other card gets a vector for each
+drive it mounts, sized for that volume, which keeps the TPA as large as
+possible; a drive can then be remounted only with a volume whose vector
+fits.
+
 ## Checks
 
 The ROM refuses to mount anything unless every check passes, and then reports
@@ -56,12 +79,15 @@ the error code on the diagnostic console:
 | 25h | Checksum |
 | 26h | Descriptor id, flags, geometry, length or alignment |
 | 27h | Payload beyond the container, or a 32-bit sum that wraps |
-| 28h | Overlapping payloads or duplicate ids |
+| 28h | A payload starting before the previous one ends (1.1 order), or overlapping |
 | 29h | Drive letter out of range or assigned twice |
 | 2Ah | No volume mounted as drive A |
 
-`tecvol` applies the same checks and also requires the image to be as long as
-the header says. The ROM cannot check the card's capacity; a payload past the
+| 25h | also the 1.1 table sum |
+
+The ROM checks the table in one pass, in table order. `tecvol` applies the
+same checks, and also requires unique ids and, in 1.1, unique labels, and
+an image as long as the header says. The ROM cannot check the card's capacity; a payload past the
 end of the card fails as an I/O error when it is reached.
 
 ## Geometries

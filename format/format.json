@@ -1,5 +1,5 @@
 {
-  "formatVersion": { "major": 1, "minor": 0 },
+  "formatVersion": { "major": 1, "minor": 1 },
   "blockBytes": 512,
   "header": {
     "magic": "TECOSVOL",
@@ -13,10 +13,16 @@
       "volumeCount": { "offset": 14, "size": 2 },
       "containerBlocks": { "offset": 16, "size": 4 },
       "checksum": { "offset": 20, "size": 2 },
-      "reserved": { "offset": 22, "size": 10 }
+      "drives": { "offset": 22, "size": 1 },
+      "tableSum": { "offset": 23, "size": 2 },
+      "reserved": { "offset": 25, "size": 7 }
     },
     "descriptorsOffset": 32,
-    "maxVolumes": 8
+    "maxVolumes": 127,
+    "maxVolumesMinor0": 8,
+    "descriptorsInBlock0": 15,
+    "descriptorsPerBlock": 16,
+    "tableBlocks": 7
   },
   "descriptor": {
     "bytes": 32,

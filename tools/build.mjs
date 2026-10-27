@@ -86,7 +86,12 @@ FMTMAJ  EQU     ${format.formatVersion.major}
 HDRSZ   EQU     ${format.header.bytes}
 DSCSZ   EQU     ${format.descriptor.bytes}
 MAXVOL  EQU     ${format.header.maxVolumes}
+MAXVOL0 EQU     ${format.header.maxVolumesMinor0}
+DSCBLK0 EQU     ${format.header.descriptorsInBlock0}
 HMAJOR  EQU     ${h.major.offset}
+HMINOR  EQU     ${h.minor.offset}
+HDRIVES EQU     ${h.drives.offset}
+HTSUM   EQU     ${h.tableSum.offset}
 HHDRSZ  EQU     ${h.headerBytes.offset}
 HDSCSZ  EQU     ${h.descriptorBytes.offset}
 HCOUNT  EQU     ${h.volumeCount.offset}

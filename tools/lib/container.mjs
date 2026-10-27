@@ -28,6 +28,24 @@ function put32(b, o, v) {
   put16(b, o + 2, (v >>> 16) & 0xffff);
 }
 
+/** Where descriptor i lives: block 0 after the header, then blocks 1-7. */
+export function descriptorAt(i) {
+  const first = format.header.descriptorsInBlock0;
+  if (i < first) return format.header.descriptorsOffset + i * format.descriptor.bytes;
+  const j = i - first;
+  return (1 + Math.floor(j / format.header.descriptorsPerBlock)) * BLOCK + (j % format.header.descriptorsPerBlock) * format.descriptor.bytes;
+}
+
+/** The table's blocks after block 0 that hold descriptors, for `count` volumes. */
+export const tableBlocksFor = (count) => Math.max(0, Math.ceil((count - format.header.descriptorsInBlock0) / format.header.descriptorsPerBlock));
+
+/** 16-bit sum of blocks 1..k of the table (format 1.1's tableSum). */
+export function tableSum(image, count) {
+  let sum = 0;
+  for (let i = BLOCK; i < (1 + tableBlocksFor(count)) * BLOCK; i += 1) sum = (sum + image[i]) & 0xffff;
+  return sum;
+}
+
 /** 16-bit sum of the header bytes, excluding the checksum field. */
 export function headerChecksum(header) {
   let sum = 0;
@@ -50,12 +68,18 @@ function driveIndex(mount) {
 
 /**
  * Build a new container. volumes: [{ geometry, label, mount, readOnly, id }].
- * Payloads are erased to E5h, an empty CP/M directory and data area.
+ * Payloads are erased to E5h, an empty CP/M directory and data area. A card
+ * of more than 8 volumes, or one given drives (the drives it wants, 1-4), is
+ * format 1.1; any other is 1.0, which every ROM reads.
  */
-export function createContainer(volumes, { align = DEFAULT_ALIGN } = {}) {
+export function createContainer(volumes, { align = DEFAULT_ALIGN, drives = 0 } = {}) {
+  const minor = volumes.length > format.header.maxVolumesMinor0 || drives ? 1 : 0;
   if (volumes.length < 1 || volumes.length > format.header.maxVolumes) {
     throw new ContainerError(`a container holds 1-${format.header.maxVolumes} volumes`);
   }
+  if (drives < 0 || drives > format.maxDrives) throw new ContainerError(`drives must be 1-${format.maxDrives}`);
+  const labels = volumes.map((v, i) => String(v.label ?? `VOLUME${i + 1}`).toUpperCase().slice(0, 11).trimEnd());
+  if (new Set(labels).size !== labels.length) throw new ContainerError("volume labels must be unique");
   if (align % format.descriptor.startAlignBlocks !== 0) {
     throw new ContainerError(`alignment must be a multiple of ${format.descriptor.startAlignBlocks} blocks`);
   }
@@ -72,23 +96,24 @@ export function createContainer(volumes, { align = DEFAULT_ALIGN } = {}) {
   const header = image.subarray(0, BLOCK);
   header.set(MAGIC, H.magic.offset);
   header[H.major.offset] = format.formatVersion.major;
-  header[H.minor.offset] = format.formatVersion.minor;
+  header[H.minor.offset] = minor;
+  header[H.drives.offset] = drives;
   put16(header, H.headerBytes.offset, format.header.bytes);
   put16(header, H.descriptorBytes.offset, format.descriptor.bytes);
   put16(header, H.volumeCount.offset, placed.length);
   put32(header, H.containerBlocks.offset, totalBlocks);
   placed.forEach((v, i) => {
-    const o = format.header.descriptorsOffset + i * format.descriptor.bytes;
-    put32(header, o + D.volumeId.offset, v.id);
-    put32(header, o + D.startBlock.offset, v.start);
-    put32(header, o + D.lengthBlocks.offset, v.g.payloadBlocks);
-    header[o + D.geometry.offset] = v.g.id;
-    header[o + D.flags.offset] = v.readOnly ? format.descriptor.flags.readOnly : 0;
-    header[o + D.mount.offset] = driveIndex(v.mount);
-    const label = fromLatin1(String(v.label ?? `VOLUME${i + 1}`).toUpperCase().padEnd(11, " ").slice(0, 11));
-    header.set(label, o + D.label.offset);
+    const o = descriptorAt(i);
+    put32(image, o + D.volumeId.offset, v.id);
+    put32(image, o + D.startBlock.offset, v.start);
+    put32(image, o + D.lengthBlocks.offset, v.g.payloadBlocks);
+    image[o + D.geometry.offset] = v.g.id;
+    image[o + D.flags.offset] = v.readOnly ? format.descriptor.flags.readOnly : 0;
+    image[o + D.mount.offset] = driveIndex(v.mount);
+    image.set(fromLatin1(labels[i].padEnd(11, " ")), o + D.label.offset);
     image.fill(0xe5, v.start * BLOCK, (v.start + v.g.payloadBlocks) * BLOCK);
   });
+  if (minor) put16(header, H.tableSum.offset, tableSum(image, placed.length));
   put16(header, H.checksum.offset, headerChecksum(header));
   parseContainer(image);
   return image;
@@ -105,25 +130,31 @@ export function parseContainer(image, { requireLength = true } = {}) {
   if (h[H.major.offset] !== format.formatVersion.major) fail(`unsupported major version ${h[H.major.offset]}`);
   if (u16(h, H.headerBytes.offset) !== format.header.bytes) fail("bad header size");
   if (u16(h, H.descriptorBytes.offset) !== format.descriptor.bytes) fail("bad descriptor size");
+  const minor = h[H.minor.offset];
   const count = u16(h, H.volumeCount.offset);
-  if (count < 1 || count > format.header.maxVolumes) fail(`bad volume count ${count}`);
+  const most = minor === 0 ? format.header.maxVolumesMinor0 : format.header.maxVolumes;
+  if (count < 1 || count > most) fail(`bad volume count ${count}`);
   if (u16(h, H.checksum.offset) !== headerChecksum(h)) fail("header checksum mismatch");
+  const drives = minor === 0 ? 0 : h[H.drives.offset];
+  if (drives > format.maxDrives) fail(`bad drives field ${drives}`);
+  if (image.length < (1 + tableBlocksFor(count)) * BLOCK) fail("image is shorter than its volume table");
+  if (minor >= 1 && u16(h, H.tableSum.offset) !== tableSum(image, count)) fail("volume table checksum mismatch");
   const containerBlocks = u32(h, H.containerBlocks.offset);
   if (requireLength && image.length < containerBlocks * BLOCK) {
     fail(`image is truncated: ${image.length} bytes, header says ${containerBlocks * BLOCK}`);
   }
   const volumes = [];
   for (let i = 0; i < count; i += 1) {
-    const o = format.header.descriptorsOffset + i * format.descriptor.bytes;
+    const o = descriptorAt(i);
     const v = {
       index: i,
-      id: u32(h, o + D.volumeId.offset),
-      start: u32(h, o + D.startBlock.offset),
-      length: u32(h, o + D.lengthBlocks.offset),
-      geometry: h[o + D.geometry.offset],
-      flags: h[o + D.flags.offset],
-      mount: h[o + D.mount.offset],
-      label: toLatin1(h.subarray(o + D.label.offset, o + D.label.offset + 11)).trimEnd(),
+      id: u32(image, o + D.volumeId.offset),
+      start: u32(image, o + D.startBlock.offset),
+      length: u32(image, o + D.lengthBlocks.offset),
+      geometry: image[o + D.geometry.offset],
+      flags: image[o + D.flags.offset],
+      mount: image[o + D.mount.offset],
+      label: toLatin1(image.subarray(o + D.label.offset, o + D.label.offset + 11)).trimEnd(),
     };
     const g = geometryById(v.geometry);
     if (v.id === 0) fail(`volume ${i}: zero id`);
@@ -131,6 +162,8 @@ export function parseContainer(image, { requireLength = true } = {}) {
     if (!g) fail(`volume ${i}: unknown geometry ${v.geometry}`);
     if (v.length !== g.payloadBlocks) fail(`volume ${i}: length does not match geometry ${g.name}`);
     if (v.start === 0 || v.start % format.descriptor.startAlignBlocks) fail(`volume ${i}: misaligned start`);
+    if (minor >= 1 && volumes.length && v.start < volumes.at(-1).start + volumes.at(-1).length) fail(`volume ${i}: not after volume ${i - 1}`);
+    if (minor >= 1 && volumes.some((p) => p.label === v.label)) fail(`volume ${i}: duplicate label ${v.label}`);
     if (v.start + v.length > containerBlocks) fail(`volume ${i}: payload beyond the container`);
     if (v.mount !== format.descriptor.unmounted && v.mount >= format.maxDrives) fail(`volume ${i}: bad drive`);
     for (const p of volumes) {
@@ -144,7 +177,7 @@ export function parseContainer(image, { requireLength = true } = {}) {
     volumes.push(v);
   }
   if (!volumes.some((v) => v.mount === 0)) fail("no volume is mounted as drive A");
-  return { containerBlocks, volumes };
+  return { containerBlocks, volumes, minor, drives };
 }
 
 /** The payload bytes of a volume, as a view into the image. */

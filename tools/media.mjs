@@ -23,6 +23,8 @@ const PROGRAMS = [
   { name: "TERM.COM", source: "test/programs/term.asm", description: "draws with the video terminal's ANSI subset" },
   { name: "PROBE.COM", source: "test/programs/probe.asm", description: "BDOS file-function probe" },
   { name: "DEMO.COM", source: "test/programs/demo.asm", description: "hardware services demonstration: LCD, digits, LEDs, PICO9918" },
+  { name: "MOUNT.COM", source: "test/programs/mount.asm", description: "mounts a volume on a drive: MOUNT B: NAME, MOUNT B: INDEX, MOUNT B: to unmount" },
+  { name: "VOLS.COM", source: "test/programs/vols.asm", description: "lists the card's volumes and the drives they are on" },
 ];
 
 const README = `TEC-OS starter disk
@@ -32,6 +34,8 @@ TERM               draw on the video console; TERM S also scrolls
 PROBE              exercise the BDOS file functions
 DEMO               the LCD, digits, 8x8 LEDs and PICO9918; any key stops
 EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
+VOLS               list the card's volumes
+MOUNT B: NAME      put a volume on a drive; MOUNT B: takes it off
 
 B: is an empty work disk.
 `;

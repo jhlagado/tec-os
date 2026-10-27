@@ -45,6 +45,13 @@ supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   nest six deep.
 - `UNLOAD` removes the lowest resident.
 
+`MOUNT B: NAME` (or an index, as `VOLS` lists them) puts another of the
+card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
+empty, and a volume is never on two drives. Both are programs on the starter
+card, using the mount service at `FF20h`. Mounts are for the session: a
+reset gives the card's own again. A nested CCP's `EXIT` gives the parent
+its own mounts back, remounting only the drives that changed.
+
 A program can shell out the same way, through `FF1Ah` (an interactive
 nested CCP) or `FF1Dh` (one command line, run with no prompt), passing the
 end of its own image in HL. TEC-OS keeps that much of the TPA in EXPAND 1

@@ -3,7 +3,7 @@
 ; EXPAND 1, one 40-byte record a level, six levels in the page cold boot
 ; allocates first (LVBASE). A record, staged in LOADBUF:
 ;   +0  the RAM BIOS table's warm-boot target     +2  the one-command flag
-;   +3  drive and user (0004h)                    +4  the mounts, from KS14
+;   +3  drive and user (0004h)                    +4  the mounts (DRVIDX)
 ;   +8  the parent's SP                           +10 the CCP stack, 27 bytes
 ;   +37 the parent image's page in EXPAND 1       +38 its length in pages
 ;   +39 the new level's flag, while the record is built
@@ -52,6 +52,10 @@ CI2:    LD      HL,(RAMBIOS+4)
         LD      (LOADBUF+2),A
         LD      A,(CURDSK)
         LD      (LOADBUF+3),A
+        LD      HL,DRVIDX
+        LD      DE,LOADBUF+4
+        LD      BC,MAXDRV
+        LDIR
         LD      HL,CSTKBAS      ; the caller's stack above its SP is intact
         LD      DE,LOADBUF+10
         LD      BC,CCPSTN
@@ -96,7 +100,31 @@ XEXIT:  LD      A,(CCPLVL)
         LD      L,0
         LD      A,(LOADBUF+38)
         CALL    XFREE
-XE1:    LD      HL,(LOADBUF)
+XE1:    LD      A,2             ; the parent's mounts: each drive that differs
+XEP:    PUSH    AF              ; is unmounted, then given the parent's
+        LD      C,0             ; volume; twice, so that a volume the child
+XE2:    CALL    XECMP           ; moved to a later drive is free by then
+        JR      Z,XE3
+        PUSH    BC
+        PUSH    DE
+        LD      A,1
+        CALL    VOLSVC
+        POP     DE
+        POP     BC
+        DEC     E
+        JP      M,XE3           ; the parent had none here
+        XOR     A
+        PUSH    BC
+        CALL    VOLSVC
+        POP     BC
+XE3:    INC     C
+        LD      A,C
+        CP      MAXDRV
+        JR      C,XE2
+        POP     AF
+        DEC     A
+        JR      NZ,XEP
+        LD      HL,(LOADBUF)
         LD      (RAMBIOS+4),HL
         LD      A,(LOADBUF+3)
         LD      (CURDSK),A
@@ -124,6 +152,17 @@ XE1:    LD      HL,(LOADBUF)
         LD      SP,(LOADBUF+8)
         LD      HL,(PRGCODE)
         OR      A
+        RET
+
+; Drive C: E = the record's index + 1, Z if the drive has it now.
+XECMP:  LD      HL,LOADBUF+4
+        LD      B,0
+        ADD     HL,BC
+        LD      E,(HL)
+        LD      HL,DRVIDX
+        ADD     HL,BC
+        LD      A,(HL)
+        CP      E
         RET
 
 ; A = level 1-6: HL = its record in EXPAND 1.

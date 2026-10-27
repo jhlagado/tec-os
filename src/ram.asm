@@ -21,6 +21,8 @@ BLKBUF: DS      512
 
 ; Drive table: start block (4), length in blocks (2), geometry (1), flags (1).
 DRVTAB: DS      MAXDRV*DRVESZ
+DRVIDX: DS      MAXDRV          ; each drive's volume: container index + 1, 0 for none
+DRVSLOT:DS      MAXDRV          ; each drive's vector slot: 0 none, 1 G1M's, 2 G8M's
 DPHTAB: DS      MAXDRV*DPHSZ
 DIRBUF: DS      128
 CSVDUM: DS      2               ; check vector placeholder; CKS is zero
@@ -28,7 +30,12 @@ STUBAD: DS      2               ; BDOS entry jump, the word at 0006h
 
 ; ---- Mount scratch ----------------------------------------------------------
 MNTCNT: DS      1
-MNTEND: DS      4*8             ; exclusive end block of each descriptor
+MNTBLK: DS      4               ; the container's length in blocks
+MNTPRV: DS      4               ; the previous descriptor's end, or the table's sum
+MNTSUM: DS      2               ; format 1.1: blocks 1-7's sum, from the header
+MNTDRV: DS      1               ; format 1.1: drives wanted; 0 for a 1.0 card
+MNTI:   DS      1               ; the descriptor being checked
+MNTCB:  DS      1               ; the table block in BLKBUF, FFh none
 
 ; ---- Video terminal ---------------------------------------------------------
 LINEBUF:DS      80              ; one display row, for scrolling

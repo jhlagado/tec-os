@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // tecvol: create, inspect and edit TEC-OS SD containers.
 //
-//   tecvol create IMAGE --volume G1M:SYSTEM:A [--volume G8M:WORK:B:ro] [--align N]
+//   tecvol create IMAGE --volume G1M:SYSTEM:A [--volume G8M:WORK:B:ro] [--align N] [--drives N]
+//                (more than 8 volumes, or --drives, makes a format 1.1 card)
 //   tecvol info IMAGE
 //   tecvol verify IMAGE
 //   tecvol dir IMAGE [DRIVE] [--user N]
@@ -35,6 +36,7 @@ function parseArgs(argv) {
     if (a === "--volume") opts.volume.push(argv[++i]);
     else if (a === "--user") opts.user = Number(argv[++i]);
     else if (a === "--align") opts.align = Number(argv[++i]);
+    else if (a === "--drives") opts.drives = Number(argv[++i]);
     else if (a === "--text") opts.text = true;
     else if (a === "--ro") opts.ro = true;
     else if (a === "--sys") opts.sys = true;
@@ -91,14 +93,14 @@ async function main(argv) {
     case "create": {
       if (!imagePath || opts.volume.length === 0) usage("create needs IMAGE and at least one --volume");
       if (existsSync(imagePath)) usage(`${imagePath} exists; remove it first`);
-      saveImage(imagePath, createContainer(opts.volume.map(parseVolumeSpec), { align: opts.align }));
+      saveImage(imagePath, createContainer(opts.volume.map(parseVolumeSpec), { align: opts.align, drives: opts.drives }));
       break;
     }
     case "info":
     case "verify": {
       const { image, info } = openImage(imagePath);
       let problems = 0;
-      console.log(`container: ${info.containerBlocks} blocks (${info.containerBlocks * 512} bytes), ${info.volumes.length} volume(s)`);
+      console.log(`container: format 1.${info.minor}, ${info.containerBlocks} blocks (${info.containerBlocks * 512} bytes), ${info.volumes.length} volume(s)${info.drives ? `, ${info.drives} drive(s) wanted` : ""}`);
       for (const v of info.volumes) {
         const { fs } = openVolume(image, info, String(v.id));
         const issues = fs.verify();
