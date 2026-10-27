@@ -667,53 +667,24 @@ PUTTSK:
         DJNZ    PUTTRIM
         RET
 
-; Print HL in decimal without leading zeros.
-PUTDEC:
-        LD      DE,DECTAB
-        LD      B,5             ; digits left
-        LD      C,0             ; nonzero once a digit has been printed
-PUTDL:
-        PUSH    BC
-        LD      A,(DE)
-        LD      C,A
-        INC     DE
-        LD      A,(DE)
-        INC     DE
+; Print HL in decimal without leading zeros: the remainders of division by
+; 10 go on the stack above a 10, which no digit equals, and print in reverse.
+PUTDEC: LD      DE,10
         PUSH    DE
-        LD      D,A
-        LD      E,C             ; DE = this power of ten
-        LD      A,'0'-1
-PUTDS:
-        INC     A
-        OR      A
-        SBC     HL,DE
-        JR      NC,PUTDS
-        ADD     HL,DE
-        POP     DE
-        POP     BC
-        CP      '0'
-        JR      NZ,PUTDO
-        BIT     0,C
-        JR      NZ,PUTDO
-        LD      A,B             ; the units digit always prints
-        CP      1
-        LD      A,'0'
-        JR      NZ,PUTDN
-PUTDO:
-        LD      C,1
-        PUSH    BC
-        PUSH    DE
+PUTDL:  CALL    DIV16
         PUSH    HL
+        EX      DE,HL
+        OR      L               ; A = H: DIV16 leaves A = D
+        LD      DE,10
+        JR      NZ,PUTDL
+PUTDP:  POP     HL
+        LD      A,L
+        CP      10
+        RET     Z
+        ADD     A,'0'
         LD      E,A
         CALL    PUTCHAR
-        POP     HL
-        POP     DE
-        POP     BC
-PUTDN:
-        DJNZ    PUTDL
-        RET
-DECTAB:
-        DW      10000,1000,100,10,1
+        JR      PUTDP
 
 PUTNAME:
         LD      A,(HL)

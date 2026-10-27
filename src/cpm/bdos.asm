@@ -1237,20 +1237,10 @@ BLOCKSCA:
         LD      D,0
         ADD     HL,DE
 
-        LD      DE,0
         LD      IX,(DPBPTR)
-        LD      C,(IX+0)
-        LD      B,(IX+1)
-
-DIVTRACK:
-        OR      A
-        SBC     HL,BC
-        JR      C,DIVDONE
-        INC     DE
-        JR      DIVTRACK
-
-DIVDONE:
-        ADD     HL,BC
+        LD      E,(IX+0)
+        LD      D,(IX+1)
+        CALL    DIV16           ; DE = the track, HL = the sector
         LD      (IOSEC),HL
         EX      DE,HL
         LD      E,(IX+13)
@@ -1269,6 +1259,28 @@ DIVDONE:
         LD      B,H
         LD      C,L
         JP      BIOSEC
+
+; HL div DE in DE, HL mod DE in HL, unsigned, for DE from 1 to 8000h: the
+; remainder then never passes 16 bits. A:C shifts the dividend out and the
+; quotient in, each bit a shift behind its trial subtraction. Returns A = D;
+; destroys F, BC.
+DIV16:  LD      A,H
+        LD      C,L
+        LD      HL,0
+        LD      B,16
+DIV16L: RL      C
+        RLA
+        ADC     HL,HL
+        SBC     HL,DE           ; no carry in: HL < DE before the shift
+        JR      NC,DIV16S
+        ADD     HL,DE           ; and carry out
+DIV16S: CCF
+        DJNZ    DIV16L
+        RL      C               ; the last quotient bit in
+        RLA
+        LD      D,A
+        LD      E,C
+        RET
 
 NEXTEXT:
         CALL    FCBEX

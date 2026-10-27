@@ -55,3 +55,15 @@ Changes made for ROM residency in TEC-OS:
   destination, copy record by record through the default DMA record, close,
   and print `COPIED nnnn` in hex. It keeps its state in the CCP's existing
   FCBs and `DIRNUM` and writes nothing in the TPA.
+- The line editor (`FNLINE`) keeps a history of the lines typed at the CCP
+  prompt in a ring in EXPAND 1 (`src/history.asm`). The CCP sets `HFLAG`
+  before its prompt's function 10, and only that call stores its line or
+  takes ^W and ^N as recall keys; for a program, function 10 is CP/M 2.2's.
+  `LINCLEAR`'s loop became the subroutine `LINERASE`, shared with recall.
+- `DIV16` divides HL by DE, giving the quotient in DE and the remainder in
+  HL, by shifts and trial subtractions, for divisors from 1 to 8000h. The
+  BDOS uses it to split a record number into track and sector, where
+  Portable CP/M subtracted the sectors per track once a track: up to 1,023
+  times at the end of an 8 MiB volume. `PUTDEC` in the CCP divides by 10
+  with it and prints the remainders in reverse, in place of a table of
+  powers of ten.
