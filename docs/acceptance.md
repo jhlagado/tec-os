@@ -103,5 +103,5 @@ T-states (0.45 s); one 512-byte SD block read about 330,000 T-states; serial
 ## Not yet shown
 
 - Any physical TEC-1G run: reset, latch decoding of bits 2–6, SD timing,
-  serial timing, NMI from the real keypad, TMS9918 access timing.
+  serial timing, TMS9918 access timing.
 - The V9938 console.

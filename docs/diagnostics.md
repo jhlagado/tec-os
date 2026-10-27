@@ -360,15 +360,16 @@ T-states, over eight characters, and compares the terminal's bit time with
 its own. It passes within 2%. A failure means the board's clock and the
 terminal disagree on 4800 baud, whatever the cause.
 
-### T29 KEYPAD and T30 KEYNMI (O2)
+### T29 KEYPAD and T30 KEYNMI
 
 Pressing each of the 20 keypad keys prints its code from port `00h` and
 whether bit 5 (Shift) was low. `AD` twice in a row ends the test. T29 passes
 when all 20 codes were seen. T30 compares the NMIs counted at `0066h` with
 the presses. The 74C923 raises its data-available output once for each key
 press and drops it on release, so a press of the same key again strobes it
-again, and with the NMI on that edge each press gives one NMI. Open item O2
-assumes this, and T30 shows whether the board does it. T29 clears its counts
+again, and with the NMI on that edge each press gives one NMI; T30 shows
+whether the board does it. It needs the keypad NMI jumper, which TEC-OS
+itself leaves off (decision D06). T29 clears its counts
 before it prints the instructions, so a key pressed while they print still
 counts. Before that order was fixed, a press arriving within the last line
 of the prompt was lost, which showed as 20 NMIs for 21 presses.
@@ -409,7 +410,6 @@ fitted the line also gives the RTC's elapsed seconds.
 | Open item | Tests | What to record |
 | --- | --- | --- |
 | O1 bank field decoding | T12, T13 | The field map and bank count; set `NBANKS` for the board profile |
-| O2 keypad NMI | T29, T30 | NMIs per press |
 | O3 writes under the overlay | T08 | Reaches RAM or dropped |
 | O4 SD timing | T19, T20, T34, T37 | Card, token polls, errors, read rate and busy polls after a write |
 | O5 VRAM timing | T17, T18 | Errors at 16 and 104 T-states a byte |

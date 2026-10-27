@@ -110,38 +110,24 @@ documented residual risk.
 4 MHz, the TEC-1G standard and Debug80's fast mode. Serial and SD delay loops
 derive from the `CPUHZ` build constant.
 
-## D06 Interrupts and NMI (Q09) — Adopted 2026-10-24, revised 2026-10-25
+## D06 Interrupts and NMI (Q09) — Adopted 2026-10-24, revised 2026-10-25 and 2026-10-27
 
 TEC-OS runs with maskable interrupts disabled. `IM 1` is selected so a stray
 enable cannot jump through an undefined vector table, and `0038h` holds
 `EI; RETI`. TEC-OS owns both vectors.
 
-NMI can occur and cannot be masked (confirmed 2026-10-25). Its sources in
-Debug80 are a hex-keypad press (74C923 data available) and the TMS9918 frame
-interrupt. TEC-OS prevents the second by keeping the TMS9918's interrupt
-enable (register 1 bit 5) clear. The keypad remains. TEC-OS handles it with a
-fixed vector and a stable stack everywhere it controls memory:
+NMI cannot be masked. Its sources in Debug80 are a hex-keypad press (74C923
+data available) and the TMS9918 frame interrupt. TEC-OS prevents the second
+by keeping the TMS9918's interrupt enable (register 1 bit 5) clear.
 
-- The first instruction at reset loads SP with fixed RAM. The ROM image holds
-  `RETN` at `0066h`, which serves while the overlay is on. An NMI in the ten
-  T-states before SP is loaded would push to an undefined SP; that window is
-  accepted.
-- Cold boot writes `RETN` to RAM `0066h` before clearing the rest of page
-  zero. Warm boot rewrites it first thing, because the program that just
-  ended may have used those bytes. Starting a native program reclaims it.
-- Every bank change runs with SP in fixed RAM, so the return address an NMI
-  pushes is never in the window being switched.
-
-Tests press the keypad every 1,000–4,000 T-states through cold boot and
-through the whole native bank-call proof (`test/nmi.test.mjs`).
-
-**Classic profile hazard (accepted, open).** `0066h` is byte 10 of the
-default FCB at `005Ch`, its second file-type character. The CCP fills that FCB
-for every command, and a CP/M program owns it while it runs. An NMI then
-executes whatever the FCB holds. Software cannot prevent this. Options: a
-board change that lets software disable keypad NMI, or the rule that the hex
-keypad is not pressed while a CP/M program runs. The rule is documented in
-[compatibility.md](compatibility.md); the board option is open item O2.
+**Keypad NMI (revised 2026-10-27).** On the board the keypad drives NMI only
+through an optional jumper, fitted for compatibility with the original
+monitor alone. TEC-OS makes no provision for a keypad NMI, and the jumper
+stays off on a board that runs it. A program owes nothing at `0066h`, which
+is byte 10 of the default FCB at `005Ch`. The `RETN` the ROM still writes to
+`0066h` at reset, cold boot and warm boot is left from the earlier rule;
+nothing relies on it. `test/nmi.test.mjs` still presses the keypad through
+cold boot.
 
 ## D07 Console (Q03) — Adopted 2026-10-24
 
@@ -437,7 +423,7 @@ warm boot; reset puts the ROM's entries back.
 | ID | Open item | Blocks |
 | --- | --- | --- |
 | O1 | Physical decoding of latch bits 2–6 and the fitted U9 device | Physical-board native banking claim |
-| O2 | A board change to let software disable keypad NMI | Classic-mode NMI robustness |
+| O2 | Closed 2026-10-27 by D06: the keypad NMI jumper stays off | — |
 | O3 | Behaviour of writes to `0000h–07FFh` with the overlay on | Nothing; TEC-OS avoids them |
 | O4 | Physical SD card timing at 4 MHz bit-bang rates | Physical-board storage claim |
 | O5 | TMS9918 VRAM access timing on the board (no delays are inserted) | Physical-board video claim |

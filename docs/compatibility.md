@@ -83,11 +83,6 @@ and run.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
   more than 46,086 bytes of TPA, may fail; how much a card gives depends on
   its volumes.
-- **NMI and the default FCB.** The Z80 NMI vector `0066h` lies inside the
-  default FCB at `005Ch` (its file-type field). While a CP/M program runs it
-  owns those bytes, so a hex-keypad press during that time executes whatever
-  the FCB holds. Do not press the hex keypad while a CP/M program runs.
-  TEC-OS restores the vector at every warm boot. See decision D06.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,
