@@ -3,7 +3,7 @@
 // 0000h-7FFFh, bit 2 (EXPAND) EXPAND 0 or EXPAND 1 at 8000h-BFFFh, and neither
 // moves the other region or ROM. Emulator evidence about the harness itself. TEST_RAM96=0
 // runs the same checks with the option off, where they fail: the runtime
-// decodes bits 3-6 as a bank field for the window (D03).
+// decodes bits 3-6 as a bank field for the window.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

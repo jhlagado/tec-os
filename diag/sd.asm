@@ -441,7 +441,7 @@ TSD7:   CALL    PRI
         CALL    PRHEX
         JP      REND
 
-; ---- T20 SDBLKS (open item O4) --------------------------------------------------
+; ---- T20 SDBLKS ----------------------------------------------------------------
 
 ; Read block 0 twice and compare, then blocks 0-63, tracking the token
 ; wait. A block costs 354,216 + 678 x polls T-states (measured on the

@@ -21,7 +21,7 @@ table of services at `FF00h`.
 - A web page that runs the whole system in a browser.
 
 Everything described here has run only in the Debug80 TEC-1G model; it has
-not yet run on a physical board. See [docs/acceptance.md](docs/acceptance.md).
+not yet run on a physical board.
 
 ## Build and test
 
@@ -96,14 +96,12 @@ Do not press the hex keypad while a CP/M program is running; see
 
 ## Documents
 
-- [Specification](docs/specification.md) and [decisions](docs/decisions.md)
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
 - [ROM services](docs/rom-services.md) (the 19 hardware services at `FF0Bh`)
 - [Console](docs/console.md)
 - [CP/M compatibility](docs/compatibility.md)
 - [Write policy and recovery](docs/recovery.md)
-- [Acceptance evidence](docs/acceptance.md)
 
 ## Sources
 

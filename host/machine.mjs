@@ -49,7 +49,7 @@ export class Machine {
    */
   /*
    * ram96: decode the system latch as the TEC-1G documentation's 96K scheme
-   * instead of the runtime's bank field (D03): bit 3 (MAIN) picks MAIN 0 or
+   * instead of the runtime's bank field (latch bits 3-6): bit 3 (MAIN) picks MAIN 0 or
    * MAIN 1, 32 KiB each, at 0000h-7FFFh, and bit 2 (EXPAND) EXPAND 0 or
    * EXPAND 1, 16 KiB each, at 8000h-BFFFh. mains: 1 when MAIN 1 is not
    * fitted, so bit 3 changes nothing; expands: 1 when EXPAND 1 is not (a

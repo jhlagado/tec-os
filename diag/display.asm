@@ -462,7 +462,7 @@ VCMP2:  INC     L
         JR      NZ,VCMP1
         RET
 
-; O5: write all 16 KiB with OUTI, 16 T-states a byte, then read it with INI.
+; VRAM timing: write all 16 KiB with OUTI, 16 T-states a byte, then read it with INI.
 ; No delays: the display stays on in 80-column mode as TEC-OS runs it.
 VFAST:  LD      HL,0
         CALL    VWA
@@ -748,7 +748,7 @@ VSTAT:  LD      C,15
 WAIT1S: LD      A,10
         JP      WAITDS
 
-; TEC-OS page-flips in 80 columns (D24): the console's names are at 1000h
+; TEC-OS page-flips in 80 columns: the console's names are at 1000h
 ; (R2 = 07h) and row moves are built at 2000h (R2 = 0Bh). The page is
 ; (R2 & 0Ch) << 10 as TEC-OS and the emulator decode it. Page 2 is filled
 ; with 2s under its own title, then R2 alternates three times and is left

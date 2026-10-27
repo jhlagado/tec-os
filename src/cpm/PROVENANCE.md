@@ -33,7 +33,7 @@ Changes made for ROM residency in TEC-OS:
   DPH scratch word (`DUSAVE`, `LOGFAST`), as DR's BDOS keeps its equivalent.
   The allocation vector was already per drive and is maintained by the BDOS
   between logins.
-- `DIR` is rewritten for TEC-OS's displays (decision D19): compact
+- `DIR` is rewritten for TEC-OS's displays: compact
   `NAME.EXT` entries in as many 13-character columns as the console width at
   `VWID` allows, followed by the file count and the free space on the listed
   drive (`PUTTRIM`, `PUTDEC`). It still hides system files and uses no TPA

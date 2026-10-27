@@ -67,7 +67,7 @@ BOOTSTK EQU     $8000           ; cold-boot stack top, fixed RAM
 RAMBIOS EQU     $BF00           ; RAM copy of the BIOS jump table, top page
 BIOSLEN EQU     17*3
 
-; ---- Resident stack sizes (measured: see docs/acceptance.md) --------------
+; ---- Resident stack sizes (measured by test/stacks.test.mjs) -------------
 ; Each is its deepest use, as measured with an NMI frame on it, and a quarter
 ; more. The CCP stack is also a transient's default stack: CP/M's eight
 ; levels, the return word and an NMI frame need 20 bytes of it.

@@ -116,9 +116,9 @@ test("the automatic tests pass on the Debug80 model and the report lists them", 
   // R7, and the probe puts registers 0-7 back.
   assert.match(r.get(36).detail, /^not F18A-compatible: SR1 read [0-9A-F]{2} \(F18A E0h-EFh\)/);
   assert.deepEqual([...vdp.stateSnapshot().registers.slice(0, 8)], [0x04, 0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0xf4]);
-  // The model's answers to the open items.
-  assert.match(r.get(8).detail, /^reaches the RAM underneath/, "O3 in Debug80");
-  assert.match(r.get(12).detail, /^field 0-F: 0122446688AACCEE .* 9 banks \+ base$/, "O1 in Debug80");
+  // The model's answers to the questions only a board settles.
+  assert.match(r.get(8).detail, /^reaches the RAM underneath/, "the write under the overlay in Debug80");
+  assert.match(r.get(12).detail, /^field 0-F: 0122446688AACCEE .* 9 banks \+ base$/, "the bank field in Debug80");
   // The model's PAL frame is 80,000 T-states; polling costs at most 33 of them.
   const frame = Number(/^frame (\d+) T; CPU at 50 Hz/.exec(r.get(18).detail)[1]);
   assert.ok(Math.abs(frame - 80_000) <= 5, `frame ${frame}`);

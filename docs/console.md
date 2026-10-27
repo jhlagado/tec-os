@@ -1,7 +1,7 @@
 # Console
 
 The console is one device at a time, chosen by the CP/M IOBYTE's `CON:`
-field at `0003h` (decision D23):
+field at `0003h`:
 
 | IOBYTE CON: | Device | Keys from | Output to | Size at `0048h` |
 | --- | --- | --- | --- | --- |
@@ -82,7 +82,7 @@ line.
 
 ## Displays
 
-The video card is always a PICO9918 (decision D21). At cold boot TEC-OS sets
+The video card is always a PICO9918. At cold boot TEC-OS sets
 up every display that answers: the PICO9918 when VRAM answers at ports
 BEh/BFh, the GLCD when its busy flag clears. The terminal reaches the
 display in use through seven driver vectors (put, get, clear to end of line,
@@ -100,7 +100,7 @@ the words its cell touches; scrolling moves the text and redraws each row,
 about 0.25 s at 4 MHz. Every access waits for the busy flag, bounded at 256 polls.
 
 The CCP's `TYPE` and `DIR` use the display size to pause with `[more]` one
-line short of a full screen (decision D19).
+line short of a full screen.
 
 The display size is published in the ABI table at `FF00h` (word at `FF09h`
 points to columns, then rows), so programs such as an editor can lay out

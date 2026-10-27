@@ -208,7 +208,7 @@ TSB6:   CALL    RESULT
         DB      " T",0
         JP      REND
 
-; ---- T29-T30 hex keypad and its NMI (open item O2) ------------------------------
+; ---- T29-T30 hex keypad and its NMI ----------------------------------------------
 
 TKEYPAD:CALL    TBEGIN
         DB      29,"KEYPAD ","Hex keypad on 00h: every key, Shift, and the NMI per press",0

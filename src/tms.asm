@@ -6,7 +6,7 @@
 ; Graphics I (32 x 24, 8-pixel cells). VRAM: patterns at 0000h, names at 0800h, Graphics I colours at
 ; 2000h and sprite attributes at 1B00h. Patterns 00h-7Fh are the console font
 ; and 80h-FFh their reverse images. No VRAM access timing is enforced; the
-; board's limits are an open item.
+; board's limits are not yet known.
 
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF

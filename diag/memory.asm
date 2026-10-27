@@ -254,7 +254,7 @@ ROMWT:  DB      $A5
 ; ---- Boot overlay -------------------------------------------------------------
 
 ; T07: with /SHADOW low, 07FFh reads the ROM byte at C7FFh and 0800h still
-; reads RAM. T08 (open item O3): where a write to 07FFh goes while the
+; reads RAM. T08: where a write to 07FFh goes while the
 ; overlay is on.
 TOVL:   CALL    TBEGIN
         DB      7,"OVERLAY","Latch bit 0: ROM C000h-C7FFh appears at 0000h-07FFh",0
@@ -479,7 +479,7 @@ TSTS1:  LD      A,(DE)
         JP      REND
 LATST:  DB      $01,$03,$05,$81
 
-; ---- Bank field (open item O1) -----------------------------------------------
+; ---- Bank field ---------------------------------------------------------------
 
 ; Select bank field value A (0-15) with EXPAND on.
 BSEL:   RLCA

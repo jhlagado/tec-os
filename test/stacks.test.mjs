@@ -4,7 +4,7 @@
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
 // whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
-// writes no handler there (D06), so none is taken; a ROM with one would have
+// writes no handler there, so none is taken; a ROM with one would have
 // each depth include the NMI's frame. Emulator evidence; the figures go to
 // build/stack-census.json.
 

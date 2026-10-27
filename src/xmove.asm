@@ -1,4 +1,4 @@
-; XMOVE and MOVE (D30), with CP/M 3's names and registers, at FF12h and
+; XMOVE and MOVE, with CP/M 3's names and registers, at FF12h and
 ; FF15h and through BDOS function 50. Bank 0 is the program's view, MAIN 0
 ; and EXPAND 0 below the BDOS entry at (0006h); bank 1 is EXPAND 1 at
 ; 8000h-BEFFh. A copy never switches MAIN, and returns with the latch and the

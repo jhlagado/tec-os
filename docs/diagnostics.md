@@ -2,16 +2,18 @@
 
 The diagnostics ROM is a separate 16 KiB image for `C000h–FFFFh`. I wrote
 it for the first runs of TEC-OS on a real TEC-1G. It exercises every piece of
-hardware TEC-OS uses and reports what the board does. Several of the open
-items in [decisions.md](decisions.md) are questions only a board can answer,
-and the ROM measures each one.
+hardware TEC-OS uses and reports what the board does. Several questions about
+the board can be answered only by running on one, and the ROM measures each
+of them: what a write under the boot overlay reaches, how the latch's bank
+field is decoded, whether VRAM keeps up without delays, and whether a card
+keeps up with the bit-bang SD rate.
 
 **Emulator results are not board evidence.** The ROM passes its automatic
 and interactive tests on the Debug80 TEC-1G model (`test/diag.test.mjs`).
 That proves the ROM's own logic and its timing arithmetic. It says nothing
 about a physical board, because the model supplies the answers. A result
-becomes board evidence only when a run on a real TEC-1G is recorded in
-[acceptance.md](acceptance.md) with the board revision.
+becomes board evidence only when a run on a real TEC-1G is recorded with the
+board revision.
 
 ## Building
 
@@ -69,7 +71,7 @@ T12 BANKS   INFO  field 0-F: 0122446688AACCEE (B base, - none); 9 banks + base
 | --- | --- |
 | `PASS` | The board did what TEC-OS relies on |
 | `FAIL` | It did not; the line says what was read |
-| `INFO` | A measured value with no verdict, often the answer to an open item |
+| `INFO` | A measured value with no verdict, often the answer to one of those questions |
 | `SKIP` | Not run: skipped, or a test it depends on failed |
 | `LOOK` | A visual or audible check in an automatic run; the interactive run asks Y/N instead |
 | `NONE` | The device is not fitted or does not answer |
@@ -125,12 +127,12 @@ T05 sums `C000h–FFFDh` and compares the sum with the word at `FFFEh`, which
 proves the chip was burned and is read correctly. T06 writes the complement
 over a known ROM byte and reads it back unchanged.
 
-### T07 OVERLAY and T08 OVLWR (O3)
+### T07 OVERLAY and T08 OVLWR
 
 With latch bit 0 low, `07FFh` should read the ROM byte at `C7FFh` and `0800h`
 should still read RAM. T07 checks both. T08 then writes `07FFh` with the
 overlay on, turns the overlay off and reads the RAM there. It reports whether
-the write reached the RAM underneath or was dropped. That is open item O3.
+the write reached the RAM underneath or was dropped.
 Debug80 sends the write to the RAM. TEC-OS never writes there with the
 overlay on, so either answer is safe.
 
@@ -166,7 +168,7 @@ descriptions of this port disagree:
 Comparing the four values shows which bits follow the latch on the board.
 TEC-OS reads bit 0 (the Matrix switch), bit 6 and bit 7.
 
-### T12 BANKS (O1) and T13 BANKRAM
+### T12 BANKS and T13 BANKRAM
 
 T12 writes a tag into the window for each value of the bank field, latch
 bits 3–6 with EXPAND on, from 15 down to 0. It then writes a different tag
@@ -174,11 +176,11 @@ with EXPAND off and reads every tag back. Values that share RAM read the tag
 of the last one written, so each value maps to the lowest value that shares
 its RAM. The line shows the field values 0–F in order: a hex digit names the
 value whose RAM it shares, `B` means the base mapping and `-` means no
-consistent RAM. Debug80 gives `0122446688AACCEE`, nine banks plus the base,
-as [decisions.md](decisions.md) D03 describes. The documented board, with
+consistent RAM. Debug80 gives `0122446688AACCEE`, nine banks plus the base:
+its model decodes latch bits 3–6 as a bank field for the window. The documented board, with
 one 32 KiB chip in U9 and bits 3–6 unconnected, should give `0000000000000000`
-and one bank plus the base. The board's line settles open item O1 and the
-value of `NBANKS` for the board profile.
+and one bank plus the base. The board's line settles how the field is
+decoded and the value of `NBANKS` for the board profile.
 
 T13 runs two pattern passes over each bank T12 found.
 
@@ -202,15 +204,15 @@ graphics RAM with a pattern that differs between rows 16 apart and reads it
 back with the controller's dummy read. It then draws a framed 8 × 8
 checkerboard. A board without the GLCD gives `NONE`.
 
-### T17 VDP (O5) and T18 VDPCLK
+### T17 VDP and T18 VDPCLK
 
 T17 detects the PICO9918 as TEC-OS does and sets TEC-OS's 80-column
 registers (`04 50 07 00 00 00 00 F4`). It writes a tag every 4 KiB to show
 16 KiB of distinct VRAM. Then it writes and reads all 16 KiB at full speed,
 16 T-states a byte with `OUTI` and `INI`, and again at 104 T-states a byte,
 counting the bytes that come back wrong. TEC-OS inserts no VRAM delays, so
-errors at full speed with none at the slower rate would answer open item O5
-against it. Last, T17 loads the font and draws the test screen: a title on
+errors at full speed with none at the slower rate would show that it needs
+them. Last, T17 loads the font and draws the test screen: a title on
 row 1, rulers on rows 2 and 24, the printable characters between them and
 the title in reverse video on row 13. The name table is read back as well.
 
@@ -221,7 +223,7 @@ own, so the right figure is the one near 4 MHz.
 
 ### T35 VDPPAGE: page select
 
-TEC-OS page-flips in 80 columns ([decisions.md](decisions.md) D24). The
+TEC-OS page-flips in 80 columns. The
 console's name table is at `1000h` (R2 = `07h`). Row moves are built in a
 second table at `2000h` (R2 = `0Bh`) and shown by rewriting R2. T35 fills
 `2000h` with 2s under the title `PAGE 2: NAMES AT 2000h, R2 = 0Bh`, leaves
@@ -264,7 +266,7 @@ On the board, T36 needs the operator for the scroll check and settles the
 identity, version and relocking from the readings. On the Debug80 model it
 reports `not F18A-compatible`, because the model has only registers 0–7.
 
-### T19 SD and T20 SDBLKS (O4)
+### T19 SD and T20 SDBLKS
 
 T19 initialises the card with TEC-OS's driver and records each answer: the
 CMD0 attempts, the CMD8 R1 and R7 bytes, the ACMD41 attempts and the OCR. It
@@ -272,8 +274,8 @@ reads the CSD and the CID with the product name and block 0. No card gives
 `NONE`. T20 reads block 0 twice and compares the copies, then reads blocks
 0–63 and reports errors and the fewest and most polls for the data token.
 One block costs 354,216 T-states plus 678 for each poll, about 89 ms at
-4 MHz. Open item O4 asks whether cards keep up with the bit-bang rate, and
-these two lines answer it for the card fitted.
+4 MHz. These two lines show whether the card fitted keeps up with the
+bit-bang rate.
 
 T37 writes one block, outside every volume, and puts it back. Every other
 test only reads the card.
@@ -369,7 +371,7 @@ the presses. The 74C923 raises its data-available output once for each key
 press and drops it on release, so a press of the same key again strobes it
 again, and with the NMI on that edge each press gives one NMI; T30 shows
 whether the board does it. It needs the keypad NMI jumper, which TEC-OS
-itself leaves off (decision D06). T29 clears its counts
+itself leaves off. T29 clears its counts
 before it prints the instructions, so a key pressed while they print still
 counts. Before that order was fixed, a press arriving within the last line
 of the prompt was lost, which showed as 20 NMIs for 21 presses.
@@ -421,18 +423,18 @@ as an F18A and which firmware version it reports.
 
 ## Recording a board run
 
-Keep the terminal log and add a row to [acceptance.md](acceptance.md) with
-the board revision, the CPU clock from T33 (or T18 or T21), what is fitted
-and the report between the two `====` lines. Results that differ from the
-Debug80 model belong in [decisions.md](decisions.md), against the decision
-they affect.
+Keep the terminal log with the board revision, the CPU clock from T33 (or
+T18 or T21), what is fitted and the report between the two `====` lines.
+Note every result that differs from the Debug80 model, with the behaviour
+of TEC-OS it affects.
 
 ## The emulator test
 
 `test/diag.test.mjs` builds the ROM and runs it on the Debug80 model:
 
 - the automatic run with the PICO9918, matrix keyboard and a card, checking
-  every result and the model's answers to O1 and O3, the frame length, the
+  every result and the model's answers on the bank field and the write
+  under the overlay, the frame length, the
   80-column screen, the page the harness decodes while R2 is `0Bh` and `07h`
   and the registers T36 leaves behind;
 - T21's set against a DS1302 that counts on from a written time, which

@@ -28,8 +28,12 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | `FF12h` | `JP XMOVE`: B = destination bank, C = source bank, for the next `MOVE` (ABI 2.2) |
 | `FF15h` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied (ABI 2.2) |
 
-`XMOVE` and `MOVE` are CP/M 3's, with its registers; decision D30 gives
-their banks and limits.
+`XMOVE` and `MOVE` are CP/M 3's, with its registers. Bank 0 is the
+program's view below the BDOS entry at `(0006h)`, read at each call; bank 1
+is EXPAND 1 at `8000h–BEFFh`. `MOVE` copies forward as `LDIR` does and
+returns `A = 0`, or `A = FFh` with nothing copied when an end lies outside
+its bank or EXPAND 1 is not fitted. A copy returns with the latch and the
+interrupt state as it found them.
 
 ## Calling the services
 
@@ -61,6 +65,11 @@ The rules that make the services safe for CP/M programs:
   them from inside its own BDOS-heavy code without re-entry.
 - **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
   the serial transmit line, high.
+
+Page zero's restart vectors at `0008h–0037h` are left to programs and
+debuggers. A warm boot, like a cold boot, puts seven zeros and a `RET` in
+each one that does not jump into ROM, so an RST through a vector a finished
+program left returns at once with the interrupt state unchanged.
 
 ## Services
 
@@ -154,7 +163,7 @@ that programs share as ATOM include files.
 | Hardware services | 755 | 3, 4 | Stays |
 
 Nothing in the ROM today belongs on the card. The native program services,
-which had no user, were removed (D25).
+which had no user, were removed.
 
 ## Fixes found on the way
 

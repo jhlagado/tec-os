@@ -13,7 +13,7 @@ with their documented conventions; 38 and 39 return zero, and functions above
 40 return zero, except 50. Function 50 is CP/M 3's direct BIOS call: `DE`
 points at the BIOSPB (function, A, BC, DE, HL). Functions 0–16 go through
 the RAM BIOS table, so hooks apply; 25 is `MOVE` and 29 `XMOVE`, for copies
-to and from EXPAND 1 (decision D30); any other, `SELMEM` (27) among them,
+to and from EXPAND 1 (see rom-services.md); any other, `SELMEM` (27) among them,
 returns `A = FFh`. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
 
 | Area | Functions | Result |

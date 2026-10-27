@@ -1,4 +1,4 @@
-// XMOVE and MOVE (D30) on the harness's 96K option: copies between bank 0,
+// XMOVE and MOVE on the harness's 96K option: copies between bank 0,
 // the program's view, and bank 1, EXPAND 1 at 8000h-BEFFh, through FF12h and
 // FF15h and through BDOS function 50. Emulator evidence.
 
