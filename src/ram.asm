@@ -78,4 +78,9 @@ GLY:    DS      1               ; pixel row being drawn, 0-63
 GLW:    DS      1               ; 16-pixel word being drawn, 0-7
 GLROWP: DS      2               ; GLTEXT address of the text row being drawn
 GLOFF:  DS      1               ; pixel offset of a character within the word
+
+; ---- XMOVE's banks for the next MOVE ------------------------------------------
+XMDST:  DS      1
+XMSRC:  DS      1
+MVREST: DS      2               ; MOVE: the bytes left for the byte loop
 HIRME:

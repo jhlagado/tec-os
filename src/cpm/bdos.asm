@@ -49,6 +49,8 @@ BENTRY:
         LD      SP,STKTOP
         LD      (PARAM),DE
         LD      A,C
+        CP      50
+        JR      Z,FNBIOS
         CP      41
         JR      NC,RETZERO
         ADD     A,A
@@ -88,6 +90,55 @@ RETWORD:
 
 FNZERO:
         JP      BIOWBT
+
+; Function 50, CP/M 3's direct BIOS call. DE -> the BIOSPB: function, A, BC,
+; DE, HL. Functions 0-16 go through the RAM BIOS table, 25 is MOVE and 29
+; XMOVE; any other returns A = FFh. Returns the registers the call leaves.
+FNBIOS:
+        LD      A,(DE)
+        LD      HL,MOVE
+        CP      25
+        JR      Z,FNBIOSG
+        LD      HL,XMOVE
+        CP      29
+        JR      Z,FNBIOSG
+        CP      17
+        LD      A,$FF
+        JR      NC,RETA
+        LD      A,(DE)
+        LD      L,A
+        ADD     A,A
+        ADD     A,L
+        LD      L,A
+        LD      H,0
+        LD      BC,RAMBIOS
+        ADD     HL,BC
+FNBIOSG:
+        LD      BC,FNBIOSR
+        PUSH    BC
+        PUSH    HL
+        EX      DE,HL
+        INC     HL
+        LD      A,(HL)
+        EX      AF,AF'
+        INC     HL
+        LD      C,(HL)
+        INC     HL
+        LD      B,(HL)
+        INC     HL
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        INC     HL
+        LD      A,(HL)
+        INC     HL
+        LD      H,(HL)
+        LD      L,A
+        EX      AF,AF'
+        RET
+FNBIOSR:
+        LD      SP,(OLDSP)
+        RET
 
 FNCIN:
         CALL    GETCHAR

@@ -19,6 +19,7 @@ LATEXP  EQU     $04             ; EXPAND: EXPAND 1 at 8000h-BFFFh
 LATCLAS EQU     LATSHAD         ; classic profile: overlay off, base window
 LATMAIN EQU     $08             ; MAIN: MAIN 1 at 0000h-7FFFh
 DETADR  EQU     $0100           ; where cold boot looks for MAIN 1
+DETEXP  EQU     $8000           ; and for EXPAND 1
 
 ; ---- Page zero (CP/M 2.2 base page) -----------------------------------------
 IOBYTE  EQU     $0003
@@ -32,16 +33,16 @@ DEFDMA  EQU     $0080
 LATCHV  EQU     $0040           ; shadow copy of the system latch
 MAINS   EQU     $0041           ; MAIN regions fitted, 1 or 2 (FF0Eh points here)
 RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
-RXCHAR  EQU     $0043
-                                ; 0044h free
+RXCHAR  EQU     $0043           ; and the byte itself
+EXPANDS EQU     $0044           ; EXPAND regions fitted, 1 or 2 (FF10h points here)
 CONDEV  EQU     $0045           ; console devices present (CD* bits)
 VROW    EQU     $0046           ; video terminal cursor row
 VCOL    EQU     $0047           ; and column
 VWID    EQU     $0048           ; video columns
 VHGT    EQU     $0049           ; video rows
 ESCST   EQU     $004A           ; escape parser state
-ESCP1   EQU     $004B           ; first and second numeric parameters
-ESCP2   EQU     $004C
+ESCP1   EQU     $004B           ; first numeric parameter
+ESCP2   EQU     $004C           ; second numeric parameter
 KBLAST  EQU     $004D           ; matrix key held at the last poll, FFh none
 VATTR   EQU     $004E           ; 80h while reverse video is on
 VCURV   EQU     $004F           ; 1 while the cursor cell is inverted

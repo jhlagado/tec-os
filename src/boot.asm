@@ -62,7 +62,7 @@ COLDRT: CALL    SDINIT
         XOR     A               ; drive A, user 0
         LD      (PZDU),A
         CALL    PZINIT
-        CALL    MAININIT
+        CALL    MEMINIT
         JP      WBOOTR
 COLDERR:JP      DIAG
 
@@ -70,13 +70,16 @@ COLDERR:JP      DIAG
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
 ; stack, because the BIOS stack is in that bank.
 WBOOTR: DI
+        LD      A,(EXPANDS)     ; without EXPAND 1 this would be the table
+        CP      2
+        JR      NZ,WBMAIN0
         LD      A,LATCLAS+LATEXP ; EXPAND 1: its warm-boot jump, for an
         OUT     (SYSLAT),A      ; exit from a program that left it in
         LD      A,$C3
         LD      (RAMBIOS+3),A
         LD      HL,WBOOTR
         LD      (RAMBIOS+4),HL
-        LD      A,LATCLAS       ; MAIN 0, EXPAND 0
+WBMAIN0:LD      A,LATCLAS       ; MAIN 0, EXPAND 0
         LD      (LATCHV),A
         OUT     (SYSLAT),A
         LD      SP,BSTK
@@ -91,37 +94,19 @@ WBOOTR: DI
         LD      C,A
         JP      CCPENT
 
-; Cold boot: count the MAIN regions, and give MAIN 1 a copy of page zero.
-; With MAIN set, the complement of MAIN 0's byte at DETADR is written; if
-; MAIN 0 then still holds its own byte, MAIN 1 is fitted. Both bytes are put
-; back. The copy switches the latch for every byte and uses no stack. MAIN
-; 1's 0000h then reaches the RAM BIOS table in EXPAND 0, so an exit from
-; MAIN 1 warm boots into MAIN 0.
-MAININIT:LD     A,(LATCHV)
-        LD      D,A             ; MAIN 0
-        OR      LATMAIN
-        LD      E,A             ; MAIN 1
+; Cold boot: count the MAIN and EXPAND regions, and give MAIN 1 a copy of
+; page zero. MAIN 1's 0000h then reaches the RAM BIOS table in EXPAND 0, so
+; an exit from MAIN 1 warm boots into MAIN 0.
+MEMINIT:LD      A,LATEXP
+        LD      HL,DETEXP
+        CALL    DETECT
+        LD      (EXPANDS),A
+        LD      A,LATMAIN
         LD      HL,DETADR
-        LD      B,(HL)          ; MAIN 0's byte
-        OUT     (SYSLAT),A
-        LD      C,(HL)          ; MAIN 1's byte, or MAIN 0's again
-        LD      A,B
-        CPL
-        LD      (HL),A
-        LD      A,D
-        OUT     (SYSLAT),A
-        LD      A,(HL)
-        LD      (HL),B
-        CP      B
-        LD      A,1
-        JR      NZ,MNSET        ; MAIN 0 saw the write: no MAIN 1
-        LD      A,E
-        OUT     (SYSLAT),A
-        LD      (HL),C
-        LD      A,D
-        OUT     (SYSLAT),A
-        LD      A,2
+        CALL    DETECT
         LD      (MAINS),A
+        CP      2
+        RET     NZ
         LD      HL,0
 MNCOPY: LD      A,D
         OUT     (SYSLAT),A
@@ -134,7 +119,35 @@ MNCOPY: LD      A,D
         LD      A,D
         OUT     (SYSLAT),A
         RET
-MNSET:  LD      (MAINS),A
+
+; Whether latch bit A shows other RAM at HL: the complement of the byte seen
+; without it is written with it set; if the byte without it is unchanged,
+; there are two regions. Both bytes are put back, and no stack is used with
+; the bit set. Returns A = 1 or 2, D = the latch without the bit, E = with.
+DETECT: LD      E,A
+        LD      A,(LATCHV)
+        LD      D,A
+        OR      E
+        LD      E,A
+        LD      B,(HL)          ; the byte without the bit
+        OUT     (SYSLAT),A
+        LD      C,(HL)          ; the byte with it, or the same one again
+        LD      A,B
+        CPL
+        LD      (HL),A
+        LD      A,D
+        OUT     (SYSLAT),A
+        LD      A,(HL)
+        LD      (HL),B
+        CP      B
+        LD      A,1
+        RET     NZ              ; one region saw the write
+        LD      A,E
+        OUT     (SYSLAT),A
+        LD      (HL),C
+        LD      A,D
+        OUT     (SYSLAT),A
+        LD      A,2
         RET
 
 ; Rebuild the classic page-zero vectors and the BDOS entry jump, and

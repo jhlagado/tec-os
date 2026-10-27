@@ -52,10 +52,11 @@ export class Machine {
    * instead of the runtime's bank field (D03): bit 3 (MAIN) picks MAIN 0 or
    * MAIN 1, 32 KiB each, at 0000h-7FFFh, and bit 2 (EXPAND) EXPAND 0 or
    * EXPAND 1, 16 KiB each, at 8000h-BFFFh. mains: 1 when MAIN 1 is not
-   * fitted, so bit 3 changes nothing. ROM, the boot overlay and PROTECT
+   * fitted, so bit 3 changes nothing; expands: 1 when EXPAND 1 is not (a
+   * 16 KiB U9), so bit 2 changes nothing. ROM, the boot overlay and PROTECT
    * (4000h-7FFFh) behave as before.
    */
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, onSdWrite }) {
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
     this.symbols = symbols;
     // output: every byte the BIOS was asked to put on the console, whichever
     // device is in use. serial: the bytes that left the serial port.
@@ -138,9 +139,9 @@ export class Machine {
     let ram = hooks;
     if (ram96) {
       this.main = Array.from({ length: mains }, () => new Uint8Array(0x8000).fill(ramFill));
-      this.expand = [0, 1].map(() => new Uint8Array(0x4000).fill(ramFill));
+      this.expand = Array.from({ length: expands }, () => new Uint8Array(0x4000).fill(ramFill));
       const main = () => this.main[system.sysCtrl & 0x08 ? mains - 1 : 0];
-      const expand = () => this.expand[(system.sysCtrl >> 2) & 1];
+      const expand = () => this.expand[system.sysCtrl & 0x04 ? expands - 1 : 0];
       ram = {
         memRead: (addr) => {
           const a = addr & 0xffff;

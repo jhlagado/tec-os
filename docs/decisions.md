@@ -420,6 +420,31 @@ ROM's console status, which draws no cursor. Cold boot builds the table and
 warm boot leaves it alone, as CP/M 2.2 does, so a replaced entry survives a
 warm boot; reset puts the ROM's entries back.
 
+## D30 Copies to and from EXPAND 1 — Adopted 2026-10-27
+
+Programs keep a flat view, MAIN 0 with EXPAND 0, and reach EXPAND 1 only by
+copying, through CP/M 3's `XMOVE` and `MOVE`: at `FF12h` and `FF15h` (ABI
+2.2) and through BDOS function 50. Bank 0 is the program's view below the
+BDOS entry at `(0006h)`, read at each call, so a resident or nested command
+processor that lowers it is protected; bank 1 is EXPAND 1 at `8000h–BEFFh`,
+its top page reserved. `MOVE` copies forward as `LDIR` does and returns
+`A = 0` with HL and DE advanced, or `A = FFh` with nothing copied when a byte
+of either end lies outside its bank, when EXPAND 1 is not fitted, or for a
+bank other than 0 or 1. `SELMEM` is not offered.
+
+A copy runs with interrupts off and switches only latch bit 2, never MAIN, so
+it works with EXPAND 1 fitted and MAIN 1 absent. Within one bank it is an
+`LDIR` in that bank's view. Across banks, the bank-0 end's part in MAIN 0
+copies by `LDIR` with EXPAND 1 in view; its part in EXPAND 0 copies a byte
+at a time, the latch switched between each read and write, about 92
+T-states a byte, so all of bank 1 copies in about 0.35 s. No stack is used
+while EXPAND 1 is in view, since the caller's stack may be in EXPAND 0.
+The latch and the interrupt state come back as they were. Cold boot counts
+the EXPAND regions beside the MAIN regions (`FF10h`), and warm boot writes
+its jump into EXPAND 1 only when it is fitted: without it, that write would
+have reset the RAM BIOS table's warm-boot entry. `XMOVE`, `MOVE` and
+function 50 cost 327 bytes of ROM.
+
 ## Open decisions
 
 | ID | Open item | Blocks |

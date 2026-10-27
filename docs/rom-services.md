@@ -18,12 +18,18 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | --- | --- |
 | `FF00h` | `"TNA"` signature |
 | `FF03h` | ABI major version, 2 |
-| `FF04h` | ABI minor version, 1 |
+| `FF04h` | ABI minor version, 2 |
 | `FF05h` | Native banks: 0 since ABI 2.0 |
 | `FF06h` | `JP` to a routine that refuses every call: status 1, carry set (the native services until ABI 2.0) |
 | `FF09h` | Address of the console size, columns then rows |
 | `FF0Bh` | `JP` to the hardware services |
-| `FF0Eh` | Address of the low-page count, 1 or 2 (ABI 2.1) |
+| `FF0Eh` | Address of the MAIN count, 1 or 2 (ABI 2.1) |
+| `FF10h` | Address of the EXPAND count, 1 or 2 (ABI 2.2) |
+| `FF12h` | `JP XMOVE`: B = destination bank, C = source bank, for the next `MOVE` (ABI 2.2) |
+| `FF15h` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied (ABI 2.2) |
+
+`XMOVE` and `MOVE` are CP/M 3's, with its registers; decision D30 gives
+their banks and limits.
 
 ## Calling the services
 

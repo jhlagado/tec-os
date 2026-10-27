@@ -36,6 +36,16 @@ EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
 B: is an empty work disk.
 `;
 
+/** TEC-OS's fixed state in page zero, 0040h-004Fh, from the EQUs in src/layout.asm. */
+function pageZeroState() {
+  const src = readFileSync(resolve(ROOT, "src/layout.asm"), "utf8");
+  return [...src.matchAll(/^(\w+)\s+EQU\s+\$(004[0-9A-F])\s*;\s*(.*)$/gm)]
+    .map((m) => ({ at: parseInt(m[2], 16), name: m[1], what: m[3] }))
+    .sort((x, y) => x.at - y.at)
+    .map((r) => `| ${hex(r.at)} | \`${r.name}\` | ${r.what} |`)
+    .join("\n");
+}
+
 function memoryMap(census) {
   const rows = (list) => list.map((r) => `| ${hex(r.start)}–${hex(r.end - 1)} | ${r.bytes} | ${r.label} |`).join("\n");
   const s = census.ram.stacks;
@@ -66,6 +76,15 @@ ${hex(census.ram.ramBios)}.
 | Addresses | Bytes | Region |
 | --- | ---: | --- |
 ${rows(census.rom.regions)}
+
+## Page zero, 0040h–004Fh
+
+CP/M leaves these bytes to the BIOS. TEC-OS keeps here the state that must
+stay in view whatever EXPAND shows.
+
+| Address | Name | Contents |
+| --- | --- | --- |
+${pageZeroState()}
 
 ## Classic resident RAM, starter card
 

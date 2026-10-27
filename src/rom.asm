@@ -20,5 +20,6 @@
 %INCLUDE "cpmlink.asm"
 %INCLUDE "cpm/bdos.asm"
 %INCLUDE "hwsvc.asm"
+%INCLUDE "xmove.asm"
 %INCLUDE "end.asm"
 %INCLUDE "abi.asm"
