@@ -5,8 +5,8 @@ services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. It holds 13,155 bytes (`debug80`) and has 3,229 free:
-2,989 below the table at `FF00h`, where code can go, and 240 above it. This
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 13,742 bytes (`debug80`) and has 2,642 free:
+2,410 below the table at `FF00h`, where code can go, and 232 above it.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
@@ -216,7 +216,7 @@ that uses them.
 
 ## Next in the ROM
 
-In order, for the 2,989 bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
+In order, for the <!-- media: below-ff00 -->2,410<!-- end --> bytes left below `FF00h`: integer arithmetic (16 × 16 multiply,
 32 ÷ 16 and 16 ÷ 16 divide), decimal and hex conversion and CRC-16; then a
 resident monitor with Intel HEX loading. A disassembler does not fit, and
 floating point and drawing stay on the card.

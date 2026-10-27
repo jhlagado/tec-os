@@ -46,6 +46,31 @@ function pageZeroState() {
     .join("\n");
 }
 
+/**
+ * The ROM figures in docs/rom-services.md, from the debug80 build: each
+ * "<!-- media: name -->...<!-- end -->" span is rewritten, so the figures
+ * follow the ROM. Code goes below the table at FF00h, so the space there is
+ * FF00h less the end of code.
+ */
+function romServicesFigures(census) {
+  const symbols = JSON.parse(readFileSync(resolve(ROOT, "build/debug80/tecos.d8.json"), "utf8")).symbols;
+  const at = (name) => symbols.find((s) => s.name === name).address;
+  const below = at("ABITAB") - at("CODEEND");
+  const n = (v) => v.toLocaleString("en-US");
+  const spans = {
+    "rom-space": `It holds ${n(census.rom.used)} bytes (\`${census.profile}\`) and has ${n(census.rom.free)} free:\n${n(below)} below the table at \`FF00h\`, where code can go, and ${n(census.rom.free - below)} above it.`,
+    "below-ff00": n(below),
+  };
+  const path = resolve(ROOT, "docs/rom-services.md");
+  let text = readFileSync(path, "utf8");
+  for (const [name, value] of Object.entries(spans)) {
+    const re = new RegExp(`(<!-- media: ${name} -->)[\\s\\S]*?(<!-- end -->)`);
+    if (!re.test(text)) throw new Error(`docs/rom-services.md has no ${name} span`);
+    text = text.replace(re, (_, open, close) => `${open}${value}${close}`);
+  }
+  writeFileSync(path, text);
+}
+
 function memoryMap(census) {
   const rows = (list) => list.map((r) => `| ${hex(r.start)}–${hex(r.end - 1)} | ${r.bytes} | ${r.label} |`).join("\n");
   const s = census.ram.stacks;
@@ -161,6 +186,7 @@ async function main() {
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
   saveImage(resolve(DIST, "starter.img"), await buildRecipe(recipe, fileFetcher(DIST)));
   writeFileSync(resolve(ROOT, "docs/memory-map.md"), memoryMap(censuses.debug80));
+  romServicesFigures(censuses.debug80);
   const manifest = Object.fromEntries(
     Object.entries(censuses).map(([k, c]) => [k, { sha256: c.sha256, romUsed: c.rom.used, tpaBytes: c.ram.tpa.bytes, nbanks: c.nbanks }]),
   );
