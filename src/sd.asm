@@ -242,7 +242,19 @@ SDRTOK: PUSH    DE
         CALL    SPIEND
         LD      A,SDETOK
         JP      SDFAIL
-SDRDAT: LD      D,2
+SDRDAT: CALL    SDRBLK
+        CALL    SPIR            ; CRC, not checked
+        CALL    SPIR
+        CALL    SPIEND
+        JP      SDIOK
+SDRCMD: CALL    SPIEND
+        LD      A,SDECMD
+        JP      SDFAIL
+
+; Receive 512 bytes into the buffer at HL, sending FFh, after the start
+; token; HL ends 512 bytes on. /CS low and CLK low on entry and on return.
+; Destroys AF, BC, DE.
+SDRBLK: LD      D,2
 SDRO:   LD      C,0
 SDRI:   PUSH    DE
         CALL    SPIR
@@ -253,13 +265,20 @@ SDRI:   PUSH    DE
         JR      NZ,SDRI
         DEC     D
         JR      NZ,SDRO
-        CALL    SPIR            ; CRC, not checked
-        CALL    SPIR
-        CALL    SPIEND
-        JP      SDIOK
-SDRCMD: CALL    SPIEND
-        LD      A,SDECMD
-        JP      SDFAIL
+        RET
+
+; Send the 512 bytes at HL after the start token; HL ends 512 bytes on. /CS
+; low and CLK low on entry and on return. Destroys AF, BC, DE.
+SDWBLK: LD      D,2
+SDWO:   LD      E,0
+SDWI:   LD      C,(HL)
+        CALL    SPIW
+        INC     HL
+        DEC     E
+        JR      NZ,SDWI
+        DEC     D
+        JR      NZ,SDWO
+        RET
 
 ; Write the 512 bytes at HL to block SDLBA, waiting until the card has
 ; finished programming.
@@ -274,15 +293,7 @@ SDWRITE:PUSH    HL
         CALL    SPIW
         LD      C,$FE
         CALL    SPIW
-        LD      D,2
-SDWO:   LD      E,0
-SDWI:   LD      C,(HL)
-        CALL    SPIW
-        INC     HL
-        DEC     E
-        JR      NZ,SDWI
-        DEC     D
-        JR      NZ,SDWO
+        CALL    SDWBLK
         LD      C,$FF           ; CRC, ignored in SPI mode
         CALL    SPIW
         CALL    SPIW
