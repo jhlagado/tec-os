@@ -25,22 +25,22 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | `FF0Bh` | `JP` to the hardware services |
 | `FF0Eh` | Address of the MAIN count, 1 or 2 (ABI 2.1) |
 | `FF10h` | Address of the EXPAND count, always 2 since TEC-OS needs EXPAND 1 (ABI 2.2) |
-| `FF12h` | `JP XMOVE`: B = destination bank, C = source bank, for the next `MOVE` (ABI 2.2) |
+| `FF12h` | `JP XMOVE`: B = destination, C = source, each 0 for the program's memory or 1 for EXPAND 1, for the next `MOVE` (ABI 2.2) |
 | `FF15h` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied (ABI 2.2) |
-| `FF18h` | Address of EXPAND 1's low mark: the page below which bank 1 is free (ABI 2.3) |
+| `FF18h` | Address of EXPAND 1's low mark: the page below which EXPAND 1 is free (ABI 2.3) |
 | `FF1Ah` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = the end of the caller's image in, function 108's code out (ABI 2.4) |
 | `FF1Dh` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt (ABI 2.4) |
 | `FF20h` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed (ABI 2.5) |
 | `FF23h` | Address of the console font, 8 bytes a character from 20h, for drivers (ABI 2.6) |
 
-`XMOVE` and `MOVE` are CP/M 3's, with its registers. Bank 0 is the
-program's view below the BDOS entry at `(0006h)`, read at each call; bank 1
-is EXPAND 1 from `8000h` up to its low mark, read at each call: cold boot
+`XMOVE` and `MOVE` are CP/M 3's, with its registers. `XMOVE`'s 0 is the
+program's view below the BDOS entry at `(0006h)`, read at each call; its 1
+is EXPAND 1 from `8000h` up to its low mark, read at each call. Cold boot
 sets the mark to `BFh` and then takes `BE00h` for the CCP's levels and
-`BD00h` for the command history, so bank 1 is `8000h–BCFFh` until TEC-OS
-allocates more of EXPAND 1 for itself, top down, in whole pages. `MOVE` copies
-forward as `LDIR` does and returns `A = 0`, or `A = FFh` with nothing
-copied when an end lies outside its bank. A copy returns with the latch
+`BD00h` for the command history, so EXPAND 1 is `8000h–BCFFh` after cold
+boot, until TEC-OS allocates more of it for itself, top down, in whole
+pages. `MOVE` copies forward as `LDIR` does and returns `A = 0`, or
+`A = FFh` with nothing copied when an end lies outside its region. A copy returns with the latch
 and the interrupt state as it found them. Cold boot clears EXPAND 1; its
 contents do not survive a reset, and warm boot leaves them.
 
