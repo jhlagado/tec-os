@@ -1,0 +1,663 @@
+{
+  "base": "b8c7214",
+  "builds": {
+    "base": {
+      "bytes": {
+        "code": 171,
+        "keyword": 5,
+        "dispatch": 9,
+        "text": 67,
+        "total": 252,
+        "freeBelowFF00": 490,
+        "romBytes": 16384
+      },
+      "passed": 22,
+      "of": 32,
+      "cases": [
+        {
+          "case": "a drive alone, A: to B:",
+          "command": "COPY X.COM B:",
+          "kind": "copied",
+          "text": "COPY?",
+          "reference": "COPIED 0018",
+          "sameBytes": false,
+          "textOk": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "a drive alone, B: to A:",
+          "command": "COPY B:X.COM A:",
+          "kind": "copied",
+          "text": "COPY?",
+          "reference": "COPIED 0015",
+          "sameBytes": false,
+          "textOk": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "a blank name with a type",
+          "command": "COPY X.COM B:.TXT",
+          "kind": "copied",
+          "text": "COPY?",
+          "reference": "COPIED 0018",
+          "sameBytes": false,
+          "textOk": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "onto itself",
+          "command": "COPY X.DAT X.DAT",
+          "kind": "refused",
+          "text": "COPIED 000C",
+          "cardUnchanged": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "onto itself, the destination's drive named",
+          "command": "COPY X.DAT A:X.DAT",
+          "kind": "refused",
+          "text": "COPIED 000C",
+          "cardUnchanged": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "onto itself, the source's drive named",
+          "command": "COPY A:X.DAT X.DAT",
+          "kind": "refused",
+          "text": "COPIED 000C",
+          "cardUnchanged": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "onto its own drive alone",
+          "command": "COPY X.DAT A:",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "no destination",
+          "command": "COPY X.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself, SYS",
+          "command": "COPY S.DAT S.DAT",
+          "kind": "refused",
+          "text": "COPIED 0008",
+          "cardUnchanged": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "onto itself, R/O",
+          "command": "COPY R.DAT R.DAT",
+          "kind": "refused",
+          "text": "Bdos Err On A: File R/O",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "onto itself on B:",
+          "command": "COPY B:X.DAT X.DAT",
+          "kind": "refused",
+          "text": "COPIED 000B",
+          "cardUnchanged": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "onto itself in user 1",
+          "command": "COPY X.DAT A:X.DAT",
+          "kind": "refused",
+          "text": "COPIED 0009",
+          "cardUnchanged": false,
+          "tpaKept": true,
+          "pass": false
+        },
+        {
+          "case": "A: to B:, same name",
+          "command": "COPY X.DAT B:X.DAT",
+          "kind": "copied",
+          "text": "COPIED 000C",
+          "sameBytes": true,
+          "textOk": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "A: to B:, run on B:",
+          "command": "COPY A:X.DAT X.DAT",
+          "kind": "copied",
+          "text": "COPIED 000C",
+          "sameBytes": true,
+          "textOk": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S0.DAT D0.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0000",
+          "reference": "COPIED 0000",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S0.DAT B:D0.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0000",
+          "reference": "COPIED 0000",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S0.DAT A:D0.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0000",
+          "reference": "COPIED 0000",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S1.DAT D1.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0001",
+          "reference": "COPIED 0001",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S1.DAT B:D1.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0001",
+          "reference": "COPIED 0001",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S1.DAT A:D1.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0001",
+          "reference": "COPIED 0001",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S128.DAT D128.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0080",
+          "reference": "COPIED 0080",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S128.DAT B:D128.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0080",
+          "reference": "COPIED 0080",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S128.DAT A:D128.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0080",
+          "reference": "COPIED 0080",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S157.DAT D157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S157.DAT B:D157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S157.DAT A:D157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S300.DAT D300.DAT",
+          "kind": "kg12",
+          "text": "COPIED 012C",
+          "reference": "COPIED 012C",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S300.DAT B:D300.DAT",
+          "kind": "kg12",
+          "text": "COPIED 012C",
+          "reference": "COPIED 012C",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S300.DAT A:D300.DAT",
+          "kind": "kg12",
+          "text": "COPIED 012C",
+          "reference": "COPIED 012C",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S157.DAT B:E157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY NONE.DAT D.DAT",
+          "kind": "kg12",
+          "text": "NO SOURCE",
+          "reference": "NO SOURCE",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S1.DAT C:D1.DAT",
+          "kind": "kg12",
+          "text": "Bdos Err On C: Bad Sector",
+          "reference": "Bdos Err On C: Bad Sector",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        }
+      ]
+    },
+    "draft": {
+      "bytes": {
+        "code": 219,
+        "keyword": 5,
+        "dispatch": 9,
+        "text": 67,
+        "total": 300,
+        "freeBelowFF00": 442,
+        "romBytes": 16384
+      },
+      "passed": 32,
+      "of": 32,
+      "cases": [
+        {
+          "case": "a drive alone, A: to B:",
+          "command": "COPY X.COM B:",
+          "kind": "copied",
+          "text": "COPIED 0018",
+          "reference": "COPIED 0018",
+          "sameBytes": true,
+          "textOk": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "a drive alone, B: to A:",
+          "command": "COPY B:X.COM A:",
+          "kind": "copied",
+          "text": "COPIED 0015",
+          "reference": "COPIED 0015",
+          "sameBytes": true,
+          "textOk": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "a blank name with a type",
+          "command": "COPY X.COM B:.TXT",
+          "kind": "copied",
+          "text": "COPIED 0018",
+          "reference": "COPIED 0018",
+          "sameBytes": true,
+          "textOk": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself",
+          "command": "COPY X.DAT X.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself, the destination's drive named",
+          "command": "COPY X.DAT A:X.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself, the source's drive named",
+          "command": "COPY A:X.DAT X.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto its own drive alone",
+          "command": "COPY X.DAT A:",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "no destination",
+          "command": "COPY X.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself, SYS",
+          "command": "COPY S.DAT S.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself, R/O",
+          "command": "COPY R.DAT R.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself on B:",
+          "command": "COPY B:X.DAT X.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "onto itself in user 1",
+          "command": "COPY X.DAT A:X.DAT",
+          "kind": "refused",
+          "text": "COPY?",
+          "cardUnchanged": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "A: to B:, same name",
+          "command": "COPY X.DAT B:X.DAT",
+          "kind": "copied",
+          "text": "COPIED 000C",
+          "sameBytes": true,
+          "textOk": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "A: to B:, run on B:",
+          "command": "COPY A:X.DAT X.DAT",
+          "kind": "copied",
+          "text": "COPIED 000C",
+          "sameBytes": true,
+          "textOk": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S0.DAT D0.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0000",
+          "reference": "COPIED 0000",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S0.DAT B:D0.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0000",
+          "reference": "COPIED 0000",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S0.DAT A:D0.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0000",
+          "reference": "COPIED 0000",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S1.DAT D1.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0001",
+          "reference": "COPIED 0001",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S1.DAT B:D1.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0001",
+          "reference": "COPIED 0001",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S1.DAT A:D1.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0001",
+          "reference": "COPIED 0001",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S128.DAT D128.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0080",
+          "reference": "COPIED 0080",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S128.DAT B:D128.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0080",
+          "reference": "COPIED 0080",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S128.DAT A:D128.DAT",
+          "kind": "kg12",
+          "text": "COPIED 0080",
+          "reference": "COPIED 0080",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S157.DAT D157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S157.DAT B:D157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S157.DAT A:D157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S300.DAT D300.DAT",
+          "kind": "kg12",
+          "text": "COPIED 012C",
+          "reference": "COPIED 012C",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S300.DAT B:D300.DAT",
+          "kind": "kg12",
+          "text": "COPIED 012C",
+          "reference": "COPIED 012C",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY B:S300.DAT A:D300.DAT",
+          "kind": "kg12",
+          "text": "COPIED 012C",
+          "reference": "COPIED 012C",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S157.DAT B:E157.DAT",
+          "kind": "kg12",
+          "text": "COPIED 009D",
+          "reference": "COPIED 009D",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY NONE.DAT D.DAT",
+          "kind": "kg12",
+          "text": "NO SOURCE",
+          "reference": "NO SOURCE",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        },
+        {
+          "case": "KG12",
+          "command": "COPY S1.DAT C:D1.DAT",
+          "kind": "kg12",
+          "text": "Bdos Err On C: Bad Sector",
+          "reference": "Bdos Err On C: Bad Sector",
+          "sameAsCopyCom": true,
+          "tpaKept": true,
+          "pass": true
+        }
+      ]
+    }
+  }
+}
