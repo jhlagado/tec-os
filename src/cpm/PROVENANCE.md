@@ -57,8 +57,9 @@ Changes made for ROM residency in TEC-OS:
   FCBs and `DIRNUM` and writes nothing in the TPA. Unlike `copy.asm`, it
   takes a drive alone, or a blank name, as the destination and fills in the
   source's name, and it refuses a destination that names the source
-  (`CPPARSE` puts the current drive in a 0 drive byte, and the two FCBs'
-  bytes 0 to 11 are compared before the open).
+  (`CPPARSE` puts the current drive, from page zero's `0004h`, which `EXIT`
+  restores, in a 0 drive byte, and the two FCBs' bytes 0 to 11 are compared
+  before the open).
 - The line editor (`FNLINE`) keeps a history of the lines typed at the CCP
   prompt in a ring in EXPAND 1 (`src/history.asm`). The CCP sets `HFLAG`
   before its prompt's function 10, and only that call stores its line or

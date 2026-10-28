@@ -75,6 +75,7 @@ for (const [line, from, to, full] of [
   ["COPY X.COM B:", ["A", "X.COM"], ["B", "X.COM"], "COPY X.COM B:X.COM"],
   ["COPY B:X.COM A:", ["B", "X.COM"], ["A", "X.COM"], "COPY B:X.COM A:X.COM"],
   ["COPY X.COM B:.TXT", ["A", "X.COM"], ["B", "X.COM"], "COPY X.COM B:X.COM"],
+  ["COPY X.COM B:.*", ["A", "X.COM"], ["B", "X.COM"], "COPY X.COM B:X.COM"],
 ])
   test(`${line} copies under the source's name, as ${full} does`, () => {
     const t = trial(line);
@@ -113,6 +114,26 @@ for (const [line, setup, from, to] of [
     assert.equal(t.text, "COPIED 000C");
     assert.deepEqual(read(t.image, ...to), read(t.image, ...from));
     assert.equal(t.tpaChanged, 0, "the TPA kept");
+  });
+
+test("after CCP, B: and EXIT, a plain name is on A: again: a copy works, and one onto itself is refused", () => {
+  const t = trial("COPY X.DAT Y.DAT", ["CCP", "B:", "EXIT"]);
+  assert.equal(t.text, "COPIED 000C");
+  assert.deepEqual(read(t.image, "A", "Y.DAT"), read(t.image, "A", "X.DAT"), "A:Y.DAT made from A:X.DAT");
+  assert.throws(() => volume(t.image, "B").read("Y.DAT"), /not found/, "nothing made on B:");
+  const u = trial("COPY X.DAT X.DAT", ["CCP", "B:", "EXIT"]);
+  assert.equal(u.text, "COPY?");
+  assert.ok(u.unchanged, "the card byte for byte");
+});
+
+for (const [line, to] of [
+  ["COPY X.DAT X.DAQ", "X.DAQ"], // only the type's last byte differs
+  ["COPY X.DAT Y.DAT", "Y.DAT"], // only the name's first byte
+])
+  test(`${line} copies: the names differ in one byte`, () => {
+    const t = trial(line);
+    assert.equal(t.text, "COPIED 000C");
+    assert.deepEqual(read(t.image, "A", to), read(t.image, "A", "X.DAT"));
   });
 
 test("every other case leaves the card and prints as COPY.COM does, with the TPA kept", () => {

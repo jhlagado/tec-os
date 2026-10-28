@@ -894,9 +894,9 @@ RENEXIST:
 ; given, and a destination that names the source is a bad command, with
 ; nothing opened.
 ; Parse the next name at HL into the FCB at DE, unambiguous (CPNAME); parse
-; it (CPPARSE), keeping DE, with the current drive in a 0 drive byte; check
-; the FCB just parsed is unambiguous (CPCHK). A bad command otherwise.
-; PARSEFCB clears the rest of the FCB.
+; it (CPPARSE), keeping DE, with the current drive from 0004h in a 0 drive
+; byte; check the FCB just parsed is unambiguous (CPCHK). A bad command
+; otherwise. PARSEFCB clears the rest of the FCB.
 CPNAME:
         CALL    CPPARSE
 CPCHK:
@@ -912,7 +912,8 @@ CPPARSE:
         LD      A,(DE)
         OR      A
         RET     NZ
-        LD      A,(BOOTDRV)
+        LD      A,(CURDSK)      ; the drive in use, as EXIT gives it back
+        AND     $0F
         INC     A
         LD      (DE),A
         RET
