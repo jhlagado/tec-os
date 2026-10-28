@@ -8,13 +8,15 @@ import { resolve } from "node:path";
 import { Machine, loadSymbols } from "./lib/machine.mjs";
 import { ROOT, standardCard } from "./lib/fixtures.mjs";
 import { buildDiag, STOPWATCH_T } from "../tools/diag.mjs";
+import { compare, parseReport } from "../tools/diag-check.mjs";
 
 const SLOW = { timeout: 600_000 };
 let rom;
 let symbols;
+let info;
 
 before(async () => {
-  await buildDiag();
+  info = await buildDiag();
   rom = readFileSync(resolve(ROOT, "build/diag/diag.rom"));
   symbols = loadSymbols(resolve(ROOT, "build/diag/diag.d8.json"));
 });
@@ -135,6 +137,33 @@ test("the automatic tests pass on the Debug80 model and the report lists them", 
   assert.equal(written.length, 2);
   assert.deepEqual([...card.slice(7 * 512, 8 * 512)], [...block7], "the card's own array, written in place");
   deliberateWrites(m);
+  // The report names its image, and the checker finds no difference in the
+  // model's own report and one for each line edited.
+  const text = m.serialText();
+  assert.match(text, new RegExp(`\\r\\nTEC-1G diagnostics 0\\.2 image ${info.id}\\r\\n`));
+  const model = parseReport(text);
+  assert.equal(model.id, info.id);
+  assert.deepEqual(compare(model, model).differences, []);
+  const edited = text
+    .replace(/T05 ROMSUM  PASS  (.*)\r\n(?=[^]*==== END)/g, "T05 ROMSUM  FAIL  $1\r\n")
+    .replace(/9 banks \+ base/g, "1 banks + base")
+    .replace(/T21 RTC .*\r\n/g, "");
+  const { differences } = compare(parseReport(edited), model);
+  assert.equal(differences.length, 3, differences.join("\n"));
+  assert.match(differences[0], /^T05 ROMSUM: board FAIL .* \| model PASS .* \| affects: Nothing in TEC-OS/);
+  assert.match(differences[1], /^T12 BANKS: board INFO .*1 banks \+ base \| model INFO .*9 banks \+ base \| affects: EXPAND 1/);
+  assert.match(differences[2], /^T21 RTC: board missing \| model NONE/);
+});
+
+test("a pattern that reads back wrong from the card says where, and the block is put back", SLOW, () => {
+  const card = standardCard();
+  const block7 = card.slice(7 * 512, 8 * 512);
+  let writes = 0;
+  const m = diag({ sdImage: card, onSdWrite: () => (writes += 1) === 1 && (card[7 * 512 + 5] ^= 0xff) });
+  const text = m.wait(/T37 SDWRITE .*\r\n/);
+  // Byte 5 of the pattern is 05h xor 0Ch xor 5Ah, its address in the buffer.
+  assert.match(text, /T37 SDWRITE FAIL  pattern read back wrong at \+0005 read AC expect 53; busy polls \d+\r\n/);
+  assert.deepEqual([...card.slice(7 * 512, 8 * 512)], [...block7]);
 });
 
 /**
@@ -218,7 +247,7 @@ test("on an F18A-compatible VDP the probe reads the identity, scrolls one row an
  * time registers once one is written; the chip counts on from the time
  * written. The clock runs at 4 MHz cycles, from `start`.
  */
-function countingRtc(m, start) {
+function countingRtc(m, start, { stopAtSet = false } = {}) {
   const rtc = m.rtc;
   const bcd = (v) => (v >> 4) * 10 + (v & 15);
   let base = start.getTime();
@@ -234,6 +263,10 @@ function countingRtc(m, start) {
   rtc.writeRegister = function (addr, value) {
     write.call(this, addr, value);
     if (addr > 6) return;
+    if (stopAtSet) {
+      this.refreshTimeRegisters = () => {};
+      return;
+    }
     this.timeFrozen = false;
     const r = this.registers;
     base = Date.UTC(2000 + bcd(r[6]), bcd(r[4]) - 1, bcd(r[3]), bcd(r[2] & 0x3f), bcd(r[1]), bcd(r[0] & 0x7f));
@@ -255,6 +288,13 @@ test("T21 sets the DS1302, sees it roll over and puts the time back", SLOW, () =
   const read = Date.UTC(2000 + bcd(r[6]), bcd(r[4]) - 1, bcd(r[3]), bcd(r[2]), bcd(r[1]), bcd(r[0]));
   const untouched = start + Math.floor((m.cycles * 1000) / 4_000_000);
   assert.ok(Math.abs(read - untouched) <= 2000, `clock off by ${(read - untouched) / 1000} s`);
+});
+
+test("a clock that stops when T21 sets it fails, with what was read and expected", SLOW, () => {
+  const m = diag({ rtc: true });
+  countingRtc(m, new Date(Date.UTC(2026, 9, 26, 9, 30, 15)), { stopAtSet: true });
+  const text = m.wait(/T21 RTC .*\r\n/);
+  assert.match(text, /T21 RTC     FAIL  .*: stopped after the set: read 58 59 23 31 12 04 99, expect 00 00 00 01 01 05 00\r\n/);
 });
 
 test("a bad bit in the variables page is reported without a stack, and nothing more runs", SLOW, () => {

@@ -21,8 +21,10 @@ START:  LD      SP,BOOTSTK
         CALL    LCDSTR
         CALL    LCDEOL
         CALL    PRI
-        DB      13,10,13,10,"TEC-1G diagnostics ",VERHI+'0','.',VERLO+'0',13,10
-        DB      "RAM 7E00-7FFF (variables and stack) passed.",13,10
+        DB      13,10,13,10,"TEC-1G diagnostics ",0
+        CALL    PRID
+        CALL    PRI
+        DB      13,10,"RAM 7E00-7FFF (variables and stack) passed.",13,10
         DB      "Press I, Y or keypad + within 5 s to include the interactive tests.",13,10,0
         LD      A,10
         CALL    GETKEY
@@ -39,7 +41,7 @@ STINT:  LD      A,1
 STAUTO: CALL    PRI
         DB      "Automatic tests only.",13,10,0
 STRAM:  CALL    PRI
-        DB      "RAM tests take about 30 s. Keep off the keypad: its NMI would",13,10
+        DB      "RAM tests take about 6 s. Keep off the keypad: its NMI would",13,10
         DB      "land in the RAM under test.",13,10,0
         LD      B,1
         CALL    LCDROW

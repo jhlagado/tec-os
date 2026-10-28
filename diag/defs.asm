@@ -43,6 +43,7 @@ RPTEND  EQU     $3000
 VARS    EQU     $7E00           ; variables, 7E00h-7EFFh
 BOOTSTK EQU     $8000           ; stack 7F00h-7FFFh
 WINDOW  EQU     $8000           ; bank window 8000h-BFFFh
+ROMID   EQU     $FFF6           ; the image ID, 8 bytes, set by the build
 ROMCKS  EQU     $FFFE           ; 16-bit sum of C000h-FFFDh, set by the build
 
 ; ---- Result codes -----------------------------------------------------------

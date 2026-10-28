@@ -308,7 +308,7 @@ SDRG2:  LD      B,18            ; 16 bytes and the CRC
 ; ---- T19 SD -------------------------------------------------------------------
 
 TSD:    CALL    TBEGIN
-        DB      19,"SD     ","SD card on FDh: CMD0, CMD8, ACMD41, CMD58, CSD, CID, block 0",0
+        DB      19,"SD     ","SD card on FDh: initialise, CSD, CID, block 0",0
         XOR     A
         LD      (SDOK),A
         CALL    SDINIT
@@ -439,6 +439,8 @@ TSD7:   CALL    PRI
         DB      ", block 0 read error ",0
         LD      A,(SAVE)
         CALL    PRHEX
+        CALL    PRI
+        DB      " (5 rejected, 6 no token)",0
         JP      REND
 
 ; ---- T20 SDBLKS ----------------------------------------------------------------
@@ -447,7 +449,7 @@ TSD7:   CALL    PRI
 ; wait. A block costs 354,216 + 678 x polls T-states (measured on the
 ; Debug80 model with no polls).
 TSDBLK: CALL    TBEGIN
-        DB      20,"SDBLKS ","O4: blocks 0-63 at bit-bang speed, token wait per block",0
+        DB      20,"SDBLKS ","Blocks 0-63: errors and token waits",0
         LD      A,(SDOK)
         OR      A
         JP      Z,TSDBN
@@ -657,7 +659,7 @@ TSW1:   LD      HL,7            ; keep block 7 in VBUFA
         JR      NZ,TSW9
         CALL    SWCHK
         LD      C,3
-        JR      NZ,TSW8
+        JP      NZ,TSW8
         LD      HL,VBUFA        ; what it held, written back
         CALL    SDWR
         LD      C,4
@@ -679,15 +681,39 @@ TSW2:   LD      A,(DE)
         OR      C
         JR      NZ,TSW2
         JR      TSW9            ; C = 0
-TSW3:   LD      C,5
+TSW3:   LD      (SAVE),HL       ; the byte read and the byte expected
+        LD      A,(HL)
+        LD      (SAVE+3),A
+        LD      A,(DE)
+        LD      (SAVE+2),A
+        LD      C,5
 TSW9:   LD      A,C
+        LD      (SAVE+4),A
         OR      A
-        PUSH    AF
         CALL    RESZ
-        POP     AF
+        LD      A,(SAVE+4)
         LD      HL,SWTXT
         CALL    PRSN
+        LD      A,(SAVE+4)
+        CP      3
+        JR      Z,TSWD
+        CP      5
+        JR      NZ,TSWE
+TSWD:   CALL    PRI
+        DB      " at +",0
+        LD      HL,(SAVE)
+        LD      DE,-SDBUF
+        ADD     HL,DE
+        CALL    PRHL
         CALL    PRI
+        DB      " read ",0
+        LD      A,(SAVE+3)
+        CALL    PRHEX
+        CALL    PRI
+        DB      " expect ",0
+        LD      A,(SAVE+2)
+        CALL    PRHEX
+TSWE:   CALL    PRI
         DB      "; busy polls ",0
         LD      HL,(SDBSY)
         CALL    PRDEC
@@ -723,12 +749,17 @@ SWP1:   CALL    SWVAL
 SWCHK:  LD      HL,SDBUF
 SWC1:   CALL    SWVAL
         CP      (HL)
-        RET     NZ
+        JR      NZ,SWCBAD
         INC     HL
         LD      A,H
         CP      HIGH(SDBUF+512)
         JR      NZ,SWC1
         RET
+SWCBAD: LD      (SAVE),HL       ; the byte read and the byte expected
+        LD      (SAVE+2),A
+        LD      A,(HL)
+        LD      (SAVE+3),A
+        RET                     ; NZ
 SWVAL:  LD      A,L
         XOR     H
         XOR     $5A

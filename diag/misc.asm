@@ -120,6 +120,27 @@ TRTC5:  CALL    RESULT
         LD      A,(SAVE+8)
         LD      HL,RTCSTXT
         CALL    PRSN
+        LD      A,(SAVE+8)      ; a failure: the registers read and expected
+        LD      HL,RTCBUF
+        LD      DE,RTCTST
+        DEC     A
+        JP      M,REND
+        JR      Z,TRTC6
+        LD      DE,RTCNEW
+        DEC     A
+        JR      Z,TRTC6
+        LD      HL,RTCRB
+        LD      DE,RTCORG
+TRTC6:  PUSH    DE
+        CALL    PRI
+        DB      ": read ",0
+        LD      B,7
+        CALL    PRBYTES
+        CALL    PRI
+        DB      ", expect ",0
+        POP     HL
+        LD      B,7
+        CALL    PRBYTES
         JP      REND
 
 ; Print the A'th of the zero-terminated strings at HL.
@@ -228,7 +249,7 @@ RTCSET: LD      D,$81
         LD      HL,RTCBUF
         CALL    RTCGET
         LD      HL,RTCBUF+1     ; 2100-01-01 00:00, any seconds below 10
-        LD      DE,RTCNEW
+        LD      DE,RTCNEW+1
         LD      B,4
         CALL    RTCCMP
         LD      C,2
@@ -252,9 +273,9 @@ RTCS8:  LD      HL,RTCORG       ; seconds + elapsed, in BCD, below 60
         LD      E,A
         LD      D,$8E
         CALL    RTCWR
-        LD      HL,RTCBUF
+        LD      HL,RTCRB
         CALL    RTCGET
-        LD      HL,RTCBUF+1
+        LD      HL,RTCRB+1
         LD      DE,RTCORG+1
         LD      B,5
         CALL    RTCCMP
@@ -272,7 +293,7 @@ RTCCMP: LD      A,(DE)
         DJNZ    RTCCMP
         RET
 RTCTST: DB      $58,$59,$23,$31,$12,$04,$99 ; a Thursday
-RTCNEW: DB      $00,$00,$01,$01
+RTCNEW: DB      $00,$00,$00,$01,$01,$05,$00 ; a Friday, seconds below 10
 
 ; DEHL = HL x 1282.
 RTCHZ:  LD      DE,0
@@ -417,7 +438,7 @@ MUXD3:  DEC     D
         RET
 
 TSEG7:  CALL    TBEGIN
-        DB      22,"SEG7   ","7-segment: each segment on all digits, then each digit",0
+        DB      22,"SEG7   ","7-segment: each segment, then each digit",0
         CALL    PRI
         DB      "Watch the display: segments a b c d e f g and the point in turn,",13,10
         DB      "then 8. on each digit from left to right, then all.",13,10,0
@@ -538,7 +559,7 @@ LEDOFF: XOR     A
         RET
 
 TRGB:   CALL    TBEGIN
-        DB      24,"RGB8X8 ","8 x 8 matrix on 05h/06h/F8h/F9h: red, green, blue, white, diagonal",0
+        DB      24,"RGB8X8 ","8 x 8 matrix on 05h/06h/F8h/F9h",0
         LD      DE,RGBSEQ
 TRGB1:  LD      A,(DE)
         OR      A

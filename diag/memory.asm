@@ -241,11 +241,11 @@ ROMWTW: LD      (HL),A          ; the deliberate ROM write
         CP      $A5
         CALL    RESZ
         CALL    PRI
-        DB      "C000h-FFFFh: wrote 5A at ",0
+        DB      "wrote 5A at ",0
         LD      HL,ROMWT
         CALL    PRHL
         CALL    PRI
-        DB      ", read ",0
+        DB      ", expect A5, read ",0
         LD      A,(ROMWT)
         CALL    PRHEX
         JP      REND
@@ -305,11 +305,16 @@ TOVL1:  CALL    RESZ
         LD      A,(SAVE+2)
         CALL    PRHEX
         CALL    PRI
-        DB      " (RAM)",0
+        DB      " (RAM, expect ",0
+        LD      A,(ROMSIG)
+        CPL
+        CALL    PRHEX
+        LD      A,')'
+        CALL    OUTC
         CALL    REND
 
         CALL    TBEGIN
-        DB      8,"OVLWR  ","O3: a write to 07FFh with the overlay on",0
+        DB      8,"OVLWR  ","A write to 07FFh with the overlay on",0
         LD      A,RINFO
         CALL    RESULT
         LD      A,(SAVE+1)      ; the value written was ROM xor 0Fh
@@ -380,7 +385,7 @@ PROTWT: LD      (HL),A
         CP      $A5
 TPROT1: CALL    RESZ
         CALL    PRI
-        DB      "wrote A5 over 5A: 4000 ",0
+        DB      "wrote A5 over 5A, expect 5A 5A A5: 4000 ",0
         LD      A,(SAVE+1)
         CALL    PRHEX
         CALL    PRI
@@ -494,7 +499,7 @@ BSEL:   RLCA
 ; its RAM; the base mapping reads EEh. A tag is checked at 8000h, 8001h and
 ; BFFFh, so a part-decoded chip shows as no RAM (FFh).
 TBANKS: CALL    TBEGIN
-        DB      12,"BANKS  ","O1: what each bank field value (latch bits 3-6) selects",0
+        DB      12,"BANKS  ","What each bank field value (latch bits 3-6) selects",0
         LD      B,16
 TBNK1:  LD      A,B
         DEC     A

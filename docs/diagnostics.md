@@ -22,8 +22,11 @@ npm run diag
 ```
 
 The build writes `build/diag/diag.rom` (16,384 bytes), the symbol map
-`build/diag/diag.d8.json` and `build/diag/diag.json` with the image's
-SHA-256, its checksum and the serial delay counts. Unused bytes are `FFh`.
+`build/diag/diag.d8.json` and `build/diag/diag.json` with the image ID, the
+image's SHA-256, its checksum and the serial delay counts. Unused bytes are
+`FFh`. The image ID is the first 8 bytes of the SHA-256 of the image with
+`FFF6h–FFFFh` blank (`FFh`). The build stores it at `FFF6h–FFFDh`, and the
+banner and the report print it, so a pasted report names the image that ran.
 The last two bytes hold the 16-bit sum of `C000h–FFFDh`, which test T05
 checks on the board. Two builds from the same sources give identical images.
 
@@ -32,6 +35,9 @@ SD driver and font. `tools/diag.mjs` generates `diag/gen/config.asm` and
 `diag/gen/font.asm` before assembling with ATOM.
 
 ## Running it on a board
+
+[board-run.md](board-run.md) is the run plan for someone at a board who
+knows the TEC-1G but not TEC-OS. In short:
 
 1. Burn `diag.rom` where the TEC-OS ROM goes. It is entered through the same
    2 KiB boot overlay at reset.
@@ -43,7 +49,7 @@ SD driver and font. `tools/diag.mjs` generates `diag/gen/config.asm` and
 4. Press `I` or `Y` on the terminal, or `+` on the hex keypad, within those
    5 s to include the interactive tests. Otherwise only the automatic tests
    run, which needs nobody at the board.
-5. Keep off the hex keypad while the RAM tests run (about 30 s at 4 MHz) and
+5. Keep off the hex keypad while the RAM tests run (about 6 s at 4 MHz) and
    during T09 and T25. A keypad press raises an NMI. During the RAM tests its
    return address would land in the RAM under test. During T09 and T25 the
    stack is write-protected.
@@ -66,6 +72,11 @@ Each test ends with one line in the report:
 ```text
 T12 BANKS   INFO  field 0-F: 0122446688AACCEE (B base, - none); 9 banks + base
 ```
+
+The report starts with the version and the image ID. Every `FAIL` line
+says what was expected and what was read, except the error counts, which
+the report's second line says expect 0. A `FAIL` on a visual or audible test
+is the operator's answer No to the question it asked.
 
 | Result | Meaning |
 | --- | --- |
@@ -132,9 +143,11 @@ over a known ROM byte and reads it back unchanged.
 With latch bit 0 low, `07FFh` should read the ROM byte at `C7FFh` and `0800h`
 should still read RAM. T07 checks both. T08 then writes `07FFh` with the
 overlay on, turns the overlay off and reads the RAM there. It reports whether
-the write reached the RAM underneath or was dropped.
-Debug80 sends the write to the RAM. TEC-OS never writes there with the
-overlay on, so either answer is safe.
+the write reached the RAM underneath or was dropped. Debug80 sends the write
+to the RAM. The board's documents select the ROM instead (`/RAM_CS` observes
+SHADOW on the MEMbus connector, J7), which gives "is dropped", or a changed
+ROM byte at `C7FFh` if the chip takes writes (T06). TEC-OS never writes
+there with the overlay on, so either answer is safe.
 
 ### T09 PROTECT
 
@@ -166,7 +179,7 @@ descriptions of this port disagree:
 | 7 | Serial RX | Serial RX |
 
 Comparing the four values shows which bits follow the latch on the board.
-TEC-OS reads bit 0 (the Matrix switch), bit 6 and bit 7.
+TEC-OS reads only bit 0 (the Matrix switch) and bit 7 (serial RX).
 
 ### T12 BANKS and T13 BANKRAM
 
@@ -407,12 +420,119 @@ counts it from the speaker edges on every run.
 stopwatch reading gives the read rate in bytes per second. With the RTC
 fitted the line also gives the RTC's elapsed seconds.
 
+## Checked against the board's documents
+
+I checked every test against the TEC-1G documentation
+(`TEC-1G/Documentation`: `memmap.md`, `ioports.md`, `connectors.md`,
+`Functional Description.md` and `Assembly/Jumpers+Switches.md`), not
+against the Debug80 model. Checked 28 October 2026 for diag 0.2.
+
+| Test | Ports and addresses | Documents | Verdict |
+| --- | --- | --- | --- |
+| T01 HOME | RAM `7E00h–7FFFh` | memmap.md, Memory Banks; Recommended Memory Configuration (U8 32K) | Agrees |
+| T02 RAMLO | RAM `0000h–7DFFh`, latch `01h` | memmap.md, SHADOW Memory | Agrees |
+| T03 RAMWIN | `8000h–BFFFh`, latch `01h` | memmap.md, EXPAND Page Switching; Recommended Memory Configuration | Differs, kept (1) |
+| T04 RAMHOME | `7E00h–7FFFh`, stack at `8000h` | as T01 and T03 | Agrees |
+| T05 ROMSUM | `C000h–FFFFh` | memmap.md, ROM Lo/Hi; Functional Description, ROM and RAM | Agrees (2) |
+| T06 ROMWR | one ROM byte written | not stated | Assumption A7 |
+| T07 OVERLAY | latch `00h`/`01h`; `07FFh`, `0800h` | ioports.md, Port FFh bit 0; memmap.md, SHADOW Memory | Agrees |
+| T08 OVLWR | `07FFh` written with latch `00h` | connectors.md, J7 (`/RAM_CS` and `/ROM_CS` observe SHADOW) | Differs from the model, kept (3) |
+| T09 PROTECT | latch `03h`; `4000h`, `7DFFh`, `3FFFh` | ioports.md, Port FFh bit 1; memmap.md, PROTECT; Functional Description, Memory Protection | Agrees |
+| T10 LATCHRD | `IN FFh` | ioports.md, Port FFh; Functional Description, System Latch Port | Agrees: write-only, information |
+| T11 STATUS | `IN 03h` at latch `01h`, `03h`, `05h`, `81h` | ioports.md, Port 03; Functional Description, System Input Port | Agrees; differs from the model, kept (4) |
+| T12 BANKS | latch bits 2–6; `8000h`, `8001h`, `BFFFh` | ioports.md, Port FFh bits 3–6; connectors.md, J7; Functional Description, Memory Management Unit | Agrees; differs from the model, kept (5) |
+| T13 BANKRAM | as T12 | as T12 | Agrees |
+| T14 SERTX | `01h` bit 6 | ioports.md, Port 01; Functional Description, FTDI Port | Agrees; framing A14 |
+| T15 LCD | `04h`, `84h` | ioports.md, Port 04 and 84h; connectors.md, LCD1 (RS on A7, R/W from inverted /RD) | Agrees; the documents differ, kept (6) |
+| T16 GLCD | `07h`, `87h` | ioports.md, Port 07; connectors.md, J1 pin 28 and J6 | Assumption A4 |
+| T17 VDP, T18 VDPCLK, T35 VDPPAGE, T36 F18A | `BEh`, `BFh` | not in the documents | Assumption A1 (7) |
+| T19 SD, T20 SDBLKS, T34 SDTIME, T37 SDWRITE | `FDh` | ioports.md, Port FDh; connectors.md, J10 | Port agrees; bits A2 |
+| T21 RTC | `FCh` | ioports.md, Port FCh | Port agrees; bits A3 |
+| T22 SEG7 | `01h` bits 0–5, `02h` | ioports.md, Port 01 and Port 02 | Agrees: every segment bit and the digit order |
+| T23 SPEAKER | `01h` bit 7 | ioports.md, Port 01 | Agrees |
+| T24 RGB8X8 | `05h`, `06h`, `F8h`, `F9h` | ioports.md, Port 05 and Port 06; connectors.md, J3 and J6 | Differs, kept (8) |
+| T25 LEDBAR | `FFh` | ioports.md, Port FFh (STATUS bar, bit 0 rightmost and active low) | Agrees |
+| T26 NMI | `0066h` | Jumpers+Switches.md, NMI Jumper | Agrees |
+| T27 SERRX, T28 SERBIT | `03h` bit 7 | ioports.md, Port 03 | Agrees; framing A14 |
+| T29 KEYPAD | `00h` bits 0–5, `03h` bit 6 | ioports.md, Port 00 and Port 03; Functional Description, HexPad Encoder | Agrees with ioports.md; the documents differ (9) |
+| T30 KEYNMI | `0066h` | Jumpers+Switches.md, NMI Jumper | Agrees |
+| T31 MATRIX | `FEh`, rows on `A8–A15` | ioports.md, Port FEh; Functional Description, Matrix Keyboard and Joystick | Agrees (key down reads 0); row select A5 |
+| T32 JOY | `FEh` with A11 low | connectors.md, J9 | Assumption A6; labels differ, kept (10) |
+| T33 CLOCK | `01h` bit 7 | Functional Description, CPU Clock Generation (4.0 MHz) | Agrees |
+
+1. The recommended configuration leaves U9 empty, and a board built to it
+   fails T03 with `FF` read at `8000h`. TEC-OS needs a 32K RAM in U9, so
+   `FAIL` is the right verdict for it. The run plan says so.
+2. A 32K ROM chip shows only the half that SW6 selects, so the run plan
+   has the image burned into both halves.
+3. The documents select the ROM, not the RAM, for `0000h–07FFh` while SHADOW
+   is on, so the documented board answers "is dropped". Debug80 sends the
+   write to the RAM. TEC-OS never writes there with the overlay on.
+4. The documents put the three config switches in bits 0–2 and the EXPAND
+   latch bit in bit 3. Debug80 puts PROTECT and EXPAND in bits 1–2. TEC-OS
+   reads only bits 0 and 7, where they agree. This document said TEC-OS
+   also reads bit 6; it does not, and that is corrected.
+5. The documents connect latch bits 3–6 only to J7 and leave U9 outside
+   the MMU, with EXPAND selecting its half, so the documented board gives
+   `0000000000000000` and one bank plus the base. Debug80 decodes bits 3–6
+   as a bank field and gives nine.
+6. `Functional Description.md` says 40 × 4. `connectors.md` and `readme.md`
+   say 20 × 4, and LCD1 has one E line where a 40 × 4 module needs two, so
+   the ROM uses the 20 × 4 row addresses.
+7. `BEh` and `BFh` are outside both onboard decoders (`00h–07h`, with the
+   diode OR on A3–A6, and `F8h–FFh`), so nothing on the board answers
+   there. The register behaviour is the PICO9918 firmware's.
+8. The documents make `05h` the X latch (bit 0 the left column) and `06h`
+   the Y latch (bit 0 the bottom row), and leave `F8h` and `F9h` free for
+   the user. The ROM drives `05h` as rows and `06h`, `F8h` and `F9h` as red,
+   green and blue columns, as Debug80 and TEC-OS's `HWLEDS` service do. The
+   run plan says what each reading shows.
+9. `ioports.md` says KDA reads 0 while a key is down; `Functional
+   Description.md` says the 74C923 "generates a high on KDA". The ROM reads
+   0 as down (A13). TEC-OS does not read the keypad.
+10. J9 wires two buttons (pins 6 and 7) and nothing to pins 5 and 9. The
+    ROM labels the bits as MON-3 does, with `pin9` and `fire3`. The line is
+    `INFO`, and the bits seen settle it.
+
+Two differences were in the ROM's own text and are fixed in 0.2: four test
+titles began with question labels that nothing a reader has defines,
+and the banner said the RAM tests take about 30 s, where they take about
+6 s at 4 MHz.
+
+### What the ROM assumes that the documents do not state
+
+| | Assumption | The report line that answers it |
+| --- | --- | --- |
+| A1 | The PICO9918 answers at `BEh`/`BFh` | T17: tags, or `NONE` |
+| A2 | The SD adaptor on `FDh`: bit 0 MOSI, 1 CLK, 2 /CS, in bit 7 MISO | T19: the card's answers |
+| A3 | The DS1302 on `FCh`: bit 4 CE, 6 CLK, 7 data out, 5 read, in bit 0 | T21: the time read |
+| A4 | The GLCD is an ST7920 with its data at `87h` | T16: busy flag and read-back |
+| A5 | A low address line on `A8–A15` selects a matrix row | T31: the row and bit of each key |
+| A6 | The joystick reads at `FEh` with A11 low, MON-3's bit layout | T32: the bits seen |
+| A7 | The ROM chip ignores writes | T06 |
+| A8 | Where a write under the overlay goes | T08 |
+| A9 | What latch bits 3–6 do | T12 |
+| A10 | Which bits of `03h` follow the latch | T11 |
+| A11 | How the 8 × 8 matrix decodes `05h`, `06h`, `F8h`, `F9h` | T24: the operator's description |
+| A12 | The LCD is 20 × 4 | T15: the row 4 read-back |
+| A13 | KDA reads 0 while a keypad key is down | T29, and the banner's 5 s wait |
+| A14 | The terminal link is 8N2 | T14 and T27 |
+| A15 | VRAM keeps up at 16 T-states a byte | T17: errors at each rate |
+| A16 | The card keeps up with the bit-bang rate | T20 and T34 |
+| A17 | Whether port `FFh` reads back | T10 |
+| A18 | One keypad NMI for each press | T30 |
+| A19 | The CPU clock is 4 MHz | T18, T21 and T33 |
+
 ## Recording a board run
 
-Keep the terminal log with the board revision, the CPU clock from T33 (or
-T18 or T21), what is fitted and the report between the two `====` lines.
-Note every result that differs from the Debug80 model, with the behaviour
-of TEC-OS it affects.
+[board-run.md](board-run.md) lists what to send back: the whole terminal
+log and a form of the board's details and the visual answers.
+`tools/diag-check.mjs` compares a pasted log with the model's run of the
+same image and names the TEC-OS behaviour behind each difference:
+
+```bash
+node tools/diag-check.mjs board-log.txt
+```
 
 ## The emulator test
 
@@ -428,7 +548,13 @@ of TEC-OS it affects.
   within 2 s of where it would have been. The runtime's DS1302 (0.3.0) stops
   counting once a time register is written, so the test keeps it counting;
 - T37's write, checking the card image's block 7 is unchanged after two
-  writes;
+  writes, and a pattern that reads back wrong, whose line gives the offset,
+  the byte read and the byte expected, with the block still put back;
+- a clock that stops when T21 sets it, whose line gives the registers read
+  and expected;
+- the report's image ID, and `tools/diag-check.mjs` on the model's own
+  report (no difference) and on a copy with a `FAIL`, an `INFO` value and a
+  missing test edited in (three);
 - the F18A probe against a stub of the firmware's register behaviour: the
   unlock, the VR15 reads, VR28 set to 8 and back to 0, R2 = `04h` during the
   scroll, the VR50 reset and TEC-OS's registers afterwards;

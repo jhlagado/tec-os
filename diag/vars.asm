@@ -47,7 +47,8 @@ SDOK:   DS      1               ; 1 when the card initialised
 GLCOK:  DS      1
 RTCOK:  DS      1
 RTCORG: DS      8               ; the clock's registers before T21 set it, and WP
-RTCBUF: DS      7               ; registers read back
+RTCBUF: DS      7               ; registers read back after the set
+RTCRB:  DS      7               ; and after the restore
 SDBSY:  DS      2               ; busy polls after the last block write
 VERR:   DS      2               ; VRAM bytes wrong
 

@@ -105,6 +105,17 @@ PRNIB:  AND     $0F
         DAA
         JP      OUTC
 
+; Print the version and the image ID that identify this build.
+PRID:   CALL    PRI
+        DB      VERHI+'0','.',VERLO+'0'," image ",0
+        LD      HL,ROMID
+        LD      B,8
+PRID1:  LD      A,(HL)
+        CALL    PRHEX
+        INC     HL
+        DJNZ    PRID1
+        RET
+
 ; Print HL as four hex digits.
 PRHL:   LD      A,H
         CALL    PRHEX
@@ -726,8 +737,10 @@ RESZ:   LD      A,RPASS
 PRREP:  CALL    CRLF
         CALL    PRI
         DB      13,10,"==== TEC-1G DIAGNOSTICS REPORT ====",13,10
-        DB      "ROM diag ",VERHI+'0','.',VERLO+'0'
-        DB      ", serial 4800 8N2, all times in T-states (4 MHz nominal)",13,10,0
+        DB      "ROM diag ",0
+        CALL    PRID
+        CALL    PRI
+        DB      ", 4800 8N2, times in T-states (4 MHz nominal), error counts expect 0",13,10,0
         LD      HL,RPTBUF
 PRREP1: LD      DE,(RPTP)
         OR      A

@@ -347,7 +347,7 @@ VREGT:  DB      $04,$50,$07,$00,$00,$00,$00,$F4
 VNAME   EQU     $1000
 
 TVDP:   CALL    TBEGIN
-        DB      17,"VDP    ","PICO9918 at BEh/BFh: VRAM size, full-speed access, 80 columns",0
+        DB      17,"VDP    ","PICO9918 at BEh/BFh: VRAM size, speed, 80 columns",0
         XOR     A
         LD      (VDPOK),A
         LD      HL,$3FFF        ; as TEC-OS detects it
@@ -754,7 +754,7 @@ WAIT1S: LD      A,10
 ; with 2s under its own title, then R2 alternates three times and is left
 ; at 07h.
 TVPAGE: CALL    TBEGIN
-        DB      35,"VDPPAGE","PICO9918 80-column pages: R2 07h shows 1000h, 0Bh shows 2000h",0
+        DB      35,"VDPPAGE","PICO9918 page select: R2 07h and 0Bh",0
         LD      A,(VDPOK)
         OR      A
         JR      NZ,TVPG1
@@ -814,7 +814,7 @@ VPG2T:  DB      "PAGE 2: NAMES AT 2000h, R2 = 0Bh ",0
 ; mask 0Fh instead of 0Ch, so the names are selected with R2 = 04h, which
 ; means 1000h under either mask.
 TF18A:  CALL    TBEGIN
-        DB      36,"F18A   ","F18A registers: identity (SR1), version (SR14), VR28 vertical scroll",0
+        DB      36,"F18A   ","F18A identity, version and vertical scroll",0
         LD      A,(VDPOK)
         OR      A
         JR      NZ,TF181

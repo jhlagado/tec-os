@@ -20,7 +20,11 @@ const ROM_START = 0xc000;
 const ROM_SIZE = 0x4000;
 const CPU_HZ = 4_000_000;
 const BAUD = 4800;
-const VERSION = { major: 0, minor: 1 };
+const VERSION = { major: 0, minor: 2 };
+// The image ID: the first 8 bytes of the SHA-256 of the image with the ID
+// and the checksum blank (FFh), stored at ROMID and printed in the report.
+const ROMID = 0xfff6;
+const ID_LEN = 8;
 
 // T-states from the first speaker edge of the GO beep to the first edge of
 // the STOP beep in the CLOCK test, measured on the Debug80 model, whose
@@ -100,6 +104,13 @@ function check(condition, message) {
   if (!condition) throw new Error(`diagnostics ROM check failed: ${message}`);
 }
 
+/** The image ID of a 16 KiB image: what the build stores at ROMID. */
+export function imageId(image) {
+  const blank = Uint8Array.from(image);
+  blank.fill(0xff, ROMID - ROM_START);
+  return createHash("sha256").update(blank).digest().subarray(0, ID_LEN);
+}
+
 export async function buildDiag() {
   const serial = writeGenerated();
   const result = await assembleAtomProject({ root: SRC, entry: "diag.asm" });
@@ -119,11 +130,13 @@ export async function buildDiag() {
   check(at("NMIROM") === 0xc066, "NMIROM must be at C066h");
   check(at("COLD") < 0xc800, "cold boot entry must be inside the overlay window");
   check(at("START") < 0xc800, "the RAM check must finish inside the overlay window");
-  check(at("CODEEND") <= 0xfffe, `code ends at ${hex(at("CODEEND"))}, over the checksum`);
+  check(at("CODEEND") <= ROMID, `code ends at ${hex(at("CODEEND"))}, over the image ID`);
+  check(at("ROMID") === ROMID, "ROMID must match tools/diag.mjs");
   check(at("VARSEND") <= 0x7f00, "variables overrun the stack page");
   check(at("NMITPE") - at("NMITPL") <= 0x38, "NMI handler too long for page zero");
   const rom = new Uint8Array(ROM_SIZE).fill(0xff);
   rom.set(bytes);
+  rom.set(imageId(rom), ROMID - ROM_START);
   let sum = 0;
   for (let i = 0; i < ROM_SIZE - 2; i += 1) sum = (sum + rom[i]) & 0xffff;
   rom[ROM_SIZE - 2] = sum & 0xff;
@@ -132,10 +145,11 @@ export async function buildDiag() {
   writeFileSync(resolve(OUT, "diag.rom"), rom);
   writeFileSync(resolve(OUT, "diag.d8.json"), JSON.stringify(d8, null, 2));
   const info = {
+    id: Buffer.from(imageId(rom)).toString("hex").toUpperCase(),
     sha256: createHash("sha256").update(rom).digest("hex"),
     checksum: sum,
     used: at("CODEEND") - ROM_START,
-    free: 0xfffe - at("CODEEND"),
+    free: ROMID - at("CODEEND"),
     serial,
   };
   writeFileSync(resolve(OUT, "diag.json"), JSON.stringify(info, null, 2) + "\n");
@@ -146,7 +160,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
     const info = await buildDiag();
     console.log(
-      `diag: ROM ${info.used}/${ROM_SIZE} bytes, checksum ${hex(info.checksum)}, sha256 ${info.sha256.slice(0, 16)}`,
+      `diag: ROM ${info.used}/${ROM_SIZE} bytes, ${info.free} free, image ${info.id}, checksum ${hex(info.checksum)}`,
     );
   } catch (error) {
     console.error(error.diagnostic ? JSON.stringify(error.diagnostic) : "", error.message);

@@ -43,7 +43,7 @@ SERS2:  IN      A,(KEYPORT)
 ; ---- T27 serial RX --------------------------------------------------------------
 
 TSERRX: CALL    TBEGIN
-        DB      27,"SERRX  ","Serial RX: each typed character comes back with its code",0
+        DB      27,"SERRX  ","Serial RX: typed characters come back",0
         CALL    RUNIT
         RET     NZ
         CALL    PRI
@@ -102,7 +102,7 @@ SBM2:   INC     HL              ; and to fall
         RET
 
 TSERBIT:CALL    TBEGIN
-        DB      28,"SERBIT ","The terminal's bit time, measured on typed U characters",0
+        DB      28,"SERBIT ","The terminal's bit time from typed U",0
         CALL    RUNIT
         RET     NZ
         CALL    PRI
@@ -201,17 +201,17 @@ TSB6:   CALL    RESULT
         LD      H,0
         CALL    PRDEC
         CALL    PRI
-        DB      " U; ROM bit ",0
+        DB      " U; expect the ROM's ",0
         LD      HL,TXBITC
         CALL    PRDEC
         CALL    PRI
-        DB      " T",0
+        DB      " T +-2%",0
         JP      REND
 
 ; ---- T29-T30 hex keypad and its NMI ----------------------------------------------
 
 TKEYPAD:CALL    TBEGIN
-        DB      29,"KEYPAD ","Hex keypad on 00h: every key, Shift, and the NMI per press",0
+        DB      29,"KEYPAD ","Hex keypad on 00h: every key and Shift",0
         CALL    RUNIT
         RET     NZ
         XOR     A               ; counts start before the prompt: a key
@@ -327,7 +327,7 @@ TKPR:   CALL    RESULT
         CALL    REND
 
         CALL    TBEGIN
-        DB      30,"KEYNMI ","O2: NMIs taken for those keypad presses",0
+        DB      30,"KEYNMI ","NMIs taken for those keypad presses",0
         LD      A,RINFO
         CALL    RESULT
         LD      HL,(NMICNT)
@@ -365,7 +365,7 @@ TKN2:   CALL    PRI
 ; Scan once every millisecond or so. A key going down prints its number
 ; (row x 8 + bit, as TEC-OS numbers them).
 TMATRIX:CALL    TBEGIN
-        DB      31,"MATRIX ","Matrix keyboard on FEh: each key reports its row and bit",0
+        DB      31,"MATRIX ","Matrix keyboard on FEh: row and bit of each key",0
         CALL    RUNIT
         RET     NZ
         CALL    PRI
@@ -507,7 +507,7 @@ TMXS9:  CALL    RXBITS
 
 ; MON-3 reads the joystick at port FEh with only A11 low (BC = F7FEh).
 TJOY:   CALL    TBEGIN
-        DB      32,"JOY    ","Joystick on FEh with A11 low: directions and buttons",0
+        DB      32,"JOY    ","Joystick on FEh with A11 low",0
         CALL    RUNIT
         RET     NZ
         CALL    PRI
@@ -624,7 +624,7 @@ DELAYN  EQU     38460           ; with the CALL and DJNZ: 26 x 38460 + 45
 ; T33: the CPU clock from a stopwatch. The interval from the first speaker
 ; edge of the GO beep to the first edge of the STOP beep is SWTOT T-states.
 TCLOCK: CALL    TBEGIN
-        DB      33,"CLOCK  ","CPU clock by stopwatch: 240M T-states, about 60 s at 4 MHz",0
+        DB      33,"CLOCK  ","CPU clock by stopwatch, about 60 s",0
         CALL    RUNIT
         RET     NZ
         CALL    PRI
