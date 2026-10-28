@@ -42,6 +42,13 @@ and `DIR` pause with `[more]` when the screen fills. Programs that parse
 DR's `DIR` layout will not find it. `SUBMIT` and batch files are not
 supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 
+- `COPY` copies one file within the current user. `DEST` may be a drive
+  alone, `COPY X.COM B:`, or a blank name with a type, `COPY X.COM B:.TXT`:
+  either takes the source's whole name, so both make `B:X.COM`. A
+  destination that names the source, on the same drive after the current
+  drive is filled in, is a bad command and nothing is opened: `COPY X.DAT`,
+  `COPY X.DAT X.DAT` and `COPY X.DAT A:` on A: all print `COPY?`.
+
 - `CCP` starts a nested command processor; `EXIT` returns to the level that
   started it, with that level's drive, user and warm-boot entry back. Levels
   nest six deep.
