@@ -21,12 +21,21 @@ HDR:    DB      "TNM",1,1,0     ; a resident
 VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
 LBUF:   DW      0               ; LINEBUF, from FF25h
 
+; INIT takes the console's table unless another GLCD.PRL has it; REMOVE
+; gives the console back only if this one took it.
 INIT:   LD      HL,VTAB
         CALL    GLHOOK
+        RET     C
         LD      (LBUF),HL
+        LD      A,1
+        LD      (OWN),A
         RET
-REMOVE: LD      HL,0
+REMOVE: LD      A,(OWN)
+        OR      A
+        RET     Z
+        LD      HL,0
         JP      GLHOOK
+OWN:    DB      0
 
 GLCCMD  EQU     $07
 GLCDAT  EQU     $87

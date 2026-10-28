@@ -32,7 +32,7 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | `FF1Dh` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt (ABI 2.4) |
 | `FF20h` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed (ABI 2.5) |
 | `FF23h` | Address of the console font, 8 bytes a character from 20h, for the GLCD console (ABI 2.6) |
-| `FF25h` | `JP GLHOOK`: HL = a video table, six words, for the GLCD console, and `LINEBUF` back in HL; HL = 0 puts the console back to serial (ABI 2.7) |
+| `FF25h` | `JP GLHOOK`: HL = a video table, six words, for the GLCD console, and `LINEBUF` back in HL; carry set and nothing changed if a table is kept already; HL = 0 puts the console back to serial (ABI 2.7) |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. `XMOVE`'s 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; its 1
@@ -84,8 +84,10 @@ row. `CONSW` points the terminal's vector at that table when it selects
 `UC1:`, and the terminal then calls the routines directly, on the caller's
 stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 25
 bytes it has. `FF25h` returns `LINEBUF`'s address in HL, where the row
-routines read and write a row. Its REMOVE calls `FF25h` with HL = 0, which
-drops the table and puts the console back to serial. The PRL loader takes
+routines read and write a row, or carry set if a table is kept already, as
+when `GLCD.PRL` is loaded a second time; that copy then leaves the console
+alone. Its REMOVE, in the copy that took the console, calls `FF25h` with
+HL = 0, which drops the table and puts the console back to serial. The PRL loader takes
 kind 1 only; kind 2, the driver kind of ABI 2.6 and before, is refused.
 
 Page zero's restart vectors at `0008h–0037h` are left to programs and

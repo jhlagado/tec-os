@@ -5,13 +5,21 @@
 
 ; HL = the resident's video table, six words in TMSVEC's order (VPUT, VGET,
 ; VCLREOL, VREST, VRDROW, VWRROW): kept for CONSW, and HL = LINEBUF on
-; return, where VRDROW and VWRROW move a row. HL = 0: the table dropped,
-; the console back to serial and the vector back to the TMS9918's.
-GLHOOK: LD      (GLVEC),HL
-        LD      A,H
+; return with carry clear, where VRDROW and VWRROW move a row; carry set
+; and nothing changed if a table is kept already. HL = 0: the table
+; dropped, the console back to serial and the vector back to the TMS9918's.
+GLHOOK: LD      A,H
         OR      L
-        LD      HL,LINEBUF
+        JR      Z,GLHOFF
+        LD      A,(GLVEC+1)     ; a table in RAM is at 0100h or above
+        OR      A
+        SCF
         RET     NZ
+        LD      (GLVEC),HL
+        LD      HL,LINEBUF
+        OR      A
+        RET
+GLHOFF: LD      (GLVEC),HL
         LD      HL,CONDEV       ; CDGLC: no GLCD console now
         RES     2,(HL)
         LD      HL,TMSVEC

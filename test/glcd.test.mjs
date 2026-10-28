@@ -131,3 +131,20 @@ test("UNLOAD gives the console back to serial and the pages to the TPA, and outp
   m.runUntil(() => m.serialText().slice(s0).includes("FILLED") && m.waitingForInput(), 60_000_000, "FILL's line on serial");
   assert.deepEqual(m.violations, []);
 });
+
+test("a second GLCD.PRL is refused the console, and unloading it leaves the first's", async () => {
+  const m = await board();
+  const table = word(m, m.sym("GLVEC"));
+  const first = word(m, 6);
+  run(m, "GLCD\r");
+  assert.equal(word(m, 6), first - 0x300, "the second is installed below the first");
+  assert.equal(word(m, m.sym("GLVEC")), table, "FF25h kept the first's table");
+  run(m, "UNLOAD\r");
+  assert.equal(word(m, 6), first);
+  assert.deepEqual([m.read(3) & 3, word(m, m.sym("GLVEC")), word(m, m.sym("VPUTV"))], [3, table, word(m, table)], "the GLCD is still the console");
+  m.mark = m.output.length;
+  m.type("UNLOAD\r");
+  m.runUntil(() => m.waitingForInput() && m.read(3) % 4 === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
+  assert.equal(word(m, m.sym("GLVEC")), 0, "the first gave it back");
+  assert.deepEqual(m.violations, []);
+});

@@ -19,5 +19,5 @@ ABITAB: DB      "TNA"           ; FF00h signature
         JP      XCMD            ; FF1Dh one command line at DE, the same
         JP      VOLSVC          ; FF20h mount, unmount and describe (ABI 2.5)
         DW      FONT            ; FF23h the console font, 8 bytes a character from 20h (ABI 2.6)
-        JP      GLHOOK          ; FF25h the GLCD's video table: HL = six words, or 0 (ABI 2.7)
+        JP      GLHOOK          ; FF25h the GLCD's video table: HL = six words (carry if one is kept), or 0 (ABI 2.7)
 ABIEND:
