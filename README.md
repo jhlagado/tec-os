@@ -10,8 +10,10 @@ table of services at `FF00h`.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
   `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,854 bytes on the
-  starter card and at least 46,086 on any card, and reach EXPAND 1 by
-  copying. TEC-OS says so at boot and stops if either half is missing.
+  starter card and at least 46,086 on any card, 768 bytes less on a board
+  with a GLCD. EXPAND 1 is TEC-OS's own: its levels and history, and room
+  kept for a block cache. TEC-OS says so at boot and stops if either half
+  is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
 - A console that is one device at a time, chosen by the CP/M IOBYTE: the

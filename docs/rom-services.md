@@ -5,8 +5,8 @@ services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,967 bytes (`debug80`) and has 1,417 free:
-1,201 below the table at `FF00h`, where code can go, and 216 above it.<!-- end --> This
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,986 bytes (`debug80`) and has 1,398 free:
+1,182 below the table at `FF00h`, where code can go, and 216 above it.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
@@ -83,7 +83,10 @@ order: put, get, clear to the end of the line, restore, read a row, write a
 row. `CONSW` points the terminal's vector at that table when it selects
 `UC1:`, and the terminal then calls the routines directly, on the caller's
 stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 25
-bytes it has. `FF25h` returns `LINEBUF`'s address in HL, where the row
+bytes it has. A program that pushes anything before calling the BIOS
+directly sets up its own stack first. The routines run with the caller's
+interrupt state and share their drawing counters, so an interrupt handler
+must not print through the console. `FF25h` returns `LINEBUF`'s address in HL, where the row
 routines read and write a row, or carry set if a table is kept already, as
 when `GLCD.PRL` is loaded a second time; that copy then leaves the console
 alone. Its REMOVE, in the copy that took the console, calls `FF25h` with
@@ -250,7 +253,7 @@ that uses them.
 
 ## Next in the ROM
 
-For the <!-- media: below-ff00 -->1,201<!-- end --> bytes left below `FF00h`: a resident monitor with Intel HEX
+For the <!-- media: below-ff00 -->1,182<!-- end --> bytes left below `FF00h`: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
