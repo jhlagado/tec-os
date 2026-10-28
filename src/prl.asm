@@ -5,11 +5,11 @@
 ; code is relocated in place for its destination page and moved there.
 ;
 ; A module header at the start of the code ("TNM", a version, the kind)
-; makes it a resident (kind 1) or a driver (kind 2); any other PRL is a
-; program. A resident goes in whole pages below (0006h)'s page: the JP at
-; its offset 6 is pointed at the old (0006h), and PZTOP and (0006h) become
-; its base + 6, so warm boot keeps it. Its INIT, whose address is at offset
-; 9, is then called. A driver goes into EXPAND 1 at an XALLOC base.
+; makes it a resident (kind 1); any other kind is refused, and any other PRL
+; is a program. A resident goes in whole pages below (0006h)'s page: the JP
+; at its offset 6 is pointed at the old (0006h), and PZTOP and (0006h)
+; become its base + 6, so warm boot keeps it. Its INIT, whose address is at
+; offset 9, is then called.
 
 PRLHDR  EQU     $0100
 PRLCODE EQU     $0200
@@ -36,8 +36,6 @@ PRLGO:  LD      HL,(PRLCODE)    ; "TNM"?
         LD      A,(PRLCODE+4)
         DEC     A
         JR      Z,PRLRES
-        DEC     A
-        JP      Z,PRLDRV
         SCF                     ; an unknown kind
         RET
 
@@ -91,48 +89,6 @@ PRLRES: LD      A,(PZBDOS+2)
 PRLDONE:OR      $FF             ; NZ, carry clear: installed
         RET
 PRLJP:  JP      (HL)
-
-; A driver: B pages from XALLOC, copied into EXPAND 1 by the copy core.
-PRLDRV: LD      A,B
-        LD      (DRVNP),A
-        CALL    XALLOC
-        RET     C
-        LD      A,H
-        LD      (PRLPG),A
-        CALL    PRLREL
-        LD      HL,$0001        ; XMDST bank 1, XMSRC bank 0
-        LD      (XMDST),HL
-        LD      A,(PRLPG)
-        LD      H,A
-        LD      L,0
-        LD      DE,PRLCODE
-        LD      BC,(PRLN)
-        CALL    MVCOPY          ; past MOVE's range check: the pages are ours
-        LD      A,(PRLPG)
-        LD      (DRVPG),A
-        LD      HL,PRLCODE+21   ; its hooks: a count, then entry and address
-        LD      B,(HL)
-        INC     HL
-PRLHK:  LD      A,B             ; each address into the call table's slot
-        OR      A
-        JR      Z,PRLDONE
-        LD      A,(HL)
-        INC     HL
-        PUSH    BC
-        PUSH    HL
-        EX      DE,HL
-        ADD     A,A
-        ADD     A,XTABLE-$BF00
-        LD      L,A
-        LD      H,XTABLE>>8
-        LD      BC,2
-        CALL    LVTO1
-        POP     HL
-        INC     HL
-        INC     HL
-        POP     BC
-        DEC     B
-        JR      PRLHK
 
 ; Relocate the n bytes at 0200h for page A, by the bitmap after them.
 PRLREL: LD      (PRLPG),A

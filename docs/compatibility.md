@@ -12,8 +12,8 @@ The BDOS is an adaptation of Portable CP/M, which implements functions 0–40
 with their documented conventions; 38 and 39 return zero, and functions above
 40 return zero, except 50 and 108. Function 50 is CP/M 3's direct BIOS call: `DE`
 points at the BIOSPB (function, A, BC, DE, HL). Functions 0–16 go through
-the RAM BIOS table, so hooks apply; 25 is `MOVE` and 29 `XMOVE`, for copies
-to and from EXPAND 1 (see rom-services.md); any other, `SELMEM` (27) among them,
+the RAM BIOS table, so hooks apply; 25 is `MOVE` and 29 `XMOVE`, CP/M 3's
+copies, which refuse every byte in EXPAND 1 (see rom-services.md); any other, `SELMEM` (27) among them,
 returns `A = FFh`. Function 108 is CP/M 3's program return code: `DE =
 FFFFh` gets it into `HL`, any other `DE` sets it; one code serves every
 program, and it is 0 after a reset. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
@@ -61,25 +61,26 @@ card, using the mount service at `FF20h`. Mounts are for the session: a
 reset gives the card's own again. A nested CCP's `EXIT` gives the parent
 its own mounts back, remounting only the drives that changed.
 
-A program can shell out the same way, through `FF1Ah` (an interactive
-nested CCP) or `FF1Dh` (one command line, run with no prompt), passing the
-end of its own image in HL. TEC-OS keeps that much of the TPA in EXPAND 1
-while the nested level runs, puts it back at `EXIT` with the program's
-stack, drive and user, and returns the last program's BDOS function 108
-code in HL. Page zero is rebuilt by the nested level: a program keeps for
-itself whatever it needs from the default FCBs and the command tail.
+A resident can shell out the same way, through `FF1Ah` (an interactive
+nested CCP) or `FF1Dh` (one command line, run with no prompt), with HL =
+`0100h`. Nothing of the TPA is kept, so the caller is code the nested level
+leaves alone: a resident, or the CCP's own `CCP`. At `EXIT` TEC-OS gives it
+back its stack, drive, user and mounts, and returns the last program's BDOS
+function 108 code in HL. Any other HL, a program asking to keep its image,
+is refused with carry set and nothing changed. Page zero is rebuilt by the
+nested level: the caller keeps for itself whatever it needs from the
+default FCBs and the command tail.
 
 A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
 a relocatable file in Digital Research's PRL format. A PRL that begins with
 TEC-OS's module header (`"TNM"`, a version and a kind) is installed rather
-than run:
+than run. Kind 1 is the only kind; any other is refused.
 
 - **A resident** goes in whole pages just below the BDOS entry, and the
   word at `0006h` moves down to the jump at its offset 6, which leads on to
   the old entry; warm boot keeps it there. Programs that size themselves
   from `0006h` never reach it. Residents are removed last in, first out,
   and a reset clears them.
-- **A driver** goes into EXPAND 1, below its low mark.
 
 Any other PRL is a program, loaded at `0100h` as its `.COM` would be.
 

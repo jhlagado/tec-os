@@ -29,7 +29,7 @@ test("without the matrix keyboard the serial terminal is the console, even with 
 
 test("CON switches the console between devices and falls back to serial", () => {
   const image = standardCard();
-  volume(image, "A").write("GLCD.PRL", GLCD_PRL); // CON UC1: loads the GLCD's driver
+  volume(image, "A").write("GLCD.PRL", GLCD_PRL); // CON UC1: loads the GLCD's resident
   const m = boot(image, { tms: true, matrix: true });
   assert.match(m.command("CON"), /CON: CRT: PICO9918/);
   m.mark = m.output.length;
@@ -120,7 +120,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const glcd = boot(image, { matrix: true });
   glcd.command("DIR *.COM");
   const g = glcd.glcdScreen();
-  const from = g.indexOf("COPY.COM"); // GLCD.PRL, the GLCD's driver, is on A: too
+  const from = g.indexOf("COPY.COM"); // GLCD.PRL, the GLCD's resident, is on A: too
   assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1002K free", "A>"]);
   assert.match(tms.command("DIR B:"), /NO FILE/);
 });
@@ -296,15 +296,19 @@ test("a GLCD board without GLCD.PRL keeps the serial console, and the LCD says s
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "GLCD?");
 });
 
-test("UNLOAD removes the GLCD's driver and the console goes back to serial", () => {
+test("UNLOAD removes the GLCD's resident and the console goes back to serial", () => {
+  const stub = boot(standardCard()).read(6);
   const m = boot(standardCard(), { matrix: true });
+  const word = (a) => m.read(a) | (m.read(a + 1) << 8);
   assert.equal(m.read(3) & 3, 3);
-  const mark = m.read(m.sym("XMARK"));
+  assert.equal(word(6), (word(m.sym("PZTOP")) & 0xff00) + 6, "GLCD.PRL is the resident below the BDOS");
+  assert.equal(word(m.sym("VPUTV")), word(word(m.sym("GLVEC"))), "the vector is its table's");
   m.mark = m.output.length;
   m.typeMatrix("unload\r");
   m.expect(/A>$/);
   assert.equal(m.read(3) & 3, 0, "TTY:");
-  assert.ok(m.read(m.sym("XMARK")) > mark, "its pages freed");
-  assert.notEqual(m.read(m.sym("VPUTV")) | (m.read(m.sym("VPUTV") + 1) << 8), m.sym("THK0"), "the vector off the driver");
+  assert.equal(m.read(6), stub, "its pages given back to the TPA");
+  assert.equal(word(m.sym("GLVEC")), 0, "its table dropped");
+  assert.equal(word(m.sym("VPUTV")), m.sym("TMSPUT"), "the vector off the freed pages");
   assert.deepEqual(m.violations, []);
 });

@@ -20,8 +20,7 @@ LATCLAS EQU     LATSHAD         ; classic profile: overlay off, base window
 LATMAIN EQU     $08             ; MAIN: MAIN 1 at 0000h-7FFFh
 DETADR  EQU     $0100           ; where cold boot looks for MAIN 1
 DETEXP  EQU     $8000           ; and for EXPAND 1
-XMTOP   EQU     $BF             ; EXPAND 1's low mark after cold boot
-XMFLOOR EQU     $80             ; and the lowest it may go
+XMLOW   EQU     $80             ; EXPAND 1's low mark: no range for programs
 
 ; ---- Page zero (CP/M 2.2 base page) -----------------------------------------
 IOBYTE  EQU     $0003

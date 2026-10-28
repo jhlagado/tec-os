@@ -20,7 +20,7 @@
 %INCLUDE "cpm/bdos.asm"
 %INCLUDE "hwsvc.asm"
 %INCLUDE "xmove.asm"
-%INCLUDE "xcall.asm"
+%INCLUDE "glcd.asm"
 %INCLUDE "history.asm"
 %INCLUDE "prl.asm"
 %INCLUDE "levels.asm"

@@ -1,7 +1,6 @@
-; DRV.PRL: a driver module for the loader's EXPAND 1 destination. Two pages
-; of code and data whose addresses point into themselves, so that its
-; relocation shows on both pages. It is placed, not called: XCALL comes
-; later.
+; DRV.PRL: a module of kind 2, the driver kind that TEC-OS no longer has,
+; which the loader refuses. Two pages of code and data whose addresses point
+; into themselves.
 ;
 ; The module header: "TNM", version 1, kind 2 (driver), a zero, the JP the
 ; loader points at the BDOS, the addresses of INIT and REMOVE (relocated

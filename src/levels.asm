@@ -1,52 +1,37 @@
 ; The CCP's levels. A nested CCP runs on the same code and work area as its
 ; parent; what the parent must get back is kept in a context record in
-; EXPAND 1, one 40-byte record a level, six levels in the page cold boot
-; allocates first (LVBASE). A record, staged in LOADBUF:
+; EXPAND 1, one 38-byte record a level, six levels in the page at LVBASE.
+; A record, staged in LOADBUF:
 ;   +0  the RAM BIOS table's warm-boot target     +2  the one-command flag
 ;   +3  drive and user (0004h)                    +4  the mounts (DRVIDX)
 ;   +8  the parent's SP                           +10 the CCP stack, 27 bytes
-;   +37 the parent image's page in EXPAND 1       +38 its length in pages
-;   +39 the new level's flag, while the record is built
-; A program at 0100h that shells out gives the end of its image in HL; that
-; much of the TPA goes to EXPAND 1 while the child level runs.
+;   +37 the new level's flag, while the record is built
+; Nothing of the TPA is kept: the caller is code that the child level
+; leaves alone, the CCP itself or a resident.
 
 LVBASE  EQU     $BE00
-LVREC   EQU     40
+LVREC   EQU     38
 LEVELS  EQU     6
 
-; From a program: an interactive nested CCP (FF1Ah), or one command line at
-; DE (a length byte, then the text) run by a nested CCP that then exits by
-; itself (FF1Dh). HL = the end of the caller's image. Each returns at EXIT
-; with HL = BDOS function 108's code, or with carry set if refused.
+; From the CCP or a resident: an interactive nested CCP (FF1Ah), or one
+; command line at DE (a length byte, then the text) run by a nested CCP
+; that then exits by itself (FF1Dh). HL = 0100h, the end of an image that
+; is no longer saved; any other HL is refused. Each returns at EXIT with
+; HL = BDOS function 108's code, or with carry set if refused.
 XCCP:   XOR     A
         JR      CCPIN
 XCMD:   LD      A,1
 CCPIN:  LD      (LOADBUF+8),SP  ; the caller's, its return address on top
         LD      (PRLN),DE       ; XCMD's line, until the child level reads it
-        LD      (LOADBUF+39),A
+        LD      (LOADBUF+37),A
         LD      A,(CCPLVL)
         CP      LEVELS
         JR      NC,CCPNO
-        LD      A,L             ; the image's pages: (HL - 0100h) rounded up
-        OR      A
-        LD      A,H
-        JR      Z,CI1
-        INC     A
-CI1:    DEC     A
-        LD      (LOADBUF+38),A
-        LD      (LOADBUF+37),A  ; 0: no image
-        OR      A
-        JR      Z,CI2
-        CALL    XALLOC
-        JR      C,CCPNO
-        LD      A,H
-        LD      (LOADBUF+37),A
-        LD      A,(LOADBUF+38)
-        LD      B,A
-        LD      C,0
-        LD      DE,TPA
-        CALL    LVTO1
-CI2:    LD      HL,(RAMBIOS+4)
+        LD      A,H             ; an image (any HL but 0100h) is refused
+        DEC     A
+        OR      L
+        JR      NZ,CCPNO
+        LD      HL,(RAMBIOS+4)
         LD      (LOADBUF),HL
         LD      A,(CCPFLG)
         LD      (LOADBUF+2),A
@@ -67,7 +52,7 @@ CI2:    LD      HL,(RAMBIOS+4)
         LD      DE,LOADBUF
         LD      BC,LVREC
         CALL    LVTO1
-        LD      A,(LOADBUF+39)
+        LD      A,(LOADBUF+37)
         LD      (CCPFLG),A
         LD      HL,WBOOTR       ; a child's exit comes back to this level
         LD      (RAMBIOS+4),HL
@@ -76,7 +61,7 @@ CCPNO:  SCF
         RET
 
 ; EXIT, and the end of a one-command level: back to the parent with its
-; stack, image, warm-boot entry, drive and user. Refused at level 0.
+; stack, warm-boot entry, mounts, drive and user. Refused at level 0.
 XEXIT:  LD      A,(CCPLVL)
         OR      A
         JP      Z,BADCMD
@@ -85,22 +70,7 @@ XEXIT:  LD      A,(CCPLVL)
         LD      HL,LOADBUF
         LD      BC,LVREC
         CALL    LVFROM1
-        LD      A,(LOADBUF+38)
-        OR      A
-        JR      Z,XE1
-        LD      B,A
-        LD      C,0
-        LD      A,(LOADBUF+37)
-        LD      D,A
-        LD      E,C
-        LD      HL,TPA
-        CALL    LVFROM1
-        LD      A,(LOADBUF+37)
-        LD      H,A
-        LD      L,0
-        LD      A,(LOADBUF+38)
-        CALL    XFREE
-XE1:    LD      A,2             ; the parent's mounts: each drive that differs
+        LD      A,2             ; the parent's mounts: each drive that differs
 XEP:    PUSH    AF              ; is unmounted, then given the parent's
         LD      C,0             ; volume; twice, so that a volume the child
 XE2:    CALL    XECMP           ; moved to a later drive is free by then
@@ -193,19 +163,4 @@ CMDUNL: LD      HL,(PZTOP)
         LD      L,0
         CALL    PRLREM
         JP      NC,STARTED
-        LD      A,(DRVPG)       ; no resident: the driver, if there is one
-        OR      A
-        JP      Z,BADCMD
-        LD      H,A
-        LD      L,0
-        LD      A,(DRVNP)
-        CALL    XFREE
-        JP      C,BADCMD
-        XOR     A
-        LD      (DRVPG),A
-        LD      HL,CONDEV       ; the console back to serial, the vector off
-        RES     2,(HL)          ; the freed driver
-        LD      HL,TMSVEC
-        CALL    VIDSET
-        CALL    SERCON
-        JP      STARTED
+        JP      BADCMD

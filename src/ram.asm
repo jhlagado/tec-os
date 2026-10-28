@@ -80,10 +80,9 @@ KBTN:   DS      1               ; arrow-sequence bytes still to deliver
 KBT1:   DS      1               ; and the bytes themselves
 KBT2:   DS      1
 
-; ---- The GLCD driver -------------------------------------------------------
+; ---- The GLCD console ------------------------------------------------------
 GLCWANT:DS      1               ; 1: a GLCD answered; the CCP's first entry loads GLCD.PRL
-DRVPG:  DS      1               ; the installed driver's EXPAND 1 page, 0 for none
-DRVNP:  DS      1               ; and its pages
+GLVEC:  DS      2               ; GLCD.PRL's video table, from GLHOOK; 0 for none
 
 ; ---- Command-line history ------------------------------------------------------
 HHEAD:  DS      1               ; the offset the next line goes in at

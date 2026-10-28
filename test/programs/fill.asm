@@ -1,4 +1,4 @@
-; FILL.COM (KS20's model): fill the TPA above this program up to (0006h)
+; FILL.COM: fill the TPA above this program up to (0006h)
 ; with HALT, then print through the BDOS. After UNLOAD of a resident GLCD,
 ; this overwrites the pages it had; a console vector still pointing there
 ; halts the machine instead of printing.

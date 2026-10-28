@@ -150,5 +150,5 @@ test("the ring is shared by CCP levels, kept by warm boot and emptied by cold bo
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.type(W);
   assert.equal(held(m), "", "cold boot empties it");
-  assert.equal(m.read(m.sym("XMARK")), 0xbd, "cold boot takes LVBASE's page and the ring's");
+  assert.equal(m.read(m.sym("XMARK")), 0x80, "the ring and the levels are fixed pages; MOVE has no range in EXPAND 1");
 });

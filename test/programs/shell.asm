@@ -1,16 +1,24 @@
-; SHELL: shells out to a nested CCP through FF1Ah and checks what it gets
-; back at EXIT. It sets drive A and user 0, pushes two known words on the
-; stack the CCP gave it, and passes the end of its own image in HL. After
-; EXIT it prints "SHELL OK", then the return code in hex, if its stack
-; words, drive (BDOS function 25), user (function 32) and 0004h are as they
-; were; otherwise "SHELL BAD".
-;   SHELL C  runs "SETRC 9" through FF1Dh instead, with no prompt, and prints
-;            the code it gets back the same way.
+; SHELL.PRL: a resident that shells out as it is installed, as a resident
+; such as a debugger does. Its INIT sets drive A and user 0, pushes two
+; known words on the stack it was called on, and calls FF1Ah with HL =
+; 0100h, since nothing of the TPA is kept. After EXIT it prints "SHELL OK",
+; then the return code in hex, if its stack words, drive (BDOS function 25),
+; user (function 32) and 0004h are as they were; "SHELL BAD" otherwise, and
+; "SHELL REFUSED" if the call returned carry. It stays installed.
+;   MODE, the byte after the name (code offset 21), = 1: it runs "SETRC 9"
+;   through FF1Dh instead, with no prompt, and prints the code it gets back
+;   the same way.
 
 BDOS    EQU     $0005
 
         ORG     $0100
-        LD      E,0
+HDR:    DB      "TNM",1,1,0     ; a resident
+        JP      0
+        DW      INIT,REMOVE
+        DB      "SHELL   "
+MODE:   DB      0
+
+INIT:   LD      E,0
         LD      C,14
         CALL    BDOS
         LD      E,0
@@ -20,15 +28,16 @@ BDOS    EQU     $0005
         PUSH    HL
         LD      HL,$5678
         PUSH    HL
-        LD      A,($0080)       ; a command tail: one command line
+        LD      A,(MODE)
         OR      A
-        LD      HL,ENDIMG
+        LD      HL,$0100        ; no image
         JR      NZ,ONE
         CALL    $FF1A
         JR      BACK
 ONE:    LD      DE,LINE
         CALL    $FF1D
-BACK:   LD      (CODE),HL
+BACK:   JR      C,REF
+        LD      (CODE),HL
         POP     HL
         LD      DE,$5678
         OR      A
@@ -59,10 +68,16 @@ BACK:   LD      (CODE),HL
         LD      A,(CODE)
         CALL    HEX
         RET
-BAD:    LD      DE,NO
+REF:    POP     HL
+        POP     HL
+        LD      DE,NOGO
+        LD      C,9
+        JP      BDOS
+BAD:    LD      DE,NO           ; the stack is not as it was: warm boot
         LD      C,9
         CALL    BDOS
-        RET
+        JP      0
+REMOVE: RET
 
 HEX:    PUSH    AF
         RRCA
@@ -83,5 +98,5 @@ NIB:    AND     $0F
 LINE:   DB      7,"SETRC 9"
 OK:     DB      13,10,"SHELL OK $"
 NO:     DB      13,10,"SHELL BAD$"
+NOGO:   DB      13,10,"SHELL REFUSED$"
 CODE:   DW      0
-ENDIMG:

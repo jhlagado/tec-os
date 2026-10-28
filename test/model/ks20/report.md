@@ -146,6 +146,7 @@ model doesn't run them.
 - `lib.mjs`: the product it runs against
 - `glcd-resident.asm`: the resident sketch
 - `glcd-entry.asm`: the ROM's new code, assembled for its size
-- `conout.asm`: a program that calls the BIOS's `CONOUT` directly
-- `fill.asm`: a program that fills the TPA with `HALT`, then prints
+- `screens.mjs`: writes the driver's screens at `b025dbb` to
+  `test/glcd-screens.json`, the reference for `test/glcd.test.mjs`
+- `CONOUT.COM` and `FILL.COM`: in `test/programs/` since KS20's build
 - `figures.json`: the run on `b025dbb`

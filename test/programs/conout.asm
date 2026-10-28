@@ -1,4 +1,4 @@
-; CONOUT.COM (KS20's model): a program on the CCP stack that calls the BIOS's
+; CONOUT.COM: a program on the CCP stack that calls the BIOS's
 ; CONOUT directly, through the table at (0001h), with text that wraps and
 ; scrolls the screen, then inserts and deletes characters and lines, so the
 ; console takes its deepest paths on the caller's stack.

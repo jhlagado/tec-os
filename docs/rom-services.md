@@ -18,28 +18,28 @@ Its layout is fixed; entries are only added, with the minor version raised.
 | --- | --- |
 | `FF00h` | `"TNA"` signature |
 | `FF03h` | ABI major version, 2 |
-| `FF04h` | ABI minor version, 6 |
+| `FF04h` | ABI minor version, 7 |
 | `FF05h` | Native banks: 0 since ABI 2.0 |
 | `FF06h` | `JP` to a routine that refuses every call: status 1, carry set (the native services until ABI 2.0) |
 | `FF09h` | Address of the console size, columns then rows |
 | `FF0Bh` | `JP` to the hardware services |
 | `FF0Eh` | Address of the MAIN count, 1 or 2 (ABI 2.1) |
 | `FF10h` | Address of the EXPAND count, always 2 since TEC-OS needs EXPAND 1 (ABI 2.2) |
-| `FF12h` | `JP XMOVE`: B = destination, C = source, each 0 for the program's memory or 1 for EXPAND 1, for the next `MOVE` (ABI 2.2) |
+| `FF12h` | `JP XMOVE`: B = destination, C = source, each 0 for the program's memory or 1 for EXPAND 1, which has no range, for the next `MOVE` (ABI 2.2) |
 | `FF15h` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied (ABI 2.2) |
-| `FF18h` | Address of EXPAND 1's low mark: the page below which EXPAND 1 is free (ABI 2.3) |
-| `FF1Ah` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = the end of the caller's image in, function 108's code out (ABI 2.4) |
+| `FF18h` | Address of EXPAND 1's low mark, always 80h: no part of EXPAND 1 is a program's (ABI 2.3) |
+| `FF1Ah` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = `0100h` in, function 108's code out; any other HL refused with carry set (ABI 2.4) |
 | `FF1Dh` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt (ABI 2.4) |
 | `FF20h` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed (ABI 2.5) |
-| `FF23h` | Address of the console font, 8 bytes a character from 20h, for drivers (ABI 2.6) |
+| `FF23h` | Address of the console font, 8 bytes a character from 20h, for the GLCD console (ABI 2.6) |
+| `FF25h` | `JP GLHOOK`: HL = a video table, six words, for the GLCD console, and `LINEBUF` back in HL; HL = 0 puts the console back to serial (ABI 2.7) |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. `XMOVE`'s 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; its 1
-is EXPAND 1 from `8000h` up to its low mark, read at each call. Cold boot
-sets the mark to `BFh` and then takes `BE00h` for the CCP's levels and
-`BD00h` for the command history, so EXPAND 1 is `8000h–BCFFh` after cold
-boot, until TEC-OS allocates more of it for itself, top down, in whole
-pages. `MOVE` copies forward as `LDIR` does and returns `A = 0`, or
+is EXPAND 1 from `8000h` up to its low mark, read at each call. EXPAND 1 is
+TEC-OS's own: `BF00h` its reserved page, `BE00h` the CCP's levels, `BD00h`
+the command history, and `8000h–BCFFh` left for a block cache. Cold boot
+sets the mark to `80h`, so every byte in bank 1 is refused. `MOVE` copies forward as `LDIR` does and returns `A = 0`, or
 `A = FFh` with nothing copied when an end lies outside its region. A copy returns with the latch
 and the interrupt state as it found them. Cold boot clears EXPAND 1; its
 contents do not survive a reset, and warm boot leaves them.
@@ -75,20 +75,18 @@ The rules that make the services safe for CP/M programs:
 - **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
   the serial transmit line, high.
 
-## Drivers in EXPAND 1
+## The GLCD console's table
 
-A port driver, such as the GLCD console, lives in EXPAND 1 with its data and
-its stack, and is loaded from a PRL whose module header (kind 2) lists the
-entries it hooks. The ROM reaches its routines through `XCALL`: a thunk in
-ROM loads `L` with the routine's slot in the call table in EXPAND 1's
-reserved page and jumps to `XCALL`, which switches EXPAND 1 in with
-interrupts off, moves to the driver stack, calls the routine with `A`, `BC`
-and `DE` as given, and switches back. The routine's `A`, `BC`, `DE` and `HL`
-come back as it left them; `SP`, the latch and the interrupt state are as
-they were; `XCALL` destroys `AF'`. A driver never touches EXPAND 0; rows the
-terminal moves through `LINEBUF` reach it through a transfer buffer in the
-reserved page. One display driver hooks the six video entries, slots 0–5;
-slots 6 and 7 are for another device.
+The GLCD console is a resident, `GLCD.PRL`, below `(0006h)`. Its INIT calls
+`FF25h` with HL pointing at six words, its routines in the terminal's
+order: put, get, clear to the end of the line, restore, read a row, write a
+row. `CONSW` points the terminal's vector at that table when it selects
+`UC1:`, and the terminal then calls the routines directly, on the caller's
+stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 25
+bytes it has. `FF25h` returns `LINEBUF`'s address in HL, where the row
+routines read and write a row. Its REMOVE calls `FF25h` with HL = 0, which
+drops the table and puts the console back to serial. The PRL loader takes
+kind 1 only; kind 2, the driver kind of ABI 2.6 and before, is refused.
 
 Page zero's restart vectors at `0008h–0037h` are left to programs and
 debuggers. A warm boot, like a cold boot, puts seven zeros and a `RET` in
@@ -174,25 +172,27 @@ that programs share as ATOM include files.
 | ANSI terminal | 988 | 2 | Stays |
 | Video switch | 104 | 2 | Stays |
 | PICO9918 text console | 419 | 1, 2 | Stays |
-| GLCD text console | — | 1, 2 | Moved to `GLCD.PRL`, a driver in EXPAND 1, loaded at the CCP's first entry |
-| `XCALL` and loading the GLCD's driver | 228 | 2 | Stays |
-| Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD driver reads it through `FF23h` |
+| GLCD text console | — | 1, 2 | Moved to `GLCD.PRL`, a resident, loaded at the CCP's first entry |
+| `FF25h` and loading the GLCD's resident | 128 | 2 | Stays |
+| Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD resident reads it through `FF23h` |
 | 20 × 4 LCD | 146 | 2 | Stays |
 | SD driver | 795 | 1 | Stays |
 | Container mount and checks | 1,192 | 1 | Stays |
 | Format tables, diagnostics | 176 | 1 | Stays |
 | CCP | 2,664 | 2 | Stays |
-| CCP levels: `XCCP`, `XCMD`, `EXIT` and `UNLOAD` | 398 | 2 | Stays |
-| PRL loader | 301 | 2 | Stays |
+| CCP levels: `XCCP`, `XCMD`, `EXIT` and `UNLOAD` | 297 | 2 | Stays |
+| PRL loader | 221 | 2 | Stays |
 | Command history | 210 | 2 | Stays |
 | BDOS | 3,736 | 2 | Stays |
-| `XMOVE` and `MOVE` | 271 | 3 | Stays |
+| `XMOVE` and `MOVE` | 228 | 3 | Stays |
 | Hardware services | 755 | 3, 4 | Stays |
-| ABI table at `FF00h` | 37 | 1 | Stays |
+| ABI table at `FF00h` | 40 | 1 | Stays |
 
 Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
 and the regions as `docs/memory-map.md` gives them, the parts within the
-console and services regions by source file.
+console and services regions by source file. The rows for the GLCD's
+resident, the CCP levels, the PRL loader, `XMOVE` and `MOVE` and the table
+are counted again after drivers and the image save went.
 
 Nothing in the ROM today belongs on the card. The native program services,
 which had no user, were removed.

@@ -269,7 +269,7 @@ that differs from the emulator's, it prints the TEC-OS behaviour named here.
 | T10 LATCHRD | Whether port `FFh` reads back | Nothing; TEC-OS keeps a copy of the latch and never reads it |
 | T11 STATUS | Which bits of port `03h` follow the latch | The console, which reads bit 0 (Matrix switch) and bit 7 (serial RX) |
 | T12 BANKS | What latch bits 3–6 select, and EXPAND 1 | EXPAND 1, where the CCP levels and command history live; the board profile's bank count |
-| T13 BANKRAM | RAM in each bank T12 found | EXPAND 1: the CCP levels, the history and loaded drivers |
+| T13 BANKRAM | RAM in each bank T12 found | EXPAND 1: the CCP levels and the history |
 | T14 SERTX | Serial output at 4800 8N2 | The serial console's output |
 | T15 LCD | The LCD's bus and busy flag | The LCD hardware service (4) |
 | T16 GLCD | The ST7920 GLCD | The GLCD console driver, GLCD.PRL |

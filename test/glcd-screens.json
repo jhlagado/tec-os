@@ -1,0 +1,87 @@
+{
+  "from": "b025dbb",
+  "what": "b025dbb's GLCD driver: the ST7920's graphics RAM, SHA-256 to 16 hex digits, after each command",
+  "bdosVector": 46854,
+  "screens": [
+    {
+      "line": "PROBE\r",
+      "gdram": "7cdf3f2a5ebcb4cb"
+    },
+    {
+      "line": "TERM\r",
+      "gdram": "95650617b0eb9876"
+    },
+    {
+      "line": "TERM S\r",
+      "gdram": "528dc293396e32af"
+    },
+    {
+      "line": "INSDEL\r",
+      "gdram": "1da17a6c44eb2a17"
+    },
+    {
+      "line": "REGION\r",
+      "gdram": "daa1009424f827fc"
+    },
+    {
+      "line": "FLIP\r",
+      "gdram": "7a498e6e1bf0a632"
+    },
+    {
+      "line": "VIDMODE\r",
+      "gdram": "72b93fcff40b94f5"
+    },
+    {
+      "line": "COPY DATA.BIN B:DATA.CPY\r",
+      "gdram": "efc24163230ddaad"
+    },
+    {
+      "line": "DIR B:\r",
+      "gdram": "7d9950f31a4855a8"
+    },
+    {
+      "line": "SAVE 4 S.COM\r",
+      "gdram": "63e87fc121277ed8"
+    },
+    {
+      "line": "TYPE S.COM\r",
+      "gdram": "fc73f11404353ca4"
+    },
+    {
+      "line": "ERA S.COM\r",
+      "gdram": "e768d21066d36773"
+    },
+    {
+      "line": "TYPE LINES.TXT\r",
+      "gdram": "c562237b494d6eaf"
+    },
+    {
+      "line": "ABC\b\b\u0015XYZ\u0012\u0005Q\r",
+      "gdram": "c4f5159758bdd6f8"
+    },
+    {
+      "line": "\u0003",
+      "gdram": "f532ea7efaac1863"
+    },
+    {
+      "line": "SAVE 1 C:X.COM\r",
+      "gdram": "70ef30f758c0a60f"
+    },
+    {
+      "line": "DIR E:\r",
+      "gdram": "58facb359ea94b4b"
+    },
+    {
+      "line": "E:\r",
+      "gdram": "a52b8b1a4914b6c7"
+    },
+    {
+      "line": "A:\r",
+      "gdram": "460a38da67c74445"
+    },
+    {
+      "line": "CONOUT\r",
+      "gdram": "b82106de46e05108"
+    }
+  ]
+}

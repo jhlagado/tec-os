@@ -8,8 +8,8 @@
 ; to and including the next one already 0, which removes what is left of the
 ; oldest line it overwrote. So ring[HHEAD-1] and ring[HHEAD] are both 0, and
 ; a walk back from the newest stops at an empty entry. A line holding a 0 is
-; not stored; nor is one equal to the newest. Cold boot takes the ring's
-; page, HRING, with the CCP's level records and clears it.
+; not stored; nor is one equal to the newest. The ring's page, HRING, is
+; fixed below the CCP's level records, and cold boot clears it.
 
 HRING   EQU     $BD00           ; the page below LVBASE
 

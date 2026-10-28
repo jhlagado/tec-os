@@ -7,7 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
-import { TEST_CLOCK, boot, program, romFor, volume } from "./lib/fixtures.mjs";
+import { TEST_CLOCK, boot, prl, program, romFor, volume } from "./lib/fixtures.mjs";
 import { createContainer, descriptorAt, headerChecksum, tableSum } from "../tools/lib/container.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -19,7 +19,8 @@ function card(n = 20, drives = 2) {
 
 async function machine(image = card()) {
   const a = volume(image, "A");
-  for (const n of ["mount", "vols", "openrd"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
+  for (const n of ["mount", "vols"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
+  a.write("OPENRD.PRL", await prl("openrd"));
   volume(image, "B").write("DATA.TXT", Buffer.from("REC1....".padEnd(128, ".") + "REC2....".padEnd(128, ".") + "\x1a", "latin1"));
   volume(image, "ARCHIVE").write("OLD.DAT", new Uint8Array(128));
   return boot(image);

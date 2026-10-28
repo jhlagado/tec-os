@@ -26,6 +26,9 @@ export function symbolsFromD8(d8) {
   return map;
 }
 
+/** Writes to EXPAND 1 at 8000h-BCFFh after cold boot's clear, by any machine. */
+export const EXPAND1_WRITES = [];
+
 export class Machine {
   /**
    * clock: the DS1302's time. Left out, it is the host's time, as on a board
@@ -149,8 +152,31 @@ export class Machine {
     this.cpu.hardware.memRead = (addr) => (empty(addr & 0xffff) ? 0xff : ram.memRead(addr));
     this.cpu.hardware.forceMemWrite = ram96 ? ram.memWrite : hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
+    // After cold boot's clear of EXPAND 1 (MEMINIT's LDIR reaching BFFFh),
+    // nothing writes its 8000h-BCFFh, below the history ring, until the
+    // next cold boot (COLD clearing page zero). A write there is kept in
+    // expand1Writes and in EXPAND1_WRITES, for the whole process.
+    const meminit = symbols.get("MEMINIT");
+    const cold = symbols.get("COLD");
+    let clearEnd = -1;
+    if (meminit !== undefined && cold !== undefined)
+      for (let a = meminit; a < meminit + 0x40 && clearEnd < 0; a += 1) if (rom[a - 0xc000] === 0xed && rom[a - 0xc000 + 1] === 0xb0) clearEnd = a + 2;
+    let cleared = false;
+    this.expand1Writes = [];
     this.cpu.hardware.memWrite = (addr, value) => {
       const a = addr & 0xffff;
+      if (clearEnd > 0) {
+        const pc = this.cpu.cpu.pc & 0xffff;
+        if (pc >= cold && pc < cold + 0x20) cleared = false;
+        else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
+          if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
+          else if (cleared && a < 0xbd00) {
+            const w = { addr: a, pc };
+            this.expand1Writes.push(w);
+            if (EXPAND1_WRITES.length < 16) EXPAND1_WRITES.push(w);
+          }
+        }
+      }
       if (a >= 0xc000) this.violations.push({ kind: "rom-write", addr: a, pc: this.cpu.cpu.pc });
       else if (a < 0x0800 && system.shadowEnabled) {
         this.violations.push({ kind: "overlay-write", addr: a, pc: this.cpu.cpu.pc });

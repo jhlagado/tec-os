@@ -111,10 +111,9 @@ MEMINIT:LD      A,LATEXP
         LDIR
         LD      A,(LATCHV)
         OUT     (SYSLAT),A
-        LD      A,XMTOP         ; nothing allocated but the reserved page
-        LD      (XMARK),A
-        LD      A,2             ; then the CCP's level records, at LVBASE,
-        CALL    XALLOC          ; and the history ring below them, HRING
+        LD      A,XMLOW         ; EXPAND 1 is TEC-OS's: the reserved page,
+        LD      (XMARK),A       ; the level records at LVBASE and the history
+                                ; at HRING, fixed; MOVE has no range in it
         LD      A,LATMAIN
         LD      HL,DETADR
         CALL    DETECT

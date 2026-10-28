@@ -16,7 +16,7 @@ const { Machine } = machine;
 
 // The stacks census's workload (test/stacks.test.mjs), then CONOUT.COM.
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode"];
-const COMMANDS = [
+export const COMMANDS = [
   "PROBE\r",
   "TERM\r",
   "TERM S\r",
@@ -154,8 +154,8 @@ async function card(glcdFile) {
   const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
   const a = volume(image, "A");
   for (const n of PROGRAMS) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
-  a.write("CONOUT.COM", (await assemble.assembleProgram(resolve(HERE, "conout.asm"))).bytes);
-  a.write("FILL.COM", (await assemble.assembleProgram(resolve(HERE, "fill.asm"))).bytes);
+  a.write("CONOUT.COM", (await assemble.assembleProgram(resolve(HERE, "../../programs/conout.asm"))).bytes);
+  a.write("FILL.COM", (await assemble.assembleProgram(resolve(HERE, "../../programs/fill.asm"))).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
   a.write("GLCD.PRL", glcdFile);

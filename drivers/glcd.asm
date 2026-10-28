@@ -1,70 +1,70 @@
-; GLCD.PRL: the ST7920 128 x 64 GLCD console as a port driver in EXPAND 1,
-; 21 columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. The
-; ROM's terminal calls it through XCALL, the slot in L: its six hooks are the
-; video entries, in the order of the hook list below. It keeps its screen
-; text and counters here, reads the font in ROM through FF23h, moves rows
-; through the transfer buffer in EXPAND 1's reserved page, and touches
-; nothing in EXPAND 0.
+; GLCD.PRL: the ST7920 128 x 64 GLCD console as a resident below (0006h),
+; 21 columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. Its
+; INIT hands the ROM its video table through FF25h, and the ROM's terminal
+; then calls its six routines directly, on the caller's stack. It keeps its
+; screen text and counters here, reads the font in ROM through FF23h, and
+; moves rows to and from the ROM's LINEBUF, whose address FF25h returns.
+; Its REMOVE, at UNLOAD, gives the console back to serial.
 
 GLCOLS  EQU     21
 GLROWS  EQU     8
-XFER    EQU     $BF30           ; the row transfer buffer, 80 bytes
+GLHOOK  EQU     $FF25           ; the video table: HL = six words, or 0
 
         ORG     $0100
-HDR:    DB      "TNM",1,2,0     ; a driver
-        JP      0
-        DW      NOP,NOP         ; INIT and REMOVE: nothing to do
+HDR:    DB      "TNM",1,1,0     ; a resident
+        JP      0               ; the loader points this at the old (0006h)
+        DW      INIT,REMOVE
         DB      "GLCD    "
-        DB      6               ; hooks: video entry, routine
-        DB      0
-        DW      GLCPUT
-        DB      1
-        DW      GLCGET
-        DB      2
-        DW      GLCCLR
-        DB      3
-        DW      GLCRST
-        DB      4
-        DW      GLRDR
-        DB      5
-        DW      GLWRR
-NOP:    RET
+
+; The video vector, in the ROM's order: VPUT, VGET, VCLREOL, VREST, VRDROW,
+; VWRROW.
+VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
+LBUF:   DW      0               ; LINEBUF, from FF25h
+
+INIT:   LD      HL,VTAB
+        CALL    GLHOOK
+        LD      (LBUF),HL
+        RET
+REMOVE: LD      HL,0
+        JP      GLHOOK
 
 GLCCMD  EQU     $07
 GLCDAT  EQU     $87
 
-; Wait until the controller is ready. Z when ready, NZ after the time-out.
-; Preserves BC, DE, HL.
-GLCWAIT:PUSH    BC
-        LD      B,0
+; Wait until the controller is ready. Z when ready, NZ after 256 polls.
+; Preserves BC, DE, HL; the count is kept in GLWN, not on the stack, since
+; the routines run on their caller's.
+GLCWAIT:XOR     A
+        LD      (GLWN),A
 GLCWL:  IN      A,(GLCCMD)
         RLCA
         JR      NC,GLCWOK
-        DJNZ    GLCWL
-        POP     BC
+        LD      A,(GLWN)
+        DEC     A
+        LD      (GLWN),A
+        JR      NZ,GLCWL
         OR      1
         RET
-GLCWOK: POP     BC
-        XOR     A
+GLCWOK: XOR     A
         RET
 
-; Send command A, or data A. Preserve BC, DE, HL.
-GLCC:   PUSH    AF
+; Send command A, or data A, once the controller is ready. Preserve BC, DE,
+; HL.
+GLCC:   LD      (GLOUT),A
         CALL    GLCWAIT
-        POP     AF
+        LD      A,(GLOUT)
         OUT     (GLCCMD),A
         RET
-GLCDW:  PUSH    AF
+GLCDW:  LD      (GLOUT),A
         CALL    GLCWAIT
-        POP     AF
+        LD      A,(GLOUT)
         OUT     (GLCDAT),A
         RET
 
-; Copy row B to the transfer buffer, or the transfer buffer to row B and
-; redraw it. The ROM moves the buffer to and from LINEBUF around the call.
+; Copy row B to LINEBUF, or LINEBUF to row B and redraw it.
 GLRDR:  LD      C,0
         CALL    GLCADR
-        LD      DE,XFER
+        LD      DE,(LBUF)
         LD      BC,GLCOLS
         LDIR
         RET
@@ -72,7 +72,7 @@ GLWRR:  PUSH    BC
         LD      C,0
         CALL    GLCADR
         EX      DE,HL
-        LD      HL,XFER
+        LD      HL,(LBUF)
         LD      BC,GLCOLS
         LDIR
         POP     BC
@@ -291,9 +291,8 @@ GLCCO:  LD      A,D
         RET
 
 ; A = glyph row (GLY mod 8) of character A in bits 7-2, reversed when bit 7
-; of the character is set. Preserves DE.
-GLGLY:  PUSH    DE
-        LD      E,A
+; of the character is set. Preserves DE; destroys BC, which GLCCMP keeps.
+GLGLY:  LD      C,A
         AND     $7F
         SUB     $20
         JR      NC,GLGL1
@@ -307,14 +306,17 @@ GLGL1:  LD      L,A
         AND     7
         ADD     A,L
         LD      L,A
-        LD      BC,($FF23)      ; the ROM's font, through the FF00h table
-        ADD     HL,BC
+        LD      A,($FF23)       ; the ROM's font, through the FF00h table
+        ADD     A,L
+        LD      L,A
+        LD      A,($FF24)
+        ADC     A,H
+        LD      H,A
         LD      A,(HL)
-        BIT     7,E
-        JR      Z,GLGL2
+        BIT     7,C
+        RET     Z
         CPL
         AND     $FC
-GLGL2:  POP     DE
         RET
 
 ; For each word: the first character it touches and how many.
@@ -326,3 +328,5 @@ GLY:    DS      1
 GLW:    DS      1
 GLROWP: DS      2
 GLOFF:  DS      1
+GLWN:   DS      1
+GLOUT:  DS      1

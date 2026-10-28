@@ -154,11 +154,11 @@ async function main() {
     writeFileSync(resolve(FILES, p.name), bytes);
     files.push({ ...p, bytes });
   }
-  // The GLCD console's driver: on a board with a GLCD and no PICO9918, the
+  // The GLCD console's resident: on a board with a GLCD and no PICO9918, the
   // CCP loads it before its first prompt.
   const glcd = await makePrl(resolve(ROOT, "drivers/glcd.asm"), resolve(ROOT, "build/prl"));
   writeFileSync(resolve(FILES, "GLCD.PRL"), glcd);
-  files.push({ name: "GLCD.PRL", description: "the GLCD console's driver, loaded at boot on a board with a GLCD and no PICO9918", bytes: glcd });
+  files.push({ name: "GLCD.PRL", description: "the GLCD console, a resident loaded at boot on a board with a GLCD and no PICO9918", bytes: glcd });
   // Edit joins the card when a build that sizes itself to the TPA and the
   // display is available (configuration tag "ECFG" at 0103h).
   const editPath = process.env.EDIT_COM ?? resolve(ROOT, "../edit/dist/EDIT.COM");

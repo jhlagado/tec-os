@@ -1,10 +1,11 @@
-// XMOVE and MOVE on the harness's 96K option: copies between bank 0,
-// the program's view, and bank 1, EXPAND 1 at 8000h-BEFFh, through FF12h and
-// FF15h and through BDOS function 50. Emulator evidence.
+// XMOVE and MOVE on the harness's 96K option, through FF12h and FF15h and
+// through BDOS function 50: copies within bank 0, the program's view, as
+// LDIR does, and every copy to or from bank 1 refused, since EXPAND 1 is
+// TEC-OS's own and its low mark is 80h. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { Machine } from "./lib/machine.mjs";
+import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { TEST_CLOCK, boot, romFor, standardCard } from "./lib/fixtures.mjs";
 
 const STUB = 0x0080;
@@ -84,9 +85,9 @@ function check(m, c, accepted) {
   return r;
 }
 
-// The low mark after cold boot comes from the build: cold boot takes the CCP's
-// level records' page at LVBASE and the history ring's below it, at HRING, so
-// bank 1 is 8000h up to HRING.
+// Copies of every shape; those that touch bank 1 are refused, since its
+// range, 8000h up to the low mark, is empty. TOP is where it ended at
+// b025dbb, so the shapes are the ones bank 1 once took.
 const copies = (top) => [
 
   { label: "MAIN 0 to bank 1, 513 bytes", dst: 1, src: 0, hl: 0x9000, de: 0x1000, bc: 513 },
@@ -106,17 +107,17 @@ test("the FF00h table gives the EXPAND count at FF10h, XMOVE at FF12h, MOVE at F
     const m = boot(standardCard(), { ram96: true, mains });
     assert.ok(m.read(0xff03) === 2 && m.read(0xff04) >= 3, "ABI 2.3 or later");
     const at = (a) => m.read(m.read(a) | (m.read(a + 1) << 8));
-    assert.deepEqual([at(0xff0e), at(0xff10), at(0xff18)], [mains, 2, m.sym("HRING") >> 8], `MAIN ${mains}`);
+    assert.deepEqual([at(0xff0e), at(0xff10), at(0xff18)], [mains, 2, 0x80], `MAIN ${mains}`);
     assert.deepEqual([m.read(0xff12), m.read(0xff15)], [0xc3, 0xc3]);
   }
 });
 
-test("MOVE copies between bank 0 and bank 1 as LDIR does, and changes nothing else", { timeout: 600_000 }, () => {
+test("MOVE copies within bank 0 as LDIR does, refuses every copy to or from bank 1, and changes nothing else", { timeout: 600_000 }, () => {
   for (const expandOnly of [false, true])
     for (const c of copies(0xbd00)) {
       const m = machine({ mains: expandOnly ? 1 : 2, seed: c.hl ^ c.de ^ c.bc });
-      assert.equal(m.read(m.sym("XMARK")) << 8, 0xbd00, "the post-cold-boot mark");
-      check(m, c, true);
+      assert.equal(m.read(m.sym("XMARK")), 0x80, "the low mark");
+      check(m, c, c.dst === 0 && c.src === 0);
     }
 });
 
@@ -124,7 +125,7 @@ test("MOVE returns with the latch and the interrupt state as it found them", () 
   for (const latch of [0x01, 0x81])
     for (const iff of [false, true]) {
       const m = machine();
-      check(m, { ...copies(m.read(m.sym("XMARK")) << 8)[2], latch, iff }, true);
+      check(m, { ...copies(0xbd00)[7], latch, iff }, true);
     }
 });
 
@@ -141,20 +142,18 @@ test("without EXPAND 1, cold boot says TEC-OS needs 64K and stops", () => {
   }
 });
 
-test("MOVE refuses a bank-1 byte outside 8000h up to the low mark or a bank-0 byte at or above (0006h)", () => {
+test("MOVE refuses any bank-1 byte, and a bank-0 byte at or above (0006h)", () => {
   const entry = 0xb806;
-  const top = 0xbd00; // the post-cold-boot mark, checked in the copies above
   for (const [c, ok] of [
     [{ label: "bank 1 from 7FFFh", dst: 0, src: 1, hl: 0x1000, de: 0x7fff, bc: 2 }, false],
-    [{ label: "bank 1 past the mark", dst: 1, src: 0, hl: top - 0x100, de: 0x1000, bc: 0x101 }, false],
-    [{ label: "bank 1 up to the mark", dst: 1, src: 0, hl: top - 0x100, de: 0x1000, bc: 0x100 }, true],
-    [{ label: "bank 0 to the entry", dst: 0, src: 1, hl: entry - 0x10, de: 0x9000, bc: 0x10 }, true],
-    [{ label: "bank 0 past the entry", dst: 0, src: 1, hl: entry - 0x10, de: 0x9000, bc: 0x11 }, false],
-    [{ label: "into the BDOS stack", dst: 0, src: 1, hl: 0xb980, de: 0x9000, bc: 0x40 }, false],
+    [{ label: "bank 1 at BCFFh, below the history", dst: 1, src: 0, hl: 0xbcff, de: 0x1000, bc: 1 }, false],
+    [{ label: "bank 0 to the entry", dst: 0, src: 0, hl: entry - 0x10, de: 0x9000, bc: 0x10 }, true],
+    [{ label: "bank 0 past the entry", dst: 0, src: 0, hl: entry - 0x10, de: 0x9000, bc: 0x11 }, false],
+    [{ label: "into the BDOS stack", dst: 0, src: 0, hl: 0xb980, de: 0x9000, bc: 0x40 }, false],
     [{ label: "bank 0 past FFFFh", dst: 0, src: 0, hl: 0xffff, de: 0x1000, bc: 2 }, false],
     [{ label: "bank 2", dst: 2, src: 0, hl: 0x9000, de: 0x1000, bc: 2 }, false],
-    [{ label: "(0006h) lowered: into the gap", dst: 0, src: 1, hl: 0xa100, de: 0x9000, bc: 0x10, entry: 0xa006 }, false],
-    [{ label: "(0006h) lowered: up to it", dst: 0, src: 1, hl: 0x9ff6, de: 0x9000, bc: 0x10, entry: 0xa006 }, true],
+    [{ label: "(0006h) lowered: into the gap", dst: 0, src: 0, hl: 0xa100, de: 0x9000, bc: 0x10, entry: 0xa006 }, false],
+    [{ label: "(0006h) lowered: up to it", dst: 0, src: 0, hl: 0x9ff6, de: 0x9000, bc: 0x10, entry: 0xa006 }, true],
   ])
     check(machine(), c, ok);
 });
@@ -174,19 +173,23 @@ test("BDOS function 50 reaches the RAM BIOS table, XMOVE and MOVE, and refuses S
   call(4, { bc: 0x5a }); // CONOUT
   assert.equal(m.text(m.mark), "Z", "function 4 writes through the RAM BIOS table");
   call(29, { bc: 0x0100 }); // XMOVE: to bank 1 from bank 0
+  const bank1 = m.expand[1].slice(0x1000, 0x1010);
+  assert.equal(call(25, { hl: 0x9000, de: 0x2000, bc: 16 }), 0xff, "MOVE to bank 1 refused");
+  assert.deepEqual(m.expand[1].slice(0x1000, 0x1010), bank1, "and bank 1 untouched");
+  call(29, { bc: 0x0000 }); // XMOVE: within bank 0
   const want = Array.from({ length: 16 }, (_, i) => m.read(0x2000 + i));
-  assert.equal(call(25, { hl: 0x9000, de: 0x2000, bc: 16 }), 0, "MOVE accepted");
-  assert.deepEqual(Array.from(m.expand[1].slice(0x1000, 0x1010)), want, "and copied to bank 1");
+  assert.equal(call(25, { hl: 0x3000, de: 0x2000, bc: 16 }), 0, "MOVE within bank 0 accepted");
+  assert.deepEqual(Array.from({ length: 16 }, (_, i) => m.read(0x3000 + i)), want, "and copied");
   assert.equal(call(27, { a: 1 }), 0xff, "SELMEM is not offered");
   assert.equal(call(17), 0xff, "nor any other number");
   assert.equal(m.sysCtrl & (MAIN | EXPAND), 0);
   assert.deepEqual(m.violations, []);
 });
 
-test("cold boot clears EXPAND 1 and sets the low mark below its own first allocation; warm boot leaves both", () => {
+test("cold boot clears EXPAND 1 and sets the low mark to 80h; warm boot leaves both", () => {
   const m = boot(standardCard(), { ram96: true, ramFill: 0x76 });
   const mark = m.sym("XMARK");
-  assert.equal(m.read(mark), m.sym("HRING") >> 8);
+  assert.equal(m.read(mark), 0x80);
   const wb = m.sym("WBOOTR");
   const want = (i) => (i === 0x3f03 ? 0xc3 : i === 0x3f04 ? wb & 0xff : i === 0x3f05 ? wb >> 8 : 0);
   assert.deepEqual(Array.from(m.expand[1]).flatMap((v, i) => (v === want(i) ? [] : [i + 0x8000])).slice(0, 4), [], "EXPAND 1 zero but for the jump at BF03h");
@@ -199,50 +202,25 @@ test("cold boot clears EXPAND 1 and sets the low mark below its own first alloca
   assert.deepEqual(m.violations, []);
 });
 
-/** Call a ROM routine with A and HL from a stub at 0080h; A, HL and carry back. */
-function rom(m, name, { a = 0, hl = 0 }) {
-  const at = m.sym(name);
-  [0x3e, a, 0x21, hl & 0xff, hl >> 8, 0xcd, at & 0xff, at >> 8, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
-  m.cpu.cpu.sp = 0x0100;
-  m.cpu.cpu.pc = STUB;
-  m.runUntil(() => m.pc === STUB + 8, 1_000_000, name);
-  const c = m.cpu.cpu;
-  return { carry: c.flags.C, hl: (c.h << 8) | c.l };
-}
-
-test("XALLOC hands out pages down from the low mark to 8000h, and XFREE takes back only the lowest", () => {
-  const m = boot(standardCard(), { ram96: true });
-  const mark = () => m.read(m.sym("XMARK"));
-  const alloc = (a) => rom(m, "XALLOC", { a });
-  const free = (hl, a) => rom(m, "XFREE", { a, hl });
-  const t = mark(); // after cold boot's own allocations
-  let r = alloc(1);
-  assert.deepEqual([r.carry, r.hl, mark()], [0, (t - 1) << 8, t - 1]);
-  r = alloc(2);
-  assert.deepEqual([r.carry, r.hl, mark()], [0, (t - 3) << 8, t - 3]);
-  assert.equal(free((t - 1) << 8, 1).carry, 1, "not the lowest block");
-  assert.equal(free((t - 3) << 8, 0xbf - (t - 3) + 1).carry, 1, "a length running into the reserved page");
-  assert.equal(mark(), t - 3);
-  const rest = t - 3 - 0x80;
-  r = alloc(rest + 1);
-  assert.deepEqual([r.carry, mark()], [1, t - 3], "past 8000h is refused");
-  r = alloc(rest);
-  assert.deepEqual([r.carry, r.hl, mark()], [0, 0x8000, 0x80], "down to 8000h exactly");
-  assert.deepEqual([free(0x8000, rest).carry, free((t - 3) << 8, 2).carry, free((t - 1) << 8, 1).carry, mark()], [0, 0, 0, t], "freed in reverse");
-  assert.equal(free(0xbf00, 1).carry, 1, "the reserved page is never freed");
-  assert.deepEqual(m.violations, []);
+test("MOVE has no range in bank 1: a byte there is refused, and 0 bytes at 8000h are not", () => {
+  for (const [c, ok] of [
+    [{ label: "1 byte at 8000h", dst: 1, src: 0, hl: 0x8000, de: 0x1000, bc: 1 }, false],
+    [{ label: "1 byte from 8000h", dst: 0, src: 1, hl: 0x1000, de: 0x8000, bc: 1 }, false],
+    [{ label: "the levels' page", dst: 1, src: 0, hl: 0xbe00, de: 0x1000, bc: 0x10 }, false],
+    [{ label: "0 bytes at 8000h", dst: 1, src: 0, hl: 0x8000, de: 0x1000, bc: 0 }, true],
+  ])
+    check(machine(), c, ok);
 });
 
-test("MOVE's bank 1 ends at the low mark", () => {
-  for (const [mark, c, ok] of [
-    [0xa0, { label: "up to the mark", dst: 1, src: 0, hl: 0x9f00, de: 0x1000, bc: 0x100 }, true],
-    [0xa0, { label: "past the mark", dst: 1, src: 0, hl: 0x9f00, de: 0x1000, bc: 0x101 }, false],
-    [0xa0, { label: "from an allocated block", dst: 0, src: 1, hl: 0x1000, de: 0xa000, bc: 0x10 }, false],
-    [0x80, { label: "with nothing left", dst: 1, src: 0, hl: 0x8000, de: 0x1000, bc: 1 }, false],
-    [0x80, { label: "0 bytes at 8000h with nothing left", dst: 1, src: 0, hl: 0x8000, de: 0x1000, bc: 0 }, true],
-  ]) {
-    const m = machine();
-    m.write(m.sym("XMARK"), mark);
-    check(m, { ...c, label: `${c.label}, mark ${mark.toString(16)}h` }, ok);
-  }
+test("the harness sees a program's write to EXPAND 1 below the history ring", () => {
+  const m = machine();
+  // LD A,05h / OUT (FFh),A / LD (9000h),A / LD A,01h / OUT (FFh),A
+  const code = [0x3e, 0x05, 0xd3, 0xff, 0x32, 0x00, 0x90, 0x3e, 0x01, 0xd3, 0xff, 0x18, 0xfe];
+  code.forEach((v, i) => m.write(STUB + i, v));
+  m.cpu.cpu.sp = 0x0100;
+  m.cpu.cpu.pc = STUB;
+  m.runUntil(() => m.pc === STUB + code.length - 2, 1_000_000, "the stub");
+  assert.deepEqual(m.expand1Writes, [{ addr: 0x9000, pc: m.expand1Writes[0]?.pc }]);
+  assert.equal(m.expand[1][0x1000], 5);
+  for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // this one was asked for
 });
