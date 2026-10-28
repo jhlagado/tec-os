@@ -1,0 +1,172 @@
+{
+  "product": "an extract of b025dbb",
+  "glcd": {
+    "driver": {
+      "prl": {
+        "fileBytes": 1002,
+        "codeBytes": 663,
+        "pages": 3
+      },
+      "tpa": 46854,
+      "stacks": {
+        "bdos": {
+          "reserved": 54,
+          "deepest": 40
+        },
+        "ccp": {
+          "reserved": 27,
+          "deepest": 27
+        },
+        "bios": {
+          "reserved": 38,
+          "deepest": 14
+        }
+      },
+      "conout": {
+        "bdos": 26,
+        "ccp": 0,
+        "program": 26,
+        "other": 4
+      },
+      "programReach": 28,
+      "driverStack": 16,
+      "violations": 0,
+      "afterUnload": {
+        "unloadPrompt": true,
+        "tpa": 46854,
+        "iobyteConsole": 0,
+        "fillPrinted": true,
+        "halted": false
+      },
+      "afterUnloadFresh": {
+        "unloadPrompt": true,
+        "tpa": 46854,
+        "iobyteConsole": 0,
+        "fillPrinted": true,
+        "halted": false
+      }
+    },
+    "resident": {
+      "prl": {
+        "fileBytes": 1027,
+        "codeBytes": 685,
+        "pages": 3
+      },
+      "tpa": 46086,
+      "tpaDropBytes": 768,
+      "tpaDropPages": 3,
+      "stacks": {
+        "bdos": {
+          "reserved": 54,
+          "deepest": 38
+        },
+        "ccp": {
+          "reserved": 27,
+          "deepest": 27
+        },
+        "bios": {
+          "reserved": 38,
+          "deepest": 14
+        }
+      },
+      "conout": {
+        "bdos": 24,
+        "ccp": 0,
+        "program": 24,
+        "other": 4
+      },
+      "programReach": 26,
+      "violations": 0,
+      "afterUnload": {
+        "unloadPrompt": true,
+        "tpa": 46854,
+        "iobyteConsole": 0,
+        "fillPrinted": true,
+        "halted": false
+      },
+      "afterUnloadFresh": {
+        "unloadPrompt": true,
+        "tpa": 46854,
+        "iobyteConsole": 0,
+        "fillPrinted": true,
+        "halted": false
+      }
+    },
+    "removeIsNop": {
+      "prl": {
+        "fileBytes": 1028,
+        "codeBytes": 686,
+        "pages": 3
+      },
+      "afterUnloadFresh": {
+        "unloadPrompt": false,
+        "screen": [
+          "rev",
+          "",
+          "A>UNLOADr the lazy do",
+          "g, 0123456789.",
+          "A>e quick brown fox j",
+          "umps over the lazy do",
+          "g, 0123456789.",
+          ""
+        ],
+        "tail": "UNLOAD\r\r\n\r\nA>"
+      }
+    },
+    "noGlcd": {
+      "tpa": 47110
+    },
+    "screens": {
+      "commands": 20,
+      "sameGdram": 20,
+      "differ": []
+    },
+    "screensFault": {
+      "fault": "VRDROW copies 20 of the 21 columns",
+      "screensThatDiffer": {
+        "census3": 0,
+        "conout": 1
+      }
+    },
+    "ccpStackFreeForAProgram": 25,
+    "bdosStackReserved": 54
+  },
+  "rom": {
+    "romAtBaseline": {
+      "used": 15289,
+      "free": 1095,
+      "belowFF00": 876
+    },
+    "freed": {
+      "thunks": 24,
+      "drvvec": 12,
+      "xcall": 46,
+      "rowWrappers": 40,
+      "prlDriverLoad": 76,
+      "prlKindDispatch": 4,
+      "unloadDriverBranch": 37,
+      "ccpinImage": 37,
+      "xexitRestore": 32,
+      "allocator": 43,
+      "meminitAlloc": 5
+    },
+    "freedTotal": 356,
+    "cost": {
+      "entry": 25,
+      "imageRefusal": 6,
+      "tableEntry": 3,
+      "conswChange": 0
+    },
+    "netBelowFF00": 325,
+    "netWithTable": 322,
+    "notCounted": "MOVE's bank-1 path stays: with XMARK 80h its range check refuses every bank-1 copy",
+    "expand1ReservedPage": {
+      "callTable": 16,
+      "xsp": 2,
+      "transferBuffer": 80,
+      "driverStack": 128,
+      "total": 226
+    },
+    "workspace": "DRVPG and DRVNP become GLVEC: no change in size"
+  }
+}
