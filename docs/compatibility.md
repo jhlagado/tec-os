@@ -43,7 +43,8 @@ supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 - `CCP` starts a nested command processor; `EXIT` returns to the level that
   started it, with that level's drive, user and warm-boot entry back. Levels
   nest six deep.
-- `UNLOAD` removes the lowest resident.
+- `UNLOAD` removes the lowest resident, at level 0 only: a nested level may
+  return into a resident below it.
 
 The prompt keeps a history of the lines typed at it. ^W puts the line before
 in the buffer, erasing the one shown, and ^N the line after; past the newest

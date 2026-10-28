@@ -155,13 +155,25 @@ test("CCP, and a resident through FF1Ah and FF1Dh with 0100h, nest to six levels
   assert.match(cmd(m, "CCP"), /CCP\?/, "a seventh level is refused");
   cmd(m, "USER 0");
   assert.match(cmd(m, "SHELL"), /SHELL REFUSED/, "and so is a resident's");
-  cmd(m, "UNLOAD");
   for (let n = 6; n >= 1; n -= 1) {
     const out = cmd(m, "EXIT");
     if (n % 2) assert.match(out, /SHELL OK [0-9A-F]{4}/, `level ${n}'s resident gets its stack, drive and user back`);
     assert.equal(level(m), n - 1);
     assert.deepEqual({ du: m.read(4), mounts: drvidx(m) }, kept[n - 1], `level ${n - 1}'s drive, user and mounts`);
   }
+  assert.deepEqual(m.violations, []);
+});
+
+test("UNLOAD is refused in a nested level, so the resident a level returns into stays", async () => {
+  const m = await machine();
+  const stub = word(m, 6);
+  cmd(m, "SHELL");
+  assert.equal(level(m), 1);
+  assert.match(cmd(m, "UNLOAD"), /UNLOAD\?/);
+  assert.equal(word(m, 6), stub - 0x100, "SHELL still installed");
+  assert.match(cmd(m, "EXIT"), /SHELL OK [0-9A-F]{4}/, "EXIT returns into it");
+  cmd(m, "UNLOAD");
+  assert.equal(word(m, 6), stub, "and at level 0 it unloads");
   assert.deepEqual(m.violations, []);
 });
 

@@ -159,7 +159,10 @@ CMDCCP: XOR     A
         CALL    CCPIN
         JP      C,BADCMD
         JP      STARTED
-CMDUNL: LD      HL,(PZTOP)
+CMDUNL: LD      A,(CCPLVL)      ; only at level 0: a resident below may be
+        OR      A               ; the caller a nested level returns into
+        JP      NZ,BADCMD
+        LD      HL,(PZTOP)
         LD      L,0
         CALL    PRLREM
         JP      NC,STARTED
