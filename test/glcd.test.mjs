@@ -26,10 +26,11 @@ async function card() {
   return withGlcd(image, { matrix: true });
 }
 
-/** A GLCD board at its first prompt, the GLCD console loaded. */
-async function board() {
+/** A GLCD board at its first prompt, the GLCD console loaded; or, with
+ *  matrix false, a serial board on the same card, which never loads it. */
+async function board({ matrix = true } = {}) {
   const { rom, symbols } = romFor();
-  const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix: true });
+  const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
   return m;
@@ -117,9 +118,9 @@ test("a program on the CCP stack calls CONOUT directly in its 25 bytes, and the 
 });
 
 test("UNLOAD gives the console back to serial and the pages to the TPA, and output then reaches serial", async () => {
+  const before = word(await board({ matrix: false }), 6); // the same card with no GLCD
   const m = await board();
   const loaded = word(m, 6);
-  const before = word(m, m.sym("PZTOP")) + 0x300; // (0006h) before GLCD.PRL went in
   run(m, "CONOUT\r");
   m.mark = m.output.length;
   m.type("UNLOAD\r");
@@ -146,5 +147,28 @@ test("a second GLCD.PRL is refused the console, and unloading it leaves the firs
   m.type("UNLOAD\r");
   m.runUntil(() => m.waitingForInput() && m.read(3) % 4 === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
   assert.equal(word(m, m.sym("GLVEC")), 0, "the first gave it back");
+  assert.deepEqual(m.violations, []);
+});
+
+test("FF25h takes a table and returns LINEBUF, refuses a second, and with 0 gives the console back", async () => {
+  const m = await board({ matrix: false });
+  const STUB = 0x0080;
+  const TABLE = 0x3000;
+  const callHook = (hl) => {
+    [0x21, hl & 0xff, hl >> 8, 0xcd, 0x25, 0xff, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
+    m.cpu.cpu.sp = 0x0100;
+    m.cpu.cpu.pc = STUB;
+    m.runUntil(() => m.pc === STUB + 6, 1_000_000, "FF25h");
+    const c = m.cpu.cpu;
+    return { hl: (c.h << 8) | c.l, carry: c.flags.C };
+  };
+  assert.equal(word(m, m.sym("GLVEC")), 0, "no table on a serial board");
+  assert.deepEqual(callHook(TABLE), { hl: m.sym("LINEBUF"), carry: 0 });
+  assert.equal(word(m, m.sym("GLVEC")), TABLE);
+  assert.deepEqual(callHook(TABLE + 0x100), { hl: TABLE + 0x100, carry: 1 }, "a second table refused, HL as given");
+  assert.equal(word(m, m.sym("GLVEC")), TABLE, "and the first kept");
+  callHook(0);
+  assert.deepEqual([word(m, m.sym("GLVEC")), m.read(3) & 3, word(m, m.sym("VPUTV"))], [0, 0, m.sym("TMSPUT")], "the table dropped, the console serial, the vector the TMS9918's");
+  assert.deepEqual(callHook(TABLE + 0x100), { hl: m.sym("LINEBUF"), carry: 0 }, "and a table taken again");
   assert.deepEqual(m.violations, []);
 });
