@@ -82,8 +82,11 @@ export class Machine {
     if (this.rtc && clock) {
       const start = clock.getTime();
       const rtcHz = 4_000_000;
+      // Until a time is written the clock follows the cycles from `clock`;
+      // after that the runtime's DS1302 counts on from the time written.
+      const counting = this.rtc.refreshTimeRegisters;
       this.rtc.refreshTimeRegisters = function () {
-        if (this.timeFrozen) return;
+        if (!this.followsHost) return counting.call(this);
         const now = new Date(start + Math.floor((machine.cycles * 1000) / rtcHz));
         const day = now.getDay() === 0 ? 7 : now.getDay();
         [now.getSeconds(), now.getMinutes(), now.getHours(), now.getDate(), now.getMonth() + 1, day, now.getFullYear() % 100].forEach(

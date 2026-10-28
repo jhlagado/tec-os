@@ -243,58 +243,51 @@ test("on an F18A-compatible VDP the probe reads the identity, scrolls one row an
 });
 
 /**
- * Keep the model's DS1302 counting after a write. Runtime 0.3.0 freezes its
- * time registers once one is written; the chip counts on from the time
- * written. The clock runs at 4 MHz cycles, from `start`.
+ * Let host time follow the machine's cycles at 4 MHz from `start`. The
+ * runtime's DS1302 keeps host time, and an emulated second takes a fraction
+ * of one on the host, so the mocked Date is moved on whenever the clock's
+ * port is used.
  */
-function countingRtc(m, start, { stopAtSet = false } = {}) {
-  const rtc = m.rtc;
-  const bcd = (v) => (v >> 4) * 10 + (v & 15);
-  let base = start.getTime();
-  let at = 0;
-  rtc.refreshTimeRegisters = function () {
-    const now = new Date(base + Math.floor(((m.cycles - at) * 1000) / 4_000_000));
-    const day = now.getUTCDay() === 0 ? 7 : now.getUTCDay();
-    [now.getUTCSeconds(), now.getUTCMinutes(), now.getUTCHours(), now.getUTCDate(), now.getUTCMonth() + 1, day, now.getUTCFullYear() % 100].forEach(
-      (v, i) => (this.registers[i] = this.toBcd(v)),
-    );
+function hostTimeFromCycles(t, m, start) {
+  t.mock.timers.enable({ apis: ["Date"], now: start });
+  const follow = () => {
+    const behind = start + Math.floor((m.cycles * 1000) / 4_000_000) - Date.now();
+    if (behind > 0) t.mock.timers.tick(behind);
   };
-  const write = rtc.writeRegister;
-  rtc.writeRegister = function (addr, value) {
-    write.call(this, addr, value);
-    if (addr > 6) return;
-    if (stopAtSet) {
-      this.refreshTimeRegisters = () => {};
-      return;
-    }
-    this.timeFrozen = false;
-    const r = this.registers;
-    base = Date.UTC(2000 + bcd(r[6]), bcd(r[4]) - 1, bcd(r[3]), bcd(r[2] & 0x3f), bcd(r[1]), bcd(r[0] & 0x7f));
-    at = m.cycles;
-  };
+  for (const name of ["read", "write"]) {
+    const f = m.rtc[name].bind(m.rtc);
+    m.rtc[name] = (value) => {
+      follow();
+      return f(value);
+    };
+  }
+  return follow;
 }
 
-test("T21 sets the DS1302, sees it roll over and puts the time back", SLOW, () => {
+test("T21 sets the DS1302, sees it roll over and puts the time back", SLOW, (t) => {
   const m = diag({ rtc: true });
-  const start = Date.UTC(2026, 9, 26, 9, 30, 15);
-  countingRtc(m, new Date(start));
+  const start = new Date(2026, 9, 26, 9, 30, 15).getTime();
+  const follow = hostTimeFromCycles(t, m, start);
   const text = m.wait(/T21 RTC .*\r\n/);
   assert.match(text, /T21 RTC     INFO  2026-10-26 09:3\d:\d\d; 1 s = 31\d\d x 1282 T = (3999|4000)\d{3} Hz; set 2099-12-31 23:59:58: read back, rolled over, restored\r\n/);
   // Afterwards the clock reads what it would have read untouched: the set
   // cost only its own seconds, which were added back.
+  follow();
   m.rtc.refreshTimeRegisters();
   const r = m.rtc.registers;
   const bcd = (v) => (v >> 4) * 10 + (v & 15);
-  const read = Date.UTC(2000 + bcd(r[6]), bcd(r[4]) - 1, bcd(r[3]), bcd(r[2]), bcd(r[1]), bcd(r[0]));
+  const read = new Date(2000 + bcd(r[6]), bcd(r[4]) - 1, bcd(r[3]), bcd(r[2]), bcd(r[1]), bcd(r[0])).getTime();
   const untouched = start + Math.floor((m.cycles * 1000) / 4_000_000);
   assert.ok(Math.abs(read - untouched) <= 2000, `clock off by ${(read - untouched) / 1000} s`);
 });
 
-test("a clock that stops when T21 sets it fails, with what was read and expected", SLOW, () => {
+test("a clock that halts when T21 sets it fails, with what was read and expected", SLOW, (t) => {
   const m = diag({ rtc: true });
-  countingRtc(m, new Date(Date.UTC(2026, 9, 26, 9, 30, 15)), { stopAtSet: true });
+  hostTimeFromCycles(t, m, new Date(2026, 9, 26, 9, 30, 15).getTime());
+  const write = m.rtc.writeRegister.bind(m.rtc);
+  m.rtc.writeRegister = (addr, value) => write(addr, addr === 0 && value === 0x58 ? 0xd8 : value); // CH set with the test time
   const text = m.wait(/T21 RTC .*\r\n/);
-  assert.match(text, /T21 RTC     FAIL  .*: stopped after the set: read 58 59 23 31 12 04 99, expect 00 00 00 01 01 05 00\r\n/);
+  assert.match(text, /T21 RTC     FAIL  .*: read back wrong: read D8 59 23 31 12 04 99, expect 58 59 23 31 12 04 99\r\n/);
 });
 
 test("a bad bit in the variables page is reported without a stack, and nothing more runs", SLOW, () => {

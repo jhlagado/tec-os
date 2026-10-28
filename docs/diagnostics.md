@@ -543,14 +543,15 @@ node tools/diag-check.mjs board-log.txt
   under the overlay, the frame length, the
   80-column screen, the page the harness decodes while R2 is `0Bh` and `07h`
   and the registers T36 leaves behind;
-- T21's set against a DS1302 that counts on from a written time, which
-  checks the read-back, the roll-over to 2100 and that the restored clock is
-  within 2 s of where it would have been. The runtime's DS1302 (0.3.0) stops
-  counting once a time register is written, so the test keeps it counting;
+- T21's set against the runtime's own DS1302 (0.3.1), which counts on from
+  a written time, checking the read-back, the roll-over to 2100 and that the
+  restored clock is within 2 s of where it would have been. The DS1302 keeps
+  host time, so the test moves a mocked host clock on with the cycles at
+  4 MHz;
 - T37's write, checking the card image's block 7 is unchanged after two
   writes, and a pattern that reads back wrong, whose line gives the offset,
   the byte read and the byte expected, with the block still put back;
-- a clock that stops when T21 sets it, whose line gives the registers read
+- a clock that halts when T21 sets it, whose line gives the registers read
   and expected;
 - the report's image ID, and `tools/diag-check.mjs` on the model's own
   report (no difference) and on a copy with a `FAIL`, an `INFO` value and a
