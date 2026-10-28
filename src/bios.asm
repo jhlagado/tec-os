@@ -5,7 +5,9 @@
 ; Disk records map to volumes linearly: record = track * 64 + sector. Every
 ; version 1 geometry has 64 records per track and no reserved tracks; the
 ; build checks this against format.json. Four records share one 512-byte SD
-; block. Writes go through to the card before success is reported.
+; block. Reads go through the block cache (cache.asm). Writes go through to
+; the card before success is reported, except on the one volume written
+; behind, whose writes stay in the cache until it writes them.
 
 BIOSBAS:JP      COLD            ; 00 cold boot
         JP      WBOOTR          ; 03 warm boot
@@ -140,10 +142,9 @@ MAPREC: LD      HL,(DSKSEC)
 MAPBAD: OR      1
         RET
 
-; Make BLKBUF hold the mapped block. Returns Z on success. GETBLKW with C
-; not 0 does not read a block it lacks: it clears BLKBUF to zeros instead,
-; and BUFOK is 2 while it holds that block.
-GETBLK: LD      C,0
+; Make BLKBUF hold the mapped block. Returns Z on success. With C not 0
+; it does not read a block it lacks: it clears BLKBUF to zeros instead, and
+; BUFOK is 2 while it holds that block.
 GETBLKW:LD      A,(BUFOK)
         OR      A
         JR      Z,GETRD
@@ -193,17 +194,12 @@ SLOTADR:LD      A,(BLKSLOT)
         ADD     HL,DE
         RET
 
-; BIOS READ: copy the record to DSKDMA. A = 0 on success, 1 on error.
-BREAD:  CALL    MAPREC
-        JR      NZ,DSKERR
-        CALL    GETBLK
-        JR      NZ,DSKERR
-        CALL    SLOTADR
-        LD      DE,(DSKDMA)
-        LD      BC,128
-        LDIR
-        XOR     A
-        RET
+; BIOS READ: copy the record to DSKDMA, through the cache. A = 0 on
+; success, 1 on error. Interrupts are off within, and back as they were.
+BREAD:  CALL    CDI
+        CALL    MAPREC
+        CALL    Z,CREAD
+        JP      BRET
 DSKERR: LD      A,1
         RET
 
@@ -211,8 +207,15 @@ DSKERR: LD      A,1
 ; A block not in BLKBUF is read first, unless nothing in it is the card's to
 ; keep: the write is of type 2 (C), the first to a newly allocated block, or
 ; BLKBUF holds the block before, cleared rather than read, on this drive and
-; in the same allocation block.
-BWRITE: PUSH    BC
+; in the same allocation block. On the write-behind volume the record goes
+; to its block's line in the cache instead (CWRBH). A = 0 on success, 1 on
+; error; interrupts are off within, and back as they were.
+BWRITE: CALL    CDI
+        LD      A,C
+        LD      (CWTYPE),A
+        CALL    BWR0
+        JP      BRET
+BWR0:   PUSH    BC
         CALL    MAPREC
         POP     BC
         JR      NZ,DSKERR
@@ -289,7 +292,12 @@ BWMASK: SRL     A               ; SD blocks in an allocation block
         SBC     HL,DE
         JR      NZ,BWGET
 BWNEW:  LD      C,1
-BWGET:  CALL    GETBLKW
+BWGET:  LD      A,(DSKCUR)
+        CALL    DRVENT
+        INC     HL
+        BIT     1,(HL)          ; written behind
+        JP      NZ,CWRBH
+        CALL    GETBLKW
         JP      NZ,DSKERR
         CALL    SLOTADR
         EX      DE,HL
@@ -299,8 +307,12 @@ BWGET:  CALL    GETBLKW
         LD      HL,BLKBUF
         CALL    SDWRITE
         JR      Z,BWOK
-        XOR     A               ; the buffer no longer matches the card
-        LD      (BUFOK),A
-        JP      DSKERR
-BWOK:   XOR     A
+        XOR     A               ; the buffer no longer matches the card,
+        LD      (BUFOK),A       ; nor does the block's line
+        CALL    CLOOK
+        CALL    Z,CDROP
+        OR      1               ; NZ: the error
+        RET
+BWOK:   CALL    CREFR           ; the block's line, if it has one, refreshed
+        XOR     A
         RET

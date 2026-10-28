@@ -1,6 +1,7 @@
 // Stack high-water marks from reset, under the heaviest workloads in the
 // suite, on the serial console, the PICO9918 and the GLCD with the matrix
-// keyboard, and on the diagnostic console without a card. Every memory write
+// keyboard, on the serial console with B: written behind, and on the
+// diagnostic console without a card. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
 // whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
@@ -13,9 +14,10 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, program, romFor, standardCard, volume, withGlcd } from "./lib/fixtures.mjs";
+import { createContainer } from "../tools/lib/container.mjs";
+import { ROOT, TEST_CLOCK, program, romFor, volume, withGlcd } from "./lib/fixtures.mjs";
 
-const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode"];
+const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
 const COMMANDS = [
   "PROBE\r",
   "TERM\r",
@@ -84,9 +86,17 @@ function run(m, line) {
   throw new Error(`no prompt after ${JSON.stringify(line)}: ${m.text(m.mark)}`);
 }
 
-async function consoleRun(opts) {
+// With B: written behind: its lines written inside BIOS WRITE at each
+// directory write, and by warm boot after DIRTY leaves a file unclosed.
+const WRITE_BEHIND = ["SAVE 4 B:S.COM\r", "COPY DATA.BIN B:DATA.CP2\r", "DIRTY\r"];
+
+async function consoleRun(opts, { wb = false } = {}) {
   const { rom, symbols } = romFor();
-  const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G8M", label: "WORK", mount: "B", writeBehind: wb },
+    { geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true },
+  ]);
   const a = volume(image, "A");
   for (const n of PROGRAMS) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
@@ -96,7 +106,7 @@ async function consoleRun(opts) {
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
-  for (const line of COMMANDS) run(m, line);
+  for (const line of [...COMMANDS, ...(wb ? WRITE_BEHIND : [])]) run(m, line);
   assert.deepEqual(m.violations, []);
   return depths();
 }
@@ -119,6 +129,7 @@ test("each stack keeps a quarter of its reservation free", { timeout: 1_800_000 
     serial: await consoleRun({}),
     pico9918: await consoleRun({ tms: true, matrix: true }),
     glcd: await consoleRun({ matrix: true }),
+    writeBehind: await consoleRun({}, { wb: true }),
     diagnostics: diagnosticRun(),
   };
   const census = Object.fromEntries(
@@ -126,7 +137,7 @@ test("each stack keeps a quarter of its reservation free", { timeout: 1_800_000 
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; and the diagnostic console without a card. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; and the diagnostic console without a card. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

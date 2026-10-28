@@ -191,8 +191,15 @@ test("cold boot clears EXPAND 1 and sets the low mark to 80h; warm boot leaves b
   const mark = m.sym("XMARK");
   assert.equal(m.read(mark), 0x80);
   const wb = m.sym("WBOOTR");
+  // The cache's lines may hold what the boot read; past them, its table's
+  // blocks and dirty bytes, then zeros but for the jump at BF03h.
+  const table = m.sym("CTAB") - 0x8000;
+  const lines = Array.from({ length: 30 }, (_, n) => m.expand[1][table + 4 * n] & m.expand[1][table + 4 * n + 1] & m.expand[1][table + 4 * n + 2] & m.expand[1][table + 4 * n + 3]);
+  assert.ok(lines.some((b) => b === 0xff), "empty lines, FFFFFFFFh");
   const want = (i) => (i === 0x3f03 ? 0xc3 : i === 0x3f04 ? wb & 0xff : i === 0x3f05 ? wb >> 8 : 0);
-  assert.deepEqual(Array.from(m.expand[1]).flatMap((v, i) => (v === want(i) ? [] : [i + 0x8000])).slice(0, 4), [], "EXPAND 1 zero but for the jump at BF03h");
+  const past = Array.from(m.expand[1]).flatMap((v, i) => (i < table + 0x100 || v === want(i) ? [] : [i + 0x8000]));
+  assert.deepEqual(past.slice(0, 4), [], "zero above the table but for the jump at BF03h");
+  assert.deepEqual(Array.from(m.expand[1].slice(table + 0x80, table + 0x80 + 30)), new Array(30).fill(0), "no line dirty");
   m.write(mark, 0xa0);
   m.expand[1][0x2000] = 0x5a;
   m.mark = m.output.length;

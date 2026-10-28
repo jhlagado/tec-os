@@ -78,8 +78,10 @@ test("cold boot counts the MAIN regions and leaves MAIN 1 as it found it, but fo
     const h1 = m.expand[1];
     const touched = [];
     const warm = m.sym("RAMBIOS") + 3;
-    for (let a = 0; a < 0x4000; a += 1) if (h1[a] !== 0 && a + 0x8000 !== warm && a + 0x8000 !== warm + 1 && a + 0x8000 !== warm + 2) touched.push(a + 0x8000);
-    assert.deepEqual(touched, [], "EXPAND 1 cleared but for its warm-boot jump");
+    // Above the block cache's lines and table (8000h-BCFFh, which the boot's
+    // reads fill), EXPAND 1 is clear but for warm boot's jump.
+    for (let a = 0x3d00; a < 0x4000; a += 1) if (h1[a] !== 0 && a + 0x8000 !== warm && a + 0x8000 !== warm + 1 && a + 0x8000 !== warm + 2) touched.push(a + 0x8000);
+    assert.deepEqual(touched, [], "EXPAND 1 cleared above the cache but for its warm-boot jump");
     assert.deepEqual(m.violations, []);
   }
 });

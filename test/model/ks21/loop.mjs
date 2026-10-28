@@ -65,7 +65,7 @@ function round(r) {
 const seconds = (t) => Object.fromEntries(Object.entries(t).map(([k, v]) => [k, +(v / 4e6).toFixed(2)]));
 
 export async function loopModel(cost) {
-  const readf = (await assemble.assembleProgram(resolve(HERE, "readf.asm"))).bytes;
+  const readf = (await assemble.assembleProgram(resolve(HERE, "../../programs/readf.asm"))).bytes;
   const data = (n) => Uint8Array.from({ length: n }, (_, i) => (i * 13 + 7) & 0xff);
   const out = { inputs: {} };
   // The speed gate: a 16 KiB save, a 12 KiB file read again, a 20 KiB scan read again.

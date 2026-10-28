@@ -1,0 +1,28 @@
+{
+  "save16": {
+    "writeThrough": 30892448,
+    "writeBehind": 9948440,
+    "ratio": 3.11
+  },
+  "reread12": {
+    "f49e380": 6992265,
+    "build": 1285350,
+    "ratio": 5.44
+  },
+  "scan20": {
+    "f49e380": 11197975,
+    "build": 11157887,
+    "ratio": 1
+  },
+  "round10k": {
+    "f49e380": 96722054,
+    "buildWriteBehind": 77676204,
+    "faster": 0.197
+  },
+  "pass": {
+    "l1": true,
+    "l2": true,
+    "l3": true,
+    "l4": true
+  }
+}

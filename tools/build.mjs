@@ -105,6 +105,8 @@ DGEOM   EQU     ${d.geometry.offset}
 DFLAGS  EQU     ${d.flags.offset}
 DMOUNT  EQU     ${d.mount.offset}
 DLABEL  EQU     ${d.label.offset}
+DCACHE  EQU     ${d.cache.offset}
+DCWB    EQU     ${format.descriptor.cacheFlags.writeBehind}
 DFREAD  EQU     ${format.descriptor.flags.readOnly}
 DUNMNT  EQU     ${format.descriptor.unmounted}
 ALIGNB  EQU     ${format.descriptor.startAlignBlocks}

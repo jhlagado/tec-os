@@ -1,10 +1,31 @@
 # Write policy and recovery
 
+## The block cache
+
+TEC-OS keeps 30 card blocks, 15 KiB, in EXPAND 1. Every volume's reads go
+through it: a block read before and still held costs a copy, not a card
+read. A volume marked written behind (byte 15 of its descriptor, `tecvol
+create`'s `:wb`) also keeps its writes there, and the card catches up:
+
+- at each write to the volume's directory, which first writes every data
+  block the cache holds changed, then the directory block itself, so the
+  directory never names a block whose data isn't on the card;
+- when every block the cache holds is changed and another is needed;
+- at every warm boot, so `^C` at the prompt writes everything;
+- when `MOUNT` changes a drive.
+
+A file is safe once it is closed, which is CP/M's own rule. Data written
+and not yet closed is lost by a reset or power off: press `^C` at the prompt
+before pressing reset or taking the card out. If a block cannot be written,
+it stays in the cache, and the next warm boot says `Write lost`.
+
 ## What a successful write means
 
-A BIOS write returns success only after the SD card has accepted the 512-byte
-block and stopped reporting busy. Nothing is cached dirty: the deblocking
-buffer always matches the card, or is marked invalid after a failed write.
+On every volume not written behind, a BIOS write returns success only after
+the SD card has accepted the 512-byte block and stopped reporting busy. The
+deblocking buffer always matches the card, or is marked invalid after a
+failed write, and the cache's copy of the block is refreshed from it, or
+dropped.
 Writing one 128-byte record reads its block first (unless the buffer already
 holds it), merges the record and writes the whole block back, so neighbouring
 records are never replaced by stale data. The exception is a block that holds

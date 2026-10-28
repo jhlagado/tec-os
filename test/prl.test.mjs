@@ -152,8 +152,8 @@ test("a kind-2 module, the retired driver kind, is refused and changes nothing",
   assert.match(m.command("DRV"), /DRV\?/, "refused as a command that will not load");
   assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP")), m.read(m.sym("CCPLVL"))], [stub, stub, level]);
   const ring = m.sym("HRING") - 0x8000;
-  const changed = Array.from(m.expand[1]).flatMap((v, i) => (v === expand1[i] || (i >= ring && i < ring + 0x100) ? [] : [i + 0x8000]));
-  assert.deepEqual(changed, [], "EXPAND 1 unchanged but for the history ring, which took the line typed");
+  const changed = Array.from(m.expand[1]).flatMap((v, i) => (v === expand1[i] || i < ring + 0x100 ? [] : [i + 0x8000]));
+  assert.deepEqual(changed, [], "EXPAND 1 unchanged but for the block cache, which read DRV.PRL, and the history ring, which took the line typed");
   assert.deepEqual(m.violations, []);
 });
 

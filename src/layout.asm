@@ -21,6 +21,9 @@ LATMAIN EQU     $08             ; MAIN: MAIN 1 at 0000h-7FFFh
 DETADR  EQU     $0100           ; where cold boot looks for MAIN 1
 DETEXP  EQU     $8000           ; and for EXPAND 1
 XMLOW   EQU     $80             ; EXPAND 1's low mark: no range for programs
+CTAB    EQU     $BC00           ; the block cache's table: the lines' blocks,
+CDIRTY  EQU     $BC80           ; 4 bytes each, and their dirty bytes
+NLINES  EQU     30              ; lines of 512 bytes at 8000h-BBFFh
 
 ; ---- Page zero (CP/M 2.2 base page) -----------------------------------------
 IOBYTE  EQU     $0003

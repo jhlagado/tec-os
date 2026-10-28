@@ -172,14 +172,24 @@ export class Machine {
     this.cpu.hardware.forceMemWrite = ram96 ? ram.memWrite : hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     // After cold boot's clear of EXPAND 1 (MEMINIT's LDIR reaching BFFFh),
-    // nothing writes its 8000h-BCFFh, below the history ring, until the
-    // next cold boot (COLD clearing page zero). A write there is kept in
-    // expand1Writes and in EXPAND1_WRITES, for the whole process.
+    // only the block cache writes its 8000h-BCFFh, below the history ring:
+    // its own code, the card's block loops and the copy core it calls, and
+    // cold boot's setting of its table. Any other write there, until the
+    // next cold boot (COLD clearing page zero), is kept in expand1Writes and
+    // in EXPAND1_WRITES, for the whole process.
     const meminit = symbols.get("MEMINIT");
     const cold = symbols.get("COLD");
     let clearEnd = -1;
     if (meminit !== undefined && cold !== undefined)
       for (let a = meminit; a < meminit + 0x40 && clearEnd < 0; a += 1) if (rom[a - 0xc000] === 0xed && rom[a - 0xc000 + 1] === 0xb0) clearEnd = a + 2;
+    // A routine runs from its label to the next label not its own (SDRB2 is
+    // SDRBLK's).
+    const sorted = [...symbols.entries()].filter(([, v]) => v >= 0xc000).sort((x, y) => x[1] - y[1]);
+    const after = (n) => sorted.find(([k, v]) => v > symbols.get(n) && !k.startsWith(n.slice(0, 4)))?.[1];
+    const writers = [["CDI", "CEND"], ["SDRBLK"], ["SDWBLK"], ["MVCOPY", "MVRANGE"], ["MEMINIT"]]
+      .filter(([a]) => symbols.has(a))
+      .map(([a, b]) => [symbols.get(a), b ? symbols.get(b) : after(a)]);
+    const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b);
     let cleared = false;
     this.expand1Writes = [];
     this.cpu.hardware.memWrite = (addr, value) => {
@@ -189,7 +199,7 @@ export class Machine {
         if (pc >= cold && pc < cold + 0x20) cleared = false;
         else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
           if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
-          else if (cleared && a < 0xbd00) {
+          else if (cleared && a < 0xbd00 && !cacheWrite(pc)) {
             const w = { addr: a, pc };
             this.expand1Writes.push(w);
             if (EXPAND1_WRITES.length < 16) EXPAND1_WRITES.push(w);

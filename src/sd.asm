@@ -255,7 +255,12 @@ SDRCMD: CALL    SPIEND
 ; token; HL ends 512 bytes on. /CS low and CLK low on entry and on return.
 ; Two bytes a pass, each bit unrolled; I counts the 256 passes. Destroys AF,
 ; BC, DE, I.
-SDRBLK: LD      C,SDIO
+SDRBLK: LD      A,(SDXB)        ; LATEXP: the buffer is a cache line, and
+        LD      B,A             ; EXPAND 1 is in view for the loop, which
+        LD      A,(LATCHV)      ; uses no stack
+        OR      B
+        OUT     (SYSLAT),A
+        LD      C,SDIO
         LD      DE,$0103        ; D: CLK low, E: CLK high; MOSI high, /CS low
         XOR     A
         LD      I,A
@@ -349,12 +354,19 @@ SDRB2:
         LD      I,A
         JP      NZ,SDRB2
         OUT     (C),D
+        LD      A,(LATCHV)
+        OUT     (SYSLAT),A
         RET
 
 ; Send the 512 bytes at HL after the start token; HL ends 512 bytes on. /CS
 ; low and CLK low on entry and on return. Each bit unrolled; MOSI changes
 ; with CLK low. Destroys AF, BC, DE.
-SDWBLK: LD      C,SDIO
+SDWBLK: LD      A,(SDXB)        ; as SDRBLK
+        LD      B,A
+        LD      A,(LATCHV)
+        OR      B
+        OUT     (SYSLAT),A
+        LD      C,SDIO
         LD      DE,$0200        ; 2 passes of 256 bytes
 SDWB2:  LD      B,(HL)
         XOR     A
@@ -412,6 +424,8 @@ SDWB2:  LD      B,(HL)
         JP      NZ,SDWB2
         AND     $FD             ; CLK low
         OUT     (C),A
+        LD      A,(LATCHV)
+        OUT     (SYSLAT),A
         RET
 
 ; Write the 512 bytes at HL to block SDLBA, waiting until the card has

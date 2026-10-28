@@ -172,3 +172,31 @@ test("tecvol makes and reads format 1.1: more than 8 volumes, a drives field, un
   assert.throws(() => createContainer(Array.from({ length: 128 }, (_, i) => ({ geometry: "G1M", label: `V${i}`, mount: i ? "-" : "A" }))), ContainerError, "128 volumes");
   assert.equal(parseContainer(standardCard()).minor, 0, "a card of 8 or fewer with no drives field stays 1.0");
 });
+
+test("tecvol marks one volume written behind with :wb, and refuses two or one read-only", () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-wb-"));
+  const tecvol = (...args) => execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const img = resolve(dir, "wb.img");
+  tecvol("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G8M:WORK:B:wb");
+  const info = parseContainer(new Uint8Array(readFileSync(img)));
+  assert.deepEqual(info.volumes.map((v) => v.writeBehind), [false, true]);
+  assert.match(tecvol("info", img), /B: WORK .* rw wb /);
+  for (const [name, specs] of [
+    ["two.img", ["G1M:SYSTEM:A:wb", "G8M:WORK:B:wb"]],
+    ["ro.img", ["G1M:SYSTEM:A", "G8M:WORK:B:ro:wb"]],
+  ])
+    assert.throws(() => tecvol("create", resolve(dir, name), ...specs.flatMap((v) => ["--volume", v])), name);
+  assert.throws(() => createContainer([{ geometry: "G1M", label: "A", mount: "A", writeBehind: true }, { geometry: "G1M", label: "B", writeBehind: true }]), /one volume at most/);
+  assert.throws(() => createContainer([{ geometry: "G1M", label: "A", mount: "A", writeBehind: true, readOnly: true }]), /read-only/);
+  // A card edited to mark a second volume, or with byte 15's other bits set, is refused.
+  const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A", writeBehind: true }, { geometry: "G1M", label: "WORK" }]);
+  const resealed = (at, v) => {
+    const b = image.slice();
+    b[at] = v;
+    const sum = headerChecksum(b.subarray(0, 512));
+    [b[20], b[21]] = [sum & 0xff, sum >> 8];
+    return b;
+  };
+  assert.throws(() => parseContainer(resealed(32 + 32 + 15, 1)), /second volume written behind/);
+  assert.throws(() => parseContainer(resealed(32 + 15, 3)), /unknown cache flags/);
+});

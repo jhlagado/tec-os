@@ -197,3 +197,16 @@ their inputs come from the brief's design and the code at `f49e380`.
 - `readf.asm`: a program that reads a file through
 - `source.mjs`: the loop's program, `X.ASM`, at a given size
 - `figures.json`: one run of each line copy
+
+## At the build
+
+KS21 was built with the direct design. `kg25l.mjs` runs KG25 (l) on the
+build and on `f49e380`'s ROM (`test/fixtures/rom-f49e380.json`), with no
+modelling. `kg25l.json` holds the results:
+
+| Case | Threshold | At the build |
+| --- | --- | ---: |
+| 16 KiB `SAVE`, write-through over write-behind | at least 2.8 | 3.11 |
+| 12 KiB file read again, `f49e380` over the build | at least 4.5 | 5.44 |
+| 20 KiB file read again, the build over `f49e380` | at most 1.05 | 1.00 |
+| The 10 KiB round on B: written behind, faster than `f49e380` | at least 15 percent | 19.7 percent |

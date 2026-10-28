@@ -36,12 +36,19 @@ are relative to the start of the container.
 | 12 | 1 | Geometry id |
 | 13 | 1 | Flags: bit 0 read-only; other bits must be zero |
 | 14 | 1 | Drive: 0–3 for A–D, FFh not mounted |
-| 15 | 1 | Reserved, zero |
+| 15 | 1 | Cache flags: bit 0, the volume is written behind (see below); other bits zero |
 | 16 | 11 | Label, ASCII, space padded |
 | 27 | 5 | Reserved, zero |
 
 The drive letter is a mount assignment, not an identity; the volume id is
 the stable name.
+
+A volume with byte 15 bit 0 set is written behind: TEC-OS keeps its writes
+in the block cache and writes them to the card later (see
+[recovery.md](recovery.md)). One volume at most is written behind, and never
+a read-only one; `tecvol create` takes `:wb` after the drive, as in
+`--volume G8M:WORK:B:wb`, and refuses a second one or `:wb` with `:ro`. A
+ROM from before the cache ignores the byte and writes the volume through.
 
 ## The volume table beyond block 0 (1.1)
 

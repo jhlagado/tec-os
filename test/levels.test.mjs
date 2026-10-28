@@ -184,7 +184,7 @@ test("a program asking FF1Ah or FF1Dh to keep its image is refused, and nothing 
   const before = m.expand[1].slice();
   assert.match(cmd(m, "REFUSE"), /REFUSED/);
   assert.deepEqual([level(m), word(m, 6)], [0, stub]);
-  const changed = Array.from(m.expand[1]).flatMap((v, i) => (v === before[i] || (i >= ring[0] && i < ring[1]) ? [] : [i + 0x8000]));
-  assert.deepEqual(changed, [], "EXPAND 1 unchanged but for the history ring, which took the line typed");
+  const changed = Array.from(m.expand[1]).flatMap((v, i) => (v === before[i] || i < ring[1] ? [] : [i + 0x8000]));
+  assert.deepEqual(changed, [], "EXPAND 1 unchanged but for the block cache, which read REFUSE.COM, and the history ring, which took the line typed");
   assert.deepEqual(m.violations, []);
 });

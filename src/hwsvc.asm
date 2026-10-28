@@ -259,8 +259,13 @@ HWSBLK: PUSH    DE
         LD      DE,SDLBA
         LD      BC,4
         LDIR
+        CALL    CDI
         POP     HL
-        CALL    SDREAD
+        PUSH    HL
+        CALL    CBLOCK          ; a cached block from its line
+        POP     HL
+        CALL    NZ,SDREAD
+        CALL    CEI
         LD      A,HWECARD
         JP      NZ,HWERR
         JP      HWOK

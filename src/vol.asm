@@ -322,7 +322,9 @@ MNONE:  PUSH    BC
         LD      A,(IX+DGEOM)
         LD      (HL),A
         INC     HL
-        LD      A,(IX+DFLAGS)
+        LD      A,(IX+DCACHE)   ; written behind (DCWB, bit 0): the drive's
+        ADD     A,A             ; flag bit 1
+        OR      (IX+DFLAGS)
         LD      (HL),A
         POP     AF              ; build the DPH
         PUSH    AF
@@ -501,6 +503,7 @@ VMNT:   LD      A,C
 VM1:    LD      (IX+DMOUNT),C
         PUSH    BC
         PUSH    DE
+        CALL    VFLUSH
         LD      A,C
         CALL    VCLEAR
         CALL    MNONE
@@ -518,6 +521,10 @@ VUNM:   LD      A,C
         JP      Z,VBAD          ; A is never left empty
         CP      MAXDRV
         JP      NC,VBAD
+        PUSH    BC
+        CALL    VFLUSH
+        POP     BC
+        LD      A,C
         CALL    VCLEAR
 VRESET: XOR     A
         LD      (BUFOK),A
@@ -534,6 +541,11 @@ VOK:    XOR     A
         RET
 VBAD:   LD      A,$FF
         RET
+
+; Before a drive's volume changes: the cache's dirty lines written.
+VFLUSH: CALL    CDI
+        CALL    CFLALL
+        JP      CEI
 
 ; Forget drive A's volume: its drive-table entry and DRVIDX. Keeps C.
 VCLEAR: PUSH    BC

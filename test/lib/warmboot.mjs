@@ -1,6 +1,6 @@
-// Helpers for the warm boot tests (KS18): a machine that counts SD block
-// reads, BDOS and BIOS callers, and allocation vectors read from memory or
-// rebuilt by a full scan of the same card.
+// Helpers for the warm boot tests (KS18): a machine that counts the blocks
+// the BIOS reads, BDOS and BIOS callers, and allocation vectors read from
+// memory or rebuilt by a full scan of the same card.
 
 import { boot, standardCard } from "./fixtures.mjs";
 
@@ -9,14 +9,28 @@ const STACK = 0x1000;
 const FCB = 0x005c;
 export const w = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 
-/** A machine on IMAGE, counting SD block reads, with BDOS and BIOS callers. */
+/**
+ * A machine on IMAGE, counting the blocks the BIOS reads: each BIOS READ of
+ * a block other than the last one read, whether the card or the block cache
+ * serves it. With BDOS and BIOS callers.
+ */
 export function rig(image = standardCard()) {
   const m = boot(image);
-  const sdread = m.sym("SDREAD");
-  const r = { m, image, reads: 0 };
+  const cread = m.sym("CREAD");
+  const lba = m.sym("SDLBA");
+  let last = -1;
+  let reads = 0;
+  const r = { m, image };
+  Object.defineProperty(r, "reads", {
+    get: () => reads,
+    set: (v) => [(reads = v), (last = -1)],
+  });
   const step = m.step.bind(m);
   m.step = () => {
-    if (m.pc === sdread) r.reads += 1;
+    if (m.pc === cread) {
+      const b = w(m, lba) + w(m, lba + 2) * 0x10000;
+      if (b !== last) [(reads += 1), (last = b)];
+    }
     return step();
   };
   r.call = (addr, { a = 0, c = 0, de = 0, bc } = {}) => {

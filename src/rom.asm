@@ -21,6 +21,7 @@
 %INCLUDE "hwsvc.asm"
 %INCLUDE "xmove.asm"
 %INCLUDE "glcd.asm"
+%INCLUDE "cache.asm"
 %INCLUDE "history.asm"
 %INCLUDE "prl.asm"
 %INCLUDE "levels.asm"

@@ -89,6 +89,7 @@ WBOOTR: DI
         RRCA
         CALL    C,VREST
         CALL    VTREGR          ; and left a scroll region set
+        CALL    CWBOOT          ; the cache's dirty lines written
         LD      A,(PZDU)
         LD      C,A
         JP      CCPENT
@@ -108,6 +109,11 @@ MEMINIT:LD      A,LATEXP
         LD      DE,$8001
         LD      BC,$3FFF
         LD      (HL),0
+        LDIR
+        LD      HL,CTAB         ; the cache's lines all empty
+        LD      DE,CTAB+1
+        LD      BC,NLINES*4-1
+        LD      (HL),$FF
         LDIR
         LD      A,(LATCHV)
         OUT     (SYSLAT),A

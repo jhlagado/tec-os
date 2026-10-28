@@ -1,12 +1,12 @@
 # ROM services
 
 Status: **Built**, 2026-10-26. The entry at `FF0Bh` (ABI 1.1, unchanged in 2.0) has 19
-services in `src/hwsvc.asm`, 755 bytes of ROM in all, and
+services in `src/hwsvc.asm`, 766 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,986 bytes (`debug80`) and has 1,398 free:
-1,182 below the table at `FF00h`, where code can go, and 216 above it.<!-- end --> This
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,685 bytes (`debug80`) and has 699 free:
+483 below the table at `FF00h`, where code can go, and 216 above it.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
@@ -38,11 +38,13 @@ Its layout is fixed; entries are only added, with the minor version raised.
 program's view below the BDOS entry at `(0006h)`, read at each call; its 1
 is EXPAND 1 from `8000h` up to its low mark, read at each call. EXPAND 1 is
 TEC-OS's own: `BF00h` its reserved page, `BE00h` the CCP's levels, `BD00h`
-the command history, and `8000h–BCFFh` left for a block cache. Cold boot
+the command history, `BC00h` the block cache's table and `8000h–BBFFh` its
+30 lines. Cold boot
 sets the mark to `80h`, so every byte in bank 1 is refused. `MOVE` copies forward as `LDIR` does and returns `A = 0`, or
 `A = FFh` with nothing copied when an end lies outside its region. A copy returns with the latch
-and the interrupt state as it found them. Cold boot clears EXPAND 1; its
-contents do not survive a reset, and warm boot leaves them.
+and the interrupt state as it found them. Cold boot clears EXPAND 1, the
+cache with it; its contents do not survive a reset, and warm boot leaves
+them.
 
 ## Calling the services
 
@@ -113,7 +115,7 @@ program left returns at once with the interrupt state unchanged.
 | 7 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
 | 8 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
 | 9 | `SERIAL` | `B` = 0: send `A`. `B` = 1: wait up to `DE` ms | `B` = the byte received, or status 3 | 4 | 40 |
-| 10 | `BLOCK` | `HL` → block number (4 bytes, least significant first), `DE` → 512-byte buffer | The raw card block, or status 4 | 8 | 21 |
+| 10 | `BLOCK` | `HL` → block number (4 bytes, least significant first), `DE` → 512-byte buffer | The card block, from the cache if it holds it, or status 4 | 10 | 32 |
 | 11 | `DELAY` | `DE` = milliseconds | About 4,000 T-states a millisecond | 4 | 16 |
 | 12 | `VREG` | `B` = register, `A` = value | Claimed PICO9918 register written | 4 | 26 |
 | 13 | `VFILL` | `HL` = VRAM address, `DE` = count, `A` = value | Claimed PICO9918 VRAM filled | 4 | 23 |
@@ -122,7 +124,7 @@ program left returns at once with the interrupt state unchanged.
 | 16 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 16 | 63 |
 | 17 | `RANDOM` | — | `HL` = the next number from a 16-bit xorshift, period 65,535 | 4 | 30 |
 | 18 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 143 |
-| | **Total** | | | | **755** |
+| | **Total** | | | | **766** |
 
 Stack is the deepest measured use of the caller's stack below the return
 address. The `VREG` row includes the claim check shared by services 12-15.
@@ -142,7 +144,8 @@ Notes:
   which is what a file-transfer program needs. All eight bits come through,
   NUL included.
 - `BLOCK` reads only, into the caller's buffer; the BIOS's own buffer is not
-  touched.
+  touched. A block the cache holds comes from the cache, so a block written
+  behind and not yet on the card reads as TEC-OS has it.
 - `RTC` uses the same bit sequence as MON3: the DS1302 puts each data bit
   out on a falling clock edge, as Debug80 runtime 0.3.0 models it.
 
@@ -188,16 +191,18 @@ that programs share as ATOM include files.
 | CCP levels: `XCCP`, `XCMD`, `EXIT` and `UNLOAD` | 297 | 2 | Stays |
 | PRL loader | 221 | 2 | Stays |
 | Command history | 210 | 2 | Stays |
+| Block cache | 600 | 1, 2 | Stays: every read goes through it |
 | BDOS | 3,736 | 2 | Stays |
 | `XMOVE` and `MOVE` | 228 | 3 | Stays |
-| Hardware services | 755 | 3, 4 | Stays |
+| Hardware services | 766 | 3, 4 | Stays |
 | ABI table at `FF00h` | 40 | 1 | Stays |
 
 Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
 and the regions as `docs/memory-map.md` gives them, the parts within the
 console and services regions by source file. The rows for the GLCD's
 resident, the CCP levels, the PRL loader, `XMOVE` and `MOVE` and the table
-are counted again after drivers and the image save went.
+are counted again after drivers and the image save went, and the block
+cache's at its build.
 
 Nothing in the ROM today belongs on the card. The native program services,
 which had no user, were removed.
@@ -253,7 +258,7 @@ that uses them.
 
 ## Next in the ROM
 
-For the <!-- media: below-ff00 -->1,182<!-- end --> bytes left below `FF00h`: a resident monitor with Intel HEX
+For the <!-- media: below-ff00 -->483<!-- end --> bytes left below `FF00h`: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

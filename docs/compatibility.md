@@ -24,7 +24,7 @@ program, and it is 0 after a reset. Function 12 still reports 2.2. The probe in 
 | --- | --- | --- |
 | Version | 12 | 2.2 reported |
 | Create, write, close, reopen, read to end | 15, 16, 20, 21, 22 | Pass, across two extent boundaries |
-| Random read and write | 33, 34 | Pass; neighbouring records in the same SD block unchanged |
+| Random read and write | 33, 34 | Pass; neighbouring records in the same SD block unchanged, written through or behind |
 | File size | 35 | Pass; a new extent's size is visible after close, as in CP/M 2.2 |
 | Sparse random write | 34 | Pass |
 | Rename, delete | 23, 19 | Pass |

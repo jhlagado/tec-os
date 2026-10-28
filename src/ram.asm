@@ -70,6 +70,14 @@ SDBYTE: DS      1               ; 1 when the card takes byte addresses
 SDARG:  DS      4               ; command argument, big-endian
 SDLBA:  DS      4               ; block address, little-endian
 SDERR:  DS      1               ; last error code
+SDXB:   DS      1               ; LATEXP while the block is a cache line
+
+; ---- The block cache (cache.asm) ----------------------------------------------
+CNEXT:  DS      1               ; the next line in turn
+CFAIL:  DS      1               ; 1: a line's write failed since warm boot
+CSKIP:  DS      1               ; CFLUSH's line to leave
+CWTYPE: DS      1               ; BIOS WRITE's type, C
+CIFF:   DS      2               ; the flags a BIOS entry found: P/V, its interrupt state
 
 ; ---- Matrix keyboard scan state ----------------------------------------------
 KBMASK: DS      1               ; row select for the next row, one bit low

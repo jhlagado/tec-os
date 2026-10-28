@@ -1,6 +1,6 @@
 ; READF NAME: reads the file named in the command tail to its end through
 ; the BDOS, 128 bytes at a time into the default DMA at 0080h, and prints
-; nothing. KS21's model times its second run, for a file read again.
+; nothing: a file read through, as the block cache sees it.
 
 BDOS    EQU     $0005
 FCB     EQU     $005C

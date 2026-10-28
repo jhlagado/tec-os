@@ -67,7 +67,9 @@ function driveIndex(mount) {
 }
 
 /**
- * Build a new container. volumes: [{ geometry, label, mount, readOnly, id }].
+ * Build a new container. volumes: [{ geometry, label, mount, readOnly,
+ * writeBehind, id }]. One volume at most is written behind, and never a
+ * read-only one.
  * Payloads are erased to E5h, an empty CP/M directory and data area. A card
  * of more than 8 volumes, or one given drives (the drives it wants, 1-4), is
  * format 1.1; any other is 1.0, which every ROM reads.
@@ -78,6 +80,8 @@ export function createContainer(volumes, { align = DEFAULT_ALIGN, drives = 0 } =
     throw new ContainerError(`a container holds 1-${format.header.maxVolumes} volumes`);
   }
   if (drives < 0 || drives > format.maxDrives) throw new ContainerError(`drives must be 1-${format.maxDrives}`);
+  if (volumes.filter((v) => v.writeBehind).length > 1) throw new ContainerError("one volume at most is written behind");
+  if (volumes.some((v) => v.writeBehind && v.readOnly)) throw new ContainerError("a read-only volume cannot be written behind");
   const labels = volumes.map((v, i) => String(v.label ?? `VOLUME${i + 1}`).toUpperCase().slice(0, 11).trimEnd());
   if (new Set(labels).size !== labels.length) throw new ContainerError("volume labels must be unique");
   if (align % format.descriptor.startAlignBlocks !== 0) {
@@ -109,6 +113,7 @@ export function createContainer(volumes, { align = DEFAULT_ALIGN, drives = 0 } =
     put32(image, o + D.lengthBlocks.offset, v.g.payloadBlocks);
     image[o + D.geometry.offset] = v.g.id;
     image[o + D.flags.offset] = v.readOnly ? format.descriptor.flags.readOnly : 0;
+    image[o + D.cache.offset] = v.writeBehind ? format.descriptor.cacheFlags.writeBehind : 0;
     image[o + D.mount.offset] = driveIndex(v.mount);
     image.set(fromLatin1(labels[i].padEnd(11, " ")), o + D.label.offset);
     image.fill(0xe5, v.start * BLOCK, (v.start + v.g.payloadBlocks) * BLOCK);
@@ -153,12 +158,14 @@ export function parseContainer(image, { requireLength = true } = {}) {
       length: u32(image, o + D.lengthBlocks.offset),
       geometry: image[o + D.geometry.offset],
       flags: image[o + D.flags.offset],
+      cache: image[o + D.cache.offset],
       mount: image[o + D.mount.offset],
       label: toLatin1(image.subarray(o + D.label.offset, o + D.label.offset + 11)).trimEnd(),
     };
     const g = geometryById(v.geometry);
     if (v.id === 0) fail(`volume ${i}: zero id`);
     if (v.flags & ~format.descriptor.flags.readOnly) fail(`volume ${i}: unknown flags`);
+    if (v.cache & ~format.descriptor.cacheFlags.writeBehind) fail(`volume ${i}: unknown cache flags`);
     if (!g) fail(`volume ${i}: unknown geometry ${v.geometry}`);
     if (v.length !== g.payloadBlocks) fail(`volume ${i}: length does not match geometry ${g.name}`);
     if (v.start === 0 || v.start % format.descriptor.startAlignBlocks) fail(`volume ${i}: misaligned start`);
@@ -173,6 +180,9 @@ export function parseContainer(image, { requireLength = true } = {}) {
     }
     v.g = g;
     v.readOnly = (v.flags & format.descriptor.flags.readOnly) !== 0;
+    v.writeBehind = (v.cache & format.descriptor.cacheFlags.writeBehind) !== 0;
+    if (v.writeBehind && v.readOnly) fail(`volume ${i}: read-only and written behind`);
+    if (v.writeBehind && volumes.some((p) => p.writeBehind)) fail(`volume ${i}: a second volume written behind`);
     v.drive = v.mount === format.descriptor.unmounted ? null : String.fromCharCode(65 + v.mount);
     volumes.push(v);
   }
