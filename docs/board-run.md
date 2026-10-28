@@ -254,6 +254,8 @@ LCD, the 7-segment display and the HALT LED show.
 
 `tools/diag-check.mjs` reads this table: for each line of a board's report
 that differs from the emulator's, it prints the TEC-OS behaviour named here.
+Measured values, such as bit times and busy polls, are printed beside the
+emulator's and are not differences.
 
 | Test | What it settles | TEC-OS behaviour it affects |
 | --- | --- | --- |

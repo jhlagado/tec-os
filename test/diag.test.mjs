@@ -153,6 +153,26 @@ test("the automatic tests pass on the Debug80 model and the report lists them", 
   assert.match(differences[0], /^T05 ROMSUM: board FAIL .* \| model PASS .* \| affects: Nothing in TEC-OS/);
   assert.match(differences[1], /^T12 BANKS: board INFO .*1 banks \+ base \| model INFO .*9 banks \+ base \| affects: EXPAND 1/);
   assert.match(differences[2], /^T21 RTC: board missing \| model NONE/);
+  // A healthy board measures other bit times, busy polls, frame T-states
+  // and ACMD41 counts, and has a clock: none of these is a difference, and
+  // each is reported with the model's beside it.
+  const healthy = text
+    .replace(/TX bit \d+ T, stop bits \d+ T/g, "TX bit 829 T, stop bits 1702 T")
+    .replace(/(T15 LCD .*clear busy )\d+/g, "$13")
+    .replace(/(T16 GLCD .*clear busy )\d+/g, "$12")
+    .replace(/frame \d+ T; CPU at 50 Hz \d+ Hz, at 60 Hz \d+ Hz/g, "frame 79680 T; CPU at 50 Hz 3984000 Hz, at 60 Hz 4780800 Hz")
+    .replace(/ACMD41 x\d+, OCR [0-9A-F ]{11}/g, "ACMD41 x37, OCR C0 FF 80 00")
+    .replace(/(T19 SD .*token polls )\d+/g, "$12")
+    .replace(/token polls min \d+ max \d+/g, "token polls min 1 max 4")
+    .replace(/busy polls \d+\r\n/g, "busy polls 212\r\n")
+    .replace(/T21 RTC .*\r\n/g, "T21 RTC     INFO  2026-10-29 14:02:31; 1 s = 3120 x 1282 T = 3999840 Hz; set 2099-12-31 23:59:58: read back, rolled over, restored\r\n");
+  const h = compare(parseReport(healthy), model);
+  assert.deepEqual(h.differences, []);
+  assert.deepEqual(h.measured.map((l) => l.slice(0, 3)), ["T14", "T15", "T16", "T18", "T19", "T20", "T21", "T37"]);
+  assert.match(h.measured.find((l) => l.startsWith("T14")), /^T14 SERTX: board 829, 1702 \| model \d+, \d+$/);
+  // A measured line in the wrong form, or failing, is still a difference.
+  const broken = healthy.replace(/read-back errors 0\/20/g, "read-back errors 2/20").replace(/T37 SDWRITE PASS/g, "T37 SDWRITE FAIL");
+  assert.deepEqual(compare(parseReport(broken), model).differences.map((l) => l.slice(0, 3)), ["T15", "T37"]);
 });
 
 test("a pattern that reads back wrong from the card says where, and the block is put back", SLOW, () => {

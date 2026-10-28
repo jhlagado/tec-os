@@ -528,7 +528,11 @@ and the banner said the RAM tests take about 30 s, where they take about
 [board-run.md](board-run.md) lists what to send back: the whole terminal
 log and a form of the board's details and the visual answers.
 `tools/diag-check.mjs` compares a pasted log with the model's run of the
-same image and names the TEC-OS behaviour behind each difference:
+same image and names the TEC-OS behaviour behind each difference. Lines that
+carry measured values (T14's bit times, T15 and T16's busy polls, T18's
+frame, T19's ACMD41 count, OCR and polls, T20's and T37's polls, and T21's
+clock, which the model doesn't have) are compared by their form, and the
+board's values are printed beside the model's rather than counted:
 
 ```bash
 node tools/diag-check.mjs board-log.txt
@@ -554,8 +558,10 @@ node tools/diag-check.mjs board-log.txt
 - a clock that halts when T21 sets it, and one that takes the time but
   never counts on, whose lines give the registers read and expected;
 - the report's image ID, and `tools/diag-check.mjs` on the model's own
-  report (no difference) and on a copy with a `FAIL`, an `INFO` value and a
-  missing test edited in (three);
+  report (no difference), on a copy with a `FAIL`, an `INFO` value and a
+  missing test edited in (three), on a copy with every measured value
+  changed and a clock line (none), and on that copy with a measured line
+  failing in form and another failing outright (two);
 - the F18A probe against a stub of the firmware's register behaviour: the
   unlock, the VR15 reads, VR28 set to 8 and back to 0, R2 = `04h` during the
   scroll, the VR50 reset and TEC-OS's registers afterwards;
