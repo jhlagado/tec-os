@@ -12,8 +12,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createContainer } from "../tools/lib/container.mjs";
-import { Machine } from "./lib/machine.mjs";
+import { createContainer, headerChecksum } from "../tools/lib/container.mjs";
+import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -247,4 +247,209 @@ test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", a
   assert.ok(t.writes.length >= 8, `${t.writes.length} card writes: one for each of 8 records`);
   assert.deepEqual(volume(image, "B").read("X.COM"), tpa, "on the card before any warm boot");
   assert.deepEqual(m.violations, []);
+});
+
+/**
+ * Card writes for which FAIL(block, data) gives "fail" or "commit" are
+ * answered with a write error; "commit" writes the block first, as a card
+ * that took the data and then failed.
+ */
+function failing(m, fail) {
+  const sd = m.sd;
+  const commit = sd.commitWrite.bind(sd);
+  sd.commitWrite = () => {
+    const w = sd.writeState;
+    const how = w && fail(w.start / 512, w.buffer);
+    if (!how) return commit();
+    if (how === "commit") commit();
+    sd.writeState = null;
+    sd.pendingResponse = [0x0d, 0xff];
+    sd.delayBytes = 1;
+  };
+}
+
+/** SYSTEM on A:, WORK on B: (written behind when wb), and ARCHIVE, index 2, on no drive; C: has a slot. */
+const card3 = (wb = true) =>
+  createContainer(
+    [
+      { geometry: "G1M", label: "SYSTEM", mount: "A" },
+      { geometry: "G8M", label: "WORK", mount: "B", writeBehind: wb },
+      { geometry: "G8M", label: "ARCHIVE", mount: "-" },
+    ],
+    { drives: 3 },
+  );
+
+/** Type LINE and run to the prompt, answering a BDOS error with ^C. */
+function through(m, line) {
+  m.mark = m.output.length;
+  m.type(line);
+  for (let i = 0; i < 50; i += 1) {
+    m.runUntil(() => m.waitingForInput(), 2_000_000_000, line);
+    if (/\r\n[A-P]>$/.test(m.text(m.mark))) return m.text(m.mark);
+    m.type("\x03");
+  }
+  throw new Error(`no prompt after ${line}`);
+}
+
+test("a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount", async () => {
+  const image = await load(card3(), ["mount"]);
+  let cuts = 0;
+  const problems = [];
+  const fill = { "F1.DAT": 0xa1, "F2.DAT": 0xb2 };
+  const check = (img) => {
+    cuts += 1;
+    const b = volume(img, "B");
+    problems.push(...b.verify().map((p) => `cut ${cuts}: ${p}`));
+    for (const f of b.list())
+      if (fill[f.name] !== undefined && !b.read(f.name).every((v) => v === fill[f.name])) problems.push(`cut ${cuts}: ${f.name} names another file's data`);
+  };
+  const m = start(image, { onSdWrite: check });
+  const fillTpa = (v) => {
+    for (let i = 0; i < 12 * 256; i += 1) m.write(0x100 + i, v);
+  };
+  fillTpa(0xa1);
+  cmd(m, "SAVE 12 B:F1.DAT");
+  cmd(m, "ERA B:F1.DAT");
+  let bad = null; // the first of F2.DAT's blocks the close's flush writes: it never reaches the card
+  failing(m, (block, data) => {
+    if (bad === null && data.every((v) => v === 0xb2)) bad = block;
+    return block === bad && "fail";
+  });
+  fillTpa(0xb2);
+  const out = through(m, "SAVE 12 B:F2.DAT\r");
+  assert.notEqual(bad, null, "a data line failed");
+  assert.match(out, /Write lost/, "warm boot tried it again");
+  through(m, "MOUNT B: ARCHIVE\r");
+  through(m, "MOUNT B: WORK\r");
+  check(image);
+  assert.deepEqual(problems, []);
+  assert.deepEqual(m.violations, []);
+});
+
+/** NPR's run on B:, written behind or through; G.DAT's records back from the card. */
+async function nprRun(wb) {
+  const image = await load(card(wb), ["npr"]);
+  const b = volume(image, "B");
+  b.write("BIG.DAT", pattern(24 * 1024, (i) => i)); // more than the cache's 15 KiB
+  b.write("OLD.DAT", pattern(16 * 128, () => 0x4f));
+  const m = start(image);
+  assert.match(cmd(m, "NPR"), /NPR OK/);
+  assert.deepEqual(m.violations, []);
+  return volume(image, "B").read("G.DAT");
+}
+
+test("a block that needs no pre-read reaches the card with its unwritten records zero, on a volume written behind and through", async () => {
+  for (const wb of [true, false]) {
+    const g = await nprRun(wb);
+    const rec = (r) => g.slice(r * 128, r * 128 + 128);
+    for (const r of [1, 2, 3, 4]) assert.ok(rec(r).every((v) => v === 0), `${wb ? ":wb" : "through"}: G.DAT record ${r} zero, not OLD.DAT's`);
+    assert.ok(rec(5).every((v) => v === 0x55), "record 5 as written");
+    assert.ok(rec(6).every((v) => v === 0x66), "record 6 as written");
+  }
+});
+
+test("more than the cache written behind with no directory write between: dirty lines evicted, and the file the same from the cache and from the card", async () => {
+  const image = card();
+  const m = start(image);
+  const t = trace(m);
+  const tpa = pattern(63 * 256, (i) => (i * 11 + (i >> 9)) ^ 0x5a); // 15.75 KiB: 32 blocks, one extent
+  tpa.forEach((v, i) => m.write(0x100 + i, v));
+  cmd(m, "SAVE 63 B:E.COM");
+  assert.ok(t.writes.length > 0, "lines written to make room");
+  [2, ...Buffer.from("E       COM"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 15, 0x5c);
+  for (let r = 0; r < 126; r += 1) {
+    bdos(m, 26, 0x4000 + r * 128);
+    bdos(m, 20, 0x5c);
+  }
+  const back = Uint8Array.from({ length: tpa.length }, (_, i) => m.read(0x4000 + i));
+  assert.deepEqual(back, tpa, "from the cache");
+  assert.deepEqual(volume(image, "B").read("E.COM"), tpa, "from the card");
+});
+
+test("an unclosed file's records reach the card at warm boot", async () => {
+  const image = card();
+  const m = start(image, { ram96: true });
+  dirty(m);
+  const table = m.sym("CTAB") - 0x8000;
+  const d = m.sym("CDIRTY") - 0x8000;
+  const line = Array.from({ length: 30 }, (_, i) => i).find((i) => m.expand[1][d + i]);
+  const lba = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
+  assert.ok(!image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "not on the card yet");
+  m.cpu.cpu.pc = 0; // warm boot, as ^C
+  m.mark = m.output.length;
+  m.expect(/\r\nA>$/);
+  assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's four records on the card");
+});
+
+test("MOUNT writes the dirty lines before it changes a drive", async () => {
+  const image = card3();
+  const m = start(image, { ram96: true });
+  dirty(m);
+  const table = m.sym("CTAB") - 0x8000;
+  const d = m.sym("CDIRTY") - 0x8000;
+  const line = Array.from({ length: 30 }, (_, i) => i).find((i) => m.expand[1][d + i]);
+  const lba = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
+  stub(m, [0x3e, 0, 0x0e, 1, 0x1e, 2, 0xcd, 0x20, 0xff]); // FF20h: mount B: with index 2, ARCHIVE
+  assert.equal(m.cpu.cpu.a, 0, "mounted");
+  assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's records on the card before the drive changed");
+});
+
+test("a failed write-through write drops its block's line, so a reread comes from the card", async () => {
+  const image = card(false);
+  const m = start(image);
+  const base = word(m, 1) - 3; // the BIOS jump table
+  const bios = (n, bc) => [0x01, bc & 0xff, bc >> 8, 0xcd, (base + 3 * n) & 0xff, (base + 3 * n) >> 8];
+  const at = [...bios(9, 1), ...bios(10, 6), ...bios(11, 2), ...bios(12, 0x2000)]; // B:, track 6, sector 2, DMA 2000h
+  stub(m, [...at, ...bios(13, 0)]); // READ: the block now has a line
+  const first = Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
+  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x77);
+  let n = 0;
+  failing(m, () => (n += 1) && "commit"); // the card takes the record and reports a failure
+  stub(m, [...at, ...bios(14, 0)]); // WRITE
+  assert.ok(n > 0 && m.cpu.cpu.a !== 0, "the write failed");
+  failing(m, () => false);
+  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0);
+  stub(m, [...at, ...bios(13, 0)]);
+  const got = Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
+  assert.notDeepEqual(first, got);
+  assert.ok(got.every((v) => v === 0x77), "the card's record, not the line's");
+});
+
+test("a volume remounted on another drive, with another on its old drive, reads back right", async () => {
+  const image = await load(card3(false), ["mount", "sum"]);
+  const work = pattern(6 * 1024, (i) => i * 5 + 1);
+  const arch = pattern(6 * 1024, (i) => i * 9 + 2);
+  volume(image, "B").write("R.DAT", work);
+  volume(image, "ARCHIVE").write("R.DAT", arch);
+  const m = start(image);
+  assert.match(cmd(m, "SUM B:R.DAT"), new RegExp(sumOf(work)));
+  assert.match(cmd(m, "MOUNT B: ARCHIVE"), /B: ARCHIVE/);
+  assert.match(cmd(m, "SUM B:R.DAT"), new RegExp(sumOf(arch)), "B:'s new volume, not the lines of its old one");
+  assert.match(cmd(m, "MOUNT C: WORK"), /C: WORK/);
+  assert.match(cmd(m, "SUM C:R.DAT"), new RegExp(sumOf(work)), "WORK on C:");
+  assert.deepEqual(m.violations, []);
+});
+
+test("descriptor byte 15's other bits reach no drive flag", async () => {
+  for (const [v, flags] of [[0xfe, 0], [0xff, 2]]) {
+    const image = card(false);
+    image[32 + 32 + 15] = v;
+    const sum = headerChecksum(image.subarray(0, 512));
+    [image[20], image[21]] = [sum & 0xff, sum >> 8];
+    const m = start(image);
+    assert.equal(m.read(m.sym("DRVTAB") + 8 + 7), flags, `byte 15 ${v.toString(16)}h`);
+  }
+});
+
+test("the harness takes the copy core's writes below BD00h as the cache's only when the cache called it", async () => {
+  const m = start(card(), { ram96: true });
+  cmd(m, "DIR B:");
+  assert.deepEqual(m.expand1Writes, [], "the cache's own copies");
+  m.write(m.sym("XMDST"), 1);
+  m.write(m.sym("XMSRC"), 0);
+  const mv = m.sym("MVCOPY");
+  stub(m, [0x21, 0x00, 0x90, 0x11, 0x00, 0x20, 0x01, 0x10, 0x00, 0xcd, mv & 0xff, mv >> 8]); // 16 bytes to 9000h, bank 1
+  assert.equal(m.expand1Writes.length, 16, "a copy not called by the cache is reported");
+  EXPAND1_WRITES.splice(0);
 });

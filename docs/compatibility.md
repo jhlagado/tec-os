@@ -142,6 +142,13 @@ and run.
   which calls the ROM's console status directly so that it draws no cursor.
 - **CCP overwrite.** Programs that expect to reclaim CCP memory below the BDOS
   gain nothing: the CCP is in ROM and its workspace is above the TPA.
+- **Interrupts off across a block.** BIOS `READ` and `WRITE` turn
+  interrupts off for the whole call and put them back as they found them, so
+  that none arrives while EXPAND 1, where the block cache lives, is in view.
+  A call that moves one block to or from the card holds them off for about
+  240,000 T-states (60 ms at 4 MHz), and a write-through write that must
+  read its block first for about 490,000 (122 ms); a hit in the cache, for
+  about 5,000. A program's interrupt routine can wait that long.
 - **Bit-banged serial.** Input that arrives while a program is busy and not
   polling the console is lost. Keys typed while the BDOS is printing are kept
   for the next read, as in CP/M 2.2.

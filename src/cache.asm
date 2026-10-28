@@ -33,13 +33,22 @@ CEI:    PUSH    AF
 CEI1:   POP     AF
         RET
 
+; HL = line A's block in the table (CTADR), or entry A of the page (CTENT),
+; and A = the latch value with EXPAND 1 in view (CXON), for the caller's OUT.
+CTADR:  ADD     A,A
+        ADD     A,A
+CTENT:  LD      L,A
+        LD      H,CTAB>>8
+CXON:   LD      A,(LATCHV)
+        OR      LATEXP
+        RET
+
 ; Look up SDLBA's block: Z with A = its line; NZ if no line has it.
 ; Destroys BC, DE, HL.
 CLOOK:  LD      DE,(SDLBA)
         LD      BC,(SDLBA+2)
-        LD      HL,CTAB
-        LD      A,(LATCHV)
-        OR      LATEXP
+        XOR     A
+        CALL    CTENT
         OUT     (SYSLAT),A
 CLK1:   LD      A,(HL)
         CP      E
@@ -83,12 +92,7 @@ CDROP:  LD      DE,$FFFF
         LD      B,D
         LD      C,E
 CENT:   PUSH    AF
-        ADD     A,A
-        ADD     A,A
-        LD      L,A             ; HL = its block
-        LD      H,CTAB>>8
-        LD      A,(LATCHV)
-        OR      LATEXP
+        CALL    CTADR
         OUT     (SYSLAT),A
         LD      (HL),E
         INC     L
@@ -110,10 +114,7 @@ CDGET:  LD      C,$FF
 CDSET:  LD      C,1
 CDPUT:  PUSH    AF
         ADD     A,CDIRTY-CTAB
-        LD      L,A
-        LD      H,CTAB>>8
-        LD      A,(LATCHV)
-        OR      LATEXP
+        CALL    CTENT
         OUT     (SYSLAT),A
         LD      A,C
         INC     A
@@ -156,12 +157,7 @@ CFL9:   POP     AF
         OR      1
         RET
 CWRITE: PUSH    AF
-        ADD     A,A
-        ADD     A,A
-        LD      L,A
-        LD      H,CTAB>>8
-        LD      A,(LATCHV)
-        OR      LATEXP
+        CALL    CTADR
         OUT     (SYSLAT),A
         LD      E,(HL)
         INC     L
@@ -218,13 +214,10 @@ CFS2:   INC     A
 ; A line for SDLBA's block: the next clean one in turn, or, with every line
 ; dirty, the next in turn written first. Z with A = the line; NZ if that
 ; write failed.
-CTAKE:  LD      A,(CNEXT)
+CTAKE:  LD      B,NLINES
+        LD      A,(CNEXT)
         ADD     A,CDIRTY-CTAB
-        LD      L,A
-        LD      B,NLINES
-        LD      H,CTAB>>8
-        LD      A,(LATCHV)
-        OR      LATEXP
+        CALL    CTENT
         OUT     (SYSLAT),A
 CTK1:   LD      A,(HL)
         OR      A
@@ -290,21 +283,23 @@ CRD1:   CALL    CRDREC
 ; BIOS WRITE on a write-behind volume, from BWRITE with its checks done and
 ; C = 1 when the block needs no pre-read. The record goes into the block's
 ; line, which is dirty; a directory write then writes every dirty line and
-; its own last. Z on success.
+; its own last, and never leaves its line dirty. Z on success.
 CWRBH:  PUSH    BC
         CALL    CLOOK
         POP     BC
-        JR      Z,CWBK          ; the line has it: never cleared again
+        JR      Z,CWB1          ; the line has it
         PUSH    BC
         CALL    CTAKE
         POP     BC
         RET     NZ
+        INC     C
         DEC     C
-        JR      NZ,CWBF
-        PUSH    AF              ; nothing of the card's to keep: cleared
-        CALL    CLADR
-        LD      A,(LATCHV)
-        OR      LATEXP
+        JR      Z,CWBF          ; the card's block first
+CWB1:   DEC     C
+        JR      NZ,CWBK         ; a line's bytes kept
+        PUSH    AF              ; nothing to keep, a hit's old bytes too:
+        CALL    CLADR           ; cleared, as written through
+        CALL    CXON
         OUT     (SYSLAT),A
         LD      D,H
         LD      E,L
@@ -341,10 +336,13 @@ CWB2:   PUSH    AF
         XOR     A               ; data: done
         RET
 CWB3:   LD      A,C             ; a directory block: the volume's data first,
-        CALL    CFLUSH          ; then the directory line
-        RET     NZ
-        LD      A,(CSKIP)
-        JP      CWRITE
+        CALL    CFLUSH          ; then the directory line; if either fails,
+        LD      A,(CSKIP)       ; the line goes, so the card's directory
+        CALL    Z,CWRITE        ; stays the truth and is read again
+        RET     Z
+        CALL    CDROP
+        OR      1               ; NZ
+        RET
 
 ; Warm boot: every dirty line written, and a failed write said.
 CWBOOT: CALL    CFLALL

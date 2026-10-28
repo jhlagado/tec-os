@@ -14,10 +14,18 @@ create`'s `:wb`) also keeps its writes there, and the card catches up:
 - at every warm boot, so `^C` at the prompt writes everything;
 - when `MOUNT` changes a drive.
 
+Changed data blocks reach the card in the cache's line order, and the
+directory block after them. A write to the directory that cannot get its
+data to the card, or cannot write itself, drops the cache's copy of that
+directory block, so the card's directory stays the truth and is read again
+next time; the BDOS reports the failed write.
+
 A file is safe once it is closed, which is CP/M's own rule. Data written
 and not yet closed is lost by a reset or power off: press `^C` at the prompt
-before pressing reset or taking the card out. If a block cannot be written,
-it stays in the cache, and the next warm boot says `Write lost`.
+before pressing reset or taking the card out. If a data block cannot be
+written, it stays changed in the cache, and each warm boot tries it again
+and says `Write lost` while it still fails. Only a reset, or power off,
+gives it up.
 
 ## What a successful write means
 
@@ -45,6 +53,13 @@ no journal, so power loss or reset can leave:
   that the directory does not list. The file reads back as it was before the
   write. The space stays free in the allocation vector rebuilt at the next
   login, so it is reused.
+- **On a volume written behind, before a directory write.** Every change
+  since the last directory write, warm boot or `MOUNT` is still in the cache
+  and is lost; the card holds the volume as it was then.
+- **On a volume written behind, during a flush.** The changed data blocks
+  reach the card one by one in line order and the directory block last, so a
+  cut leaves some new data blocks that no entry names, as above, and never a
+  directory entry naming a block whose data is not there.
 - **During a block write.** One 512-byte block may hold old, new or mixed
   contents. If it is a directory block, up to 16 directory entries can be
   damaged.
@@ -69,8 +84,10 @@ the card from the TEC-1G, or hold it in reset, while the PC has it.
 
 **A changed card needs a reset.** The TEC-1G has no card-detect line, and
 TEC-OS initialises the card only at cold boot. Removing the card while
-TEC-OS runs is an I/O error: the next disk access fails, the BDOS reports
-`Bad Sector` and warm boots. A warm boot keeps the mounts and keeps each
+TEC-OS runs is an I/O error: the next disk access that needs the card fails,
+the BDOS reports `Bad Sector` and warm boots. A read of a block the cache
+holds still succeeds, and a write behind still goes into the cache; the
+warm boot then says `Write lost` for what it could not write. A warm boot keeps the mounts and keeps each
 drive logged in with its allocation vector, so it cannot see that the card
 is a different one. A card put in after that answers no read until reset.
 Press reset after changing cards.

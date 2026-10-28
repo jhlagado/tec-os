@@ -323,7 +323,8 @@ MNONE:  PUSH    BC
         LD      (HL),A
         INC     HL
         LD      A,(IX+DCACHE)   ; written behind (DCWB, bit 0): the drive's
-        ADD     A,A             ; flag bit 1
+        AND     DCWB            ; flag bit 1
+        ADD     A,A
         OR      (IX+DFLAGS)
         LD      (HL),A
         POP     AF              ; build the DPH

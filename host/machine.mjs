@@ -173,8 +173,10 @@ export class Machine {
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     // After cold boot's clear of EXPAND 1 (MEMINIT's LDIR reaching BFFFh),
     // only the block cache writes its 8000h-BCFFh, below the history ring:
-    // its own code, the card's block loops and the copy core it calls, and
-    // cold boot's setting of its table. Any other write there, until the
+    // its own code, the card's block loops, the copy core when the cache
+    // called it (the return address on entry to MVCOPY in CDI-CEND; MOVE
+    // and the levels' copies are still watched), and cold boot's setting of
+    // its table. Any other write there, until the
     // next cold boot (COLD clearing page zero), is kept in expand1Writes and
     // in EXPAND1_WRITES, for the whole process.
     const meminit = symbols.get("MEMINIT");
@@ -186,10 +188,19 @@ export class Machine {
     // SDRBLK's).
     const sorted = [...symbols.entries()].filter(([, v]) => v >= 0xc000).sort((x, y) => x[1] - y[1]);
     const after = (n) => sorted.find(([k, v]) => v > symbols.get(n) && !k.startsWith(n.slice(0, 4)))?.[1];
-    const writers = [["CDI", "CEND"], ["SDRBLK"], ["SDWBLK"], ["MVCOPY", "MVRANGE"], ["MEMINIT"]]
+    const writers = [["CDI", "CEND"], ["SDRBLK"], ["SDWBLK"], ["MEMINIT"]]
       .filter(([a]) => symbols.has(a))
       .map(([a, b]) => [symbols.get(a), b ? symbols.get(b) : after(a)]);
-    const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b);
+    const [cdi, cend, mvcopy, mvrange] = ["CDI", "CEND", "MVCOPY", "MVRANGE"].map((n) => symbols.get(n));
+    let mvForCache = false;
+    if (mvcopy !== undefined && cdi !== undefined)
+      this.mvWatch = (pc) => {
+        if (pc !== mvcopy) return;
+        const sp = this.cpu.cpu.sp;
+        const ret = ram.memRead(sp) | (ram.memRead((sp + 1) & 0xffff) << 8);
+        mvForCache = ret >= cdi && ret < cend;
+      };
+    const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b) || (mvForCache && pc >= mvcopy && pc < mvrange);
     let cleared = false;
     this.expand1Writes = [];
     this.cpu.hardware.memWrite = (addr, value) => {
@@ -238,6 +249,7 @@ export class Machine {
 
   step() {
     if (this.cpu.cpu.pc === this.conout) this.output.push(this.cpu.cpu.c);
+    this.mvWatch?.(this.cpu.cpu.pc);
     const result = this.cpu.step();
     const cycles = result.cycles ?? 0;
     this.tec1g.recordCycles(cycles);
