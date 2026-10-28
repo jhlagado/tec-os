@@ -38,7 +38,8 @@ EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
 VOLS               list the card's volumes
 MOUNT B: NAME      put a volume on a drive; MOUNT B: takes it off
 
-B: is an empty work disk.
+B: is an empty work disk, written behind: its changes reach the card when a
+file is closed, at ^C and at MOUNT. Press ^C at A> before reset or power off.
 `;
 
 /** TEC-OS's fixed state in page zero, 0040h-004Fh, from the EQUs in src/layout.asm. */
@@ -218,13 +219,13 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "1",
+    revision: "2",
     name: "TEC-OS starter",
-    instruction: "At A>, type DIR, then TERM or DEMO. B: is an empty work disk.",
+    instruction: "At A>, type DIR, then TERM or DEMO. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "debug80",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
-      { geometry: "G8M", label: "WORK", mount: "B" },
+      { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },
     ],
     components: files.map((f) => ({
       id: f.name.toLowerCase().replace(/\W/g, "-"),
