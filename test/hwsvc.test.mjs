@@ -232,6 +232,17 @@ test("hardware services: the DS1302 clock", () => {
   const set = bytes(m, BUF + 0x10, 7);
   assert.deepEqual(set.slice(1), [0x59, 0x12, 0x25, 0x12, 0x04, 0x26]);
   assert.ok(set[0] >= 0x30 && set[0] <= 0x31, "seconds as set");
+  // The host stalls for 1.2 s between the set and the next read, and the
+  // machine runs no cycles: the clock reads what it read before.
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1200);
+  ok(svc(m, 18, { b: 0, hl: BUF + 0x20 }));
+  assert.deepEqual(bytes(m, BUF + 0x20, 7), set, "no host time counted after a stall");
+  // A second of emulated cycles moves it on by one.
+  const end = m.cycles + 4_000_000;
+  m.runUntil(() => m.cycles >= end, 5_000_000, "a second of cycles");
+  ok(svc(m, 18, { b: 0, hl: BUF + 0x30 }));
+  const later = bytes(m, BUF + 0x30, 7);
+  assert.equal(later[0], set[0] + 1, "a second later");
   assert.deepEqual(m.violations, []);
 });
 

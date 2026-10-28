@@ -85,12 +85,31 @@ export class Machine {
     if (this.rtc && clock) {
       const start = clock.getTime();
       const rtcHz = 4_000_000;
-      // Until a time is written the clock follows the cycles from `clock`;
-      // after that the runtime's DS1302 counts on from the time written.
+      const emulatedMs = () => start + Math.floor((machine.cycles * 1000) / rtcHz);
+      // Until a time is written the clock follows the cycles from `clock`.
+      // After that the runtime's DS1302 counts on from the time written, by
+      // whole seconds since its tick base; the base and the seconds here are
+      // emulated ones too, so a slow or stalled host changes nothing.
+      const write = this.rtc.writeRegister;
+      this.rtc.writeRegister = function (addr, value) {
+        const base = this.tickBaseMs;
+        write.call(this, addr, value);
+        if (this.tickBaseMs !== base) this.tickBaseMs = emulatedMs();
+      };
+      this.rtc.advanceWrittenTime = function () {
+        const now = emulatedMs();
+        if (this.registers[0] & 0x80) {
+          this.tickBaseMs = now; // CH set: the registers hold
+          return;
+        }
+        const elapsed = Math.floor((now - this.tickBaseMs) / 1000);
+        for (let i = 0; i < elapsed; i += 1) this.tick();
+        this.tickBaseMs += elapsed * 1000;
+      };
       const counting = this.rtc.refreshTimeRegisters;
       this.rtc.refreshTimeRegisters = function () {
         if (!this.followsHost) return counting.call(this);
-        const now = new Date(start + Math.floor((machine.cycles * 1000) / rtcHz));
+        const now = new Date(emulatedMs());
         const day = now.getDay() === 0 ? 7 : now.getDay();
         [now.getSeconds(), now.getMinutes(), now.getHours(), now.getDate(), now.getMonth() + 1, day, now.getFullYear() % 100].forEach(
           (v, i) => (this.registers[i] = this.toBcd(v)),
