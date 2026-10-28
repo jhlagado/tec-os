@@ -1,0 +1,1171 @@
+{
+  "product": "the working tree at TEC-OS f49e380, built",
+  "inputs": {
+    "TAS.COM": "48b81b5874b774557c9016e2247168eb8860863e2dcd75283f5a804dba535bf4",
+    "EDIT.COM": "599eba0d79c06c0ff85a8d048489e0ba7d689caebce08b498cc041a2d78a1d9b"
+  },
+  "copy": {
+    "record": {
+      "0080h (below 8000h)": {
+        "lineToDma": 3349,
+        "dmaToLine": 3352,
+        "ok": true
+      },
+      "9000h (at or above 8000h)": {
+        "lineToDma": 12239,
+        "dmaToLine": 12242,
+        "ok": true
+      },
+      "7FC0h (64 bytes each side)": {
+        "lineToDma": 7890,
+        "dmaToLine": 7893,
+        "ok": true
+      }
+    },
+    "todayRecordLdir": 2683,
+    "line": {
+      "mvbl": {
+        "lineToBlkbuf": {
+          "t": 47567,
+          "ok": true
+        },
+        "blkbufToLine": {
+          "t": 47570,
+          "ok": true
+        }
+      },
+      "u8": {
+        "lineToBlkbuf": {
+          "t": 30641,
+          "ok": true,
+          "latch": true
+        },
+        "blkbufToLine": {
+          "t": 30641,
+          "ok": true,
+          "latch": true
+        }
+      },
+      "sp16": {
+        "lineToBlkbuf": {
+          "t": 12439,
+          "ok": true,
+          "latch": true
+        },
+        "blkbufToLine": {
+          "t": 12439,
+          "ok": true,
+          "latch": true
+        }
+      }
+    },
+    "loopBytes": {
+      "u8": 84,
+      "sp16": 113
+    },
+    "perByte": {
+      "mvbl": 92.9,
+      "u8": 59.8,
+      "sp16": 24.3
+    },
+    "violations": 0,
+    "cleanup": true
+  },
+  "rom": {
+    "sketchBytes": 591,
+    "hookBytes": 35,
+    "stageBytes": 626,
+    "withUnrolledCopy": 722,
+    "freeBelowFF00": 1182,
+    "leftAfter": 556,
+    "leftAfterWithUnrolled": 460,
+    "workspaceBytes": 8,
+    "lookup": {
+      "miss": {
+        "t": 1677
+      },
+      "hitFirst": {
+        "t": 256,
+        "found": true
+      },
+      "hitMiddle": {
+        "t": 1036,
+        "found": true
+      },
+      "hitLast": {
+        "t": 1764,
+        "found": true
+      }
+    }
+  },
+  "loop": {
+    "mvbl": {
+      "inputs": {
+        "TAS.COM": 24200,
+        "EDIT.COM": 7924
+      },
+      "save16": {
+        "today": 30239539,
+        "writeThrough": 30413352,
+        "writeBehind": 13014025
+      },
+      "reread12": {
+        "first": {
+          "today": 7057209,
+          "writeThrough": 8036267,
+          "writeBehind": 8036267
+        },
+        "second": {
+          "today": 6794247,
+          "writeThrough": 1284731,
+          "writeBehind": 1284731
+        }
+      },
+      "scan20": {
+        "first": {
+          "today": 11223690,
+          "writeThrough": 12812613,
+          "writeBehind": 12812613
+        },
+        "second": {
+          "today": 11220081,
+          "writeThrough": 13075615,
+          "writeBehind": 13075615
+        }
+      },
+      "speedCounts": {
+        "today": {
+          "readHit": 0,
+          "readMiss": 0,
+          "writeHit": 0,
+          "writeMiss": 0,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeThrough": {
+          "readHit": 522,
+          "readMiss": 141,
+          "writeHit": 3,
+          "writeMiss": 128,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeBehind": {
+          "readHit": 521,
+          "readMiss": 142,
+          "writeHit": 99,
+          "writeMiss": 32,
+          "linesWritten": 35,
+          "flushes": 3,
+          "cardReads": 175,
+          "cardWrites": 131
+        }
+      },
+      "source10k": {
+        "sourceBytes": 10240,
+        "open": {
+          "today": 17122112,
+          "writeThrough": 18658354,
+          "writeBehind": 18658354
+        },
+        "save": {
+          "today": 24656066,
+          "writeThrough": 25107032,
+          "writeBehind": 14800632
+        },
+        "quit": {
+          "today": 562441,
+          "writeThrough": 385740,
+          "writeBehind": 385740
+        },
+        "assemble": {
+          "today": 53619726,
+          "writeThrough": 56328335,
+          "writeBehind": 51853594
+        },
+        "run": {
+          "today": 761709,
+          "writeThrough": 888189,
+          "writeBehind": 354967
+        },
+        "total": {
+          "today": 96722054,
+          "writeThrough": 101367650,
+          "writeBehind": 86053287
+        },
+        "seconds": {
+          "open": {
+            "today": 4.28,
+            "writeThrough": 4.66,
+            "writeBehind": 4.66
+          },
+          "save": {
+            "today": 6.16,
+            "writeThrough": 6.28,
+            "writeBehind": 3.7
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 13.4,
+            "writeThrough": 14.08,
+            "writeBehind": 12.96
+          },
+          "run": {
+            "today": 0.19,
+            "writeThrough": 0.22,
+            "writeBehind": 0.09
+          },
+          "total": {
+            "today": 24.18,
+            "writeThrough": 25.34,
+            "writeBehind": 21.51
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeThrough": {
+            "readHit": 840,
+            "readMiss": 255,
+            "writeHit": 31,
+            "writeMiss": 206,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeBehind": {
+            "readHit": 848,
+            "readMiss": 247,
+            "writeHit": 183,
+            "writeMiss": 54,
+            "linesWritten": 87,
+            "flushes": 31,
+            "cardReads": 302,
+            "cardWrites": 237
+          }
+        }
+      },
+      "source20k": {
+        "sourceBytes": 20480,
+        "open": {
+          "today": 26712582,
+          "writeThrough": 29641087,
+          "writeBehind": 29641087
+        },
+        "save": {
+          "today": 43393366,
+          "writeThrough": 43590996,
+          "writeBehind": 23000464
+        },
+        "quit": {
+          "today": 563210,
+          "writeThrough": 386509,
+          "writeBehind": 386509
+        },
+        "assemble": {
+          "today": 95297833,
+          "writeThrough": 97888127,
+          "writeBehind": 88974661
+        },
+        "run": {
+          "today": 1020172,
+          "writeThrough": 1202704,
+          "writeBehind": 402871
+        },
+        "total": {
+          "today": 166987163,
+          "writeThrough": 172709423,
+          "writeBehind": 142405592
+        },
+        "seconds": {
+          "open": {
+            "today": 6.68,
+            "writeThrough": 7.41,
+            "writeBehind": 7.41
+          },
+          "save": {
+            "today": 10.85,
+            "writeThrough": 10.9,
+            "writeBehind": 5.75
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 23.82,
+            "writeThrough": 24.47,
+            "writeBehind": 22.24
+          },
+          "run": {
+            "today": 0.26,
+            "writeThrough": 0.3,
+            "writeBehind": 0.1
+          },
+          "total": {
+            "today": 41.75,
+            "writeThrough": 43.18,
+            "writeBehind": 35.6
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeThrough": {
+            "readHit": 1104,
+            "readMiss": 340,
+            "writeHit": 33,
+            "writeMiss": 402,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeBehind": {
+            "readHit": 1114,
+            "readMiss": 330,
+            "writeHit": 333,
+            "writeMiss": 102,
+            "linesWritten": 137,
+            "flushes": 33,
+            "cardReads": 420,
+            "cardWrites": 435
+          }
+        }
+      },
+      "gate": {
+        "save16WriteThroughOverWriteBehind": 2.34,
+        "save16TodayOverWriteBehind": 2.32,
+        "reread12TodayOverCache": 5.29,
+        "scan20CacheOverToday": 1.17
+      }
+    },
+    "u8": {
+      "inputs": {
+        "TAS.COM": 24200,
+        "EDIT.COM": 7924
+      },
+      "save16": {
+        "today": 30239539,
+        "writeThrough": 30362574,
+        "writeBehind": 11863057
+      },
+      "reread12": {
+        "first": {
+          "today": 7057209,
+          "writeThrough": 7613117,
+          "writeBehind": 7613117
+        },
+        "second": {
+          "today": 6794247,
+          "writeThrough": 1284731,
+          "writeBehind": 1284731
+        }
+      },
+      "scan20": {
+        "first": {
+          "today": 11223690,
+          "writeThrough": 12118647,
+          "writeBehind": 12118647
+        },
+        "second": {
+          "today": 11220081,
+          "writeThrough": 12364723,
+          "writeBehind": 12364723
+        }
+      },
+      "speedCounts": {
+        "today": {
+          "readHit": 0,
+          "readMiss": 0,
+          "writeHit": 0,
+          "writeMiss": 0,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeThrough": {
+          "readHit": 522,
+          "readMiss": 141,
+          "writeHit": 3,
+          "writeMiss": 128,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeBehind": {
+          "readHit": 521,
+          "readMiss": 142,
+          "writeHit": 99,
+          "writeMiss": 32,
+          "linesWritten": 35,
+          "flushes": 3,
+          "cardReads": 175,
+          "cardWrites": 131
+        }
+      },
+      "source10k": {
+        "sourceBytes": 10240,
+        "open": {
+          "today": 17122112,
+          "writeThrough": 18049018,
+          "writeBehind": 18049018
+        },
+        "save": {
+          "today": 24656066,
+          "writeThrough": 25005476,
+          "writeBehind": 14022036
+        },
+        "quit": {
+          "today": 562441,
+          "writeThrough": 385740,
+          "writeBehind": 385740
+        },
+        "assemble": {
+          "today": 53619726,
+          "writeThrough": 54906551,
+          "writeBehind": 50211772
+        },
+        "run": {
+          "today": 761709,
+          "writeThrough": 854337,
+          "writeBehind": 354967
+        },
+        "total": {
+          "today": 96722054,
+          "writeThrough": 99201122,
+          "writeBehind": 83023533
+        },
+        "seconds": {
+          "open": {
+            "today": 4.28,
+            "writeThrough": 4.51,
+            "writeBehind": 4.51
+          },
+          "save": {
+            "today": 6.16,
+            "writeThrough": 6.25,
+            "writeBehind": 3.51
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 13.4,
+            "writeThrough": 13.73,
+            "writeBehind": 12.55
+          },
+          "run": {
+            "today": 0.19,
+            "writeThrough": 0.21,
+            "writeBehind": 0.09
+          },
+          "total": {
+            "today": 24.18,
+            "writeThrough": 24.8,
+            "writeBehind": 20.76
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeThrough": {
+            "readHit": 840,
+            "readMiss": 255,
+            "writeHit": 31,
+            "writeMiss": 206,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeBehind": {
+            "readHit": 848,
+            "readMiss": 247,
+            "writeHit": 183,
+            "writeMiss": 54,
+            "linesWritten": 87,
+            "flushes": 31,
+            "cardReads": 302,
+            "cardWrites": 237
+          }
+        }
+      },
+      "source20k": {
+        "sourceBytes": 20480,
+        "open": {
+          "today": 26712582,
+          "writeThrough": 28659379,
+          "writeBehind": 28659379
+        },
+        "save": {
+          "today": 43393366,
+          "writeThrough": 43489440,
+          "writeBehind": 21527902
+        },
+        "quit": {
+          "today": 563210,
+          "writeThrough": 386509,
+          "writeBehind": 386509
+        },
+        "assemble": {
+          "today": 95297833,
+          "writeThrough": 96110897,
+          "writeBehind": 86858911
+        },
+        "run": {
+          "today": 1020172,
+          "writeThrough": 1151926,
+          "writeBehind": 402871
+        },
+        "total": {
+          "today": 166987163,
+          "writeThrough": 169798151,
+          "writeBehind": 137835572
+        },
+        "seconds": {
+          "open": {
+            "today": 6.68,
+            "writeThrough": 7.16,
+            "writeBehind": 7.16
+          },
+          "save": {
+            "today": 10.85,
+            "writeThrough": 10.87,
+            "writeBehind": 5.38
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 23.82,
+            "writeThrough": 24.03,
+            "writeBehind": 21.71
+          },
+          "run": {
+            "today": 0.26,
+            "writeThrough": 0.29,
+            "writeBehind": 0.1
+          },
+          "total": {
+            "today": 41.75,
+            "writeThrough": 42.45,
+            "writeBehind": 34.46
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeThrough": {
+            "readHit": 1104,
+            "readMiss": 340,
+            "writeHit": 33,
+            "writeMiss": 402,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeBehind": {
+            "readHit": 1114,
+            "readMiss": 330,
+            "writeHit": 333,
+            "writeMiss": 102,
+            "linesWritten": 137,
+            "flushes": 33,
+            "cardReads": 420,
+            "cardWrites": 435
+          }
+        }
+      },
+      "gate": {
+        "save16WriteThroughOverWriteBehind": 2.56,
+        "save16TodayOverWriteBehind": 2.55,
+        "reread12TodayOverCache": 5.29,
+        "scan20CacheOverToday": 1.1
+      }
+    },
+    "sp16": {
+      "inputs": {
+        "TAS.COM": 24200,
+        "EDIT.COM": 7924
+      },
+      "save16": {
+        "today": 30239539,
+        "writeThrough": 30307968,
+        "writeBehind": 10625321
+      },
+      "reread12": {
+        "first": {
+          "today": 7057209,
+          "writeThrough": 7158067,
+          "writeBehind": 7158067
+        },
+        "second": {
+          "today": 6794247,
+          "writeThrough": 1284731,
+          "writeBehind": 1284731
+        }
+      },
+      "scan20": {
+        "first": {
+          "today": 11223690,
+          "writeThrough": 11372365,
+          "writeBehind": 11372365
+        },
+        "second": {
+          "today": 11220081,
+          "writeThrough": 11600239,
+          "writeBehind": 11600239
+        }
+      },
+      "speedCounts": {
+        "today": {
+          "readHit": 0,
+          "readMiss": 0,
+          "writeHit": 0,
+          "writeMiss": 0,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeThrough": {
+          "readHit": 522,
+          "readMiss": 141,
+          "writeHit": 3,
+          "writeMiss": 128,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeBehind": {
+          "readHit": 521,
+          "readMiss": 142,
+          "writeHit": 99,
+          "writeMiss": 32,
+          "linesWritten": 35,
+          "flushes": 3,
+          "cardReads": 175,
+          "cardWrites": 131
+        }
+      },
+      "source10k": {
+        "sourceBytes": 10240,
+        "open": {
+          "today": 17122112,
+          "writeThrough": 17393746,
+          "writeBehind": 17393746
+        },
+        "save": {
+          "today": 24656066,
+          "writeThrough": 24896264,
+          "writeBehind": 13184744
+        },
+        "quit": {
+          "today": 562441,
+          "writeThrough": 385740,
+          "writeBehind": 385740
+        },
+        "assemble": {
+          "today": 53619726,
+          "writeThrough": 53377583,
+          "writeBehind": 48446178
+        },
+        "run": {
+          "today": 761709,
+          "writeThrough": 817933,
+          "writeBehind": 354967
+        },
+        "total": {
+          "today": 96722054,
+          "writeThrough": 96871266,
+          "writeBehind": 79765375
+        },
+        "seconds": {
+          "open": {
+            "today": 4.28,
+            "writeThrough": 4.35,
+            "writeBehind": 4.35
+          },
+          "save": {
+            "today": 6.16,
+            "writeThrough": 6.22,
+            "writeBehind": 3.3
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 13.4,
+            "writeThrough": 13.34,
+            "writeBehind": 12.11
+          },
+          "run": {
+            "today": 0.19,
+            "writeThrough": 0.2,
+            "writeBehind": 0.09
+          },
+          "total": {
+            "today": 24.18,
+            "writeThrough": 24.22,
+            "writeBehind": 19.94
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeThrough": {
+            "readHit": 840,
+            "readMiss": 255,
+            "writeHit": 31,
+            "writeMiss": 206,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeBehind": {
+            "readHit": 848,
+            "readMiss": 247,
+            "writeHit": 183,
+            "writeMiss": 54,
+            "linesWritten": 87,
+            "flushes": 31,
+            "cardReads": 302,
+            "cardWrites": 237
+          }
+        }
+      },
+      "source20k": {
+        "sourceBytes": 20480,
+        "open": {
+          "today": 26712582,
+          "writeThrough": 27603663,
+          "writeBehind": 27603663
+        },
+        "save": {
+          "today": 43393366,
+          "writeThrough": 43380228,
+          "writeBehind": 19944328
+        },
+        "quit": {
+          "today": 563210,
+          "writeThrough": 386509,
+          "writeBehind": 386509
+        },
+        "assemble": {
+          "today": 95297833,
+          "writeThrough": 94199687,
+          "writeBehind": 84583661
+        },
+        "run": {
+          "today": 1020172,
+          "writeThrough": 1097320,
+          "writeBehind": 402871
+        },
+        "total": {
+          "today": 166987163,
+          "writeThrough": 166667407,
+          "writeBehind": 132921032
+        },
+        "seconds": {
+          "open": {
+            "today": 6.68,
+            "writeThrough": 6.9,
+            "writeBehind": 6.9
+          },
+          "save": {
+            "today": 10.85,
+            "writeThrough": 10.85,
+            "writeBehind": 4.99
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 23.82,
+            "writeThrough": 23.55,
+            "writeBehind": 21.15
+          },
+          "run": {
+            "today": 0.26,
+            "writeThrough": 0.27,
+            "writeBehind": 0.1
+          },
+          "total": {
+            "today": 41.75,
+            "writeThrough": 41.67,
+            "writeBehind": 33.23
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeThrough": {
+            "readHit": 1104,
+            "readMiss": 340,
+            "writeHit": 33,
+            "writeMiss": 402,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeBehind": {
+            "readHit": 1114,
+            "readMiss": 330,
+            "writeHit": 333,
+            "writeMiss": 102,
+            "linesWritten": 137,
+            "flushes": 33,
+            "cardReads": 420,
+            "cardWrites": 435
+          }
+        }
+      },
+      "gate": {
+        "save16WriteThroughOverWriteBehind": 2.85,
+        "save16TodayOverWriteBehind": 2.85,
+        "reread12TodayOverCache": 5.29,
+        "scan20CacheOverToday": 1.03
+      }
+    },
+    "direct": {
+      "inputs": {
+        "TAS.COM": 24200,
+        "EDIT.COM": 7924
+      },
+      "save16": {
+        "today": 30239539,
+        "writeThrough": 30270651,
+        "writeBehind": 9779469
+      },
+      "reread12": {
+        "first": {
+          "today": 7057209,
+          "writeThrough": 6847092,
+          "writeBehind": 6847092
+        },
+        "second": {
+          "today": 6794247,
+          "writeThrough": 1284731,
+          "writeBehind": 1284731
+        }
+      },
+      "scan20": {
+        "first": {
+          "today": 11223690,
+          "writeThrough": 10862366,
+          "writeBehind": 10862366
+        },
+        "second": {
+          "today": 11220081,
+          "writeThrough": 11077801,
+          "writeBehind": 11077801
+        }
+      },
+      "speedCounts": {
+        "today": {
+          "readHit": 0,
+          "readMiss": 0,
+          "writeHit": 0,
+          "writeMiss": 0,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeThrough": {
+          "readHit": 522,
+          "readMiss": 141,
+          "writeHit": 3,
+          "writeMiss": 128,
+          "linesWritten": 0,
+          "flushes": 0,
+          "cardReads": 175,
+          "cardWrites": 131
+        },
+        "writeBehind": {
+          "readHit": 521,
+          "readMiss": 142,
+          "writeHit": 99,
+          "writeMiss": 32,
+          "linesWritten": 35,
+          "flushes": 3,
+          "cardReads": 175,
+          "cardWrites": 131
+        }
+      },
+      "source10k": {
+        "sourceBytes": 10240,
+        "open": {
+          "today": 17122112,
+          "writeThrough": 16945942,
+          "writeBehind": 16945942
+        },
+        "save": {
+          "today": 24656066,
+          "writeThrough": 24821630,
+          "writeBehind": 12612550
+        },
+        "quit": {
+          "today": 562441,
+          "writeThrough": 385740,
+          "writeBehind": 385740
+        },
+        "assemble": {
+          "today": 53619726,
+          "writeThrough": 52332707,
+          "writeBehind": 47239595
+        },
+        "run": {
+          "today": 761709,
+          "writeThrough": 793055,
+          "writeBehind": 354967
+        },
+        "total": {
+          "today": 96722054,
+          "writeThrough": 95279074,
+          "writeBehind": 77538794
+        },
+        "seconds": {
+          "open": {
+            "today": 4.28,
+            "writeThrough": 4.24,
+            "writeBehind": 4.24
+          },
+          "save": {
+            "today": 6.16,
+            "writeThrough": 6.21,
+            "writeBehind": 3.15
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 13.4,
+            "writeThrough": 13.08,
+            "writeBehind": 11.81
+          },
+          "run": {
+            "today": 0.19,
+            "writeThrough": 0.2,
+            "writeBehind": 0.09
+          },
+          "total": {
+            "today": 24.18,
+            "writeThrough": 23.82,
+            "writeBehind": 19.38
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeThrough": {
+            "readHit": 840,
+            "readMiss": 255,
+            "writeHit": 31,
+            "writeMiss": 206,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 302,
+            "cardWrites": 237
+          },
+          "writeBehind": {
+            "readHit": 848,
+            "readMiss": 247,
+            "writeHit": 183,
+            "writeMiss": 54,
+            "linesWritten": 87,
+            "flushes": 31,
+            "cardReads": 302,
+            "cardWrites": 237
+          }
+        }
+      },
+      "source20k": {
+        "sourceBytes": 20480,
+        "open": {
+          "today": 26712582,
+          "writeThrough": 26882201,
+          "writeBehind": 26882201
+        },
+        "save": {
+          "today": 43393366,
+          "writeThrough": 43305594,
+          "writeBehind": 18862135
+        },
+        "quit": {
+          "today": 563210,
+          "writeThrough": 386509,
+          "writeBehind": 386509
+        },
+        "assemble": {
+          "today": 95297833,
+          "writeThrough": 92893592,
+          "writeBehind": 83028786
+        },
+        "run": {
+          "today": 1020172,
+          "writeThrough": 1060003,
+          "writeBehind": 402871
+        },
+        "total": {
+          "today": 166987163,
+          "writeThrough": 164527899,
+          "writeBehind": 129562502
+        },
+        "seconds": {
+          "open": {
+            "today": 6.68,
+            "writeThrough": 6.72,
+            "writeBehind": 6.72
+          },
+          "save": {
+            "today": 10.85,
+            "writeThrough": 10.83,
+            "writeBehind": 4.72
+          },
+          "quit": {
+            "today": 0.14,
+            "writeThrough": 0.1,
+            "writeBehind": 0.1
+          },
+          "assemble": {
+            "today": 23.82,
+            "writeThrough": 23.22,
+            "writeBehind": 20.76
+          },
+          "run": {
+            "today": 0.26,
+            "writeThrough": 0.27,
+            "writeBehind": 0.1
+          },
+          "total": {
+            "today": 41.75,
+            "writeThrough": 41.13,
+            "writeBehind": 32.39
+          }
+        },
+        "counts": {
+          "today": {
+            "readHit": 0,
+            "readMiss": 0,
+            "writeHit": 0,
+            "writeMiss": 0,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeThrough": {
+            "readHit": 1104,
+            "readMiss": 340,
+            "writeHit": 33,
+            "writeMiss": 402,
+            "linesWritten": 0,
+            "flushes": 0,
+            "cardReads": 420,
+            "cardWrites": 435
+          },
+          "writeBehind": {
+            "readHit": 1114,
+            "readMiss": 330,
+            "writeHit": 333,
+            "writeMiss": 102,
+            "linesWritten": 137,
+            "flushes": 33,
+            "cardReads": 420,
+            "cardWrites": 435
+          }
+        }
+      },
+      "gate": {
+        "save16WriteThroughOverWriteBehind": 3.1,
+        "save16TodayOverWriteBehind": 3.09,
+        "reread12TodayOverCache": 5.29,
+        "scan20CacheOverToday": 0.99
+      }
+    }
+  }
+}
