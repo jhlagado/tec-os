@@ -11,6 +11,33 @@ The run takes about 2 minutes without the hands-on tests and 15 to 20
 minutes with them. It reads the SD card and writes one block that no file
 uses, then puts it back. It writes nothing else outside the board's RAM.
 
+## Getting the images
+
+Two files come from this repository: `diag.rom`, the diagnostics ROM, and
+`starter.img`, the starter card. They come with this plan. To build them
+from a checkout, with Node.js 20 or later:
+
+```bash
+npm ci
+```
+
+```bash
+npm run build
+```
+
+```bash
+node tools/diag.mjs
+```
+
+```bash
+node tools/media.mjs
+```
+
+The diagnostics ROM is then `build/diag/diag.rom`, made by
+[tools/diag.mjs](../tools/diag.mjs); the line it prints gives the image ID
+the report will show. The starter card is `dist/starter.img`, made by
+[tools/media.mjs](../tools/media.mjs) from `dist/starter.recipe.json`.
+
 ## What to prepare
 
 - **The board.** Note its PCB revision and what is fitted. The form at the
@@ -19,7 +46,7 @@ uses, then puts it back. It writes nothing else outside the board's RAM.
   the EXPAND jumpers set for a 32K chip. The board's recommended build
   leaves U9 empty. Without it the RAM test of the window, T03, fails, which
   is a useful answer too, but most of what TEC-OS needs goes untested.
-- **The ROM.** `diag.rom` is a 16 KiB image for `C000h–FFFFh`. In a 32K chip
+- **The ROM.** `diag.rom` (see [Getting the images](#getting-the-images)) is a 16 KiB image for `C000h–FFFFh`. In a 32K chip
   (27C256 or 28C256), burn it into both halves, at `0000h` and at `4000h`,
   so that the ROM Lo/Hi switch (SW6) runs it in either position. Set the
   ROM SIZE jumpers for a 28-pin chip, as for MON-3.
@@ -31,8 +58,7 @@ uses, then puts it back. It writes nothing else outside the board's RAM.
 - **The CPU clock on FAST** (SW2), with the 4 MHz crystal oscillator. The
   serial link works only at 4 MHz.
 - **A stopwatch** that shows tenths of a second. A phone's is fine.
-- **An SD card that may be written.** Write `starter.img` from the TEC-OS
-  release to it with balenaEtcher, Raspberry Pi Imager or `dd`. Any card of
+- **An SD card that may be written.** Write [`starter.img`](#getting-the-images) to it with balenaEtcher, Raspberry Pi Imager or `dd`. Any card of
   16 MB or more will do. T37 writes block 7 of the card, which no file
   uses, and puts back what was there. It writes only to a card that holds a
   TEC-OS image, so a card with anything else on it is left alone, and T37
