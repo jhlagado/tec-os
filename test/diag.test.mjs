@@ -290,6 +290,18 @@ test("a clock that halts when T21 sets it fails, with what was read and expected
   assert.match(text, /T21 RTC     FAIL  .*: read back wrong: read D8 59 23 31 12 04 99, expect 58 59 23 31 12 04 99\r\n/);
 });
 
+test("a clock that takes the time but never counts on fails, with what was read and expected", SLOW, (t) => {
+  const m = diag({ rtc: true });
+  hostTimeFromCycles(t, m, new Date(2026, 9, 26, 9, 30, 15).getTime());
+  const write = m.rtc.writeRegister.bind(m.rtc);
+  m.rtc.writeRegister = (addr, value) => {
+    write(addr, value);
+    if (addr <= 6) m.rtc.refreshTimeRegisters = () => {}; // set, with CH clear, and no longer counting
+  };
+  const text = m.wait(/T21 RTC .*\r\n/);
+  assert.match(text, /T21 RTC     FAIL  .*: stopped after the set: read 58 59 23 31 12 04 99, expect 00 00 00 01 01 05 00\r\n/);
+});
+
 test("a bad bit in the variables page is reported without a stack, and nothing more runs", SLOW, () => {
   const m = diag();
   const write = m.cpu.hardware.memWrite;

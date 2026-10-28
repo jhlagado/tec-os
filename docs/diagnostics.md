@@ -551,8 +551,8 @@ node tools/diag-check.mjs board-log.txt
 - T37's write, checking the card image's block 7 is unchanged after two
   writes, and a pattern that reads back wrong, whose line gives the offset,
   the byte read and the byte expected, with the block still put back;
-- a clock that halts when T21 sets it, whose line gives the registers read
-  and expected;
+- a clock that halts when T21 sets it, and one that takes the time but
+  never counts on, whose lines give the registers read and expected;
 - the report's image ID, and `tools/diag-check.mjs` on the model's own
   report (no difference) and on a copy with a `FAIL`, an `INFO` value and a
   missing test edited in (three);
