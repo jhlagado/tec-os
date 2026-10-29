@@ -1,12 +1,13 @@
-; MOUNT: mounts a volume on a drive through the mount service at FF20h.
+; MOUNT: mounts a volume on a drive through the mount service at ABIVOL.
 ;   MOUNT B: NAME   the volume labelled NAME, found through describe
 ;   MOUNT B: 5      the volume at container index 5, as VOLS numbers them
 ;   MOUNT B:        unmounts B: (A: is never left empty)
 ; Prints the drive and the volume's label (also when it is there already),
 ; or the reason it would not.
+%INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
-VOLSVC  EQU     $FF20
+VOLSVC  EQU     ABIVOL
 TAIL    EQU     $0081
 
         ORG     $0100

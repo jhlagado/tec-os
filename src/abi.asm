@@ -1,23 +1,20 @@
-; The TEC-OS table at a fixed ROM address. Its layout is fixed; entries are
-; only ever added, with the minor version raised. ABI 2.0 dropped the native
-; program services: FF06h stays and refuses every call.
+; The TEC-OS table, ABI 3.0, at C003h after the reset jump: the one fixed
+; address in the ROM. Its layout is fixed; entries are only ever added, at
+; the end, with the minor version raised. src/abi.inc gives each entry's
+; address to programs, and the build checks it against these labels.
 
-        ORG     $FF00
-ABITAB: DB      "TNA"           ; FF00h signature
-        DB      2               ; FF03h ABI major version
-        DB      7               ; FF04h ABI minor version: 1 adds FF0Eh, 2 FF10h-FF17h, 3 FF18h, 4 FF1Ah-FF1Fh, 5 FF20h, 6 FF23h, 7 FF25h
-        DB      0               ; FF05h native banks: none since 2.0
-        JP      NONATSV         ; FF06h no services: status 1, carry set
-        DW      VWID            ; FF09h console columns, then rows; 0 = serial only
-        JP      HWSVC           ; FF0Bh hardware services: C = service
-        DW      MAINS           ; FF0Eh MAIN regions fitted, 1 or 2 (ABI 2.1)
-        DW      EXPANDS         ; FF10h EXPAND regions fitted, always 2 (ABI 2.2)
-        JP      XMOVE           ; FF12h B = destination bank, C = source bank
-        JP      MOVE            ; FF15h HL = destination, DE = source, BC = count
-        DW      XMARK           ; FF18h EXPAND 1's low mark, a page (ABI 2.3), 80h
-        JP      XCCP            ; FF1Ah a nested CCP: HL = 0100h (ABI 2.4)
-        JP      XCMD            ; FF1Dh one command line at DE, the same
-        JP      VOLSVC          ; FF20h mount, unmount and describe (ABI 2.5)
-        DW      FONT            ; FF23h the console font, 8 bytes a character from 20h (ABI 2.6)
-        JP      GLHOOK          ; FF25h the GLCD's video table: HL = six words (carry if one is kept), or 0 (ABI 2.7)
+ABITAB: DB      "TNA"           ; C003h signature
+ABIMAJ: DB      3               ; C006h ABI major version
+ABIMIN: DB      0               ; C007h ABI minor version
+ABIVID: DW      VWID            ; C008h console columns, then rows; 0 = serial only
+ABIHW:  JP      HWSVC           ; C00Ah hardware services: C = service
+ABIMAIN:DW      MAINS           ; C00Dh MAIN regions fitted, 1 or 2
+ABIXMOV:JP      XMOVE           ; C00Fh B = destination bank, C = source bank
+ABIMOVE:JP      MOVE            ; C012h HL = destination, DE = source, BC = count
+ABIXMRK:DW      XMARK           ; C015h EXPAND 1's low mark, a page; 80h
+ABIXCCP:JP      XCCP            ; C017h a nested CCP: HL = 0100h
+ABIXCMD:JP      XCMD            ; C01Ah one command line at DE, the same
+ABIVOL: JP      VOLSVC          ; C01Dh mount, unmount and describe
+ABIFONT:DW      FONT            ; C020h the console font, 8 bytes a character from 20h
+ABIGLCD:JP      GLHOOK          ; C022h the GLCD's video table: HL = six words (carry if one is kept), or 0
 ABIEND:

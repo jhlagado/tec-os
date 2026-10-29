@@ -6,7 +6,7 @@
 // that workspace allows, assemble again, check every placement rule and write
 // the image, debug map and memory census to build/<profile>/.
 
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, writeFileSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -168,6 +168,26 @@ function fontSource() {
 
 let currentDefinitions = {};
 
+/** src/abi.inc, written by hand, against the symbol table: each EQU names a
+ *  label of abi.asm at the same address, and every label there has one. */
+function checkAbiInc(at) {
+  const inc = readFileSync(resolve(SRC, "abi.inc"), "utf8");
+  const equs = [...inc.matchAll(/^(\w+)\s+EQU\s+\$([0-9A-F]{4})\b/gim)].map((m) => [m[1].toUpperCase(), parseInt(m[2], 16)]);
+  for (const [name, value] of equs) check(at(name) === value, `abi.inc: ${name} is ${hex(value)}, the ROM has ${hex(at(name))}`);
+  const labels = [...readFileSync(resolve(SRC, "abi.asm"), "utf8").matchAll(/^(\w+):/gm)].map((m) => m[1].toUpperCase());
+  for (const l of labels) check(equs.some(([n]) => n === l), `abi.inc has no ${l}`);
+}
+
+/** No .asm file of the product names an address of the old table, $FF00-$FF27. */
+function checkNoOldAddress() {
+  for (const dir of ["src", "drivers", "diag", "test/programs"]) {
+    for (const f of readdirSync(resolve(ROOT, dir), { recursive: true }).filter((n) => n.endsWith(".asm"))) {
+      const m = /\$FF(?:[01][0-9A-F]|2[0-7])\b/i.exec(readFileSync(resolve(ROOT, dir, f), "utf8"));
+      check(!m, `${dir}/${f} names ${m?.[0]}, an address of the old table`);
+    }
+  }
+}
+
 async function assemble() {
   const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions });
   const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
@@ -224,15 +244,16 @@ async function buildProfile(name) {
 
   const at = (n) => need(symbols, n);
   check(at("RESET") === 0xc000, "RESET must be at C000h");
-  check(at("INT38") === 0xc038, "INT38 must be at C038h");
-  check(at("COLD") < 0xc800, "cold boot entry must be inside the overlay window");
-  check(at("CODEEND") <= at("ABITAB"), "code overruns the table at FF00h");
-  check(at("ABITAB") === 0xff00, "ABI table must be at FF00h");
+  check(at("ABITAB") === 0xc003, "the table must be at C003h");
+  check(at("ABIEND") === at("ROMDATA"), "the data block must follow the table");
+  check(at("ROMDATA") <= at("ROMCODE") && at("ROMCODE") <= at("CODEEND"), "the table, the data and the code, in that order");
+  check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
+  checkAbiInc(at);
+  checkNoOldAddress();
   check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);
   check(at("BDOSRME") === RAMBIOS, `the fixed workspace must end at the RAM BIOS table, not ${hex(at("BDOSRME"))}`);
   check(at("SDBYTE") === RAMBIOS + 51, "the state above the RAM BIOS table follows it");
   check(at("WSEND") <= 0xc000, `workspace ends at ${hex(at("WSEND"))}`);
-  check((at("BENTRY") - at("BDOSBAS")) === 6, "BDOS entry is six bytes into the BDOS");
   check(at("BSTK") <= at("CCPRAM"), "BIOS stack overlaps the CCP workspace");
 
   const starter = cardLayout(at("WSBASE"), CARDS.starter);
@@ -251,20 +272,14 @@ async function buildProfile(name) {
     serial,
     rom: {
       bytes: ROM_SIZE,
-      used: at("CODEEND") - ROM_START + (at("ABIEND") - at("ABITAB")),
-      free: at("ABITAB") - at("CODEEND") + (0x10000 - at("ABIEND")),
+      used: at("CODEEND") - ROM_START,
+      free: 0x10000 - at("CODEEND"),
       regions: [
-        ["vectors and boot", at("RESET"), at("BIOSBAS")],
-        ["BIOS", at("BIOSBAS"), at("CONINIT")],
-        ["console", at("CONINIT"), at("SPIW")],
-        ["SD driver", at("SPIW"), at("MOUNT")],
-        ["volume mount", at("MOUNT"), at("FMTMAG")],
-        ["format tables", at("FMTMAG"), at("DIAG")],
-        ["diagnostics", at("DIAG"), at("CCPBAS")],
-        ["CCP", at("CCPBAS"), at("CCPROM")],
-        ["BDOS", at("BDOSBAS"), at("BDOSROM")],
-        ["hardware services", at("HWSVC"), at("CODEEND")],
-        ["ABI table", at("ABITAB"), at("ABIEND")],
+        ["reset jump", at("RESET"), at("RESET") + 3],
+        ["table", at("ABITAB"), at("ABIEND")],
+        ["data", at("ROMDATA"), at("ROMCODE")],
+        ["code", at("ROMCODE"), at("CODEEND")],
+        ["free", at("CODEEND"), 0x10000],
       ].map(([label, start, end]) => ({ label, start, end, bytes: end - start })),
     },
     ram: {

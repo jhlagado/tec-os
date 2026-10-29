@@ -81,7 +81,7 @@ test("a mount on B: then a warm boot scans B's new volume in full", () => {
   const r = rig(standardCard([{ geometry: "G8M", label: "SPARE" }]));
   r.m.command("B:");
   r.m.command("A:");
-  assert.equal(r.call(0xff20, { a: 0, c: 1, de: 2 }), 0, "VOLSVC: SPARE on B:");
+  assert.equal(r.call(r.m.sym("ABIVOL"), { a: 0, c: 1, de: 2 }), 0, "VOLSVC: SPARE on B:");
   r.warm();
   r.reads = 0;
   r.m.command("B:");

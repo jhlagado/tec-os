@@ -13,7 +13,6 @@ LCDI:   LD      A,(HL)
         INC     HL
         DJNZ    LCDI
         RET
-LCDSEQ: DB      $38,$0C,$06,$01
 
 ; Wait while the display is busy, at most 256 polls. Preserves BC, DE, HL.
 LCDWAIT:PUSH    BC
@@ -52,7 +51,6 @@ LCDS:   LD      A,(HL)
         OUT     (LCDDAT),A
         INC     HL
         JR      LCDS
-LCDROWS:DB      $80,$C0,$94,$D4
 
 ; Show the drive letters and labels of drives A and B on rows 1 and 2.
 LCDVOLS:LD      C,0
@@ -92,5 +90,3 @@ LCDVN:  INC     C
         CP      2               ; only A and B fit
         JR      C,LCDV
         RET
-
-LCDBAN: DB      "TEC-OS ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0

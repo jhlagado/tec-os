@@ -353,7 +353,6 @@ CWBOOT: CALL    CFLALL
         LD      (HL),0
         LD      HL,CWMSG
         JP      PUTS
-CWMSG:  DB      13,10,"Write lost",0
 
 ; The BLOCK service: SDLBA's block from its line into the 512 bytes at HL,
 ; Z, if a line has it (CBLOCK). BLKBUF into the line that has SDLBA's

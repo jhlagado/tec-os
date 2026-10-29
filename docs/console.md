@@ -96,7 +96,7 @@ The GLCD console is a resident, `GLCD.PRL` on the starter card, not part of
 the ROM. Its code and its screen text take three pages just below the BDOS
 entry, so on a board that loads it `(0006h)` is 768 bytes lower; a board
 without a GLCD loses nothing. Its INIT hands the terminal its six video
-routines through `FF25h`, and the terminal calls them directly, on the
+routines through `ABIGLCD` in the table at `C003h`, and the terminal calls them directly, on the
 caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
 keyboard and no PICO9918, cold boot shows its banner and volumes on the
 serial terminal and the 20 × 4 LCD, and the CCP's first entry loads
@@ -116,8 +116,8 @@ about 0.25 s at 4 MHz. Every access waits for the busy flag, bounded at 256 poll
 The CCP's `TYPE` and `DIR` use the display size to pause with `[more]` one
 line short of a full screen.
 
-The display size is published in the ABI table at `FF00h` (word at `FF09h`
-points to columns, then rows), so programs such as an editor can lay out
+The display size is published in the table at `C003h` (the word at
+`ABIVID`, `C008h`, points to columns, then rows), so programs such as an editor can lay out
 their screen without being rebuilt for each display.
 
 The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows.

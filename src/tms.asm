@@ -10,7 +10,6 @@
 
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
-TNAME   EQU     TMSNAME         ; 0800h, or 1000h for 80 columns (4 KiB aligned)
 ; A second name table one page up (2000h for 80 columns, 0C00h otherwise)
 ; lets row moves be built out of sight and shown with one register write.
 %IF TMS80
@@ -18,8 +17,6 @@ TPGOFF  EQU     $10
 %ELSE
 TPGOFF  EQU     $04
 %ENDIF
-TCOLOR  EQU     $2000
-TSPRITE EQU     $1B00
 
 ; Detect and initialise the display. Z when present. VIDINIT has already
 ; pointed the terminal's driver vectors here.
@@ -149,12 +146,6 @@ TMSCELL:LD      A,B
         LD      E,C
         ADD     HL,DE
         RET
-TMSROWT:DW      TNAME,TNAME+TMSCOLS,TNAME+2*TMSCOLS,TNAME+3*TMSCOLS
-        DW      TNAME+4*TMSCOLS,TNAME+5*TMSCOLS,TNAME+6*TMSCOLS,TNAME+7*TMSCOLS
-        DW      TNAME+8*TMSCOLS,TNAME+9*TMSCOLS,TNAME+10*TMSCOLS,TNAME+11*TMSCOLS
-        DW      TNAME+12*TMSCOLS,TNAME+13*TMSCOLS,TNAME+14*TMSCOLS,TNAME+15*TMSCOLS
-        DW      TNAME+16*TMSCOLS,TNAME+17*TMSCOLS,TNAME+18*TMSCOLS,TNAME+19*TMSCOLS
-        DW      TNAME+20*TMSCOLS,TNAME+21*TMSCOLS,TNAME+22*TMSCOLS,TNAME+23*TMSCOLS
 
 ; Copy row B to LINEBUF, or LINEBUF to row B, as one block. Destroy AF, BC,
 ; DE, HL. While a move builds the hidden page, rows are read from the page
@@ -268,20 +259,3 @@ TMSR2:  LD      A,(TPSHOW)
         LD      A,$82
         OUT     (VDPCTL),A
         RET
-
-; Registers 0-7.
-; - 80 columns (PICO9918 TEXT80, also the V9938 TEXT2 and F18A T80 mode):
-;   R0 bit 2 with text mode, names at a 4 KiB boundary (R2 low bits set as
-;   the V9938 requires), patterns at 0000h, white on dark blue. No unlock is
-;   needed.
-; - 40 columns: text mode, the same colours.
-; - Graphics I: patterns 0000h, colours 2000h, sprites 1B00h/3800h.
-%IF TMS32
-TMSREGS:DB      $00,$C0,TNAME/$400,TCOLOR/$40,$00,TSPRITE/$80,$07,$F1
-%ELSE
-%IF TMS80
-TMSREGS:DB      $04,$50,TNAME/$400+3,$00,$00,$00,$00,$F4
-%ELSE
-TMSREGS:DB      $00,$D0,TNAME/$400,$00,$00,$00,$00,$F4
-%ENDIF
-%ENDIF

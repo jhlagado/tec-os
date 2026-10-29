@@ -35,10 +35,10 @@ DEFDMA  EQU     $0080
 ; CP/M reserves 0040h-004Fh for BIOS scratch. TEC-OS keeps the state that must
 ; stay visible whatever the bank window shows here.
 LATCHV  EQU     $0040           ; shadow copy of the system latch
-MAINS   EQU     $0041           ; MAIN regions fitted, 1 or 2 (FF0Eh points here)
+MAINS   EQU     $0041           ; MAIN regions fitted, 1 or 2 (ABIMAIN points here)
 RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
 RXCHAR  EQU     $0043           ; and the byte itself
-EXPANDS EQU     $0044           ; EXPAND regions fitted, 1 or 2 (FF10h points here)
+EXPANDS EQU     $0044           ; EXPAND regions fitted: always 2, MEMINIT stops on fewer
 CONDEV  EQU     $0045           ; console devices present (CD* bits)
 VROW    EQU     $0046           ; video terminal cursor row
 VCOL    EQU     $0047           ; and column

@@ -54,9 +54,11 @@ test("warm boot by ^C keeps the drive and user number", () => {
 });
 
 test("warm boot clears the restart vectors except jumps into ROM, and a stale RST returns", () => {
-  // SETV leaves 0008h jumping into the TPA, 0010h jumping into ROM (FF0Bh)
+  // SETV leaves 0008h jumping into the TPA, 0010h jumping into ROM (the
+  // hardware services' entry in the table)
+  const HW = romFor().symbols.get("ABIHW");
   // and stray bytes in the tail of 0018h, then ends with JP 0000h.
-  const set = { 0x08: [0xc3, 0x08, 0x40], 0x10: [0xc3, 0x0b, 0xff], 0x1b: [0xc3, 0x00, 0x40] };
+  const set = { 0x08: [0xc3, 0x08, 0x40], 0x10: [0xc3, HW & 0xff, HW >> 8], 0x1b: [0xc3, 0x00, 0x40] };
   const code = Object.entries(set).flatMap(([at, bytes]) =>
     bytes.flatMap((b, i) => [0x3e, b, 0x32, (Number(at) + i) & 0xff, 0x00]),
   );
@@ -68,7 +70,7 @@ test("warm boot clears the restart vectors except jumps into ROM, and a stale RS
   m.command("SETV");
   const want = new Array(0x30).fill(0);
   for (let v = 0x08; v < 0x38; v += 8) want[v - 0x08 + 7] = 0xc9;
-  want.splice(0x10 - 0x08, 8, 0xc3, 0x0b, 0xff, 0, 0, 0, 0, 0);
+  want.splice(0x10 - 0x08, 8, 0xc3, HW & 0xff, HW >> 8, 0, 0, 0, 0, 0);
   assert.deepEqual(Array.from({ length: 0x30 }, (_, i) => m.read(0x08 + i)), want, "0008h-0037h after the warm boot");
   for (const v of [0x08, 0x18]) {
     m.type(`RST${v.toString(16).padStart(2, "0")}\r`);
@@ -77,8 +79,8 @@ test("warm boot clears the restart vectors except jumps into ROM, and a stale RS
     m.expect(/\r\nA>$/);
   }
   m.type("RST10\r");
-  m.runUntil(() => m.pc === 0xff0b || m.pc === 0x0101, 50_000_000, "RST 10h");
-  assert.equal(m.pc, 0xff0b, "the kept jump into ROM is taken");
+  m.runUntil(() => m.pc === HW || m.pc === 0x0101, 50_000_000, "RST 10h");
+  assert.equal(m.pc, HW, "the kept jump into ROM is taken");
   noViolations(m);
 });
 

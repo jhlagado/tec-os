@@ -1,8 +1,9 @@
 ; OPENRD.PRL: a resident whose INIT opens B:DATA.TXT, reads its first
 ; record and prints its first 8 bytes, shells out to a nested CCP through
-; FF1Ah with HL = 0100h, and after EXIT reads the next record through the
+; ABIXCCP with HL = 0100h, and after EXIT reads the next record through the
 ; same FCB and prints its first 8 bytes. A child level that remounts B:
 ; must give the parent its own B: back.
+%INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
 
@@ -22,7 +23,7 @@ INIT:   LD      DE,BUF
         JR      Z,FAIL
         CALL    READ
         LD      HL,$0100        ; no image
-        CALL    $FF1A
+        CALL    ABIXCCP
         LD      DE,BUF          ; the nested level moved the DMA address
         LD      C,26
         CALL    BDOS

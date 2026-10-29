@@ -5,7 +5,7 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { basename, resolve } from "node:path";
+import { basename, dirname, relative, resolve } from "node:path";
 import { assembleProgram } from "./assemble.mjs";
 
 /** SOURCE assembled at ORIGIN: its "ORG $0100" line rewritten in a copy in WORK. */
@@ -18,7 +18,8 @@ export async function assembleAt(source, origin, work) {
   const digest = createHash("sha256").update(text).digest("hex").slice(0, 16);
   mkdirSync(work, { recursive: true });
   const copy = resolve(work, `${basename(source, ".asm")}-${digest}-at${hex}.asm`);
-  writeFileSync(copy, text.replace(org, (_, lead) => `${lead}$${hex}`));
+  const repoint = (t) => t.replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, resolve(dirname(source), p))}"`);
+  writeFileSync(copy, repoint(text.replace(org, (_, lead) => `${lead}$${hex}`)));
   return (await assembleProgram(copy, { base: origin })).bytes;
 }
 

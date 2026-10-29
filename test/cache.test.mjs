@@ -212,7 +212,7 @@ test("BLOCK on a dirty block returns its line, not the card", async () => {
   const lba = [0, 1, 2, 3].map((k) => m.expand[1][table + 4 * line + k]);
   const block = lba[0] | (lba[1] << 8) | (lba[2] << 16) | (lba[3] << 24);
   lba.forEach((v, k) => m.write(0x2800 + k, v));
-  stub(m, [0x0e, 10, 0x21, 0x00, 0x28, 0x11, 0x00, 0x24, 0xcd, 0x0b, 0xff]); // BLOCK: HL = the LBA, DE = 2400h
+  stub(m, [0x0e, 10, 0x21, 0x00, 0x28, 0x11, 0x00, 0x24, 0xcd, m.sym("ABIHW") & 0xff, m.sym("ABIHW") >> 8]); // BLOCK: HL = the LBA, DE = 2400h
   const got = Array.from({ length: 512 }, (_, i) => m.read(0x2400 + i));
   assert.deepEqual(got, Array.from(m.expand[1].slice(line * 512, line * 512 + 512)), "the line's bytes");
   assert.ok(got.slice(0, 128).every((v) => v === 0xc3), "with the record written");
@@ -390,7 +390,7 @@ test("MOUNT writes the dirty lines before it changes a drive", async () => {
   const d = m.sym("CDIRTY") - 0x8000;
   const line = Array.from({ length: 30 }, (_, i) => i).find((i) => m.expand[1][d + i]);
   const lba = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
-  stub(m, [0x3e, 0, 0x0e, 1, 0x1e, 2, 0xcd, 0x20, 0xff]); // FF20h: mount B: with index 2, ARCHIVE
+  stub(m, [0x3e, 0, 0x0e, 1, 0x1e, 2, 0xcd, m.sym("ABIVOL") & 0xff, m.sym("ABIVOL") >> 8]); // mount B: with index 2, ARCHIVE
   assert.equal(m.cpu.cpu.a, 0, "mounted");
   assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's records on the card before the drive changed");
 });

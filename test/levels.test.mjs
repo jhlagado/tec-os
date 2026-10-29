@@ -1,5 +1,5 @@
-// The CCP's levels: a resident shelling out through FF1Ah and getting its
-// stack, drive and user back at EXIT; one command line through FF1Dh;
+// The CCP's levels: a resident shelling out through ABIXCCP and getting its
+// stack, drive and user back at EXIT; one command line through ABIXCMD;
 // nesting to six levels, with each level's drive, user and mounts given
 // back; a program's image refused; a parent's warm-boot hook set aside;
 // EXIT, CCP and UNLOAD as built-ins. Emulator evidence.
@@ -11,7 +11,7 @@ import { boot, prl, program, standardCard, volume } from "./lib/fixtures.mjs";
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
 
-/** SHELL.PRL with its MODE byte (code offset 21) set: FF1Dh, not FF1Ah. */
+/** SHELL.PRL with its MODE byte (code offset 21) set: ABIXCMD, not ABIXCCP. */
 async function shellc() {
   const f = Uint8Array.from(await prl("shell"));
   f[256 + 21] = 1;
@@ -54,7 +54,7 @@ test("a resident shells out, its child level changes drive and user, and at EXIT
   assert.deepEqual(m.violations, []);
 });
 
-test("one command line through FF1Dh runs with no prompt and returns its code", async () => {
+test("one command line through ABIXCMD runs with no prompt and returns its code", async () => {
   const m = await machine();
   const out = cmd(m, "SHELLC");
   assert.match(out, /SHELL OK 0009/);
@@ -120,7 +120,7 @@ test("EXIT at level 0 and UNLOAD with no resident are refused; UNLOAD removes re
 
 test("the level records and the history have fixed pages, and a record keeps no image", async () => {
   const m = await machine({ ram96: true });
-  assert.ok(m.read(0xff03) === 2 && m.read(0xff04) >= 7, "ABI 2.7 or later");
+  assert.ok(m.read(m.sym("ABIMAJ")) === 3, "ABI 3");
   assert.equal(m.read(m.sym("XMARK")), 0x80, "no range for MOVE in EXPAND 1");
   assert.equal(m.sym("HRING"), m.sym("LVBASE") - 0x100, "the ring just below the records");
   assert.equal(m.sym("LVBASE"), 0xbe00);
@@ -133,7 +133,7 @@ test("the level records and the history have fixed pages, and a record keeps no 
   assert.deepEqual(m.violations, []);
 });
 
-test("CCP, and a resident through FF1Ah and FF1Dh with 0100h, nest to six levels and each EXIT gives back drive, user and mounts", async () => {
+test("CCP, and a resident through ABIXCCP and ABIXCMD with 0100h, nest to six levels and each EXIT gives back drive, user and mounts", async () => {
   const m = await machine();
   const kept = [];
   for (let n = 1; n <= 6; n += 1) {
@@ -177,7 +177,7 @@ test("UNLOAD is refused in a nested level, so the resident a level returns into 
   assert.deepEqual(m.violations, []);
 });
 
-test("a program asking FF1Ah or FF1Dh to keep its image is refused, and nothing changes", async () => {
+test("a program asking ABIXCCP or ABIXCMD to keep its image is refused, and nothing changes", async () => {
   const m = await machine({ ram96: true });
   const stub = word(m, 6);
   const ring = [m.sym("HRING") - 0x8000, m.sym("HRING") - 0x8000 + 0x100];

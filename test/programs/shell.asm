@@ -1,13 +1,14 @@
 ; SHELL.PRL: a resident that shells out as it is installed, as a resident
 ; such as a debugger does. Its INIT sets drive A and user 0, pushes two
-; known words on the stack it was called on, and calls FF1Ah with HL =
+; known words on the stack it was called on, and calls ABIXCCP with HL =
 ; 0100h, since nothing of the TPA is kept. After EXIT it prints "SHELL OK",
 ; then the return code in hex, if its stack words, drive (BDOS function 25),
 ; user (function 32) and 0004h are as they were; "SHELL BAD" otherwise, and
 ; "SHELL REFUSED" if the call returned carry. It stays installed.
 ;   MODE, the byte after the name (code offset 21), = 1: it runs "SETRC 9"
-;   through FF1Dh instead, with no prompt, and prints the code it gets back
+;   through ABIXCMD instead, with no prompt, and prints the code it gets back
 ;   the same way.
+%INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
 
@@ -32,10 +33,10 @@ INIT:   LD      E,0
         OR      A
         LD      HL,$0100        ; no image
         JR      NZ,ONE
-        CALL    $FF1A
+        CALL    ABIXCCP
         JR      BACK
 ONE:    LD      DE,LINE
-        CALL    $FF1D
+        CALL    ABIXCMD
 BACK:   JR      C,REF
         LD      (CODE),HL
         POP     HL

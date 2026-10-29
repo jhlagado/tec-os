@@ -1,4 +1,4 @@
-// BIOS devices, the hardware services and the table at FF00h.
+// BIOS devices, the hardware services and the table at C003h.
 // Emulator evidence.
 
 import { test } from "node:test";
@@ -8,21 +8,12 @@ import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
 
-test("the old native service entry at FF06h refuses every call and touches no memory", () => {
+test("the table at C003h: TNA, ABI 3.0, and the entries abi.inc names", () => {
   const m = boot(standardCard());
-  assert.deepEqual([m.read(0xff03), m.read(0xff05)], [2, 0], "ABI 2, no native banks");
-  const fill = (a) => (a * 7 + 3) & 0xff;
-  for (let a = 0x0100; a < 0x0600; a += 1) m.write(a, fill(a));
-  const cpu = m.cpu.cpu;
-  for (const c of [0, 1, 3, 12, 0xff]) {
-    m.write(0x0efe, 0x00);
-    m.write(0x0eff, 0x0f);
-    Object.assign(cpu, { c, a: 0x55, sp: 0x0efe, pc: 0xff06 });
-    m.runUntil(() => m.pc === 0x0f00, 1_000_000, `FF06h with C = ${c}`);
-    assert.equal(cpu.a, 1, `status 1 for C = ${c}`);
-    assert.equal(cpu.flags.C, 1, `carry for C = ${c}`);
-  }
-  for (let a = 0x0100; a < 0x0600; a += 1) assert.equal(m.read(a), fill(a), `${a.toString(16)} untouched`);
+  const S = (n) => m.sym(n);
+  assert.equal(S("ABITAB"), 0xc003);
+  assert.deepEqual([0, 1, 2, 3, 4].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 3, 0], "TNA 3.0");
+  for (const n of ["ABIHW", "ABIXMOV", "ABIMOVE", "ABIXCCP", "ABIXCMD", "ABIVOL", "ABIGLCD"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
   noViolations(m);
 });
 
@@ -77,7 +68,7 @@ test("the hardware services drive the LCD, clock, digits, LEDs and a claimed PIC
   const image = standardCard();
   volume(image, "A").write("DEMO.COM", (await program("demo")).bytes);
   const m = boot(image, { tms: true, matrix: true });
-  assert.equal(m.read(0xff03), 2, "ABI 2, with the hardware services");
+  assert.equal(m.read(m.sym("ABIMAJ")), 3, "ABI 3, with the hardware services");
   m.mark = m.output.length;
   m.typeMatrix("demo\r");
   const t = m.cycles + 8_000_000;

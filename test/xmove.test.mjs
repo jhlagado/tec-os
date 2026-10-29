@@ -1,4 +1,4 @@
-// XMOVE and MOVE on the harness's 96K option, through FF12h and FF15h and
+// XMOVE and MOVE on the harness's 96K option, through ABIXMOV and ABIMOVE and
 // through BDOS function 50: copies within bank 0, the program's view, as
 // LDIR does, and every copy to or from bank 1 refused, since EXPAND 1 is
 // TEC-OS's own and its low mark is 80h. Emulator evidence.
@@ -28,12 +28,14 @@ function machine({ mains = 2, seed = 1 } = {}) {
 const cell = (mem, b, a) => (b === 1 ? [mem.expand[1], a - 0x8000] : a < 0x8000 ? [mem.main[0], a] : [mem.expand[0], a - 0x8000]);
 const snapshot = (m) => ({ main: m.main.map((r) => r.slice()), expand: m.expand.map((r) => r.slice()) });
 
+const le = (a) => [a & 0xff, a >> 8];
+
 /** Run XMOVE then MOVE from a stub at 0080h; the registers, latch writes and memory after. */
 function move(m, { dst, src, hl, de, bc, iff = false, latch = 0x01, entry }) {
   if (entry !== undefined) [m.write(6, entry & 0xff), m.write(7, entry >> 8)];
   m.write(m.sym("LATCHV"), latch);
   m.cpu.hardware.ioWrite(0xff, latch);
-  const code = [...(iff ? [0xfb] : [0xf3]), 0x06, dst, 0x0e, src, 0xcd, 0x12, 0xff, 0x21, hl & 0xff, hl >> 8, 0x11, de & 0xff, de >> 8, 0x01, bc & 0xff, bc >> 8, 0xcd, 0x15, 0xff, 0x18, 0xfe];
+  const code = [...(iff ? [0xfb] : [0xf3]), 0x06, dst, 0x0e, src, 0xcd, ...le(m.sym("ABIXMOV")), 0x21, hl & 0xff, hl >> 8, 0x11, de & 0xff, de >> 8, 0x01, bc & 0xff, bc >> 8, 0xcd, ...le(m.sym("ABIMOVE")), 0x18, 0xfe];
   code.forEach((v, i) => m.write(STUB + i, v));
   const before = snapshot(m);
   const writes = [];
@@ -102,13 +104,14 @@ const copies = (top) => [
   { label: "0 bytes", dst: 1, src: 0, hl: 0x9000, de: 0x1000, bc: 0 },
 ];
 
-test("the FF00h table gives the EXPAND count at FF10h, XMOVE at FF12h, MOVE at FF15h and the low mark at FF18h", () => {
+test("the table gives the MAIN count, XMOVE, MOVE and the low mark; EXPAND is always 2", () => {
   for (const mains of [2, 1]) {
     const m = boot(standardCard(), { ram96: true, mains });
-    assert.ok(m.read(0xff03) === 2 && m.read(0xff04) >= 3, "ABI 2.3 or later");
+    const S = (n) => m.sym(n);
+    assert.ok(m.read(S("ABIMAJ")) === 3, "ABI 3");
     const at = (a) => m.read(m.read(a) | (m.read(a + 1) << 8));
-    assert.deepEqual([at(0xff0e), at(0xff10), at(0xff18)], [mains, 2, 0x80], `MAIN ${mains}`);
-    assert.deepEqual([m.read(0xff12), m.read(0xff15)], [0xc3, 0xc3]);
+    assert.deepEqual([at(S("ABIMAIN")), m.read(S("EXPANDS")), at(S("ABIXMRK"))], [mains, 2, 0x80], `MAIN ${mains}`);
+    assert.deepEqual([m.read(S("ABIXMOV")), m.read(S("ABIMOVE"))], [0xc3, 0xc3]);
   }
 });
 

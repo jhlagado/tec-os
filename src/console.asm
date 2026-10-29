@@ -483,7 +483,3 @@ KBIDX:  ADD     A,L
         INC     H
 KBIDX1: LD      A,(HL)
         RET
-
-KBARROW:DB      "ABDC"          ; up, down, left, right
-KBSPEC: DB      $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
-KBSHIFT:DB      "<_>?)!@#$%^&*( : +"

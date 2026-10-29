@@ -2,11 +2,14 @@
 
 TEC-OS is a ROM-resident operating system for the TEC-1G. It runs CP/M 2.2
 programs from SD-card volumes and gives them the TEC-1G's hardware through a
-table of services at `FF00h`.
+table of services at `C003h`.
 
 - 16 KiB ROM at `C000h–FFFFh`, entered through the 2 KiB boot overlay at
   reset. It holds the BIOS, the CCP and BDOS, the SD and console drivers and
-  the hardware services.
+  the hardware services. It is laid out as a jump to cold boot at `C000h`,
+  the table at `C003h`, one block of read-only data, one block of code and
+  the free space at the end. `dist/abi.inc` gives programs the table's
+  addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
   `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,854 bytes on the
@@ -100,7 +103,7 @@ Do not press the hex keypad while a CP/M program is running; see
 
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
-- [ROM services](docs/rom-services.md) (the 19 hardware services at `FF0Bh`)
+- [ROM services](docs/rom-services.md) (the table at `C003h` and the 19 hardware services)
 - [Console](docs/console.md)
 - [CP/M compatibility](docs/compatibility.md)
 - [Write policy and recovery](docs/recovery.md)

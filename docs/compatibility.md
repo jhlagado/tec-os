@@ -68,12 +68,12 @@ lines are not kept.
 `MOUNT B: NAME` (or an index, as `VOLS` lists them) puts another of the
 card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
 empty, and a volume is never on two drives. Both are programs on the starter
-card, using the mount service at `FF20h`. Mounts are for the session: a
+card, using the mount service in the table, `ABIVOL`. Mounts are for the session: a
 reset gives the card's own again. A nested CCP's `EXIT` gives the parent
 its own mounts back, remounting only the drives that changed.
 
-A resident can shell out the same way, through `FF1Ah` (an interactive
-nested CCP) or `FF1Dh` (one command line, run with no prompt), with HL =
+A resident can shell out the same way, through `ABIXCCP` (an interactive
+nested CCP) or `ABIXCMD` (one command line, run with no prompt), with HL =
 `0100h`. Nothing of the TPA is kept, so the caller is code the nested level
 leaves alone: a resident, or the CCP's own `CCP`. At `EXIT` TEC-OS gives it
 back its stack, drive, user and mounts, and returns the last program's BDOS
@@ -133,7 +133,7 @@ warm boot on the PICO9918 and 1,447 on the GLCD.
 
 | Program | Version | Result | Notes |
 | --- | --- | --- | --- |
-| Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file at 40 × 24 (TMS9918) and 21 × 8 (GLCD), sizing itself from `FF09h`; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`) |
+| Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs; sized wrongly on the GLCD | Edits, saves and reopens a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`). It sizes itself from ABI 2.7's word at `FF09h`; ABI 3.0 moved the table to `C003h`, so it finds no signature, takes 80 × 24, and on the GLCD's 21 × 8 fails until it reads `ABIVID` at `C008h` |
 | ATOM.COM | build that sizes its workspace from `0006h` | Runs | Assembles `HELLO.ASM` into `HELLO.COM` on TEC-OS, which then runs (`test/atom.test.mjs`); needs the BDOS at `78C4h` or higher |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
 | EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |

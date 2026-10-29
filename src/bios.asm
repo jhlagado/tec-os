@@ -9,24 +9,6 @@
 ; the card before success is reported, except on the one volume written
 ; behind, whose writes stay in the cache until it writes them.
 
-BIOSBAS:JP      COLD            ; 00 cold boot
-        JP      WBOOTR          ; 03 warm boot
-        JP      BCONSTC         ; 06
-        JP      BCONIN          ; 09
-        JP      BCONOUT         ; 0C
-        JP      BLIST           ; 0F
-        JP      BPUNCH          ; 12
-        JP      BREADER         ; 15
-        JP      BHOME           ; 18
-        JP      BSELDSK         ; 1B
-        JP      BSETTRK         ; 1E
-        JP      BSETSEC         ; 21
-        JP      BSETDMA         ; 24
-        JP      BREAD           ; 27
-        JP      BWRITE          ; 2A
-        JP      BLISTST         ; 2D
-        JP      BSECTRN         ; 30
-
 BHOME:  LD      BC,0
 BSETTRK:LD      (DSKTRK),BC
         RET

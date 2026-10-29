@@ -35,8 +35,6 @@ VRDROW: LD      HL,(VRDRV)
 VWRROW: LD      HL,(VWRRV)
         JP      (HL)
 
-TMSVEC: DW      TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR
-
 ; Whether the ST7920 GLCD answers on port 07h: Z when its busy flag clears
 ; within 256 polls. The GLCD console itself is a resident, GLCD.PRL.
 GLCCMD  EQU     $07

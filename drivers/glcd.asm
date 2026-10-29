@@ -1,14 +1,15 @@
 ; GLCD.PRL: the ST7920 128 x 64 GLCD console as a resident below (0006h),
 ; 21 columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. Its
-; INIT hands the ROM its video table through FF25h, and the ROM's terminal
+; INIT hands the ROM its video table through ABIGLCD, and the ROM's terminal
 ; then calls its six routines directly, on the caller's stack. It keeps its
-; screen text and counters here, reads the font in ROM through FF23h, and
-; moves rows to and from the ROM's LINEBUF, whose address FF25h returns.
+; screen text and counters here, reads the font in ROM through ABIFONT, and
+; moves rows to and from the ROM's LINEBUF, whose address ABIGLCD returns.
 ; Its REMOVE, at UNLOAD, gives the console back to serial.
+%INCLUDE "../src/abi.inc"
 
 GLCOLS  EQU     21
 GLROWS  EQU     8
-GLHOOK  EQU     $FF25           ; the video table: HL = six words, or 0
+GLHOOK  EQU     ABIGLCD         ; the video table: HL = six words, or 0
 
         ORG     $0100
 HDR:    DB      "TNM",1,1,0     ; a resident
@@ -19,7 +20,7 @@ HDR:    DB      "TNM",1,1,0     ; a resident
 ; The video vector, in the ROM's order: VPUT, VGET, VCLREOL, VREST, VRDROW,
 ; VWRROW.
 VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
-LBUF:   DW      0               ; LINEBUF, from FF25h
+LBUF:   DW      0               ; LINEBUF, from ABIGLCD
 
 ; INIT takes the console's table unless another GLCD.PRL has it; REMOVE
 ; gives the console back only if this one took it.
@@ -315,10 +316,10 @@ GLGL1:  LD      L,A
         AND     7
         ADD     A,L
         LD      L,A
-        LD      A,($FF23)       ; the ROM's font, through the FF00h table
+        LD      A,(ABIFONT)     ; the ROM's font, through the table
         ADD     A,L
         LD      L,A
-        LD      A,($FF24)
+        LD      A,(ABIFONT+1)
         ADC     A,H
         LD      H,A
         LD      A,(HL)

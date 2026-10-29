@@ -55,17 +55,14 @@ function pageZeroState() {
 /**
  * The ROM figures in docs/rom-services.md, from the debug80 build: each
  * "<!-- media: name -->...<!-- end -->" span is rewritten, so the figures
- * follow the ROM. Code goes below the table at FF00h, so the space there is
- * FF00h less the end of code.
+ * follow the ROM. The free space is one gap, from the end of the code to the
+ * end of the ROM.
  */
 function romServicesFigures(census) {
-  const symbols = JSON.parse(readFileSync(resolve(ROOT, "build/debug80/tecos.d8.json"), "utf8")).symbols;
-  const at = (name) => symbols.find((s) => s.name === name).address;
-  const below = at("ABITAB") - at("CODEEND");
   const n = (v) => v.toLocaleString("en-US");
   const spans = {
-    "rom-space": `It holds ${n(census.rom.used)} bytes (\`${census.profile}\`) and has ${n(census.rom.free)} free:\n${n(below)} below the table at \`FF00h\`, where code can go, and ${n(census.rom.free - below)} above it.`,
-    "below-ff00": n(below),
+    "rom-space": `It holds ${n(census.rom.used)} bytes (\`${census.profile}\`) and has ${n(census.rom.free)} free,\nin one gap after the code at the end of the ROM.`,
+    "rom-free": n(census.rom.free),
   };
   const path = resolve(ROOT, "docs/rom-services.md");
   let text = readFileSync(path, "utf8");
@@ -212,6 +209,7 @@ async function main() {
       console.log(`media: ${editPath} predates the screen configuration; Edit left off the card`);
     }
   }
+  copyFileSync(resolve(ROOT, "src/abi.inc"), resolve(DIST, "abi.inc"));
   const readme = Buffer.from(README.replace(/\n/g, "\r\n") + "\x1a");
   writeFileSync(resolve(FILES, "README.TXT"), readme);
   files.push({ name: "README.TXT", description: "what is on this disk", bytes: readme });

@@ -4,14 +4,15 @@
 ; 8 x 8 LEDs and, on a PICO9918, colour bars with a bouncing ball in
 ; Graphics I that takes a random colour at each bounce. The screen goes back
 ; to the console when it stops.
+%INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
-HWSVC   EQU     $FF0B           ; hardware services, ABI 1.1
+HWSVC   EQU     ABIHW           ; hardware services
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
 
         ORG     $0100
-        LD      HL,$FF00        ; TEC-OS's table: hardware services from 1.1
+        LD      HL,ABITAB       ; TEC-OS's table
         LD      DE,ABITAG
         LD      B,3
 CHKTAG: LD      A,(DE)
@@ -20,10 +21,10 @@ CHKTAG: LD      A,(DE)
         INC     HL
         INC     DE
         DJNZ    CHKTAG
-        LD      A,($FF03)       ; ABI 2.0 and later have them all
+        LD      A,(ABIMAJ)      ; ABI 2.0 and later have them all
         CP      2
         JR      NC,HASHW
-        LD      A,($FF04)
+        LD      A,(ABIMIN)
         OR      A
         JP      Z,NOHW
 HASHW:

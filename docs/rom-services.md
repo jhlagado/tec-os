@@ -1,38 +1,55 @@
 # ROM services
 
-Status: **Built**, 2026-10-26. The entry at `FF0Bh` (ABI 1.1, unchanged in 2.0) has 19
-services in `src/hwsvc.asm`, 766 bytes of ROM in all, and
+Status: **Built**, 2026-10-26. The hardware services' entry, `ABIHW` at
+`C00Ah`, has 19 services in `src/hwsvc.asm`, 766 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,725 bytes (`debug80`) and has 659 free:
-443 below the table at `FF00h`, where code can go, and 216 above it.<!-- end --> This
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,652 bytes (`debug80`) and has 732 free,
+in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
-## The table at `FF00h`
+## The ROM's layout
 
-Its layout is fixed; entries are only added, with the minor version raised.
-
-| Address | Contents |
+| Addresses | Contents |
 | --- | --- |
-| `FF00h` | `"TNA"` signature |
-| `FF03h` | ABI major version, 2 |
-| `FF04h` | ABI minor version, 7 |
-| `FF05h` | Native banks: 0 since ABI 2.0 |
-| `FF06h` | `JP` to a routine that refuses every call: status 1, carry set (the native services until ABI 2.0) |
-| `FF09h` | Address of the console size, columns then rows |
-| `FF0Bh` | `JP` to the hardware services |
-| `FF0Eh` | Address of the MAIN count, 1 or 2 (ABI 2.1) |
-| `FF10h` | Address of the EXPAND count, always 2 since TEC-OS needs EXPAND 1 (ABI 2.2) |
-| `FF12h` | `JP XMOVE`: B = destination, C = source, each 0 for the program's memory or 1 for EXPAND 1, which has no range, for the next `MOVE` (ABI 2.2) |
-| `FF15h` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied (ABI 2.2) |
-| `FF18h` | Address of EXPAND 1's low mark, always 80h: no part of EXPAND 1 is a program's (ABI 2.3) |
-| `FF1Ah` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = `0100h` in, function 108's code out; any other HL refused with carry set (ABI 2.4) |
-| `FF1Dh` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt (ABI 2.4) |
-| `FF20h` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed (ABI 2.5) |
-| `FF23h` | Address of the console font, 8 bytes a character from 20h, for the GLCD console (ABI 2.6) |
-| `FF25h` | `JP GLHOOK`: HL = a video table, six words, for the GLCD console, and `LINEBUF` back in HL; carry set and nothing changed if a table is kept already; HL = 0 puts the console back to serial (ABI 2.7) |
+| `C000h–C002h` | `JP COLD`: at reset the CPU runs it through the boot overlay at `0000h` |
+| `C003h` | The table, below: the one fixed address in the ROM |
+| after the table | One block of read-only data: messages, the font, the geometry and format tables, the CCP's and the BDOS's tables, and the BIOS jump table that cold boot copies to RAM |
+| after the data | One block of code |
+| to `FFFFh` | The free space, in one gap |
+
+Only `C003h` is fixed. The data and code move when an entry is added to the
+table or the code changes; programs reach the ROM only through the table.
+The build checks this order from the symbol table on every profile, and
+refuses any `.asm` file that names an address of the old table at `FF00h`.
+
+## The table at `C003h`
+
+ABI 3.0. Its layout is fixed; entries are only added, at the end, with the
+minor version raised. `src/abi.inc`, published in `dist/` as `abi.inc`,
+gives each entry's address under the name below, and the build checks it
+against the ROM. ABI 3.0 keeps ABI 2.7's entries in the same order, less
+the native banks (`FF05h`), the native services' entry (`FF06h`) and the
+EXPAND count (`FF10h`, always 2).
+
+| Address | Name | Contents |
+| --- | --- | --- |
+| `C003h` | `ABITAB` | `"TNA"` signature |
+| `C006h` | `ABIMAJ` | ABI major version, 3 |
+| `C007h` | `ABIMIN` | ABI minor version, 0 |
+| `C008h` | `ABIVID` | Address of the console size, columns then rows |
+| `C00Ah` | `ABIHW` | `JP` to the hardware services |
+| `C00Dh` | `ABIMAIN` | Address of the MAIN count, 1 or 2 |
+| `C00Fh` | `ABIXMOV` | `JP XMOVE`: B = destination, C = source, each 0 for the program's memory or 1 for EXPAND 1, which has no range, for the next `MOVE` |
+| `C012h` | `ABIMOVE` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied |
+| `C015h` | `ABIXMRK` | Address of EXPAND 1's low mark, always 80h: no part of EXPAND 1 is a program's |
+| `C017h` | `ABIXCCP` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = `0100h` in, function 108's code out; any other HL refused with carry set |
+| `C01Ah` | `ABIXCMD` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt |
+| `C01Dh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
+| `C020h` | `ABIFONT` | Address of the console font, 8 bytes a character from 20h, for the GLCD console |
+| `C022h` | `ABIGLCD` | `JP GLHOOK`: HL = a video table, six words, for the GLCD console, and `LINEBUF` back in HL; carry set and nothing changed if a table is kept already; HL = 0 puts the console back to serial |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. `XMOVE`'s 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; its 1
@@ -48,8 +65,8 @@ them.
 
 ## Calling the services
 
-A program checks for `"TNA"` at `FF00h` and an ABI version of 2.0 or later,
-or 1.1 or later (major at `FF03h`, minor at `FF04h`), then calls `FF0Bh` with the service number in C and arguments in A,
+A program checks for `"TNA"` at `ABITAB` and ABI major version 3 at
+`ABIMAJ`, then calls `ABIHW` with the service number in C and arguments in A,
 B, DE and HL. On return A holds the status, with Z set and carry clear on
 success; results come back as each service lists. IX, IY and the alternate
 registers are preserved. A CP/M program that finds no signature is on
@@ -80,7 +97,7 @@ The rules that make the services safe for CP/M programs:
 ## The GLCD console's table
 
 The GLCD console is a resident, `GLCD.PRL`, below `(0006h)`. Its INIT calls
-`FF25h` with HL pointing at six words, its routines in the terminal's
+`ABIGLCD` with HL pointing at six words, its routines in the terminal's
 order: put, get, clear to the end of the line, restore, read a row, write a
 row. `CONSW` points the terminal's vector at that table when it selects
 `UC1:`, and the terminal then calls the routines directly, on the caller's
@@ -88,10 +105,10 @@ stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 25
 bytes it has. A program that pushes anything before calling the BIOS
 directly sets up its own stack first. The routines run with the caller's
 interrupt state and share their drawing counters, so an interrupt handler
-must not print through the console. `FF25h` returns `LINEBUF`'s address in HL, where the row
+must not print through the console. `ABIGLCD` returns `LINEBUF`'s address in HL, where the row
 routines read and write a row, or carry set if a table is kept already, as
 when `GLCD.PRL` is loaded a second time; that copy then leaves the console
-alone. Its REMOVE, in the copy that took the console, calls `FF25h` with
+alone. Its REMOVE, in the copy that took the console, calls `ABIGLCD` with
 HL = 0, which drops the table and puts the console back to serial. The PRL loader takes
 kind 1 only; kind 2, the driver kind of ABI 2.6 and before, is refused.
 
@@ -181,8 +198,8 @@ that programs share as ATOM include files.
 | Video switch | 104 | 2 | Stays |
 | PICO9918 text console | 419 | 1, 2 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.PRL`, a resident, loaded at the CCP's first entry |
-| `FF25h` and loading the GLCD's resident | 128 | 2 | Stays |
-| Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD resident reads it through `FF23h` |
+| `ABIGLCD` and loading the GLCD's resident | 128 | 2 | Stays |
+| Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD resident reads it through `ABIFONT` |
 | 20 × 4 LCD | 146 | 2 | Stays |
 | SD driver | 795 | 1 | Stays |
 | Container mount and checks | 1,192 | 1 | Stays |
@@ -195,14 +212,15 @@ that programs share as ATOM include files.
 | BDOS | 3,736 | 2 | Stays |
 | `XMOVE` and `MOVE` | 228 | 3 | Stays |
 | Hardware services | 766 | 3, 4 | Stays |
-| ABI table at `FF00h` | 40 | 1 | Stays |
+| The table at `C003h` and the reset jump | 37 | 1 | Stays |
 
 Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
 and the regions as `docs/memory-map.md` gives them, the parts within the
-console and services regions by source file. The rows for the GLCD's
-resident, the CCP levels, the PRL loader, `XMOVE` and `MOVE` and the table
-are counted again after drivers and the image save went, and the block
-cache's at its build.
+console and services regions by source file. The memory map now gives the
+ROM as its five blocks instead. The rows for the GLCD's
+resident, the CCP levels, the PRL loader, `XMOVE` and `MOVE` are counted
+again after drivers and the image save went, the block cache's at its
+build, and the table's with the reset jump at the compact layout.
 
 Nothing in the ROM today belongs on the card. The native program services,
 which had no user, were removed.
@@ -258,7 +276,7 @@ that uses them.
 
 ## Next in the ROM
 
-For the <!-- media: below-ff00 -->443<!-- end --> bytes left below `FF00h`: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->732<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

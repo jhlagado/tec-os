@@ -1,5 +1,5 @@
 // Container format 1.1 and mounting at run time: a card of more than 8
-// volumes, cold boot's one-pass table check, the vector slots, the FF20h
+// volumes, cold boot's one-pass table check, the vector slots, the ABIVOL
 // service through MOUNT.COM and VOLS.COM, and EXIT giving a parent its own
 // mounts back. Emulator evidence.
 

@@ -43,9 +43,6 @@ CTRLN   EQU     14
 SPACE   EQU     32
 DELETE  EQU     $7F
 
-; CP/M places its public entry six bytes into the resident BDOS extent.
-        DS      6,0
-
 BENTRY:
         LD      (OLDSP),SP
         LD      SP,STKTOP
@@ -64,14 +61,19 @@ BENTRY:
         ADD     HL,DE
         LD      E,(HL)
         INC     HL
-        LD      D,(HL)
-        ; Table words are resident-relative offsets. Bit 15 requests FCB
-        ; drive binding; no flag is hidden in an absolute machine address.
-        BIT     7,D
-        RES     7,D
-        LD      HL,BDOSBAS
-        ADD     HL,DE
-        JR      Z,DISPATCH
+        LD      D,(HL)          ; DE = the routine
+        LD      HL,FCBMAP-1     ; its FCB bit: byte C/8, bit C mod 8
+        LD      A,C
+FCBBYTE:INC     HL
+        SUB     8
+        JR      NC,FCBBYTE
+        LD      B,A             ; (C mod 8) - 8
+        LD      A,(HL)
+FCBBIT: RLCA                    ; 8 - (C mod 8) turns: the bit in carry
+        INC     B
+        JR      NZ,FCBBIT
+        EX      DE,HL
+        JR      NC,DISPATCH
         PUSH    HL
         CALL    FCBSEL
         POP     HL
@@ -2520,90 +2522,3 @@ ERASE1:
         LD      C,BACKSP
         CALL    BIOCOT
         JP      COLBACK
-
-FNTAB:
-        DW      FNZERO-BDOSBAS,FNCIN-BDOSBAS,FNCOUT-BDOSBAS
-        DW      FNREAD-BDOSBAS,FNPUNCH-BDOSBAS,FNLIST-BDOSBAS,FNDIRECT-BDOSBAS
-        DW      FNGETIO-BDOSBAS,FNSETIO-BDOSBAS,FNPRINT-BDOSBAS
-        DW      FNLINE-BDOSBAS,FNSTAT-BDOSBAS,FNVERS-BDOSBAS
-        DW      FNRESET-BDOSBAS,FNSEL-BDOSBAS
-        DW      FNOPEN-BDOSBAS+$8000,FNCLSE-BDOSBAS+$8000,FNSRCHF-BDOSBAS+$8000
-        DW      FNSRCHN-BDOSBAS,FNDELETE-BDOSBAS+$8000
-        DW      FNREADSQ-BDOSBAS+$8000,FNWRITE-BDOSBAS+$8000
-        DW      FNMAKE-BDOSBAS+$8000,FNRENAME-BDOSBAS+$8000
-        DW      FNLOGIN-BDOSBAS,FNCURDSK-BDOSBAS,FNSETDMA-BDOSBAS
-        DW      FNGETALV-BDOSBAS,FNWRPROT-BDOSBAS,FNGETRO-BDOSBAS
-        DW      FNATTR-BDOSBAS+$8000,FNGETDPB-BDOSBAS,FNUSER-BDOSBAS
-        DW      FNRREAD-BDOSBAS+$8000,FNRWRITE-BDOSBAS+$8000,FNSIZE-BDOSBAS+$8000
-        DW      FNSETRR-BDOSBAS,FNRESETD-BDOSBAS,RETZERO-BDOSBAS
-        DW      RETZERO-BDOSBAS,FNWRZERO-BDOSBAS+$8000
-
-ERRHEAD: DB     CR,LF,"Bdos Err On ",0
-ERRSEL: DB      ": Select",0
-ERRBAD: DB      ": Bad Sector",0
-ERRRO:  DB      ": R/O",0
-ERRFILE: DB     ": File R/O",0
-
-; ROM ends here; the BDOS writable state follows in RAM.
-BDOSROM:
-        ORG     BDOSRAM
-OLDSP:  DS      2
-PARAM:  DS      2
-COLUMN: DS      1
-LISTEN: DS      1
-PENDING: DS      1
-PENDCHR: DS      1
-LINPTR: DS      2
-LINMAX: DS      1
-LINCNT: DS      1
-HFLAG:  DS      1               ; FFh: the CCP's prompt, with history
-HPOS:   DS      1               ; the history line shown: its terminator
-CURDRV: DS      1
-DEFDRV: DS      1
-DEFDPB: DS      2
-DEFALV: DS      2
-USERNO: DS      1
-WRFLAG: DS      1               ; set by the CCP for its reset at entry
-WARMV:  DS      2               ; drives to rebuild to their mark
-ROVEC:  DS      2
-CURDMA: DS      2
-DPHPTR: DS      2
-DPBPTR: DS      2
-DIRPTR: DS      2
-ALVPTR: DS      2
-XLTPTR: DS      2
-CURTRK: DS      2
-CURSEC: DS      2
-DIRLEFT: DS      2
-ENTPTR: DS      2
-ENTLEFT: DS      1
-ALLEFT: DS      1
-DIRCNT: DS      2
-DIRUSED: DS      2
-SRCHIDX: DS      2
-SRCHFCB: DS      2
-MATCHPTR: DS      2
-COPYPTR: DS      2
-OPENMOD: DS      1
-RETCODE: DS      1
-SEQREC: DS      1
-IOTRK:  DS      2
-IOSEC:  DS      2
-FSIZE0: DS      1
-FSIZE1: DS      1
-FSIZE2: DS      1
-CAND0:  DS      1
-CAND1:  DS      1
-CAND2:  DS      1
-TARGEX: DS      1
-TARGS2: DS      1
-WRTYPE: DS      1
-ZEROFIL: DS      1
-ZEROBN: DS      2
-DIRTRK: DS      2
-DIRSEC: DS      2
-STKBASE:
-        DS      BDOSSTN
-STKTOP:
-BDOSRME:
-        ORG     BDOSROM

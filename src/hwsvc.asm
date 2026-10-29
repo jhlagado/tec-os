@@ -1,4 +1,4 @@
-; Hardware services, ABI 1.1 (docs/rom-services.md). CALL FF0Bh with the
+; Hardware services, ABI 1.1 (docs/rom-services.md). CALL ABIHW with the
 ; service in C and arguments in A, B, DE and HL. Returns A = status with Z
 ; and carry clear on success; results as each service says. IX, IY and the
 ; alternate registers are preserved. Any program may call them: they run on
@@ -69,17 +69,11 @@ HWSVC:  LD      (HWARGA),A
         EX      (SP),HL         ; the service is the return address
         LD      A,(HWARGA)
         RET
-; FF06h, once the native services' entry: no such service.
-NONATSV:LD      A,HWEBAD
 HWERR:  OR      A
         SCF
         RET
 HWOK:   XOR     A
         RET
-
-HWTAB:  DW      HWSINFO,HWSDIG,HWSHEX,HWSLED,HWSLCD,HWSVID,HWSTONE,HWSJOY
-        DW      HWSKEYS,HWSSER,HWSBLK,HWSDLY,HWSVREG,HWSVFIL,HWSVWR,HWSVRD
-        DW      HWSPUT,HWSRND,HWSRTC
 
 ; Bit 3 of B reports a DS1302 clock: it answers with seconds below 60h.
 HWSINFO:CALL    RTCHAS
@@ -114,8 +108,6 @@ HWSHEX: AND     $0F
         ADD     HL,DE
         LD      B,(HL)
         JP      HWOK
-HWSEGT: DB      $EB,$28,$CD,$AD,$2E,$A7,$E7,$29 ; 0-7
-        DB      $EF,$AF,$6F,$E6,$C3,$EC,$C7,$47 ; 8-9, A-F
 
 ; One pass over the eight rows, each lit for about 0.4 ms; then all off.
 HWSLED: LD      C,1

@@ -64,6 +64,127 @@ BSTK:
 BIOSRME:
 CCPRAM  EQU     BIOSRME
 
+; ---- The CCP's state and stack (cpm/ccp.asm) ----------------------------------
+CMDFCB:
+        DS      36
+RENFCB:
+        DS      36
+CMDBUF:
+        DS      1
+CMDLEN:
+        DS      1
+CMDTXT:
+        DS      128
+BOOTDRV:
+        DS      1
+CMDSTRT:
+        DS      2
+ARGSTRT:
+        DS      2
+FCBBASE:
+        DS      2
+DIRCOL:
+        DS      1
+DIRNCOL:
+        DS      1
+DIRNUM:
+        DS      2
+PGLINE:
+        DS      1
+PGCOL:
+        DS      1
+PGROWS:
+        DS      1
+PGWID:
+        DS      1
+DIRANY:
+        DS      1
+DIRENTP:
+        DS      2
+SAVEPGS:
+        DS      1
+SAVEADR:
+        DS      2
+ERAANS:
+        DS      1
+ERAALL:
+        DS      1
+; This is both the oversize discriminator and ordinary CCP scratch storage.
+LOADBUF:
+        DS      128
+; A fixed sentinel separates reusable command scratch from the downward-growing
+; resident stack. The host proof checks that every byte survives the deepest
+; built-in and error-recovery paths.
+STKGUARD:
+        DS      16
+STKGUEND:
+CSTKBAS:
+        DS      CCPSTN
+CSTKTOP:
+CCPRME:
+
+; ---- The BDOS's state and stack (cpm/bdos.asm) --------------------------------
+BDOSRAM EQU     CCPRME
+OLDSP:  DS      2
+PARAM:  DS      2
+COLUMN: DS      1
+LISTEN: DS      1
+PENDING: DS      1
+PENDCHR: DS      1
+LINPTR: DS      2
+LINMAX: DS      1
+LINCNT: DS      1
+HFLAG:  DS      1               ; FFh: the CCP's prompt, with history
+HPOS:   DS      1               ; the history line shown: its terminator
+CURDRV: DS      1
+DEFDRV: DS      1
+DEFDPB: DS      2
+DEFALV: DS      2
+USERNO: DS      1
+WRFLAG: DS      1               ; set by the CCP for its reset at entry
+WARMV:  DS      2               ; drives to rebuild to their mark
+ROVEC:  DS      2
+CURDMA: DS      2
+DPHPTR: DS      2
+DPBPTR: DS      2
+DIRPTR: DS      2
+ALVPTR: DS      2
+XLTPTR: DS      2
+CURTRK: DS      2
+CURSEC: DS      2
+DIRLEFT: DS      2
+ENTPTR: DS      2
+ENTLEFT: DS      1
+ALLEFT: DS      1
+DIRCNT: DS      2
+DIRUSED: DS      2
+SRCHIDX: DS      2
+SRCHFCB: DS      2
+MATCHPTR: DS      2
+COPYPTR: DS      2
+OPENMOD: DS      1
+RETCODE: DS      1
+SEQREC: DS      1
+IOTRK:  DS      2
+IOSEC:  DS      2
+FSIZE0: DS      1
+FSIZE1: DS      1
+FSIZE2: DS      1
+CAND0:  DS      1
+CAND1:  DS      1
+CAND2:  DS      1
+TARGEX: DS      1
+TARGS2: DS      1
+WRTYPE: DS      1
+ZEROFIL: DS      1
+ZEROBN: DS      2
+DIRTRK: DS      2
+DIRSEC: DS      2
+STKBASE:
+        DS      BDOSSTN
+STKTOP:
+BDOSRME:
+
         ORG     RAMBIOS+BIOSLEN
 ; ---- SD card state ----------------------------------------------------------
 SDBYTE: DS      1               ; 1 when the card takes byte addresses
@@ -99,7 +220,7 @@ HHEAD:  DS      1               ; the offset the next line goes in at
 XMDST:  DS      1
 XMSRC:  DS      1
 MVREST: DS      2               ; MOVE: the bytes left for the byte loop
-XMARK:  DS      1               ; EXPAND 1's low mark (FF18h points here)
+XMARK:  DS      1               ; EXPAND 1's low mark (ABIXMRK points here)
 PZTOP:  DS      2               ; the current top, which warm boot puts at 0006h
 PRGCODE:DS      2               ; BDOS function 108's program return code
 PRLN:   DS      2               ; the PRL loader: code length
@@ -107,3 +228,4 @@ PRLDL:  DS      1               ; and relocation delta
 CCPLVL: DS      1               ; the CCP's level, 0 at the outermost
 CCPFLG: DS      1               ; 1 a one-command level to run, 2 run: exit
 HIRME:
+WSEND   EQU     HIRME           ; end of the classic resident workspace

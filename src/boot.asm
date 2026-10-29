@@ -1,26 +1,7 @@
-; Reset, interrupt vectors, cold boot and warm boot.
-;
-; At reset the latch is 00h, so the first 2 KiB of this image also appear at
-; 0000h. The CPU starts there, loads SP with fixed RAM, then jumps to the same
-; code at its C000h alias before removing the overlay. TEC-OS never writes
-; 0000h-07FFh while the overlay is on.
-
-        ORG     $C000
-RESET:  LD      SP,BOOTSTK
-        DI
-        JP      COLD
-
-        DS      RST7-($-$C000),$FF
-        ; RST 38h while the overlay is on. Interrupts stay disabled, so this
-        ; runs only if a program executes RST 38h; it returns at once.
-INT38:  EI
-        RETI
-
-ROMSIG: DB      "TEC-OS",0
-ROMVERS:DW      ROMVER
+; Cold boot and warm boot. The reset jump is in reset.asm.
 
 ; ---- Cold boot ----------------------------------------------------------------
-; Entered from RESET (stack in fixed RAM) or BIOS function 0.
+; Entered from RESET, at 0000h at reset, or BIOS function 0.
 COLD:   DI
         LD      SP,BOOTSTK
         LD      A,LATCLAS
@@ -36,7 +17,7 @@ COLD:   DI
         CALL    RAMCHK          ; does not return without RAM at 8000h-BFFFh
         LD      HL,WSBASE       ; clear the resident workspace
         LD      DE,WSBASE+1
-        LD      BC,(WSCLRN)
+        LD      BC,WSEND-WSBASE-1
         LD      (HL),0
         LDIR
         LD      SP,BSTK
@@ -225,7 +206,7 @@ RSTZERO:LD      (HL),0
 ; forget the deblocking buffer so a changed card is reread.
 CPMINIT:LD      HL,CCPRAM
         LD      DE,CCPRAM+1
-        LD      BC,(CPMCLRN)
+        LD      BC,BDOSRME-CCPRAM-1
         LD      (HL),0
         LDIR
         LD      HL,DEFDMA
@@ -233,7 +214,7 @@ CPMINIT:LD      HL,CCPRAM
         LD      A,127
         LD      (CMDBUF),A
         LD      HL,STKGUARD
-        LD      A,(GUARDN)
+        LD      A,STKGUEND-STKGUARD
         LD      B,A
 CPMIG:  LD      (HL),$A5
         INC     HL
@@ -272,7 +253,3 @@ RAMOUT: LD      A,(HL)
         INC     HL
         JR      RAMOUT
 RAMSTOP:JR      RAMSTOP
-
-RAMMSG: DB      13,10,"TEC-OS needs 64K RAM",13,10,0
-
-BANNER: DB      13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0

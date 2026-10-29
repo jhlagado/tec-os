@@ -13,9 +13,9 @@ LVBASE  EQU     $BE00
 LVREC   EQU     38
 LEVELS  EQU     6
 
-; From the CCP or a resident: an interactive nested CCP (FF1Ah), or one
+; From the CCP or a resident: an interactive nested CCP (ABIXCCP), or one
 ; command line at DE (a length byte, then the text) run by a nested CCP
-; that then exits by itself (FF1Dh). HL = 0100h, the end of an image that
+; that then exits by itself (ABIXCMD). HL = 0100h, the end of an image that
 ; is no longer saved; any other HL is refused. Each returns at EXIT with
 ; HL = BDOS function 108's code, or with carry set if refused.
 XCCP:   XOR     A

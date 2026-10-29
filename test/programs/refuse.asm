@@ -1,17 +1,18 @@
-; REFUSE: asks for a nested CCP through FF1Ah, then for one command line
-; through FF1Dh, each with HL = 0200h, as a program that wants its image
+; REFUSE: asks for a nested CCP through ABIXCCP, then for one command line
+; through ABIXCMD, each with HL = 0200h, as a program that wants its image
 ; kept would. Prints "REFUSED" if both return with carry set; "ACCEPTED"
 ; as soon as one does not.
+%INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
 
         ORG     $0100
         LD      HL,$0200
-        CALL    $FF1A
+        CALL    ABIXCCP
         JR      NC,YES
         LD      HL,$0200
         LD      DE,LINE
-        CALL    $FF1D
+        CALL    ABIXCMD
         JR      NC,YES
         LD      DE,NO
         LD      C,9

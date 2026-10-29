@@ -60,13 +60,13 @@ test("without MAIN 1, bit 3 changes nothing", () => {
 // regions and gives MAIN 1 a copy of page zero; a warm boot from MAIN 1 or
 // from EXPAND 1 comes back in MAIN 0 and EXPAND 0.
 const FILL = 0x76;
-const mainsAt = (m) => m.read(m.read(0xff0e) | (m.read(0xff0f) << 8));
+const mainsAt = (m) => m.read(m.read(m.sym("ABIMAIN")) | (m.read(m.sym("ABIMAIN") + 1) << 8));
 const defined = [0x00, 0x01, 0x02, 0x05, 0x06, 0x07, ...Array.from({ length: 0x33 }, (_, i) => 0x08 + i), 0x41, 0x44, 0x66, 0x67];
 
 test("cold boot counts the MAIN regions and leaves MAIN 1 as it found it, but for page zero", { skip: !ram96 }, () => {
   for (const mains of [1, 2]) {
     const m = boot(standardCard(), { ram96: true, mains, ramFill: FILL });
-    assert.ok(m.read(0xff03) === 2 && m.read(0xff04) >= 1, "ABI 2.1 or later");
+    assert.ok(m.read(m.sym("ABIMAJ")) === 3, "ABI 3");
     assert.equal(mainsAt(m), mains, `${mains} MAIN region(s) found`);
     if (mains === 2) {
       const p1 = m.main[1];

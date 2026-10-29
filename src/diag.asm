@@ -42,6 +42,3 @@ DGCOL:  LD      A,(HL)
         DEC     C
         JR      NZ,DGROW
         JR      DGLOOP
-
-DGERR:  DB      "No volume mounted, error ",0
-DGPROM: DB      "R retry, H header> ",0
