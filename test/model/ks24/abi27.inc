@@ -1,0 +1,17 @@
+; The table at c9e421b, ABI 2.7, under abi.inc's names: for TABLE (table.asm)
+; on the old ROM.
+
+ABITAB  EQU     $FF00
+ABIMAJ  EQU     $FF03
+ABIMIN  EQU     $FF04
+ABIVID  EQU     $FF09
+ABIHW   EQU     $FF0B
+ABIMAIN EQU     $FF0E
+ABIXMOV EQU     $FF12
+ABIMOVE EQU     $FF15
+ABIXMRK EQU     $FF18
+ABIXCCP EQU     $FF1A
+ABIXCMD EQU     $FF1D
+ABIVOL  EQU     $FF20
+ABIFONT EQU     $FF23
+ABIGLCD EQU     $FF25

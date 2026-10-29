@@ -1,0 +1,1016 @@
+{
+  "base": "c9e421b",
+  "profiles": [
+    "debug80",
+    "debug80t40",
+    "debug80g32",
+    "board"
+  ],
+  "draft": {
+    "options": {
+      "table": "front",
+      "dispatch": "words",
+      "lengths": "immediate"
+    },
+    "notes": [
+      "dispatch: absolute words; FCBMAP %00000000,%10000000,%11111011,%01000000,%00001110,%00000001",
+      "data runs: 18, 76 DB/DW lines"
+    ],
+    "adapted": {
+      "drivers/glcd.asm": 3,
+      "test/programs/demo.asm": 4,
+      "test/programs/mount.asm": 1,
+      "test/programs/vols.asm": 1,
+      "test/programs/shell.asm": 2,
+      "test/programs/refuse.asm": 2,
+      "test/programs/openrd.asm": 1,
+      "tools/lib/assemble.mjs": 3,
+      "tools/lib/prl.mjs": 2,
+      "test/hwsvc.test.mjs": 2,
+      "test/warmboot.test.mjs": 1,
+      "test/xmove.test.mjs": 4,
+      "test/system.test.mjs": 5,
+      "test/levels.test.mjs": 1,
+      "test/ram96.test.mjs": 2,
+      "test/cache.test.mjs": 2,
+      "test/glcd.test.mjs": 2,
+      "test/devices.test.mjs": 2,
+      "tools/media.mjs": 2
+    }
+  },
+  "removed": {
+    "parts": {
+      "padding": 49,
+      "int38": 3,
+      "resetSpDi": 4,
+      "tableEntries": 6,
+      "nonatsv": 2,
+      "romsigRomvers": 9,
+      "bdosSix": 6
+    },
+    "total": 79
+  },
+  "rom": {
+    "debug80": {
+      "oldFree": 659,
+      "newFree": 732,
+      "gained": 73,
+      "floor": 738,
+      "pass": false,
+      "short": 6,
+      "regions": {
+        "reset jump": {
+          "start": "C000h",
+          "bytes": 3
+        },
+        "table": {
+          "start": "C003h",
+          "bytes": 34
+        },
+        "data": {
+          "start": "C025h",
+          "bytes": 1645
+        },
+        "code": {
+          "start": "C692h",
+          "bytes": 13970
+        },
+        "free": {
+          "start": "FD24h",
+          "bytes": 732
+        }
+      }
+    },
+    "debug80t40": {
+      "oldFree": 659,
+      "newFree": 732,
+      "gained": 73,
+      "floor": 738,
+      "pass": false,
+      "short": 6,
+      "regions": {
+        "reset jump": {
+          "start": "C000h",
+          "bytes": 3
+        },
+        "table": {
+          "start": "C003h",
+          "bytes": 34
+        },
+        "data": {
+          "start": "C025h",
+          "bytes": 1645
+        },
+        "code": {
+          "start": "C692h",
+          "bytes": 13970
+        },
+        "free": {
+          "start": "FD24h",
+          "bytes": 732
+        }
+      }
+    },
+    "debug80g32": {
+      "oldFree": 635,
+      "newFree": 708,
+      "gained": 73,
+      "floor": 714,
+      "pass": false,
+      "short": 6,
+      "regions": {
+        "reset jump": {
+          "start": "C000h",
+          "bytes": 3
+        },
+        "table": {
+          "start": "C003h",
+          "bytes": 34
+        },
+        "data": {
+          "start": "C025h",
+          "bytes": 1645
+        },
+        "code": {
+          "start": "C692h",
+          "bytes": 13994
+        },
+        "free": {
+          "start": "FD3Ch",
+          "bytes": 708
+        }
+      }
+    },
+    "board": {
+      "oldFree": 659,
+      "newFree": 732,
+      "gained": 73,
+      "floor": 738,
+      "pass": false,
+      "short": 6,
+      "regions": {
+        "reset jump": {
+          "start": "C000h",
+          "bytes": 3
+        },
+        "table": {
+          "start": "C003h",
+          "bytes": 34
+        },
+        "data": {
+          "start": "C025h",
+          "bytes": 1645
+        },
+        "code": {
+          "start": "C692h",
+          "bytes": 13970
+        },
+        "free": {
+          "start": "FD24h",
+          "bytes": 732
+        }
+      }
+    }
+  },
+  "layout": {
+    "debug80": {
+      "reset": "C000h",
+      "table": "C003h-C024h",
+      "data": "C025h-C691h",
+      "code": "C692h-FD23h",
+      "free": "FD24h-FFFFh",
+      "inOrder": true,
+      "dataInCode": 0,
+      "codeBytesCovered": true,
+      "codeInData": 17,
+      "codeInDataIsBiosTable": true
+    },
+    "debug80t40": {
+      "reset": "C000h",
+      "table": "C003h-C024h",
+      "data": "C025h-C691h",
+      "code": "C692h-FD23h",
+      "free": "FD24h-FFFFh",
+      "inOrder": true,
+      "dataInCode": 0,
+      "codeBytesCovered": true,
+      "codeInData": 17,
+      "codeInDataIsBiosTable": true
+    },
+    "debug80g32": {
+      "reset": "C000h",
+      "table": "C003h-C024h",
+      "data": "C025h-C691h",
+      "code": "C692h-FD3Bh",
+      "free": "FD3Ch-FFFFh",
+      "inOrder": true,
+      "dataInCode": 0,
+      "codeBytesCovered": true,
+      "codeInData": 17,
+      "codeInDataIsBiosTable": true
+    },
+    "board": {
+      "reset": "C000h",
+      "table": "C003h-C024h",
+      "data": "C025h-C691h",
+      "code": "C692h-FD23h",
+      "free": "FD24h-FFFFh",
+      "inOrder": true,
+      "dataInCode": 0,
+      "codeBytesCovered": true,
+      "codeInData": 17,
+      "codeInDataIsBiosTable": true
+    },
+    "dataBySource": {
+      "boot.asm": 51,
+      "bios.asm": 51,
+      "console.asm": 37,
+      "video.asm": 12,
+      "tms.asm": 56,
+      "lcd.asm": 27,
+      "vol.asm": 13,
+      "diag.asm": 46,
+      "cpm/ccp.asm": 307,
+      "cpm/bdos.asm": 142,
+      "hwsvc.asm": 54,
+      "glcd.asm": 18,
+      "cache.asm": 13,
+      "gen/font.asm": 768,
+      "gen/geom.asm": 50
+    },
+    "dataBlockBytes": 1645,
+    "baseDataSegmentBytes": 1618,
+    "ram": {
+      "compared": 367,
+      "differ": [],
+      "gone": []
+    },
+    "oldAddressesInAsm": []
+  },
+  "choices": {
+    "table": {
+      "front": {
+        "free": 732,
+        "at": "C003h",
+        "entryAdded": "the data and the code move up by its bytes; every table address stays"
+      },
+      "top": {
+        "options": {
+          "table": "top"
+        },
+        "free": 732,
+        "codeEnd": "FD02h",
+        "table": "FFDDh"
+      },
+      "note": "ATOM emits no byte at FFFFh, so the top table is at FFDDh-FFFEh; an entry added moves its start, and every address, down, and the free gap sits between the code and the table",
+      "picked": "front"
+    },
+    "dispatch": {
+      "words": {
+        "free": 732,
+        "costBytes": 14,
+        "map": "dispatch: absolute words; FCBMAP %00000000,%10000000,%11111011,%01000000,%00001110,%00000001"
+      },
+      "offsetsInData": {
+        "options": {
+          "dispatch": "offsets"
+        },
+        "error": "{\"logicalIdentity\":\"data3.asm\",\"ordinal\":10,\"offset\":1768,\"line\":79,\"column\":9} data3.asm:79:9: a forward reference here must be one symbol plus or minus a small number"
+      },
+      "offsetsInCode": {
+        "options": {
+          "dispatch": "offsets-in-code"
+        },
+        "free": 746,
+        "codeEnd": "FD16h",
+        "table": "C003h",
+        "note": "the table as at BASE, left in the BDOS's code: data inside the code block, so the layout gate fails"
+      },
+      "picked": "words"
+    },
+    "lengths": {
+      "immediate": {
+        "free": 732
+      },
+      "data": {
+        "options": {
+          "lengths": "data"
+        },
+        "free": 724,
+        "codeEnd": "FD2Ch",
+        "table": "C003h"
+      },
+      "savedBytes": 8,
+      "picked": "immediate"
+    },
+    "order": {
+      "jpWithinJrBase": 86,
+      "jpWithinJrDraft": 83,
+      "note": "ATOM never turns a JP into a JR, so no order saves a byte by itself; each JP in reach is a byte for KS28 to take",
+      "picked": "the source order of BASE in both blocks"
+    }
+  },
+  "reconcile": {
+    "baseUsed": 15725,
+    "removed": 79,
+    "dispatchFlag": 14,
+    "lengthsAsOperands": -8,
+    "expectedUsed": 15652,
+    "draftUsed": 15652,
+    "otherMovesCost": 0
+  },
+  "reset": {
+    "debug80": {
+      "base": {
+        "instructionsBelow0800": [
+          "0000h 31h",
+          "0003h F3h",
+          "0004h C3h"
+        ],
+        "bytesFetched": "0000h-0006h",
+        "onlyFirstThree": false,
+        "nextPc": "C044h",
+        "cold": "C044h",
+        "nextIsCold": true,
+        "outSyslatAt": "C04Ah",
+        "prompt": true
+      },
+      "draft": {
+        "instructionsBelow0800": [
+          "0000h C3h"
+        ],
+        "bytesFetched": "0000h-0002h",
+        "onlyFirstThree": true,
+        "nextPc": "C692h",
+        "cold": "C692h",
+        "nextIsCold": true,
+        "outSyslatAt": "C698h",
+        "prompt": true
+      },
+      "pass": true
+    },
+    "debug80t40": {
+      "base": {
+        "instructionsBelow0800": [
+          "0000h 31h",
+          "0003h F3h",
+          "0004h C3h"
+        ],
+        "bytesFetched": "0000h-0006h",
+        "onlyFirstThree": false,
+        "nextPc": "C044h",
+        "cold": "C044h",
+        "nextIsCold": true,
+        "outSyslatAt": "C04Ah",
+        "prompt": true
+      },
+      "draft": {
+        "instructionsBelow0800": [
+          "0000h C3h"
+        ],
+        "bytesFetched": "0000h-0002h",
+        "onlyFirstThree": true,
+        "nextPc": "C692h",
+        "cold": "C692h",
+        "nextIsCold": true,
+        "outSyslatAt": "C698h",
+        "prompt": true
+      },
+      "pass": true
+    },
+    "debug80g32": {
+      "base": {
+        "instructionsBelow0800": [
+          "0000h 31h",
+          "0003h F3h",
+          "0004h C3h"
+        ],
+        "bytesFetched": "0000h-0006h",
+        "onlyFirstThree": false,
+        "nextPc": "C044h",
+        "cold": "C044h",
+        "nextIsCold": true,
+        "outSyslatAt": "C04Ah",
+        "prompt": true
+      },
+      "draft": {
+        "instructionsBelow0800": [
+          "0000h C3h"
+        ],
+        "bytesFetched": "0000h-0002h",
+        "onlyFirstThree": true,
+        "nextPc": "C692h",
+        "cold": "C692h",
+        "nextIsCold": true,
+        "outSyslatAt": "C698h",
+        "prompt": true
+      },
+      "pass": true
+    },
+    "board": {
+      "base": {
+        "instructionsBelow0800": [
+          "0000h 31h",
+          "0003h F3h",
+          "0004h C3h"
+        ],
+        "bytesFetched": "0000h-0006h",
+        "onlyFirstThree": false,
+        "nextPc": "C044h",
+        "cold": "C044h",
+        "nextIsCold": true,
+        "outSyslatAt": "C04Ah",
+        "prompt": true
+      },
+      "draft": {
+        "instructionsBelow0800": [
+          "0000h C3h"
+        ],
+        "bytesFetched": "0000h-0002h",
+        "onlyFirstThree": true,
+        "nextPc": "C692h",
+        "cold": "C692h",
+        "nextIsCold": true,
+        "outSyslatAt": "C698h",
+        "prompt": true
+      },
+      "pass": true
+    }
+  },
+  "tpa": {
+    "debug80": {
+      "base": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "draft": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "pass": true
+    },
+    "debug80t40": {
+      "base": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "draft": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "pass": true
+    },
+    "debug80g32": {
+      "base": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "draft": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "pass": true
+    },
+    "board": {
+      "base": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "draft": {
+        "bdosVector": "B806h",
+        "bytes": 46854
+      },
+      "pass": true
+    }
+  },
+  "table": {
+    "debug80": {
+      "base": {
+        "version": "2.7",
+        "text": "\n\nNO FILE\n\nA>EXIT\n"
+      },
+      "draft": {
+        "signature": "TNA",
+        "version": "3.0",
+        "console": "80 x 24",
+        "hwInfo": {
+          "a": 0,
+          "b": 11,
+          "de": 1,
+          "hl": 6224,
+          "f": 68
+        },
+        "hwHexB": {
+          "a": 0,
+          "b": 230,
+          "f": 68
+        },
+        "mains": 1,
+        "xmark": 128,
+        "fontA": [
+          112,
+          136,
+          136,
+          136,
+          248,
+          136,
+          136,
+          0
+        ],
+        "xmove": {
+          "a": 0,
+          "f": 4
+        },
+        "move": {
+          "a": 0,
+          "f": 68,
+          "bytes": [
+            90,
+            91,
+            88,
+            89,
+            94,
+            95,
+            92,
+            93,
+            82,
+            83,
+            80,
+            81,
+            86,
+            87,
+            84,
+            85
+          ]
+        },
+        "describe0": {
+          "a": 0,
+          "f": 0,
+          "descriptor": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            83,
+            89,
+            83,
+            84,
+            69,
+            77,
+            32,
+            32,
+            32,
+            32,
+            32,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "glcdHook0": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xcmd": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xccp": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        }
+      },
+      "draftText": "\n\nNO FILE\n\nA>EXIT\n",
+      "differ": [
+        "version"
+      ],
+      "pass": true
+    },
+    "debug80t40": {
+      "base": {
+        "version": "2.7",
+        "text": "\n\nNO FILE\n\nA>EXIT\n"
+      },
+      "draft": {
+        "signature": "TNA",
+        "version": "3.0",
+        "console": "40 x 24",
+        "hwInfo": {
+          "a": 0,
+          "b": 11,
+          "de": 1,
+          "hl": 6184,
+          "f": 68
+        },
+        "hwHexB": {
+          "a": 0,
+          "b": 230,
+          "f": 68
+        },
+        "mains": 1,
+        "xmark": 128,
+        "fontA": [
+          112,
+          136,
+          136,
+          136,
+          248,
+          136,
+          136,
+          0
+        ],
+        "xmove": {
+          "a": 0,
+          "f": 4
+        },
+        "move": {
+          "a": 0,
+          "f": 68,
+          "bytes": [
+            90,
+            91,
+            88,
+            89,
+            94,
+            95,
+            92,
+            93,
+            82,
+            83,
+            80,
+            81,
+            86,
+            87,
+            84,
+            85
+          ]
+        },
+        "describe0": {
+          "a": 0,
+          "f": 0,
+          "descriptor": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            83,
+            89,
+            83,
+            84,
+            69,
+            77,
+            32,
+            32,
+            32,
+            32,
+            32,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "glcdHook0": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xcmd": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xccp": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        }
+      },
+      "draftText": "\n\nNO FILE\n\nA>EXIT\n",
+      "differ": [
+        "version"
+      ],
+      "pass": true
+    },
+    "debug80g32": {
+      "base": {
+        "version": "2.7",
+        "text": "\n\nNO FILE\n\nA>EXIT\n"
+      },
+      "draft": {
+        "signature": "TNA",
+        "version": "3.0",
+        "console": "32 x 24",
+        "hwInfo": {
+          "a": 0,
+          "b": 11,
+          "de": 1,
+          "hl": 6176,
+          "f": 68
+        },
+        "hwHexB": {
+          "a": 0,
+          "b": 230,
+          "f": 68
+        },
+        "mains": 1,
+        "xmark": 128,
+        "fontA": [
+          112,
+          136,
+          136,
+          136,
+          248,
+          136,
+          136,
+          0
+        ],
+        "xmove": {
+          "a": 0,
+          "f": 4
+        },
+        "move": {
+          "a": 0,
+          "f": 68,
+          "bytes": [
+            90,
+            91,
+            88,
+            89,
+            94,
+            95,
+            92,
+            93,
+            82,
+            83,
+            80,
+            81,
+            86,
+            87,
+            84,
+            85
+          ]
+        },
+        "describe0": {
+          "a": 0,
+          "f": 0,
+          "descriptor": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            83,
+            89,
+            83,
+            84,
+            69,
+            77,
+            32,
+            32,
+            32,
+            32,
+            32,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "glcdHook0": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xcmd": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xccp": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        }
+      },
+      "draftText": "\n\nNO FILE\n\nA>EXIT\n",
+      "differ": [
+        "version"
+      ],
+      "pass": true
+    },
+    "board": {
+      "base": {
+        "version": "2.7",
+        "text": "\n\nNO FILE\n\nA>EXIT\n"
+      },
+      "draft": {
+        "signature": "TNA",
+        "version": "3.0",
+        "console": "80 x 24",
+        "hwInfo": {
+          "a": 0,
+          "b": 11,
+          "de": 1,
+          "hl": 6224,
+          "f": 68
+        },
+        "hwHexB": {
+          "a": 0,
+          "b": 230,
+          "f": 68
+        },
+        "mains": 1,
+        "xmark": 128,
+        "fontA": [
+          112,
+          136,
+          136,
+          136,
+          248,
+          136,
+          136,
+          0
+        ],
+        "xmove": {
+          "a": 0,
+          "f": 4
+        },
+        "move": {
+          "a": 0,
+          "f": 68,
+          "bytes": [
+            90,
+            91,
+            88,
+            89,
+            94,
+            95,
+            92,
+            93,
+            82,
+            83,
+            80,
+            81,
+            86,
+            87,
+            84,
+            85
+          ]
+        },
+        "describe0": {
+          "a": 0,
+          "f": 0,
+          "descriptor": [
+            1,
+            0,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            0,
+            8,
+            0,
+            0,
+            2,
+            0,
+            0,
+            0,
+            83,
+            89,
+            83,
+            84,
+            69,
+            77,
+            32,
+            32,
+            32,
+            32,
+            32,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "glcdHook0": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xcmd": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        },
+        "xccp": {
+          "a": 0,
+          "f": 0,
+          "hl": 0
+        }
+      },
+      "draftText": "\n\nNO FILE\n\nA>EXIT\n",
+      "differ": [
+        "version"
+      ],
+      "pass": true
+    }
+  },
+  "suite": {
+    "runs": [
+      {
+        "tests": 177,
+        "pass": 176,
+        "fail": 1,
+        "skipped": 0,
+        "failed": [
+          "Edit does the same on the GLCD"
+        ],
+        "seconds": 241
+      },
+      {
+        "tests": 177,
+        "pass": 176,
+        "fail": 1,
+        "skipped": 0,
+        "failed": [
+          "Edit does the same on the GLCD"
+        ],
+        "seconds": 241
+      }
+    ],
+    "base": {
+      "tests": 177,
+      "pass": 177,
+      "fail": 0,
+      "skipped": 0,
+      "failed": [],
+      "seconds": 212
+    },
+    "stacks": {
+      "bdos": {
+        "base": 34,
+        "draft": 34,
+        "reserved": 54,
+        "same": true
+      },
+      "ccp": {
+        "base": 20,
+        "draft": 20,
+        "reserved": 27,
+        "same": true
+      },
+      "bios": {
+        "base": 16,
+        "draft": 16,
+        "reserved": 38,
+        "same": true
+      }
+    }
+  }
+}
