@@ -1,8 +1,10 @@
 ; The PRL loader. The CCP has read the whole file to 0100h: a 256-byte header
 ; page (the code length n at 0101h, the extra data memory m at 0104h), then
-; n bytes of code for origin 0000h at 0200h, then the bitmap, one bit a code
-; byte, most significant first, marking the high bytes of addresses. The
-; code is relocated in place for its destination page and moved there.
+; n bytes of code for origin 0100h at 0200h, then the bitmap, one bit a code
+; byte, most significant first, marking the high bytes of addresses. This is
+; Digital Research's PRL. A program runs where its code was made for; a
+; resident's marked bytes gain its page less 1, in place, and it is moved
+; there.
 ;
 ; A module header at the start of the code ("TNM", a version, the kind)
 ; makes it a resident (kind 1); any other kind is refused, and any other PRL
@@ -39,11 +41,9 @@ PRLGO:  LD      HL,(PRLCODE)    ; "TNM"?
         SCF                     ; an unknown kind
         RET
 
-; A program: relocated for page 1 and moved down to 0100h. Its extra data
-; memory is its own to check against (0006h), as a .COM's is.
-PRLPROG:LD      A,1
-        CALL    PRLREL
-        LD      HL,PRLCODE
+; A program: moved down to 0100h, its origin, so nothing is relocated. Its
+; extra data memory is its own to check against (0006h), as a .COM's is.
+PRLPROG:LD      HL,PRLCODE
         LD      DE,PRLHDR
         LD      BC,(PRLN)
         LD      A,B
@@ -64,8 +64,10 @@ PRLRES: LD      A,(PZBDOS+2)
         CP      2
         RET     C
         LD      A,C
+        DEC     A               ; made for page 1
         CALL    PRLREL
-        LD      A,(PRLPG)
+        LD      A,(PRLDL)
+        INC     A               ; the page again
         LD      D,A
         LD      E,0
         LD      HL,PRLCODE
@@ -90,8 +92,8 @@ PRLDONE:OR      $FF             ; NZ, carry clear: installed
         RET
 PRLJP:  JP      (HL)
 
-; Relocate the n bytes at 0200h for page A, by the bitmap after them.
-PRLREL: LD      (PRLPG),A
+; Add A to the n bytes at 0200h that the bitmap after them marks.
+PRLREL: LD      (PRLDL),A
         LD      DE,PRLCODE
         LD      HL,(PRLN)
         LD      B,H
@@ -108,7 +110,7 @@ PRLRB:  LD      A,B
         LD      E,8
 PRLRBT: SLA     D
         JR      NC,PRLRS
-        LD      A,(PRLPG)
+        LD      A,(PRLDL)
         ADD     A,(HL)
         LD      (HL),A
 PRLRS:  INC     HL

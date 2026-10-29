@@ -103,7 +103,7 @@ XMARK:  DS      1               ; EXPAND 1's low mark (FF18h points here)
 PZTOP:  DS      2               ; the current top, which warm boot puts at 0006h
 PRGCODE:DS      2               ; BDOS function 108's program return code
 PRLN:   DS      2               ; the PRL loader: code length
-PRLPG:  DS      1               ; and destination page
+PRLDL:  DS      1               ; and relocation delta
 CCPLVL: DS      1               ; the CCP's level, 0 at the outermost
 CCPFLG: DS      1               ; 1 a one-command level to run, 2 run: exit
 HIRME:

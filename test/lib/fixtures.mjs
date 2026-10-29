@@ -42,7 +42,7 @@ export async function programAt(name, origin) {
  * NAME as a PRL, made as Digital Research made them: assembled at 0000h and
  * 0100h, with a bitmap bit for each byte that differs (each must differ by
  * exactly 1). A 256-byte header gives the code length; then the code for
- * 0000h and the bitmap.
+ * 0100h and the bitmap.
  */
 export async function prl(name) {
   const at0 = await programAt(name, 0);
@@ -56,7 +56,7 @@ export async function prl(name) {
   }
   const file = new Uint8Array(256 + n + bitmap.length);
   file.set([0, n & 0xff, n >> 8]);
-  file.set(at0, 256);
+  file.set(at1, 256);
   file.set(bitmap, 256 + n);
   return file;
 }

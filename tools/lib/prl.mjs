@@ -1,7 +1,7 @@
 // PRL files, made as Digital Research made them: the source assembled at
 // origin 0000h and at 0100h, with a bitmap bit for each byte that differs
 // (each must differ by exactly 1, the high byte of an address). A 256-byte
-// header gives the code length; then the code for 0000h and the bitmap.
+// header gives the code length; then the code for 0100h and the bitmap.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -22,7 +22,7 @@ export async function assembleAt(source, origin, work) {
   return (await assembleProgram(copy, { base: origin })).bytes;
 }
 
-/** The PRL file for SOURCE, its 0000h assembly made in WORK. */
+/** The PRL file for SOURCE, its 0000h assembly, for the bitmap, made in WORK. */
 export async function makePrl(source, work) {
   const at0 = await assembleAt(source, 0, work);
   const at1 = await assembleAt(source, 0x100, work);
@@ -36,7 +36,7 @@ export async function makePrl(source, work) {
   }
   const file = new Uint8Array(256 + n + bitmap.length);
   file.set([0, n & 0xff, n >> 8]);
-  file.set(at0, 256);
+  file.set(at1, 256);
   file.set(bitmap, 256 + n);
   return file;
 }

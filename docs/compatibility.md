@@ -83,17 +83,20 @@ nested level: the caller keeps for itself whatever it needs from the
 default FCBs and the command tail.
 
 A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
-a relocatable file in Digital Research's PRL format. A PRL that begins with
+a relocatable file in Digital Research's PRL format: a 256-byte header, the
+code made for `0100h`, then a bitmap marking the high bytes of its
+addresses, as LINK-80's `[OP]` writes it. A PRL that begins with
 TEC-OS's module header (`"TNM"`, a version and a kind) is installed rather
 than run. Kind 1 is the only kind; any other is refused.
 
 - **A resident** goes in whole pages just below the BDOS entry, and the
   word at `0006h` moves down to the jump at its offset 6, which leads on to
   the old entry; warm boot keeps it there. Programs that size themselves
-  from `0006h` never reach it. Residents are removed last in, first out,
+  from `0006h` never reach it. Its marked bytes gain its page less 1. Residents are removed last in, first out,
   and a reset clears them.
 
-Any other PRL is a program, loaded at `0100h` as its `.COM` would be.
+Any other PRL is a program, loaded at `0100h` as its `.COM` would be,
+with nothing relocated.
 
 ## Base page
 

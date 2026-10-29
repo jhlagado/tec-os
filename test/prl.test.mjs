@@ -167,3 +167,80 @@ test("BDOS function 108 gets and sets the program return code, kept across a war
   assert.equal(get(), 0x1234, "after a warm boot, for the parent");
   assert.deepEqual(m.violations, []);
 });
+
+/** A PRL file from CODE, made for 0100h, with the code offsets in MARKS. */
+function handPrl(code, marks) {
+  const n = code.length;
+  const bitmap = new Uint8Array(Math.ceil(n / 8));
+  for (const i of marks) bitmap[i >> 3] |= 0x80 >> (i & 7);
+  const file = new Uint8Array(256 + n + bitmap.length);
+  file.set([0, n & 0xff, n >> 8]);
+  file.set(code, 256);
+  file.set(bitmap, 256 + n);
+  return file;
+}
+
+// Made by hand in Digital Research's convention: code for 0100h, each marked
+// byte the high byte of an address in it. Neither length is a multiple of 8.
+const DRPROG = handPrl(
+  [
+    0x11, 0x09, 0x01, // LD DE,MSG
+    0x0e, 0x09, // LD C,9
+    0xcd, 0x05, 0x00, // CALL 0005h, not marked
+    0xc9, // RET
+    0x44, 0x52, 0x21, 0x24, // MSG: "DR!$"
+  ],
+  [2],
+);
+const DRRES = handPrl(
+  [
+    0x54, 0x4e, 0x4d, 0x01, 0x01, 0x00, // "TNM", version 1, kind 1
+    0xc3, 0x00, 0x00, // 6: JP to the old top
+    0x15, 0x01, // 9: INIT, 0115h
+    0x1d, 0x01, // 11: REMOVE, 011Dh
+    ...Array.from("DRRES   ", (c) => c.charCodeAt(0)),
+    0x21, 0x1e, 0x01, // 21: INIT: LD HL,FLAG
+    0x34, // INC (HL)
+    0xc3, 0x1c, 0x01, // JP DONE
+    0xc9, // 28: DONE: RET
+    0xc9, // 29: REMOVE: RET
+    0x00, // 30: FLAG
+  ],
+  [10, 12, 23, 27],
+);
+
+test("a PRL made by hand for 0100h runs as a program, nothing relocated", async () => {
+  assert.notEqual(DRPROG[1] % 8, 0);
+  const m = await machine({ "DRPROG.PRL": DRPROG });
+  assert.match(m.command("DRPROG"), /DR!\r\n/);
+  assert.deepEqual(bytes(m, 0x100, 13), Array.from(DRPROG.slice(256, 256 + 13)), "at 0100h as in the file");
+  assert.deepEqual(m.violations, []);
+});
+
+test("a PRL made by hand for 0100h installs as a resident at two BDOS tops, its marked bytes gaining page less 1", async () => {
+  const n = 31;
+  assert.equal(DRRES[1], n);
+  assert.notEqual(n % 8, 0);
+  const m = await machine({ "DRRES.PRL": DRRES });
+  const stub = word(m, 6);
+  let top = stub;
+  for (const p of [(stub >> 8) - 1, (stub >> 8) - 2]) {
+    m.command("DRRES");
+    const base = p << 8;
+    assert.equal(word(m, 6), base + 6, `(0006h) is the resident at ${p.toString(16)}00h + 6`);
+    const want = Array.from(DRRES.slice(256, 256 + n));
+    for (const i of [10, 12, 23, 27]) want[i] = (want[i] + p - 1) & 0xff;
+    want[7] = top & 0xff;
+    want[8] = top >> 8;
+    want[30] = 1; // FLAG, which INIT counted, at its relocated address
+    assert.deepEqual(bytes(m, base, n), want, `the resident at page ${p.toString(16)}h`);
+    assert.deepEqual([word(m, base + 9), word(m, base + 11)], [base + 0x15, base + 0x1d], "INIT and REMOVE relocated");
+    top = base + 6;
+  }
+  const lo = ((stub >> 8) - 2) << 8;
+  assert.equal(removeAt(m, lo).carry, 0, "its REMOVE, at its relocated address, returns");
+  assert.equal(word(m, 6), lo + 0x106);
+  back(m);
+  assert.equal(word(m, 6), lo + 0x106, "warm boot keeps the one left");
+  assert.deepEqual(m.violations, []);
+});
