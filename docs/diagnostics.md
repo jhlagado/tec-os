@@ -193,7 +193,7 @@ consistent RAM. Debug80 gives `0122446688AACCEE`, nine banks plus the base:
 its model decodes latch bits 3–6 as a bank field for the window. The documented board, with
 one 32 KiB chip in U9 and bits 3–6 unconnected, should give `0000000000000000`
 and one bank plus the base. The board's line settles how the field is
-decoded and the value of `NBANKS` for the board profile.
+decoded.
 
 T13 runs two pattern passes over each bank T12 found.
 

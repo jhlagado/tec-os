@@ -223,7 +223,7 @@ that programs share as ATOM include files.
 | PICO9918 text console | — | 1, 2 | Moved to `PICO.DRV`, `PICO40.DRV` and `PICO32.DRV`; the probe and raw services stay |
 | PICO9918 probe and raw addressing | 59 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.DRV`, a driver, loaded by `STARTUP.CMD` |
-| `ABIGLCD` and loading the display drivers | 128 | 2 | Stays |
+| `ABIGLCD` and loading the display drivers | 140 | 2 | Stays |
 | Font, 96 characters | 768 | 1 | Stays: both display drivers read it through `ABIFONT`, and each would otherwise take the TPA below its floor |
 | 20 × 4 LCD | 146 | 2 | Stays |
 | SD driver | 795 | 1 | Stays |

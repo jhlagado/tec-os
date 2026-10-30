@@ -19,7 +19,7 @@ loader ignores what follows its relocation data.
 | Offset | Bytes | In the file | In memory |
 | --- | --- | --- | --- |
 | 0 | 1 | Magic, `44h` | The registry's head before it, 2 bytes |
-| 1 | 1 | Format version, 1 | |
+| 1 | 1 | Format version, 2 | |
 | 2 | 1 | Number of dependencies | The owner before it, a page |
 | 3 | 1 | Flags: bit 0 removable | The same; 0 if a hook kept the pages |
 | 4 | 2 | `REMOVE`, from the header's start | The same |
@@ -34,6 +34,10 @@ loader ignores what follows its relocation data.
 The header is 25 bytes and goes into memory with the image, the loader writing
 over the fields a load has finished with, so the file carries no padding. The
 `JP` lands at the page's `xx06h`, where `(0006h)` must point.
+
+Format version 2 has version 1's layout. It rose because `ABIGLCD` gained a mode in
+A: a version 1 `GLCD.DRV` calls it with A = 0 and would overwrite the workspace, so
+the loader refuses that file.
 
 A dependency is 9 bytes: its least version, then a service's 8-byte name.
 
