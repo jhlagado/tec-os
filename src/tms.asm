@@ -186,7 +186,7 @@ TMSPUT: PUSH    AF
 
 ; A = the character at row B, column C. Destroys DE, HL.
 TMSGET: CALL    TMSCELL
-        JP      TMSPEEK
+        JR      TMSPEEK
 
 ; Clear row B from column C to the end of the line.
 TMSCLR: LD      A,C

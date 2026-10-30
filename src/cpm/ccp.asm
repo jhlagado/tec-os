@@ -86,7 +86,7 @@ MLREAD: CALL    SAVEDU
 
 MLGOT:  LD      A,(CMDLEN)
         OR      A
-        JP      Z,STARTED
+        JR      Z,STARTED
         LD      B,A
         LD      HL,CMDTXT
 
@@ -109,7 +109,7 @@ UPNEXT:
         CALL    SKIPSP
         LD      A,(HL)
         OR      A
-        JP      Z,STARTED
+        JR      Z,STARTED
         CP      'A'
         JR      C,NOTDRIVE
         CP      'P'+1
@@ -199,7 +199,7 @@ NOTDRIVE:
         JP      Z,CMDUNL
         LD      DE,CMDFCB
         CALL    UNAMBIG
-        JP      C,BADCMD
+        JR      C,BADCMD
         LD      A,'C'
         LD      (CMDFCB+9),A
         LD      A,'O'
@@ -1343,7 +1343,7 @@ FCBDOT:
         EX      DE,HL
         POP     HL
         LD      B,3
-        JP      PARFLD
+        JR      PARFLD
 
 FCBDRBAD:
         SCF
@@ -1383,11 +1383,11 @@ PARLONG:
         INC     HL
         LD      A,(HL)
         OR      A
-        JP      Z,PLEND
+        JR      Z,PLEND
         CP      SPACE
-        JP      Z,PLEND
+        JR      Z,PLEND
         CP      '='
-        JP      Z,PLEND
+        JR      Z,PLEND
         CP      '.'
         JR      NZ,PARLONG
 

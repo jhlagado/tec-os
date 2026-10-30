@@ -151,7 +151,7 @@ CFILL:  PUSH    AF
         POP     AF
         JR      NZ,CFL9
         POP     AF
-        JP      CSET            ; Z
+        JR      CSET            ; Z
 CFL9:   POP     AF
         CALL    CDROP
         OR      1

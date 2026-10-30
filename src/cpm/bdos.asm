@@ -155,10 +155,10 @@ FNRETC:
         INC     A
         JR      Z,FNRETG
         LD      (PRGCODE),HL
-        JP      RETZERO
+        JR      RETZERO
 FNRETG:
         LD      HL,(PRGCODE)
-        JP      RETWORD
+        JR      RETWORD
 
 FNCIN:
         CALL    GETCHAR
@@ -166,17 +166,17 @@ FNCIN:
         PUSH    AF
         CALL    ECHOCHAR
         POP     AF
-        JP      RETA
+        JR      RETA
 
 FNCOUT:
         LD      A,(PARAM)
         LD      C,A
         CALL    OUTCHAR
-        JP      RETZERO
+        JR      RETZERO
 
 FNREAD:
         CALL    BIORDR
-        JP      RETA
+        JR      RETA
 
 FNPUNCH:
         LD      A,(PARAM)
@@ -300,12 +300,12 @@ LINHIST:
         OR      A
         JR      Z,LINCHR        ; a program's call: a character
         CALL    HREC
-        JP      LINLOOP
+        JR      LINLOOP
 
 LINBACK:
         LD      A,(LINCNT)
         OR      A
-        JP      Z,LINLOOP
+        JR      Z,LINLOOP
         DEC     A
         LD      (LINCNT),A
         LD      HL,(LINPTR)
@@ -555,10 +555,10 @@ FCBORD:
         OR      A
         JR      NZ,FCBEXPL
         LD      A,(DEFDRV)
-        JP      SELDRV
+        JR      SELDRV
 FCBEXPL:
         DEC     A
-        JP      SELDRV
+        JR      SELDRV
 
 ; Open uses the same public-directory iterator as search, then imports only
 ; the directory-owned FCB fields. Bit 7 of S2 marks the FCB unmodified, which
@@ -917,10 +917,10 @@ READSEQ:
         ; since its open must reach the directory first.
         CALL    CLOSEFCB
         INC     A
-        JP      Z,READ_EOF
+        JR      Z,READ_EOF
         CALL    NEXTEXT
         OR      A
-        JP      NZ,READ_EOF
+        JR      NZ,READ_EOF
         CALL    FCBCR
         XOR     A
         LD      (HL),A
@@ -933,12 +933,12 @@ READCHK:
         CALL    FCBOFF
         LD      A,(HL)
         CP      B
-        JP      Z,READ_EOF
-        JP      C,READ_EOF
+        JR      Z,READ_EOF
+        JR      C,READ_EOF
         CALL    FCBLOCK
         LD      A,D
         OR      E
-        JP      Z,READ_EOF
+        JR      Z,READ_EOF
         CALL    POSREC
         CALL    FCBCR
         INC     (HL)
@@ -996,7 +996,7 @@ RANDPREP:
         LD      A,E             ; CP/M 2.2 records 0..65535; r2 is overflow
         OR      A
         LD      A,6
-        JP      NZ,RANDFAIL     ; reject before changing any FCB field
+        JR      NZ,RANDFAIL     ; reject before changing any FCB field
         LD      A,C
         AND     $7F
         LD      (SEQREC),A
@@ -1822,7 +1822,7 @@ READDIR:
         POP     AF
         OR      A
         JP      NZ,RDFAIL
-        JP      ADVSEC
+        JR      ADVSEC
 
 ; Write the current directory buffer back to the exact record READDIR loaded.
 WRITEDIR:
@@ -2290,7 +2290,7 @@ CHKBLK:
         CP      E
         LD      A,(IX+6)
         SBC     A,D
-        JP      C,BADSECT
+        JR      C,BADSECT
         RET
 
 ; Z means the current drive needs its allocation vector rebuilt. The BIOS
@@ -2403,7 +2403,7 @@ DISKERR:
         CALL    OUTCHAR
         POP     HL
         CALL    ERRTEXT
-        JP      GETCHAR
+        JR      GETCHAR
 
 GETCHAR:
         LD      A,(PENDING)
@@ -2525,4 +2525,4 @@ ERASE1:
         CALL    BIOCOT
         LD      C,BACKSP
         CALL    BIOCOT
-        JP      COLBACK
+        JR      COLBACK

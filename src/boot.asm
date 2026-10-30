@@ -46,7 +46,7 @@ COLDRT: CALL    SDINIT
         LD      (PZDU),A
         CALL    PZINIT
         CALL    MEMINIT
-        JP      WBOOTR
+        JR      WBOOTR
 COLDERR:JP      DIAG
 
 ; ---- Warm boot ----------------------------------------------------------------

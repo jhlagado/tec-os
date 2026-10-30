@@ -22,11 +22,11 @@ PRLGO:  LD      HL,(LOADTOP)   ; exclusive end of whole disk records
         LD      DE,PRLCODE
         OR      A
         SBC     HL,DE
-        JP      C,PRLFAIL       ; incomplete header page
+        JR      C,PRLFAIL       ; incomplete header page
         LD      HL,(PRLHDR+1)
         LD      A,H
         OR      L
-        JP      Z,PRLFAIL       ; LDIR must never receive zero
+        JR      Z,PRLFAIL       ; LDIR must never receive zero
         LD      (PRLN),HL
         LD      B,H
         LD      C,L

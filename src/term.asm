@@ -29,7 +29,7 @@ VTOUT:  CALL    CURHIDE
         CP      $20
         JR      C,VTCTL
         CP      $7F
-        JP      NC,VTDONE
+        JR      NC,VTDONE
         LD      HL,VATTR
         OR      (HL)
         LD      E,A
@@ -53,49 +53,49 @@ VTCOL:  LD      (VCOL),A
 VTDONE: RET
 
 VTCTL:  CP      13
-        JP      Z,VTCR
+        JR      Z,VTCR
         CP      10
-        JP      Z,VTLF0
+        JR      Z,VTLF0
         CP      8
-        JP      Z,VTBS
+        JR      Z,VTBS
         CP      9
-        JP      Z,VTTAB
+        JR      Z,VTTAB
         CP      12
-        JP      Z,VTFF
+        JR      Z,VTFF
         CP      27
-        JP      NZ,VTDONE
+        JR      NZ,VTDONE
         LD      A,1
         LD      (ESCST),A
-        JP      VTDONE
+        JR      VTDONE
 VTCR:   XOR     A
         LD      (VCOL),A
-        JP      VTDONE
+        JR      VTDONE
 VTLF0:  CALL    VTLF
-        JP      VTDONE
+        JR      VTDONE
 VTBS:   LD      A,(VCOL)
         LD      HL,VWID         ; from a pending wrap, back to the last column
         CP      (HL)
         JR      C,VTBS1
         LD      A,(HL)
 VTBS1:  OR      A
-        JP      Z,VTDONE
+        JR      Z,VTDONE
         DEC     A
         LD      (VCOL),A
-        JP      VTDONE
+        JR      VTDONE
 VTTAB:  LD      A,(VCOL)
         OR      7
         INC     A
         LD      HL,VWID
         CP      (HL)
-        JP      C,VTCOL
+        JR      C,VTCOL
         LD      A,(HL)
         DEC     A
-        JP      VTCOL
+        JR      VTCOL
 VTFF:   CALL    VTCLS
         XOR     A
         LD      (VROW),A
         LD      (VCOL),A
-        JP      VTDONE
+        JR      VTDONE
 
 ; Move down a line. At the bottom of the scroll region the region scrolls up
 ; a line; below the region the cursor stops at the last row.
@@ -137,7 +137,7 @@ VTCLL:  LD      C,0
 ; Escape sequences. ESCST: 1 after ESC, 2 in the first parameter, 3 in the
 ; second.
 VTESC:  CP      1
-        JP      NZ,VTPAR
+        JR      NZ,VTPAR
         LD      A,C
         CP      '['
         LD      A,0
@@ -150,9 +150,9 @@ VTESCX: LD      (ESCST),A
         JP      VTDONE
 VTPAR:  LD      A,C
         CP      '0'
-        JP      C,VTPNOD
+        JR      C,VTPNOD
         CP      '9'+1
-        JP      NC,VTPNOD
+        JR      NC,VTPNOD
         SUB     '0'             ; parameter = parameter * 10 + digit
         LD      B,A
         LD      HL,ESCP1
@@ -170,7 +170,7 @@ VTPD:   LD      A,(HL)
         LD      (HL),A
         JP      VTDONE
 VTPNOD: CP      ';'
-        JP      NZ,VTPFIN
+        JR      NZ,VTPFIN
         XOR     A
         LD      (ESCP2),A
         LD      A,3
@@ -210,7 +210,7 @@ VTPFIN: CP      '?'             ; private marker: ignore
         CP      'M'
         JP      Z,VTDL
         CP      'r'
-        JP      Z,VTREG
+        JR      Z,VTREG
         JP      VTDONE
 
 ; ESC [ t ; b r: scroll region rows t to b (1-based; absent or 0 means the
@@ -254,7 +254,7 @@ VTN1:   LD      B,A
 VTUP:   CALL    VTN
         LD      A,(VROW)
         SUB     B
-        JP      NC,VTSETR
+        JR      NC,VTSETR
         XOR     A
 VTSETR: LD      (VROW),A
         JP      VTDONE
@@ -265,7 +265,7 @@ VTDOWN: CALL    VTN
         LD      A,$FF           ; saturate before clipping to the dimension
 VTDN1:  LD      HL,VHGT
         CALL    VTCLIP
-        JP      VTSETR
+        JR      VTSETR
 VTRIGHT:CALL    VTN
         LD      A,(VCOL)
         ADD     A,B
@@ -278,9 +278,9 @@ VTSETC: LD      (VCOL),A
 VTLEFT: CALL    VTN
         LD      A,(VCOL)
         SUB     B
-        JP      NC,VTSETC
+        JR      NC,VTSETC
         XOR     A
-        JP      VTSETC
+        JR      VTSETC
 VTPOS:  LD      A,(ESCP1)       ; 1-based, 0 means 1
         OR      A
         JR      Z,VTPR
@@ -296,7 +296,7 @@ VTPR:   LD      HL,VHGT
         DEC     A
 VTPC:   LD      HL,VWID
         CALL    VTCLIP
-        JP      VTSETC
+        JR      VTSETC
 VTED:   LD      A,(ESCP1)
         CP      2
         JR      Z,VTED2

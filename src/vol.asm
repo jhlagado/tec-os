@@ -190,7 +190,7 @@ MNDESC: LD      A,(MNTI)
         LD      DE,MNTPRV
         CALL    CMP32
         LD      A,MEOVLAP
-        JP      C,MNTERR
+        JR      C,MNTERR
         LD      IY,MNTPRV
         LD      L,(IX+DSTART)   ; end = start + length, no wrap
         LD      H,(IX+DSTART+1)
@@ -207,18 +207,18 @@ MNDESC: LD      A,(MNTI)
         LD      (IY+2),L
         LD      (IY+3),H
         LD      A,MERANGE
-        JP      C,MNTERR
+        JR      C,MNTERR
         LD      DE,MNTPRV       ; end <= container blocks
         LD      HL,MNTBLK
         CALL    CMP32
         LD      A,MERANGE
-        JP      C,MNTERR
+        JR      C,MNTERR
         LD      A,(IX+DMOUNT)   ; drive letter: none, or A-D, once
         CP      DUNMNT
         JR      Z,MNNEXT
         CP      MAXDRV
         LD      A,MEMOUNT
-        JP      NC,MNTERR
+        JR      NC,MNTERR
         LD      E,(IX+DMOUNT)
         LD      D,0
         LD      HL,DRVIDX
@@ -226,7 +226,7 @@ MNDESC: LD      A,(MNTI)
         LD      A,(HL)
         OR      A
         LD      A,MEMOUNT
-        JP      NZ,MNTERR
+        JR      NZ,MNTERR
         LD      A,(MNTI)
         INC     A
         LD      (HL),A
@@ -477,7 +477,7 @@ VOLSVC: LD      B,A
         LD      A,E
         CALL    VDESC
         POP     DE
-        JP      NZ,VBAD
+        JR      NZ,VBAD
         PUSH    IX
         POP     HL
         LD      BC,DSCSZ
@@ -491,12 +491,12 @@ VOLSVC: LD      B,A
 
 VMNT:   LD      A,C
         CP      MAXDRV
-        JP      NC,VBAD
+        JR      NC,VBAD
         LD      A,E
         CALL    VDESC           ; IX -> its descriptor, A = its drive or FFh
-        JP      NZ,VBAD
+        JR      NZ,VBAD
         INC     A
-        JP      NZ,VBAD         ; on a drive already
+        JR      NZ,VBAD         ; on a drive already
         LD      A,(IX+DLEN+1)   ; the slot must hold its vector: a payload of
         CP      $10             ; 4096 blocks or more needs a G8M slot (2)
         LD      A,2
@@ -506,9 +506,9 @@ VMNT:   LD      A,C
         ADD     HL,BC
         CP      (HL)
         JR      Z,VM1
-        JP      NC,VBAD
+        JR      NC,VBAD
 VM1:    CALL    VFLUSH
-        JP      NZ,VBAD
+        JR      NZ,VBAD
         LD      (IX+DMOUNT),C   ; publish only after the old data is safe
         PUSH    BC
         PUSH    DE
@@ -526,11 +526,11 @@ VM1:    CALL    VFLUSH
 
 VUNM:   LD      A,C
         OR      A
-        JP      Z,VBAD          ; A is never left empty
+        JR      Z,VBAD          ; A is never left empty
         CP      MAXDRV
-        JP      NC,VBAD
+        JR      NC,VBAD
         CALL    VFLUSH
-        JP      NZ,VBAD
+        JR      NZ,VBAD
         LD      A,C
         CALL    VCLEAR
 VRESET: XOR     A
