@@ -8,7 +8,7 @@
 ; version and the entry table's address. The registry is the list through
 ; those records, its head in REGHEAD.
 
-DMAGIC  EQU     $0144           ; 'D', format version 1
+DMAGIC  EQU     $0244           ; 'D', format version 2
 DF      EQU     $0100           ; the file
 DDEP    EQU     2               ; dependencies; resident, the previous owner
 DFLG    EQU     3               ; bit 0 removable

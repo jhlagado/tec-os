@@ -4,7 +4,7 @@
 %INCLUDE "../../src/abi.inc"
 
         ORG     $0100
-HDR:    DB      'D',1,0,FLAGS
+HDR:    DB      'D',2,0,FLAGS
         DW      0,0,XTRA,0      ; REMOVE, size, extra, relocation: the writer's
         DB      STKB,STKI,STKC
         DW      0               ; INIT: the writer's

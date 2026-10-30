@@ -40,7 +40,7 @@ MNTCB:  DS      1               ; the table block in BLKBUF, FFh none
 
 ; ---- Video terminal ---------------------------------------------------------
 LINEBUF:DS      80              ; one display row, for scrolling
-VPUTV:  DS      2               ; driver vectors set by VIDINIT
+VPUTV:  DS      2               ; driver vectors set by CONSWV
 VGETV:  DS      2
 VCLRV:  DS      2
 VRSTV:  DS      2

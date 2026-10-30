@@ -20,7 +20,7 @@ COLOUR  EQU     $2000
 SPRITE  EQU     $1B00
 
         ORG     $0100
-HDR:    DB      'D',1,0,1       ; removable
+HDR:    DB      'D',2,0,1       ; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      0,0,0           ; over the base: BDOS, BIOS, CCP
         DW      0               ; INIT: the writer's
@@ -67,7 +67,8 @@ TMSFN:  OR      A
         JR      Z,TMSFLIP
         DEC     A
         JP      Z,TMSMBEG
-        LD      (TMVCOPY),A     ; A = 0
+        DEC     A
+        LD      (TMVCOPY),A     ; 0
         RET
 
 ; Show the page drawn, if it is not already shown. Destroys AF, HL.

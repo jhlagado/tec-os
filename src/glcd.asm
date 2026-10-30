@@ -78,7 +78,7 @@ DRVGO:  CALL    LOADCOM
         CP      (HL)
         JR      Z,CONSET
         LD      HL,GLVEC+1
-        CP      (HL)
+        XOR     (HL)            ; carry clear: any other driver has loaded
         RET     NZ
         LD      HL,CONDEV
         SET     2,(HL)          ; CDGLC

@@ -16,7 +16,7 @@
 ; images of 00h-7Fh, which also draws the cursor. The cursor is shown only
 ; while console input is awaited, so output does not pay for redrawing it.
 ;
-; The driver supplies VIDINIT (Z when a display is present), VPUT (A at row
+; The driver supplies VPUT (A at row
 ; B, column C), VGET, VCLREOL (from row B, column C), and VRDROW and VWRROW
 ; (row B to and from LINEBUF).
 

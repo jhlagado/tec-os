@@ -4,7 +4,7 @@
 
 import { Machine, symbolsFromD8 } from "../../host/machine.mjs";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { cardProblem, setDisplayLine } from "../../host/card.mjs";
+import { prepareCard } from "../../host/card.mjs";
 import { parseContainer, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { buildRecipe } from "../../tools/lib/recipe.mjs";
@@ -64,6 +64,8 @@ async function starterCard() {
 // ---- Machine lifecycle ------------------------------------------------------
 
 async function powerOn() {
+  const { problem, changed } = prepareCard(state.card, state.display, state.width);
+  if (changed) state.cardDirty = true;
   const { rom, symbols } = await loadRom();
   state.machine = new Machine({
     rom,
@@ -77,7 +79,6 @@ async function powerOn() {
   });
   state.serialSeen = 0;
   appendSerial("\n[power on]\n");
-  const problem = cardProblem(state.card, state.display, state.width);
   if (problem) appendSerial(`[${problem}]\n`);
 }
 
@@ -483,10 +484,6 @@ $("profile").value = state.width;
 $("profile").addEventListener("change", async (e) => {
   state.width = e.target.value;
   localStorageSet("tecos.width", state.width);
-  if (!cardProblem(state.card, "tms", state.width)) {
-    setDisplayLine(state.card, "tms", state.width);
-    state.cardDirty = true;
-  }
   await powerOn();
 });
 $("reset").addEventListener("click", () => {

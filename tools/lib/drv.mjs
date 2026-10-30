@@ -10,6 +10,7 @@ import { assembleProgram } from "./assemble.mjs";
 import { assembleAt } from "./prl.mjs";
 
 export const DHLEN = 25;
+export const FORMAT = 2; // the loader's DMAGIC. Version 2 has version 1's layout.
 // $C000 and 0C000h. A decimal or binary form of an address isn't caught.
 const ROM_ADDRESS = /\$[C-Fc-f][0-9A-Fa-f]{3}\b|\b0[C-Fc-f][0-9A-Fa-f]{3}[Hh]\b/;
 
@@ -104,6 +105,7 @@ export async function makeDrv(source, { defs = {}, deps = [], raw = {}, work, re
   file.set(at0);
   file.set(list, at0.length);
   file.set(data, at0.length + list.length);
+  file[1] = FORMAT;
   file[2] = deps.length;
   const put = (at, v) => {
     file[at] = v & 0xff;

@@ -14,7 +14,7 @@ GLHOOK  EQU     ABIGLCD         ; the video table: A = the mode, HL = eight word
 IOBYTE  EQU     $0003
 
         ORG     $0100
-HDR:    DB      'D',1,0,1       ; removable
+HDR:    DB      'D',2,0,1       ; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      2,0,6           ; over the base: BDOS, BIOS, CCP
         DW      0               ; INIT: the writer's
@@ -55,10 +55,12 @@ REMOVE: LD      DE,PICONAM
         LD      BC,$0100
         CALL    ABIDRV
         JR      C,REMOV1
-        LD      A,(IOBYTE)
-        AND     $FC
-        OR      1               ; CRT:
-        LD      (IOBYTE),A
+        LD      HL,IOBYTE       ; UC1: becomes CRT:, and no other field changes
+        LD      A,(HL)
+        CPL
+        AND     3
+        JR      NZ,REMOV1
+        RES     1,(HL)
 REMOV1: LD      A,3
         LD      HL,0
         JP      GLHOOK
