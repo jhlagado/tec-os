@@ -19,6 +19,7 @@ const state = {
   machine: null,
   card: null,
   cardDirty: false,
+  importBusy: false,
   running: true,
   serialSeen: 0,
   serialText: "",
@@ -83,7 +84,7 @@ function reset() {
 }
 
 setInterval(async () => {
-  if (!state.cardDirty || !state.card) return;
+  if (state.importBusy || !state.cardDirty || !state.card) return;
   state.cardDirty = false;
   await saveCard(state.card);
 }, 2000);
@@ -98,7 +99,7 @@ function frame(now) {
   const m = state.machine;
   const dt = Math.min(100, now - last);
   last = now;
-  if (m && state.running) {
+  if (m && state.running && !state.importBusy) {
     const target = m.cycles + (dt * CPU_HZ) / 1000;
     const deadline = performance.now() + 30;
     const start = m.cycles;
@@ -410,6 +411,10 @@ function download(bytes, name) {
 }
 
 async function useCard(image) {
+  if (state.importBusy) {
+    $("cardinfo").textContent = "Not opened: file import in progress";
+    return;
+  }
   parseContainer(image);
   state.card = image;
   await saveCard(image);
@@ -430,7 +435,13 @@ $("openimg").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 $("putfile").addEventListener("change", async (e) => {
+  if (state.importBusy) {
+    $("cardinfo").textContent = "Not copied: file import in progress";
+    e.target.value = "";
+    return;
+  }
   if (!state.card) return;
+  state.importBusy = true;
   const wasRunning = state.running;
   state.running = false;
   try {
@@ -449,6 +460,7 @@ $("putfile").addEventListener("change", async (e) => {
     $("cardinfo").textContent = `Not copied: ${err.message}`;
   } finally {
     state.running = wasRunning;
+    state.importBusy = false;
   }
   e.target.value = "";
   refreshFiles();
@@ -479,6 +491,7 @@ $("power").addEventListener("click", async () => {
   refreshFiles();
 });
 $("pause").addEventListener("click", () => {
+  if (state.importBusy) return;
   state.running = !state.running;
   $("pause").textContent = state.running ? "Pause" : "Run";
 });

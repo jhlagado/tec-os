@@ -142,9 +142,92 @@ for (const running of [true, false]) {
       releaseSave();
       await pending;
       assert.equal(pausedDuringRead, false);
+      assert.equal(state.importBusy, false);
       assert.equal(state.running, running);
       assert.equal(resets, failure ? 0 : 1);
       if (failure) assert.equal(Buffer.compare(image, before), 0);
+    });
+  }
+}
+
+for (const running of [true, false]) {
+  for (const failure of [false, true]) {
+    test(`browser import guard excludes competing operations, running=${running}, failure=${failure}`, async () => {
+      const { image, fs } = card();
+      const before = image.slice();
+      const state = { card: image, running, cardDirty: true };
+      const source = readFileSync(new URL('../web/src/main.mjs', import.meta.url), 'utf8');
+      const handlers = {};
+      const elements = { drive: { value: 'A' }, astext: { checked: false }, cardinfo: {} };
+      const $ = id => elements[id] ??= { addEventListener: (_type, fn) => { handlers[id] = fn; } };
+      let releaseRead, releaseSave, saves = 0, powers = 0, steps = 0, autosave;
+      const readGate = new Promise(resolve => { releaseRead = resolve; });
+      const saveGate = new Promise(resolve => { releaseSave = resolve; });
+      const context = { state, $, CpmVolume, parseContainer, volumePayload,
+        currentVolume: () => fs,
+        saveCard: async () => { saves++; await saveGate; if (failure) throw Error('save failed'); },
+        reset: () => {}, refreshFiles: () => {}, refreshCard: () => {}, powerOn: async () => { powers++; },
+        setInterval: fn => { autosave = fn; }, performance: { now: () => 0 }, CPU_HZ: 1000,
+        requestAnimationFrame: () => {}, render: () => {},
+      };
+      const importStart = source.indexOf('$("putfile").addEventListener');
+      const pauseStart = source.indexOf('$("pause").addEventListener');
+      const useStart = source.indexOf('async function useCard(');
+      const autosaveStart = source.indexOf('setInterval(async () =>');
+      runInNewContext([
+        source.slice(importStart, source.indexOf('$("drive").addEventListener', importStart)),
+        source.slice(pauseStart, source.indexOf('setInterval(refreshFiles', pauseStart)),
+        source.slice(useStart, source.indexOf('$("starter").addEventListener', useStart)),
+        source.slice(autosaveStart, source.indexOf('// ---- Run loop', autosaveStart)),
+        source.slice(source.indexOf('let last ='), source.indexOf('// ---- Rendering')),
+        'this.useCard = useCard; this.frame = frame;',
+      ].join('\n'), context);
+      state.machine = { cycles: 0, step() { steps++; this.cycles++; } };
+      const pending = handlers.putfile({ target: { files: [{ name: 'FIRST.TXT', arrayBuffer: async () => { await readGate; return new ArrayBuffer(128); } }] } });
+      const busyDuringRead = state.importBusy;
+      let secondReads = 0;
+      const overlapping = handlers.putfile({ target: { files: [{ name: 'SECOND.TXT', arrayBuffer: async () => { secondReads++; return new ArrayBuffer(128); } }] } });
+      const busyAfterOverlap = state.importBusy;
+      handlers.pause();
+      const runningAfterPause = state.running;
+      const replacement = context.useCard(card().image);
+      const cardAfterReplacement = state.card;
+      const powersAfterReplacement = powers;
+      const autosaveRead = autosave();
+      const savesDuringRead = saves;
+      const dirtyDuringRead = state.cardDirty;
+      // The frame guard must hold even if another control changes running.
+      state.running = true;
+      context.frame(10);
+      const stepsDuringRead = steps;
+      state.running = false;
+      releaseRead();
+      await new Promise(resolve => setImmediate(resolve));
+      const busyDuringSave = state.importBusy;
+      handlers.pause();
+      const runningDuringSave = state.running;
+      const autosaveSave = autosave();
+      const savesDuringSave = saves;
+      releaseSave();
+      await Promise.all([pending, overlapping, replacement, autosaveRead, autosaveSave].map(p => Promise.resolve(p).catch(() => {})));
+      assert.equal(busyDuringRead, true);
+      assert.equal(busyAfterOverlap, true);
+      assert.equal(secondReads, 0);
+      assert.equal(runningAfterPause, false);
+      assert.equal(cardAfterReplacement, image);
+      assert.equal(powersAfterReplacement, 0);
+      assert.equal(savesDuringRead, 0);
+      assert.equal(dirtyDuringRead, true);
+      assert.equal(stepsDuringRead, 0);
+      assert.equal(busyDuringSave, true);
+      assert.equal(runningDuringSave, false);
+      assert.equal(savesDuringSave, 1);
+      assert.equal(state.importBusy, false);
+      assert.equal(state.running, running);
+      assert.equal(state.card, image);
+      assert.equal(fs.find('SECOND.TXT'), undefined);
+      if (failure) assert.equal(Buffer.compare(image, before), 0);
+      else assert.ok(fs.find('FIRST.TXT'));
     });
   }
 }
