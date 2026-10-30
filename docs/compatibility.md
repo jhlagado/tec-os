@@ -89,6 +89,13 @@ addresses, as LINK-80's `[OP]` writes it. A PRL that begins with
 TEC-OS's module header (`"TNM"`, a version and a kind) is installed rather
 than run. Kind 1 is the only kind; any other is refused.
 
+A driver is a resident in TEC-OS's own `.DRV` format, with an installation
+that can fail cleanly and a registry through which programs find its
+services (`ABIDRV`, ABI 3.1). `docs/drivers.md` is its interface. The CCP
+has no command for a `.DRV` yet, and `UNLOAD` takes the lowest resident of
+either kind. Nothing of this changes the TPA when no driver is installed, and
+a program written for CP/M sees neither.
+
 - **A resident** goes in whole pages just below the BDOS entry, and the
   word at `0006h` moves down to the jump at its offset 6, which leads on to
   the old entry; warm boot keeps it there. Programs that size themselves

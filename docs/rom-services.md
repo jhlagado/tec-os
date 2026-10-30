@@ -5,7 +5,7 @@ Status: **Built**, 2026-10-26. The hardware services' entry, `ABIHW` at
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,573 bytes (`debug80`) and has 811 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,099 bytes (`debug80`) and has 285 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -27,18 +27,18 @@ refuses any `.asm` file that names an address of the old table at `FF00h`.
 
 ## The table at `C003h`
 
-ABI 3.0. Its layout is fixed; entries are only added, at the end, with the
+ABI 3.1. Its layout is fixed; entries are only added, at the end, with the
 minor version raised. `src/abi.inc`, published in `dist/` as `abi.inc`,
 gives each entry's address under the name below, and the build checks it
-against the ROM. ABI 3.0 keeps ABI 2.7's entries in the same order, less
+against the ROM. ABI 3.0 kept ABI 2.7's entries in the same order, less
 the native banks (`FF05h`), the native services' entry (`FF06h`) and the
-EXPAND count (`FF10h`, always 2).
+EXPAND count (`FF10h`, always 2). ABI 3.1 adds `ABIDRV`.
 
 | Address | Name | Contents |
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` signature |
 | `C006h` | `ABIMAJ` | ABI major version, 3 |
-| `C007h` | `ABIMIN` | ABI minor version, 0 |
+| `C007h` | `ABIMIN` | ABI minor version, 1 |
 | `C008h` | `ABIVID` | Address of the console size, columns then rows |
 | `C00Ah` | `ABIHW` | `JP` to the hardware services |
 | `C00Dh` | `ABIMAIN` | Address of the MAIN count, 1 or 2 |
@@ -50,6 +50,7 @@ EXPAND count (`FF10h`, always 2).
 | `C01Dh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
 | `C020h` | `ABIFONT` | Address of the console font, 8 bytes a character from 20h, for the GLCD console |
 | `C022h` | `ABIGLCD` | `JP GLHOOK`: HL = a video table, six words, for the GLCD console, and `LINEBUF` back in HL; carry set and nothing changed if a table is kept already; HL = 0 puts the console back to serial |
+| `C025h` | `ABIDRV` | `JP DRVSVC`: the service registry, below; C = 0 find, 1 enumerate |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. `XMOVE`'s 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; its 1
@@ -62,6 +63,24 @@ sets the mark to `80h`, so every byte in bank 1 is refused. `MOVE` copies forwar
 and the interrupt state as it found them. Cold boot clears EXPAND 1, the
 cache with it; its contents do not survive a reset, and warm boot leaves
 them.
+
+## The service registry
+
+`ABIDRV` finds what the drivers in memory offer. `docs/drivers.md` sets out
+the drivers and what each side may rely on.
+
+| C | Arguments | Returns |
+| --- | --- | --- |
+| 0, find | DE = a service's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
+| 1, enumerate | B = an index from 0 | Carry clear: HL = that record (a link word, the name, the version, the table's address), A = the generation. Carry set: past the last |
+| anything else | | Carry set |
+
+Find returns the newest driver's service when two offer one. AF, BC, DE and
+HL are destroyed; IX and IY are kept. It uses at most 8 bytes of the caller's
+stack, its return address among them, and makes no BDOS or BIOS call, so it
+is safe on any stack. Each walk stops after 256 records, so a program that
+has overwritten a record can't loop it. A removal raises the generation by
+one. There is no public removal: `UNLOAD` is the only way a driver leaves.
 
 ## Calling the services
 
@@ -101,7 +120,7 @@ The GLCD console is a resident, `GLCD.PRL`, below `(0006h)`. Its INIT calls
 order: put, get, clear to the end of the line, restore, read a row, write a
 row. `CONSW` points the terminal's vector at that table when it selects
 `UC1:`, and the terminal then calls the routines directly, on the caller's
-stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 25
+stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 28
 bytes it has. A program that pushes anything before calling the BIOS
 directly sets up its own stack first. The routines run with the caller's
 interrupt state and share their drawing counters, so an interrupt handler
@@ -276,7 +295,7 @@ that uses them.
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->811<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->285<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
