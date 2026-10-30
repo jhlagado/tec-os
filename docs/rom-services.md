@@ -5,7 +5,7 @@ Status: **Built**, 2026-10-26. The hardware services' entry, `ABIHW` at
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,652 bytes (`debug80`) and has 732 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,798 bytes (`debug80`) and has 586 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -276,7 +276,7 @@ that uses them.
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->732<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->586<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
