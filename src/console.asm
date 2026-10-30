@@ -5,8 +5,8 @@
 ;   BAT: (2)  CP/M batch: keys from the reader, output to the list device
 ;   UC1: (3)  GLCD screen and the matrix keyboard
 ;
-; Cold boot picks CRT:, then UC1:, then TTY:, by what answered and whether
-; the Matrix switch is on. A program or the CCP's CON command may change the
+; Cold boot starts on TTY:, and a display driver's load takes the console. A
+; program or the CCP's CON command may change the
 ; IOBYTE at any time; the next console call acts on it, clearing and homing
 ; the new screen. CRT: or UC1: without its display or keyboard falls back to
 ; the serial terminal. VWID and VHGT give the size of the console in use, 0
@@ -43,27 +43,6 @@ CONINIT:LD      A,$40
         LD      (CONDEV),A
         JP      VIDINIT
 
-; Pick the cold-boot console from what answered and act on it.
-CONPICK:LD      A,(CONDEV)
-        LD      C,A
-        LD      B,CMCRT
-        AND     CDTMS+CDMTX
-        CP      CDTMS+CDMTX
-        JR      Z,CONPK1
-        LD      B,CMUC1
-        LD      A,C
-        AND     CDGLC+CDMTX
-        CP      CDGLC+CDMTX
-        JR      Z,CONPK1
-        LD      B,CMTTY
-CONPK1: LD      A,(IOBYTE)
-        AND     $FC
-        OR      B
-        LD      (IOBYTE),A
-        LD      A,$FF
-        LD      (CONACT),A
-        ; fall through
-
 ; Act on a changed IOBYTE CON: field. Preserves BC and DE.
 CONSEL: LD      A,(IOBYTE)
         AND     3
@@ -79,30 +58,19 @@ CONSEL: LD      A,(IOBYTE)
         RET
 
 CONSW:  LD      B,A
-        LD      A,(CONDEV)
-        LD      C,A
+        RRCA
         LD      A,B
-        CP      CMCRT
-        JR      NZ,CONSW3
-        LD      A,C
-        AND     CDTMS+CDMTX
-        CP      CDTMS+CDMTX
-        JR      NZ,CONSWT
-        LD      HL,TMSVEC
-        LD      DE,TMSCOLS+256*24
-        JR      CONSWV
-CONSW3: CP      CMUC1
-        JR      NZ,CONSW2
-        LD      A,C
-        AND     CDGLC+CDMTX
-        CP      CDGLC+CDMTX
-        JR      NZ,CONSWT
-        LD      HL,(GLVEC)      ; CDGLC: GLCD.DRV is installed, its table
-        LD      A,H             ; given through GLHOOK
-        OR      L
-        JR      Z,CONSWT
-        LD      DE,GLCOLS+256*GLROWS
-        JR      CONSWV
+        JR      NC,CONSW2
+        ADD     A,LOW(PIVEC)-1  ; CRT: or UC1:, its driver's table
+        LD      L,A
+        LD      H,HIGH(PIVEC)
+        LD      A,(HL)
+        INC     HL
+        LD      H,(HL)
+        LD      L,A
+        OR      H
+        JR      NZ,CONSWV
+        JR      CONSWT
 CONSW2: CP      CMBAT
         JR      Z,CONSWN
 CONSWT: LD      A,CMTTY         ; the serial terminal, also the fallback
@@ -111,10 +79,13 @@ CONSWN: LD      (CONMOD),A
         LD      (VWID),HL
         RET
 CONSWV: PUSH    BC              ; B = the video mode
-        PUSH    DE
-        CALL    VIDSET
-        POP     DE
-        LD      (VWID),DE       ; columns, then rows
+        LD      DE,VPUTV
+        LD      BC,14
+        LDIR
+        LD      E,(HL)          ; the table goes on with columns, then rows
+        INC     HL
+        LD      D,(HL)
+        LD      (VWID),DE
         CALL    VTREGR
         POP     BC
         LD      A,B
@@ -144,9 +115,7 @@ BCONSTC:CALL    BCONST
         RET
 
 BCONST: CALL    CONSEL
-        LD      A,(CONMOD)      ; a program asking for a key sees the screen
-        CP      CMCRT           ; it has drawn: show a finished row move
-        CALL    Z,TMSFLIP
+        CALL    VTFLIP          ; a program asking for a key sees the screen it has drawn
         LD      A,(RXFULL)
         OR      A
         JR      NZ,CSTYES
@@ -179,9 +148,7 @@ CSTYES: LD      A,$FF
 ; BIOS CONIN: wait for a character and return it in A with bit 7 clear.
 ; NUL is not delivered (Debug80 sends one ahead of its first input byte).
 BCONIN: CALL    CONSEL
-        LD      A,(CONMOD)
-        CP      CMCRT
-        CALL    Z,TMSFLIP
+        CALL    VTFLIP
         LD      A,(RXFULL)
         OR      A
         JR      NZ,CINTAKE

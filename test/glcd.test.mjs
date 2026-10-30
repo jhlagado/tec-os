@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, program, romFor, standardCard, volume, withGlcd } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, program, romFor, standardCard, volume, withDisplay } from "./lib/fixtures.mjs";
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/glcd-screens.json"), "utf8"));
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "conout", "fill"];
@@ -23,7 +23,7 @@ async function card() {
   for (const n of PROGRAMS) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
-  return withGlcd(image, { matrix: true });
+  return withDisplay(image, { matrix: true });
 }
 
 /** A GLCD board at its first prompt, the GLCD console loaded; or, with
@@ -153,10 +153,10 @@ test("the GLCD hook takes a table and returns LINEBUF, refuses a second, and wit
   const STUB = 0x0080;
   const TABLE = 0x3000;
   const callHook = (hl) => {
-    [0x21, hl & 0xff, hl >> 8, 0xcd, m.sym("ABIGLCD") & 0xff, m.sym("ABIGLCD") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
+    [0x3e, 3, 0x21, hl & 0xff, hl >> 8, 0xcd, m.sym("ABIGLCD") & 0xff, m.sym("ABIGLCD") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
     m.cpu.cpu.sp = 0x0100;
     m.cpu.cpu.pc = STUB;
-    m.runUntil(() => m.pc === STUB + 6, 1_000_000, "ABIGLCD");
+    m.runUntil(() => m.pc === STUB + 8, 1_000_000, "ABIGLCD");
     const c = m.cpu.cpu;
     return { hl: (c.h << 8) | c.l, carry: c.flags.C };
   };
@@ -167,8 +167,9 @@ test("the GLCD hook takes a table and returns LINEBUF, refuses a second, and wit
   assert.equal(word(m, m.sym("GLVEC")), TABLE);
   assert.deepEqual(callHook(TABLE + 0x100), { hl: TABLE + 0x100, carry: 1 }, "a second table refused, HL as given");
   assert.equal(word(m, m.sym("GLVEC")), TABLE, "and the first kept");
+  m.write(m.sym("CONMOD"), 3);
   callHook(0);
-  assert.deepEqual([word(m, m.sym("GLVEC")), m.read(3) & 3, word(m, m.sym("VPUTV"))], [0, 0, m.sym("TMSPUT")], "the table dropped, the console serial, the vector the TMS9918's");
+  assert.deepEqual([word(m, m.sym("GLVEC")), m.read(m.sym("CONMOD"))], [0, 0], "the table dropped, the console serial, the vector the TMS9918's");
   assert.deepEqual(callHook(TABLE + 0x100), { hl: m.sym("LINEBUF"), carry: 0 }, "and a table taken again");
   assert.deepEqual(m.violations, []);
 });

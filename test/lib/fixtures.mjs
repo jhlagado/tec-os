@@ -6,7 +6,7 @@ import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { assembleProgram } from "../../tools/lib/assemble.mjs";
-import { makeDrv } from "../../tools/lib/drv.mjs";
+import { PICO_WIDTHS, makeDrv } from "../../tools/lib/drv.mjs";
 import { Machine, loadSymbols } from "./machine.mjs";
 import { createContainer, parseContainer, findVolume, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
@@ -102,27 +102,36 @@ export const driver = async (name) => (await makeDrv(resolve(ROOT, "test/program
 /** GLCD.DRV, the GLCD console driver, built from drivers/glcd.asm. */
 export const GLCD_DRV = (await makeDrv(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/drv") })).file;
 
+/** PICO.DRV, PICO40.DRV and PICO32.DRV, by file name. */
+export const PICO_DRV = Object.fromEntries(
+  await Promise.all(Object.entries(PICO_WIDTHS).map(async ([name, defs]) => [name, (await makeDrv(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/drv") })).file])),
+);
+
+/** The PICO driver's file for a profile's name, which stays as the width. */
+export const picoFor = (profile = "debug80") => ({ debug80t40: "PICO40.DRV", debug80g32: "PICO32.DRV" })[profile] ?? "PICO.DRV";
+
 /** A STARTUP.CMD of these lines. */
 export const startupFile = (...lines) => Buffer.from(lines.map((l) => `${l}\r\n`).join("") + "\x1a", "latin1");
 
 /**
- * Put GLCD.DRV and a STARTUP.CMD naming it on drive A of IMAGE when the machine
- * has the matrix keyboard and no PICO9918, as a GLCD board's card has them, so
- * startup makes the GLCD the console.
+ * Put a board's display driver and a STARTUP.CMD naming it on drive A of IMAGE:
+ * PICO.DRV, by the profile's width, with the matrix keyboard and a PICO9918, and
+ * GLCD.DRV with the keyboard alone. A card that has a STARTUP.CMD keeps it.
  */
-export function withGlcd(image, { tms = false, matrix = false } = {}) {
-  if (!matrix || tms) return image;
+export function withDisplay(image, { tms = false, matrix = false, profile } = {}) {
+  if (!matrix) return image;
+  const name = tms ? picoFor(profile) : "GLCD.DRV";
   const a = volume(image, "A");
-  if (a.list().some((f) => f.name === "GLCD.DRV")) return image;
-  a.write("GLCD.DRV", GLCD_DRV);
-  if (!a.list().some((f) => f.name === "STARTUP.CMD")) a.write("STARTUP.CMD", startupFile("GLCD.DRV"));
+  if (a.list().some((f) => f.name === name)) return image;
+  a.write(name, tms ? PICO_DRV[name] : GLCD_DRV);
+  if (!a.list().some((f) => f.name === "STARTUP.CMD")) a.write("STARTUP.CMD", startupFile(name));
   return image;
 }
 
 /** Boot a machine to the first CCP prompt. Its clock starts at TEST_CLOCK. */
 export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false, glcd = true, ram96 = false, mains = 2, expands = 2 } = {}) {
   const { rom, symbols } = romFor(profile);
-  if (sdImage) withGlcd(sdImage, { tms, matrix });
+  if (sdImage) withDisplay(sdImage, { tms, matrix, profile });
   const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, glcd, ram96, mains, expands, clock: TEST_CLOCK });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");

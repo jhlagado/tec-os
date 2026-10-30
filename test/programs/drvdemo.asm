@@ -54,7 +54,8 @@ INIT:
         LD      (RESULT),A
 %ENDIF
 %IF V_GLVEC
-        LD      HL,VTAB         ; a vector the scan can't see, then failure
+        LD      A,3             ; a vector the scan can't see, then failure
+        LD      HL,VTAB
         CALL    ABIGLCD
         SCF
         RET
@@ -80,6 +81,7 @@ INIT:
         JP      0               ; a warm boot from inside INIT
 %ENDIF
 %IF V_STK
+        LD      A,3
         LD      HL,VTAB
         CALL    ABIGLCD
         RET     C
@@ -170,6 +172,7 @@ REMOVE:
         LD      (HL),D
 %ENDIF
 %IF V_STK
+        LD      A,3
         LD      HL,0
         CALL    ABIGLCD
 %ENDIF
@@ -261,7 +264,8 @@ HITS:   DB      0
 %ENDIF
 %IF V_GLVEC+V_STK > 0
 ; The ROM's six video routines, each using six bytes of its caller's stack.
-VTAB:   DW      VRT,VRT,VRT,VRT,VRT,VRT
+VTAB:   DW      VRT,VRT,VRT,VRT,VRT,VRT,0
+        DB      21,8
 VRT:
 %IF DEPTH
         PUSH    AF

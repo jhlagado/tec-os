@@ -44,6 +44,13 @@ export const encoders = {
   },
 };
 
+// PICO.DRV, PICO40.DRV and PICO32.DRV: one source, a width each.
+export const PICO_WIDTHS = {
+  "PICO.DRV": { COLS: 80, NAMES: 0x1000, TPG: 0x10 },
+  "PICO40.DRV": { COLS: 40, NAMES: 0x0800, TPG: 0x04 },
+  "PICO32.DRV": { COLS: 32, NAMES: 0x0800, TPG: 0x04 },
+};
+
 /** %IF expression ... %ENDIF, nested, resolved from defs. */
 function conditions(text, defs) {
   const on = [true];

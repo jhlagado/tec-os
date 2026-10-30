@@ -152,8 +152,8 @@ HWSLC:  CALL    LCDWAIT
 
 ; Claim: the console stops drawing on the PICO9918 (output to it is dropped,
 ; no cursor, no page flips) and the program owns its registers and VRAM.
-; Release, or warm boot: text mode, font and page come back and the screen is
-; cleared.
+; Release, or warm boot: with PICO.DRV in, text mode, font and page come back
+; and the screen is cleared; with none, the VDP is left as the program left it.
 HWSVID: LD      A,(CONDEV)
         AND     CDTMS
         LD      A,HWENODV
@@ -172,7 +172,17 @@ HWVREL: LD      A,(VCLAIM)
         JP      Z,HWOK
         XOR     A
         LD      (VCLAIM),A
-        CALL    TMSSET          ; registers, font, page shown
+        LD      HL,(PIVEC)      ; registers, font, page shown, by its driver
+        LD      A,H
+        OR      L
+        JP      Z,HWOK          ; none: nothing is restored
+        LD      DE,6
+        ADD     HL,DE
+        LD      A,(HL)
+        INC     HL
+        LD      H,(HL)
+        LD      L,A
+        CALL    VHLJP
         LD      A,(CONMOD)
         CP      CMCRT
         JP      NZ,HWOK

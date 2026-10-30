@@ -10,7 +10,8 @@
 
 GLCOLS  EQU     21
 GLROWS  EQU     8
-GLHOOK  EQU     ABIGLCD         ; the video table: HL = six words, or 0
+GLHOOK  EQU     ABIGLCD         ; the video table: A = the mode, HL = eight words, or 0
+IOBYTE  EQU     $0003
 
         ORG     $0100
 HDR:    DB      'D',1,0,1       ; removable
@@ -22,29 +23,46 @@ HDR:    DB      'D',1,0,1       ; removable
 ; The video vector, in the ROM's order: VPUT, VGET, VCLREOL, VREST, VRDROW,
 ; VWRROW.
 VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
+        DW      0               ; only the PICO9918 has row moves to show
+        DB      GLCOLS,GLROWS
 LBUF:   DW      0               ; LINEBUF, from ABIGLCD
 
-; INIT refuses if the controller doesn't answer, or another GLCD.DRV has the
-; console; it offers no service. REMOVE gives the console back only if this one
-; took it.
-INIT:   CALL    GLCWAIT
+; INIT refuses if the controller doesn't answer, another GLCD.DRV has the
+; console, or another display is the console and CON UC1 didn't ask: a line in
+; STARTUP.CMD gives way to PICO.DRV. It offers no service. REMOVE gives the
+; console back, to PICO.DRV if that is in.
+INIT:   LD      A,(IOBYTE)
+        AND     3
+        CP      3
+        JR      Z,INIT1
+        LD      HL,(ABIVID)
+        LD      A,(HL)
+        OR      A
         SCF
         RET     NZ
+INIT1:  CALL    GLCWAIT
+        SCF
+        RET     NZ
+        LD      A,3             ; UC1:
         LD      HL,VTAB
         CALL    GLHOOK
         RET     C
         LD      (LBUF),HL
-        LD      A,1
-        LD      (OWN),A
         LD      HL,0
         OR      A
         RET
-REMOVE: LD      A,(OWN)
-        OR      A
-        RET     Z
+REMOVE: LD      DE,PICONAM
+        LD      BC,$0100
+        CALL    ABIDRV
+        JR      C,REMOV1
+        LD      A,(IOBYTE)
+        AND     $FC
+        OR      1               ; CRT:
+        LD      (IOBYTE),A
+REMOV1: LD      A,3
         LD      HL,0
         JP      GLHOOK
-OWN:    DB      0
+PICONAM:DB      "PICO    "
 
 GLCCMD  EQU     $07
 GLCDAT  EQU     $87

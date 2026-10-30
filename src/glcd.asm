@@ -1,36 +1,50 @@
-; The GLCD console. Its drawing code is a driver, GLCD.DRV, below
-; (0006h); its INIT hands the ROM its video table through GLHOOK (ABIGLCD),
-; and CONSW then points the terminal's vector at that table for UC1:. Its
-; REMOVE calls GLHOOK with 0, which puts the console back to serial.
+; The video drivers' hook. PICO.DRV and GLCD.DRV hand the ROM a table through
+; GLHOOK (ABIGLCD), and CONSW points the terminal's vector at it for CRT: and
+; UC1:. Each REMOVE calls GLHOOK with 0.
 
-; HL = the resident's video table, six words in TMSVEC's order (VPUT, VGET,
-; VCLREOL, VREST, VRDROW, VWRROW): kept for CONSW, and HL = LINEBUF on
-; return with carry clear, where VRDROW and VWRROW move a row; carry set
-; and nothing changed if a table is kept already. HL = 0: the table
-; dropped, the console back to serial and the vector back to the TMS9918's.
-GLHOOK: LD      A,H
+; A = CMCRT or CMUC1, HL = the driver's table: the terminal's six words (VPUT,
+; VGET, VCLREOL, VREST, VRDROW, VWRROW), the word for VTFN's functions, then
+; columns and rows. Kept for CONSW, and HL = LINEBUF on return with carry clear,
+; where VRDROW and VWRROW move a row; carry set and nothing changed if a table is
+; kept already, or there is no matrix keyboard. HL = 0: the table dropped, and
+; the console chosen again at its next call, carry clear.
+GLHOOK: ADD     A,LOW(PIVEC)-1
+        LD      E,A
+        LD      D,HIGH(PIVEC)
+        LD      A,H
         OR      L
         JR      Z,GLHOFF
-        LD      A,(CONDEV)      ; CDMTX, bit 0: no keyboard, no GLCD console
+        LD      A,(CONDEV)      ; CDMTX, bit 0
         RRCA
         CCF
         RET     C
-        LD      A,(GLVEC+1)     ; a table in RAM is at 0100h or above
+        INC     DE
+        LD      A,(DE)          ; a table in RAM is at 0100h or above
+        DEC     DE
         OR      A
         SCF
         RET     NZ
-        LD      (GLVEC),HL
+        EX      DE,HL
+        LD      (HL),E
+        INC     HL
+        LD      (HL),D
         LD      HL,LINEBUF
         OR      A
         RET
-GLHOFF: LD      (GLVEC),HL
+GLHOFF: EX      DE,HL
+        LD      (HL),D
+        INC     HL
+        LD      (HL),D
+        LD      A,L
+        CP      LOW(GLVEC+1)
+        JR      NZ,GLHF1
         LD      HL,CONDEV       ; CDGLC: no GLCD console now
         RES     2,(HL)
-        LD      HL,TMSVEC
-        CALL    VIDSET
-        LD      A,$FF           ; the console is chosen again at its next call
+GLHF1:  XOR     A
+        LD      (CONMOD),A
+        DEC     A
         LD      (CONACT),A
-        OR      A
+        OR      A               ; carry clear
         RET
 
 ; Load A:GLCD.DRV if there is a GLCD and its resident is not in, and make it
@@ -51,25 +65,28 @@ GLCNO:  LD      HL,GLCMSG
         SCF
         RET
 
-; Read CMDFCB's driver and install it. A driver that gave GLHOOK a table is the
-; GLCD: CDGLC goes on, and it is the console unless a PICO9918 is. Carry set if
-; it wouldn't read or install.
+; Read CMDFCB's driver and install it. If its page holds a video table it takes
+; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in. Carry set if it
+; wouldn't read or install.
 DRVGO:  CALL    LOADCOM
         RET     C
         CALL    DRVLOAD
         RET     C
-        LD      HL,CONDEV
-        BIT     2,(HL)
+        LD      A,(DRVHEAD)
+        LD      B,CMCRT
+        LD      HL,PIVEC+1
+        CP      (HL)
+        JR      Z,CONSET
+        LD      HL,GLVEC+1
+        CP      (HL)
         RET     NZ
-        LD      A,(GLVEC+1)
-        OR      A
-        RET     Z
+        LD      HL,CONDEV
         SET     2,(HL)          ; CDGLC
-        BIT     1,(HL)          ; CDTMS
+        LD      A,(PIVEC+1)
+        OR      A
         RET     NZ
         LD      B,CMUC1
         JR      CONSET
-SERCON: LD      B,CMTTY         ; the console mode B, at once
 CONSET: LD      A,(IOBYTE)
         AND     $FC
         OR      B

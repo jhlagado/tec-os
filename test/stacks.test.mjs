@@ -16,7 +16,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_DRV, ROOT, TEST_CLOCK, prl, program, romFor, volume, withGlcd } from "./lib/fixtures.mjs";
+import { GLCD_DRV, PICO_DRV, ROOT, TEST_CLOCK, prl, program, romFor, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
 
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
 const COMMANDS = [
@@ -110,14 +110,15 @@ async function consoleRun(opts, { wb = false } = {}) {
   for (const n of PROGRAMS) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
-  withGlcd(image, { tms: false, matrix: false, ...opts });
+  withDisplay(image, { tms: false, matrix: false, ...opts });
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  const conmod = m.read(m.sym("CONMOD"));
   for (const line of [...COMMANDS, ...(wb ? WRITE_BEHIND : [])]) run(m, line);
   assert.deepEqual(m.violations, []);
-  return depths();
+  return { ...depths(), conmod };
 }
 
 /** CON UC1 loading GLCD.DRV, then a resident shelling out and its level's EXIT. */
@@ -127,13 +128,17 @@ async function deepPaths(lines, opts = { tms: true, matrix: true }) {
   const a = volume(image, "A");
   a.write("GLCD.DRV", GLCD_DRV);
   a.write("SHELL.PRL", await prl("shell"));
+  if (opts.tms) {
+    a.write("PICO.DRV", PICO_DRV["PICO.DRV"]);
+    a.write("STARTUP.CMD", startupFile("PICO.DRV"));
+  }
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   for (const line of lines) run(m, line);
   assert.deepEqual(m.violations, []);
-  return depths();
+  return { ...depths(), conmod: m.read(m.sym("CONMOD")) };
 }
 
 function diagnosticRun() {
@@ -160,6 +165,9 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     conUc1Glcd: await deepPaths(["CON UC1\r"], { matrix: true }),
     residentLevel: await deepPaths(["SHELL\r", "DIR\r", "EXIT\r"]),
   };
+  assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
+  assert.equal(runs.glcd.conmod, 3, "the glcd run is on UC1:");
+  assert.equal(runs.conUc1.conmod, 3, "both displays, CON UC1 took the GLCD");
   const census = Object.fromEntries(
     ["bdos", "ccp", "bios"].map((k) => [k, { reserved: runs.serial[k].reserved, deepest: Math.max(...Object.values(runs).map((r) => r[k].deepest)) }]),
   );

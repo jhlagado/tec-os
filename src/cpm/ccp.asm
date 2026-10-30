@@ -1032,16 +1032,13 @@ CONCMP:
         INC     HL
 CONEND:
         CALL    ENDCHK
-        LD      A,B             ; UC1: the GLCD's driver, if it is not in
-        CP      CMUC1
-        JR      NZ,CONSETB
-        CALL    GLCLD
-        LD      B,CMUC1
-CONSETB:
         LD      A,(IOBYTE)
         AND     $FC
         OR      B
         LD      (IOBYTE),A
+        LD      A,B             ; UC1: the GLCD's driver, if it is not in
+        CP      CMUC1
+        CALL    Z,GLCLD
 CONSHOW:
         LD      DE,CONHDR
         CALL    PUTSTR

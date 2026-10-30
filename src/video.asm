@@ -1,21 +1,13 @@
-; Video displays. VIDINIT sets up every display that answers and records it
-; in CONDEV; the console mode then points the terminal's driver vectors at
-; one of them: VPUT (A at row B, column C), VGET, VCLREOL, VREST, which puts
+; Video displays. VIDINIT records in CONDEV whether the PICO9918 answers; the
+; console mode then points the terminal's driver vectors at a driver's table: VPUT (A at row B, column C), VGET, VCLREOL, VREST, which puts
 ; back the display mode and character set after a program may have changed
 ; them, leaving the picture alone, and VRDROW and VWRROW, which copy row B to
 ; and from LINEBUF. Scrolling is a line delete in the terminal.
 
-VIDINIT:LD      HL,TMSVEC
-        CALL    VIDSET
-        CALL    TMSINIT
+VIDINIT:CALL    TMSINIT
         RET     NZ
         LD      HL,CONDEV
         SET     1,(HL)          ; CDTMS
-        RET
-
-VIDSET: LD      DE,VPUTV
-        LD      BC,12
-        LDIR
         RET
 
 VPUT:   LD      HL,(VPUTV)
@@ -25,21 +17,29 @@ VGET:   LD      HL,(VGETV)
 VCLREOL:LD      HL,(VCLRV)
         JP      (HL)
 VREST:  LD      HL,(VRSTV)
-        JP      (HL)
+VHLJP:  JP      (HL)
 VRDROW: LD      HL,(VRDRV)
         JP      (HL)
 VWRROW: LD      HL,(VWRRV)
         JP      (HL)
 
-; Around a row move of rows C to VSBOT (the rest of the screen stays): on the
-; PICO9918 the move is built in the hidden page, shown at the next flip.
-VTMBEG: LD      A,(CONMOD)
-        CP      CMCRT
-        RET     NZ
-        LD      B,C             ; rows C to VSBOT move
+; The word for what only the PICO9918 does, when it is the console and no
+; program has claimed it: A = 0 show a finished row move; 1 begin a move of rows
+; C to VSBOT; 2 end one. Destroys AF, HL.
+VTMBEG: LD      B,C
         LD      A,(VSBOT)
         LD      C,A
-        JP      TMSMBEG
-VTMEND: XOR     A
-        LD      (TMVCOPY),A
-        RET
+        LD      A,1
+        JR      VTFN
+VTMEND: LD      A,2
+        JR      VTFN
+VTFLIP: XOR     A
+VTFN:   LD      L,A
+        LD      A,(CONMOD)
+        CP      CMCRT
+        RET     NZ
+        CALL    VTOWN
+        RET     NZ
+        LD      A,L
+        LD      HL,(VFNV)
+        JP      (HL)

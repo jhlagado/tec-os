@@ -76,13 +76,6 @@ for (const [name, opts] of [["no GLCD", { matrix: true, glcd: false }], ["no mat
   });
 }
 
-test("on a PICO9918 and matrix board GLCD.DRV loads and the PICO9918 keeps the console", () => {
-  const m = start({ "GLCD.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("GLCD.DRV") }, { tms: true, matrix: true });
-  prompt(m);
-  assert.notEqual(m.read(m.sym("DRVHEAD")), 0);
-  assert.equal(m.read(3) & 3, 1, "CRT:");
-});
-
 const SAY = (await program("say")).bytes;
 const raw = (text) => Buffer.from(text, "latin1");
 
@@ -133,15 +126,6 @@ test("a reset clears the position, so the file runs again", () => {
   const from = m.output.length;
   m.runUntil(() => m.ready() && /[A-P]>$/.test(m.text(from)), 400_000_000, "the prompt after reset");
   assert.match(m.text(from), /A>USER 3/);
-});
-
-test("the GLCD's UNLOAD on a PICO9918 board leaves the console on CRT:", () => {
-  const m = start({ "GLCD.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("GLCD.DRV") }, { tms: true, matrix: true });
-  prompt(m);
-  m.mark = m.output.length;
-  m.typeMatrix("unload\r");
-  m.runUntil(() => m.read(m.sym("DRVHEAD")) === 0 && m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 400_000_000, "UNLOAD");
-  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), m.read(m.sym("VPUTV")) | (m.read(m.sym("VPUTV") + 1) << 8)], [1, 1, m.sym("TMSPUT")]);
 });
 
 /** Each line's output and BDOS calls from MLGOT to the next MLREAD. */

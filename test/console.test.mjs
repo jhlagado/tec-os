@@ -7,15 +7,17 @@ import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/
 import { Machine } from "./lib/machine.mjs";
 import { GLCD_DRV, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
-test("with a PICO9918 and the matrix keyboard, the screen is the console and serial is quiet", () => {
+test("with PICO.DRV in the startup file, the banner goes to serial, and the screen is the console from its take", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
   const screen = m.screen();
-  assert.equal(screen[1], "TEC-OS 0.1 for TEC-1G");
-  assert.equal(screen[2], "A: SYSTEM");
-  assert.equal(screen[5], "A>");
-  assert.equal(m.cell(5, 2), 0xa0, "cursor is the reverse image of a space");
+  const at = screen.indexOf("A>");
+  assert.ok(at >= 0, "the prompt on the screen");
+  assert.equal(m.cell(at, 2), 0xa0, "cursor is the reverse image of a space");
   assert.match(m.bootText, /A: SYSTEM/);
-  assert.equal(m.serialText(), "", "nothing goes to the serial port");
+  const serial = m.serialText();
+  assert.match(serial, /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK *\r\n\r\nA>PICO\.DRV\r\r\n$/, "up to the take");
+  m.command("DIR");
+  assert.equal(m.serialText(), serial, "and nothing goes to the serial port after it");
   assert.equal(m.read(3) & 3, 1, "IOBYTE CON: is CRT:");
 });
 
@@ -86,11 +88,9 @@ test("the video terminal implements its ANSI subset", async () => {
   assert.equal(t[23], "A>");
 });
 
-test("the 32-column profile uses TMS9918 Graphics I", () => {
+test("PICO32.DRV uses TMS9918 Graphics I", () => {
   const m = boot(standardCard(), { tms: true, matrix: true, profile: "debug80g32" });
-  const s = m.screen(32);
-  assert.equal(s[1], "TEC-OS 0.1 for TEC-1G");
-  assert.equal(s[5], "A>");
+  assert.ok(m.screen(32).includes("A>"));
   assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[1], 0xc0);
 });
 
@@ -114,10 +114,12 @@ test("DIR lays out names to fit the display and reports free space", () => {
   assert.deepEqual(s.slice(at + 1, at + 5), [
     "COPY.COM     TERM.COM     PROBE.COM",
     "MANUAL.TXT   README.TXT   X",
-    "6 files, 1004K free",
-    "A>",
+    "PICO40.DRV   STARTUP.CMD",
+    "8 files, 1000K free",
   ]);
-  const glcd = boot(image, { matrix: true });
+  const small = standardCard();
+  for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) volume(small, "A").write(n, new Uint8Array(300));
+  const glcd = boot(small, { matrix: true });
   glcd.command("DIR *.COM");
   const g = glcd.glcdScreen();
   const from = g.indexOf("COPY.COM"); // GLCD.DRV and STARTUP.CMD are on A: too
@@ -311,6 +313,5 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [3, 0], "IOBYTE stays UC1:, served by serial");
   assert.equal(m.read(6), stub, "its pages given back to the TPA");
   assert.equal(word(m.sym("GLVEC")), 0, "its table dropped");
-  assert.equal(word(m.sym("VPUTV")), m.sym("TMSPUT"), "the vector off the freed pages");
   assert.deepEqual(m.violations, []);
 });

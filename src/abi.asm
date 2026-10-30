@@ -16,6 +16,6 @@ ABIXCCP:JP      XCCP            ; C017h a nested CCP: HL = 0100h
 ABIXCMD:JP      XCMD            ; C01Ah one command line at DE, the same
 ABIVOL: JP      VOLSVC          ; C01Dh mount, unmount and describe
 ABIFONT:DW      FONT            ; C020h the console font, 8 bytes a character from 20h
-ABIGLCD:JP      GLHOOK          ; C022h the GLCD's video table: HL = six words (carry if one is kept), or 0
+ABIGLCD:JP      GLHOOK          ; C022h a video driver's table: A = CMCRT or CMUC1, HL = eight words (carry if one is kept), or 0
 ABIDRV: JP      DRVSVC          ; C025h the service registry: C = 0 find, 1 enumerate
 ABIEND:

@@ -22,7 +22,6 @@ COLD:   DI
         LDIR
         LD      SP,BSTK
         CALL    CONINIT
-        CALL    CONPICK
 COLDCON:CALL    LCDINIT
         LD      HL,LCDBAN
         LD      B,0

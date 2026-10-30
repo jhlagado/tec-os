@@ -17,6 +17,6 @@ ABIXCCP EQU     $C017           ; CALL: a nested CCP, HL = 0100h
 ABIXCMD EQU     $C01A           ; CALL: one command line at DE, HL = 0100h
 ABIVOL  EQU     $C01D           ; CALL: mount, unmount and describe volumes
 ABIFONT EQU     $C020           ; a word: the address of the console font, 8 bytes a character from 20h
-ABIGLCD EQU     $C022           ; CALL: the GLCD's video table, HL = six words, or 0
+ABIGLCD EQU     $C022           ; CALL: a video driver's table, A = 1 CRT or 3 UC1, HL = eight words, or 0
 ABIDRV  EQU     $C025           ; CALL: the service registry, C = 0 find, 1 enumerate
 ABIEND  EQU     $C028           ; the end of ABI 3.1's entries

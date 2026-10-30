@@ -79,10 +79,6 @@ BDOSSTN EQU     54
 CCPSTN  EQU     30
 BIOSSTN EQU     38
 
-; ---- GLCD console geometry: 6 x 8 cells on 128 x 64 pixels ------------------
-GLCOLS  EQU     21
-GLROWS  EQU     8
-
 ; ---- Disk geometry limits ---------------------------------------------------
 MAXDRV  EQU     4               ; drives A-D
 DPHSZ   EQU     16

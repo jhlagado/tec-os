@@ -46,11 +46,9 @@ VCLRV:  DS      2
 VRSTV:  DS      2
 VRDRV:  DS      2               ; read row B into LINEBUF
 VWRRV:  DS      2               ; write LINEBUF to row B
+VFNV:   DS      2               ; flip, begin and end a row move: A = 0, 1, 2
 VSTOP:  DS      1               ; scroll region, first and last row
 VSBOT:  DS      1
-TPDRAW: DS      1               ; PICO9918 page drawn and page shown: offset
-TPSHOW: DS      1               ; high byte, 0 or TPGOFF
-TMVCOPY:DS      1               ; 1 while a row move builds the hidden page
 CONACT: DS      1               ; IOBYTE CON: field last acted on
 VCLAIM: DS      1               ; 1 while a program owns the PICO9918
 HWARGA: DS      1               ; hardware services: A on entry
@@ -210,7 +208,8 @@ KBT1:   DS      1               ; and the bytes themselves
 KBT2:   DS      1
 
 ; ---- The GLCD console ------------------------------------------------------
-GLVEC:  DS      2               ; GLCD.DRV's video table, from GLHOOK; 0 for none
+PIVEC:  DS      2               ; PICO.DRV's video table, from GLHOOK; 0 for none
+GLVEC:  DS      2               ; GLCD.DRV's, the same: indexed by CMCRT and CMUC1
 
 ; ---- Command-line history ------------------------------------------------------
 HHEAD:  DS      1               ; the offset the next line goes in at
