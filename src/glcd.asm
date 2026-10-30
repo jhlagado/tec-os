@@ -11,6 +11,10 @@
 GLHOOK: LD      A,H
         OR      L
         JR      Z,GLHOFF
+        LD      A,(CONDEV)      ; CDMTX, bit 0: no keyboard, no GLCD console
+        RRCA
+        CCF
+        RET     C
         LD      A,(GLVEC+1)     ; a table in RAM is at 0100h or above
         OR      A
         SCF
@@ -24,7 +28,9 @@ GLHOFF: LD      (GLVEC),HL
         RES     2,(HL)
         LD      HL,TMSVEC
         CALL    VIDSET
-        JR      SERCON
+        CALL    SERCON
+        OR      A
+        RET
 
 ; The CCP's first entry after a cold boot that found a GLCD, with the matrix
 ; keyboard and no PICO9918: load A:GLCD.PRL and make it the console. Until
@@ -54,13 +60,30 @@ GLCLD:  LD      A,(CONDEV)
         LD      DE,CMDFCB
         LD      BC,12
         LDIR
-        CALL    LOADCOM
-        JR      C,GLCNO
-        CALL    PRLGO
-        JR      C,GLCNO
-        JR      Z,GLCNO         ; a program, not a resident
+        CALL    DRVGO
+        RET     NC
+GLCNO:  LD      HL,GLCMSG
+        LD      B,3
+        CALL    LCDROW
+        SCF
+        RET
+
+; Read CMDFCB's driver and install it. A driver that gave GLHOOK a table is the
+; GLCD: CDGLC goes on, and it is the console unless a PICO9918 is. Carry set if
+; it wouldn't read or install.
+DRVGO:  CALL    LOADCOM
+        RET     C
+        CALL    DRVLOAD
+        RET     C
         LD      HL,CONDEV
-        SET     2,(HL)          ; CDGLC: the resident is in
+        BIT     2,(HL)
+        RET     NZ
+        LD      A,(GLVEC+1)
+        OR      A
+        RET     Z
+        SET     2,(HL)          ; CDGLC
+        BIT     1,(HL)          ; CDTMS
+        RET     NZ
         LD      B,CMUC1
         JR      CONSET
 SERCON: LD      B,CMTTY         ; the console mode B, at once
@@ -71,9 +94,4 @@ CONSET: LD      A,(IOBYTE)
         LD      A,$FF
         LD      (CONACT),A
         JP      CONSEL
-GLCNO:  LD      HL,GLCMSG
-        LD      B,3
-        CALL    LCDROW
-        SCF
-        RET
 

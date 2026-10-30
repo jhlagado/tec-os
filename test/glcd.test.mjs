@@ -2,7 +2,7 @@
 // workload and CONOUT.COM, the ST7920's graphics RAM equals what b025dbb's
 // driver in EXPAND 1 drew (test/glcd-screens.json); (0006h) is three pages
 // lower than it was with the driver; a program on the CCP stack can call
-// the BIOS's CONOUT directly in the 25 bytes it has; and UNLOAD gives the
+// the BIOS's CONOUT directly in the 28 bytes it has; and UNLOAD gives the
 // console and the pages back. Emulator evidence.
 
 import { test } from "node:test";
@@ -32,7 +32,7 @@ async function board({ matrix = true } = {}) {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;
 }
 
@@ -133,16 +133,14 @@ test("UNLOAD gives the console back to serial and the pages to the TPA, and outp
   assert.deepEqual(m.violations, []);
 });
 
-test("a second GLCD.PRL is refused the console, and unloading it leaves the first's", async () => {
+test("a second GLCD.DRV is refused whole, and the first keeps the console", async () => {
   const m = await board();
   const table = word(m, m.sym("GLVEC"));
   const first = word(m, 6);
-  run(m, "GLCD\r");
-  assert.equal(word(m, 6), first - 0x300, "the second is installed below the first");
-  assert.equal(word(m, m.sym("GLVEC")), table, "ABIGLCD kept the first's table");
-  run(m, "UNLOAD\r");
-  assert.equal(word(m, 6), first);
-  assert.deepEqual([m.read(3) & 3, word(m, m.sym("GLVEC")), word(m, m.sym("VPUTV"))], [3, table, word(m, table)], "the GLCD is still the console");
+  const from = m.output.length;
+  run(m, "GLCD.DRV\r");
+  assert.match(m.text(from), /GLCD\.DRV\?/);
+  assert.deepEqual([word(m, 6), word(m, m.sym("GLVEC")), m.read(3) & 3], [first, table, 3]);
   m.mark = m.output.length;
   m.type("UNLOAD\r");
   m.runUntil(() => m.waitingForInput() && m.read(3) % 4 === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
@@ -163,6 +161,8 @@ test("the GLCD hook takes a table and returns LINEBUF, refuses a second, and wit
     return { hl: (c.h << 8) | c.l, carry: c.flags.C };
   };
   assert.equal(word(m, m.sym("GLVEC")), 0, "no table on a serial board");
+  assert.equal(callHook(TABLE).carry, 1, "and no keyboard, no table");
+  m.write(m.sym("CONDEV"), m.read(m.sym("CONDEV")) | 1);
   assert.deepEqual(callHook(TABLE), { hl: m.sym("LINEBUF"), carry: 0 });
   assert.equal(word(m, m.sym("GLVEC")), TABLE);
   assert.deepEqual(callHook(TABLE + 0x100), { hl: TABLE + 0x100, carry: 1 }, "a second table refused, HL as given");

@@ -7,13 +7,12 @@ const putWord = (m, a, n) => { m.write(a, n & 255); m.write(a + 1, n >> 8); };
 
 // Enter the actual loader with a record-rounded extent. Stop before either
 // destructive path so an old ROM fails promptly instead of corrupting itself.
-async function check({ n, end, resident = false, version = 1, kind = 1, extra = 0, top, accept = false }) {
+async function check({ n, end, extra = 0, top, accept = false }) {
   const m = await boot(standardCard());
   for (let a = 0x100; a < 0x400; a++) m.write(a, 0);
   putWord(m, 0x101, n);
   putWord(m, 0x104, extra);
   m.write(0x200, 0xc9);
-  if (resident) [0x54, 0x4e, 0x4d, version, kind].forEach((v, i) => m.write(0x200 + i, v));
   if (top !== undefined) putWord(m, 6, top);
   // The baseline has no retained extent; the same input still reaches its
   // destructive path, which is the discriminator for every rejection case.
@@ -27,7 +26,7 @@ async function check({ n, end, resident = false, version = 1, kind = 1, extra = 
   let minSp = 0x70;
   m.runUntil(() => {
     minSp = Math.min(minSp, m.cpu.cpu.sp);
-    return [0x80, m.sym("PRLPROG"), m.sym("PRLREL")].includes(m.pc);
+    return [0x80, m.sym("PRLPROG")].includes(m.pc);
   }, 1_000_000, "validation returns or reaches a destructive path");
   if (accept) assert.equal(m.pc, m.sym("PRLPROG"));
   else {
@@ -49,8 +48,6 @@ for (const [name, input] of Object.entries({
   "wrapped code end": { n: 65535, end: 0x280 },
   "wrapped bitmap end": { n: 58000, end: 0xb800 },
   "destination above current TPA": { n: 257, end: 0x400, top: 0x206 },
-  "short resident header": { n: 12, end: 0x280, resident: true },
-  "unsupported resident version": { n: 32, end: 0x280, resident: true, version: 2 },
 })) test(`PRL rejects ${name} without mutation`, () => check(input));
 
 for (const n of [1, 7, 8, 9, 113, 114, 127, 128, 255, 256, 257]) {

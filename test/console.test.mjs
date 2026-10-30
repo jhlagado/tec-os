@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_PRL, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { GLCD_DRV, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 test("with a PICO9918 and the matrix keyboard, the screen is the console and serial is quiet", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
@@ -29,7 +29,7 @@ test("without the matrix keyboard the serial terminal is the console, even with 
 
 test("CON switches the console between devices and falls back to serial", () => {
   const image = standardCard();
-  volume(image, "A").write("GLCD.PRL", GLCD_PRL); // CON UC1: loads the GLCD's resident
+  volume(image, "A").write("GLCD.DRV", GLCD_DRV); // CON UC1: loads the GLCD's resident
   const m = boot(image, { tms: true, matrix: true });
   assert.match(m.command("CON"), /CON: CRT: PICO9918/);
   m.mark = m.output.length;
@@ -120,7 +120,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const glcd = boot(image, { matrix: true });
   glcd.command("DIR *.COM");
   const g = glcd.glcdScreen();
-  const from = g.indexOf("COPY.COM"); // GLCD.PRL, the GLCD's resident, is on A: too
+  const from = g.indexOf("COPY.COM"); // GLCD.DRV is on A: too
   assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1002K free", "A>"]);
   assert.match(tms.command("DIR B:"), /NO FILE/);
 });
@@ -287,7 +287,7 @@ test("a row move on the PICO9918 is built out of sight and shown when the progra
   assert.deepEqual(m.violations, []);
 });
 
-test("a GLCD board without GLCD.PRL keeps the serial console, and the LCD says so", () => {
+test("a GLCD board without GLCD.DRV keeps the serial console, and the LCD says so", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
@@ -301,7 +301,7 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   const m = boot(standardCard(), { matrix: true });
   const word = (a) => m.read(a) | (m.read(a + 1) << 8);
   assert.equal(m.read(3) & 3, 3);
-  assert.equal(word(6), (word(m.sym("PZTOP")) & 0xff00) + 6, "GLCD.PRL is the resident below the BDOS");
+  assert.equal(word(6), (word(m.sym("PZTOP")) & 0xff00) + 6, "GLCD.DRV is the resident below the BDOS");
   assert.equal(word(m.sym("VPUTV")), word(word(m.sym("GLVEC"))), "the vector is its table's");
   m.mark = m.output.length;
   m.typeMatrix("unload\r");

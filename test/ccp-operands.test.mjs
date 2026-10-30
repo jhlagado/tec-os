@@ -1,7 +1,8 @@
 // The CCP's operands: one command line for each branch of the built-ins'
 // argument, parser and end checks, in order, since files persist. Console
 // output and the BDOS calls of each line are held against a fixture taken
-// from the ROM at 9a5512b, so the fixture proves the behaviour is kept. A
+// from the prior ROM, so the fixture proves the behaviour is kept; SHELLC,
+// SHELLE and CON UC1 were retaken when modules left. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it. Emulator evidence.
@@ -12,7 +13,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_PRL, ROOT, boot, prl, volume } from "./lib/fixtures.mjs";
+import { GLCD_DRV, ROOT, boot, prl, volume } from "./lib/fixtures.mjs";
 
 const FIXTURE = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/ccp-operands.json"), "utf8"));
 const PROFILE = "debug80";
@@ -47,7 +48,7 @@ async function card({ glcd = false } = {}) {
   const bad = Uint8Array.from(shell);
   Buffer.from("DIR <  ").copy(bad, at);
   a.write("SHELLE.PRL", bad);
-  if (glcd) a.write("GLCD.PRL", GLCD_PRL);
+  if (glcd) a.write("GLCD.DRV", GLCD_DRV);
   const b = volume(image, "B");
   fill(b, 65536, (i) => `FILL${i}.BIN`);
   fill(b, 4096, (i) => `TOP${i}.BIN`);

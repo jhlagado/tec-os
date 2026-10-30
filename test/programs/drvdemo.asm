@@ -11,6 +11,9 @@ HDR:    DB      'D',1,0,FLAGS
         DB      DRVNAME
 ; ---- the image ----------------------------------------------------------------
 INIT:
+%IF V_HANG
+        JR      INIT            ; a broken driver
+%ENDIF
 %IF V_FAIL
         SCF
         RET

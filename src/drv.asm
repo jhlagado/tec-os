@@ -31,7 +31,7 @@ DRVUNL: LD      A,(CCPLVL)
         LD      L,A
         LD      A,(DRVHEAD)
         CP      H
-        JP      NZ,PRLREM
+        JR      NZ,PRLRF
         LD      L,DFLG
         BIT     0,(HL)
         JR      Z,PRLRF

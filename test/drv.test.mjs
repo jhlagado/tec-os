@@ -9,10 +9,10 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { checkInterfaces, DHLEN, encoders, makeDrv } from "../tools/lib/drv.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, boot, prl, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
-const VARIANTS = ["V_FAIL", "V_PROBE", "V_CCP", "V_CMD", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"];
+const VARIANTS = ["V_FAIL", "V_PROBE", "V_CCP", "V_CMD", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
 const made = new Map();
 
 /** DRVDEMO with OVER set; opt as makeDrv's. */
@@ -83,9 +83,7 @@ function bench(m) {
 }
 
 async function machine(opts = {}) {
-  const image = standardCard();
-  volume(image, "A").write("RES.PRL", await prl("res"));
-  return bench(boot(image, opts));
+  return bench(boot(standardCard(), opts));
 }
 
 const snapshot = (m) => Uint8Array.from({ length: 0xc000 }, (_, i) => m.read(i));
@@ -110,7 +108,7 @@ function ranges(m) {
       DIRBUF: [s("DIRBUF"), s("DIRBUF") + 128],
       LOGINV: [s("LOGINV"), s("LOGINV") + 2],
       "the SD and cache state": [s("SDBYTE"), s("KBMASK")],
-      "the keyboard's scan": [s("KBMASK"), s("GLCWANT")],
+      "the keyboard's scan": [s("KBMASK"), s("GLVEC")],
       "the terminal's cursor and parser": [0x46, 0x50],
       "RXFULL and RXCHAR": [0x42, 0x44],
       HHEAD: [s("HHEAD"), s("HHEAD") + 1],
@@ -290,6 +288,25 @@ test("REMOVE calling ABIXCCP is refused, and UNLOAD goes on", async () => {
   assert.equal(t.m.read(base + d.symbols.RESULT), 1, "the call returned carry");
   assert.equal(t.m.read(t.m.sym("CCPLVL")), 0);
   assert.equal(t.m.read(t.m.sym("DRVHEAD")), 0);
+});
+
+test("NAME.DRV installs, from a drive too; a file that won't read and a refused load go to BADCMD", async () => {
+  const image = standardCard();
+  const good2 = (await drv()).file;
+  volume(image, "A").write("OK.DRV", good2);
+  volume(image, "B").write("OK2.DRV", good2);
+  volume(image, "A").write("FAIL.DRV", (await drv({ V_FAIL: 1 })).file);
+  const t = bench(boot(image));
+  const stub = t.word(6);
+  assert.match(t.m.command("NONE.DRV"), /NONE\.DRV\?/);
+  assert.match(t.m.command("FAIL.DRV"), /FAIL\.DRV\?/);
+  assert.equal(t.word(6), stub);
+  t.m.command("CCP");
+  assert.match(t.m.command("OK.DRV"), /OK\.DRV\?/, "a level is refused");
+  t.m.command("EXIT");
+  assert.doesNotMatch(t.m.command("OK.DRV"), /\?/);
+  assert.doesNotMatch(t.m.command("B:OK2.DRV"), /\?/);
+  assert.equal(t.word(6), stub - 0x200);
 });
 
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
@@ -488,28 +505,8 @@ for (const [i, field] of [[0, "STKB"], [1, "STKI"], [2, "STKC"]]) {
   });
 }
 
-test("a module PRL below a driver and above one: UNLOAD takes the lowest, by the owner's page", async () => {
-  let t = await machine();
-  t.m.command("RES");
-  t.load((await drv()).file);
-  t.prompt();
-  t.unload();
-  assert.equal(t.find("DEMO").carry, 1);
-  t.prompt();
-  assert.doesNotMatch(t.unload(), /UNLOAD\?/);
-  assert.equal(t.word(t.m.sym("PZTOP")), t.word(t.m.sym("STUBAD")));
-  t = await machine();
-  t.load((await drv()).file);
-  t.prompt();
-  const page = t.head();
-  t.m.command("RES");
-  t.unload();
-  assert.equal(t.find("DEMO").carry, 0);
-  assert.equal(t.word(6), page + 6);
-});
-
 test("the scan can't see a GLVEC-style vector: INIT failed, pages freed, the vector left", async () => {
-  const t = await machine();
+  const t = await machine({ tms: true, matrix: true });
   const x = transaction(t, (await drv({ V_GLVEC: 1 })).file);
   assert.deepEqual([x.r.carry, x.r.rc], [1, 1]);
   assert.notEqual(t.word(t.m.sym("GLVEC")), 0);

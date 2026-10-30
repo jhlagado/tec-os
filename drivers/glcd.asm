@@ -1,10 +1,11 @@
-; GLCD.PRL: the ST7920 128 x 64 GLCD console as a resident below (0006h),
-; 21 columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. Its
-; INIT hands the ROM its video table through ABIGLCD, and the ROM's terminal
-; then calls its six routines directly, on the caller's stack. It keeps its
-; screen text and counters here, reads the font in ROM through ABIFONT, and
-; moves rows to and from the ROM's LINEBUF, whose address ABIGLCD returns.
-; Its REMOVE, at UNLOAD, gives the console back to serial.
+; GLCD.DRV: the ST7920 128 x 64 GLCD console as a driver below (0006h), 21
+; columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. Its INIT
+; checks that the controller answers and hands the ROM its video table through
+; ABIGLCD; the CCP then takes the console, unless a PICO9918 has it, and the
+; ROM's terminal calls its six routines directly, on the caller's stack. It
+; keeps its screen text and counters here, reads the font in ROM through
+; ABIFONT, and moves rows to and from the ROM's LINEBUF, whose address ABIGLCD
+; returns. Its REMOVE, at UNLOAD, gives the console back to serial.
 %INCLUDE "../src/abi.inc"
 
 GLCOLS  EQU     21
@@ -12,9 +13,10 @@ GLROWS  EQU     8
 GLHOOK  EQU     ABIGLCD         ; the video table: HL = six words, or 0
 
         ORG     $0100
-HDR:    DB      "TNM",1,1,0     ; a resident
-        JP      0               ; the loader points this at the old (0006h)
-        DW      INIT,REMOVE
+HDR:    DB      'D',1,0,1       ; removable
+        DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
+        DB      2,0,6           ; over the base: BDOS, BIOS, CCP
+        DW      0               ; INIT: the writer's
         DB      "GLCD    "
 
 ; The video vector, in the ROM's order: VPUT, VGET, VCLREOL, VREST, VRDROW,
@@ -22,14 +24,20 @@ HDR:    DB      "TNM",1,1,0     ; a resident
 VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
 LBUF:   DW      0               ; LINEBUF, from ABIGLCD
 
-; INIT takes the console's table unless another GLCD.PRL has it; REMOVE
-; gives the console back only if this one took it.
-INIT:   LD      HL,VTAB
+; INIT refuses if the controller doesn't answer, or another GLCD.DRV has the
+; console; it offers no service. REMOVE gives the console back only if this one
+; took it.
+INIT:   CALL    GLCWAIT
+        SCF
+        RET     NZ
+        LD      HL,VTAB
         CALL    GLHOOK
         RET     C
         LD      (LBUF),HL
         LD      A,1
         LD      (OWN),A
+        LD      HL,0
+        OR      A
         RET
 REMOVE: LD      A,(OWN)
         OR      A
@@ -340,3 +348,4 @@ GLROWP: DS      2
 GLOFF:  DS      1
 GLWN:   DS      1
 GLOUT:  DS      1
+IMGEND:

@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, prl, program, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, driver, prl, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
@@ -25,7 +25,7 @@ async function machine(opts = {}) {
   a.write("SHELL.PRL", await prl("shell"));
   a.write("SHELLC.PRL", await shellc());
   a.write("SAY.COM", SAY);
-  a.write("RES.PRL", await prl("res"));
+  a.write("RES.DRV", await driver("res"));
   volume(image, "B").write("SAY.COM", SAY);
   return boot(image, opts);
 }
@@ -50,7 +50,6 @@ test("a resident shells out, its child level changes drive and user, and at EXIT
   const out = cmd(m, "EXIT", /\r\nA>$/);
   assert.match(out, /SHELL OK 0007/, "stack, drive, user and the return code");
   assert.equal(level(m), 0);
-  assert.equal(word(m, 6), stub - 0x100, "SHELL stays installed");
   assert.deepEqual(m.violations, []);
 });
 
@@ -107,8 +106,8 @@ test("EXIT at level 0 and UNLOAD with no resident are refused; UNLOAD removes re
   assert.match(cmd(m, "EXIT"), /EXIT\?/);
   assert.match(cmd(m, "UNLOAD"), /UNLOAD\?/);
   const stub = word(m, 6);
-  cmd(m, "RES");
-  cmd(m, "RES");
+  cmd(m, "RES.DRV");
+  cmd(m, "RES.DRV");
   assert.equal(word(m, 6), stub - 0x200);
   cmd(m, "UNLOAD");
   assert.equal(word(m, 6), stub - 0x100);
@@ -166,14 +165,15 @@ test("CCP, and a resident through ABIXCCP and ABIXCMD with 0100h, nest to six le
   assert.deepEqual(m.violations, []);
 });
 
-test("UNLOAD is refused in a nested level, so the resident a level returns into stays", async () => {
+test("UNLOAD is refused in a nested level, and at level 0 it unloads", async () => {
   const m = await machine();
   const stub = word(m, 6);
-  cmd(m, "SHELL");
+  cmd(m, "RES.DRV");
+  cmd(m, "CCP");
   assert.equal(level(m), 1);
   assert.match(cmd(m, "UNLOAD"), /UNLOAD\?/);
-  assert.equal(word(m, 6), stub - 0x100, "SHELL still installed");
-  assert.match(cmd(m, "EXIT"), /SHELL OK [0-9A-F]{4}/, "EXIT returns into it");
+  assert.equal(word(m, 6), stub - 0x100, "still installed");
+  cmd(m, "EXIT");
   cmd(m, "UNLOAD");
   assert.equal(word(m, 6), stub, "and at level 0 it unloads");
   assert.deepEqual(m.violations, []);

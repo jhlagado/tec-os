@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
-import { makePrl } from "./lib/prl.mjs";
+import { makeDrv } from "./lib/drv.mjs";
 import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
 import { PROFILES } from "./build.mjs";
 
@@ -192,11 +192,11 @@ async function main() {
     writeFileSync(resolve(FILES, p.name), bytes);
     files.push({ ...p, bytes });
   }
-  // The GLCD console's resident: on a board with a GLCD and no PICO9918, the
-  // CCP loads it before its first prompt.
-  const glcd = await makePrl(resolve(ROOT, "drivers/glcd.asm"), resolve(ROOT, "build/prl"));
-  writeFileSync(resolve(FILES, "GLCD.PRL"), glcd);
-  files.push({ name: "GLCD.PRL", description: "the GLCD console, a resident loaded at boot on a board with a GLCD and no PICO9918", bytes: glcd });
+  // The GLCD console's driver, and the startup file that loads it before the
+  // first prompt. A board with no GLCD refuses it, and the prompt follows.
+  const glcd = (await makeDrv(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/drv") })).file;
+  writeFileSync(resolve(FILES, "GLCD.DRV"), glcd);
+  files.push({ name: "GLCD.DRV", description: "the GLCD console, a driver", bytes: glcd });
   // Edit joins the card when a build that sizes itself to the TPA and the
   // display is available (configuration tag "ECFG" at 0103h).
   const editPath = process.env.EDIT_COM ?? resolve(ROOT, "../edit/dist/EDIT.COM");

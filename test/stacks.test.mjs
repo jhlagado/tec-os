@@ -2,7 +2,7 @@
 // suite, on the serial console, the PICO9918 and the GLCD with the matrix
 // keyboard, on the serial console with B: written behind, on the diagnostic
 // console without a card, and on the CCP's two deepest paths: CON UC1 loading
-// GLCD.PRL on a PICO9918 and matrix board, and a resident's level. Every memory write
+// GLCD.DRV on a PICO9918 and matrix board and on a GLCD board, and a shelled-out level. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
 // whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
@@ -16,7 +16,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_PRL, ROOT, TEST_CLOCK, prl, program, romFor, volume, withGlcd } from "./lib/fixtures.mjs";
+import { GLCD_DRV, ROOT, TEST_CLOCK, prl, program, romFor, volume, withGlcd } from "./lib/fixtures.mjs";
 
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
 const COMMANDS = [
@@ -114,23 +114,23 @@ async function consoleRun(opts, { wb = false } = {}) {
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   for (const line of [...COMMANDS, ...(wb ? WRITE_BEHIND : [])]) run(m, line);
   assert.deepEqual(m.violations, []);
   return depths();
 }
 
-/** CON UC1 loading GLCD.PRL, then a resident shelling out and its level's EXIT. */
-async function deepPaths(lines) {
+/** CON UC1 loading GLCD.DRV, then a resident shelling out and its level's EXIT. */
+async function deepPaths(lines, opts = { tms: true, matrix: true }) {
   const { rom, symbols } = romFor();
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }]);
   const a = volume(image, "A");
-  a.write("GLCD.PRL", GLCD_PRL);
+  a.write("GLCD.DRV", GLCD_DRV);
   a.write("SHELL.PRL", await prl("shell"));
-  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: true, matrix: true });
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   for (const line of lines) run(m, line);
   assert.deepEqual(m.violations, []);
   return depths();
@@ -164,7 +164,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.PRL on a PICO9918 and matrix board; and SHELL.PRL shelling out from its INIT, a DIR at that level, and EXIT. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board; and SHELL.PRL, a program, shelling out, a DIR at that level, and EXIT. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

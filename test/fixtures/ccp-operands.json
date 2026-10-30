@@ -1,5 +1,5 @@
 {
-  "rom": "9a5512b",
+  "rom": "ks25b",
   "profile": "debug80",
   "inputs": [
     {
@@ -401,7 +401,7 @@
     {
       "input": "CON UC1",
       "output": "CON UC1\r\r\nCON: TTY: serial terminal\r\nA>",
-      "calls": "62a06907f637a9856b77e79bf82e707226e52c7975d2960cae4145a430748443",
+      "calls": "e6c7af9637d8a1972b50b8a1872f7eefae3d69ecb9584ca5d9227b9d00200c3d",
       "peak": 14
     },
     {
@@ -473,22 +473,22 @@
     {
       "input": "SHELLC",
       "output": "SHELLC\r\r\n\r\n\r\nSETRC?\r\n\r\n\r\nSHELL OK 0000\r\nA>",
-      "calls": "79fb5d6a7762f3682d9d05e0c37d64ff0cd85cafd56803e71e87233137e2866c",
-      "peak": 22
+      "calls": "0c688563d7af8d50b1cf7b96df5fd0ed3b7dd7cdc30b04bcb22ff4a04f3fe3ad",
+      "peak": 20
     },
     {
       "input": "SHELLE",
       "output": "SHELLE\r\r\n\r\n\r\n<?\r\n\r\n\r\nSHELL OK 0000\r\nA>",
-      "calls": "bd6feea9469b498b400d1263eec239025842140be2236b778939980d0e30f009",
-      "peak": 22
+      "calls": "642f48a60030f71a7170bcbe78124ea59d19f165328a44253ed19ded494828b2",
+      "peak": 20
     }
   ],
   "picoMatrix": [
     {
       "input": "CON UC1",
       "output": "CON UC1\r\r\nCON: UC1: GLCD\r\nA>",
-      "calls": "60526d197375f99a0da094e7685efcc9440c8e667bd0d467805ab8c2b27c9404",
-      "peak": 22
+      "calls": "472e3480f0c53a298d0148422babe4859e7b19aee3ffef4571a4684060a9ad40",
+      "peak": 12
     }
   ]
 }

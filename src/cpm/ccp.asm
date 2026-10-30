@@ -197,7 +197,17 @@ NOTDRIVE:
         LD      DE,CMDFCB
         CALL    UNAMBIG
         JR      C,BADCMD
-        LD      A,'C'
+        LD      HL,(CMDFCB+9)   ; NAME.DRV installs
+        LD      DE,'R'*256+'D'
+        SBC     HL,DE
+        JR      NZ,CMDCOM
+        LD      A,(CMDFCB+11)
+        CP      'V'
+        JR      NZ,CMDCOM
+        CALL    DRVGO
+        JR      C,BADCMD
+        JP      STARTED
+CMDCOM: LD      A,'C'
         LD      (CMDFCB+9),A
         LD      A,'O'
         LD      (CMDFCB+10),A
@@ -214,7 +224,6 @@ NOTDRIVE:
         JR      C,BADCMD
         CALL    PRLGO
         JR      C,BADCMD
-        JP      NZ,STARTED      ; a module installed
 CMDRUN: CALL    PREPPAGE
         ; Keep the return word outside default DMA ($0080..$00FF). The
         ; resident stack supplies 28 free bytes beneath this two-byte word.
@@ -1020,9 +1029,10 @@ CONEND:
         CALL    ENDCHK
         LD      A,B             ; UC1: the GLCD's driver, if it is not in
         CP      CMUC1
-        PUSH    BC
-        CALL    Z,GLCLD
-        POP     BC
+        JR      NZ,CONSETB
+        CALL    GLCLD
+        LD      B,CMUC1
+CONSETB:
         LD      A,(IOBYTE)
         AND     $FC
         OR      B

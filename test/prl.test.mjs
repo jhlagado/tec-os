@@ -1,10 +1,10 @@
-// The PRL loader: programs and residents from PRL files made as
-// Digital Research made them, the CCP's NAME.COM before NAME.PRL, removal
-// last in, first out, and BDOS function 108. Emulator evidence.
+// The PRL loader: programs from PRL files made as Digital Research made
+// them, the CCP's NAME.COM before NAME.PRL, and BDOS function 108; and a
+// driver's place below (0006h), removal last in, first out. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, prl, program, programAt, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, driver, prl, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0080;
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -25,7 +25,6 @@ function run(m, code) {
   const c = m.cpu.cpu;
   return { a: c.a, hl: (c.h << 8) | c.l, carry: c.flags.C };
 }
-const removeAt = (m, base) => run(m, [0x21, base & 0xff, base >> 8, 0xcd, m.sym("PRLREM") & 0xff, m.sym("PRLREM") >> 8]);
 const back = (m) => {
   m.mark = m.output.length;
   m.cpu.cpu.pc = 0;
@@ -69,20 +68,14 @@ test("the CCP runs NAME.PRL only when there is no NAME.COM", async () => {
 });
 
 test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it", async () => {
-  const m = await machine({ "RES.PRL": await prl("res"), "HOOK.COM": (await program("hook")).bytes });
+  const m = await machine({ "RES.DRV": await driver("res"), "HOOK.COM": (await program("hook")).bytes });
   const stub = word(m, 6);
   const p1 = (stub >> 8) - 1; // one page below the stub's
-  m.command("RES");
+  m.command("RES.DRV");
   assert.equal(word(m, 6), (p1 << 8) + 6, "(0006h) is the resident's base + 6");
   assert.equal(word(m, m.sym("PZTOP")), (p1 << 8) + 6);
-  const at = await programAt("res", p1 << 8);
-  const want = Array.from(at);
-  want[7] = stub & 0xff;
-  want[8] = stub >> 8;
-  const data = 4; // OLDCO and COUNT, which INIT and the hook write
-  assert.deepEqual(bytes(m, p1 << 8, at.length - data), want.slice(0, -data), "the resident equals its source assembled at its page, its JP to the old top");
   assert.equal(word(m, m.sym("RAMBIOS") + 13) >> 8, p1, "its INIT hooked CONOUT");
-  m.command("RES");
+  m.command("RES.DRV");
   const low = ((p1 - 1) << 8) + 6;
   assert.equal(word(m, 6), low, "a second resident below the first");
   assert.equal(word(m, low + 1), (p1 << 8) + 6, "its JP chains to the first");
@@ -112,49 +105,35 @@ test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps i
 });
 
 test("residents are removed last in, first out, each REMOVE undoing its INIT", async () => {
-  const m = await machine({ "RES.PRL": await prl("res") });
+  const m = await machine({ "RES.DRV": await driver("res") });
   const conout = () => word(m, m.sym("RAMBIOS") + 13); // CONOUT's JP target
   const rom = conout();
   const stub = word(m, 6);
   const [up, lo] = [(stub & 0xff00) - 0x100, (stub & 0xff00) - 0x200];
-  m.command("RES");
+  m.command("RES.DRV");
   const first = conout();
-  m.command("RES");
+  m.command("RES.DRV");
   assert.notEqual(conout(), first);
-  assert.equal(removeAt(m, up).carry, 1, "the upper resident is not the lowest");
   assert.equal(word(m, 6), lo + 6);
-  assert.equal(removeAt(m, lo).carry, 0);
+  m.command("UNLOAD");
   assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP")), conout()], [up + 6, up + 6, first]);
-  assert.equal(removeAt(m, up).carry, 0);
+  m.command("UNLOAD");
   assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP")), conout()], [stub, stub, rom]);
-  assert.equal(removeAt(m, stub & 0xff00).carry, 1, "the stub is no resident");
+  assert.match(m.command("UNLOAD"), /UNLOAD\?/, "the stub is no resident");
   back(m);
   assert.equal(word(m, 6), stub);
   assert.deepEqual(m.violations, []);
 });
 
 test("a cold boot clears every resident", async () => {
-  const m = await machine({ "RES.PRL": await prl("res") });
+  const m = await machine({ "RES.DRV": await driver("res") });
   const stub = word(m, 6);
-  m.command("RES");
+  m.command("RES.DRV");
   assert.equal(word(m, 6), stub - 0x100);
   m.reset();
   m.expect(/A>$/, { maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt after reset");
   assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP"))], [stub, stub]);
-});
-
-test("a kind-2 module, the retired driver kind, is refused and changes nothing", async () => {
-  const m = await machine({ "DRV.PRL": await prl("drv") }, { ram96: true });
-  const stub = word(m, 6);
-  const expand1 = m.expand[1].slice();
-  const level = m.read(m.sym("CCPLVL"));
-  assert.match(m.command("DRV"), /DRV\?/, "refused as a command that will not load");
-  assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP")), m.read(m.sym("CCPLVL"))], [stub, stub, level]);
-  const ring = m.sym("HRING") - 0x8000;
-  const changed = Array.from(m.expand[1]).flatMap((v, i) => (v === expand1[i] || i < ring + 0x100 ? [] : [i + 0x8000]));
-  assert.deepEqual(changed, [], "EXPAND 1 unchanged but for the block cache, which read DRV.PRL, and the history ring, which took the line typed");
-  assert.deepEqual(m.violations, []);
 });
 
 test("BDOS function 108 gets and sets the program return code, kept across a warm boot", async () => {
@@ -192,55 +171,11 @@ const DRPROG = handPrl(
   ],
   [2],
 );
-const DRRES = handPrl(
-  [
-    0x54, 0x4e, 0x4d, 0x01, 0x01, 0x00, // "TNM", version 1, kind 1
-    0xc3, 0x00, 0x00, // 6: JP to the old top
-    0x15, 0x01, // 9: INIT, 0115h
-    0x1d, 0x01, // 11: REMOVE, 011Dh
-    ...Array.from("DRRES   ", (c) => c.charCodeAt(0)),
-    0x21, 0x1e, 0x01, // 21: INIT: LD HL,FLAG
-    0x34, // INC (HL)
-    0xc3, 0x1c, 0x01, // JP DONE
-    0xc9, // 28: DONE: RET
-    0xc9, // 29: REMOVE: RET
-    0x00, // 30: FLAG
-  ],
-  [10, 12, 23, 27],
-);
 
 test("a PRL made by hand for 0100h runs as a program, nothing relocated", async () => {
   assert.notEqual(DRPROG[1] % 8, 0);
   const m = await machine({ "DRPROG.PRL": DRPROG });
   assert.match(m.command("DRPROG"), /DR!\r\n/);
   assert.deepEqual(bytes(m, 0x100, 13), Array.from(DRPROG.slice(256, 256 + 13)), "at 0100h as in the file");
-  assert.deepEqual(m.violations, []);
-});
-
-test("a PRL made by hand for 0100h installs as a resident at two BDOS tops, its marked bytes gaining page less 1", async () => {
-  const n = 31;
-  assert.equal(DRRES[1], n);
-  assert.notEqual(n % 8, 0);
-  const m = await machine({ "DRRES.PRL": DRRES });
-  const stub = word(m, 6);
-  let top = stub;
-  for (const p of [(stub >> 8) - 1, (stub >> 8) - 2]) {
-    m.command("DRRES");
-    const base = p << 8;
-    assert.equal(word(m, 6), base + 6, `(0006h) is the resident at ${p.toString(16)}00h + 6`);
-    const want = Array.from(DRRES.slice(256, 256 + n));
-    for (const i of [10, 12, 23, 27]) want[i] = (want[i] + p - 1) & 0xff;
-    want[7] = top & 0xff;
-    want[8] = top >> 8;
-    want[30] = 1; // FLAG, which INIT counted, at its relocated address
-    assert.deepEqual(bytes(m, base, n), want, `the resident at page ${p.toString(16)}h`);
-    assert.deepEqual([word(m, base + 9), word(m, base + 11)], [base + 0x15, base + 0x1d], "INIT and REMOVE relocated");
-    top = base + 6;
-  }
-  const lo = ((stub >> 8) - 2) << 8;
-  assert.equal(removeAt(m, lo).carry, 0, "its REMOVE, at its relocated address, returns");
-  assert.equal(word(m, 6), lo + 0x106);
-  back(m);
-  assert.equal(word(m, 6), lo + 0x106, "warm boot keeps the one left");
   assert.deepEqual(m.violations, []);
 });

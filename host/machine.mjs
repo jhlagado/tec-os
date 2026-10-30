@@ -36,6 +36,7 @@ export class Machine {
    * the emulated cycles at 4 MHz, so a run reads the same time on any host.
    */
   /*
+   * glcd: false for a machine with no ST7920: its busy flag never clears.
    * ram96: decode the system latch as the TEC-1G documentation's 96K scheme
    * instead of the runtime's bank field (latch bits 3-6): bit 3 (MAIN) picks MAIN 0 or
    * MAIN 1, 32 KiB each, at 0000h-7FFFh, and bit 2 (EXPAND) EXPAND 0 or
@@ -44,7 +45,7 @@ export class Machine {
    * 16 KiB U9), so bit 2 changes nothing. ROM, the boot overlay and PROTECT
    * (4000h-7FFFh) behave as before.
    */
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, glcd = true, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
     this.symbols = symbols;
     // output: every byte the BIOS was asked to put on the console, whichever
     // device is in use. serial: the bytes that left the serial port.
@@ -122,6 +123,7 @@ export class Machine {
         const p = port & 0xff;
         if (p === SD_PORT) return this.sd ? this.sd.read() : 0xff;
         if (p === RTC_PORT) return this.rtc ? this.rtc.read() : 0xff;
+        if (!glcd && (p === 0x07 || p === 0x87)) return 0xff;
         return base.read(port);
       },
       write: (port, value) => {
@@ -323,6 +325,13 @@ export class Machine {
     ].map(([a, b]) => [this.sym(a), this.sym(b)]);
     for (const [a, b] of this.inputRanges) if (pc >= a && pc < b) return true;
     return false;
+  }
+
+  /** True at a prompt with startup's file finished: its position is 80h or above and the CCP is reading a line. */
+  ready() {
+    const pos = this.symbols.get("STPOS");
+    if (pos === undefined) return this.waitingForInput();
+    return this.waitingForInput() && this.read(pos) >= 0x80 && this.read(this.sym("HFLAG")) === 0xff;
   }
 
   /** True while a video display and the matrix keyboard are the console. */

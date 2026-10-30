@@ -46,7 +46,7 @@ function start(image, { rom, ram96 = false, onSdWrite } = {}) {
   const r = rom ?? romFor();
   const m = new Machine({ ...r, sdImage: image, clock: TEST_CLOCK, ram96, onSdWrite });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.waitingForInput(), 10_000_000, "the first input request");
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;
 }
 
