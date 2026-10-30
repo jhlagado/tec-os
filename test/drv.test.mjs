@@ -309,6 +309,19 @@ test("NAME.DRV installs, from a drive too; a file that won't read and a refused 
   assert.equal(t.word(6), stub - 0x200);
 });
 
+test("DRIVERS lists each driver and its pages, the newest first, with none and after UNLOAD", async () => {
+  const image = standardCard();
+  volume(image, "A").write("OK.DRV", (await drv()).file);
+  volume(image, "A").write("TWO.DRV", (await drv({ DRVNAME: '"TWO     "', XTRA: 300 })).file);
+  const t = bench(boot(image));
+  assert.doesNotMatch(t.m.command("DRIVERS"), /\?|DEMO/);
+  t.m.command("OK.DRV");
+  t.m.command("TWO.DRV");
+  assert.match(t.m.command("DRIVERS"), /TWO 2\r\nDEMO 1\r\n/);
+  t.m.command("UNLOAD");
+  assert.match(t.m.command("DRIVERS"), /DRIVERS\r\r\nDEMO 1\r\n/);
+});
+
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
   const d = await drv();
   assert.deepEqual([d.file.length, DHLEN, d.image - DHLEN, d.data.length], [60, 25, 31, 4]);

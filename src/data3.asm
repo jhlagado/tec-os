@@ -41,6 +41,8 @@ EXITKEY:
         DB      "EXIT",0
 UNLKEY:
         DB      "UNLOAD",0
+DRVKEY:
+        DB      "DRIVERS",0
 CPNOSRC:
         DB      "NO SOURCE",CR,LF,'$'
 CPNODST:

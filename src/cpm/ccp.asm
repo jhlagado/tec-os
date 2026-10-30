@@ -196,6 +196,9 @@ NOTDRIVE:
         LD      DE,UNLKEY
         CALL    ISCMD
         JP      Z,CMDUNL
+        LD      DE,DRVKEY
+        CALL    ISCMD
+        JP      Z,CMDDRV
         LD      DE,CMDFCB
         CALL    UNAMBIG
         JR      C,BADCMD

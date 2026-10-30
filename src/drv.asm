@@ -297,6 +297,32 @@ DRVIN:  LD      DE,DHLEN
         CCF
         RET
 
+; DRIVERS: each driver's name and pages, from the owner list.
+CMDDRV: LD      A,(DRVHEAD)
+CMDDL:  OR      A
+        JP      Z,MAINLOOP
+        LD      H,A
+        LD      L,DNAM
+        LD      B,8
+        CALL    PUTTRIM
+        PUSH    HL
+        LD      E,' '
+        CALL    PUTCHAR
+        POP     HL
+        PUSH    HL
+        LD      L,8
+        LD      A,(HL)
+        SUB     H
+        LD      L,A
+        LD      H,0
+        CALL    PUTDEC
+        LD      DE,CRLFMSG
+        CALL    PUTSTR
+        POP     HL
+        LD      L,DDEP
+        LD      A,(HL)
+        JR      CMDDL
+
 ; Startup. Once after cold boot one record of A:STARTUP.CMD is read, the
 ; position marked done first, so that a failure can't repeat.
 STBOOT: LD      HL,STPOS
