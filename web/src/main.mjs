@@ -4,6 +4,7 @@
 
 import { Machine, symbolsFromD8 } from "../../host/machine.mjs";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
+import { cardProblem, setDisplayLine } from "../../host/card.mjs";
 import { parseContainer, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { buildRecipe } from "../../tools/lib/recipe.mjs";
@@ -14,7 +15,7 @@ const CPU_HZ = 4_000_000;
 const $ = (id) => document.getElementById(id);
 
 const state = {
-  profile: localStorageGet("tecos.profile") ?? "debug80",
+  width: localStorageGet("tecos.width") ?? "80",
   display: localStorageGet("tecos.display") ?? "tms",
   machine: null,
   card: null,
@@ -47,10 +48,10 @@ async function fetchBytes(url) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-async function loadRom(profile) {
+async function loadRom() {
   const [rom, symbols] = await Promise.all([
-    fetchBytes(`roms/tecos-${profile}.rom`),
-    fetch(`roms/tecos-${profile}.symbols.json`, { cache: "no-cache" }).then((r) => r.json()),
+    fetchBytes("roms/tecos-debug80.rom"),
+    fetch("roms/tecos-debug80.symbols.json", { cache: "no-cache" }).then((r) => r.json()),
   ]);
   return { rom, symbols: symbolsFromD8({ symbols }) };
 }
@@ -63,7 +64,7 @@ async function starterCard() {
 // ---- Machine lifecycle ------------------------------------------------------
 
 async function powerOn() {
-  const { rom, symbols } = await loadRom(state.profile);
+  const { rom, symbols } = await loadRom();
   state.machine = new Machine({
     rom,
     symbols,
@@ -76,6 +77,8 @@ async function powerOn() {
   });
   state.serialSeen = 0;
   appendSerial("\n[power on]\n");
+  const problem = cardProblem(state.card, state.display, state.width);
+  if (problem) appendSerial(`[${problem}]\n`);
 }
 
 function reset() {
@@ -476,10 +479,14 @@ $("display").addEventListener("change", async (e) => {
   await powerOn();
   (state.display === "tms" ? $("tms") : $("glcd")).focus();
 });
-$("profile").value = state.profile;
+$("profile").value = state.width;
 $("profile").addEventListener("change", async (e) => {
-  state.profile = e.target.value;
-  localStorageSet("tecos.profile", state.profile);
+  state.width = e.target.value;
+  localStorageSet("tecos.width", state.width);
+  if (!cardProblem(state.card, "tms", state.width)) {
+    setDisplayLine(state.card, "tms", state.width);
+    state.cardDirty = true;
+  }
   await powerOn();
 });
 $("reset").addEventListener("click", () => {
