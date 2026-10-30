@@ -1310,14 +1310,7 @@ FCBDRBAD:
         RET
 
 PARFLD:
-        LD      A,(HL)
-        OR      A
-        RET     Z
-        CP      SPACE
-        RET     Z
-        CP      '='
-        RET     Z
-        CP      '.'
+        CALL    FCBEND
         RET     Z
         CP      '*'
         JR      Z,PARSTAR
@@ -1329,14 +1322,7 @@ PARFLD:
         DJNZ    PARFLD
 
 PARSKIP:
-        LD      A,(HL)
-        OR      A
-        RET     Z
-        CP      SPACE
-        RET     Z
-        CP      '='
-        RET     Z
-        CP      '.'
+        CALL    FCBEND
         RET     Z
 
 PARLONG:
@@ -1420,7 +1406,13 @@ STARLOOP:
         INC     HL
 
 PARIGN:
-        LD      A,(HL)
+        CALL    FCBEND
+        RET     Z
+        INC     HL
+        JR      PARIGN
+
+; Z at the end of a name: a zero, a space, '=' or '.'. A holds the character.
+FCBEND: LD      A,(HL)
         OR      A
         RET     Z
         CP      SPACE
@@ -1428,9 +1420,7 @@ PARIGN:
         CP      '='
         RET     Z
         CP      '.'
-        RET     Z
-        INC     HL
-        JR      PARIGN
+        RET
 
 SKIPSP:
         LD      A,(HL)

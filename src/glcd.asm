@@ -38,10 +38,6 @@ GLHOFF: LD      (GLVEC),HL
 GLCLD:  LD      A,(CONDEV)
         AND     CDGLC
         RET     NZ              ; in already
-        LD      A,(GLCWANT)
-        OR      A
-        SCF
-        RET     Z
         LD      HL,GLCFCB
         LD      DE,CMDFCB
         LD      BC,12
