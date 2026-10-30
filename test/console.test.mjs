@@ -128,7 +128,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
 test("the GLCD is the console when no TMS9918 answers", () => {
   const m = boot(standardCard(), { matrix: true });
   // The banner and the volumes go to serial and the LCD; the CCP's first
-  // entry loads GLCD.PRL, and the GLCD is the console from its first prompt.
+  // startup loads GLCD.DRV, and the GLCD is the console from its next prompt.
   assert.match(m.serialText(), /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK/);
   assert.equal(m.glcdScreen().find((l) => l !== ""), "A>");
   m.mark = m.output.length;
@@ -308,7 +308,7 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   m.mark = m.output.length;
   m.typeMatrix("unload\r");
   m.expect(/A>$/);
-  assert.equal(m.read(3) & 3, 0, "TTY:");
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [3, 0], "IOBYTE stays UC1:, served by serial");
   assert.equal(m.read(6), stub, "its pages given back to the TPA");
   assert.equal(word(m.sym("GLVEC")), 0, "its table dropped");
   assert.equal(word(m.sym("VPUTV")), m.sym("TMSPUT"), "the vector off the freed pages");

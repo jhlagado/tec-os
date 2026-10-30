@@ -372,7 +372,7 @@ STLINE: LD      A,(CCPLVL)
         LD      H,HIGH(STREC)
         LD      DE,CMDTXT
 STL1:   LD      A,L
-        CP      LOW(STREC+127)
+        CP      LOW(STREC+128)
         JR      Z,STLE
         LD      A,(HL)
         INC     HL

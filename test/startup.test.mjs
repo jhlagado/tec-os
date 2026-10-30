@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { makeDrv } from "../tools/lib/drv.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_DRV, ROOT, TEST_CLOCK, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_DRV, ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 function start(files, { key = false, ...opts } = {}) {
   const image = standardCard();
@@ -81,4 +81,164 @@ test("on a PICO9918 and matrix board GLCD.DRV loads and the PICO9918 keeps the c
   prompt(m);
   assert.notEqual(m.read(m.sym("DRVHEAD")), 0);
   assert.equal(m.read(3) & 3, 1, "CRT:");
+});
+
+const SAY = (await program("say")).bytes;
+const raw = (text) => Buffer.from(text, "latin1");
+
+test("a file of exactly 128 bytes runs its last byte, and reads no further", () => {
+  const m = start({ "STARTUP.CMD": raw("\r".repeat(121) + "USER 13") });
+  m.write(m.sym("STREC") + 128, 0x5a); // past the record: a byte that would spoil the line
+  prompt(m);
+  assert.equal(user(m), 13);
+});
+
+test("^Z and a zero each end the file", () => {
+  for (const end of ["\x1a", "\0"]) {
+    const m = start({ "STARTUP.CMD": raw(`USER 3\r\n${end}\r\nUSER 4\r\n`) });
+    prompt(m);
+    assert.equal(user(m), 3, JSON.stringify(end));
+  }
+});
+
+test("the DMA address is the default's after the read, with a file and without", () => {
+  for (const files of [{}, { "STARTUP.CMD": raw("\x1a") }]) {
+    const m = start(files);
+    prompt(m);
+    assert.equal(m.read(m.sym("CURDMA")) | (m.read(m.sym("CURDMA") + 1) << 8), 0x80);
+  }
+});
+
+test("a read that returns an error starts nothing, whatever the record holds", () => {
+  const m = start({ "STARTUP.CMD": new Uint8Array(0) });
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("STBOOT")) [..."USER 5\r\n"].forEach((c, i) => m.write(m.sym("STREC") + i, c.charCodeAt(0)));
+    return step();
+  };
+  prompt(m);
+  assert.equal(user(m), 0);
+});
+
+test("NAME.DRX is no driver: the type must be DRV in full", () => {
+  const m = start({ "SAY.COM": SAY });
+  prompt(m);
+  assert.doesNotMatch(m.command("SAY.DRX"), /SAY\.DRX\?/);
+});
+
+test("a reset clears the position, so the file runs again", () => {
+  const m = start({ "STARTUP.CMD": startupFile("USER 3") });
+  prompt(m);
+  m.reset();
+  const from = m.output.length;
+  m.runUntil(() => m.ready() && /[A-P]>$/.test(m.text(from)), 400_000_000, "the prompt after reset");
+  assert.match(m.text(from), /A>USER 3/);
+});
+
+test("the GLCD's UNLOAD on a PICO9918 board leaves the console on CRT:", () => {
+  const m = start({ "GLCD.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("GLCD.DRV") }, { tms: true, matrix: true });
+  prompt(m);
+  m.mark = m.output.length;
+  m.typeMatrix("unload\r");
+  m.runUntil(() => m.read(m.sym("DRVHEAD")) === 0 && m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 400_000_000, "UNLOAD");
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), m.read(m.sym("VPUTV")) | (m.read(m.sym("VPUTV") + 1) << 8)], [1, 1, m.sym("TMSPUT")]);
+});
+
+/** Each line's output and BDOS calls from MLGOT to the next MLREAD. */
+function trace(m) {
+  const rows = [];
+  let row = null;
+  const step = m.step.bind(m);
+  m.step = () => {
+    const pc = m.pc;
+    if (pc === m.sym("MLGOT")) {
+      row = { from: m.output.length, calls: [] };
+      rows.push(row);
+    }
+    if (pc === m.sym("MLREAD") && row) {
+      row.output = m.text(row.from);
+      delete row.from;
+      row = null;
+    }
+    if (pc === 5 && row) {
+      const c = m.cpu.cpu;
+      const de = (c.d << 8) | c.e;
+      if (c.c === 9) {
+        let s = "";
+        for (let a = de; m.read(a) !== 0x24; a += 1) s += String.fromCharCode(m.read(a));
+        row.calls.push([9, s]);
+      } else row.calls.push([c.c, [10, 26].includes(c.c) || (c.c >= 15 && c.c <= 23) ? de : c.e]);
+    }
+    return step();
+  };
+  return rows;
+}
+
+for (const [name, lines, typed] of [
+  ["a built-in then a line", ["TYPE HELLO.TXT", "DIR"]],
+  ["a program's warm boot then a line", ["SAY", "DIR"]],
+  ["CCP, EXIT, then a line", ["CCP", "DIR"], "EXIT"],
+  ["a failing line then a line", ["NOSUCH", "DIR"]],
+  ["USER 3 then a line", ["USER 3", "DIR"]],
+]) {
+  test(`lines from the file equal the same lines typed: ${name}`, () => {
+    const nested = (m, from) => m.runUntil(() => m.waitingForInput() && m.read(m.sym("CCPLVL")) === 1 && /[A-P]>$/.test(m.text(from)), 400_000_000, "the nested prompt");
+    const f = start({ "SAY.COM": SAY, "STARTUP.CMD": startupFile(...lines) });
+    const fromFile = trace(f);
+    if (typed) {
+      nested(f, 0);
+      f.type(`${typed}\r`);
+    }
+    prompt(f);
+    const t = start({ "SAY.COM": SAY, "STARTUP.CMD": raw("\x1a") });
+    prompt(t);
+    const byHand = trace(t);
+    for (const line of lines) {
+      if (typed && line === "DIR") t.command(typed);
+      if (line === "CCP") {
+        const from = t.output.length;
+        t.type("CCP\r");
+        nested(t, from);
+      } else t.command(line);
+    }
+    const upper = (rows) => rows.map((r) => ({ ...r, output: r.output.toUpperCase() }));
+    assert.deepEqual(upper(fromFile), upper(byHand));
+  });
+}
+
+test("an unreadable file reaches a prompt, and what it held doesn't run", () => {
+  const m = start({ "STARTUP.CMD": startupFile("NEVERRUN") });
+  const lba = Math.floor(Buffer.from(m.sdImage.buffer, m.sdImage.byteOffset, m.sdImage.length).indexOf("NEVERRUN") / 512);
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("SDREAD")) {
+      const a = m.sym("SDLBA");
+      if ((m.read(a) | (m.read(a + 1) << 8) | (m.read(a + 2) << 16)) === lba) m.cpu.cpu.pc = m.sym("SDRCMD");
+    }
+    return step();
+  };
+  for (let i = 0; i < 12 && !(m.ready() && /[A-P]>$/.test(m.text(0))); i += 1) {
+    const end = m.cycles + 20_000_000;
+    m.runUntil(() => m.cycles >= end || (m.ready() && /[A-P]>$/.test(m.text(0))), 40_000_000, "the error's key");
+    if (m.waitingForInput() && !/[A-P]>$/.test(m.text(0))) m.type("\r");
+  }
+  assert.ok(m.ready() && /[A-P]>$/.test(m.text(0)));
+  assert.match(m.text(0), /Bad Sector/);
+  assert.doesNotMatch(m.text(0), /NEVERRUN/);
+  assert.match(m.command("DIR HELLO.TXT"), /HELLO\.TXT/);
+});
+
+test("a file that resets the machine runs for ever, and the skip breaks it", () => {
+  const files = { "RESET.COM": Uint8Array.from([0xc3, 0x00, 0xc0]), "STARTUP.CMD": startupFile("RESET") };
+  const m = start(files);
+  let resets = 0;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("COLD")) resets += 1;
+    return step();
+  };
+  m.runUntil(() => resets >= 4, 400_000_000, "four resets");
+  const held = start(files, { key: true });
+  prompt(held);
+  assert.match(held.command("DIR HELLO.TXT"), /HELLO\.TXT/);
 });

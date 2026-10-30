@@ -210,7 +210,7 @@ KBT1:   DS      1               ; and the bytes themselves
 KBT2:   DS      1
 
 ; ---- The GLCD console ------------------------------------------------------
-GLVEC:  DS      2               ; GLCD.PRL's video table, from GLHOOK; 0 for none
+GLVEC:  DS      2               ; GLCD.DRV's video table, from GLHOOK; 0 for none
 
 ; ---- Command-line history ------------------------------------------------------
 HHEAD:  DS      1               ; the offset the next line goes in at

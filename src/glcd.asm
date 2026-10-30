@@ -1,4 +1,4 @@
-; The GLCD console. Its drawing code is a resident, GLCD.PRL, below
+; The GLCD console. Its drawing code is a driver, GLCD.DRV, below
 ; (0006h); its INIT hands the ROM its video table through GLHOOK (ABIGLCD),
 ; and CONSW then points the terminal's vector at that table for UC1:. Its
 ; REMOVE calls GLHOOK with 0, which puts the console back to serial.
@@ -28,7 +28,8 @@ GLHOFF: LD      (GLVEC),HL
         RES     2,(HL)
         LD      HL,TMSVEC
         CALL    VIDSET
-        CALL    SERCON
+        LD      A,$FF           ; the console is chosen again at its next call
+        LD      (CONACT),A
         OR      A
         RET
 

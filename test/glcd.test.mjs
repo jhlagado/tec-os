@@ -124,7 +124,7 @@ test("UNLOAD gives the console back to serial and the pages to the TPA, and outp
   run(m, "CONOUT\r");
   m.mark = m.output.length;
   m.type("UNLOAD\r");
-  m.runUntil(() => m.waitingForInput() && m.read(3) % 4 === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
+  m.runUntil(() => m.waitingForInput() && m.read(m.sym("CONMOD")) === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
   assert.equal(word(m, 6), before);
   assert.equal(loaded, before - 0x300);
   const s0 = m.serialText().length;
@@ -143,7 +143,7 @@ test("a second GLCD.DRV is refused whole, and the first keeps the console", asyn
   assert.deepEqual([word(m, 6), word(m, m.sym("GLVEC")), m.read(3) & 3], [first, table, 3]);
   m.mark = m.output.length;
   m.type("UNLOAD\r");
-  m.runUntil(() => m.waitingForInput() && m.read(3) % 4 === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
+  m.runUntil(() => m.waitingForInput() && m.read(m.sym("CONMOD")) === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
   assert.equal(word(m, m.sym("GLVEC")), 0, "the first gave it back");
   assert.deepEqual(m.violations, []);
 });

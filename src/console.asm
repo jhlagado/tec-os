@@ -97,7 +97,7 @@ CONSW3: CP      CMUC1
         AND     CDGLC+CDMTX
         CP      CDGLC+CDMTX
         JR      NZ,CONSWT
-        LD      HL,(GLVEC)      ; CDGLC: GLCD.PRL is installed, its table
+        LD      HL,(GLVEC)      ; CDGLC: GLCD.DRV is installed, its table
         LD      A,H             ; given through GLHOOK
         OR      L
         JR      Z,CONSWT

@@ -15,11 +15,11 @@ PRLGO:  LD      HL,(LOADTOP)   ; exclusive end of whole disk records
         LD      DE,PRLCODE
         OR      A
         SBC     HL,DE
-        JR      C,PRLFAIL       ; incomplete header page
+        JR      C,PRLRF         ; incomplete header page
         LD      HL,(PRLHDR+1)
         LD      A,H
         OR      L
-        JR      Z,PRLFAIL       ; LDIR must never receive zero
+        JR      Z,PRLRF         ; LDIR must never receive zero
         LD      (PRLN),HL
         LD      B,H
         LD      C,L
@@ -56,8 +56,6 @@ PRLPROG:LD      HL,PRLCODE      ; moved down to 0100h, its origin
         LD      BC,(PRLN)
         LDIR
 PRLP2:  RET
-PRLFAIL:SCF
-        RET
 ; The top before the resident at base HL goes back. Carry clear.
 PRLTOP: LD      L,7
         LD      E,(HL)
