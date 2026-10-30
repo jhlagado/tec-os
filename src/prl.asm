@@ -18,7 +18,47 @@ PRLCODE EQU     $0200
 
 ; Returns carry set if the PRL does not fit; otherwise Z for a program ready
 ; at 0100h, NZ for a module installed.
-PRLGO:  LD      HL,(PRLCODE)    ; "TNM"?
+PRLGO:  LD      HL,(LOADTOP)   ; exclusive end of whole disk records
+        LD      DE,PRLCODE
+        OR      A
+        SBC     HL,DE
+        JP      C,PRLFAIL       ; incomplete header page
+        LD      HL,(PRLHDR+1)
+        LD      A,H
+        OR      L
+        JP      Z,PRLFAIL       ; LDIR must never receive zero
+        LD      (PRLN),HL
+        LD      B,H
+        LD      C,L
+        ADD     HL,DE          ; exclusive code end
+        RET     C
+        EX      DE,HL
+        LD      H,B
+        LD      L,C
+        DEC     HL
+        LD      B,3
+PRLBITS:SRL     H
+        RR      L
+        DJNZ    PRLBITS
+        INC     HL             ; ceil(n / 8), without n + 7 overflow
+        ADD     HL,DE          ; exclusive bitmap end
+        RET     C
+        LD      DE,(LOADTOP)
+        EX      DE,HL
+        OR      A
+        SBC     HL,DE
+        RET     C              ; code and bitmap must be in loaded records
+        LD      HL,(PRLN)
+        LD      DE,PRLHDR
+        ADD     HL,DE
+        RET     C
+        LD      DE,(PZBDOS+1)
+        LD      E,0            ; destination ceiling is the top's page
+        EX      DE,HL
+        OR      A
+        SBC     HL,DE
+        RET     C
+        LD      HL,(PRLCODE)    ; "TNM"?
         LD      DE,'N'*256+'T'
         OR      A
         SBC     HL,DE
@@ -28,6 +68,15 @@ PRLGO:  LD      HL,(PRLCODE)    ; "TNM"?
         LD      A,(PRLCODE+2)
         CP      'M'
         JR      NZ,PRLPROG
+        LD      HL,(PRLN)
+        LD      DE,13          ; through the REMOVE address
+        OR      A
+        SBC     HL,DE
+        RET     C
+        LD      A,(PRLCODE+3)
+        DEC     A
+        JR      NZ,PRLFAIL     ; only module version 1
+        LD      HL,(PRLN)
         LD      DE,(PRLHDR+4)   ; pages for n + m
         ADD     HL,DE
         RET     C
@@ -39,6 +88,9 @@ PRLGO:  LD      HL,(PRLCODE)    ; "TNM"?
         DEC     A
         JR      Z,PRLRES
         SCF                     ; an unknown kind
+        RET
+
+PRLFAIL:SCF
         RET
 
 ; A program: moved down to 0100h, its origin, so nothing is relocated. Its

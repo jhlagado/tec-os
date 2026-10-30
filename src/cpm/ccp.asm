@@ -299,6 +299,7 @@ LOADEND:
         JR      NZ,LOADBAD
 
 LOADOK:
+        LD      (LOADTOP),HL    ; retain record-rounded extent before CLOSE
         LD      DE,CMDFCB
         LD      C,16
         CALL    BDOS

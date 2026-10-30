@@ -223,6 +223,7 @@ MVREST: DS      2               ; MOVE: the bytes left for the byte loop
 XMARK:  DS      1               ; EXPAND 1's low mark (ABIXMRK points here)
 PZTOP:  DS      2               ; the current top, which warm boot puts at 0006h
 PRGCODE:DS      2               ; BDOS function 108's program return code
+LOADTOP:DS      2               ; successful LOADCOM exclusive record end
 PRLN:   DS      2               ; the PRL loader: code length
 PRLDL:  DS      1               ; and relocation delta
 CCPLVL: DS      1               ; the CCP's level, 0 at the outermost
