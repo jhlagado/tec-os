@@ -58,7 +58,7 @@ INIT:
 %ENDIF
 %IF V_HOOK
         LD      HL,($0001)      ; CONOUT, in the table
-        LD      DE,10
+        LD      DE,HOOKAT
         ADD     HL,DE
         LD      E,(HL)
         INC     HL
@@ -113,6 +113,40 @@ INIT:
         LD      HL,$0300        ; an entry table outside the image
         LD      (REC+11),HL
 %ENDIF
+%IF V_END
+        LD      HL,HDR+253      ; a record running off the driver's last page
+        OR      A
+        RET
+%ENDIF
+%IF V_CHAIN
+        LD      HL,IMGEND       ; CHAINB records, in the extra memory; 0 for 256
+        LD      B,CHAINB
+CHAIN1: LD      DE,13
+        PUSH    HL
+        ADD     HL,DE
+        EX      DE,HL           ; DE = the next
+        POP     HL
+        LD      (HL),E
+        INC     HL
+        LD      (HL),D
+        PUSH    DE
+        LD      DE,10
+        ADD     HL,DE
+        LD      DE,TABLE
+        LD      (HL),E
+        INC     HL
+        LD      (HL),D
+        POP     HL
+        DJNZ    CHAIN1
+        LD      DE,-13
+        ADD     HL,DE
+        LD      (HL),0          ; the last link
+        INC     HL
+        LD      (HL),0
+        LD      HL,IMGEND
+        OR      A
+        RET
+%ENDIF
 %IF V_NONE
         LD      HL,0            ; no services
         OR      A
@@ -125,7 +159,7 @@ INIT:
 REMOVE:
 %IF V_HOOK
         LD      HL,($0001)
-        LD      DE,10
+        LD      DE,HOOKAT
         ADD     HL,DE
         LD      DE,(OLDCO)
         LD      (HL),E
@@ -139,6 +173,13 @@ REMOVE:
 %IF V_REFUSE
         SCF
         RET
+%ENDIF
+%IF V_REMWIN
+        LD      HL,$0100        ; refused while REMOVE runs
+        CALL    ABIXCCP
+        LD      A,0
+        ADC     A,A
+        LD      (RESULT),A
 %ENDIF
         OR      A
         RET
@@ -172,7 +213,15 @@ SAFE:   LD      DE,DEPNAME
 GEN:    DB      0
 %ENDIF
 
+%IF V_LONG
+        DS      600,$55         ; a gap the relocation data must step over
+%ENDIF
+%IF V_TWO
+REC:    DW      REC2
+%ENDIF
+%IF V_TWO == 0
 REC:    DW      0
+%ENDIF
         DB      SVCNAME
         DB      SVCVER
         DW      TABLE
@@ -183,6 +232,11 @@ TABLE:  JP      LOOK
 %ENDIF
 %IF V_LATE == 0
 TABLE:  JP      SERVICE
+%ENDIF
+%IF V_TWO
+REC2:   DW      0
+        DB      "SECOND  ",1
+        DW      TABLE
 %ENDIF
 COUNT:  DB      0
 RESULT: DB      $FF

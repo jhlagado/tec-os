@@ -10,7 +10,8 @@ import { assembleProgram } from "./assemble.mjs";
 import { assembleAt } from "./prl.mjs";
 
 export const DHLEN = 25;
-const ROM_ADDRESS = /\$[C-Fc-f][0-9A-Fa-f]{3}\b/;
+// $C000 and 0C000h. A decimal or binary form of an address isn't caught.
+const ROM_ADDRESS = /\$[C-Fc-f][0-9A-Fa-f]{3}\b|\b0[C-Fc-f][0-9A-Fa-f]{3}[Hh]\b/;
 
 /** Refuse a source naming a ROM address; only abi.inc may. */
 export function checkInterfaces(text, name) {
@@ -90,6 +91,7 @@ export async function makeDrv(source, { defs = {}, deps = [], raw = {}, work, re
   if (at0.length !== at1.length) throw new Error(`${source}: the two assemblies differ in length`);
   const fixups = fixupsOf(at0, at1, DHLEN, basename(source));
   const data = encoders[reloc](fixups, at0.length - DHLEN);
+  for (const d of deps) if (d.name.length > 8) throw new Error(`${d.name}: a dependency's name is at most 8 bytes`);
   const list = Uint8Array.from(deps.flatMap((d) => [d.version, ...Buffer.from(d.name.padEnd(8), "latin1")]));
   const file = new Uint8Array(at0.length + list.length + data.length);
   file.set(at0);

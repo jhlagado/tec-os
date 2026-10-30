@@ -217,7 +217,7 @@ NOTDRIVE:
         JP      NZ,STARTED      ; a module installed
 CMDRUN: CALL    PREPPAGE
         ; Keep the return word outside default DMA ($0080..$00FF). The
-        ; resident stack supplies 25 free bytes beneath this two-byte word.
+        ; resident stack supplies 28 free bytes beneath this two-byte word.
         LD      SP,CSTKTOP
         LD      HL,WBOOT
         PUSH    HL

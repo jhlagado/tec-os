@@ -53,16 +53,17 @@ DRVUNL: LD      A,(CCPLVL)
 ; Install the file at 0100h, up to LOADTOP. Carry clear: installed. Carry set:
 ; DRVRC is 0 refused, nothing changed; 1 INIT failed, nothing left; 2 failed,
 ; its pages reserved with no services.
-DRVLOAD:LD      A,(CCPLVL)      ; level 0, and no INIT or REMOVE running
+DRVLOAD:XOR     A
+        LD      (DRVRC),A
+        LD      A,(CCPLVL)      ; level 0, and no INIT or REMOVE running
         OR      A
         JR      NZ,PRLRF
-        LD      (DRVRC),A
         LD      HL,(DF)
         LD      DE,DMAGIC
         SBC     HL,DE
         JR      NZ,PRLRF
         LD      BC,(DF+DSIZ)    ; the image in the records
-        LD      HL,DF
+        INC     H               ; HL = 0: now the file
         CALL    DRVEXT
         RET     C
         LD      HL,(DF+DINI)
@@ -180,7 +181,7 @@ DRVMOV:
         CALL    DRVBND
         JR      C,DRVSCAN
         PUSH    HL              ; the first record
-        LD      B,0             ; 256 records at most
+        LD      B,0             ; 255 records at most
 DRVWK:  LD      A,H
         OR      L
         JR      Z,DRVLK

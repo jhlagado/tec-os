@@ -12,14 +12,14 @@ import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, prl, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
-const VARIANTS = ["V_FAIL", "V_PROBE", "V_CCP", "V_CMD", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE"];
+const VARIANTS = ["V_FAIL", "V_PROBE", "V_CCP", "V_CMD", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"];
 const made = new Map();
 
 /** DRVDEMO with OVER set; opt as makeDrv's. */
 async function drv(over = {}, opt = {}) {
   const key = JSON.stringify([over, opt]);
   if (!made.has(key)) {
-    const defs = { ...Object.fromEntries(VARIANTS.map((v) => [v, 0])), FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, DRVNAME: '"DEMO    "', SVCNAME: '"DEMO    "', SVCVER: 2, ...over };
+    const defs = { ...Object.fromEntries(VARIANTS.map((v) => [v, 0])), FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, DRVNAME: '"DEMO    "', SVCNAME: '"DEMO    "', SVCVER: 2, ...over };
     made.set(key, await makeDrv(resolve(ROOT, "test/programs/drvdemo.asm"), { defs, work: resolve(ROOT, "build/drv"), ...opt }));
   }
   return made.get(key);
@@ -48,10 +48,18 @@ function bench(m) {
     m.runUntil(() => m.pc === STUB || m.pc === m.sym("CCPENT"), 60_000_000, `return from ${addr.toString(16)}`);
     return { back: m.pc === STUB, carry: c.flags.C, a: c.a, hl: (c.h << 8) | c.l };
   };
+  const entry = () => assert.equal(word(6) & 0xff, 6, "(0006h) stays xx06h");
   const load = (file, end) => {
     put(0x100, [...file]);
     poke(m.sym("LOADTOP"), end ?? 0x100 + Math.ceil(file.length / 128) * 128);
-    return { ...call(m.sym("DRVLOAD")), rc: m.read(m.sym("DRVRC")) };
+    const r = { ...call(m.sym("DRVLOAD")), rc: m.read(m.sym("DRVRC")) };
+    if (r.back) entry();
+    return r;
+  };
+  const unload = () => {
+    const text = m.command("UNLOAD");
+    entry();
+    return text;
   };
   const prompt = () => {
     m.mark = m.output.length;
@@ -71,7 +79,7 @@ function bench(m) {
   };
   const nth = (i) => call(m.sym("ABIDRV"), { b: i, c: 1 });
   const head = () => m.read(m.sym("DRVHEAD")) << 8;
-  return { m, word, poke, put, call, load, prompt, warmBoot, find, nth, head };
+  return { m, word, poke, put, call, load, unload, prompt, warmBoot, find, nth, head };
 }
 
 async function machine(opts = {}) {
@@ -135,8 +143,9 @@ function transaction(t, file, end) {
 
 const untouched = (t, x) => assert.deepEqual(x.differs(), []);
 
-test("a driver installs, is found and enumerated, is called and unloads, leaving everything as it was", async () => {
-  const t = await machine();
+for (const profile of ["debug80", "debug80t40", "debug80g32", "board"]) {
+  test(`${profile}: a driver installs, is found and enumerated, is called and unloads, leaving everything as it was`, async () => {
+  const t = await machine({ profile });
   const d = await drv();
   const before = snapshot(t.m);
   const ceiling = t.word(6) & 0xff00;
@@ -155,17 +164,141 @@ test("a driver installs, is found and enumerated, is called and unloads, leaving
   assert.equal(t.nth(0).carry, 0);
   assert.equal(t.nth(1).carry, 1);
   t.prompt();
-  t.m.command("UNLOAD");
+  t.unload();
   assert.equal(t.word(6), stub);
   assert.equal(t.m.read(t.m.sym("DRVGEN")), 1, "the generation is raised");
   const gen = t.m.sym("DRVGEN");
   assert.deepEqual(changed(t.m, before, snapshot(t.m), ceiling, ["load", "command"], { DRVGEN: [gen, gen + 1] }), []);
   assert.deepEqual(t.m.violations, []);
+  });
+}
+
+test("a load refused at a level reports refused, whatever the last load left", async () => {
+  const t = await machine();
+  assert.equal(t.load((await drv({ V_FAIL: 1 })).file).rc, 1);
+  t.prompt();
+  t.m.command("CCP");
+  const r = t.load((await drv()).file);
+  assert.deepEqual([r.carry, r.rc], [1, 0]);
+});
+
+test("a load refused by the window reports refused", async () => {
+  const t = await machine();
+  assert.equal(t.load((await drv({ V_FAIL: 1 })).file).rc, 1);
+  t.m.write(t.m.sym("CCPLVL"), 0x80);
+  const r = t.load((await drv()).file);
+  assert.deepEqual([r.carry, r.rc], [1, 0]);
+  t.m.write(t.m.sym("CCPLVL"), 0);
+});
+
+test("every image byte is its file's, and only the fixups gain the page, across gaps of 255 and more", async () => {
+  const t = await machine();
+  const d = await drv({ V_LONG: 1 });
+  assert.ok(d.data.includes(255), "the data steps over a long gap");
+  assert.equal(t.load(d.file).carry, 0);
+  const base = t.head();
+  const fixups = new Set(d.fixups);
+  for (let i = 0; i < d.image - DHLEN; i += 1) {
+    const want = (d.file[DHLEN + i] + (fixups.has(i) ? base >> 8 : 0)) & 0xff;
+    assert.equal(t.m.read(base + DHLEN + i), want, `image byte ${i}`);
+  }
+});
+
+test("every dependency is checked, and with all present the relocation data still follows them", async () => {
+  const deps = [{ name: "DEMO", version: 2 }, { name: "OTHER", version: 1 }];
+  const two = await drv({ V_DEP: 1, DRVNAME: '"CLIENT  "', SVCNAME: '"CLIENT  "' }, { deps });
+  const t = await machine();
+  t.load((await drv()).file);
+  const x = transaction(t, two.file);
+  assert.deepEqual([x.r.carry, x.r.rc], [1, 0], "the second is absent");
+  untouched(t, x);
+  t.load((await drv({ DRVNAME: '"OTHER   "', SVCNAME: '"OTHER   "', SVCVER: 1 })).file);
+  assert.equal(t.load(two.file).carry, 0);
+  assert.equal(t.find("CLIENT").carry, 0);
+});
+
+test("the older registry follows a driver's last record, so every service stays found", async () => {
+  const t = await machine();
+  t.load((await drv({ SVCNAME: '"OLDER   "' })).file);
+  t.load((await drv({ V_TWO: 1 })).file);
+  for (const name of ["DEMO", "SECOND", "OLDER"]) assert.equal(t.find(name).carry, 0, name);
+  assert.deepEqual([0, 1, 2, 3].map((i) => t.nth(i).carry), [0, 0, 0, 1]);
+});
+
+test("a record whose end leaves the driver's pages is refused", async () => {
+  const t = await machine();
+  const page = t.word(6) >> 8;
+  t.m.write((page << 8) + 9, page - 1); // past the end: a table's high byte the check would accept
+  t.poke(((page - 1) << 8) + 253, 0); // the record's link: the last
+  const r = t.load((await drv({ V_END: 1 })).file);
+  assert.deepEqual([r.carry, r.rc], [1, 1]);
+  assert.equal(t.word(t.m.sym("REGHEAD")), 0);
+});
+
+test("enumerate returns the record itself and the generation", async () => {
+  const t = await machine();
+  t.load((await drv()).file);
+  t.prompt();
+  t.unload();
+  t.load((await drv()).file);
+  const n = t.nth(0);
+  assert.equal(n.hl, t.word(t.m.sym("REGHEAD")));
+  assert.equal(Buffer.from([2, 3, 4, 5].map((i) => t.m.read(n.hl + i))).toString(), "DEMO");
+  assert.equal(n.a, 1, "one removal so far");
+  assert.equal(t.find("DEMO").a, 1);
+});
+
+test("a file ending exactly at LOADTOP is whole", async () => {
+  const t = await machine();
+  assert.equal(t.load(good.file, 0x100 + good.file.length).carry, 0);
+});
+
+for (const [entry, at] of [[0, 0xfffe], [16, 46]]) {
+  test(`the scan reaches the table's entry ${entry}`, async () => {
+    const t = await machine();
+    const r = t.load((await drv({ V_HOOK: 1, V_HOOKFAIL: 1, HOOKAT: at })).file);
+    assert.deepEqual([r.carry, r.rc], [1, 2]);
+  });
+}
+
+test("a chain of 255 records is taken and 256 is refused", async () => {
+  const t = await machine();
+  const r = t.load((await drv({ V_CHAIN: 1, CHAINB: 255, XTRA: 3400 })).file);
+  assert.equal(r.carry, 0);
+  assert.equal(t.nth(254).carry, 0);
+  assert.equal(t.nth(255).carry, 1);
+  const u = await machine();
+  const s = u.load((await drv({ V_CHAIN: 1, CHAINB: 0, XTRA: 3400 })).file);
+  assert.deepEqual([s.carry, s.rc], [1, 1]);
+});
+
+test("INIT returning 0 installs a driver with no services", async () => {
+  const t = await machine();
+  assert.equal(t.load((await drv({ V_NONE: 1 })).file).carry, 0);
+  assert.notEqual(t.head(), 0);
+  assert.equal(t.word(t.m.sym("REGHEAD")), 0);
+  assert.equal(t.nth(0).carry, 1);
+});
+
+test("REMOVE calling ABIXCCP is refused, and UNLOAD goes on", async () => {
+  const t = await machine();
+  const d = await drv({ V_REMWIN: 1 });
+  t.load(d.file);
+  const base = t.head();
+  t.prompt();
+  t.unload();
+  assert.equal(t.m.read(base + d.symbols.RESULT), 1, "the call returned carry");
+  assert.equal(t.m.read(t.m.sym("CCPLVL")), 0);
+  assert.equal(t.m.read(t.m.sym("DRVHEAD")), 0);
 });
 
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
   const d = await drv();
   assert.deepEqual([d.file.length, DHLEN, d.image - DHLEN, d.data.length], [60, 25, 31, 4]);
+});
+
+test("a dependency's name over 8 bytes is refused by the writer", async () => {
+  await assert.rejects(drv({}, { deps: [{ name: "TOOLONGNAME", version: 1 }] }), /at most 8 bytes/);
 });
 
 test("the relocation data decodes to the same fixups by delta, and a long gap takes 255s", () => {
@@ -231,7 +364,7 @@ test("INIT fails with a hook left: the pages stay, nothing is registered, UNLOAD
   assert.deepEqual([t.word(t.m.sym("PZTOP")), t.word(t.m.sym("REGHEAD"))], [base + 6, 0]);
   assert.equal(t.find("DEMO").carry, 1);
   t.prompt();
-  assert.match(t.m.command("UNLOAD"), /UNLOAD\?/);
+  assert.match(t.unload(), /UNLOAD\?/);
   t.warmBoot();
   assert.equal(t.word(t.m.sym("PZTOP")), base + 6, "warm boot keeps them");
 });
@@ -311,11 +444,11 @@ test("a dependency present is bound at INIT, and last in is first out", async ()
   assert.equal(t.load(c.file).carry, 0);
   const bound = t.word(t.head() + c.symbols.DEPTAB);
   t.prompt();
-  t.m.command("UNLOAD");
+  t.unload();
   assert.equal(t.find("CLIENT").carry, 1);
   assert.equal(t.find("DEMO").hl, bound);
   t.prompt();
-  t.m.command("UNLOAD");
+  t.unload();
   assert.equal(t.find("DEMO").carry, 1);
 });
 
@@ -326,7 +459,7 @@ test("two drivers offering one service: the newest, and removal uncovers the old
   t.load((await drv({ SVCVER: 3, DRVNAME: '"NEWER   "' })).file);
   assert.notEqual(t.find("DEMO").hl, older);
   t.prompt();
-  t.m.command("UNLOAD");
+  t.unload();
   assert.equal(t.find("DEMO").hl, older);
 });
 
@@ -337,7 +470,7 @@ for (const [name, over] of [["REMOVE refuses", { V_REFUSE: 1 }], ["not removable
     t.prompt();
     const before = snapshot(t.m);
     const ceiling = t.word(6) & 0xff00;
-    assert.match(t.m.command("UNLOAD"), /UNLOAD\?/);
+    assert.match(t.unload(), /UNLOAD\?/);
     assert.deepEqual(changed(t.m, before, snapshot(t.m), ceiling, ["load", "command"]), []);
   });
 }
@@ -360,17 +493,17 @@ test("a module PRL below a driver and above one: UNLOAD takes the lowest, by the
   t.m.command("RES");
   t.load((await drv()).file);
   t.prompt();
-  t.m.command("UNLOAD");
+  t.unload();
   assert.equal(t.find("DEMO").carry, 1);
   t.prompt();
-  assert.doesNotMatch(t.m.command("UNLOAD"), /UNLOAD\?/);
+  assert.doesNotMatch(t.unload(), /UNLOAD\?/);
   assert.equal(t.word(t.m.sym("PZTOP")), t.word(t.m.sym("STUBAD")));
   t = await machine();
   t.load((await drv()).file);
   t.prompt();
   const page = t.head();
   t.m.command("RES");
-  t.m.command("UNLOAD");
+  t.unload();
   assert.equal(t.find("DEMO").carry, 0);
   assert.equal(t.word(6), page + 6);
 });
@@ -403,7 +536,7 @@ test("a resident that keeps a pointer past removal runs into freed pages, and th
   t.call(table);
   const kept = t.find("DEMO").hl;
   t.prompt();
-  t.m.command("UNLOAD");
+  t.unload();
   assert.ok(t.word(6) > kept, "the pages are the TPA's");
   assert.equal(t.call(table + 3).a, 1, "the stale bytes still run");
   assert.equal(t.m.read((kept & 0xff00) + demo.symbols.COUNT), 1, "and write the TPA");
@@ -415,6 +548,7 @@ test("a resident that keeps a pointer past removal runs into freed pages, and th
 
 test("a source naming a ROM address is refused; abi.inc's names pass", () => {
   assert.throws(() => checkInterfaces("        CALL    $C025\n", "raw.asm"), /ROM address \$C025/);
+  assert.throws(() => checkInterfaces("        CALL    0C025h\n", "raw.asm"), /ROM address 0C025h/);
   assert.doesNotThrow(() => checkInterfaces("        CALL    ABIDRV ; not $C025\n", "ok.asm"));
 });
 
