@@ -11,15 +11,18 @@
     "EDIT.COM": {
       "env": "EDIT_COM",
       "default": "../edit/dist/EDIT.COM",
-      "source": "jhlagado/edit 8414b18, dist/EDIT.COM",
-      "bytes": 7924,
-      "sha256": "599eba0d79c06c0ff85a8d048489e0ba7d689caebce08b498cc041a2d78a1d9b"
+      "source": "jhlagado/edit 845d0629, dist/EDIT.COM",
+      "bytes": 7931,
+      "sha256": "2c9e7d0ec588019b9184ca89543e5a644fafda864bb940445375edb50bbb0fe6"
     },
     "triptych-headless": {
       "env": "TRIPTYCH_HEADLESS",
       "default": "../triptych/packages/triptych-headless",
       "source": "triptych f74de0b, packages/triptych-headless with its built dist",
-      "tree": ["src", "dist"],
+      "tree": [
+        "src",
+        "dist"
+      ],
       "sha256": "fa022e404a144524905b63d232ace989da36173f72434cd47d5faa541d99fc82"
     }
   }

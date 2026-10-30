@@ -133,7 +133,7 @@ warm boot on the PICO9918 and 1,447 on the GLCD.
 
 | Program | Version | Result | Notes |
 | --- | --- | --- | --- |
-| Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs; sized wrongly on the GLCD | Edits, saves and reopens a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`). It sizes itself from ABI 2.7's word at `FF09h`; ABI 3.0 moved the table to `C003h`, so it finds no signature, takes 80 × 24, and on the GLCD's 21 × 8 fails until it reads `ABIVID` at `C008h` |
+| Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`). The pinned build checks ABI 3 at `C003h` and reads `ABIVID` at `C008h`; it also edits, saves and reopens on the GLCD at 21 × 8 |
 | ATOM.COM | build that sizes its workspace from `0006h` | Runs | Assembles `HELLO.ASM` into `HELLO.COM` on TEC-OS, which then runs (`test/atom.test.mjs`); needs the BDOS at `78C4h` or higher |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
 | EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |
