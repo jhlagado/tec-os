@@ -96,3 +96,55 @@ test('browser stages the whole import before saving or publishing', async () => 
   assert.equal(saves, 1);
   assert.equal(resets, 1);
 });
+
+for (const running of [true, false]) {
+  for (const failure of [null, 'read', 'save']) {
+    test(`browser import restores running=${running} after ${failure ?? 'success'}`, async () => {
+      const { image } = card();
+      const before = image.slice();
+      const state = { card: image, running };
+      const source = readFileSync(new URL('../web/src/main.mjs', import.meta.url), 'utf8');
+      const start = source.indexOf('$("putfile").addEventListener');
+      const end = source.indexOf('$("drive").addEventListener', start);
+      let handler, releaseRead, releaseSave, saves = 0, resets = 0;
+      const readGate = new Promise(resolve => { releaseRead = resolve; });
+      const saveGate = new Promise(resolve => { releaseSave = resolve; });
+      const elements = { drive: { value: 'A' }, astext: { checked: false }, cardinfo: {}, putfile: { addEventListener: (_type, fn) => { handler = fn; } } };
+      runInNewContext(source.slice(start, end), {
+        state, CpmVolume, parseContainer, volumePayload, $: id => elements[id],
+        currentVolume: () => new CpmVolume(volumePayload(image, parseContainer(image).volumes[0]), parseContainer(image).volumes[0].g),
+        saveCard: async () => {
+          saves++;
+          assert.equal(state.running, false);
+          await saveGate;
+          assert.equal(state.running, false);
+          if (failure === 'save') throw Error('save failed');
+        },
+        reset: () => { assert.equal(state.running, false); resets++; },
+        refreshFiles: () => {},
+      });
+      const pending = handler({ target: { files: [{ name: 'KEEP.TXT', arrayBuffer: async () => {
+        assert.equal(state.running, false);
+        await readGate;
+        assert.equal(state.running, false);
+        if (failure === 'read') throw Error('read failed');
+        return new ArrayBuffer(128);
+      } }] } });
+      const pausedDuringRead = state.running;
+      releaseRead();
+      // Allow the handler to reach the pending save without completing it.
+      await new Promise(resolve => setImmediate(resolve));
+      if (failure !== 'read') {
+        assert.equal(saves, 1);
+        assert.equal(state.running, false);
+        assert.equal(Buffer.compare(image, before), 0);
+      }
+      releaseSave();
+      await pending;
+      assert.equal(pausedDuringRead, false);
+      assert.equal(state.running, running);
+      assert.equal(resets, failure ? 0 : 1);
+      if (failure) assert.equal(Buffer.compare(image, before), 0);
+    });
+  }
+}
