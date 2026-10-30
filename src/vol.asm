@@ -252,12 +252,18 @@ MNTERR: PUSH    AF
 ; Read card block A (0-7, the container's table) into BLKBUF. NZ if it fails.
 MNBLK:  LD      (MNTCB),A
         LD      L,A
+        XOR     A
+        LD      (BUFOK),A       ; metadata owns BLKBUF, even if the read fails
         LD      H,0
         LD      (SDLBA),HL
         LD      L,H
         LD      (SDLBA+2),HL
         LD      HL,BLKBUF
-        JP      SDREAD
+        CALL    SDREAD
+        RET     Z
+        LD      A,$FF
+        LD      (MNTCB),A       ; a failed read is not a cached table block
+        RET
 
 ; IX = descriptor A of the table, its block read into BLKBUF if it is not
 ; already there (MNTCB). Block 0 holds 15 after the header, each later block
@@ -501,10 +507,11 @@ VMNT:   LD      A,C
         CP      (HL)
         JR      Z,VM1
         JP      NC,VBAD
-VM1:    LD      (IX+DMOUNT),C
+VM1:    CALL    VFLUSH
+        JP      NZ,VBAD
+        LD      (IX+DMOUNT),C   ; publish only after the old data is safe
         PUSH    BC
         PUSH    DE
-        CALL    VFLUSH
         LD      A,C
         CALL    VCLEAR
         CALL    MNONE
@@ -522,9 +529,8 @@ VUNM:   LD      A,C
         JP      Z,VBAD          ; A is never left empty
         CP      MAXDRV
         JP      NC,VBAD
-        PUSH    BC
         CALL    VFLUSH
-        POP     BC
+        JP      NZ,VBAD
         LD      A,C
         CALL    VCLEAR
 VRESET: XOR     A
@@ -543,10 +549,19 @@ VOK:    XOR     A
 VBAD:   LD      A,$FF
         RET
 
-; Before a drive's volume changes: the cache's dirty lines written.
-VFLUSH: CALL    CDI
+; Before a drive's volume changes: write dirty cache lines, Z on success.
+; Keep the requested drive (BC), descriptor index (DE) and pointer (IX).
+; CDI/CEI use HL/AF; CFLALL and its SDWRITE/MAPREC path destroy BC/DE/HL.
+VFLUSH: PUSH    BC
+        PUSH    DE
+        PUSH    IX
+        CALL    CDI
         CALL    CFLALL
-        JP      CEI
+        CALL    CEI
+        POP     IX
+        POP     DE
+        POP     BC
+        RET
 
 ; Forget drive A's volume: its drive-table entry and DRVIDX. Keeps C.
 VCLEAR: PUSH    BC

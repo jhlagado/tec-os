@@ -993,6 +993,10 @@ RANDPREP:
         LD      D,(HL)
         INC     HL
         LD      E,(HL)
+        LD      A,E             ; CP/M 2.2 records 0..65535; r2 is overflow
+        OR      A
+        LD      A,6
+        JP      NZ,RANDFAIL     ; reject before changing any FCB field
         LD      A,C
         AND     $7F
         LD      (SEQREC),A
