@@ -171,8 +171,11 @@ export class CpmVolume {
     const records = Math.ceil(body.length / RECORD);
     const padded = new Uint8Array(records * RECORD).fill(text ? EOF : 0);
     padded.set(body);
-    this.erase(name, user);
+    // Plan against the intact directory, reclaiming this file's allocations.
+    const old = this.find(name, user);
+    const reusable = new Set(old?.entries.map((e) => e.index) ?? []);
     const used = this.usedBlocks();
+    for (const e of old?.entries ?? []) for (const b of e.blocks) used.delete(b);
     const recordsPerBlock = this.blockBytes / RECORD;
     const blocksNeeded = Math.ceil(records / recordsPerBlock);
     const free = [];
@@ -181,8 +184,10 @@ export class CpmVolume {
     const recordsPerEntry = 128 * this.extentsPerEntry;
     const entryCount = Math.max(1, Math.ceil(records / recordsPerEntry));
     const slots = [];
-    for (let i = 0; i < this.entries && slots.length < entryCount; i += 1) if (this.entry(i)[0] === 0xe5) slots.push(i);
+    for (let i = 0; i < this.entries && slots.length < entryCount; i += 1) if (this.entry(i)[0] === 0xe5 || reusable.has(i)) slots.push(i);
     if (slots.length < entryCount) throw new CpmError("directory full");
+    // No capacity check below this point can fail.
+    this.erase(name, user);
     free.forEach((b, k) => {
       const chunk = padded.subarray(k * this.blockBytes, (k + 1) * this.blockBytes);
       this.data.set(chunk, b * this.blockBytes);

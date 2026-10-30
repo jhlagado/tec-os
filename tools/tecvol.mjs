@@ -105,7 +105,7 @@ async function main(argv) {
       let problems = 0;
       console.log(`container: format 1.${info.minor}, ${info.containerBlocks} blocks (${info.containerBlocks * 512} bytes), ${info.volumes.length} volume(s)${info.drives ? `, ${info.drives} drive(s) wanted` : ""}`);
       for (const v of info.volumes) {
-        const { fs } = openVolume(image, info, String(v.id));
+        const fs = new CpmVolume(volumePayload(image, v), v.g, { readOnly: v.readOnly });
         const issues = fs.verify();
         problems += issues.length;
         console.log(

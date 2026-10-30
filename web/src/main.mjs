@@ -430,14 +430,18 @@ $("openimg").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 $("putfile").addEventListener("change", async (e) => {
-  const fs = currentVolume();
-  if (!fs) return;
+  if (!state.card) return;
+  const staged = state.card.slice();
+  const v = parseContainer(staged).volumes.find((x) => x.drive === $("drive").value);
+  if (!v) return;
+  const fs = new CpmVolume(volumePayload(staged, v), v.g, { readOnly: v.readOnly });
   try {
     for (const file of e.target.files) {
       const name = file.name.toUpperCase();
       fs.write(name, new Uint8Array(await file.arrayBuffer()), { text: $("astext").checked });
     }
-    await saveCard(state.card);
+    await saveCard(staged);
+    state.card.set(staged);
     reset();
   } catch (err) {
     $("cardinfo").textContent = `Not copied: ${err.message}`;

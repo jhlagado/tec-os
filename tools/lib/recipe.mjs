@@ -1,7 +1,7 @@
 // Build a card from a tecos-file-recipe-v1 document. Runs in Node and in the
 // browser: the caller supplies fetch(url) returning the file's bytes.
 
-import { createContainer, headerChecksum, parseContainer, findVolume, volumePayload } from "./container.mjs";
+import { createContainer, descriptorAt, tableSum, headerChecksum, parseContainer, findVolume, volumePayload } from "./container.mjs";
 import { CpmVolume } from "./cpmfs.mjs";
 import { format } from "./format.mjs";
 
@@ -28,10 +28,15 @@ export async function buildRecipe(recipe, fetchFile) {
   const header = image.subarray(0, format.blockBytes);
   recipe.volumes.forEach((v, i) => {
     if (v.readOnly) {
-      header[format.header.descriptorsOffset + i * format.descriptor.bytes + format.descriptor.fields.flags.offset] |=
+      image[descriptorAt(i) + format.descriptor.fields.flags.offset] |=
         format.descriptor.flags.readOnly;
     }
   });
+  if (info.minor >= 1) {
+    const sum = tableSum(image, recipe.volumes.length);
+    header[format.header.fields.tableSum.offset] = sum & 0xff;
+    header[format.header.fields.tableSum.offset + 1] = sum >> 8;
+  }
   const sum = headerChecksum(header);
   header[format.header.fields.checksum.offset] = sum & 0xff;
   header[format.header.fields.checksum.offset + 1] = sum >> 8;
