@@ -113,13 +113,15 @@ CONSWN: LD      (CONMOD),A
 CONSWV: PUSH    BC              ; B = the video mode
         PUSH    DE
         CALL    VIDSET
-        CALL    VREST           ; the display in its mode before the clear
         POP     DE
         LD      (VWID),DE       ; columns, then rows
         CALL    VTREGR
         POP     BC
         LD      A,B
         LD      (CONMOD),A
+        CALL    VTOWN
+        RET     NZ              ; selection must leave a claimed display alone
+        CALL    VREST           ; the display in its mode before the clear
         XOR     A
         LD      (VROW),A
         LD      (VCOL),A

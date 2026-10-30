@@ -189,7 +189,10 @@ TMSGET: CALL    TMSCELL
         JP      TMSPEEK
 
 ; Clear row B from column C to the end of the line.
-TMSCLR: CALL    TMSCELL
+TMSCLR: LD      A,C
+        CP      TMSCOLS
+        RET     NC              ; pending wrap has no cells left to erase
+        CALL    TMSCELL
         CALL    TMSWA
         LD      A,TMSCOLS
         SUB     C

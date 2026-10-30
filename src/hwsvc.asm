@@ -356,6 +356,9 @@ HWSPUT: CALL    VTOWN
         RRCA
         LD      A,HWENODV
         JP      NC,HWERR
+        LD      A,B
+        OR      A
+        JP      Z,HWOK          ; no source read or cursor change for zero count
         PUSH    BC
         PUSH    DE
         PUSH    HL

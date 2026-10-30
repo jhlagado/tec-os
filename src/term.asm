@@ -261,13 +261,17 @@ VTSETR: LD      (VROW),A
 VTDOWN: CALL    VTN
         LD      A,(VROW)
         ADD     A,B
-        LD      HL,VHGT
+        JR      NC,VTDN1
+        LD      A,$FF           ; saturate before clipping to the dimension
+VTDN1:  LD      HL,VHGT
         CALL    VTCLIP
         JP      VTSETR
 VTRIGHT:CALL    VTN
         LD      A,(VCOL)
         ADD     A,B
-        LD      HL,VWID
+        JR      NC,VTRT1
+        LD      A,$FF
+VTRT1:  LD      HL,VWID
         CALL    VTCLIP
 VTSETC: LD      (VCOL),A
         JP      VTDONE
