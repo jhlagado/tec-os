@@ -44,14 +44,10 @@ npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 block. `npm test` runs Edit on TEC-OS and on Triptych's CP/M when those are
 present beside this repository.
 
-The ROM is assembled with ATOM. Profiles:
-
-| Profile | Banks | Display | Use |
-| --- | ---: | --- | --- |
-| `debug80` | 9 | PICO9918, 80 columns | Debug80's TEC-1G model |
-| `debug80t40` | 9 | PICO9918, 40 columns | As above |
-| `debug80g32` | 9 | PICO9918, 32 columns | As above, Graphics I |
-| `board` | 1 | PICO9918, 80 columns | The TEC-1G as its documentation describes U9 |
+The ROM is assembled with ATOM. There is one image for every board. The names
+`debug80`, `debug80t40`, `debug80g32` and `board` stay as aliases of it. The
+display's width is chosen by a line in `A:STARTUP.CMD`: `PICO.DRV` for 80 columns,
+`PICO40.DRV` for 40 and `PICO32.DRV` for 32 in Graphics I.
 
 ## In a web page
 
@@ -86,8 +82,9 @@ to TEC-OS. Never change a card on the PC while the TEC-1G is using it.
 
 ## Using it
 
-TEC-OS boots to the CP/M prompt `A>` on the PICO9918 or the GLCD when the
-board's Matrix switch is on, and on the serial terminal otherwise: connect
+TEC-OS starts on the serial terminal and the 20 × 4 LCD, and the starter card's
+`STARTUP.CMD` then moves the console to the PICO9918 or the GLCD when the
+board's Matrix switch is on. Otherwise it stays on the serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
@@ -95,9 +92,9 @@ CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.DRV` installs a driver.
 `A:STARTUP.CMD` runs at cold boot; a keypad key held from reset until the
-prompt skips it. The console is then the PICO9918 on a board with one, and the
-serial terminal otherwise. If the card is missing or invalid, a
-diagnostic prompt shows the error code and offers a retry.
+prompt skips it, and the console stays on the serial terminal. If the card is dead
+the LCD shows `CARD?`. If the card is missing or invalid, a
+diagnostic prompt on the serial terminal shows the error code and offers a retry.
 
 Do not press the hex keypad while a CP/M program is running; see
 [docs/compatibility.md](docs/compatibility.md).

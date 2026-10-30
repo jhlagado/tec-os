@@ -1,8 +1,8 @@
 # Drivers
 
-Status: **Built**, 2026-10-31: the loader, the registry, the commands, startup
-and `GLCD.DRV`, the first real driver. `test/drv.test.mjs` and
-`test/startup.test.mjs` hold them.
+Status: **Built**, 2026-10-31: the loader, the registry, the commands, startup,
+`GLCD.DRV` and `PICO.DRV`. `test/drv.test.mjs`, `test/startup.test.mjs` and
+`test/pico.test.mjs` hold them.
 
 A driver is a resident in EXPAND 0, below `(0006h)`, in whole pages. It
 offers named services through the registry and calls the ROM only through
@@ -47,14 +47,16 @@ driver's page added.
 `NAME.DRV`, or `B:NAME.DRV`, reads that file and installs it. The type must be
 typed: `NAME` alone still looks for `NAME.COM` and then `NAME.PRL`. If the file
 won't read, or the load is refused or fails, the command's name comes back with
-a question mark, as for any command that won't run. If the driver gave
-`ABIGLCD` a table, the GLCD becomes the console, unless a PICO9918 is.
+a question mark, as for any command that won't run. If the driver's table is in
+its own first page it takes the console: `PICO.DRV` always, `GLCD.DRV` unless
+`PICO.DRV` is in. Any other driver leaves the console alone.
 
 `DRIVERS` prints one line for each driver, the newest first: its name and its
 pages. It walks the owner list, so a driver with no services is listed.
 
 `UNLOAD` removes the lowest resident, as below, and answers the same way if it
-can't.
+can't. `PICO.DRV`'s `REMOVE` refuses while it is the console, since `CON CRT` has no
+load. `GLCD.DRV`'s gives the console back to `CRT:` if `PICO.DRV` is in.
 
 ## Startup
 
@@ -73,10 +75,21 @@ A line ends at CR or LF, and blank lines are passed over. `^Z`, a zero or the
 that starts there isn't run. A line that fails prints its usual message and the
 next runs.
 
-One card can serve every board. A line naming `GLCD.DRV` makes the GLCD the
-console where there is one, and elsewhere prints `GLCD.DRV?` and goes on. A
-failed `GLCD.DRV` line, or a skip, leaves the LCD silent: only `CON UC1:` shows
-`GLCD?`.
+**Width is a startup line.** `PICO.DRV` is 80 columns, `PICO40.DRV` 40 and
+`PICO32.DRV` 32 in Graphics I, and the ROM is one image for every board. The starter
+card carries all three and names `PICO.DRV`.
+
+One card can serve every board: a line for the PICO9918, then `GLCD.DRV`. Each line
+makes its display the console where there is one, and elsewhere prints its name with
+a question mark and goes on. On a board with both, `GLCD.DRV`'s line gives way once
+`PICO.DRV` is the console, and only `CON UC1:` installs the second; the two together
+cost 1,280 TPA bytes, leaving 45,574 on the starter card. A failed display line, or a
+skip, leaves the LCD silent: only `CON UC1:` shows `GLCD?`. Until a display's line
+runs, the banner and volumes go to the serial terminal and the LCD, and a dead card
+shows `CARD?` on the LCD.
+
+A board with no matrix keyboard refuses both drivers, so it has an unprogrammed VDP
+until a program claims it. A claim with no `PICO.DRV` in restores nothing on release.
 
 **The skip.** A keypad key held through reset, until the prompt, skips the file:
 port `03h` bit 6 is read once, just before the open, about 1.46 s after reset. The
@@ -86,8 +99,8 @@ over this bit's polarity: a board that reads it the other way would skip on ever
 boot. The web host has no keypad and no tool to clear the file, which can only be
 overwritten by a copy or replaced with a new starter card.
 
-**Recovery needs serial.** After a skip, or with no file, a GLCD board has its LCD
-and the serial terminal: the matrix keyboard isn't read until the driver is in.
+**Recovery needs serial.** After a skip, or with no file, a board has its LCD and the
+serial terminal: the matrix keyboard isn't read until a display's driver is in.
 
 ## Installation
 

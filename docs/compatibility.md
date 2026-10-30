@@ -4,9 +4,11 @@ TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
 46,854 bytes (`0100h–B805h`) on the starter card, and at least 46,086 on any
 card, since cold boot places the BDOS entry below the allocation vectors of
-the volumes mounted. On a board with a GLCD, its console's driver takes
-768 bytes more: 46,086 on the starter card and 45,318 with four 8 MiB
-volumes. It reports version 2.2.
+the volumes mounted. A display's driver takes more: 512 bytes for the PICO9918,
+46,342 on the starter card, and 768 for the GLCD, 46,086 on the starter card and
+45,318 with four 8 MiB volumes. A board with both displays that installs both
+with `CON UC1` gives up 1,280 bytes, 45,574 on the starter card. It reports
+version 2.2.
 
 ## BDOS functions
 
@@ -123,7 +125,7 @@ The user number survives warm boot.
 Warm boot puts the video display back into its console mode: on the
 PICO9918 it reloads registers 0–7 and the font, and on the GLCD it turns the
 display and graphics back on. What a program left on the screen stays until
-the console writes over it. The restore costs 143,044 T-states (36 ms) per
+the console writes over it. The restore costs about 143,000 T-states (36 ms) per
 warm boot on the PICO9918 and 1,447 on the GLCD.
 
 ## Devices

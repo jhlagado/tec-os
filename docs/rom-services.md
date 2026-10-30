@@ -5,7 +5,7 @@ Status: **Built**, 2026-10-26. The hardware services' entry, `ABIHW` at
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,104 bytes (`debug80`) and has 280 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,697 bytes (`debug80`) and has 687 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -49,7 +49,7 @@ EXPAND count (`FF10h`, always 2). ABI 3.1 adds `ABIDRV`.
 | `C01Ah` | `ABIXCMD` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt |
 | `C01Dh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
 | `C020h` | `ABIFONT` | Address of the console font, 8 bytes a character from 20h, for the GLCD console |
-| `C022h` | `ABIGLCD` | `JP GLHOOK`: HL = a video table, six words, for the GLCD console, and `LINEBUF` back in HL; carry set and nothing changed if a table is kept already; HL = 0 puts the console back to serial |
+| `C022h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
 | `C025h` | `ABIDRV` | `JP DRVSVC`: the service registry, below; C = 0 find, 1 enumerate |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers. `XMOVE`'s 0 is the
@@ -114,23 +114,27 @@ The rules that make the services safe for CP/M programs:
 - **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
   the serial transmit line, high.
 
-## The GLCD console's table
+## A video driver's table
 
-The GLCD console is a driver, `GLCD.DRV`, below `(0006h)`. Its INIT calls
-`ABIGLCD` with HL pointing at six words, its routines in the terminal's
-order: put, get, clear to the end of the line, restore, read a row, write a
-row. `CONSW` points the terminal's vector at that table when it selects
-`UC1:`, and the terminal then calls the routines directly, on the caller's
-stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 28
-bytes it has. A program that pushes anything before calling the BIOS
-directly sets up its own stack first. The routines run with the caller's
-interrupt state and share their drawing counters, so an interrupt handler
-must not print through the console. `ABIGLCD` returns `LINEBUF`'s address in HL, where the row
-routines read and write a row, or carry set if a table is kept already, as
-when `GLCD.DRV` is loaded a second time; that copy's INIT then fails and
-nothing of it stays. `ABIGLCD` also returns carry set with no matrix keyboard. Its REMOVE, in the copy that took the console, calls `ABIGLCD` with
-HL = 0, which drops the table and puts the console back to serial, with carry
-clear.
+The consoles on the PICO9918 and the GLCD are drivers, `PICO.DRV` and `GLCD.DRV`,
+below `(0006h)`. INIT calls `ABIGLCD` with A = 1 for `CRT:` or 3 for `UC1:` and HL
+pointing at eight words: the routines in the terminal's order (put, get, clear to
+the end of the line, restore, read a row, write a row), a routine for the page
+functions, then a byte of columns and a byte of rows. The seventh word may be 0 on
+a display that isn't `CRT:`, since only `CRT:` calls it, with A = 0 to show a finished
+row move, 1 to begin a move of rows B to C and 2 to end one, and never while a
+program has claimed the VDP. `CONSW` points the terminal's vector at the table
+when it selects the mode, and the terminal then calls the routines directly, on the
+caller's stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 28
+bytes it has. A program that pushes anything before calling the BIOS directly sets
+up its own stack first. The routines run with the caller's interrupt state, so an
+interrupt handler must not print through the console.
+
+`ABIGLCD` returns `LINEBUF`'s address in HL, where the row routines read and write a
+row, with carry clear. It returns carry set with nothing changed if that mode has a
+table already, or with no matrix keyboard. HL = 0 drops the mode's table, with carry
+clear, and the console is chosen again at its next call. A destroys; BC is kept.
+It uses 2 bytes of the caller's stack.
 
 Page zero's restart vectors at `0008h–0037h` are left to programs and
 debuggers. A warm boot, like a cold boot, puts seven zeros and a `RET` in
@@ -216,10 +220,11 @@ that programs share as ATOM include files.
 | Serial and matrix keyboard | 789 | 1, 2 | Stays |
 | ANSI terminal | 988 | 2 | Stays |
 | Video switch | 104 | 2 | Stays |
-| PICO9918 text console | 419 | 1, 2 | Stays |
+| PICO9918 text console | — | 1, 2 | Moved to `PICO.DRV`, `PICO40.DRV` and `PICO32.DRV`; the probe and raw services stay |
+| PICO9918 probe and raw addressing | 59 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.DRV`, a driver, loaded by `STARTUP.CMD` |
-| `ABIGLCD` and loading the GLCD's resident | 128 | 2 | Stays |
-| Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD resident reads it through `ABIFONT` |
+| `ABIGLCD` and loading the display drivers | 128 | 2 | Stays |
+| Font, 96 characters | 768 | 1 | Stays: both display drivers read it through `ABIFONT`, and each would otherwise take the TPA below its floor |
 | 20 × 4 LCD | 146 | 2 | Stays |
 | SD driver | 795 | 1 | Stays |
 | Container mount and checks | 1,192 | 1 | Stays |
@@ -297,7 +302,7 @@ that uses them.
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->280<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->687<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
