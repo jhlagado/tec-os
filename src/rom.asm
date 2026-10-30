@@ -30,5 +30,6 @@
 %INCLUDE "cache.asm"
 %INCLUDE "history.asm"
 %INCLUDE "prl.asm"
+%INCLUDE "drv.asm"
 %INCLUDE "levels.asm"
 %INCLUDE "end.asm"

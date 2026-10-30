@@ -180,13 +180,8 @@ PRLRE:  POP     DE
 ; Remove the resident at base HL if it is the lowest: its REMOVE is called
 ; and PZTOP and (0006h) go back to the top before it. Carry set and nothing
 ; changed otherwise.
-PRLREM: LD      DE,(PZTOP)
-        LD      A,L
-        ADD     A,6
-        CP      E
-        JR      NZ,PRLRF
-        LD      A,H
-        CP      D
+PRLREM: LD      A,(PZTOP+1)
+        CP      H
         JR      NZ,PRLRF
         LD      A,(STUBAD+1)    ; the cold-boot stub is not a resident
         CP      H
@@ -199,7 +194,7 @@ PRLREM: LD      DE,(PZTOP)
         EX      DE,HL
         CALL    PRLJP           ; its REMOVE
         POP     HL
-        LD      L,7
+PRLTOP: LD      L,7
         LD      E,(HL)
         INC     HL
         LD      D,(HL)

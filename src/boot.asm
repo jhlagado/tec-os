@@ -64,6 +64,8 @@ WBOOTR: DI
         OUT     (SYSLAT),A
         LD      SP,BSTK
         CALL    PZINIT
+        LD      HL,CCPLVL       ; the window shuts
+        RES     7,(HL)
         CALL    CPMINIT
         CALL    HWVREL          ; a program that claimed the PICO9918 gives it back
         LD      A,(CONMOD)      ; a program may have changed the display mode

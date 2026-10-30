@@ -76,7 +76,7 @@ BIOSLEN EQU     17*3
 ; more. The CCP stack is also a transient's default stack: CP/M's eight
 ; levels, the return word and an NMI frame need 20 bytes of it.
 BDOSSTN EQU     54
-CCPSTN  EQU     27
+CCPSTN  EQU     30
 BIOSSTN EQU     38
 
 ; ---- GLCD console geometry: 6 x 8 cells on 128 x 64 pixels ------------------

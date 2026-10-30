@@ -128,7 +128,9 @@ test("the level records and the history have fixed pages, and a record keeps no 
   cmd(m, "CCP", /\r\nB>$/);
   const rec = m.sym("LVBASE") - 0x8000;
   assert.equal(m.expand[1][rec + 3], 1, "level 1's record holds drive and user");
-  assert.equal(m.expand[1][rec + 38], 0, "and ends at its 38th byte");
+  assert.equal(m.sym("LVREC"), 41);
+  assert.equal(m.expand[1][rec + 41], 0, "and ends at its 41st byte");
+  assert.ok(m.sym("LVREC") * m.sym("LEVELS") <= 256, "six records in the page");
   cmd(m, "EXIT", /\r\nB>$/);
   assert.deepEqual(m.violations, []);
 });

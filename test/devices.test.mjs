@@ -8,12 +8,12 @@ import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
 
-test("the table at C003h: TNA, ABI 3.0, and the entries abi.inc names", () => {
+test("the table at C003h: TNA, ABI 3.1, and the entries abi.inc names", () => {
   const m = boot(standardCard());
   const S = (n) => m.sym(n);
   assert.equal(S("ABITAB"), 0xc003);
-  assert.deepEqual([0, 1, 2, 3, 4].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 3, 0], "TNA 3.0");
-  for (const n of ["ABIHW", "ABIXMOV", "ABIMOVE", "ABIXCCP", "ABIXCMD", "ABIVOL", "ABIGLCD"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
+  assert.deepEqual([0, 1, 2, 3, 4].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 3, 1], "TNA 3.1");
+  for (const n of ["ABIHW", "ABIXMOV", "ABIMOVE", "ABIXCCP", "ABIXCMD", "ABIVOL", "ABIGLCD", "ABIDRV"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
   noViolations(m);
 });
 

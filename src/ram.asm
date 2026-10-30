@@ -116,7 +116,7 @@ LOADBUF:
 ; resident stack. The host proof checks that every byte survives the deepest
 ; built-in and error-recovery paths.
 STKGUARD:
-        DS      16
+        DS      43-CCPSTN
 STKGUEND:
 CSTKBAS:
         DS      CCPSTN
@@ -226,7 +226,11 @@ PRGCODE:DS      2               ; BDOS function 108's program return code
 LOADTOP:DS      2               ; successful LOADCOM exclusive record end
 PRLN:   DS      2               ; the PRL loader: code length
 PRLDL:  DS      1               ; and relocation delta
-CCPLVL: DS      1               ; the CCP's level, 0 at the outermost
+CCPLVL: DS      1               ; the CCP's level, 0 at the outermost; bit 7: an INIT or REMOVE runs
 CCPFLG: DS      1               ; 1 a one-command level to run, 2 run: exit
+REGHEAD:DS      2               ; the first service record
+DRVHEAD:DS      1               ; the lowest driver's page, 0 for none
+DRVGEN: DS      1               ; raised by each removal
+DRVRC:  DS      1               ; the last load's failure
 HIRME:
 WSEND   EQU     HIRME           ; end of the classic resident workspace

@@ -1,0 +1,219 @@
+; DRVDEMO: a driver offering one service, "DEMO" version 2, a table of one
+; entry: A = its count of calls, raised. Assembled with one V_ name set to
+; make each of the failure cases.
+%INCLUDE "../../src/abi.inc"
+
+        ORG     $0100
+HDR:    DB      'D',1,0,FLAGS
+        DW      0,0,XTRA,0      ; REMOVE, size, extra, relocation: the writer's
+        DB      STKB,STKI,STKC
+        DW      0               ; INIT: the writer's
+        DB      DRVNAME
+; ---- the image ----------------------------------------------------------------
+INIT:
+%IF V_FAIL
+        SCF
+        RET
+%ENDIF
+%IF V_PROBE
+        LD      DE,REC+2        ; can a client see this service yet?
+        LD      BC,$0100
+        CALL    ABIDRV
+        LD      A,0
+        ADC     A,A
+        LD      (RESULT),A
+%ENDIF
+%IF V_CCP
+        LD      HL,$0100
+        CALL    ABIXCCP
+        LD      A,0
+        ADC     A,A
+        LD      (RESULT),A
+%ENDIF
+%IF V_CMD
+        LD      HL,$0100
+        LD      DE,LINE
+        CALL    ABIXCMD
+        LD      A,0
+        ADC     A,A
+        LD      (RESULT),A
+%ENDIF
+%IF V_LOAD
+        CALL    RAWLOAD
+        LD      A,0
+        ADC     A,A
+        LD      (RESULT),A
+%ENDIF
+%IF V_UNL
+        CALL    RAWUNL
+        LD      A,0
+        ADC     A,A
+        LD      (RESULT),A
+%ENDIF
+%IF V_GLVEC
+        LD      HL,VTAB         ; a vector the scan can't see, then failure
+        CALL    ABIGLCD
+        SCF
+        RET
+%ENDIF
+%IF V_HOOK
+        LD      HL,($0001)      ; CONOUT, in the table
+        LD      DE,10
+        ADD     HL,DE
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        LD      (OLDCO),DE
+        LD      DE,MYCO
+        LD      (HL),D
+        DEC     HL
+        LD      (HL),E
+%ENDIF
+%IF V_HOOKFAIL
+        SCF
+        RET
+%ENDIF
+%IF V_WB
+        JP      0               ; a warm boot from inside INIT
+%ENDIF
+%IF V_STK
+        LD      HL,VTAB
+        CALL    ABIGLCD
+        RET     C
+%IF DEPTH
+        PUSH    AF              ; six bytes of the CCP's stack
+        PUSH    BC
+        PUSH    HL
+        POP     HL
+        POP     BC
+        POP     AF
+%ENDIF
+%ENDIF
+%IF V_DEP
+        LD      DE,DEPNAME      ; bound once, at INIT
+        LD      BC,$0100
+        CALL    ABIDRV
+        RET     C
+        LD      (DEPTAB),HL
+%ENDIF
+%IF V_WILD
+        LD      HL,$0200        ; a record outside the image
+        OR      A
+        RET
+%ENDIF
+%IF V_LINK
+        LD      HL,ABITAB       ; a link outside the image
+        LD      (REC),HL
+%ENDIF
+%IF V_CYCLE
+        LD      HL,REC          ; a record linked to itself
+        LD      (REC),HL
+%ENDIF
+%IF V_TABLE
+        LD      HL,$0300        ; an entry table outside the image
+        LD      (REC+11),HL
+%ENDIF
+%IF V_NONE
+        LD      HL,0            ; no services
+        OR      A
+        RET
+%ENDIF
+        LD      HL,REC          ; the record, published by the loader
+        OR      A
+        RET
+
+REMOVE:
+%IF V_HOOK
+        LD      HL,($0001)
+        LD      DE,10
+        ADD     HL,DE
+        LD      DE,(OLDCO)
+        LD      (HL),E
+        INC     HL
+        LD      (HL),D
+%ENDIF
+%IF V_STK
+        LD      HL,0
+        CALL    ABIGLCD
+%ENDIF
+%IF V_REFUSE
+        SCF
+        RET
+%ENDIF
+        OR      A
+        RET
+
+SERVICE:LD      HL,COUNT
+        INC     (HL)
+        LD      A,(HL)
+        RET
+
+%IF V_LATE
+; A resident that looks up later and keeps the pointer: the violation. LOOK
+; finds DEMO and keeps its table; USE calls it, unchecked; SAFE checks.
+LOOK:   LD      DE,DEPNAME
+        LD      BC,$0100
+        CALL    ABIDRV
+        RET     C
+        LD      (DEPTAB),HL
+        LD      (GEN),A
+        RET
+USE:    LD      HL,(DEPTAB)
+        JP      (HL)
+SAFE:   LD      DE,DEPNAME
+        LD      BC,$0100
+        CALL    ABIDRV
+        RET     C
+        LD      HL,GEN
+        CP      (HL)
+        SCF
+        RET     NZ
+        JR      USE
+GEN:    DB      0
+%ENDIF
+
+REC:    DW      0
+        DB      SVCNAME
+        DB      SVCVER
+        DW      TABLE
+%IF V_LATE
+TABLE:  JP      LOOK
+        JP      USE
+        JP      SAFE
+%ENDIF
+%IF V_LATE == 0
+TABLE:  JP      SERVICE
+%ENDIF
+COUNT:  DB      0
+RESULT: DB      $FF
+%IF V_CMD
+LINE:   DB      3,"DIR"
+%ENDIF
+%IF V_DEP + V_LATE > 0
+DEPNAME:DB      "DEMO    "
+DEPTAB: DW      0
+%ENDIF
+%IF V_HOOK
+MYCO:   PUSH    HL
+        LD      HL,HITS
+        INC     (HL)
+        POP     HL
+        DB      $C3
+OLDCO:  DW      0
+HITS:   DB      0
+%ENDIF
+%IF V_GLVEC+V_STK > 0
+; The ROM's six video routines, each using six bytes of its caller's stack.
+VTAB:   DW      VRT,VRT,VRT,VRT,VRT,VRT
+VRT:
+%IF DEPTH
+        PUSH    AF
+        PUSH    BC
+        PUSH    HL
+        POP     HL
+        POP     BC
+        POP     AF
+%ENDIF
+        RET
+%ENDIF
+IMGEND:

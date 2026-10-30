@@ -1,10 +1,10 @@
 // The CCP's operands: one command line for each branch of the built-ins'
 // argument, parser and end checks, in order, since files persist. Console
 // output and the BDOS calls of each line are held against a fixture taken
-// from the ROM at e3d91b5, before these checks were shared, so the fixture
-// proves the behaviour was kept. The CCP's peak is read per command against
-// that ROM's: the shared checks may add their frames, and CON UC1 on a PICO9918
-// and matrix board, where none is pending, may add nothing. Emulator evidence.
+// from the ROM at 9a5512b, so the fixture proves the behaviour is kept. A
+// function 9 call is compared by its text, not its address, since the ROM's
+// data moves when the table grows. The CCP's peak is read per command against
+// that ROM's: nothing may add to it. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -16,7 +16,6 @@ import { GLCD_PRL, ROOT, boot, prl, volume } from "./lib/fixtures.mjs";
 
 const FIXTURE = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/ccp-operands.json"), "utf8"));
 const PROFILE = "debug80";
-const FRAMES = 4; // bytes of the CCP's stack the shared checks may add to a command
 
 const fill = (v, size, name) => {
   try {
@@ -75,7 +74,11 @@ function watch(m) {
       // A byte argument leaves a stale D, so only an address is compared whole.
       const named = c >= 15 && c <= 23;
       const fcb = named ? [...Array(36).keys()].map((i) => m.read(de + i)) : null;
-      seen.calls.push({ c, ...([9, 10, 26].includes(c) || named ? { de } : { e }), fcb });
+      if (c === 9) {
+        let text = "";
+        for (let a = de; m.read(a) !== 0x24; a += 1) text += String.fromCharCode(m.read(a));
+        seen.calls.push({ c, text, fcb });
+      } else seen.calls.push({ c, ...([10, 26].includes(c) || named ? { de } : { e }), fcb });
     }
     return step();
   };
@@ -126,7 +129,7 @@ test("the built-ins' operands keep their output, BDOS calls and stack", { timeou
   assert.equal(FIXTURE.inputs.length, 80);
   const m = boot(await card(), { profile: PROFILE });
   const rows = reading(m, FIXTURE.inputs);
-  const deep = rows.filter((r, i) => r.peak > FIXTURE.inputs[i].peak + FRAMES);
+  const deep = rows.filter((r, i) => r.peak > FIXTURE.inputs[i].peak);
   assert.deepEqual(deep.map((r) => `${r.input}: ${r.peak}`), []);
 });
 

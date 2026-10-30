@@ -12,6 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
+import { checkInterfaces } from "./lib/drv.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = resolve(ROOT, "src");
@@ -188,6 +189,15 @@ function checkNoOldAddress() {
   }
 }
 
+/** A driver source reaches the ROM only through abi.inc's names. */
+function checkDriverSources() {
+  for (const dir of ["drivers", "test/programs"]) {
+    for (const f of readdirSync(resolve(ROOT, dir)).filter((n) => n.endsWith(".asm") && (dir === "drivers" || n.startsWith("drv")))) {
+      checkInterfaces(readFileSync(resolve(ROOT, dir, f), "utf8"), `${dir}/${f}`);
+    }
+  }
+}
+
 async function assemble() {
   const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions });
   const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
@@ -250,6 +260,7 @@ async function buildProfile(name) {
   check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
   checkAbiInc(at);
   checkNoOldAddress();
+  checkDriverSources();
   check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);
   check(at("BDOSRME") === RAMBIOS, `the fixed workspace must end at the RAM BIOS table, not ${hex(at("BDOSRME"))}`);
   check(at("SDBYTE") === RAMBIOS + 51, "the state above the RAM BIOS table follows it");

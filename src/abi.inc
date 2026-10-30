@@ -1,4 +1,4 @@
-; TEC-OS's table, ABI 3.0: the address of each entry, for programs. The
+; TEC-OS's table, ABI 3.1: the address of each entry, for programs. The
 ; table is at C003h; its layout is fixed and entries are only ever added, at
 ; the end, with the minor version raised. A program checks for "TNA" at
 ; ABITAB and its major version at ABIMAJ before it uses the rest. The TEC-OS
@@ -18,4 +18,5 @@ ABIXCMD EQU     $C01A           ; CALL: one command line at DE, HL = 0100h
 ABIVOL  EQU     $C01D           ; CALL: mount, unmount and describe volumes
 ABIFONT EQU     $C020           ; a word: the address of the console font, 8 bytes a character from 20h
 ABIGLCD EQU     $C022           ; CALL: the GLCD's video table, HL = six words, or 0
-ABIEND  EQU     $C025           ; the end of ABI 3.0's entries
+ABIDRV  EQU     $C025           ; CALL: the service registry, C = 0 find, 1 enumerate
+ABIEND  EQU     $C028           ; the end of ABI 3.1's entries

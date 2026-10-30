@@ -108,4 +108,7 @@ GLCMSG: DB      "GLCD?",0
 ; ---- cache.asm ---------------------------------------------------------------
 CWMSG:  DB      13,10,"Write lost",0
 
+; ---- drv.asm -----------------------------------------------------------------
+DRVLIM: DB      8,12,6          ; BDOS, BIOS and CCP: each stack's sum of drivers
+
 ROMCODE:
