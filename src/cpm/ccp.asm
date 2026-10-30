@@ -158,11 +158,8 @@ NOTDRIVE:
         LD      DE,CRLFMSG
         CALL    PUTSTR
         LD      HL,CMDTXT
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL
-        LD      DE,CMDFCB
-        CALL    PARSEFCB
-        JP      C,BADCMD
+        CALL    CMDSKIP
+        CALL    CMDPARSE
         LD      (ARGSTRT),HL
         LD      DE,DIRKEY
         CALL    ISCMD
@@ -226,6 +223,33 @@ CMDRUN: CALL    PREPPAGE
         PUSH    HL
         JP      TPA
 
+; An argument: from ARGSTRT, or from HL at CMDSKIP, past its spaces, noted
+; for an error. A holds its first character, with Z at the end of the line.
+ARGSKIP:
+        LD      HL,(ARGSTRT)
+CMDSKIP:
+        CALL    SKIPSP
+        LD      (CMDSTRT),HL
+        OR      A
+        RET
+
+; One unambiguous name at HL into CMDFCB, and nothing after it.
+ONENAME:
+        CALL    CMDPARSE
+        CALL    CPCHK
+; A bad command unless only spaces are left. B is kept.
+ENDCHK:
+        CALL    SKIPSP
+        OR      A
+        RET     Z
+        JR      BADCMD
+
+; The name at HL into CMDFCB, or into the FCB at DE, or a bad command.
+CMDPARSE:
+        LD      DE,CMDFCB
+FCBPARSE:
+        CALL    PARSEFCB
+        RET     NC
 BADCMD:
         LD      HL,(CMDSTRT)
 
@@ -246,6 +270,7 @@ BADEND:
         LD      E,'?'
         CALL    PUTCHAR
         LD      DE,CRLFMSG
+PRTGO:
         CALL    PUTSTR
         JP      STARTED
 
@@ -312,16 +337,9 @@ LOADBAD:
 
 ; DIR uses only search-first/search-next and the public DMA directory record.
 CMDDIR:
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL
-        LD      DE,CMDFCB
-        CALL    PARSEFCB
-        JP      C,BADCMD
-        CALL    SKIPSP
-        LD      A,(HL)
-        OR      A
-        JP      NZ,BADCMD
+        CALL    ARGSKIP
+        CALL    CMDPARSE
+        CALL    ENDCHK
         LD      A,(CMDFCB+1)    ; no name, with or without a drive: every file
         CP      SPACE
         JR      NZ,DIRREADY
@@ -457,13 +475,9 @@ DIRNEXT:
 DIRDONE:
         LD      A,(DIRANY)
         OR      A
-        JR      NZ,DIRSUM
-        LD      DE,NOFILE
-        CALL    PUTSTR
-        JP      STARTED
+        JP      Z,FILENO
 
 ; Footer: "n files, nK free" for the drive listed.
-DIRSUM:
         CALL    PGCRLF
         JP      C,STARTED
         LD      HL,(DIRNUM)
@@ -704,26 +718,14 @@ PUTNAME:
 
 ; TYPE streams public 128-byte records and stops at CP/M text EOF.
 CMDTYPE:
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL
-        LD      A,(HL)
-        OR      A
-        JR      Z,TYPENO
-        LD      DE,CMDFCB
-        CALL    PARSEFCB
-        JP      C,BADCMD
-        CALL    UNAMBIG
-        JP      C,BADCMD
-        CALL    SKIPSP
-        LD      A,(HL)
-        OR      A
-        JP      NZ,BADCMD
+        CALL    ARGSKIP
+        JR      Z,FILENO
+        CALL    ONENAME
         LD      DE,CMDFCB
         LD      C,15
         CALL    BDOS
         INC     A
-        JR      Z,TYPENO
+        JR      Z,FILENO
         LD      DE,LOADBUF
         LD      C,26
         CALL    BDOS
@@ -759,26 +761,16 @@ TYPEEND:
         CALL    BDOS
         JP      STARTED
 
-TYPENO:
+FILENO:
         LD      DE,NOFILE
-        CALL    PUTSTR
-        JP      STARTED
+        JP      PRTGO
 
 ; ERA deletes through BDOS only after the complete operand has parsed.
 CMDERA:
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL
-        LD      A,(HL)
-        OR      A
+        CALL    ARGSKIP
         JP      Z,BADCMD
-        LD      DE,CMDFCB
-        CALL    PARSEFCB
-        JP      C,BADCMD
-        CALL    SKIPSP
-        LD      A,(HL)
-        OR      A
-        JP      NZ,BADCMD
+        CALL    CMDPARSE
+        CALL    ENDCHK
         XOR     A
         LD      (ERAALL),A
         LD      HL,CMDFCB+1
@@ -813,33 +805,22 @@ ERADEL:
         LD      C,19
         CALL    BDOS
         INC     A
-        JR      Z,ERANO
+        JR      Z,FILENO
         LD      A,(ERAALL)
         OR      A
         JP      NZ,STARTED
         JP      MAINLOOP
 
-ERANO:
-        LD      DE,NOFILE
-        CALL    PUTSTR
-        JP      STARTED
-
 ; REN's public syntax is NEW=OLD. A separate destination FCB permits an
 ; existence check before the function-23 mutation FCB is assembled.
 CMDREN:
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL
-        LD      A,(HL)
-        OR      A
+        CALL    ARGSKIP
         JP      Z,BADCMD
         CP      '='
         JP      Z,BADCMD
         LD      DE,RENFCB
-        CALL    PARSEFCB
-        JP      C,BADCMD
-        CALL    UNAMBIG
-        JP      C,BADCMD
+        CALL    FCBPARSE
+        CALL    CPCHK
         LD      A,(HL)
         CP      '='
         JP      NZ,BADCMD
@@ -851,15 +832,7 @@ CMDREN:
         JP      Z,BADCMD
         CP      '='
         JP      Z,BADCMD
-        LD      DE,CMDFCB
-        CALL    PARSEFCB
-        JP      C,BADCMD
-        CALL    UNAMBIG
-        JP      C,BADCMD
-        CALL    SKIPSP
-        LD      A,(HL)
-        OR      A
-        JP      NZ,BADCMD
+        CALL    ONENAME
 
         LD      DE,LOADBUF
         LD      C,26
@@ -878,13 +851,12 @@ CMDREN:
         LD      C,23
         CALL    BDOS
         INC     A
-        JP      Z,ERANO
+        JP      Z,FILENO
         JP      MAINLOOP
 
 RENEXIST:
         LD      DE,FILEEX
-        CALL    PUTSTR
-        JP      STARTED
+        JP      PRTGO
 
 ; TEC-OS: COPY SOURCE DEST copies a file a record at a time through the
 ; default DMA record, as COPY.COM does: open the source, erase and make the
@@ -992,8 +964,7 @@ CPDONE:
         CALL    CPHEX
         LD      DE,CRLFMSG
 CPFAIL:
-        CALL    PUTSTR
-        JP      STARTED
+        JP      PRTGO
 
 ; BDOS function C on the source or the destination.
 CPSRC:
@@ -1025,10 +996,7 @@ CPNIB:
 ; console call, so the report appears on the new console, and names the
 ; serial terminal when the chosen display or keyboard is missing.
 CMDCON:
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL    ; an error names the argument
-        OR      A
+        CALL    ARGSKIP         ; an error names the argument
         JR      Z,CONSHOW
         LD      DE,CONNAMS
         LD      B,0
@@ -1049,9 +1017,7 @@ CONCMP:
         JR      NZ,CONEND
         INC     HL
 CONEND:
-        CALL    SKIPSP
-        OR      A
-        JP      NZ,BADCMD
+        CALL    ENDCHK
         LD      A,B             ; UC1: the GLCD's driver, if it is not in
         CP      CMUC1
         PUSH    BC
@@ -1091,10 +1057,7 @@ CONSKIP:
 
 ; USER accepts one decimal user number in the CP/M 2.2 range 0..15.
 CMDUSER:
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL
-        LD      A,(HL)
+        CALL    ARGSKIP
         CP      '0'
         JP      C,BADCMD
         CP      '9'+1
@@ -1118,10 +1081,7 @@ CMDUSER:
         INC     HL
 
 USERDONE:
-        CALL    SKIPSP
-        LD      A,(HL)
-        OR      A
-        JP      NZ,BADCMD
+        CALL    ENDCHK
         LD      E,B
         LD      C,32
         CALL    BDOS
@@ -1130,10 +1090,7 @@ USERDONE:
 ; SAVE writes 256-byte pages from the TPA. A count reaching the page of the
 ; BDOS entry jump is rejected rather than saving it or the workspace.
 CMDSAVE:
-        LD      HL,(ARGSTRT)
-        CALL    SKIPSP
-        LD      (CMDSTRT),HL
-        LD      A,(HL)
+        CALL    ARGSKIP
         CP      '0'
         JP      C,BADCMD
         CP      '9'+1
@@ -1175,15 +1132,7 @@ SAVENEND:
         LD      A,(HL)
         OR      A
         JP      Z,BADCMD
-        LD      DE,CMDFCB
-        CALL    PARSEFCB
-        JP      C,BADCMD
-        CALL    UNAMBIG
-        JP      C,BADCMD
-        CALL    SKIPSP
-        LD      A,(HL)
-        OR      A
-        JP      NZ,BADCMD
+        CALL    ONENAME
 
         LD      DE,CMDFCB
         LD      C,19
@@ -1236,8 +1185,7 @@ SAVECLS:
 
 SAVENOSP:
         LD      DE,NOSPACE
-        CALL    PUTSTR
-        JP      STARTED
+        JP      PRTGO
 
 ; Publish only documented page-zero transient state after loading succeeds.
 PREPPAGE:

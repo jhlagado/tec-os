@@ -1,0 +1,406 @@
+{
+  "rom": "e3d91b5",
+  "profile": "debug80",
+  "inputs": [
+    {
+      "input": "DIR",
+      "output": "DIR\r\r\nHELLO.TXT    KEEP.TXT     BIG.BIN      SHELLC.PRL   SHELLE.PRL  \r\n5 files, 978K free\r\nA>",
+      "calls": "272a196a2ce7fade9b6f7b5e3e5313ad8483a85788c9c8c7c5e304e170678375"
+    },
+    {
+      "input": "DIR *.TXT",
+      "output": "DIR *.TXT\r\r\nHELLO.TXT    KEEP.TXT    \r\n2 files, 978K free\r\nA>",
+      "calls": "d126a03bdea32720528b03e6b1480184614f1cb06addb13ab744655b501a911c"
+    },
+    {
+      "input": "DIR B:",
+      "output": "DIR B:\r\r\nFILL0.BIN    FILL1.BIN    FILL2.BIN    FILL3.BIN    FILL4.BIN    FILL5.BIN\r\nFILL6.BIN    FILL7.BIN    FILL8.BIN    FILL9.BIN    FILL10.BIN   FILL11.BIN\r\nFILL12.BIN   FILL13.BIN   FILL14.BIN   TOP0.BIN     TOP1.BIN     TOP2.BIN\r\nTOP3.BIN     TOP4.BIN     TOP5.BIN     TOP6.BIN     TOP7.BIN     TOP8.BIN\r\nTOP9.BIN     TOP10.BIN    TOP11.BIN    TOP12.BIN    TOP13.BIN   \r\n29 files, 0K free\r\nA>",
+      "calls": "c7d7167616455f30e329755c71d1ebf5a2c538e2cc6576416e29e03ee238b035"
+    },
+    {
+      "input": "DIR NOFILE.TXT",
+      "output": "DIR NOFILE.TXT\r\r\nNO FILE\r\nA>",
+      "calls": "7a9118c24b2b07e2496a56182cfe61342e25f8bbc4913666dd471f72342cc1a5"
+    },
+    {
+      "input": "DIR <",
+      "output": "DIR <\r\r\n<?\r\n\r\nA>",
+      "calls": "d700673bb36e098c289ad1590a76f368b61aaa363da4ccb447be35b563f84fea"
+    },
+    {
+      "input": "DIR A B",
+      "output": "DIR A B\r\r\nA?\r\n\r\nA>",
+      "calls": "5747e070b3442ddf831fca278945c24b800af1119bad3a418739b902423c12e4"
+    },
+    {
+      "input": "DIR HELLO.TXT X",
+      "output": "DIR HELLO.TXT X\r\r\nHELLO.TXT?\r\n\r\nA>",
+      "calls": "1905ab7b9090cb2fa7b43107f742a3d67f24fc612988777f185790a7e4ed5d2a"
+    },
+    {
+      "input": "<",
+      "output": "<\r\r\n<?\r\n\r\nA>",
+      "calls": "d700673bb36e098c289ad1590a76f368b61aaa363da4ccb447be35b563f84fea"
+    },
+    {
+      "input": "ABCDEFGHIJ",
+      "output": "ABCDEFGHIJ\r\r\nABCDEFGHIJ?\r\n\r\nA>",
+      "calls": "929b46437e1d3358c386f97f7bee3026dfcb2681110534bbde5a41318d19fa84"
+    },
+    {
+      "input": "NOSUCH",
+      "output": "NOSUCH\r\r\nNOSUCH?\r\n\r\nA>",
+      "calls": "8df90cfae2e7f5b6d8089fe0ff37626dcd62fe6d046af35a739784120b7c67bf"
+    },
+    {
+      "input": "B:",
+      "output": "B:\r\r\nB>",
+      "calls": "081d7cb6931329d634064ff3ff9659cbb565bbcf1ce1aab09599b1470ba4ba8f"
+    },
+    {
+      "input": "A:",
+      "output": "A:\r\r\nA>",
+      "calls": "071ebd2e99b9e5781a5d93c01a5c72011ac842e8935b3031a8d2e00800d81f82"
+    },
+    {
+      "input": "TYPE",
+      "output": "TYPE\r\r\nNO FILE\r\nA>",
+      "calls": "67f3ebd0dbb14595d0e6b7a2cc4e6254136afd9add1b8ba834c2bb079f7ebbc9"
+    },
+    {
+      "input": "TYPE HELLO.TXT",
+      "output": "TYPE HELLO.TXT\r\r\nhello\r\n\r\nA>",
+      "calls": "d0ed674e57305c299ec733808f25313cc408ab21f4affc73068caa2c81c48fe4"
+    },
+    {
+      "input": "TYPE NOFILE.TXT",
+      "output": "TYPE NOFILE.TXT\r\r\nNO FILE\r\nA>",
+      "calls": "f0e1db21f779fce9011e4831db13fea82cd52f1f9774e2f72f17014e398597c9"
+    },
+    {
+      "input": "TYPE ABCDEFGHIJ",
+      "output": "TYPE ABCDEFGHIJ\r\r\nABCDEFGHIJ?\r\n\r\nA>",
+      "calls": "929b46437e1d3358c386f97f7bee3026dfcb2681110534bbde5a41318d19fa84"
+    },
+    {
+      "input": "TYPE <",
+      "output": "TYPE <\r\r\n<?\r\n\r\nA>",
+      "calls": "d700673bb36e098c289ad1590a76f368b61aaa363da4ccb447be35b563f84fea"
+    },
+    {
+      "input": "TYPE *.COM",
+      "output": "TYPE *.COM\r\r\n*.COM?\r\n\r\nA>",
+      "calls": "613f787c16f9d2847eca78811a6705b631add2f6e4749c9a22433576ddfc8a5b"
+    },
+    {
+      "input": "TYPE HELLO.TXT X",
+      "output": "TYPE HELLO.TXT X\r\r\nHELLO.TXT?\r\n\r\nA>",
+      "calls": "1905ab7b9090cb2fa7b43107f742a3d67f24fc612988777f185790a7e4ed5d2a"
+    },
+    {
+      "input": "ERA",
+      "output": "ERA\r\r\n?\r\n\r\nA>",
+      "calls": "4c2e5c52f2bc9c7fba0fdcde1af37203b948070f917d43adb13b8b4d5129cc03"
+    },
+    {
+      "input": "ERA NOFILE.TXT",
+      "output": "ERA NOFILE.TXT\r\r\nNO FILE\r\nA>",
+      "calls": "1c2f9a8d9a031af68ad7ccdac791ffddeaa13edec113b25786f17c7ff4218f56"
+    },
+    {
+      "input": "ERA A B",
+      "output": "ERA A B\r\r\nA?\r\n\r\nA>",
+      "calls": "5747e070b3442ddf831fca278945c24b800af1119bad3a418739b902423c12e4"
+    },
+    {
+      "input": "ERA <",
+      "output": "ERA <\r\r\n<?\r\n\r\nA>",
+      "calls": "d700673bb36e098c289ad1590a76f368b61aaa363da4ccb447be35b563f84fea"
+    },
+    {
+      "input": "SAVE 1 GONE.TMP",
+      "output": "SAVE 1 GONE.TMP\r\r\nA>",
+      "calls": "38b24e7930749f1bef19489d224c12512db836177f612f9fcb8a05635342834f"
+    },
+    {
+      "input": "ERA GONE.TMP",
+      "output": "ERA GONE.TMP\r\r\nA>",
+      "calls": "553f44e910ee89e98b4312a966dd2c20c12b685ba095a8993a3abe8be477b4b8"
+    },
+    {
+      "input": "ERA *.ZZZ",
+      "output": "ERA *.ZZZ\r\r\nNO FILE\r\nA>",
+      "calls": "a06bbc1d9e5071890d310289a048ba4e1c5556c81e7f75b9f04342985d7bbdde"
+    },
+    {
+      "input": "ERA *.*",
+      "output": "ERA *.*\r\r\nALL (Y/N)?\r\r\r\nA>",
+      "calls": "3fa8221e9c3573268193e9ef560e0af9e279ad94cca8f3fe259b4921fa2a9807"
+    },
+    {
+      "input": "REN",
+      "output": "REN\r\r\n?\r\n\r\nA>",
+      "calls": "4c2e5c52f2bc9c7fba0fdcde1af37203b948070f917d43adb13b8b4d5129cc03"
+    },
+    {
+      "input": "REN =B",
+      "output": "REN =B\r\r\n=B?\r\n\r\nA>",
+      "calls": "700f31c93bb11530b67ad9ef8774d199f4398b7e8617b0631f927d2896e2127a"
+    },
+    {
+      "input": "REN A",
+      "output": "REN A\r\r\nA?\r\n\r\nA>",
+      "calls": "5747e070b3442ddf831fca278945c24b800af1119bad3a418739b902423c12e4"
+    },
+    {
+      "input": "REN A=",
+      "output": "REN A=\r\r\nA=?\r\n\r\nA>",
+      "calls": "998efc353a7fde95fe64a7965ed4c22ce75148726240ced3da2e75466afb584d"
+    },
+    {
+      "input": "REN A= B",
+      "output": "REN A= B\r\r\nA=?\r\n\r\nA>",
+      "calls": "998efc353a7fde95fe64a7965ed4c22ce75148726240ced3da2e75466afb584d"
+    },
+    {
+      "input": "REN A==B",
+      "output": "REN A==B\r\r\nA==B?\r\n\r\nA>",
+      "calls": "84c5387cde1e3089d1f66692ebaf352a06be3dbba10c8a9ec0d3d208fc6e6a00"
+    },
+    {
+      "input": "REN <=B",
+      "output": "REN <=B\r\r\n<=B?\r\n\r\nA>",
+      "calls": "81d95523c6337b1e9cb32fe584520f84caa50d33e463cf318c0d2387bd958900"
+    },
+    {
+      "input": "REN *.A=B",
+      "output": "REN *.A=B\r\r\n*.A=B?\r\n\r\nA>",
+      "calls": "db408e620873ef6f3d27fd6a401413479cf70b70e121a6ed24d27603de0622ce"
+    },
+    {
+      "input": "REN A=*.B",
+      "output": "REN A=*.B\r\r\nA=*.B?\r\n\r\nA>",
+      "calls": "f0e45c7898148873dcd564e0b226baa407cef628d02b81aa4e996256a0f6e9ba"
+    },
+    {
+      "input": "REN A=<",
+      "output": "REN A=<\r\r\nA=<?\r\n\r\nA>",
+      "calls": "20deda3d82492ca8ea1f0dd14481d1648bc73dea465f987a34408a27fbe4a036"
+    },
+    {
+      "input": "REN A=B C",
+      "output": "REN A=B C\r\r\nA=B?\r\n\r\nA>",
+      "calls": "e59399c06a8c3543a7dd4509415bced828d295f5d0756df9d812f4b9a767897b"
+    },
+    {
+      "input": "REN NEW.TXT=NOFILE.TXT",
+      "output": "REN NEW.TXT=NOFILE.TXT\r\r\nNO FILE\r\nA>",
+      "calls": "30054caf2c3712f7269e25fbfaae81f3a4780ce6b42bf5a725d8968edf55550f"
+    },
+    {
+      "input": "REN KEEP.TXT=HELLO.TXT",
+      "output": "REN KEEP.TXT=HELLO.TXT\r\r\nFILE EXISTS\r\nA>",
+      "calls": "b1c7c289e255c29510133c0f7fea71e3a87836e749c1b06e804b5ec2fad66732"
+    },
+    {
+      "input": "REN NEW.TXT=HELLO.TXT",
+      "output": "REN NEW.TXT=HELLO.TXT\r\r\nA>",
+      "calls": "1d72a56e89c5ded5e31d57506a0b182f0d30712d48edb5349e2832dc66d77762"
+    },
+    {
+      "input": "REN HELLO.TXT=NEW.TXT",
+      "output": "REN HELLO.TXT=NEW.TXT\r\r\nA>",
+      "calls": "0b167b3956b211cb7d24eb36f9f6d20caa50313f7e9cca2ee778556f78ae08c4"
+    },
+    {
+      "input": "USER",
+      "output": "USER\r\r\n?\r\n\r\nA>",
+      "calls": "4c2e5c52f2bc9c7fba0fdcde1af37203b948070f917d43adb13b8b4d5129cc03"
+    },
+    {
+      "input": "USER A",
+      "output": "USER A\r\r\nA?\r\n\r\nA>",
+      "calls": "5747e070b3442ddf831fca278945c24b800af1119bad3a418739b902423c12e4"
+    },
+    {
+      "input": "USER 5 X",
+      "output": "USER 5 X\r\r\n5?\r\n\r\nA>",
+      "calls": "aaa701fe45b0563789a7fe886d7e7b64b54c9a35ec9069516b4c69fe709f6349"
+    },
+    {
+      "input": "USER 16",
+      "output": "USER 16\r\r\n16?\r\n\r\nA>",
+      "calls": "e6d09244ea6d51a11200d100cd28e09b758440d9c895c8f4731496be169ce788"
+    },
+    {
+      "input": "USER 1 2",
+      "output": "USER 1 2\r\r\n1?\r\n\r\nA>",
+      "calls": "b516fae6e1c43fe5a3723711aa6cb230b5d2b30112d741844909af89b9ea222c"
+    },
+    {
+      "input": "USER 5",
+      "output": "USER 5\r\r\nA>",
+      "calls": "65fb5b2c31dda562f6b7728d256fe3612bf71cc52770977ead72fd300683c4d9"
+    },
+    {
+      "input": "USER 15",
+      "output": "USER 15\r\r\nA>",
+      "calls": "de390abc94decf84fc23238d5afb3e319da29645269266309dc2f9ba8a726814"
+    },
+    {
+      "input": "USER 0",
+      "output": "USER 0\r\r\nA>",
+      "calls": "09c8fe6644f587dff9e162d553192a44fa2702f5f8d6d1d2a007c6b6752d3138"
+    },
+    {
+      "input": "SAVE",
+      "output": "SAVE\r\r\n?\r\n\r\nA>",
+      "calls": "4c2e5c52f2bc9c7fba0fdcde1af37203b948070f917d43adb13b8b4d5129cc03"
+    },
+    {
+      "input": "SAVE X",
+      "output": "SAVE X\r\r\nX?\r\n\r\nA>",
+      "calls": "76663f76153b35be5f32831168cf625a654d310f06dd3a5f6f9df91865d0d929"
+    },
+    {
+      "input": "SAVE 1",
+      "output": "SAVE 1\r\r\n1?\r\n\r\nA>",
+      "calls": "b516fae6e1c43fe5a3723711aa6cb230b5d2b30112d741844909af89b9ea222c"
+    },
+    {
+      "input": "SAVE 1 <",
+      "output": "SAVE 1 <\r\r\n1?\r\n\r\nA>",
+      "calls": "b516fae6e1c43fe5a3723711aa6cb230b5d2b30112d741844909af89b9ea222c"
+    },
+    {
+      "input": "SAVE 1 *.X",
+      "output": "SAVE 1 *.X\r\r\n1?\r\n\r\nA>",
+      "calls": "b516fae6e1c43fe5a3723711aa6cb230b5d2b30112d741844909af89b9ea222c"
+    },
+    {
+      "input": "SAVE 1 X Y",
+      "output": "SAVE 1 X Y\r\r\n1?\r\n\r\nA>",
+      "calls": "b516fae6e1c43fe5a3723711aa6cb230b5d2b30112d741844909af89b9ea222c"
+    },
+    {
+      "input": "SAVE 300 S.COM",
+      "output": "SAVE 300 S.COM\r\r\n300?\r\n\r\nA>",
+      "calls": "5682e3dc96a9e318c9ff561c73030a2ce2ac8cc7e036a5c158fd1df7ec4e92cf"
+    },
+    {
+      "input": "SAVE 1 S1.COM",
+      "output": "SAVE 1 S1.COM\r\r\nA>",
+      "calls": "c252f6e792089c1827797c1e578a6a3b76870a92fff88460cebfc5d544cd8fab"
+    },
+    {
+      "input": "ERA S1.COM",
+      "output": "ERA S1.COM\r\r\nA>",
+      "calls": "cd99f3611a8ec0e9fe0626862bd7a165e9620be7322cb7f61f5f581de509ed59"
+    },
+    {
+      "input": "SAVE 1 C:X.COM",
+      "output": "SAVE 1 C:X.COM\r\r\n\r\nBdos Err On C: Bad Sector\r\nA>",
+      "calls": "a5288e75fe19734c36cac54741d7ae1661946f4011c3cb351d8e2c258af5a9db"
+    },
+    {
+      "input": "SAVE 200 B:FULL.COM",
+      "output": "SAVE 200 B:FULL.COM\r\r\n200?\r\n\r\nA>",
+      "calls": "c314ba5378bf2130c9d289e11a8610325b90772feb3890ca28e75f403fd6d6c0"
+    },
+    {
+      "input": "CON",
+      "output": "CON\r\r\nCON: TTY: serial terminal\r\nA>",
+      "calls": "8b0bb05a6c626ba83eee33823d7ccad11c3e69e9401eb83b80742616c39c16d2"
+    },
+    {
+      "input": "CON TTY",
+      "output": "CON TTY\r\r\nCON: TTY: serial terminal\r\nA>",
+      "calls": "8b0bb05a6c626ba83eee33823d7ccad11c3e69e9401eb83b80742616c39c16d2"
+    },
+    {
+      "input": "CON TTY:",
+      "output": "CON TTY:\r\r\nCON: TTY: serial terminal\r\nA>",
+      "calls": "8b0bb05a6c626ba83eee33823d7ccad11c3e69e9401eb83b80742616c39c16d2"
+    },
+    {
+      "input": "CON TTY X",
+      "output": "CON TTY X\r\r\nTTY?\r\n\r\nA>",
+      "calls": "5fd5531a837088218423ef599c2603838d3ec1151efd17737f462efdd820ee70"
+    },
+    {
+      "input": "CON XYZ",
+      "output": "CON XYZ\r\r\nXYZ?\r\n\r\nA>",
+      "calls": "ba150205ae31de885ed154081dfd58e7a7ba680dd6ebd2846954b2983cd1cd68"
+    },
+    {
+      "input": "CON UC1",
+      "output": "CON UC1\r\r\nCON: TTY: serial terminal\r\nA>",
+      "calls": "75a5707dee818867f18cf77deaac6b448d1d1fa1917ee69a8ab3da15a9db86fe"
+    },
+    {
+      "input": "CON TTY",
+      "output": "CON TTY\r\r\nCON: TTY: serial terminal\r\nA>",
+      "calls": "8b0bb05a6c626ba83eee33823d7ccad11c3e69e9401eb83b80742616c39c16d2"
+    },
+    {
+      "input": "COPY",
+      "output": "COPY\r\r\nCOPY?\r\n\r\nA>",
+      "calls": "d4c03b8e13c6006cb1fb6cea0bdc7fa4202d3d4d64483f3c05230994395edcc4"
+    },
+    {
+      "input": "COPY HELLO.TXT",
+      "output": "COPY HELLO.TXT\r\r\nCOPY?\r\n\r\nA>",
+      "calls": "d4c03b8e13c6006cb1fb6cea0bdc7fa4202d3d4d64483f3c05230994395edcc4"
+    },
+    {
+      "input": "COPY <",
+      "output": "COPY <\r\r\nCOPY?\r\n\r\nA>",
+      "calls": "d4c03b8e13c6006cb1fb6cea0bdc7fa4202d3d4d64483f3c05230994395edcc4"
+    },
+    {
+      "input": "COPY HELLO.TXT <",
+      "output": "COPY HELLO.TXT <\r\r\nCOPY?\r\n\r\nA>",
+      "calls": "d4c03b8e13c6006cb1fb6cea0bdc7fa4202d3d4d64483f3c05230994395edcc4"
+    },
+    {
+      "input": "COPY HELLO.TXT HELLO.TXT",
+      "output": "COPY HELLO.TXT HELLO.TXT\r\r\nCOPY?\r\n\r\nA>",
+      "calls": "d4c03b8e13c6006cb1fb6cea0bdc7fa4202d3d4d64483f3c05230994395edcc4"
+    },
+    {
+      "input": "COPY NOFILE.TXT B:",
+      "output": "COPY NOFILE.TXT B:\r\r\nNO SOURCE\r\n\r\nA>",
+      "calls": "47075b9a0ea9e9904f232fc7dace7430e2f12385f743ab993d30ebd816d26f3b"
+    },
+    {
+      "input": "COPY HELLO.TXT C:",
+      "output": "COPY HELLO.TXT C:\r\r\n\r\nBdos Err On C: Bad Sector\r\nA>",
+      "calls": "be15aa3c39d4f05ffee53b31dfb56fc0e70a93ab4b24203fc493de2c4fdfc6c0"
+    },
+    {
+      "input": "COPY BIG.BIN B:",
+      "output": "COPY BIG.BIN B:\r\r\nWRITE ERROR\r\n\r\nA>",
+      "calls": "d9a6e0c7d268bc02060cb106781681344c3478520ba8f4f53ee505e5cc1b380c"
+    },
+    {
+      "input": "COPY HELLO.TXT B:SMALL.TXT",
+      "output": "COPY HELLO.TXT B:SMALL.TXT\r\r\nWRITE ERROR\r\n\r\nA>",
+      "calls": "6c56aacf57869650dd7bc21c9563fff285cfca5e290278f756e94177e4a461af"
+    },
+    {
+      "input": "COPY HELLO.TXT D:",
+      "output": "COPY HELLO.TXT D:\r\r\nCANNOT MAKE DEST\r\n\r\nA>",
+      "calls": "cef9737aed55cf7c9e8dfb29eb641ff53029a8cc6c8726a14a4c5f7cac8ac11d"
+    },
+    {
+      "input": "SHELLC",
+      "output": "SHELLC\r\r\n\r\n\r\nSETRC?\r\n\r\n\r\nSHELL OK 0000\r\nA>",
+      "calls": "f83b8466ff2257d29359dbc543acfcea1457a85ffc70e386eb1baf630ac45374"
+    },
+    {
+      "input": "SHELLE",
+      "output": "SHELLE\r\r\n\r\n\r\n<?\r\n\r\n\r\nSHELL OK 0000\r\nA>",
+      "calls": "5dab160ca633b334d80970bc66c664cb07c9989c03b390ab2e2d27fdd7fa7f42"
+    }
+  ]
+}

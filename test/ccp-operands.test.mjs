@@ -1,0 +1,125 @@
+// The CCP's operands: one command line for each branch of the built-ins'
+// argument, parser and end checks, in order, since files persist. Console
+// output and the BDOS calls of each line are held against a fixture taken
+// from the ROM at e3d91b5, before these checks were shared, so the fixture
+// proves the behaviour was kept. The CCP's peak is read per command: a
+// resident's level reaches further than a built-in. Emulator evidence.
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { createContainer } from "../tools/lib/container.mjs";
+import { ROOT, boot, prl, volume } from "./lib/fixtures.mjs";
+
+const FIXTURE = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/ccp-operands.json"), "utf8"));
+const PROFILE = "debug80";
+const PEAK = 16; // bytes of the CCP's stack, per command
+const LEVEL_PEAK = 22; // and at a command that opens a level
+const LEVELS = ["SHELLC", "SHELLE"];
+
+const fill = (v, size, name) => {
+  try {
+    for (let i = 0; i < 4096; i += 1) v.write(name(i), new Uint8Array(size).fill(i));
+  } catch {
+    // Full, as intended.
+  }
+};
+
+/** A card with the files the lines read, B: out of blocks and D: out of directory entries. */
+async function card() {
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G1M", label: "WORK", mount: "B" },
+    { geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true },
+    { geometry: "G1M", label: "NAMES", mount: "D" },
+  ]);
+  const a = volume(image, "A");
+  a.write("HELLO.TXT", Buffer.from("hello\r\n\x1a", "latin1"));
+  a.write("KEEP.TXT", Buffer.from("keep\r\n\x1a", "latin1"));
+  a.write("BIG.BIN", new Uint8Array(30000).fill(0x55));
+  // SHELL.PRL with its MODE byte (code offset 21) set: ABIXCMD, not ABIXCCP.
+  const shell = Uint8Array.from(await prl("shell"));
+  shell[256 + 21] = 1;
+  a.write("SHELLC.PRL", shell);
+  // The same with its one command line failing to parse.
+  const at = Buffer.from(shell).indexOf("SETRC 9");
+  assert.ok(at > 0, "the one-command line");
+  const bad = Uint8Array.from(shell);
+  Buffer.from("DIR <  ").copy(bad, at);
+  a.write("SHELLE.PRL", bad);
+  const b = volume(image, "B");
+  fill(b, 65536, (i) => `FILL${i}.BIN`);
+  fill(b, 4096, (i) => `TOP${i}.BIN`);
+  fill(volume(image, "D"), 1, (i) => `N${i}.TXT`);
+  return image;
+}
+
+/** Note the deepest non-LDIR write to the CCP's stack, and each BDOS call. */
+function watch(m) {
+  const [base, top] = [m.sym("CSTKBAS"), m.sym("CSTKTOP")];
+  const seen = { low: top, calls: [] };
+  const write = m.cpu.hardware.memWrite;
+  m.cpu.hardware.memWrite = (addr, value) => {
+    const pc = m.cpu.cpu.pc;
+    const ldir = (m.read(pc) === 0xed && m.read(pc + 1) === 0xb0) || (m.read(pc - 1) === 0xed && m.read(pc) === 0xb0);
+    if (!ldir && addr >= base && addr < top && addr < seen.low) seen.low = addr;
+    write(addr, value);
+  };
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === 5) {
+      const { c, d, e } = m.cpu.cpu;
+      const de = (d << 8) | e;
+      // A byte argument leaves a stale D, so only an address is compared whole.
+      const named = c >= 15 && c <= 23;
+      const fcb = named ? [...Array(36).keys()].map((i) => m.read(de + i)) : null;
+      seen.calls.push({ c, ...([9, 10, 26].includes(c) || named ? { de } : { e }), fcb });
+    }
+    return step();
+  };
+  return {
+    start() {
+      seen.low = top;
+      seen.calls = [];
+    },
+    peak: () => top - seen.low,
+    calls: () => seen.calls,
+  };
+}
+
+/** Type a line and run to the prompt, answering a [more] or an error's key. */
+function run(m, line) {
+  m.mark = m.output.length;
+  m.type(`${line}\r`);
+  const prompt = /\r\n[A-P]>$/;
+  let seen = -1;
+  for (let i = 0; i < 200; i += 1) {
+    const end = m.cycles + 20_000_000;
+    m.runUntil(() => m.cycles >= end || (m.waitingForInput() && prompt.test(m.text(m.mark))), 30_000_000, line);
+    const t = m.text(m.mark);
+    if (prompt.test(t) && m.waitingForInput()) return t;
+    if (m.output.length === seen && m.waitingForInput()) m.type(/\[more\]$/.test(t) ? " " : "\r");
+    seen = m.output.length;
+  }
+  throw new Error(`no prompt after ${JSON.stringify(line)}: ${m.text(m.mark)}`);
+}
+
+test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
+  assert.equal(FIXTURE.profile, PROFILE);
+  assert.equal(FIXTURE.inputs.length, 80);
+  const m = boot(await card(), { profile: PROFILE });
+  const log = watch(m);
+  const rows = FIXTURE.inputs.map(({ input }) => {
+    log.start();
+    const output = run(m, input);
+    const calls = createHash("sha256").update(JSON.stringify(log.calls())).digest("hex");
+    return { input, output, calls, peak: log.peak() };
+  });
+  assert.deepEqual(m.violations, []);
+  const changed = rows.filter((r, i) => r.output !== FIXTURE.inputs[i].output || r.calls !== FIXTURE.inputs[i].calls);
+  assert.deepEqual(changed.map((r) => r.input), []);
+  const deep = rows.filter((r) => r.peak > (LEVELS.includes(r.input) ? LEVEL_PEAK : PEAK));
+  assert.deepEqual(deep.map((r) => `${r.input}: ${r.peak}`), []);
+});
