@@ -120,8 +120,8 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const glcd = boot(image, { matrix: true });
   glcd.command("DIR *.COM");
   const g = glcd.glcdScreen();
-  const from = g.indexOf("COPY.COM"); // GLCD.DRV is on A: too
-  assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1002K free", "A>"]);
+  const from = g.indexOf("COPY.COM"); // GLCD.DRV and STARTUP.CMD are on A: too
+  assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1000K free", "A>"]);
   assert.match(tms.command("DIR B:"), /NO FILE/);
 });
 
@@ -197,7 +197,7 @@ test("a long DIR pauses too", () => {
     pauses += 1;
   }
   assert.equal(pauses, 4, "31 lines at 7 lines a screen");
-  assert.match(all, /31 files/);
+  assert.match(all, /32 files/);
 });
 
 test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
@@ -287,12 +287,14 @@ test("a row move on the PICO9918 is built out of sight and shown when the progra
   assert.deepEqual(m.violations, []);
 });
 
-test("a GLCD board without GLCD.DRV keeps the serial console, and the LCD says so", () => {
+test("a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.DRV says so on the LCD", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   assert.equal(m.read(3) & 3, 0, "TTY:");
   assert.match(m.serialText(), /A>$/);
+  m.command("CON UC1");
+  assert.equal(m.read(m.sym("CONMOD")), 0, "still the serial terminal");
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "GLCD?");
 });
 

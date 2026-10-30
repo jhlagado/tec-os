@@ -32,21 +32,7 @@ GLHOFF: LD      (GLVEC),HL
         OR      A
         RET
 
-; The CCP's first entry after a cold boot that found a GLCD, with the matrix
-; keyboard and no PICO9918: load A:GLCD.PRL and make it the console. Until
-; then the console is serial, with the 20 x 4 LCD; without the file it stays
-; so, and the LCD shows GLCD?. GLCWANT: 0 no GLCD, 1 one to load, 2 tried.
-GLCBOOT:LD      HL,GLCWANT
-        LD      A,(HL)
-        DEC     A
-        RET     NZ
-        INC     (HL)
-        LD      A,(CONDEV)
-        AND     CDTMS+CDMTX
-        CP      CDMTX
-        RET     NZ
-
-; Load A:GLCD.PRL if there is a GLCD and its resident is not in, and make it
+; Load A:GLCD.DRV if there is a GLCD and its resident is not in, and make it
 ; the console: carry set if there is none or it will not load (the LCD says
 ; so).
 GLCLD:  LD      A,(CONDEV)

@@ -232,5 +232,7 @@ REGHEAD:DS      2               ; the first service record
 DRVHEAD:DS      1               ; the lowest driver's page, 0 for none
 DRVGEN: DS      1               ; raised by each removal
 DRVRC:  DS      1               ; the last load's failure
+STPOS:  DS      1               ; 0 at cold boot, FFh done, else the next byte + 1
+STREC:  DS      128             ; A:STARTUP.CMD's one record
 HIRME:
 WSEND   EQU     HIRME           ; end of the classic resident workspace

@@ -197,6 +197,9 @@ async function main() {
   const glcd = (await makeDrv(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/drv") })).file;
   writeFileSync(resolve(FILES, "GLCD.DRV"), glcd);
   files.push({ name: "GLCD.DRV", description: "the GLCD console, a driver", bytes: glcd });
+  const startup = Buffer.from("GLCD.DRV\r\n\x1a", "latin1");
+  writeFileSync(resolve(FILES, "STARTUP.CMD"), startup);
+  files.push({ name: "STARTUP.CMD", description: "the commands run at cold boot", bytes: startup });
   // Edit joins the card when a build that sizes itself to the TPA and the
   // display is available (configuration tag "ECFG" at 0103h).
   const editPath = process.env.EDIT_COM ?? resolve(ROOT, "../edit/dist/EDIT.COM");

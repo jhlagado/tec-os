@@ -104,6 +104,7 @@ HWSEGT: DB      $EB,$28,$CD,$AD,$2E,$A7,$E7,$29 ; 0-7
 ; ---- glcd.asm ----------------------------------------------------------------
 GLCFCB: DB      1,"GLCD    DRV"
 GLCMSG: DB      "GLCD?",0
+STFCB:  DB      1,"STARTUP CMD"
 
 ; ---- cache.asm ---------------------------------------------------------------
 CWMSG:  DB      13,10,"Write lost",0

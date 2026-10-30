@@ -106,14 +106,16 @@ export const GLCD_DRV = (await makeDrv(resolve(ROOT, "drivers/glcd.asm"), { work
 export const startupFile = (...lines) => Buffer.from(lines.map((l) => `${l}\r\n`).join("") + "\x1a", "latin1");
 
 /**
- * Put GLCD.DRV on drive A of IMAGE when the machine has the matrix keyboard and
- * no PICO9918, as a GLCD board's card has it, so the CCP's first entry makes the
- * GLCD the console.
+ * Put GLCD.DRV and a STARTUP.CMD naming it on drive A of IMAGE when the machine
+ * has the matrix keyboard and no PICO9918, as a GLCD board's card has them, so
+ * startup makes the GLCD the console.
  */
 export function withGlcd(image, { tms = false, matrix = false } = {}) {
   if (!matrix || tms) return image;
   const a = volume(image, "A");
-  if (!a.list().some((f) => f.name === "GLCD.DRV")) a.write("GLCD.DRV", GLCD_DRV);
+  if (a.list().some((f) => f.name === "GLCD.DRV")) return image;
+  a.write("GLCD.DRV", GLCD_DRV);
+  if (!a.list().some((f) => f.name === "STARTUP.CMD")) a.write("STARTUP.CMD", startupFile("GLCD.DRV"));
   return image;
 }
 

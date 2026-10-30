@@ -157,6 +157,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     writeBehind: await consoleRun({}, { wb: true }),
     diagnostics: diagnosticRun(),
     conUc1: await deepPaths(["CON UC1\r"]),
+    conUc1Glcd: await deepPaths(["CON UC1\r"], { matrix: true }),
     residentLevel: await deepPaths(["SHELL\r", "DIR\r", "EXIT\r"]),
   };
   const census = Object.fromEntries(
@@ -164,7 +165,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board; and SHELL.PRL, a program, shelling out, a DIR at that level, and EXIT. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; and SHELL.PRL, a program, shelling out, a DIR at that level, and EXIT. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

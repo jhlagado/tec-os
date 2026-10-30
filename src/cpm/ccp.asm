@@ -42,7 +42,7 @@ CCPENT:
         LD      E,A
         LD      C,32
         CALL    BDOS
-        CALL    GLCBOOT         ; once after cold boot, on a GLCD board
+        CALL    STBOOT          ; once after cold boot
         LD      A,(BOOTDRV)
         OR      A
         JR      Z,STARTED
@@ -78,6 +78,8 @@ MLREAD: CALL    SAVEDU
         CALL    PUTCHAR
         LD      E,'>'
         CALL    PUTCHAR
+        CALL    STLINE          ; at level 0, startup's next line
+        JR      NC,MLGOT
         LD      DE,CMDBUF
         LD      HL,HFLAG        ; history for this line
         LD      (HL),$FF

@@ -297,6 +297,87 @@ DRVIN:  LD      DE,DHLEN
         CCF
         RET
 
+; Startup. Once after cold boot one record of A:STARTUP.CMD is read, the
+; position marked done first, so that a failure can't repeat.
+STBOOT: LD      HL,STPOS
+        LD      A,(HL)
+        OR      A
+        RET     NZ
+        DEC     (HL)
+        IN      A,(STSPORT)     ; a keypad key held skips it: bit 6 low
+        AND     $40
+        RET     Z
+        LD      HL,STFCB
+        LD      DE,CMDFCB
+        LD      BC,12
+        LDIR
+        LD      DE,STREC
+        LD      C,26
+        CALL    BDOS
+        LD      DE,CMDFCB
+        LD      C,15
+        CALL    BDOS
+        INC     A
+        JR      Z,STBDMA
+        LD      DE,CMDFCB
+        LD      C,20
+        CALL    BDOS
+        OR      A
+        JR      NZ,STBDMA
+        INC     A
+        LD      (STPOS),A
+STBDMA: LD      HL,DEFDMA
+        LD      (CURDMA),HL
+        RET
+
+; At level 0 with a line left: it goes in the command buffer, echoed as if
+; typed, and carry clear. Lines end at CR or LF and blank ones are passed
+; over; ^Z, a zero or the record's last byte ends the file.
+STLINE: LD      A,(CCPLVL)
+        OR      A
+        SCF
+        RET     NZ
+        LD      A,(STPOS)
+        OR      A
+        SCF
+        RET     M
+        ADD     A,LOW(STREC)-1
+        LD      L,A
+        LD      H,HIGH(STREC)
+        LD      DE,CMDTXT
+STL1:   LD      A,L
+        CP      LOW(STREC+127)
+        JR      Z,STLE
+        LD      A,(HL)
+        INC     HL
+        OR      A
+        JR      Z,STLE
+        CP      26
+        JR      Z,STLE
+        CP      13
+        JR      Z,STL2
+        CP      10
+        JR      Z,STL2
+        LD      (DE),A
+        INC     DE
+        JR      STL1
+STLE:   LD      L,LOW(STREC)-2
+STL2:   LD      A,L
+        SUB     LOW(STREC)-1
+        LD      (STPOS),A
+        LD      A,E
+        SUB     LOW(CMDTXT)
+        JR      Z,STLINE
+        LD      (CMDLEN),A
+        EX      DE,HL
+        LD      (HL),13
+        INC     HL
+        LD      (HL),'$'
+        LD      DE,CMDTXT
+        CALL    PUTSTR
+        OR      A
+        RET
+
 ; ABIDRV. C = 0, find: DE = the name, B = the least version; HL = the entry
 ; table. C = 1, enumerate: B = an index; HL = that record. A = the generation.
 ; Carry if there is none. BC, DE destroyed.
