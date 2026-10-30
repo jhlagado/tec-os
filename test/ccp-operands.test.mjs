@@ -2,8 +2,9 @@
 // argument, parser and end checks, in order, since files persist. Console
 // output and the BDOS calls of each line are held against a fixture taken
 // from the ROM at e3d91b5, before these checks were shared, so the fixture
-// proves the behaviour was kept. The CCP's peak is read per command: a
-// resident's level reaches further than a built-in. Emulator evidence.
+// proves the behaviour was kept. The CCP's peak is read per command against
+// that ROM's: the shared checks may add their frames, and CON UC1 on a PICO9918
+// and matrix board, where none is pending, may add nothing. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -11,13 +12,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer } from "../tools/lib/container.mjs";
-import { ROOT, boot, prl, volume } from "./lib/fixtures.mjs";
+import { GLCD_PRL, ROOT, boot, prl, volume } from "./lib/fixtures.mjs";
 
 const FIXTURE = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/ccp-operands.json"), "utf8"));
 const PROFILE = "debug80";
-const PEAK = 16; // bytes of the CCP's stack, per command
-const LEVEL_PEAK = 22; // and at a command that opens a level
-const LEVELS = ["SHELLC", "SHELLE"];
+const FRAMES = 4; // bytes of the CCP's stack the shared checks may add to a command
 
 const fill = (v, size, name) => {
   try {
@@ -28,7 +27,7 @@ const fill = (v, size, name) => {
 };
 
 /** A card with the files the lines read, B: out of blocks and D: out of directory entries. */
-async function card() {
+async function card({ glcd = false } = {}) {
   const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry: "G1M", label: "WORK", mount: "B" },
@@ -49,6 +48,7 @@ async function card() {
   const bad = Uint8Array.from(shell);
   Buffer.from("DIR <  ").copy(bad, at);
   a.write("SHELLE.PRL", bad);
+  if (glcd) a.write("GLCD.PRL", GLCD_PRL);
   const b = volume(image, "B");
   fill(b, 65536, (i) => `FILL${i}.BIN`);
   fill(b, 4096, (i) => `TOP${i}.BIN`);
@@ -106,20 +106,33 @@ function run(m, line) {
   throw new Error(`no prompt after ${JSON.stringify(line)}: ${m.text(m.mark)}`);
 }
 
-test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
-  assert.equal(FIXTURE.profile, PROFILE);
-  assert.equal(FIXTURE.inputs.length, 80);
-  const m = boot(await card(), { profile: PROFILE });
+/** Run each row's line, reading what the fixture holds for it. */
+function reading(m, fixture) {
   const log = watch(m);
-  const rows = FIXTURE.inputs.map(({ input }) => {
+  const rows = fixture.map(({ input }) => {
     log.start();
     const output = run(m, input);
     const calls = createHash("sha256").update(JSON.stringify(log.calls())).digest("hex");
     return { input, output, calls, peak: log.peak() };
   });
   assert.deepEqual(m.violations, []);
-  const changed = rows.filter((r, i) => r.output !== FIXTURE.inputs[i].output || r.calls !== FIXTURE.inputs[i].calls);
+  const changed = rows.filter((r, i) => r.output !== fixture[i].output || r.calls !== fixture[i].calls);
   assert.deepEqual(changed.map((r) => r.input), []);
-  const deep = rows.filter((r) => r.peak > (LEVELS.includes(r.input) ? LEVEL_PEAK : PEAK));
+  return rows;
+}
+
+test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
+  assert.equal(FIXTURE.profile, PROFILE);
+  assert.equal(FIXTURE.inputs.length, 80);
+  const m = boot(await card(), { profile: PROFILE });
+  const rows = reading(m, FIXTURE.inputs);
+  const deep = rows.filter((r, i) => r.peak > FIXTURE.inputs[i].peak + FRAMES);
   assert.deepEqual(deep.map((r) => `${r.input}: ${r.peak}`), []);
+});
+
+test("CON UC1 on a PICO9918 and matrix board keeps its stack peak", { timeout: 300_000 }, async () => {
+  assert.equal(FIXTURE.picoMatrix.length, 1);
+  const m = boot(await card({ glcd: true }), { profile: PROFILE, tms: true, matrix: true });
+  const [row] = reading(m, FIXTURE.picoMatrix);
+  assert.equal(row.peak, FIXTURE.picoMatrix[0].peak);
 });
