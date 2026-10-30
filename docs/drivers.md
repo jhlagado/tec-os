@@ -24,7 +24,7 @@ loader ignores what follows its relocation data.
 | 0 | 1 | Magic, `44h` | The registry's head before it, 2 bytes |
 | 1 | 1 | Format version, 1 | |
 | 2 | 1 | Number of dependencies | The owner before it, a page |
-| 3 | 1 | Flags: bit 0 removable | The same; 0 if the pages are kept after a failure |
+| 3 | 1 | Flags: bit 0 removable | The same; 0 if a hook kept the pages |
 | 4 | 2 | `REMOVE`, from the header's start | The same |
 | 6 | 2 | Header and image, in bytes | `JP` to the top before it, 3 bytes |
 | 8 | 2 | Extra memory after the image, not cleared | Its low byte is the `JP`'s last |
@@ -77,7 +77,7 @@ at the first, or 0 for none. A record is 13 bytes:
 | 11 | 2 | Its entry table's address |
 
 The loader checks that each record, its link and its table's address lie in the
-driver's pages, for at most 256 records, and then links them. It can't check an
+driver's pages, for at most 255 records, and then links them. It can't check an
 entry table's contents. If a check fails it calls `REMOVE`; if `REMOVE` refuses,
 the driver stays installed with no services and the load reports 2.
 
@@ -102,15 +102,19 @@ A driver runs on its caller's stack, and that is one of four. Its header
 declares its additional use on each of the three the ROM owns. The loader
 refuses a driver that takes a stack's sum past its limit:
 
-| Stack | Reserved | Deepest without a driver | Limit for drivers |
-| --- | --- | --- | --- |
-| BDOS | 54 | 32 | 8 |
-| BIOS | 38 | 16 | 12 |
-| CCP | 30 | 16 | 6 |
+| Stack | Reserved | Base | Census | Limit for drivers |
+| --- | --- | --- | --- | --- |
+| BDOS | 54 | 32 | 34 | 8 |
+| BIOS | 38 | 16 | 16 | 12 |
+| CCP | 30 | 16 | 22 | 6 |
 
-Each limit keeps a quarter of its stack free. A declaration is the driver's
-promise, and `test/drv.test.mjs` shows how a stack watch proves one: the ROM
-can't.
+The base is the deepest use on the serial and PICO9918 paths, with no resident.
+The census is the deepest use of all, 34 and 22 being `GLCD.PRL`'s. A limit is
+counted from the base, so a stack holds its base and its limit with a quarter
+free, but a driver's figure added to the census leaves less: the CCP's stack
+would then reach 28 of 30, the BDOS's 42 of 54. Nothing overflows. A declaration
+is the driver's promise, and `test/drv.test.mjs` shows how a stack watch proves
+one: the ROM can't.
 
 A program's stack can't be checked, so a driver's own document states what a
 program must leave. On the BDOS's stack a driver may not call the BDOS, as
@@ -128,6 +132,8 @@ A client finds a service with `ABIDRV` (`docs/rom-services.md`):
 - **A resident that looks up later** may not keep the pointer. Removing the
   service frees its pages, and a kept pointer runs whatever is there. `ABIDRV`
   returns a generation, raised by each removal, for such a resident to compare.
+  It is 8 bits and wraps: after exactly 256 removals a stale pointer passes the
+  comparison.
 
 Each service's table is defined in a document with its interface version.
 
