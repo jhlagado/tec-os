@@ -4,7 +4,7 @@ TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
 46,854 bytes (`0100h–B805h`) on the starter card, and at least 46,086 on any
 card, since cold boot places the BDOS entry below the allocation vectors of
-the volumes mounted. On a board with a GLCD, its console's resident takes
+the volumes mounted. On a board with a GLCD, its console's driver takes
 768 bytes more: 46,086 on the starter card and 45,318 with four 8 MiB
 volumes. It reports version 2.2.
 
@@ -53,8 +53,12 @@ supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 - `CCP` starts a nested command processor; `EXIT` returns to the level that
   started it, with that level's drive, user and warm-boot entry back. Levels
   nest six deep.
-- `UNLOAD` removes the lowest resident, at level 0 only: a nested level may
-  return into a resident below it.
+- `NAME.DRV` installs a driver and `DRIVERS` lists them, each with its pages.
+  `UNLOAD` removes the lowest, at level 0 only: a nested level may return into
+  a resident below it.
+- At cold boot `A:STARTUP.CMD`, if there is one, runs before the first prompt.
+  One record of it is read, at most 128 bytes, and a keypad key held through
+  reset skips it. `docs/drivers.md` has the rules.
 
 The prompt keeps a history of the lines typed at it. ^W puts the line before
 in the buffer, erasing the one shown, and ^N the line after; past the newest
@@ -75,7 +79,8 @@ its own mounts back, remounting only the drives that changed.
 A resident can shell out the same way, through `ABIXCCP` (an interactive
 nested CCP) or `ABIXCMD` (one command line, run with no prompt), with HL =
 `0100h`. Nothing of the TPA is kept, so the caller is code the nested level
-leaves alone: a resident, or the CCP's own `CCP`. At `EXIT` TEC-OS gives it
+leaves alone: a resident, a program out of the way of the child, or the CCP's
+own `CCP`. At `EXIT` TEC-OS gives it
 back its stack, drive, user and mounts, and returns the last program's BDOS
 function 108 code in HL. Any other HL, a program asking to keep its image,
 is refused with carry set and nothing changed. Page zero is rebuilt by the
@@ -85,25 +90,20 @@ default FCBs and the command tail.
 A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
 a relocatable file in Digital Research's PRL format: a 256-byte header, the
 code made for `0100h`, then a bitmap marking the high bytes of its
-addresses, as LINK-80's `[OP]` writes it. A PRL that begins with
-TEC-OS's module header (`"TNM"`, a version and a kind) is installed rather
-than run. Kind 1 is the only kind; any other is refused.
+addresses, as LINK-80's `[OP]` writes it. A PRL is a program, loaded at
+`0100h` as its `.COM` would be, with nothing relocated: only its length is
+read, and the bitmap is checked for. The module header some earlier PRLs
+carried is no longer read.
 
 A driver is a resident in TEC-OS's own `.DRV` format, with an installation
 that can fail cleanly and a registry through which programs find its
-services (`ABIDRV`, ABI 3.1). `docs/drivers.md` is its interface. The CCP
-has no command for a `.DRV` yet, and `UNLOAD` takes the lowest resident of
-either kind. Nothing of this changes the TPA when no driver is installed, and
-a program written for CP/M sees neither.
-
-- **A resident** goes in whole pages just below the BDOS entry, and the
-  word at `0006h` moves down to the jump at its offset 6, which leads on to
-  the old entry; warm boot keeps it there. Programs that size themselves
-  from `0006h` never reach it. Its marked bytes gain its page less 1. Residents are removed last in, first out,
-  and a reset clears them.
-
-Any other PRL is a program, loaded at `0100h` as its `.COM` would be,
-with nothing relocated.
+services (`ABIDRV`, ABI 3.1). `docs/drivers.md` is its interface. It goes in
+whole pages just below the BDOS entry, and the word at `0006h` moves down to
+the jump at its offset 6, which leads on to the old entry; warm boot keeps it
+there. Programs that size themselves from `0006h` never reach it. Drivers are
+removed last in, first out, and a reset clears them. Nothing of this changes
+the TPA when no driver is installed, and a program written for CP/M sees
+neither.
 
 ## Base page
 

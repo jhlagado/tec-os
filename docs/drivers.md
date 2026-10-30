@@ -1,11 +1,8 @@
 # Drivers
 
-Status: **Built**, 2026-10-31, the loader and the registry, proved with a
-demonstration driver by `test/drv.test.mjs`. The loader has no command yet:
-the tests reach `DRVLOAD` by its symbol, with the file in the TPA and
-`LOADTOP` at its end. The CCP's `.DRV` command, a listing and a startup file
-come next, then the first real driver. `GLCD.PRL` stays a module PRL until
-then.
+Status: **Built**, 2026-10-31: the loader, the registry, the commands, startup
+and `GLCD.DRV`, the first real driver. `test/drv.test.mjs` and
+`test/startup.test.mjs` hold them.
 
 A driver is a resident in EXPAND 0, below `(0006h)`, in whole pages. It
 offers named services through the registry and calls the ROM only through
@@ -44,6 +41,45 @@ The relocation data is a list of gaps. Each byte is the distance to the next
 byte to relocate, the first from the byte before the image; 255 moves on with
 nothing relocated. Each marked byte, the high byte of an address, has the
 driver's page added.
+
+## Commands
+
+`NAME.DRV`, or `B:NAME.DRV`, reads that file and installs it. The type must be
+typed: `NAME` alone still looks for `NAME.COM` and then `NAME.PRL`. If the file
+won't read, or the load is refused or fails, the command's name comes back with
+a question mark, as for any command that won't run. If the driver gave
+`ABIGLCD` a table, the GLCD becomes the console, unless a PICO9918 is.
+
+`DRIVERS` prints one line for each driver, the newest first: its name and its
+pages. It walks the owner list, so a driver with no services is listed.
+
+`UNLOAD` removes the lowest resident, as below, and answers the same way if it
+can't.
+
+## Startup
+
+At cold boot only, `A:STARTUP.CMD`, if there is one, runs before the first
+prompt. One record is read once, into RAM: **at most 128 bytes**, and anything
+after them isn't run. The file isn't read again, so a warm boot doesn't repeat
+it and `USER 3` in a line can't affect it. Each prompt at level 0 takes the next
+line in place of the keyboard, echoed as if typed, so a program's warm boot, a
+built-in's return and `EXIT` all reach the next line by the same route. A nested
+level takes no lines; `EXIT` resumes them.
+
+A line ends at CR or LF, and blank lines are passed over. `^Z`, a zero or the
+128th byte ends the file, and a line that reaches the 128th byte still runs. A
+line that fails prints its usual message and the next runs.
+
+One card can serve every board. A line naming `GLCD.DRV` makes the GLCD the
+console where there is one, and elsewhere prints `GLCD.DRV?` and goes on.
+
+**The skip.** A keypad key held through reset skips the file: port `03h` bit 6 is
+read just before the open, so the skip needs no driver and costs no boot time.
+A line that hangs or resets the machine would otherwise run at every boot. The
+web host has no keypad, so it clears the file through its own card tools.
+
+**Recovery needs serial.** After a skip, or with no file, a GLCD board has its LCD
+and the serial terminal: the matrix keyboard isn't read until the driver is in.
 
 ## Installation
 
@@ -109,7 +145,7 @@ refuses a driver that takes a stack's sum past its limit:
 | CCP | 30 | 16 | 22 | 6 |
 
 The base is the deepest use on the serial and PICO9918 paths, with no resident.
-The census is the deepest use of all, 34 and 22 being `GLCD.PRL`'s. A limit is
+The census is the deepest use of all, 34 and 22 being `GLCD.DRV`'s. A limit is
 counted from the base, so a stack holds its base and its limit with a quarter
 free, but a driver's figure added to the census leaves less: the CCP's stack
 would then reach 28 of 30, the BDOS's 42 of 54. Nothing overflows. A declaration
@@ -139,8 +175,8 @@ Each service's table is defined in a document with its interface version.
 
 ## Removal
 
-`UNLOAD` acts on the lowest resident only, read from `PZTOP`, and treats it as a
-driver only if the owner list's head is its page. If the flag says it isn't
+`UNLOAD` acts on the lowest resident only, read from `PZTOP`, and only if the
+owner list's head is its page. If the flag says it isn't
 removable, or its `REMOVE` refuses, `UNLOAD` says so and changes nothing.
 Otherwise the registry and owner heads go back to what they were before it, the
 generation rises, and `PZTOP` and `(0006h)` go back to the top before it. Warm

@@ -300,7 +300,7 @@ emulator's and are not differences.
 | T13 BANKRAM | RAM in each bank T12 found | EXPAND 1: the CCP levels and the history |
 | T14 SERTX | Serial output at 4800 8N2 | The serial console's output |
 | T15 LCD | The LCD's bus and busy flag | The LCD hardware service (4) |
-| T16 GLCD | The ST7920 GLCD | The GLCD console, the resident GLCD.PRL |
+| T16 GLCD | The ST7920 GLCD | The GLCD console, the driver GLCD.DRV |
 | T17 VDP | The PICO9918, its 16K VRAM and its speed | The 80-column console, which writes VRAM with no delays |
 | T18 VDPCLK | The PICO9918's frame rate | Nothing directly; a check on T33's clock |
 | T19 SD | The card's answers to TEC-OS's driver | Every drive: TEC-OS keeps its volumes on the card |

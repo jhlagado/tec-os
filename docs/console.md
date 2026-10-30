@@ -92,19 +92,21 @@ the display in use (see [compatibility.md](compatibility.md)).
 
 ## GLCD
 
-The GLCD console is a resident, `GLCD.PRL` on the starter card, not part of
+The GLCD console is a driver, `GLCD.DRV` on the starter card, not part of
 the ROM. Its code and its screen text take three pages just below the BDOS
 entry, so on a board that loads it `(0006h)` is 768 bytes lower; a board
 without a GLCD loses nothing. Its INIT hands the terminal its six video
 routines through `ABIGLCD` in the table at `C003h`, and the terminal calls them directly, on the
 caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
 keyboard and no PICO9918, cold boot shows its banner and volumes on the
-serial terminal and the 20 × 4 LCD, and the CCP's first entry loads
-`A:GLCD.PRL` and makes the GLCD the console from the first prompt; without
-the file the console stays serial and the LCD shows `GLCD?`. `CON UC1:`
-loads it too, on a board that has both displays. Warm boot keeps it;
-`UNLOAD`, when it is the lowest resident, removes it and the console goes
-back to serial.
+serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
+`GLCD.DRV` installs it and makes the GLCD the console; with no such line the
+console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
+too, and shows `GLCD?` on the LCD if it can't. On a board with a PICO9918 the
+driver loads and the PICO9918 keeps the console until `CON UC1:`. A board
+without a GLCD or a matrix keyboard refuses it, leaving nothing behind. Warm
+boot keeps it; `UNLOAD`, when it is the lowest resident, removes it and the
+console goes back to serial.
 
 The ST7920 runs in its extended instruction set with graphics on. The
 driver keeps the 168 characters on screen and draws each 16-pixel graphics

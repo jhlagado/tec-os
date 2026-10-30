@@ -5,7 +5,7 @@ Status: **Built**, 2026-10-26. The hardware services' entry, `ABIHW` at
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,098 bytes (`debug80`) and has 286 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,104 bytes (`debug80`) and has 280 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -116,7 +116,7 @@ The rules that make the services safe for CP/M programs:
 
 ## The GLCD console's table
 
-The GLCD console is a resident, `GLCD.PRL`, below `(0006h)`. Its INIT calls
+The GLCD console is a driver, `GLCD.DRV`, below `(0006h)`. Its INIT calls
 `ABIGLCD` with HL pointing at six words, its routines in the terminal's
 order: put, get, clear to the end of the line, restore, read a row, write a
 row. `CONSW` points the terminal's vector at that table when it selects
@@ -127,10 +127,10 @@ directly sets up its own stack first. The routines run with the caller's
 interrupt state and share their drawing counters, so an interrupt handler
 must not print through the console. `ABIGLCD` returns `LINEBUF`'s address in HL, where the row
 routines read and write a row, or carry set if a table is kept already, as
-when `GLCD.PRL` is loaded a second time; that copy then leaves the console
-alone. Its REMOVE, in the copy that took the console, calls `ABIGLCD` with
-HL = 0, which drops the table and puts the console back to serial. The PRL loader takes
-kind 1 only; kind 2, the driver kind of ABI 2.6 and before, is refused.
+when `GLCD.DRV` is loaded a second time; that copy's INIT then fails and
+nothing of it stays. `ABIGLCD` also returns carry set with no matrix keyboard. Its REMOVE, in the copy that took the console, calls `ABIGLCD` with
+HL = 0, which drops the table and puts the console back to serial, with carry
+clear.
 
 Page zero's restart vectors at `0008h–0037h` are left to programs and
 debuggers. A warm boot, like a cold boot, puts seven zeros and a `RET` in
@@ -217,7 +217,7 @@ that programs share as ATOM include files.
 | ANSI terminal | 988 | 2 | Stays |
 | Video switch | 104 | 2 | Stays |
 | PICO9918 text console | 419 | 1, 2 | Stays |
-| GLCD text console | — | 1, 2 | Moved to `GLCD.PRL`, a resident, loaded at the CCP's first entry |
+| GLCD text console | — | 1, 2 | Moved to `GLCD.DRV`, a driver, loaded by `STARTUP.CMD` |
 | `ABIGLCD` and loading the GLCD's resident | 128 | 2 | Stays |
 | Font, 96 characters | 768 | 1 | Stays: the PICO9918 needs it before the card is read, and the GLCD resident reads it through `ABIFONT` |
 | 20 × 4 LCD | 146 | 2 | Stays |
@@ -226,7 +226,8 @@ that programs share as ATOM include files.
 | Format tables, diagnostics | 176 | 1 | Stays |
 | CCP | 2,664 | 2 | Stays |
 | CCP levels: `XCCP`, `XCMD`, `EXIT` and `UNLOAD` | 297 | 2 | Stays |
-| PRL loader | 221 | 2 | Stays |
+| PRL loader | 100 | 2 | Stays, for programs |
+| Driver loader, registry, `DRIVERS` and startup | 718 | 2 | Stays |
 | Command history | 210 | 2 | Stays |
 | Block cache | 591 | 1, 2 | Stays: every read goes through it |
 | BDOS | 3,736 | 2 | Stays |
@@ -238,7 +239,7 @@ Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
 and the regions as `docs/memory-map.md` gives them, the parts within the
 console and services regions by source file. The memory map now gives the
 ROM as its five blocks instead. The rows for the GLCD's
-resident, the CCP levels, the PRL loader, `XMOVE` and `MOVE` are counted
+driver, the CCP levels, the PRL and driver loaders, `XMOVE` and `MOVE` are counted
 again after drivers and the image save went, the block cache's at its
 build, and the table's with the reset jump at the compact layout.
 
@@ -296,7 +297,7 @@ that uses them.
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->286<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->280<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
