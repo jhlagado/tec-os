@@ -94,8 +94,9 @@ CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `DEMO` on the starter card shows the hardware services: the LCD, the
 7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.DRV` installs a driver.
-`A:STARTUP.CMD` runs at cold boot; a keypad key held through reset skips it,
-and the serial terminal is then the console. If the card is missing or invalid, a
+`A:STARTUP.CMD` runs at cold boot; a keypad key held from reset until the
+prompt skips it. The console is then the PICO9918 on a board with one, and the
+serial terminal otherwise. If the card is missing or invalid, a
 diagnostic prompt shows the error code and offers a retry.
 
 Do not press the hex keypad while a CP/M program is running; see

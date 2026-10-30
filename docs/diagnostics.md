@@ -489,7 +489,8 @@ against the Debug80 model. Checked 28 October 2026 for diag 0.2.
    run plan says what each reading shows.
 9. `ioports.md` says KDA reads 0 while a key is down; `Functional
    Description.md` says the 74C923 "generates a high on KDA". The ROM reads
-   0 as down (A13). TEC-OS does not read the keypad.
+   0 as down (A13). TEC-OS reads that bit once, at cold boot, for startup's
+   skip, and does not otherwise read the keypad.
 10. J9 wires two buttons (pins 6 and 7) and nothing to pins 5 and 9. The
     ROM labels the bits as MON-3 does, with `pin9` and `fire3`. The line is
     `INFO`, and the bits seen settle it.

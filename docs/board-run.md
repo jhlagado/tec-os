@@ -313,7 +313,7 @@ emulator's and are not differences.
 | T26 NMI | No stray NMIs | Programs: TEC-OS answers an NMI with RETN and expects none |
 | T27 SERRX | Serial input | The serial console's input |
 | T28 SERBIT | The terminal's bit time against the ROM's | The serial console at 4800 baud |
-| T29 KEYPAD | The keypad's codes and Shift | Nothing; TEC-OS does not read the keypad |
+| T29 KEYPAD | The keypad's codes and Shift | Startup's skip, which reads the key-down bit once at cold boot; TEC-OS reads no key codes |
 | T30 KEYNMI | One NMI for each keypad press | Nothing; TEC-OS runs with the NMI jumper off |
 | T31 MATRIX | The matrix keyboard's key numbers | The matrix keyboard console and the keys hardware service (8) |
 | T32 JOY | The joystick's bits | The joystick hardware service (7) |

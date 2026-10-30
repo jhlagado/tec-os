@@ -62,21 +62,29 @@ At cold boot only, `A:STARTUP.CMD`, if there is one, runs before the first
 prompt. One record is read once, into RAM: **at most 128 bytes**, and anything
 after them isn't run. The file isn't read again, so a warm boot doesn't repeat
 it and `USER 3` in a line can't affect it. Each prompt at level 0 takes the next
-line in place of the keyboard, echoed as if typed, so a program's warm boot, a
-built-in's return and `EXIT` all reach the next line by the same route. A nested
-level takes no lines; `EXIT` resumes them.
+line in place of the keyboard, so a program's warm boot, a built-in's return and
+`EXIT` all reach the next line by the same route. A nested level takes no lines;
+`EXIT` resumes them. ^C stops the current program, and the next lines still run.
+The line is echoed through BDOS function 9, so a `$` in it ends the echo, though
+the line runs whole.
 
 A line ends at CR or LF, and blank lines are passed over. `^Z`, a zero or the
-128th byte ends the file, and a line that reaches the 128th byte still runs. A
-line that fails prints its usual message and the next runs.
+128th byte ends the file. A line that reaches the 128th byte runs with it; one
+that starts there isn't run. A line that fails prints its usual message and the
+next runs.
 
 One card can serve every board. A line naming `GLCD.DRV` makes the GLCD the
-console where there is one, and elsewhere prints `GLCD.DRV?` and goes on.
+console where there is one, and elsewhere prints `GLCD.DRV?` and goes on. A
+failed `GLCD.DRV` line, or a skip, leaves the LCD silent: only `CON UC1:` shows
+`GLCD?`.
 
-**The skip.** A keypad key held through reset skips the file: port `03h` bit 6 is
-read just before the open, so the skip needs no driver and costs no boot time.
-A line that hangs or resets the machine would otherwise run at every boot. The
-web host has no keypad, so it clears the file through its own card tools.
+**The skip.** A keypad key held through reset, until the prompt, skips the file:
+port `03h` bit 6 is read once, just before the open, about 1.46 s after reset. The
+skip needs no driver and costs no boot time. A line that hangs or resets the
+machine would otherwise run at every boot. `docs/diagnostics.md` records a conflict
+over this bit's polarity: a board that reads it the other way would skip on every
+boot. The web host has no keypad and no tool to clear the file, which can only be
+overwritten by a copy or replaced with a new starter card.
 
 **Recovery needs serial.** After a skip, or with no file, a GLCD board has its LCD
 and the serial terminal: the matrix keyboard isn't read until the driver is in.
