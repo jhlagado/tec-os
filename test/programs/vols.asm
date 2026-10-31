@@ -7,6 +7,25 @@ BDOS    EQU     $0005
 VOLSVC  EQU     ABIVOL
 
         ORG     $0100
+; This program speaks ABI 4's table: on anything else it says so and stops.
+	LD	HL,ABITAB
+	LD	DE,ABITAG
+	LD	B,3
+CHKTAG:	LD	A,(DE)
+	CP	(HL)
+	JR	NZ,NOABI	; not TEC-OS's table
+	INC	HL
+	INC	DE
+	DJNZ	CHKTAG
+	LD	A,(HL)		; HL = ABIMAJ now
+	CP	4
+	JR	Z,ABIOK
+NOABI:	LD	DE,NOABIM
+	LD	C,9
+	JP	BDOS
+ABITAG:	DB	"TNA"
+NOABIM:	DB	"VOLS needs TEC-OS with ABI 4.",13,10,"$"
+ABIOK:
         LD      A,(IDX)
 NEXT:   LD      E,A
         LD      A,2             ; describe

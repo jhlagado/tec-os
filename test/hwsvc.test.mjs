@@ -11,6 +11,7 @@ import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/
 import { ROOT, boot, romFor, standardCard } from "./lib/fixtures.mjs";
 
 const HWSVC = romFor().symbols.get("ABIHW");
+const HW = { INFO: 0, DIGIT: 1, LCD: 2, VIDEO: 3, TONE: 4, JOY: 5, KEYS: 6, PUTAT: 7, RTC: 8 };
 const BACK = 0x0f00; // the sentinel return address
 const STACK = 0x1000; // the caller's stack top
 const BUF = 0x2000; // argument and result buffers
@@ -63,7 +64,6 @@ const fails = (r, status) => {
 };
 const bytes = (m, addr, n) => Array.from({ length: n }, (_, i) => m.read(addr + i));
 const put = (m, addr, list) => list.forEach((v, i) => m.write(addr + i, v));
-const words = (...w) => w.flatMap((v) => [v & 0xff, v >> 8]);
 
 /** Port writes during fn(), as [port, value]. */
 function outs(m, fn) {
@@ -80,42 +80,29 @@ function outs(m, fn) {
   }
 }
 
-test("hardware services: information, bad numbers, digits, LEDs, LCD, tone, delay", () => {
+test("hardware services: information, bad numbers, digits, LCD, tone", () => {
   const m = boot(standardCard());
-  const info = svc(m, 0);
+  const info = svc(m, HW.INFO);
   ok(info);
   assert.equal(info.b & 0x08, 0x08, "the DS1302 answers");
   assert.equal(info.de, m.sym("ROMVER"));
   assert.equal(info.hl, 0, "serial console: no columns or rows");
-  fails(svc(m, 19), 1);
-  fails(svc(m, 0xff), 1);
-
-  const hex = Array.from({ length: 16 }, (_, n) => svc(m, 2, { a: n }).b);
-  assert.deepEqual(hex.slice(0, 4), [0xeb, 0x28, 0xcd, 0xad]);
-  assert.equal(svc(m, 2, { a: 0x1f }).b, 0x47, "only the low four bits");
+  for (let n = 9; n < 256; n += 1) fails(svc(m, n), 1);
 
   put(m, BUF, [1, 2, 3, 4, 5, 6]);
-  const [dig, dout] = outs(m, () => svc(m, 1, { hl: BUF }));
+  const [dig, dout] = outs(m, () => svc(m, HW.DIGIT, { hl: BUF }));
   ok(dig);
   const selects = dout.filter(([p]) => p === 0x01).map(([, v]) => v);
   assert.deepEqual(selects, [0x60, 0x40, 0x50, 0x40, 0x48, 0x40, 0x44, 0x40, 0x42, 0x40, 0x41, 0x40], "each digit, then off, serial idle");
   assert.deepEqual(dout.filter(([p]) => p === 0x02).map(([, v]) => v), [1, 2, 3, 4, 5, 6]);
 
-  put(m, BUF, Array.from({ length: 24 }, (_, i) => i));
-  const [led, lout] = outs(m, () => svc(m, 3, { hl: BUF }));
-  ok(led);
-  const rows = lout.filter(([p, v]) => p === 0x05 && v).map(([, v]) => v);
-  assert.deepEqual(rows, [1, 2, 4, 8, 16, 32, 64, 128]);
-  assert.deepEqual(lout.at(-1), [0x05, 0], "all rows off at the end");
-  assert.deepEqual(lout.filter(([p]) => p === 0xf9).map(([, v]) => v), [2, 5, 8, 11, 14, 17, 20, 23], "blue bytes");
-
   put(m, BUF, [..."Row two of the LCD.."].map((ch) => ch.charCodeAt(0)));
-  ok(svc(m, 4, { b: 2, hl: BUF }));
+  ok(svc(m, HW.LCD, { b: 2, hl: BUF }));
   const lcd = serializeTec1gUpdateFromRuntimeState(m.tec1g.state).lcd;
   assert.equal(String.fromCharCode(...lcd.slice(40, 60)), "Row two of the LCD..");
-  fails(svc(m, 4, { b: 4, hl: BUF }), 1);
+  fails(svc(m, HW.LCD, { b: 4, hl: BUF }), 1);
 
-  const [tone, tout] = outs(m, () => svc(m, 6, { b: 100, de: 20 }));
+  const [tone, tout] = outs(m, () => svc(m, HW.TONE, { b: 100, de: 20 }));
   ok(tone);
   const levels = tout.filter(([p]) => p === 0x01).map(([, v]) => v);
   assert.equal(levels.length, 21);
@@ -124,123 +111,70 @@ test("hardware services: information, bad numbers, digits, LEDs, LCD, tone, dela
   assert.equal(levels.at(-1), 0x40);
   const half = tone.cycles / 20;
   assert.ok(half > 1640 && half < 1680, `a half cycle of B = 100 is about 1,659 T-states, not ${half}`);
-  ok(svc(m, 6, { b: 10, de: 0 }));
-
-  const ms = svc(m, 11, { de: 10 }).cycles / 10;
-  assert.ok(Math.abs(ms - 4000) < 80, `a millisecond is about 4,000 T-states at 4 MHz, not ${ms}`);
-  assert.ok(svc(m, 11, { de: 0 }).cycles < 260, "no wait beyond the dispatch");
+  ok(svc(m, HW.TONE, { b: 10, de: 0 }));
   assert.deepEqual(m.violations, []);
 });
 
-test("hardware services: joystick, matrix keys, serial, card blocks, random numbers", () => {
-  const image = standardCard();
-  const m = boot(image, { matrix: true });
+test("hardware services: joystick and matrix keys", () => {
+  const m = boot(standardCard(), { matrix: true });
   m.tec1g.state.input.joystickState = 0x05;
-  assert.equal(svc(m, 7).b, 0x05, "joystick up and right");
+  assert.equal(svc(m, HW.JOY).b, 0x05, "joystick up and right");
   m.tec1g.state.input.joystickState = 0;
-  assert.equal(svc(m, 7).b, 0);
+  assert.equal(svc(m, HW.JOY).b, 0);
 
   m.tec1g.applyMatrixKey(2, 5, true);
   m.tec1g.applyMatrixKey(6, 0, true);
-  ok(svc(m, 8, { hl: BUF }));
+  ok(svc(m, HW.KEYS, { hl: BUF }));
   assert.deepEqual(bytes(m, BUF, 8), [0, 0, 0x20, 0, 0, 0, 0x01, 0]);
   m.tec1g.applyMatrixKey(2, 5, false);
   m.tec1g.applyMatrixKey(6, 0, false);
-  svc(m, 8, { hl: BUF });
+  svc(m, HW.KEYS, { hl: BUF });
   assert.deepEqual(bytes(m, BUF, 8), [0, 0, 0, 0, 0, 0, 0, 0]);
-
-  const sent = m.serial.length;
-  ok(svc(m, 9, { a: 0xa5, b: 0 }));
-  assert.deepEqual([...m.serial.slice(sent)], [0xa5]);
-  const timeout = svc(m, 9, { b: 1, de: 3 }, 100_000);
-  fails(timeout, 3);
-  assert.ok(timeout.cycles > 3 * 3800 && timeout.cycles < 5 * 4200, `about 4 ms of waiting, not ${timeout.cycles}`);
-  m.tec1g.queueSerial([0x3c]);
-  const nul = svc(m, 9, { b: 1, de: 1000 }, 10_000_000); // the emulator's line sends a NUL first
-  ok(nul);
-  assert.equal(nul.b, 0);
-  const rx = svc(m, 9, { b: 1, de: 1000 }, 10_000_000);
-  ok(rx);
-  assert.equal(rx.b, 0x3c);
-
-  put(m, BUF, [0, 0, 0, 0]);
-  ok(svc(m, 10, { hl: BUF, de: BUF + 0x100 }));
-  assert.deepEqual(bytes(m, BUF + 0x100, 512), [...image.slice(0, 512)], "block 0 of the card");
-  put(m, BUF, [3, 0, 0, 0]);
-  ok(svc(m, 10, { hl: BUF, de: BUF + 0x100 }));
-  assert.deepEqual(bytes(m, BUF + 0x100, 512), [...image.slice(3 * 512, 4 * 512)], "block 3, least significant byte first");
-
-  m.write(m.sym("RNDST"), 0);
-  m.write(m.sym("RNDST") + 1, 0);
-  let x = 0xace1;
-  for (let i = 0; i < 5; i++) {
-    x ^= (x << 7) & 0xffff;
-    x ^= x >> 9;
-    x ^= (x << 8) & 0xffff;
-    const r = svc(m, 17);
-    ok(r);
-    assert.equal(r.hl, x, `random number ${i}`);
-  }
   assert.deepEqual(m.violations, []);
 });
 
-test("hardware services: the claimed PICO9918 and text at a position", () => {
+test("hardware services: the claim, INFO's claim bit, and text at a position", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
-  const vdp = () => m.tec1g.state.display.tms9918.stateSnapshot();
   put(m, BUF, [..."HELLO"].map((ch) => ch.charCodeAt(0)));
-  ok(svc(m, 16, { de: 0x0502, b: 5, hl: BUF }));
+  ok(svc(m, HW.PUTAT, { de: 0x0502, b: 5, hl: BUF }));
   assert.equal(m.screen()[5].slice(2, 7), "HELLO");
-  ok(svc(m, 16, { de: 78, b: 5, hl: BUF }));
+  ok(svc(m, HW.PUTAT, { de: 78, b: 5, hl: BUF }));
   assert.equal(m.screen()[0].slice(78), "HE", "clipped at the right edge");
-  ok(svc(m, 16, { de: 0x1800, b: 5, hl: BUF }), "a row off the screen draws nothing");
+  ok(svc(m, HW.PUTAT, { de: 0x1800, b: 5, hl: BUF }), "a row off the screen draws nothing");
 
-  fails(svc(m, 12, { a: 0, b: 7 }), 5);
-  fails(svc(m, 13, { a: 0, de: 4, hl: 0 }), 5);
-  fails(svc(m, 14, { hl: BUF }), 5);
-  fails(svc(m, 15, { hl: BUF }), 5);
-
-  ok(svc(m, 5, { b: 1 }));
-  fails(svc(m, 16, { de: 0, b: 1, hl: BUF }), 2);
-  ok(svc(m, 12, { a: 0xf4, b: 7 }));
-  assert.equal(vdp().registers[7], 0xf4);
-  ok(svc(m, 13, { a: 0x5a, de: 300, hl: 0x3000 }));
-  const v = vdp().vram;
-  assert.ok(v.slice(0x3000, 0x3000 + 300).every((b) => b === 0x5a));
-  put(m, BUF + 0x10, Array.from({ length: 40 }, (_, i) => i * 3));
-  put(m, BUF, words(0x3200, BUF + 0x10, 40));
-  ok(svc(m, 14, { hl: BUF }));
-  assert.deepEqual([...vdp().vram.slice(0x3200, 0x3228)], bytes(m, BUF + 0x10, 40));
-  put(m, BUF, words(0x3000, BUF + 0x100, 300));
-  ok(svc(m, 15, { hl: BUF }));
-  assert.ok(bytes(m, BUF + 0x100, 300).every((b) => b === 0x5a), "VRAM read back");
-  ok(svc(m, 5, { b: 0 }));
-  assert.deepEqual([...vdp().registers.slice(0, 2)], [0x04, 0x50], "text mode again");
+  assert.equal(svc(m, HW.INFO).b & 0x10, 0, "not claimed");
+  ok(svc(m, HW.VIDEO, { b: 1 }));
+  assert.equal(svc(m, HW.INFO).b & 0x10, 0x10, "claimed");
+  fails(svc(m, HW.PUTAT, { de: 0, b: 1, hl: BUF }), 2);
+  ok(svc(m, HW.VIDEO, { b: 0 }));
+  assert.equal(svc(m, HW.INFO).b & 0x10, 0, "released");
+  assert.deepEqual([...m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 2)], [0x04, 0x50], "text mode again");
   assert.deepEqual(m.violations, []);
 });
 
 test("hardware services: the DS1302 clock", () => {
   const m = boot(standardCard());
-  ok(svc(m, 18, { b: 0, hl: BUF }));
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF }));
   // The test clock starts at 12:00:00 on Thursday 1 January 2026 and runs
   // with the emulated cycles, so the boot has used a second or two of it.
   const got = bytes(m, BUF, 7);
   assert.ok(got[0] <= 0x05, `seconds ${got[0].toString(16)}`);
   assert.deepEqual(got.slice(1), [0x00, 0x12, 0x01, 0x01, 0x04, 0x26], "minutes, hours, date, month, weekday, year");
   put(m, BUF, [0x30, 0x59, 0x12, 0x25, 0x12, 0x04, 0x26]);
-  ok(svc(m, 18, { b: 1, hl: BUF }));
-  ok(svc(m, 18, { b: 0, hl: BUF + 0x10 }));
+  ok(svc(m, HW.RTC, { b: 1, hl: BUF }));
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF + 0x10 }));
   const set = bytes(m, BUF + 0x10, 7);
   assert.deepEqual(set.slice(1), [0x59, 0x12, 0x25, 0x12, 0x04, 0x26]);
   assert.ok(set[0] >= 0x30 && set[0] <= 0x31, "seconds as set");
   // The host stalls for 1.2 s between the set and the next read, and the
   // machine runs no cycles: the clock reads what it read before.
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1200);
-  ok(svc(m, 18, { b: 0, hl: BUF + 0x20 }));
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF + 0x20 }));
   assert.deepEqual(bytes(m, BUF + 0x20, 7), set, "no host time counted after a stall");
   // A second of emulated cycles moves it on by one.
   const end = m.cycles + 4_000_000;
   m.runUntil(() => m.cycles >= end, 5_000_000, "a second of cycles");
-  ok(svc(m, 18, { b: 0, hl: BUF + 0x30 }));
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF + 0x30 }));
   const later = bytes(m, BUF + 0x30, 7);
   assert.equal(later[0], set[0] + 1, "a second later");
   assert.deepEqual(m.violations, []);

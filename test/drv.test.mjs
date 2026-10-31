@@ -576,7 +576,7 @@ const extraFor = (n) => n - S;
 const MALFORMED = [
   ["the file shorter than its header", good.file.slice(0, 16), 0x110],
   ["a wrong magic", edit((f) => (f[0] = 0x45))],
-  ["format version 1, whose INIT calls ABIGLCD with no mode", edit((f) => (f[1] = 1))],
+  ["format version 2, whose driver reads the font at ABIFONT", edit((f) => (f[1] = 2))],
   ["the image size overflowing the address space", u16(6, 0xff80)],
   ["the image size past the file", u16(6, 0x4000)],
   ["the image size below the header", u16(6, 24)],

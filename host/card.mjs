@@ -3,6 +3,7 @@
 
 import { findVolume, parseContainer, volumePayload } from "../tools/lib/container.mjs";
 import { CpmVolume } from "../tools/lib/cpmfs.mjs";
+import { FORMAT } from "../tools/lib/drv-format.mjs";
 
 export const WIDTH_FILES = { 80: "PICO.DRV", 40: "PICO40.DRV", 32: "PICO32.DRV" };
 const DISPLAY_LINE = /^(PICO(40|32)?|GLCD)\.DRV$/i;
@@ -19,14 +20,18 @@ export const displayFile = (display, width) => (display === "tms" ? WIDTH_FILES[
 /** Why the card can't show DISPLAY at WIDTH, or null. */
 export function cardProblem(image, display, width) {
   const name = displayFile(display, width);
+  let a;
   let files;
   try {
-    files = driveA(image).list();
+    a = driveA(image);
+    files = a.list();
   } catch {
     return "This card has no drive A: the diagnostic prompt is on the serial terminal below. A new starter card has one.";
   }
-  if (files.some((f) => f.name === name)) return null;
-  return `This card has no ${name}: it boots as its STARTUP.CMD says. A new starter card has it.`;
+  if (!files.some((f) => f.name === name)) return `This card has no ${name}: it boots as its STARTUP.CMD says. A new starter card has it.`;
+  const version = a.read(name)[1];
+  if (version !== FORMAT) return `This card's ${name} is format ${version}, from an older TEC-OS, and this ROM refuses it. A new starter card has the driver.`;
+  return null;
 }
 
 /** Ready the card for DISPLAY at WIDTH: the problem, if any, and whether the card changed. */

@@ -8,7 +8,6 @@
 %INCLUDE "reset.asm"
 %INCLUDE "abi.asm"
 %INCLUDE "data.asm"
-%INCLUDE "gen/font.asm"
 %INCLUDE "data2.asm"
 %INCLUDE "gen/geom.asm"
 %INCLUDE "data3.asm"

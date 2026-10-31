@@ -3,13 +3,18 @@
 ; answers, a hex counter on the 7-segment digits, a moving rainbow on the
 ; 8 x 8 LEDs and, on a PICO9918, colour bars with a bouncing ball in
 ; Graphics I that takes a random colour at each bounce. The screen goes back
-; to the console when it stops.
+; to the console when it stops. The segment patterns, the LED scan and the
+; random numbers are its own: the ROM drives neither of those displays.
 %INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
 HWSVC   EQU     ABIHW           ; hardware services
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
+LEDSEL	EQU	$05		; 8 x 8 matrix: row select, then the colours
+LEDR	EQU	$06
+LEDG	EQU	$F8
+LEDB	EQU	$F9
 
         ORG     $0100
         LD      HL,ABITAB       ; TEC-OS's table
@@ -21,15 +26,11 @@ CHKTAG: LD      A,(DE)
         INC     HL
         INC     DE
         DJNZ    CHKTAG
-        LD      A,(ABIMAJ)      ; ABI 2.0 and later have them all
-        CP      2
-        JR      NC,HASHW
-        LD      A,(ABIMIN)
-        OR      A
-        JP      Z,NOHW
-HASHW:
+	LD	A,(ABIMAJ)	; another major's services have other numbers
+	CP	4
+	JP	NZ,NOHW
 
-        LD      C,0             ; INFO: which devices answered
+        LD      C,HWINFO        ; which devices answered
         CALL    HWSVC
         LD      A,B
         LD      (DEVS),A
@@ -51,14 +52,14 @@ HASHW:
         CALL    PRINT
         LD      B,120           ; TONE: about 1 kHz for 0.2 s
         LD      DE,400
-        LD      C,6
+        LD      C,HWTONE
         CALL    HWSVC
 
         LD      HL,LCDTXT       ; the LCD's four rows
         LD      B,0
 LCDLP:  PUSH    BC
         PUSH    HL
-        LD      C,4
+        LD      C,HWLCD
         CALL    HWSVC
         POP     HL
         LD      DE,20
@@ -73,7 +74,7 @@ LCDLP:  PUSH    BC
         AND     2
         JR      Z,LOOP
         LD      B,1
-        LD      C,5
+        LD      C,HWVIDEO
         CALL    HWSVC
         LD      A,1
         LD      (CLAIMED),A
@@ -87,12 +88,11 @@ LOOP:   LD      HL,FR
         CALL    COUNT
         CALL    MKDIG
         LD      HL,DIGBUF       ; DIGITS: one scan
-        LD      C,1
+        LD      C,HWDIGIT
         CALL    HWSVC
         CALL    MKLED
-        LD      HL,LEDBUF       ; LEDS: one scan
-        LD      C,3
-        CALL    HWSVC
+        LD      HL,LEDBUF       ; one scan of the LEDs
+        CALL    LEDSCAN
         LD      A,(CLAIMED)
         OR      A
         CALL    NZ,BALL
@@ -103,16 +103,15 @@ LOOP:   LD      HL,FR
         JR      Z,LOOP
 
         LD      HL,ZEROS        ; digits and LEDs off
-        LD      C,1
+        LD      C,HWDIGIT
         CALL    HWSVC
         LD      HL,ZEROS
-        LD      C,3
-        CALL    HWSVC
+        CALL    LEDSCAN
         LD      A,(CLAIMED)     ; give the screen back to the console
         OR      A
         JR      Z,DONE
         LD      B,0
-        LD      C,5
+        LD      C,HWVIDEO
         CALL    HWSVC
 DONE:   LD      DE,BYE
         JP      PRINT
@@ -139,7 +138,7 @@ CLOCK:  LD      A,(DEVS)
         RET     Z
         LD      HL,TIME         ; RTC: seconds, minutes, hours, ...
         LD      B,0
-        LD      C,18
+        LD      C,HWRTC
         CALL    HWSVC
         RET     NZ
         LD      HL,CLKROW+9
@@ -153,7 +152,7 @@ CLOCK:  LD      A,(DEVS)
         CALL    BCD2
         LD      HL,CLKROW       ; LCDROW 3
         LD      B,3
-        LD      C,4
+        LD      C,HWLCD
         JP      HWSVC
 ; (HL), (HL+1) = the two BCD digits of A; HL moves past them.
 BCD2:   PUSH    AF
@@ -201,14 +200,17 @@ MKDL:   PUSH    BC
         POP     BC
         DJNZ    MKDL
         RET
-SEG:    PUSH    DE
-        LD      C,2             ; HEXSEG: B = pattern for the digit in A
-        CALL    HWSVC
-        POP     DE
-        LD      A,B
-        LD      (DE),A
-        INC     DE
-        RET
+; The low four bits of A as a segment pattern at DE, which moves on. Destroys
+; AF, BC and HL.
+SEG:	AND	$0F
+	LD	C,A
+	LD	B,0
+	LD	HL,SEGTAB
+	ADD	HL,BC		; the digit's own pattern
+	LD	A,(HL)
+	LD	(DE),A
+	INC	DE
+	RET
 
 ; ---- 8 x 8 rainbow ----------------------------------------------------------
 
@@ -261,6 +263,29 @@ MKL3:   DEC     E
         CP      8
         JR      NZ,MKLR
         RET
+
+; One pass over the eight rows of red, green and blue bytes at HL, each row lit
+; for about 0.4 ms, then all off. Each row's colours go out with the rows dark
+; from the pass before. Destroys AF, BC and HL.
+LEDSCAN:LD	C,1		; the row's select bit
+LEDSL:	LD	A,(HL)
+	OUT	(LEDR),A
+	INC	HL
+	LD	A,(HL)
+	OUT	(LEDG),A
+	INC	HL
+	LD	A,(HL)
+	OUT	(LEDB),A
+	INC	HL
+	LD	A,C		; the row lights
+	OUT	(LEDSEL),A
+	LD	B,128		; about 0.4 ms at 4 MHz
+LEDSD:	DJNZ	LEDSD
+	XOR	A		; dark before the next row's colours
+	OUT	(LEDSEL),A
+	SLA	C
+	JR	NC,LEDSL	; the bit has left after the eighth row
+	RET
 
 ; ---- PICO9918 Graphics I ----------------------------------------------------
 
@@ -354,9 +379,7 @@ BALL:   LD      HL,BX
         RET     Z
         XOR     A
         LD      (BOUNCE),A
-        LD      C,17            ; RANDOM: a new colour, 8-15
-        CALL    HWSVC
-        LD      A,L
+        CALL    RANDOM          ; a new colour, 8-15
         AND     7
         OR      8
         PUSH    AF
@@ -365,6 +388,27 @@ BALL:   LD      HL,BX
         POP     AF
         OUT     (VDPDAT),A
         RET
+; The next of the xorshift16 (7, 9, 8) numbers, period 65,535 from any nonzero
+; seed. Returns it in HL, with its low byte in A too. Destroys F.
+RANDOM:	LD	HL,(SEED)
+	LD	A,H		; x ^= x << 7, as two rotates through carry
+	RRA
+	LD	A,L
+	RRA
+	XOR	H
+	LD	H,A
+	LD	A,L		; x ^= x >> 9
+	RRA
+	LD	A,H
+	RRA
+	XOR	L
+	LD	L,A
+	XOR	H		; x ^= x << 8
+	LD	H,A
+	LD	(SEED),HL
+	LD	A,L
+	RET
+
 ; (HL) += (DE), reversing (DE) at 0 and at C.
 STEP:   LD      A,(DE)
         ADD     A,(HL)
@@ -399,7 +443,7 @@ NOMSG:  DB      "no$"
 KEYMSG: DB      13,10,"Watch the LCD, the digits, the LEDs and the screen.",13,10
         DB      "Press any key to stop.",13,10,"$"
 BYE:    DB      13,10,"Demo stopped.",13,10,"$"
-NOHWMSG:DB      13,10,"DEMO needs TEC-OS with hardware services (ABI 1.1 or later).",13,10,"$"
+NOHWMSG:DB      13,10,"DEMO needs TEC-OS with ABI 4.",13,10,"$"
 LCDTXT: DB      "TEC-OS hardware demo"
         DB      "7-seg: hex counter  "
         DB      "8x8: moving rainbow "
@@ -417,6 +461,10 @@ BX:     DB      40
 BY:     DB      60
 DX:     DB      2
 DY:     DB      2
+; The digits 0-9 and A-F as segment patterns.
+SEGTAB:	DB	$EB,$28,$CD,$AD,$2E,$A7,$E7,$29
+	DB	$EF,$AF,$6F,$E6,$C3,$EC,$C7,$47
+SEED:	DW	$ACE1
 ZEROS:  DB      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 DEVS:   DB      0
 CLAIMED:DB      0

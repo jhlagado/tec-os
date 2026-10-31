@@ -1,86 +1,77 @@
-; Hardware services, ABI 1.1 (docs/rom-services.md). CALL ABIHW with the
-; service in C and arguments in A, B, DE and HL. Returns A = status with Z
-; and carry clear on success; results as each service says. IX, IY and the
+; Hardware services, ABI 4.0 (docs/rom-services.md). CALL ABIHW with the
+; service in C and arguments in B, DE and HL. Returns A = status with Z and
+; carry clear on success; results as each service says. IX, IY and the
 ; alternate registers are preserved. Any program may call them: they run on
-; the caller's stack (at most 16 bytes) and keep their
-; state in the resident workspace.
+; the caller's stack (at most 16 bytes) and keep their state in the resident
+; workspace. Numbers and status codes are in abi.inc too, and the build
+; checks that the two agree.
 ;
 ; These are the services that would otherwise fight the OS for a port: the
 ; digit and speaker port (01h) also carries the serial transmit line, which
-; must stay idle, and the PICO9918 is the console. Devices the OS does not
-; use, such as the 8 x 8 LEDs, are here for convenience.
+; must stay idle, and the PICO9918 is the console.
 
-HWINFO  EQU     0               ; B = devices (CONDEV bits), DE = ROM version,
-                                ; L = console columns, H = rows (0 for serial)
-HWDIGIT EQU     1               ; HL -> 6 segment bytes, leftmost first: one scan
-HWHEX   EQU     2               ; A = 0-15: B = its segment pattern
-HWLEDS  EQU     3               ; HL -> 8 rows of red, green, blue bytes: one scan
-HWLCD   EQU     4               ; B = row 0-3, HL -> 20 characters
-HWVIDEO EQU     5               ; B = 1 claim the PICO9918, 0 give it back
-HWTONE  EQU     6               ; B = half period (16 T-states a unit), DE = half cycles
-HWJOY   EQU     7               ; B = joystick bits, 1 for each one pressed
-HWKEYS  EQU     8               ; HL -> 8 bytes: the matrix rows, 1 for each key down
-HWSER   EQU     9               ; B = 0: send A; B = 1: B = byte, waiting up to DE ms
-HWBLOCK EQU     10              ; HL -> block number (4 bytes), DE -> 512-byte buffer
-HWDELAY EQU     11              ; DE = milliseconds
-HWVREG  EQU     12              ; claimed PICO9918: register B = A
-HWVFILL EQU     13              ; claimed PICO9918: DE bytes of A from VRAM address HL
-HWVWR   EQU     14              ; claimed PICO9918: HL -> VRAM address, RAM address, count
-HWVRD   EQU     15              ; claimed PICO9918: the same, VRAM to RAM
-HWPUTAT EQU     16              ; D = row, E = column, B = count, HL -> characters
-HWRAND  EQU     17              ; HL = next pseudo-random number
-HWRTC   EQU     18              ; B = 0 read, 1 set the 7 BCD bytes at HL
-HWCOUNT EQU     19
+HWINFO	EQU	0		; B = devices (CONDEV's bits, HWBRTC, HWBCLM),
+				; DE = ROM version,
+				; L = console columns, H = rows (0 for serial)
+HWDIGIT	EQU	1		; HL -> 6 segment bytes, leftmost first
+HWLCD	EQU	2		; B = row 0-3, HL -> 20 characters
+HWVIDEO	EQU	3		; B = 1 claim the PICO9918, 0 give it back
+HWTONE	EQU	4		; B = half period (16 T-states a unit),
+				; DE = half cycles
+HWJOY	EQU	5		; B = joystick bits, 1 for each one pressed
+HWKEYS	EQU	6		; HL -> 8 bytes: the matrix rows
+HWPUTAT	EQU	7		; D = row, E = column, B = count,
+				; HL -> characters
+HWRTC	EQU	8		; B = 0 read, 1 set the 7 BCD bytes at HL
+HWCOUNT	EQU	9
 
-HWEBAD  EQU     1               ; no such service, or an argument out of range
-HWENODV EQU     2               ; the device is not fitted
-HWETIME EQU     3               ; nothing arrived in time
-HWECARD EQU     4               ; the card did not read
-HWENCLM EQU     5               ; the PICO9918 is not claimed
+HWEBAD	EQU	1		; no such service, or an argument out of range
+HWENODV	EQU	2		; the device is not fitted
 
 RTCPORT EQU     $FC             ; DS1302: bit 4 enable, 6 clock, 7 data out,
                                 ; 5 data in, read on bit 0
 
 SEGPORT EQU     $02             ; 7-segment segment latch
-LEDROW  EQU     $05             ; 8 x 8 matrix: row select, then red, green, blue
-LEDRED  EQU     $06
-LEDGRN  EQU     $F8
-LEDBLU  EQU     $F9
 TXIDLE  EQU     $40             ; port 01h bit 6: serial line idle, speaker off
 
-HWSVC:  LD      (HWARGA),A
-        LD      A,C
-        CP      HWCOUNT
-        LD      A,HWEBAD
-	JR	NC,HWERR
-        PUSH    HL
-        PUSH    DE
-        LD      A,C
-        ADD     A,A
-        LD      E,A
-        LD      D,0
-        LD      HL,HWTAB
-        ADD     HL,DE
-        LD      E,(HL)
-        INC     HL
-        LD      D,(HL)
-        EX      DE,HL           ; HL = the service
-        POP     DE
-        EX      (SP),HL         ; the service is the return address
-        LD      A,(HWARGA)
-        RET
+; The dispatcher. C = the service, B, DE and HL its arguments, which reach it
+; whole. An out of range number returns HWEBAD. Destroys AF and what the
+; service does.
+HWSVC:	LD	A,C
+	CP	HWCOUNT
+	LD	A,HWEBAD
+	JR	NC,HWERR	; past the table
+	PUSH	HL
+	PUSH	DE
+	LD	A,C		; two bytes an entry
+	ADD	A,A
+	LD	E,A
+	LD	D,0
+	LD	HL,HWTAB
+	ADD	HL,DE
+	LD	E,(HL)
+	INC	HL
+	LD	D,(HL)
+	EX	DE,HL		; HL = the service
+	POP	DE
+	EX	(SP),HL		; the service is the return address,
+	RET			; and the caller's HL comes back
 HWERR:  OR      A
         SCF
         RET
 HWOK:   XOR     A
         RET
 
-; Bit 3 of B reports a DS1302 clock: it answers with seconds below 60h.
-HWSINFO:CALL    RTCHAS
-        LD      A,(CONDEV)
-        JR      NZ,HWSIN1
-        OR      $08
-HWSIN1: LD      B,A
+; The INFO service. Returns B = CONDEV's bits, with HWBRTC if a DS1302 answers
+; (seconds below 60h) and HWBCLM, which is VCLAIM's value, while the PICO9918
+; is claimed; DE = the ROM's version; HL = columns and rows.
+HWSINFO:CALL	RTCHAS
+	LD	A,(CONDEV)
+	JR	NZ,HWSIN1
+	OR	$08		; HWBRTC
+HWSIN1:	LD	HL,VCLAIM
+	OR	(HL)
+	LD	B,A
         LD      DE,ROMVER
         LD      HL,(VWID)
         JP      HWOK
@@ -99,35 +90,6 @@ HWSDD:  DJNZ    HWSDD
         INC     HL
         SRL     C
         JR      NZ,HWSDL
-        JP      HWOK
-
-HWSHEX: AND     $0F
-        LD      E,A
-        LD      D,0
-        LD      HL,HWSEGT
-        ADD     HL,DE
-        LD      B,(HL)
-        JP      HWOK
-
-; One pass over the eight rows, each lit for about 0.4 ms; then all off.
-HWSLED: LD      C,1
-HWSLL:  LD      A,(HL)
-        OUT     (LEDRED),A
-        INC     HL
-        LD      A,(HL)
-        OUT     (LEDGRN),A
-        INC     HL
-        LD      A,(HL)
-        OUT     (LEDBLU),A
-        INC     HL
-        LD      A,C
-        OUT     (LEDROW),A
-        LD      B,128
-HWSLD:  DJNZ    HWSLD
-        XOR     A
-        OUT     (LEDROW),A
-        SLA     C
-        JR      NC,HWSLL
         JP      HWOK
 
 HWSLCD: LD      A,B
@@ -164,7 +126,7 @@ HWSVID: LD      A,(CONDEV)
         LD      A,(CONMOD)
         CP      CMCRT
         CALL    Z,CURHIDE
-        LD      A,1
+        LD      A,CDCLM         ; HWBCLM, as INFO reports it
         LD      (VCLAIM),A
         JP      HWOK
 HWVREL: LD      A,(VCLAIM)
@@ -230,131 +192,6 @@ HWSKL:  IN      A,(C)
         JR      C,HWSKL
         JP      HWOK
 
-; ---- Serial -----------------------------------------------------------------------
-; Whatever the console uses, 4800 baud, eight bits, two stop bits.
-HWSSER: LD      C,A
-        LD      A,B
-        OR      A
-        LD      A,C
-        JR      NZ,HWSRX
-        CALL    TXBYTE
-        JP      HWOK
-HWSRX:  LD      B,105           ; about 1 ms of 38 T-state polls
-HWSRP:  IN      A,(KEYPORT)
-        IN      A,(STSPORT)
-        RLCA
-        JR      NC,HWSRG
-        DJNZ    HWSRP
-        LD      A,D
-        OR      E
-        LD      A,HWETIME
-        JP      Z,HWERR
-        DEC     DE
-        JR      HWSRX
-HWSRG:  CALL    RXBITS
-        LD      B,A
-        JP      HWOK
-
-; ---- Card -----------------------------------------------------------------------------
-; Reads leave the BIOS's own buffer alone; no raw writes are offered.
-HWSBLK: PUSH    DE
-        LD      DE,SDLBA
-        LD      BC,4
-        LDIR
-        CALL    CDI
-        POP     HL
-        PUSH    HL
-        CALL    CBLOCK          ; a cached block from its line
-        POP     HL
-        CALL    NZ,SDREAD
-        CALL    CEI
-        LD      A,HWECARD
-        JP      NZ,HWERR
-        JP      HWOK
-
-; ---- Delay ----------------------------------------------------------------------------
-HWSDLY: LD      A,D
-        OR      E
-        JP      Z,HWOK
-        LD      B,0             ; 3,323 + 658 + 40 T-states: 1 ms at 4 MHz
-HWSDA:  DJNZ    HWSDA
-        LD      B,51
-HWSDB:  DJNZ    HWSDB
-        DEC     DE
-        JR      HWSDLY
-
-; ---- Claimed PICO9918 -------------------------------------------------------------
-HWCLMD: LD      C,A             ; returns only when the PICO9918 is claimed; keeps A
-        LD      A,(VCLAIM)
-        OR      A
-        LD      A,C
-        RET     NZ
-        POP     HL              ; not claimed: fail the service
-        LD      A,HWENCLM
-        JP      HWERR
-
-HWSVREG:CALL    HWCLMD
-        OUT     (VDPCTL),A
-        LD      A,B
-        OR      $80
-        OUT     (VDPCTL),A
-        JP      HWOK
-
-HWSVFIL:CALL    HWCLMD
-        LD      C,A
-        CALL    TMSWA
-        LD      A,D
-        OR      E
-        JP      Z,HWOK
-HWSVFL: LD      A,C
-        OUT     (VDPDAT),A
-        DEC     DE
-        LD      A,D
-        OR      E
-        JR      NZ,HWSVFL
-        JP      HWOK
-
-; HL -> VRAM address, RAM address, count (three words).
-HWSVWR: CALL    HWCLMD
-        CALL    HWVBLK
-        CALL    TMSWA
-        EX      DE,HL
-HWSVWL: LD      A,B
-        OR      C
-        JP      Z,HWOK
-        LD      A,(HL)
-        OUT     (VDPDAT),A
-        INC     HL
-        DEC     BC
-        JR      HWSVWL
-HWSVRD: CALL    HWCLMD
-        CALL    HWVBLK
-        CALL    TMSRA
-        EX      DE,HL
-HWSVRL: LD      A,B
-        OR      C
-        JP      Z,HWOK
-        IN      A,(VDPDAT)
-        LD      (HL),A
-        INC     HL
-        DEC     BC
-        JR      HWSVRL
-; HL = VRAM address, DE = RAM address, BC = count from the block at HL.
-HWVBLK: LD      E,(HL)
-        INC     HL
-        LD      D,(HL)
-        INC     HL
-        PUSH    DE
-        LD      E,(HL)
-        INC     HL
-        LD      D,(HL)
-        INC     HL
-        LD      C,(HL)
-        INC     HL
-        LD      B,(HL)
-        POP     HL
-        RET
-
 ; ---- Text at a position -----------------------------------------------------------
 ; On a video console, B characters from HL at row D, column E, clipped to the
 ; screen, without moving the cursor. Status 2 on the serial terminal or while
@@ -397,30 +234,6 @@ HWSPL:  LD      A,(VWID)
         INC     HL
         INC     E
         DJNZ    HWSPL
-        JP      HWOK
-
-; ---- Random ---------------------------------------------------------------------------
-; xorshift16 (7, 9, 8): period 65,535 from any nonzero seed.
-HWSRND: LD      HL,(RNDST)
-        LD      A,H
-        OR      L
-        JR      NZ,HWSRN1
-        LD      HL,$ACE1
-HWSRN1: LD      A,H             ; x ^= x << 7
-        RRA
-        LD      A,L
-        RRA
-        XOR     H
-        LD      H,A
-        LD      A,L
-        RRA
-        LD      A,H
-        RRA
-        XOR     L
-        LD      L,A
-        XOR     H               ; x ^= x >> 9, x ^= x << 8
-        LD      H,A
-        LD      (RNDST),HL
         JP      HWOK
 
 ; ---- Clock ------------------------------------------------------------------------------

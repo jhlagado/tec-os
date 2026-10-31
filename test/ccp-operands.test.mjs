@@ -2,7 +2,8 @@
 // argument, parser and end checks, in order, since files persist. Console
 // output and the BDOS calls of each line are held against a fixture taken
 // from the prior ROM, so the fixture proves the behaviour is kept; SHELLC,
-// SHELLE and CON UC1 were retaken when modules left. A
+// SHELLE and CON UC1 were retaken when modules left, and CON UC1 again when
+// GLCD.DRV took its font, six records longer. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it. Emulator evidence.

@@ -7,10 +7,11 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
 import { assembleProgram } from "./assemble.mjs";
+import { FORMAT } from "./drv-format.mjs";
 import { assembleAt } from "./prl.mjs";
 
 export const DHLEN = 25;
-export const FORMAT = 2; // the loader's DMAGIC. Version 2 has version 1's layout.
+export { FORMAT }; // the loader's DMAGIC. Version 3 has version 1's layout.
 // $C000 and 0C000h. A decimal or binary form of an address isn't caught.
 const ROM_ADDRESS = /\$[C-Fc-f][0-9A-Fa-f]{3}\b|\b0[C-Fc-f][0-9A-Fa-f]{3}[Hh]\b/;
 
@@ -92,7 +93,11 @@ export async function makeDrv(source, { defs = {}, deps = [], raw = {}, work, re
   const copy = resolve(work, `${basename(source, ".asm")}-${tag}.asm`);
   let body = conditions(text, defs);
   for (const [k, v] of Object.entries(defs)) if (typeof v === "string") body = body.replaceAll(k, v);
-  body = body.replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, resolve(dirname(source), p))}"`).replace(/^(\s+ORG\s+\$0100\s*)$/m, `${prelude}$1`);
+  // ATOM takes %INCLUDE only in a file's header, so those above the ORG go to it
+  // with their paths moved, and one below it, the font placed last, is copied in.
+  const org = body.search(/^\s+ORG\s+\$0100\s*$/m);
+  const inside = (p) => readFileSync(resolve(dirname(source), p), "utf8");
+  body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, resolve(dirname(source), p))}"`) + prelude + body.slice(org).replace(/^%INCLUDE\s+"([^"]+)"\s*$/gm, (_, p) => inside(p));
   writeFileSync(copy, body);
   const at0 = await assembleAt(copy, 0, work);
   const { bytes: at1, symbols } = await assembleProgram(copy, { base: 0x100 });

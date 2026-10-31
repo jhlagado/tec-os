@@ -4,16 +4,22 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
+import { Machine } from "./lib/machine.mjs";
 import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
 
-test("the table at C003h: TNA, ABI 3.1, and the entries abi.inc names", () => {
+test("the table at C003h: TNA, ABI 4.0, the entries abi.inc names, and the old table's addresses each mapped", () => {
   const m = boot(standardCard());
   const S = (n) => m.sym(n);
   assert.equal(S("ABITAB"), 0xc003);
-  assert.deepEqual([0, 1, 2, 3, 4].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 3, 1], "TNA 3.1");
-  for (const n of ["ABIHW", "ABIXMOV", "ABIMOVE", "ABIXCCP", "ABIXCMD", "ABIVOL", "ABIGLCD", "ABIDRV"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
+  assert.deepEqual([0, 1, 2, 3, 4].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 4, 0], "TNA 4.0");
+  for (const n of ["ABIHW", "ABIVOL", "ABIGLCD", "ABIDRV", "ABIXCCP", "ABIXCMD"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
+  // ABI 3.1's addresses: the first five hold still, the rest moved or left.
+  const mapped = { C003: "ABITAB", C006: "ABIMAJ", C007: "ABIMIN", C008: "ABIVID", C00A: "ABIHW", C00D: "ABIMAIN", C00F: "ABIVOL", C012: "ABIGLCD", C015: "ABIDRV", C018: "ABIXCCP", C01B: "ABIXCMD" };
+  for (const [at, n] of Object.entries(mapped)) assert.equal(S(n), parseInt(at, 16), n);
+  assert.equal(S("ABIEND"), 0xc01e);
+  for (const n of ["ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "FONT", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);
   noViolations(m);
 });
 
@@ -24,10 +30,10 @@ test("warm boot restores the PICO9918 text mode and font after a program changes
   m.command("VIDMODE");
   const vdp = m.tec1g.state.display.tms9918.stateSnapshot();
   assert.deepEqual([...vdp.registers.slice(0, 8)], [0x04, 0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0xf4]);
-  const font = m.sym("FONT") + (0x41 - 0x20) * 8;
+  const font = Machine.font.subarray((0x41 - 0x20) * 8, (0x41 - 0x20) * 8 + 8);
   const glyph = (base) => [...vdp.vram.slice(base + 0x41 * 8, base + 0x41 * 8 + 8)];
-  assert.deepEqual(glyph(0), Array.from({ length: 8 }, (_, i) => m.read(font + i)), "pattern for A");
-  assert.deepEqual(glyph(0x400), Array.from({ length: 8 }, (_, i) => ~m.read(font + i) & 0xff), "reverse A");
+  assert.deepEqual(glyph(0), [...font], "pattern for A");
+  assert.deepEqual(glyph(0x400), [...font].map((v) => ~v & 0xff), "reverse A");
   assert.ok(m.screen().some((line) => line.startsWith("A>")));
   noViolations(m);
 });
@@ -64,11 +70,11 @@ test("punch and reader are the serial port, eight bits wide", async () => {
   noViolations(m);
 });
 
-test("the hardware services drive the LCD, clock, digits, LEDs and a claimed PICO9918 (DEMO.COM)", async () => {
+test("DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PICO9918", async () => {
   const image = standardCard();
   volume(image, "A").write("DEMO.COM", (await program("demo")).bytes);
   const m = boot(image, { tms: true, matrix: true });
-  assert.equal(m.read(m.sym("ABIMAJ")), 3, "ABI 3, with the hardware services");
+  assert.equal(m.read(m.sym("ABIMAJ")), 4, "ABI 4");
   m.mark = m.output.length;
   m.typeMatrix("demo\r");
   const t = m.cycles + 8_000_000;

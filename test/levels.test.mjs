@@ -119,7 +119,7 @@ test("EXIT at level 0 and UNLOAD with no resident are refused; UNLOAD removes re
 
 test("the level records and the history have fixed pages, and a record keeps no image", async () => {
   const m = await machine({ ram96: true });
-  assert.ok(m.read(m.sym("ABIMAJ")) === 3, "ABI 3");
+  assert.ok(m.read(m.sym("ABIMAJ")) === 4, "ABI 4");
   assert.equal(m.read(m.sym("XMARK")), 0x80, "no range for MOVE in EXPAND 1");
   assert.equal(m.sym("HRING"), m.sym("LVBASE") - 0x100, "the ring just below the records");
   assert.equal(m.sym("LVBASE"), 0xbe00);

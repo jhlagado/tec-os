@@ -50,9 +50,7 @@ VFNV:   DS      2               ; flip, begin and end a row move: A = 0, 1, 2
 VSTOP:  DS      1               ; scroll region, first and last row
 VSBOT:  DS      1
 CONACT: DS      1               ; IOBYTE CON: field last acted on
-VCLAIM: DS      1               ; 1 while a program owns the PICO9918
-HWARGA: DS      1               ; hardware services: A on entry
-RNDST:  DS      2               ; RANDOM's state
+VCLAIM: DS      1               ; CDCLM while a program owns the PICO9918
 CONMOD: DS      1               ; console mode in effect (CMTTY..CMUC1)
 
 ; ---- BIOS stack used by warm boot and the diagnostic console ----------------
@@ -218,7 +216,7 @@ HHEAD:  DS      1               ; the offset the next line goes in at
 XMDST:  DS      1
 XMSRC:  DS      1
 MVREST: DS      2               ; MOVE: the bytes left for the byte loop
-XMARK:  DS      1               ; EXPAND 1's low mark (ABIXMRK points here)
+XMARK:  DS      1               ; EXPAND 1's low mark
 PZTOP:  DS      2               ; the current top, which warm boot puts at 0006h
 PRGCODE:DS      2               ; BDOS function 108's program return code
 LOADTOP:DS      2               ; successful LOADCOM exclusive record end

@@ -3,9 +3,8 @@
 ; checks that the controller answers and hands the ROM its video table through
 ; ABIGLCD; the CCP then takes the console, unless a PICO9918 has it, and the
 ; ROM's terminal calls its six routines directly, on the caller's stack. It
-; keeps its screen text and counters here, reads the font in ROM through
-; ABIFONT, and moves rows to and from the ROM's LINEBUF, whose address ABIGLCD
-; returns. Its REMOVE, at UNLOAD, gives the console back to serial.
+; keeps its screen text, its counters and its own font here, and moves rows to
+; and from the ROM's LINEBUF, whose address ABIGLCD returns. Its REMOVE, at UNLOAD, gives the console back to serial.
 %INCLUDE "../src/abi.inc"
 
 GLCOLS  EQU     21
@@ -14,7 +13,7 @@ GLHOOK  EQU     ABIGLCD         ; the video table: A = the mode, HL = eight word
 IOBYTE  EQU     $0003
 
         ORG     $0100
-HDR:    DB      'D',2,0,1       ; removable
+HDR:    DB      'D',3,0,1       ; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      2,0,6           ; over the base: BDOS, BIOS, CCP
         DW      0               ; INIT: the writer's
@@ -207,8 +206,13 @@ GLCGET: CALL    GLCADR
         LD      A,(HL)
         RET
 
-; Clear row B from column C to the end of the line.
-GLCCLR: CALL    GLCADR
+; Clear row B from column C to the end of the line. At a pending wrap C is past
+; the row: the count would be 256 and the fill would run on through the text and
+; the font.
+GLCCLR:	LD	A,C
+	CP	GLCOLS
+	RET	NC		; no cells left to erase
+        CALL    GLCADR
         LD      A,GLCOLS
         SUB     C
 GLCCL:  LD      (HL),' '
@@ -344,10 +348,10 @@ GLGL1:  LD      L,A
         AND     7
         ADD     A,L
         LD      L,A
-        LD      A,(ABIFONT)     ; the ROM's font, through the table
-        ADD     A,L
+        LD      A,LOW(FONT)     ; the font's start, added by hand so that C
+        ADD     A,L             ; and DE stay
         LD      L,A
-        LD      A,(ABIFONT+1)
+        LD      A,HIGH(FONT)
         ADC     A,H
         LD      H,A
         LD      A,(HL)
@@ -368,4 +372,7 @@ GLROWP: DS      2
 GLOFF:  DS      1
 GLWN:   DS      1
 GLOUT:  DS      1
+
+; The console font, last in the image.
+%INCLUDE "font.asm"
 IMGEND:

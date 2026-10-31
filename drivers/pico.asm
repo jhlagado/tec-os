@@ -4,12 +4,16 @@
 ; cells, one file a width. Its INIT refuses if the ROM's probe found no VDP, and
 ; hands the ROM its table through ABIGLCD; the load then makes it the console, and
 ; the ROM's terminal calls its routines directly, on the caller's stack. REMOVE
-; refuses while it is the console, since CON CRT can't load it back. Its service,
-; "PICO", is how another driver sees it.
+; refuses while it is the console, since CON CRT can't load it back, and while
+; the PICO9918 is claimed, since the entries below may be in use. Its service,
+; "PICO", is how another driver sees it. Version 2 of the record's table goes on
+; after the console's words with the graphics entries, abi.inc's PICOREG to
+; PICORD. A program finds them with ABIDRV, holds the claim while it uses them,
+; and looks them up again rather than keep them across its own exit.
 ;
 ; VRAM: patterns at 0000h, names at 0800h (1000h for 80 columns), Graphics I
 ; colours at 2000h and sprite attributes at 1B00h. Patterns 00h-7Fh are the
-; console font and 80h-FFh their reverse images. A second name table one page up
+; console font, which is this driver's own, and 80h-FFh their reverse images. A second name table one page up
 ; lets row moves be built out of sight and shown with one register write. No VRAM
 ; access timing is enforced.
 %INCLUDE "../src/abi.inc"
@@ -20,27 +24,28 @@ COLOUR  EQU     $2000
 SPRITE  EQU     $1B00
 
         ORG     $0100
-HDR:    DB      'D',2,0,1       ; removable
+HDR:    DB      'D',3,0,1       ; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      0,0,0           ; over the base: BDOS, BIOS, CCP
         DW      0               ; INIT: the writer's
         DB      "PICO    "
 
 ; In the ROM's order: VPUT, VGET, VCLREOL, VREST, VRDROW, VWRROW, the row moves,
-; columns and rows.
+; columns and rows. Then the graphics entries, at PICOREG to PICORD.
 VTAB:   DW      TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
         DB      COLS,24
+	DW	GFXREG,GFXFIL,GFXWR,GFXRD
 REC:    DW      0
-        DB      "PICO    ",1
+        DB      "PICO    ",2
         DW      VTAB
 LBUF:   DW      0               ; LINEBUF, from ABIGLCD
 TPDRAW: DB      0               ; the page drawn and the page shown: offset
 TPSHOW: DB      0               ; high byte, 0 or TPG
 TMVCOPY:DB      0               ; 1 while a row move builds the hidden page
 
-INIT:   LD      C,0             ; INFO: B = what answered at cold boot
+INIT:   LD      C,HWINFO        ; B = what answered at cold boot
         CALL    ABIHW
-        BIT     1,B
+        BIT     1,B             ; HWBPICO
         SCF
         RET     Z
         LD      A,1             ; CRT:
@@ -52,14 +57,23 @@ INIT:   LD      C,0             ; INFO: B = what answered at cold boot
         OR      A
         RET
 
-REMOVE: LD      HL,(ABIVID)
-        LD      A,(HL)
-        CP      COLS
-        SCF
-        RET     Z
-        LD      A,1
-        LD      HL,0
-        JP      ABIGLCD
+; UNLOAD's check, and the undo of a refused record. Refuses, with carry, while
+; the PICO9918 is claimed, or while this driver is the console. Otherwise takes
+; its table back from the ROM. Destroys AF, BC, DE and HL.
+REMOVE:	LD	C,HWINFO
+	CALL	ABIHW
+	LD	A,B
+	AND	HWBCLM		; a claim: a program may be using the entries
+	SCF
+	RET	NZ
+	LD	HL,(ABIVID)
+	LD	A,(HL)
+	CP	COLS		; the console at this width is this driver
+	SCF
+	RET	Z
+	LD	A,1		; CRT: no table
+	LD	HL,0
+	JP	ABIGLCD
 
 ; The ROM's three: A = 0 show the page drawn, 1 begin a move of rows B to C,
 ; 2 end one.
@@ -120,7 +134,7 @@ TMSCH:  LD      L,A             ; HL = FONT + 8 * (code - 20h)
         ADD     HL,HL
         ADD     HL,HL
         ADD     HL,HL
-        LD      BC,(ABIFONT)
+        LD      BC,FONT
         ADD     HL,BC
 TMSGLY: LD      B,8
 TMSROW: LD      A,(HL)
@@ -145,6 +159,52 @@ TMSCOL: LD      A,$F1
         OUT     (VDPDAT),A
 %ENDIF
         RET
+
+; The graphics entries, reached through the record's table. Each assumes that
+; the caller holds the claim, as a program writing the ports does, and destroys
+; AF, BC, DE and HL. A count of zero moves nothing.
+
+; Set register B to A.
+GFXREG:	OUT	(VDPCTL),A	; the value goes first
+	LD	A,B
+	OR	$80		; then the register, with its write flag
+	OUT	(VDPCTL),A
+	RET
+
+; Fill DE bytes of VRAM from address HL with A.
+GFXFIL:	LD	C,A		; the value, across the addressing
+	CALL	TMSWA
+GFXFL:	LD	A,D
+	OR	E
+	RET	Z		; the count has run out
+	LD	A,C
+	OUT	(VDPDAT),A
+	DEC	DE
+	JR	GFXFL
+
+; Copy BC bytes from DE to VRAM address HL.
+GFXWR:	CALL	TMSWA
+	EX	DE,HL		; HL = the source
+GFXWL:	LD	A,B
+	OR	C
+	RET	Z		; the count has run out
+	LD	A,(HL)
+	OUT	(VDPDAT),A
+	INC	HL
+	DEC	BC
+	JR	GFXWL
+
+; Copy BC bytes from VRAM address HL to DE.
+GFXRD:	CALL	TMSRA
+	EX	DE,HL		; HL = the destination
+GFXRL:	LD	A,B
+	OR	C
+	RET	Z		; the count has run out
+	IN	A,(VDPDAT)
+	LD	(HL),A
+	INC	HL
+	DEC	BC
+	JR	GFXRL
 
 ; Set the VRAM write address to HL.
 TMSWA:  LD      A,L
@@ -300,4 +360,7 @@ TMSREGS:DB      $04,$50,NAMES/$400+3,$00,$00,$00,$00,$F4
 %IF COLS == 40
 TMSREGS:DB      $00,$D0,NAMES/$400,$00,$00,$00,$00,$F4
 %ENDIF
+
+; The console font, last in the image.
+%INCLUDE "font.asm"
 IMGEND:

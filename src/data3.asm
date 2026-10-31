@@ -96,12 +96,8 @@ ERRRO:  DB      ": R/O",0
 ERRFILE: DB     ": File R/O",0
 
 ; ---- hwsvc.asm ---------------------------------------------------------------
-HWTAB:  DW      HWSINFO,HWSDIG,HWSHEX,HWSLED,HWSLCD,HWSVID,HWSTONE,HWSJOY
-        DW      HWSKEYS,HWSSER,HWSBLK,HWSDLY,HWSVREG,HWSVFIL,HWSVWR,HWSVRD
-        DW      HWSPUT,HWSRND,HWSRTC
-
-HWSEGT: DB      $EB,$28,$CD,$AD,$2E,$A7,$E7,$29 ; 0-7
-        DB      $EF,$AF,$6F,$E6,$C3,$EC,$C7,$47 ; 8-9, A-F
+HWTAB:	DW	HWSINFO,HWSDIG,HWSLCD,HWSVID,HWSTONE,HWSJOY
+	DW	HWSKEYS,HWSPUT,HWSRTC
 
 ; ---- glcd.asm ----------------------------------------------------------------
 GLCFCB: DB      1,"GLCD    DRV"

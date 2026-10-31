@@ -3,7 +3,7 @@
 ; chains to the entry it replaced; its REMOVE puts that entry back.
 
         ORG     $0100
-HDR:    DB      'D',2,0,1       ; removable
+HDR:    DB      'D',3,0,1       ; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      0,0,0
         DW      0               ; INIT: the writer's

@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
 import { checkInterfaces } from "./lib/drv.mjs";
+import { driverFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = resolve(ROOT, "src");
@@ -134,35 +135,7 @@ GEOESZ  EQU     6
     );
   }
   writeFileSync(resolve(GEN, "geom.asm"), lines.join("\n") + "\n");
-  writeFileSync(resolve(GEN, "font.asm"), fontSource());
   return s;
-}
-
-/** The console font from format/font5x7.txt as DB rows, 96 glyphs. */
-function fontSource() {
-  const text = readFileSync(resolve(ROOT, "format/font5x7.txt"), "utf8");
-  const glyphs = new Map();
-  let code;
-  let rows;
-  for (const line of text.split(/\r?\n/)) {
-    if (line.trim() === "" || (line.startsWith("#") && !/^[#.]{5}$/.test(line))) continue;
-    const head = /^= ([0-9A-F]{2})$/.exec(line);
-    if (head) {
-      code = parseInt(head[1], 16);
-      rows = [];
-      glyphs.set(code, rows);
-      continue;
-    }
-    if (!/^[#.]{5}$/.test(line)) throw new Error(`font: bad row ${JSON.stringify(line)}`);
-    rows.push(parseInt(line.replace(/#/g, "1").replace(/\./g, "0"), 2) << 3);
-  }
-  const out = ["; Generated from format/font5x7.txt. Do not edit.", "FONT:"];
-  for (let c = 0x20; c < 0x80; c += 1) {
-    const g = glyphs.get(c);
-    if (!g || g.length !== 8) throw new Error(`font: glyph ${c.toString(16)} missing or not 8 rows`);
-    out.push(`        DB      ${g.map((v) => "$" + v.toString(16).toUpperCase().padStart(2, "0")).join(",")}`);
-  }
-  return out.join("\n") + "\n";
 }
 
 let currentDefinitions = {};
@@ -175,6 +148,23 @@ function checkAbiInc(at) {
   for (const [name, value] of equs) check(at(name) === value, `abi.inc: ${name} is ${hex(value)}, the ROM has ${hex(at(name))}`);
   const labels = [...readFileSync(resolve(SRC, "abi.asm"), "utf8").matchAll(/^(\w+):/gm)].map((m) => m[1].toUpperCase());
   for (const l of labels) check(equs.some(([n]) => n === l), `abi.inc has no ${l}`);
+}
+
+/** The services' numbers and status codes in abi.inc against hwsvc.asm, which
+ *  can't include it: the same names with the same values, either way round. */
+function checkServices() {
+  const numbers = (file) => new Map([...readFileSync(resolve(SRC, file), "utf8").matchAll(/^(HW[A-Z]+)\s+EQU\s+(\d+)\b/gm)].map((m) => [m[1], Number(m[2])]));
+  const inc = numbers("abi.inc");
+  const rom = numbers("hwsvc.asm");
+  check(rom.size > 0, "hwsvc.asm has no service numbers");
+  for (const [n, v] of rom) check(inc.get(n) === v, `abi.inc: ${n} is ${inc.get(n)}, hwsvc.asm has ${v}`);
+  for (const n of inc.keys()) check(rom.has(n), `hwsvc.asm has no ${n}`);
+}
+
+/** drivers/font.asm is committed, so that a driver builds with nothing
+ *  generated first, and it stays the text the font file gives. */
+function checkDriverFont() {
+  check(readFileSync(resolve(ROOT, "drivers/font.asm"), "utf8") === driverFontSource(ROOT), "drivers/font.asm is not format/font5x7.txt");
 }
 
 /** No .asm file of the product names an address of the old table, $FF00-$FF27. */
@@ -256,6 +246,8 @@ async function buildProfile(name) {
   check(at("ROMDATA") <= at("ROMCODE") && at("ROMCODE") <= at("CODEEND"), "the table, the data and the code, in that order");
   check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
   checkAbiInc(at);
+  checkServices();
+  checkDriverFont();
   checkNoOldAddress();
   checkDriverSources();
   check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);

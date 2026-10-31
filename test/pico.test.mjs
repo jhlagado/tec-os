@@ -5,9 +5,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { cardProblem } from "../host/card.mjs";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { prepareCard } from "../host/card.mjs";
+import { PICO_WIDTHS, makeDrv } from "../tools/lib/drv.mjs";
 import { displayFiles } from "../tools/lib/starter.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { screens } from "./lib/pico-workload.mjs";
@@ -49,13 +50,31 @@ const say = (m, line) => {
   m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 400_000_000, line);
   return m.text(m.mark);
 };
-const hw = (m, c, b, a = 0) => {
+/** Call ADDR from a stub, with these registers. */
+const callAt = (m, addr, regs) => {
   const STUB = 0x0060;
-  [0xcd, m.sym("ABIHW") & 0xff, m.sym("ABIHW") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
-  Object.assign(m.cpu.cpu, { a, b, c, sp: 0x0100, pc: STUB });
-  m.runUntil(() => m.pc === STUB + 3, 80_000_000, "ABIHW");
-  return m.cpu.cpu.a;
+  [0xcd, addr & 0xff, addr >> 8, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
+  const cpu = m.cpu.cpu;
+  const saved = Object.fromEntries(["a", "b", "c", "d", "e", "h", "l", "sp", "pc"].map((r) => [r, cpu[r]]));
+  const flags = { ...cpu.flags };
+  Object.assign(cpu, regs, { sp: 0x0100, pc: STUB });
+  m.runUntil(() => m.pc === STUB + 3, 80_000_000, "the call");
+  const after = { a: cpu.a, h: cpu.h, l: cpu.l, flags: { ...cpu.flags } };
+  Object.assign(cpu, saved, { flags }); // back in the input loop, which the stub interrupted
+  return after;
 };
+const VIDEO = 3;
+const [PICOREG, PICOFIL, PICOWR, PICORD] = [16, 18, 20, 22];
+const hw = (m, c, b, a = 0) => callAt(m, m.sym("ABIHW"), { a, b, c }).a;
+
+/** The "PICO" record's table at the least version, or null. */
+const picoTable = (m, least = 2) => {
+  [..."PICO    "].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
+  const c = callAt(m, m.sym("ABIDRV"), { b: least, c: 0, d: 0x20, e: 0 });
+  return c.flags.C ? null : (c.h << 8) | c.l;
+};
+/** A graphics entry, by its offset in the table. */
+const gfx = (m, off, regs) => callAt(m, word(m, picoTable(m) + off), regs);
 
 for (const [name, cols] of [["PICO.DRV", 80], ["PICO40.DRV", 40], ["PICO32.DRV", 32]]) {
   test(`${name} is the console at ${cols} columns, and scrolls`, () => {
@@ -73,7 +92,7 @@ test("a board with both displays keeps the PICO9918; GLCD.DRV's line gives way, 
   const one = word(m, 6);
   assert.equal(m.read(3) & 3, CRT);
   say(m, "CON UC1");
-  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), word(m, 6)], [UC1, UC1, one - 0x300]);
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), word(m, 6)], [UC1, UC1, one - 0x600]);
   say(m, "CON CRT");
   assert.equal(m.read(m.sym("CONMOD")), CRT);
   say(m, "CON UC1");
@@ -111,12 +130,12 @@ test("PICO32.DRV writes the colours and an empty sprite table", () => {
 
 test("TPA after boot: one display, and both", () => {
   const top = (m) => word(m, 6) - 0x100;
-  assert.equal(top(start(both(["PICO.DRV"]), { glcd: false })), 46342);
-  assert.equal(top(start({ "GLCD.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("GLCD.DRV") }, { tms: false })), 46086);
+  assert.equal(top(start(both(["PICO.DRV"]), { glcd: false })), 45318);
+  assert.equal(top(start({ "GLCD.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("GLCD.DRV") }, { tms: false })), 45318);
   const m = start(both());
-  assert.equal(top(m), 46342, "a board with both, at boot");
+  assert.equal(top(m), 45318, "a board with both, at boot");
   say(m, "CON UC1");
-  assert.equal(top(m), 45574);
+  assert.equal(top(m), 43782);
 });
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/pico-screens.json"), "utf8"));
@@ -138,7 +157,7 @@ test("the starter card boots the PICO9918 alone on a board with both, and the GL
   assert.deepEqual(files.map((f) => f.name), ["PICO.DRV", "PICO40.DRV", "PICO32.DRV", "GLCD.DRV", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 46342]);
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45318]);
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 
@@ -267,7 +286,7 @@ test("REMOVE refuses while PICO.DRV is the console, and UNLOAD changes nothing; 
   assert.equal(word(m, 6), top);
   say(m, "CON TTY");
   say(m, "UNLOAD");
-  assert.deepEqual([word(m, 6), word(m, m.sym("PIVEC"))], [top + 0x200, 0]);
+  assert.deepEqual([word(m, 6), word(m, m.sym("PIVEC"))], [top + 0x600, 0]);
   m.traps = 0;
   m.cpu.cpu.pc = 0; // a warm boot with no table
   m.mark = m.output.length;
@@ -305,12 +324,12 @@ test("PICO.DRV is refused with no PICO9918, and with no matrix keyboard", () => 
 
 test("a claimed VDP takes no row-move call: the driver isn't entered while a program owns it", () => {
   const m = start(both(["PICO.DRV"]));
-  hw(m, 5, 1);
+  hw(m, VIDEO, 1);
   const base = m.read(m.sym("DRVHEAD")) << 8;
   let entered = 0;
   const step = m.step.bind(m);
   m.step = () => {
-    if (m.pc >= base && m.pc < base + 0x200) entered += 1;
+    if (m.pc >= base && m.pc < base + 0x600) entered += 1;
     return step();
   };
   const STUB = 0x0060;
@@ -328,23 +347,22 @@ test("the take runs only for a driver with its table in its own page", async () 
 });
 
 const VREG1 = (m) => m.tec1g.state.display.tms9918.stateSnapshot().registers[1];
-const VREG = 12;
 
 test("a claim with PICO.DRV in, on CRT:: nothing drawn, and release restores it", () => {
   const m = start(both(["PICO.DRV"]));
-  assert.equal(hw(m, 5, 1), 0);
-  hw(m, VREG, 1, 0xc0);
+  assert.equal(hw(m, VIDEO, 1), 0);
+  gfx(m, PICOREG, { a: 0xc0, b: 1 });
   assert.equal(VREG1(m), 0xc0, "the program's mode");
-  assert.equal(hw(m, 5, 0), 0);
+  assert.equal(hw(m, VIDEO, 0), 0);
   assert.equal(VREG1(m), 0x50, "text mode back");
 });
 
 test("a claim with PICO.DRV in, on UC1:: release restores the VDP, and the GLCD stays the console", () => {
   const m = start(both(["PICO.DRV"]));
   say(m, "CON UC1");
-  hw(m, 5, 1);
-  hw(m, VREG, 1, 0xc0);
-  assert.equal(hw(m, 5, 0), 0);
+  hw(m, VIDEO, 1);
+  gfx(m, PICOREG, { a: 0xc0, b: 1 });
+  assert.equal(hw(m, VIDEO, 0), 0);
   assert.equal(VREG1(m), 0x50);
   assert.equal(m.read(m.sym("CONMOD")), UC1);
 });
@@ -364,8 +382,8 @@ test("a claim with no driver, and after UNLOAD: refused by nothing, and nothing 
       if (m.pc === bdos) wild += 1; // through word 0's sixth byte
       return step();
     };
-    assert.equal(hw(m, 5, 1), 0);
-    assert.equal(hw(m, 5, 0), 0);
+    assert.equal(hw(m, VIDEO, 1), 0);
+    assert.equal(hw(m, VIDEO, 0), 0);
     assert.equal(VREG1(m), before);
     assert.deepEqual([m.traps, wild], [0, 0]);
   }
@@ -374,9 +392,196 @@ test("a claim with no driver, and after UNLOAD: refused by nothing, and nothing 
 test("a program reading VRAM on the driver sees the names and patterns it saw", () => {
   const m = start(both(["PICO.DRV"]));
   const v = m.tec1g.state.display.tms9918.stateSnapshot().vram;
-  const font = m.sym("FONT") + (0x41 - 0x20) * 8;
-  assert.deepEqual([...v.slice(0x41 * 8, 0x41 * 8 + 8)], Array.from({ length: 8 }, (_, i) => m.read(font + i)));
+  assert.deepEqual([...v.slice(0x41 * 8, 0x41 * 8 + 8)], [...Machine.font.subarray(0x21 * 8, 0x22 * 8)]);
   assert.ok([...v.slice(0x1000, 0x1000 + 80 * 24)].includes(0x41), "the screen's A> in the name table");
+});
+
+/** What fn writes to the VDP's control port. */
+function ports(m, fn) {
+  const seen = [];
+  const io = m.cpu.hardware.ioWrite;
+  m.cpu.hardware.ioWrite = (port, value) => {
+    if ((port & 0xff) === 0xbf) seen.push(value & 0xff);
+    io(port, value);
+  };
+  try {
+    return [fn(), seen];
+  } finally {
+    m.cpu.hardware.ioWrite = io;
+  }
+}
+
+const WIDTHS = [["PICO.DRV", 80, 0x50], ["PICO40.DRV", 40, 0xd0], ["PICO32.DRV", 32, 0xc0]];
+const vram = (m) => m.tec1g.state.display.tms9918.stateSnapshot().vram;
+const cold = (m, off) => hw(m, VIDEO, off);
+const ramAt = (m, a, n) => Array.from({ length: n }, (_, i) => m.read(a + i));
+
+for (const [name, cols, r1] of WIDTHS) {
+  test(`${name}: each graphics entry against VRAM under a claim, then release and warm boot give the text back`, () => {
+    const m = start({ [name]: PICO_DRV[name], "STARTUP.CMD": startupFile(name) });
+    assert.notEqual(picoTable(m, 2), null, "the record's version 2");
+    assert.equal(picoTable(m, 3), null, "and no higher");
+    const page = m.read(m.sym("DRVHEAD"));
+    assert.equal(picoTable(m) >> 8, page, "the table is in the driver's page");
+    assert.equal(cold(m, 1), 0);
+    gfx(m, PICOREG, { a: 0x1c, b: 7 });
+    assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[7], 0x1c);
+    gfx(m, PICOFIL, { a: 0x5a, d: 1, e: 0x2c, h: 0x30, l: 0 });
+    const filled = vram(m);
+    assert.ok(filled.slice(0x3000, 0x3000 + 300).every((b) => b === 0x5a));
+    assert.equal(filled[0x3000 + 300], 0, "the fill stops at its count");
+    gfx(m, PICOFIL, { a: 0xa5, d: 0, e: 0, h: 0x30, l: 0 });
+    assert.equal(vram(m)[0x3000], 0x5a, "a count of zero fills nothing");
+    const data = Array.from({ length: 300 }, (_, i) => (i * 3) & 0xff);
+    data.forEach((v, i) => m.write(0x2100 + i, v));
+    const [, wrote] = ports(m, () => gfx(m, PICOWR, { b: 1, c: 0x2c, d: 0x21, e: 0, h: 0x32, l: 0 }));
+    assert.deepEqual(wrote.slice(0, 2), [0x00, 0x72], "the VDP is told a write");
+    assert.deepEqual([...vram(m).slice(0x3200, 0x3200 + 300)], data);
+    const [, read] = ports(m, () => gfx(m, PICORD, { b: 1, c: 0x2c, d: 0x28, e: 0, h: 0x32, l: 0 }));
+    assert.deepEqual(read.slice(0, 2), [0x00, 0x32], "the VDP is told a read");
+    assert.deepEqual(ramAt(m, 0x2800, 300), data, "VRAM read back");
+    m.write(0x2900, 0x77);
+    gfx(m, PICORD, { b: 0, c: 0, d: 0x29, e: 0, h: 0x32, l: 0 });
+    assert.equal(m.read(0x2900), 0x77, "a count of zero reads nothing");
+    assert.equal(cold(m, 0), 0);
+    assert.equal(VREG1(m), r1, "release: text mode");
+    assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[7], cols === 32 ? 0xf1 : 0xf4);
+    cold(m, 1);
+    gfx(m, PICOREG, { a: 0xe2, b: 1 });
+    m.cpu.cpu.pc = 0;
+    m.mark = m.output.length;
+    m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+    assert.equal(m.read(m.sym("VCLAIM")), 0, "program exit releases");
+    assert.equal(VREG1(m), r1, "warm boot: text mode");
+    assert.deepEqual(m.violations, []);
+  });
+
+  test(`${name}: the whole pattern table after the take, CONSWV, a release and a warm boot`, () => {
+    const m = start({ [name]: PICO_DRV[name], "STARTUP.CMD": startupFile(name) });
+    const want = Array.from({ length: 256 }, (_, code) => {
+      const c = code & 0x7f;
+      const glyph = [...Machine.font.subarray(c < 0x20 ? 0 : (c - 0x20) * 8, c < 0x20 ? 8 : (c - 0x20) * 8 + 8)];
+      return code & 0x80 ? glyph.map((v) => ~v & 0xff) : glyph;
+    }).flat();
+    const patterns = (label) => assert.deepEqual([...vram(m).slice(0, 0x800)], want, label);
+    const wreck = () => vram(m).fill(0, 0, 0x800);
+    patterns("after the take");
+    wreck();
+    say(m, "CON TTY");
+    say(m, "CON CRT");
+    assert.equal(m.read(m.sym("CONMOD")), CRT);
+    patterns("after CONSWV");
+    cold(m, 1);
+    wreck();
+    cold(m, 0);
+    patterns("after a release");
+    wreck();
+    m.cpu.cpu.pc = 0;
+    m.mark = m.output.length;
+    m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+    patterns("after a warm boot");
+  });
+}
+
+test("a claim held at UNLOAD after CON TTY: refused, the service still found, and allowed after the release", () => {
+  const m = start(both(["PICO.DRV"]));
+  say(m, "CON TTY");
+  const top = word(m, 6);
+  const table = picoTable(m);
+  assert.notEqual(table, null);
+  assert.equal(cold(m, 1), 0);
+  assert.match(say(m, "UNLOAD"), /UNLOAD\?/);
+  assert.equal(word(m, 6), top, "nothing moved");
+  assert.equal(picoTable(m), table, "the service is found while claimed");
+  gfx(m, PICOREG, { a: 0xf4, b: 7 });
+  assert.equal(cold(m, 0), 0);
+  assert.equal(picoTable(m), table, "and after the release");
+  assert.doesNotMatch(say(m, "UNLOAD"), /UNLOAD\?/);
+  assert.deepEqual([word(m, 6), word(m, m.sym("PIVEC")), picoTable(m)], [top + 0x600, 0, null]);
+});
+
+test("a refused record under a claim: REMOVE refuses, so the pages stay with the table hooked, and a warm boot is safe", async () => {
+  const text = readFileSync(resolve(ROOT, "drivers/pico.asm"), "utf8").replace('"../src/abi.inc"', '"../../src/abi.inc"').replace('"font.asm"', '"../../drivers/font.asm"');
+  const a = "        LD      HL,REC\n";
+  assert.ok(text.includes(a));
+  const dir = resolve(ROOT, "build/variants");
+  mkdirSync(dir, { recursive: true });
+  const src = resolve(dir, "picobad.asm");
+  writeFileSync(src, text.replace(a, `        LD      B,1\n        LD      C,HWVIDEO\n        CALL    ABIHW\n        LD      HL,ABITAB\n`));
+  const { file } = await makeDrv(src, { defs: PICO_WIDTHS["PICO.DRV"], work: resolve(ROOT, "build/drv") });
+  const m = start({ "PICOB.DRV": file, "STARTUP.CMD": startupFile("PICOB.DRV") });
+  assert.match(m.text(0), /PICOB\.DRV\?/);
+  const page = m.read(m.sym("DRVHEAD"));
+  assert.ok(page >= 0x80, "the pages are kept");
+  assert.equal(word(m, 6), (page << 8) + 6);
+  assert.equal(m.read(m.sym("PIVEC") + 1), page, "the table stays hooked");
+  assert.equal(picoTable(m, 1), null, "no record");
+  assert.equal(m.read(m.sym("CONMOD")), 0, "no take");
+  m.cpu.cpu.pc = 0;
+  m.mark = m.output.length;
+  m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+  assert.equal(m.read(m.sym("VCLAIM")), 0, "warm boot gave the claim back, through the kept pages");
+  assert.deepEqual(m.violations, []);
+});
+
+test("INIT failing leaves no record and the old ceiling", () => {
+  for (const [name, opts, files] of [["PICO.DRV", { matrix: false }, PICO_DRV], ["PICO.DRV", { tms: false }, PICO_DRV], ["GLCD.DRV", { tms: false, glcd: false }, { "GLCD.DRV": GLCD_DRV }]]) {
+    const plain = word(start({}, opts), 6);
+    const m = start({ ...files, "STARTUP.CMD": startupFile(name) }, opts);
+    assert.deepEqual([word(m, 6), m.read(m.sym("DRVHEAD")), word(m, m.sym("REGHEAD")), word(m, m.sym("PIVEC")), word(m, m.sym("GLVEC"))], [plain, 0, 0, 0, 0], `${name} ${JSON.stringify(opts)}`);
+  }
+});
+
+test("KE-115: a take leaves a program's row 3 alone, and clears PICO? only when it is up", () => {
+  const row = "A program's row 3...";
+  const write = (m) => {
+    [...row].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
+    assert.equal(callAt(m, m.sym("ABIHW"), { b: 3, c: 2, h: 0x20, l: 0 }).a, 0);
+    assert.equal(lcdRow(m, 3), row);
+  };
+  const g = start({ "GLCD.DRV": GLCD_DRV }, { tms: false });
+  write(g);
+  say(g, "CON UC1");
+  assert.equal(g.read(m0(g)), UC1);
+  assert.equal(lcdRow(g, 3), row, "the first display's take");
+  const p = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"], "GLCD.DRV": GLCD_DRV });
+  assert.equal(lcdRow(p, 3), "PICO?");
+  say(p, "PICOX.DRV");
+  assert.equal(lcdRow(p, 3), "", "the word goes with the take");
+  write(p);
+  say(p, "CON UC1");
+  assert.equal(p.read(m0(p)), UC1);
+  assert.equal(lcdRow(p, 3), row, "a later take: the word has gone, so the row is the program's");
+  const again = start({ "GLCD.DRV": GLCD_DRV });
+  assert.equal(lcdRow(again, 3), "PICO?");
+  say(again, "GLCD.DRV");
+  assert.equal(lcdRow(again, 3), "", "the first take clears the word");
+  write(again);
+  say(again, "CON TTY");
+  say(again, "UNLOAD");
+  say(again, "GLCD.DRV");
+  assert.equal(again.read(m0(again)), UC1);
+  assert.equal(lcdRow(again, 3), row, "the second take finds the flag down");
+});
+
+test("the probe needs both patterns: a VDP that answers one way is not present", () => {
+  const m = new Machine({ ...romFor(), sdImage: standardCard(), clock: TEST_CLOCK, tms: true, matrix: true });
+  const read = m.cpu.hardware.ioRead;
+  m.cpu.hardware.ioRead = (port) => ((port & 0xff) === 0xbe ? 0x5a : read(port));
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  assert.equal(m.read(m.sym("CONDEV")) & 2, 0);
+});
+
+test("the web host: a stored card with old drivers says so and offers a new starter", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  const old = Uint8Array.from(PICO_DRV["PICO.DRV"]);
+  old[1] = 2;
+  a.write("PICO.DRV", old);
+  assert.match(cardProblem(image, "tms", "80"), /PICO\.DRV is format 2.*A new starter card/);
+  assert.deepEqual(prepareCard(image, "tms", "80").changed, false);
+  a.write("PICO.DRV", PICO_DRV["PICO.DRV"]);
+  assert.equal(cardProblem(image, "tms", "80"), null);
 });
 
 test("the web host: power-on applies the width, says what a card lacks, and a card with no drive A doesn't stop it", () => {
