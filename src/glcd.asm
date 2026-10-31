@@ -60,11 +60,11 @@ GLCLD:	LD	A,(CONDEV)
 	CALL	DRVGO
 	RET	NC
 	LD	HL,GLCMSG	; the LCD says so, carry set
-	JP	LCD3
+	JP	LCDWRD
 
 ; Read CMDFCB's driver and install it. If its page holds a video table it takes
-; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in, and PICO? goes
-; from the LCD. Carry set if it wouldn't read or install.
+; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in, and the ROM's
+; word goes from the LCD. Carry set if it wouldn't read or install.
 DRVGO:	CALL	LOADCOM
 	RET	C
 	CALL	DRVLOAD
@@ -81,21 +81,28 @@ DRVGO:	CALL	LOADCOM
 	SET	2,(HL)		; CDGLC
 	LD	A,(PIVEC+1)
 	OR	A
-	RET	NZ		; PICO.DRV keeps the console
+	JR	NZ,WRDCLR	; PICO.DRV keeps the console, and GLCD? is false
 	LD	B,CMUC1
-CONSET:	LD	HL,CONDEV	; a display has come: PICO? goes, if it is up,
-	BIT	7,(HL)		; and otherwise a program's row 3 stays (CDWRD)
-	JR	Z,CONST1
-	RES	7,(HL)
-	PUSH	BC		; the console's mode, across the LCD
-	LD	HL,PICCLR	; blanks over the word
-	CALL	LCD3
-	POP	BC
-CONST1:	LD	A,(IOBYTE)	; the mode goes in the CON: field
+CONSET:	CALL	WRDCLR		; a display has come: the word is false
+	LD	A,(IOBYTE)	; the mode goes in the CON: field
 	AND	$FC
 	OR	B
 	LD	(IOBYTE),A
 	LD	A,$FF		; CONACT no field: CONSEL acts
 	LD	(CONACT),A
 	JP	CONSEL
+
+; Clear the ROM's word from row 3 if it is still there, and otherwise leave the
+; row as a program left it. Keeps B, and carry clear if it came clear. Destroys
+; AF, HL.
+WRDCLR:	LD	HL,CONDEV
+	BIT	7,(HL)		; CDWRD
+	RET	Z		; the row is a program's, or empty
+	RES	7,(HL)
+	PUSH	BC		; the console's mode, across the LCD
+	LD	HL,PICCLR	; blanks over the word
+	CALL	LCD3
+	POP	BC
+	OR	A		; LCD3 leaves carry set
+	RET
 

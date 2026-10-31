@@ -147,7 +147,7 @@ FNBIOSR:
         RET
 
 ; Function 108, CP/M 3's program return code: DE = FFFFh gets it into HL;
-; any other DE sets it. One code for every level.
+; any other DE sets it. One code for every program.
 FNRETC:
         LD      HL,(PARAM)
         LD      A,H

@@ -538,36 +538,85 @@ test("INIT failing leaves no record and the old ceiling", () => {
   }
 });
 
-test("KE-115: a take leaves a program's row 3 alone, and clears PICO? only when it is up", () => {
-  const row = "A program's row 3...";
-  const write = (m) => {
-    [...row].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
-    assert.equal(callAt(m, m.sym("ABIHW"), { b: 3, c: 2, h: 0x20, l: 0 }).a, 0);
-    assert.equal(lcdRow(m, 3), row);
-  };
-  const g = start({ "GLCD.DRV": GLCD_DRV }, { tms: false });
-  write(g);
-  say(g, "CON UC1");
-  assert.equal(g.read(m0(g)), UC1);
-  assert.equal(lcdRow(g, 3), row, "the first display's take");
-  const p = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"], "GLCD.DRV": GLCD_DRV });
+const ROW = "A program's row 3...";
+const writeRow3 = (m) => {
+  [...ROW].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
+  assert.equal(callAt(m, m.sym("ABIHW"), { b: 3, c: ABI.HWLCD, h: 0x20, l: 0 }).a, 0);
+  assert.equal(lcdRow(m, 3), ROW);
+};
+
+test("row 3: a take leaves a program's row alone, with nothing up", () => {
+  const m = start({ "GLCD.DRV": GLCD_DRV }, { tms: false });
+  writeRow3(m);
+  say(m, "CON UC1");
+  assert.equal(m.read(m0(m)), UC1);
+  assert.equal(lcdRow(m, 3), ROW);
+});
+
+test("row 3: a program's write over PICO? survives the take that follows", () => {
+  const m = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"] });
+  assert.equal(lcdRow(m, 3), "PICO?");
+  writeRow3(m);
+  say(m, "PICOX.DRV");
+  assert.equal(m.read(m0(m)), CRT);
+  assert.equal(lcdRow(m, 3), ROW);
+});
+
+test("row 3: a program's write over GLCD? survives the take that follows", () => {
+  const m = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"] });
+  say(m, "CON UC1");
+  assert.equal(lcdRow(m, 3), "GLCD?");
+  writeRow3(m);
+  say(m, "PICOX.DRV");
+  assert.equal(lcdRow(m, 3), ROW);
+});
+
+test("row 3: each word is cleared by a take, and the flag doesn't stay for the next", () => {
+  const p = start({ "GLCD.DRV": GLCD_DRV });
   assert.equal(lcdRow(p, 3), "PICO?");
-  say(p, "PICOX.DRV");
-  assert.equal(lcdRow(p, 3), "", "the word goes with the take");
-  write(p);
-  say(p, "CON UC1");
+  say(p, "GLCD.DRV");
+  assert.equal(lcdRow(p, 3), "", "PICO?");
+  writeRow3(p);
+  say(p, "CON TTY");
+  say(p, "UNLOAD");
+  say(p, "GLCD.DRV");
   assert.equal(p.read(m0(p)), UC1);
-  assert.equal(lcdRow(p, 3), row, "a later take: the word has gone, so the row is the program's");
-  const again = start({ "GLCD.DRV": GLCD_DRV });
-  assert.equal(lcdRow(again, 3), "PICO?");
-  say(again, "GLCD.DRV");
-  assert.equal(lcdRow(again, 3), "", "the first take clears the word");
-  write(again);
-  say(again, "CON TTY");
-  say(again, "UNLOAD");
-  say(again, "GLCD.DRV");
-  assert.equal(again.read(m0(again)), UC1);
-  assert.equal(lcdRow(again, 3), row, "the second take finds the flag down");
+  assert.equal(lcdRow(p, 3), ROW, "the second take finds the flag down");
+  const g = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"] });
+  say(g, "CON UC1");
+  assert.equal(lcdRow(g, 3), "GLCD?");
+  say(g, "PICOX.DRV");
+  assert.equal(g.read(m0(g)), CRT);
+  assert.equal(lcdRow(g, 3), "", "GLCD?");
+});
+
+test("row 3: GLCD? is cleared by GLCD.DRV loading under PICO.DRV, which keeps the console", () => {
+  const m = start({ "PICO.DRV": PICO_DRV["PICO.DRV"], "GLCDX.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("PICO.DRV") });
+  say(m, "CON UC1");
+  assert.equal(lcdRow(m, 3), "GLCD?");
+  const top = word(m, 6);
+  assert.doesNotMatch(say(m, "GLCDX.DRV"), /GLCDX\.DRV\?/);
+  assert.equal(word(m, 6), top - 0x600, "it loaded");
+  assert.notEqual(m.read(m0(m)), UC1, "and took no console");
+  assert.equal(lcdRow(m, 3), "");
+});
+
+test("row 3: PICO? still shows on the black screen after a failed CON UC1", () => {
+  const m = start({ "STARTUP.CMD": startupFile("CON UC1") });
+  assert.equal(m.read(m.sym("CONDEV")) & ABI.HWBWRD, ABI.HWBWRD);
+  assert.equal(lcdRow(m, 3), "PICO?");
+});
+
+test("INFO's HWBWRD follows the word: up, overwritten and cleared", () => {
+  const m = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"] });
+  const info = () => callAt(m, m.sym("ABIHW"), { c: HWINFO }).b & HWBWRD;
+  assert.equal(info(), HWBWRD);
+  writeRow3(m);
+  assert.equal(info(), 0);
+  say(m, "CON UC1");
+  assert.equal(info(), HWBWRD);
+  say(m, "PICOX.DRV");
+  assert.equal(info(), 0);
 });
 
 test("the probe needs both patterns: a VDP that answers one way is not present", () => {

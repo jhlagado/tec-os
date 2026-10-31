@@ -14,23 +14,23 @@ ABIVOL	EQU	$C00F		; CALL: mount, unmount and describe volumes
 ABIGLCD	EQU	$C012		; CALL: a video driver's table, A = 1 CRT
 				; or 3 UC1, HL = eight words, or 0
 ABIDRV	EQU	$C015		; CALL: the registry, C = 0 find, 1 list
-ABIXCCP	EQU	$C018		; CALL: a nested CCP, HL = 0100h
-ABIXCMD	EQU	$C01B		; CALL: one command line at DE, HL = 0100h
-ABIEND	EQU	$C01E		; the end of ABI 4.0's entries
+ABIEND	EQU	$C018		; the end of ABI 4.0's entries
 
-; ABIHW's services, in C. Any other number returns HWEBAD.
-HWINFO	EQU	0		; B = devices, DE = ROM version,
+; ABIHW's services, in C, from HWBASE, the first number no ABI 3 program used.
+; Any other number returns HWEBAD with the registers as they were.
+HWBASE	EQU	19		; the first service
+HWINFO	EQU	19		; B = devices, DE = ROM version,
 				; L = columns, H = rows
-HWDIGIT	EQU	1		; HL -> 6 segment bytes, leftmost first
-HWLCD	EQU	2		; B = row 0-3, HL -> 20 characters
-HWVIDEO	EQU	3		; B = 1 claim the PICO9918, 0 give it back
-HWTONE	EQU	4		; B = half period, DE = half cycles
-HWJOY	EQU	5		; B = joystick bits, 1 for each one pressed
-HWKEYS	EQU	6		; HL -> 8 bytes: the matrix rows
-HWPUTAT	EQU	7		; D = row, E = column, B = count,
+HWDIGIT	EQU	20		; HL -> 6 segment bytes, leftmost first
+HWLCD	EQU	21		; B = row 0-3, HL -> 20 characters
+HWVIDEO	EQU	22		; B = 1 claim the PICO9918, 0 give it back
+HWTONE	EQU	23		; B = half period, DE = half cycles
+HWJOY	EQU	24		; B = joystick bits, 1 for each one pressed
+HWKEYS	EQU	25		; HL -> 8 bytes: the matrix rows
+HWPUTAT	EQU	26		; D = row, E = column, B = count,
 				; HL -> characters
-HWRTC	EQU	8		; B = 0 read, 1 set the 7 BCD bytes at HL
-HWCOUNT	EQU	9
+HWRTC	EQU	27		; B = 0 read, 1 set the 7 BCD bytes at HL
+HWCOUNT	EQU	9		; how many follow HWBASE
 
 ; Status in A, with carry set.
 HWEBAD	EQU	1		; no such service, or an argument out of range
@@ -42,7 +42,7 @@ HWBPICO	EQU	$02		; a PICO9918 answered at cold boot
 HWBGLCD	EQU	$04		; GLCD.DRV is in
 HWBRTC	EQU	$08		; a DS1302 clock answers
 HWBCLM	EQU	$10		; the PICO9918 is claimed
-HWBWRD	EQU	$80		; PICO? is on the LCD
+HWBWRD	EQU	$80		; a word of the ROM's is on LCD row 3
 
 ; Version 2 of the "PICO" record's table: PICO.DRV's graphics entries, as
 ; offsets. Each assumes that the caller holds the claim, and destroys AF, BC,

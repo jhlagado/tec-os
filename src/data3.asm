@@ -21,8 +21,6 @@ UNMORE:
         DB      CR,"      ",CR,'$'
 DIRKEY:
         DB      "DIR",0
-TYPEKEY:
-        DB      "TYPE",0
 ERAKEY:
         DB      "ERA",0
 RENKEY:
@@ -35,10 +33,6 @@ CONKEY:
         DB      "CON",0
 COPYKEY:
         DB      "COPY",0
-CCPKEY:
-        DB      "CCP",0
-EXITKEY:
-        DB      "EXIT",0
 UNLKEY:
         DB      "UNLOAD",0
 DRVKEY:

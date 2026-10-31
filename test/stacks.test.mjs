@@ -2,8 +2,7 @@
 // suite, on the serial console, the PICO9918 and the GLCD with the matrix
 // keyboard, on the serial console with B: written behind, on the diagnostic
 // console without a card, and on the CCP's two deepest paths: CON UC1 loading
-// GLCD.DRV on a PICO9918 and matrix board and on a GLCD board, a shelled-out
-// level, and PICO? reaching the LCD at the first prompt. Every memory write
+// GLCD.DRV on a PICO9918 and matrix board and on a GLCD board, and PICO? reaching the LCD at the first prompt. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
 // whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
@@ -17,7 +16,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_DRV, PICO_DRV, ROOT, TEST_CLOCK, prl, program, romFor, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
+import { GLCD_DRV, PICO_DRV, ROOT, TEST_CLOCK, program, romFor, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
 
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
 const COMMANDS = [
@@ -122,13 +121,12 @@ async function consoleRun(opts, { wb = false } = {}) {
   return { ...depths(), conmod };
 }
 
-/** CON UC1 loading GLCD.DRV, then a resident shelling out and its level's EXIT. */
+/** A line such as CON UC1 loading GLCD.DRV, on a card with the display's files. */
 async function deepPaths(lines, opts = { tms: true, matrix: true }, { pico = true } = {}) {
   const { rom, symbols } = romFor();
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }]);
   const a = volume(image, "A");
   a.write("GLCD.DRV", GLCD_DRV);
-  a.write("SHELL.PRL", await prl("shell"));
   if (opts.tms && pico) {
     a.write("PICO.DRV", PICO_DRV["PICO.DRV"]);
     a.write("STARTUP.CMD", startupFile("PICO.DRV"));
@@ -165,7 +163,6 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     diagnostics: diagnosticRun(),
     conUc1: await deepPaths(["CON UC1\r"]),
     conUc1Glcd: await deepPaths(["CON UC1\r"], { matrix: true }),
-    residentLevel: await deepPaths(["SHELL\r", "DIR\r", "EXIT\r"]),
     picoNoDriver: await deepPaths(["DIR\r"], { tms: true, matrix: true }, { pico: false }),
     unloadPico: await deepPaths(["CON TTY\r", "UNLOAD\r"]),
   };
@@ -178,7 +175,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; SHELL.PRL, a program, shelling out, a DIR at that level, and EXIT; a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt; and PICO.DRV's UNLOAD after CON TTY, whose REMOVE calls INFO. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt; and PICO.DRV's UNLOAD after CON TTY, whose REMOVE calls INFO. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

@@ -14,8 +14,7 @@ table of services at `C003h`.
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
   `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,854 bytes on the
   starter card and at least 46,086 on any card, 1,536 bytes less on a board
-  with a display driver. EXPAND 1 is TEC-OS's own: its levels and history, and room
-  kept for a block cache. TEC-OS says so at boot and stops if either half
+  with a display driver. EXPAND 1 is TEC-OS's own: its block cache and history. TEC-OS says so at boot and stops if either half
   is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.

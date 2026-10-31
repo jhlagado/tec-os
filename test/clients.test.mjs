@@ -5,10 +5,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { ABI, TEST_CLOCK, boot, program, romFor, sourceDigest, standardCard, volume } from "./lib/fixtures.mjs";
+import { ABI, ROOT, TEST_CLOCK, boot, program, romFor, sourceDigest, standardCard, volume } from "./lib/fixtures.mjs";
 
 /** A serial board at its prompt, the ROM's bytes at C003h changed as `edit` says. */
 async function machine(edit = () => {}) {
@@ -113,5 +114,82 @@ test("a program's digest covers what it includes, nested", () => {
 });
 
 test("abi.inc's numbers reach the tests by name", () => {
-  assert.deepEqual([ABI.HWINFO, ABI.HWRTC, ABI.HWCOUNT, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [0, 8, 9, 0x80, 16, 22]);
+  assert.deepEqual([ABI.HWBASE, ABI.HWINFO, ABI.HWRTC, ABI.HWCOUNT, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [19, 19, 27, 9, 0x80, 16, 22]);
 });
+
+// Binaries from an edc2745 starter card, ABI 3.1, as they might still sit on a
+// stored card. Pinned by hash: they are the evidence that an old program does
+// no harm, and must not be rebuilt.
+const OLD = {
+  "DEMO.COM": "92918e238d08803acf25523b372aa463b76a02a83430f9322d5a075de817be1f",
+  "MOUNT.COM": "2ad307aee40367bf17732b37e6c806cba1f372845a2ba96d5cad48dfb0b869b6",
+  "VOLS.COM": "b2867c02d518a5b605905f7c3c9d542053cd20c9649492185386103b23be8599",
+};
+const old = (name) => {
+  const bytes = readFileSync(resolve(ROOT, "test/fixtures/edc2745", name));
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), OLD[name], `${name} is the pinned binary`);
+  return bytes;
+};
+
+/** A board at its prompt with OLD's binaries on A:, and each pc reached in the services. */
+function oldMachine(opts = {}) {
+  const image = standardCard();
+  const a = volume(image, "A");
+  for (const n of Object.keys(OLD)) a.write(n, old(n));
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, ...opts });
+  m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  const seen = { services: 0, svc: 0, c01d: 0, strayed: 0 };
+  const inService = [...symbols.entries()].filter(([k]) => /^HWS[A-Z]+$/.test(k) && k !== "HWSVC").map(([, v]) => v);
+  const step = m.step.bind(m);
+  let last = 0;
+  m.step = () => {
+    if (inService.includes(m.pc)) seen.services += 1;
+    if (m.pc === symbols.get("HWSVC")) seen.svc += 1;
+    if (m.pc === 0xc01d) seen.c01d += 1;
+    if (last === 0xc01d && m.pc >= 0xc000) seen.strayed += 1; // anything but a RET to the program
+    last = m.pc;
+    return step();
+  };
+  return { m, seen, image };
+}
+// Page zero, less 0040h-004Fh, the BIOS's scratch, which every key typed moves.
+const pageZero = (m) => Array.from({ length: 0x5c }, (_, i) => (i >= 0x40 && i < 0x50 ? 0 : m.read(i)));
+
+test("an old DEMO prints no throughout, reaches no service, and leaves page zero unchanged", () => {
+  const { m, seen } = oldMachine();
+  const before = pageZero(m);
+  const from = m.output.length;
+  m.type("DEMO\r");
+  m.expect(/Press any key to stop\.\r\n/, { from, maxCycles: 80_000_000 });
+  const text = m.text(from);
+  assert.match(text, /PICO9918: no/);
+  assert.match(text, /GLCD: no/);
+  assert.match(text, /clock: no/);
+  const end = m.cycles + 8_000_000;
+  m.runUntil(() => m.cycles > end, 9_000_000, "the demo running");
+  assert.ok(seen.svc > 10, "it called, and each call was refused");
+  assert.equal(seen.services, 0, "no service ran");
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)).startsWith("TEC-OS hardware demo"), false, "the LCD isn't written");
+  m.type("x");
+  m.expect(/A>$/, { maxCycles: 80_000_000 });
+  assert.deepEqual(pageZero(m), before);
+  assert.deepEqual(m.violations, []);
+});
+
+for (const [line, name] of [["VOLS", "VOLS"], ["MOUNT B:", "MOUNT, to unmount"], ["MOUNT B: 0", "MOUNT, to mount"]]) {
+  test(`an old ${name} returns through C01Dh and changes nothing`, () => {
+    const { m, seen, image } = oldMachine();
+    const card = Uint8Array.from(image);
+    const mounts = Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d));
+    const before = pageZero(m);
+    m.command(line);
+    assert.ok(seen.c01d >= 1, "it called C01Dh");
+    assert.equal(seen.strayed, 0, "and was sent straight back");
+    assert.deepEqual(Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d)), mounts);
+    assert.deepEqual(pageZero(m), before);
+    assert.deepEqual([...image], [...card], "the card byte for byte");
+    assert.deepEqual(m.violations, []);
+  });
+}

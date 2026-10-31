@@ -70,10 +70,9 @@ or a warm boot. `GLCD.DRV`'s gives the console back to `CRT:` if `PICO.DRV` is i
 At cold boot only, `A:STARTUP.CMD`, if there is one, runs before the first
 prompt. One record is read once, into RAM: **at most 128 bytes**, and anything
 after them isn't run. The file isn't read again, so a warm boot doesn't repeat
-it and `USER 3` in a line can't affect it. Each prompt at level 0 takes the next
-line in place of the keyboard, so a program's warm boot, a built-in's return and
-`EXIT` all reach the next line by the same route. A nested level takes no lines;
-`EXIT` resumes them. ^C stops the current program, and the next lines still run.
+it and `USER 3` in a line can't affect it. Each prompt takes the next line in place
+of the keyboard, so a program's warm boot and a built-in's return reach the next line
+by the same route. ^C stops the current program, and the next lines still run.
 The line is echoed through BDOS function 9, so a `$` in it ends the echo, though
 the line runs whole.
 
@@ -96,7 +95,11 @@ if no display driver is installed. That covers a missing file, a bad file, no
 `STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
 has taken over from a bad `PICO.DRV`, or after a good load and `CON TTY`, and a board
 with no matrix keyboard, which both drivers refuse, never shows it. A display driver
-installed later clears the word, and otherwise leaves a program's row 3 alone. `CON UC1:` shows `GLCD?` if it can't load. Until a
+installed later clears the word. `CON UC1:` shows `GLCD?` if it can't load, a take
+clears that too, and so does `GLCD.DRV` loading under `PICO.DRV`, which keeps the
+console. A word goes only if it is still there: a program's write to row 3 through
+service `LCD` takes the row over, and no take clears it. A program writing the LCD's
+port directly is unseen. Until a
 display's line runs, the banner and volumes go to the serial terminal and the LCD. A
 card that won't mount shows `CARD?` on the LCD at every failure, and `R` starts the LCD
 again, so a good retry clears the word.
@@ -117,7 +120,7 @@ serial terminal: the matrix keyboard isn't read until a display's driver is in.
 
 ## Installation
 
-A load runs only at level 0, with no `INIT` or `REMOVE` running. In order:
+A load runs only with no `INIT` or `REMOVE` running, which `DRVBSY` says. In order:
 
 1. The file's magic, version, sizes and `INIT` and `REMOVE` are checked against
    the image and the file, and the base against `8000h`.
@@ -158,13 +161,13 @@ the 17 entries of the RAM BIOS table for a target in the driver: a hit keeps the
 pages, not removable, and registers nothing. Vectors such as `ABIGLCD`'s table
 can't be scanned, so that rule binds the driver.
 
-While `INIT` or `REMOVE` runs, `ABIXCCP`, `ABIXCMD`, a load and a removal are
-refused. A warm boot ends that state.
+While `INIT` or `REMOVE` runs, a load and a removal are refused, which only a raw
+call to the ROM could try. A warm boot ends that state.
 
 **`REMOVE`** undoes `INIT`, restoring hooks in reverse order, and returns carry
 clear, or carry set to refuse, leaving everything as it was. It may be called
-after a record check failed. `UNLOAD` calls it, from the CCP at level 0, so no
-program is running.
+after a record check failed. `UNLOAD` calls it, from the CCP, so no program is
+running.
 
 ## Stacks
 

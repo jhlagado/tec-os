@@ -55,7 +55,7 @@ CDMTX   EQU     $01             ; matrix keyboard enabled
 CDTMS   EQU     $02             ; PICO9918 answered at cold boot
 CDGLC	EQU	$04		; GLCD.DRV is in
 CDCLM	EQU	$10		; VCLAIM's value: the PICO9918 is claimed
-CDWRD	EQU	$80		; PICO? is on the LCD
+CDWRD	EQU	$80		; a word of the ROM's is on LCD row 3
 
 ; Console modes: the IOBYTE CON: field in effect (CONMOD). Odd means a video
 ; display with the matrix keyboard.

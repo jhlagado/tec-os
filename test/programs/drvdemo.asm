@@ -26,21 +26,6 @@ INIT:
         ADC     A,A
         LD      (RESULT),A
 %ENDIF
-%IF V_CCP
-        LD      HL,$0100
-        CALL    ABIXCCP
-        LD      A,0
-        ADC     A,A
-        LD      (RESULT),A
-%ENDIF
-%IF V_CMD
-        LD      HL,$0100
-        LD      DE,LINE
-        CALL    ABIXCMD
-        LD      A,0
-        ADC     A,A
-        LD      (RESULT),A
-%ENDIF
 %IF V_LOAD
         CALL    RAWLOAD
         LD      A,0
@@ -181,8 +166,7 @@ REMOVE:
         RET
 %ENDIF
 %IF V_REMWIN
-        LD      HL,$0100        ; refused while REMOVE runs
-        CALL    ABIXCCP
+	CALL	RAWUNL		; refused while REMOVE runs
         LD      A,0
         ADC     A,A
         LD      (RESULT),A
@@ -246,9 +230,6 @@ REC2:   DW      0
 %ENDIF
 COUNT:  DB      0
 RESULT: DB      $FF
-%IF V_CMD
-LINE:   DB      3,"DIR"
-%ENDIF
 %IF V_DEP + V_LATE > 0
 DEPNAME:DB      "DEMO    "
 DEPTAB: DW      0

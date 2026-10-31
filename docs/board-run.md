@@ -296,18 +296,18 @@ emulator's and are not differences.
 | T09 PROTECT | PROTECT makes `4000h–7FFFh` read-only | Programs that set PROTECT; TEC-OS keeps the bit across bank changes |
 | T10 LATCHRD | Whether port `FFh` reads back | Nothing; TEC-OS keeps a copy of the latch and never reads it |
 | T11 STATUS | Which bits of port `03h` follow the latch | The console, which reads bit 0 (Matrix switch) and bit 7 (serial RX) |
-| T12 BANKS | What latch bits 3–6 select, and EXPAND 1 | EXPAND 1, where the CCP levels and command history live |
-| T13 BANKRAM | RAM in each bank T12 found | EXPAND 1: the CCP levels and the history |
+| T12 BANKS | What latch bits 3–6 select, and EXPAND 1 | EXPAND 1, where the block cache and command history live |
+| T13 BANKRAM | RAM in each bank T12 found | EXPAND 1: the block cache and the history |
 | T14 SERTX | Serial output at 4800 8N2 | The serial console's output |
-| T15 LCD | The LCD's bus and busy flag | The LCD hardware service (2) |
+| T15 LCD | The LCD's bus and busy flag | The LCD hardware service (21) |
 | T16 GLCD | The ST7920 GLCD | The GLCD console, the driver GLCD.DRV |
 | T17 VDP | The PICO9918, its 16K VRAM and its speed | The 80-column console, which writes VRAM with no delays |
 | T18 VDPCLK | The PICO9918's frame rate | Nothing directly; a check on T33's clock |
 | T19 SD | The card's answers to TEC-OS's driver | Every drive: TEC-OS keeps its volumes on the card |
 | T20 SDBLKS | Block reads at the bit-bang rate | Disk reads |
-| T21 RTC | The DS1302: its time, rate, set and restore | The clock hardware service (8) and the clock TEC-OS reports |
-| T22 SEG7 | The 7-segment wiring | The digit hardware service (1) |
-| T23 SPEAKER | The speaker | The tone hardware service (4) |
+| T21 RTC | The DS1302: its time, rate, set and restore | The clock hardware service (27) and the clock TEC-OS reports |
+| T22 SEG7 | The 7-segment wiring | The digit hardware service (20) |
+| T23 SPEAKER | The speaker | The tone hardware service (23) |
 | T24 RGB8X8 | How the matrix decodes `05h`, `06h`, `F8h`, `F9h` | `DEMO.COM`'s LED scan: the ROM has no service for the matrix |
 | T25 LEDBAR | The STATUS bar and the CAPS lamp | The CAPS lamp, latch bit 7, which the matrix keyboard console sets |
 | T26 NMI | No stray NMIs | Programs: TEC-OS answers an NMI with RETN and expects none |
@@ -315,8 +315,8 @@ emulator's and are not differences.
 | T28 SERBIT | The terminal's bit time against the ROM's | The serial console at 4800 baud |
 | T29 KEYPAD | The keypad's codes and Shift | Startup's skip, which reads the key-down bit once at cold boot; TEC-OS reads no key codes |
 | T30 KEYNMI | One NMI for each keypad press | Nothing; TEC-OS runs with the NMI jumper off |
-| T31 MATRIX | The matrix keyboard's key numbers | The matrix keyboard console and the keys hardware service (6) |
-| T32 JOY | The joystick's bits | The joystick hardware service (5) |
+| T31 MATRIX | The matrix keyboard's key numbers | The matrix keyboard console and the keys hardware service (25) |
+| T32 JOY | The joystick's bits | The joystick hardware service (24) |
 | T33 CLOCK | The CPU clock, by stopwatch | Every timing: the serial rate and every delay assume 4 MHz |
 | T34 SDTIME | The card's read rate | Disk speed |
 | T35 VDPPAGE | Which name table R2 selects | The 80-column console's page flip when it scrolls |

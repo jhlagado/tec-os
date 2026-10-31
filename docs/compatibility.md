@@ -52,12 +52,8 @@ supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   drive is filled in, is a bad command and nothing is opened: `COPY X.DAT`,
   `COPY X.DAT X.DAT` and `COPY X.DAT A:` on A: all print `COPY?`.
 
-- `CCP` starts a nested command processor; `EXIT` returns to the level that
-  started it, with that level's drive, user and warm-boot entry back. Levels
-  nest six deep.
 - `NAME.DRV` installs a driver and `DRIVERS` lists them, each with its pages.
-  `UNLOAD` removes the lowest, at level 0 only: a nested level may return into
-  a resident below it.
+  `UNLOAD` removes the lowest.
 - At cold boot `A:STARTUP.CMD`, if there is one, runs before the first prompt.
   One record of it is read, at most 128 bytes, and a keypad key held through
   reset skips it. `docs/drivers.md` has the rules.
@@ -65,8 +61,7 @@ supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 The prompt keeps a history of the lines typed at it. ^W puts the line before
 in the buffer, erasing the one shown, and ^N the line after; past the newest
 the line is empty. The line recalled can be edited and sent like a typed
-one. The history is a 256-byte ring at `BD00h` in EXPAND 1, shared by every
-CCP level, kept by warm boot and emptied by a reset. A line equal to the
+one. The history is a 256-byte ring at `BD00h` in EXPAND 1, kept by warm boot and emptied by a reset. A line equal to the
 newest is not stored again, and nor is one holding a 0. Function 10 called by
 a program is CP/M 2.2's: ^W and ^N go into its buffer as characters, and its
 lines are not kept.
@@ -75,19 +70,7 @@ lines are not kept.
 card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
 empty, and a volume is never on two drives. Both are programs on the starter
 card, using the mount service in the table, `ABIVOL`. Mounts are for the session: a
-reset gives the card's own again. A nested CCP's `EXIT` gives the parent
-its own mounts back, remounting only the drives that changed.
-
-A resident can shell out the same way, through `ABIXCCP` (an interactive
-nested CCP) or `ABIXCMD` (one command line, run with no prompt), with HL =
-`0100h`. Nothing of the TPA is kept, so the caller is code the nested level
-leaves alone: a resident, a program out of the way of the child, or the CCP's
-own `CCP`. At `EXIT` TEC-OS gives it
-back its stack, drive, user and mounts, and returns the last program's BDOS
-function 108 code in HL. Any other HL, a program asking to keep its image,
-is refused with carry set and nothing changed. Page zero is rebuilt by the
-nested level: the caller keeps for itself whatever it needs from the
-default FCBs and the command tail.
+reset gives the card's own again.
 
 A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
 a relocatable file in Digital Research's PRL format: a 256-byte header, the

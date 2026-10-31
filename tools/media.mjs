@@ -90,7 +90,7 @@ function memoryMap(census) {
     span(at("CTAB"), lines * 4, "each line's card block, 4 bytes, FFFFFFFFh while empty"),
     span(at("CDIRTY"), lines, "each line's dirty byte, nonzero while the card lacks its changes"),
     span(at("HRING"), 256, "command history"),
-    span(at("LVBASE"), 256, "the CCP's levels"),
+    span(at("HRING") + 256, 256, "free, watched by the host so that a stray write fails"),
     span(0xbf00, 256, "reserved"),
   ].join("\n");
   const cacheState = [

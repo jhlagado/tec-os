@@ -56,29 +56,13 @@ STARTED:
 
 MAINLOOP:
         LD      SP,CSTKTOP
-        LD      A,(CCPFLG)      ; a one-command level: run its line, then exit
-        OR      A
-        JR      Z,MLREAD
-        DEC     A
-        JP      NZ,XEXIT
-        LD      A,2
-        LD      (CCPFLG),A
-        LD      HL,(PRLN)
-        LD      DE,CMDLEN
-        LD      C,(HL)
-        LD      B,A
-        DEC     B
-        DEC     B
-        INC     BC
-        LDIR
-        JR      MLGOT
 MLREAD: CALL    SAVEDU
         ADD     A,'A'
         LD      E,A
         CALL    PUTCHAR
         LD      E,'>'
         CALL    PUTCHAR
-        CALL    STLINE          ; at level 0, startup's next line
+	CALL	STLINE		; startup's next line
         JR      NC,MLGOT
         LD      DE,CMDBUF
         LD      HL,HFLAG        ; history for this line
@@ -187,12 +171,6 @@ NOTDRIVE:
         LD      DE,COPYKEY
         CALL    ISCMD
         JP      Z,CMDCOPY
-        LD      DE,CCPKEY
-        CALL    ISCMD
-        JP      Z,CMDCCP
-        LD      DE,EXITKEY
-        CALL    ISCMD
-        JP      Z,XEXIT
         LD      DE,UNLKEY
         CALL    ISCMD
         JP      Z,CMDUNL
@@ -899,7 +877,7 @@ CPPARSE:
         LD      A,(DE)
         OR      A
         RET     NZ
-        LD      A,(CURDSK)      ; the drive in use, as EXIT gives it back
+	LD	A,(CURDSK)	; the drive in use
         AND     $0F
         INC     A
         LD      (DE),A
@@ -1009,6 +987,12 @@ CPNIB:
 ; may follow) sets the IOBYTE CON: field. The BIOS switches at the next
 ; console call, so the report appears on the new console, and names the
 ; serial terminal when the chosen display or keyboard is missing.
+; UNLOAD: the lowest resident goes, or the command comes back with a question
+; mark.
+CMDUNL:	CALL	DRVUNL
+	JP	NC,STARTED	; carry: DRVUNL refused
+	JP	BADCMD
+
 CMDCON:
         CALL    ARGSKIP         ; an error names the argument
         JR      Z,CONSHOW

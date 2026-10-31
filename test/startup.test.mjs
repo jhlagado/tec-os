@@ -34,15 +34,6 @@ test("each line runs, echoed, and a failing one prints its message; a warm boot 
   assert.doesNotMatch(m.text(mark), /USER/);
 });
 
-test("a nested level takes no line, and EXIT resumes the file", () => {
-  const m = start({ "STARTUP.CMD": startupFile("CCP", "USER 3") });
-  m.runUntil(() => m.waitingForInput() && m.read(m.sym("CCPLVL")) === 1, 400_000_000, "the nested prompt");
-  assert.equal(user(m), 0);
-  m.type("EXIT\r");
-  prompt(m);
-  assert.equal(user(m), 3);
-});
-
 test("a file with no lines, and no file, reach the prompt; a file over one record ends at it", () => {
   prompt(start({ "STARTUP.CMD": new Uint8Array(0) }));
   prompt(start({}));
@@ -54,7 +45,7 @@ test("a file with no lines, and no file, reach the prompt; a file over one recor
 
 test("a key held through reset skips the file: a hanging INIT reaches a prompt, and with no key it hangs", async () => {
   const defs = { FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, DRVNAME: '"HANG    "', SVCNAME: '"HANG    "', SVCVER: 1 };
-  for (const v of ["V_FAIL", "V_PROBE", "V_CCP", "V_CMD", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
+  for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
   defs.V_HANG = 1;
   const { file } = await makeDrv(resolve(ROOT, "test/programs/drvdemo.asm"), { defs, work: resolve(ROOT, "build/drv") });
   const files = { "HANG.DRV": file, "STARTUP.CMD": startupFile("HANG.DRV") };
@@ -158,33 +149,20 @@ function trace(m) {
   return rows;
 }
 
-for (const [name, lines, typed] of [
+for (const [name, lines] of [
   ["a built-in then a line", ["TYPE HELLO.TXT", "DIR"]],
   ["a program's warm boot then a line", ["SAY", "DIR"]],
-  ["CCP, EXIT, then a line", ["CCP", "DIR"], "EXIT"],
   ["a failing line then a line", ["NOSUCH", "DIR"]],
   ["USER 3 then a line", ["USER 3", "DIR"]],
 ]) {
   test(`lines from the file equal the same lines typed: ${name}`, () => {
-    const nested = (m, from) => m.runUntil(() => m.waitingForInput() && m.read(m.sym("CCPLVL")) === 1 && /[A-P]>$/.test(m.text(from)), 400_000_000, "the nested prompt");
     const f = start({ "SAY.COM": SAY, "STARTUP.CMD": startupFile(...lines) });
     const fromFile = trace(f);
-    if (typed) {
-      nested(f, 0);
-      f.type(`${typed}\r`);
-    }
     prompt(f);
     const t = start({ "SAY.COM": SAY, "STARTUP.CMD": raw("\x1a") });
     prompt(t);
     const byHand = trace(t);
-    for (const line of lines) {
-      if (typed && line === "DIR") t.command(typed);
-      if (line === "CCP") {
-        const from = t.output.length;
-        t.type("CCP\r");
-        nested(t, from);
-      } else t.command(line);
-    }
+    for (const line of lines) t.command(line);
     const upper = (rows) => rows.map((r) => ({ ...r, output: r.output.toUpperCase() }));
     assert.deepEqual(upper(fromFile), upper(byHand));
   });

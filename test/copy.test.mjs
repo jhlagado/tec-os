@@ -116,12 +116,12 @@ for (const [line, setup, from, to] of [
     assert.equal(t.tpaChanged, 0, "the TPA kept");
   });
 
-test("after CCP, B: and EXIT, a plain name is on A: again: a copy works, and one onto itself is refused", () => {
-  const t = trial("COPY X.DAT Y.DAT", ["CCP", "B:", "EXIT"]);
+test("after B: and A:, a plain name is on A: again: a copy works, and one onto itself is refused", () => {
+  const t = trial("COPY X.DAT Y.DAT", ["B:", "A:"]);
   assert.equal(t.text, "COPIED 000C");
   assert.deepEqual(read(t.image, "A", "Y.DAT"), read(t.image, "A", "X.DAT"), "A:Y.DAT made from A:X.DAT");
   assert.throws(() => volume(t.image, "B").read("Y.DAT"), /not found/, "nothing made on B:");
-  const u = trial("COPY X.DAT X.DAT", ["CCP", "B:", "EXIT"]);
+  const u = trial("COPY X.DAT X.DAT", ["B:", "A:"]);
   assert.equal(u.text, "COPY?");
   assert.ok(u.unchanged, "the card byte for byte");
 });

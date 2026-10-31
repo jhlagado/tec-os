@@ -159,6 +159,7 @@ function checkServices(at) {
   check(rom.size > 0, "hwsvc.asm has no service numbers");
   for (const [n, v] of rom) check(inc.get(n) === v, `abi.inc: ${n} is ${inc.get(n)}, hwsvc.asm has ${v}`);
   for (const n of inc.keys()) check(rom.has(n), `hwsvc.asm has no ${n}`);
+  check(rom.get("HWINFO") === rom.get("HWBASE") && rom.get("HWRTC") === rom.get("HWBASE") + rom.get("HWCOUNT") - 1, "the services run from HWBASE, HWCOUNT of them");
   const bits = { HWBMTX: "CDMTX", HWBPICO: "CDTMS", HWBGLCD: "CDGLC", HWBCLM: "CDCLM", HWBWRD: "CDWRD" };
   for (const [n, cd] of Object.entries(bits)) check(rom.get(n) === at(cd), `hwsvc.asm: ${n} is not ${cd}`);
 }
@@ -261,6 +262,7 @@ async function buildProfile(name) {
   check(at("RESET") === 0xc000, "RESET must be at C000h");
   check(at("ABITAB") === 0xc003, "the table must be at C003h");
   check(at("ABIEND") === at("ROMDATA"), "the data block must follow the table");
+  check(at("OLDVOL") === 0xc01d && rom[0x1d] === 0xc9, "ABI 3's ABIVOL must hold a RET");
   check(at("ROMDATA") <= at("ROMCODE") && at("ROMCODE") <= at("CODEEND"), "the table, the data and the code, in that order");
   check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
   checkAbiInc(at);

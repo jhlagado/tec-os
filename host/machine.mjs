@@ -26,7 +26,7 @@ export function symbolsFromD8(d8) {
   return map;
 }
 
-/** Writes to EXPAND 1 at 8000h-BCFFh after cold boot's clear, by any machine. */
+/** Writes to EXPAND 1 at 8000h-BCFFh and BE00h-BEFFh after cold boot's clear, by any machine. */
 export const EXPAND1_WRITES = [];
 
 export class Machine {
@@ -174,10 +174,11 @@ export class Machine {
     this.cpu.hardware.forceMemWrite = ram96 ? ram.memWrite : hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     // After cold boot's clear of EXPAND 1 (MEMINIT's LDIR reaching BFFFh),
-    // only the block cache writes its 8000h-BCFFh, below the history ring:
+    // nothing writes the free page BE00h-BEFFh, and only the block cache
+    // writes its 8000h-BCFFh, below the history ring:
     // its own code, the card's block loops, the copy core when the cache
     // called it (the return address on entry to MVCOPY in CDI-CEND; MOVE
-    // and the levels' copies are still watched), and cold boot's setting of
+    // is still watched), and cold boot's setting of
     // its table. Any other write there, until the
     // next cold boot (COLD clearing page zero), is kept in expand1Writes and
     // in EXPAND1_WRITES, for the whole process.
@@ -212,7 +213,7 @@ export class Machine {
         if (pc >= cold && pc < cold + 0x20) cleared = false;
         else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
           if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
-          else if (cleared && a < 0xbd00 && !cacheWrite(pc)) {
+          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbf00)) {
             const w = { addr: a, pc };
             this.expand1Writes.push(w);
             if (EXPAND1_WRITES.length < 16) EXPAND1_WRITES.push(w);

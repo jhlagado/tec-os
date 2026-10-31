@@ -31,6 +31,13 @@ LCDC:   PUSH    AF
         OUT     (LCDCMD),A
         RET
 
+; Write the word at HL to row 3 and mark that it is there, so that a take can
+; tell the row is the ROM's to clear. HL = PICMSG or GLCMSG. Returns as LCDROW.
+LCDWRD:	PUSH	HL		; the word, across the flag
+	LD	HL,CONDEV
+	SET	7,(HL)		; CDWRD
+	POP	HL
+
 ; Write the zero-terminated string at HL to row 3, the row for a recovery
 ; message: CARD?, GLCD? or PICO?, or blanks to clear one. Returns as LCDROW.
 LCD3:	LD	B,3		; the bottom row, free of the volumes

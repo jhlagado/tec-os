@@ -1,6 +1,6 @@
 // Container format 1.1 and mounting at run time: a card of more than 8
 // volumes, cold boot's one-pass table check, the vector slots, the ABIVOL
-// service through MOUNT.COM and VOLS.COM, and EXIT giving a parent its own
+// service through MOUNT.COM and VOLS.COM, and a reset giving the card's own
 // mounts back. Emulator evidence.
 
 import { test } from "node:test";
@@ -20,7 +20,6 @@ function card(n = 20, drives = 2) {
 async function machine(image = card()) {
   const a = volume(image, "A");
   for (const n of ["mount", "vols"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
-  a.write("OPENRD.COM", (await program("openrd")).bytes);
   volume(image, "B").write("DATA.TXT", Buffer.from("REC1....".padEnd(128, ".") + "REC2....".padEnd(128, ".") + "\x1a", "latin1"));
   volume(image, "ARCHIVE").write("OLD.DAT", new Uint8Array(128));
   return boot(image);
@@ -55,18 +54,6 @@ test("MOUNT takes a volume by label or index, refuses one in use, A: left empty 
   assert.doesNotMatch(again, /Cannot/);
   assert.match(m.command("MOUNT B:"), /Unmounted/);
   assert.deepEqual(drvidx(m), [1, 0, 0, 0]);
-  assert.deepEqual(m.violations, []);
-});
-
-test("a nested level remounts B:, and at EXIT the parent's B: is its own and its open file reads on", async () => {
-  const m = await machine();
-  assert.match(m.command("OPENRD"), /REC1\.\.\.\./);
-  assert.equal(m.read(m.sym("CCPLVL")), 1);
-  m.command("MOUNT B: ARCHIVE");
-  assert.match(m.command("DIR B:"), /OLD\.DAT/);
-  const out = m.command("EXIT");
-  assert.match(out, /REC2\.\.\.\./, "the parent's file reads on through its FCB");
-  assert.deepEqual(drvidx(m), [1, 2, 0, 0], "the parent's mounts");
   assert.deepEqual(m.violations, []);
 });
 

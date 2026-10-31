@@ -108,7 +108,7 @@ keyboard and no PICO9918, cold boot shows its banner and volumes on the
 serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
 `GLCD.DRV` installs it and makes the GLCD the console; with no such line the
 console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
-too, and shows `GLCD?` on the LCD if it can't. On a board with both displays
+too, and shows `GLCD?` on the LCD if it can't, which a display taking over clears. On a board with both displays
 the line gives way to `PICO.DRV`, and only `CON UC1:` installs it; the two
 together cost 3,072 TPA bytes. A board without a GLCD or a matrix keyboard refuses
 it, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
