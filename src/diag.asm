@@ -4,12 +4,9 @@
 
 DIAG:   LD      SP,BSTK
         PUSH    AF
-        LD      HL,DGLCD        ; the LCD, for a board with no terminal
-        LD      B,3
-        CALL    LCDROW
-        POP     AF
-        PUSH    AF
-        LD      HL,DGERR
+	LD	HL,DGLCD	; the LCD, for a board with no terminal
+	CALL	LCD3
+	LD	HL,DGERR
         CALL    PUTS
         POP     AF
         CALL    PUTHEX

@@ -15,6 +15,7 @@ import { GLCD_DRV, PICO_DRV, ROOT, TEST_CLOCK, boot, driver, romFor, standardCar
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const m0 = (m) => m.sym("CONMOD");
+const lcdRow = (m, row) => String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(row * 20, row * 20 + 20)).trimEnd();
 const CRT = 1;
 const UC1 = 3;
 
@@ -146,10 +147,64 @@ test("a dead card shows CARD? on the LCD, for a board with no terminal", () => {
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "CARD?");
 });
 
-test("a board whose PICO.DRV fails takes the GLCD from the next line", () => {
+test("a good retry clears CARD?, and a failed one shows it again", () => {
+  const image = standardCard();
+  image[0] ^= 0xff; // a card that starts, with no container to mount
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, matrix: true });
+  m.expect(/R retry, H header> $/, { from: 0, maxCycles: 200_000_000 });
+  assert.equal(lcdRow(m, 3), "CARD?");
+  m.mark = m.output.length;
+  m.type("R");
+  m.expect(/R retry, H header> $/, { maxCycles: 200_000_000 });
+  assert.equal(lcdRow(m, 3), "CARD?");
+  image[0] ^= 0xff;
+  m.mark = m.output.length;
+  m.type("R");
+  m.expect(/A>$/, { maxCycles: 400_000_000 });
+  assert.equal(lcdRow(m, 3), "");
+  assert.match(lcdRow(m, 0), /^TEC-OS/);
+  assert.match(lcdRow(m, 1), /^A: /);
+});
+
+for (const [name, files] of [
+  ["a missing PICO.DRV", { "STARTUP.CMD": startupFile("PICO.DRV") }],
+  ["a bad PICO.DRV", { "PICO.DRV": new Uint8Array(200).fill(0x55), "STARTUP.CMD": startupFile("PICO.DRV") }],
+  ["no STARTUP.CMD", {}],
+]) {
+  test(`a PICO9918 board with ${name} says PICO? on the LCD, once`, () => {
+    const m = start(files);
+    assert.equal(m.read(m.sym("CONMOD")), 0);
+    assert.equal(lcdRow(m, 3), "PICO?");
+    m.tec1g.state.lcdCtrl.lcd.fill(0x20, 60, 80);
+    m.command("USER 0");
+    assert.equal(lcdRow(m, 3), "", "the next prompt leaves the row alone");
+  });
+}
+
+test("a line left without an end, and a record full to its last byte, say PICO? after they run", () => {
+  const raw = (text) => Buffer.from(text, "latin1");
+  for (const file of [raw("PICO.DRV\x1a"), raw("USER 1\r\n".repeat(15) + "\r".repeat(6) + "\r\n")]) {
+    assert.equal(lcdRow(start({ "STARTUP.CMD": file }), 3), "PICO?");
+  }
+});
+
+test("a good PICO.DRV shows nothing on the LCD, and nor does a later CON TTY", () => {
+  const m = start({ ...PICO_DRV, "STARTUP.CMD": startupFile("PICO.DRV") });
+  assert.equal(m.read(m.sym("CONMOD")), CRT);
+  assert.equal(lcdRow(m, 3), "");
+  say(m, "CON TTY");
+  assert.equal(lcdRow(m, 3), "");
+});
+
+test("the LCD stays silent on a board with no PICO9918, whatever the file", () => {
+  assert.equal(lcdRow(start({ "STARTUP.CMD": startupFile("PICO.DRV") }, { tms: false }), 3), "");
+});
+
+test("a board whose PICO.DRV fails takes the GLCD from the next line, and the LCD says nothing", () => {
   const m = start({ "GLCD.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("PICO.DRV", "GLCD.DRV") });
   assert.match(m.text(0), /PICO\.DRV\?/);
   assert.equal(m.read(m.sym("CONMOD")), UC1);
+  assert.equal(lcdRow(m, 3), "");
 });
 
 test("the GLCD's UNLOAD with CRT: as the console leaves it there", () => {

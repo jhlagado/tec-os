@@ -21,6 +21,7 @@ DINI    EQU     15              ; INIT, from the header's start
 DNAM    EQU     17              ; 8 bytes
 DHLEN   EQU     25
 DRECSZ  EQU     13              ; link, name, version, table
+STLAST	EQU	STREC+127	; startup's record: its last byte
 
 ; UNLOAD: the lowest resident, at level 0 with the window shut. Only a head of
 ; the owner list is a driver.
@@ -324,12 +325,14 @@ CMDDL:  OR      A
         JR      CMDDL
 
 ; Startup. Once after cold boot one record of A:STARTUP.CMD is read, the
-; position marked done first, so that a failure can't repeat.
+; position marked finished first, so that a failure can't repeat. STPOS is 0
+; until then, the next byte + 1 in the file, 80h up once it is finished, and FFh
+; when STDONE has looked at the console.
 STBOOT: LD      HL,STPOS
         LD      A,(HL)
         OR      A
         RET     NZ
-        DEC     (HL)
+	SET	7,(HL)		; finished, whatever follows
         IN      A,(STSPORT)     ; a keypad key held skips it: bit 6 low
         AND     $40
         RET     Z
@@ -363,10 +366,11 @@ STLINE: LD      A,(CCPLVL)
         OR      A
         SCF
         RET     NZ
-        LD      A,(STPOS)
-        OR      A
-        SCF
-        RET     M
+	LD	HL,STPOS
+	LD	A,(HL)
+	RLCA			; top bit to carry: the file is finished
+	JR	C,STDONE
+	RRCA			; the position again
         ADD     A,LOW(STREC)-1
         LD      L,A
         LD      H,HIGH(STREC)
@@ -387,7 +391,7 @@ STL1:   LD      A,L
         LD      (DE),A
         INC     DE
         JR      STL1
-STLE:   LD      L,LOW(STREC)-2
+STLE:	LD	L,LOW(STLAST)	; STPOS 80h, finished
 STL2:   LD      A,L
         SUB     LOW(STREC)-1
         LD      (STPOS),A
@@ -403,6 +407,23 @@ STL2:   LD      A,L
         CALL    PUTSTR
         OR      A
         RET
+
+; The file is finished, at the first prompt at level 0 after its last line. A
+; board with a PICO9918 and no driver as the console has a black screen, and
+; perhaps no serial terminal, so the LCD says PICO?. This looks once, so that a
+; later CON TTY or a program's LCD text is left alone. HL = STPOS, A = STPOS
+; rotated left, carry set. Returns carry set for STLINE. Destroys AF, B, HL.
+STDONE:	INC	A		; FFh has been seen, and carry stays
+	RET	Z
+	LD	(HL),$FF	; never again
+	LD	A,(CONMOD)	; odd is a video console, so a driver has it
+	BIT	0,A		; BIT leaves carry, as RET needs
+	RET	NZ
+	LD	A,(CONDEV)	; no PICO9918 means nothing is black
+	BIT	1,A		; CDTMS
+	RET	Z
+	LD	HL,PICMSG	; a driver should have taken this board
+	JP	LCD3
 
 ; ABIDRV. C = 0, find: DE = the name, B = the least version; HL = the entry
 ; table. C = 1, enumerate: B = an index; HL = that record. A = the generation.

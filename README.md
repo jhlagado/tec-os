@@ -92,9 +92,10 @@ CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.DRV` installs a driver.
 `A:STARTUP.CMD` runs at cold boot; a keypad key held from reset until the
-prompt skips it, and the console stays on the serial terminal. If the card is dead
-the LCD shows `CARD?`. If the card is missing or invalid, a
-diagnostic prompt on the serial terminal shows the error code and offers a retry.
+prompt skips it, and the console stays on the serial terminal. A board with a
+PICO9918 and no display driver then shows `PICO?` on the LCD. If the card is missing
+or invalid the LCD shows `CARD?`, and a diagnostic prompt on the serial terminal
+shows the error code and offers a retry. A good retry clears the word.
 
 Do not press the hex keypad while a CP/M program is running; see
 [docs/compatibility.md](docs/compatibility.md).

@@ -59,11 +59,8 @@ GLCLD:  LD      A,(CONDEV)
         LDIR
         CALL    DRVGO
         RET     NC
-GLCNO:  LD      HL,GLCMSG
-        LD      B,3
-        CALL    LCDROW
-        SCF
-        RET
+	LD	HL,GLCMSG	; the LCD says so, carry set
+	JP	LCD3
 
 ; Read CMDFCB's driver and install it. If its page holds a video table it takes
 ; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in. Carry set if it
@@ -86,7 +83,6 @@ DRVGO:  CALL    LOADCOM
         OR      A
         RET     NZ
         LD      B,CMUC1
-        JR      CONSET
 CONSET: LD      A,(IOBYTE)
         AND     $FC
         OR      B

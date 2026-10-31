@@ -107,6 +107,7 @@ HWSEGT: DB      $EB,$28,$CD,$AD,$2E,$A7,$E7,$29 ; 0-7
 GLCFCB: DB      1,"GLCD    DRV"
 GLCMSG: DB      "GLCD?",0
 DGLCD:  DB      "CARD?",0
+PICMSG:	DB	"PICO?",0
 STFCB:  DB      1,"STARTUP CMD"
 
 ; ---- cache.asm ---------------------------------------------------------------

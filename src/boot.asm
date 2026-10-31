@@ -12,7 +12,6 @@ COLD:   DI
         LD      BC,$FF
         LD      (HL),L
         LDIR
-        LD      A,LATCLAS
         LD      (LATCHV),A
         CALL    RAMCHK          ; does not return without RAM at 8000h-BFFFh
         LD      HL,WSBASE       ; clear the resident workspace
@@ -22,16 +21,17 @@ COLD:   DI
         LDIR
         LD      SP,BSTK
         CALL    CONINIT
-COLDCON:CALL    LCDINIT
-        LD      HL,LCDBAN
-        LD      B,0
-        CALL    LCDROW
         LD      HL,BANNER
         CALL    PUTS
-COLDRT: CALL    SDINIT
-        JR      NZ,COLDERR
-        CALL    MOUNT
-        JR      NZ,COLDERR
+; DIAG's retry comes back here. LCDINIT clears the display, so CARD? goes
+; with it, and a retry that fails shows it again.
+COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
+	LD	HL,LCDBAN	; LCDINIT's count left B = 0, the top row
+	CALL	LCDROW
+	CALL	SDINIT
+	JP	NZ,DIAG		; no card, or one that won't start
+	CALL	MOUNT
+	JP	NZ,DIAG		; a card with no volume to mount
         CALL    ALVINIT
         LD      HL,(STUBAD)     ; no residents yet
         LD      (PZTOP),HL
@@ -45,8 +45,6 @@ COLDRT: CALL    SDINIT
         LD      (PZDU),A
         CALL    PZINIT
         CALL    MEMINIT
-        JR      WBOOTR
-COLDERR:JP      DIAG
 
 ; ---- Warm boot ----------------------------------------------------------------
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
@@ -215,8 +213,7 @@ CPMINIT:LD      HL,CCPRAM
         LD      A,127
         LD      (CMDBUF),A
         LD      HL,STKGUARD
-        LD      A,STKGUEND-STKGUARD
-        LD      B,A
+        LD      B,STKGUEND-STKGUARD
 CPMIG:  LD      (HL),$A5
         INC     HL
         DJNZ    CPMIG

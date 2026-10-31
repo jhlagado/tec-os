@@ -87,10 +87,13 @@ One card can serve every board: a line for the PICO9918, then `GLCD.DRV`. Each l
 makes its display the console where there is one, and elsewhere prints its name with
 a question mark and goes on. On a board with both, `GLCD.DRV`'s line gives way once
 `PICO.DRV` is the console, and only `CON UC1:` installs the second; the two together
-cost 1,280 TPA bytes, leaving 45,574 on the starter card. A failed display line, or a
-skip, leaves the LCD silent: only `CON UC1:` shows `GLCD?`. Until a display's line
-runs, the banner and volumes go to the serial terminal and the LCD, and a dead card
-shows `CARD?` on the LCD.
+cost 1,280 TPA bytes, leaving 45,574 on the starter card. At the first prompt after
+the file, a board with a PICO9918 and no driver as the console shows `PICO?` on the
+LCD, once, which covers a missing or bad `PICO.DRV`, no file and a skip. `CON UC1:`
+shows `GLCD?` if it can't load. Until a display's line runs, the banner and volumes go
+to the serial terminal and the LCD, and a card that won't mount shows `CARD?` on the
+LCD, on every failure, until `R` retries it: the retry starts the LCD again, so a good
+one clears the word.
 
 A board with no matrix keyboard refuses both drivers, so it has an unprogrammed VDP
 until a program claims it. A claim with no `PICO.DRV` in restores nothing on release.
