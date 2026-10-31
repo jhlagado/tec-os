@@ -26,7 +26,7 @@ export function symbolsFromD8(d8) {
   return map;
 }
 
-/** Writes to EXPAND 1 at 8000h-BCFFh after cold boot's clear, by any machine. */
+/** Writes to EXPAND 1 at 8000h-BCFFh and BE00h-BEFFh after cold boot's clear, by any machine. */
 export const EXPAND1_WRITES = [];
 
 export class Machine {
@@ -212,7 +212,7 @@ export class Machine {
         if (pc >= cold && pc < cold + 0x20) cleared = false;
         else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
           if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
-          else if (cleared && a < 0xbd00 && !cacheWrite(pc)) {
+          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbf00)) {
             const w = { addr: a, pc };
             this.expand1Writes.push(w);
             if (EXPAND1_WRITES.length < 16) EXPAND1_WRITES.push(w);

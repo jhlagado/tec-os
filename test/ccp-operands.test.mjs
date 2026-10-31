@@ -1,9 +1,9 @@
 // The CCP's operands: one command line for each branch of the built-ins'
 // argument, parser and end checks, in order, since files persist. Console
 // output and the BDOS calls of each line are held against a fixture taken
-// from the prior ROM, so the fixture proves the behaviour is kept; SHELLC,
-// SHELLE and CON UC1 were retaken when modules left, and CON UC1 again when
-// GLCD.DRV took its font, six records longer. A
+// from the prior ROM, so the fixture proves the behaviour is kept; CON UC1
+// was retaken when modules left, and again when GLCD.DRV took its font, six
+// records longer. SHELLC and SHELLE left with the nested levels. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it. Emulator evidence.
@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_DRV, ROOT, boot, prl, volume } from "./lib/fixtures.mjs";
+import { GLCD_DRV, ROOT, boot, volume } from "./lib/fixtures.mjs";
 
 const FIXTURE = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/ccp-operands.json"), "utf8"));
 const PROFILE = "debug80";
@@ -39,16 +39,9 @@ async function card({ glcd = false } = {}) {
   a.write("HELLO.TXT", Buffer.from("hello\r\n\x1a", "latin1"));
   a.write("KEEP.TXT", Buffer.from("keep\r\n\x1a", "latin1"));
   a.write("BIG.BIN", new Uint8Array(30000).fill(0x55));
-  // SHELL.PRL with its MODE byte (code offset 21) set: ABIXCMD, not ABIXCCP.
-  const shell = Uint8Array.from(await prl("shell"));
-  shell[256 + 21] = 1;
-  a.write("SHELLC.PRL", shell);
-  // The same with its one command line failing to parse.
-  const at = Buffer.from(shell).indexOf("SETRC 9");
-  assert.ok(at > 0, "the one-command line");
-  const bad = Uint8Array.from(shell);
-  Buffer.from("DIR <  ").copy(bad, at);
-  a.write("SHELLE.PRL", bad);
+  // Two files of the sizes of programs that have gone, so that DIR's rows hold.
+  a.write("SHELLC.PRL", new Uint8Array(512));
+  a.write("SHELLE.PRL", new Uint8Array(512));
   if (glcd) a.write("GLCD.DRV", GLCD_DRV);
   const b = volume(image, "B");
   fill(b, 65536, (i) => `FILL${i}.BIN`);
@@ -128,7 +121,7 @@ function reading(m, fixture) {
 
 test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
   assert.equal(FIXTURE.profile, PROFILE);
-  assert.equal(FIXTURE.inputs.length, 80);
+  assert.equal(FIXTURE.inputs.length, 78);
   const m = boot(await card(), { profile: PROFILE });
   const rows = reading(m, FIXTURE.inputs);
   const deep = rows.filter((r, i) => r.peak > FIXTURE.inputs[i].peak);

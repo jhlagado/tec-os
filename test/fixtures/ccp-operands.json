@@ -469,18 +469,6 @@
       "output": "COPY HELLO.TXT D:\r\r\nCANNOT MAKE DEST\r\n\r\nA>",
       "calls": "567d4a4ebe5cdc51aa00d9c8401aff6c8292df4f2a835d0cfccbd4311d6d4e1a",
       "peak": 16
-    },
-    {
-      "input": "SHELLC",
-      "output": "SHELLC\r\r\n\r\n\r\nSETRC?\r\n\r\n\r\nSHELL OK 0000\r\nA>",
-      "calls": "0c688563d7af8d50b1cf7b96df5fd0ed3b7dd7cdc30b04bcb22ff4a04f3fe3ad",
-      "peak": 20
-    },
-    {
-      "input": "SHELLE",
-      "output": "SHELLE\r\r\n\r\n\r\n<?\r\n\r\n\r\nSHELL OK 0000\r\nA>",
-      "calls": "642f48a60030f71a7170bcbe78124ea59d19f165328a44253ed19ded494828b2",
-      "peak": 20
     }
   ],
   "picoMatrix": [

@@ -1,5 +1,5 @@
 ; Command-line history: lines typed at the CCP prompt, kept in one page of
-; EXPAND 1 from cold boot and shared by every CCP level. ^W at the prompt
+; EXPAND 1 from cold boot. ^W at the prompt
 ; recalls the line before, ^N the line after. Function 10 called by a
 ; program is CP/M 2.2's, with ^W and ^N as characters.
 ;
@@ -9,9 +9,9 @@
 ; oldest line it overwrote. So ring[HHEAD-1] and ring[HHEAD] are both 0, and
 ; a walk back from the newest stops at an empty entry. A line holding a 0 is
 ; not stored; nor is one equal to the newest. The ring's page, HRING, is
-; fixed below the CCP's level records, and cold boot clears it.
+; fixed, and cold boot clears it.
 
-HRING   EQU     $BD00           ; the page below LVBASE
+HRING	EQU	$BD00		; its page, in EXPAND 1
 
 ; A = the ring's byte at L (HGET), or that byte = A (HPUT), with H the
 ; ring's page, HRING>>8. EXPAND 1 is in view for the access alone, and no stack is

@@ -23,9 +23,9 @@ DHLEN   EQU     25
 DRECSZ  EQU     13              ; link, name, version, table
 STLAST	EQU	STREC+127	; startup's record: its last byte
 
-; UNLOAD: the lowest resident, at level 0 with the window shut. Only a head of
+; UNLOAD: the lowest resident, with no INIT or REMOVE running. Only a head of
 ; the owner list is a driver.
-DRVUNL: LD      A,(CCPLVL)
+DRVUNL:	LD	A,(DRVBSY)	; 0 here, and used as such below
         OR      A
         JR      NZ,PRLRF
         LD      HL,(PZTOP)
@@ -56,7 +56,7 @@ DRVUNL: LD      A,(CCPLVL)
 ; its pages reserved with no services.
 DRVLOAD:XOR     A
         LD      (DRVRC),A
-        LD      A,(CCPLVL)      ; level 0, and no INIT or REMOVE running
+	LD	A,(DRVBSY)	; no INIT or REMOVE running
         OR      A
         JR      NZ,PRLRF
         LD      HL,(DF)
@@ -250,12 +250,12 @@ DRVRET: LD      (DRVRC),A
         CP      1
         CCF
 DRVSHUT:LD      A,0
-        LD      (CCPLVL),A
+	LD	(DRVBSY),A
         RET
 
 ; HL at the header field, the page in H: the window opens and that routine runs.
 DRVCALL:LD      A,$80
-        LD      (CCPLVL),A
+	LD	(DRVBSY),A
         LD      E,(HL)
         INC     L
         LD      A,(HL)
@@ -359,15 +359,11 @@ STBDMA:	LD	HL,DEFDMA	; the DMA address programs expect
 	LD	(CURDMA),HL
 	RET
 
-; At level 0 with a line left: it goes in the command buffer, echoed as if
+; With a line left: it goes in the command buffer, echoed as if
 ; typed, and carry clear. Lines end at CR or LF and blank ones are passed
 ; over. ^Z, a zero or the record's last byte ends the file. Otherwise carry
 ; set, through STDONE once the file has finished. Destroys AF, B, DE, HL.
-STLINE:	LD	A,(CCPLVL)
-	OR	A
-	SCF
-	RET	NZ		; only the top level takes a line
-	LD	HL,STPOS
+STLINE:	LD	HL,STPOS
 	LD	A,(HL)
 	RLCA			; top bit to carry: the file is finished
 	JR	C,STDONE
@@ -409,7 +405,7 @@ STL2:	LD	A,L
 	OR	A
 	RET
 
-; Once, at the first prompt at level 0 after startup: with a PICO9918 and a
+; Once, at the first prompt after startup: with a PICO9918 and a
 ; matrix keyboard fitted and no display driver in, the LCD says PICO?. That
 ; board's screen is black and it may have no serial terminal. It covers a
 ; missing file, a bad file, no STARTUP.CMD and a skip. HL = STPOS, A = STPOS
@@ -417,16 +413,15 @@ STL2:	LD	A,L
 STDONE:	INC	A		; FFh has been seen, and carry stays
 	RET	Z
 	LD	(HL),$FF	; once only
-	LD	A,(CONDEV)	; the only CD* bits: zero is both and no GLCD
+	LD	A,(CONDEV)	; zero: both, no GLCD, whatever row 3 has
+	AND	$FF-CDWRD	; GLCD? may be up from a failed CON UC1
 	SUB	CDMTX+CDTMS	; CDGLC set means GLCD.DRV is in
 	LD	HL,PIVEC+1	; and a word here means PICO.DRV is
 	OR	(HL)
 	SCF
 	RET	NZ
-	LD	HL,CONDEV	; a take can tell that it wipes this word
-	SET	7,(HL)		; CDWRD
 	LD	HL,PICMSG	; carry set by LCDROW
-	JP	LCD3
+	JP	LCDWRD
 ; ABIDRV. C = 0, find: DE = the name, B = the least version; HL = the entry
 ; table. C = 1, enumerate: B = an index; HL = that record. A = the generation.
 ; Carry if there is none. BC, DE destroyed.

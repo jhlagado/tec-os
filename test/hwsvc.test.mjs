@@ -8,10 +8,10 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { ROOT, boot, romFor, standardCard } from "./lib/fixtures.mjs";
+import { ABI, ROOT, boot, romFor, standardCard } from "./lib/fixtures.mjs";
 
 const HWSVC = romFor().symbols.get("ABIHW");
-const HW = { INFO: 0, DIGIT: 1, LCD: 2, VIDEO: 3, TONE: 4, JOY: 5, KEYS: 6, PUTAT: 7, RTC: 8 };
+const HW = Object.fromEntries(["INFO", "DIGIT", "LCD", "VIDEO", "TONE", "JOY", "KEYS", "PUTAT", "RTC"].map((n) => [n, ABI[`HW${n}`]]));
 const BACK = 0x0f00; // the sentinel return address
 const STACK = 0x1000; // the caller's stack top
 const BUF = 0x2000; // argument and result buffers
@@ -87,7 +87,14 @@ test("hardware services: information, bad numbers, digits, LCD, tone", () => {
   assert.equal(info.b & 0x08, 0x08, "the DS1302 answers");
   assert.equal(info.de, m.sym("ROMVER"));
   assert.equal(info.hl, 0, "serial console: no columns or rows");
-  for (let n = 9; n < 256; n += 1) fails(svc(m, n), 1);
+  assert.deepEqual(Object.values(HW), [19, 20, 21, 22, 23, 24, 25, 26, 27], "base+0 to base+8");
+  // Every other number refuses, and leaves B, DE and HL as they came.
+  for (let n = 0; n < 256; n += 1) {
+    if (n >= ABI.HWBASE && n < ABI.HWBASE + ABI.HWCOUNT) continue;
+    const r = svc(m, n, { b: 0x5a, de: 0x1234, hl: 0x5678 });
+    fails(r, 1);
+    assert.deepEqual([r.b, r.de, r.hl], [0x5a, 0x1234, 0x5678], `service ${n} leaves the registers`);
+  }
 
   put(m, BUF, [1, 2, 3, 4, 5, 6]);
   const [dig, dout] = outs(m, () => svc(m, HW.DIGIT, { hl: BUF }));

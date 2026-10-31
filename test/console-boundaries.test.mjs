@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, standardCard } from "./lib/fixtures.mjs";
+import { ABI, boot, standardCard } from "./lib/fixtures.mjs";
 
 const profiles = ["debug80", "debug80t40", "debug80g32", "glcd"];
 const depths = {};
@@ -64,13 +64,13 @@ for (const profile of profiles) {
     m.cpu.hardware.memRead = (a) => { if (a >= 0x2000 && a < 0x2100) reads.push(a); return read(a); };
     m.write(0x2000, 90);
     let r;
-    const writes = watch(m, () => { r = call(m, "ABIHW", { c: 7, b: 0, d: 0, e: 0, h: 0x20, l: 0 }); });
+    const writes = watch(m, () => { r = call(m, "ABIHW", { c: ABI.HWPUTAT, b: 0, d: 0, e: 0, h: 0x20, l: 0 }); });
     m.cpu.hardware.memRead = read;
     ok(r);
     assert.deepEqual(reads, [], "zero count must not read the source");
     assert.deepEqual(screen(m, profile), before);
     assert.equal(writes.length, 0);
-    ok(call(m, "ABIHW", { c: 7, b: 1, d: 0, e: 0, h: 0x20, l: 0 }));
+    ok(call(m, "ABIHW", { c: ABI.HWPUTAT, b: 1, d: 0, e: 0, h: 0x20, l: 0 }));
     assert.equal(screen(m, profile)[0], "ZBC");
     assert.equal(m.read(m.sym("VCOL")), 3);
     assert.deepEqual(m.violations, []);
@@ -88,7 +88,7 @@ for (const profile of profiles) {
   test(`${profile}: switching to a claimed display preserves registers and VRAM until release`, () => {
     const m = start(profile);
     const defaultRegisters = [...m.tec1g.state.display.tms9918.stateSnapshot().registers];
-    ok(call(m, "ABIHW", { c: 3, b: 1 }));
+    ok(call(m, "ABIHW", { c: ABI.HWVIDEO, b: 1 }));
     vreg(m, 7, 0x12);
     const before = m.tec1g.state.display.tms9918.stateSnapshot();
     const writes = watch(m, () => {
@@ -101,12 +101,12 @@ for (const profile of profiles) {
     assert.equal(writes.filter(([p]) => p === 0xbe || p === 0xbf).length, 0);
     assert.deepEqual(m.tec1g.state.display.tms9918.stateSnapshot(), before);
     assert.notEqual(m.read(m.sym("VCLAIM")), 0);
-    assert.deepEqual(call(m, "ABIHW", { c: 7, b: 0, h: 0x20, l: 0 }), { a: 2, carry: 1, z: 0 });
-    ok(call(m, "ABIHW", { c: 3, b: 0 }));
+    assert.deepEqual(call(m, "ABIHW", { c: ABI.HWPUTAT, b: 0, h: 0x20, l: 0 }), { a: 2, carry: 1, z: 0 });
+    ok(call(m, "ABIHW", { c: ABI.HWVIDEO, b: 0 }));
     assert.equal(m.read(m.sym("VCLAIM")), 0);
     assert.deepEqual([...m.tec1g.state.display.tms9918.stateSnapshot().registers], defaultRegisters);
     assert.ok(m.screen().every((row) => row === ""));
-    ok(call(m, "ABIHW", { c: 3, b: 1 }));
+    ok(call(m, "ABIHW", { c: ABI.HWVIDEO, b: 1 }));
     vreg(m, 7, 0x12);
     m.cpu.cpu.pc = m.sym("WBOOTR");
     m.mark = m.output.length;

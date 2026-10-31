@@ -12,7 +12,7 @@ import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
-const VARIANTS = ["V_FAIL", "V_PROBE", "V_CCP", "V_CMD", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
+const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
 const made = new Map();
 
 /** DRVDEMO with OVER set; opt as makeDrv's. */
@@ -171,22 +171,13 @@ for (const profile of ["debug80", "debug80t40", "debug80g32", "board"]) {
   });
 }
 
-test("a load refused at a level reports refused, whatever the last load left", async () => {
-  const t = await machine();
-  assert.equal(t.load((await drv({ V_FAIL: 1 })).file).rc, 1);
-  t.prompt();
-  t.m.command("CCP");
-  const r = t.load((await drv()).file);
-  assert.deepEqual([r.carry, r.rc], [1, 0]);
-});
-
 test("a load refused by the window reports refused", async () => {
   const t = await machine();
   assert.equal(t.load((await drv({ V_FAIL: 1 })).file).rc, 1);
-  t.m.write(t.m.sym("CCPLVL"), 0x80);
+  t.m.write(t.m.sym("DRVBSY"), 0x80);
   const r = t.load((await drv()).file);
   assert.deepEqual([r.carry, r.rc], [1, 0]);
-  t.m.write(t.m.sym("CCPLVL"), 0);
+  t.m.write(t.m.sym("DRVBSY"), 0);
 });
 
 test("every image byte is its file's, and only the fixups gain the page, across gaps of 255 and more", async () => {
@@ -278,15 +269,15 @@ test("INIT returning 0 installs a driver with no services", async () => {
   assert.equal(t.nth(0).carry, 1);
 });
 
-test("REMOVE calling ABIXCCP is refused, and UNLOAD goes on", async () => {
+test("REMOVE calling the removal by its ROM address is refused, and UNLOAD goes on", async () => {
   const t = await machine();
-  const d = await drv({ V_REMWIN: 1 });
+  const d = await drv({ V_REMWIN: 1 }, { raw: { RAWUNL: t.m.sym("DRVUNL") } });
   t.load(d.file);
   const base = t.head();
   t.prompt();
   t.unload();
   assert.equal(t.m.read(base + d.symbols.RESULT), 1, "the call returned carry");
-  assert.equal(t.m.read(t.m.sym("CCPLVL")), 0);
+  assert.equal(t.m.read(t.m.sym("DRVBSY")), 0);
   assert.equal(t.m.read(t.m.sym("DRVHEAD")), 0);
 });
 
@@ -301,9 +292,6 @@ test("NAME.DRV installs, from a drive too; a file that won't read and a refused 
   assert.match(t.m.command("NONE.DRV"), /NONE\.DRV\?/);
   assert.match(t.m.command("FAIL.DRV"), /FAIL\.DRV\?/);
   assert.equal(t.word(6), stub);
-  t.m.command("CCP");
-  assert.match(t.m.command("OK.DRV"), /OK\.DRV\?/, "a level is refused");
-  t.m.command("EXIT");
   assert.doesNotMatch(t.m.command("OK.DRV"), /\?/);
   assert.doesNotMatch(t.m.command("B:OK2.DRV"), /\?/);
   assert.equal(t.word(6), stub - 0x200);
@@ -353,13 +341,6 @@ test("warm boot keeps a driver, a nested level finds it and can't load, and a re
   t.warmBoot();
   assert.equal(t.find("DEMO").carry, 0);
   t.prompt();
-  t.m.command("CCP");
-  assert.equal(t.find("DEMO").carry, 0, "a level sees what its parent sees");
-  t.prompt();
-  const refused = t.load(d.file);
-  assert.deepEqual([refused.carry, refused.rc], [1, 0], "a level-1 load is refused");
-  t.prompt();
-  t.m.command("EXIT");
   t.m.reset();
   const from = t.m.output.length;
   t.m.expect(/A>$/, { from, maxCycles: 200_000_000 });
@@ -381,7 +362,7 @@ for (const [name, over] of [
     const top = t.word(6);
     t.prompt();
     t.warmBoot();
-    assert.deepEqual([t.word(6), t.m.read(t.m.sym("CCPLVL"))], [top, 0]);
+    assert.deepEqual([t.word(6), t.m.read(t.m.sym("DRVBSY"))], [top, 0]);
   });
 }
 
@@ -409,8 +390,6 @@ test("INIT lies and REMOVE refuses: installed with no services, and the load say
 });
 
 for (const [name, over, raw] of [
-  ["ABIXCCP", { V_CCP: 1 }],
-  ["ABIXCMD", { V_CMD: 1 }],
   ["a load", { V_LOAD: 1 }, ["RAWLOAD", "DRVLOAD"]],
   ["a removal", { V_UNL: 1 }, ["RAWUNL", "DRVUNL"]],
 ]) {
@@ -420,7 +399,7 @@ for (const [name, over, raw] of [
     const d = await drv(over, raw ? { raw: { [raw[0]]: t.m.sym(raw[1]) } } : {});
     assert.equal(t.load(d.file).carry, 0);
     assert.equal(t.m.read(t.head() + d.symbols.RESULT), 1, "the call returned carry");
-    assert.equal(t.m.read(t.m.sym("CCPLVL")), 0);
+    assert.equal(t.m.read(t.m.sym("DRVBSY")), 0);
     assert.equal(t.find("FIRST").carry, 0, "the driver below stays");
   });
 }
@@ -440,8 +419,12 @@ test("a warm boot inside INIT rolls the ceiling back", async () => {
   const [top, pztop] = [t.word(6), t.word(t.m.sym("PZTOP"))];
   assert.equal(t.load((await drv({ V_WB: 1 })).file).back, false);
   t.m.runUntil(() => t.m.waitingForInput(), 200_000_000, "the prompt");
-  assert.deepEqual([t.word(6), t.word(t.m.sym("PZTOP")), t.m.read(t.m.sym("CCPLVL"))], [top, pztop, 0]);
+  assert.deepEqual([t.word(6), t.word(t.m.sym("PZTOP")), t.m.read(t.m.sym("DRVBSY"))], [top, pztop, 0]);
   assert.deepEqual(changed(t.m, before, snapshot(t.m), ceiling, ["load", "command"]), []);
+  assert.equal(t.load((await drv()).file).carry, 0, "the guard is down: a load works");
+  t.prompt();
+  t.unload();
+  assert.deepEqual([t.word(6), t.m.read(t.m.sym("DRVHEAD"))], [top, 0], "and UNLOAD works");
 });
 
 test("a warm boot inside INIT after a hook leaves it dangling, which is why hooks go last", async () => {

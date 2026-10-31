@@ -1,11 +1,11 @@
 # ROM services
 
 Status: **Built**, ABI 4.0. The hardware services' entry, `ABIHW` at
-`C00Ah`, has 9 services in `src/hwsvc.asm`, 473 bytes of ROM in all, and
+`C00Ah`, has 9 services in `src/hwsvc.asm`, 485 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,601 bytes (`debug80`) and has 1,783 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,271 bytes (`debug80`) and has 2,113 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -31,8 +31,13 @@ ABI 4.0. `src/abi.inc`, published in `dist/` as `abi.inc`, gives each entry's
 address under the name below, and the service numbers and status codes, and
 the build checks them against the ROM. A program tests for major version 4
 exactly: a new major may move what follows `ABIMAIN` and renumber the services.
-`C003h` to `C00Ch` kept their addresses from ABI 3. `ABIXCCP` and `ABIXCMD` are
-last so that they can be cut off the end.
+`C003h` to `C00Ch` kept their addresses from ABI 3. ABI 4 isn't frozen until a
+release, so a later stage may add to the table's end, which is `C018h`.
+
+Two things keep a program from ABI 3 harmless. Service numbers start at `HWBASE`,
+19, so that its numbers 0 to 18 are refused. And its `MOUNT` and `VOLS`, which test
+nothing and call `C01Dh`, meet a `RET` there, in the data after the table, and the
+build checks that it stays.
 
 | Address | Name | Contents |
 | --- | --- | --- |
@@ -45,14 +50,12 @@ last so that they can be cut off the end.
 | `C00Fh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
 | `C012h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
 | `C015h` | `ABIDRV` | `JP DRVSVC`: the service registry, below; C = 0 find, 1 enumerate |
-| `C018h` | `ABIXCCP` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = `0100h` in, function 108's code out; any other HL refused with carry set |
-| `C01Bh` | `ABIXCMD` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers, reached through BDOS
 function 50's selectors 29 and 25. `XMOVE`'s 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; its 1
 is EXPAND 1 from `8000h` up to its low mark, read at each call. EXPAND 1 is
-TEC-OS's own: `BF00h` its reserved page, `BE00h` the CCP's levels, `BD00h`
+TEC-OS's own: `BF00h` its reserved page, `BE00h` free, `BD00h`
 the command history, `BC00h` the block cache's table and `8000h–BBFFh` its
 30 lines. Cold boot
 sets the mark to `80h`, so every byte in bank 1 is refused. `MOVE` copies forward as `LDIR` does and returns `A = 0`, or
@@ -138,19 +141,20 @@ program left returns at once with the interrupt state unchanged.
 
 | C | Service | Arguments | Results | Stack | ROM |
 | ---: | --- | --- | --- | ---: | ---: |
-| — | Dispatcher, exits, table | | | 4 | 48 |
-| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed (`HWBCLM`), 7 `PICO?` on the LCD (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
-| 1 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
-| 2 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written | 10 | 34 |
-| 3 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 8 | 81 |
-| 4 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 59 T-states | 4 | 29 |
-| 5 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
-| 6 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
-| 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 22 | 68 |
-| 8 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
-| | **Total** | | | | **473** |
+| — | Dispatcher, exits, table | | | 4 | 50 |
+| 19 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed (`HWBCLM`), 7 a word of the ROM's, `PICO?` or `GLCD?`, on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
+| 20 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
+| 21 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written; row 3 also clears `HWBWRD` | 10 | 44 |
+| 22 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 8 | 81 |
+| 23 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 59 T-states | 4 | 29 |
+| 24 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
+| 25 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
+| 26 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 22 | 68 |
+| 27 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
+| | **Total** | | | | **485** |
 
-Numbers 9 to 255 return status 1. Stack is the deepest measured use of the
+Every other number, 0 to 18 and 28 to 255, returns status 1 with the other registers
+as they came. Stack is the deepest measured use of the
 caller's stack below the return address.
 
 Notes:
@@ -213,23 +217,23 @@ carries its own.
 | Container mount and checks | 1,192 | 1 | Stays |
 | Format tables, diagnostics | 176 | 1 | Stays |
 | CCP | 2,664 | 2 | Stays |
-| CCP levels: `XCCP`, `XCMD`, `EXIT` and `UNLOAD` | 297 | 2 | Stays |
 | PRL loader | 100 | 2 | Stays, for programs |
 | Driver loader, registry, `DRIVERS` and startup | 718 | 2 | Stays |
 | Command history | 210 | 2 | Stays |
 | Block cache | 563 | 1, 2 | Stays: every read goes through it |
 | BDOS | 3,736 | 2 | Stays |
 | `XMOVE` and `MOVE` | 228 | 3 | Stays |
-| Hardware services | 473 | 3, 4 | Stays |
-| The table at `C003h` and the reset jump | 30 | 1 | Stays |
+| Hardware services | 485 | 3, 4 | Stays |
+| The table at `C003h` and the reset jump | 24 | 1 | Stays |
 
 Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
 and the regions as `docs/memory-map.md` gives them, the parts within the
 console and services regions by source file. The memory map now gives the
 ROM as its five blocks instead. The rows for the GLCD's
-driver, the CCP levels, the PRL and driver loaders, `XMOVE` and `MOVE` are counted
+driver, the PRL and driver loaders, `XMOVE` and `MOVE` are counted
 again after drivers and the image save went, and the block cache's, the
-probe's, the services' and the table's at ABI 4.0.
+probe's, the services' and the table's at ABI 4.0, the table's again when it
+lost its last two entries.
 
 Nothing in the ROM today belongs on the card. The native program services,
 which had no user, were removed.
@@ -271,7 +275,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,783<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->2,113<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

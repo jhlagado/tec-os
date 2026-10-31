@@ -1,8 +1,8 @@
 ; The TEC-OS table, ABI 4.0, at C003h after the reset jump: the one fixed
 ; address in the ROM. src/abi.inc gives each entry's address to programs, and
 ; the build checks it against these labels. A new major version may move what
-; follows ABIMAIN. ABIXCCP and ABIXCMD stay last, so that they can be cut off
-; the end.
+; follows ABIMAIN. The table ends with ABIDRV at C018h, and ABI 4 isn't frozen
+; until a release, so a later stage may add to its end.
 
 ABITAB:	DB	"TNA"		; C003h signature
 ABIMAJ:	DB	4		; C006h ABI major version
@@ -18,8 +18,4 @@ ABIGLCD:
 				; one is kept), or 0
 ABIDRV:	JP	DRVSVC		; C015h the service registry: C = 0 find,
 				; 1 enumerate
-ABIXCCP:
-	JP	XCCP		; C018h a nested CCP: HL = 0100h
-ABIXCMD:
-	JP	XCMD		; C01Bh one command line at DE, the same
 ABIEND:

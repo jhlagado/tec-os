@@ -14,12 +14,13 @@ test("the table at C003h: TNA, ABI 4.0, the entries abi.inc names, and the old t
   const S = (n) => m.sym(n);
   assert.equal(S("ABITAB"), 0xc003);
   assert.deepEqual([0, 1, 2, 3, 4].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 4, 0], "TNA 4.0");
-  for (const n of ["ABIHW", "ABIVOL", "ABIGLCD", "ABIDRV", "ABIXCCP", "ABIXCMD"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
+  for (const n of ["ABIHW", "ABIVOL", "ABIGLCD", "ABIDRV"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
   // ABI 3.1's addresses: the first five hold still, the rest moved or left.
-  const mapped = { C003: "ABITAB", C006: "ABIMAJ", C007: "ABIMIN", C008: "ABIVID", C00A: "ABIHW", C00D: "ABIMAIN", C00F: "ABIVOL", C012: "ABIGLCD", C015: "ABIDRV", C018: "ABIXCCP", C01B: "ABIXCMD" };
+  const mapped = { C003: "ABITAB", C006: "ABIMAJ", C007: "ABIMIN", C008: "ABIVID", C00A: "ABIHW", C00D: "ABIMAIN", C00F: "ABIVOL", C012: "ABIGLCD", C015: "ABIDRV" };
   for (const [at, n] of Object.entries(mapped)) assert.equal(S(n), parseInt(at, 16), n);
-  assert.equal(S("ABIEND"), 0xc01e);
-  for (const n of ["ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "FONT", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);
+  assert.equal(S("ABIEND"), 0xc018);
+  assert.equal(m.read(0xc01d), 0xc9, "a RET where ABI 3 had ABIVOL");
+  for (const n of ["ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "ABIXCCP", "ABIXCMD", "XCCP", "XCMD", "XEXIT", "CCPFLG", "CCPLVL", "LVBASE", "FONT", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);
   noViolations(m);
 });
 

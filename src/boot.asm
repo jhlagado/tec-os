@@ -62,7 +62,7 @@ WBOOTR: DI
         OUT     (SYSLAT),A
         LD      SP,BSTK
         CALL    PZINIT
-        LD      HL,CCPLVL       ; the window shuts
+	LD	HL,DRVBSY	; no INIT or REMOVE outlives a warm boot
         RES     7,(HL)
         CALL    CPMINIT
         CALL    HWVREL          ; a program that claimed the PICO9918 gives it back
@@ -99,8 +99,8 @@ MEMINIT:LD      A,LATEXP
         LD      A,(LATCHV)
         OUT     (SYSLAT),A
         LD      A,XMLOW         ; EXPAND 1 is TEC-OS's: the reserved page,
-        LD      (XMARK),A       ; the level records at LVBASE and the history
-                                ; at HRING, fixed; MOVE has no range in it
+	LD	(XMARK),A	; the history at HRING and the cache, fixed:
+				; MOVE has no range in it
         LD      A,LATMAIN
         LD      HL,DETADR
         CALL    DETECT

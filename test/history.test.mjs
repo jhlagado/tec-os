@@ -137,8 +137,8 @@ test("a program's function 10 takes ^W as a character and its line is not stored
   assert.deepEqual(lines(m), ["ask", "dir"]);
 });
 
-test("the ring is shared by CCP levels, kept by warm boot and emptied by cold boot", () => {
-  const m = session(["dir", "ccp", "type nested.txt", "exit"]);
+test("the ring is kept by warm boot and emptied by cold boot", () => {
+  const m = session(["dir", "type nested.txt", "exit"]);
   m.mark = m.output.length;
   m.type(W + W);
   assert.equal(held(m), "type nested.txt");
@@ -150,5 +150,5 @@ test("the ring is shared by CCP levels, kept by warm boot and emptied by cold bo
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.type(W);
   assert.equal(held(m), "", "cold boot empties it");
-  assert.equal(m.read(m.sym("XMARK")), 0x80, "the ring and the levels are fixed pages; MOVE has no range in EXPAND 1");
+  assert.equal(m.read(m.sym("XMARK")), 0x80, "the ring is a fixed page; MOVE has no range in EXPAND 1");
 });
