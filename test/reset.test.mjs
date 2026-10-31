@@ -105,6 +105,26 @@ test("a recognised reset keeps a remapped A:, the boot list and the LCD say so, 
   assert.deepEqual(m.violations, []);
 });
 
+test("all four drives are kept: a remapped D:", () => {
+  const vols = [VOLUMES[0], VOLUMES[1], { geometry: "G1M", label: "CEE", mount: "C" }, { geometry: "G1M", label: "DEE", mount: "D" }, { geometry: "G1M", label: "ALT", mount: "-" }];
+  const m = machine(card(vols));
+  assert.equal(mountOn(m, 3, 4), 0);
+  reset(m);
+  assert.deepEqual(idx(m), [1, 2, 3, 5]);
+});
+
+test("a selected volume of another geometry than the drive's default gets its own DPH", () => {
+  const vols = [{ geometry: "G8M", label: "SYSTEM", mount: "A" }, VOLUMES[1], VOLUMES[2]];
+  const m = machine(card(vols));
+  const big = m.command("DIR");
+  assert.equal(mountOn(m, 0, 2), 0);
+  reset(m);
+  assert.deepEqual(idx(m), [3, 2, 0, 0]);
+  const small = m.command("DIR");
+  assert.notEqual(/(\d+)K free/.exec(small)?.[1] ?? "none", /(\d+)K free/.exec(big)?.[1] ?? "none");
+  assert.doesNotMatch(small, /Bad Sector/);
+});
+
 test("a warm boot keeps the selection", () => {
   const m = remapped();
   warm(m);
