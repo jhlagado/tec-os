@@ -91,11 +91,11 @@ ERRFILE: DB     ": File R/O",0
 
 ; ---- hwsvc.asm ---------------------------------------------------------------
 ; The hardware services, by number: HWINFO up to HWRTC.
-HWTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
-	DW	HWSLCD,HWSVID	; 2 and 3
-	DW	HWSTONE,HWSJOY	; 4 and 5
-	DW	HWSKEYS,HWSPUT	; 6 and 7
-	DW	HWSRTC		; 8
+HWTAB:	DW	HWSINFO,HWSDIG	; 19 and 20
+	DW	HWSLCD,HWSVID	; 21 and 22
+	DW	HWSTONE,HWSJOY	; 23 and 24
+	DW	HWSKEYS,HWSPUT	; 25 and 26
+	DW	HWSRTC		; 27
 
 ; ---- glcd.asm ----------------------------------------------------------------
 GLCFCB: DB      1,"GLCD    DRV"

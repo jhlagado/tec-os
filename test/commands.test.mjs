@@ -66,7 +66,7 @@ test("a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and B
   assert.deepEqual(m.expand1Writes, []);
   for (const a of [0xbe00, 0xbeff]) poke(a);
   assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbe00, 0xbeff]);
-  EXPAND1_WRITES.length = 0; // the two writes this test made, which the file's end would otherwise fail
+  for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // these were asked for
 });
 
 test("startup lines go on after ^C at a program", async () => {

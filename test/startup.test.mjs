@@ -1,5 +1,5 @@
-// A:STARTUP.CMD at cold boot: its one record, its lines run from MLREAD at
-// level 0, the keypad's skip, and a card with GLCD.DRV on boards with and
+// A:STARTUP.CMD at cold boot: its one record, its lines run from MLREAD, the
+// keypad's skip, and a card with GLCD.DRV on boards with and
 // without a GLCD. Emulator evidence.
 
 import { test } from "node:test";
@@ -45,7 +45,7 @@ test("a file with no lines, and no file, reach the prompt; a file over one recor
 
 test("a key held through reset skips the file: a hanging INIT reaches a prompt, and with no key it hangs", async () => {
   const defs = { FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, DRVNAME: '"HANG    "', SVCNAME: '"HANG    "', SVCVER: 1 };
-  for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
+  for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
   defs.V_HANG = 1;
   const { file } = await makeDrv(resolve(ROOT, "test/programs/drvdemo.asm"), { defs, work: resolve(ROOT, "build/drv") });
   const files = { "HANG.DRV": file, "STARTUP.CMD": startupFile("HANG.DRV") };

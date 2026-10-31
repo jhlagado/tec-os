@@ -1,8 +1,8 @@
-; The TEC-OS table, ABI 4.0, at C003h after the reset jump: the one fixed
-; address in the ROM. src/abi.inc gives each entry's address to programs, and
+; The TEC-OS table, ABI 4.0, at C003h after the reset jump. It and the RET at
+; C01Dh (data.asm) are the ROM's fixed addresses. src/abi.inc gives each entry's address to programs, and
 ; the build checks it against these labels. A new major version may move what
-; follows ABIMAIN. The table ends with ABIDRV at C018h, and ABI 4 isn't frozen
-; until a release, so a later stage may add to its end.
+; follows ABIMAIN. The table ends at C018h, with ABIDRV at C015h, and ABI 4
+; isn't frozen until a release, so a later stage may add to its end.
 
 ABITAB:	DB	"TNA"		; C003h signature
 ABIMAJ:	DB	4		; C006h ABI major version

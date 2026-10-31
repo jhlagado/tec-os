@@ -215,7 +215,7 @@ test("MOVE has no range in bank 1: a byte there is refused, and 0 bytes at 8000h
   for (const [c, ok] of [
     [{ label: "1 byte at 8000h", dst: 1, src: 0, hl: 0x8000, de: 0x1000, bc: 1 }, false],
     [{ label: "1 byte from 8000h", dst: 0, src: 1, hl: 0x1000, de: 0x8000, bc: 1 }, false],
-    [{ label: "the levels' page", dst: 1, src: 0, hl: 0xbe00, de: 0x1000, bc: 0x10 }, false],
+    [{ label: "the free page", dst: 1, src: 0, hl: 0xbe00, de: 0x1000, bc: 0x10 }, false],
     [{ label: "0 bytes at 8000h", dst: 1, src: 0, hl: 0x8000, de: 0x1000, bc: 0 }, true],
   ])
     check(machine(), c, ok);

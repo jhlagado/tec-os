@@ -20,7 +20,7 @@ gives programs the TEC-1G's hardware, and what belongs on the card instead.
 | after the data | One block of code |
 | to `FFFFh` | The free space, in one gap |
 
-Only `C003h` is fixed. The data and code move when an entry is added to the
+Only `C003h` and the `RET` at `C01Dh`, below, are fixed. The data and code move when an entry is added to the
 table or the code changes; programs reach the ROM only through the table.
 The build checks this order from the symbol table on every profile, and
 refuses any `.asm` file that names an address of the old table at `FF00h`.
@@ -34,10 +34,13 @@ exactly: a new major may move what follows `ABIMAIN` and renumber the services.
 `C003h` to `C00Ch` kept their addresses from ABI 3. ABI 4 isn't frozen until a
 release, so a later stage may add to the table's end, which is `C018h`.
 
-Two things keep a program from ABI 3 harmless. Service numbers start at `HWBASE`,
-19, so that its numbers 0 to 18 are refused. And its `MOUNT` and `VOLS`, which test
-nothing and call `C01Dh`, meet a `RET` there, in the data after the table, and the
-build checks that it stays.
+An ABI 3 program that tests the major for 3 stops itself. For the old clients that
+don't, two things are done. Service numbers start at `HWBASE`, 19, so that the
+numbers 0 to 18 are refused, which holds for `DEMO`, whose test takes any major from
+2. And `MOUNT` and `VOLS`, which test nothing and call `C01Dh`, meet a `RET` there,
+in the data after the table, and the build checks that it stays. No other program
+is covered: an ABI 3 program that doesn't test may reach any address in the table,
+such as `C012h`, which is `ABIGLCD` now.
 
 | Address | Name | Contents |
 | --- | --- | --- |

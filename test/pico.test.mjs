@@ -601,6 +601,43 @@ test("row 3: GLCD? is cleared by GLCD.DRV loading under PICO.DRV, which keeps th
   assert.equal(lcdRow(m, 3), "");
 });
 
+test("row 3: a program's write to rows 0 to 2 leaves the word for a take to clear", () => {
+  const m = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"] });
+  assert.equal(lcdRow(m, 3), "PICO?");
+  [..."Not row three.......".slice(0, 20)].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
+  for (const b of [0, 1, 2]) callAt(m, m.sym("ABIHW"), { b, c: ABI.HWLCD, h: 0x20, l: 0 });
+  assert.equal(lcdRow(m, 3), "PICO?");
+  say(m, "PICOX.DRV");
+  assert.equal(lcdRow(m, 3), "");
+});
+
+test("row 3: a failed load by hand leaves the word", () => {
+  const m = start({ "BAD.DRV": BAD });
+  assert.equal(lcdRow(m, 3), "PICO?");
+  assert.match(say(m, "BAD.DRV"), /BAD\.DRV\?/);
+  assert.equal(lcdRow(m, 3), "PICO?");
+  assert.equal(m.read(m.sym("CONDEV")) & HWBWRD, HWBWRD, "still marked");
+});
+
+test("row 3: a driver with no video table leaves the word", async () => {
+  const m = start({ "RES.DRV": await driver("res") });
+  assert.equal(lcdRow(m, 3), "PICO?");
+  const top = word(m, 6);
+  assert.doesNotMatch(say(m, "RES.DRV"), /RES\.DRV\?/);
+  assert.equal(word(m, 6), top - 0x100, "it loaded");
+  assert.equal(lcdRow(m, 3), "PICO?");
+});
+
+test("row 3: the word lasts through a program's warm boot, for a take to clear", () => {
+  const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C and returns
+  const m = start({ "SAY.COM": SAY, "PICOX.DRV": PICO_DRV["PICO.DRV"] });
+  assert.equal(lcdRow(m, 3), "PICO?");
+  assert.match(say(m, "SAY"), /C\r\n/);
+  say(m, "PICOX.DRV");
+  assert.equal(m.read(m0(m)), CRT);
+  assert.equal(lcdRow(m, 3), "");
+});
+
 test("row 3: PICO? still shows on the black screen after a failed CON UC1", () => {
   const m = start({ "STARTUP.CMD": startupFile("CON UC1") });
   assert.equal(m.read(m.sym("CONDEV")) & ABI.HWBWRD, ABI.HWBWRD);

@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { ABI, ROOT, TEST_CLOCK, boot, program, romFor, sourceDigest, standardCard, volume } from "./lib/fixtures.mjs";
+import { ABI, ROOT, TEST_CLOCK, boot, program, romFor, sourceDigest, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 /** A serial board at its prompt, the ROM's bytes at C003h changed as `edit` says. */
 async function machine(edit = () => {}) {
@@ -120,6 +120,8 @@ test("abi.inc's numbers reach the tests by name", () => {
 // Binaries from an edc2745 starter card, ABI 3.1, as they might still sit on a
 // stored card. Pinned by hash: they are the evidence that an old program does
 // no harm, and must not be rebuilt.
+// An old DEMO's INFO is refused with B as it came, and CHKTAG's DJNZ left B = 0, so
+// it reads no devices and prints no throughout.
 const OLD = {
   "DEMO.COM": "92918e238d08803acf25523b372aa463b76a02a83430f9322d5a075de817be1f",
   "MOUNT.COM": "2ad307aee40367bf17732b37e6c806cba1f372845a2ba96d5cad48dfb0b869b6",
@@ -175,6 +177,27 @@ test("an old DEMO prints no throughout, reaches no service, and leaves page zero
   m.type("x");
   m.expect(/A>$/, { maxCycles: 80_000_000 });
   assert.deepEqual(pageZero(m), before);
+  assert.deepEqual(m.violations, []);
+});
+
+// PICO.DRV from a 2d5ce25 starter card, format 3 and ABI 4 with services from 0.
+// Its INIT's INFO is refused with B as it came, and DRVLOAD leaves B = 0, so its
+// BIT 1,B finds no PICO9918 and it refuses.
+const OLD_PICO = "23513b3ba4931a183b097f0753209e0b03bbea6168127a56279fc41cfb95a58a";
+
+test("a 2d5ce25 PICO.DRV is refused in INIT: its name with a question mark, DRVRC 1 and PICO? still shown", () => {
+  const bytes = readFileSync(resolve(ROOT, "test/fixtures/2d5ce25/PICO.DRV"));
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), OLD_PICO, "the pinned binary");
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("PICO.DRV", bytes);
+  a.write("STARTUP.CMD", startupFile("PICO.DRV"));
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt");
+  assert.match(m.text(0), /PICO\.DRV\?/);
+  assert.deepEqual([m.read(m.sym("DRVRC")), m.read(m.sym("DRVHEAD")), m.read(m.sym("CONMOD"))], [1, 0, 0]);
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "PICO?");
   assert.deepEqual(m.violations, []);
 });
 

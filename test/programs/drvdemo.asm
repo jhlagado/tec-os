@@ -165,6 +165,9 @@ REMOVE:
         SCF
         RET
 %ENDIF
+%IF V_REMWB
+	JP	0		; a warm boot from inside REMOVE
+%ENDIF
 %IF V_REMWIN
 	CALL	RAWUNL		; refused while REMOVE runs
         LD      A,0

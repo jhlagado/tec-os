@@ -12,7 +12,7 @@ import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
-const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
+const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
 const made = new Map();
 
 /** DRVDEMO with OVER set; opt as makeDrv's. */
@@ -333,7 +333,7 @@ test("the table has no removal: function 2 is refused and the driver stays", asy
   assert.equal(t.find("DEMO").carry, 0);
 });
 
-test("warm boot keeps a driver, a nested level finds it and can't load, and a reset empties both", async () => {
+test("warm boot keeps a driver, and a reset empties both", async () => {
   const t = await machine();
   const d = await drv();
   t.load(d.file);
@@ -425,6 +425,20 @@ test("a warm boot inside INIT rolls the ceiling back", async () => {
   t.prompt();
   t.unload();
   assert.deepEqual([t.word(6), t.m.read(t.m.sym("DRVHEAD"))], [top, 0], "and UNLOAD works");
+});
+
+test("a warm boot from inside REMOVE clears the guard, the driver stays, and a later load works", async () => {
+  const t = await machine();
+  assert.equal(t.load((await drv({ V_REMWB: 1 })).file).carry, 0);
+  const page = t.head();
+  const top = t.word(6);
+  t.prompt();
+  t.m.mark = t.m.output.length;
+  t.m.type("UNLOAD\r");
+  t.m.runUntil(() => t.m.ready() && /[A-P]>$/.test(t.m.text(t.m.mark)), 200_000_000, "the prompt after a warm boot");
+  assert.deepEqual([t.m.read(t.m.sym("DRVBSY")), t.head(), t.word(6)], [0, page, top], "the guard down and the driver in");
+  assert.equal(t.load((await drv({ DRVNAME: '"SECOND  "', SVCNAME: '"SECOND  "' })).file).carry, 0);
+  assert.equal(t.word(6), top - ((await drv({ DRVNAME: '"SECOND  "', SVCNAME: '"SECOND  "' })).image + 255 >> 8) * 256);
 });
 
 test("a warm boot inside INIT after a hook leaves it dangling, which is why hooks go last", async () => {

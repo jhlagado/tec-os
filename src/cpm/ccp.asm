@@ -983,16 +983,16 @@ CPNIB:
         LD      E,A
         JP      PUTCHAR
 
-; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon
-; may follow) sets the IOBYTE CON: field. The BIOS switches at the next
-; console call, so the report appears on the new console, and names the
-; serial terminal when the chosen display or keyboard is missing.
 ; UNLOAD: the lowest resident goes, or the command comes back with a question
 ; mark.
 CMDUNL:	CALL	DRVUNL
 	JP	NC,STARTED	; carry: DRVUNL refused
 	JP	BADCMD
 
+; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon
+; may follow) sets the IOBYTE CON: field. The BIOS switches at the next
+; console call, so the report appears on the new console, and names the
+; serial terminal when the chosen display or keyboard is missing.
 CMDCON:
         CALL    ARGSKIP         ; an error names the argument
         JR      Z,CONSHOW

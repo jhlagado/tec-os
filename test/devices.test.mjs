@@ -24,6 +24,29 @@ test("the table at C003h: TNA, ABI 4.0, the entries abi.inc names, and the old t
   noViolations(m);
 });
 
+for (const [at, name] of [[0xc018, "ABIXCCP"], [0xc01b, "ABIXCMD"]]) {
+  test(`a call to ${at.toString(16).toUpperCase()}h, 2d5ce25's ${name}, reaches the RET at C01Dh with nothing written`, () => {
+    const m = boot(standardCard());
+    const back = 0x0f00;
+    m.write(0x0ffe, back & 0xff);
+    m.write(0x0fff, back >> 8);
+    const cpu = m.cpu.cpu;
+    const saved = { pc: cpu.pc, sp: cpu.sp };
+    Object.assign(cpu, { pc: at, sp: 0x0ffe });
+    const writes = [];
+    const { memWrite, ioWrite } = m.cpu.hardware;
+    m.cpu.hardware.memWrite = (a, v) => { writes.push(a); memWrite(a, v); };
+    m.cpu.hardware.ioWrite = (p, v) => { writes.push(p); ioWrite(p, v); };
+    let ret = 0;
+    const step = m.step.bind(m);
+    m.step = () => { if (m.pc === 0xc01d) ret += 1; return step(); };
+    m.runUntil(() => m.pc === back, 1_000, "the return");
+    Object.assign(m.cpu.hardware, { memWrite, ioWrite });
+    Object.assign(cpu, saved);
+    assert.deepEqual([ret, writes], [1, []]);
+  });
+}
+
 test("warm boot restores the PICO9918 text mode and font after a program changes them", async () => {
   const image = standardCard();
   volume(image, "A").write("VIDMODE.COM", (await program("vidmode")).bytes);

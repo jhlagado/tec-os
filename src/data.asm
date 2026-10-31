@@ -7,8 +7,7 @@ ROMDATA:
 
 ; ABI 3 had its mount service at C01Dh, and a card from then can still hold a
 ; MOUNT.COM or VOLS.COM with no test of the table. A RET there sends each back
-; with nothing done. The five bytes before it are the CCP's TYPE keyword, the
-; one data item of that length that needn't stay with its neighbours.
+; with nothing done. The five bytes before it are the CCP's TYPE keyword.
 TYPEKEY:
 	DB	"TYPE",0
 OLDVOL:	DB	$C9		; C01Dh: RET, checked by the build
