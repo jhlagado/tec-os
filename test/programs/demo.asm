@@ -12,7 +12,7 @@ HWSVC   EQU     ABIHW           ; hardware services
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
 LEDSEL	EQU	$05		; 8 x 8 matrix: row select, then the colours
-LEDR	EQU	$06
+LEDR	EQU	$06		; red, green and blue columns
 LEDG	EQU	$F8
 LEDB	EQU	$F9
 
@@ -27,10 +27,10 @@ CHKTAG: LD      A,(DE)
         INC     DE
         DJNZ    CHKTAG
 	LD	A,(ABIMAJ)	; another major's services have other numbers
-	CP	4
+	CP	4		; exactly: a later major may renumber
 	JP	NZ,NOHW
 
-        LD      C,HWINFO        ; which devices answered
+	LD	C,HWINFO	; which devices answered
         CALL    HWSVC
         LD      A,B
         LD      (DEVS),A
@@ -52,14 +52,14 @@ CHKTAG: LD      A,(DE)
         CALL    PRINT
         LD      B,120           ; TONE: about 1 kHz for 0.2 s
         LD      DE,400
-        LD      C,HWTONE
+	LD	C,HWTONE	; the beep
         CALL    HWSVC
 
         LD      HL,LCDTXT       ; the LCD's four rows
         LD      B,0
 LCDLP:  PUSH    BC
         PUSH    HL
-        LD      C,HWLCD
+	LD	C,HWLCD		; row B, 20 characters from HL
         CALL    HWSVC
         POP     HL
         LD      DE,20
@@ -74,7 +74,7 @@ LCDLP:  PUSH    BC
         AND     2
         JR      Z,LOOP
         LD      B,1
-        LD      C,HWVIDEO
+	LD	C,HWVIDEO	; B = 1: the claim, then the ports are ours
         CALL    HWSVC
         LD      A,1
         LD      (CLAIMED),A
@@ -88,11 +88,11 @@ LOOP:   LD      HL,FR
         CALL    COUNT
         CALL    MKDIG
         LD      HL,DIGBUF       ; DIGITS: one scan
-        LD      C,HWDIGIT
+	LD	C,HWDIGIT	; six patterns from HL
         CALL    HWSVC
         CALL    MKLED
-        LD      HL,LEDBUF       ; one scan of the LEDs
-        CALL    LEDSCAN
+	LD	HL,LEDBUF	; one scan of the LEDs
+	CALL	LEDSCAN		; the ROM has no service for them
         LD      A,(CLAIMED)
         OR      A
         CALL    NZ,BALL
@@ -103,15 +103,15 @@ LOOP:   LD      HL,FR
         JR      Z,LOOP
 
         LD      HL,ZEROS        ; digits and LEDs off
-        LD      C,HWDIGIT
+	LD	C,HWDIGIT	; a dark pass
         CALL    HWSVC
         LD      HL,ZEROS
-        CALL    LEDSCAN
+	CALL	LEDSCAN		; a dark pass
         LD      A,(CLAIMED)     ; give the screen back to the console
         OR      A
         JR      Z,DONE
         LD      B,0
-        LD      C,HWVIDEO
+	LD	C,HWVIDEO	; B = 0: release, and text comes back
         CALL    HWSVC
 DONE:   LD      DE,BYE
         JP      PRINT
@@ -138,7 +138,7 @@ CLOCK:  LD      A,(DEVS)
         RET     Z
         LD      HL,TIME         ; RTC: seconds, minutes, hours, ...
         LD      B,0
-        LD      C,HWRTC
+	LD	C,HWRTC		; B = 0: read
         CALL    HWSVC
         RET     NZ
         LD      HL,CLKROW+9
@@ -152,7 +152,7 @@ CLOCK:  LD      A,(DEVS)
         CALL    BCD2
         LD      HL,CLKROW       ; LCDROW 3
         LD      B,3
-        LD      C,HWLCD
+	LD	C,HWLCD		; the last row
         JP      HWSVC
 ; (HL), (HL+1) = the two BCD digits of A; HL moves past them.
 BCD2:   PUSH    AF
@@ -202,13 +202,13 @@ MKDL:   PUSH    BC
         RET
 ; The low four bits of A as a segment pattern at DE, which moves on. Destroys
 ; AF, BC and HL.
-SEG:	AND	$0F
+SEG:	AND	$0F		; one hex digit
 	LD	C,A
-	LD	B,0
+	LD	B,0		; BC = the digit
 	LD	HL,SEGTAB
 	ADD	HL,BC		; the digit's own pattern
 	LD	A,(HL)
-	LD	(DE),A
+	LD	(DE),A		; into the caller's buffer
 	INC	DE
 	RET
 
@@ -267,14 +267,14 @@ MKL3:   DEC     E
 ; One pass over the eight rows of red, green and blue bytes at HL, each row lit
 ; for about 0.4 ms, then all off. Each row's colours go out with the rows dark
 ; from the pass before. Destroys AF, BC and HL.
-LEDSCAN:LD	C,1		; the row's select bit
-LEDSL:	LD	A,(HL)
+LEDSCAN:	LD	C,1	; the row's select bit
+LEDSL:	LD	A,(HL)		; red
 	OUT	(LEDR),A
 	INC	HL
-	LD	A,(HL)
+	LD	A,(HL)		; green
 	OUT	(LEDG),A
 	INC	HL
-	LD	A,(HL)
+	LD	A,(HL)		; blue
 	OUT	(LEDB),A
 	INC	HL
 	LD	A,C		; the row lights
@@ -379,7 +379,7 @@ BALL:   LD      HL,BX
         RET     Z
         XOR     A
         LD      (BOUNCE),A
-        CALL    RANDOM          ; a new colour, 8-15
+	CALL	RANDOM		; a new colour, 8-15
         AND     7
         OR      8
         PUSH    AF
@@ -390,23 +390,23 @@ BALL:   LD      HL,BX
         RET
 ; The next of the xorshift16 (7, 9, 8) numbers, period 65,535 from any nonzero
 ; seed. Returns it in HL, with its low byte in A too. Destroys F.
-RANDOM:	LD	HL,(SEED)
+RANDOM:	LD	HL,(SEED)	; the last number
 	LD	A,H		; x ^= x << 7, as two rotates through carry
 	RRA
 	LD	A,L
 	RRA
 	XOR	H
-	LD	H,A
+	LD	H,A		; the first step's high byte
 	LD	A,L		; x ^= x >> 9
 	RRA
 	LD	A,H
 	RRA
 	XOR	L
-	LD	L,A
+	LD	L,A		; the second step's low byte
 	XOR	H		; x ^= x << 8
 	LD	H,A
-	LD	(SEED),HL
-	LD	A,L
+	LD	(SEED),HL	; for the next call
+	LD	A,L		; the byte callers use
 	RET
 
 ; (HL) += (DE), reversing (DE) at 0 and at C.
@@ -443,7 +443,7 @@ NOMSG:  DB      "no$"
 KEYMSG: DB      13,10,"Watch the LCD, the digits, the LEDs and the screen.",13,10
         DB      "Press any key to stop.",13,10,"$"
 BYE:    DB      13,10,"Demo stopped.",13,10,"$"
-NOHWMSG:DB      13,10,"DEMO needs TEC-OS with ABI 4.",13,10,"$"
+NOHWMSG:	DB	13,10,"DEMO needs TEC-OS with ABI 4.",13,10,"$"
 LCDTXT: DB      "TEC-OS hardware demo"
         DB      "7-seg: hex counter  "
         DB      "8x8: moving rainbow "

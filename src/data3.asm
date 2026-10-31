@@ -96,8 +96,12 @@ ERRRO:  DB      ": R/O",0
 ERRFILE: DB     ": File R/O",0
 
 ; ---- hwsvc.asm ---------------------------------------------------------------
-HWTAB:	DW	HWSINFO,HWSDIG,HWSLCD,HWSVID,HWSTONE,HWSJOY
-	DW	HWSKEYS,HWSPUT,HWSRTC
+; The hardware services, by number: HWINFO up to HWRTC.
+HWTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
+	DW	HWSLCD,HWSVID	; 2 and 3
+	DW	HWSTONE,HWSJOY	; 4 and 5
+	DW	HWSKEYS,HWSPUT	; 6 and 7
+	DW	HWSRTC		; 8
 
 ; ---- glcd.asm ----------------------------------------------------------------
 GLCFCB: DB      1,"GLCD    DRV"

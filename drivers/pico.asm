@@ -13,9 +13,9 @@
 ;
 ; VRAM: patterns at 0000h, names at 0800h (1000h for 80 columns), Graphics I
 ; colours at 2000h and sprite attributes at 1B00h. Patterns 00h-7Fh are the
-; console font, which is this driver's own, and 80h-FFh their reverse images. A second name table one page up
-; lets row moves be built out of sight and shown with one register write. No VRAM
-; access timing is enforced.
+; console font, which is this driver's own, and 80h-FFh their reverse images. A
+; second name table one page up lets row moves be built out of sight and shown
+; with one register write. No VRAM access timing is enforced.
 %INCLUDE "../src/abi.inc"
 
 VDPDAT  EQU     $BE
@@ -24,7 +24,7 @@ COLOUR  EQU     $2000
 SPRITE  EQU     $1B00
 
         ORG     $0100
-HDR:    DB      'D',3,0,1       ; removable
+HDR:	DB	'D',3,0,1	; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      0,0,0           ; over the base: BDOS, BIOS, CCP
         DW      0               ; INIT: the writer's
@@ -34,18 +34,19 @@ HDR:    DB      'D',3,0,1       ; removable
 ; columns and rows. Then the graphics entries, at PICOREG to PICORD.
 VTAB:   DW      TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
         DB      COLS,24
-	DW	GFXREG,GFXFIL,GFXWR,GFXRD
+	DW	GFXREG,GFXFIL	; PICOREG, PICOFIL
+	DW	GFXWR,GFXRD	; PICOWR, PICORD
 REC:    DW      0
-        DB      "PICO    ",2
+	DB	"PICO    ",2
         DW      VTAB
 LBUF:   DW      0               ; LINEBUF, from ABIGLCD
 TPDRAW: DB      0               ; the page drawn and the page shown: offset
 TPSHOW: DB      0               ; high byte, 0 or TPG
 TMVCOPY:DB      0               ; 1 while a row move builds the hidden page
 
-INIT:   LD      C,HWINFO        ; B = what answered at cold boot
+INIT:	LD	C,HWINFO	; B = what answered at cold boot
         CALL    ABIHW
-        BIT     1,B             ; HWBPICO
+	BIT	1,B		; HWBPICO
         SCF
         RET     Z
         LD      A,1             ; CRT:
@@ -60,19 +61,19 @@ INIT:   LD      C,HWINFO        ; B = what answered at cold boot
 ; UNLOAD's check, and the undo of a refused record. Refuses, with carry, while
 ; the PICO9918 is claimed, or while this driver is the console. Otherwise takes
 ; its table back from the ROM. Destroys AF, BC, DE and HL.
-REMOVE:	LD	C,HWINFO
+REMOVE:	LD	C,HWINFO	; B = the devices, with the claim bit
 	CALL	ABIHW
 	LD	A,B
 	AND	HWBCLM		; a claim: a program may be using the entries
 	SCF
 	RET	NZ
-	LD	HL,(ABIVID)
+	LD	HL,(ABIVID)	; the console's size
 	LD	A,(HL)
 	CP	COLS		; the console at this width is this driver
 	SCF
 	RET	Z
-	LD	A,1		; CRT: no table
-	LD	HL,0
+	LD	A,1		; CRT:
+	LD	HL,0		; no table
 	JP	ABIGLCD
 
 ; The ROM's three: A = 0 show the page drawn, 1 begin a move of rows B to C,
@@ -134,7 +135,7 @@ TMSCH:  LD      L,A             ; HL = FONT + 8 * (code - 20h)
         ADD     HL,HL
         ADD     HL,HL
         ADD     HL,HL
-        LD      BC,FONT
+	LD	BC,FONT		; this driver's own, relocated
         ADD     HL,BC
 TMSGLY: LD      B,8
 TMSROW: LD      A,(HL)
@@ -174,10 +175,10 @@ GFXREG:	OUT	(VDPCTL),A	; the value goes first
 ; Fill DE bytes of VRAM from address HL with A.
 GFXFIL:	LD	C,A		; the value, across the addressing
 	CALL	TMSWA
-GFXFL:	LD	A,D
+GFXFL:	LD	A,D		; tested first, so that 0 fills nothing
 	OR	E
 	RET	Z		; the count has run out
-	LD	A,C
+	LD	A,C		; the VDP moves its own address on
 	OUT	(VDPDAT),A
 	DEC	DE
 	JR	GFXFL
@@ -185,10 +186,10 @@ GFXFL:	LD	A,D
 ; Copy BC bytes from DE to VRAM address HL.
 GFXWR:	CALL	TMSWA
 	EX	DE,HL		; HL = the source
-GFXWL:	LD	A,B
+GFXWL:	LD	A,B		; tested first, so that 0 copies nothing
 	OR	C
 	RET	Z		; the count has run out
-	LD	A,(HL)
+	LD	A,(HL)		; the VDP moves its own address on
 	OUT	(VDPDAT),A
 	INC	HL
 	DEC	BC
@@ -197,10 +198,10 @@ GFXWL:	LD	A,B
 ; Copy BC bytes from VRAM address HL to DE.
 GFXRD:	CALL	TMSRA
 	EX	DE,HL		; HL = the destination
-GFXRL:	LD	A,B
+GFXRL:	LD	A,B		; tested first, so that 0 copies nothing
 	OR	C
 	RET	Z		; the count has run out
-	IN	A,(VDPDAT)
+	IN	A,(VDPDAT)	; the VDP moves its own address on
 	LD	(HL),A
 	INC	HL
 	DEC	BC

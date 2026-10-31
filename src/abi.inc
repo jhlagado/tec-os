@@ -7,9 +7,9 @@
 ABITAB	EQU	$C003		; signature "TNA"
 ABIMAJ	EQU	$C006		; major version, 4
 ABIMIN	EQU	$C007		; minor version
-ABIVID	EQU	$C008		; a word: columns, then rows; 0 = serial
+ABIVID	EQU	$C008		; a word: where columns, then rows, are
 ABIHW	EQU	$C00A		; CALL: hardware services, C = service
-ABIMAIN	EQU	$C00D		; a word: MAIN regions fitted, 1 or 2
+ABIMAIN	EQU	$C00D		; a word: where the MAIN count is, 1 or 2
 ABIVOL	EQU	$C00F		; CALL: mount, unmount and describe volumes
 ABIGLCD	EQU	$C012		; CALL: a video driver's table, A = 1 CRT
 				; or 3 UC1, HL = eight words, or 0

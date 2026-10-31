@@ -4,10 +4,10 @@ TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
 46,854 bytes (`0100h–B805h`) on the starter card, and at least 46,086 on any
 card, since cold boot places the BDOS entry below the allocation vectors of
-the volumes mounted. A display's driver takes more: 512 bytes for the PICO9918,
-46,342 on the starter card, and 768 for the GLCD, 46,086 on the starter card and
-45,318 with four 8 MiB volumes. A board with both displays that installs both
-with `CON UC1` gives up 1,280 bytes, 45,574 on the starter card. It reports
+the volumes mounted. A display's driver takes more: 1,536 bytes for the PICO9918
+or the GLCD, leaving 45,318 on the starter card and 44,550 with four 8 MiB
+volumes. A board with both displays that installs both with `CON UC1` gives up
+3,072 bytes, 43,782 on the starter card and 43,014 with four. It reports
 version 2.2.
 
 ## BDOS functions
@@ -99,7 +99,7 @@ carried is no longer read.
 
 A driver is a resident in TEC-OS's own `.DRV` format, with an installation
 that can fail cleanly and a registry through which programs find its
-services (`ABIDRV`, ABI 3.1). `docs/drivers.md` is its interface. It goes in
+services (`ABIDRV`, ABI 4). `docs/drivers.md` is its interface. It goes in
 whole pages just below the BDOS entry, and the word at `0006h` moves down to
 the jump at its offset 6, which leads on to the old entry; warm boot keeps it
 there. Programs that size themselves from `0006h` never reach it. Drivers are
@@ -142,7 +142,7 @@ warm boot on the PICO9918 and 1,447 on the GLCD.
 
 | Program | Version | Result | Notes |
 | --- | --- | --- | --- |
-| Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`). The pinned build checks ABI 3 at `C003h` and reads `ABIVID` at `C008h`; it also edits, saves and reopens on the GLCD at 21 × 8 |
+| Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`). The pinned build tests for ABI major 3 at `C003h`, so the card and the tests take it with that one byte set to 4, checked by its hash, and it reads `ABIVID` at `C008h`; it also edits, saves and reopens on the GLCD at 21 × 8 |
 | ATOM.COM | build that sizes its workspace from `0006h` | Runs | Assembles `HELLO.ASM` into `HELLO.COM` on TEC-OS, which then runs (`test/atom.test.mjs`); needs the BDOS at `78C4h` or higher |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
 | EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |
@@ -155,7 +155,7 @@ and run.
 
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
   more than 46,086 bytes of TPA, may fail; how much a card gives depends on
-  its volumes, and on a GLCD board 768 bytes less.
+  its volumes, and on a board with a display driver 1,536 bytes less.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,

@@ -362,7 +362,7 @@ CREFR:	CALL	CLOOK		; A = the line, Z if there is one
 	LD	BC,$0001	; XMDST bank 1, XMSRC bank 0
 	LD	(XMDST),BC
 	CALL	CLADR		; HL = the line
-	LD	DE,BLKBUF
+	LD	DE,BLKBUF	; from the block just written
 	LD	BC,512
 	CALL	MVCOPY		; a CALL: the host's guard on EXPAND 1 reads
 	RET			; the return address to name its writer

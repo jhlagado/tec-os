@@ -8,7 +8,7 @@ VDPCTL	EQU	$BF
 ; Whether VRAM answers with what was written, at its last address, with two
 ; patterns that between them test every bit. Returns Z when present. Destroys
 ; AF and B.
-TMSINIT:LD	A,$5A
+TMSINIT:	LD	A,$5A
 	CALL	TMSTRY
 	RET	NZ		; one failure is enough
 	LD	A,$A5
@@ -18,12 +18,12 @@ TMSTRY:	LD	B,A		; the pattern, across the addressing
 	OUT	(VDPCTL),A
 	LD	A,$3F+$40	; its high bits, and the write flag
 	OUT	(VDPCTL),A
-	LD	A,B
+	LD	A,B		; the pattern goes to VRAM
 	OUT	(VDPDAT),A
 	LD	A,$FF		; the same address, to read
 	OUT	(VDPCTL),A
-	LD	A,$3F
+	LD	A,$3F		; its high bits, with no write flag
 	OUT	(VDPCTL),A
-	IN	A,(VDPDAT)
+	IN	A,(VDPDAT)	; what VRAM holds now
 	CP	B		; Z: the VDP has it
 	RET

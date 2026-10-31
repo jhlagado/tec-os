@@ -37,23 +37,23 @@ TXIDLE  EQU     $40             ; port 01h bit 6: serial line idle, speaker off
 ; The dispatcher. C = the service, B, DE and HL its arguments, which reach it
 ; whole. An out of range number returns HWEBAD. Destroys AF and what the
 ; service does.
-HWSVC:	LD	A,C
+HWSVC:	LD	A,C		; A carries the status from here
 	CP	HWCOUNT
 	LD	A,HWEBAD
 	JR	NC,HWERR	; past the table
-	PUSH	HL
+	PUSH	HL		; the arguments, across the lookup
 	PUSH	DE
 	LD	A,C		; two bytes an entry
 	ADD	A,A
 	LD	E,A
-	LD	D,0
+	LD	D,0		; DE = the entry's offset
 	LD	HL,HWTAB
 	ADD	HL,DE
-	LD	E,(HL)
+	LD	E,(HL)		; DE = the service
 	INC	HL
 	LD	D,(HL)
 	EX	DE,HL		; HL = the service
-	POP	DE
+	POP	DE		; the caller's DE back
 	EX	(SP),HL		; the service is the return address,
 	RET			; and the caller's HL comes back
 HWERR:  OR      A
@@ -65,11 +65,11 @@ HWOK:   XOR     A
 ; The INFO service. Returns B = CONDEV's bits, with HWBRTC if a DS1302 answers
 ; (seconds below 60h) and HWBCLM, which is VCLAIM's value, while the PICO9918
 ; is claimed; DE = the ROM's version; HL = columns and rows.
-HWSINFO:CALL	RTCHAS
-	LD	A,(CONDEV)
+HWSINFO:	CALL	RTCHAS
+	LD	A,(CONDEV)	; the flags are still RTCHAS's
 	JR	NZ,HWSIN1
 	OR	$08		; HWBRTC
-HWSIN1:	LD	HL,VCLAIM
+HWSIN1:	LD	HL,VCLAIM	; holds HWBCLM's value while claimed
 	OR	(HL)
 	LD	B,A
         LD      DE,ROMVER
@@ -126,7 +126,7 @@ HWSVID: LD      A,(CONDEV)
         LD      A,(CONMOD)
         CP      CMCRT
         CALL    Z,CURHIDE
-        LD      A,CDCLM         ; HWBCLM, as INFO reports it
+	LD	A,CDCLM		; HWBCLM, as INFO reports it
         LD      (VCLAIM),A
         JP      HWOK
 HWVREL: LD      A,(VCLAIM)

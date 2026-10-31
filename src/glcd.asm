@@ -88,7 +88,7 @@ CONSET:	LD	HL,CONDEV	; a display has come: PICO? goes, if it is up,
 	JR	Z,CONST1
 	RES	7,(HL)
 	PUSH	BC		; the console's mode, across the LCD
-	LD	HL,PICCLR
+	LD	HL,PICCLR	; blanks over the word
 	CALL	LCD3
 	POP	BC
 CONST1:	LD	A,(IOBYTE)	; the mode goes in the CON: field
