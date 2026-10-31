@@ -174,10 +174,11 @@ export class Machine {
     this.cpu.hardware.forceMemWrite = ram96 ? ram.memWrite : hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     // After cold boot's clear of EXPAND 1 (MEMINIT's LDIR reaching BFFFh),
-    // only the block cache writes its 8000h-BCFFh, below the history ring:
+    // nothing writes the free page BE00h-BEFFh, and only the block cache
+    // writes its 8000h-BCFFh, below the history ring:
     // its own code, the card's block loops, the copy core when the cache
     // called it (the return address on entry to MVCOPY in CDI-CEND; MOVE
-    // and the levels' copies are still watched), and cold boot's setting of
+    // is still watched), and cold boot's setting of
     // its table. Any other write there, until the
     // next cold boot (COLD clearing page zero), is kept in expand1Writes and
     // in EXPAND1_WRITES, for the whole process.

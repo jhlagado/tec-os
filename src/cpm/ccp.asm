@@ -877,7 +877,7 @@ CPPARSE:
         LD      A,(DE)
         OR      A
         RET     NZ
-        LD      A,(CURDSK)      ; the drive in use, as EXIT gives it back
+	LD	A,(CURDSK)	; the drive in use
         AND     $0F
         INC     A
         LD      (DE),A
