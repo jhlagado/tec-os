@@ -152,7 +152,13 @@ const FIELDS = {
   "(0001h) low": (m) => m.write(1, m.read(1) ^ 1),
   "(0002h) high": (m) => m.write(2, m.read(2) ^ 1),
   "(0005h)": (m) => m.write(5, 0xc9),
-  "STUBAD's low byte": (m) => m.write(m.sym("STUBAD"), 7),
+  // The same jump one byte up, so that only the low byte tells.
+  "STUBAD's low byte": (m) => {
+    const s = S(m);
+    const jump = [m.read(s), m.read(s + 1), m.read(s + 2)];
+    jump.forEach((v, i) => m.write(s + 1 + i, v));
+    m.write(m.sym("STUBAD"), 7);
+  },
   "the stub's JP": (m) => m.write(S(m), 0xc9),
   "the stub's target, low": (m) => m.write(S(m) + 1, m.read(S(m) + 1) ^ 1),
   "the stub's target, high": (m) => m.write(S(m) + 2, m.read(S(m) + 2) ^ 1),
