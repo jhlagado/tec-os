@@ -328,7 +328,7 @@ MNFILL:	LD	A,(IX+DSTART)	; start, four bytes
 	LD	A,(IX+DSTART+1)
 	LD	(HL),A
 	INC	HL
-	LD	A,(IX+DSTART+2)
+	LD	A,(IX+DSTART+2)	; the high half
 	LD	(HL),A
 	INC	HL
 	LD	A,(IX+DSTART+3)
@@ -365,7 +365,7 @@ MNZ:	LD	(HL),0
 	INC	HL
 	DJNZ	MNZ
 	LD	DE,DIRBUF	; shared by every drive
-	LD	(HL),E
+	LD	(HL),E		; the DPH's words are little-endian
 	INC	HL
 	LD	(HL),D
 	INC	HL
@@ -374,16 +374,16 @@ MNZ:	LD	(HL),0
 	CALL	GEOFIND
 	LD	DE,4		; the entry's DPB word
 	ADD	HL,DE
-	LD	E,(HL)
+	LD	E,(HL)		; read through HL
 	INC	HL
 	LD	D,(HL)		; DE = DPB
 	POP	HL		; into the DPH
-	LD	(HL),E
+	LD	(HL),E		; after DIRBUF's word
 	INC	HL
 	LD	(HL),D
 	INC	HL
 	LD	DE,CSVDUM	; no directory check vector
-	LD	(HL),E
+	LD	(HL),E		; the last word before the ALV
 	INC	HL
 	LD	(HL),D
 	RET
@@ -418,9 +418,9 @@ RSDRV:	CALL	RSEQ
 	CALL	VSLOT		; a match: it must fit the drive's slot
 	RET	C
 	LD	HL,RSLIDX	; this drive's index + 1
-	LD	B,0
+	LD	B,0		; BC = the drive
 	ADD	HL,BC
-	LD	A,(MNTI)
+	LD	A,(MNTI)	; as DRVIDX counts them
 	INC	A
 	LD	(HL),A		; kept for step 2
 	XOR	A		; a second drive now can't match this one, and
@@ -438,8 +438,8 @@ RSNEXT:	LD	HL,DRVESZ	; the next retained drive
 	CP	(HL)
 	JR	NZ,RSWALK
 	LD	C,0		; every retained drive must have matched
-	LD	HL,RSLBUF+6
-	LD	DE,RSLIDX
+	LD	HL,RSLBUF+6	; HL at each geometry
+	LD	DE,RSLIDX	; DE at each index
 RSCHK:	LD	A,(DE)
 	OR	A
 	JR	NZ,RSCHK1	; matched
@@ -453,20 +453,20 @@ RSCHK1:	INC	DE		; the next drive's index and geometry
 	LD	A,C
 	CP	MAXDRV		; all four
 	JR	C,RSCHK
-	LD	HL,RSLBUF	; step 2: the entries and, after them, the indices
+	LD	HL,RSLBUF	; step 2: entries, then the indices
 	LD	DE,DRVTAB
 	LD	BC,MAXDRV*DRVESZ+MAXDRV
 	LDIR
 	LD	C,0		; each drive's DPH for what it now holds
-RSDPH:	LD	A,C
+RSDPH:	LD	A,C		; the drive
 	CALL	DRVENT		; HL -> its geometry byte
 	LD	A,(HL)
 	OR	A
-	JR	Z,RSDPH1	; empty: BSELDSK refuses it, whatever the DPH says
-	PUSH	BC
+	JR	Z,RSDPH1	; empty: BSELDSK refuses it anyway
+	PUSH	BC		; the loop's count
 	LD	E,C		; the drive, while C takes the geometry
 	LD	C,A
-	LD	A,E
+	LD	A,E		; and A the drive
 	CALL	MNDPH
 	POP	BC
 RSDPH1:	INC	C
@@ -480,7 +480,7 @@ RSDPH1:	INC	C
 RSEQ:	PUSH	DE		; the caller's place in RSLBUF
 	LD	HL,RSLTMP
 	LD	B,DRVESZ
-RSEQ1:	LD	A,(DE)
+RSEQ1:	LD	A,(DE)		; a retained byte
 	CP	(HL)
 	JR	NZ,RSEQ2	; NZ goes back to the caller
 	INC	DE		; the next of the eight
@@ -614,7 +614,7 @@ VMNT:   LD      A,C
         JR      NZ,VBAD         ; on a drive already
 	CALL	VSLOT
 	JR	C,VBAD
-        CALL    VFLUSH
+	CALL	VFLUSH		; old data safe first
         JR      NZ,VBAD
         LD      (IX+DMOUNT),C   ; publish only after the old data is safe
         PUSH    BC
