@@ -141,6 +141,31 @@ async function deepPaths(lines, opts = { tms: true, matrix: true }, { pico = tru
   return { ...depths(), conmod: m.read(m.sym("CONMOD")), row3 };
 }
 
+/** A recognised reset with a remapped A:, through RSLCAP and RESEL, watched from the reset on. */
+async function resetRun() {
+  const { rom, symbols } = romFor();
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G8M", label: "WORK", mount: "B" },
+    { geometry: "G1M", label: "ALT", mount: "-" },
+  ]);
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  [0x3e, 0, 0x0e, 0, 0x1e, 2, 0xcd, m.sym("ABIVOL") & 0xff, m.sym("ABIVOL") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(0x60 + i, v));
+  const { pc, sp } = m.cpu.cpu;
+  Object.assign(m.cpu.cpu, { pc: 0x60, sp: 0x100 });
+  m.runUntil(() => m.pc === 0x69, 80_000_000, "the mount");
+  Object.assign(m.cpu.cpu, { pc, sp });
+  const depths = watch(m);
+  const from = m.output.length;
+  m.reset();
+  m.expect(/A>$/, { from, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the prompt after the reset");
+  assert.equal(m.read(m.sym("DRVIDX")), 3, "the reset kept the selection");
+  return depths();
+}
+
 function diagnosticRun() {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, clock: TEST_CLOCK });
@@ -165,6 +190,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     conUc1Glcd: await deepPaths(["CON UC1\r"], { matrix: true }),
     picoNoDriver: await deepPaths(["DIR\r"], { tms: true, matrix: true }, { pico: false }),
     unloadPico: await deepPaths(["CON TTY\r", "UNLOAD\r"]),
+    recognisedReset: await resetRun(),
   };
   assert.equal(runs.picoNoDriver.row3, "PICO?", "the run went through STDONE's LCD path");
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
@@ -175,7 +201,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt; and PICO.DRV's UNLOAD after CON TTY, whose REMOVE calls INFO. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt; and PICO.DRV's UNLOAD after CON TTY, whose REMOVE calls INFO; and a recognised reset with a remapped A:. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

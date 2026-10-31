@@ -85,3 +85,11 @@ BIOSSTN EQU     38
 MAXDRV  EQU     4               ; drives A-D
 DPHSZ   EQU     16
 DRVESZ  EQU     8               ; drive table entry size
+
+; A reset's retained selection, in the TPA, which nothing writes between COLD
+; and MEMINIT: DRVTAB's copy, then each drive's index + 1, in DRVIDX's order
+; after it, then RESEL's working copy of one descriptor. RSLBUF+6, A:'s
+; geometry, is 0 for no selection.
+RSLBUF	EQU	$0100
+RSLIDX	EQU	RSLBUF+MAXDRV*DRVESZ
+RSLTMP	EQU	RSLIDX+MAXDRV

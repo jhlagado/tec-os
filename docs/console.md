@@ -10,7 +10,7 @@ field at `0003h`:
 | `BAT:` (2) | CP/M batch | Reader (serial) | List (discarded) | 0 × 0 |
 | `UC1:` (3) | GLCD | Matrix keyboard | GLCD | 21 × 8 |
 
-Cold boot starts on `TTY:`, and a display driver's load takes the console:
+A reset starts on `TTY:`, and a display driver's load takes the console:
 `PICO.DRV` always, `GLCD.DRV` unless `PICO.DRV` is in.
 The CCP's `CON` command shows the console in use; `CON TTY`, `CON CRT`,
 `CON BAT` and `CON UC1` (a colon may follow) change it, as `STAT CON:=CRT:`

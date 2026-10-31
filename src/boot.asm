@@ -1,13 +1,18 @@
 ; Cold boot and warm boot. The reset jump is in reset.asm.
 
 ; ---- Cold boot ----------------------------------------------------------------
-; Entered from RESET, at 0000h at reset, or BIOS function 0.
+; Entered from RESET, at 0000h at reset, or BIOS function 0. One entry, and
+; three paths through the ROM: an ordinary exit is warm boot, below, and never
+; comes here; a recognised reset keeps the selected volumes, by RSLCAP and
+; RESEL; an unrecognised reset takes the card's defaults.
 WSSPAN	EQU	WSEND-WSBASE-1	; the workspace, less the byte LDIR starts from
 COLD:	DI
 	LD	SP,BOOTSTK
 	LD	A,LATCLAS	; overlay off, classic bank, code at C0xxh
 	OUT	(SYSLAT),A
 	IM	1
+	CALL	RSLCAP		; before anything it reads is cleared
+COLDZ:	LD	A,LATCLAS	; RSLCAP used A
 	LD	HL,0		; clear page zero
 	LD	DE,1
 	LD	BC,$FF
@@ -34,6 +39,7 @@ COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
 	CALL	MOUNT
 	JP	NZ,DIAG		; a card with no volume to mount
 	CALL	ALVINIT
+	CALL	RESEL		; a retained selection, if the card still has it
 	LD	HL,(STUBAD)	; no residents yet
 	LD	(PZTOP),HL
 	LD	HL,BIOSBAS	; the RAM BIOS table, at cold boot only: warm
@@ -74,6 +80,62 @@ WBOOTR: DI
         LD      A,(PZDU)
         LD      C,A
         JP      CCPENT
+
+; Recognise a TEC-OS of this layout from what it left in RAM, reading only, at
+; fixed addresses, and running nothing old. RAM is recognised when page zero
+; holds the warm boot jump to RAMBIOS+3 and a jump at 0005h, STUBAD's word S
+; is an xx06h address holding JP BENTRY, and the word W at 0006h is an xx06h
+; address from 8000h to S. W is not compared with PZTOP: DRVLOAD lowers it
+; before INIT, so the reset that recovers from a hung INIT is recognised too.
+; BENTRY and STUBAD's own address are the layout's test, and ram.asm states
+; the limit. Recognised, DRVTAB goes to RSLBUF, which nothing writes before
+; MEMINIT, so DIAG's retry finds it. Otherwise RSLBUF's A: geometry is 0,
+; which means no selection. Runs on the boot stack, clear of all it reads.
+; Destroys AF, BC, DE and HL.
+RSLCAP:	LD	A,($0000)	; the warm boot jump
+	CP	$C3		; JP
+	JR	NZ,RSLNO
+	LD	HL,($0001)	; to the RAM BIOS table's warm boot entry
+	LD	DE,RAMBIOS+3	; which never moves
+	SBC	HL,DE		; carry is clear: the CP was equal
+	JR	NZ,RSLNO
+	LD	A,(PZBDOS)	; the jump at 0005h
+	CP	$C3		; JP
+	JR	NZ,RSLNO
+	LD	HL,(STUBAD)	; S, the stub
+	LD	A,L		; on a page's offset 6, as ALVINIT puts it
+	CP	6
+	JR	NZ,RSLNO
+	LD	E,H		; its page, W's upper limit
+	LD	A,(HL)		; S holds JP BENTRY, the layout's test
+	CP	$C3
+	JR	NZ,RSLNO
+	INC	HL
+	LD	A,(HL)		; the target, low byte
+	CP	LOW(BENTRY)
+	JR	NZ,RSLNO
+	INC	HL
+	LD	A,(HL)		; and high
+	CP	HIGH(BENTRY)
+	JR	NZ,RSLNO
+	LD	HL,(PZBDOS+1)	; W, which any resident has lowered
+	LD	A,L		; each resident's JP is at offset 6
+	CP	6
+	JR	NZ,RSLNO
+	LD	A,H		; no driver goes below 8000h
+	CP	$80
+	JR	C,RSLNO
+	LD	A,E		; S's page, W's at most
+	CP	H
+	JR	C,RSLNO
+RSLYES:	LD	HL,DRVTAB	; recognised: the selection, for RESEL
+	LD	DE,RSLBUF
+	LD	BC,32		; MAXDRV*DRVESZ: all of DRVTAB
+	LDIR
+	RET
+RSLNO:	XOR	A		; no selection: the card's defaults
+	LD	(RSLBUF+6),A
+	RET
 
 ; Cold boot: count the MAIN and EXPAND regions, and give MAIN 1 a copy of
 ; page zero. MAIN 1's 0000h then reaches the RAM BIOS table in EXPAND 0, so

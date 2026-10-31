@@ -90,7 +90,7 @@ CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `DEMO` on the starter card shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.DRV` installs a driver.
-`A:STARTUP.CMD` runs at cold boot; a keypad key held from reset until the
+`A:STARTUP.CMD` runs after a reset, from the volume selected as A:; a keypad key held from reset until the
 prompt skips it, and the console stays on the serial terminal. A board with a
 PICO9918 and a matrix keyboard shows `PICO?` on the LCD, once, if no display driver
 is installed at the first prompt after startup. If the card is missing

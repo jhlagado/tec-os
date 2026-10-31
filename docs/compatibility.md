@@ -55,8 +55,8 @@ supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 - `NAME.DRV` installs a driver and `DRIVERS` lists them, each with its pages.
   `UNLOAD` removes the lowest.
 - At cold boot `A:STARTUP.CMD`, if there is one, runs before the first prompt.
-  One record of it is read, at most 128 bytes, and a keypad key held through
-  reset skips it. `docs/drivers.md` has the rules.
+  One record of it is read, at most 128 bytes, from the volume on A:, and a keypad
+  key held through reset skips it. `docs/drivers.md` has the rules.
 
 The prompt keeps a history of the lines typed at it. ^W puts the line before
 in the buffer, erasing the one shown, and ^N the line after; past the newest
@@ -70,7 +70,8 @@ lines are not kept.
 card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
 empty, and a volume is never on two drives. Both are programs on the starter
 card, using the mount service in the table, `ABIVOL`. Mounts are for the session: a
-reset gives the card's own again.
+reset keeps them, as long as the card still holds each volume. `docs/recovery.md`
+says how.
 
 A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
 a relocatable file in Digital Research's PRL format: a 256-byte header, the
