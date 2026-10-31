@@ -1,11 +1,11 @@
 # ROM services
 
-Status: **Built**, 2026-10-26. The hardware services' entry, `ABIHW` at
-`C00Ah`, has 19 services in `src/hwsvc.asm`, 766 bytes of ROM in all, and
+Status: **Built**, ABI 4.0. The hardware services' entry, `ABIHW` at
+`C00Ah`, has 9 services in `src/hwsvc.asm`, 473 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,713 bytes (`debug80`) and has 671 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,601 bytes (`debug80`) and has 1,783 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -16,7 +16,7 @@ gives programs the TEC-1G's hardware, and what belongs on the card instead.
 | --- | --- |
 | `C000h–C002h` | `JP COLD`: at reset the CPU runs it through the boot overlay at `0000h` |
 | `C003h` | The table, below: the one fixed address in the ROM |
-| after the table | One block of read-only data: messages, the font, the geometry and format tables, the CCP's and the BDOS's tables, and the BIOS jump table that cold boot copies to RAM |
+| after the table | One block of read-only data: messages, the geometry and format tables, the CCP's and the BDOS's tables, and the BIOS jump table that cold boot copies to RAM |
 | after the data | One block of code |
 | to `FFFFh` | The free space, in one gap |
 
@@ -27,32 +27,29 @@ refuses any `.asm` file that names an address of the old table at `FF00h`.
 
 ## The table at `C003h`
 
-ABI 3.1. Its layout is fixed; entries are only added, at the end, with the
-minor version raised. `src/abi.inc`, published in `dist/` as `abi.inc`,
-gives each entry's address under the name below, and the build checks it
-against the ROM. ABI 3.0 kept ABI 2.7's entries in the same order, less
-the native banks (`FF05h`), the native services' entry (`FF06h`) and the
-EXPAND count (`FF10h`, always 2). ABI 3.1 adds `ABIDRV`.
+ABI 4.0. `src/abi.inc`, published in `dist/` as `abi.inc`, gives each entry's
+address under the name below, and the service numbers and status codes, and
+the build checks them against the ROM. A program tests for major version 4
+exactly: a new major may move what follows `ABIMAIN` and renumber the services.
+`C003h` to `C00Ch` kept their addresses from ABI 3. `ABIXCCP` and `ABIXCMD` are
+last so that they can be cut off the end.
 
 | Address | Name | Contents |
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` signature |
-| `C006h` | `ABIMAJ` | ABI major version, 3 |
-| `C007h` | `ABIMIN` | ABI minor version, 1 |
+| `C006h` | `ABIMAJ` | ABI major version, 4 |
+| `C007h` | `ABIMIN` | ABI minor version, 0 |
 | `C008h` | `ABIVID` | Address of the console size, columns then rows |
 | `C00Ah` | `ABIHW` | `JP` to the hardware services |
 | `C00Dh` | `ABIMAIN` | Address of the MAIN count, 1 or 2 |
-| `C00Fh` | `ABIXMOV` | `JP XMOVE`: B = destination, C = source, each 0 for the program's memory or 1 for EXPAND 1, which has no range, for the next `MOVE` |
-| `C012h` | `ABIMOVE` | `JP MOVE`: HL = destination, DE = source, BC = count; A = 0, or FFh with nothing copied |
-| `C015h` | `ABIXMRK` | Address of EXPAND 1's low mark, always 80h: no part of EXPAND 1 is a program's |
-| `C017h` | `ABIXCCP` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = `0100h` in, function 108's code out; any other HL refused with carry set |
-| `C01Ah` | `ABIXCMD` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt |
-| `C01Dh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
-| `C020h` | `ABIFONT` | Address of the console font, 8 bytes a character from 20h, for the GLCD console |
-| `C022h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
-| `C025h` | `ABIDRV` | `JP DRVSVC`: the service registry, below; C = 0 find, 1 enumerate |
+| `C00Fh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
+| `C012h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
+| `C015h` | `ABIDRV` | `JP DRVSVC`: the service registry, below; C = 0 find, 1 enumerate |
+| `C018h` | `ABIXCCP` | `JP XCCP`: a nested CCP, back at `EXIT`; HL = `0100h` in, function 108's code out; any other HL refused with carry set |
+| `C01Bh` | `ABIXCMD` | `JP XCMD`: as `XCCP`, but DE points at one command line (a length byte, then the text), run with no prompt |
 
-`XMOVE` and `MOVE` are CP/M 3's, with its registers. `XMOVE`'s 0 is the
+`XMOVE` and `MOVE` are CP/M 3's, with its registers, reached through BDOS
+function 50's selectors 29 and 25. `XMOVE`'s 0 is the
 program's view below the BDOS entry at `(0006h)`, read at each call; its 1
 is EXPAND 1 from `8000h` up to its low mark, read at each call. EXPAND 1 is
 TEC-OS's own: `BF00h` its reserved page, `BE00h` the CCP's levels, `BD00h`
@@ -85,9 +82,9 @@ passes a comparison. There is no public removal: `UNLOAD` is the only way a driv
 
 ## Calling the services
 
-A program checks for `"TNA"` at `ABITAB` and ABI major version 3 at
-`ABIMAJ`, then calls `ABIHW` with the service number in C and arguments in A,
-B, DE and HL. On return A holds the status, with Z set and carry clear on
+A program checks for `"TNA"` at `ABITAB` and ABI major version 4 at
+`ABIMAJ`, then calls `ABIHW` with the service number in C and arguments in
+B, DE and HL. `abi.inc` names each number and status code. On return A holds the status, with Z set and carry clear on
 success; results come back as each service lists. IX, IY and the alternate
 registers are preserved. A CP/M program that finds no signature is on
 another system and carries on without the TEC-1G's devices.
@@ -97,9 +94,6 @@ another system and carries on without the TEC-1G's devices.
 | 0 | Success |
 | 1 | No such service, or an argument out of range |
 | 2 | The device is not fitted, or not the console |
-| 3 | Nothing arrived in time |
-| 4 | The card did not read |
-| 5 | The PICO9918 is not claimed |
 
 The rules that make the services safe for CP/M programs:
 
@@ -107,8 +101,7 @@ The rules that make the services safe for CP/M programs:
   beyond the buffers it is given. The deepest takes 16 bytes of the caller's
   stack, counting the dispatcher but not the `CALL`.
 - **Resident state only.** The services keep their state in the resident
-  workspace: the claim flag, a saved argument and the random number seed,
-  4 bytes in all.
+  workspace: the claim flag, 1 byte.
 - **Never the BDOS.** Services do not call the BDOS, so a program can call
   them from inside its own BDOS-heavy code without re-entry.
 - **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
@@ -145,48 +138,36 @@ program left returns at once with the interrupt state unchanged.
 
 | C | Service | Arguments | Results | Stack | ROM |
 | ---: | --- | --- | --- | ---: | ---: |
-| — | Dispatcher, exits, table | | | 4 | 75 |
-| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock; `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 20 |
-| 1 | `DIGITS` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
-| 2 | `HEXSEG` | `A` = 0-15 (the low four bits) | `B` = its segment pattern, MON3's layout | 4 | 29 |
-| 3 | `LEDS` | `HL` → 8 rows of red, green, blue bytes | One scan of the 8 × 8 matrix, about 0.4 ms a row, then off | 4 | 31 |
-| 4 | `LCDROW` | `B` = row 0-3, `HL` → 20 characters | The row written | 10 | 35 |
-| 5 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 8 | 65 |
-| 6 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 59 T-states | 4 | 29 |
-| 7 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
-| 8 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
-| 9 | `SERIAL` | `B` = 0: send `A`. `B` = 1: wait up to `DE` ms | `B` = the byte received, or status 3 | 4 | 40 |
-| 10 | `BLOCK` | `HL` → block number (4 bytes, least significant first), `DE` → 512-byte buffer | The card block, from the cache if it holds it, or status 4 | 10 | 32 |
-| 11 | `DELAY` | `DE` = milliseconds | About 4,000 T-states a millisecond | 4 | 16 |
-| 12 | `VREG` | `B` = register, `A` = value | Claimed PICO9918 register written | 4 | 26 |
-| 13 | `VFILL` | `HL` = VRAM address, `DE` = count, `A` = value | Claimed PICO9918 VRAM filled | 4 | 23 |
-| 14 | `VWRITE` | `HL` → VRAM address, RAM address, count (three words) | RAM copied to VRAM | 4 | 36 |
-| 15 | `VREAD` | The same | VRAM copied to RAM | 4 | 22 |
-| 16 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 16 | 63 |
-| 17 | `RANDOM` | — | `HL` = the next number from a 16-bit xorshift, period 65,535 | 4 | 30 |
-| 18 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 143 |
-| | **Total** | | | | **766** |
+| — | Dispatcher, exits, table | | | 4 | 48 |
+| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed, 7 `PICO?` on the LCD; `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
+| 1 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
+| 2 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written | 10 | 34 |
+| 3 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 8 | 81 |
+| 4 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 59 T-states | 4 | 29 |
+| 5 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
+| 6 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
+| 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 16 | 68 |
+| 8 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
+| | **Total** | | | | **473** |
 
-Stack is the deepest measured use of the caller's stack below the return
-address. The `VREG` row includes the claim check shared by services 12-15.
+Numbers 9 to 255 return status 1. Stack is the deepest measured use of the
+caller's stack below the return address.
 
 Notes:
 
-- The digits, LEDs and speaker are multiplexed or timed by the CPU, so a
-  program calls `DIGITS` and `LEDS` in its main loop.
+- The digits and speaker are multiplexed or timed by the CPU, so a program
+  calls `DIGIT` in its main loop.
 - While the PICO9918 is claimed the console drops output to it, draws no
   cursor and does not flip pages, and the program may set any mode and use
-  all of VRAM. Releasing it, or a warm boot, restores the 80-column text
-  mode, font and page and clears the screen.
-- `PUTAT` is a fast path for full-screen programs: it costs only the cell
-  writes, against a BDOS call and the ANSI parser for each character. Edit
-  stays a portable CP/M program and can use it when it finds the signature.
-- `SERIAL` works whatever the console routing, at 4800 baud with eight bits,
-  which is what a file-transfer program needs. All eight bits come through,
-  NUL included.
-- `BLOCK` reads only, into the caller's buffer; the BIOS's own buffer is not
-  touched. A block the cache holds comes from the cache, so a block written
-  behind and not yet on the card reads as TEC-OS has it.
+  all of VRAM, through the ports or through `PICO.DRV`'s graphics entries
+  (`docs/drivers.md`). The claim has no owner. Releasing it, or a warm boot,
+  which releases a resident's claim too, restores the driver's text mode,
+  font and page and clears the screen.
+- `PUTAT` is a fast path for full-screen programs: through the driver's cell
+  routine it costs about 445 T-states a cell along a row on `PICO.DRV` at 80
+  columns, against about 4,500 through the BDOS and the ANSI parser. On the
+  GLCD, whose cells are drawn pixel by pixel, the two are within 4 percent.
+  Edit stays a portable CP/M program and can use it when it finds the signature.
 - `RTC` uses the same bit sequence as MON3: the DS1302 puts each data bit
   out on a falling clock edge, as Debug80 runtime 0.3.0 models it.
 
@@ -208,8 +189,10 @@ A routine goes in the ROM when at least one of these holds:
 4. **It is small and nearly every program for the device would carry it.**
    Only for a few dozen bytes; anything larger goes in an include file.
 
-Everything else lives on the card: utilities as `.COM` files, and driver code
-that programs share as ATOM include files.
+Everything else lives on the card: utilities as `.COM` files, drivers as
+`.DRV` files, and code that programs share as ATOM include files. The 8 × 8
+LEDs, 7-segment patterns and random numbers have no ROM service: `DEMO.COM`
+carries its own.
 
 ## What the ROM holds today
 
@@ -220,11 +203,11 @@ that programs share as ATOM include files.
 | Serial and matrix keyboard | 789 | 1, 2 | Stays |
 | ANSI terminal | 988 | 2 | Stays |
 | Video switch | 104 | 2 | Stays |
-| PICO9918 text console | — | 1, 2 | Moved to `PICO.DRV`, `PICO40.DRV` and `PICO32.DRV`; the probe and raw services stay |
-| PICO9918 probe and raw addressing | 59 | 1 | Stays |
+| PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.DRV`, `PICO40.DRV` and `PICO32.DRV`; the probe stays |
+| PICO9918 probe | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.DRV`, a driver, loaded by `STARTUP.CMD` |
 | `ABIGLCD` and loading the display drivers | 140 | 2 | Stays |
-| Font, 96 characters | 768 | 1 | Stays: both display drivers read it through `ABIFONT`, and each would otherwise take the TPA below its floor |
+| Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
 | 20 × 4 LCD | 146 | 2 | Stays |
 | SD driver | 795 | 1 | Stays |
 | Container mount and checks | 1,192 | 1 | Stays |
@@ -234,19 +217,19 @@ that programs share as ATOM include files.
 | PRL loader | 100 | 2 | Stays, for programs |
 | Driver loader, registry, `DRIVERS` and startup | 718 | 2 | Stays |
 | Command history | 210 | 2 | Stays |
-| Block cache | 591 | 1, 2 | Stays: every read goes through it |
+| Block cache | 563 | 1, 2 | Stays: every read goes through it |
 | BDOS | 3,736 | 2 | Stays |
 | `XMOVE` and `MOVE` | 228 | 3 | Stays |
-| Hardware services | 766 | 3, 4 | Stays |
-| The table at `C003h` and the reset jump | 37 | 1 | Stays |
+| Hardware services | 473 | 3, 4 | Stays |
+| The table at `C003h` and the reset jump | 30 | 1 | Stays |
 
 Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
 and the regions as `docs/memory-map.md` gives them, the parts within the
 console and services regions by source file. The memory map now gives the
 ROM as its five blocks instead. The rows for the GLCD's
 driver, the CCP levels, the PRL and driver loaders, `XMOVE` and `MOVE` are counted
-again after drivers and the image save went, the block cache's at its
-build, and the table's with the reset jump at the compact layout.
+again after drivers and the image save went, and the block cache's, the
+probe's, the services' and the table's at ABI 4.0.
 
 Nothing in the ROM today belongs on the card. The native program services,
 which had no user, were removed.
@@ -286,23 +269,9 @@ Programs:
 | `TUNE.COM`, `LEDS.COM`, `JOY.COM` | Speaker, LED and joystick tests and demos |
 | `TERM.COM`, `PROBE.COM` | Already on the starter card; `COPY` is built into the CCP |
 
-## Costs
-
-| Resource | Before the services | After the services | Change |
-| --- | ---: | ---: | ---: |
-| ROM used | 13,079 | 13,868 | +789: the services and the console's claim hooks |
-| ROM free | 3,305 | 2,516 | |
-| TPA | 45,830 | 45,830 | none |
-| Resident workspace | | | +4 bytes |
-| Caller's stack per service | — | 16 bytes or less | measured by the tests |
-
-The 8 × 8 LED scan and the clock driver were planned as include files on the
-card; at 31 and 143 bytes they cost less in the ROM than in every program
-that uses them.
-
 ## Next in the ROM
 
-For the <!-- media: rom-free -->671<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,783<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

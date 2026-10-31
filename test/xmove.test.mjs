@@ -1,4 +1,4 @@
-// XMOVE and MOVE on the harness's 96K option, through ABIXMOV and ABIMOVE and
+// XMOVE and MOVE on the harness's 96K option, called directly and
 // through BDOS function 50: copies within bank 0, the program's view, as
 // LDIR does, and every copy to or from bank 1 refused, since EXPAND 1 is
 // TEC-OS's own and its low mark is 80h. Emulator evidence.
@@ -35,7 +35,7 @@ function move(m, { dst, src, hl, de, bc, iff = false, latch = 0x01, entry }) {
   if (entry !== undefined) [m.write(6, entry & 0xff), m.write(7, entry >> 8)];
   m.write(m.sym("LATCHV"), latch);
   m.cpu.hardware.ioWrite(0xff, latch);
-  const code = [...(iff ? [0xfb] : [0xf3]), 0x06, dst, 0x0e, src, 0xcd, ...le(m.sym("ABIXMOV")), 0x21, hl & 0xff, hl >> 8, 0x11, de & 0xff, de >> 8, 0x01, bc & 0xff, bc >> 8, 0xcd, ...le(m.sym("ABIMOVE")), 0x18, 0xfe];
+  const code = [...(iff ? [0xfb] : [0xf3]), 0x06, dst, 0x0e, src, 0xcd, ...le(m.sym("XMOVE")), 0x21, hl & 0xff, hl >> 8, 0x11, de & 0xff, de >> 8, 0x01, bc & 0xff, bc >> 8, 0xcd, ...le(m.sym("MOVE")), 0x18, 0xfe];
   code.forEach((v, i) => m.write(STUB + i, v));
   const before = snapshot(m);
   const writes = [];
@@ -104,14 +104,13 @@ const copies = (top) => [
   { label: "0 bytes", dst: 1, src: 0, hl: 0x9000, de: 0x1000, bc: 0 },
 ];
 
-test("the table gives the MAIN count, XMOVE, MOVE and the low mark; EXPAND is always 2", () => {
+test("the table gives the MAIN count; the mark stays 80h and EXPAND is always 2", () => {
   for (const mains of [2, 1]) {
     const m = boot(standardCard(), { ram96: true, mains });
     const S = (n) => m.sym(n);
-    assert.ok(m.read(S("ABIMAJ")) === 3, "ABI 3");
+    assert.ok(m.read(S("ABIMAJ")) === 4, "ABI 4");
     const at = (a) => m.read(m.read(a) | (m.read(a + 1) << 8));
-    assert.deepEqual([at(S("ABIMAIN")), m.read(S("EXPANDS")), at(S("ABIXMRK"))], [mains, 2, 0x80], `MAIN ${mains}`);
-    assert.deepEqual([m.read(S("ABIXMOV")), m.read(S("ABIMOVE"))], [0xc3, 0xc3]);
+    assert.deepEqual([at(S("ABIMAIN")), m.read(S("EXPANDS")), m.read(S("XMARK"))], [mains, 2, 0x80], `MAIN ${mains}`);
   }
 });
 

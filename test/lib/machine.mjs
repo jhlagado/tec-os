@@ -3,7 +3,11 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { after } from "node:test";
-import { EXPAND1_WRITES, symbolsFromD8 } from "../../host/machine.mjs";
+import { resolve } from "node:path";
+import { EXPAND1_WRITES, Machine, symbolsFromD8 } from "../../host/machine.mjs";
+import { fontBytes } from "../../tools/lib/font.mjs";
+
+Machine.font = fontBytes(resolve(import.meta.dirname, "../.."));
 
 export { EXPAND1_WRITES, Machine, bootMachine } from "../../host/machine.mjs";
 

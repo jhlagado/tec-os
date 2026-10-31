@@ -404,12 +404,13 @@ export class Machine {
 
   /**
    * The GLCD console as text: each 6 x 8 cell of the 128 x 64 graphics RAM
-   * is matched against the ROM font. Reverse cells read as their character;
-   * unknown patterns read as "?".
+   * is matched against the font, 768 bytes from 20h, which the ROM no longer
+   * holds. The test library passes it in Machine.font. Reverse cells read as
+   * their character; unknown patterns read as "?".
    */
   glcdScreen(cols = 21, rows = 8) {
     const gdram = this.tec1g.state.display.glcdCtrl.glcd;
-    const font = this.sym("FONT");
+    const { font } = Machine;
     const pixel = (x, y) => (gdram[y * 16 + (x >> 3)] >> (7 - (x & 7))) & 1;
     this.glyphCache ??= new Map();
     const glyphs = this.glyphCache;
@@ -417,7 +418,7 @@ export class Machine {
       let key = "";
       let rev = "";
       for (let r = 0; r < 8; r += 1) {
-        const bits = this.read(font + (code - 0x20) * 8 + r);
+        const bits = font[(code - 0x20) * 8 + r];
         for (let px = 0; px < 6; px += 1) {
           const on = (bits >> (7 - px)) & 1;
           key += on;

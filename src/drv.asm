@@ -8,7 +8,7 @@
 ; version and the entry table's address. The registry is the list through
 ; those records, its head in REGHEAD.
 
-DMAGIC  EQU     $0244           ; 'D', format version 2
+DMAGIC	EQU	$0344		; 'D', format version 3
 DF      EQU     $0100           ; the file
 DDEP    EQU     2               ; dependencies; resident, the previous owner
 DFLG    EQU     3               ; bit 0 removable
@@ -423,6 +423,8 @@ STDONE:	INC	A		; FFh has been seen, and carry stays
 	OR	(HL)
 	SCF
 	RET	NZ
+	LD	HL,CONDEV	; a take can tell that it wipes this word
+	SET	7,(HL)		; CDWRD
 	LD	HL,PICMSG	; carry set by LCDROW
 	JP	LCD3
 ; ABIDRV. C = 0, find: DE = the name, B = the least version; HL = the entry

@@ -1,5 +1,5 @@
-; XMOVE and MOVE, with CP/M 3's names and registers, at ABIXMOV and
-; ABIMOVE and through BDOS function 50. Bank 0 is the program's view, MAIN 0
+; XMOVE and MOVE, with CP/M 3's names and registers, through BDOS function
+; 50, and MVCOPY for the ROM's own copies. Bank 0 is the program's view, MAIN 0
 ; and EXPAND 0 below the BDOS entry at (0006h); bank 1 is EXPAND 1 from
 ; 8000h up to its low mark, XMARK. Cold boot sets the mark to 80h, since
 ; EXPAND 1 is TEC-OS's own, so every copy of a byte to or from bank 1 is

@@ -13,13 +13,15 @@ and what the ROM does for it.
 
 A `.DRV` file is the image, made for page 0 with its header at the start, then
 the dependencies, then the relocation data. `tools/lib/drv.mjs` writes one from
-two assemblies. Records are whole on disk, so a file's end is rounded, and the
+two assemblies. ATOM takes `%INCLUDE` only in a file's header, so the writer copies
+in any `%INCLUDE` below the `ORG`, which is how a display driver places its font
+last in the image, where its 768 bytes cost no gap bytes. Records are whole on disk, so a file's end is rounded, and the
 loader ignores what follows its relocation data.
 
 | Offset | Bytes | In the file | In memory |
 | --- | --- | --- | --- |
 | 0 | 1 | Magic, `44h` | The registry's head before it, 2 bytes |
-| 1 | 1 | Format version, 2 | |
+| 1 | 1 | Format version, 3 | |
 | 2 | 1 | Number of dependencies | The owner before it, a page |
 | 3 | 1 | Flags: bit 0 removable | The same; 0 if a hook kept the pages |
 | 4 | 2 | `REMOVE`, from the header's start | The same |
@@ -35,9 +37,9 @@ The header is 25 bytes and goes into memory with the image, the loader writing
 over the fields a load has finished with, so the file carries no padding. The
 `JP` lands at the page's `xx06h`, where `(0006h)` must point.
 
-Format version 2 has version 1's layout. It rose because `ABIGLCD` gained a mode in
-A: a version 1 `GLCD.DRV` calls it with A = 0 and would overwrite the workspace, so
-the loader refuses that file.
+Format version 3 has version 1's layout. It rose with ABI 4, which moved the table's
+entries and took the font out of the ROM: drivers test no ABI, so the loader refuses
+an older file.
 
 A dependency is 9 bytes: its least version, then a service's 8-byte name.
 
@@ -60,7 +62,8 @@ pages. It walks the owner list, so a driver with no services is listed.
 
 `UNLOAD` removes the lowest resident, as below, and answers the same way if it
 can't. `PICO.DRV`'s `REMOVE` refuses while it is the console, since `CON CRT` has no
-load. `GLCD.DRV`'s gives the console back to `CRT:` if `PICO.DRV` is in.
+load, and while the PICO9918 is claimed, which it reads from `INFO`, until a release
+or a warm boot. `GLCD.DRV`'s gives the console back to `CRT:` if `PICO.DRV` is in.
 
 ## Startup
 
@@ -87,13 +90,13 @@ One card can serve every board: a line for the PICO9918, then `GLCD.DRV`. Each l
 makes its display the console where there is one, and elsewhere prints its name with
 a question mark and goes on. On a board with both, `GLCD.DRV`'s line gives way once
 `PICO.DRV` is the console, and only `CON UC1:` installs the second; the two together
-cost 1,280 TPA bytes, leaving 45,574 on the starter card. Once, at the first prompt
+cost 3,072 TPA bytes, leaving 43,782 on the starter card. Once, at the first prompt
 after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
 if no display driver is installed. That covers a missing file, a bad file, no
 `STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
 has taken over from a bad `PICO.DRV`, or after a good load and `CON TTY`, and a board
 with no matrix keyboard, which both drivers refuse, never shows it. A display driver
-installed later clears the word. `CON UC1:` shows `GLCD?` if it can't load. Until a
+installed later clears the word, and otherwise leaves a program's row 3 alone. `CON UC1:` shows `GLCD?` if it can't load. Until a
 display's line runs, the banner and volumes go to the serial terminal and the LCD. A
 card that won't mount shows `CARD?` on the LCD at every failure, and `R` starts the LCD
 again, so a good retry clears the word.
@@ -204,6 +207,24 @@ A client finds a service with `ABIDRV` (`docs/rom-services.md`):
 
 Each service's table is defined in a document with its interface version.
 
+### `PICO`, version 2
+
+`PICO.DRV`, at each width, offers `PICO` with the table it hands `ABIGLCD`, followed
+by four words, the graphics entries:
+
+| Offset | `abi.inc` | Registers | Effect |
+| --- | --- | --- | --- |
+| 16 | `PICOREG` | B = register, A = value | The VDP's register written |
+| 18 | `PICOFIL` | HL = VRAM address, DE = count, A = value | VRAM filled |
+| 20 | `PICOWR` | HL = VRAM address, DE = RAM address, BC = count | RAM copied to VRAM |
+| 22 | `PICORD` | The same | VRAM copied to RAM |
+
+Each assumes the caller holds the claim (service `VIDEO`), as a program writing the
+ports does, and checks nothing. A count of 0 moves nothing. Each destroys AF, BC, DE
+and HL. `GLCD.DRV`'s `REMOVE` asks for version 1 and reads none of these. A board with
+a PICO9918 and no matrix keyboard refuses the driver, so it has no entries: a
+program there claims the VDP and writes the ports.
+
 ## Removal
 
 `UNLOAD` acts on the lowest resident only, read from `PZTOP`, and only if the
@@ -215,7 +236,9 @@ boot keeps drivers and the registry; a reset empties both.
 
 ## Rules for a source
 
-A driver calls the published table and nothing else. The build refuses a source
+A driver calls the published table and nothing else, and carries what it needs
+that the ROM doesn't offer: each display driver has its own font, checked by the
+build against `format/font5x7.txt`. The build refuses a source
 in `drivers/`, or `test/programs/drv*.asm`, that names a ROM address; `abi.inc`'s
 names are the way in. No driver owns an interrupt: `PZINIT` rewrites `0038h` and
 the restart vectors at each warm boot, so a handler wouldn't last until `REMOVE`.

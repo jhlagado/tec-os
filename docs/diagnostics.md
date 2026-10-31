@@ -485,7 +485,7 @@ against the Debug80 model. Checked 28 October 2026 for diag 0.2.
 8. The documents make `05h` the X latch (bit 0 the left column) and `06h`
    the Y latch (bit 0 the bottom row), and leave `F8h` and `F9h` free for
    the user. The ROM drives `05h` as rows and `06h`, `F8h` and `F9h` as red,
-   green and blue columns, as Debug80 and TEC-OS's `HWLEDS` service do. The
+   green and blue columns, as Debug80 and TEC-OS's `DEMO.COM` do. The
    run plan says what each reading shows.
 9. `ioports.md` says KDA reads 0 while a key is down; `Functional
    Description.md` says the 74C923 "generates a high on KDA". The ROM reads

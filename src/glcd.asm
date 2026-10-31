@@ -63,8 +63,8 @@ GLCLD:	LD	A,(CONDEV)
 	JP	LCD3
 
 ; Read CMDFCB's driver and install it. If its page holds a video table it takes
-; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in, and any recovery
-; word goes from the LCD. Carry set if it wouldn't read or install.
+; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in, and PICO? goes
+; from the LCD. Carry set if it wouldn't read or install.
 DRVGO:	CALL	LOADCOM
 	RET	C
 	CALL	DRVLOAD
@@ -83,11 +83,15 @@ DRVGO:	CALL	LOADCOM
 	OR	A
 	RET	NZ		; PICO.DRV keeps the console
 	LD	B,CMUC1
-CONSET:	PUSH	BC		; the console's mode, across the LCD
-	LD	HL,PICCLR	; a display has come: no word stays
+CONSET:	LD	HL,CONDEV	; a display has come: PICO? goes, if it is up,
+	BIT	7,(HL)		; and otherwise a program's row 3 stays (CDWRD)
+	JR	Z,CONST1
+	RES	7,(HL)
+	PUSH	BC		; the console's mode, across the LCD
+	LD	HL,PICCLR	; blanks over the word
 	CALL	LCD3
 	POP	BC
-	LD	A,(IOBYTE)	; the mode goes in the CON: field
+CONST1:	LD	A,(IOBYTE)	; the mode goes in the CON: field
 	AND	$FC
 	OR	B
 	LD	(IOBYTE),A

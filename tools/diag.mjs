@@ -11,6 +11,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
+import { fontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = resolve(ROOT, "diag");
@@ -47,31 +48,6 @@ function serialTiming() {
   return { txdly, rxdly, rxhalf, txstop, txBit: 49 + 16 * txdly, txStop: 16 * txstop + 11 };
 }
 
-/** The console font from format/font5x7.txt as DB rows, 96 glyphs. */
-function fontSource() {
-  const text = readFileSync(resolve(ROOT, "format/font5x7.txt"), "utf8");
-  const glyphs = new Map();
-  let rows;
-  for (const line of text.split(/\r?\n/)) {
-    if (line.trim() === "" || (line.startsWith("#") && !/^[#.]{5}$/.test(line))) continue;
-    const head = /^= ([0-9A-F]{2})$/.exec(line);
-    if (head) {
-      rows = [];
-      glyphs.set(parseInt(head[1], 16), rows);
-      continue;
-    }
-    if (!/^[#.]{5}$/.test(line)) throw new Error(`font: bad row ${JSON.stringify(line)}`);
-    rows.push(parseInt(line.replace(/#/g, "1").replace(/\./g, "0"), 2) << 3);
-  }
-  const out = ["; Generated from format/font5x7.txt by tools/diag.mjs. Do not edit.", "FONT:"];
-  for (let c = 0x20; c < 0x80; c += 1) {
-    const g = glyphs.get(c);
-    if (!g || g.length !== 8) throw new Error(`font: glyph ${c.toString(16)} missing or not 8 rows`);
-    out.push(`        DB      ${g.map((v) => hex(v, 2)).join(",")}`);
-  }
-  return out.join("\n") + "\n";
-}
-
 function writeGenerated() {
   mkdirSync(GEN, { recursive: true });
   const s = serialTiming();
@@ -96,7 +72,7 @@ SWT10L  EQU     ${hex(sw10 % 65536)}           ; and ten times it
 SWT10H  EQU     ${hex(Math.floor(sw10 / 65536))}
 `,
   );
-  writeFileSync(resolve(GEN, "font.asm"), fontSource());
+  writeFileSync(resolve(GEN, "font.asm"), fontSource(ROOT, "; Generated from format/font5x7.txt by tools/diag.mjs. Do not edit."));
   return s;
 }
 

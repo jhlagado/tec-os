@@ -7,6 +7,25 @@ BDOS    EQU     $0005
 VOLSVC  EQU     ABIVOL
 
         ORG     $0100
+; This program speaks ABI 4's table: on anything else it says so and stops.
+	LD	HL,ABITAB	; what is at the table's address
+	LD	DE,ABITAG	; against what should be
+	LD	B,3
+CHKTAG:	LD	A,(DE)		; each byte of the tag
+	CP	(HL)
+	JR	NZ,NOABI	; not TEC-OS's table
+	INC	HL		; on to the next of each
+	INC	DE
+	DJNZ	CHKTAG
+	LD	A,(HL)		; HL = ABIMAJ now
+	CP	4		; exactly: entries may move at each major
+	JR	Z,ABIOK
+NOABI:	LD	DE,NOABIM	; the word, and back to the CCP
+	LD	C,9		; BDOS: print to $
+	JP	BDOS
+ABITAG:	DB	"TNA"
+NOABIM:	DB	"VOLS needs TEC-OS with ABI 4.",13,10,"$"
+ABIOK:
         LD      A,(IDX)
 NEXT:   LD      E,A
         LD      A,2             ; describe

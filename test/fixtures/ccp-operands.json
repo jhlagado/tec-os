@@ -487,7 +487,7 @@
     {
       "input": "CON UC1",
       "output": "CON UC1\r\r\nCON: UC1: GLCD\r\nA>",
-      "calls": "472e3480f0c53a298d0148422babe4859e7b19aee3ffef4571a4684060a9ad40",
+      "calls": "c9cb8505b7f97a575a650351859385f03138fe4679654680e4ab98291924ca65",
       "peak": 12
     }
   ]

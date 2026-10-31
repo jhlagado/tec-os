@@ -8,12 +8,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
-import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { editForAbi4 } from "../tools/lib/edit.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const EDIT = pinned("EDIT.COM");
 const TRIPTYCH = pinned("triptych-headless");
-const editCom = () => new Uint8Array(readFileSync(EDIT.path));
+const editCom = () => editForAbi4(new Uint8Array(readFileSync(EDIT.path)), ROOT);
 const NOTES = "hello\nsecond line\n";
 const EDITED = "hello\nYsecond line\n";
 

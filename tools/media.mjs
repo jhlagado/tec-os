@@ -11,6 +11,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
 import { displayFiles } from "./lib/starter.mjs";
+import { editForAbi4 } from "./lib/edit.mjs";
 import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
 import { PROFILES } from "./build.mjs";
 
@@ -200,8 +201,9 @@ async function main() {
   // display is available (configuration tag "ECFG" at 0103h).
   const editPath = process.env.EDIT_COM ?? resolve(ROOT, "../edit/dist/EDIT.COM");
   if (existsSync(editPath)) {
-    const bytes = new Uint8Array(readFileSync(editPath));
-    if (Buffer.from(bytes.subarray(3, 7)).toString("latin1") === "ECFG") {
+    const pinnedBytes = new Uint8Array(readFileSync(editPath));
+    if (Buffer.from(pinnedBytes.subarray(3, 7)).toString("latin1") === "ECFG") {
+      const bytes = editForAbi4(pinnedBytes, ROOT);
       writeFileSync(resolve(FILES, "EDIT.COM"), bytes);
       files.push({ name: "EDIT.COM", description: "Edit, the full-screen editor: EDIT NAME.TXT, ^S save, ^Q quit", bytes });
     } else {

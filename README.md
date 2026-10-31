@@ -13,8 +13,8 @@ table of services at `C003h`.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
   `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,854 bytes on the
-  starter card and at least 46,086 on any card, 768 bytes less on a board
-  with a GLCD. EXPAND 1 is TEC-OS's own: its levels and history, and room
+  starter card and at least 46,086 on any card, 1,536 bytes less on a board
+  with a display driver. EXPAND 1 is TEC-OS's own: its levels and history, and room
   kept for a block cache. TEC-OS says so at boot and stops if either half
   is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
@@ -88,8 +88,8 @@ board's Matrix switch is on. Otherwise it stays on the serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
-`DEMO` on the starter card shows the hardware services: the LCD, the
-7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
+`DEMO` on the starter card shows the hardware: the LCD, the 7-segment digits,
+the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.DRV` installs a driver.
 `A:STARTUP.CMD` runs at cold boot; a keypad key held from reset until the
 prompt skips it, and the console stays on the serial terminal. A board with a
@@ -105,7 +105,7 @@ Do not press the hex keypad while a CP/M program is running; see
 
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
-- [ROM services](docs/rom-services.md) (the table at `C003h` and the 19 hardware services)
+- [ROM services](docs/rom-services.md) (the table at `C003h` and the 9 hardware services)
 - [Console](docs/console.md)
 - [CP/M compatibility](docs/compatibility.md)
 - [Write policy and recovery](docs/recovery.md)
@@ -114,8 +114,9 @@ Do not press the hex keypad while a CP/M program is running; see
 
 `src/` holds the ROM. `src/cpm/` holds the CCP and BDOS adapted from Portable
 CP/M ([provenance](src/cpm/PROVENANCE.md)). `format/` holds the container and
-geometry definition and the console font, which both the ROM build and the
-host tools read. `tools/` holds the build, `tecvol` and the media script.
+geometry definition, which both the ROM build and the host tools read, and
+the console font, which the display drivers' copy in `drivers/` is checked
+against. `tools/` holds the build, `tecvol` and the media script.
 `test/` holds the tests, their harness and the test programs.
 
 TEC-OS is licensed under GPL-3.0-or-later.

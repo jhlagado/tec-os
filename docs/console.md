@@ -89,18 +89,18 @@ terminal reaches the display in use through the driver's table, so another
 display needs only those routines. `docs/drivers.md` has the rules.
 
 The PICO9918's console is `PICO.DRV`, `PICO40.DRV` or `PICO32.DRV`, one file a
-width, which the startup line chooses. It takes two pages below the BDOS entry,
-so `(0006h)` is 512 bytes lower. It refuses with no PICO9918 and with no matrix
+width, which the startup line chooses. It takes six pages below the BDOS entry,
+so `(0006h)` is 1,536 bytes lower, with its own font and the graphics entries. It refuses with no PICO9918 and with no matrix
 keyboard, and a board with no matrix keyboard therefore has an unprogrammed VDP
 until a program claims it. Its `REMOVE` refuses while it is the console, since
-`CON CRT` has no load. Warm boot restores the mode of
+`CON CRT` has no load, and while the PICO9918 is claimed. Warm boot restores the mode of
 the display in use (see [compatibility.md](compatibility.md)).
 
 ## GLCD
 
 The GLCD console is a driver, `GLCD.DRV` on the starter card, not part of
-the ROM. Its code and its screen text take three pages just below the BDOS
-entry, so on a board that loads it `(0006h)` is 768 bytes lower; a board
+the ROM. Its code, its screen text and its font take six pages just below the
+BDOS entry, so on a board that loads it `(0006h)` is 1,536 bytes lower; a board
 without a GLCD loses nothing. Its INIT hands the terminal its six video
 routines through `ABIGLCD` in the table at `C003h`, and the terminal calls them directly, on the
 caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
@@ -110,7 +110,7 @@ serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
 console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
 too, and shows `GLCD?` on the LCD if it can't. On a board with both displays
 the line gives way to `PICO.DRV`, and only `CON UC1:` installs it; the two
-together cost 1,280 TPA bytes. A board without a GLCD or a matrix keyboard refuses
+together cost 3,072 TPA bytes. A board without a GLCD or a matrix keyboard refuses
 it, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
 resident, removes it, and the console goes back to `CRT:` if `PICO.DRV` is in and
 to serial if not.
@@ -129,7 +129,9 @@ The display size is published in the table at `C003h` (the word at
 `ABIVID`, `C008h`, points to columns, then rows), so programs such as an editor can lay out
 their screen without being rebuilt for each display.
 
-The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows.
+The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows. The
+ROM holds none: each display driver carries its own copy, `drivers/font.asm`, as
+the diagnostics ROM does, and the build checks it against that file.
 
 ## Matrix keyboard
 

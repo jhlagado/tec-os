@@ -354,26 +354,16 @@ CWBOOT: CALL    CFLALL
         LD      HL,CWMSG
         JP      PUTS
 
-; The BLOCK service: SDLBA's block from its line into the 512 bytes at HL,
-; Z, if a line has it (CBLOCK). BLKBUF into the line that has SDLBA's
-; block, if one does (CREFR).
-CBLOCK: LD      BC,$0100        ; XMDST bank 0, XMSRC bank 1
-        JR      CXL
-CREFR:  LD      HL,BLKBUF
-        LD      BC,$0001        ; XMDST bank 1, XMSRC bank 0
-CXL:    PUSH    HL
-        PUSH    BC
-        CALL    CLOOK
-        POP     BC
-        POP     DE              ; DE = the other end
-        RET     NZ
-        LD      (XMDST),BC
-        CALL    CLADR           ; HL = the line
-        DEC     C
-        JR      Z,CXL1          ; into the line: DE is the source
-        EX      DE,HL
-CXL1:   LD      BC,512
-        CALL    MVCOPY
-        XOR     A
-        RET
+; After a write through BLKBUF: the line that holds SDLBA's block, if one does,
+; takes the new contents, so that it can't hand back the old ones. Destroys AF,
+; BC, DE and HL.
+CREFR:	CALL	CLOOK		; A = the line, Z if there is one
+	RET	NZ		; not cached: nothing to keep true
+	LD	BC,$0001	; XMDST bank 1, XMSRC bank 0
+	LD	(XMDST),BC
+	CALL	CLADR		; HL = the line
+	LD	DE,BLKBUF	; from the block just written
+	LD	BC,512
+	CALL	MVCOPY		; a CALL: the host's guard on EXPAND 1 reads
+	RET			; the return address to name its writer
 CEND:
