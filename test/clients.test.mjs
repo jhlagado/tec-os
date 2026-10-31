@@ -140,13 +140,16 @@ function oldMachine(opts = {}) {
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, ...opts });
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  const seen = { services: 0, svc: 0, c01d: 0 };
+  const seen = { services: 0, svc: 0, c01d: 0, strayed: 0 };
   const inService = [...symbols.entries()].filter(([k]) => /^HWS[A-Z]+$/.test(k) && k !== "HWSVC").map(([, v]) => v);
   const step = m.step.bind(m);
+  let last = 0;
   m.step = () => {
     if (inService.includes(m.pc)) seen.services += 1;
     if (m.pc === symbols.get("HWSVC")) seen.svc += 1;
     if (m.pc === 0xc01d) seen.c01d += 1;
+    if (last === 0xc01d && m.pc >= 0xc000) seen.strayed += 1; // anything but a RET to the program
+    last = m.pc;
     return step();
   };
   return { m, seen, image };
@@ -183,6 +186,7 @@ for (const [line, name] of [["VOLS", "VOLS"], ["MOUNT B:", "MOUNT, to unmount"],
     const before = pageZero(m);
     m.command(line);
     assert.ok(seen.c01d >= 1, "it called C01Dh");
+    assert.equal(seen.strayed, 0, "and was sent straight back");
     assert.deepEqual(Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d)), mounts);
     assert.deepEqual(pageZero(m), before);
     assert.deepEqual([...image], [...card], "the card byte for byte");
