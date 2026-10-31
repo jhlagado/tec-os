@@ -115,13 +115,15 @@ test("all four drives are kept: a remapped D:", () => {
 
 test("a selected volume of another geometry than the drive's default gets its own DPH", () => {
   const vols = [{ geometry: "G8M", label: "SYSTEM", mount: "A" }, VOLUMES[1], VOLUMES[2]];
-  const m = machine(card(vols));
+  const image = card(vols);
+  for (const v of ["SYSTEM", "ALT"]) volume(image, v).write("HELLO.TXT", new Uint8Array(128));
+  const m = machine(image);
   const big = m.command("DIR");
   assert.equal(mountOn(m, 0, 2), 0);
   reset(m);
   assert.deepEqual(idx(m), [3, 2, 0, 0]);
   const small = m.command("DIR");
-  assert.notEqual(/(\d+)K free/.exec(small)?.[1] ?? "none", /(\d+)K free/.exec(big)?.[1] ?? "none");
+  assert.ok(Number(/(\d+)K free/.exec(small)[1]) < Number(/(\d+)K free/.exec(big)[1]) / 4, `${small} against ${big}`);
   assert.doesNotMatch(small, /Bad Sector/);
 });
 
