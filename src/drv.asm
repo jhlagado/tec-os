@@ -49,7 +49,7 @@ DRVUNL: LD      A,(CCPLVL)
         EX      DE,HL
         INC     (HL)
         EX      DE,HL
-        JP      PRLTOP
+	JR	PRLTOP
 
 ; Install the file at 0100h, up to LOADTOP. Carry clear: installed. Carry set:
 ; DRVRC is 0 refused, nothing changed; 1 INIT failed, nothing left; 2 failed,
@@ -328,103 +328,103 @@ CMDDL:  OR      A
 ; position marked finished first, so that a failure can't repeat. STPOS is 0
 ; until then, the next byte + 1 in the file, 80h up once it is finished, and FFh
 ; when STDONE has looked at the console.
-STBOOT: LD      HL,STPOS
-        LD      A,(HL)
-        OR      A
-        RET     NZ
+STBOOT:	LD	HL,STPOS
+	LD	A,(HL)
+	OR	A
+	RET	NZ		; cold boot has passed here already
 	SET	7,(HL)		; finished, whatever follows
-        IN      A,(STSPORT)     ; a keypad key held skips it: bit 6 low
-        AND     $40
-        RET     Z
-        LD      HL,STFCB
-        LD      DE,CMDFCB
-        LD      BC,12
-        LDIR
-        LD      DE,STREC
-        LD      C,26
-        CALL    BDOS
-        LD      DE,CMDFCB
-        LD      C,15
-        CALL    BDOS
-        INC     A
-        JR      Z,STBDMA
-        LD      DE,CMDFCB
-        LD      C,20
-        CALL    BDOS
-        OR      A
-        JR      NZ,STBDMA
-        INC     A
-        LD      (STPOS),A
-STBDMA: LD      HL,DEFDMA
-        LD      (CURDMA),HL
-        RET
+	IN	A,(STSPORT)	; a keypad key held skips it: bit 6 low
+	AND	$40
+	RET	Z
+	LD	HL,STFCB	; the file's name, for the BDOS
+	LD	DE,CMDFCB
+	LD	BC,12
+	LDIR
+	LD	DE,STREC	; the record goes where STLINE reads it
+	LD	C,26
+	CALL	BDOS
+	LD	DE,CMDFCB	; no file ends here
+	LD	C,15
+	CALL	BDOS
+	INC	A
+	JR	Z,STBDMA
+	LD	DE,CMDFCB	; one record, and an empty file ends here
+	LD	C,20
+	CALL	BDOS
+	OR	A
+	JR	NZ,STBDMA
+	INC	A		; STPOS 1, the file's first byte
+	LD	(STPOS),A
+STBDMA:	LD	HL,DEFDMA	; the DMA address programs expect
+	LD	(CURDMA),HL
+	RET
 
 ; At level 0 with a line left: it goes in the command buffer, echoed as if
 ; typed, and carry clear. Lines end at CR or LF and blank ones are passed
-; over; ^Z, a zero or the record's last byte ends the file.
-STLINE: LD      A,(CCPLVL)
-        OR      A
-        SCF
-        RET     NZ
+; over. ^Z, a zero or the record's last byte ends the file. Otherwise carry
+; set, through STDONE once the file has finished. Destroys AF, B, DE, HL.
+STLINE:	LD	A,(CCPLVL)
+	OR	A
+	SCF
+	RET	NZ		; only the top level takes a line
 	LD	HL,STPOS
 	LD	A,(HL)
 	RLCA			; top bit to carry: the file is finished
 	JR	C,STDONE
 	RRCA			; the position again
-        ADD     A,LOW(STREC)-1
-        LD      L,A
-        LD      H,HIGH(STREC)
-        LD      DE,CMDTXT
-STL1:   LD      A,L
-        CP      LOW(STREC+128)
-        JR      Z,STLE
-        LD      A,(HL)
-        INC     HL
-        OR      A
-        JR      Z,STLE
-        CP      26
-        JR      Z,STLE
-        CP      13
-        JR      Z,STL2
-        CP      10
-        JR      Z,STL2
-        LD      (DE),A
-        INC     DE
-        JR      STL1
+	ADD	A,LOW(STREC)-1
+	LD	L,A
+	LD	H,HIGH(STREC)
+	LD	DE,CMDTXT
+STL1:	LD	A,L
+	CP	LOW(STREC+128)
+	JR	Z,STLE		; the record has run out
+	LD	A,(HL)
+	INC	HL
+	OR	A
+	JR	Z,STLE		; a zero ends the file
+	CP	26
+	JR	Z,STLE		; and so does ^Z
+	CP	13
+	JR	Z,STL2
+	CP	10
+	JR	Z,STL2
+	LD	(DE),A		; a character of the line
+	INC	DE
+	JR	STL1
 STLE:	LD	L,LOW(STLAST)	; STPOS 80h, finished
-STL2:   LD      A,L
-        SUB     LOW(STREC)-1
-        LD      (STPOS),A
-        LD      A,E
-        SUB     LOW(CMDTXT)
-        JR      Z,STLINE
-        LD      (CMDLEN),A
-        EX      DE,HL
-        LD      (HL),13
-        INC     HL
-        LD      (HL),'$'
-        LD      DE,CMDTXT
-        CALL    PUTSTR
-        OR      A
-        RET
+STL2:	LD	A,L
+	SUB	LOW(STREC)-1	; the next byte + 1
+	LD	(STPOS),A
+	LD	A,E
+	SUB	LOW(CMDTXT)
+	JR	Z,STLINE	; a blank line: the next one
+	LD	(CMDLEN),A
+	EX	DE,HL
+	LD	(HL),13		; ends the line for the CCP, and
+	INC	HL
+	LD	(HL),'$'	; for the echo
+	LD	DE,CMDTXT
+	CALL	PUTSTR
+	OR	A
+	RET
 
-; The file is finished, at the first prompt at level 0 after its last line. A
-; board with a PICO9918 and no driver as the console has a black screen, and
-; perhaps no serial terminal, so the LCD says PICO?. This looks once, so that a
-; later CON TTY or a program's LCD text is left alone. HL = STPOS, A = STPOS
+; Once, at the first prompt at level 0 after startup: with a PICO9918 and a
+; matrix keyboard fitted and no display driver in, the LCD says PICO?. That
+; board's screen is black and it may have no serial terminal. It covers a
+; missing file, a bad file, no STARTUP.CMD and a skip. HL = STPOS, A = STPOS
 ; rotated left, carry set. Returns carry set for STLINE. Destroys AF, B, HL.
 STDONE:	INC	A		; FFh has been seen, and carry stays
 	RET	Z
-	LD	(HL),$FF	; never again
-	LD	A,(CONMOD)	; odd is a video console, so a driver has it
-	BIT	0,A		; BIT leaves carry, as RET needs
+	LD	(HL),$FF	; once only
+	LD	A,(CONDEV)	; the only CD* bits: zero is both and no GLCD
+	SUB	CDMTX+CDTMS	; CDGLC set means GLCD.DRV is in
+	LD	HL,PIVEC+1	; and a word here means PICO.DRV is
+	OR	(HL)
+	SCF
 	RET	NZ
-	LD	A,(CONDEV)	; no PICO9918 means nothing is black
-	BIT	1,A		; CDTMS
-	RET	Z
-	LD	HL,PICMSG	; a driver should have taken this board
+	LD	HL,PICMSG	; carry set by LCDROW
 	JP	LCD3
-
 ; ABIDRV. C = 0, find: DE = the name, B = the least version; HL = the entry
 ; table. C = 1, enumerate: B = an index; HL = that record. A = the generation.
 ; Carry if there is none. BC, DE destroyed.

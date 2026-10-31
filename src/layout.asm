@@ -53,7 +53,7 @@ VCURV   EQU     $004F           ; 1 while the cursor cell is inverted
 
 CDMTX   EQU     $01             ; matrix keyboard enabled
 CDTMS   EQU     $02             ; PICO9918 answered at cold boot
-CDGLC   EQU     $04             ; GLCD answered at cold boot
+CDGLC	EQU	$04		; GLCD.DRV is in
 
 ; Console modes: the IOBYTE CON: field in effect (CONMOD). Odd means a video
 ; display with the matrix keyboard.

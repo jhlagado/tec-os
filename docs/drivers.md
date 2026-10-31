@@ -87,13 +87,16 @@ One card can serve every board: a line for the PICO9918, then `GLCD.DRV`. Each l
 makes its display the console where there is one, and elsewhere prints its name with
 a question mark and goes on. On a board with both, `GLCD.DRV`'s line gives way once
 `PICO.DRV` is the console, and only `CON UC1:` installs the second; the two together
-cost 1,280 TPA bytes, leaving 45,574 on the starter card. At the first prompt after
-the file, a board with a PICO9918 and no driver as the console shows `PICO?` on the
-LCD, once, which covers a missing or bad `PICO.DRV`, no file and a skip. `CON UC1:`
-shows `GLCD?` if it can't load. Until a display's line runs, the banner and volumes go
-to the serial terminal and the LCD, and a card that won't mount shows `CARD?` on the
-LCD, on every failure, until `R` retries it: the retry starts the LCD again, so a good
-one clears the word.
+cost 1,280 TPA bytes, leaving 45,574 on the starter card. Once, at the first prompt
+after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
+if no display driver is installed. That covers a missing file, a bad file, no
+`STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
+has taken over from a bad `PICO.DRV`, or after a good load and `CON TTY`, and a board
+with no matrix keyboard, which both drivers refuse, never shows it. A display driver
+installed later clears the word. `CON UC1:` shows `GLCD?` if it can't load. Until a
+display's line runs, the banner and volumes go to the serial terminal and the LCD. A
+card that won't mount shows `CARD?` on the LCD at every failure, and `R` starts the LCD
+again, so a good retry clears the word.
 
 A board with no matrix keyboard refuses both drivers, so it has an unprogrammed VDP
 until a program claims it. A claim with no `PICO.DRV` in restores nothing on release.

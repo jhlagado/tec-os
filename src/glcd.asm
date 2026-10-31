@@ -50,44 +50,48 @@ GLHF1:  XOR     A
 ; Load A:GLCD.DRV if there is a GLCD and its resident is not in, and make it
 ; the console: carry set if there is none or it will not load (the LCD says
 ; so).
-GLCLD:  LD      A,(CONDEV)
-        AND     CDGLC
-        RET     NZ              ; in already
-        LD      HL,GLCFCB
-        LD      DE,CMDFCB
-        LD      BC,12
-        LDIR
-        CALL    DRVGO
-        RET     NC
+GLCLD:	LD	A,(CONDEV)
+	AND	CDGLC
+	RET	NZ		; in already
+	LD	HL,GLCFCB	; the file's name, for the loader
+	LD	DE,CMDFCB
+	LD	BC,12
+	LDIR
+	CALL	DRVGO
+	RET	NC
 	LD	HL,GLCMSG	; the LCD says so, carry set
 	JP	LCD3
 
 ; Read CMDFCB's driver and install it. If its page holds a video table it takes
-; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in. Carry set if it
-; wouldn't read or install.
-DRVGO:  CALL    LOADCOM
-        RET     C
-        CALL    DRVLOAD
-        RET     C
-        LD      A,(DRVHEAD)
-        LD      B,CMCRT
-        LD      HL,PIVEC+1
-        CP      (HL)
-        JR      Z,CONSET
-        LD      HL,GLVEC+1
-        XOR     (HL)            ; carry clear: any other driver has loaded
-        RET     NZ
-        LD      HL,CONDEV
-        SET     2,(HL)          ; CDGLC
-        LD      A,(PIVEC+1)
-        OR      A
-        RET     NZ
-        LD      B,CMUC1
-CONSET: LD      A,(IOBYTE)
-        AND     $FC
-        OR      B
-        LD      (IOBYTE),A
-        LD      A,$FF
-        LD      (CONACT),A
-        JP      CONSEL
+; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in, and any recovery
+; word goes from the LCD. Carry set if it wouldn't read or install.
+DRVGO:	CALL	LOADCOM
+	RET	C
+	CALL	DRVLOAD
+	RET	C
+	LD	A,(DRVHEAD)
+	LD	B,CMCRT		; PICO.DRV's table in this driver's page?
+	LD	HL,PIVEC+1
+	CP	(HL)
+	JR	Z,CONSET
+	LD	HL,GLVEC+1
+	XOR	(HL)		; carry clear: any other driver has loaded
+	RET	NZ
+	LD	HL,CONDEV
+	SET	2,(HL)		; CDGLC
+	LD	A,(PIVEC+1)
+	OR	A
+	RET	NZ		; PICO.DRV keeps the console
+	LD	B,CMUC1
+CONSET:	PUSH	BC		; the console's mode, across the LCD
+	LD	HL,PICCLR	; a display has come: no word stays
+	CALL	LCD3
+	POP	BC
+	LD	A,(IOBYTE)	; the mode goes in the CON: field
+	AND	$FC
+	OR	B
+	LD	(IOBYTE),A
+	LD	A,$FF		; CONACT no field: CONSEL acts
+	LD	(CONACT),A
+	JP	CONSEL
 

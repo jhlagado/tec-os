@@ -182,7 +182,7 @@ FNPUNCH:
         LD      A,(PARAM)
         LD      C,A
         CALL    BIOPUN
-        JP      RETZERO
+	JR	RETZERO
 
 FNLIST:
         LD      A,(PARAM)

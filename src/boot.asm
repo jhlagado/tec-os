@@ -2,27 +2,28 @@
 
 ; ---- Cold boot ----------------------------------------------------------------
 ; Entered from RESET, at 0000h at reset, or BIOS function 0.
-COLD:   DI
-        LD      SP,BOOTSTK
-        LD      A,LATCLAS
-        OUT     (SYSLAT),A      ; overlay off, classic bank; execution is at C0xxh
-        IM      1
-        LD      HL,0            ; clear page zero
-        LD      DE,1
-        LD      BC,$FF
-        LD      (HL),L
-        LDIR
-        LD      (LATCHV),A
-        CALL    RAMCHK          ; does not return without RAM at 8000h-BFFFh
-        LD      HL,WSBASE       ; clear the resident workspace
-        LD      DE,WSBASE+1
-        LD      BC,WSEND-WSBASE-1
-        LD      (HL),0
-        LDIR
-        LD      SP,BSTK
-        CALL    CONINIT
-        LD      HL,BANNER
-        CALL    PUTS
+WSSPAN	EQU	WSEND-WSBASE-1	; the workspace, less the byte LDIR starts from
+COLD:	DI
+	LD	SP,BOOTSTK
+	LD	A,LATCLAS	; overlay off, classic bank, code at C0xxh
+	OUT	(SYSLAT),A
+	IM	1
+	LD	HL,0		; clear page zero
+	LD	DE,1
+	LD	BC,$FF
+	LD	(HL),L
+	LDIR
+	LD	(LATCHV),A	; A is still LATCLAS
+	CALL	RAMCHK		; no return without RAM at 8000h-BFFFh
+	LD	HL,WSBASE	; clear the resident workspace
+	LD	DE,WSBASE+1
+	LD	BC,WSSPAN
+	LD	(HL),0
+	LDIR
+	LD	SP,BSTK		; the workspace is there to hold it now
+	CALL	CONINIT
+	LD	HL,BANNER
+	CALL	PUTS
 ; DIAG's retry comes back here. LCDINIT clears the display, so CARD? goes
 ; with it, and a retry that fails shows it again.
 COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
@@ -32,19 +33,19 @@ COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
 	JP	NZ,DIAG		; no card, or one that won't start
 	CALL	MOUNT
 	JP	NZ,DIAG		; a card with no volume to mount
-        CALL    ALVINIT
-        LD      HL,(STUBAD)     ; no residents yet
-        LD      (PZTOP),HL
-        LD      HL,BIOSBAS      ; the RAM BIOS table, at cold boot only: warm
-        LD      DE,RAMBIOS      ; boot leaves it, and any entry a program has
-        LD      BC,BIOSLEN      ; replaced, alone, as CP/M 2.2 does
-        LDIR
-        CALL    SHOWVOL
-        CALL    LCDVOLS
-        XOR     A               ; drive A, user 0
-        LD      (PZDU),A
-        CALL    PZINIT
-        CALL    MEMINIT
+	CALL	ALVINIT
+	LD	HL,(STUBAD)	; no residents yet
+	LD	(PZTOP),HL
+	LD	HL,BIOSBAS	; the RAM BIOS table, at cold boot only: warm
+	LD	DE,RAMBIOS	; boot leaves it, and any entry a program has
+	LD	BC,BIOSLEN	; replaced, alone, as CP/M 2.2 does
+	LDIR
+	CALL	SHOWVOL
+	CALL	LCDVOLS
+	XOR	A		; drive A, user 0
+	LD	(PZDU),A
+	CALL	PZINIT
+	CALL	MEMINIT		; then on into warm boot
 
 ; ---- Warm boot ----------------------------------------------------------------
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
@@ -201,6 +202,9 @@ RSTZERO:LD      (HL),0
         JR      NZ,RSTCLR
         RET
 
+; The stack guard's bytes.
+STKGN	EQU	STKGUEND-STKGUARD
+
 ; Reset the CCP and BDOS writable state as a fresh disk load would, and
 ; forget the deblocking buffer so a changed card is reread.
 CPMINIT:LD      HL,CCPRAM
@@ -213,10 +217,10 @@ CPMINIT:LD      HL,CCPRAM
         LD      A,127
         LD      (CMDBUF),A
         LD      HL,STKGUARD
-        LD      B,STKGUEND-STKGUARD
-CPMIG:  LD      (HL),$A5
-        INC     HL
-        DJNZ    CPMIG
+	LD	B,STKGN		; each guard byte gets the pattern a check reads
+CPMIG:	LD	(HL),$A5
+	INC	HL
+	DJNZ	CPMIG
         XOR     A
         LD      (BUFOK),A
         RET

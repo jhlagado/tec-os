@@ -472,7 +472,7 @@ VOLSVC: LD      B,A
         DEC     A
         JR      Z,VUNM
         DEC     A
-        JP      NZ,VBAD
+	JR	NZ,VBAD
         PUSH    HL              ; describe
         LD      A,E
         CALL    VDESC

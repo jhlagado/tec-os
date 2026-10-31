@@ -32,31 +32,31 @@ LCDC:   PUSH    AF
         RET
 
 ; Write the zero-terminated string at HL to row 3, the row for a recovery
-; message: CARD?, GLCD? or PICO?. Returns as LCDROW does.
+; message: CARD?, GLCD? or PICO?, or blanks to clear one. Returns as LCDROW.
 LCD3:	LD	B,3		; the bottom row, free of the volumes
 
 ; Write the zero-terminated string at HL from row B (0-3), column 0. Returns
-; carry set, so a caller reporting a failure can end with a jump here.
-LCDROW: LD      A,B
-        PUSH    HL
-        LD      HL,LCDROWS
-        ADD     A,L
-        LD      L,A
-        JR      NC,LCDR1
-        INC     H
-LCDR1:  LD      A,(HL)
-        POP     HL
-        CALL    LCDC
-LCDS:   LD      A,(HL)
+; carry set, so a caller reporting a failure can end with a jump here, and NZ.
+; Destroys AF, HL. BC and DE are kept.
+LCDROW:	LD	A,B
+	PUSH	HL
+	LD	HL,LCDROWS	; the row's address on the display
+	ADD	A,L
+	LD	L,A
+	JR	NC,LCDR1
+	INC	H		; the table's page changed
+LCDR1:	LD	A,(HL)
+	POP	HL
+	CALL	LCDC
+LCDS:	LD	A,(HL)
 	CP	1		; carry at the zero that ends the string
 	RET	C
-        PUSH    AF
-        CALL    LCDWAIT
-        POP     AF
-        OUT     (LCDDAT),A
-        INC     HL
-        JR      LCDS
-
+	PUSH	AF
+	CALL	LCDWAIT
+	POP	AF
+	OUT	(LCDDAT),A
+	INC	HL
+	JR	LCDS
 ; Show the drive letters and labels of drives A and B on rows 1 and 2.
 LCDVOLS:LD      C,0
 LCDV:   PUSH    BC

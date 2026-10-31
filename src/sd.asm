@@ -109,7 +109,7 @@ SDCMDX: PUSH    AF
         CALL    SETARG
         POP     AF
         CALL    SDCMD
-        JP      SPIEND
+	JR	SPIEND
 
 ; Initialise the card. Returns Z when it is ready for block I/O.
 SDINIT: XOR     A
@@ -167,7 +167,7 @@ SDI41W: DJNZ    SDI41W
         DEC     C
         JR      NZ,SDI41
         LD      A,SDEINIT
-        JP      SDFAIL
+	JR	SDFAIL
 SDI58:  LD      DE,0
         LD      HL,0
         CALL    SETARG
@@ -193,7 +193,7 @@ SDI58:  LD      DE,0
         OR      A
         JR      Z,SDIOK
         LD      A,SDEBLEN
-        JP      SDFAIL
+	JR	SDFAIL
 SDI58F: CALL    SPIEND
         LD      A,SDEOCR
 SDFAIL: LD      (SDERR),A
@@ -227,7 +227,7 @@ SDREAD: PUSH    HL
         CALL    SDCMD
         POP     HL
         OR      A
-        JP      NZ,SDRCMD
+	JR	NZ,SDRCMD
         LD      C,0             ; token wait: 65536 polls
         LD      D,0
 SDRTOK: PUSH    DE
@@ -241,15 +241,15 @@ SDRTOK: PUSH    DE
         JR      NZ,SDRTOK
         CALL    SPIEND
         LD      A,SDETOK
-        JP      SDFAIL
+	JR	SDFAIL
 SDRDAT: CALL    SDRBLK
         CALL    SPIR            ; CRC, not checked
         CALL    SPIR
         CALL    SPIEND
-        JP      SDIOK
+	JR	SDIOK
 SDRCMD: CALL    SPIEND
         LD      A,SDECMD
-        JP      SDFAIL
+	JR	SDFAIL
 
 ; Receive 512 bytes into the buffer at HL, sending FFh, after the start
 ; token; HL ends 512 bytes on. /CS low and CLK low on entry and on return.

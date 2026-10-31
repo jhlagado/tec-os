@@ -2,7 +2,8 @@
 // suite, on the serial console, the PICO9918 and the GLCD with the matrix
 // keyboard, on the serial console with B: written behind, on the diagnostic
 // console without a card, and on the CCP's two deepest paths: CON UC1 loading
-// GLCD.DRV on a PICO9918 and matrix board and on a GLCD board, and a shelled-out level. Every memory write
+// GLCD.DRV on a PICO9918 and matrix board and on a GLCD board, a shelled-out
+// level, and PICO? reaching the LCD at the first prompt. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
 // whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
@@ -122,13 +123,13 @@ async function consoleRun(opts, { wb = false } = {}) {
 }
 
 /** CON UC1 loading GLCD.DRV, then a resident shelling out and its level's EXIT. */
-async function deepPaths(lines, opts = { tms: true, matrix: true }) {
+async function deepPaths(lines, opts = { tms: true, matrix: true }, { pico = true } = {}) {
   const { rom, symbols } = romFor();
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }]);
   const a = volume(image, "A");
   a.write("GLCD.DRV", GLCD_DRV);
   a.write("SHELL.PRL", await prl("shell"));
-  if (opts.tms) {
+  if (opts.tms && pico) {
     a.write("PICO.DRV", PICO_DRV["PICO.DRV"]);
     a.write("STARTUP.CMD", startupFile("PICO.DRV"));
   }
@@ -138,7 +139,8 @@ async function deepPaths(lines, opts = { tms: true, matrix: true }) {
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   for (const line of lines) run(m, line);
   assert.deepEqual(m.violations, []);
-  return { ...depths(), conmod: m.read(m.sym("CONMOD")) };
+  const row3 = String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd();
+  return { ...depths(), conmod: m.read(m.sym("CONMOD")), row3 };
 }
 
 function diagnosticRun() {
@@ -164,7 +166,9 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     conUc1: await deepPaths(["CON UC1\r"]),
     conUc1Glcd: await deepPaths(["CON UC1\r"], { matrix: true }),
     residentLevel: await deepPaths(["SHELL\r", "DIR\r", "EXIT\r"]),
+    picoNoDriver: await deepPaths(["DIR\r"], { tms: true, matrix: true }, { pico: false }),
   };
+  assert.equal(runs.picoNoDriver.row3, "PICO?", "the run went through STDONE's LCD path");
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
   assert.equal(runs.glcd.conmod, 3, "the glcd run is on UC1:");
   assert.equal(runs.conUc1.conmod, 3, "both displays, CON UC1 took the GLCD");
@@ -173,7 +177,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; and SHELL.PRL, a program, shelling out, a DIR at that level, and EXIT. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; SHELL.PRL, a program, shelling out, a DIR at that level, and EXIT; and a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

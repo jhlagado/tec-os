@@ -52,7 +52,7 @@ HWSVC:  LD      (HWARGA),A
         LD      A,C
         CP      HWCOUNT
         LD      A,HWEBAD
-        JP      NC,HWERR
+	JR	NC,HWERR
         PUSH    HL
         PUSH    DE
         LD      A,C
@@ -133,7 +133,7 @@ HWSLD:  DJNZ    HWSLD
 HWSLCD: LD      A,B
         CP      4
         LD      A,HWEBAD
-        JP      NC,HWERR
+	JR	NC,HWERR
         PUSH    HL
         LD      HL,LCDROWS
         LD      E,B
