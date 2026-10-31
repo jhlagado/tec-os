@@ -184,6 +184,7 @@ export class Machine {
     // in EXPAND1_WRITES, for the whole process.
     const meminit = symbols.get("MEMINIT");
     const cold = symbols.get("COLD");
+    const coldz = symbols.get("COLDZ") ?? cold; // where COLD clears page zero
     let clearEnd = -1;
     if (meminit !== undefined && cold !== undefined)
       for (let a = meminit; a < meminit + 0x40 && clearEnd < 0; a += 1) if (rom[a - 0xc000] === 0xed && rom[a - 0xc000 + 1] === 0xb0) clearEnd = a + 2;
@@ -210,7 +211,7 @@ export class Machine {
       const a = addr & 0xffff;
       if (clearEnd > 0) {
         const pc = this.cpu.cpu.pc & 0xffff;
-        if (pc >= cold && pc < cold + 0x20) cleared = false;
+        if (pc >= coldz && pc < coldz + 0x20) cleared = false;
         else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
           if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
           else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbf00)) {
@@ -510,6 +511,61 @@ export class Machine {
     if ((pc === this.sym("CINRX") || pc === this.sym("CSTRX")) && (this.cpu.cpu.a & 0x7f) === (head.code & 0x7f)) {
       p.shift();
     }
+  }
+
+  /** A card put in at the socket: the next command sees IMAGE, or no card with none. */
+  swapCard(image, { highCapacity = true, onSdWrite } = {}) {
+    this.sdImage = image;
+    this.sd = image ? new SdSpi({ image, highCapacity, ...(onSdWrite ? { onWrite: onSdWrite } : {}) }) : null;
+  }
+
+  /** All RAM as one array: 0000h-BFFFh, then EXPAND 1's 16 KiB. */
+  ramImage() {
+    const out = new Uint8Array(0x10000);
+    const latch = this.sysCtrl;
+    for (let a = 0; a < 0xc000; a += 1) out[a] = this.read(a);
+    this.cpu.hardware.ioWrite(0xff, (latch | 0x04) & 0xff);
+    for (let a = 0x8000; a < 0xc000; a += 1) out[a + 0x4000] = this.read(a);
+    this.cpu.hardware.ioWrite(0xff, latch);
+    return out;
+  }
+
+  /** Fill RAM from ramImage()'s array, the bytes another ROM left behind. */
+  loadRam(image) {
+    const latch = this.sysCtrl;
+    for (let a = 0; a < 0xc000; a += 1) this.write(a, image[a]);
+    this.cpu.hardware.ioWrite(0xff, (latch | 0x04) & 0xff);
+    for (let a = 0x8000; a < 0xc000; a += 1) this.write(a, image[a + 0x4000]);
+    this.cpu.hardware.ioWrite(0xff, latch);
+  }
+
+  /**
+   * From now until the program counter reaches one of DECISIONS (symbol names):
+   * every memory write outside BOOTSTK's stack page, and the lowest program
+   * counter from COLD to MEMINIT. Returns the record, which fills as the machine runs.
+   */
+  traceToDecision(decisions, stackFrom = 0x7f00) {
+    const stops = decisions.map((n) => this.sym(n));
+    const trace = { writes: [], decided: false, lowPc: 0xffff };
+    const { memWrite } = this.cpu.hardware;
+    const cold = this.sym("COLD");
+    const meminit = this.sym("MEMINIT");
+    const step = this.step.bind(this);
+    let inRom = false;
+    this.cpu.hardware.memWrite = (addr, value) => {
+      const a = addr & 0xffff;
+      if (!trace.decided && !(a >= stackFrom && a < 0x8000)) trace.writes.push(a);
+      memWrite(addr, value);
+    };
+    this.step = () => {
+      const pc = this.pc;
+      if (pc === cold) inRom = true;
+      if (pc === meminit) inRom = false;
+      if (inRom && pc < trace.lowPc) trace.lowPc = pc;
+      if (stops.includes(pc)) trace.decided = true;
+      return step();
+    };
+    return trace;
   }
 
   /** The reset button: CPU and latches reset, RAM and the card keep their contents. */

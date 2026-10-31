@@ -89,6 +89,8 @@ Power the board.
 
 ### 3. Reset and choose (5 seconds)
 
+A reset with TEC-OS in RAM keeps any volumes selected with `MOUNT`.
+
 Press RESET. Within a second the terminal shows:
 
 ```text

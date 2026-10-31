@@ -190,7 +190,7 @@ MNDESC: LD      A,(MNTI)
         LD      DE,MNTPRV
         CALL    CMP32
         LD      A,MEOVLAP
-        JR      C,MNTERR
+	JP	C,MNTERR
         LD      IY,MNTPRV
         LD      L,(IX+DSTART)   ; end = start + length, no wrap
         LD      H,(IX+DSTART+1)
@@ -219,6 +219,11 @@ MNDESC: LD      A,(MNTI)
         CP      MAXDRV
         LD      A,MEMOUNT
         JR      NC,MNTERR
+	LD	A,(MNTDRV)	; N drives have slots: past them, none. N = 0
+	DEC	A		; wraps, and every default drive is slotted
+	CP	(IX+DMOUNT)
+	LD	A,MEMOUNT
+	JP	C,MNTERR
         LD      E,(IX+DMOUNT)
         LD      D,0
         LD      HL,DRVIDX
@@ -301,78 +306,188 @@ DX1:    LD      L,A
         JR      MNBLK
 
 ; Install the descriptor at IX as drive (IX+DMOUNT). Preserves B and IX.
-MNONE:  PUSH    BC
-        LD      A,(IX+DMOUNT)
-        PUSH    AF
-        CALL    DRVENT          ; HL -> geometry byte; entry starts 6 earlier
-        LD      DE,-6
-        ADD     HL,DE
-        LD      A,(IX+DSTART)
-        LD      (HL),A
-        INC     HL
-        LD      A,(IX+DSTART+1)
-        LD      (HL),A
-        INC     HL
-        LD      A,(IX+DSTART+2)
-        LD      (HL),A
-        INC     HL
-        LD      A,(IX+DSTART+3)
-        LD      (HL),A
-        INC     HL
-        LD      A,(IX+DLEN)
-        LD      (HL),A
-        INC     HL
-        LD      A,(IX+DLEN+1)
-        LD      (HL),A
-        INC     HL
-        LD      A,(IX+DGEOM)
-        LD      (HL),A
-        INC     HL
-        LD      A,(IX+DCACHE)   ; written behind (DCWB, bit 0): the drive's
-        AND     DCWB            ; flag bit 1
-        ADD     A,A
-        OR      (IX+DFLAGS)
-        LD      (HL),A
-        POP     AF              ; build the DPH
-        PUSH    AF
-        LD      L,A
-        LD      H,0
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        ADD     HL,HL
-        LD      DE,DPHTAB
-        ADD     HL,DE
-        LD      B,8             ; XLT and BDOS scratch words are zero
-MNZ:    LD      (HL),0
-        INC     HL
-        DJNZ    MNZ
-        LD      DE,DIRBUF
-        LD      (HL),E
-        INC     HL
-        LD      (HL),D
-        INC     HL
-        PUSH    HL
-        LD      A,(IX+DGEOM)
-        CALL    GEOFIND
-        LD      DE,4
-        ADD     HL,DE
-        LD      E,(HL)
-        INC     HL
-        LD      D,(HL)          ; DE = DPB
-        POP     HL
-        LD      (HL),E
-        INC     HL
-        LD      (HL),D
-        INC     HL
-        LD      DE,CSVDUM
-        LD      (HL),E
-        INC     HL
-        LD      (HL),D
-        INC     HL
-        POP     AF              ; ALVINIT sets the allocation vector
-        POP     BC
-        RET
+MNONE:	PUSH	BC
+	LD	A,(IX+DMOUNT)
+	PUSH	AF		; the drive, across the entry
+	CALL	DRVENT		; HL -> geometry byte, entry starts 6 earlier
+	LD	DE,-6
+	ADD	HL,DE
+	CALL	MNFILL
+	POP	AF		; the drive again, for its DPH
+	LD	C,(IX+DGEOM)
+	CALL	MNDPH
+	POP	BC		; the caller's B
+	RET
+
+; The eight bytes of a drive-table entry for the descriptor at IX, at HL:
+; start, length, geometry and the flags, with written-behind beside read-only.
+; Keeps IX. Destroys A, and leaves HL at the eighth byte.
+MNFILL:	LD	A,(IX+DSTART)	; start, four bytes
+	LD	(HL),A
+	INC	HL
+	LD	A,(IX+DSTART+1)
+	LD	(HL),A
+	INC	HL
+	LD	A,(IX+DSTART+2)	; the high half
+	LD	(HL),A
+	INC	HL
+	LD	A,(IX+DSTART+3)
+	LD	(HL),A
+	INC	HL
+	LD	A,(IX+DLEN)	; length, two bytes
+	LD	(HL),A
+	INC	HL
+	LD	A,(IX+DLEN+1)
+	LD	(HL),A
+	INC	HL
+	LD	A,(IX+DGEOM)	; geometry
+	LD	(HL),A
+	INC	HL
+	LD	A,(IX+DCACHE)	; written behind (DCWB, bit 0): the drive's
+	AND	DCWB		; flag bit 1
+	ADD	A,A
+	OR	(IX+DFLAGS)	; beside read-only
+	LD	(HL),A
+	RET
+
+; Build drive A's DPH for geometry C. Leaves its ALV word, which ALVINIT sets.
+; Keeps C and IX. Destroys AF, B, DE and HL.
+MNDPH:	LD	L,A		; DPHSZ bytes a drive
+	LD	H,0
+	ADD	HL,HL
+	ADD	HL,HL
+	ADD	HL,HL
+	ADD	HL,HL
+	LD	DE,DPHTAB	; HL = this drive's DPH
+	ADD	HL,DE
+	LD	B,8		; XLT and BDOS scratch words are zero
+MNZ:	LD	(HL),0
+	INC	HL
+	DJNZ	MNZ
+	LD	DE,DIRBUF	; shared by every drive
+	LD	(HL),E		; the DPH's words are little-endian
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	PUSH	HL		; the DPB word's place, across the lookup
+	LD	A,C
+	CALL	GEOFIND
+	LD	DE,4		; the entry's DPB word
+	ADD	HL,DE
+	LD	E,(HL)		; read through HL
+	INC	HL
+	LD	D,(HL)		; DE = DPB
+	POP	HL		; into the DPH
+	LD	(HL),E		; after DIRBUF's word
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	LD	DE,CSVDUM	; no directory check vector
+	LD	(HL),E		; the last word before the ALV
+	INC	HL
+	LD	(HL),D
+	RET
+
+; Reselect a retained selection (RSLCAP) on the card MOUNT has just accepted,
+; after ALVINIT has given the card's defaults their slots, so that neither
+; slots nor TPA vary with the selection. Step 1 reads and changes nothing: one
+; walk of the descriptors, each compared with every retained drive on the
+; eight bytes MNFILL builds. It gives up, leaving the defaults whole, on a
+; failed read, a descriptor matching two drives, a volume whose slot wouldn't
+; hold its vector by VMNT's rule, or a retained drive left with no match. Step
+; 2 reads nothing and can't fail: RSLBUF replaces DRVTAB and DRVIDX, and each
+; drive's DPH is built. Drives not retained stay empty, even if the card names
+; them. Destroys AF, BC, DE, HL and IX.
+RESEL:	LD	A,(RSLBUF+6)	; no retained A: means no selection
+	OR	A
+	RET	Z
+	LD	HL,0		; no drive matched yet
+	LD	(RSLIDX),HL	; all four indices
+	LD	(RSLIDX+2),HL
+	XOR	A		; MNTI walks the table
+	LD	(MNTI),A
+RSWALK:	LD	A,(MNTI)
+	CALL	DESCIX		; IX -> the descriptor
+	RET	NZ		; a failed read: the defaults stand
+	LD	HL,RSLTMP	; as a drive-table entry
+	CALL	MNFILL
+	LD	C,0		; each retained drive, with DE at its entry
+	LD	DE,RSLBUF
+RSDRV:	CALL	RSEQ
+	JR	NZ,RSNEXT
+	CALL	VSLOT		; a match: it must fit the drive's slot
+	RET	C
+	LD	HL,RSLIDX	; this drive's index + 1
+	LD	B,0		; BC = the drive
+	ADD	HL,BC
+	LD	A,(MNTI)	; as DRVIDX counts them
+	INC	A
+	LD	(HL),A		; kept for step 2
+	XOR	A		; a second drive now can't match this one, and
+	LD	(RSLTMP+6),A	; is left with none, which gives up below
+RSNEXT:	LD	HL,DRVESZ	; the next retained drive
+	ADD	HL,DE
+	EX	DE,HL		; DE goes on, C counts
+	INC	C
+	LD	A,C
+	CP	MAXDRV		; all four, retained or not
+	JR	C,RSDRV
+	LD	HL,MNTI		; the next descriptor
+	INC	(HL)
+	LD	A,(MNTCNT)	; MOUNT's count of them
+	CP	(HL)
+	JR	NZ,RSWALK
+	LD	C,0		; every retained drive must have matched
+	LD	HL,RSLBUF+6	; HL at each geometry
+	LD	DE,RSLIDX	; DE at each index
+RSCHK:	LD	A,(DE)
+	OR	A
+	JR	NZ,RSCHK1	; matched
+	OR	(HL)		; no match, and A is its geometry
+	RET	NZ		; retained: give up
+RSCHK1:	INC	DE		; the next drive's index and geometry
+	LD	A,L		; within RSLBUF's page
+	ADD	A,DRVESZ
+	LD	L,A
+	INC	C
+	LD	A,C
+	CP	MAXDRV		; all four
+	JR	C,RSCHK
+	LD	HL,RSLBUF	; step 2: entries, then the indices
+	LD	DE,DRVTAB
+	LD	BC,MAXDRV*DRVESZ+MAXDRV
+	LDIR
+	LD	C,0		; each drive's DPH for what it now holds
+RSDPH:	LD	A,C		; the drive
+	CALL	DRVENT		; HL -> its geometry byte
+	LD	A,(HL)
+	OR	A
+	JR	Z,RSDPH1	; empty: BSELDSK refuses it anyway
+	PUSH	BC		; the loop's count
+	LD	E,C		; the drive, while C takes the geometry
+	LD	C,A
+	LD	A,E		; and A the drive
+	CALL	MNDPH
+	POP	BC
+RSDPH1:	INC	C
+	LD	A,C		; all four
+	CP	MAXDRV
+	JR	C,RSDPH
+	RET
+
+; Z if the eight bytes at DE equal RSLTMP's. Keeps C and DE. Destroys AF, B,
+; HL.
+RSEQ:	PUSH	DE		; the caller's place in RSLBUF
+	LD	HL,RSLTMP
+	LD	B,DRVESZ
+RSEQ1:	LD	A,(DE)		; a retained byte
+	CP	(HL)
+	JR	NZ,RSEQ2	; NZ goes back to the caller
+	INC	DE		; the next of the eight
+	INC	HL
+	DJNZ	RSEQ1
+RSEQ2:	POP	DE
+	RET
 
 ; Pack the allocation vectors down from WSBASE, in drive order, and put
 ; each one's address in its DPH. A format 1.1 card that asks for N drives
@@ -472,7 +587,7 @@ VOLSVC: LD      B,A
         DEC     A
         JR      Z,VUNM
         DEC     A
-	JR	NZ,VBAD
+	JP	NZ,VBAD
         PUSH    HL              ; describe
         LD      A,E
         CALL    VDESC
@@ -497,17 +612,9 @@ VMNT:   LD      A,C
         JR      NZ,VBAD
         INC     A
         JR      NZ,VBAD         ; on a drive already
-        LD      A,(IX+DLEN+1)   ; the slot must hold its vector: a payload of
-        CP      $10             ; 4096 blocks or more needs a G8M slot (2)
-        LD      A,2
-        SBC     A,0
-        LD      HL,DRVSLOT
-        LD      B,0
-        ADD     HL,BC
-        CP      (HL)
-        JR      Z,VM1
-        JR      NC,VBAD
-VM1:    CALL    VFLUSH
+	CALL	VSLOT
+	JR	C,VBAD
+	CALL	VFLUSH		; old data safe first
         JR      NZ,VBAD
         LD      (IX+DMOUNT),C   ; publish only after the old data is safe
         PUSH    BC
@@ -523,6 +630,21 @@ VM1:    CALL    VFLUSH
         INC     E
         LD      (HL),E
         JR      VRESET
+
+; Carry if the slot of drive C won't hold the vector of the volume at IX: a
+; payload of 4096 blocks or more needs a G8M slot (2), and any other a slot.
+; Keeps C, DE and IX. Destroys AF, B and HL.
+VSLOT:	LD	A,(IX+DLEN+1)	; the payload's high byte
+	CP	$10
+	LD	A,2		; 2 needed, or 1 with the carry of a small one
+	SBC	A,0
+	LD	HL,DRVSLOT	; this drive's slot
+	LD	B,0
+	ADD	HL,BC
+	DEC	A		; carry: the slot is above what's needed less 1
+	CP	(HL)
+	CCF
+	RET
 
 VUNM:   LD      A,C
         OR      A
@@ -680,7 +802,7 @@ SHOWVOL:LD      C,0             ; each mounted drive, in drive order
 SHV:    PUSH    BC
         CALL    DRVDESC
         JR      NZ,SHVN
-        LD      A,(IX+DMOUNT)
+	LD	A,C		; the drive, which may not be the card's letter
         ADD     A,'A'
         CALL    PUTA
         LD      A,':'

@@ -21,8 +21,8 @@ directory block, so the card's directory stays the truth and is read again
 next time; the BDOS reports the failed write.
 
 A file is safe once it is closed, which is CP/M's own rule. Data written
-and not yet closed is lost by a reset or power off: press `^C` at the prompt
-before pressing reset or taking the card out. If a data block cannot be
+and not yet closed is lost by a reset or power off, and never reaches any card:
+press `^C` at the prompt before pressing reset or taking the card out. If a data block cannot be
 written, it stays changed in the cache, and each warm boot tries it again
 and says `Write lost` while it still fails. Only a reset, or power off,
 gives it up.
@@ -79,6 +79,46 @@ no journal, so power loss or reset can leave:
 
 The PC and TEC-OS must never write the same card at the same time. Remove
 the card from the TEC-1G, or hold it in reset, while the PC has it.
+
+## Three paths
+
+TEC-OS comes back from a program in one of three ways, and the hardware reset
+signal doesn't distinguish the last two.
+
+| Path | Volumes | Everything else |
+| --- | --- | --- |
+| Ordinary exit: a program's return, `^C`, or `JP 0000h` | Unchanged | Warm boot: dirty lines written, drivers and registry kept |
+| Recognised reset | The selection, each volume checked against the card | Rebuilt |
+| Unrecognised reset | The card's defaults | Rebuilt |
+
+A reset is recognised from what TEC-OS left in RAM: page zero's jumps, and the BDOS
+entry stub at its address, jumping to this ROM's BDOS. The test reads and runs
+nothing old, and RAM from another build, damaged RAM or power-up RAM fails it.
+There is no signature to clear: what proves the selection is that the volumes are
+still on the card.
+
+Only the selection is kept. Page zero, the workspace, drivers, the registry, the
+cache, open files, the history and the TPA ceiling are all rebuilt, and a reset
+starts at user 0 on the serial console, with startup run once from the selected A:.
+
+Each drive's start, length, geometry and flags must match one descriptor of the card
+now in the socket, and fit the slot that drive has, or the selection is dropped whole
+and the card's defaults stand. Nothing is half applied. A card that won't mount goes
+to the diagnostic prompt as always, and `R` applies the selection if the retry works.
+A drive unmounted before the reset stays unmounted, and can be mounted after it.
+
+Limits:
+
+- RAM with no warm boot behind it isn't recognised, so a reset at the diagnostic
+  prompt or during a boot, rather than `R`, gives the defaults.
+- There is no route back to the defaults but losing RAM: every recognised reset
+  reapplies the selection, and the keypad skip keeps it. A board whose selected A:
+  has no driver stays as it is until the volume is mounted away or power goes.
+- Identity is extents, not a name: a card with identical extents takes the
+  selection, and a card that changed only its default letters keeps it.
+
+**Flush before a reset.** A reset discards dirty lines and never writes them, to the
+old card or a new one. Press `^C` at the prompt before a reset or taking the card out.
 
 ## Card removal
 

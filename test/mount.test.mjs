@@ -57,13 +57,15 @@ test("MOUNT takes a volume by label or index, refuses one in use, A: left empty 
   assert.deepEqual(m.violations, []);
 });
 
-test("a reset gives the card's own mounts back", async () => {
+test("a reset keeps the selected volume", async () => {
   const m = await machine();
   m.command("MOUNT B: ARCHIVE");
+  const from = m.output.length;
   m.reset();
-  m.expect(/A>$/, { maxCycles: 80_000_000 });
+  m.expect(/A>$/, { from, maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt after reset");
-  assert.deepEqual(drvidx(m), [1, 2, 0, 0]);
+  assert.deepEqual(drvidx(m), [1, 8, 0, 0], "KD-139: the selection, where this read the card's own at KD-47");
+  assert.match(m.text(from), /B: ARCHIVE/, "the boot list names the drive, not the card's letter");
 });
 
 test("cold boot refuses a table out of order, an overlap, a payload past the container and a wrong table sum", () => {

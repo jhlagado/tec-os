@@ -1,6 +1,6 @@
 ; Resident workspace in the classic bank, from WSBASE upwards. The CCP and
-; BDOS blocks follow this one (CCPRAM, then BDOSRAM) and end at the RAM
-; BIOS table at BF00h; the SD, keyboard and GLCD state sit above the table. Nothing
+; BDOS blocks follow this one (CCPRAM, then BDOSRAM) and end at the RAM BIOS
+; table at BF00h; the SD, keyboard and GLCD state sit above the table. Nothing
 ; here is initialised by the image: cold and warm boot clear and set it.
 
         ORG     WSBASE
@@ -20,6 +20,10 @@ BUFBLK: DS      2
 BLKBUF: DS      512
 
 ; Drive table: start block (4), length in blocks (2), geometry (1), flags (1).
+; A recognised reset copies it from RAM by its address alone (RSLCAP). A ROM
+; with the same BENTRY and STUBAD addresses and a different DRVTAB would be
+; taken for this one: the 32 bytes then fail RESEL's match or name a volume
+; the card has, so the harm stops at a validated volume on a drive.
 DRVTAB: DS      MAXDRV*DRVESZ
 DRVIDX: DS      MAXDRV          ; each drive's volume: container index + 1, 0 for none
 DRVSLOT:DS      MAXDRV          ; each drive's vector slot: 0 none, 1 G1M's, 2 G8M's
@@ -108,9 +112,9 @@ ERAALL:
 ; This is both the oversize discriminator and ordinary CCP scratch storage.
 LOADBUF:
         DS      128
-; A fixed sentinel separates reusable command scratch from the downward-growing
-; resident stack. The host proof checks that every byte survives the deepest
-; built-in and error-recovery paths.
+; A fixed sentinel separates reusable command scratch from the
+; downward-growing resident stack. The host proof checks that every byte
+; survives the deepest built-in and error-recovery paths.
 STKGUARD:
         DS      43-CCPSTN
 STKGUEND:
