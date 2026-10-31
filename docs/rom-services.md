@@ -98,8 +98,8 @@ another system and carries on without the TEC-1G's devices.
 The rules that make the services safe for CP/M programs:
 
 - **The caller's stack.** No service switches stacks or touches the TPA
-  beyond the buffers it is given. The deepest takes 16 bytes of the caller's
-  stack, counting the dispatcher but not the `CALL`.
+  beyond the buffers it is given. The deepest, `PUTAT` on a GLCD console, takes
+  22 bytes of the caller's stack, counting the dispatcher but not the `CALL`.
 - **Resident state only.** The services keep their state in the resident
   workspace: the claim flag, 1 byte.
 - **Never the BDOS.** Services do not call the BDOS, so a program can call
@@ -139,14 +139,14 @@ program left returns at once with the interrupt state unchanged.
 | C | Service | Arguments | Results | Stack | ROM |
 | ---: | --- | --- | --- | ---: | ---: |
 | — | Dispatcher, exits, table | | | 4 | 48 |
-| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed, 7 `PICO?` on the LCD; `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
+| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed (`HWBCLM`), 7 `PICO?` on the LCD (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
 | 1 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
 | 2 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written | 10 | 34 |
 | 3 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 8 | 81 |
 | 4 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 59 T-states | 4 | 29 |
 | 5 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
 | 6 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
-| 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 16 | 68 |
+| 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 22 | 68 |
 | 8 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
 | | **Total** | | | | **473** |
 

@@ -2,8 +2,8 @@
 ; service in C and arguments in B, DE and HL. Returns A = status with Z and
 ; carry clear on success; results as each service says. IX, IY and the
 ; alternate registers are preserved. Any program may call them: they run on
-; the caller's stack (at most 16 bytes) and keep their state in the resident
-; workspace. Numbers and status codes are in abi.inc too, and the build
+; the caller's stack (at most 22 bytes, PUTAT on a GLCD console being the
+; deepest) and keep their state in the resident workspace. Numbers and status codes are in abi.inc too, and the build
 ; checks that the two agree.
 ;
 ; These are the services that would otherwise fight the OS for a port: the
@@ -27,6 +27,15 @@ HWCOUNT	EQU	9
 
 HWEBAD	EQU	1		; no such service, or an argument out of range
 HWENODV	EQU	2		; the device is not fitted
+
+; INFO's bits in B. The build checks them against CONDEV's CD* bits, which
+; they name for programs.
+HWBMTX	EQU	$01		; a matrix keyboard
+HWBPICO	EQU	$02		; a PICO9918 answered at cold boot
+HWBGLCD	EQU	$04		; GLCD.DRV is in
+HWBRTC	EQU	$08		; a DS1302 clock answers
+HWBCLM	EQU	$10		; the PICO9918 is claimed
+HWBWRD	EQU	$80		; PICO? is on the LCD
 
 RTCPORT EQU     $FC             ; DS1302: bit 4 enable, 6 clock, 7 data out,
                                 ; 5 data in, read on bit 0
@@ -65,10 +74,11 @@ HWOK:   XOR     A
 ; The INFO service. Returns B = CONDEV's bits, with HWBRTC if a DS1302 answers
 ; (seconds below 60h) and HWBCLM, which is VCLAIM's value, while the PICO9918
 ; is claimed; DE = the ROM's version; HL = columns and rows.
-HWSINFO:	CALL	RTCHAS
+HWSINFO:
+	CALL	RTCHAS
 	LD	A,(CONDEV)	; the flags are still RTCHAS's
 	JR	NZ,HWSIN1
-	OR	$08		; HWBRTC
+	OR	HWBRTC		; the clock answered
 HWSIN1:	LD	HL,VCLAIM	; holds HWBCLM's value while claimed
 	OR	(HL)
 	LD	B,A

@@ -1,4 +1,4 @@
-; DEMO.COM: the hardware services. A beep, then until a key is pressed: a
+; DEMO.COM: the TEC-1G's hardware. A beep, then until a key is pressed: a
 ; title on the 20 x 4 LCD with the time on its last row when a DS1302 clock
 ; answers, a hex counter on the 7-segment digits, a moving rainbow on the
 ; 8 x 8 LEDs and, on a PICO9918, colour bars with a bouncing ball in
@@ -267,7 +267,8 @@ MKL3:   DEC     E
 ; One pass over the eight rows of red, green and blue bytes at HL, each row lit
 ; for about 0.4 ms, then all off. Each row's colours go out with the rows dark
 ; from the pass before. Destroys AF, BC and HL.
-LEDSCAN:	LD	C,1	; the row's select bit
+LEDSCAN:
+	LD	C,1		; the row's select bit
 LEDSL:	LD	A,(HL)		; red
 	OUT	(LEDR),A
 	INC	HL
@@ -443,7 +444,8 @@ NOMSG:  DB      "no$"
 KEYMSG: DB      13,10,"Watch the LCD, the digits, the LEDs and the screen.",13,10
         DB      "Press any key to stop.",13,10,"$"
 BYE:    DB      13,10,"Demo stopped.",13,10,"$"
-NOHWMSG:	DB	13,10,"DEMO needs TEC-OS with ABI 4.",13,10,"$"
+NOHWMSG:
+	DB	13,10,"DEMO needs TEC-OS with ABI 4.",13,10,"$"
 LCDTXT: DB      "TEC-OS hardware demo"
         DB      "7-seg: hex counter  "
         DB      "8x8: moving rainbow "

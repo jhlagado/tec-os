@@ -12,7 +12,7 @@ import { PICO_WIDTHS, makeDrv } from "../tools/lib/drv.mjs";
 import { displayFiles } from "../tools/lib/starter.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { screens } from "./lib/pico-workload.mjs";
-import { GLCD_DRV, PICO_DRV, ROOT, TEST_CLOCK, boot, driver, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_DRV, PICO_DRV, ROOT, TEST_CLOCK, boot, driver, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const m0 = (m) => m.sym("CONMOD");
@@ -59,12 +59,12 @@ const callAt = (m, addr, regs) => {
   const flags = { ...cpu.flags };
   Object.assign(cpu, regs, { sp: 0x0100, pc: STUB });
   m.runUntil(() => m.pc === STUB + 3, 80_000_000, "the call");
-  const after = { a: cpu.a, h: cpu.h, l: cpu.l, flags: { ...cpu.flags } };
+  const after = { a: cpu.a, b: cpu.b, h: cpu.h, l: cpu.l, flags: { ...cpu.flags } };
   Object.assign(cpu, saved, { flags }); // back in the input loop, which the stub interrupted
   return after;
 };
-const VIDEO = 3;
-const [PICOREG, PICOFIL, PICOWR, PICORD] = [16, 18, 20, 22];
+const VIDEO = ABI.HWVIDEO;
+const { PICOREG, PICOFIL, PICOWR, PICORD, HWBWRD, HWINFO } = ABI;
 const hw = (m, c, b, a = 0) => callAt(m, m.sym("ABIHW"), { a, b, c }).a;
 
 /** The "PICO" record's table at the least version, or null. */
@@ -252,10 +252,13 @@ test("the LCD stays silent with no PICO9918, and with no matrix keyboard", () =>
 
 test("a display driver installed by hand clears PICO?", () => {
   const typed = start({ "PICOX.DRV": PICO_DRV["PICO.DRV"] });
+  const info = () => callAt(typed, typed.sym("ABIHW"), { c: HWINFO }).b;
   assert.equal(lcdRow(typed, 3), "PICO?");
+  assert.equal(info() & HWBWRD, HWBWRD, "INFO reports the word");
   say(typed, "PICOX.DRV");
   assert.equal(typed.read(m0(typed)), CRT);
   assert.equal(lcdRow(typed, 3), "");
+  assert.equal(info() & HWBWRD, 0, "and its going");
   const uc1 = start({ "GLCD.DRV": GLCD_DRV });
   assert.equal(lcdRow(uc1, 3), "PICO?");
   say(uc1, "CON UC1");
@@ -440,6 +443,9 @@ for (const [name, cols, r1] of WIDTHS) {
     const [, read] = ports(m, () => gfx(m, PICORD, { b: 1, c: 0x2c, d: 0x28, e: 0, h: 0x32, l: 0 }));
     assert.deepEqual(read.slice(0, 2), [0x00, 0x32], "the VDP is told a read");
     assert.deepEqual(ramAt(m, 0x2800, 300), data, "VRAM read back");
+    m.write(0x2100, data[0] ^ 0xff);
+    gfx(m, PICOWR, { b: 0, c: 0, d: 0x21, e: 0, h: 0x32, l: 0 });
+    assert.equal(vram(m)[0x3200], data[0], "a count of zero writes nothing");
     m.write(0x2900, 0x77);
     gfx(m, PICORD, { b: 0, c: 0, d: 0x29, e: 0, h: 0x32, l: 0 });
     assert.equal(m.read(0x2900), 0x77, "a count of zero reads nothing");

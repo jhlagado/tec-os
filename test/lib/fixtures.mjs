@@ -13,6 +13,11 @@ import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
+/** src/abi.inc's plain numbers by name: services, status codes, bits and offsets. */
+export const ABI = Object.fromEntries(
+  [...readFileSync(resolve(ROOT, "src/abi.inc"), "utf8").matchAll(/^(\w+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]),
+);
+
 export function romFor(profile = "debug80") {
   const dir = resolve(ROOT, "build", profile);
   const romPath = resolve(dir, "tecos.rom");
@@ -20,9 +25,20 @@ export function romFor(profile = "debug80") {
   return { rom: readFileSync(romPath), symbols: loadSymbols(resolve(dir, "tecos.d8.json")) };
 }
 
+/** A digest of a source and of everything it includes, nested. */
+export function sourceDigest(path, seen = new Set()) {
+  if (seen.has(path)) return "";
+  seen.add(path);
+  const text = readFileSync(path);
+  const includes = [...text.toString("latin1").matchAll(/^%INCLUDE\s+"([^"]+)"/gim)].map((m) => resolve(dirname(path), m[1]));
+  const hash = createHash("sha256").update(text);
+  for (const inc of includes) hash.update(sourceDigest(inc, seen));
+  return hash.digest("hex").slice(0, 16);
+}
+
 /**
  * test/programs/NAME.asm assembled at ORIGIN: its "ORG $0100" line rewritten,
- * cached by source digest and origin.
+ * cached by the digest of the source and its includes, and origin.
  */
 export async function programAt(name, origin) {
   if (origin === 0x100) return (await program(name)).bytes;
@@ -30,7 +46,7 @@ export async function programAt(name, origin) {
   const org = /^(\s+ORG\s+)\$0100\s*$/m;
   if (!org.test(text)) throw new Error(`${name}.asm has no "ORG $0100" line`);
   const hex = origin.toString(16).toUpperCase().padStart(4, "0");
-  const digest = createHash("sha256").update(text).digest("hex").slice(0, 16);
+  const digest = sourceDigest(resolve(ROOT, "test/programs", `${name}.asm`));
   const cacheDir = resolve(ROOT, "build/test-programs");
   const src = resolve(cacheDir, `${name}-${digest}-at${hex}.asm`);
   mkdirSync(cacheDir, { recursive: true });
@@ -61,11 +77,10 @@ export async function prl(name) {
   return file;
 }
 
-/** Assemble test/programs/NAME.asm with ATOM, cached by source digest. */
+/** Assemble test/programs/NAME.asm with ATOM, cached by the same digest. */
 export async function program(name, { base = 0x100 } = {}) {
   const src = resolve(ROOT, "test/programs", `${name}.asm`);
-  const text = readFileSync(src);
-  const digest = createHash("sha256").update(text).digest("hex").slice(0, 16);
+  const digest = sourceDigest(src);
   const cacheDir = resolve(ROOT, "build/test-programs");
   const out = resolve(cacheDir, `${name}-${digest}-${base.toString(16)}.bin`);
   if (existsSync(out)) {

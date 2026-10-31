@@ -8,7 +8,8 @@ VDPCTL	EQU	$BF
 ; Whether VRAM answers with what was written, at its last address, with two
 ; patterns that between them test every bit. Returns Z when present. Destroys
 ; AF and B.
-TMSINIT:	LD	A,$5A
+TMSINIT:
+	LD	A,$5A		; alternating bits, then their inverse
 	CALL	TMSTRY
 	RET	NZ		; one failure is enough
 	LD	A,$A5

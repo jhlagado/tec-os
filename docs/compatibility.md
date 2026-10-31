@@ -125,8 +125,8 @@ The user number survives warm boot.
 Warm boot puts the video display back into its console mode: on the
 PICO9918 it reloads registers 0–7 and the font, and on the GLCD it turns the
 display and graphics back on. What a program left on the screen stays until
-the console writes over it. The restore costs about 143,000 T-states (36 ms) per
-warm boot on the PICO9918 and 1,447 on the GLCD.
+the console writes over it. The restore costs about 145,000 T-states (36 ms) per
+warm boot on the PICO9918 and 7,984 on the GLCD.
 
 ## Devices
 

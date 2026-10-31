@@ -24,7 +24,7 @@ const sha = (b) => createHash("sha256").update(b).digest("hex");
 const PROGRAMS = [
   { name: "TERM.COM", source: "test/programs/term.asm", description: "draws with the video terminal's ANSI subset" },
   { name: "PROBE.COM", source: "test/programs/probe.asm", description: "BDOS file-function probe" },
-  { name: "DEMO.COM", source: "test/programs/demo.asm", description: "hardware services demonstration: LCD, digits, LEDs, PICO9918" },
+  { name: "DEMO.COM", source: "test/programs/demo.asm", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918" },
   { name: "MOUNT.COM", source: "test/programs/mount.asm", description: "mounts a volume on a drive: MOUNT B: NAME, MOUNT B: INDEX, MOUNT B: to unmount" },
   { name: "VOLS.COM", source: "test/programs/vols.asm", description: "lists the card's volumes and the drives they are on" },
 ];

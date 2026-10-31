@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
-import { checkInterfaces } from "./lib/drv.mjs";
+import { PICO_WIDTHS, checkInterfaces, makeDrv } from "./lib/drv.mjs";
 import { driverFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -152,13 +152,31 @@ function checkAbiInc(at) {
 
 /** The services' numbers and status codes in abi.inc against hwsvc.asm, which
  *  can't include it: the same names with the same values, either way round. */
-function checkServices() {
-  const numbers = (file) => new Map([...readFileSync(resolve(SRC, file), "utf8").matchAll(/^(HW[A-Z]+)\s+EQU\s+(\d+)\b/gm)].map((m) => [m[1], Number(m[2])]));
+function checkServices(at) {
+  const numbers = (file) => new Map([...readFileSync(resolve(SRC, file), "utf8").matchAll(/^(HW[A-Z]+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]));
   const inc = numbers("abi.inc");
   const rom = numbers("hwsvc.asm");
   check(rom.size > 0, "hwsvc.asm has no service numbers");
   for (const [n, v] of rom) check(inc.get(n) === v, `abi.inc: ${n} is ${inc.get(n)}, hwsvc.asm has ${v}`);
   for (const n of inc.keys()) check(rom.has(n), `hwsvc.asm has no ${n}`);
+  const bits = { HWBMTX: "CDMTX", HWBPICO: "CDTMS", HWBGLCD: "CDGLC", HWBCLM: "CDCLM", HWBWRD: "CDWRD" };
+  for (const [n, cd] of Object.entries(bits)) check(rom.get(n) === at(cd), `hwsvc.asm: ${n} is not ${cd}`);
+}
+
+/** abi.inc's PICOREG to PICORD against each PICO driver's table: the word at
+ *  that offset from VTAB is the entry. */
+async function checkPicoTable() {
+  const inc = readFileSync(resolve(SRC, "abi.inc"), "utf8");
+  const offsets = new Map([...inc.matchAll(/^(PICO[A-Z]+)\s+EQU\s+(\d+)\b/gm)].map((m) => [m[1], Number(m[2])]));
+  const entries = { PICOREG: "GFXREG", PICOFIL: "GFXFIL", PICOWR: "GFXWR", PICORD: "GFXRD" };
+  check(offsets.size === Object.keys(entries).length, "abi.inc: the PICO table's offsets");
+  for (const defs of Object.values(PICO_WIDTHS)) {
+    const { file, symbols } = await makeDrv(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/drv") });
+    for (const [n, label] of Object.entries(entries)) {
+      const at = symbols.VTAB + offsets.get(n);
+      check((file[at] | (file[at + 1] << 8)) === symbols[label], `abi.inc: ${n} is not ${label} in the PICO table`);
+    }
+  }
 }
 
 /** drivers/font.asm is committed, so that a driver builds with nothing
@@ -246,7 +264,8 @@ async function buildProfile(name) {
   check(at("ROMDATA") <= at("ROMCODE") && at("ROMCODE") <= at("CODEEND"), "the table, the data and the code, in that order");
   check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
   checkAbiInc(at);
-  checkServices();
+  checkServices(at);
+  await checkPicoTable();
   checkDriverFont();
   checkNoOldAddress();
   checkDriverSources();

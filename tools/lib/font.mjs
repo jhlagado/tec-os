@@ -36,7 +36,7 @@ export const fontBytes = (root) => Uint8Array.from(fontGlyphs(root).flat());
 
 /** The font as source: a heading, the label FONT and DB rows. */
 export function fontSource(root, heading) {
-  const rows = fontGlyphs(root).map((g) => `        DB      ${g.map(hex).join(",")}`);
+  const rows = fontGlyphs(root).map((g) => `\tDB\t${g.map(hex).join(",")}`);
   return [heading, "FONT:", ...rows].join("\n") + "\n";
 }
 

@@ -42,6 +42,7 @@ HWBPICO	EQU	$02		; a PICO9918 answered at cold boot
 HWBGLCD	EQU	$04		; GLCD.DRV is in
 HWBRTC	EQU	$08		; a DS1302 clock answers
 HWBCLM	EQU	$10		; the PICO9918 is claimed
+HWBWRD	EQU	$80		; PICO? is on the LCD
 
 ; Version 2 of the "PICO" record's table: PICO.DRV's graphics entries, as
 ; offsets. Each assumes that the caller holds the claim, and destroys AF, BC,
