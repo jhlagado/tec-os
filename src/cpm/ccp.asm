@@ -112,11 +112,14 @@ MLTAKE: LD      A,(HL)
         CP      ':'
         JR      NZ,MLTK0
         LD      DE,(PRGCODE)
-        INC     DE              ; FF01h to FFFFh for a failure
         LD      A,D
         INC     A
-        JR      NZ,MLTKC
-        LD      (CHPOS),A       ; A = 0: the rest of the line dropped
+        JR      NZ,MLTKC        ; below FF00h
+        LD      A,E
+        INC     A
+        JR      Z,MLTKC         ; FFFFh
+        XOR     A               ; failed: the rest of the line dropped
+        LD      (CHPOS),A
         JP      STARTED
 MLTKC:  INC     HL
 MLTK0:  LD      (ARGSTRT),HL
