@@ -17,6 +17,7 @@ FCBONE  EQU     $005C
 FCBTWO  EQU     $006C
 CMDTAIL EQU     $0080
 TPA     EQU     $0100
+RCFAIL  EQU     255*256         ; FF00h, function 108's code for a failure
 
 
 ; Cold and warm boot both enter here with C holding the CP/M 2.2 page-zero
@@ -62,6 +63,9 @@ MLREAD: CALL    SAVEDU
         CALL    PUTCHAR
         LD      E,'>'
         CALL    PUTCHAR
+        CALL    CHSKIP          ; a chained line's next piece, before all else
+        JR      NZ,MLECHO
+        LD      (CHPOS),A       ; none: A = 0
 	CALL	STLINE		; startup's next line
         JR      NC,MLGOT
         LD      DE,CMDBUF
@@ -70,32 +74,76 @@ MLREAD: CALL    SAVEDU
         LD      C,10
         CALL    BDOS
 
-MLGOT:  LD      A,(CMDLEN)
-        OR      A
-        JR      Z,STARTED
-        LD      B,A
-        LD      HL,CMDTXT
+; A line, typed or startup's, CMDLEN long in CMDTXT: a 0 after it, and its
+; first piece taken as a chained line's would be.
+MLGOT:  LD      HL,CMDLEN
+        LD      E,(HL)
+        LD      D,0
+        INC     HL
+        ADD     HL,DE
+        LD      (HL),D
+        LD      A,1
+        LD      (CHPOS),A
+        CALL    CHSKIP
+        JR      Z,STARTED       ; nothing but spaces and !
+        JR      MLTAKE
 
-UPLOOP:
-        LD      A,(HL)
+; A chained piece, echoed as STLINE echoes a line, up to its ! or the end.
+MLECHO: PUSH    HL
+MLEC1:  LD      A,(HL)
+        OR      A
+        JR      Z,MLEC2
+        CP      '!'
+        JR      Z,MLEC2
+        LD      E,A
+        PUSH    HL
+        CALL    PUTCHAR
+        POP     HL
+        INC     HL
+        JR      MLEC1
+MLEC2:  POP     HL
+
+; Take the piece at HL. One that starts with : runs only if the last
+; command succeeded: its code, function 108's, is not FF00h to FFFEh; after a
+; failure the rest of the line goes. Then upper case up to its ! or the
+; line's end, the ! made its end and CHPOS the next piece's, or 0 at the end,
+; and the code cleared, before the command is looked for. ARGSTRT holds it.
+MLTAKE: LD      A,(HL)
+        CP      ':'
+        JR      NZ,MLTK0
+        LD      DE,(PRGCODE)
+        INC     DE              ; FF01h to FFFFh for a failure
+        LD      A,D
+        INC     A
+        JR      NZ,MLTKC
+        LD      (CHPOS),A       ; A = 0: the rest of the line dropped
+        JP      STARTED
+MLTKC:  INC     HL
+MLTK0:  LD      (ARGSTRT),HL
+MLTK1:  LD      A,(HL)
+        OR      A
+        JR      Z,MLTK3         ; the line's end: CHPOS 0
+        CP      '!'
+        JR      Z,MLTK2
         CP      'a'
-        JR      C,UPNEXT
+        JR      C,MLTKN
         CP      'z'+1
-        JR      NC,UPNEXT
+        JR      NC,MLTKN
         AND     $DF
         LD      (HL),A
-
-UPNEXT:
+MLTKN:  INC     HL
+        JR      MLTK1
+MLTK2:  LD      (HL),0
         INC     HL
-        DJNZ    UPLOOP
-        XOR     A
-        LD      (HL),A
-
-        LD      HL,CMDTXT
+        LD      A,L
+        SUB     LOW(CMDTXT-1)
+MLTK3:  LD      (CHPOS),A
+        LD      HL,0
+        LD      (PRGCODE),HL
+        LD      HL,(ARGSTRT)
         CALL    SKIPSP
-        LD      A,(HL)
         OR      A
-        JR      Z,STARTED
+        JP      Z,STARTED       ; a : and nothing after it
         CP      'A'
         JR      C,NOTDRIVE
         CP      'P'+1
@@ -118,6 +166,25 @@ UPNEXT:
         CALL    BDOS
         CALL    SAVEDU
         JP      STARTED
+
+; HL = a chained line's next piece, past spaces and !, from CHPOS; A its
+; first character, with Z when none is left (A = 0). Destroys DE.
+CHSKIP: LD      A,(CHPOS)
+        OR      A
+        RET     Z
+        LD      E,A
+        LD      D,0
+        LD      HL,CMDTXT-1
+        ADD     HL,DE
+CHSK1:  LD      A,(HL)
+        CP      SPACE
+        JR      Z,CHSK2
+        CP      '!'
+        JR      NZ,CHSK3
+CHSK2:  INC     HL
+        JR      CHSK1
+CHSK3:  OR      A
+        RET
 
 ; Record the current user and drive in the page-zero byte at $0004 so a warm
 ; boot restores both. Returns the drive in A.
@@ -143,7 +210,7 @@ SAVEDU:
 NOTDRIVE:
         LD      DE,CRLFMSG
         CALL    PUTSTR
-        LD      HL,CMDTXT
+        LD      HL,(ARGSTRT)    ; the piece
         CALL    CMDSKIP
         CALL    CMDPARSE
         LD      (ARGSTRT),HL
@@ -262,6 +329,10 @@ BADEND:
         LD      E,'?'
         CALL    PUTCHAR
         LD      DE,CRLFMSG
+; A command's error message at DE: the code FF00h, a failure for a piece
+; that starts with :, then the message and the prompt.
+ERRGO:  LD      HL,RCFAIL
+        LD      (PRGCODE),HL
 PRTGO:
         CALL    PUTSTR
         JP      STARTED
@@ -755,7 +826,7 @@ TYPEEND:
 
 FILENO:
         LD      DE,NOFILE
-        JP      PRTGO
+        JP      ERRGO
 
 ; ERA deletes through BDOS only after the complete operand has parsed.
 CMDERA:
@@ -848,7 +919,7 @@ CMDREN:
 
 RENEXIST:
         LD      DE,FILEEX
-        JP      PRTGO
+        JP      ERRGO
 
 ; TEC-OS: COPY SOURCE DEST copies a file a record at a time through the
 ; default DMA record, as COPY.COM does: open the source, erase and make the
@@ -955,8 +1026,9 @@ CPDONE:
         LD      A,(DIRNUM)
         CALL    CPHEX
         LD      DE,CRLFMSG
-CPFAIL:
         JP      PRTGO
+CPFAIL:
+        JP      ERRGO
 
 ; BDOS function C on the source or the destination.
 CPSRC:
@@ -1181,7 +1253,7 @@ SAVECLS:
 
 SAVENOSP:
         LD      DE,NOSPACE
-        JP      PRTGO
+        JP      ERRGO
 
 ; Publish only documented page-zero transient state after loading succeeds.
 PREPPAGE:

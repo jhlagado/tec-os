@@ -361,8 +361,10 @@ STBDMA:	LD	HL,DEFDMA	; the DMA address programs expect
 
 ; With a line left: it goes in the command buffer, echoed as if
 ; typed, and carry clear. Lines end at CR or LF and blank ones are passed
-; over. ^Z, a zero or the record's last byte ends the file. Otherwise carry
-; set, through STDONE once the file has finished. Destroys AF, B, DE, HL.
+; over; a line's characters after its 127th are passed over too, as a typed
+; line has no more (KE-127). ^Z, a zero or the record's last byte ends the
+; file. Otherwise carry set, through STDONE once the file has finished.
+; Destroys AF, B, DE, HL.
 STLINE:	LD	HL,STPOS
 	LD	A,(HL)
 	RLCA			; top bit to carry: the file is finished
@@ -372,6 +374,7 @@ STLINE:	LD	HL,STPOS
 	LD	L,A
 	LD	H,HIGH(STREC)
 	LD	DE,CMDTXT
+	LD	B,127		; the characters a line may hold
 STL1:	LD	A,L
 	CP	LOW(STREC+128)
 	JR	Z,STLE		; the record has run out
@@ -385,8 +388,12 @@ STL1:	LD	A,L
 	JR	Z,STL2
 	CP	10
 	JR	Z,STL2
+	INC	B
+	DEC	B
+	JR	Z,STL1		; past the 127th: passed over
 	LD	(DE),A		; a character of the line
 	INC	DE
+	DEC	B
 	JR	STL1
 STLE:	LD	L,LOW(STLAST)	; STPOS 80h, finished
 STL2:	LD	A,L

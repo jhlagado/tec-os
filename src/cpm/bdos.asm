@@ -43,6 +43,39 @@ CTRLN   EQU     14
 SPACE   EQU     32
 DELETE  EQU     $7F
 
+; Function 47, chain (TEC-OS's, from CP/M 3's): the command at the DMA
+; address, ended by a 0 within 128 bytes and holding no CR or LF, replaces
+; what is left of the CCP's line, and the program ends by warm boot; the CCP
+; runs it next, before any startup line. It may hold ! and :, and E is
+; ignored. Otherwise A = FFh and the program goes on, the line unchanged.
+FNCHAIN:
+        LD      HL,(CURDMA)
+        LD      B,128
+FNCH1:  LD      A,(HL)
+        OR      A
+        JR      Z,FNCH2
+        CP      CR
+        JR      Z,FNCHNO
+        CP      LF
+        JR      Z,FNCHNO
+        INC     HL
+        DJNZ    FNCH1
+FNCHNO: LD      A,$FF
+        JR      RETA
+FNCH2:  LD      HL,(CURDMA)     ; the command, its 0 and what follows
+        LD      DE,CMDTXT
+        LD      BC,128
+        LDIR
+        LD      A,1             ; its first piece next
+        LD      (CHPOS),A
+        JP      BIOWBT
+
+; ^C at a line's start and a BDOS error's exit end the program by warm boot,
+; and the rest of a chained line goes with it.
+CHDROP: XOR     A
+        LD      (CHPOS),A
+        JP      BIOWBT
+
 BENTRY:
         LD      (OLDSP),SP
         LD      SP,STKTOP
@@ -52,6 +85,8 @@ BENTRY:
         JR      Z,FNBIOS
         CP      108
         JR      Z,FNRETC
+        CP      47
+        JR      Z,FNCHAIN
         CP      41
         JR      NC,RETZERO
         ADD     A,A
@@ -337,7 +372,7 @@ LINABRT:
         CALL    ECHOCHAR
         LD      C,'C'
         CALL    ECHOCHAR
-        JP      BIOWBT
+        JP      CHDROP
 
 LINEOL:
         LD      C,CR
@@ -667,7 +702,7 @@ DELLOOP:
         JR      Z,DELFREE
         LD      HL,ERRFILE
         CALL    DISKERR
-        JP      BIOWBT
+        JP      CHDROP
 
 DELFREE:
         CALL    FREEENT
@@ -2364,7 +2399,7 @@ CHKRO:
         RET     Z
         LD      HL,ERRRO
         CALL    DISKERR
-        JP      BIOWBT
+        JP      CHDROP
 
 ; Failure diagnostics are deliberately kept behind one routine so later
 ; milestones can add the exact CP/M retry/abort interaction without coupling
@@ -2372,7 +2407,7 @@ CHKRO:
 SELFAIL:
         LD      HL,ERRSEL
         CALL    DISKERR
-        JP      BIOWBT
+        JP      CHDROP
 
 ERRTEXT:
         LD      A,(HL)
@@ -2386,12 +2421,12 @@ ERRTEXT:
         JR      ERRTEXT
 
 RDFAIL:
-        JP      BIOWBT
+        JP      CHDROP
 
 BADSECT:
         LD      HL,ERRBAD
         CALL    DISKERR
-        JP      BIOWBT
+        JP      CHDROP
 
 DISKERR:
         PUSH    HL
