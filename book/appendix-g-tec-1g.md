@@ -21,11 +21,11 @@ in the files that drive them.
 | `01h` | out | Digit select and serial | Bits 0 to 5 select the 7-segment digits, bit 6 is the serial line's output, bit 7 the speaker |
 | `02h` | out | 7-segment segments | Service `DIGIT` |
 | `03h` | in | System input | Bit 0 the Matrix switch, bit 6 a keypad key down, bit 7 the serial line's input |
-| `04h` | out | 20 × 4 LCD, instructions | The LCD's setup and its rows |
+| `04h` | in, out | 20 × 4 LCD, instructions and status | The busy flag, the LCD's setup and its rows |
 | `84h` | out | 20 × 4 LCD, data | The same |
 | `05h`, `06h`, `F8h`, `F9h` | out | 8 × 8 LEDs | No service; `DEMO` writes them |
 | `07h`, `87h` | in, out | Graphics LCD, ST7920 | `GLCD.DRV` only |
-| `BEh`, `BFh` | in, out | PICO9918, data and control | The probe at cold boot, the console in `PICO.DRV`, service `VIDEO` |
+| `BEh`, `BFh` | in, out | PICO9918, data and control | The probe at cold boot; the console and service `VIDEO`'s restore, both in `PICO.DRV` |
 | `FCh` | in, out | DS1302 clock | Services `INFO` and `RTC` |
 | `FDh` | in, out | SD card adaptor | The SD card driver |
 | `FEh` | in | Matrix keyboard and joystick | The keyboard scan, services `KEYS` and `JOY` |
@@ -60,17 +60,17 @@ reaches TEC-OS only while it is polling bit 7 for a start bit.
 TEC-OS reads three bits of port `03h` (`src/layout.asm:11`):
 
 - **Bit 0, the Matrix switch.** Read once, at cold boot, into `CONDEV`
-  (`src/console.asm:41-43`). With the switch off TEC-OS never scans the matrix
-  keyboard, and both display drivers fail to install, since each needs the
-  keyboard.
+  (`src/console.asm:41-43`). With the switch off the console never scans the
+  matrix keyboard, and both display drivers fail to install, since each needs
+  the keyboard.
 - **Bit 6, a keypad key down.** Read once, at cold boot, just before the
   startup file is opened; a low bit skips the file (`src/drv.asm:336-338`).
 - **Bit 7, the serial line's input** (`src/console.asm:131`,
   `src/console.asm:184`, `src/console.asm:198`).
 
 The TEC-1G's documents and the Debug80 model describe the other bits of port
-`03h` differently, and they also differ on the sense of bit 6: the documents'
-`ioports.md` has it low while a key is down, as TEC-OS reads it.
+`03h` differently. On bit 6 the two agree: it is low while a keypad key is
+down, which is how TEC-OS reads it (`src/drv.asm:336-338`).
 `docs/diagnostics.md` records the comparison, and test T11 reads the port on a
 board. The Protect and Expand switches are not read.
 
@@ -134,10 +134,10 @@ No TEC-OS service drives the 8 × 8 LEDs, and the ROM never writes their ports.
 `DEMO` on the starter card writes them itself, as the Debug80 model decodes
 them: port `05h` selects a row, and `06h`, `F8h` and `F9h` light its red,
 green and blue columns (`test/programs/demo.asm:14-17`,
-`test/programs/demo.asm:273-286`). The board's documents make `05h` and `06h`
-the two axes of a single-colour matrix and leave `F8h` and `F9h` free, so
-`DEMO`'s pattern may look different on a board. Test T24 of the diagnostics
-ROM records what a board shows.
+`test/programs/demo.asm:273-286`). The TEC-1G port list makes `05h` and `06h`
+the X and Y axes of a single-colour matrix, so `DEMO`'s pattern may look
+different on a board. Test T24 of the diagnostics ROM records what a board
+shows.
 
 ## The DS1302 clock
 
