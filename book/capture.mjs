@@ -13,8 +13,10 @@
 // reset button, which keeps RAM and the card, and waits for the prompt.
 //
 // Options:
-//   --board serial   no PICO9918 and no matrix keyboard (the default)
-//   --board pico     a PICO9918 and the matrix keyboard, as the web page has
+//   --board serial   a serial terminal only: no PICO9918, GLCD or matrix
+//                    keyboard (the default)
+//   --board pico     a PICO9918, the GLCD and the matrix keyboard, as the web
+//                    page has
 //   --board glcd     the GLCD and the matrix keyboard, no PICO9918
 //   --card PATH      the card image; dist/starter.img by default
 //   --card none      no card in the socket
@@ -45,7 +47,7 @@ while (args.length) {
   else lines.push(a);
 }
 
-const boards = { serial: {}, pico: { tms: true, matrix: true }, glcd: { matrix: true } };
+const boards = { serial: { glcd: false }, pico: { tms: true, matrix: true }, glcd: { matrix: true } };
 if (!boards[opt.board]) throw new Error(`--board ${opt.board}: serial, pico or glcd`);
 const rom = readFileSync(opt.rom);
 const symbols = symbolsFromD8(JSON.parse(readFileSync(opt.rom.replace(/\.rom$/, ".d8.json"), "utf8")));
