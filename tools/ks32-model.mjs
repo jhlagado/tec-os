@@ -337,7 +337,8 @@ async function choices(landed, walks) {
       Object.entries(ke).map(async ([k, o]) => {
         const a = await startup(o.dir, long);
         const b = await startup(o.dir, past);
-        return [k, { line128: a.entries, line128PastTheRecord: { entries: b.entries, after: prl(b.text.slice(b.text.lastIndexOf("A>DIR") >= 0 ? b.text.lastIndexOf("A>DIR") : b.text.lastIndexOf("B>"))).slice(0, 160) } }];
+        const last = b.text.slice(b.text.lastIndexOf(">DIR A:X.COM") - 1).replace(/ {2,}/g, " ");
+        return [k, { line128: a.entries, line128PastTheRecord: { line: past.trimEnd() + ` (padded to 128)`, after: prl(last) } }];
       }),
     ),
   );
@@ -360,18 +361,18 @@ async function choices(landed, walks) {
       walkUnderSkip: walkSkip,
       walkUnderDrop: walks,
       walkSame: JSON.stringify(walks.map((w) => w.screen)) === JSON.stringify(walkSkip.map((w) => w.screen)),
-      settled: `dropTestFirst: ${base(after, "skipScanFirst") - base(after, "dropTestFirst")} bytes fewer than skip's cheapest form, and a failure stops the line, so a later piece never runs on a failed build`,
+      settled: `dropTestFirst: ${base(after, "skipScanFirst") - base(after, "dropTestFirst")} bytes against skip's cheapest form (the : test after the scan), and a failure stops the line, so no later piece runs on a failed build; the walk is the same under both, its : piece last`,
     },
     builtinErrors: {
       options: strip(errors),
       linesUnderEach: era,
       walkLeadingEra: "X.COM absent: ERA X.COM prints NO FILE and, under setFF00, sets FF00h; EDIT X.ASM is not a : piece and clears it as it is taken, so the walk is the same under both",
-      settled: `setFF00: ${base(errors, "setFF00") - base(errors, "leaveZero")} bytes more, and : means "the last command succeeded" for built-ins too`,
+      settled: `setFF00: ${base(errors, "setFF00") - base(errors, "leaveZero")} byte(s) more, and : means "the last command succeeded" for built-ins too; leaveZero would also leave 0 after a command word that doesn't parse, since that reaches BADCMD before the transient path`,
     },
     ke127: {
       options: strip(ke),
       runs: ke127,
-      settled: "lineCutAt127: a startup line holds 127 characters, as typed and chained lines do, so its 0 is inside CMDTXT and no piece reads past the line",
+      settled: `lineCutAt127: ${base(ke, "lineCutAt127") - base(ke, "tail126")} bytes more than tail126 and ${base(ke, "lineCutAt127") - base(ke, "noZeroAt100")} more than noZeroAt100, but only it keeps a startup line to 127 characters, as typed and chained lines are: under the other two a 128-character line's 0 is BOOTDRV, which CCPENT rewrites, so a piece taken after a warm boot on B: reads 01h into its tail (line128PastTheRecord)`,
     },
   };
 }
