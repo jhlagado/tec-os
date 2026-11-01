@@ -338,3 +338,60 @@ export const MUTANTS_KS30 = [
   { name: "row 3: the word cleared leaves carry set", ...t30(["POP BC", "OR A", "RET"], ["POP BC", "RET"], ["test/pico.test.mjs"], G) },
   { name: "row 3: INFO loses the bit", ...t30(["LD B,A", "LD DE,ROMVER"], ["AND $7F", "LD B,A", "LD DE,ROMVER"], ["test/pico.test.mjs"], H) },
 ];
+
+const C = "src/cpm/ccp.asm";
+const BD = "src/cpm/bdos.asm";
+const CHAIN = ["test/chain.test.mjs"];
+const k = (find, put, file = C, tests = CHAIN) => ({ edits: [asm(file, find, put)], tests });
+const FAILED = ["XOR A", "LD (CHPOS),A", "JP STARTED", "MLTKC: INC HL"];
+
+/** KS32's mutants: each rule of the chained line, function 47 and KE-127's fix. */
+export const MUTANTS_KS32 = [
+  { name: "line: ! not a separator", ...k(["CP '!'", "JR Z,MLTK2"], []) },
+  { name: "line: an empty piece not passed over", ...k(["CHSK1: LD A,(HL)", "CP SPACE", "JR Z,CHSK2", "CP '!'", "JR NZ,CHSK3"], ["CHSK1: LD A,(HL)", "CP SPACE", "JR NZ,CHSK3"]) },
+  {
+    name: "line: the rest not kept over warm boot",
+    ...k(["CPMINIT: LD HL,CCPCLR", "LD DE,CCPCLR+1", "LD BC,BDOSRME-CCPCLR-1"], ["CPMINIT: LD HL,CCPRAM", "LD DE,CCPRAM+1", "LD BC,BDOSRME-CCPRAM-1"], B, [...CHAIN, "test/walk.test.mjs"]),
+  },
+  {
+    name: "line: a startup line before the rest",
+    ...k(["CALL CHSKIP", "JR NZ,MLECHO", "LD (CHPOS),A", "CALL STLINE", "JR NC,MLGOT"], ["CALL STLINE", "JR NC,MLGOT", "CALL CHSKIP", "JR NZ,MLECHO", "LD (CHPOS),A"]),
+  },
+  { name: "line: a piece not echoed", ...k(["LD E,A", "PUSH HL", "CALL PUTCHAR", "POP HL", "INC HL", "JR MLEC1"], ["INC HL", "JR MLEC1"]) },
+  { name: "line: no upper case", ...k(["AND $DF", "LD (HL),A", "MLTKN: INC HL"], ["MLTKN: INC HL"]) },
+  { name: "line: no 0 after a typed line", ...k(["ADD HL,DE", "LD (HL),D", "LD A,1"], ["ADD HL,DE", "LD A,1"]) },
+  { name: "line: each piece parsed from the line's start", ...k(["LD HL,(ARGSTRT)", "CALL CMDSKIP"], ["LD HL,CMDTXT", "CALL CMDSKIP"]) },
+  { name: ": not a prefix", ...k(["CP ':'", "JR NZ,MLTK0"], ["JR MLTK0"]) },
+  { name: ": runs after a failure", ...k(FAILED, ["MLTKC: INC HL"]) },
+  { name: ": FFFFh a failure", ...k(["LD A,E", "INC A", "JR Z,MLTKC"], []) },
+  { name: ": failure from FE00h", ...k(["LD A,D", "INC A", "JR NZ,MLTKC"], ["LD A,D", "INC A", "INC A", "JR NZ,MLTKC"]) },
+  {
+    name: ": after a failure only that piece skipped",
+    ...k(FAILED, ["MLSKP: LD A,(HL)", "OR A", "JR Z,MLSK3", "INC HL", "CP '!'", "JR NZ,MLSKP", "LD A,L", "SUB LOW(CMDTXT-1)", "MLSK3: LD (CHPOS),A", "JP STARTED", "MLTKC: INC HL"]),
+  },
+  { name: "code: not cleared as a piece is taken", ...k(["LD HL,0", "LD (PRGCODE),HL", "LD HL,(ARGSTRT)"], ["LD HL,(ARGSTRT)"]) },
+  {
+    name: "code: cleared only as a program starts",
+    edits: [asm(C, ["LD HL,0", "LD (PRGCODE),HL", "LD HL,(ARGSTRT)"], ["LD HL,(ARGSTRT)"]), asm(C, ["CMDRUN: CALL PREPPAGE"], ["CMDRUN: LD HL,0", "LD (PRGCODE),HL", "CALL PREPPAGE"])],
+    tests: CHAIN,
+  },
+  { name: "code: NAME? and a built-in's error leave it", ...k(["ERRGO: LD HL,RCFAIL", "LD (PRGCODE),HL"], ["ERRGO:"]) },
+  { name: "code: NO FILE leaves it", ...k(["FILENO:", "LD DE,NOFILE", "JP ERRGO"], ["FILENO:", "LD DE,NOFILE", "JP PRTGO"]) },
+  { name: "code: FILE EXISTS leaves it", ...k(["RENEXIST:", "LD DE,FILEEX", "JP ERRGO"], ["RENEXIST:", "LD DE,FILEEX", "JP PRTGO"]) },
+  { name: "code: COPY's success a failure", ...k(["JP PRTGO", "CPFAIL:", "JP ERRGO"], ["CPFAIL:", "JP ERRGO"]) },
+  { name: "47: not dispatched", ...k(["CP 47", "JR Z,FNCHAIN"], [], BD) },
+  { name: "47: a CR let through", ...k(["CP CR", "JR Z,FNCHNO", "CP LF", "JR Z,FNCHNO"], ["CP LF", "JR Z,FNCHNO"], BD) },
+  { name: "47: an LF let through", ...k(["CP CR", "JR Z,FNCHNO", "CP LF", "JR Z,FNCHNO"], ["CP CR", "JR Z,FNCHNO"], BD) },
+  { name: "47: a 0 looked for in 129 bytes", ...k(["FNCHAIN:", "LD HL,(CURDMA)", "LD B,128"], ["FNCHAIN:", "LD HL,(CURDMA)", "LD B,129"], BD) },
+  { name: "47: a 0 looked for in 127 bytes", ...k(["FNCHAIN:", "LD HL,(CURDMA)", "LD B,128"], ["FNCHAIN:", "LD HL,(CURDMA)", "LD B,127"], BD) },
+  { name: "47: 64 bytes copied", ...k(["LD DE,CMDTXT", "LD BC,128", "LDIR"], ["LD DE,CMDTXT", "LD BC,64", "LDIR"], BD) },
+  { name: "47: the program goes on", ...k(["LD A,1", "LD (CHPOS),A", "JP BIOWBT"], ["LD A,1", "LD (CHPOS),A", "JP RETZERO"], BD) },
+  { name: "47: the line not marked", ...k(["LD A,1", "LD (CHPOS),A", "JP BIOWBT"], ["JP BIOWBT"], BD) },
+  { name: "47: refused with A = 0", ...k(["FNCHNO: LD A,$FF"], ["FNCHNO: LD A,0"], BD) },
+  { name: "stop: ^C keeps the rest", ...k(["LD C,'C'", "CALL ECHOCHAR", "JP CHDROP"], ["LD C,'C'", "CALL ECHOCHAR", "JP BIOWBT"], BD) },
+  { name: "stop: a bad sector keeps the rest", ...k(["BADSECT:", "LD HL,ERRBAD", "CALL DISKERR", "JP CHDROP"], ["BADSECT:", "LD HL,ERRBAD", "CALL DISKERR", "JP BIOWBT"], BD) },
+  { name: "stop: CHDROP drops nothing", ...k(["CHDROP: XOR A", "LD (CHPOS),A", "JP BIOWBT"], ["CHDROP: JP BIOWBT"], BD) },
+  { name: "stop: a reset keeps the rest", ...k(["CHPOS: DS 1", "HIRME:"], ["HIRME:", "CHPOS: DS 1"], "src/ram.asm") },
+  { name: "KE-127: a startup line not cut at 127", ...k(["INC B", "DEC B", "JR Z,STL1"], [], D) },
+  { name: "KE-127: a startup line cut at 128", ...k(["LD DE,CMDTXT", "LD B,127"], ["LD DE,CMDTXT", "LD B,128"], D) },
+];
