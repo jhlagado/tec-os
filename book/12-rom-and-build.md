@@ -228,8 +228,8 @@ result against the rules the layout depends on, and stops with
 The last check works out the TPA without running the ROM. `cardLayout`
 follows the arithmetic that cold boot's `ALVINIT` uses: the allocation
 vectors packed down from `WSBASE`, each `DSM / 8 + 1` bytes, and the BDOS
-entry jump at the highest address of the form `xx06h` that leaves the jump
-and six more bytes below the vectors (`tools/build.mjs:232-236`, `src/vol.asm:496-576`). For the
+entry jump at the highest address of the form `xx06h` at which the
+three-byte jump still ends below the vectors (`tools/build.mjs:232-236`, `src/vol.asm:496-576`). For the
 starter card's two volumes, a G1M with `DSM` 511 and a G8M with `DSM` 2047,
 the vectors take 320 bytes and the entry is at `B806h`, which leaves 46,854
 bytes from `0100h`.
