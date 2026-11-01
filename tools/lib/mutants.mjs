@@ -1,5 +1,6 @@
 // The stage models' mutants. Each is a list of edits to a copy of the landed
-// tree and the test files to run on it. An edit to assembly source names a
+// tree and the test files to run on it, with a pattern for the names of the
+// tests meant to catch it where those are fewer than the file's. An edit to assembly source names a
 // run of consecutive lines by their code, comments and spacing aside, which
 // must occur once in the file, and the lines that replace it; an edit to any
 // other file is a text that must occur once and its replacement. A mutant is
@@ -96,7 +97,8 @@ async function one(dir, work, m, i) {
   if (!m.tests.length) return { caught: false, by: [] };
   let tap;
   try {
-    tap = await node(copy, ["--test", "--test-concurrency=1", "--test-reporter=tap", ...m.tests]);
+    const only = m.only ? [`--test-name-pattern=${m.only}`] : [];
+    tap = await node(copy, ["--test", "--test-concurrency=1", "--test-reporter=tap", ...only, ...m.tests]);
   } catch (e) {
     tap = e.message;
   }
@@ -220,9 +222,10 @@ const t30 = (find, put, tests, file) => ({ edits: [asm(file, find, put)], tests:
 const WATCH = "(a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbf00)";
 const watch = (to) => ({ edits: [text(MJS, WATCH, to)], tests: ["test/commands.test.mjs"] });
 /** C01Dh a jump to a stub that passes the mount service's function N on, and returns from any other. */
-const oldFwd = (n, tests) => ({
+const oldFwd = (n, only) => ({
   edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: JP OLDFWD"]), asm("src/end.asm", ["CODEEND:"], [`OLDFWD: CP ${n}`, "JP Z,VOLSVC", "RET", "CODEEND:"])],
-  tests,
+  tests: ["test/clients.test.mjs"],
+  only,
 });
 /** A keyword the CCP takes as a built-in that refuses, before the transient path. */
 const builtin = (word) => ({
@@ -245,7 +248,8 @@ export const MUTANTS_KS30 = [
   },
   { name: "commands: CCP still a built-in, not reaching the transient path", ...builtin("CCP") },
   { name: "commands: EXIT still a built-in, not reaching the transient path", ...builtin("EXIT") },
-  { name: "commands: UNLOAD with no resident not refused", ...t30(["LD A,(DRVHEAD)", "CP H", "JR NZ,PRLRF", "LD L,DFLG"], ["LD A,(DRVHEAD)", "CP H", "LD L,DFLG"], ["test/commands.test.mjs", "test/drv.test.mjs"], D) },
+  // With no resident, UNLOAD returns with carry clear, as if it had removed one.
+  { name: "commands: UNLOAD with no resident not refused", ...t30(["LD A,(DRVHEAD)", "CP H", "JR NZ,PRLRF", "LD L,DFLG"], ["LD A,(DRVHEAD)", "CP H", "JR Z,UNLHAS", "OR A", "RET", "UNLHAS: LD L,DFLG"], ["test/commands.test.mjs", "test/drv.test.mjs"], D) },
   { name: "commands: UNLOAD ignores the removable flag", ...t30(["LD L,DFLG", "BIT 0,(HL)", "JR Z,PRLRF"], ["LD L,DFLG"], ["test/commands.test.mjs", "test/drv.test.mjs"], D) },
   { name: "guard: load path ignores it", ...t30(["LD (DRVRC),A", "LD A,(DRVBSY)", "OR A", "JR NZ,PRLRF"], ["LD (DRVRC),A"], ["test/drv.test.mjs"], D) },
   { name: "guard: UNLOAD ignores it", ...t30(["DRVUNL: LD A,(DRVBSY)", "OR A", "JR NZ,PRLRF"], ["DRVUNL: XOR A"], ["test/drv.test.mjs"], D) },
@@ -280,12 +284,12 @@ export const MUTANTS_KS30 = [
   // HWBASE moved in hwsvc.asm and abi.inc alike, the services' numbers left.
   { name: "selector: HWBASE out of step with HWINFO (the build)", edits: [asm(H, ["HWBASE EQU 19"], ["HWBASE EQU 20"]), asm("src/abi.inc", ["HWBASE EQU 19"], ["HWBASE EQU 20"])], tests: [] },
   // The dispatcher as ABI 3's: numbers from 0.
-  { name: "old DEMO: reaches the services", edits: [asm(H, ["SUB HWBASE", "CP HWCOUNT"], ["CP HWCOUNT"]), asm(H, ["LD HL,HWTAB0"], ["LD HL,HWTAB"])], tests: ["test/clients.test.mjs"] },
+  { name: "old DEMO: reaches the services", edits: [asm(H, ["SUB HWBASE", "CP HWCOUNT"], ["CP HWCOUNT"]), asm(H, ["LD HL,HWTAB0"], ["LD HL,HWTAB"])], tests: ["test/clients.test.mjs"], only: "^an old DEMO" },
   { name: "old DEMO: refusal without carry", ...t30(["HWERR: OR A", "SCF", "RET"], ["HWERR: OR A", "RET"], ["test/clients.test.mjs"], H) },
-  { name: "old VOLS: reaches the mount service", ...oldFwd(2, ["test/clients.test.mjs"]) },
-  { name: "old MOUNT unmounting: reaches the mount service", ...oldFwd(1, ["test/clients.test.mjs"]) },
-  { name: "old MOUNT mounting: reaches the mount service", ...oldFwd(0, ["test/clients.test.mjs"]) },
-  { name: "old VOLS: no RET, runs on into the data", edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: DB $00"])], tests: ["test/clients.test.mjs"] },
+  { name: "old VOLS: reaches the mount service", ...oldFwd(2, "^an old VOLS") },
+  { name: "old MOUNT unmounting: reaches the mount service", ...oldFwd(1, "^an old MOUNT, to unmount") },
+  { name: "old MOUNT mounting: reaches the mount service", ...oldFwd(0, "^an old MOUNT, to mount") },
+  { name: "old VOLS: no RET, runs on into the data", edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: DB $00"])], tests: ["test/clients.test.mjs"], only: "^an old VOLS" },
   // The pinned DEMO.COM replaced by test/programs/demo.asm as this tree builds it.
   { name: "old binaries: a rebuilt fixture", edits: [{ file: "test/fixtures/edc2745/DEMO.COM", rebuild: "test/programs/demo.asm" }], tests: ["test/clients.test.mjs"] },
   { name: "row 3: PICO? sets no flag", ...t30(["LD HL,PICMSG", "JP LCDWRD"], ["LD HL,PICMSG", "JP LCD3"], ["test/pico.test.mjs"], D) },
