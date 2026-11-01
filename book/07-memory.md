@@ -25,10 +25,10 @@ three parts:
 
 The window at `8000h–BFFFh` shows one half of the RAM chip in U9 at a time,
 and bit 2 of the board's system latch, at port `FFh`, selects which. EXPAND
-0 is in view when TEC-OS starts a program. So a program sees 48 KiB of RAM
+0 is in view when TEC-OS starts a program. So a program has 48 KiB of RAM
 from `0000h` to `BFFFh`, with the ROM above it.
 
-TEC-OS uses the top of that RAM and lets programs have the rest. Page zero,
+TEC-OS uses the top of that RAM, and programs have the rest. Page zero,
 `0000h–00FFh`, holds the jumps and buffers through which a program reaches
 TEC-OS. The program area, which CP/M calls the TPA, runs from `0100h` up to
 TEC-OS's resident workspace at the top of EXPAND 0. The workspace holds the
@@ -36,7 +36,7 @@ BDOS's entry, the drives' allocation vectors, the buffer for card blocks,
 the stacks and state of the BIOS, the CCP and the BDOS, and at `BF00h` the
 BIOS's jump table.
 
-Cold boot also looks for a second 32 KiB at `0000h–7FFFh`, which bit 3 of
+Cold boot also tests for a second 32 KiB at `0000h–7FFFh`, which bit 3 of
 the latch would put in view in place of the fixed RAM. It stores 1 or 2 at
 `0041h` for the number of regions, and gives the second its own copy of page
 zero; TEC-OS uses no other byte of it.
@@ -89,10 +89,10 @@ CRLF:   DB      "h",13,10,"$"
 
 `DIGIT` turns the low four bits of `A` into a character from `0` to `F` and
 prints it with function 2, and `HEX` calls it for the high four bits and
-then falls into it for the low four. Each ends with `JP BDOS`, so the BDOS's
-return is the routine's return. Assembled as Chapter 6 describes and copied
-to drive B of a copy of the starter card, it runs on a board with only a
-serial terminal:
+then falls into it for the low four. `DIGIT` ends with `JP BDOS`, so the
+BDOS's return is the return of both. Assembled as Chapter 6 describes and
+copied to drive B of a copy of the starter card, it runs on a board with
+only a serial terminal:
 
 ```sh
 cp dist/starter.img mem.img
@@ -127,8 +127,8 @@ A>
 
 Each display driver takes 1,536 bytes, six pages of 256, and so the program
 area is 46,854 bytes on the starter card with no driver, 45,318 with one and
-43,782 with both. On a card whose header gives four drives, such as the one
-Chapter 4 builds, the word is `B506h` with no driver, and the program area
+43,782 with both. On a card whose header gives four drives, such as `my.img`
+from Chapter 4, the word is `B506h` with no driver, and the program area
 46,086 bytes.
 
 The CCP loads a `.COM` file a record of 128 bytes at a time from `0100h`,
@@ -227,16 +227,17 @@ no service that gives a program space there.
 
 ## XMOVE and MOVE
 
-CP/M 3 gives programs two BIOS calls for copying memory between banks, and
-TEC-OS has them with CP/M 3's numbers and registers. `XMOVE`, BIOS function
-29, takes the destination bank in `B` and the source bank in `C` for the
-next copy. `MOVE`, BIOS function 25, copies `BC` bytes from the address in
-`DE` to the address in `HL`, forwards as `LDIR` does, between the banks
-`XMOVE` named, or within bank 0 if `XMOVE` wasn't called; each `MOVE` uses
-the banks once, and the next is in bank 0 again. A program reaches both
-through BDOS function 50, CP/M 3's direct BIOS call, with `DE` pointing at a
-BIOS parameter block of eight bytes: the BIOS function, then the values for
-`A`, `BC`, `DE` and `HL`.
+CP/M 3 gives programs two BIOS calls for copying memory between banks,
+separately switched regions of memory that share addresses, and TEC-OS has
+them with CP/M 3's numbers and registers. `XMOVE`, BIOS function 29, takes
+the destination bank in `B` and the source bank in `C` for the next copy.
+`MOVE`, BIOS function 25, copies `BC` bytes from the address in `DE` to the
+address in `HL`, forwards as `LDIR` does, between the banks `XMOVE` named,
+or within bank 0 if `XMOVE` wasn't called; each `MOVE` uses the banks once,
+and the next is in bank 0 again. A program reaches both through BDOS
+function 50, CP/M 3's direct BIOS call, with `DE` pointing at a BIOS
+parameter block of eight bytes: the BIOS function, then the values for `A`,
+`BC`, `DE` and `HL`.
 
 On TEC-OS, bank 0 is the program's view of memory, from `0000h` up to the
 word at `0006h`, and bank 1 is EXPAND 1. Since EXPAND 1 is TEC-OS's, bank 1
@@ -319,6 +320,5 @@ copied in bank 0
 A>
 ```
 
-So a program that copies within its own memory with `MOVE` gets its copy on
-TEC-OS, and a program that keeps data in a second bank gets `FFh` from its
-first `MOVE` there.
+A CP/M 3 program that keeps data in a second bank therefore needs a version
+that keeps it in bank 0.
