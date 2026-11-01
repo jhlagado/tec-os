@@ -2,8 +2,8 @@
 // a tree of this repository at a commit, built and with its release set; the
 // census and the image; the stack census by the tree's own test; and boot,
 // reset and warm boot timed in a worker that imports the tree's own host and
-// test library, as its tests use them. Each worker runs one case and prints
-// one line of JSON; node:test's report from the test library goes to stderr.
+// test library, as its tests use them. A worker runs its cases and prints one
+// line of JSON; node:test's report from the test library goes to stderr.
 //
 // Times are T-states at 4 MHz, the board's clock. A usable prompt is the
 // CCP's, at A> with startup's file finished (Machine.ready()). SD reads are
@@ -138,10 +138,22 @@ export async function reproducible(dir) {
   return out;
 }
 
+// One process at a time in a tree that imports its test library: each import
+// assembles the drivers again into the tree's build/drv, the same files.
+const trees = new Map();
+function inOrder(dir, fn) {
+  const before = trees.get(dir) ?? Promise.resolve();
+  const done = before.then(fn, fn);
+  trees.set(dir, done.catch(() => {}));
+  return done;
+}
+
 /** DIR's stack census, by its own test/stacks.test.mjs. */
-export async function stackCensus(dir) {
-  await node(dir, ["--test", "test/stacks.test.mjs"]);
-  return JSON.parse(readFileSync(resolve(dir, "build/stack-census.json"), "utf8"));
+export function stackCensus(dir) {
+  return inOrder(dir, async () => {
+    await node(dir, ["--test", "test/stacks.test.mjs"]);
+    return JSON.parse(readFileSync(resolve(dir, "build/stack-census.json"), "utf8"));
+  });
 }
 
 /** A census's deepest figure per stack, BDOS, CCP, BIOS, for the figures. */
@@ -164,10 +176,12 @@ export async function pool(tasks, n = 3) {
   return out;
 }
 
-/** One measurement in a worker: SCRIPT --worker JOB, its JSON. */
-export async function worker(script, job) {
-  const out = await node(ROOT, ["--test-reporter=tap", "--test-reporter-destination=stderr", script, "--worker", JSON.stringify(job)]);
-  return JSON.parse(out.trim().split("\n").at(-1));
+/** Measurements in a worker, in the tree JOB.dir names: SCRIPT --worker JOB, its JSON. */
+export function worker(script, job) {
+  return inOrder(job.dir, async () => {
+    const out = await node(ROOT, ["--test-reporter=tap", "--test-reporter-destination=stderr", script, "--worker", JSON.stringify(job)]);
+    return JSON.parse(out.trim().split("\n").at(-1));
+  });
 }
 
 /** The value after NAME in the command line, or FALLBACK. */
@@ -204,7 +218,7 @@ export async function variant(work, dir, name, edit) {
 
 /** Each case's measurement by TASK ("cold" or "recognised") in DIR, by name. */
 export async function bootTable(script, dir, task, names = Object.keys(CASES)) {
-  const got = await Promise.all(names.map((name) => worker(script, { task, dir, name })));
+  const got = await worker(script, { task: "batch", dir, jobs: names.map((name) => ({ task, name })) });
   return Object.fromEntries(names.map((n, i) => [n, got[i]]));
 }
 
@@ -214,7 +228,7 @@ export const TPA_DISPLAYS = ["serial", "pico80", "pico40", "pico32", "glcd", "bo
 export async function tpaTable(script, dir) {
   const jobs = [];
   for (const card of ["starter", "fourG8M"]) for (const display of TPA_DISPLAYS) jobs.push({ card, display });
-  const got = await Promise.all(jobs.map((j) => worker(script, { task: "tpa", dir, ...j })));
+  const got = await worker(script, { task: "batch", dir, jobs: jobs.map((j) => ({ task: "tpa", ...j })) });
   const out = { starter: {}, fourG8M: {} };
   jobs.forEach((j, i) => (out[j.card][j.display] = got[i]));
   return out;
@@ -285,14 +299,15 @@ export function residentSection(landedDir, referenceDir, watch) {
 /** A worker's job, in the tree it names; prints its JSON. */
 export async function runWorker(job) {
   const t = await inTree(job.dir);
-  const out = {
-    cold: () => t.cold(job.name).out,
-    recognised: () => t.recognised(job.name).out,
-    tpa: () => t.tpaOn(job.card, job.display),
-    watch: () => t.watchFreedPage(),
-    selection: () => t.selection(job.selected),
-  }[job.task]();
-  console.log(JSON.stringify(out));
+  const one = (j) =>
+    ({
+      cold: () => t.cold(j.name).out,
+      recognised: () => t.recognised(j.name).out,
+      tpa: () => t.tpaOn(j.card, j.display),
+      watch: () => t.watchFreedPage(),
+      selection: () => t.selection(j.selected),
+    })[j.task]();
+  console.log(JSON.stringify(job.task === "batch" ? job.jobs.map(one) : one(job)));
 }
 
 // ---- In a worker: the tree's own host and test library ----------------------
