@@ -14,13 +14,19 @@ version 2.2.
 
 The BDOS is an adaptation of Portable CP/M, which implements functions 0–40
 with their documented conventions; 38 and 39 return zero, and functions above
-40 return zero, except 50 and 108. Function 50 is CP/M 3's direct BIOS call: `DE`
+40 return zero, except 47, 50 and 108. Function 50 is CP/M 3's direct BIOS call: `DE`
 points at the BIOSPB (function, A, BC, DE, HL). Functions 0–16 go through
 the RAM BIOS table, so hooks apply; 25 is `MOVE` and 29 `XMOVE`, CP/M 3's
 copies, which refuse every byte in EXPAND 1 (see rom-services.md); any other, `SELMEM` (27) among them,
 returns `A = FFh`. Function 108 is CP/M 3's program return code: `DE =
 FFFFh` gets it into `HL`, any other `DE` sets it; one code serves every
-program, and it is 0 after a reset. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
+program, and it is 0 after a reset. The CCP clears it as it takes each
+command and sets it to FF00h when a command isn't found, won't load or is a
+built-in that fails. Function 47 is TEC-OS's chain, from CP/M 3's: the
+command at the DMA address, ended by a 0 within 128 bytes, replaces what is
+left of the CCP's line and the program ends by warm boot; a string with no 0
+there, or holding a CR or LF, returns `A = FFh` and the program goes on. `E`
+is ignored. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
 
 | Area | Functions | Result |
 | --- | --- | --- |
@@ -42,7 +48,13 @@ syntax of the CP/M 2.2 CCP. `DIR`'s output is TEC-OS's own: `NAME.EXT`
 columns that fit the display, then the file count and free space. `TYPE`
 and `DIR` pause with `[more]` when the screen fills. Programs that parse
 DR's `DIR` layout will not find it. `SUBMIT` and batch files are not
-supported. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
+supported. A line of up to 127 characters, typed, from `STARTUP.CMD` or from
+function 47, is split at each `!`, and what is left of it runs after each
+program's warm boot, before any startup line; a piece that starts with `:`
+runs only if the last command's code is not FF00h to FFFEh, and otherwise
+the rest of the line is dropped. ^C at a program's line input, a BDOS
+error's exit and a reset drop it too. These are TEC-OS's own rules, taken
+from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 
 - `COPY` copies one file within the current user. `DEST` may be a drive
   alone, `COPY X.COM B:`, or a blank name with a type, `COPY X.COM B:.TXT`
