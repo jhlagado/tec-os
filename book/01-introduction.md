@@ -145,8 +145,7 @@ startup file.
 The web page and the tests run the same TEC-1G model, `host/machine.mjs`. The
 script `book/capture.mjs` boots it from a PC's command line with the starter
 card, types the commands it is given, and prints everything TEC-OS sent to
-the console. The book's examples come from it, and it needs Node.js 20.10 or
-later:
+the console. The book's examples come from it:
 
 ```sh
 node book/capture.mjs DIR

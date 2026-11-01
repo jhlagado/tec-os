@@ -31,7 +31,7 @@
 //   --screen         print the PICO9918's or the GLCD's text at the end
 //   --serial         print what left the serial port, not the console
 //
-// Run `npm run build && npm run media` first, with Node.js 20.10 or later.
+// Run `npm run build && npm run media` first. Node.js 20 or later.
 // The DS1302 starts at 1 November 2026, 12:00, so a run gives the same
 // output on any host. The starter card holds EDIT.COM only when
 // `npm run media` found a build of Edit (see tools/media.mjs), and DIR's
