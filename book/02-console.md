@@ -27,10 +27,10 @@ device of the TEC-1G:
 `TTY:` is a terminal program on a PC, connected to the board's FTDI serial
 port. `CRT:` is the PICO9918 with the matrix keyboard, at 80, 40 or 32
 columns and 24 rows, and `UC1:` is the 128 × 64 graphics LCD with the matrix
-keyboard, which TEC-OS treats as a screen of 21 columns and 8 rows. `BAT:` is
-CP/M's batch device, which in CP/M takes its input from the reader device and
-sends its output to the list device; TEC-OS's reader is the serial port and
-its list device discards what it is given, so on `BAT:` TEC-OS reads the
+keyboard, which TEC-OS treats as a screen of 21 columns and 8 rows. `BAT:`
+is CP/M's batch device, which in CP/M takes its input from the reader device
+and sends its output to the list device; TEC-OS's reader is the serial port
+and its list device discards what it is given, so on `BAT:` TEC-OS reads the
 serial port and prints nothing. Chapter 8 describes the reader and the list
 device.
 
@@ -39,9 +39,9 @@ the drives there at cold boot, and programs write to it through the services
 in Chapter 9.
 
 Cold boot, after power-on or a reset, clears page zero, the first 256 bytes
-of memory, and with it the IOBYTE, so it always starts on `TTY:`. A warm boot, the restart of the
-CCP when a program ends, leaves the IOBYTE as it was, and the console with
-it.
+of memory, and with it the IOBYTE, so it always starts on `TTY:`. A warm
+boot, the restart of the CCP when a program ends, leaves the IOBYTE as it
+was, and the console with it.
 
 ## The CON command
 
@@ -62,8 +62,8 @@ list` and `CON: UC1: GLCD`.
 device. The names are `TTY`, `CRT`, `BAT` and `UC1`, and a colon may follow
 them. The BIOS acts on the new bits at its next console call, and the first
 call after the change is the one that prints `CON`'s reply, so the reply
-appears on the new console. A name that isn't one of the four comes back with
-a question mark:
+appears on the new console. A name that isn't one of the four comes back
+with a question mark:
 
 <!-- node book/capture.mjs "CON XYZ" -->
 ```text
@@ -73,10 +73,11 @@ XYZ?
 A>
 ```
 
-On a board with a PICO9918 and the matrix keyboard, where `PICO.DRV` has made
-the PICO9918 the console, `CON TTY` typed on the matrix keyboard moves the
-console to the serial terminal. The command's echo appears on the PICO9918,
-and the reply and the next prompt on the PC's terminal, which shows this:
+On a board with a PICO9918 and the matrix keyboard, where `PICO.DRV` has
+made the PICO9918 the console, `CON TTY` typed on the matrix keyboard moves
+the console to the serial terminal. The command's echo appears on the
+PICO9918, and the reply and the next prompt on the PC's terminal, which
+shows this:
 
 <!-- node book/capture.mjs --board pico --serial "CON TTY" -->
 ```text
@@ -104,8 +105,8 @@ A>
 ```
 
 `CRT:` and `UC1:` need their display, its driver and the matrix keyboard. If
-any of them is missing, the BIOS uses the serial terminal, so there is always
-a console. On a board with only a serial terminal, `CON CRT` sets the
+any of them is missing, the BIOS uses the serial terminal, so there is
+always a console. On a board with only a serial terminal, `CON CRT` sets the
 IOBYTE's bits to 1 and the console stays on the serial terminal, which is
 what `CON` reports:
 
@@ -125,8 +126,8 @@ A>
 `CON UC1` does more than set the bits. If `GLCD.DRV`, the graphics LCD's
 driver, isn't installed, `CON UC1` loads it from drive A first. On a board
 with both displays this is how the console reaches the graphics LCD, since
-the startup file's `GLCD.DRV` line installs nothing while the PICO9918 is the
-console. On the web page's board, which has both displays, the graphics
+the startup file's `GLCD.DRV` line installs nothing while the PICO9918 is
+the console. On the web page's board, which has both displays, the graphics
 LCD shows this after `CON UC1`:
 
 <!-- node book/capture.mjs --board pico --screen "CON UC1" CON -->
@@ -165,18 +166,18 @@ A>
 
 A program changes the console in the same way, by writing the IOBYTE's low
 two bits, and TEC-OS acts on the change at the program's next console call.
-Digital Research's `STAT CON:=CRT:` works like this, so a copy of `STAT` from
-another CP/M system changes the console too.
+Digital Research's `STAT CON:=CRT:` works like this, so a copy of `STAT`
+from another CP/M system changes the console too.
 
 ## The serial terminal
 
 The serial port runs at 4800 baud with 8 data bits, no parity and 2 stop
 bits, and the terminal program on the PC is set the same way. TEC-OS sends
-and receives each bit itself, through bit 6 of port `01h` for output and
-bit 7 of port `03h` for input, and it times each bit by counting the Z80's
-clock cycles: one bit is 833 T-states at 4 MHz. That is why, as Chapter 1
-says, the serial link works only with the CPU clock switch on FAST and the
-4 MHz oscillator.
+and receives each bit itself, through bit 6 of port `01h` for output and bit
+7 of port `03h` for input, and it times each bit by counting the Z80's clock
+cycles: one bit is 833 T-states at 4 MHz. That is why, as Chapter 1 says,
+the serial link works only with the CPU clock switch on FAST and the 4 MHz
+oscillator.
 
 TEC-OS passes every byte to the serial terminal unchanged. The terminal
 program does its own interpretation of control characters and escape
@@ -230,9 +231,9 @@ Three keys are modifiers, held down with another key: Shift, Ctrl and Fn.
 Shift gives capital letters and the shifted symbols, and on the digit keys
 the shifted symbols are those of a PC keyboard, `)` on 0, `!` on 1, `@` on 2
 and so on to `(` on 9. Ctrl with a letter gives that letter's control code,
-from `01h` for A to `1Ah` for Z, so Ctrl and C together is `^C`. Fn gives the
-same character as the key alone. A modifier pressed alone sends nothing, and
-two keys held together send nothing unless one of them is a modifier.
+from `01h` for A to `1Ah` for Z, so Ctrl and C together is `^C`. Fn gives
+the same character as the key alone. A modifier pressed alone sends nothing,
+and two keys held together send nothing unless one of them is a modifier.
 
 The Caps key turns Caps Lock on and off, and the CAPS lamp, bit 7 of the
 board's system latch, lights while it is on. With Caps Lock on, the letter
@@ -283,10 +284,10 @@ Chapter 3 describes the history of command lines behind `^W` and `^N`.
 Two keys act while the BDOS prints. `^S` stops the output, and the next key
 starts it again; that key is used up and does nothing else, so a `^C` then
 doesn't end the program as it does in CP/M 2.2. `^P` turns the copy to the
-list device on or off, as it does in a line. Any other key typed
-during output is kept for the program's next console read, so it isn't
-lost. Since TEC-OS's list device discards what it is sent, `^P` has no
-effect that you can see.
+list device on or off, as it does in a line. Any other key typed during
+output is kept for the program's next console read, so it isn't lost. Since
+TEC-OS's list device discards what it is sent, `^P` has no effect that you
+can see.
 
 ## Pauses in long listings
 
@@ -295,8 +296,8 @@ the console's right edge and continues on the next row. One line short of a
 full screen they print `[more]` on the last row and wait for a key. On the
 serial terminal they count as for 80 columns and 24 rows.
 
-The graphics LCD, with 8 rows of 21 characters, shows the pause soonest. On a
-board with the graphics LCD and no PICO9918, `TYPE README.TXT` stops after
+The graphics LCD, with 8 rows of 21 characters, shows the pause soonest. On
+a board with the graphics LCD and no PICO9918, `TYPE README.TXT` stops after
 seven rows, and the screen shows this:
 
 <!-- node book/capture.mjs --board glcd --screen "TYPE README.TXT" -->
