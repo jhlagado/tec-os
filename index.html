@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TEC-OS</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <h1>TEC-OS <span class="sub">on an emulated TEC-1G</span></h1>
+      <div class="controls">
+        <label>ROM
+          <select id="profile">
+            <option value="80">PICO9918, 80 columns</option>
+            <option value="40">PICO9918, 40 columns</option>
+            <option value="32">PICO9918, 32 columns</option>
+          </select>
+        </label>
+        <label>Display
+          <select id="display">
+            <option value="tms">PICO9918 card</option>
+            <option value="glcd">GLCD only</option>
+          </select>
+        </label>
+        <button id="reset" title="Press the reset button: RAM and card keep their contents">Reset</button>
+        <button id="power" title="Power cycle: RAM is lost, the card is kept">Power cycle</button>
+        <button id="pause">Pause</button>
+        <span id="speed" class="status"></span>
+      </div>
+    </header>
+
+    <main>
+      <section class="monitor">
+        <canvas id="tms" width="1024" height="768" tabindex="0" aria-label="PICO9918 screen: click to type"></canvas>
+        <div class="hint">
+          Click the screen to type on the matrix keyboard. The serial terminal
+          is the console after <code>CON TTY</code>; <code>CON CRT</code> or
+          <code>CON UC1</code> comes back.
+        </div>
+      </section>
+
+      <section class="board" aria-label="TEC-1G front panel">
+        <div class="digits" id="digits"></div>
+        <div class="lcd" id="lcd" aria-label="20 by 4 LCD"></div>
+        <div class="row">
+          <div class="leds" id="leds" aria-label="8 by 8 RGB LEDs"></div>
+          <canvas id="glcd" width="256" height="128" tabindex="0" aria-label="128 by 64 GLCD: click to type"></canvas>
+        </div>
+        <div class="latch" id="latch"></div>
+      </section>
+
+      <section class="serial">
+        <h2>Serial console <span class="sub">4800 baud</span></h2>
+        <pre id="serial" tabindex="0" aria-label="Serial terminal: click to type"></pre>
+      </section>
+
+      <section class="card">
+        <h2>SD card</h2>
+        <div class="card-actions">
+          <button id="starter">New starter card</button>
+          <label class="file-button">Open image<input type="file" id="openimg" hidden /></label>
+          <button id="saveimg">Download image</button>
+        </div>
+        <div id="cardinfo" class="status"></div>
+        <div class="files">
+          <label>Drive <select id="drive"></select></label>
+          <label class="file-button">Copy file to drive<input type="file" id="putfile" hidden multiple /></label>
+          <label><input type="checkbox" id="astext" /> as text</label>
+        </div>
+        <table id="filelist"><thead><tr><th>User</th><th>Name</th><th>Bytes</th><th></th></tr></thead><tbody></tbody></table>
+        <p class="note">Changing files resets the TEC-1G so CP/M sees the new directory.</p>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

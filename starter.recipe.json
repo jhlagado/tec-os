@@ -1,0 +1,191 @@
+{
+  "schema": "tecos-file-recipe-v1",
+  "id": "starter",
+  "revision": "2",
+  "name": "TEC-OS starter",
+  "instruction": "At A>, type DIR, then TERM or DEMO. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+  "profile": "debug80",
+  "volumes": [
+    {
+      "geometry": "G1M",
+      "label": "SYSTEM",
+      "mount": "A"
+    },
+    {
+      "geometry": "G8M",
+      "label": "WORK",
+      "mount": "B",
+      "writeBehind": true
+    }
+  ],
+  "components": [
+    {
+      "id": "term-com",
+      "name": "TERM.COM",
+      "description": "draws with the video terminal's ANSI subset",
+      "files": [
+        {
+          "name": "TERM.COM",
+          "url": "files/TERM.COM",
+          "drive": "A",
+          "bytes": 95,
+          "sha256": "fc34fcd4cbc4b7c300b36936486f3d2e98deb01341c21f6aa32d6a90261726b9"
+        }
+      ]
+    },
+    {
+      "id": "probe-com",
+      "name": "PROBE.COM",
+      "description": "BDOS file-function probe",
+      "files": [
+        {
+          "name": "PROBE.COM",
+          "url": "files/PROBE.COM",
+          "drive": "A",
+          "bytes": 923,
+          "sha256": "8586ae2e8c0673773522a7e1ac7739f82c027440a06108dd1a4967f921c28bb7"
+        }
+      ]
+    },
+    {
+      "id": "demo-com",
+      "name": "DEMO.COM",
+      "description": "a demonstration of the hardware: LCD, digits, LEDs, PICO9918",
+      "files": [
+        {
+          "name": "DEMO.COM",
+          "url": "files/DEMO.COM",
+          "drive": "A",
+          "bytes": 1191,
+          "sha256": "d76be28ca6b15d026a78936f41895632f57b4ebac114b2f0310c9fc70f53ec1f"
+        }
+      ]
+    },
+    {
+      "id": "mount-com",
+      "name": "MOUNT.COM",
+      "description": "mounts a volume on a drive: MOUNT B: NAME, MOUNT B: INDEX, MOUNT B: to unmount",
+      "files": [
+        {
+          "name": "MOUNT.COM",
+          "url": "files/MOUNT.COM",
+          "drive": "A",
+          "bytes": 496,
+          "sha256": "834b0fde38ba97399605f815df0646b4d82a9f5dcd7b5404018e8f5095cc2b12"
+        }
+      ]
+    },
+    {
+      "id": "vols-com",
+      "name": "VOLS.COM",
+      "description": "lists the card's volumes and the drives they are on",
+      "files": [
+        {
+          "name": "VOLS.COM",
+          "url": "files/VOLS.COM",
+          "drive": "A",
+          "bytes": 266,
+          "sha256": "d2914530cdf5ae7e8e71f30adc623c4b0728551e7b8ba511dd6734436e5f1432"
+        }
+      ]
+    },
+    {
+      "id": "pico-drv",
+      "name": "PICO.DRV",
+      "description": "the PICO9918 console at 80 columns, a driver",
+      "files": [
+        {
+          "name": "PICO.DRV",
+          "url": "files/PICO.DRV",
+          "drive": "A",
+          "bytes": 1360,
+          "sha256": "f1f3af28dbb8f2f56b780de06188c988b0b6a035fb59e7e4224efb7e8d595dac"
+        }
+      ]
+    },
+    {
+      "id": "pico40-drv",
+      "name": "PICO40.DRV",
+      "description": "the PICO9918 console at 40 columns, a driver",
+      "files": [
+        {
+          "name": "PICO40.DRV",
+          "url": "files/PICO40.DRV",
+          "drive": "A",
+          "bytes": 1360,
+          "sha256": "1307091c1602bcd7f3f93b359e9adab40d00159284e98c2961b62bfb9bd764e5"
+        }
+      ]
+    },
+    {
+      "id": "pico32-drv",
+      "name": "PICO32.DRV",
+      "description": "the PICO9918 console at 32 columns, a driver",
+      "files": [
+        {
+          "name": "PICO32.DRV",
+          "url": "files/PICO32.DRV",
+          "drive": "A",
+          "bytes": 1386,
+          "sha256": "667760955013c60d4466457ea7d49cb7c89f27b00dabd09232034131fd644ab3"
+        }
+      ]
+    },
+    {
+      "id": "glcd-drv",
+      "name": "GLCD.DRV",
+      "description": "the GLCD console, a driver",
+      "files": [
+        {
+          "name": "GLCD.DRV",
+          "url": "files/GLCD.DRV",
+          "drive": "A",
+          "bytes": 1597,
+          "sha256": "072f939f9faf9197f587a15961bf41d92d9be1f4dec2d91a60876d67874f0fcb"
+        }
+      ]
+    },
+    {
+      "id": "startup-cmd",
+      "name": "STARTUP.CMD",
+      "description": "the commands run at cold boot",
+      "files": [
+        {
+          "name": "STARTUP.CMD",
+          "url": "files/STARTUP.CMD",
+          "drive": "A",
+          "bytes": 21,
+          "sha256": "d303b317e8b75c8ec99c55bf93e1286eaafba439bca4dfc5545bfc21734e8473"
+        }
+      ]
+    },
+    {
+      "id": "edit-com",
+      "name": "EDIT.COM",
+      "description": "Edit, the full-screen editor: EDIT NAME.TXT, ^S save, ^Q quit",
+      "files": [
+        {
+          "name": "EDIT.COM",
+          "url": "files/EDIT.COM",
+          "drive": "A",
+          "bytes": 7931,
+          "sha256": "ed88337e6dfa2626dd37a225a0ec09332f4927a0bde62114bbf8661d2d0fdc78"
+        }
+      ]
+    },
+    {
+      "id": "readme-txt",
+      "name": "README.TXT",
+      "description": "what is on this disk",
+      "files": [
+        {
+          "name": "README.TXT",
+          "url": "files/README.TXT",
+          "drive": "A",
+          "bytes": 637,
+          "sha256": "4b3df4394a2df38f60356b93cdc0f364659bbf716a2408650c8458aed4e687d4"
+        }
+      ]
+    }
+  ]
+}
