@@ -38,8 +38,8 @@ of a run, such as the startup lines before a prompt, the text says so.
 
 **Part II cites the source.** In Part II each claim about the code carries a
 reference to the file and line it rests on, as `src/boot.asm:22`, at the
-named commit. Part I names files where a reader would want them, and needs
-no line numbers.
+named commit. Part I names files where a reader would want them, without
+line numbers.
 
 ## The reader
 
@@ -51,7 +51,7 @@ use a term without explaining it again, and it names the chapter that
 explained it when the reader may have skipped there.
 
 A chapter begins with its subject and the reader's route through it, in a
-sentence or two, and goes straight in. It ends on its last substantive point:
+sentence or two, and then starts on the subject. It ends on its last substantive point:
 no recap of what it said and no forecast of the next chapter. A forward
 reference is kept when it gives the reader a useful expectation, written as
 "Chapter 4 explains the cache", never as a topic arriving or waiting.
