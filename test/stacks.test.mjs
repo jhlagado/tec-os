@@ -82,7 +82,9 @@ function watch(m) {
 function run(m, line) {
   m.mark = m.output.length;
   m.type(line);
-  const prompt = /\r\n[A-P]>$/;
+  const re = /\r\n[A-P]>$/;
+  // Not the prompt before a chained line's next piece (KS32).
+  const prompt = { test: (t) => re.test(t) && m.read(m.sym("CHPOS")) === 0 };
   let seen = -1;
   for (let i = 0; i < 400; i += 1) {
     const end = m.cycles + 20_000_000;
@@ -141,6 +143,32 @@ async function deepPaths(lines, opts = { tms: true, matrix: true }, { pico = tru
   return { ...depths(), conmod: m.read(m.sym("CONMOD")), row3 };
 }
 
+/**
+ * Chained lines (KS32): pieces split at !, a : piece after a failure, a
+ * BDOS error and ^C that drop the rest, and function 47 from a program, its
+ * line holding ! and :.
+ */
+async function chainRun() {
+  const { rom, symbols } = romFor();
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G8M", label: "WORK", mount: "B" },
+    { geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true },
+  ]);
+  const a = volume(image, "A");
+  for (const n of ["probe", "line"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
+  a.write("CHAIN.COM", Uint8Array.from([...(await program("chain")).bytes, ...Buffer.from("PROBE!DIR B:!:DIR\0", "latin1")]));
+  a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
+  const depths = watch(m);
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  for (const line of ["PROBE!DIR!USER 0\r", "ERA NOSUCH.X!:DIR!DIR\r", "CHAIN!PROBE\r", "SAVE 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
+  assert.deepEqual(m.violations, []);
+  assert.equal(m.read(m.sym("CHPOS")), 0);
+  return depths();
+}
+
 /** A recognised reset with a remapped A:, through RSLCAP and RESEL, watched from the reset on. */
 async function resetRun() {
   const { rom, symbols } = romFor();
@@ -191,6 +219,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     picoNoDriver: await deepPaths(["DIR\r"], { tms: true, matrix: true }, { pico: false }),
     unloadPico: await deepPaths(["CON TTY\r", "UNLOAD\r"]),
     recognisedReset: await resetRun(),
+    chained: await chainRun(),
   };
   assert.equal(runs.picoNoDriver.row3, "PICO?", "the run went through STDONE's LCD path");
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
@@ -201,7 +230,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt; and PICO.DRV's UNLOAD after CON TTY, whose REMOVE calls INFO; and a recognised reset with a remapped A:. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.DRV on a PICO9918 and matrix board, and on a GLCD board; a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt; and PICO.DRV's UNLOAD after CON TTY, whose REMOVE calls INFO; a recognised reset with a remapped A:; and chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));
