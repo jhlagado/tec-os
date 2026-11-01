@@ -4,7 +4,7 @@ Checked against TEC-OS 98c6416.
 
 The console is the device you type commands on and read TEC-OS's replies
 from. A TEC-1G can carry a serial terminal, a PICO9918 video card and a
-graphics LCD at once, and TEC-OS uses one of them as the console at a time.
+graphics LCD at once, and TEC-OS uses one of them at a time as the console.
 This chapter describes the four console devices and the `CON` command that
 moves the console between them, then the serial terminal, the display
 drivers that put the console on a screen, the matrix keyboard, the keys that
@@ -27,12 +27,12 @@ device of the TEC-1G:
 `TTY:` is a terminal program on a PC, connected to the board's FTDI serial
 port. `CRT:` is the PICO9918 with the matrix keyboard, at 80, 40 or 32
 columns and 24 rows, and `UC1:` is the 128 × 64 graphics LCD with the matrix
-keyboard, which TEC-OS treats as a screen of 21 columns and 8 rows. `BAT:`
+keyboard, on which TEC-OS draws 21 columns and 8 rows of characters. `BAT:`
 is CP/M's batch device, which in CP/M takes its input from the reader device
-and sends its output to the list device; TEC-OS's reader is the serial port
-and its list device discards what it is given, so on `BAT:` TEC-OS reads the
-serial port and prints nothing. Chapter 8 describes the reader and the list
-device.
+and sends its output to the list device, CP/M's printer; TEC-OS's reader is
+the serial port and its list device discards what it is given, so on `BAT:`
+TEC-OS reads the serial port and prints nothing. Chapter 8 describes the
+reader and the list device.
 
 The 20 × 4 character LCD is never the console. TEC-OS writes its version and
 the drives there at cold boot, and programs write to it through the services
@@ -45,18 +45,9 @@ was, and the console with it.
 
 ## The CON command
 
-`CON` with no argument names the console in use, with a word about what the
-device is:
-
-<!-- node book/capture.mjs CON -->
-```text
-A>CON
-CON: TTY: serial terminal
-A>
-```
-
-The other three replies are `CON: CRT: PICO9918`, `CON: BAT: reader and
-list` and `CON: UC1: GLCD`.
+`CON` with no argument names the console in use, as Chapter 1 showed. Its
+four replies are `CON: TTY: serial terminal`, `CON: CRT: PICO9918`, `CON:
+BAT: reader and list` and `CON: UC1: GLCD`.
 
 `CON` followed by a device name sets the IOBYTE's console bits to that
 device. The names are `TTY`, `CRT`, `BAT` and `UC1`, and a colon may follow
@@ -183,16 +174,16 @@ TEC-OS passes every byte to the serial terminal unchanged. The terminal
 program does its own interpretation of control characters and escape
 sequences, so a program that moves the cursor or clears the screen needs a
 terminal program that follows the ANSI conventions, as most do. The serial
-terminal has no size that TEC-OS can read; the CCP and programs that need
-one assume 80 columns and 24 rows.
+terminal has no size that TEC-OS can read; the CCP counts lines and columns
+for 80 columns and 24 rows, and most programs written for CP/M use 80 by 24.
 
 The board has no hardware to hold an incoming byte, and TEC-OS takes no
-interrupt from the serial line. TEC-OS catches a byte only while it is
-watching the line, which it does while a program waits for a key and for a
-moment before each character the BDOS prints. A byte that arrives while
-TEC-OS is doing anything else is lost. Keys typed by hand at the prompt are
-caught, but text pasted into the terminal program, or typed ahead of a busy
-program, can lose characters.
+interrupt from the serial line. TEC-OS catches a byte only while it polls
+the line, which it does while a program waits for a key and for a moment
+before each character the BDOS prints. A byte that arrives while TEC-OS is
+doing anything else is lost. Keys typed by hand at the prompt are caught,
+but text pasted into the terminal program, or typed ahead of a busy program,
+can lose characters.
 
 ## A display as the console
 
@@ -237,7 +228,8 @@ and two keys held together send nothing unless one of them is a modifier.
 
 The Caps key turns Caps Lock on and off, and the CAPS lamp, bit 7 of the
 board's system latch, lights while it is on. With Caps Lock on, the letter
-keys give capitals, with Shift or without it; the other keys are unchanged.
+keys give capitals, with Shift or without it, and the `{` key gives `[`; the
+other keys are unchanged.
 
 Return sends `0Dh` and Esc `1Bh`; `^H` is backspace, `08h`, and `^I` is tab,
 `09h`. The four arrow keys send the escape sequences an ANSI terminal sends
@@ -284,10 +276,10 @@ Chapter 3 describes the history of command lines behind `^W` and `^N`.
 Two keys act while the BDOS prints. `^S` stops the output, and the next key
 starts it again; that key is used up and does nothing else, so a `^C` then
 doesn't end the program as it does in CP/M 2.2. `^P` turns the copy to the
-list device on or off, as it does in a line. Any other key typed during
-output is kept for the program's next console read, so it isn't lost. Since
-TEC-OS's list device discards what it is sent, `^P` has no effect that you
-can see.
+list device on or off, as it does in a line. The first other key typed
+during output is kept for the program's next console read; while it waits
+there, TEC-OS reads no further key. Since TEC-OS's list device discards what
+it is sent, `^P` has no effect that you can see.
 
 ## Pauses in long listings
 
@@ -331,7 +323,8 @@ DEMO               th
 
 `^C`, Esc or `Q` at `[more]`, in capitals or not, rubs out `[more]` and ends
 the listing there. After `q` at the first pause the CCP starts a new line
-for the prompt, and the graphics LCD shows this:
+for the prompt, below the row `[more]` was on, and the graphics LCD shows
+this:
 
 <!-- node book/capture.mjs --board glcd --screen "TYPE README.TXT" "@key q" -->
 ```text
@@ -344,5 +337,3 @@ TERM               dr
 
 A>
 ```
-
-The empty row above the prompt is the one `[more]` was on.
