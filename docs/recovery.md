@@ -93,9 +93,14 @@ signal doesn't distinguish the last two.
 
 A reset is recognised from what TEC-OS left in RAM: page zero's jumps, and the BDOS
 entry stub at its address, jumping to this ROM's BDOS. The test reads and runs
-nothing old, and RAM from another build, damaged RAM or power-up RAM fails it.
-There is no signature to clear: what proves the selection is that the volumes are
-still on the card.
+nothing old, and power-up RAM, or RAM from a build with another BDOS entry (`BENTRY`)
+or stub address (`STUBAD`), fails it. It doesn't read the drive table, so a
+damaged `DRVTAB` passes it, and so does RAM from any build with the same
+`BENTRY` and `STUBAD` addresses, whatever its drive table holds. The harm stops at a volume
+checked against the card: the retained drives must match the card's descriptors
+as below, or the defaults are taken, and a drive whose geometry is 0 is not
+retained, whatever its other bytes. There is no signature to clear: what proves
+the selection is that the volumes are still on the card.
 
 Only the selection is kept. Page zero, the workspace, drivers, the registry, the
 cache, open files, the history and the TPA ceiling are all rebuilt, and a reset
