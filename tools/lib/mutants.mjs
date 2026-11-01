@@ -391,7 +391,15 @@ export const MUTANTS_KS32 = [
   { name: "stop: ^C keeps the rest", ...k(["LD C,'C'", "CALL ECHOCHAR", "JP CHDROP"], ["LD C,'C'", "CALL ECHOCHAR", "JP BIOWBT"], BD) },
   { name: "stop: a bad sector keeps the rest", ...k(["BADSECT:", "LD HL,ERRBAD", "CALL DISKERR", "JP CHDROP"], ["BADSECT:", "LD HL,ERRBAD", "CALL DISKERR", "JP BIOWBT"], BD) },
   { name: "stop: CHDROP drops nothing", ...k(["CHDROP: XOR A", "LD (CHPOS),A", "JP BIOWBT"], ["CHDROP: JP BIOWBT"], BD) },
-  { name: "stop: a reset keeps the rest", ...k(["CHPOS: DS 1", "HIRME:"], ["HIRME:", "CHPOS: DS 1"], "src/ram.asm") },
+  // CHPOS past HIRME and the line past cold boot's clear: either alone is masked by the other.
+  {
+    name: "stop: a reset keeps the rest",
+    edits: [
+      asm("src/ram.asm", ["CHPOS: DS 1", "HIRME:"], ["HIRME:", "CHPOS: DS 1"]),
+      asm(B, ["LD HL,WSBASE", "LD DE,WSBASE+1", "LD BC,WSSPAN", "LD (HL),0", "LDIR"], ["LD HL,WSBASE", "LD DE,WSBASE+1", "LD BC,CMDFCB-WSBASE-1", "LD (HL),0", "LDIR", "LD HL,CCPCLR", "LD DE,CCPCLR+1", "LD BC,WSEND-CCPCLR-1", "LD (HL),0", "LDIR"]),
+    ],
+    tests: CHAIN,
+  },
   { name: "KE-127: a startup line not cut at 127", ...k(["INC B", "DEC B", "JR Z,STL1"], [], D) },
   { name: "KE-127: a startup line cut at 128", ...k(["LD DE,CMDTXT", "LD B,127"], ["LD DE,CMDTXT", "LD B,128"], D) },
 ];
