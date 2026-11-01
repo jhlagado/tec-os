@@ -76,26 +76,17 @@ nothing.
 
 ## The ring at BD00h
 
-The history is the page at `BD00h` in EXPAND 1 (`src/history.asm:14`). Chapter
-13 lists EXPAND 1's contents: the block cache's 30 lines at `8000h–BBFFh`, the
-cache's table at `BC00h`, the history at `BD00h` and a free page at `BE00h`.
-EXPAND 1 shares the addresses `8000h–BFFFh` with EXPAND 0, which holds
-TEC-OS's workspace and the top of the program area, and bit 2 of the system
-latch at port `FFh`, `LATEXP`, selects it (`src/layout.asm:13`,
-`src/layout.asm:18`). The copy services `XMOVE` and `MOVE`, a program's route
-to EXPAND memory, reject every byte of EXPAND 1: cold boot sets its low mark
-to `80h`, so the range they may copy in it is empty (`src/boot.asm:163-165`,
-`src/layout.asm:23`, `src/xmove.asm:4-6`).
+The history is the page at `BD00h` in EXPAND 1, `HRING`
+(`src/history.asm:14`). Chapter 13 lists EXPAND 1's other pages, and explains
+why programs can't reach it through `XMOVE` and `MOVE` and why no stack is in
+use while it is in view.
 
 Two routines read and write the ring a byte at a time. `HGET` returns the byte
 at offset `L` in `A`, and `HPUT` writes `A` there, with `H` holding the ring's
 page, `BDh` (`src/history.asm:16-42`). Each saves the interrupt state, turns
 interrupts off, writes the latch with `LATEXP` added to TEC-OS's copy of it at
 `0040h`, makes the access, writes the latch back as it was, and turns
-interrupts on again if they were on before. No stack is used while EXPAND 1 is
-in view (`src/history.asm:17-18`). The BDOS's stack, on which function 10
-runs, is in the workspace at `8000h–BFFFh` in EXPAND 0, and a push or a return
-then would reach EXPAND 1's bytes in its place.
+interrupts on again if they were on before.
 
 The offset into the page is `L` alone, so moving from offset `FFh` to the next
 byte with `INC L` reaches offset `00h`, and the page is a ring with no end.
@@ -117,12 +108,14 @@ sets the byte `HFLAG` to `FFh` (`src/cpm/ccp.asm:67-71`, `src/ram.asm:137`).
 Function 10 ends at `LINDONE`, after Return, after a line feed or when the
 buffer is full. There it reads `HFLAG`, clears it, and calls `HSTORE` if the
 flag was set and the line has at least one character
-(`src/cpm/bdos.asm:407-420`). A program that calls function 10 itself finds
-`HFLAG` clear, since every warm boot clears the CCP's and the BDOS's RAM,
-which holds it (`src/boot.asm:73`, `src/boot.asm:272-276`). So only the lines
-typed at the CCP's prompt go into the history. The lines of `STARTUP.CMD`
-don't: the CCP takes each of them from `STLINE` in place of function 10
-(`src/cpm/ccp.asm:65-66`), so after cold boot the history is empty.
+(`src/cpm/bdos.asm:407-420`). When a program calls function 10 itself, `HFLAG`
+is clear: `LINDONE` cleared it after the CCP's line, and every warm boot
+clears it too, with the rest of the CCP's and the BDOS's RAM, for a line the
+CCP abandoned at `^C` (`src/cpm/bdos.asm:416-418`, `src/boot.asm:73`,
+`src/boot.asm:272-276`). So only the lines typed at the CCP's prompt go into
+the history. The lines of `STARTUP.CMD` don't: the CCP takes each of them from
+`STLINE` in place of function 10 (`src/cpm/ccp.asm:65-66`), so after cold boot
+the history is empty.
 
 `HSTORE` stores the line as function 10 returns it, before the CCP turns its
 small letters into capitals (`src/cpm/ccp.asm:73-92`), so a recalled line
@@ -193,12 +186,12 @@ calls `HREC` (`src/cpm/bdos.asm:302`).
 (`src/cpm/bdos.asm:232-233`). `HREC` works from `HPOS`
 (`src/history.asm:53-102`):
 
-- For `^W` it finds the first byte of the shown entry with `HSTART`. The byte
-  before that is the terminator of the entry before, and the byte before that
-  terminator is that entry's last character. If that character is 0, the entry
-  before is empty: the walk has reached the oldest line, and `HREC` returns
-  with the line as it is (`src/history.asm:62-68`). Otherwise the entry
-  before's terminator becomes `HPOS`.
+- For `^W` it steps back to the first byte of the shown entry with `HSTART`.
+  The byte before that is the terminator of the entry before, and the byte
+  before that terminator is that entry's last character. If that character is
+  0, the entry before is empty: the walk has reached the oldest line, and
+  `HREC` returns with the line as it is (`src/history.asm:62-68`). Otherwise
+  the entry before's terminator becomes `HPOS`.
 - For `^N` with no line shown, `HPOS` equal to `HHEAD`, `HREC` returns at once
   (`src/history.asm:70-72`). Otherwise it steps forward to the next byte of 0,
   the terminator of the entry after, which becomes `HPOS`
