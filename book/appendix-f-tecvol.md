@@ -210,8 +210,8 @@ tecvol: TERM.COM not found
 usage: tecvol create|info|verify|dir|put|get|era|recipe|install ... (see tools/tecvol.mjs)
 ```
 
-The first command looked in user area 0 and found nothing; the second erased
-the file from user area 3 and printed nothing.
+The first command searched user area 0, which has no `TERM.COM`; the second
+erased the file from user area 3 and printed nothing.
 
 ## The card on the board
 

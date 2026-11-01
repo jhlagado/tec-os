@@ -70,7 +70,7 @@ clock at 1 January 2026, 12:00 (`test/lib/fixtures.mjs:111` and `112`), and
 `book/capture.mjs` at 1 November 2026, 12:00, so the capture of `DEMO` in
 Chapter 1 shows `12:00:14` on any PC.
 
-## Watching every write
+## Checks on every write
 
 The machine passes every memory write through a check of its own
 (`host/machine.mjs:209` to `229`). A write to `C000h–FFFFh`, the ROM, is
@@ -160,7 +160,7 @@ Typing takes two forms. `type` sends each character to the serial port only
 when TEC-OS is waiting for one, and waits until TEC-OS has taken it
 (`host/machine.mjs:350` to `367`); with a display as the console it presses
 keys on the matrix keyboard instead, holding each, with its Shift or Ctrl,
-until TEC-OS's scan has seen it, then releasing it (`host/machine.mjs:448` to
+until TEC-OS's scan has read it, then releasing it (`host/machine.mjs:448` to
 `462`). `enqueueInput` and `pumpInput` do the same without blocking, one step
 at a time, for the web page's run loop and for `capture.mjs`
 (`host/machine.mjs:464` to `516`). Either way the model paces input to TEC-OS.

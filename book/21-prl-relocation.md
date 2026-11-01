@@ -95,7 +95,7 @@ and TEC-OS's loader doesn't read it.
 
 ## A PRL program at 0100h
 
-The CCP looks for `NAME.PRL` only after it has found no `NAME.COM`
+The CCP opens `NAME.PRL` only after an open of `NAME.COM` has failed
 (`src/cpm/ccp.asm:193` to `206`). If `NAME.COM` is on the drive but doesn't
 load, because it is too large or a read fails, the command fails there, with
 no search for the PRL (`src/cpm/ccp.asm:201`). With `SAY.PRL` copied to the

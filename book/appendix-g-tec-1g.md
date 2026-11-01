@@ -53,7 +53,7 @@ no parity and 2 stop bits. The bit times are counted in T-states for a 4 MHz
 clock (`tools/build.mjs:25`, `40` to `57`, `src/console.asm:193` to `200`), so
 the board's CPU clock switch has to be on FAST with the 4 MHz oscillator.
 There is no receive buffer in hardware: a byte reaches TEC-OS only while it is
-watching bit 7 for a start bit.
+polling bit 7 for a start bit.
 
 ## Port 03h and the switches
 
