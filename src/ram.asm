@@ -65,9 +65,13 @@ BIOSRME:
 CCPRAM  EQU     BIOSRME
 
 ; ---- The CCP's state and stack (cpm/ccp.asm) ----------------------------------
-; The command line comes first and is kept over warm boot, for the pieces of
-; a chained line still to run (CHPOS): CPMINIT clears from CCPCLR. Cold boot
-; clears it with the rest of the workspace.
+; Up to CCPCLR, kept over warm boot: the command line, for the pieces of a
+; chained line still to run (CHPOS), and the two FCBs before it, which each
+; use parses in full. CPMINIT clears from CCPCLR; cold boot clears them all.
+CMDFCB:
+        DS      36
+RENFCB:
+        DS      36
 CMDBUF:
         DS      1
 CMDLEN:
@@ -75,10 +79,6 @@ CMDLEN:
 CMDTXT:
         DS      128
 CCPCLR:
-CMDFCB:
-        DS      36
-RENFCB:
-        DS      36
 BOOTDRV:
         DS      1
 CMDSTRT:
