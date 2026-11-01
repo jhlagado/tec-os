@@ -15,7 +15,7 @@ the list device, the punch and the reader.
 ## The BDOS's console functions
 
 A program usually reaches the console through the BDOS, with the functions
-Chapter 6 used and a few more:
+of Chapter 6 and a few more:
 
 | Function | Name | Takes | Returns |
 | --- | --- | --- | --- |
@@ -30,7 +30,7 @@ Functions 1, 2, 9 and 10 do more than move a byte. They expand a tab into
 spaces up to the next multiple of 8 columns, counting columns from the last
 carriage return, and they copy what they print to the list device while `^P`
 has turned the copy on. Before each character they print, functions 2 and 9
-also look for a key: `^S` stops the output until the next key, `^P` turns
+also check for a key: `^S` stops the output until the next key, `^P` turns
 the copy on or off, and any other key is held for the program's next console
 read, as Chapter 2 describes. Function 10 gives the line the editing keys of
 Chapter 2, and a `^C` as its first key ends the program with a warm boot.
@@ -138,10 +138,11 @@ printing. A program uses one level or the other for both.
 
 The BDOS calls the BIOS through the same table in RAM, so a program that
 writes its own jump into an entry receives the BDOS's console calls as well
-as its own: an entry at `CONOUT` gets every character the BDOS prints. Warm
-boot leaves the table as it is, as in CP/M 2.2, except that it puts back the
-warm boot entry, so a program that replaces another entry puts the old jump
-back before it ends.
+as its own: an entry at `CONOUT` gets every character the BDOS prints. The
+BDOS's check for a key during output is the exception: it calls the ROM's
+`CONST` directly, not through the table. Warm boot leaves the table as it
+is, as in CP/M 2.2, so a program that replaces an entry, the warm boot entry
+included, puts the old jump back before it ends.
 
 ## The video terminal
 
@@ -182,7 +183,7 @@ separated by `;`, then a letter that names the action. In the table, `n`,
 | `ESC [ 7 m`, `ESC [ 0 m` | reverse video on, and off |
 | `ESC [ n @`, `ESC [ n P` | inserts `n` blanks at the cursor, or deletes `n` characters there; the rest of the line moves right or left |
 | `ESC [ t ; b r` | makes rows `t` to `b` the scroll region and puts the cursor at the top left |
-| `ESC [ r` | makes the whole screen the scroll region |
+| `ESC [ r` | makes the whole screen the scroll region and puts the cursor at the top left |
 | `ESC [ n L`, `ESC [ n M` | inserts or deletes `n` lines at the cursor's row, within the scroll region; the rows below move, and the cursor goes to column 1 |
 
 A line feed at the bottom of the scroll region scrolls the region up one row
@@ -213,22 +214,21 @@ A>
 
 ## The cursor
 
-On a display, the cursor is the cell at the cursor's position drawn as its
-reverse image. TEC-OS draws it only while a program waits for a key: during
-`CONIN`, and when a program polls with `CONST` and no key is waiting, as
-BDOS functions 6 and 11 do. The next character printed removes it, so a
-program that prints a screenful never spends time drawing the cursor between
-characters. The BDOS's own look for `^S` during output draws no cursor, and
-no cursor is drawn while the cursor's position is past the right edge,
-waiting for a wrap.
+On a display, TEC-OS shows the cursor by drawing the cell at the cursor
+position as its reverse image. TEC-OS draws it only while a program waits
+for a key: during `CONIN`, and when a program polls with `CONST` and no key
+is waiting, as BDOS functions 6 and 11 do. The next character printed
+removes it, so a program that prints a screenful never spends time drawing
+the cursor between characters. The BDOS's own check for `^S` during output
+draws no cursor, and no cursor is drawn while the cursor's position is past
+the right edge, waiting for a wrap.
 
 ## The console's size
 
 A program that lays out a screen, such as an editor, uses the console's
 size. TEC-OS keeps the columns at `0048h` and the rows at `0049h`, and both
 are 0 while the console is the serial terminal, whose size TEC-OS can't
-read; a program then takes the screen to be 80 by 24, as the CCP does for
-`[more]`.
+read; a program then uses 80 by 24, as the CCP does for `[more]`.
 
 The ROM's table of services at `C003h`, which Chapter 9 describes, has the
 same bytes through a pointer. It starts with the letters `TNA` and the
@@ -328,8 +328,8 @@ A>B:SIZE
 A>
 ```
 
-The size changes whenever the console does, so a program reads it when it
-starts and doesn't keep it across its own exit.
+The size changes whenever the console does, so a program reads it again
+after it changes the console, and a later run reads it afresh.
 
 ## The IOBYTE's other devices
 
