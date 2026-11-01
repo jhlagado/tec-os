@@ -396,8 +396,8 @@ The transcript leaves out the boot before the first `MOUNT`. If any of the
 volumes doesn't match a descriptor on the card in the socket, the whole
 choice is dropped and the drives get the volumes the header names, as after
 a power cycle. Turning the board off always gives the header's drives, since
-the choice is held only in RAM. Chapter 14 describes how cold boot
-recognises the RAM a reset leaves.
+the choice is held only in RAM. Chapter 14 describes the test cold boot
+applies to the RAM a reset leaves.
 
 The changes in the cache are what a reset loses, so, as Chapter 1 says, a
 `^C` at the prompt before a reset puts them all on the card.

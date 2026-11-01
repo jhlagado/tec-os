@@ -150,7 +150,7 @@ checked against.
     `src/ram.asm`, `src/layout.asm`, `docs/memory-map.md`,
     `test/stacks.test.mjs`.
 14. **Reset, cold boot and warm boot.** The boot overlay; `COLD`; the two RAM
-    checks; counting MAIN and EXPAND; recognising a reset and keeping the
+    checks; counting MAIN and EXPAND; the reset test and keeping the
     selected volumes; rebuilding page zero; the warm boot path and its cost.
     Sources: `src/reset.asm`, `src/boot.asm`, `src/vol.asm`, `src/ram.asm`,
     `docs/recovery.md`.
