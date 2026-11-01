@@ -6,11 +6,11 @@ The BIOS is the part of a CP/M system written for one machine, and on the
 TEC-1G most of it is the console: a serial port made of two port bits and
 timing loops, a matrix keyboard scanned by software, a terminal emulator that
 turns escape sequences into cursor moves, and displays whose code is loaded
-from the card. This chapter starts at the BIOS jump table and follows a
-character through it, in from a key and out to a screen, by way of the
-IOBYTE that selects the device. It ends at the 20 × 4 LCD, which the BIOS
-writes to but which is never the console. The disk entries of the table are
-in Chapter 18.
+from the card. This chapter describes the BIOS jump table, the IOBYTE that
+selects the console, the path of a character in from a key and out to a
+screen, the list, punch and reader, and the 20 × 4 LCD, which the BIOS writes
+to but which is never the console. The disk entries of the table are in
+Chapter 18.
 
 ## The jump table
 
@@ -54,8 +54,8 @@ program's routine. Cold boot is the only time the table is copied, so warm
 boot leaves a replaced entry in place, as CP/M 2.2's warm boot does
 (`src/boot.asm:45-47`); a program that replaces an entry has to put it back
 before it ends, or the replacement's code in the TPA is called after the
-program has gone. Warm boot writes one jump of its own, at `BF03h` in
-EXPAND 1, and leaves EXPAND 0's table alone (`src/boot.asm:59-65`).
+program has gone. The one jump warm boot writes is in EXPAND 1's page at
+`BF00h`, not in this table; Chapter 14 describes it.
 
 ## The IOBYTE and the console mode
 
@@ -159,7 +159,7 @@ held high for `TXSTOP` passes, 105. On the model a whole character takes
 9,217 T-states, so the serial terminal shows about 430 characters a second.
 
 `RXBITS` receives one (`src/console.asm:192-206`). It is called just after a
-poll has seen the start bit, and it waits `RXHALF` passes, 74, to reach the
+poll has read the start bit, and it waits `RXHALF` passes, 74, to reach the
 middle of the first data bit; then it samples the line eight times, shifting
 each sample into `C`, with `RXDLY`, 50, passes between samples. A pass of its
 loop takes 38 + 16 × `RXDLY` T-states, 838. The polling loops that look for
@@ -175,6 +175,28 @@ A byte that comes while TEC-OS is doing something else is lost, and text sent
 to TEC-OS from a PC reaches it whole only as fast as the program reading it
 calls `CONIN` or `READER`.
 
+## The list, punch and reader
+
+CP/M 2.2 gives a program three more character devices through the BIOS: the
+list device, a printer, for output; the punch for output and the reader for
+input. TEC-OS has no printer, and puts the other two on the serial port
+(`src/console.asm:271-287`):
+
+- `LIST` returns at once, so whatever a program prints to the list device is
+  discarded, and `LISTST` returns `FFh`, ready, so a program that waits for
+  the printer never waits;
+- `PUNCH` sends the byte in `C` with `TXBYTE`, all eight bits, whatever the
+  console is;
+- `READER` waits for a start bit on the serial input and returns the byte
+  with `RXBITS`, all eight bits, with no `NUL` skipped.
+
+The punch and reader are the serial port even while the console is a video
+display, so a program on the PICO9918's console can exchange binary data
+with a PC over the serial line. A byte that `CONST` has already received
+stays in `RXCHAR` for the console, and `READER` does not see it
+(`src/console.asm:277-278`). The console mode `BAT:` takes its input from the
+reader and sends its output to the list device, and so discards it.
+
 ## The matrix keyboard
 
 The matrix keyboard is read through port `FEh`. An `IN A,(C)` with `C` at
@@ -182,7 +204,7 @@ The matrix keyboard is read through port `FEh`. An `IN A,(C)` with `C` at
 selects one of eight rows; the byte read has a low bit for each key down in
 that row. Key number k is row k / 8, bit k mod 8. Keys 0, 1 and 2 are Shift,
 Ctrl and Fn, keys 3 to 6 are the arrows, and key 7 is Caps Lock
-(`src/console.asm:291-295`). TEC-OS reads the keyboard only when the board's
+(`src/console.asm:291-295`, `src/console.asm:366-367`). TEC-OS reads the keyboard only when the board's
 Matrix switch was on at cold boot: `CONINIT` copies bit 0 of port `03h` into
 `CONDEV`'s bit `CDMTX` (`src/console.asm:41-43`), and `KBPOLL` returns at once
 without it (`src/console.asm:299-301`).
@@ -213,9 +235,9 @@ case, in upper case with Shift or Caps Lock, and as control codes 01h to
 ## The video terminal
 
 On a video console every character of output goes through `VTOUT`, a terminal
-emulator of the VT100's kind (`src/term.asm:1-21`). The serial terminal gets
-no such treatment: `BCONOUT` sends its bytes untouched and the terminal
-program on the PC interprets them. `BCONOUT` itself is short
+emulator of the VT100's kind (`src/term.asm:1-21`). Serial output bypasses
+it: `BCONOUT` sends its bytes untouched and the terminal program on the PC
+interprets them. `BCONOUT` itself is short
 (`src/console.asm:208-217`): after `CONSEL` it drops the character if a
 program has claimed the PICO9918 and it is the console, goes to `VTOUT` for
 `CRT:` and `UC1:`, returns with the character dropped for `BAT:`, whose
@@ -340,6 +362,5 @@ with a PICO9918 reaches its first prompt with no display driver
 `CONDEV` (`src/lcd.asm:34-39`), and `WRDCLR` writes blanks over the row only
 while that bit is set, so that a word TEC-OS wrote is cleared when a display
 driver is installed and a row a program wrote is left alone
-(`src/glcd.asm:95-107`). The LCD is never the
-console; programs reach it through the hardware services, as Chapter 9
-describes.
+(`src/glcd.asm:95-107`). Programs reach the LCD through the hardware
+services, as Chapter 9 describes.

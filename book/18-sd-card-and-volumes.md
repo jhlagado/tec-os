@@ -8,8 +8,8 @@ bottom is a driver that talks to the card over SPI, bit by bit through one
 port. Above it, cold boot reads the container in the card's first blocks,
 checks it, and builds a drive table and a disk parameter header for each
 drive. At the top, the BIOS's disk entries turn a track and sector into a
-block of the card and a quarter of that block. This chapter goes up through
-the layers in that order, and ends with the mount service through which
+block of the card and a quarter of that block. The sections take the layers
+from the bottom up, and the last describes the mount service through which
 `MOUNT` and `VOLS` change and list the drives. Chapter 19 describes the
 block cache, which every read passes through.
 
@@ -83,7 +83,8 @@ block, about 55 milliseconds, and `SDWRITE` 216,154. Nearly all of that is
 the 4,096 bits of the block moved one at a time. When `SDXB` holds `LATEXP`
 the buffer is a line of the block cache in EXPAND 1, and each loop puts
 EXPAND 1 in view around itself and uses no stack while it is
-(`src/sd.asm:258-262`, `src/sd.asm:356-359`).
+(`src/sd.asm:258-262`, `src/sd.asm:356-359`, `src/sd.asm:364-368`,
+`src/sd.asm:427-428`).
 
 ## The container's checks
 
@@ -245,10 +246,12 @@ succeeds, the cache's copy, if it has one, is refreshed from `BLKBUF`
 cache instead, at `CWRBH` (`src/bios.asm:277-281`).
 
 A program that writes a new file sequentially on a volume written through
-therefore causes no card reads, and four card writes for each block, since
-the block goes to the card after each of its records. `SAVE 8 X.COM` on
-drive A, 16 records in four blocks, writes 18 blocks: the 16 and two of the
-directory.
+therefore causes no card reads for its data, and four card writes for each
+block, since the block goes to the card after each of its records.
+`SAVE 8 X.COM` on drive A, 16 records in four blocks, writes 18 blocks, the
+16 and two of the directory, and reads the directory's block from the card
+before each of those two writes, since the data has replaced it in
+`BLKBUF`.
 
 ## The mount service
 

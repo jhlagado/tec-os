@@ -2,12 +2,12 @@
 
 Checked against TEC-OS 98c6416.
 
-TEC-OS is one 16 KiB image for the addresses `C000h–FFFFh`. This chapter describes how that image is laid out, from the
-jump at its first byte to the free space at its end, and how the build makes
-it: the source files and the order ATOM assembles them in, the include files
-the build writes before it assembles, the two assemblies that place the
-workspace, the checks the build makes on the result, and the four names
-under which it writes the one image.
+TEC-OS is one 16 KiB image for the addresses `C000h–FFFFh`. This chapter
+describes how that image is laid out, from the jump at its first byte to the
+free space at its end, and how the build makes it: the source files and the
+order ATOM assembles them in, the include files the build writes before it
+assembles, the two assemblies that place the workspace, the checks the build
+makes on the result, and the four names under which it writes the one image.
 
 ## The image from C000h
 
@@ -26,16 +26,9 @@ The figures are those of the build at commit 98c6416, which writes them to
 in `docs/memory-map.md`. The used part, from `C000h` to the end of the code,
 is 14,541 of the 16,384 bytes.
 
-The first three bytes are a jump, `JP COLD` (`src/reset.asm:6`). At reset the
-TEC-1G's system latch is `00h`, and with the latch at `00h` the first 2 KiB
-of the ROM appear at `0000h` as well as at `C000h` (`src/reset.asm:1-3`).
-The Z80 starts at `0000h`, so the first instruction it runs is this jump,
-seen through the copy at `0000h`. `COLD` is at `C33Dh`, the first byte of
-the code, and the jump goes there in the ROM proper; its first act after
-`DI` and setting the stack is to write `LATCLAS` to the latch, which turns
-the copy at `0000h` off and leaves RAM there (`src/boot.asm:9-12`,
-`src/layout.asm:16`, `src/layout.asm:19`). Chapter 14 follows cold boot from
-that point.
+The first three bytes are a jump, `JP COLD` (`src/reset.asm:6`), to `C33Dh`,
+the first byte of the code. Chapter 14 describes how the Z80 reaches it at
+reset.
 
 The table at `C003h` is the fixed interface for programs and drivers
 (`src/abi.asm:7-21`). It starts with the signature `TNA` and the ABI's major
@@ -54,11 +47,10 @@ another in the assembly, and it holds the messages, the keyword strings, the
 keyboard's tables, the container's name and disk parameters, the BDOS's
 function table and the hardware services' table. Each group is headed by the
 name of the source file whose code uses it, so `CWMSG`, the text
-`Write lost`, sits under `cache.asm` (`src/data3.asm:108-109`). Nothing in
-the block is executed. The one part of it made of instructions, the BIOS
-jump table `BIOSBAS` (`src/data.asm:20-36`), is copied: cold boot copies it to RAM at
-`BF00h` (`src/boot.asm:45-48`), and the BDOS and programs call that copy
-(`src/cpm/bdos.asm:14-28`). Chapter 15 describes the table.
+`Write lost`, sits under `cache.asm` (`src/data3.asm:108-109`). Apart from
+the `RET` at `C01Dh`, described below, nothing in the block runs where it is.
+The BIOS jump table `BIOSBAS` (`src/data.asm:20-36`) is in it as the source of
+the copy that programs and the BDOS call, which Chapter 15 describes.
 
 The block's first five bytes are the CCP's keyword `TYPE` and its zero
 (`src/data.asm:11-12`), and the sixth, at `C01Dh`, is a `RET`
@@ -115,9 +107,9 @@ from there each file's bytes follow the last's.
 That order is what makes the layout. The table follows the reset jump
 because `abi.asm` follows `reset.asm`; the data follows the table because the
 four data files come next; and the code follows the data because every file
-after `data3.asm` is code. So a code file's routines are in the code block and its
-strings and tables are in the data block, under a heading with the file's
-name.
+after `data3.asm` is code. So a code file's routines are in the code block
+and its strings and tables are in the data block, under a heading with the
+file's name.
 
 ## The generated files
 
@@ -133,11 +125,9 @@ the banner and the LCD's top row print from (`src/data.asm:17`,
 `RXPOLL`, are the delay counts for the bit-banged serial port. The build
 works them out from the CPU's clock, 4,000,000 Hz, and the baud rate, 4800,
 using the T-states of the loops in `console.asm` (`tools/build.mjs:24-25`,
-`tools/build.mjs:40-61`). One bit is 833.3 T-states; the transmit loop
-takes 49 + 16 × `TXDLY` T-states a bit, so `TXDLY` is 49 and a bit takes 833.
-The receive loop takes 38 + 16 × `RXDLY`, so `RXDLY` is 50 and a bit takes
-838. The build stops with an error if a count would not fit in a byte.
-Chapter 15 explains the loops.
+`tools/build.mjs:40-61`). At 98c6416 they are 49, 105, 50, 74 and 77. The
+build stops with an error if a count would not fit in a byte. Chapter 15
+explains the loops and the arithmetic behind the counts.
 
 `gen/format.asm` and `gen/geom.asm` come from `format/format.json`, the one
 definition of the card's container. It gives the container's name,
@@ -226,11 +216,10 @@ result against the rules the layout depends on, and stops with
   (`tools/build.mjs:280-281`).
 
 The last check works out the TPA without running the ROM. `cardLayout`
-follows the arithmetic that cold boot's `ALVINIT` uses: the allocation
-vectors packed down from `WSBASE`, each `DSM / 8 + 1` bytes, and the BDOS
-entry jump at the highest address of the form `xx06h` at which the
-three-byte jump still ends below the vectors (`tools/build.mjs:232-236`, `src/vol.asm:496-576`). For the
-starter card's two volumes, a G1M with `DSM` 511 and a G8M with `DSM` 2047,
+follows the arithmetic that cold boot's `ALVINIT` uses, which Chapter 13
+describes: the allocation vectors packed down from `WSBASE`, and the BDOS
+entry jump below them (`tools/build.mjs:232-236`). For the starter card's two
+volumes, a G1M with `DSM` 511 and a G8M with `DSM` 2047,
 the vectors take 320 bytes and the entry is at `B806h`, which leaves 46,854
 bytes from `0100h`.
 
@@ -244,10 +233,10 @@ stacks (`tools/build.mjs:283-331`).
 
 The build has four profile names, `debug80`, `debug80t40`, `debug80g32`
 and `board`, and they all name the same image (`tools/build.mjs:28-35`).
-The PICO9918's width, which once needed a separate ROM, is now chosen by the
-driver loaded at startup, as Chapter 5 describes. The build assembles the
-first profile and copies its image and map to the other three, changing only
-the name in each census (`tools/build.mjs:335-349`). `npm run build`
+The PICO9918's width is set by the driver loaded at startup (Chapter 5), so
+every board takes the same image. The build assembles the first profile and
+copies its image and map to the other three, changing only the name and the
+description in each census (`tools/build.mjs:335-349`). `npm run build`
 prints one line for each:
 
 ```text

@@ -1,6 +1,9 @@
 # 19. The block cache
 
-Checked against TEC-OS 98c6416.
+Checked against TEC-OS 98c6416, with the starter card's `EDIT.COM` from
+Edit 845d062, whose copy on the card has the SHA-256
+`ed88337e6dfa2626dd37a225a0ec09332f4927a0bde62114bbf8661d2d0fdc78`; the
+timings and traces below were made on that card.
 
 Reading a block from the SD card takes TEC-OS about 55 milliseconds, because
 every bit of it passes through a port one at a time, as Chapter 18 describes.
@@ -22,8 +25,8 @@ to give the high byte (`src/cache.asm:131-136`). Its table is the next page.
 From `CTAB`, `BC00h`, each line has four bytes holding the number of the card
 block it holds, `FFFFFFFFh` while it is empty; from `CDIRTY`, `BC80h`, each
 line has a byte that is nonzero while the line holds changes the card lacks.
-Cold boot clears EXPAND 1 and sets the 120 bytes of block numbers to `FFh`,
-so every line starts empty and clean (`src/boot.asm:149-160`).
+Every line starts empty and clean, since cold boot clears EXPAND 1 and marks
+each line empty, as Chapter 14 describes.
 
 The lines are keyed by the block's number on the card, `SDLBA`, and not by
 drive and block within the volume. A block has one number whichever drive
@@ -33,8 +36,8 @@ All of the cache is in EXPAND 1 and all of its state outside the table is
 in the workspace above the RAM BIOS table, at fixed addresses: `CNEXT`, the
 next line to give out; `CFAIL`, set when a line's write has failed since the
 last warm boot; `CSKIP`, the line a flush leaves alone; `CWTYPE`, the write
-type of the current BIOS `WRITE`; and `CIFF`, the interrupt state the current
-BIOS call found (`src/ram.asm:196-201`). To read or write the table, a routine
+type of the current BIOS `WRITE`; and `CIFF`, the interrupt state at the
+current BIOS call's entry (`src/ram.asm:196-201`). To read or write the table, a routine
 takes from `CXON` the latch value with `LATEXP` added to `LATCHV`, writes it
 to the latch, reads or writes the bytes with no `PUSH`, `POP` or `CALL` in
 between, and writes `LATCHV` back to the latch (`src/cache.asm:36-44`).
@@ -78,7 +81,7 @@ the CCP's loads at `0100h` and up, takes from 5,763 T-states, and a miss
 
 `DIR` on the starter card's drive A shows the effect. After the first prompt
 the directory's blocks are in the cache, and `DIR`'s three BIOS reads are all
-hits, and none of them reads the card.
+hits.
 
 ## Writes through
 
@@ -216,5 +219,6 @@ whole length. A read that misses holds them off for about 235,000 T-states,
 59 milliseconds, and a directory write on the volume written behind holds
 them off while every dirty line is written: on the model the close of a file
 of four blocks took 1,111,250 T-states, and a flush of all 30 lines takes
-about 30 × 217,411, some 6.5 million T-states, or 1.6 seconds. TEC-OS itself
-never turns interrupts on, so this affects only a program that does.
+about 30 × 217,411, some 6.5 million T-states, or 1.6 seconds. Interrupts
+are on only when a program has enabled them, as Chapter 14 describes, so this
+affects only such a program.
