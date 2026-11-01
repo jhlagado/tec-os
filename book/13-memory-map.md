@@ -3,7 +3,7 @@
 Checked against TEC-OS 98c6416.
 
 TEC-OS has 16 KiB of ROM and, of RAM, the 64 KiB a TEC-1G with U9 fitted
-has. Chapter 7 describes that memory as a program sees it. This chapter
+has. Chapter 7 describes that memory from a program's side. This chapter
 describes it from TEC-OS's side: how the system latch puts RAM and ROM into
 the Z80's 64 KiB, what TEC-OS keeps in page zero, the resident workspace at
 the top of EXPAND 0 and the allocation vectors below it, the four stacks and
@@ -157,7 +157,7 @@ directory search state and the file's position, then the BDOS's stack
 `BF00h–BF32h` is the RAM BIOS table, seventeen three-byte jumps that cold
 boot copies from the ROM (`src/layout.asm:73-74`, `src/boot.asm:45-48`).
 It starts a page, so that a program that follows the word at `0001h`, which
-points at its second entry, finds the table on a page boundary
+points at its second entry, reaches the table on a page boundary
 (`src/bios.asm:1-3`).
 
 Above the table, from `SDBYTE` at `BF33h`, is state that the build puts at a

@@ -265,4 +265,4 @@ media` then copies each profile's three files to `dist/` as
 have the same SHA-256,
 `59f01f21287f0d9b1b6dd30b3fbe8df5f1971a14b9bb033715c90bd592d95932`, and the
 names are kept so that anything that reads a ROM by its profile's name still
-finds one.
+has a file to read.

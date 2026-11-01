@@ -55,7 +55,7 @@ buffer (`src/cache.asm:138-158`, `src/sd.asm:258-262`). A failed read leaves
 the line empty.
 
 `CTAKE` gives out lines in turn (`src/cache.asm:214-248`). It starts at
-`CNEXT` and takes the first clean line it finds there or after it, wrapping
+`CNEXT` and takes the first clean line from there on, wrapping
 from line 29 to line 0, and sets `CNEXT` to the line after the one it took.
 A clean line can be given out at any time, since the card has the same
 bytes, and a dirty line is passed over. When every line is dirty, `CTAKE`
@@ -176,7 +176,7 @@ occasions:
 The warm boot's flush is the one you can cause: a `^C` at the prompt is
 a warm boot, and after it every change is on the card. A reset writes
 nothing, since cold boot clears EXPAND 1 (`src/boot.asm:149-155`), and the
-changes a reset finds in the cache are lost.
+changes in the cache at the time of a reset are lost.
 
 ## Write lost
 

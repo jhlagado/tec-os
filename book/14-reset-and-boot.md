@@ -142,8 +142,8 @@ up with, and after the button it still holds what TEC-OS left there.
 TEC-OS uses that to keep one thing across a reset, the selection of volumes
 on the drives, so that a reset of a board whose drives were changed with
 `MOUNT` comes back with the same drives. The test is `RSLCAP`
-(`src/boot.asm:84-138`), and it reads only fixed addresses and runs nothing
-it finds. RAM counts as TEC-OS's when all of these hold:
+(`src/boot.asm:84-138`), and it reads only fixed addresses and runs none of
+the code it reads. RAM counts as TEC-OS's when all of these hold:
 
 - `0000h` holds a `JP` to `BF03h`, the RAM BIOS table's warm boot entry;
 - `0005h` holds a `JP`;
@@ -210,7 +210,7 @@ workspace and EXPAND 1 as on any cold boot, so drivers, the registry, the
 cache, open files and the history are gone, and the console is the serial
 terminal again (`src/boot.asm:15-28`, `src/boot.asm:149-155`). A change the
 cache held for the card is lost. Once a recognised reset has applied a
-selection, the next reset finds it again while the card still holds those
+selection, the next reset passes the test again while the card still holds those
 volumes, so only losing the RAM returns the drives to the card's own
 choice; `docs/recovery.md` sets out these limits for the user.
 

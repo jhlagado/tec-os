@@ -41,7 +41,7 @@ CP/M 2.2 (`src/data.asm:20-36`):
 The table in the ROM is never called. Cold boot copies it to `BF00h`, the
 start of the page above the BDOS's workspace (`src/boot.asm:45-48`), and
 every caller goes through the copy. The word at `0001h` points at its warm
-boot entry, `BF03h`, so a program finds the table the way CP/M 2.2 programs
+boot entry, `BF03h`, so a program reaches the table the way CP/M 2.2 programs
 do, by taking that word and subtracting 3. The BDOS calls the same copy: its
 names for the BIOS entries are offsets from `RAMBIOS` (`src/cpm/bdos.asm:14-28`),
 and its function 50, the direct BIOS call of CP/M 3, sends functions 0 to 16
