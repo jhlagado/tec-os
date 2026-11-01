@@ -9,8 +9,9 @@ image, lists and checks one, copies files to and from its volumes, builds a
 card from a recipe and writes an image to a card. It runs with Node.js from a
 clone of the repository, as `node tools/tecvol.mjs`, and `package.json` also
 names it as the command `tecvol` (`package.json:11-13`). This appendix lists
-its nine commands with their options, and each with an example. Appendix E
-describes the container the commands work on.
+its nine commands with their options, each with an example, and ends with the
+card those examples make. Appendix E describes the container the commands work
+on.
 
 ## Common rules
 
@@ -112,16 +113,47 @@ at 2 KiB each.
 
 `verify IMAGE` prints the same lines, and ends with exit status 1 if any
 volume has a fault. A container that fails its own checks fails both commands
-before they print anything. Chapter 24's card with a changed header byte
-gives:
+before they print anything. A copy of the starter card with one header byte
+changed gives:
 
 ```sh
+cp dist/starter.img build/badsum.img
+printf 'X' | dd of=build/badsum.img bs=1 seek=25 conv=notrunc
 node tools/tecvol.mjs verify build/badsum.img
 ```
 
 ```text
 tecvol: header checksum mismatch
 ```
+
+## dir
+
+`dir IMAGE [DRIVE]` lists a volume's files, drive A's by default, one line
+each: the user area, the name and the size (`tools/tecvol.mjs:120-127`). The
+size is in whole records, 128 bytes each, since CP/M records no size more
+exact. `R/O` and `SYS` follow a file with those attributes. The starter card's
+drive A:
+
+```sh
+node tools/tecvol.mjs dir dist/starter.img A
+```
+
+```text
+ 0 DEMO.COM         1280
+ 0 EDIT.COM         7936
+ 0 GLCD.DRV         1664
+ 0 MOUNT.COM         512
+ 0 PICO.DRV         1408
+ 0 PICO32.DRV       1408
+ 0 PICO40.DRV       1408
+ 0 PROBE.COM        1024
+ 0 README.TXT        640
+ 0 STARTUP.CMD       128
+ 0 TERM.COM          128
+ 0 VOLS.COM          384
+```
+
+`TERM.COM` is 95 bytes on the PC, and one record on the card.
 
 ## put
 
@@ -156,26 +188,6 @@ node tools/tecvol.mjs put build/my.img ARCHIVE build/hello.txt
 ```text
 tecvol: volume is read-only
 ```
-
-## dir
-
-`dir IMAGE [DRIVE]` lists a volume's files, drive A's by default, one line
-each: the user area, the name and the size (`tools/tecvol.mjs:120-127`). The
-size is in whole records, 128 bytes each, since CP/M records no size more
-exact. `R/O` and `SYS` follow a file with those attributes.
-
-```sh
-node tools/tecvol.mjs dir build/my.img A
-node tools/tecvol.mjs dir build/my.img B
-```
-
-```text
- 0 HELLO.TXT         128
- 0 VOLS.COM          384
- 3 TERM.COM          128
-```
-
-`TERM.COM` is 95 bytes on the PC, and one record on the card.
 
 ## get
 
@@ -213,35 +225,6 @@ usage: tecvol create|info|verify|dir|put|get|era|recipe|install ... (see tools/t
 The first command searched user area 0, which has no `TERM.COM`; the second
 erased the file from user area 3 and printed nothing.
 
-## The card on the board
-
-After those commands, the card boots with its two drives, and the text file
-reads back with TEC-OS's `TYPE`:
-
-<!-- node book/capture.mjs --card build/my.img DIR "TYPE HELLO.TXT" VOLS -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM     
-B: WORK       
-
-A>DIR
-HELLO.TXT    VOLS.COM    
-2 files, 1012K free
-A>TYPE HELLO.TXT
-hello
-world
-
-A>VOLS
-00 SYSTEM      G1M A:
-01 WORK        G8M B:
-02 ARCHIVE     G1M R/O
-
-A>
-```
-
-The card has no `STARTUP.CMD`, so no lines follow the volumes before the first
-prompt. `VOLS` lists all three volumes, `ARCHIVE` on no drive.
-
 ## recipe
 
 `recipe RECIPE.json IMAGE` builds a card from a recipe, a JSON file that lists
@@ -271,8 +254,9 @@ sha256sum build/fresh.img dist/starter.img
 2d77a418db8d0bdaba60f346605c58357c47f84bff88363606ffee20422c6710  dist/starter.img
 ```
 
-The two images are the same to the byte, since a recipe gives the same card
-from the same files every time.
+The two images are the same to the byte: the volumes' places, the `E5h` fill,
+the files' blocks and the header hold nothing that depends on the time or the
+PC.
 
 ## install
 
@@ -290,3 +274,44 @@ device such as `/dev/sdX`. Opening a device usually needs the PC's
 administrator rights. `install` checks nothing about the device, so the device
 name needs checking twice before the command runs: given the PC's own disk, it
 overwrites that disk's first blocks.
+
+## A worked example
+
+The commands above, run in order from `create` to `era`, make a card with a
+text file and a program on drive A. `dir` lists them:
+
+```sh
+node tools/tecvol.mjs dir build/my.img A
+```
+
+```text
+ 0 HELLO.TXT         128
+ 0 VOLS.COM          384
+```
+
+The card boots with its two drives, and the text file reads back with TEC-OS's
+`TYPE`:
+
+<!-- node book/capture.mjs --card build/my.img DIR "TYPE HELLO.TXT" VOLS -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM     
+B: WORK       
+
+A>DIR
+HELLO.TXT    VOLS.COM    
+2 files, 1012K free
+A>TYPE HELLO.TXT
+hello
+world
+
+A>VOLS
+00 SYSTEM      G1M A:
+01 WORK        G8M B:
+02 ARCHIVE     G1M R/O
+
+A>
+```
+
+The card has no `STARTUP.CMD`, so no lines follow the volumes before the first
+prompt. `VOLS` lists all three volumes, `ARCHIVE` on no drive.
