@@ -49,7 +49,7 @@ The header's fields (`format/format.json`, `header`):
 | 14 | 2 | Number of volumes | 2 |
 | 16 | 4 | Container length in blocks | `00005000h`, 20,480 |
 | 20 | 2 | Checksum | `07F4h` |
-| 22 | 1 | 1.1: the drives the card wants, 0 to 4; 0 in 1.0 | 0 |
+| 22 | 1 | 1.1: the number of drives to set up, 0 to 4; 0 in 1.0 | 0 |
 | 23 | 2 | 1.1: the table's sum; 0 in 1.0 | 0 |
 | 25 | 7 | Reserved, 0 | 0 |
 | 32 | 32 each | The first 15 volume descriptors | 2 |
@@ -60,9 +60,9 @@ sums all 512 and then takes the two checksum bytes back out (`src/vol.asm:781`
 to `802`). The sum covers the descriptors in block 0 as well as the header's
 fields, so a change to any byte of block 0 needs a new checksum.
 
-A card's minor version decides three things. A 1.0 card has no drives field
-and no table sum, and `tecvol` gives it at most 8 volumes. A 1.1 card may have
-up to 127, may name the drives it wants, and has the table sum
+A card's minor version sets three things. A 1.0 card has no drives field and
+no table sum, and `tecvol` gives it at most 8 volumes. A 1.1 card may have up
+to 127, may give a number of drives, and has the table sum
 (`tools/lib/container.mjs:74` to `78`, `138` to `146`). `tecvol create` makes
 a 1.1 card when it is given more than 8 volumes or `--drives`, and a 1.0 card
 otherwise. The ROM treats any minor version other than 0 as 1.1
