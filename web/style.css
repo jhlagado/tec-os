@@ -236,3 +236,44 @@ td:nth-child(3) {
   font-size: 0.85rem;
   margin: 0.5rem 0 0;
 }
+/* Phones and tablets: a hidden field the tapped screen focuses, so the
+   phone's keyboard comes up, and a row of the keys that keyboard lacks. */
+.phonekeys {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  resize: none;
+  overflow: hidden;
+  color: transparent;
+  background: transparent;
+  caret-color: transparent;
+  font-size: 16px; /* smaller makes iOS zoom in on focus */
+  pointer-events: none;
+}
+.touchkeys {
+  display: none;
+  gap: 6px;
+  margin-top: 8px;
+}
+@media (hover: none) and (pointer: coarse) {
+  .touchkeys {
+    display: flex;
+  }
+}
+.touchkeys button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0.3rem 0;
+  touch-action: manipulation;
+}
+.touchkeys button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

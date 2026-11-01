@@ -33,8 +33,18 @@
     <main>
       <section class="monitor">
         <canvas id="tms" width="1024" height="768" tabindex="0" aria-label="PICO9918 screen: click to type"></canvas>
+        <div id="touchkeys" class="touchkeys" role="toolbar" aria-label="Keys a phone keyboard lacks">
+          <button type="button" tabindex="-1" data-key="Control" aria-pressed="false">Ctrl</button>
+          <button type="button" tabindex="-1" data-key="Escape">Esc</button>
+          <button type="button" tabindex="-1" data-key="Tab">Tab</button>
+          <button type="button" tabindex="-1" data-key="ArrowLeft" aria-label="Left">&larr;</button>
+          <button type="button" tabindex="-1" data-key="ArrowUp" aria-label="Up">&uarr;</button>
+          <button type="button" tabindex="-1" data-key="ArrowDown" aria-label="Down">&darr;</button>
+          <button type="button" tabindex="-1" data-key="ArrowRight" aria-label="Right">&rarr;</button>
+        </div>
         <div class="hint">
-          Click the screen to type on the matrix keyboard. The serial terminal
+          Click the screen to type on the matrix keyboard; on a phone, tap it
+          to bring up the keyboard. The serial terminal
           is the console after <code>CON TTY</code>; <code>CON CRT</code> or
           <code>CON UC1</code> comes back.
         </div>
@@ -72,6 +82,8 @@
         <p class="note">Changing files resets the TEC-1G so CP/M sees the new directory.</p>
       </section>
     </main>
+    <textarea id="phonekeys" class="phonekeys" rows="1" tabindex="-1" aria-label="Keyboard for the TEC-1G"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="enter"></textarea>
     <script type="module" src="app.js"></script>
   </body>
 </html>

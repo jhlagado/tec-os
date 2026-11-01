@@ -354,6 +354,106 @@ $("tms").addEventListener("click", () => $("tms").focus());
 $("glcd").addEventListener("keydown", onKey(() => "matrix"));
 $("glcd").addEventListener("click", () => $("glcd").focus());
 
+// ---- Phones and tablets ------------------------------------------------------------
+// A canvas or pre brings up no on-screen keyboard. A tap on the screen, the
+// GLCD or the serial terminal focuses a hidden text field instead, and what
+// the phone's keyboard does to that field is turned into the key events the
+// tapped element would have had, for the same onKey. The field holds one
+// space, so that Backspace always has something to delete; each edit is
+// compared with what was there and the field is put back. A row of keys gives
+// the ones a phone keyboard lacks; Ctrl latches for the next key.
+
+const phone = { target: "matrix", pointer: "", ctrl: false };
+const phoneInput = $("phonekeys");
+const PHONE_REST = " ";
+let phoneSent = PHONE_REST;
+
+function phoneKey(key, ctrlHeld = false) {
+  const ctrlKey = (ctrlHeld || phone.ctrl) && key.length === 1;
+  if (phone.ctrl) setCtrl(false);
+  onKey(() => phone.target)({ key, ctrlKey, metaKey: false, altKey: false, preventDefault() {} });
+}
+
+function setCtrl(on) {
+  phone.ctrl = on;
+  $("touchkeys").querySelector('[data-key="Control"]').setAttribute("aria-pressed", String(on));
+}
+
+function phoneRest() {
+  phoneInput.value = PHONE_REST;
+  phoneInput.selectionStart = phoneInput.selectionEnd = PHONE_REST.length;
+  phoneSent = PHONE_REST;
+}
+
+// Send the difference between what the field held and what it holds now: a
+// Backspace for each character taken off the end, then each one added. A
+// keyboard composing a word changes it in place, so this follows it as it goes.
+function phoneEdited() {
+  const now = phoneInput.value;
+  let same = 0;
+  while (same < now.length && same < phoneSent.length && now[same] === phoneSent[same]) same += 1;
+  for (let i = same; i < phoneSent.length; i += 1) phoneKey("Backspace");
+  for (const ch of now.slice(same)) phoneKey(ch === "\n" || ch === "\r" ? "Enter" : ch);
+  phoneSent = now;
+}
+
+function phoneFocus(el, target) {
+  phone.target = target;
+  const box = el.getBoundingClientRect();
+  phoneInput.style.top = `${box.top + window.scrollY}px`;
+  phoneInput.style.left = `${box.left + window.scrollX}px`;
+  phoneRest();
+  phoneInput.focus({ preventScroll: true });
+  el.after($("touchkeys"));
+}
+
+for (const [id, target] of [["tms", "matrix"], ["glcd", "matrix"], ["serial", "serial"]]) {
+  const el = $(id);
+  el.addEventListener("pointerdown", (e) => {
+    phone.pointer = e.pointerType;
+  });
+  el.addEventListener("click", () => {
+    if (phone.pointer === "touch") phoneFocus(el, target);
+  });
+}
+
+phoneInput.addEventListener("keydown", (e) => {
+  if (e.isComposing || e.keyCode === 229) return; // the keyboard is editing the field: see input
+  // A key with a name, as from a tablet's own keyboard, goes as it would to the
+  // tapped element; letters a phone keyboard sends this way go the same way.
+  const ctrlKey = e.ctrlKey || (phone.ctrl && e.key.length === 1);
+  if (keyText({ key: e.key, ctrlKey, metaKey: e.metaKey, altKey: e.altKey }) === null) return;
+  e.preventDefault();
+  phoneKey(e.key, e.ctrlKey);
+});
+phoneInput.addEventListener("beforeinput", (e) => {
+  if (e.isComposing) return;
+  if (e.inputType === "insertLineBreak" || e.inputType === "insertParagraph") {
+    e.preventDefault();
+    phoneKey("Enter");
+  }
+});
+phoneInput.addEventListener("input", (e) => {
+  phoneEdited();
+  if (!e.isComposing) phoneRest();
+});
+phoneInput.addEventListener("compositionend", () => {
+  phoneEdited();
+  phoneRest();
+});
+
+for (const button of $("touchkeys").querySelectorAll("button")) {
+  button.addEventListener("mousedown", (e) => e.preventDefault()); // keep the field, and the keyboard
+  button.addEventListener("click", () => {
+    if (button.dataset.key === "Control") setCtrl(!phone.ctrl);
+    else phoneKey(button.dataset.key);
+    if (document.activeElement !== phoneInput && phone.pointer === "touch") phoneInput.focus({ preventScroll: true });
+  });
+}
+
+// For tests: the PICO9918 screen as text rows.
+globalThis.tecos = { screen: () => state.machine?.screen() ?? [] };
+
 // ---- Card ---------------------------------------------------------------------------
 
 function cardInfo() {
