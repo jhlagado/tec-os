@@ -50,7 +50,8 @@ function apply(dir, e) {
   const at = [];
   for (let i = 0; i + want.length <= lines.length; i += 1) if (want.every((w, k) => codes[i + k] === w)) at.push(i);
   if (at.length !== 1) throw new Error(`${e.file}: ${JSON.stringify(e.find)} found ${at.length} times`);
-  const put = e.put.map((l) => (/^\w+:/.test(l) ? l.replace(/^(\w+:)\s*/, "$1\t") : `\t${l}`).replace(/ /, "\t").trimEnd());
+  // A label or an EQU's name at the margin, an instruction a tab in.
+  const put = e.put.map((l) => (/^\w+:/.test(l) ? l.replace(/^(\w+:)\s*/, "$1\t") : /^\w+ EQU /i.test(l) ? l : `\t${l}`).replace(/ /, "\t").trimEnd());
   lines.splice(at[0], want.length, ...put);
   writeFileSync(path, lines.join("\n"));
 }
@@ -220,7 +221,7 @@ const WATCH = "(a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbf00)";
 const watch = (to) => ({ edits: [text(MJS, WATCH, to)], tests: ["test/commands.test.mjs"] });
 /** C01Dh a jump to a stub that passes the mount service's function N on, and returns from any other. */
 const oldFwd = (n, tests) => ({
-  edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: JP OLDFWD"]), asm("src/vol.asm", ["VUNM: LD A,C"], [`OLDFWD: CP ${n}`, "JP Z,VOLSVC", "RET", "VUNM: LD A,C"])],
+  edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: JP OLDFWD"]), asm("src/end.asm", ["CODEEND:"], [`OLDFWD: CP ${n}`, "JP Z,VOLSVC", "RET", "CODEEND:"])],
   tests,
 });
 /** A keyword the CCP takes as a built-in that refuses, before the transient path. */
@@ -236,13 +237,10 @@ const builtin = (word) => ({
 export const MUTANTS_KS30 = [
   { name: "rom: no RET at C01Dh (the build)", ...t30(["OLDVOL: DB $C9"], ["OLDVOL:"], [], DATA) },
   { name: "rom: the RET one byte out (the build)", ...t30(['DB "TYPE",0', "OLDVOL: DB $C9"], ['DB "TYPE",0,0', "OLDVOL: DB $C9"], [], DATA) },
-  // ABIXCCP's three bytes kept after ABIDRV, and two of the data's moved so that C01Dh still holds the RET.
+  // ABIXCCP's jump kept at C018h, where the table ended before, with two bytes after it so that C01Dh still holds the RET.
   {
     name: "rom: a retired entry left in the table",
-    edits: [
-      asm("src/abi.asm", ["ABIEND:"], ["ABIXCCP: JP DRVSVC", "ABIEND:"]),
-      asm(DATA, ["TYPEKEY:", 'DB "TYPE",0', "OLDVOL: DB $C9"], ["DB 0,0", "OLDVOL: DB $C9", "TYPEKEY:", 'DB "TYPE",0']),
-    ],
+    edits: [asm(DATA, ["TYPEKEY:", 'DB "TYPE",0', "OLDVOL: DB $C9"], ["ABIXCCP: JP DRVSVC", "DB 0,0", "OLDVOL: DB $C9", "TYPEKEY:", 'DB "TYPE",0'])],
     tests: ["test/devices.test.mjs"],
   },
   { name: "commands: CCP still a built-in, not reaching the transient path", ...builtin("CCP") },
@@ -256,8 +254,8 @@ export const MUTANTS_KS30 = [
   { name: "guard: not reset after REMOVE or INIT", ...t30(["DRVSHUT: LD A,0", "LD (DRVBSY),A"], ["DRVSHUT: LD A,0"], ["test/drv.test.mjs"], D) },
   // Startup's position set finished as its first line is taken.
   { name: "startup: lines stop after the first", ...t30(["STL2: LD A,L", "SUB LOW(STREC)-1"], ["STL2: LD A,$80+LOW(STREC)-1", "SUB LOW(STREC)-1"], ["test/startup.test.mjs"], D) },
-  // Warm boot empties the ring: HHEAD 0, and the entry before it 0.
-  { name: "history: cleared at warm boot", ...t30(["LD HL,DRVBSY", "RES 7,(HL)"], ["LD HL,DRVBSY", "RES 7,(HL)", "XOR A", "LD (HHEAD),A", "LD HL,HRING+$FF", "CALL HPUT"], ["test/history.test.mjs"], B) },
+  // Warm boot empties the ring: HHEAD 0, and the entry before it, at HRING+FFh, 0.
+  { name: "history: cleared at warm boot", ...t30(["LD HL,DRVBSY", "RES 7,(HL)"], ["LD HL,DRVBSY", "RES 7,(HL)", "XOR A", "LD (HHEAD),A", "LD HL,$BDFF", "CALL HPUT"], ["test/history.test.mjs"], B) },
   { name: "freed page: the watch gone", ...watch("(a < 0xbd00 ? !cacheWrite(pc) : false)") },
   { name: "freed page: the watch a byte short at the top", ...watch("(a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbeff)") },
   { name: "freed page: the watch a byte short at the bottom", ...watch("(a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe01 && a < 0xbf00)") },
@@ -279,7 +277,8 @@ export const MUTANTS_KS30 = [
     tests: ["test/hwsvc.test.mjs"],
   },
   { name: "selector: abi.inc out of step (the build)", ...t30(["HWLCD EQU 21"], ["HWLCD EQU 22"], [], "src/abi.inc") },
-  { name: "selector: HWBASE out of step with HWINFO (the build)", ...t30(["HWBASE EQU 19"], ["HWBASE EQU 20"], [], H) },
+  // HWBASE moved in hwsvc.asm and abi.inc alike, the services' numbers left.
+  { name: "selector: HWBASE out of step with HWINFO (the build)", edits: [asm(H, ["HWBASE EQU 19"], ["HWBASE EQU 20"]), asm("src/abi.inc", ["HWBASE EQU 19"], ["HWBASE EQU 20"])], tests: [] },
   // The dispatcher as ABI 3's: numbers from 0.
   { name: "old DEMO: reaches the services", edits: [asm(H, ["SUB HWBASE", "CP HWCOUNT"], ["CP HWCOUNT"]), asm(H, ["LD HL,HWTAB0"], ["LD HL,HWTAB"])], tests: ["test/clients.test.mjs"] },
   { name: "old DEMO: refusal without carry", ...t30(["HWERR: OR A", "SCF", "RET"], ["HWERR: OR A", "RET"], ["test/clients.test.mjs"], H) },
