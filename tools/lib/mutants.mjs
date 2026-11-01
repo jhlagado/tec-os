@@ -5,13 +5,16 @@
 // must occur once in the file, and the lines that replace it; an edit to any
 // other file is a text that must occur once and its replacement. A mutant is
 // caught when the build fails or a test fails, and "by" names the first three
-// to fail, in the files' order: the build's message, a test's name, or a
-// test file whose run failed outside any test, at its end, where the host's
-// watch of EXPAND 1 asserts. The names are the stage's record's; where a
+// to fail, in the files' order: the build's message or a test's name. A test
+// file whose run failed outside any test is named by the test it failed in,
+// from the trace test/lib/machine.mjs keeps with TEST_TRACE set: the test
+// running when its process died, or each test that wrote EXPAND 1 where the
+// host's watch asserts, at the file's end. Only a file that keeps no trace, or
+// died outside any test, is named as a file. The names are the stage's record's; where a
 // mutant's change had to be reconstructed from its name, the comment beside
 // it says what it does.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build, copyTree, log, node } from "./model.mjs";
@@ -96,20 +99,36 @@ async function one(dir, work, m, i) {
   }
   if (!m.tests.length) return { caught: false, by: [] };
   let tap;
+  const traceFile = resolve(copy, "test-trace.jsonl");
+  rmSync(traceFile, { force: true });
   try {
     const only = m.only ? [`--test-name-pattern=${m.only}`] : [];
-    tap = await node(copy, ["--test", "--test-concurrency=1", "--test-reporter=tap", ...only, ...m.tests]);
+    tap = await node(copy, ["--test", "--test-concurrency=1", "--test-reporter=tap", ...only, ...m.tests], { env: { TEST_TRACE: traceFile } });
   } catch (e) {
     tap = e.message;
   }
-  // A failure outside any test is named by its file: the host's watch of EXPAND 1
-  // asserts in test/lib/machine.mjs, after a file's last test, at the file's end.
   const where = (n) => (isAbsolute(n) ? relative(copy, n) : n);
-  const failed = [...tap.matchAll(/^\s*not ok \d+ - (.*?)(?: # .*)?$/gm)].map((x) => where(x[1])).map((n) => (n === "test/lib/machine.mjs" ? "the file's end" : n));
-  const names = failed.filter((n) => !m.tests.includes(n) && n !== "the file's end");
-  const by = (names.length ? names : failed).slice(0, 3);
+  const traced = existsSync(traceFile) ? readFileSync(traceFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+  const failed = [...tap.matchAll(/^\s*not ok \d+ - (.*?)(?: # .*)?$/gm)].flatMap((x) => named(where(x[1]), m.tests, traced.map((t) => ({ ...t, file: where(t.file) }))));
+  const by = [...new Set(failed)].slice(0, 3);
   log(`mutant ${m.name}: ${by.length ? "caught" : "survived"}`);
   return { caught: by.length > 0, by };
+}
+
+/**
+ * The names for a failure the TAP names N. A test's name is itself. The host's
+ * watch of EXPAND 1 asserts in test/lib/machine.mjs, after a file's last test:
+ * the tests that wrote it, from the trace. A test file, one of FILES, failed
+ * outside any test: the test the trace shows it in when its process died.
+ */
+function named(n, files, traced) {
+  if (n === "test/lib/machine.mjs") {
+    const wrote = traced.filter((t) => t.what === "expand1").map((t) => `${t.test} (a write to EXPAND 1, at the file's end)`);
+    return wrote.length ? wrote : ["the file's end"];
+  }
+  if (!files.includes(n)) return [n];
+  const last = traced.filter((t) => t.file === n).at(-1);
+  return last?.what === "start" ? [`${last.test} (its file died in it)`] : [n];
 }
 
 const RESET = ["test/reset.test.mjs"];
