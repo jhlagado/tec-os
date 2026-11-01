@@ -118,7 +118,7 @@ const V = "src/vol.asm";
 const D = "src/drv.asm";
 const r = (find, put, tests = RESET, file = B) => ({ edits: [asm(file, find, put)], tests });
 
-/** KS31's mutants, on b6fd6f6. */
+/** KS31's mutants and its review's, on a tree with KE-126's fix: b6fd6f6 has the code two of them change. */
 export const MUTANTS_KS31 = [
   { name: "recognition: (0000h) unread", ...r(["RSLCAP: LD A,($0000)", "CP $C3", "JR NZ,RSLNO"], ["RSLCAP: LD A,($0000)", "CP $C3"]) },
   { name: "recognition: (0001h) unread", ...r(["SBC HL,DE", "JR NZ,RSLNO", "LD A,(PZBDOS)"], ["SBC HL,DE", "LD A,(PZBDOS)"]) },
@@ -144,7 +144,9 @@ export const MUTANTS_KS31 = [
   { name: "capture: RSLNO leaves the old buffer", ...r(["RSLNO: XOR A", "LD (RSLBUF+6),A", "RET"], ["RSLNO: RET"]) },
   { name: "capture: D: lost", ...r(["LD BC,32"], ["LD BC,24"]) },
   { name: "abandon: a failed read ignored", ...r(["CALL DESCIX", "RET NZ", "LD HL,RSLTMP"], ["CALL DESCIX", "LD HL,RSLTMP"], RESET, V) },
-  { name: "abandon: one descriptor on two drives", ...r(["XOR A", "LD (RSLTMP+6),A"], [], RESET, V) },
+  { name: "abandon: one descriptor on two drives", ...r(["JR RSDESC"], [], RESET, V) },
+  // KE-126 undone: RSLTMP's geometry zeroed after a match, as b6fd6f6 did, so that a retained drive of geometry 0 matches next.
+  { name: "abandon: a drive of geometry 0 matched", ...r(["LD (HL),A", "JR RSDESC"], ["LD (HL),A", "XOR A", "LD (RSLTMP+6),A"], RESET, V) },
   { name: "abandon: no slot check", ...r(["CALL VSLOT", "RET C"], [], RESET, V) },
   // The review's M4: VSLOT passed over for a drive with no slot.
   {

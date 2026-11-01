@@ -16,7 +16,8 @@
 // The trees are git archives in build/model-ks31/, and the shipped card is
 // each tree's own dist/starter.img, by its tools/media.mjs, which needs the
 // pinned EDIT.COM (EDIT_COM). --mutants and --against are as for
-// tools/ks30-model.mjs.
+// tools/ks30-model.mjs. The mutants are on a tree with KE-126's fix, which
+// b6fd6f6 lacks: with --mutants, --landed names a tree that has it.
 //
 // RESEL inside MOUNT, the arrangement the stage rejected, was a prototype's
 // and isn't rebuilt here: its figures are null. The repeated DPH is rebuilt

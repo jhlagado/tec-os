@@ -370,6 +370,20 @@ for (const [name, spoil] of Object.entries(RETAINED)) {
   });
 }
 
+test("a retained drive of geometry 0 is not retained, whatever its other bytes, and no volume is on two drives", () => {
+  // B: as A: but for its geometry: what VCLEAR and UNMOUNT never leave, but a damaged DRVTAB that passes recognition can.
+  const m = machine();
+  for (let i = 0; i < 8; i += 1) m.write(entry(m, 1) + i, i === 6 ? 0 : m.read(entry(m, 0) + i));
+  const text = reset(m);
+  assert.deepEqual(idx(m), [1, 0, 0, 0]);
+  assert.equal(m.read(entry(m, 1) + 6), 0, "B: empty");
+  assert.equal(lineCount(text, "SYSTEM"), 1, text);
+  assert.doesNotMatch(text, /B: /);
+  assert.notEqual(mountOn(m, 1, 0), 0, "SYSTEM is on A: already");
+  assert.equal(mountOn(m, 1, 1), 0);
+  assert.match(m.command("DIR B:"), /NO FILE/);
+});
+
 test("a retained drive left with no slot on a card of identical extents gives the defaults whole", () => {
   // ALT a default on C: of the first card and not of the second, so that C: has a slot only on the first.
   const m = machine(card(VOLUMES.map((v) => (v.label === "ALT" ? { ...v, mount: "C" } : v))));

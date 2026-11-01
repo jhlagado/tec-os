@@ -392,9 +392,13 @@ MNZ:	LD	(HL),0
 ; after ALVINIT has given the card's defaults their slots, so that neither
 ; slots nor TPA vary with the selection. Step 1 reads and changes nothing: one
 ; walk of the descriptors, each compared with every retained drive on the
-; eight bytes MNFILL builds. It gives up, leaving the defaults whole, on a
-; failed read, a descriptor matching two drives, a volume whose slot wouldn't
-; hold its vector by VMNT's rule, or a retained drive left with no match. Step
+; eight bytes MNFILL builds. A descriptor goes to the first drive it matches
+; and no other is tried, so a second drive holding the same entry is left with
+; no match. A drive of geometry 0 is not retained, whatever its other seven
+; bytes: no descriptor MOUNT accepts has geometry 0, so none matches it. Step 1
+; gives up, leaving the defaults whole, on a failed read, a volume whose slot
+; wouldn't hold its vector by VMNT's rule, or a retained drive (geometry not
+; 0) left with no match. Step
 ; 2 reads nothing and can't fail: RSLBUF replaces DRVTAB and DRVIDX, and each
 ; drive's DPH is built. Drives not retained stay empty, even if the card names
 ; them. Destroys AF, BC, DE, HL and IX.
@@ -423,8 +427,8 @@ RSDRV:	CALL	RSEQ
 	LD	A,(MNTI)	; as DRVIDX counts them
 	INC	A
 	LD	(HL),A		; kept for step 2
-	XOR	A		; a second drive now can't match this one, and
-	LD	(RSLTMP+6),A	; is left with none, which gives up below
+	JR	RSDESC		; no other drive is tried: a duplicate is left
+				; with no match, which gives up below
 RSNEXT:	LD	HL,DRVESZ	; the next retained drive
 	ADD	HL,DE
 	EX	DE,HL		; DE goes on, C counts
@@ -432,7 +436,7 @@ RSNEXT:	LD	HL,DRVESZ	; the next retained drive
 	LD	A,C
 	CP	MAXDRV		; all four, retained or not
 	JR	C,RSDRV
-	LD	HL,MNTI		; the next descriptor
+RSDESC:	LD	HL,MNTI		; the next descriptor
 	INC	(HL)
 	LD	A,(MNTCNT)	; MOUNT's count of them
 	CP	(HL)
