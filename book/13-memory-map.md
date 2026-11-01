@@ -185,7 +185,7 @@ Cold boot places the vectors after it has read the card. `ALVINIT` starts at
 `WSBASE` and works down, giving each drive its vector in drive order and
 putting each one's address in the drive's DPH (`src/vol.asm:496-570`). How
 much it gives each drive depends on the card. A card of container format 1.1
-whose header asks for N drives gets a 256-byte slot for each of drives A to
+whose header has a drive count of N gets a 256-byte slot for each of drives A to
 the Nth, mounted or not, so that any of those drives can later take any
 volume. Any other card, including every format 1.0 card, gets a slot for each
 drive it mounts, of the size its volume needs (`src/vol.asm:517-545`).
