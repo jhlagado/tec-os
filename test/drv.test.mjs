@@ -115,6 +115,8 @@ function ranges(m) {
       "XMDST to MVREST": [s("XMDST"), s("XMARK")],
       LINEBUF: [s("LINEBUF"), s("LINEBUF") + 80],
       "the mount scratch": [s("MNTCNT"), s("LINEBUF")],
+      // KS32: cleared as each command is taken, FF00h after an error.
+      PRGCODE: [s("PRGCODE"), s("PRGCODE") + 2],
     },
   };
 }
