@@ -57,8 +57,10 @@ caret, so `^C` means Ctrl and C together.
 
 ## Contents
 
-Chapter 1 is written. The entries for the other chapters list their planned
-subjects and the source files their statements are to be checked against.
+Chapters 1, 2, 4, 6, 7, 8, 12, 13, 14, 15, 18, 19, 21, 23, 24 and 26 and
+appendices E, F and G are written. The entries for the other chapters list
+their planned subjects and the source files their statements are to be
+checked against.
 
 ### Part I: Using and programming TEC-OS
 
