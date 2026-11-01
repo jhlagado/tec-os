@@ -146,6 +146,11 @@ export const MUTANTS_KS31 = [
   { name: "abandon: a failed read ignored", ...r(["CALL DESCIX", "RET NZ", "LD HL,RSLTMP"], ["CALL DESCIX", "LD HL,RSLTMP"], RESET, V) },
   { name: "abandon: one descriptor on two drives", ...r(["XOR A", "LD (RSLTMP+6),A"], [], RESET, V) },
   { name: "abandon: no slot check", ...r(["CALL VSLOT", "RET C"], [], RESET, V) },
+  // The review's M4: VSLOT passed over for a drive with no slot.
+  {
+    name: "abandon: a drive with slot 0 taken as fitting",
+    ...r(["CALL VSLOT", "RET C", "LD HL,RSLIDX"], ["LD HL,DRVSLOT", "LD B,0", "ADD HL,BC", "LD A,(HL)", "OR A", "JR Z,RSFIT", "CALL VSLOT", "RET C", "RSFIT: LD HL,RSLIDX"], RESET, V),
+  },
   // The size VSLOT asks of a slot one less: none for a small volume, G1M's for a large.
   { name: "abandon: slot check one size small", ...r(["LD A,2", "SBC A,0"], ["LD A,1", "SBC A,0"], RESET, V) },
   { name: "abandon: a retained drive with no match", ...r(["OR (HL)", "RET NZ", "RSCHK1: INC DE"], ["OR (HL)", "RSCHK1: INC DE"], RESET, V) },
@@ -166,6 +171,14 @@ export const MUTANTS_KS31 = [
   { name: "step 2: indices not copied", ...r(["LD BC,MAXDRV*DRVESZ+MAXDRV", "LDIR", "LD C,0"], ["LD BC,MAXDRV*DRVESZ", "LDIR", "LD C,0"], RESET, V) },
   { name: "step 2: index off by one", ...r(["ADD HL,BC", "LD A,(MNTI)", "INC A", "LD (HL),A"], ["ADD HL,BC", "LD A,(MNTI)", "LD (HL),A"], RESET, V) },
   { name: "step 2: no DPH built", ...r(["LD A,E", "CALL MNDPH"], ["LD A,E"], RESET, V) },
+  // The review's M5.
+  { name: "step 2: a DPH rebuilt for A: only", ...r(["RSDPH1: INC C", "LD A,C", "CP MAXDRV", "JR C,RSDPH"], ["RSDPH1: INC C", "LD A,C", "CP 1", "JR C,RSDPH"], RESET, V) },
+  // The review's M10 and M11.
+  { name: "DIAG: the header dump zeroes RSLBUF+6", ...r(["CP 'H'", "JR NZ,DGLOOP", "LD HL,BLKBUF"], ["CP 'H'", "JR NZ,DGLOOP", "XOR A", "LD (RSLBUF+6),A", "LD HL,BLKBUF"], RESET, "src/diag.asm") },
+  {
+    name: "MOUNT: no default A: let through when a selection is retained",
+    ...r(["LD A,(DRVTAB+6)", "OR A", "LD A,MENOA", "JR Z,MNTERR"], ["LD A,(DRVTAB+6)", "LD HL,RSLBUF+6", "OR (HL)", "LD A,MENOA", "JR Z,MNTERR"], RESET, V),
+  },
   // The walk ends after its first descriptor, as a walk that never reads on would.
   { name: "step 2: the walk stops at the first block", ...r(["LD A,(MNTCNT)", "CP (HL)", "JR NZ,RSWALK"], ["LD A,1", "CP (HL)", "JR NZ,RSWALK"], RESET, V) },
   { name: "RESEL before ALVINIT", ...r(["CALL ALVINIT", "CALL RESEL"], ["CALL RESEL", "CALL ALVINIT"]) },

@@ -30,17 +30,30 @@ const card = (vols = VOLUMES, opts) => createContainer(vols, opts);
 
 const put16 = (b, at, v) => { b[at] = v & 0xff; b[at + 1] = v >> 8; };
 
+/** OUT's table sum, if it has one, and header checksum made good for its N descriptors. */
+function resum(out, n) {
+  const h = format.header.fields;
+  if (out[h.minor.offset]) put16(out, h.tableSum.offset, tableSum(out, n));
+  put16(out, h.checksum.offset, headerChecksum(out.subarray(0, 512)));
+  return out;
+}
+const count = (image) => image[format.header.fields.volumeCount.offset] | (image[format.header.fields.volumeCount.offset + 1] << 8);
+
 /** IMAGE with descriptor I taken out, its neighbours' extents as they were. */
 function without(image, i) {
   const out = Uint8Array.from(image);
-  const h = format.header.fields;
-  const n = out[h.volumeCount.offset] | (out[h.volumeCount.offset + 1] << 8);
+  const n = count(out);
   for (let j = i; j < n - 1; j += 1) out.copyWithin(descriptorAt(j), descriptorAt(j + 1), descriptorAt(j + 1) + format.descriptor.bytes);
   out.fill(0, descriptorAt(n - 1), descriptorAt(n - 1) + format.descriptor.bytes);
-  put16(out, h.volumeCount.offset, n - 1);
-  if (out[h.minor.offset]) put16(out, h.tableSum.offset, tableSum(out, n - 1));
-  put16(out, h.checksum.offset, headerChecksum(out.subarray(0, 512)));
-  return out;
+  put16(out, format.header.fields.volumeCount.offset, n - 1);
+  return resum(out, n - 1);
+}
+
+/** IMAGE with descriptor I's default drive MOUNT, which createContainer would refuse when it leaves no A:. */
+function remount(image, i, mount) {
+  const out = Uint8Array.from(image);
+  out[descriptorAt(i) + format.descriptor.fields.mount.offset] = mount;
+  return resum(out, count(out));
 }
 
 const warm = (m) => {
@@ -123,6 +136,21 @@ test("a selected volume of another geometry than the drive's default gets its ow
   reset(m);
   assert.deepEqual(idx(m), [3, 2, 0, 0]);
   const small = m.command("DIR");
+  assert.ok(Number(/(\d+)K free/.exec(small)[1]) < Number(/(\d+)K free/.exec(big)[1]) / 4, `${small} against ${big}`);
+  assert.doesNotMatch(small, /Bad Sector/);
+});
+
+test("a drive other than A: selected with another geometry than its default's gets its own DPH", () => {
+  const vols = [VOLUMES[0], { geometry: "G8M", label: "WORK", mount: "B" }, VOLUMES[2]];
+  const image = card(vols);
+  for (const v of ["WORK", "ALT"]) volume(image, v).write("HELLO.TXT", new Uint8Array(128));
+  const m = machine(image);
+  const big = m.command("DIR B:");
+  assert.equal(mountOn(m, 1, 2), 0);
+  reset(m);
+  assert.deepEqual(idx(m), [1, 3, 0, 0]);
+  const small = m.command("DIR B:");
+  assert.match(small, /HELLO/);
   assert.ok(Number(/(\d+)K free/.exec(small)[1]) < Number(/(\d+)K free/.exec(big)[1]) / 4, `${small} against ${big}`);
   assert.doesNotMatch(small, /Bad Sector/);
 });
@@ -245,6 +273,56 @@ test("a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset
   assert.deepEqual(idx(n), DEFAULTS, "RAM with no PZINIT behind it is unrecognised");
 });
 
+const DIAGP = /R retry, H header> $/;
+/** M, its selection made on GOOD, reset with BAD in, to DIAG's prompt. */
+function toDiag(m, bad) {
+  m.swapCard(bad);
+  const from = m.output.length;
+  m.reset();
+  return m.expect(DIAGP, { from, maxCycles: 400_000_000 });
+}
+/** Type KEY at DIAG and wait for its prompt, or for A> with UNTIL. */
+function atDiag(m, key, until = DIAGP) {
+  const from = m.output.length;
+  m.type(key);
+  return m.expect(until, { from, maxCycles: 400_000_000 });
+}
+
+test("DIAG's retry uses the selection after the header dump and after a second failure", () => {
+  const good = card();
+  const dead = Uint8Array.from(good);
+  dead[0] ^= 0xff;
+  const m = remapped(good);
+  toDiag(m, dead);
+  const dump = atDiag(m, "H");
+  assert.match(dump, /^H\r\n((?:[0-9A-F]{2} ){16}\r\n){4}R retry/, "the header dump");
+  m.swapCard(good);
+  atDiag(m, "R", /A>$/);
+  assert.deepEqual(idx(m), [3, 2, 0, 0], "a retry after the header dump");
+
+  const n = remapped(good);
+  toDiag(n, dead);
+  assert.match(atDiag(n, "R"), /error 21\r\nR retry/, "a second failure");
+  n.swapCard(good);
+  atDiag(n, "R", /A>$/);
+  assert.deepEqual(idx(n), [3, 2, 0, 0], "a retry after a second failure");
+});
+
+test("a card with no default A: under a valid retained A: reaches DIAG, and a retry uses the selection", () => {
+  // Two drives slotted, so that A: has a slot on either card and only MOUNT's refusal stands in the way.
+  const good = card(VOLUMES, { drives: 2 });
+  const noA = remount(good, 0, format.descriptor.unmounted);
+  const m = remapped(good);
+  m.swapCard(noA);
+  const from = m.output.length;
+  m.reset();
+  const text = m.expect(new RegExp(`${DIAGP.source}|A>$`), { from, maxCycles: 400_000_000 });
+  assert.match(text, /error 2A\r\nR retry, H header> $/, "MENOA, at DIAG");
+  m.swapCard(good);
+  atDiag(m, "R", /A>$/);
+  assert.deepEqual(idx(m), [3, 2, 0, 0]);
+});
+
 test("an index moved by new volumes at lower starts is kept, and regenerated", () => {
   const big = card([VOLUMES[0], { geometry: "G1M", label: "NEW", mount: "-" }, ...VOLUMES.slice(1)]);
   const small = without(big, 1);
@@ -291,6 +369,17 @@ for (const [name, spoil] of Object.entries(RETAINED)) {
     assert.match(m.command("DIR B:"), /NO FILE/);
   });
 }
+
+test("a retained drive left with no slot on a card of identical extents gives the defaults whole", () => {
+  // ALT a default on C: of the first card and not of the second, so that C: has a slot only on the first.
+  const m = machine(card(VOLUMES.map((v) => (v.label === "ALT" ? { ...v, mount: "C" } : v))));
+  assert.deepEqual(idx(m), [1, 2, 3, 0]);
+  m.swapCard(card());
+  reset(m);
+  assert.equal(m.read(m.sym("DRVSLOT") + 2), 0, "C: has no slot");
+  assert.deepEqual(idx(m), DEFAULTS);
+  assert.match(m.command("DIR B:"), /NO FILE/);
+});
 
 test("a G8M volume kept on a drive whose slot is G1M's gives the defaults, and one that fits doesn't", () => {
   const vols = (b) => [VOLUMES[0], { geometry: b, label: "WORK", mount: "B" }, { geometry: "G8M", label: "BIGV", mount: "-" }];
