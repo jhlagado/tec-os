@@ -303,7 +303,7 @@ start of the window, so that bank 1 has no bytes a program may copy to or from
 (`src/xmove.asm:1-7`, `src/boot.asm:163-165`, `src/layout.asm:23`).
 `MVRANGE` rejects every range in bank 1 that does not lie between `8000h` and
 the mark, and in bank 0 every range that does not end by the word at `0006h`
-(`src/xmove.asm:144-167`). TEC-OS's own copies, from the cache's lines to the
+(`src/xmove.asm:147-169`). TEC-OS's own copies, from the cache's lines to the
 DMA buffer and back, use the same routine without the check, `MVCOPY`.
 
 The routines that put EXPAND 1 in view use no stack until EXPAND 0 is back,
