@@ -209,7 +209,7 @@ with `STRICT=1`, which `npm run test:strict` sets (`test/lib/inputs.mjs:1` to
 Every test is evidence from the model. A behaviour the model gets wrong, such
 as a write under the boot overlay or the decoding of the latch's upper bits,
 gives a passing test and a different board. Chapter 24 describes the
-diagnostics ROM, which asks those questions of a board.
+diagnostics ROM, which tests those points on a board.
 
 ## The web page
 
@@ -232,9 +232,9 @@ its drive (`tools/lib/recipe.mjs:14` to `26`). The card is kept in the
 browser's IndexedDB, in the database `tecos`, the store `cards`, under the key
 `current` (`web/src/store.mjs:4` to `6`). Each write TEC-OS makes to the card
 marks it changed, and every 2 seconds a changed card is stored again
-(`web/src/main.mjs:76` to `78`, `90` to `94`). A browser that refuses the
-storage gets one warning in its console, and the page runs on with the card in
-memory (`web/src/store.mjs:1` and `2`, `17` to `21`).
+(`web/src/main.mjs:76` to `78`, `90` to `94`). When the browser's storage
+fails, the page writes one warning to the browser's console, and the page runs
+on with the card in memory (`web/src/store.mjs:1` and `2`, `17` to `21`).
 
 Each frame of the browser's display, the page runs the machine for the time
 since the last frame at 4 MHz, at most 100 ms of it, and stops early after 30
