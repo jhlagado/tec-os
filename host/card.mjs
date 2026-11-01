@@ -4,6 +4,7 @@
 import { findVolume, parseContainer, volumePayload } from "../tools/lib/container.mjs";
 import { CpmVolume } from "../tools/lib/cpmfs.mjs";
 import { FORMAT } from "../tools/lib/drv-format.mjs";
+import { fromLatin1, toLatin1 } from "../tools/lib/bytes.mjs";
 
 export const WIDTH_FILES = { 80: "PICO.DRV", 40: "PICO40.DRV", 32: "PICO32.DRV" };
 const DISPLAY_LINE = /^(PICO(40|32)?|GLCD)\.DRV$/i;
@@ -44,10 +45,10 @@ export function prepareCard(image, display, width) {
 export function setDisplayLine(image, display, width) {
   const a = driveA(image);
   const had = a.list().some((f) => f.name === "STARTUP.CMD");
-  const old = had ? Buffer.from(a.read("STARTUP.CMD")).toString("latin1").split("\x1a")[0] : "";
+  const old = had ? toLatin1(a.read("STARTUP.CMD")).split("\x1a")[0] : "";
   const rest = old.split(/\r?\n/).filter((l) => l !== "" && !DISPLAY_LINE.test(l.trim()));
   const text = [displayFile(display, width), ...(display === "tms" ? ["GLCD.DRV"] : []), ...rest].map((l) => `${l}\r\n`).join("");
   if (text === old) return false;
-  a.write("STARTUP.CMD", Buffer.from(`${text}\x1a`, "latin1"));
+  a.write("STARTUP.CMD", fromLatin1(`${text}\x1a`));
   return true;
 }

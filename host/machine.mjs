@@ -13,6 +13,7 @@ import { SdSpi } from "@jhlagado/debug80-runtime/platforms/tec1g/sd-spi";
 import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
 import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap";
 import { Ds1302 } from "@jhlagado/debug80-runtime/platforms/tec1g/ds1302";
+import { toLatin1 } from "../tools/lib/bytes.mjs";
 
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
@@ -289,7 +290,7 @@ export class Machine {
 
   text(from = 0) {
     const done = this.outputText.length;
-    if (done < this.output.length) this.outputText += Buffer.from(this.output.slice(done)).toString("latin1");
+    if (done < this.output.length) this.outputText += toLatin1(Uint8Array.from(this.output.slice(done)));
     return this.outputText.slice(from);
   }
 
@@ -343,7 +344,7 @@ export class Machine {
 
   /** Serial bytes as text. */
   serialText(from = 0) {
-    return Buffer.from(this.serial.slice(from)).toString("latin1");
+    return toLatin1(Uint8Array.from(this.serial.slice(from)));
   }
 
   /** Type text one character at a time, as a terminal user would: each byte
