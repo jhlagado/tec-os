@@ -186,19 +186,42 @@ R retry, H header>
 ```
 
 `tecvol create` and the starter card's recipe always place the volumes in
-order, so a card made by either passes both.
+order, so a card made by either passes the ROM's order check.
 
 The drives field limits the drive bytes. On a 1.1 card that gives N drives, a
 volume may name only drives A to the Nth. With N of 0, or on a 1.0 card, any
-of the four (`src/vol.asm:222-226`).
+of the four (`src/vol.asm:222-226`). `tecvol` checks only that a drive byte is
+`FFh` or 0 to 3 (`tools/lib/container.mjs:175`), so a 1.1 card made with
+`--drives 2` and a volume on drive C passes `tecvol verify`, and the ROM stops
+at the diagnostic prompt with code `29h`:
 
-`tecvol` makes these checks and more (`tools/lib/container.mjs:127-191`). It
-also requires at most 8 volumes on a 1.0 card, a known cache flag, volume ids
-different from each other, unique labels on a 1.1 card, no volume both
-read-only and written behind, at most one written behind, and an image as long
-as the header's container length. The ROM checks none of the cache byte, the
-label, the reserved bytes or whether two volumes share an id, and it can't
-check the card's size.
+```sh
+node tools/tecvol.mjs create build/drv2.img --volume G1M:SYSTEM:A --volume G1M:EXTRA:C --drives 2
+node tools/tecvol.mjs verify build/drv2.img
+```
+
+```text
+container: format 1.1, 6144 blocks (3145728 bytes), 2 volume(s), 2 drive(s) wanted
+  A: SYSTEM      id 1 G1M start 2048 rw 0 file(s), 1040384 bytes free
+  C: EXTRA       id 2 G1M start 4096 rw 0 file(s), 1040384 bytes free
+```
+
+<!-- node book/capture.mjs --card build/drv2.img -->
+```text
+TEC-OS 0.1 for TEC-1G
+No volume mounted, error 29
+R retry, H header> 
+```
+
+`tecvol` makes the ROM's checks, except two, and more
+(`tools/lib/container.mjs:127-191`). The two it misses are the descriptors'
+order on a 1.0 card, code `28h`, and a volume on a drive beyond the number the
+drives field gives, code `29h`. It also requires at most 8 volumes on a 1.0
+card, a known cache flag, volume ids different from each other, unique labels
+on a 1.1 card, no volume both read-only and written behind, at most one
+written behind, and an image as long as the header's container length. The ROM
+checks none of the cache byte, the label, the reserved bytes or whether two
+volumes share an id, and it can't check the card's size.
 
 ## The geometries
 
