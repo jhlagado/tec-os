@@ -28,10 +28,10 @@ it in `HL`. CP/M 2.2 defines no register as kept across a call, so a program
 saves in its own memory, or on its stack, every value it uses after the
 call.
 
-The word at `0006h`, inside the jump at `0005h`, is the address of the
-BDOS's entry, and it is also the end of the memory a program may use, as
-Chapter 7 explains. Beyond reading that word, a program has no use for the
-BDOS's address: it calls `0005h`.
+The word at `0006h`, inside the jump at `0005h`, is the address that jump
+leads to, the BDOS's entry or a driver's jump on to it, and it is also the
+end of the memory a program may use, as Chapter 7 explains. Beyond reading
+that word, a program has no use for that address: it calls `0005h`.
 
 The functions this chapter uses are these:
 
@@ -106,7 +106,7 @@ B>
 
 The transcript leaves out the boot before `B:`. The blank line before the
 prompt comes from TEC-OS: when a program ends, the CCP starts a new line
-before it prints the prompt again. The CCP looks for the program on the
+before it prints the prompt again. The CCP searches for the program on the
 current drive only, so at `A>` the command `HELLO` comes back as `HELLO?`,
 and `B:HELLO` runs the program from drive B.
 
@@ -279,8 +279,9 @@ Hello from the TEC-1G
 B>
 ```
 
-With `EDIT` from the starter card to change the source, the whole cycle of
-editing, assembling and running a program takes place on the TEC-1G.
+With `A:EDIT HELLO.ASM`, the starter card's editor, to change the source,
+the whole cycle of editing, assembling and running a program takes place on
+the TEC-1G.
 
 ## The ways a program ends
 
@@ -297,13 +298,14 @@ is a warm boot:
 - a key pressed after a BDOS error such as `Bdos Err On B: Bad Sector`.
 
 The warm boot writes the block cache's changes to the card, puts back the
-jumps in page zero, clears each restart vector at `0008h–0037h` that a
-program set, keeping only a jump into the ROM, starts the CCP again and
-prints the prompt on the drive and in the user area held in the byte at
-`0004h`. The CCP writes that byte before it starts a program, so the prompt
-is on the drive and user area current then, unless the program changed the
-byte. Drivers stay installed, and the IOBYTE keeps its value. Chapter 14
-describes the warm boot step by step.
+jumps in page zero, clears each restart vector at `0008h–0037h`, the
+addresses that `RST` instructions call (Chapter 7), that a program set,
+keeping only a jump into the ROM, starts the CCP again and prints the prompt
+on the drive and in the user area held in the byte at `0004h`. The CCP
+writes that byte before it starts a program, so the prompt is on the drive
+and user area current then, unless the program changed the byte. Drivers
+stay installed, and the IOBYTE keeps its value. Chapter 14 describes the
+warm boot step by step.
 
 The stack the CCP gives a program is the CCP's own, and it has 28 bytes free
 below the return address, enough for a few levels of calls and pushes. A
