@@ -74,14 +74,14 @@ its size and the layout of its directory:
 | G1M | 1 MiB | 2 KiB | 256 |
 | G8M | 8 MiB | 4 KiB | 512 |
 
-CP/M gives space to a file in allocation blocks, so the smallest file takes
-2 KiB on a G1M volume and 4 KiB on a G8M volume. A directory entry describes
-up to 16 KiB of a file on a G1M volume and 32 KiB on a G8M volume, and a
-larger file takes more than one. The directory is at the start of the
-volume, in its first allocation blocks: 8 KiB on G1M and 16 KiB on G8M,
-which is why an empty G8M volume has 8,372,224 bytes free, 16 KiB less than
-8 MiB. Both geometries have 128-byte records, the unit in which CP/M reads
-and writes, four of them to a 512-byte block of the card.
+CP/M gives space to a file in allocation blocks, so the smallest file with
+any data in it takes 2 KiB on a G1M volume and 4 KiB on a G8M volume. A
+directory entry describes up to 16 KiB of a file on a G1M volume and 32 KiB
+on a G8M volume, and a larger file takes more than one. The directory is at
+the start of the volume, in its first allocation blocks: 8 KiB on G1M and 16
+KiB on G8M, which is why an empty G8M volume has 8,372,224 bytes free, 16
+KiB less than 8 MiB. Both geometries have 128-byte records, the unit in
+which CP/M reads and writes, four of them to a 512-byte block of the card.
 
 A volume's contents are an ordinary CP/M 2.2 directory and data area, so a
 PC tool that reads CP/M disks, such as cpmtools, reads a volume copied out
@@ -155,8 +155,10 @@ container: format 1.1, 38912 blocks (19922944 bytes), 4 volume(s), 4 drive(s) wa
 ```
 
 `GAMES` and `SPARE` have `-` for their drive: TEC-OS puts them on no drive
-at cold boot. `tecvol verify` prints the same lines and also checks each
-volume's directory, as the last section of this chapter describes.
+at cold boot. `tecvol info` and `tecvol verify` both check each volume's
+directory and print any problem in it under the volume's line, and `verify`
+exits with status 1 when there is one, as the last section of this chapter
+describes.
 
 ## Recipes and the starter card
 
@@ -181,7 +183,7 @@ Its volumes, written here one to a line, are these:
 ]
 ```
 
-and each file has an entry such as this one:
+and each file, inside the `components` list, has an entry such as this one:
 
 ```json
 {
@@ -283,15 +285,15 @@ drive is first used, and it is how the BDOS finds a free block without
 reading the directory. A G1M volume's vector is 64 bytes and a G8M volume's
 256 bytes.
 
-The vectors are in the memory just below the BDOS, and so they come out of
-the memory programs have. Cold boot gives out the space in one of two ways.
-A card in format 1.0, or one in format 1.1 whose header gives no number of
-drives, gets a vector for each drive cold boot puts a volume on, sized for
-that volume. The starter card's two drives take 64 and 256 bytes, the word
-at `0006h` is `B806h`, and programs have 46,854 bytes. Drives C and D get no
-vector, so on the starter card no volume can be mounted on them. A drive
-keeps its vector when `MOUNT` empties it, and drive B's, of 256 bytes, can
-take a G1M or a G8M volume:
+The vectors are just below TEC-OS's workspace, and the BDOS's entry is below
+them, so they come out of the memory programs have. Cold boot gives out the
+space in one of two ways. A card in format 1.0, or one in format 1.1 whose
+header gives no number of drives, gets a vector for each drive cold boot
+puts a volume on, sized for that volume. The starter card's two drives take
+64 and 256 bytes, the word at `0006h` is `B806h`, and programs have 46,854
+bytes. Drives C and D get no vector, so on the starter card no volume can be
+mounted on them. A drive keeps its vector when `MOUNT` empties it, and drive
+B's, of 256 bytes, can take a G1M or a G8M volume:
 
 <!-- node book/capture.mjs "MOUNT B:" "MOUNT C: WORK" "MOUNT B: WORK" -->
 ```text
@@ -314,10 +316,11 @@ N` makes it, gets a 256-byte vector for each of drives A to the Nth, whether
 a volume is on it at cold boot or not, so that any of those drives can take
 any volume later. `my.img`'s header gives four, and its vectors take 1,024
 bytes: the word at `0006h` is `B506h`, and programs have 46,086 bytes, 768
-fewer than on the starter card. A drive past the Nth gets no vector, and a
-card whose header puts a volume on such a drive fails the checks at cold
-boot. Chapter 7 describes the memory programs have, and Chapter 13 the rest
-of the map.
+fewer than on the starter card, since the BDOS's entry goes at offset 6 of
+the page below the vectors. A drive past the Nth gets no vector, and a card
+whose header puts a volume on such a drive fails the checks at cold boot.
+Chapter 7 describes the memory programs have, and Chapter 13 the rest of the
+map.
 
 ## The block cache and the volume written behind
 
@@ -351,11 +354,13 @@ The order of the writes keeps the card's directory true to its data: TEC-OS
 writes a directory block only after every changed data block the cache
 holds, so the directory never names a block whose data isn't on the card.
 
-When a changed block can't be written, it stays in the cache, and each warm
-boot tries it again and prints `Write lost` while the write still fails. A
-reset or a power cut discards it.
+When a changed data block can't be written, it stays in the cache, and each
+warm boot tries it again and prints `Write lost` while the write still
+fails. A directory block that can't be written is dropped from the cache,
+and the directory is read from the card again. A reset or a power cut
+discards both.
 
-## What a reset keeps
+## The drives after a reset
 
 A reset runs cold boot, and cold boot rebuilds TEC-OS's memory: the cache,
 the drivers, the command history and the open files are all gone after it,
@@ -391,45 +396,43 @@ The transcript leaves out the boot before the first `MOUNT`. If any of the
 volumes doesn't match a descriptor on the card in the socket, the whole
 choice is dropped and the drives get the volumes the header names, as after
 a power cycle. Turning the board off always gives the header's drives, since
-the choice is held only in RAM. Chapter 14 describes how cold boot tells a
-reset from a power-on.
+the choice is held only in RAM. Chapter 14 describes how cold boot
+recognises the RAM a reset leaves.
 
-The changes in the cache are what a reset loses, so a `^C` at the prompt
-before pressing reset, turning the board off or taking the card out puts
-them all on the card.
+The changes in the cache are what a reset loses, so, as Chapter 1 says, a
+`^C` at the prompt before a reset puts them all on the card.
 
 ## Putting an image on a card
 
-`tecvol install` writes an image to a card from the PC, from the card's
-first block:
+`tecvol install`, which Chapter 1 used for the starter card, writes any
+image to a card in the same way:
 
 ```sh
 node tools/tecvol.mjs install my.img /dev/rdiskN --yes
 ```
 
 `/dev/rdiskN` stands for the card's device, which on a Mac is a name of that
-form and on Linux one such as `/dev/sdb`. `install` overwrites the device
-from block 0 and does nothing without `--yes`, so the device name needs
-checking twice before the command runs. The card must be at least as large
-as the container; TEC-OS can't read the card's size, and a volume that runs
-past the end of a smaller card fails with a disk error when TEC-OS reaches
-the missing blocks. The web page's "Open image" loads an image file from the
-PC into the page's card, and "Download image" saves the page's card as one,
-so the same image runs in the page and on a board.
+form and on Linux one such as `/dev/sdb`. As Chapter 1 says, `install`
+overwrites the device from block 0; it does nothing without `--yes`. The
+card must be at least as large as the container; TEC-OS can't read the
+card's size, and a volume that runs past the end of a smaller card fails
+with a disk error when TEC-OS reaches the missing blocks. The web page's
+"Open image" loads an image file from the PC into the page's card, and
+"Download image" saves the page's card as one, so the same image runs in the
+page and on a board.
 
 TEC-OS and the PC must never write the same card at the same time, and a
 card changed on a PC needs a reset when it goes back into the board. TEC-OS
 starts the card only at cold boot, and across warm boots it keeps each
 drive's allocation vector and the cache's copies of blocks. A card changed
-on the PC doesn't match them, and a warm boot doesn't read the card again to
-find out.
+on the PC doesn't match them, and a warm boot doesn't read the card again.
 
-## After a power cut
+## Recovery after a power cut
 
 CP/M writes a file's data blocks first and its directory entry after them,
-and TEC-OS adds no journal. A file is safe on the card once it is closed. A
-power cut or a reset can lose a file still being written, in one of these
-ways:
+and TEC-OS adds no journal. Once a file is closed, its data and its
+directory entry are both on the card. A power cut or a reset can lose a file
+still being written, in one of these ways:
 
 - On a volume written through, a cut between the data and the directory
   leaves new data in blocks the directory doesn't name. The file reads back
