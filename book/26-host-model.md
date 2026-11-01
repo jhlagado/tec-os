@@ -7,10 +7,8 @@ Every transcript in this book came from a TEC-1G that exists only as software.
 The repository runs TEC-OS on the Debug80 TEC-1G runtime, a model of the
 board's CPU, memory, latch and devices, through one module,
 `host/machine.mjs`, which the tests, the web page and `book/capture.mjs` all
-use. This chapter describes that module: the board it builds, the SD card and
-clock it attaches, the checks it makes on every memory write and the ways a
-caller drives it. It then describes the tests built on it and the web page,
-with its build, its card and its controls.
+use. This chapter describes that module, then the tests and the web page built
+on it.
 
 ## One machine for the tests, the page and the book
 
@@ -52,7 +50,7 @@ state directly instead.
 
 The runtime has an SD card model of its own, and the machine turns it off and
 attaches its own instance of the runtime's `SdSpi` class on port `FDh`
-(`host/machine.mjs:58`, `host/machine.mjs:72`, `host/machine.mjs:122-135`).
+(`host/machine.mjs:59`, `host/machine.mjs:69`, `host/machine.mjs:122-135`).
 The card is then the caller's array of bytes: a write by TEC-OS changes that
 array at once, and the caller can read the files from it, save it or swap it.
 `swapCard` puts a different image, or none, in the socket for the next command
@@ -60,8 +58,8 @@ array at once, and the caller can read the files from it, save it or swap it.
 browser's storage.
 
 The DS1302 is attached the same way, on port `FCh`, with the runtime's
-`rtcEnabled` turned off (`host/machine.mjs:74`, `host/machine.mjs:85`,
-`host/machine.mjs:124`, `host/machine.mjs:132`). With no `clock` given it
+`rtcEnabled` turned off (`host/machine.mjs:72`, `host/machine.mjs:85`,
+`host/machine.mjs:126`, `host/machine.mjs:135-137`). With no `clock` given it
 reads the PC's own time, as on a board whose clock was set
 (`host/machine.mjs:35-37`). With a `clock`, the machine starts the DS1302 at
 that time and moves it on by the cycles run at 4 MHz, 4,000,000 T-states to
@@ -81,20 +79,21 @@ an `overlay-write`, each with the address and the program counter, in
 `violations`. TEC-OS never makes either write. On a board the first reaches
 the ROM chip, and the second goes to RAM in the runtime but to the ROM in the
 TEC-1G's own documents (`docs/diagnostics.md`, T08), so a program that made
-one could behave differently on the model and on a board. 23 of the test files
-check that `violations` is empty.
+one could behave differently on the model and on a board. Of the test files,
+23 check that `violations` is empty.
 
 A second watch covers EXPAND 1 (`host/machine.mjs:180-222`). From cold boot's
 clear of EXPAND 1 until the next cold boot, only the block cache may write
 `8000h–BCFFh`, and nothing may write the free page `BE00h–BEFFh`. The machine
-finds the clear by its `LDIR` in `MEMINIT`, and the cache's writers by their
-symbols: the cache's own routines, the SD card's block loops, and the copy
-routine `MVCOPY` when the cache called it. Any other write is recorded in the
-machine's `expand1Writes` and, for the first 16, in `EXPAND1_WRITES`, shared
-by every machine in the process. The Node.js wrapper the tests use fails a
-test file if that list isn't empty at its end (`test/lib/machine.mjs:14-17`).
-The history's page at `BD00h` is left out of the watch, since `HSTORE` writes
-it.
+takes the end of the clear from its `LDIR` in `MEMINIT`, and the cache's
+writers from their symbols: the cache's own routines, the SD card's block
+loops, and the copy routine `MVCOPY` when the cache called it. Any other write
+is recorded in the machine's `expand1Writes` and, for the first 16, in
+`EXPAND1_WRITES`, shared by every machine in the process. The Node.js wrapper
+the tests use fails a test file if that list isn't empty at its end
+(`test/lib/machine.mjs:14-17`). The history's page at `BD00h` is left out of
+the watch, since `HSTORE` writes it, and so is the page at `BF00h`, where warm
+boot writes its jump.
 
 ## Driving the machine
 
@@ -103,9 +102,10 @@ the program counter is at `BCONOUT`, the BIOS's console output, the byte in
 `C` goes into `output`: so `output` holds every byte TEC-OS put on the
 console, whichever device it went to. A second record, `serial`, holds the
 bytes that left the serial port, which the runtime decodes from the bit-banged
-line (`host/machine.mjs:54-56`, `host/machine.mjs:76`). One run of
-`capture.mjs` on the board with only the graphics LCD shows the two records
-apart. The console record has the whole boot and the `CON` command:
+line (`host/machine.mjs:53-55`, `host/machine.mjs:77`). Two runs of
+`capture.mjs` on the board with only the graphics LCD, one printing the
+console and one the serial port, show the two records apart. The console
+record has the whole boot and the `CON` command:
 
 <!-- node book/capture.mjs --board glcd --screen CON -->
 ```text
@@ -135,6 +135,7 @@ A>PICO.DRV
 PICO.DRV?
 
 A>GLCD.DRV
+
 ```
 
 The graphics LCD shows what came after, since the driver cleared it:
@@ -209,10 +210,11 @@ file whose SHA-256 differs fails its test; a missing one skips it, or fails it
 with `STRICT=1`, which `npm run test:strict` sets (`test/lib/inputs.mjs:1-6`,
 `package.json:18`).
 
-Every test is evidence from the model. A behaviour the model gets wrong, such
-as a write under the boot overlay or the decoding of the latch's upper bits,
-gives a passing test and a different board. Chapter 24 describes the
-diagnostics ROM, which tests those points on a board.
+Every test is evidence from the model. A behaviour in which the model differs
+from the board as its documents describe it, such as a write under the boot
+overlay or the decoding of the latch's upper bits, gives a passing test and
+may give a different board. Chapter 24 describes the diagnostics ROM, which
+tests those points on a board.
 
 ## The web page
 
@@ -260,22 +262,10 @@ of buttons for Ctrl, Esc, Tab and the arrows (`web/src/main.mjs:357-452`,
 `web/index.html:36-44`). The serial terminal on the page drops the escape
 sequences TEC-OS sends and acts on backspace (`web/src/main.mjs:286-314`).
 
-The controls (`web/index.html:12-30`, `web/index.html:68-82`) are these:
-
-| Control | Effect |
-| --- | --- |
-| ROM | The PICO9918's width, 80, 40 or 32 columns; the board is turned off and on |
-| Display | A board with a PICO9918, or one with only the graphics LCD; the board is turned off and on |
-| Reset | The reset button: RAM and the card kept |
-| Power cycle | A new machine: RAM lost, the card kept |
-| Pause | Stops the Z80, and with the button now named Run starts it again |
-| New starter card | A card built afresh from the recipe, then a power cycle |
-| Open image | A card image from the PC, checked as a container, then a power cycle |
-| Download image | The card saved to the PC as `tecos-card.img` |
-| Drive | The drive whose files are listed and copied to |
-| Copy file to drive | Files from the PC written to that drive, then a reset |
-| as text | Copies, and downloads from the list, as text |
-| The file list | Each file on the drive, with its user area, size and a Download button |
+Chapter 1 lists the page's controls (`web/index.html:12-30`,
+`web/index.html:68-82`). Beyond those it lists each file of the drive chosen
+in "Drive", with its user area, its size and a Download button that saves the
+file to the PC, as text when "as text" is ticked (`web/src/main.mjs:493-506`).
 
 The width and the display are kept in the browser's local storage
 (`web/src/main.mjs:17-19`, `web/src/main.mjs:576-588`). Each power-on, from
@@ -283,10 +273,10 @@ either of them, the Power cycle button or a new card, first prepares the card
 with `prepareCard` from `host/card.mjs` (`web/src/main.mjs:66-83`). It checks
 that drive A has the display's driver file, in the format this ROM loads, and
 if so makes the first line of `STARTUP.CMD` that file's name, followed by
-`GLCD.DRV` on a board with the PICO9918, keeping any other lines the file had
-(`host/card.mjs:21-54`). A card that fails the check is left as it is, and the
-reason goes to the serial terminal with the words `[power on]`: no drive A, no
-such driver, or a driver of another format.
+`GLCD.DRV` on a board with the PICO9918, keeping its other lines that name no
+display driver (`host/card.mjs:21-54`). A card that fails the check is left as
+it is, and the reason goes to the serial terminal with the words `[power on]`:
+no drive A, no such driver, or a driver of another format.
 
 "Copy file to drive" writes to a copy of the card while the machine is paused,
 saves it, copies it into the card the machine is using, and presses reset
