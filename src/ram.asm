@@ -65,16 +65,20 @@ BIOSRME:
 CCPRAM  EQU     BIOSRME
 
 ; ---- The CCP's state and stack (cpm/ccp.asm) ----------------------------------
-CMDFCB:
-        DS      36
-RENFCB:
-        DS      36
+; The command line comes first and is kept over warm boot, for the pieces of
+; a chained line still to run (CHPOS): CPMINIT clears from CCPCLR. Cold boot
+; clears it with the rest of the workspace.
 CMDBUF:
         DS      1
 CMDLEN:
         DS      1
 CMDTXT:
         DS      128
+CCPCLR:
+CMDFCB:
+        DS      36
+RENFCB:
+        DS      36
 BOOTDRV:
         DS      1
 CMDSTRT:
@@ -233,5 +237,6 @@ DRVGEN: DS      1               ; raised by each removal
 DRVRC:  DS      1               ; the last load's failure
 STPOS:	DS	1		; startup's state and position, as at STBOOT
 STREC:  DS      128             ; A:STARTUP.CMD's one record
+CHPOS:  DS      1               ; a chained line's next piece: its offset in CMDTXT + 1, 0 for none
 HIRME:
 WSEND   EQU     HIRME           ; end of the classic resident workspace

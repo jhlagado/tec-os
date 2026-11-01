@@ -268,10 +268,11 @@ RSTZERO:LD      (HL),0
 STKGN	EQU	STKGUEND-STKGUARD
 
 ; Reset the CCP and BDOS writable state as a fresh disk load would, and
-; forget the deblocking buffer so a changed card is reread.
-CPMINIT:LD      HL,CCPRAM
-        LD      DE,CCPRAM+1
-        LD      BC,BDOSRME-CCPRAM-1
+; forget the deblocking buffer so a changed card is reread. The command line,
+; below CCPCLR, is kept for a chained line's next piece.
+CPMINIT:LD      HL,CCPCLR
+        LD      DE,CCPCLR+1
+        LD      BC,BDOSRME-CCPCLR-1
         LD      (HL),0
         LDIR
         LD      HL,DEFDMA
