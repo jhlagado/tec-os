@@ -106,6 +106,10 @@ test(": runs a piece after a success, and not after a program's FF00h, FFFEh or 
   assert.match(missing, /NOSUCH\?\r\n\r\nA>:SAY\r\nA>$/);
   assert.equal(code(m), 0xff00, "a command not found sets FF00h");
   assert.equal(count(run(m, ":SAY"), /PRL/g), 0, "a : that starts a line tests the last command");
+  // FFFFh, which function 108 can't set, since it reads the code: no failure.
+  m.write(m.sym("PRGCODE"), 0xff);
+  m.write(m.sym("PRGCODE") + 1, 0xff);
+  assert.equal(count(run(m, ":SAY"), /PRL/g), 1, "FFFFh is no failure");
 });
 
 test("after a failed : piece the rest of the line goes, and the prompt comes back", () => {
@@ -144,6 +148,8 @@ test("a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no f
     assert.equal(code(m), 0xff00, bad);
   }
   assert.equal(count(run(m, "ERA X.COM!SAY"), /PRL/g), 1, "the walk's leading ERA stops nothing after it");
+  assert.equal(count(run(m, "COPY SAY.COM B:!:SAY"), /PRL/g), 1, "COPY's success");
+  assert.equal(count(run(m, "COPY NONE.COM B:!:SAY"), /PRL/g), 0, "COPY's failure");
 });
 
 /** The page-zero state, stack and DMA a program starts with, at 0100h. */
