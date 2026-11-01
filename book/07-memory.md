@@ -243,9 +243,8 @@ word at `0006h`, and bank 1 is EXPAND 1. Since EXPAND 1 is TEC-OS's, bank 1
 has no bytes a program may use: a `MOVE` with any byte in bank 1 copies
 nothing and returns `FFh` in `A`. A `MOVE` within bank 0 copies and returns
 0. A copy that runs past the word at `0006h` is refused in the same way, and
-a copy puts the latch and the interrupt state back as they
-were before it. This
-program tries both:
+a copy puts the latch and the interrupt state back as they were before it.
+This program tries both:
 
 ```asm
 ; BANKS: try CP/M 3's MOVE into bank 1, then within bank 0, and print the
