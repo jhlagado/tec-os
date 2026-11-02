@@ -476,7 +476,8 @@ FNVERS:
         JP      RETA
 
 ; Reset to drive A, restore the standard DMA address, and discover all disk
-; geometry and work areas through the public BIOS DPH/DPB boundary.
+; geometry and work areas through the public BIOS DPH/DPB boundary. The user
+; number stays as it is, as in CP/M 2.2.
 FNRESET:
         LD      HL,WRFLAG       ; the CCP's reset at its entry: WRESET
         LD      A,(HL)
@@ -489,7 +490,6 @@ FNRESET:
         LD      (WARMV),HL
 RSTAIL: XOR     A
         LD      (CURDRV),A
-        LD      (USERNO),A
         LD      H,A
         LD      L,A
         LD      (ROVEC),HL

@@ -105,3 +105,16 @@ test("function 32 with E5h is user 5: erased entries stay erased", () => {
   const disk = volume(image, "A");
   assert.deepEqual(disk.list({ user: 5 }).map((x) => x.name), ["NEW.DAT"], "made in user 5, not as an erased entry");
 });
+
+test("function 13 from user 5 leaves the user number 5, on drive A", () => {
+  const image = standardCard();
+  volume(image, "A").write("FIVE.DAT", new Uint8Array(128), { user: 5 });
+  const r = rig(image);
+  r.call(5, { c: 32, de: 5 });
+  r.call(5, { c: 14, de: 1 });
+  assert.equal(r.bdos(13), 0);
+  assert.equal(r.call(5, { c: 32, de: 0xff }), 5, "the user number");
+  assert.equal(r.bdos(25), 0, "the drive: A");
+  r.fcb(0, "FIVE    DAT");
+  assert.notEqual(r.bdos(15), 0xff, "user 5's file opens");
+});

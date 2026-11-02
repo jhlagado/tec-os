@@ -54,6 +54,9 @@ user byte of an erased entry. The CCP's `USER` takes 0–15, and 0004h holds
 four bits of the user, so a program that leaves user 16 or more finds the
 next prompt in that number's low four bits.
 
+Function 13 resets the disks and selects drive A, and leaves the user number
+as it is, as CP/M 2.2's does.
+
 ## Command processor
 
 `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the

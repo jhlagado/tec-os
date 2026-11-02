@@ -440,4 +440,5 @@ export const MUTANTS_FIXES = [
     name: "CCP: a drive with no volume selected at warm boot",
     ...f(["CP MAXDRV", "JR NC,CCPDA", "LD E,A", "LD D,0", "LD HL,DRVIDX", "ADD HL,DE", "LD A,(HL)", "OR A", "LD A,E", "JR NZ,CCPDR", "CCPDA: XOR A", "CCPDR: LD (BOOTDRV),A"], ["LD (BOOTDRV),A"], ["test/mount.test.mjs"], C),
   },
+  { name: "13: the user number set to 0", ...f(["RSTAIL: XOR A", "LD (CURDRV),A", "LD H,A"], ["RSTAIL: XOR A", "LD (CURDRV),A", "LD (USERNO),A", "LD H,A"]) },
 ];
