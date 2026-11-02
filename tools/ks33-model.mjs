@@ -10,15 +10,16 @@
 // TAS.COM; capture; and the shared font priced on each configuration.
 //
 //   node tools/ks33-model.mjs [--landed REV] [--reference REV] [--mutants]
-//                             [--old-sets] [--sets-only] [--against FIGURES.json]
-//                             [--out FILE]
+//                             [--old-sets] [--sets-only] [--set NAME]
+//                             [--old-set NAME] [--against FIGURES.json] [--out FILE]
 //
 // --landed is the tree measured, HEAD by default; --reference the baseline,
 // 62d47ed. The trees are git archives in build/model-ks33/, each built with
 // its release set, which needs the pinned EDIT.COM and TAS.COM (EDIT_COM,
 // TAS_COM). --mutants runs every set on the landed tree; --old-sets reruns
 // KS30 to KS32's sets at their own commits. --sets-only runs those two alone,
-// and its figures are merged into the rest. A short account goes to stderr.
+// and its figures are merged into the rest; --set and --old-set take one set
+// at a time, so that a long run can yield the machine. A short account goes to stderr.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -502,12 +503,13 @@ function account(f) {
 async function sets(landed) {
   const out = {};
   if (process.argv.includes("--mutants")) {
-    const all = [...MUTANTS_KS30, ...MUTANTS_KS31, ...MUTANTS_KS32, ...MUTANTS_FIXES, ...MUTANTS_KS33];
-    Object.assign(out, await mutate(landed, WORK, all));
+    const all = { ks30: MUTANTS_KS30, ks31: MUTANTS_KS31, ks32: MUTANTS_KS32, fixes: MUTANTS_FIXES, ks33: MUTANTS_KS33 };
+    const only = M.arg("--set");
+    Object.assign(out, await mutate(landed, WORK, only ? all[only] : Object.values(all).flat()));
   }
   if (process.argv.includes("--old-sets")) {
     out.oldSets = {};
-    for (const [set, name, rev] of OLD_SETS) {
+    for (const [set, name, rev] of OLD_SETS.filter(([, n]) => [undefined, n].includes(M.arg("--old-set")))) {
       const dir = await M.prepared(WORK, name, rev).catch((e) => ({ refused: e.message.slice(0, 300) }));
       out.oldSets[name] = typeof dir === "string" ? { rev, ...(await mutate(dir, WORK, set)).mutantScore } : { rev, ...dir };
     }
