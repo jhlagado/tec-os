@@ -219,6 +219,30 @@ test("a card removed with dirty lines leaves the console working, and warm boot 
   assert.match(cmd(m, "USER 0"), /\r\n[A-P]>$/, "the console works");
 });
 
+test("the same card put back isn't started: Write lost again at warm boot, and a reset loses the lines", async () => {
+  const image = card();
+  const m = start(image);
+  dirty(m);
+  m.sd = null; // the card out
+  const warm = () => {
+    m.mark = m.output.length;
+    m.cpu.cpu.pc = 0;
+    let seen = -1;
+    for (let i = 0; i < 200 && !/\r\n[A-P]>$/.test(m.text(m.mark)); i += 1) {
+      const end = m.cycles + 20_000_000;
+      m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
+      if (m.waitingForInput() && m.output.length === seen) m.type("\r");
+      seen = m.output.length;
+    }
+    return m.text(m.mark);
+  };
+  assert.match(warm(), /Write lost/);
+  m.swapCard(image);
+  assert.match(warm(), /Write lost/);
+  m.reset();
+  m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
+});
+
 test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", async () => {
   const image = card();
   const m = start(image, { rom: oldRom("4ea57f7") });
