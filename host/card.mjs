@@ -33,7 +33,8 @@ export function cardProblem(image, display, width) {
     return "This card has no drive A: the diagnostic prompt is on the serial terminal below. A new starter card has one.";
   }
   if (!files.some((f) => f.name === name)) {
-    const old = files.find((f) => OLD_DISPLAY.test(f.name));
+    const asked = name.replace(".SVC", ".DRV");
+    const old = files.find((f) => f.name === asked) ?? files.find((f) => OLD_DISPLAY.test(f.name));
     if (old) return `This card is from an older TEC-OS: this ROM doesn't load ${old.name}, so the card boots as its STARTUP.CMD says. A new starter card has ${name}.`;
     return `This card has no ${name}: it boots as its STARTUP.CMD says. A new starter card has it.`;
   }
@@ -48,12 +49,23 @@ export function prepareCard(image, display, width) {
   return { problem, changed: problem ? false : setDisplayLine(image, display, width) };
 }
 
-/** A startup line without its display pieces, the rest of the chain kept: "" if none is left. */
-const withoutDisplay = (line) =>
-  line
-    .split("!")
-    .filter((p) => !DISPLAY_PIECE.test(p.trim()))
-    .join("!");
+/**
+ * A startup line without its display pieces, the rest of the chain kept: "" if
+ * none is left. The piece after one taken out loses a leading ":", since the
+ * command it waited on is gone and it must not wait on whatever now comes first.
+ */
+function withoutDisplay(line) {
+  const kept = [];
+  let taken = false;
+  for (const piece of line.split("!")) {
+    if (DISPLAY_PIECE.test(piece.trim())) taken = true;
+    else {
+      kept.push(taken ? piece.replace(/^(\s*):/, "$1") : piece);
+      taken = false;
+    }
+  }
+  return kept.join("!");
+}
 
 /** Make STARTUP.CMD's first line the driver for DISPLAY at WIDTH, leaving the rest. True if it changed. */
 export function setDisplayLine(image, display, width) {

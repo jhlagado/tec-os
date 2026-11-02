@@ -484,7 +484,9 @@ export const MUTANTS_KS33 = [
   { name: "the listing left as DRIVERS", edits: [text("src/data3.asm", '"SERVICES",0', '"DRIVERS",0')], tests: ["test/svc.test.mjs"] },
   { name: "the alias gone from abi.inc", edits: [text("src/abi.inc", "ABIDRV\tEQU\tABISVC", "ABIXXX\tEQU\tABISVC")], tests: ["test/svc.test.mjs"], only: "ABIDRV" },
   { name: "the demo out of the source check", edits: [text("tools/build.mjs", 'n.startsWith("svc")', 'n.startsWith("drv")')], tests: [] },
-  { name: "the page: a chained line taken whole", edits: [text("host/card.mjs", '.split("!")\n', '.split("\\n")\n')], tests: ["test/pico.test.mjs"] },
+  { name: "the page: a chained line taken whole", edits: [text("host/card.mjs", 'of line.split("!"))', 'of line.split("\\n"))')], tests: ["test/pico.test.mjs"] },
+  { name: "the page: a colon kept after a display piece", edits: [text("host/card.mjs", 'taken ? piece.replace(/^(\\s*):/, "$1") : piece', "piece")], tests: ["test/pico.test.mjs"], only: "loses its colon" },
+  { name: "the page: an old card's words name the first file", edits: [text("host/card.mjs", 'files.find((f) => f.name === asked) ?? ', "")], tests: ["test/pico.test.mjs"], only: "name the display asked for" },
   { name: "the page: an old card's own words gone", edits: [text("host/card.mjs", "if (old) return", "if (!old) return")], tests: ["test/pico.test.mjs"] },
   { name: "the media tool takes any TAS.COM", edits: [text("tools/media.mjs", "if (got !== entry.sha256) throw", "if (false) throw")], tests: ["test/tas.test.mjs"], only: "the media tool refuses" },
 ];

@@ -709,6 +709,20 @@ test("the web host: a chained startup line loses its display pieces and keeps th
   assert.equal(prepareCard(image, "tms", "80").changed, false);
 });
 
+test("the web host: the piece after a display piece loses its colon and still runs after a failing GLCD.SVC", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
+  a.write("VOLS.COM", Uint8Array.from([0xc9]));
+  a.write("STARTUP.CMD", startupFile("PICO.SVC!:VOLS", "DIR!GLCD.SVC!PICO.SVC!:USER 3!:USER 0"));
+  prepareCard(image, "tms", "80");
+  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nVOLS\r\nDIR!USER 3!:USER 0\r\n");
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
+  m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
+  assert.match(m.text(0), /GLCD\.SVC\?[\s\S]*>VOLS\r/, "VOLS isn't dropped by the failed line before it");
+  assert.doesNotMatch(m.text(0), /VOLS\?/);
+});
+
 test("the web host: a card with .DRV files is refused in its own words and left alone", () => {
   const image = standardCard();
   const a = volume(image, "A");
@@ -717,9 +731,19 @@ test("the web host: a card with .DRV files is refused in its own words and left 
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
   const before = image.slice();
   const { problem, changed } = prepareCard(image, "tms", "80");
-  assert.match(problem, /older TEC-OS: this ROM doesn't load (PICO|GLCD)\.DRV.*A new starter card has PICO\.SVC/);
+  assert.match(problem, /older TEC-OS: this ROM doesn't load PICO\.DRV.*A new starter card has PICO\.SVC/);
   assert.equal(changed, false);
   assert.deepEqual(image, before);
+});
+
+test("the web host: an old card's words name the display asked for, or else what it has", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("GLCD.DRV", GLCD_SVC);
+  a.write("PICO.DRV", PICO_SVC["PICO.SVC"]);
+  assert.match(cardProblem(image, "tms", "80"), /doesn't load PICO\.DRV/);
+  assert.match(cardProblem(image, "glcd", "80"), /doesn't load GLCD\.DRV/);
+  assert.match(cardProblem(image, "tms", "40"), /doesn't load (GLCD|PICO)\.DRV.*has PICO40\.SVC/);
 });
 
 test("the web host: a card whose files were renamed by hand has its .DRV display lines taken out", () => {
