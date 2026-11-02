@@ -11,7 +11,8 @@
 //
 //   node tools/ks33-model.mjs [--landed REV] [--reference REV] [--mutants]
 //                             [--old-sets] [--sets-only] [--set NAME]
-//                             [--old-set NAME] [--against FIGURES.json] [--out FILE]
+//                             [--old-set NAME] [--slice FROM:TO] [--against FIGURES.json]
+//                             [--out FILE]
 //
 // --landed is the tree measured, HEAD by default; --reference the baseline,
 // 62d47ed. The trees are git archives in build/model-ks33/, each built with
@@ -499,19 +500,22 @@ function account(f) {
   return p.join("\n") + "\n";
 }
 
+/** SET, or its part that --slice FROM:TO names. */
+const slice = (set) => set.slice(...(M.arg("--slice") ?? "0:9999").split(":").map(Number));
+
 /** The mutant sets: every set on the landed tree, and KS30 to KS32's on their own commits. */
 async function sets(landed) {
   const out = {};
   if (process.argv.includes("--mutants")) {
     const all = { ks30: MUTANTS_KS30, ks31: MUTANTS_KS31, ks32: MUTANTS_KS32, fixes: MUTANTS_FIXES, ks33: MUTANTS_KS33 };
     const only = M.arg("--set");
-    Object.assign(out, await mutate(landed, WORK, only ? all[only] : Object.values(all).flat()));
+    Object.assign(out, await mutate(landed, WORK, slice(only ? all[only] : Object.values(all).flat())));
   }
   if (process.argv.includes("--old-sets")) {
     out.oldSets = {};
     for (const [set, name, rev] of OLD_SETS.filter(([, n]) => [undefined, n].includes(M.arg("--old-set")))) {
       const dir = await M.prepared(WORK, name, rev).catch((e) => ({ refused: e.message.slice(0, 300) }));
-      out.oldSets[name] = typeof dir === "string" ? { rev, ...(await mutate(dir, WORK, set)).mutantScore } : { rev, ...dir };
+      out.oldSets[name] = typeof dir === "string" ? { rev, ...(await mutate(dir, WORK, slice(set))).mutantScore } : { rev, ...dir };
     }
   }
   return out;
