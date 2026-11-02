@@ -705,8 +705,58 @@ test("the web host: a chained startup line loses its display pieces and keeps th
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC"));
   assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, changed: true });
-  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\nDIR!USER 3\r\n");
+  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\nDIR!:USER 3\r\n");
   assert.equal(prepareCard(image, "tms", "80").changed, false);
+});
+
+test("the web host: a removed piece's colon passes to the piece after it, and one that hung on a display piece goes", () => {
+  const cases = [
+    ["X!:PICO.SVC!Y", "X!:Y"],
+    ["X!PICO.SVC!:Y", "X!Y"],
+    ["X!:PICO.SVC!:Y", "X!:Y"],
+    ["X!:PICO.SVC!GLCD.SVC!Y", "X!:Y"],
+    ["X!PICO.SVC!:GLCD.SVC!Y", "X!Y"],
+    [":X", "X"],
+  ];
+  for (const [line, want] of cases) {
+    const image = standardCard();
+    const a = volume(image, "A");
+    a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
+    a.write("STARTUP.CMD", startupFile(line));
+    prepareCard(image, "tms", "80");
+    assert.equal(startupText(image), `PICO.SVC\r\nGLCD.SVC\r\n${want}\r\n`, line);
+    assert.equal(prepareCard(image, "tms", "80").changed, false, line);
+  }
+});
+
+test("the web host: a next line's first colon goes with the display piece it hung on, and no colon crosses a line", () => {
+  const cases = [
+    [["PICO.SVC", ":VOLS"], "VOLS"],
+    [["DIR", "PICO.SVC", ":VOLS", ":USER 3"], "DIR\r\nVOLS\r\n:USER 3"],
+    [["X!:PICO.SVC", ":Y"], "X\r\n:Y"],
+    [["X!:PICO.SVC", "Y"], "X\r\nY"],
+    [["X!PICO.SVC", ":Y"], "X\r\nY"],
+  ];
+  for (const [lines, want] of cases) {
+    const image = standardCard();
+    const a = volume(image, "A");
+    a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
+    a.write("STARTUP.CMD", startupFile(...lines));
+    prepareCard(image, "tms", "80");
+    assert.equal(startupText(image), `PICO.SVC\r\nGLCD.SVC\r\n${want}\r\n`, lines.join("|"));
+  }
+});
+
+test("the web host: VOLS on the line after PICO.SVC still runs after a failing GLCD.SVC", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
+  a.write("VOLS.COM", Uint8Array.from([0xc9]));
+  a.write("STARTUP.CMD", startupFile("PICO.SVC", ":VOLS"));
+  prepareCard(image, "tms", "80");
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
+  m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
+  assert.match(m.text(0), /GLCD\.SVC\?[\s\S]*>VOLS\r/);
 });
 
 test("the web host: the piece after a display piece loses its colon and still runs after a failing GLCD.SVC", () => {

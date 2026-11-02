@@ -50,21 +50,32 @@ export function prepareCard(image, display, width) {
 }
 
 /**
- * A startup line without its display pieces, the rest of the chain kept: "" if
- * none is left. The piece after one taken out loses a leading ":", since the
- * command it waited on is gone and it must not wait on whatever now comes first.
+ * STARTUP.CMD's lines without their display pieces, the rest of each chain kept
+ * and a line with nothing left gone. A piece taken out passes its own ":" to the
+ * piece after it on its line. A ":" that waited on a piece taken out goes, on its
+ * line or first on the next, since it must not wait on what now comes before it.
  */
-function withoutDisplay(line) {
-  const kept = [];
-  let taken = false;
-  for (const piece of line.split("!")) {
-    if (DISPLAY_PIECE.test(piece.trim())) taken = true;
-    else {
-      kept.push(taken ? piece.replace(/^(\s*):/, "$1") : piece);
-      taken = false;
-    }
+function withoutDisplay(lines) {
+  const out = [];
+  let taken = true; // the display lines go first, so a first ":" would depend on them
+  let colon = false; // what the piece after a removed one inherits
+  for (const line of lines) {
+    if (line.trim() === "") continue;
+    const kept = [];
+    line.split("!").forEach((piece, i) => {
+      const own = /^\s*:/.test(piece);
+      const cond = !taken ? own : i === 0 ? own && colon : colon;
+      if (DISPLAY_PIECE.test(piece.trim())) {
+        taken = true;
+        colon = cond;
+      } else {
+        kept.push(piece.replace(/^(\s*):?/, cond ? "$1:" : "$1"));
+        taken = false;
+      }
+    });
+    if (kept.join("!").trim() !== "") out.push(kept.join("!"));
   }
-  return kept.join("!");
+  return out;
 }
 
 /** Make STARTUP.CMD's first line the driver for DISPLAY at WIDTH, leaving the rest. True if it changed. */
@@ -72,7 +83,7 @@ export function setDisplayLine(image, display, width) {
   const a = driveA(image);
   const had = a.list().some((f) => f.name === "STARTUP.CMD");
   const old = had ? toLatin1(a.read("STARTUP.CMD")).split("\x1a")[0] : "";
-  const rest = old.split(/\r?\n/).map(withoutDisplay).filter((l) => l.trim() !== "");
+  const rest = withoutDisplay(old.split(/\r?\n/));
   const text = [displayFile(display, width), ...(display === "tms" ? ["GLCD.SVC"] : []), ...rest].map((l) => `${l}\r\n`).join("");
   if (text === old) return false;
   a.write("STARTUP.CMD", fromLatin1(`${text}\x1a`));
