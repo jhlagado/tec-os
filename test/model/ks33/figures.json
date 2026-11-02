@@ -1,0 +1,1956 @@
+{
+  "baseline": "62d47ed",
+  "assembler": "ATOM 0.3.7",
+  "prototype": "eea8798601cad1d50f570fe627d3509239193324",
+  "recommended": {
+    "magic": "kept0344h",
+    "listing": "SERVICES",
+    "oldCards": "refuse",
+    "transition": "svcAlone"
+  },
+  "rom": {
+    "reference": {
+      "used": 14777,
+      "free": 1607
+    },
+    "used": 14778,
+    "free": 1606,
+    "saving": -1,
+    "regions": {
+      "reset jump": 3,
+      "table": 21,
+      "data": 806,
+      "code": 13948,
+      "free": 1606
+    },
+    "reconciled": 16384,
+    "equals16384": true,
+    "contiguous": true,
+    "oneImage": true,
+    "sha256": "debba41f1c4bbdbfcb34bb118956dd38cab88ca00ad76848474b10ee3848a301",
+    "tableEnd": 49176
+  },
+  "tpa": {
+    "prototype": {
+      "starter": {
+        "serial": 46854,
+        "pico80": 45318,
+        "pico40": 45318,
+        "pico32": 45318,
+        "glcd": 45318,
+        "both": 43782
+      },
+      "fourG8M": {
+        "serial": 46086,
+        "pico80": 44550,
+        "pico40": 44550,
+        "pico32": 44550,
+        "glcd": 44550,
+        "both": 43014
+      }
+    },
+    "reference": {
+      "starter": {
+        "serial": 46854,
+        "pico80": 45318,
+        "pico40": 45318,
+        "pico32": 45318,
+        "glcd": 45318,
+        "both": 43782
+      },
+      "fourG8M": {
+        "serial": 46086,
+        "pico80": 44550,
+        "pico40": 44550,
+        "pico32": 44550,
+        "glcd": 44550,
+        "both": 43014
+      }
+    }
+  },
+  "resident": {
+    "reference": {
+      "fixedBase": 47448,
+      "workspaceBytes": 1448,
+      "stateAboveTheTable": 179,
+      "entry": 47110,
+      "cards": {
+        "starter": {
+          "entry": 47110,
+          "alvBase": 47128,
+          "tpa": 46854
+        },
+        "fourG8M": {
+          "entry": 46342,
+          "alvBase": 46424,
+          "tpa": 46086
+        }
+      }
+    },
+    "prototype": {
+      "fixedBase": 47448,
+      "workspaceBytes": 1448,
+      "stateAboveTheTable": 179,
+      "entry": 47110,
+      "cards": {
+        "starter": {
+          "entry": 47110,
+          "alvBase": 47128,
+          "tpa": 46854
+        },
+        "fourG8M": {
+          "entry": 46342,
+          "alvBase": 46424,
+          "tpa": 46086
+        }
+      }
+    },
+    "workspaceReleased": 0,
+    "expand1": "BE00h to BEFFh free, 256 bytes, watched by the host"
+  },
+  "stacks": {
+    "reference": {
+      "bdos": 34,
+      "ccp": 22,
+      "bios": 16
+    },
+    "prototype": {
+      "bdos": 34,
+      "ccp": 22,
+      "bios": 16
+    },
+    "reserved": {
+      "bdos": 54,
+      "ccp": 30,
+      "bios": 38
+    },
+    "pathsGone": [],
+    "goneReadings": {},
+    "runs": {
+      "serial": {
+        "bdos": 28,
+        "ccp": 16,
+        "bios": 14
+      },
+      "pico9918": {
+        "bdos": 32,
+        "ccp": 16,
+        "bios": 14
+      },
+      "glcd": {
+        "bdos": 34,
+        "ccp": 20,
+        "bios": 14
+      },
+      "writeBehind": {
+        "bdos": 28,
+        "ccp": 16,
+        "bios": 16
+      },
+      "diagnostics": {
+        "bdos": 0,
+        "ccp": 0,
+        "bios": 12
+      },
+      "conUc1": {
+        "bdos": 30,
+        "ccp": 14,
+        "bios": 14
+      },
+      "conUc1Glcd": {
+        "bdos": 20,
+        "ccp": 22,
+        "bios": 14
+      },
+      "picoNoDriver": {
+        "bdos": 20,
+        "ccp": 12,
+        "bios": 14
+      },
+      "unloadPico": {
+        "bdos": 20,
+        "ccp": 14,
+        "bios": 14
+      },
+      "recognisedReset": {
+        "bdos": 20,
+        "ccp": 6,
+        "bios": 14
+      },
+      "chained": {
+        "bdos": 28,
+        "ccp": 14,
+        "bios": 14
+      }
+    },
+    "deepestCcpRun": "conUc1Glcd",
+    "proved": {
+      "PICO.DRV": {
+        "declared": [
+          0,
+          0,
+          0
+        ],
+        "peakOverReference": [
+          0,
+          0,
+          0
+        ]
+      },
+      "GLCD.DRV": {
+        "declared": [
+          2,
+          0,
+          6
+        ],
+        "overBase": [
+          2,
+          0,
+          6
+        ]
+      }
+    },
+    "limit": [
+      8,
+      12,
+      6
+    ],
+    "everyQuarterFree": true
+  },
+  "rename": {
+    "drvEcho": true,
+    "drvLoadsNothing": true,
+    "svcInstalls": true,
+    "servicesLists": true,
+    "conUc1LoadsGlcdSvc": true
+  },
+  "names": {
+    "bookExcluded": "book/ left the product (KD-156), so it is out of both trees' counts; the list's totals with it stand at the reference",
+    "stays": {
+      "DRVTAB": [
+        31,
+        31
+      ],
+      "DRVIDX": [
+        22,
+        22
+      ],
+      "drvidx": [
+        5,
+        5
+      ],
+      "DRVSLOT": [
+        7,
+        7
+      ],
+      "DRVESZ": [
+        20,
+        20
+      ],
+      "DRVENT": [
+        9,
+        9
+      ],
+      "DRVDESC": [
+        3,
+        3
+      ],
+      "DRVMASK": [
+        5,
+        5
+      ],
+      "MAXDRV": [
+        29,
+        29
+      ],
+      "MNTDRV": [
+        11,
+        11
+      ],
+      "CURDRV": [
+        12,
+        12
+      ],
+      "DEFDRV": [
+        5,
+        5
+      ],
+      "BOOTDRV": [
+        6,
+        7
+      ],
+      "SELDRV": [
+        4,
+        4
+      ],
+      "BUFDRV": [
+        4,
+        4
+      ],
+      "RSDRV": [
+        2,
+        2
+      ],
+      "VRDRV": [
+        2,
+        2
+      ],
+      "drv2": [
+        0,
+        0
+      ],
+      "ABIDRV": [
+        24,
+        9
+      ]
+    },
+    "staysThatMoved": [
+      "BOOTDRV: 6 to 7",
+      "ABIDRV: 24 to 9"
+    ],
+    "historicalEqual": true,
+    "historicalTokens": 77,
+    "unexpectedTokens": {},
+    "bootdrvNote": "BOOTDRV's one more is docs/services.md's sentence on a 127-character line, which the findings table asks for",
+    "renamedAtReference": 683
+  },
+  "serviceLines": {
+    "lines": 195,
+    "byClass": {
+      "service": 1,
+      "record": 35,
+      "hardware service": 114,
+      "ROM table": 43,
+      "BDOS function": 2
+    },
+    "everyLineClassed": true
+  },
+  "docs": {
+    "hits": {
+      "docs/board-run.md": 1,
+      "docs/compatibility.md": 5,
+      "docs/services.md": 2,
+      "host/card.mjs": 3,
+      "test/clients.test.mjs": 1,
+      "test/pico.test.mjs": 17,
+      "test/svc.test.mjs": 5,
+      "tools/ks30-model.mjs": 2,
+      "tools/ks31-model.mjs": 2,
+      "tools/lib/model.mjs": 3,
+      "tools/lib/mutants.mjs": 3,
+      "tools/media.mjs": 1
+    },
+    "keeps": [
+      "old-card tests",
+      "the .DRV name's refusal",
+      "the fixture's own name, 2d5ce25/PICO.DRV",
+      "test/fixtures/",
+      "historical",
+      "carried keys",
+      "carried keys and old trees' names",
+      "the format's history",
+      "T16's record",
+      "what a .DRV name does",
+      "the old-card refusal",
+      "README.TXT's update note"
+    ],
+    "outsideKeeps": [],
+    "findings": {
+      "bios.asm header": true,
+      "development ids": true,
+      "data.asm header": true,
+      "BCONOUT": true,
+      "reader and punch": true,
+      "the scan's reason": true,
+      "error 28h": true,
+      "SHOWVOL": true,
+      "the NMI frame": true,
+      "say.asm": true,
+      "container-format RAM cost": true,
+      "console.md 7Fh to FFh": true,
+      "board-run T26 and step 3": true,
+      "T01's timing": true,
+      "diagnostics' first person": true,
+      "CFLALL": true,
+      "^S": true,
+      "[more]": true,
+      "function 50's AF'": true,
+      "the missing keys": true,
+      "startup's $": true,
+      "a gap list from 0": true,
+      "a 127-character line": true
+    },
+    "findingsDone": true
+  },
+  "contracts": {
+    "tableEntries": 9,
+    "tableAgrees": true,
+    "hardwareServices": [
+      "19",
+      "9"
+    ],
+    "functions": true,
+    "format": true,
+    "tpa": true,
+    "tableEnd": "c018",
+    "aliasInAbiInc": true,
+    "romTable": {
+      "rows": 21,
+      "sum": 14778,
+      "used": 14778,
+      "sumsToCensus": true,
+      "eachRowItsSpan": true
+    }
+  },
+  "choices": {
+    "magic": {
+      "options": {
+        "kept0344h": {
+          "romUsed": 14778,
+          "romOverPrototype": 0,
+          "onThisRom": {
+            "oldFileLoads": true,
+            "pageSays": null
+          }
+        },
+        "letterS": {
+          "romUsed": 14778,
+          "romOverPrototype": 0,
+          "onThisRom": {
+            "oldFileLoads": false,
+            "pageSays": null
+          }
+        },
+        "newVersion": {
+          "romUsed": 14778,
+          "romOverPrototype": 0,
+          "onThisRom": {
+            "oldFileLoads": false,
+            "pageSays": "This card's PICO.SVC is format 3, from an older TEC-OS, and this ROM refuses it. A new starter card has the driver."
+          }
+        }
+      },
+      "settled": "0344h kept: no ROM byte in any option, and only it lets an old format 3 file renamed .SVC load, as KD-144 keeps the layout. 0353h passes the page's byte 1 check and is then refused by the ROM; a new version is refused by both"
+    },
+    "listing": {
+      "options": {
+        "SERVICES": {
+          "romUsed": 14778,
+          "romOverPrototype": 0
+        },
+        "MODULES": {
+          "romUsed": 14777,
+          "romOverPrototype": -1
+        },
+        "DRIVERS": {
+          "romUsed": 14777,
+          "romOverPrototype": -1
+        }
+      },
+      "settled": "SERVICES: the rule's name under design 3, 1 ROM byte over MODULES; DRIVERS would be a stated exception"
+    },
+    "oldCards": {
+      "refuse": {
+        "sourceLines": 3
+      },
+      "rename": {
+        "sourceLines": 11
+      },
+      "cards": {
+        "aStarterOfFormat3": {
+          "refuse": {
+            "problem": "This card is from an older TEC-OS: this ROM doesn't load PICO.DRV, so the card boots as its STARTUP.CMD says. A new starter card has PICO.SVC.",
+            "changed": false,
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.DRV?",
+                "GLCD.DRV?"
+              ]
+            }
+          },
+          "rename": {
+            "boot": {
+              "console": "the display",
+              "head": true,
+              "row3": "",
+              "text": [
+                "GLCD.SVC?"
+              ]
+            }
+          }
+        },
+        "aStarterOfFormat2": {
+          "refuse": {
+            "problem": "This card is from an older TEC-OS: this ROM doesn't load PICO.DRV, so the card boots as its STARTUP.CMD says. A new starter card has PICO.SVC.",
+            "changed": false,
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.DRV?",
+                "GLCD.DRV?"
+              ]
+            }
+          },
+          "rename": {
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.SVC?",
+                "GLCD.SVC?"
+              ]
+            }
+          }
+        },
+        "ownersOwnLine": {
+          "refuse": {
+            "problem": "This card is from an older TEC-OS: this ROM doesn't load PICO.DRV, so the card boots as its STARTUP.CMD says. A new starter card has PICO.SVC.",
+            "changed": false,
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.DRV?",
+                "GLCD.DRV?",
+                "MY.DRV?"
+              ]
+            }
+          },
+          "rename": {
+            "boot": {
+              "console": "the display",
+              "head": true,
+              "row3": "",
+              "text": [
+                "GLCD.SVC?",
+                "MY.DRV?"
+              ]
+            }
+          }
+        }
+      },
+      "settled": "refused through cardProblem: 3 source lines, the card left as its owner made it. Renaming takes 11 lines, works only for format 3, and leaves an owner's own .DRV line printing its name"
+    },
+    "transition": {
+      "options": {
+        "svcAlone": {
+          "romUsed": 14778,
+          "romOverPrototype": 0
+        },
+        "bothTypes": {
+          "romUsed": 14793,
+          "romOverPrototype": 15,
+          "run": {
+            "drvInstalls": true
+          }
+        }
+      },
+      "settled": ".SVC alone: bothTypes costs 15 bytes and KD-144 says the rename lands once"
+    },
+    "card": {
+      "stock": {
+        "pico": {
+          "seconds": 2.169,
+          "cycles": 8676589,
+          "sdReads": 25,
+          "tpa": 45318,
+          "row3": "",
+          "warmBoot": {
+            "seconds": 0.0488,
+            "cycles": 195247,
+            "sdReads": 0
+          }
+        },
+        "glcd": {
+          "seconds": 2.247,
+          "cycles": 8987634,
+          "sdReads": 22,
+          "tpa": 45318,
+          "row3": "",
+          "warmBoot": {
+            "seconds": 0.0548,
+            "cycles": 219115,
+            "sdReads": 0
+          }
+        }
+      },
+      "chained": {
+        "prep": {
+          "problem": null,
+          "changed": true
+        },
+        "line": "PICO.SVC\r\nGLCD.SVC\r\nVOLS\r\nDIR\r\n"
+      },
+      "oldCards": {
+        "aStarterOfFormat3": {
+          "refuse": {
+            "problem": "This card is from an older TEC-OS: this ROM doesn't load PICO.DRV, so the card boots as its STARTUP.CMD says. A new starter card has PICO.SVC.",
+            "changed": false,
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.DRV?",
+                "GLCD.DRV?"
+              ]
+            }
+          },
+          "rename": {
+            "boot": {
+              "console": "the display",
+              "head": true,
+              "row3": "",
+              "text": [
+                "GLCD.SVC?"
+              ]
+            }
+          }
+        },
+        "aStarterOfFormat2": {
+          "refuse": {
+            "problem": "This card is from an older TEC-OS: this ROM doesn't load PICO.DRV, so the card boots as its STARTUP.CMD says. A new starter card has PICO.SVC.",
+            "changed": false,
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.DRV?",
+                "GLCD.DRV?"
+              ]
+            }
+          },
+          "rename": {
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.SVC?",
+                "GLCD.SVC?"
+              ]
+            }
+          }
+        },
+        "ownersOwnLine": {
+          "refuse": {
+            "problem": "This card is from an older TEC-OS: this ROM doesn't load PICO.DRV, so the card boots as its STARTUP.CMD says. A new starter card has PICO.SVC.",
+            "changed": false,
+            "boot": {
+              "console": "serial",
+              "head": false,
+              "row3": "PICO?",
+              "text": [
+                "PICO.DRV?",
+                "GLCD.DRV?",
+                "MY.DRV?"
+              ]
+            }
+          },
+          "rename": {
+            "boot": {
+              "console": "the display",
+              "head": true,
+              "row3": "",
+              "text": [
+                "GLCD.SVC?",
+                "MY.DRV?"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "drvMutant": {
+    "tests": {
+      "a 2d5ce25 PICO.SVC is refused in INIT": "failed",
+      "NAME.SVC installs, from a drive too": "failed",
+      "a second GLCD.SVC is refused whole": "failed",
+      "a board with both displays keeps the PICO9918": "failed",
+      "STDONE returns carry through LCDROW": "failed",
+      "a board whose PICO.SVC fails takes the GLCD": "failed",
+      "PICO.SVC is refused with no PICO9918": "failed",
+      "a refused record under a claim": "failed",
+      "row 3: a failed load by hand": "failed",
+      "a machine with .* refuses GLCD.SVC": "failed"
+    },
+    "everyOneFails": true
+  },
+  "media": {
+    "diagnostics": {
+      "landed": "66412ce96f99aaf4b67afaaad0d8c6597f81e1e46a5c33d40180a24a8a5ea343",
+      "reference": "66412ce96f99aaf4b67afaaad0d8c6597f81e1e46a5c33d40180a24a8a5ea343"
+    },
+    "starterImage": "d827a53934bb8da7756622498b76a0ab0c528975f2309158fce68c7d35109c28",
+    "recipe": "0f1bbb94e4eb86a282f7b4c99493c2303f8429a5e8488054d6c5c778637152dd",
+    "revision": "3",
+    "files": {
+      "TERM.COM": "fc34fcd4cbc4b7c300b36936486f3d2e98deb01341c21f6aa32d6a90261726b9",
+      "PROBE.COM": "8586ae2e8c0673773522a7e1ac7739f82c027440a06108dd1a4967f921c28bb7",
+      "DEMO.COM": "d76be28ca6b15d026a78936f41895632f57b4ebac114b2f0310c9fc70f53ec1f",
+      "MOUNT.COM": "834b0fde38ba97399605f815df0646b4d82a9f5dcd7b5404018e8f5095cc2b12",
+      "VOLS.COM": "d2914530cdf5ae7e8e71f30adc623c4b0728551e7b8ba511dd6734436e5f1432",
+      "PICO.SVC": "f1f3af28dbb8f2f56b780de06188c988b0b6a035fb59e7e4224efb7e8d595dac",
+      "PICO40.SVC": "1307091c1602bcd7f3f93b359e9adab40d00159284e98c2961b62bfb9bd764e5",
+      "PICO32.SVC": "667760955013c60d4466457ea7d49cb7c89f27b00dabd09232034131fd644ab3",
+      "GLCD.SVC": "072f939f9faf9197f587a15961bf41d92d9be1f4dec2d91a60876d67874f0fcb",
+      "STARTUP.CMD": "3b8024d462c98e93ca315fcbd3454d0a2c5463bde78e6e0111937cb294034d53",
+      "EDIT.COM": "ed88337e6dfa2626dd37a225a0ec09332f4927a0bde62114bbf8661d2d0fdc78",
+      "TAS.COM": "ff18734807206127d4ede7a96bbd26acf36310361834a1c9ae998b20e2f98292",
+      "README.TXT": "e0e23061caa4e143b6477e0ff55cf37e627208e79f66f2283d6eff2b28a7c68e"
+    },
+    "filesSvcOnly": true,
+    "resetIdentity": {
+      "rule": "the same test: page zero's jumps and the stub at STUBAD jumping to BENTRY",
+      "landed": {
+        "BENTRY": "e112",
+        "STUBAD": "bc52"
+      },
+      "reference": {
+        "BENTRY": "e111",
+        "STUBAD": "bc52"
+      }
+    }
+  },
+  "book": {
+    "bookGone": true,
+    "runs": true
+  },
+  "tests": {
+    "oldBinaries": {
+      "pass": 15,
+      "fail": 0,
+      "skipped": 0
+    },
+    "tas": {
+      "pass": 10,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "fonts": {
+    "note": "Measured, not moved (C6, KD-136). ABI entry's 2 bytes and the new format version are added by hand: the variant reads the font at a fixed address.",
+    "present": {
+      "rom": 14778,
+      "files": {
+        "PICO.SVC": 1360,
+        "GLCD.SVC": 1597
+      },
+      "tpa": {
+        "starter": {
+          "serial": 46854,
+          "pico80": 45318,
+          "pico40": 45318,
+          "pico32": 45318,
+          "glcd": 45318,
+          "both": 43782
+        },
+        "fourG8M": {
+          "serial": 46086,
+          "pico80": 44550,
+          "pico40": 44550,
+          "pico32": 44550,
+          "glcd": 44550,
+          "both": 43014
+        }
+      },
+      "cold": {
+        "serial": {
+          "seconds": 2.224,
+          "sdReads": 25,
+          "warmBoot": 0.0216
+        },
+        "pico80": {
+          "seconds": 2.169,
+          "sdReads": 25,
+          "warmBoot": 0.0488
+        },
+        "glcd": {
+          "seconds": 2.247,
+          "sdReads": 22,
+          "warmBoot": 0.0548
+        },
+        "bothDisplays": {
+          "seconds": 2.169,
+          "sdReads": 25,
+          "warmBoot": 0.0488
+        }
+      }
+    },
+    "shared": {
+      "rom": 15546,
+      "romWithAbiEntry": 15548,
+      "free": 836,
+      "files": {
+        "PICO.SVC": 591,
+        "GLCD.SVC": 828
+      },
+      "tpa": {
+        "starter": {
+          "serial": 46854,
+          "pico80": 46086,
+          "pico40": 46086,
+          "pico32": 46086,
+          "glcd": 46086,
+          "both": 45318
+        },
+        "fourG8M": {
+          "serial": 46086,
+          "pico80": 45318,
+          "pico40": 45318,
+          "pico32": 45318,
+          "glcd": 45318,
+          "both": 44550
+        }
+      },
+      "cold": {
+        "serial": {
+          "seconds": 2.019,
+          "sdReads": 22,
+          "warmBoot": 0.0216
+        },
+        "pico80": {
+          "seconds": 1.964,
+          "sdReads": 22,
+          "warmBoot": 0.0488
+        },
+        "glcd": {
+          "seconds": 2.117,
+          "sdReads": 20,
+          "warmBoot": 0.0548
+        },
+        "bothDisplays": {
+          "seconds": 1.964,
+          "sdReads": 22,
+          "warmBoot": 0.0488
+        }
+      }
+    }
+  },
+  "reproducible": {
+    "first": "debba41f1c4bbdbfcb34bb118956dd38cab88ca00ad76848474b10ee3848a301",
+    "second": "debba41f1c4bbdbfcb34bb118956dd38cab88ca00ad76848474b10ee3848a301",
+    "third": "debba41f1c4bbdbfcb34bb118956dd38cab88ca00ad76848474b10ee3848a301",
+    "equal": true
+  },
+  "mutants": {
+    "old VOLS: reaches the mount service": {
+      "caught": true,
+      "by": [
+        "an old VOLS returns through C01Dh and changes nothing"
+      ]
+    },
+    "old MOUNT unmounting: reaches the mount service": {
+      "caught": true,
+      "by": [
+        "an old MOUNT, to unmount returns through C01Dh and changes nothing"
+      ]
+    },
+    "old MOUNT mounting: reaches the mount service": {
+      "caught": true,
+      "by": [
+        "an old MOUNT, to mount returns through C01Dh and changes nothing"
+      ]
+    },
+    "old VOLS: no RET, runs on into the data": {
+      "caught": true,
+      "by": [
+        "an old VOLS returns through C01Dh and changes nothing"
+      ]
+    },
+    "old binaries: a rebuilt fixture": {
+      "caught": true,
+      "by": [
+        "an old DEMO prints no throughout, reaches no hardware service, and leaves page zero unchanged",
+        "an old VOLS returns through C01Dh and changes nothing",
+        "an old MOUNT, to unmount returns through C01Dh and changes nothing"
+      ]
+    },
+    "row 3: PICO? sets no flag": {
+      "caught": true,
+      "by": [
+        "a display driver installed by hand clears PICO?",
+        "row 3: each word is cleared by a take, and the flag doesn't stay for the next",
+        "row 3: a program's write to rows 0 to 2 leaves the word for a take to clear"
+      ]
+    },
+    "rom: no RET at C01Dh (the build)": {
+      "caught": true,
+      "by": [
+        "the build: placement check failed: ABI 3's ABIVOL must hold a RET"
+      ]
+    },
+    "rom: the RET one byte out (the build)": {
+      "caught": true,
+      "by": [
+        "the build: placement check failed: ABI 3's ABIVOL must hold a RET"
+      ]
+    },
+    "rom: a retired entry left in the table": {
+      "caught": true,
+      "by": [
+        "the table at C003h: TNA, ABI 4.0, the entries abi.inc names, and the old table's addresses each mapped",
+        "a call to C018h, 2d5ce25's ABIXCCP, reaches the RET at C01Dh with nothing written"
+      ]
+    },
+    "commands: CCP still a built-in, not reaching the transient path": {
+      "caught": true,
+      "by": [
+        "CCP says so with no file, and runs a file of that name"
+      ]
+    },
+    "commands: EXIT still a built-in, not reaching the transient path": {
+      "caught": true,
+      "by": [
+        "EXIT says so with no file, and runs a file of that name"
+      ]
+    },
+    "commands: UNLOAD with no resident not refused": {
+      "caught": true,
+      "by": [
+        "UNLOAD is refused with no resident, and removes residents last in, first out"
+      ]
+    },
+    "commands: UNLOAD ignores the removable flag": {
+      "caught": true,
+      "by": [
+        "INIT fails with a hook left: the pages stay, nothing is registered, UNLOAD refuses",
+        "not removable: UNLOAD says so and changes nothing"
+      ]
+    },
+    "guard: load path ignores it": {
+      "caught": true,
+      "by": [
+        "a load refused by the window reports refused"
+      ]
+    },
+    "guard: UNLOAD ignores it": {
+      "caught": true,
+      "by": [
+        "REMOVE calling the removal by its ROM address is refused, and UNLOAD goes on",
+        "INIT calling a removal is refused"
+      ]
+    },
+    "guard: never set": {
+      "caught": true,
+      "by": [
+        "REMOVE calling the removal by its ROM address is refused, and UNLOAD goes on",
+        "INIT calling a removal is refused"
+      ]
+    },
+    "guard: not reset at warm boot": {
+      "caught": true,
+      "by": [
+        "a warm boot inside INIT rolls the ceiling back",
+        "a warm boot from inside REMOVE clears the guard, the service stays, and a later load works"
+      ]
+    },
+    "guard: not reset after REMOVE or INIT": {
+      "caught": true,
+      "by": [
+        "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+      ]
+    },
+    "startup: lines stop after the first": {
+      "caught": true,
+      "by": [
+        "each line runs, echoed, and a failing one prints its message; a warm boot doesn't run the file",
+        "a file with no lines, and no file, reach the prompt; a file over one record ends at it",
+        "a file of exactly 128 bytes runs its last byte, and reads no further"
+      ]
+    },
+    "history: cleared at warm boot": {
+      "caught": true,
+      "by": [
+        "a program's function 10 takes ^W as a character and its line is not stored",
+        "the ring is kept by warm boot and emptied by cold boot"
+      ]
+    },
+    "freed page: the watch gone": {
+      "caught": true,
+      "by": [
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not"
+      ]
+    },
+    "freed page: the watch a byte short at the top": {
+      "caught": true,
+      "by": [
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not",
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not (a write to EXPAND 1, at the file's end)"
+      ]
+    },
+    "freed page: the watch a byte short at the bottom": {
+      "caught": true,
+      "by": [
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not",
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not (a write to EXPAND 1, at the file's end)"
+      ]
+    },
+    "freed page: the watch spills onto the history": {
+      "caught": true,
+      "by": [
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not",
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not (a write to EXPAND 1, at the file's end)"
+      ]
+    },
+    "freed page: the watch spills onto the reserved page": {
+      "caught": true,
+      "by": [
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not",
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not (a write to EXPAND 1, at the file's end)"
+      ]
+    },
+    "selector: base test one low": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone",
+        "hardware services: the DS1302 clock"
+      ]
+    },
+    "selector: base test one high": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone",
+        "hardware services: the claim, INFO's claim bit, and text at a position"
+      ]
+    },
+    "selector: upper test one high": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone"
+      ]
+    },
+    "selector: upper test one low": {
+      "caught": true,
+      "by": [
+        "hardware services: the DS1302 clock"
+      ]
+    },
+    "selector: the table not offset": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone",
+        "hardware services: joystick and matrix keys",
+        "hardware services: the claim, INFO's claim bit, and text at a position"
+      ]
+    },
+    "row 3: GLCD? sets no flag": {
+      "caught": true,
+      "by": [
+        "row 3: GLCD? is cleared by GLCD.SVC loading under PICO.SVC, which keeps the console",
+        "INFO's HWBWRD follows the word: up, overwritten and cleared"
+      ]
+    },
+    "row 3: a program's write leaves the flag": {
+      "caught": true,
+      "by": [
+        "row 3: a program's write over PICO? survives the take that follows",
+        "row 3: a program's write over GLCD? survives the take that follows",
+        "INFO's HWBWRD follows the word: up, overwritten and cleared"
+      ]
+    },
+    "row 3: the wrong row resets it": {
+      "caught": true,
+      "by": [
+        "row 3: a program's write over PICO? survives the take that follows",
+        "row 3: a program's write over GLCD? survives the take that follows",
+        "row 3: a program's write to rows 0 to 2 leaves the word for a take to clear"
+      ]
+    },
+    "row 3: every take blanks it": {
+      "caught": true,
+      "by": [
+        "row 3: a take leaves a program's row alone, with nothing up",
+        "row 3: a program's write over PICO? survives the take that follows",
+        "row 3: a program's write over GLCD? survives the take that follows"
+      ]
+    },
+    "row 3: no take clears a word": {
+      "caught": true,
+      "by": [
+        "a display driver installed by hand clears PICO?",
+        "row 3: each word is cleared by a take, and the flag doesn't stay for the next",
+        "row 3: GLCD? is cleared by GLCD.SVC loading under PICO.SVC, which keeps the console"
+      ]
+    },
+    "row 3: the flag stays after a take": {
+      "caught": true,
+      "by": [
+        "a display driver installed by hand clears PICO?",
+        "INFO's HWBWRD follows the word: up, overwritten and cleared"
+      ]
+    },
+    "row 3: a load under PICO.SVC leaves GLCD?": {
+      "caught": true,
+      "by": [
+        "row 3: GLCD? is cleared by GLCD.SVC loading under PICO.SVC, which keeps the console"
+      ]
+    },
+    "row 3: STDONE not masked": {
+      "caught": true,
+      "by": [
+        "row 3: PICO? still shows on the black screen after a failed CON UC1"
+      ]
+    },
+    "row 3: the word cleared leaves carry set": {
+      "caught": true,
+      "by": [
+        "row 3: GLCD? is cleared by GLCD.SVC loading under PICO.SVC, which keeps the console"
+      ]
+    },
+    "row 3: INFO loses the bit": {
+      "caught": true,
+      "by": [
+        "a display driver installed by hand clears PICO?",
+        "INFO's HWBWRD follows the word: up, overwritten and cleared"
+      ]
+    },
+    "recognition: (0000h) unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses (0000h)"
+      ]
+    },
+    "recognition: (0001h) unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses (0001h) low",
+        "recognition refuses (0002h) high"
+      ]
+    },
+    "recognition: (0005h) unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses (0005h)"
+      ]
+    },
+    "recognition: S low byte unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses STUBAD's low byte"
+      ]
+    },
+    "recognition: the stub's JP unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses the stub's JP"
+      ]
+    },
+    "recognition: BENTRY's low byte unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses the stub's target, low"
+      ]
+    },
+    "recognition: BENTRY's high byte unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses the stub's target, high"
+      ]
+    },
+    "recognition: W low byte unread": {
+      "caught": true,
+      "by": [
+        "recognition refuses W's low byte"
+      ]
+    },
+    "recognition: W below 8000h allowed": {
+      "caught": true,
+      "by": [
+        "recognition refuses W below 8000h"
+      ]
+    },
+    "recognition: 8000h one low": {
+      "caught": true,
+      "by": [
+        "recognition refuses W below 8000h"
+      ]
+    },
+    "recognition: 8000h one high": {
+      "caught": true,
+      "by": [
+        "W at exactly 8000h and at S is recognised"
+      ]
+    },
+    "recognition: W above S allowed": {
+      "caught": true,
+      "by": [
+        "recognition refuses W above S"
+      ]
+    },
+    "MOUNT: no default A: let through when a selection is retained": {
+      "caught": true,
+      "by": [
+        "a card with no default A: under a valid retained A: reaches DIAG, and a retry uses the selection"
+      ]
+    },
+    "step 2: the walk stops at the first block": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "RESEL before ALVINIT": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "RESEL never called": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "reset state: IOBYTE kept": {
+      "caught": true,
+      "by": [
+        "from user 5, a drive and a video console, a reset reaches A:, user 0, on serial"
+      ]
+    },
+    "reset state: drive and user kept": {
+      "caught": true,
+      "by": [
+        "from user 5, a drive and a video console, a reset reaches A:, user 0, on serial",
+        "startup runs once per reset from the selected A:, at user 0",
+        "startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit"
+      ]
+    },
+    "reset state: workspace kept, console and services with it": {
+      "caught": true,
+      "by": [
+        "a real service loaded is recognised, and is gone after the reset",
+        "a retained drive left with no slot on a card of identical extents gives the defaults whole",
+        "startup runs once per reset from the selected A:, at user 0"
+      ]
+    },
+    "KE-121: a drive beyond MNTDRV mounts": {
+      "caught": true,
+      "by": [
+        "a default drive beyond MNTDRV is refused with MEMOUNT"
+      ]
+    },
+    "KE-121: one drive short": {
+      "caught": true,
+      "by": [
+        "a card with no default A: under a valid retained A: reaches DIAG, and a retry uses the selection",
+        "a default drive beyond MNTDRV is refused with MEMOUNT",
+        "a default drive within MNTDRV boots"
+      ]
+    },
+    "KE-122: the card's letter": {
+      "caught": true,
+      "by": [
+        "a reset keeps the selected volume",
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary"
+      ]
+    },
+    "startup: opened at every warm boot": {
+      "caught": true,
+      "by": [
+        "startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit",
+        "lines from the file equal the same lines typed: a program's warm boot then a line"
+      ]
+    },
+    "startup: marked after the open": {
+      "caught": true,
+      "by": [
+        "startup is marked before it opens"
+      ]
+    },
+    "recognition: W equal to S refused": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "recognition: always": {
+      "caught": true,
+      "by": [
+        "recognition refuses (0000h)",
+        "recognition refuses (0001h) low",
+        "recognition refuses (0002h) high"
+      ]
+    },
+    "recognition: never": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "recognition: after the clears": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "capture: RSLNO leaves the old buffer": {
+      "caught": true,
+      "by": [
+        "a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset at DIAG doesn't"
+      ]
+    },
+    "capture: D: lost": {
+      "caught": true,
+      "by": [
+        "all four drives are kept: a remapped D:",
+        "a hung INIT is recognised, W below PZTOP, and the reset recovers from it"
+      ]
+    },
+    "abandon: a failed read ignored": {
+      "caught": true,
+      "by": [
+        "a failed read in step 1 leaves the defaults whole"
+      ]
+    },
+    "abandon: one descriptor on two drives": {
+      "caught": true,
+      "by": [
+        "a retained drive duplicated in RSLBUF gives the defaults whole"
+      ]
+    },
+    "abandon: a drive of geometry 0 matched": {
+      "caught": true,
+      "by": [
+        "a retained drive of geometry 0 is not retained, whatever its other bytes, and no volume is on two drives"
+      ]
+    },
+    "abandon: no slot check": {
+      "caught": true,
+      "by": [
+        "a retained drive left with no slot on a card of identical extents gives the defaults whole",
+        "a G8M volume kept on a drive whose slot is G1M's gives the defaults, and one that fits doesn't"
+      ]
+    },
+    "abandon: a drive with slot 0 taken as fitting": {
+      "caught": true,
+      "by": [
+        "a retained drive left with no slot on a card of identical extents gives the defaults whole"
+      ]
+    },
+    "abandon: slot check one size small": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "abandon: no retained A: test": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "compare: flags left out": {
+      "caught": true,
+      "by": [
+        "a retained volume changed flags on the card gives the defaults whole",
+        "a retained drive of changed flags gives the defaults whole"
+      ]
+    },
+    "compare: geometry left out too": {
+      "caught": true,
+      "by": [
+        "a retained volume changed flags on the card gives the defaults whole",
+        "a retained drive of changed geometry gives the defaults whole",
+        "a retained drive of changed flags gives the defaults whole"
+      ]
+    },
+    "compare: length left out too": {
+      "caught": true,
+      "by": [
+        "a retained volume changed flags on the card gives the defaults whole",
+        "a retained drive resized gives the defaults whole",
+        "a retained drive of changed geometry gives the defaults whole"
+      ]
+    },
+    "compare: start by its low byte only": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "step 2: indices not copied": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "step 2: index off by one": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "step 2: no DPH built": {
+      "caught": true,
+      "by": [
+        "a selected volume of another geometry than the drive's default gets its own DPH",
+        "a drive other than A: selected with another geometry than its default's gets its own DPH"
+      ]
+    },
+    "step 2: a DPH rebuilt for A: only": {
+      "caught": true,
+      "by": [
+        "a drive other than A: selected with another geometry than its default's gets its own DPH"
+      ]
+    },
+    "DIAG: the header dump zeroes RSLBUF+6": {
+      "caught": true,
+      "by": [
+        "DIAG's retry uses the selection after the header dump and after a second failure"
+      ]
+    },
+    "startup: at the wrong user": {
+      "caught": true,
+      "by": [
+        "a selected volume of another geometry than the drive's default gets its own DPH",
+        "a drive other than A: selected with another geometry than its default's gets its own DPH",
+        "a real service loaded is recognised, and is gone after the reset"
+      ]
+    },
+    "startup: from B:": {
+      "caught": true,
+      "by": [
+        "a drive unmounted before a reset stays so, and can be mounted after it",
+        "a retained drive of geometry 0 is not retained, whatever its other bytes, and no volume is on two drives",
+        "startup runs once per reset from the selected A:, at user 0"
+      ]
+    },
+    "startup: the skip gone": {
+      "caught": true,
+      "by": [
+        "a held key skips startup on the selected A:"
+      ]
+    },
+    "startup: a program's exit ends the file": {
+      "caught": true,
+      "by": [
+        "startup runs once per reset from the selected A:, at user 0",
+        "startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit",
+        "startup is marked before it opens"
+      ]
+    },
+    "host: the guard not rearmed by a reset": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary (a write to EXPAND 1, at the file's end)",
+        "all four drives are kept: a remapped D: (a write to EXPAND 1, at the file's end)",
+        "a selected volume of another geometry than the drive's default gets its own DPH (a write to EXPAND 1, at the file's end)"
+      ]
+    },
+    "host: swapCard keeps the old card": {
+      "caught": true,
+      "by": [
+        "a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset at DIAG doesn't",
+        "DIAG's retry uses the selection after the header dump and after a second failure",
+        "a card with no default A: under a valid retained A: reaches DIAG, and a retry uses the selection"
+      ]
+    },
+    "recognition: a write before the decision": {
+      "caught": true,
+      "by": [
+        "RAM from 4b6877b, a resident in, is unrecognised and nothing old runs",
+        "RAM from dbdce5c, a resident in, is unrecognised and nothing old runs",
+        "recognised: only the ROM runs from COLD to MEMINIT, and nothing is written outside the boot stack before the decision"
+      ]
+    },
+    "recognition: old code run": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "a real service loaded is recognised, and is gone after the reset",
+        "a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset at DIAG doesn't"
+      ]
+    },
+    "tecvol: a 1.0 card's order not checked": {
+      "caught": true,
+      "by": [
+        "tecvol verify refuses every 1.0 card the ROM's MOUNT refuses, check by check"
+      ]
+    },
+    "tecvol: a drive past the drives field let through": {
+      "caught": true,
+      "by": [
+        "tecvol verify and the ROM agree on a volume on each drive with every drives value, at both minor versions",
+        "tecvol create refuses a volume on a drive past the drives it gives"
+      ]
+    },
+    "write: the FCB left on the next extent when its make fails": {
+      "caught": true,
+      "by": [
+        "a sequential write that needs an extent with the directory full returns 1, and once an entry is freed carries on with no extent missing"
+      ]
+    },
+    "write: the extent moved on after record 127": {
+      "caught": true,
+      "by": [
+        "a sequential write of 128 records makes one extent, not an empty second one"
+      ]
+    },
+    "32: E stored unmasked": {
+      "caught": true,
+      "by": [
+        "function 32 keeps E's low five bits, for every E from 10h to FEh, and FFh gets the user number",
+        "function 32 with E5h is user 5: erased entries stay erased"
+      ]
+    },
+    "CCP: a drive with no volume selected at warm boot": {
+      "caught": true,
+      "by": [
+        "unmounting the current drive leaves the prompt on A:, and the next command runs",
+        "a warm boot with 0004h on a drive past D: or one with no volume comes back on A:, in the same user"
+      ]
+    },
+    "13: the user number set to 0": {
+      "caught": true,
+      "by": [
+        "function 13 from user 5 leaves the user number 5, on drive A"
+      ]
+    },
+    "R/O: a sequential write let through": {
+      "caught": true,
+      "by": [
+        "functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the card is unchanged"
+      ]
+    },
+    "R/O: a random write let through": {
+      "caught": true,
+      "by": [
+        "functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the card is unchanged"
+      ]
+    },
+    "R/O: a rename let through": {
+      "caught": true,
+      "by": [
+        "functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the card is unchanged"
+      ]
+    },
+    "R/O: function 30 refused as well": {
+      "caught": true,
+      "by": [
+        "function 30 still changes a read-only file's attributes, as CP/M 2.2's does, and the file can then be written"
+      ]
+    },
+    "line: ! not a separator": {
+      "caught": true,
+      "by": [
+        "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+        "an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line",
+        "a line of 127 characters runs whole: 32 pieces"
+      ]
+    },
+    "line: an empty piece not passed over": {
+      "caught": true,
+      "by": [
+        "an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line"
+      ]
+    },
+    "line: the rest not kept over warm boot": {
+      "caught": true,
+      "by": [
+        "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+        "an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line",
+        "a line of 127 characters runs whole: 32 pieces"
+      ]
+    },
+    "line: a startup line before the rest": {
+      "caught": true,
+      "by": [
+        "a startup line holding ! runs all its pieces before the next startup line",
+        "a chain from a startup line runs before the next startup line, and may hold ! and :"
+      ]
+    },
+    "line: a piece not echoed": {
+      "caught": true,
+      "by": [
+        "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+        "an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line",
+        "a piece may be a built-in, a drive change or a .PRL, and keeps the drive and user it sets"
+      ]
+    },
+    "line: no upper case": {
+      "caught": true,
+      "by": [
+        "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+        "history gives the chained line back whole, as typed, and it runs again",
+        "a chain from a startup line runs before the next startup line, and may hold ! and :"
+      ]
+    },
+    "line: no 0 after a typed line": {
+      "caught": true,
+      "by": [
+        "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+        "an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line",
+        "a startup line holding ! runs all its pieces before the next startup line"
+      ]
+    },
+    "line: each piece parsed from the line's start": {
+      "caught": true,
+      "by": [
+        "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+        "a piece may be a built-in, a drive change or a .PRL, and keeps the drive and user it sets",
+        "a startup line holding ! runs all its pieces before the next startup line"
+      ]
+    },
+    ": not a prefix": {
+      "caught": true,
+      "by": [
+        ": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?",
+        "after a failed : piece the rest of the line goes, and the prompt comes back",
+        "the code is cleared as each piece is taken, before the command is looked for"
+      ]
+    },
+    ": runs after a failure": {
+      "caught": true,
+      "by": [
+        ": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?",
+        "after a failed : piece the rest of the line goes, and the prompt comes back",
+        "the code is cleared as each piece is taken, before the command is looked for"
+      ]
+    },
+    ": FFFFh a failure": {
+      "caught": true,
+      "by": [
+        ": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?"
+      ]
+    },
+    ": failure from FE00h": {
+      "caught": true,
+      "by": [
+        ": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?",
+        "after a failed : piece the rest of the line goes, and the prompt comes back",
+        "the code is cleared as each piece is taken, before the command is looked for"
+      ]
+    },
+    ": after a failure only that piece skipped": {
+      "caught": true,
+      "by": [
+        "after a failed : piece the rest of the line goes, and the prompt comes back",
+        "a chain from a startup line runs before the next startup line, and may hold ! and :",
+        "SAVE's NO SPACE sets FF00h: a full directory and a full disk"
+      ]
+    },
+    "code: not cleared as a piece is taken": {
+      "caught": true,
+      "by": [
+        "the code is cleared as each piece is taken, before the command is looked for",
+        "a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file"
+      ]
+    },
+    "code: cleared only as a program starts": {
+      "caught": true,
+      "by": [
+        "the code is cleared as each piece is taken, before the command is looked for"
+      ]
+    },
+    "code: NAME? and a built-in's error leave it": {
+      "caught": true,
+      "by": [
+        ": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?",
+        "the code is cleared as each piece is taken, before the command is looked for",
+        "a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file"
+      ]
+    },
+    "code: NO FILE leaves it": {
+      "caught": true,
+      "by": [
+        "a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file"
+      ]
+    },
+    "code: FILE EXISTS leaves it": {
+      "caught": true,
+      "by": [
+        "a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file"
+      ]
+    },
+    "code: COPY's success a failure": {
+      "caught": true,
+      "by": [
+        "a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file"
+      ]
+    },
+    "47: not dispatched": {
+      "caught": true,
+      "by": [
+        "function 47's command starts with the default FCBs, tail, DMA and stack of the same command typed",
+        "function 47 copies the command before anything loads: a target that loads over the caller's DMA",
+        "function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on"
+      ]
+    },
+    "47: a CR let through": {
+      "caught": true,
+      "by": [
+        "function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on"
+      ]
+    },
+    "47: an LF let through": {
+      "caught": true,
+      "by": [
+        "function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on"
+      ]
+    },
+    "47: a 0 looked for in 129 bytes": {
+      "caught": true,
+      "by": [
+        "function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on"
+      ]
+    },
+    "47: a 0 looked for in 127 bytes": {
+      "caught": true,
+      "by": [
+        "function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt",
+        "KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded"
+      ]
+    },
+    "47: 64 bytes copied": {
+      "caught": true,
+      "by": [
+        "function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt"
+      ]
+    },
+    "47: the program goes on": {
+      "caught": true,
+      "by": [
+        "function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt",
+        "a chain from a startup line runs before the next startup line, and may hold ! and :"
+      ]
+    },
+    "47: the line not marked": {
+      "caught": true,
+      "by": [
+        "function 47's command starts with the default FCBs, tail, DMA and stack of the same command typed",
+        "function 47 copies the command before anything loads: a target that loads over the caller's DMA",
+        "function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt"
+      ]
+    },
+    "47: refused with A = 0": {
+      "caught": true,
+      "by": [
+        "function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on"
+      ]
+    },
+    "stop: ^C keeps the rest": {
+      "caught": true,
+      "by": [
+        "^C at a program's line input drops the rest of the line"
+      ]
+    },
+    "stop: a bad sector keeps the rest": {
+      "caught": true,
+      "by": [
+        "a BDOS error's exit drops the rest of the line"
+      ]
+    },
+    "stop: a read-only drive keeps the rest": {
+      "caught": true,
+      "by": [
+        "a read-only drive's exit drops the rest of the line"
+      ]
+    },
+    "stop: a failed select keeps the rest": {
+      "caught": true,
+      "by": [
+        "a failed select's exit drops the rest of the line"
+      ]
+    },
+    "stop: a failed directory read keeps the rest": {
+      "caught": true,
+      "by": [
+        "a directory read that fails drops the rest of the line"
+      ]
+    },
+    "stop: ERA's read-only file keeps the rest": {
+      "caught": true,
+      "by": [
+        "ERA's read-only file drops the rest of the line"
+      ]
+    },
+    "code: NO SPACE leaves it": {
+      "caught": true,
+      "by": [
+        "SAVE's NO SPACE sets FF00h: a full directory and a full disk"
+      ]
+    },
+    "stop: a write lost at warm boot keeps the rest": {
+      "caught": true,
+      "by": [
+        "a write lost at warm boot drops the rest of the line"
+      ]
+    },
+    "stop: ^C at [more] keeps the rest": {
+      "caught": true,
+      "by": [
+        "^C at TYPE's or DIR's [more] drops the rest of the line"
+      ]
+    },
+    "stop: CHDROP drops nothing": {
+      "caught": true,
+      "by": [
+        "^C at a program's line input drops the rest of the line",
+        "a BDOS error's exit drops the rest of the line",
+        "a read-only drive's exit drops the rest of the line"
+      ]
+    },
+    "stop: a reset keeps the rest": {
+      "caught": true,
+      "by": [
+        "a reset clears the rest of the line"
+      ]
+    },
+    "KE-127: a startup line not cut at 127": {
+      "caught": true,
+      "by": [
+        "KE-127: a startup line of 128 characters runs its first 127, and leaves 0100h as loaded"
+      ]
+    },
+    "KE-127: a startup line cut at 128": {
+      "caught": true,
+      "by": [
+        "KE-127: a startup line of 128 characters runs its first 127, and leaves 0100h as loaded"
+      ]
+    },
+    "the CCP left on .DRV": {
+      "caught": true,
+      "by": [
+        "DEMO's own tables: each hex digit's pattern, each colour port and random colours",
+        "a 2d5ce25 PICO.SVC is refused in INIT: its name with a question mark, SVCRC 1 and PICO? still shown",
+        "the resident GLCD draws every screen of the workload as the driver did, byte for byte"
+      ]
+    },
+    "CON UC1 left on GLCD.DRV": {
+      "caught": true,
+      "by": [
+        "a board with both displays keeps the PICO9918; GLCD.SVC's line gives way, and CON UC1 installs it",
+        "the GLCD's UNLOAD clears its INFO bit",
+        "TPA after boot: one display, and both"
+      ]
+    },
+    "the listing left as DRIVERS": {
+      "caught": true,
+      "by": [
+        "SERVICES lists each service and its pages, the newest first, with none and after UNLOAD"
+      ]
+    },
+    "the alias gone from abi.inc": {
+      "caught": true,
+      "by": [
+        "the build: placement check failed: abi.inc: ABIDRV is not an alias of ABISVC"
+      ]
+    },
+    "the demo out of the source check": {
+      "caught": true,
+      "by": [
+        "the build: placement check failed: the service sources checked were drivers/font.asm, drivers/glcd.asm, drivers/pico.asm"
+      ]
+    },
+    "the page: a chained line taken whole": {
+      "caught": true,
+      "by": [
+        "the web host: a chained startup line loses its display pieces and keeps the rest",
+        "the web host: the piece after a display piece loses its colon and still runs after a failing GLCD.SVC"
+      ]
+    },
+    "the page: a colon kept after a display piece": {
+      "caught": true,
+      "by": [
+        "the web host: the piece after a display piece loses its colon and still runs after a failing GLCD.SVC"
+      ]
+    },
+    "the page: an old card's words name the first file": {
+      "caught": true,
+      "by": [
+        "the web host: an old card's words name the display asked for, or else what it has"
+      ]
+    },
+    "the page: an old card's own words gone": {
+      "caught": true,
+      "by": [
+        "the web host: power-on applies the width, says what a card lacks, and a card with no drive A doesn't stop it",
+        "the web host: a card with .DRV files is refused in its own words and left alone",
+        "the web host: an old card's words name the display asked for, or else what it has"
+      ]
+    },
+    "the media tool takes any TAS.COM": {
+      "caught": true,
+      "by": [
+        "the media tool refuses a TAS.COM missing or not as pinned"
+      ]
+    }
+  },
+  "mutantScore": {
+    "caught": 156,
+    "total": 165,
+    "run": 156,
+    "notRun": [
+      {
+        "name": "KS31 recognition: A not reloaded for LATCHV",
+        "reason": "over 800 MB under the guard"
+      },
+      {
+        "name": "KS31 dirty cache: EXPAND 1 not cleared",
+        "reason": "over 800 MB under the guard"
+      },
+      {
+        "name": "KS31 abandon: a retained drive with no match",
+        "reason": "1,451 MB under the guard; not run on this machine"
+      },
+      {
+        "name": "KS30 positions 24 to 29 of the set",
+        "reason": "664 MB as a slice, over the 600 MB limit"
+      }
+    ]
+  },
+  "oldSets": {
+    "ks30": {
+      "rev": "dbdce5c",
+      "caught": 36,
+      "total": 36,
+      "notRun": "positions 20 to 29: over 600 MB as a slice"
+    },
+    "ks31": {
+      "rev": "98c6416",
+      "caught": 30,
+      "total": 30,
+      "notRun": "positions 10 to 29 and 50 to 56: over 600 MB as slices"
+    },
+    "ks32": {
+      "rev": "08da4d6",
+      "caught": 34,
+      "total": 39,
+      "excluded": "positions 35 and 36 do not apply at 08da4d6: their code landed in f3be90f and 92073d5; positions 30 to 34 are not caught there because their tests landed in 864b558"
+    }
+  }
+}
