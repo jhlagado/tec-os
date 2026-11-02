@@ -5,11 +5,10 @@ Checked against TEC-OS 08da4d6, with the starter card's `EDIT.COM` from Edit
 `ed88337e6dfa2626dd37a225a0ec09332f4927a0bde62114bbf8661d2d0fdc78`.
 
 The CCP prints the prompt, reads a command line and carries it out, as Chapter
-3 describes from the keyboard's side. This chapter follows the CCP's code: its
-entry from cold and warm boot, the loop that prints the prompt and takes a
-line apart at each `!`, the parsing of the command word and of file names, the
-built-in commands, the loading of a program and the page zero it gets, and the
-RAM and the stack the CCP uses.
+3 describes from the keyboard's side. This chapter describes the CCP's code:
+its entry from cold and warm boot, the prompt, the parsing of the command word
+and of file names, the built-in commands, the loading of a program and the
+page zero it gets, and the RAM and the stack the CCP uses.
 
 ## The CCP in the ROM
 
@@ -22,15 +21,17 @@ from `CCPRAM`, `BCEBh`, to `BE76h` (`src/ram.asm:64-128`).
 
 The CCP is an ordinary CP/M program in most of what it does. It reads and
 writes files and the console through `CALL 0005h`, as a program in the TPA
-does, and its comments say so: `DIR` uses only search first and search next
-and the DMA record, `TYPE` reads 128-byte records, `ERA` deletes through the
-BDOS (`src/cpm/ccp.asm:404`, `src/cpm/ccp.asm:785`, `src/cpm/ccp.asm:834`).
-What it does outside that interface is read a few of TEC-OS's own bytes: the
-console's width and height at `0048h` and `0049h`, the console mode, the
-IOBYTE, the top of the TPA at `0007h`, the BDOS's flags `HFLAG` and `WRFLAG`,
-and the return code `PRGCODE`. It also calls a few of TEC-OS's routines
-directly: startup's `STBOOT` and `STLINE`, the driver loader, the PRL loader
-and the BDOS's division, `DIV16`.
+does: `DIR` lists with functions 17 and 18, `TYPE` reads with function 20 and
+`ERA` erases with function 19 (`src/cpm/ccp.asm:450-452`,
+`src/cpm/ccp.asm:800-803`, `src/cpm/ccp.asm:869-872`). What it does outside
+that interface is read a few of TEC-OS's own bytes: the console's width and
+height at `0048h` and `0049h`, the console mode, the IOBYTE, the top of the
+TPA at `0007h`, the BDOS's flags `HFLAG` and `WRFLAG`, and the return code
+`PRGCODE`. It also calls a few of TEC-OS's routines directly: startup's
+`STBOOT` and `STLINE`, the driver loader, the driver commands' routines
+`CMDDRV` and `DRVUNL`, `GLCLD` for `CON UC1`, the PRL loader and the BDOS's
+division, `DIV16` (`src/cpm/ccp.asm:246-249`, `src/cpm/ccp.asm:1063`,
+`src/cpm/ccp.asm:1100`).
 
 ## The entry from boot
 
@@ -38,8 +39,9 @@ Cold boot and warm boot both end with a jump to `CCPENT`, with `C` holding the
 byte at `0004h`, the user number in bits 4 to 7 and the drive in bits 0 to 3
 (`src/boot.asm:80-82`, `src/cpm/ccp.asm:23-52`). Cold boot sets that byte to
 0, drive A and user 0, before it falls into warm boot (`src/boot.asm:51-52`).
-Warm boot leaves it as the CCP last wrote it, so the CCP comes back to the
-drive and user it was on.
+Warm boot's `PZINIT` leaves it as the CCP last wrote it
+(`src/boot.asm:215-217`), so the CCP comes back to the drive and user it was
+on.
 
 `CCPENT` sets its stack and keeps the drive in `BOOTDRV`
 (`src/cpm/ccp.asm:27-30`). It sets `WRFLAG` and calls function 13, the disk
@@ -95,118 +97,32 @@ Every prompt therefore leaves `0004h` matching the drive and user in use, so a
 warm boot started by a program returns to them. The prompt is the drive's
 letter and `>` (`src/cpm/ccp.asm:61-65`); the user number is not shown.
 
-A line comes from one of three places, tried in this order
-(`src/cpm/ccp.asm:66-75`):
+A line comes first from what is left of a chained line, then from the startup
+file, through `STLINE`, and last from the keyboard, through BDOS function 10
+with `HFLAG` set for the history (`src/cpm/ccp.asm:66-75`). For the keyboard
+the CCP's buffer is `CMDBUF`, with `CMDLEN` after it for the count and
+`CMDTXT` for the characters (`src/ram.asm:75-80`); warm boot sets the buffer's
+maximum to 127 (`src/boot.asm:280-281`). `MLTAKE` takes one piece of the line
+up to its `!`, turns its letters to capitals and sets `PRGCODE`, the return
+code, to 0 (`src/cpm/ccp.asm:106-149`). Chapter 25 describes the chained line,
+the `:` test, the return code and the ways the rest of a line is dropped, and
+Chapter 22 the startup file.
 
-1. the next piece of a chained line, while `CHPOS` is not 0;
-2. the next line of `A:STARTUP.CMD`, from `STLINE`, while startup has lines;
-3. the console, through BDOS function 10, with `HFLAG` set so that the line is
-   stored in the history and `^W` and `^N` recall earlier ones.
-
-For the console, the CCP's buffer is `CMDBUF`, with `CMDLEN` after it for the
-count and `CMDTXT` for the 128 characters (`src/ram.asm:75-80`). Warm boot
-sets the buffer's first byte, the maximum, to 127 (`src/boot.asm:280-281`), so
-a line holds 127 characters and the 128th byte has room for the 0 that `MLGOT`
-writes after the line (`src/cpm/ccp.asm:77-84`). `STLINE` copies a line of the
-startup file into `CMDTXT` itself, passes over its characters after the 127th,
-and echoes it as if typed, since it does not come through function 10
-(`src/drv.asm:362-413`). Both kinds of line then go the same way: `MLGOT` sets
-`CHPOS` to 1, the line's start, and takes its first piece
-(`src/cpm/ccp.asm:85-89`).
-
-## Pieces of a line
-
-A line is split at each `!` into pieces, and the CCP runs one piece at a time.
-`CHPOS` holds the offset in `CMDTXT` of the next piece plus 1, or 0 when none
-is left (`src/ram.asm:240`). It is above the RAM BIOS table, where warm boot
-does not clear it, and `CMDTXT` is below `CCPCLR`, the start of what warm boot
-clears (`src/ram.asm:67-81`, `src/boot.asm:270-277`). So after a program's
-warm boot the rest of the line is still there, and `MAINLOOP`'s first test
-finds it.
-
-`CHSKIP` finds the next piece: from `CHPOS` it passes over spaces and `!`, and
-returns with the zero flag set if it reaches the end of the line
-(`src/cpm/ccp.asm:173-190`). A line of spaces and `!` alone gives a new prompt
-(`src/cpm/ccp.asm:87-88`). A piece found by `MAINLOOP` is echoed after the
-prompt by `MLECHO`, as far as its `!` or the end, since it did not come
-through function 10 (`src/cpm/ccp.asm:91-104`).
-
-`MLTAKE` then prepares the piece (`src/cpm/ccp.asm:106-149`). A piece that
-starts with `:` runs only if the last command succeeded. The test is on the
-code of BDOS function 108: a code from `FF00h` to `FFFEh` is a failure, and
-the CCP then sets `CHPOS` to 0, dropping the rest of the line, and goes back
-to the prompt (`src/cpm/ccp.asm:111-123`). Otherwise the `:` is passed over,
-and the piece's letters are turned to capitals as far as its `!` or the line's
-end. The `!` becomes a 0, the end of the piece, and `CHPOS` is set to the next
-piece, or to 0 at the end of the line (`src/cpm/ccp.asm:124-143`). Last,
-`PRGCODE` is set to 0, so that each command starts as a success
-(`src/cpm/ccp.asm:144-145`).
-
-Only the piece being taken is turned to capitals, so a later piece is echoed
-as it was typed:
-
-<!-- node book/capture.mjs "dir *.drv ! b: ! dir" -->
-```text
-A>dir *.drv ! b: ! dir
-PICO.DRV     PICO40.DRV   PICO32.DRV   GLCD.DRV    
-4 files, 986K free
-A>b: 
-B>dir
-NO FILE
-B>
-```
-
-The rest of a line is dropped in three cases: when a piece that starts with
-`:` follows a failure; when `^C` is the first key of a line that a program
-reads with function 10; and after a BDOS error, whose warm boot goes through
-`CHDROP` (`src/cpm/bdos.asm:73-77`). A reset clears `CHPOS` with the rest of
-the workspace (`src/boot.asm:23-27`). Two other ways of ending a command leave
-the rest of the line to run. `^C` at a `[more]` pause ends `TYPE` or `DIR`,
-and the CCP goes on to the next piece; and `Write lost`, printed by a warm
-boot whose cache flush has failed, is followed by the next piece as well
-(`src/cache.asm:347-355`).
-
-An example of `^C` at `[more]` needs a card with a long text on it. This card,
-used for the later examples too, is a copy of the starter card with four files
-on drive B: two programs that are a `RET` and zeros, of 46,848 and 46,849
-bytes, a program `ARGS`, and a text of 40 lines:
+The later examples use a copy of the starter card with three files on drive B:
+two programs that are a `RET` and zeros, of 46,848 and 46,849 bytes, and a
+program `ARGS`, whose source, saved as `build/args.asm`, is in the section on
+page zero below:
 
 ```sh
 node -e 'const b = n => { const x = Buffer.alloc(n); x[0] = 0xC9; return x; };
 require("fs").writeFileSync("build/fits.com", b(46848));
-require("fs").writeFileSync("build/big.com", b(46849));
-let s = ""; for (let i = 1; i <= 40; i++) s += "Line " + i + "\n";
-require("fs").writeFileSync("build/lines.txt", s);'
+require("fs").writeFileSync("build/big.com", b(46849));'
 npx atom build/args.asm build/args.com
 cp dist/starter.img build/ccp.img
 node tools/tecvol.mjs put build/ccp.img B build/args.com
 node tools/tecvol.mjs put build/ccp.img B build/fits.com
 node tools/tecvol.mjs put build/ccp.img B build/big.com
-node tools/tecvol.mjs put build/ccp.img B build/lines.txt --text
 ```
-
-A `^C` at the first pause in `LINES.TXT` ends `TYPE`, and `DIR` runs:
-
-<!-- node book/capture.mjs --card build/ccp.img B: "TYPE LINES.TXT ! DIR" "^C" -->
-```text
-A>B:
-B>TYPE LINES.TXT ! DIR
-Line 1
-Line 22
-Line 23
-      
-B>DIR
-ARGS.COM     FITS.COM     BIG.COM      LINES.TXT   
-4 files, 8072K free
-B>
-```
-
-The transcript leaves out the lines from `Line 2` to `Line 21`. The six spaces
-are what is left of `[more]`, which the pager writes over when a key comes.
-
-`ARGS`'s source, saved as `build/args.asm`, is in the section on page zero
-below. Chapter 25 describes the chained line and function 47, which puts a
-line in `CMDTXT` from a program.
 
 ## Drive changes and the command word
 
@@ -241,12 +157,11 @@ Any other type, or none, is replaced by `COM` (`src/cpm/ccp.asm:263-268`), so
 
 A command that fails ends at `BADCMD`, which prints the word from `CMDSTRT` up
 to its first space with a question mark after it, then a new line
-(`src/cpm/ccp.asm:315-334`). Every message that reports a failed command,
-`BADCMD`'s and the built-ins' `NO FILE`, `FILE EXISTS`, `NO SPACE` and
-`COPY`'s four, goes through `ERRGO`, which sets the return code to `FF00h`
-first (`src/cpm/ccp.asm:335-341`). `ERRGO` and the built-ins end at `STARTED`,
-which starts a new line and prints the prompt, or at `MAINLOOP`, which prints
-the prompt on the line the command left.
+(`src/cpm/ccp.asm:315-334`). It and the built-ins' messages of failure go
+through `ERRGO`, which sets the return code to `FF00h` first
+(`src/cpm/ccp.asm:335-341`); Chapter 25 lists them. `ERRGO` and the built-ins
+end at `STARTED`, which starts a new line and prints the prompt, or at
+`MAINLOOP`, which prints the prompt on the line the command left.
 
 ## File names
 
@@ -286,7 +201,7 @@ Each built-in is a routine in `ccp.asm` or, for the driver commands, in
 | `USER` | `CMDUSER` | `src/cpm/ccp.asm:1129-1159` |
 | `CON` | `CMDCON` | `src/cpm/ccp.asm:1067-1127` |
 | `COPY` | `CMDCOPY` | `src/cpm/ccp.asm:927-1059` |
-| `UNLOAD` | `CMDUNL` | `src/cpm/ccp.asm:1061-1065`, `src/drv.asm:26-30` |
+| `UNLOAD` | `CMDUNL` | `src/cpm/ccp.asm:1061-1065`, `src/drv.asm:26-52` |
 | `DRIVERS` | `CMDDRV` | `src/drv.asm:301-325` |
 
 `DIR` turns a missing name into eleven `?`, sets the DMA address to `LOADBUF`
@@ -316,7 +231,7 @@ multiple of 8 at a tab, and counts a new line at LF and at a character that
 would pass the last column, as the screen wraps it. When the rows are full it
 prints `[more]` and waits with function 6, so that the key is not echoed;
 `UNMORE` then writes a CR, six spaces and a CR over `[more]`. `^C`, Esc and
-`Q` stop the listing; any other key shows the next screen.
+`Q` or `q` stop the listing; any other key shows the next screen.
 
 `TYPE` opens its one file, reads it a record at a time into `LOADBUF` and
 prints each byte through the pager up to the first `^Z`, `1Ah`, or the end of
@@ -537,5 +452,7 @@ BDOS call moves to the BDOS's stack, so a program's calls of `0005h` use only
 two bytes of the program's stack.
 
 The CCP keeps nothing in the TPA. The program area from `0100h` is untouched
-by the CCP until it loads a program there, and only `SAVE` reads it, which is
-how `SAVE` writes what a program left in memory.
+by the CCP until it loads a program or a driver there, a driver for `NAME.DRV`
+or `CON UC1` (`src/glcd.asm:68`, `src/drv.asm:54`), and only `SAVE` reads it,
+which is how `SAVE` writes what a program or a loaded driver file left in
+memory.

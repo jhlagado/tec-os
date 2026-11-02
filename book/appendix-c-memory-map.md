@@ -42,19 +42,30 @@ cache table and history page.
 
 ## The CPU's address space
 
+The Z80's 64 KiB are three windows:
+
 | Addresses | Contents |
 | --- | --- |
-| `0000h–07FFh` at reset | the first 2 KiB of the ROM, until cold boot sets bit 0 of the latch (`src/reset.asm:1-3`, `src/boot.asm:11-12`) |
+| `0000h–7FFFh` | MAIN 0, or MAIN 1 while bit 3 of the latch is set, on a board that has it |
+| `8000h–BFFFh` | EXPAND 0, or EXPAND 1 while bit 2 of the latch is set |
+| `C000h–FFFFh` | the ROM |
+
+At reset the first 2 KiB of the ROM also appear at `0000h–07FFh`, until cold
+boot sets bit 0 of the latch (`src/reset.asm:1-3`, `src/boot.asm:11-12`). With
+MAIN 0 and EXPAND 0 in view, TEC-OS uses them in this way:
+
+| Addresses | Contents |
+| --- | --- |
 | `0000h–00FFh` | page zero |
 | `0100h–B805h` | the TPA, 46,854 bytes |
 | `B806h–BFFFh` | the BDOS entry jump and the resident workspace, in EXPAND 0 |
-| `8000h–BFFFh` | EXPAND 0, or EXPAND 1 while bit 2 of the latch is set |
 | `C000h–FFFFh` | the ROM |
-| `0000h–7FFFh` | MAIN 0, or MAIN 1 while bit 3 of the latch is set, on a board that has it |
 
 The latch is the system latch at port `FFh`, which TEC-OS writes from the copy
 it keeps at `0040h` (`src/layout.asm:13-23`). Its value while TEC-OS runs is
-`01h`: the copy of the ROM at `0000h` off, MAIN 0 and EXPAND 0 in view.
+`01h`: the copy of the ROM at `0000h` off, MAIN 0 and EXPAND 0 in view. It is
+`81h` while the matrix keyboard's Caps Lock is on, which sets bit 7
+(`src/console.asm:392-397`).
 
 The TPA ends below the BDOS entry jump, whose address is in the word at
 `0006h`. Cold boot places the jump below the allocation vectors of the card's
@@ -135,7 +146,7 @@ From the BDOS entry jump to `BFFFh`, on the starter card:
 | --- | ---: | --- |
 | `B806h–B808h` | 3 | the BDOS entry jump, `JP BENTRY` |
 | `B809h–B817h` | 15 | unused |
-| `B818h–B957h` | 320 | the allocation vectors: A's 64 bytes, then B's 256 |
+| `B818h–B957h` | 320 | the allocation vectors: B's 256 bytes at `B818h`, then A's 64 at `B918h` |
 | `B958h–BCC4h` | 877 | the BIOS's disk state and buffers, the mount service's scratch and the video terminal's state |
 | `BCC5h–BCEAh` | 38 | the BIOS stack |
 | `BCEBh–BE76h` | 396 | the CCP's state and stack |
@@ -236,21 +247,25 @@ clears the rest:
 
 ## EXPAND 1
 
-Cold boot clears all of it. No program can reach it: `MOVE` rejects every
-range in bank 1 (`src/xmove.asm:1-7`).
+Cold boot clears all of it. No BDOS or BIOS call gives a program a range in
+it: `MOVE` rejects every range in bank 1 (`src/xmove.asm:1-7`). A program that
+writes the latch can still switch it in, and the jump at `BF03h` is for one
+that ends that way.
 
 | Addresses | Bytes | Contents |
 | --- | ---: | --- |
 | `8000h–BBFFh` | 15,360 | the block cache's 30 lines, 512 bytes each |
 | `BC00h–BC77h` | 120 | `CTAB`: each line's card block, 4 bytes, `FFFFFFFFh` while empty |
+| `BC78h–BC7Fh` | 8 | unused |
 | `BC80h–BC9Dh` | 30 | `CDIRTY`: each line's dirty byte |
+| `BC9Eh–BCFFh` | 98 | unused |
 | `BD00h–BDFFh` | 256 | `HRING`: the command history |
 | `BE00h–BEFFh` | 256 | unused |
 | `BF00h–BFFFh` | 256 | reserved; warm boot writes a jump at `BF03h` |
 
 The cache's addresses are in `src/layout.asm:24-26` and the history's page in
-`src/history.asm:14`. The jump at `BF03h` is `JP WBOOTR`, for a program that
-ends with EXPAND 1 in view (`src/boot.asm:59-65`).
+`src/history.asm:14`. The jump at `BF03h` is `JP WBOOTR`
+(`src/boot.asm:59-65`).
 
 ## The stacks
 
