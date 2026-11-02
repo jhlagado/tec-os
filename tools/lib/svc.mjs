@@ -102,6 +102,7 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   writeFileSync(copy, body);
   const at0 = await assembleAt(copy, 0, work);
   const { bytes: at1, symbols } = await assembleProgram(copy, { base: 0x100 });
+  if (symbols.INIT === undefined || symbols.REMOVE === undefined) throw new Error(`${source}: INIT and REMOVE required`);
   if (at0.length !== at1.length) throw new Error(`${source}: the two assemblies differ in length`);
   const fixups = fixupsOf(at0, at1, DHLEN, basename(source));
   const data = encoders[reloc](fixups, at0.length - DHLEN);

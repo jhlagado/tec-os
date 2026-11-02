@@ -6,7 +6,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { checkInterfaces, DHLEN, encoders, makeSvc } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
@@ -698,3 +698,14 @@ test("each declared stack figure is proved by the watch, and a false one fails i
   assert.deepEqual(await stackRun(1, 2), used, "the ROM can't check what a file declares");
   assert.ok(Object.values(used).some((u) => u > 2), "a declaration of 2 fails");
 });
+
+for (const label of ["INIT", "REMOVE"]) {
+  test(`makeSvc stops at a source with no ${label}, as TAS does`, async () => {
+    const dir = mkdtempSync(resolve(ROOT, "build/svc-"));
+    const text = readFileSync(resolve(ROOT, "test/programs/res.asm"), "utf8").replace(new RegExp(`^${label}:`, "m"), `X${label}:`);
+    const path = resolve(dir, "NOLAB.asm");
+    writeFileSync(path, text);
+    await assert.rejects(makeSvc(path, { work: dir }), /INIT and REMOVE required/);
+    rmSync(dir, { recursive: true });
+  });
+}
