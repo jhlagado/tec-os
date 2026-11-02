@@ -1,4 +1,4 @@
-; MOUNT: mounts a volume on a drive through the mount service at ABIVOL.
+; MOUNT: mounts a volume on a drive through the mount entry at ABIVOL.
 ;   MOUNT B: NAME   the volume labelled NAME, found through describe
 ;   MOUNT B: 5      the volume at container index 5, as VOLS numbers them
 ;   MOUNT B:        unmounts B: (A: is never left empty)

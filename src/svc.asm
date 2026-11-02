@@ -53,7 +53,7 @@ SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
 
 ; Install the file at 0100h, up to LOADTOP. Carry clear: installed. Carry set:
 ; SVCRC is 0 refused, nothing changed; 1 INIT failed, nothing left; 2 failed,
-; its pages reserved with no services.
+; its pages reserved with no records.
 SVCLOAD:XOR     A
         LD      (SVCRC),A
 	LD	A,(SVCBSY)	; no INIT or REMOVE running

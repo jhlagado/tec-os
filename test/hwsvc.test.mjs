@@ -1,6 +1,6 @@
 // The ABIHW hardware services, called directly at the A> prompt with the
 // arguments in the registers and a return address on a stack in the TPA.
-// Every write below that stack counts towards the service's stack depth.
+// Every write below that stack counts towards the hardware service's stack depth.
 // Emulator evidence; the depths go to build/hwsvc-stacks.json.
 
 import { test } from "node:test";
@@ -17,7 +17,7 @@ const STACK = 0x1000; // the caller's stack top
 const BUF = 0x2000; // argument and result buffers
 const depths = {};
 
-/** Call service c with the registers given; returns the registers, the flags,
+/** Call hardware service c with the registers given; returns the registers, the flags,
  *  the T-states it took and the bytes of stack it used. */
 function svc(m, c, { a = 0, b = 0, de = 0, hl = 0 } = {}, maxCycles = 20_000_000) {
   const cpu = m.cpu.cpu;
@@ -33,7 +33,7 @@ function svc(m, c, { a = 0, b = 0, de = 0, hl = 0 } = {}, maxCycles = 20_000_000
   };
   const start = m.cycles;
   try {
-    m.runUntil(() => m.pc === BACK, maxCycles, `service ${c} returning`);
+    m.runUntil(() => m.pc === BACK, maxCycles, `hardware service ${c} returning`);
   } finally {
     m.cpu.hardware.memWrite = write;
   }
@@ -47,7 +47,7 @@ function svc(m, c, { a = 0, b = 0, de = 0, hl = 0 } = {}, maxCycles = 20_000_000
     cycles: m.cycles - start,
     stack: STACK - 2 - low,
   };
-  assert.equal(cpu.sp, STACK, `service ${c} balances the stack`);
+  assert.equal(cpu.sp, STACK, `hardware service ${c} balances the stack`);
   depths[c] = Math.max(depths[c] ?? 0, r.stack);
   Object.assign(cpu, saved);
   return r;
@@ -93,7 +93,7 @@ test("hardware services: information, bad numbers, digits, LCD, tone", () => {
     if (n >= ABI.HWBASE && n < ABI.HWBASE + ABI.HWCOUNT) continue;
     const r = svc(m, n, { b: 0x5a, de: 0x1234, hl: 0x5678 });
     fails(r, 1);
-    assert.deepEqual([r.b, r.de, r.hl], [0x5a, 0x1234, 0x5678], `service ${n} leaves the registers`);
+    assert.deepEqual([r.b, r.de, r.hl], [0x5a, 0x1234, 0x5678], `hardware service ${n} leaves the registers`);
   }
 
   put(m, BUF, [1, 2, 3, 4, 5, 6]);
@@ -191,5 +191,5 @@ test("hardware services: stack depths", () => {
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/hwsvc-stacks.json"), JSON.stringify(depths, null, 2) + "\n");
   console.log(JSON.stringify(depths));
-  for (const [c, d] of Object.entries(depths)) assert.ok(d <= 16, `service ${c} used ${d} bytes of stack`);
+  for (const [c, d] of Object.entries(depths)) assert.ok(d <= 16, `hardware service ${c} used ${d} bytes of stack`);
 });

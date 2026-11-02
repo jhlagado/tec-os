@@ -575,7 +575,7 @@ SELDRV:
         JP      LOGIN
 
 ; PARAM names the caller FCB; its drive byte is never rewritten. C still
-; identifies the dispatched service. Zero means logical default; 1..16 means
+; identifies the dispatched function. Zero means logical default; 1..16 means
 ; A..P. Only Search First admits '?' as a raw-directory request.
 FCBSEL:
         LD      HL,(PARAM)
@@ -597,7 +597,7 @@ FCBEXPL:
 
 ; Open uses the same public-directory iterator as search, then imports only
 ; the directory-owned FCB fields. Bit 7 of S2 marks the FCB unmodified, which
-; lets close avoid a disk write until a later mutation service changes it.
+; lets close avoid a disk write until a later mutation function changes it.
 FNOPEN:
         LD      A,1
         JR      SETSRCH

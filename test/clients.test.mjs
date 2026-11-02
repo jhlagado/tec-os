@@ -133,7 +133,7 @@ const old = (name) => {
   return bytes;
 };
 
-/** A board at its prompt with OLD's binaries on A:, and each pc reached in the services. */
+/** A board at its prompt with OLD's binaries on A:, and each pc reached in the hardware services. */
 function oldMachine(opts = {}) {
   const image = standardCard();
   const a = volume(image, "A");
@@ -159,7 +159,7 @@ function oldMachine(opts = {}) {
 // Page zero, less 0040h-004Fh, the BIOS's scratch, which every key typed moves.
 const pageZero = (m) => Array.from({ length: 0x5c }, (_, i) => (i >= 0x40 && i < 0x50 ? 0 : m.read(i)));
 
-test("an old DEMO prints no throughout, reaches no service, and leaves page zero unchanged", () => {
+test("an old DEMO prints no throughout, reaches no hardware service, and leaves page zero unchanged", () => {
   const { m, seen } = oldMachine();
   const before = pageZero(m);
   const from = m.output.length;
@@ -172,7 +172,7 @@ test("an old DEMO prints no throughout, reaches no service, and leaves page zero
   const end = m.cycles + 8_000_000;
   m.runUntil(() => m.cycles > end, 9_000_000, "the demo running");
   assert.ok(seen.svc > 10, "it called, and each call was refused");
-  assert.equal(seen.services, 0, "no service ran");
+  assert.equal(seen.services, 0, "no hardware service ran");
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)).startsWith("TEC-OS hardware demo"), false, "the LCD isn't written");
   m.type("x");
   m.expect(/A>$/, { maxCycles: 80_000_000 });
@@ -180,7 +180,7 @@ test("an old DEMO prints no throughout, reaches no service, and leaves page zero
   assert.deepEqual(m.violations, []);
 });
 
-// PICO.SVC from a 2d5ce25 starter card, format 3 and ABI 4 with services from 0.
+// PICO.SVC from a 2d5ce25 starter card, format 3 and ABI 4 with hardware services from 0.
 // Its INIT's INFO is refused with B as it came, and SVCLOAD leaves B = 0, so its
 // BIT 1,B finds no PICO9918 and it refuses.
 const OLD_PICO = "23513b3ba4931a183b097f0753209e0b03bbea6168127a56279fc41cfb95a58a";

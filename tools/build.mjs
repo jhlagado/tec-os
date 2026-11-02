@@ -151,13 +151,13 @@ function checkAbiInc(at) {
   check(/^ABIDRV\s+EQU\s+ABISVC\b/m.test(inc), "abi.inc: ABIDRV is not an alias of ABISVC");
 }
 
-/** The services' numbers and status codes in abi.inc against hwsvc.asm, which
+/** The hardware services' numbers and status codes in abi.inc against hwsvc.asm, which
  *  can't include it: the same names with the same values, either way round. */
 function checkServices(at) {
   const numbers = (file) => new Map([...readFileSync(resolve(SRC, file), "utf8").matchAll(/^(HW[A-Z]+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]));
   const inc = numbers("abi.inc");
   const rom = numbers("hwsvc.asm");
-  check(rom.size > 0, "hwsvc.asm has no service numbers");
+  check(rom.size > 0, "hwsvc.asm has no hardware service numbers");
   for (const [n, v] of rom) check(inc.get(n) === v, `abi.inc: ${n} is ${inc.get(n)}, hwsvc.asm has ${v}`);
   for (const n of inc.keys()) check(rom.has(n), `hwsvc.asm has no ${n}`);
   check(rom.get("HWINFO") === rom.get("HWBASE") && rom.get("HWRTC") === rom.get("HWBASE") + rom.get("HWCOUNT") - 1, "the services run from HWBASE, HWCOUNT of them");

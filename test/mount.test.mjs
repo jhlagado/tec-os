@@ -1,6 +1,6 @@
 // Container format 1.1 and mounting at run time: a card of more than 8
 // volumes, cold boot's one-pass table check, the vector slots, the ABIVOL
-// service through MOUNT.COM and VOLS.COM, and a reset giving the card's own
+// entry through MOUNT.COM and VOLS.COM, and a reset giving the card's own
 // mounts back. Emulator evidence.
 
 import { test } from "node:test";

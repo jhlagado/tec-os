@@ -384,7 +384,7 @@ test("INIT fails with a hook left: the pages stay, nothing is registered, UNLOAD
   assert.equal(t.word(t.m.sym("PZTOP")), base + 6, "warm boot keeps them");
 });
 
-test("INIT lies and REMOVE refuses: installed with no services, and the load says so", async () => {
+test("INIT lies and REMOVE refuses: installed with no records, and the load says so", async () => {
   const t = await machine();
   const x = transaction(t, (await svc({ V_WILD: 1, V_REFUSE: 1 })).file);
   assert.deepEqual([x.r.carry, x.r.rc], [1, 2]);
@@ -408,7 +408,7 @@ for (const [name, over, raw] of [
   });
 }
 
-test("no client can see a service while its INIT runs", async () => {
+test("no client can see a record while its INIT runs", async () => {
   const t = await machine();
   const d = await svc({ V_PROBE: 1 });
   t.load(d.file);

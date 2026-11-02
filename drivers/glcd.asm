@@ -29,7 +29,7 @@ LBUF:   DW      0               ; LINEBUF, from ABIGLCD
 
 ; INIT refuses if the controller doesn't answer, another GLCD.SVC has the
 ; console, or another display is the console and CON UC1 didn't ask: a line in
-; STARTUP.CMD gives way to PICO.SVC. It offers no service. REMOVE gives the
+; STARTUP.CMD gives way to PICO.SVC. It publishes no record. REMOVE gives the
 ; console back, to PICO.SVC if that is in.
 INIT:   LD      A,(IOBYTE)
         AND     3

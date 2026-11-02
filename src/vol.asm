@@ -575,7 +575,7 @@ ALVSKP: INC     C
         LD      (STUBAD),HL
         RET
 
-; The mount service, ABIVOL. A = 0: mount drive C with the volume at
+; The mount entry, ABIVOL. A = 0: mount drive C with the volume at
 ; container index E; 1: unmount drive C; 2: describe index E into the 32
 ; bytes at HL, its mount byte the drive it is on now (FFh none). Returns A =
 ; 0, or A = FFh with nothing changed: an index past the table, a drive past

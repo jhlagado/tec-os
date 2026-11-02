@@ -1,4 +1,4 @@
-; VOLS: lists the card's volumes through the mount service at ABIVOL: for
+; VOLS: lists the card's volumes through the mount entry at ABIVOL: for
 ; each, its index, label, geometry, R/O when read-only, and the drive it is
 ; on now.
 %INCLUDE "../../src/abi.inc"

@@ -514,7 +514,7 @@ export async function inTree(dir) {
     /**
      * The 20-volume card of test/reset.test.mjs, G1M volumes V0 to V19 with
      * V0 on A: and V1 on B:, on the serial board: a recognised reset, after
-     * the mount service has put index 17 on A: when SELECTED.
+     * the mount entry has put index 17 on A: when SELECTED.
      */
     selection(selected) {
       const vols = Array.from({ length: 20 }, (_, i) => ({ geometry: "G1M", label: `V${i}`, mount: i < 2 ? "AB"[i] : "-" }));
@@ -528,7 +528,7 @@ export async function inTree(dir) {
         const flags = { ...cpu.flags };
         Object.assign(cpu, { a: 0, c: 0, e: 17, sp: 0x0100, pc: 0x60 });
         m.runUntil(() => m.pc === 0x63, 80_000_000, "the mount");
-        if (cpu.a !== 0) throw new Error(`the mount service gave ${cpu.a}`);
+        if (cpu.a !== 0) throw new Error(`the mount entry gave ${cpu.a}`);
         Object.assign(cpu, saved, { flags });
         t.warm(m); // the program's exit, as after any program's call
       }

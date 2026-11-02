@@ -1,12 +1,12 @@
 ; Hardware services, ABI 4.0 (docs/rom-services.md). CALL ABIHW with the
-; service in C, from HWBASE, and arguments in B, DE and HL. Returns A = status
-; with Z and carry clear on success; results as each service says. IX, IY and
+; number in C, from HWBASE, and arguments in B, DE and HL. Returns A = status
+; with Z and carry clear on success; results as each one says. IX, IY and
 ; the alternate registers are preserved. Any program may call them: they run on
 ; the caller's stack (at most 22 bytes, PUTAT on a GLCD console being the
 ; deepest) and keep their state in the resident workspace. Numbers and status
 ; codes are in abi.inc too, and the build checks that the two agree.
 ;
-; These are the services that would otherwise fight the OS for a port: the
+; These are the calls that would otherwise fight the OS for a port: the
 ; digit and speaker port (01h) also carries the serial transmit line, which
 ; must stay idle, and the PICO9918 is the console.
 
@@ -26,7 +26,7 @@ HWRTC	EQU	27		; B = 0 read, 1 set the 7 BCD bytes at HL
 HWCOUNT	EQU	9		; how many follow HWBASE
 HWBASE	EQU	19		; the first number no ABI 3 program used
 
-HWEBAD	EQU	1		; no such service, or an argument out of range
+HWEBAD	EQU	1		; no such number, or an argument out of range
 HWENODV	EQU	2		; the device is not fitted
 
 ; INFO's bits in B. The build checks them against CONDEV's CD* bits, which
@@ -45,10 +45,10 @@ SEGPORT EQU     $02             ; 7-segment segment latch
 TXIDLE  EQU     $40             ; port 01h bit 6: serial line idle, speaker off
 HWTAB0	EQU	HWTAB-2*HWBASE	; the table as C indexes it
 
-; The dispatcher. C = the service, B, DE and HL its arguments, which reach it
+; The dispatcher. C = the number, B, DE and HL its arguments, which reach it
 ; whole. Any number outside HWBASE to HWBASE+8 returns HWEBAD with the other
 ; registers as they were, so an ABI 3 program's old numbers do nothing. Destroys
-; AF and what the service does.
+; AF and what the hardware service does.
 HWSVC:	LD	A,C		; below HWBASE wraps to a large number
 	SUB	HWBASE
 	CP	HWCOUNT
@@ -62,12 +62,12 @@ HWSVC:	LD	A,C		; below HWBASE wraps to a large number
 	LD	D,0		; DE = the entry's offset
 	LD	HL,HWTAB0	; C counts from HWBASE
 	ADD	HL,DE
-	LD	E,(HL)		; DE = the service
+	LD	E,(HL)		; DE = its routine
 	INC	HL
 	LD	D,(HL)
-	EX	DE,HL		; HL = the service
+	EX	DE,HL		; HL = its routine
 	POP	DE		; the caller's DE back
-	EX	(SP),HL		; the service is the return address,
+	EX	(SP),HL		; the routine is the return address,
 	RET			; and the caller's HL comes back
 HWERR:  OR      A
         SCF
@@ -75,7 +75,7 @@ HWERR:  OR      A
 HWOK:   XOR     A
         RET
 
-; The INFO service. Returns B = CONDEV's bits, with HWBRTC if a DS1302 answers
+; The INFO hardware service. Returns B = CONDEV's bits, with HWBRTC if a DS1302 answers
 ; (seconds below 60h) and HWBCLM, which is VCLAIM's value, while the PICO9918
 ; is claimed; DE = the ROM's version; HL = columns and rows.
 HWSINFO:

@@ -26,7 +26,7 @@ CHKTAG: LD      A,(DE)
         INC     HL
         INC     DE
         DJNZ    CHKTAG
-	LD	A,(ABIMAJ)	; another major's services have other numbers
+	LD	A,(ABIMAJ)	; another major has other numbers
 	CP	4		; exactly: a later major may renumber
 	JP	NZ,NOHW
 
@@ -92,7 +92,7 @@ LOOP:   LD      HL,FR
         CALL    HWSVC
         CALL    MKLED
 	LD	HL,LEDBUF	; one scan of the LEDs
-	CALL	LEDSCAN		; the ROM has no service for them
+	CALL	LEDSCAN		; no hardware service does them
         LD      A,(CLAIMED)
         OR      A
         CALL    NZ,BALL

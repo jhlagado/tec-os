@@ -493,7 +493,7 @@ for (const [name, cols, r1] of WIDTHS) {
   });
 }
 
-test("a claim held at UNLOAD after CON TTY: refused, the service still found, and allowed after the release", () => {
+test("a claim held at UNLOAD after CON TTY: refused, the record still found, and allowed after the release", () => {
   const m = start(both(["PICO.SVC"]));
   say(m, "CON TTY");
   const top = word(m, 6);
@@ -502,7 +502,7 @@ test("a claim held at UNLOAD after CON TTY: refused, the service still found, an
   assert.equal(cold(m, 1), 0);
   assert.match(say(m, "UNLOAD"), /UNLOAD\?/);
   assert.equal(word(m, 6), top, "nothing moved");
-  assert.equal(picoTable(m), table, "the service is found while claimed");
+  assert.equal(picoTable(m), table, "the record is found while claimed");
   gfx(m, PICOREG, { a: 0xf4, b: 7 });
   assert.equal(cold(m, 0), 0);
   assert.equal(picoTable(m), table, "and after the release");

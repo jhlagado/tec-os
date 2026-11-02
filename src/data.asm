@@ -5,7 +5,7 @@
 
 ROMDATA:
 
-; ABI 3 had its mount service at C01Dh, and a card from then can still hold a
+; ABI 3 had its mount entry at C01Dh, and a card from then can still hold a
 ; MOUNT.COM or VOLS.COM with no test of the table. A RET there sends each back
 ; with nothing done. The five bytes before it are the CCP's TYPE keyword.
 TYPEKEY:

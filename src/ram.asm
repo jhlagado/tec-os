@@ -231,7 +231,7 @@ LOADTOP:DS      2               ; successful LOADCOM exclusive record end
 PRLN:   DS      2               ; the PRL loader: code length
 PRLDL:  DS      1               ; and relocation delta
 SVCBSY:	DS	1		; 80h while an INIT or REMOVE runs
-REGHEAD:DS      2               ; the first service record
+REGHEAD:DS      2               ; the first record
 SVCHEAD:DS      1               ; the lowest service's page, 0 for none
 SVCGEN: DS      1               ; raised by each removal
 SVCRC:  DS      1               ; the last load's failure

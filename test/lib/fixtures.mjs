@@ -13,7 +13,7 @@ import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
-/** src/abi.inc's plain numbers by name: services, status codes, bits and offsets. */
+/** src/abi.inc's plain numbers by name: hardware services, status codes, bits and offsets. */
 export const ABI = Object.fromEntries(
   [...readFileSync(resolve(ROOT, "src/abi.inc"), "utf8").matchAll(/^(\w+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]),
 );

@@ -17,9 +17,9 @@ ABISVC	EQU	$C015		; CALL: the registry, C = 0 find, 1 list
 ABIDRV	EQU	ABISVC		; ABISVC's old name, kept for older sources
 ABIEND	EQU	$C018		; the end of ABI 4.0's entries
 
-; ABIHW's services, in C, from HWBASE, the first number no ABI 3 program used.
+; ABIHW's hardware services, in C, from HWBASE, the first number no ABI 3 program used.
 ; Any other number returns HWEBAD with the registers as they were.
-HWBASE	EQU	19		; the first service
+HWBASE	EQU	19		; the first hardware service
 HWINFO	EQU	19		; B = devices, DE = ROM version,
 				; L = columns, H = rows
 HWDIGIT	EQU	20		; HL -> 6 segment bytes, leftmost first
@@ -34,7 +34,7 @@ HWRTC	EQU	27		; B = 0 read, 1 set the 7 BCD bytes at HL
 HWCOUNT	EQU	9		; how many follow HWBASE
 
 ; Status in A, with carry set.
-HWEBAD	EQU	1		; no such service, or an argument out of range
+HWEBAD	EQU	1		; no such number, or an argument out of range
 HWENODV	EQU	2		; the device is not fitted
 
 ; HWINFO's bits in B.

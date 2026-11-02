@@ -19,7 +19,7 @@ INIT:
         RET
 %ENDIF
 %IF V_PROBE
-        LD      DE,REC+2        ; can a client see this service yet?
+        LD      DE,REC+2        ; can a client see this record yet?
         LD      BC,$0100
         CALL    ABISVC
         LD      A,0
@@ -138,7 +138,7 @@ CHAIN1: LD      DE,13
         RET
 %ENDIF
 %IF V_NONE
-        LD      HL,0            ; no services
+        LD      HL,0            ; no records
         OR      A
         RET
 %ENDIF

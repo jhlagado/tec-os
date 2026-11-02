@@ -74,7 +74,7 @@ function callAt(m, addr, regs) {
   Object.assign(cpu, saved, { flags });
   return a;
 }
-/** The mount service, as a program calls it: its BDOS call needs the program's exit after it. */
+/** The mount entry, as a program calls it: its BDOS call needs the program's exit after it. */
 const volSvc = (m, a, c, e = 0) => {
   const r = callAt(m, m.sym("ABIVOL"), { a, c, e });
   warm(m);
@@ -705,6 +705,6 @@ for (const [name, spoil] of [["recognised", () => {}], ["unrecognised", (m) => m
   });
 }
 
-test("abi.inc is not moved: the services and the table still read as ABI 4", () => {
+test("abi.inc is not moved: the hardware services and the table still read as ABI 4", () => {
   assert.equal(ABI.HWBASE, 19);
 });
