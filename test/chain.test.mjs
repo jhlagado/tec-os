@@ -360,6 +360,22 @@ test("SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
   }
 });
 
+test("a write lost at warm boot drops the rest of the line", () => {
+  const m = boot(card());
+  // As the first program starts, a dirty line's write failed: CWBOOT says so at its warm boot.
+  let armed = true;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (armed && m.pc === 0x100) [m.write(m.sym("CFAIL"), 1), (armed = false)];
+    return step();
+  };
+  const out = run(m, "SAY!:SAY!USER 3");
+  assert.match(out, /^SAY!:SAY!USER 3\r\r\nPRL\r\nWrite lost\r\nA>$/);
+  assert.equal(count(out, /PRL/g), 1);
+  assert.equal(user(m), 0);
+  assert.equal(m.read(m.sym("CFAIL")), 0);
+});
+
 test("a reset clears the rest of the line", () => {
   const m = boot(card());
   const from = m.output.length;

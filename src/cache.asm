@@ -344,13 +344,16 @@ CWB3:   LD      A,C             ; a directory block: the volume's data first,
         OR      1               ; NZ
         RET
 
-; Warm boot: every dirty line written, and a failed write said.
+; Warm boot: every dirty line written, and a failed write said. The rest of a
+; chained line goes, as it does on a BDOS error's exit.
 CWBOOT: CALL    CFLALL
         LD      HL,CFAIL
         LD      A,(HL)
         OR      A
         RET     Z
-        LD      (HL),0
+        XOR     A
+        LD      (HL),A
+        LD      (CHPOS),A
         LD      HL,CWMSG
         JP      PUTS
 

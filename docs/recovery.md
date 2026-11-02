@@ -24,8 +24,8 @@ A file is safe once it is closed, which is CP/M's own rule. Data written
 and not yet closed is lost by a reset or power off, and never reaches any card:
 press `^C` at the prompt before pressing reset or taking the card out. If a data block cannot be
 written, it stays changed in the cache, and each warm boot tries it again
-and says `Write lost` while it still fails. Only a reset, or power off,
-gives it up.
+and says `Write lost` while it still fails, dropping the rest of a chained
+line as a BDOS error does. Only a reset, or power off, gives it up.
 
 ## What a successful write means
 
