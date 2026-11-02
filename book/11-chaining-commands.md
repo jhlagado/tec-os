@@ -10,10 +10,7 @@ whether that was a built-in or a program. A command written with `:` in front
 runs only if the one before it succeeded, and a program reports success or
 failure through a return code that it sets with BDOS function 108. A program
 can also end by handing the CCP a new command line, with BDOS function 47.
-This chapter describes the line split at `!`, the condition `:`, the return
-code with a small program that sets it, and function 47 with a program that
-uses it. It ends with the events that drop the rest of a line. These rules
-are TEC-OS's own, taken from CP/M 3's CCP; CP/M 2.2 runs one command per
+TEC-OS takes these rules from CP/M 3's CCP; CP/M 2.2 runs one command per
 line. Chapter 25 describes the code behind them.
 
 ## Several commands on one line
@@ -107,8 +104,9 @@ it went with the rest of the line. In the second line `DIR *.DRV` succeeded,
 and `:DIR *.CMD` ran. The third line starts with `:`, and the command it
 tests is the last one of the line before, the `DIR *.CMD` that succeeded. A
 `:` at the start of a line typed after a failure runs nothing. On the
-serial-only board the starter card's startup line `GLCD.DRV` fails, so a `:`
-that starts the first line typed there runs nothing too.
+serial-only board and on the web page's board, where the starter card's last
+startup line `GLCD.DRV` fails, a `:` that starts the first line typed runs
+nothing too.
 
 ## Return codes
 
@@ -277,34 +275,35 @@ from function 47 that isn't found, or doesn't load, fails as a typed one
 does, with its name and a question mark. `RUN` alone chains an empty line,
 which ends the program and runs nothing, and the prompt comes back.
 
-The line may be up to 127 characters, and it may hold `!` and `:`, which
-the CCP treats as in a typed line; a `:` at its start tests the code the
-program set before the call. Function 47 rejects a line with no 0 in its
-first 128 bytes, or with a carriage return or a line feed before the 0. Then
-it returns with `A = FFh`, the program goes on, and the line it came from is
+The line may be up to 127 characters, and it may hold `!` and `:`, which the
+CCP treats as in a typed line; a `:` at its start tests the code the program
+set before the call. Function 47 rejects a line with no 0 in its first 128
+bytes, or with a carriage return or a line feed before the 0. Then it
+returns with `A = FFh`, the program goes on, and the line it came from is
 unchanged; in `RUN`, the message `Not run` follows. A tail can hold neither
 character, so `RUN` itself never prints it. The line is copied as soon as
 the function is called, so it may be anywhere in memory, even where the next
 program loads. CP/M 3's function 47 also reads register `E`, and TEC-OS
-ignores it: the chained command runs on the drive and in the user area held
-in the byte at `0004h`, as any command after a program's end does.
+doesn't read it: the chained command runs on the drive and in the user area
+held in the byte at `0004h`, as any command after a program's end does.
 
 A program started from a line of `STARTUP.CMD` may chain too, and the
 chained line runs before the startup file's next line.
 
 ## The end of a chained line
 
-These events drop what is left of a line, and the prompt comes back to wait
-for a new one:
+These events drop what is left of a line:
 
 - a `:` piece after a failure;
 - a call to function 47, whose line replaces the rest;
-- `^C` typed as the first key of a line that a program reads with BDOS
-  function 10;
+- `^C` typed while a line that a program reads with BDOS function 10 is
+  empty;
 - the key that ends a BDOS error, such as `Bdos Err On C: Select`;
 - a reset.
 
-Here the BDOS error for a drive with no volume, ended by the key `x`, drops
+After function 47 its own line runs in place of the rest, and after a reset
+TEC-OS starts again from the startup file; after the others the prompt comes
+back to wait for a new line. Here the BDOS error for a drive with no volume, ended by the key `x`, drops
 the `VOLS` after it:
 
 <!-- node book/capture.mjs "@start DIR C:!VOLS" "@key x" -->
@@ -317,7 +316,8 @@ A>
 
 Other ways a command can end leave the rest of the line to run. A program
 that prints its own error message and returns has succeeded unless it set
-the code. `^C`, Esc or `Q` at `[more]` ends a `TYPE` or `DIR` listing and
-the line's next piece runs, as it does after a listing that ran to its end.
-A `Write lost` message at a warm boot, which Chapter 19 describes, also
-leaves the rest of the line to run.
+the code. A key that ends a `TYPE` or `DIR` listing at `[more]`, `^C`, Esc
+or `Q`, and also `#` or `;`, which differ from `^C` and Esc only in the bit
+the key test clears, lets the line's next piece run, as it does after a
+listing that ran to its end. A `Write lost` message at a warm boot, which
+Chapter 4 describes, also leaves the rest of the line to run.

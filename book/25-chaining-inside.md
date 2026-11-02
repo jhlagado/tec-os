@@ -8,11 +8,14 @@ Chapter 11 describes a command line split at `!`, the condition `:`, the
 return code and BDOS function 47 as you use them. Behind them are a command
 line that outlives the warm boot at the end of each program, one byte that
 marks the next piece of it, a 16-bit code and a copy into the CCP's buffer.
-This chapter follows a line from the prompt through the CCP's main loop: where
-the line is kept, how the loop takes a piece, the test of the code at `:`,
-the paths that drop the rest of the line, and function 47's checks and copy.
-The code is in `src/cpm/ccp.asm`, with function 47 and function 108 in
-`src/cpm/bdos.asm` and the line's storage in `src/ram.asm`.
+This chapter follows a line from the prompt through the CCP's main loop:
+where the line is kept, how the loop takes a piece, the test of the code at
+`:`, the paths that drop the rest of the line, and function 47's checks and
+copy. The code is in `src/cpm/ccp.asm`, with function 47 and function 108 in
+`src/cpm/bdos.asm` and the line's storage in `src/ram.asm`. Chapter 17
+describes the CCP's other routines named here, and Chapter 16 the BDOS's
+entry. `test/chain.test.mjs` checks these rules on the host model of Chapter
+26.
 
 ## The line kept across a warm boot
 
@@ -30,15 +33,15 @@ bytes, so the command buffer and the two FCBs before it are kept
 since each use of them parses a name into them in full and clears the rest
 (`src/cpm/ccp.asm:1299-1324`).
 
-The position of the next piece is `CHPOS`, one byte at `BFE5h` in the part of
-the workspace above the RAM BIOS table, which warm boot leaves alone
+The position of the next piece is `CHPOS`, one byte at `BFE5h` in the part
+of the workspace above the RAM BIOS table, which warm boot doesn't clear
 (`src/ram.asm:192`, `src/ram.asm:240`). It holds the piece's offset in
 `CMDTXT` plus one, and 0 when no piece is left, so one byte covers the 128
-offsets with 0 to spare. The return code, `PRGCODE` at `BF57h`, is in the same
-block (`src/ram.asm:229`). Cold boot clears the whole resident workspace, from
-`WSBASE` to `WSEND`, which ends after `CHPOS` (`src/boot.asm:23-27`,
-`src/ram.asm:241-242`); after a reset, then, no piece is left and the code is
-0.
+offsets with 0 to spare. The return code, `PRGCODE` at `BF57h`, is in the
+same block (`src/ram.asm:229`). Cold boot clears the whole resident
+workspace, from `WSBASE` to `WSEND`, which ends after `CHPOS`
+(`src/boot.asm:23-27`, `src/ram.asm:241-242`); after a reset, then, no piece
+is left and the code is 0.
 
 The buffer's maximum length, 127, is set by `CPMINIT` at every warm boot and
 so at every cold boot, which runs on into warm boot (`src/boot.asm:279-281`,
@@ -48,19 +51,20 @@ passes over the rest of the line (`src/drv.asm:377`, `src/drv.asm:391-393`).
 Function 47 takes a line whose 0 is within 128 bytes, so at most 127
 characters too (`src/cpm/bdos.asm:51-64`). With that limit a piece's command
 tail fits the page-zero buffer at `0080h`. A program's name has at least one
-character, so its tail has at most 126, which `PREPPAGE` copies to `0081h`
-with a 0 after it, the 0 landing at `00FFh` at the latest
-(`src/cpm/ccp.asm:1273-1290`). A tail one character longer would put its 0 at
-`0100h`, over the first byte of the program, which `LOADCOM` has already
-loaded by then (`src/cpm/ccp.asm:269-280`).
+character, so its tail has at most 126, which `PREPPAGE` (Chapter 17) copies
+to `0081h` with a 0 after it, the 0 landing at `00FFh` at the latest
+(`src/cpm/ccp.asm:1273-1290`). A tail one character longer would put its 0
+at `0100h`, over the first byte of the program, which `LOADCOM` (Chapter 17)
+has already loaded by then (`src/cpm/ccp.asm:269-280`).
 
 ## The main loop
 
 The CCP's loop starts at `MAINLOOP`, after any command and after the entry
-from a warm boot. `SAVEDU` stores the drive and user area at `0004h` and
-returns the drive, and the loop prints the prompt with it (`src/cpm/ccp.asm:58-65`,
-`src/cpm/ccp.asm:192-211`). It then looks for a line in an order with three
-places (`src/cpm/ccp.asm:66-75`):
+from a warm boot; Chapter 17 describes the prompt and the line it reads.
+`SAVEDU` stores the drive and user area at `0004h` and returns the drive,
+and the loop prints the prompt with it (`src/cpm/ccp.asm:58-65`,
+`src/cpm/ccp.asm:192-211`). It then takes a line from one of three places,
+in this order (`src/cpm/ccp.asm:66-75`):
 
 1. the next piece of a chained line, found by `CHSKIP`;
 2. the next line of the startup file, from `STLINE`, once `CHPOS` is 0;
@@ -68,9 +72,9 @@ places (`src/cpm/ccp.asm:66-75`):
    turned on for it through `HFLAG`.
 
 A chained line's pieces therefore run before the startup file's next line,
-whether the line came from the startup file, from the keyboard or from
-function 47. This card's startup file has three lines, and the first two hold
-`!`:
+whether the line came from the startup file or from function 47 called by a
+program that a startup line started. This card's startup file has three
+lines, and the first two hold `!`:
 
 ```sh
 printf 'DIR *.CMD!:TYPE STARTUP.CMD\nPICO.DRV!:VOLS\nUSER 0\n' > startup.cmd
@@ -140,27 +144,28 @@ line was echoed by `STLINE`, so neither goes through `MLECHO`.
 6. Spaces are passed over. A piece with nothing left, such as a `:` alone,
    goes back to the prompt.
 
-Only then does the CCP look at what the piece is. A drive letter and a colon
-alone select the drive (`src/cpm/ccp.asm:150-171`), and anything else goes to
-`NOTDRIVE`, which compares the command with the built-ins' names and
-otherwise loads a program or a driver (`src/cpm/ccp.asm:213-286`). Every
-routine after `MLTAKE` reads the piece through `ARGSTRT` and stops at its 0,
-so a built-in or a program reads its own piece and nothing of the pieces after
-it. `PREPPAGE` copies the command tail from `ARGSTRT` up to the 0, and so the
-tail at `0080h` ends at the `!` (`src/cpm/ccp.asm:1262-1290`).
+Only then does the CCP test what the piece is. A drive letter and a colon
+alone select the drive (`src/cpm/ccp.asm:150-171`), and anything else goes
+to `NOTDRIVE` (Chapter 17), which compares the command with the built-ins'
+names and otherwise loads a program or a driver (`src/cpm/ccp.asm:213-286`).
+Every routine after `MLTAKE` reads the piece through `ARGSTRT` and stops at
+its 0, so a built-in or a program reads its own piece and nothing of the
+pieces after it. `PREPPAGE` copies the command tail from `ARGSTRT` up to the
+0, and so the tail at `0080h` ends at the `!` (`src/cpm/ccp.asm:1262-1290`).
 
 `CHPOS` is set before the command runs. A program that ends normally, by
-`RET`, by a jump to `0000h` or by BDOS function 0 (`src/cpm/bdos.asm:132-133`),
-reaches the warm boot, then the CCP's entry and `MAINLOOP`, and `CHSKIP` finds
-the next piece where `MLTAKE` left it. A built-in ends with a jump to
-`STARTED` or `MAINLOOP` and reaches `CHSKIP` the same way.
+`RET`, by a jump to `0000h` or by BDOS function 0
+(`src/cpm/bdos.asm:132-133`), reaches the warm boot, then the CCP's entry
+and `MAINLOOP`, and `CHSKIP` finds the next piece where `MLTAKE` left it. A
+built-in ends with a jump to `STARTED`, which Chapter 17 describes, or
+`MAINLOOP` and reaches `CHSKIP` the same way.
 
 The offset arithmetic at `MLTK2` uses only the low bytes of the addresses:
 `L` less the low byte of `CMDTXT - 1` (`src/cpm/ccp.asm:139-143`). The
 difference is below 256, so the 8-bit subtraction gives it whatever page the
 buffer is on.
 
-## The return code and :
+## The return code and the `:` test
 
 BDOS function 108 is `FNRETC` (`src/cpm/bdos.asm:184-196`). The BDOS's
 entry sends function 108 there before its table, as it does 50 and 47
@@ -185,31 +190,32 @@ The code is cleared at step 5, after the test, so the test reads the code
 of the command before and the command about to run starts from 0. A program
 that calls function 108 with `DE = FFFFh` at its start reads that 0.
 
-The CCP sets the code to a failure in one place, `ERRGO`, which stores
-`RCFAIL`, `FF00h`, and prints the message at `DE` before it goes to
-`STARTED` (`src/cpm/ccp.asm:20`, `src/cpm/ccp.asm:335-341`). `BADCMD`, which
-prints a command or argument with a question mark, falls through into it
-(`src/cpm/ccp.asm:315-338`), and the built-ins' messages go there by `JP
-ERRGO`: `NO FILE` from `FILENO`, `FILE EXISTS` from `REN`, `NO SPACE` from
-`SAVE`, and `COPY`'s four messages through `CPFAIL` (`src/cpm/ccp.asm:830-832`,
-`src/cpm/ccp.asm:923-925`, `src/cpm/ccp.asm:1257-1259`,
-`src/cpm/ccp.asm:1033-1034`). A program that isn't found, won't load or is a
-driver that won't install reaches `BADCMD` (`src/cpm/ccp.asm:250-279`). Every
-other end of a built-in leaves the code at 0, among them `COPY`'s `COPIED`
-line, which is printed through `PRTGO`, the entry after the store
-(`src/cpm/ccp.asm:1025-1032`, `src/cpm/ccp.asm:339`).
+The CCP sets the code to a failure in one place, `ERRGO`, which Chapter 17
+describes with `BADCMD`, which stores `RCFAIL`, `FF00h`, and prints the
+message at `DE` before it goes to `STARTED` (`src/cpm/ccp.asm:20`,
+`src/cpm/ccp.asm:335-341`). `BADCMD`, which prints a command or argument
+with a question mark, falls through into it (`src/cpm/ccp.asm:315-338`), and
+the built-ins' messages go there by `JP ERRGO`: `NO FILE` from `FILENO`,
+`FILE EXISTS` from `REN`, `NO SPACE` from `SAVE`, and `COPY`'s four messages
+through `CPFAIL` (`src/cpm/ccp.asm:830-832`, `src/cpm/ccp.asm:923-925`,
+`src/cpm/ccp.asm:1257-1259`, `src/cpm/ccp.asm:1033-1034`). A program that
+isn't found, won't load or is a driver that won't install reaches `BADCMD`
+(`src/cpm/ccp.asm:250-279`). Every other end of a built-in leaves the code
+at 0, among them `COPY`'s `COPIED` line, which is printed through `PRTGO`,
+the entry after the store (`src/cpm/ccp.asm:1025-1032`,
+`src/cpm/ccp.asm:339`).
 
 ## Paths that drop the rest
 
 A line is dropped by setting `CHPOS` to 0. Besides the failed `:` above, the
-BDOS does it in `CHDROP`, which clears `CHPOS` and jumps to the warm boot through the RAM
-BIOS table (`src/cpm/bdos.asm:73-77`). Two kinds of event go through
-`CHDROP`:
+BDOS does it in `CHDROP`, which clears `CHPOS` and jumps to the warm boot
+through the RAM BIOS table (`src/cpm/bdos.asm:73-77`). Two kinds of event go
+through `CHDROP`:
 
-- `^C` as the first key of a line read with function 10. `LINABRT` prints
+- `^C` while a line read with function 10 is empty. `LINABRT` prints
   `^C` and jumps to `CHDROP` (`src/cpm/bdos.asm:365-375`). At the CCP's own
   prompt no piece is left, since the CCP calls function 10 only with `CHPOS`
-  at 0, so the drop matters for a program that reads a line.
+  at 0, so only a line that a program reads has anything to drop.
 - A disk error. `DISKERR` prints `Bdos Err On`, the drive and the cause, and
   waits for a key (`src/cpm/bdos.asm:2431-2441`); the routine for each cause
   then jumps to `CHDROP`: `File R/O` from function 19, `R/O` from `CHKRO`,
@@ -219,16 +225,21 @@ BIOS table (`src/cpm/bdos.asm:73-77`). Two kinds of event go through
   `RDFAIL`, which jumps to `CHDROP` with no message
   (`src/cpm/bdos.asm:1859`, `src/cpm/bdos.asm:2423-2424`).
 
-A reset drops the line by clearing `CHPOS` with the rest of the workspace.
+A reset drops the line by clearing `CHPOS` with the rest of the workspace
+(`src/boot.asm:23-27`).
 
-Two ends of a command leave `CHPOS` as it was, and the line runs on. A key
-that stops a listing at `[more]`, `^C`, Esc or `Q`, sets carry in `PGNEWL`,
-and `DIR` and `TYPE` then end through `STARTED` like a listing that ran to
-its end (`src/cpm/ccp.asm:717-732`, `src/cpm/ccp.asm:486`,
-`src/cpm/ccp.asm:548`, `src/cpm/ccp.asm:819-828`). A failed write of the
-cache at a warm boot prints `Write lost` from `CWBOOT`, which returns to
+Two ends of a command leave `CHPOS` as it was, and the line runs on. At
+`[more]`, `PGWAIT` reads a key, clears its bit 5 with `AND DFh` and compares
+it with `03h`, `1Bh` and `Q`, so `^C`, Esc, `Q` and `q` stop a listing, and
+so do `#` and `;`, which the mask turns into `^C` and Esc. A key that stops
+it sets carry in `PGNEWL`, and `DIR` and `TYPE` then end through `STARTED`
+like a listing that ran to its end (`src/cpm/ccp.asm:707-732`,
+`src/cpm/ccp.asm:486`, `src/cpm/ccp.asm:548`, `src/cpm/ccp.asm:819-828`).
+`Write lost`, which `CWBOOT` prints at a warm boot when a cache write has
+failed since the last one, leaves the line to run too: `CWBOOT` returns to
 `WBOOTR`, and that jumps to the CCP's entry with nothing changed in `CHPOS`
-(`src/cache.asm:347-355`, `src/boot.asm:79-82`).
+(`src/ram.asm:202`, `src/cache.asm:191`, `src/cache.asm:347-355`,
+`src/boot.asm:79-82`).
 
 ## Function 47
 
@@ -258,16 +269,12 @@ has replaced that entry gets the call, as it does for the other warm boots
 the BDOS makes. The warm boot keeps `CMDTXT` and `CHPOS`, and at `MAINLOOP`
 `CHSKIP` finds the line's first piece. The loop echoes it with `MLECHO` and
 takes it with `MLTAKE` as it does any chained piece, so a `:` at its start
-tests the code the calling program left. `E`, which CP/M 3's function 47
-reads, is ignored; the CCP's entry takes the drive and user area from
-`0004h`, as after any program (`src/boot.asm:80-82`, `src/cpm/ccp.asm:26-52`).
+tests the code the calling program left. TEC-OS doesn't read `E`, which CP/M
+3's function 47 reads; the CCP's entry takes the drive and user area from
+`0004h`, as after any program (`src/boot.asm:80-82`,
+`src/cpm/ccp.asm:26-52`).
 
 The line from function 47 replaces the whole of the old line, and `CHPOS`
 points at its start, so the pieces of the old line after the program are
 gone. An empty line, a 0 at the DMA address, leaves `CHSKIP` nothing to find,
 and the CCP goes on to the startup file or the keyboard.
-
-`test/chain.test.mjs` runs these rules on the host model of Chapter 26: lines
-of up to 32 pieces, `:` after each kind of failure, the drops, function 47's
-rejections and copy, and the program's view of page zero after a piece and
-after function 47, which is the same as after a typed command.

@@ -17,7 +17,7 @@ history of command lines behind `^W` and `^N`.
 The CCP reads a line with BDOS function 10, CP/M's line input, with the
 editing keys that Chapter 2 lists, and Return ends it. The line holds up to
 127 characters, and a 127th character ends it as Return would. Before it
-looks for the command, the CCP turns every lower-case letter into a capital,
+searches for the command, the CCP turns every lower-case letter into a capital,
 so `dir *.com` and `DIR *.COM` are the same command:
 
 <!-- node book/capture.mjs "dir *.com" "DIR ????.COM" "DIR A:P*.*" "DIR B:" -->
@@ -76,11 +76,11 @@ A>
 `TYPE *.CMD` fails because `TYPE` takes one file and `*.CMD` is a wildcard,
 which the next section explains. `DIR A: B:` fails because `DIR` takes one
 argument, and the word printed back is the command's first argument, `A:`,
-not the extra one after it. Every built-in but `COPY` prints its first
-argument so, and one that needs an argument and has none prints the question
-mark alone: `ERA` with no name prints `?`. `COPY` prints its own name,
-`COPY?`, and so do an unknown command, a program that won't load and
-`UNLOAD`.
+not the extra one after it. Every built-in but `COPY` and `UNLOAD` prints
+its first argument so, and one that needs an argument and has none prints
+the question mark alone (`TYPE` prints `NO FILE`): `ERA` with no name prints
+`?`. `COPY` and `UNLOAD` print their own names, `COPY?` and `UNLOAD?`, and so
+do an unknown command and a program that won't load.
 
 ## Wildcards
 
@@ -141,9 +141,8 @@ below, and it leaves out a file whose system attribute is set. `tecvol put
 can set it with BDOS function 30. A system file is still there for every
 other command: `TYPE` prints it and a command runs it.
 
-`DIR`'s layout is TEC-OS's own. CP/M 2.2's `DIR` prints the names in a
-different layout, and a program that reads that layout from `DIR`'s output
-won't find it here.
+`DIR`'s layout is TEC-OS's own, and CP/M 2.2's `DIR` prints the names in a
+different layout.
 
 ## TYPE
 
@@ -308,7 +307,7 @@ returns the prompt to drive A.
 ## User areas
 
 CP/M divides the files on a drive into 16 user areas, numbered 0 to 15.
-Every file belongs to one, and a command, a program and `DIR` see only the
+Every file belongs to one, and a command, a program and `DIR` work only on the
 files of the current user area, on every drive. TEC-OS starts in user area
 0, and the starter card's files are all there. `USER` and a number select
 another area. The prompt doesn't show the area, so the files of area 0
@@ -373,12 +372,12 @@ Chapter 10 describes how a driver is made.
 
 ## Running a program
 
-A command that isn't a built-in names a program. The CCP looks on the
-current drive, in the current user area, for the file `NAME.COM`, loads it
-at `0100h` and starts it. If there is no `NAME.COM`, it looks for
-`NAME.PRL`, a program in Digital Research's relocatable PRL format, which
+A command that isn't a built-in names a program. The CCP searches the
+directory of the current drive, in the current user area, for the file
+`NAME.COM`, loads it at `0100h` and starts it. If there is no `NAME.COM`, it
+searches for `NAME.PRL`, a program in Digital Research's relocatable PRL format, which
 Chapter 10 describes. A drive in front of the name runs the program from
-that drive; the CCP looks nowhere else:
+that drive, and the CCP searches no other:
 
 <!-- node book/capture.mjs B: "A:VOLS" VOLS "README.TXT" -->
 ```text
@@ -397,8 +396,8 @@ B>
 ```
 
 A type typed after a program's name is replaced: `VOLS.COM` runs `VOLS`, and
-`README.TXT` as a command looks for `README.COM` and then `README.PRL`, and
-finds neither. The one exception is `.DRV`, which installs a driver.
+`README.TXT` as a command searches for `README.COM` and then `README.PRL`,
+and finds neither. The one exception is `.DRV`, which installs a driver.
 
 The command fails, with its name and a question mark, when neither file is
 there, and also when `NAME.COM` is there but doesn't load: when a read of it
@@ -443,8 +442,8 @@ The message is `Bdos Err On`, the drive, and one of four causes:
 
 After printing the message, the BDOS waits for a key. When the key comes it
 ends the command, or the program that made the call, with a warm boot. In
-CP/M 2.2 a Return there passes over a `Bad Sector` error and the program
-goes on; in TEC-OS every key ends it.
+CP/M 2.2 any key but `^C` there passes over a `Bad Sector` error and the
+program goes on; in TEC-OS every key ends it.
 
 A write to a read-only volume, such as one made with `tecvol create`'s `:ro`
 in Chapter 4, gives `Bad Sector`, the message for a failed disk write. This
@@ -476,10 +475,11 @@ cause of `R/O`, stays so until the next warm boot.
 
 ## Command history
 
-The CCP keeps the lines typed at its prompt. `^W` at the prompt replaces the
-line being typed with the line typed before it, and a second `^W` with the
-one before that; `^N` moves the other way, toward the newest, and one step past the
-newest leaves an empty line. A line brought back can be edited with the keys
+TEC-OS keeps the lines typed at the CCP's prompt, in a store that Chapter 23
+describes. `^W` at the prompt replaces the line being typed with the line
+typed before it, and a second `^W` with the one before that; `^N` moves the
+other way, toward the newest, and one step past the newest leaves an empty
+line. A line brought back can be edited with the keys
 of Chapter 2 and run with Return, as if it had been typed. Here `DIR *.DRV`
 and `CON` were typed, then `^W`, `^W` and Return; the PICO9918's screen
 shows `DIR *.DRV` brought back and run again:
@@ -507,4 +507,3 @@ lines, and the oldest go first when it fills. A line the same as the newest
 is not stored again, and the lines of the startup file are not stored at all.
 A warm boot keeps the history, and a reset empties it. In a line that a
 program reads with function 10, `^W` and `^N` are characters like any other.
-Chapter 23 describes the store behind the keys.

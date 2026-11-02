@@ -57,8 +57,8 @@ caret, so `^C` means Ctrl and C together.
 
 ## Contents
 
-Chapters 1, 2, 4, 6, 7, 8, 12, 13, 14, 15, 18, 19, 21, 23, 24 and 26 and
-appendices E, F and G are written. The entries for the other chapters list
+Chapters 1, 2, 3, 4, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 23,
+24, 25 and 26 and appendices A, C, E, F and G are written. The entries for the other chapters list
 their planned subjects and the source files their statements are to be
 checked against.
 
@@ -81,7 +81,7 @@ checked against.
    arrows; `[more]` in long listings. Sources: `docs/console.md`,
    `src/console.asm`, `src/cpm/ccp.asm`, `drivers/pico.asm`,
    `drivers/glcd.asm`.
-3. **The command line.** File names and wildcards; the built-in commands
+3. **[The command line](03-command-line.md).** File names and wildcards; the built-in commands
    (`DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `DRIVERS`,
    `UNLOAD`, `NAME.DRV`); running a `.COM` or `.PRL` file; user areas; BDOS
    error messages; command history with `^W` and `^N`. Sources:
@@ -161,12 +161,12 @@ checked against.
     `ABIGLCD`; the 20 × 4 LCD. Sources: `src/bios.asm`, `src/console.asm`,
     `src/term.asm`, `src/video.asm`, `src/tms.asm`, `src/lcd.asm`,
     `src/glcd.asm`.
-16. **The BDOS.** The entry, the function table and the FCB map; files,
-    extents and records; allocation vectors and the scan at warm boot; disk
-    errors; function 50, with BIOS functions 25 (`MOVE`) and 29 (`XMOVE`);
-    function 108; the differences from Digital Research's BDOS. Sources:
+16. **[The BDOS](16-bdos.md).** The entry, the function table and the FCB
+    map; files, extents and records; allocation vectors and the scan at warm
+    boot; disk errors; function 50, with BIOS functions 25 (`MOVE`) and 29
+    (`XMOVE`); functions 108 and 47; the differences from Digital Research's BDOS. Sources:
     `src/cpm/bdos.asm`, `src/cpm/PROVENANCE.md`, `docs/compatibility.md`.
-17. **The CCP.** The entry from boot; reading and parsing a line; the
+17. **[The CCP](17-ccp.md).** The entry from boot; reading and parsing a line; the
     built-ins; `LOADCOM`, `PREPPAGE` and the jump to `0100h`; `.COM` before
     `.PRL`; the CCP's RAM and stack. Sources: `src/cpm/ccp.asm`,
     `src/data3.asm`, `src/ram.asm`.
@@ -213,7 +213,7 @@ checked against.
 
 ### Appendices
 
-- **A. BDOS functions.** Each function from 0 to 40, with 50 and 108: its
+- **A. BDOS functions.** Each function from 0 to 40, with 47, 50 and 108: its
   registers, its result and any difference from CP/M 2.2. Sources:
   `src/cpm/bdos.asm`, `docs/compatibility.md`.
 - **B. ROM services.** The table at `C003h` entry by entry, the hardware
