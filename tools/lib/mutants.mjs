@@ -415,6 +415,8 @@ export const MUTANTS_KS32 = [
 
 const CT = "tools/lib/container.mjs";
 const VERIFY = ["test/verify-mount.test.mjs"];
+const CPM = ["test/cpm22.test.mjs"];
+const f = (find, put, tests = CPM, file = BD) => ({ edits: [asm(file, find, put)], tests });
 
 /** The fixes after KS32: each mutant undoes one, and its test catches it. */
 export const MUTANTS_FIXES = [
@@ -427,5 +429,10 @@ export const MUTANTS_FIXES = [
     name: "tecvol: a drive past the drives field let through",
     edits: [text(CT, "drives && v.mount >= drives) fail(", "drives && v.mount >= 99) fail(")],
     tests: VERIFY,
+  },
+  { name: "write: the FCB left on the next extent when its make fails", ...f(["EXTFULL:", "CALL FCBEX", "POP DE", "LD (HL),E", "INC HL", "INC HL", "LD (HL),D"], ["EXTFULL:", "POP DE"]) },
+  {
+    name: "write: the extent moved on after record 127",
+    ...f(["JR NZ,WRITEBAD", "XOR A", "RET", "WRITEBAD:"], ["JR NZ,WRITEBAD", "CALL FCBCR", "LD A,(ZEROFIL)", "ADD A,(HL)", "CP 128", "CALL Z,ADVEXT", "XOR A", "RET", "WRITEBAD:"]),
   },
 ];

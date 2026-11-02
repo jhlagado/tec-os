@@ -58,7 +58,7 @@ test("a 16 KiB save reads no data block, only the directory", () => {
   }
   assert.notEqual(bdos(16), 0xff);
   assert.ok(counts.reads <= 2, `${counts.reads} block reads`);
-  assert.equal(counts.writes, 131, "every record and the directory written through");
+  assert.equal(counts.writes, 130, "every record, the make and the close written through");
   assert.deepEqual(volume(image, "A").read("SAVE16.DAT"), expected(128));
 });
 

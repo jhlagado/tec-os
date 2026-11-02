@@ -41,6 +41,13 @@ is ignored. Function 12 still reports 2.2. The probe in `test/programs/probe.asm
 | Drive selection | 14, 25 | Pass |
 | Read-only volume | 21 via `SAVE` | `Bdos Err On C: Bad Sector`; card unchanged |
 
+A sequential write (21) moves to the next extent when it needs it, as CP/M
+2.2's does: the write of record 128 of an extent, not the write of record
+127, opens or makes the next one. With the directory full that write returns
+1 and leaves the FCB on its extent at record 128, so the same write made
+after an entry is freed makes the extent and goes on, with none missing. A
+file of 128 records has one directory entry.
+
 ## Command processor
 
 `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the

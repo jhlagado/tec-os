@@ -885,38 +885,48 @@ WRITEBLK:
         CALL    BIOWRS
         OR      A
         JR      NZ,WRITEBAD
-        ; Only a sequential write moves to the next extent after record 127.
-        ; ZEROFIL's bit 7 keeps a random write's sum away from 128.
-        CALL    FCBCR
-        LD      A,(ZEROFIL)
-        ADD     A,(HL)
-        CP      128
-        CALL    Z,ADVEXT
         XOR     A
         RET
 
 WRITEBAD:
         JP      BADSECT
 
-WRITEEND:
-        LD      A,1
-        RET
-
+; A sequential write past record 127 moves to the next extent first, as CP/M
+; 2.2's open_reel does: the write that needs the extent makes it. With the
+; directory full that write returns 1 and the FCB is put back on its extent,
+; record 128, so a write after an entry is freed makes the extent it needs.
 ADVEXT:
         CALL    CLOSEFCB
+        CALL    FCBEX
+        LD      E,(HL)          ; EX and S2, for a make that fails
+        INC     HL
+        INC     HL
+        LD      D,(HL)
+        PUSH    DE
         CALL    NEXTEXT
         OR      A
         JR      Z,EXTCLEAR
         LD      A,1
         LD      (WRTYPE),A
         CALL    MAKEFCB
-        CP      $FF
-        JR      Z,WRITEEND
+        INC     A
+        JR      Z,EXTFULL
 
 EXTCLEAR:
+        POP     DE
         CALL    FCBCR
         XOR     A
         LD      (HL),A
+        RET
+
+EXTFULL:
+        CALL    FCBEX
+        POP     DE
+        LD      (HL),E
+        INC     HL
+        INC     HL
+        LD      (HL),D
+        LD      A,1
         RET
 
 ADVWRITE:
@@ -995,7 +1005,8 @@ FNRREAD:
         JR      RANDDONE
 
 ; ZEROFIL is zero for reads and sequential writes. Random writes set bit 7,
-; and function 40 also sets bit 0 to zero-fill each newly allocated block.
+; which marks a write for RANDMISS, and function 40 also sets bit 0 to
+; zero-fill each newly allocated block.
 FNRWRITE:
         LD      A,$80
         JR      RANDWRT
