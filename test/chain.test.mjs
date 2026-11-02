@@ -277,6 +277,89 @@ test("a BDOS error's exit drops the rest of the line", () => {
   assert.equal(user(m), 0);
 });
 
+/** Type LINE, answer the BDOS error it meets with a key, and run to the prompt: the text since. */
+function runError(m, line, err) {
+  const from = m.output.length;
+  m.type(`${line}\r`);
+  m.runUntil(() => m.waitingForInput() && err.test(m.text(from)), 200_000_000, `the error in ${JSON.stringify(line)}`);
+  m.type("\r");
+  m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
+  return m.text(from);
+}
+
+// ROX.COM: function 28 makes the current drive read-only, then function 22 makes the file in 5Ch.
+const ROX = Uint8Array.from([0x0e, 28, 0xcd, 5, 0, 0x11, 0x5c, 0, 0x0e, 22, 0xcd, 5, 0, 0xc9]);
+// SEL16.COM: function 14 with E = 16, a drive past P:.
+const SEL16 = Uint8Array.from([0x1e, 16, 0x0e, 14, 0xcd, 5, 0, 0xc9]);
+
+test("a read-only drive's exit drops the rest of the line", () => {
+  const m = boot(card({ "ROX.COM": ROX }));
+  const out = runError(m, "ROX NEW.DAT!SAY!USER 2", /Bdos Err On A: R\/O/);
+  assert.equal(count(out, /PRL/g), 0);
+  assert.equal(user(m), 0);
+  assert.equal(volume(m.sdImage, "A").find("NEW.DAT"), undefined, "nothing made");
+});
+
+test("a failed select's exit drops the rest of the line", () => {
+  const m = boot(card({ "SEL16.COM": SEL16 }));
+  const out = runError(m, "SEL16!SAY!USER 2", /Bdos Err On .: Select/);
+  assert.equal(count(out, /PRL/g), 0);
+  assert.equal(user(m), 0);
+});
+
+test("a directory read that fails drops the rest of the line", () => {
+  const m = boot(card());
+  // The OR A after READDIR's BIORDS, before its JP NZ,RDFAIL: A made nonzero once.
+  const at = m.sym("RDFAIL");
+  let check = -1;
+  for (let a = 0xc000; a < 0xfffd && check < 0; a += 1) if (m.read(a) === 0xb7 && m.read(a + 1) === 0xc2 && m.read(a + 2) === (at & 255) && m.read(a + 3) === at >> 8) check = a;
+  assert.ok(check > 0, "READDIR's test");
+  let armed = false;
+  let failed = 0;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (armed && m.pc === check) [(m.cpu.cpu.a = 1), (armed = false), (failed += 1)];
+    return step();
+  };
+  const from = m.output.length;
+  armed = true;
+  m.type("DIR!SAY!USER 2\r");
+  m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
+  assert.equal(failed, 1);
+  assert.equal(count(m.text(from), /PRL/g), 0);
+  assert.equal(user(m), 0);
+});
+
+test("ERA's read-only file drops the rest of the line", () => {
+  const image = card();
+  volume(image, "A").write("R.DAT", new Uint8Array(128), { readOnly: true });
+  const m = boot(image);
+  const out = runError(m, "ERA R.DAT!SAY!USER 2", /Bdos Err On A: File R\/O/);
+  assert.equal(count(out, /PRL/g), 0);
+  assert.equal(user(m), 0);
+  assert.ok(volume(m.sdImage, "A").find("R.DAT"), "the file kept");
+});
+
+test("SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
+  const full = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G1M", label: "DIRS", mount: "B" },
+    { geometry: "G1M", label: "DATA", mount: "C" },
+  ]);
+  const b = volume(full, "B");
+  for (let i = 0; i < 256; i += 1) b.write(`F${i}.DAT`, new Uint8Array(1));
+  const c = volume(full, "C");
+  c.write("BIG.DAT", new Uint8Array(c.freeBytes()));
+  const m = boot(card({}, full));
+  for (const drive of ["B", "C"]) {
+    const out = run(m, `SAVE 1 ${drive}:X.COM!:SAY!USER 2`);
+    assert.match(out, /NO SPACE/, drive);
+    assert.equal(count(out, /PRL/g), 0, drive);
+    assert.equal(code(m), 0xff00, drive);
+    assert.equal(user(m), 0, drive);
+  }
+});
+
 test("a reset clears the rest of the line", () => {
   const m = boot(card());
   const from = m.output.length;

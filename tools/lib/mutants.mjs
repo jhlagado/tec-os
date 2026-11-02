@@ -390,6 +390,13 @@ export const MUTANTS_KS32 = [
   { name: "47: refused with A = 0", ...k(["FNCHNO: LD A,$FF"], ["FNCHNO: LD A,0"], BD) },
   { name: "stop: ^C keeps the rest", ...k(["LD C,'C'", "CALL ECHOCHAR", "JP CHDROP"], ["LD C,'C'", "CALL ECHOCHAR", "JP BIOWBT"], BD) },
   { name: "stop: a bad sector keeps the rest", ...k(["BADSECT:", "LD HL,ERRBAD", "CALL DISKERR", "JP CHDROP"], ["BADSECT:", "LD HL,ERRBAD", "CALL DISKERR", "JP BIOWBT"], BD) },
+  // The review's R1 to R4: the other four BDOS error exits, each back to BIOWBT.
+  { name: "stop: a read-only drive keeps the rest", ...k(["LD HL,ERRRO", "CALL DISKERR", "JP CHDROP"], ["LD HL,ERRRO", "CALL DISKERR", "JP BIOWBT"], BD) },
+  { name: "stop: a failed select keeps the rest", ...k(["SELFAIL:", "LD HL,ERRSEL", "CALL DISKERR", "JP CHDROP"], ["SELFAIL:", "LD HL,ERRSEL", "CALL DISKERR", "JP BIOWBT"], BD) },
+  { name: "stop: a failed directory read keeps the rest", ...k(["RDFAIL:", "JP CHDROP"], ["RDFAIL:", "JP BIOWBT"], BD) },
+  { name: "stop: ERA's read-only file keeps the rest", ...k(["LD HL,ERRFILE", "CALL DISKERR", "JP CHDROP"], ["LD HL,ERRFILE", "CALL DISKERR", "JP BIOWBT"], BD) },
+  // R5: SAVE's NO SPACE leaving the code.
+  { name: "code: NO SPACE leaves it", ...k(["SAVENOSP:", "LD DE,NOSPACE", "JP ERRGO"], ["SAVENOSP:", "LD DE,NOSPACE", "JP PRTGO"]) },
   { name: "stop: CHDROP drops nothing", ...k(["CHDROP: XOR A", "LD (CHPOS),A", "JP BIOWBT"], ["CHDROP: JP BIOWBT"], BD) },
   // CHPOS past HIRME and the line past cold boot's clear: either alone is masked by the other.
   {
