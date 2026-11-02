@@ -118,3 +118,22 @@ test("REN takes one drive from either name, and a name on another drive is refus
   m.command("REN T.COM=Y.COM");
   assert.match(m.command("DIR T.COM"), /T\.COM/);
 });
+
+test("ERA *.* answered with Return alone erases nothing and takes no second Return", async () => {
+  const m = await machine();
+  m.command("SAVE 1 B:KEEP.COM");
+  const from = m.output.length;
+  m.type("ERA B:*.*\r");
+  m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
+  m.type("\r");
+  m.expect(/A>$/, { from, maxCycles: 50_000_000 });
+  assert.match(m.command("DIR B:"), /KEEP\.COM/);
+  const again = m.output.length;
+  m.type("ERA B:*.*\r");
+  m.expect(/ALL \(Y\/N\)\?/, { from: again, maxCycles: 100_000_000 });
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
+  m.type("y\r");
+  m.expect(/A>$/, { from: again, maxCycles: 50_000_000 });
+  assert.match(m.command("DIR B:"), /NO FILE/);
+});

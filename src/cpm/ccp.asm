@@ -873,12 +873,16 @@ ERACHK:
         CALL    BDOS
         AND     $DF
         LD      (ERAANS),A
+        CP      CR              ; Return alone ends the answer
+        JR      Z,ERAGOT
 
 ERADRAIN:
         LD      C,1
         CALL    BDOS
         CP      CR
         JR      NZ,ERADRAIN
+
+ERAGOT:
         LD      A,(ERAANS)
         CP      'Y'
         JP      NZ,STARTED
