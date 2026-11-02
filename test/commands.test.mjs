@@ -81,3 +81,16 @@ test("startup lines go on after ^C at a program", async () => {
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
   assert.equal(m.read(4) >> 4, 3, "the next line ran");
 });
+
+test("ERA frees each directory entry's blocks once", async () => {
+  const m = await machine({ "ONE.DAT": Buffer.alloc(128) });
+  let frees = 0;
+  const free = m.sym("FREEENT");
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === free) frees += 1;
+    return step();
+  };
+  m.command("ERA ONE.DAT");
+  assert.equal(frees, 1);
+});

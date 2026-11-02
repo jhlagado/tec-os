@@ -710,7 +710,6 @@ DELLOOP:
         LD      HL,(MATCHPTR)
         CALL    ROTEST
         CALL    FREEENT
-        CALL    FREEENT
         LD      HL,(MATCHPTR)
         LD      (HL),$E5
         CALL    WRDIRNOW
