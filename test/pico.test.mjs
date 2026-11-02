@@ -118,9 +118,7 @@ test("CON UC1, CON TTY, UNLOAD stays on serial: only UC1: moves to CRT:", () => 
 });
 
 test("a service loading with GLCD.SVC in installs, and says nothing", async () => {
-  const res = Uint8Array.from(await service("res"));
-  res[14] = 0; // GLCD.SVC takes the CCP's whole limit
-  const m = start({ "GLCD.SVC": GLCD_SVC, "RES.SVC": res, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false });
+  const m = start({ "GLCD.SVC": GLCD_SVC, "RES.SVC": await service("res"), "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false });
   assert.doesNotMatch(say(m, "RES.SVC"), /RES\.SVC\?/);
 });
 

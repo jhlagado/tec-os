@@ -124,11 +124,12 @@ async function consoleRun(opts, { wb = false } = {}) {
 }
 
 /** A line such as CON UC1 loading GLCD.SVC, on a card with the display's files. */
-async function deepPaths(lines, opts = { tms: true, matrix: true }, { pico = true } = {}) {
+async function deepPaths(lines, opts = { tms: true, matrix: true }, { pico = true, files = {} } = {}) {
   const { rom, symbols } = romFor();
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }]);
   const a = volume(image, "A");
   a.write("GLCD.SVC", GLCD_SVC);
+  for (const [name, bytes] of Object.entries(files)) a.write(name, bytes);
   if (opts.tms && pico) {
     a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
     a.write("STARTUP.CMD", startupFile("PICO.SVC"));
@@ -220,11 +221,16 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     unloadPico: await deepPaths(["CON TTY\r", "UNLOAD\r"]),
     recognisedReset: await resetRun(),
     chained: await chainRun(),
+    serialPlain: await deepPaths(["TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}),
+    resident: await deepPaths(["RES.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}, { files: { "RES.SVC": await service("res") } }),
   };
   assert.equal(runs.picoNoDriver.row3, "PICO?", "the run went through STDONE's LCD path");
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
   assert.equal(runs.glcd.conmod, 3, "the glcd run is on UC1:");
   assert.equal(runs.conUc1.conmod, 3, "both displays, CON UC1 took the GLCD");
+  for (const [k, more] of [["bdos", 2], ["bios", 0], ["ccp", 0]]) {
+    assert.ok(runs.resident[k].deepest <= runs.serialPlain[k].deepest + more, `RES.SVC declares ${more} on the ${k} stack`);
+  }
   const census = Object.fromEntries(
     ["bdos", "ccp", "bios"].map((k) => [k, { reserved: runs.serial[k].reserved, deepest: Math.max(...Object.values(runs).map((r) => r[k].deepest)) }]),
   );
@@ -240,7 +246,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   }
 });
 
-test("RES.SVC declares the word MYCO pushes on the BDOS's and the CCP's stacks", async () => {
+test("RES.SVC declares the word MYCO pushes on the BDOS's stack", async () => {
   const bytes = await service("res");
-  assert.deepEqual([...bytes.subarray(12, 15)], [2, 0, 2]);
+  assert.deepEqual([...bytes.subarray(12, 15)], [2, 0, 0]);
 });
