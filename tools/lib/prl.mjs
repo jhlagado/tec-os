@@ -12,7 +12,7 @@ import { assembleProgram } from "./assemble.mjs";
 export async function assembleAt(source, origin, work) {
   if (origin === 0x100) return (await assembleProgram(source, { base: origin })).bytes;
   const text = readFileSync(source, "utf8");
-  const org = /^(\s+ORG\s+)\$0100\s*$/m;
+  const org = /^([ \t]+ORG[ \t]+)\$0100[ \t]*\r?$/m;
   if (!org.test(text)) throw new Error(`${source} has no "ORG $0100" line`);
   const hex = origin.toString(16).toUpperCase().padStart(4, "0");
   const digest = createHash("sha256").update(text).digest("hex").slice(0, 16);

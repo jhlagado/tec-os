@@ -96,7 +96,7 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   for (const [k, v] of Object.entries(defs)) if (typeof v === "string") body = body.replaceAll(k, v);
   // ATOM takes %INCLUDE only in a file's header, so those above the ORG go to it
   // with their paths moved, and one below it, the font placed last, is copied in.
-  const org = body.search(/^\s+ORG\s+\$0100\s*$/m);
+  const org = body.search(/^[ \t]+ORG[ \t]+\$0100[ \t]*\r?$/m);
   const inside = (p) => readFileSync(resolve(dirname(source), p), "utf8");
   body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, resolve(dirname(source), p))}"`) + prelude + body.slice(org).replace(/^%INCLUDE\s+"([^"]+)"\s*$/gm, (_, p) => inside(p));
   writeFileSync(copy, body);

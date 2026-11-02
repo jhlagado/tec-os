@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { assembleAt } from "../tools/lib/prl.mjs";
+import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | m.read(a + 1) << 8;
 const putWord = (m, a, n) => { m.write(a, n & 255); m.write(a + 1, n >> 8); };
@@ -67,4 +70,16 @@ test("CCP retains the actual short file extent and refuses its oversized declara
   assert.equal(word(m, m.sym("LOADTOP")), 0x280, "three disk records, including padding");
   m.expect(/SHORT\?\r\n\r\nA>$/);
   assert.equal(word(m, 6), before);
+});
+
+test("an unindented ORG after a blank line is refused, and an indented one with CRLF is taken", async () => {
+  const dir = mkdtempSync(resolve(ROOT, "build/org-"));
+  const at = (text) => {
+    const path = resolve(dir, "T.asm");
+    writeFileSync(path, text);
+    return assembleAt(path, 0x8000, dir);
+  };
+  await assert.rejects(at("\nORG $0100\n\tRET\n"), /no "ORG \$0100" line/);
+  assert.equal((await at("\tORG $0100\r\n\tRET\r\n")).length, 1);
+  rmSync(dir, { recursive: true });
 });

@@ -750,7 +750,7 @@ PGSTOP:
         SCF
         RET
 
-; Print up to B characters from HL, stopping at a space; count them in C.
+; Print up to B characters from HL, passing over spaces; count those printed in C.
 ; Leaves HL after the field.
 PUTTRIM:
         LD      A,(HL)
