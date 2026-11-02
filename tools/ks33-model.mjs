@@ -37,8 +37,8 @@ const HEADERS = ["drivers/pico.asm", "drivers/glcd.asm", "test/programs/svcdemo.
 
 /** Each source's header bytes, magic and version, and the loader's word. */
 function magic(dir, word, letter, version) {
-  M.patch(dir, "src/svc.asm", "DMAGIC  EQU     $0344", `DMAGIC  EQU     ${word}`);
-  for (const f of HEADERS) M.patch(dir, f, "DB      'D',3,", `DB      '${letter}',${version},`);
+  M.patch(dir, "src/svc.asm", "DMAGIC\tEQU\t$0344", `DMAGIC\tEQU\t${word}`);
+  for (const f of HEADERS) M.patch(dir, f, "DB\t'D',3,", `DB\t'${letter}',${version},`);
   M.patch(dir, "tools/lib/svc-format.mjs", "FORMAT = 3", `FORMAT = ${version}`);
 }
 
@@ -448,7 +448,6 @@ async function choices(landed) {
   mag.kept0344h.onThisRom = await M.worker(SCRIPT, { task: "magic", dir: landed, old });
   for (const k of Object.keys(MAGIC)) {
     if (!mag[k].dir) continue;
-    await M.media(mag[k].dir).catch(() => {});
     await M.build(mag[k].dir);
     await M.media(mag[k].dir);
     mag[k].onThisRom = await M.worker(SCRIPT, { task: "magic", dir: mag[k].dir, old });
