@@ -428,7 +428,7 @@ function capture(dir) {
 const LANDED = M.arg("--landed", "HEAD");
 const REFERENCE = M.arg("--reference", "62d47ed");
 const OLD_SETS = [
-  [MUTANTS_KS30, "ks30", M.arg("--ks30", "d6f8d9d")],
+  [MUTANTS_KS30, "ks30", M.arg("--ks30", "dbdce5c")],
   [MUTANTS_KS31, "ks31", M.arg("--ks31", "98c6416")],
   [MUTANTS_KS32, "ks32", M.arg("--ks32", "08da4d6")],
 ];
