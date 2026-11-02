@@ -394,13 +394,23 @@ test("KE-127: a startup line of 128 characters runs its first 127, and leaves 01
   assert.match(m.text(0), new RegExp(`A>X ${"A".repeat(125)}\\r`));
 });
 
-test("KE-127: the longest tail, 126 characters, typed, chained and from function 47, leaves 0100h as loaded", () => {
+test("KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded", () => {
   const line = `X ${"B".repeat(125)}`;
   assert.equal(line.length, 127);
+  // A piece after a ! can't carry 126 characters in a 127-character line: the chained
+  // case is the longest a piece after a program can have, 124, its 0 the line's.
+  const chained = `X!X ${"B".repeat(123)}`;
+  assert.equal(chained.length, 127);
   const m = boot(card({ "X.COM": X128, "CHAIN.COM": chainTo(line) }));
   const got = atEntry(m);
   run(m, line);
+  assert.deepEqual(got, [{ b100: 0xc9, tail: 126, last: 0 }], "typed");
+  got.length = 0;
+  run(m, chained);
+  assert.deepEqual(got, [{ b100: 0xc9, tail: 0, last: 0 }, { b100: 0xc9, tail: 124, last: 0 }], "chained");
+  assert.equal(m.read(0x80 + 1 + 124), 0, "the chained tail's 0");
+  assert.deepEqual([...Array.from({ length: 124 }, (_, i) => m.read(0x81 + i))], [...raw(` ${"B".repeat(123)}`)], "the chained tail");
+  got.length = 0;
   run(m, "CHAIN");
-  assert.deepEqual(got.at(0), { b100: 0xc9, tail: 126, last: 0 });
-  assert.deepEqual(got.at(-1), { b100: 0xc9, tail: 126, last: 0 });
+  assert.deepEqual(got.at(-1), { b100: 0xc9, tail: 126, last: 0 }, "from function 47");
 });
