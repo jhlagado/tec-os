@@ -199,11 +199,13 @@ checked against.
     diagnostics ROM, its tests and its report; running it on a board.
     Sources: `src/diag.asm`, `diag/`, `tools/diag.mjs`,
     `docs/diagnostics.md`, `docs/board-run.md`.
-25. **Chaining inside** (planned). The command line kept across a warm boot;
-    splitting at `!`; the return code and `:`; function 47's copy and its
-    checks. Like Chapter 11, it will describe the release that adds
-    chaining. Sources: that release's `src/cpm/ccp.asm`, `src/cpm/bdos.asm`
-    and `src/ram.asm`.
+25. **[Chaining inside](25-chaining-inside.md).** The command line and
+    `CHPOS` kept across a warm boot; the 127-character limit; the CCP's
+    main loop and the order of a chained piece, a startup line and the
+    keyboard; taking a piece at `!`; the return code, `ERRGO` and `:`; the
+    paths that drop the rest of a line; function 47's checks and copy.
+    Sources: `src/cpm/ccp.asm`, `src/cpm/bdos.asm`, `src/ram.asm`,
+    `src/boot.asm`, `src/drv.asm`, `src/cache.asm`.
 26. **The host model and the web page.** `host/machine.mjs` and the Debug80
     TEC-1G runtime; the SD card and clock attached to it; the tests; the web
     page's build, its card in IndexedDB and its controls. Sources:
