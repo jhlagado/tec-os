@@ -122,5 +122,5 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   put(10, data.length);
   put(15, symbols.INIT - 0x100);
   const offsets = Object.fromEntries(Object.entries(symbols).map(([k, v]) => [k, v - 0x100]));
-  return { file, symbols: offsets, image: at0.length, fixups, data };
+  return { file, symbols: offsets, image: at0.length, fixups, data, copy };
 }

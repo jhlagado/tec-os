@@ -12,7 +12,7 @@ import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
-const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
+const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
 const made = new Map();
 
 /** SVCDEMO with OVER set; opt as makeSvc's. */
@@ -247,7 +247,7 @@ test("a file ending exactly at LOADTOP is whole", async () => {
 for (const [entry, at] of [[0, 0xfffe], [16, 46]]) {
   test(`the scan reaches the table's entry ${entry}`, async () => {
     const t = await machine();
-    const r = t.load((await svc({ V_HOOK: 1, V_HOOKFAIL: 1, HOOKAT: at })).file);
+    const r = t.load((await svc({ V_HOOK: 1, V_HOOKFL: 1, HOOKAT: at })).file);
     assert.deepEqual([r.carry, r.rc], [1, 2]);
   });
 }
@@ -372,7 +372,7 @@ for (const [name, over] of [
 
 test("INIT fails with a hook left: the pages stay, nothing is registered, UNLOAD refuses", async () => {
   const t = await machine();
-  const x = transaction(t, (await svc({ V_HOOK: 1, V_HOOKFAIL: 1 })).file);
+  const x = transaction(t, (await svc({ V_HOOK: 1, V_HOOKFL: 1 })).file);
   assert.deepEqual([x.r.carry, x.r.rc], [1, 2]);
   const base = t.head();
   assert.notEqual(base, 0);

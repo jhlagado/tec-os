@@ -5,7 +5,7 @@
 //
 // Run after npm run build.
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,12 +36,35 @@ TERM               draw on the video console; TERM S also scrolls
 PROBE              exercise the BDOS file functions
 DEMO               the LCD, digits, 8x8 LEDs and PICO9918; any key stops
 EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
+TAS NAME           assemble NAME.ASM to NAME.COM and NAME.DBG
 VOLS               list the card's volumes
 MOUNT B: NAME      put a volume on a drive; MOUNT B: takes it off
 
+NAME.SVC           install a service, such as a display's driver
+SERVICES           list the services installed, each with its pages
+UNLOAD             remove the last service installed
+
+A line chains commands with !, and a piece that starts with : runs only if the
+last command succeeded: ERA X.COM!EDIT X.ASM!TAS X!:X
+
 B: is an empty work disk, written behind: its changes reach the card when a
 file is closed, at ^C and at MOUNT. Press ^C at A> before reset or power off.
+
+A card with .DRV files is from an older TEC-OS and this ROM won't load them.
+Make a new starter card, or rename each file .SVC if its format is 3 and change
+STARTUP.CMD to match.
 `;
+
+/** The pinned TAS.COM's bytes, which the card holds: a file missing or not as pinned is refused. */
+function tasBytes() {
+  const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs["TAS.COM"];
+  const path = process.env[entry.env] ?? resolve(ROOT, entry.default);
+  if (!existsSync(path)) throw new Error(`no TAS.COM at ${path}: the starter card holds it, so set ${entry.env}`);
+  const bytes = new Uint8Array(readFileSync(path));
+  const got = sha(bytes);
+  if (got !== entry.sha256) throw new Error(`TAS.COM at ${path} has sha256 ${got}, pinned ${entry.sha256}`);
+  return bytes;
+}
 
 /** TEC-OS's fixed state in page zero, 0040h-004Fh, from the EQUs in src/layout.asm. */
 function pageZeroState() {
@@ -178,6 +201,8 @@ loop ${census.serial.txBitCycles}, receive loop ${census.serial.rxBitCycles}.
 }
 
 async function main() {
+  const tas = tasBytes();
+  rmSync(FILES, { recursive: true, force: true }); // what the page copies: nothing from an older set
   mkdirSync(FILES, { recursive: true });
   const censuses = {};
   for (const profile of Object.keys(PROFILES)) {
@@ -210,6 +235,8 @@ async function main() {
       console.log(`media: ${editPath} predates the screen configuration; Edit left off the card`);
     }
   }
+  writeFileSync(resolve(FILES, "TAS.COM"), tas);
+  files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   copyFileSync(resolve(ROOT, "src/abi.inc"), resolve(DIST, "abi.inc"));
   const readme = Buffer.from(README.replace(/\n/g, "\r\n") + "\x1a");
   writeFileSync(resolve(FILES, "README.TXT"), readme);
@@ -218,7 +245,7 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "2",
+    revision: "3",
     name: "TEC-OS starter",
     instruction: "At A>, type DIR, then TERM or DEMO. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "debug80",

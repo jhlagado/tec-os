@@ -1,0 +1,107 @@
+// TAS.COM, the assembler the starter card carries, on TEC-OS: a program
+// assembled on the TEC and run; the card's copy, by its pinned hash, with a
+// missing or wrong file refused by the media tool; and drivers/ and svcdemo.asm
+// assembling under TAS to Atom's bytes. TAS at its pin writes no .SVC, so what
+// is compared is the flat image under a .COM type. Emulator evidence. TAS.COM
+// is a pinned input (test/inputs.json).
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { assembleProgram } from "../tools/lib/assemble.mjs";
+import { PICO_WIDTHS, makeSvc } from "../tools/lib/svc.mjs";
+import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { check, pinned } from "./lib/inputs.mjs";
+
+const TAS = pinned("TAS.COM");
+const HELLO = 'ORG $100\nLD DE,MESSAGE\nLD C,9\nCALL 5\nRET\nMESSAGE: DB "HELLO FROM TAS",13,10,"$"\n';
+const LONG = { maxCycles: 4_000_000_000 };
+const text = (p) => Buffer.from(readFileSync(resolve(ROOT, p)));
+
+test("TAS assembles a program on TEC-OS and the program runs", { skip: TAS.skip, timeout: 900_000 }, () => {
+  check(TAS);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  a.write("HELLO.ASM", Buffer.from(HELLO), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  m.command("TAS HELLO", LONG);
+  const names = volume(image, "A").list().map((f) => f.name);
+  assert.ok(names.includes("HELLO.COM") && names.includes("HELLO.DBG"), names.join(" "));
+  assert.match(m.command("HELLO"), /HELLO FROM TAS/);
+  assert.deepEqual(m.violations, []);
+});
+
+test("the starter card holds TAS.COM by its hash", { skip: TAS.skip }, () => {
+  check(TAS);
+  const pin = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs["TAS.COM"];
+  const bytes = volume(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), "A").read("TAS.COM").subarray(0, pin.bytes);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), pin.sha256);
+  const recipe = JSON.parse(readFileSync(resolve(ROOT, "dist/starter.recipe.json"), "utf8"));
+  assert.equal(recipe.components.find((c) => c.name === "TAS.COM").files[0].sha256, pin.sha256);
+});
+
+test("the media tool refuses a TAS.COM missing or not as pinned", () => {
+  const media = (path) => spawnSync(process.execPath, ["tools/media.mjs"], { cwd: ROOT, env: { ...process.env, TAS_COM: path }, encoding: "utf8" });
+  const missing = media(resolve(ROOT, "build/no-such-TAS.COM"));
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /no TAS\.COM at/);
+  const wrong = media(resolve(ROOT, "README.md"));
+  assert.notEqual(wrong.status, 0);
+  assert.match(wrong.stderr, /TAS\.COM at .* has sha256 [0-9a-f]+, pinned ff187348/);
+});
+
+/**
+ * ROOT.COM under TAS on a card holding FILES and ROOT.ASM, which sets EQUS and
+ * includes MAIN: the image, its CP/M records' padding cut to LENGTH.
+ */
+function underTas(equs, main, files, length) {
+  check(TAS);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  for (const [n, b] of Object.entries(files)) a.write(n, b, { text: true });
+  const root = `${Object.entries(equs).map(([k, v]) => `${k.padEnd(8)} EQU ${v}\n`).join("")}%INCLUDE "${main}"\n`;
+  a.write("ROOT.ASM", Buffer.from(root), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  const said = m.command("TAS ROOT", LONG);
+  const written = volume(image, "A").list().some((f) => f.name === "ROOT.COM");
+  assert.ok(written, said);
+  assert.deepEqual(m.violations, []);
+  return volume(image, "A").read("ROOT.COM").subarray(0, length);
+}
+
+/** Atom's flat image of SOURCE as makeSvc writes it, by the tree's own tool. */
+async function underAtom(source, opt) {
+  const made = await makeSvc(resolve(ROOT, source), { work: resolve(ROOT, "build/svc"), ...opt });
+  return (await assembleProgram(made.copy)).bytes;
+}
+
+const COMMON = { "ABI.INC": text("src/abi.inc"), "FONT.ASM": text("drivers/font.asm") };
+
+for (const [name, defs] of Object.entries(PICO_WIDTHS)) {
+  test(`${name}'s source assembles under TAS to Atom's bytes`, { skip: TAS.skip, timeout: 900_000 }, async () => {
+    const atom = await underAtom("drivers/pico.asm", { defs });
+    const tas = underTas(defs, "PICO.ASM", { ...COMMON, "PICO.ASM": text("drivers/pico.asm") }, atom.length);
+    assert.deepEqual([...tas], [...atom]);
+  });
+}
+
+test("GLCD.SVC's source assembles under TAS to Atom's bytes", { skip: TAS.skip, timeout: 900_000 }, async () => {
+  const atom = await underAtom("drivers/glcd.asm", {});
+  const tas = underTas({}, "GLCD.ASM", { ...COMMON, "GLCD.ASM": text("drivers/glcd.asm") }, atom.length);
+  assert.deepEqual([...tas], [...atom]);
+});
+
+test("svcdemo.asm assembles under TAS to Atom's bytes", { skip: TAS.skip, timeout: 900_000 }, async () => {
+  const flags = [...new Set(readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").match(/\bV_[A-Z]+\b/g))];
+  const numbers = { ...Object.fromEntries(flags.map((v) => [v, 0])), FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, RECVER: 2 };
+  const name = '"DEMO    "';
+  const atom = await underAtom("test/programs/svcdemo.asm", { defs: { ...numbers, HDRNAME: name, RECNAME: name } });
+  const source = readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").replaceAll("HDRNAME", name).replaceAll("RECNAME", name);
+  const tas = underTas(numbers, "SVCDEMO.ASM", { ...COMMON, "SVCDEMO.ASM": Buffer.from(source, "latin1") }, atom.length);
+  assert.deepEqual([...tas], [...atom]);
+});

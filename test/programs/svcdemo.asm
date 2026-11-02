@@ -58,7 +58,7 @@ INIT:
         DEC     HL
         LD      (HL),E
 %ENDIF
-%IF V_HOOKFAIL
+%IF V_HOOKFL
         SCF
         RET
 %ENDIF
@@ -233,7 +233,7 @@ REC2:   DW      0
 %ENDIF
 COUNT:  DB      0
 RESULT: DB      $FF
-%IF V_DEP + V_LATE > 0
+%IF V_DEP + V_LATE
 DEPNAME:DB      "DEMO    "
 DEPTAB: DW      0
 %ENDIF
@@ -246,7 +246,7 @@ MYCO:   PUSH    HL
 OLDCO:  DW      0
 HITS:   DB      0
 %ENDIF
-%IF V_GLVEC+V_STK > 0
+%IF V_GLVEC+V_STK
 ; The ROM's six video routines, each using six bytes of its caller's stack.
 VTAB:   DW      VRT,VRT,VRT,VRT,VRT,VRT,0
         DB      21,8
