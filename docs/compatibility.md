@@ -48,6 +48,12 @@ A sequential write (21) moves to the next extent when it needs it, as CP/M
 after an entry is freed makes the extent and goes on, with none missing. A
 file of 128 records has one directory entry.
 
+Function 32 keeps the low five bits of any `E` but FFh, as CP/M 2.2's does:
+user numbers 0–31 reach the directory, and no `E` makes the user E5h, the
+user byte of an erased entry. The CCP's `USER` takes 0–15, and 0004h holds
+four bits of the user, so a program that leaves user 16 or more finds the
+next prompt in that number's low four bits.
+
 ## Command processor
 
 `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the

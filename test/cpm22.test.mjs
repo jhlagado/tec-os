@@ -75,3 +75,33 @@ test("a sequential write of 128 records makes one extent, not an empty second on
   const used = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).filter((e) => e[0] !== 0xe5);
   assert.deepEqual(used.map((e) => [e[12], e[15]]), [[0, 128]]);
 });
+
+test("function 32 keeps E's low five bits, for every E from 10h to FEh, and FFh gets the user number", () => {
+  const r = rig();
+  for (let e = 0x10; e <= 0xfe; e += 1) {
+    r.call(5, { c: 32, de: e });
+    assert.equal(r.call(5, { c: 32, de: 0xff }), e & 0x1f, `E = ${e.toString(16)}h`);
+  }
+  r.call(5, { c: 32, de: 0x07 });
+  r.call(5, { c: 32, de: 0xff });
+  assert.equal(r.call(5, { c: 32, de: 0xff }), 7, "FFh leaves it");
+});
+
+test("function 32 with E5h is user 5: erased entries stay erased", () => {
+  const image = standardCard();
+  const r = rig(image);
+  r.fcb(0, "GONE    DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  assert.notEqual(r.bdos(16), 0xff);
+  assert.equal(r.bdos(19), 0);
+  r.call(5, { c: 32, de: 0xe5 });
+  assert.equal(r.call(5, { c: 32, de: 0xff }), 5);
+  r.fcb(0, "GONE    DAT");
+  assert.equal(r.bdos(17), 0xff, "search finds no erased file");
+  assert.equal(r.bdos(15), 0xff, "nor does open");
+  r.fcb(0, "NEW     DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  assert.notEqual(r.bdos(16), 0xff);
+  const disk = volume(image, "A");
+  assert.deepEqual(disk.list({ user: 5 }).map((x) => x.name), ["NEW.DAT"], "made in user 5, not as an erased entry");
+});

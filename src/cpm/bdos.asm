@@ -1470,10 +1470,13 @@ FNGETDPB:
         LD      HL,(DEFDPB)
         JP      RETWORD
 
+; E = FFh gets the user number; any other E sets it to its low five bits, as
+; CP/M 2.2 does, so no E reaches E5h, an erased entry's user byte.
 FNUSER:
         LD      A,(PARAM)
         CP      $FF
         JR      Z,GETUSER
+        AND     $1F
         LD      (USERNO),A
         JP      RETZERO
 
