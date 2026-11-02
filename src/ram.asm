@@ -214,8 +214,8 @@ KBT1:   DS      1               ; and the bytes themselves
 KBT2:   DS      1
 
 ; ---- The GLCD console ------------------------------------------------------
-PIVEC:  DS      2               ; PICO.DRV's video table, from GLHOOK; 0 for none
-GLVEC:  DS      2               ; GLCD.DRV's, the same: indexed by CMCRT and CMUC1
+PIVEC:  DS      2               ; PICO.SVC's video table, from GLHOOK; 0 for none
+GLVEC:  DS      2               ; GLCD.SVC's, the same: indexed by CMCRT and CMUC1
 
 ; ---- Command-line history ------------------------------------------------------
 HHEAD:  DS      1               ; the offset the next line goes in at
@@ -230,11 +230,11 @@ PRGCODE:DS      2               ; BDOS function 108's program return code
 LOADTOP:DS      2               ; successful LOADCOM exclusive record end
 PRLN:   DS      2               ; the PRL loader: code length
 PRLDL:  DS      1               ; and relocation delta
-DRVBSY:	DS	1		; 80h while an INIT or REMOVE runs
+SVCBSY:	DS	1		; 80h while an INIT or REMOVE runs
 REGHEAD:DS      2               ; the first service record
-DRVHEAD:DS      1               ; the lowest driver's page, 0 for none
-DRVGEN: DS      1               ; raised by each removal
-DRVRC:  DS      1               ; the last load's failure
+SVCHEAD:DS      1               ; the lowest driver's page, 0 for none
+SVCGEN: DS      1               ; raised by each removal
+SVCRC:  DS      1               ; the last load's failure
 STPOS:	DS	1		; startup's state and position, as at STBOOT
 STREC:  DS      128             ; A:STARTUP.CMD's one record
 CHPOS:  DS      1               ; a chained line's next piece: its offset in CMDTXT + 1, 0 for none

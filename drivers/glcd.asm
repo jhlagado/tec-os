@@ -1,4 +1,4 @@
-; GLCD.DRV: the ST7920 128 x 64 GLCD console as a driver below (0006h), 21
+; GLCD.SVC: the ST7920 128 x 64 GLCD console as a driver below (0006h), 21
 ; columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. Its INIT
 ; checks that the controller answers and hands the ROM its video table through
 ; ABIGLCD; the CCP then takes the console, unless a PICO9918 has it, and the
@@ -27,10 +27,10 @@ VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
         DB      GLCOLS,GLROWS
 LBUF:   DW      0               ; LINEBUF, from ABIGLCD
 
-; INIT refuses if the controller doesn't answer, another GLCD.DRV has the
+; INIT refuses if the controller doesn't answer, another GLCD.SVC has the
 ; console, or another display is the console and CON UC1 didn't ask: a line in
-; STARTUP.CMD gives way to PICO.DRV. It offers no service. REMOVE gives the
-; console back, to PICO.DRV if that is in.
+; STARTUP.CMD gives way to PICO.SVC. It offers no service. REMOVE gives the
+; console back, to PICO.SVC if that is in.
 INIT:   LD      A,(IOBYTE)
         AND     3
         CP      3
@@ -53,7 +53,7 @@ INIT1:  CALL    GLCWAIT
         RET
 REMOVE: LD      DE,PICONAM
         LD      BC,$0100
-        CALL    ABIDRV
+        CALL    ABISVC
         JR      C,REMOV1
         LD      HL,IOBYTE       ; UC1: becomes CRT:, and no other field changes
         LD      A,(HL)

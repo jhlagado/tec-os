@@ -2,7 +2,7 @@
 // argument, parser and end checks, in order, since files persist. Console
 // output and the BDOS calls of each line are held against a fixture taken
 // from the prior ROM, so the fixture proves the behaviour is kept; CON UC1
-// was retaken when modules left, and again when GLCD.DRV took its font, six
+// was retaken when modules left, and again when GLCD.SVC took its font, six
 // records longer. SHELLC and SHELLE left with the nested levels. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_DRV, ROOT, boot, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, boot, volume } from "./lib/fixtures.mjs";
 
 const FIXTURE = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/ccp-operands.json"), "utf8"));
 const PROFILE = "debug80";
@@ -42,7 +42,7 @@ async function card({ glcd = false } = {}) {
   // Two files of the sizes of programs that have gone, so that DIR's rows hold.
   a.write("SHELLC.PRL", new Uint8Array(512));
   a.write("SHELLE.PRL", new Uint8Array(512));
-  if (glcd) a.write("GLCD.DRV", GLCD_DRV);
+  if (glcd) a.write("GLCD.SVC", GLCD_SVC);
   const b = volume(image, "B");
   fill(b, 65536, (i) => `FILL${i}.BIN`);
   fill(b, 4096, (i) => `TOP${i}.BIN`);

@@ -1,13 +1,13 @@
 // A:STARTUP.CMD at cold boot: its one record, its lines run from MLREAD, the
-// keypad's skip, and a card with GLCD.DRV on boards with and
+// keypad's skip, and a card with GLCD.SVC on boards with and
 // without a GLCD. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { resolve } from "node:path";
-import { makeDrv } from "../tools/lib/drv.mjs";
+import { makeSvc } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_DRV, ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 function start(files, { key = false, ...opts } = {}) {
   const image = standardCard();
@@ -44,25 +44,25 @@ test("a file with no lines, and no file, reach the prompt; a file over one recor
 });
 
 test("a key held through reset skips the file: a hanging INIT reaches a prompt, and with no key it hangs", async () => {
-  const defs = { FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, DRVNAME: '"HANG    "', SVCNAME: '"HANG    "', SVCVER: 1 };
+  const defs = { FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"HANG    "', RECNAME: '"HANG    "', RECVER: 1 };
   for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
   defs.V_HANG = 1;
-  const { file } = await makeDrv(resolve(ROOT, "test/programs/drvdemo.asm"), { defs, work: resolve(ROOT, "build/drv") });
-  const files = { "HANG.DRV": file, "STARTUP.CMD": startupFile("HANG.DRV") };
+  const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
+  const files = { "HANG.SVC": file, "STARTUP.CMD": startupFile("HANG.SVC") };
   const held = start(files, { key: true });
   prompt(held);
-  assert.equal(held.read(held.sym("DRVHEAD")), 0);
+  assert.equal(held.read(held.sym("SVCHEAD")), 0);
   const free = start(files);
   assert.throws(() => prompt(free, 60_000_000));
   assert.ok(free.pc < 0xc000, "in the driver");
 });
 
 for (const [name, opts] of [["no GLCD", { matrix: true, glcd: false }], ["no matrix keyboard", {}]]) {
-  test(`a machine with ${name} refuses GLCD.DRV from the file and the prompt follows`, () => {
-    const m = start({ "GLCD.DRV": GLCD_DRV, "STARTUP.CMD": startupFile("GLCD.DRV") }, opts);
+  test(`a machine with ${name} refuses GLCD.SVC from the file and the prompt follows`, () => {
+    const m = start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, opts);
     prompt(m);
-    assert.match(m.text(0), /GLCD\.DRV\?/);
-    assert.equal(m.read(m.sym("DRVHEAD")), 0);
+    assert.match(m.text(0), /GLCD\.SVC\?/);
+    assert.equal(m.read(m.sym("SVCHEAD")), 0);
     assert.equal(m.read(3) & 3, 0, "TTY:");
   });
 }
@@ -104,10 +104,10 @@ test("a read that returns an error starts nothing, whatever the record holds", (
   assert.equal(user(m), 0);
 });
 
-test("NAME.DRX is no driver: the type must be DRV in full", () => {
+test("NAME.SVX is no service: the type must be SVC in full", () => {
   const m = start({ "SAY.COM": SAY });
   prompt(m);
-  assert.doesNotMatch(m.command("SAY.DRX"), /SAY\.DRX\?/);
+  assert.doesNotMatch(m.command("SAY.SVX"), /SAY\.SVX\?/);
 });
 
 test("a reset clears the position, so the file runs again", () => {

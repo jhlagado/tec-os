@@ -17,7 +17,7 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { build, copyTree, log, node } from "./model.mjs";
+import { build, copyTree, fileType, log, node } from "./model.mjs";
 
 /** A line's code: its comment and label spacing gone, its spaces single. */
 function code(line) {
@@ -60,9 +60,35 @@ function apply(dir, e) {
   writeFileSync(path, lines.join("\n"));
 }
 
+// The sets are written in the names of a tree with src/svc.asm. A tree without
+// it takes each old name instead, in the text, the source paths and the test
+// paths alike, and in the mutants' own names, which its record gives.
+const OLD_NAMES = {
+  SVCBSY: "DRVBSY",
+  SVCCALL: "DRVCALL",
+  SVCHEAD: "DRVHEAD",
+  SVCRC: "DRVRC",
+  SVCREG: "DRVSVC",
+  SVCSHUT: "DRVSHUT",
+  SVCUNL: "DRVUNL",
+  "PICO.SVC": "PICO.DRV",
+  "console and services": "console and drivers",
+  "src/svc.asm": "src/drv.asm",
+  "test/svc.test.mjs": "test/drv.test.mjs",
+};
+const OLD_NAME = new RegExp(Object.keys(OLD_NAMES).map((n) => n.replaceAll(".", "\\.")).join("|"), "g");
+const oldNames = (v) => {
+  if (typeof v === "string") return v.replace(OLD_NAME, (n) => OLD_NAMES[n]);
+  if (Array.isArray(v)) return v.map(oldNames);
+  return v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, oldNames(x)])) : v;
+};
+
+/** MUTANTS in the names of tree DIR. */
+export const forTree = (dir, mutants) => (fileType(dir) === "SVC" ? mutants : oldNames(mutants));
+
 /** Apply each of MUTANTS to a copy of DIR at WORK, building nothing: the errors of those that don't apply. */
 export function check(dir, work, mutants) {
-  return mutants.flatMap((m, i) => {
+  return forTree(dir, mutants).flatMap((m, i) => {
     const copy = copyTree(dir, work, `mutant-${i}`);
     try {
       for (const e of m.edits) apply(copy, e);
@@ -74,7 +100,8 @@ export function check(dir, work, mutants) {
 }
 
 /** Run MUTANTS on copies of DIR at WORK; the figures' mutants and mutantScore. */
-export async function mutate(dir, work, mutants) {
+export async function mutate(dir, work, set) {
+  const mutants = forTree(dir, set);
   const results = await Promise.all(mutants.map((m, i) => one(dir, work, m, i)));
   const out = Object.fromEntries(mutants.map((m, i) => [m.name, results[i]]));
   const caught = results.filter((r) => r.caught).length;
@@ -134,7 +161,7 @@ function named(n, files, traced) {
 const RESET = ["test/reset.test.mjs"];
 const B = "src/boot.asm";
 const V = "src/vol.asm";
-const D = "src/drv.asm";
+const D = "src/svc.asm";
 const r = (find, put, tests = RESET, file = B) => ({ edits: [asm(file, find, put)], tests });
 
 /** KS31's mutants and its review's, on a tree with KE-126's fix: b6fd6f6 has the code two of them change. */
@@ -230,7 +257,7 @@ export const MUTANTS_KS31 = [
   { name: "startup: from B:", ...r(['STFCB: DB 1,"STARTUP CMD"'], ['STFCB: DB 2,"STARTUP CMD"'], RESET, "src/data3.asm") },
   { name: "startup: the skip gone", ...r(["IN A,(STSPORT)", "AND $40", "RET Z"], [], RESET, D) },
   // Every warm boot marks the file finished.
-  { name: "startup: a program's exit ends the file", ...r(["LD HL,DRVBSY", "RES 7,(HL)"], ["LD HL,DRVBSY", "RES 7,(HL)", "LD HL,STPOS", "SET 7,(HL)"]) },
+  { name: "startup: a program's exit ends the file", ...r(["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "RES 7,(HL)", "LD HL,STPOS", "SET 7,(HL)"]) },
   { name: "dirty cache: EXPAND 1 not cleared", ...r(["LD HL,$8000", "LD DE,$8001", "LD BC,$3FFF", "LD (HL),0", "LDIR"], []) },
   {
     name: "host: the guard not rearmed by a reset",
@@ -277,23 +304,23 @@ export const MUTANTS_KS30 = [
   // ABIXCCP's jump kept at C018h, where the table ended before, with two bytes after it so that C01Dh still holds the RET.
   {
     name: "rom: a retired entry left in the table",
-    edits: [asm(DATA, ["TYPEKEY:", 'DB "TYPE",0', "OLDVOL: DB $C9"], ["ABIXCCP: JP DRVSVC", "DB 0,0", "OLDVOL: DB $C9", "TYPEKEY:", 'DB "TYPE",0'])],
+    edits: [asm(DATA, ["TYPEKEY:", 'DB "TYPE",0', "OLDVOL: DB $C9"], ["ABIXCCP: JP SVCREG", "DB 0,0", "OLDVOL: DB $C9", "TYPEKEY:", 'DB "TYPE",0'])],
     tests: ["test/devices.test.mjs"],
   },
   { name: "commands: CCP still a built-in, not reaching the transient path", ...builtin("CCP") },
   { name: "commands: EXIT still a built-in, not reaching the transient path", ...builtin("EXIT") },
   // With no resident, UNLOAD returns with carry clear, as if it had removed one.
-  { name: "commands: UNLOAD with no resident not refused", ...t30(["LD A,(DRVHEAD)", "CP H", "JR NZ,PRLRF", "LD L,DFLG"], ["LD A,(DRVHEAD)", "CP H", "JR Z,UNLHAS", "OR A", "RET", "UNLHAS: LD L,DFLG"], ["test/commands.test.mjs", "test/drv.test.mjs"], D) },
-  { name: "commands: UNLOAD ignores the removable flag", ...t30(["LD L,DFLG", "BIT 0,(HL)", "JR Z,PRLRF"], ["LD L,DFLG"], ["test/commands.test.mjs", "test/drv.test.mjs"], D) },
-  { name: "guard: load path ignores it", ...t30(["LD (DRVRC),A", "LD A,(DRVBSY)", "OR A", "JR NZ,PRLRF"], ["LD (DRVRC),A"], ["test/drv.test.mjs"], D) },
-  { name: "guard: UNLOAD ignores it", ...t30(["DRVUNL: LD A,(DRVBSY)", "OR A", "JR NZ,PRLRF"], ["DRVUNL: XOR A"], ["test/drv.test.mjs"], D) },
-  { name: "guard: never set", ...t30(["DRVCALL: LD A,$80", "LD (DRVBSY),A"], ["DRVCALL: LD A,$80"], ["test/drv.test.mjs"], D) },
-  { name: "guard: not reset at warm boot", ...t30(["LD HL,DRVBSY", "RES 7,(HL)"], [], ["test/drv.test.mjs"], B) },
-  { name: "guard: not reset after REMOVE or INIT", ...t30(["DRVSHUT: LD A,0", "LD (DRVBSY),A"], ["DRVSHUT: LD A,0"], ["test/drv.test.mjs"], D) },
+  { name: "commands: UNLOAD with no resident not refused", ...t30(["LD A,(SVCHEAD)", "CP H", "JR NZ,PRLRF", "LD L,DFLG"], ["LD A,(SVCHEAD)", "CP H", "JR Z,UNLHAS", "OR A", "RET", "UNLHAS: LD L,DFLG"], ["test/commands.test.mjs", "test/svc.test.mjs"], D) },
+  { name: "commands: UNLOAD ignores the removable flag", ...t30(["LD L,DFLG", "BIT 0,(HL)", "JR Z,PRLRF"], ["LD L,DFLG"], ["test/commands.test.mjs", "test/svc.test.mjs"], D) },
+  { name: "guard: load path ignores it", ...t30(["LD (SVCRC),A", "LD A,(SVCBSY)", "OR A", "JR NZ,PRLRF"], ["LD (SVCRC),A"], ["test/svc.test.mjs"], D) },
+  { name: "guard: UNLOAD ignores it", ...t30(["SVCUNL: LD A,(SVCBSY)", "OR A", "JR NZ,PRLRF"], ["SVCUNL: XOR A"], ["test/svc.test.mjs"], D) },
+  { name: "guard: never set", ...t30(["SVCCALL: LD A,$80", "LD (SVCBSY),A"], ["SVCCALL: LD A,$80"], ["test/svc.test.mjs"], D) },
+  { name: "guard: not reset at warm boot", ...t30(["LD HL,SVCBSY", "RES 7,(HL)"], [], ["test/svc.test.mjs"], B) },
+  { name: "guard: not reset after REMOVE or INIT", ...t30(["SVCSHUT: LD A,0", "LD (SVCBSY),A"], ["SVCSHUT: LD A,0"], ["test/svc.test.mjs"], D) },
   // Startup's position set finished as its first line is taken.
   { name: "startup: lines stop after the first", ...t30(["STL2: LD A,L", "SUB LOW(STREC)-1"], ["STL2: LD A,$80+LOW(STREC)-1", "SUB LOW(STREC)-1"], ["test/startup.test.mjs"], D) },
   // Warm boot empties the ring: HHEAD 0, and the entry before it, at HRING+FFh, 0.
-  { name: "history: cleared at warm boot", ...t30(["LD HL,DRVBSY", "RES 7,(HL)"], ["LD HL,DRVBSY", "RES 7,(HL)", "XOR A", "LD (HHEAD),A", "LD HL,$BDFF", "CALL HPUT"], ["test/history.test.mjs"], B) },
+  { name: "history: cleared at warm boot", ...t30(["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "RES 7,(HL)", "XOR A", "LD (HHEAD),A", "LD HL,$BDFF", "CALL HPUT"], ["test/history.test.mjs"], B) },
   { name: "freed page: the watch gone", ...watch("(a < 0xbd00 ? !cacheWrite(pc) : false)") },
   { name: "freed page: the watch a byte short at the top", ...watch("(a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbeff)") },
   { name: "freed page: the watch a byte short at the bottom", ...watch("(a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe01 && a < 0xbf00)") },
@@ -333,7 +360,7 @@ export const MUTANTS_KS30 = [
   { name: "row 3: every take blanks it", ...t30(["WRDCLR: LD HL,CONDEV", "BIT 7,(HL)", "RET Z"], ["WRDCLR: LD HL,CONDEV"], ["test/pico.test.mjs"], G) },
   { name: "row 3: no take clears a word", ...t30(["WRDCLR: LD HL,CONDEV"], ["WRDCLR: OR A", "RET", "LD HL,CONDEV"], ["test/pico.test.mjs"], G) },
   { name: "row 3: the flag stays after a take", ...t30(["RET Z", "RES 7,(HL)", "PUSH BC"], ["RET Z", "PUSH BC"], ["test/pico.test.mjs"], G) },
-  { name: "row 3: a load under PICO.DRV leaves GLCD?", ...t30(["JR NZ,WRDCLR"], ["RET NZ"], ["test/pico.test.mjs"], G) },
+  { name: "row 3: a load under PICO.SVC leaves GLCD?", ...t30(["JR NZ,WRDCLR"], ["RET NZ"], ["test/pico.test.mjs"], G) },
   { name: "row 3: STDONE not masked", ...t30(["AND $FF-CDWRD"], [], ["test/pico.test.mjs"], D) },
   { name: "row 3: the word cleared leaves carry set", ...t30(["POP BC", "OR A", "RET"], ["POP BC", "RET"], ["test/pico.test.mjs"], G) },
   { name: "row 3: INFO loses the bit", ...t30(["LD B,A", "LD DE,ROMVER"], ["AND $7F", "LD B,A", "LD DE,ROMVER"], ["test/pico.test.mjs"], H) },

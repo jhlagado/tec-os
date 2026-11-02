@@ -1,7 +1,7 @@
 # Drivers
 
 Status: **Built**, 2026-10-31: the loader, the registry, the commands, startup,
-`GLCD.DRV` and `PICO.DRV`. `test/drv.test.mjs`, `test/startup.test.mjs` and
+`GLCD.SVC` and `PICO.SVC`. `test/svc.test.mjs`, `test/startup.test.mjs` and
 `test/pico.test.mjs` hold them.
 
 A driver is a resident in EXPAND 0, below `(0006h)`, in whole pages. It
@@ -11,8 +11,8 @@ and what the ROM does for it.
 
 ## The file
 
-A `.DRV` file is the image, made for page 0 with its header at the start, then
-the dependencies, then the relocation data. `tools/lib/drv.mjs` writes one from
+A `.SVC` file is the image, made for page 0 with its header at the start, then
+the dependencies, then the relocation data. `tools/lib/svc.mjs` writes one from
 two assemblies. ATOM takes `%INCLUDE` only in a file's header, so the writer copies
 in any `%INCLUDE` below the `ORG`, which is how a display driver places its font
 last in the image, where its 768 bytes cost no gap bytes. Records are whole on disk, so a file's end is rounded, and the
@@ -50,20 +50,20 @@ driver's page added.
 
 ## Commands
 
-`NAME.DRV`, or `B:NAME.DRV`, reads that file and installs it. The type must be
+`NAME.SVC`, or `B:NAME.SVC`, reads that file and installs it. The type must be
 typed: `NAME` alone still looks for `NAME.COM` and then `NAME.PRL`. If the file
 won't read, or the load is refused or fails, the command's name comes back with
 a question mark, as for any command that won't run. If the driver's table is in
-its own first page it takes the console: `PICO.DRV` always, `GLCD.DRV` unless
-`PICO.DRV` is in. Any other driver leaves the console alone.
+its own first page it takes the console: `PICO.SVC` always, `GLCD.SVC` unless
+`PICO.SVC` is in. Any other driver leaves the console alone.
 
 `DRIVERS` prints one line for each driver, the newest first: its name and its
 pages. It walks the owner list, so a driver with no services is listed.
 
 `UNLOAD` removes the lowest resident, as below, and answers the same way if it
-can't. `PICO.DRV`'s `REMOVE` refuses while it is the console, since `CON CRT` has no
+can't. `PICO.SVC`'s `REMOVE` refuses while it is the console, since `CON CRT` has no
 load, and while the PICO9918 is claimed, which it reads from `INFO`, until a release
-or a warm boot. `GLCD.DRV`'s gives the console back to `CRT:` if `PICO.DRV` is in.
+or a warm boot. `GLCD.SVC`'s gives the console back to `CRT:` if `PICO.SVC` is in.
 
 ## Startup
 
@@ -84,22 +84,22 @@ the whole record, runs without its last; one that starts at the 128th byte isn't
 run. A line that fails prints its usual message and the
 next runs.
 
-**Width is a startup line.** `PICO.DRV` is 80 columns, `PICO40.DRV` 40 and
-`PICO32.DRV` 32 in Graphics I, and the ROM is one image for every board. The starter
-card carries all three and names `PICO.DRV`.
+**Width is a startup line.** `PICO.SVC` is 80 columns, `PICO40.SVC` 40 and
+`PICO32.SVC` 32 in Graphics I, and the ROM is one image for every board. The starter
+card carries all three and names `PICO.SVC`.
 
-One card can serve every board: a line for the PICO9918, then `GLCD.DRV`. Each line
+One card can serve every board: a line for the PICO9918, then `GLCD.SVC`. Each line
 makes its display the console where there is one, and elsewhere prints its name with
-a question mark and goes on. On a board with both, `GLCD.DRV`'s line gives way once
-`PICO.DRV` is the console, and only `CON UC1:` installs the second; the two together
+a question mark and goes on. On a board with both, `GLCD.SVC`'s line gives way once
+`PICO.SVC` is the console, and only `CON UC1:` installs the second; the two together
 cost 3,072 TPA bytes, leaving 43,782 on the starter card. Once, at the first prompt
 after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
 if no display driver is installed. That covers a missing file, a bad file, no
 `STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
-has taken over from a bad `PICO.DRV`, or after a good load and `CON TTY`, and a board
+has taken over from a bad `PICO.SVC`, or after a good load and `CON TTY`, and a board
 with no matrix keyboard, which both drivers refuse, never shows it. A display driver
 installed later clears the word. `CON UC1:` shows `GLCD?` if it can't load, a take
-clears that too, and so does `GLCD.DRV` loading under `PICO.DRV`, which keeps the
+clears that too, and so does `GLCD.SVC` loading under `PICO.SVC`, which keeps the
 console. A word goes only if it is still there: a program's write to row 3 through
 service `LCD` takes the row over, and no take clears it. A program writing the LCD's
 port directly is unseen. Until a
@@ -108,7 +108,7 @@ card that won't mount shows `CARD?` on the LCD at every failure, and `R` starts 
 again, so a good retry clears the word.
 
 A board with no matrix keyboard refuses both drivers, so it has an unprogrammed VDP
-until a program claims it. A claim with no `PICO.DRV` in restores nothing on release.
+until a program claims it. A claim with no `PICO.SVC` in restores nothing on release.
 
 **The skip.** A keypad key held through reset, until the prompt, skips the file:
 port `03h` bit 6 is read once, just before the open, about 1.46 s after reset. The
@@ -123,7 +123,7 @@ serial terminal: the matrix keyboard isn't read until a display's driver is in.
 
 ## Installation
 
-A load runs only with no `INIT` or `REMOVE` running, which `DRVBSY` says. In order:
+A load runs only with no `INIT` or `REMOVE` running, which `SVCBSY` says. In order:
 
 1. The file's magic, version, sizes and `INIT` and `REMOVE` are checked against
    the image and the file, and the base against `8000h`.
@@ -136,8 +136,8 @@ A load runs only with no `INIT` or `REMOVE` running, which `DRVBSY` says. In ord
 7. The records are checked and linked, and `PZTOP` is written. That word is the
    commit.
 
-Until step 5 a refusal leaves everything but the file as it was. `DRVLOAD`
-returns carry clear when installed. With carry set, `DRVRC` is 0 for refused,
+Until step 5 a refusal leaves everything but the file as it was. `SVCLOAD`
+returns carry clear when installed. With carry set, `SVCRC` is 0 for refused,
 1 for a failure leaving nothing behind, and 2 for a failure with the pages kept.
 
 ## What a driver must do
@@ -185,11 +185,11 @@ refuses a driver that takes a stack's sum past its limit:
 | CCP | 30 | 16 | 22 | 6 |
 
 The base is the deepest use on the serial and PICO9918 paths, with no resident.
-The census is the deepest use of all, 34 and 22 being `GLCD.DRV`'s. A limit is
+The census is the deepest use of all, 34 and 22 being `GLCD.SVC`'s. A limit is
 counted from the base, so a stack holds its base and its limit with a quarter
 free, but a driver's figure added to the census leaves less: the CCP's stack
 would then reach 28 of 30, the BDOS's 42 of 54. Nothing overflows. A declaration
-is the driver's promise, and `test/drv.test.mjs` shows how a stack watch proves
+is the driver's promise, and `test/svc.test.mjs` shows how a stack watch proves
 one: the ROM can't.
 
 A program's stack can't be checked, so a driver's own document states what a
@@ -198,7 +198,7 @@ program must leave. On the BDOS's stack a driver may not call the BDOS, as
 
 ## Services
 
-A client finds a service with `ABIDRV` (`docs/rom-services.md`):
+A client finds a service with `ABISVC` (`docs/rom-services.md`):
 
 - **A program** may keep a pointer until it exits. No driver can be removed
   while it runs.
@@ -206,7 +206,7 @@ A client finds a service with `ABIDRV` (`docs/rom-services.md`):
   The dependency is then above it in memory, and last in, first out removes the
   dependent first.
 - **A resident that looks up later** may not keep the pointer. Removing the
-  service frees its pages, and a kept pointer runs whatever is there. `ABIDRV`
+  service frees its pages, and a kept pointer runs whatever is there. `ABISVC`
   returns a generation, raised by each removal, for such a resident to compare.
   It is 8 bits and wraps: after exactly 256 removals a stale pointer passes the
   comparison.
@@ -215,7 +215,7 @@ Each service's table is defined in a document with its interface version.
 
 ### `PICO`, version 2
 
-`PICO.DRV`, at each width, offers `PICO` with the table it hands `ABIGLCD`, followed
+`PICO.SVC`, at each width, offers `PICO` with the table it hands `ABIGLCD`, followed
 by four words, the graphics entries:
 
 | Offset | `abi.inc` | Registers | Effect |
@@ -227,7 +227,7 @@ by four words, the graphics entries:
 
 Each assumes the caller holds the claim (service `VIDEO`), as a program writing the
 ports does, and checks nothing. A count of 0 moves nothing. Each destroys AF, BC, DE
-and HL. `GLCD.DRV`'s `REMOVE` asks for version 1 and reads none of these. A board with
+and HL. `GLCD.SVC`'s `REMOVE` asks for version 1 and reads none of these. A board with
 a PICO9918 and no matrix keyboard refuses the driver, so it has no entries: a
 program there claims the VDP and writes the ports.
 
@@ -245,6 +245,6 @@ boot keeps drivers and the registry; a reset empties both.
 A driver calls the published table and nothing else, and carries what it needs
 that the ROM doesn't offer: each display driver has its own font, checked by the
 build against `format/font5x7.txt`. The build refuses a source
-in `drivers/`, or `test/programs/drv*.asm`, that names a ROM address; `abi.inc`'s
+in `drivers/`, or `test/programs/svc*.asm`, that names a ROM address; `abi.inc`'s
 names are the way in. No driver owns an interrupt: `PZINIT` rewrites `0038h` and
 the restart vectors at each warm boot, so a handler wouldn't last until `REMOVE`.

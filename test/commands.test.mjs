@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { TEST_CLOCK, boot, driver, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { TEST_CLOCK, boot, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
@@ -14,7 +14,7 @@ const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); /
 async function machine(files = {}, opts = {}) {
   const image = standardCard();
   const a = volume(image, "A");
-  a.write("RES.DRV", await driver("res"));
+  a.write("RES.SVC", await service("res"));
   for (const [n, b] of Object.entries(files)) a.write(n, b);
   return boot(image, opts);
 }
@@ -33,8 +33,8 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
   const m = await machine();
   assert.match(m.command("UNLOAD"), /UNLOAD\?/);
   const stub = word(m, 6);
-  m.command("RES.DRV");
-  m.command("RES.DRV");
+  m.command("RES.SVC");
+  m.command("RES.SVC");
   assert.equal(word(m, 6), stub - 0x200);
   m.command("UNLOAD");
   assert.equal(word(m, 6), stub - 0x100);
@@ -44,11 +44,11 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
   assert.deepEqual(m.violations, []);
 });
 
-test("nothing is kept for a level: the table ends at ABIDRV and the page at BE00h is free", async () => {
+test("nothing is kept for a level: the table ends at ABISVC and the page at BE00h is free", async () => {
   const m = await machine({}, { ram96: true });
   assert.equal(m.read(m.sym("XMARK")), 0x80, "no range for MOVE in EXPAND 1");
   assert.equal(m.sym("HRING"), 0xbd00);
-  assert.equal(m.sym("ABIEND"), m.sym("ABIDRV") + 3);
+  assert.equal(m.sym("ABIEND"), m.sym("ABISVC") + 3);
   assert.deepEqual(m.violations, []);
 });
 

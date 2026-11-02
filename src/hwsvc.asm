@@ -33,7 +33,7 @@ HWENODV	EQU	2		; the device is not fitted
 ; they name for programs.
 HWBMTX	EQU	$01		; a matrix keyboard
 HWBPICO	EQU	$02		; a PICO9918 answered at cold boot
-HWBGLCD	EQU	$04		; GLCD.DRV is in
+HWBGLCD	EQU	$04		; GLCD.SVC is in
 HWBRTC	EQU	$08		; a DS1302 clock answers
 HWBCLM	EQU	$10		; the PICO9918 is claimed
 HWBWRD	EQU	$80		; a word of the ROM's is on LCD row 3
@@ -133,7 +133,7 @@ HWSLC:  CALL    LCDWAIT
 
 ; Claim: the console stops drawing on the PICO9918 (output to it is dropped,
 ; no cursor, no page flips) and the program owns its registers and VRAM.
-; Release, or warm boot: with PICO.DRV in, text mode, font and page come back
+; Release, or warm boot: with PICO.SVC in, text mode, font and page come back
 ; and the screen is cleared; with none, the VDP is left as the program left it.
 HWSVID: LD      A,(CONDEV)
         AND     CDTMS

@@ -6,7 +6,7 @@ import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { assembleProgram } from "../../tools/lib/assemble.mjs";
-import { PICO_WIDTHS, makeDrv } from "../../tools/lib/drv.mjs";
+import { PICO_WIDTHS, makeSvc } from "../../tools/lib/svc.mjs";
 import { Machine, loadSymbols } from "./machine.mjs";
 import { createContainer, parseContainer, findVolume, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
@@ -111,34 +111,34 @@ export function volume(image, drive) {
 /** The DS1302's time when a test machine starts: 1 January 2026, 12:00:00. */
 export const TEST_CLOCK = new Date(2026, 0, 1, 12, 0, 0);
 
-/** test/programs/NAME.asm as a .DRV file. */
-export const driver = async (name) => (await makeDrv(resolve(ROOT, "test/programs", `${name}.asm`), { work: resolve(ROOT, "build/drv") })).file;
+/** test/programs/NAME.asm as a .SVC file. */
+export const service = async (name) => (await makeSvc(resolve(ROOT, "test/programs", `${name}.asm`), { work: resolve(ROOT, "build/svc") })).file;
 
-/** GLCD.DRV, the GLCD console driver, built from drivers/glcd.asm. */
-export const GLCD_DRV = (await makeDrv(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/drv") })).file;
+/** GLCD.SVC, the GLCD console driver, built from drivers/glcd.asm. */
+export const GLCD_SVC = (await makeSvc(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/svc") })).file;
 
-/** PICO.DRV, PICO40.DRV and PICO32.DRV, by file name. */
-export const PICO_DRV = Object.fromEntries(
-  await Promise.all(Object.entries(PICO_WIDTHS).map(async ([name, defs]) => [name, (await makeDrv(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/drv") })).file])),
+/** PICO.SVC, PICO40.SVC and PICO32.SVC, by file name. */
+export const PICO_SVC = Object.fromEntries(
+  await Promise.all(Object.entries(PICO_WIDTHS).map(async ([name, defs]) => [name, (await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") })).file])),
 );
 
 /** The PICO driver's file for a profile's name, which stays as the width. */
-export const picoFor = (profile = "debug80") => ({ debug80t40: "PICO40.DRV", debug80g32: "PICO32.DRV" })[profile] ?? "PICO.DRV";
+export const picoFor = (profile = "debug80") => ({ debug80t40: "PICO40.SVC", debug80g32: "PICO32.SVC" })[profile] ?? "PICO.SVC";
 
 /** A STARTUP.CMD of these lines. */
 export const startupFile = (...lines) => Buffer.from(lines.map((l) => `${l}\r\n`).join("") + "\x1a", "latin1");
 
 /**
  * Put a board's display driver and a STARTUP.CMD naming it on drive A of IMAGE:
- * PICO.DRV, by the profile's width, with the matrix keyboard and a PICO9918, and
- * GLCD.DRV with the keyboard alone. A card that has a STARTUP.CMD keeps it.
+ * PICO.SVC, by the profile's width, with the matrix keyboard and a PICO9918, and
+ * GLCD.SVC with the keyboard alone. A card that has a STARTUP.CMD keeps it.
  */
 export function withDisplay(image, { tms = false, matrix = false, profile } = {}) {
   if (!matrix) return image;
-  const name = tms ? picoFor(profile) : "GLCD.DRV";
+  const name = tms ? picoFor(profile) : "GLCD.SVC";
   const a = volume(image, "A");
   if (a.list().some((f) => f.name === name)) return image;
-  a.write(name, tms ? PICO_DRV[name] : GLCD_DRV);
+  a.write(name, tms ? PICO_SVC[name] : GLCD_SVC);
   if (!a.list().some((f) => f.name === "STARTUP.CMD")) a.write("STARTUP.CMD", startupFile(name));
   return image;
 }

@@ -1,4 +1,4 @@
-; PICO.DRV, PICO40.DRV and PICO32.DRV: the console on the PICO9918, a
+; PICO.SVC, PICO40.SVC and PICO32.SVC: the console on the PICO9918, a
 ; TMS9918A-compatible VDP with the F18A's 80-column text mode, as a driver below
 ; (0006h): 80 x 24 in 6-pixel cells, 40 x 24, or Graphics I at 32 x 24 in 8-pixel
 ; cells, one file a width. Its INIT refuses if the ROM's probe found no VDP, and
@@ -8,7 +8,7 @@
 ; the PICO9918 is claimed, since the entries below may be in use. Its service,
 ; "PICO", is how another driver sees it. Version 2 of the record's table goes on
 ; after the console's words with the graphics entries, abi.inc's PICOREG to
-; PICORD. A program finds them with ABIDRV, holds the claim while it uses them,
+; PICORD. A program finds them with ABISVC, holds the claim while it uses them,
 ; and looks them up again rather than keep them across its own exit.
 ;
 ; VRAM: patterns at 0000h, names at 0800h (1000h for 80 columns), Graphics I

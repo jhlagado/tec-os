@@ -1,4 +1,4 @@
-; RES.DRV: a driver with no service. Its INIT replaces CONOUT in the RAM BIOS
+; RES.SVC: a driver with no service. Its INIT replaces CONOUT in the RAM BIOS
 ; table with a routine that counts the characters passing through it and
 ; chains to the entry it replaced; its REMOVE puts that entry back.
 

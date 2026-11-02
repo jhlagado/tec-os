@@ -4,7 +4,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, driver, prl, program, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, service, prl, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0080;
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -68,14 +68,14 @@ test("the CCP runs NAME.PRL only when there is no NAME.COM", async () => {
 });
 
 test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it", async () => {
-  const m = await machine({ "RES.DRV": await driver("res"), "HOOK.COM": (await program("hook")).bytes });
+  const m = await machine({ "RES.SVC": await service("res"), "HOOK.COM": (await program("hook")).bytes });
   const stub = word(m, 6);
   const p1 = (stub >> 8) - 1; // one page below the stub's
-  m.command("RES.DRV");
+  m.command("RES.SVC");
   assert.equal(word(m, 6), (p1 << 8) + 6, "(0006h) is the resident's base + 6");
   assert.equal(word(m, m.sym("PZTOP")), (p1 << 8) + 6);
   assert.equal(word(m, m.sym("RAMBIOS") + 13) >> 8, p1, "its INIT hooked CONOUT");
-  m.command("RES.DRV");
+  m.command("RES.SVC");
   const low = ((p1 - 1) << 8) + 6;
   assert.equal(word(m, 6), low, "a second resident below the first");
   assert.equal(word(m, low + 1), (p1 << 8) + 6, "its JP chains to the first");
@@ -105,14 +105,14 @@ test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps i
 });
 
 test("residents are removed last in, first out, each REMOVE undoing its INIT", async () => {
-  const m = await machine({ "RES.DRV": await driver("res") });
+  const m = await machine({ "RES.SVC": await service("res") });
   const conout = () => word(m, m.sym("RAMBIOS") + 13); // CONOUT's JP target
   const rom = conout();
   const stub = word(m, 6);
   const [up, lo] = [(stub & 0xff00) - 0x100, (stub & 0xff00) - 0x200];
-  m.command("RES.DRV");
+  m.command("RES.SVC");
   const first = conout();
-  m.command("RES.DRV");
+  m.command("RES.SVC");
   assert.notEqual(conout(), first);
   assert.equal(word(m, 6), lo + 6);
   m.command("UNLOAD");
@@ -126,9 +126,9 @@ test("residents are removed last in, first out, each REMOVE undoing its INIT", a
 });
 
 test("a cold boot clears every resident", async () => {
-  const m = await machine({ "RES.DRV": await driver("res") });
+  const m = await machine({ "RES.SVC": await service("res") });
   const stub = word(m, 6);
-  m.command("RES.DRV");
+  m.command("RES.SVC");
   assert.equal(word(m, 6), stub - 0x100);
   m.reset();
   m.expect(/A>$/, { maxCycles: 80_000_000 });

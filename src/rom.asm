@@ -29,5 +29,5 @@
 %INCLUDE "cache.asm"
 %INCLUDE "history.asm"
 %INCLUDE "prl.asm"
-%INCLUDE "drv.asm"
+%INCLUDE "svc.asm"
 %INCLUDE "end.asm"

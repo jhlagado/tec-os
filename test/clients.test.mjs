@@ -180,23 +180,23 @@ test("an old DEMO prints no throughout, reaches no service, and leaves page zero
   assert.deepEqual(m.violations, []);
 });
 
-// PICO.DRV from a 2d5ce25 starter card, format 3 and ABI 4 with services from 0.
-// Its INIT's INFO is refused with B as it came, and DRVLOAD leaves B = 0, so its
+// PICO.SVC from a 2d5ce25 starter card, format 3 and ABI 4 with services from 0.
+// Its INIT's INFO is refused with B as it came, and SVCLOAD leaves B = 0, so its
 // BIT 1,B finds no PICO9918 and it refuses.
 const OLD_PICO = "23513b3ba4931a183b097f0753209e0b03bbea6168127a56279fc41cfb95a58a";
 
-test("a 2d5ce25 PICO.DRV is refused in INIT: its name with a question mark, DRVRC 1 and PICO? still shown", () => {
+test("a 2d5ce25 PICO.SVC is refused in INIT: its name with a question mark, SVCRC 1 and PICO? still shown", () => {
   const bytes = readFileSync(resolve(ROOT, "test/fixtures/2d5ce25/PICO.DRV"));
   assert.equal(createHash("sha256").update(bytes).digest("hex"), OLD_PICO, "the pinned binary");
   const image = standardCard();
   const a = volume(image, "A");
-  a.write("PICO.DRV", bytes);
-  a.write("STARTUP.CMD", startupFile("PICO.DRV"));
+  a.write("PICO.SVC", bytes);
+  a.write("STARTUP.CMD", startupFile("PICO.SVC"));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
-  assert.match(m.text(0), /PICO\.DRV\?/);
-  assert.deepEqual([m.read(m.sym("DRVRC")), m.read(m.sym("DRVHEAD")), m.read(m.sym("CONMOD"))], [1, 0, 0]);
+  assert.match(m.text(0), /PICO\.SVC\?/);
+  assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [1, 0, 0]);
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "PICO?");
   assert.deepEqual(m.violations, []);
 });

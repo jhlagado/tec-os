@@ -1,6 +1,6 @@
 ; The PICO9918 on the TEC-Deck video card: what the ROM keeps of it, the probe.
 ; Port BEh is VRAM data and BFh is control. The console and the graphics entries
-; are a driver, PICO.DRV.
+; are a driver, PICO.SVC.
 
 VDPDAT	EQU	$BE
 VDPCTL	EQU	$BF

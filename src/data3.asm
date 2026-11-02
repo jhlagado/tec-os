@@ -35,7 +35,7 @@ COPYKEY:
         DB      "COPY",0
 UNLKEY:
         DB      "UNLOAD",0
-DRVKEY:
+SVCKEY:
         DB      "DRIVERS",0
 CPNOSRC:
         DB      "NO SOURCE",CR,LF,'$'
@@ -98,7 +98,7 @@ HWTAB:	DW	HWSINFO,HWSDIG	; 19 and 20
 	DW	HWSRTC		; 27
 
 ; ---- glcd.asm ----------------------------------------------------------------
-GLCFCB: DB      1,"GLCD    DRV"
+GLCFCB: DB      1,"GLCD    SVC"
 GLCMSG: DB      "GLCD?",0
 DGLCD:  DB      "CARD?",0
 PICMSG:	DB	"PICO?"
@@ -108,7 +108,7 @@ STFCB:  DB      1,"STARTUP CMD"
 ; ---- cache.asm ---------------------------------------------------------------
 CWMSG:  DB      13,10,"Write lost",0
 
-; ---- drv.asm -----------------------------------------------------------------
-DRVLIM: DB      8,12,6          ; BDOS, BIOS and CCP: each stack's sum of drivers
+; ---- svc.asm -----------------------------------------------------------------
+SVCLIM: DB      8,12,6          ; BDOS, BIOS and CCP: each stack's sum of drivers
 
 ROMCODE:

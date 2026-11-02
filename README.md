@@ -45,8 +45,8 @@ present beside this repository.
 
 The ROM is assembled with ATOM. There is one image for every board. The names
 `debug80`, `debug80t40`, `debug80g32` and `board` stay as aliases of it. The
-display's width is chosen by a line in `A:STARTUP.CMD`: `PICO.DRV` for 80 columns,
-`PICO40.DRV` for 40 and `PICO32.DRV` for 32 in Graphics I.
+display's width is chosen by a line in `A:STARTUP.CMD`: `PICO.SVC` for 80 columns,
+`PICO40.SVC` for 40 and `PICO32.SVC` for 32 in Graphics I.
 
 ## In a web page
 
@@ -89,7 +89,7 @@ moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `DEMO` on the starter card shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
-that names a `.COM` file runs it, and `NAME.DRV` installs a driver.
+that names a `.COM` file runs it, and `NAME.SVC` installs a driver.
 `A:STARTUP.CMD` runs after a reset, from the volume selected as A:; a keypad key held from reset until the
 prompt skips it, and the console stays on the serial terminal. A board with a
 PICO9918 and a matrix keyboard shows `PICO?` on the LCD, once, if no display driver

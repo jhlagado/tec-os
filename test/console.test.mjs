@@ -5,9 +5,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_DRV, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
-test("with PICO.DRV in the startup file, the banner goes to serial, and the screen is the console from its take", () => {
+test("with PICO.SVC in the startup file, the banner goes to serial, and the screen is the console from its take", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
   const screen = m.screen();
   const at = screen.indexOf("A>");
@@ -15,7 +15,7 @@ test("with PICO.DRV in the startup file, the banner goes to serial, and the scre
   assert.equal(m.cell(at, 2), 0xa0, "cursor is the reverse image of a space");
   assert.match(m.bootText, /A: SYSTEM/);
   const serial = m.serialText();
-  assert.match(serial, /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK *\r\n\r\nA>PICO\.DRV\r\r\n$/, "up to the take");
+  assert.match(serial, /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK *\r\n\r\nA>PICO\.SVC\r\r\n$/, "up to the take");
   m.command("DIR");
   assert.equal(m.serialText(), serial, "and nothing goes to the serial port after it");
   assert.equal(m.read(3) & 3, 1, "IOBYTE CON: is CRT:");
@@ -31,7 +31,7 @@ test("without the matrix keyboard the serial terminal is the console, even with 
 
 test("CON switches the console between devices and falls back to serial", () => {
   const image = standardCard();
-  volume(image, "A").write("GLCD.DRV", GLCD_DRV); // CON UC1: loads the GLCD's resident
+  volume(image, "A").write("GLCD.SVC", GLCD_SVC); // CON UC1: loads the GLCD's resident
   const m = boot(image, { tms: true, matrix: true });
   assert.match(m.command("CON"), /CON: CRT: PICO9918/);
   m.mark = m.output.length;
@@ -88,7 +88,7 @@ test("the video terminal implements its ANSI subset", async () => {
   assert.equal(t[23], "A>");
 });
 
-test("PICO32.DRV uses TMS9918 Graphics I", () => {
+test("PICO32.SVC uses TMS9918 Graphics I", () => {
   const m = boot(standardCard(), { tms: true, matrix: true, profile: "debug80g32" });
   assert.ok(m.screen(32).includes("A>"));
   assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[1], 0xc0);
@@ -114,7 +114,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   assert.deepEqual(s.slice(at + 1, at + 5), [
     "COPY.COM     TERM.COM     PROBE.COM",
     "MANUAL.TXT   README.TXT   X",
-    "PICO40.DRV   STARTUP.CMD",
+    "PICO40.SVC   STARTUP.CMD",
     "8 files, 1000K free",
   ]);
   const small = standardCard();
@@ -122,7 +122,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const glcd = boot(small, { matrix: true });
   glcd.command("DIR *.COM");
   const g = glcd.glcdScreen();
-  const from = g.indexOf("COPY.COM"); // GLCD.DRV and STARTUP.CMD are on A: too
+  const from = g.indexOf("COPY.COM"); // GLCD.SVC and STARTUP.CMD are on A: too
   assert.deepEqual(g.slice(from, from + 5), ["COPY.COM", "TERM.COM", "PROBE.COM", "3 files, 1000K free", "A>"]);
   assert.match(tms.command("DIR B:"), /NO FILE/);
 });
@@ -130,7 +130,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
 test("the GLCD is the console when no TMS9918 answers", () => {
   const m = boot(standardCard(), { matrix: true });
   // The banner and the volumes go to serial and the LCD; the CCP's first
-  // startup loads GLCD.DRV, and the GLCD is the console from its next prompt.
+  // startup loads GLCD.SVC, and the GLCD is the console from its next prompt.
   assert.match(m.serialText(), /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK/);
   assert.equal(m.glcdScreen().find((l) => l !== ""), "A>");
   m.mark = m.output.length;
@@ -289,7 +289,7 @@ test("a row move on the PICO9918 is built out of sight and shown when the progra
   assert.deepEqual(m.violations, []);
 });
 
-test("a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.DRV says so on the LCD", () => {
+test("a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.SVC says so on the LCD", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
@@ -305,7 +305,7 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   const m = boot(standardCard(), { matrix: true });
   const word = (a) => m.read(a) | (m.read(a + 1) << 8);
   assert.equal(m.read(3) & 3, 3);
-  assert.equal(word(6), (word(m.sym("PZTOP")) & 0xff00) + 6, "GLCD.DRV is the resident below the BDOS");
+  assert.equal(word(6), (word(m.sym("PZTOP")) & 0xff00) + 6, "GLCD.SVC is the resident below the BDOS");
   assert.equal(word(m.sym("VPUTV")), word(word(m.sym("GLVEC"))), "the vector is its table's");
   m.mark = m.output.length;
   m.typeMatrix("unload\r");

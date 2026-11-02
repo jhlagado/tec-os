@@ -133,13 +133,13 @@ test("UNLOAD gives the console back to serial and the pages to the TPA, and outp
   assert.deepEqual(m.violations, []);
 });
 
-test("a second GLCD.DRV is refused whole, and the first keeps the console", async () => {
+test("a second GLCD.SVC is refused whole, and the first keeps the console", async () => {
   const m = await board();
   const table = word(m, m.sym("GLVEC"));
   const first = word(m, 6);
   const from = m.output.length;
-  run(m, "GLCD.DRV\r");
-  assert.match(m.text(from), /GLCD\.DRV\?/);
+  run(m, "GLCD.SVC\r");
+  assert.match(m.text(from), /GLCD\.SVC\?/);
   assert.deepEqual([word(m, 6), word(m, m.sym("GLVEC")), m.read(3) & 3], [first, table, 3]);
   m.mark = m.output.length;
   m.type("UNLOAD\r");

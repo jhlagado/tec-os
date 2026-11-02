@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
-import { PICO_WIDTHS, checkInterfaces, makeDrv } from "./lib/drv.mjs";
+import { PICO_WIDTHS, checkInterfaces, makeSvc } from "./lib/svc.mjs";
 import { driverFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -148,6 +148,7 @@ function checkAbiInc(at) {
   for (const [name, value] of equs) check(at(name) === value, `abi.inc: ${name} is ${hex(value)}, the ROM has ${hex(at(name))}`);
   const labels = [...readFileSync(resolve(SRC, "abi.asm"), "utf8").matchAll(/^(\w+):/gm)].map((m) => m[1].toUpperCase());
   for (const l of labels) check(equs.some(([n]) => n === l), `abi.inc has no ${l}`);
+  check(/^ABIDRV\s+EQU\s+ABISVC\b/m.test(inc), "abi.inc: ABIDRV is not an alias of ABISVC");
 }
 
 /** The services' numbers and status codes in abi.inc against hwsvc.asm, which
@@ -172,7 +173,7 @@ async function checkPicoTable() {
   const entries = { PICOREG: "GFXREG", PICOFIL: "GFXFIL", PICOWR: "GFXWR", PICORD: "GFXRD" };
   check(offsets.size === Object.keys(entries).length, "abi.inc: the PICO table's offsets");
   for (const defs of Object.values(PICO_WIDTHS)) {
-    const { file, symbols } = await makeDrv(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/drv") });
+    const { file, symbols } = await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") });
     for (const [n, label] of Object.entries(entries)) {
       const at = symbols.VTAB + offsets.get(n);
       check((file[at] | (file[at + 1] << 8)) === symbols[label], `abi.inc: ${n} is not ${label} in the PICO table`);
@@ -196,13 +197,18 @@ function checkNoOldAddress() {
   }
 }
 
-/** A driver source reaches the ROM only through abi.inc's names. */
-function checkDriverSources() {
+/** A service's source reaches the ROM only through abi.inc's names. The build
+ *  fails if it finds none, or if the demo in test/programs drops out. */
+function checkServiceSources() {
+  const checked = [];
   for (const dir of ["drivers", "test/programs"]) {
-    for (const f of readdirSync(resolve(ROOT, dir)).filter((n) => n.endsWith(".asm") && (dir === "drivers" || n.startsWith("drv")))) {
+    for (const f of readdirSync(resolve(ROOT, dir)).filter((n) => n.endsWith(".asm") && (dir === "drivers" || n.startsWith("svc")))) {
       checkInterfaces(readFileSync(resolve(ROOT, dir, f), "utf8"), `${dir}/${f}`);
+      checked.push(`${dir}/${f}`);
     }
   }
+  check(checked.includes("drivers/pico.asm") && checked.includes("test/programs/svcdemo.asm"), `the service sources checked were ${checked.join(", ") || "none"}`);
+  return checked;
 }
 
 async function assemble() {
@@ -270,7 +276,7 @@ async function buildProfile(name) {
   await checkPicoTable();
   checkDriverFont();
   checkNoOldAddress();
-  checkDriverSources();
+  checkServiceSources();
   check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);
   check(at("BDOSRME") === RAMBIOS, `the fixed workspace must end at the RAM BIOS table, not ${hex(at("BDOSRME"))}`);
   check(at("SDBYTE") === RAMBIOS + 51, "the state above the RAM BIOS table follows it");

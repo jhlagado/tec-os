@@ -88,7 +88,7 @@ from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   drive is filled in, is a bad command and nothing is opened: `COPY X.DAT`,
   `COPY X.DAT X.DAT` and `COPY X.DAT A:` on A: all print `COPY?`.
 
-- `NAME.DRV` installs a driver and `DRIVERS` lists them, each with its pages.
+- `NAME.SVC` installs a driver and `DRIVERS` lists them, each with its pages.
   `UNLOAD` removes the lowest.
 - At cold boot `A:STARTUP.CMD`, if there is one, runs before the first prompt.
   One record of it is read, at most 128 bytes, from the volume on A:, and a keypad
@@ -120,9 +120,9 @@ addresses, as LINK-80's `[OP]` writes it. A PRL is a program, loaded at
 read, and the bitmap is checked for. The module header some earlier PRLs
 carried is no longer read.
 
-A driver is a resident in TEC-OS's own `.DRV` format, with an installation
+A driver is a resident in TEC-OS's own `.SVC` format, with an installation
 that can fail cleanly and a registry through which programs find its
-services (`ABIDRV`, ABI 4). `docs/drivers.md` is its interface. It goes in
+services (`ABISVC`, ABI 4). `docs/drivers.md` is its interface. It goes in
 whole pages just below the BDOS entry, and the word at `0006h` moves down to
 the jump at its offset 6, which leads on to the old entry; warm boot keeps it
 there. Programs that size themselves from `0006h` never reach it. Drivers are

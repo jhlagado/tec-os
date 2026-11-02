@@ -1,4 +1,4 @@
-; The video drivers' hook. PICO.DRV and GLCD.DRV hand the ROM a table through
+; The video drivers' hook. PICO.SVC and GLCD.SVC hand the ROM a table through
 ; GLHOOK (ABIGLCD), and CONSW points the terminal's vector at it for CRT: and
 ; UC1:. Each REMOVE calls GLHOOK with 0.
 
@@ -47,7 +47,7 @@ GLHF1:  XOR     A
         OR      A               ; carry clear
         RET
 
-; Load A:GLCD.DRV if there is a GLCD and its resident is not in, and make it
+; Load A:GLCD.SVC if there is a GLCD and its resident is not in, and make it
 ; the console: carry set if there is none or it will not load (the LCD says
 ; so).
 GLCLD:	LD	A,(CONDEV)
@@ -57,20 +57,20 @@ GLCLD:	LD	A,(CONDEV)
 	LD	DE,CMDFCB
 	LD	BC,12
 	LDIR
-	CALL	DRVGO
+	CALL	SVCGO
 	RET	NC
 	LD	HL,GLCMSG	; the LCD says so, carry set
 	JP	LCDWRD
 
 ; Read CMDFCB's driver and install it. If its page holds a video table it takes
-; the console: PICO.DRV always, GLCD.DRV unless PICO.DRV is in, and the ROM's
+; the console: PICO.SVC always, GLCD.SVC unless PICO.SVC is in, and the ROM's
 ; word goes from the LCD. Carry set if it wouldn't read or install.
-DRVGO:	CALL	LOADCOM
+SVCGO:	CALL	LOADCOM
 	RET	C
-	CALL	DRVLOAD
+	CALL	SVCLOAD
 	RET	C
-	LD	A,(DRVHEAD)
-	LD	B,CMCRT		; PICO.DRV's table in this driver's page?
+	LD	A,(SVCHEAD)
+	LD	B,CMCRT		; PICO.SVC's table in this driver's page?
 	LD	HL,PIVEC+1
 	CP	(HL)
 	JR	Z,CONSET
@@ -81,7 +81,7 @@ DRVGO:	CALL	LOADCOM
 	SET	2,(HL)		; CDGLC
 	LD	A,(PIVEC+1)
 	OR	A
-	JR	NZ,WRDCLR	; PICO.DRV keeps the console, and GLCD? is false
+	JR	NZ,WRDCLR	; PICO.SVC keeps the console, and GLCD? is false
 	LD	B,CMUC1
 CONSET:	CALL	WRDCLR		; a display has come: the word is false
 	LD	A,(IOBYTE)	; the mode goes in the CON: field

@@ -79,6 +79,9 @@ function run(dir, args, { env = {}, quiet = true } = {}) {
 /** Build DIR's ROM: every profile, or those named. */
 export const build = (dir, profiles = []) => node(dir, ["tools/build.mjs", ...profiles]);
 
+/** The loaded file type of tree DIR, by its source: src/svc.asm means .SVC, and every new name; its absence .DRV, and every old one. */
+export const fileType = (dir) => (existsSync(resolve(dir, "src/svc.asm")) ? "SVC" : "DRV");
+
 /** The pinned EDIT.COM, which the shipped card holds: from EDIT_COM, else beside this repository. */
 export function editCom() {
   const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs["EDIT.COM"];
@@ -139,7 +142,7 @@ export async function reproducible(dir) {
 }
 
 // One process at a time in a tree that imports its test library: each import
-// assembles the drivers again into the tree's build/drv, the same files.
+// assembles the drivers again into the tree's build/svc, the same files.
 const trees = new Map();
 function inOrder(dir, fn) {
   const before = trees.get(dir) ?? Promise.resolve();
@@ -159,7 +162,7 @@ export function stackCensus(dir) {
 /** A census's deepest figure per stack, BDOS, CCP, BIOS, for the figures. */
 export const depths = (c) => ({ bdos: c.bdos.deepest, ccp: c.ccp.deepest, bios: c.bios.deepest });
 
-/** The three stack bytes of a .DRV file's header, BDOS, BIOS, CCP, as its writer declared them. */
+/** The three stack bytes of a .SVC file's header, BDOS, BIOS, CCP, as its writer declared them. */
 export const declaredStacks = (file) => [...file.subarray(12, 15)];
 
 /** Run TASKS (functions returning promises) N at a time, in order of the results. */
@@ -242,7 +245,7 @@ export function stackFigures(censusL, censusR, landedDir, limit) {
   const runsL = stackRuns(censusL);
   const runsR = stackRuns(censusR);
   const gone = Object.keys(runsR).filter((k) => !(k in runsL));
-  const drv = (n) => readFileSync(resolve(landedDir, "dist/files", n));
+  const file = (stem) => readFileSync(resolve(landedDir, "dist/files", `${stem}.${fileType(landedDir)}`));
   return {
     reference: depths(censusR),
     prototype: depths(censusL),
@@ -254,20 +257,24 @@ export function stackFigures(censusL, censusR, landedDir, limit) {
     proved: {
       // What each driver adds to the stacks, as proved before this stage and
       // stated in KG33: carried. Each header's declaration is read here.
-      "PICO.DRV": { declared: declaredStacks(drv("PICO.DRV")), peakOverReference: [0, 0, 0] },
-      "GLCD.DRV": { declared: declaredStacks(drv("GLCD.DRV")), overBase: [2, 0, 6] },
+      // The keys are KG34 to KG36's, kept as recorded.
+      "PICO.DRV": { declared: declaredStacks(file("PICO")), peakOverReference: [0, 0, 0] },
+      "GLCD.DRV": { declared: declaredStacks(file("GLCD")), overBase: [2, 0, 6] },
     },
     limit,
     everyQuarterFree: ["bdos", "ccp", "bios"].every((k) => (censusL[k].reserved - censusL[k].deepest) * 4 >= censusL[k].reserved),
   };
 }
 
-/** DRVLIM, each stack's room for drivers (BDOS, BIOS, CCP), from DIR's image. */
-export function drvlim(dir) {
+/** SVCLIM, each stack's room for services (BDOS, BIOS, CCP), from DIR's image. */
+export function svclim(dir) {
   const r = rom(dir);
-  const at = r.symbols.get("DRVLIM") - 0xc000;
+  const at = r.symbols.get(fileType(dir) === "SVC" ? "SVCLIM" : "DRVLIM") - 0xc000;
   return [...r.image.subarray(at, at + 3)];
 }
+
+/** The old models' name for svclim. */
+export const drvlim = svclim;
 
 /** The figures' first three keys. */
 export const heading = (reference, landedDir, landed) => ({
@@ -326,8 +333,8 @@ export const BOARDS = {
 
 /**
  * The cases, each on the shipped card (the tree's dist/starter.img) as the
- * web host prepares it for the display chosen. missingDrivers: PICO.DRV and
- * GLCD.DRV, the two its startup file names, erased. badDriver: PICO.DRV's
+ * web host prepares it for the display chosen. missingDrivers: PICO.SVC and
+ * GLCD.SVC, the two its startup file names, erased. badDriver: PICO.SVC's
  * bytes all 55h, its length kept. keypadSkip: a key held through reset.
  * noCard: no card. badCard: its first byte inverted, so the card starts with
  * no container to mount. retry: the bad card put right at DIAG and R typed.
@@ -394,10 +401,11 @@ export async function inTree(dir) {
       if (c.card === "none") return undefined;
       const image = shipped();
       if (c.display) card.prepareCard(image, ...c.display);
-      if (c.card === "missing") for (const n of ["PICO.DRV", "GLCD.DRV"]) fx.volume(image, "A").erase(n);
+      const type = fileType(dir);
+      if (c.card === "missing") for (const n of ["PICO", "GLCD"]) fx.volume(image, "A").erase(`${n}.${type}`);
       if (c.card === "badDriver") {
         const a = fx.volume(image, "A");
-        a.write("PICO.DRV", new Uint8Array(a.read("PICO.DRV").length).fill(0x55));
+        a.write(`PICO.${type}`, new Uint8Array(a.read(`PICO.${type}`).length).fill(0x55));
       }
       if (c.card === "badCard") image[0] ^= 0xff;
       return image;

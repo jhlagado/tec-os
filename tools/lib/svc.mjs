@@ -1,4 +1,4 @@
-// .DRV files. The source is assembled at 0000h and at 0100h, as a PRL is; the
+// .SVC files. The source is assembled at 0000h and at 0100h, as a PRL is; the
 // bytes that differ by exactly 1 are the fixups. The file is the image made
 // for page 0, its header included, then the dependencies (least version, then
 // an 8-byte name), then the relocation data.
@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
 import { assembleProgram } from "./assemble.mjs";
-import { FORMAT } from "./drv-format.mjs";
+import { FORMAT } from "./svc-format.mjs";
 import { assembleAt } from "./prl.mjs";
 
 export const DHLEN = 25;
@@ -47,11 +47,11 @@ export const encoders = {
   },
 };
 
-// PICO.DRV, PICO40.DRV and PICO32.DRV: one source, a width each.
+// PICO.SVC, PICO40.SVC and PICO32.SVC: one source, a width each.
 export const PICO_WIDTHS = {
-  "PICO.DRV": { COLS: 80, NAMES: 0x1000, TPG: 0x10 },
-  "PICO40.DRV": { COLS: 40, NAMES: 0x0800, TPG: 0x04 },
-  "PICO32.DRV": { COLS: 32, NAMES: 0x0800, TPG: 0x04 },
+  "PICO.SVC": { COLS: 80, NAMES: 0x1000, TPG: 0x10 },
+  "PICO40.SVC": { COLS: 40, NAMES: 0x0800, TPG: 0x04 },
+  "PICO32.SVC": { COLS: 32, NAMES: 0x0800, TPG: 0x04 },
 };
 
 /** %IF expression ... %ENDIF, nested, resolved from defs. */
@@ -80,11 +80,11 @@ export function fixupsOf(at0, at1, skip, name) {
 }
 
 /**
- * The .DRV for SOURCE. defs: %IF names, EQUs and strings for the source; deps:
+ * The .SVC for SOURCE. defs: %IF names, EQUs and strings for the source; deps:
  * [{ name, version }]; raw: EQUs naming ROM addresses, for variants that break
  * the interface rule on purpose; reloc: an encoder's name.
  */
-export async function makeDrv(source, { defs = {}, deps = [], raw = {}, work, reloc = "delta" }) {
+export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, reloc = "delta" }) {
   const text = readFileSync(source, "utf8");
   checkInterfaces(text, basename(source));
   mkdirSync(work, { recursive: true });

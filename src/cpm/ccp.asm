@@ -258,20 +258,20 @@ NOTDRIVE:
         LD      DE,UNLKEY
         CALL    ISCMD
         JP      Z,CMDUNL
-        LD      DE,DRVKEY
+        LD      DE,SVCKEY
         CALL    ISCMD
-        JP      Z,CMDDRV
+        JP      Z,CMDSVC
         LD      DE,CMDFCB
         CALL    UNAMBIG
         JR      C,BADCMD
-        LD      HL,(CMDFCB+9)   ; NAME.DRV installs
-        LD      DE,'R'*256+'D'
+        LD      HL,(CMDFCB+9)   ; NAME.SVC installs
+        LD      DE,'V'*256+'S'
         SBC     HL,DE
         JR      NZ,CMDCOM
         LD      A,(CMDFCB+11)
-        CP      'V'
+        CP      'C'
         JR      NZ,CMDCOM
-        CALL    DRVGO
+        CALL    SVCGO
         JR      C,BADCMD
         JP      STARTED
 CMDCOM: LD      A,'C'
@@ -1079,8 +1079,8 @@ CPNIB:
 
 ; UNLOAD: the lowest resident goes, or the command comes back with a question
 ; mark.
-CMDUNL:	CALL	DRVUNL
-	JP	NC,STARTED	; carry: DRVUNL refused
+CMDUNL:	CALL	SVCUNL
+	JP	NC,STARTED	; carry: SVCUNL refused
 	JP	BADCMD
 
 ; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon

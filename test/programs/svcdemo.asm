@@ -1,4 +1,4 @@
-; DRVDEMO: a driver offering one service, "DEMO" version 2, a table of one
+; SVCDEMO: a driver offering one service, "DEMO" version 2, a table of one
 ; entry: A = its count of calls, raised. Assembled with one V_ name set to
 ; make each of the failure cases.
 %INCLUDE "../../src/abi.inc"
@@ -8,7 +8,7 @@ HDR:	DB	'D',3,0,FLAGS
         DW      0,0,XTRA,0      ; REMOVE, size, extra, relocation: the writer's
         DB      STKB,STKI,STKC
         DW      0               ; INIT: the writer's
-        DB      DRVNAME
+        DB      HDRNAME
 ; ---- the image ----------------------------------------------------------------
 INIT:
 %IF V_HANG
@@ -21,7 +21,7 @@ INIT:
 %IF V_PROBE
         LD      DE,REC+2        ; can a client see this service yet?
         LD      BC,$0100
-        CALL    ABIDRV
+        CALL    ABISVC
         LD      A,0
         ADC     A,A
         LD      (RESULT),A
@@ -82,7 +82,7 @@ INIT:
 %IF V_DEP
         LD      DE,DEPNAME      ; bound once, at INIT
         LD      BC,$0100
-        CALL    ABIDRV
+        CALL    ABISVC
         RET     C
         LD      (DEPTAB),HL
 %ENDIF
@@ -187,7 +187,7 @@ SERVICE:LD      HL,COUNT
 ; finds DEMO and keeps its table; USE calls it, unchecked; SAFE checks.
 LOOK:   LD      DE,DEPNAME
         LD      BC,$0100
-        CALL    ABIDRV
+        CALL    ABISVC
         RET     C
         LD      (DEPTAB),HL
         LD      (GEN),A
@@ -196,7 +196,7 @@ USE:    LD      HL,(DEPTAB)
         JP      (HL)
 SAFE:   LD      DE,DEPNAME
         LD      BC,$0100
-        CALL    ABIDRV
+        CALL    ABISVC
         RET     C
         LD      HL,GEN
         CP      (HL)
@@ -215,8 +215,8 @@ REC:    DW      REC2
 %IF V_TWO == 0
 REC:    DW      0
 %ENDIF
-        DB      SVCNAME
-        DB      SVCVER
+        DB      RECNAME
+        DB      RECVER
         DW      TABLE
 %IF V_LATE
 TABLE:  JP      LOOK

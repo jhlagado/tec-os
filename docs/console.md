@@ -11,7 +11,7 @@ field at `0003h`:
 | `UC1:` (3) | GLCD | Matrix keyboard | GLCD | 21 × 8 |
 
 A reset starts on `TTY:`, and a display driver's load takes the console:
-`PICO.DRV` always, `GLCD.DRV` unless `PICO.DRV` is in.
+`PICO.SVC` always, `GLCD.SVC` unless `PICO.SVC` is in.
 The CCP's `CON` command shows the console in use; `CON TTY`, `CON CRT`,
 `CON BAT` and `CON UC1` (a colon may follow) change it, as `STAT CON:=CRT:`
 or any program writing the IOBYTE does. The BIOS acts on a change at the
@@ -23,9 +23,9 @@ there is always a console. The 20 × 4 LCD is never the console.
 | --- | --- | --- | --- |
 | FTDI serial, 4800 8N2 | in, out | always | Implemented |
 | Matrix keyboard | in | the board's Matrix configuration switch (port 03h bit 0) is on | Implemented |
-| PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh; `PICO.DRV` | Implemented |
-| PICO9918, 40 × 24 text | out | as above, with `PICO40.DRV` | Implemented |
-| PICO9918, 32 × 24 Graphics I | out | as above, with `PICO32.DRV` | Implemented |
+| PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh; `PICO.SVC` | Implemented |
+| PICO9918, 40 × 24 text | out | as above, with `PICO40.SVC` | Implemented |
+| PICO9918, 32 × 24 Graphics I | out | as above, with `PICO32.SVC` | Implemented |
 | ST7920 GLCD, 128 × 64 as 21 × 8 | out | the controller's busy flag clears | Implemented |
 | HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
 
@@ -88,7 +88,7 @@ driver. Until one is in, output goes to the serial terminal and the LCD. The
 terminal reaches the display in use through the driver's table, so another
 display needs only those routines. `docs/drivers.md` has the rules.
 
-The PICO9918's console is `PICO.DRV`, `PICO40.DRV` or `PICO32.DRV`, one file a
+The PICO9918's console is `PICO.SVC`, `PICO40.SVC` or `PICO32.SVC`, one file a
 width, which the startup line chooses. It takes six pages below the BDOS entry,
 so `(0006h)` is 1,536 bytes lower, with its own font and the graphics entries. It refuses with no PICO9918 and with no matrix
 keyboard, and a board with no matrix keyboard therefore has an unprogrammed VDP
@@ -98,7 +98,7 @@ the display in use (see [compatibility.md](compatibility.md)).
 
 ## GLCD
 
-The GLCD console is a driver, `GLCD.DRV` on the starter card, not part of
+The GLCD console is a driver, `GLCD.SVC` on the starter card, not part of
 the ROM. Its code, its screen text and its font take six pages just below the
 BDOS entry, so on a board that loads it `(0006h)` is 1,536 bytes lower; a board
 without a GLCD loses nothing. Its INIT hands the terminal its six video
@@ -106,13 +106,13 @@ routines through `ABIGLCD` in the table at `C003h`, and the terminal calls them 
 caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
 keyboard and no PICO9918, cold boot shows its banner and volumes on the
 serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
-`GLCD.DRV` installs it and makes the GLCD the console; with no such line the
+`GLCD.SVC` installs it and makes the GLCD the console; with no such line the
 console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
 too, and shows `GLCD?` on the LCD if it can't, which a display taking over clears. On a board with both displays
-the line gives way to `PICO.DRV`, and only `CON UC1:` installs it; the two
+the line gives way to `PICO.SVC`, and only `CON UC1:` installs it; the two
 together cost 3,072 TPA bytes. A board without a GLCD or a matrix keyboard refuses
 it, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
-resident, removes it, and the console goes back to `CRT:` if `PICO.DRV` is in and
+resident, removes it, and the console goes back to `CRT:` if `PICO.SVC` is in and
 to serial if not.
 
 The ST7920 runs in its extended instruction set with graphics on. The

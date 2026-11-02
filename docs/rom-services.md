@@ -52,7 +52,7 @@ such as `C012h`, which is `ABIGLCD` now.
 | `C00Dh` | `ABIMAIN` | Address of the MAIN count, 1 or 2 |
 | `C00Fh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
 | `C012h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
-| `C015h` | `ABIDRV` | `JP DRVSVC`: the service registry, below; C = 0 find, 1 enumerate |
+| `C015h` | `ABISVC` | `JP SVCREG`: the service registry, below; C = 0 find, 1 enumerate |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers, reached through BDOS
 function 50's selectors 29 and 25. `XMOVE`'s 0 is the
@@ -69,7 +69,7 @@ them.
 
 ## The service registry
 
-`ABIDRV` finds what the drivers in memory offer. `docs/drivers.md` sets out
+`ABISVC` finds what the drivers in memory offer. `docs/drivers.md` sets out
 the drivers and what each side may rely on.
 
 | C | Arguments | Returns |
@@ -115,7 +115,7 @@ The rules that make the services safe for CP/M programs:
 
 ## A video driver's table
 
-The consoles on the PICO9918 and the GLCD are drivers, `PICO.DRV` and `GLCD.DRV`,
+The consoles on the PICO9918 and the GLCD are drivers, `PICO.SVC` and `GLCD.SVC`,
 below `(0006h)`. INIT calls `ABIGLCD` with A = 1 for `CRT:` or 3 for `UC1:` and HL
 pointing at eight words: the routines in the terminal's order (put, get, clear to
 the end of the line, restore, read a row, write a row), a routine for the page
@@ -166,12 +166,12 @@ Notes:
   calls `DIGIT` in its main loop.
 - While the PICO9918 is claimed the console drops output to it, draws no
   cursor and does not flip pages, and the program may set any mode and use
-  all of VRAM, through the ports or through `PICO.DRV`'s graphics entries
+  all of VRAM, through the ports or through `PICO.SVC`'s graphics entries
   (`docs/drivers.md`). The claim has no owner. Releasing it, or a warm boot,
   which releases a resident's claim too, restores the driver's text mode,
   font and page and clears the screen.
 - `PUTAT` is a fast path for full-screen programs: through the driver's cell
-  routine it costs about 445 T-states a cell along a row on `PICO.DRV` at 80
+  routine it costs about 445 T-states a cell along a row on `PICO.SVC` at 80
   columns, against about 4,500 through the BDOS and the ANSI parser. On the
   GLCD, whose cells are drawn pixel by pixel, the two are within 4 percent.
   Edit stays a portable CP/M program and can use it when it finds the signature.
@@ -197,7 +197,7 @@ A routine goes in the ROM when at least one of these holds:
    Only for a few dozen bytes; anything larger goes in an include file.
 
 Everything else lives on the card: utilities as `.COM` files, drivers as
-`.DRV` files, and code that programs share as ATOM include files. The 8 × 8
+`.SVC` files, and code that programs share as ATOM include files. The 8 × 8
 LEDs, 7-segment patterns and random numbers have no ROM service: `DEMO.COM`
 carries its own.
 
@@ -210,9 +210,9 @@ carries its own.
 | Serial and matrix keyboard | 789 | 1, 2 | Stays |
 | ANSI terminal | 988 | 2 | Stays |
 | Video switch | 104 | 2 | Stays |
-| PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.DRV`, `PICO40.DRV` and `PICO32.DRV`; the probe stays |
+| PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, `PICO40.SVC` and `PICO32.SVC`; the probe stays |
 | PICO9918 probe | 32 | 1 | Stays |
-| GLCD text console | — | 1, 2 | Moved to `GLCD.DRV`, a driver, loaded by `STARTUP.CMD` |
+| GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
 | `ABIGLCD` and loading the display drivers | 140 | 2 | Stays |
 | Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
 | 20 × 4 LCD | 146 | 2 | Stays |

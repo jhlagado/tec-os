@@ -68,7 +68,7 @@ WBOOTR: DI
         OUT     (SYSLAT),A
         LD      SP,BSTK
         CALL    PZINIT
-	LD	HL,DRVBSY	; no INIT or REMOVE outlives a warm boot
+	LD	HL,SVCBSY	; no INIT or REMOVE outlives a warm boot
         RES     7,(HL)
         CALL    CPMINIT
         CALL    HWVREL          ; a program that claimed the PICO9918 gives it back
@@ -85,7 +85,7 @@ WBOOTR: DI
 ; fixed addresses, and running nothing old. RAM is recognised when page zero
 ; holds the warm boot jump to RAMBIOS+3 and a jump at 0005h, STUBAD's word S
 ; is an xx06h address holding JP BENTRY, and the word W at 0006h is an xx06h
-; address from 8000h to S. W is not compared with PZTOP: DRVLOAD lowers it
+; address from 8000h to S. W is not compared with PZTOP: SVCLOAD lowers it
 ; before INIT, so the reset that recovers from a hung INIT is recognised too.
 ; BENTRY and STUBAD's own address are the layout's test, and ram.asm states
 ; the limit. Recognised, DRVTAB goes to RSLBUF, which nothing writes before

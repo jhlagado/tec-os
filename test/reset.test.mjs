@@ -10,8 +10,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { Machine } from "./lib/machine.mjs";
-import { ABI, ROOT, TEST_CLOCK, driver, romFor, startupFile, volume } from "./lib/fixtures.mjs";
-import { makeDrv } from "../tools/lib/drv.mjs";
+import { ABI, ROOT, TEST_CLOCK, service, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { makeSvc } from "../tools/lib/svc.mjs";
 import { createContainer, descriptorAt, headerChecksum, tableSum } from "../tools/lib/container.mjs";
 import { format } from "../tools/lib/format.mjs";
 
@@ -216,31 +216,31 @@ test("W at exactly 8000h and at S is recognised", () => {
 
 test("a real driver loaded is recognised, and is gone after the reset", async () => {
   const image = card();
-  volume(image, "SYSTEM").write("RES.DRV", await driver("res"));
-  volume(image, "ALT").write("RES.DRV", await driver("res"));
+  volume(image, "SYSTEM").write("RES.SVC", await service("res"));
+  volume(image, "ALT").write("RES.SVC", await service("res"));
   const m = remapped(image);
   const top = word(m, 6);
-  m.command("RES.DRV");
+  m.command("RES.SVC");
   assert.equal(word(m, 6), top - 0x100);
   reset(m);
-  assert.deepEqual([idx(m), word(m, 6), m.read(m.sym("DRVHEAD")), word(m, m.sym("REGHEAD"))], [[3, 2, 0, 0], top, 0, 0]);
+  assert.deepEqual([idx(m), word(m, 6), m.read(m.sym("SVCHEAD")), word(m, m.sym("REGHEAD"))], [[3, 2, 0, 0], top, 0, 0]);
 });
 
 test("a hung INIT is recognised, W below PZTOP, and the reset recovers from it", async () => {
-  const defs = { FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, DRVNAME: '"HANG    "', SVCNAME: '"HANG    "', SVCVER: 1 };
+  const defs = { FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"HANG    "', RECNAME: '"HANG    "', RECVER: 1 };
   for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
   defs.V_HANG = 1;
-  const { file } = await makeDrv(resolve(ROOT, "test/programs/drvdemo.asm"), { defs, work: resolve(ROOT, "build/drv") });
+  const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
   const image = card();
-  volume(image, "ALT").write("HANG.DRV", file);
+  volume(image, "ALT").write("HANG.SVC", file);
   const m = remapped(image);
-  m.type("HANG.DRV\r");
+  m.type("HANG.SVC\r");
   const end = m.cycles + 8_000_000;
   m.runUntil(() => m.cycles > end, 9_000_000, "the hang");
   assert.ok(word(m, 6) < word(m, m.sym("PZTOP")), "W is below PZTOP");
-  assert.notEqual(m.read(m.sym("DRVBSY")), 0, "in INIT");
+  assert.notEqual(m.read(m.sym("SVCBSY")), 0, "in INIT");
   reset(m);
-  assert.deepEqual([idx(m), m.read(m.sym("DRVBSY"))], [[3, 2, 0, 0], 0]);
+  assert.deepEqual([idx(m), m.read(m.sym("SVCBSY"))], [[3, 2, 0, 0], 0]);
 });
 
 test("a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset at DIAG doesn't", () => {
@@ -606,7 +606,7 @@ test("a dirty line with CFAIL set is not written to a card of identical extents 
   assert.doesNotMatch(m.text(0), /Write lost[\s\S]*Write lost[\s\S]*A>$/);
 });
 
-// RAM left by other ROMs. Each file is a real run's RAM with RES.DRV in, pinned by
+// RAM left by other ROMs. Each file is a real run's RAM with RES.SVC in, pinned by
 // hash, gzipped: page zero, the workspace and everything else that ROM left.
 const OLD_RAM = {
   "4b6877b": "5dc1bc2f5834d84b9411951baf445037a6828b0f6c4fc34af9aed89262357791",
@@ -631,7 +631,7 @@ for (const [name, sha] of Object.entries(OLD_RAM)) {
     assert.deepEqual(trace.writes, []);
     assert.ok(trace.lowPc >= 0xc000, `pc ${trace.lowPc.toString(16)}`);
     assert.deepEqual(idx(m), DEFAULTS);
-    assert.equal(m.read(m.sym("DRVHEAD")), 0);
+    assert.equal(m.read(m.sym("SVCHEAD")), 0);
   });
 }
 

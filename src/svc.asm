@@ -1,4 +1,4 @@
-; The driver loader and the service registry. A .DRV file is read to 0100h:
+; The driver loader and the service registry. A .SVC file is read to 0100h:
 ; the header and image, made for page 0, then the dependencies, then the
 ; relocation data. The image runs where its header lands: header and image
 ; move together to a page boundary, the loader writing its fields over those
@@ -25,12 +25,12 @@ STLAST	EQU	STREC+127	; startup's record: its last byte
 
 ; UNLOAD: the lowest resident, with no INIT or REMOVE running. Only a head of
 ; the owner list is a driver.
-DRVUNL:	LD	A,(DRVBSY)	; 0 here, and used as such below
+SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         OR      A
         JR      NZ,PRLRF
         LD      HL,(PZTOP)
         LD      L,A
-        LD      A,(DRVHEAD)
+        LD      A,(SVCHEAD)
         CP      H
         JR      NZ,PRLRF
         LD      L,DFLG
@@ -38,8 +38,8 @@ DRVUNL:	LD	A,(DRVBSY)	; 0 here, and used as such below
         JR      Z,PRLRF
         PUSH    HL
         LD      L,DREM
-        CALL    DRVCALL
-        CALL    DRVSHUT
+        CALL    SVCCALL
+        CALL    SVCSHUT
         POP     HL
         RET     C
         LD      L,A             ; the registry's head and the owner's, then
@@ -52,11 +52,11 @@ DRVUNL:	LD	A,(DRVBSY)	; 0 here, and used as such below
 	JR	PRLTOP
 
 ; Install the file at 0100h, up to LOADTOP. Carry clear: installed. Carry set:
-; DRVRC is 0 refused, nothing changed; 1 INIT failed, nothing left; 2 failed,
+; SVCRC is 0 refused, nothing changed; 1 INIT failed, nothing left; 2 failed,
 ; its pages reserved with no services.
-DRVLOAD:XOR     A
-        LD      (DRVRC),A
-	LD	A,(DRVBSY)	; no INIT or REMOVE running
+SVCLOAD:XOR     A
+        LD      (SVCRC),A
+	LD	A,(SVCBSY)	; no INIT or REMOVE running
         OR      A
         JR      NZ,PRLRF
         LD      HL,(DF)
@@ -65,13 +65,13 @@ DRVLOAD:XOR     A
         JR      NZ,PRLRF
         LD      BC,(DF+DSIZ)    ; the image in the records
         INC     H               ; HL = 0: now the file
-        CALL    DRVEXT
+        CALL    SVCEXT
         RET     C
         LD      HL,(DF+DINI)
-        CALL    DRVIN
+        CALL    SVCIN
         RET     C
         LD      HL,(DF+DREM)
-        CALL    DRVIN
+        CALL    SVCIN
         RET     C
         LD      HL,(DF+DXTR)    ; the pages; the base at 8000h or above
         ADD     HL,BC
@@ -88,55 +88,55 @@ DRVLOAD:XOR     A
         LD      L,C
         INC     H
         LD      A,(DF+DDEP)
-DRVDL:  OR      A
-        JR      Z,DRVDE
+SVCDL:  OR      A
+        JR      Z,SVCDE
         PUSH    AF
         PUSH    HL
         LD      BC,9
-        CALL    DRVEXT
+        CALL    SVCEXT
         EX      (SP),HL         ; the next on the stack
-        JR      C,DRVDX
+        JR      C,SVCDX
         EX      DE,HL
         LD      A,(DE)          ; the least version, then the name
         LD      C,A
         INC     DE
         CALL    REGFIND
-DRVDX:  POP     HL
+SVCDX:  POP     HL
         POP     BC
         RET     C
         LD      A,B
         DEC     A
-        JR      DRVDL
-DRVDE:  PUSH    HL              ; the relocation data
+        JR      SVCDL
+SVCDE:  PUSH    HL              ; the relocation data
         LD      BC,(DF+DREL)
-        CALL    DRVEXT
-        JR      C,DRVSX
-        LD      HL,DRVLIM       ; each stack's room left, carried in the header
-        LD      A,(DRVHEAD)
+        CALL    SVCEXT
+        JR      C,SVCSX
+        LD      HL,SVCLIM       ; each stack's room left, carried in the header
+        LD      A,(SVCHEAD)
         OR      A
-        JR      Z,DRVS0
+        JR      Z,SVCS0
         LD      H,A
         LD      L,DSTK
-DRVS0:  LD      DE,DF+DSTK
+SVCS0:  LD      DE,DF+DSTK
         LD      B,3
-DRVSL:  LD      A,(HL)
+SVCSL:  LD      A,(HL)
         EX      DE,HL
         SUB     (HL)
-        JR      C,DRVSX
+        JR      C,SVCSX
         LD      (HL),A
         EX      DE,HL
         INC     HL
         INC     DE
-        DJNZ    DRVSL
-DRVSX:  POP     DE
+        DJNZ    SVCSL
+SVCSX:  POP     DE
         RET     C
 ; Add the page to the image's marked bytes. The list at DE holds the gap from
 ; each fixup to the next; 255 is a gap and no fixup. Carry past the image.
         LD      BC,(DF+DREL)
         LD      HL,DF+DHLEN-1
-DRVR1:  LD      A,B
+SVCR1:  LD      A,B
         OR      C
-        JR      Z,DRVMOV
+        JR      Z,SVCMOV
         DEC     BC
         LD      A,(DE)
         INC     DE
@@ -154,12 +154,12 @@ DRVR1:  LD      A,B
         CCF
         RET     C
         OR      A
-        JR      Z,DRVR1
+        JR      Z,SVCR1
         LD      A,(PRLDL)
         ADD     A,(HL)
         LD      (HL),A
-        JR      DRVR1
-DRVMOV:
+        JR      SVCR1
+SVCMOV:
         LD      HL,REGHEAD      ; the resident's fields, in the header
         LD      DE,DF
         LD      BC,3
@@ -178,17 +178,17 @@ DRVMOV:
         LD      L,6
         LD      (PZBDOS+1),HL
         LD      L,DINI
-        CALL    DRVCALL
-        CALL    DRVBND
-        JR      C,DRVSCAN
+        CALL    SVCCALL
+        CALL    SVCBND
+        JR      C,SVCSCAN
         PUSH    HL              ; the first record
         LD      B,0             ; 255 records at most
-DRVWK:  LD      A,H
+SVCWK:  LD      A,H
         OR      L
-        JR      Z,DRVLK
+        JR      Z,SVCLK
         LD      (PRLN),HL       ; the last so far
-        CALL    DRVCK
-        JR      C,DRVRF
+        CALL    SVCCK
+        JR      C,SVCRF
         PUSH    BC
         LD      C,(HL)
         INC     HL
@@ -196,66 +196,66 @@ DRVWK:  LD      A,H
         PUSH    BC              ; the link
         LD      BC,DRECSZ-2
         ADD     HL,BC           ; the record's last byte
-        CALL    DRVCK
-        JR      C,DRVWX
+        CALL    SVCCK
+        JR      C,SVCWX
         LD      A,(HL)          ; the table
-        CALL    DRVCKA
-DRVWX:  POP     HL
+        CALL    SVCCKA
+SVCWX:  POP     HL
         POP     BC
-        JR      C,DRVRF
-        DJNZ    DRVWK
-DRVRF:  POP     HL              ; a record refused: REMOVE undoes INIT
+        JR      C,SVCRF
+        DJNZ    SVCWK
+SVCRF:  POP     HL              ; a record refused: REMOVE undoes INIT
         LD      H,D
         LD      L,DREM
-        CALL    DRVCALL
-        CALL    DRVBND
-        JR      C,DRVKEEP
+        CALL    SVCCALL
+        CALL    SVCBND
+        JR      C,SVCKEEP
 ; INIT failed. A hook left in the table keeps the pages.
-DRVSCAN:LD      HL,RAMBIOS+2
+SVCSCAN:LD      HL,RAMBIOS+2
         LD      B,BIOSLEN/3
-DRVSC1: LD      A,(HL)
-        CALL    DRVCKA
-        JR      NC,DRVHIT
+SVCSC1: LD      A,(HL)
+        CALL    SVCCKA
+        JR      NC,SVCHIT
         INC     HL
         INC     HL
         INC     HL
-        DJNZ    DRVSC1
+        DJNZ    SVCSC1
         LD      HL,(PZTOP)
         LD      (PZBDOS+1),HL
         LD      A,1
-        JR      DRVRET
-DRVHIT: LD      E,DFLG
+        JR      SVCRET
+SVCHIT: LD      E,DFLG
         XOR     A
         LD      (DE),A          ; not removable
-DRVKEEP:LD      A,2
-        LD      (DRVRC),A
-        JR      DRVCOM
-DRVLK:  POP     HL              ; link the records, then commit
+SVCKEEP:LD      A,2
+        LD      (SVCRC),A
+        JR      SVCCOM
+SVCLK:  POP     HL              ; link the records, then commit
         LD      A,H
         OR      L
-        JR      Z,DRVCOM
+        JR      Z,SVCCOM
         LD      BC,(REGHEAD)
         LD      (REGHEAD),HL
         LD      HL,(PRLN)
         LD      (HL),C
         INC     HL
         LD      (HL),B
-DRVCOM: LD      A,D
-        LD      (DRVHEAD),A
+SVCCOM: LD      A,D
+        LD      (SVCHEAD),A
         LD      H,A
         LD      L,6
         LD      (PZTOP),HL      ; the commit
-        LD      A,(DRVRC)
-DRVRET: LD      (DRVRC),A
+        LD      A,(SVCRC)
+SVCRET: LD      (SVCRC),A
         CP      1
         CCF
-DRVSHUT:LD      A,0
-	LD	(DRVBSY),A
+SVCSHUT:LD      A,0
+	LD	(SVCBSY),A
         RET
 
 ; HL at the header field, the page in H: the window opens and that routine runs.
-DRVCALL:LD      A,$80
-	LD	(DRVBSY),A
+SVCCALL:LD      A,$80
+	LD	(SVCBSY),A
         LD      E,(HL)
         INC     L
         LD      A,(HL)
@@ -265,23 +265,23 @@ DRVCALL:LD      A,$80
         JP      (HL)
 
 ; D = the driver's page, E = the page above its last. Flags and HL kept.
-DRVBND: LD      A,(PRLDL)
+SVCBND: LD      A,(PRLDL)
         LD      D,A
         LD      E,8
         LD      A,(DE)
         LD      E,A
         RET
 
-; Carry unless HL, or at DRVCKA the page A, is in the driver's pages.
-DRVCK:  LD      A,H
-DRVCKA: CP      D
+; Carry unless HL, or at SVCCKA the page A, is in the driver's pages.
+SVCCK:  LD      A,H
+SVCCKA: CP      D
         RET     C
         CP      E
         CCF
         RET
 
 ; HL + BC, carry if that is past the file. HL = the sum, DE destroyed.
-DRVEXT: ADD     HL,BC
+SVCEXT: ADD     HL,BC
         RET     C
         EX      DE,HL
         LD      HL,(LOADTOP)
@@ -290,7 +290,7 @@ DRVEXT: ADD     HL,BC
         RET
 
 ; Carry unless HL is an offset into the image, of BC bytes with the header.
-DRVIN:  LD      DE,DHLEN
+SVCIN:  LD      DE,DHLEN
         SBC     HL,DE
         RET     C
         ADD     HL,DE
@@ -299,7 +299,7 @@ DRVIN:  LD      DE,DHLEN
         RET
 
 ; DRIVERS: each driver's name and pages, from the owner list.
-CMDDRV: LD      A,(DRVHEAD)
+CMDSVC: LD      A,(SVCHEAD)
 CMDDL:  OR      A
         JP      Z,MAINLOOP
         LD      H,A
@@ -422,17 +422,17 @@ STDONE:	INC	A		; FFh has been seen, and carry stays
 	LD	(HL),$FF	; once only
 	LD	A,(CONDEV)	; zero: both, no GLCD, whatever row 3 has
 	AND	$FF-CDWRD	; GLCD? may be up from a failed CON UC1
-	SUB	CDMTX+CDTMS	; CDGLC set means GLCD.DRV is in
-	LD	HL,PIVEC+1	; and a word here means PICO.DRV is
+	SUB	CDMTX+CDTMS	; CDGLC set means GLCD.SVC is in
+	LD	HL,PIVEC+1	; and a word here means PICO.SVC is
 	OR	(HL)
 	SCF
 	RET	NZ
 	LD	HL,PICMSG	; carry set by LCDROW
 	JP	LCDWRD
-; ABIDRV. C = 0, find: DE = the name, B = the least version; HL = the entry
+; ABISVC. C = 0, find: DE = the name, B = the least version; HL = the entry
 ; table. C = 1, enumerate: B = an index; HL = that record. A = the generation.
 ; Carry if there is none. BC, DE destroyed.
-DRVSVC: LD      A,C
+SVCREG: LD      A,C
         LD      C,B
         LD      B,0
         OR      A
@@ -442,7 +442,7 @@ DRVSVC: LD      A,C
         RET     NZ
         LD      HL,(REGHEAD)
         INC     C
-DRVS1:  LD      A,H
+SVCS1:  LD      A,H
         OR      L
         SCF
         RET     Z
@@ -452,7 +452,7 @@ DRVS1:  LD      A,H
         INC     HL
         LD      H,(HL)
         LD      L,A
-        JR      DRVS1
+        JR      SVCS1
 
 ; DE = the name, C = the least version, B = 0.
 REGFIND:LD      HL,(REGHEAD)
@@ -483,7 +483,7 @@ REGF2:  LD      A,(DE)
         POP     BC
         POP     DE
         POP     BC
-REGGEN: LD      A,(DRVGEN)
+REGGEN: LD      A,(SVCGEN)
         OR      A
         RET
 REGF3:  POP     BC
