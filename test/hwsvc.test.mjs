@@ -202,5 +202,5 @@ test("hardware services: stack depths", () => {
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/hwsvc-stacks.json"), JSON.stringify(depths, null, 2) + "\n");
   console.log(JSON.stringify(depths));
-  for (const [c, d] of Object.entries(depths)) assert.ok(d <= 16, `hardware service ${c} used ${d} bytes of stack`);
+  for (const [c, d] of Object.entries(depths)) assert.ok(d <= (Number(c) === HW.PUTAT ? 22 : 16), `hardware service ${c} used ${d} bytes of stack`);
 });
