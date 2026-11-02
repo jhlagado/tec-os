@@ -148,11 +148,11 @@ program left returns at once with the interrupt state unchanged.
 | 19 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed (`HWBCLM`), 7 a word of the ROM's, `PICO?` or `GLCD?`, on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
 | 20 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
 | 21 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written; row 3 also clears `HWBWRD` | 10 | 44 |
-| 22 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 8 | 81 |
-| 23 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 59 T-states | 4 | 29 |
+| 22 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 10 | 81 |
+| 23 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 51 T-states | 4 | 29 |
 | 24 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
 | 25 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
-| 26 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial or while claimed | 22 | 68 |
+| 26 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial, or while the PICO9918 is claimed and is the console | 22 | 68 |
 | 27 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
 | | **Total** | | | | **485** |
 
@@ -171,9 +171,10 @@ Notes:
   which releases a resident's claim too, restores the driver's text mode,
   font and page and clears the screen.
 - `PUTAT` is a fast path for full-screen programs: through the driver's cell
-  routine it costs about 445 T-states a cell along a row on `PICO.SVC` at 80
-  columns, against about 4,500 through the BDOS and the ANSI parser. On the
-  GLCD, whose cells are drawn pixel by pixel, the two are within 4 percent.
+  routine it costs about 425 T-states a cell along a row on `PICO.SVC` at 80
+  columns, against about 715 through BIOS `CONOUT` and about 3,860 through BDOS
+  function 2. On the GLCD, whose cells are drawn pixel by pixel, each takes about
+  35,000 T-states a cell or more, and they are within 10 percent.
   Edit stays a portable CP/M program and can use it when it finds the signature.
 - `RTC` uses the same bit sequence as MON3: the DS1302 puts each data bit
   out on a falling clock edge, as Debug80 runtime 0.3.0 models it.

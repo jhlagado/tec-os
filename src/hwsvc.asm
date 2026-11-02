@@ -175,7 +175,7 @@ HWVREL: LD      A,(VCLAIM)
 
 ; ---- Speaker ------------------------------------------------------------------
 ; Square wave on port 01h bit 7: DE half cycles of B units of 16 T-states
-; (plus 59 a half cycle), the serial line held idle throughout.
+; (plus 51 a half cycle), the serial line held idle throughout.
 HWSTONE:LD      A,D
         OR      E
         JP      Z,HWOK
@@ -213,8 +213,8 @@ HWSKL:  IN      A,(C)
 
 ; ---- Text at a position -----------------------------------------------------------
 ; On a video console, B characters from HL at row D, column E, clipped to the
-; screen, without moving the cursor. Status 2 on the serial terminal or while
-; the PICO9918 is claimed.
+; screen, without moving the cursor. Status 2 on the serial terminal, or while
+; the PICO9918 is claimed and is the console.
 HWSPUT: CALL    VTOWN
         LD      A,HWENODV
         JP      NZ,HWERR

@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { ABI, ROOT, boot, romFor, standardCard } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, ROOT, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const HWSVC = romFor().symbols.get("ABIHW");
 const HW = Object.fromEntries(["INFO", "DIGIT", "LCD", "VIDEO", "TONE", "JOY", "KEYS", "PUTAT", "RTC"].map((n) => [n, ABI[`HW${n}`]]));
@@ -70,7 +70,7 @@ function outs(m, fn) {
   const seen = [];
   const io = m.cpu.hardware.ioWrite;
   m.cpu.hardware.ioWrite = (port, value) => {
-    seen.push([port & 0xff, value & 0xff]);
+    seen.push([port & 0xff, value & 0xff, m.cycles]);
     io(port, value);
   };
   try {
@@ -116,8 +116,9 @@ test("hardware services: information, bad numbers, digits, LCD, tone", () => {
   assert.ok(levels.every((v) => (v & 0x40) !== 0), "the serial line stays idle");
   assert.deepEqual(levels.slice(0, 4), [0xc0, 0x40, 0xc0, 0x40], "the speaker bit toggles");
   assert.equal(levels.at(-1), 0x40);
-  const half = tone.cycles / 20;
-  assert.ok(half > 1640 && half < 1680, `a half cycle of B = 100 is about 1,659 T-states, not ${half}`);
+  const at = tout.filter(([p]) => p === 0x01).map(([, , t]) => t);
+  const halves = at.slice(1, 20).map((t, i) => t - at[i]);
+  assert.deepEqual([...new Set(halves)], [16 * 100 + 51], "a half cycle of B = 100 is 16 x B + 51 T-states");
   ok(svc(m, HW.TONE, { b: 10, de: 0 }));
   assert.deepEqual(m.violations, []);
 });
@@ -125,7 +126,7 @@ test("hardware services: information, bad numbers, digits, LCD, tone", () => {
 test("hardware services: joystick and matrix keys", () => {
   const m = boot(standardCard(), { matrix: true });
   m.tec1g.state.input.joystickState = 0x05;
-  assert.equal(svc(m, HW.JOY).b, 0x05, "joystick up and right");
+  assert.equal(svc(m, HW.JOY).b, 0x05, "joystick up and left");
   m.tec1g.state.input.joystickState = 0;
   assert.equal(svc(m, HW.JOY).b, 0);
 
@@ -185,6 +186,16 @@ test("hardware services: the DS1302 clock", () => {
   const later = bytes(m, BUF + 0x30, 7);
   assert.equal(later[0], set[0] + 1, "a second later");
   assert.deepEqual(m.violations, []);
+});
+
+test("hardware services: a claim stops PUTAT only while the PICO9918 is the console", () => {
+  const image = standardCard();
+  volume(image, "A").write("GLCD.SVC", GLCD_SVC);
+  const m = boot(image, { tms: true, matrix: true });
+  m.command("CON UC1");
+  ok(svc(m, HW.VIDEO, { b: 1 }));
+  ok(svc(m, HW.PUTAT, { b: 4, hl: BUF }));
+  ok(svc(m, HW.VIDEO, { b: 0 }));
 });
 
 test("hardware services: stack depths", () => {

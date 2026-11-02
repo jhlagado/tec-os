@@ -225,6 +225,8 @@ against the ROM.
 | `C015h` | `ABISVC` | `JP` to the registry; `ABIDRV` is its old name, an alias in `abi.inc` at no ROM byte |
 
 The table ends at `C018h`. `C01Dh` holds a `RET`, for an ABI 3 card's programs.
+`PUTAT` returns status 2 on the serial terminal, or while the PICO9918 is claimed and
+is the console: with the console on `UC1:`, a claim leaves it working.
 
 The restart vectors today: `PZINIT` writes `EI; RETI` at `0038h` and, at cold boot
 and every warm boot, seven zeros and a `RET` over every vector at `0008h` to `0037h`
