@@ -1,6 +1,7 @@
 # 13. The memory map
 
-Checked against TEC-OS 98c6416.
+Checked against TEC-OS 98c6416, and the state above the RAM BIOS table, from
+`BF33h`, against 08da4d6.
 
 TEC-OS has 16 KiB of ROM and, of RAM, the 64 KiB a TEC-1G with U9 fitted
 has. Chapter 7 describes that memory from a program's side. This chapter
@@ -118,8 +119,8 @@ laid out like this:
 | `BCEBh–BE76h` | 396 | CCP state and stack |
 | `BE77h–BEFFh` | 137 | BDOS state and stack |
 | `BF00h–BF32h` | 51 | RAM BIOS table |
-| `BF33h–BFE4h` | 178 | SD, keyboard and GLCD state |
-| `BFE5h–BFFFh` | 27 | unused |
+| `BF33h–BFE5h` | 179 | SD, keyboard and GLCD state |
+| `BFE6h–BFFFh` | 26 | unused |
 
 The image initialises none of it: `ram.asm` reserves each byte with `DS`,
 and cold boot and warm boot clear and set it (`src/ram.asm:1-4`).
@@ -155,14 +156,15 @@ directory search state and the file's position, then the BDOS's stack
 of a page (`src/layout.asm:73-74`); Chapter 15 describes it.
 
 Above the table, from `SDBYTE` at `BF33h`, is state that the build puts at a
-fixed offset from it, 51 bytes on (`src/ram.asm:188`): the SD card driver's
+fixed offset from it, 51 bytes on (`src/ram.asm:192`): the SD card driver's
 command argument, block address and last error, the block cache's next line,
 failure flag and saved interrupt state, the matrix keyboard's scan state, the
 two video drivers' table addresses, the history's head, `XMOVE`'s banks,
-`PZTOP`, the PRL and driver loader's state and the driver registry's head,
-and the 128-byte record of `A:STARTUP.CMD` that startup reads
-(`src/ram.asm:189-235`). It ends at `WSEND`, `BFE5h`, and the build checks
-that it ends by `C000h` (`src/ram.asm:236-237`, `tools/build.mjs:277`).
+`PZTOP`, the program return code `PRGCODE`, the PRL and driver loader's state
+and the driver registry's head, the 128-byte record of `A:STARTUP.CMD` that
+startup reads, and `CHPOS`, the next piece of a chained command line
+(`src/ram.asm:193-240`). It ends at `WSEND`, `BFE6h`, and the build checks
+that it ends by `C000h` (`src/ram.asm:241-242`, `tools/build.mjs:277`).
 
 ## The allocation vectors and the BDOS entry
 
