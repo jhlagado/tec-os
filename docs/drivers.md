@@ -72,13 +72,16 @@ prompt. One record is read once, into RAM: **at most 128 bytes**, and anything
 after them isn't run. The file isn't read again, so a warm boot doesn't repeat
 it and `USER 3` in a line can't affect it. Each prompt takes the next line in place
 of the keyboard, so a program's warm boot and a built-in's return reach the next line
-by the same route. ^C stops the current program, and the next lines still run.
+by the same route. ^C stops the current program, and the next lines still run;
+^C at a program's line input also drops the rest of a line holding `!`, and the
+next startup line runs.
 The line is echoed through BDOS function 9, so a `$` in it ends the echo, though
 the line runs whole.
 
 A line ends at CR or LF, and blank lines are passed over. `^Z`, a zero or the
-128th byte ends the file. A line that reaches the 128th byte runs with it; one
-that starts there isn't run. A line that fails prints its usual message and the
+128th byte ends the file. A line runs its first 127 characters, so one of 128,
+the whole record, runs without its last; one that starts at the 128th byte isn't
+run. A line that fails prints its usual message and the
 next runs.
 
 **Width is a startup line.** `PICO.DRV` is 80 columns, `PICO40.DRV` 40 and
