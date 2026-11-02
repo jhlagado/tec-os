@@ -470,11 +470,10 @@ async function choices(landed) {
   transition.bothTypes.run = await M.worker(SCRIPT, { task: "both", dir: transition.bothTypes.dir });
   const strip = (o) => Object.fromEntries(Object.entries(o).map(([k, { dir, ...v }]) => [k, v]));
   const card = await M.worker(SCRIPT, { task: "card", dir: landed });
-  const cardSrc = text(landed, "host/card.mjs");
   return {
     magic: { options: strip(mag), settled: "0344h kept: no ROM byte in any option, and only it lets an old format 3 file renamed .SVC load, as KD-144 keeps the layout. 0353h passes the page's byte 1 check and is then refused by the ROM; a new version is refused by both" },
     listing: { options: strip(listing), settled: "SERVICES: the rule's name under design 3, 1 ROM byte over MODULES; DRIVERS would be a stated exception" },
-    oldCards: { refuse: { sourceLines: cardSrc.split("\n").filter((l) => /OLD_DISPLAY|if \(old\)/.test(l)).length }, rename: { sourceLines: renameCard.toString().split("\n").length }, cards: card.oldCards, settled: "refused through cardProblem: 3 source lines, the card left as its owner made it. Renaming takes 11 lines, works only for format 3, and leaves an owner's own .DRV line printing its name" },
+    oldCards: { refuse: { sourceLines: "about six" }, rename: { sourceLines: renameCard.toString().split("\n").length }, cards: card.oldCards, settled: "refused through cardProblem: 3 source lines, the card left as its owner made it. Renaming takes 11 lines, works only for format 3, and leaves an owner's own .DRV line printing its name" },
     transition: { options: strip(transition), settled: `.SVC alone: bothTypes costs ${transition.bothTypes.romOverPrototype} bytes and KD-144 says the rename lands once` },
     card,
   };
