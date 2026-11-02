@@ -301,6 +301,10 @@ test("NAME.SVC installs, from a drive too; a file that won't read and a refused 
   assert.equal(t.word(6), stub - 0x200);
 });
 
+test("ABIDRV stays in abi.inc as ABISVC's old name, at no ROM byte", () => {
+  assert.match(readFileSync(resolve(ROOT, "src/abi.inc"), "utf8"), /^ABIDRV\tEQU\tABISVC\b/m);
+});
+
 test("an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing loaded", async () => {
   const image = standardCard();
   volume(image, "A").write("OK.DRV", (await svc()).file);
