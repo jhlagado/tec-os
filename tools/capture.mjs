@@ -2,7 +2,7 @@
 // Runs TEC-OS on the host model and prints what the console showed, for the
 // book's examples. It uses the same machine as the tests and the web page.
 //
-//   node book/capture.mjs [options] [--] LINE...
+//   node tools/capture.mjs [options] [--] LINE...
 //
 // Each LINE is typed at the prompt followed by Return, and the run waits for
 // the next prompt. A LINE of ^ and a letter, such as ^C, is that control key
@@ -33,10 +33,10 @@
 //
 // Run `npm run build && npm run media` first. Node.js 20 or later.
 // The DS1302 starts at 1 November 2026, 12:00, so a run gives the same
-// output on any host. The starter card holds EDIT.COM only when
-// `npm run media` found a build of Edit (see tools/media.mjs), and DIR's
-// figures change with it, so the script prints the card's SHA-256 and the
-// Edit build's on stderr.
+// output on any host. The starter card holds TAS.COM always, by its pin, and
+// EDIT.COM only when `npm run media` found a build of Edit (see
+// tools/media.mjs), and DIR's figures change with it, so the script prints the
+// card's SHA-256 and the Edit build's on stderr.
 
 import { createHash } from "node:crypto";
 
@@ -44,7 +44,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Machine, symbolsFromD8 } from "../host/machine.mjs";
-import { fontBytes } from "../tools/lib/font.mjs";
+import { fontBytes } from "./lib/font.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 Machine.font = fontBytes(ROOT);
