@@ -81,3 +81,9 @@ test("startup lines go on after ^C at a program", async () => {
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
   assert.equal(m.read(4) >> 4, 3, "the next line ran");
 });
+
+test("NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no program of the name", async () => {
+  const m = await machine({ "ONE.COM": SAY });
+  assert.match(m.command("ONE.DRV"), /C\r\n/);
+  assert.match(m.command("TWO.DRV"), /TWO\.DRV\?/);
+});
