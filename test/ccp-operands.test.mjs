@@ -5,7 +5,8 @@
 // was retaken when modules left, again when GLCD.SVC took its font, six
 // records longer, and again when the type in its FCBs became SVC, those two
 // hashes alone. A write to C: was retaken when a read-only volume came to say
-// R/O. SHELLC and SHELLE left with the nested levels. A
+// R/O, and ERA *.* when Return alone came to end its answer. SHELLC and SHELLE
+// left with the nested levels. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it. Emulator evidence.

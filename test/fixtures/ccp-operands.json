@@ -160,8 +160,8 @@
     },
     {
       "input": "ERA *.*",
-      "output": "ERA *.*\r\r\nALL (Y/N)?\r\r\r\nA>",
-      "calls": "f7ba0c4a916ca6e5e440680d7ddcba35cb933459ca9685ebcce1352ce0c958f4",
+      "output": "ERA *.*\r\r\nALL (Y/N)?\r\r\nA>",
+      "calls": "4eb16656dde0335a2a7315877d4ccdd89c063c4af3fd6a4e543898f96decae44",
       "peak": 12
     },
     {
