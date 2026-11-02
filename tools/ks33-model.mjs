@@ -144,8 +144,8 @@ async function runTask(job) {
     const res = await fx.service("res");
     const image = t.shipped();
     const a = fx.volume(image, "A");
-    a.write("RES.SVC", res.file);
-    a.write("RES.DRV", res.file);
+    a.write("RES.SVC", res);
+    a.write("RES.DRV", res);
     const m = t.machine(image);
     t.prompt(m, 0);
     const drv = m.command("RES.DRV");
@@ -185,7 +185,7 @@ async function runTask(job) {
   }
   if (job.task === "both") {
     const image = t.shipped();
-    fx.volume(image, "A").write("RES.DRV", (await fx.service("res")).file);
+    fx.volume(image, "A").write("RES.DRV", await fx.service("res"));
     const m = t.machine(image);
     t.prompt(m, 0);
     m.command("RES.DRV");
