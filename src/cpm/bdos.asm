@@ -1990,6 +1990,12 @@ LOGOK:
         LD      D,(HL)
         LD      (ALVPTR),DE
 
+        LD      A,(CURDRV)      ; a volume mounted read-only is in ROVEC
+        CALL    DRVENT          ; from each selection, past a warm boot's clear
+        INC     HL
+        BIT     0,(HL)
+        LD      HL,ROVEC
+        CALL    NZ,VSET
         POP     AF
         JR      NZ,LOGFAST
         CALL    INITALV
@@ -2415,13 +2421,7 @@ CHKRO:
         LD      A,H
         AND     D
         OR      L
-        JR      NZ,ROERR
-        LD      A,(CURDRV)      ; a volume mounted read-only
-        CALL    DRVENT
-        INC     HL
-        BIT     0,(HL)
         RET     Z
-ROERR:
         LD      HL,ERRRO
         CALL    DISKERR
         JP      CHDROP

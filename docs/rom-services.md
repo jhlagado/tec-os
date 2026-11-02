@@ -5,7 +5,7 @@ Status: **Built**, ABI 4.0. The *ROM table* is at `C003h`. Its hardware services
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,822 bytes (`debug80`) and has 1,562 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,826 bytes (`debug80`) and has 1,558 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -222,7 +222,7 @@ carries its own.
 | Container mount and checks | 1,390 | 1 | Stays |
 | Diagnostics | 86 | 1 | Stays |
 | CCP | 2,399 | 2 | Stays |
-| BDOS | 3,905 | 2 | Stays |
+| BDOS | 3,909 | 2 | Stays |
 | Hardware services | 467 | 3, 4 | Stays |
 | `XMOVE` and `MOVE` | 228 | 3 | Stays |
 | `ABIGLCD` and loading the display drivers | 167 | 2 | Stays |
@@ -233,7 +233,7 @@ carries its own.
 
 Counted from the `debug80` build's symbol map: each row is one source file's span,
 and the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the census's
-14,822 bytes used.
+14,826 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
@@ -275,7 +275,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,562<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,558<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

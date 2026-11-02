@@ -68,3 +68,14 @@ test("a write to a read-only volume says R/O, and the card is unchanged", () => 
   m.expect(/A>$/, { from, maxCycles: 100_000_000 });
   assert.ok(before.equals(m.sd.image ?? image));
 });
+
+test("function 29 lists a read-only volume once its drive is selected", () => {
+  const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
+  // select C:, ask for the vector, keep it at 0080h, back to A:, warm boot
+  const prog = [0x0e, 14, 0x1e, 2, 0xcd, 5, 0, 0x0e, 29, 0xcd, 5, 0, 0x22, 0x80, 0, 0x0e, 14, 0x1e, 0, 0xcd, 5, 0, 0xc3, 0, 0];
+  const a = volume(image, "A");
+  a.write("ASK.COM", Uint8Array.from(prog));
+  const m = boot(image);
+  m.command("ASK");
+  assert.equal(m.read(0x80) | (m.read(0x81) << 8), 4, "drive C's bit");
+});
