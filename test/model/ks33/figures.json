@@ -451,7 +451,7 @@
     },
     "oldCards": {
       "refuse": {
-        "sourceLines": 3
+        "sourceLines": "about six"
       },
       "rename": {
         "sourceLines": 11
@@ -1908,12 +1908,42 @@
       "by": [
         "the media tool refuses a TAS.COM missing or not as pinned"
       ]
+    },
+    "selector: a refusal clobbers B": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone"
+      ]
+    },
+    "selector: a refusal clobbers HL": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone"
+      ]
+    },
+    "selector: abi.inc out of step (the build)": {
+      "caught": true,
+      "by": [
+        "the build: placement check failed: abi.inc: HWLCD is 22, hwsvc.asm has 21"
+      ]
+    },
+    "selector: HWBASE out of step with HWINFO (the build)": {
+      "caught": true,
+      "by": [
+        "the build: placement check failed: the services run from HWBASE, HWCOUNT of them"
+      ]
+    },
+    "old DEMO: reaches the services": {
+      "caught": true,
+      "by": [
+        "an old DEMO prints no throughout, reaches no hardware service, and leaves page zero unchanged"
+      ]
     }
   },
   "mutantScore": {
-    "caught": 156,
+    "caught": 161,
     "total": 165,
-    "run": 156,
+    "run": 161,
     "notRun": [
       {
         "name": "KS31 recognition: A not reloaded for LATCHV",
@@ -1928,8 +1958,8 @@
         "reason": "1,451 MB under the guard; not run on this machine"
       },
       {
-        "name": "KS30 positions 24 to 29 of the set",
-        "reason": "664 MB as a slice, over the 600 MB limit"
+        "name": "KS30 old DEMO: refusal without carry",
+        "reason": "662 MB singly under the guard at 600 MB"
       }
     ]
   },
