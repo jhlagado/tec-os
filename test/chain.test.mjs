@@ -309,8 +309,8 @@ test("a failed select's exit drops the rest of the line", () => {
 
 test("a directory read that fails drops the rest of the line", () => {
   const m = boot(card());
-  // The OR A after READDIR's BIORDS, before its JP NZ,RDFAIL: A made nonzero once.
-  const at = m.sym("RDFAIL");
+  // The OR A after READDIR's BIORDS, before its JP NZ,BADSECT: A made nonzero once.
+  const at = m.sym("BADSECT");
   let check = -1;
   for (let a = 0xc000; a < 0xfffd && check < 0; a += 1) if (m.read(a) === 0xb7 && m.read(a + 1) === 0xc2 && m.read(a + 2) === (at & 255) && m.read(a + 3) === at >> 8) check = a;
   assert.ok(check > 0, "READDIR's test");
@@ -324,6 +324,9 @@ test("a directory read that fails drops the rest of the line", () => {
   const from = m.output.length;
   armed = true;
   m.type("DIR!SAY!USER 2\r");
+  m.expect(/Bad Sector/, { from, maxCycles: 400_000_000 });
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the error's key");
+  m.type("\r");
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
   assert.equal(failed, 1);
   assert.equal(count(m.text(from), /PRL/g), 0);

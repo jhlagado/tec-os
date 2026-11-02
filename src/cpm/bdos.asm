@@ -1882,7 +1882,7 @@ READDIR:
         CALL    BIODMA
         POP     AF
         OR      A
-        JP      NZ,RDFAIL
+        JP      NZ,BADSECT
         JR      ADVSEC
 
 ; Write the current directory buffer back to the exact record READDIR loaded.
@@ -2455,9 +2455,6 @@ ERRTEXT:
         CALL    OUTCHAR
         POP     HL
         JR      ERRTEXT
-
-RDFAIL:
-        JP      CHDROP
 
 BADSECT:
         LD      HL,ERRBAD
