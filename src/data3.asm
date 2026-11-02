@@ -109,6 +109,6 @@ STFCB:  DB      1,"STARTUP CMD"
 CWMSG:  DB      13,10,"Write lost",0
 
 ; ---- svc.asm -----------------------------------------------------------------
-SVCLIM: DB      8,12,6          ; BDOS, BIOS and CCP: each stack's sum of drivers
+SVCLIM: DB      8,12,6          ; BDOS, BIOS and CCP: each stack's sum of services
 
 ROMCODE:

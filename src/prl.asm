@@ -4,7 +4,7 @@
 ; byte, most significant first, marking the high bytes of addresses. This is
 ; Digital Research's PRL. A program runs where its code was made for, so the
 ; bitmap is only checked for: the file is moved down and run. Residents are
-; drivers (svc.asm).
+; services (svc.asm).
 
 PRLHDR  EQU     $0100
 PRLCODE EQU     $0200

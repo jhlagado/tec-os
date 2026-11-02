@@ -87,7 +87,7 @@ signal doesn't distinguish the last two.
 
 | Path | Volumes | Everything else |
 | --- | --- | --- |
-| Ordinary exit: a program's return, `^C`, or `JP 0000h` | Unchanged | Warm boot: dirty lines written, drivers and registry kept |
+| Ordinary exit: a program's return, `^C`, or `JP 0000h` | Unchanged | Warm boot: dirty lines written, services and registry kept |
 | Recognised reset | The selection, each volume checked against the card | Rebuilt |
 | Unrecognised reset | The card's defaults | Rebuilt |
 
@@ -102,7 +102,7 @@ as below, or the defaults are taken, and a drive whose geometry is 0 is not
 retained, whatever its other bytes. There is no signature to clear: what proves
 the selection is that the volumes are still on the card.
 
-Only the selection is kept. Page zero, the workspace, drivers, the registry, the
+Only the selection is kept. Page zero, the workspace, services, the registry, the
 cache, open files, the history and the TPA ceiling are all rebuilt, and a reset
 starts at user 0 on the serial console, with startup run once from the selected A:.
 

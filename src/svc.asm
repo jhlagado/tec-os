@@ -1,4 +1,4 @@
-; The driver loader and the service registry. A .SVC file is read to 0100h:
+; The service loader and the registry. A .SVC file is read to 0100h:
 ; the header and image, made for page 0, then the dependencies, then the
 ; relocation data. The image runs where its header lands: header and image
 ; move together to a page boundary, the loader writing its fields over those
@@ -24,7 +24,7 @@ DRECSZ  EQU     13              ; link, name, version, table
 STLAST	EQU	STREC+127	; startup's record: its last byte
 
 ; UNLOAD: the lowest resident, with no INIT or REMOVE running. Only a head of
-; the owner list is a driver.
+; the owner list is a service.
 SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         OR      A
         JR      NZ,PRLRF
@@ -264,7 +264,7 @@ SVCCALL:LD      A,$80
         LD      L,E
         JP      (HL)
 
-; D = the driver's page, E = the page above its last. Flags and HL kept.
+; D = the service's page, E = the page above its last. Flags and HL kept.
 SVCBND: LD      A,(PRLDL)
         LD      D,A
         LD      E,8
@@ -272,7 +272,7 @@ SVCBND: LD      A,(PRLDL)
         LD      E,A
         RET
 
-; Carry unless HL, or at SVCCKA the page A, is in the driver's pages.
+; Carry unless HL, or at SVCCKA the page A, is in the service's pages.
 SVCCK:  LD      A,H
 SVCCKA: CP      D
         RET     C

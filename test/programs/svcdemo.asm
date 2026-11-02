@@ -1,4 +1,4 @@
-; SVCDEMO: a driver offering one service, "DEMO" version 2, a table of one
+; SVCDEMO: a library publishing one record, "DEMO" version 2, a table of one
 ; entry: A = its count of calls, raised. Assembled with one V_ name set to
 ; make each of the failure cases.
 %INCLUDE "../../src/abi.inc"
@@ -12,7 +12,7 @@ HDR:	DB	'D',3,0,FLAGS
 ; ---- the image ----------------------------------------------------------------
 INIT:
 %IF V_HANG
-        JR      INIT            ; a broken driver
+        JR      INIT            ; a broken service
 %ENDIF
 %IF V_FAIL
         SCF
@@ -104,7 +104,7 @@ INIT:
         LD      (REC+11),HL
 %ENDIF
 %IF V_END
-        LD      HL,HDR+253      ; a record running off the driver's last page
+        LD      HL,HDR+253      ; a record running off the service's last page
         OR      A
         RET
 %ENDIF

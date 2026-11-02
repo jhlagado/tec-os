@@ -86,7 +86,7 @@ The video card is always a PICO9918. At cold boot the ROM records whether VRAM
 answers at ports BEh/BFh, and programs nothing: each display's console is a
 driver. Until one is in, output goes to the serial terminal and the LCD. The
 terminal reaches the display in use through the driver's table, so another
-display needs only those routines. `docs/drivers.md` has the rules.
+display needs only those routines. `docs/services.md` has the rules.
 
 The PICO9918's console is `PICO.SVC`, `PICO40.SVC` or `PICO32.SVC`, one file a
 width, which the startup line chooses. It takes six pages below the BDOS entry,

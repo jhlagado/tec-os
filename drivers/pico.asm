@@ -6,7 +6,7 @@
 ; the ROM's terminal calls its routines directly, on the caller's stack. REMOVE
 ; refuses while it is the console, since CON CRT can't load it back, and while
 ; the PICO9918 is claimed, since the entries below may be in use. Its service,
-; "PICO", is how another driver sees it. Version 2 of the record's table goes on
+; "PICO", is how another service sees it. Version 2 of the record's table goes on
 ; after the console's words with the graphics entries, abi.inc's PICOREG to
 ; PICORD. A program finds them with ABISVC, holds the claim while it uses them,
 ; and looks them up again rather than keep them across its own exit.

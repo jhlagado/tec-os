@@ -242,7 +242,7 @@ export const MUTANTS_KS31 = [
     edits: [asm(B, ["IM 1", "CALL RSLCAP"], ["IM 1", "CALL RSLCAP", "LD A,(PZDU)", "LD (RSLBUF+48),A"]), asm(B, ["XOR A", "LD (PZDU),A", "CALL PZINIT"], ["LD A,(RSLBUF+48)", "LD (PZDU),A", "CALL PZINIT"])],
     tests: RESET,
   },
-  { name: "reset state: workspace kept, console and drivers with it", ...r(["LD HL,WSBASE", "LD DE,WSBASE+1", "LD BC,WSSPAN", "LD (HL),0", "LDIR"], []) },
+  { name: "reset state: workspace kept, console and services with it", ...r(["LD HL,WSBASE", "LD DE,WSBASE+1", "LD BC,WSSPAN", "LD (HL),0", "LDIR"], []) },
   { name: "KE-121: a drive beyond MNTDRV mounts", ...r(["LD A,(MNTDRV)", "DEC A", "CP (IX+DMOUNT)", "LD A,MEMOUNT", "JP C,MNTERR"], [], RESET, V) },
   { name: "KE-121: one drive short", ...r(["LD A,(MNTDRV)", "DEC A", "CP (IX+DMOUNT)"], ["LD A,(MNTDRV)", "SUB 2", "CP (IX+DMOUNT)"], RESET, V) },
   { name: "KE-122: the card's letter", ...r(["JR NZ,SHVN", "LD A,C", "ADD A,'A'"], ["JR NZ,SHVN", "LD A,(IX+DMOUNT)", "ADD A,'A'"], [...RESET, "test/mount.test.mjs"], V) },

@@ -142,7 +142,7 @@ export async function reproducible(dir) {
 }
 
 // One process at a time in a tree that imports its test library: each import
-// assembles the drivers again into the tree's build/svc, the same files.
+// assembles the services again into the tree's build/svc, the same files.
 const trees = new Map();
 function inOrder(dir, fn) {
   const before = trees.get(dir) ?? Promise.resolve();
@@ -255,7 +255,7 @@ export function stackFigures(censusL, censusR, landedDir, limit) {
     runs: runsL,
     deepestCcpRun: Object.entries(runsL).reduce((a, b) => (b[1].ccp > a[1].ccp ? b : a))[0],
     proved: {
-      // What each driver adds to the stacks, as proved before this stage and
+      // What each service adds to the stacks, as proved before this stage and
       // stated in KG33: carried. Each header's declaration is read here.
       // The keys are KG34 to KG36's, kept as recorded.
       "PICO.DRV": { declared: declaredStacks(file("PICO")), peakOverReference: [0, 0, 0] },

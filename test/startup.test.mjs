@@ -54,7 +54,7 @@ test("a key held through reset skips the file: a hanging INIT reaches a prompt, 
   assert.equal(held.read(held.sym("SVCHEAD")), 0);
   const free = start(files);
   assert.throws(() => prompt(free, 60_000_000));
-  assert.ok(free.pc < 0xc000, "in the driver");
+  assert.ok(free.pc < 0xc000, "in the service");
 });
 
 for (const [name, opts] of [["no GLCD", { matrix: true, glcd: false }], ["no matrix keyboard", {}]]) {

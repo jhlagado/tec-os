@@ -1,7 +1,7 @@
-# ROM services
+# The ROM table and the hardware services
 
-Status: **Built**, ABI 4.0. The hardware services' entry, `ABIHW` at
-`C00Ah`, has 9 services in `src/hwsvc.asm`, 485 bytes of ROM in all, and
+Status: **Built**, ABI 4.0. The *ROM table* is at `C003h`. Its hardware services' entry, `ABIHW` at
+`C00Ah`, has 9 *hardware services* in `src/hwsvc.asm`, 485 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
@@ -15,7 +15,7 @@ gives programs the TEC-1G's hardware, and what belongs on the card instead.
 | Addresses | Contents |
 | --- | --- |
 | `C000h–C002h` | `JP COLD`: at reset the CPU runs it through the boot overlay at `0000h` |
-| `C003h` | The table, below: the one fixed address in the ROM |
+| `C003h` | The ROM table, below: the one fixed address in the ROM |
 | after the table | One block of read-only data: messages, the geometry and format tables, the CCP's and the BDOS's tables, and the BIOS jump table that cold boot copies to RAM |
 | after the data | One block of code |
 | to `FFFFh` | The free space, in one gap |
@@ -25,17 +25,17 @@ table or the code changes; programs reach the ROM only through the table.
 The build checks this order from the symbol table on every profile, and
 refuses any `.asm` file that names an address of the old table at `FF00h`.
 
-## The table at `C003h`
+## The ROM table
 
 ABI 4.0. `src/abi.inc`, published in `dist/` as `abi.inc`, gives each entry's
-address under the name below, and the service numbers and status codes, and
+address under the name below, and the hardware services' numbers and status codes, and
 the build checks them against the ROM. A program tests for major version 4
-exactly: a new major may move what follows `ABIMAIN` and renumber the services.
+exactly: a new major may move what follows `ABIMAIN` and renumber the hardware services.
 `C003h` to `C00Ch` kept their addresses from ABI 3. ABI 4 isn't frozen until a
 release, so a later stage may add to the table's end, which is `C018h`.
 
 An ABI 3 program that tests the major for 3 stops itself. For the old clients that
-don't, two things are done. Service numbers start at `HWBASE`, 19, so that the
+don't, two things are done. Hardware service numbers start at `HWBASE`, 19, so that the
 numbers 0 to 18 are refused, which holds for `DEMO`, whose test takes any major from
 2. And `MOUNT` and `VOLS`, which test nothing and call `C01Dh`, meet a `RET` there,
 in the data after the table, and the build checks that it stays. No other program
@@ -52,7 +52,7 @@ such as `C012h`, which is `ABIGLCD` now.
 | `C00Dh` | `ABIMAIN` | Address of the MAIN count, 1 or 2 |
 | `C00Fh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
 | `C012h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
-| `C015h` | `ABISVC` | `JP SVCREG`: the service registry, below; C = 0 find, 1 enumerate |
+| `C015h` | `ABISVC` | `JP SVCREG`: the registry, below; C = 0 find, 1 enumerate |
 
 `XMOVE` and `MOVE` are CP/M 3's, with its registers, reached through BDOS
 function 50's selectors 29 and 25. `XMOVE`'s 0 is the
@@ -67,50 +67,50 @@ and the interrupt state as it found them. Cold boot clears EXPAND 1, the
 cache with it; its contents do not survive a reset, and warm boot leaves
 them.
 
-## The service registry
+## The registry
 
-`ABISVC` finds what the drivers in memory offer. `docs/drivers.md` sets out
-the drivers and what each side may rely on.
+`ABISVC` finds the records of the services in memory. `docs/services.md` sets out
+the services and what each side may rely on.
 
 | C | Arguments | Returns |
 | --- | --- | --- |
-| 0, find | DE = a service's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
+| 0, find | DE = a record's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
 | 1, enumerate | B = an index from 0 | Carry clear: HL = that record (a link word, the name, the version, the table's address), A = the generation. Carry set: past the last |
 | anything else | | Carry set |
 
-Find returns the newest driver's service when two offer one. AF, BC, DE and
+Find returns the newest service's record when two publish one name. AF, BC, DE and
 HL are destroyed; IX and IY are kept. It uses at most 8 bytes of the caller's
 stack, its return address among them, and makes no BDOS or BIOS call, so it
 is safe on any stack. Each walk stops after 256 records, so a program that
 has overwritten a record can't loop it. A removal raises the generation by
 one; it is 8 bits, so after 256 removals it repeats and a stale pointer
-passes a comparison. There is no public removal: `UNLOAD` is the only way a driver leaves.
+passes a comparison. There is no public removal: `UNLOAD` is the only way a service leaves.
 
-## Calling the services
+## Calling the hardware services
 
 A program checks for `"TNA"` at `ABITAB` and ABI major version 4 at
-`ABIMAJ`, then calls `ABIHW` with the service number in C and arguments in
+`ABIMAJ`, then calls `ABIHW` with the hardware service's number in C and arguments in
 B, DE and HL. `abi.inc` names each number and status code. On return A holds the status, with Z set and carry clear on
-success; results come back as each service lists. IX, IY and the alternate
+success; results come back as each hardware service lists. IX, IY and the alternate
 registers are preserved. A CP/M program that finds no signature is on
 another system and carries on without the TEC-1G's devices.
 
 | Status | Meaning |
 | ---: | --- |
 | 0 | Success |
-| 1 | No such service, or an argument out of range |
+| 1 | No such hardware service, or an argument out of range |
 | 2 | The device is not fitted, or not the console |
 
-The rules that make the services safe for CP/M programs:
+The rules that make the hardware services safe for CP/M programs:
 
-- **The caller's stack.** No service switches stacks or touches the TPA
+- **The caller's stack.** No hardware service switches stacks or touches the TPA
   beyond the buffers it is given. The deepest, `PUTAT` on a GLCD console, takes
   22 bytes of the caller's stack, counting the dispatcher but not the `CALL`.
-- **Resident state only.** The services keep their state in the resident
+- **Resident state only.** The hardware services keep their state in the resident
   workspace: the claim flag, 1 byte.
-- **Never the BDOS.** Services do not call the BDOS, so a program can call
+- **Never the BDOS.** Hardware services do not call the BDOS, so a program can call
   them from inside its own BDOS-heavy code without re-entry.
-- **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
+- **Port 01h stays safe.** Every hardware service that writes port 01h holds bit 6,
   the serial transmit line, high.
 
 ## A video driver's table
@@ -140,9 +140,9 @@ debuggers. A warm boot, like a cold boot, puts seven zeros and a `RET` in
 each one that does not jump into ROM, so an RST through a vector a finished
 program left returns at once with the interrupt state unchanged.
 
-## Services
+## The hardware services
 
-| C | Service | Arguments | Results | Stack | ROM |
+| C | Hardware service | Arguments | Results | Stack | ROM |
 | ---: | --- | --- | --- | ---: | ---: |
 | — | Dispatcher, exits, table | | | 4 | 50 |
 | 19 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed (`HWBCLM`), 7 a word of the ROM's, `PICO?` or `GLCD?`, on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
@@ -167,7 +167,7 @@ Notes:
 - While the PICO9918 is claimed the console drops output to it, draws no
   cursor and does not flip pages, and the program may set any mode and use
   all of VRAM, through the ports or through `PICO.SVC`'s graphics entries
-  (`docs/drivers.md`). The claim has no owner. Releasing it, or a warm boot,
+  (`docs/services.md`). The claim has no owner. Releasing it, or a warm boot,
   which releases a resident's claim too, restores the driver's text mode,
   font and page and clears the screen.
 - `PUTAT` is a fast path for full-screen programs: through the driver's cell
@@ -196,9 +196,9 @@ A routine goes in the ROM when at least one of these holds:
 4. **It is small and nearly every program for the device would carry it.**
    Only for a few dozen bytes; anything larger goes in an include file.
 
-Everything else lives on the card: utilities as `.COM` files, drivers as
+Everything else lives on the card: utilities as `.COM` files, services as
 `.SVC` files, and code that programs share as ATOM include files. The 8 × 8
-LEDs, 7-segment patterns and random numbers have no ROM service: `DEMO.COM`
+LEDs, 7-segment patterns and random numbers have no hardware service: `DEMO.COM`
 carries its own.
 
 ## What the ROM holds today
@@ -238,12 +238,12 @@ again after drivers and the image save went, and the block cache's, the
 probe's, the services' and the table's at ABI 4.0, the table's again when it
 lost its last two entries.
 
-Nothing in the ROM today belongs on the card. The native program services,
+Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
 
 ## Fixes found on the way
 
-Writing the proposal for these services turned up three faults. All three are fixed (67 bytes
+Writing the proposal for the hardware services turned up three faults. All three are fixed (67 bytes
 of ROM) and covered by `test/devices`:
 
 1. **`NATSVC` wrote into the TPA when a CP/M program called it.** It stored

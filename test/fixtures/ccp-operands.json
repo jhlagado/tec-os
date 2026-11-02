@@ -401,7 +401,7 @@
     {
       "input": "CON UC1",
       "output": "CON UC1\r\r\nCON: TTY: serial terminal\r\nA>",
-      "calls": "e6c7af9637d8a1972b50b8a1872f7eefae3d69ecb9584ca5d9227b9d00200c3d",
+      "calls": "a7e3692b779c5d2f701d1627e548ae754b6270e5a41636d640a862b986ea5531",
       "peak": 14
     },
     {
@@ -475,7 +475,7 @@
     {
       "input": "CON UC1",
       "output": "CON UC1\r\r\nCON: UC1: GLCD\r\nA>",
-      "calls": "c9cb8505b7f97a575a650351859385f03138fe4679654680e4ab98291924ca65",
+      "calls": "b9aadd4ffb8ed33ef464fc6c239fb8111549fbc3df4a1c4ab4efa865225b5d74",
       "peak": 12
     }
   ]

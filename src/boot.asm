@@ -122,7 +122,7 @@ RSLCAP:	LD	A,($0000)	; the warm boot jump
 	LD	A,L		; each resident's JP is at offset 6
 	CP	6
 	JR	NZ,RSLNO
-	LD	A,H		; no driver goes below 8000h
+	LD	A,H		; no service goes below 8000h
 	CP	$80
 	JR	C,RSLNO
 	LD	A,E		; S's page, W's at most

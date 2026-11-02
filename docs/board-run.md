@@ -310,7 +310,7 @@ emulator's and are not differences.
 | T21 RTC | The DS1302: its time, rate, set and restore | The clock hardware service (27) and the clock TEC-OS reports |
 | T22 SEG7 | The 7-segment wiring | The digit hardware service (20) |
 | T23 SPEAKER | The speaker | The tone hardware service (23) |
-| T24 RGB8X8 | How the matrix decodes `05h`, `06h`, `F8h`, `F9h` | `DEMO.COM`'s LED scan: the ROM has no service for the matrix |
+| T24 RGB8X8 | How the matrix decodes `05h`, `06h`, `F8h`, `F9h` | `DEMO.COM`'s LED scan: the ROM has no hardware service for the matrix |
 | T25 LEDBAR | The STATUS bar and the CAPS lamp | The CAPS lamp, latch bit 7, which the matrix keyboard console sets |
 | T26 NMI | No stray NMIs | Programs: TEC-OS answers an NMI with RETN and expects none |
 | T27 SERRX | Serial input | The serial console's input |

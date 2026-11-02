@@ -214,7 +214,7 @@ test("W at exactly 8000h and at S is recognised", () => {
   assert.deepEqual(idx(m), [3, 2, 0, 0]);
 });
 
-test("a real driver loaded is recognised, and is gone after the reset", async () => {
+test("a real service loaded is recognised, and is gone after the reset", async () => {
   const image = card();
   volume(image, "SYSTEM").write("RES.SVC", await service("res"));
   volume(image, "ALT").write("RES.SVC", await service("res"));

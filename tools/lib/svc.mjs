@@ -12,7 +12,7 @@ import { assembleAt } from "./prl.mjs";
 
 export const DHLEN = 25;
 export { FORMAT }; // the loader's DMAGIC. Version 3 has version 1's layout: it rose with ABI 4,
-// whose table an older driver would read wrongly.
+// whose table an older service would read wrongly.
 // $C000 and 0C000h. A decimal or binary form of an address isn't caught.
 const ROM_ADDRESS = /\$[C-Fc-f][0-9A-Fa-f]{3}\b|\b0[C-Fc-f][0-9A-Fa-f]{3}[Hh]\b/;
 

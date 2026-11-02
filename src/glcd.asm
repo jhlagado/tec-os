@@ -62,7 +62,7 @@ GLCLD:	LD	A,(CONDEV)
 	LD	HL,GLCMSG	; the LCD says so, carry set
 	JP	LCDWRD
 
-; Read CMDFCB's driver and install it. If its page holds a video table it takes
+; Read CMDFCB's service and install it. If its page holds a video table it takes
 ; the console: PICO.SVC always, GLCD.SVC unless PICO.SVC is in, and the ROM's
 ; word goes from the LCD. Carry set if it wouldn't read or install.
 SVCGO:	CALL	LOADCOM
@@ -70,12 +70,12 @@ SVCGO:	CALL	LOADCOM
 	CALL	SVCLOAD
 	RET	C
 	LD	A,(SVCHEAD)
-	LD	B,CMCRT		; PICO.SVC's table in this driver's page?
+	LD	B,CMCRT		; PICO.SVC's table in this service's page?
 	LD	HL,PIVEC+1
 	CP	(HL)
 	JR	Z,CONSET
 	LD	HL,GLVEC+1
-	XOR	(HL)		; carry clear: any other driver has loaded
+	XOR	(HL)		; carry clear: any other service has loaded
 	RET	NZ
 	LD	HL,CONDEV
 	SET	2,(HL)		; CDGLC

@@ -117,7 +117,7 @@ test("CON UC1, CON TTY, UNLOAD stays on serial: only UC1: moves to CRT:", () => 
   assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [0, 0]);
 });
 
-test("a driver loading with GLCD.SVC in installs, and says nothing", async () => {
+test("a service loading with GLCD.SVC in installs, and says nothing", async () => {
   const m = start({ "GLCD.SVC": GLCD_SVC, "RES.SVC": await service("res"), "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false });
   assert.doesNotMatch(say(m, "RES.SVC"), /RES\.SVC\?/);
 });
@@ -346,11 +346,11 @@ test("a claimed VDP takes no row-move call: the driver isn't entered while a pro
   assert.equal(entered, 0);
 });
 
-test("the take runs only for a driver with its table in its own page", async () => {
+test("the take runs only for a service with its table in its own page", async () => {
   const m = start(both(["PICO.SVC"], { "RES.SVC": await service("res") }));
   say(m, "CON TTY");
   say(m, "RES.SVC");
-  assert.equal(m.read(m.sym("CONMOD")), 0, "any other driver leaves the console");
+  assert.equal(m.read(m.sym("CONMOD")), 0, "any other service leaves the console");
 });
 
 const VREG1 = (m) => m.tec1g.state.display.tms9918.stateSnapshot().registers[1];
@@ -625,7 +625,7 @@ test("row 3: a failed load by hand leaves the word", () => {
   assert.equal(m.read(m.sym("CONDEV")) & HWBWRD, HWBWRD, "still marked");
 });
 
-test("row 3: a driver with no video table leaves the word", async () => {
+test("row 3: a service with no video table leaves the word", async () => {
   const m = start({ "RES.SVC": await service("res") });
   assert.equal(lcdRow(m, 3), "PICO?");
   const top = word(m, 6);

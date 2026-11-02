@@ -1,4 +1,4 @@
-// Drivers and the service registry: SVCDEMO and its variants, loaded as the
+// Services and the registry: SVCDEMO and its variants, loaded as the
 // shell will load them, by the loader's symbol with the file in the TPA. Each
 // failure compares the whole state before and after, by name: page zero,
 // every resident page and the workspace, less the buffers listed in ranges().
@@ -144,7 +144,7 @@ function transaction(t, file, end) {
 const untouched = (t, x) => assert.deepEqual(x.differs(), []);
 
 for (const profile of ["debug80", "debug80t40", "debug80g32", "board"]) {
-  test(`${profile}: a driver installs, is found and enumerated, is called and unloads, leaving everything as it was`, async () => {
+  test(`${profile}: a service installs, is found and enumerated, is called and unloads, leaving everything as it was`, async () => {
   const t = await machine({ profile });
   const d = await svc();
   const before = snapshot(t.m);
@@ -208,7 +208,7 @@ test("every dependency is checked, and with all present the relocation data stil
   assert.equal(t.find("CLIENT").carry, 0);
 });
 
-test("the older registry follows a driver's last record, so every service stays found", async () => {
+test("the older registry follows a service's last record, so every record stays found", async () => {
   const t = await machine();
   t.load((await svc({ RECNAME: '"OLDER   "' })).file);
   t.load((await svc({ V_TWO: 1 })).file);
@@ -216,7 +216,7 @@ test("the older registry follows a driver's last record, so every service stays 
   assert.deepEqual([0, 1, 2, 3].map((i) => t.nth(i).carry), [0, 0, 0, 1]);
 });
 
-test("a record whose end leaves the driver's pages is refused", async () => {
+test("a record whose end leaves the service's pages is refused", async () => {
   const t = await machine();
   const page = t.word(6) >> 8;
   t.m.write((page << 8) + 9, page - 1); // past the end: a table's high byte the check would accept
@@ -263,7 +263,7 @@ test("a chain of 255 records is taken and 256 is refused", async () => {
   assert.deepEqual([s.carry, s.rc], [1, 1]);
 });
 
-test("INIT returning 0 installs a driver with no services", async () => {
+test("INIT returning 0 installs a service with no records", async () => {
   const t = await machine();
   assert.equal(t.load((await svc({ V_NONE: 1 })).file).carry, 0);
   assert.notEqual(t.head(), 0);
@@ -330,14 +330,14 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
   assert.deepEqual([...encoders.offsets([513])], [1, 2]);
 });
 
-test("the table has no removal: function 2 is refused and the driver stays", async () => {
+test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
   assert.equal(t.call(t.m.sym("ABISVC"), { b: 0, c: 2 }).carry, 1);
   assert.equal(t.find("DEMO").carry, 0);
 });
 
-test("warm boot keeps a driver, and a reset empties both", async () => {
+test("warm boot keeps a service, and a reset empties both", async () => {
   const t = await machine();
   const d = await svc();
   t.load(d.file);
@@ -404,7 +404,7 @@ for (const [name, over, raw] of [
     assert.equal(t.load(d.file).carry, 0);
     assert.equal(t.m.read(t.head() + d.symbols.RESULT), 1, "the call returned carry");
     assert.equal(t.m.read(t.m.sym("SVCBSY")), 0);
-    assert.equal(t.find("FIRST").carry, 0, "the driver below stays");
+    assert.equal(t.find("FIRST").carry, 0, "the service below stays");
   });
 }
 
@@ -431,7 +431,7 @@ test("a warm boot inside INIT rolls the ceiling back", async () => {
   assert.deepEqual([t.word(6), t.m.read(t.m.sym("SVCHEAD"))], [top, 0], "and UNLOAD works");
 });
 
-test("a warm boot from inside REMOVE clears the guard, the driver stays, and a later load works", async () => {
+test("a warm boot from inside REMOVE clears the guard, the service stays, and a later load works", async () => {
   const t = await machine();
   assert.equal(t.load((await svc({ V_REMWB: 1 })).file).carry, 0);
   const page = t.head();
@@ -440,7 +440,7 @@ test("a warm boot from inside REMOVE clears the guard, the driver stays, and a l
   t.m.mark = t.m.output.length;
   t.m.type("UNLOAD\r");
   t.m.runUntil(() => t.m.ready() && /[A-P]>$/.test(t.m.text(t.m.mark)), 200_000_000, "the prompt after a warm boot");
-  assert.deepEqual([t.m.read(t.m.sym("SVCBSY")), t.head(), t.word(6)], [0, page, top], "the guard down and the driver in");
+  assert.deepEqual([t.m.read(t.m.sym("SVCBSY")), t.head(), t.word(6)], [0, page, top], "the guard down and the service in");
   assert.equal(t.load((await svc({ HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).file).carry, 0);
   assert.equal(t.word(6), top - ((await svc({ HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).image + 255 >> 8) * 256);
 });
@@ -483,7 +483,7 @@ test("a dependency present is bound at INIT, and last in is first out", async ()
   assert.equal(t.find("DEMO").carry, 1);
 });
 
-test("two drivers offering one service: the newest, and removal uncovers the older", async () => {
+test("two services publishing one record: the newest, and removal uncovers the older", async () => {
   const t = await machine();
   t.load((await svc()).file);
   const older = t.find("DEMO").hl;
@@ -577,7 +577,7 @@ const extraFor = (n) => n - S;
 const MALFORMED = [
   ["the file shorter than its header", good.file.slice(0, 16), 0x110],
   ["a wrong magic", edit((f) => (f[0] = 0x45))],
-  ["format version 2, whose driver reads the font at ABIFONT", edit((f) => (f[1] = 2))],
+  ["format version 2, whose service reads the font at ABIFONT", edit((f) => (f[1] = 2))],
   ["the image size overflowing the address space", u16(6, 0xff80)],
   ["the image size past the file", u16(6, 0x4000)],
   ["the image size below the header", u16(6, 24)],
@@ -629,8 +629,8 @@ test("slack past the file's end is tolerated", async () => {
   assert.equal(t.load(good.file).carry, 0);
 });
 
-// The stack: a driver as the console, each table routine using nothing, or six
-// bytes, of its caller's stack. From a driver's first instruction until control
+// The stack: a service as the console, each table routine using nothing, or six
+// bytes, of its caller's stack. From a service's first instruction until control
 // is back outside above that SP, the deepest it goes, per stack.
 function entries(m, lo, hi) {
   const s = (n) => m.sym(n);

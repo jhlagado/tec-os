@@ -88,11 +88,11 @@ from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   drive is filled in, is a bad command and nothing is opened: `COPY X.DAT`,
   `COPY X.DAT X.DAT` and `COPY X.DAT A:` on A: all print `COPY?`.
 
-- `NAME.SVC` installs a driver and `DRIVERS` lists them, each with its pages.
+- `NAME.SVC` installs a service and `SERVICES` lists them, each with its pages.
   `UNLOAD` removes the lowest.
 - At cold boot `A:STARTUP.CMD`, if there is one, runs before the first prompt.
   One record of it is read, at most 128 bytes, from the volume on A:, and a keypad
-  key held through reset skips it. `docs/drivers.md` has the rules.
+  key held through reset skips it. `docs/services.md` has the rules.
 
 The prompt keeps a history of the lines typed at it. ^W puts the line before
 in the buffer, erasing the one shown, and ^N the line after; past the newest
@@ -108,7 +108,7 @@ empty, and a volume is never on two drives. `MOUNT B:` with B: the current
 drive takes it off too, and the next prompt is `A>`: the CCP takes A: at
 warm boot whenever 0004h names a drive with no volume, as no select of it
 could succeed. Both are programs on the starter
-card, using the mount service in the table, `ABIVOL`. Mounts are for the session: a
+card, using the mount entry in the ROM table, `ABIVOL`. Mounts are for the session: a
 reset keeps them, as long as the card still holds each volume. `docs/recovery.md`
 says how.
 
@@ -120,14 +120,14 @@ addresses, as LINK-80's `[OP]` writes it. A PRL is a program, loaded at
 read, and the bitmap is checked for. The module header some earlier PRLs
 carried is no longer read.
 
-A driver is a resident in TEC-OS's own `.SVC` format, with an installation
+A service is a resident in TEC-OS's own `.SVC` format, with an installation
 that can fail cleanly and a registry through which programs find its
-services (`ABISVC`, ABI 4). `docs/drivers.md` is its interface. It goes in
+services (`ABISVC`, ABI 4). `docs/services.md` is its interface. It goes in
 whole pages just below the BDOS entry, and the word at `0006h` moves down to
 the jump at its offset 6, which leads on to the old entry; warm boot keeps it
-there. Programs that size themselves from `0006h` never reach it. Drivers are
+there. Programs that size themselves from `0006h` never reach it. Services are
 removed last in, first out, and a reset clears them. Nothing of this changes
-the TPA when no driver is installed, and a program written for CP/M sees
+the TPA when no service is installed, and a program written for CP/M sees
 neither.
 
 ## Base page

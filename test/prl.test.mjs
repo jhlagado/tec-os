@@ -1,6 +1,6 @@
 // The PRL loader: programs from PRL files made as Digital Research made
 // them, the CCP's NAME.COM before NAME.PRL, and BDOS function 108; and a
-// driver's place below (0006h), removal last in, first out. Emulator evidence.
+// service's place below (0006h), removal last in, first out. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

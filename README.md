@@ -2,7 +2,7 @@
 
 TEC-OS is a ROM-resident operating system for the TEC-1G. It runs CP/M 2.2
 programs from SD-card volumes and gives them the TEC-1G's hardware through a
-table of services at `C003h`.
+ROM table at `C003h`.
 
 - 16 KiB ROM at `C000h–FFFFh`, entered through the 2 KiB boot overlay at
   reset. It holds the BIOS, the CCP and BDOS, the SD and console drivers and
@@ -89,7 +89,7 @@ moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `DEMO` on the starter card shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
-that names a `.COM` file runs it, and `NAME.SVC` installs a driver.
+that names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, from the volume selected as A:; a keypad key held from reset until the
 prompt skips it, and the console stays on the serial terminal. A board with a
 PICO9918 and a matrix keyboard shows `PICO?` on the LCD, once, if no display driver
@@ -104,7 +104,7 @@ Do not press the hex keypad while a CP/M program is running; see
 
 - [Memory map](docs/memory-map.md), generated from the build
 - [Container format](docs/container-format.md)
-- [ROM services](docs/rom-services.md) (the table at `C003h` and the 9 hardware services)
+- [The ROM table](docs/rom-services.md) (the table at `C003h` and the 9 hardware services)
 - [Console](docs/console.md)
 - [CP/M compatibility](docs/compatibility.md)
 - [Write policy and recovery](docs/recovery.md)

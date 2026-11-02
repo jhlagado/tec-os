@@ -98,7 +98,7 @@ checked against.
 5. **Startup and drivers.** `A:STARTUP.CMD` and its rules; the display lines
    and the PICO9918's three widths; the keypad skip; the words `PICO?`,
    `GLCD?` and `CARD?` on the LCD; installing, listing and removing drivers.
-   Sources: `docs/drivers.md`, `src/drv.asm`, `src/glcd.asm`, `src/lcd.asm`,
+   Sources: `docs/services.md`, `src/drv.asm`, `src/glcd.asm`, `src/lcd.asm`,
    `src/data3.asm`, `drivers/pico.asm`, `drivers/glcd.asm`, `host/card.mjs`.
 6. **A first program.** Calling the BDOS; a program that prints, and one that
    reads the file named on its command line; assembling with ATOM; copying
@@ -126,7 +126,7 @@ checked against.
 10. **PRL programs and drivers.** Digital Research's PRL format as TEC-OS
     loads it; the `.DRV` format; `INIT` and `REMOVE`; the service registry
     and `ABIDRV`; the `PICO` service; writing and installing a small driver.
-    Sources: `src/prl.asm`, `src/drv.asm`, `docs/drivers.md`, `drivers/`,
+    Sources: `src/prl.asm`, `src/drv.asm`, `docs/services.md`, `drivers/`,
     `tools/lib/drv.mjs`, `tools/lib/drv-format.mjs`, `tools/lib/prl.mjs`,
     `test/programs/drvdemo.asm`.
 11. **[Chaining commands](11-chaining-commands.md).** Several commands on
@@ -183,7 +183,7 @@ checked against.
     each service; `XMOVE` and `MOVE`; the seven steps of a driver's load;
     the registry and its generation; removal; the stack census. Sources:
     `src/hwsvc.asm`, `src/xmove.asm`, `src/drv.asm`, `src/abi.asm`,
-    `docs/drivers.md`, `docs/rom-services.md`.
+    `docs/services.md`, `docs/rom-services.md`.
 21. **PRL relocation.** A PRL file's header, code and bitmap; how the CCP
     loads one at `0100h`; the `.DRV` relocation list of gaps and how the
     loader applies it. Sources: `src/prl.asm`, `src/drv.asm`,
