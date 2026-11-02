@@ -5,7 +5,7 @@
         ORG     $0100
 HDR:	DB	'D',3,0,1	; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
-        DB      0,0,0
+        DB      2,0,2           ; MYCO's PUSH, on CONOUT's callers' stacks
         DW      0               ; INIT: the writer's
         DB      "RES     "
 

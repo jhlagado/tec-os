@@ -16,7 +16,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_SVC, PICO_SVC, ROOT, TEST_CLOCK, program, romFor, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
+import { GLCD_SVC, PICO_SVC, ROOT, TEST_CLOCK, program, romFor, service, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
 
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
 const COMMANDS = [
@@ -238,4 +238,9 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     const { reserved, deepest } = census[k];
     assert.ok((reserved - deepest) * 4 >= reserved, `${k} used ${deepest} of ${reserved}, less than a quarter left`);
   }
+});
+
+test("RES.SVC declares the word MYCO pushes on the BDOS's and the CCP's stacks", async () => {
+  const bytes = await service("res");
+  assert.deepEqual([...bytes.subarray(12, 15)], [2, 0, 2]);
 });
