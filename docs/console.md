@@ -54,8 +54,8 @@ A line feed at the bottom of the scroll region scrolls the region; below the
 region it stops at the last row. The region resets to the whole screen when
 the console changes and at warm boot.
 
-Other escape sequences are read and ignored. Characters 80h–FFh are reverse
-images of 00h–7Fh. The cursor is the reverse image of the cell under it. It
+Other escape sequences are read and ignored. `VTOUT` drops output bytes 7Fh to
+FFh. A cell holding 80h–FFh shows the reverse image of 00h–7Fh. The cursor is the reverse image of the cell under it. It
 is drawn while a program waits for a key, through BIOS `CONIN` or by polling
 BIOS `CONST` (as BDOS functions 6 and 11 do), and removed by the next output,
 so output never pays for redrawing it. The BDOS's own check for `^S` during
@@ -135,7 +135,8 @@ the diagnostics ROM does, and the build checks it against that file.
 
 ## Matrix keyboard
 
-Keys follow the TEC-1G matrix layout as Debug80 documents it: key k is row
+The key translation gives no `]`, `}`, `` ` `` or `~`: the key after Z gives `{`
+and `[`, and Ctrl gives Esc. Keys follow the TEC-1G matrix layout as Debug80 documents it: key k is row
 k / 8, bit k % 8 of port FEh. Keys 0, 1 and 2 are Shift, Ctrl and Fn; key 7
 toggles Caps Lock, shown on the latch's CAPS lamp. Keys 3–6 are the arrow
 keys; TEC-OS delivers them as `ESC [ A`, `ESC [ B`, `ESC [ D` and `ESC [ C`

@@ -205,7 +205,7 @@ RXD:    DEC     D
         LD      A,C
         RET
 
-; BIOS CONOUT: send C to the serial port and the video terminal.
+; BIOS CONOUT: send C to the serial port or the video terminal, by the console.
 BCONOUT:CALL    CONSEL
         CALL    VTOWN           ; a program owns the PICO9918: drop the output
         RET     NZ
@@ -268,8 +268,9 @@ PUTNIB: AND     $0F
         DAA
         JR      PUTA
 
-; List, punch and reader devices are not fitted. Output is discarded and the
-; reader returns end of file, so programs do not hang.
+; The list device is not fitted: its output is discarded and it reports ready.
+; Punch and reader are the serial port, and BREADER waits for a byte with no
+; timeout.
 BLIST:  RET
 BLISTST:LD      A,$FF
         RET
@@ -288,9 +289,8 @@ BRDRX:  RET
 
 ; ---- Matrix keyboard ------------------------------------------------------------
 
-; The keyboard is scanned a row at a time so that a serial start bit is never
-; kept waiting for a whole scan. Key k is row k/8, bit k%8 of port FEh, with
-; the row selected by a low bit in the high address byte. Keys 0, 1 and 2 are
+; The keyboard is scanned a row at a time. Key k is row k/8, bit k%8 of port
+; FEh, with the row selected by a low bit in the high address byte. Keys 0, 1 and 2 are
 ; Shift, Ctrl and Fn; key 7 toggles Caps Lock. A key is delivered once when it
 ; goes down; holding it does not repeat.
 

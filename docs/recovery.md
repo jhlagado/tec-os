@@ -59,7 +59,8 @@ no journal, so power loss or reset can leave:
 - **On a volume written behind, during a flush.** The changed data blocks
   reach the card one by one in line order and the directory block last, so a
   cut leaves some new data blocks that no entry names, as above, and never a
-  directory entry naming a block whose data is not there.
+  directory entry naming a block whose data is not there. A flush stops at the
+  first line whose write fails, and the lines after it wait for a later flush.
 - **During a block write.** One 512-byte block may hold old, new or mixed
   contents. If it is a directory block, up to 16 directory entries can be
   damaged.

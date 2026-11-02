@@ -89,8 +89,10 @@ from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   `COPY X.DAT X.DAT` and `COPY X.DAT A:` on A: all print `COPY?`.
 
 - `NAME.SVC` installs a service and `SERVICES` lists them, each with its pages.
-  `UNLOAD` removes the lowest.
-- At cold boot `A:STARTUP.CMD`, if there is one, runs before the first prompt.
+  `UNLOAD` removes the lowest. A `.DRV` name is no longer a service: `NAME.DRV`
+  goes down the `.COM` path and prints `NAME.DRV?`.
+- After a reset, recognised or not, and not on an ordinary exit, `A:STARTUP.CMD`,
+  if there is one, runs before the first prompt.
   One record of it is read, at most 128 bytes, from the volume on A:, and a keypad
   key held through reset skips it. `docs/services.md` has the rules.
 
@@ -166,7 +168,8 @@ warm boot on the PICO9918 and 7,984 on the GLCD.
 | Program | Version | Result | Notes |
 | --- | --- | --- | --- |
 | Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`). The pinned build tests for ABI major 3 at `C003h`, so the card and the tests take it with that one byte set to 4, checked by its hash, and it reads `ABIVID` at `C008h`; it also edits, saves and reopens on the GLCD at 21 × 8 |
-| ATOM.COM | build that sizes its workspace from `0006h` | Runs | Assembles `HELLO.ASM` into `HELLO.COM` on TEC-OS, which then runs (`test/atom.test.mjs`); needs the BDOS at `78C4h` or higher |
+| TAS.COM | Thorium `7604daa`, on the starter card | Runs | Assembles `HELLO.ASM` into `HELLO.COM` and `HELLO.DBG` on TEC-OS, and rebuilds itself, using the BDOS only (`test/tas.test.mjs`). It writes `.DRV` version 2, which this ROM refuses, and a flat file under any other type, `.SVC` included, so services are built on the host. It sets no function 108 status, so the chain keeps `ERA X.COM` first |
+| ATOM.COM | build that sizes its workspace from `0006h` | Ran until `TAS.COM` took its place | Assembled `HELLO.ASM` into `HELLO.COM` on TEC-OS; needs the BDOS at `78C4h` or higher. It stays the ROM's host build |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
 | EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |
 
@@ -176,6 +179,11 @@ and run.
 
 ## Known incompatibilities
 
+- **`^S`.** The key after `^S` is consumed and dropped, so `^C` there doesn't warm
+  boot as CP/M 2.2's does.
+- **`[more]`.** The key is tested with `AND DFh`, so `#` and `;` stop a listing as
+  ^C, Esc and Q do.
+- **Function 50.** The direct BIOS call destroys AF'.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
   more than 46,086 bytes of TPA, may fail; how much a card gives depends on
   its volumes, and on a board with a display driver 1,536 bytes less.
@@ -195,3 +203,61 @@ and run.
 - **Bit-banged serial.** Input that arrives while a program is busy and not
   polling the console is lost. Keys typed while the BDOS is printing are kept
   for the next read, as in CP/M 2.2.
+
+## The contract at this commit
+
+What another program or study may rely on, in one place. ABI 4.0 is not frozen
+until a release. `src/abi.inc` is the published form, and the build checks it
+against the ROM.
+
+### The ROM table
+
+| Address | Name | What it is |
+| --- | --- | --- |
+| `C003h` | `ABITAB` | `"TNA"` |
+| `C006h` | `ABIMAJ` | Major version, 4 |
+| `C007h` | `ABIMIN` | Minor version, 0 |
+| `C008h` | `ABIVID` | Address of the console size, columns then rows |
+| `C00Ah` | `ABIHW` | `JP` to the hardware services, numbered 19 to 27 in C |
+| `C00Dh` | `ABIMAIN` | Address of the MAIN count |
+| `C00Fh` | `ABIVOL` | `JP` to mount, unmount and describe volumes |
+| `C012h` | `ABIGLCD` | `JP` to hand the ROM a video driver's table |
+| `C015h` | `ABISVC` | `JP` to the registry; `ABIDRV` is its old name, an alias in `abi.inc` at no ROM byte |
+
+The table ends at `C018h`. `C01Dh` holds a `RET`, for an ABI 3 card's programs.
+
+The restart vectors today: `PZINIT` writes `EI; RETI` at `0038h` and, at cold boot
+and every warm boot, seven zeros and a `RET` over every vector at `0008h` to `0037h`
+that isn't a jump into ROM, so a free slot's first byte is 00h. Resident RST hooks
+are unsupported and survive no warm boot.
+
+### The BDOS
+
+Functions 0 to 40, 47, 50 and 108, as above. 38 and 39 return zero, and so does any
+other function above 40.
+
+### The service format
+
+Format 3, the magic 0344h ('D', then the version), the type `.SVC`. The layout is
+`docs/services.md`'s. The magic stayed through the type's change, so a format 3 file
+under its old name is a good file once it is renamed.
+
+### Page zero and the workspace
+
+`docs/memory-map.md` gives both. Page zero is CP/M's, with TEC-OS's state at `0040h`
+to `004Fh`. The RAM BIOS table is at `BF00h`. The CCP's command line and both its FCBs
+are kept over warm boot, from `CCPCLR`, and `CHPOS` above the table holds the place in
+a chained line.
+
+### What changed since each pin
+
+| Area | Since `814bc44` | Before it, from `7029f57` |
+| --- | --- | --- |
+| ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 4.0. `XMOVE`, `MOVE`, the nested CCP entries, the EXPAND count, the low mark and the font's address left it; `ABIGLCD` and `ABISVC` joined. The file type's rename adds `ABISVC` beside `ABIDRV` | The table was added |
+| Hardware services | 19 numbered from 0 became 9 numbered from 19: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`. An old number returns status 1 | Added |
+| BDOS | Function 47 added. 25 and 29 refuse every byte of EXPAND 1. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
+| Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `.SVC` for `.DRV`, and `SERVICES` for `DRIVERS` | History, `COPY` and `STARTUP.CMD` added |
+| Service format | Format 3 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
+| Page zero | `0040h` to `004Fh` hold the same names, and `EXPANDS` is always 2. The next stage changes page zero after a warm boot: this commit doesn't hold it fixed | State moved there |
+| Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
+| TPA | 46,854 on the starter card with no display, and 1,536 less with each display's driver | 45,830 at `7029f57` |

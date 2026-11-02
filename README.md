@@ -87,10 +87,14 @@ board's Matrix switch is on. Otherwise it stays on the serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
+`SERVICES` lists the services installed and `UNLOAD` removes the last one. A line
+chains commands with `!`, and a piece starting `:` runs only if the last command
+succeeded, as in `ERA X.COM!EDIT X.ASM!TAS X!:X`.
 `DEMO` on the starter card shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.
-`A:STARTUP.CMD` runs after a reset, from the volume selected as A:; a keypad key held from reset until the
+`A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary
+exit, from the volume selected as A:; a keypad key held from reset until the
 prompt skips it, and the console stays on the serial terminal. A board with a
 PICO9918 and a matrix keyboard shows `PICO?` on the LCD, once, if no display driver
 is installed at the first prompt after startup. If the card is missing

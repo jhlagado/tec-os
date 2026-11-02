@@ -1,7 +1,7 @@
 ; The ROM's read-only data: one block after the table, gathered from the
 ; code's source files in their assembly order. The block runs on through
-; data2.asm, gen/geom.asm and data3.asm. Nothing in it is
-; executed but the BIOS jump table, which cold boot copies to RAMBIOS.
+; data2.asm, gen/geom.asm and data3.asm. Nothing in it is executed: cold
+; boot copies the BIOS jump table to RAMBIOS, and only that copy runs.
 
 ROMDATA:
 

@@ -1,7 +1,7 @@
 # Diagnostics ROM
 
-The diagnostics ROM is a separate 16 KiB image for `C000h–FFFFh`. I wrote
-it for the first runs of TEC-OS on a real TEC-1G. It exercises every piece of
+The diagnostics ROM is a separate 16 KiB image for `C000h–FFFFh`, for the
+first runs of TEC-OS on a real TEC-1G. It exercises every piece of
 hardware TEC-OS uses and reports what the board does. Several questions about
 the board can be answered only by running on one, and the ROM measures each
 of them: what a write under the boot overlay reaches, how the latch's bank
@@ -114,7 +114,7 @@ Interrupts stay disabled with `IM 1` selected, as in TEC-OS.
 Four fill-and-verify passes over `7E00h–7FFFh` before anything uses the
 stack. The code runs on registers alone. On a failure it prints the address,
 the value written and the value read on the serial port, again without a
-stack, and repeats the message every 2 s. Nothing else runs, because every
+stack, and repeats the message about every 6.8 s. Nothing else runs, because every
 later test needs this page. This test proves the RAM the ROM itself depends
 on.
 
@@ -422,7 +422,7 @@ fitted the line also gives the RTC's elapsed seconds.
 
 ## Checked against the board's documents
 
-I checked every test against the TEC-1G documentation
+Every test is checked against the TEC-1G documentation
 (`TEC-1G/Documentation`: `memmap.md`, `ioports.md`, `connectors.md`,
 `Functional Description.md` and `Assembly/Jumpers+Switches.md`), not
 against the Debug80 model. Checked 28 October 2026 for diag 0.2.

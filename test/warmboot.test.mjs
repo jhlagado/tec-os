@@ -1,4 +1,4 @@
-// The warm boot keeps the drives logged in (KS18): a drive nothing has
+// The warm boot keeps the drives logged in: a drive nothing has
 // changed keeps its allocation vector, a changed one is rebuilt to its
 // directory's mark, and every vector after a warm boot is the one a full
 // scan of the card gives. Emulator evidence.

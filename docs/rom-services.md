@@ -205,38 +205,34 @@ carries its own.
 
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
-| Vectors, cold and warm boot | 572 | 1 | Stays |
-| BIOS | 452 | 2 | Stays |
-| Serial and matrix keyboard | 789 | 1, 2 | Stays |
-| ANSI terminal | 988 | 2 | Stays |
-| Video switch | 104 | 2 | Stays |
+| The ROM table and the reset jump | 24 | 1 | Stays |
+| Read-only data: messages, keywords, the jump table's source, geometries | 806 | 1, 2 | Stays |
+| Cold and warm boot, the vectors | 546 | 1 | Stays |
+| BIOS | 482 | 2 | Stays |
+| Serial and matrix keyboard | 690 | 1, 2 | Stays |
+| ANSI terminal | 971 | 2 | Stays |
+| Video switch | 64 | 2 | Stays |
 | PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, `PICO40.SVC` and `PICO32.SVC`; the probe stays |
 | PICO9918 probe | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
-| `ABIGLCD` and loading the display drivers | 140 | 2 | Stays |
 | Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
-| 20 × 4 LCD | 146 | 2 | Stays |
-| SD driver | 795 | 1 | Stays |
-| Container mount and checks | 1,192 | 1 | Stays |
-| Format tables, diagnostics | 176 | 1 | Stays |
-| CCP | 2,664 | 2 | Stays |
-| PRL loader | 100 | 2 | Stays, for programs |
-| Driver loader, registry, `DRIVERS` and startup | 718 | 2 | Stays |
-| Command history | 210 | 2 | Stays |
-| Block cache | 563 | 1, 2 | Stays: every read goes through it |
-| BDOS | 3,736 | 2 | Stays |
+| 20 × 4 LCD | 129 | 2 | Stays |
+| SD driver | 818 | 1 | Stays |
+| Container mount and checks | 1,390 | 1 | Stays |
+| Diagnostics | 86 | 1 | Stays |
+| CCP | 2,378 | 2 | Stays |
+| BDOS | 3,893 | 2 | Stays |
+| Hardware services | 467 | 3, 4 | Stays |
 | `XMOVE` and `MOVE` | 228 | 3 | Stays |
-| Hardware services | 485 | 3, 4 | Stays |
-| The table at `C003h` and the reset jump | 24 | 1 | Stays |
+| `ABIGLCD` and loading the display drivers | 156 | 2 | Stays |
+| Block cache | 566 | 1, 2 | Stays: every read goes through it |
+| Command history | 210 | 2 | Stays |
+| PRL loader | 98 | 2 | Stays, for programs |
+| Service loader, registry, `SERVICES` and startup | 744 | 2 | Stays |
 
-Counted from the `debug80` build's symbol map at `7957c52`: the CCP, BDOS
-and the regions as `docs/memory-map.md` gives them, the parts within the
-console and services regions by source file. The memory map now gives the
-ROM as its five blocks instead. The rows for the GLCD's
-driver, the PRL and driver loaders, `XMOVE` and `MOVE` are counted
-again after drivers and the image save went, and the block cache's, the
-probe's, the services' and the table's at ABI 4.0, the table's again when it
-lost its last two entries.
+Counted from the `debug80` build's symbol map: each row is one source file's span,
+and the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the census's
+14,778 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.

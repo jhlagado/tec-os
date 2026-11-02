@@ -77,7 +77,8 @@ or a warm boot. `GLCD.SVC`'s gives the console back to `CRT:` if `PICO.SVC` is i
 
 ## Startup
 
-At cold boot only, `A:STARTUP.CMD`, if there is one, runs before the first
+After a reset, recognised or not, and never on an ordinary exit, `A:STARTUP.CMD`,
+if there is one, runs before the first
 prompt. One record is read once, into RAM: **at most 128 bytes**, and anything
 after them isn't run. The file isn't read again, so a warm boot doesn't repeat
 it and `USER 3` in a line can't affect it. Each prompt takes the next line in place

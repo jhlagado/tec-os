@@ -89,8 +89,6 @@ Power the board.
 
 ### 3. Reset and choose (5 seconds)
 
-A reset with TEC-OS in RAM keeps any volumes selected with `MOUNT`.
-
 Press RESET. Within a second the terminal shows:
 
 ```text
@@ -260,7 +258,7 @@ LCD, the 7-segment display and the HALT LED show.
     halves of a 32K chip were burned, and the clock. If the HALT LED is
     lit, say so.
 - **A line like `T01 HOME FAIL RAM 7E00-7FFF at 7E81 wrote 00 read 10`,
-  repeated every 2 seconds.** The RAM at the top of U8 is faulty, and the
+  repeated about every 7 seconds.** The RAM at the top of U8 is faulty, and the
   ROM goes no further because everything else needs it. Send the log.
 - **Garbled characters.** The terminal settings or the clock. Check 4800
   baud, 8 data bits, no parity, 2 stop bits, and SW2 on FAST.
@@ -312,7 +310,7 @@ emulator's and are not differences.
 | T23 SPEAKER | The speaker | The tone hardware service (23) |
 | T24 RGB8X8 | How the matrix decodes `05h`, `06h`, `F8h`, `F9h` | `DEMO.COM`'s LED scan: the ROM has no hardware service for the matrix |
 | T25 LEDBAR | The STATUS bar and the CAPS lamp | The CAPS lamp, latch bit 7, which the matrix keyboard console sets |
-| T26 NMI | No stray NMIs | Programs: TEC-OS answers an NMI with RETN and expects none |
+| T26 NMI | No stray NMIs | Programs: TEC-OS has no NMI routine, 0066h being in the default FCB, and expects none |
 | T27 SERRX | Serial input | The serial console's input |
 | T28 SERBIT | The terminal's bit time against the ROM's | The serial console at 4800 baud |
 | T29 KEYPAD | The keypad's codes and Shift | Startup's skip, which reads the key-down bit once at cold boot; TEC-OS reads no key codes |

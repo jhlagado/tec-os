@@ -115,7 +115,7 @@ HCN2:   EXX
         DAA
 HCSEND: LD      IY,HCNEXT
         JP      TXNS
-HCWAIT: LD      B,16            ; about 1.7 s, then say it again
+HCWAIT: LD      B,16            ; about 6.8 s, then say it again
 HCW1:   LD      DE,0
 HCW2:   DEC     DE
         LD      A,D

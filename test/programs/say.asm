@@ -1,5 +1,5 @@
-; SAY: prints "PRL" by BDOS function 9 from a string whose address the
-; loader must relocate, then returns. Run as SAY.PRL beside a SAY.COM that
+; SAY: prints "PRL" by BDOS function 9, then returns. A program is moved
+; to 0100h, not relocated. Run as SAY.PRL beside a SAY.COM that
 ; prints something else, it shows which file the CCP chose.
 
 BDOS    EQU     $0005

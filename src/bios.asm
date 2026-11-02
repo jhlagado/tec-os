@@ -1,6 +1,6 @@
-; CP/M 2.2 BIOS. The ROM table below is the one the BDOS calls; warm boot
-; copies it to RAMBIOS so programs that follow the vector at 0001h find a
-; page-aligned table in RAM.
+; CP/M 2.2 BIOS. Cold boot copies the ROM table below to RAMBIOS. That
+; page-aligned copy is the one that runs: the BDOS calls it, and programs
+; reach it by the vector at 0001h.
 ;
 ; Disk records map to volumes linearly: record = track * 64 + sector. Every
 ; version 1 geometry has 64 records per track and no reserved tracks; the
@@ -208,7 +208,7 @@ BWR0:   PUSH    BC
         JR      NZ,DSKERR
         DEC     HL
         PUSH    HL              ; a directory block: its drive dirty, its mark
-        PUSH    BC              ; raised over the block (KS18)
+        PUSH    BC              ; raised over the block
         LD      B,(HL)
         LD      A,64
 BWDN:   SRL     A               ; the directory's SD blocks: 32 G8M, 16 G1M

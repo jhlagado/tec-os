@@ -129,5 +129,7 @@ end
 
 ## RAM cost
 
-Each mounted drive costs a 16-byte DPH and a 256-byte allocation vector in
-the classic bank. TEC-OS mounts up to four drives.
+`DPHTAB` is a fixed 64 bytes, 16 for each of the four drives, whatever is
+mounted. Each mounted drive also costs an allocation vector in the classic
+bank, one bit for each block of its geometry: 64 bytes for G1M, up to 256.
+TEC-OS mounts up to four drives.

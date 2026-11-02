@@ -362,7 +362,7 @@ STBDMA:	LD	HL,DEFDMA	; the DMA address programs expect
 ; With a line left: it goes in the command buffer, echoed as if
 ; typed, and carry clear. Lines end at CR or LF and blank ones are passed
 ; over; a line's characters after its 127th are passed over too, as a typed
-; line has no more (KE-127). ^Z, a zero or the record's last byte ends the
+; line has no more. ^Z, a zero or the record's last byte ends the
 ; file. Otherwise carry set, through STDONE once the file has finished.
 ; Destroys AF, B, DE, HL.
 STLINE:	LD	HL,STPOS

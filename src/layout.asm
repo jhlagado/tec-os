@@ -74,9 +74,10 @@ RAMBIOS EQU     $BF00           ; RAM copy of the BIOS jump table, top page
 BIOSLEN EQU     17*3
 
 ; ---- Resident stack sizes (measured by test/stacks.test.mjs) -------------
-; Each is its deepest use, as measured with an NMI frame on it, and a quarter
-; more. The CCP stack is also a transient's default stack: CP/M's eight
-; levels, the return word and an NMI frame need 20 bytes of it.
+; Each is its deepest use, as measured, and a quarter more. No NMI frame is
+; in the figures: the test takes an NMI only where 0066h holds RETN, which
+; TEC-OS never writes. The CCP stack is also a transient's default stack:
+; CP/M's eight levels and the return word need 18 bytes of it.
 BDOSSTN EQU     54
 CCPSTN  EQU     30
 BIOSSTN EQU     38

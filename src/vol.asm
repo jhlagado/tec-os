@@ -13,7 +13,7 @@ MECOUNT EQU     $24             ; volume count
 MESUM   EQU     $25             ; header checksum
 MEDESC  EQU     $26             ; descriptor id, flags, geometry, length or alignment
 MERANGE EQU     $27             ; payload beyond the container or wrapping
-MEOVLAP EQU     $28             ; overlapping payloads or duplicate ids
+MEOVLAP EQU     $28             ; overlapping payloads
 MEMOUNT EQU     $29             ; invalid or duplicate drive letter
 MENOA   EQU     $2A             ; no volume mounted as drive A
 
@@ -801,7 +801,7 @@ HSSUB:  LD      C,A
         SBC     HL,BC
         RET
 
-; Print the mounted drives: letter, label and size.
+; Print the mounted drives: letter and label.
 SHOWVOL:LD      C,0             ; each mounted drive, in drive order
 SHV:    PUSH    BC
         CALL    DRVDESC

@@ -1,4 +1,4 @@
-// Helpers for the warm boot tests (KS18): a machine that counts the blocks
+// Helpers for the warm boot tests: a machine that counts the blocks
 // the BIOS reads, BDOS and BIOS callers, and allocation vectors read from
 // memory or rebuilt by a full scan of the same card.
 
