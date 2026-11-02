@@ -241,6 +241,7 @@ test("the same card put back isn't started: Write lost again at warm boot, and a
   assert.match(warm(), /Write lost/);
   m.reset();
   m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
+  assert.equal(volume(image, "B").read("Q.DAT").length, 0, "the name was on the card, and its records are gone");
 });
 
 test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", async () => {

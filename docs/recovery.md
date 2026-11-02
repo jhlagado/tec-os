@@ -146,8 +146,9 @@ Press reset after changing cards.
 
 **Lines still dirty when a card comes out are lost.** That holds for the same
 card put back. Only cold boot starts a card, so each `^C` says `Write lost` again,
-and the reset that starts it discards the lines. TEC-OS can't tell the card that
-came back from another one, so it doesn't restart a card to write to it.
+and the reset that starts it discards the lines. Restarting a card to write to it
+is left out by choice: TEC-OS doesn't read a card's CID, so a different card would
+take these lines.
 
 A warm boot rebuilds a drive's allocation vector from its directory when
 anything has changed it since its last scan: a file written, closed or
