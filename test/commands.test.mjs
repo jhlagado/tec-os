@@ -35,9 +35,9 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
   const stub = word(m, 6);
   m.command("RES.SVC");
   m.command("RES.SVC");
-  assert.equal(word(m, 6), stub - 0x200);
+  assert.equal(word(m, 6), (stub & 0xff00) - 0x200);
   m.command("UNLOAD");
-  assert.equal(word(m, 6), stub - 0x100);
+  assert.equal(word(m, 6), (stub & 0xff00) - 0x100);
   m.command("UNLOAD");
   assert.equal(word(m, 6), stub);
   assert.match(m.command("UNLOAD"), /UNLOAD\?/);

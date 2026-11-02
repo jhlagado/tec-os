@@ -49,7 +49,7 @@ function bench(m) {
     m.runUntil(() => m.pc === STUB || m.pc === m.sym("CCPENT"), 60_000_000, `return from ${addr.toString(16)}`);
     return { back: m.pc === STUB, carry: c.flags.C, a: c.a, hl: (c.h << 8) | c.l };
   };
-  const entry = () => assert.equal(word(6) & 0xff, 6, "(0006h) stays xx06h");
+  const entry = () => assert.ok(word(6) === word(m.sym("STUBAD")) || (word(6) & 0xff) === 0, "(0006h) is the stub or a page's start");
   const load = (file, end) => {
     put(0x100, [...file]);
     poke(m.sym("LOADTOP"), end ?? 0x100 + Math.ceil(file.length / 128) * 128);
@@ -153,10 +153,10 @@ for (const profile of ["debug80", "debug80t40", "debug80g32", "board"]) {
   const stub = t.word(6);
   assert.equal(t.load(d.file).carry, 0);
   const base = t.head();
-  assert.equal(t.word(6), base + 6, "(0006h) stays xx06h");
-  assert.equal(t.word(t.m.sym("PZTOP")), base + 6);
-  assert.equal(t.m.read(base + 6), 0xc3);
-  assert.equal(t.word(base + 7), stub, "the JP is to the old top");
+  assert.equal(t.word(6), base, "(0006h) is the page's start");
+  assert.equal(t.word(t.m.sym("PZTOP")), base);
+  assert.equal(t.m.read(base), 0xc3);
+  assert.equal(t.word(base + 1), t.m.sym("BENTRY"), "the JP is straight into the BDOS");
   const f = t.find("DEMO");
   assert.equal(f.carry, 0);
   assert.equal(t.call(f.hl).a, 1);
@@ -299,7 +299,7 @@ test("NAME.SVC installs, from a drive too; a file that won't read and a refused 
   assert.equal(t.word(6), stub);
   assert.doesNotMatch(t.m.command("OK.SVC"), /\?/);
   assert.doesNotMatch(t.m.command("B:OK2.SVC"), /\?/);
-  assert.equal(t.word(6), stub - 0x200);
+  assert.equal(t.word(6), (stub & 0xff00) - 0x200);
 });
 
 test("ABIDRV stays in abi.inc as ABISVC's old name, at no ROM byte", () => {
@@ -389,12 +389,12 @@ test("INIT fails with a hook left: the pages stay, nothing is registered, UNLOAD
   assert.deepEqual([x.r.carry, x.r.rc], [1, 2]);
   const base = t.head();
   assert.notEqual(base, 0);
-  assert.deepEqual([t.word(t.m.sym("PZTOP")), t.word(t.m.sym("REGHEAD"))], [base + 6, 0]);
+  assert.deepEqual([t.word(t.m.sym("PZTOP")), t.word(t.m.sym("REGHEAD"))], [base, 0]);
   assert.equal(t.find("DEMO").carry, 1);
   t.prompt();
   assert.match(t.unload(), /UNLOAD\?/);
   t.warmBoot();
-  assert.equal(t.word(t.m.sym("PZTOP")), base + 6, "warm boot keeps them");
+  assert.equal(t.word(t.m.sym("PZTOP")), base, "warm boot keeps them");
 });
 
 test("INIT lies and REMOVE refuses: installed with no records, and the load says so", async () => {

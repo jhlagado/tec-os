@@ -234,10 +234,10 @@ function check(condition, message) {
 const CARDS = { starter: [511, 2047], fourG8M: [2047, 2047, 2047, 2047] };
 
 /** ALVINIT's layout for a card: vectors packed down from WSBASE, the BDOS
- *  entry jump at the highest xx06h address below them. */
+ *  entry jump directly below them. */
 function cardLayout(wsbase, dsms) {
   const alvBase = wsbase - dsms.reduce((n, dsm) => n + (dsm >> 3) + 1, 0);
-  const entry = ((alvBase - 9) & 0xff00) + 6;
+  const entry = alvBase - 3;
   return { entry, alvBase, tpa: entry - 0x100 };
 }
 

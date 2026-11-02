@@ -72,13 +72,13 @@ test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps i
   const stub = word(m, 6);
   const p1 = (stub >> 8) - 1; // one page below the stub's
   m.command("RES.SVC");
-  assert.equal(word(m, 6), (p1 << 8) + 6, "(0006h) is the resident's base + 6");
-  assert.equal(word(m, m.sym("PZTOP")), (p1 << 8) + 6);
+  assert.equal(word(m, 6), p1 << 8, "(0006h) is the resident's base");
+  assert.equal(word(m, m.sym("PZTOP")), p1 << 8);
   assert.equal(word(m, m.sym("RAMBIOS") + 13) >> 8, p1, "its INIT hooked CONOUT");
   m.command("RES.SVC");
-  const low = ((p1 - 1) << 8) + 6;
+  const low = (p1 - 1) << 8;
   assert.equal(word(m, 6), low, "a second resident below the first");
-  assert.equal(word(m, low + 1), (p1 << 8) + 6, "its JP chains to the first");
+  assert.equal(word(m, low + 1), m.sym("BENTRY"), "its JP is straight into the BDOS");
   // Warm boots by ^C, JP 0000h and BDOS function 0, and a disk error.
   m.mark = m.output.length;
   m.type("\x03");
@@ -114,9 +114,9 @@ test("residents are removed last in, first out, each REMOVE undoing its INIT", a
   const first = conout();
   m.command("RES.SVC");
   assert.notEqual(conout(), first);
-  assert.equal(word(m, 6), lo + 6);
+  assert.equal(word(m, 6), lo);
   m.command("UNLOAD");
-  assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP")), conout()], [up + 6, up + 6, first]);
+  assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP")), conout()], [up, up, first]);
   m.command("UNLOAD");
   assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP")), conout()], [stub, stub, rom]);
   assert.match(m.command("UNLOAD"), /UNLOAD\?/, "the stub is no resident");
@@ -129,7 +129,7 @@ test("a cold boot clears every resident", async () => {
   const m = await machine({ "RES.SVC": await service("res") });
   const stub = word(m, 6);
   m.command("RES.SVC");
-  assert.equal(word(m, 6), stub - 0x100);
+  assert.equal(word(m, 6), (stub & 0xff00) - 0x100);
   m.reset();
   m.expect(/A>$/, { maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt after reset");

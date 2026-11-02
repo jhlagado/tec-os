@@ -84,9 +84,9 @@ WBOOTR: DI
 ; Recognise a TEC-OS of this layout from what it left in RAM, reading only, at
 ; fixed addresses, and running nothing old. RAM is recognised when page zero
 ; holds the warm boot jump to RAMBIOS+3 and a jump at 0005h, STUBAD's word S
-; is an xx06h address holding JP BENTRY, and the word W at 0006h is an xx06h
-; address from 8000h to S. W is not compared with PZTOP: SVCLOAD lowers it
-; before INIT, so the reset that recovers from a hung INIT is recognised too.
+; holds JP BENTRY, and the word W at 0006h is S or a page's start from 8000h
+; to S's page. W is not compared with PZTOP: SVCLOAD lowers it before INIT,
+; so the reset that recovers from a hung INIT is recognised too.
 ; BENTRY and STUBAD's own address are the layout's test, and ram.asm states
 ; the limit. Recognised, DRVTAB goes to RSLBUF, which nothing writes before
 ; MEMINIT, so DIAG's retry finds it. Otherwise RSLBUF's A: geometry is 0,
@@ -103,10 +103,6 @@ RSLCAP:	LD	A,($0000)	; the warm boot jump
 	CP	$C3		; JP
 	JR	NZ,RSLNO
 	LD	HL,(STUBAD)	; S, the stub
-	LD	A,L		; on a page's offset 6, as ALVINIT puts it
-	CP	6
-	JR	NZ,RSLNO
-	LD	E,H		; its page, W's upper limit
 	LD	A,(HL)		; S holds JP BENTRY, the layout's test
 	CP	$C3
 	JR	NZ,RSLNO
@@ -119,13 +115,18 @@ RSLCAP:	LD	A,($0000)	; the warm boot jump
 	CP	HIGH(BENTRY)
 	JR	NZ,RSLNO
 	LD	HL,(PZBDOS+1)	; W, which any resident has lowered
-	LD	A,L		; each resident's JP is at offset 6
-	CP	6
+	LD	DE,(STUBAD)
+	OR	A
+	SBC	HL,DE		; W = S: no resident
+	JR	Z,RSLYES
+	ADD	HL,DE
+	LD	A,L		; each resident's entry is at offset 0
+	OR	A
 	JR	NZ,RSLNO
 	LD	A,H		; no service goes below 8000h
 	CP	$80
 	JR	C,RSLNO
-	LD	A,E		; S's page, W's at most
+	LD	A,D		; S's page, W's at most
 	CP	H
 	JR	C,RSLNO
 RSLYES:	LD	HL,DRVTAB	; recognised: the selection, for RESEL

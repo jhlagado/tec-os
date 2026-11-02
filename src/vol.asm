@@ -498,8 +498,7 @@ RSEQ2:	POP	DE
 ; gets a G8M-sized slot (256 bytes) for each of drives 0 to N-1, mounted or
 ; not, so any drive may later take any volume; any other card gets a slot
 ; for each mounted drive, DSM / 8 + 1 bytes, as before. DRVSLOT records what
-; each slot holds. The BDOS entry jump goes at the highest xx06h address
-; below them.
+; each slot holds. The BDOS entry jump goes directly below them.
 ALVINIT:LD      HL,WSBASE
         LD      (STUBAD),HL     ; the lowest vector so far
         LD      C,0
@@ -569,9 +568,9 @@ ALVSKP: INC     C
         CP      MAXDRV
         JR      C,ALVNX
         LD      HL,(STUBAD)
-        LD      DE,-9           ; the JP and six free bytes below the vectors
-        ADD     HL,DE
-        LD      L,6
+        DEC     HL              ; the JP, below the lowest vector
+        DEC     HL
+        DEC     HL
         LD      (STUBAD),HL
         RET
 

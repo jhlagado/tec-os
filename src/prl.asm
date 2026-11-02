@@ -56,14 +56,16 @@ PRLPROG:LD      HL,PRLCODE      ; moved down to 0100h, its origin
         LD      BC,(PRLN)
         LDIR
 PRLP2:  RET
-; The top before the resident at base HL goes back. Carry clear.
-PRLTOP: LD      L,7
-        LD      E,(HL)
-        INC     HL
-        LD      D,(HL)
-        LD      (PZTOP),DE
-        LD      (PZBDOS+1),DE
+; The top goes back to the next owner's page, or the stub with none. Carry
+; clear.
+PRLTOP: LD      A,(SVCHEAD)
+        LD      H,A
+        LD      L,0
         OR      A
+        JR      NZ,PRLT1
+        LD      HL,(STUBAD)
+PRLT1:  LD      (PZTOP),HL
+        LD      (PZBDOS+1),HL
         RET
 PRLRF:  SCF
         RET

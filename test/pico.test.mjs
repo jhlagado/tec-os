@@ -131,12 +131,12 @@ test("PICO32.SVC writes the colours and an empty sprite table", () => {
 
 test("TPA after boot: one display, and both", () => {
   const top = (m) => word(m, 6) - 0x100;
-  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 45318);
-  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 45318);
+  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 45312);
+  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 45312);
   const m = start(both());
-  assert.equal(top(m), 45318, "a board with both, at boot");
+  assert.equal(top(m), 45312, "a board with both, at boot");
   say(m, "CON UC1");
-  assert.equal(top(m), 43782);
+  assert.equal(top(m), 43776);
 });
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/pico-screens.json"), "utf8"));
@@ -158,7 +158,7 @@ test("the starter card boots the PICO9918 alone on a board with both, and the GL
   assert.deepEqual(files.map((f) => f.name), ["PICO.SVC", "PICO40.SVC", "PICO32.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45318]);
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45312]);
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 
@@ -292,7 +292,7 @@ test("REMOVE refuses while PICO.SVC is the console, and UNLOAD changes nothing; 
   assert.equal(word(m, 6), top);
   say(m, "CON TTY");
   say(m, "UNLOAD");
-  assert.deepEqual([word(m, 6), word(m, m.sym("PIVEC"))], [top + 0x600, 0]);
+  assert.deepEqual([word(m, 6), word(m, m.sym("PIVEC"))], [word(m, m.sym("STUBAD")), 0]);
   m.traps = 0;
   m.cpu.cpu.pc = 0; // a warm boot with no table
   m.mark = m.output.length;
@@ -507,7 +507,7 @@ test("a claim held at UNLOAD after CON TTY: refused, the record still found, and
   assert.equal(cold(m, 0), 0);
   assert.equal(picoTable(m), table, "and after the release");
   assert.doesNotMatch(say(m, "UNLOAD"), /UNLOAD\?/);
-  assert.deepEqual([word(m, 6), word(m, m.sym("PIVEC")), picoTable(m)], [top + 0x600, 0, null]);
+  assert.deepEqual([word(m, 6), word(m, m.sym("PIVEC")), picoTable(m)], [word(m, m.sym("STUBAD")), 0, null]);
 });
 
 test("a refused record under a claim: REMOVE refuses, so the pages stay with the table hooked, and a warm boot is safe", async () => {
@@ -523,7 +523,7 @@ test("a refused record under a claim: REMOVE refuses, so the pages stay with the
   assert.match(m.text(0), /PICOB\.SVC\?/);
   const page = m.read(m.sym("SVCHEAD"));
   assert.ok(page >= 0x80, "the pages are kept");
-  assert.equal(word(m, 6), (page << 8) + 6);
+  assert.equal(word(m, 6), page << 8);
   assert.equal(m.read(m.sym("PIVEC") + 1), page, "the table stays hooked");
   assert.equal(picoTable(m, 1), null, "no record");
   assert.equal(m.read(m.sym("CONMOD")), 0, "no take");
@@ -633,7 +633,7 @@ test("row 3: a service with no video table leaves the word", async () => {
   assert.equal(lcdRow(m, 3), "PICO?");
   const top = word(m, 6);
   assert.doesNotMatch(say(m, "RES.SVC"), /RES\.SVC\?/);
-  assert.equal(word(m, 6), top - 0x100, "it loaded");
+  assert.equal(word(m, 6), (top & 0xff00) - 0x100, "it loaded");
   assert.equal(lcdRow(m, 3), "PICO?");
 });
 

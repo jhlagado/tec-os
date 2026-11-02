@@ -305,7 +305,7 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   const m = boot(standardCard(), { matrix: true });
   const word = (a) => m.read(a) | (m.read(a + 1) << 8);
   assert.equal(m.read(3) & 3, 3);
-  assert.equal(word(6), (word(m.sym("PZTOP")) & 0xff00) + 6, "GLCD.SVC is the resident below the BDOS");
+  assert.equal(word(6), word(m.sym("PZTOP")) & 0xff00, "GLCD.SVC is the resident below the BDOS");
   assert.equal(word(m.sym("VPUTV")), word(word(m.sym("GLVEC"))), "the vector is its table's");
   m.mark = m.output.length;
   m.typeMatrix("unload\r");

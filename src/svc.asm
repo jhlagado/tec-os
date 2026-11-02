@@ -10,11 +10,13 @@
 
 DMAGIC	EQU	$0344		; 'D', format version 3
 DF      EQU     $0100           ; the file
-DDEP    EQU     2               ; dependencies; resident, the previous owner
+DDEP    EQU     2               ; dependencies
 DFLG    EQU     3               ; bit 0 removable
 DREM    EQU     4               ; REMOVE, from the header's start
-DSIZ    EQU     6               ; header and image; resident, the JP
+DSIZ    EQU     6               ; header and image
+DOLD    EQU     6               ; resident, the registry's head before it
 DXTR    EQU     8               ; extra memory after the image
+DOWN    EQU     8               ; resident, the owner before it, 0 at the last
 DREL    EQU     10              ; relocation bytes
 DSTK    EQU     12              ; BDOS, BIOS and CCP stack; resident, the room left
 DINI    EQU     15              ; INIT, from the header's start
@@ -42,7 +44,7 @@ SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         CALL    SVCSHUT
         POP     HL
         RET     C
-        LD      L,A             ; the registry's head and the owner's, then
+        LD      L,DOLD          ; the registry's head and the owner's, then
         LD      DE,REGHEAD      ; the generation and the top
         LD      BC,3
         LDIR
@@ -160,22 +162,24 @@ SVCR1:  LD      A,B
         LD      (HL),A
         JR      SVCR1
 SVCMOV:
+        LD      BC,(DF+DSIZ)    ; the size, before the fields go over it
+        PUSH    BC
         LD      HL,REGHEAD      ; the resident's fields, in the header
-        LD      DE,DF
+        LD      DE,DF+DOLD
         LD      BC,3
         LDIR
-        LD      BC,(DF+DSIZ)
-        LD      HL,(PZTOP)
-        LD      (DF+DSIZ+1),HL
+        LD      HL,BENTRY       ; the page's offset 0 enters the BDOS
+        LD      (DF+1),HL
         LD      A,$C3
-        LD      (DF+DSIZ),A
+        LD      (DF),A
+        POP     BC
         LD      HL,DF           ; the move; only (0006h) is lowered
         LD      A,(PRLDL)
         LD      D,A
         LD      E,L
         LDIR
         LD      H,A
-        LD      L,6
+        LD      L,B
         LD      (PZBDOS+1),HL
         LD      L,DINI
         CALL    SVCCALL
@@ -243,7 +247,7 @@ SVCLK:  POP     HL              ; link the records, then commit
 SVCCOM: LD      A,D
         LD      (SVCHEAD),A
         LD      H,A
-        LD      L,6
+        LD      L,0
         LD      (PZTOP),HL      ; the commit
         LD      A,(SVCRC)
 SVCRET: LD      (SVCRC),A
@@ -267,9 +271,17 @@ SVCCALL:LD      A,$80
 ; D = the service's page, E = the page above its last. Flags and HL kept.
 SVCBND: LD      A,(PRLDL)
         LD      D,A
-        LD      E,8
+        LD      E,DOWN
         LD      A,(DE)
+        CALL    SVCABV
         LD      E,A
+        RET
+
+; A = a service's owner: A = the page above that service. Carry kept.
+SVCABV: INC     A
+        DEC     A
+        RET     NZ
+        LD      A,(STUBAD+1)
         RET
 
 ; Carry unless HL, or at SVCCKA the page A, is in the service's pages.
@@ -311,8 +323,9 @@ CMDDL:  OR      A
         CALL    PUTCHAR
         POP     HL
         PUSH    HL
-        LD      L,8
+        LD      L,DOWN
         LD      A,(HL)
+        CALL    SVCABV
         SUB     H
         LD      L,A
         LD      H,0
@@ -320,7 +333,7 @@ CMDDL:  OR      A
         LD      DE,CRLFMSG
         CALL    PUTSTR
         POP     HL
-        LD      L,DDEP
+        LD      L,DOWN
         LD      A,(HL)
         JR      CMDDL
 

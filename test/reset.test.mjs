@@ -180,19 +180,15 @@ const FIELDS = {
   "(0001h) low": (m) => m.write(1, m.read(1) ^ 1),
   "(0002h) high": (m) => m.write(2, m.read(2) ^ 1),
   "(0005h)": (m) => m.write(5, 0xc9),
-  // The same jump one byte up, so that only the low byte tells.
-  "STUBAD's low byte": (m) => {
-    const s = S(m);
-    const jump = [m.read(s), m.read(s + 1), m.read(s + 2)];
-    jump.forEach((v, i) => m.write(s + 1 + i, v));
-    m.write(m.sym("STUBAD"), 7);
-  },
   "the stub's JP": (m) => m.write(S(m), 0xc9),
   "the stub's target, low": (m) => m.write(S(m) + 1, m.read(S(m) + 1) ^ 1),
   "the stub's target, high": (m) => m.write(S(m) + 2, m.read(S(m) + 2) ^ 1),
   "W's low byte": (m) => m.write(6, 7),
   "W below 8000h": (m) => m.write(7, 0x7f),
-  "W above S": (m) => m.write(7, (S(m) >> 8) + 1),
+  "W above S": (m) => {
+    m.write(6, 0);
+    m.write(7, (S(m) >> 8) + 1);
+  },
 };
 for (const [name, spoil] of Object.entries(FIELDS)) {
   test(`recognition refuses ${name}`, () => {
@@ -205,10 +201,10 @@ for (const [name, spoil] of Object.entries(FIELDS)) {
 
 test("W at exactly 8000h and at S is recognised", () => {
   const m = remapped();
-  m.write(6, 6);
+  m.write(6, 0);
   m.write(7, 0x80);
   reset(m);
-  assert.deepEqual(idx(m), [3, 2, 0, 0], "8000h, or rather 8006h");
+  assert.deepEqual(idx(m), [3, 2, 0, 0], "8000h");
   m.write(7, S(m) >> 8);
   reset(m);
   assert.deepEqual(idx(m), [3, 2, 0, 0]);
@@ -221,7 +217,7 @@ test("a real service loaded is recognised, and is gone after the reset", async (
   const m = remapped(image);
   const top = word(m, 6);
   m.command("RES.SVC");
-  assert.equal(word(m, 6), top - 0x100);
+  assert.equal(word(m, 6), (top & 0xff00) - 0x100);
   reset(m);
   assert.deepEqual([idx(m), word(m, 6), m.read(m.sym("SVCHEAD")), word(m, m.sym("REGHEAD"))], [[3, 2, 0, 0], top, 0, 0]);
 });

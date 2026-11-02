@@ -145,7 +145,7 @@ test("without EXPAND 1, cold boot says TEC-OS needs 64K and stops", () => {
 });
 
 test("MOVE refuses any bank-1 byte, and a bank-0 byte at or above (0006h)", () => {
-  const entry = 0xb806;
+  const entry = 0xb815;
   for (const [c, ok] of [
     [{ label: "bank 1 from 7FFFh", dst: 0, src: 1, hl: 0x1000, de: 0x7fff, bc: 2 }, false],
     [{ label: "bank 1 at BCFFh, below the history", dst: 1, src: 0, hl: 0xbcff, de: 0x1000, bc: 1 }, false],
