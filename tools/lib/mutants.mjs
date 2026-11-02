@@ -441,4 +441,8 @@ export const MUTANTS_FIXES = [
     ...f(["CP MAXDRV", "JR NC,CCPDA", "LD E,A", "LD D,0", "LD HL,DRVIDX", "ADD HL,DE", "LD A,(HL)", "OR A", "LD A,E", "JR NZ,CCPDR", "CCPDA: XOR A", "CCPDR: LD (BOOTDRV),A"], ["LD (BOOTDRV),A"], ["test/mount.test.mjs"], C),
   },
   { name: "13: the user number set to 0", ...f(["RSTAIL: XOR A", "LD (CURDRV),A", "LD H,A"], ["RSTAIL: XOR A", "LD (CURDRV),A", "LD (USERNO),A", "LD H,A"]) },
+  { name: "R/O: a sequential write let through", ...f(["FNWRITE:", "CALL ROFCB"], ["FNWRITE:", "CALL CHKRO"]) },
+  { name: "R/O: a random write let through", ...f(["LD (ZEROFIL),A", "CALL ROFCB", "CALL RANDPREP"], ["LD (ZEROFIL),A", "CALL CHKRO", "CALL RANDPREP"]) },
+  { name: "R/O: a rename let through", ...f(["JR Z,MUTCOPY", "LD HL,(MATCHPTR)", "CALL ROTEST", "MUTCOPY:"], ["JR Z,MUTCOPY", "MUTCOPY:"]) },
+  { name: "R/O: function 30 refused as well", ...f(["AND $10", "JR Z,MUTCOPY"], ["AND $10"]) },
 ];

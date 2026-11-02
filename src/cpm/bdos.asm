@@ -680,6 +680,19 @@ FNSRCHN:
         CALL    FINDENT
         JP      RETA
 
+; File R/O, as CP/M 2.2's check_rofile and check_rodir: a write's FCB, or the
+; directory entry at HL of a rename or an erase, with t1's bit 7 set goes no
+; further. ROFCB checks the drive first.
+ROFCB:  CALL    CHKRO
+        LD      HL,(PARAM)
+ROTEST: LD      DE,9
+        ADD     HL,DE
+        BIT     7,(HL)
+        RET     Z
+        LD      HL,ERRFILE
+        CALL    DISKERR
+        JP      CHDROP
+
 FNDELETE:
         CALL    CHKRO
         LD      HL,(PARAM)
@@ -695,16 +708,8 @@ DELLOOP:
         CP      $FF
         JR      Z,DELDONE
         LD      HL,(MATCHPTR)
-        LD      DE,9
-        ADD     HL,DE
-        LD      A,(HL)
-        AND     $80
-        JR      Z,DELFREE
-        LD      HL,ERRFILE
-        CALL    DISKERR
-        JP      CHDROP
-
-DELFREE:
+        CALL    ROTEST
+        CALL    FREEENT
         CALL    FREEENT
         LD      HL,(MATCHPTR)
         LD      (HL),$E5
@@ -805,7 +810,7 @@ MAKEUSED:
         RET
 
 FNWRITE:
-        CALL    CHKRO
+        CALL    ROFCB
         XOR     A
         LD      (ZEROFIL),A
         CALL    WRITESEQ
@@ -839,6 +844,14 @@ MUTLOOP:
         CALL    FINDENT
         CP      $FF
         JP      Z,DELDONE
+        LD      A,(COPYPTR)     ; a rename's name is 17 bytes in, function
+        LD      HL,PARAM        ; 30's 1: a rename of a read-only file is
+        SUB     (HL)            ; refused, as CP/M 2.2 refuses it, and its
+        AND     $10             ; attributes can still be changed
+        JR      Z,MUTCOPY
+        LD      HL,(MATCHPTR)
+        CALL    ROTEST
+MUTCOPY:
         LD      HL,(COPYPTR)
         LD      DE,(MATCHPTR)
         INC     DE
@@ -1016,7 +1029,7 @@ FNWRZERO:
 
 RANDWRT:
         LD      (ZEROFIL),A
-        CALL    CHKRO
+        CALL    ROFCB
         CALL    RANDPREP
         JR      C,RANDRET
         CALL    WRITESEQ

@@ -118,3 +118,69 @@ test("function 13 from user 5 leaves the user number 5, on drive A", () => {
   r.fcb(0, "FIVE    DAT");
   assert.notEqual(r.bdos(15), 0xff, "user 5's file opens");
 });
+
+/** BDOS function C, to its return or to a BDOS error's wait for a key; then the key, and the CCP's prompt. */
+function attempt(r, c, de = FCB) {
+  const { m } = r;
+  const cpu = m.cpu.cpu;
+  const saved = { pc: cpu.pc, sp: cpu.sp };
+  m.write(0x0ffe, 0x00);
+  m.write(0x0fff, 0x0f);
+  Object.assign(cpu, { c, d: de >> 8, e: de & 0xff, sp: 0x0ffe, pc: 0x0005 });
+  m.mark = m.output.length;
+  const [cin, cinEnd] = [m.sym("CINLP"), m.sym("CINWE")]; // a wait for a key, not a poll
+  m.runUntil(() => m.pc === 0x0f00 || (m.pc >= cin && m.pc < cinEnd), 200_000_000, `BDOS ${c}`);
+  if (m.pc === 0x0f00) {
+    const a = cpu.a;
+    Object.assign(cpu, saved);
+    return { a };
+  }
+  const text = m.text(m.mark);
+  m.type(" ");
+  m.expect(/\r\nA>$/, { maxCycles: 100_000_000 });
+  m.runUntil(() => m.ready(), 20_000_000, "the prompt's input");
+  return { text };
+}
+
+test("functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the card is unchanged", () => {
+  const image = standardCard();
+  volume(image, "A").write("R.DAT", Uint8Array.from({ length: 256 }, (_, i) => i & 0xff), { readOnly: true });
+  const r = rig(image);
+  const { m } = r;
+  const open = () => {
+    r.fcb(0, "R       DAT");
+    assert.notEqual(r.bdos(15), 0xff);
+    assert.equal(m.read(FCB + 9) & 0x80, 0x80, "open gives the FCB the attribute");
+    fill(9).forEach((v, k) => m.write(DMA + k, v));
+  };
+  const cases = [
+    ["21", () => open(), 21],
+    ["34", () => (open(), m.write(FCB + 33, 1)), 34],
+    ["40", () => (open(), m.write(FCB + 33, 5)), 40],
+    ["23", () => (r.fcb(0, "R       DAT"), [0, ...Buffer.from("S       DAT")].forEach((v, i) => m.write(FCB + 16 + i, v))), 23],
+  ];
+  for (const [name, setup, fn] of cases) {
+    const before = image.slice();
+    setup();
+    const got = attempt(r, fn);
+    assert.match(got.text ?? `returned ${got.a}`, /Bdos Err On A: File R\/O/, `function ${name}`);
+    assert.equal(Buffer.compare(image, before), 0, `function ${name}: the card unchanged`);
+  }
+  assert.deepEqual(volume(image, "A").list().map((x) => [x.name, x.readOnly]), [["R.DAT", true]]);
+});
+
+test("function 30 still changes a read-only file's attributes, as CP/M 2.2's does, and the file can then be written", () => {
+  const image = standardCard();
+  volume(image, "A").write("R.DAT", new Uint8Array(128), { readOnly: true });
+  const r = rig(image);
+  r.fcb(0, "R       DAT");
+  assert.equal(r.bdos(30), 0, "the attribute cleared");
+  assert.deepEqual(volume(image, "A").list().map((x) => [x.name, x.readOnly]), [["R.DAT", false]]);
+  r.fcb(0, "R       DAT");
+  assert.notEqual(r.bdos(15), 0xff);
+  fill(1).forEach((v, k) => r.m.write(DMA + k, v));
+  r.m.write(FCB + 32, 1);
+  assert.equal(r.bdos(21), 0, "a write once it is read-write");
+  assert.notEqual(r.bdos(16), 0xff);
+  assert.equal(volume(image, "A").read("R.DAT").length, 256);
+});

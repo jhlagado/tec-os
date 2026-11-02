@@ -57,6 +57,12 @@ next prompt in that number's low four bits.
 Function 13 resets the disks and selects drive A, and leaves the user number
 as it is, as CP/M 2.2's does.
 
+A file with the read-only attribute (`t1`'s bit 7) is refused with
+`File R/O` (`Bdos Err On A: File R/O` for a file on A:), and the program
+ends after a key, for a write (21, 34, 40) through an FCB opened on it, a
+rename (23) and an erase (19), as in CP/M 2.2. Function 30 still sets or clears the attribute on such a
+file, as CP/M 2.2's does, so a program can make it read-write again.
+
 ## Command processor
 
 `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the
