@@ -126,6 +126,12 @@ Limits:
 **Flush before a reset.** A reset discards dirty lines and never writes them, to the
 old card or a new one. Press `^C` at the prompt before a reset or taking the card out.
 
+## A damaged directory
+
+A block number past the end of a volume has no place in the allocation vector,
+so logging the drive in passes over it, on drive A too. Reading that block says
+`Bad Sector`, the rest of the volume works, and `ERA` takes the file.
+
 ## Card removal
 
 **A changed card needs a reset.** The TEC-1G has no card-detect line, and

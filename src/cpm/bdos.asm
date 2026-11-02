@@ -2311,11 +2311,16 @@ CLRBLK:
         LD      (HL),A
         RET
 
+; Z if DE is 0 or past the volume's end: such a block has no bit, so a directory
+; with one can still be logged in and its file erased. Reading it is refused.
 BITPTR:
         LD      A,D
         OR      E
         RET     Z
-        CALL    CHKBLK
+        CALL    BLKPAST
+        SBC     A,A             ; FFh if past the end
+        INC     A
+        RET     Z
         LD      A,E
         AND     7
         LD      B,A
@@ -2347,12 +2352,17 @@ BITDONE:
 ; block-to-record shift. DE is the block; preserve it and HL/BC. IX identifies
 ; the current DPB on return. Invalid references follow the fatal I/O path.
 CHKBLK:
+        CALL    BLKPAST
+        JR      C,BADSECT
+        RET
+
+; Carry if block DE is past the end of the current drive. Sets IX to its DPB.
+BLKPAST:
         LD      IX,(DPBPTR)
         LD      A,(IX+5)
         CP      E
         LD      A,(IX+6)
         SBC     A,D
-        JR      C,BADSECT
         RET
 
 ; Z means the current drive needs its allocation vector rebuilt. The BIOS
