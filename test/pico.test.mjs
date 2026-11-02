@@ -595,14 +595,17 @@ test("row 3: each word is cleared by a take, and the flag doesn't stay for the n
   assert.equal(lcdRow(g, 3), "", "GLCD?");
 });
 
-test("row 3: GLCD? is cleared by GLCD.SVC loading under PICO.SVC, which keeps the console", () => {
+test("row 3: GLCD? stays while PICO.SVC keeps the console, and a CON UC1 that loads clears it", () => {
   const m = start({ "PICO.SVC": PICO_SVC["PICO.SVC"], "GLCDX.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("PICO.SVC") });
   say(m, "CON UC1");
   assert.equal(lcdRow(m, 3), "GLCD?");
   const top = word(m, 6);
-  assert.doesNotMatch(say(m, "GLCDX.SVC"), /GLCDX\.SVC\?/);
+  assert.match(say(m, "GLCDX.SVC"), /GLCDX\.SVC\?/);
+  assert.equal(word(m, 6), top, "only CON UC1 installs it beside the PICO9918");
+  assert.equal(lcdRow(m, 3), "GLCD?");
+  say(m, "REN GLCD.SVC=GLCDX.SVC");
+  say(m, "CON UC1");
   assert.equal(word(m, 6), top - 0x600, "it loaded");
-  assert.notEqual(m.read(m0(m)), UC1, "and took no console");
   assert.equal(lcdRow(m, 3), "");
 });
 
@@ -803,4 +806,16 @@ test("the web host: a card whose files were renamed by hand has its .DRV display
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
   assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, changed: true });
   assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nMY.DRV\r\n");
+});
+
+test("a failed CON UC1 leaves the console as it was, and a later one takes the GLCD", () => {
+  const m = start({ "PICO.SVC": PICO_SVC["PICO.SVC"], "GLCD.XXX": GLCD_SVC, "STARTUP.CMD": startupFile("PICO.SVC") });
+  assert.equal(m.read(m0(m)), CRT);
+  say(m, "CON UC1");
+  assert.equal(m.read(m0(m)), CRT, "the console is still the PICO9918");
+  assert.equal(m.read(3) & 3, CRT, "and so is the IOBYTE's CON: field");
+  say(m, "REN GLCD.SVC=GLCD.XXX");
+  say(m, "CON UC1");
+  assert.equal(m.read(m0(m)), UC1);
+  assert.equal(m.read(3) & 3, UC1);
 });

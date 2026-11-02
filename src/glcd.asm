@@ -59,6 +59,9 @@ GLCLD:	LD	A,(CONDEV)
 	LDIR
 	CALL	SVCGO
 	RET	NC
+	LD	A,(CONMOD)	; the console stays, so the field goes back
+	LD	B,A
+	CALL	CONFLD
 	LD	HL,GLCMSG	; the LCD says so, carry set
 	JP	LCDWRD
 
@@ -84,13 +87,17 @@ SVCGO:	CALL	LOADCOM
 	JR	NZ,WRDCLR	; PICO.SVC keeps the console, and GLCD? is false
 	LD	B,CMUC1
 CONSET:	CALL	WRDCLR		; a display has come: the word is false
-	LD	A,(IOBYTE)	; the mode goes in the CON: field
-	AND	$FC
-	OR	B
-	LD	(IOBYTE),A
+	CALL	CONFLD		; the mode goes in the CON: field
 	LD	A,$FF		; CONACT no field: CONSEL acts
 	LD	(CONACT),A
 	JP	CONSEL
+
+; Put B, a console mode, in the IOBYTE's CON: field. Keeps B. Destroys AF.
+CONFLD:	LD	A,(IOBYTE)
+	AND	$FC
+	OR	B
+	LD	(IOBYTE),A
+	RET
 
 ; Clear the ROM's word from row 3 if it is still there, and otherwise leave the
 ; row as a program left it. Keeps B, and carry clear if it came clear. Destroys

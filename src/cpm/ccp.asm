@@ -1110,10 +1110,7 @@ CONCMP:
         INC     HL
 CONEND:
         CALL    ENDCHK
-        LD      A,(IOBYTE)
-        AND     $FC
-        OR      B
-        LD      (IOBYTE),A
+        CALL    CONFLD
         LD      A,B             ; UC1: the GLCD's driver, if it is not in
         CP      CMUC1
         CALL    Z,GLCLD
