@@ -129,12 +129,12 @@ checked against.
     Sources: `src/prl.asm`, `src/drv.asm`, `docs/drivers.md`, `drivers/`,
     `tools/lib/drv.mjs`, `tools/lib/drv-format.mjs`, `tools/lib/prl.mjs`,
     `test/programs/drvdemo.asm`.
-11. **Chaining commands** (planned). Several commands on one line with `!`;
-    a command that runs only after a success, with `:`; return codes; a
-    program that ends by starting another, with BDOS function 47. TEC-OS at
-    commit 98c6416 runs one command per line and has no function 47, and
-    this chapter will describe the release that adds them. Sources: that
-    release's `src/cpm/ccp.asm` and `src/cpm/bdos.asm`.
+11. **[Chaining commands](11-chaining-commands.md).** Several commands on
+    one line with `!`; a command that runs only after a success, with `:`;
+    the return code of BDOS function 108 and the failures the CCP sets; a
+    program that ends by starting another, with BDOS function 47; the
+    events that drop the rest of a line. Sources: `src/cpm/ccp.asm`,
+    `src/cpm/bdos.asm`, `src/drv.asm`, `docs/compatibility.md`.
 
 ### Part II: Inside TEC-OS
 
