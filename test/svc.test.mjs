@@ -301,6 +301,14 @@ test("NAME.SVC installs, from a drive too; a file that won't read and a refused 
   assert.equal(t.word(6), stub - 0x200);
 });
 
+test("an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing loaded", async () => {
+  const image = standardCard();
+  volume(image, "A").write("OK.DRV", (await svc()).file);
+  const m = boot(image);
+  assert.match(m.command("OK.DRV"), /OK\.DRV\?/);
+  assert.equal(m.read(m.sym("SVCHEAD")), 0, "nothing loaded");
+});
+
 test("SERVICES lists each service and its pages, the newest first, with none and after UNLOAD", async () => {
   const image = standardCard();
   volume(image, "A").write("OK.SVC", (await svc()).file);

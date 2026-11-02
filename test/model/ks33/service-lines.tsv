@@ -1,0 +1,197 @@
+# Every line saying "service" at 62d47ed, outside test/model/, the stage tools, test/fixtures/ and LICENSE: file:line, class, text.
+# Classes: service, record, hardware service, ROM table, and BDOS function for two lines that meant neither. book/ lines are classed here; their wording goes with the book (KD-156).
+README.md:5	ROM table	table of services at `C003h`.
+README.md:9	hardware service	the hardware services. It is laid out as a jump to cold boot at `C000h`,
+README.md:107	ROM table	- [ROM services](docs/rom-services.md) (the table at `C003h` and the 9 hardware services)
+book/01-introduction.md:39	ROM table	serial terminal, the keyboard scan and a table of services for the board's
+book/01-introduction.md:53	ROM table	- a table of services at `C003h` through which a program reaches the
+book/01-introduction.md:382	hardware service	`DEMO` uses the hardware services described in Chapter 9. It beeps, puts a
+book/01-introduction.md:393	hardware service	TEC-OS hardware services demo
+book/02-console.md:38	hardware service	the drives there at cold boot, and programs write to it through the services
+book/07-memory.md:226	hardware service	no service that gives a program space there.
+book/08-programs-and-console.md:233	ROM table	The ROM's table of services at `C003h`, which Chapter 9 describes, has the
+book/12-rom-and-build.md:37	hardware service	services at `C00Ah`, a word that points at the count of MAIN regions at
+book/12-rom-and-build.md:38	ROM table	`C00Dh`, and three more jumps: the mount service at `C00Fh`, the video
+book/12-rom-and-build.md:40	hardware service	describes the table from a program's side and Chapter 20 the services
+book/12-rom-and-build.md:48	hardware service	function table and the hardware services' table. Each group is headed by the
+book/12-rom-and-build.md:58	ROM table	ABI 3 had its mount service at `C01Dh`, and a card from that time can hold a
+book/12-rom-and-build.md:198	hardware service	- the hardware services' numbers and status codes in `abi.inc` are the ones
+book/13-memory-map.md:140	hardware service	service's scratch bytes, and the video terminal's state: an 80-byte row
+book/13-memory-map.md:271	ROM table	services. Cold boot clears all 16 KiB of it and marks every cache line
+book/15-bios-and-console.md:329	hardware service	A program claims the PICO9918 through the hardware services, to draw on it
+book/15-bios-and-console.md:333	hardware service	claim ends with the service's release or at warm boot, when `HWVREL` gives the
+book/15-bios-and-console.md:366	hardware service	services, as Chapter 9 describes.
+book/16-bdos.md:428	ROM table	(`src/cpm/bdos.asm:1600-1614`); the mount service calls it for a drive whose
+book/18-sd-card-and-volumes.md:12	ROM table	from the bottom up, and the last describes the mount service through which
+book/18-sd-card-and-volumes.md:256	ROM table	## The mount service
+book/18-sd-card-and-volumes.md:259	ROM table	list the drives through the mount service, `VOLSVC`, which a program reaches
+book/18-sd-card-and-volumes.md:277	hardware service	line of the block cache to the card, with interrupts off, and the service
+book/18-sd-card-and-volumes.md:281	hardware service	the index; an unmount clears the entry. Either way the service ends by
+book/18-sd-card-and-volumes.md:284	hardware service	(`src/vol.asm:662-674`). The service writes nothing of its own to the card.
+book/19-block-cache.md:175	ROM table	- every call of the mount service that mounts or unmounts a drive, whose
+book/19-block-cache.md:212	ROM table	call made with interrupts off returns with them off. The mount service's
+book/README.md:6	hardware service	services. This book is about using TEC-OS, writing programs for it and the
+book/README.md:120	hardware service	9. **The hardware services.** The table at `C003h` and ABI 4; checking for
+book/README.md:121	hardware service	TEC-OS; the nine services: board information, the 7-segment digits, the
+book/README.md:124	ROM table	`docs/rom-services.md`, `src/abi.asm`, `src/abi.inc`, `src/hwsvc.asm`,
+book/README.md:127	record	loads it; the `.DRV` format; `INIT` and `REMOVE`; the service registry
+book/README.md:128	record	and `ABIDRV`; the `PICO` service; writing and installing a small driver.
+book/README.md:175	ROM table	mount service, `ABIVOL`; deblocking 128-byte records into 512-byte
+book/README.md:182	ROM table	20. **The ROM services and the driver loader.** The dispatcher at `ABIHW` and
+book/README.md:183	hardware service	each service; `XMOVE` and `MOVE`; the seven steps of a driver's load;
+book/README.md:186	ROM table	`docs/drivers.md`, `docs/rom-services.md`.
+book/README.md:219	ROM table	- **B. ROM services.** The table at `C003h` entry by entry, the hardware
+book/README.md:220	hardware service	services by number with their registers and status codes, and `ABIDRV`.
+book/README.md:222	ROM table	`docs/rom-services.md`.
+book/README.md:243	hardware service	which no service drives; the DS1302 clock and the SD adaptor. Sources:
+book/appendix-c-memory-map.md:86	ROM table	| `C003h–C017h` | 21 | the table of ROM services |
+book/appendix-c-memory-map.md:150	ROM table	| `B958h–BCC4h` | 877 | the BIOS's disk state and buffers, the mount service's scratch and the video terminal's state |
+book/appendix-c-memory-map.md:185	ROM table	| `BC54h–BC61h` | 14 | `MNTCNT` to `MNTCB` | the mount service's scratch |
+book/appendix-g-tec-1g.md:22	hardware service	| `02h` | out | 7-segment segments | Service `DIGIT` |
+book/appendix-g-tec-1g.md:26	hardware service	| `05h`, `06h`, `F8h`, `F9h` | out | 8 × 8 LEDs | No service; `DEMO` writes them |
+book/appendix-g-tec-1g.md:28	hardware service	| `BEh`, `BFh` | in, out | PICO9918, data and control | The probe at cold boot; the console and service `VIDEO`'s restore, both in `PICO.DRV` |
+book/appendix-g-tec-1g.md:29	hardware service	| `FCh` | in, out | DS1302 clock | Services `INFO` and `RTC` |
+book/appendix-g-tec-1g.md:31	hardware service	| `FEh` | in | Matrix keyboard and joystick | The keyboard scan, services `KEYS` and `JOY` |
+book/appendix-g-tec-1g.md:44	hardware service	terminal receives a start bit. The ROM's own writes do: the `DIGIT` service
+book/appendix-g-tec-1g.md:45	hardware service	lights each digit with bit 6 set, and the `TONE` service toggles bit 7 with
+book/appendix-g-tec-1g.md:48	hardware service	and the speaker through the services of Chapter 9 and not by writing the port.
+book/appendix-g-tec-1g.md:133	hardware service	No TEC-OS service drives the 8 × 8 LEDs, and the ROM never writes their ports.
+book/appendix-g-tec-1g.md:150	hardware service	(`src/hwsvc.asm:292-303`). The `INFO` service reports it in bit 3 of `B`, and
+book/appendix-g-tec-1g.md:151	hardware service	the `RTC` service reads and sets its seven BCD registers (Chapter 9).
+docs/board-run.md:304	hardware service	| T15 LCD | The LCD's bus and busy flag | The LCD hardware service (21) |
+docs/board-run.md:310	hardware service	| T21 RTC | The DS1302: its time, rate, set and restore | The clock hardware service (27) and the clock TEC-OS reports |
+docs/board-run.md:311	hardware service	| T22 SEG7 | The 7-segment wiring | The digit hardware service (20) |
+docs/board-run.md:312	hardware service	| T23 SPEAKER | The speaker | The tone hardware service (23) |
+docs/board-run.md:313	hardware service	| T24 RGB8X8 | How the matrix decodes `05h`, `06h`, `F8h`, `F9h` | `DEMO.COM`'s LED scan: the ROM has no service for the matrix |
+docs/board-run.md:320	hardware service	| T31 MATRIX | The matrix keyboard's key numbers | The matrix keyboard console and the keys hardware service (25) |
+docs/board-run.md:321	hardware service	| T32 JOY | The joystick's bits | The joystick hardware service (24) |
+docs/compatibility.md:20	ROM table	copies, which refuse every byte in EXPAND 1 (see rom-services.md); any other, `SELMEM` (27) among them,
+docs/compatibility.md:111	ROM table	card, using the mount service in the table, `ABIVOL`. Mounts are for the session: a
+docs/compatibility.md:125	record	services (`ABIDRV`, ABI 4). `docs/drivers.md` is its interface. It goes in
+docs/console.md:106	ROM table	caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
+docs/diagnostics.md:319	hardware service	TEC-OS's hardware services set the clock, so T21 then sets it too. It waits
+docs/drivers.md:8	record	offers named services through the registry and calls the ROM only through
+docs/drivers.md:44	record	A dependency is 9 bytes: its least version, then a service's 8-byte name.
+docs/drivers.md:61	record	pages. It walks the owner list, so a driver with no services is listed.
+docs/drivers.md:104	hardware service	service `LCD` takes the row over, and no take clears it. A program writing the LCD's
+docs/drivers.md:151	record	| 2 | 8 | The service's name |
+docs/drivers.md:158	record	the driver stays installed with no services and the load reports 2.
+docs/drivers.md:199	record	## Services
+docs/drivers.md:201	record	A client finds a service with `ABIDRV` (`docs/rom-services.md`):
+docs/drivers.md:209	service	service frees its pages, and a kept pointer runs whatever is there. `ABIDRV`
+docs/drivers.md:214	record	Each service's table is defined in a document with its interface version.
+docs/drivers.md:228	hardware service	Each assumes the caller holds the claim (service `VIDEO`), as a program writing the
+docs/rom-services.md:1	ROM table	# ROM services
+docs/rom-services.md:3	hardware service	Status: **Built**, ABI 4.0. The hardware services' entry, `ABIHW` at
+docs/rom-services.md:4	hardware service	`C00Ah`, has 9 services in `src/hwsvc.asm`, 485 bytes of ROM in all, and
+docs/rom-services.md:31	hardware service	address under the name below, and the service numbers and status codes, and
+docs/rom-services.md:33	hardware service	exactly: a new major may move what follows `ABIMAIN` and renumber the services.
+docs/rom-services.md:38	hardware service	don't, two things are done. Service numbers start at `HWBASE`, 19, so that the
+docs/rom-services.md:51	hardware service	| `C00Ah` | `ABIHW` | `JP` to the hardware services |
+docs/rom-services.md:55	record	| `C015h` | `ABIDRV` | `JP DRVSVC`: the service registry, below; C = 0 find, 1 enumerate |
+docs/rom-services.md:70	record	## The service registry
+docs/rom-services.md:77	record	| 0, find | DE = a service's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
+docs/rom-services.md:81	record	Find returns the newest driver's service when two offer one. AF, BC, DE and
+docs/rom-services.md:89	hardware service	## Calling the services
+docs/rom-services.md:92	hardware service	`ABIMAJ`, then calls `ABIHW` with the service number in C and arguments in
+docs/rom-services.md:94	hardware service	success; results come back as each service lists. IX, IY and the alternate
+docs/rom-services.md:101	hardware service	| 1 | No such service, or an argument out of range |
+docs/rom-services.md:104	hardware service	The rules that make the services safe for CP/M programs:
+docs/rom-services.md:106	hardware service	- **The caller's stack.** No service switches stacks or touches the TPA
+docs/rom-services.md:109	hardware service	- **Resident state only.** The services keep their state in the resident
+docs/rom-services.md:111	hardware service	- **Never the BDOS.** Services do not call the BDOS, so a program can call
+docs/rom-services.md:113	hardware service	- **Port 01h stays safe.** Every service that writes port 01h holds bit 6,
+docs/rom-services.md:143	hardware service	## Services
+docs/rom-services.md:145	hardware service	| C | Service | Arguments | Results | Stack | ROM |
+docs/rom-services.md:201	hardware service	LEDs, 7-segment patterns and random numbers have no ROM service: `DEMO.COM`
+docs/rom-services.md:229	hardware service	| Hardware services | 485 | 3, 4 | Stays |
+docs/rom-services.md:234	hardware service	console and services regions by source file. The memory map now gives the
+docs/rom-services.md:238	hardware service	probe's, the services' and the table's at ABI 4.0, the table's again when it
+docs/rom-services.md:241	ROM table	Nothing in the ROM today belongs on the card. The native program services,
+docs/rom-services.md:246	hardware service	Writing the proposal for these services turned up three faults. All three are fixed (67 bytes
+drivers/glcd.asm:32	record	; STARTUP.CMD gives way to PICO.DRV. It offers no service. REMOVE gives the
+drivers/pico.asm:8	record	; the PICO9918 is claimed, since the entries below may be in use. Its service,
+src/abi.asm:11	hardware service	ABIHW:	JP	HWSVC		; C00Ah hardware services: C = service
+src/abi.asm:19	record	ABIDRV:	JP	DRVSVC		; C015h the service registry: C = 0 find,
+src/abi.inc:2	hardware service	; services' numbers and status codes, for programs. The table is at C003h. A
+src/abi.inc:11	hardware service	ABIHW	EQU	$C00A		; CALL: hardware services, C = service
+src/abi.inc:19	hardware service	; ABIHW's services, in C, from HWBASE, the first number no ABI 3 program used.
+src/abi.inc:21	hardware service	HWBASE	EQU	19		; the first service
+src/abi.inc:36	hardware service	HWEBAD	EQU	1		; no such service, or an argument out of range
+src/cpm/bdos.asm:578	BDOS function	; identifies the dispatched service. Zero means logical default; 1..16 means
+src/cpm/bdos.asm:600	BDOS function	; lets close avoid a disk write until a later mutation service changes it.
+src/data.asm:8	ROM table	; ABI 3 had its mount service at C01Dh, and a card from then can still hold a
+src/data3.asm:93	hardware service	; The hardware services, by number: HWINFO up to HWRTC.
+src/drv.asm:1	record	; The driver loader and the service registry. A .DRV file is read to 0100h:
+src/drv.asm:56	record	; its pages reserved with no services.
+src/hwsvc.asm:1	ROM table	; Hardware services, ABI 4.0 (docs/rom-services.md). CALL ABIHW with the
+src/hwsvc.asm:2	hardware service	; service in C, from HWBASE, and arguments in B, DE and HL. Returns A = status
+src/hwsvc.asm:3	hardware service	; with Z and carry clear on success; results as each service says. IX, IY and
+src/hwsvc.asm:9	hardware service	; These are the services that would otherwise fight the OS for a port: the
+src/hwsvc.asm:29	hardware service	HWEBAD	EQU	1		; no such service, or an argument out of range
+src/hwsvc.asm:48	hardware service	; The dispatcher. C = the service, B, DE and HL its arguments, which reach it
+src/hwsvc.asm:51	hardware service	; AF and what the service does.
+src/hwsvc.asm:65	hardware service	LD	E,(HL)		; DE = the service
+src/hwsvc.asm:68	hardware service	EX	DE,HL		; HL = the service
+src/hwsvc.asm:70	hardware service	EX	(SP),HL		; the service is the return address,
+src/hwsvc.asm:78	hardware service	; The INFO service. Returns B = CONDEV's bits, with HWBRTC if a DS1302 answers
+src/ram.asm:234	record	REGHEAD:DS      2               ; the first service record
+src/vol.asm:578	ROM table	; The mount service, ABIVOL. A = 0: mount drive C with the volume at
+test/clients.test.mjs:136	hardware service	/** A board at its prompt with OLD's binaries on A:, and each pc reached in the services. */
+test/clients.test.mjs:145	hardware service	const seen = { services: 0, svc: 0, c01d: 0, strayed: 0 };
+test/clients.test.mjs:150	hardware service	if (inService.includes(m.pc)) seen.services += 1;
+test/clients.test.mjs:162	hardware service	test("an old DEMO prints no throughout, reaches no service, and leaves page zero unchanged", () => {
+test/clients.test.mjs:175	hardware service	assert.equal(seen.services, 0, "no service ran");
+test/clients.test.mjs:183	hardware service	// PICO.DRV from a 2d5ce25 starter card, format 3 and ABI 4 with services from 0.
+test/devices.test.mjs:1	hardware service	// BIOS devices, the hardware services and the table at C003h.
+test/drv.test.mjs:1	record	// Drivers and the service registry: DRVDEMO and its variants, loaded as the
+test/drv.test.mjs:211	record	test("the older registry follows a driver's last record, so every service stays found", async () => {
+test/drv.test.mjs:266	record	test("INIT returning 0 installs a driver with no services", async () => {
+test/drv.test.mjs:385	record	test("INIT lies and REMOVE refuses: installed with no services, and the load says so", async () => {
+test/drv.test.mjs:409	record	test("no client can see a service while its INIT runs", async () => {
+test/drv.test.mjs:484	record	test("two drivers offering one service: the newest, and removal uncovers the older", async () => {
+test/hwsvc.test.mjs:1	hardware service	// The ABIHW hardware services, called directly at the A> prompt with the
+test/hwsvc.test.mjs:3	hardware service	// Every write below that stack counts towards the service's stack depth.
+test/hwsvc.test.mjs:20	hardware service	/** Call service c with the registers given; returns the registers, the flags,
+test/hwsvc.test.mjs:36	hardware service	m.runUntil(() => m.pc === BACK, maxCycles, `service ${c} returning`);
+test/hwsvc.test.mjs:50	hardware service	assert.equal(cpu.sp, STACK, `service ${c} balances the stack`);
+test/hwsvc.test.mjs:83	hardware service	test("hardware services: information, bad numbers, digits, LCD, tone", () => {
+test/hwsvc.test.mjs:96	hardware service	assert.deepEqual([r.b, r.de, r.hl], [0x5a, 0x1234, 0x5678], `service ${n} leaves the registers`);
+test/hwsvc.test.mjs:125	hardware service	test("hardware services: joystick and matrix keys", () => {
+test/hwsvc.test.mjs:143	hardware service	test("hardware services: the claim, INFO's claim bit, and text at a position", () => {
+test/hwsvc.test.mjs:162	hardware service	test("hardware services: the DS1302 clock", () => {
+test/hwsvc.test.mjs:190	hardware service	test("hardware services: stack depths", () => {
+test/hwsvc.test.mjs:194	hardware service	for (const [c, d] of Object.entries(depths)) assert.ok(d <= 16, `service ${c} used ${d} bytes of stack`);
+test/lib/fixtures.mjs:16	hardware service	/** src/abi.inc's plain numbers by name: services, status codes, bits and offsets. */
+test/mount.test.mjs:3	hardware service	// service through MOUNT.COM and VOLS.COM, and a reset giving the card's own
+test/pico.test.mjs:492	record	test("a claim held at UNLOAD after CON TTY: refused, the service still found, and allowed after the release", () => {
+test/pico.test.mjs:501	record	assert.equal(picoTable(m), table, "the service is found while claimed");
+test/programs/demo.asm:11	hardware service	HWSVC   EQU     ABIHW           ; hardware services
+test/programs/demo.asm:29	hardware service	LD	A,(ABIMAJ)	; another major's services have other numbers
+test/programs/demo.asm:95	hardware service	CALL	LEDSCAN		; the ROM has no service for them
+test/programs/demo.asm:438	hardware service	TITLE:  DB      13,10,"TEC-OS hardware services demo",13,10,"$"
+test/programs/drvdemo.asm:1	record	; DRVDEMO: a driver offering one service, "DEMO" version 2, a table of one
+test/programs/drvdemo.asm:22	record	LD      DE,REC+2        ; can a client see this service yet?
+test/programs/drvdemo.asm:141	record	LD      HL,0            ; no services
+test/programs/drvdemo.asm:180	record	SERVICE:LD      HL,COUNT
+test/programs/drvdemo.asm:227	record	TABLE:  JP      SERVICE
+test/programs/mount.asm:1	ROM table	; MOUNT: mounts a volume on a drive through the mount service at ABIVOL.
+test/programs/res.asm:1	record	; RES.DRV: a driver with no service. Its INIT replaces CONOUT in the RAM BIOS
+test/programs/vols.asm:1	ROM table	; VOLS: lists the card's volumes through the mount service at ABIVOL: for
+test/reset.test.mjs:77	ROM table	/** The mount service, as a program calls it: its BDOS call needs the program's exit after it. */
+test/reset.test.mjs:708	hardware service	test("abi.inc is not moved: the services and the table still read as ABI 4", () => {
+test/system.test.mjs:58	hardware service	// hardware services' entry in the table)
+tools/build.mjs:153	hardware service	/** The services' numbers and status codes in abi.inc against hwsvc.asm, which
+tools/build.mjs:159	hardware service	check(rom.size > 0, "hwsvc.asm has no service numbers");
+tools/build.mjs:162	hardware service	check(rom.get("HWINFO") === rom.get("HWBASE") && rom.get("HWRTC") === rom.get("HWBASE") + rom.get("HWCOUNT") - 1, "the services run from HWBASE, HWCOUNT of them");
+tools/lib/model.mjs:509	ROM table	* the mount service has put index 17 on A: when SELECTED.
+tools/lib/model.mjs:523	ROM table	if (cpu.a !== 0) throw new Error(`the mount service gave ${cpu.a}`);
+tools/lib/mutants.mjs:258	ROM table	/** C01Dh a jump to a stub that passes the mount service's function N on, and returns from any other. */
+tools/lib/mutants.mjs:318	hardware service	// HWBASE moved in hwsvc.asm and abi.inc alike, the services' numbers left.
+tools/lib/mutants.mjs:321	hardware service	{ name: "old DEMO: reaches the services", edits: [asm(H, ["SUB HWBASE", "CP HWCOUNT"], ["CP HWCOUNT"]), asm(H, ["LD HL,HWTAB0"], ["LD HL,HWTAB"])], tests: ["test/clients.test.mjs"], only: "^an old DEMO" },
+tools/lib/mutants.mjs:323	ROM table	{ name: "old VOLS: reaches the mount service", ...oldFwd(2, "^an old VOLS") },
+tools/lib/mutants.mjs:324	ROM table	{ name: "old MOUNT unmounting: reaches the mount service", ...oldFwd(1, "^an old MOUNT, to unmount") },
+tools/lib/mutants.mjs:325	ROM table	{ name: "old MOUNT mounting: reaches the mount service", ...oldFwd(0, "^an old MOUNT, to mount") },
+tools/media.mjs:57	ROM table	* The ROM figures in docs/rom-services.md, from the debug80 build: each
+tools/media.mjs:68	ROM table	const path = resolve(ROOT, "docs/rom-services.md");
+tools/media.mjs:72	ROM table	if (!re.test(text)) throw new Error(`docs/rom-services.md has no ${name} span`);
