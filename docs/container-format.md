@@ -57,8 +57,9 @@ volumes continues the table in blocks 1–7, 16 descriptors to a block, up to
 127 in all; no volume can start below block 8, so those blocks are always
 free. The header's table sum is the 16-bit sum of every byte of the blocks
 that hold descriptors (`count / 16` of them, rounded down). In 1.1 the
-descriptors are in ascending order of start block, and labels are unique.
-A ROM that reads only 1.0 refuses a card of more than 8 volumes on its
+labels are unique. In every version the descriptors are in ascending order
+of start block, and a 1.1 card that asks for N drives mounts no volume on a
+drive past the Nth. A ROM that reads only 1.0 refuses a card of more than 8 volumes on its
 count, and mounts a 1.1 card of 8 or fewer as before.
 
 ## Allocation vectors
@@ -81,20 +82,20 @@ the error code on the diagnostic console:
 | 20h | Block 0 unreadable |
 | 21h | Magic |
 | 22h | Major version |
-| 23h | Header or descriptor size |
+| 23h | Header or descriptor size, or a 1.1 drives field above 4 |
 | 24h | Volume count |
-| 25h | Checksum |
+| 25h | Checksum, or the 1.1 table sum |
 | 26h | Descriptor id, flags, geometry, length or alignment |
 | 27h | Payload beyond the container, or a 32-bit sum that wraps |
-| 28h | A payload starting before the previous one ends (1.1 order), or overlapping |
-| 29h | Drive letter out of range or assigned twice |
+| 28h | A payload starting before the previous one ends: out of start order, or overlapping |
+| 29h | Drive letter out of range, past the 1.1 drives field's N, or assigned twice |
 | 2Ah | No volume mounted as drive A |
 
-| 25h | also the 1.1 table sum |
-
 The ROM checks the table in one pass, in table order. `tecvol` applies the
-same checks, and also requires unique ids and, in 1.1, unique labels, and
-an image as long as the header says. The ROM cannot check the card's capacity; a payload past the
+same checks, so a card `tecvol verify` passes mounts, and also requires
+unique ids, known cache flags, at most one volume written behind and never a
+read-only one, at most 8 volumes in 1.0 and unique labels in 1.1, and an image as
+long as the header says. The ROM cannot check the card's capacity; a payload past the
 end of the card fails as an I/O error when it is reached.
 
 ## Geometries

@@ -1,6 +1,8 @@
 // TEC-OS container images: header block, volume descriptors and payloads.
-// The checks here are a superset of the ROM's mount checks, so an image this
-// module accepts will mount.
+// The checks here are a superset of the ROM's mount checks (src/vol.asm,
+// MOUNT), so an image this module accepts will mount: on every card the
+// descriptors are in ascending start order, and on a 1.1 card that names N
+// drives no volume is on a drive past the Nth.
 
 import { format, geometryById, geometryByName } from "./format.mjs";
 import { fromLatin1, sameBytes, toLatin1 } from "./bytes.mjs";
@@ -169,10 +171,11 @@ export function parseContainer(image, { requireLength = true } = {}) {
     if (!g) fail(`volume ${i}: unknown geometry ${v.geometry}`);
     if (v.length !== g.payloadBlocks) fail(`volume ${i}: length does not match geometry ${g.name}`);
     if (v.start === 0 || v.start % format.descriptor.startAlignBlocks) fail(`volume ${i}: misaligned start`);
-    if (minor >= 1 && volumes.length && v.start < volumes.at(-1).start + volumes.at(-1).length) fail(`volume ${i}: not after volume ${i - 1}`);
+    if (volumes.length && v.start < volumes.at(-1).start + volumes.at(-1).length) fail(`volume ${i}: not after volume ${i - 1}`);
     if (minor >= 1 && volumes.some((p) => p.label === v.label)) fail(`volume ${i}: duplicate label ${v.label}`);
     if (v.start + v.length > containerBlocks) fail(`volume ${i}: payload beyond the container`);
     if (v.mount !== format.descriptor.unmounted && v.mount >= format.maxDrives) fail(`volume ${i}: bad drive`);
+    if (v.mount !== format.descriptor.unmounted && drives && v.mount >= drives) fail(`volume ${i}: drive ${String.fromCharCode(65 + v.mount)} is past the card's ${drives} drive(s)`);
     for (const p of volumes) {
       if (p.id === v.id) fail(`volume ${i}: duplicate id`);
       if (v.mount !== format.descriptor.unmounted && p.mount === v.mount) fail(`volume ${i}: duplicate drive`);

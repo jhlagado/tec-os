@@ -475,7 +475,9 @@ test("from user 5, a drive and a video console, a reset reaches A:, user 0, on s
 });
 
 test("a default drive beyond MNTDRV is refused with MEMOUNT", () => {
-  const image = card(VOLUMES, { drives: 1 });
+  const image = card(VOLUMES, { drives: 2 }); // tecvol refuses B: on a one-drive card; the header says 1 here
+  image[format.header.fields.drives.offset] = 1;
+  resum(image, VOLUMES.length);
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });
   m.expect(/R retry, H header> $/, { from: 0, maxCycles: 400_000_000 });

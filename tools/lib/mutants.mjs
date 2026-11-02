@@ -412,3 +412,20 @@ export const MUTANTS_KS32 = [
   { name: "KE-127: a startup line not cut at 127", ...k(["INC B", "DEC B", "JR Z,STL1"], [], D) },
   { name: "KE-127: a startup line cut at 128", ...k(["LD DE,CMDTXT", "LD B,127"], ["LD DE,CMDTXT", "LD B,128"], D) },
 ];
+
+const CT = "tools/lib/container.mjs";
+const VERIFY = ["test/verify-mount.test.mjs"];
+
+/** The fixes after KS32: each mutant undoes one, and its test catches it. */
+export const MUTANTS_FIXES = [
+  {
+    name: "tecvol: a 1.0 card's order not checked",
+    edits: [text(CT, "    if (volumes.length && v.start < volumes.at(-1).start", "    if (minor >= 1 && volumes.length && v.start < volumes.at(-1).start")],
+    tests: VERIFY,
+  },
+  {
+    name: "tecvol: a drive past the drives field let through",
+    edits: [text(CT, "drives && v.mount >= drives) fail(", "drives && v.mount >= 99) fail(")],
+    tests: VERIFY,
+  },
+];
