@@ -376,6 +376,59 @@ test("a write lost at warm boot drops the rest of the line", () => {
   assert.equal(m.read(m.sym("CFAIL")), 0);
 });
 
+/** A card with LONG.TXT of 30 lines on A:, and 200 files on B:, for TYPE's and DIR's [more] on serial's 24 rows. */
+function pagedCard() {
+  const image = card();
+  const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join("\n") + "\n";
+  volume(image, "A").write("LONG.TXT", Buffer.from(lines), { text: true });
+  const b = volume(image, "B");
+  for (let i = 0; i < 200; i += 1) b.write(`F${i}.DAT`, new Uint8Array(1));
+  return image;
+}
+
+/** Type LINE, answer its first [more] with KEY, and run to the prompt: the text since. */
+function runMore(m, line, key) {
+  const from = m.output.length;
+  m.type(`${line}\r`);
+  m.runUntil(() => m.waitingForInput() && /\[more\]$/.test(m.text(from)), 200_000_000, `the [more] in ${JSON.stringify(line)}`);
+  m.type(key);
+  m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
+  return m.text(from);
+}
+
+test("^C at TYPE's or DIR's [more] drops the rest of the line", () => {
+  const m = boot(pagedCard());
+  for (const line of ["TYPE LONG.TXT!SAY!USER 2", "TYPE LONG.TXT!:SAY!USER 2", "DIR B:!SAY!USER 2", "DIR B:!:SAY!USER 2"]) {
+    const out = runMore(m, line, "\x03");
+    assert.equal(count(out, /PRL/g), 0, line);
+    assert.doesNotMatch(out, /line 30|\d+ files?\b/, line);
+    assert.equal(user(m), 0, line);
+    assert.equal(code(m), 0, line);
+  }
+});
+
+test("Esc or Q at [more], and ERA *.* answered N, are answers: the code stays 0 and the line goes on", () => {
+  const m = boot(pagedCard());
+  for (const [line, key] of [
+    ["TYPE LONG.TXT!:SAY", "\x1b"],
+    ["TYPE LONG.TXT!:SAY", "q"],
+    ["DIR B:!:SAY", "Q"],
+    ["DIR B:!:SAY", "\x1b"],
+  ]) {
+    const out = runMore(m, line, key);
+    assert.equal(count(out, /PRL/g), 1, `${line} ${JSON.stringify(key)}`);
+    assert.equal(code(m), 0, `${line} ${JSON.stringify(key)}`);
+  }
+  const from = m.output.length;
+  m.type("ERA B:*.*!:SAY\r");
+  m.runUntil(() => m.waitingForInput() && /\(Y\/N\)\?$/.test(m.text(from)), 200_000_000, "ERA's question");
+  m.type("N\r");
+  m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
+  assert.equal(count(m.text(from), /PRL/g), 1);
+  assert.equal(code(m), 0);
+  assert.ok(volume(m.sdImage, "B").find("F0.DAT"), "nothing erased");
+});
+
 test("a reset clears the rest of the line", () => {
   const m = boot(card());
   const from = m.output.length;

@@ -398,6 +398,7 @@ export const MUTANTS_KS32 = [
   // R5: SAVE's NO SPACE leaving the code.
   { name: "code: NO SPACE leaves it", ...k(["SAVENOSP:", "LD DE,NOSPACE", "JP ERRGO"], ["SAVENOSP:", "LD DE,NOSPACE", "JP PRTGO"]) },
   { name: "stop: a write lost at warm boot keeps the rest", ...k(["XOR A", "LD (HL),A", "LD (CHPOS),A", "LD HL,CWMSG"], ["LD (HL),0", "LD HL,CWMSG"], "src/cache.asm") },
+  { name: "stop: ^C at [more] keeps the rest", ...k(["CP 3", "JR Z,PGDROP"], ["CP 3", "JR Z,PGSTOP"]) },
   { name: "stop: CHDROP drops nothing", ...k(["CHDROP: XOR A", "LD (CHPOS),A", "JP BIOWBT"], ["CHDROP: JP BIOWBT"], BD) },
   // CHPOS past HIRME and the line past cold boot's clear: either alone is masked by the other.
   {

@@ -52,8 +52,10 @@ supported. A line of up to 127 characters, typed, from `STARTUP.CMD` or from
 function 47, is split at each `!`, and what is left of it runs after each
 program's warm boot, before any startup line; a piece that starts with `:`
 runs only if the last command's code is not FF00h to FFFEh, and otherwise
-the rest of the line is dropped. ^C at a program's line input, a BDOS
-error's exit, a write lost at warm boot and a reset drop it too. These are TEC-OS's own rules, taken
+the rest of the line is dropped. ^C at a program's line input or at
+`TYPE`'s or `DIR`'s `[more]`, a BDOS error's exit, a write lost at warm
+boot and a reset drop it too. Esc or Q at `[more]`, and `ERA *.*` answered
+N, are answers, not failures: they leave the code at 0, and the line goes on. These are TEC-OS's own rules, taken
 from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 
 - `COPY` copies one file within the current user. `DEST` may be a drive

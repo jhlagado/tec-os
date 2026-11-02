@@ -716,7 +716,7 @@ PGWAIT:
         POP     AF
         AND     $DF             ; upper case; ^C and Esc are unaffected
         CP      3
-        JR      Z,PGSTOP
+        JR      Z,PGDROP
         CP      $1B
         JR      Z,PGSTOP
         CP      'Q'
@@ -727,6 +727,11 @@ PGNL1:
         XOR     A
         LD      (PGCOL),A
         RET
+; ^C drops the rest of a chained line, as it does at a program's line input;
+; Esc and Q stop only the listing.
+PGDROP:
+        XOR     A
+        LD      (CHPOS),A
 PGSTOP:
         SCF
         RET
