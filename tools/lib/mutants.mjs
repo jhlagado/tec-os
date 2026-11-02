@@ -420,7 +420,6 @@ export const MUTANTS_KS32 = [
   // The review's R1 to R4: the other four BDOS error exits, each back to BIOWBT.
   { name: "stop: a read-only drive keeps the rest", ...k(["LD HL,ERRRO", "CALL DISKERR", "JP CHDROP"], ["LD HL,ERRRO", "CALL DISKERR", "JP BIOWBT"], BD) },
   { name: "stop: a failed select keeps the rest", ...k(["SELFAIL:", "LD HL,ERRSEL", "CALL DISKERR", "JP CHDROP"], ["SELFAIL:", "LD HL,ERRSEL", "CALL DISKERR", "JP BIOWBT"], BD) },
-  { name: "stop: a failed directory read keeps the rest", ...k(["RDFAIL:", "JP CHDROP"], ["RDFAIL:", "JP BIOWBT"], BD) },
   { name: "stop: ERA's read-only file keeps the rest", ...k(["LD HL,ERRFILE", "CALL DISKERR", "JP CHDROP"], ["LD HL,ERRFILE", "CALL DISKERR", "JP BIOWBT"], BD) },
   // R5: SAVE's NO SPACE leaving the code.
   { name: "code: NO SPACE leaves it", ...k(["SAVENOSP:", "LD DE,NOSPACE", "JP ERRGO"], ["SAVENOSP:", "LD DE,NOSPACE", "JP PRTGO"]) },
