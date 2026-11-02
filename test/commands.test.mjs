@@ -112,7 +112,7 @@ test("REN takes one drive from either name, and a name on another drive is refus
   m.command("REN B:Z.COM=X.COM");
   assert.match(m.command("DIR B:Z.COM"), /Z\.COM/);
   assert.match(m.command("DIR B:X.COM"), /NO FILE/);
-  assert.match(m.command("REN B:SAME.DAT=A:SAME.DAT"), /REN\?/);
+  assert.match(m.command("REN B:SAME.DAT=A:SAME.DAT"), /B:SAME\.DAT=A:SAME\.DAT\?/);
   assert.match(m.command("DIR SAME.DAT"), /SAME\.DAT/);
   m.command("B:");
   m.command("REN T.COM=Y.COM");
