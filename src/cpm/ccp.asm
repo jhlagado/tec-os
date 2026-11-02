@@ -23,11 +23,25 @@ RCFAIL  EQU     255*256         ; FF00h, function 108's code for a failure
 ; Cold and warm boot both enter here with C holding the CP/M 2.2 page-zero
 ; byte: user number in bits 4-7, drive in bits 0-3. The BIOS has just reset
 ; the BDOS state, so rebuild the disk state and restore both before prompting.
+; TEC-OS: a drive with no volume, unmounted or past D:, cannot be selected,
+; and its Select error would warm boot back here to fail again; the CCP takes
+; A: instead, and the prompt's 0004h then says so.
 CCPENT:
         LD      SP,CSTKTOP
         LD      A,C
         AND     $0F
-        LD      (BOOTDRV),A
+        CP      MAXDRV
+        JR      NC,CCPDA
+        LD      E,A
+        LD      D,0
+        LD      HL,DRVIDX
+        ADD     HL,DE
+        LD      A,(HL)          ; its volume's index + 1, 0 for none
+        OR      A
+        LD      A,E
+        JR      NZ,CCPDR
+CCPDA:  XOR     A
+CCPDR:  LD      (BOOTDRV),A
         LD      A,C
         RRCA
         RRCA

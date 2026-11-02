@@ -436,4 +436,8 @@ export const MUTANTS_FIXES = [
     ...f(["JR NZ,WRITEBAD", "XOR A", "RET", "", "WRITEBAD:"], ["JR NZ,WRITEBAD", "CALL FCBCR", "LD A,(ZEROFIL)", "ADD A,(HL)", "CP 128", "CALL Z,ADVEXT", "XOR A", "RET", "", "WRITEBAD:"]),
   },
   { name: "32: E stored unmasked", ...f(["CP $FF", "JR Z,GETUSER", "AND $1F", "LD (USERNO),A"], ["CP $FF", "JR Z,GETUSER", "LD (USERNO),A"]) },
+  {
+    name: "CCP: a drive with no volume selected at warm boot",
+    ...f(["CP MAXDRV", "JR NC,CCPDA", "LD E,A", "LD D,0", "LD HL,DRVIDX", "ADD HL,DE", "LD A,(HL)", "OR A", "LD A,E", "JR NZ,CCPDR", "CCPDA: XOR A", "CCPDR: LD (BOOTDRV),A"], ["LD (BOOTDRV),A"], ["test/mount.test.mjs"], C),
+  },
 ];

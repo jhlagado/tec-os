@@ -95,7 +95,10 @@ lines are not kept.
 
 `MOUNT B: NAME` (or an index, as `VOLS` lists them) puts another of the
 card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
-empty, and a volume is never on two drives. Both are programs on the starter
+empty, and a volume is never on two drives. `MOUNT B:` with B: the current
+drive takes it off too, and the next prompt is `A>`: the CCP takes A: at
+warm boot whenever 0004h names a drive with no volume, as no select of it
+could succeed. Both are programs on the starter
 card, using the mount service in the table, `ABIVOL`. Mounts are for the session: a
 reset keeps them, as long as the card still holds each volume. `docs/recovery.md`
 says how.
