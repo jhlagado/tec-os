@@ -54,3 +54,17 @@ test("the file with that block says Bad Sector when it's read, and ERA takes it"
   assert.doesNotMatch(m.command("DIR BAD.TXT"), /BAD\.TXT\r\n.*BAD\.TXT/s);
   assert.match(m.command("DIR BAD.TXT"), /No file|NOT FOUND|0 files/i);
 });
+
+test("a write to a read-only volume says R/O, and the card is unchanged", () => {
+  const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
+  const before = Buffer.from(image);
+  const m = boot(image);
+  const from = m.output.length;
+  m.type("SAVE 1 C:NEW.COM\r");
+  m.expect(/Bdos Err On C: R\/O/, { from, maxCycles: 100_000_000 });
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the error's key");
+  assert.doesNotMatch(m.text(from), /Bad Sector/);
+  m.type("\r");
+  m.expect(/A>$/, { from, maxCycles: 100_000_000 });
+  assert.ok(before.equals(m.sd.image ?? image));
+});

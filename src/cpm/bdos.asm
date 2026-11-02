@@ -2347,23 +2347,6 @@ BITDONE:
         OR      A
         RET
 
-; Reject corrupt allocation references before vector indexing or the 16-bit
-; block-to-record shift. DE is the block; preserve it and HL/BC. IX identifies
-; the current DPB on return. Invalid references follow the fatal I/O path.
-CHKBLK:
-        CALL    BLKPAST
-        JR      C,BADSECT
-        RET
-
-; Carry if block DE is past the end of the current drive. Sets IX to its DPB.
-BLKPAST:
-        LD      IX,(DPBPTR)
-        LD      A,(IX+5)
-        CP      E
-        LD      A,(IX+6)
-        SBC     A,D
-        RET
-
 ; Z means the current drive needs its allocation vector rebuilt. The BIOS
 ; receives the normalized result separately in E; the mask itself may be wide.
 ; NZ if the current drive's bit is set in LOGINV (LOGTEST) or in DE (VTEST).
@@ -2432,7 +2415,13 @@ CHKRO:
         LD      A,H
         AND     D
         OR      L
+        JR      NZ,ROERR
+        LD      A,(CURDRV)      ; a volume mounted read-only
+        CALL    DRVENT
+        INC     HL
+        BIT     0,(HL)
         RET     Z
+ROERR:
         LD      HL,ERRRO
         CALL    DISKERR
         JP      CHDROP
@@ -2460,6 +2449,23 @@ BADSECT:
         LD      HL,ERRBAD
         CALL    DISKERR
         JP      CHDROP
+
+; Reject corrupt allocation references before vector indexing or the 16-bit
+; block-to-record shift. DE is the block; preserve it and HL/BC. IX identifies
+; the current DPB on return. Invalid references follow the fatal I/O path.
+CHKBLK:
+        CALL    BLKPAST
+        JR      C,BADSECT
+        RET
+
+; Carry if block DE is past the end of the current drive. Sets IX to its DPB.
+BLKPAST:
+        LD      IX,(DPBPTR)
+        LD      A,(IX+5)
+        CP      E
+        LD      A,(IX+6)
+        SBC     A,D
+        RET
 
 DISKERR:
         PUSH    HL

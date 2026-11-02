@@ -39,7 +39,7 @@ is ignored. Function 12 still reports 2.2. The probe in `test/programs/probe.asm
 | Wildcard search | 17 | Pass |
 | User areas | 32 | Pass; files in one user area are invisible from another |
 | Drive selection | 14, 25 | Pass |
-| Read-only volume | 21 via `SAVE` | `Bdos Err On C: Bad Sector`; card unchanged |
+| Read-only volume | 22 via `SAVE` | `Bdos Err On C: R/O`; card unchanged. Function 29 doesn't list the volume: its vector holds only what function 28 set |
 
 A sequential write (21) moves to the next extent when it needs it, as CP/M
 2.2's does: the write of record 128 of an extent, not the write of record

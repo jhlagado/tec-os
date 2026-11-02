@@ -358,8 +358,8 @@
     },
     {
       "input": "SAVE 1 C:X.COM",
-      "output": "SAVE 1 C:X.COM\r\r\n\r\nBdos Err On C: Bad Sector\r\nA>",
-      "calls": "27c112fddd2027b32c9114ee49717d616d740e6ab2e1ac970182d8748a259fb4",
+      "output": "SAVE 1 C:X.COM\r\r\n\r\nBdos Err On C: R/O\r\nA>",
+      "calls": "ec550d98de8a41a39fd28b614e2a4847f955ca25fbbf812afe7847bcbad0ba9f",
       "peak": 14
     },
     {
@@ -448,8 +448,8 @@
     },
     {
       "input": "COPY HELLO.TXT C:",
-      "output": "COPY HELLO.TXT C:\r\r\n\r\nBdos Err On C: Bad Sector\r\nA>",
-      "calls": "1bf8688e381e709437873aaccb399b5f8fef651769ad818ad3e471c7719e4c5e",
+      "output": "COPY HELLO.TXT C:\r\r\n\r\nBdos Err On C: R/O\r\nA>",
+      "calls": "2139f064cac14104c7be9533cf8c717bb8fe01ef58f1faf64c494cf87108caf1",
       "peak": 16
     },
     {
