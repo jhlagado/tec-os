@@ -36,7 +36,7 @@ COPYKEY:
 UNLKEY:
         DB      "UNLOAD",0
 SVCKEY:
-        DB      "DRIVERS",0
+        DB      "SERVICES",0
 CPNOSRC:
         DB      "NO SOURCE",CR,LF,'$'
 CPNODST:

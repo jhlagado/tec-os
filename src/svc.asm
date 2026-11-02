@@ -298,7 +298,7 @@ SVCIN:  LD      DE,DHLEN
         CCF
         RET
 
-; DRIVERS: each driver's name and pages, from the owner list.
+; SERVICES: each service's name and pages, from the owner list.
 CMDSVC: LD      A,(SVCHEAD)
 CMDDL:  OR      A
         JP      Z,MAINLOOP

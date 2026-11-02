@@ -696,3 +696,37 @@ test("the web host: power-on applies the width, says what a card lacks, and a ca
   assert.equal(prepareCard(image, "tms", "40").changed, false);
   assert.match(cardProblem(image, "tms", "32"), /no PICO32\.SVC: it boots as its STARTUP\.CMD says/);
 });
+
+const startupText = (image) => Buffer.from(volume(image, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0];
+
+test("the web host: a chained startup line loses its display pieces and keeps the rest", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
+  a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC"));
+  assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, changed: true });
+  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\nDIR!USER 3\r\n");
+  assert.equal(prepareCard(image, "tms", "80").changed, false);
+});
+
+test("the web host: a card with .DRV files is refused in its own words and left alone", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("PICO.DRV", PICO_SVC["PICO.SVC"]);
+  a.write("GLCD.DRV", GLCD_SVC);
+  a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
+  const before = image.slice();
+  const { problem, changed } = prepareCard(image, "tms", "80");
+  assert.match(problem, /older TEC-OS: this ROM doesn't load (PICO|GLCD)\.DRV.*A new starter card has PICO\.SVC/);
+  assert.equal(changed, false);
+  assert.deepEqual(image, before);
+});
+
+test("the web host: a card whose files were renamed by hand has its .DRV display lines taken out", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
+  a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
+  assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, changed: true });
+  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nMY.DRV\r\n");
+});
