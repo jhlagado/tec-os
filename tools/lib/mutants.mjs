@@ -433,6 +433,6 @@ export const MUTANTS_FIXES = [
   { name: "write: the FCB left on the next extent when its make fails", ...f(["EXTFULL:", "CALL FCBEX", "POP DE", "LD (HL),E", "INC HL", "INC HL", "LD (HL),D"], ["EXTFULL:", "POP DE"]) },
   {
     name: "write: the extent moved on after record 127",
-    ...f(["JR NZ,WRITEBAD", "XOR A", "RET", "WRITEBAD:"], ["JR NZ,WRITEBAD", "CALL FCBCR", "LD A,(ZEROFIL)", "ADD A,(HL)", "CP 128", "CALL Z,ADVEXT", "XOR A", "RET", "WRITEBAD:"]),
+    ...f(["JR NZ,WRITEBAD", "XOR A", "RET", "", "WRITEBAD:"], ["JR NZ,WRITEBAD", "CALL FCBCR", "LD A,(ZEROFIL)", "ADD A,(HL)", "CP 128", "CALL Z,ADVEXT", "XOR A", "RET", "", "WRITEBAD:"]),
   },
 ];
