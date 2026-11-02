@@ -4,6 +4,7 @@
 // lower than it was with the driver; a program on the CCP stack can call
 // the BIOS's CONOUT directly in the 28 bytes it has; and UNLOAD gives the
 // console and the pages back. Emulator evidence.
+// The screens that show SAVE to a read-only volume were retaken: it came to say R/O.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";

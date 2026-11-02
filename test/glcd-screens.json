@@ -65,19 +65,19 @@
     },
     {
       "line": "SAVE 1 C:X.COM\r",
-      "gdram": "70ef30f758c0a60f"
+      "gdram": "65ad54822728ad1c"
     },
     {
       "line": "DIR E:\r",
-      "gdram": "58facb359ea94b4b"
+      "gdram": "d0bf1c9d19d08fcb"
     },
     {
       "line": "E:\r",
-      "gdram": "a52b8b1a4914b6c7"
+      "gdram": "dc44bc7bc5ba3fef"
     },
     {
       "line": "A:\r",
-      "gdram": "460a38da67c74445"
+      "gdram": "9076e2471ceeb2db"
     },
     {
       "line": "CONOUT\r",
