@@ -90,7 +90,8 @@ from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 
 - `NAME.SVC` installs a service and `SERVICES` lists them, each with its pages.
   `UNLOAD` removes the lowest. A `.DRV` name is no longer a service: `NAME.DRV`
-  goes down the `.COM` path and prints `NAME.DRV?`.
+  goes down the `.COM` path, runs a `NAME.COM` or `NAME.PRL` if there is one, and
+  prints `NAME.DRV?` only if there is neither.
 - After a reset, recognised or not, and not on an ordinary exit, `A:STARTUP.CMD`,
   if there is one, runs before the first prompt.
   One record of it is read, at most 128 bytes, from the volume on A:, and a keypad
@@ -124,7 +125,7 @@ carried is no longer read.
 
 A service is a resident in TEC-OS's own `.SVC` format, with an installation
 that can fail cleanly and a registry through which programs find its
-services (`ABISVC`, ABI 4). `docs/services.md` is its interface. It goes in
+records (`ABISVC`, ABI 4). `docs/services.md` is its interface. It goes in
 whole pages just below the BDOS entry, and the word at `0006h` moves down to
 the jump at its offset 6, which leads on to the old entry; warm boot keeps it
 there. Programs that size themselves from `0006h` never reach it. Services are
@@ -258,7 +259,7 @@ a chained line.
 | ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 4.0. `XMOVE`, `MOVE`, the nested CCP entries, the EXPAND count, the low mark and the font's address left it; `ABIGLCD` and `ABISVC` joined. The file type's rename adds `ABISVC` beside `ABIDRV` | The table was added |
 | Hardware services | 19 numbered from 0 became 9 numbered from 19: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`. An old number returns status 1 | Added |
 | BDOS | Function 47 added. 25 and 29 refuse every byte of EXPAND 1. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
-| Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `.SVC` for `.DRV`, and `SERVICES` for `DRIVERS` | History, `COPY` and `STARTUP.CMD` added |
+| Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 3 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
 | Page zero | `0040h` to `004Fh` hold the same names, and `EXPANDS` is always 2. The next stage changes page zero after a warm boot: this commit doesn't hold it fixed | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |

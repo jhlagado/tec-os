@@ -93,4 +93,9 @@ test("ERA frees each directory entry's blocks once", async () => {
   };
   m.command("ERA ONE.DAT");
   assert.equal(frees, 1);
+
+test("NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no program of the name", async () => {
+  const m = await machine({ "ONE.COM": SAY });
+  assert.match(m.command("ONE.DRV"), /C\r\n/);
+  assert.match(m.command("TWO.DRV"), /TWO\.DRV\?/);
 });
