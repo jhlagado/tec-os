@@ -10,13 +10,15 @@
 // TAS.COM; capture; and the shared font priced on each configuration.
 //
 //   node tools/ks33-model.mjs [--landed REV] [--reference REV] [--mutants]
-//                             [--old-sets] [--against FIGURES.json] [--out FILE]
+//                             [--old-sets] [--sets-only] [--against FIGURES.json]
+//                             [--out FILE]
 //
 // --landed is the tree measured, HEAD by default; --reference the baseline,
 // 62d47ed. The trees are git archives in build/model-ks33/, each built with
 // its release set, which needs the pinned EDIT.COM and TAS.COM (EDIT_COM,
 // TAS_COM). --mutants runs every set on the landed tree; --old-sets reruns
-// KS30 to KS32's sets at their own commits. A short account goes to stderr.
+// KS30 to KS32's sets at their own commits. --sets-only runs those two alone,
+// and its figures are merged into the rest. A short account goes to stderr.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -470,7 +472,7 @@ async function choices(landed) {
   return {
     magic: { options: strip(mag), settled: "0344h kept: no ROM byte in any option, and only it lets an old format 3 file renamed .SVC load, as KD-144 keeps the layout. 0353h passes the page's byte 1 check and is then refused by the ROM; a new version is refused by both" },
     listing: { options: strip(listing), settled: "SERVICES: the rule's name under design 3, 1 ROM byte over MODULES; DRIVERS would be a stated exception" },
-    oldCards: { refuse: { sourceLines: cardSrc.split("\n").filter((l) => /OLD_DISPLAY|if \(old\)/.test(l)).length }, rename: { sourceLines: renameCard.toString().split("\n").length }, cards: card.oldCards, settled: "refused through cardProblem: 3 source lines, the card left as its owner made it. Renaming takes 12 lines, works only for format 3, and leaves an owner's own .DRV line printing its name" },
+    oldCards: { refuse: { sourceLines: cardSrc.split("\n").filter((l) => /OLD_DISPLAY|if \(old\)/.test(l)).length }, rename: { sourceLines: renameCard.toString().split("\n").length }, cards: card.oldCards, settled: "refused through cardProblem: 3 source lines, the card left as its owner made it. Renaming takes 11 lines, works only for format 3, and leaves an owner's own .DRV line printing its name" },
     transition: { options: strip(transition), settled: `.SVC alone: bothTypes costs ${transition.bothTypes.romOverPrototype} bytes and KD-144 says the rename lands once` },
     card,
   };
@@ -496,8 +498,31 @@ function account(f) {
   return p.join("\n") + "\n";
 }
 
+/** The mutant sets: every set on the landed tree, and KS30 to KS32's on their own commits. */
+async function sets(landed) {
+  const out = {};
+  if (process.argv.includes("--mutants")) {
+    const all = [...MUTANTS_KS30, ...MUTANTS_KS31, ...MUTANTS_KS32, ...MUTANTS_FIXES, ...MUTANTS_KS33];
+    Object.assign(out, await mutate(landed, WORK, all));
+  }
+  if (process.argv.includes("--old-sets")) {
+    out.oldSets = {};
+    for (const [set, name, rev] of OLD_SETS) {
+      const dir = await M.prepared(WORK, name, rev).catch((e) => ({ refused: e.message.slice(0, 300) }));
+      out.oldSets[name] = typeof dir === "string" ? { rev, ...(await mutate(dir, WORK, set)).mutantScore } : { rev, ...dir };
+    }
+  }
+  return out;
+}
+
 async function main() {
   const t0 = Date.now();
+  if (process.argv.includes("--sets-only")) {
+    const got = await sets(await M.prepared(WORK, "landed", LANDED));
+    writeFileSync(M.arg("--out"), JSON.stringify({ prototype: M.commit(LANDED), ...got }, null, 2) + "\n");
+    M.log(`${got.mutantScore ? `mutants ${got.mutantScore.caught} of ${got.mutantScore.total} caught; ` : ""}${JSON.stringify(got.oldSets)}; done in ${Math.round((Date.now() - t0) / 1000)} s`);
+    return;
+  }
   const [landed, reference] = await Promise.all([M.prepared(WORK, "landed", LANDED), M.prepared(WORK, "reference", REFERENCE)]);
   M.log("measuring");
   const [tpaL, tpaR, coldL, coldR, censusL, censusR, watch, rename] = await Promise.all([
@@ -533,17 +558,7 @@ async function main() {
     fonts: await fonts(landed, tpaL, coldL),
     reproducible: await M.reproducible(landed),
   };
-  if (process.argv.includes("--mutants")) {
-    const all = [...MUTANTS_KS30, ...MUTANTS_KS31, ...MUTANTS_KS32, ...MUTANTS_FIXES, ...MUTANTS_KS33];
-    Object.assign(figures, await mutate(landed, WORK, all));
-  }
-  if (process.argv.includes("--old-sets")) {
-    figures.oldSets = {};
-    for (const [set, name, rev] of OLD_SETS) {
-      const dir = await M.prepared(WORK, name, rev).catch((e) => ({ refused: e.message.slice(0, 300) }));
-      figures.oldSets[name] = typeof dir === "string" ? { rev, ...(await mutate(dir, WORK, set)).mutantScore } : { rev, ...dir };
-    }
-  }
+  Object.assign(figures, await sets(landed));
   const out = JSON.stringify(figures, null, 2) + "\n";
   const path = M.arg("--out");
   if (path) writeFileSync(path, out);
