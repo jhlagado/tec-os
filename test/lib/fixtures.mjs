@@ -6,6 +6,7 @@ import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { assembleProgram } from "../../tools/lib/assemble.mjs";
+import { ORG_LINE } from "../../tools/lib/prl.mjs";
 import { PICO_WIDTHS, makeSvc } from "../../tools/lib/svc.mjs";
 import { Machine, loadSymbols } from "./machine.mjs";
 import { createContainer, parseContainer, findVolume, volumePayload } from "../../tools/lib/container.mjs";
@@ -43,14 +44,13 @@ export function sourceDigest(path, seen = new Set()) {
 export async function programAt(name, origin) {
   if (origin === 0x100) return (await program(name)).bytes;
   const text = readFileSync(resolve(ROOT, "test/programs", `${name}.asm`), "utf8");
-  const org = /^(\s+ORG\s+)\$0100\s*$/m;
-  if (!org.test(text)) throw new Error(`${name}.asm has no "ORG $0100" line`);
+  if (!ORG_LINE.test(text)) throw new Error(`${name}.asm has no "ORG $0100" line`);
   const hex = origin.toString(16).toUpperCase().padStart(4, "0");
   const digest = sourceDigest(resolve(ROOT, "test/programs", `${name}.asm`));
   const cacheDir = resolve(ROOT, "build/test-programs");
   const src = resolve(cacheDir, `${name}-${digest}-at${hex}.asm`);
   mkdirSync(cacheDir, { recursive: true });
-  writeFileSync(src, text.replace(org, (_, lead) => `${lead}$${hex}`));
+  writeFileSync(src, text.replace(ORG_LINE, (_, lead) => `${lead}$${hex}`));
   return (await assembleProgram(src, { base: origin })).bytes;
 }
 

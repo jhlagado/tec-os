@@ -8,18 +8,20 @@ import { createHash } from "node:crypto";
 import { basename, dirname, relative, resolve } from "node:path";
 import { assembleProgram } from "./assemble.mjs";
 
+/** A source's one "ORG $0100" line, indented, with nothing after it. */
+export const ORG_LINE = /^([ \t]+ORG[ \t]+)\$0100[ \t]*\r?$/m;
+
 /** SOURCE assembled at ORIGIN: its "ORG $0100" line rewritten in a copy in WORK. */
 export async function assembleAt(source, origin, work) {
   if (origin === 0x100) return (await assembleProgram(source, { base: origin })).bytes;
   const text = readFileSync(source, "utf8");
-  const org = /^([ \t]+ORG[ \t]+)\$0100[ \t]*\r?$/m;
-  if (!org.test(text)) throw new Error(`${source} has no "ORG $0100" line`);
+  if (!ORG_LINE.test(text)) throw new Error(`${source} has no "ORG $0100" line`);
   const hex = origin.toString(16).toUpperCase().padStart(4, "0");
   const digest = createHash("sha256").update(text).digest("hex").slice(0, 16);
   mkdirSync(work, { recursive: true });
   const copy = resolve(work, `${basename(source, ".asm")}-${digest}-at${hex}.asm`);
   const repoint = (t) => t.replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, resolve(dirname(source), p))}"`);
-  writeFileSync(copy, repoint(text.replace(org, (_, lead) => `${lead}$${hex}`)));
+  writeFileSync(copy, repoint(text.replace(ORG_LINE, (_, lead) => `${lead}$${hex}`)));
   return (await assembleProgram(copy, { base: origin })).bytes;
 }
 
