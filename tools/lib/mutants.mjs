@@ -476,10 +476,10 @@ export const MUTANTS_FIXES = [
 
 // ---- KS33: the rename ---------------------------------------------------
 
-export const CCP_ON_DRV = [text(C, "LD      DE,'V'*256+'S'", "LD      DE,'R'*256+'D'"), text(C, "CP      'C'\n        JR      NZ,CMDCOM", "CP      'V'\n        JR      NZ,CMDCOM")];
+export const CCP_OLD_TYPE = [text(C, "LD      DE,'V'*256+'S'", "LD      DE,'R'*256+'D'"), text(C, "CP      'C'\n        JR      NZ,CMDCOM", "CP      'V'\n        JR      NZ,CMDCOM")];
 
 export const MUTANTS_KS33 = [
-  { name: "the CCP left on .DRV", edits: CCP_ON_DRV, tests: ["test/svc.test.mjs", "test/glcd.test.mjs", "test/pico.test.mjs", "test/startup.test.mjs", "test/clients.test.mjs"] },
+  { name: "the CCP left on .DRV", edits: CCP_OLD_TYPE, tests: ["test/svc.test.mjs", "test/glcd.test.mjs", "test/pico.test.mjs", "test/startup.test.mjs", "test/clients.test.mjs"] },
   { name: "CON UC1 left on GLCD.DRV", edits: [text("src/data3.asm", '"GLCD    SVC"', '"GLCD    DRV"')], tests: ["test/pico.test.mjs"] },
   { name: "the listing left as DRIVERS", edits: [text("src/data3.asm", '"SERVICES",0', '"DRIVERS",0')], tests: ["test/svc.test.mjs"] },
   { name: "the alias gone from abi.inc", edits: [text("src/abi.inc", "ABIDRV\tEQU\tABISVC", "ABIXXX\tEQU\tABISVC")], tests: ["test/svc.test.mjs"], only: "ABIDRV" },

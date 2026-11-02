@@ -20,11 +20,11 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as M from "./lib/model.mjs";
-import { CCP_ON_DRV, MUTANTS_FIXES, MUTANTS_KS30, MUTANTS_KS31, MUTANTS_KS32, MUTANTS_KS33, mutate } from "./lib/mutants.mjs";
+import { CCP_OLD_TYPE, MUTANTS_FIXES, MUTANTS_KS30, MUTANTS_KS31, MUTANTS_KS32, MUTANTS_KS33, mutate } from "./lib/mutants.mjs";
 import { against } from "./lib/against.mjs";
 
 const SCRIPT = fileURLToPath(import.meta.url);
@@ -66,7 +66,8 @@ const TRANSITION = {
 
 /** The font in the ROM, last in the code, and each display driver reading it at the address FONTAT. */
 function sharedFont(dir, fontAt) {
-  M.patch(dir, "src/rom.asm", '%INCLUDE "end.asm"', '%INCLUDE "../drivers/font.asm"\n%INCLUDE "end.asm"');
+  cpSync(resolve(dir, "drivers/font.asm"), resolve(dir, "src/font.asm"));
+  M.patch(dir, "src/rom.asm", '%INCLUDE "end.asm"', '%INCLUDE "font.asm"\n%INCLUDE "end.asm"');
   for (const f of ["drivers/pico.asm", "drivers/glcd.asm"]) M.patch(dir, f, '%INCLUDE "font.asm"\n', "");
   for (const f of ["drivers/pico.asm", "drivers/glcd.asm"]) M.patch(dir, f, "        ORG     $0100\n", `FONT    EQU     ${fontAt}\n        ORG     $0100\n`);
 }
@@ -180,9 +181,10 @@ async function runTask(job) {
     t.prompt(m, 0);
     const text = m.command("OLD.SVC");
     const page = t.shipped();
-    fx.volume(page, "A").write("PICO.SVC", Uint8Array.from(job.old));
+    fx.volume(page, "A").write("PICO.SVC", Uint8Array.from(job.oldPico));
     return { oldFileLoads: !/OLD\.SVC\?/.test(text), pageSays: t.card.cardProblem(page, "tms", 80) };
   }
+  if (job.task === "res") return [...(await fx.service("res"))];
   if (job.task === "both") {
     const image = t.shipped();
     fx.volume(image, "A").write("RES.DRV", await fx.service("res"));
@@ -196,7 +198,7 @@ async function runTask(job) {
 
 if (process.argv[2] === "--worker") {
   const job = JSON.parse(process.argv[3]);
-  if (["rename", "card", "magic", "both"].includes(job.task)) console.log(JSON.stringify(await runTask(job)));
+  if (["rename", "card", "magic", "res", "both"].includes(job.task)) console.log(JSON.stringify(await runTask(job)));
   else await M.runWorker(job);
   process.exit(0);
 }
@@ -228,6 +230,8 @@ function census(dir) {
   return { live, old };
 }
 
+// In tools/lib alone, for old trees (D5): the old names and the alias drvlim. DRV is the kept .DRV of the keep list.
+const EXPECTED = "DRV DRVLIM drvlim DRVBSY DRVCALL DRVHEAD DRVRC DRVSVC DRVSHUT DRVUNL drv".split(" ");
 const STAY = "DRVTAB DRVIDX drvidx DRVSLOT DRVESZ DRVENT DRVDESC DRVMASK MAXDRV MNTDRV CURDRV DEFDRV BOOTDRV SELDRV BUFDRV RSDRV VRDRV drv2 ABIDRV".split(" ");
 
 function names(landed, reference) {
@@ -235,14 +239,15 @@ function names(landed, reference) {
   const r = census(reference);
   const stays = Object.fromEntries(STAY.map((k) => [k, [r.live[k] ?? 0, l.live[k] ?? 0]]));
   const moved = Object.entries(stays).filter(([, [a, b]]) => a !== b).map(([k, v]) => `${k}: ${v[0]} to ${v[1]}`);
-  const left = Object.fromEntries(Object.entries(l.live).filter(([k]) => !STAY.includes(k)));
+  const left = Object.fromEntries(Object.entries(l.live).filter(([k]) => !STAY.includes(k) && !EXPECTED.includes(k)));
   return {
     bookExcluded: "book/ left the product (KD-156), so it is out of both trees' counts; the list's totals with it stand at the reference",
     stays,
     staysThatMoved: moved,
     historicalEqual: JSON.stringify(Object.entries(l.old).sort()) === JSON.stringify(Object.entries(r.old).sort()),
     historicalTokens: Object.values(l.old).reduce((a, n) => a + n, 0),
-    otherTokensLeft: left,
+    unexpectedTokens: left,
+    bootdrvNote: "BOOTDRV's one more is docs/services.md's sentence on a 127-character line, which the findings table asks for",
     renamedAtReference: Object.entries(r.live).filter(([k]) => !STAY.includes(k)).reduce((a, [, n]) => a + n, 0),
   };
 }
@@ -260,6 +265,7 @@ function serviceLines(landed) {
 const KEEPS = [
   [/^test\/pico\.test\.mjs$/, "old-card tests"],
   [/^test\/svc\.test\.mjs$/, "the .DRV name's refusal"],
+  [/^test\/clients\.test\.mjs$/, "the fixture's own name, 2d5ce25/PICO.DRV"],
   [/^test\/fixtures\//, "test/fixtures/"],
   [/^test\/model\/ks2/, "historical"],
   [/^tools\/ks3[01]-model\.mjs$/, "carried keys"],
@@ -354,7 +360,7 @@ const REFUSALS = [
 
 async function drvMutant(landed) {
   const copy = M.copyTree(landed, WORK, "mutant-drv");
-  for (const e of CCP_ON_DRV) M.patch(copy, e.file, e.from, e.to);
+  for (const e of CCP_OLD_TYPE) M.patch(copy, e.file, e.from, e.to);
   await M.build(copy);
   const out = {};
   for (const [file, title] of REFUSALS) {
@@ -443,14 +449,15 @@ async function choices(landed) {
     }
     return out;
   };
-  const old = [...readFileSync(resolve(landed, "dist/files/PICO.SVC"))];
+  const oldPico = [...readFileSync(resolve(landed, "dist/files/PICO.SVC"))];
+  const old = await M.worker(SCRIPT, { task: "res", dir: landed });
   const mag = await measured(MAGIC, "kept0344h");
-  mag.kept0344h.onThisRom = await M.worker(SCRIPT, { task: "magic", dir: landed, old });
+  mag.kept0344h.onThisRom = await M.worker(SCRIPT, { task: "magic", dir: landed, old, oldPico });
   for (const k of Object.keys(MAGIC)) {
     if (!mag[k].dir) continue;
     await M.build(mag[k].dir);
     await M.media(mag[k].dir);
-    mag[k].onThisRom = await M.worker(SCRIPT, { task: "magic", dir: mag[k].dir, old });
+    mag[k].onThisRom = await M.worker(SCRIPT, { task: "magic", dir: mag[k].dir, old, oldPico });
   }
   const listing = await measured(LISTING, "SERVICES");
   const transition = await measured(TRANSITION, "svcAlone");
@@ -461,7 +468,7 @@ async function choices(landed) {
   const card = await M.worker(SCRIPT, { task: "card", dir: landed });
   const cardSrc = text(landed, "host/card.mjs");
   return {
-    magic: { options: strip(mag), settled: "0344h kept: no ROM byte in any option, and only it lets an old format 3 file renamed .SVC load, as KD-144 keeps the layout. 0353h passes the page's byte 1 check and is then refused by the ROM. A new version is refused by the ROM and the page alike" },
+    magic: { options: strip(mag), settled: "0344h kept: no ROM byte in any option, and only it lets an old format 3 file renamed .SVC load, as KD-144 keeps the layout. 0353h passes the page's byte 1 check and is then refused by the ROM; a new version is refused by both" },
     listing: { options: strip(listing), settled: "SERVICES: the rule's name under design 3, 1 ROM byte over MODULES; DRIVERS would be a stated exception" },
     oldCards: { refuse: { sourceLines: cardSrc.split("\n").filter((l) => /OLD_DISPLAY|if \(old\)/.test(l)).length }, rename: { sourceLines: renameCard.toString().split("\n").length }, cards: card.oldCards, settled: "refused through cardProblem: 3 source lines, the card left as its owner made it. Renaming takes 12 lines, works only for format 3, and leaves an owner's own .DRV line printing its name" },
     transition: { options: strip(transition), settled: `.SVC alone: bothTypes costs ${transition.bothTypes.romOverPrototype} bytes and KD-144 says the rename lands once` },
@@ -475,7 +482,7 @@ function account(f) {
   p.push(`ROM ${f.rom.used} used, ${f.rom.free} free (reference ${f.rom.reference.used}/${f.rom.reference.free}), net ${-f.rom.saving}, reconciled ${f.rom.reconciled}, contiguous ${f.rom.contiguous}, one image ${f.rom.oneImage}, ${f.rom.sha256.slice(0, 16)}`);
   p.push(`TPA ${f.tpa.prototype.starter.serial} (${f.tpa.reference.starter.serial}); stacks ${JSON.stringify(f.stacks.prototype)} (${JSON.stringify(f.stacks.reference)})`);
   for (const k of ["magic", "listing", "transition"]) p.push(`choice ${k}: ${JSON.stringify(f.choices[k].options).slice(0, 300)}`);
-  p.push(`names: stays moved ${JSON.stringify(f.names.staysThatMoved)}, other tokens ${JSON.stringify(f.names.otherTokensLeft)}, historical equal ${f.names.historicalEqual}`);
+  p.push(`names: stays moved ${JSON.stringify(f.names.staysThatMoved)}, unexpected ${JSON.stringify(f.names.unexpectedTokens)}, historical equal ${f.names.historicalEqual}`);
   p.push(`service lines ${f.serviceLines.lines}, ${JSON.stringify(f.serviceLines.byClass)}`);
   p.push(`.DRV outside keeps ${JSON.stringify(f.docs.outsideKeeps)}; findings done ${f.docs.findingsDone}; ${JSON.stringify(Object.entries(f.docs.findings).filter(([, v]) => !v))}`);
   p.push(`contracts ${JSON.stringify(f.contracts)}`);
