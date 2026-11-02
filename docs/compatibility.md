@@ -169,7 +169,7 @@ warm boot on the PICO9918 and 7,984 on the GLCD.
 | Program | Version | Result | Notes |
 | --- | --- | --- | --- |
 | Edit | build with the screen configuration block (`ECFG` at `0103h`) | Runs | Edits, saves and reopens a file on the PICO9918 at 80 × 24; also verified on Triptych's CP/M 2.2 at 80 × 24 (`test/edit.test.mjs`). The pinned build tests for ABI major 3 at `C003h`, so the card and the tests take it with that one byte set to 4, checked by its hash, and it reads `ABIVID` at `C008h`; it also edits, saves and reopens on the GLCD at 21 × 8 |
-| TAS.COM | Thorium `7604daa`, on the starter card | Runs | Assembles `HELLO.ASM` into `HELLO.COM` and `HELLO.DBG` on TEC-OS, and rebuilds itself, using the BDOS only (`test/tas.test.mjs`). It writes `.DRV` version 2, which this ROM refuses, and a flat file under any other type, `.SVC` included, so services are built on the host. It sets no function 108 status, so the chain keeps `ERA X.COM` first |
+| TAS.COM | Thorium `dbee66a`, on the starter card | Runs | Assembles `HELLO.ASM` into `HELLO.COM` and `HELLO.DBG` on TEC-OS, and rebuilds itself, using the BDOS only (`test/tas.test.mjs`). `TAS X X.SVC` writes a service that loads. A failed build sets FF00h by function 108, so `EDIT X.ASM!TAS X!:X` needs no `ERA X.COM`, and a read-only output is refused |
 | ATOM.COM | build that sizes its workspace from `0006h` | Ran until `TAS.COM` took its place | Assembled `HELLO.ASM` into `HELLO.COM` on TEC-OS; needs the BDOS at `78C4h` or higher. It stays the ROM's host build |
 | ATOM.COM | 0.3.7 | Refuses to run | Requires the BDOS at `E400h` or higher |
 | EDIT.COM | 0.2.0 without the screen configuration | Not run | Fixed stack at `D800h–E3FFh`, above the TPA, and assumes 80 × 24 |

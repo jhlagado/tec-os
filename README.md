@@ -89,7 +89,7 @@ moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `SERVICES` lists the services installed and `UNLOAD` removes the last one. A line
 chains commands with `!`, and a piece starting `:` runs only if the last command
-succeeded, as in `ERA X.COM!EDIT X.ASM!TAS X!:X`.
+succeeded, as in `EDIT X.ASM!TAS X!:X`.
 `DEMO` on the starter card shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.

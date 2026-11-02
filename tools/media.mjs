@@ -37,6 +37,7 @@ PROBE              exercise the BDOS file functions
 DEMO               the LCD, digits, 8x8 LEDs and PICO9918; any key stops
 EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
 TAS NAME           assemble NAME.ASM to NAME.COM and NAME.DBG
+TAS NAME NAME.SVC  assemble it to a service
 VOLS               list the card's volumes
 MOUNT B: NAME      put a volume on a drive; MOUNT B: takes it off
 
@@ -45,7 +46,7 @@ SERVICES           list the services installed, each with its pages
 UNLOAD             remove the last service installed
 
 A line chains commands with !, and a piece that starts with : runs only if the
-last command succeeded: ERA X.COM!EDIT X.ASM!TAS X!:X
+last command succeeded: EDIT X.ASM!TAS X!:X
 
 B: is an empty work disk, written behind: its changes reach the card when a
 file is closed, at ^C and at MOUNT. Press ^C at A> before reset or power off.

@@ -17,10 +17,10 @@
     },
     "TAS.COM": {
       "env": "TAS_COM",
-      "default": "../thorium/build/tas/TAS.COM",
-      "source": "jhlagado/thorium 7604daa, build/tas/TAS.COM",
-      "bytes": 10100,
-      "sha256": "ff18734807206127d4ede7a96bbd26acf36310361834a1c9ae998b20e2f98292"
+      "default": "../thorium/dist/TAS.COM",
+      "source": "jhlagado/thorium dbee66a, dist/TAS.COM",
+      "bytes": 10295,
+      "sha256": "45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2"
     },
     "triptych-headless": {
       "env": "TRIPTYCH_HEADLESS",

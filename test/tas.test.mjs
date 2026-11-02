@@ -1,9 +1,10 @@
 // TAS.COM, the assembler the starter card carries, on TEC-OS: a program
 // assembled on the TEC and run; the card's copy, by its pinned hash, with a
 // missing or wrong file refused by the media tool; and drivers/ and svcdemo.asm
-// assembling under TAS to Atom's bytes. TAS at its pin writes no .SVC, so what
-// is compared is the flat image under a .COM type. Emulator evidence. TAS.COM
-// is a pinned input (test/inputs.json).
+// assembling under TAS to Atom's bytes, compared as the flat image under a .COM
+// type; a .SVC that loads; a failed build's FF00h stopping a chained line; and a
+// read-only output refused. Emulator evidence. TAS.COM is a pinned input
+// (test/inputs.json).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -51,7 +52,49 @@ test("the media tool refuses a TAS.COM missing or not as pinned", () => {
   assert.match(missing.stderr, /no TAS\.COM at/);
   const wrong = media(resolve(ROOT, "README.md"));
   assert.notEqual(wrong.status, 0);
-  assert.match(wrong.stderr, /TAS\.COM at .* has sha256 [0-9a-f]+, pinned ff187348/);
+  assert.match(wrong.stderr, /TAS\.COM at .* has sha256 [0-9a-f]+, pinned 45c0cf05/);
+});
+
+test("TAS X X.SVC makes a service that loads", { skip: TAS.skip, timeout: 900_000 }, () => {
+  check(TAS);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  a.write("RES.ASM", text("test/programs/res.asm"), { text: true });
+  const m = boot(image);
+  assert.match(m.command("TAS RES RES.SVC", LONG), /RES\.SVC written/);
+  assert.doesNotMatch(m.command("RES.SVC"), /RES\.SVC\?/);
+  assert.match(m.command("SERVICES"), /RES\s+1/);
+  assert.deepEqual(m.violations, []);
+});
+
+test("a failed build stops TAS BAD!:X through FF00h, with a stale X.COM there", { skip: TAS.skip, timeout: 900_000 }, () => {
+  check(TAS);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  a.write("BAD.ASM", Buffer.from(HELLO.replace("CALL 5", "CALL NOWHERE")), { text: true });
+  a.write("X.COM", Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9])); // prints C
+  const m = boot(image);
+  const said = m.command("TAS BAD!:X", LONG);
+  assert.match(said, /undefined symbol NOWHERE/);
+  assert.doesNotMatch(said, /\r\nC\r\n|X\?/);
+  assert.equal(m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8), 0xff00);
+  assert.deepEqual(m.violations, []);
+});
+
+test("TAS refuses a read-only output and leaves it as it was", { skip: TAS.skip, timeout: 900_000 }, () => {
+  check(TAS);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  a.write("HELLO.ASM", Buffer.from(HELLO), { text: true });
+  a.write("HELLO.COM", Uint8Array.from([0xc9]), { readOnly: true });
+  const m = boot(image);
+  assert.match(m.command("TAS HELLO!:USER 3", LONG), /read-only/);
+  assert.equal(m.read(4) >> 4, 0, "the line stopped");
+  assert.equal(volume(image, "A").read("HELLO.COM")[0], 0xc9);
+  assert.deepEqual(m.violations, []);
 });
 
 /**
