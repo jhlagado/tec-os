@@ -919,6 +919,21 @@ CMDREN:
         JP      Z,BADCMD
         CALL    ONENAME
 
+        LD      HL,CMDFCB       ; one drive for both names: the new name's,
+        LD      A,(RENFCB)      ; or the old's, and two are a bad command
+        OR      A
+        JR      Z,RENOLD
+        CP      (HL)
+        JR      Z,RENTEST
+        LD      B,A
+        LD      A,(HL)
+        OR      A
+        JP      NZ,BADCMD
+        LD      (HL),B
+RENOLD:
+        LD      A,(HL)
+        LD      (RENFCB),A
+RENTEST:
         LD      DE,LOADBUF
         LD      C,26
         CALL    BDOS

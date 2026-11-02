@@ -93,9 +93,28 @@ test("ERA frees each directory entry's blocks once", async () => {
   };
   m.command("ERA ONE.DAT");
   assert.equal(frees, 1);
+});
 
 test("NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no program of the name", async () => {
   const m = await machine({ "ONE.COM": SAY });
   assert.match(m.command("ONE.DRV"), /C\r\n/);
   assert.match(m.command("TWO.DRV"), /TWO\.DRV\?/);
+});
+
+test("REN takes one drive from either name, and a name on another drive is refused", async () => {
+  const m = await machine({ "SAME.DAT": SAY });
+  m.command("SAVE 1 B:OLD.COM");
+  m.command("SAVE 1 B:X.COM");
+  assert.match(m.command("REN X.COM=B:OLD.COM"), /FILE EXISTS/);
+  assert.match(m.command("DIR B:"), /OLD\.COM[\s\S]*2 files/);
+  m.command("REN Y.COM=B:OLD.COM");
+  assert.match(m.command("DIR B:Y.COM"), /Y\.COM/);
+  m.command("REN B:Z.COM=X.COM");
+  assert.match(m.command("DIR B:Z.COM"), /Z\.COM/);
+  assert.match(m.command("DIR B:X.COM"), /NO FILE/);
+  assert.match(m.command("REN B:SAME.DAT=A:SAME.DAT"), /REN\?/);
+  assert.match(m.command("DIR SAME.DAT"), /SAME\.DAT/);
+  m.command("B:");
+  m.command("REN T.COM=Y.COM");
+  assert.match(m.command("DIR T.COM"), /T\.COM/);
 });
