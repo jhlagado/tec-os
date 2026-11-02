@@ -62,6 +62,7 @@ for (const [name, opts] of [["no GLCD", { matrix: true, glcd: false }], ["no mat
     const m = start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, opts);
     prompt(m);
     assert.match(m.text(0), /GLCD\.SVC\?/);
+    assert.equal(m.read(m.sym("SVCRC")), 1, "INIT ran and refused");
     assert.equal(m.read(m.sym("SVCHEAD")), 0);
     assert.equal(m.read(3) & 3, 0, "TTY:");
   });

@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { checkInterfaces, DHLEN, encoders, makeSvc } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
 const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFAIL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
@@ -292,7 +292,9 @@ test("NAME.SVC installs, from a drive too; a file that won't read and a refused 
   const t = bench(boot(image));
   const stub = t.word(6);
   assert.match(t.m.command("NONE.SVC"), /NONE\.SVC\?/);
+  assert.equal(fcbType(t.m), "SVC", "the loader's path, not the COM path's");
   assert.match(t.m.command("FAIL.SVC"), /FAIL\.SVC\?/);
+  assert.equal(t.m.read(t.m.sym("SVCRC")), 1, "INIT ran and failed");
   assert.equal(t.word(6), stub);
   assert.doesNotMatch(t.m.command("OK.SVC"), /\?/);
   assert.doesNotMatch(t.m.command("B:OK2.SVC"), /\?/);

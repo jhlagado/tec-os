@@ -125,6 +125,14 @@ export const PICO_SVC = Object.fromEntries(
 /** The PICO driver's file for a profile's name, which stays as the width. */
 export const picoFor = (profile = "debug80") => ({ debug80t40: "PICO40.SVC", debug80g32: "PICO32.SVC" })[profile] ?? "PICO.SVC";
 
+/**
+ * The three type bytes in the CCP's FCB after M's last command. A name the
+ * loader took leaves SVC there. The COM path overwrites them, COM then PRL, so
+ * a refused load is told from a name that never reached the loader, which
+ * prints the same NAME.TYP?.
+ */
+export const fcbType = (m) => String.fromCharCode(...[9, 10, 11].map((i) => m.read(m.sym("CMDFCB") + i)));
+
 /** A STARTUP.CMD of these lines. */
 export const startupFile = (...lines) => Buffer.from(lines.map((l) => `${l}\r\n`).join("") + "\x1a", "latin1");
 

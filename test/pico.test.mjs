@@ -12,7 +12,7 @@ import { PICO_WIDTHS, makeSvc } from "../tools/lib/svc.mjs";
 import { displayFiles } from "../tools/lib/starter.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { screens } from "./lib/pico-workload.mjs";
-import { ABI, GLCD_SVC, PICO_SVC, ROOT, TEST_CLOCK, boot, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, PICO_SVC, ROOT, TEST_CLOCK, boot, fcbType, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const m0 = (m) => m.sym("CONMOD");
@@ -89,6 +89,7 @@ for (const [name, cols] of [["PICO.SVC", 80], ["PICO40.SVC", 40], ["PICO32.SVC",
 test("a board with both displays keeps the PICO9918; GLCD.SVC's line gives way, and CON UC1 installs it", () => {
   const m = start(both());
   assert.match(m.text(0), /GLCD\.SVC\?/);
+  assert.equal(m.read(m.sym("SVCRC")), 1, "GLCD's INIT ran and gave way");
   const one = word(m, 6);
   assert.equal(m.read(3) & 3, CRT);
   say(m, "CON UC1");
@@ -197,6 +198,7 @@ for (const [name, files, opts] of [
   test(`a PICO9918 board with ${name} says PICO? on the LCD, once`, () => {
     const m = start(files, opts);
     assert.equal(word(m, m.sym("PIVEC")), 0, "no driver in");
+    if (name.includes("missing") || name.includes("bad")) assert.equal(fcbType(m), "SVC", "the loader's path, not the COM path's");
     assert.equal(lcdRow(m, 3), "PICO?");
     m.tec1g.state.lcdCtrl.lcd.fill(0x20, 60, 80);
     m.command("USER 0");
@@ -207,6 +209,7 @@ for (const [name, files, opts] of [
 test("STDONE returns carry through LCDROW: the file's last line runs once", () => {
   const m = start({ "STARTUP.CMD": startupFile("PICO.SVC") });
   assert.equal(lcdRow(m, 3), "PICO?");
+  assert.equal(fcbType(m), "SVC", "the loader's path, not the COM path's");
   assert.equal((m.text(0).match(/PICO\.SVC\?/g) ?? []).length, 1);
 });
 
@@ -304,6 +307,7 @@ test("no driver: reset to a prompt on serial with no file, a bad file and no vec
     const m = start(files);
     assert.equal(m.traps, 0);
     assert.deepEqual([m.read(m.sym("CONMOD")), word(m, m.sym("PIVEC"))], [0, 0]);
+    if (files["PICO.SVC"]) assert.equal(fcbType(m), "SVC", "the loader's path, not the COM path's");
     assert.match(m.command("DIR HELLO.TXT"), /HELLO\.TXT/);
   }
 });
@@ -321,7 +325,7 @@ test("PICO.SVC is refused with no PICO9918, and with no matrix keyboard", () => 
   for (const opts of [{ tms: false }, { matrix: false }]) {
     const m = start({ "PICO.SVC": PICO_SVC["PICO.SVC"], "STARTUP.CMD": startupFile("PICO.SVC") }, opts);
     assert.match(m.text(0), /PICO\.SVC\?/);
-    assert.deepEqual([m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [0, 0]);
+    assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [1, 0, 0]);
   }
 });
 
@@ -534,6 +538,7 @@ test("INIT failing leaves no record and the old ceiling", () => {
   for (const [name, opts, files] of [["PICO.SVC", { matrix: false }, PICO_SVC], ["PICO.SVC", { tms: false }, PICO_SVC], ["GLCD.SVC", { tms: false, glcd: false }, { "GLCD.SVC": GLCD_SVC }]]) {
     const plain = word(start({}, opts), 6);
     const m = start({ ...files, "STARTUP.CMD": startupFile(name) }, opts);
+    assert.equal(m.read(m.sym("SVCRC")), 1, `${name}'s INIT ran and failed`);
     assert.deepEqual([word(m, 6), m.read(m.sym("SVCHEAD")), word(m, m.sym("REGHEAD")), word(m, m.sym("PIVEC")), word(m, m.sym("GLVEC"))], [plain, 0, 0, 0, 0], `${name} ${JSON.stringify(opts)}`);
   }
 });
@@ -615,6 +620,7 @@ test("row 3: a failed load by hand leaves the word", () => {
   const m = start({ "BAD.SVC": BAD });
   assert.equal(lcdRow(m, 3), "PICO?");
   assert.match(say(m, "BAD.SVC"), /BAD\.SVC\?/);
+  assert.equal(fcbType(m), "SVC", "the loader's path, not the COM path's");
   assert.equal(lcdRow(m, 3), "PICO?");
   assert.equal(m.read(m.sym("CONDEV")) & HWBWRD, HWBWRD, "still marked");
 });

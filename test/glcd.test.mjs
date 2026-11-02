@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, program, romFor, standardCard, volume, withDisplay } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay } from "./lib/fixtures.mjs";
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/glcd-screens.json"), "utf8"));
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "conout", "fill"];
@@ -140,6 +140,7 @@ test("a second GLCD.SVC is refused whole, and the first keeps the console", asyn
   const from = m.output.length;
   run(m, "GLCD.SVC\r");
   assert.match(m.text(from), /GLCD\.SVC\?/);
+  assert.equal(fcbType(m), "SVC", "the loader's path, not the COM path's");
   assert.deepEqual([word(m, 6), word(m, m.sym("GLVEC")), m.read(3) & 3], [first, table, 3]);
   m.mark = m.output.length;
   m.type("UNLOAD\r");
