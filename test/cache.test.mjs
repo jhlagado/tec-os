@@ -461,3 +461,41 @@ test("the harness takes the copy core's writes below BD00h as the cache's only w
   assert.equal(m.expand1Writes.length, 16, "a copy not called by the cache is reported");
   EXPAND1_WRITES.splice(0);
 });
+
+/** Where 128 bytes of V lie in IMAGE, or -1. */
+const runOf = (image, v) => Buffer.from(image).indexOf(Buffer.alloc(128, v));
+
+test("function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, which warm boot doesn't say again (KS36b)", async () => {
+  const image = card();
+  const m = start(image);
+  dirty(m);
+  assert.equal(runOf(image, 0xc3), -1, "the records are only in the cache");
+  bdos(m, 48, 0);
+  assert.equal(m.cpu.cpu.a, 0);
+  assert.notEqual(runOf(image, 0xc3), -1, "and on the card after function 48, before any close");
+
+  const failed = card();
+  const n = start(failed);
+  dirty(n);
+  failing(n, () => "fail");
+  bdos(n, 48, 0);
+  assert.equal(n.cpu.cpu.a, 0xff, "a failed write: FFh");
+  n.mark = n.output.length;
+  n.cpu.cpu.pc = 0;
+  n.runUntil(() => n.waitingForInput() && /\r\n[A-P]>$/.test(n.text(n.mark)), 400_000_000, "warm boot");
+  assert.doesNotMatch(n.text(n.mark), /Write lost/, "the failed line was dropped and reported by function 48");
+});
+
+test("function 45: FFh returns a BDOS error to the program, A = FFh and H the code, FEh says it first, and warm boot puts the default back (KS36b)", async () => {
+  const m = start(card());
+  for (const [mode, said] of [[0xff, false], [0xfe, true]]) {
+    bdos(m, 45, mode);
+    m.mark = m.output.length;
+    bdos(m, 14, 15); // select P:, which has no volume
+    assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 4], `mode ${mode.toString(16)}: a select error, returned`);
+    assert.equal(/Bdos Err On P: Select/.test(m.text(m.mark)), said, `mode ${mode.toString(16)}: the message ${said ? "said" : "not said"}`);
+  }
+  m.cpu.cpu.pc = 0;
+  m.runUntil(() => m.waitingForInput(), 400_000_000, "warm boot");
+  assert.equal(m.read(m.sym("ERRMODE")), 0, "warm boot: the default again");
+});

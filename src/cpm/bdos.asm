@@ -85,6 +85,10 @@ BENTRY:
         JR      Z,FNRETC
         CP      47
         JR      Z,FNCHAIN
+	CP	45
+	JR	Z,FNERRM
+	CP	48
+	JR	Z,FNFLSH
         CP      41
         JR      NC,RETZERO
         ADD     A,A
@@ -129,6 +133,22 @@ RETWORD:
 
 FNZERO:
         JP      BIOWBT
+
+; Function 45, CP/M 3's error mode: E = FFh, a BDOS error returns to the
+; program with A = FFh and H its code, and no message; FEh, the message and
+; then the same return; any other, the default: the message, a key, and the
+; program ends with the rest of a chained line. Warm boot puts it back to 0.
+FNERRM:	LD	A,E
+	LD	(ERRMODE),A
+	JR	RETZERO
+
+; Function 48, CP/M 3's flush: every changed line of the cache written. A = 0,
+; or FFh if any write failed, its line then dropped; E = FFh's purge is the same
+; flush, since dropping clean lines changes nothing a program can see.
+FNFLSH:	CALL	VFLUSH
+	JR	Z,RETZERO
+	LD	A,$FF
+	JR	RETA
 
 ; Function 108, CP/M 3's program return code: DE = FFFFh gets it into HL;
 ; any other DE sets it. One code for every program.
@@ -643,8 +663,8 @@ ROTEST: LD      DE,9
         BIT     7,(HL)
         RET     Z
         LD      HL,ERRFILE
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,3		; read-only file
+	JP	BDERR
 
 FNDELETE:
         CALL    CHKRO
@@ -2378,16 +2398,16 @@ RONZ:	CALL	DRVMASK		; HL = the drive's bit
 CHKRO:	CALL	RONZ		; writable: on
         RET     Z
         LD      HL,ERRRO
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,2		; read-only disk
+	JR	BDERR
 
 ; Failure diagnostics are deliberately kept behind one routine so later
 ; milestones can add the exact CP/M retry/abort interaction without coupling
 ; normal disk algorithms to console policy.
 SELFAIL:
         LD      HL,ERRSEL
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,4		; select
+	JR	BDERR
 
 ERRTEXT:
         LD      A,(HL)
@@ -2402,8 +2422,24 @@ ERRTEXT:
 
 BADSECT:
         LD      HL,ERRBAD
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,1		; disk I/O
+
+; A BDOS error, the message at HL and its code in B, as function 45's mode
+; says: returned to the program (FFh), said and returned (FEh), or said, a key
+; waited for and the program ended with the rest of a chained line (default).
+; A returned error leaves a chained line alone (KD-181).
+BDERR:	LD	A,(ERRMODE)
+	CP	$FE
+	JR	C,BDDEF		; the default
+	PUSH	BC
+	CALL	Z,DISKMSG	; FEh: the message first
+	POP	BC
+	LD	H,B		; H = the code, A = L = FFh
+	LD	L,$FF
+	JP	RETWORD
+BDDEF:	CALL	DISKMSG
+	CALL	GETCHAR		; a key, then the program ends
+	JP	CHDROP
 
 ; Reject corrupt allocation references before vector indexing or the 16-bit
 ; block-to-record shift. DE is the block; preserve it and HL/BC. IX identifies
@@ -2422,7 +2458,8 @@ BLKPAST:
         SBC     A,D
         RET
 
-DISKERR:
+; The message at HL after "Bdos Err On X".
+DISKMSG:
         PUSH    HL
         LD      HL,ERRHEAD
         CALL    ERRTEXT
@@ -2431,8 +2468,7 @@ DISKERR:
         LD      C,A
         CALL    OUTCHAR
         POP     HL
-        CALL    ERRTEXT
-        JR      GETCHAR
+        JR      ERRTEXT
 
 GETCHAR:
         LD      A,(PENDING)

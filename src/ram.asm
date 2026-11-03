@@ -131,6 +131,7 @@ CCPRME:
 ; ---- The BDOS's state and stack (cpm/bdos.asm) --------------------------------
 BDOSRAM EQU     CCPRME
 OLDSP:  DS      2
+ERRMODE:DS      1               ; function 45's mode: FFh return, FEh display; 0 at warm boot
 PARAM:  DS      2
 COLUMN: DS      1
 LISTEN: DS      1

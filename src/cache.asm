@@ -329,15 +329,12 @@ CWB2:   PUSH    AF
         JR      Z,CWB3
         XOR     A               ; data: done
         RET
-CWBT:	LD	A,C		; the line
-	CALL	CWRITE		; Z: the card has the block
-	RET	Z
-	CALL	CDROP		; failed: the line goes, the card's copy stands
-	OR	1		; NZ
-	RET
+CWBT:	LD	A,C		; written through: the line to the card,
+	CP	A		; Z, as after a flush with no failure
+	JR	CWB4
 CWB3:   LD      A,C             ; a directory block: the volume's data first,
         CALL    CFLUSH          ; then the directory line; if either fails,
-	CALL	Z,CWRITE	; the line goes, so the card's directory
+CWB4:	CALL	Z,CWRITE	; the line goes, so the card's directory
         RET     Z               ; stays the truth and is read again
         CALL    CDROP
         OR      1               ; NZ

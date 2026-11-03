@@ -15,7 +15,7 @@ holding the word at `0006h`, so the largest it loads on the starter card is
 
 The BDOS is an adaptation of Portable CP/M, which implements functions 0–40
 with their documented conventions; 38 and 39 return zero, and functions above
-40 return zero, except 47 and 108; CP/M 3's function 50 is not provided, and a
+40 return zero, except 45, 47, 48 and 108; CP/M 3's function 50 is not provided, and a
 program reaches the BIOS through the jump table at `(0001h)`. Function 108 is CP/M 3's program return code: `DE =
 FFFFh` gets it into `HL`, any other `DE` sets it; one code serves every
 program, and it is 0 after a reset. The CCP clears it as it takes each
@@ -24,7 +24,14 @@ built-in that fails. Function 47 is TEC-OS's chain, from CP/M 3's: the
 command at the DMA address, ended by a 0 within 128 bytes, replaces what is
 left of the CCP's line and the program ends by warm boot; a string with no 0
 there, or holding a CR or LF, returns `A = FFh` and the program goes on. `E`
-is ignored. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
+is ignored. Function 45 is CP/M 3's error mode: with `E = FFh` a BDOS error
+returns to the program with `A = FFh` and `H` its code (1 disk I/O, 2 read-only
+disk, 3 read-only file, 4 select) and no message, and the rest of a chained line
+stays; with `FEh` the message is said first; any other `E` is the default, the
+message, a key and the program's end. Warm boot puts the default back. Function
+48 is CP/M 3's flush: every changed line of the cache goes to the card, `A = 0`,
+or `FFh` if a write failed, that line then dropped; `E = FFh`'s purge is the same
+flush. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
 
 | Area | Functions | Result |
 | --- | --- | --- |
