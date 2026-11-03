@@ -154,7 +154,9 @@ async function failures(dir, traceFile, files, only) {
   }
   const where = (n) => (isAbsolute(n) ? relative(dir, n) : n);
   const traced = existsSync(traceFile) ? readFileSync(traceFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
-  return [...tap.matchAll(/^\s*not ok \d+ - (.*?)(?: # .*)?$/gm)].flatMap((x) => named(where(x[1]), files, traced.map((t) => ({ ...t, file: where(t.file) }))));
+  const out = [...tap.matchAll(/^\s*not ok \d+ - (.*?)(?: # .*)?$/gm)].flatMap((x) => named(where(x[1]), files, traced.map((t) => ({ ...t, file: where(t.file) }))));
+  out.passed = [...tap.matchAll(/^\s*ok \d+ - /gm)].length;
+  return out;
 }
 
 async function one(dir, work, m, i) {
@@ -174,9 +176,14 @@ async function one(dir, work, m, i) {
   }
   if (!m.tests.length) return { caught: false, by: [] };
   const failed = await failures(copy, resolve(copy, "test-trace.jsonl"), m.tests, m.only);
-  const already = new Set(await failingUnmutated(dir, work, m.tests, m.only));
+  const unmutatedRun = await failingUnmutated(dir, work, m.tests, m.only);
+  if (!unmutatedRun.passed) throw new Error(`mutant ${m.name}: no test of ${m.tests.join(", ")} passes on the unmutated tree: no catch can be credited (KE-162)`);
+  const already = new Set(unmutatedRun);
   const by = [...new Set(failed.filter((n) => !already.has(n)))].slice(0, 3);
   const notCredited = [...new Set(failed.filter((n) => already.has(n)))];
+  // Every test that failed fails unmutated too: the set can't judge this mutant, so it is no survivor.
+  if (notCredited.length && !by.length)
+    throw new Error(`mutant ${m.name}: its tests (${m.tests.join(", ")}) fail on the unmutated tree, ${notCredited.slice(0, 3).join("; ")}: no catch can be credited (KE-162)`);
   log(`mutant ${m.name}: ${by.length ? "caught" : "survived"}${notCredited.length ? `; ${notCredited.length} failing unmutated, not credited` : ""}`);
   return { caught: by.length > 0, by, ...(notCredited.length ? { notCredited } : {}) };
 }
