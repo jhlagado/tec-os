@@ -70,26 +70,7 @@ LCDV:   PUSH    BC
         CALL    DRVDESC
         POP     BC
         JR      NZ,LCDVN
-        LD      A,C
-        PUSH    BC
-        LD      HL,LINEBUF
-        ADD     A,'A'
-        LD      (HL),A
-        INC     HL
-        LD      (HL),':'
-        INC     HL
-        LD      (HL),' '
-        INC     HL
-        PUSH    IX
-        POP     DE
-        EX      DE,HL
-        LD      BC,DLABEL
-        ADD     HL,BC
-        LD      BC,11
-        LDIR
-        XOR     A
-        LD      (DE),A
-        POP     BC
+	CALL	DRVLAB		; the row's text in LINEBUF
         PUSH    BC
         LD      A,C
         INC     A
@@ -102,3 +83,28 @@ LCDVN:  INC     C
         CP      2               ; only A and B fit
         JR      C,LCDV
         RET
+
+; LINEBUF = drive C's letter, ": " and the 11-byte label of its descriptor at
+; IX, then a 0: the drive walkers' shared text, LCDVOLS's rows and SHOWVOL's
+; lines. Keeps BC and IX. Destroys AF, DE and HL.
+DRVLAB:	LD	A,C
+	PUSH	BC
+	LD	HL,LINEBUF
+	ADD	A,'A'		; the drive's letter, then ": "
+	LD	(HL),A
+	INC	HL
+	LD	(HL),':'
+	INC	HL
+	LD	(HL),' '
+	INC	HL
+	PUSH	IX
+	POP	DE
+	EX	DE,HL		; DE = LINEBUF+3, HL = the descriptor
+	LD	BC,DLABEL
+	ADD	HL,BC
+	LD	BC,11		; the label
+	LDIR
+	XOR	A		; and its end
+	LD	(DE),A
+	POP	BC
+	RET

@@ -324,26 +324,9 @@ SHOWVOL:LD      C,0             ; each mounted drive, in drive order
 SHV:    PUSH    BC
         CALL    DRVDESC
         JR      NZ,SHVN
-	LD	A,C		; the drive, which may not be the card's letter
-        ADD     A,'A'
-        CALL    PUTA
-        LD      A,':'
-        CALL    PUTA
-        LD      A,' '
-        CALL    PUTA
-        PUSH    IX
-        POP     HL
-        LD      DE,DLABEL
-        ADD     HL,DE
-        LD      B,11
-SHVL:   LD      A,(HL)
-        PUSH    BC
-        PUSH    HL
-        CALL    PUTA
-        POP     HL
-        POP     BC
-        INC     HL
-        DJNZ    SHVL
+	CALL	DRVLAB		; letter and label, in LINEBUF: at cold
+	LD	HL,LINEBUF	; boot the console is serial, and no
+	CALL	PUTS		; terminal row needs LINEBUF
         LD      A,(IX+DFLAGS)
         AND     DFREAD
         JR      Z,SHVRW
