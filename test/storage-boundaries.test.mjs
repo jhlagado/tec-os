@@ -166,3 +166,33 @@ for (const fn of [34, 40]) test(`BDOS ${fn} accepts random record 65535 with exa
   assert.equal(bdos(m, 33, 0x5000), 0);
   assert.deepEqual(bytes(m, 0x4000, 128), Uint8Array.from({ length: 128 }, (_, i) => i ^ 0xa5));
 });
+
+// A3: MOUNT and UNMOUNT write a drive's dirty lines first. Their stack, with
+// lines written behind waiting, stays within abi.inc's bound of 24 bytes below
+// the return address.
+test("MOUNT and UNMOUNT with dirty lines written behind stay within abi.inc's 24 bytes of stack, and write the lines (A3)", (t) => {
+  const deepest = {};
+  for (const [name, op, drive, index] of [["UNMOUNT", 1, 1, 0], ["MOUNT", 0, 1, 2]]) {
+    const { m, image } = start();
+    if (op === 0) svc(m, 1); // B: free for the mount, its lines written
+    for (let sector = 0; sector < 24; sector += 1) writeRecord(m, 1, sector, 0x40 + sector);
+    const before = image.slice();
+    let low = 0x3000;
+    const step = m.step.bind(m);
+    m.step = () => {
+      const sp = m.cpu.cpu.sp;
+      if (sp < low && sp > 0x2f00) low = sp;
+      return step();
+    };
+    const got = op === 0 ? svc(m, op, drive, index) : svc(m, op, drive);
+    m.step = step;
+    deepest[name] = 0x3000 - low;
+    if (op === 1) {
+      assert.equal(got, 0, "UNMOUNT B:");
+      assert.notDeepEqual(image, before, "its dirty lines reached the card");
+    }
+    assert.ok(deepest[name] <= 24, `${name}: ${deepest[name]} bytes below the return address`);
+  }
+  assert.ok(deepest.UNMOUNT > 0 && deepest.MOUNT > 0, JSON.stringify(deepest));
+  t.diagnostic(`stack below the return address: ${JSON.stringify(deepest)}`);
+});
