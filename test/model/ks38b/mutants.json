@@ -1,0 +1,106 @@
+{
+  "mutants": {
+    "HEXHL: a digit one off": {
+      "caught": true,
+      "by": [
+        "COPY X.DAT B:X.DAT on A: still copies",
+        "COPY A:X.DAT X.DAT on B: still copies",
+        "after B: and A:, a plain name is on A: again: a copy works, and one onto itself is refused"
+      ]
+    },
+    "SUMDE: the carry dropped": {
+      "caught": true,
+      "by": [
+        "a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume",
+        "MOUNT takes a volume by label or index, refuses one in use, A: left empty and a drive without a slot, and unmounts",
+        "a reset keeps the selected volume"
+      ]
+    },
+    "DPHADR from ALVINIT: the DPB word one off": {
+      "caught": true,
+      "by": [
+        "a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume",
+        "MOUNT takes a volume by label or index, refuses one in use, A: left empty and a drive without a slot, and unmounts",
+        "a reset keeps the selected volume"
+      ]
+    },
+    "DPHADR from MNDPH: the next drive's DPH": {
+      "caught": true,
+      "by": [
+        "a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume",
+        "MOUNT takes a volume by label or index, refuses one in use, A: left empty and a drive without a slot, and unmounts",
+        "a reset keeps the selected volume"
+      ]
+    },
+    "CPSRC: the destination's FCB": {
+      "caught": true,
+      "by": [
+        "CCP says so with no file, and runs a file of that name",
+        "EXIT says so with no file, and runs a file of that name",
+        "UNLOAD is refused with no resident, and removes residents last in, first out"
+      ]
+    },
+    "KEYTAB: DIR runs TYPE": {
+      "caught": true,
+      "by": [
+        "REN takes one drive from either name, and a name on another drive is refused",
+        "ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)",
+        "ERA *.* answered with Return alone erases nothing and takes no second Return"
+      ]
+    },
+    "KEYTAB's loop: a word's handler not passed over": {
+      "caught": true,
+      "by": [
+        "UNLOAD is refused with no resident, and removes residents last in, first out",
+        "startup lines go on after ^C at a program",
+        "ERA frees each directory entry's blocks once"
+      ]
+    },
+    "MNDBAD: a bad descriptor reported as unreadable": {
+      "caught": true,
+      "by": [
+        "tecvol verify refuses every 1.0 card the ROM's MOUNT refuses, check by check",
+        "tecvol verify refuses every 1.1 card the ROM's MOUNT refuses, check by check"
+      ]
+    },
+    "MNFILL: the length's high byte not copied": {
+      "caught": true,
+      "by": [
+        "a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume",
+        "MOUNT takes a volume by label or index, refuses one in use, A: left empty and a drive without a slot, and unmounts",
+        "a reset keeps the selected volume"
+      ]
+    },
+    "DRVLAB: the label a character short": {
+      "caught": true,
+      "by": [
+        "cold boot lists each drive's whole 11-character label, its spaces too (KS38b's DRVLAB)"
+      ]
+    },
+    "PUTCHAR: HL not kept": {
+      "caught": true,
+      "by": [
+        "the built-ins' operands keep their output, BDOS calls and stack",
+        "CCP says so with no file, and runs a file of that name",
+        "EXIT says so with no file, and runs a file of that name"
+      ]
+    }
+  },
+  "mutantsAt": {
+    "HEXHL: a digit one off": "7766643",
+    "SUMDE: the carry dropped": "7766643",
+    "DPHADR from ALVINIT: the DPB word one off": "7766643",
+    "DPHADR from MNDPH: the next drive's DPH": "7766643",
+    "CPSRC: the destination's FCB": "7766643",
+    "KEYTAB: DIR runs TYPE": "7766643",
+    "KEYTAB's loop: a word's handler not passed over": "7766643",
+    "MNDBAD: a bad descriptor reported as unreadable": "7766643",
+    "MNFILL: the length's high byte not copied": "7766643",
+    "DRVLAB: the label a character short": "5f0f97a",
+    "PUTCHAR: HL not kept": "7766643"
+  },
+  "mutantScore": {
+    "caught": 11,
+    "total": 11
+  }
+}
