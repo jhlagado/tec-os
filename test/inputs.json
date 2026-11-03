@@ -14,12 +14,12 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium 04ec086, dist/TED.COM",
+      "source": "jhlagado/thorium 128edb7, dist/TED.COM",
       "repo": "jhlagado/thorium",
-      "commit": "04ec08614a832d91445571ca1b2e17d3d8589955",
+      "commit": "128edb7cbb27de17a9d3a7a747706a5b227b30c4",
       "path": "dist/TED.COM",
-      "bytes": 11831,
-      "sha256": "d42b6d2a5ea3158ff76774abaef1d290a42dc76ea9bb34aa564e3ae87add7344"
+      "bytes": 11923,
+      "sha256": "2b9291a8c50fc2fbf6673112627bcfc849cf0f7578d20e4104b86f9e1516e49f"
     }
   }
 }

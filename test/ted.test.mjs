@@ -3,7 +3,7 @@
 // of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
 // from the listing of Thorium 8fcc6ea's build (build/ted/ted.sym), whose
-// workspace 04ec086 keeps:
+// workspace 128edb7 keeps:
 // the pin's hash holds them.
 
 import { readFileSync } from "node:fs";
@@ -118,7 +118,8 @@ function round({ drive = "A", tms = true }) {
 
   mark = m.output.length;
   keys(m, "\x14d", "TED after TDB?", () => /TED\r\n/.test(since()) && /L2 C2/.test(status()));
-  assert.match(since(), new RegExp(`${drive}>TDB HELLO\\r\\nTDB\\?\\r\\n\\r\\n${drive}>TED\\r\\n`), "the chain's line taken, TDB? and !TED");
+  // Item E: each tool on the line names the load drive, the current one here
+  assert.match(since(), new RegExp(`${drive}>${drive}:TDB HELLO\\r\\n${drive}:TDB\\?\\r\\n\\r\\n${drive}>${drive}:TED\\r\\n`), "the chain's line taken, TDB? and !TED");
   assert.equal(word(m, CURSOR), 12, "the same place");
 
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
@@ -189,4 +190,31 @@ test("TED's text holds at least 33,052 bytes on the starter's files with no disp
     keys(m, "ted x.asm\r", "TED", () => /TED +X\.ASM/.test(m.text(0)));
     assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${board.tms ? "on a board with both" : "with no display"}, at least ${floor}`);
   }
+});
+
+test("C:TED from B: edits B:'s file, and ^T B runs C:'s TAS and comes back to C:'s TED, item E's load drive", { skip: TED.skip || TAS.skip, timeout: 600_000 }, () => {
+  check(TED);
+  check(TAS);
+  const image = standardCard([{ geometry: "G1M", label: "TOOLS", mount: "C" }]);
+  const c = volume(image, "C");
+  c.write("TED.COM", tedBytes());
+  c.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  volume(image, "B").write("HELLO.ASM", Buffer.from(BAD), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  const status = () => m.screen()[23];
+  let mark = m.output.length;
+  keys(m, "b:\r", "the drive", () => m.text(mark).endsWith("B>"));
+  keys(m, "c:ted hello.asm\r", "C:'s TED on B:'s file", () => /TED .*HELLO\.ASM/.test(status()));
+  mark = m.output.length;
+  keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
+  assert.doesNotMatch(m.text(mark), /TAS\?|TED\?/, "both found on C:");
+  assert.equal(word(m, CURSOR), 12, "at the error's line and column");
+  keys(m, ";", "the fix", () => /L2 C3/.test(status()));
+  mark = m.output.length;
+  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
+  keys(m, "\x11", "the prompt", () => m.text(mark).endsWith("B>"));
+  assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
+  assert.ok(volume(image, "B").list().some((f) => f.name === "HELLO.COM"), "HELLO.COM on B:");
+  assert.equal(m.read(4) & 15, 1, "the current drive still B:");
+  assert.deepEqual(m.violations, []);
 });
