@@ -1,0 +1,716 @@
+{
+  "baseline": "ea9c1c0",
+  "assembler": "ATOM 0.3.7",
+  "prototype": "be75fe7a0d180a6028ae56f75f49ac08c85d273b",
+  "recommended": {
+    "entry": "jpBentry",
+    "rest003B": "zeroed",
+    "bound": "atOrAboveTop",
+    "safeRead": "routine"
+  },
+  "rom": {
+    "reference": {
+      "used": 14826,
+      "free": 1558
+    },
+    "used": 14937,
+    "free": 1447,
+    "saving": -111,
+    "regions": {
+      "reset jump": 3,
+      "table": 21,
+      "data": 806,
+      "code": 14107,
+      "free": 1447
+    },
+    "reconciled": 16384,
+    "equals16384": true,
+    "contiguous": true,
+    "oneImage": true,
+    "sha256": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
+    "tableEnd": 49176
+  },
+  "ceiling": {
+    "used": 15358,
+    "font": 770,
+    "floor": 256,
+    "margin": 421
+  },
+  "tpa": {
+    "prototype": {
+      "starter": {
+        "serial": 46869,
+        "pico80": 45312,
+        "pico40": 45312,
+        "pico32": 45312,
+        "glcd": 45312,
+        "both": 43776
+      },
+      "fourG8M": {
+        "serial": 46165,
+        "pico80": 44544,
+        "pico40": 44544,
+        "pico32": 44544,
+        "glcd": 44544,
+        "both": 43008
+      }
+    },
+    "reference": {
+      "starter": {
+        "serial": 46854,
+        "pico80": 45318,
+        "pico40": 45318,
+        "pico32": 45318,
+        "glcd": 45318,
+        "both": 43782
+      },
+      "fourG8M": {
+        "serial": 46086,
+        "pico80": 44550,
+        "pico40": 44550,
+        "pico32": 44550,
+        "glcd": 44550,
+        "both": 43014
+      }
+    }
+  },
+  "cards": {
+    "prototype": {
+      "starter": {
+        "entry": 47125,
+        "alvBase": 47128,
+        "tpa": 46869
+      },
+      "fourG8M": {
+        "entry": 46421,
+        "alvBase": 46424,
+        "tpa": 46165
+      }
+    },
+    "reference": {
+      "starter": {
+        "entry": 47110,
+        "alvBase": 47128,
+        "tpa": 46854
+      },
+      "fourG8M": {
+        "entry": 46342,
+        "alvBase": 46424,
+        "tpa": 46086
+      }
+    }
+  },
+  "resident": {
+    "prototype": {
+      "fixedBase": 47448,
+      "workspaceBytes": 1448,
+      "stateAboveTheTable": 179,
+      "entry": 47125,
+      "cards": {
+        "starter": {
+          "entry": 47125,
+          "alvBase": 47128,
+          "tpa": 46869
+        },
+        "fourG8M": {
+          "entry": 46421,
+          "alvBase": 46424,
+          "tpa": 46165
+        }
+      }
+    },
+    "reference": {
+      "fixedBase": 47448,
+      "workspaceBytes": 1448,
+      "stateAboveTheTable": 179,
+      "entry": 47110,
+      "cards": {
+        "starter": {
+          "entry": 47110,
+          "alvBase": 47128,
+          "tpa": 46854
+        },
+        "fourG8M": {
+          "entry": 46342,
+          "alvBase": 46424,
+          "tpa": 46086
+        }
+      }
+    }
+  },
+  "stacks": {
+    "reference": {
+      "bdos": 32,
+      "ccp": 22,
+      "bios": 16
+    },
+    "prototype": {
+      "bdos": 32,
+      "ccp": 22,
+      "bios": 16
+    },
+    "reserved": {
+      "bdos": 54,
+      "ccp": 30,
+      "bios": 38
+    },
+    "pathsGone": [],
+    "goneReadings": {},
+    "runs": {
+      "serial": {
+        "bdos": 28,
+        "ccp": 16,
+        "bios": 14
+      },
+      "pico9918": {
+        "bdos": 32,
+        "ccp": 16,
+        "bios": 14
+      },
+      "glcd": {
+        "bdos": 32,
+        "ccp": 20,
+        "bios": 14
+      },
+      "writeBehind": {
+        "bdos": 28,
+        "ccp": 16,
+        "bios": 16
+      },
+      "diagnostics": {
+        "bdos": 0,
+        "ccp": 0,
+        "bios": 12
+      },
+      "conUc1": {
+        "bdos": 30,
+        "ccp": 16,
+        "bios": 14
+      },
+      "conUc1Glcd": {
+        "bdos": 20,
+        "ccp": 22,
+        "bios": 14
+      },
+      "picoNoDriver": {
+        "bdos": 20,
+        "ccp": 12,
+        "bios": 14
+      },
+      "unloadPico": {
+        "bdos": 20,
+        "ccp": 16,
+        "bios": 14
+      },
+      "recognisedReset": {
+        "bdos": 20,
+        "ccp": 6,
+        "bios": 14
+      },
+      "chained": {
+        "bdos": 28,
+        "ccp": 14,
+        "bios": 14
+      },
+      "serialPlain": {
+        "bdos": 20,
+        "ccp": 14,
+        "bios": 14
+      },
+      "resident": {
+        "bdos": 20,
+        "ccp": 14,
+        "bios": 14
+      }
+    },
+    "deepestCcpRun": "conUc1Glcd",
+    "proved": {
+      "PICO.DRV": {
+        "declared": [
+          0,
+          0,
+          0
+        ],
+        "peakOverReference": [
+          0,
+          0,
+          0
+        ]
+      },
+      "GLCD.DRV": {
+        "declared": [
+          2,
+          0,
+          6
+        ],
+        "overBase": [
+          2,
+          0,
+          6
+        ]
+      }
+    },
+    "limit": [
+      8,
+      12,
+      6
+    ],
+    "everyQuarterFree": true
+  },
+  "entry": {
+    "jumpsWithNoneOneTwo": [
+      2,
+      2,
+      2
+    ]
+  },
+  "drivers": {
+    "prototype": {
+      "GLCD.SVC": {
+        "file": 1597,
+        "image": 1530,
+        "extra": 0,
+        "pages": 6,
+        "room": 6,
+        "stacks": [
+          2,
+          0,
+          6
+        ]
+      },
+      "PICO.SVC": {
+        "file": 1378,
+        "image": 1314,
+        "extra": 0,
+        "pages": 6,
+        "room": 222,
+        "stacks": [
+          0,
+          0,
+          0
+        ]
+      },
+      "PICO32.SVC": {
+        "file": 1404,
+        "image": 1338,
+        "extra": 0,
+        "pages": 6,
+        "room": 198,
+        "stacks": [
+          0,
+          0,
+          0
+        ]
+      },
+      "PICO40.SVC": {
+        "file": 1378,
+        "image": 1314,
+        "extra": 0,
+        "pages": 6,
+        "room": 222,
+        "stacks": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "reference": {
+      "GLCD.SVC": {
+        "file": 1597,
+        "image": 1530,
+        "extra": 0,
+        "pages": 6,
+        "room": 6,
+        "stacks": [
+          2,
+          0,
+          6
+        ]
+      },
+      "PICO.SVC": {
+        "file": 1360,
+        "image": 1301,
+        "extra": 0,
+        "pages": 6,
+        "room": 235,
+        "stacks": [
+          0,
+          0,
+          0
+        ]
+      },
+      "PICO32.SVC": {
+        "file": 1386,
+        "image": 1325,
+        "extra": 0,
+        "pages": 6,
+        "room": 211,
+        "stacks": [
+          0,
+          0,
+          0
+        ]
+      },
+      "PICO40.SVC": {
+        "file": 1360,
+        "image": 1301,
+        "extra": 0,
+        "pages": 6,
+        "room": 235,
+        "stacks": [
+          0,
+          0,
+          0
+        ]
+      }
+    }
+  },
+  "pageZero": {
+    "differs": [
+      "0006"
+    ],
+    "rule": "a clean boot's 0000h-005Bh: only the word at 0006h"
+  },
+  "noOffset": {
+    "hits": [],
+    "clean": true
+  },
+  "contracts": {
+    "tpa": true,
+    "stub": true,
+    "flags": true,
+    "jumpAtZero": true,
+    "ownerAtEight": true,
+    "noOwnsAnInterrupt": true,
+    "sweepToThe40h": true,
+    "romTable": {
+      "rows": 21,
+      "sum": 14937,
+      "used": 14937,
+      "sumsToCensus": true,
+      "eachRowItsSpan": true
+    },
+    "rxhalf": 70
+  },
+  "choices": {
+    "entry": {
+      "jpBentry": {
+        "romUsed": 14937
+      },
+      "link": {
+        "romUsed": 14937,
+        "romOverPrototype": 0,
+        "jumpsWithNoneOneTwo": [
+          2,
+          3,
+          4
+        ]
+      },
+      "settled": "JP BENTRY: the design rule, whatever a link saves"
+    },
+    "rest003B": {
+      "zeroed": {
+        "romUsed": 14937
+      },
+      "leftAlone": {
+        "romUsed": 14934,
+        "romOverPrototype": -3
+      },
+      "settled": "zeroed, so a clean boot's bytes don't change"
+    },
+    "bound": {
+      "atOrAboveTop": {
+        "romUsed": 14937
+      },
+      "noWorkspace": {
+        "romUsed": 14954,
+        "romOverPrototype": 17
+      },
+      "settled": "at or above PZTOP's page"
+    },
+    "safeRead": {
+      "routine": {
+        "romUsed": 14937
+      },
+      "inline": {
+        "romUsed": 14951,
+        "romOverPrototype": 14
+      },
+      "settled": "the routine"
+    }
+  },
+  "media": {
+    "diagnostics": {
+      "landed": "66412ce96f99aaf4b67afaaad0d8c6597f81e1e46a5c33d40180a24a8a5ea343",
+      "reference": "66412ce96f99aaf4b67afaaad0d8c6597f81e1e46a5c33d40180a24a8a5ea343"
+    },
+    "starterImage": "e2a3f041f519c0c907ccbf91433160dce0e5b16e874dc731ee329255ad5e2c6c",
+    "recipe": "d4e4f190f1a4aecaa364677c03a57ed2cfd697f1f5bdd88924086fbbadade1b0",
+    "revision": "3",
+    "files": {
+      "TERM.COM": "fc34fcd4cbc4b7c300b36936486f3d2e98deb01341c21f6aa32d6a90261726b9",
+      "PROBE.COM": "8586ae2e8c0673773522a7e1ac7739f82c027440a06108dd1a4967f921c28bb7",
+      "DEMO.COM": "d76be28ca6b15d026a78936f41895632f57b4ebac114b2f0310c9fc70f53ec1f",
+      "MOUNT.COM": "834b0fde38ba97399605f815df0646b4d82a9f5dcd7b5404018e8f5095cc2b12",
+      "VOLS.COM": "d2914530cdf5ae7e8e71f30adc623c4b0728551e7b8ba511dd6734436e5f1432",
+      "PICO.SVC": "2786ee2be3f435175f8a4db8be8356b0979d0ee5cf3b553321adc64ea27df3ee",
+      "PICO40.SVC": "cbdd19b4d4374529fad53888ddd96c018178ce908a2a7f6305c46f8e158975fe",
+      "PICO32.SVC": "6eb8c899b4b11e6e83cc45afaaa6db2d216614e541091ce015a41589fd96ec0b",
+      "GLCD.SVC": "072f939f9faf9197f587a15961bf41d92d9be1f4dec2d91a60876d67874f0fcb",
+      "STARTUP.CMD": "3b8024d462c98e93ca315fcbd3454d0a2c5463bde78e6e0111937cb294034d53",
+      "EDIT.COM": "ed88337e6dfa2626dd37a225a0ec09332f4927a0bde62114bbf8661d2d0fdc78",
+      "TAS.COM": "45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2",
+      "README.TXT": "2396e75078be8a4720f9843ac45f9e0cf452a678ed6589fb880c87ba040b3a21"
+    },
+    "filesSvcOnly": true,
+    "resetIdentity": {
+      "rule": "the same test: page zero's jumps and the stub at STUBAD jumping to BENTRY",
+      "landed": {
+        "BENTRY": "e143",
+        "STUBAD": "bc52"
+      },
+      "reference": {
+        "BENTRY": "e127",
+        "STUBAD": "bc52"
+      }
+    }
+  },
+  "tests": {
+    "masking": {
+      "pass": 20,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "reproducible": {
+    "first": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
+    "second": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
+    "third": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
+    "equal": true
+  },
+  "mutants": {
+    "sweep: stops at 0037h": {
+      "caught": true,
+      "by": [
+        "a vector into freed pages goes at UNLOAD with no declaration"
+      ]
+    },
+    "sweep: the bound a page high": {
+      "caught": true,
+      "by": [
+        "a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h",
+        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays"
+      ]
+    },
+    "sweep: the bound back at C0h": {
+      "caught": true,
+      "by": [
+        "a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h",
+        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays"
+      ]
+    },
+    "sweep: the bound a page low": {
+      "caught": true,
+      "by": [
+        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays",
+        "a vector into freed pages goes at UNLOAD with no declaration",
+        "a failed INIT's vector goes with its pages"
+      ]
+    },
+    "sweep: 003Fh keeps its RET": {
+      "caught": true,
+      "by": [
+        "a clean boot's restart vectors are the defaults, and 0038h is EI; RETI"
+      ]
+    },
+    "sweep: exits with carry set": {
+      "caught": true,
+      "by": [
+        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success",
+        "a vector into freed pages goes at UNLOAD with no declaration",
+        "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, serial"
+      ]
+    },
+    "claims: format 3's flags of 1 claim": {
+      "caught": true,
+      "by": [
+        "a claim on a free slot installs, and format 3's flags of 1 claim nothing"
+      ]
+    },
+    "reset: a vector kept": {
+      "caught": true,
+      "by": [
+        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays",
+        "a vector into freed pages goes at UNLOAD with no declaration",
+        "a failed INIT's vector goes with its pages"
+      ]
+    },
+    "entry: the link restored": {
+      "caught": true,
+      "by": [
+        "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+      ]
+    },
+    "header: the fields below (0006h)": {
+      "caught": true,
+      "by": [
+        "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+      ]
+    },
+    "header: the owner not kept": {
+      "caught": true,
+      "by": [
+        "a chain of 255 records is taken and 256 is refused",
+        "SERVICES lists each service and its pages, the newest first, with none and after UNLOAD",
+        "a dependency present is bound at INIT, and last in is first out"
+      ]
+    },
+    "header: the top from the stub alone": {
+      "caught": true,
+      "by": [
+        "a dependency present is bound at INIT, and last in is first out",
+        "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, serial",
+        "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, PICO"
+      ]
+    },
+    "header: the page above from nothing": {
+      "caught": true,
+      "by": [
+        "a record whose end leaves the service's pages is refused",
+        "SERVICES lists each service and its pages, the newest first, with none and after UNLOAD"
+      ]
+    },
+    "stub: a byte low": {
+      "caught": true,
+      "by": [
+        "cold boot leaves the overlay off, the classic bank selected and the CCP prompting",
+        "cold boot packs each drive's allocation vector, DSM / 8 + 1 bytes, below the workspace and puts the BDOS entry below them"
+      ]
+    },
+    "recognition: W = S refused": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "mask: VPAIR with no DI": {
+      "caught": true,
+      "by": [
+        "PICO.SVC: TMSR2's pairs run with interrupts off, and the state comes back",
+        "PICO.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "PICO.SVC: GFXREG's pairs run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: VPAIR leaves them off": {
+      "caught": true,
+      "by": [
+        "PICO.SVC: TMSR2's pairs run with interrupts off, and the state comes back",
+        "PICO.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "PICO.SVC: GFXREG's pairs run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: VPAIR turns them on": {
+      "caught": true,
+      "by": [
+        "PICO.SVC: TMSR2's pairs run with interrupts off, and the state comes back",
+        "PICO.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "PICO.SVC: GFXREG's pairs run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: GFXREG bare": {
+      "caught": true,
+      "by": [
+        "PICO.SVC: GFXREG's pairs run with interrupts off, and the state comes back",
+        "PICO40.SVC: GFXREG's pairs run with interrupts off, and the state comes back",
+        "PICO32.SVC: GFXREG's pairs run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: TMSR bare": {
+      "caught": true,
+      "by": [
+        "PICO.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "PICO40.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "PICO32.SVC: TMSSET's pairs run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: TXBYTE with no DI": {
+      "caught": true,
+      "by": [
+        "TXBYTE's port writes run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: RXBITS with no DI": {
+      "caught": true,
+      "by": [
+        "RXBITS's eight samples run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: TXBYTE leaves them off": {
+      "caught": true,
+      "by": [
+        "TXBYTE's port writes run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: RXBITS leaves them off": {
+      "caught": true,
+      "by": [
+        "RXBITS's eight samples run with interrupts off, and the state comes back"
+      ]
+    },
+    "mask: RXHALF not re-derived": {
+      "caught": true,
+      "by": [
+        "RXBITS samples bit 0 at its middle, with interrupts on and off"
+      ]
+    },
+    "unload: no sweep": {
+      "caught": true,
+      "by": [
+        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success",
+        "a vector into freed pages goes at UNLOAD with no declaration"
+      ]
+    },
+    "failed INIT: no sweep": {
+      "caught": true,
+      "by": [
+        "a failed INIT's vector goes with its pages"
+      ]
+    },
+    "unload: a claimed slot left": {
+      "caught": true,
+      "by": [
+        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success"
+      ]
+    },
+    "unload: the slots a place out": {
+      "caught": true,
+      "by": [
+        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success"
+      ]
+    },
+    "claims: a held slot let through": {
+      "caught": true,
+      "by": [
+        "a second claim is refused with nothing changed"
+      ]
+    },
+    "claims: the slots a place out": {
+      "caught": true,
+      "by": [
+        "a second claim is refused with nothing changed"
+      ]
+    }
+  },
+  "mutantScore": {
+    "caught": 31,
+    "total": 31,
+    "notRun": []
+  }
+}
