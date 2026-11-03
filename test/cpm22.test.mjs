@@ -217,4 +217,7 @@ test("a write in place reaches the card before any close, and the recovery guide
   assert.doesNotMatch(guide, /never reaches any card/, "the guide no longer says unclosed data never reaches the card");
   for (const kind of ["Unwritten dirty data", "New allocations", "In-place overwrites"]) assert.match(guide, new RegExp(`\\*\\*${kind}\\.\\*\\*`), kind);
   assert.match(guide, /nothing is rolled back/);
+  // KE-166: before a directory write, a volume written behind may already have some changes on the card, through eviction.
+  assert.doesNotMatch(guide, /the card holds the volume as it was then/, "the card isn't said to hold the volume as it was");
+  assert.match(guide, /already be on the card, written when their\s+lines were taken for other blocks/);
 });
