@@ -1,0 +1,1507 @@
+{
+  "landed": "5681443547099472d2c09658571b8cb2b7eec406",
+  "sizes": [
+    30,
+    20,
+    10,
+    5
+  ],
+  "rows": [
+    {
+      "loop": "small ^T B",
+      "lines": 30,
+      "reads": 234,
+      "loadReads": 177,
+      "measuredMisses": 48,
+      "secondsPerMiss": 0.027,
+      "turn": {
+        "misses": 48,
+        "seconds": 6.594,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 48,
+        "seconds": 6.594
+      },
+      "mark": {
+        "misses": 47,
+        "seconds": 6.567
+      }
+    },
+    {
+      "loop": "small ^T B",
+      "lines": 20,
+      "reads": 234,
+      "loadReads": 177,
+      "measuredMisses": 50,
+      "secondsPerMiss": 0.027,
+      "turn": {
+        "misses": 50,
+        "seconds": 6.665,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 50,
+        "seconds": 6.665
+      },
+      "mark": {
+        "misses": 53,
+        "seconds": 6.746
+      }
+    },
+    {
+      "loop": "small ^T B",
+      "lines": 10,
+      "reads": 234,
+      "loadReads": 177,
+      "measuredMisses": 50,
+      "secondsPerMiss": 0.027,
+      "turn": {
+        "misses": 50,
+        "seconds": 6.645,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 50,
+        "seconds": 6.645
+      },
+      "mark": {
+        "misses": 53,
+        "seconds": 6.726
+      }
+    },
+    {
+      "loop": "small ^T B",
+      "lines": 5,
+      "reads": 234,
+      "loadReads": 177,
+      "measuredMisses": 50,
+      "secondsPerMiss": 0.027,
+      "turn": {
+        "misses": 50,
+        "seconds": 6.634,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 50,
+        "seconds": 6.634
+      },
+      "mark": {
+        "misses": 53,
+        "seconds": 6.715
+      }
+    },
+    {
+      "loop": "small ^T R",
+      "lines": 30,
+      "reads": 349,
+      "loadReads": 275,
+      "measuredMisses": 50,
+      "secondsPerMiss": 0.05223,
+      "turn": {
+        "misses": 50,
+        "seconds": 7.331,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 50,
+        "seconds": 7.331
+      },
+      "mark": {
+        "misses": 49,
+        "seconds": 7.279
+      }
+    },
+    {
+      "loop": "small ^T R",
+      "lines": 20,
+      "reads": 349,
+      "loadReads": 275,
+      "measuredMisses": 78,
+      "secondsPerMiss": 0.05223,
+      "turn": {
+        "misses": 78,
+        "seconds": 8.822,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 78,
+        "seconds": 8.822
+      },
+      "mark": {
+        "misses": 83,
+        "seconds": 9.083
+      }
+    },
+    {
+      "loop": "small ^T R",
+      "lines": 10,
+      "reads": 349,
+      "loadReads": 275,
+      "measuredMisses": 78,
+      "secondsPerMiss": 0.05223,
+      "turn": {
+        "misses": 78,
+        "seconds": 8.787,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 78,
+        "seconds": 8.787
+      },
+      "mark": {
+        "misses": 83,
+        "seconds": 9.048
+      }
+    },
+    {
+      "loop": "small ^T R",
+      "lines": 5,
+      "reads": 349,
+      "loadReads": 275,
+      "measuredMisses": 78,
+      "secondsPerMiss": 0.05223,
+      "turn": {
+        "misses": 78,
+        "seconds": 8.771,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 78,
+        "seconds": 8.771
+      },
+      "mark": {
+        "misses": 83,
+        "seconds": 9.032
+      }
+    },
+    {
+      "loop": "30K ^T B",
+      "lines": 30,
+      "reads": 536,
+      "loadReads": 177,
+      "measuredMisses": 120,
+      "secondsPerMiss": 0.02617,
+      "turn": {
+        "misses": 120,
+        "seconds": 18.374,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 120,
+        "seconds": 18.374
+      },
+      "mark": {
+        "misses": 119,
+        "seconds": 18.348
+      }
+    },
+    {
+      "loop": "30K ^T B",
+      "lines": 20,
+      "reads": 536,
+      "loadReads": 177,
+      "measuredMisses": 124,
+      "secondsPerMiss": 0.02617,
+      "turn": {
+        "misses": 124,
+        "seconds": 18.53,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 124,
+        "seconds": 18.53
+      },
+      "mark": {
+        "misses": 127,
+        "seconds": 18.609
+      }
+    },
+    {
+      "loop": "30K ^T B",
+      "lines": 10,
+      "reads": 536,
+      "loadReads": 177,
+      "measuredMisses": 124,
+      "secondsPerMiss": 0.02617,
+      "turn": {
+        "misses": 124,
+        "seconds": 18.469,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 124,
+        "seconds": 18.469
+      },
+      "mark": {
+        "misses": 127,
+        "seconds": 18.548
+      }
+    },
+    {
+      "loop": "30K ^T B",
+      "lines": 5,
+      "reads": 536,
+      "loadReads": 177,
+      "measuredMisses": 124,
+      "secondsPerMiss": 0.02617,
+      "turn": {
+        "misses": 124,
+        "seconds": 18.437,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 124,
+        "seconds": 18.437
+      },
+      "mark": {
+        "misses": 127,
+        "seconds": 18.516
+      }
+    },
+    {
+      "loop": "30K ^T R",
+      "lines": 30,
+      "reads": 667,
+      "loadReads": 289,
+      "measuredMisses": 126,
+      "secondsPerMiss": 0.05027,
+      "turn": {
+        "misses": 126,
+        "seconds": 19.376,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 125,
+        "seconds": 19.326
+      },
+      "mark": {
+        "misses": 125,
+        "seconds": 19.326
+      }
+    },
+    {
+      "loop": "30K ^T R",
+      "lines": 20,
+      "reads": 667,
+      "loadReads": 289,
+      "measuredMisses": 155,
+      "secondsPerMiss": 0.05027,
+      "turn": {
+        "misses": 155,
+        "seconds": 20.897,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 155,
+        "seconds": 20.897
+      },
+      "mark": {
+        "misses": 160,
+        "seconds": 21.148
+      }
+    },
+    {
+      "loop": "30K ^T R",
+      "lines": 10,
+      "reads": 667,
+      "loadReads": 289,
+      "measuredMisses": 155,
+      "secondsPerMiss": 0.05027,
+      "turn": {
+        "misses": 155,
+        "seconds": 20.822,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 155,
+        "seconds": 20.822
+      },
+      "mark": {
+        "misses": 160,
+        "seconds": 21.073
+      }
+    },
+    {
+      "loop": "30K ^T R",
+      "lines": 5,
+      "reads": 667,
+      "loadReads": 289,
+      "measuredMisses": 156,
+      "secondsPerMiss": 0.05027,
+      "turn": {
+        "misses": 156,
+        "seconds": 20.839,
+        "matchesMeasured": true,
+        "readsDiverging": 0
+      },
+      "clock": {
+        "misses": 156,
+        "seconds": 20.839
+      },
+      "mark": {
+        "misses": 160,
+        "seconds": 21.04
+      }
+    }
+  ],
+  "mount": [
+    {
+      "loop": "small ^T B",
+      "lines": 5,
+      "mounts": 2,
+      "turn": {
+        "misses": 50,
+        "seconds": 6.634
+      },
+      "clock": {
+        "misses": 50,
+        "seconds": 6.634
+      },
+      "mark": {
+        "misses": 55,
+        "seconds": 6.769
+      }
+    },
+    {
+      "loop": "small ^T R",
+      "lines": 5,
+      "mounts": 3,
+      "turn": {
+        "misses": 78,
+        "seconds": 8.771
+      },
+      "clock": {
+        "misses": 78,
+        "seconds": 8.771
+      },
+      "mark": {
+        "misses": 86,
+        "seconds": 9.189
+      }
+    },
+    {
+      "loop": "30K ^T B",
+      "lines": 5,
+      "mounts": 2,
+      "turn": {
+        "misses": 124,
+        "seconds": 18.437
+      },
+      "clock": {
+        "misses": 124,
+        "seconds": 18.437
+      },
+      "mark": {
+        "misses": 129,
+        "seconds": 18.568
+      }
+    },
+    {
+      "loop": "30K ^T R",
+      "lines": 5,
+      "mounts": 3,
+      "turn": {
+        "misses": 156,
+        "seconds": 20.839
+      },
+      "clock": {
+        "misses": 156,
+        "seconds": 20.839
+      },
+      "mark": {
+        "misses": 163,
+        "seconds": 21.191
+      }
+    }
+  ],
+  "timing": {
+    "5": {
+      "small ^T B": {
+        "sourceBytes": 71,
+        "total": 6.634,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.945,
+            "program": 0.007,
+            "os": 0.938,
+            "fileCalls": 0.899
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.448,
+            "program": 0,
+            "os": 1.448,
+            "fileCalls": 1.338
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.226,
+            "program": 0.05,
+            "os": 1.176,
+            "fileCalls": 1.115
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.611,
+            "program": 0.001,
+            "os": 1.611,
+            "fileCalls": 1.53
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.752,
+            "program": 0.015,
+            "os": 0.737,
+            "fileCalls": 0.671
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "small ^T R": {
+        "sourceBytes": 71,
+        "total": 8.771,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.945,
+            "program": 0.007,
+            "os": 0.938,
+            "fileCalls": 0.899
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.448,
+            "program": 0,
+            "os": 1.448,
+            "fileCalls": 1.338
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.226,
+            "program": 0.05,
+            "os": 1.176,
+            "fileCalls": 1.115
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.611,
+            "program": 0.001,
+            "os": 1.611,
+            "fileCalls": 1.53
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.678,
+            "program": 0.007,
+            "os": 0.671,
+            "fileCalls": 0.605
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.131,
+            "program": 0,
+            "os": 0.131,
+            "fileCalls": 0.067
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.591,
+            "program": 0.001,
+            "os": 1.591,
+            "fileCalls": 1.53
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.328,
+            "program": 0.012,
+            "os": 0.316,
+            "fileCalls": 0.207
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.135,
+            "program": 0.001,
+            "os": 0.134,
+            "fileCalls": 0.128
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T B": {
+        "sourceBytes": 34808,
+        "total": 18.437,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.958,
+            "program": 0.006,
+            "os": 0.952,
+            "fileCalls": 0.913
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.45,
+            "program": 0,
+            "os": 1.45,
+            "fileCalls": 1.338
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.776,
+            "program": 3.556,
+            "os": 9.22,
+            "fileCalls": 9.108
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.614,
+            "program": 0.001,
+            "os": 1.613,
+            "fileCalls": 1.53
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.788,
+            "program": 0.021,
+            "os": 0.767,
+            "fileCalls": 0.697
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.851,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T R": {
+        "sourceBytes": 34808,
+        "total": 20.839,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.958,
+            "program": 0.006,
+            "os": 0.952,
+            "fileCalls": 0.913
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.45,
+            "program": 0,
+            "os": 1.45,
+            "fileCalls": 1.338
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.776,
+            "program": 3.556,
+            "os": 9.22,
+            "fileCalls": 9.108
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.614,
+            "program": 0.001,
+            "os": 1.613,
+            "fileCalls": 1.53
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.708,
+            "program": 0.007,
+            "os": 0.7,
+            "fileCalls": 0.63
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.333,
+            "program": 0,
+            "os": 0.333,
+            "fileCalls": 0.265
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.646,
+            "program": 0.001,
+            "os": 1.646,
+            "fileCalls": 1.585
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.338,
+            "program": 0.018,
+            "os": 0.32,
+            "fileCalls": 0.212
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.139,
+            "program": 0.001,
+            "os": 0.138,
+            "fileCalls": 0.132
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.85,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      }
+    },
+    "10": {
+      "small ^T B": {
+        "sourceBytes": 71,
+        "total": 6.645,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.945,
+            "program": 0.007,
+            "os": 0.938,
+            "fileCalls": 0.899
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.452,
+            "program": 0,
+            "os": 1.452,
+            "fileCalls": 1.342
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.227,
+            "program": 0.05,
+            "os": 1.176,
+            "fileCalls": 1.116
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.616,
+            "program": 0.001,
+            "os": 1.616,
+            "fileCalls": 1.535
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.753,
+            "program": 0.015,
+            "os": 0.737,
+            "fileCalls": 0.672
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "small ^T R": {
+        "sourceBytes": 71,
+        "total": 8.787,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.945,
+            "program": 0.007,
+            "os": 0.938,
+            "fileCalls": 0.899
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.452,
+            "program": 0,
+            "os": 1.452,
+            "fileCalls": 1.342
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.227,
+            "program": 0.05,
+            "os": 1.176,
+            "fileCalls": 1.116
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.616,
+            "program": 0.001,
+            "os": 1.616,
+            "fileCalls": 1.535
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.679,
+            "program": 0.007,
+            "os": 0.671,
+            "fileCalls": 0.605
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.131,
+            "program": 0,
+            "os": 0.131,
+            "fileCalls": 0.068
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.596,
+            "program": 0.001,
+            "os": 1.595,
+            "fileCalls": 1.534
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.329,
+            "program": 0.012,
+            "os": 0.317,
+            "fileCalls": 0.208
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.135,
+            "program": 0.001,
+            "os": 0.134,
+            "fileCalls": 0.128
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T B": {
+        "sourceBytes": 34808,
+        "total": 18.469,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.958,
+            "program": 0.006,
+            "os": 0.952,
+            "fileCalls": 0.914
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.455,
+            "program": 0,
+            "os": 1.454,
+            "fileCalls": 1.342
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.797,
+            "program": 3.556,
+            "os": 9.241,
+            "fileCalls": 9.13
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.619,
+            "program": 0.001,
+            "os": 1.618,
+            "fileCalls": 1.534
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.789,
+            "program": 0.021,
+            "os": 0.767,
+            "fileCalls": 0.697
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.851,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T R": {
+        "sourceBytes": 34808,
+        "total": 20.822,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.958,
+            "program": 0.006,
+            "os": 0.952,
+            "fileCalls": 0.914
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.455,
+            "program": 0,
+            "os": 1.454,
+            "fileCalls": 1.342
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.797,
+            "program": 3.556,
+            "os": 9.241,
+            "fileCalls": 9.13
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.619,
+            "program": 0.001,
+            "os": 1.618,
+            "fileCalls": 1.534
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.708,
+            "program": 0.007,
+            "os": 0.7,
+            "fileCalls": 0.631
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.335,
+            "program": 0,
+            "os": 0.335,
+            "fileCalls": 0.266
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.596,
+            "program": 0.001,
+            "os": 1.595,
+            "fileCalls": 1.534
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.339,
+            "program": 0.018,
+            "os": 0.321,
+            "fileCalls": 0.213
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.139,
+            "program": 0.001,
+            "os": 0.138,
+            "fileCalls": 0.132
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.85,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      }
+    },
+    "20": {
+      "small ^T B": {
+        "sourceBytes": 71,
+        "total": 6.665,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.945,
+            "program": 0.007,
+            "os": 0.938,
+            "fileCalls": 0.899
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.461,
+            "program": 0,
+            "os": 1.46,
+            "fileCalls": 1.35
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.227,
+            "program": 0.05,
+            "os": 1.177,
+            "fileCalls": 1.116
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.625,
+            "program": 0.001,
+            "os": 1.625,
+            "fileCalls": 1.543
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.756,
+            "program": 0.015,
+            "os": 0.741,
+            "fileCalls": 0.674
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "small ^T R": {
+        "sourceBytes": 71,
+        "total": 8.822,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.945,
+            "program": 0.007,
+            "os": 0.938,
+            "fileCalls": 0.899
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.461,
+            "program": 0,
+            "os": 1.46,
+            "fileCalls": 1.35
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.227,
+            "program": 0.05,
+            "os": 1.177,
+            "fileCalls": 1.116
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.625,
+            "program": 0.001,
+            "os": 1.625,
+            "fileCalls": 1.543
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.681,
+            "program": 0.007,
+            "os": 0.674,
+            "fileCalls": 0.608
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.133,
+            "program": 0,
+            "os": 0.133,
+            "fileCalls": 0.068
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.606,
+            "program": 0.001,
+            "os": 1.606,
+            "fileCalls": 1.544
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.331,
+            "program": 0.012,
+            "os": 0.319,
+            "fileCalls": 0.21
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.136,
+            "program": 0.001,
+            "os": 0.135,
+            "fileCalls": 0.128
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T B": {
+        "sourceBytes": 34808,
+        "total": 18.53,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.958,
+            "program": 0.006,
+            "os": 0.952,
+            "fileCalls": 0.913
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.463,
+            "program": 0,
+            "os": 1.463,
+            "fileCalls": 1.35
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.84,
+            "program": 3.556,
+            "os": 9.284,
+            "fileCalls": 9.172
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.629,
+            "program": 0.001,
+            "os": 1.628,
+            "fileCalls": 1.543
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.789,
+            "program": 0.021,
+            "os": 0.768,
+            "fileCalls": 0.698
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.851,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T R": {
+        "sourceBytes": 34808,
+        "total": 20.897,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.958,
+            "program": 0.006,
+            "os": 0.952,
+            "fileCalls": 0.913
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.463,
+            "program": 0,
+            "os": 1.463,
+            "fileCalls": 1.35
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.84,
+            "program": 3.556,
+            "os": 9.284,
+            "fileCalls": 9.172
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.629,
+            "program": 0.001,
+            "os": 1.628,
+            "fileCalls": 1.543
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.708,
+            "program": 0.007,
+            "os": 0.701,
+            "fileCalls": 0.631
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.336,
+            "program": 0,
+            "os": 0.336,
+            "fileCalls": 0.266
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.606,
+            "program": 0.001,
+            "os": 1.605,
+            "fileCalls": 1.544
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.341,
+            "program": 0.018,
+            "os": 0.323,
+            "fileCalls": 0.214
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.14,
+            "program": 0.001,
+            "os": 0.139,
+            "fileCalls": 0.133
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.85,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      }
+    },
+    "30": {
+      "small ^T B": {
+        "sourceBytes": 71,
+        "total": 6.594,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.949,
+            "program": 0.007,
+            "os": 0.942,
+            "fileCalls": 0.903
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.473,
+            "program": 0,
+            "os": 1.473,
+            "fileCalls": 1.361
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.177,
+            "program": 0.05,
+            "os": 1.126,
+            "fileCalls": 1.066
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.637,
+            "program": 0.001,
+            "os": 1.636,
+            "fileCalls": 1.553
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.707,
+            "program": 0.015,
+            "os": 0.691,
+            "fileCalls": 0.625
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "small ^T R": {
+        "sourceBytes": 71,
+        "total": 7.331,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.949,
+            "program": 0.007,
+            "os": 0.942,
+            "fileCalls": 0.903
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.473,
+            "program": 0,
+            "os": 1.473,
+            "fileCalls": 1.361
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 1.177,
+            "program": 0.05,
+            "os": 1.126,
+            "fileCalls": 1.066
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.637,
+            "program": 0.001,
+            "os": 1.636,
+            "fileCalls": 1.553
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.687,
+            "program": 0.007,
+            "os": 0.679,
+            "fileCalls": 0.613
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.136,
+            "program": 0,
+            "os": 0.136,
+            "fileCalls": 0.069
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 0.292,
+            "program": 0.001,
+            "os": 0.291,
+            "fileCalls": 0.229
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.168,
+            "program": 0.012,
+            "os": 0.156,
+            "fileCalls": 0.101
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.136,
+            "program": 0.001,
+            "os": 0.135,
+            "fileCalls": 0.129
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.651,
+            "program": 0.156,
+            "os": 0.495,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T B": {
+        "sourceBytes": 34808,
+        "total": 18.374,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.963,
+            "program": 0.006,
+            "os": 0.957,
+            "fileCalls": 0.918
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.476,
+            "program": 0,
+            "os": 1.475,
+            "fileCalls": 1.361
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.706,
+            "program": 3.556,
+            "os": 9.15,
+            "fileCalls": 9.038
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.64,
+            "program": 0.001,
+            "os": 1.639,
+            "fileCalls": 1.553
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.739,
+            "program": 0.021,
+            "os": 0.718,
+            "fileCalls": 0.702
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.851,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      },
+      "30K ^T R": {
+        "sourceBytes": 34808,
+        "total": 19.376,
+        "drawn": true,
+        "segments": [
+          {
+            "what": "TED, the key to function 47",
+            "seconds": 0.963,
+            "program": 0.006,
+            "os": 0.957,
+            "fileCalls": 0.918
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 1.476,
+            "program": 0,
+            "os": 1.475,
+            "fileCalls": 1.361
+          },
+          {
+            "what": "TAS's run",
+            "seconds": 12.706,
+            "program": 3.556,
+            "os": 9.15,
+            "fileCalls": 9.038
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 1.64,
+            "program": 0.001,
+            "os": 1.639,
+            "fileCalls": 1.553
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.658,
+            "program": 0.007,
+            "os": 0.65,
+            "fileCalls": 0.635
+          },
+          {
+            "what": "the CCP: the chained line, and the next program's load",
+            "seconds": 0.339,
+            "program": 0,
+            "os": 0.339,
+            "fileCalls": 0.268
+          },
+          {
+            "what": "GAME's run",
+            "seconds": 0.026,
+            "program": 0,
+            "os": 0.026,
+            "fileCalls": 0
+          },
+          {
+            "what": "the CCP: the warm boot, and the next program's load",
+            "seconds": 0.292,
+            "program": 0.001,
+            "os": 0.291,
+            "fileCalls": 0.229
+          },
+          {
+            "what": "TED's start, up to its first draw",
+            "seconds": 0.287,
+            "program": 0.018,
+            "os": 0.269,
+            "fileCalls": 0.215
+          },
+          {
+            "what": "TED's wait for a key, the key given at once",
+            "seconds": 0.14,
+            "program": 0.001,
+            "os": 0.139,
+            "fileCalls": 0.133
+          },
+          {
+            "what": "TED's draw",
+            "seconds": 0.85,
+            "program": 0.185,
+            "os": 0.665,
+            "fileCalls": 0
+          }
+        ]
+      }
+    }
+  }
+}
