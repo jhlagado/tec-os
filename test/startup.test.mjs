@@ -191,8 +191,11 @@ test("an unreadable file reaches a prompt, and what it held doesn't run", () => 
   assert.match(m.command("DIR HELLO.TXT"), /HELLO\.TXT/);
 });
 
-test("a file that resets the machine runs for ever, and the skip breaks it", () => {
-  const files = { "RESET.COM": Uint8Array.from([0xc3, 0x00, 0xc0]), "STARTUP.CMD": startupFile("RESET") };
+// LD HL,(0001h) / DEC HL x3 / JP (HL): BIOS function 0, cold boot, by the warm boot vector.
+const COLDBOOT = Uint8Array.from([0x2a, 0x01, 0x00, 0x2b, 0x2b, 0x2b, 0xe9]);
+
+test("a file that cold boots the machine runs for ever, and the skip breaks it", () => {
+  const files = { "RESET.COM": COLDBOOT, "STARTUP.CMD": startupFile("RESET") };
   const m = start(files);
   let resets = 0;
   const step = m.step.bind(m);
@@ -204,4 +207,18 @@ test("a file that resets the machine runs for ever, and the skip breaks it", () 
   const held = start(files, { key: true });
   prompt(held);
   assert.match(held.command("DIR HELLO.TXT"), /HELLO\.TXT/);
+});
+
+test("a startup file whose program jumps to C000h warm boots once, as a program's run into the ROM does (B1), and the prompt comes back", () => {
+  const m = start({ "JUMP.COM": Uint8Array.from([0xc3, 0x00, 0xc0]), "STARTUP.CMD": startupFile("JUMP") });
+  let colds = 0;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("COLD")) colds += 1;
+    return step();
+  };
+  prompt(m);
+  assert.equal(colds, 1, "the first cold boot only");
+  assert.equal((m.text(0).match(/TEC-OS /g) ?? []).length, 1, "one banner");
+  assert.match(m.text(0), /A>JUMP\r\r\n\r\nA>$/);
 });

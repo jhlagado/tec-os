@@ -27,7 +27,7 @@ export function symbolsFromD8(d8) {
   return map;
 }
 
-/** Writes to EXPAND 1 at 8000h-BCFFh and BE00h-BEFFh after cold boot's clear, by any machine. */
+/** Writes to EXPAND 1 at 8000h-BCFFh and BE00h-BFFFh after cold boot's clear, by any machine. */
 export const EXPAND1_WRITES = [];
 
 export class Machine {

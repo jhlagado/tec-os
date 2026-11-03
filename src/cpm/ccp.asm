@@ -280,7 +280,7 @@ CMDCOM: LD      A,'C'
         LD      (CMDFCB+10),A
         LD      A,'M'
         LD      (CMDFCB+11),A
-        CALL    LOADCOM
+	CALL	LOADA		; the named or current drive: user, user 0
         JR      NC,CMDRUN
         JR      NZ,BADCMD       ; there, but it would not load
 	LD	HL,CMDFCB	; not here: A:'s, if no drive was named
@@ -358,9 +358,9 @@ PRTGO:
         CALL    PUTSTR
         JP      STARTED
 
-; LOADA: LOADCOM on A:, in the current user and then, if it isn't there and
-; the user isn't 0, in user 0, as CP/M 3's search looks (A7). The user is
-; put back before it returns. Carry as LOADCOM's: Z for not found.
+; LOADA: LOADCOM on CMDFCB's drive, in the current user and then, if it
+; isn't there and the user isn't 0, in user 0 (A7): no SYS attribute needed.
+; The user is put back before it returns. Carry as LOADCOM's: Z for not found.
 LOADA:	CALL	LOADCOM
 	RET	NC		; loaded in the current user
 	RET	NZ		; there, but it would not load
