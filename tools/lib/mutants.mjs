@@ -551,9 +551,11 @@ const HWT = ["test/hwsvc.test.mjs"];
 export const MUTANTS_KS36A = [
   { name: "64K: EXPAND 1 not looked for", ...ks34(B, ["CALL RAMPAT", "LD A,LATEXP", "LD HL,DETEXP", "CALL DETECT", "CP 2", "RET Z", "JR RAMBAD"], ["CALL RAMPAT", "RET"], EXP) },
   { name: "64K: the check after the banner", edits: [asm(B, ["CALL RAMCHK"], ["NOP", "NOP", "NOP"]), asm(B, ["COLDRT: CALL LCDINIT"], ["COLDRT: CALL RAMCHK", "CALL LCDINIT"])], tests: EXP },
-  { name: "search: none", ...ks34(CCPF, ["INC (HL)", "CALL LOADCOM"], ["JR BADCMD", "CALL LOADCOM"], SRCH) },
+  { name: "search: none", ...ks34(CCPF, ["INC (HL)", "CALL LOADA"], ["JR BADCMD", "CALL LOADA"], SRCH) },
   { name: "search: a named drive searched too", ...ks34(CCPF, ["OR A", "JR NZ,BADCMD", "LD A,(PZDU)", "AND $0F", "JR Z,BADCMD", "INC (HL)"], ["OR A", "LD A,(PZDU)", "AND $0F", "JR Z,BADCMD", "LD (HL),1"], SRCH) },
-  { name: "search: the current drive left on A:", ...ks34(CCPF, ["INC (HL)", "CALL LOADCOM"], ["INC (HL)", "XOR A", "LD (PZDU),A", "CALL LOADCOM"], SRCH) },
+  { name: "search: the current drive left on A:", ...ks34(CCPF, ["INC (HL)", "CALL LOADA"], ["INC (HL)", "XOR A", "LD (PZDU),A", "CALL LOADA"], SRCH) },
+  { name: "A7: A:'s user 0 not searched", ...ks34(CCPF, ["AND $F0", "SCF", "RET Z", "PUSH AF"], ["AND $F0", "SCF", "RET", "PUSH AF"], ["test/search.test.mjs"]) },
+  { name: "B1: a program's run into C000h cold boots", ...ks34(B, ["CP HIGH(RSTENT)", "JP NZ,WBOOTR"], ["CP HIGH(RSTENT)", "NOP", "NOP", "NOP"], EXP) },
   { name: "KE-149: the case folded before Return", ...ks34(CCPF, ["CP CR", "JP Z,STARTED", "AND $DF"], ["AND $DF", "CP CR", "JP Z,STARTED"], ["test/commands.test.mjs"]) },
   { name: "KE-148: close writes a read-only drive", ...ks34(BDOSF, ["CALL RONZ", "LD A,0", "RET NZ", "CALL FINDEXCT"], ["CALL FINDEXCT"], ["test/cpm22.test.mjs"]) },
   { name: "EXPAND 1: the warm-boot jump planted again", ...ks34(B, ["WBOOTR: DI", "LD A,LATCLAS"], ["WBOOTR: DI", "LD A,LATCLAS+LATEXP", "OUT (SYSLAT),A", "LD A,$C3", "LD (RAMBIOS+3),A", "LD A,LATCLAS"], EXP) },
