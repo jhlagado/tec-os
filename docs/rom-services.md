@@ -5,7 +5,7 @@ at `C008h`, to 15 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook and the registry's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,521 bytes (`tecos`) and has 1,863 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,561 bytes (`tecos`) and has 1,823 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -254,7 +254,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,863<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,823<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

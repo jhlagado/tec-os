@@ -45,6 +45,7 @@ COLDZ:	LD	A,LATCLAS	; RSLCAP used A
 COLDNC:
 	LD	HL,BANNER
 	CALL	PUTS
+	CALL	MEMINIT		; the cache's lines empty, before any mount
 ; DIAG's retry comes back here. LCDINIT clears the display, so CARD? goes
 ; with it, and a retry that fails shows it again.
 COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
@@ -66,8 +67,7 @@ COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
 	CALL	LCDVOLS
 	XOR	A		; drive A, user 0
 	LD	(PZDU),A
-	CALL	PZINIT
-	CALL	MEMINIT		; then on into warm boot
+	CALL	PZINIT		; then on into warm boot
 
 ; ---- Warm boot ----------------------------------------------------------------
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
@@ -439,26 +439,4 @@ DGLOOP:	LD	HL,DGPROM	; ask until the key is one of ours
 	POP	AF
 	CP	'R'
 	JP	Z,COLDRT	; retry: LCD, card and mount from the start
-	CP	'H'
-	JR	NZ,DGLOOP
-	LD	HL,BLKBUF	; first 64 bytes of the last block read
-	LD	C,4		; rows of 16 bytes
-DGROW:	LD	B,16
-DGCOL:	LD	A,(HL)
-	PUSH	BC		; the hex output uses both counts
-	PUSH	HL
-	CALL	PUTHEX
-	LD	A,' '
-	CALL	PUTA
-	POP	HL
-	POP	BC
-	INC	HL		; the next byte of the row
-	DJNZ	DGCOL
-	PUSH	BC		; the end of the row, counts kept again
-	PUSH	HL
-	CALL	PUTCRLF
-	POP	HL
-	POP	BC
-	DEC	C
-	JR	NZ,DGROW
-	JR	DGLOOP		; the prompt again
+	JR	DGLOOP		; any other key: the prompt again

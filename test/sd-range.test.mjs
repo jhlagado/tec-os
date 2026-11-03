@@ -29,7 +29,7 @@ function farCard(start) {
 /** Cold boot on CARD: the mount's error, two hex digits, or "booted". */
 function mountOf(card, highCapacity) {
   const m = new Machine({ ...romFor(), sdImage: card, clock: TEST_CLOCK, highCapacity });
-  const out = m.expect(/R retry, H header> $|A>$/, { from: 0, maxCycles: 200_000_000 });
+  const out = m.expect(/R retry> $|A>$/, { from: 0, maxCycles: 200_000_000 });
   return /A>$/.test(out) ? "booted" : out.match(/error ([0-9A-F]{2})/)?.[1];
 }
 

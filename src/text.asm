@@ -6,7 +6,7 @@ RAMMSG: DB      13,10,"TEC-OS needs 64K RAM",13,10,0
 BANNER: DB      13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0
 ROTXT:  DB      " (read-only)",0
 DGERR:  DB      "No volume mounted, error ",0
-DGPROM: DB      "R retry, H header> ",0
+DGPROM: DB      "R retry> ",0
 DGCARD: DB      "CARD?",0
 
 ; ---- cpm/ccp.asm -------------------------------------------------------------

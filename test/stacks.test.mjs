@@ -199,11 +199,11 @@ function diagnosticRun() {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, clock: TEST_CLOCK });
   const depths = watch(m);
-  m.expect(/R retry, H header> $/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/R retry> $/, { from: 0, maxCycles: 200_000_000 });
   for (const key of ["H", "R", "H"]) {
     m.mark = m.output.length;
     m.type(key);
-    m.expect(/R retry, H header> $/, { maxCycles: 200_000_000 });
+    m.expect(/R retry> $/, { maxCycles: 200_000_000 });
   }
   return depths({ pattern: false });
 }

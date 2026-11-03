@@ -108,7 +108,7 @@ One card can serve every board: a line for the PICO9918, then `GLCD.SVC`. Each l
 makes its display the console where there is one, and elsewhere prints its name with
 a question mark and goes on. On a board with both, `GLCD.SVC`'s line gives way once
 `PICO.SVC` is the console, and only `CON UC1:` installs the second; the two together
-leave 43,776 bytes of TPA on the starter card. Once, at the first prompt
+leave 44,032 bytes of TPA on the starter card. Once, at the first prompt
 after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
 if no display driver is installed. That covers a missing file, a bad file, no
 `STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
