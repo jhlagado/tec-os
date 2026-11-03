@@ -4,7 +4,7 @@
 // when it names the same label and offset on both sides. The names search
 // finds old file and label names left in src/.
 
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 export const ROM_BASE = 0xc000;
@@ -19,7 +19,31 @@ export function built(dir) {
   const census = JSON.parse(readFileSync(at("census.json"), "utf8"));
   const labels = d8.symbols.filter((s) => s.kind === "label").map((s) => ({ name: s.name.toUpperCase(), address: s.address }));
   const constants = new Map(d8.symbols.filter((s) => s.kind === "constant").map((s) => [s.name.toUpperCase(), s.value]));
-  return { image: readFileSync(at("tecos.rom")), labels, constants, end: ROM_BASE + census.rom.used };
+  // Each instruction's or data line's addresses, with its source line's code.
+  const segments = Object.entries(d8.files)
+    .flatMap(([file, f]) => {
+      const path = resolve(dir, "src", file);
+      const lines = existsSync(path) ? readFileSync(path, "utf8").split("\n") : [];
+      return (f.segments ?? []).map((g) => ({ start: g.start, end: g.end, text: lines[g.line - 1] ?? "" }));
+    })
+    .sort((x, y) => x.start - y.start);
+  return { image: readFileSync(at("tecos.rom")), labels, constants, segments, end: ROM_BASE + census.rom.used };
+}
+
+/** The source line, its comment gone and its spacing single, of the instruction holding ADDRESS: its text and start. */
+function lineAt(side, address) {
+  const list = side.segments ?? [];
+  let lo = 0;
+  let hi = list.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (list[mid].start <= address) lo = mid;
+    else hi = mid - 1;
+  }
+  const g = list[lo];
+  if (!g || address < g.start || address >= g.end) return null;
+  const code = g.text.replace(/;.*$/, "").replace(/^\w+:/, "").replace(/\s+/g, " ").trim().toUpperCase();
+  return { code, start: g.start };
 }
 
 /** A and B byte for byte: the count of bytes that differ and the first few. */
@@ -73,7 +97,8 @@ const samePlace = (p, q) => p !== null && q !== null && p.offset === q.offset &&
  * is found in MOVED by its names; its bytes must match, but for a word that is
  * an address of the same place on both sides, the same offset from the same
  * label, a byte that is the low or high half of one label's address on both
- * sides, as CP LOW(BENTRY) is, and a relative jump's displacement to the same
+ * sides in an instruction whose source line is the same on both and takes
+ * LOW( or HIGH(, as CP LOW(BENTRY) does, and a relative jump's displacement to the same
  * place, when code moves between the jump and its target. MARKERS are labels
  * that mark a place, such as the data block's start, not what follows them:
  * they are left out. RENAMES maps BASE's names to MOVED's. Names missing or extra,
@@ -123,9 +148,16 @@ export function compareLabels(base, moved, { renames = {}, markers = [] } = {}) 
         i = j + 1;
         continue;
       }
+      // A half of one label's address, where the instruction's source line is
+      // the same on both sides, its renames undone, and takes LOW( or HIGH(.
       if (halves.has(`${a[i]},${b[i]}`)) {
-        maskedBytes += 1;
-        continue;
+        const p = lineAt(base, g.start + i);
+        const q = lineAt(moved, m.start + i);
+        const undone = q && q.code.replace(/\b\w+\b/g, (w) => fromMoved[w] ?? w);
+        if (p && q && p.code === undone && /\b(LOW|HIGH)\s*\(/.test(p.code) && g.start + i - p.start === m.start + i - q.start) {
+          maskedBytes += 1;
+          continue;
+        }
       }
       // A relative jump's displacement, its opcode the same, to the same place on both sides.
       const signed = (v) => (v < 128 ? v : v - 256);
