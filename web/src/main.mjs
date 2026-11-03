@@ -64,7 +64,22 @@ async function starterCard() {
 
 // ---- Machine lifecycle ------------------------------------------------------
 
-async function powerOn() {
+// The card is changed by one thing at a time: a power on's preparation, which
+// may write PICO.SVC at the chosen width, and an import's publication take
+// turns, so the later choice reaches both the running card and the saved one
+// (KE-168).
+let turn = Promise.resolve();
+function serial(fn) {
+  const run = turn.then(fn);
+  turn = run.catch(() => {});
+  return run;
+}
+
+function powerOn() {
+  return serial(powerOnNow);
+}
+
+async function powerOnNow() {
   let fetched = {};
   if (state.display === "tms") {
     const recipe = await fetch("starter.recipe.json", { cache: "no-cache" }).then((r) => r.json()).catch(() => ({}));
@@ -616,17 +631,19 @@ $("putfile").addEventListener("change", async (e) => {
   const wasRunning = state.running;
   state.running = false;
   try {
-    const staged = state.card.slice();
-    const v = parseContainer(staged).volumes.find((x) => x.drive === $("drive").value);
-    if (!v) return;
-    const fs = new CpmVolume(volumePayload(staged, v), v.g, { readOnly: v.readOnly });
-    for (const file of e.target.files) {
-      const name = file.name.toUpperCase();
-      fs.write(name, new Uint8Array(await file.arrayBuffer()), { text: $("astext").checked });
-    }
-    await importSave(staged); // a failed save throws: "Not copied", and the card as it was
-    state.card.set(staged);
-    reset();
+    // The files read first; then, in the card's turn, staged on the card as it is then.
+    const files = [];
+    for (const file of e.target.files) files.push([file.name.toUpperCase(), new Uint8Array(await file.arrayBuffer())]);
+    await serial(async () => {
+      const staged = state.card.slice();
+      const v = parseContainer(staged).volumes.find((x) => x.drive === $("drive").value);
+      if (!v) return;
+      const fs = new CpmVolume(volumePayload(staged, v), v.g, { readOnly: v.readOnly });
+      for (const [name, bytes] of files) fs.write(name, bytes, { text: $("astext").checked });
+      await importSave(staged); // a failed save throws: "Not copied", and the card as it was
+      state.card.set(staged);
+      reset();
+    });
   } catch (err) {
     $("cardinfo").textContent = `Not copied: ${err.message}`;
   } finally {

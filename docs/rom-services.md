@@ -188,32 +188,31 @@ carries its own.
 
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
-| The ROM table and the reset jump | 24 | 1 | Stays |
-| Read-only data: messages, keywords, the jump table's source, geometries | 806 | 1, 2 | Stays |
-| Cold and warm boot, the vectors | 563 | 1 | Stays |
-| BIOS | 482 | 2 | Stays |
-| Serial and matrix keyboard | 706 | 1, 2 | Stays |
-| ANSI terminal | 971 | 2 | Stays |
-| Video switch | 64 | 2 | Stays |
+| The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
+| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 817 | 1, 2 | Stays |
+| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console (`boot.asm`) | 802 | 1 | Stays |
+| BIOS, with its entries' interrupt discipline (`bios.asm`) | 514 | 2 | Stays |
+| Serial console (`console.asm`) | 467 | 1, 2 | Stays |
+| Matrix keyboard (`keyboard.asm`) | 249 | 1, 2 | Stays |
+| ANSI terminal (`term.asm`) | 971 | 2 | Stays |
+| Video switch and the display drivers' hook (`video.asm`) | 118 | 2 | Stays |
 | PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, `PICO40.SVC` and `PICO32.SVC`; the probe stays |
-| PICO9918 probe | 32 | 1 | Stays |
+| PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
 | Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
-| 20 × 4 LCD | 129 | 2 | Stays |
-| SD driver | 818 | 1 | Stays |
-| Container mount and checks | 1,387 | 1 | Stays |
-| Diagnostics | 86 | 1 | Stays |
-| CCP | 2,399 | 2 | Stays |
-| BDOS | 3,909 | 2 | Stays |
-| Hardware services | 467 | 3, 4 | Stays |
-| `TNDRVR` and loading the display drivers | 167 | 2 | Stays |
-| Block cache | 573 | 1, 2 | Stays: every read goes through it |
-| Command history | 211 | 2 | Stays |
-| Service loader, registry, `SERVICES` and startup | 822 | 2 | Stays |
+| 20 × 4 LCD (`lcd.asm`) | 129 | 2 | Stays |
+| SD driver (`sd.asm`) | 836 | 1 | Stays |
+| Container mount and checks (`vol.asm`) | 1,243 | 1 | Stays |
+| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,658 | 2 | Stays |
+| BDOS (`cpm/bdos.asm`) | 3,854 | 2 | Stays |
+| Numbered services, `TNDRVR`'s among them (`services.asm`) | 495 | 3, 4 | Stays |
+| Block cache (`cache.asm`) | 693 | 1, 2 | Stays: every read goes through it |
+| Command history (`history.asm`) | 211 | 2 | Stays |
+| Service loader, registry and loading the display drivers (`loader.asm`) | 727 | 2 | Stays |
 
-Counted from the build's symbol map: each row is one source file's span,
-and the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the census's
-14,947 bytes used.
+Counted from the build's debug map: each row is its source files' bytes, and
+the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
+census's 14,827 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.

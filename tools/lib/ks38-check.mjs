@@ -43,7 +43,7 @@ function lineAt(side, address) {
   const g = list[lo];
   if (!g || address < g.start || address >= g.end) return null;
   const code = g.text.replace(/;.*$/, "").replace(/^\w+:/, "").replace(/\s+/g, " ").trim().toUpperCase();
-  return { code, start: g.start };
+  return { code, start: g.start, end: g.end };
 }
 
 /** A and B byte for byte: the count of bytes that differ and the first few. */
@@ -94,9 +94,9 @@ const samePlace = (p, q) => p !== null && q !== null && p.offset === q.offset &&
 
 /**
  * BASE and MOVED label by label. Each group of labels at one address in BASE
- * is found in MOVED by its names; its bytes must match, but for a word that is
- * an address of the same place on both sides, the same offset from the same
- * label, a byte that is the low or high half of one label's address on both
+ * is found in MOVED by its names; its bytes must match, but for an address
+ * field, decoded from the debug map's source line, the same on both sides
+ * (KE-169), that names the same place, the same offset from the same label, a byte that is the low or high half of one label's address on both
  * sides in an instruction whose source line is the same on both and takes
  * LOW( or HIGH(, as CP LOW(BENTRY) does, and a relative jump's displacement to the same
  * place, when code moves between the jump and its target. MARKERS are labels
@@ -139,10 +139,27 @@ export function compareLabels(base, moved, { renames = {}, markers = [] } = {}) 
     const a = base.image.subarray(g.start - ROM_BASE, g.start - ROM_BASE + g.length);
     const b = moved.image.subarray(m.start - ROM_BASE, m.start - ROM_BASE + m.length);
     const word = (x, k) => x[k] | (x[k + 1] << 8);
+    // The same source line on both sides, its renames undone, holding offset K
+    // of the group at the same place in it: the line's two sides, or null.
+    const sameLine = (k) => {
+      const p = lineAt(base, g.start + k);
+      const q = lineAt(moved, m.start + k);
+      if (!p || !q || g.start + k - p.start !== m.start + k - q.start) return null;
+      return p.code === q.code.replace(/\b\w+\b/g, (w) => fromMoved[w] ?? w) ? p : null;
+    };
+    // An address field at offset K: the last two bytes of an instruction (a
+    // Z80 instruction's nn always ends it), or a word of a DW line (KE-169).
+    const addressField = (k) => {
+      const p = sameLine(k);
+      if (!p) return false;
+      const at = g.start + k;
+      if (/^DW\b/.test(p.code)) return (at - p.start) % 2 === 0 && at + 1 < p.end;
+      return !/^D[BS]\b/.test(p.code) && at === p.end - 2;
+    };
     for (let i = 0; i < a.length; i += 1) {
       if (a[i] === b[i]) continue;
-      // The differing byte is an address's low byte, or its high byte with the low one equal.
-      const j = [i, i - 1].find((k) => k >= 0 && k + 1 < a.length && samePlace(where.base(word(a, k)), where.moved(word(b, k))));
+      // The differing byte is an address field's low byte, or its high byte with the low one equal.
+      const j = [i, i - 1].find((k) => k >= 0 && k + 1 < a.length && addressField(k) && samePlace(where.base(word(a, k)), where.moved(word(b, k))));
       if (j !== undefined) {
         masked += 1;
         i = j + 1;
@@ -161,7 +178,8 @@ export function compareLabels(base, moved, { renames = {}, markers = [] } = {}) 
       }
       // A relative jump's displacement, its opcode the same, to the same place on both sides.
       const signed = (v) => (v < 128 ? v : v - 256);
-      if (i > 0 && a[i - 1] === b[i - 1] && JR.has(a[i - 1]) && samePlace(where.base(g.start + i + 1 + signed(a[i])), where.moved(m.start + i + 1 + signed(b[i])))) {
+      const jr = sameLine(i);
+      if (jr && g.start + i === jr.start + 1 && jr.end - jr.start === 2 && a[i - 1] === b[i - 1] && JR.has(a[i - 1]) && samePlace(where.base(g.start + i + 1 + signed(a[i])), where.moved(m.start + i + 1 + signed(b[i])))) {
         maskedJumps += 1;
         continue;
       }
