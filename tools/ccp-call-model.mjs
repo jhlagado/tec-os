@@ -64,7 +64,7 @@ function startupControls(r) {
 const variants = { incumbent() {}, descriptor };
 
 function descriptorContract(r, mutation) {
-  const failures = [];
+  const failures = [], cycleClasses = [new Set(),new Set()];
   for (let d = 0; d < 256; d++) {
     const memory = new Uint8Array(65536).fill(0xa5);
     memory.set(r.image, 0xc000);
@@ -75,8 +75,9 @@ function descriptorContract(r, mutation) {
     memory[0x2100] = d; memory[0x3ffe] = 0; memory[0x3fff] = 0x21;
     const m = createZ80Runtime({ memory, startAddress: entry }, 0, {read:()=>255,write(){}});
     Object.assign(m.cpu, {pc:entry,sp:0x3ffe,h:0x67,l:0x89,b:0x5a,c:0xa7,a:0x3c});
-    let n=0;
-    while(m.cpu.pc !== r.symbols.get("BDOS")) { assert.ok(++n<20); m.step(); }
+    let n=0,cycles=0;
+    while(m.cpu.pc !== r.symbols.get("BDOS")) { assert.ok(++n<20); cycles+=m.step().cycles; }
+    cycleClasses[d&1].add(cycles);
     const actual=m.hardware.memory, fcb=r.symbols.get(d & 1 ? "RENFCB":"CMDFCB");
     let good=m.cpu.sp===0x3ffe && m.cpu.h===0x67 && m.cpu.l===0x89 && m.cpu.b===0x5a && m.cpu.a===0x3c && m.cpu.c===(d>>1) && (m.cpu.d<<8|m.cpu.e)===fcb && actual[0x3ffe]===1 && actual[0x3fff]===0x21 && actual[0x3ffd]===0xa5;
     // A stubbed BDOS return isolates the descriptor ABI: no instruction in
@@ -88,7 +89,7 @@ function descriptorContract(r, mutation) {
     good &&= m.cpu.pc===0x2101 && m.cpu.sp===0x4000 && m.cpu.a===0x91 && m.cpu.h===0x42 && m.cpu.l===0x37 && JSON.stringify(m.cpu.flags)===flags;
     if(!good) failures.push(d);
   }
-  return {cases:256,mismatches:failures.length};
+  return {cases:256,mismatches:failures.length,dispatcherCycles:cycleClasses.map(x=>[...x])};
 }
 
 function corpus() {
@@ -234,6 +235,11 @@ for (const name of selected) {
     const controls=["return-byte","FCB-selector","function"].map((mutation)=>({mutation,...descriptorContract(r,mutation)}));
     assert.ok(controls.every((c)=>c.mismatches>0));
     figures.descriptorContract={contract,controls,actualStartupControls:startupControls(r)};
+    const at=r.symbols.get("DOSSEQ")-0xc000, bytes=r.image.slice(at,r.symbols.get("CPHEX")-0xc000);
+    assert.equal(bytes.length,18);
+    figures.account={callSites:21,tailSites:1,oldWrappers:12,newHelper:bytes.length,helperHex:Buffer.from(bytes).toString("hex"),callerBytesSaved:21,tailBytesSaved:0,netBytesSaved:15,
+      listing:["EX (SP),HL","LD C,(HL)","INC HL","EX (SP),HL","SRL C","LD DE,CMDFCB","JP NC,BDOS","LD DE,RENFCB","JP BDOS"],
+      note:"LD C,fn + CALL costs24T before old20T wrapper; CALL+descriptor uses17T before measured79/99T dispatcher. READSRC tail becomes CALL/DB/RET and adds2 live stack bytes at BDOS."};
   }
   const parserRows = cases.flatMap((input) => [0x2100, 0x21f8].map((at) => parserRead(r, input, at)));
   baselineParsers ??= parserRows;
