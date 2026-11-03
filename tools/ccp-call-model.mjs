@@ -62,7 +62,7 @@ function startupControls(r) {
     else image[sites[0]+3]=mutation==="FCB-selector"?31:38;
     let error; try {boot({...r,image});} catch(e) {
       const missingStartup=e.code==="ERR_ASSERTION" && e.expected instanceof RegExp && ["USER 3","USER 0"].includes(e.expected.source);
-      const guestStop=/^(CPU halted at [0-9a-f]+ before |no (first prompt|output matching) within )/.test(e.message);
+      const guestStop=/^CPU halted at [0-9a-f]+ before /.test(e.message) || e.message.startsWith("no first prompt within ") || e.message.startsWith("no output /A>$/ within ");
       if(!missingStartup && !guestStop) throw e; // host/tool failures never qualify a mutant
       error=String(e.message);
     }
@@ -71,7 +71,12 @@ function startupControls(r) {
   });
 }
 
-const variants = { incumbent() {}, descriptor };
+const variants = { incumbent() {}, descriptor, "descriptor-shared": descriptorShared };
+
+function descriptorShared(dir) {
+  descriptor(dir);
+  edit(dir, "        JP      NC,BDOS\n        LD      DE,RENFCB\n        JP      BDOS", "        JR      NC,DOSGO\n        LD      DE,RENFCB\nDOSGO:  JP      BDOS");
+}
 
 function descriptorContract(r, mutation) {
   const failures = [], cycleClasses = [new Set(),new Set()];
@@ -81,7 +86,7 @@ function descriptorContract(r, mutation) {
     const entry = r.symbols.get("DOSSEQ");
     if (mutation === "return-byte") { assert.equal(memory[entry + 2], 0x23); memory[entry + 2] = 0; }
     if (mutation === "function") { assert.equal(memory[entry + 4], 0xcb); memory[entry + 4] = 0; memory[entry + 5] = 0; }
-    if (mutation === "FCB-selector") { assert.equal(memory[entry + 9], 0xd2); memory[entry + 9] = 0xda; }
+    if (mutation === "FCB-selector") { assert.ok([0xd2,0x30].includes(memory[entry + 9])); memory[entry + 9] ^= 8; }
     memory[0x2100] = d; memory[0x3ffe] = 0; memory[0x3fff] = 0x21;
     const m = createZ80Runtime({ memory, startAddress: entry }, 0, {read:()=>255,write(){}});
     Object.assign(m.cpu, {pc:entry,sp:0x3ffe,h:0x67,l:0x89,b:0x5a,c:0xa7,a:0x3c});
@@ -239,17 +244,19 @@ for (const name of selected) {
   change(dir);
   await build(dir);
   const r = rom(dir);
-  if(name === "descriptor") {
+  if(name.startsWith("descriptor")) {
     const contract = descriptorContract(r);
     assert.equal(contract.mismatches,0);
     const controls=["return-byte","FCB-selector","function"].map((mutation)=>({mutation,...descriptorContract(r,mutation)}));
     assert.ok(controls.every((c)=>c.mismatches>0));
-    figures.descriptorContract={contract,controls,actualStartupControls:startupControls(r)};
+    figures.descriptorContracts ??= {};
+    figures.descriptorContracts[name]={contract,controls,actualStartupControls:startupControls(r)};
     const at=r.symbols.get("DOSSEQ")-0xc000, bytes=r.image.slice(at,r.symbols.get("CPHEX")-0xc000);
-    assert.equal(bytes.length,18);
-    figures.account={callSites:21,tailSites:1,oldWrappers:12,newHelper:bytes.length,helperHex:Buffer.from(bytes).toString("hex"),callerBytesSaved:21,tailBytesSaved:0,netBytesSaved:15,
-      listing:["EX (SP),HL","LD C,(HL)","INC HL","EX (SP),HL","SRL C","LD DE,CMDFCB","JP NC,BDOS","LD DE,RENFCB","JP BDOS"],
-      note:"LD C,fn + CALL costs24T before old20T wrapper; CALL+descriptor uses17T before measured79/99T dispatcher. READSRC tail becomes CALL/DB/RET and adds2 live stack bytes at BDOS."};
+    assert.equal(bytes.length,name==="descriptor"?18:17);
+    figures.accounts ??= {};
+    figures.accounts[name]={callSites:21,tailSites:1,oldWrappers:12,newHelper:bytes.length,helperHex:Buffer.from(bytes).toString("hex"),callerBytesSaved:21,tailBytesSaved:0,netBytesSaved:21-(bytes.length-12),
+      listing:["EX (SP),HL","LD C,(HL)","INC HL","EX (SP),HL","SRL C","LD DE,CMDFCB",name==="descriptor"?"JP NC,BDOS":"JR NC,DOSGO","LD DE,RENFCB",name==="descriptor"?"JP BDOS":"DOSGO: JP BDOS"],
+      note:"LD C,fn + CALL costs24T before old20T wrapper; CALL+descriptor uses17T before measured dispatcher cycles. READSRC tail becomes CALL/DB/RET and adds2 live stack bytes at BDOS."};
   }
   const parserRows = cases.flatMap((input) => [0x2100, 0x21f8].map((at) => parserRead(r, input, at)));
   baselineParsers ??= parserRows;
