@@ -1,27 +1,27 @@
 {
   "baseline": "a1c4141",
   "assembler": "ATOM 0.3.7",
-  "prototype": "0e472f3093c107bb862260aca6d9339d012ce617",
+  "prototype": "d30f6455fdc2bd930df7deeadde68b5212d784bb",
   "rom": {
     "reference": {
       "used": 14947,
       "free": 1437
     },
-    "used": 14688,
-    "free": 1696,
-    "saving": 259,
+    "used": 14827,
+    "free": 1557,
+    "saving": 120,
     "regions": {
       "reset jump": 3,
       "table": 8,
       "data": 817,
-      "code": 13860,
-      "free": 1696
+      "code": 13999,
+      "free": 1557
     },
     "reconciled": 16384,
     "equals16384": true,
     "contiguous": true,
     "oneImage": true,
-    "sha256": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
+    "sha256": "0f56d050f703c297f8735a15d506bb1fa526bc80f33630473ecb5a14ee516083",
     "tableEnd": 49163
   },
   "table": {
@@ -32,8 +32,8 @@
       5,
       0,
       195,
-      247,
-      239
+      102,
+      240
     ],
     "tna": "TNA",
     "major": 5,
@@ -56,7 +56,7 @@
       },
       "TNVIDEO": {
         "number": 3,
-        "stack": 10
+        "stack": 12
       },
       "TNTONE": {
         "number": 4,
@@ -242,8 +242,7 @@
     "TNVIDEO": {
       "stated": 12,
       "measured": 12,
-      "within": true,
-      "note": "abi.inc said 10; corrected at ce2384d"
+      "within": true
     },
     "TNTONE": {
       "stated": 4,
@@ -559,9 +558,9 @@
       "change": 12
     },
     "boot.asm": {
-      "prototype": 526,
+      "prototype": 534,
       "reference": 563,
-      "change": -37
+      "change": -29
     },
     "bios.asm": {
       "prototype": 482,
@@ -594,14 +593,14 @@
       "change": 0
     },
     "sd.asm": {
-      "prototype": 818,
+      "prototype": 836,
       "reference": 818,
-      "change": 0
+      "change": 18
     },
     "vol.asm": {
-      "prototype": 1391,
+      "prototype": 1425,
       "reference": 1387,
-      "change": 4
+      "change": 38
     },
     "diag.asm": {
       "prototype": 86,
@@ -609,24 +608,24 @@
       "change": 0
     },
     "cpm/ccp.asm": {
-      "prototype": 2399,
+      "prototype": 2443,
       "reference": 2399,
-      "change": 0
+      "change": 44
     },
     "cpm/bdos.asm": {
-      "prototype": 3847,
+      "prototype": 3854,
       "reference": 3909,
-      "change": -62
+      "change": -55
     },
     "hwsvc.asm": {
-      "prototype": 458,
+      "prototype": 474,
       "reference": 467,
-      "change": -9
+      "change": 7
     },
     "glcd.asm": {
-      "prototype": 176,
+      "prototype": 188,
       "reference": 167,
-      "change": 9
+      "change": 21
     },
     "cache.asm": {
       "prototype": 725,
@@ -667,22 +666,21 @@
   "noneLeft": {
     "hits": [
       "docs/compatibility.md:18",
-      "docs/compatibility.md:170",
+      "docs/compatibility.md:171",
       "docs/compatibility.md:254",
       "docs/compatibility.md:257",
-      "host/machine.mjs:199",
       "test/clients.test.mjs:122",
       "test/devices.test.mjs:19",
       "test/expand.test.mjs:55",
-      "tools/lib/model.mjs:541"
+      "tools/lib/model.mjs:544",
+      "tools/lib/model.mjs:545"
     ],
-    "none": false,
-    "reasons": "every hit states a removal or is history: compatibility.md 18 (function 50 not provided), 170, 254, 257 (history rows); host/machine.mjs 199 (MVRANGE for older trees); clients.test 122 and devices.test 19 (the names gone, as tested); expand.test 55 (function 50 is gone, tested); tools/lib/model.mjs 541 (ABIVOL for older trees)"
+    "none": false
   },
   "reproducible": {
-    "first": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
-    "second": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
-    "third": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
+    "first": "0f56d050f703c297f8735a15d506bb1fa526bc80f33630473ecb5a14ee516083",
+    "second": "0f56d050f703c297f8735a15d506bb1fa526bc80f33630473ecb5a14ee516083",
+    "third": "0f56d050f703c297f8735a15d506bb1fa526bc80f33630473ecb5a14ee516083",
     "equal": true
   },
   "mutants": {
@@ -702,7 +700,8 @@
       "caught": true,
       "by": [
         "a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets",
-        "on B:, a .COM only on A: runs, and B:'s own copy comes first"
+        "on B:, a .COM only on A: runs, and B:'s own copy comes first",
+        "0050h is the drive a program came from: a typed B:NAME, a plain name, the search and a chained B:NAME (KD-178)"
       ]
     },
     "search: a named drive searched too": {
@@ -715,60 +714,74 @@
       "caught": true,
       "by": [
         "a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets",
-        "on B:, a .COM only on A: runs, and B:'s own copy comes first"
+        "on B:, a .COM only on A: runs, and B:'s own copy comes first",
+        "0050h is the drive a program came from: a typed B:NAME, a plain name, the search and a chained B:NAME (KD-178)"
+      ]
+    },
+    "A7: A:'s user 0 not searched": {
+      "caught": true,
+      "by": [
+        "under user 3, the search looks in A:'s user 3, then A:'s user 0, and puts the user back (A7)"
+      ]
+    },
+    "B1: a program's run into C000h cold boots": {
+      "caught": true,
+      "by": [
+        "a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and its file's lines reach the card (B1)"
       ]
     },
     "KE-149: the case folded before Return": {
       "caught": true,
       "by": [
-        "ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)"
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not",
+        "ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)",
+        "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not (a write to EXPAND 1, at the file's end)"
       ]
     },
     "KE-148: close writes a read-only drive": {
       "caught": true,
       "by": [
-        "function 16 of a never-opened FCB on a drive function 28 made read-only says R/O, not Bad Sector, and the card is unchanged (KE-148)"
+        "function 16 of a never-opened FCB on a drive function 28 made read-only returns success and writes nothing, as CP/M 2.2's close does (A8, KE-148)"
       ]
     },
     "EXPAND 1: the warm-boot jump planted again": {
       "caught": true,
       "by": [
-        "cold boot clears EXPAND 1 but for the cache's table; warm boot leaves it"
+        "cold boot clears EXPAND 1 but for the cache's table; warm boot leaves it",
+        "the harness sees a program's write to EXPAND 1 below the history ring",
+        "the harness sees a program's write to EXPAND 1's free top page, BF00h-BFFFh, as well (A12)"
       ]
     },
     "dispatch: one past the table taken": {
       "caught": true,
       "by": [
-        "hardware services: information, bad numbers, digits, LCD, tone",
-        "hardware services: stack depths"
+        "hardware services: information, bad numbers, digits, LCD, tone"
       ]
     },
     "dispatch: the last number refused": {
       "caught": true,
       "by": [
-        "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
-        "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
-        "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+        "80 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "40 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "32 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
       ]
     },
     "dispatch: a refusal's status 0": {
       "caught": true,
       "by": [
-        "hardware services: information, bad numbers, digits, LCD, tone",
-        "hardware services: stack depths"
+        "hardware services: information, bad numbers, digits, LCD, tone"
       ]
     },
     "INFO: probes the clock again": {
       "caught": true,
       "by": [
-        "hardware services: stack depths"
+        "hardware services: information, bad numbers, digits, LCD, tone"
       ]
     },
     "INFO: the clock's bit not set at cold boot": {
       "caught": true,
       "by": [
-        "hardware services: information, bad numbers, digits, LCD, tone",
-        "hardware services: stack depths"
+        "hardware services: information, bad numbers, digits, LCD, tone"
       ]
     },
     "startup: the clock's bit not masked": {
@@ -796,8 +809,7 @@
     "driver hook: a refusal's status 0": {
       "caught": true,
       "by": [
-        "a volume or driver hook refusal is TNEBAD with carry, and nothing changes",
-        "hardware services: stack depths"
+        "a volume or driver hook refusal is TNEBAD with carry, and nothing changes"
       ]
     },
     "find: B not the least version": {
@@ -811,9 +823,27 @@
     "list: one off": {
       "caught": true,
       "by": [
-        "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
-        "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
-        "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+        "80 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "40 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "32 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+      ]
+    },
+    "A1: VIDEO takes any B": {
+      "caught": true,
+      "by": [
+        "VIDEO, RTC and the driver hook refuse any other B with TNEBAD, and nothing changes (A1)"
+      ]
+    },
+    "A1: RTC takes any B": {
+      "caught": true,
+      "by": [
+        "VIDEO, RTC and the driver hook refuse any other B with TNEBAD, and nothing changes (A1)"
+      ]
+    },
+    "A1: the driver hook takes any B": {
+      "caught": true,
+      "by": [
+        "VIDEO, RTC and the driver hook refuse any other B with TNEBAD, and nothing changes (A1)"
       ]
     },
     "format: 3 accepted": {
@@ -825,45 +855,34 @@
     }
   },
   "mutantsAt": {
-    "64K: EXPAND 1 not looked for": "a0a3c7a",
-    "64K: the check after the banner": "a0a3c7a",
-    "search: none": "a0a3c7a",
-    "search: a named drive searched too": "a0a3c7a",
-    "search: the current drive left on A:": "a0a3c7a",
-    "KE-149: the case folded before Return": "c515f24",
-    "KE-148: close writes a read-only drive": "c515f24",
-    "EXPAND 1: the warm-boot jump planted again": "c515f24",
-    "dispatch: one past the table taken": "c515f24",
-    "dispatch: the last number refused": "c515f24",
-    "dispatch: a refusal's status 0": "c515f24",
-    "INFO: probes the clock again": "c515f24",
-    "INFO: the clock's bit not set at cold boot": "c515f24",
-    "startup: the clock's bit not masked": "c515f24",
-    "volumes: a refusal without carry": "c515f24",
-    "volumes: B not the drive": "c515f24",
-    "driver hook: a refusal's status 0": "c515f24",
-    "find: B not the least version": "c515f24",
-    "list: one off": "c515f24",
-    "format: 3 accepted": "c515f24"
+    "64K: EXPAND 1 not looked for": "d30f645",
+    "64K: the check after the banner": "d30f645",
+    "search: none": "d30f645",
+    "search: a named drive searched too": "d30f645",
+    "search: the current drive left on A:": "d30f645",
+    "A7: A:'s user 0 not searched": "d30f645",
+    "B1: a program's run into C000h cold boots": "d30f645",
+    "KE-149: the case folded before Return": "d30f645",
+    "KE-148: close writes a read-only drive": "d30f645",
+    "EXPAND 1: the warm-boot jump planted again": "d30f645",
+    "dispatch: one past the table taken": "d30f645",
+    "dispatch: the last number refused": "d30f645",
+    "dispatch: a refusal's status 0": "d30f645",
+    "INFO: probes the clock again": "d30f645",
+    "INFO: the clock's bit not set at cold boot": "d30f645",
+    "startup: the clock's bit not masked": "d30f645",
+    "volumes: a refusal without carry": "d30f645",
+    "volumes: B not the drive": "d30f645",
+    "driver hook: a refusal's status 0": "d30f645",
+    "find: B not the least version": "d30f645",
+    "list: one off": "d30f645",
+    "A1: VIDEO takes any B": "d30f645",
+    "A1: RTC takes any B": "d30f645",
+    "A1: the driver hook takes any B": "d30f645",
+    "format: 3 accepted": "d30f645"
   },
   "mutantScore": {
-    "caught": 20,
-    "total": 20
-  },
-  "check": {
-    "commit": "5c677bb",
-    "tests": 580,
-    "pass": 579,
-    "fail": 1,
-    "failing": [
-      "hardware services: stack depths: the limit applied to the volume services refusals, fixed at 0e472f3 (hwsvc.test 7 of 7)"
-    ],
-    "peakMB": 544,
-    "seconds": 1239.3,
-    "builds": {
-      "runs": 2,
-      "files": 15,
-      "match": true
-    }
+    "caught": 25,
+    "total": 25
   }
 }
