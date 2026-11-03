@@ -33,10 +33,15 @@ Node.js 20 or later.
 
 ```sh
 npm ci
+npx playwright install chromium   # once: the browser the page's tests drive
 npm run build    # the ROM image in build/tecos/
 npm test         # host and emulator tests, about 90 seconds
 npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 ```
+
+The web page's tests (`test/web-touch.test.mjs`, `test/web-store.test.mjs`) drive
+Chromium through `playwright`, pinned in `package.json`; `npx playwright install
+chromium` fetches the browser that version expects.
 
 `npm run media` puts TED and TAS on the starter card from
 `../thorium/dist/TED.COM` and `../thorium/dist/TAS.COM` (or the files named by
