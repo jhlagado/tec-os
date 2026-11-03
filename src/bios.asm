@@ -30,7 +30,8 @@ BSELDSK:LD      A,C
         JR      Z,SELBAD
         LD      A,C
         LD      (DSKCUR),A
-DPHADR: LD      L,A             ; HL = DPHTAB + 16 * drive A; destroys DE
+DPHADR: LD      L,A             ; HL = DPHTAB + 16 * drive A, for BSELDSK,
+                                ; MNDPH and ALVINIT; keeps BC, destroys DE
         LD      H,0
         ADD     HL,HL
         ADD     HL,HL

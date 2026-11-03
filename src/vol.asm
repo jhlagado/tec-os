@@ -359,14 +359,7 @@ MNFILL:	LD	A,(IX+DSTART)	; start, four bytes
 
 ; Build drive A's DPH for geometry C. Leaves its ALV word, which ALVINIT sets.
 ; Keeps C and IX. Destroys AF, B, DE and HL.
-MNDPH:	LD	L,A		; DPHSZ bytes a drive
-	LD	H,0
-	ADD	HL,HL
-	ADD	HL,HL
-	ADD	HL,HL
-	ADD	HL,HL
-	LD	DE,DPHTAB	; HL = this drive's DPH
-	ADD	HL,DE
+MNDPH:	CALL	DPHADR		; HL = this drive's DPH
 	LD	B,8		; XLT and BDOS scratch words are zero
 MNZ:	LD	(HL),0
 	INC	HL

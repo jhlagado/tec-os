@@ -367,15 +367,9 @@ ALVINIT:LD      HL,WSBASE
         LD      (STUBAD),HL     ; the lowest vector so far
         LD      C,0
 ALVNX:  LD      A,C             ; HL = the DPH's DPB word, at +10
-        ADD     A,A
-        ADD     A,A
-        ADD     A,A
-        ADD     A,A
-        ADD     A,10
-        LD      L,A
-        LD      H,0
-        LD      DE,DPHTAB
-        ADD     HL,DE
+	CALL	DPHADR		; the drive's DPH; C kept
+	LD	DE,10
+	ADD	HL,DE
         PUSH    HL
         LD      A,(MNTDRV)
         OR      A
