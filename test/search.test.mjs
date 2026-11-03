@@ -38,5 +38,8 @@ test("a drive named in the command looks there only, and A: looks nowhere else",
   assert.match(m.command("A:HI"), /^A'S HI\r$/m);
   assert.match(m.command("B:BOTH"), /^B'S BOTH\r$/m);
   assert.match(m.command("BONLY"), /^BONLY\?\r$/m, "on A:, B: isn't searched");
+  m.command("B:");
+  assert.match(m.command("B:HI"), /^B:HI\?\r$/m, "on B:, B:HI looks on B: only");
+  assert.equal(m.read(4) & 15, 1);
   assert.deepEqual(m.violations, []);
 });

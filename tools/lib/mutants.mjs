@@ -537,3 +537,36 @@ export const MUTANTS_KS34 = [
   { name: "47: the guard outlives a warm boot, from INIT", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC), only: "function 47 from INIT" },
   { name: "47: the guard outlives a warm boot, from REMOVE", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC), only: "function 47 from REMOVE" },
 ];
+
+// KS36a: removals and ABI 5. Each mutant names a test that can fail; parts 1,
+// 2 and 8 are deletions, judged by the tests deleted and kept with them.
+const CCPF = "src/cpm/ccp.asm";
+const BDOSF = "src/cpm/bdos.asm";
+const HWF = "src/hwsvc.asm";
+const VOLF = "src/vol.asm";
+const GLF = "src/glcd.asm";
+const EXP = ["test/expand.test.mjs"];
+const SRCH = ["test/search.test.mjs", "test/chain.test.mjs"];
+const HWT = ["test/hwsvc.test.mjs"];
+export const MUTANTS_KS36A = [
+  { name: "64K: EXPAND 1 not looked for", ...ks34(B, ["CALL RAMPAT", "LD A,LATEXP", "LD HL,DETEXP", "CALL DETECT", "CP 2", "RET Z", "JR RAMBAD"], ["CALL RAMPAT", "RET"], EXP) },
+  { name: "64K: the check after the banner", edits: [asm(B, ["CALL RAMCHK"], ["NOP", "NOP", "NOP"]), asm(B, ["COLDRT: CALL LCDINIT"], ["COLDRT: CALL RAMCHK", "CALL LCDINIT"])], tests: EXP },
+  { name: "search: none", ...ks34(CCPF, ["INC (HL)", "CALL LOADCOM"], ["JR BADCMD", "CALL LOADCOM"], SRCH) },
+  { name: "search: a named drive searched too", ...ks34(CCPF, ["OR A", "JR NZ,BADCMD", "LD A,(PZDU)", "AND $0F", "JR Z,BADCMD", "INC (HL)"], ["OR A", "LD A,(PZDU)", "AND $0F", "JR Z,BADCMD", "LD (HL),1"], SRCH) },
+  { name: "search: the current drive left on A:", ...ks34(CCPF, ["INC (HL)", "CALL LOADCOM"], ["INC (HL)", "XOR A", "LD (PZDU),A", "CALL LOADCOM"], SRCH) },
+  { name: "KE-149: the case folded before Return", ...ks34(CCPF, ["CP CR", "JP Z,STARTED", "AND $DF"], ["AND $DF", "CP CR", "JP Z,STARTED"], ["test/commands.test.mjs"]) },
+  { name: "KE-148: close writes a read-only drive", ...ks34(BDOSF, ["CALL CHKRO", "CALL FINDEXCT"], ["CALL FINDEXCT"], ["test/cpm22.test.mjs"]) },
+  { name: "EXPAND 1: the warm-boot jump planted again", ...ks34(B, ["WBOOTR: DI", "LD A,LATCLAS"], ["WBOOTR: DI", "LD A,LATCLAS+LATEXP", "OUT (SYSLAT),A", "LD A,$C3", "LD (RAMBIOS+3),A", "LD A,LATCLAS"], EXP) },
+  { name: "dispatch: one past the table taken", ...ks34(HWF, ["CP TNCOUNT"], ["CP TNCOUNT+1"], HWT) },
+  { name: "dispatch: the last number refused", ...ks34(HWF, ["CP TNCOUNT"], ["CP TNCOUNT-1"], ["test/svc.test.mjs"]) },
+  { name: "dispatch: a refusal's status 0", ...ks34(HWF, ["CP TNCOUNT", "LD A,TNEBAD"], ["CP TNCOUNT", "LD A,0"], HWT) },
+  { name: "INFO: probes the clock again", ...ks34(HWF, ["HWSINFO:", "LD A,(CONDEV)"], ["HWSINFO:", "CALL RTCHAS", "LD A,(CONDEV)"], HWT) },
+  { name: "INFO: the clock's bit not set at cold boot", ...ks34(B, ["LD HL,CONDEV", "SET 3,(HL)"], ["LD HL,CONDEV", "NOP", "NOP"], HWT) },
+  { name: "startup: the clock's bit not masked", ...ks34(SVCF, ["AND $FF-CDWRD-CDRTC"], ["AND $FF-CDWRD"], ["test/pico.test.mjs"]) },
+  { name: "volumes: a refusal without carry", ...ks34(VOLF, ["VBAD: LD A,TNEBAD", "SCF", "RET"], ["VBAD: LD A,TNEBAD", "OR A", "RET"], HWT) },
+  { name: "volumes: B not the drive", ...ks34(VOLF, ["VSIN: LD C,B"], ["VSIN: LD C,1"], ["test/reset.test.mjs"]) },
+  { name: "driver hook: a refusal's status 0", ...ks34(GLF, ["LD A,TNEBAD", "RET C", "XOR A"], ["LD A,0", "RET C", "XOR A"], HWT) },
+  { name: "find: B not the least version", ...ks34(SVCF, ["SVFND: LD C,B", "LD B,0"], ["SVFND: LD C,0", "LD B,0"], ["test/svc.test.mjs", "test/pico.test.mjs"]) },
+  { name: "list: one off", ...ks34(SVCF, ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C"], ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C", "INC C"], ["test/svc.test.mjs"]) },
+  { name: "format: 3 accepted", ...ks34(SVCF, ["DMAGIC EQU SVCFMT*256+'D'"], ["DMAGIC EQU 3*256+'D'"], ["test/clients.test.mjs"]) },
+];

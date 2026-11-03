@@ -187,6 +187,18 @@ test("hardware services: the DS1302 clock", () => {
   assert.deepEqual(m.violations, []);
 });
 
+test("a volume or driver hook refusal is TNEBAD with carry, and nothing changes", () => {
+  const m = boot(standardCard(), { tms: true, matrix: true });
+  const drives = () => Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d));
+  const before = drives();
+  fails(svc(m, ABI.TNDESC, { de: 40, hl: BUF }), ABI.TNEBAD); // an index past the table
+  fails(svc(m, ABI.TNUNMNT, { b: 0 }), ABI.TNEBAD); // A: is never left empty
+  fails(svc(m, ABI.TNMOUNT, { b: 1, de: 0 }), ABI.TNEBAD); // SYSTEM is on A: already
+  assert.deepEqual(drives(), before);
+  fails(svc(m, ABI.TNDRVR, { b: 1, hl: 0x3000 }), ABI.TNEBAD); // CRT: has PICO.SVC's table
+  assert.deepEqual(m.violations, []);
+});
+
 test("hardware services: a claim stops PUTAT only while the PICO9918 is the console", () => {
   const image = standardCard();
   volume(image, "A").write("GLCD.SVC", GLCD_SVC);
