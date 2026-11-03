@@ -1,0 +1,2544 @@
+{
+  "commit": "38048e0",
+  "inputs": "pinned, test/inputs.json",
+  "command": "npm run build, npm run media, then STRICT=1 npm run check, under the memory guard at 900 MB",
+  "npmRunCheck": {
+    "result": "pass",
+    "exit": 0,
+    "peakMB": 716,
+    "seconds": 543.2,
+    "steps": [
+      "build",
+      "test",
+      "media",
+      "web"
+    ]
+  },
+  "builds": {
+    "runs": 2,
+    "files": 24,
+    "match": true,
+    "image": "6f3e7467744ec00ee6a727c5a62c910e7b64b4ccc3fa622d778ea0b0c15b82f1"
+  },
+  "suite": {
+    "tests": 610,
+    "pass": 610,
+    "fail": 0,
+    "skip": 0,
+    "cancelled": 0,
+    "failing": [],
+    "result": "pass",
+    "results": [
+      {
+        "name": "DIV16 divides HL by DE for divisors up to 8000h, in at most 1,300 T-states",
+        "result": "pass"
+      },
+      {
+        "name": "PUTDEC prints HL in decimal without leading zeros",
+        "result": "pass"
+      },
+      {
+        "name": "random records at the end of the 8 MiB volume are written and read where the host puts them",
+        "result": "pass"
+      },
+      {
+        "name": "a file read again comes from the cache, with no card read, and the same bytes",
+        "result": "pass"
+      },
+      {
+        "name": "write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns",
+        "result": "pass"
+      },
+      {
+        "name": "on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "at every card write while a file is erased and its blocks reused, the volume verifies and no entry names another file's data",
+        "result": "pass"
+      },
+      {
+        "name": "a write after the block before it was cleared keeps a block's records that its line no longer holds",
+        "result": "pass"
+      },
+      {
+        "name": "a card removed with dirty lines leaves the console working, and warm boot says the write was lost",
+        "result": "pass"
+      },
+      {
+        "name": "the same card put back isn't started: Write lost again at warm boot, and a reset loses the lines",
+        "result": "pass"
+      },
+      {
+        "name": "the ROM before the cache, 4ea57f7, mounts a :wb volume written through",
+        "result": "pass"
+      },
+      {
+        "name": "a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount",
+        "result": "pass"
+      },
+      {
+        "name": "a block that needs no pre-read reaches the card with its unwritten records zero, on a volume written behind and through",
+        "result": "pass"
+      },
+      {
+        "name": "more than the cache written behind with no directory write between: dirty lines evicted, and the file the same from the cache and from the card",
+        "result": "pass"
+      },
+      {
+        "name": "an unclosed file's records reach the card at warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "MOUNT writes the dirty lines before it changes a drive",
+        "result": "pass"
+      },
+      {
+        "name": "a failed write-through write drops its block's line, so a reread comes from the card",
+        "result": "pass"
+      },
+      {
+        "name": "a volume remounted on another drive, with another on its old drive, reads back right",
+        "result": "pass"
+      },
+      {
+        "name": "descriptor byte 15's other bits reach no drive flag",
+        "result": "pass"
+      },
+      {
+        "name": "the harness takes the copy core's writes below BD00h as the cache's only when the cache called it",
+        "result": "pass"
+      },
+      {
+        "name": "the built-ins' operands keep their output, BDOS calls and stack",
+        "result": "pass"
+      },
+      {
+        "name": "CON UC1 on a PICO9918 and matrix board keeps its stack peak",
+        "result": "pass"
+      },
+      {
+        "name": "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+        "result": "pass"
+      },
+      {
+        "name": "an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line",
+        "result": "pass"
+      },
+      {
+        "name": "a line of 127 characters runs whole: 32 pieces",
+        "result": "pass"
+      },
+      {
+        "name": "a piece may be a built-in, a drive change or a .PRL, and keeps the drive and user it sets",
+        "result": "pass"
+      },
+      {
+        "name": "a startup line holding ! runs all its pieces before the next startup line",
+        "result": "pass"
+      },
+      {
+        "name": "history gives the chained line back whole, as typed, and it runs again",
+        "result": "pass"
+      },
+      {
+        "name": ": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?",
+        "result": "pass"
+      },
+      {
+        "name": "after a failed : piece the rest of the line goes, and the prompt comes back",
+        "result": "pass"
+      },
+      {
+        "name": "the code is cleared as each piece is taken, before the command is looked for",
+        "result": "pass"
+      },
+      {
+        "name": "a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file",
+        "result": "pass"
+      },
+      {
+        "name": "function 47's command starts with the default FCBs, tail, DMA and stack of the same command typed",
+        "result": "pass"
+      },
+      {
+        "name": "function 47 copies the command before anything loads: a target that loads over the caller's DMA",
+        "result": "pass"
+      },
+      {
+        "name": "function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on",
+        "result": "pass"
+      },
+      {
+        "name": "function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt",
+        "result": "pass"
+      },
+      {
+        "name": "a chained command missing, unreadable or too large reaches NAME? and the prompt",
+        "result": "pass"
+      },
+      {
+        "name": "a chain from a startup line runs before the next startup line, and may hold ! and :",
+        "result": "pass"
+      },
+      {
+        "name": "^C at a program's line input drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "a BDOS error's exit drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "a read-only drive's exit drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "a failed select's exit drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "a directory read that fails drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "ERA's read-only file drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "SAVE's NO SPACE sets FF00h: a full directory and a full disk",
+        "result": "pass"
+      },
+      {
+        "name": "a write lost at warm boot drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "^C at TYPE's or DIR's [more] drops the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "Esc or Q at [more], and ERA *.* answered N, are answers: the code stays 0 and the line goes on",
+        "result": "pass"
+      },
+      {
+        "name": "a reset clears the rest of the line",
+        "result": "pass"
+      },
+      {
+        "name": "KE-127: a startup line of 128 characters runs its first 127, and leaves 0100h as loaded",
+        "result": "pass"
+      },
+      {
+        "name": "KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded",
+        "result": "pass"
+      },
+      {
+        "name": "DEMO refuses major 3",
+        "result": "pass"
+      },
+      {
+        "name": "DEMO refuses no TNA tag",
+        "result": "pass"
+      },
+      {
+        "name": "MOUNT B: refuses major 3",
+        "result": "pass"
+      },
+      {
+        "name": "MOUNT B: refuses no TNA tag",
+        "result": "pass"
+      },
+      {
+        "name": "MOUNT refuses major 3",
+        "result": "pass"
+      },
+      {
+        "name": "MOUNT refuses no TNA tag",
+        "result": "pass"
+      },
+      {
+        "name": "MOUNT lists and unmounts on major 4",
+        "result": "pass"
+      },
+      {
+        "name": "DEMO's own tables: each hex digit's pattern, each colour port and random colours",
+        "result": "pass"
+      },
+      {
+        "name": "a program's digest covers what it includes, nested",
+        "result": "pass"
+      },
+      {
+        "name": "abi.inc's numbers reach the tests by name",
+        "result": "pass"
+      },
+      {
+        "name": "an old DEMO prints no throughout, reaches no hardware service, and leaves page zero unchanged",
+        "result": "pass"
+      },
+      {
+        "name": "a 2d5ce25 PICO.SVC is refused in INIT: its name with a question mark, SVCRC 1 and PICO? still shown",
+        "result": "pass"
+      },
+      {
+        "name": "an old VOLS returns through C01Dh and changes nothing",
+        "result": "pass"
+      },
+      {
+        "name": "an old MOUNT, to unmount returns through C01Dh and changes nothing",
+        "result": "pass"
+      },
+      {
+        "name": "an old MOUNT, to mount returns through C01Dh and changes nothing",
+        "result": "pass"
+      },
+      {
+        "name": "CCP says so with no file, and runs a file of that name",
+        "result": "pass"
+      },
+      {
+        "name": "EXIT says so with no file, and runs a file of that name",
+        "result": "pass"
+      },
+      {
+        "name": "UNLOAD is refused with no resident, and removes residents last in, first out",
+        "result": "pass"
+      },
+      {
+        "name": "nothing is kept for a level: the table ends at ABISVC and the page at BE00h is free",
+        "result": "pass"
+      },
+      {
+        "name": "a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not",
+        "result": "pass"
+      },
+      {
+        "name": "startup lines go on after ^C at a program",
+        "result": "pass"
+      },
+      {
+        "name": "ERA frees each directory entry's blocks once",
+        "result": "pass"
+      },
+      {
+        "name": "NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no program of the name",
+        "result": "pass"
+      },
+      {
+        "name": "REN takes one drive from either name, and a name on another drive is refused",
+        "result": "pass"
+      },
+      {
+        "name": "ERA *.* answered with Return alone erases nothing and takes no second Return",
+        "result": "pass"
+      },
+      {
+        "name": "debug80: erase at pending wrap preserves following row",
+        "result": "pass"
+      },
+      {
+        "name": "debug80: zero PUTAT does not read input or touch display",
+        "result": "pass"
+      },
+      {
+        "name": "debug80: relative cursor B clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "debug80: relative cursor C clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "debug80: switching to a claimed display preserves registers and VRAM until release",
+        "result": "pass"
+      },
+      {
+        "name": "debug80t40: erase at pending wrap preserves following row",
+        "result": "pass"
+      },
+      {
+        "name": "debug80t40: zero PUTAT does not read input or touch display",
+        "result": "pass"
+      },
+      {
+        "name": "debug80t40: relative cursor B clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "debug80t40: relative cursor C clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "debug80t40: switching to a claimed display preserves registers and VRAM until release",
+        "result": "pass"
+      },
+      {
+        "name": "debug80g32: erase at pending wrap preserves following row",
+        "result": "pass"
+      },
+      {
+        "name": "debug80g32: zero PUTAT does not read input or touch display",
+        "result": "pass"
+      },
+      {
+        "name": "debug80g32: relative cursor B clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "debug80g32: relative cursor C clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "debug80g32: switching to a claimed display preserves registers and VRAM until release",
+        "result": "pass"
+      },
+      {
+        "name": "glcd: erase at pending wrap preserves following row",
+        "result": "pass"
+      },
+      {
+        "name": "glcd: zero PUTAT does not read input or touch display",
+        "result": "pass"
+      },
+      {
+        "name": "glcd: relative cursor B clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "glcd: relative cursor C clamps before and after carry",
+        "result": "pass"
+      },
+      {
+        "name": "console boundary stack high-water marks",
+        "result": "pass"
+      },
+      {
+        "name": "with PICO.SVC in the startup file, the banner goes to serial, and the screen is the console from its take",
+        "result": "pass"
+      },
+      {
+        "name": "without the matrix keyboard the serial terminal is the console, even with a display",
+        "result": "pass"
+      },
+      {
+        "name": "CON switches the console between devices and falls back to serial",
+        "result": "pass"
+      },
+      {
+        "name": "CRT: without a PICO9918 falls back to the serial terminal",
+        "result": "pass"
+      },
+      {
+        "name": "the matrix keyboard types at the prompt",
+        "result": "pass"
+      },
+      {
+        "name": "the video terminal implements its ANSI subset",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC uses TMS9918 Graphics I",
+        "result": "pass"
+      },
+      {
+        "name": "the 20 x 4 LCD shows the banner and mounted drives",
+        "result": "pass"
+      },
+      {
+        "name": "DIR lays out names to fit the display and reports free space",
+        "result": "pass"
+      },
+      {
+        "name": "the GLCD is the console when no TMS9918 answers",
+        "result": "pass"
+      },
+      {
+        "name": "TYPE pauses a screen at a time on the 8-row GLCD and can be stopped",
+        "result": "pass"
+      },
+      {
+        "name": "TYPE fills a 24-row, 40-column screen before pausing, and long lines count as wrapped",
+        "result": "pass"
+      },
+      {
+        "name": "a long DIR pauses too",
+        "result": "pass"
+      },
+      {
+        "name": "matrix arrow keys arrive as ANSI cursor sequences",
+        "result": "pass"
+      },
+      {
+        "name": "the default console is the PICO9918's 80 x 24 text mode",
+        "result": "pass"
+      },
+      {
+        "name": "the video terminal inserts and deletes characters and lines",
+        "result": "pass"
+      },
+      {
+        "name": "the cursor shows while a program polls for a key, and goes with the next output",
+        "result": "pass"
+      },
+      {
+        "name": "a scroll region scrolls only its own rows",
+        "result": "pass"
+      },
+      {
+        "name": "a row move on the PICO9918 is built out of sight and shown when the program asks for a key",
+        "result": "pass"
+      },
+      {
+        "name": "a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.SVC says so on the LCD",
+        "result": "pass"
+      },
+      {
+        "name": "UNLOAD removes the GLCD's resident and the console goes back to serial",
+        "result": "pass"
+      },
+      {
+        "name": "COPY X.COM B: copies under the source's name, as COPY X.COM B:X.COM does",
+        "result": "pass"
+      },
+      {
+        "name": "COPY B:X.COM A: copies under the source's name, as COPY B:X.COM A:X.COM does",
+        "result": "pass"
+      },
+      {
+        "name": "COPY X.COM B:.TXT copies under the source's name, as COPY X.COM B:X.COM does",
+        "result": "pass"
+      },
+      {
+        "name": "COPY X.COM B:.* copies under the source's name, as COPY X.COM B:X.COM does",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto itself is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto itself, the destination's drive named is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto itself, the source's drive named is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto its own drive alone is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY with no destination is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto itself, marked SYS is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto itself, marked R/O is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto itself on B:, written behind is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY onto itself in user 1 is a bad command and leaves the card as it was",
+        "result": "pass"
+      },
+      {
+        "name": "COPY X.DAT B:X.DAT on A: still copies",
+        "result": "pass"
+      },
+      {
+        "name": "COPY A:X.DAT X.DAT on B: still copies",
+        "result": "pass"
+      },
+      {
+        "name": "after B: and A:, a plain name is on A: again: a copy works, and one onto itself is refused",
+        "result": "pass"
+      },
+      {
+        "name": "COPY X.DAT X.DAQ copies: the names differ in one byte",
+        "result": "pass"
+      },
+      {
+        "name": "COPY X.DAT Y.DAT copies: the names differ in one byte",
+        "result": "pass"
+      },
+      {
+        "name": "every other case leaves the card and prints as COPY.COM does, with the TPA kept",
+        "result": "pass"
+      },
+      {
+        "name": "a sequential write that needs an extent with the directory full returns 1, and once an entry is freed carries on with no extent missing",
+        "result": "pass"
+      },
+      {
+        "name": "a sequential write of 128 records makes one extent, not an empty second one",
+        "result": "pass"
+      },
+      {
+        "name": "function 32 keeps E's low five bits, for every E from 10h to FEh, and FFh gets the user number",
+        "result": "pass"
+      },
+      {
+        "name": "function 32 with E5h is user 5: erased entries stay erased",
+        "result": "pass"
+      },
+      {
+        "name": "function 13 from user 5 leaves the user number 5, on drive A",
+        "result": "pass"
+      },
+      {
+        "name": "functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the card is unchanged",
+        "result": "pass"
+      },
+      {
+        "name": "function 30 still changes a read-only file's attributes, as CP/M 2.2's does, and the file can then be written",
+        "result": "pass"
+      },
+      {
+        "name": "a block past the end of A:'s directory leaves the prompt reachable",
+        "result": "pass"
+      },
+      {
+        "name": "the file with that block says Bad Sector when it's read, and ERA takes it",
+        "result": "pass"
+      },
+      {
+        "name": "a write to a read-only volume says R/O, and the card is unchanged",
+        "result": "pass"
+      },
+      {
+        "name": "function 29 lists a read-only volume once its drive is selected",
+        "result": "pass"
+      },
+      {
+        "name": "the table at C003h: TNA, ABI 4.0, the entries abi.inc names, and the old table's addresses each mapped",
+        "result": "pass"
+      },
+      {
+        "name": "a call to C018h, 2d5ce25's ABIXCCP, reaches the RET at C01Dh with nothing written",
+        "result": "pass"
+      },
+      {
+        "name": "a call to C01Bh, 2d5ce25's ABIXCMD, reaches the RET at C01Dh with nothing written",
+        "result": "pass"
+      },
+      {
+        "name": "warm boot restores the PICO9918 text mode and font after a program changes them",
+        "result": "pass"
+      },
+      {
+        "name": "warm boot turns the GLCD display and graphics back on",
+        "result": "pass"
+      },
+      {
+        "name": "punch and reader are the serial port, eight bits wide",
+        "result": "pass"
+      },
+      {
+        "name": "DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PICO9918",
+        "result": "pass"
+      },
+      {
+        "name": "the automatic tests pass on the Debug80 model and the report lists them",
+        "result": "pass"
+      },
+      {
+        "name": "a pattern that reads back wrong from the card says where, and the block is put back",
+        "result": "pass"
+      },
+      {
+        "name": "on an F18A-compatible VDP the probe reads the identity, scrolls one row and locks again",
+        "result": "pass"
+      },
+      {
+        "name": "T21 sets the DS1302, sees it roll over and puts the time back",
+        "result": "pass"
+      },
+      {
+        "name": "a clock that halts when T21 sets it fails, with what was read and expected",
+        "result": "pass"
+      },
+      {
+        "name": "a clock that takes the time but never counts on fails, with what was read and expected",
+        "result": "pass"
+      },
+      {
+        "name": "a bad bit in the variables page is reported without a stack, and nothing more runs",
+        "result": "pass"
+      },
+      {
+        "name": "without RAM in the window the ROM reports it and carries on",
+        "result": "pass"
+      },
+      {
+        "name": "the interactive tests run from the serial terminal, keypad, matrix and joystick",
+        "result": "pass"
+      },
+      {
+        "name": "the resident GLCD draws every screen of the workload as the driver did, byte for byte",
+        "result": "pass"
+      },
+      {
+        "name": "on a GLCD board (0006h) is six pages lower than with the driver, and no more",
+        "result": "pass"
+      },
+      {
+        "name": "a program on the CCP stack calls CONOUT directly in its 28 bytes, and the BDOS stack keeps a quarter free",
+        "result": "pass"
+      },
+      {
+        "name": "UNLOAD gives the console back to serial and the pages to the TPA, and output then reaches serial",
+        "result": "pass"
+      },
+      {
+        "name": "a second GLCD.SVC is refused whole, and the first keeps the console",
+        "result": "pass"
+      },
+      {
+        "name": "the GLCD hook takes a table and returns LINEBUF, refuses a second, and with 0 gives the console back",
+        "result": "pass"
+      },
+      {
+        "name": "^W recalls the lines typed at the prompt, newest first, and ^N steps forward",
+        "result": "pass"
+      },
+      {
+        "name": "a recalled line is erased in place and cut at the buffer's maximum",
+        "result": "pass"
+      },
+      {
+        "name": "over many lines the ring wraps and every recall is a whole line",
+        "result": "pass"
+      },
+      {
+        "name": "a line repeated, a line holding a 0 and an empty line are not stored",
+        "result": "pass"
+      },
+      {
+        "name": "a program's function 10 takes ^W as a character and its line is not stored",
+        "result": "pass"
+      },
+      {
+        "name": "the ring is kept by warm boot and emptied by cold boot",
+        "result": "pass"
+      },
+      {
+        "name": "replaced CONOUT, CONIN and CONST see the BDOS's console traffic, and ^C reaches the replaced WBOOT",
+        "result": "pass"
+      },
+      {
+        "name": "replaced CONOUT and WBOOT stay in the table across a ^C warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "a BDOS disk error reaches the replaced WBOOT, and its message the replaced CONOUT",
+        "result": "pass"
+      },
+      {
+        "name": "JP 0000h and BDOS function 0 reach the replaced WBOOT",
+        "result": "pass"
+      },
+      {
+        "name": "a cold boot puts the ROM's warm-boot entry back in the table",
+        "result": "pass"
+      },
+      {
+        "name": "failed replacement preserves every byte on full disk",
+        "result": "pass"
+      },
+      {
+        "name": "failed replacement preserves every byte on full directory",
+        "result": "pass"
+      },
+      {
+        "name": "replacement reuses all old entries and blocks at both capacity limits",
+        "result": "pass"
+      },
+      {
+        "name": "recipe seals read-only descriptors across 15 volumes",
+        "result": "pass"
+      },
+      {
+        "name": "recipe seals read-only descriptors across 16 volumes",
+        "result": "pass"
+      },
+      {
+        "name": "recipe seals read-only descriptors across 17 volumes",
+        "result": "pass"
+      },
+      {
+        "name": "verify diagnoses the exact second descriptor despite a numeric label",
+        "result": "pass"
+      },
+      {
+        "name": "browser stages the whole import before saving or publishing",
+        "result": "pass"
+      },
+      {
+        "name": "browser import restores running=true after success",
+        "result": "pass"
+      },
+      {
+        "name": "browser import restores running=true after read",
+        "result": "pass"
+      },
+      {
+        "name": "browser import restores running=true after save",
+        "result": "pass"
+      },
+      {
+        "name": "browser import restores running=false after success",
+        "result": "pass"
+      },
+      {
+        "name": "browser import restores running=false after read",
+        "result": "pass"
+      },
+      {
+        "name": "browser import restores running=false after save",
+        "result": "pass"
+      },
+      {
+        "name": "browser import guard excludes competing operations, running=true, failure=false",
+        "result": "pass"
+      },
+      {
+        "name": "browser import guard excludes competing operations, running=true, failure=true",
+        "result": "pass"
+      },
+      {
+        "name": "browser import guard excludes competing operations, running=false, failure=false",
+        "result": "pass"
+      },
+      {
+        "name": "browser import guard excludes competing operations, running=false, failure=true",
+        "result": "pass"
+      },
+      {
+        "name": "every geometry satisfies the firmware limits",
+        "result": "pass"
+      },
+      {
+        "name": "a new container validates and describes its volumes",
+        "result": "pass"
+      },
+      {
+        "name": "corrupt, truncated and inconsistent containers are rejected",
+        "result": "pass"
+      },
+      {
+        "name": "files round-trip as binary and text across extent boundaries",
+        "result": "pass"
+      },
+      {
+        "name": "full disks and full directories are reported, not corrupted",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol creates, edits and reads a container atomically",
+        "result": "pass"
+      },
+      {
+        "name": "a recipe builds a verified card and rejects a wrong digest",
+        "result": "pass"
+      },
+      {
+        "name": "CpmVolume refuses writes to a read-only volume",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol makes and reads format 1.1: more than 8 volumes, a drives field, unique labels",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol marks one volume written behind with :wb, and refuses two or one read-only",
+        "result": "pass"
+      },
+      {
+        "name": "hardware services: information, bad numbers, digits, LCD, tone",
+        "result": "pass"
+      },
+      {
+        "name": "hardware services: joystick and matrix keys",
+        "result": "pass"
+      },
+      {
+        "name": "hardware services: the claim, INFO's claim bit, and text at a position",
+        "result": "pass"
+      },
+      {
+        "name": "hardware services: the DS1302 clock",
+        "result": "pass"
+      },
+      {
+        "name": "hardware services: a claim stops PUTAT only while the PICO9918 is the console",
+        "result": "pass"
+      },
+      {
+        "name": "hardware services: stack depths",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC: TMSR2's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC: GFXREG's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC: TMSWA's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC: TMSRA's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC: TMSR2's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC: GFXREG's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC: TMSWA's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC: TMSRA's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC: TMSR2's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC: TMSSET's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC: GFXREG's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC: TMSWA's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC: TMSRA's pairs run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "TXBYTE's port writes run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "RXBITS's eight samples run with interrupts off, and the state comes back",
+        "result": "pass"
+      },
+      {
+        "name": "RXBITS samples bit 0 at its middle, with interrupts on and off",
+        "result": "pass"
+      },
+      {
+        "name": "the erratum: CDI, HACC and MVCOPY keep interrupts on when P/V is false",
+        "result": "pass"
+      },
+      {
+        "name": "the erratum: VPAIR keeps interrupts on when P/V is false",
+        "result": "pass"
+      },
+      {
+        "name": "a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume",
+        "result": "pass"
+      },
+      {
+        "name": "MOUNT takes a volume by label or index, refuses one in use, A: left empty and a drive without a slot, and unmounts",
+        "result": "pass"
+      },
+      {
+        "name": "a reset keeps the selected volume",
+        "result": "pass"
+      },
+      {
+        "name": "cold boot refuses a table out of order, an overlap, a payload past the container and a wrong table sum",
+        "result": "pass"
+      },
+      {
+        "name": "on a card of more than 15 volumes, the boot lists and the LCD show each drive's own volume",
+        "result": "pass"
+      },
+      {
+        "name": "unmounting the current drive leaves the prompt on A:, and the next command runs",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot with 0004h on a drive past D: or one with no volume comes back on A:, in the same user",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC is the console at 80 columns, and scrolls",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC is the console at 40 columns, and scrolls",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC is the console at 32 columns, and scrolls",
+        "result": "pass"
+      },
+      {
+        "name": "a board with both displays keeps the PICO9918; GLCD.SVC's line gives way, and CON UC1 installs it",
+        "result": "pass"
+      },
+      {
+        "name": "the GLCD's UNLOAD clears its INFO bit",
+        "result": "pass"
+      },
+      {
+        "name": "CON UC1, CON TTY, UNLOAD stays on serial: only UC1: moves to CRT:",
+        "result": "pass"
+      },
+      {
+        "name": "a service loading with GLCD.SVC in installs, and says nothing",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC writes the colours and an empty sprite table",
+        "result": "pass"
+      },
+      {
+        "name": "TPA after boot: one display, and both",
+        "result": "pass"
+      },
+      {
+        "name": "at 80 columns the screens equal the ROM console's, step by step",
+        "result": "pass"
+      },
+      {
+        "name": "at 40 columns the screens equal the ROM console's, step by step",
+        "result": "pass"
+      },
+      {
+        "name": "at 32 columns the screens equal the ROM console's, step by step",
+        "result": "pass"
+      },
+      {
+        "name": "a scroll, then ESC[2@ keeps the row it opens",
+        "result": "pass"
+      },
+      {
+        "name": "the starter card boots the PICO9918 alone on a board with both, and the GLCD on a board with one",
+        "result": "pass"
+      },
+      {
+        "name": "a dead card shows CARD? on the LCD, for a board with no terminal",
+        "result": "pass"
+      },
+      {
+        "name": "a good retry clears CARD?, and a failed one shows it again",
+        "result": "pass"
+      },
+      {
+        "name": "a PICO9918 board with a missing PICO.SVC says PICO? on the LCD, once",
+        "result": "pass"
+      },
+      {
+        "name": "a PICO9918 board with a bad PICO.SVC says PICO? on the LCD, once",
+        "result": "pass"
+      },
+      {
+        "name": "a PICO9918 board with no STARTUP.CMD says PICO? on the LCD, once",
+        "result": "pass"
+      },
+      {
+        "name": "a PICO9918 board with a file with no display line says PICO? on the LCD, once",
+        "result": "pass"
+      },
+      {
+        "name": "a PICO9918 board with a skip past a good PICO.SVC says PICO? on the LCD, once",
+        "result": "pass"
+      },
+      {
+        "name": "STDONE returns carry through LCDROW: the file's last line runs once",
+        "result": "pass"
+      },
+      {
+        "name": "GLCLD returns carry through LCDROW when GLCD.SVC won't load",
+        "result": "pass"
+      },
+      {
+        "name": "a line left without an end, and a record full to its last byte, say PICO? after they run",
+        "result": "pass"
+      },
+      {
+        "name": "a good PICO.SVC shows nothing on the LCD",
+        "result": "pass"
+      },
+      {
+        "name": "a display driver in, then CON TTY in the file: the LCD stays silent",
+        "result": "pass"
+      },
+      {
+        "name": "the LCD stays silent with no PICO9918, and with no matrix keyboard",
+        "result": "pass"
+      },
+      {
+        "name": "a display driver installed by hand clears PICO?",
+        "result": "pass"
+      },
+      {
+        "name": "a board whose PICO.SVC fails takes the GLCD from the next line, and the LCD says nothing",
+        "result": "pass"
+      },
+      {
+        "name": "the GLCD's UNLOAD with CRT: as the console leaves it there",
+        "result": "pass"
+      },
+      {
+        "name": "REMOVE refuses while PICO.SVC is the console, and UNLOAD changes nothing; from serial it goes",
+        "result": "pass"
+      },
+      {
+        "name": "no driver: reset to a prompt on serial with no file, a bad file and no vector call",
+        "result": "pass"
+      },
+      {
+        "name": "on UC1: with no PICO driver, boot and a warm boot make no vector call",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC is refused with no PICO9918, and with no matrix keyboard",
+        "result": "pass"
+      },
+      {
+        "name": "a claimed VDP takes no row-move call: the driver isn't entered while a program owns it",
+        "result": "pass"
+      },
+      {
+        "name": "the take runs only for a service with its table in its own page",
+        "result": "pass"
+      },
+      {
+        "name": "a claim with PICO.SVC in, on CRT:: nothing drawn, and release restores it",
+        "result": "pass"
+      },
+      {
+        "name": "a claim with PICO.SVC in, on UC1:: release restores the VDP, and the GLCD stays the console",
+        "result": "pass"
+      },
+      {
+        "name": "a claim with no driver, and after UNLOAD: refused by nothing, and nothing is restored",
+        "result": "pass"
+      },
+      {
+        "name": "a program reading VRAM on the driver sees the names and patterns it saw",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC: the whole pattern table after the take, CONSWV, a release and a warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC: the whole pattern table after the take, CONSWV, a release and a warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC: the whole pattern table after the take, CONSWV, a release and a warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "a claim held at UNLOAD after CON TTY: refused, the record still found, and allowed after the release",
+        "result": "pass"
+      },
+      {
+        "name": "a refused record under a claim: REMOVE refuses, so the pages stay with the table hooked, and a warm boot is safe",
+        "result": "pass"
+      },
+      {
+        "name": "INIT failing leaves no record and the old ceiling",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: a take leaves a program's row alone, with nothing up",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: a program's write over PICO? survives the take that follows",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: a program's write over GLCD? survives the take that follows",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: each word is cleared by a take, and the flag doesn't stay for the next",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: GLCD? stays while PICO.SVC keeps the console, and a CON UC1 that loads clears it",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: a program's write to rows 0 to 2 leaves the word for a take to clear",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: a failed load by hand leaves the word",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: a service with no video table leaves the word",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: the word lasts through a program's warm boot, for a take to clear",
+        "result": "pass"
+      },
+      {
+        "name": "row 3: PICO? still shows on the black screen after a failed CON UC1",
+        "result": "pass"
+      },
+      {
+        "name": "INFO's HWBWRD follows the word: up, overwritten and cleared",
+        "result": "pass"
+      },
+      {
+        "name": "the probe needs both patterns: a VDP that answers one way is not present",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: a stored card with old drivers says so and offers a new starter",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: power-on writes PICO.SVC at the width, says what a card lacks, and a card with no drive A doesn't stop it",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: a chained startup line loses its display pieces and keeps the rest",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: a removed piece's colon passes to the piece after it, and one that hung on a display piece goes",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: a next line's first colon goes with the display piece it hung on, and no colon crosses a line",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: VOLS on the line after PICO.SVC still runs after a failing GLCD.SVC",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: the piece after a display piece loses its colon and still runs after a failing GLCD.SVC",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: a card with .DRV files is refused in its own words and left alone",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: an old card's words name the display asked for, or else what it has",
+        "result": "pass"
+      },
+      {
+        "name": "the web host: a card whose files were renamed by hand has its .DRV display lines taken out",
+        "result": "pass"
+      },
+      {
+        "name": "a failed CON UC1 leaves the console as it was, and a later one takes the GLCD",
+        "result": "pass"
+      },
+      {
+        "name": "PRL rejects short header without mutation",
+        "result": "pass"
+      },
+      {
+        "name": "PRL rejects zero code without mutation",
+        "result": "pass"
+      },
+      {
+        "name": "PRL rejects declared code beyond records without mutation",
+        "result": "pass"
+      },
+      {
+        "name": "PRL rejects missing bitmap record without mutation",
+        "result": "pass"
+      },
+      {
+        "name": "PRL rejects wrapped code end without mutation",
+        "result": "pass"
+      },
+      {
+        "name": "PRL rejects wrapped bitmap end without mutation",
+        "result": "pass"
+      },
+      {
+        "name": "PRL rejects destination above current TPA without mutation",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 1 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 7 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 8 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 9 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 113 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 114 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 127 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 128 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 255 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 256 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "PRL accepts 257 code bytes with record padding",
+        "result": "pass"
+      },
+      {
+        "name": "CCP retains the actual short file extent and refuses its oversized declaration",
+        "result": "pass"
+      },
+      {
+        "name": "an unindented ORG after a blank line is refused, and an indented one with CRLF is taken",
+        "result": "pass"
+      },
+      {
+        "name": "a program PRL loads at 0100h as its .COM and runs the same",
+        "result": "pass"
+      },
+      {
+        "name": "the CCP runs NAME.PRL only when there is no NAME.COM",
+        "result": "pass"
+      },
+      {
+        "name": "a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it",
+        "result": "pass"
+      },
+      {
+        "name": "residents are removed last in, first out, each REMOVE undoing its INIT",
+        "result": "pass"
+      },
+      {
+        "name": "a cold boot clears every resident",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS function 108 gets and sets the program return code, kept across a warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "a PRL made by hand for 0100h runs as a program, nothing relocated",
+        "result": "pass"
+      },
+      {
+        "name": "latch bit 3 switches only MAIN and bit 2 only EXPAND, as the 96K board does",
+        "result": "pass"
+      },
+      {
+        "name": "without MAIN 1, bit 3 changes nothing",
+        "result": "pass"
+      },
+      {
+        "name": "cold boot counts the MAIN regions and leaves MAIN 1 as it found it, but for page zero",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot from MAIN 1 or from EXPAND 1 returns to MAIN 0 and EXPAND 0",
+        "result": "pass"
+      },
+      {
+        "name": "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "result": "pass"
+      },
+      {
+        "name": "all four drives are kept: a remapped D:",
+        "result": "pass"
+      },
+      {
+        "name": "a selected volume of another geometry than the drive's default gets its own DPH",
+        "result": "pass"
+      },
+      {
+        "name": "a drive other than A: selected with another geometry than its default's gets its own DPH",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot keeps the selection",
+        "result": "pass"
+      },
+      {
+        "name": "a drive unmounted before a reset stays so, and can be mounted after it",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses (0000h)",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses (0001h) low",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses (0002h) high",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses (0005h)",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses the stub's JP",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses the stub's target, low",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses the stub's target, high",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses W's low byte",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses W below 8000h",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses W at 7F01h",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses W = S below 8000h",
+        "result": "pass"
+      },
+      {
+        "name": "recognition refuses W above S",
+        "result": "pass"
+      },
+      {
+        "name": "W at exactly 8000h and at S's page is recognised",
+        "result": "pass"
+      },
+      {
+        "name": "a real service loaded is recognised, and is gone after the reset",
+        "result": "pass"
+      },
+      {
+        "name": "a hung INIT is recognised, W below PZTOP, and the reset recovers from it",
+        "result": "pass"
+      },
+      {
+        "name": "a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset at DIAG doesn't",
+        "result": "pass"
+      },
+      {
+        "name": "DIAG's retry uses the selection after the header dump and after a second failure",
+        "result": "pass"
+      },
+      {
+        "name": "a card with no default A: under a valid retained A: reaches DIAG, and a retry uses the selection",
+        "result": "pass"
+      },
+      {
+        "name": "an index moved by new volumes at lower starts is kept, and regenerated",
+        "result": "pass"
+      },
+      {
+        "name": "a retained volume moved on the card gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained volume changed flags on the card gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained volume removed on the card gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive resized gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive of another start gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive of changed geometry gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive of changed flags gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive duplicated in RSLBUF gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive absent from A: gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive on a drive with no slot gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive of geometry 0 is not retained, whatever its other bytes, and no volume is on two drives",
+        "result": "pass"
+      },
+      {
+        "name": "a retained drive left with no slot on a card of identical extents gives the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a G8M volume kept on a drive whose slot is G1M's gives the defaults, and one that fits doesn't",
+        "result": "pass"
+      },
+      {
+        "name": "a failed read in step 1 leaves the defaults whole",
+        "result": "pass"
+      },
+      {
+        "name": "a card of 1.1 with drives keeps its selection, and each index past the first block",
+        "result": "pass"
+      },
+      {
+        "name": "a written-behind volume keeps its flag through a reset",
+        "result": "pass"
+      },
+      {
+        "name": "from user 5, a drive and a video console, a reset reaches A:, user 0, on serial",
+        "result": "pass"
+      },
+      {
+        "name": "a default drive beyond MNTDRV is refused with MEMOUNT",
+        "result": "pass"
+      },
+      {
+        "name": "a default drive within MNTDRV boots",
+        "result": "pass"
+      },
+      {
+        "name": "startup runs once per reset from the selected A:, at user 0",
+        "result": "pass"
+      },
+      {
+        "name": "startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit",
+        "result": "pass"
+      },
+      {
+        "name": "startup is marked before it opens",
+        "result": "pass"
+      },
+      {
+        "name": "a selected A: with no STARTUP.CMD reaches a serial prompt",
+        "result": "pass"
+      },
+      {
+        "name": "an unreadable STARTUP.CMD on the selected A: leaves a prompt",
+        "result": "pass"
+      },
+      {
+        "name": "a held key skips startup on the selected A:",
+        "result": "pass"
+      },
+      {
+        "name": "a dirty line with CFAIL set is not written to a card of identical extents after a reset",
+        "result": "pass"
+      },
+      {
+        "name": "RAM from 4b6877b, a resident in, is unrecognised and nothing old runs",
+        "result": "pass"
+      },
+      {
+        "name": "RAM from dbdce5c, a resident in, is unrecognised and nothing old runs",
+        "result": "pass"
+      },
+      {
+        "name": "random RAM, 200 seeded runs: unrecognised, and each stops at the decision with nothing written",
+        "result": "pass"
+      },
+      {
+        "name": "random RAM all the way to a prompt, 4 seeded runs, gives the defaults",
+        "result": "pass"
+      },
+      {
+        "name": "a recognised image with a random DRVTAB, 24 seeded runs, boots with the defaults",
+        "result": "pass"
+      },
+      {
+        "name": "BIOS function 0 with MAIN 1 selected on the 96K option is recognised",
+        "result": "pass"
+      },
+      {
+        "name": "BIOS function 0 with EXPAND 1 selected on the 96K option is recognised",
+        "result": "pass"
+      },
+      {
+        "name": "BIOS function 0 with both selected on the 96K option is recognised",
+        "result": "pass"
+      },
+      {
+        "name": "recognised: only the ROM runs from COLD to MEMINIT, and nothing is written outside the boot stack before the decision",
+        "result": "pass"
+      },
+      {
+        "name": "unrecognised: only the ROM runs from COLD to MEMINIT, and nothing is written outside the boot stack before the decision",
+        "result": "pass"
+      },
+      {
+        "name": "abi.inc is not moved: the hardware services and the table still read as ABI 4",
+        "result": "pass"
+      },
+      {
+        "name": "each stack keeps a quarter of its reservation free, and every STKGUARD byte survives the deepest built-in and error paths",
+        "result": "pass"
+      },
+      {
+        "name": "RES.SVC declares the word MYCO pushes on the BDOS's stack",
+        "result": "pass"
+      },
+      {
+        "name": "the starter card holds exactly six files, each by its hash",
+        "result": "pass"
+      },
+      {
+        "name": "the starter's A: has room for TED's files and a 4 KiB source",
+        "result": "pass"
+      },
+      {
+        "name": "the starter card boots, and MOUNT lists its volumes",
+        "result": "pass"
+      },
+      {
+        "name": "each line runs, echoed, and a failing one prints its message; a warm boot doesn't run the file",
+        "result": "pass"
+      },
+      {
+        "name": "a file with no lines, and no file, reach the prompt; a file over one record ends at it",
+        "result": "pass"
+      },
+      {
+        "name": "a key held through reset skips the file: a hanging INIT reaches a prompt, and with no key it hangs",
+        "result": "pass"
+      },
+      {
+        "name": "a machine with no GLCD refuses GLCD.SVC from the file and the prompt follows",
+        "result": "pass"
+      },
+      {
+        "name": "a machine with no matrix keyboard refuses GLCD.SVC from the file and the prompt follows",
+        "result": "pass"
+      },
+      {
+        "name": "a file of exactly 128 bytes runs its last byte, and reads no further",
+        "result": "pass"
+      },
+      {
+        "name": "^Z and a zero each end the file",
+        "result": "pass"
+      },
+      {
+        "name": "the DMA address is the default's after the read, with a file and without",
+        "result": "pass"
+      },
+      {
+        "name": "a read that returns an error starts nothing, whatever the record holds",
+        "result": "pass"
+      },
+      {
+        "name": "NAME.SVX is no service: the type must be SVC in full",
+        "result": "pass"
+      },
+      {
+        "name": "a reset clears the position, so the file runs again",
+        "result": "pass"
+      },
+      {
+        "name": "lines from the file equal the same lines typed: a built-in then a line",
+        "result": "pass"
+      },
+      {
+        "name": "lines from the file equal the same lines typed: a program's warm boot then a line",
+        "result": "pass"
+      },
+      {
+        "name": "lines from the file equal the same lines typed: a failing line then a line",
+        "result": "pass"
+      },
+      {
+        "name": "lines from the file equal the same lines typed: USER 3 then a line",
+        "result": "pass"
+      },
+      {
+        "name": "an unreadable file reaches a prompt, and what it held doesn't run",
+        "result": "pass"
+      },
+      {
+        "name": "a file that resets the machine runs for ever, and the skip breaks it",
+        "result": "pass"
+      },
+      {
+        "name": "describe invalidates the deblocking key before metadata reuse",
+        "result": "pass"
+      },
+      {
+        "name": "rejected mount invalidates the deblocking key before metadata reuse",
+        "result": "pass"
+      },
+      {
+        "name": "failed descriptor read invalidates the deblocking key before metadata reuse",
+        "result": "pass"
+      },
+      {
+        "name": "mount restores the requested drive and descriptor after a clean flush",
+        "result": "pass"
+      },
+      {
+        "name": "mount restores the requested drive and descriptor after a dirty flush",
+        "result": "pass"
+      },
+      {
+        "name": "failed flush aborts mount without publishing mapping or descriptor changes",
+        "result": "pass"
+      },
+      {
+        "name": "failed flush aborts unmount without publishing mapping or descriptor changes",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 33 rejects record 10000 with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 33 rejects record 3ffff with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 33 rejects record 40000 with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 33 rejects record ffffff with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 34 rejects record 10000 with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 34 rejects record 3ffff with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 34 rejects record 40000 with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 34 rejects record ffffff with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 40 rejects record 10000 with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 40 rejects record 3ffff with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 40 rejects record 40000 with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 40 rejects record ffffff with code 6 and retains the complete FCB",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 34 accepts random record 65535 with exact extent and current record",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS 40 accepts random record 65535 with exact extent and current record",
+        "result": "pass"
+      },
+      {
+        "name": "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "result": "pass"
+      },
+      {
+        "name": "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "result": "pass"
+      },
+      {
+        "name": "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "result": "pass"
+      },
+      {
+        "name": "board: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "result": "pass"
+      },
+      {
+        "name": "a load refused by the window reports refused",
+        "result": "pass"
+      },
+      {
+        "name": "every image byte is its file's, and only the fixups gain the page, across gaps of 255 and more",
+        "result": "pass"
+      },
+      {
+        "name": "every dependency is checked, and with all present the relocation data still follows them",
+        "result": "pass"
+      },
+      {
+        "name": "the older registry follows a service's last record, so every record stays found",
+        "result": "pass"
+      },
+      {
+        "name": "a record whose end leaves the service's pages is refused",
+        "result": "pass"
+      },
+      {
+        "name": "enumerate returns the record itself and the generation",
+        "result": "pass"
+      },
+      {
+        "name": "a file ending exactly at LOADTOP is whole",
+        "result": "pass"
+      },
+      {
+        "name": "the scan reaches the table's entry 0",
+        "result": "pass"
+      },
+      {
+        "name": "the scan reaches the table's entry 16",
+        "result": "pass"
+      },
+      {
+        "name": "a chain of 255 records is taken and 256 is refused",
+        "result": "pass"
+      },
+      {
+        "name": "INIT returning 0 installs a service with no records",
+        "result": "pass"
+      },
+      {
+        "name": "REMOVE calling the removal by its ROM address is refused, and UNLOAD goes on",
+        "result": "pass"
+      },
+      {
+        "name": "NAME.SVC installs, from a drive too; a file that won't read and a refused load go to BADCMD",
+        "result": "pass"
+      },
+      {
+        "name": "ABIDRV stays in abi.inc as ABISVC's old name, at no ROM byte",
+        "result": "pass"
+      },
+      {
+        "name": "an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing loaded",
+        "result": "pass"
+      },
+      {
+        "name": "SERVICES lists each service and its pages, the newest first, with none and after UNLOAD",
+        "result": "pass"
+      },
+      {
+        "name": "a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation",
+        "result": "pass"
+      },
+      {
+        "name": "a dependency's name over 8 bytes is refused by the writer",
+        "result": "pass"
+      },
+      {
+        "name": "the relocation data decodes to the same fixups by delta, and a long gap takes 255s",
+        "result": "pass"
+      },
+      {
+        "name": "the table has no removal: function 2 is refused and the service stays",
+        "result": "pass"
+      },
+      {
+        "name": "warm boot keeps a service, and a reset empties both",
+        "result": "pass"
+      },
+      {
+        "name": "INIT fails cleanly: failed, and the state is as it was",
+        "result": "pass"
+      },
+      {
+        "name": "a record outside the image: failed, and the state is as it was",
+        "result": "pass"
+      },
+      {
+        "name": "a link outside the image: failed, and the state is as it was",
+        "result": "pass"
+      },
+      {
+        "name": "a cyclic chain: failed, and the state is as it was",
+        "result": "pass"
+      },
+      {
+        "name": "an entry table outside the image: failed, and the state is as it was",
+        "result": "pass"
+      },
+      {
+        "name": "INIT fails with a hook left: the pages stay, nothing is registered, UNLOAD refuses",
+        "result": "pass"
+      },
+      {
+        "name": "INIT lies and REMOVE refuses: installed with no records, and the load says so",
+        "result": "pass"
+      },
+      {
+        "name": "INIT calling a load is refused",
+        "result": "pass"
+      },
+      {
+        "name": "INIT calling a removal is refused",
+        "result": "pass"
+      },
+      {
+        "name": "no client can see a record while its INIT runs",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot inside INIT rolls the ceiling back",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot from inside REMOVE clears the guard, the service stays, and a later load works",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot inside INIT after a hook leaves it dangling, which is why hooks go last",
+        "result": "pass"
+      },
+      {
+        "name": "a dependency absent is refused and nothing changes",
+        "result": "pass"
+      },
+      {
+        "name": "a dependency below the least version is refused",
+        "result": "pass"
+      },
+      {
+        "name": "a dependency present is bound at INIT, and last in is first out",
+        "result": "pass"
+      },
+      {
+        "name": "two services publishing one record: the newest, and removal uncovers the older",
+        "result": "pass"
+      },
+      {
+        "name": "REMOVE refuses: UNLOAD says so and changes nothing",
+        "result": "pass"
+      },
+      {
+        "name": "not removable: UNLOAD says so and changes nothing",
+        "result": "pass"
+      },
+      {
+        "name": "STKB: past its limit refused, at it installed, and a second past the sum refused",
+        "result": "pass"
+      },
+      {
+        "name": "STKI: past its limit refused, at it installed, and a second past the sum refused",
+        "result": "pass"
+      },
+      {
+        "name": "STKC: past its limit refused, at it installed, and a second past the sum refused",
+        "result": "pass"
+      },
+      {
+        "name": "the scan can't see a GLVEC-style vector: INIT failed, pages freed, the vector left",
+        "result": "pass"
+      },
+      {
+        "name": "a program that makes a link a cycle can't loop find or enumerate",
+        "result": "pass"
+      },
+      {
+        "name": "a resident that keeps a pointer past removal runs into freed pages, and the generation tells it",
+        "result": "pass"
+      },
+      {
+        "name": "a source naming a ROM address is refused; abi.inc's names pass",
+        "result": "pass"
+      },
+      {
+        "name": "18 malformed files, each field",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: the file shorter than its header",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: a wrong magic",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: format version 2, whose service reads the font at ABIFONT",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: the image size overflowing the address space",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: the image size past the file",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: the image size below the header",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: image and extra overflowing",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: a dependency list past the file",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: the relocation size past the file",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: the relocation size overflowing",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: a fixup past the image",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: a fixup one byte past the image",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: INIT before the image",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: INIT at the image's end",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: INIT far outside",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: REMOVE before the image",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: REMOVE at the image's end",
+        "result": "pass"
+      },
+      {
+        "name": "refused, nothing changed: a base below 8000h",
+        "result": "pass"
+      },
+      {
+        "name": "accepted at the edge: a base of exactly 8000h",
+        "result": "pass"
+      },
+      {
+        "name": "accepted at the edge: a fixup on the image's last byte",
+        "result": "pass"
+      },
+      {
+        "name": "accepted at the edge: INIT on the image's last byte, a RET",
+        "result": "pass"
+      },
+      {
+        "name": "slack past the file's end is tolerated",
+        "result": "pass"
+      },
+      {
+        "name": "each declared stack figure is proved by the watch, and a false one fails it",
+        "result": "pass"
+      },
+      {
+        "name": "makeSvc stops at a source with no INIT, as TAS does",
+        "result": "pass"
+      },
+      {
+        "name": "makeSvc stops at a source with no REMOVE, as TAS does",
+        "result": "pass"
+      },
+      {
+        "name": "a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h",
+        "result": "pass"
+      },
+      {
+        "name": "the bound: a jump at or below the top goes, and one above it stays",
+        "result": "pass"
+      },
+      {
+        "name": "the bound with no service: a jump into the stub's page below the stub goes",
+        "result": "pass"
+      },
+      {
+        "name": "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success",
+        "result": "pass"
+      },
+      {
+        "name": "a vector into freed pages goes at UNLOAD with no declaration",
+        "result": "pass"
+      },
+      {
+        "name": "a failed INIT's vector goes with its pages",
+        "result": "pass"
+      },
+      {
+        "name": "a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot inside INIT takes the vector it set",
+        "result": "pass"
+      },
+      {
+        "name": "a second claim is refused with nothing changed",
+        "result": "pass"
+      },
+      {
+        "name": "a claim on a free slot installs, and format 3's flags of 1 claim nothing",
+        "result": "pass"
+      },
+      {
+        "name": "a service with a vector is gone at a recognised reset, and the vector with it",
+        "result": "pass"
+      },
+      {
+        "name": "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, serial",
+        "result": "pass"
+      },
+      {
+        "name": "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, PICO",
+        "result": "pass"
+      },
+      {
+        "name": "a BDOS call is two jumps from CALL 5, with no service, one and two",
+        "result": "pass"
+      },
+      {
+        "name": "function 47 from INIT rolls the load back, and the chained line runs",
+        "result": "pass"
+      },
+      {
+        "name": "function 47 from REMOVE keeps the service listed, and the chained line runs",
+        "result": "pass"
+      },
+      {
+        "name": "cold boot leaves the overlay off, the classic bank selected and the CCP prompting",
+        "result": "pass"
+      },
+      {
+        "name": "reset from a non-default bank and a dirty latch boots cleanly, repeatedly",
+        "result": "pass"
+      },
+      {
+        "name": "warm boot by ^C keeps the drive and user number",
+        "result": "pass"
+      },
+      {
+        "name": "warm boot clears the restart vectors except jumps into ROM, and a stale RST returns",
+        "result": "pass"
+      },
+      {
+        "name": "a clean boot's restart vectors are the defaults, and 0038h is EI; RETI",
+        "result": "pass"
+      },
+      {
+        "name": "without a card the diagnostic console reports and retries",
+        "result": "pass"
+      },
+      {
+        "name": "without RAM at 8000h-BFFFh the boot says so on the serial console and stops",
+        "result": "pass"
+      },
+      {
+        "name": "the ROM rejects an invalid container before mounting anything",
+        "result": "pass"
+      },
+      {
+        "name": "a standard-capacity card (byte addressing) works",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS file functions pass the probe",
+        "result": "pass"
+      },
+      {
+        "name": "cold boot packs each drive's allocation vector, DSM / 8 + 1 bytes, below the workspace and puts the BDOS entry below them",
+        "result": "pass"
+      },
+      {
+        "name": "on a card of four 8 MiB volumes the BDOS probe passes",
+        "result": "pass"
+      },
+      {
+        "name": "DIR with only a drive lists that drive, and SAVE writes to a drive named",
+        "result": "pass"
+      },
+      {
+        "name": "text and binary files cross between the PC and TEC-OS, and survive power loss",
+        "result": "pass"
+      },
+      {
+        "name": "files over 16 KiB cross between TEC-OS and the PC on a volume whose entries hold two extents",
+        "result": "pass"
+      },
+      {
+        "name": "sparse files and a block written after a reopen survive on both volumes",
+        "result": "pass"
+      },
+      {
+        "name": "a read-only volume refuses writes without changing it",
+        "result": "pass"
+      },
+      {
+        "name": "TAS assembles a program on TEC-OS and the program runs",
+        "result": "pass"
+      },
+      {
+        "name": "the starter card holds TAS.COM by its hash",
+        "result": "pass"
+      },
+      {
+        "name": "the media tool refuses a TAS.COM missing or not as pinned",
+        "result": "pass"
+      },
+      {
+        "name": "TAS X X.SVC makes a service that loads",
+        "result": "pass"
+      },
+      {
+        "name": "a failed build stops TAS BAD!:X through FF00h, with a stale X.COM there",
+        "result": "pass"
+      },
+      {
+        "name": "TAS refuses a read-only output and leaves it as it was",
+        "result": "pass"
+      },
+      {
+        "name": "PICO.SVC's source assembles under TAS to Atom's bytes",
+        "result": "pass"
+      },
+      {
+        "name": "PICO40.SVC's source assembles under TAS to Atom's bytes",
+        "result": "pass"
+      },
+      {
+        "name": "PICO32.SVC's source assembles under TAS to Atom's bytes",
+        "result": "pass"
+      },
+      {
+        "name": "GLCD.SVC's source assembles under TAS to Atom's bytes",
+        "result": "pass"
+      },
+      {
+        "name": "svcdemo.asm assembles under TAS to Atom's bytes",
+        "result": "pass"
+      },
+      {
+        "name": "TED edits, saves and reopens a file on TEC-OS with the PICO9918 (80 x 24)",
+        "result": "pass"
+      },
+      {
+        "name": "TED edits, saves and reopens a file on TEC-OS with the PICO9918 (40 x 24)",
+        "result": "pass"
+      },
+      {
+        "name": "TED edits, saves and reopens a file on TEC-OS with the PICO9918 (32 x 24)",
+        "result": "pass"
+      },
+      {
+        "name": "TED does the same on the GLCD (21 x 8)",
+        "result": "pass"
+      },
+      {
+        "name": "the line argument: TED NOTES.TXT 2 opens at line 2",
+        "result": "pass"
+      },
+      {
+        "name": "the round on A: with the PICO9918: ^T B at the error, ^T D's TDB? and back, the fix, ^T R",
+        "result": "pass"
+      },
+      {
+        "name": "the round on B:, written behind, with the PICO9918",
+        "result": "pass"
+      },
+      {
+        "name": "the round on A: with a serial terminal",
+        "result": "pass"
+      },
+      {
+        "name": "TED's text holds at least 33,052 bytes on the starter card and 31,000 with the PICO9918's driver",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol verify refuses every 1.0 card the ROM's MOUNT refuses, check by check",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol verify refuses every 1.1 card the ROM's MOUNT refuses, check by check",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol verify refuses a wrong 1.1 table sum, as the ROM does, and a 1.0 card has none",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol verify and the ROM agree on a volume on each drive with every drives value, at both minor versions",
+        "result": "pass"
+      },
+      {
+        "name": "tecvol create refuses a volume on a drive past the drives it gives",
+        "result": "pass"
+      },
+      {
+        "name": "the walk with a source that fails: the prompt comes back with TAS's message, and :x doesn't run",
+        "result": "pass"
+      },
+      {
+        "name": "the walk with a source that assembles: X runs",
+        "result": "pass"
+      },
+      {
+        "name": "a warm boot with nothing changed reads no block, in a tenth of the time",
+        "result": "pass"
+      },
+      {
+        "name": "after SAVE the warm boot rebuilds A from its directory up to the mark",
+        "result": "pass"
+      },
+      {
+        "name": "a file written and never closed frees its blocks at the warm boot, as CP/M 2.2 does",
+        "result": "pass"
+      },
+      {
+        "name": "a vector a program wrote over is scanned in full",
+        "result": "pass"
+      },
+      {
+        "name": "a program's BIOS write of a directory entry above the mark is read at the warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "function 13 from a program scans the whole directory",
+        "result": "pass"
+      },
+      {
+        "name": "a drive set read-only is read-write again after a warm boot",
+        "result": "pass"
+      },
+      {
+        "name": "a mount on B: then a warm boot scans B's new volume in full",
+        "result": "pass"
+      },
+      {
+        "name": "the web page's bundle uses no Node globals",
+        "result": "pass"
+      },
+      {
+        "name": "on a phone, tapping the screen and typing dir on the phone's keyboard lists the directory",
+        "result": "pass"
+      },
+      {
+        "name": "a 16 KiB save reads no data block, only the directory",
+        "result": "pass"
+      },
+      {
+        "name": "a newly allocated block holds zeros in the records not yet written",
+        "result": "pass"
+      },
+      {
+        "name": "every write is on the card when WRITE returns",
+        "result": "pass"
+      },
+      {
+        "name": "a random write into an allocated block keeps its neighbours",
+        "result": "pass"
+      },
+      {
+        "name": "a write after a new block on drive B reads a block of drive A",
+        "result": "pass"
+      },
+      {
+        "name": "the table gives the MAIN count; the mark stays 80h and EXPAND is always 2",
+        "result": "pass"
+      },
+      {
+        "name": "MOVE copies within bank 0 as LDIR does, refuses every copy to or from bank 1, and changes nothing else",
+        "result": "pass"
+      },
+      {
+        "name": "MOVE returns with the latch and the interrupt state as it found them",
+        "result": "pass"
+      },
+      {
+        "name": "without EXPAND 1, cold boot says TEC-OS needs 64K and stops",
+        "result": "pass"
+      },
+      {
+        "name": "MOVE refuses any bank-1 byte, and a bank-0 byte at or above (0006h)",
+        "result": "pass"
+      },
+      {
+        "name": "BDOS function 50 reaches the RAM BIOS table, XMOVE and MOVE, and refuses SELMEM",
+        "result": "pass"
+      },
+      {
+        "name": "cold boot clears EXPAND 1 and sets the low mark to 80h; warm boot leaves both",
+        "result": "pass"
+      },
+      {
+        "name": "MOVE has no range in bank 1: a byte there is refused, and 0 bytes at 8000h are not",
+        "result": "pass"
+      },
+      {
+        "name": "the harness sees a program's write to EXPAND 1 below the history ring",
+        "result": "pass"
+      }
+    ]
+  },
+  "gates": {
+    "starter: exactly six files by hash": {
+      "test": "the starter card holds exactly six files, each by its hash",
+      "failInput": "main at 1c0eb18: 13 files on A:, among them EDIT.COM, VOLS.COM, README.TXT, TERM, DEMO, PROBE, PICO40.SVC and PICO32.SVC"
+    },
+    "starter: room for TED's files and a 4 KiB source": {
+      "test": "the starter's A: has room for TED's files and a 4 KiB source",
+      "free": 1007616,
+      "need": 14336
+    },
+    "MOUNT lists": {
+      "tests": [
+        "MOUNT lists and unmounts on major 4",
+        "a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume",
+        "the starter card boots, and MOUNT lists its volumes"
+      ],
+      "mutant": "JP Z,LIST removed from test/programs/mount.asm: those three fail, 22 pass"
+    },
+    "the round, PICO and serial, A: and B:": {
+      "tests": [
+        "the round on A: with the PICO9918: ^T B at the error, ^T D's TDB? and back, the fix, ^T R",
+        "the round on B:, written behind, with the PICO9918",
+        "the round on A: with a serial terminal"
+      ]
+    },
+    "^T D's sequence": {
+      "test": "the round's ^T D step: TDB HELLO, TDB?, then !TED at the same place, asserted in each round"
+    },
+    "the line argument": {
+      "test": "the line argument: TED NOTES.TXT 2 opens at line 2"
+    },
+    "text room": {
+      "test": "TED's text holds at least 33,052 bytes on the starter card and 31,000 with the PICO9918's driver",
+      "figures": {
+        "starterNoDisplay": 33067,
+        "floor": 33052,
+        "withPico": 31510,
+        "floorWithDisplay": 31000,
+        "withBothDisplays": "about 29,974 by the 1,536 bytes the GLCD's driver takes: the fail input of the 31,000 floor"
+      }
+    },
+    "EDIT.COM gone from live": {
+      "search": "git grep -i -E 'edit\\.com|edit_com|editcom|lib/edit|editForAbi4'",
+      "exclusions": [
+        "test/model and test/fixtures: records",
+        "tools/ks30-model.mjs to tools/ks34-model.mjs: older trees",
+        "tools/lib/model.mjs OLDER_PINS and editCom(): older trees' media",
+        "docs/compatibility.md: the Edit and EDIT.COM rows, history"
+      ]
+    },
+    "ROM unchanged": {
+      "image": "6f3e7467744ec00ee6a727c5a62c910e7b64b4ccc3fa622d778ea0b0c15b82f1",
+      "against": "1c0eb18's 6f3e7467744ec00e…"
+    }
+  },
+  "changedTests": {
+    "since": "1c0eb18",
+    "files": {
+      "test/edit.test.mjs": "Removed, with its Triptych case",
+      "test/ted.test.mjs": "New: four geometries, the line argument, the round three ways, the text room",
+      "test/starter.test.mjs": "New: the six files by hash, the room on A:, MOUNT on the starter",
+      "test/walk.test.mjs": "TED in place of Edit",
+      "test/clients.test.mjs": "MOUNT's list in place of VOLS",
+      "test/mount.test.mjs": "MOUNT's list in place of VOLS",
+      "test/pico.test.mjs": "The starter's three display files; the page writes PICO.SVC at its width",
+      "test/web-touch.test.mjs": "The six-file card's directory",
+      "test/programs/mount.asm": "MOUNT with no argument lists the volumes",
+      "test/programs/vols.asm": "Removed"
+    }
+  }
+}
