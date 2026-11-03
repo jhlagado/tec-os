@@ -1,0 +1,510 @@
+{
+  "kind": "bounded original-system versus TEC-OS diagnostic, not feature parity",
+  "pins": {
+    "portable": "3beed4e60a10b3f68a68e8da0f3851946b2e96a4",
+    "debug": "2cb5cb6138ac7864b0c97ea32482f617de97da97",
+    "atom": "0.3.7",
+    "runtime": "0.3.3",
+    "atom-z80": {
+      "version": "0.3.7",
+      "treeSha256": "e20354b6d672c264e9b856d8970a59dd1225c329c9576bfab2535d879e52ddda",
+      "files": 104
+    },
+    "@jhlagado/debug80-runtime": {
+      "version": "0.3.3",
+      "treeSha256": "bb2beb62429ebcb73f62796c375d3c42c72aa732635c8b22f58eea1755859fa8",
+      "files": 219
+    }
+  },
+  "inputs": {
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:third_party/cpm22/cpm22.img": "7d2898386a77ff3c1e84b0141dad251a19be795befadb7dd8a9ba5965ba4654f",
+    "2cb5cb6138ac7864b0c97ea32482f617de97da97:apps/debug80-vscode/roms/cpm22/cpm22.img": "51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be",
+    "2cb5cb6138ac7864b0c97ea32482f617de97da97:third_party/cpm22/ccp.asm": "497aea556887cbae6f2fc54f24b9826fcd17950f1534f9e54d9b67de094949bc",
+    "2cb5cb6138ac7864b0c97ea32482f617de97da97:scripts/cpm22/convert-8080-to-z80.mjs": "d2cdc9253f155e2787319ce89d7ab1f83b251af9907aa40c751eb7d976aaae78",
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:test/fixtures/test-bios.asm": "e7186dc9b6bc0f67da03917a3c6f975de5fe5716c47ee85e3f856b814c091736",
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:test/support/portable-cpm-machine.ts": "4b1426a67c5096fd318144264d652ddcbec68ef1e1e4e7273b71445197b3456a",
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:tools/lib/cpm22-disk.mjs": "0406e70a2afccad5b7774b54bf267f4bb6cd7811ccdb848c0d49e0d9062a4bda",
+    "07daed7d03565b8ec8cec8234d19365f67e87682:tools/ccp-call-model.mjs": "df6b70d881be5cb47e97dc6040698cd7a74078c432d8afd06742c87412361da0"
+  },
+  "normalization": [],
+  "patches": [],
+  "geometry": {
+    "records": 2002,
+    "recordBytes": 128,
+    "tracks": 77,
+    "sectors": 26,
+    "systemRecords": 52
+  },
+  "addresses": {
+    "ccp": 58368,
+    "bdos": 60416,
+    "bios": 64000
+  },
+  "results": [
+    {
+      "case": "USER 0",
+      "original": {
+        "output": "USER 0\r\r\nA>",
+        "userDrive": 0
+      },
+      "tecos": {
+        "output": "USER 0\r\r\nA>",
+        "userDrive": 0
+      },
+      "sameOutput": true,
+      "sameUser": true
+    },
+    {
+      "case": "USER 00",
+      "original": {
+        "output": "USER 00\r\r\nA>",
+        "userDrive": 0
+      },
+      "tecos": {
+        "output": "USER 00\r\r\n00?\r\n\r\nA>",
+        "userDrive": 0
+      },
+      "sameOutput": false,
+      "sameUser": true
+    },
+    {
+      "case": "USER 01",
+      "original": {
+        "output": "USER 01\r\r\nA>",
+        "userDrive": 16
+      },
+      "tecos": {
+        "output": "USER 01\r\r\n01?\r\n\r\nA>",
+        "userDrive": 0
+      },
+      "sameOutput": false,
+      "sameUser": false
+    },
+    {
+      "case": "USER 15",
+      "original": {
+        "output": "USER 15\r\r\nA>",
+        "userDrive": 240
+      },
+      "tecos": {
+        "output": "USER 15\r\r\nA>",
+        "userDrive": 240
+      },
+      "sameOutput": true,
+      "sameUser": true
+    },
+    {
+      "case": "USER 16",
+      "original": {
+        "output": "USER 16\r\r\n16?\r\n\r\nA>",
+        "userDrive": 0
+      },
+      "tecos": {
+        "output": "USER 16\r\r\n16?\r\n\r\nA>",
+        "userDrive": 0
+      },
+      "sameOutput": true,
+      "sameUser": true
+    },
+    {
+      "case": "USER 1 EXTRA",
+      "original": {
+        "output": "USER 1 EXTRA\r\r\nEXTRA?\r\n\r\nA>",
+        "userDrive": 16
+      },
+      "tecos": {
+        "output": "USER 1 EXTRA\r\r\n1?\r\n\r\nA>",
+        "userDrive": 0
+      },
+      "sameOutput": false,
+      "sameUser": false
+    },
+    {
+      "case": "TYPE HELLO.TXT",
+      "original": {
+        "output": "TYPE HELLO.TXT\r\r\nHELLO\r\n\r\nA>"
+      },
+      "tecos": {
+        "output": "TYPE HELLO.TXT\r\r\nHELLO\r\n\r\nA>"
+      },
+      "sameOutput": true
+    },
+    {
+      "case": "REN OTHER.TXT=HELLO.TXT",
+      "original": {
+        "output": "REN OTHER.TXT=HELLO.TXT\r\r\nA>"
+      },
+      "tecos": {
+        "output": "REN OTHER.TXT=HELLO.TXT\r\r\nA>"
+      },
+      "sameOutput": true
+    },
+    {
+      "case": "SAVE 0 EMPTY.DAT",
+      "original": {
+        "output": "SAVE 0 EMPTY.DAT\r\r\nA>"
+      },
+      "tecos": {
+        "output": "SAVE 0 EMPTY.DAT\r\r\nA>"
+      },
+      "sameOutput": true
+    },
+    {
+      "case": "export/reboot persisted logical files",
+      "original": {
+        "files": [
+          {
+            "name": "EMPTY.DAT",
+            "user": 0,
+            "records": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "name": "OTHER.TXT",
+            "user": 0,
+            "records": 1,
+            "sha256": "333ee686f94a7084f44f2c2f103b66ff553a2708a74413fb65b9b86dd08f8a32"
+          },
+          {
+            "name": "PROBE.COM",
+            "user": 0,
+            "records": 1,
+            "sha256": "c696e3efc523a904f3b73c19b32ba329f9704660d76329273b184c3c6e44e4f1"
+          }
+        ],
+        "output": "TYPE OTHER.TXT\r\r\nHELLO\r\n\r\nA>"
+      },
+      "tecos": {
+        "files": [
+          {
+            "name": "EMPTY.DAT",
+            "user": 0,
+            "records": 0,
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "name": "OTHER.TXT",
+            "user": 0,
+            "records": 1,
+            "sha256": "333ee686f94a7084f44f2c2f103b66ff553a2708a74413fb65b9b86dd08f8a32"
+          },
+          {
+            "name": "PROBE.COM",
+            "user": 0,
+            "records": 1,
+            "sha256": "c696e3efc523a904f3b73c19b32ba329f9704660d76329273b184c3c6e44e4f1"
+          }
+        ],
+        "output": "TYPE OTHER.TXT\r\r\nHELLO\r\n\r\nA>"
+      },
+      "sameOutput": true,
+      "sameFiles": true
+    },
+    {
+      "case": "PROBE B:FOO*.BAR BAZ.QUX",
+      "original": {
+        "fcb1": [
+          2,
+          70,
+          79,
+          79,
+          63,
+          63,
+          63,
+          63,
+          63,
+          66,
+          65,
+          82,
+          0,
+          0,
+          0,
+          1,
+          0,
+          66,
+          65,
+          90,
+          32,
+          32,
+          32,
+          32,
+          32,
+          81,
+          85,
+          88,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fcb2": [
+          0,
+          66,
+          65,
+          90,
+          32,
+          32,
+          32,
+          32,
+          32,
+          81,
+          85,
+          88,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          19,
+          32,
+          66,
+          58,
+          70,
+          79,
+          79,
+          42,
+          46,
+          66,
+          65,
+          82,
+          32,
+          66,
+          65,
+          90
+        ],
+        "tail": [
+          19,
+          32,
+          66,
+          58,
+          70,
+          79,
+          79,
+          42,
+          46,
+          66,
+          65,
+          82,
+          32,
+          66,
+          65,
+          90,
+          46,
+          81,
+          85,
+          88,
+          0
+        ],
+        "sp": 60329,
+        "dma": [
+          128,
+          0
+        ],
+        "returnWord": [
+          95,
+          235
+        ]
+      },
+      "tecos": {
+        "fcb1": [
+          2,
+          70,
+          79,
+          79,
+          63,
+          63,
+          63,
+          63,
+          63,
+          66,
+          65,
+          82,
+          0,
+          0,
+          0,
+          0,
+          0,
+          66,
+          65,
+          90,
+          32,
+          32,
+          32,
+          32,
+          32,
+          81,
+          85,
+          88,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "fcb2": [
+          0,
+          66,
+          65,
+          90,
+          32,
+          32,
+          32,
+          32,
+          32,
+          81,
+          85,
+          88,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          19,
+          32,
+          66,
+          58,
+          70,
+          79,
+          79,
+          42,
+          46,
+          66,
+          65,
+          82,
+          32,
+          66,
+          65,
+          90
+        ],
+        "tail": [
+          19,
+          32,
+          66,
+          58,
+          70,
+          79,
+          79,
+          42,
+          46,
+          66,
+          65,
+          82,
+          32,
+          66,
+          65,
+          90,
+          46,
+          81,
+          85,
+          88,
+          0
+        ],
+        "sp": 48757,
+        "dma": [
+          128,
+          0
+        ],
+        "returnWord": [
+          0,
+          0
+        ]
+      },
+      "sameTail": true,
+      "sameDma": true,
+      "placement": "SP/return address differ intentionally: original resident RAM CCP versus TEC-OS ROM CCP and warm-boot return; no address normalization applied",
+      "fcbByteDifferences": [
+        {
+          "address": 107,
+          "original": 1,
+          "tecos": 0
+        }
+      ]
+    }
+  ],
+  "sourceReproduction": {
+    "status": "pass",
+    "initializedBytes": 1979,
+    "sha256": "1930f9e276ea79c4e118b3a3fc2178ca0c02732f5073ff6763d8abe1d6cd391c",
+    "emittedBytes": 2034,
+    "projectionSha256": "4abafbecce685b719c2e6995ec491196950535f13f2f99841a862e3c444604ee"
+  },
+  "executables": {
+    "ccp": "67fda0f138c3654a2fb15ae49acb2e663c848774779fa9822eda0f6d3a9b8da3",
+    "bdos": "258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+    "bios": "8c82ef5c4b986f5dd97f1ffb2d915525756f9b2450daa369bea276dc68116f70"
+  },
+  "runtimeEntry": {
+    "path": "@jhlagado/debug80-runtime/dist/z80/runtime.js",
+    "sha256": "e2118827a1bc0aecd677dd3b1898505f8bd7f765668aa69db01b840871116987"
+  },
+  "machineAdapter": {
+    "source": "4b1426a67c5096fd318144264d652ddcbec68ef1e1e4e7273b71445197b3456a",
+    "adapted": "aea428f4c27cc105b39e811d5b1fb1504d0a2d4da19f8c3a3f9ee9ec1babfdce",
+    "changes": [
+      "fixed default profile E400/EC00/FA00",
+      "runtime factory supplied from pinned dependency; no CPU/disk algorithm changes"
+    ]
+  },
+  "target": {
+    "modelPin": "07daed7d03565b8ec8cec8234d19365f67e87682",
+    "modelTool": "df6b70d881be5cb47e97dc6040698cd7a74078c432d8afd06742c87412361da0",
+    "rom": "ab2d0c6b8a8d5d36ad3c51af3ef22cfb166890cc412f51bb9352b7a80cb27ed6",
+    "symbols": "ba4f3e8bf0df4f96eac6bcbced5f5a2530651eccaae8c68500467b4dd3300f77",
+    "files": {
+      "host/machine.mjs": "65fc54509ef56c7aad1d5821ffc9ce8219914b10c4376f794332f521163925cb",
+      "tools/lib/bytes.mjs": "a6a3f0c9d4ff5441f61bffc03264cb1bc7d4097a418bb7531491df57aad17687",
+      "tools/lib/container.mjs": "0f86a39cfee6697a18e427d55ec4f25817d4209affcca7350c7540e480510d54",
+      "tools/lib/cpmfs.mjs": "648c2b3a663bcde8cea0dee96f2947dad5f220589296711e9b47e2e02caf768d",
+      "src/cpm/ccp.asm": "9aada5826a319d5bd0cc3bfb845fddc724b3fac598ae021ae68fcbbe2302f4bc",
+      "src/cpm/bdos.asm": "4af66e39ca05c49034a820d76f5c911aa08a12ac712e182edf08c412d69056e3",
+      "package-lock.json": "2615ff7b36345318ab310673f630e9b38b49dd296146e70e22bab4c90b22f69c"
+    },
+    "resolver": "TECOS_COMPARE_ROOT, default ../tec-os-ccp-calls/build/ccp-calls-model/descriptor-shared",
+    "geometry": "single G1M A: volume, write-through; independent of reference disk geometry"
+  },
+  "logicalInputs": [
+    {
+      "name": "HELLO.TXT",
+      "user": 0,
+      "records": 1,
+      "sha256": "333ee686f94a7084f44f2c2f103b66ff553a2708a74413fb65b9b86dd08f8a32"
+    },
+    {
+      "name": "PROBE.COM",
+      "user": 0,
+      "records": 1,
+      "sha256": "c696e3efc523a904f3b73c19b32ba329f9704660d76329273b184c3c6e44e4f1"
+    }
+  ],
+  "elapsedMs": 1691.060291,
+  "maxRssKiB": 137520,
+  "status": "diagnostic complete; differences are not parity failures",
+  "diagnosticCommit": "ef542f7",
+  "guard": {
+    "name": "ccp-pair",
+    "command": "node ccp-compare.mjs",
+    "limitMB": 800,
+    "heapMB": 384,
+    "event": "end",
+    "at": "2026-11-03T23:06:57.725Z",
+    "outcome": "exit 0",
+    "code": 0,
+    "peakMB": 149,
+    "processes": 2,
+    "seconds": 2.1,
+    "freePercentAtEnd": 41
+  }
+}
