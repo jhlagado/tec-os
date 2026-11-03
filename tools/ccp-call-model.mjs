@@ -24,7 +24,7 @@ function descriptor(dir) {
   let source = readFileSync(path, "utf8"), calls = 0, tails = 0;
   source = source.replace(/^[ \t]*LD[ \t]+C,(\d+)[^\n]*\n[ \t]*(CALL|JP)[ \t]+(CPSRC|CPDST)/gm, (_, fn, op, dest) => {
     op === "JP" ? tails++ : calls++;
-    return `        CALL    DOSSEQ\n        DB      ${`${fn}*2+${dest === "CPDST" ? 1 : 0}`}${op === "JP" ? "\n        RET" : ""}`;
+    return `        CALL    DOSSEQ\n        DB      ${fn}*2+${dest === "CPDST" ? 1 : 0}    ; BDOS ${fn}, ${dest === "CPDST" ? "destination" : "source"} FCB${op === "JP" ? "\n        RET" : ""}`;
   });
   assert.equal(calls, 21); assert.equal(tails, 1);
   const old = `CPSRC:
@@ -34,6 +34,11 @@ CPDST:
         LD      DE,RENFCB
         JP      BDOS`;
   assert.ok(source.includes(old));
+  source = source.replace(/; BDOS function C on CMDFCB,[\s\S]*?; through CPSRC\. Returns as the BDOS does\./, `; One inline byte after CALL: BDOS function*2 + destination bit (0=CMDFCB,
+; 1=RENFCB). Advance the return PC past it, preserving HL, B and A. BDOS owns
+; DE/C and its normal result registers/flags. SRL changes incoming flags;
+; BENTRY overwrites them with CP before any handler dispatch. No frame is
+; added here; the READSRC terminal CALL/byte/RET holds one extra return word.`);
   source = source.replace(old, `DOSSEQ:
         EX      (SP),HL
         LD      C,(HL)
