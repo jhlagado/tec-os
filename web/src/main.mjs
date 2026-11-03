@@ -64,7 +64,22 @@ async function starterCard() {
 
 // ---- Machine lifecycle ------------------------------------------------------
 
-async function powerOn() {
+// The card is changed by one thing at a time: a power on's preparation, which
+// may write PICO.SVC at the chosen width, and an import's publication take
+// turns, so the later choice reaches both the running card and the saved one
+// (KE-168).
+let turn = Promise.resolve();
+function serial(fn) {
+  const run = turn.then(fn);
+  turn = run.catch(() => {});
+  return run;
+}
+
+function powerOn() {
+  return serial(powerOnNow);
+}
+
+async function powerOnNow() {
   let fetched = {};
   if (state.display === "tms") {
     const recipe = await fetch("starter.recipe.json", { cache: "no-cache" }).then((r) => r.json()).catch(() => ({}));
@@ -107,6 +122,7 @@ setInterval(async () => {
  * card dirty, and the next tick saves the newest copy (D3).
  */
 async function save(image = state.card) {
+  if (state.noSave) return false; // the stored record couldn't be read: kept as it is
   if (state.saving) {
     state.cardDirty = true;
     return false;
@@ -142,6 +158,7 @@ async function save(image = state.card) {
  * and drop the copied files (KE-163). A failure throws, for "Not copied".
  */
 async function importSave(staged) {
+  if (state.noSave) return; // the copy stays in memory only, as the card does
   while (state.saving) await state.saveDone;
   state.saving = true;
   let done;
@@ -531,7 +548,11 @@ function refreshCard() {
   if (!info) return;
   $("cardinfo").textContent =
     info.volumes.map((v) => `${v.drive ?? "-"}: ${v.label} (${v.g.name}${v.readOnly ? ", read-only" : ""})`).join("   ") +
-    (state.unsaved ? "   Card not saved in this browser: it is kept in memory and saved again shortly." : "");
+    (state.noSave
+      ? "   The saved card couldn't be read, so this card isn't saved; reload to try again."
+      : state.unsaved
+        ? "   Card not saved in this browser: it is kept in memory and saved again shortly."
+        : "");
   const select = $("drive");
   const current = select.value;
   select.innerHTML = "";
@@ -610,17 +631,19 @@ $("putfile").addEventListener("change", async (e) => {
   const wasRunning = state.running;
   state.running = false;
   try {
-    const staged = state.card.slice();
-    const v = parseContainer(staged).volumes.find((x) => x.drive === $("drive").value);
-    if (!v) return;
-    const fs = new CpmVolume(volumePayload(staged, v), v.g, { readOnly: v.readOnly });
-    for (const file of e.target.files) {
-      const name = file.name.toUpperCase();
-      fs.write(name, new Uint8Array(await file.arrayBuffer()), { text: $("astext").checked });
-    }
-    await importSave(staged); // a failed save throws: "Not copied", and the card as it was
-    state.card.set(staged);
-    reset();
+    // The files read first; then, in the card's turn, staged on the card as it is then.
+    const files = [];
+    for (const file of e.target.files) files.push([file.name.toUpperCase(), new Uint8Array(await file.arrayBuffer())]);
+    await serial(async () => {
+      const staged = state.card.slice();
+      const v = parseContainer(staged).volumes.find((x) => x.drive === $("drive").value);
+      if (!v) return;
+      const fs = new CpmVolume(volumePayload(staged, v), v.g, { readOnly: v.readOnly });
+      for (const [name, bytes] of files) fs.write(name, bytes, { text: $("astext").checked });
+      await importSave(staged); // a failed save throws: "Not copied", and the card as it was
+      state.card.set(staged);
+      reset();
+    });
   } catch (err) {
     $("cardinfo").textContent = `Not copied: ${err.message}`;
   } finally {
@@ -665,12 +688,17 @@ setInterval(refreshFiles, 5000);
 // ---- Start ---------------------------------------------------------------------------
 
 (async () => {
-  state.card = (await loadCard()) ?? (await starterCard());
+  // A record that won't read, or won't parse, is left as it is: a starter card
+  // runs, unsaved, and nothing is saved until a reload reads the record (KE-164).
   try {
-    parseContainer(state.card);
+    state.card = await loadCard();
+    if (state.card) parseContainer(state.card);
   } catch {
-    state.card = await starterCard();
+    state.card = null;
+    state.noSave = true;
+    state.unsaved = true;
   }
+  state.card ??= await starterCard();
   await save();
   await powerOn();
   refreshCard();

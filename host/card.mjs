@@ -45,8 +45,11 @@ export function cardProblem(image, display) {
   return null;
 }
 
-/** True if the card's file BYTES, a whole number of records, holds BUILD and nothing after it. */
-const holds = (bytes, build) => bytes.length === Math.ceil(build.length / 128) * 128 && build.every((v, i) => bytes[i] === v);
+/**
+ * True if the card's file BYTES, a whole number of records, is BUILD as the
+ * volume writes it: the build, then zeros to the record's end (KE-165).
+ */
+const holds = (bytes, build) => bytes.length === Math.ceil(build.length / 128) * 128 && bytes.every((v, i) => v === (i < build.length ? build[i] : 0));
 
 /**
  * Ready the card for DISPLAY: the problem, if any, a note, and whether the card

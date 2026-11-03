@@ -40,7 +40,12 @@ function failing(where) {
           },
           transaction() {
             const tx = { error: null };
-            tx.objectStore = () => ({ put: () => later(() => ((tx.error = new Error("quota exceeded")), tx.onerror?.())) });
+            const get = () => {
+              const r = {};
+              later(() => (where === "get" ? ((r.error = new Error("read failed")), r.onerror?.()) : ((r.result = undefined), r.onsuccess?.())));
+              return r;
+            };
+            tx.objectStore = () => ({ get, put: () => later(() => ((tx.error = new Error("quota exceeded")), tx.onerror?.())) });
             return tx;
           },
         };
@@ -202,4 +207,74 @@ test("a file import during a timer's save saves after it, so the stored card hol
   await imported;
   assert.deepEqual(Array.from(stored), [2], "the copied files are the card stored last");
   assert.match(source, /await importSave\(staged\)/, "and the import's handler saves through it");
+});
+
+test("the real store's loadCard gives null for no card and throws when the read fails, so the page can tell them apart (KE-164)", async () => {
+  const { loadCard } = await import(pathToFileURL(resolve(ROOT, "web/src/store.mjs")).href);
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    globalThis.indexedDB = failing("none");
+    assert.equal(await loadCard(), null, "no record: null");
+    globalThis.indexedDB = failing("get");
+    await assert.rejects(loadCard(), /read failed/, "a failed read throws");
+  } finally {
+    console.warn = warn;
+    delete globalThis.indexedDB;
+  }
+});
+
+test("a saved card that won't read, or won't parse, is left as it is: the page runs a starter unsaved and says so (KE-164)", async (t) => {
+  execFileSync(process.execPath, [resolve(ROOT, "web/build.mjs")], { stdio: "pipe" });
+  const { chromium } = require("playwright");
+  const server = await serve();
+  const browser = await chromium.launch();
+  t.after(async () => {
+    await browser.close();
+    server.close();
+  });
+  const url = `http://127.0.0.1:${server.address().port}/`;
+  const MARK = [7, 7, 7, 1, 2, 3];
+  const record = (page) => page.evaluate(() => new Promise((ok) => {
+    const r = indexedDB.open("tecos", 1);
+    r.onsuccess = () => {
+      const get = r.result.transaction("cards").objectStore("cards").get("current");
+      get.onsuccess = () => ok(get.result ? Array.from(new Uint8Array(get.result)).slice(0, 6) : null);
+    };
+  }));
+  const plant = (page, bytes) => page.evaluate((b) => new Promise((ok) => {
+    const r = indexedDB.open("tecos", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("cards");
+    r.onsuccess = () => {
+      const tx = r.result.transaction("cards", "readwrite");
+      tx.objectStore("cards").put(new Uint8Array(b).buffer, "current");
+      tx.oncomplete = ok;
+    };
+  }), bytes);
+  const context = await browser.newContext();
+  for (const kind of ["read", "parse"]) {
+    // The marker stored by a page that is then closed, so that no other page's timer saves over it.
+    const planter = await context.newPage();
+    await planter.goto(`${url}missing`); // the origin, without the page's own code
+    await plant(planter, kind === "read" ? [...MARK, ...new Array(512).fill(0)] : MARK);
+    await planter.close();
+    const page = await context.newPage();
+    if (kind === "read")
+      await page.addInitScript(() => {
+        const get = IDBObjectStore.prototype.get;
+        let failed = false;
+        IDBObjectStore.prototype.get = function (...a) {
+          if (failed) return get.apply(this, a);
+          failed = true;
+          const r = {};
+          setTimeout(() => ((r.error = new Error("read failed")), r.onerror?.()), 0);
+          return r;
+        };
+      });
+    await page.goto(url);
+    await page.waitForFunction(() => /couldn't be read/.test(document.getElementById("cardinfo").textContent), null, { timeout: 30_000 });
+    await page.waitForTimeout(5_000); // two of the timer's ticks
+    assert.deepEqual(await record(page), MARK, `${kind}: the stored record is untouched`);
+    await page.close();
+  }
 });

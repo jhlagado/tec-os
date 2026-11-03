@@ -34,8 +34,9 @@ Node.js 20 or later.
 ```sh
 npm ci
 npx playwright install chromium   # once: the browser the page's tests drive
+npm run inputs   # once on a fresh clone: TED.COM and TAS.COM at their pins, in .inputs/
 npm run build    # the ROM image in build/tecos/
-npm test         # host and emulator tests, about 90 seconds
+npm test         # host and emulator tests, several minutes
 npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 ```
 
@@ -43,10 +44,11 @@ The web page's tests (`test/web-touch.test.mjs`, `test/web-store.test.mjs`) driv
 Chromium through `playwright`, pinned in `package.json`; `npx playwright install
 chromium` fetches the browser that version expects.
 
-`npm run media` puts TED and TAS on the starter card from
-`../thorium/dist/TED.COM` and `../thorium/dist/TAS.COM` (or the files named by
-`TED_COM` and `TAS_COM`), and refuses a file that is missing or not the build
-pinned in `test/inputs.json`.
+`npm run media` and the tests take TED and TAS from the files named by `TED_COM`
+and `TAS_COM`, else `../thorium/dist/TED.COM` and `../thorium/dist/TAS.COM`,
+else `.inputs/`, which `npm run inputs` fills from each pin's repository and
+commit. A file that is missing or not the build pinned in `test/inputs.json` is
+refused.
 
 The ROM is assembled with ATOM. There is one image for every board,
 `build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
