@@ -728,6 +728,22 @@ test("the web host: a PICO.SVC of the card's owner is kept at any width", () => 
   assert.match(prepareCard(image, "tms", "40", DRIVERS).note, /own PICO\.SVC is kept/);
 });
 
+test("the web host: a stock PICO.SVC with one byte changed after its build, in its last record, is the owner's and kept (KE-165)", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  const build = PICO_SVC["PICO40.SVC"];
+  assert.ok(build.length % 128, "the build ends inside a record");
+  const own = new Uint8Array(Math.ceil(build.length / 128) * 128);
+  own.set(build);
+  own[build.length] = 0x5a; // past the build, where the volume writes zeros
+  a.write("PICO.SVC", own);
+  a.write("STARTUP.CMD", startupFile("PICO.SVC"));
+  const got = prepareCard(image, "tms", "80", DRIVERS);
+  assert.deepEqual([got.problem, got.changed], [null, false]);
+  assert.match(got.note, /own PICO\.SVC is kept/);
+  assert.deepEqual([...volume(image, "A").read("PICO.SVC")], [...own]);
+});
+
 test("the web host: a PICO.SVC of an older format is replaced by the width's, and without drivers it is only named", () => {
   const image = standardCard();
   const a = volume(image, "A");
