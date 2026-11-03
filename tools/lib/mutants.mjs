@@ -642,4 +642,5 @@ export const MUTANTS_KS38B = [
   { name: "MNFILL: the length's high byte not copied", ...ks34(VOLF, ["LD BC,6", "LDIR"], ["LD BC,5", "LDIR"], ["test/mount.test.mjs", "test/reset.test.mjs"]) },
   { name: "DRVLAB: the label a character short", ...ks34(LCDF, ["LD BC,11", "LDIR"], ["LD BC,10", "LDIR"], ["test/console.test.mjs"]) },
   { name: "PUTCHAR: HL not kept", ...ks34(CCPF, ["PUSH HL", "LD C,2", "CALL BDOS", "POP HL"], ["NOP", "LD C,2", "CALL BDOS", "NOP"], ["test/commands.test.mjs", "test/ccp-operands.test.mjs"]) },
+  { name: "PUTCHAR: BC not kept", ...ks34(CCPF, ["PUTCHAR:", "PUSH BC", "PUSH HL", "LD C,2", "CALL BDOS", "POP HL", "POP BC"], ["PUTCHAR:", "NOP", "PUSH HL", "LD C,2", "CALL BDOS", "POP HL", "NOP"], ["test/commands.test.mjs", "test/ccp-operands.test.mjs"]) },
 ];
