@@ -1,0 +1,16 @@
+{
+  "baseline": "7935507",
+  "markers": ["ROMDATA", "ROMCODE", "CODEEND"],
+  "merges": {
+    "hex printers": { "bytes": 7, "routines": ["PUTHEX", "PUTNIB", "HEXHL", "HEXNIB", "CPHEX", "CPNIB", "CPHEXC"] },
+    "the byte sums": { "bytes": 5, "routines": ["HDRSUM", "HSL", "HSN", "MNSUMB", "MNSUM", "MNSUM1", "SUMDE", "SUMDE1"] },
+    "DPHADR everywhere": { "bytes": 14, "routines": ["MNDPH", "ALVNX"] },
+    "CPSRC": { "bytes": 51, "routines": ["LOADCOM", "LOADLOOP", "LOADLIM", "LOADOK", "DIRWOK", "DIRNEXT", "CMDTYPE", "TYPEREAD", "TYPEEND", "ERADEL", "RENTEST", "SAVENEND", "SAVE128", "SAVECLS", "STBOOT"] },
+    "command words": { "bytes": 40, "routines": ["NOTDRIVE", "KEYTAB", "KEYNXT", "KEYSK", "TYPEKEY", "DIRKEY", "ERAKEY", "RENKEY", "SAVEKEY", "USERKEY", "CONKEY", "COPYKEY", "UNLKEY", "SVCKEY"] },
+    "descriptor checks' tail": { "bytes": 14, "routines": ["MNDESC", "MNDBAD"] },
+    "MNFILL by LDIR": { "bytes": 16, "routines": ["MNFILL"] },
+    "drive walkers' label copy": { "bytes": 23, "routines": ["SHV", "SHVL", "LCDV", "DRVLAB"] },
+    "PUTCHAR keeps BC and HL": { "bytes": 15, "routines": ["PUTCHAR", "MLEC1", "BADLOOP", "DIRNAME", "DIRPADC", "PUTTRIM", "PUTNAME", "CMDDL"] }
+  },
+  "hotPaths": ["BENTRY", "DISPATCH", "FINDENT", "READDIR", "POSREC", "FNREADSQ", "FNRREAD", "SDRBLK", "SDWBLK"]
+}
