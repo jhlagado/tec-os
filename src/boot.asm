@@ -319,6 +319,44 @@ RAMOUT: LD      A,(HL)
         JR      RAMOUT
 RAMSTOP:JR      RAMSTOP
 
+; Print the mounted drives: letter and label.
+SHOWVOL:LD      C,0             ; each mounted drive, in drive order
+SHV:    PUSH    BC
+        CALL    DRVDESC
+        JR      NZ,SHVN
+	LD	A,C		; the drive, which may not be the card's letter
+        ADD     A,'A'
+        CALL    PUTA
+        LD      A,':'
+        CALL    PUTA
+        LD      A,' '
+        CALL    PUTA
+        PUSH    IX
+        POP     HL
+        LD      DE,DLABEL
+        ADD     HL,DE
+        LD      B,11
+SHVL:   LD      A,(HL)
+        PUSH    BC
+        PUSH    HL
+        CALL    PUTA
+        POP     HL
+        POP     BC
+        INC     HL
+        DJNZ    SHVL
+        LD      A,(IX+DFLAGS)
+        AND     DFREAD
+        JR      Z,SHVRW
+        LD      HL,ROTXT
+        CALL    PUTS
+SHVRW:  CALL    PUTCRLF
+SHVN:   POP     BC
+        INC     C
+        LD      A,C
+        CP      MAXDRV
+        JR      C,SHV
+        RET
+
 ; Pack the allocation vectors down from WSBASE, in drive order, and put
 ; each one's address in its DPH. A format 1.1 card that asks for N drives
 ; gets a G8M-sized slot (256 bytes) for each of drives 0 to N-1, mounted or
