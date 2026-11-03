@@ -1,0 +1,869 @@
+{
+  "baseline": "a1c4141",
+  "assembler": "ATOM 0.3.7",
+  "prototype": "0e472f3093c107bb862260aca6d9339d012ce617",
+  "rom": {
+    "reference": {
+      "used": 14947,
+      "free": 1437
+    },
+    "used": 14688,
+    "free": 1696,
+    "saving": 259,
+    "regions": {
+      "reset jump": 3,
+      "table": 8,
+      "data": 817,
+      "code": 13860,
+      "free": 1696
+    },
+    "reconciled": 16384,
+    "equals16384": true,
+    "contiguous": true,
+    "oneImage": true,
+    "sha256": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
+    "tableEnd": 49163
+  },
+  "table": {
+    "bytes": [
+      84,
+      78,
+      65,
+      5,
+      0,
+      195,
+      247,
+      239
+    ],
+    "tna": "TNA",
+    "major": 5,
+    "minor": 0,
+    "jumpTo": "SVCDSP",
+    "end": 49163,
+    "count": 15,
+    "stated": {
+      "TNINFO": {
+        "number": 0,
+        "stack": 6
+      },
+      "TNDIGIT": {
+        "number": 1,
+        "stack": 4
+      },
+      "TNLCD": {
+        "number": 2,
+        "stack": 10
+      },
+      "TNVIDEO": {
+        "number": 3,
+        "stack": 10
+      },
+      "TNTONE": {
+        "number": 4,
+        "stack": 4
+      },
+      "TNJOY": {
+        "number": 5,
+        "stack": 4
+      },
+      "TNKEYS": {
+        "number": 6,
+        "stack": 4
+      },
+      "TNPUTAT": {
+        "number": 7,
+        "stack": 22
+      },
+      "TNRTC": {
+        "number": 8,
+        "stack": 8
+      },
+      "TNMOUNT": {
+        "number": 9,
+        "stack": 24
+      },
+      "TNUNMNT": {
+        "number": 10,
+        "stack": 24
+      },
+      "TNDESC": {
+        "number": 11,
+        "stack": 24
+      },
+      "TNDRVR": {
+        "number": 12,
+        "stack": 4
+      },
+      "TNFIND": {
+        "number": 13,
+        "stack": 8
+      },
+      "TNLIST": {
+        "number": 14,
+        "stack": 8
+      }
+    },
+    "entries": {
+      "TNINFO": "HWSINFO",
+      "TNDIGIT": "HWSDIG",
+      "TNLCD": "HWSLCD",
+      "TNVIDEO": "HWSVID",
+      "TNTONE": "HWSTONE",
+      "TNJOY": "HWSJOY",
+      "TNKEYS": "HWSKEYS",
+      "TNPUTAT": "HWSPUT",
+      "TNRTC": "HWSRTC",
+      "TNMOUNT": "VSMNT",
+      "TNUNMNT": "VSUNM",
+      "TNDESC": "VSDSC",
+      "TNDRVR": "SVDRV",
+      "TNFIND": "SVFND",
+      "TNLIST": "SVLST"
+    },
+    "numbersInOrder": true
+  },
+  "services": {
+    "services": {
+      "TNINFO": {
+        "a": 0,
+        "carry": 0,
+        "stack": 4,
+        "balanced": true
+      },
+      "TNDIGIT": {
+        "a": 0,
+        "carry": 0,
+        "stack": 4,
+        "balanced": true
+      },
+      "TNLCD": {
+        "a": 0,
+        "carry": 0,
+        "stack": 10,
+        "balanced": true
+      },
+      "TNVIDEO": {
+        "a": 0,
+        "carry": 0,
+        "stack": 12,
+        "balanced": true
+      },
+      "TNTONE": {
+        "a": 0,
+        "carry": 0,
+        "stack": 4,
+        "balanced": true
+      },
+      "TNJOY": {
+        "a": 0,
+        "carry": 0,
+        "stack": 4,
+        "balanced": true
+      },
+      "TNKEYS": {
+        "a": 0,
+        "carry": 0,
+        "stack": 4,
+        "balanced": true
+      },
+      "TNPUTAT": {
+        "a": 0,
+        "carry": 0,
+        "stack": 14,
+        "balanced": true
+      },
+      "TNRTC": {
+        "a": 0,
+        "carry": 0,
+        "stack": 8,
+        "balanced": true
+      },
+      "TNDESC": {
+        "a": 0,
+        "carry": 0,
+        "stack": 20,
+        "balanced": true
+      },
+      "TNUNMNT": {
+        "a": 0,
+        "carry": 0,
+        "stack": 16,
+        "balanced": true
+      },
+      "TNMOUNT": {
+        "a": 0,
+        "carry": 0,
+        "stack": 18,
+        "balanced": true
+      },
+      "TNDRVR": {
+        "a": 1,
+        "carry": 1,
+        "stack": 4,
+        "balanced": true
+      },
+      "TNFIND": {
+        "a": 0,
+        "carry": 0,
+        "stack": 6,
+        "balanced": true
+      },
+      "TNLIST": {
+        "a": 0,
+        "carry": 0,
+        "stack": 4,
+        "balanced": true
+      },
+      "pastTheTable": {
+        "a": 1,
+        "carry": 1,
+        "stack": 0,
+        "balanced": true
+      }
+    },
+    "violations": 0
+  },
+  "stackWithin": {
+    "TNINFO": {
+      "stated": 6,
+      "measured": 4,
+      "within": true
+    },
+    "TNDIGIT": {
+      "stated": 4,
+      "measured": 4,
+      "within": true
+    },
+    "TNLCD": {
+      "stated": 10,
+      "measured": 10,
+      "within": true
+    },
+    "TNVIDEO": {
+      "stated": 12,
+      "measured": 12,
+      "within": true,
+      "note": "abi.inc said 10; corrected at ce2384d"
+    },
+    "TNTONE": {
+      "stated": 4,
+      "measured": 4,
+      "within": true
+    },
+    "TNJOY": {
+      "stated": 4,
+      "measured": 4,
+      "within": true
+    },
+    "TNKEYS": {
+      "stated": 4,
+      "measured": 4,
+      "within": true
+    },
+    "TNPUTAT": {
+      "stated": 22,
+      "measured": 14,
+      "within": true
+    },
+    "TNRTC": {
+      "stated": 8,
+      "measured": 8,
+      "within": true
+    },
+    "TNMOUNT": {
+      "stated": 24,
+      "measured": 18,
+      "within": true
+    },
+    "TNUNMNT": {
+      "stated": 24,
+      "measured": 16,
+      "within": true
+    },
+    "TNDESC": {
+      "stated": 24,
+      "measured": 20,
+      "within": true
+    },
+    "TNDRVR": {
+      "stated": 4,
+      "measured": 4,
+      "within": true
+    },
+    "TNFIND": {
+      "stated": 8,
+      "measured": 6,
+      "within": true
+    },
+    "TNLIST": {
+      "stated": 8,
+      "measured": 4,
+      "within": true
+    }
+  },
+  "allWithin": true,
+  "tpa": {
+    "prototype": {
+      "starter": {
+        "serial": 46869,
+        "pico80": 45312,
+        "pico40": 45312,
+        "pico32": 45312,
+        "glcd": 45312,
+        "both": 43776
+      },
+      "fourG8M": {
+        "serial": 46165,
+        "pico80": 44544,
+        "pico40": 44544,
+        "pico32": 44544,
+        "glcd": 44544,
+        "both": 43008
+      }
+    },
+    "reference": {
+      "starter": {
+        "serial": 46869,
+        "pico80": 45312,
+        "pico40": 45312,
+        "pico32": 45312,
+        "glcd": 45312,
+        "both": 43776
+      },
+      "fourG8M": {
+        "serial": 46165,
+        "pico80": 44544,
+        "pico40": 44544,
+        "pico32": 44544,
+        "glcd": 44544,
+        "both": 43008
+      }
+    }
+  },
+  "cards": {
+    "prototype": {
+      "starter": {
+        "entry": 47125,
+        "alvBase": 47128,
+        "tpa": 46869
+      },
+      "fourG8M": {
+        "entry": 46421,
+        "alvBase": 46424,
+        "tpa": 46165
+      }
+    },
+    "reference": {
+      "starter": {
+        "entry": 47125,
+        "alvBase": 47128,
+        "tpa": 46869
+      },
+      "fourG8M": {
+        "entry": 46421,
+        "alvBase": 46424,
+        "tpa": 46165
+      }
+    }
+  },
+  "stacks": {
+    "reference": {
+      "bdos": 32,
+      "ccp": 22,
+      "bios": 16
+    },
+    "prototype": {
+      "bdos": 32,
+      "ccp": 22,
+      "bios": 16
+    },
+    "reserved": {
+      "bdos": 54,
+      "ccp": 30,
+      "bios": 38
+    },
+    "pathsGone": [],
+    "goneReadings": {},
+    "runs": {
+      "serial": {
+        "bdos": 28,
+        "ccp": 16,
+        "bios": 14
+      },
+      "pico9918": {
+        "bdos": 32,
+        "ccp": 16,
+        "bios": 14
+      },
+      "glcd": {
+        "bdos": 32,
+        "ccp": 20,
+        "bios": 14
+      },
+      "writeBehind": {
+        "bdos": 28,
+        "ccp": 16,
+        "bios": 16
+      },
+      "diagnostics": {
+        "bdos": 0,
+        "ccp": 0,
+        "bios": 12
+      },
+      "conUc1": {
+        "bdos": 30,
+        "ccp": 16,
+        "bios": 14
+      },
+      "conUc1Glcd": {
+        "bdos": 20,
+        "ccp": 22,
+        "bios": 14
+      },
+      "picoNoDriver": {
+        "bdos": 20,
+        "ccp": 12,
+        "bios": 14
+      },
+      "unloadPico": {
+        "bdos": 20,
+        "ccp": 16,
+        "bios": 14
+      },
+      "recognisedReset": {
+        "bdos": 20,
+        "ccp": 6,
+        "bios": 14
+      },
+      "chained": {
+        "bdos": 28,
+        "ccp": 14,
+        "bios": 14
+      },
+      "serialPlain": {
+        "bdos": 20,
+        "ccp": 14,
+        "bios": 14
+      },
+      "resident": {
+        "bdos": 20,
+        "ccp": 14,
+        "bios": 14
+      }
+    },
+    "deepestCcpRun": "conUc1Glcd",
+    "proved": {
+      "PICO.DRV": {
+        "declared": [
+          0,
+          0,
+          0
+        ],
+        "peakOverReference": [
+          0,
+          0,
+          0
+        ]
+      },
+      "GLCD.DRV": {
+        "declared": [
+          2,
+          0,
+          6
+        ],
+        "overBase": [
+          2,
+          0,
+          6
+        ]
+      }
+    },
+    "limit": [
+      8,
+      12,
+      6
+    ],
+    "everyQuarterFree": true
+  },
+  "removed": {
+    "part1": {
+      "names": [
+        "XMOVE",
+        "MOVE",
+        "MVRANGE",
+        "FNBIOS",
+        "XMARK"
+      ],
+      "gone": true
+    },
+    "part2": {
+      "names": [
+        "MNCOPY",
+        "MAINS",
+        "EXPANDS",
+        "LATMAIN",
+        "ABIMAIN"
+      ],
+      "gone": true
+    },
+    "part6": {
+      "plantedJump": true
+    },
+    "part8": {
+      "names": [
+        "PRLGO",
+        "PRLBITS",
+        "PRLPROG",
+        "PRLTOP"
+      ],
+      "gone": true
+    },
+    "part3": {
+      "names": [
+        "ABIHW",
+        "ABIVOL",
+        "ABIGLCD",
+        "ABISVC",
+        "ABIVID",
+        "OLDVOL",
+        "HWBASE",
+        "SVCREG"
+      ],
+      "gone": true
+    }
+  },
+  "files": {
+    "reset.asm": {
+      "prototype": 11,
+      "reference": 3,
+      "change": 8
+    },
+    "data.asm": {
+      "prototype": 144,
+      "reference": 145,
+      "change": -1
+    },
+    "data2.asm": {
+      "prototype": 40,
+      "reference": 40,
+      "change": 0
+    },
+    "gen/geom.asm": {
+      "prototype": 50,
+      "reference": 50,
+      "change": 0
+    },
+    "data3.asm": {
+      "prototype": 583,
+      "reference": 571,
+      "change": 12
+    },
+    "boot.asm": {
+      "prototype": 526,
+      "reference": 563,
+      "change": -37
+    },
+    "bios.asm": {
+      "prototype": 482,
+      "reference": 482,
+      "change": 0
+    },
+    "console.asm": {
+      "prototype": 706,
+      "reference": 706,
+      "change": 0
+    },
+    "term.asm": {
+      "prototype": 971,
+      "reference": 971,
+      "change": 0
+    },
+    "video.asm": {
+      "prototype": 64,
+      "reference": 64,
+      "change": 0
+    },
+    "tms.asm": {
+      "prototype": 32,
+      "reference": 32,
+      "change": 0
+    },
+    "lcd.asm": {
+      "prototype": 129,
+      "reference": 129,
+      "change": 0
+    },
+    "sd.asm": {
+      "prototype": 818,
+      "reference": 818,
+      "change": 0
+    },
+    "vol.asm": {
+      "prototype": 1391,
+      "reference": 1387,
+      "change": 4
+    },
+    "diag.asm": {
+      "prototype": 86,
+      "reference": 86,
+      "change": 0
+    },
+    "cpm/ccp.asm": {
+      "prototype": 2399,
+      "reference": 2399,
+      "change": 0
+    },
+    "cpm/bdos.asm": {
+      "prototype": 3847,
+      "reference": 3909,
+      "change": -62
+    },
+    "hwsvc.asm": {
+      "prototype": 458,
+      "reference": 467,
+      "change": -9
+    },
+    "glcd.asm": {
+      "prototype": 176,
+      "reference": 167,
+      "change": 9
+    },
+    "cache.asm": {
+      "prototype": 725,
+      "reference": 573,
+      "change": 152
+    },
+    "history.asm": {
+      "prototype": 211,
+      "reference": 211,
+      "change": 0
+    },
+    "svc.asm": {
+      "prototype": 839,
+      "reference": 822,
+      "change": 17
+    },
+    "end.asm": {
+      "prototype": 0,
+      "reference": 0,
+      "change": 0
+    },
+    "abi.asm": {
+      "prototype": 0,
+      "reference": 21,
+      "change": -21
+    },
+    "xmove.asm": {
+      "prototype": 0,
+      "reference": 229,
+      "change": -229
+    },
+    "prl.asm": {
+      "prototype": 0,
+      "reference": 102,
+      "change": -102
+    }
+  },
+  "noneLeft": {
+    "hits": [
+      "docs/compatibility.md:18",
+      "docs/compatibility.md:170",
+      "docs/compatibility.md:254",
+      "docs/compatibility.md:257",
+      "host/machine.mjs:199",
+      "test/clients.test.mjs:122",
+      "test/devices.test.mjs:19",
+      "test/expand.test.mjs:55",
+      "tools/lib/model.mjs:541"
+    ],
+    "none": false,
+    "reasons": "every hit states a removal or is history: compatibility.md 18 (function 50 not provided), 170, 254, 257 (history rows); host/machine.mjs 199 (MVRANGE for older trees); clients.test 122 and devices.test 19 (the names gone, as tested); expand.test 55 (function 50 is gone, tested); tools/lib/model.mjs 541 (ABIVOL for older trees)"
+  },
+  "reproducible": {
+    "first": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
+    "second": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
+    "third": "f26c3215d0f3de368fcf343c1cc0c8bcd1a152291e0e4dec31a12bfaf1747186",
+    "equal": true
+  },
+  "mutants": {
+    "64K: EXPAND 1 not looked for": {
+      "caught": true,
+      "by": [
+        "without EXPAND 1, cold boot says TEC-OS needs 64K and stops, before the banner"
+      ]
+    },
+    "64K: the check after the banner": {
+      "caught": true,
+      "by": [
+        "without EXPAND 1, cold boot says TEC-OS needs 64K and stops, before the banner"
+      ]
+    },
+    "search: none": {
+      "caught": true,
+      "by": [
+        "a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets",
+        "on B:, a .COM only on A: runs, and B:'s own copy comes first"
+      ]
+    },
+    "search: a named drive searched too": {
+      "caught": true,
+      "by": [
+        "a drive named in the command looks there only, and A: looks nowhere else"
+      ]
+    },
+    "search: the current drive left on A:": {
+      "caught": true,
+      "by": [
+        "a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets",
+        "on B:, a .COM only on A: runs, and B:'s own copy comes first"
+      ]
+    },
+    "KE-149: the case folded before Return": {
+      "caught": true,
+      "by": [
+        "ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)"
+      ]
+    },
+    "KE-148: close writes a read-only drive": {
+      "caught": true,
+      "by": [
+        "function 16 of a never-opened FCB on a drive function 28 made read-only says R/O, not Bad Sector, and the card is unchanged (KE-148)"
+      ]
+    },
+    "EXPAND 1: the warm-boot jump planted again": {
+      "caught": true,
+      "by": [
+        "cold boot clears EXPAND 1 but for the cache's table; warm boot leaves it"
+      ]
+    },
+    "dispatch: one past the table taken": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone",
+        "hardware services: stack depths"
+      ]
+    },
+    "dispatch: the last number refused": {
+      "caught": true,
+      "by": [
+        "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+      ]
+    },
+    "dispatch: a refusal's status 0": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone",
+        "hardware services: stack depths"
+      ]
+    },
+    "INFO: probes the clock again": {
+      "caught": true,
+      "by": [
+        "hardware services: stack depths"
+      ]
+    },
+    "INFO: the clock's bit not set at cold boot": {
+      "caught": true,
+      "by": [
+        "hardware services: information, bad numbers, digits, LCD, tone",
+        "hardware services: stack depths"
+      ]
+    },
+    "startup: the clock's bit not masked": {
+      "caught": true,
+      "by": [
+        "a PICO9918 board with a missing PICO.SVC says PICO? on the LCD, once",
+        "a PICO9918 board with a bad PICO.SVC says PICO? on the LCD, once",
+        "a PICO9918 board with no STARTUP.CMD says PICO? on the LCD, once"
+      ]
+    },
+    "volumes: a refusal without carry": {
+      "caught": true,
+      "by": [
+        "a volume or driver hook refusal is TNEBAD with carry, and nothing changes"
+      ]
+    },
+    "volumes: B not the drive": {
+      "caught": true,
+      "by": [
+        "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+        "all four drives are kept: a remapped D:",
+        "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "driver hook: a refusal's status 0": {
+      "caught": true,
+      "by": [
+        "a volume or driver hook refusal is TNEBAD with carry, and nothing changes",
+        "hardware services: stack depths"
+      ]
+    },
+    "find: B not the least version": {
+      "caught": true,
+      "by": [
+        "PICO.SVC: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+        "PICO40.SVC: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+        "PICO32.SVC: each graphics entry against VRAM under a claim, then release and warm boot give the text back"
+      ]
+    },
+    "list: one off": {
+      "caught": true,
+      "by": [
+        "debug80: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80t40: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+        "debug80g32: a service installs, is found and enumerated, is called and unloads, leaving everything as it was"
+      ]
+    },
+    "format: 3 accepted": {
+      "caught": true,
+      "by": [
+        "DEMO's own tables: each hex digit's pattern, each colour port and random colours",
+        "a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark, nothing loaded and PICO? still shown"
+      ]
+    }
+  },
+  "mutantsAt": {
+    "64K: EXPAND 1 not looked for": "a0a3c7a",
+    "64K: the check after the banner": "a0a3c7a",
+    "search: none": "a0a3c7a",
+    "search: a named drive searched too": "a0a3c7a",
+    "search: the current drive left on A:": "a0a3c7a",
+    "KE-149: the case folded before Return": "c515f24",
+    "KE-148: close writes a read-only drive": "c515f24",
+    "EXPAND 1: the warm-boot jump planted again": "c515f24",
+    "dispatch: one past the table taken": "c515f24",
+    "dispatch: the last number refused": "c515f24",
+    "dispatch: a refusal's status 0": "c515f24",
+    "INFO: probes the clock again": "c515f24",
+    "INFO: the clock's bit not set at cold boot": "c515f24",
+    "startup: the clock's bit not masked": "c515f24",
+    "volumes: a refusal without carry": "c515f24",
+    "volumes: B not the drive": "c515f24",
+    "driver hook: a refusal's status 0": "c515f24",
+    "find: B not the least version": "c515f24",
+    "list: one off": "c515f24",
+    "format: 3 accepted": "c515f24"
+  },
+  "mutantScore": {
+    "caught": 20,
+    "total": 20
+  },
+  "check": {
+    "commit": "5c677bb",
+    "tests": 580,
+    "pass": 579,
+    "fail": 1,
+    "failing": [
+      "hardware services: stack depths: the limit applied to the volume services refusals, fixed at 0e472f3 (hwsvc.test 7 of 7)"
+    ],
+    "peakMB": 544,
+    "seconds": 1239.3,
+    "builds": {
+      "runs": 2,
+      "files": 15,
+      "match": true
+    }
+  }
+}
