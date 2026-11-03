@@ -34,3 +34,34 @@ KBSHIFT:DB      "<_>?)!@#$%^&*( : +"
 LCDSEQ: DB      $38,$0C,$06,$01
 
 LCDROWS:DB      $80,$C0,$94,$D4
+
+; ---- cpm/bdos.asm ------------------------------------------------------------
+; Each function's routine. FCBMAP has a bit for each function, bit n of
+; byte n/8, set where the FCB's drive is bound first.
+FNTAB:
+        DW      FNZERO,FNCIN,FNCOUT,FNREAD,FNPUNCH,FNLIST
+        DW      FNDIRECT,FNGETIO,FNSETIO,FNPRINT,FNLINE,FNSTAT
+        DW      FNVERS,FNRESET,FNSEL,FNOPEN,FNCLSE,FNSRCHF
+        DW      FNSRCHN,FNDELETE,FNREADSQ,FNWRITE,FNMAKE,FNRENAME
+        DW      FNLOGIN,FNCURDSK,FNSETDMA,FNGETALV,FNWRPROT,FNGETRO
+        DW      FNATTR,FNGETDPB,FNUSER,FNRREAD,FNRWRITE,FNSIZE
+        DW      FNSETRR,FNRESETD,RETZERO,RETZERO,FNWRZERO
+FCBMAP: DB      %00000000,%10000000,%11111011,%01000000,%00001110,%00000001
+
+; ---- services.asm ------------------------------------------------------------
+; The numbered services, from TNINFO to TNLIST: abi.inc's order.
+SVTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
+	DW	HWSLCD,HWSVID	; 2 and 3
+	DW	HWSTONE,HWSJOY	; 4 and 5
+	DW	HWSKEYS,HWSPUT	; 6 and 7
+	DW	HWSRTC,VSMNT	; 8 and 9
+	DW	VSUNM,VSDSC	; 10 and 11
+	DW	SVDRV,SVFND	; 12 and 13
+	DW	SVLST		; 14
+
+; ---- loader.asm and cpm/ccp.asm: FCB templates -------------------------------
+GLCFCB: DB      1,"GLCD    SVC"
+STFCB:  DB      1,"STARTUP CMD"
+
+; ---- loader.asm --------------------------------------------------------------
+SVCLIM: DB      8,12,6          ; BDOS, BIOS, CCP: each stack's sum of services
