@@ -232,3 +232,32 @@ test("hardware services: stack depths", () => {
   // The hardware services, 0 to 7 and the clock; the others' figures are abi.inc's, which KS36a's model checks.
   for (const [c, d] of Object.entries(depths).filter(([c]) => Number(c) <= ABI.TNRTC)) assert.ok(d <= (Number(c) === HW.PUTAT ? 22 : 16), `hardware service ${c} used ${d} bytes of stack`);
 });
+
+test("every service keeps IY, and all but MOUNT, UNMOUNT and DESCRIBE keep IX and the alternates too (A4)", () => {
+  const image = standardCard([{ geometry: "G1M", label: "THIRD", mount: "-" }]);
+  const m = boot(image, { tms: true, matrix: true });
+  put(m, BUF + 0x40, [..."PICO    "].map((ch) => ch.charCodeAt(0)));
+  const alt = ["a_prime", "b_prime", "c_prime", "d_prime", "e_prime", "h_prime", "l_prime"];
+  const set = () => {
+    const cpu = m.cpu.cpu;
+    Object.assign(cpu, { ix: 0x1357, iy: 0x2468 });
+    alt.forEach((r, i) => (cpu[r] = 0x31 + i));
+    return () => ({ ix: cpu.ix, iy: cpu.iy, alt: alt.map((r) => cpu[r]) });
+  };
+  const kept = { ix: 0x1357, iy: 0x2468, alt: alt.map((_, i) => 0x31 + i) };
+  const calls = [
+    ["TNINFO", {}], ["TNDIGIT", { hl: BUF }], ["TNLCD", { b: 3, hl: BUF }], ["TNVIDEO", { b: 1 }], ["TNVIDEO", { b: 0 }],
+    ["TNTONE", { b: 1, de: 2 }], ["TNJOY", {}], ["TNKEYS", { hl: BUF }], ["TNPUTAT", { b: 2, hl: BUF }], ["TNRTC", { b: 0, hl: BUF }],
+    ["TNDESC", { de: 2, hl: BUF }], ["TNUNMNT", { b: 1 }], ["TNMOUNT", { b: 1, de: 1 }],
+    ["TNDRVR", { b: 1, hl: 0x3000 }], ["TNFIND", { b: 1, de: BUF + 0x40 }], ["TNLIST", { b: 0 }],
+  ];
+  for (const [name, regs] of calls) {
+    const read = set();
+    svc(m, ABI[name], regs);
+    const after = read();
+    assert.equal(after.iy, kept.iy, `${name} keeps IY`);
+    if (["TNMOUNT", "TNUNMNT", "TNDESC"].includes(name)) continue; // abi.inc lets these change IX and the alternates
+    assert.deepEqual(after, kept, `${name} keeps IX, IY and the alternates`);
+  }
+  assert.deepEqual(m.violations, []);
+});
