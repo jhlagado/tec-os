@@ -1,5 +1,5 @@
-; The data block, continued from tables.asm and gen/geom.asm; the code
-; follows it.
+; The data block's text, after tables.asm and gen/geom.asm; the code follows
+; it.
 
 ; ---- boot.asm ----------------------------------------------------------------
 RAMMSG: DB      13,10,"TEC-OS needs 64K RAM",13,10,0

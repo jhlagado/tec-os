@@ -1,8 +1,8 @@
-; The ROM's read-only data: one block after the table, gathered from the
-; code's source files in their assembly order. The block runs on through
-; gen/geom.asm, which as an include stands between two files, and text.asm.
-; Nothing in it is executed: cold boot copies the BIOS jump table to RAMBIOS,
-; and only that copy runs.
+; The ROM's read-only data: one block after the table, its tables here, then
+; gen/geom.asm's, which as an include stands between two files, then the text
+; in text.asm. Each part is headed by the source file that uses it. Nothing in
+; it is executed: cold boot copies the BIOS jump table to RAMBIOS, and only
+; that copy runs.
 
 ROMDATA:
 

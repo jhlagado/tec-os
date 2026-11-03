@@ -1,8 +1,8 @@
 ; The numbered services, ABI 5.0 (docs/rom-services.md). CALL ABICALL with the
 ; number in C and arguments in B, DE and HL; abi.inc names each number, its
 ; arguments, results, carry and stack. Returns A = 0 with Z and carry clear on
-; success, or A = a status with carry. The hardware services, 0 to 8, are here;
-; the volumes' are vol.asm's, the driver hook glcd.asm's and the registry's
+; success, or A = a status with carry. The hardware services, 0 to 8, and the
+; driver hook's are here; the volumes' are vol.asm's and the registry's
 ; loader.asm's. Any program may call them: they run on the caller's stack and
 ; keep their state in the resident workspace.
 ;
