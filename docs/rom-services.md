@@ -209,9 +209,9 @@ carries its own.
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump | 24 | 1 | Stays |
 | Read-only data: messages, keywords, the jump table's source, geometries | 806 | 1, 2 | Stays |
-| Cold and warm boot, the vectors | 546 | 1 | Stays |
+| Cold and warm boot, the vectors | 561 | 1 | Stays |
 | BIOS | 482 | 2 | Stays |
-| Serial and matrix keyboard | 690 | 1, 2 | Stays |
+| Serial and matrix keyboard | 706 | 1, 2 | Stays |
 | ANSI terminal | 971 | 2 | Stays |
 | Video switch | 64 | 2 | Stays |
 | PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, `PICO40.SVC` and `PICO32.SVC`; the probe stays |
@@ -220,21 +220,21 @@ carries its own.
 | Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
 | 20 × 4 LCD | 129 | 2 | Stays |
 | SD driver | 818 | 1 | Stays |
-| Container mount and checks | 1,390 | 1 | Stays |
+| Container mount and checks | 1,387 | 1 | Stays |
 | Diagnostics | 86 | 1 | Stays |
 | CCP | 2,399 | 2 | Stays |
 | BDOS | 3,909 | 2 | Stays |
 | Hardware services | 467 | 3, 4 | Stays |
-| `XMOVE` and `MOVE` | 228 | 3 | Stays |
+| `XMOVE` and `MOVE` | 229 | 3 | Stays |
 | `ABIGLCD` and loading the display drivers | 167 | 2 | Stays |
-| Block cache | 566 | 1, 2 | Stays: every read goes through it |
-| Command history | 210 | 2 | Stays |
-| PRL loader | 98 | 2 | Stays, for programs |
-| Service loader, registry, `SERVICES` and startup | 744 | 2 | Stays |
+| Block cache | 573 | 1, 2 | Stays: every read goes through it |
+| Command history | 211 | 2 | Stays |
+| PRL loader | 102 | 2 | Stays, for programs |
+| Service loader, registry, `SERVICES` and startup | 814 | 2 | Stays |
 
 Counted from the `debug80` build's symbol map: each row is one source file's span,
 and the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the census's
-14,826 bytes used.
+14,937 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
