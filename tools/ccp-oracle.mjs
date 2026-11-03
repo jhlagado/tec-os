@@ -56,15 +56,16 @@ try {
  const biosSymbols=lastSymbols;
  report.executables={ccp:sha(ccp),bdos:sha(bdos),bios:sha(bios)};
  const runtimePath=new URL(import.meta.resolve('@jhlagado/debug80-runtime/z80/runtime'));
- report.runtimeEntry={url:runtimePath.href,sha256:sha(await readFile(runtimePath))};
+ report.runtimeEntry={path:'@jhlagado/debug80-runtime/dist/z80/runtime.js',sha256:sha(await readFile(runtimePath))};
  const machineSource=blob(portable,P,'test/support/portable-cpm-machine.ts').toString();
  let adapted=(await transform(machineSource,{loader:'ts',format:'esm',target:'es2022'})).code;
  adapted=adapted.replace(/import\s*\{\s*createDebug80TestHarness\s*\}\s*from\s*[^;]+;/,'').replace(/import\s*\{[\s\S]*?targetProfile[\s\S]*?\}\s*from\s*[^;]+;/,'');
  const prefix=`const DEFAULT_PROFILE='triptych-cpu-v0.1'; const targetProfile=id=>{if(id!==DEFAULT_PROFILE)throw Error('profile');return {ccp:0xe400,bdos:0xec00,bios:0xfa00}};\n`;
  // Function injection avoids resolving repository-relative .js imports from TS.
- const machineModule=await moduleFrom(prefix+'const createDebug80TestHarness=()=>({createRuntime:globalThis.__ccpOracleRuntime});\n'+adapted);
+ const executableAdapter=prefix+'const createDebug80TestHarness=()=>({createRuntime:globalThis.__ccpOracleRuntime});\n'+adapted;
+ const machineModule=await moduleFrom(executableAdapter);
  globalThis.__ccpOracleRuntime=io=>createZ80Runtime({memory:new Uint8Array(65536),startAddress:0},0,io);
- report.machineAdapter={source:sha(machineSource),adapted:sha(prefix+adapted),changes:['fixed default profile E400/EC00/FA00','runtime factory supplied from pinned dependency; no CPU/disk algorithm changes']};
+ report.machineAdapter={source:sha(machineSource),adapted:sha(executableAdapter),changes:['fixed default profile E400/EC00/FA00','runtime factory supplied from pinned dependency; no CPU/disk algorithm changes']};
  const {PortableCpmMachine}=machineModule;
  const fs=await moduleFrom(blob(portable,P,'tools/lib/cpm22-disk.mjs').toString());
  const install=(image,name,bytes)=>fs.installCpm22File(image,{name,bytes});
