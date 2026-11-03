@@ -1,7 +1,9 @@
 // KG42, KS38b's gate: against KS38a's landed tip, the ROM falls by exactly the
 // sum the merges state, only the merged routines and their callers differ label
 // by label, and the hot paths are equal. The lists are
-// test/model/ks38b/kg42.json's; the baseline is built from git.
+// test/model/ks38b/kg42.json's. Both trees, KS38b's landed tip and the
+// baseline, are built from git, so the record holds as later stages change the
+// ROM.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -13,10 +15,12 @@ import { ROOT } from "./lib/fixtures.mjs";
 
 const KG42 = JSON.parse(readFileSync(resolve(ROOT, "test/model/ks38b/kg42.json"), "utf8"));
 
-test("KG42: the ROM falls by the merges' stated bytes, only their routines differ, and the hot paths are equal", { timeout: 300_000 }, async () => {
+test("KG42: the ROM falls by the merges' stated bytes, only their routines differ, and the hot paths are equal", { timeout: 600_000 }, async () => {
   const dir = M.tree(resolve(ROOT, "build/ks38b-test"), "baseline", KG42.baseline);
   await M.build(dir);
-  const r = compareLabels(built(dir), built(ROOT), { markers: KG42.markers });
+  const landed = M.tree(resolve(ROOT, "build/ks38b-test"), "landed", KG42.landed);
+  await M.build(landed);
+  const r = compareLabels(built(dir), built(landed), { markers: KG42.markers });
   const merges = Object.values(KG42.merges);
   const stated = merges.reduce((n, m) => n + m.bytes, 0);
   assert.equal(r.used[0] - r.used[1], stated, `the ROM falls by ${stated}, the merges' sum`);
