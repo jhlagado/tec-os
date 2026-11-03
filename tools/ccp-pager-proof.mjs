@@ -20,12 +20,17 @@ function run(r, board, answer) {
   const v = findVolume(parseContainer(image), "A");
   const a = new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
   for (let n = 0; n < 150; n++) a.write(`F${String(n).padStart(3, "0")}.DAT`, Uint8Array.of(n));
-  if (board === "glcd" && answer === "\x03") {
+  if (board === "glcd") {
     a.write("GLCD.SVC", glcd);
     a.write("STARTUP.CMD", Buffer.from("GLCD.SVC\r\n\x1a"));
   }
   const m = new Machine({ rom: r.image, symbols: r.symbols, sdImage: image, glcd: board === "glcd", matrix: board === "glcd", clock: new Date(2026, 0, 1) });
   m.runUntil(() => m.ready() && /A>$/.test(m.text()), 200000000, "initial prompt");
+  if (board === "glcd") {
+    assert.equal(m.videoConsole(), true, "GLCD is the active console");
+    assert.equal(m.read(m.sym("VWID")), 21, "GLCD text width");
+    assert.equal(m.read(m.sym("VHGT")), 8, "GLCD text height");
+  } else assert.equal(m.videoConsole(), false, "serial is the active console");
   const guard = m.sym("STKGUARD"), base = m.sym("CSTKBAS"), top = m.sym("CSTKTOP");
   const writes = [], low = { beforePause: top, afterAnswer: top };
   let phase = "beforePause";
@@ -47,8 +52,8 @@ function run(r, board, answer) {
   phase = "afterAnswer";
   // On this matrix layout the key mapped from byte 03h is Up, producing an
   // ANSI sequence. Supply the pager byte at the BDOS pending-input boundary
-  // for GLCD; serial answers still travel through the emulated terminal.
-  if (board === "glcd") {
+  // for GLCD control-C only; Q and Esc still use its matrix keyboard.
+  if (board === "glcd" && answer === "\x03") {
     m.write(m.sym("PENDCHR"), answer.charCodeAt(0));
     m.write(m.sym("PENDING"), 1);
   } else m.type(answer);
