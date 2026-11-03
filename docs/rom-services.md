@@ -189,10 +189,10 @@ carries its own.
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
-| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 817 | 1, 2 | Stays |
-| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console (`boot.asm`) | 802 | 1 | Stays |
+| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 838 | 1, 2 | Stays |
+| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console (`boot.asm`) | 772 | 1 | Stays |
 | BIOS, with its entries' interrupt discipline (`bios.asm`) | 514 | 2 | Stays |
-| Serial console (`console.asm`) | 467 | 1, 2 | Stays |
+| Serial console (`console.asm`) | 471 | 1, 2 | Stays |
 | Matrix keyboard (`keyboard.asm`) | 249 | 1, 2 | Stays |
 | ANSI terminal (`term.asm`) | 971 | 2 | Stays |
 | Video switch and the display drivers' hook (`video.asm`) | 118 | 2 | Stays |
@@ -200,10 +200,10 @@ carries its own.
 | PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
 | Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
-| 20 × 4 LCD (`lcd.asm`) | 129 | 2 | Stays |
+| 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
 | SD driver (`sd.asm`) | 836 | 1 | Stays |
-| Container mount and checks (`vol.asm`) | 1,243 | 1 | Stays |
-| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,658 | 2 | Stays |
+| Container mount and checks (`vol.asm`) | 1,200 | 1 | Stays |
+| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,520 | 2 | Stays |
 | BDOS (`cpm/bdos.asm`) | 3,854 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 495 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 693 | 1, 2 | Stays: every read goes through it |
@@ -212,7 +212,7 @@ carries its own.
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 14,827 bytes used.
+census's 14,645 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
