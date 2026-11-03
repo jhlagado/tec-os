@@ -18,9 +18,9 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium 8fcc6ea, dist/TED.COM",
-      "bytes": 11781,
-      "sha256": "9a9936cf9daeb285b585470faaf6f5885926c8aa00c227de2fafe79f762a413e"
+      "source": "jhlagado/thorium f2d16a8, dist/TED.COM",
+      "bytes": 11887,
+      "sha256": "373d866bb667b26370933d494d3e0fca5af8f330090b085182ad450d952ac64a"
     },
     "triptych-headless": {
       "env": "TRIPTYCH_HEADLESS",

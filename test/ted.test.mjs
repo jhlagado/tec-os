@@ -2,7 +2,8 @@
 // reopens a file at every console's size, opens at a line, and runs the round
 // of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
-// from the listing of the pinned build (Thorium 8fcc6ea, build/ted/ted.sym):
+// from the listing of Thorium 8fcc6ea's build (build/ted/ted.sym), whose
+// workspace f2d16a8 keeps:
 // the pin's hash holds them.
 
 import { readFileSync } from "node:fs";
@@ -103,7 +104,7 @@ function round({ drive = "A", tms = true }) {
   const since = () => m.text(mark);
   const status = () => (tms ? m.screen()[23] : since().split("\x1b[24;1H").at(-1));
   if (drive !== "A") keys(m, `${drive}:\r`, "the drive", () => since().endsWith(`${drive}>`));
-  keys(m, "ted hello.asm\r", "TED", () => /EDIT HELLO\.ASM/.test(status()));
+  keys(m, "ted hello.asm\r", "TED", () => /TED HELLO\.ASM/.test(status()));
 
   mark = m.output.length;
   keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(since()) && /operands are not valid/.test(status()));
@@ -155,7 +156,7 @@ test("TED's text holds at least 33,052 bytes on the starter's files with no disp
     for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
     a.write("TED.COM", tedBytes());
     const m = boot(image, board);
-    keys(m, "ted x.asm\r", "TED", () => /EDIT X\.ASM/.test(m.text(0)));
+    keys(m, "ted x.asm\r", "TED", () => /TED X\.ASM/.test(m.text(0)));
     assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${board.tms ? "on a board with both" : "with no display"}, at least ${floor}`);
   }
 });
