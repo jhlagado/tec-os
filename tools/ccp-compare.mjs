@@ -86,7 +86,7 @@ try {
  const targetFiles={};
  for(const path of ['host/machine.mjs','tools/lib/bytes.mjs','tools/lib/container.mjs','tools/lib/cpmfs.mjs','src/cpm/ccp.asm','src/cpm/bdos.asm','package-lock.json'])targetFiles[path]=sha(await readFile(join(targetRoot,path)));
  const targetRepo=resolve(process.env.TECOS_MODEL_REPO || '../tec-os-ccp-calls');
- report.target={modelPin:targetPin,modelTool:sha(blob(targetRepo,targetPin,'tools/ccp-calls-model.mjs')),rom:sha(rom),symbols:sha(mapBytes),files:targetFiles,resolver:'TECOS_COMPARE_ROOT, default ../tec-os-ccp-calls/build/ccp-calls-model/descriptor-shared',geometry:'single G1M A: volume, write-through; independent of reference disk geometry'};
+ report.target={modelPin:targetPin,modelTool:sha(blob(targetRepo,targetPin,'tools/ccp-call-model.mjs')),rom:sha(rom),symbols:sha(mapBytes),files:targetFiles,resolver:'TECOS_COMPARE_ROOT, default ../tec-os-ccp-calls/build/ccp-calls-model/descriptor-shared',geometry:'single G1M A: volume, write-through; independent of reference disk geometry'};
  const targetVol=image=>{const info=parseContainer(image),v=findVolume(info,'A');return new CpmVolume(volumePayload(image,v),v.g,{readOnly:false});};
  const padded=text=>{const b=new Uint8Array(128).fill(0x1a);b.set(Buffer.from(text));return b;};
  const hello=padded('HELLO\r\n'),probe=padded('');probe[0]=0xc9;
