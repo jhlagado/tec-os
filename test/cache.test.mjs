@@ -499,3 +499,24 @@ test("function 45: FFh returns a BDOS error to the program, A = FFh and H the co
   m.runUntil(() => m.waitingForInput(), 400_000_000, "warm boot");
   assert.equal(m.read(m.sym("ERRMODE")), 0, "warm boot: the default again");
 });
+
+test("function 47's warm boot puts the lines written behind on the card before the chained program loads (KS36b)", async () => {
+  const image = await load(card(), ["say"]);
+  const m = start(image);
+  dirty(m);
+  [..."SAY", 0].forEach((v, i) => m.write(0x2100 + i, typeof v === "string" ? v.charCodeAt(0) : v));
+  bdos(m, 26, 0x2100);
+  let onCard = null;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (onCard === null && m.pc === m.sym("LOADCOM")) onCard = runOf(image, 0xc3) !== -1;
+    return step();
+  };
+  m.mark = m.output.length;
+  m.write(0x3000, 0x0e); m.write(0x3001, 47); m.write(0x3002, 0xcd); m.write(0x3003, 0x05); m.write(0x3004, 0x00);
+  m.cpu.cpu.sp = 0x3100;
+  m.cpu.cpu.pc = 0x3000;
+  m.runUntil(() => m.waitingForInput() && /\nSAY\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "the chained SAY");
+  m.step = step;
+  assert.equal(onCard, true, "the records were on the card when the CCP began to load SAY");
+});
