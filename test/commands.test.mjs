@@ -51,7 +51,7 @@ test("nothing is kept for a level: the table ends at ABICALL's jump and the page
   assert.deepEqual(m.violations, []);
 });
 
-test("a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and BF00h do not", async () => {
+test("a write to BE00h-BFFFh in EXPAND 1 fails the host's watch, and one to BDFFh, the history's, does not (A12)", async () => {
   const m = await machine();
   const poke = (a) => {
     // EXPAND 1 in view, one byte written, EXPAND 0 back, from a stub in page zero.
@@ -61,10 +61,10 @@ test("a write to BE00h-BEFFh in EXPAND 1 fails the host's watch, and BDFFh and B
     m.runUntil(() => m.pc === 0x6d, 1_000_000, "the stub");
     Object.assign(m.cpu.cpu, { pc, sp });
   };
-  for (const a of [0xbdff, 0xbf00]) poke(a);
+  poke(0xbdff);
   assert.deepEqual(m.expand1Writes, []);
-  for (const a of [0xbe00, 0xbeff]) poke(a);
-  assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbe00, 0xbeff]);
+  for (const a of [0xbe00, 0xbeff, 0xbf00, 0xbfff]) poke(a);
+  assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbe00, 0xbeff, 0xbf00, 0xbfff]);
   for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // these were asked for
 });
 
