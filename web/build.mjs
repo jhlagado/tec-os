@@ -11,7 +11,7 @@ import { build } from "esbuild";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WEB = resolve(ROOT, "web");
 const OUT = resolve(WEB, "dist");
-const PROFILES = ["debug80"]; // one image; the width is a driver on the card
+const PROFILES = ["tecos"]; // one image; the width is a driver on the card
 
 mkdirSync(resolve(OUT, "roms"), { recursive: true });
 mkdirSync(resolve(OUT, "files"), { recursive: true });
@@ -30,12 +30,12 @@ await build({
 
 for (const f of ["index.html", "style.css"]) copyFileSync(resolve(WEB, f), resolve(OUT, f));
 for (const p of PROFILES) {
-  copyFileSync(resolve(ROOT, `dist/tecos-${p}.rom`), resolve(OUT, `roms/tecos-${p}.rom`));
-  const d8 = JSON.parse(readFileSync(resolve(ROOT, `dist/tecos-${p}.d8.json`), "utf8"));
+  copyFileSync(resolve(ROOT, `dist/${p}.rom`), resolve(OUT, `roms/${p}.rom`));
+  const d8 = JSON.parse(readFileSync(resolve(ROOT, `dist/${p}.d8.json`), "utf8"));
   const labels = d8.symbols
     .filter((s) => typeof (s.address ?? s.value) === "number")
     .map((s) => ({ name: s.name, address: s.address ?? s.value }));
-  writeFileSync(resolve(OUT, `roms/tecos-${p}.symbols.json`), JSON.stringify(labels));
+  writeFileSync(resolve(OUT, `roms/${p}.symbols.json`), JSON.stringify(labels));
 }
 copyFileSync(resolve(ROOT, "dist/starter.recipe.json"), resolve(OUT, "starter.recipe.json"));
 for (const f of readdirSync(resolve(ROOT, "dist/files"))) {

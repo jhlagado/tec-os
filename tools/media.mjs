@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Produce the release set in dist/: ROM images and maps for every profile,
+// Produce the release set in dist/: the ROM image, its map and census,
 // the starter programs, a recipe that lists them with their digests, the
 // starter card built from that recipe, and the memory map document.
 //
@@ -83,7 +83,7 @@ function memoryMap(census) {
     span(at("CDIRTY"), lines, "each line's dirty byte, nonzero while the card lacks its changes"),
     span(at("HRING"), 256, "command history"),
     span(at("HRING") + 256, 256, "free, watched by the host so that a stray write fails"),
-    span(0xbf00, 256, "reserved"),
+    span(0xbf00, 256, "free"),
   ].join("\n");
   const cacheState = [
     ["SDXB", "LATEXP while a card block goes to or from a cache line"],
@@ -146,8 +146,8 @@ ${cacheState}
 
 ## EXPAND 1
 
-Cold boot clears it. Programs reach none of it: \`XMOVE\` and \`MOVE\` refuse
-every byte of bank 1.
+Cold boot clears it. Programs reach none of it: no TEC-OS interface leaves
+it in view.
 
 | Addresses | Bytes | Contents |
 | --- | ---: | --- |
@@ -177,9 +177,9 @@ async function main() {
   const censuses = {};
   for (const profile of Object.keys(PROFILES)) {
     const dir = resolve(ROOT, "build", profile);
-    copyFileSync(resolve(dir, "tecos.rom"), resolve(DIST, `tecos-${profile}.rom`));
-    copyFileSync(resolve(dir, "tecos.d8.json"), resolve(DIST, `tecos-${profile}.d8.json`));
-    copyFileSync(resolve(dir, "census.json"), resolve(DIST, `tecos-${profile}.census.json`));
+    copyFileSync(resolve(dir, "tecos.rom"), resolve(DIST, "tecos.rom"));
+    copyFileSync(resolve(dir, "tecos.d8.json"), resolve(DIST, "tecos.d8.json"));
+    copyFileSync(resolve(dir, "census.json"), resolve(DIST, "tecos.census.json"));
     censuses[profile] = JSON.parse(readFileSync(resolve(dir, "census.json"), "utf8"));
   }
   const files = [];
@@ -211,7 +211,7 @@ async function main() {
     revision: "4",
     name: "TEC-OS starter",
     instruction: "At A>, type DIR, then MOUNT, or TED HELLO.ASM to write a program. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
-    profile: "debug80",
+    profile: "tecos",
     widths,
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -226,8 +226,8 @@ async function main() {
   };
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
   saveImage(resolve(DIST, "starter.img"), await buildRecipe(recipe, fileFetcher(DIST)));
-  writeFileSync(resolve(ROOT, "docs/memory-map.md"), memoryMap(censuses.debug80));
-  romServicesFigures(censuses.debug80);
+  writeFileSync(resolve(ROOT, "docs/memory-map.md"), memoryMap(censuses.tecos));
+  romServicesFigures(censuses.tecos);
   const manifest = Object.fromEntries(
     Object.entries(censuses).map(([k, c]) => [k, { sha256: c.sha256, romUsed: c.rom.used, tpaBytes: c.ram.tpa.bytes }]),
   );

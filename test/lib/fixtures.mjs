@@ -19,8 +19,9 @@ export const ABI = Object.fromEntries(
   [...readFileSync(resolve(ROOT, "src/abi.inc"), "utf8").matchAll(/^(\w+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]),
 );
 
-export function romFor(profile = "debug80") {
-  const dir = resolve(ROOT, "build", profile);
+/** The one ROM. A test's profile name chooses only the PICO9918 driver's width (picoFor). */
+export function romFor() {
+  const dir = resolve(ROOT, "build", "tecos");
   const romPath = resolve(dir, "tecos.rom");
   if (!existsSync(romPath)) throw new Error(`${romPath} missing: run npm run build first`);
   return { rom: readFileSync(romPath), symbols: loadSymbols(resolve(dir, "tecos.d8.json")) };

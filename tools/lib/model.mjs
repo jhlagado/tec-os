@@ -107,9 +107,10 @@ export const media = (dir) => {
   return node(dir, ["tools/media.mjs"], { env: older ? { EDIT_COM: editCom(), TAS_COM: tasCom() } : { TED_COM: tedCom(), TAS_COM: tasCom() } });
 };
 
-/** DIR's ROM for PROFILE: image, census and symbols. */
+/** DIR's ROM for PROFILE: image, census and symbols. A tree with one image, build/tecos, has it for every name. */
 export function rom(dir, profile = "debug80") {
-  const at = (f) => resolve(dir, "build", profile, f);
+  const one = resolve(dir, "build", "tecos");
+  const at = (f) => resolve(existsSync(one) ? one : resolve(dir, "build", profile), f);
   const d8 = JSON.parse(readFileSync(at("tecos.d8.json"), "utf8"));
   const symbols = new Map(d8.symbols.map((s) => [s.name.toUpperCase(), s.address ?? s.value]));
   return { image: readFileSync(at("tecos.rom")), census: JSON.parse(readFileSync(at("census.json"), "utf8")), symbols };

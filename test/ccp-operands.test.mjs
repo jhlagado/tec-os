@@ -118,7 +118,7 @@ function reading(m, fixture) {
   });
   assert.deepEqual(m.violations, []);
   const changed = rows.filter((r, i) => r.output !== fixture[i].output || r.calls !== fixture[i].calls);
-  assert.deepEqual(changed.map((r) => r.input), []);
+  assert.deepEqual(changed.map((r) => r.input), [], JSON.stringify(changed.map(({ input, output, calls }) => ({ input, output, calls }))));
   return rows;
 }
 

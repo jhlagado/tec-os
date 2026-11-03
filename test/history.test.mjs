@@ -150,5 +150,4 @@ test("the ring is kept by warm boot and emptied by cold boot", () => {
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.type(W);
   assert.equal(held(m), "", "cold boot empties it");
-  assert.equal(m.read(m.sym("XMARK")), 0x80, "the ring is a fixed page; MOVE has no range in EXPAND 1");
 });

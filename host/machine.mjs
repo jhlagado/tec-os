@@ -178,8 +178,8 @@ export class Machine {
     // nothing writes the free page BE00h-BEFFh, and only the block cache
     // writes its 8000h-BCFFh, below the history ring:
     // its own code, the card's block loops, the copy core when the cache
-    // called it (the return address on entry to MVCOPY in CDI-CEND; MOVE
-    // is still watched), and cold boot's setting of
+    // called it (the return address on entry to MVCOPY in CDI-CEND), and
+    // cold boot's setting of
     // its table. Any other write there, until the
     // next cold boot (COLD clearing page zero), is kept in expand1Writes and
     // in EXPAND1_WRITES, for the whole process.
@@ -197,6 +197,7 @@ export class Machine {
       .filter(([a]) => symbols.has(a))
       .map(([a, b]) => [symbols.get(a), b ? symbols.get(b) : after(a)]);
     const [cdi, cend, mvcopy, mvrange] = ["CDI", "CEND", "MVCOPY", "MVRANGE"].map((n) => symbols.get(n));
+    const mvEnd = mvrange ?? (symbols.has("MVOK") ? symbols.get("MVOK") + 2 : undefined); // MVCOPY ends at MVOK's RET without MOVE's range check
     let mvForCache = false;
     if (mvcopy !== undefined && cdi !== undefined)
       this.mvWatch = (pc) => {
@@ -205,7 +206,7 @@ export class Machine {
         const ret = ram.memRead(sp) | (ram.memRead((sp + 1) & 0xffff) << 8);
         mvForCache = ret >= cdi && ret < cend;
       };
-    const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b) || (mvForCache && pc >= mvcopy && pc < mvrange);
+    const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b) || (mvForCache && pc >= mvcopy && pc < mvEnd);
     let cleared = false;
     this.expand1Writes = [];
     this.cpu.hardware.memWrite = (addr, value) => {

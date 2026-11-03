@@ -66,7 +66,8 @@ name's last; `makeSvc` never writes one.
 ## Commands
 
 `NAME.SVC`, or `B:NAME.SVC`, reads that file and installs it. The type must be
-typed: `NAME` alone still looks for `NAME.COM` and then `NAME.PRL`. If the file
+typed: `NAME` alone looks for `NAME.COM`, on A: too when it isn't on the current
+drive. If the file
 won't read, or the load is refused or fails, the command's name comes back with
 a question mark, as for any command that won't run. If a display driver's table is in
 its own first page it takes the console: `PICO.SVC` always, `GLCD.SVC` unless
@@ -291,10 +292,8 @@ source left on under the default `EI; RETI` repeats for ever, and a warm boot in
 Nothing in the ROM enables interrupts: cold boot and warm boot leave them off, and each
 routine that masks them restores what it found. A kept `0038h` therefore does nothing
 after a warm boot until a program or a service sets `EI`, and a warm-boot hook chains
-into `WBOOTR` with no service code after it. `MAIN 1` keeps its cold-boot page zero
-for good, so a service whose vector matters there writes its own copy last, as with
-hooks, and restores it in `REMOVE`. A warm boot inside `INIT` leaves that copy stale,
-and no sweep reaches it.
+into `WBOOTR` with no service code after it. TEC-OS never selects MAIN 1 and gives
+it no page zero.
 
 The ROM and the display drivers mask what an interrupt could split: `VPAIR` for each
 pair written to the VDP's control port, and serial's `TXBYTE` and `RXBITS` for a whole

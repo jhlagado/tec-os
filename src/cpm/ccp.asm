@@ -283,14 +283,16 @@ CMDCOM: LD      A,'C'
         CALL    LOADCOM
         JR      NC,CMDRUN
         JR      NZ,BADCMD       ; there, but it would not load
-        LD      HL,'R'*256+'P'  ; no NAME.COM: NAME.PRL
-        LD      (CMDFCB+9),HL
-        LD      A,'L'
-        LD      (CMDFCB+11),A
-        CALL    LOADCOM
-        JR      C,BADCMD
-        CALL    PRLGO
-        JR      C,BADCMD
+	LD	HL,CMDFCB	; not here: A:'s, if no drive was named
+	LD	A,(HL)
+	OR	A
+	JR	NZ,BADCMD	; B:NAME looks on B: only
+	LD	A,(PZDU)	; and the current drive isn't A:
+	AND	$0F
+	JR	Z,BADCMD
+	INC	(HL)		; the FCB's drive 1, A:
+	CALL	LOADCOM
+	JR	C,BADCMD
 CMDRUN: CALL    PREPPAGE
         ; Keep the return word outside default DMA ($0080..$00FF). The
         ; resident stack supplies 28 free bytes beneath this two-byte word.
@@ -871,10 +873,10 @@ ERACHK:
         CALL    PUTSTR
         LD      C,1
         CALL    BDOS
+        CP      CR              ; Return alone is no, and is
+        JP      Z,STARTED       ; compared before the case is folded
         AND     $DF
         LD      (ERAANS),A
-        CP      CR              ; Return alone ends the answer
-        JR      Z,ERAGOT
 
 ERADRAIN:
         LD      C,1

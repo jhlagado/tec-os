@@ -377,3 +377,118 @@ CREFR:	CALL	CLOOK		; A = the line, Z if there is one
 	CALL	MVCOPY		; a CALL: the host's guard on EXPAND 1 reads
 	RET			; the return address to name its writer
 CEND:
+
+; MVCOPY: the cache's copy between EXPAND 0 and EXPAND 1. BC bytes from DE to
+; HL, forward as LDIR does, XMDST and XMSRC the destination's and source's
+; banks: 0 the program's view, 1 EXPAND 1. Returns A = 0 with HL and DE advanced
+; by BC. Destroys BC and F; the alternate registers are kept, and the latch and
+; the interrupt state are as it found them.
+;
+; With interrupts off, EXPAND 1 is switched in only around code that uses no
+; stack, as the caller's stack may be in EXPAND 0. Within one bank: LDIR in
+; that bank's view. Across banks, the bank-0 end's part below 8000h, in MAIN
+; 0, copies by LDIR with EXPAND 1 in view; its part in EXPAND 0 copies a byte
+; at a time, the latch switched between each read and write, with the two
+; latch values in D' and E'.
+MVCOPY: LD      A,B
+        OR      C
+        JP      Z,MVOK
+        CALL    IFFGET
+        DI
+        PUSH    AF
+        EXX
+        PUSH    BC
+        PUSH    DE
+        LD      C,SYSLAT
+        LD      A,(LATCHV)
+        LD      D,A             ; the source's latch
+        LD      E,A             ; the destination's
+        LD      A,(XMSRC)
+        OR      A
+        JR      Z,MV1
+        SET     2,D
+MV1:    LD      A,(XMDST)
+        OR      A
+        JR      Z,MV2
+        SET     2,E
+MV2:    LD      A,D
+        CP      E
+        EXX
+        JR      Z,MVLDIR        ; one bank
+        PUSH    HL
+        LD      A,(XMDST)
+        OR      A
+        JR      Z,MV3
+        LD      H,D             ; HL = the bank-0 end
+        LD      L,E
+MV3:    PUSH    DE
+        EX      DE,HL
+        LD      HL,$8000
+        OR      A
+        SBC     HL,DE           ; bytes below 8000h
+        POP     DE
+        JR      C,MVNONE
+        JR      Z,MVNONE
+        SBC     HL,BC           ; carry is clear
+        JR      C,MV4
+        LD      HL,0            ; all of it is below 8000h
+MV4:    ADD     HL,BC           ; HL = the part below 8000h
+        PUSH    HL
+        LD      H,B
+        LD      L,C
+        POP     BC
+        OR      A
+        SBC     HL,BC
+        LD      (MVREST),HL     ; and the part in EXPAND 0
+        POP     HL
+        EXX
+        LD      A,D
+        OR      E               ; EXPAND 1 in view
+        OUT     (C),A
+        EXX
+        EX      DE,HL           ; LDIR copies from HL to DE
+        LDIR
+        EX      DE,HL
+        EXX
+        LD      A,D
+        AND     E               ; EXPAND 0 in view
+        OUT     (C),A
+        EXX
+        LD      BC,(MVREST)
+        JR      MVBYTE
+MVNONE: POP     HL
+MVBYTE: LD      A,B
+        OR      C
+        JR      Z,MVEND
+MVBL:   EXX
+        OUT     (C),D
+        EXX
+        LD      A,(DE)
+        EXX
+        OUT     (C),E
+        EXX
+        LD      (HL),A
+        INC     HL
+        INC     DE
+        DEC     BC
+        LD      A,B
+        OR      C
+        JR      NZ,MVBL
+        JR      MVEND
+MVLDIR: EXX
+        OUT     (C),D
+        EXX
+        EX      DE,HL
+        LDIR
+        EX      DE,HL
+MVEND:  LD      A,(LATCHV)      ; page zero is in MAIN 0, always in view
+        OUT     (SYSLAT),A
+        EXX
+        POP     DE
+        POP     BC
+        EXX
+        POP     AF
+        JP      PO,MVOK
+        EI
+MVOK:   XOR     A
+        RET

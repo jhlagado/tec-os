@@ -96,8 +96,8 @@ function ranges(m) {
     load: {
       "the CCP's stack": [s("CSTKBAS"), s("CSTKTOP")],
       LOADTOP: [s("LOADTOP"), s("LOADTOP") + 2],
-      PRLN: [s("PRLN"), s("PRLN") + 2],
-      PRLDL: [s("PRLDL"), s("PRLDL") + 1],
+      SLN: [s("SLN"), s("SLN") + 2],
+      SLDL: [s("SLDL"), s("SLDL") + 1],
       SVCRC: [s("SVCRC"), s("SVCRC") + 1],
       LOADBUF: [s("LOADBUF"), s("LOADBUF") + 128],
     },
@@ -113,7 +113,7 @@ function ranges(m) {
       "the terminal's cursor and parser": [0x46, 0x50],
       "RXFULL and RXCHAR": [0x42, 0x44],
       HHEAD: [s("HHEAD"), s("HHEAD") + 1],
-      "XMDST to MVREST": [s("XMDST"), s("XMARK")],
+      "XMDST to MVREST": [s("XMDST"), s("MVREST") + 2],
       LINEBUF: [s("LINEBUF"), s("LINEBUF") + 80],
       "the mount scratch": [s("MNTCNT"), s("LINEBUF")],
       // KS32: cleared as each command is taken, FF00h after an error.

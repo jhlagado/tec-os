@@ -2,7 +2,8 @@
 ;
 ;   TTY: (0)  serial terminal: keys and output on the serial port
 ;   CRT: (1)  PICO9918 screen and the matrix keyboard
-;   BAT: (2)  CP/M batch: keys from the reader, output to the list device
+;   BAT: (2)  CP/M batch: keys from the reader, the serial port; output to the
+;             list device, which discards it
 ;   UC1: (3)  GLCD screen and the matrix keyboard
 ;
 ; Cold boot starts on TTY:, and a display driver's load takes the console. A

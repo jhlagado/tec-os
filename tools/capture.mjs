@@ -26,7 +26,7 @@
 //   --board glcd     the GLCD and the matrix keyboard, no PICO9918
 //   --card PATH      the card image; dist/starter.img by default
 //   --card none      no card in the socket
-//   --rom PATH       the ROM; dist/tecos-debug80.rom by default
+//   --rom PATH       the ROM; dist/tecos.rom by default
 //   --lcd            print the 20 x 4 LCD's rows at the end
 //   --screen         print the PICO9918's or the GLCD's text at the end
 //   --serial         print what left the serial port, not the console
@@ -48,7 +48,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 Machine.font = fontBytes(ROOT);
 
 const args = process.argv.slice(2);
-const opt = { board: "serial", card: resolve(ROOT, "dist/starter.img"), rom: resolve(ROOT, "dist/tecos-debug80.rom") };
+const opt = { board: "serial", card: resolve(ROOT, "dist/starter.img"), rom: resolve(ROOT, "dist/tecos.rom") };
 const lines = [];
 while (args.length) {
   const a = args.shift();

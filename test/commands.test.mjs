@@ -46,7 +46,6 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
 
 test("nothing is kept for a level: the table ends at ABISVC and the page at BE00h is free", async () => {
   const m = await machine({}, { ram96: true });
-  assert.equal(m.read(m.sym("XMARK")), 0x80, "no range for MOVE in EXPAND 1");
   assert.equal(m.sym("HRING"), 0xbd00);
   assert.equal(m.sym("ABIEND"), m.sym("ABISVC") + 3);
   assert.deepEqual(m.violations, []);
@@ -117,6 +116,19 @@ test("REN takes one drive from either name, and a name on another drive is refus
   m.command("B:");
   m.command("REN T.COM=Y.COM");
   assert.match(m.command("DIR T.COM"), /T\.COM/);
+});
+
+test("ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)", async () => {
+  const m = await machine();
+  m.command("SAVE 1 B:KEEP.COM");
+  const from = m.output.length;
+  m.type("ERA B:*.*\r");
+  m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
+  m.type("-\r"); // 2Dh folds to 0Dh: once it was taken for Return, and the real one reached the prompt
+  m.expect(/A>$/, { from, maxCycles: 50_000_000 });
+  assert.doesNotMatch(m.text(from), /A>\r\nA>$/, "no second prompt from a stray Return");
+  assert.match(m.command("DIR B:"), /KEEP\.COM/);
 });
 
 test("ERA *.* answered with Return alone erases nothing and takes no second Return", async () => {

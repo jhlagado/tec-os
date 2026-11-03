@@ -81,8 +81,6 @@ BENTRY:
         LD      SP,STKTOP
         LD      (PARAM),DE
         LD      A,C
-        CP      50
-        JR      Z,FNBIOS
         CP      108
         JR      Z,FNRETC
         CP      47
@@ -131,55 +129,6 @@ RETWORD:
 
 FNZERO:
         JP      BIOWBT
-
-; Function 50, CP/M 3's direct BIOS call. DE -> the BIOSPB: function, A, BC,
-; DE, HL. Functions 0-16 go through the RAM BIOS table, 25 is MOVE and 29
-; XMOVE; any other returns A = FFh. Returns the registers the call leaves.
-FNBIOS:
-        LD      A,(DE)
-        LD      HL,MOVE
-        CP      25
-        JR      Z,FNBIOSG
-        LD      HL,XMOVE
-        CP      29
-        JR      Z,FNBIOSG
-        CP      17
-        LD      A,$FF
-        JR      NC,RETA
-        LD      A,(DE)
-        LD      L,A
-        ADD     A,A
-        ADD     A,L
-        LD      L,A
-        LD      H,0
-        LD      BC,RAMBIOS
-        ADD     HL,BC
-FNBIOSG:
-        LD      BC,FNBIOSR
-        PUSH    BC
-        PUSH    HL
-        EX      DE,HL
-        INC     HL
-        LD      A,(HL)
-        EX      AF,AF'
-        INC     HL
-        LD      C,(HL)
-        INC     HL
-        LD      B,(HL)
-        INC     HL
-        LD      E,(HL)
-        INC     HL
-        LD      D,(HL)
-        INC     HL
-        LD      A,(HL)
-        INC     HL
-        LD      H,(HL)
-        LD      L,A
-        EX      AF,AF'
-        RET
-FNBIOSR:
-        LD      SP,(OLDSP)
-        RET
 
 ; Function 108, CP/M 3's program return code: DE = FFFFh gets it into HL;
 ; any other DE sets it. One code for every program.
@@ -616,8 +565,10 @@ CLOSEFCB:
 
 ; An FCB on an earlier extent than its entry's writes back only the
 ; allocation map: the entry's extent and record count describe its last
-; extent.
+; extent. A read-only drive refuses the write first, as CP/M 2.2's close
+; checks the drive (KE-148).
 CLOSEDIR:
+	CALL	CHKRO		; R/O, not a failed write
         CALL    FINDEXCT
         CP      $FF
         RET     Z

@@ -57,12 +57,6 @@ COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
 ; stack, because the BIOS stack is in that bank.
 WBOOTR: DI
-        LD      A,LATCLAS+LATEXP ; EXPAND 1: its warm-boot jump, for an
-        OUT     (SYSLAT),A      ; exit from a program that left it in
-        LD      A,$C3
-        LD      (RAMBIOS+3),A
-        LD      HL,WBOOTR
-        LD      (RAMBIOS+4),HL
         LD      A,LATCLAS       ; MAIN 0, EXPAND 0
         LD      (LATCHV),A
         OUT     (SYSLAT),A
@@ -137,16 +131,9 @@ RSLNO:	XOR	A		; no selection: the card's defaults
 	LD	(RSLBUF+6),A
 	RET
 
-; Cold boot: count the MAIN and EXPAND regions, and give MAIN 1 a copy of
-; page zero. MAIN 1's 0000h then reaches the RAM BIOS table in EXPAND 0, so
-; an exit from MAIN 1 warm boots into MAIN 0.
-MEMINIT:LD      A,LATEXP
-        LD      HL,DETEXP
-        CALL    DETECT
-        LD      (EXPANDS),A
-        CP      2
-        JP      NZ,RAMBAD       ; no EXPAND 1: TEC-OS needs 64K
-        LD      A,E             ; EXPAND 1 in view, no stack: clear it all
+; Cold boot: clear EXPAND 1, which RAMCHK found, and empty the cache's lines.
+MEMINIT:LD	A,(LATCHV)	; EXPAND 1 in view, no stack: clear it all
+	OR	LATEXP
         OUT     (SYSLAT),A
         LD      HL,$8000
         LD      DE,$8001
@@ -160,32 +147,14 @@ MEMINIT:LD      A,LATEXP
         LDIR
         LD      A,(LATCHV)
         OUT     (SYSLAT),A
-        LD      A,XMLOW         ; EXPAND 1 is TEC-OS's: the reserved page,
-	LD	(XMARK),A	; the history at HRING and the cache, fixed:
-				; MOVE has no range in it
-        LD      A,LATMAIN
-        LD      HL,DETADR
-        CALL    DETECT
-        LD      (MAINS),A
-        CP      2
-        RET     NZ
-        LD      HL,0
-MNCOPY: LD      A,D
-        OUT     (SYSLAT),A
-        LD      C,(HL)
-        LD      A,E
-        OUT     (SYSLAT),A
-        LD      (HL),C
-        INC     L
-        JR      NZ,MNCOPY
-        LD      A,D
-        OUT     (SYSLAT),A
+	LD	A,1		; MAIN 1 is not counted: ABIMAIN's
+	LD	(MAINS),A	; count is 1 until its entry goes
         RET
 
 ; Whether latch bit A shows other RAM at HL: the complement of the byte seen
 ; without it is written with it set; if the byte without it is unchanged,
 ; there are two regions. Both bytes are put back, and no stack is used with
-; the bit set. Returns A = 1 or 2, D = the latch without the bit, E = with.
+; the bit set. Returns A = 1 or 2.
 DETECT: LD      E,A
         LD      A,(LATCHV)
         LD      D,A
@@ -298,14 +267,22 @@ CPMIG:	LD	(HL),$A5
         RET
 
 ;---- RAM check -----------------------------------------------------------------
-; TEC-OS needs RAM at 8000h-BFFFh: the resident workspace and the CP/M stacks
-; live there. Write both ends of the window before reading either, so a
-; floating bus cannot hand back the byte just written. Without that RAM,
-; report on the serial console (CONDEV is still 0) and stop. The boot stack
-; is in fixed RAM.
+; TEC-OS needs 64K: RAM at 8000h-BFFFh, where the resident workspace and the
+; CP/M stacks live, and EXPAND 1 behind it, the cache's and the history's. One
+; check, before the banner. Write both ends of the window before reading
+; either, so a floating bus cannot hand back the byte just written; then look
+; for EXPAND 1 at 8000h. Without either, report on the serial console (CONDEV
+; is still 0) and stop. The boot stack is in fixed RAM.
 RAMCHK: LD      DE,$55AA
         CALL    RAMPAT
         LD      DE,$AA55
+	CALL	RAMPAT
+	LD	A,LATEXP	; and EXPAND 1 behind the window
+	LD	HL,DETEXP
+	CALL	DETECT
+	CP	2
+	RET	Z		; 64K
+	JR	RAMBAD
 RAMPAT: LD      HL,$8000
         LD      (HL),D
         LD      A,E

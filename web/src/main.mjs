@@ -50,8 +50,8 @@ async function fetchBytes(url) {
 
 async function loadRom() {
   const [rom, symbols] = await Promise.all([
-    fetchBytes("roms/tecos-debug80.rom"),
-    fetch("roms/tecos-debug80.symbols.json", { cache: "no-cache" }).then((r) => r.json()),
+    fetchBytes("roms/tecos.rom"),
+    fetch("roms/tecos.symbols.json", { cache: "no-cache" }).then((r) => r.json()),
   ]);
   return { rom, symbols: symbolsFromD8({ symbols }) };
 }

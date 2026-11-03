@@ -1,10 +1,10 @@
-// The PRL loader: programs from PRL files made as Digital Research made
-// them, the CCP's NAME.COM before NAME.PRL, and BDOS function 108; and a
-// service's place below (0006h), removal last in, first out. Emulator evidence.
+// Residents and BDOS function 108: a service's place below (0006h), removal
+// last in, first out, and the program return code. The PRL loader went in
+// KS36a. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, service, prl, program, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, service, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0080;
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -30,42 +30,6 @@ const back = (m) => {
   m.cpu.cpu.pc = 0;
   m.runUntil(() => m.waitingForInput() && /\r\nA>$/.test(m.text(m.mark)), 200_000_000, "the prompt");
 };
-
-test("a program PRL loads at 0100h as its .COM and runs the same", async () => {
-  for (const name of ["probe", "hook"]) {
-    const com = (await program(name)).bytes;
-    const m = await machine({ [`${name.toUpperCase()}.PRL`]: await prl(name) });
-    const at = m.sym("PRLP2");
-    let image;
-    m.mark = m.output.length;
-    m.type(name === "probe" ? "PROBE\r" : "HOOK\r");
-    m.runUntil(() => m.pc === at, 400_000_000, "the loaded program");
-    image = bytes(m, 0x100, com.length);
-    assert.deepEqual(image, Array.from(com), `${name}.PRL at 0100h equals ${name}.COM`);
-    if (name === "probe") {
-      const results = m.expect(/\r\nA>$/, { maxCycles: 2_000_000_000 }).match(/T\d\d (ok|FAIL)/g);
-      assert.equal(results.length, 16);
-      assert.deepEqual(results.filter((r) => r.endsWith("FAIL")), []);
-    }
-    assert.deepEqual(m.violations, []);
-  }
-});
-
-test("the CCP runs NAME.PRL only when there is no NAME.COM", async () => {
-  const com = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
-  const say = await prl("say");
-  let m = await machine({ "SAY.PRL": say });
-  assert.match(m.command("SAY"), /PRL/, "the .PRL alone");
-  m = await machine({ "SAY.COM": com });
-  assert.match(m.command("SAY"), /C\r\n/, "the .COM alone");
-  m = await machine({ "SAY.COM": com, "SAY.PRL": say });
-  const out = m.command("SAY");
-  assert.match(out, /C\r\n/, "with both, the .COM");
-  assert.doesNotMatch(out, /PRL/);
-  m = await machine({});
-  assert.match(m.command("SAY"), /SAY\?/, "neither");
-  assert.deepEqual(m.violations, []);
-});
 
 test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it", async () => {
   const m = await machine({ "RES.SVC": await service("res"), "HOOK.COM": (await program("hook")).bytes });
@@ -144,38 +108,5 @@ test("BDOS function 108 gets and sets the program return code, kept across a war
   assert.equal(get(), 0x1234);
   back(m);
   assert.equal(get(), 0x1234, "after a warm boot, for the parent");
-  assert.deepEqual(m.violations, []);
-});
-
-/** A PRL file from CODE, made for 0100h, with the code offsets in MARKS. */
-function handPrl(code, marks) {
-  const n = code.length;
-  const bitmap = new Uint8Array(Math.ceil(n / 8));
-  for (const i of marks) bitmap[i >> 3] |= 0x80 >> (i & 7);
-  const file = new Uint8Array(256 + n + bitmap.length);
-  file.set([0, n & 0xff, n >> 8]);
-  file.set(code, 256);
-  file.set(bitmap, 256 + n);
-  return file;
-}
-
-// Made by hand in Digital Research's convention: code for 0100h, each marked
-// byte the high byte of an address in it. Neither length is a multiple of 8.
-const DRPROG = handPrl(
-  [
-    0x11, 0x09, 0x01, // LD DE,MSG
-    0x0e, 0x09, // LD C,9
-    0xcd, 0x05, 0x00, // CALL 0005h, not marked
-    0xc9, // RET
-    0x44, 0x52, 0x21, 0x24, // MSG: "DR!$"
-  ],
-  [2],
-);
-
-test("a PRL made by hand for 0100h runs as a program, nothing relocated", async () => {
-  assert.notEqual(DRPROG[1] % 8, 0);
-  const m = await machine({ "DRPROG.PRL": DRPROG });
-  assert.match(m.command("DRPROG"), /DR!\r\n/);
-  assert.deepEqual(bytes(m, 0x100, 13), Array.from(DRPROG.slice(256, 256 + 13)), "at 0100h as in the file");
   assert.deepEqual(m.violations, []);
 });

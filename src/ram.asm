@@ -220,16 +220,15 @@ GLVEC:  DS      2               ; GLCD.SVC's, the same: indexed by CMCRT and CMU
 ; ---- Command-line history ------------------------------------------------------
 HHEAD:  DS      1               ; the offset the next line goes in at
 
-; ---- XMOVE's banks for the next MOVE ------------------------------------------
+; ---- MVCOPY's banks: 0 the program's view, 1 EXPAND 1 ----------------------
 XMDST:  DS      1
 XMSRC:  DS      1
-MVREST: DS      2               ; MOVE: the bytes left for the byte loop
-XMARK:	DS	1		; EXPAND 1's low mark
+MVREST: DS      2               ; MVCOPY: the bytes left for the byte loop
 PZTOP:  DS      2               ; the current top, which warm boot puts at 0006h
 PRGCODE:DS      2               ; BDOS function 108's program return code
 LOADTOP:DS      2               ; successful LOADCOM exclusive record end
-PRLN:   DS      2               ; the PRL loader: code length
-PRLDL:  DS      1               ; and relocation delta
+SLN:    DS      2               ; the service loader: code length
+SLDL:   DS      1               ; and relocation delta
 SVCBSY:	DS	1		; 80h while an INIT or REMOVE runs
 REGHEAD:DS      2               ; the first record
 SVCHEAD:DS      1               ; the lowest service's page, 0 for none

@@ -33,7 +33,7 @@ Node.js 20 or later.
 
 ```sh
 npm ci
-npm run build    # ROM images for each profile in build/<profile>/
+npm run build    # the ROM image in build/tecos/
 npm test         # host and emulator tests, about 90 seconds
 npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 ```
@@ -43,8 +43,8 @@ npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 `TED_COM` and `TAS_COM`), and refuses a file that is missing or not the build
 pinned in `test/inputs.json`.
 
-The ROM is assembled with ATOM. There is one image for every board. The names
-`debug80`, `debug80t40`, `debug80g32` and `board` stay as aliases of it. The
+The ROM is assembled with ATOM. There is one image for every board,
+`build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
 display's driver is `A:PICO.SVC`, built at 80 columns, 40, or 32 in Graphics I.
 The starter card holds the 80-column build; `npm run media` puts the other two
 in `dist/files` as `PICO40.SVC` and `PICO32.SVC`, and the web page writes the

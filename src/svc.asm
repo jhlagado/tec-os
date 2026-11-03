@@ -25,19 +25,33 @@ DHLEN   EQU     25
 DRECSZ  EQU     13              ; link, name, version, table
 STLAST	EQU	STREC+127	; startup's record: its last byte
 
+; The top goes back to the next owner's page, or the stub with none. Carry
+; clear.
+SLTOP: LD      A,(SVCHEAD)
+        LD      H,A
+        LD      L,0
+        OR      A
+        JR      NZ,SLT1
+        LD      HL,(STUBAD)
+SLT1:  LD      (PZTOP),HL
+        LD      (PZBDOS+1),HL
+        RET
+SLFAIL: SCF
+        RET
+
 ; UNLOAD: the lowest resident, with no INIT or REMOVE running. Only a head of
 ; the owner list is a service.
 SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         OR      A
-        JR      NZ,PRLRF
+        JR      NZ,SLFAIL
         LD      HL,(PZTOP)
         LD      L,A
         LD      A,(SVCHEAD)
         CP      H
-        JR      NZ,PRLRF
+        JR      NZ,SLFAIL
         LD      L,DFLG
         BIT     0,(HL)
-        JR      Z,PRLRF
+        JR      Z,SLFAIL
         PUSH    HL
         LD      L,DREM
         CALL    SVCCALL
@@ -54,7 +68,7 @@ SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         EX      DE,HL
         INC     (HL)
         EX      DE,HL
-        CALL    PRLTOP
+        CALL    SLTOP
         JP      PZSWP           ; a vector into the freed pages goes
 
 ; Install the file at 0100h, up to LOADTOP. Carry clear: installed. Carry set:
@@ -64,11 +78,11 @@ SVCLOAD:XOR     A
         LD      (SVCRC),A
 	LD	A,(SVCBSY)	; no INIT or REMOVE running
         OR      A
-        JR      NZ,PRLRF
+        JR      NZ,SLFAIL
         LD      HL,(DF)
         LD      DE,DMAGIC
         SBC     HL,DE
-        JR      NZ,PRLRF
+        JR      NZ,SLFAIL
         LD      BC,(DF+DSIZ)    ; the image in the records
         INC     H               ; HL = 0: now the file
         CALL    SVCEXT
@@ -89,7 +103,7 @@ SVCLOAD:XOR     A
         RET     C
         CP      $80
         RET     C
-        LD      (PRLDL),A
+        LD      (SLDL),A
         LD      H,B             ; the dependencies, after the image
         LD      L,C
         INC     H
@@ -161,7 +175,7 @@ SVCR1:  LD      A,B
         RET     C
         OR      A
         JR      Z,SVCR1
-        LD      A,(PRLDL)
+        LD      A,(SLDL)
         ADD     A,(HL)
         LD      (HL),A
         JR      SVCR1
@@ -175,7 +189,7 @@ SVCMC:  SRL     A
         LD      C,A
         LD      A,(HL)
         CP      $C3
-        JP      Z,PRLRF
+        JP      Z,SLFAIL
         LD      A,C
 SVCMN:  ADD     HL,DE
         OR      A
@@ -192,7 +206,7 @@ SVCMN:  ADD     HL,DE
         LD      (DF),A
         POP     BC
         LD      HL,DF           ; the move; only (0006h) is lowered
-        LD      A,(PRLDL)
+        LD      A,(SLDL)
         LD      D,A
         LD      E,L
         LDIR
@@ -208,7 +222,7 @@ SVCMN:  ADD     HL,DE
 SVCWK:  LD      A,H
         OR      L
         JR      Z,SVCLK
-        LD      (PRLN),HL       ; the last so far
+        LD      (SLN),HL       ; the last so far
         CALL    SVCCK
         JR      C,SVCRF
         PUSH    BC
@@ -261,7 +275,7 @@ SVCLK:  POP     HL              ; link the records, then commit
         JR      Z,SVCCOM
         LD      BC,(REGHEAD)
         LD      (REGHEAD),HL
-        LD      HL,(PRLN)
+        LD      HL,(SLN)
         LD      (HL),C
         INC     HL
         LD      (HL),B
@@ -304,7 +318,7 @@ SVCCALL:LD      A,$80
         JP      (HL)
 
 ; D = the service's page, E = the page above its last. Carry and HL kept.
-SVCBND: LD      A,(PRLDL)
+SVCBND: LD      A,(SLDL)
         LD      D,A
         LD      E,DOWN
         LD      A,(DE)

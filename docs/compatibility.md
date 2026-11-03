@@ -15,11 +15,8 @@ holding the word at `0006h`, so the largest it loads on the starter card is
 
 The BDOS is an adaptation of Portable CP/M, which implements functions 0–40
 with their documented conventions; 38 and 39 return zero, and functions above
-40 return zero, except 47, 50 and 108. Function 50 is CP/M 3's direct BIOS call: `DE`
-points at the BIOSPB (function, A, BC, DE, HL). Functions 0–16 go through
-the RAM BIOS table, so hooks apply; 25 is `MOVE` and 29 `XMOVE`, CP/M 3's
-copies, which refuse every byte in EXPAND 1 (see rom-services.md); any other, `SELMEM` (27) among them,
-returns `A = FFh`. Function 108 is CP/M 3's program return code: `DE =
+40 return zero, except 47 and 108; CP/M 3's function 50 is not provided, and a
+program reaches the BIOS through the jump table at `(0001h)`. Function 108 is CP/M 3's program return code: `DE =
 FFFFh` gets it into `HL`, any other `DE` sets it; one code serves every
 program, and it is 0 after a reset. The CCP clears it as it takes each
 command and sets it to FF00h when a command isn't found, won't load or is a
@@ -91,8 +88,8 @@ from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
 
 - `NAME.SVC` installs a service and `SERVICES` lists them, each with its pages.
   `UNLOAD` removes the lowest. A `.DRV` name is no longer a service: `NAME.DRV`
-  goes down the `.COM` path, runs a `NAME.COM` or `NAME.PRL` if there is one, and
-  prints `NAME.DRV?` only if there is neither.
+  goes down the `.COM` path, runs a `NAME.COM` if there is one, and
+  prints `NAME.DRV?` if there is none.
 - After a reset, recognised or not, and not on an ordinary exit, `A:STARTUP.CMD`,
   if there is one, runs before the first prompt.
   One record of it is read, at most 128 bytes, from the volume on A:, and a keypad
@@ -117,13 +114,11 @@ card, using the mount entry in the ROM table, `ABIVOL`. Mounts are for the sessi
 reset keeps them, as long as the card still holds each volume. `docs/recovery.md`
 says how.
 
-A command runs `NAME.COM`; when there is no `NAME.COM`, it runs `NAME.PRL`,
-a relocatable file in Digital Research's PRL format: a 256-byte header, the
-code made for `0100h`, then a bitmap marking the high bytes of its
-addresses, as LINK-80's `[OP]` writes it. A PRL is a program, loaded at
-`0100h` as its `.COM` would be, with nothing relocated: only its length is
-read, and the bitmap is checked for. The module header some earlier PRLs
-carried is no longer read.
+A command runs `NAME.COM` from the current drive. When there is none there, no
+drive was named and the current drive isn't A:, it runs A:'s `NAME.COM` (KD-169),
+so `TED` and `TAS` run from B:; the current drive stays as it was. `B:NAME`
+looks on B: only. A `.PRL` file is not run: it is a `.COM` with a 256-byte header,
+and none is on the starter card or written by the tools.
 
 A service is a resident in TEC-OS's own `.SVC` format, with an installation
 that can fail cleanly and a registry through which programs find its
@@ -262,9 +257,9 @@ a chained line.
 | --- | --- | --- |
 | ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 4.0. `XMOVE`, `MOVE`, the nested CCP entries, the EXPAND count, the low mark and the font's address left it; `ABIGLCD` and `ABISVC` joined. The file type's rename adds `ABISVC` beside `ABIDRV` | The table was added |
 | Hardware services | 19 numbered from 0 became 9 numbered from 19: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`. An old number returns status 1 | Added |
-| BDOS | Function 47 added. 25 and 29 refuse every byte of EXPAND 1. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
+| BDOS | Function 47 added; function 50 gone. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 3 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
-| Page zero | `0040h` to `004Fh` hold the same names, and `EXPANDS` is always 2. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
+| Page zero | `0040h` to `004Fh` hold the same names but `EXPANDS`, gone with MAIN 1's count. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
 | TPA | 46,869 on the starter card with no display, 45,312 with one display's driver and 43,776 with two | 45,830 at `7029f57` |

@@ -59,7 +59,7 @@
     {
       "input": "NOSUCH",
       "output": "NOSUCH\r\r\nNOSUCH?\r\n\r\nA>",
-      "calls": "bc434a201db345a071e532a999c59f6f4da0e87aad66fe7c090afc6b2ba32dc8",
+      "calls": "847547d79c0e178249c9fe574cc895f253b9eb7850031483c4a2faa706561612",
       "peak": 12
     },
     {

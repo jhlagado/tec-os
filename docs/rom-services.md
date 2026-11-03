@@ -5,7 +5,7 @@ Status: **Built**, ABI 4.0. The *ROM table* is at `C003h`. Its hardware services
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,947 bytes (`debug80`) and has 1,437 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,685 bytes (`tecos`) and has 1,699 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -54,18 +54,10 @@ such as `C012h`, which is `ABIGLCD` now.
 | `C012h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
 | `C015h` | `ABISVC` | `JP SVCREG`: the registry, below; C = 0 find, 1 enumerate |
 
-`XMOVE` and `MOVE` are CP/M 3's, with its registers, reached through BDOS
-function 50's selectors 29 and 25. `XMOVE`'s 0 is the
-program's view below the BDOS entry at `(0006h)`, read at each call; its 1
-is EXPAND 1 from `8000h` up to its low mark, read at each call. EXPAND 1 is
-TEC-OS's own: `BF00h` its reserved page, `BE00h` free, `BD00h`
-the command history, `BC00h` the block cache's table and `8000h–BBFFh` its
-30 lines. Cold boot
-sets the mark to `80h`, so every byte in bank 1 is refused. `MOVE` copies forward as `LDIR` does and returns `A = 0`, or
-`A = FFh` with nothing copied when an end lies outside its region. A copy returns with the latch
-and the interrupt state as it found them. Cold boot clears EXPAND 1, the
-cache with it; its contents do not survive a reset, and warm boot leaves
-them.
+EXPAND 1 is TEC-OS's own, and no interface leaves it in view: `BF00h` and `BE00h`
+free, `BD00h` the command history, `BC00h` the block cache's table and
+`8000h–BBFFh` its 30 lines. Cold boot clears EXPAND 1, the cache with it; its
+contents do not survive a reset, and warm boot leaves them.
 
 ## The registry
 
@@ -225,14 +217,12 @@ carries its own.
 | CCP | 2,399 | 2 | Stays |
 | BDOS | 3,909 | 2 | Stays |
 | Hardware services | 467 | 3, 4 | Stays |
-| `XMOVE` and `MOVE` | 229 | 3 | Stays |
 | `ABIGLCD` and loading the display drivers | 167 | 2 | Stays |
 | Block cache | 573 | 1, 2 | Stays: every read goes through it |
 | Command history | 211 | 2 | Stays |
-| PRL loader | 102 | 2 | Stays, for programs |
 | Service loader, registry, `SERVICES` and startup | 822 | 2 | Stays |
 
-Counted from the `debug80` build's symbol map: each row is one source file's span,
+Counted from the build's symbol map: each row is one source file's span,
 and the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the census's
 14,947 bytes used.
 
@@ -276,7 +266,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,437<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,699<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

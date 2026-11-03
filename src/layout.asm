@@ -17,10 +17,7 @@ LATSHAD EQU     $01             ; /SHADOW high: boot overlay removed
 LATKEEP EQU     $83             ; bits preserved by bank changes (/SHADOW, PROTECT, CAPS)
 LATEXP  EQU     $04             ; EXPAND: EXPAND 1 at 8000h-BFFFh
 LATCLAS EQU     LATSHAD         ; classic profile: overlay off, base window
-LATMAIN EQU     $08             ; MAIN: MAIN 1 at 0000h-7FFFh
-DETADR  EQU     $0100           ; where cold boot looks for MAIN 1
 DETEXP  EQU     $8000           ; and for EXPAND 1
-XMLOW   EQU     $80             ; EXPAND 1's low mark: no range for programs
 CTAB    EQU     $BC00           ; the block cache's table: the lines' blocks,
 CDIRTY  EQU     $BC80           ; 4 bytes each, and their dirty bytes
 NLINES  EQU     30              ; lines of 512 bytes at 8000h-BBFFh
@@ -38,7 +35,6 @@ LATCHV  EQU     $0040           ; shadow copy of the system latch
 MAINS   EQU     $0041           ; MAIN regions fitted, 1 or 2 (ABIMAIN points here)
 RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
 RXCHAR  EQU     $0043           ; and the byte itself
-EXPANDS EQU     $0044           ; EXPAND regions fitted: always 2, MEMINIT stops on fewer
 CONDEV  EQU     $0045           ; console devices present (CD* bits)
 VROW    EQU     $0046           ; video terminal cursor row
 VCOL    EQU     $0047           ; and column
@@ -61,7 +57,7 @@ CDWRD	EQU	$80		; a word of the ROM's is on LCD row 3
 ; display with the matrix keyboard.
 CMTTY   EQU     0               ; serial terminal
 CMCRT   EQU     1               ; PICO9918 and matrix keyboard
-CMBAT   EQU     2               ; reader in, list out
+CMBAT   EQU     2               ; keys from the serial reader, output discarded
 CMUC1   EQU     3               ; GLCD and matrix keyboard
 
 ; ---- Classic resident region (top of the classic bank) ----------------------

@@ -8,7 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { TEST_CLOCK, boot, program, prl, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { TEST_CLOCK, boot, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 const SAY = (await program("say")).bytes; // prints PRL
 const RC = (await program("rc")).bytes;
@@ -67,11 +67,10 @@ test("a line of 127 characters runs whole: 32 pieces", () => {
   assert.equal(count(run(m, line, 2_000_000_000), /PRL/g), 32);
 });
 
-test("a piece may be a built-in, a drive change or a .PRL, and keeps the drive and user it sets", async () => {
-  const m = boot(card({ "HI.PRL": await prl("say") }));
-  volume(m.sdImage, "B").write("SAY.COM", SAY);
-  const out = run(m, "USER 0!B:!SAY!A:!HI!DIR HI.PRL");
-  assert.match(out, /A>B:\r\nB>SAY\r\nPRL\r\nB>A:\r\nA>HI\r\nPRL\r\nA>DIR HI.PRL\r\nHI\.PRL\s+\r\n1 file/);
+test("a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets", () => {
+  const m = boot(card({ "HI.COM": SAY }));
+  const out = run(m, "USER 0!B:!HI!A:!HI!DIR HI.COM");
+  assert.match(out, /A>B:\r\nB>HI\r\nPRL\r\nB>A:\r\nA>HI\r\nPRL\r\nA>DIR HI.COM\r\nHI\.COM\s+\r\n1 file/);
   assert.equal(m.read(4) & 15, 0);
 });
 

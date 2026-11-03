@@ -25,13 +25,9 @@ const CPU_HZ = 4_000_000;
 const BAUD = 4800;
 const VERSION = { major: 0, minor: 1 };
 
-// One image for every board: the display's width is a driver now. The names
-// stay as aliases of it, so that what reads a profile by name still finds one.
+// One image, one name, for every board: the display's width is a driver.
 export const PROFILES = {
-  debug80: { description: "Debug80 TEC-1G model" },
-  debug80t40: { description: "the same image, an alias" },
-  debug80g32: { description: "the same image, an alias" },
-  board: { description: "the same image, an alias" },
+  tecos: { description: "the TEC-1G, on the board and in Debug80" },
 };
 
 const hex = (value, width = 4) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
@@ -339,26 +335,15 @@ async function buildProfile(name) {
   return census;
 }
 
-export async function build(names = Object.keys(PROFILES)) {
-  const out = [];
-  const [first, ...aliases] = names;
-  const census = await buildProfile(first);
-  out.push(census);
-  for (const name of aliases) {
-    const dir = resolve(ROOT, "build", name);
-    mkdirSync(dir, { recursive: true });
-    for (const f of ["tecos.rom", "tecos.d8.json"]) copyFileSync(resolve(ROOT, "build", first, f), resolve(dir, f));
-    const alias = { ...census, profile: name, description: PROFILES[name].description };
-    writeFileSync(resolve(dir, "census.json"), JSON.stringify(alias, null, 2) + "\n");
-    out.push(alias);
-  }
-  return out;
+export async function build() {
+  return [await buildProfile("tecos")];
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const names = process.argv.slice(2);
   try {
-    for (const census of await build(names.length ? names : undefined)) {
+    if (names.some((n) => n !== "tecos")) throw new Error(`one image, tecos: not ${names.join(" ")}`);
+    for (const census of await build()) {
       console.log(
         `${census.profile}: ROM ${census.rom.used}/${census.rom.bytes} bytes, ` +
           `TPA ${hex(census.ram.tpa.start)}-${hex(census.ram.tpa.end - 1)} (${census.ram.tpa.bytes} bytes), ` +
