@@ -171,3 +171,35 @@ test("the page saves one card at a time, and after three failures says saving ke
     assert.match(info.textContent, i < 3 ? /saved again shortly/ : /keeps failing.*Download image/, `failure ${i}`);
   }
 });
+
+test("a file import during a timer's save saves after it, so the stored card holds the copied files (KE-163)", async () => {
+  const source = readFileSync(resolve(ROOT, "web/src/main.mjs"), "utf8");
+  const start = source.indexOf("setInterval(async () =>");
+  const end = source.indexOf("// ---- Run loop", start);
+  const releases = [];
+  let stored = null;
+  const context = {
+    state: { card: Uint8Array.of(1), cardDirty: true },
+    $: () => ({ textContent: "" }),
+    refreshCard: () => {},
+    setInterval: (fn) => (context.tick = fn),
+    // A slow store: each save lands when the test releases it, in the order the test chooses.
+    saveCard: (image) => new Promise((ok) => releases.push(() => ((stored = image), ok()))),
+  };
+  runInNewContext(`${source.slice(start, end)}\nthis.importSave = typeof importSave === "function" ? importSave : (s) => saveCard(s);`, context);
+  const timer = context.tick(); // the old card's save, under way
+  await Promise.resolve();
+  const imported = context.importSave(Uint8Array.of(2)); // the import's, with the copied files
+  await new Promise((ok) => setTimeout(ok, 0));
+  // The import's save, if it has started, lands first; the timer's older one lands last.
+  const concurrent = releases.length > 1;
+  if (concurrent) releases[1]();
+  releases[0]();
+  await timer;
+  // Otherwise the import's save starts once the timer's has landed, and lands after it.
+  while (releases.length < 2) await new Promise((ok) => setTimeout(ok, 0));
+  if (!concurrent) releases[1]();
+  await imported;
+  assert.deepEqual(Array.from(stored), [2], "the copied files are the card stored last");
+  assert.match(source, /await importSave\(staged\)/, "and the import's handler saves through it");
+});

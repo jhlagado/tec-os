@@ -112,6 +112,8 @@ async function save(image = state.card) {
     return false;
   }
   state.saving = true;
+  let done;
+  state.saveDone = new Promise((ok) => (done = ok));
   try {
     await saveCard(image);
     const was = state.unsaved;
@@ -130,6 +132,25 @@ async function save(image = state.card) {
     return false;
   } finally {
     state.saving = false;
+    done();
+  }
+}
+
+/**
+ * A file import's save of STAGED: after any save under way has finished, and
+ * under the same guard, so that an older card's save can't finish after it
+ * and drop the copied files (KE-163). A failure throws, for "Not copied".
+ */
+async function importSave(staged) {
+  while (state.saving) await state.saveDone;
+  state.saving = true;
+  let done;
+  state.saveDone = new Promise((ok) => (done = ok));
+  try {
+    await saveCard(staged);
+  } finally {
+    state.saving = false;
+    done();
   }
 }
 
@@ -597,7 +618,7 @@ $("putfile").addEventListener("change", async (e) => {
       const name = file.name.toUpperCase();
       fs.write(name, new Uint8Array(await file.arrayBuffer()), { text: $("astext").checked });
     }
-    await saveCard(staged); // a failed save throws: "Not copied", and the card as it was
+    await importSave(staged); // a failed save throws: "Not copied", and the card as it was
     state.card.set(staged);
     reset();
   } catch (err) {
