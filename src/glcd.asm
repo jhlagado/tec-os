@@ -1,7 +1,3 @@
-; The video drivers' hook. PICO.SVC and GLCD.SVC hand the ROM a table through
-; TNDRVR (abi.inc), and CONSW points the terminal's vector at it for CRT: and
-; UC1:. Each REMOVE calls it with HL = 0.
-
 ; TNDRVR: B = the mode, then VIDHOOK's. A refusal returns A = TNEBAD with carry.
 SVDRV:	LD	A,B
 	CP	CMCRT		; CRT: or UC1:, and nothing else:
@@ -16,51 +12,6 @@ SVDRV1:	CALL	VIDHOOK
 	RET	C
 	XOR	A
 	RET
-
-; A = CMCRT or CMUC1, HL = the driver's table: the terminal's six words (VPUT,
-; VGET, VCLREOL, VREST, VRDROW, VWRROW), the word for VTFN's functions, then
-; columns and rows. Kept for CONSW, and HL = LINEBUF on return with carry clear,
-; where VRDROW and VWRROW move a row; carry set and nothing changed if a table is
-; kept already, or there is no matrix keyboard. HL = 0: the table dropped, and
-; the console chosen again at its next call, carry clear.
-VIDHOOK: ADD     A,LOW(PIVEC)-1
-        LD      E,A
-        LD      D,HIGH(PIVEC)
-        LD      A,H
-        OR      L
-        JR      Z,VIDHOFF
-        LD      A,(CONDEV)      ; CDMTX, bit 0
-        RRCA
-        CCF
-        RET     C
-        INC     DE
-        LD      A,(DE)          ; a table in RAM is at 0100h or above
-        DEC     DE
-        OR      A
-        SCF
-        RET     NZ
-        EX      DE,HL
-        LD      (HL),E
-        INC     HL
-        LD      (HL),D
-        LD      HL,LINEBUF
-        OR      A
-        RET
-VIDHOFF: EX      DE,HL
-        LD      (HL),D
-        INC     HL
-        LD      (HL),D
-        LD      A,L
-        CP      LOW(GLVEC+1)
-        JR      NZ,VIDHF1
-        LD      HL,CONDEV       ; CDGLC: no GLCD console now
-        RES     2,(HL)
-VIDHF1: XOR     A
-        LD      (CONMOD),A
-        DEC     A
-        LD      (CONACT),A
-        OR      A               ; carry clear
-        RET
 
 ; Load A:GLCD.SVC if there is a GLCD and its resident is not in, and make it
 ; the console: carry set if there is none or it will not load (the LCD says
@@ -127,4 +78,3 @@ WRDCLR:	LD	HL,CONDEV
 	POP	BC
 	OR	A		; LCD3 leaves carry set
 	RET
-
