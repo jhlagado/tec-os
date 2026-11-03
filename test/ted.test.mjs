@@ -3,7 +3,7 @@
 // of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
 // from the listing of Thorium 8fcc6ea's build (build/ted/ted.sym), whose
-// workspace 676075a keeps:
+// workspace 04ec086 keeps:
 // the pin's hash holds them.
 
 import { readFileSync } from "node:fs";

@@ -7,11 +7,10 @@
 // do. A mismatch is refused: the file is removed and the run fails. Nothing is
 // substituted. An entry already in .inputs/ with the right hash is kept.
 //
-// A tree entry (triptych-headless) is a built package, not a file in git: it
-// is fetched and built only with --trees, by the entry's own build, and then
-// checked the same way. No test on this tree reads one.
+// Each entry is one file in its repository at its commit; a directory entry,
+// as older trees pinned for Triptych, is refused, since it would need a build.
 //
-//   npm run inputs [-- --trees] [-- NAME ...]
+//   npm run inputs [-- NAME ...]
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -23,7 +22,6 @@ import { digest } from "../test/lib/digest.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = inputsDir(ROOT);
 const args = process.argv.slice(2);
-const trees = args.includes("--trees");
 const only = args.filter((a) => !a.startsWith("--"));
 const inputs = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs;
 
@@ -55,23 +53,12 @@ for (const [name, entry] of Object.entries(inputs)) {
     continue;
   }
   if (!entry.repo || !entry.commit || !entry.path) throw new Error(`${name}: test/inputs.json gives no repo, commit and path`);
-  if (entry.tree && !trees) {
-    console.log(`${name}: not fetched; a built package, which npm run inputs -- --trees builds (${entry.build})`);
-    continue;
-  }
+  if (entry.tree) throw new Error(`${name}: a directory input, which this tool doesn't build`);
   try {
     const work = fetched(name, entry);
     rmSync(target, { recursive: true, force: true });
     mkdirSync(OUT, { recursive: true });
-    if (entry.tree) {
-      git(work, "checkout", "-q", "--force", entry.commit);
-      execFileSync("npm", ["ci"], { cwd: work, stdio: "inherit" });
-      execFileSync("npm", ["run", "build:wasm-host"], { cwd: work, stdio: "inherit" });
-      execFileSync("node", ["scripts/build.mjs"], { cwd: resolve(work, entry.path), stdio: "inherit" });
-      execFileSync("cp", ["-R", resolve(work, entry.path), target]);
-    } else {
-      writeFileSync(target, execFileSync("git", ["show", `${entry.commit}:${entry.path}`], { cwd: work, maxBuffer: 1 << 26 }));
-    }
+    writeFileSync(target, execFileSync("git", ["show", `${entry.commit}:${entry.path}`], { cwd: work, maxBuffer: 1 << 26 }));
     const got = digest(entry, target);
     if (got !== entry.sha256) {
       rmSync(target, { recursive: true, force: true });

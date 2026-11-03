@@ -26,6 +26,8 @@ NLINES  EQU     30              ; lines of 512 bytes at 8000h-BBFFh
 IOBYTE  EQU     $0003
 PZDU    EQU     $0004           ; user number (bits 4-7) and drive (bits 0-3)
 PZBDOS  EQU     $0005           ; JP to the BDOS stub
+PZLDRV	EQU	$0050		; the drive a program was loaded from,
+				; 0 the current, 1 A: (CP/M 3's)
 RST7    EQU     $0038
 DEFDMA  EQU     $0080
 

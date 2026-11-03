@@ -97,6 +97,9 @@ CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `SERVICES` lists the services installed and `UNLOAD` removes the last one. A line
 chains commands with `!`, and a piece starting `:` runs only if the last command
 succeeded, as in `TED X.ASM!TAS X!:X`.
+`SAMPLE.ASM` on the starter card is a first program to build and read: `TAS SAMPLE`
+assembles it and `SAMPLE` runs it, printing the screen's size, writing the LCD,
+lighting the digits and beeping through the ROM's services by `abi.inc`'s names.
 `DEMO.COM`, on the viewer's demo card, shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.
