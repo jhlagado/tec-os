@@ -54,13 +54,15 @@ function sources(dir, d = "src") {
 }
 
 /**
- * E's file in DIR, or, where KS38's moves took its text away (the file gone, or
- * the text not in it), the one source under src/ that holds the text once.
+ * E's file in DIR, or, as a fallback that says so, where KS38's moves took its
+ * text away (the file gone, or the text not in it), the one source under src/
+ * that holds the text once. The sets name the files of the trees they run on.
  */
 function home(dir, e) {
   const there = existsSync(resolve(dir, e.file)) && matches(readFileSync(resolve(dir, e.file), "utf8"), e).length > 0;
   if (there || !e.file.startsWith("src/")) return e.file;
   const found = sources(dir).filter((f) => matches(readFileSync(resolve(dir, f), "utf8"), e).length === 1);
+  if (found.length === 1) log(`mutant text named in ${e.file} found in ${found[0]}: the set names a file it has left`);
   return found.length === 1 ? found[0] : e.file;
 }
 
@@ -588,9 +590,9 @@ export const MUTANTS_KS34 = [
 // 2 and 8 are deletions, judged by the tests deleted and kept with them.
 const CCPF = "src/cpm/ccp.asm";
 const BDOSF = "src/cpm/bdos.asm";
-const HWF = "src/hwsvc.asm";
+const HWF = "src/services.asm"; // hwsvc.asm and glcd.asm's SVDRV until KS38a
 const VOLF = "src/vol.asm";
-const GLF = "src/glcd.asm";
+const LOADF = "src/loader.asm"; // svc.asm until KS38a
 const EXP = ["test/expand.test.mjs"];
 const SRCH = ["test/search.test.mjs", "test/chain.test.mjs"];
 const HWT = ["test/hwsvc.test.mjs"];
@@ -610,14 +612,14 @@ export const MUTANTS_KS36A = [
   { name: "dispatch: a refusal's status 0", ...ks34(HWF, ["CP TNCOUNT", "LD A,TNEBAD"], ["CP TNCOUNT", "LD A,0"], HWT) },
   { name: "INFO: probes the clock again", ...ks34(HWF, ["HWSINFO:", "LD A,(CONDEV)"], ["HWSINFO:", "CALL RTCHAS", "LD A,(CONDEV)"], HWT) },
   { name: "INFO: the clock's bit not set at cold boot", ...ks34(B, ["LD HL,CONDEV", "SET 3,(HL)"], ["LD HL,CONDEV", "NOP", "NOP"], HWT) },
-  { name: "startup: the clock's bit not masked", ...ks34(SVCF, ["AND $FF-CDWRD-CDRTC"], ["AND $FF-CDWRD"], ["test/pico.test.mjs"]) },
+  { name: "startup: the clock's bit not masked", ...ks34(CCPF, ["AND $FF-CDWRD-CDRTC"], ["AND $FF-CDWRD"], ["test/pico.test.mjs"]) },
   { name: "volumes: a refusal without carry", ...ks34(VOLF, ["VBAD: LD A,TNEBAD", "SCF", "RET"], ["VBAD: LD A,TNEBAD", "OR A", "RET"], HWT) },
   { name: "volumes: B not the drive", ...ks34(VOLF, ["VSIN: LD C,B"], ["VSIN: LD C,1"], ["test/reset.test.mjs"]) },
-  { name: "driver hook: a refusal's status 0", ...ks34(GLF, ["LD A,TNEBAD", "RET C", "XOR A"], ["LD A,0", "RET C", "XOR A"], HWT) },
-  { name: "find: B not the least version", ...ks34(SVCF, ["SVFND: LD C,B", "LD B,0"], ["SVFND: LD C,0", "LD B,0"], ["test/svc.test.mjs", "test/pico.test.mjs"]) },
-  { name: "list: one off", ...ks34(SVCF, ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C"], ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C", "INC C"], ["test/svc.test.mjs"]) },
+  { name: "driver hook: a refusal's status 0", ...ks34(HWF, ["LD A,TNEBAD", "RET C", "XOR A"], ["LD A,0", "RET C", "XOR A"], HWT) },
+  { name: "find: B not the least version", ...ks34(LOADF, ["SVFND: LD C,B", "LD B,0"], ["SVFND: LD C,0", "LD B,0"], ["test/svc.test.mjs", "test/pico.test.mjs"]) },
+  { name: "list: one off", ...ks34(LOADF, ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C"], ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C", "INC C"], ["test/svc.test.mjs"]) },
   { name: "A1: VIDEO takes any B", ...ks34(HWF, ["HWSVID: LD A,B", "CP 2", "LD A,TNEBAD", "JP NC,HWERR"], ["HWSVID: LD A,B", "CP 2", "LD A,TNEBAD"], HWT) },
   { name: "A1: RTC takes any B", ...ks34(HWF, ["HWSRTC: LD A,B", "CP 2", "LD A,TNEBAD", "JP NC,HWERR"], ["HWSRTC: LD A,B", "CP 2", "LD A,TNEBAD"], HWT) },
-  { name: "A1: the driver hook takes any B", ...ks34(GLF, ["SVDRV: LD A,B", "CP CMCRT"], ["SVDRV: LD A,B", "JR SVDRV1", "CP CMCRT"], HWT) },
-  { name: "format: 3 accepted", ...ks34(SVCF, ["DMAGIC EQU SVCFMT*256+'D'"], ["DMAGIC EQU 3*256+'D'"], ["test/clients.test.mjs"]) },
+  { name: "A1: the driver hook takes any B", ...ks34(HWF, ["SVDRV: LD A,B", "CP CMCRT"], ["SVDRV: LD A,B", "JR SVDRV1", "CP CMCRT"], HWT) },
+  { name: "format: 3 accepted", ...ks34(LOADF, ["DMAGIC EQU SVCFMT*256+'D'"], ["DMAGIC EQU 3*256+'D'"], ["test/clients.test.mjs"]) },
 ];
