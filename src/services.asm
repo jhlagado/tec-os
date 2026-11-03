@@ -310,3 +310,18 @@ RTCR1:  LD      A,$70           ; clock high, read, enabled
         DJNZ    RTCR1
         POP     BC
         RET
+
+; TNDRVR: B = the mode, then VIDHOOK's. A refusal returns A = TNEBAD with carry.
+SVDRV:	LD	A,B
+	CP	CMCRT		; CRT: or UC1:, and nothing else:
+	JR	Z,SVDRV1	; another B would index past PIVEC's
+	CP	CMUC1		; pair of words (A1)
+	JR	Z,SVDRV1
+	LD	A,TNEBAD	; refused, nothing changed
+	SCF
+	RET
+SVDRV1:	CALL	VIDHOOK
+	LD	A,TNEBAD	; kept already, or no matrix keyboard
+	RET	C
+	XOR	A
+	RET

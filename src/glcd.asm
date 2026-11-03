@@ -1,17 +1,4 @@
-; TNDRVR: B = the mode, then VIDHOOK's. A refusal returns A = TNEBAD with carry.
-SVDRV:	LD	A,B
-	CP	CMCRT		; CRT: or UC1:, and nothing else:
-	JR	Z,SVDRV1	; another B would index past PIVEC's
-	CP	CMUC1		; pair of words (A1)
-	JR	Z,SVDRV1
-	LD	A,TNEBAD	; refused, nothing changed
-	SCF
-	RET
-SVDRV1:	CALL	VIDHOOK
-	LD	A,TNEBAD	; kept already, or no matrix keyboard
-	RET	C
-	XOR	A
-	RET
+
 
 ; Load A:GLCD.SVC if there is a GLCD and its resident is not in, and make it
 ; the console: carry set if there is none or it will not load (the LCD says
