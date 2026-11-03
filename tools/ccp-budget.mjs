@@ -1,10 +1,9 @@
-// KG-CCP1's current implementation budget. Historical exact merge accounting
-// remains in ks38b.test; these ceilings allow further measured compaction.
-import { test } from "node:test";
+// KG-CCP1 stage qualifier; deliberately not part of the generic test suite.
+// Run only while qualifying this gate. Later stages set their own budgets.
 import assert from "node:assert/strict";
-import { ROOT, rom } from "../tools/lib/model.mjs";
+import { ROOT, rom } from "./lib/model.mjs";
 
-test("CCP fits the compacted ROM budget without moving work into RAM or reducing TPA", () => {
+{
   const r = rom(ROOT);
   const code = r.symbols.get("BDOSBAS") - r.symbols.get("CCPBAS");
   assert.ok(code <= 2452, `CCP code ${code} exceeds 2452 bytes`);
@@ -13,4 +12,5 @@ test("CCP fits the compacted ROM budget without moving work into RAM or reducing
   assert.equal(r.census.ram.regions.find((x) => x.label === "CCP state and stack").bytes, 396);
   assert.equal(r.symbols.get("CSTKTOP") - r.symbols.get("CSTKBAS"), 30);
   assert.equal(r.census.ram.tpa.bytes, 46869);
-});
+}
+console.log("KG-CCP1 ROM, RAM and TPA budget passes");
