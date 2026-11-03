@@ -12,11 +12,13 @@ import { fromLatin1, toLatin1 } from "../tools/lib/bytes.mjs";
 const DISPLAY_PIECE = /^:?(PICO(40|32)?|GLCD)\.(SVC|DRV)$/i;
 const OLD_DISPLAY = /^(PICO(40|32)?|GLCD)\.DRV$/;
 
+/** A:'s volume, read-only as its descriptor says. Its files are user 0's: the ROM loads from there. */
 function driveA(image) {
   const info = parseContainer(image);
   const v = findVolume(info, "A");
-  return new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
+  return new CpmVolume(volumePayload(image, v), v.g, { readOnly: v.readOnly });
 }
+const userZero = (a) => a.list({ user: 0 });
 
 /** The first line a card needs for DISPLAY, "tms" or "glcd". */
 export const displayFile = (display) => (display === "tms" ? "PICO.SVC" : "GLCD.SVC");
@@ -28,7 +30,7 @@ export function cardProblem(image, display) {
   let files;
   try {
     a = driveA(image);
-    files = a.list();
+    files = userZero(a);
   } catch {
     return "This card has no drive A: the diagnostic prompt is on the serial terminal below. A new starter card has one.";
   }
@@ -54,13 +56,28 @@ const holds = (bytes, build) => bytes.length === Math.ceil(build.length / 128) *
  * a card from an older TEC-OS, with .DRV files, is left alone.
  */
 export function prepareCard(image, display, width, drivers) {
+  // Drivers that couldn't be had: the page has said the card is left as it is.
+  if (display === "tms" && drivers === null) return { problem: cardProblem(image, display), note: null, changed: false };
+  // The changes are made on a copy, and reach the card only when all are made:
+  // a read-only A: or a full directory leaves the card as it was, and it boots so.
+  const staged = image.slice();
+  try {
+    const r = prepare(staged, display, width, drivers);
+    if (r.changed) image.set(staged);
+    return r;
+  } catch (e) {
+    return { problem: `This card couldn't be prepared for the page (${e.message}), so it boots as it is.`, note: null, changed: false };
+  }
+}
+
+function prepare(image, display, width, drivers) {
   let problem = cardProblem(image, display);
   let note = null;
   let wrote = false;
   const driver = display === "tms" && drivers ? drivers[width] : undefined;
   if (driver && (!problem || /^This card(?: has no|'s) PICO\.SVC/.test(problem))) {
     const a = driveA(image);
-    const had = a.list().some((f) => f.name === "PICO.SVC") ? a.read("PICO.SVC") : null;
+    const had = userZero(a).some((f) => f.name === "PICO.SVC") ? a.read("PICO.SVC") : null;
     const ours = !had || had[1] !== FORMAT || Object.values(drivers).some((d) => holds(had, d));
     if (!ours) note = `This card's own PICO.SVC is kept, at the width it was built for.`;
     else if (!had || !holds(had, driver)) {
@@ -127,7 +144,7 @@ function withoutDisplay(lines) {
 /** Make STARTUP.CMD's first line the driver for DISPLAY, leaving the rest. True if it changed. */
 export function setDisplayLine(image, display) {
   const a = driveA(image);
-  const had = a.list().some((f) => f.name === "STARTUP.CMD");
+  const had = userZero(a).some((f) => f.name === "STARTUP.CMD");
   const old = had ? toLatin1(a.read("STARTUP.CMD")).split("\x1a")[0] : "";
   const rest = withoutDisplay(old.split(/\r?\n/));
   // The chosen display's line alone: CON UC1 loads GLCD.SVC itself, and a line

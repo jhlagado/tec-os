@@ -70,7 +70,8 @@ async function powerOn() {
     const recipe = await fetch("starter.recipe.json", { cache: "no-cache" }).then((r) => r.json()).catch(() => ({}));
     fetched = await widthDrivers(recipe, fetchBytes);
   }
-  const { problem, note, changed } = prepareCard(state.card, state.display, state.width, fetched.drivers);
+  // null drivers: the fetch failed, and the card is left as it is.
+  const { problem, note, changed } = prepareCard(state.card, state.display, state.width, fetched.problem ? null : fetched.drivers);
   if (changed) state.cardDirty = true;
   const { rom, symbols } = await loadRom();
   state.machine = new Machine({

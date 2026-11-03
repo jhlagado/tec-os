@@ -14,6 +14,7 @@ import { displayFiles } from "../tools/lib/starter.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { screens } from "./lib/pico-workload.mjs";
 import { ABI, GLCD_SVC, PICO_SVC, ROOT, TEST_CLOCK, boot, fcbType, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { createContainer } from "../tools/lib/container.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const m0 = (m) => m.sym("CONMOD");
@@ -899,4 +900,58 @@ test("the web host: the page's card boots on the board with both displays with n
   assert.doesNotMatch(m.screen().join("\n"), /\?/, "no line refused on the screen");
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
   assert.deepEqual(m.violations, []);
+});
+
+// KE-154: the page reads user 0 only, leaves a read-only A:, a card whose
+// drivers couldn't be had and a card it can't finish preparing as they are,
+// and the card then boots as it is.
+const bootsToPrompt = (image) => {
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
+  m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt");
+  return m;
+};
+
+test("the web host: a PICO.SVC in user 3 isn't A:'s, and the page writes user 0's (KE-154)", () => {
+  const image = standardCard();
+  volume(image, "A").write("PICO.SVC", PICO_SVC["PICO.SVC"], { user: 3 });
+  assert.match(cardProblem(image, "tms"), /no PICO\.SVC/, "user 3's file isn't the one the ROM loads");
+  assert.deepEqual(prepareCard(image, "tms", "80", DRIVERS), { problem: null, note: null, changed: true });
+  assert.deepEqual([...volume(image, "A").read("PICO.SVC").subarray(0, DRIVERS[80].length)], [...DRIVERS[80]], "user 0's, written");
+});
+
+test("the web host: a read-only A: is left byte for byte, and the card boots as it is (KE-154)", () => {
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A", readOnly: true },
+    { geometry: "G8M", label: "WORK", mount: "B" },
+  ]);
+  volume(image, "A").write("STARTUP.CMD", startupFile("DIR"));
+  const before = image.slice();
+  const got = prepareCard(image, "tms", "80", DRIVERS);
+  assert.equal(got.changed, false);
+  assert.match(got.problem, /couldn't be prepared .*read-only.*boots as it is/);
+  assert.deepEqual(image, before);
+  assert.match(bootsToPrompt(image).text(0), />DIR\r/, "its own STARTUP.CMD ran");
+});
+
+test("the web host: drivers that couldn't be had leave the card byte for byte, STARTUP.CMD with it (KE-154)", () => {
+  const image = standardCard();
+  volume(image, "A").write("PICO.SVC", PICO_SVC["PICO.SVC"]);
+  volume(image, "A").write("STARTUP.CMD", startupFile("GLCD.SVC", "PICO.SVC", "DIR"));
+  const before = image.slice();
+  assert.deepEqual(prepareCard(image, "tms", "40", null), { problem: null, note: null, changed: false });
+  assert.deepEqual(image, before);
+});
+
+test("the web host: a full directory leaves the card as it was, and it boots (KE-154)", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("STARTUP.CMD", startupFile("USER 0")); // a line that prints nothing long
+  for (let i = 0; a.list().length < a.entries; i += 1) a.write(`F${i}.DAT`, new Uint8Array());
+  const before = image.slice();
+  let got;
+  assert.doesNotThrow(() => (got = prepareCard(image, "tms", "80", DRIVERS)));
+  assert.equal(got.changed, false);
+  assert.match(got.problem, /couldn't be prepared .*boots as it is/);
+  assert.deepEqual(image, before);
+  assert.match(bootsToPrompt(image).text(0), />USER 0\r/, "the original card boots");
 });
