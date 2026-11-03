@@ -83,6 +83,14 @@ test("warm boot clears the restart vectors except jumps into ROM, and a stale RS
   noViolations(m);
 });
 
+test("a clean boot's restart vectors are the defaults, and 0038h is EI; RETI", () => {
+  const m = boot(standardCard());
+  const want = new Array(0x30).fill(0);
+  for (let v = 0; v < 0x30; v += 8) want[v + 7] = 0xc9;
+  want.push(0xfb, 0xed, 0x4d, 0, 0, 0, 0, 0);
+  assert.deepEqual(Array.from({ length: 0x38 }, (_, i) => m.read(0x08 + i)), want);
+});
+
 test("without a card the diagnostic console reports and retries", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols });

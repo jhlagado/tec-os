@@ -116,9 +116,17 @@ async function entry(job) {
   return jumps;
 }
 
+/** 0000h-005Bh after a clean boot. */
+async function pageZero(job) {
+  const { fx } = await M.inTree(job.dir);
+  const m = fx.boot(fx.standardCard());
+  return Array.from({ length: 0x5c }, (_, i) => m.read(i));
+}
+
 if (process.argv[2] === "--worker") {
   const job = JSON.parse(process.argv[3]);
   if (job.task === "entry") console.log(JSON.stringify(await entry(job)));
+  else if (job.task === "pagezero") console.log(JSON.stringify(await pageZero(job)));
   else await M.runWorker(job);
   process.exit(0);
 }
@@ -266,6 +274,7 @@ async function main() {
   const censusL = await M.stackCensus(landed);
   const censusR = await M.stackCensus(reference);
   const rom = M.romSection(landed, reference);
+  const [zeroL, zeroR] = [await M.worker(SCRIPT, { task: "pagezero", dir: landed }), await M.worker(SCRIPT, { task: "pagezero", dir: reference })];
   const cards = (d) => M.rom(d).census.ram.cards;
   const figures = {
     ...M.heading(REFERENCE, landed, LANDED),
@@ -278,6 +287,7 @@ async function main() {
     stacks: M.stackFigures(censusL, censusR, landed, M.svclim(landed)),
     entry: { jumpsWithNoneOneTwo: await M.worker(SCRIPT, { task: "entry", dir: landed }) },
     drivers: { prototype: drivers(landed), reference: drivers(reference) },
+    pageZero: { differs: zeroL.flatMap((b, i) => (b === zeroR[i] ? [] : [i.toString(16).padStart(4, "0")])), rule: "a clean boot's 0000h-005Bh: only the word at 0006h" },
     noOffset: noOffset(landed),
     contracts: contracts(landed),
     choices: await choices(landed, rom.used),
