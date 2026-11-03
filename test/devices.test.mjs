@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
-import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, program, standardCard, volume, RTC_SVC } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
 
@@ -55,7 +55,11 @@ test("punch and reader are the serial port, eight bits wide", async () => {
 test("DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PICO9918", async () => {
   const image = standardCard();
   volume(image, "A").write("DEMO.COM", (await program("demo")).bytes);
+  volume(image, "A").write("RTC.SVC", RTC_SVC);
   const m = boot(image, { tms: true, matrix: true });
+  const below = m.read(m.sym("SVCHEAD")); // PICO.SVC's page
+  m.typeMatrix("rtc.svc\r"); // the clock is a service: DEMO finds its record
+  m.runUntil(() => m.ready() && m.read(m.sym("SVCHEAD")) !== below, 400_000_000, "RTC.SVC in");
   assert.equal(m.read(m.sym("ABIMAJ")), 5, "ABI 5");
   m.mark = m.output.length;
   m.typeMatrix("demo\r");

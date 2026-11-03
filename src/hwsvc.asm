@@ -220,38 +220,9 @@ HWSPL:  LD      A,(VWID)
         DJNZ    HWSPL
         JP      HWOK
 
-; ---- Clock ------------------------------------------------------------------------------
-; Seven BCD bytes at HL: seconds, minutes, hours, date, month, weekday, year.
-HWSRTC: PUSH    BC
-        CALL    RTCHAS
-        POP     BC
-        LD      A,TNENODV
-        JP      NZ,HWERR
-        LD      A,B
-        OR      A
-        JR      NZ,HWSRW
-        LD      D,$BF           ; clock burst read
-        CALL    RTCCMD
-        LD      B,7
-HWSRR:  CALL    RTCRD
-        LD      (HL),D
-        INC     HL
-        DJNZ    HWSRR
-        JR      RTCEND
-HWSRW:  LD      DE,$8E00        ; write protect off
-        CALL    RTCPUT
-        LD      D,$BE           ; clock burst write: 7 bytes and the control byte
-        CALL    RTCCMD
-        LD      B,7
-HWSRV:  LD      D,(HL)
-        CALL    RTCWR
-        INC     HL
-        DJNZ    HWSRV
-        LD      D,0
-        CALL    RTCWR
-RTCEND: XOR     A
-        OUT     (RTCPORT),A
-        JP      HWOK
+; ---- Clock ----------------------------------------------------------------------
+; The clock's service is RTC.SVC (drivers/rtc.asm, KD-171). The ROM keeps only
+; what cold boot needs to set CDRTC: RTCHAS and the routines it calls.
 
 ; Z when a DS1302 answers: its seconds register reads below 60h.
 RTCHAS: LD      D,$81
@@ -265,13 +236,6 @@ RTCHAS: LD      D,$81
         XOR     A
         RET
 RTCNO:  OR      1
-        RET
-; Write register D = E.
-RTCPUT: CALL    RTCCMD
-        LD      D,E
-        CALL    RTCWR
-        XOR     A
-        OUT     (RTCPORT),A
         RET
 ; Enable the chip and send the command byte in D.
 RTCCMD: LD      A,$10

@@ -1,11 +1,11 @@
 # The ROM table and the hardware services
 
 Status: **Built**, ABI 5.0. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
-at `C008h`, to 15 *numbered services*: 9 *hardware services* in `src/hwsvc.asm`, and
+at `C008h`, to 14 *numbered services*: 8 *hardware services* in `src/hwsvc.asm`, and
 the volumes', the display drivers' hook and the registry's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,688 bytes (`tecos`) and has 1,696 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,614 bytes (`tecos`) and has 1,770 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -52,8 +52,8 @@ the services and what each side may rely on.
 
 | C | Arguments | Returns |
 | --- | --- | --- |
-| 13, `TNFIND` | DE = a record's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
-| 14, `TNLIST` | B = an index from 0 | Carry clear: HL = that record (a link word, the name, the version, the table's address), A = the generation. Carry set: past the last |
+| 12, `TNFIND` | DE = a record's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
+| 13, `TNLIST` | B = an index from 0 | Carry clear: HL = that record (a link word, the name, the version, the table's address), A = the generation. Carry set: past the last |
 
 Find returns the newest service's record when two publish one name. AF, BC, DE and
 HL are destroyed; IX and IY are kept. Each uses at most 8 bytes of the caller's
@@ -96,7 +96,7 @@ The rules that make the hardware services safe for CP/M programs:
 ## A video driver's table
 
 The consoles on the PICO9918 and the GLCD are drivers, `PICO.SVC` and `GLCD.SVC`,
-below `(0006h)`. INIT calls `TNDRVR` (12) with B = 1 for `CRT:` or 3 for `UC1:` and HL
+below `(0006h)`. INIT calls `TNDRVR` (11) with B = 1 for `CRT:` or 3 for `UC1:` and HL
 pointing at eight words: the routines in the terminal's order (put, get, clear to
 the end of the line, restore, read a row, write a row), a routine for the page
 functions, then a byte of columns and a byte of rows. The seventh word may be 0 on
@@ -134,11 +134,10 @@ unchanged. `docs/services.md` gives a service's rules.
 | 5 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
 | 6 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
 | 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial, or while the PICO9918 is claimed and is the console | 22 | 68 |
-| 8 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
 | | **Total** | | | | **485** |
 
-Numbers 9 to 14 are the volumes', the drivers' hook and the registry's, above and in
-`abi.inc`. Every number from 15 to 255 returns status 1 with the other registers
+Numbers 8 to 13 are the volumes', the drivers' hook and the registry's, above and in
+`abi.inc`. Every number from 14 to 255 returns status 1 with the other registers
 as they came. Stack is the deepest measured use of the
 caller's stack below the return address.
 
@@ -158,8 +157,13 @@ Notes:
   function 2. On the GLCD, whose cells are drawn pixel by pixel, each takes about
   35,000 T-states a cell or more, and they are within 10 percent.
   Edit stays a portable CP/M program and can use it when it finds the signature.
-- `RTC` uses the same bit sequence as MON3: the DS1302 puts each data bit
-  out on a falling clock edge, as Debug80 runtime 0.3.0 models it.
+- The clock is `RTC.SVC` (`drivers/rtc.asm`, KD-171), not a hardware service:
+  `TNFIND` finds its record `RTC`, version 1, whose table's word `RTCCLK` takes
+  B = 0 to read or 1 to set the seven BCD bytes at HL (seconds, minutes, hours,
+  date, month, weekday, year), in 6 bytes of stack. Its INIT refuses unless
+  `INFO`'s bit 3 says a clock answered at cold boot. It uses the same bit
+  sequence as MON3: the DS1302 puts each data bit out on a falling clock edge,
+  as Debug80 runtime 0.3.0 models it. Leaving the ROM saved 74 bytes.
 
 ## What earns ROM space
 
@@ -255,7 +259,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,696<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,770<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
