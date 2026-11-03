@@ -113,16 +113,7 @@ MNSUMB: PUSH    BC
         LD      HL,(MNTPRV)
         LD      DE,BLKBUF
         LD      BC,512
-MNSUM:  LD      A,(DE)
-        ADD     A,L
-        LD      L,A
-        JR      NC,MNSUM1
-        INC     H
-MNSUM1: INC     DE
-        DEC     BC
-        LD      A,B
-        OR      C
-        JR      NZ,MNSUM
+	CALL	SUMDE		; the block added to the sum so far
         LD      (MNTPRV),HL
         POP     BC
         INC     C
@@ -718,16 +709,7 @@ CMPNE:  CCF                     ; flags now describe (HL) - (DE)
 HDRSUM: LD      HL,0
         LD      DE,BLKBUF
         LD      BC,HDRSZ
-HSL:    LD      A,(DE)
-        ADD     A,L
-        LD      L,A
-        JR      NC,HSN
-        INC     H
-HSN:    INC     DE
-        DEC     BC
-        LD      A,B
-        OR      C
-        JR      NZ,HSL
+	CALL	SUMDE		; every header byte
         LD      DE,(BLKBUF+HCKSUM)
         LD      A,E             ; take the two checksum bytes back out
         CALL    HSSUB
@@ -737,6 +719,21 @@ HSSUB:  LD      C,A
         OR      A
         SBC     HL,BC
         RET
+
+; HL = HL + each of the BC bytes at DE, unsigned, for the header's sum and the
+; table blocks' (MOUNT). BC from 1; 0 is 65,536. Returns DE past the bytes and
+; BC = 0. Destroys AF.
+SUMDE:	LD	A,(DE)
+	ADD	A,L		; the byte into the low half,
+	LD	L,A
+	JR	NC,SUMDE1
+	INC	H		; its carry into the high
+SUMDE1:	INC	DE
+	DEC	BC
+	LD	A,B
+	OR	C
+	JR	NZ,SUMDE	; every byte
+	RET
 
 ; IX -> the descriptor of the volume on drive C, read from its block of the
 ; table. NZ if the drive has none or the block does not read. Keeps C.
