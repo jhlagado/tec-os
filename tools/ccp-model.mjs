@@ -161,7 +161,7 @@ const variants = {
 };
 
 function corpus() {
-  const cases = new Set(["", " ", "A:", "P:", "Q:", "@:", "A=", ".TXT", "*.*", "A*.T*", "ABCDEFGH.XYZ", "ABCDEFGHI.XYZ", "A.XYZZ"]);
+  const cases = new Set(["", " ", "A:", "P:", "Q:", "@:", "A=", ".TXT", "*.*", "A*.T*", "ABCDEFGH.XYZ", "ABCDEFGHI.XYZ", "A.XYZZ", "A".repeat(127), "A." + "B".repeat(125)]);
   for (const n of [0, 1, 7, 8, 9, 16]) for (const e of [0, 1, 2, 3, 4, 8])
     for (const d of ["", "A:", "P:", "Q:"]) cases.add(d + "A".repeat(n) + "." + "B".repeat(e));
   for (const b of Array.from({ length: 256 }, (_, n) => n)) {
@@ -264,9 +264,13 @@ for (const [name, change] of Object.entries(variants)) {
   const mismatches = parserRows.flatMap((row, i) => JSON.stringify(row.state) === JSON.stringify(baselineParsers[i].state) ? [] : [i]);
   const result = {
     sha256: sha(r.image), rom: r.census.rom.used, ccp: r.symbols.get("BDOSBAS") - r.symbols.get("CCPBAS"),
+    romRegions: r.census.rom.regions, ramRegions: r.census.ram.regions, stacks: r.census.ram.stacks,
     ram: r.census.ram.regions.find((x) => x.label === "CCP state and stack").bytes,
     tpa: r.census.ram.tpa.bytes, parser: { mismatches: mismatches.length, examples: mismatches.slice(0, 8).map((i) => cases[Math.floor(i / 2)]), cycles: parserRows.reduce((n, r) => n + r.cycles, 0), peak: Math.max(...parserRows.map((r) => r.stack)) },
   };
+  const worst = parserRows.map((row, i) => ({ index: i, delta: row.cycles - baselineParsers[i].cycles })).sort((a, b) => b.delta - a.delta)[0];
+  result.parser.worstCycleDelta = { input: cases[Math.floor(worst.index / 2)], cycles: worst.delta };
+  result.outsideCcpBytes = result.rom - result.ccp;
   if (!name.startsWith("mutant")) {
     const session = sessions(r);
     baselineSession ??= session;
