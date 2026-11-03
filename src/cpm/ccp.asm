@@ -4,8 +4,7 @@
 ; and reviewed black-box CCP fixtures. ATOM is its assembler.
 ;
 ; TEC-OS ROM-resident adaptation (see PROVENANCE.md). The code and text are in
-; ROM; the command buffers, scratch FCBs and stack are in the RAM block at the
-; end of this file. The transient ceiling is the page of the BDOS entry jump
+; ROM; the command buffers, scratch FCBs and stack are in src/ram.asm. The transient ceiling is the page of the BDOS entry jump
 ; (the byte at 0007h), rather than the CCP origin.
 
 CCPBAS:
@@ -96,9 +95,8 @@ MLGOT:  LD      HL,CMDLEN
         INC     HL
         ADD     HL,DE
         LD      (HL),D
-        LD      A,1
-        LD      (CHPOS),A
-        CALL    CHSKIP
+        LD      HL,CMDTXT       ; CHPOS was cleared before acquiring this line
+        CALL    CHSK1
         JR      Z,STARTED       ; nothing but spaces and !
         JR      MLTAKE
 
@@ -230,11 +228,9 @@ NOTDRIVE:
         CALL    CMDPARSE
         LD      (ARGSTRT),HL
 	LD	DE,KEYTAB	; the built-in commands' words
-KEYNXT:	PUSH	DE
-	CALL	ISCMD		; Z: the word, DE at its 0
-	POP	HL		; the word's start
+KEYNXT:	CALL	ISCMD		; DE at the mismatch or the word's 0
+	EX	DE,HL		; skip only the unmatched suffix
 	JR	NZ,KEYSK
-	EX	DE,HL		; the word matched: its handler, after the 0
 	INC	HL
 	LD	A,(HL)		; the handler's address, low byte first
 	INC	HL
@@ -377,8 +373,8 @@ LOADA:	CALL	LOADCOM
 ; Load an ordinary COM image through the public BDOS FCB/DMA interface.
 ; Carry reports missing, unreadable, or oversized input.
 LOADCOM:
-        LD      C,15
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      15*2+0    ; BDOS 15, source FCB
         INC     A
         SCF
         RET     Z
@@ -390,10 +386,7 @@ LOADLOOP:
         JR      Z,LOADLIM
         PUSH    HL
         EX      DE,HL
-        LD      C,26
-        CALL    BDOS
-        LD      C,20
-        CALL    CPSRC
+        CALL    READSRC
         POP     HL
         OR      A
         JR      NZ,LOADEND
@@ -406,10 +399,7 @@ LOADLOOP:
 LOADLIM:
         PUSH    HL
         LD      DE,LOADBUF
-        LD      C,26
-        CALL    BDOS
-        LD      C,20
-        CALL    CPSRC
+        CALL    READSRC
         POP     HL
         CP      1
         JR      Z,LOADOK
@@ -422,13 +412,22 @@ LOADEND:
 
 LOADOK:
         LD      (LOADTOP),HL    ; retain record-rounded extent before CLOSE
-        LD      C,16
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      16*2+0    ; BDOS 16, source FCB
         OR      A
         RET
 
 LOADBAD:
         SCF
+        RET
+
+; DE is the next record's DMA address. Set DMA, then read the source FCB.
+; Each BDOS call holds this helper's return word plus its own return word.
+READSRC:
+        LD      C,26
+        CALL    BDOS
+        CALL    DOSSEQ
+        DB      20*2+0    ; BDOS 20, source FCB
         RET
 
 ; DIR uses only search-first/search-next and the public DMA directory record.
@@ -454,7 +453,6 @@ DIRREADY:
         CALL    BDOS
         XOR     A
         LD      (DIRCOL),A
-        LD      (DIRANY),A
         LD      H,A
         LD      L,A
         LD      (DIRNUM),HL
@@ -477,8 +475,8 @@ DIRWSET:
 DIRWOK:
         LD      (DIRNCOL),A
         CALL    PGINIT
-        LD      C,17
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      17*2+0    ; BDOS 17, source FCB
 
 DIRLOOP:
         INC     A
@@ -499,7 +497,7 @@ DIRLOOP:
         BIT     7,(HL)
         POP     HL
         JR      NZ,DIRNEXT
-        LD      (DIRENTP),HL
+        PUSH    HL              ; live until DIRNAME; abort resets SP
         LD      A,(DIRCOL)
         OR      A
         JR      Z,DIRHEAD
@@ -508,20 +506,21 @@ DIRLOOP:
         JR      DIRNAME
 
 DIRHEAD:
-        LD      A,(DIRANY)
-        OR      A
+        LD      A,(DIRNCOL)    ; columns remaining in this row
+        LD      (DIRCOL),A
+        LD      HL,(DIRNUM)
+        LD      A,H
+        OR      L
         JR      Z,DIRNAME
         CALL    PGCRLF
         JP      C,STARTED       ; stopped at a page pause
 
 ; One entry as NAME.EXT, padded to 12 unless it ends the line.
 DIRNAME:
-        LD      A,1
-        LD      (DIRANY),A
         LD      HL,(DIRNUM)
         INC     HL
         LD      (DIRNUM),HL
-        LD      HL,(DIRENTP)
+        POP     HL
         INC     HL
         LD      B,8
         LD      C,0             ; characters printed
@@ -536,16 +535,9 @@ DIRNAME:
         LD      B,3
         CALL    PUTTRIM
 DIRPAD:
-        LD      A,(DIRCOL)
-        INC     A
-        LD      HL,DIRNCOL
-        CP      (HL)
-        JR      C,DIRPADL
-        XOR     A
-        LD      (DIRCOL),A
-        JR      DIRNEXT
-DIRPADL:
-        LD      (DIRCOL),A
+        LD      HL,DIRCOL
+        DEC     (HL)
+        JR      Z,DIRNEXT
 DIRPADC:
         LD      A,C
         CP      12
@@ -556,13 +548,14 @@ DIRPADC:
         JR      DIRPADC
 
 DIRNEXT:
-        LD      C,18
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      18*2+0    ; BDOS 18, source FCB
         JP      DIRLOOP
 
 DIRDONE:
-        LD      A,(DIRANY)
-        OR      A
+        LD      HL,(DIRNUM)
+        LD      A,H
+        OR      L
         JP      Z,FILENO
 
 ; Footer: "n files, nK free" for the drive listed.
@@ -792,22 +785,13 @@ PUTDP:  POP     HL
         CALL    PUTCHAR
         JR      PUTDP
 
-PUTNAME:
-        LD      A,(HL)
-        AND     $7F
-        LD      E,A
-        CALL    PUTCHAR
-        INC     HL
-        DJNZ    PUTNAME
-        RET
-
 ; TYPE streams public 128-byte records and stops at CP/M text EOF.
 CMDTYPE:
         CALL    ARGSKIP
         JR      Z,FILENO
         CALL    ONENAME
-        LD      C,15
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      15*2+0    ; BDOS 15, source FCB
         INC     A
         JR      Z,FILENO
         LD      DE,LOADBUF
@@ -816,8 +800,8 @@ CMDTYPE:
         CALL    PGINIT
 
 TYPEREAD:
-        LD      C,20
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      20*2+0    ; BDOS 20, source FCB
         OR      A
         JR      NZ,TYPEEND
         LD      HL,LOADBUF
@@ -839,8 +823,8 @@ TYPEBYTE:
         JR      TYPEREAD
 
 TYPEEND:
-        LD      C,16
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      16*2+0    ; BDOS 16, source FCB
         JP      STARTED
 
 FILENO:
@@ -887,8 +871,8 @@ ERAGOT:
         LD      (ERAALL),A
 
 ERADEL:
-        LD      C,19
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      19*2+0    ; BDOS 19, source FCB
         INC     A
         JR      Z,FILENO
         LD      A,(ERAALL)
@@ -947,8 +931,8 @@ RENTEST:
         LD      DE,CMDFCB+16
         LD      BC,12
         LDIR
-        LD      C,23
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      23*2+0    ; BDOS 23, source FCB
         INC     A
         JP      Z,FILENO
         JP      MAINLOOP
@@ -1021,27 +1005,27 @@ CPGO:
         LD      DE,DEFDMA
         LD      C,26
         CALL    BDOS
-        LD      C,15
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      15*2+0    ; BDOS 15, source FCB
         INC     A
         LD      DE,CPNOSRC
         JR      Z,CPFAIL
-        LD      C,19
-        CALL    CPDST
-        LD      C,22
-        CALL    CPDST
+        CALL    DOSSEQ
+        DB      19*2+1    ; BDOS 19, destination FCB
+        CALL    DOSSEQ
+        DB      22*2+1    ; BDOS 22, destination FCB
         INC     A
         LD      DE,CPNODST
         JR      Z,CPFAIL
         LD      HL,0
         LD      (DIRNUM),HL
 CPLOOP:
-        LD      C,20
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      20*2+0    ; BDOS 20, source FCB
         OR      A
         JR      NZ,CPDONE
-        LD      C,21
-        CALL    CPDST
+        CALL    DOSSEQ
+        DB      21*2+1    ; BDOS 21, destination FCB
         OR      A
         LD      DE,CPWRITE
         JR      NZ,CPFAIL
@@ -1050,8 +1034,8 @@ CPLOOP:
         LD      (DIRNUM),HL
         JR      CPLOOP
 CPDONE:
-        LD      C,16
-        CALL    CPDST
+        CALL    DOSSEQ
+        DB      16*2+1    ; BDOS 16, destination FCB
         INC     A
         LD      DE,CPCLOSE
         JR      Z,CPFAIL
@@ -1066,15 +1050,21 @@ CPDONE:
 CPFAIL:
         JP      ERRGO
 
-; BDOS function C on CMDFCB, the command's file or COPY's source (CPSRC), or on
-; RENFCB, COPY's destination (CPDST): every CCP call on the command's FCB goes
-; through CPSRC. Returns as the BDOS does.
-CPSRC:
+; One inline byte after CALL: BDOS function*2 + destination bit (0=CMDFCB,
+; 1=RENFCB). Advance the return PC past it, preserving HL, B and A. BDOS owns
+; DE/C and its normal result registers/flags. SRL changes incoming flags;
+; BENTRY overwrites them with CP before any handler dispatch. No frame is
+; added here; the READSRC terminal CALL/byte/RET holds one extra return word.
+DOSSEQ:
+        EX      (SP),HL
+        LD      C,(HL)
+        INC     HL
+        EX      (SP),HL
+        SRL     C
         LD      DE,CMDFCB
-        JP      BDOS
-CPDST:
+        JR      NC,DOSGO
         LD      DE,RENFCB
-        JP      BDOS
+DOSGO:  JP      BDOS
 
 ; Print A as two hex digits by BDOS function 2, through console.asm's HEXHL.
 ; Destroys AF, BC, DE, HL.
@@ -1227,10 +1217,10 @@ SAVENEND:
         JP      Z,BADCMD
         CALL    ONENAME
 
-        LD      C,19
-        CALL    CPSRC
-        LD      C,22
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      19*2+0    ; BDOS 19, source FCB
+        CALL    DOSSEQ
+        DB      22*2+0    ; BDOS 22, source FCB
         INC     A
         JR      Z,SAVENOSP
         LD      HL,TPA
@@ -1253,8 +1243,8 @@ SAVE128:
         LD      DE,(SAVEADR)
         LD      C,26
         CALL    BDOS
-        LD      C,21
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      21*2+0    ; BDOS 21, source FCB
         OR      A
         SCF
         RET     NZ
@@ -1266,8 +1256,8 @@ SAVE128:
         RET
 
 SAVECLS:
-        LD      C,16
-        CALL    CPSRC
+        CALL    DOSSEQ
+        DB      16*2+0    ; BDOS 16, source FCB
         INC     A
         JR      Z,SAVENOSP
         JP      MAINLOOP
@@ -1308,15 +1298,13 @@ TAILDONE:
         LD      (DE),A
         LD      DE,CMDTAIL
         LD      C,26
-        CALL    BDOS
-        RET
+        JP      BDOS
 
-; Parse one CP/M file reference into the first 16 bytes of an FCB. HL points
+; Parse one CP/M file reference into a cleared 36-byte FCB. HL points
 ; at the first token byte and returns at its delimiter. A '*' expands to '?'
 ; through the remainder of its current field.
 PARSEFCB:
         LD      (FCBBASE),DE
-        PUSH    HL
         PUSH    DE
         XOR     A
         LD      (DE),A
@@ -1340,7 +1328,6 @@ FCBZERO:
         INC     DE
         DJNZ    FCBZERO
         POP     DE
-        POP     HL
 
         LD      A,(HL)
         OR      A
@@ -1373,13 +1360,12 @@ FCBNAME:
 
 FCBDOT:
         INC     HL
-        PUSH    HL
-        LD      HL,(FCBBASE)
-        LD      DE,9
-        ADD     HL,DE
-        EX      DE,HL
-        POP     HL
-        LD      B,3
+        LD      A,E             ; B is the unfilled part of the name field
+        ADD     A,B
+        LD      E,A
+        JR      NC,FCBTYP
+        INC     D
+FCBTYP: LD      B,3
         JR      PARFLD
 
 FCBDRBAD:
@@ -1404,14 +1390,7 @@ PARSKIP:
 
 PARLONG:
         INC     HL
-        LD      A,(HL)
-        OR      A
-        JR      Z,PLEND
-        CP      SPACE
-        JR      Z,PLEND
-        CP      '='
-        JR      Z,PLEND
-        CP      '.'
+        CALL    FCBEND
         JR      NZ,PARLONG
 
 PLEND:
@@ -1428,25 +1407,11 @@ UNAMBIG:
         INC     HL
         LD      A,(HL)
         CP      SPACE
-        JR      Z,UNAMBAD
-        LD      B,11
-
-UNAMLOOP:
-        LD      A,(HL)
-        CP      '?'
-        JR      Z,UNAMBAD
-        INC     HL
-        DJNZ    UNAMLOOP
-        POP     BC
-        POP     HL
-        OR      A
-        RET
-
-UNAMBAD:
-        POP     BC
-        POP     HL
-        SCF
-        RET
+        JR      Z,CHRRET
+        LD      BC,11
+        LD      A,'?'
+        CPIR                    ; equality means an ambiguous name
+        JR      CHRRET
 
 ; CP/M 2.2 reserves these characters inside filename and filetype fields.
 ; Dot and equals are handled as grammar delimiters, while question mark and
@@ -1455,22 +1420,14 @@ VALIDCHR:
         PUSH    HL
         PUSH    BC
         LD      HL,BADCHARS
-        LD      B,13
-
-VLDLOOP:
-        CP      (HL)
-        JR      Z,VALIDBAD
-        INC     HL
-        DJNZ    VLDLOOP
-        POP     BC
-        POP     HL
-        OR      A
-        RET
-
-VALIDBAD:
-        POP     BC
+        LD      BC,13
+        CPIR                    ; equality means a forbidden byte
+; Both scans preserve HL/BC and return carry for a match (invalid/ambiguous).
+CHRRET: POP     BC
         POP     HL
         SCF
+        RET     Z
+        OR      A
         RET
 
 PARSTAR:
@@ -1587,12 +1544,12 @@ STBOOT:	LD	HL,STPOS
 	LD	DE,STREC	; the record goes where STLINE reads it
 	LD	C,26
 	CALL	BDOS
-	LD	C,15		; no file ends here
-	CALL	CPSRC
+        CALL    DOSSEQ
+        DB      15*2+0    ; BDOS 15, source FCB
 	INC	A
 	JR	Z,STBDMA
-	LD	C,20		; one record, and an empty file ends here
-	CALL	CPSRC
+        CALL    DOSSEQ
+        DB      20*2+0    ; BDOS 20, source FCB
 	OR	A
 	JR	NZ,STBDMA
 	INC	A		; STPOS 1, the file's first byte
