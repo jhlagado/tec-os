@@ -12,7 +12,7 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,854 bytes on the
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,869 bytes on the
   starter card and at least 46,086 on any card, 1,536 bytes less on a board
   with a display driver. EXPAND 1 is TEC-OS's own: its block cache and history. TEC-OS says so at boot and stops if either half
   is missing.

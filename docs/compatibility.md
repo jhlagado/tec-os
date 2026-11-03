@@ -127,16 +127,17 @@ A service is a resident in TEC-OS's own `.SVC` format, with an installation
 that can fail cleanly and a registry through which programs find its
 records (`ABISVC`, ABI 4). `docs/services.md` is its interface. It goes in
 whole pages just below the BDOS entry, and the word at `0006h` moves down to
-the jump at its offset 6, which leads on to the old entry; warm boot keeps it
-there. Programs that size themselves from `0006h` never reach it. Services are
+the page's start, which holds a jump straight into the BDOS, however many are in;
+warm boot keeps it there. Programs that size themselves from `0006h` never reach it, a
+stack set from that word included. Services are
 removed last in, first out, and a reset clears them. Nothing of this changes
 the TPA when no service is installed, and a program written for CP/M sees
 neither.
 
 ## Base page
 
-Warm boot at `0000h`, BDOS vector at `0005h` (target `B806h` on the starter card, always an
-`xx06h` address), IOBYTE at
+Warm boot at `0000h`, BDOS vector at `0005h` (target `B815h` on the starter card, directly
+below the allocation vectors), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
 `0100h`. The BIOS jump table is at `BF00h`, the top page of EXPAND 0, and
@@ -229,10 +230,10 @@ The table ends at `C018h`. `C01Dh` holds a `RET`, for an ABI 3 card's programs.
 `PUTAT` returns status 2 on the serial terminal, or while the PICO9918 is claimed and
 is the console: with the console on `UC1:`, a claim leaves it working.
 
-The restart vectors today: `PZINIT` writes `EI; RETI` at `0038h` and, at cold boot
-and every warm boot, seven zeros and a `RET` over every vector at `0008h` to `0037h`
-that isn't a jump into ROM, so a free slot's first byte is 00h. Resident RST hooks
-are unsupported and survive no warm boot.
+The restart vectors today: at cold boot, every warm boot, an unload and a failed
+`INIT`, a sweep gives each vector at `0008h` to `003Fh` that isn't a `JP` at or above
+`PZTOP`'s page seven zeros and a `RET`, or `EI; RETI` at `0038h`, so a free slot's first
+byte isn't `C3h`. A service claims its vectors in its flags, by `docs/services.md`.
 
 ### The BDOS
 
@@ -261,6 +262,6 @@ a chained line.
 | BDOS | Function 47 added. 25 and 29 refuse every byte of EXPAND 1. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 3 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
-| Page zero | `0040h` to `004Fh` hold the same names, and `EXPANDS` is always 2. The next stage changes page zero after a warm boot: this commit doesn't hold it fixed | State moved there |
+| Page zero | `0040h` to `004Fh` hold the same names, and `EXPANDS` is always 2. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
-| TPA | 46,854 on the starter card with no display, and 1,536 less with each display's driver | 45,830 at `7029f57` |
+| TPA | 46,869 on the starter card with no display, 45,312 with one display's driver and 43,776 with two | 45,830 at `7029f57` |

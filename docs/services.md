@@ -27,13 +27,13 @@ loader ignores what follows its relocation data.
 
 | Offset | Bytes | In the file | In memory |
 | --- | --- | --- | --- |
-| 0 | 1 | Magic, `44h` | The registry's head before it, 2 bytes |
+| 0 | 1 | Magic, `44h` | `JP BENTRY`, 3 bytes |
 | 1 | 1 | Format version, 3 | |
-| 2 | 1 | Number of dependencies | The owner before it, a page |
-| 3 | 1 | Flags: bit 0 removable | The same; 0 if a hook kept the pages |
+| 2 | 1 | Number of dependencies | |
+| 3 | 1 | Flags: bit 0 removable, bits 1 to 7 claim `RST 1` to `RST 7` | The same; 0 if a hook kept the pages |
 | 4 | 2 | `REMOVE`, from the header's start | The same |
-| 6 | 2 | Header and image, in bytes | `JP` to the top before it, 3 bytes |
-| 8 | 2 | Extra memory after the image, not cleared | Its low byte is the `JP`'s last |
+| 6 | 2 | Header and image, in bytes | The registry's head before it |
+| 8 | 2 | Extra memory after the image, not cleared | Low byte: the owner before it, a page, 0 at the last |
 | 10 | 2 | Relocation data, in bytes | Unused |
 | 12 | 3 | Stack use: BDOS, BIOS, CCP | Each stack's room left below this service |
 | 15 | 2 | `INIT`, from the header's start | Unused |
@@ -41,8 +41,13 @@ loader ignores what follows its relocation data.
 | 25 | | The image | |
 
 The header is 25 bytes and goes into memory with the image, the loader writing
-over the fields a load has finished with, so the file carries no padding. The
-`JP` lands at the page's `xx06h`, where `(0006h)` must point.
+over the fields a load has finished with, so the file carries no padding.
+
+With a service in, `(0006h)` is its page's start. The `JP` there goes straight into
+the BDOS, so a BDOS call is two jumps however many services are in, and every field a
+service needs lies at or above that word, where a program that sets SP from it can't
+reach. With none in, `(0006h)` is the stub directly below the allocation vectors,
+`B815h` on the starter card and lower on a card with more volumes.
 
 Format version 3 has version 1's layout. It rose with ABI 4, which moved the table's
 entries and took the font out of the ROM: services test no ABI, so the loader refuses
@@ -142,10 +147,11 @@ A load runs only with no `INIT` or `REMOVE` running, which `SVCBSY` says. In ord
 2. Each dependency must be installed, at its least version or above.
 3. Each stack's figure must fit the room left.
 4. The image is relocated and any fixup past it refused.
-5. The header and image move to their pages and `(0006h)` is lowered.
-6. `INIT` runs. `PZTOP` is untouched, so a warm boot during `INIT` puts the
+5. A restart vector claimed in the flags must not hold a `JP`.
+6. The header and image move to their pages and `(0006h)` is lowered.
+7. `INIT` runs. `PZTOP` is untouched, so a warm boot during `INIT` puts the
    ceiling back by itself.
-7. The records are checked and linked, and `PZTOP` is written. That word is the
+8. The records are checked and linked, and `PZTOP` is written. That word is the
    commit.
 
 Until step 5 a refusal leaves everything but the file as it was. `SVCLOAD`
@@ -249,7 +255,8 @@ program there claims the VDP and writes the ports.
 owner list's head is its page. If the flag says it isn't
 removable, or its `REMOVE` refuses, `UNLOAD` says so and changes nothing.
 Otherwise the registry and owner heads go back to what they were before it, the
-generation rises, and `PZTOP` and `(0006h)` go back to the top before it. Warm
+generation rises, and `PZTOP` and `(0006h)` go back to the top before it. The slots
+the service claimed and any vector into its pages then take their defaults. Warm
 boot keeps services and the registry; a reset empties both.
 
 ## Rules for a source
@@ -258,5 +265,39 @@ A service calls the ROM table and nothing else, and carries what it needs
 that the ROM doesn't offer: each display driver has its own font, checked by the
 build against `format/font5x7.txt`. The build refuses a source
 in `drivers/`, or `test/programs/svc*.asm`, that names a ROM address; `abi.inc`'s
-names are the way in. No service owns an interrupt: `PZINIT` rewrites `0038h` and
-the restart vectors at each warm boot, so a handler wouldn't last until `REMOVE`.
+names are the way in.
+
+## Restart vectors and interrupts
+
+Memory above the TPA is of three kinds: service resident memory, the workspace with
+the RAM BIOS table, and the ROM. At cold boot, at every warm boot, after an unload and
+after a failed `INIT`, a sweep of `0008h` to `003Fh` keeps a `JP` whose target's page is
+at or above `PZTOP`'s page, and gives anything else its default: seven zeros and a
+`RET`, or `EI; RETI` at `0038h`, the rest of that vector zero. The bound keeps all
+three kinds. It also keeps a jump into the bytes of the stub's page below the stub,
+which are the TPA's, and into a service's header.
+
+A service claims `RST 1` to `RST 7` by flags bits 1 to 7. A load whose claimed slot
+holds a `JP` is refused with nothing changed, `SVCRC` 0. `INIT` writes the vector
+itself, so a write it didn't declare goes unseen, the rule that binds `ABIGLCD`'s table,
+and a `JP` a finished program left into ROM counts as held until a reset. Unload gives
+the claimed slots their defaults whatever they hold, and sweeps. A jump the service set
+outside its pages in a slot it didn't claim is `REMOVE`'s to restore. A failed `INIT`
+runs no `REMOVE`, so that, and turning off any interrupt source, are `INIT`'s duty. A
+source left on under the default `EI; RETI` repeats for ever, and a warm boot inside
+`INIT` leaves one on. A reset forgets the service and clears its vectors.
+
+Nothing in the ROM enables interrupts: cold boot and warm boot leave them off, and each
+routine that masks them restores what it found. A kept `0038h` therefore does nothing
+after a warm boot until a program or a service sets `EI`, and a warm-boot hook chains
+into `WBOOTR` with no service code after it. `MAIN 1` keeps its cold-boot page zero
+for good, so a service whose vector matters there writes its own copy last, as with
+hooks, and restores it in `REMOVE`. A warm boot inside `INIT` leaves that copy stale,
+and no sweep reaches it.
+
+The ROM and the display drivers mask what an interrupt could split: `VPAIR` for each
+pair written to the VDP's control port, and serial's `TXBYTE` and `RXBITS` for a whole
+byte, while their start-bit polls stay open. A program holding the claim masks its
+own pairs. Function 47 from `INIT` or `REMOVE` is a warm boot there, like function 0,
+`^C` or a disk error: from `INIT` the load rolls back, and from `REMOVE` the service
+stays listed.

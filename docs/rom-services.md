@@ -135,10 +135,11 @@ table already, or with no matrix keyboard. HL = 0 drops the mode's table, with c
 clear, and the console is chosen again at its next call. A destroys; BC is kept.
 It uses 2 bytes of the caller's stack.
 
-Page zero's restart vectors at `0008h–0037h` are left to programs and
-debuggers. A warm boot, like a cold boot, puts seven zeros and a `RET` in
-each one that does not jump into ROM, so an RST through a vector a finished
-program left returns at once with the interrupt state unchanged.
+Page zero's restart vectors at `0008h–003Fh` are left to programs, debuggers and
+services. A warm boot, like a cold boot, puts seven zeros and a `RET`, or `EI; RETI`
+at `0038h`, in each one that doesn't jump to a page at or above `PZTOP`'s, so an RST
+through a vector a finished program left returns at once with the interrupt state
+unchanged. `docs/services.md` gives a service's rules.
 
 ## The hardware services
 
