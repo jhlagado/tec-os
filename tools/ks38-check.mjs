@@ -5,9 +5,10 @@
 //
 //   node tools/ks38-check.mjs same --baseline REV
 //       the image byte for byte: a rename's check
-//   node tools/ks38-check.mjs labels --baseline REV [--renames FILE]
+//   node tools/ks38-check.mjs labels --baseline REV [--renames FILE] [--markers A,B]
 //       label by label, an address in the ROM taken by its label: a move's
-//       check. FILE is JSON, {"OLD": "NEW", ...}, the labels renamed since REV.
+//       check. FILE is JSON, {"OLD": "NEW", ...}, the labels renamed since REV;
+//       the markers, such as ROMDATA, mark a place and are left out.
 //   node tools/ks38-check.mjs names NAME ... | --list FILE
 //       the old file and label names, as whole words, in src/; history and
 //       generated files are outside. FILE holds one name a line.
@@ -55,7 +56,8 @@ async function main() {
     const { rev, side } = await baseline();
     const file = M.arg("--renames");
     const renames = file ? JSON.parse(readFileSync(file, "utf8")) : {};
-    const r = compareLabels(side, here(), { renames });
+    const markers = (M.arg("--markers") ?? "").split(",").filter(Boolean);
+    const r = compareLabels(side, here(), { renames, markers });
     if (r.same) console.log(`${r.groups} label groups equal ${rev}'s, ${r.masked} addresses, ${r.maskedBytes} address halves and ${r.maskedJumps} relative jumps taken by their labels, ${r.used[1]} bytes used`);
     else for (const d of r.differences) console.log(JSON.stringify(d));
     return r.same;

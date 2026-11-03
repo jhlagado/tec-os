@@ -74,14 +74,17 @@ const samePlace = (p, q) => p !== null && q !== null && p.offset === q.offset &&
  * an address of the same place on both sides, the same offset from the same
  * label, a byte that is the low or high half of one label's address on both
  * sides, as CP LOW(BENTRY) is, and a relative jump's displacement to the same
- * place, when code moves between the jump and its target. RENAMES maps BASE's names to MOVED's. Names missing or extra,
+ * place, when code moves between the jump and its target. MARKERS are labels
+ * that mark a place, such as the data block's start, not what follows them:
+ * they are left out. RENAMES maps BASE's names to MOVED's. Names missing or extra,
  * constants that differ (an address in the ROM again taken by its place) and
  * the bytes used are reported too.
  */
-export function compareLabels(base, moved, { renames = {} } = {}) {
+export function compareLabels(base, moved, { renames = {}, markers = [] } = {}) {
   const fromMoved = Object.fromEntries(Object.entries(renames).map(([old, now]) => [now, old]));
-  const gb = groups(base);
-  const gm = groups(moved, fromMoved);
+  const unmarked = (side) => ({ ...side, labels: side.labels.filter((l) => !markers.includes(l.name)) });
+  const gb = groups(unmarked(base));
+  const gm = groups(unmarked(moved), fromMoved);
   const where = { base: locator(gb), moved: locator(gm) };
   const inMoved = new Map(gm.flatMap((g) => g.names.map((n) => [n, g])));
   const named = new Set(gb.flatMap((g) => g.names));

@@ -112,3 +112,12 @@ test("a relative jump whose displacement changes but whose target is the same la
   assert.equal(compareLabels(base, side(true, 0)).maskedJumps, 1);
   assert.deepEqual(compareLabels(base, side(true, 2)).differences.map((d) => [d.kind, d.label]), [["bytes", "A"]]);
 });
+
+test("a marker that shared its address with a label moved away is reported, and left out when named", () => {
+  // M marks the block's start; A and B trade places, so M is at B in the moved image.
+  const side = (a, b) => ({ image: Buffer.alloc(0x40), labels: [{ name: "M", address: 0xc010 }, { name: "A", address: a }, { name: "B", address: b }], constants: new Map(), end: 0xc030 });
+  const base = side(0xc010, 0xc020);
+  const moved = side(0xc020, 0xc010);
+  assert.ok(compareLabels(base, moved).differences.some((d) => d.kind === "apart"));
+  assert.deepEqual(compareLabels(base, moved, { markers: ["M"] }).differences, []);
+});
