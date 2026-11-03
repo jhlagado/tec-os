@@ -45,7 +45,13 @@ function run(r, board, answer) {
   m.runUntil(() => m.waitingForInput() && m.text(from).endsWith("[more]"), 600000000, "directory page pause");
   const paused = m.text(from), atPause = m.cycles;
   phase = "afterAnswer";
-  m.type(answer);
+  // On this matrix layout the key mapped from byte 03h is Up, producing an
+  // ANSI sequence. Supply the pager byte at the BDOS pending-input boundary
+  // for GLCD; serial answers still travel through the emulated terminal.
+  if (board === "glcd") {
+    m.write(m.sym("PENDCHR"), answer.charCodeAt(0));
+    m.write(m.sym("PENDING"), 1);
+  } else m.type(answer);
   const idle = () => m.ready() && m.read(m.sym("CHPOS")) === 0 && /A>$/.test(m.text(from));
   m.runUntil(idle, 200000000, "final prompt after answer");
   const stopped = m.text(from), stoppedUser = m.read(4) >> 4;
@@ -56,7 +62,7 @@ function run(r, board, answer) {
   assert.equal(m.read(4) >> 4, 3, "next command executes after abort");
   assert.deepEqual(writes, [], "no transient write into the CCP stack guard");
   assert.deepEqual(m.violations, []);
-  return { board, answer: answer.charCodeAt(0), width: m.read(m.sym("VWID")), height: m.read(m.sym("VHGT")), paused, stopped, stoppedUser, recovery: m.text(recoveryFrom), peaks: Object.fromEntries(Object.entries(low).map(([p, v]) => [p, top - v])), guardWrites: writes.length, cycles: { toPause: atPause - start, afterAnswer: m.cycles - atPause } };
+  return { board, answer: answer.charCodeAt(0), answerDelivery: board === "glcd" ? "BDOS pending-input byte" : "serial terminal", width: m.read(m.sym("VWID")), height: m.read(m.sym("VHGT")), paused, stopped, stoppedUser, recovery: m.text(recoveryFrom), peaks: Object.fromEntries(Object.entries(low).map(([p, v]) => [p, top - v])), guardWrites: writes.length, cycles: { toPause: atPause - start, afterAnswer: m.cycles - atPause } };
 }
 const result = { reference: refs[0], candidate: refs[1], romHashes: refs.map((dir) => createHash("sha256").update(rom(dir).image).digest("hex")), runs: [] };
 for (const board of ["serial", "glcd"]) for (const answer of ["Q", "\x1b", "\x03"]) {
