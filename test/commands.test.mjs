@@ -151,3 +151,25 @@ test("ERA *.* answered with Return alone erases nothing and takes no second Retu
   m.expect(/A>$/, { from: again, maxCycles: 50_000_000 });
   assert.match(m.command("DIR B:"), /NO FILE/);
 });
+
+test("the CCP's printer keeps OUTCHAR's column count and ^P echo", async () => {
+  const m = await machine({ "ONE.DAT": Buffer.alloc(128) });
+  assert.equal(m.read(m.sym("COLUMN")), 2, "A> counted by OUTCHAR: the CCP prints through BDOS function 2");
+  let listed = 0;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("BLIST")) listed += 1;
+    return step();
+  };
+  m.command("\x10DIR"); // ^P on, then DIR
+  assert.ok(listed > 10, `DIR's listing echoed to the list device: ${listed} characters`);
+  m.step = step;
+});
+
+test("FNPRINT ends at $", async () => {
+  // LD DE,MSG / LD C,9 / CALL 5 / RET / MSG: "AB$CD$"
+  const m = await machine({ "P9.COM": Uint8Array.from([0x11, 0x09, 0x01, 0x0e, 0x09, 0xcd, 0x05, 0x00, 0xc9, ...Buffer.from("AB$CD$", "latin1")]) });
+  const out = m.command("P9");
+  assert.match(out, /P9\r\r?\nAB\r?\n?A>/);
+  assert.doesNotMatch(out, /CD/);
+});
