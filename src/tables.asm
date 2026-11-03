@@ -32,7 +32,7 @@ BIOSBAS:JP      COLD            ; 00 cold boot
         JP      BLISTST         ; 2D
         JP      BSECTRN         ; 30
 
-; ---- console.asm -------------------------------------------------------------
+; ---- keyboard.asm ------------------------------------------------------------
 KBARROW:DB      "ABDC"          ; up, down, left, right
 KBSPEC: DB      $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
 KBSHIFT:DB      "<_>?)!@#$%^&*( : +"

@@ -14,6 +14,7 @@
 %INCLUDE "boot.asm"
 %INCLUDE "bios.asm"
 %INCLUDE "console.asm"
+%INCLUDE "keyboard.asm"
 %INCLUDE "term.asm"
 %INCLUDE "video.asm"
 %INCLUDE "tms.asm"
