@@ -529,7 +529,7 @@ export const MUTANTS_KS34 = [
   { name: "mask: RXBITS with no DI", ...ks34(CONF, ["PUSH AF", "DI", "LD D,RXHALF"], ["PUSH AF", "NOP", "LD D,RXHALF"], MASK) },
   { name: "mask: TXBYTE leaves them off", ...ks34(CONF, ["JR NZ,TXS", "POP AF", "RET PO", "EI", "RET"], ["JR NZ,TXS", "POP AF", "RET"], MASK) },
   { name: "mask: RXBITS leaves them off", ...ks34(CONF, ["LD A,C", "RET PO", "EI", "RET"], ["LD A,C", "RET"], MASK) },
-  { name: "mask: RXHALF not re-derived", edits: [text("tools/build.mjs", "1.5 * bit - 51 - 58.5 - kbLate / 2", "1.5 * bit - 51 - kbLate / 2")], tests: ["test/console.test.mjs", "test/console-boundaries.test.mjs"] },
+  { name: "mask: RXHALF not re-derived", edits: [text("tools/build.mjs", "1.5 * bit - 51 - 58.5 - kbLate / 2", "1.5 * bit - 51 - kbLate / 2")], tests: MASK },
   { name: "erratum: IFFGET's bare read", ...ks34("src/cache.asm", ["IFFGET: LD A,I", "RET PE", "LD A,I", "RET"], ["IFFGET: LD A,I", "RET"], MASK) },
   { name: "erratum: VPAIR's bare read", ...ks34(PICOF, ["VPAIR: LD A,I", "JP PE,VPAIR1", "LD A,I"], ["VPAIR: LD A,I"], MASK) },
   { name: "47: the guard outlives a warm boot", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC) },

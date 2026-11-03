@@ -113,6 +113,22 @@ test("RXBITS's eight samples run with interrupts off, and the state comes back",
   }
 });
 
+test("RXBITS samples bit 0 at its middle, with interrupts on and off", () => {
+  const m = boot(standardCard());
+  const rxb = m.sym("RXB");
+  const bit = 4_000_000 / 4800;
+  for (const on of [true, false]) {
+    let start = -1;
+    let first = -1;
+    call(m, m.sym("RXBITS"), {}, on, () => {
+      if (start < 0) start = m.cycles - 17; // the CALL
+      if (first < 0 && m.pc === rxb) first = m.cycles;
+    });
+    // A poll sees the edge 19 T-states late on average, and the IN reads 11 after RXB.
+    assert.ok(Math.abs(first + 11 - start + 19 - 1.5 * bit) <= 24, `the sample ${first + 11 - start + 19} T-states after the edge, on ${on}`);
+  }
+});
+
 /** Call ADDR with interrupts on, clearing P/V once just after the first LD A,I at READ. */
 function erratum(m, addr, regs, read, then = () => {}) {
   const cpu = m.cpu.cpu;
