@@ -242,6 +242,7 @@ function sessions(r) {
   for (const command of commands) {
     const before = m.cycles;
     const output = m.command(command);
+    for (let a = m.sym("STKGUARD"); a < m.sym("STKGUEND"); a++) assert.equal(m.read(a), 0xa5, `${command}: CCP stack guard`);
     rows.push({ command, output, driveUser: m.read(4), code: m.read(m.sym("PRGCODE")) | m.read(m.sym("PRGCODE") + 1) << 8, cycles: m.cycles - before });
   }
   m.cpu.cpu.pc = 0; m.runUntil(() => m.ready(), 200000000, "warm reboot flush");
