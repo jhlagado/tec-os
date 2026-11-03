@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdtemp, rm, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { transform } from 'esbuild';
@@ -23,6 +23,10 @@ const started=performance.now();
 const scratch=await mkdtemp(join(tmpdir(),'ccp-oracle-'));
 const report={kind:'original-system qualification, not TEC-OS parity',pins:{portable:P,debug:D,atom:'0.3.7',runtime:'0.3.3'},inputs,normalization:[],patches:[],geometry:{records:2002,recordBytes:128,tracks:77,sectors:26,systemRecords:52},addresses:{ccp:0xe400,bdos:0xec00,bios:0xfa00},results:[]};
 try {
+ for(const [name,version] of [['atom-z80','0.3.7'],['@jhlagado/debug80-runtime','0.3.3']]){
+  const root=resolve(import.meta.dirname,'../node_modules',name);const pkg=JSON.parse(await readFile(join(root,'package.json'),'utf8'));assert.equal(pkg.version,version);
+  const entries=[];async function walk(dir){for(const e of (await readdir(join(root,dir),{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){if(e.name==='node_modules')continue;const p=join(dir,e.name);if(e.isDirectory())await walk(p);else if(e.isFile())entries.push([p,sha(await readFile(join(root,p)))]);}}await walk('');report.pins[name]={version,treeSha256:sha(JSON.stringify(entries)),files:entries.length};
+ }
  const disk=blob(portable,P,'third_party/cpm22/cpm22.img');
  assert.equal(sha(disk),'7d2898386a77ff3c1e84b0141dad251a19be795befadb7dd8a9ba5965ba4654f');
  const ccp=disk.subarray(0,0x800),bdos=disk.subarray(0x800,0x1600);
@@ -71,7 +75,7 @@ try {
  const logical=(image,name)=>Buffer.from(fs.readCpm22File(image,name));
  let image=install(fresh(),'HELLO.TXT',Buffer.from('HELLO\r\n\x1a'));
  let m=boot(image);assert.equal(m.runUntilOutputSuffix(prompt),prompt);
- let out=command(m,'TYPE HELLO.TXT');assert.equal(out,'TYPE HELLO.TXT\rHELLO\r\n\r\nA>');
+ let out=command(m,'TYPE HELLO.TXT');assert.equal(out,'TYPE HELLO.TXT\r\r\nHELLO\r\n\r\nA>');
  const typeExpected=out;
  report.results.push({name:'boot and TYPE',output:out});
  out=command(m,'REN OTHER.TXT=HELLO.TXT');
@@ -106,4 +110,4 @@ try {
  assert.ok(out.endsWith(prompt));assert.throws(()=>assert.equal(out,typeExpected));report.results.push({name:'negative visible-content control',caught:true,output:out});
  report.elapsedMs=performance.now()-started;report.maxRssKiB=process.resourceUsage().maxRSS;report.status='pass';
  console.log(JSON.stringify(report,null,2));
-} finally {delete globalThis.__ccpOracleRuntime;await rm(scratch,{recursive:true,force:true});}
+} catch(e){report.status='fail';report.error=String(e);console.log(JSON.stringify(report,null,2));throw e;} finally {delete globalThis.__ccpOracleRuntime;await rm(scratch,{recursive:true,force:true});}
