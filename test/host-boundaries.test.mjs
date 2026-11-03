@@ -33,10 +33,16 @@ for (const capacity of ['disk', 'directory']) {
 }
 
 
-/** The page's code from START to END, after its importSave, which the import's handler calls (KE-163). */
+/** The page's function NAME's text. */
+function fn(source, name) {
+  const at = source.indexOf(name);
+  return source.slice(at, source.indexOf("\n}\n", at) + 3);
+}
+
+/** The page's code from START to END, after the helpers the import's handler calls: importSave (KE-163) and serial (KE-168). */
 function withImportSave(source, start, end) {
-  const at = source.indexOf("async function importSave");
-  return `${source.slice(at, source.indexOf("\n}\n", at) + 3)}\n${source.slice(start, end)}`;
+  const serial = source.includes("function serial(") ? `let turn = Promise.resolve();\n${fn(source, "function serial(")}` : "";
+  return `${fn(source, "async function importSave")}\n${serial}\n${source.slice(start, end)}`;
 }
 
 test('replacement reuses all old entries and blocks at both capacity limits', () => {
@@ -182,7 +188,7 @@ for (const running of [true, false]) {
       const useStart = source.indexOf('async function useCard(');
       const autosaveStart = source.indexOf('setInterval(async () =>');
       runInNewContext([
-        source.slice(importStart, source.indexOf('$("drive").addEventListener', importStart)),
+        withImportSave(source, importStart, source.indexOf('$("drive").addEventListener', importStart)),
         source.slice(pauseStart, source.indexOf('setInterval(refreshFiles', pauseStart)),
         source.slice(useStart, source.indexOf('$("starter").addEventListener', useStart)),
         source.slice(autosaveStart, source.indexOf('// ---- Run loop', autosaveStart)),
@@ -238,3 +244,39 @@ for (const running of [true, false]) {
     });
   }
 }
+
+test("a width chosen while an import's files are read is the width on the card the import publishes (KE-168)", async () => {
+  const { image } = card();
+  const source = readFileSync(new URL('../web/src/main.mjs', import.meta.url), 'utf8');
+  const life = source.slice(source.indexOf("let turn = Promise.resolve();"), source.indexOf("\nfunction reset()"));
+  const start = source.indexOf('$("putfile").addEventListener');
+  const end = source.indexOf('$("drive").addEventListener', start);
+  const state = { card: image, display: 'tms', width: '80' };
+  const elements = { drive: { value: 'A' }, astext: { checked: false }, cardinfo: {}, putfile: { addEventListener: (_type, f) => { handler = f; } } };
+  let handler, releaseRead;
+  const readGate = new Promise((ok) => { releaseRead = ok; });
+  const volumeOf = (img) => { const v = parseContainer(img).volumes[0]; return new CpmVolume(volumePayload(img, v), v.g); };
+  const context = {
+    state, CpmVolume, parseContainer, volumePayload, $: (id) => elements[id],
+    saveCard: async () => {}, reset: () => {}, refreshFiles: () => {}, appendSerial: () => {},
+    fetch: async () => ({ json: async () => ({}) }), fetchBytes: async () => new Uint8Array(0),
+    widthDrivers: async () => ({ drivers: {} }), loadRom: async () => ({ rom: new Uint8Array(0), symbols: new Map() }),
+    Machine: class {},
+    // The card's driver stood in for by a file on A: naming the width it was prepared at.
+    prepareCard: (img, _display, width) => { volumeOf(img).write('WIDTH.TXT', new TextEncoder().encode(width)); return { problem: null, note: null, changed: true }; },
+  };
+  const page = source.includes("let turn = Promise.resolve();")
+    ? `${life}\n${fn(source, "async function importSave")}\n${source.slice(start, end)}\nthis.powerOn = powerOn;`
+    : `${source.slice(source.indexOf("async function powerOn"), source.indexOf("\nfunction reset()"))}\n${withImportSave(source, start, end)}\nthis.powerOn = powerOn;`;
+  runInNewContext(page, context);
+  await context.powerOn(); // power on at 80
+  const imported = handler({ target: { files: [{ name: 'new.txt', arrayBuffer: async () => { await readGate; return new Uint8Array([65]).buffer; } }], value: 'x' } });
+  await new Promise((ok) => setTimeout(ok, 0));
+  state.width = '40'; // chosen, and the power on done, while the file is still read
+  await context.powerOn();
+  releaseRead();
+  await imported;
+  const a = volumeOf(state.card);
+  assert.ok(a.find('NEW.TXT'), 'the import published');
+  assert.equal(new TextDecoder().decode(a.read('WIDTH.TXT')).replace(/\0+$/, ''), '40', 'and the card holds the width chosen last');
+});
