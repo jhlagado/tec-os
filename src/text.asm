@@ -1,4 +1,5 @@
-; The data block, continued (data.asm); the code follows it.
+; The data block, continued from tables.asm and gen/geom.asm; the code
+; follows it.
 
 ; ---- diag.asm ----------------------------------------------------------------
 DGERR:  DB      "No volume mounted, error ",0
