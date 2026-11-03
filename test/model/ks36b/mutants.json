@@ -40,11 +40,11 @@
     }
   },
   "mutantsAt": {
-    "promise 1: a volume written through no longer written before the call returns": "1f94710",
-    "promise 2: CWB3's order reversed, the directory line before the data": "1f94710",
-    "promise 3: the warm boot's flush removed": "1f94710",
-    "a flush that stops at its first failure": "1f94710",
-    "a mount that reads into fixed RAM": "1f94710"
+    "promise 1: a volume written through no longer written before the call returns": "8450378",
+    "promise 2: CWB3's order reversed, the directory line before the data": "8450378",
+    "promise 3: the warm boot's flush removed": "8450378",
+    "a flush that stops at its first failure": "8450378",
+    "a mount that reads into fixed RAM": "8450378"
   },
   "mutantScore": {
     "caught": 5,
