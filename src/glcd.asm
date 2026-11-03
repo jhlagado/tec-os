@@ -2,7 +2,7 @@
 ; TNDRVR (abi.inc), and CONSW points the terminal's vector at it for CRT: and
 ; UC1:. Each REMOVE calls it with HL = 0.
 
-; TNDRVR: B = the mode, then GLHOOK's. A refusal returns A = TNEBAD with carry.
+; TNDRVR: B = the mode, then VIDHOOK's. A refusal returns A = TNEBAD with carry.
 SVDRV:	LD	A,B
 	CP	CMCRT		; CRT: or UC1:, and nothing else:
 	JR	Z,SVDRV1	; another B would index past PIVEC's
@@ -11,7 +11,7 @@ SVDRV:	LD	A,B
 	LD	A,TNEBAD	; refused, nothing changed
 	SCF
 	RET
-SVDRV1:	CALL	GLHOOK
+SVDRV1:	CALL	VIDHOOK
 	LD	A,TNEBAD	; kept already, or no matrix keyboard
 	RET	C
 	XOR	A
@@ -23,12 +23,12 @@ SVDRV1:	CALL	GLHOOK
 ; where VRDROW and VWRROW move a row; carry set and nothing changed if a table is
 ; kept already, or there is no matrix keyboard. HL = 0: the table dropped, and
 ; the console chosen again at its next call, carry clear.
-GLHOOK: ADD     A,LOW(PIVEC)-1
+VIDHOOK: ADD     A,LOW(PIVEC)-1
         LD      E,A
         LD      D,HIGH(PIVEC)
         LD      A,H
         OR      L
-        JR      Z,GLHOFF
+        JR      Z,VIDHOFF
         LD      A,(CONDEV)      ; CDMTX, bit 0
         RRCA
         CCF
@@ -46,16 +46,16 @@ GLHOOK: ADD     A,LOW(PIVEC)-1
         LD      HL,LINEBUF
         OR      A
         RET
-GLHOFF: EX      DE,HL
+VIDHOFF: EX      DE,HL
         LD      (HL),D
         INC     HL
         LD      (HL),D
         LD      A,L
         CP      LOW(GLVEC+1)
-        JR      NZ,GLHF1
+        JR      NZ,VIDHF1
         LD      HL,CONDEV       ; CDGLC: no GLCD console now
         RES     2,(HL)
-GLHF1:  XOR     A
+VIDHF1: XOR     A
         LD      (CONMOD),A
         DEC     A
         LD      (CONACT),A

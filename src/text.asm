@@ -104,7 +104,7 @@ SVTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
 ; ---- glcd.asm ----------------------------------------------------------------
 GLCFCB: DB      1,"GLCD    SVC"
 GLCMSG: DB      "GLCD?",0
-DGLCD:  DB      "CARD?",0
+DGCARD: DB      "CARD?",0
 PICMSG:	DB	"PICO?"
 PICCLR:	DB	"     ",0	; PICO?'s blanks wipe any of these words
 STFCB:  DB      1,"STARTUP CMD"

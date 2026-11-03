@@ -4,7 +4,7 @@
 
 DIAG:	LD	SP,BSTK		; the stack the failed mount may have left deep
 	PUSH	AF		; the code, kept across the messages
-	LD	HL,DGLCD	; the LCD, for a board with no terminal
+	LD	HL,DGCARD	; the LCD, for a board with no terminal
 	CALL	LCD3
 	LD	HL,DGERR
 	CALL	PUTS
