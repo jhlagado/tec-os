@@ -21,7 +21,6 @@
 %INCLUDE "lcd.asm"
 %INCLUDE "sd.asm"
 %INCLUDE "vol.asm"
-%INCLUDE "diag.asm"
 %INCLUDE "cpm/ccp.asm"
 %INCLUDE "cpm/bdos.asm"
 %INCLUDE "services.asm"

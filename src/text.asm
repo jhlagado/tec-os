@@ -1,7 +1,7 @@
 ; The data block, continued from tables.asm and gen/geom.asm; the code
 ; follows it.
 
-; ---- diag.asm ----------------------------------------------------------------
+; ---- boot.asm: DIAG ----------------------------------------------------------
 DGERR:  DB      "No volume mounted, error ",0
 DGPROM: DB      "R retry, H header> ",0
 
