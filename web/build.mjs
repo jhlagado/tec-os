@@ -3,7 +3,7 @@
 // images with their label maps, and the starter recipe and files from dist/.
 // Run after npm run build and npm run media.
 
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync, readdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -13,6 +13,7 @@ const WEB = resolve(ROOT, "web");
 const OUT = resolve(WEB, "dist");
 const PROFILES = ["tecos"]; // one image; the width is a driver on the card
 
+rmSync(OUT, { recursive: true, force: true }); // nothing from an older build reaches the page
 mkdirSync(resolve(OUT, "roms"), { recursive: true });
 mkdirSync(resolve(OUT, "files"), { recursive: true });
 
@@ -37,7 +38,8 @@ for (const p of PROFILES) {
     .map((s) => ({ name: s.name, address: s.address ?? s.value }));
   writeFileSync(resolve(OUT, `roms/${p}.symbols.json`), JSON.stringify(labels));
 }
-copyFileSync(resolve(ROOT, "dist/starter.recipe.json"), resolve(OUT, "starter.recipe.json"));
+// The page's card is the starter with DEMO.COM (KD-170), under the name the page fetches.
+copyFileSync(resolve(ROOT, "dist/page.recipe.json"), resolve(OUT, "starter.recipe.json"));
 for (const f of readdirSync(resolve(ROOT, "dist/files"))) {
   copyFileSync(resolve(ROOT, "dist/files", f), resolve(OUT, "files", f));
 }

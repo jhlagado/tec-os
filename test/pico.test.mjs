@@ -697,7 +697,7 @@ test("the web host: power-on writes PICO.SVC at the width, says what a card lack
   const pico = (n) => [...volume(image, "A").read("PICO.SVC").subarray(0, PICO_SVC[n].length)];
   assert.deepEqual(prepareCard(image, "tms", "40", DRIVERS), { problem: null, note: null, changed: true }, "a card with none gets the width's");
   assert.deepEqual(pico("PICO40.SVC"), [...PICO_SVC["PICO40.SVC"]]);
-  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\n");
+  assert.equal(startupText(image), "PICO.SVC\r\nDIR\r\n");
   assert.equal(prepareCard(image, "tms", "40", DRIVERS).changed, false);
   assert.deepEqual(prepareCard(image, "tms", "32", DRIVERS), { problem: null, note: null, changed: true }, "a width change");
   assert.deepEqual(pico("PICO32.SVC"), [...PICO_SVC["PICO32.SVC"]]);
@@ -715,7 +715,7 @@ test("the web host: a PICO.SVC of the card's owner is kept at any width", () => 
   const own = Uint8Array.from(PICO_SVC["PICO40.SVC"]);
   own[own.length - 1] ^= 0xff; // a build of their own: any byte not a starter build's
   a.write("PICO.SVC", own);
-  a.write("STARTUP.CMD", startupFile("PICO.SVC", "GLCD.SVC"));
+  a.write("STARTUP.CMD", startupFile("PICO.SVC")); // the page's line already
   const before = [...volume(image, "A").read("PICO.SVC")];
   const got = prepareCard(image, "tms", "80", DRIVERS);
   assert.deepEqual([got.problem, got.changed], [null, false]);
@@ -771,7 +771,7 @@ test("the web host: a chained startup line loses its display pieces and keeps th
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC"));
   assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\nDIR!:USER 3\r\n");
+  assert.equal(startupText(image), "PICO.SVC\r\nDIR\r\nDIR!:USER 3\r\n");
   assert.equal(prepareCard(image, "tms").changed, false);
 });
 
@@ -790,7 +790,7 @@ test("the web host: a removed piece's colon passes to the piece after it, and on
     a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
     a.write("STARTUP.CMD", startupFile(line));
     prepareCard(image, "tms");
-    assert.equal(startupText(image), `PICO.SVC\r\nGLCD.SVC\r\n${want}\r\n`, line);
+    assert.equal(startupText(image), `PICO.SVC\r\n${want}\r\n`, line);
     assert.equal(prepareCard(image, "tms").changed, false, line);
   }
 });
@@ -809,11 +809,11 @@ test("the web host: a next line's first colon goes with the display piece it hun
     a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
     a.write("STARTUP.CMD", startupFile(...lines));
     prepareCard(image, "tms");
-    assert.equal(startupText(image), `PICO.SVC\r\nGLCD.SVC\r\n${want}\r\n`, lines.join("|"));
+    assert.equal(startupText(image), `PICO.SVC\r\n${want}\r\n`, lines.join("|"));
   }
 });
 
-test("the web host: VOLS on the line after PICO.SVC still runs after a failing GLCD.SVC", () => {
+test("the web host: VOLS on the line after PICO.SVC runs, with no GLCD.SVC line to give way", () => {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
@@ -822,20 +822,21 @@ test("the web host: VOLS on the line after PICO.SVC still runs after a failing G
   prepareCard(image, "tms");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
   m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
-  assert.match(m.text(0), /GLCD\.SVC\?[\s\S]*>VOLS\r/);
+  assert.match(m.text(0), />PICO\.SVC\r[\s\S]*>VOLS\r/);
+  assert.doesNotMatch(m.text(0), /GLCD\.SVC/);
 });
 
-test("the web host: the piece after a display piece loses its colon and still runs after a failing GLCD.SVC", () => {
+test("the web host: the piece after a display piece loses its colon and runs", () => {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("VOLS.COM", Uint8Array.from([0xc9]));
   a.write("STARTUP.CMD", startupFile("PICO.SVC!:VOLS", "DIR!GLCD.SVC!PICO.SVC!:USER 3!:USER 0"));
   prepareCard(image, "tms");
-  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nVOLS\r\nDIR!USER 3!:USER 0\r\n");
+  assert.equal(startupText(image), "PICO.SVC\r\nVOLS\r\nDIR!USER 3!:USER 0\r\n");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
   m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
-  assert.match(m.text(0), /GLCD\.SVC\?[\s\S]*>VOLS\r/, "VOLS isn't dropped by the failed line before it");
+  assert.match(m.text(0), />PICO\.SVC\r[\s\S]*>VOLS\r/, "VOLS runs after the display's line");
   assert.doesNotMatch(m.text(0), /VOLS\?/);
 });
 
@@ -871,7 +872,7 @@ test("the web host: a card whose files were renamed by hand has its .DRV display
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
   assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nMY.DRV\r\n");
+  assert.equal(startupText(image), "PICO.SVC\r\nMY.DRV\r\n");
 });
 
 test("a failed CON UC1 leaves the console as it was, and a later one takes the GLCD", () => {
@@ -884,4 +885,18 @@ test("a failed CON UC1 leaves the console as it was, and a later one takes the G
   say(m, "CON UC1");
   assert.equal(m.read(m0(m)), UC1);
   assert.equal(m.read(3) & 3, UC1);
+});
+
+test("the web host: the page's card boots on the board with both displays with no line refused (KE-150)", async () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
+  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\n", "the starter's own two lines, for a real board");
+  assert.deepEqual(prepareCard(image, "tms", "80", DRIVERS), { problem: null, note: null, changed: true });
+  assert.equal(startupText(image), "PICO.SVC\r\n", "the page writes the chosen display's line alone");
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: true });
+  m.runUntil(() => m.ready() && m.screen().some((l) => /^A>$/.test(l.trim())), 800_000_000, "the prompt");
+  assert.doesNotMatch(m.screen().join("\n"), /\?/, "no line refused on the screen");
+  assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
+  assert.deepEqual(m.violations, []);
 });
