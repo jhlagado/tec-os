@@ -103,18 +103,31 @@ test("a byte that is the low or high half of one label's address is taken by its
 
 test("a relative jump whose displacement changes but whose target is the same label is taken by it, and one to elsewhere is not", () => {
   // A: JR B; between them a 4-byte D that moves out, and C, moving in after B.
-  const side = (moved, disp) => {
+  const side = (moved, disp, op = 0x18, text = "JR\tB") => {
     const image = Buffer.alloc(0x40);
     const labels = moved
       ? [{ name: "A", address: 0xc010 }, { name: "B", address: 0xc012 }, { name: "D", address: 0xc014 }, { name: "C", address: 0xc018 }]
       : [{ name: "A", address: 0xc010 }, { name: "D", address: 0xc012 }, { name: "B", address: 0xc016 }, { name: "C", address: 0xc018 }];
-    image.set([0x18, disp], 0x10);
-    return { image, labels, constants: new Map(), end: 0xc040 };
+    image.set([op, disp], 0x10);
+    return { image, labels, constants: new Map(), segments: [{ start: 0xc010, end: 0xc012, text: `A:\t${text}` }], end: 0xc040 };
   };
   const base = side(false, 4);
   assert.deepEqual(compareLabels(base, side(true, 0)).differences, []);
   assert.equal(compareLabels(base, side(true, 0)).maskedJumps, 1);
   assert.deepEqual(compareLabels(base, side(true, 2)).differences.map((d) => [d.kind, d.label]), [["bytes", "A"]]);
+});
+
+test("a JR NZ turned into JR NC is a difference, even where its two bytes read as an address of the same place (KE-169)", () => {
+  // A: JR NZ or JR NC back 64 bytes, its bytes 20h C0h (C020h) or 30h C0h (C030h); X and Y, 16 bytes
+  // each, trade places, so C020h and C030h are both X's first byte, and only the line says they differ.
+  const side = (moved, op, text) => {
+    const image = Buffer.alloc(0x40);
+    image.set([op, 0xc0], 0x10);
+    const labels = [{ name: "A", address: 0xc010 }, { name: "X", address: moved ? 0xc030 : 0xc020 }, { name: "Y", address: moved ? 0xc020 : 0xc030 }];
+    return { image, labels, constants: new Map(), segments: [{ start: 0xc010, end: 0xc012, text: `A:\t${text}` }], end: 0xc040 };
+  };
+  const base = side(false, 0x20, "JR\tNZ,$-62");
+  assert.deepEqual(compareLabels(base, side(true, 0x30, "JR\tNC,$-62")).differences.map((d) => [d.kind, d.label, d.offset]), [["bytes", "A", 0]]);
 });
 
 test("a marker that shared its address with a label moved away is reported, and left out when named", () => {
