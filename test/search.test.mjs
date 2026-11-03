@@ -87,3 +87,27 @@ test("under user 3, the search looks in A:'s user 3, then A:'s user 0, and puts 
   assert.match(m.command("ONLY3"), /^ONLY3\?\r$/m, "user 0 doesn't look in user 3");
   assert.deepEqual(m.violations, []);
 });
+
+test("the current or named drive looks in user 0 after the current user too: A: under user 3, B:NAME, and B:'s user 0 before A: (A7)", () => {
+  const image = standardCard();
+  volume(image, "A").write("ZERO.COM", SAY("A'S USER 0"));
+  volume(image, "A").write("BOTH.COM", SAY("A'S USER 0 BOTH"));
+  volume(image, "A").write("BOTH.COM", SAY("A'S USER 3 BOTH"), { user: 3 });
+  volume(image, "A").write("NEAR.COM", SAY("A'S USER 3 NEAR"), { user: 3 });
+  volume(image, "B").write("BZERO.COM", SAY("B'S USER 0"));
+  volume(image, "B").write("BTWO.COM", SAY("B'S USER 0 BTWO"));
+  volume(image, "B").write("BTWO.COM", SAY("B'S USER 3 BTWO"), { user: 3 });
+  volume(image, "B").write("NEAR.COM", SAY("B'S USER 0 NEAR"));
+  const m = boot(image);
+  m.command("USER 3");
+  assert.match(m.command("ZERO"), /^A'S USER 0\r$/m, "on A:, A:'s user 0");
+  assert.match(m.command("BOTH"), /^A'S USER 3 BOTH\r$/m, "the current user first");
+  assert.match(m.command("B:BZERO"), /^B'S USER 0\r$/m, "B:NAME in B:'s user 0");
+  assert.match(m.command("B:BTWO"), /^B'S USER 3 BTWO\r$/m, "B:NAME, the current user first");
+  assert.match(m.command("B:ZERO"), /^B:ZERO\?\r$/m, "B:NAME looks on B: only");
+  m.command("B:");
+  assert.match(m.command("BZERO"), /^B'S USER 0\r$/m, "on B:, B:'s user 0");
+  assert.match(m.command("NEAR"), /^B'S USER 0 NEAR\r$/m, "the current drive's user 0 before A:'s");
+  assert.equal(m.read(4), 0x31, "still user 3 on B:");
+  assert.deepEqual(m.violations, []);
+});
