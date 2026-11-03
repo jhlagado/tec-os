@@ -36,7 +36,7 @@ npm ci
 npx playwright install chromium   # once: the browser the page's tests drive
 npm run inputs   # once on a fresh clone: TED.COM and TAS.COM at their pins, in .inputs/
 npm run build    # the ROM image in build/tecos/
-npm test         # host and emulator tests, about 90 seconds
+npm test         # host and emulator tests, several minutes
 npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 ```
 

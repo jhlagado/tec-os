@@ -28,7 +28,7 @@ loader ignores what follows its relocation data.
 | Offset | Bytes | In the file | In memory |
 | --- | --- | --- | --- |
 | 0 | 1 | Magic, `44h` | `JP BENTRY`, 3 bytes |
-| 1 | 1 | Format version, 3 | |
+| 1 | 1 | Format version, 4 (`SVCFMT`) | |
 | 2 | 1 | Number of dependencies | |
 | 3 | 1 | Flags: bit 0 removable, bits 1 to 7 claim `RST 1` to `RST 7` | The same; 0 if a hook kept the pages |
 | 4 | 2 | `REMOVE`, from the header's start | The same |
