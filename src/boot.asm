@@ -319,6 +319,87 @@ RAMOUT: LD      A,(HL)
         JR      RAMOUT
 RAMSTOP:JR      RAMSTOP
 
+; Pack the allocation vectors down from WSBASE, in drive order, and put
+; each one's address in its DPH. A format 1.1 card that asks for N drives
+; gets a G8M-sized slot (256 bytes) for each of drives 0 to N-1, mounted or
+; not, so any drive may later take any volume; any other card gets a slot
+; for each mounted drive, DSM / 8 + 1 bytes, as before. DRVSLOT records what
+; each slot holds. The BDOS entry jump goes directly below them.
+ALVINIT:LD      HL,WSBASE
+        LD      (STUBAD),HL     ; the lowest vector so far
+        LD      C,0
+ALVNX:  LD      A,C             ; HL = the DPH's DPB word, at +10
+        ADD     A,A
+        ADD     A,A
+        ADD     A,A
+        ADD     A,A
+        ADD     A,10
+        LD      L,A
+        LD      H,0
+        LD      DE,DPHTAB
+        ADD     HL,DE
+        PUSH    HL
+        LD      A,(MNTDRV)
+        OR      A
+        JR      Z,ALV10
+        LD      B,A
+        LD      A,C
+        CP      B
+        JR      NC,ALVNO
+        LD      DE,256
+        JR      ALVPUT
+ALV10:  LD      A,C
+        CALL    DRVENT
+        LD      A,(HL)
+        OR      A
+        JR      Z,ALVNO         ; not mounted
+        POP     HL
+        PUSH    HL
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        LD      HL,5            ; DSM
+        ADD     HL,DE
+        LD      E,(HL)
+        INC     HL
+        LD      D,(HL)
+        LD      B,3
+ALVSH:  SRL     D
+        RR      E
+        DJNZ    ALVSH
+        INC     DE
+ALVPUT: LD      HL,DRVSLOT      ; 1 for 64 bytes, 2 for 256
+        LD      B,0
+        ADD     HL,BC
+        LD      A,D
+        INC     A
+        LD      (HL),A
+        LD      HL,(STUBAD)
+        OR      A
+        SBC     HL,DE
+        LD      (STUBAD),HL
+        EX      DE,HL
+        POP     HL
+        INC     HL              ; the ALV word, at +14
+        INC     HL
+        INC     HL
+        INC     HL
+        LD      (HL),E
+        INC     HL
+        LD      (HL),D
+        JR      ALVSKP
+ALVNO:  POP     HL
+ALVSKP: INC     C
+        LD      A,C
+        CP      MAXDRV
+        JR      C,ALVNX
+        LD      HL,(STUBAD)
+        DEC     HL              ; the JP, below the lowest vector
+        DEC     HL
+        DEC     HL
+        LD      (STUBAD),HL
+        RET
+
 ; Diagnostic console, entered when the card or container cannot be mounted.
 ; A = error code: SDE* (01h-0Fh) from the SD driver or ME* (20h-2Fh) from
 ; the mount checks. The console stays usable without a card.
