@@ -175,7 +175,7 @@ export class Machine {
     this.cpu.hardware.forceMemWrite = ram96 ? ram.memWrite : hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     // After cold boot's clear of EXPAND 1 (MEMINIT's LDIR reaching BFFFh),
-    // nothing writes the free page BE00h-BEFFh, and only the block cache
+    // nothing writes the free pages BE00h-BFFFh, and only the block cache
     // writes its 8000h-BCFFh, below the history ring:
     // its own code, the card's block loops, the copy core when the cache
     // called it (the return address on entry to MVCOPY in CDI-CEND), and
@@ -216,7 +216,7 @@ export class Machine {
         if (pc >= coldz && pc < coldz + 0x20) cleared = false;
         else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
           if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
-          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00 && a < 0xbf00)) {
+          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00)) { // BE00h-BFFFh: free since KS36a
             const w = { addr: a, pc };
             this.expand1Writes.push(w);
             if (EXPAND1_WRITES.length < 16) EXPAND1_WRITES.push(w);

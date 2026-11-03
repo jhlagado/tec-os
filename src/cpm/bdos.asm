@@ -565,10 +565,12 @@ CLOSEFCB:
 
 ; An FCB on an earlier extent than its entry's writes back only the
 ; allocation map: the entry's extent and record count describe its last
-; extent. A read-only drive refuses the write first, as CP/M 2.2's close
-; checks the drive (KE-148).
+; extent. On a read-only drive it writes nothing and returns success, as CP/M
+; 2.2's close does (A8, restating KE-148).
 CLOSEDIR:
-	CALL	CHKRO		; R/O, not a failed write
+	CALL	RONZ		; NZ: the drive is read-only
+	LD	A,0
+	RET	NZ		; nothing written, and success
         CALL    FINDEXCT
         CP      $FF
         RET     Z
@@ -2363,8 +2365,8 @@ MASKLOOP:
         DJNZ    MASKLOOP
         RET
 
-CHKRO:
-        CALL    DRVMASK
+; RONZ: NZ if the selected drive is read-only. Changes AF, DE, HL.
+RONZ:	CALL	DRVMASK		; HL = the drive's bit
         LD      DE,(ROVEC)
         LD      A,L
         AND     E
@@ -2372,6 +2374,8 @@ CHKRO:
         LD      A,H
         AND     D
         OR      L
+	RET
+CHKRO:	CALL	RONZ		; writable: on
         RET     Z
         LD      HL,ERRRO
         CALL    DISKERR

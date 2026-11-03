@@ -171,7 +171,7 @@ test("functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the
   assert.deepEqual(volume(image, "A").list().map((x) => [x.name, x.readOnly]), [["R.DAT", true]]);
 });
 
-test("function 16 of a never-opened FCB on a drive function 28 made read-only says R/O, not Bad Sector, and the card is unchanged (KE-148)", () => {
+test("function 16 of a never-opened FCB on a drive function 28 made read-only returns success and writes nothing, as CP/M 2.2's close does (A8, KE-148)", () => {
   const image = standardCard();
   volume(image, "A").write("C.DAT", new Uint8Array(128));
   const r = rig(image);
@@ -179,8 +179,8 @@ test("function 16 of a never-opened FCB on a drive function 28 made read-only sa
   r.fcb(0, "C       DAT"); // never opened: S2's bit 7 is clear
   const before = image.slice();
   const got = attempt(r, 16);
-  assert.match(got.text ?? `returned ${got.a}`, /Bdos Err On A: R\/O/);
-  assert.doesNotMatch(got.text ?? "", /Bad Sector/);
+  assert.equal(got.text, undefined, `no error: ${got.text}`);
+  assert.equal(got.a, 0, "success");
   assert.equal(Buffer.compare(image, before), 0, "the card unchanged");
 });
 

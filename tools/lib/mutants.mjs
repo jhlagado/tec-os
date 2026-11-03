@@ -555,7 +555,7 @@ export const MUTANTS_KS36A = [
   { name: "search: a named drive searched too", ...ks34(CCPF, ["OR A", "JR NZ,BADCMD", "LD A,(PZDU)", "AND $0F", "JR Z,BADCMD", "INC (HL)"], ["OR A", "LD A,(PZDU)", "AND $0F", "JR Z,BADCMD", "LD (HL),1"], SRCH) },
   { name: "search: the current drive left on A:", ...ks34(CCPF, ["INC (HL)", "CALL LOADCOM"], ["INC (HL)", "XOR A", "LD (PZDU),A", "CALL LOADCOM"], SRCH) },
   { name: "KE-149: the case folded before Return", ...ks34(CCPF, ["CP CR", "JP Z,STARTED", "AND $DF"], ["AND $DF", "CP CR", "JP Z,STARTED"], ["test/commands.test.mjs"]) },
-  { name: "KE-148: close writes a read-only drive", ...ks34(BDOSF, ["CALL CHKRO", "CALL FINDEXCT"], ["CALL FINDEXCT"], ["test/cpm22.test.mjs"]) },
+  { name: "KE-148: close writes a read-only drive", ...ks34(BDOSF, ["CALL RONZ", "LD A,0", "RET NZ", "CALL FINDEXCT"], ["CALL FINDEXCT"], ["test/cpm22.test.mjs"]) },
   { name: "EXPAND 1: the warm-boot jump planted again", ...ks34(B, ["WBOOTR: DI", "LD A,LATCLAS"], ["WBOOTR: DI", "LD A,LATCLAS+LATEXP", "OUT (SYSLAT),A", "LD A,$C3", "LD (RAMBIOS+3),A", "LD A,LATCLAS"], EXP) },
   { name: "dispatch: one past the table taken", ...ks34(HWF, ["CP TNCOUNT"], ["CP TNCOUNT+1"], HWT) },
   { name: "dispatch: the last number refused", ...ks34(HWF, ["CP TNCOUNT"], ["CP TNCOUNT-1"], ["test/svc.test.mjs"]) },

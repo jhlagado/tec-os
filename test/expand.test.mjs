@@ -63,3 +63,15 @@ test("BDOS function 50 is gone: it returns 0, as every number past 40 does", () 
   m.runUntil(() => m.pc === 0x0100 + code.length - 2, 10_000_000, "the call's return");
   assert.equal(m.read(0x90), 0);
 });
+
+test("the harness sees a program's write to EXPAND 1's free top page, BF00h-BFFFh, as well (A12)", () => {
+  const m = boot(standardCard(), { ram96: true });
+  // LD A,05h / OUT (FFh),A / LD (BF80h),A / LD A,01h / OUT (FFh),A
+  const code = [0x3e, 0x05, 0xd3, 0xff, 0x32, 0x80, 0xbf, 0x3e, 0x01, 0xd3, 0xff, 0x18, 0xfe];
+  code.forEach((v, i) => m.write(STUB + i, v));
+  m.cpu.cpu.sp = 0x0100;
+  m.cpu.cpu.pc = STUB;
+  m.runUntil(() => m.pc === STUB + code.length - 2, 1_000_000, "the stub");
+  assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbf80]);
+  for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // this one was asked for
+});
