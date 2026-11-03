@@ -15,6 +15,7 @@ SDECMD  EQU     5               ; read or write command rejected
 SDETOK  EQU     6               ; no data token
 SDEWRSP EQU     7               ; write not accepted
 SDEBUSY EQU     8               ; card stayed busy
+SDERNG	EQU	9		; a standard card's block past its 4 GiB
 
 ; Send C, most significant bit first, with /CS low. Destroys AF, B.
 SPIW:   LD      B,8
@@ -204,12 +205,21 @@ SDIOK:  XOR     A
         RET
 
 ; Load SDARG from SDLBA, converting to a byte address for standard-capacity
-; cards. Destroys AF, DE, HL.
+; cards. Carry, and SDARG unchanged, for a standard card's block at 800000h
+; or above, whose byte address would lose its top bits and name a lower block
+; (KE-151). Destroys AF, DE, HL.
 LBAARG: LD      HL,(SDLBA)
         LD      DE,(SDLBA+2)
         LD      A,(SDBYTE)
         OR      A
-        JP      Z,SETARG
+        JP      Z,SETARG        ; block addressing: carry clear
+	LD	A,D		; bits 24-31 of the block
+	OR	A
+	SCF
+	RET	NZ		; past 4 GiB: refused
+	BIT	7,E		; bit 23
+	SCF
+	RET	NZ		; and so is this
         LD      D,E             ; DEHL = LBA << 8
         LD      E,H
         LD      H,L
@@ -223,6 +233,7 @@ LBAARG: LD      HL,(SDLBA)
 ; Read block SDLBA into the 512 bytes at HL.
 SDREAD: PUSH    HL
         CALL    LBAARG
+	JR	C,SDRNG		; no command for a block it can't name
         LD      A,17
         CALL    SDCMD
         POP     HL
@@ -249,6 +260,9 @@ SDRDAT: CALL    SDRBLK
 	JR	SDIOK
 SDRCMD: CALL    SPIEND
         LD      A,SDECMD
+	JR	SDFAIL
+SDRNG:	POP	HL		; the buffer's address
+	LD	A,SDERNG	; refused before any command
 	JR	SDFAIL
 
 ; Receive 512 bytes into the buffer at HL, sending FFh, after the start
@@ -432,6 +446,7 @@ SDWB2:  LD      B,(HL)
 ; finished programming.
 SDWRITE:PUSH    HL
         CALL    LBAARG
+	JP	C,SDRNG		; nothing written for a block it can't name
         LD      A,24
         CALL    SDCMD
         POP     HL
