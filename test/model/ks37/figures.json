@@ -11,11 +11,37 @@
     }
   },
   "textRoom": {
-    "starterNoDisplay": 33067,
-    "floor": 33052,
-    "withPico": 31510,
-    "floorWithDisplay": 31000,
-    "withBothDisplays": "about 29,974 by the 1,536 bytes the GLCD's driver takes: the fail input of the 31,000 floor"
+    "read": "TED X.ASM on the built starter card, TEXCAP at 2551h, at ks37-fix",
+    "serialNoDisplay": {
+      "tpa": 46869,
+      "text": 33067,
+      "loaded": "none: PICO.SVC? and GLCD.SVC?"
+    },
+    "picoOnly": {
+      "tpa": 45312,
+      "text": 31510,
+      "loaded": "PICO.SVC"
+    },
+    "glcdOnly": {
+      "tpa": 45312,
+      "text": 31510,
+      "loaded": "GLCD.SVC"
+    },
+    "bothAsBooted": {
+      "tpa": 45312,
+      "text": 31510,
+      "loaded": "PICO.SVC; GLCD.SVC gives way, GLCD.SVC?"
+    },
+    "bothAfterConUc1": {
+      "tpa": 43776,
+      "text": 29974,
+      "loaded": "PICO.SVC and GLCD.SVC"
+    },
+    "floors": {
+      "noDisplay": 33052,
+      "asBooted": 31000,
+      "note": "KG39 is restated from these figures"
+    }
   },
   "rom": {
     "bytes": 14947,
@@ -56,10 +82,14 @@
         "sha256": "45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2"
       }
     ],
-    "freeOnA": 1007616,
     "blockBytes": 2048,
-    "needOnA": 14336,
-    "failInput": "main at 1c0eb18: 13 files on A:, among them EDIT.COM, VOLS.COM, README.TXT, TERM, DEMO, PROBE, PICO40.SVC and PICO32.SVC"
+    "failInput": "main at 1c0eb18: 13 files on A:, among them EDIT.COM, VOLS.COM, README.TXT, TERM, DEMO, PROBE, PICO40.SVC and PICO32.SVC",
+    "roomOnA": {
+      "statement": "A statement, not a gate: A: holds six files and has 1,007,616 bytes free in 2 KiB blocks, against 14,336 for THOR.PRJ, .SES, .ERR, .$$$ and .BAK at a block each and a 4 KiB source",
+      "free": 1007616,
+      "need": 14336
+    },
+    "widths": "pinned in the recipe by SHA-256: PICO.SVC, PICO40.SVC and PICO32.SVC, served from files/ for the page, not on the card"
   },
   "limits": [
     "TED takes no drive in its argument: TED B:X.ASM is EDIT error 01. The CCP looks for TAS on the current drive only, so work on B: copies TED.COM and TAS.COM there.",

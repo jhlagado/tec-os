@@ -22,5 +22,5 @@ export async function displayFiles(root) {
 export async function widthDrivers(root) {
   const work = resolve(root, "build/svc");
   const names = Object.keys(PICO_WIDTHS).filter((n) => n !== "PICO.SVC");
-  return Promise.all(names.map(async (name) => ({ name, bytes: (await makeSvc(resolve(root, "drivers/pico.asm"), { defs: PICO_WIDTHS[name], work })).file })));
+  return Promise.all(names.map(async (name) => ({ name, cols: PICO_WIDTHS[name].COLS, bytes: (await makeSvc(resolve(root, "drivers/pico.asm"), { defs: PICO_WIDTHS[name], work })).file })));
 }

@@ -300,7 +300,7 @@ emulator's and are not differences.
 | T13 BANKRAM | RAM in each bank T12 found | EXPAND 1: the block cache and the history |
 | T14 SERTX | Serial output at 4800 8N2 | The serial console's output |
 | T15 LCD | The LCD's bus and busy flag | The LCD hardware service (21) |
-| T16 GLCD | The ST7920 GLCD | The GLCD console, the driver GLCD.DRV |
+| T16 GLCD | The ST7920 GLCD | The GLCD console, the driver `GLCD.SVC` |
 | T17 VDP | The PICO9918, its 16K VRAM and its speed | The 80-column console, which writes VRAM with no delays |
 | T18 VDPCLK | The PICO9918's frame rate | Nothing directly; a check on T33's clock |
 | T19 SD | The card's answers to TEC-OS's driver | Every drive: TEC-OS keeps its volumes on the card |
@@ -308,7 +308,7 @@ emulator's and are not differences.
 | T21 RTC | The DS1302: its time, rate, set and restore | The clock hardware service (27) and the clock TEC-OS reports |
 | T22 SEG7 | The 7-segment wiring | The digit hardware service (20) |
 | T23 SPEAKER | The speaker | The tone hardware service (23) |
-| T24 RGB8X8 | How the matrix decodes `05h`, `06h`, `F8h`, `F9h` | `DEMO.COM`'s LED scan: the ROM has no hardware service for the matrix |
+| T24 RGB8X8 | How the matrix decodes `05h`, `06h`, `F8h`, `F9h` | `DEMO.COM`'s LED scan, on the viewer's demo card: the ROM has no hardware service for the matrix |
 | T25 LEDBAR | The STATUS bar and the CAPS lamp | The CAPS lamp, latch bit 7, which the matrix keyboard console sets |
 | T26 NMI | No stray NMIs | Programs: TEC-OS has no NMI routine, 0066h being in the default FCB, and expects none |
 | T27 SERRX | Serial input | The serial console's input |

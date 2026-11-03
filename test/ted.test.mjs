@@ -8,7 +8,8 @@
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { displayFiles } from "../tools/lib/starter.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TED = pinned("TED.COM");
@@ -144,13 +145,17 @@ test("the round on A: with a serial terminal", { skip: TED.skip || TAS.skip, tim
   round({ drive: "A", tms: false });
 });
 
-test("TED's text holds at least 33,052 bytes on the starter card and 31,000 with the PICO9918's driver", { skip: TED.skip, timeout: 900_000 }, () => {
+test("TED's text holds at least 33,052 bytes on the starter's files with no display, and 31,000 on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
-  for (const [tms, floor] of [[false, 33_052], [true, 31_000]]) {
+  // The starter's display files: on a board with both, GLCD.SVC gives way to
+  // PICO.SVC, so one driver is loaded; CON UC1 loads the second (the figures).
+  for (const [board, floor] of [[{ glcd: false }, 33_052], [{ tms: true, matrix: true, glcd: true }, 31_000]]) {
     const image = standardCard();
-    volume(image, "A").write("TED.COM", tedBytes());
-    const m = boot(image, tms ? { tms: true, matrix: true } : {});
+    const a = volume(image, "A");
+    for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
+    a.write("TED.COM", tedBytes());
+    const m = boot(image, board);
     keys(m, "ted x.asm\r", "TED", () => /EDIT X\.ASM/.test(m.text(0)));
-    assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${tms ? "with" : "without"} a display, at least ${floor}`);
+    assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${board.tms ? "on a board with both" : "with no display"}, at least ${floor}`);
   }
 });

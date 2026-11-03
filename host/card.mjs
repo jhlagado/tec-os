@@ -7,8 +7,6 @@ import { CpmVolume } from "../tools/lib/cpmfs.mjs";
 import { FORMAT } from "../tools/lib/svc-format.mjs";
 import { fromLatin1, toLatin1 } from "../tools/lib/bytes.mjs";
 
-/** The driver for each width, as the page fetches it from files/; on the card it is PICO.SVC. */
-export const WIDTH_FILES = { 80: "PICO.SVC", 40: "PICO40.SVC", 32: "PICO32.SVC" };
 // A display piece of a startup line, under either type: a card whose files were
 // renamed by hand still has its .DRV lines.
 const DISPLAY_PIECE = /^:?(PICO(40|32)?|GLCD)\.(SVC|DRV)$/i;
@@ -45,25 +43,56 @@ export function cardProblem(image, display) {
   return null;
 }
 
+/** True if the card's file BYTES, a whole number of records, holds BUILD and nothing after it. */
+const holds = (bytes, build) => bytes.length === Math.ceil(build.length / 128) * 128 && build.every((v, i) => bytes[i] === v);
+
 /**
- * Ready the card for DISPLAY: the problem, if any, and whether the card changed.
- * DRIVER, the PICO9918's driver at the width chosen, becomes A:PICO.SVC when it
- * differs, on a card with drive A and no older driver: a card from an older
- * TEC-OS is left alone.
+ * Ready the card for DISPLAY: the problem, if any, a note, and whether the card
+ * changed. DRIVERS, the PICO9918's driver at each width by its column count,
+ * puts WIDTH's on the card as A:PICO.SVC when the card has none, one of those
+ * builds or one of an older format. A PICO.SVC of the card's owner is kept, and
+ * a card from an older TEC-OS, with .DRV files, is left alone.
  */
-export function prepareCard(image, display, driver) {
+export function prepareCard(image, display, width, drivers) {
   let problem = cardProblem(image, display);
+  let note = null;
   let wrote = false;
-  if (display === "tms" && driver instanceof Uint8Array && (!problem || /^This card (has no|'s) PICO\.SVC/.test(problem))) {
+  const driver = display === "tms" && drivers ? drivers[width] : undefined;
+  if (driver && (!problem || /^This card(?: has no|'s) PICO\.SVC/.test(problem))) {
     const a = driveA(image);
-    const had = a.list().some((f) => f.name === "PICO.SVC") ? a.read("PICO.SVC").subarray(0, driver.length) : null;
-    if (!had || had.length !== driver.length || had.some((b, i) => b !== driver[i])) {
+    const had = a.list().some((f) => f.name === "PICO.SVC") ? a.read("PICO.SVC") : null;
+    const ours = !had || had[1] !== FORMAT || Object.values(drivers).some((d) => holds(had, d));
+    if (!ours) note = `This card's own PICO.SVC is kept, at the width it was built for.`;
+    else if (!had || !holds(had, driver)) {
       a.write("PICO.SVC", driver);
       wrote = true;
     }
     problem = cardProblem(image, display);
   }
-  return { problem, changed: problem ? wrote : setDisplayLine(image, display) || wrote };
+  return { problem, note, changed: problem ? wrote : setDisplayLine(image, display) || wrote };
+}
+
+const hex = (buf) => [...new Uint8Array(buf)].map((v) => v.toString(16).padStart(2, "0")).join("");
+
+/**
+ * The PICO9918's drivers the recipe's widths pin, fetched by FETCHBYTES and each
+ * checked by its SHA-256: { drivers } by column count, or { problem } when one
+ * can't be had, and then the card is left as it is.
+ */
+export async function widthDrivers(recipe, fetchBytes) {
+  try {
+    const drivers = {};
+    for (const [width, { url, sha256 }] of Object.entries(recipe.widths ?? {})) {
+      const bytes = await fetchBytes(url);
+      const got = hex(await globalThis.crypto.subtle.digest("SHA-256", bytes));
+      if (got !== sha256) throw new Error(`${url} has SHA-256 ${got}, the recipe pins ${sha256}`);
+      drivers[width] = bytes;
+    }
+    if (!Object.keys(drivers).length) throw new Error("the recipe names no drivers");
+    return { drivers };
+  } catch (e) {
+    return { problem: `The PICO9918's drivers couldn't be fetched (${e.message}), so the card is left as it is.` };
+  }
 }
 
 /**

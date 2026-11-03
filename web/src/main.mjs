@@ -4,7 +4,7 @@
 
 import { Machine, symbolsFromD8 } from "../../host/machine.mjs";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { WIDTH_FILES, prepareCard } from "../../host/card.mjs";
+import { prepareCard, widthDrivers } from "../../host/card.mjs";
 import { parseContainer, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { buildRecipe } from "../../tools/lib/recipe.mjs";
@@ -64,8 +64,12 @@ async function starterCard() {
 // ---- Machine lifecycle ------------------------------------------------------
 
 async function powerOn() {
-  const driver = state.display === "tms" ? await fetchBytes(`files/${WIDTH_FILES[state.width]}`) : undefined;
-  const { problem, changed } = prepareCard(state.card, state.display, driver);
+  let fetched = {};
+  if (state.display === "tms") {
+    const recipe = await fetch("starter.recipe.json", { cache: "no-cache" }).then((r) => r.json()).catch(() => ({}));
+    fetched = await widthDrivers(recipe, fetchBytes);
+  }
+  const { problem, note, changed } = prepareCard(state.card, state.display, state.width, fetched.drivers);
   if (changed) state.cardDirty = true;
   const { rom, symbols } = await loadRom();
   state.machine = new Machine({
@@ -80,7 +84,7 @@ async function powerOn() {
   });
   state.serialSeen = 0;
   appendSerial("\n[power on]\n");
-  if (problem) appendSerial(`[${problem}]\n`);
+  for (const words of [fetched.problem, problem, note]) if (words) appendSerial(`[${words}]\n`);
 }
 
 function reset() {

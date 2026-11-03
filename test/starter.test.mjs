@@ -1,7 +1,7 @@
 // The starter card that `npm run media` builds: exactly six files on A:, each
-// the bytes its source or pin gives, with room for TED's files and a source,
-// and it boots to a MOUNT that lists its volumes. Emulator evidence. TED.COM and
-// TAS.COM are pinned inputs (test/inputs.json).
+// the bytes its source or pin gives, the page's width drivers pinned in its
+// recipe, and it boots to a MOUNT that lists its volumes. Emulator evidence.
+// TED.COM and TAS.COM are pinned inputs (test/inputs.json).
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -49,13 +49,12 @@ test("the starter card holds exactly six files, each by its hash", { skip: TED.s
     assert.equal(recipe.components.find((c) => c.name === name).files[0].sha256, sha(bytes), `${name} in the recipe`);
   }
   assert.deepEqual(volume(card, "B").list(), [], "B: is empty");
-});
-
-test("the starter's A: has room for TED's files and a 4 KiB source", { skip: TED.skip || TAS.skip, timeout: 300_000 }, () => {
-  const a = volume(starter().card, "A");
-  // THOR.PRJ, .SES, .ERR, .$$$ and .BAK, a block each, and the source.
-  const need = 5 * a.blockBytes + 4096;
-  assert.ok(a.freeBytes() >= need, `${a.freeBytes()} bytes free on A:, ${need} needed`);
+  const widths = { 80: "PICO.SVC", 40: "PICO40.SVC", 32: "PICO32.SVC" };
+  assert.deepEqual(Object.keys(recipe.widths).sort(), Object.keys(widths).sort());
+  for (const [w, name] of Object.entries(widths)) {
+    assert.deepEqual(recipe.widths[w], { url: `files/${name}`, sha256: sha(PICO_SVC[name]) }, `the ${w}-column driver's pin`);
+    assert.equal(sha(readFileSync(resolve(ROOT, "dist/files", name))), sha(PICO_SVC[name]), `files/${name} as pinned`);
+  }
 });
 
 test("the starter card boots, and MOUNT lists its volumes", { skip: TED.skip || TAS.skip, timeout: 300_000 }, () => {

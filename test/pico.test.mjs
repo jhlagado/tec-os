@@ -4,10 +4,11 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { cardProblem } from "../host/card.mjs";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { prepareCard } from "../host/card.mjs";
+import { prepareCard, widthDrivers } from "../host/card.mjs";
 import { PICO_WIDTHS, makeSvc } from "../tools/lib/svc.mjs";
 import { displayFiles } from "../tools/lib/starter.mjs";
 import { Machine } from "./lib/machine.mjs";
@@ -680,28 +681,86 @@ test("the web host: a stored card with old drivers says so and offers a new star
   old[1] = 2;
   a.write("PICO.SVC", old);
   assert.match(cardProblem(image, "tms"), /PICO\.SVC is format 2.*A new starter card/);
-  assert.deepEqual(prepareCard(image, "tms").changed, false);
+  assert.deepEqual(prepareCard(image, "tms", "80").changed, false);
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   assert.equal(cardProblem(image, "tms"), null);
 });
 
+const DRIVERS = { 80: PICO_SVC["PICO.SVC"], 40: PICO_SVC["PICO40.SVC"], 32: PICO_SVC["PICO32.SVC"] };
+
 test("the web host: power-on writes PICO.SVC at the width, says what a card lacks, and a card with no drive A doesn't stop it", () => {
   const image = standardCard();
   assert.match(cardProblem(image, "tms"), /no PICO\.SVC: it boots as its STARTUP\.CMD says/);
-  assert.match(prepareCard(new Uint8Array(4096), "tms", PICO_SVC["PICO.SVC"]).problem, /no drive A/);
+  assert.match(prepareCard(new Uint8Array(4096), "tms", "80", DRIVERS).problem, /no drive A/);
   const a = volume(image, "A");
   a.write("STARTUP.CMD", startupFile("PICO.SVC", "GLCD.SVC", "DIR"));
   const pico = (n) => [...volume(image, "A").read("PICO.SVC").subarray(0, PICO_SVC[n].length)];
-  assert.deepEqual(prepareCard(image, "tms", PICO_SVC["PICO40.SVC"]), { problem: null, changed: true }, "a card with none gets the width's");
+  assert.deepEqual(prepareCard(image, "tms", "40", DRIVERS), { problem: null, note: null, changed: true }, "a card with none gets the width's");
   assert.deepEqual(pico("PICO40.SVC"), [...PICO_SVC["PICO40.SVC"]]);
   assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\n");
-  assert.equal(prepareCard(image, "tms", PICO_SVC["PICO40.SVC"]).changed, false);
-  assert.deepEqual(prepareCard(image, "tms", PICO_SVC["PICO32.SVC"]), { problem: null, changed: true }, "a width change");
+  assert.equal(prepareCard(image, "tms", "40", DRIVERS).changed, false);
+  assert.deepEqual(prepareCard(image, "tms", "32", DRIVERS), { problem: null, note: null, changed: true }, "a width change");
   assert.deepEqual(pico("PICO32.SVC"), [...PICO_SVC["PICO32.SVC"]]);
+  assert.deepEqual(prepareCard(image, "tms", "80", DRIVERS), { problem: null, note: null, changed: true }, "and back");
+  assert.deepEqual(pico("PICO.SVC"), [...PICO_SVC["PICO.SVC"]]);
   volume(image, "A").write("GLCD.SVC", GLCD_SVC);
-  assert.deepEqual(prepareCard(image, "glcd"), { problem: null, changed: true }, "the GLCD's line first");
+  assert.deepEqual(prepareCard(image, "glcd", "40", DRIVERS), { problem: null, note: null, changed: true }, "the GLCD's line first");
   assert.equal(startupText(image), "GLCD.SVC\r\nDIR\r\n");
-  assert.deepEqual(pico("PICO32.SVC"), [...PICO_SVC["PICO32.SVC"]], "and PICO.SVC left");
+  assert.deepEqual(pico("PICO.SVC"), [...PICO_SVC["PICO.SVC"]], "and PICO.SVC left");
+});
+
+test("the web host: a PICO.SVC of the card's owner is kept at any width", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  const own = Uint8Array.from(PICO_SVC["PICO40.SVC"]);
+  own[own.length - 1] ^= 0xff; // a build of their own: any byte not a starter build's
+  a.write("PICO.SVC", own);
+  a.write("STARTUP.CMD", startupFile("PICO.SVC", "GLCD.SVC"));
+  const before = [...volume(image, "A").read("PICO.SVC")];
+  const got = prepareCard(image, "tms", "80", DRIVERS);
+  assert.deepEqual([got.problem, got.changed], [null, false]);
+  assert.match(got.note, /own PICO\.SVC is kept/);
+  assert.deepEqual([...volume(image, "A").read("PICO.SVC")], before);
+  const longer = new Uint8Array(PICO_SVC["PICO.SVC"].length + 200);
+  longer.set(PICO_SVC["PICO.SVC"]); // a starter build with more after it is the owner's too
+  a.write("PICO.SVC", longer);
+  assert.match(prepareCard(image, "tms", "40", DRIVERS).note, /own PICO\.SVC is kept/);
+});
+
+test("the web host: a PICO.SVC of an older format is replaced by the width's, and without drivers it is only named", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  const old = Uint8Array.from(PICO_SVC["PICO.SVC"]);
+  old[1] = 2;
+  a.write("PICO.SVC", old);
+  assert.match(prepareCard(image, "tms", "40").problem, /PICO\.SVC is format 2/, "no drivers: the card is left");
+  assert.deepEqual(prepareCard(image, "tms", "40", DRIVERS), { problem: null, note: null, changed: true });
+  assert.deepEqual([...volume(image, "A").read("PICO.SVC").subarray(0, DRIVERS[40].length)], [...DRIVERS[40]]);
+});
+
+test("the web host: the width drivers are taken only by their pins, and a failure leaves the card with a word", async () => {
+  const sha = (b) => createHash("sha256").update(b).digest("hex");
+  const recipe = { widths: Object.fromEntries(Object.entries(DRIVERS).map(([w, b]) => [w, { url: `files/${w}`, sha256: sha(b) }])) };
+  const served = (over = {}) => async (url) => {
+    const w = url.slice(6);
+    if (over[w] === "missing") throw new Error(`${url}: HTTP 404`);
+    return over[w] ?? DRIVERS[w];
+  };
+  const ok = await widthDrivers(recipe, served());
+  assert.deepEqual(Object.keys(ok.drivers).sort(), ["32", "40", "80"]);
+  const bad = Uint8Array.from(DRIVERS[40]);
+  bad[9] ^= 1;
+  for (const over of [{ 40: bad }, { 32: "missing" }]) {
+    const got = await widthDrivers(recipe, served(over));
+    assert.equal(got.drivers, undefined);
+    assert.match(got.problem, /couldn't be fetched .*(SHA-256|404).*left as it is/);
+    const image = standardCard();
+    volume(image, "A").write("STARTUP.CMD", startupFile("DIR"));
+    const before = image.slice();
+    assert.match(prepareCard(image, "tms", "40", got.drivers).problem, /no PICO\.SVC/);
+    assert.deepEqual(image, before, "the card as it was");
+  }
+  assert.match((await widthDrivers({}, served())).problem, /names no drivers/);
 });
 
 const startupText = (image) => Buffer.from(volume(image, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0];
@@ -711,7 +770,7 @@ test("the web host: a chained startup line loses its display pieces and keeps th
   const a = volume(image, "A");
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC"));
-  assert.deepEqual(prepareCard(image, "tms"), { problem: null, changed: true });
+  assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
   assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\nDIR!:USER 3\r\n");
   assert.equal(prepareCard(image, "tms").changed, false);
 });
@@ -811,7 +870,7 @@ test("the web host: a card whose files were renamed by hand has its .DRV display
   const a = volume(image, "A");
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
-  assert.deepEqual(prepareCard(image, "tms"), { problem: null, changed: true });
+  assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
   assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nMY.DRV\r\n");
 });
 

@@ -192,8 +192,13 @@ async function main() {
     writeFileSync(resolve(FILES, f.name), f.bytes);
     files.push(f);
   }
-  // The page's other widths: it writes one as the card's PICO.SVC. Not on the card.
-  for (const f of await widthDrivers(ROOT)) writeFileSync(resolve(FILES, f.name), f.bytes);
+  // The page's other widths: it writes one as the card's PICO.SVC. Not on the card,
+  // but pinned in the recipe's widths with the card's own.
+  const widths = { 80: { url: "files/PICO.SVC", sha256: sha(files.find((f) => f.name === "PICO.SVC").bytes) } };
+  for (const f of await widthDrivers(ROOT)) {
+    writeFileSync(resolve(FILES, f.name), f.bytes);
+    widths[f.cols] = { url: `files/${f.name}`, sha256: sha(f.bytes) };
+  }
   writeFileSync(resolve(FILES, "TED.COM"), ted);
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   writeFileSync(resolve(FILES, "TAS.COM"), tas);
@@ -207,6 +212,7 @@ async function main() {
     name: "TEC-OS starter",
     instruction: "At A>, type DIR, then MOUNT, or TED HELLO.ASM to write a program. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "debug80",
+    widths,
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
       { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },

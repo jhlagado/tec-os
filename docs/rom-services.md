@@ -3,7 +3,7 @@
 Status: **Built**, ABI 4.0. The *ROM table* is at `C003h`. Its hardware services' entry, `ABIHW` at
 `C00Ah`, has 9 *hardware services* in `src/hwsvc.asm`, 485 bytes of ROM in all, and
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
-measures its stack. `DEMO.COM`, from `test/programs/demo.asm`, shows them.
+measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
 The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,947 bytes (`debug80`) and has 1,437 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
