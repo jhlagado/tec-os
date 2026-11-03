@@ -121,8 +121,12 @@ export function compareLabels(base, moved, { renames = {} } = {}) {
   return { same: differences.length === 0, differences, groups: gb.length, masked, used };
 }
 
-/** Lines in DIR/src that name any of NAMES as a whole word, without regard to case. History (.md) and generated files are outside. */
-export function searchNames(dir, names, { scope = ["src"], outside = [/\.md$/i, /^src\/gen\//] } = {}) {
+/**
+ * Lines in DIR/src that name any of NAMES as a whole word, without regard to
+ * case. History (.md) and generated files are outside, and so is a mention of
+ * drivers/glcd.asm, the GLCD driver's own file, which keeps its name.
+ */
+export function searchNames(dir, names, { scope = ["src"], outside = [/\.md$/i, /^src\/gen\//], allowed = ["drivers/glcd.asm"] } = {}) {
   const escaped = names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   const term = new RegExp(`(?<![\\w.])(${escaped.join("|")})(?![\\w])`, "i");
   const hits = [];
@@ -135,7 +139,7 @@ export function searchNames(dir, names, { scope = ["src"], outside = [/\.md$/i, 
         readFileSync(resolve(dir, p), "utf8")
           .split("\n")
           .forEach((line, i) => {
-            const m = term.exec(line);
+            const m = term.exec(allowed.reduce((l, a) => l.replaceAll(a, ""), line));
             if (m) hits.push({ file: relative(dir, resolve(dir, p)), line: i + 1, name: m[1] });
           });
     }

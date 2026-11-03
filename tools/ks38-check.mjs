@@ -14,7 +14,7 @@
 //
 // Each exits 1 when it finds a difference or a name, and prints what it found.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import * as M from "./lib/model.mjs";
 import { built, compareLabels, sameImage, searchNames } from "./lib/ks38-check.mjs";
@@ -25,9 +25,16 @@ const hex = (n) => n.toString(16).toUpperCase().padStart(4, "0") + "h";
 async function baseline() {
   const rev = M.arg("--baseline");
   if (!rev) throw new Error("--baseline REV is required");
-  const dir = M.tree(WORK, "baseline", rev);
-  await M.build(dir);
-  return { rev: M.commit(rev).slice(0, 7), side: built(dir) };
+  // A baseline built already, of the same commit, is used again.
+  const dir = resolve(WORK, "baseline");
+  const stamp = resolve(dir, "build/ks38-baseline");
+  const full = M.commit(rev);
+  if (!existsSync(stamp) || readFileSync(stamp, "utf8") !== full) {
+    M.tree(WORK, "baseline", rev);
+    await M.build(dir);
+    writeFileSync(stamp, full);
+  }
+  return { rev: full.slice(0, 7), side: built(dir) };
 }
 
 function here() {

@@ -70,14 +70,14 @@ test("with the files traded, the label check finds an operand changed and a jump
 });
 
 test("the names search finds old names as whole words in src/, and nothing in history or generated files", () => {
-  assert.ok(searchNames(ROOT, ["GLHOOK"]).some((h) => h.file.startsWith("src/")), "GLHOOK is in src/ today");
-  assert.ok(searchNames(ROOT, ["glcd.asm"]).some((h) => h.file === "src/rom.asm"), "a file name, without regard to case");
+  assert.ok(searchNames(ROOT, ["PIVEC"]).some((h) => h.file.startsWith("src/")), "PIVEC is in src/");
+  assert.ok(searchNames(ROOT, ["BOOT.ASM"]).some((h) => h.file === "src/rom.asm"), "a file name, without regard to case");
   assert.deepEqual(searchNames(ROOT, ["NOSUCHLABEL"]), []);
   const dir = mkdtempSync(resolve(ROOT, "build/ks38-names-"));
   mkdirSync(resolve(dir, "src/gen"), { recursive: true });
-  writeFileSync(resolve(dir, "src/a.asm"), "\tCALL\tGLHOOKS\n\tCALL\tGLHOOK\t; the hook\n");
+  writeFileSync(resolve(dir, "src/a.asm"), "\tCALL\tGLHOOKS\n\tCALL\tGLHOOK\t; the hook\n; built from drivers/glcd.asm\n");
   writeFileSync(resolve(dir, "src/PROVENANCE.md"), "GLHOOK was its name\n");
   writeFileSync(resolve(dir, "src/gen/x.asm"), "GLHOOK\tEQU\t1\n");
-  assert.deepEqual(searchNames(dir, ["GLHOOK"]), [{ file: "src/a.asm", line: 2, name: "GLHOOK" }]);
+  assert.deepEqual(searchNames(dir, ["GLHOOK", "glcd.asm"]), [{ file: "src/a.asm", line: 2, name: "GLHOOK" }], "drivers/glcd.asm allowed");
   rmSync(dir, { recursive: true });
 });

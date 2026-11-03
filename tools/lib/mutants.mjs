@@ -14,7 +14,7 @@
 // mutant's change had to be reconstructed from its name, the comment beside
 // it says what it does.
 
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build, copyTree, fileType, log, node } from "./model.mjs";
@@ -38,25 +38,47 @@ export const asm = (file, find, put) => ({ file, find, put });
 /** In FILE, the text FROM, once, replaced by TO. */
 export const text = (file, from, to) => ({ file, from, to });
 
+/** Where E's text stands in SRC: the line indexes of its matches, or for text, one entry a match. */
+function matches(src, e) {
+  if (e.from !== undefined) return Array(src.split(e.from).length - 1).fill(0);
+  const codes = src.split("\n").map(code);
+  const want = e.find.map(code);
+  const at = [];
+  for (let i = 0; i + want.length <= codes.length; i += 1) if (want.every((w, k) => codes[i + k] === w)) at.push(i);
+  return at;
+}
+
+/** The assembly sources under DIR/src, as paths from DIR. */
+function sources(dir, d = "src") {
+  return readdirSync(resolve(dir, d), { withFileTypes: true }).flatMap((x) => (x.isDirectory() ? sources(dir, `${d}/${x.name}`) : /\.(asm|inc)$/.test(x.name) ? [`${d}/${x.name}`] : []));
+}
+
+/**
+ * E's file in DIR, or, where KS38's moves took its text away (the file gone, or
+ * the text not in it), the one source under src/ that holds the text once.
+ */
+function home(dir, e) {
+  const there = existsSync(resolve(dir, e.file)) && matches(readFileSync(resolve(dir, e.file), "utf8"), e).length > 0;
+  if (there || !e.file.startsWith("src/")) return e.file;
+  const found = sources(dir).filter((f) => matches(readFileSync(resolve(dir, f), "utf8"), e).length === 1);
+  return found.length === 1 ? found[0] : e.file;
+}
+
 function apply(dir, e) {
-  const path = resolve(dir, e.file);
-  const src = readFileSync(path, "utf8");
   if (e.rebuild) return; // after the build: see one()
+  const file = home(dir, e);
+  const path = resolve(dir, file);
+  const src = readFileSync(path, "utf8");
+  const at = matches(src, e);
+  if (at.length !== 1) throw new Error(`${file}: ${JSON.stringify(e.from ?? e.find)} found ${at.length} times`);
   if (e.from !== undefined) {
-    const n = src.split(e.from).length - 1;
-    if (n !== 1) throw new Error(`${e.file}: ${JSON.stringify(e.from)} found ${n} times`);
     writeFileSync(path, src.replace(e.from, e.to));
     return;
   }
   const lines = src.split("\n");
-  const codes = lines.map(code);
-  const want = e.find.map(code);
-  const at = [];
-  for (let i = 0; i + want.length <= lines.length; i += 1) if (want.every((w, k) => codes[i + k] === w)) at.push(i);
-  if (at.length !== 1) throw new Error(`${e.file}: ${JSON.stringify(e.find)} found ${at.length} times`);
   // A label or an EQU's name at the margin, an instruction a tab in.
   const put = e.put.map((l) => (/^\w+:/.test(l) ? l.replace(/^(\w+:)\s*/, "$1\t") : /^\w+ EQU /i.test(l) ? l : `\t${l}`).replace(/ /, "\t").trimEnd());
-  lines.splice(at[0], want.length, ...put);
+  lines.splice(at[0], e.find.length, ...put);
   writeFileSync(path, lines.join("\n"));
 }
 
