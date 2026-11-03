@@ -226,6 +226,21 @@ async function main() {
   };
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
   saveImage(resolve(DIST, "starter.img"), await buildRecipe(recipe, fileFetcher(DIST)));
+
+  // The web page's card (KD-170): the starter's six files and DEMO.COM.
+  const { bytes: demo } = await assembleProgram(resolve(ROOT, "test/programs/demo.asm"), { base: 0x100 });
+  writeFileSync(resolve(FILES, "DEMO.COM"), demo);
+  const page = {
+    ...recipe,
+    id: "page",
+    name: "TEC-OS starter, with the demo",
+    instruction: "At A>, type DEMO to see the hardware, DIR, MOUNT, or TED HELLO.ASM to write a program. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    components: [
+      ...recipe.components,
+      { id: "demo-com", name: "DEMO.COM", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918", files: [{ name: "DEMO.COM", url: "files/DEMO.COM", drive: "A", bytes: demo.length, sha256: sha(demo) }] },
+    ],
+  };
+  writeFileSync(resolve(DIST, "page.recipe.json"), JSON.stringify(page, null, 2) + "\n");
   writeFileSync(resolve(ROOT, "docs/memory-map.md"), memoryMap(censuses.debug80));
   romServicesFigures(censuses.debug80);
   const manifest = Object.fromEntries(

@@ -11,6 +11,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLCD_SVC, PICO_SVC, ROOT, boot, program, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
+import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
@@ -61,4 +62,17 @@ test("the starter card boots, and MOUNT lists its volumes", { skip: TED.skip || 
   const m = boot(Uint8Array.from(starter().card));
   assert.match(m.command("MOUNT"), /^00 SYSTEM +G1M A:\r\n01 WORK +G8M B:\r\n/m);
   assert.deepEqual(m.violations, []);
+});
+
+test("the web page's card is the starter with DEMO.COM, which the starter lacks (KD-170)", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
+  const { card, recipe } = starter();
+  const page = JSON.parse(readFileSync(resolve(ROOT, "dist/page.recipe.json"), "utf8"));
+  const demo = (await program("demo")).bytes;
+  const names = (r) => r.components.map((c) => c.name).sort();
+  assert.deepEqual(names(page), [...names(recipe), "DEMO.COM"].sort());
+  assert.equal(page.components.find((c) => c.name === "DEMO.COM").files[0].sha256, sha(demo));
+  assert.match(page.instruction, /DEMO/);
+  assert.equal(volume(card, "A").list().some((f) => f.name === "DEMO.COM"), false, "not on the starter");
+  const onPage = volume(await buildRecipe(page, fileFetcher(resolve(ROOT, "dist"))), "A");
+  assert.equal(sha(onPage.read("DEMO.COM").subarray(0, demo.length)), sha(demo), "on the page's card");
 });

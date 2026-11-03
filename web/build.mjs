@@ -37,7 +37,8 @@ for (const p of PROFILES) {
     .map((s) => ({ name: s.name, address: s.address ?? s.value }));
   writeFileSync(resolve(OUT, `roms/tecos-${p}.symbols.json`), JSON.stringify(labels));
 }
-copyFileSync(resolve(ROOT, "dist/starter.recipe.json"), resolve(OUT, "starter.recipe.json"));
+// The page's card is the starter with DEMO.COM (KD-170), under the name the page fetches.
+copyFileSync(resolve(ROOT, "dist/page.recipe.json"), resolve(OUT, "starter.recipe.json"));
 for (const f of readdirSync(resolve(ROOT, "dist/files"))) {
   copyFileSync(resolve(ROOT, "dist/files", f), resolve(OUT, "files", f));
 }
