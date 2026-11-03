@@ -3,10 +3,32 @@
 // (each must differ by exactly 1, the high byte of an address). A 256-byte
 // header gives the code length; then the code for 0100h and the bitmap.
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { basename, dirname, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import { assembleProgram } from "./assemble.mjs";
+
+/**
+ * PATH from DIR as the disk spells it: each part matched without regard to
+ * case, as CP/M and TAS match names, so %INCLUDE "ABI.INC" finds abi.inc on a
+ * case-sensitive file system too (B2). An exact spelling is taken first; a part
+ * found in no spelling is left as written, for the assembler's own message.
+ */
+export function onDisk(dir, path) {
+  let at = isAbsolute(path) ? resolve("/") : resolve(dir);
+  for (const part of path.split(/[\\/]/)) {
+    if (part === "" || part === "." || part === "..") {
+      at = resolve(at, part || ".");
+      continue;
+    }
+    let names = [];
+    try {
+      names = readdirSync(at);
+    } catch {}
+    at = resolve(at, names.includes(part) ? part : names.find((n) => n.toLowerCase() === part.toLowerCase()) ?? part);
+  }
+  return at;
+}
 
 /** A source's one "ORG $0100" line, indented, with nothing after it. */
 export const ORG_LINE = /^([ \t]+ORG[ \t]+)\$0100[ \t]*\r?$/m;
@@ -20,7 +42,7 @@ export async function assembleAt(source, origin, work) {
   const digest = createHash("sha256").update(text).digest("hex").slice(0, 16);
   mkdirSync(work, { recursive: true });
   const copy = resolve(work, `${basename(source, ".asm")}-${digest}-at${hex}.asm`);
-  const repoint = (t) => t.replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, resolve(dirname(source), p))}"`);
+  const repoint = (t) => t.replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, onDisk(dirname(source), p))}"`);
   writeFileSync(copy, repoint(text.replace(ORG_LINE, (_, lead) => `${lead}$${hex}`)));
   return (await assembleProgram(copy, { base: origin })).bytes;
 }

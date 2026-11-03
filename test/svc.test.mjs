@@ -7,8 +7,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { checkInterfaces, DHLEN, encoders, makeSvc } from "../tools/lib/svc.mjs";
+import { relative, resolve } from "node:path";
+import { checkInterfaces, DHLEN, encoders, makeSvc, onDisk } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
@@ -905,4 +905,15 @@ test("function 47 from REMOVE keeps the service listed, and the chained line run
   t.m.type("UNLOAD\r");
   t.m.runUntil(() => t.m.waitingForInput() && t.m.read(4) >> 4 === 3, 200_000_000, "USER 3");
   assert.deepEqual([t.m.read(t.m.sym("SVCBSY")), t.head()], [0, page]);
+});
+
+test("makeSvc finds an include whatever its case, as CP/M and TAS do: ABI.INC is abi.inc (B2)", async () => {
+  assert.equal(onDisk(resolve(ROOT, "drivers"), "../SRC/ABI.INC"), resolve(ROOT, "src/abi.inc"));
+  assert.equal(onDisk(resolve(ROOT, "drivers"), "../src/abi.inc"), resolve(ROOT, "src/abi.inc"), "an exact spelling as it is");
+  const dir = mkdtempSync(resolve(ROOT, "build/svc-case-"));
+  const text = readFileSync(resolve(ROOT, "test/programs/res.asm"), "utf8").replace("        ORG     $0100", `%INCLUDE "${relative(dir, resolve(ROOT, "src")).toUpperCase().replace(/\\/g, "/")}/ABI.INC"\n        ORG     $0100`);
+  writeFileSync(resolve(dir, "res.asm"), text);
+  const { file } = await makeSvc(resolve(dir, "res.asm"), { work: resolve(dir, "work") });
+  assert.equal(file[0], 0x44, "built");
+  rmSync(dir, { recursive: true });
 });

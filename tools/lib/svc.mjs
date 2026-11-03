@@ -8,7 +8,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
 import { assembleProgram } from "./assemble.mjs";
 import { FORMAT } from "./svc-format.mjs";
-import { ORG_LINE, assembleAt } from "./prl.mjs";
+import { ORG_LINE, assembleAt, onDisk } from "./prl.mjs";
+
+export { onDisk };
 
 export const DHLEN = 25;
 export { FORMAT }; // the loader's DMAGIC. Version 4 has version 1's layout: it rose with ABI 5,
@@ -97,8 +99,8 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   // ATOM takes %INCLUDE only in a file's header, so those above the ORG go to it
   // with their paths moved, and one below it, the font placed last, is copied in.
   const org = body.search(ORG_LINE);
-  const inside = (p) => readFileSync(resolve(dirname(source), p), "utf8");
-  body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, resolve(dirname(source), p))}"`) + prelude + body.slice(org).replace(/^%INCLUDE\s+"([^"]+)"\s*$/gm, (_, p) => inside(p));
+  const inside = (p) => readFileSync(onDisk(dirname(source), p), "utf8");
+  body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, onDisk(dirname(source), p))}"`) + prelude + body.slice(org).replace(/^%INCLUDE\s+"([^"]+)"\s*$/gm, (_, p) => inside(p));
   writeFileSync(copy, body);
   const at0 = await assembleAt(copy, 0, work);
   const { bytes: at1, symbols } = await assembleProgram(copy, { base: 0x100 });
