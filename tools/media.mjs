@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
-import { displayFiles } from "./lib/starter.mjs";
+import { displayFiles, widthDrivers } from "./lib/starter.mjs";
 import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
 import { PROFILES } from "./build.mjs";
 
@@ -21,40 +21,8 @@ const hex = (v, w = 4) => v.toString(16).toUpperCase().padStart(w, "0") + "h";
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
 const PROGRAMS = [
-  { name: "TERM.COM", source: "test/programs/term.asm", description: "draws with the video terminal's ANSI subset" },
-  { name: "PROBE.COM", source: "test/programs/probe.asm", description: "BDOS file-function probe" },
-  { name: "DEMO.COM", source: "test/programs/demo.asm", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918" },
-  { name: "MOUNT.COM", source: "test/programs/mount.asm", description: "mounts a volume on a drive: MOUNT B: NAME, MOUNT B: INDEX, MOUNT B: to unmount" },
-  { name: "VOLS.COM", source: "test/programs/vols.asm", description: "lists the card's volumes and the drives they are on" },
+  { name: "MOUNT.COM", source: "test/programs/mount.asm", description: "lists the card's volumes, or mounts one on a drive: MOUNT, MOUNT B: NAME, MOUNT B: INDEX, MOUNT B: to unmount" },
 ];
-
-const README = `TEC-OS starter disk
-
-COPY SOURCE DEST   copy a file (built in), for example COPY TERM.COM B:TERM.COM
-TERM               draw on the video console; TERM S also scrolls
-PROBE              exercise the BDOS file functions
-DEMO               the LCD, digits, 8x8 LEDs and PICO9918; any key stops
-TED NAME.ASM       full-screen editor: ^S save, ^Q quit, ^T B build, ^T R run
-TED NAME.ASM 12    open it at line 12
-TAS NAME           assemble NAME.ASM to NAME.COM and NAME.DBG
-TAS NAME NAME.SVC  assemble it to a service
-VOLS               list the card's volumes
-MOUNT B: NAME      put a volume on a drive; MOUNT B: takes it off
-
-NAME.SVC           install a service, such as a display's driver
-SERVICES           list the services installed, each with its pages
-UNLOAD             remove the last service installed
-
-A line chains commands with !, and a piece that starts with : runs only if the
-last command succeeded: TED X.ASM!TAS X!:X
-
-B: is an empty work disk, written behind: its changes reach the card when a
-file is closed, at ^C and at MOUNT. Press ^C at A> before reset or power off.
-
-A card with .DRV files is from an older TEC-OS and this ROM won't load them.
-Make a new starter card, or rename each file .SVC if its format is 3 and change
-STARTUP.CMD to match.
-`;
 
 /** The pinned NAME's bytes, which the card holds: a file missing or not as pinned is refused. */
 function pinnedBytes(name) {
@@ -224,21 +192,20 @@ async function main() {
     writeFileSync(resolve(FILES, f.name), f.bytes);
     files.push(f);
   }
+  // The page's other widths: it writes one as the card's PICO.SVC. Not on the card.
+  for (const f of await widthDrivers(ROOT)) writeFileSync(resolve(FILES, f.name), f.bytes);
   writeFileSync(resolve(FILES, "TED.COM"), ted);
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   writeFileSync(resolve(FILES, "TAS.COM"), tas);
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   copyFileSync(resolve(ROOT, "src/abi.inc"), resolve(DIST, "abi.inc"));
-  const readme = Buffer.from(README.replace(/\n/g, "\r\n") + "\x1a");
-  writeFileSync(resolve(FILES, "README.TXT"), readme);
-  files.push({ name: "README.TXT", description: "what is on this disk", bytes: readme });
 
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "3",
+    revision: "4",
     name: "TEC-OS starter",
-    instruction: "At A>, type DIR, then TERM or DEMO. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DIR, then MOUNT, or TED HELLO.ASM to write a program. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "debug80",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },

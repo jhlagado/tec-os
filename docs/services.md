@@ -101,9 +101,9 @@ the whole record, runs without its last; one that starts at the 128th byte isn't
 run. A line that fails prints its usual message and the
 next runs.
 
-**Width is a startup line.** `PICO.SVC` is 80 columns, `PICO40.SVC` 40 and
-`PICO32.SVC` 32 in Graphics I, and the ROM is one image for every board. The starter
-card carries all three and names `PICO.SVC`.
+**Width is the driver's build.** `PICO.SVC` is built at 80 columns, 40, or 32 in
+Graphics I, and the ROM is one image for every board. The starter card carries the
+80-column build, and the web page writes the width chosen as `PICO.SVC`.
 
 One card can serve every board: a line for the PICO9918, then `GLCD.SVC`. Each line
 makes its display the console where there is one, and elsewhere prints its name with

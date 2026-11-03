@@ -1,6 +1,6 @@
 // Container format 1.1 and mounting at run time: a card of more than 8
 // volumes, cold boot's one-pass table check, the vector slots, the ABIVOL
-// entry through MOUNT.COM and VOLS.COM, and a reset giving the card's own
+// entry through MOUNT.COM, whose bare MOUNT lists the volumes, and a reset giving the card's own
 // mounts back. Emulator evidence.
 
 import { test } from "node:test";
@@ -19,18 +19,18 @@ function card(n = 20, drives = 2) {
 
 async function machine(image = card()) {
   const a = volume(image, "A");
-  for (const n of ["mount", "vols"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
+  a.write("MOUNT.COM", (await program("mount")).bytes);
   volume(image, "B").write("DATA.TXT", Buffer.from("REC1....".padEnd(128, ".") + "REC2....".padEnd(128, ".") + "\x1a", "latin1"));
   volume(image, "ARCHIVE").write("OLD.DAT", new Uint8Array(128));
   return boot(image);
 }
 const drvidx = (m) => Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d));
 
-test("a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and VOLS lists every volume", async () => {
+test("a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume", async () => {
   const m = await machine();
   assert.deepEqual(drvidx(m), [1, 2, 0, 0]);
   assert.deepEqual(Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVSLOT") + d)), [2, 2, 0, 0], "two G8M slots");
-  const out = m.command("VOLS");
+  const out = m.command("MOUNT");
   const lines = out.split("\r\n").filter((l) => /^\d\d /.test(l));
   assert.equal(lines.length, 20);
   assert.match(lines[0], /^00 SYSTEM +G8M A:/);

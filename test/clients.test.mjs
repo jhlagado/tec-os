@@ -1,5 +1,6 @@
-// The ROM's own clients on the table: DEMO.COM, MOUNT.COM and VOLS.COM each test
-// the tag and major version 4, stop with a word on any other, and run on 4.
+// The ROM's own clients on the table: DEMO.COM and MOUNT.COM each test the tag
+// and major version 4, stop with a word on any other, and run on 4. The old
+// VOLS.COM is a stored card's; MOUNT lists the volumes now.
 // Emulator evidence.
 
 import { test } from "node:test";
@@ -18,7 +19,7 @@ async function machine(edit = () => {}) {
   edit(patched);
   const image = standardCard();
   const a = volume(image, "A");
-  for (const n of ["demo", "mount", "vols"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
+  for (const n of ["demo", "mount"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   const m = new Machine({ rom: patched, symbols, sdImage: image, clock: TEST_CLOCK });
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
@@ -27,7 +28,7 @@ async function machine(edit = () => {}) {
 
 const MAJOR3 = (r) => (r[6] = 3);
 const NOTAG = (r) => (r[3] = 0x58);
-const WORDS = { DEMO: "DEMO needs TEC-OS with ABI 4.", "MOUNT B:": "MOUNT needs TEC-OS with ABI 4.", VOLS: "VOLS needs TEC-OS with ABI 4." };
+const WORDS = { DEMO: "DEMO needs TEC-OS with ABI 4.", "MOUNT B:": "MOUNT needs TEC-OS with ABI 4.", MOUNT: "MOUNT needs TEC-OS with ABI 4." };
 
 for (const [line, word] of Object.entries(WORDS)) {
   for (const [why, edit] of [["major 3", MAJOR3], ["no TNA tag", NOTAG]]) {
@@ -39,9 +40,10 @@ for (const [line, word] of Object.entries(WORDS)) {
   }
 }
 
-test("MOUNT and VOLS run on major 4", async () => {
+test("MOUNT lists and unmounts on major 4", async () => {
   const m = await machine();
-  assert.match(m.command("VOLS"), /^00 SYSTEM/m);
+  assert.match(m.command("MOUNT"), /^00 SYSTEM +G1M A:\r\n01 WORK +G8M B:\r\n/m);
+  assert.match(m.command("MOUNT X:"), /^MOUNT \[D: \[NAME or INDEX\]\]/m, "a bad drive gets the usage line");
   assert.match(m.command("MOUNT B:"), /B:/);
   assert.deepEqual(m.violations, []);
 });

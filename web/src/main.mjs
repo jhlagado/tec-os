@@ -4,7 +4,7 @@
 
 import { Machine, symbolsFromD8 } from "../../host/machine.mjs";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { prepareCard } from "../../host/card.mjs";
+import { WIDTH_FILES, prepareCard } from "../../host/card.mjs";
 import { parseContainer, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { buildRecipe } from "../../tools/lib/recipe.mjs";
@@ -64,7 +64,8 @@ async function starterCard() {
 // ---- Machine lifecycle ------------------------------------------------------
 
 async function powerOn() {
-  const { problem, changed } = prepareCard(state.card, state.display, state.width);
+  const driver = state.display === "tms" ? await fetchBytes(`files/${WIDTH_FILES[state.width]}`) : undefined;
+  const { problem, changed } = prepareCard(state.card, state.display, driver);
   if (changed) state.cardDirty = true;
   const { rom, symbols } = await loadRom();
   state.machine = new Machine({

@@ -45,8 +45,10 @@ pinned in `test/inputs.json`.
 
 The ROM is assembled with ATOM. There is one image for every board. The names
 `debug80`, `debug80t40`, `debug80g32` and `board` stay as aliases of it. The
-display's width is chosen by a line in `A:STARTUP.CMD`: `PICO.SVC` for 80 columns,
-`PICO40.SVC` for 40 and `PICO32.SVC` for 32 in Graphics I.
+display's driver is `A:PICO.SVC`, built at 80 columns, 40, or 32 in Graphics I.
+The starter card holds the 80-column build; `npm run media` puts the other two
+in `dist/files` as `PICO40.SVC` and `PICO32.SVC`, and the web page writes the
+width chosen as the card's `PICO.SVC`.
 
 ## In a web page
 
@@ -89,8 +91,8 @@ moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
 `SERVICES` lists the services installed and `UNLOAD` removes the last one. A line
 chains commands with `!`, and a piece starting `:` runs only if the last command
-succeeded, as in `EDIT X.ASM!TAS X!:X`.
-`DEMO` on the starter card shows the hardware: the LCD, the 7-segment digits,
+succeeded, as in `TED X.ASM!TAS X!:X`.
+`DEMO.COM`, from `test/programs/demo.asm`, shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary

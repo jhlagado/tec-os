@@ -1,11 +1,13 @@
-// What the web host needs of a card: the startup file's display pieces, and a
-// word for a card that can't drive the display chosen.
+// What the web host needs of a card: the startup file's display pieces, the
+// PICO9918's driver at the width chosen, and a word for a card that can't drive
+// the display chosen. A card holds one PICO.SVC; the page writes it at its width.
 
 import { findVolume, parseContainer, volumePayload } from "../tools/lib/container.mjs";
 import { CpmVolume } from "../tools/lib/cpmfs.mjs";
 import { FORMAT } from "../tools/lib/svc-format.mjs";
 import { fromLatin1, toLatin1 } from "../tools/lib/bytes.mjs";
 
+/** The driver for each width, as the page fetches it from files/; on the card it is PICO.SVC. */
 export const WIDTH_FILES = { 80: "PICO.SVC", 40: "PICO40.SVC", 32: "PICO32.SVC" };
 // A display piece of a startup line, under either type: a card whose files were
 // renamed by hand still has its .DRV lines.
@@ -18,12 +20,12 @@ function driveA(image) {
   return new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
 }
 
-/** The first line a card needs for DISPLAY, "tms" or "glcd", at WIDTH. */
-export const displayFile = (display, width) => (display === "tms" ? WIDTH_FILES[width] : "GLCD.SVC");
+/** The first line a card needs for DISPLAY, "tms" or "glcd". */
+export const displayFile = (display) => (display === "tms" ? "PICO.SVC" : "GLCD.SVC");
 
-/** Why the card can't show DISPLAY at WIDTH, or null. */
-export function cardProblem(image, display, width) {
-  const name = displayFile(display, width);
+/** Why the card can't show DISPLAY, or null. */
+export function cardProblem(image, display) {
+  const name = displayFile(display);
   let a;
   let files;
   try {
@@ -43,10 +45,25 @@ export function cardProblem(image, display, width) {
   return null;
 }
 
-/** Ready the card for DISPLAY at WIDTH: the problem, if any, and whether the card changed. */
-export function prepareCard(image, display, width) {
-  const problem = cardProblem(image, display, width);
-  return { problem, changed: problem ? false : setDisplayLine(image, display, width) };
+/**
+ * Ready the card for DISPLAY: the problem, if any, and whether the card changed.
+ * DRIVER, the PICO9918's driver at the width chosen, becomes A:PICO.SVC when it
+ * differs, on a card with drive A and no older driver: a card from an older
+ * TEC-OS is left alone.
+ */
+export function prepareCard(image, display, driver) {
+  let problem = cardProblem(image, display);
+  let wrote = false;
+  if (display === "tms" && driver instanceof Uint8Array && (!problem || /^This card (has no|'s) PICO\.SVC/.test(problem))) {
+    const a = driveA(image);
+    const had = a.list().some((f) => f.name === "PICO.SVC") ? a.read("PICO.SVC").subarray(0, driver.length) : null;
+    if (!had || had.length !== driver.length || had.some((b, i) => b !== driver[i])) {
+      a.write("PICO.SVC", driver);
+      wrote = true;
+    }
+    problem = cardProblem(image, display);
+  }
+  return { problem, changed: problem ? wrote : setDisplayLine(image, display) || wrote };
 }
 
 /**
@@ -78,13 +95,13 @@ function withoutDisplay(lines) {
   return out;
 }
 
-/** Make STARTUP.CMD's first line the driver for DISPLAY at WIDTH, leaving the rest. True if it changed. */
-export function setDisplayLine(image, display, width) {
+/** Make STARTUP.CMD's first line the driver for DISPLAY, leaving the rest. True if it changed. */
+export function setDisplayLine(image, display) {
   const a = driveA(image);
   const had = a.list().some((f) => f.name === "STARTUP.CMD");
   const old = had ? toLatin1(a.read("STARTUP.CMD")).split("\x1a")[0] : "";
   const rest = withoutDisplay(old.split(/\r?\n/));
-  const text = [displayFile(display, width), ...(display === "tms" ? ["GLCD.SVC"] : []), ...rest].map((l) => `${l}\r\n`).join("");
+  const text = [displayFile(display), ...(display === "tms" ? ["GLCD.SVC"] : []), ...rest].map((l) => `${l}\r\n`).join("");
   if (text === old) return false;
   a.write("STARTUP.CMD", fromLatin1(`${text}\x1a`));
   return true;

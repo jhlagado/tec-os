@@ -106,12 +106,13 @@ newest is not stored again, and nor is one holding a 0. Function 10 called by
 a program is CP/M 2.2's: ^W and ^N go into its buffer as characters, and its
 lines are not kept.
 
-`MOUNT B: NAME` (or an index, as `VOLS` lists them) puts another of the
+`MOUNT` lists the card's volumes, and `MOUNT B: NAME` (or an index, as `MOUNT`
+lists them) puts another of the
 card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
 empty, and a volume is never on two drives. `MOUNT B:` with B: the current
 drive takes it off too, and the next prompt is `A>`: the CCP takes A: at
 warm boot whenever 0004h names a drive with no volume, as no select of it
-could succeed. Both are programs on the starter
+could succeed. `MOUNT.COM` is on the starter
 card, using the mount entry in the ROM table, `ABIVOL`. Mounts are for the session: a
 reset keeps them, as long as the card still holds each volume. `docs/recovery.md`
 says how.

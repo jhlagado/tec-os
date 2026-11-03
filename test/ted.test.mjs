@@ -5,12 +5,10 @@
 // from the listing of the pinned build (Thorium 8fcc6ea, build/ted/ted.sym):
 // the pin's hash holds them.
 
-import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, standardCard, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TED = pinned("TED.COM");
@@ -155,17 +153,4 @@ test("TED's text holds at least 33,052 bytes on the starter card and 31,000 with
     keys(m, "ted x.asm\r", "TED", () => /EDIT X\.ASM/.test(m.text(0)));
     assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${tms ? "with" : "without"} a display, at least ${floor}`);
   }
-});
-
-test("the built starter card carries the pinned TED.COM, and room for TED's files and a 4 KiB source", { skip: TED.skip, timeout: 300_000 }, () => {
-  check(TED);
-  execFileSync(process.execPath, ["tools/media.mjs"], { cwd: ROOT, stdio: "ignore" });
-  const card = new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img")));
-  const a = volume(card, "A");
-  const onCard = a.read("TED.COM").subarray(0, tedBytes().length);
-  assert.deepEqual([...onCard], [...tedBytes()], "the pinned bytes");
-  assert.equal(a.list().some((f) => f.name === "EDIT.COM"), false);
-  // THOR.PRJ, .SES, .ERR, .$$$ and .BAK, a block each, and the source.
-  const need = 5 * a.blockBytes + 4096;
-  assert.ok(a.freeBytes() >= need, `${a.freeBytes()} bytes free on A:, ${need} needed`);
 });

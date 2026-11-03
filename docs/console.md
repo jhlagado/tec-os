@@ -24,8 +24,8 @@ there is always a console. The 20 × 4 LCD is never the console.
 | FTDI serial, 4800 8N2 | in, out | always | Implemented |
 | Matrix keyboard | in | the board's Matrix configuration switch (port 03h bit 0) is on | Implemented |
 | PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh; `PICO.SVC` | Implemented |
-| PICO9918, 40 × 24 text | out | as above, with `PICO40.SVC` | Implemented |
-| PICO9918, 32 × 24 Graphics I | out | as above, with `PICO32.SVC` | Implemented |
+| PICO9918, 40 × 24 text | out | as above, `PICO.SVC` built at 40 columns | Implemented |
+| PICO9918, 32 × 24 Graphics I | out | as above, `PICO.SVC` built at 32 columns | Implemented |
 | ST7920 GLCD, 128 × 64 as 21 × 8 | out | the controller's busy flag clears | Implemented |
 | HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
 
@@ -88,8 +88,8 @@ driver. Until one is in, output goes to the serial terminal and the LCD. The
 terminal reaches the display in use through the driver's table, so another
 display needs only those routines. `docs/services.md` has the rules.
 
-The PICO9918's console is `PICO.SVC`, `PICO40.SVC` or `PICO32.SVC`, one file a
-width, which the startup line chooses. It takes six pages below the BDOS entry,
+The PICO9918's console is `PICO.SVC`, built at 80 columns, 40, or 32 in
+Graphics I; a card holds one, and the web page writes the width chosen. It takes six pages below the BDOS entry,
 so `(0006h)` is six pages under the stub's, with its own font and the graphics entries. It refuses with no PICO9918 and with no matrix
 keyboard, and a board with no matrix keyboard therefore has an unprogrammed VDP
 until a program claims it. Its `REMOVE` refuses while it is the console, since

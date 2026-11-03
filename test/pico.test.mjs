@@ -155,7 +155,7 @@ test("a scroll, then ESC[2@ keeps the row it opens", () => {
 
 test("the starter card boots the PICO9918 alone on a board with both, and the GLCD on a board with one", async () => {
   const files = await displayFiles(ROOT);
-  assert.deepEqual(files.map((f) => f.name), ["PICO.SVC", "PICO40.SVC", "PICO32.SVC", "GLCD.SVC", "STARTUP.CMD"]);
+  assert.deepEqual(files.map((f) => f.name), ["PICO.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
   assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45312]);
@@ -679,25 +679,29 @@ test("the web host: a stored card with old drivers says so and offers a new star
   const old = Uint8Array.from(PICO_SVC["PICO.SVC"]);
   old[1] = 2;
   a.write("PICO.SVC", old);
-  assert.match(cardProblem(image, "tms", "80"), /PICO\.SVC is format 2.*A new starter card/);
-  assert.deepEqual(prepareCard(image, "tms", "80").changed, false);
+  assert.match(cardProblem(image, "tms"), /PICO\.SVC is format 2.*A new starter card/);
+  assert.deepEqual(prepareCard(image, "tms").changed, false);
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
-  assert.equal(cardProblem(image, "tms", "80"), null);
+  assert.equal(cardProblem(image, "tms"), null);
 });
 
-test("the web host: power-on applies the width, says what a card lacks, and a card with no drive A doesn't stop it", () => {
+test("the web host: power-on writes PICO.SVC at the width, says what a card lacks, and a card with no drive A doesn't stop it", () => {
   const image = standardCard();
-  assert.match(cardProblem(image, "tms", "80"), /no PICO\.SVC/);
-  assert.match(prepareCard(new Uint8Array(4096), "tms", "80").problem, /no drive A/);
+  assert.match(cardProblem(image, "tms"), /no PICO\.SVC: it boots as its STARTUP\.CMD says/);
+  assert.match(prepareCard(new Uint8Array(4096), "tms", PICO_SVC["PICO.SVC"]).problem, /no drive A/);
   const a = volume(image, "A");
-  a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
-  a.write("PICO40.SVC", PICO_SVC["PICO40.SVC"]);
-  assert.equal(cardProblem(image, "tms", "80"), null);
   a.write("STARTUP.CMD", startupFile("PICO.SVC", "GLCD.SVC", "DIR"));
-  assert.deepEqual(prepareCard(image, "tms", "40"), { problem: null, changed: true });
-  assert.equal(Buffer.from(volume(image, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0], "PICO40.SVC\r\nGLCD.SVC\r\nDIR\r\n");
-  assert.equal(prepareCard(image, "tms", "40").changed, false);
-  assert.match(cardProblem(image, "tms", "32"), /no PICO32\.SVC: it boots as its STARTUP\.CMD says/);
+  const pico = (n) => [...volume(image, "A").read("PICO.SVC").subarray(0, PICO_SVC[n].length)];
+  assert.deepEqual(prepareCard(image, "tms", PICO_SVC["PICO40.SVC"]), { problem: null, changed: true }, "a card with none gets the width's");
+  assert.deepEqual(pico("PICO40.SVC"), [...PICO_SVC["PICO40.SVC"]]);
+  assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\n");
+  assert.equal(prepareCard(image, "tms", PICO_SVC["PICO40.SVC"]).changed, false);
+  assert.deepEqual(prepareCard(image, "tms", PICO_SVC["PICO32.SVC"]), { problem: null, changed: true }, "a width change");
+  assert.deepEqual(pico("PICO32.SVC"), [...PICO_SVC["PICO32.SVC"]]);
+  volume(image, "A").write("GLCD.SVC", GLCD_SVC);
+  assert.deepEqual(prepareCard(image, "glcd"), { problem: null, changed: true }, "the GLCD's line first");
+  assert.equal(startupText(image), "GLCD.SVC\r\nDIR\r\n");
+  assert.deepEqual(pico("PICO32.SVC"), [...PICO_SVC["PICO32.SVC"]], "and PICO.SVC left");
 });
 
 const startupText = (image) => Buffer.from(volume(image, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0];
@@ -707,9 +711,9 @@ test("the web host: a chained startup line loses its display pieces and keeps th
   const a = volume(image, "A");
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC"));
-  assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, changed: true });
+  assert.deepEqual(prepareCard(image, "tms"), { problem: null, changed: true });
   assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nDIR\r\nDIR!:USER 3\r\n");
-  assert.equal(prepareCard(image, "tms", "80").changed, false);
+  assert.equal(prepareCard(image, "tms").changed, false);
 });
 
 test("the web host: a removed piece's colon passes to the piece after it, and one that hung on a display piece goes", () => {
@@ -726,9 +730,9 @@ test("the web host: a removed piece's colon passes to the piece after it, and on
     const a = volume(image, "A");
     a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
     a.write("STARTUP.CMD", startupFile(line));
-    prepareCard(image, "tms", "80");
+    prepareCard(image, "tms");
     assert.equal(startupText(image), `PICO.SVC\r\nGLCD.SVC\r\n${want}\r\n`, line);
-    assert.equal(prepareCard(image, "tms", "80").changed, false, line);
+    assert.equal(prepareCard(image, "tms").changed, false, line);
   }
 });
 
@@ -745,7 +749,7 @@ test("the web host: a next line's first colon goes with the display piece it hun
     const a = volume(image, "A");
     a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
     a.write("STARTUP.CMD", startupFile(...lines));
-    prepareCard(image, "tms", "80");
+    prepareCard(image, "tms");
     assert.equal(startupText(image), `PICO.SVC\r\nGLCD.SVC\r\n${want}\r\n`, lines.join("|"));
   }
 });
@@ -756,7 +760,7 @@ test("the web host: VOLS on the line after PICO.SVC still runs after a failing G
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("VOLS.COM", Uint8Array.from([0xc9]));
   a.write("STARTUP.CMD", startupFile("PICO.SVC", ":VOLS"));
-  prepareCard(image, "tms", "80");
+  prepareCard(image, "tms");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
   m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
   assert.match(m.text(0), /GLCD\.SVC\?[\s\S]*>VOLS\r/);
@@ -768,7 +772,7 @@ test("the web host: the piece after a display piece loses its colon and still ru
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("VOLS.COM", Uint8Array.from([0xc9]));
   a.write("STARTUP.CMD", startupFile("PICO.SVC!:VOLS", "DIR!GLCD.SVC!PICO.SVC!:USER 3!:USER 0"));
-  prepareCard(image, "tms", "80");
+  prepareCard(image, "tms");
   assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nVOLS\r\nDIR!USER 3!:USER 0\r\n");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
   m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
@@ -783,7 +787,7 @@ test("the web host: a card with .DRV files is refused in its own words and left 
   a.write("GLCD.DRV", GLCD_SVC);
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
   const before = image.slice();
-  const { problem, changed } = prepareCard(image, "tms", "80");
+  const { problem, changed } = prepareCard(image, "tms");
   assert.match(problem, /older TEC-OS: this ROM doesn't load PICO\.DRV.*A new starter card has PICO\.SVC/);
   assert.equal(changed, false);
   assert.deepEqual(image, before);
@@ -794,9 +798,12 @@ test("the web host: an old card's words name the display asked for, or else what
   const a = volume(image, "A");
   a.write("GLCD.DRV", GLCD_SVC);
   a.write("PICO.DRV", PICO_SVC["PICO.SVC"]);
-  assert.match(cardProblem(image, "tms", "80"), /doesn't load PICO\.DRV/);
-  assert.match(cardProblem(image, "glcd", "80"), /doesn't load GLCD\.DRV/);
-  assert.match(cardProblem(image, "tms", "40"), /doesn't load (GLCD|PICO)\.DRV.*has PICO40\.SVC/);
+  assert.match(cardProblem(image, "tms"), /doesn't load PICO\.DRV/);
+  assert.match(cardProblem(image, "glcd"), /doesn't load GLCD\.DRV/);
+  assert.match(cardProblem(image, "tms"), /doesn't load PICO\.DRV.*has PICO\.SVC/);
+  const before = image.slice();
+  assert.equal(prepareCard(image, "tms", PICO_SVC["PICO40.SVC"]).changed, false, "an older card isn't given a driver");
+  assert.deepEqual(image, before);
 });
 
 test("the web host: a card whose files were renamed by hand has its .DRV display lines taken out", () => {
@@ -804,7 +811,7 @@ test("the web host: a card whose files were renamed by hand has its .DRV display
   const a = volume(image, "A");
   a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
-  assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, changed: true });
+  assert.deepEqual(prepareCard(image, "tms"), { problem: null, changed: true });
   assert.equal(startupText(image), "PICO.SVC\r\nGLCD.SVC\r\nMY.DRV\r\n");
 });
 
