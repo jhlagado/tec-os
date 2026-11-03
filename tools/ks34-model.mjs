@@ -179,7 +179,7 @@ function figuresAgree(landed, c) {
     "docs/services.md": [page(starter.entry) - 0xd00],
   };
   const missing = Object.entries(want).flatMap(([f, v]) => v.filter((x) => !text(landed, f).includes(n(x))).map((x) => `${f}: ${n(x)}`));
-  const old = /\b(46,854|46,086|45,318|44,550|43,782|43,014|1,536 bytes|B80[56]h|xx06h)\b/;
+  const old = /\b(46,854|46,592|46,086|45,318|44,550|43,782|43,014|1,536 bytes|B80[56]h|xx06h)\b/;
   const stale = walk(landed).filter((f) => /\.md$/.test(f) && !HISTORICAL(f)).flatMap((f) => text(landed, f).split("\n").filter((l) => old.test(l) && !/^\| TPA \|/.test(l)).map((l) => `${f}: ${l.slice(0, 60)}`));
   return { missing, stale, agree: !missing.length && !stale.length };
 }

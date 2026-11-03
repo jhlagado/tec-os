@@ -7,9 +7,9 @@ card, since cold boot places the BDOS entry below the allocation vectors of
 the volumes mounted. A display's driver takes six pages under the stub's page,
 leaving 45,312 on the starter card and 44,544 with four 8 MiB volumes. A board
 with both displays that installs both with `CON UC1` has 43,776 on the starter
-card and 43,008 with four. The CCP loads a `.COM` up to the page holding the
-word at `0006h`, so the largest it loads on the starter card is 46,592 bytes, 277
-below the TPA: a program may use the rest. It reports version 2.2.
+card and 43,008 with four. The CCP loads a `.COM` up to the start of the page
+holding the word at `0006h`, so the largest it loads on the starter card is
+46,848 bytes (`0100h–B7FFh`), 21 below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
 
