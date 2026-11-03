@@ -12,5 +12,10 @@
     "drive walkers' label copy": { "bytes": 20, "routines": ["SHV", "SHVL", "LCDV", "DRVLAB"] },
     "PUTCHAR keeps BC and HL": { "bytes": 15, "routines": ["PUTCHAR", "MLEC1", "BADLOOP", "DIRNAME", "DIRPADC", "PUTTRIM", "PUTNAME", "CMDDL"] }
   },
+  "stacks": {
+    "note": "PUTCHAR keeps BC and HL (KD-158, KG42's stated change). ccp-operands' fixture, per command: DIR 12 to 16, DIR *.TXT 12 to 16, DIR B: 12 to 14, B: 6 to 8, A: 6 to 8. Paths it doesn't measure: a successful COPY's CPHEX 8 to 14 bytes of the CCP's 30; MLEC1, BADLOOP and CMDDL each 2 deeper. The stack census's workload holds a COPY of 20000 bytes A: to B:, and its CCP deepest stays 22 of 30.",
+    "ccpReserved": 30,
+    "ccpDeepest": 22
+  },
   "hotPaths": ["BENTRY", "DISPATCH", "FINDENT", "READDIR", "POSREC", "FNREADSQ", "FNRREAD", "SDRBLK", "SDWBLK"]
 }
