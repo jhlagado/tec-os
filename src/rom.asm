@@ -1,6 +1,7 @@
 ; TEC-OS ROM image, C000h-FFFFh: the reset jump, the table, one block of
 ; read-only data and one block of code, with the free space at the end.
 ; Include order is assembly order.
+%INCLUDE "abi.inc"
 %INCLUDE "gen/config.asm"
 %INCLUDE "gen/format.asm"
 %INCLUDE "layout.asm"

@@ -1,58 +1,26 @@
-; Hardware services, ABI 4.0 (docs/rom-services.md). CALL ABIHW with the
-; number in C, from HWBASE, and arguments in B, DE and HL. Returns A = status
-; with Z and carry clear on success; results as each one says. IX, IY and
-; the alternate registers are preserved. Any program may call them: they run on
-; the caller's stack (at most 22 bytes, PUTAT on a GLCD console being the
-; deepest) and keep their state in the resident workspace. Numbers and status
-; codes are in abi.inc too, and the build checks that the two agree.
+; The numbered services, ABI 5.0 (docs/rom-services.md). CALL ABICALL with the
+; number in C and arguments in B, DE and HL; abi.inc names each number, its
+; arguments, results, carry and stack. Returns A = 0 with Z and carry clear on
+; success, or A = a status with carry. The hardware services, 0 to 8, are here;
+; the volumes' are vol.asm's, the driver hook glcd.asm's and the registry's
+; svc.asm's. Any program may call them: they run on the caller's stack and keep
+; their state in the resident workspace.
 ;
-; These are the calls that would otherwise fight the OS for a port: the
-; digit and speaker port (01h) also carries the serial transmit line, which
-; must stay idle, and the PICO9918 is the console.
-
-HWINFO	EQU	19		; B = devices (CONDEV's bits, HWBRTC, HWBCLM),
-				; DE = ROM version,
-				; L = console columns, H = rows (0 for serial)
-HWDIGIT	EQU	20		; HL -> 6 segment bytes, leftmost first
-HWLCD	EQU	21		; B = row 0-3, HL -> 20 characters
-HWVIDEO	EQU	22		; B = 1 claim the PICO9918, 0 give it back
-HWTONE	EQU	23		; B = half period (16 T-states a unit),
-				; DE = half cycles
-HWJOY	EQU	24		; B = joystick bits, 1 for each one pressed
-HWKEYS	EQU	25		; HL -> 8 bytes: the matrix rows
-HWPUTAT	EQU	26		; D = row, E = column, B = count,
-				; HL -> characters
-HWRTC	EQU	27		; B = 0 read, 1 set the 7 BCD bytes at HL
-HWCOUNT	EQU	9		; how many follow HWBASE
-HWBASE	EQU	19		; the first number no ABI 3 program used
-
-HWEBAD	EQU	1		; no such number, or an argument out of range
-HWENODV	EQU	2		; the device is not fitted
-
-; INFO's bits in B. The build checks them against CONDEV's CD* bits, which
-; they name for programs.
-HWBMTX	EQU	$01		; a matrix keyboard
-HWBPICO	EQU	$02		; a PICO9918 answered at cold boot
-HWBGLCD	EQU	$04		; GLCD.SVC is in
-HWBRTC	EQU	$08		; a DS1302 clock answers
-HWBCLM	EQU	$10		; the PICO9918 is claimed
-HWBWRD	EQU	$80		; a word of the ROM's is on LCD row 3
+; The hardware services are the calls that would otherwise fight the OS for a
+; port: the digit and speaker port (01h) also carries the serial transmit line,
+; which must stay idle, and the PICO9918 is the console.
 
 RTCPORT EQU     $FC             ; DS1302: bit 4 enable, 6 clock, 7 data out,
                                 ; 5 data in, read on bit 0
 
 SEGPORT EQU     $02             ; 7-segment segment latch
 TXIDLE  EQU     $40             ; port 01h bit 6: serial line idle, speaker off
-HWTAB0	EQU	HWTAB-2*HWBASE	; the table as C indexes it
-
-; The dispatcher. C = the number, B, DE and HL its arguments, which reach it
-; whole. Any number outside HWBASE to HWBASE+8 returns HWEBAD with the other
-; registers as they were, so an ABI 3 program's old numbers do nothing. Destroys
-; AF and what the hardware service does.
-HWSVC:	LD	A,C		; below HWBASE wraps to a large number
-	SUB	HWBASE
-	CP	HWCOUNT
-	LD	A,HWEBAD
+; The dispatcher. C = the number, B, DE and HL its arguments, which reach the
+; service whole. Any number from TNCOUNT up returns TNEBAD with the other
+; registers as they were. Destroys AF and what the service does.
+SVCDSP:	LD	A,C
+	CP	TNCOUNT
+	LD	A,TNEBAD
 	JR	NC,HWERR	; past the table
 	PUSH	HL		; the arguments, across the lookup
 	PUSH	DE
@@ -60,7 +28,7 @@ HWSVC:	LD	A,C		; below HWBASE wraps to a large number
 	ADD	A,A
 	LD	E,A
 	LD	D,0		; DE = the entry's offset
-	LD	HL,HWTAB0	; C counts from HWBASE
+	LD	HL,SVTAB
 	ADD	HL,DE
 	LD	E,(HL)		; DE = its routine
 	INC	HL
@@ -75,15 +43,12 @@ HWERR:  OR      A
 HWOK:   XOR     A
         RET
 
-; The INFO hardware service. Returns B = CONDEV's bits, with HWBRTC if a DS1302 answers
-; (seconds below 60h) and HWBCLM, which is VCLAIM's value, while the PICO9918
-; is claimed; DE = the ROM's version; HL = columns and rows.
+; INFO. Returns B = CONDEV's bits, the clock's from cold boot, with HWBCLM,
+; VCLAIM's value, while the PICO9918 is claimed; DE = the ROM's version; HL =
+; columns and rows. It reads no device.
 HWSINFO:
-	CALL	RTCHAS
-	LD	A,(CONDEV)	; the flags are still RTCHAS's
-	JR	NZ,HWSIN1
-	OR	HWBRTC		; the clock answered
-HWSIN1:	LD	HL,VCLAIM	; holds HWBCLM's value while claimed
+	LD	A,(CONDEV)
+	LD	HL,VCLAIM	; holds HWBCLM's value while claimed
 	OR	(HL)
 	LD	B,A
         LD      DE,ROMVER
@@ -108,7 +73,7 @@ HWSDD:  DJNZ    HWSDD
 
 HWSLCD: LD      A,B
 	CP	4
-        LD      A,HWEBAD
+        LD      A,TNEBAD
 	JR	NC,HWERR
         PUSH    HL
 	LD	A,B		; a program takes row 3: no word of the ROM's
@@ -137,7 +102,7 @@ HWSLC:  CALL    LCDWAIT
 ; and the screen is cleared; with none, the VDP is left as the program left it.
 HWSVID: LD      A,(CONDEV)
         AND     CDTMS
-        LD      A,HWENODV
+        LD      A,TNENODV
         JP      Z,HWERR
         LD      A,B
         OR      A
@@ -216,11 +181,11 @@ HWSKL:  IN      A,(C)
 ; screen, without moving the cursor. Status 2 on the serial terminal, or while
 ; the PICO9918 is claimed and is the console.
 HWSPUT: CALL    VTOWN
-        LD      A,HWENODV
+        LD      A,TNENODV
         JP      NZ,HWERR
         LD      A,(CONMOD)
         RRCA
-        LD      A,HWENODV
+        LD      A,TNENODV
         JP      NC,HWERR
         LD      A,B
         OR      A
@@ -260,7 +225,7 @@ HWSPL:  LD      A,(VWID)
 HWSRTC: PUSH    BC
         CALL    RTCHAS
         POP     BC
-        LD      A,HWENODV
+        LD      A,TNENODV
         JP      NZ,HWERR
         LD      A,B
         OR      A

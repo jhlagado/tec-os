@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Machine } from './lib/machine.mjs';
-import { romFor, TEST_CLOCK, volume } from './lib/fixtures.mjs';
+import { ABI, romFor, TEST_CLOCK, volume } from './lib/fixtures.mjs';
 import { createContainer, parseContainer } from '../tools/lib/container.mjs';
 
 function start() {
@@ -25,7 +25,8 @@ function call(m, name, regs = {}) {
   assert.equal(m.cpu.cpu.sp, 0x3002, 'balanced return to the caller');
   return m.cpu.cpu.a;
 }
-const svc = (m, a, c = 1, e = 2) => call(m, 'ABIVOL', { a, c, e, h: 0x50, l: 0 });
+// The volume services by their old operation: 0 mount, 1 unmount, 2 describe; drive C.
+const svc = (m, a, c = 1, e = 2) => call(m, 'ABICALL', { b: c, c: [ABI.TNMOUNT, ABI.TNUNMNT, ABI.TNDESC][a], e, h: 0x50, l: 0 });
 function writeRecord(m, drive, sector, value) {
   call(m, 'BSELDSK', { c: drive });
   word(m, 'DSKTRK', 2); word(m, 'DSKSEC', sector); word(m, 'DSKDMA', 0x4000);
@@ -53,7 +54,7 @@ for (const operation of ['describe', 'rejected mount', 'failed descriptor read']
     const fault = operation === 'failed descriptor read' ? failIO(m, 'SDREAD') : null;
     const result = operation === 'rejected mount' ? svc(m, 0, 1, 0) : svc(m, 2);
     fault?.restore();
-    assert.equal(result, operation === 'describe' ? 0 : 255);
+    assert.equal(result, operation === 'describe' ? 0 : ABI.TNEBAD);
     if (fault) assert.ok(fault.count() > 0);
     assert.equal(m.read(m.sym('BUFOK')), 0);
     writeRecord(m, 0, 1, 0xbb);
@@ -108,7 +109,7 @@ for (const op of [0, 1]) {
     const result = svc(m, op);
     fault.restore();
     assert.ok(fault.count() > 0, 'real dirty line reached SDWRITE');
-    assert.equal(result, 255);
+    assert.equal(result, ABI.TNEBAD);
     assert.deepEqual(bytes(m, m.sym('DRVTAB'), 36), table);
     assert.deepEqual(bytes(m, m.sym('DPHTAB'), 64), dph);
     assert.deepEqual(image, card);

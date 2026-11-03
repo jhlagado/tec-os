@@ -110,7 +110,7 @@ empty, and a volume is never on two drives. `MOUNT B:` with B: the current
 drive takes it off too, and the next prompt is `A>`: the CCP takes A: at
 warm boot whenever 0004h names a drive with no volume, as no select of it
 could succeed. `MOUNT.COM` is on the starter
-card, using the mount entry in the ROM table, `ABIVOL`. Mounts are for the session: a
+card, using the ROM table's volume services, `TNMOUNT` and `TNUNMNT`. Mounts are for the session: a
 reset keeps them, as long as the card still holds each volume. `docs/recovery.md`
 says how.
 
@@ -122,7 +122,7 @@ and none is on the starter card or written by the tools.
 
 A service is a resident in TEC-OS's own `.SVC` format, with an installation
 that can fail cleanly and a registry through which programs find its
-records (`ABISVC`, ABI 4). `docs/services.md` is its interface. It goes in
+records (`TNFIND` and `TNLIST`, ABI 5). `docs/services.md` is its interface. It goes in
 whole pages just below the BDOS entry, and the word at `0006h` moves down to
 the page's start, which holds a jump straight into the BDOS, however many are in;
 warm boot keeps it there. Programs that size themselves from `0006h` never reach it, a
@@ -206,25 +206,19 @@ and run.
 
 ## The contract at this commit
 
-What another program or study may rely on, in one place. ABI 4.0 is not frozen
-until a release. `src/abi.inc` is the published form, and the build checks it
-against the ROM.
+What another program or study may rely on, in one place. ABI 5.0 is not frozen
+until a release. `src/abi.inc` is the published form, and the ROM assembles from it.
 
 ### The ROM table
 
 | Address | Name | What it is |
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` |
-| `C006h` | `ABIMAJ` | Major version, 4 |
+| `C006h` | `ABIMAJ` | Major version, 5 |
 | `C007h` | `ABIMIN` | Minor version, 0 |
-| `C008h` | `ABIVID` | Address of the console size, columns then rows |
-| `C00Ah` | `ABIHW` | `JP` to the hardware services, numbered 19 to 27 in C |
-| `C00Dh` | `ABIMAIN` | Address of the MAIN count |
-| `C00Fh` | `ABIVOL` | `JP` to mount, unmount and describe volumes |
-| `C012h` | `ABIGLCD` | `JP` to hand the ROM a video driver's table |
-| `C015h` | `ABISVC` | `JP` to the registry; `ABIDRV` is its old name, an alias in `abi.inc` at no ROM byte |
+| `C008h` | `ABICALL` | `JP` to the 15 services numbered 0 to 14 in C: the hardware services, mount, unmount, describe, the video drivers' hook, find and list |
 
-The table ends at `C018h`. `C01Dh` holds a `RET`, for an ABI 3 card's programs.
+The table ends at `C00Bh`. `abi.inc` gives each service's arguments, results, carry and stack.
 `PUTAT` returns status 2 on the serial terminal, or while the PICO9918 is claimed and
 is the console: with the console on `UC1:`, a claim leaves it working.
 
@@ -240,9 +234,9 @@ other function above 40.
 
 ### The service format
 
-Format 3, the magic 0344h ('D', then the version), the type `.SVC`. The layout is
-`docs/services.md`'s. The magic stayed through the type's change, so a format 3 file
-under its old name is a good file once it is renamed.
+Format 4, the magic 0444h ('D', then the version), the type `.SVC`. The layout is
+`docs/services.md`'s, unchanged from format 3; the version rose with ABI 5, so the
+loader refuses a format 3 service, which would call ABI 4's addresses.
 
 ### Page zero and the workspace
 
@@ -255,11 +249,11 @@ a chained line.
 
 | Area | Since `814bc44` | Before it, from `7029f57` |
 | --- | --- | --- |
-| ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 4.0. `XMOVE`, `MOVE`, the nested CCP entries, the EXPAND count, the low mark and the font's address left it; `ABIGLCD` and `ABISVC` joined. The file type's rename adds `ABISVC` beside `ABIDRV` | The table was added |
-| Hardware services | 19 numbered from 0 became 9 numbered from 19: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`. An old number returns status 1 | Added |
+| ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 5.0: 8 bytes, the signature, the versions and one jump to 15 numbered services. `XMOVE`, `MOVE`, the nested CCP entries, the counts, the low mark, the console size's address and the font's address left it | The table was added |
+| Hardware services | 19 numbered from 0 became 9 numbered from 0: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`, then mount, unmount, describe, the drivers' hook, find and list as 9 to 14. A number past 14 returns status 1 | Added |
 | BDOS | Function 47 added; function 50 gone. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
-| Service format | Format 3 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
+| Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
 | Page zero | `0040h` to `004Fh` hold the same names but `EXPANDS`, gone with MAIN 1's count. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
 | TPA | 46,869 on the starter card with no display, 45,312 with one display's driver and 43,776 with two | 45,830 at `7029f57` |

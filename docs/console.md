@@ -102,7 +102,7 @@ The GLCD console is a driver, `GLCD.SVC` on the starter card, not part of
 the ROM. Its code, its screen text and its font take six pages just below the
 BDOS entry, so on a board that loads it `(0006h)` is six pages under the stub's; a board
 without a GLCD loses nothing. Its INIT hands the terminal its six video
-routines through `ABIGLCD` in the table at `C003h`, and the terminal calls them directly, on the
+routines through `TNDRVR`, a service of the table at `C003h`, and the terminal calls them directly, on the
 caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
 keyboard and no PICO9918, cold boot shows its banner and volumes on the
 serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
@@ -126,7 +126,7 @@ The CCP's `TYPE` and `DIR` use the display size to pause with `[more]` one
 line short of a full screen.
 
 The display size is published in the table at `C003h` (the word at
-`ABIVID`, `C008h`, points to columns, then rows), so programs such as an editor can lay out
+`INFO`, service 0, returns columns in L and rows in H), so programs such as an editor can lay out
 their screen without being rebuilt for each display.
 
 The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows. The

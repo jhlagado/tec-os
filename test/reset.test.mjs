@@ -74,9 +74,9 @@ function callAt(m, addr, regs) {
   Object.assign(cpu, saved, { flags });
   return a;
 }
-/** The mount entry, as a program calls it: its BDOS call needs the program's exit after it. */
+/** The volume services, as a program calls them, by the old operation: 0 mount, 1 unmount, 2 describe, on drive C. Their BDOS call needs the program's exit after it. */
 const volSvc = (m, a, c, e = 0) => {
-  const r = callAt(m, m.sym("ABIVOL"), { a, c, e });
+  const r = callAt(m, m.sym("ABICALL"), { b: c, c: [ABI.TNMOUNT, ABI.TNUNMNT, ABI.TNDESC][a], e });
   warm(m);
   return r;
 };
@@ -719,6 +719,6 @@ for (const [name, spoil] of [["recognised", () => {}], ["unrecognised", (m) => m
   });
 }
 
-test("abi.inc is not moved: the hardware services and the table still read as ABI 4", () => {
-  assert.equal(ABI.HWBASE, 19);
+test("abi.inc is ABI 5: INFO is service 0 and the table one jump at C008h", () => {
+  assert.deepEqual([ABI.TNINFO, ABI.ABICALL, ABI.ABIEND], [0, 0xc008, 0xc00b]);
 });

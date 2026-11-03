@@ -25,7 +25,7 @@ function call(m, label, args = {}) {
   for (const [r, v] of Object.entries(preserved)) assert.equal(cpu[r], v, r);
   assert.deepEqual(cpu.flags_prime, alternateFlags, "alternate flags");
   if (label === "CONSEL") for (const r of ["b", "c", "d", "e"]) assert.equal(cpu[r], args[r], r);
-  const key = label === "ABIHW" ? `${label}/${args.c}/${args.b ?? 0}` : label;
+  const key = label === "ABICALL" ? `${label}/${args.c}/${args.b ?? 0}` : label;
   depths[key] = Math.max(depths[key] ?? 0, 0xffe - low);
   return { a: cpu.a, carry: cpu.flags.C, z: cpu.flags.Z };
 }
@@ -64,13 +64,13 @@ for (const profile of profiles) {
     m.cpu.hardware.memRead = (a) => { if (a >= 0x2000 && a < 0x2100) reads.push(a); return read(a); };
     m.write(0x2000, 90);
     let r;
-    const writes = watch(m, () => { r = call(m, "ABIHW", { c: ABI.HWPUTAT, b: 0, d: 0, e: 0, h: 0x20, l: 0 }); });
+    const writes = watch(m, () => { r = call(m, "ABICALL", { c: ABI.TNPUTAT, b: 0, d: 0, e: 0, h: 0x20, l: 0 }); });
     m.cpu.hardware.memRead = read;
     ok(r);
     assert.deepEqual(reads, [], "zero count must not read the source");
     assert.deepEqual(screen(m, profile), before);
     assert.equal(writes.length, 0);
-    ok(call(m, "ABIHW", { c: ABI.HWPUTAT, b: 1, d: 0, e: 0, h: 0x20, l: 0 }));
+    ok(call(m, "ABICALL", { c: ABI.TNPUTAT, b: 1, d: 0, e: 0, h: 0x20, l: 0 }));
     assert.equal(screen(m, profile)[0], "ZBC");
     assert.equal(m.read(m.sym("VCOL")), 3);
     assert.deepEqual(m.violations, []);
@@ -88,7 +88,7 @@ for (const profile of profiles) {
   test(`${profile}: switching to a claimed display preserves registers and VRAM until release`, () => {
     const m = start(profile);
     const defaultRegisters = [...m.tec1g.state.display.tms9918.stateSnapshot().registers];
-    ok(call(m, "ABIHW", { c: ABI.HWVIDEO, b: 1 }));
+    ok(call(m, "ABICALL", { c: ABI.TNVIDEO, b: 1 }));
     vreg(m, 7, 0x12);
     const before = m.tec1g.state.display.tms9918.stateSnapshot();
     const writes = watch(m, () => {
@@ -101,12 +101,12 @@ for (const profile of profiles) {
     assert.equal(writes.filter(([p]) => p === 0xbe || p === 0xbf).length, 0);
     assert.deepEqual(m.tec1g.state.display.tms9918.stateSnapshot(), before);
     assert.notEqual(m.read(m.sym("VCLAIM")), 0);
-    assert.deepEqual(call(m, "ABIHW", { c: ABI.HWPUTAT, b: 0, h: 0x20, l: 0 }), { a: 2, carry: 1, z: 0 });
-    ok(call(m, "ABIHW", { c: ABI.HWVIDEO, b: 0 }));
+    assert.deepEqual(call(m, "ABICALL", { c: ABI.TNPUTAT, b: 0, h: 0x20, l: 0 }), { a: 2, carry: 1, z: 0 });
+    ok(call(m, "ABICALL", { c: ABI.TNVIDEO, b: 0 }));
     assert.equal(m.read(m.sym("VCLAIM")), 0);
     assert.deepEqual([...m.tec1g.state.display.tms9918.stateSnapshot().registers], defaultRegisters);
     assert.ok(m.screen().every((row) => row === ""));
-    ok(call(m, "ABIHW", { c: ABI.HWVIDEO, b: 1 }));
+    ok(call(m, "ABICALL", { c: ABI.TNVIDEO, b: 1 }));
     vreg(m, 7, 0x12);
     m.cpu.cpu.pc = m.sym("WBOOTR");
     m.mark = m.output.length;

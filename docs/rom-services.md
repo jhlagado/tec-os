@@ -1,11 +1,11 @@
 # The ROM table and the hardware services
 
-Status: **Built**, ABI 4.0. The *ROM table* is at `C003h`. Its hardware services' entry, `ABIHW` at
-`C00Ah`, has 9 *hardware services* in `src/hwsvc.asm`, 485 bytes of ROM in all, and
-`test/hwsvc.test.mjs` calls each one with its arguments in the registers and
-measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
+Status: **Built**, ABI 5.0. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
+at `C008h`, to 15 *numbered services*: 9 *hardware services* in `src/hwsvc.asm`, and
+the volumes', the display drivers' hook and the registry's. `test/hwsvc.test.mjs`
+calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,685 bytes (`tecos`) and has 1,699 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,688 bytes (`tecos`) and has 1,696 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -20,39 +20,25 @@ gives programs the TEC-1G's hardware, and what belongs on the card instead.
 | after the data | One block of code |
 | to `FFFFh` | The free space, in one gap |
 
-Only `C003h` and the `RET` at `C01Dh`, below, are fixed. The data and code move when an entry is added to the
-table or the code changes; programs reach the ROM only through the table.
-The build checks this order from the symbol table on every profile, and
-refuses any `.asm` file that names an address of the old table at `FF00h`.
+Only `C003h` is fixed. The data and code move when the code changes; programs reach
+the ROM only through the table. The build checks this order from the symbol table.
 
 ## The ROM table
 
-ABI 4.0. `src/abi.inc`, published in `dist/` as `abi.inc`, gives each entry's
-address under the name below, and the hardware services' numbers and status codes, and
-the build checks them against the ROM. A program tests for major version 4
-exactly: a new major may move what follows `ABIMAIN` and renumber the hardware services.
-`C003h` to `C00Ch` kept their addresses from ABI 3. ABI 4 isn't frozen until a
-release, so a later stage may add to the table's end, which is `C018h`.
-
-An ABI 3 program that tests the major for 3 stops itself. For the old clients that
-don't, two things are done. Hardware service numbers start at `HWBASE`, 19, so that the
-numbers 0 to 18 are refused, which holds for `DEMO`, whose test takes any major from
-2. And `MOUNT` and `VOLS`, which test nothing and call `C01Dh`, meet a `RET` there,
-in the data after the table, and the build checks that it stays. No other program
-is covered: an ABI 3 program that doesn't test may reach any address in the table,
-such as `C012h`, which is `ABIGLCD` now.
+ABI 5.0. `src/abi.inc`, published in `dist/` as `abi.inc`, gives the table's
+addresses and each service's number, arguments, results, carry and stack; the ROM
+assembles from the same file, so the two can't disagree. A program tests for major
+version 5 exactly: a new major may renumber the services, and a new minor only adds
+numbers at the end. An ABI 4 or ABI 3 program that tests the major stops itself; one that
+tests nothing reaches whatever its old address now holds, and a service of format 3,
+built for ABI 4, is refused by the loader before its INIT runs.
 
 | Address | Name | Contents |
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` signature |
-| `C006h` | `ABIMAJ` | ABI major version, 4 |
+| `C006h` | `ABIMAJ` | ABI major version, 5 |
 | `C007h` | `ABIMIN` | ABI minor version, 0 |
-| `C008h` | `ABIVID` | Address of the console size, columns then rows |
-| `C00Ah` | `ABIHW` | `JP` to the hardware services |
-| `C00Dh` | `ABIMAIN` | Address of the MAIN count, 1 or 2 |
-| `C00Fh` | `ABIVOL` | `JP VOLSVC`: A = 0 mount drive C with container index E; 1 unmount drive C; 2 describe index E into the 32 bytes at HL, its drive byte the drive it is on now. A = 0, or FFh with nothing changed |
-| `C012h` | `ABIGLCD` | `JP GLHOOK`: A = 1 `CRT:` or 3 `UC1:`, HL = a video driver's table of eight words, and `LINEBUF` back in HL; carry set and nothing changed if that mode has one, or with no matrix keyboard; HL = 0 drops it |
-| `C015h` | `ABISVC` | `JP SVCREG`: the registry, below; C = 0 find, 1 enumerate |
+| `C008h` | `ABICALL` | `JP` to the service numbered in C |
 
 EXPAND 1 is TEC-OS's own, and no interface leaves it in view: `BF00h` and `BE00h`
 free, `BD00h` the command history, `BC00h` the block cache's table and
@@ -61,30 +47,32 @@ contents do not survive a reset, and warm boot leaves them.
 
 ## The registry
 
-`ABISVC` finds the records of the services in memory. `docs/services.md` sets out
+`TNFIND` and `TNLIST` find the records of the services in memory. `docs/services.md` sets out
 the services and what each side may rely on.
 
 | C | Arguments | Returns |
 | --- | --- | --- |
-| 0, find | DE = a record's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
-| 1, enumerate | B = an index from 0 | Carry clear: HL = that record (a link word, the name, the version, the table's address), A = the generation. Carry set: past the last |
-| anything else | | Carry set |
+| 13, `TNFIND` | DE = a record's name, 8 bytes padded with spaces; B = the least interface version | Carry clear: HL = its entry table, A = the generation. Carry set: none |
+| 14, `TNLIST` | B = an index from 0 | Carry clear: HL = that record (a link word, the name, the version, the table's address), A = the generation. Carry set: past the last |
 
 Find returns the newest service's record when two publish one name. AF, BC, DE and
-HL are destroyed; IX and IY are kept. It uses at most 8 bytes of the caller's
-stack, its return address among them, and makes no BDOS or BIOS call, so it
+HL are destroyed; IX and IY are kept. Each uses at most 8 bytes of the caller's
+stack, the dispatcher's among them, and makes no BDOS or BIOS call, so it
 is safe on any stack. Each walk stops after 256 records, so a program that
 has overwritten a record can't loop it. A removal raises the generation by
 one; it is 8 bits, so after 256 removals it repeats and a stale pointer
 passes a comparison. There is no public removal: `UNLOAD` is the only way a service leaves.
 
-## Calling the hardware services
+## Calling the services
 
-A program checks for `"TNA"` at `ABITAB` and ABI major version 4 at
-`ABIMAJ`, then calls `ABIHW` with the hardware service's number in C and arguments in
-B, DE and HL. `abi.inc` names each number and status code. On return A holds the status, with Z set and carry clear on
-success; results come back as each hardware service lists. IX, IY and the alternate
-registers are preserved. A CP/M program that finds no signature is on
+A program checks for `"TNA"` at `ABITAB` and ABI major version 5 at
+`ABIMAJ`, then calls `ABICALL` with the service's number in C and arguments in
+B, DE and HL; A is never an argument. `abi.inc` names each number and status code. On return A holds the status, with Z set and carry clear on
+success, or a status with carry set and nothing changed; results come back as each
+service lists, and `TNFIND` and `TNLIST` return the generation in A. IX, IY and the
+alternate registers are preserved, but `TNMOUNT`, `TNUNMNT` and `TNDESC` may change
+IX and the alternates. None calls the BDOS but `TNMOUNT` and `TNUNMNT`, which reset
+the drive through function 37 on the BDOS's own stack. A CP/M program that finds no signature is on
 another system and carries on without the TEC-1G's devices.
 
 | Status | Meaning |
@@ -108,7 +96,7 @@ The rules that make the hardware services safe for CP/M programs:
 ## A video driver's table
 
 The consoles on the PICO9918 and the GLCD are drivers, `PICO.SVC` and `GLCD.SVC`,
-below `(0006h)`. INIT calls `ABIGLCD` with A = 1 for `CRT:` or 3 for `UC1:` and HL
+below `(0006h)`. INIT calls `TNDRVR` (12) with B = 1 for `CRT:` or 3 for `UC1:` and HL
 pointing at eight words: the routines in the terminal's order (put, get, clear to
 the end of the line, restore, read a row, write a row), a routine for the page
 functions, then a byte of columns and a byte of rows. The seventh word may be 0 on
@@ -121,11 +109,11 @@ bytes it has. A program that pushes anything before calling the BIOS directly se
 up its own stack first. The routines run with the caller's interrupt state, so an
 interrupt handler must not print through the console.
 
-`ABIGLCD` returns `LINEBUF`'s address in HL, where the row routines read and write a
-row, with carry clear. It returns carry set with nothing changed if that mode has a
-table already, or with no matrix keyboard. HL = 0 drops the mode's table, with carry
-clear, and the console is chosen again at its next call. A destroys; BC is kept.
-It uses 2 bytes of the caller's stack.
+`TNDRVR` returns `LINEBUF`'s address in HL, where the row routines read and write a
+row, with A = 0 and carry clear. It returns `TNEBAD` with carry and nothing changed if
+that mode has a table already, or with no matrix keyboard. HL = 0 drops the mode's
+table, with carry clear, and the console is chosen again at its next call. It uses 4
+bytes of the caller's stack, the dispatcher's among them.
 
 Page zero's restart vectors at `0008h–003Fh` are left to programs, debuggers and
 services. A warm boot, like a cold boot, puts seven zeros and a `RET`, or `EI; RETI`
@@ -138,18 +126,19 @@ unchanged. `docs/services.md` gives a service's rules.
 | C | Hardware service | Arguments | Results | Stack | ROM |
 | ---: | --- | --- | --- | ---: | ---: |
 | — | Dispatcher, exits, table | | | 4 | 50 |
-| 19 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, 4 PICO9918 claimed (`HWBCLM`), 7 a word of the ROM's, `PICO?` or `GLCD?`, on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
-| 20 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
-| 21 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written; row 3 also clears `HWBWRD` | 10 | 44 |
-| 22 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 10 | 81 |
-| 23 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 51 T-states | 4 | 29 |
-| 24 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
-| 25 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
-| 26 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial, or while the PICO9918 is claimed and is the console | 22 | 68 |
-| 27 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
+| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, as cold boot found it, 4 PICO9918 claimed (`HWBCLM`), 7 a word of the ROM's, `PICO?` or `GLCD?`, on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
+| 1 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
+| 2 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written; row 3 also clears `HWBWRD` | 10 | 44 |
+| 3 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 10 | 81 |
+| 4 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 51 T-states | 4 | 29 |
+| 5 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
+| 6 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |
+| 7 | `PUTAT` | `D` = row, `E` = column, `B` = count, `HL` → characters | Written on the video console without moving the cursor, clipped to the screen; status 2 on serial, or while the PICO9918 is claimed and is the console | 22 | 68 |
+| 8 | `RTC` | `B` = 0 read, 1 set; `HL` → 7 BCD bytes: seconds, minutes, hours, date, month, weekday, year | The DS1302 clock read or set; status 2 without a clock | 8 | 138 |
 | | **Total** | | | | **485** |
 
-Every other number, 0 to 18 and 28 to 255, returns status 1 with the other registers
+Numbers 9 to 14 are the volumes', the drivers' hook and the registry's, above and in
+`abi.inc`. Every number from 15 to 255 returns status 1 with the other registers
 as they came. Stack is the deepest measured use of the
 caller's stack below the return address.
 
@@ -217,7 +206,7 @@ carries its own.
 | CCP | 2,399 | 2 | Stays |
 | BDOS | 3,909 | 2 | Stays |
 | Hardware services | 467 | 3, 4 | Stays |
-| `ABIGLCD` and loading the display drivers | 167 | 2 | Stays |
+| `TNDRVR` and loading the display drivers | 167 | 2 | Stays |
 | Block cache | 573 | 1, 2 | Stays: every read goes through it |
 | Command history | 211 | 2 | Stays |
 | Service loader, registry, `SERVICES` and startup | 822 | 2 | Stays |
@@ -266,7 +255,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,699<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,696<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

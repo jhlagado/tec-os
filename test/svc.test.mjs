@@ -76,9 +76,9 @@ function bench(m) {
   };
   const find = (name, least = 1) => {
     put(0x300, [...Buffer.from(name.padEnd(8), "latin1")]);
-    return call(m.sym("ABISVC"), { b: least, c: 0, d: 3, e: 0 });
+    return call(m.sym("ABICALL"), { b: least, c: 13, d: 3, e: 0 });
   };
-  const nth = (i) => call(m.sym("ABISVC"), { b: i, c: 1 });
+  const nth = (i) => call(m.sym("ABICALL"), { b: i, c: 14 });
   const head = () => m.read(m.sym("SVCHEAD")) << 8;
   return { m, word, poke, put, call, load, unload, prompt, warmBoot, find, nth, head };
 }
@@ -302,10 +302,6 @@ test("NAME.SVC installs, from a drive too; a file that won't read and a refused 
   assert.equal(t.word(6), (stub & 0xff00) - 0x200);
 });
 
-test("ABIDRV stays in abi.inc as ABISVC's old name, at no ROM byte", () => {
-  assert.match(readFileSync(resolve(ROOT, "src/abi.inc"), "utf8"), /^ABIDRV\tEQU\tABISVC\b/m);
-});
-
 test("an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing loaded", async () => {
   const image = standardCard();
   volume(image, "A").write("OK.DRV", (await svc()).file);
@@ -346,7 +342,7 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
 test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
-  assert.equal(t.call(t.m.sym("ABISVC"), { b: 0, c: 2 }).carry, 1);
+  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 15 }).carry, 1);
   assert.equal(t.find("DEMO").carry, 0);
 });
 
@@ -573,7 +569,7 @@ test("a resident that keeps a pointer past removal runs into freed pages, and th
 test("a source naming a ROM address is refused; abi.inc's names pass", () => {
   assert.throws(() => checkInterfaces("        CALL    $C025\n", "raw.asm"), /ROM address \$C025/);
   assert.throws(() => checkInterfaces("        CALL    0C025h\n", "raw.asm"), /ROM address 0C025h/);
-  assert.doesNotThrow(() => checkInterfaces("        CALL    ABISVC ; not $C025\n", "ok.asm"));
+  assert.doesNotThrow(() => checkInterfaces("        CALL    ABICALL ; not $C025\n", "ok.asm"));
 });
 
 // Malformed files, each changing one thing in a good file.
@@ -692,7 +688,7 @@ async function stackRun(depth, declared) {
 }
 
 test("each declared stack figure is proved by the watch, and a false one fails it", async () => {
-  assert.deepEqual(await stackRun(0, 0), { bdos: 0, bios: 0, ccp: 2 }, "INIT's call to ABIGLCD");
+  assert.deepEqual(await stackRun(0, 0), { bdos: 0, bios: 0, ccp: 6 }, "INIT's call to TNDRVR, through the dispatcher");
   const used = await stackRun(1, 6);
   assert.deepEqual(used, { bdos: 6, bios: 6, ccp: 6 }, "declared 6 on each");
   assert.deepEqual(await stackRun(1, 2), used, "the ROM can't check what a file declares");
@@ -762,7 +758,7 @@ test("UNLOAD gives a vector into its pages and a slot it declared their defaults
   const t = await machine();
   t.load((await svc({ V_VEC: 1, VECAT: 0x10, FLAGS: 0x05 })).file);
   t.prompt();
-  const hw = t.m.sym("ABIHW");
+  const hw = t.m.sym("ABICALL");
   pokes(t, 0x20, jp(hw)); // undeclared, outside its pages: REMOVE's to restore
   pokes(t, 0x10, jp(hw)); // declared: goes whatever it holds
   assert.doesNotMatch(t.unload(), /UNLOAD\?/);
@@ -814,7 +810,7 @@ test("a claim on a free slot installs, and format 3's flags of 1 claim nothing",
   assert.equal(t.load((await svc({ FLAGS: 0xfe })).file).carry, 0);
   t.prompt();
   const held = await machine();
-  pokes(held, 0x08, jp(held.m.sym("ABIHW")));
+  pokes(held, 0x08, jp(held.m.sym("ABICALL")));
   assert.equal(held.load((await svc({ FLAGS: 1 })).file).carry, 0);
 });
 

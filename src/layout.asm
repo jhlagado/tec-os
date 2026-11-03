@@ -32,7 +32,6 @@ DEFDMA  EQU     $0080
 ; CP/M reserves 0040h-004Fh for BIOS scratch. TEC-OS keeps the state that must
 ; stay visible whatever the bank window shows here.
 LATCHV  EQU     $0040           ; shadow copy of the system latch
-MAINS   EQU     $0041           ; MAIN regions fitted, 1 or 2 (ABIMAIN points here)
 RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
 RXCHAR  EQU     $0043           ; and the byte itself
 CONDEV  EQU     $0045           ; console devices present (CD* bits)
@@ -50,6 +49,7 @@ VCURV   EQU     $004F           ; 1 while the cursor cell is inverted
 CDMTX   EQU     $01             ; matrix keyboard enabled
 CDTMS   EQU     $02             ; PICO9918 answered at cold boot
 CDGLC	EQU	$04		; GLCD.SVC is in
+CDRTC	EQU	$08		; a DS1302 answered at cold boot
 CDCLM	EQU	$10		; VCLAIM's value: the PICO9918 is claimed
 CDWRD	EQU	$80		; a word of the ROM's is on LCD row 3
 

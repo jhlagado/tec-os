@@ -1,4 +1,4 @@
-// The ABIHW hardware services, called directly at the A> prompt with the
+// The hardware services through ABICALL, called directly at the A> prompt with the
 // arguments in the registers and a return address on a stack in the TPA.
 // Every write below that stack counts towards the hardware service's stack depth.
 // Emulator evidence; the depths go to build/hwsvc-stacks.json.
@@ -10,8 +10,8 @@ import { resolve } from "node:path";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { ABI, GLCD_SVC, ROOT, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
-const HWSVC = romFor().symbols.get("ABIHW");
-const HW = Object.fromEntries(["INFO", "DIGIT", "LCD", "VIDEO", "TONE", "JOY", "KEYS", "PUTAT", "RTC"].map((n) => [n, ABI[`HW${n}`]]));
+const HWSVC = romFor().symbols.get("ABICALL");
+const HW = Object.fromEntries(["INFO", "DIGIT", "LCD", "VIDEO", "TONE", "JOY", "KEYS", "PUTAT", "RTC"].map((n) => [n, ABI[`TN${n}`]]));
 const BACK = 0x0f00; // the sentinel return address
 const STACK = 0x1000; // the caller's stack top
 const BUF = 0x2000; // argument and result buffers
@@ -87,10 +87,9 @@ test("hardware services: information, bad numbers, digits, LCD, tone", () => {
   assert.equal(info.b & 0x08, 0x08, "the DS1302 answers");
   assert.equal(info.de, m.sym("ROMVER"));
   assert.equal(info.hl, 0, "serial console: no columns or rows");
-  assert.deepEqual(Object.values(HW), [19, 20, 21, 22, 23, 24, 25, 26, 27], "base+0 to base+8");
-  // Every other number refuses, and leaves B, DE and HL as they came.
-  for (let n = 0; n < 256; n += 1) {
-    if (n >= ABI.HWBASE && n < ABI.HWBASE + ABI.HWCOUNT) continue;
+  assert.deepEqual(Object.values(HW), [0, 1, 2, 3, 4, 5, 6, 7, 8], "0 to 8");
+  // Every number past the last refuses, and leaves B, DE and HL as they came.
+  for (let n = ABI.TNCOUNT; n < 256; n += 1) {
     const r = svc(m, n, { b: 0x5a, de: 0x1234, hl: 0x5678 });
     fails(r, 1);
     assert.deepEqual([r.b, r.de, r.hl], [0x5a, 0x1234, 0x5678], `hardware service ${n} leaves the registers`);

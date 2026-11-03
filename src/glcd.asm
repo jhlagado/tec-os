@@ -1,6 +1,14 @@
 ; The video drivers' hook. PICO.SVC and GLCD.SVC hand the ROM a table through
-; GLHOOK (ABIGLCD), and CONSW points the terminal's vector at it for CRT: and
-; UC1:. Each REMOVE calls GLHOOK with 0.
+; TNDRVR (abi.inc), and CONSW points the terminal's vector at it for CRT: and
+; UC1:. Each REMOVE calls it with HL = 0.
+
+; TNDRVR: B = the mode, then GLHOOK's. A refusal returns A = TNEBAD with carry.
+SVDRV:	LD	A,B
+	CALL	GLHOOK
+	LD	A,TNEBAD	; kept already, or no matrix keyboard
+	RET	C
+	XOR	A
+	RET
 
 ; A = CMCRT or CMUC1, HL = the driver's table: the terminal's six words (VPUT,
 ; VGET, VCLREOL, VREST, VRDROW, VWRROW), the word for VTFN's functions, then

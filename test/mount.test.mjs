@@ -1,5 +1,5 @@
 // Container format 1.1 and mounting at run time: a card of more than 8
-// volumes, cold boot's one-pass table check, the vector slots, the ABIVOL
+// volumes, cold boot's one-pass table check, the vector slots, the volume services
 // entry through MOUNT.COM, whose bare MOUNT lists the volumes, and a reset giving the card's own
 // mounts back. Emulator evidence.
 

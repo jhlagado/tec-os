@@ -64,14 +64,14 @@ const callAt = (m, addr, regs) => {
   Object.assign(cpu, saved, { flags }); // back in the input loop, which the stub interrupted
   return after;
 };
-const VIDEO = ABI.HWVIDEO;
-const { PICOREG, PICOFIL, PICOWR, PICORD, HWBWRD, HWINFO } = ABI;
-const hw = (m, c, b, a = 0) => callAt(m, m.sym("ABIHW"), { a, b, c }).a;
+const VIDEO = ABI.TNVIDEO;
+const { PICOREG, PICOFIL, PICOWR, PICORD, HWBWRD, TNINFO: HWINFO } = ABI;
+const hw = (m, c, b, a = 0) => callAt(m, m.sym("ABICALL"), { a, b, c }).a;
 
 /** The "PICO" record's table at the least version, or null. */
 const picoTable = (m, least = 2) => {
   [..."PICO    "].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
-  const c = callAt(m, m.sym("ABISVC"), { b: least, c: 0, d: 0x20, e: 0 });
+  const c = callAt(m, m.sym("ABICALL"), { b: least, c: ABI.TNFIND, d: 0x20, e: 0 });
   return c.flags.C ? null : (c.h << 8) | c.l;
 };
 /** A graphics entry, by its offset in the table. */
@@ -256,7 +256,7 @@ test("the LCD stays silent with no PICO9918, and with no matrix keyboard", () =>
 
 test("a display driver installed by hand clears PICO?", () => {
   const typed = start({ "PICOX.SVC": PICO_SVC["PICO.SVC"] });
-  const info = () => callAt(typed, typed.sym("ABIHW"), { c: HWINFO }).b;
+  const info = () => callAt(typed, typed.sym("ABICALL"), { c: HWINFO }).b;
   assert.equal(lcdRow(typed, 3), "PICO?");
   assert.equal(info() & HWBWRD, HWBWRD, "INFO reports the word");
   say(typed, "PICOX.SVC");
@@ -518,7 +518,7 @@ test("a refused record under a claim: REMOVE refuses, so the pages stay with the
   const dir = resolve(ROOT, "build/variants");
   mkdirSync(dir, { recursive: true });
   const src = resolve(dir, "picobad.asm");
-  writeFileSync(src, text.replace(a, `        LD      B,1\n        LD      C,HWVIDEO\n        CALL    ABIHW\n        LD      HL,ABITAB\n`));
+  writeFileSync(src, text.replace(a, `        LD      B,1\n        LD      C,TNVIDEO\n        CALL    ABICALL\n        LD      HL,ABITAB\n`));
   const { file } = await makeSvc(src, { defs: PICO_WIDTHS["PICO.SVC"], work: resolve(ROOT, "build/svc") });
   const m = start({ "PICOB.SVC": file, "STARTUP.CMD": startupFile("PICOB.SVC") });
   assert.match(m.text(0), /PICOB\.SVC\?/);
@@ -547,7 +547,7 @@ test("INIT failing leaves no record and the old ceiling", () => {
 const ROW = "A program's row 3...";
 const writeRow3 = (m) => {
   [...ROW].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
-  assert.equal(callAt(m, m.sym("ABIHW"), { b: 3, c: ABI.HWLCD, h: 0x20, l: 0 }).a, 0);
+  assert.equal(callAt(m, m.sym("ABICALL"), { b: 3, c: ABI.TNLCD, h: 0x20, l: 0 }).a, 0);
   assert.equal(lcdRow(m, 3), ROW);
 };
 
@@ -614,7 +614,7 @@ test("row 3: a program's write to rows 0 to 2 leaves the word for a take to clea
   const m = start({ "PICOX.SVC": PICO_SVC["PICO.SVC"] });
   assert.equal(lcdRow(m, 3), "PICO?");
   [..."Not row three.......".slice(0, 20)].forEach((ch, i) => m.write(0x2000 + i, ch.charCodeAt(0)));
-  for (const b of [0, 1, 2]) callAt(m, m.sym("ABIHW"), { b, c: ABI.HWLCD, h: 0x20, l: 0 });
+  for (const b of [0, 1, 2]) callAt(m, m.sym("ABICALL"), { b, c: ABI.TNLCD, h: 0x20, l: 0 });
   assert.equal(lcdRow(m, 3), "PICO?");
   say(m, "PICOX.SVC");
   assert.equal(lcdRow(m, 3), "");
@@ -656,7 +656,7 @@ test("row 3: PICO? still shows on the black screen after a failed CON UC1", () =
 
 test("INFO's HWBWRD follows the word: up, overwritten and cleared", () => {
   const m = start({ "PICOX.SVC": PICO_SVC["PICO.SVC"] });
-  const info = () => callAt(m, m.sym("ABIHW"), { c: HWINFO }).b & HWBWRD;
+  const info = () => callAt(m, m.sym("ABICALL"), { c: HWINFO }).b & HWBWRD;
   assert.equal(info(), HWBWRD);
   writeRow3(m);
   assert.equal(info(), 0);

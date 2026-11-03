@@ -8,7 +8,7 @@ A *service* is what a `.SVC` file installs: a resident in EXPAND 0, below
 `(0006h)`, in whole pages. It publishes named *records* in the registry and
 calls the ROM only through the *ROM table* at `C003h`. A *driver* is a service
 that drives hardware, and a *library* is a service offering routines. The
-*hardware services* are the numbered calls through `ABIHW`, in the ROM; they
+*hardware services* are numbered calls through `ABICALL`, in the ROM; they
 aren't loaded and have no record. *Service resident memory* is the pages loaded
 services hold, from the lowest resident's page up to the workspace. The format
 is the service format.
@@ -49,11 +49,9 @@ service needs lies at or above that word, where a program that sets SP from it c
 reach. With none in, `(0006h)` is the stub directly below the allocation vectors,
 `B815h` on the starter card and lower on a card with more volumes.
 
-Format version 3 has version 1's layout. It rose with ABI 4, which moved the table's
-entries and took the font out of the ROM: services test no ABI, so the loader refuses
-an older file. The layout and the magic have stayed since, through the type's
-change from `.DRV` to `.SVC`: a format 3 file with its old name is a good file once
-it is renamed, and the CCP hands the loader no `.DRV` name.
+Format version 4 has version 1's layout. It rose with ABI 5, as 3 did with ABI 4:
+services test no ABI, and each major moved the table's entries, so the loader
+refuses an older file. The CCP hands the loader no `.DRV` name.
 
 A dependency is 9 bytes: its least version, then a record's 8-byte name.
 
@@ -180,7 +178,7 @@ the service stays installed with no records and the load reports 2.
 a warm boot inside it can't call anything back and a hook already in the table
 would be left pointing into free memory. After a failed `INIT` the loader scans
 the 17 entries of the RAM BIOS table for a target in the service: a hit keeps the
-pages, not removable, and registers nothing. Vectors such as `ABIGLCD`'s table
+pages, not removable, and registers nothing. Vectors such as `TNDRVR`'s table
 can't be scanned, so that rule binds the service.
 
 While `INIT` or `REMOVE` runs, a load and a removal are refused, which only a raw
@@ -217,7 +215,7 @@ program must leave. On the BDOS's stack a service may not call the BDOS, as
 
 ## Records
 
-A client finds a record with `ABISVC` (`docs/rom-services.md`):
+A client finds a record with `TNFIND` (`docs/rom-services.md`):
 
 - **A program** may keep a pointer until it exits. No service can be removed
   while it runs.
@@ -225,7 +223,7 @@ A client finds a record with `ABISVC` (`docs/rom-services.md`):
   The dependency is then above it in memory, and last in, first out removes the
   dependent first.
 - **A service that looks up later** may not keep the pointer. Removing a
-  service frees its pages, and a kept pointer runs whatever is there. `ABISVC`
+  service frees its pages, and a kept pointer runs whatever is there. `TNFIND`
   returns a generation, raised by each removal, for such a service to compare.
   It is 8 bits and wraps: after exactly 256 removals a stale pointer passes the
   comparison.
@@ -234,7 +232,7 @@ Each record's table is defined in a document with its interface version.
 
 ### `PICO`, version 2
 
-`PICO.SVC`, at each width, offers `PICO` with the table it hands `ABIGLCD`, followed
+`PICO.SVC`, at each width, offers `PICO` with the table it hands `TNDRVR`, followed
 by four words, the graphics entries:
 
 | Offset | `abi.inc` | Registers | Effect |
@@ -280,7 +278,7 @@ interrupts as it finds them, so `REMOVE` turns a source off before it returns.
 
 A service claims `RST 1` to `RST 7` by flags bits 1 to 7. A load whose claimed slot
 holds a `JP` is refused with nothing changed, `SVCRC` 0. `INIT` writes the vector
-itself, so a write it didn't declare goes unseen, the rule that binds `ABIGLCD`'s table,
+itself, so a write it didn't declare goes unseen, the rule that binds `TNDRVR`'s table,
 and a `JP` a finished program left into ROM counts as held until a reset. Unload gives
 the claimed slots their defaults whatever they hold, and sweeps. A jump the service set
 outside its pages in a slot it didn't claim is `REMOVE`'s to restore. A failed `INIT`

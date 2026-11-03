@@ -1,17 +1,12 @@
 ; The ROM's read-only data: one block after the table, gathered from the
 ; code's source files in their assembly order. The block runs on through
-; data2.asm, gen/geom.asm and data3.asm. Nothing in it is executed but the RET
-; at OLDVOL, which an old program calls: cold boot copies the BIOS jump table to
-; RAMBIOS, and only that copy runs.
+; data2.asm, gen/geom.asm and data3.asm. Nothing in it is executed: cold boot
+; copies the BIOS jump table to RAMBIOS, and only that copy runs.
 
 ROMDATA:
 
-; ABI 3 had its mount entry at C01Dh, and a card from then can still hold a
-; MOUNT.COM or VOLS.COM with no test of the table. A RET there sends each back
-; with nothing done. The five bytes before it are the CCP's TYPE keyword.
 TYPEKEY:
 	DB	"TYPE",0
-OLDVOL:	DB	$C9		; C01Dh: RET, checked by the build
 
 ; ---- boot.asm ----------------------------------------------------------------
 RAMMSG: DB      13,10,"TEC-OS needs 64K RAM",13,10,0

@@ -8,7 +8,7 @@
 ; version and the entry table's address. The registry is the list through
 ; those records, its head in REGHEAD.
 
-DMAGIC	EQU	$0344		; 'D', format version 3
+DMAGIC	EQU	SVCFMT*256+'D'	; 'D', then the format, abi.inc's
 DF      EQU     $0100           ; the file
 DDEP    EQU     2               ; dependencies
 DFLG    EQU     3               ; bit 0 removable, bits 1-7 RST 1-7 claimed
@@ -483,7 +483,7 @@ STDONE:	INC	A		; FFh has been seen, and carry stays
 	RET	Z
 	LD	(HL),$FF	; once only
 	LD	A,(CONDEV)	; zero: both, no GLCD, whatever row 3 has
-	AND	$FF-CDWRD	; GLCD? may be up from a failed CON UC1
+	AND	$FF-CDWRD-CDRTC	; GLCD? may be up from a failed CON UC1
 	SUB	CDMTX+CDTMS	; CDGLC set means GLCD.SVC is in
 	LD	HL,PIVEC+1	; and a word here means PICO.SVC is
 	OR	(HL)
@@ -491,17 +491,13 @@ STDONE:	INC	A		; FFh has been seen, and carry stays
 	RET	NZ
 	LD	HL,PICMSG	; carry set by LCDROW
 	JP	LCDWRD
-; ABISVC. C = 0, find: DE = the name, B = the least version; HL = the entry
-; table. C = 1, enumerate: B = an index; HL = that record. A = the generation.
-; Carry if there is none. BC, DE destroyed.
-SVCREG: LD      A,C
-        LD      C,B
-        LD      B,0
-        OR      A
-        JR      Z,REGFIND
-        DEC     A
-        SCF
-        RET     NZ
+; The registry's services (abi.inc). TNFIND: DE = the name, B = the least
+; version; HL = the entry table. TNLIST: B = an index; HL = that record. A = the
+; generation. Carry if there is none. BC, DE destroyed.
+SVFND:	LD	C,B
+	LD	B,0
+	JR	REGFIND
+SVLST:	LD	C,B
         LD      HL,(REGHEAD)
         INC     C
 SVCS1:  LD      A,H

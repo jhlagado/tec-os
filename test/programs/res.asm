@@ -3,7 +3,7 @@
 ; chains to the entry it replaced; its REMOVE puts that entry back.
 
         ORG     $0100
-HDR:	DB	'D',3,0,1	; removable
+HDR:	DB	'D',4,0,1	; removable, format 4 (abi.inc's SVCFMT)
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      2,0,0           ; MYCO's PUSH, on the BDOS's stack
         DW      0               ; INIT: the writer's

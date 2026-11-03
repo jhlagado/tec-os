@@ -4,7 +4,7 @@
 %INCLUDE "../../src/abi.inc"
 
         ORG     $0100
-HDR:	DB	'D',3,0,FLAGS
+HDR:	DB	'D',SVCFMT,0,FLAGS
         DW      0,0,XTRA,0      ; REMOVE, size, extra, relocation: the writer's
         DB      STKB,STKI,STKC
         DW      0               ; INIT: the writer's
@@ -20,8 +20,8 @@ INIT:
 %ENDIF
 %IF V_PROBE
         LD      DE,REC+2        ; can a client see this record yet?
-        LD      BC,$0100
-        CALL    ABISVC
+	LD	BC,$0100+TNFIND	; version 1 or later
+	CALL	ABICALL
         LD      A,0
         ADC     A,A
         LD      (RESULT),A
@@ -39,9 +39,10 @@ INIT:
         LD      (RESULT),A
 %ENDIF
 %IF V_GLVEC
-        LD      A,3             ; a vector the scan can't see, then failure
+	LD	B,3		; a vector the scan can't see, then failure
         LD      HL,VTAB
-        CALL    ABIGLCD
+	LD	C,TNDRVR
+	CALL	ABICALL
         SCF
         RET
 %ENDIF
@@ -69,7 +70,7 @@ INIT:
         LD      (VECAT+1),HL
 %ENDIF
 %IF V_VECX
-        LD      HL,ABIHW        ; the vector outside this service
+	LD	HL,ABICALL	; the vector outside this service
         LD      (VECAT+1),HL
 %ENDIF
 %IF V_VECFL
@@ -83,9 +84,10 @@ INIT:
         JP      0               ; a warm boot from inside INIT
 %ENDIF
 %IF V_STK
-        LD      A,3
+	LD	B,3
         LD      HL,VTAB
-        CALL    ABIGLCD
+	LD	C,TNDRVR
+	CALL	ABICALL
         RET     C
 %IF DEPTH
         PUSH    AF              ; six bytes of the CCP's stack
@@ -98,8 +100,8 @@ INIT:
 %ENDIF
 %IF V_DEP
         LD      DE,DEPNAME      ; bound once, at INIT
-        LD      BC,$0100
-        CALL    ABISVC
+	LD	BC,$0100+TNFIND	; version 1 or later
+	CALL	ABICALL
         RET     C
         LD      (DEPTAB),HL
 %ENDIF
@@ -174,9 +176,10 @@ REMOVE:
         LD      (HL),D
 %ENDIF
 %IF V_STK
-        LD      A,3
+	LD	B,3
         LD      HL,0
-        CALL    ABIGLCD
+	LD	C,TNDRVR
+	CALL	ABICALL
 %ENDIF
 %IF V_REFUSE
         SCF
@@ -206,8 +209,8 @@ SERVICE:LD      HL,COUNT
 ; A resident that looks up later and keeps the pointer: the violation. LOOK
 ; finds DEMO and keeps its table; USE calls it, unchecked; SAFE checks.
 LOOK:   LD      DE,DEPNAME
-        LD      BC,$0100
-        CALL    ABISVC
+	LD	BC,$0100+TNFIND	; version 1 or later
+	CALL	ABICALL
         RET     C
         LD      (DEPTAB),HL
         LD      (GEN),A
@@ -215,8 +218,8 @@ LOOK:   LD      DE,DEPNAME
 USE:    LD      HL,(DEPTAB)
         JP      (HL)
 SAFE:   LD      DE,DEPNAME
-        LD      BC,$0100
-        CALL    ABISVC
+	LD	BC,$0100+TNFIND	; version 1 or later
+	CALL	ABICALL
         RET     C
         LD      HL,GEN
         CP      (HL)

@@ -9,56 +9,14 @@ import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
 
-test("the table at C003h: TNA, ABI 4.0, the entries abi.inc names, and the old table's addresses each mapped", () => {
+test("the table at C003h: TNA, ABI 5.0 and one jump to the services, 8 bytes, and the old entries gone", () => {
   const m = boot(standardCard());
   const S = (n) => m.sym(n);
   assert.equal(S("ABITAB"), 0xc003);
-  assert.deepEqual([0, 1, 2, 3, 4].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 4, 0], "TNA 4.0");
-  for (const n of ["ABIHW", "ABIVOL", "ABIGLCD", "ABISVC"]) assert.equal(m.read(S(n)), 0xc3, `${n} is a jump`);
-  // ABI 3.1's addresses: the first five hold still, the rest moved or left.
-  const mapped = { C003: "ABITAB", C006: "ABIMAJ", C007: "ABIMIN", C008: "ABIVID", C00A: "ABIHW", C00D: "ABIMAIN", C00F: "ABIVOL", C012: "ABIGLCD", C015: "ABISVC" };
-  for (const [at, n] of Object.entries(mapped)) assert.equal(S(n), parseInt(at, 16), n);
-  assert.equal(S("ABIEND"), 0xc018);
-  assert.equal(m.read(0xc01d), 0xc9, "a RET where ABI 3 had ABIVOL");
-  for (const n of ["ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "ABIXCCP", "ABIXCMD", "XCCP", "XCMD", "XEXIT", "CCPFLG", "CCPLVL", "LVBASE", "FONT", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);
-  noViolations(m);
-});
-
-for (const [at, name] of [[0xc018, "ABIXCCP"], [0xc01b, "ABIXCMD"]]) {
-  test(`a call to ${at.toString(16).toUpperCase()}h, 2d5ce25's ${name}, reaches the RET at C01Dh with nothing written`, () => {
-    const m = boot(standardCard());
-    const back = 0x0f00;
-    m.write(0x0ffe, back & 0xff);
-    m.write(0x0fff, back >> 8);
-    const cpu = m.cpu.cpu;
-    const saved = { pc: cpu.pc, sp: cpu.sp };
-    Object.assign(cpu, { pc: at, sp: 0x0ffe });
-    const writes = [];
-    const { memWrite, ioWrite } = m.cpu.hardware;
-    m.cpu.hardware.memWrite = (a, v) => { writes.push(a); memWrite(a, v); };
-    m.cpu.hardware.ioWrite = (p, v) => { writes.push(p); ioWrite(p, v); };
-    let ret = 0;
-    const step = m.step.bind(m);
-    m.step = () => { if (m.pc === 0xc01d) ret += 1; return step(); };
-    m.runUntil(() => m.pc === back, 1_000, "the return");
-    Object.assign(m.cpu.hardware, { memWrite, ioWrite });
-    Object.assign(cpu, saved);
-    assert.deepEqual([ret, writes], [1, []]);
-  });
-}
-
-test("warm boot restores the PICO9918 text mode and font after a program changes them", async () => {
-  const image = standardCard();
-  volume(image, "A").write("VIDMODE.COM", (await program("vidmode")).bytes);
-  const m = boot(image, { tms: true, matrix: true });
-  m.command("VIDMODE");
-  const vdp = m.tec1g.state.display.tms9918.stateSnapshot();
-  assert.deepEqual([...vdp.registers.slice(0, 8)], [0x04, 0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0xf4]);
-  const font = Machine.font.subarray((0x41 - 0x20) * 8, (0x41 - 0x20) * 8 + 8);
-  const glyph = (base) => [...vdp.vram.slice(base + 0x41 * 8, base + 0x41 * 8 + 8)];
-  assert.deepEqual(glyph(0), [...font], "pattern for A");
-  assert.deepEqual(glyph(0x400), [...font].map((v) => ~v & 0xff), "reverse A");
-  assert.ok(m.screen().some((line) => line.startsWith("A>")));
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 5, 0, 0xc3], "TNA 5.0, then JP");
+  assert.equal(m.read(S("ABICALL") + 1) | (m.read(S("ABICALL") + 2) << 8), S("SVCDSP"));
+  assert.deepEqual([S("ABICALL"), S("ABIEND")], [0xc008, 0xc00b]);
+  for (const n of ["ABIVID", "ABIHW", "ABIMAIN", "ABIVOL", "ABIGLCD", "ABISVC", "ABIDRV", "OLDVOL", "HWBASE", "ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "ABIXCCP", "ABIXCMD", "XCCP", "XCMD", "XEXIT", "CCPFLG", "CCPLVL", "LVBASE", "FONT", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);
   noViolations(m);
 });
 
@@ -98,7 +56,7 @@ test("DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PIC
   const image = standardCard();
   volume(image, "A").write("DEMO.COM", (await program("demo")).bytes);
   const m = boot(image, { tms: true, matrix: true });
-  assert.equal(m.read(m.sym("ABIMAJ")), 4, "ABI 4");
+  assert.equal(m.read(m.sym("ABIMAJ")), 5, "ABI 5");
   m.mark = m.output.length;
   m.typeMatrix("demo\r");
   const t = m.cycles + 8_000_000;

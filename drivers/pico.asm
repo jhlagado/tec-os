@@ -2,13 +2,13 @@
 ; TMS9918A-compatible VDP with the F18A's 80-column text mode, as a driver below
 ; (0006h): 80 x 24 in 6-pixel cells, 40 x 24, or Graphics I at 32 x 24 in 8-pixel
 ; cells, one file a width. Its INIT refuses if the ROM's probe found no VDP, and
-; hands the ROM its table through ABIGLCD; the load then makes it the console, and
+; hands the ROM its table through TNDRVR; the load then makes it the console, and
 ; the ROM's terminal calls its routines directly, on the caller's stack. REMOVE
 ; refuses while it is the console, since CON CRT can't load it back, and while
 ; the PICO9918 is claimed, since the entries below may be in use. Its record,
 ; "PICO", is how another service sees it. Version 2 of the record's table goes on
 ; after the console's words with the graphics entries, abi.inc's PICOREG to
-; PICORD. A program finds them with ABISVC, holds the claim while it uses them,
+; PICORD. A program finds them with TNFIND, holds the claim while it uses them,
 ; and looks them up again rather than keep them across its own exit.
 ;
 ; VRAM: patterns at 0000h, names at 0800h (1000h for 80 columns), Graphics I
@@ -24,7 +24,7 @@ COLOUR  EQU     $2000
 SPRITE  EQU     $1B00
 
         ORG     $0100
-HDR:	DB	'D',3,0,1	; removable
+HDR:	DB	'D',SVCFMT,0,1	; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      0,0,0           ; over the base: BDOS, BIOS, CCP
         DW      0               ; INIT: the writer's
@@ -39,19 +39,20 @@ VTAB:   DW      TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
 REC:    DW      0
 	DB	"PICO    ",2
         DW      VTAB
-LBUF:   DW      0               ; LINEBUF, from ABIGLCD
+LBUF:   DW      0               ; LINEBUF, from TNDRVR
 TPDRAW: DB      0               ; the page drawn and the page shown: offset
 TPSHOW: DB      0               ; high byte, 0 or TPG
 TMVCOPY:DB      0               ; 1 while a row move builds the hidden page
 
-INIT:	LD	C,HWINFO	; B = what answered at cold boot
-        CALL    ABIHW
+INIT:	LD	C,TNINFO	; B = what answered at cold boot
+	CALL	ABICALL
 	BIT	1,B		; HWBPICO
         SCF
         RET     Z
-        LD      A,1             ; CRT:
+	LD	B,1		; CRT:
         LD      HL,VTAB
-        CALL    ABIGLCD
+	LD	C,TNDRVR
+	CALL	ABICALL
         RET     C
         LD      (LBUF),HL
         LD      HL,REC
@@ -61,20 +62,20 @@ INIT:	LD	C,HWINFO	; B = what answered at cold boot
 ; UNLOAD's check, and the undo of a refused record. Refuses, with carry, while
 ; the PICO9918 is claimed, or while this driver is the console. Otherwise takes
 ; its table back from the ROM. Destroys AF, BC, DE and HL.
-REMOVE:	LD	C,HWINFO	; B = the devices, with the claim bit
-	CALL	ABIHW
+REMOVE:	LD	C,TNINFO	; B = the devices, with the claim bit,
+	CALL	ABICALL		; L = the console's columns
 	LD	A,B
 	AND	HWBCLM		; a claim: a program may be using the entries
 	SCF
 	RET	NZ
-	LD	HL,(ABIVID)	; the console's size
-	LD	A,(HL)
+	LD	A,L		; the console's columns
 	CP	COLS		; the console at this width is this driver
 	SCF
 	RET	Z
-	LD	A,1		; CRT:
+	LD	B,1		; CRT:
 	LD	HL,0		; no table
-	JP	ABIGLCD
+	LD	C,TNDRVR
+	JP	ABICALL
 
 ; The ROM's three: A = 0 show the page drawn, 1 begin a move of rows B to C,
 ; 2 end one.

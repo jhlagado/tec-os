@@ -1,20 +1,19 @@
 ; GLCD.SVC: the ST7920 128 x 64 GLCD console as a driver below (0006h), 21
 ; columns x 8 rows of 6 x 8 cells, built from the ROM's GLCD code. Its INIT
 ; checks that the controller answers and hands the ROM its video table through
-; ABIGLCD; the CCP then takes the console, unless a PICO9918 has it, and the
+; TNDRVR; the CCP then takes the console, unless a PICO9918 has it, and the
 ; ROM's terminal calls its six routines directly, on the caller's stack. It
 ; keeps its screen text, its counters and its own font here, and moves rows to
-; and from the ROM's LINEBUF, whose address ABIGLCD returns. Its REMOVE, at
+; and from the ROM's LINEBUF, whose address TNDRVR returns. Its REMOVE, at
 ; UNLOAD, gives the console back to serial.
 %INCLUDE "../src/abi.inc"
 
 GLCOLS  EQU     21
 GLROWS  EQU     8
-GLHOOK  EQU     ABIGLCD         ; the video table: A = the mode, HL = eight words, or 0
 IOBYTE  EQU     $0003
 
         ORG     $0100
-HDR:	DB	'D',3,0,1	; removable
+HDR:	DB	'D',SVCFMT,0,1	; removable
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
         DB      2,0,6           ; over the base: BDOS, BIOS, CCP
         DW      0               ; INIT: the writer's
@@ -25,7 +24,7 @@ HDR:	DB	'D',3,0,1	; removable
 VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
         DW      0               ; only the PICO9918 has row moves to show
         DB      GLCOLS,GLROWS
-LBUF:   DW      0               ; LINEBUF, from ABIGLCD
+LBUF:   DW      0               ; LINEBUF, from TNDRVR
 
 ; INIT refuses if the controller doesn't answer, another GLCD.SVC has the
 ; console, or another display is the console and CON UC1 didn't ask: a line in
@@ -35,25 +34,27 @@ INIT:   LD      A,(IOBYTE)
         AND     3
         CP      3
         JR      Z,INIT1
-        LD      HL,(ABIVID)
-        LD      A,(HL)
+	LD	C,TNINFO	; L = the console's columns, 0 for serial
+	CALL	ABICALL
+	LD	A,L
         OR      A
         SCF
         RET     NZ
 INIT1:  CALL    GLCWAIT
         SCF
         RET     NZ
-        LD      A,3             ; UC1:
+	LD	B,3		; UC1:
         LD      HL,VTAB
-        CALL    GLHOOK
+	LD	C,TNDRVR
+	CALL	ABICALL
         RET     C
         LD      (LBUF),HL
         LD      HL,0
         OR      A
         RET
 REMOVE: LD      DE,PICONAM
-        LD      BC,$0100
-        CALL    ABISVC
+	LD	BC,$0100+TNFIND	; version 1 or later
+	CALL	ABICALL
         JR      C,REMOV1
         LD      HL,IOBYTE       ; UC1: becomes CRT:, and no other field changes
         LD      A,(HL)
@@ -61,9 +62,10 @@ REMOVE: LD      DE,PICONAM
         AND     3
         JR      NZ,REMOV1
         RES     1,(HL)
-REMOV1: LD      A,3
+REMOV1:	LD	B,3		; UC1:'s table dropped
         LD      HL,0
-        JP      GLHOOK
+	LD	C,TNDRVR
+	JP	ABICALL
 PICONAM:DB      "PICO    "
 
 GLCCMD  EQU     $07

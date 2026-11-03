@@ -8,7 +8,7 @@
 %INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
-HWSVC   EQU     ABIHW           ; hardware services
+HWSVC   EQU     ABICALL         ; the numbered services
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
 LEDSEL	EQU	$05		; 8 x 8 matrix: row select, then the colours
@@ -27,10 +27,10 @@ CHKTAG: LD      A,(DE)
         INC     DE
         DJNZ    CHKTAG
 	LD	A,(ABIMAJ)	; another major has other numbers
-	CP	4		; exactly: a later major may renumber
+	CP	5		; exactly: a later major may renumber
 	JP	NZ,NOHW
 
-	LD	C,HWINFO	; which devices answered
+	LD	C,TNINFO	; which devices answered
         CALL    HWSVC
         LD      A,B
         LD      (DEVS),A
@@ -52,14 +52,14 @@ CHKTAG: LD      A,(DE)
         CALL    PRINT
         LD      B,120           ; TONE: about 1 kHz for 0.2 s
         LD      DE,400
-	LD	C,HWTONE	; the beep
+	LD	C,TNTONE	; the beep
         CALL    HWSVC
 
         LD      HL,LCDTXT       ; the LCD's four rows
         LD      B,0
 LCDLP:  PUSH    BC
         PUSH    HL
-	LD	C,HWLCD		; row B, 20 characters from HL
+	LD	C,TNLCD		; row B, 20 characters from HL
         CALL    HWSVC
         POP     HL
         LD      DE,20
@@ -74,7 +74,7 @@ LCDLP:  PUSH    BC
         AND     2
         JR      Z,LOOP
         LD      B,1
-	LD	C,HWVIDEO	; B = 1: the claim, then the ports are ours
+	LD	C,TNVIDEO	; B = 1: the claim, then the ports are ours
         CALL    HWSVC
         LD      A,1
         LD      (CLAIMED),A
@@ -88,7 +88,7 @@ LOOP:   LD      HL,FR
         CALL    COUNT
         CALL    MKDIG
         LD      HL,DIGBUF       ; DIGITS: one scan
-	LD	C,HWDIGIT	; six patterns from HL
+	LD	C,TNDIGIT	; six patterns from HL
         CALL    HWSVC
         CALL    MKLED
 	LD	HL,LEDBUF	; one scan of the LEDs
@@ -103,7 +103,7 @@ LOOP:   LD      HL,FR
         JR      Z,LOOP
 
         LD      HL,ZEROS        ; digits and LEDs off
-	LD	C,HWDIGIT	; a dark pass
+	LD	C,TNDIGIT	; a dark pass
         CALL    HWSVC
         LD      HL,ZEROS
 	CALL	LEDSCAN		; a dark pass
@@ -111,7 +111,7 @@ LOOP:   LD      HL,FR
         OR      A
         JR      Z,DONE
         LD      B,0
-	LD	C,HWVIDEO	; B = 0: release, and text comes back
+	LD	C,TNVIDEO	; B = 0: release, and text comes back
         CALL    HWSVC
 DONE:   LD      DE,BYE
         JP      PRINT
@@ -138,7 +138,7 @@ CLOCK:  LD      A,(DEVS)
         RET     Z
         LD      HL,TIME         ; RTC: seconds, minutes, hours, ...
         LD      B,0
-	LD	C,HWRTC		; B = 0: read
+	LD	C,TNRTC		; B = 0: read
         CALL    HWSVC
         RET     NZ
         LD      HL,CLKROW+9
@@ -152,7 +152,7 @@ CLOCK:  LD      A,(DEVS)
         CALL    BCD2
         LD      HL,CLKROW       ; LCDROW 3
         LD      B,3
-	LD	C,HWLCD		; the last row
+	LD	C,TNLCD		; the last row
         JP      HWSVC
 ; (HL), (HL+1) = the two BCD digits of A; HL moves past them.
 BCD2:   PUSH    AF
@@ -445,7 +445,7 @@ KEYMSG: DB      13,10,"Watch the LCD, the digits, the LEDs and the screen.",13,1
         DB      "Press any key to stop.",13,10,"$"
 BYE:    DB      13,10,"Demo stopped.",13,10,"$"
 NOHWMSG:
-	DB	13,10,"DEMO needs TEC-OS with ABI 4.",13,10,"$"
+	DB	13,10,"DEMO needs TEC-OS with ABI 5.",13,10,"$"
 LCDTXT: DB      "TEC-OS hardware demo"
         DB      "7-seg: hex counter  "
         DB      "8x8: moving rainbow "

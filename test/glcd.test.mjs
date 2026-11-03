@@ -155,10 +155,10 @@ test("the GLCD hook takes a table and returns LINEBUF, refuses a second, and wit
   const STUB = 0x0080;
   const TABLE = 0x3000;
   const callHook = (hl) => {
-    [0x3e, 3, 0x21, hl & 0xff, hl >> 8, 0xcd, m.sym("ABIGLCD") & 0xff, m.sym("ABIGLCD") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
+    [0x06, 3, 0x21, hl & 0xff, hl >> 8, 0x0e, 12, 0xcd, m.sym("ABICALL") & 0xff, m.sym("ABICALL") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(STUB + i, v));
     m.cpu.cpu.sp = 0x0100;
     m.cpu.cpu.pc = STUB;
-    m.runUntil(() => m.pc === STUB + 8, 1_000_000, "ABIGLCD");
+    m.runUntil(() => m.pc === STUB + 10, 1_000_000, "TNDRVR");
     const c = m.cpu.cpu;
     return { hl: (c.h << 8) | c.l, carry: c.flags.C };
   };

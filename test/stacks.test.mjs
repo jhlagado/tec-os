@@ -181,7 +181,7 @@ async function resetRun() {
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  [0x3e, 0, 0x0e, 0, 0x1e, 2, 0xcd, m.sym("ABIVOL") & 0xff, m.sym("ABIVOL") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(0x60 + i, v));
+  [0x06, 0, 0x0e, 9, 0x1e, 2, 0xcd, m.sym("ABICALL") & 0xff, m.sym("ABICALL") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(0x60 + i, v));
   const { pc, sp } = m.cpu.cpu;
   Object.assign(m.cpu.cpu, { pc: 0x60, sp: 0x100 });
   m.runUntil(() => m.pc === 0x69, 80_000_000, "the mount");

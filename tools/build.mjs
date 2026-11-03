@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
-import { PICO_WIDTHS, checkInterfaces, makeSvc } from "./lib/svc.mjs";
+import { FORMAT, PICO_WIDTHS, checkInterfaces, makeSvc } from "./lib/svc.mjs";
 import { driverFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -137,29 +137,20 @@ GEOESZ  EQU     6
 
 let currentDefinitions = {};
 
-/** src/abi.inc, written by hand, against the symbol table: each EQU names a
- *  label of abi.asm at the same address, and every label there has one. */
-function checkAbiInc(at) {
-  const inc = readFileSync(resolve(SRC, "abi.inc"), "utf8");
-  const equs = [...inc.matchAll(/^(\w+)\s+EQU\s+\$([0-9A-F]{4})\b/gim)].map((m) => [m[1].toUpperCase(), parseInt(m[2], 16)]);
-  for (const [name, value] of equs) check(at(name) === value, `abi.inc: ${name} is ${hex(value)}, the ROM has ${hex(at(name))}`);
-  const labels = [...readFileSync(resolve(SRC, "abi.asm"), "utf8").matchAll(/^(\w+):/gm)].map((m) => m[1].toUpperCase());
-  for (const l of labels) check(equs.some(([n]) => n === l), `abi.inc has no ${l}`);
-  check(/^ABIDRV\s+EQU\s+ABISVC\b/m.test(inc), "abi.inc: ABIDRV is not an alias of ABISVC");
-}
-
-/** The hardware services' numbers and status codes in abi.inc against hwsvc.asm, which
- *  can't include it: the same names with the same values, either way round. */
-function checkServices(at) {
-  const numbers = (file) => new Map([...readFileSync(resolve(SRC, file), "utf8").matchAll(/^(HW[A-Z]+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]));
-  const inc = numbers("abi.inc");
-  const rom = numbers("hwsvc.asm");
-  check(rom.size > 0, "hwsvc.asm has no hardware service numbers");
-  for (const [n, v] of rom) check(inc.get(n) === v, `abi.inc: ${n} is ${inc.get(n)}, hwsvc.asm has ${v}`);
-  for (const n of inc.keys()) check(rom.has(n), `hwsvc.asm has no ${n}`);
-  check(rom.get("HWINFO") === rom.get("HWBASE") && rom.get("HWRTC") === rom.get("HWBASE") + rom.get("HWCOUNT") - 1, "the services run from HWBASE, HWCOUNT of them");
-  const bits = { HWBMTX: "CDMTX", HWBPICO: "CDTMS", HWBGLCD: "CDGLC", HWBCLM: "CDCLM", HWBWRD: "CDWRD" };
-  for (const [n, cd] of Object.entries(bits)) check(rom.get(n) === at(cd), `hwsvc.asm: ${n} is not ${cd}`);
+/** ABI 5's table as the ROM holds it: "TNA", the major, the minor, then JP to
+ *  the dispatcher, 8 bytes at abi.inc's addresses, which the ROM includes; the
+ *  service table one word a number; INFO's bits CONDEV's. */
+function checkAbi(at, rom) {
+  const byte = (a) => rom[a - 0xc000];
+  check(String.fromCharCode(byte(at("ABITAB")), byte(at("ABITAB") + 1), byte(at("ABITAB") + 2)) === "TNA", "the signature at ABITAB");
+  check(byte(at("ABIMAJ")) === 5 && byte(at("ABIMIN")) === 0, "ABI 5.0 at ABIMAJ and ABIMIN");
+  check(byte(at("ABICALL")) === 0xc3 && (byte(at("ABICALL") + 1) | (byte(at("ABICALL") + 2) << 8)) === at("SVCDSP"), "ABICALL is JP SVCDSP");
+  check(at("ABIEND") === at("ABICALL") + 3 && at("ABIEND") - at("ABITAB") === 8, "the table is 8 bytes");
+  check(at("SVCFMT") === FORMAT, `abi.inc's SVCFMT is ${at("SVCFMT")}, tools/lib/svc-format.mjs has ${FORMAT}`);
+  const table = Array.from({ length: at("TNCOUNT") }, (_, n) => byte(at("SVTAB") + 2 * n) | (byte(at("SVTAB") + 2 * n + 1) << 8));
+  check(table.every((v) => v >= at("ROMCODE") && v < at("CODEEND")), "every service's entry is code");
+  const bits = { HWBMTX: "CDMTX", HWBPICO: "CDTMS", HWBGLCD: "CDGLC", HWBRTC: "CDRTC", HWBCLM: "CDCLM", HWBWRD: "CDWRD" };
+  for (const [n, cd] of Object.entries(bits)) check(at(n) === at(cd), `abi.inc: ${n} is not ${cd}`);
 }
 
 /** abi.inc's PICOREG to PICORD against each PICO driver's table: the word at
@@ -182,16 +173,6 @@ async function checkPicoTable() {
  *  generated first, and it stays the text the font file gives. */
 function checkDriverFont() {
   check(readFileSync(resolve(ROOT, "drivers/font.asm"), "utf8") === driverFontSource(ROOT), "drivers/font.asm is not format/font5x7.txt");
-}
-
-/** No .asm file of the product names an address of the old table, $FF00-$FF27. */
-function checkNoOldAddress() {
-  for (const dir of ["src", "drivers", "diag", "test/programs"]) {
-    for (const f of readdirSync(resolve(ROOT, dir), { recursive: true }).filter((n) => n.endsWith(".asm"))) {
-      const m = /\$FF(?:[01][0-9A-F]|2[0-7])\b/i.exec(readFileSync(resolve(ROOT, dir, f), "utf8"));
-      check(!m, `${dir}/${f} names ${m?.[0]}, an address of the old table`);
-    }
-  }
 }
 
 /** A service's source reaches the ROM only through abi.inc's names. The build
@@ -265,14 +246,11 @@ async function buildProfile(name) {
   check(at("RESET") === 0xc000, "RESET must be at C000h");
   check(at("ABITAB") === 0xc003, "the table must be at C003h");
   check(at("ABIEND") === at("ROMDATA"), "the data block must follow the table");
-  check(at("OLDVOL") === 0xc01d && rom[0x1d] === 0xc9, "ABI 3's ABIVOL must hold a RET");
   check(at("ROMDATA") <= at("ROMCODE") && at("ROMCODE") <= at("CODEEND"), "the table, the data and the code, in that order");
   check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
-  checkAbiInc(at);
-  checkServices(at);
+  checkAbi(at, rom);
   await checkPicoTable();
   checkDriverFont();
-  checkNoOldAddress();
   checkServiceSources();
   check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);
   check(at("BDOSRME") === RAMBIOS, `the fixed workspace must end at the RAM BIOS table, not ${hex(at("BDOSRME"))}`);

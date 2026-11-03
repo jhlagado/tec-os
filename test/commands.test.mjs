@@ -44,10 +44,10 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
   assert.deepEqual(m.violations, []);
 });
 
-test("nothing is kept for a level: the table ends at ABISVC and the page at BE00h is free", async () => {
+test("nothing is kept for a level: the table ends at ABICALL's jump and the page at BE00h is free", async () => {
   const m = await machine({}, { ram96: true });
   assert.equal(m.sym("HRING"), 0xbd00);
-  assert.equal(m.sym("ABIEND"), m.sym("ABISVC") + 3);
+  assert.equal(m.sym("ABIEND"), m.sym("ABICALL") + 3);
   assert.deepEqual(m.violations, []);
 });
 

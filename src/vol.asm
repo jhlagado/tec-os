@@ -574,23 +574,19 @@ ALVSKP: INC     C
         LD      (STUBAD),HL
         RET
 
-; The mount entry, ABIVOL. A = 0: mount drive C with the volume at
-; container index E; 1: unmount drive C; 2: describe index E into the 32
-; bytes at HL, its mount byte the drive it is on now (FFh none). Returns A =
-; 0, or A = FFh with nothing changed: an index past the table, a drive past
-; D, a volume already on another drive, a slot too small, or drive A to be
-; left empty. A mount or unmount resets the drive in the BDOS, as function 37
-; does, so its next access logs it in from its directory.
-VOLSVC: LD      B,A
-        LD      A,$FF
-        LD      (MNTCB),A       ; BLKBUF may hold anything
-        LD      A,B
-        OR      A
-        JR      Z,VMNT
-        DEC     A
-        JR      Z,VUNM
-        DEC     A
-	JP	NZ,VBAD
+; The volume services, TNMOUNT, TNUNMNT and TNDESC (abi.inc). B = the drive for
+; a mount or unmount, E = the container index for a mount or a describe, HL ->
+; 32 bytes for a describe, its mount byte the drive it is on now (FFh none).
+; Returns A = 0 with carry clear, or A = TNEBAD with carry and nothing changed:
+; an index past the table, a drive past D, a volume already on another drive,
+; a slot too small, or drive A to be left empty. A mount or unmount resets the
+; drive in the BDOS, as function 37 does, so its next access logs it in from
+; its directory.
+VSMNT:	CALL	VSIN
+	JR	VMNT
+VSUNM:	CALL	VSIN
+	JR	VUNM
+VSDSC:	CALL	VSIN
         PUSH    HL              ; describe
         LD      A,E
         CALL    VDESC
@@ -671,8 +667,15 @@ VRS2:   EX      DE,HL
         CALL    BDOS
 VOK:    XOR     A
         RET
-VBAD:   LD      A,$FF
+VBAD:	LD	A,TNEBAD	; refused, nothing changed
+	SCF
         RET
+
+; C = the drive from B, and BLKBUF marked as holding anything. Keeps B, DE, HL.
+VSIN:	LD	C,B
+	LD	A,$FF
+	LD	(MNTCB),A	; BLKBUF may hold anything
+	RET
 
 ; Before a drive's volume changes: write dirty cache lines, Z on success.
 ; Keep the requested drive (BC), descriptor index (DE) and pointer (IX).

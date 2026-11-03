@@ -55,7 +55,7 @@ test("warm boot by ^C keeps the drive and user number", () => {
 test("warm boot clears the restart vectors except jumps into ROM, and a stale RST returns", () => {
   // SETV leaves 0008h jumping into the TPA, 0010h jumping into ROM (the
   // hardware services' entry in the table)
-  const HW = romFor().symbols.get("ABIHW");
+  const HW = romFor().symbols.get("ABICALL");
   // and stray bytes in the tail of 0018h, then ends with JP 0000h.
   const set = { 0x08: [0xc3, 0x08, 0x40], 0x10: [0xc3, HW & 0xff, HW >> 8], 0x1b: [0xc3, 0x00, 0x40] };
   const code = Object.entries(set).flatMap(([at, bytes]) =>

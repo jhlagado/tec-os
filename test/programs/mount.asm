@@ -1,4 +1,4 @@
-; MOUNT: mounts a volume on a drive through the mount entry at ABIVOL.
+; MOUNT: mounts a volume on a drive through ABI 5's volume services.
 ;   MOUNT           lists the card's volumes
 ;   MOUNT B: NAME   the volume labelled NAME, found through describe
 ;   MOUNT B: 5      the volume at container index 5, as the list numbers them
@@ -8,11 +8,10 @@
 %INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
-VOLSVC  EQU     ABIVOL
 TAIL    EQU     $0081
 
         ORG     $0100
-; This program speaks ABI 4's table: on anything else it says so and stops.
+; This program speaks ABI 5's table: on anything else it says so and stops.
 	LD	HL,ABITAB	; what is at the table's address
 	LD	DE,ABITAG	; against what should be
 	LD	B,3
@@ -23,13 +22,13 @@ CHKTAG:	LD	A,(DE)		; each byte of the tag
 	INC	DE
 	DJNZ	CHKTAG
 	LD	A,(HL)		; HL = ABIMAJ now
-	CP	4		; exactly: entries may move at each major
+	CP	5		; exactly: entries may move at each major
 	JR	Z,ABIOK
 NOABI:	LD	DE,NOABIM	; the word, and back to the CCP
 	LD	C,9		; BDOS: print to $
 	JP	BDOS
 ABITAG:	DB	"TNA"
-NOABIM:	DB	"MOUNT needs TEC-OS with ABI 4.",13,10,"$"
+NOABIM:	DB	"MOUNT needs TEC-OS with ABI 5.",13,10,"$"
 ABIOK:
         LD      HL,TAIL
         CALL    SKIP
@@ -48,9 +47,9 @@ ABIOK:
         OR      A
         JR      NZ,WHICH
         LD      A,(DRIVE)       ; no volume: unmount
-        LD      C,A
-        LD      A,1
-        CALL    VOLSVC
+	LD	B,A
+	LD	C,TNUNMNT
+	CALL	ABICALL
         OR      A
         LD      DE,NOUNM
         JP      NZ,SAY
@@ -100,9 +99,9 @@ FIND:   XOR     A               ; each index's label, until one matches
         LD      (IDX),A
 FIND1:  LD      A,(IDX)
         LD      E,A
-        LD      A,2
+	LD	C,TNDESC
         LD      HL,DESC
-        CALL    VOLSVC
+	CALL	ABICALL
         OR      A
         LD      DE,NOVOL
         JP      NZ,SAY
@@ -123,9 +122,9 @@ FIND2:  LD      HL,IDX
 
 MOUNTA: LD      E,A             ; mount index A on the drive
         LD      (IDX),A
-        LD      A,2             ; already there? then say so, not an error
+	LD	C,TNDESC	; already there? then say so, not an error
         LD      HL,DESC
-        CALL    VOLSVC
+	CALL	ABICALL
         OR      A
         LD      DE,NOVOL
         JP      NZ,SAY
@@ -136,17 +135,17 @@ MOUNTA: LD      E,A             ; mount index A on the drive
         LD      A,(IDX)
         LD      E,A
         LD      A,(DRIVE)
-        LD      C,A
-        XOR     A
-        CALL    VOLSVC
+	LD	B,A
+	LD	C,TNMOUNT
+	CALL	ABICALL
         OR      A
         LD      DE,NOMNT
         JP      NZ,SAY
         LD      A,(IDX)         ; say what is there now
         LD      E,A
-        LD      A,2
+	LD	C,TNDESC
         LD      HL,DESC
-        CALL    VOLSVC
+	CALL	ABICALL
 SHOW:   LD      A,(DRIVE)
         ADD     A,'A'
         LD      (MNTD),A
@@ -162,9 +161,9 @@ SHOW:   LD      A,(DRIVE)
 ; Takes IDX at 0, as loaded. Returns to the CCP past the last one.
 LIST:	LD	A,(IDX)		; the next index
 	LD	E,A
-	LD	A,2		; describe
+	LD	C,TNDESC	; describe
 	LD	HL,DESC
-	CALL	VOLSVC
+	CALL	ABICALL
 	OR	A
 	RET	NZ		; past the table: done
 	LD	A,(IDX)		; the index, two digits

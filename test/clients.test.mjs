@@ -1,6 +1,5 @@
 // The ROM's own clients on the table: DEMO.COM and MOUNT.COM each test the tag
-// and major version 4, stop with a word on any other, and run on 4. The old
-// VOLS.COM is a stored card's; MOUNT lists the volumes now.
+// and major version 5, stop with a word on any other, and run on 5.
 // Emulator evidence.
 
 import { test } from "node:test";
@@ -28,7 +27,7 @@ async function machine(edit = () => {}) {
 
 const MAJOR3 = (r) => (r[6] = 3);
 const NOTAG = (r) => (r[3] = 0x58);
-const WORDS = { DEMO: "DEMO needs TEC-OS with ABI 4.", "MOUNT B:": "MOUNT needs TEC-OS with ABI 4.", MOUNT: "MOUNT needs TEC-OS with ABI 4." };
+const WORDS = { DEMO: "DEMO needs TEC-OS with ABI 5.", "MOUNT B:": "MOUNT needs TEC-OS with ABI 5.", MOUNT: "MOUNT needs TEC-OS with ABI 5." };
 
 for (const [line, word] of Object.entries(WORDS)) {
   for (const [why, edit] of [["major 3", MAJOR3], ["no TNA tag", NOTAG]]) {
@@ -40,7 +39,7 @@ for (const [line, word] of Object.entries(WORDS)) {
   }
 }
 
-test("MOUNT lists and unmounts on major 4", async () => {
+test("MOUNT lists and unmounts on major 5", async () => {
   const m = await machine();
   assert.match(m.command("MOUNT"), /^00 SYSTEM +G1M A:\r\n01 WORK +G8M B:\r\n/m);
   assert.match(m.command("MOUNT X:"), /^MOUNT \[D: \[NAME or INDEX\]\]/m, "a bad drive gets the usage line");
@@ -116,78 +115,19 @@ test("a program's digest covers what it includes, nested", () => {
 });
 
 test("abi.inc's numbers reach the tests by name", () => {
-  assert.deepEqual([ABI.HWBASE, ABI.HWINFO, ABI.HWRTC, ABI.HWCOUNT, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [19, 19, 27, 9, 0x80, 16, 22]);
+  assert.deepEqual([ABI.TNINFO, ABI.TNRTC, ABI.TNMOUNT, ABI.TNLIST, ABI.TNCOUNT, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [0, 8, 9, 14, 15, 0x80, 16, 22]);
 });
 
-// Binaries from an edc2745 starter card, ABI 3.1, as they might still sit on a
-// stored card. Pinned by hash: they are the evidence that an old program does
-// no harm, and must not be rebuilt.
-// An old DEMO's INFO is refused with B as it came, and CHKTAG's DJNZ left B = 0, so
-// it reads no devices and prints no throughout.
-const OLD = {
-  "DEMO.COM": "92918e238d08803acf25523b372aa463b76a02a83430f9322d5a075de817be1f",
-  "MOUNT.COM": "2ad307aee40367bf17732b37e6c806cba1f372845a2ba96d5cad48dfb0b869b6",
-  "VOLS.COM": "b2867c02d518a5b605905f7c3c9d542053cd20c9649492185386103b23be8599",
-};
-const old = (name) => {
-  const bytes = readFileSync(resolve(ROOT, "test/fixtures/edc2745", name));
-  assert.equal(createHash("sha256").update(bytes).digest("hex"), OLD[name], `${name} is the pinned binary`);
-  return bytes;
-};
+// ABI 3's binaries, which a stored card might hold and which test no major,
+// are no longer covered: ABI 5 has no RET at C01Dh (KS36a's part 3). Programs
+// that test the major stop themselves, as the tests above show.
 
-/** A board at its prompt with OLD's binaries on A:, and each pc reached in the hardware services. */
-function oldMachine(opts = {}) {
-  const image = standardCard();
-  const a = volume(image, "A");
-  for (const n of Object.keys(OLD)) a.write(n, old(n));
-  const { rom, symbols } = romFor();
-  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, ...opts });
-  m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
-  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  const seen = { services: 0, svc: 0, c01d: 0, strayed: 0 };
-  const inService = [...symbols.entries()].filter(([k]) => /^HWS[A-Z]+$/.test(k) && k !== "HWSVC").map(([, v]) => v);
-  const step = m.step.bind(m);
-  let last = 0;
-  m.step = () => {
-    if (inService.includes(m.pc)) seen.services += 1;
-    if (m.pc === symbols.get("HWSVC")) seen.svc += 1;
-    if (m.pc === 0xc01d) seen.c01d += 1;
-    if (last === 0xc01d && m.pc >= 0xc000) seen.strayed += 1; // anything but a RET to the program
-    last = m.pc;
-    return step();
-  };
-  return { m, seen, image };
-}
-// Page zero, less 0040h-004Fh, the BIOS's scratch, which every key typed moves.
-const pageZero = (m) => Array.from({ length: 0x5c }, (_, i) => (i >= 0x40 && i < 0x50 ? 0 : m.read(i)));
-
-test("an old DEMO prints no throughout, reaches no hardware service, and leaves page zero unchanged", () => {
-  const { m, seen } = oldMachine();
-  const before = pageZero(m);
-  const from = m.output.length;
-  m.type("DEMO\r");
-  m.expect(/Press any key to stop\.\r\n/, { from, maxCycles: 80_000_000 });
-  const text = m.text(from);
-  assert.match(text, /PICO9918: no/);
-  assert.match(text, /GLCD: no/);
-  assert.match(text, /clock: no/);
-  const end = m.cycles + 8_000_000;
-  m.runUntil(() => m.cycles > end, 9_000_000, "the demo running");
-  assert.ok(seen.svc > 10, "it called, and each call was refused");
-  assert.equal(seen.services, 0, "no hardware service ran");
-  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)).startsWith("TEC-OS hardware demo"), false, "the LCD isn't written");
-  m.type("x");
-  m.expect(/A>$/, { maxCycles: 80_000_000 });
-  assert.deepEqual(pageZero(m), before);
-  assert.deepEqual(m.violations, []);
-});
-
-// PICO.SVC from a 2d5ce25 starter card, format 3 and ABI 4 with hardware services from 0.
-// Its INIT's INFO is refused with B as it came, and SVCLOAD leaves B = 0, so its
-// BIT 1,B finds no PICO9918 and it refuses.
+// PICO.SVC from a 2d5ce25 starter card, format 3. ABI 5 raised the format to 4,
+// so the loader refuses it before its INIT can call an old address: no stale
+// driver runs.
 const OLD_PICO = "23513b3ba4931a183b097f0753209e0b03bbea6168127a56279fc41cfb95a58a";
 
-test("a 2d5ce25 PICO.SVC is refused in INIT: its name with a question mark, SVCRC 1 and PICO? still shown", () => {
+test("a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark, nothing loaded and PICO? still shown", () => {
   const bytes = readFileSync(resolve(ROOT, "test/fixtures/2d5ce25/PICO.DRV"));
   assert.equal(createHash("sha256").update(bytes).digest("hex"), OLD_PICO, "the pinned binary");
   const image = standardCard();
@@ -198,23 +138,7 @@ test("a 2d5ce25 PICO.SVC is refused in INIT: its name with a question mark, SVCR
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
   assert.match(m.text(0), /PICO\.SVC\?/);
-  assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [1, 0, 0]);
+  assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [0, 0, 0], "no INIT ran");
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "PICO?");
   assert.deepEqual(m.violations, []);
 });
-
-for (const [line, name] of [["VOLS", "VOLS"], ["MOUNT B:", "MOUNT, to unmount"], ["MOUNT B: 0", "MOUNT, to mount"]]) {
-  test(`an old ${name} returns through C01Dh and changes nothing`, () => {
-    const { m, seen, image } = oldMachine();
-    const card = Uint8Array.from(image);
-    const mounts = Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d));
-    const before = pageZero(m);
-    m.command(line);
-    assert.ok(seen.c01d >= 1, "it called C01Dh");
-    assert.equal(seen.strayed, 0, "and was sent straight back");
-    assert.deepEqual(Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d)), mounts);
-    assert.deepEqual(pageZero(m), before);
-    assert.deepEqual([...image], [...card], "the card byte for byte");
-    assert.deepEqual(m.violations, []);
-  });
-}

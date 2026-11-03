@@ -27,6 +27,11 @@ COLDZ:	LD	A,LATCLAS	; RSLCAP used A
 	LDIR
 	LD	SP,BSTK		; the workspace is there to hold it now
 	CALL	CONINIT
+	CALL	RTCHAS		; the clock, once: INFO reads its bit
+	JR	NZ,COLDNC
+	LD	HL,CONDEV
+	SET	3,(HL)		; CDRTC
+COLDNC:
 	LD	HL,BANNER
 	CALL	PUTS
 ; DIAG's retry comes back here. LCDINIT clears the display, so CARD? goes
@@ -147,8 +152,6 @@ MEMINIT:LD	A,(LATCHV)	; EXPAND 1 in view, no stack: clear it all
         LDIR
         LD      A,(LATCHV)
         OUT     (SYSLAT),A
-	LD	A,1		; MAIN 1 is not counted: ABIMAIN's
-	LD	(MAINS),A	; count is 1 until its entry goes
         RET
 
 ; Whether latch bit A shows other RAM at HL: the complement of the byte seen
