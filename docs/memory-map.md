@@ -80,7 +80,10 @@ The block cache's state, in the SD, keyboard and GLCD state above:
 ## EXPAND 1
 
 Cold boot clears it. Programs reach none of it: no TEC-OS interface leaves
-it in view.
+it in view. A program that puts it in view itself and ends without putting
+EXPAND 0 back finds BF03h empty and runs on into the ROM at C000h; the ROM
+tells that from a reset, since the overlay is off, and warm boots, so the
+cache's lines are written as at any exit.
 
 | Addresses | Bytes | Contents |
 | --- | ---: | --- |

@@ -1,11 +1,21 @@
 ; Cold boot and warm boot. The reset jump is in reset.asm.
 
 ; ---- Cold boot ----------------------------------------------------------------
-; Entered from RESET, at 0000h at reset, or BIOS function 0. One entry, and
+; Entered from RSTENT at reset, or BIOS function 0. One entry, and
 ; three paths through the ROM: an ordinary exit is warm boot, below, and never
 ; comes here; a recognised reset keeps the selected volumes, by RSLCAP and
 ; RESEL; an unrecognised reset takes the card's defaults.
 WSSPAN	EQU	WSEND-WSBASE-1	; the workspace, less the byte LDIR starts from
+
+; ---- Reset entry ----------------------------------------------------------------
+; RESET's jump comes here, from 0000h at reset or from C000h when a program
+; ends with EXPAND 1 in view: its JP 0 finds BF03h empty there and runs on
+; through zeros into the ROM (B1). At reset the overlay is on and 0002h holds
+; the jump's high byte; otherwise it holds the RAM BIOS's, and warm boot,
+; which puts EXPAND 0 back, writes the cache's dirty lines as any exit does.
+RSTENT:	LD	A,($0002)	; the overlay's copy of RESET's target, or RAM's
+	CP	HIGH(RSTENT)	; equal only at reset
+	JP	NZ,WBOOTR	; a program's exit: keep its writes
 COLD:	DI
 	LD	SP,BOOTSTK
 	LD	A,LATCLAS	; overlay off, classic bank, code at C0xxh

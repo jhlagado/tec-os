@@ -75,3 +75,24 @@ test("the harness sees a program's write to EXPAND 1's free top page, BF00h-BFFF
   assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbf80]);
   for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // this one was asked for
 });
+
+test("a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and its file's lines reach the card (B1)", () => {
+  const m = boot(standardCard(), { ram96: true });
+  const fcb = [0, ..."B1      TMP"].map((c) => (typeof c === "string" ? c.charCodeAt(0) : c));
+  fcb.concat(new Array(24).fill(0)).forEach((v, i) => m.write(0x5c + i, v));
+  for (let i = 0; i < 128; i += 1) m.write(0x80 + i, i < 127 ? 0x42 : 0x1a); // B..B, ^Z
+  // MAKE, WRITE and CLOSE B1.TMP, then LD A,05h / OUT (FFh),A / JP 0000h
+  const call = (c) => [0x0e, c, 0x11, 0x5c, 0x00, 0xcd, 0x05, 0x00];
+  const code = [...call(22), ...call(21), ...call(16), 0x3e, 0x05, 0xd3, 0xff, 0xc3, 0x00, 0x00];
+  code.forEach((v, i) => m.write(0x0100 + i, v));
+  const from = m.output.length;
+  m.cpu.cpu.sp = 0x8000; // clear of the record at 0080h
+  m.cpu.cpu.pc = 0x0100;
+  m.expect(/\r\nA>$/, { from });
+  assert.doesNotMatch(m.text(from), /TEC-OS/, "a warm boot, not a cold one");
+  assert.equal(m.sysCtrl & 0x04, 0, "EXPAND 0 in view");
+  m.reset();
+  m.expect(/\r\nA>$/, { from: 0 });
+  assert.match(m.command("TYPE B1.TMP"), /B{127}/, "the file's record on the card after a reset");
+  assert.deepEqual(m.expand1Writes, []);
+});
