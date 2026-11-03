@@ -20,7 +20,7 @@ function run(r, board, answer) {
   const v = findVolume(parseContainer(image), "A");
   const a = new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
   for (let n = 0; n < 150; n++) a.write(`F${String(n).padStart(3, "0")}.DAT`, Uint8Array.of(n));
-  if (board === "glcd") {
+  if (board === "glcd" && answer === "\x03") {
     a.write("GLCD.SVC", glcd);
     a.write("STARTUP.CMD", Buffer.from("GLCD.SVC\r\n\x1a"));
   }
@@ -62,7 +62,7 @@ function run(r, board, answer) {
   assert.equal(m.read(4) >> 4, 3, "next command executes after abort");
   assert.deepEqual(writes, [], "no transient write into the CCP stack guard");
   assert.deepEqual(m.violations, []);
-  return { board, answer: answer.charCodeAt(0), answerDelivery: board === "glcd" ? "BDOS pending-input byte" : "serial terminal", width: m.read(m.sym("VWID")), height: m.read(m.sym("VHGT")), paused, stopped, stoppedUser, recovery: m.text(recoveryFrom), peaks: Object.fromEntries(Object.entries(low).map(([p, v]) => [p, top - v])), guardWrites: writes.length, cycles: { toPause: atPause - start, afterAnswer: m.cycles - atPause } };
+  return { board, answer: answer.charCodeAt(0), answerDelivery: board === "glcd" ? (answer === "\x03" ? "BDOS pending-input byte" : "matrix keyboard") : "serial terminal", width: m.read(m.sym("VWID")), height: m.read(m.sym("VHGT")), paused, stopped, stoppedUser, recovery: m.text(recoveryFrom), peaks: Object.fromEntries(Object.entries(low).map(([p, v]) => [p, top - v])), guardWrites: writes.length, cycles: { toPause: atPause - start, afterAnswer: m.cycles - atPause } };
 }
 const result = { reference: refs[0], candidate: refs[1], romHashes: refs.map((dir) => createHash("sha256").update(rom(dir).image).digest("hex")), runs: [] };
 for (const board of ["serial", "glcd"]) for (const answer of ["Q", "\x1b", "\x03"]) {
