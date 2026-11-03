@@ -101,6 +101,48 @@ function listing(dir) {
 `, "");
 }
 
+function parserShared(dir) {
+  parser(dir);
+  edit(dir, `UNAMBIG:
+        PUSH    HL
+        PUSH    BC
+        LD      HL,(FCBBASE)
+        INC     HL
+        LD      A,(HL)
+        CP      SPACE
+        JR      Z,UNAMBAD
+        LD      B,11
+
+UNAMLOOP:
+        LD      A,(HL)
+        CP      '?'
+        JR      Z,UNAMBAD
+        INC     HL
+        DJNZ    UNAMLOOP
+        POP     BC
+        POP     HL
+        OR      A
+        RET
+
+UNAMBAD:
+        POP     BC
+        POP     HL
+        SCF
+        RET`, `UNAMBIG:
+        PUSH    HL
+        PUSH    BC
+        LD      HL,(FCBBASE)
+        INC     HL
+        LD      A,(HL)
+        CP      SPACE
+        JR      Z,CHRRET
+        LD      BC,11
+        LD      A,'?'
+        CPIR                    ; equality means an ambiguous name
+        JR      CHRRET`);
+  edit(dir, "        CPIR                    ; equality means a forbidden byte\n        POP     BC", "        CPIR                    ; equality means a forbidden byte\nCHRRET: POP     BC");
+}
+
 function dispatch(dir) {
   edit(dir, `KEYNXT:\tPUSH\tDE
 \tCALL\tISCMD\t\t; Z: the word, DE at its 0
@@ -112,7 +154,7 @@ function dispatch(dir) {
 }
 
 const variants = {
-  incumbent() {}, parser, listing, dispatch,
+  incumbent() {}, parser, "parser-shared": parserShared, listing, dispatch,
   combined(dir) { parser(dir); listing(dir); dispatch(dir); },
   "mutant-parser-overflow"(dir) { parser(dir); edit(dir, "PLEND:\n        SCF\n        RET", "PLEND:\n        OR      A\n        RET"); },
   "mutant-parser-tail"(dir) { parser(dir); edit(dir, "        LD      B,24", "        LD      B,20"); },
@@ -149,7 +191,20 @@ function parserRead(r, input, at) {
   assert.equal(m.cpu.sp, 0x4000, "parser stack balanced");
   assert.equal(actual[at - 1], 0xa5, "FCB lower canary");
   assert.equal(actual[at + 36], 0xa5, "FCB upper canary");
-  return { state: { fcb: [...actual.slice(at, at + 36)], cursor: (m.cpu.h << 8 | m.cpu.l) - 0x2000, carry: m.cpu.flags.C }, cycles, stack: 0x3ffe - low };
+  const state = { fcb: [...actual.slice(at, at + 36)], cursor: (m.cpu.h << 8 | m.cpu.l) - 0x2000, carry: m.cpu.flags.C };
+  const hl = m.cpu.h << 8 | m.cpu.l;
+  Object.assign(m.cpu, { pc: r.symbols.get("UNAMBIG"), sp: 0x3ffe, b: 0x3c, c: 0xa7 });
+  count = 0;
+  while (m.cpu.pc !== 0x3000) {
+    assert.ok(++count < 1000, "UNAMBIG did not return");
+    cycles += m.step().cycles;
+    low = Math.min(low, m.cpu.sp);
+  }
+  assert.equal(m.cpu.sp, 0x4000, "UNAMBIG stack balanced");
+  assert.equal(m.cpu.h << 8 | m.cpu.l, hl, "UNAMBIG preserves cursor");
+  assert.equal(m.cpu.b << 8 | m.cpu.c, 0x3ca7, "UNAMBIG preserves BC");
+  state.unambiguous = !m.cpu.flags.C;
+  return { state, cycles, stack: 0x3ffe - low };
 }
 
 function volume(image, drive) {
