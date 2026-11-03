@@ -22,7 +22,7 @@ const EDITED = "hello\nYsecond line\n";
 // Line 2 fails: 256 doesn't fit A. A ';' typed at the error's column makes it a comment.
 const BAD = ' ORG 100H\n LD A,256\n LD DE,MSG\n LD C,9\n CALL 5\n RET\nMSG: DB "HI",13,10,"$"\n';
 const FIXED = BAD.replace(" LD A,256", " ;LD A,256");
-const LIMIT = 600_000_000; // a step that hangs shows in seconds, not minutes
+const LIMIT = 100_000_000; // each step's cycles: a stall fails in seconds, naming the step
 
 const tedBytes = () => new Uint8Array(readFileSync(TED.path));
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -31,7 +31,12 @@ const text = (image, drive, name) => Buffer.from(volume(image, drive).read(name,
 /** Keys for M, each when it waits for one, then until it waits with nothing queued and DONE holds. */
 function keys(m, s, what, done = () => true) {
   m.enqueueInput(s, m.videoConsole() ? "matrix" : "serial");
-  m.runUntil(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), LIMIT, what);
+  try {
+    m.runUntil(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), LIMIT, what);
+  } catch (e) {
+    const screen = m.videoConsole() ? m.screen().filter((l) => l.trim()).join("\n") : m.text(0).slice(-600);
+    throw new Error(`${what}: no within ${LIMIT} cycles, ${m.pending?.length ?? 0} keys unread, pc ${m.pc.toString(16)}\n${screen}`);
+  }
 }
 
 function editOnTecOs({ tms, profile = "debug80", cols = 80 }) {
@@ -104,7 +109,7 @@ function round({ drive = "A", tms = true }) {
   const since = () => m.text(mark);
   const status = () => (tms ? m.screen()[23] : since().split("\x1b[24;1H").at(-1));
   if (drive !== "A") keys(m, `${drive}:\r`, "the drive", () => since().endsWith(`${drive}>`));
-  keys(m, "ted hello.asm\r", "TED", () => /TED HELLO\.ASM/.test(status()));
+  keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));
 
   mark = m.output.length;
   keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(since()) && /operands are not valid/.test(status()));
@@ -181,7 +186,7 @@ test("TED's text holds at least 33,052 bytes on the starter's files with no disp
     for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
     a.write("TED.COM", tedBytes());
     const m = boot(image, board);
-    keys(m, "ted x.asm\r", "TED", () => /TED X\.ASM/.test(m.text(0)));
+    keys(m, "ted x.asm\r", "TED", () => /TED +X\.ASM/.test(m.text(0)));
     assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${board.tms ? "on a board with both" : "with no display"}, at least ${floor}`);
   }
 });
