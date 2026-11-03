@@ -104,7 +104,7 @@ try {
  const sub=new Uint8Array(256);for(const [record,line] of [[0,'TYPE SECOND.TXT'],[1,'TYPE FIRST.TXT']]){sub[record*128]=line.length;sub.set(Buffer.from(line),record*128+1);}
  image=install(fresh(),'FIRST.TXT',Buffer.from('FIRST\r\n\x1a'));image=install(image,'SECOND.TXT',Buffer.from('SECOND\r\n\x1a'));image=install(image,'$$$.SUB',sub);
  m=boot(image);out=m.runUntilOutputSuffix('SECOND\r\n\r\nA>',4_000_000);
- assert.ok(out.indexOf('FIRST\r\n')<out.indexOf('SECOND\r\n'));
+ assert.equal(out,'\r\nA>TYPE FIRST.TXT\r\nFIRST\r\n\r\nA>TYPE SECOND.TXT\r\nSECOND\r\n\r\nA>');
  // Drive the prompt's command-source check to completion before inspecting deletion.
  m.enqueueAscii('\r');out+=m.runUntilOutputSuffix(prompt,4_000_000);
  assert.throws(()=>logical(m.exportDisk(),'$$$.SUB'));
