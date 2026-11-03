@@ -137,6 +137,7 @@ function parserRead(r, input, at) {
   memory.set(Buffer.from(input + "\0", "latin1"), 0x2000);
   memory[0x3ffe] = 0; memory[0x3fff] = 0x30;
   const m = createZ80Runtime({ memory, startAddress: r.symbols.get("PARSEFCB") }, 0, { read: () => 255, write() {} });
+  const actual = m.hardware.memory; // createZ80Runtime copies the input image
   Object.assign(m.cpu, { pc: r.symbols.get("PARSEFCB"), sp: 0x3ffe, h: 0x20, l: 0, d: at >> 8, e: at & 255, b: 0x5a, c: 0x69 });
   let cycles = 0, low = 0x3ffe, count = 0;
   while (m.cpu.pc !== 0x3000) {
@@ -145,9 +146,9 @@ function parserRead(r, input, at) {
     low = Math.min(low, m.cpu.sp);
   }
   assert.equal(m.cpu.sp, 0x4000, "parser stack balanced");
-  assert.equal(memory[at - 1], 0xa5, "FCB lower canary");
-  assert.equal(memory[at + 36], 0xa5, "FCB upper canary");
-  return { state: { fcb: [...memory.slice(at, at + 36)], cursor: (m.cpu.h << 8 | m.cpu.l) - 0x2000, carry: m.cpu.flags.C }, cycles, stack: 0x3ffe - low };
+  assert.equal(actual[at - 1], 0xa5, "FCB lower canary");
+  assert.equal(actual[at + 36], 0xa5, "FCB upper canary");
+  return { state: { fcb: [...actual.slice(at, at + 36)], cursor: (m.cpu.h << 8 | m.cpu.l) - 0x2000, carry: m.cpu.flags.C }, cycles, stack: 0x3ffe - low };
 }
 
 function volume(image, drive) {
@@ -194,7 +195,7 @@ function sessions(r) {
 }
 
 mkdirSync(WORK, { recursive: true });
-const cases = corpus(), figures = { baseline: BASE, assembler: "atom-z80 0.3.7", commands, parserCases: cases.length * 2, variants: {} };
+const cases = corpus(), figures = { baseline: BASE, runnerSha256: sha(readFileSync(new URL(import.meta.url))), assembler: "atom-z80 0.3.7", commands, parserCases: cases.length * 2, variants: {} };
 let baselineParsers, baselineSession;
 for (const [name, change] of Object.entries(variants)) {
   console.error(`CCP model: ${name}`);
