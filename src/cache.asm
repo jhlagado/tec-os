@@ -270,10 +270,12 @@ CRD1:   CALL    CRDREC
         XOR     A
         RET
 
-; BIOS WRITE on a write-behind volume, from BWRITE with its checks done and
-; C = 1 when the block needs no pre-read. The record goes into the block's
-; line, which is dirty; a directory write then writes every dirty line and
-; its own last, and never leaves its line dirty. Z on success.
+; BIOS WRITE, every volume, from BWRITE with its checks done and C = 1 when
+; the block needs no pre-read. The record goes into the block's line, which is
+; dirty. On a volume written through (CWTYPE bit 7) the line is written to the
+; card before the call returns, and dropped if that fails. On the one written
+; behind a directory write then writes every dirty line and its own last, and
+; never leaves its line dirty. Z on success.
 CWRBH:  PUSH    BC
         CALL    CLOOK
         POP     BC
@@ -321,10 +323,18 @@ CWB2:   PUSH    AF
         CALL    CDSET
         LD      C,A
         LD      A,(CWTYPE)
+	OR	A
+	JP	M,CWBT		; written through: to the card now
         DEC     A
         JR      Z,CWB3
         XOR     A               ; data: done
         RET
+CWBT:	LD	A,C		; the line
+	CALL	CWRITE		; Z: the card has the block
+	RET	Z
+	CALL	CDROP		; failed: the line goes, the card's copy stands
+	OR	1		; NZ
+	RET
 CWB3:   LD      A,C             ; a directory block: the volume's data first,
         CALL    CFLUSH          ; then the directory line; if either fails,
 	CALL	Z,CWRITE	; the line goes, so the card's directory
@@ -343,18 +353,6 @@ CWBOOT:	CALL	CFLALL
 	LD	HL,CWMSG
 	JP	PUTS
 
-; After a write through BLKBUF: the line that holds SDLBA's block, if one does,
-; takes the new contents, so that it can't hand back the old ones. Destroys AF,
-; BC, DE and HL.
-CREFR:	CALL	CLOOK		; A = the line, Z if there is one
-	RET	NZ		; not cached: nothing to keep true
-	LD	BC,$0001	; XMDST bank 1, XMSRC bank 0
-	LD	(XMDST),BC
-	CALL	CLADR		; HL = the line
-	LD	DE,BLKBUF	; from the block just written
-	LD	BC,512
-	CALL	MVCOPY		; a CALL: the host's guard on EXPAND 1 reads
-	RET			; the return address to name its writer
 CEND:
 
 ; MVCOPY: the cache's copy between EXPAND 0 and EXPAND 1. BC bytes from DE to
