@@ -1,7 +1,10 @@
 ; The data block, continued from tables.asm and gen/geom.asm; the code
 ; follows it.
 
-; ---- boot.asm: DIAG ----------------------------------------------------------
+; ---- boot.asm ----------------------------------------------------------------
+RAMMSG: DB      13,10,"TEC-OS needs 64K RAM",13,10,0
+BANNER: DB      13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0
+ROTXT:  DB      " (read-only)",0
 DGERR:  DB      "No volume mounted, error ",0
 DGPROM: DB      "R retry, H header> ",0
 
@@ -20,6 +23,8 @@ MOREMSG:
         DB      "[more]",'$'
 UNMORE:
         DB      CR,"      ",CR,'$'
+TYPEKEY:
+        DB      "TYPE",0
 DIRKEY:
         DB      "DIR",0
 ERAKEY:
@@ -70,6 +75,9 @@ ALLQUERY:
         DB      "ALL (Y/N)?",'$'
 BADCHARS:
         DB      "<>,;:[]%|()/",92
+
+; ---- lcd.asm -----------------------------------------------------------------
+LCDBAN: DB      "TEC-OS ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0
 
 ; ---- cpm/bdos.asm ------------------------------------------------------------
 ; Each function's routine. FCBMAP has a bit for each function, bit n of
