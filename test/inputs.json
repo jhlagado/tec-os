@@ -1,10 +1,13 @@
 {
-  "note": "Application inputs from outside this repository, pinned by SHA-256 (test/lib/inputs.mjs). Each is read from env, else default, relative to this repository. Recorded from the checkouts at the commits named in source.",
+  "note": "Application inputs from outside this repository, pinned by SHA-256 (test/lib/inputs.mjs). Each is read from env, else default, relative to this repository. Recorded from the checkouts at the commits named in source. Each entry's repo, commit and path say where `npm run inputs` fetches it into .inputs/ when neither env nor default has it.",
   "inputs": {
     "ATOM.COM": {
       "env": "ATOM_COM",
       "default": "../atom/assets/atom-cpm22.com",
       "source": "jhlagado/atom 505cee1, assets/atom-cpm22.com",
+      "repo": "jhlagado/atom",
+      "commit": "505cee164816845e78f3549ad16a138eeb596f0e",
+      "path": "assets/atom-cpm22.com",
       "bytes": 22680,
       "sha256": "c99135936bcccfaffb29c98679ed4dbb5d2d6a76c62080de15a1831da2403be7"
     },
@@ -12,6 +15,9 @@
       "env": "TAS_COM",
       "default": "../thorium/dist/TAS.COM",
       "source": "jhlagado/thorium dbee66a, dist/TAS.COM",
+      "repo": "jhlagado/thorium",
+      "commit": "dbee66a90816df9a5884a08754ebc2d458a38325",
+      "path": "dist/TAS.COM",
       "bytes": 10295,
       "sha256": "45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2"
     },
@@ -19,6 +25,9 @@
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
       "source": "jhlagado/thorium 676075a, dist/TED.COM",
+      "repo": "jhlagado/thorium",
+      "commit": "676075ace58e010695f53c4711288ad26a2dfe6e",
+      "path": "dist/TED.COM",
       "bytes": 11887,
       "sha256": "373d866bb667b26370933d494d3e0fca5af8f330090b085182ad450d952ac64a"
     },
@@ -26,11 +35,15 @@
       "env": "TRIPTYCH_HEADLESS",
       "default": "../triptych/packages/triptych-headless",
       "source": "triptych f74de0b, packages/triptych-headless with its built dist",
+      "repo": "jhlagado/triptych",
+      "commit": "f74de0bae8453d651832850038c831fa1ccfcc08",
+      "path": "packages/triptych-headless",
       "tree": [
         "src",
         "dist"
       ],
-      "sha256": "fa022e404a144524905b63d232ace989da36173f72434cd47d5faa541d99fc82"
+      "sha256": "fa022e404a144524905b63d232ace989da36173f72434cd47d5faa541d99fc82",
+      "build": "node scripts/build.mjs, in the package, after the repository's own build of its WebAssembly host"
     }
   }
 }

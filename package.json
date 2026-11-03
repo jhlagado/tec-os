@@ -18,7 +18,8 @@
     "test:strict": "STRICT=1 npm test",
     "media": "node tools/media.mjs",
     "check": "npm run build && npm test && npm run media && npm run web",
-    "web": "node web/build.mjs"
+    "web": "node web/build.mjs",
+    "inputs": "node tools/inputs.mjs"
   },
   "devDependencies": {
     "@jhlagado/debug80-runtime": "0.3.3",

@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
 import { displayFiles, widthDrivers } from "./lib/starter.mjs";
 import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
+import { located } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,8 +28,8 @@ const PROGRAMS = [
 /** The pinned NAME's bytes, which the card holds: a file missing or not as pinned is refused. */
 function pinnedBytes(name) {
   const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs[name];
-  const path = process.env[entry.env] ?? resolve(ROOT, entry.default);
-  if (!existsSync(path)) throw new Error(`no ${name} at ${path}: the starter card holds it, so set ${entry.env}`);
+  const path = located(ROOT, name, entry);
+  if (!existsSync(path)) throw new Error(`no ${name} at ${path}: the starter card holds it, so set ${entry.env} or run npm run inputs`);
   const bytes = new Uint8Array(readFileSync(path));
   const got = sha(bytes);
   if (got !== entry.sha256) throw new Error(`${name} at ${path} has sha256 ${got}, pinned ${entry.sha256}`);

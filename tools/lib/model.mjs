@@ -10,6 +10,7 @@
 // the blocks the card was asked for, counted at the host's card.
 
 import { execFileSync, spawn } from "node:child_process";
+import { inputsDir } from "./pins.mjs";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, cpSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
@@ -95,7 +96,7 @@ const OLDER_PINS = {
 function shipped(name, dir = ROOT) {
   const own = resolve(dir, "test/inputs.json");
   const entry = (existsSync(own) ? JSON.parse(readFileSync(own, "utf8")).inputs[name] : undefined) ?? OLDER_PINS[name];
-  const paths = [process.env[entry.env], resolve(ROOT, entry.default), process.env.PINS_DIR && resolve(process.env.PINS_DIR, entry.sha256)].filter(Boolean).map((p) => resolve(p));
+  const paths = [process.env[entry.env], resolve(ROOT, entry.default), resolve(inputsDir(ROOT), name), process.env.PINS_DIR && resolve(process.env.PINS_DIR, entry.sha256)].filter(Boolean).map((p) => resolve(p));
   const path = paths.find((p) => existsSync(p) && sha256(readFileSync(p)) === entry.sha256);
   if (!path) throw new Error(`no ${name} with sha256 ${entry.sha256} at ${paths.join(" or ")}: set ${entry.env}, or PINS_DIR to a folder of pinned files by hash`);
   return path;

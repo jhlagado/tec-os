@@ -4,3 +4,4 @@ dist/
 src/gen/
 web/dist/
 diag/gen/
+.inputs/
