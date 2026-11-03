@@ -92,22 +92,21 @@ async function entry(job) {
   const res = await fx.service("res");
   const image = fx.standardCard();
   fx.volume(image, "A").write("RES.SVC", res);
+  fx.volume(image, "A").write("ASK.COM", Uint8Array.from([0x0e, 12, 0xcd, 5, 0, 0xc9])); // function 12, CALL 5, RET
   const m = fx.boot(image);
+  const bentry = m.sym("BENTRY");
+  let counting = false;
+  let seen = 0;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === 0x0102) [counting, seen] = [true, 0];
+    else if (m.pc === bentry) counting = false;
+    else if (counting && m.pc !== 0x0102 && m.read(m.pc) === 0xc3) seen += 1;
+    return step();
+  };
   const count = () => {
-    [0x0e, 12, 0xcd, 5, 0, 0x18, 0xfe].forEach((v, i) => m.write(0x0300 + i, v));
-    const c = m.cpu.cpu;
-    const saved = { pc: c.pc, sp: c.sp };
-    Object.assign(c, { pc: 0x0300, sp: 0x0400 });
-    const bentry = m.sym("BENTRY");
-    let jumps = 0;
-    while (m.pc !== bentry) {
-      const op = m.read(m.pc);
-      if (m.pc >= 5 && op === 0xc3) jumps += 1;
-      m.step();
-    }
-    m.runUntil(() => m.pc === 0x0305, 1_000_000, "the return");
-    Object.assign(c, saved);
-    return jumps;
+    m.command("ASK");
+    return seen;
   };
   const jumps = [count()];
   m.command("RES.SVC");
