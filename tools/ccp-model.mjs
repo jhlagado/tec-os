@@ -182,9 +182,23 @@ function dispatch(dir) {
 \tJR\tNZ,KEYSK`);
 }
 
+function sourceEntry(dir) {
+  edit(dir, "        LD      A,1\n        LD      (CHPOS),A\n        CALL    CHSKIP", "        LD      HL,CMDTXT       ; CHPOS was cleared before acquiring this line\n        CALL    CHSK1");
+  edit(dir, "        LD      DE,CMDTAIL\n        LD      C,26\n        CALL    BDOS\n        RET", "        LD      DE,CMDTAIL\n        LD      C,26\n        JP      BDOS");
+}
+
+function loaderRead(dir) {
+  const path = resolve(dir, ccp), text = readFileSync(path, "utf8");
+  const old = "        LD      C,26\n        CALL    BDOS\n        LD      C,20\n        CALL    CPSRC";
+  assert.equal(text.split(old).length - 1, 2, "two loader DMA/read paths");
+  writeFileSync(path, text.replaceAll(old, "        CALL    READSRC"));
+  edit(dir, "LOADBAD:\n        SCF\n        RET", "LOADBAD:\n        SCF\n        RET\n\n; DE is the next record's DMA address; the read returns directly to its caller.\nREADSRC:\n        LD      C,26\n        CALL    BDOS\n        LD      C,20\n        JP      CPSRC");
+}
+
 const variants = {
   incumbent() {}, parser, "parser-shared": parserShared, listing, "listing-counter": listingCounter, "listing-state": listingState, dispatch,
-  combined(dir) { parserShared(dir); listingState(dir); dispatch(dir); },
+  "source-entry": sourceEntry, "loader-read": loaderRead,
+  combined(dir) { parserShared(dir); listingState(dir); dispatch(dir); sourceEntry(dir); loaderRead(dir); },
   "mutant-parser-overflow"(dir) { parser(dir); edit(dir, "PLEND:\n        SCF\n        RET", "PLEND:\n        OR      A\n        RET"); },
   "mutant-parser-tail"(dir) { parser(dir); edit(dir, "        LD      B,24", "        LD      B,20"); },
 };
@@ -253,6 +267,7 @@ function boot(r) {
   return { m, image };
 }
 const commands = [
+  "", " ! ! ", ":", "USER 0!USER 1!:USER 0",
   "DIR", "TYPE HELLO.TXT", "DIR *.TXT", "TYPE ABCDEFGHI.TXT", "TYPE HELLO.TXTT", "TYPE *.TXT",
   "REN NEW.TXT=SECOND.TXT", "COPY HELLO.TXT B:", "TYPE B:HELLO.TXT", "ERA NEW.TXT", "DIR",
   "USER 15", "USER 16", "USER 0", "SAVE 0 ZERO.BIN", "DIR ZERO.BIN", "ERA ZERO.BIN",
