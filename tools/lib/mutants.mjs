@@ -169,11 +169,10 @@ export const MUTANTS_KS31 = [
   { name: "recognition: (0000h) unread", ...r(["RSLCAP: LD A,($0000)", "CP $C3", "JR NZ,RSLNO"], ["RSLCAP: LD A,($0000)", "CP $C3"]) },
   { name: "recognition: (0001h) unread", ...r(["SBC HL,DE", "JR NZ,RSLNO", "LD A,(PZBDOS)"], ["SBC HL,DE", "LD A,(PZBDOS)"]) },
   { name: "recognition: (0005h) unread", ...r(["LD A,(PZBDOS)", "CP $C3", "JR NZ,RSLNO"], ["LD A,(PZBDOS)", "CP $C3"]) },
-  { name: "recognition: S low byte unread", ...r(["LD A,L", "CP 6", "JR NZ,RSLNO", "LD E,H"], ["LD A,L", "CP 6", "LD E,H"]) },
   { name: "recognition: the stub's JP unread", ...r(["LD A,(HL)", "CP $C3", "JR NZ,RSLNO", "INC HL"], ["LD A,(HL)", "CP $C3", "INC HL"]) },
   { name: "recognition: BENTRY's low byte unread", ...r(["CP LOW(BENTRY)", "JR NZ,RSLNO"], ["CP LOW(BENTRY)"]) },
   { name: "recognition: BENTRY's high byte unread", ...r(["CP HIGH(BENTRY)", "JR NZ,RSLNO"], ["CP HIGH(BENTRY)"]) },
-  { name: "recognition: W low byte unread", ...r(["LD A,L", "CP 6", "JR NZ,RSLNO", "LD A,H"], ["LD A,L", "CP 6", "LD A,H"]) },
+  { name: "recognition: W low byte unread", ...r(["LD A,L", "OR A", "JR NZ,RSLNO", "LD A,H"], ["LD A,L", "OR A", "LD A,H"]) },
   { name: "recognition: W below 8000h allowed", ...r(["CP $80", "JR C,RSLNO"], ["CP $80"]) },
   { name: "recognition: 8000h one low", ...r(["CP $80", "JR C,RSLNO"], ["CP $7F", "JR C,RSLNO"]) },
   { name: "recognition: 8000h one high", ...r(["CP $80", "JR C,RSLNO"], ["CP $81", "JR C,RSLNO"]) },
@@ -488,4 +487,50 @@ export const MUTANTS_KS33 = [
   { name: "the page: an old card's words name the first file", edits: [text("host/card.mjs", 'files.find((f) => f.name === asked) ?? ', "")], tests: ["test/pico.test.mjs"], only: "name the display asked for" },
   { name: "the page: an old card's own words gone", edits: [text("host/card.mjs", "if (old) return", "if (!old) return")], tests: ["test/pico.test.mjs"] },
   { name: "the media tool takes any TAS.COM", edits: [text("tools/media.mjs", "if (got !== entry.sha256) throw", "if (false) throw")], tests: ["test/tas.test.mjs"], only: "the media tool refuses" },
+];
+
+// KS34: kept vectors, the resident header, masks, the safe read and function
+// 47, each with the tests meant to catch it.
+const SVCF = "src/svc.asm";
+const PICOF = "drivers/pico.asm";
+const CONF = "src/console.asm";
+const ks34 = (file, find, put, tests) => ({ edits: [asm(file, find, put)], tests });
+const VEC = ["test/svc.test.mjs"];
+const SYS = ["test/system.test.mjs"];
+const MASK = ["test/masking.test.mjs"];
+export const MUTANTS_KS34 = [
+  { name: "sweep: stops at 0037h", ...ks34(B, ["CP $40", "JR NZ,RSTCLR"], ["CP $38", "JR NZ,RSTCLR"], VEC) },
+  { name: "sweep: the bound a page high", ...ks34(B, ["LD A,(PZTOP+1)", "DEC A"], ["LD A,(PZTOP+1)"], VEC) },
+  { name: "sweep: the bound back at C0h", ...ks34(B, ["LD A,(PZTOP+1)", "DEC A"], ["LD A,$BF", "NOP", "NOP"], VEC) },
+  { name: "sweep: the bound a page low", ...ks34(B, ["LD A,(PZTOP+1)", "DEC A"], ["LD A,(PZTOP+1)", "SUB 2"], VEC) },
+  { name: "sweep: 003Fh keeps its RET", ...ks34(B, ["LD (RST7+7),A"], ["NOP"], SYS) },
+  { name: "sweep: exits with carry set", ...ks34(B, ["LD A,$FB", "LD (RST7),A", "RET"], ["LD A,$FB", "LD (RST7),A", "SCF", "RET"], VEC) },
+  { name: "unload: no sweep", ...ks34(SVCF, ["CALL PRLTOP", "JP PZSWP"], ["JP PRLTOP"], VEC) },
+  { name: "failed INIT: no sweep", ...ks34(SVCF, ["LD (PZBDOS+1),HL", "CALL PZSWP"], ["LD (PZBDOS+1),HL"], VEC) },
+  { name: "unload: a claimed slot left", ...ks34(SVCF, ["LD (HL),D"], ["NOP"], VEC) },
+  { name: "unload: the slots a place out", ...ks34(SVCF, ["LD HL,8", "LD DE,8", "SRL A", "SVCUC: SRL A"], ["LD HL,16", "LD DE,8", "SRL A", "SVCUC: SRL A"], VEC) },
+  { name: "claims: a held slot let through", ...ks34(SVCF, ["CP $C3", "JP Z,PRLRF"], ["CP $C3"], VEC) },
+  { name: "claims: the slots a place out", ...ks34(SVCF, ["LD HL,8", "LD DE,8", "SRL A", "SVCMC: SRL A"], ["LD HL,16", "LD DE,8", "SRL A", "SVCMC: SRL A"], VEC) },
+  { name: "claims: format 3's flags of 1 claim", ...ks34(SVCF, ["LD DE,8", "SRL A", "SVCMC: SRL A"], ["LD DE,8", "NOP", "NOP", "SVCMC: SRL A"], VEC) },
+  { name: "reset: a vector kept", edits: [asm(B, ["LD HL,0", "LD DE,1", "LD BC,$FF"], ["LD HL,$40", "LD DE,$41", "LD BC,$BF"]), asm(B, ["LD A,(PZTOP+1)", "DEC A"], ["LD A,$7F", "NOP", "NOP"])], tests: VEC },
+  { name: "entry: the link restored", ...ks34(SVCF, ["LD HL,BENTRY"], ["LD HL,(PZTOP)"], VEC) },
+  { name: "header: the fields below (0006h)", ...ks34(SVCF, ["LD H,A", "LD L,B", "LD (PZBDOS+1),HL"], ["LD H,A", "LD L,3", "LD (PZBDOS+1),HL"], VEC) },
+  { name: "header: the owner not kept", ...ks34(SVCF, ["LD DE,DF+DOLD", "LD BC,3"], ["LD DE,DF+DOLD", "LD BC,2"], VEC) },
+  { name: "header: the top from the stub alone", ...ks34("src/prl.asm", ["OR A", "JR NZ,PRLT1"], ["OR A", "NOP", "NOP"], VEC) },
+  { name: "header: the page above from nothing", ...ks34(SVCF, ["RET NZ", "LD A,(STUBAD+1)"], ["RET NZ", "LD A,$BF"], VEC) },
+  { name: "stub: a byte low", ...ks34("src/vol.asm", ["DEC HL", "DEC HL", "DEC HL", "LD (STUBAD),HL"], ["DEC HL", "DEC HL", "DEC HL", "DEC HL", "LD (STUBAD),HL"], SYS) },
+  { name: "recognition: W = S refused", ...ks34(B, ["SBC HL,DE", "JR Z,RSLYES"], ["SBC HL,DE", "NOP", "NOP"], ["test/reset.test.mjs"]) },
+  { name: "mask: VPAIR with no DI", ...ks34(PICOF, ["VPAIR1: PUSH AF", "DI"], ["VPAIR1: PUSH AF", "NOP"], MASK) },
+  { name: "mask: VPAIR leaves them off", ...ks34(PICOF, ["RET PO", "EI", "RET"], ["RET PO", "RET"], MASK) },
+  { name: "mask: VPAIR turns them on", ...ks34(PICOF, ["RET PO", "EI", "RET"], ["NOP", "EI", "RET"], MASK) },
+  { name: "mask: GFXREG bare", ...ks34(PICOF, ["GFXREG: LD L,A", "LD A,B", "OR $80", "LD H,A", "JP VPAIR"], ["GFXREG: OUT (VDPCTL),A", "LD A,B", "OR $80", "OUT (VDPCTL),A", "RET"], MASK) },
+  { name: "mask: TMSR bare", ...ks34(PICOF, ["TMSR: LD A,(HL)", "PUSH HL", "LD L,A", "LD H,C", "CALL VPAIR", "POP HL"], ["TMSR: LD A,(HL)", "OUT (VDPCTL),A", "LD A,C", "OUT (VDPCTL),A"], MASK) },
+  { name: "mask: TXBYTE with no DI", ...ks34(CONF, ["CALL IFFGET", "PUSH AF", "DI", "LD B,9"], ["CALL IFFGET", "PUSH AF", "NOP", "LD B,9"], MASK) },
+  { name: "mask: RXBITS with no DI", ...ks34(CONF, ["PUSH AF", "DI", "LD D,RXHALF"], ["PUSH AF", "NOP", "LD D,RXHALF"], MASK) },
+  { name: "mask: TXBYTE leaves them off", ...ks34(CONF, ["JR NZ,TXS", "POP AF", "RET PO", "EI", "RET"], ["JR NZ,TXS", "POP AF", "RET"], MASK) },
+  { name: "mask: RXBITS leaves them off", ...ks34(CONF, ["LD A,C", "RET PO", "EI", "RET"], ["LD A,C", "RET"], MASK) },
+  { name: "mask: RXHALF not re-derived", edits: [text("tools/build.mjs", "1.5 * bit - 51 - 58.5 - kbLate / 2", "1.5 * bit - 51 - kbLate / 2")], tests: ["test/console.test.mjs", "test/console-boundaries.test.mjs"] },
+  { name: "erratum: IFFGET's bare read", ...ks34("src/cache.asm", ["IFFGET: LD A,I", "RET PE", "LD A,I", "RET"], ["IFFGET: LD A,I", "RET"], MASK) },
+  { name: "erratum: VPAIR's bare read", ...ks34(PICOF, ["VPAIR: LD A,I", "JP PE,VPAIR1", "LD A,I"], ["VPAIR: LD A,I"], MASK) },
+  { name: "47: the guard outlives a warm boot", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC) },
 ];
