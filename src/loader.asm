@@ -359,33 +359,6 @@ SVCIN:  LD      DE,DHLEN
         CCF
         RET
 
-; SERVICES: each service's name and pages, from the owner list.
-CMDSVC: LD      A,(SVCHEAD)
-CMDDL:  OR      A
-        JP      Z,MAINLOOP
-        LD      H,A
-        LD      L,DNAM
-        LD      B,8
-        CALL    PUTTRIM
-        PUSH    HL
-        LD      E,' '
-        CALL    PUTCHAR
-        POP     HL
-        PUSH    HL
-        LD      L,DOWN
-        LD      A,(HL)
-        CALL    SVCABV
-        SUB     H
-        LD      L,A
-        LD      H,0
-        CALL    PUTDEC
-        LD      DE,CRLFMSG
-        CALL    PUTSTR
-        POP     HL
-        LD      L,DOWN
-        LD      A,(HL)
-        JR      CMDDL
-
 ; Startup. Once after cold boot one record of A:STARTUP.CMD is read, the
 ; position marked finished first, so that a failure can't repeat. STPOS is 0
 ; until then, the next byte + 1 in the file, 80h up once it is finished, and FFh

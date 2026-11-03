@@ -1584,3 +1584,30 @@ PUTSTR:
 PUTCHAR:
         LD      C,2
         JP      BDOS
+
+; SERVICES: each service's name and pages, from the owner list.
+CMDSVC: LD      A,(SVCHEAD)
+CMDDL:  OR      A
+        JP      Z,MAINLOOP
+        LD      H,A
+        LD      L,DNAM
+        LD      B,8
+        CALL    PUTTRIM
+        PUSH    HL
+        LD      E,' '
+        CALL    PUTCHAR
+        POP     HL
+        PUSH    HL
+        LD      L,DOWN
+        LD      A,(HL)
+        CALL    SVCABV
+        SUB     H
+        LD      L,A
+        LD      H,0
+        CALL    PUTDEC
+        LD      DE,CRLFMSG
+        CALL    PUTSTR
+        POP     HL
+        LD      L,DOWN
+        LD      A,(HL)
+        JR      CMDDL
