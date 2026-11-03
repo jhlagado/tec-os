@@ -315,3 +315,8 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   assert.equal(word(m.sym("GLVEC")), 0, "its table dropped");
   assert.deepEqual(m.violations, []);
 });
+
+test("cold boot lists each drive's whole 11-character label, its spaces too (KS38b's DRVLAB)", () => {
+  const m = boot(standardCard());
+  assert.match(m.serialText(), /\r\nA: SYSTEM {5}\r\nB: WORK {7}\r\n/);
+});
