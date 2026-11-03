@@ -24,26 +24,6 @@ MOREMSG:
         DB      "[more]",'$'
 UNMORE:
         DB      CR,"      ",CR,'$'
-TYPEKEY:
-        DB      "TYPE",0
-DIRKEY:
-        DB      "DIR",0
-ERAKEY:
-        DB      "ERA",0
-RENKEY:
-        DB      "REN",0
-SAVEKEY:
-        DB      "SAVE",0
-USERKEY:
-        DB      "USER",0
-CONKEY:
-        DB      "CON",0
-COPYKEY:
-        DB      "COPY",0
-UNLKEY:
-        DB      "UNLOAD",0
-SVCKEY:
-        DB      "SERVICES",0
 CPNOSRC:
         DB      "NO SOURCE",CR,LF,'$'
 CPNODST:

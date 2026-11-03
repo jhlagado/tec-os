@@ -35,6 +35,30 @@ LCDSEQ: DB      $38,$0C,$06,$01
 
 LCDROWS:DB      $80,$C0,$94,$D4
 
+; ---- cpm/ccp.asm: the built-in commands -----------------------------------
+; Each word, its 0, then its handler, in the order they are tried; a 0 ends.
+KEYTAB:	DB	"DIR",0
+	DW	CMDDIR
+	DB	"TYPE",0
+	DW	CMDTYPE
+	DB	"ERA",0
+	DW	CMDERA
+	DB	"REN",0
+	DW	CMDREN
+	DB	"SAVE",0
+	DW	CMDSAVE
+	DB	"USER",0
+	DW	CMDUSER
+	DB	"CON",0
+	DW	CMDCON
+	DB	"COPY",0
+	DW	CMDCOPY
+	DB	"UNLOAD",0
+	DW	CMDUNL
+	DB	"SERVICES",0
+	DW	CMDSVC
+	DB	0
+
 ; ---- cpm/bdos.asm ------------------------------------------------------------
 ; Each function's routine. FCBMAP has a bit for each function, bit n of
 ; byte n/8, set where the FCB's drive is bound first.

@@ -231,36 +231,28 @@ NOTDRIVE:
         CALL    CMDSKIP
         CALL    CMDPARSE
         LD      (ARGSTRT),HL
-        LD      DE,DIRKEY
-        CALL    ISCMD
-        JP      Z,CMDDIR
-        LD      DE,TYPEKEY
-        CALL    ISCMD
-        JP      Z,CMDTYPE
-        LD      DE,ERAKEY
-        CALL    ISCMD
-        JP      Z,CMDERA
-        LD      DE,RENKEY
-        CALL    ISCMD
-        JP      Z,CMDREN
-        LD      DE,SAVEKEY
-        CALL    ISCMD
-        JP      Z,CMDSAVE
-        LD      DE,USERKEY
-        CALL    ISCMD
-        JP      Z,CMDUSER
-        LD      DE,CONKEY
-        CALL    ISCMD
-        JP      Z,CMDCON
-        LD      DE,COPYKEY
-        CALL    ISCMD
-        JP      Z,CMDCOPY
-        LD      DE,UNLKEY
-        CALL    ISCMD
-        JP      Z,CMDUNL
-        LD      DE,SVCKEY
-        CALL    ISCMD
-        JP      Z,CMDSVC
+	LD	DE,KEYTAB	; the built-in commands' words
+KEYNXT:	PUSH	DE
+	CALL	ISCMD		; Z: the word, DE at its 0
+	POP	HL		; the word's start
+	JR	NZ,KEYSK
+	EX	DE,HL		; the word matched: its handler, after the 0
+	INC	HL
+	LD	A,(HL)		; the handler's address, low byte first
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	JP	(HL)		; it takes the line from ARGSTRT itself
+KEYSK:	LD	A,(HL)		; past the word and its 0,
+	INC	HL
+	OR	A
+	JR	NZ,KEYSK
+	INC	HL		; and its handler
+	INC	HL
+	EX	DE,HL
+	LD	A,(DE)
+	OR	A
+	JR	NZ,KEYNXT	; another word; a 0 ends the table
         LD      DE,CMDFCB
         CALL    UNAMBIG
         JR      C,BADCMD
