@@ -46,6 +46,21 @@ CPDST:
         JP      BDOS`);
   writeFileSync(path, source);
 }
+function startupControls(r) {
+  const entry=r.symbols.get("DOSSEQ"), start=r.symbols.get("STBOOT")-0xc000, end=r.symbols.get("STBDMA")-0xc000;
+  const sites=[];
+  for(let i=start;i<end-3;i++) if(r.image[i]===0xcd && r.image[i+1]===(entry&255) && r.image[i+2]===(entry>>8)) sites.push(i);
+  assert.equal(sites.length,2,"both startup calls are encoded");
+  return ["return-byte","FCB-selector","function"].map((mutation)=>{
+    const image=Uint8Array.from(r.image);
+    if(mutation==="return-byte") image[entry-0xc000+2]=0;
+    else image[sites[0]+3]=mutation==="FCB-selector"?31:38;
+    let error; try {boot({...r,image});} catch(e) {error=String(e.message);}
+    assert.ok(error,`${mutation} must distinguish actual startup execution`);
+    return {mutation,callSite:sites[0]+0xc000,detected:true,error};
+  });
+}
+
 const variants = { incumbent() {}, descriptor };
 
 function descriptorContract(r, mutation) {
@@ -127,6 +142,24 @@ function volume(image, drive) {
   const info = parseContainer(image), v = findVolume(info, drive);
   return new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
 }
+function observeFileCalls(m) {
+  const trace = [], step = m.step.bind(m); let pending;
+  m.step = () => {
+    const c=m.cpu.cpu, sp=c.sp;
+    if(pending && m.pc === pending.pc && sp === pending.sp+2) {
+      trace.push({fn:pending.fn, fcb:pending.fcb, entryStack:pending.entryStack,
+        result:{a:c.a,b:c.b,c:c.c,d:c.d,e:c.e,h:c.h,l:c.l,flags:{...c.flags}}}); pending=undefined;
+    }
+    const de=c.d<<8|c.e;
+    if(m.pc===5 && [15,16,17,18,19,20,21,22,23].includes(c.c) && [m.sym("CMDFCB"),m.sym("RENFCB")].includes(de)) {
+      assert.equal(pending,undefined,"no nested file BDOS call");
+      pending={pc:m.read(sp)|(m.read(sp+1)<<8),sp,fn:c.c,fcb:de===m.sym("CMDFCB")?"source":"destination",entryStack:m.sym("CSTKTOP")-sp};
+    }
+    return step();
+  };
+  return trace;
+}
+
 function boot(r) {
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G1M", label: "WORK", mount: "B" }]);
   const a = volume(image, "A");
@@ -136,12 +169,13 @@ function boot(r) {
   a.write("PROBE.COM", Uint8Array.of(0xc9));
   for (let n = 0; n < 4; n++) a.write(`F${n}.DAT`, Uint8Array.of(n)); // seven entries cross the six-column boundary
   const m = new Machine({ rom: r.image, symbols: r.symbols, sdImage: image, glcd: false, clock: new Date(2026, 0, 1) });
+  const fileCalls=observeFileCalls(m);
   let bootPeak = 0; const step = m.step.bind(m);
   m.step = () => { const sp=m.cpu.cpu.sp; if(sp>=m.sym("CSTKBAS") && sp<=m.sym("CSTKTOP")) bootPeak=Math.max(bootPeak,m.sym("CSTKTOP")-sp); return step(); };
   m.expect(/A>$/, { from: 0, maxCycles: 80000000 });
   m.runUntil(() => m.ready(), 200000000, "first prompt");
   assert.equal(m.read(4)>>4,0); assert.match(m.text(0), /USER 3/); assert.match(m.text(0), /USER 0/);
-  return { m, image, bootPeak, startup: m.text(0) };
+  return { m, image, bootPeak, fileCalls, startup: m.text(0) };
 }
 const commands = [
   "", " ! ! ", ":", "USER 0!USER 1!:USER 0",
@@ -152,7 +186,7 @@ const commands = [
   "DIR A B", "REN =HELLO.TXT", "COPY HELLO.TXT HELLO.TXT", "TYPE HELLO.TXT!DIR", "NOFILE!:DIR",
 ];
 function sessions(r) {
-  const { m, image, bootPeak, startup } = boot(r), rows = [], entries = [];
+  const { m, image, bootPeak, startup, fileCalls } = boot(r), rows = [], entries = [];
   let peak = 0;
   const step = m.step.bind(m);
   m.step = () => {
@@ -178,7 +212,7 @@ function sessions(r) {
   cold.runUntil(() => cold.ready(), 200000000, "cold reopen");
   const reopened = cold.command("TYPE B:HELLO.TXT");
   assert.deepEqual(cold.violations, []);
-  return { rows, entries, files, peak, bootPeak, startup, cardHash: sha(image), coldOutput, reopened };
+  return { rows, entries, files, peak, bootPeak, startup, fileCalls, cardHash: sha(image), coldOutput, reopened };
 }
 
 mkdirSync(WORK, { recursive: true });
@@ -199,7 +233,7 @@ for (const name of selected) {
     assert.equal(contract.mismatches,0);
     const controls=["return-byte","FCB-selector","function"].map((mutation)=>({mutation,...descriptorContract(r,mutation)}));
     assert.ok(controls.every((c)=>c.mismatches>0));
-    figures.descriptorContract={contract,controls};
+    figures.descriptorContract={contract,controls,actualStartupControls:startupControls(r)};
   }
   const parserRows = cases.flatMap((input) => [0x2100, 0x21f8].map((at) => parserRead(r, input, at)));
   baselineParsers ??= parserRows;
@@ -216,9 +250,9 @@ for (const name of selected) {
   if (!name.startsWith("mutant")) {
     const session = sessions(r);
     baselineSession ??= session;
-    const semantics = (s) => ({ startup: s.startup, rows: s.rows.map(({ cycles, ...rest }) => rest), entries: s.entries, files: s.files, cardHash: s.cardHash, coldOutput: s.coldOutput, reopened: s.reopened });
+    const semantics = (s) => ({ fileCalls:s.fileCalls.map(({entryStack,...rest})=>rest), startup: s.startup, rows: s.rows.map(({ cycles, ...rest }) => rest), entries: s.entries, files: s.files, cardHash: s.cardHash, coldOutput: s.coldOutput, reopened: s.reopened });
     assert.deepEqual(semantics(session), semantics(baselineSession), `${name}: command session changed`);
-    result.session = { equivalent: true, peak: session.peak, bootPeak: session.bootPeak, cycles: session.rows.map((row) => ({ command: row.command, cycles: row.cycles })) };
+    result.session = { equivalent: true, peak: session.peak, bootPeak: session.bootPeak, fileCalls:session.fileCalls, cycles: session.rows.map((row) => ({ command: row.command, cycles: row.cycles })) };
     assert.equal(mismatches.length, 0, `${name}: parser mismatch`);
   } else assert.ok(mismatches.length > 0, `${name} must be distinguished`);
   result.delta = result.rom - (figures.variants.incumbent?.rom ?? result.rom);
