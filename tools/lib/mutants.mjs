@@ -623,3 +623,23 @@ export const MUTANTS_KS36A = [
   { name: "A1: the driver hook takes any B", ...ks34(HWF, ["SVDRV: LD A,B", "CP CMCRT"], ["SVDRV: LD A,B", "JR SVDRV1", "CP CMCRT"], HWT) },
   { name: "format: 3 accepted", ...ks34(LOADF, ["DMAGIC EQU SVCFMT*256+'D'"], ["DMAGIC EQU 3*256+'D'"], ["test/clients.test.mjs"]) },
 ];
+
+// KS38b: one mutant for each merged routine, caught by a test that passes
+// unmutated (KG42).
+const TBLF = "src/tables.asm";
+const CONF38 = "src/console.asm";
+const LCDF = "src/lcd.asm";
+const MNT = ["test/mount.test.mjs", "test/verify-mount.test.mjs"];
+export const MUTANTS_KS38B = [
+  { name: "HEXHL: a digit one off", ...ks34(CONF38, ["ADC A,$40", "DAA", "JP (HL)"], ["ADC A,$41", "DAA", "JP (HL)"], ["test/copy.test.mjs", "test/diag.test.mjs"]) },
+  { name: "SUMDE: the carry dropped", ...ks34(VOLF, ["JR NC,SUMDE1", "INC H"], ["JR NC,SUMDE1", "NOP"], MNT) },
+  { name: "DPHADR from ALVINIT: the DPB word one off", ...ks34(B, ["CALL DPHADR", "LD DE,10"], ["CALL DPHADR", "LD DE,12"], ["test/mount.test.mjs", "test/system.test.mjs"]) },
+  { name: "DPHADR from MNDPH: the next drive's DPH", ...ks34(VOLF, ["MNDPH: CALL DPHADR"], ["MNDPH: INC A", "CALL DPHADR"], ["test/mount.test.mjs", "test/system.test.mjs"]) },
+  { name: "CPSRC: the destination's FCB", ...ks34(CCPF, ["CPSRC:", "LD DE,CMDFCB"], ["CPSRC:", "LD DE,RENFCB"], ["test/commands.test.mjs"]) },
+  { name: "KEYTAB: DIR runs TYPE", ...ks34(TBLF, ['KEYTAB: DB "DIR",0', "DW CMDDIR"], ['KEYTAB: DB "DIR",0', "DW CMDTYPE"], ["test/commands.test.mjs"]) },
+  { name: "KEYTAB's loop: a word's handler not passed over", ...ks34(CCPF, ["INC HL", "INC HL", "EX DE,HL", "LD A,(DE)"], ["INC HL", "EX DE,HL", "LD A,(DE)"], ["test/commands.test.mjs"]) },
+  { name: "MNDBAD: a bad descriptor reported as unreadable", ...ks34(VOLF, ["MNDBAD: LD A,MEDESC"], ["MNDBAD: LD A,MEIO"], MNT) },
+  { name: "MNFILL: the length's high byte not copied", ...ks34(VOLF, ["LD BC,6", "LDIR"], ["LD BC,5", "LDIR"], ["test/mount.test.mjs", "test/reset.test.mjs"]) },
+  { name: "DRVLAB: the label a character short", ...ks34(LCDF, ["LD BC,11", "LDIR"], ["LD BC,10", "LDIR"], ["test/console.test.mjs"]) },
+  { name: "PUTCHAR: HL not kept", ...ks34(CCPF, ["PUSH HL", "LD C,2", "CALL BDOS", "POP HL"], ["NOP", "LD C,2", "CALL BDOS", "NOP"], ["test/commands.test.mjs", "test/ccp-operands.test.mjs"]) },
+];
