@@ -321,25 +321,17 @@ MNONE:	PUSH	BC
 
 ; The eight bytes of a drive-table entry for the descriptor at IX, at HL:
 ; start, length, geometry and the flags, with written-behind beside read-only.
-; Keeps IX. Destroys A, and leaves HL at the eighth byte.
-MNFILL:	LD	A,(IX+DSTART)	; start, four bytes
-	LD	(HL),A
-	INC	HL
-	LD	A,(IX+DSTART+1)
-	LD	(HL),A
-	INC	HL
-	LD	A,(IX+DSTART+2)	; the high half
-	LD	(HL),A
-	INC	HL
-	LD	A,(IX+DSTART+3)
-	LD	(HL),A
-	INC	HL
-	LD	A,(IX+DLEN)	; length, two bytes
-	LD	(HL),A
-	INC	HL
-	LD	A,(IX+DLEN+1)
-	LD	(HL),A
-	INC	HL
+; The start's four bytes and the length's low two follow each other in the
+; descriptor (DSTART, DLEN), so they go in one LDIR. Keeps IX. Destroys A, BC
+; and DE, and leaves HL at the eighth byte.
+MNFILL:	EX	DE,HL		; DE = the entry
+	PUSH	IX
+	POP	HL
+	LD	BC,DSTART	; HL = the descriptor's start field
+	ADD	HL,BC
+	LD	BC,6		; start, then the length's low half
+	LDIR
+	EX	DE,HL		; HL = the entry's seventh byte
 	LD	A,(IX+DGEOM)	; geometry
 	LD	(HL),A
 	INC	HL
