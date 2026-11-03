@@ -60,9 +60,9 @@ failure is reported as unresolved rather than silently accepted.
 
 ## Qualified observation
 
-The harness at `f777e34` passed on 4 November 2026; the recorded result is
+The harness at `d0f23bc` passed on 4 November 2026; the recorded result is
 `test/fixtures/ccp-oracle-qualification.json`. Guarded execution took 1.5
-seconds with 80 MB sampled peak across at most two processes. The process's
+seconds with 94 MB sampled peak across at most two processes. The process's
 own maximum RSS is retained separately in the result; sampling is not an
 exact high-water measurement.
 
@@ -83,3 +83,7 @@ user state is published after the prompt when the CCP reaches its input
 wait. No output normalization was added. The transient observation also
 retains the first FCB's record-count byte of 1; this is an observation to
 assess against TEC-OS, not a demand to retain incidental loader state.
+
+The result review strengthened the batch check from a relative substring-order
+comparison to the complete expected batch transcript. That also rejects a
+missing first command; the guarded qualification passes with the stronger check.

@@ -163,22 +163,22 @@
       "runtime factory supplied from pinned dependency; no CPU/disk algorithm changes"
     ]
   },
-  "elapsedMs": 1246.973417,
-  "maxRssKiB": 86432,
+  "elapsedMs": 1127.2584160000001,
+  "maxRssKiB": 91088,
   "status": "pass",
-  "qualificationCommit": "f777e34",
+  "qualificationCommit": "d0f23bc",
   "guard": {
     "name": "ccp-oracle",
     "command": "node ccp-oracle.mjs",
     "limitMB": 800,
     "heapMB": 384,
     "event": "end",
-    "at": "2026-11-03T22:03:37.713Z",
+    "at": "2026-11-03T22:25:11.148Z",
     "outcome": "exit 0",
     "code": 0,
-    "peakMB": 80,
+    "peakMB": 94,
     "processes": 2,
     "seconds": 1.5,
-    "freePercentAtEnd": 35
+    "freePercentAtEnd": 42
   }
 }
