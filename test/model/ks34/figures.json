@@ -1,7 +1,7 @@
 {
   "baseline": "ea9c1c0",
   "assembler": "ATOM 0.3.7",
-  "prototype": "be75fe7a0d180a6028ae56f75f49ac08c85d273b",
+  "prototype": "feadfd177a31847edf58d95a96fe1e0f99faf89c",
   "recommended": {
     "entry": "jpBentry",
     "rest003B": "zeroed",
@@ -13,28 +13,28 @@
       "used": 14826,
       "free": 1558
     },
-    "used": 14937,
-    "free": 1447,
-    "saving": -111,
+    "used": 14947,
+    "free": 1437,
+    "saving": -121,
     "regions": {
       "reset jump": 3,
       "table": 21,
       "data": 806,
-      "code": 14107,
-      "free": 1447
+      "code": 14117,
+      "free": 1437
     },
     "reconciled": 16384,
     "equals16384": true,
     "contiguous": true,
     "oneImage": true,
-    "sha256": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
+    "sha256": "6f3e7467744ec00ee6a727c5a62c910e7b64b4ccc3fa622d778ea0b0c15b82f1",
     "tableEnd": 49176
   },
   "ceiling": {
     "used": 15358,
     "font": 770,
     "floor": 256,
-    "margin": 421
+    "margin": 411
   },
   "tpa": {
     "prototype": {
@@ -378,6 +378,11 @@
   },
   "contracts": {
     "tpa": true,
+    "figures": {
+      "missing": [],
+      "stale": [],
+      "agree": true
+    },
     "stub": true,
     "flags": true,
     "jumpAtZero": true,
@@ -386,8 +391,8 @@
     "sweepToThe40h": true,
     "romTable": {
       "rows": 21,
-      "sum": 14937,
-      "used": 14937,
+      "sum": 14947,
+      "used": 14947,
       "sumsToCensus": true,
       "eachRowItsSpan": true
     },
@@ -396,10 +401,10 @@
   "choices": {
     "entry": {
       "jpBentry": {
-        "romUsed": 14937
+        "romUsed": 14947
       },
       "link": {
-        "romUsed": 14937,
+        "romUsed": 14947,
         "romOverPrototype": 0,
         "jumpsWithNoneOneTwo": [
           2,
@@ -411,30 +416,30 @@
     },
     "rest003B": {
       "zeroed": {
-        "romUsed": 14937
+        "romUsed": 14947
       },
       "leftAlone": {
-        "romUsed": 14934,
+        "romUsed": 14944,
         "romOverPrototype": -3
       },
       "settled": "zeroed, so a clean boot's bytes don't change"
     },
     "bound": {
       "atOrAboveTop": {
-        "romUsed": 14937
+        "romUsed": 14947
       },
       "noWorkspace": {
-        "romUsed": 14954,
+        "romUsed": 14964,
         "romOverPrototype": 17
       },
       "settled": "at or above PZTOP's page"
     },
     "safeRead": {
       "routine": {
-        "romUsed": 14937
+        "romUsed": 14947
       },
       "inline": {
-        "romUsed": 14951,
+        "romUsed": 14961,
         "romOverPrototype": 14
       },
       "settled": "the routine"
@@ -467,7 +472,7 @@
     "resetIdentity": {
       "rule": "the same test: page zero's jumps and the stub at STUBAD jumping to BENTRY",
       "landed": {
-        "BENTRY": "e143",
+        "BENTRY": "e145",
         "STUBAD": "bc52"
       },
       "reference": {
@@ -484,10 +489,14 @@
     }
   },
   "reproducible": {
-    "first": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
-    "second": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
-    "third": "61fced034a747640c712dde30b563c3a431167627affe89405565a3e59a93be0",
+    "first": "6f3e7467744ec00ee6a727c5a62c910e7b64b4ccc3fa622d778ea0b0c15b82f1",
+    "second": "6f3e7467744ec00ee6a727c5a62c910e7b64b4ccc3fa622d778ea0b0c15b82f1",
+    "third": "6f3e7467744ec00ee6a727c5a62c910e7b64b4ccc3fa622d778ea0b0c15b82f1",
     "equal": true
+  },
+  "mutantsAt": {
+    "3892616": "recognition: S below 8000h let through, with its new input",
+    "f0ba625": "each mutant but the one below; the code is the same at feadfd1"
   },
   "mutants": {
     "sweep: stops at 0037h": {
@@ -496,26 +505,27 @@
         "a vector into freed pages goes at UNLOAD with no declaration"
       ]
     },
-    "sweep: the bound a page high": {
+    "sweep: the top itself kept": {
       "caught": true,
       "by": [
         "a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h",
-        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays"
+        "the bound: a jump at or below the top goes, and one above it stays",
+        "the bound with no service: a jump into the stub's page below the stub goes"
       ]
     },
     "sweep: the bound back at C0h": {
       "caught": true,
       "by": [
         "a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h",
-        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays"
+        "the bound: a jump at or below the top goes, and one above it stays",
+        "the bound with no service: a jump into the stub's page below the stub goes"
       ]
     },
-    "sweep: the bound a page low": {
+    "sweep: the bound on the page alone": {
       "caught": true,
       "by": [
-        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays",
-        "a vector into freed pages goes at UNLOAD with no declaration",
-        "a failed INIT's vector goes with its pages"
+        "the bound: a jump at or below the top goes, and one above it stays",
+        "the bound with no service: a jump into the stub's page below the stub goes"
       ]
     },
     "sweep: 003Fh keeps its RET": {
@@ -532,6 +542,12 @@
         "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, serial"
       ]
     },
+    "claims: the slots a place out": {
+      "caught": true,
+      "by": [
+        "a second claim is refused with nothing changed"
+      ]
+    },
     "claims: format 3's flags of 1 claim": {
       "caught": true,
       "by": [
@@ -541,9 +557,9 @@
     "reset: a vector kept": {
       "caught": true,
       "by": [
-        "the bound: a jump to the end of the page below the top goes, and one to the top's page stays",
-        "a vector into freed pages goes at UNLOAD with no declaration",
-        "a failed INIT's vector goes with its pages"
+        "the bound: a jump at or below the top goes, and one above it stays",
+        "the bound with no service: a jump into the stub's page below the stub goes",
+        "a vector into freed pages goes at UNLOAD with no declaration"
       ]
     },
     "entry: the link restored": {
@@ -582,7 +598,8 @@
       "caught": true,
       "by": [
         "a record whose end leaves the service's pages is refused",
-        "SERVICES lists each service and its pages, the newest first, with none and after UNLOAD"
+        "SERVICES lists each service and its pages, the newest first, with none and after UNLOAD",
+        "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, PICO"
       ]
     },
     "stub: a byte low": {
@@ -598,6 +615,12 @@
         "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
         "all four drives are kept: a remapped D:",
         "a selected volume of another geometry than the drive's default gets its own DPH"
+      ]
+    },
+    "recognition: S below 8000h let through": {
+      "caught": true,
+      "by": [
+        "recognition refuses W at 7F01h"
       ]
     },
     "mask: VPAIR with no DI": {
@@ -682,12 +705,22 @@
         "the erratum: VPAIR keeps interrupts on when P/V is false"
       ]
     },
-    "47: the guard outlives a warm boot": {
+    "47: the guard outlives a warm boot, from INIT": {
       "caught": true,
       "by": [
-        "a warm boot inside INIT rolls the ceiling back",
-        "a warm boot from inside REMOVE clears the guard, the service stays, and a later load works",
         "function 47 from INIT rolls the load back, and the chained line runs"
+      ]
+    },
+    "47: the guard outlives a warm boot, from REMOVE": {
+      "caught": true,
+      "by": [
+        "function 47 from REMOVE keeps the service listed, and the chained line runs"
+      ]
+    },
+    "failed INIT: a claimed slot left": {
+      "caught": true,
+      "by": [
+        "a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads"
       ]
     },
     "unload: no sweep": {
@@ -700,19 +733,22 @@
     "failed INIT: no sweep": {
       "caught": true,
       "by": [
-        "a failed INIT's vector goes with its pages"
+        "a failed INIT's vector goes with its pages",
+        "a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads"
       ]
     },
     "unload: a claimed slot left": {
       "caught": true,
       "by": [
-        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success"
+        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success",
+        "a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads"
       ]
     },
     "unload: the slots a place out": {
       "caught": true,
       "by": [
-        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success"
+        "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success",
+        "a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads"
       ]
     },
     "claims: a held slot let through": {
@@ -720,17 +756,10 @@
       "by": [
         "a second claim is refused with nothing changed"
       ]
-    },
-    "claims: the slots a place out": {
-      "caught": true,
-      "by": [
-        "a second claim is refused with nothing changed"
-      ]
     }
   },
   "mutantScore": {
-    "caught": 34,
-    "total": 34,
-    "notRun": []
+    "caught": 37,
+    "total": 37
   }
 }
