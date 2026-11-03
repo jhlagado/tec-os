@@ -32,7 +32,7 @@ const KS36B_RUNS = [];
 if (process.env.KS36B_TRACE) process.on("exit", () => writeFileSync(process.env.KS36B_TRACE, JSON.stringify(KS36B_RUNS)));
 function ks36bTrace(m) {
   if (!process.env.KS36B_TRACE) return;
-  const at = (n) => m.sym(n);
+  const at = (n) => { try { return m.sym(n); } catch { return -1; } }; // a tree without one (CREFR after KS36b) never matches
   const [cread, ctake, cfill, loadcom, cmdrun, badcmd, sdlba, crefr, bentry] = ["CREAD", "CTAKE", "CFILL", "LOADCOM", "CMDRUN", "BADCMD", "SDLBA", "CREFR", "BENTRY"].map(at);
   const run = { reads: [], writes: 0, loop: -1 };
   KS36B_RUNS.push(run);
