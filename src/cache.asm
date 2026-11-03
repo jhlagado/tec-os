@@ -284,6 +284,8 @@ CWRBH:  PUSH    BC
         CALL    CTAKE
         POP     BC
         RET     NZ
+	LD	HL,CWTYPE	; a line taken for this write
+	SET	6,(HL)
         INC     C
         DEC     C
         JR      Z,CWBF          ; the card's block first
@@ -329,14 +331,20 @@ CWB2:   PUSH    AF
         JR      Z,CWB3
         XOR     A               ; data: done
         RET
-CWBT:	LD	A,C		; written through: the line to the card,
-	CP	A		; Z, as after a flush with no failure
-	JR	CWB4
+CWBT:	LD	A,C		; written through: the line to the card
+	CALL	CWRITE
+	JR	NZ,CWBX		; failed: the line goes
+	LD	HL,CWTYPE
+	BIT	6,(HL)		; a line taken for this write is the next
+	RET	Z		; in turn again: writing through churns
+	LD	(CNEXT),A	; that one line, not the programs' blocks,
+	CP	A		; and keeps the block for its next record
+	RET
 CWB3:   LD      A,C             ; a directory block: the volume's data first,
         CALL    CFLUSH          ; then the directory line; if either fails,
-CWB4:	CALL	Z,CWRITE	; the line goes, so the card's directory
+	CALL	Z,CWRITE	; the line goes, so the card's directory
         RET     Z               ; stays the truth and is read again
-        CALL    CDROP
+CWBX:   CALL    CDROP
         OR      1               ; NZ
         RET
 
