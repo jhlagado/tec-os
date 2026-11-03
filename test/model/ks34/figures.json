@@ -670,6 +670,26 @@
         "RXBITS samples bit 0 at its middle, with interrupts on and off"
       ]
     },
+    "erratum: IFFGET's bare read": {
+      "caught": true,
+      "by": [
+        "the erratum: CDI, HACC and MVCOPY keep interrupts on when P/V is false"
+      ]
+    },
+    "erratum: VPAIR's bare read": {
+      "caught": true,
+      "by": [
+        "the erratum: VPAIR keeps interrupts on when P/V is false"
+      ]
+    },
+    "47: the guard outlives a warm boot": {
+      "caught": true,
+      "by": [
+        "a warm boot inside INIT rolls the ceiling back",
+        "a warm boot from inside REMOVE clears the guard, the service stays, and a later load works",
+        "function 47 from INIT rolls the load back, and the chained line runs"
+      ]
+    },
     "unload: no sweep": {
       "caught": true,
       "by": [
@@ -709,8 +729,8 @@
     }
   },
   "mutantScore": {
-    "caught": 31,
-    "total": 31,
+    "caught": 34,
+    "total": 34,
     "notRun": []
   }
 }
