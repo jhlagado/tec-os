@@ -30,6 +30,12 @@ function usage(message) {
   process.exit(2);
 }
 
+/** V as a whole number from LO to HI in decimal digits, or the usage line naming OPTION: checked before any change. */
+function whole(option, v, lo, hi) {
+  if (!/^\d{1,8}$/.test(v ?? "") || Number(v) < lo || Number(v) > hi) usage(`${option} ${JSON.stringify(v ?? "")}: a whole number ${lo} to ${hi}`);
+  return Number(v);
+}
+
 function parseArgs(argv) {
   const args = [];
   const opts = { volume: [] };
@@ -41,8 +47,8 @@ function parseArgs(argv) {
       if (!/^\d{1,2}$/.test(v ?? "") || Number(v) > 15) usage(`--user ${JSON.stringify(v ?? "")}: a user number 0 to 15`);
       opts.user = Number(v);
     }
-    else if (a === "--align") opts.align = Number(argv[++i]);
-    else if (a === "--drives") opts.drives = Number(argv[++i]);
+    else if (a === "--align") opts.align = whole("--align", argv[++i], 1, 0xffffff); // a positive count of blocks (D4)
+    else if (a === "--drives") opts.drives = whole("--drives", argv[++i], 1, 4); // 1 to 4 drives (D4)
     else if (a === "--text") opts.text = true;
     else if (a === "--ro") opts.ro = true;
     else if (a === "--sys") opts.sys = true;

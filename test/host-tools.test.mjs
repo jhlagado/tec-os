@@ -135,6 +135,13 @@ test("tecvol --user takes an integer 0 to 15 only, and a refused one leaves the 
     assert.throws(() => run("put", img, "B", payload, "X.BIN", "--user", user), /user/, `--user ${JSON.stringify(user)} refused`);
     assert.deepEqual(readFileSync(img), before, `--user ${JSON.stringify(user)}: the image unchanged`);
   }
+  for (const [option, bad] of [["--align", ["oops", "1.5", "0", "-8", ""]], ["--drives", ["oops", "2.5", "0", "5", "-1"]]]) {
+    for (const v of bad) {
+      const fresh = resolve(dir, `new-${option.slice(2)}.img`);
+      assert.throws(() => run("create", fresh, "--volume", "G1M:SYSTEM:A", option, v), new RegExp(option), `${option} ${JSON.stringify(v)} refused (D4)`);
+      assert.throws(() => readFileSync(fresh), /ENOENT/, `${option} ${JSON.stringify(v)}: no image made`);
+    }
+  }
   run("put", img, "B", payload, "Y.BIN", "--user", "15");
   assert.match(run("dir", img, "B", "--user", "15"), /15 Y\.BIN/);
 });
