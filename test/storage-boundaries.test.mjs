@@ -118,9 +118,11 @@ for (const op of [0, 1]) {
     assert.equal(m.read(0x5000 + 14), 255);
     assert.equal(svc(m, 2, 1, 1), 0);
     assert.equal(m.read(0x5000 + 14), 1, 'old volume remains on B');
-    assert.equal(svc(m, op), 0, 'dirty data remains retryable');
+    // KS36b: the flush tried the line and dropped it when its write failed, so the retry has
+    // nothing to write and succeeds, and the card keeps the block it had.
+    assert.equal(svc(m, op), 0, 'the retry succeeds');
     const offset = (parseContainer(image).volumes[1].start + 32) * 512;
-    assert.deepEqual(image.slice(offset, offset + 128), new Uint8Array(128).fill(0x6b));
+    assert.deepEqual(image.slice(offset, offset + 128), card.slice(offset, offset + 128), 'the failed record never reached the card');
   });
 }
 

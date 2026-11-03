@@ -219,7 +219,7 @@ test("a card removed with dirty lines leaves the console working, and warm boot 
   assert.match(cmd(m, "USER 0"), /\r\n[A-P]>$/, "the console works");
 });
 
-test("the same card put back isn't started: Write lost again at warm boot, and a reset loses the lines", async () => {
+test("the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)", async () => {
   const image = card();
   const m = start(image);
   dirty(m);
@@ -238,7 +238,7 @@ test("the same card put back isn't started: Write lost again at warm boot, and a
   };
   assert.match(warm(), /Write lost/);
   m.swapCard(image);
-  assert.match(warm(), /Write lost/);
+  assert.doesNotMatch(warm(), /Write lost/, "the failed lines were dropped: nothing is said twice");
   m.reset();
   m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
   assert.equal(volume(image, "B").read("Q.DAT").length, 0, "the name was on the card, and its records are gone");
@@ -325,7 +325,8 @@ test("a directory write whose data line fails leaves the card's directory the tr
   fillTpa(0xb2);
   const out = through(m, "SAVE 12 B:F2.DAT\r");
   assert.notEqual(bad, null, "a data line failed");
-  assert.match(out, /Write lost/, "warm boot tried it again");
+  assert.match(out, /Bad Sector/, "the close's flush failed, and the BDOS says so");
+  assert.doesNotMatch(out, /Write lost/, "the failed line was dropped by that flush, so warm boot has nothing to say (KS36b)");
   through(m, "MOUNT B: ARCHIVE\r");
   through(m, "MOUNT B: WORK\r");
   check(image);

@@ -594,7 +594,7 @@ test("a held key skips startup on the selected A:", () => {
   assert.deepEqual(idx(m), [3, 2, 0, 0], "the skip keeps the selection");
 });
 
-test("a dirty line with CFAIL set is not written to a card of identical extents after a reset", () => {
+test("a dirty line is not written to a card of identical extents after a reset", () => {
   const image = card([VOLUMES[0], { ...VOLUMES[1], writeBehind: true }, ...VOLUMES.slice(2)]);
   const m = machine(image);
   // A file written and not closed: what a program holds when the button goes.
@@ -609,7 +609,6 @@ test("a dirty line with CFAIL set is not written to a card of identical extents 
   m.cpu.hardware.ioWrite(0xff, 0x05);
   assert.ok(lines.some((i) => m.read(m.sym("CDIRTY") + i)), "a dirty line");
   m.cpu.hardware.ioWrite(0xff, 0x01);
-  m.write(m.sym("CFAIL"), 1);
   const other = Uint8Array.from(image);
   const writes = [];
   m.swapCard(other, { onSdWrite: (lba) => writes.push(lba) });

@@ -119,8 +119,8 @@ CLADR:  ADD     A,A
 ; Read SDLBA's block straight into line A (CFILL), or write line A straight
 ; to its block (CWRITE). Z on success. CFILL enters the line on success and
 ; leaves it empty otherwise. CWRITE takes the block from the table, keeps
-; SDLBA, marks the line clean on success, and on a failure sets CFAIL and
-; leaves it dirty. Both keep A.
+; SDLBA, marks the line clean on success, and on a failure leaves it dirty
+; and returns NZ. Both keep A.
 CFILL:  PUSH    AF
         CALL    CLADR
         LD      A,LATEXP
@@ -168,29 +168,38 @@ CWRITE: PUSH    AF
         CALL    CDCLR           ; written: clean
         CP      A
         RET
-CWR9:   LD      C,1
-        LD      HL,CFAIL
-        LD      (HL),C
-        DEC     C
-        DEC     C               ; NZ
-        RET
+CWR9:	LD	C,A		; the line, kept
+	XOR	A
+	INC	A		; NZ: the write failed
+	LD	A,C
+	RET
 
-; Write every dirty line (CFLALL), or every one but line A (CFLUSH). NZ at
-; the first that fails; the rest stay dirty.
-CFLALL: LD      A,$FF
-CFLUSH: LD      (CSKIP),A
-        XOR     A
-CFS1:   LD      HL,CSKIP
-        CP      (HL)
-        JR      Z,CFS2
-        CALL    CDGET
-        CALL    NZ,CWRITE
-        RET     NZ
-CFS2:   INC     A
-        CP      NLINES
-        JR      C,CFS1
-        CP      A
-        RET
+; Write every dirty line (CFLALL), or every one but line A (CFLUSH). Each
+; is tried; one whose write fails is dropped, so the card's copy stands, and
+; the flush returns NZ if any did, Z if none. Returns A = the line left (FFh
+; for CFLALL). Destroys BC, DE and HL.
+CFLALL:	LD	A,$FF
+CFLUSH:	LD	C,A		; the line to leave
+	LD	B,0		; lines that failed
+	XOR	A
+CFS1:	CP	C
+	JR	Z,CFS2		; the one left
+	PUSH	BC
+	CALL	CDGET		; Z: clean, nothing to write
+	CALL	NZ,CWRITE	; keeps A, NZ if the card refused it
+	POP	BC
+	JR	Z,CFS2
+	PUSH	BC
+	CALL	CDROP		; failed: dropped, the card's copy stands
+	POP	BC
+	INC	B		; and counted
+CFS2:	INC	A		; every line, failures or not
+	CP	NLINES
+	JR	C,CFS1
+	LD	A,C		; the line left, for CWB3
+	INC	B
+	DEC	B		; NZ if any failed
+	RET
 
 ; A line for SDLBA's block: the next clean one in turn, or, with every line
 ; dirty, the next in turn written first. Z with A = the line; NZ if that
@@ -318,25 +327,21 @@ CWB2:   PUSH    AF
         RET
 CWB3:   LD      A,C             ; a directory block: the volume's data first,
         CALL    CFLUSH          ; then the directory line; if either fails,
-        LD      A,(CSKIP)       ; the line goes, so the card's directory
-        CALL    Z,CWRITE        ; stays the truth and is read again
-        RET     Z
+	CALL	Z,CWRITE	; the line goes, so the card's directory
+        RET     Z               ; stays the truth and is read again
         CALL    CDROP
         OR      1               ; NZ
         RET
 
-; Warm boot: every dirty line written, and a failed write said. The rest of a
-; chained line goes, as it does on a BDOS error's exit.
-CWBOOT: CALL    CFLALL
-        LD      HL,CFAIL
-        LD      A,(HL)
-        OR      A
-        RET     Z
-        XOR     A
-        LD      (HL),A
-        LD      (CHPOS),A
-        LD      HL,CWMSG
-        JP      PUTS
+; Warm boot: every dirty line tried, and, if any failed and was dropped,
+; Write lost said once. The rest of a chained line goes, as it does on a BDOS
+; error's exit.
+CWBOOT:	CALL	CFLALL
+	RET	Z		; every line written
+	XOR	A
+	LD	(CHPOS),A	; the chained line goes
+	LD	HL,CWMSG
+	JP	PUTS
 
 ; After a write through BLKBUF: the line that holds SDLBA's block, if one does,
 ; takes the new contents, so that it can't hand back the old ones. Destroys AF,

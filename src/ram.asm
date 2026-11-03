@@ -199,8 +199,6 @@ SDXB:   DS      1               ; LATEXP while the block is a cache line
 
 ; ---- The block cache (cache.asm) ----------------------------------------------
 CNEXT:  DS      1               ; the next line in turn
-CFAIL:  DS      1               ; 1: a line's write failed since warm boot
-CSKIP:  DS      1               ; CFLUSH's line to leave
 CWTYPE: DS      1               ; BIOS WRITE's type, C
 CIFF:   DS      2               ; the flags a BIOS entry found: P/V, its interrupt state
 

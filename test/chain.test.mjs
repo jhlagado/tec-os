@@ -364,18 +364,25 @@ test("SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
 
 test("a write lost at warm boot drops the rest of the line", () => {
   const m = boot(card());
-  // As the first program starts, a dirty line's write failed: CWBOOT says so at its warm boot.
+  // As the first program starts, a cached line is made dirty and the next card write fails:
+  // CWBOOT's flush drops it and says Write lost at the warm boot.
   let armed = true;
+  let failNext = false;
   const step = m.step.bind(m);
   m.step = () => {
-    if (armed && m.pc === 0x100) [m.write(m.sym("CFAIL"), 1), (armed = false)];
+    if (armed && m.pc === 0x100) {
+      m.cpu.hardware.ioWrite(0xff, 0x05); // EXPAND 1 in view: line 0's dirty byte
+      m.write(m.sym("CDIRTY"), 1);
+      m.cpu.hardware.ioWrite(0xff, 0x01);
+      [armed, failNext] = [false, true];
+    }
+    if (failNext && m.pc === m.sym("SDWRITE")) [(m.cpu.cpu.a = 5), (m.cpu.cpu.pc = m.sym("SDFAIL")), (failNext = false)];
     return step();
   };
   const out = run(m, "SAY!:SAY!USER 3");
   assert.match(out, /^SAY!:SAY!USER 3\r\r\nSAY\r\nWrite lost\r\nA>$/);
   assert.equal(count(out, /\nSAY\r/g), 1);
   assert.equal(user(m), 0);
-  assert.equal(m.read(m.sym("CFAIL")), 0);
 });
 
 /** A card with LONG.TXT of 30 lines on A:, and 200 files on B:, for TYPE's and DIR's [more] on serial's 24 rows. */

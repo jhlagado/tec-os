@@ -88,8 +88,6 @@ function memoryMap(census) {
   const cacheState = [
     ["SDXB", "LATEXP while a card block goes to or from a cache line"],
     ["CNEXT", "the next line in turn"],
-    ["CFAIL", "1 once a line's write has failed since the last warm boot"],
-    ["CSKIP", "the line a flush leaves, the directory's"],
     ["CWTYPE", "BIOS WRITE's type, C"],
     ["CIFF", "2 bytes: the flags a BIOS entry found, its interrupt state in P/V"],
   ]
