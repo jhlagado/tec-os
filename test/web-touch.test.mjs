@@ -91,7 +91,7 @@ test("on a phone, tapping the screen and typing dir on the phone's keyboard list
   const lines = await screen();
   const at = lines.indexOf("A>dir");
   assert.ok(at >= 0, `the typed command is on the screen:\n${lines.join("\n")}`);
-  assert.match(lines[at + 1] ?? "", /^TERM\.COM +PROBE\.COM/, `the directory follows it:\n${lines.join("\n")}`);
+  assert.match(lines[at + 1] ?? "", /^MOUNT\.COM +PICO\.SVC/, `the directory follows it:\n${lines.join("\n")}`);
   assert.ok(lines.slice(at).some((l) => /^\d+ files, \d+K free$/.test(l)), `the directory's count follows it:\n${lines.join("\n")}`);
   assert.deepEqual(errors, []);
 });
