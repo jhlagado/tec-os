@@ -141,7 +141,7 @@ test("GLCD.SVC's source assembles under TAS to Atom's bytes", { skip: TAS.skip, 
 
 test("svcdemo.asm assembles under TAS to Atom's bytes", { skip: TAS.skip, timeout: 900_000 }, async () => {
   const flags = [...new Set(readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").match(/\bV_[A-Z]+\b/g))];
-  const numbers = { ...Object.fromEntries(flags.map((v) => [v, 0])), FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, RECVER: 2 };
+  const numbers = { ...Object.fromEntries(flags.map((v) => [v, 0])), VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, RECVER: 2 };
   const name = '"DEMO    "';
   const atom = await underAtom("test/programs/svcdemo.asm", { defs: { ...numbers, HDRNAME: name, RECNAME: name } });
   const source = readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").replaceAll("HDRNAME", name).replaceAll("RECNAME", name);

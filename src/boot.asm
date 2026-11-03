@@ -229,29 +229,28 @@ PZINIT: LD      A,$C3
         LD      (HL),LOW(BENTRY)
         INC     HL
         LD      (HL),HIGH(BENTRY)
-        LD      HL,$4DED        ; RETI after EI at 0038h
-        LD      (RST7+1),HL
-        LD      A,$FB
-        LD      (RST7),A
-; The restart vectors 0008h-0037h: each one that is not a jump into ROM
-; becomes seven zeros and a RET, so an RST through it returns at once, with
-; the interrupt state unchanged, and never runs into the next vector. A jump
-; into ROM keeps its three bytes and the rest of its vector is cleared. A
-; program's vector into the TPA does not outlive it, and a cold boot leaves
-; the same bytes.
-        LD      HL,$0008
+; The restart vectors 0008h-003Fh, here and after a service goes: each one
+; that is not a jump at or above the top's page becomes seven zeros and a RET,
+; so an RST through it returns at once, with the interrupt state unchanged,
+; and never runs into the next vector, and 0038h takes EI; RETI. Such a jump,
+; into a service, the workspace or ROM, keeps its three bytes and the rest of
+; its vector is cleared. A program's vector into the TPA does not outlive it,
+; one into a service's pages does not outlive the service, and a cold boot
+; leaves the same bytes. Carry clear.
+PZSWP:  LD      HL,$0008
 RSTCLR: LD      BC,7*256+$C9    ; seven zeros, then RET
         LD      A,(HL)
         CP      $C3
         JR      NZ,RSTZERO
         INC     HL
         INC     HL
-        LD      A,(HL)          ; the target's high byte
+        LD      A,(PZTOP+1)
+        DEC     A
+        CP      (HL)            ; the target's high byte
         DEC     HL
         DEC     HL
-        CP      $C0
-        JR      C,RSTZERO
-        INC     HL              ; keep JP nn into ROM, then five zeros
+        JR      NC,RSTZERO
+        INC     HL              ; keep JP nn, then five zeros
         INC     HL
         INC     HL
         LD      BC,4*256+0
@@ -261,8 +260,17 @@ RSTZERO:LD      (HL),0
         LD      (HL),C
         INC     HL
         LD      A,L
-        CP      $38
+        CP      $40
         JR      NZ,RSTCLR
+        LD      A,(RST7)
+        CP      $C3
+        RET     Z               ; a kept jump at 0038h
+        XOR     A
+        LD      (RST7+7),A      ; zeros after EI; RETI, as a clean boot has
+        LD      HL,$4DED        ; RETI after EI
+        LD      (RST7+1),HL
+        LD      A,$FB
+        LD      (RST7),A
         RET
 
 ; The stack guard's bytes.

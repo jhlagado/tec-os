@@ -13,14 +13,14 @@ import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
-const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
+const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
 const made = new Map();
 
 /** SVCDEMO with OVER set; opt as makeSvc's. */
 async function svc(over = {}, opt = {}) {
   const key = JSON.stringify([over, opt]);
   if (!made.has(key)) {
-    const defs = { ...Object.fromEntries(VARIANTS.map((v) => [v, 0])), FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"DEMO    "', RECNAME: '"DEMO    "', RECVER: 2, ...over };
+    const defs = { ...Object.fromEntries(VARIANTS.map((v) => [v, 0])), VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"DEMO    "', RECNAME: '"DEMO    "', RECVER: 2, ...over };
     made.set(key, await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc"), ...opt }));
   }
   return made.get(key);
@@ -709,3 +709,178 @@ for (const label of ["INIT", "REMOVE"]) {
     rmSync(dir, { recursive: true });
   });
 }
+
+// Restart vectors. The sweep keeps a jump at or above the top's page, at warm
+// boot, after an unload and after a failed INIT; a declared slot that holds a
+// jump refuses the load.
+const slot = (m, at) => Array.from({ length: 8 }, (_, i) => m.read(at + i));
+const DEFAULT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
+const DEFAULT38 = [0xfb, 0xed, 0x4d, 0, 0, 0, 0, 0];
+const jp = (a) => [0xc3, a & 0xff, a >> 8];
+const pokes = (t, at, bytes) => bytes.forEach((b, i) => t.m.write(at + i, b));
+
+test("a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h", async () => {
+  const t = await machine();
+  const d = await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 });
+  assert.equal(t.load(d.file).carry, 0);
+  t.prompt();
+  const base = t.head();
+  t.warmBoot();
+  assert.deepEqual(slot(t.m, 0x38), [...jp(base + d.symbols.VHAND), 0, 0, 0, 0, 0]);
+  t.put(0x300, [0xff, 0xc9]);
+  assert.equal(t.call(0x300).back, true);
+  assert.equal(t.m.read(base + d.symbols.RESULT), 0x5a);
+});
+
+test("the bound: a jump to the end of the page below the top goes, and one to the top's page stays", async () => {
+  const t = await machine();
+  t.load((await svc()).file);
+  t.prompt();
+  const page = t.head() >> 8;
+  pokes(t, 0x10, jp((page << 8) - 1));
+  pokes(t, 0x18, jp(page << 8));
+  t.warmBoot();
+  assert.deepEqual(slot(t.m, 0x10), DEFAULT);
+  assert.deepEqual(slot(t.m, 0x18), [...jp(page << 8), 0, 0, 0, 0, 0]);
+});
+
+test("UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success", async () => {
+  const t = await machine();
+  t.load((await svc({ V_VEC: 1, VECAT: 0x10, FLAGS: 0x05 })).file);
+  t.prompt();
+  const hw = t.m.sym("ABIHW");
+  pokes(t, 0x20, jp(hw)); // undeclared, outside its pages: REMOVE's to restore
+  pokes(t, 0x10, jp(hw)); // declared: goes whatever it holds
+  assert.doesNotMatch(t.unload(), /UNLOAD\?/);
+  assert.deepEqual(slot(t.m, 0x10), DEFAULT);
+  assert.deepEqual(slot(t.m, 0x20), [...jp(hw), 0, 0, 0, 0, 0]);
+});
+
+test("a vector into freed pages goes at UNLOAD with no declaration", async () => {
+  const t = await machine();
+  t.load((await svc({ V_VEC: 1, VECAT: 0x38 })).file);
+  t.prompt();
+  assert.doesNotMatch(t.unload(), /UNLOAD\?/);
+  assert.deepEqual(slot(t.m, 0x38), DEFAULT38);
+});
+
+test("a failed INIT's vector goes with its pages", async () => {
+  const t = await machine();
+  const r = t.load((await svc({ V_VEC: 1, V_VECFL: 1 })).file);
+  assert.deepEqual([r.carry, r.rc], [1, 1]);
+  assert.deepEqual(slot(t.m, 8), DEFAULT);
+});
+
+test("a warm boot inside INIT takes the vector it set", async () => {
+  const t = await machine();
+  assert.equal(t.load((await svc({ V_VEC: 1, V_WB: 1 })).file).back, false);
+  t.m.runUntil(() => t.m.waitingForInput(), 200_000_000, "the prompt");
+  assert.deepEqual(slot(t.m, 8), DEFAULT);
+});
+
+test("a second claim is refused with nothing changed", async () => {
+  const t = await machine();
+  t.load((await svc({ V_VEC: 1, FLAGS: 3 })).file);
+  const x = transaction(t, (await svc({ V_VEC: 1, FLAGS: 3, HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).file);
+  assert.deepEqual([x.r.carry, x.r.rc], [1, 0]);
+  assert.deepEqual(x.differs(), []);
+});
+
+test("a claim on a free slot installs, and format 3's flags of 1 claim nothing", async () => {
+  const t = await machine();
+  t.poke(0x10, 0);
+  assert.equal(t.load((await svc({ FLAGS: 0xfe })).file).carry, 0);
+  t.prompt();
+  const held = await machine();
+  pokes(held, 0x08, jp(held.m.sym("ABIHW")));
+  assert.equal(held.load((await svc({ FLAGS: 1 })).file).carry, 0);
+});
+
+test("a service with a vector is gone at a recognised reset, and the vector with it", async () => {
+  const image = standardCard();
+  volume(image, "A").write("VEC.SVC", (await svc({ V_VEC: 1, VECAT: 0x10, FLAGS: 5 })).file);
+  const m = boot(image);
+  m.command("VEC.SVC");
+  assert.equal(m.read(0x10), 0xc3);
+  m.reset();
+  m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
+  assert.deepEqual(slot(m, 0x10), DEFAULT);
+  assert.equal(m.read(m.sym("SVCHEAD")), 0);
+});
+
+// Nothing a service needs lies below (0006h).
+for (const opts of [{}, { tms: true, matrix: true }]) {
+  test(`a program setting SP from (0006h) leaves SERVICES and UNLOAD working, ${opts.tms ? "PICO" : "serial"}`, async () => {
+    const image = standardCard();
+    const a = volume(image, "A");
+    a.write("ONE.SVC", (await svc({ HDRNAME: '"ONE     "', RECNAME: '"ONE     "' })).file);
+    a.write("TWO.SVC", (await svc({ HDRNAME: '"TWO     "', RECNAME: '"TWO     "' })).file);
+    a.write("KEEP.SVC", (await svc({ FLAGS: 0, HDRNAME: '"KEEP    "', RECNAME: '"KEEP    "' })).file);
+    // LD HL,(0006h); LD SP,HL; LD HL,FFFFh; PUSH HL three times; JP 0
+    a.write("SMASH.COM", Uint8Array.from([0x2a, 6, 0, 0xf9, 0x21, 0xff, 0xff, 0xe5, 0xe5, 0xe5, 0xc3, 0, 0]));
+    const m = boot(image, opts);
+    const say = (line) => {
+      m.mark = m.output.length;
+      if (m.videoConsole()) m.typeMatrix(`${line.toLowerCase()}\r`);
+      else m.type(`${line}\r`);
+      m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 400_000_000, line);
+      return m.text(m.mark);
+    };
+    say("ONE.SVC");
+    say("TWO.SVC");
+    const top = m.read(6) | (m.read(7) << 8);
+    say("SMASH");
+    assert.equal(m.read(top - 1), 0xff, "the six bytes below (0006h) are the program's");
+    if (!m.videoConsole()) assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\n/);
+    assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
+    assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
+    say("KEEP.SVC");
+    say("SMASH");
+    assert.match(say("UNLOAD"), /UNLOAD\?/, "not removable, and refused as it should be");
+    assert.deepEqual(m.violations, []);
+  });
+}
+
+test("a BDOS call is two jumps from CALL 5, with no service, one and two", async () => {
+  const t = await machine();
+  const entry = t.m.sym("BENTRY");
+  const count = () => {
+    t.put(0x300, [0x0e, 12, 0xcd, 5, 0, 0xc9]); // function 12, CALL 5, RET
+    const c = t.m.cpu.cpu;
+    t.poke(t.m.sym("CSTKTOP") - 2, STUB);
+    Object.assign(c, { sp: t.m.sym("CSTKTOP") - 2, pc: 0x300 });
+    const seen = [];
+    while (t.m.pc !== entry) {
+      if (t.m.pc !== 0x300 && t.m.pc !== 0x302) seen.push(t.m.pc);
+      t.m.step();
+    }
+    t.m.runUntil(() => t.m.pc === STUB, 1_000_000, "the return");
+    return seen;
+  };
+  assert.deepEqual(count(), [5, t.word(t.m.sym("STUBAD"))]);
+  t.load((await svc({ HDRNAME: '"ONE     "', RECNAME: '"ONE     "' })).file);
+  assert.deepEqual(count(), [5, t.head()]);
+  t.load((await svc({ HDRNAME: '"TWO     "', RECNAME: '"TWO     "' })).file);
+  assert.deepEqual(count(), [5, t.head()]);
+});
+
+// KB-21: function 47 from INIT or REMOVE is a warm boot there, as any other.
+test("function 47 from INIT rolls the load back, and the chained line runs", async () => {
+  const t = await machine();
+  const top = t.word(6);
+  assert.equal(t.load((await svc({ V_CHI: 1, V_CHN: 1 })).file).back, false);
+  t.m.runUntil(() => t.m.waitingForInput() && t.m.read(4) >> 4 === 3, 200_000_000, "USER 3");
+  assert.deepEqual([t.word(6), t.m.read(t.m.sym("SVCBSY")), t.m.read(t.m.sym("SVCHEAD"))], [top, 0, 0]);
+  assert.equal(t.load((await svc()).file).carry, 0, "the guard is down");
+});
+
+test("function 47 from REMOVE keeps the service listed, and the chained line runs", async () => {
+  const t = await machine();
+  t.load((await svc({ V_CHR: 1, V_CHN: 1 })).file);
+  t.prompt();
+  const page = t.head();
+  t.m.mark = t.m.output.length;
+  t.m.type("UNLOAD\r");
+  t.m.runUntil(() => t.m.waitingForInput() && t.m.read(4) >> 4 === 3, 200_000_000, "USER 3");
+  assert.deepEqual([t.m.read(t.m.sym("SVCBSY")), t.head()], [0, page]);
+});

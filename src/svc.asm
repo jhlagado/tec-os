@@ -11,7 +11,7 @@
 DMAGIC	EQU	$0344		; 'D', format version 3
 DF      EQU     $0100           ; the file
 DDEP    EQU     2               ; dependencies
-DFLG    EQU     3               ; bit 0 removable
+DFLG    EQU     3               ; bit 0 removable, bits 1-7 RST 1-7 claimed
 DREM    EQU     4               ; REMOVE, from the header's start
 DSIZ    EQU     6               ; header and image
 DOLD    EQU     6               ; resident, the registry's head before it
@@ -44,6 +44,18 @@ SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         CALL    SVCSHUT
         POP     HL
         RET     C
+        PUSH    HL              ; a slot it claimed takes its default below
+        LD      L,DFLG
+        LD      A,(HL)
+        LD      HL,8
+        LD      DE,8
+        SRL     A
+SVCUC:  SRL     A
+        JR      NC,SVCUN
+        LD      (HL),D
+SVCUN:  ADD     HL,DE
+        JR      NZ,SVCUC
+        POP     HL
         LD      L,DOLD          ; the registry's head and the owner's, then
         LD      DE,REGHEAD      ; the generation and the top
         LD      BC,3
@@ -51,7 +63,8 @@ SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         EX      DE,HL
         INC     (HL)
         EX      DE,HL
-	JR	PRLTOP
+        CALL    PRLTOP
+        JP      PZSWP           ; a vector into the freed pages goes
 
 ; Install the file at 0100h, up to LOADTOP. Carry clear: installed. Carry set:
 ; SVCRC is 0 refused, nothing changed; 1 INIT failed, nothing left; 2 failed,
@@ -162,6 +175,20 @@ SVCR1:  LD      A,B
         LD      (HL),A
         JR      SVCR1
 SVCMOV:
+        LD      A,(DF+DFLG)     ; a slot claimed that holds a jump refuses
+        LD      HL,8
+        LD      DE,8
+        SRL     A
+SVCMC:  SRL     A
+        JR      NC,SVCMN
+        LD      C,A
+        LD      A,(HL)
+        CP      $C3
+        JP      Z,PRLRF
+        LD      A,C
+SVCMN:  ADD     HL,DE
+        OR      A
+        JR      NZ,SVCMC
         LD      BC,(DF+DSIZ)    ; the size, before the fields go over it
         PUSH    BC
         LD      HL,REGHEAD      ; the resident's fields, in the header
@@ -226,6 +253,7 @@ SVCSC1: LD      A,(HL)
         DJNZ    SVCSC1
         LD      HL,(PZTOP)
         LD      (PZBDOS+1),HL
+        CALL    PZSWP           ; a vector INIT set goes with the pages
         LD      A,1
         JR      SVCRET
 SVCHIT: LD      E,DFLG

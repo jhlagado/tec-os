@@ -62,6 +62,19 @@ INIT:
         SCF
         RET
 %ENDIF
+%IF V_VEC
+        LD      A,$C3           ; a restart vector into this service
+        LD      (VECAT),A
+        LD      HL,VHAND
+        LD      (VECAT+1),HL
+%ENDIF
+%IF V_VECFL
+        SCF
+        RET
+%ENDIF
+%IF V_CHI
+        CALL    CHAIN47         ; function 47 from INIT
+%ENDIF
 %IF V_WB
         JP      0               ; a warm boot from inside INIT
 %ENDIF
@@ -165,6 +178,9 @@ REMOVE:
         SCF
         RET
 %ENDIF
+%IF V_CHR
+	CALL	CHAIN47		; function 47 from REMOVE
+%ENDIF
 %IF V_REMWB
 	JP	0		; a warm boot from inside REMOVE
 %ENDIF
@@ -233,6 +249,19 @@ REC2:   DW      0
 %ENDIF
 COUNT:  DB      0
 RESULT: DB      $FF
+%IF V_VEC
+VHAND:  LD      A,$5A           ; a restart vector's handler
+        LD      (RESULT),A
+        RET
+%ENDIF
+%IF V_CHN
+CHAIN47:LD      DE,CMD47        ; the command at the DMA address, then 47
+        LD      C,26
+        CALL    5
+        LD      C,47
+        JP      5
+CMD47:  DB      "USER 3",0
+%ENDIF
 %IF V_DEP + V_LATE
 DEPNAME:DB      "DEMO    "
 DEPTAB: DW      0
