@@ -24,7 +24,7 @@ function descriptor(dir) {
   let source = readFileSync(path, "utf8"), calls = 0, tails = 0;
   source = source.replace(/^[ \t]*LD[ \t]+C,(\d+)[^\n]*\n[ \t]*(CALL|JP)[ \t]+(CPSRC|CPDST)/gm, (_, fn, op, dest) => {
     op === "JP" ? tails++ : calls++;
-    return `        CALL    DOSSEQ\n        DB      ${Number(fn) * 2 + (dest === "CPDST" ? 1 : 0)}${op === "JP" ? "\n        RET" : ""}`;
+    return `        CALL    DOSSEQ\n        DB      ${`${fn}*2+${dest === "CPDST" ? 1 : 0}`}${op === "JP" ? "\n        RET" : ""}`;
   });
   assert.equal(calls, 21); assert.equal(tails, 1);
   const old = `CPSRC:
@@ -55,7 +55,12 @@ function startupControls(r) {
     const image=Uint8Array.from(r.image);
     if(mutation==="return-byte") image[entry-0xc000+2]=0;
     else image[sites[0]+3]=mutation==="FCB-selector"?31:38;
-    let error; try {boot({...r,image});} catch(e) {error=String(e.message);}
+    let error; try {boot({...r,image});} catch(e) {
+      const missingStartup=e.code==="ERR_ASSERTION" && e.expected instanceof RegExp && ["USER 3","USER 0"].includes(e.expected.source);
+      const guestStop=/^(CPU halted at [0-9a-f]+ before |no (first prompt|output matching) within )/.test(e.message);
+      if(!missingStartup && !guestStop) throw e; // host/tool failures never qualify a mutant
+      error=String(e.message);
+    }
     assert.ok(error,`${mutation} must distinguish actual startup execution`);
     return {mutation,callSite:sites[0]+0xc000,detected:true,error};
   });
