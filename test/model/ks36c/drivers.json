@@ -1,0 +1,64 @@
+{
+  "landed": "626ee41a591bd8dc95e30997dad0d83dd6911c38",
+  "today": {
+    "GLCD.SVC": {
+      "bytes": 1536,
+      "pages": 6,
+      "file": 1603
+    },
+    "PICO.SVC": {
+      "bytes": 1315,
+      "pages": 6,
+      "file": 1379
+    },
+    "PICO40.SVC": {
+      "bytes": 1315,
+      "pages": 6,
+      "file": 1379
+    },
+    "PICO32.SVC": {
+      "bytes": 1339,
+      "pages": 6,
+      "file": 1405
+    }
+  },
+  "glcd": {
+    "glcd-a": {
+      "bytes": 781,
+      "pages": 4,
+      "file": 850
+    },
+    "glcd-b": {
+      "bytes": 768,
+      "pages": 3,
+      "file": 834
+    },
+    "glcd-a150": {
+      "bytes": 763,
+      "pages": 3,
+      "file": 832
+    },
+    "glcd-b150": {
+      "bytes": 750,
+      "pages": 3,
+      "file": 816
+    }
+  },
+  "pico": {
+    "PICO.SVC": {
+      "bytes": 560,
+      "pages": 3,
+      "file": 625
+    },
+    "PICO40.SVC": {
+      "bytes": 560,
+      "pages": 3,
+      "file": 625
+    },
+    "PICO32.SVC": {
+      "bytes": 584,
+      "pages": 3,
+      "file": 651
+    }
+  }
+}
