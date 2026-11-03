@@ -201,6 +201,10 @@ async function main() {
   }
   writeFileSync(resolve(FILES, "TED.COM"), ted);
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
+  // SAMPLE.ASM, a first program for TAS (KD-177), as a CP/M text file.
+  const sample = Buffer.from(readFileSync(resolve(ROOT, "programs/SAMPLE.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
+  writeFileSync(resolve(FILES, "SAMPLE.ASM"), sample);
+  files.push({ name: "SAMPLE.ASM", description: "a first program to build: TAS SAMPLE, then SAMPLE", bytes: sample });
   writeFileSync(resolve(FILES, "TAS.COM"), tas);
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   copyFileSync(resolve(ROOT, "src/abi.inc"), resolve(DIST, "abi.inc"));
@@ -210,7 +214,7 @@ async function main() {
     id: "starter",
     revision: "4",
     name: "TEC-OS starter",
-    instruction: "At A>, type DIR, then MOUNT, or TED HELLO.ASM to write a program. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or TED SAMPLE.ASM to read it. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",
     widths,
     volumes: [
@@ -227,14 +231,14 @@ async function main() {
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
   saveImage(resolve(DIST, "starter.img"), await buildRecipe(recipe, fileFetcher(DIST)));
 
-  // The web page's card (KD-170): the starter's six files and DEMO.COM.
+  // The web page's card (KD-170): the starter's files and DEMO.COM.
   const { bytes: demo } = await assembleProgram(resolve(ROOT, "test/programs/demo.asm"), { base: 0x100 });
   writeFileSync(resolve(FILES, "DEMO.COM"), demo);
   const page = {
     ...recipe,
     id: "page",
     name: "TEC-OS starter, with the demo",
-    instruction: "At A>, type DEMO to see the hardware, DIR, MOUNT, or TED HELLO.ASM to write a program. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DEMO to see the hardware, or TAS SAMPLE and SAMPLE to build and run a first program, or TED SAMPLE.ASM to read it. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     components: [
       ...recipe.components,
       { id: "demo-com", name: "DEMO.COM", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918", files: [{ name: "DEMO.COM", url: "files/DEMO.COM", drive: "A", bytes: demo.length, sha256: sha(demo) }] },

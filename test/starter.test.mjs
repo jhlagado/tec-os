@@ -1,4 +1,4 @@
-// The starter card that `npm run media` builds: exactly six files on A:, each
+// The starter card that `npm run media` builds: exactly seven files on A:, each
 // the bytes its source or pin gives, the page's width drivers pinned in its
 // recipe, and it boots to a MOUNT that lists its volumes. Emulator evidence.
 // TED.COM and TAS.COM are pinned inputs (test/inputs.json).
@@ -30,7 +30,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly six files, each by its hash", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
+test("the starter card holds exactly seven files, each by its hash", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   const { card, recipe } = starter();
@@ -41,6 +41,7 @@ test("the starter card holds exactly six files, each by its hash", { skip: TED.s
     "MOUNT.COM": (await program("mount")).bytes,
     "TAS.COM": readFileSync(TAS.path),
     "TED.COM": readFileSync(TED.path),
+    "SAMPLE.ASM": Buffer.from(readFileSync(resolve(ROOT, "programs/SAMPLE.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1"),
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
