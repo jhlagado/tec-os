@@ -389,9 +389,8 @@ LOADA:	CALL	LOADCOM
 ; Load an ordinary COM image through the public BDOS FCB/DMA interface.
 ; Carry reports missing, unreadable, or oversized input.
 LOADCOM:
-        LD      DE,CMDFCB
         LD      C,15
-        CALL    BDOS
+        CALL    CPSRC
         INC     A
         SCF
         RET     Z
@@ -405,9 +404,8 @@ LOADLOOP:
         EX      DE,HL
         LD      C,26
         CALL    BDOS
-        LD      DE,CMDFCB
         LD      C,20
-        CALL    BDOS
+        CALL    CPSRC
         POP     HL
         OR      A
         JR      NZ,LOADEND
@@ -422,9 +420,8 @@ LOADLIM:
         LD      DE,LOADBUF
         LD      C,26
         CALL    BDOS
-        LD      DE,CMDFCB
         LD      C,20
-        CALL    BDOS
+        CALL    CPSRC
         POP     HL
         CP      1
         JR      Z,LOADOK
@@ -437,9 +434,8 @@ LOADEND:
 
 LOADOK:
         LD      (LOADTOP),HL    ; retain record-rounded extent before CLOSE
-        LD      DE,CMDFCB
         LD      C,16
-        CALL    BDOS
+        CALL    CPSRC
         OR      A
         RET
 
@@ -493,9 +489,8 @@ DIRWSET:
 DIRWOK:
         LD      (DIRNCOL),A
         CALL    PGINIT
-        LD      DE,CMDFCB
         LD      C,17
-        CALL    BDOS
+        CALL    CPSRC
 
 DIRLOOP:
         INC     A
@@ -579,9 +574,8 @@ DIRPADC:
         JR      DIRPADC
 
 DIRNEXT:
-        LD      DE,CMDFCB
         LD      C,18
-        CALL    BDOS
+        CALL    CPSRC
         JP      DIRLOOP
 
 DIRDONE:
@@ -838,9 +832,8 @@ CMDTYPE:
         CALL    ARGSKIP
         JR      Z,FILENO
         CALL    ONENAME
-        LD      DE,CMDFCB
         LD      C,15
-        CALL    BDOS
+        CALL    CPSRC
         INC     A
         JR      Z,FILENO
         LD      DE,LOADBUF
@@ -849,9 +842,8 @@ CMDTYPE:
         CALL    PGINIT
 
 TYPEREAD:
-        LD      DE,CMDFCB
         LD      C,20
-        CALL    BDOS
+        CALL    CPSRC
         OR      A
         JR      NZ,TYPEEND
         LD      HL,LOADBUF
@@ -873,9 +865,8 @@ TYPEBYTE:
         JR      TYPEREAD
 
 TYPEEND:
-        LD      DE,CMDFCB
         LD      C,16
-        CALL    BDOS
+        CALL    CPSRC
         JP      STARTED
 
 FILENO:
@@ -922,9 +913,8 @@ ERAGOT:
         LD      (ERAALL),A
 
 ERADEL:
-        LD      DE,CMDFCB
         LD      C,19
-        CALL    BDOS
+        CALL    CPSRC
         INC     A
         JR      Z,FILENO
         LD      A,(ERAALL)
@@ -983,9 +973,8 @@ RENTEST:
         LD      DE,CMDFCB+16
         LD      BC,12
         LDIR
-        LD      DE,CMDFCB
         LD      C,23
-        CALL    BDOS
+        CALL    CPSRC
         INC     A
         JP      Z,FILENO
         JP      MAINLOOP
@@ -1103,7 +1092,9 @@ CPDONE:
 CPFAIL:
         JP      ERRGO
 
-; BDOS function C on the source or the destination.
+; BDOS function C on CMDFCB, the command's file or COPY's source (CPSRC), or on
+; RENFCB, COPY's destination (CPDST): every CCP call on the command's FCB goes
+; through CPSRC. Returns as the BDOS does.
 CPSRC:
         LD      DE,CMDFCB
         JP      BDOS
@@ -1262,12 +1253,10 @@ SAVENEND:
         JP      Z,BADCMD
         CALL    ONENAME
 
-        LD      DE,CMDFCB
         LD      C,19
-        CALL    BDOS
-        LD      DE,CMDFCB
+        CALL    CPSRC
         LD      C,22
-        CALL    BDOS
+        CALL    CPSRC
         INC     A
         JR      Z,SAVENOSP
         LD      HL,TPA
@@ -1290,9 +1279,8 @@ SAVE128:
         LD      DE,(SAVEADR)
         LD      C,26
         CALL    BDOS
-        LD      DE,CMDFCB
         LD      C,21
-        CALL    BDOS
+        CALL    CPSRC
         OR      A
         SCF
         RET     NZ
@@ -1304,9 +1292,8 @@ SAVE128:
         RET
 
 SAVECLS:
-        LD      DE,CMDFCB
         LD      C,16
-        CALL    BDOS
+        CALL    CPSRC
         INC     A
         JR      Z,SAVENOSP
         JP      MAINLOOP
@@ -1621,14 +1608,12 @@ STBOOT:	LD	HL,STPOS
 	LD	DE,STREC	; the record goes where STLINE reads it
 	LD	C,26
 	CALL	BDOS
-	LD	DE,CMDFCB	; no file ends here
-	LD	C,15
-	CALL	BDOS
+	LD	C,15		; no file ends here
+	CALL	CPSRC
 	INC	A
 	JR	Z,STBDMA
-	LD	DE,CMDFCB	; one record, and an empty file ends here
-	LD	C,20
-	CALL	BDOS
+	LD	C,20		; one record, and an empty file ends here
+	CALL	CPSRC
 	OR	A
 	JR	NZ,STBDMA
 	INC	A		; STPOS 1, the file's first byte
