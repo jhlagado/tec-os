@@ -87,24 +87,28 @@ const OLDER_PINS = {
   "EDIT.COM": { env: "EDIT_COM", default: "../edit/dist/EDIT.COM", sha256: "2c9e7d0ec588019b9184ca89543e5a644fafda864bb940445375edb50bbb0fe6" },
 };
 
-/** A pinned file the shipped card holds: from its env, else beside this repository. */
-function shipped(name) {
-  const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs[name] ?? OLDER_PINS[name];
-  const path = resolve(process.env[entry.env] ?? resolve(ROOT, entry.default));
-  if (!existsSync(path)) throw new Error(`no ${name} at ${path}: the shipped card holds it, so set ${entry.env}`);
-  const got = sha256(readFileSync(path));
-  if (got !== entry.sha256) throw new Error(`${name} at ${path} has sha256 ${got}, pinned ${entry.sha256}`);
+/**
+ * A pinned file the shipped card holds, as tree DIR pins it: from its env, else
+ * beside this repository, else from PINS_DIR by its hash, where a model keeps
+ * the binaries older trees pinned.
+ */
+function shipped(name, dir = ROOT) {
+  const own = resolve(dir, "test/inputs.json");
+  const entry = (existsSync(own) ? JSON.parse(readFileSync(own, "utf8")).inputs[name] : undefined) ?? OLDER_PINS[name];
+  const paths = [process.env[entry.env], resolve(ROOT, entry.default), process.env.PINS_DIR && resolve(process.env.PINS_DIR, entry.sha256)].filter(Boolean).map((p) => resolve(p));
+  const path = paths.find((p) => existsSync(p) && sha256(readFileSync(p)) === entry.sha256);
+  if (!path) throw new Error(`no ${name} with sha256 ${entry.sha256} at ${paths.join(" or ")}: set ${entry.env}, or PINS_DIR to a folder of pinned files by hash`);
   return path;
 }
 
-export const editCom = () => shipped("EDIT.COM");
-export const tasCom = () => shipped("TAS.COM");
-export const tedCom = () => shipped("TED.COM");
+export const editCom = (dir) => shipped("EDIT.COM", dir);
+export const tasCom = (dir) => shipped("TAS.COM", dir);
+export const tedCom = (dir) => shipped("TED.COM", dir);
 
 /** DIR's release set, dist/ and the starter card, by its own tools/media.mjs: an older tree's takes EDIT.COM, a newer one's TED.COM. */
 export const media = (dir) => {
   const older = existsSync(resolve(dir, "tools/lib/edit.mjs"));
-  return node(dir, ["tools/media.mjs"], { env: older ? { EDIT_COM: editCom(), TAS_COM: tasCom() } : { TED_COM: tedCom(), TAS_COM: tasCom() } });
+  return node(dir, ["tools/media.mjs"], { env: older ? { EDIT_COM: editCom(dir), TAS_COM: tasCom(dir) } : { TED_COM: tedCom(dir), TAS_COM: tasCom(dir) } });
 };
 
 /** DIR's ROM for PROFILE: image, census and symbols. A tree with one image, build/tecos, has it for every name. */

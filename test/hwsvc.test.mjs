@@ -213,5 +213,6 @@ test("hardware services: stack depths", () => {
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/hwsvc-stacks.json"), JSON.stringify(depths, null, 2) + "\n");
   console.log(JSON.stringify(depths));
-  for (const [c, d] of Object.entries(depths)) assert.ok(d <= (Number(c) === HW.PUTAT ? 22 : 16), `hardware service ${c} used ${d} bytes of stack`);
+  // The hardware services, 0 to 7 and the clock; the others' figures are abi.inc's, which KS36a's model checks.
+  for (const [c, d] of Object.entries(depths).filter(([c]) => Number(c) <= ABI.TNRTC)) assert.ok(d <= (Number(c) === HW.PUTAT ? 22 : 16), `hardware service ${c} used ${d} bytes of stack`);
 });
