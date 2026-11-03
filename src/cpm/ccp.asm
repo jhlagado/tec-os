@@ -96,9 +96,8 @@ MLGOT:  LD      HL,CMDLEN
         INC     HL
         ADD     HL,DE
         LD      (HL),D
-        LD      A,1
-        LD      (CHPOS),A
-        CALL    CHSKIP
+        LD      HL,CMDTXT       ; CHPOS was cleared before acquiring this line
+        CALL    CHSK1
         JR      Z,STARTED       ; nothing but spaces and !
         JR      MLTAKE
 
@@ -230,11 +229,9 @@ NOTDRIVE:
         CALL    CMDPARSE
         LD      (ARGSTRT),HL
 	LD	DE,KEYTAB	; the built-in commands' words
-KEYNXT:	PUSH	DE
-	CALL	ISCMD		; Z: the word, DE at its 0
-	POP	HL		; the word's start
+KEYNXT:	CALL	ISCMD		; DE at the mismatch or the word's 0
+	EX	DE,HL		; skip only the unmatched suffix
 	JR	NZ,KEYSK
-	EX	DE,HL		; the word matched: its handler, after the 0
 	INC	HL
 	LD	A,(HL)		; the handler's address, low byte first
 	INC	HL
@@ -390,10 +387,7 @@ LOADLOOP:
         JR      Z,LOADLIM
         PUSH    HL
         EX      DE,HL
-        LD      C,26
-        CALL    BDOS
-        LD      C,20
-        CALL    CPSRC
+        CALL    READSRC
         POP     HL
         OR      A
         JR      NZ,LOADEND
@@ -406,10 +400,7 @@ LOADLOOP:
 LOADLIM:
         PUSH    HL
         LD      DE,LOADBUF
-        LD      C,26
-        CALL    BDOS
-        LD      C,20
-        CALL    CPSRC
+        CALL    READSRC
         POP     HL
         CP      1
         JR      Z,LOADOK
@@ -430,6 +421,14 @@ LOADOK:
 LOADBAD:
         SCF
         RET
+
+; DE is the next record's DMA address; the read returns directly to its caller.
+; SETDMA holds one extra return address; READSEQ tail-calls the source FCB.
+READSRC:
+        LD      C,26
+        CALL    BDOS
+        LD      C,20
+        JP      CPSRC
 
 ; DIR uses only search-first/search-next and the public DMA directory record.
 CMDDIR:
@@ -454,7 +453,6 @@ DIRREADY:
         CALL    BDOS
         XOR     A
         LD      (DIRCOL),A
-        LD      (DIRANY),A
         LD      H,A
         LD      L,A
         LD      (DIRNUM),HL
@@ -499,7 +497,7 @@ DIRLOOP:
         BIT     7,(HL)
         POP     HL
         JR      NZ,DIRNEXT
-        LD      (DIRENTP),HL
+        PUSH    HL              ; live until DIRNAME; abort resets SP
         LD      A,(DIRCOL)
         OR      A
         JR      Z,DIRHEAD
@@ -508,20 +506,21 @@ DIRLOOP:
         JR      DIRNAME
 
 DIRHEAD:
-        LD      A,(DIRANY)
-        OR      A
+        LD      A,(DIRNCOL)    ; columns remaining in this row
+        LD      (DIRCOL),A
+        LD      HL,(DIRNUM)
+        LD      A,H
+        OR      L
         JR      Z,DIRNAME
         CALL    PGCRLF
         JP      C,STARTED       ; stopped at a page pause
 
 ; One entry as NAME.EXT, padded to 12 unless it ends the line.
 DIRNAME:
-        LD      A,1
-        LD      (DIRANY),A
         LD      HL,(DIRNUM)
         INC     HL
         LD      (DIRNUM),HL
-        LD      HL,(DIRENTP)
+        POP     HL
         INC     HL
         LD      B,8
         LD      C,0             ; characters printed
@@ -536,16 +535,9 @@ DIRNAME:
         LD      B,3
         CALL    PUTTRIM
 DIRPAD:
-        LD      A,(DIRCOL)
-        INC     A
-        LD      HL,DIRNCOL
-        CP      (HL)
-        JR      C,DIRPADL
-        XOR     A
-        LD      (DIRCOL),A
-        JR      DIRNEXT
-DIRPADL:
-        LD      (DIRCOL),A
+        LD      HL,DIRCOL
+        DEC     (HL)
+        JR      Z,DIRNEXT
 DIRPADC:
         LD      A,C
         CP      12
@@ -561,8 +553,9 @@ DIRNEXT:
         JP      DIRLOOP
 
 DIRDONE:
-        LD      A,(DIRANY)
-        OR      A
+        LD      HL,(DIRNUM)
+        LD      A,H
+        OR      L
         JP      Z,FILENO
 
 ; Footer: "n files, nK free" for the drive listed.
@@ -791,15 +784,6 @@ PUTDP:  POP     HL
         LD      E,A
         CALL    PUTCHAR
         JR      PUTDP
-
-PUTNAME:
-        LD      A,(HL)
-        AND     $7F
-        LD      E,A
-        CALL    PUTCHAR
-        INC     HL
-        DJNZ    PUTNAME
-        RET
 
 ; TYPE streams public 128-byte records and stops at CP/M text EOF.
 CMDTYPE:
@@ -1308,15 +1292,13 @@ TAILDONE:
         LD      (DE),A
         LD      DE,CMDTAIL
         LD      C,26
-        CALL    BDOS
-        RET
+        JP      BDOS
 
 ; Parse one CP/M file reference into the first 16 bytes of an FCB. HL points
 ; at the first token byte and returns at its delimiter. A '*' expands to '?'
 ; through the remainder of its current field.
 PARSEFCB:
         LD      (FCBBASE),DE
-        PUSH    HL
         PUSH    DE
         XOR     A
         LD      (DE),A
@@ -1340,7 +1322,6 @@ FCBZERO:
         INC     DE
         DJNZ    FCBZERO
         POP     DE
-        POP     HL
 
         LD      A,(HL)
         OR      A
@@ -1373,13 +1354,12 @@ FCBNAME:
 
 FCBDOT:
         INC     HL
-        PUSH    HL
-        LD      HL,(FCBBASE)
-        LD      DE,9
-        ADD     HL,DE
-        EX      DE,HL
-        POP     HL
-        LD      B,3
+        LD      A,E             ; B is the unfilled part of the name field
+        ADD     A,B
+        LD      E,A
+        JR      NC,FCBTYP
+        INC     D
+FCBTYP: LD      B,3
         JR      PARFLD
 
 FCBDRBAD:
@@ -1404,14 +1384,7 @@ PARSKIP:
 
 PARLONG:
         INC     HL
-        LD      A,(HL)
-        OR      A
-        JR      Z,PLEND
-        CP      SPACE
-        JR      Z,PLEND
-        CP      '='
-        JR      Z,PLEND
-        CP      '.'
+        CALL    FCBEND
         JR      NZ,PARLONG
 
 PLEND:
@@ -1428,25 +1401,11 @@ UNAMBIG:
         INC     HL
         LD      A,(HL)
         CP      SPACE
-        JR      Z,UNAMBAD
-        LD      B,11
-
-UNAMLOOP:
-        LD      A,(HL)
-        CP      '?'
-        JR      Z,UNAMBAD
-        INC     HL
-        DJNZ    UNAMLOOP
-        POP     BC
-        POP     HL
-        OR      A
-        RET
-
-UNAMBAD:
-        POP     BC
-        POP     HL
-        SCF
-        RET
+        JR      Z,CHRRET
+        LD      BC,11
+        LD      A,'?'
+        CPIR                    ; equality means an ambiguous name
+        JR      CHRRET
 
 ; CP/M 2.2 reserves these characters inside filename and filetype fields.
 ; Dot and equals are handled as grammar delimiters, while question mark and
@@ -1455,22 +1414,14 @@ VALIDCHR:
         PUSH    HL
         PUSH    BC
         LD      HL,BADCHARS
-        LD      B,13
-
-VLDLOOP:
-        CP      (HL)
-        JR      Z,VALIDBAD
-        INC     HL
-        DJNZ    VLDLOOP
-        POP     BC
-        POP     HL
-        OR      A
-        RET
-
-VALIDBAD:
-        POP     BC
+        LD      BC,13
+        CPIR                    ; equality means a forbidden byte
+; Both scans preserve HL/BC and return carry for a match (invalid/ambiguous).
+CHRRET: POP     BC
         POP     HL
         SCF
+        RET     Z
+        OR      A
         RET
 
 PARSTAR:
