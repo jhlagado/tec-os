@@ -397,7 +397,7 @@ test("MOUNT writes the dirty lines before it changes a drive", async () => {
   const d = m.sym("CDIRTY") - 0x8000;
   const line = Array.from({ length: 30 }, (_, i) => i).find((i) => m.expand[1][d + i]);
   const lba = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
-  stub(m, [0x06, 1, 0x0e, 8, 0x1e, 2, 0xcd, m.sym("ABICALL") & 0xff, m.sym("ABICALL") >> 8]); // TNMOUNT B: with index 2, ARCHIVE
+  stub(m, [0x06, 1, 0x0e, 9, 0x1e, 2, 0xcd, m.sym("ABICALL") & 0xff, m.sym("ABICALL") >> 8]); // TNMOUNT B: with index 2, ARCHIVE
   assert.equal(m.cpu.cpu.a, 0, "mounted");
   assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's records on the card before the drive changed");
 });

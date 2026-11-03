@@ -216,7 +216,7 @@ until a release. `src/abi.inc` is the published form, and the ROM assembles from
 | `C003h` | `ABITAB` | `"TNA"` |
 | `C006h` | `ABIMAJ` | Major version, 5 |
 | `C007h` | `ABIMIN` | Minor version, 0 |
-| `C008h` | `ABICALL` | `JP` to the 14 services numbered 0 to 13 in C: the hardware services, mount, unmount, describe, the video drivers' hook, find and list |
+| `C008h` | `ABICALL` | `JP` to the 15 services numbered 0 to 14 in C: the hardware services, mount, unmount, describe, the video drivers' hook, find and list |
 
 The table ends at `C00Bh`. `abi.inc` gives each service's arguments, results, carry and stack.
 `PUTAT` returns status 2 on the serial terminal, or while the PICO9918 is claimed and
@@ -250,7 +250,7 @@ a chained line.
 | Area | Since `814bc44` | Before it, from `7029f57` |
 | --- | --- | --- |
 | ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 5.0: 8 bytes, the signature, the versions and one jump to 15 numbered services. `XMOVE`, `MOVE`, the nested CCP entries, the counts, the low mark, the console size's address and the font's address left it | The table was added |
-| Hardware services | 19 numbered from 0 became 8 numbered from 0: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, then mount, unmount, describe, the drivers' hook, find and list as 8 to 13. A number past 13 returns status 1. The clock became `RTC.SVC` | Added |
+| Hardware services | 19 numbered from 0 became 9 numbered from 0: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`, then mount, unmount, describe, the drivers' hook, find and list as 9 to 14. A number past 14 returns status 1 | Added |
 | BDOS | Function 47 added; function 50 gone. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |

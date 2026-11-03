@@ -48,35 +48,39 @@ TNPUTAT	EQU	7		; D = row, E = column, B = count,
 				; clipped. TNENODV on serial or while
 				; the PICO9918 is claimed and is the
 				; console. Stack 22
-TNMOUNT	EQU	8		; B = drive 0-3, E = container index:
+TNRTC	EQU	8		; B = 0 read, 1 set the 7 BCD bytes at
+				; HL: seconds, minutes, hours, date,
+				; month, weekday, year. TNENODV
+				; without a clock. Stack 8
+TNMOUNT	EQU	9		; B = drive 0-3, E = container index:
 				; the volume mounted there, the drive
 				; reset in the BDOS. TNEBAD for an
 				; index past the table, a drive past
 				; D:, a volume on another drive, a
 				; slot too small. Stack 24
-TNUNMNT	EQU	9		; B = drive 1-3: unmounted, the drive
+TNUNMNT	EQU	10		; B = drive 1-3: unmounted, the drive
 				; reset. TNEBAD for A: or past D:.
 				; Stack 24
-TNDESC	EQU	10		; E = container index, HL -> 32 bytes:
+TNDESC	EQU	11		; E = container index, HL -> 32 bytes:
 				; its descriptor, the mount byte the
 				; drive it is on now or FFh. TNEBAD
 				; past the table. Stack 24
-TNDRVR	EQU	11		; B = 1 CRT: or 3 UC1:, HL = a video
+TNDRVR	EQU	12		; B = 1 CRT: or 3 UC1:, HL = a video
 				; driver's table of eight words:
 				; -> HL = LINEBUF. TNEBAD if that mode
 				; has a table, or with no matrix
 				; keyboard. HL = 0 drops the mode's
 				; table. Stack 4
-TNFIND	EQU	12		; DE -> a record's name, 8 bytes
+TNFIND	EQU	13		; DE -> a record's name, 8 bytes
 				; padded with spaces, B = the least
 				; version: -> carry clear, HL = its
 				; entry table, A = the generation;
 				; carry set for none. Stack 8
-TNLIST	EQU	13		; B = an index from 0: -> carry clear,
+TNLIST	EQU	14		; B = an index from 0: -> carry clear,
 				; HL = that record, A = the
 				; generation; carry set past the
 				; last. Stack 8
-TNCOUNT	EQU	14		; how many services there are
+TNCOUNT	EQU	15		; how many services there are
 
 ; Status in A, with carry set.
 TNEBAD	EQU	1		; no such number, an argument out of
@@ -88,19 +92,11 @@ TNENODV	EQU	2		; the device is not fitted, or not the
 ; any other: each major moves the table's entries.
 SVCFMT	EQU	4
 
-; The clock is a service, RTC.SVC (KD-171): TNFIND finds its record "RTC",
-; version 1, and its table's word RTCCLK is the clock, called with B = 0 read
-; or 1 set the 7 BCD bytes at HL: seconds, minutes, hours, date, month,
-; weekday, year. It returns A = 0 with carry clear, takes 8 bytes of stack and
-; keeps IX and IY. RTC.SVC's INIT refuses unless HWBRTC is set.
-RTCCLK	EQU	0
-
 ; TNINFO's bits in B.
 HWBMTX	EQU	$01		; a matrix keyboard
 HWBPICO	EQU	$02		; a PICO9918 answered at cold boot
 HWBGLCD	EQU	$04		; GLCD.SVC is in
-HWBRTC	EQU	$08		; a DS1302 clock answered at cold boot,
-				; so RTC.SVC loads
+HWBRTC	EQU	$08		; a DS1302 clock answered at cold boot
 HWBCLM	EQU	$10		; the PICO9918 is claimed
 HWBWRD	EQU	$80		; a word of the ROM's is on LCD row 3
 

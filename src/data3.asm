@@ -95,9 +95,10 @@ SVTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
 	DW	HWSLCD,HWSVID	; 2 and 3
 	DW	HWSTONE,HWSJOY	; 4 and 5
 	DW	HWSKEYS,HWSPUT	; 6 and 7
-	DW	VSMNT,VSUNM	; 8 and 9
-	DW	VSDSC,SVDRV	; 10 and 11
-	DW	SVFND,SVLST	; 12 and 13
+	DW	HWSRTC,VSMNT	; 8 and 9
+	DW	VSUNM,VSDSC	; 10 and 11
+	DW	SVDRV,SVFND	; 12 and 13
+	DW	SVLST		; 14
 
 ; ---- glcd.asm ----------------------------------------------------------------
 GLCFCB: DB      1,"GLCD    SVC"

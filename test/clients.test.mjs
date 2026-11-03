@@ -115,7 +115,7 @@ test("a program's digest covers what it includes, nested", () => {
 });
 
 test("abi.inc's numbers reach the tests by name", () => {
-  assert.deepEqual([ABI.TNINFO, ABI.TNPUTAT, ABI.TNMOUNT, ABI.TNLIST, ABI.TNCOUNT, ABI.RTCCLK, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [0, 7, 8, 13, 14, 0, 0x80, 16, 22]);
+  assert.deepEqual([ABI.TNINFO, ABI.TNRTC, ABI.TNMOUNT, ABI.TNLIST, ABI.TNCOUNT, ABI.HWBWRD, ABI.PICOREG, ABI.PICORD], [0, 8, 9, 14, 15, 0x80, 16, 22]);
 });
 
 // ABI 3's binaries, which a stored card might hold and which test no major,

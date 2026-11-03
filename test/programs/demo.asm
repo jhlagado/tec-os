@@ -136,19 +136,10 @@ YESNO:  PUSH    AF
 CLOCK:  LD      A,(DEVS)
         AND     8
         RET     Z
-	LD	DE,RTCNAM	; RTC.SVC's record, if it is in
-	LD	BC,$0100+TNFIND	; version 1 or later
-	CALL	HWSVC
-	RET	C		; no clock service: no time
-	LD	E,(HL)		; its table's word RTCCLK: the clock
-	INC	HL
-	LD	D,(HL)
-	EX	DE,HL
-	LD	(CLKCALL+1),HL
-        LD      HL,TIME         ; seconds, minutes, hours, ...
-        LD      B,0             ; read
-CLKCALL:CALL	0		; the clock, as found
-        OR      A
+        LD      HL,TIME         ; RTC: seconds, minutes, hours, ...
+        LD      B,0
+	LD	C,TNRTC		; B = 0: read
+        CALL    HWSVC
         RET     NZ
         LD      HL,CLKROW+9
         LD      A,(TIME+2)
@@ -444,7 +435,6 @@ VWA:    LD      A,L
 ; ---- Data -------------------------------------------------------------------
 
 ABITAG: DB      "TNA"
-RTCNAM:	DB	"RTC     "	; RTC.SVC's record
 TITLE:  DB      13,10,"TEC-OS hardware services demo",13,10,"$"
 PICOMSG:DB      "PICO9918: $"
 GLCDMSG:DB      "   GLCD: $"

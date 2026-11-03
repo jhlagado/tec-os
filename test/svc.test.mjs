@@ -76,9 +76,9 @@ function bench(m) {
   };
   const find = (name, least = 1) => {
     put(0x300, [...Buffer.from(name.padEnd(8), "latin1")]);
-    return call(m.sym("ABICALL"), { b: least, c: 12, d: 3, e: 0 });
+    return call(m.sym("ABICALL"), { b: least, c: 13, d: 3, e: 0 });
   };
-  const nth = (i) => call(m.sym("ABICALL"), { b: i, c: 13 });
+  const nth = (i) => call(m.sym("ABICALL"), { b: i, c: 14 });
   const head = () => m.read(m.sym("SVCHEAD")) << 8;
   return { m, word, poke, put, call, load, unload, prompt, warmBoot, find, nth, head };
 }
@@ -342,7 +342,7 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
 test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
-  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 14 }).carry, 1);
+  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 15 }).carry, 1);
   assert.equal(t.find("DEMO").carry, 0);
 });
 

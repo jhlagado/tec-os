@@ -118,9 +118,6 @@ export const service = async (name) => (await makeSvc(resolve(ROOT, "test/progra
 /** GLCD.SVC, the GLCD console driver, built from drivers/glcd.asm. */
 export const GLCD_SVC = (await makeSvc(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/svc") })).file;
 
-/** RTC.SVC, the DS1302 clock as a service (KD-171), built from drivers/rtc.asm. */
-export const RTC_SVC = (await makeSvc(resolve(ROOT, "drivers/rtc.asm"), { work: resolve(ROOT, "build/svc") })).file;
-
 /** PICO.SVC, PICO40.SVC and PICO32.SVC, by file name. */
 export const PICO_SVC = Object.fromEntries(
   await Promise.all(Object.entries(PICO_WIDTHS).map(async ([name, defs]) => [name, (await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") })).file])),
@@ -156,10 +153,10 @@ export function withDisplay(image, { tms = false, matrix = false, profile } = {}
 }
 
 /** Boot a machine to the first CCP prompt. Its clock starts at TEST_CLOCK. */
-export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false, glcd = true, rtc = true, ram96 = false, mains = 2, expands = 2 } = {}) {
+export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false, glcd = true, ram96 = false, mains = 2, expands = 2 } = {}) {
   const { rom, symbols } = romFor(profile);
   if (sdImage) withDisplay(sdImage, { tms, matrix, profile });
-  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, glcd, rtc, ram96, mains, expands, clock: TEST_CLOCK });
+  const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, glcd, ram96, mains, expands, clock: TEST_CLOCK });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;

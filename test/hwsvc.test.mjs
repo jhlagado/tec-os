@@ -8,10 +8,10 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { ABI, GLCD_SVC, ROOT, RTC_SVC, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, ROOT, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const HWSVC = romFor().symbols.get("ABICALL");
-const HW = Object.fromEntries(["INFO", "DIGIT", "LCD", "VIDEO", "TONE", "JOY", "KEYS", "PUTAT"].map((n) => [n, ABI[`TN${n}`]]));
+const HW = Object.fromEntries(["INFO", "DIGIT", "LCD", "VIDEO", "TONE", "JOY", "KEYS", "PUTAT", "RTC"].map((n) => [n, ABI[`TN${n}`]]));
 const BACK = 0x0f00; // the sentinel return address
 const STACK = 0x1000; // the caller's stack top
 const BUF = 0x2000; // argument and result buffers
@@ -19,12 +19,12 @@ const depths = {};
 
 /** Call hardware service c with the registers given; returns the registers, the flags,
  *  the T-states it took and the bytes of stack it used. */
-function svc(m, c, { a = 0, b = 0, de = 0, hl = 0, at = HWSVC } = {}, maxCycles = 20_000_000) {
+function svc(m, c, { a = 0, b = 0, de = 0, hl = 0 } = {}, maxCycles = 20_000_000) {
   const cpu = m.cpu.cpu;
   const saved = { pc: cpu.pc, sp: cpu.sp };
   m.write(STACK - 2, BACK & 0xff);
   m.write(STACK - 1, BACK >> 8);
-  Object.assign(cpu, { a, b, c, d: de >> 8, e: de & 0xff, h: hl >> 8, l: hl & 0xff, sp: STACK - 2, pc: at });
+  Object.assign(cpu, { a, b, c, d: de >> 8, e: de & 0xff, h: hl >> 8, l: hl & 0xff, sp: STACK - 2, pc: HWSVC });
   let low = STACK - 2;
   const write = m.cpu.hardware.memWrite;
   m.cpu.hardware.memWrite = (addr, value) => {
@@ -87,7 +87,7 @@ test("hardware services: information, bad numbers, digits, LCD, tone", () => {
   assert.equal(info.b & 0x08, 0x08, "the DS1302 answers");
   assert.equal(info.de, m.sym("ROMVER"));
   assert.equal(info.hl, 0, "serial console: no columns or rows");
-  assert.deepEqual(Object.values(HW), [0, 1, 2, 3, 4, 5, 6, 7], "0 to 7");
+  assert.deepEqual(Object.values(HW), [0, 1, 2, 3, 4, 5, 6, 7, 8], "0 to 8");
   // Every number past the last refuses, and leaves B, DE and HL as they came.
   for (let n = ABI.TNCOUNT; n < 256; n += 1) {
     const r = svc(m, n, { b: 0x5a, de: 0x1234, hl: 0x5678 });
@@ -159,47 +159,29 @@ test("hardware services: the claim, INFO's claim bit, and text at a position", (
   assert.deepEqual(m.violations, []);
 });
 
-/** RTC.SVC loaded on M, and its clock's address from its record, by TNFIND. */
-function rtcClock(m) {
-  assert.doesNotMatch(m.command("RTC.SVC"), /RTC\.SVC\?/, "it loads");
-  put(m, BUF + 0x40, [..."RTC     "].map((ch) => ch.charCodeAt(0)));
-  const found = svc(m, ABI.TNFIND, { b: 1, de: BUF + 0x40 });
-  assert.equal(found.carry, 0, "its record found");
-  return m.read(found.hl + ABI.RTCCLK) | (m.read(found.hl + ABI.RTCCLK + 1) << 8);
-}
-
-test("RTC.SVC loads only with a clock, and its record's clock reads and sets the DS1302", () => {
-  const none = standardCard();
-  volume(none, "A").write("RTC.SVC", RTC_SVC);
-  const bare = boot(none, { rtc: false });
-  assert.equal(svc(bare, HW.INFO).b & 0x08, 0, "no clock at cold boot");
-  assert.match(bare.command("RTC.SVC"), /RTC\.SVC\?/, "refused without one");
-  const image = standardCard();
-  volume(image, "A").write("RTC.SVC", RTC_SVC);
-  const m = boot(image);
-  const clock = rtcClock(m);
-  const RTC = "RTC.SVC";
-  ok(svc(m, RTC, { b: 0, hl: BUF, at: clock }));
+test("hardware services: the DS1302 clock", () => {
+  const m = boot(standardCard());
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF }));
   // The test clock starts at 12:00:00 on Thursday 1 January 2026 and runs
   // with the emulated cycles, so the boot has used a second or two of it.
   const got = bytes(m, BUF, 7);
   assert.ok(got[0] <= 0x05, `seconds ${got[0].toString(16)}`);
   assert.deepEqual(got.slice(1), [0x00, 0x12, 0x01, 0x01, 0x04, 0x26], "minutes, hours, date, month, weekday, year");
   put(m, BUF, [0x30, 0x59, 0x12, 0x25, 0x12, 0x04, 0x26]);
-  ok(svc(m, RTC, { b: 1, hl: BUF, at: clock }));
-  ok(svc(m, RTC, { b: 0, hl: BUF + 0x10, at: clock }));
+  ok(svc(m, HW.RTC, { b: 1, hl: BUF }));
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF + 0x10 }));
   const set = bytes(m, BUF + 0x10, 7);
   assert.deepEqual(set.slice(1), [0x59, 0x12, 0x25, 0x12, 0x04, 0x26]);
   assert.ok(set[0] >= 0x30 && set[0] <= 0x31, "seconds as set");
   // The host stalls for 1.2 s between the set and the next read, and the
   // machine runs no cycles: the clock reads what it read before.
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1200);
-  ok(svc(m, RTC, { b: 0, hl: BUF + 0x20, at: clock }));
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF + 0x20 }));
   assert.deepEqual(bytes(m, BUF + 0x20, 7), set, "no host time counted after a stall");
   // A second of emulated cycles moves it on by one.
   const end = m.cycles + 4_000_000;
   m.runUntil(() => m.cycles >= end, 5_000_000, "a second of cycles");
-  ok(svc(m, RTC, { b: 0, hl: BUF + 0x30, at: clock }));
+  ok(svc(m, HW.RTC, { b: 0, hl: BUF + 0x30 }));
   const later = bytes(m, BUF + 0x30, 7);
   assert.equal(later[0], set[0] + 1, "a second later");
   assert.deepEqual(m.violations, []);
