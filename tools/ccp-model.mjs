@@ -271,20 +271,32 @@ function sessions(r) {
   };
   for (const command of commands) {
     const before = m.cycles;
-    const output = m.command(command);
+    const from = m.output.length;
+    m.type(`${command}\r`);
+    m.runUntil(() => m.ready() && m.read(m.sym("CHPOS")) === 0 && /[A-P]>$/.test(m.text(from)), 600000000, `final prompt after ${command}`);
+    const output = m.text(from);
     for (let a = m.sym("STKGUARD"); a < m.sym("STKGUEND"); a++) assert.equal(m.read(a), 0xa5, `${command}: CCP stack guard`);
     rows.push({ command, output, driveUser: m.read(4), code: m.read(m.sym("PRGCODE")) | m.read(m.sym("PRGCODE") + 1) << 8, cycles: m.cycles - before });
   }
   m.cpu.cpu.pc = 0; m.runUntil(() => m.ready(), 200000000, "warm reboot flush");
   const files = ["A", "B"].map((drive) => ({ drive, files: volume(image, drive).list().map((f) => ({ ...f, bytesHash: sha(volume(image, drive).read(f.name)) })) }));
   assert.deepEqual(m.violations, []);
-  return { rows, entries, files, peak, cardHash: sha(image) };
+  const cold = new Machine({ rom: r.image, symbols: r.symbols, sdImage: image, glcd: false, clock: new Date(2026, 0, 1) });
+  const coldOutput = cold.expect(/A>$/, { from: 0, maxCycles: 80000000 });
+  cold.runUntil(() => cold.ready(), 200000000, "cold reopen");
+  const reopened = cold.command("TYPE B:HELLO.TXT");
+  assert.deepEqual(cold.violations, []);
+  return { rows, entries, files, peak, cardHash: sha(image), coldOutput, reopened };
 }
 
 mkdirSync(WORK, { recursive: true });
-const cases = corpus(), figures = { baseline: BASE, runnerSha256: sha(readFileSync(new URL(import.meta.url))), assembler: "atom-z80 0.3.7", commands, parserCases: cases.length * 2, variants: {} };
+const selected = process.env.CCP_VARIANTS?.split(",") ?? Object.keys(variants);
+assert.equal(selected[0], "incumbent", "the incumbent runs first");
+assert.ok(selected.every((name) => name in variants), "every requested variant exists");
+const cases = corpus(), figures = { baseline: BASE, runnerSha256: sha(readFileSync(new URL(import.meta.url))), selected, assembler: "atom-z80 0.3.7", commands, parserCases: cases.length * 2, variants: {} };
 let baselineParsers, baselineSession;
-for (const [name, change] of Object.entries(variants)) {
+for (const name of selected) {
+  const change = variants[name];
   console.error(`CCP model: ${name}`);
   const dir = tree(WORK, name, BASE);
   change(dir);
@@ -305,7 +317,7 @@ for (const [name, change] of Object.entries(variants)) {
   if (!name.startsWith("mutant")) {
     const session = sessions(r);
     baselineSession ??= session;
-    const semantics = (s) => ({ rows: s.rows.map(({ cycles, ...rest }) => rest), entries: s.entries, files: s.files, cardHash: s.cardHash });
+    const semantics = (s) => ({ rows: s.rows.map(({ cycles, ...rest }) => rest), entries: s.entries, files: s.files, cardHash: s.cardHash, coldOutput: s.coldOutput, reopened: s.reopened });
     assert.deepEqual(semantics(session), semantics(baselineSession), `${name}: command session changed`);
     result.session = { equivalent: true, peak: session.peak, cycles: session.rows.map((row) => ({ command: row.command, cycles: row.cycles })) };
     assert.equal(mismatches.length, 0, `${name}: parser mismatch`);
