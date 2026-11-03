@@ -130,7 +130,9 @@ export function setDisplayLine(image, display) {
   const had = a.list().some((f) => f.name === "STARTUP.CMD");
   const old = had ? toLatin1(a.read("STARTUP.CMD")).split("\x1a")[0] : "";
   const rest = withoutDisplay(old.split(/\r?\n/));
-  const text = [displayFile(display), ...(display === "tms" ? ["GLCD.SVC"] : []), ...rest].map((l) => `${l}\r\n`).join("");
+  // The chosen display's line alone: CON UC1 loads GLCD.SVC itself, and a line
+  // for it on the page's board with both would only give way, GLCD.SVC? (KE-150).
+  const text = [displayFile(display), ...rest].map((l) => `${l}\r\n`).join("");
   if (text === old) return false;
   a.write("STARTUP.CMD", fromLatin1(`${text}\x1a`));
   return true;
