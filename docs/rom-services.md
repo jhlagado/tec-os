@@ -189,9 +189,9 @@ carries its own.
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
-| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 838 | 1, 2 | Stays |
-| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console (`boot.asm`) | 772 | 1 | Stays |
-| BIOS, with its entries' interrupt discipline (`bios.asm`) | 514 | 2 | Stays |
+| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 828 | 1, 2 | Stays |
+| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console, its header dump gone (`boot.asm`) | 735 | 1 | Stays |
+| BIOS, with its entries' interrupt discipline (`bios.asm`) | 404 | 2 | Stays |
 | Serial console (`console.asm`) | 471 | 1, 2 | Stays |
 | Matrix keyboard (`keyboard.asm`) | 249 | 1, 2 | Stays |
 | ANSI terminal (`term.asm`) | 971 | 2 | Stays |
@@ -202,17 +202,17 @@ carries its own.
 | Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
 | 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
 | SD driver (`sd.asm`) | 836 | 1 | Stays |
-| Container mount and checks (`vol.asm`) | 1,200 | 1 | Stays |
+| Container mount and checks (`vol.asm`) | 1,287 | 1 | Stays |
 | CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,520 | 2 | Stays |
-| BDOS (`cpm/bdos.asm`) | 3,854 | 2 | Stays |
+| BDOS (`cpm/bdos.asm`) | 3,892 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 495 | 3, 4 | Stays |
-| Block cache (`cache.asm`) | 693 | 1, 2 | Stays: every read goes through it |
+| Block cache (`cache.asm`) | 690 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
 | Service loader, registry and loading the display drivers (`loader.asm`) | 727 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 14,645 bytes used.
+census's 14,610 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
