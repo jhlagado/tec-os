@@ -20,9 +20,23 @@ data to the card, or cannot write itself, drops the cache's copy of that
 directory block, so the card's directory stays the truth and is read again
 next time; the BDOS reports the failed write.
 
-A file is safe once it is closed, which is CP/M's own rule. Data written
-and not yet closed is lost by a reset or power off, and never reaches any card:
-press `^C` at the prompt before pressing reset or taking the card out. If a data block cannot be
+A file is complete once it is closed, which is CP/M's own rule, but a write
+can reach the card before the close, and nothing is rolled back. What a reset
+or power off before the close leaves depends on where the write went:
+
+- **Unwritten dirty data.** On a volume written behind, changed blocks the cache
+  holds and hasn't written are lost. Press `^C` at the prompt before pressing
+  reset or taking the card out.
+- **New allocations.** Blocks a write allocated reach the card, at once on a
+  volume not written behind, or when the cache writes them, but until the
+  directory entry is written no entry names them: the file reads back without
+  them, and the space is free again at the next login.
+- **In-place overwrites.** A write into a block the file already had changes that
+  block on the card, at once on a volume not written behind, and when the cache
+  evicts or flushes it on one written behind. The old contents are gone, closed
+  or not: there is no copy to return to.
+
+If a data block cannot be
 written, it stays changed in the cache, and each warm boot tries it again
 and says `Write lost` while it still fails, dropping the rest of a chained
 line as a BDOS error does. Only a reset, or power off, gives it up.
@@ -49,10 +63,11 @@ against power loss is up to the card. That is not verified.
 A CP/M file update touches data blocks, then the directory entry. TEC-OS adds
 no journal, so power loss or reset can leave:
 
-- **Between data and directory writes.** The data blocks hold new records
-  that the directory does not list. The file reads back as it was before the
-  write. The space stays free in the allocation vector rebuilt at the next
-  login, so it is reused.
+- **Between data and directory writes.** Newly allocated blocks hold records
+  that the directory does not list, and their space is free again in the
+  allocation vector rebuilt at the next login. Blocks the file already had and
+  were written in place hold the new records: the file reads back mixed, old
+  where nothing was written and new where it was, with its old length.
 - **On a volume written behind, before a directory write.** Every change
   since the last directory write, warm boot or `MOUNT` is still in the cache
   and is lost; the card holds the volume as it was then.

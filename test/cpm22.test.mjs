@@ -6,7 +6,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { standardCard, volume } from "./lib/fixtures.mjs";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ROOT, standardCard, volume } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
 
 const FCB = 0x005c;
@@ -196,4 +198,23 @@ test("function 30 still changes a read-only file's attributes, as CP/M 2.2's doe
   assert.equal(r.bdos(21), 0, "a write once it is read-write");
   assert.notEqual(r.bdos(16), 0xff);
   assert.equal(volume(image, "A").read("R.DAT").length, 256);
+});
+
+test("a write in place reaches the card before any close, and the recovery guide says so (KE-156)", () => {
+  const image = standardCard();
+  const old = Uint8Array.from({ length: 256 }, () => 0x11);
+  volume(image, "A").write("OLD.DAT", old);
+  const r = rig(image);
+  const { m } = r;
+  r.fcb(0, "OLD     DAT");
+  assert.notEqual(r.bdos(15), 0xff, "opened");
+  fill(7).forEach((v, k) => m.write(DMA + k, v));
+  assert.equal(r.bdos(21), 0, "record 0 written over, and the file never closed");
+  const onCard = volume(image, "A").read("OLD.DAT");
+  assert.deepEqual([...onCard.subarray(0, 128)], [...fill(7)], "the old record is gone from the card already");
+  assert.deepEqual([...onCard.subarray(128, 256)], [...old.subarray(128)], "the record not written stays");
+  const guide = readFileSync(resolve(ROOT, "docs/recovery.md"), "utf8");
+  assert.doesNotMatch(guide, /never reaches any card/, "the guide no longer says unclosed data never reaches the card");
+  for (const kind of ["Unwritten dirty data", "New allocations", "In-place overwrites"]) assert.match(guide, new RegExp(`\\*\\*${kind}\\.\\*\\*`), kind);
+  assert.match(guide, /nothing is rolled back/);
 });
