@@ -33,14 +33,12 @@
 //
 // Run `npm run build && npm run media` first. Node.js 20 or later.
 // The DS1302 starts at 1 November 2026, 12:00, so a run gives the same
-// output on any host. The starter card holds TAS.COM always, by its pin, and
-// EDIT.COM only when `npm run media` found a build of Edit (see
-// tools/media.mjs), and DIR's figures change with it, so the script prints the
-// card's SHA-256 and the Edit build's on stderr.
+// output on any host. The starter card holds TAS.COM and TED.COM by their pins
+// (test/inputs.json), and the script prints the card's SHA-256 on stderr.
 
 import { createHash } from "node:crypto";
 
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Machine, symbolsFromD8 } from "../host/machine.mjs";
@@ -68,10 +66,6 @@ const sdImage = opt.card === "none" ? undefined : new Uint8Array(readFileSync(op
 const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 if (sdImage) {
   process.stderr.write(`card ${opt.card}: SHA-256 ${sha(sdImage)}\n`);
-  const edit = resolve(ROOT, "dist/files/EDIT.COM");
-  if (opt.card === resolve(ROOT, "dist/starter.img")) {
-    process.stderr.write(existsSync(edit) ? `starter EDIT.COM: SHA-256 ${sha(readFileSync(edit))}\n` : "starter card made without EDIT.COM\n");
-  }
 }
 const m = new Machine({ rom, symbols, sdImage, clock: new Date(2026, 10, 1, 12, 0, 0), ...boards[opt.board] });
 

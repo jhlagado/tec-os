@@ -82,9 +82,14 @@ export const build = (dir, profiles = []) => node(dir, ["tools/build.mjs", ...pr
 /** The loaded file type of tree DIR, by its source: src/svc.asm means .SVC, and every new name; its absence .DRV, and every old one. */
 export const fileType = (dir) => (existsSync(resolve(dir, "src/svc.asm")) ? "SVC" : "DRV");
 
+/** Pins this tree no longer holds, for the older trees a model builds: their media still put EDIT.COM on the card. */
+const OLDER_PINS = {
+  "EDIT.COM": { env: "EDIT_COM", default: "../edit/dist/EDIT.COM", sha256: "2c9e7d0ec588019b9184ca89543e5a644fafda864bb940445375edb50bbb0fe6" },
+};
+
 /** A pinned file the shipped card holds: from its env, else beside this repository. */
 function shipped(name) {
-  const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs[name];
+  const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs[name] ?? OLDER_PINS[name];
   const path = resolve(process.env[entry.env] ?? resolve(ROOT, entry.default));
   if (!existsSync(path)) throw new Error(`no ${name} at ${path}: the shipped card holds it, so set ${entry.env}`);
   const got = sha256(readFileSync(path));
@@ -94,9 +99,13 @@ function shipped(name) {
 
 export const editCom = () => shipped("EDIT.COM");
 export const tasCom = () => shipped("TAS.COM");
+export const tedCom = () => shipped("TED.COM");
 
-/** DIR's release set, dist/ and the starter card, by its own tools/media.mjs. */
-export const media = (dir) => node(dir, ["tools/media.mjs"], { env: { EDIT_COM: editCom(), TAS_COM: tasCom() } });
+/** DIR's release set, dist/ and the starter card, by its own tools/media.mjs: an older tree's takes EDIT.COM, a newer one's TED.COM. */
+export const media = (dir) => {
+  const older = existsSync(resolve(dir, "tools/lib/edit.mjs"));
+  return node(dir, ["tools/media.mjs"], { env: older ? { EDIT_COM: editCom(), TAS_COM: tasCom() } : { TED_COM: tedCom(), TAS_COM: tasCom() } });
+};
 
 /** DIR's ROM for PROFILE: image, census and symbols. */
 export function rom(dir, profile = "debug80") {

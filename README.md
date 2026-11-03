@@ -38,10 +38,10 @@ npm test         # host and emulator tests, about 90 seconds
 npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 ```
 
-`npm run media` puts Edit on the starter card when `../edit/dist/EDIT.COM`
-(or the file named by `EDIT_COM`) is a build with the screen configuration
-block. `npm test` runs Edit on TEC-OS and on Triptych's CP/M when those are
-present beside this repository.
+`npm run media` puts TED and TAS on the starter card from
+`../thorium/dist/TED.COM` and `../thorium/dist/TAS.COM` (or the files named by
+`TED_COM` and `TAS_COM`), and refuses a file that is missing or not the build
+pinned in `test/inputs.json`.
 
 The ROM is assembled with ATOM. There is one image for every board. The names
 `debug80`, `debug80t40`, `debug80g32` and `board` stay as aliases of it. The

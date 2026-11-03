@@ -11,7 +11,6 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
 import { displayFiles } from "./lib/starter.mjs";
-import { editForAbi4 } from "./lib/edit.mjs";
 import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
 import { PROFILES } from "./build.mjs";
 
@@ -35,7 +34,8 @@ COPY SOURCE DEST   copy a file (built in), for example COPY TERM.COM B:TERM.COM
 TERM               draw on the video console; TERM S also scrolls
 PROBE              exercise the BDOS file functions
 DEMO               the LCD, digits, 8x8 LEDs and PICO9918; any key stops
-EDIT NAME.TXT      full-screen editor, if present: ^S save, ^Q quit
+TED NAME.ASM       full-screen editor: ^S save, ^Q quit, ^T B build, ^T R run
+TED NAME.ASM 12    open it at line 12
 TAS NAME           assemble NAME.ASM to NAME.COM and NAME.DBG
 TAS NAME NAME.SVC  assemble it to a service
 VOLS               list the card's volumes
@@ -46,7 +46,7 @@ SERVICES           list the services installed, each with its pages
 UNLOAD             remove the last service installed
 
 A line chains commands with !, and a piece that starts with : runs only if the
-last command succeeded: EDIT X.ASM!TAS X!:X
+last command succeeded: TED X.ASM!TAS X!:X
 
 B: is an empty work disk, written behind: its changes reach the card when a
 file is closed, at ^C and at MOUNT. Press ^C at A> before reset or power off.
@@ -56,14 +56,14 @@ Make a new starter card, or rename each file .SVC if its format is 3 and change
 STARTUP.CMD to match.
 `;
 
-/** The pinned TAS.COM's bytes, which the card holds: a file missing or not as pinned is refused. */
-function tasBytes() {
-  const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs["TAS.COM"];
+/** The pinned NAME's bytes, which the card holds: a file missing or not as pinned is refused. */
+function pinnedBytes(name) {
+  const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs[name];
   const path = process.env[entry.env] ?? resolve(ROOT, entry.default);
-  if (!existsSync(path)) throw new Error(`no TAS.COM at ${path}: the starter card holds it, so set ${entry.env}`);
+  if (!existsSync(path)) throw new Error(`no ${name} at ${path}: the starter card holds it, so set ${entry.env}`);
   const bytes = new Uint8Array(readFileSync(path));
   const got = sha(bytes);
-  if (got !== entry.sha256) throw new Error(`TAS.COM at ${path} has sha256 ${got}, pinned ${entry.sha256}`);
+  if (got !== entry.sha256) throw new Error(`${name} at ${path} has sha256 ${got}, pinned ${entry.sha256}`);
   return bytes;
 }
 
@@ -202,7 +202,8 @@ loop ${census.serial.txBitCycles}, receive loop ${census.serial.rxBitCycles}.
 }
 
 async function main() {
-  const tas = tasBytes();
+  const tas = pinnedBytes("TAS.COM");
+  const ted = pinnedBytes("TED.COM");
   rmSync(FILES, { recursive: true, force: true }); // what the page copies: nothing from an older set
   mkdirSync(FILES, { recursive: true });
   const censuses = {};
@@ -223,19 +224,8 @@ async function main() {
     writeFileSync(resolve(FILES, f.name), f.bytes);
     files.push(f);
   }
-  // Edit joins the card when a build that sizes itself to the TPA and the
-  // display is available (configuration tag "ECFG" at 0103h).
-  const editPath = process.env.EDIT_COM ?? resolve(ROOT, "../edit/dist/EDIT.COM");
-  if (existsSync(editPath)) {
-    const pinnedBytes = new Uint8Array(readFileSync(editPath));
-    if (Buffer.from(pinnedBytes.subarray(3, 7)).toString("latin1") === "ECFG") {
-      const bytes = editForAbi4(pinnedBytes, ROOT);
-      writeFileSync(resolve(FILES, "EDIT.COM"), bytes);
-      files.push({ name: "EDIT.COM", description: "Edit, the full-screen editor: EDIT NAME.TXT, ^S save, ^Q quit", bytes });
-    } else {
-      console.log(`media: ${editPath} predates the screen configuration; Edit left off the card`);
-    }
-  }
+  writeFileSync(resolve(FILES, "TED.COM"), ted);
+  files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   writeFileSync(resolve(FILES, "TAS.COM"), tas);
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   copyFileSync(resolve(ROOT, "src/abi.inc"), resolve(DIST, "abi.inc"));

@@ -8,19 +8,19 @@
       "bytes": 22680,
       "sha256": "c99135936bcccfaffb29c98679ed4dbb5d2d6a76c62080de15a1831da2403be7"
     },
-    "EDIT.COM": {
-      "env": "EDIT_COM",
-      "default": "../edit/dist/EDIT.COM",
-      "source": "jhlagado/edit 845d0629, dist/EDIT.COM",
-      "bytes": 7931,
-      "sha256": "2c9e7d0ec588019b9184ca89543e5a644fafda864bb940445375edb50bbb0fe6"
-    },
     "TAS.COM": {
       "env": "TAS_COM",
       "default": "../thorium/dist/TAS.COM",
       "source": "jhlagado/thorium dbee66a, dist/TAS.COM",
       "bytes": 10295,
       "sha256": "45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2"
+    },
+    "TED.COM": {
+      "env": "TED_COM",
+      "default": "../thorium/dist/TED.COM",
+      "source": "jhlagado/thorium 8fcc6ea, dist/TED.COM",
+      "bytes": 11781,
+      "sha256": "9a9936cf9daeb285b585470faaf6f5885926c8aa00c227de2fafe79f762a413e"
     },
     "triptych-headless": {
       "env": "TRIPTYCH_HEADLESS",

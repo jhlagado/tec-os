@@ -1,0 +1,171 @@
+// TED, the editor of the other study's tools, on TEC-OS: it edits, saves and
+// reopens a file at every console's size, opens at a line, and runs the round
+// of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
+// pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
+// from the listing of the pinned build (Thorium 8fcc6ea, build/ted/ted.sym):
+// the pin's hash holds them.
+
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { check, pinned } from "./lib/inputs.mjs";
+
+const TED = pinned("TED.COM");
+const TAS = pinned("TAS.COM");
+const CURSOR = 0x24ca; // the cursor's offset in the text
+const TEXCAP = 0x2551; // the text's room, from the word at 0006h
+const NOTES = "hello\nsecond line\n";
+const EDITED = "hello\nYsecond line\n";
+// Line 2 fails: 256 doesn't fit A. A ';' typed at the error's column makes it a comment.
+const BAD = ' ORG 100H\n LD A,256\n LD DE,MSG\n LD C,9\n CALL 5\n RET\nMSG: DB "HI",13,10,"$"\n';
+const FIXED = BAD.replace(" LD A,256", " ;LD A,256");
+const LIMIT = 4_000_000_000;
+
+const tedBytes = () => new Uint8Array(readFileSync(TED.path));
+const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
+const text = (image, drive, name) => Buffer.from(volume(image, drive).read(name, { text: true })).toString();
+
+/** Keys for M, each when it waits for one, then until it waits with nothing queued and DONE holds. */
+function keys(m, s, what, done = () => true) {
+  m.enqueueInput(s, m.videoConsole() ? "matrix" : "serial");
+  m.runUntil(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), LIMIT, what);
+}
+
+function editOnTecOs({ tms, profile = "debug80", cols = 80 }) {
+  check(TED);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TED.COM", tedBytes());
+  a.write("NOTES.TXT", Buffer.from(NOTES), { text: true });
+  let m = boot(image, { tms, profile, matrix: true });
+  const screen = () => (tms ? m.screen() : m.glcdScreen());
+  m.typeMatrix("ted notes.txt\r");
+  m.runUntilChecked(() => m.waitingForInput() && screen()[0] === "hello", 400_000_000, "the editor's first screen");
+  const rows = tms ? 24 : 8;
+  assert.equal(screen().length, rows);
+  assert.deepEqual([m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], tms ? [cols, 24] : [21, 8], "the console's geometry");
+  assert.match(screen()[rows - 1], /NOTES/, "status row on the last line");
+  m.typeMatrix("\x04Y"); // down arrow, then Y
+  m.typeMatrix("\x13"); // ^S save
+  m.runUntilChecked(() => m.waitingForInput() && text(image, "A", "NOTES.TXT") === EDITED, 400_000_000, "the saved file on the card");
+  m.typeMatrix("\x11"); // ^Q quit
+  m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => l.startsWith("A>")), 400_000_000, "the prompt");
+  assert.deepEqual(m.violations, []);
+
+  // Power cycle and open it again.
+  m = boot(image, { tms, profile, matrix: true, ramFill: 0x76 });
+  m.typeMatrix("ted notes.txt\r");
+  m.runUntilChecked(() => m.waitingForInput() && screen()[1] === "Ysecond line", 400_000_000, "the saved text");
+  m.typeMatrix("\x11");
+  m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => l.startsWith("A>")), 400_000_000, "the prompt");
+}
+
+for (const [cols, profile] of [[80, "debug80"], [40, "debug80t40"], [32, "debug80g32"]]) {
+  test(`TED edits, saves and reopens a file on TEC-OS with the PICO9918 (${cols} x 24)`, { skip: TED.skip, timeout: 900_000 }, () => {
+    editOnTecOs({ tms: true, profile, cols });
+  });
+}
+
+test("TED does the same on the GLCD (21 x 8)", { skip: TED.skip, timeout: 900_000 }, () => {
+  editOnTecOs({ tms: false });
+});
+
+test("the line argument: TED NOTES.TXT 2 opens at line 2", { skip: TED.skip, timeout: 900_000 }, () => {
+  check(TED);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TED.COM", tedBytes());
+  a.write("NOTES.TXT", Buffer.from(NOTES), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  keys(m, "ted notes.txt 2\r", "TED at line 2", () => m.screen()[0] === "hello" && /L2 C1/.test(m.screen()[23]));
+  keys(m, "Y\x13", "the save", () => text(image, "A", "NOTES.TXT") === EDITED);
+  keys(m, "\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
+});
+
+/**
+ * The round on DRIVE: ^T B fails and opens at the error, ^T D chains TDB, which
+ * isn't there, so TDB? and !TED bring TED back; the fix, ^T B again, ^T R runs
+ * the program, and a key brings TED back at the same place. TED and TAS are on
+ * DRIVE: the CCP looks for a command on the current drive only.
+ */
+function round({ drive = "A", tms = true }) {
+  check(TED);
+  check(TAS);
+  const image = standardCard();
+  const d = volume(image, drive);
+  d.write("TED.COM", tedBytes());
+  d.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  d.write("HELLO.ASM", Buffer.from(BAD), { text: true });
+  const m = boot(image, tms ? { tms: true, matrix: true } : {});
+  let mark = m.output.length;
+  const since = () => m.text(mark);
+  const status = () => (tms ? m.screen()[23] : since().split("\x1b[24;1H").at(-1));
+  if (drive !== "A") keys(m, `${drive}:\r`, "the drive", () => since().endsWith(`${drive}>`));
+  keys(m, "ted hello.asm\r", "TED", () => /EDIT HELLO\.ASM/.test(status()));
+
+  mark = m.output.length;
+  keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(since()) && /operands are not valid/.test(status()));
+  assert.equal(word(m, CURSOR), 12, "at line 2, column 2: the error's place");
+  assert.equal(volume(image, drive).list().some((f) => f.name === "HELLO.COM"), false, "a failed build leaves no HELLO.COM");
+
+  mark = m.output.length;
+  keys(m, "\x14d", "TED after TDB?", () => /TED\r\n/.test(since()) && /L2 C2/.test(status()));
+  assert.match(since(), new RegExp(`${drive}>TDB HELLO\\r\\nTDB\\?\\r\\n\\r\\n${drive}>TED\\r\\n`), "the chain's line taken, TDB? and !TED");
+  assert.equal(word(m, CURSOR), 12, "the same place");
+
+  keys(m, ";", "the fix", () => /L2 C3/.test(status()));
+  mark = m.output.length;
+  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(since()) && /THOR\.PRJ: HELLO\.ASM/.test(status()));
+  assert.match(since(), /HELLO\.COM written/);
+  assert.equal(text(image, drive, "HELLO.ASM"), FIXED, "^T B saves first");
+  assert.equal(word(m, CURSOR), 13);
+
+  mark = m.output.length;
+  keys(m, "\x14r", "the program and the wait", () => /Press a key/.test(since()));
+  assert.match(since(), new RegExp(`${drive}>HELLO\\r\\nHI\\r\\n`), "HELLO ran");
+  keys(m, " ", "TED again", () => /L2 C3/.test(status()));
+  assert.equal(word(m, CURSOR), 13, "the same place as before ^T R");
+  keys(m, "\x11", "the prompt", () => since().endsWith(`${drive}>`));
+  assert.deepEqual(m.violations, []);
+  const names = volume(image, drive).list().map((f) => f.name);
+  for (const n of ["HELLO.COM", "HELLO.DBG", "THOR.PRJ", "THOR.SES"]) assert.ok(names.includes(n), `${n} on ${drive}:`);
+}
+
+test("the round on A: with the PICO9918: ^T B at the error, ^T D's TDB? and back, the fix, ^T R", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
+  round({ drive: "A" });
+});
+
+test("the round on B:, written behind, with the PICO9918", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
+  round({ drive: "B" });
+});
+
+test("the round on A: with a serial terminal", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
+  round({ drive: "A", tms: false });
+});
+
+test("TED's text holds at least 33,052 bytes on the starter card and 31,000 with the PICO9918's driver", { skip: TED.skip, timeout: 900_000 }, () => {
+  check(TED);
+  for (const [tms, floor] of [[false, 33_052], [true, 31_000]]) {
+    const image = standardCard();
+    volume(image, "A").write("TED.COM", tedBytes());
+    const m = boot(image, tms ? { tms: true, matrix: true } : {});
+    keys(m, "ted x.asm\r", "TED", () => /EDIT X\.ASM/.test(m.text(0)));
+    assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${tms ? "with" : "without"} a display, at least ${floor}`);
+  }
+});
+
+test("the built starter card carries the pinned TED.COM, and room for TED's files and a 4 KiB source", { skip: TED.skip, timeout: 300_000 }, () => {
+  check(TED);
+  execFileSync(process.execPath, ["tools/media.mjs"], { cwd: ROOT, stdio: "ignore" });
+  const card = new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img")));
+  const a = volume(card, "A");
+  const onCard = a.read("TED.COM").subarray(0, tedBytes().length);
+  assert.deepEqual([...onCard], [...tedBytes()], "the pinned bytes");
+  assert.equal(a.list().some((f) => f.name === "EDIT.COM"), false);
+  // THOR.PRJ, .SES, .ERR, .$$$ and .BAK, a block each, and the source.
+  const need = 5 * a.blockBytes + 4096;
+  assert.ok(a.freeBytes() >= need, `${a.freeBytes()} bytes free on A:, ${need} needed`);
+});
