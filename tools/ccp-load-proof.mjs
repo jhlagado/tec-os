@@ -19,7 +19,7 @@ function boot(r, image, resident) {
   m.runUntil(() => m.ready() && /A>$/.test(m.text()), 200000000, "prompt");
   return m;
 }
-function run(r, resident, delta) {
+function run(r, resident, delta, fault = false) {
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }]);
   if (resident) { volume(image).write("GLCD.SVC", glcd); volume(image).write("STARTUP.CMD", Buffer.from("GLCD.SVC\r\n\x1a")); }
   const calibrated = boot(r, image.slice(), resident);
@@ -32,7 +32,7 @@ function run(r, resident, delta) {
   m.command("USER 3");
   const top = m.sym("CSTKTOP"), guard = m.sym("STKGUARD"), base = m.sym("CSTKBAS");
   const before = [...Array(32).keys()].map((i) => m.read(ceiling + i));
-  let peak = 0, setDmaPeak = 0, limits = 0, entries = 0;
+  let peak = 0, setDmaPeak = 0, readPeak = 0, readReturns = [], pendingRead, faults = 0, limits = 0, entries = 0;
   const hits = [], write = m.cpu.hardware.memWrite, step = m.step.bind(m);
   const clearSites = [];
   for (let a = m.sym("CPMINIT"); a < m.sym("CPMIG"); a++) if (m.read(a) === 0xed && m.read(a + 1) === 0xb0) clearSites.push(a);
@@ -47,6 +47,18 @@ function run(r, resident, delta) {
   };
   m.step = () => {
     const sp = m.cpu.cpu.sp;
+    if(pendingRead && m.pc===pendingRead.pc && sp===pendingRead.sp+2) {
+      readReturns.push({a:m.cpu.cpu.a,stack:top-sp}); pendingRead=undefined;
+    }
+    if(m.pc===5 && m.cpu.cpu.c===20) {
+      readPeak=Math.max(readPeak,top-sp);
+      pendingRead={pc:m.read(sp)|(m.read(sp+1)<<8),sp};
+    }
+    if(fault && !faults && m.pc===m.sym("FNREADSQ")) {
+      // At the real file-read handler, take its ordinary Bad Sector exit.
+      // This qualifies descriptor-frame abandonment, not the SD transport.
+      faults++; m.cpu.cpu.pc=m.sym("BADSECT");
+    }
     if (sp >= guard && sp <= top) {
       peak = Math.max(peak, top - sp);
       if (m.pc === 5 && m.cpu.cpu.c === 26) setDmaPeak = Math.max(setDmaPeak, top - sp);
@@ -56,22 +68,28 @@ function run(r, resident, delta) {
     return step();
   };
   const from = m.output.length, start = m.cycles;
-  m.type("EDGE\r");
+  m.type(fault ? "EDGE!USER 7\r" : "EDGE\r");
+  if(fault) {
+    m.runUntil(()=>m.waitingForInput() && /Bad Sector/.test(m.text(from)),200000000,"injected read error");
+    m.type("\r");
+  }
   m.runUntil(() => m.ready() && m.read(m.sym("CHPOS")) === 0 && /A>$/.test(m.text(from)), 600000000, "loaded program or refusal");
-  assert.equal(entries, delta <= 0 ? 1 : 0, "exact ceiling accepted, one record beyond refused");
-  assert.equal(limits, delta >= 0 ? 1 : 0, "LOADLIM reached only at the ceiling");
+  assert.equal(entries, !fault && delta <= 0 ? 1 : 0, "exact ceiling accepted, one record beyond refused");
+  assert.equal(limits, !fault && delta >= 0 ? 1 : 0, "LOADLIM reached only at the ceiling");
   assert.deepEqual([...Array(32).keys()].map((i) => m.read(ceiling + i)), before, "ceiling bytes remain untouched");
-  assert.equal(m.read(4), 0x30, "user 3 restored after user-0 search");
+  if(!fault) assert.equal(m.read(4), 0x30, "user 3 restored after user-0 search");
+  else { assert.equal(faults,1); assert.notEqual(m.read(4)>>4,7,"warm boot drops the remaining chain"); }
+  assert.ok(peak<=22,"CCP retains a quarter of its 30-byte stack");
   assert.deepEqual(hits, [], "guard never written by a stack frame");
   assert.deepEqual(m.violations, []);
-  return { resident, delta, ceiling, bytes, output: m.text(from), entries, limits, driveUser: m.read(4), peak, setDmaPeak, cycles: m.cycles - start };
+  return { resident, delta, fault, faults, readPeak, readReturns, ceiling, bytes, output: m.text(from), entries, limits, driveUser: m.read(4), peak, setDmaPeak, cycles: m.cycles - start };
 }
 const result = { romHashes: dirs.map((d) => createHash("sha256").update(rom(d).image).digest("hex")), runs: [] };
-for (const resident of [false, true]) for (const delta of [-128, 0, 128]) {
-  const pair = dirs.map((dir) => run(rom(dir), resident, delta));
-  const visible = ({ peak, setDmaPeak, cycles, ...r }) => r;
+for (const resident of [false, true]) for (const [delta,fault] of [[-128,false],[0,false],[128,false],[-128,true]]) {
+  const pair = dirs.map((dir) => run(rom(dir), resident, delta, fault));
+  const visible = ({ peak, setDmaPeak, readPeak, readReturns, cycles, ...r }) => r;
   assert.deepEqual(visible(pair[1]), visible(pair[0]), `resident ${resident}, delta ${delta}`);
-  result.runs.push({ resident, delta, equivalent: true, reference: pair[0], candidate: pair[1] });
+  result.runs.push({ resident, delta, fault, equivalent: true, reference: pair[0], candidate: pair[1] });
   writeFileSync(output, JSON.stringify(result, null, 2) + "\n");
   console.error(`resident ${resident}, delta ${delta}: matched, peak ${pair[1].peak}, SETDMA ${pair[1].setDmaPeak}`);
 }
