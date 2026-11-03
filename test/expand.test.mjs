@@ -96,3 +96,18 @@ test("a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and it
   assert.match(m.command("TYPE B1.TMP"), /B{127}/, "the file's record on the card after a reset");
   assert.deepEqual(m.expand1Writes, []);
 });
+
+test("a write to EXPAND 1 by ROM code outside the cache, between CDI and CTADR, fails the host's watch (KS38a's review)", () => {
+  const m = boot(standardCard(), { ram96: true });
+  const [cdi, ctadr, mnfill] = ["CDI", "CTADR", "MNFILL"].map((n) => m.sym(n));
+  assert.ok(cdi < mnfill && mnfill < ctadr, "MNFILL, in vol.asm, lies between them since the moves");
+  // LD A,05h / OUT (FFh),A / LD HL,9000h / LD IX,0200h / CALL MNFILL / LD A,01h / OUT (FFh),A / JR $
+  const code = [0x3e, 0x05, 0xd3, 0xff, 0x21, 0x00, 0x90, 0xdd, 0x21, 0x00, 0x02, 0xcd, mnfill & 0xff, mnfill >> 8, 0x3e, 0x01, 0xd3, 0xff, 0x18, 0xfe];
+  code.forEach((v, i) => m.write(STUB + i, v));
+  m.cpu.cpu.sp = 0x0100;
+  m.cpu.cpu.pc = STUB;
+  m.runUntil(() => m.pc === STUB + code.length - 2, 1_000_000, "the stub");
+  assert.ok(m.expand1Writes.length >= 8, `MNFILL's eight bytes at 9000h seen: ${m.expand1Writes.length}`);
+  assert.ok(m.expand1Writes.every((w) => w.pc >= mnfill && w.pc < ctadr));
+  for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // these were asked for
+});
