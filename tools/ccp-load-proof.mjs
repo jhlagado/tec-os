@@ -89,6 +89,7 @@ for (const resident of [false, true]) for (const [delta,fault] of [[-128,false],
   const pair = dirs.map((dir) => run(rom(dir), resident, delta, fault));
   const visible = ({ peak, setDmaPeak, readPeak, readReturns, cycles, ...r }) => r;
   assert.deepEqual(visible(pair[1]), visible(pair[0]), `resident ${resident}, delta ${delta}`);
+  assert.deepEqual(pair[1].readReturns.map(x=>x.a),pair[0].readReturns.map(x=>x.a),"same actual read return values");
   result.runs.push({ resident, delta, fault, equivalent: true, reference: pair[0], candidate: pair[1] });
   writeFileSync(output, JSON.stringify(result, null, 2) + "\n");
   console.error(`resident ${resident}, delta ${delta}: matched, peak ${pair[1].peak}, SETDMA ${pair[1].setDmaPeak}`);
