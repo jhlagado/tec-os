@@ -143,6 +143,27 @@ UNAMBAD:
   edit(dir, "        CPIR                    ; equality means a forbidden byte\n        POP     BC", "        CPIR                    ; equality means a forbidden byte\nCHRRET: POP     BC");
 }
 
+function listingCounter(dir) {
+  listing(dir);
+  edit(dir, "DIRHEAD:\n        LD      A,(DIRANY)", "DIRHEAD:\n        LD      A,(DIRNCOL)    ; columns remaining in this row\n        LD      (DIRCOL),A\n        LD      A,(DIRANY)");
+  edit(dir, `DIRPAD:
+        LD      A,(DIRCOL)
+        INC     A
+        LD      HL,DIRNCOL
+        CP      (HL)
+        JR      C,DIRPADL
+        XOR     A
+        LD      (DIRCOL),A
+        JR      DIRNEXT
+DIRPADL:
+        LD      (DIRCOL),A
+DIRPADC:`, `DIRPAD:
+        LD      HL,DIRCOL
+        DEC     (HL)
+        JR      Z,DIRNEXT
+DIRPADC:`);
+}
+
 function dispatch(dir) {
   edit(dir, `KEYNXT:\tPUSH\tDE
 \tCALL\tISCMD\t\t; Z: the word, DE at its 0
@@ -154,8 +175,8 @@ function dispatch(dir) {
 }
 
 const variants = {
-  incumbent() {}, parser, "parser-shared": parserShared, listing, dispatch,
-  combined(dir) { parser(dir); listing(dir); dispatch(dir); },
+  incumbent() {}, parser, "parser-shared": parserShared, listing, "listing-counter": listingCounter, dispatch,
+  combined(dir) { parserShared(dir); listingCounter(dir); dispatch(dir); },
   "mutant-parser-overflow"(dir) { parser(dir); edit(dir, "PLEND:\n        SCF\n        RET", "PLEND:\n        OR      A\n        RET"); },
   "mutant-parser-tail"(dir) { parser(dir); edit(dir, "        LD      B,24", "        LD      B,20"); },
 };
@@ -217,6 +238,7 @@ function boot(r) {
   a.write("HELLO.TXT", Buffer.from("hello\r\nworld\r\n\x1a"));
   a.write("SECOND.TXT", Buffer.from("second\r\n\x1a"));
   a.write("PROBE.COM", Uint8Array.of(0xc9));
+  for (let n = 0; n < 4; n++) a.write(`F${n}.DAT`, Uint8Array.of(n)); // seven entries cross the six-column boundary
   const m = new Machine({ rom: r.image, symbols: r.symbols, sdImage: image, glcd: false, clock: new Date(2026, 0, 1) });
   m.expect(/A>$/, { from: 0, maxCycles: 80000000 });
   m.runUntil(() => m.ready(), 200000000, "first prompt");
