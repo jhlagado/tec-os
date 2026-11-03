@@ -77,11 +77,11 @@ WBOOTR: DI
         LD      (LATCHV),A
         OUT     (SYSLAT),A
         LD      SP,BSTK
-        CALL    PZINIT
-	LD	HL,SVCBSY	; no INIT or REMOVE outlives a warm boot
-        RES     7,(HL)
+	CALL	HWVREL		; a program that claimed the PICO9918 gives
+	CALL	PZINIT		; it back first: its interrupt, an NMI, off
+	LD	HL,SVCBSY	; before page zero is rebuilt; no INIT or
+        RES     7,(HL)          ; REMOVE outlives a warm boot
         CALL    CPMINIT
-        CALL    HWVREL          ; a program that claimed the PICO9918 gives it back
         LD      A,(CONMOD)      ; a program may have changed the display mode
         RRCA
         CALL    C,VREST
