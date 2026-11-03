@@ -129,7 +129,7 @@ unchanged. `docs/services.md` gives a service's rules.
 | 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, as cold boot found it, 4 PICO9918 claimed (`HWBCLM`), 7 a word of the ROM's, `PICO?` or `GLCD?`, on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
 | 1 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
 | 2 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written; row 3 also clears `HWBWRD` | 10 | 44 |
-| 3 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 10 | 81 |
+| 3 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 12 | 81 |
 | 4 | `TONE` | `B` = half period in units of 16 T-states, `DE` = half cycles | A square wave on the speaker; each half cycle is 16 × B + 51 T-states | 4 | 29 |
 | 5 | `JOY` | — | `B` = joystick bits, 1 for each one pressed | 4 | 10 |
 | 6 | `KEYS` | `HL` → 8-byte buffer | The 8 matrix rows, 1 for each key down | 4 | 15 |

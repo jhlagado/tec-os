@@ -34,7 +34,7 @@ TNDIGIT	EQU	1		; HL -> 6 segment bytes, leftmost
 TNLCD	EQU	2		; B = row 0-3, HL -> 20 characters:
 				; the LCD row written. Stack 10
 TNVIDEO	EQU	3		; B = 1 claim the PICO9918, 0 give it
-				; back. TNENODV without one. Stack 10
+				; back. TNENODV without one. Stack 12
 TNTONE	EQU	4		; B = half period in 16 T-states,
 				; DE = half cycles: a square wave on
 				; the speaker. Stack 4
