@@ -1,0 +1,184 @@
+{
+  "kind": "original-system qualification, not TEC-OS parity",
+  "pins": {
+    "portable": "3beed4e60a10b3f68a68e8da0f3851946b2e96a4",
+    "debug": "2cb5cb6138ac7864b0c97ea32482f617de97da97",
+    "atom": "0.3.7",
+    "runtime": "0.3.3",
+    "atom-z80": {
+      "version": "0.3.7",
+      "treeSha256": "e20354b6d672c264e9b856d8970a59dd1225c329c9576bfab2535d879e52ddda",
+      "files": 104
+    },
+    "@jhlagado/debug80-runtime": {
+      "version": "0.3.3",
+      "treeSha256": "bb2beb62429ebcb73f62796c375d3c42c72aa732635c8b22f58eea1755859fa8",
+      "files": 219
+    }
+  },
+  "inputs": {
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:third_party/cpm22/cpm22.img": "7d2898386a77ff3c1e84b0141dad251a19be795befadb7dd8a9ba5965ba4654f",
+    "2cb5cb6138ac7864b0c97ea32482f617de97da97:apps/debug80-vscode/roms/cpm22/cpm22.img": "51b61f8c8d26a252890b08e78627ba82e1bd92b2dc4a640fd6b64201aa5cb6be",
+    "2cb5cb6138ac7864b0c97ea32482f617de97da97:third_party/cpm22/ccp.asm": "497aea556887cbae6f2fc54f24b9826fcd17950f1534f9e54d9b67de094949bc",
+    "2cb5cb6138ac7864b0c97ea32482f617de97da97:scripts/cpm22/convert-8080-to-z80.mjs": "d2cdc9253f155e2787319ce89d7ab1f83b251af9907aa40c751eb7d976aaae78",
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:test/fixtures/test-bios.asm": "e7186dc9b6bc0f67da03917a3c6f975de5fe5716c47ee85e3f856b814c091736",
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:test/support/portable-cpm-machine.ts": "4b1426a67c5096fd318144264d652ddcbec68ef1e1e4e7273b71445197b3456a",
+    "3beed4e60a10b3f68a68e8da0f3851946b2e96a4:tools/lib/cpm22-disk.mjs": "0406e70a2afccad5b7774b54bf267f4bb6cd7811ccdb848c0d49e0d9062a4bda"
+  },
+  "normalization": [],
+  "patches": [],
+  "geometry": {
+    "records": 2002,
+    "recordBytes": 128,
+    "tracks": 77,
+    "sectors": 26,
+    "systemRecords": 52
+  },
+  "addresses": {
+    "ccp": 58368,
+    "bdos": 60416,
+    "bios": 64000
+  },
+  "results": [
+    {
+      "name": "boot and TYPE",
+      "output": "TYPE HELLO.TXT\r\r\nHELLO\r\n\r\nA>"
+    },
+    {
+      "name": "REN persist/reboot TYPE then ERA",
+      "output": "TYPE OTHER.TXT\r\r\nHELLO\r\n\r\nA>ERA OTHER.TXT\r\r\nA>",
+      "disk": "e82672f56a7fd4a6bb3344b837c5c9a9f8822d1cd8651b19c436ad0e71455623"
+    },
+    {
+      "name": "USER and SAVE 0",
+      "output": "USER 5\r\r\nA>SAVE 0 EMPTY.DAT\r\r\nA>",
+      "userDrive": 80
+    },
+    {
+      "name": "transient FCBs tail stack and RET",
+      "state": {
+        "fcb1": [
+          2,
+          70,
+          79,
+          79,
+          63,
+          63,
+          63,
+          63,
+          63,
+          66,
+          65,
+          82,
+          0,
+          0,
+          0,
+          1
+        ],
+        "fcb2": [
+          0,
+          66,
+          65,
+          90,
+          32,
+          32,
+          32,
+          32,
+          32,
+          81,
+          85,
+          88,
+          0,
+          0,
+          0,
+          0
+        ],
+        "tail": [
+          19,
+          32,
+          66,
+          58,
+          70,
+          79,
+          79,
+          42,
+          46,
+          66,
+          65,
+          82,
+          32,
+          66,
+          65,
+          90,
+          46,
+          81,
+          85,
+          88,
+          0,
+          0
+        ],
+        "sp": 60329,
+        "dma": [
+          128,
+          0
+        ],
+        "returnWord": [
+          95,
+          235
+        ]
+      }
+    },
+    {
+      "name": "SUBMIT reverse order and deletion",
+      "output": "\r\nA>TYPE FIRST.TXT\r\nFIRST\r\n\r\nA>TYPE SECOND.TXT\r\nSECOND\r\n\r\nA>\r\r\nA>",
+      "disk": "cb24f26733a941da22a9ee26579c80eaf4a73da66784ca76d7d187eda2e6317a"
+    },
+    {
+      "name": "negative visible-content control",
+      "caught": true,
+      "output": "TYPE HELLO.TXT\r\r\nWRONG\r\n\r\nA>"
+    }
+  ],
+  "sourceReproduction": {
+    "status": "pass",
+    "initializedBytes": 1979,
+    "sha256": "1930f9e276ea79c4e118b3a3fc2178ca0c02732f5073ff6763d8abe1d6cd391c",
+    "emittedBytes": 2034,
+    "projectionSha256": "4abafbecce685b719c2e6995ec491196950535f13f2f99841a862e3c444604ee"
+  },
+  "executables": {
+    "ccp": "67fda0f138c3654a2fb15ae49acb2e663c848774779fa9822eda0f6d3a9b8da3",
+    "bdos": "258fe1b659a979fa9adab000fd2ee27b165349179f6b5f5b8b5266ea3385ac22",
+    "bios": "8c82ef5c4b986f5dd97f1ffb2d915525756f9b2450daa369bea276dc68116f70"
+  },
+  "runtimeEntry": {
+    "path": "@jhlagado/debug80-runtime/dist/z80/runtime.js",
+    "sha256": "e2118827a1bc0aecd677dd3b1898505f8bd7f765668aa69db01b840871116987"
+  },
+  "machineAdapter": {
+    "source": "4b1426a67c5096fd318144264d652ddcbec68ef1e1e4e7273b71445197b3456a",
+    "adapted": "aea428f4c27cc105b39e811d5b1fb1504d0a2d4da19f8c3a3f9ee9ec1babfdce",
+    "changes": [
+      "fixed default profile E400/EC00/FA00",
+      "runtime factory supplied from pinned dependency; no CPU/disk algorithm changes"
+    ]
+  },
+  "elapsedMs": 1246.973417,
+  "maxRssKiB": 86432,
+  "status": "pass",
+  "qualificationCommit": "f777e34",
+  "guard": {
+    "name": "ccp-oracle",
+    "command": "node ccp-oracle.mjs",
+    "limitMB": 800,
+    "heapMB": 384,
+    "event": "end",
+    "at": "2026-11-03T22:03:37.713Z",
+    "outcome": "exit 0",
+    "code": 0,
+    "peakMB": 80,
+    "processes": 2,
+    "seconds": 1.5,
+    "freePercentAtEnd": 35
+  }
+}

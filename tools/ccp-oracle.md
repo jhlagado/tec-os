@@ -57,3 +57,29 @@ contract, and new features need separate benefit and cost decisions.
 The result is host-emulator evidence. It does not prove hardware execution,
 full original feature coverage, or incumbent/candidate parity. Source assembly
 failure is reported as unresolved rather than silently accepted.
+
+## Qualified observation
+
+The harness at `f777e34` passed on 4 November 2026; the recorded result is
+`test/fixtures/ccp-oracle-qualification.json`. Guarded execution took 1.5
+seconds with 80 MB sampled peak across at most two processes. The process's
+own maximum RSS is retained separately in the result; sampling is not an
+exact high-water measurement.
+
+ATOM reproduced the 1,979 initialized CCP bytes exactly. Its full 2,034-byte
+materialization also includes reserved workspace; only the initialized
+extent is compared against the code hash, and the executable reference still
+uses the original 2,048-byte disk slot including its E5h padding.
+
+All six probe groups passed: boot/TYPE; REN persisted through export/reboot,
+TYPE and ERA; USER 5 and SAVE 0 with the directory entry checked; transient
+FCBs/tail/DMA/entry stack and return; two submitted records in reverse order
+with deletion; and the deliberately wrong TYPE content reaching a prompt but
+failing comparison. This is reference qualification, not a feature parity run.
+
+Two initial harness assumptions were corrected from actual execution and
+source: TYPE's framing includes a CRLF after the echoed CR, and page-zero
+user state is published after the prompt when the CCP reaches its input
+wait. No output normalization was added. The transient observation also
+retains the first FCB's record-count byte of 1; this is an observation to
+assess against TEC-OS, not a demand to retain incidental loader state.
