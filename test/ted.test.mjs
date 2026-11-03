@@ -3,7 +3,7 @@
 // of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
 // from the listing of Thorium 8fcc6ea's build (build/ted/ted.sym), whose
-// workspace f2d16a8 keeps:
+// workspace 676075a keeps:
 // the pin's hash holds them.
 
 import { readFileSync } from "node:fs";
@@ -22,7 +22,7 @@ const EDITED = "hello\nYsecond line\n";
 // Line 2 fails: 256 doesn't fit A. A ';' typed at the error's column makes it a comment.
 const BAD = ' ORG 100H\n LD A,256\n LD DE,MSG\n LD C,9\n CALL 5\n RET\nMSG: DB "HI",13,10,"$"\n';
 const FIXED = BAD.replace(" LD A,256", " ;LD A,256");
-const LIMIT = 4_000_000_000;
+const LIMIT = 600_000_000; // a step that hangs shows in seconds, not minutes
 
 const tedBytes = () => new Uint8Array(readFileSync(TED.path));
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -144,6 +144,31 @@ test("the round on B:, written behind, with the PICO9918", { skip: TED.skip || T
 
 test("the round on A: with a serial terminal", { skip: TED.skip || TAS.skip, timeout: 1_800_000 }, () => {
   round({ drive: "A", tms: false });
+});
+
+test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'s TAS", { skip: TED.skip || TAS.skip, timeout: 600_000 }, () => {
+  check(TED);
+  check(TAS);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TED.COM", tedBytes());
+  a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+  volume(image, "B").write("HELLO.ASM", Buffer.from(BAD), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  const status = () => m.screen()[23];
+  keys(m, "ted b:hello.asm\r", "TED on B:'s file", () => /TED .*HELLO\.ASM/.test(status()));
+  let mark = m.output.length;
+  keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
+  assert.equal(word(m, CURSOR), 12, "at the error's line and column");
+  keys(m, ";", "the fix", () => /L2 C3/.test(status()));
+  mark = m.output.length;
+  keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
+  keys(m, "\x11", "the prompt", () => m.text(mark).endsWith("A>"));
+  assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
+  const onB = volume(image, "B").list().map((f) => f.name);
+  assert.ok(onB.includes("HELLO.COM"), `HELLO.COM on B:: ${onB.join(" ")}`);
+  assert.equal(m.read(4) & 15, 0, "the current drive still A:");
+  assert.deepEqual(m.violations, []);
 });
 
 test("TED's text holds at least 33,052 bytes on the starter's files with no display, and 31,000 on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {

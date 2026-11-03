@@ -127,7 +127,9 @@ test("ERA *.* answered with - erases nothing, and the Return after it ends the a
   m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
   m.type("-\r"); // 2Dh folds to 0Dh: once it was taken for Return, and the real one reached the prompt
   m.expect(/A>$/, { from, maxCycles: 50_000_000 });
-  assert.doesNotMatch(m.text(from), /A>\r\nA>$/, "no second prompt from a stray Return");
+  const end = m.cycles + 20_000_000; // time for a stray Return to reach the prompt
+  m.runUntil(() => m.cycles >= end, 30_000_000, "a pause");
+  assert.equal((m.text(from).match(/A>/g) ?? []).length, 1, `one prompt after the answer: ${JSON.stringify(m.text(from))}`);
   assert.match(m.command("DIR B:"), /KEEP\.COM/);
 });
 

@@ -18,7 +18,7 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium f2d16a8, dist/TED.COM",
+      "source": "jhlagado/thorium 676075a, dist/TED.COM",
       "bytes": 11887,
       "sha256": "373d866bb667b26370933d494d3e0fca5af8f330090b085182ad450d952ac64a"
     },
