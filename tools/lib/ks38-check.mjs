@@ -9,6 +9,9 @@ import { join, relative, resolve } from "node:path";
 
 export const ROM_BASE = 0xc000;
 
+/** The opcodes of DJNZ and the JRs, whose operand is a displacement. */
+const JR = new Set([0x10, 0x18, 0x20, 0x28, 0x30, 0x38]);
+
 /** A built tree's image, its ROM labels by address, its constants and the end of what it uses. */
 export function built(dir) {
   const at = (f) => resolve(dir, "build/tecos", f);
@@ -69,8 +72,9 @@ const samePlace = (p, q) => p !== null && q !== null && p.offset === q.offset &&
  * BASE and MOVED label by label. Each group of labels at one address in BASE
  * is found in MOVED by its names; its bytes must match, but for a word that is
  * an address of the same place on both sides, the same offset from the same
- * label, and a byte that is the low or high half of one label's address on
- * both sides, as CP LOW(BENTRY) is. RENAMES maps BASE's names to MOVED's. Names missing or extra,
+ * label, a byte that is the low or high half of one label's address on both
+ * sides, as CP LOW(BENTRY) is, and a relative jump's displacement to the same
+ * place, when code moves between the jump and its target. RENAMES maps BASE's names to MOVED's. Names missing or extra,
  * constants that differ (an address in the ROM again taken by its place) and
  * the bytes used are reported too.
  */
@@ -84,6 +88,7 @@ export function compareLabels(base, moved, { renames = {} } = {}) {
   const differences = [];
   let masked = 0;
   let maskedBytes = 0;
+  let maskedJumps = 0;
   // A byte operand that is LOW or HIGH of a label's address: the pairs of
   // values, base and moved, that one label's moved address gives.
   const at = new Map(gm.flatMap((g) => g.names.map((n) => [n, g.start])));
@@ -119,6 +124,12 @@ export function compareLabels(base, moved, { renames = {} } = {}) {
         maskedBytes += 1;
         continue;
       }
+      // A relative jump's displacement, its opcode the same, to the same place on both sides.
+      const signed = (v) => (v < 128 ? v : v - 256);
+      if (i > 0 && a[i - 1] === b[i - 1] && JR.has(a[i - 1]) && samePlace(where.base(g.start + i + 1 + signed(a[i])), where.moved(m.start + i + 1 + signed(b[i])))) {
+        maskedJumps += 1;
+        continue;
+      }
       differences.push({ label, kind: "bytes", offset: i, base: a[i], moved: b[i] });
       break;
     }
@@ -130,7 +141,7 @@ export function compareLabels(base, moved, { renames = {} } = {}) {
   }
   const used = [base.end - ROM_BASE, moved.end - ROM_BASE];
   if (used[0] !== used[1]) differences.push({ label: "", kind: "used", base: used[0], moved: used[1] });
-  return { same: differences.length === 0, differences, groups: gb.length, masked, maskedBytes, used };
+  return { same: differences.length === 0, differences, groups: gb.length, masked, maskedBytes, maskedJumps, used };
 }
 
 /**

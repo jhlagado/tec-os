@@ -96,3 +96,19 @@ test("a byte that is the low or high half of one label's address on both sides i
   assert.equal(compareLabels(base, side(0xc030, 0x30, 0xc0)).maskedBytes, 1);
   assert.deepEqual(compareLabels(base, side(0xc030, 0x31, 0xc0)).differences.map((d) => [d.kind, d.label, d.offset]), [["bytes", "A", 1]]);
 });
+
+test("a relative jump whose displacement changes but whose target is the same label is taken by it, and one to elsewhere is not", () => {
+  // A: JR B; between them a 4-byte D that moves out, and C, moving in after B.
+  const side = (moved, disp) => {
+    const image = Buffer.alloc(0x40);
+    const labels = moved
+      ? [{ name: "A", address: 0xc010 }, { name: "B", address: 0xc012 }, { name: "D", address: 0xc014 }, { name: "C", address: 0xc018 }]
+      : [{ name: "A", address: 0xc010 }, { name: "D", address: 0xc012 }, { name: "B", address: 0xc016 }, { name: "C", address: 0xc018 }];
+    image.set([0x18, disp], 0x10);
+    return { image, labels, constants: new Map(), end: 0xc040 };
+  };
+  const base = side(false, 4);
+  assert.deepEqual(compareLabels(base, side(true, 0)).differences, []);
+  assert.equal(compareLabels(base, side(true, 0)).maskedJumps, 1);
+  assert.deepEqual(compareLabels(base, side(true, 2)).differences.map((d) => [d.kind, d.label]), [["bytes", "A"]]);
+});
