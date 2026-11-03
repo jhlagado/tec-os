@@ -84,6 +84,14 @@
         "CCP says so with no file, and runs a file of that name",
         "EXIT says so with no file, and runs a file of that name"
       ]
+    },
+    "PUTCHAR: BC not kept": {
+      "caught": true,
+      "by": [
+        "the built-ins' operands keep their output, BDOS calls and stack",
+        "REN takes one drive from either name, and a name on another drive is refused",
+        "ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)"
+      ]
     }
   },
   "mutantsAt": {
@@ -97,10 +105,11 @@
     "MNDBAD: a bad descriptor reported as unreadable": "7766643",
     "MNFILL: the length's high byte not copied": "7766643",
     "DRVLAB: the label a character short": "5f0f97a",
-    "PUTCHAR: HL not kept": "7766643"
+    "PUTCHAR: HL not kept": "7766643",
+    "PUTCHAR: BC not kept": "9772f1f"
   },
   "mutantScore": {
-    "caught": 11,
-    "total": 11
+    "caught": 12,
+    "total": 12
   }
 }
