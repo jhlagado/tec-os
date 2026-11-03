@@ -82,19 +82,23 @@ test("the names search finds old names as whole words in src/, and nothing in hi
   rmSync(dir, { recursive: true });
 });
 
-test("a byte that is the low or high half of one label's address on both sides is taken by its label, and another value is not", () => {
-  // A holds LD A,LOW(B) / LD A,HIGH(B) / RET; B and C, 16 bytes each, trade places.
-  const side = (b, low, high) => {
+test("a byte that is the low or high half of one label's address is taken by its label only in an unchanged LOW( or HIGH( line, and an unrelated byte that happens to equal one is not", () => {
+  // A holds LD A,<first> / LD A,HIGH(B) / RET; B and C, 16 bytes each, trade places.
+  const side = (b, low, first) => {
     const image = Buffer.alloc(0x40);
-    image.set([0x3e, low, 0x3e, high, 0xc9], 0x10);
+    image.set([0x3e, low, 0x3e, 0xc0, 0xc9], 0x10);
     image[b - 0xc000] = 0xc9;
     const c = b === 0xc020 ? 0xc030 : 0xc020;
-    return { image, labels: [{ name: "A", address: 0xc010 }, { name: "B", address: b }, { name: "C", address: c }], constants: new Map(), end: 0xc040 };
+    const segments = [{ start: 0xc010, end: 0xc012, text: `A:\tLD\tA,${first}\t; its low byte` }, { start: 0xc012, end: 0xc014, text: "\tLD\tA,HIGH(B)" }];
+    return { image, labels: [{ name: "A", address: 0xc010 }, { name: "B", address: b }, { name: "C", address: c }], constants: new Map(), segments, end: 0xc040 };
   };
-  const base = side(0xc020, 0x20, 0xc0);
-  assert.deepEqual(compareLabels(base, side(0xc030, 0x30, 0xc0)).differences, []);
-  assert.equal(compareLabels(base, side(0xc030, 0x30, 0xc0)).maskedBytes, 1);
-  assert.deepEqual(compareLabels(base, side(0xc030, 0x31, 0xc0)).differences.map((d) => [d.kind, d.label, d.offset]), [["bytes", "A", 1]]);
+  const base = side(0xc020, 0x20, "LOW(B)");
+  assert.deepEqual(compareLabels(base, side(0xc030, 0x30, "LOW(B)")).differences, []);
+  assert.equal(compareLabels(base, side(0xc030, 0x30, "LOW(B)")).maskedBytes, 1);
+  assert.deepEqual(compareLabels(base, side(0xc030, 0x31, "LOW(B)")).differences.map((d) => [d.kind, d.label, d.offset]), [["bytes", "A", 1]], "another value");
+  // An unrelated immediate, 20h, changed to 30h, which is B's moved low half: the line says so.
+  const plain = side(0xc020, 0x20, "$20");
+  assert.deepEqual(compareLabels(plain, side(0xc030, 0x30, "$30")).differences.map((d) => [d.kind, d.label, d.offset]), [["bytes", "A", 1]], "an unrelated byte");
 });
 
 test("a relative jump whose displacement changes but whose target is the same label is taken by it, and one to elsewhere is not", () => {

@@ -195,10 +195,11 @@ export class Machine {
     const after = (n) => sorted.find(([k, v]) => v > symbols.get(n) && !k.startsWith(n.slice(0, 4)))?.[1];
     // The cache's code runs from CTADR, past the BIOS entry's interrupt
     // discipline, which writes no EXPAND 1 and since KS38 is in bios.asm.
-    const writers = [[symbols.has("CTADR") ? "CTADR" : "CDI", "CEND"], ["SDRBLK"], ["SDWBLK"], ["MEMINIT"]]
+    const cache = symbols.has("CTADR") ? "CTADR" : "CDI";
+    const writers = [[cache, "CEND"], ["SDRBLK"], ["SDWBLK"], ["MEMINIT"]]
       .filter(([a]) => symbols.has(a))
       .map(([a, b]) => [symbols.get(a), b ? symbols.get(b) : after(a)]);
-    const [cdi, cend, mvcopy] = ["CDI", "CEND", "MVCOPY"].map((n) => symbols.get(n));
+    const [cdi, cend, mvcopy] = [cache, "CEND", "MVCOPY"].map((n) => symbols.get(n)); // cdi: the cache's start
     const mvEnd = symbols.has("MVOK") ? symbols.get("MVOK") + 2 : undefined; // MVCOPY ends at MVOK's RET
     let mvForCache = false;
     if (mvcopy !== undefined && cdi !== undefined)

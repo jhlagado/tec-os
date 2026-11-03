@@ -1,0 +1,6 @@
+{
+  "baseline": "7458352",
+  "renames": { "GLHOOK": "VIDHOOK", "GLHOFF": "VIDHOFF", "GLHF1": "VIDHF1", "DGLCD": "DGCARD" },
+  "markers": ["ROMDATA", "ROMCODE", "CODEEND"],
+  "oldNames": ["svc.asm", "hwsvc.asm", "glcd.asm", "diag.asm", "data.asm", "data2.asm", "data3.asm", "GLHOOK", "GLHOFF", "GLHF1", "DGLCD"]
+}
