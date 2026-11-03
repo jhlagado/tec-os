@@ -34,7 +34,17 @@ function run(r, resident, delta) {
   const before = [...Array(32).keys()].map((i) => m.read(ceiling + i));
   let peak = 0, setDmaPeak = 0, limits = 0, entries = 0;
   const hits = [], write = m.cpu.hardware.memWrite, step = m.step.bind(m);
-  m.cpu.hardware.memWrite = (a, v) => { if (a >= guard && a < base && v !== 0xa5) hits.push([m.pc, a, v]); write(a, v); };
+  const clearSites = [];
+  for (let a = m.sym("CPMINIT"); a < m.sym("CPMIG"); a++) if (m.read(a) === 0xed && m.read(a + 1) === 0xb0) clearSites.push(a);
+  assert.equal(clearSites.length, 1, "one known workspace-initialization LDIR");
+  m.cpu.hardware.memWrite = (a, v) => {
+    if (a >= guard && a < base) {
+      const clear = v === 0 && (m.pc === clearSites[0] || m.pc === clearSites[0] + 1);
+      const fill = v === 0xa5 && (m.pc === m.sym("CPMIG") || m.pc === m.sym("CPMIG") + 1);
+      if (!clear && !fill) hits.push([m.pc, a, v]);
+    }
+    write(a, v);
+  };
   m.step = () => {
     const sp = m.cpu.cpu.sp;
     if (sp >= guard && sp <= top) {
