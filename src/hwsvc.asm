@@ -100,7 +100,11 @@ HWSLC:  CALL    LCDWAIT
 ; no cursor, no page flips) and the program owns its registers and VRAM.
 ; Release, or warm boot: with PICO.SVC in, text mode, font and page come back
 ; and the screen is cleared; with none, the VDP is left as the program left it.
-HWSVID: LD      A,(CONDEV)
+HWSVID:	LD	A,B		; 0 or 1, and nothing else
+	CP	2
+	LD	A,TNEBAD
+	JP	NC,HWERR	; refused, nothing changed (A1)
+	LD	A,(CONDEV)
         AND     CDTMS
         LD      A,TNENODV
         JP      Z,HWERR
@@ -222,7 +226,11 @@ HWSPL:  LD      A,(VWID)
 
 ; ---- Clock ------------------------------------------------------------------------------
 ; Seven BCD bytes at HL: seconds, minutes, hours, date, month, weekday, year.
-HWSRTC: PUSH    BC
+HWSRTC:	LD	A,B		; 0 read or 1 set, and nothing else
+	CP	2
+	LD	A,TNEBAD
+	JP	NC,HWERR	; refused, the clock untouched (A1)
+	PUSH	BC
         CALL    RTCHAS
         POP     BC
         LD      A,TNENODV

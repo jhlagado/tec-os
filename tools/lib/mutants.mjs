@@ -568,5 +568,8 @@ export const MUTANTS_KS36A = [
   { name: "driver hook: a refusal's status 0", ...ks34(GLF, ["LD A,TNEBAD", "RET C", "XOR A"], ["LD A,0", "RET C", "XOR A"], HWT) },
   { name: "find: B not the least version", ...ks34(SVCF, ["SVFND: LD C,B", "LD B,0"], ["SVFND: LD C,0", "LD B,0"], ["test/svc.test.mjs", "test/pico.test.mjs"]) },
   { name: "list: one off", ...ks34(SVCF, ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C"], ["SVLST: LD C,B", "LD HL,(REGHEAD)", "INC C", "INC C"], ["test/svc.test.mjs"]) },
+  { name: "A1: VIDEO takes any B", ...ks34(HWF, ["HWSVID: LD A,B", "CP 2", "LD A,TNEBAD", "JP NC,HWERR"], ["HWSVID: LD A,B", "CP 2", "LD A,TNEBAD"], HWT) },
+  { name: "A1: RTC takes any B", ...ks34(HWF, ["HWSRTC: LD A,B", "CP 2", "LD A,TNEBAD", "JP NC,HWERR"], ["HWSRTC: LD A,B", "CP 2", "LD A,TNEBAD"], HWT) },
+  { name: "A1: the driver hook takes any B", ...ks34(GLF, ["SVDRV: LD A,B", "CP CMCRT"], ["SVDRV: LD A,B", "JR SVDRV1", "CP CMCRT"], HWT) },
   { name: "format: 3 accepted", ...ks34(SVCF, ["DMAGIC EQU SVCFMT*256+'D'"], ["DMAGIC EQU 3*256+'D'"], ["test/clients.test.mjs"]) },
 ];

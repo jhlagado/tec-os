@@ -34,7 +34,8 @@ TNDIGIT	EQU	1		; HL -> 6 segment bytes, leftmost
 TNLCD	EQU	2		; B = row 0-3, HL -> 20 characters:
 				; the LCD row written. Stack 10
 TNVIDEO	EQU	3		; B = 1 claim the PICO9918, 0 give it
-				; back. TNENODV without one. Stack 12
+				; back. TNEBAD for any other B,
+				; TNENODV without one. Stack 12
 TNTONE	EQU	4		; B = half period in 16 T-states,
 				; DE = half cycles: a square wave on
 				; the speaker. Stack 4
@@ -48,7 +49,8 @@ TNPUTAT	EQU	7		; D = row, E = column, B = count,
 				; clipped. TNENODV on serial or while
 				; the PICO9918 is claimed and is the
 				; console. Stack 22
-TNRTC	EQU	8		; B = 0 read, 1 set the 7 BCD bytes at
+TNRTC	EQU	8		; B = 0 read, 1 set (TNEBAD for any
+				; other B) the 7 BCD bytes at
 				; HL: seconds, minutes, hours, date,
 				; month, weekday, year. TNENODV
 				; without a clock. Stack 8
@@ -68,9 +70,11 @@ TNDESC	EQU	11		; E = container index, HL -> 32 bytes:
 TNDRVR	EQU	12		; B = 1 CRT: or 3 UC1:, HL = a video
 				; driver's table of eight words:
 				; -> HL = LINEBUF. TNEBAD if that mode
-				; has a table, or with no matrix
-				; keyboard. HL = 0 drops the mode's
-				; table. Stack 4
+				; has a table, with no matrix
+				; keyboard, or for any other B.
+				; HL = 0 drops the mode's table:
+				; A = 0, carry clear, HL destroyed.
+				; Stack 4
 TNFIND	EQU	13		; DE -> a record's name, 8 bytes
 				; padded with spaces, B = the least
 				; version: -> carry clear, HL = its

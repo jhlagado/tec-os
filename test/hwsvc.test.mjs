@@ -199,6 +199,22 @@ test("a volume or driver hook refusal is TNEBAD with carry, and nothing changes"
   assert.deepEqual(m.violations, []);
 });
 
+test("VIDEO, RTC and the driver hook refuse any other B with TNEBAD, and nothing changes (A1)", () => {
+  const m = boot(standardCard(), { tms: true, matrix: true });
+  const vectors = () => Array.from({ length: 8 }, (_, i) => m.read(m.sym("PIVEC") - 2 + i));
+  const claim = () => m.read(m.sym("VCLAIM"));
+  const before = [vectors(), claim()];
+  for (const b of [2, 3, 0x80, 0xff]) {
+    fails(svc(m, ABI.TNVIDEO, { b }), ABI.TNEBAD);
+    const [, ports] = outs(m, () => fails(svc(m, ABI.TNRTC, { b, hl: BUF }), ABI.TNEBAD));
+    assert.deepEqual(ports.filter(([p]) => p === 0xfc), [], `RTC with B = ${b} touches no clock`);
+  }
+  for (const b of [0, 2, 4, 5, 0xff]) fails(svc(m, ABI.TNDRVR, { b, hl: 0x3000 }), ABI.TNEBAD);
+  fails(svc(m, ABI.TNDRVR, { b: 2, hl: 0 }), ABI.TNEBAD);
+  assert.deepEqual([vectors(), claim()], before, "no word beside PIVEC written, no claim taken");
+  assert.deepEqual(m.violations, []);
+});
+
 test("hardware services: a claim stops PUTAT only while the PICO9918 is the console", () => {
   const image = standardCard();
   volume(image, "A").write("GLCD.SVC", GLCD_SVC);
