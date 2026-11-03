@@ -109,6 +109,32 @@ export async function mutate(dir, work, set) {
   return { mutants: out, mutantScore: { caught, total: mutants.length } };
 }
 
+/**
+ * The test names that fail on DIR itself, unmutated, for FILES and ONLY: a
+ * test failing there catches nothing (KE-162). Each set is run once.
+ */
+const unmutated = new Map();
+function failingUnmutated(dir, work, files, only) {
+  const key = JSON.stringify([dir, files, only ?? null]);
+  if (!unmutated.has(key)) unmutated.set(key, failures(dir, resolve(work, `unmutated-${unmutated.size}.jsonl`), files, only));
+  return unmutated.get(key);
+}
+
+/** Run FILES' tests (those named ONLY) in tree DIR: the names of the failures, as named() gives them. */
+async function failures(dir, traceFile, files, only) {
+  let tap;
+  rmSync(traceFile, { force: true });
+  try {
+    const pattern = only ? [`--test-name-pattern=${only}`] : [];
+    tap = await node(dir, ["--test", "--test-concurrency=1", "--test-reporter=tap", ...pattern, ...files], { env: { TEST_TRACE: traceFile } });
+  } catch (e) {
+    tap = e.message;
+  }
+  const where = (n) => (isAbsolute(n) ? relative(dir, n) : n);
+  const traced = existsSync(traceFile) ? readFileSync(traceFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
+  return [...tap.matchAll(/^\s*not ok \d+ - (.*?)(?: # .*)?$/gm)].flatMap((x) => named(where(x[1]), files, traced.map((t) => ({ ...t, file: where(t.file) }))));
+}
+
 async function one(dir, work, m, i) {
   const copy = copyTree(dir, work, `mutant-${i}`);
   for (const e of m.edits) apply(copy, e);
@@ -125,21 +151,12 @@ async function one(dir, work, m, i) {
     writeFileSync(resolve(copy, e.file), (await assembleProgram(resolve(copy, e.rebuild), { base: 0x100 })).bytes);
   }
   if (!m.tests.length) return { caught: false, by: [] };
-  let tap;
-  const traceFile = resolve(copy, "test-trace.jsonl");
-  rmSync(traceFile, { force: true });
-  try {
-    const only = m.only ? [`--test-name-pattern=${m.only}`] : [];
-    tap = await node(copy, ["--test", "--test-concurrency=1", "--test-reporter=tap", ...only, ...m.tests], { env: { TEST_TRACE: traceFile } });
-  } catch (e) {
-    tap = e.message;
-  }
-  const where = (n) => (isAbsolute(n) ? relative(copy, n) : n);
-  const traced = existsSync(traceFile) ? readFileSync(traceFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l)) : [];
-  const failed = [...tap.matchAll(/^\s*not ok \d+ - (.*?)(?: # .*)?$/gm)].flatMap((x) => named(where(x[1]), m.tests, traced.map((t) => ({ ...t, file: where(t.file) }))));
-  const by = [...new Set(failed)].slice(0, 3);
-  log(`mutant ${m.name}: ${by.length ? "caught" : "survived"}`);
-  return { caught: by.length > 0, by };
+  const failed = await failures(copy, resolve(copy, "test-trace.jsonl"), m.tests, m.only);
+  const already = new Set(await failingUnmutated(dir, work, m.tests, m.only));
+  const by = [...new Set(failed.filter((n) => !already.has(n)))].slice(0, 3);
+  const notCredited = [...new Set(failed.filter((n) => already.has(n)))];
+  log(`mutant ${m.name}: ${by.length ? "caught" : "survived"}${notCredited.length ? `; ${notCredited.length} failing unmutated, not credited` : ""}`);
+  return { caught: by.length > 0, by, ...(notCredited.length ? { notCredited } : {}) };
 }
 
 /**

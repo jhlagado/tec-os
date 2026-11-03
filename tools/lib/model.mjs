@@ -68,7 +68,9 @@ export function node(dir, args, opts) {
 
 function run(dir, args, { env = {}, quiet = true } = {}) {
   return new Promise((ok, fail) => {
-    const child = spawn(process.execPath, args, { cwd: dir, env: { ...process.env, ...env }, stdio: ["ignore", "pipe", "pipe"] });
+    // A child node --test under a test runner reports to it, not as TAP, unless the runner's context is dropped.
+    const { NODE_TEST_CONTEXT, ...outer } = process.env;
+    const child = spawn(process.execPath, args, { cwd: dir, env: { ...outer, ...env }, stdio: ["ignore", "pipe", "pipe"] });
     let out = "";
     let err = "";
     child.stdout.on("data", (d) => (out += d));
