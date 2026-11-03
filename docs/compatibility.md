@@ -116,7 +116,8 @@ says how.
 
 A command runs `NAME.COM` from the current drive. When there is none there, no
 drive was named and the current drive isn't A:, it runs A:'s `NAME.COM` (KD-169),
-so `TED` and `TAS` run from B:; the current drive stays as it was. `B:NAME`
+from the current user and, if it isn't there, from user 0, as CP/M 3's search
+looks, so `TED` and `TAS` run from B:; the current drive stays as it was. `B:NAME`
 looks on B: only. A `.PRL` file is not run: it is a `.COM` with a 256-byte header,
 and none is on the starter card or written by the tools.
 

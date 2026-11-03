@@ -291,7 +291,7 @@ CMDCOM: LD      A,'C'
 	AND	$0F
 	JR	Z,BADCMD
 	INC	(HL)		; the FCB's drive 1, A:
-	CALL	LOADCOM
+	CALL	LOADA		; its current user, then user 0
 	JR	C,BADCMD
 CMDRUN: CALL    PREPPAGE
 	LD	A,(CMDFCB)	; the drive the program came from, as
@@ -357,6 +357,34 @@ ERRGO:  LD      HL,RCFAIL
 PRTGO:
         CALL    PUTSTR
         JP      STARTED
+
+; LOADA: LOADCOM on A:, in the current user and then, if it isn't there and
+; the user isn't 0, in user 0, as CP/M 3's search looks (A7). The user is
+; put back before it returns. Carry as LOADCOM's: Z for not found.
+LOADA:	CALL	LOADCOM
+	RET	NC		; loaded in the current user
+	RET	NZ		; there, but it would not load
+	LD	A,(PZDU)	; the user, in the high nibble
+	AND	$F0
+	SCF
+	RET	Z		; user 0 already: not found
+	PUSH	AF
+	LD	E,0		; BDOS function 32: user 0
+	LD	C,32
+	CALL	BDOS
+	CALL	LOADCOM
+	POP	BC		; B = the user in the high nibble
+	PUSH	AF		; LOADCOM's result, across the restore
+	LD	A,B
+	RRCA			; the user back to bits 0-3
+	RRCA
+	RRCA
+	RRCA
+	LD	E,A		; and back into the BDOS
+	LD	C,32
+	CALL	BDOS
+	POP	AF
+	RET
 
 ; Load an ordinary COM image through the public BDOS FCB/DMA interface.
 ; Carry reports missing, unreadable, or oversized input.

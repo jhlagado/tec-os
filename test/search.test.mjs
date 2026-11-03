@@ -68,3 +68,22 @@ test("0050h is the drive a program came from: a typed B:NAME, a plain name, the 
   assert.match(m.text(from), /B:SHOWB\r\n2[\s\S]*SHOW\r\n0/, "a chained B:NAME piece, and the piece after it");
   assert.deepEqual(m.violations, []);
 });
+
+test("under user 3, the search looks in A:'s user 3, then A:'s user 0, and puts the user back (A7)", () => {
+  const image = standardCard();
+  volume(image, "A").write("ZERO.COM", SAY("A'S USER 0"));
+  volume(image, "A").write("BOTH.COM", SAY("A'S USER 0 BOTH"));
+  volume(image, "A").write("BOTH.COM", SAY("A'S USER 3 BOTH"), { user: 3 });
+  volume(image, "A").write("ONLY3.COM", SAY("A'S USER 3"), { user: 3 });
+  const m = boot(image);
+  m.command("USER 3");
+  m.command("B:");
+  assert.match(m.command("ONLY3"), /^A'S USER 3\r$/m, "A:'s user 3 first");
+  assert.match(m.command("BOTH"), /^A'S USER 3 BOTH\r$/m, "the current user before user 0");
+  assert.match(m.command("ZERO"), /^A'S USER 0\r$/m, "then A:'s user 0");
+  assert.match(m.command("NONE"), /^NONE\?\r$/m);
+  assert.equal(m.read(4), 0x31, "still user 3 on B:");
+  m.command("USER 0");
+  assert.match(m.command("ONLY3"), /^ONLY3\?\r$/m, "user 0 doesn't look in user 3");
+  assert.deepEqual(m.violations, []);
+});
