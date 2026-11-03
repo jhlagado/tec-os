@@ -115,6 +115,7 @@ const variants = {
   incumbent() {}, parser, listing, dispatch,
   combined(dir) { parser(dir); listing(dir); dispatch(dir); },
   "mutant-parser-overflow"(dir) { parser(dir); edit(dir, "PLEND:\n        SCF\n        RET", "PLEND:\n        OR      A\n        RET"); },
+  "mutant-parser-tail"(dir) { parser(dir); edit(dir, "        LD      B,24", "        LD      B,20"); },
 };
 
 function corpus() {
@@ -218,7 +219,7 @@ for (const [name, change] of Object.entries(variants)) {
     assert.deepEqual(semantics(session), semantics(baselineSession), `${name}: command session changed`);
     result.session = { equivalent: true, peak: session.peak, cycles: session.rows.map((row) => ({ command: row.command, cycles: row.cycles })) };
     assert.equal(mismatches.length, 0, `${name}: parser mismatch`);
-  } else assert.ok(mismatches.length > 0, "overflow mutant must be distinguished");
+  } else assert.ok(mismatches.length > 0, `${name} must be distinguished`);
   result.delta = result.rom - (figures.variants.incumbent?.rom ?? result.rom);
   figures.variants[name] = result;
   writeFileSync(outPath, JSON.stringify(figures, null, 2) + "\n");
