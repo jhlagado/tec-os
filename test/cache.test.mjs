@@ -520,3 +520,30 @@ test("function 47's warm boot puts the lines written behind on the card before t
   m.step = step;
   assert.equal(onCard, true, "the records were on the card when the CCP began to load SAY");
 });
+
+test("a flush tries every line: the first line's write failing, the next still reaches the card, and warm boot says Write lost once (KS36b)", async () => {
+  const image = card();
+  const m = start(image);
+  // B:R.DAT, eight records not closed: a block of C3h and one of D4h, two dirty lines.
+  [2, ...Buffer.from("R       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 22, 0x5c);
+  for (const v of [0xc3, 0xd4])
+    for (let r = 0; r < 4; r += 1) {
+      for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, v);
+      bdos(m, 26, 0x2000);
+      bdos(m, 21, 0x5c);
+    }
+  failing(m, (block, data) => data.every((v) => v === 0xc3) && "fail");
+  m.mark = m.output.length;
+  m.cpu.cpu.pc = 0;
+  m.runUntil(() => m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
+  assert.equal(runOf(image, 0xc3), -1, "the failed line never reached the card");
+  assert.notEqual(runOf(image, 0xd4), -1, "the next line did");
+  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1);
+});
+
+test("the cold mount reads the table through a cache line, and leaves the TPA as it found it (KS36b)", () => {
+  const m = boot(standardCard(), { ramFill: 0x76 });
+  const tpa = Array.from({ length: 0x600 }, (_, i) => m.read(0x200 + i));
+  assert.ok(tpa.every((v) => v === 0x76), "0200h-07FFh untouched by the mount");
+});
