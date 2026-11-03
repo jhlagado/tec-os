@@ -85,7 +85,10 @@ try {
  out+=command(m,'ERA OTHER.TXT');assert.throws(()=>logical(m.exportDisk(),'OTHER.TXT'));
  report.results.push({name:'REN persist/reboot TYPE then ERA',output:out,disk:sha(m.exportDisk())});
  out=command(m,'USER 5');out+=command(m,'SAVE 0 EMPTY.DAT');
+ // Prompt output precedes readcom/saveuser. Observe the actual next input wait.
+ for(let n=0;m.cpuState().pc!==biosSymbols.CONIN;n++){assert.ok(n<1_000_000,'next input wait');m.step();}
  assert.equal(m.readRam(4,1)[0]>>>4,5);
+ const saved=m.exportDisk();assert.ok(Array.from({length:64},(_,i)=>saved.subarray(6656+i*32,6656+(i+1)*32)).some(e=>e[0]===5&&Buffer.from(e.subarray(1,12)).toString()==='EMPTY   DAT'&&e[15]===0),'SAVE0 directory entry in user5');
  report.results.push({name:'USER and SAVE 0',output:out,userDrive:m.readRam(4,1)[0]});
  // Observe transient state before RET can overwrite it.
  image=install(fresh(),'PROBE.COM',await assemble('probe.asm','ORG $100\n RET\n',0x100));
