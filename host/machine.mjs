@@ -193,7 +193,9 @@ export class Machine {
     // SDRBLK's).
     const sorted = [...symbols.entries()].filter(([, v]) => v >= 0xc000).sort((x, y) => x[1] - y[1]);
     const after = (n) => sorted.find(([k, v]) => v > symbols.get(n) && !k.startsWith(n.slice(0, 4)))?.[1];
-    const writers = [["CDI", "CEND"], ["SDRBLK"], ["SDWBLK"], ["MEMINIT"]]
+    // The cache's code runs from CTADR, past the BIOS entry's interrupt
+    // discipline, which writes no EXPAND 1 and since KS38 is in bios.asm.
+    const writers = [[symbols.has("CTADR") ? "CTADR" : "CDI", "CEND"], ["SDRBLK"], ["SDWBLK"], ["MEMINIT"]]
       .filter(([a]) => symbols.has(a))
       .map(([a, b]) => [symbols.get(a), b ? symbols.get(b) : after(a)]);
     const [cdi, cend, mvcopy] = ["CDI", "CEND", "MVCOPY"].map((n) => symbols.get(n));

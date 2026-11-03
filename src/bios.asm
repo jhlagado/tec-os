@@ -298,3 +298,29 @@ BWGET:  LD      A,(DSKCUR)
 BWOK:   CALL    CREFR           ; the block's line, if it has one, refreshed
         XOR     A
         RET
+
+; P/V = the interrupt state. The second read is for an NMOS Z80, which can
+; clear P/V if an interrupt is accepted during the first. Destroys A.
+IFFGET: LD      A,I
+        RET     PE
+        LD      A,I
+        RET
+
+; Interrupts off for a BIOS entry, their state kept in CIFF (CDI); back as
+; they were, keeping A and the flags (CEI). CDI destroys HL.
+CDI:    CALL    IFFGET
+        DI
+        PUSH    AF
+        POP     HL
+        LD      (CIFF),HL       ; L: the flags, P/V in bit 2
+        RET
+BRET:   LD      A,0             ; BIOS READ and WRITE: A from Z or NZ, and
+        JR      Z,CEI           ; interrupts as they were
+        INC     A
+CEI:    PUSH    AF
+        LD      A,(CIFF)
+        AND     4
+        JR      Z,CEI1
+        EI
+CEI1:   POP     AF
+        RET
