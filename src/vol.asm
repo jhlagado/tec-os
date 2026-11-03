@@ -213,6 +213,22 @@ MNDESC: LD      A,(MNTI)
         CALL    CMP32
         LD      A,MERANGE
         JR      C,MNTERR
+	LD	A,(SDBYTE)	; a standard card addresses bytes: its
+	OR	A		; last block is 7FFFFFh (KE-158)
+	JR	Z,MNSTOK	; block addressing: no such bound
+	LD	A,(IY+3)	; the end, exclusive, at most 800000h
+	OR	A
+	JR	NZ,MNSTX
+	LD	A,(IY+2)
+	CP	$80
+	JR	C,MNSTOK	; below 800000h
+	JR	NZ,MNSTX	; above it
+	LD	A,(IY+1)	; 80xxxxh: only 800000h itself
+	OR	(IY+0)
+	JR	Z,MNSTOK
+MNSTX:	LD	A,MERANGE	; a block the card can't name
+	JP	MNTERR
+MNSTOK:
         LD      A,(IX+DMOUNT)   ; drive letter: none, or A-D, once
         CP      DUNMNT
         JR      Z,MNNEXT

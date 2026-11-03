@@ -26,24 +26,22 @@ function farCard(start) {
   return img;
 }
 
-test("a standard card's volume at block 800800h: SAVE and DIR to it are refused, and no block of the card changes (KE-151)", () => {
-  const image = farCard(0x800800);
-  const before = image.slice();
-  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, highCapacity: false });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
-  for (const line of ["SAVE 1 B:X.COM", "DIR B:"]) {
-    const from = m.output.length;
-    m.type(`${line}\r`);
-    m.expect(/Bdos Err On B: Bad Sector/, { from, maxCycles: 200_000_000 });
-    m.type(" "); // CP/M's error waits for a key, then warm boots
-    m.expect(/\r\nA>$/, { from, maxCycles: 200_000_000 });
+/** Cold boot on CARD: the mount's error, two hex digits, or "booted". */
+function mountOf(card, highCapacity) {
+  const m = new Machine({ ...romFor(), sdImage: card, clock: TEST_CLOCK, highCapacity });
+  const out = m.expect(/R retry, H header> $|A>$/, { from: 0, maxCycles: 200_000_000 });
+  return /A>$/.test(out) ? "booted" : out.match(/error ([0-9A-F]{2})/)?.[1];
+}
+
+test("a standard card's volume past block 7FFFFFh is refused at mount, error 27, and the card is left as it was (KE-151, KE-158)", () => {
+  for (const [start, what] of [[0x800800, "wholly past the bound"], [0x7ff000, "straddling it"]]) {
+    const image = farCard(start);
+    const before = image.slice();
+    assert.equal(mountOf(image, false), "27", `a volume ${what}: MERANGE`);
+    assert.deepEqual(image, before, `${what}: the card byte for byte`);
   }
-  assert.equal(m.read(m.sym("SDERR")), 9, "SDERNG: no command for a block the card can't name");
-  const changed = [];
-  for (let i = 0; i < before.length; i += 1) if (image[i] !== before[i] && changed.length < 4) changed.push(i.toString(16));
-  assert.deepEqual(changed, [], "the card byte for byte, the blocks below 800h above all");
-  assert.deepEqual(m.violations, []);
+  assert.equal(mountOf(farCard(0x800000 - 0x4000), false), "booted", "a volume ending at 800000h itself mounts");
+  assert.equal(mountOf(farCard(0x7ff000), true), "booted", "on a high-capacity card the same volume mounts");
 });
 
 test("on a standard card, LBAARG names block 7FFFFFh and refuses 800000h: the bound is exact", () => {
