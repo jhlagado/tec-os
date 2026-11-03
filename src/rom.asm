@@ -24,7 +24,6 @@
 %INCLUDE "cpm/ccp.asm"
 %INCLUDE "cpm/bdos.asm"
 %INCLUDE "services.asm"
-%INCLUDE "glcd.asm"
 %INCLUDE "cache.asm"
 %INCLUDE "history.asm"
 %INCLUDE "loader.asm"
