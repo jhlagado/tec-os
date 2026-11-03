@@ -44,3 +44,17 @@ CONSET:	CALL	WRDCLR		; a display has come: the word is false
 	LD	A,$FF		; CONACT no field: CONSEL acts
 	LD	(CONACT),A
 	JP	CONSEL
+
+; Clear the ROM's word from row 3 if it is still there, and otherwise leave the
+; row as a program left it. Keeps B, and carry clear if it came clear. Destroys
+; AF, HL.
+WRDCLR:	LD	HL,CONDEV
+	BIT	7,(HL)		; CDWRD
+	RET	Z		; the row is a program's, or empty
+	RES	7,(HL)
+	PUSH	BC		; the console's mode, across the LCD
+	LD	HL,PICCLR	; blanks over the word
+	CALL	LCD3
+	POP	BC
+	OR	A		; LCD3 leaves carry set
+	RET
