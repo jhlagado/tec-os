@@ -1,7 +1,8 @@
 # CCP inline BDOS call model
 
-This is a model against production snapshot `304d268`, not a second production
-landing. The archived incumbent has 14,577 used ROM bytes and a 2,452-byte CCP.
+This tool models alternatives against production snapshot `304d268`. The
+selected alternative was promoted and qualified at `420d8f2`; see
+[the integration handoff](../docs/ccp-integration.md). The archived incumbent has 14,577 used ROM bytes and a 2,452-byte CCP.
 The first model measured 14,562 and 2,437 respectively: 15 additional bytes
 saved, with RAM 396 and starter TPA 46,869 unchanged. Its ROM SHA-256 is
 `43c4b99c57860a89f703197ac2a90962aa798d1fdc0627dd530ee424521c11b2`.
@@ -43,7 +44,8 @@ error exit to check frame abandonment, not the SD transport's fault handling.
 ## Selected model and remaining opportunities
 
 The full model/proof run at `07daed7` selected the shared final JP: a 17-byte
-helper, 16 net ROM bytes saved. Used ROM is 14,561, CCP 2,436, SHA-256
+helper, 16 net ROM bytes saved. Used ROM is 14,561; the CCP extent is 2,436
+(2,414 instruction bytes plus 22 inline immutable bytes), SHA-256
 `ab2d0c6b8a8d5d36ad3c51af3ef22cfb166890cc412f51bb9352b7a80cb27ed6`.
 Its source/destination dispatch costs 91/96 T-states: ordinary calls add
 64/69 and the former terminal path adds 81. The small COPY session adds
@@ -58,8 +60,9 @@ bytes; loader peak remains 12. Six pager pairs and five DIR cases/controls
 pass. The 79 focused tests pass with no failures or skips; the broad stack
 workload remains CCP 22/30, BDOS 32/54 and BIOS 16/38. The guarded run took
 233.5 seconds at 352 MB peak. Evidence is in the Origo SOT under
-`studies/p3-tec-os/evidence/ccp-calls/model/`. These are model results, pending
-production promotion and qualification under a registered second gate.
+`studies/p3-tec-os/evidence/ccp-calls/model/`. These are model results. The promoted source subsequently passed all 632
+strict production tests, media/web builds and a byte-identical repeat build
+at `420d8f2` under KG-CCP2.
 
 The remaining bounded alternatives have explicit costs:
 
