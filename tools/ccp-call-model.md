@@ -39,3 +39,42 @@ Then run chain, history, startup, COPY, search and stack tests from the
 the production stage gate separately requires qualification at its selected
 source tip. The loader Bad Sector injection enters the real read handler's
 error exit to check frame abandonment, not the SD transport's fault handling.
+
+## Selected model and remaining opportunities
+
+The full model/proof run at `07daed7` selected the shared final JP: a 17-byte
+helper, 16 net ROM bytes saved. Used ROM is 14,561, CCP 2,436, SHA-256
+`ab2d0c6b8a8d5d36ad3c51af3ef22cfb166890cc412f51bb9352b7a80cb27ed6`.
+Its source/destination dispatch costs 91/96 T-states: ordinary calls add
+64/69 and the former terminal path adds 81. The small COPY session adds
+468 T-states; the worst tested ceiling-sized load adds 30,081 (7.52 ms at
+4 MHz). The 18-byte alternative remains in the model and its figures.
+
+All 2,972 parser observations, 33 complete sessions and startup, actual BDOS
+return-register/flag traces, and three actual startup mutants pass. Eight
+loader pairs include EOF, ceiling refusal and a Bad Sector exit through warm
+boot, with and without a resident. READSEQ entry use rises from 10 to 12 stack
+bytes; loader peak remains 12. Six pager pairs and five DIR cases/controls
+pass. The 79 focused tests pass with no failures or skips; the broad stack
+workload remains CCP 22/30, BDOS 32/54 and BIOS 16/38. The guarded run took
+233.5 seconds at 352 MB peak. Evidence is in the Origo SOT under
+`studies/p3-tec-os/evidence/ccp-calls/model/`. These are model results, pending
+production promotion and qualification under a registered second gate.
+
+The remaining bounded alternatives have explicit costs:
+
+- A common command-source provider costs 35 bytes against the existing 26,
+  nine bytes larger with another frame. Chain echo is already shared in
+  17 bytes. Reject for this size task.
+- A generic read/write record helper saves only one byte while adding a
+  frame and cycles on the write path. Reject that trade.
+- POP HL / LD C,(HL) / INC HL / PUSH HL saves 17 T-states against the exchange
+  sequence but saves no bytes and relaxes the preserved-HL contract. Retain
+  the stronger reviewed contract.
+- Selecting the destination by changing E alone is invalid: CMDFCB at BCEBh
+  and RENFCB at BD0Fh lie on different pages.
+
+DIRANY and DIRENTP leave three reserved RAM bytes unused; integration can
+consider them in workspace packing. They are not counted as ROM savings.
+Previous-command recall remains Ctrl-W/Ctrl-N and passes the focused history
+suite. Batch support is an optional separate feature decision.
