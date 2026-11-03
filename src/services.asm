@@ -3,8 +3,8 @@
 ; arguments, results, carry and stack. Returns A = 0 with Z and carry clear on
 ; success, or A = a status with carry. The hardware services, 0 to 8, are here;
 ; the volumes' are vol.asm's, the driver hook glcd.asm's and the registry's
-; svc.asm's. Any program may call them: they run on the caller's stack and keep
-; their state in the resident workspace.
+; loader.asm's. Any program may call them: they run on the caller's stack and
+; keep their state in the resident workspace.
 ;
 ; The hardware services are the calls that would otherwise fight the OS for a
 ; port: the digit and speaker port (01h) also carries the serial transmit line,

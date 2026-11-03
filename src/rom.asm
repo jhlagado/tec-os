@@ -28,5 +28,5 @@
 %INCLUDE "glcd.asm"
 %INCLUDE "cache.asm"
 %INCLUDE "history.asm"
-%INCLUDE "svc.asm"
+%INCLUDE "loader.asm"
 %INCLUDE "end.asm"
