@@ -68,9 +68,11 @@ no journal, so power loss or reset can leave:
   allocation vector rebuilt at the next login. Blocks the file already had and
   were written in place hold the new records: the file reads back mixed, old
   where nothing was written and new where it was, with its old length.
-- **On a volume written behind, before a directory write.** Every change
-  since the last directory write, warm boot or `MOUNT` is still in the cache
-  and is lost; the card holds the volume as it was then.
+- **On a volume written behind, before a directory write.** The changes since
+  the last directory write, warm boot or `MOUNT` that the cache still holds
+  unwritten are lost. Some may already be on the card, written when their
+  lines were taken for other blocks, so the card can hold a mix of old and new
+  blocks; as above, nothing is rolled back.
 - **On a volume written behind, during a flush.** The changed data blocks
   reach the card one by one in line order and the directory block last, so a
   cut leaves some new data blocks that no entry names, as above, and never a

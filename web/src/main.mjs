@@ -107,6 +107,7 @@ setInterval(async () => {
  * card dirty, and the next tick saves the newest copy (D3).
  */
 async function save(image = state.card) {
+  if (state.noSave) return false; // the stored record couldn't be read: kept as it is
   if (state.saving) {
     state.cardDirty = true;
     return false;
@@ -142,6 +143,7 @@ async function save(image = state.card) {
  * and drop the copied files (KE-163). A failure throws, for "Not copied".
  */
 async function importSave(staged) {
+  if (state.noSave) return; // the copy stays in memory only, as the card does
   while (state.saving) await state.saveDone;
   state.saving = true;
   let done;
@@ -531,7 +533,11 @@ function refreshCard() {
   if (!info) return;
   $("cardinfo").textContent =
     info.volumes.map((v) => `${v.drive ?? "-"}: ${v.label} (${v.g.name}${v.readOnly ? ", read-only" : ""})`).join("   ") +
-    (state.unsaved ? "   Card not saved in this browser: it is kept in memory and saved again shortly." : "");
+    (state.noSave
+      ? "   The saved card couldn't be read, so this card isn't saved; reload to try again."
+      : state.unsaved
+        ? "   Card not saved in this browser: it is kept in memory and saved again shortly."
+        : "");
   const select = $("drive");
   const current = select.value;
   select.innerHTML = "";
@@ -665,12 +671,17 @@ setInterval(refreshFiles, 5000);
 // ---- Start ---------------------------------------------------------------------------
 
 (async () => {
-  state.card = (await loadCard()) ?? (await starterCard());
+  // A record that won't read, or won't parse, is left as it is: a starter card
+  // runs, unsaved, and nothing is saved until a reload reads the record (KE-164).
   try {
-    parseContainer(state.card);
+    state.card = await loadCard();
+    if (state.card) parseContainer(state.card);
   } catch {
-    state.card = await starterCard();
+    state.card = null;
+    state.noSave = true;
+    state.unsaved = true;
   }
+  state.card ??= await starterCard();
   await save();
   await powerOn();
   refreshCard();

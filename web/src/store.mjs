@@ -1,6 +1,7 @@
-// The card image, kept in IndexedDB so it survives reloads. A load that fails
-// gives no card, and the page makes one. A save that fails throws, so the page
-// keeps the card marked unsaved and says so (KE-153).
+// The card image, kept in IndexedDB so it survives reloads. A load finds no
+// card (null), and the page makes one, or fails and throws, and the page saves
+// nothing over the record it couldn't read (KE-164). A save that fails throws,
+// so the page keeps the card marked unsaved and says so (KE-153).
 
 const DB = "tecos";
 const STORE = "cards";
@@ -32,7 +33,7 @@ export async function loadCard() {
     });
   } catch (e) {
     warn(e);
-    return null;
+    throw e;
   } finally {
     db?.close();
   }
