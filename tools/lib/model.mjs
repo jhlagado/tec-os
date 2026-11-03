@@ -539,12 +539,14 @@ export async function inTree(dir) {
       const m = t.machine(container.createContainer(vols));
       t.prompt(m, 0);
       if (selected) {
-        const at = m.sym("ABIVOL");
+        // ABI 4's mount entry, or ABI 5's TNMOUNT through ABICALL (A9).
+        const abi5 = m.symbols.get("ABIVOL") === undefined;
+        const at = m.sym(abi5 ? "ABICALL" : "ABIVOL");
         [0xcd, at & 0xff, at >> 8, 0x18, 0xfe].forEach((v, i) => m.write(0x60 + i, v));
         const cpu = m.cpu.cpu;
         const saved = Object.fromEntries(["a", "b", "c", "d", "e", "h", "l", "sp", "pc"].map((r) => [r, cpu[r]]));
         const flags = { ...cpu.flags };
-        Object.assign(cpu, { a: 0, c: 0, e: 17, sp: 0x0100, pc: 0x60 });
+        Object.assign(cpu, abi5 ? { a: 0, b: 0, c: t.fx.ABI.TNMOUNT, e: 17, sp: 0x0100, pc: 0x60 } : { a: 0, c: 0, e: 17, sp: 0x0100, pc: 0x60 });
         m.runUntil(() => m.pc === 0x63, 80_000_000, "the mount");
         if (cpu.a !== 0) throw new Error(`the mount entry gave ${cpu.a}`);
         Object.assign(cpu, saved, { flags });

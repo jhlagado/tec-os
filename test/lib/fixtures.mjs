@@ -6,7 +6,6 @@ import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { assembleProgram } from "../../tools/lib/assemble.mjs";
-import { ORG_LINE } from "../../tools/lib/prl.mjs";
 import { PICO_WIDTHS, makeSvc } from "../../tools/lib/svc.mjs";
 import { Machine, loadSymbols } from "./machine.mjs";
 import { createContainer, parseContainer, findVolume, volumePayload } from "../../tools/lib/container.mjs";
@@ -38,45 +37,6 @@ export function sourceDigest(path, seen = new Set()) {
   return hash.digest("hex").slice(0, 16);
 }
 
-/**
- * test/programs/NAME.asm assembled at ORIGIN: its "ORG $0100" line rewritten,
- * cached by the digest of the source and its includes, and origin.
- */
-export async function programAt(name, origin) {
-  if (origin === 0x100) return (await program(name)).bytes;
-  const text = readFileSync(resolve(ROOT, "test/programs", `${name}.asm`), "utf8");
-  if (!ORG_LINE.test(text)) throw new Error(`${name}.asm has no "ORG $0100" line`);
-  const hex = origin.toString(16).toUpperCase().padStart(4, "0");
-  const digest = sourceDigest(resolve(ROOT, "test/programs", `${name}.asm`));
-  const cacheDir = resolve(ROOT, "build/test-programs");
-  const src = resolve(cacheDir, `${name}-${digest}-at${hex}.asm`);
-  mkdirSync(cacheDir, { recursive: true });
-  writeFileSync(src, text.replace(ORG_LINE, (_, lead) => `${lead}$${hex}`));
-  return (await assembleProgram(src, { base: origin })).bytes;
-}
-
-/**
- * NAME as a PRL, made as Digital Research made them: assembled at 0000h and
- * 0100h, with a bitmap bit for each byte that differs (each must differ by
- * exactly 1). A 256-byte header gives the code length; then the code for
- * 0100h and the bitmap.
- */
-export async function prl(name) {
-  const at0 = await programAt(name, 0);
-  const at1 = await programAt(name, 0x100);
-  const n = at0.length;
-  const bitmap = new Uint8Array(Math.ceil(n / 8));
-  for (let i = 0; i < n; i += 1) {
-    if (at0[i] === at1[i]) continue;
-    if (((at0[i] + 1) & 0xff) !== at1[i]) throw new Error(`${name}: byte ${i} is not relocatable`);
-    bitmap[i >> 3] |= 0x80 >> (i & 7);
-  }
-  const file = new Uint8Array(256 + n + bitmap.length);
-  file.set([0, n & 0xff, n >> 8]);
-  file.set(at1, 256);
-  file.set(bitmap, 256 + n);
-  return file;
-}
 
 /** Assemble test/programs/NAME.asm with ATOM, cached by the same digest. */
 export async function program(name, { base = 0x100 } = {}) {
@@ -128,7 +88,7 @@ export const picoFor = (profile = "debug80") => ({ debug80t40: "PICO40.SVC", deb
 
 /**
  * The three type bytes in the CCP's FCB after M's last command. A name the
- * loader took leaves SVC there. The COM path overwrites them, COM then PRL, so
+ * loader took leaves SVC there. The COM path overwrites them with COM, so
  * a refused load is told from a name that never reached the loader, which
  * prints the same NAME.TYP?.
  */

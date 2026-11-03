@@ -196,8 +196,8 @@ export class Machine {
     const writers = [["CDI", "CEND"], ["SDRBLK"], ["SDWBLK"], ["MEMINIT"]]
       .filter(([a]) => symbols.has(a))
       .map(([a, b]) => [symbols.get(a), b ? symbols.get(b) : after(a)]);
-    const [cdi, cend, mvcopy, mvrange] = ["CDI", "CEND", "MVCOPY", "MVRANGE"].map((n) => symbols.get(n));
-    const mvEnd = mvrange ?? (symbols.has("MVOK") ? symbols.get("MVOK") + 2 : undefined); // MVCOPY ends at MVOK's RET without MOVE's range check
+    const [cdi, cend, mvcopy] = ["CDI", "CEND", "MVCOPY"].map((n) => symbols.get(n));
+    const mvEnd = symbols.has("MVOK") ? symbols.get("MVOK") + 2 : undefined; // MVCOPY ends at MVOK's RET
     let mvForCache = false;
     if (mvcopy !== undefined && cdi !== undefined)
       this.mvWatch = (pc) => {

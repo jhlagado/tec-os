@@ -1,6 +1,5 @@
-; SAY: prints "PRL" by BDOS function 9, then returns. A program is moved
-; to 0100h, not relocated. Run as SAY.PRL beside a SAY.COM that
-; prints something else, it shows which file the CCP chose.
+; SAY: prints "SAY" by BDOS function 9, then returns: a program for the
+; chain's tests, whose output marks each piece that ran.
 
 BDOS    EQU     $0005
 
@@ -9,4 +8,4 @@ BDOS    EQU     $0005
         LD      C,9
         CALL    BDOS
         RET
-MSG:    DB      "PRL$"
+MSG:    DB      "SAY$"
