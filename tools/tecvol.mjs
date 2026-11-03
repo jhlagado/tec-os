@@ -36,7 +36,11 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === "--volume") opts.volume.push(argv[++i]);
-    else if (a === "--user") opts.user = Number(argv[++i]);
+    else if (a === "--user") {
+      const v = argv[++i]; // an integer 0 to 15, checked before any change (KE-152)
+      if (!/^\d{1,2}$/.test(v ?? "") || Number(v) > 15) usage(`--user ${JSON.stringify(v ?? "")}: a user number 0 to 15`);
+      opts.user = Number(v);
+    }
     else if (a === "--align") opts.align = Number(argv[++i]);
     else if (a === "--drives") opts.drives = Number(argv[++i]);
     else if (a === "--text") opts.text = true;

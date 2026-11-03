@@ -121,6 +121,24 @@ test("tecvol creates, edits and reads a container atomically", () => {
   assert.match(run("verify", img), /C: ARCHIVE .* ro/);
 });
 
+test("tecvol --user takes an integer 0 to 15 only, and a refused one leaves the image byte for byte (KE-152)", () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-user-"));
+  const img = resolve(dir, "card.img");
+  const tool = resolve(ROOT, "tools/tecvol.mjs");
+  const run = (...args) => execFileSync(process.execPath, [tool, ...args], { encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
+  run("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G1M:WORK:B");
+  const payload = resolve(dir, "data.bin");
+  writeFileSync(payload, Buffer.from("data"));
+  run("put", img, "B", payload, "KEEP.BIN");
+  const before = readFileSync(img);
+  for (const user of ["oops", "1.5", "16", "-1", "", "0x2"]) {
+    assert.throws(() => run("put", img, "B", payload, "X.BIN", "--user", user), /user/, `--user ${JSON.stringify(user)} refused`);
+    assert.deepEqual(readFileSync(img), before, `--user ${JSON.stringify(user)}: the image unchanged`);
+  }
+  run("put", img, "B", payload, "Y.BIN", "--user", "15");
+  assert.match(run("dir", img, "B", "--user", "15"), /15 Y\.BIN/);
+});
+
 test("a recipe builds a verified card and rejects a wrong digest", async () => {
   const files = { "HELLO.TXT": Buffer.from("hello\r\n\x1a") };
   const recipe = {

@@ -164,7 +164,7 @@ export class CpmVolume {
    */
   write(name, bytes, { user = 0, text = false, readOnly = false, system = false } = {}) {
     this.assertWritable();
-    if (user < 0 || user > 15) throw new CpmError(`user ${user} outside 0-15`);
+    if (!Number.isInteger(user) || user < 0 || user > 15) throw new CpmError(`user ${user} outside 0-15`);
     const key = cpmName(name);
     let body = Uint8Array.from(bytes);
     if (text) body = fromLatin1(toLatin1(body).replace(/\r?\n/g, "\r\n") + String.fromCharCode(EOF));
