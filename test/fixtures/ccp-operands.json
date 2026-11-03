@@ -6,19 +6,19 @@
       "input": "DIR",
       "output": "DIR\r\r\nHELLO.TXT    KEEP.TXT     BIG.BIN      SHELLC.PRL   SHELLE.PRL  \r\n5 files, 978K free\r\nA>",
       "calls": "d98044768bc312bc810d8aa82c40ad00d8171fb58b81756fe05d9f4b3022bce8",
-      "peak": 12
+      "peak": 16
     },
     {
       "input": "DIR *.TXT",
       "output": "DIR *.TXT\r\r\nHELLO.TXT    KEEP.TXT    \r\n2 files, 978K free\r\nA>",
       "calls": "8cba9cb5d0150b22ab1ba549162fbf4a60007e8ec057af3b7f257e5378b55170",
-      "peak": 12
+      "peak": 16
     },
     {
       "input": "DIR B:",
       "output": "DIR B:\r\r\nFILL0.BIN    FILL1.BIN    FILL2.BIN    FILL3.BIN    FILL4.BIN    FILL5.BIN\r\nFILL6.BIN    FILL7.BIN    FILL8.BIN    FILL9.BIN    FILL10.BIN   FILL11.BIN\r\nFILL12.BIN   FILL13.BIN   FILL14.BIN   TOP0.BIN     TOP1.BIN     TOP2.BIN\r\nTOP3.BIN     TOP4.BIN     TOP5.BIN     TOP6.BIN     TOP7.BIN     TOP8.BIN\r\nTOP9.BIN     TOP10.BIN    TOP11.BIN    TOP12.BIN    TOP13.BIN   \r\n29 files, 0K free\r\nA>",
       "calls": "b7b3f15cce91420cd30227daa086cb39d3f72cade41c7c45029685c48bf41b83",
-      "peak": 12
+      "peak": 14
     },
     {
       "input": "DIR NOFILE.TXT",
@@ -66,13 +66,13 @@
       "input": "B:",
       "output": "B:\r\r\nB>",
       "calls": "10bcababfcb8d5d21f0803a38942ad4f1f29a192a5b24f5b751466694aaa78d5",
-      "peak": 6
+      "peak": 8
     },
     {
       "input": "A:",
       "output": "A:\r\r\nA>",
       "calls": "f3a62e2393a740744f539b146889380ddb5f2c199ea60c24a6afb339e857c485",
-      "peak": 6
+      "peak": 8
     },
     {
       "input": "TYPE",

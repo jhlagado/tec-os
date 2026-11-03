@@ -110,9 +110,7 @@ MLEC1:  LD      A,(HL)
         CP      '!'
         JR      Z,MLEC2
         LD      E,A
-        PUSH    HL
         CALL    PUTCHAR
-        POP     HL
         INC     HL
         JR      MLEC1
 MLEC2:  POP     HL
@@ -332,9 +330,7 @@ BADLOOP:
         CP      SPACE
         JR      Z,BADEND
         LD      E,A
-        PUSH    HL
         CALL    PUTCHAR
-        POP     HL
         INC     HL
         JR      BADLOOP
 
@@ -534,12 +530,8 @@ DIRNAME:
         AND     $7F
         CP      SPACE
         JR      Z,DIRPAD
-        PUSH    HL
-        PUSH    BC
         LD      E,'.'
         CALL    PUTCHAR
-        POP     BC
-        POP     HL
         INC     C
         LD      B,3
         CALL    PUTTRIM
@@ -558,10 +550,8 @@ DIRPADC:
         LD      A,C
         CP      12
         JR      NC,DIRNEXT
-        PUSH    BC
         LD      E,SPACE
         CALL    PUTCHAR
-        POP     BC
         INC     C
         JR      DIRPADC
 
@@ -775,12 +765,8 @@ PUTTRIM:
         AND     $7F
         CP      SPACE
         JR      Z,PUTTSK
-        PUSH    BC
-        PUSH    HL
         LD      E,A
         CALL    PUTCHAR
-        POP     HL
-        POP     BC
         INC     C
 PUTTSK:
         INC     HL
@@ -810,11 +796,7 @@ PUTNAME:
         LD      A,(HL)
         AND     $7F
         LD      E,A
-        PUSH    BC
-        PUSH    HL
         CALL    PUTCHAR
-        POP     HL
-        POP     BC
         INC     HL
         DJNZ    PUTNAME
         RET
@@ -1550,9 +1532,16 @@ PUTSTR:
         LD      C,9
         JP      BDOS
 
+; Print E by BDOS function 2, through OUTCHAR's column count and ^P echo.
+; Keeps BC and HL, which every caller wants kept. Destroys AF and DE.
 PUTCHAR:
+	PUSH	BC
+	PUSH	HL
         LD      C,2
-        JP      BDOS
+	CALL	BDOS
+	POP	HL
+	POP	BC
+	RET
 
 ; SERVICES: each service's name and pages, from the owner list.
 CMDSVC: LD      A,(SVCHEAD)
@@ -1562,10 +1551,8 @@ CMDDL:  OR      A
         LD      L,DNAM
         LD      B,8
         CALL    PUTTRIM
-        PUSH    HL
         LD      E,' '
         CALL    PUTCHAR
-        POP     HL
         PUSH    HL
         LD      L,DOWN
         LD      A,(HL)
