@@ -266,20 +266,25 @@ PUTCRLF:LD      A,13
 PUTA:   LD      C,A
         JP      BCONOUT
 
-; Print A as two hex digits. Destroys AF, BCDE, HL.
-PUTHEX: PUSH    AF
-        RRCA
-        RRCA
-        RRCA
-        RRCA
-        CALL    PUTNIB
-        POP     AF
-PUTNIB: AND     $0F
-        ADD     A,$90
-        DAA
-        ADC     A,$40
-        DAA
-        JR      PUTA
+; Print A as two hex digits on the console (PUTHEX), or through the routine at
+; HL, which takes each digit in A and may destroy any register (HEXHL); the
+; CCP's CPHEX prints through BDOS function 2 so. Destroys AF, BCDE, HL.
+PUTHEX:	LD	HL,PUTA		; the console, by the BIOS
+HEXHL:	PUSH	AF
+	RRCA			; the high digit first
+	RRCA
+	RRCA
+	RRCA
+	PUSH	HL		; the output, which may destroy it
+	CALL	HEXNIB
+	POP	HL
+	POP	AF		; then the low
+HEXNIB:	AND	$0F
+	ADD	A,$90		; 0-9 to 90h-99h, A-F to 00h-05h
+	DAA
+	ADC	A,$40		; then '0'-'9' or 'A'-'F'
+	DAA
+	JP	(HL)		; the output takes it and returns
 
 ; The list device is not fitted: its output is discarded and it reports ready.
 ; Punch and reader are the serial port, and BREADER waits for a byte with no

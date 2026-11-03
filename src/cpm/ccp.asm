@@ -1111,22 +1111,12 @@ CPDST:
         LD      DE,RENFCB
         JP      BDOS
 
-CPHEX:
-        PUSH    AF
-        RRCA
-        RRCA
-        RRCA
-        RRCA
-        CALL    CPNIB
-        POP     AF
-CPNIB:
-        AND     $0F
-        ADD     A,$90
-        DAA
-        ADC     A,$40
-        DAA
-        LD      E,A
-        JP      PUTCHAR
+; Print A as two hex digits by BDOS function 2, through console.asm's HEXHL.
+; Destroys AF, BC, DE, HL.
+CPHEX:	LD	HL,CPHEXC	; each digit through PUTCHAR
+	JP	HEXHL
+CPHEXC:	LD	E,A		; function 2 takes the character in E
+	JP	PUTCHAR
 
 ; UNLOAD: the lowest resident goes, or the command comes back with a question
 ; mark.
