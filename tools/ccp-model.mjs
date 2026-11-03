@@ -164,6 +164,14 @@ DIRPADC:`, `DIRPAD:
 DIRPADC:`);
 }
 
+function listingState(dir) {
+  listingCounter(dir);
+  edit(dir, "        LD      (DIRCOL),A\n        LD      (DIRANY),A", "        LD      (DIRCOL),A");
+  edit(dir, "        LD      (DIRCOL),A\n        LD      A,(DIRANY)\n        OR      A", "        LD      (DIRCOL),A\n        LD      HL,(DIRNUM)\n        LD      A,H\n        OR      L");
+  edit(dir, "DIRNAME:\n        LD      A,1\n        LD      (DIRANY),A\n        LD      HL,(DIRNUM)", "DIRNAME:\n        LD      HL,(DIRNUM)");
+  edit(dir, "DIRDONE:\n        LD      A,(DIRANY)\n        OR      A", "DIRDONE:\n        LD      HL,(DIRNUM)\n        LD      A,H\n        OR      L");
+}
+
 function dispatch(dir) {
   edit(dir, `KEYNXT:\tPUSH\tDE
 \tCALL\tISCMD\t\t; Z: the word, DE at its 0
@@ -175,8 +183,8 @@ function dispatch(dir) {
 }
 
 const variants = {
-  incumbent() {}, parser, "parser-shared": parserShared, listing, "listing-counter": listingCounter, dispatch,
-  combined(dir) { parserShared(dir); listingCounter(dir); dispatch(dir); },
+  incumbent() {}, parser, "parser-shared": parserShared, listing, "listing-counter": listingCounter, "listing-state": listingState, dispatch,
+  combined(dir) { parserShared(dir); listingState(dir); dispatch(dir); },
   "mutant-parser-overflow"(dir) { parser(dir); edit(dir, "PLEND:\n        SCF\n        RET", "PLEND:\n        OR      A\n        RET"); },
   "mutant-parser-tail"(dir) { parser(dir); edit(dir, "        LD      B,24", "        LD      B,20"); },
 };
