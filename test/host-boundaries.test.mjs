@@ -32,6 +32,13 @@ for (const capacity of ['disk', 'directory']) {
   });
 }
 
+
+/** The page's code from START to END, after its importSave, which the import's handler calls (KE-163). */
+function withImportSave(source, start, end) {
+  const at = source.indexOf("async function importSave");
+  return `${source.slice(at, source.indexOf("\n}\n", at) + 3)}\n${source.slice(start, end)}`;
+}
+
 test('replacement reuses all old entries and blocks at both capacity limits', () => {
   const { fs } = card();
   const bytes = new Uint8Array(fs.freeBytes()).fill(0xaa);
@@ -82,7 +89,7 @@ test('browser stages the whole import before saving or publishing', async () => 
     const v = parseContainer(state.card).volumes[0];
     return new CpmVolume(volumePayload(state.card, v), v.g);
   };
-  runInNewContext(source.slice(start, end), context);
+  runInNewContext(withImportSave(source, start, end), context);
   const before = image.slice();
   const file = (name, size) => ({ name, arrayBuffer: async () => new ArrayBuffer(size) });
   await handler({ target: { files: [file('GOOD.TXT', 128), file('HUGE.DAT', 2 * 1024 * 1024)] } });
@@ -110,7 +117,7 @@ for (const running of [true, false]) {
       const readGate = new Promise(resolve => { releaseRead = resolve; });
       const saveGate = new Promise(resolve => { releaseSave = resolve; });
       const elements = { drive: { value: 'A' }, astext: { checked: false }, cardinfo: {}, putfile: { addEventListener: (_type, fn) => { handler = fn; } } };
-      runInNewContext(source.slice(start, end), {
+      runInNewContext(withImportSave(source, start, end), {
         state, CpmVolume, parseContainer, volumePayload, $: id => elements[id],
         currentVolume: () => new CpmVolume(volumePayload(image, parseContainer(image).volumes[0]), parseContainer(image).volumes[0].g),
         saveCard: async () => {
