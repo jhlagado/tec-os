@@ -20,6 +20,7 @@ const state = {
   machine: null,
   card: null,
   cardDirty: false,
+  unsaved: false, // the last save failed (KE-153)
   importBusy: false,
   running: true,
   serialSeen: 0,
@@ -92,10 +93,26 @@ function reset() {
   appendSerial("\n[reset]\n");
 }
 
+/** Save the card; on failure it stays marked unsaved, the next tick tries again, and the page says so. */
+async function save(image = state.card) {
+  try {
+    await saveCard(image);
+    const was = state.unsaved;
+    state.unsaved = false;
+    if (was) refreshCard();
+    return true;
+  } catch (e) {
+    state.cardDirty = true;
+    state.unsaved = true;
+    $("cardinfo").textContent = `Card not saved in this browser: ${e?.message ?? e}. It is kept in memory and saved again shortly.`;
+    return false;
+  }
+}
+
 setInterval(async () => {
   if (state.importBusy || !state.cardDirty || !state.card) return;
   state.cardDirty = false;
-  await saveCard(state.card);
+  await save();
 }, 2000);
 
 // ---- Run loop -----------------------------------------------------------------
@@ -473,9 +490,9 @@ function cardInfo() {
 function refreshCard() {
   const info = cardInfo();
   if (!info) return;
-  $("cardinfo").textContent = info.volumes
-    .map((v) => `${v.drive ?? "-"}: ${v.label} (${v.g.name}${v.readOnly ? ", read-only" : ""})`)
-    .join("   ");
+  $("cardinfo").textContent =
+    info.volumes.map((v) => `${v.drive ?? "-"}: ${v.label} (${v.g.name}${v.readOnly ? ", read-only" : ""})`).join("   ") +
+    (state.unsaved ? "   Card not saved in this browser: it is kept in memory and saved again shortly." : "");
   const select = $("drive");
   const current = select.value;
   select.innerHTML = "";
@@ -526,7 +543,7 @@ async function useCard(image) {
   }
   parseContainer(image);
   state.card = image;
-  await saveCard(image);
+  await save(image);
   await powerOn();
   refreshCard();
 }
@@ -562,8 +579,8 @@ $("putfile").addEventListener("change", async (e) => {
       const name = file.name.toUpperCase();
       fs.write(name, new Uint8Array(await file.arrayBuffer()), { text: $("astext").checked });
     }
-    await saveCard(staged);
     state.card.set(staged);
+    await save();
     reset();
   } catch (err) {
     $("cardinfo").textContent = `Not copied: ${err.message}`;
@@ -615,7 +632,7 @@ setInterval(refreshFiles, 5000);
   } catch {
     state.card = await starterCard();
   }
-  await saveCard(state.card);
+  await save();
   await powerOn();
   refreshCard();
   requestAnimationFrame(frame);

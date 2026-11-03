@@ -1,5 +1,6 @@
-// The card image, kept in IndexedDB so it survives reloads. Failures are
-// reported once and the page carries on with the card in memory.
+// The card image, kept in IndexedDB so it survives reloads. A load that fails
+// gives no card, and the page makes one. A save that fails throws, so the page
+// keeps the card marked unsaved and says so (KE-153).
 
 const DB = "tecos";
 const STORE = "cards";
@@ -42,8 +43,10 @@ export async function saveCard(image) {
       tx.objectStore(STORE).put(image.slice().buffer, KEY);
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error ?? new Error("the save was aborted"));
     });
   } catch (e) {
     warn(e);
+    throw e;
   }
 }
