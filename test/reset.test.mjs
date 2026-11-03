@@ -184,7 +184,15 @@ const FIELDS = {
   "the stub's target, low": (m) => m.write(S(m) + 1, m.read(S(m) + 1) ^ 1),
   "the stub's target, high": (m) => m.write(S(m) + 2, m.read(S(m) + 2) ^ 1),
   "W's low byte": (m) => m.write(6, 7),
-  "W below 8000h": (m) => m.write(7, 0x7f),
+  // 7F00h passes every other field; 7F01h is 7F00h if the borrow leaks.
+  "W below 8000h": (m) => {
+    m.write(6, 0);
+    m.write(7, 0x7f);
+  },
+  "W at 7F01h": (m) => {
+    m.write(6, 1);
+    m.write(7, 0x7f);
+  },
   // W = S = 0100h, with the jump there: the stub's address has no other test.
   "W = S below 8000h": (m) => {
     const s = S(m);
@@ -208,15 +216,16 @@ for (const [name, spoil] of Object.entries(FIELDS)) {
   });
 }
 
-test("W at exactly 8000h and at S is recognised", () => {
+test("W at exactly 8000h and at S's page is recognised", () => {
   const m = remapped();
   m.write(6, 0);
   m.write(7, 0x80);
   reset(m);
   assert.deepEqual(idx(m), [3, 2, 0, 0], "8000h");
+  m.write(6, 0);
   m.write(7, S(m) >> 8);
   reset(m);
-  assert.deepEqual(idx(m), [3, 2, 0, 0]);
+  assert.deepEqual(idx(m), [3, 2, 0, 0], "S's page");
 });
 
 test("a real service loaded is recognised, and is gone after the reset", async () => {
