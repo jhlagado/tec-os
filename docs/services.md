@@ -109,7 +109,7 @@ One card can serve every board: a line for the PICO9918, then `GLCD.SVC`. Each l
 makes its display the console where there is one, and elsewhere prints its name with
 a question mark and goes on. On a board with both, `GLCD.SVC`'s line gives way once
 `PICO.SVC` is the console, and only `CON UC1:` installs the second; the two together
-cost 3,072 TPA bytes, leaving 43,782 on the starter card. Once, at the first prompt
+leave 43,776 bytes of TPA on the starter card. Once, at the first prompt
 after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
 if no display driver is installed. That covers a missing file, a bad file, no
 `STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
@@ -271,11 +271,11 @@ names are the way in.
 
 Memory above the TPA is of three kinds: service resident memory, the workspace with
 the RAM BIOS table, and the ROM. At cold boot, at every warm boot, after an unload and
-after a failed `INIT`, a sweep of `0008h` to `003Fh` keeps a `JP` whose target's page is
-at or above `PZTOP`'s page, and gives anything else its default: seven zeros and a
-`RET`, or `EI; RETI` at `0038h`, the rest of that vector zero. The bound keeps all
-three kinds. It also keeps a jump into the bytes of the stub's page below the stub,
-which are the TPA's, and into a service's header.
+after a failed `INIT`, a sweep of `0008h` to `003Fh` keeps a `JP` whose target is above
+`PZTOP`, and gives anything else its default: seven zeros and a `RET`, or `EI; RETI` at
+`0038h`, the rest of that vector zero. The bound keeps all three kinds, and a jump into
+a service's header past its entry. The sweep rewrites `0038h` a byte at a time with
+interrupts as it finds them, so `REMOVE` turns a source off before it returns.
 
 A service claims `RST 1` to `RST 7` by flags bits 1 to 7. A load whose claimed slot
 holds a `JP` is refused with nothing changed, `SVCRC` 0. `INIT` writes the vector
@@ -283,7 +283,8 @@ itself, so a write it didn't declare goes unseen, the rule that binds `ABIGLCD`'
 and a `JP` a finished program left into ROM counts as held until a reset. Unload gives
 the claimed slots their defaults whatever they hold, and sweeps. A jump the service set
 outside its pages in a slot it didn't claim is `REMOVE`'s to restore. A failed `INIT`
-runs no `REMOVE`, so that, and turning off any interrupt source, are `INIT`'s duty. A
+has its claimed slots cleared the same way, and runs no `REMOVE`, so any other jump, and
+turning off any interrupt source, are `INIT`'s duty. A
 source left on under the default `EI; RETI` repeats for ever, and a warm boot inside
 `INIT` leaves one on. A reset forgets the service and clears its vectors.
 

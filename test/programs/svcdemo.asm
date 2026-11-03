@@ -68,6 +68,10 @@ INIT:
         LD      HL,VHAND
         LD      (VECAT+1),HL
 %ENDIF
+%IF V_VECX
+        LD      HL,ABIHW        ; the vector outside this service
+        LD      (VECAT+1),HL
+%ENDIF
 %IF V_VECFL
         SCF
         RET

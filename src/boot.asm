@@ -84,8 +84,8 @@ WBOOTR: DI
 ; Recognise a TEC-OS of this layout from what it left in RAM, reading only, at
 ; fixed addresses, and running nothing old. RAM is recognised when page zero
 ; holds the warm boot jump to RAMBIOS+3 and a jump at 0005h, STUBAD's word S
-; holds JP BENTRY, and the word W at 0006h is S or a page's start from 8000h
-; to S's page. W is not compared with PZTOP: SVCLOAD lowers it before INIT,
+; holds JP BENTRY, and the word W at 0006h is from 8000h up, and S or a page's
+; start at most S's page. W is not compared with PZTOP: SVCLOAD lowers it before INIT,
 ; so the reset that recovers from a hung INIT is recognised too.
 ; BENTRY and STUBAD's own address are the layout's test, and ram.asm states
 ; the limit. Recognised, DRVTAB goes to RSLBUF, which nothing writes before
@@ -115,17 +115,16 @@ RSLCAP:	LD	A,($0000)	; the warm boot jump
 	CP	HIGH(BENTRY)
 	JR	NZ,RSLNO
 	LD	HL,(PZBDOS+1)	; W, which any resident has lowered
+	LD	A,H		; no service or stub goes below 8000h
+	CP	$80
+	JR	C,RSLNO
 	LD	DE,(STUBAD)
-	OR	A
-	SBC	HL,DE		; W = S: no resident
+	SBC	HL,DE		; W = S: no resident. Carry is clear
 	JR	Z,RSLYES
 	ADD	HL,DE
 	LD	A,L		; each resident's entry is at offset 0
 	OR	A
 	JR	NZ,RSLNO
-	LD	A,H		; no service goes below 8000h
-	CP	$80
-	JR	C,RSLNO
 	LD	A,D		; S's page, W's at most
 	CP	H
 	JR	C,RSLNO
@@ -230,7 +229,7 @@ PZINIT: LD      A,$C3
         INC     HL
         LD      (HL),HIGH(BENTRY)
 ; The restart vectors 0008h-003Fh, here and after a service goes: each one
-; that is not a jump at or above the top's page becomes seven zeros and a RET,
+; that is not a jump above the top becomes seven zeros and a RET,
 ; so an RST through it returns at once, with the interrupt state unchanged,
 ; and never runs into the next vector, and 0038h takes EI; RETI. Such a jump,
 ; into a service, the workspace or ROM, keeps its three bytes and the rest of
@@ -242,11 +241,12 @@ RSTCLR: LD      BC,7*256+$C9    ; seven zeros, then RET
         LD      A,(HL)
         CP      $C3
         JR      NZ,RSTZERO
-        INC     HL
+        INC     HL              ; carry if the target is above the top
+        LD      A,(PZTOP)
+        SUB     (HL)
         INC     HL
         LD      A,(PZTOP+1)
-        DEC     A
-        CP      (HL)            ; the target's high byte
+        SBC     A,(HL)
         DEC     HL
         DEC     HL
         JR      NC,RSTZERO

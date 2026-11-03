@@ -90,7 +90,7 @@ display needs only those routines. `docs/services.md` has the rules.
 
 The PICO9918's console is `PICO.SVC`, `PICO40.SVC` or `PICO32.SVC`, one file a
 width, which the startup line chooses. It takes six pages below the BDOS entry,
-so `(0006h)` is 1,536 bytes lower, with its own font and the graphics entries. It refuses with no PICO9918 and with no matrix
+so `(0006h)` is six pages under the stub's, with its own font and the graphics entries. It refuses with no PICO9918 and with no matrix
 keyboard, and a board with no matrix keyboard therefore has an unprogrammed VDP
 until a program claims it. Its `REMOVE` refuses while it is the console, since
 `CON CRT` has no load, and while the PICO9918 is claimed. Warm boot restores the mode of
@@ -100,7 +100,7 @@ the display in use (see [compatibility.md](compatibility.md)).
 
 The GLCD console is a driver, `GLCD.SVC` on the starter card, not part of
 the ROM. Its code, its screen text and its font take six pages just below the
-BDOS entry, so on a board that loads it `(0006h)` is 1,536 bytes lower; a board
+BDOS entry, so on a board that loads it `(0006h)` is six pages under the stub's; a board
 without a GLCD loses nothing. Its INIT hands the terminal its six video
 routines through `ABIGLCD` in the table at `C003h`, and the terminal calls them directly, on the
 caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix

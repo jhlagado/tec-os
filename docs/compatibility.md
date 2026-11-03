@@ -2,13 +2,14 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-46,854 bytes (`0100h–B805h`) on the starter card, and at least 46,086 on any
+46,869 bytes (`0100h–B814h`) on the starter card, and at least 46,165 on any
 card, since cold boot places the BDOS entry below the allocation vectors of
-the volumes mounted. A display's driver takes more: 1,536 bytes for the PICO9918
-or the GLCD, leaving 45,318 on the starter card and 44,550 with four 8 MiB
-volumes. A board with both displays that installs both with `CON UC1` gives up
-3,072 bytes, 43,782 on the starter card and 43,014 with four. It reports
-version 2.2.
+the volumes mounted. A display's driver takes six pages under the stub's page,
+leaving 45,312 on the starter card and 44,544 with four 8 MiB volumes. A board
+with both displays that installs both with `CON UC1` has 43,776 on the starter
+card and 43,008 with four. The CCP loads a `.COM` up to the page holding the
+word at `0006h`, so the largest it loads on the starter card is 46,592 bytes, 277
+below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
 
@@ -187,8 +188,8 @@ and run.
   ^C, Esc and Q do.
 - **Function 50.** The direct BIOS call destroys AF'.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 46,086 bytes of TPA, may fail; how much a card gives depends on
-  its volumes, and on a board with a display driver 1,536 bytes less.
+  more than 46,165 bytes of TPA, may fail; how much a card gives depends on
+  its volumes, and on a board with a display driver 44,544 is the least.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,

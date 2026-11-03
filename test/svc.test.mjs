@@ -13,7 +13,7 @@ import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
-const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
+const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
 const made = new Map();
 
 /** SVCDEMO with OVER set; opt as makeSvc's. */
@@ -732,16 +732,30 @@ test("a jump into a service is kept over warm boot, and RST 38h reaches a kept 0
   assert.equal(t.m.read(base + d.symbols.RESULT), 0x5a);
 });
 
-test("the bound: a jump to the end of the page below the top goes, and one to the top's page stays", async () => {
+test("the bound: a jump at or below the top goes, and one above it stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
   t.prompt();
   const page = t.head() >> 8;
   pokes(t, 0x10, jp((page << 8) - 1));
   pokes(t, 0x18, jp(page << 8));
+  pokes(t, 0x20, jp((page << 8) + 1));
   t.warmBoot();
   assert.deepEqual(slot(t.m, 0x10), DEFAULT);
-  assert.deepEqual(slot(t.m, 0x18), [...jp(page << 8), 0, 0, 0, 0, 0]);
+  assert.deepEqual(slot(t.m, 0x18), DEFAULT);
+  assert.deepEqual(slot(t.m, 0x20), [...jp((page << 8) + 1), 0, 0, 0, 0, 0]);
+});
+
+test("the bound with no service: a jump into the stub's page below the stub goes", async () => {
+  const t = await machine();
+  const stub = t.word(t.m.sym("STUBAD"));
+  pokes(t, 0x10, jp(stub - 1));
+  pokes(t, 0x18, jp(stub));
+  pokes(t, 0x20, jp(stub + 3));
+  t.warmBoot();
+  assert.deepEqual(slot(t.m, 0x10), DEFAULT);
+  assert.deepEqual(slot(t.m, 0x18), DEFAULT);
+  assert.deepEqual(slot(t.m, 0x20), [...jp(stub + 3), 0, 0, 0, 0, 0]);
 });
 
 test("UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success", async () => {
@@ -769,6 +783,14 @@ test("a failed INIT's vector goes with its pages", async () => {
   const r = t.load((await svc({ V_VEC: 1, V_VECFL: 1 })).file);
   assert.deepEqual([r.carry, r.rc], [1, 1]);
   assert.deepEqual(slot(t.m, 8), DEFAULT);
+});
+
+test("a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads", async () => {
+  const t = await machine();
+  const r = t.load((await svc({ V_VEC: 1, V_VECX: 1, V_VECFL: 1, FLAGS: 3 })).file);
+  assert.deepEqual([r.carry, r.rc], [1, 1]);
+  assert.deepEqual(slot(t.m, 8), DEFAULT);
+  assert.equal(t.load((await svc({ V_VEC: 1, FLAGS: 3 })).file).carry, 0);
 });
 
 test("a warm boot inside INIT takes the vector it set", async () => {
@@ -831,7 +853,11 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
     const top = m.read(6) | (m.read(7) << 8);
     say("SMASH");
     assert.equal(m.read(top - 1), 0xff, "the six bytes below (0006h) are the program's");
-    if (!m.videoConsole()) assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\n/);
+    if (opts.tms) {
+      assert.equal(m.videoConsole(), true, "PICO.SVC is in");
+      say("SERVICES");
+      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+PICO +6/);
+    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     say("KEEP.SVC");

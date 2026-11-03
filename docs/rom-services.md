@@ -5,7 +5,7 @@ Status: **Built**, ABI 4.0. The *ROM table* is at `C003h`. Its hardware services
 `test/hwsvc.test.mjs` calls each one with its arguments in the registers and
 measures its stack. `DEMO.COM` on the starter card shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,937 bytes (`debug80`) and has 1,447 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,947 bytes (`debug80`) and has 1,437 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -209,7 +209,7 @@ carries its own.
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump | 24 | 1 | Stays |
 | Read-only data: messages, keywords, the jump table's source, geometries | 806 | 1, 2 | Stays |
-| Cold and warm boot, the vectors | 561 | 1 | Stays |
+| Cold and warm boot, the vectors | 563 | 1 | Stays |
 | BIOS | 482 | 2 | Stays |
 | Serial and matrix keyboard | 706 | 1, 2 | Stays |
 | ANSI terminal | 971 | 2 | Stays |
@@ -230,11 +230,11 @@ carries its own.
 | Block cache | 573 | 1, 2 | Stays: every read goes through it |
 | Command history | 211 | 2 | Stays |
 | PRL loader | 102 | 2 | Stays, for programs |
-| Service loader, registry, `SERVICES` and startup | 814 | 2 | Stays |
+| Service loader, registry, `SERVICES` and startup | 822 | 2 | Stays |
 
 Counted from the `debug80` build's symbol map: each row is one source file's span,
 and the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the census's
-14,937 bytes used.
+14,947 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
@@ -276,7 +276,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,447<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,437<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

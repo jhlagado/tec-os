@@ -185,6 +185,15 @@ const FIELDS = {
   "the stub's target, high": (m) => m.write(S(m) + 2, m.read(S(m) + 2) ^ 1),
   "W's low byte": (m) => m.write(6, 7),
   "W below 8000h": (m) => m.write(7, 0x7f),
+  // W = S = 0100h, with the jump there: the stub's address has no other test.
+  "W = S below 8000h": (m) => {
+    const s = S(m);
+    [0, 1, 2].forEach((i) => m.write(0x0100 + i, m.read(s + i)));
+    [m.sym("STUBAD"), 6].forEach((a) => {
+      m.write(a, 0x00);
+      m.write(a + 1, 0x01);
+    });
+  },
   "W above S": (m) => {
     m.write(6, 0);
     m.write(7, (S(m) >> 8) + 1);
@@ -224,7 +233,7 @@ test("a real service loaded is recognised, and is gone after the reset", async (
 
 test("a hung INIT is recognised, W below PZTOP, and the reset recovers from it", async () => {
   const defs = { VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"HANG    "', RECNAME: '"HANG    "', RECVER: 1 };
-  for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
+  for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO"]) defs[v] = 0;
   defs.V_HANG = 1;
   const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
   const image = card();

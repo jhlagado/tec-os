@@ -45,16 +45,7 @@ SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
         POP     HL
         RET     C
         PUSH    HL              ; a slot it claimed takes its default below
-        LD      L,DFLG
-        LD      A,(HL)
-        LD      HL,8
-        LD      DE,8
-        SRL     A
-SVCUC:  SRL     A
-        JR      NC,SVCUN
-        LD      (HL),D
-SVCUN:  ADD     HL,DE
-        JR      NZ,SVCUC
+        CALL    SVCFRE
         POP     HL
         LD      L,DOLD          ; the registry's head and the owner's, then
         LD      DE,REGHEAD      ; the generation and the top
@@ -251,9 +242,11 @@ SVCSC1: LD      A,(HL)
         INC     HL
         INC     HL
         DJNZ    SVCSC1
+        LD      H,D             ; a slot it claimed, and any vector into it,
+        CALL    SVCFRE          ; go with the pages
         LD      HL,(PZTOP)
         LD      (PZBDOS+1),HL
-        CALL    PZSWP           ; a vector INIT set goes with the pages
+        CALL    PZSWP
         LD      A,1
         JR      SVCRET
 SVCHIT: LD      E,DFLG
@@ -285,6 +278,20 @@ SVCSHUT:LD      A,0
 	LD	(SVCBSY),A
         RET
 
+; The first byte of each slot claimed by the service in page H is cleared,
+; so that the sweep gives it its default.
+SVCFRE: LD      L,DFLG
+        LD      A,(HL)
+        LD      HL,8
+        LD      DE,8
+        SRL     A
+SVCUC:  SRL     A
+        JR      NC,SVCUN
+        LD      (HL),D
+SVCUN:  ADD     HL,DE
+        JR      NZ,SVCUC
+        RET
+
 ; HL at the header field, the page in H: the window opens and that routine runs.
 SVCCALL:LD      A,$80
 	LD	(SVCBSY),A
@@ -296,7 +303,7 @@ SVCCALL:LD      A,$80
         LD      L,E
         JP      (HL)
 
-; D = the service's page, E = the page above its last. Flags and HL kept.
+; D = the service's page, E = the page above its last. Carry and HL kept.
 SVCBND: LD      A,(PRLDL)
         LD      D,A
         LD      E,DOWN

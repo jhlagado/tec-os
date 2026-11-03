@@ -10,10 +10,12 @@
 // on the landed tree.
 //
 //   node tools/ks34-model.mjs [--landed REV] [--reference REV] [--mutants]
-//                             [--sets-only] [--slice FROM:TO] [--out FILE]
+//                             [--sets-only] [--match NAMES] [--list]
+//                             [--slice FROM:TO] [--out FILE]
 //
 // --landed is the tree measured, HEAD by default; --reference the baseline,
-// ea9c1c0. The trees are git archives in build/model-ks34/, each built with
+// ea9c1c0. --match takes the older sets' mutants whose names it finds, on the
+// landed tree, one set of names at a time. The trees are git archives in build/model-ks34/, each built with
 // its release set, which needs the pinned EDIT.COM and TAS.COM. A short
 // account goes to stderr.
 
@@ -23,7 +25,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as M from "./lib/model.mjs";
-import { MUTANTS_KS34, mutate } from "./lib/mutants.mjs";
+import { MUTANTS_FIXES, MUTANTS_KS30, MUTANTS_KS31, MUTANTS_KS32, MUTANTS_KS33, MUTANTS_KS34, mutate } from "./lib/mutants.mjs";
 
 const SCRIPT = fileURLToPath(import.meta.url);
 const WORK = resolve(M.ROOT, "build/model-ks34");
@@ -166,12 +168,29 @@ function romTable(landed) {
   return { rows: bytes.length, sum, used: c.rom.used, sumsToCensus: sum === c.rom.used, eachRowItsSpan: JSON.stringify(bytes) === JSON.stringify(expected) };
 }
 
+/** The memory figures the docs give, against the build, and no old one left. */
+function figuresAgree(landed, c) {
+  const n = (x) => x.toLocaleString("en-US");
+  const page = (w) => w & 0xff00;
+  const { starter, fourG8M } = c.ram.cards;
+  const want = {
+    "docs/compatibility.md": [starter.tpa, fourG8M.tpa, page(starter.entry) - 0x700, page(fourG8M.entry) - 0x700, page(starter.entry) - 0xd00, page(fourG8M.entry) - 0xd00, page(starter.entry) - 0x100],
+    "README.md": [starter.tpa, fourG8M.tpa, page(starter.entry) - 0x700, page(fourG8M.entry) - 0x700],
+    "docs/services.md": [page(starter.entry) - 0xd00],
+  };
+  const missing = Object.entries(want).flatMap(([f, v]) => v.filter((x) => !text(landed, f).includes(n(x))).map((x) => `${f}: ${n(x)}`));
+  const old = /\b(46,854|46,086|45,318|44,550|43,782|43,014|1,536 bytes|B80[56]h|xx06h)\b/;
+  const stale = walk(landed).filter((f) => /\.md$/.test(f) && !HISTORICAL(f)).flatMap((f) => text(landed, f).split("\n").filter((l) => old.test(l) && !/^\| TPA \|/.test(l)).map((l) => `${f}: ${l.slice(0, 60)}`));
+  return { missing, stale, agree: !missing.length && !stale.length };
+}
+
 function contracts(landed) {
   const account = text(landed, "docs/compatibility.md");
   const services = text(landed, "docs/services.md");
   const { census: c, symbols } = M.rom(landed);
   return {
     tpa: account.includes(c.ram.tpa.bytes.toLocaleString("en-US")),
+    figures: figuresAgree(landed, c),
     stub: account.includes(`${c.ram.bdosVector.toString(16).toUpperCase()}h`) && services.includes(`${c.ram.bdosVector.toString(16).toUpperCase()}h`),
     flags: /bits 1 to 7 claim `RST 1` to `RST 7`/.test(services) && /LD\s+A,\(DF\+DFLG\)/.test(text(landed, SVC)),
     jumpAtZero: /`JP BENTRY`, 3 bytes/.test(services) && /LD\s+\(DF\),A/.test(text(landed, SVC)),
@@ -258,11 +277,22 @@ function account(f) {
 const LANDED = M.arg("--landed", "HEAD");
 const REFERENCE = M.arg("--reference", "ea9c1c0");
 const slice = (set) => set.slice(...(M.arg("--slice") ?? "0:9999").split(":").map(Number));
+/** With --match, the mutants of every set whose names it finds; otherwise KS34's. */
+const chosen = () => {
+  const match = M.arg("--match");
+  if (!match) return MUTANTS_KS34;
+  const seen = new Set();
+  return [...MUTANTS_KS30, ...MUTANTS_KS31, ...MUTANTS_KS32, ...MUTANTS_FIXES, ...MUTANTS_KS33, ...MUTANTS_KS34].filter((m) => new RegExp(match, "i").test(m.name) && !seen.has(m.name) && seen.add(m.name));
+};
 
 async function main() {
   const t0 = Date.now();
   if (process.argv.includes("--sets-only")) {
-    const got = await mutate(await M.prepared(WORK, "landed", LANDED), WORK, slice(MUTANTS_KS34));
+    if (process.argv.includes("--list")) {
+      console.log(chosen().map((m) => m.name).join("\n"));
+      return;
+    }
+    const got = await mutate(await M.prepared(WORK, "landed", LANDED), WORK, slice(chosen()));
     writeFileSync(M.arg("--out"), JSON.stringify({ prototype: M.commit(LANDED), ...got }, null, 2) + "\n");
     M.log(`mutants ${got.mutantScore.caught} of ${got.mutantScore.total} caught; done in ${Math.round((Date.now() - t0) / 1000)} s`);
     return;
