@@ -9,7 +9,7 @@
     "command words": { "bytes": 40, "routines": ["NOTDRIVE", "KEYTAB", "KEYNXT", "KEYSK", "TYPEKEY", "DIRKEY", "ERAKEY", "RENKEY", "SAVEKEY", "USERKEY", "CONKEY", "COPYKEY", "UNLKEY", "SVCKEY"] },
     "descriptor checks' tail": { "bytes": 14, "routines": ["MNDESC", "MNDBAD"] },
     "MNFILL by LDIR": { "bytes": 16, "routines": ["MNFILL"] },
-    "drive walkers' label copy": { "bytes": 23, "routines": ["SHV", "SHVL", "LCDV", "DRVLAB"] },
+    "drive walkers' label copy": { "bytes": 20, "routines": ["SHV", "SHVL", "LCDV", "DRVLAB"] },
     "PUTCHAR keeps BC and HL": { "bytes": 15, "routines": ["PUTCHAR", "MLEC1", "BADLOOP", "DIRNAME", "DIRPADC", "PUTTRIM", "PUTNAME", "CMDDL"] }
   },
   "hotPaths": ["BENTRY", "DISPATCH", "FINDENT", "READDIR", "POSREC", "FNREADSQ", "FNRREAD", "SDRBLK", "SDWBLK"]

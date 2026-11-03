@@ -320,3 +320,14 @@ test("cold boot lists each drive's whole 11-character label, its spaces too (KS3
   const m = boot(standardCard());
   assert.match(m.serialText(), /\r\nA: SYSTEM {5}\r\nB: WORK {7}\r\n/);
 });
+
+test("SHOWVOL lists the drives without touching LINEBUF, the video terminal's buffer (KS38b's review)", () => {
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols, sdImage: standardCard(), clock: TEST_CLOCK });
+  const [showvol, lcdvols, linebuf] = ["SHOWVOL", "LCDVOLS", "LINEBUF"].map((n) => m.sym(n));
+  m.runUntil(() => m.pc === showvol, 80_000_000, "SHOWVOL");
+  for (let i = 0; i < 80; i += 1) m.write(linebuf + i, 0x5a);
+  m.runUntil(() => m.pc === lcdvols, 20_000_000, "LCDVOLS, after it");
+  assert.deepEqual(Array.from({ length: 80 }, (_, i) => m.read(linebuf + i)), new Array(80).fill(0x5a));
+  assert.match(m.serialText(), /A: SYSTEM {5}\r\nB: WORK {7}\r\n/);
+});

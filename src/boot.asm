@@ -324,9 +324,10 @@ SHOWVOL:LD      C,0             ; each mounted drive, in drive order
 SHV:    PUSH    BC
         CALL    DRVDESC
         JR      NZ,SHVN
-	CALL	DRVLAB		; letter and label, in LINEBUF: at cold
-	LD	HL,LINEBUF	; boot the console is serial, and no
-	CALL	PUTS		; terminal row needs LINEBUF
+	LD	HL,CMDTXT	; letter and label, in the CCP's line,
+	CALL	DRVLAB		; free at cold boot, before the CCP
+	LD	HL,CMDTXT	; has run; LINEBUF is the terminal's
+	CALL	PUTS
         LD      A,(IX+DFLAGS)
         AND     DFREAD
         JR      Z,SHVRW
