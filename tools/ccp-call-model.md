@@ -29,13 +29,13 @@ Run under the shared memory guard, limit 800 MB and heap 384 MB, with
 
 ```
 node tools/ccp-call-model.mjs build/ccp-call-figures.json
-node tools/ccp-load-proof.mjs build/ccp-calls-model/incumbent build/ccp-calls-model/descriptor build/ccp-call-load.json
-node tools/ccp-pager-proof.mjs build/ccp-calls-model/incumbent build/ccp-calls-model/descriptor build/ccp-call-pager.json
-node tools/ccp-dir-proof.mjs build/ccp-calls-model/incumbent build/ccp-calls-model/descriptor build/ccp-call-dir.json
+node tools/ccp-load-proof.mjs build/ccp-calls-model/incumbent build/ccp-calls-model/descriptor-shared build/ccp-call-load.json
+node tools/ccp-pager-proof.mjs build/ccp-calls-model/incumbent build/ccp-calls-model/descriptor-shared build/ccp-call-pager.json
+node tools/ccp-dir-proof.mjs build/ccp-calls-model/incumbent build/ccp-calls-model/descriptor-shared build/ccp-call-dir.json
 ```
 
 Then run chain, history, startup, COPY, search and stack tests from the
-`build/ccp-calls-model/descriptor` directory. These are focused model checks;
+`build/ccp-calls-model/descriptor-shared` directory. These are focused model checks;
 the production stage gate separately requires qualification at its selected
 source tip. The loader Bad Sector injection enters the real read handler's
 error exit to check frame abandonment, not the SD transport's fault handling.
