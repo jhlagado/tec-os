@@ -100,19 +100,36 @@ setInterval(async () => {
   await save();
 }, 2000);
 
-/** Save the card; on failure it stays marked unsaved, the next tick tries again, and the page says so. */
+/**
+ * Save the card; on failure it stays marked unsaved, the next tick tries again,
+ * and the page says so, and after three failures in a row that saving keeps
+ * failing (D2). One save at a time: a save asked for during another marks the
+ * card dirty, and the next tick saves the newest copy (D3).
+ */
 async function save(image = state.card) {
+  if (state.saving) {
+    state.cardDirty = true;
+    return false;
+  }
+  state.saving = true;
   try {
     await saveCard(image);
     const was = state.unsaved;
     state.unsaved = false;
+    state.saveFailures = 0;
     if (was) refreshCard();
     return true;
   } catch (e) {
     state.cardDirty = true;
     state.unsaved = true;
-    $("cardinfo").textContent = `Card not saved in this browser: ${e?.message ?? e}. It is kept in memory and saved again shortly.`;
+    state.saveFailures = (state.saveFailures ?? 0) + 1;
+    $("cardinfo").textContent =
+      state.saveFailures >= 3
+        ? `Saving the card in this browser keeps failing (${e?.message ?? e}). It is kept in memory only: Download image keeps a copy.`
+        : `Card not saved in this browser: ${e?.message ?? e}. It is kept in memory and saved again shortly.`;
     return false;
+  } finally {
+    state.saving = false;
   }
 }
 

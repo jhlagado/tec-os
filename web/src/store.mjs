@@ -22,8 +22,9 @@ function warn(e) {
 }
 
 export async function loadCard() {
+  let db;
   try {
-    const db = await open();
+    db = await open();
     return await new Promise((resolve, reject) => {
       const request = db.transaction(STORE).objectStore(STORE).get(KEY);
       request.onsuccess = () => resolve(request.result ? new Uint8Array(request.result) : null);
@@ -32,12 +33,15 @@ export async function loadCard() {
   } catch (e) {
     warn(e);
     return null;
+  } finally {
+    db?.close();
   }
 }
 
 export async function saveCard(image) {
+  let db;
   try {
-    const db = await open();
+    db = await open();
     await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE, "readwrite");
       tx.objectStore(STORE).put(image.slice().buffer, KEY);
@@ -48,5 +52,7 @@ export async function saveCard(image) {
   } catch (e) {
     warn(e);
     throw e;
+  } finally {
+    db?.close(); // each save its own connection, closed after it (D2)
   }
 }

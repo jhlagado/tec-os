@@ -13,12 +13,15 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { extname, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import { ROOT } from "./lib/fixtures.mjs";
 
 const require = createRequire(import.meta.url);
 const DIST = resolve(ROOT, "web/dist");
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json" };
 
+let closes = 0;
 /** An IndexedDB whose open fails, or whose put's transaction fails, as asked. */
 function failing(where) {
   const later = (f) => setTimeout(f, 0);
@@ -32,6 +35,9 @@ function failing(where) {
           return;
         }
         request.result = {
+          close() {
+            closes += 1;
+          },
           transaction() {
             const tx = { error: null };
             tx.objectStore = () => ({ put: () => later(() => ((tx.error = new Error("quota exceeded")), tx.onerror?.())) });
@@ -52,7 +58,9 @@ test("the real store's saveCard throws when IndexedDB can't open, or a put fails
   try {
     for (const where of ["open", "put"]) {
       globalThis.indexedDB = failing(where);
+      closes = 0;
       await assert.rejects(saveCard(new Uint8Array(4)), /open refused|quota exceeded/, where);
+      assert.equal(closes, where === "open" ? 0 : 1, `${where}: a connection opened is closed (D2)`);
     }
   } finally {
     console.warn = warn;
@@ -114,7 +122,7 @@ test("the page keeps a card it couldn't save unsaved, says so, and saves it once
   await page.waitForFunction(() => /not saved/.test(document.getElementById("cardinfo").textContent), null, { timeout: 30_000 });
   await page.waitForFunction(() => window.saveTries >= 3, null, { timeout: 30_000 });
   await page.evaluate(() => (window.failSaves = false));
-  await page.waitForFunction(() => !/not saved/.test(document.getElementById("cardinfo").textContent), null, { timeout: 30_000 });
+  await page.waitForFunction(() => !/not saved|keeps failing/.test(document.getElementById("cardinfo").textContent), null, { timeout: 30_000 });
   const stored = await page.evaluate(
     () =>
       new Promise((ok) => {
@@ -127,4 +135,39 @@ test("the page keeps a card it couldn't save unsaved, says so, and saves it once
   );
   assert.ok(stored > 0, "the card saved once storage worked");
   assert.deepEqual(errors, []);
+});
+
+test("the page saves one card at a time, and after three failures says saving keeps failing (D2, D3)", async () => {
+  const source = readFileSync(resolve(ROOT, "web/src/main.mjs"), "utf8");
+  const start = source.indexOf("setInterval(async () =>");
+  const end = source.indexOf("// ---- Run loop", start);
+  const info = { textContent: "" };
+  let release;
+  let calls = 0;
+  let fail = false;
+  const context = {
+    state: { card: new Uint8Array(4), cardDirty: true },
+    $: () => info,
+    refreshCard: () => {},
+    setInterval: (fn) => (context.tick = fn),
+    saveCard: async () => {
+      calls += 1;
+      if (fail) throw new Error("quota exceeded");
+      await new Promise((ok) => (release = ok));
+    },
+  };
+  runInNewContext(`${source.slice(start, end)}\nthis.save = save;`, context);
+  const first = context.tick(); // a save under way
+  await Promise.resolve();
+  context.state.cardDirty = true;
+  assert.equal(await context.save(), false, "a second save while one runs doesn't start");
+  assert.equal(calls, 1, "one saveCard at a time (D3)");
+  assert.equal(context.state.cardDirty, true, "and the card stays dirty for the next tick");
+  release();
+  await first;
+  fail = true;
+  for (let i = 1; i <= 3; i += 1) {
+    await context.save();
+    assert.match(info.textContent, i < 3 ? /saved again shortly/ : /keeps failing.*Download image/, `failure ${i}`);
+  }
 });
