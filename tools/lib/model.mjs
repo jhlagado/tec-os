@@ -233,7 +233,8 @@ export function patch(dir, file, from, to) {
 export async function variant(work, dir, name, edit) {
   const copy = copyTree(dir, work, `variant-${name}`);
   edit(copy);
-  await build(copy, ["debug80"]);
+  // A tree of one image builds it by no name; an older one named its profiles (A5).
+  await build(copy, /\btecos: \{/.test(readFileSync(resolve(copy, "tools/build.mjs"), "utf8")) ? [] : ["debug80"]);
   return rom(copy).census.rom.used;
 }
 

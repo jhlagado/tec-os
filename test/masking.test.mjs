@@ -60,8 +60,8 @@ async function board(name) {
   const a = volume(image, "A");
   a.write(name, PICO_SVC[name]);
   a.write("STARTUP.CMD", startupFile(name));
-  const profile = { "PICO.SVC": "debug80", "PICO40.SVC": "debug80t40", "PICO32.SVC": "debug80g32" }[name];
-  const m = new Machine({ ...romFor(profile), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
+  const width = { "PICO.SVC": 80, "PICO40.SVC": 40, "PICO32.SVC": 32 }[name];
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "a usable prompt");
   const made = await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs: PICO_WIDTHS[name], work: resolve(ROOT, "build/svc") });

@@ -39,13 +39,13 @@ function keys(m, s, what, done = () => true) {
   }
 }
 
-function editOnTecOs({ tms, profile = "debug80", cols = 80 }) {
+function editOnTecOs({ tms, cols = 80 }) {
   check(TED);
   const image = standardCard();
   const a = volume(image, "A");
   a.write("TED.COM", tedBytes());
   a.write("NOTES.TXT", Buffer.from(NOTES), { text: true });
-  let m = boot(image, { tms, profile, matrix: true });
+  let m = boot(image, { tms, width: cols, matrix: true });
   const screen = () => (tms ? m.screen() : m.glcdScreen());
   m.typeMatrix("ted notes.txt\r");
   m.runUntilChecked(() => m.waitingForInput() && screen()[0] === "hello", 400_000_000, "the editor's first screen");
@@ -61,16 +61,16 @@ function editOnTecOs({ tms, profile = "debug80", cols = 80 }) {
   assert.deepEqual(m.violations, []);
 
   // Power cycle and open it again.
-  m = boot(image, { tms, profile, matrix: true, ramFill: 0x76 });
+  m = boot(image, { tms, width: cols, matrix: true, ramFill: 0x76 });
   m.typeMatrix("ted notes.txt\r");
   m.runUntilChecked(() => m.waitingForInput() && screen()[1] === "Ysecond line", 400_000_000, "the saved text");
   m.typeMatrix("\x11");
   m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => l.startsWith("A>")), 400_000_000, "the prompt");
 }
 
-for (const [cols, profile] of [[80, "debug80"], [40, "debug80t40"], [32, "debug80g32"]]) {
+for (const cols of [80, 40, 32]) {
   test(`TED edits, saves and reopens a file on TEC-OS with the PICO9918 (${cols} x 24)`, { skip: TED.skip, timeout: 900_000 }, () => {
-    editOnTecOs({ tms: true, profile, cols });
+    editOnTecOs({ tms: true, cols });
   });
 }
 

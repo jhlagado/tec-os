@@ -125,7 +125,7 @@ function reading(m, fixture) {
 test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
   assert.equal(FIXTURE.profile, PROFILE);
   assert.equal(FIXTURE.inputs.length, 78);
-  const m = boot(await card(), { profile: PROFILE });
+  const m = boot(await card());
   const rows = reading(m, FIXTURE.inputs);
   const deep = rows.filter((r, i) => r.peak > FIXTURE.inputs[i].peak);
   assert.deepEqual(deep.map((r) => `${r.input}: ${r.peak}`), []);
@@ -133,7 +133,7 @@ test("the built-ins' operands keep their output, BDOS calls and stack", { timeou
 
 test("CON UC1 on a PICO9918 and matrix board keeps its stack peak", { timeout: 300_000 }, async () => {
   assert.equal(FIXTURE.picoMatrix.length, 1);
-  const m = boot(await card({ glcd: true }), { profile: PROFILE, tms: true, matrix: true });
+  const m = boot(await card({ glcd: true }), { tms: true, matrix: true });
   const [row] = reading(m, FIXTURE.picoMatrix);
   assert.equal(row.peak, FIXTURE.picoMatrix[0].peak);
 });

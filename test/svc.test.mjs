@@ -144,9 +144,9 @@ function transaction(t, file, end) {
 
 const untouched = (t, x) => assert.deepEqual(x.differs(), []);
 
-for (const profile of ["debug80", "debug80t40", "debug80g32", "board"]) {
-  test(`${profile}: a service installs, is found and enumerated, is called and unloads, leaving everything as it was`, async () => {
-  const t = await machine({ profile });
+for (const width of [80, 40, 32]) {
+  test(`${width} columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was`, async () => {
+  const t = await machine({ width });
   const d = await svc();
   const before = snapshot(t.m);
   const ceiling = t.word(6) & 0xff00;

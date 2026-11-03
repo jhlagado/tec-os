@@ -2,10 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ABI, boot, standardCard } from "./lib/fixtures.mjs";
 
-const profiles = ["debug80", "debug80t40", "debug80g32", "glcd"];
+const boards = [80, 40, 32, "glcd"]; // the PICO9918 at each width, and the GLCD
 const depths = {};
-function start(profile) {
-  return boot(standardCard(), { profile: profile === "glcd" ? "debug80" : profile, tms: profile !== "glcd", matrix: true });
+function start(board) {
+  return boot(standardCard(), { width: board === "glcd" ? 80 : board, tms: board !== "glcd", matrix: true });
 }
 function call(m, label, args = {}) {
   const cpu = m.cpu.cpu;
@@ -32,7 +32,7 @@ function call(m, label, args = {}) {
 /** A program writing the VDP's register R, as DEMO does. */
 function vreg(m, r, v) { m.cpu.hardware.ioWrite(0xbf, v); m.cpu.hardware.ioWrite(0xbf, 0x80 | r); }
 function out(m, s) { for (const c of s) call(m, "BCONOUT", { c: c.charCodeAt(0) }); }
-function screen(m, profile) { return profile === "glcd" ? m.glcdScreen() : m.screen(); }
+function screen(m, board) { return board === "glcd" ? m.glcdScreen() : m.screen(); }
 function ok(r) { assert.deepEqual(r, { a: 0, carry: 0, z: 1 }); }
 function watch(m, fn) {
   const seen = [];
@@ -42,23 +42,23 @@ function watch(m, fn) {
   return seen;
 }
 
-for (const profile of profiles) {
-  test(`${profile}: erase at pending wrap preserves following row`, () => {
-    const m = start(profile), width = m.read(m.sym("VWID"));
+for (const board of boards) {
+  test(`${board}: erase at pending wrap preserves following row`, () => {
+    const m = start(board), width = m.read(m.sym("VWID"));
     out(m, "\x0c\x1b[2;1H" + "Y".repeat(width) + "\x1b[1;1H" + "X".repeat(width));
     const writes = watch(m, () => out(m, "\x1b[K"));
-    assert.equal(screen(m, profile)[1], "Y".repeat(width));
-    assert.equal(screen(m, profile)[0], "X".repeat(width));
-    if (profile !== "glcd") assert.equal(writes.filter(([p]) => p === 0xbe).length, 0);
+    assert.equal(screen(m, board)[1], "Y".repeat(width));
+    assert.equal(screen(m, board)[0], "X".repeat(width));
+    if (board !== "glcd") assert.equal(writes.filter(([p]) => p === 0xbe).length, 0);
     out(m, "\r\x1b[K");
-    assert.equal(screen(m, profile)[0], "");
-    assert.equal(screen(m, profile)[1], "Y".repeat(width));
+    assert.equal(screen(m, board)[0], "");
+    assert.equal(screen(m, board)[1], "Y".repeat(width));
     assert.deepEqual(m.violations, []);
   });
-  test(`${profile}: zero PUTAT does not read input or touch display`, () => {
-    const m = start(profile);
+  test(`${board}: zero PUTAT does not read input or touch display`, () => {
+    const m = start(board);
     out(m, "\x0cABC");
-    const before = screen(m, profile);
+    const before = screen(m, board);
     const reads = [];
     const read = m.cpu.hardware.memRead;
     m.cpu.hardware.memRead = (a) => { if (a >= 0x2000 && a < 0x2100) reads.push(a); return read(a); };
@@ -68,15 +68,15 @@ for (const profile of profiles) {
     m.cpu.hardware.memRead = read;
     ok(r);
     assert.deepEqual(reads, [], "zero count must not read the source");
-    assert.deepEqual(screen(m, profile), before);
+    assert.deepEqual(screen(m, board), before);
     assert.equal(writes.length, 0);
     ok(call(m, "ABICALL", { c: ABI.TNPUTAT, b: 1, d: 0, e: 0, h: 0x20, l: 0 }));
-    assert.equal(screen(m, profile)[0], "ZBC");
+    assert.equal(screen(m, board)[0], "ZBC");
     assert.equal(m.read(m.sym("VCOL")), 3);
     assert.deepEqual(m.violations, []);
   });
-  for (const direction of ["B", "C"]) test(`${profile}: relative cursor ${direction} clamps before and after carry`, () => {
-    const m = start(profile), width = m.read(m.sym("VWID")), height = m.read(m.sym("VHGT"));
+  for (const direction of ["B", "C"]) test(`${board}: relative cursor ${direction} clamps before and after carry`, () => {
+    const m = start(board), width = m.read(m.sym("VWID")), height = m.read(m.sym("VHGT"));
     for (const n of [1, 2, width - 1, width, 254, 255]) {
       out(m, `\x0c\x1b[2;2H\x1b[${n}${direction}`);
       const row = direction === "B";
@@ -84,9 +84,9 @@ for (const profile of profiles) {
     }
     assert.deepEqual(m.violations, []);
   });
-  if (profile === "glcd") continue;
-  test(`${profile}: switching to a claimed display preserves registers and VRAM until release`, () => {
-    const m = start(profile);
+  if (board === "glcd") continue;
+  test(`${board}: switching to a claimed display preserves registers and VRAM until release`, () => {
+    const m = start(board);
     const defaultRegisters = [...m.tec1g.state.display.tms9918.stateSnapshot().registers];
     ok(call(m, "ABICALL", { c: ABI.TNVIDEO, b: 1 }));
     vreg(m, 7, 0x12);

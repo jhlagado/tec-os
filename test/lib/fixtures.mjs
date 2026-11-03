@@ -18,7 +18,7 @@ export const ABI = Object.fromEntries(
   [...readFileSync(resolve(ROOT, "src/abi.inc"), "utf8").matchAll(/^(\w+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]),
 );
 
-/** The one ROM. A test's profile name chooses only the PICO9918 driver's width (picoFor). */
+/** The one ROM, for every board and every width: the PICO9918 driver's width is the card's (picoFor). */
 export function romFor() {
   const dir = resolve(ROOT, "build", "tecos");
   const romPath = resolve(dir, "tecos.rom");
@@ -83,8 +83,8 @@ export const PICO_SVC = Object.fromEntries(
   await Promise.all(Object.entries(PICO_WIDTHS).map(async ([name, defs]) => [name, (await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") })).file])),
 );
 
-/** The PICO driver's file for a profile's name, which stays as the width. */
-export const picoFor = (profile = "debug80") => ({ debug80t40: "PICO40.SVC", debug80g32: "PICO32.SVC" })[profile] ?? "PICO.SVC";
+/** The PICO driver's file for a width in columns: 80, 40 or 32. */
+export const picoFor = (width = 80) => ({ 40: "PICO40.SVC", 32: "PICO32.SVC" })[width] ?? "PICO.SVC";
 
 /**
  * The three type bytes in the CCP's FCB after M's last command. A name the
@@ -99,12 +99,12 @@ export const startupFile = (...lines) => Buffer.from(lines.map((l) => `${l}\r\n`
 
 /**
  * Put a board's display driver and a STARTUP.CMD naming it on drive A of IMAGE:
- * PICO.SVC, by the profile's width, with the matrix keyboard and a PICO9918, and
+ * PICO.SVC at WIDTH, with the matrix keyboard and a PICO9918, and
  * GLCD.SVC with the keyboard alone. A card that has a STARTUP.CMD keeps it.
  */
-export function withDisplay(image, { tms = false, matrix = false, profile } = {}) {
+export function withDisplay(image, { tms = false, matrix = false, width = 80 } = {}) {
   if (!matrix) return image;
-  const name = tms ? picoFor(profile) : "GLCD.SVC";
+  const name = tms ? picoFor(width) : "GLCD.SVC";
   const a = volume(image, "A");
   if (a.list().some((f) => f.name === name)) return image;
   a.write(name, tms ? PICO_SVC[name] : GLCD_SVC);
@@ -113,9 +113,9 @@ export function withDisplay(image, { tms = false, matrix = false, profile } = {}
 }
 
 /** Boot a machine to the first CCP prompt. Its clock starts at TEST_CLOCK. */
-export function boot(sdImage, { profile = "debug80", ramFill = 0, highCapacity = true, tms = false, matrix = false, glcd = true, ram96 = false, mains = 2, expands = 2 } = {}) {
-  const { rom, symbols } = romFor(profile);
-  if (sdImage) withDisplay(sdImage, { tms, matrix, profile });
+export function boot(sdImage, { width = 80, ramFill = 0, highCapacity = true, tms = false, matrix = false, glcd = true, ram96 = false, mains = 2, expands = 2 } = {}) {
+  const { rom, symbols } = romFor();
+  if (sdImage) withDisplay(sdImage, { tms, matrix, width });
   const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, glcd, ram96, mains, expands, clock: TEST_CLOCK });
   m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");

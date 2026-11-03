@@ -142,9 +142,9 @@ test("TPA after boot: one display, and both", () => {
 });
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/pico-screens.json"), "utf8"));
-for (const [profile, cols] of [["debug80", 80], ["debug80t40", 40], ["debug80g32", 32]]) {
+for (const cols of [80, 40, 32]) {
   test(`at ${cols} columns the screens equal the ROM console's, step by step`, () => {
-    const m = boot(standardCard(), { profile, tms: true, matrix: true });
+    const m = boot(standardCard(), { width: cols, tms: true, matrix: true });
     assert.deepEqual(screens(m, cols), REF[cols]);
   });
 }

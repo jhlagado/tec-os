@@ -89,7 +89,7 @@ test("the video terminal implements its ANSI subset", async () => {
 });
 
 test("PICO32.SVC uses TMS9918 Graphics I", () => {
-  const m = boot(standardCard(), { tms: true, matrix: true, profile: "debug80g32" });
+  const m = boot(standardCard(), { tms: true, matrix: true, width: 32 });
   assert.ok(m.screen(32).includes("A>"));
   assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[1], 0xc0);
 });
@@ -107,7 +107,7 @@ test("DIR lays out names to fit the display and reports free space", () => {
   const image = standardCard();
   const a = volume(image, "A");
   for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
-  const tms = boot(image, { tms: true, matrix: true, profile: "debug80t40" });
+  const tms = boot(image, { tms: true, matrix: true, width: 40 });
   tms.command("DIR");
   const s = tms.screen();
   const at = s.indexOf("A>DIR");
@@ -169,7 +169,7 @@ test("TYPE fills a 24-row, 40-column screen before pausing, and long lines count
   const image = standardCard();
   const long = "x".repeat(70);
   volume(image, "A").write("WIDE.TXT", Buffer.from(`${long}\n${numberedLines(40)}`), { text: true });
-  const m = boot(image, { tms: true, matrix: true, profile: "debug80t40" });
+  const m = boot(image, { tms: true, matrix: true, width: 40 });
   m.mark = m.output.length;
   m.type("TYPE WIDE.TXT\r");
   m.expect(/\[more\]$/);
