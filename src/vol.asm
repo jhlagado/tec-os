@@ -139,41 +139,33 @@ MNDESC: LD      A,(MNTI)
         OR      (IX+DVOLID+1)
         OR      (IX+DVOLID+2)
         OR      (IX+DVOLID+3)
-        LD      A,MEDESC
-        JP      Z,MNTERR
+	JP	Z,MNDBAD
         LD      A,(IX+DFLAGS)
         AND     $FF-DFREAD
-        LD      A,MEDESC
-        JP      NZ,MNTERR
+	JP	NZ,MNDBAD
         LD      A,(IX+DGEOM)
         CALL    GEOFIND         ; HL -> geometry entry, Z if known
-        LD      A,MEDESC
-        JP      NZ,MNTERR
+	JP	NZ,MNDBAD
         INC     HL              ; length must equal the geometry's payload
         INC     HL
         LD      A,(HL)
         CP      (IX+DLEN)
-        LD      A,MEDESC
-        JP      NZ,MNTERR
+	JP	NZ,MNDBAD
         INC     HL
         LD      A,(HL)
         CP      (IX+DLEN+1)
-        LD      A,MEDESC
-        JP      NZ,MNTERR
+	JP	NZ,MNDBAD
         LD      A,(IX+DLEN+2)
         OR      (IX+DLEN+3)
-        LD      A,MEDESC
-        JP      NZ,MNTERR
+	JP	NZ,MNDBAD
         LD      A,(IX+DSTART)   ; start: nonzero and aligned
         AND     ALIGNB-1
-        LD      A,MEDESC
-        JP      NZ,MNTERR
+	JP	NZ,MNDBAD
         LD      A,(IX+DSTART)
         OR      (IX+DSTART+1)
         OR      (IX+DSTART+2)
         OR      (IX+DSTART+3)
-        LD      A,MEDESC
-        JP      Z,MNTERR
+	JP	Z,MNDBAD
         PUSH    IX              ; start >= the previous end
         POP     HL
         LD      DE,DSTART
@@ -255,6 +247,7 @@ MNNEXT: LD      HL,MNTI
         XOR     A
         LD      (BUFOK),A       ; BLKBUF holds the table, not volume data
         RET
+MNDBAD:	LD	A,MEDESC	; a descriptor check failed
 MNTERR: PUSH    AF
         CALL    UNMOUNT
         POP     AF
