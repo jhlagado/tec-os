@@ -94,6 +94,12 @@ function reset() {
   appendSerial("\n[reset]\n");
 }
 
+setInterval(async () => {
+  if (state.importBusy || !state.cardDirty || !state.card) return;
+  state.cardDirty = false;
+  await save();
+}, 2000);
+
 /** Save the card; on failure it stays marked unsaved, the next tick tries again, and the page says so. */
 async function save(image = state.card) {
   try {
@@ -109,12 +115,6 @@ async function save(image = state.card) {
     return false;
   }
 }
-
-setInterval(async () => {
-  if (state.importBusy || !state.cardDirty || !state.card) return;
-  state.cardDirty = false;
-  await save();
-}, 2000);
 
 // ---- Run loop -----------------------------------------------------------------
 
@@ -580,8 +580,8 @@ $("putfile").addEventListener("change", async (e) => {
       const name = file.name.toUpperCase();
       fs.write(name, new Uint8Array(await file.arrayBuffer()), { text: $("astext").checked });
     }
+    await saveCard(staged); // a failed save throws: "Not copied", and the card as it was
     state.card.set(staged);
-    await save();
     reset();
   } catch (err) {
     $("cardinfo").textContent = `Not copied: ${err.message}`;
