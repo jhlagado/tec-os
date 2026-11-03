@@ -87,6 +87,8 @@ test("hardware services: information, bad numbers, digits, LCD, tone", () => {
   assert.equal(info.b & 0x08, 0x08, "the DS1302 answers");
   assert.equal(info.de, m.sym("ROMVER"));
   assert.equal(info.hl, 0, "serial console: no columns or rows");
+  const [, ports] = outs(m, () => ok(svc(m, HW.INFO)));
+  assert.deepEqual(ports.filter(([p]) => p === 0xfc), [], "INFO reads the clock's bit cold boot set, and touches no clock");
   assert.deepEqual(Object.values(HW), [0, 1, 2, 3, 4, 5, 6, 7, 8], "0 to 8");
   // Every number past the last refuses, and leaves B, DE and HL as they came.
   for (let n = ABI.TNCOUNT; n < 256; n += 1) {
