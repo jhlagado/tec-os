@@ -24,7 +24,7 @@
 %INCLUDE "diag.asm"
 %INCLUDE "cpm/ccp.asm"
 %INCLUDE "cpm/bdos.asm"
-%INCLUDE "hwsvc.asm"
+%INCLUDE "services.asm"
 %INCLUDE "glcd.asm"
 %INCLUDE "cache.asm"
 %INCLUDE "history.asm"

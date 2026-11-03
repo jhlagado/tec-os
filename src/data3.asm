@@ -89,7 +89,7 @@ ERRBAD: DB      ": Bad Sector",0
 ERRRO:  DB      ": R/O",0
 ERRFILE: DB     ": File R/O",0
 
-; ---- hwsvc.asm ---------------------------------------------------------------
+; ---- services.asm ------------------------------------------------------------
 ; The numbered services, from TNINFO to TNLIST: abi.inc's order.
 SVTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
 	DW	HWSLCD,HWSVID	; 2 and 3

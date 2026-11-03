@@ -1,7 +1,7 @@
 # The ROM table and the hardware services
 
 Status: **Built**, ABI 5.0. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
-at `C008h`, to 15 *numbered services*: 9 *hardware services* in `src/hwsvc.asm`, and
+at `C008h`, to 15 *numbered services*: 9 *hardware services* in `src/services.asm`, and
 the volumes', the display drivers' hook and the registry's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
