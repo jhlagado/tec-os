@@ -1,0 +1,53 @@
+{
+  "mutants": {
+    "promise 1: a volume written through no longer written before the call returns": {
+      "caught": true,
+      "by": [
+        "write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns",
+        "a failed write-through write drops its block's line, so a reread comes from the card"
+      ]
+    },
+    "promise 2: CWB3's order reversed, the directory line before the data": {
+      "caught": true,
+      "by": [
+        "at every card write while a file is erased and its blocks reused, the volume verifies and no entry names another file's data",
+        "a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount"
+      ]
+    },
+    "promise 3: the warm boot's flush removed": {
+      "caught": true,
+      "by": [
+        "a card removed with dirty lines leaves the console working, and warm boot says the write was lost",
+        "the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)",
+        "an unclosed file's records reach the card at warm boot"
+      ]
+    },
+    "a flush that stops at its first failure": {
+      "caught": true,
+      "by": [
+        "the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)",
+        "a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount",
+        "function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, which warm boot doesn't say again (KS36b)"
+      ]
+    },
+    "a mount that reads into fixed RAM": {
+      "caught": true,
+      "by": [
+        "a file read again comes from the cache, with no card read, and the same bytes",
+        "write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns",
+        "on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot"
+      ]
+    }
+  },
+  "mutantsAt": {
+    "promise 1: a volume written through no longer written before the call returns": "1f94710",
+    "promise 2: CWB3's order reversed, the directory line before the data": "1f94710",
+    "promise 3: the warm boot's flush removed": "1f94710",
+    "a flush that stops at its first failure": "1f94710",
+    "a mount that reads into fixed RAM": "1f94710"
+  },
+  "mutantScore": {
+    "caught": 5,
+    "total": 5
+  }
+}
