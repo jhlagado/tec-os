@@ -81,3 +81,18 @@ test("the names search finds old names as whole words in src/, and nothing in hi
   assert.deepEqual(searchNames(dir, ["GLHOOK", "glcd.asm"]), [{ file: "src/a.asm", line: 2, name: "GLHOOK" }], "drivers/glcd.asm allowed");
   rmSync(dir, { recursive: true });
 });
+
+test("a byte that is the low or high half of one label's address on both sides is taken by its label, and another value is not", () => {
+  // A holds LD A,LOW(B) / LD A,HIGH(B) / RET; B and C, 16 bytes each, trade places.
+  const side = (b, low, high) => {
+    const image = Buffer.alloc(0x40);
+    image.set([0x3e, low, 0x3e, high, 0xc9], 0x10);
+    image[b - 0xc000] = 0xc9;
+    const c = b === 0xc020 ? 0xc030 : 0xc020;
+    return { image, labels: [{ name: "A", address: 0xc010 }, { name: "B", address: b }, { name: "C", address: c }], constants: new Map(), end: 0xc040 };
+  };
+  const base = side(0xc020, 0x20, 0xc0);
+  assert.deepEqual(compareLabels(base, side(0xc030, 0x30, 0xc0)).differences, []);
+  assert.equal(compareLabels(base, side(0xc030, 0x30, 0xc0)).maskedBytes, 1);
+  assert.deepEqual(compareLabels(base, side(0xc030, 0x31, 0xc0)).differences.map((d) => [d.kind, d.label, d.offset]), [["bytes", "A", 1]]);
+});

@@ -56,7 +56,7 @@ async function main() {
     const file = M.arg("--renames");
     const renames = file ? JSON.parse(readFileSync(file, "utf8")) : {};
     const r = compareLabels(side, here(), { renames });
-    if (r.same) console.log(`${r.groups} label groups equal ${rev}'s, ${r.masked} addresses taken by their labels, ${r.used[1]} bytes used`);
+    if (r.same) console.log(`${r.groups} label groups equal ${rev}'s, ${r.masked} addresses and ${r.maskedBytes} address halves taken by their labels, ${r.used[1]} bytes used`);
     else for (const d of r.differences) console.log(JSON.stringify(d));
     return r.same;
   }
