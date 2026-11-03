@@ -386,8 +386,8 @@ CEND:
 ;
 ; With interrupts off, EXPAND 1 is switched in only around code that uses no
 ; stack, as the caller's stack may be in EXPAND 0. Within one bank: LDIR in
-; that bank's view. Across banks, the bank-0 end's part below 8000h, in MAIN
-; 0, copies by LDIR with EXPAND 1 in view; its part in EXPAND 0 copies a byte
+; that bank's view. Across banks, the bank-0 end's part below 8000h, in the
+; fixed RAM, copies by LDIR with EXPAND 1 in view; its part in EXPAND 0 copies a byte
 ; at a time, the latch switched between each read and write, with the two
 ; latch values in D' and E'.
 MVCOPY: LD      A,B

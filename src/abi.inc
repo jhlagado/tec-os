@@ -1,7 +1,7 @@
 ; TEC-OS's table, ABI 5.0, for programs: its 8 bytes at C003h, and the
 ; numbered services behind its one jump. A program checks for "TNA" at ABITAB
-; and for major version 5 at ABIMAJ before it calls ABICALL. The TEC-OS build
-; checks every address and number here against the ROM.
+; and for major version 5 at ABIMAJ before it calls ABICALL. The ROM assembles
+; from this file, and the build checks the table's bytes it makes.
 ;
 ; The table: "TNA", the major, the minor, then JP to the services. A new major
 ; may renumber the services; a new minor only adds numbers at the end.
@@ -20,8 +20,9 @@ ABIEND	EQU	$C00B		; the table's end: 8 bytes
 ; registers, but MOUNT, UNMOUNT and DESCRIBE, which may change IX and the
 ; alternates. None calls the BDOS, but MOUNT and UNMOUNT, which reset the drive
 ; through function 37 on the BDOS's own stack, so a program calls them from
-; outside its own BDOS calls. Registers not named as results are destroyed. Stack is
-; the most each takes below its return address, the dispatcher's included.
+; outside its own BDOS calls. Registers not named as results are destroyed.
+; Stack is a bound on what each takes below its return address, the
+; dispatcher's included: none takes more, and some take less.
 ; Any number from TNCOUNT up returns TNEBAD with B, DE and HL as they came.
 
 TNINFO	EQU	0		; -> B = devices (HWB* below),

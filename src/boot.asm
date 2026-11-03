@@ -62,7 +62,7 @@ COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
 ; BIOS function 1 and the JP at 0000h. Select the classic bank before the
 ; stack, because the BIOS stack is in that bank.
 WBOOTR: DI
-        LD      A,LATCLAS       ; MAIN 0, EXPAND 0
+        LD      A,LATCLAS       ; EXPAND 0 in view
         LD      (LATCHV),A
         OUT     (SYSLAT),A
         LD      SP,BSTK

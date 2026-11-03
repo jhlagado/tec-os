@@ -184,7 +184,6 @@ and run.
   boot as CP/M 2.2's does.
 - **`[more]`.** The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
-- **Function 50.** The direct BIOS call destroys AF'.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
   more than 46,165 bytes of TPA, may fail; how much a card gives depends on
   its volumes, and on a board with a display driver 44,544 is the least.
@@ -255,6 +254,6 @@ a chained line.
 | BDOS | Function 47 added; function 50 gone. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
-| Page zero | `0040h` to `004Fh` hold the same names but `EXPANDS`, gone with MAIN 1's count. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
+| Page zero | `0040h` to `004Fh` hold the same names but `MAINS` at `0041h` and `EXPANDS` at `0044h`, gone with MAIN 1's count; both bytes are unused. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
 | TPA | 46,869 on the starter card with no display, 45,312 with one display's driver and 43,776 with two | 45,830 at `7029f57` |
