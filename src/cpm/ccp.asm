@@ -294,6 +294,8 @@ CMDCOM: LD      A,'C'
 	CALL	LOADCOM
 	JR	C,BADCMD
 CMDRUN: CALL    PREPPAGE
+	LD	A,(CMDFCB)	; the drive the program came from, as
+	LD	(PZLDRV),A	; CP/M 3 keeps it: 0 the current, 1 A:
         ; Keep the return word outside default DMA ($0080..$00FF). The
         ; resident stack supplies 28 free bytes beneath this two-byte word.
         LD      SP,CSTKTOP

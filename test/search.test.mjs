@@ -43,3 +43,28 @@ test("a drive named in the command looks there only, and A: looks nowhere else",
   assert.equal(m.read(4) & 15, 1);
   assert.deepEqual(m.violations, []);
 });
+
+// KD-178: the CCP leaves the drive it loaded a program from at 0050h, as CP/M 3
+// does: 0 for the current drive, 1 for A: and so on, and 1 after the search.
+// SHOW prints that byte as a digit: LD A,(0050h) / ADD A,'0' / LD E,A / LD C,2 /
+// CALL 5 / RET.
+const SHOW = Uint8Array.from([0x3a, 0x50, 0x00, 0xc6, 0x30, 0x5f, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]);
+
+test("0050h is the drive a program came from: a typed B:NAME, a plain name, the search and a chained B:NAME (KD-178)", () => {
+  const image = standardCard();
+  volume(image, "A").write("SHOW.COM", SHOW);
+  volume(image, "B").write("SHOWB.COM", SHOW);
+  const m = boot(image);
+  const shown = (line) => /\r\n(\d)/.exec(m.command(line))?.[1];
+  assert.equal(shown("SHOW"), "0", "a plain name: the current drive");
+  assert.equal(shown("B:SHOWB"), "2", "B:NAME typed");
+  m.command("B:");
+  assert.equal(shown("SHOW"), "1", "found on A: by the search");
+  assert.equal(shown("SHOWB"), "0", "B:'s own, the current drive");
+  m.command("A:");
+  const from = m.output.length;
+  m.type("USER 0!B:SHOWB!SHOW\r");
+  m.runUntil(() => m.ready() && m.read(m.sym("CHPOS")) === 0 && /A>$/.test(m.text(from)), 400_000_000, "the chained line's end");
+  assert.match(m.text(from), /B:SHOWB\r\n2[\s\S]*SHOW\r\n0/, "a chained B:NAME piece, and the piece after it");
+  assert.deepEqual(m.violations, []);
+});
