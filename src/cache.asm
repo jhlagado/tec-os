@@ -14,9 +14,16 @@
 
 ; CTAB, CDIRTY and NLINES are in layout.asm.
 
+; P/V = the interrupt state. The second read is for an NMOS Z80, which can
+; clear P/V if an interrupt is accepted during the first. Destroys A.
+IFFGET: LD      A,I
+        RET     PE
+        LD      A,I
+        RET
+
 ; Interrupts off for a BIOS entry, their state kept in CIFF (CDI); back as
 ; they were, keeping A and the flags (CEI). CDI destroys HL.
-CDI:    LD      A,I             ; P/V = the interrupt state
+CDI:    CALL    IFFGET
         DI
         PUSH    AF
         POP     HL

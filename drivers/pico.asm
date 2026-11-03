@@ -98,10 +98,9 @@ TMSR2:  LD      A,(TPSHOW)
         RRCA
         LD      HL,TMSREGS+2
         ADD     A,(HL)
-        OUT     (VDPCTL),A
-        LD      A,$82
-        OUT     (VDPCTL),A
-        RET
+        LD      L,A
+        LD      H,$82
+        JP      VPAIR
 
 ; Load registers 0-7, the font and its reverse images, and in Graphics I the
 ; colours and an empty sprite table. VREST calls this, so a program that changed
@@ -111,9 +110,11 @@ TMSSET: LD      HL,TMSREGS
         LD      B,8
         LD      C,$80
 TMSR:   LD      A,(HL)
-        OUT     (VDPCTL),A
-        LD      A,C
-        OUT     (VDPCTL),A
+        PUSH    HL
+        LD      L,A
+        LD      H,C
+        CALL    VPAIR
+        POP     HL
         INC     HL
         INC     C
         DJNZ    TMSR
@@ -166,11 +167,11 @@ TMSCOL: LD      A,$F1
 ; AF, BC, DE and HL. A count of zero moves nothing.
 
 ; Set register B to A.
-GFXREG:	OUT	(VDPCTL),A	; the value goes first
+GFXREG:	LD	L,A		; the value goes first
 	LD	A,B
 	OR	$80		; then the register, with its write flag
-	OUT	(VDPCTL),A
-	RET
+	LD	H,A
+	JP	VPAIR
 
 ; Fill DE bytes of VRAM from address HL with A.
 GFXFIL:	LD	C,A		; the value, across the addressing
@@ -208,19 +209,31 @@ GFXRL:	LD	A,B		; tested first, so that 0 copies nothing
 	JR	GFXRL
 
 ; Set the VRAM write address to HL.
-TMSWA:  LD      A,L
-        OUT     (VDPCTL),A
-        LD      A,H
+TMSWA:  LD      A,H
         AND     $3F
         OR      $40
-        OUT     (VDPCTL),A
-        RET
+        LD      H,A
+        JP      VPAIR
 ; Set the VRAM read address to HL.
-TMSRA:  LD      A,L
+TMSRA:  LD      A,H
+        AND     $3F
+        LD      H,A
+; Write L then H to the control port with interrupts off, and put their state
+; back: an interrupt's own VDP read between the two would split the pair. The
+; second LD A,I is for an NMOS Z80, which can clear P/V if an interrupt comes
+; during the first. Keeps BC and DE. Destroys AF.
+VPAIR:  LD      A,I
+        JP      PE,VPAIR1
+        LD      A,I
+VPAIR1: PUSH    AF
+        DI
+        LD      A,L
         OUT     (VDPCTL),A
         LD      A,H
-        AND     $3F
         OUT     (VDPCTL),A
+        POP     AF
+        RET     PO
+        EI
         RET
 
 ; HL = address of row B, column C in the page being drawn. Destroys AF, DE.

@@ -22,7 +22,7 @@ HPUT:   PUSH    BC
         JR      HACC
 HGET:   PUSH    BC
         LD      C,0
-HACC:   LD      A,I             ; P/V = the interrupt state
+HACC:   CALL    IFFGET
         DI
         PUSH    AF
         LD      A,(LATCHV)

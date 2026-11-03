@@ -37,7 +37,7 @@ MOVE:   LD      A,(XMDST)
 MVCOPY: LD      A,B
         OR      C
         JP      Z,MVOK
-        LD      A,I             ; P/V = the interrupt state
+        CALL    IFFGET
         DI
         PUSH    AF
         EXX

@@ -191,7 +191,10 @@ CINRX:  AND     $7F
 
 ; Receive the byte whose start bit has just been seen. Samples the middle of
 ; each data bit, least significant first. Returns it in A; destroys BCD.
-RXBITS: LD      D,RXHALF
+RXBITS: CALL    IFFGET          ; interrupts off for the byte: 65 or 52
+        PUSH    AF              ; T-states of RXHALF's allowance
+        DI
+        LD      D,RXHALF
 RXH:    DEC     D
         JR      NZ,RXH
         LD      B,8
@@ -202,7 +205,10 @@ RXB:    IN      A,(STSPORT)
 RXD:    DEC     D
         JR      NZ,RXD
         DJNZ    RXB
+        POP     AF
         LD      A,C
+        RET     PO              ; the flags kept: interrupts as they were
+        EI
         RET
 
 ; BIOS CONOUT: send C to the serial port or the video terminal, by the console.
@@ -217,6 +223,9 @@ BCONOUT:CALL    CONSEL
 BCOSER: LD      A,C
 ; Send A. Each bit takes 49+16*TXDLY T-states. Destroys AF, BDE.
 TXBYTE: LD      E,A
+        CALL    IFFGET          ; interrupts off for the byte
+        PUSH    AF
+        DI
         LD      B,9             ; start bit, then 8 data bits
         OR      A               ; carry clear: the start bit is low
 TXB:    SBC     A,A
@@ -233,6 +242,9 @@ TXD:    DEC     D
         LD      D,TXSTOP
 TXS:    DEC     D
         JR      NZ,TXS
+        POP     AF
+        RET     PO
+        EI
         RET
 
 ; Print the zero-terminated string at HL on every console output.
