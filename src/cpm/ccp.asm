@@ -291,7 +291,7 @@ MLTK3:
 ; with no : after it
   jr nz,NOTDRIVE
   inc hl
-  call SKIPSP
+  call SKIPSP    ; skip after drive
   ld a,(hl)
   or a
 ; more after it, as in B:NAME

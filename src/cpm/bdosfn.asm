@@ -16,7 +16,7 @@
 FNLOGIN:
 ; bit n set: drive n is logged in
   ld hl,(LOGINV)
-  jp RETWORD
+  jp RETWORD     ; return the vector
 
 ; Function 25, the current drive: the
 ; default drive, 0 for A. Returns it in
@@ -40,7 +40,7 @@ FNCURDSK:
 FNSETDMA:
   ld hl,(PARAM)  ; the caller's DE
   ld (CURDMA),hl
-  ld b,h
+  ld b,h         ; BC for BIOS SETDMA
   ld c,l
   call BIODMA    ; through the RAM copy
                  ; of the BIOS's table
@@ -57,7 +57,7 @@ FNGETALV:
 ; kept from the default drive's
 ; selection
   ld hl,(DEFALV)
-  jp RETWORD
+  jp RETWORD     ; return ALV address
 
 ; Function 46, CP/M 3's free space:
 ; drive E's free blocks, from its
@@ -78,7 +78,7 @@ FNFREE:
   ld ix,(DPBPTR)
 ; block 0 in bit 7 of the first byte
   ld hl,(ALVPTR)
-  ld e,(ix+5)
+  ld e,(ix+5)    ; DSM low byte
   ld d,(ix+6)    ; DSM, the drive's last
                  ; block
   inc de         ; DE = the drive's
@@ -88,7 +88,7 @@ FNFREE:
                  ; current byte
 
 FRBIT:
-  push af
+  push af        ; save the bit mask
   and (hl)       ; the block's bit set:
                  ; in use
   jr nz,FRUSED
@@ -100,39 +100,39 @@ FRUSED:
                  ; a carry when it
   jr nc,FRSAME   ; wraps from bit 0 to
                  ; bit 7, the next byte
-  inc hl
+  inc hl         ; next vector byte
 
 FRSAME:
   dec de         ; one block fewer to
                  ; look at
   push af        ; the mask kept while
                  ; DE is tested
-  ld a,d
+  ld a,d         ; test remaining blocks
   or e
   jr z,FREND     ; every block counted
-  pop af
+  pop af         ; restore the bit mask
   jr FRBIT
 
 FREND:
   pop af         ; the mask dropped
   ld h,b         ; records = blocks <<
                  ; BSH, 24 bits
-  ld l,c
+  ld l,c         ; free blocks low byte
   xor a          ; A: the top byte
   ld b,(ix+2)    ; BSH: a block holds
                  ; 2^BSH records
 
 FRSH:
-  add hl,hl
+  add hl,hl      ; shift low 16 bits
   rla            ; H's top bit into A
   djnz FRSH
   ex de,hl
 ; the answer at the DMA address, low
 ; first
   ld hl,(CURDMA)
-  ld (hl),e
+  ld (hl),e      ; store the low byte
   inc hl
-  ld (hl),d
+  ld (hl),d      ; store the middle byte
   inc hl
   ld (hl),a      ; the top byte
   jp RETZERO
@@ -143,7 +143,7 @@ FRSH:
 ; function 13 or 37, clears it. Returns
 ; A = 0. Changes AF, B, DE and HL.
 FNWRPROT:
-  ld a,(DEFDRV)
+  ld a,(DEFDRV)  ; default drive number
   call MASKA     ; HL = the drive's bit
   ex de,hl
   ld hl,(ROVEC)  ; ORed into the
@@ -154,7 +154,7 @@ FNWRPROT:
   ld a,h
   or d           ; and I to P
   ld h,a
-  ld (ROVEC),hl
+  ld (ROVEC),hl  ; save read-only vector
   jp RETZERO
 
 ; Function 29, the read-only vector: a
@@ -164,7 +164,7 @@ FNWRPROT:
 FNGETRO:
   ld hl,(ROVEC)  ; set by function 28 or
                  ; a read-only mount
-  jp RETWORD
+  jp RETWORD     ; return the vector
 
 ; Function 31, the DPB's address: the
 ; default drive's disk parameter block.
@@ -174,7 +174,7 @@ FNGETDPB:
 ; kept from the default drive's
 ; selection
   ld hl,(DEFDPB)
-  jp RETWORD
+  jp RETWORD     ; return DPB address
 
 ; Function 32, the user number. E = FFh
 ; gets the user number; any other E sets
@@ -184,7 +184,7 @@ FNGETDPB:
 ; a set. Changes AF, B and HL.
 FNUSER:
   ld a,(PARAM)   ; the caller's E
-  cp $FF
+  cp $FF         ; read current user?
   jr z,GETUSER   ; FFh: get it
   and $1F        ; 0 to 31
   ld (USERNO),a
@@ -229,7 +229,7 @@ FNSIZE:
 
 SIZELOOP:
   call FINDENT
-  cp $FF
+  cp $FF         ; directory exhausted?
   jr z,SIZEDONE  ; no extent left
 ; the entry: EX and S2 where an FCB has
 ; them
@@ -253,7 +253,7 @@ SIZELOOP:
 
   ld b,a         ; CAND against FSIZE,
                  ; top bytes first
-  ld a,(FSIZE2)
+  ld a,(FSIZE2)  ; compare high byte
   cp b
   jr c,SIZEKEEP  ; this end is the
                  ; larger
@@ -262,14 +262,14 @@ SIZELOOP:
   ld a,(CAND1)   ; top bytes equal: the
                  ; middle ones
   ld b,a
-  ld a,(FSIZE1)
+  ld a,(FSIZE1)  ; compare middle byte
   cp b
   jr c,SIZEKEEP  ; larger
 ; smaller
   jr nz,SIZELOOP
   ld a,(CAND0)   ; and then the low ones
   ld b,a
-  ld a,(FSIZE0)
+  ld a,(FSIZE0)  ; compare low byte
   cp b
 ; not larger: FSIZE stands
   jr nc,SIZELOOP
@@ -505,7 +505,7 @@ FINDLIM:
                  ; the record
 ; returned if it matches
   ld (RETCODE),a
-  add a,a
+  add a,a        ; scale slot to offset
   add a,a
   add a,a
   add a,a
@@ -738,7 +738,7 @@ NAMEOK:
   ld c,a         ; the bits that differ
 ; the DPB: EXM is byte 4
   ld hl,(DPBPTR)
-  inc hl
+  inc hl         ; skip to extent mask
   inc hl
   inc hl
   inc hl

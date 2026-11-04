@@ -337,7 +337,7 @@ CPDONE:
   call PUTSTR
 ; the high byte first
   ld a,(DIRNUM+1)
-  call CPHEX
+  call CPHEX     ; print high byte
   ld a,(DIRNUM)
   call CPHEX
   ld de,CRLFMSG

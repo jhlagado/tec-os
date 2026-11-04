@@ -37,7 +37,7 @@ CMDDIR:
   jr nz,DIRREADY
 ; else all 11 name and type bytes
   ld hl,CMDFCB+1
-  ld b,11
+  ld b,11        ; 8 name + 3 type bytes
   ld a,'?'
 
 DIRWILD:

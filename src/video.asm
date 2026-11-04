@@ -138,7 +138,7 @@ VIDHOOK:
   add a,LOW(PIVEC)-1
   ld e,a
   ld d,HIGH(PIVEC)
-  ld a,h
+  ld a,h         ; test table pointer
   or l
   jr z,VIDHOFF   ; HL = 0: the table
                  ; dropped

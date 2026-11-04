@@ -21,7 +21,7 @@ READDIR:
   ld (DIRTRK),hl
   ld b,h
   ld c,l
-  call BIOTRK
+  call BIOTRK    ; select read track
 ; its logical sector, kept too,
   ld hl,(CURSEC)
   ld (DIRSEC),hl
@@ -33,13 +33,13 @@ READDIR:
                  ; sector
   ld b,h
   ld c,l
-  call BIOSEC
+  call BIOSEC    ; select read sector
 ; read into the directory buffer
   ld hl,(DIRPTR)
   ld b,h
   ld c,l
-  call BIODMA
-  call BIORDS
+  call BIODMA    ; use directory DMA
+  call BIORDS    ; read directory record
   call DMABACK   ; the DMA back; a
                  ; failed read: error 1
   jr ADVSEC      ; on to the next
@@ -57,17 +57,17 @@ WRITEDIR:
   ld hl,(DIRTRK)
   ld b,h
   ld c,l
-  call BIOTRK
+  call BIOTRK    ; select write track
 ; and its sector,
   ld hl,(DIRSEC)
   ld b,h
   ld c,l
 ; translated through the skew table
   ld de,(XLTPTR)
-  call BIOTRN
+  call BIOTRN    ; translate sector
   ld b,h
   ld c,l
-  call BIOSEC
+  call BIOSEC    ; select write sector
 ; On into WRDIRNOW's write.
 
 ; The delete loop writes immediately
@@ -86,10 +86,10 @@ WRDIRNOW:
   ld hl,(DIRPTR)
   ld b,h
   ld c,l
-  call BIODMA
+  call BIODMA    ; use directory DMA
   ld c,1         ; type 1: a directory
                  ; write, at once
-  call BIOWRS
+  call BIOWRS    ; write directory
 
 ; After a BIOS read or write from a BDOS
 ; buffer: the BIOS's DMA address set
@@ -107,12 +107,12 @@ DMABACK:
   ld hl,(CURDMA)
   ld b,h
   ld c,l
-  call BIODMA
-  pop af
+  call BIODMA    ; restore caller DMA
+  pop af         ; recover BIOS status
   or a           ; NZ: the read or write
                  ; failed
-  ret z
-  jp BADSECT
+  ret z          ; success
+  jp BADSECT     ; report disk error
 
 ; Step CURSEC on to the next directory
 ; record: past the track's last
@@ -129,9 +129,9 @@ ADVSEC:
   ld c,(hl)      ; SPT, the sectors on a
                  ; track
   inc hl
-  ld b,(hl)
+  ld b,(hl)      ; SPT high byte
   ex de,hl
-  or a
+  or a           ; clear carry
   sbc hl,bc      ; carry: still on this
                  ; track
   jr c,SECSAME
@@ -183,7 +183,7 @@ LOGIN:
 
 LOGSEL:
   ld a,(CURDRV)
-  ld c,a
+  ld c,a         ; drive for BIOS
   call BIOSEL    ; HL = the DPH, 0 for
                  ; no volume
   ld a,h
@@ -191,7 +191,7 @@ LOGSEL:
   jr nz,LOGOK
   pop af         ; no volume: the select
                  ; error
-  jp SELFAIL
+  jp SELFAIL     ; drive unavailable
 
 LOGOK:
   ld (DPHPTR),hl
@@ -233,7 +233,7 @@ LOGOK:
                  ; flags:
   bit 0,(hl)     ; bit 0, read-only
   ld hl,ROVEC
-  call nz,VSET
+  call nz,VSET   ; mark read-only
   pop af         ; NZ: logged in
                  ; already,
   jr nz,LOGFAST  ; its vector kept
@@ -241,7 +241,7 @@ LOGOK:
                  ; vector,
   ld hl,LOGINV   ; and the drive marked
                  ; logged in
-  call VSET
+  call VSET      ; mark drive logged in
 
   ld hl,0        ; no entries counted or
                  ; used yet
@@ -369,7 +369,7 @@ LOGDONE:
                  ; flag, cleared
   ld (hl),0
   ld hl,WARMV    ; no rebuild left to do
-  call VCLR
+  call VCLR      ; clear rebuild bit
   jr LOGCNT      ; DIRCNT set and a new
                  ; search
 
@@ -408,7 +408,7 @@ ALVSUM:
   ex de,hl       ; existing SUMDE takes
                  ; its source in DE
   ld hl,0        ; the sum from 0
-  call SUMDE
+  call SUMDE     ; sum directory bytes
   ex de,hl       ; sum in DE, pointer
                  ; past the vector in HL
   ret
