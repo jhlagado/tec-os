@@ -27,8 +27,9 @@ async function variant(name, edits) {
   return built(dir);
 }
 
-// lcd.asm and the file included just before it, read from rom.asm, traded.
-const LCDPAIR = readFileSync(resolve(ROOT, "src/rom.asm"), "latin1").match(/^(%INCLUDE "[^"]+")\n(%INCLUDE "lcd\.asm")$/m);
+// lcd.asm and the file included just before it, read from rom.asm, traded,
+// whatever spaces or tabs lay the include lines out.
+const LCDPAIR = readFileSync(resolve(ROOT, "src/rom.asm"), "latin1").match(/^([ \t]*%INCLUDE[ \t]+"[^"]+")\n([ \t]*%INCLUDE[ \t]+"lcd\.asm")$/m);
 const SWAP = ["src/rom.asm", LCDPAIR[0], `${LCDPAIR[2]}\n${LCDPAIR[1]}`];
 
 test("the image check passes on the same image and finds one byte changed", () => {
