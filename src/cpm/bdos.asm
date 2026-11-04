@@ -2061,8 +2061,8 @@ DUPTR:
         ADD     HL,BC
         RET
 
-; Clear the BIOS-owned allocation vector and copy the reserved-directory
-; bits supplied by the selected drive's DPB.
+; Return BC = DSM / 8 + 1 allocation bytes, HL = the BIOS-owned vector.
+; Uses BC/HL and flags; preserves A/DE/IX/IY.
 ALVLEN:
         LD      HL,(DPBPTR)
         LD      BC,5
@@ -2080,6 +2080,8 @@ ALVLEN:
         LD      HL,(ALVPTR)
         RET
 
+; Clear the BIOS-owned allocation vector and copy the reserved-directory
+; bits supplied by the selected drive's DPB.
 INITALV:
         CALL    ALVLEN
 

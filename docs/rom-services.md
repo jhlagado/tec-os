@@ -5,7 +5,7 @@ at `C008h`, to 15 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook and the registry's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,561 bytes (`tecos`) and has 1,823 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,462 bytes (`tecos`) and has 1,922 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -204,7 +204,7 @@ carries its own.
 | SD driver (`sd.asm`) | 836 | 1 | Stays |
 | Container mount and checks (`vol.asm`) | 1,200 | 1 | Stays |
 | CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,436 | 2 | Stays |
-| BDOS (`cpm/bdos.asm`) | 3,854 | 2 | Stays |
+| BDOS (`cpm/bdos.asm`) | 3,755 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 495 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 693 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
@@ -212,7 +212,7 @@ carries its own.
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 14,561 bytes used. The CCP extent contains 2,414 instruction bytes
+census's 14,462 bytes used. The CCP extent contains 2,414 instruction bytes
 and 22 inline immutable descriptor bytes, as classified by ATOM's debug map.
 The strings and tables outside that extent retain their byte account.
 
@@ -256,7 +256,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,823<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,922<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
