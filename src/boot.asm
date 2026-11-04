@@ -366,9 +366,9 @@ SHV:	PUSH	BC		; the drive, across the printing
 	CALL	DRVDESC		; IX at its volume's descriptor
 	JR	NZ,SHVN		; none on this drive
 	LD	HL,CMDTXT	; letter and label, in the CCP's line,
-	CALL	DRVLAB		; free at cold boot, before the CCP
-	LD	HL,CMDTXT	; has run; LINEBUF is the terminal's
-	CALL	PUTS
+	CALL	DRVLAB		; free before the CCP has run; not in
+	LD	HL,CMDTXT	; LINEBUF, where the terminal's scroll
+	CALL	PUTS		; puts a row while PUTS prints it
 	LD	A,(IX+DFLAGS)	; the volume's flags
 	AND	DFREAD
 	JR	Z,SHVRW		; writable: no note

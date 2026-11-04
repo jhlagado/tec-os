@@ -73,14 +73,14 @@ LCDV:	PUSH	BC
 	CALL	DRVDESC		; IX = drive C's descriptor
 	POP	BC
 	JR	NZ,LCDVN	; no volume on it
-	LD	HL,LINEBUF	; the row's text, in the terminal's
-	CALL	DRVLAB		; buffer, which the LCD may use
+	LD	HL,LINEBUF	; the row's text, in the terminal's row
+	CALL	DRVLAB		; buffer, free between console calls
 	PUSH	BC
 	LD	A,C
 	INC	A
 	LD	B,A		; row 1 for A, 2 for B
-	LD	HL,LINEBUF	; the text DRVLAB made
-	CALL	LCDROW
+	LD	HL,LINEBUF	; the text DRVLAB made, which LCDROW
+	CALL	LCDROW		; writes without the console
 	POP	BC
 LCDVN:	INC	C		; the next drive
 	LD	A,C
