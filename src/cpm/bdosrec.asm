@@ -443,20 +443,23 @@ ALNEXT:
 	JR	ALLOCLOP
 
 ; Block DE is free: its bit set, the drive marked changed, and the block
-; written in the FCB's map cell for SEQREC. Returns A = 0.
+; written in the FCB's map cell for SEQREC, the FCB marked changed (S2's bit
+; 7 clear) at once, so that close writes the entry that holds the block even
+; when the record's write then fails. Returns A = 0.
 ALFOUND:
 	LD	A,(HL)
 	OR	C		; the block now in use
 	LD	(HL),A
-	PUSH	HL		; TEC-OS: the vector changed, the drive dirty
-	LD	HL,(DPHPTR)	; the drive's DPH
-	INC	HL
+	LD	HL,(DPHPTR)	; TEC-OS: the vector changed, the drive
+	INC	HL		; dirty
 	INC	HL
 	INC	HL
 	INC	HL
 	LD	(HL),1		; its byte 4 set: the vector changed
-	POP	HL
 	PUSH	DE		; the block, kept through FCBADDR
+	LD	DE,14		; S2's bit 7 clear: the FCB's map has
+	CALL	FCBOFF		; changed
+	RES	7,(HL)
 	CALL	FCBADDR		; HL at the record's map cell
 	POP	DE
 	LD	(HL),E		; the block's low byte

@@ -200,3 +200,23 @@ test("a zero-filling write whose block fails returns the error with the program'
   assert.equal(r.bdos(20, 0x0200), 0, "DATA.DAT's first record read, with no directory read before it");
   assert.deepEqual(Array.from({ length: 128 }, (_, k) => m.read(DMA + k)), new Array(128).fill(0x5a), "the record is at the program's DMA address");
 });
+
+test("a write that fails after its block is claimed leaves no block marked used that no directory entry holds (KE-177)", () => {
+  const image = standardCard();
+  const r = callRig(image);
+  const { m } = r;
+  r.bdos(45, 0xff);
+  r.fcb(0, "LEAK    DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  const restore = failWrites(m);
+  assert.equal(r.bdos(21), 0xff, "the write fails, the error returned");
+  restore();
+  const block = m.read(FCB + 16) | (m.read(FCB + 17) << 8);
+  assert.notEqual(block, 0, "a block was claimed for record 0");
+  assert.notEqual(r.bdos(16), 0xff, "closed");
+  const used = (alv(m, 0)[block >> 3] >> (7 - (block & 7))) & 1;
+  const disk = volume(image, "A");
+  const entry = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).find((e) => e[0] === 0 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "LEAK    DAT");
+  const held = [...Array(8).keys()].some((i) => (entry[16 + 2 * i] | (entry[17 + 2 * i] << 8)) === block);
+  assert.ok(!used || held, `block ${block}: ${used ? "used in the vector" : "free"}, ${held ? "held" : "not held"} by LEAK.DAT's entry`);
+});
