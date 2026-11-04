@@ -1,0 +1,145 @@
+{
+  "drivers/glcd.asm": {
+    "lines": [
+      "VTAB: DW GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR",
+      "  DB 0,3, 2,4, 5,3, 8,3, 10,4, 13,3, 16,3, 18,3"
+    ],
+    "headers": {
+      "INIT": 17
+    }
+  },
+  "src/bios.asm": {
+    "lines": [],
+    "headers": {
+      "BWRITE": 24
+    }
+  },
+  "src/boot.asm": {
+    "lines": [],
+    "headers": {
+      "RSTENT": 19,
+      "RSLCAP": 23,
+      "PZSWP": 18,
+      "RAMCHK": 17
+    }
+  },
+  "src/cache.asm": {
+    "lines": [],
+    "headers": {
+      "CWRBH": 20,
+      "MVCOPY": 25
+    }
+  },
+  "src/cpm/bdos.asm": {
+    "lines": [],
+    "headers": {
+      "FNLINE": 18
+    }
+  },
+  "src/cpm/bdosfile.asm": {
+    "lines": [],
+    "headers": {
+      "WRESET": 17,
+      "MAKEFCB": 17
+    }
+  },
+  "src/cpm/bdosfn.asm": {
+    "lines": [],
+    "headers": {
+      "FINDENT": 23,
+      "MATCHFCB": 24
+    }
+  },
+  "src/cpm/bdoslog.asm": {
+    "lines": [],
+    "headers": {
+      "LOGIN": 17
+    }
+  },
+  "src/cpm/bdosrec.asm": {
+    "lines": [],
+    "headers": {
+      "ZEROBLK": 18
+    }
+  },
+  "src/cpm/ccpcmd.asm": {
+    "lines": [],
+    "headers": {
+      "CMDCON": 21
+    }
+  },
+  "src/cpm/ccpfile.asm": {
+    "lines": [],
+    "headers": {
+      "CMDDIR": 19
+    }
+  },
+  "src/loader.asm": {
+    "lines": [],
+    "headers": {
+      "SVCUNL": 20
+    }
+  },
+  "src/pico.asm": {
+    "lines": [
+      "PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN",
+      "REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$F4",
+      "REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$F4",
+      "REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$F1"
+    ],
+    "headers": {}
+  },
+  "src/services.asm": {
+    "lines": [],
+    "headers": {
+      "HWSVID": 17
+    }
+  },
+  "src/tables.asm": {
+    "lines": [
+      "KBSPEC: DB $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C",
+      "  DW FNZERO,FNCIN,FNCOUT,FNREAD,FNPUNCH,FNLIST",
+      "  DW FNDIRECT,FNGETIO,FNSETIO,FNPRINT,FNLINE,FNSTAT",
+      "  DW FNVERS,FNRESET,FNSEL,FNOPEN,FNCLSE,FNSRCHF",
+      "  DW FNSRCHN,FNDELETE,FNREADSQ,FNWRITE,FNMAKE,FNRENAME",
+      "  DW FNLOGIN,FNCURDSK,FNSETDMA,FNGETALV,FNWRPROT,FNGETRO",
+      "  DW FNATTR,FNGETDPB,FNUSER,FNRREAD,FNRWRITE,FNSIZE",
+      "  DW FNSETRR,FNRESETD,RETZERO,RETZERO,FNWRZERO",
+      "FCBMAP: DB %00000000,%10000000,%11111011,%01000000,%00001110,%00000001"
+    ],
+    "headers": {}
+  },
+  "src/text.asm": {
+    "lines": [
+      "RAMMSG: DB 13,10,\"TEC-OS needs 64K RAM\",13,10,0",
+      "BANNER: DB 13,10,\"TEC-OS \",VERHI+'0','.',VERLO+'0',\" for TEC-1G\",13,10,0",
+      "LCDBAN: DB \"TEC-OS \",VERHI+'0','.',VERLO+'0',\"  TEC-1G\",0"
+    ],
+    "headers": {}
+  },
+  "src/video.asm": {
+    "lines": [],
+    "headers": {
+      "VIDHOOK": 18
+    }
+  },
+  "src/vol.asm": {
+    "lines": [],
+    "headers": {
+      "MNBLK": 16
+    }
+  },
+  "src/cpm/ccpmut.asm": {
+    "lines": [],
+    "headers": {
+      "CMDCOPY": 22
+    }
+  },
+  "src/volsvc.asm": {
+    "lines": [],
+    "headers": {
+      "RESEL": 30,
+      "VSMNT": 17
+    }
+  }
+}

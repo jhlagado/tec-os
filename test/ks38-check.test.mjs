@@ -44,9 +44,9 @@ test("the image check passes on the same image and finds one byte changed", () =
 
 test("a label renamed: the image is the same, and the label check passes given the rename and fails without it", async () => {
   const renamed = await variant("rename", [
-    ["src/reset.asm", "RESET:\tJP\tRSTENT", "RESET:\tJP\tRESETIN"],
-    ["src/boot.asm", "RSTENT:\tLD\tA,($0002)", "RESETIN:LD\tA,($0002)"],
-    ["src/boot.asm", "CP\tHIGH(RSTENT)", "CP\tHIGH(RESETIN)"],
+    ["src/reset.asm", "RESET:\n  jp RSTENT", "RESET:\n  jp RESETIN"],
+    ["src/boot.asm", "RSTENT:\n  ld a,($0002)", "RESETIN:\n  ld a,($0002)"],
+    ["src/boot.asm", "cp HIGH(RSTENT)", "cp HIGH(RESETIN)"],
   ]);
   assert.equal(sameImage(base.image, renamed.image).same, true);
   assert.equal(compareLabels(base, renamed, { renames: { RSTENT: "RESETIN" } }).same, true);
@@ -64,10 +64,10 @@ test("two files trade places: the image check fails, the label check passes with
 });
 
 test("with the files traded, the label check finds an operand changed and a jump retargeted", async () => {
-  const operand = await variant("swap-operand", [SWAP, ["src/boot.asm", "CP\tHIGH(RSTENT)", "CP\tHIGH(RSTENT)+1"]]);
+  const operand = await variant("swap-operand", [SWAP, ["src/boot.asm", "cp HIGH(RSTENT)", "cp HIGH(RSTENT)+1"]]);
   const named = (r) => r.differences.map((d) => [d.kind, d.label.split("/").includes("RSTENT")]);
   assert.deepEqual(named(compareLabels(base, operand)), [["bytes", true]], "RSTENT's group");
-  const retarget = await variant("swap-jump", [SWAP, ["src/boot.asm", "JP\tNZ,WBOOTR", "JP\tNZ,COLD"]]);
+  const retarget = await variant("swap-jump", [SWAP, ["src/boot.asm", "jp nz,WBOOTR", "jp nz,COLD"]]);
   assert.deepEqual(named(compareLabels(base, retarget)), [["bytes", true]], "RSTENT's group");
   rmSync(WORK, { recursive: true, force: true });
 });

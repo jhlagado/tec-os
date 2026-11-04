@@ -10,7 +10,7 @@
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkSource } from "./lib/style.mjs";
+import { checkCompactSource } from "./lib/style-compact.mjs";
 
 const ROOT = resolve(fileURLToPath(import.meta.url), "../..");
 const args = process.argv.slice(2);
@@ -30,12 +30,15 @@ export function sources(root = ROOT) {
   };
   walk("src");
   walk("drivers");
+  out.push("programs/SAMPLE.ASM");
   return out;
 }
 
 const given = args.filter((a, i) => !a.startsWith("--") && !["--json"].includes(args[i - 1]));
 const files = given.length ? given.map((f) => relative(ROOT, resolve(f))) : sources();
-const results = files.map((f) => ({ file: f, ...checkSource(readFileSync(resolve(ROOT, f), "latin1"), basename(f)) }));
+const entries = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-routines.json"), "utf8"));
+const exceptions = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-exceptions.json"), "utf8"));
+const results = files.map((f) => ({ file: f, ...checkCompactSource(readFileSync(resolve(ROOT, f), "latin1"), basename(f), entries[f], exceptions[f]) }));
 
 const pad = (s, n) => String(s).padStart(n);
 console.log(`${"file".padEnd(22)} ${pad("lines", 5)} ${pad("code", 5)} ${pad("comm%", 5)} ${pad("routines", 8)} ${pad("no hdr", 6)} ${pad("run", 4)} ${pad("bytes", 6)}  faults`);

@@ -1,302 +1,449 @@
-; Resident workspace in the classic bank, from WSBASE upwards. The CCP and
-; BDOS blocks follow this one (CCPRAM, then BDOSRAM) and end at the RAM BIOS
-; table at BF00h; the SD, keyboard and GLCD state sit above the table. Nothing
-; here is initialised by the image: cold and warm boot clear and set it.
+; Resident workspace in the classic
+; bank, from WSBASE upwards. The CCP and
+; BDOS blocks follow this one (CCPRAM,
+; then BDOSRAM) and end at the RAM BIOS
+; table at BF00h; the SD, keyboard and
+; GLCD state sit above the table.
+; Nothing
+; here is initialised by the image: cold
+; and warm boot clear and set it.
 
-	ORG	WSBASE
+  ORG WSBASE
 
-; ---- BIOS disk state ---------------------------------------------------------
-DSKCUR:	DS	1		; selected drive
-DSKTRK:	DS	2
-DSKSEC:	DS	2
-DSKDMA:	DS	2
-BLKOFF:	DS	2		; block number within the volume
+; ---- BIOS disk state
+; --------------------------------------
+DSKCUR: DS 1     ; selected drive
+DSKTRK: DS 2
+DSKSEC: DS 2
+DSKDMA: DS 2
+BLKOFF: DS 2     ; block number within
+                 ; the volume
+
 BLKSLOT:
-	DS	1		; 128-byte record within the block, 0-3
+  DS 1           ; 128-byte record
+                 ; within the block, 0-3
 
-; BWRITE's key (GETKEY): the block last cleared rather than read, by drive and
-; block number, so that the next one of its allocation block needs no read.
-BUFOK:	DS	1
-BUFDRV:	DS	1
-BUFBLK:	DS	2
+; BWRITE's key (GETKEY): the block last
+; cleared rather than read, by drive and
+; block number, so that the next one of
+; its allocation block needs no read.
+BUFOK: DS 1
+BUFDRV: DS 1
+BUFBLK: DS 2
 
-; Drive table: start block (4), length in blocks (2), geometry (1), flags (1).
-; A recognised reset copies it from RAM by its address alone (RSLCAP). A ROM
-; with the same BENTRY and STUBAD addresses and a different DRVTAB would be
-; taken for this one: the 32 bytes then fail RESEL's match or name a volume
-; the card has, so the harm stops at a validated volume on a drive.
-DRVTAB:	DS	MAXDRV*DRVESZ
-DRVIDX:	DS	MAXDRV		; each drive's volume: container index
-				; + 1, 0 for none
+; Drive table: start block (4), length
+; in blocks (2), geometry (1), flags
+; (1).
+; A recognised reset copies it from RAM
+; by its address alone (RSLCAP). A ROM
+; with the same BENTRY and STUBAD
+; addresses and a different DRVTAB would
+; be
+; taken for this one: the 32 bytes then
+; fail RESEL's match or name a volume
+; the card has, so the harm stops at a
+; validated volume on a drive.
+DRVTAB: DS MAXDRV*DRVESZ
+; each drive's volume: container index
+DRVIDX: DS MAXDRV
+; + 1, 0 for none
 DRVSLOT:
-	DS	MAXDRV		; each drive's vector slot: 0 none,
-				; 1 G1M's, 2 G8M's
-DPHTAB:	DS	MAXDRV*DPHSZ
-LOGINV:	DS	2		; the BDOS's logged drives, kept across
-				; a warm boot
-DIRBUF:	DS	128
-CSVDUM:	DS	2		; check vector placeholder; CKS is zero
-STUBAD:	DS	2		; BDOS entry jump, the word at 0006h
+  DS MAXDRV      ; each drive's vector
+                 ; slot: 0 none,
+; 1 G1M's, 2 G8M's
+DPHTAB: DS MAXDRV*DPHSZ
+LOGINV: DS 2     ; the BDOS's logged
+                 ; drives, kept across
+; a warm boot
+DIRBUF: DS 128
+CSVDUM: DS 2     ; check vector
+                 ; placeholder; CKS is
+                 ; zero
+STUBAD: DS 2     ; BDOS entry jump, the
+                 ; word at 0006h
 
-; ---- The PICO9918's console (pico.asm): PISTART's block, PICO.SVC's order ---
-; Its offsets are abi.inc's, from the table: the width at 14, PICOWID's word at
-; 24, the record from 26, its version at 36, the page drawn at 41 and shown at
-; 42. Outside CPMINIT's span, so warm boot keeps the width.
-PIBLK:	DS	14		; the table: the terminal's seven words
-PIWID:	DS	12		; the columns, rows and five entries
-PIREC:	DS	13		; the record, the registry's tail
-	DS	2		; PICO.SVC's LBUF: keeps TPSHOW at 42
-PITPD:	DS	1		; the page drawn and the page shown: 0
-PITPS:	DS	1		; or PITPG's offset, high byte
-PIMV:	DS	1		; 1 while a row move builds the hidden page
-PITPG:	DS	1		; the second page's offset, high byte
-PIREGP:	DS	2		; this width's registers 0-7, in the ROM
-PIROWT:	DS	48		; each row's address in the name table
+; ---- The PICO9918's console
+; (pico.asm): PISTART's block,
+; PICO.SVC's order ---
+; Its offsets are abi.inc's, from the
+; table: the width at 14, PICOWID's word
+; at
+; 24, the record from 26, its version at
+; 36, the page drawn at 41 and shown at
+; 42. Outside CPMINIT's span, so warm
+; boot keeps the width.
+PIBLK: DS 14     ; the table: the
+                 ; terminal's seven
+                 ; words
+PIWID: DS 12     ; the columns, rows and
+                 ; five entries
+PIREC: DS 13     ; the record, the
+                 ; registry's tail
+  DS 2           ; PICO.SVC's LBUF:
+                 ; keeps TPSHOW at 42
+PITPD: DS 1      ; the page drawn and
+                 ; the page shown: 0
+PITPS: DS 1      ; or PITPG's offset,
+                 ; high byte
+PIMV: DS 1       ; 1 while a row move
+                 ; builds the hidden
+                 ; page
+PITPG: DS 1      ; the second page's
+                 ; offset, high byte
+PIREGP: DS 2     ; this width's
+                 ; registers 0-7, in the
+                 ; ROM
+PIROWT: DS 48    ; each row's address in
+                 ; the name table
 
-; ---- Mount scratch ----------------------------------------------------------
-MNTCNT:	DS	1		; the rest above the table (packing)
-MNBUF:	DS	32		; 32 bytes of it: the header's, or a descriptor
+; ---- Mount scratch
+; --------------------------------------
+MNTCNT: DS 1     ; the rest above the
+                 ; table (packing)
+MNBUF: DS 32     ; 32 bytes of it: the
+                 ; header's, or a
+                 ; descriptor
 
-; ---- Video terminal ---------------------------------------------------------
+; ---- Video terminal
+; --------------------------------------
 LINEBUF:
-	DS	80		; one display row, for scrolling
-VPUTV:	DS	2		; driver vectors set by CONSWV
-VGETV:	DS	2
-VCLRV:	DS	2
-VRSTV:	DS	2
-VRDRV:	DS	2		; read row B into LINEBUF
-VWRRV:	DS	2		; write LINEBUF to row B
-VFNV:	DS	2		; flip, begin and end a row move: A = 0, 1, 2
-VSTOP:	DS	1		; scroll region, first and last row
-VSBOT:	DS	1
-VCLAIM:	DS	1		; CDCLM while a program owns the PICO9918
-CONMOD:	DS	1		; console mode in effect (CMTTY..CMUC1)
+  DS 80          ; one display row, for
+                 ; scrolling
+VPUTV: DS 2      ; driver vectors set by
+                 ; CONSWV
+VGETV: DS 2
+VCLRV: DS 2
+VRSTV: DS 2
+VRDRV: DS 2      ; read row B into
+                 ; LINEBUF
+VWRRV: DS 2      ; write LINEBUF to row
+                 ; B
+VFNV: DS 2       ; flip, begin and end a
+                 ; row move: A = 0, 1, 2
+VSTOP: DS 1      ; scroll region, first
+                 ; and last row
+VSBOT: DS 1
+VCLAIM: DS 1     ; CDCLM while a program
+                 ; owns the PICO9918
+CONMOD: DS 1     ; console mode in
+                 ; effect (CMTTY..CMUC1)
 
-; ---- BIOS stack, warm boot's: cold boot and DIAG run on STKTOP (KE-173) -----
-BSTKB:	DS	BIOSSTN
+; ---- BIOS stack, warm boot's: cold
+; boot and DIAG run on STKTOP (KE-173)
+; -----
+BSTKB: DS BIOSSTN
 BSTK:
 
 BIOSRME:
-CCPRAM	EQU	BIOSRME
+CCPRAM EQU BIOSRME
 
-; ---- The CCP's state and stack (cpm/ccp.asm) ---------------------------------
-; Up to CCPCLR, kept over warm boot: the command line, for the pieces of a
-; chained line still to run (CHPOS), and the two FCBs before it, which each
-; use parses in full. CPMINIT clears from CCPCLR; cold boot clears them all.
+; ---- The CCP's state and stack
+; (cpm/ccp.asm)
+; ---------------------------------
+; Up to CCPCLR, kept over warm boot: the
+; command line, for the pieces of a
+; chained line still to run (CHPOS), and
+; the two FCBs before it, which each
+; use parses in full. CPMINIT clears
+; from CCPCLR; cold boot clears them
+; all.
 CMDFCB:
-	DS	36
+  DS 36
 RENFCB:
-	DS	36
+  DS 36
 CMDBUF:
-	DS	1
+  DS 1
 CMDLEN:
-	DS	1
+  DS 1
 CMDTXT:
-	DS	128
+  DS 128
 CCPCLR:
 BOOTDRV:
-	DS	1
+  DS 1
 CMDSTRT:
-	DS	2
+  DS 2
 ARGSTRT:
-	DS	2
+  DS 2
 FCBBASE:
-	DS	2
+  DS 2
 DIRCOL:
-	DS	1
+  DS 1
 DIRNCOL:
-	DS	1
+  DS 1
 DIRNUM:
-	DS	2
+  DS 2
 PGLINE:
-	DS	1
+  DS 1
 PGCOL:
-	DS	1
+  DS 1
 PGROWS:
-	DS	1
+  DS 1
 PGWID:
-	DS	1
+  DS 1
 SAVEPGS:
-	DS	1
+  DS 1
 SAVEADR:
-	DS	2
+  DS 2
 ERAANS:
-	DS	1
+  DS 1
 ERAALL:
-	DS	1
-; This is both the oversize discriminator and ordinary CCP scratch storage.
+  DS 1
+; This is both the oversize
+; discriminator and ordinary CCP scratch
+; storage.
 LOADBUF:
-	DS	128
-; A fixed sentinel separates reusable command scratch from the
-; downward-growing resident stack. The host proof checks that every byte
-; survives the deepest built-in and error-recovery paths.
+  DS 128
+; A fixed sentinel separates reusable
+; command scratch from the
+; downward-growing resident stack. The
+; host proof checks that every byte
+; survives the deepest built-in and
+; error-recovery paths.
 STKGUARD:
-	DS	43-CCPSTN
+  DS 43-CCPSTN
 STKGUEND:
 CSTKBAS:
-	DS	CCPSTN
+  DS CCPSTN
 CSTKTOP:
 CCPRME:
 
-; ---- The BDOS's state and stack (cpm/bdos.asm) -------------------------------
-BDOSRAM	EQU	CCPRME
-OLDSP:	DS	2
+; ---- The BDOS's state and stack
+; (cpm/bdos.asm)
+; -------------------------------
+BDOSRAM EQU CCPRME
+OLDSP: DS 2
 ERRMODE:
-	DS	1		; function 45's mode: FFh return, FEh
-				; display; 0 at warm boot
-PARAM:	DS	2
-COLUMN:	DS	1
-LISTEN:	DS	1
+  DS 1           ; function 45's mode:
+                 ; FFh return, FEh
+; display; 0 at warm boot
+PARAM: DS 2
+COLUMN: DS 1
+LISTEN: DS 1
 PENDING:
-	DS	1
+  DS 1
 PENDCHR:
-	DS	1
-LINPTR:	DS	2
-LINMAX:	DS	1
-LINCNT:	DS	1
-HFLAG:	DS	1		; FFh: the CCP's prompt, with history
-HPOS:	DS	1		; the history line shown: its terminator
-CURDRV:	DS	1
-DEFDRV:	DS	1
-DEFDPB:	DS	2
-DEFALV:	DS	2
-USERNO:	DS	1
-WRFLAG:	DS	1		; set by the CCP for its reset at entry
-WARMV:	DS	2		; drives to rebuild to their mark
-ROVEC:	DS	2
-CURDMA:	DS	2
-DPHPTR:	DS	2
-DPBPTR:	DS	2
-DIRPTR:	DS	2
-ALVPTR:	DS	2
-XLTPTR:	DS	2
-CURTRK:	DS	2
-CURSEC:	DS	2
+  DS 1
+LINPTR: DS 2
+LINMAX: DS 1
+LINCNT: DS 1
+HFLAG: DS 1      ; FFh: the CCP's
+                 ; prompt, with history
+HPOS: DS 1       ; the history line
+                 ; shown: its terminator
+CURDRV: DS 1
+DEFDRV: DS 1
+DEFDPB: DS 2
+DEFALV: DS 2
+USERNO: DS 1
+WRFLAG: DS 1     ; set by the CCP for
+                 ; its reset at entry
+WARMV: DS 2      ; drives to rebuild to
+                 ; their mark
+ROVEC: DS 2
+CURDMA: DS 2
+DPHPTR: DS 2
+DPBPTR: DS 2
+DIRPTR: DS 2
+ALVPTR: DS 2
+XLTPTR: DS 2
+CURTRK: DS 2
+CURSEC: DS 2
 DIRLEFT:
-	DS	2
-ENTPTR:	DS	2
+  DS 2
+ENTPTR: DS 2
 ENTLEFT:
-	DS	1
-ALLEFT:	DS	1
-DIRCNT:	DS	2
+  DS 1
+ALLEFT: DS 1
+DIRCNT: DS 2
 DIRUSED:
-	DS	2
+  DS 2
 SRCHIDX:
-	DS	2
+  DS 2
 SRCHFCB:
-	DS	2
+  DS 2
 MATCHPTR:
-	DS	2
+  DS 2
 COPYPTR:
-	DS	2
+  DS 2
 OPENMOD:
-	DS	1
+  DS 1
 RETCODE:
-	DS	1
-SEQREC:	DS	1
-IOTRK:	DS	2
-IOSEC:	DS	2
-FSIZE0:	DS	1
-FSIZE1:	DS	1
-FSIZE2:	DS	1
-CAND0:	DS	1
-CAND1:	DS	1
-CAND2:	DS	1
-TARGEX:	DS	1
-TARGS2:	DS	1
-WRTYPE:	DS	1
+  DS 1
+SEQREC: DS 1
+IOTRK: DS 2
+IOSEC: DS 2
+FSIZE0: DS 1
+FSIZE1: DS 1
+FSIZE2: DS 1
+CAND0: DS 1
+CAND1: DS 1
+CAND2: DS 1
+TARGEX: DS 1
+TARGS2: DS 1
+WRTYPE: DS 1
 ZEROFIL:
-	DS	1
-ZEROBN:	DS	2
-DIRTRK:	DS	2
-DIRSEC:	DS	2
+  DS 1
+ZEROBN: DS 2
+DIRTRK: DS 2
+DIRSEC: DS 2
 STKBASE:
-	DS	BDOSSTN
+  DS BDOSSTN
 STKTOP:
 BDOSRME:
 
-	ORG	RAMBIOS+BIOSLEN
-; ---- SD card state ----------------------------------------------------------
-SDBYTE:	DS	1		; 1 when the card takes byte addresses
-SDARG:	DS	4		; command argument, big-endian
-SDLBA:	DS	4		; block address, little-endian
-SDERR:	DS	1		; last error code
-SDXB:	DS	1		; LATEXP while the block is a cache line
+  ORG RAMBIOS+BIOSLEN
+; ---- SD card state
+; --------------------------------------
+SDBYTE: DS 1     ; 1 when the card takes
+                 ; byte addresses
+SDARG: DS 4      ; command argument,
+                 ; big-endian
+SDLBA: DS 4      ; block address,
+                 ; little-endian
+SDERR: DS 1      ; last error code
+SDXB: DS 1       ; LATEXP while the
+                 ; block is a cache line
 
-; ---- The block cache (cache.asm) ---------------------------------------------
-CNEXT:	DS	1		; the next line in turn
-CWTYPE:	DS	1		; BIOS WRITE's type, C
-CIFF:	DS	2		; the flags a BIOS entry found: P/V,
-				; its interrupt state
+; ---- The block cache (cache.asm)
+; --------------------------------------
+CNEXT: DS 1      ; the next line in turn
+CWTYPE: DS 1     ; BIOS WRITE's type, C
+CIFF: DS 2       ; the flags a BIOS
+                 ; entry found: P/V,
+; its interrupt state
 
-; ---- Matrix keyboard scan state ----------------------------------------------
-KBMASK:	DS	1		; row select for the next row, one bit low
-KBBASE:	DS	1		; key number of that row's bit 0
-KBE:	DS	1		; last key seen in this scan, FFh none
-KBD:	DS	1		; the key seen before it
-KBTN:	DS	1		; arrow-sequence bytes still to deliver
-KBT1:	DS	1		; and the bytes themselves
-KBT2:	DS	1
+; ---- Matrix keyboard scan state
+; --------------------------------------
+KBMASK: DS 1     ; row select for the
+                 ; next row, one bit low
+KBBASE: DS 1     ; key number of that
+                 ; row's bit 0
+KBE: DS 1        ; last key seen in this
+                 ; scan, FFh none
+KBD: DS 1        ; the key seen before
+                 ; it
+KBTN: DS 1       ; arrow-sequence bytes
+                 ; still to deliver
+KBT1: DS 1       ; and the bytes
+                 ; themselves
+KBT2: DS 1
 
-; ---- The GLCD console ------------------------------------------------------
-PIVEC:	DS	2		; PIBLK, set by PISTART; 0 with no console
-GLVEC:	DS	2		; GLCD.SVC's, the same: indexed by
-				; CMCRT and CMUC1
+; ---- The GLCD console
+; --------------------------------------
+PIVEC: DS 2      ; PIBLK, set by
+                 ; PISTART; 0 with no
+                 ; console
+GLVEC: DS 2      ; GLCD.SVC's, the same:
+                 ; indexed by
+; CMCRT and CMUC1
 
-; ---- Command-line history ----------------------------------------------------
-HHEAD:	DS	1		; the offset the next line goes in at
+; ---- Command-line history
+; --------------------------------------
+HHEAD: DS 1      ; the offset the next
+                 ; line goes in at
 
-; ---- MVCOPY's banks: 0 the program's view, 1 EXPAND 1 ----------------------
-XMDST:	DS	1
-XMSRC:	DS	1
-MVREST:	DS	2		; MVCOPY: the bytes left for the byte loop
-PZTOP:	DS	2		; the current top, which warm boot puts at 0006h
+; ---- MVCOPY's banks: 0 the program's
+; view, 1 EXPAND 1
+; ----------------------
+XMDST: DS 1
+XMSRC: DS 1
+MVREST: DS 2     ; MVCOPY: the bytes
+                 ; left for the byte
+                 ; loop
+PZTOP: DS 2      ; the current top,
+                 ; which warm boot puts
+                 ; at 0006h
+
 PRGCODE:
-	DS	2		; BDOS function 108's program return code
+  DS 2           ; BDOS function 108's
+                 ; program return code
+
 LOADTOP:
-	DS	2		; successful LOADCOM exclusive record end
-SLN:	DS	2		; the service loader: the last record so far
-SLDL:	DS	1		; and relocation delta
-SVCBSY:	DS	1		; 80h while an INIT or REMOVE runs
+  DS 2           ; successful LOADCOM
+                 ; exclusive record end
+SLN: DS 2        ; the service loader:
+                 ; the last record so
+                 ; far
+SLDL: DS 1       ; and relocation delta
+SVCBSY: DS 1     ; 80h while an INIT or
+                 ; REMOVE runs
+
 REGHEAD:
-	DS	2		; the first record
+  DS 2           ; the first record
 SVCHEAD:
-	DS	1		; the lowest service's page, 0 for none
-SVCGEN:	DS	1		; raised by each removal
-SVCRC:	DS	1		; the last load's failure
-SVCRA:	DS	1		; INIT's A: a cause only when SVCRC is 1
-STFLAG:	DS	1		; FFh while a line from STARTUP.CMD runs,
-				; 0 typed
-STPOS:	DS	1		; startup's state and position, as at STBOOT
-STREC:	DS	128		; A:STARTUP.CMD's one record
-CHPOS:	DS	1		; a chained line's next piece: its offset
-				; in CMDTXT + 1, 0 for none
+  DS 1           ; the lowest service's
+                 ; page, 0 for none
+SVCGEN: DS 1     ; raised by each
+                 ; removal
+SVCRC: DS 1      ; the last load's
+                 ; failure
+SVCRA: DS 1      ; INIT's A: a cause
+                 ; only when SVCRC is 1
+STFLAG: DS 1     ; FFh while a line from
+                 ; STARTUP.CMD runs,
+; 0 typed
+STPOS: DS 1      ; startup's state and
+                 ; position, as at
+                 ; STBOOT
+STREC: DS 128    ; A:STARTUP.CMD's one
+                 ; record
+CHPOS: DS 1      ; a chained line's next
+                 ; piece: its offset
+; in CMDTXT + 1, 0 for none
 
-; ---- The console's state, read only with EXPAND 0 in view (page zero's once) -
-RXFULL:	DS	1		; console byte waiting in RXCHAR
-RXCHAR:	DS	1		; and the byte itself
-CONDEV:	DS	1		; console devices present (CD* bits)
-VROW:	DS	1		; video terminal cursor row
-VCOL:	DS	1		; and column
-VWID:	DS	1		; video columns
-VHGT:	DS	1		; video rows
-ESCST:	DS	1		; escape parser state
-ESCP1:	DS	1		; first numeric parameter
-ESCP2:	DS	1		; second numeric parameter
-KBLAST:	DS	1		; matrix key held at the last poll, FFh none
-VATTR:	DS	1		; 80h while reverse video is on
-VCURV:	DS	1		; 1 while the cursor cell is inverted
+; ---- The console's state, read only
+; with EXPAND 0 in view (page zero's
+; once) -
+RXFULL: DS 1     ; console byte waiting
+                 ; in RXCHAR
+RXCHAR: DS 1     ; and the byte itself
+CONDEV: DS 1     ; console devices
+                 ; present (CD* bits)
+VROW: DS 1       ; video terminal cursor
+                 ; row
+VCOL: DS 1       ; and column
+VWID: DS 1       ; video columns
+VHGT: DS 1       ; video rows
+ESCST: DS 1      ; escape parser state
+ESCP1: DS 1      ; first numeric
+                 ; parameter
+ESCP2: DS 1      ; second numeric
+                 ; parameter
+KBLAST: DS 1     ; matrix key held at
+                 ; the last poll, FFh
+                 ; none
+VATTR: DS 1      ; 80h while reverse
+                 ; video is on
+VCURV: DS 1      ; 1 while the cursor
+                 ; cell is inverted
 
-; ---- The mount scratch's 14 bytes, MNTCNT and MNBUF below the table ---------
-; Here so that the workspace above the table runs to C000h with no gap
-; (KS36c's packing): warm boot clears none of it, as below.
-MNTBLK:	DS	4		; the container's length in blocks
-MNTPRV:	DS	4		; the previous descriptor's end, or the
-				; table's sum
-MNTSUM:	DS	2		; format 1.1: blocks 1-7's sum, from the header
-MNTDRV:	DS	1		; format 1.1: drives wanted; 0 for a 1.0 card
-MNTI:	DS	1		; the descriptor being checked, or VDESC's
-MNTCB:	DS	1		; the table block in MNTLN's line, FFh none
-MNTLN:	DS	1		; the line that holds it
+; ---- The mount scratch's 14 bytes,
+; MNTCNT and MNBUF below the table
+; ---------
+; Here so that the workspace above the
+; table runs to C000h with no gap
+; (KS36c's packing): warm boot clears
+; none of it, as below.
+MNTBLK: DS 4     ; the container's
+                 ; length in blocks
+MNTPRV: DS 4     ; the previous
+                 ; descriptor's end, or
+                 ; the
+; table's sum
+MNTSUM: DS 2     ; format 1.1: blocks
+                 ; 1-7's sum, from the
+                 ; header
+MNTDRV: DS 1     ; format 1.1: drives
+                 ; wanted; 0 for a 1.0
+                 ; card
+MNTI: DS 1       ; the descriptor being
+                 ; checked, or VDESC's
+MNTCB: DS 1      ; the table block in
+                 ; MNTLN's line, FFh
+                 ; none
+MNTLN: DS 1      ; the line that holds
+                 ; it
+
 HIRME:
-WSEND	EQU	HIRME		; end of the classic resident workspace
+WSEND EQU HIRME  ; end of the classic
+                 ; resident workspace

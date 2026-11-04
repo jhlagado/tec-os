@@ -39,8 +39,12 @@ function pinnedBytes(name) {
 /** TEC-OS's fixed state in page zero, 0040h-004Fh, from the EQUs in src/layout.asm. */
 function pageZeroState() {
   const src = readFileSync(resolve(ROOT, "src/layout.asm"), "utf8");
-  return [...src.matchAll(/^(\w+)\s+EQU\s+\$(004[0-9A-F])\s*;\s*(.*)$/gm)]
-    .map((m) => ({ at: parseInt(m[2], 16), name: m[1], what: m[3] }))
+  return [...src.matchAll(/^(\w+)\s+EQU\s+\$(004[0-9A-F])\b(?:[ \t]*;[ \t]*(.*))?/gm)]
+    .map((m) => {
+      const notes = src.slice(0, m.index).match(/(?:^; .*\n)+$(?![\s\S])/m)?.[0];
+      const what = m[3] ?? notes?.trimEnd().split("\n").map((line) => line.slice(2)).join(" ") ?? "";
+      return { at: parseInt(m[2], 16), name: m[1], what };
+    })
     .sort((x, y) => x.at - y.at)
     .map((r) => `| ${hex(r.at)} | \`${r.name}\` | ${r.what} |`)
     .join("\n");

@@ -15,13 +15,12 @@ const TAS = pinned("TAS.COM");
 const SOURCE = readFileSync(resolve(ROOT, "programs/SAMPLE.ASM"), "utf8");
 
 test("SAMPLE.ASM's table names are abi.inc's, at abi.inc's values, and it fits the style's limits", () => {
-  const equs = [...SOURCE.matchAll(/^(\w+)\tEQU\t(\$[0-9A-F]+|\d+)/gm)].filter(([, n]) => n !== "BDOS");
+  const equs = [...SOURCE.matchAll(/^(\w+) +EQU +(\$[0-9A-F]+|\d+)/gm)].filter(([, n]) => n !== "BDOS");
   assert.ok(equs.length >= 7);
   for (const [, name, v] of equs) assert.equal(Number(v.replace("$", "0x")), ABI[name], name);
-  assert.ok(SOURCE.split("\n").length <= 150, "under about 150 lines");
   assert.ok(Buffer.byteLength(SOURCE) <= 24_576);
-  const code = SOURCE.split("\n").map((l) => l.replace(/"[^"]*"/g, '""'));
-  assert.ok(code.every((l) => !/ {2}/.test(l)), "tabs, not runs of spaces, outside strings");
+  assert.ok(SOURCE.split("\n").every(line => line.length <= 40), "fits 40 columns");
+  assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
 });
 
 test("TAS builds SAMPLE on TEC-OS, and SAMPLE runs on the PICO9918 board and returns to the prompt", { skip: TAS.skip, timeout: 900_000 }, () => {
