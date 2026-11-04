@@ -76,6 +76,15 @@ CHDROP: XOR     A
         LD      (CHPOS),A
         JP      BIOWBT
 
+; Function 44, CP/M 3's multi-sector count: E = 1, the only count, succeeds;
+; any other returns FFh. Function 99, truncate, returns FFh at FNCHNO with
+; nothing changed.
+FNMULT:	LD	A,E
+	DEC	A
+	JR	Z,RETA		; A = 0
+FNTRUN:	JR	FNCHNO
+
+
 BENTRY:
         LD      (OLDSP),SP
         LD      SP,STKTOP
@@ -84,7 +93,13 @@ BENTRY:
         CP      108
         JR      Z,FNRETC
         CP      47
-        JR      Z,FNCHAIN
+	JP	Z,FNCHAIN
+	CP	44
+	JR	Z,FNMULT
+	CP	46
+	JP	Z,FNFREE
+	CP	99
+	JR	Z,FNTRUN
         CP      41
         JR      NC,RETZERO
         ADD     A,A
@@ -1412,6 +1427,50 @@ FNSETDMA:
 FNGETALV:
         LD      HL,(DEFALV)
         JP      RETWORD
+
+; Function 46, CP/M 3's free space: drive E's free blocks, from its allocation
+; vector, as records, in the three bytes at the DMA address, low first. The
+; drive is selected as an FCB's would be, and the default stays.
+FNFREE:	LD	A,E
+	CALL	SELDRV
+	LD	IX,(DPBPTR)
+	LD	HL,(ALVPTR)
+	LD	E,(IX+5)
+	LD	D,(IX+6)
+	INC	DE		; DE = the drive's blocks
+	LD	BC,0		; the free ones
+	LD	A,$80		; the bit within the current byte
+FRBIT:	PUSH	AF
+	AND	(HL)
+	JR	NZ,FRUSED
+	INC	BC
+FRUSED:	POP	AF
+	RRCA
+	JR	NC,FRSAME
+	INC	HL
+FRSAME:	DEC	DE
+	PUSH	AF
+	LD	A,D
+	OR	E
+	JR	Z,FREND
+	POP	AF
+	JR	FRBIT
+FREND:	POP	AF
+	LD	H,B		; records = blocks << BSH, 24 bits
+	LD	L,C
+	XOR	A
+	LD	B,(IX+2)
+FRSH:	ADD	HL,HL
+	RLA
+	DJNZ	FRSH
+	EX	DE,HL
+	LD	HL,(CURDMA)
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	LD	(HL),A
+	JP	RETZERO
 
 FNWRPROT:
         LD      A,(DEFDRV)

@@ -477,7 +477,7 @@ test("from user 5, a drive and a video console, a reset reaches A:, user 0, on s
   m.expect(/A>$/, { from: 0, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
   m.command("USER 5");
-  m.command("B:", { prompt: /\r\nB>$/ });
+  m.command("B:", { prompt: /\r\n5B>$/ });
   m.write(3, 1);
   m.cpu.hardware.ioWrite(0xbf, 0xc0);
   m.cpu.hardware.ioWrite(0xbf, 0x81);
@@ -530,7 +530,7 @@ test("startup isn't reopened by a program's exit, ^C or a warm boot, and pending
   warm(m);
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\n3A>$/);
   assert.equal(lineCount(m.text(0), "USER 3"), 1 + 0);
   assert.equal(m.read(m.sym("STPOS")) >= 0x80, true);
 });

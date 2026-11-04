@@ -94,7 +94,7 @@ function watch(m) {
 function run(m, line) {
   m.mark = m.output.length;
   m.type(`${line}\r`);
-  const prompt = /\r\n[A-P]>$/;
+  const prompt = /\r\n\d*[A-P]>$/;
   let seen = -1;
   for (let i = 0; i < 200; i += 1) {
     const end = m.cycles + 20_000_000;

@@ -72,6 +72,18 @@ STARTED:
 MAINLOOP:
         LD      SP,CSTKTOP
 MLREAD: CALL    SAVEDU
+	PUSH	AF		; the user first, as CP/M 3 does, unless 0:
+	LD	A,B		; 3A>
+	RRCA
+	RRCA
+	RRCA
+	RRCA
+	OR	A
+	JR	Z,MLDRV
+	LD	L,A
+	LD	H,0
+	CALL	PUTDEC
+MLDRV:	POP	AF
         ADD     A,'A'
         LD      E,A
         CALL    PUTCHAR
@@ -589,63 +601,24 @@ DIRDONE:
         LD      DE,FILEMSG
 DIRSUM2:
         CALL    PUTSTR
-        LD      A,(CMDFCB)      ; count free blocks on the listed drive
-        OR      A
-        JR      Z,DIRFREE
-        DEC     A
-        LD      E,A
-        LD      C,14
-        CALL    BDOS
-DIRFREE:
-        LD      C,31
-        CALL    BDOS
-        PUSH    HL
-        POP     IX              ; IX -> DPB
-        LD      C,27
-        CALL    BDOS            ; HL -> allocation vector
-        LD      E,(IX+5)
-        LD      D,(IX+6)
-        INC     DE              ; DE = blocks on the drive
-        LD      BC,0            ; free blocks
-        LD      A,$80           ; bit within the current byte
-DIRFBIT:
-        PUSH    AF
-        AND     (HL)
-        JR      NZ,DIRFUSED
-        INC     BC
-DIRFUSED:
-        POP     AF
-        RRCA
-        JR      NC,DIRFSAME
-        INC     HL
-DIRFSAME:
-        DEC     DE
-        PUSH    AF
-        LD      A,D
-        OR      E
-        JR      Z,DIRFEND
-        POP     AF
-        JR      DIRFBIT
-DIRFEND:
-        POP     AF
-        LD      H,B             ; kilobytes = blocks << (BSH - 3)
-        LD      L,C
-        LD      A,(IX+2)
-        SUB     3
-        JR      Z,DIRFKB
-DIRFSH:
-        ADD     HL,HL
-        DEC     A
-        JR      NZ,DIRFSH
-DIRFKB:
+	LD	A,(CMDFCB)	; the listed drive's free records, from
+	DEC	A		; function 46, into LOADBUF, the DMA
+	JP	P,DIRFREE	; address: a drive named, or the current
+	LD	A,(CURDSK)
+	AND	$0F
+DIRFREE:LD	E,A
+	LD	C,46
+	CALL	BDOS
+	LD	HL,(LOADBUF)	; kilobytes = records / 8
+	LD	A,(LOADBUF+2)
+	LD	B,3
+DIRFK:	SRL	A
+	RR	H
+	RR	L
+	DJNZ	DIRFK
         CALL    PUTDEC
         LD      DE,FREEMSG
         CALL    PUTSTR
-        LD      A,(CURDSK)      ; back to the current drive
-        AND     $0F
-        LD      E,A
-        LD      C,14
-        CALL    BDOS
         JP      STARTED
 
 ; ---- Page pauses (TEC-OS) --------------------------------------------------

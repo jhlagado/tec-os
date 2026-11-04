@@ -43,13 +43,13 @@ function card() {
 function run(m, line) {
   m.mark = m.output.length;
   m.type(`${line}\r`);
-  const prompt = /\r\n[A-P]>$/;
+  const prompt = /\r\n\d*[A-P]>$/;
   m.runUntil(() => m.waitingForInput(), 4_000_000_000, line);
   if (!prompt.test(m.text(m.mark))) {
     m.type("\r"); // a BDOS error waits for a key before its warm boot
     m.runUntil(() => m.waitingForInput() && prompt.test(m.text(m.mark)), 400_000_000, `${line} after the error`);
   }
-  const lines = m.text(m.mark).replace(/\r\n[A-P]>$/, "").split(/\r*\n/);
+  const lines = m.text(m.mark).replace(/\r\n\d*[A-P]>$/, "").split(/\r*\n/);
   const at = lines.findIndex((l) => l.endsWith(line.replace(/\x03/g, "")));
   return lines.slice(at + 1).join("\n").trim();
 }

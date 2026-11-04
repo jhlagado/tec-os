@@ -48,7 +48,7 @@ test("a line of two, three and four pieces runs each in turn, each echoed after 
   const m = boot(card());
   assert.equal(run(m, "say!say"), "say!say\r\r\nSAY\r\nA>say\r\nSAY\r\nA>");
   assert.equal(count(run(m, "SAY!SAY!SAY"), /\nSAY\r/g), 3);
-  assert.equal(run(m, "SAY!USER 3!USER 0!SAY"), "SAY!USER 3!USER 0!SAY\r\r\nSAY\r\nA>USER 3\r\nA>USER 0\r\nA>SAY\r\nSAY\r\nA>");
+  assert.equal(run(m, "SAY!USER 3!USER 0!SAY"), "SAY!USER 3!USER 0!SAY\r\r\nSAY\r\nA>USER 3\r\n3A>USER 0\r\nA>SAY\r\nSAY\r\nA>");
   run(m, "USER 3");
   assert.equal(user(m), 3);
 });
@@ -77,7 +77,7 @@ test("a piece may be a built-in, a drive change or a .COM found on A:, and keeps
 test("a startup line holding ! runs all its pieces before the next startup line", () => {
   const m = boot(card({ "STARTUP.CMD": startupFile("SAY!USER 2!USER 0", "SAY!USER 5") }));
   m.runUntil(() => idle(m, 0), 600_000_000, "the prompt");
-  assert.match(m.text(0), /A>SAY!USER 2!USER 0\r\r\nSAY\r\nA>USER 2\r\nA>USER 0\r\nA>SAY!USER 5\r\r\nSAY\r\nA>USER 5\r\nA>$/);
+  assert.match(m.text(0), /A>SAY!USER 2!USER 0\r\r\nSAY\r\nA>USER 2\r\n2A>USER 0\r\nA>SAY!USER 5\r\r\nSAY\r\nA>USER 5\r\n5A>$/);
   assert.equal(user(m), 5);
 });
 
@@ -241,7 +241,7 @@ test("a chain from a startup line runs before the next startup line, and may hol
   const m = boot(card({ "CHAIN.COM": chainTo("USER 0!RC FF00!:SAY!SAY"), "C2.COM": chainTo("say!:user 4"), "STARTUP.CMD": startupFile("CHAIN", "C2", "USER 3") }));
   m.runUntil(() => idle(m, 0), 800_000_000, "the prompt");
   const t = m.text(0);
-  assert.match(t, /A>CHAIN\r\r\n\r\nA>USER 0\r\nA>RC FF00\r\n\r\nA>:SAY\r\nA>C2\r\r\n\r\nA>say\r\nSAY\r\nA>:user 4\r\nA>USER 3\r\r\nA>$/);
+  assert.match(t, /A>CHAIN\r\r\n\r\nA>USER 0\r\nA>RC FF00\r\n\r\nA>:SAY\r\nA>C2\r\r\n\r\nA>say\r\nSAY\r\nA>:user 4\r\n4A>USER 3\r\r\n3A>$/);
   assert.equal(user(m), 3);
 });
 
