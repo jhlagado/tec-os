@@ -1,4 +1,0 @@
-{"name":"k39smoke","command":"node zz.mjs","limitMB":500,"heapMB":375,"event":"start","at":"2026-11-04T04:12:55.031Z","freePercent":39,"load":3.18,"waitedSeconds":849}
-{"name":"k39smoke","command":"node zz.mjs","limitMB":500,"heapMB":375,"event":"end","at":"2026-11-04T04:12:57.963Z","outcome":"exit 0","code":0,"peakMB":123,"processes":1,"seconds":2.9,"freePercentAtEnd":40}
-{"name":"k39smoke2","command":"node zz.mjs","limitMB":500,"heapMB":375,"event":"start","at":"2026-11-04T04:26:24.890Z","freePercent":41,"load":2.72,"waitedSeconds":789}
-{"name":"k39smoke2","command":"node zz.mjs","limitMB":500,"heapMB":375,"event":"end","at":"2026-11-04T04:26:27.562Z","outcome":"exit 0","code":0,"peakMB":151,"processes":1,"seconds":2.7,"freePercentAtEnd":41}
