@@ -9,14 +9,14 @@ import { boot, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const noViolations = (m) => assert.deepEqual(m.violations, []);
 
-test("the table at C003h: TNA, ABI 5.0 and one jump to the services, 8 bytes, and the old entries gone", () => {
+test("the table at C003h: TNA, ABI 5.1 and one jump to the services, 8 bytes, and the old entries gone", () => {
   const m = boot(standardCard());
   const S = (n) => m.sym(n);
   assert.equal(S("ABITAB"), 0xc003);
-  assert.deepEqual([0, 1, 2, 3, 4, 5].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 5, 0, 0xc3], "TNA 5.0, then JP");
+  assert.deepEqual([0, 1, 2, 3, 4, 5].map((i) => m.read(S("ABITAB") + i)), [0x54, 0x4e, 0x41, 5, 1, 0xc3], "TNA 5.1, then JP");
   assert.equal(m.read(S("ABICALL") + 1) | (m.read(S("ABICALL") + 2) << 8), S("SVCDSP"));
   assert.deepEqual([S("ABICALL"), S("ABIEND")], [0xc008, 0xc00b]);
-  for (const n of ["ABIVID", "ABIHW", "ABIMAIN", "ABIVOL", "ABIGLCD", "ABISVC", "ABIDRV", "OLDVOL", "HWBASE", "ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "ABIXCCP", "ABIXCMD", "XCCP", "XCMD", "XEXIT", "CCPFLG", "CCPLVL", "LVBASE", "FONT", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);
+  for (const n of ["ABIVID", "ABIHW", "ABIMAIN", "ABIVOL", "ABIGLCD", "ABISVC", "ABIDRV", "OLDVOL", "HWBASE", "ABIFONT", "ABIMOVE", "ABIXMOV", "ABIXMRK", "ABIXCCP", "ABIXCMD", "XCCP", "XCMD", "XEXIT", "CCPFLG", "CCPLVL", "LVBASE", "HWSEGT", "RNDST", "HWARGA", "CBLOCK"]) assert.equal(m.symbols.get(n), undefined, `${n} is gone`);
   noViolations(m);
 });
 

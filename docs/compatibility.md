@@ -4,10 +4,10 @@ TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
 46,869 bytes (`0100h–B814h`) on the starter card, and at least 46,165 on any
 card, since cold boot places the BDOS entry below the allocation vectors of
-the volumes mounted. A display's driver takes six pages under the stub's page,
-leaving 45,312 on the starter card and 44,544 with four 8 MiB volumes. A board
-with both displays that installs both with `CON UC1` has 43,776 on the starter
-card and 43,008 with four. The CCP loads a `.COM` up to the start of the page
+the volumes mounted. A display's driver takes three pages under the stub's page,
+leaving 46,080 on the starter card and 45,312 with four 8 MiB volumes. A board
+with both displays, whose starter card installs both, has 45,312 on the starter
+card and 44,544 with four. The CCP loads a `.COM` up to the start of the page
 holding the word at `0006h`, so the largest it loads on the starter card is
 46,848 bytes (`0100h–B7FFh`), 21 below the TPA: a program may use the rest. It reports version 2.2.
 
