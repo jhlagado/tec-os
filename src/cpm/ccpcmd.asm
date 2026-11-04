@@ -187,9 +187,11 @@ SAVENUM:
 	ADD	A,A		; 255: twice B, kept in D,
 	JP	C,BADCMD
 	LD	D,A
-	ADD	A,A		; then four and eight times B, neither
-	ADD	A,A		; carry tested, and twice B added
-	ADD	A,D
+	ADD	A,A		; then four times B, a carry bad,
+	JP	C,BADCMD
+	ADD	A,A		; and eight times B, a carry bad
+	JP	C,BADCMD
+	ADD	A,D		; and twice B added, a carry bad
 	JP	C,BADCMD
 	ADD	A,E		; and the digit
 	JP	C,BADCMD

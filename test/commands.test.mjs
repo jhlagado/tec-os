@@ -173,3 +173,11 @@ test("FNPRINT ends at $", async () => {
   assert.match(out, /P9\r\r?\nAB\r?\n?A>/);
   assert.doesNotMatch(out, /CD/);
 });
+
+test("SAVE refuses a count past 255 as any bad count, whichever doubling carries (KE-174)", async () => {
+  const m = await machine();
+  for (const n of [320, 640, 256, 999]) {
+    assert.match(m.command(`SAVE ${n} B:BIG.COM`), new RegExp(`\\r\\n${n}\\?\\r\\n`), `SAVE ${n} refused`);
+    assert.match(m.command("DIR B:"), /NO FILE/, `SAVE ${n} wrote nothing`);
+  }
+});
