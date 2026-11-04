@@ -3,7 +3,7 @@
 The console is one device at a time, chosen by the CP/M IOBYTE's `CON:`
 field at `0003h`:
 
-| IOBYTE CON: | Device | Keys from | Output to | Size at `0048h` |
+| IOBYTE CON: | Device | Keys from | Output to | Size, from `INFO` (`L` × `H`) |
 | --- | --- | --- | --- | --- |
 | `TTY:` (0) | Serial terminal | Serial | Serial | 0 × 0 (programs assume 80 × 24) |
 | `CRT:` (1) | PICO9918 | Matrix keyboard | PICO9918 | 80, 40 or 32 × 24, by `CON` |
