@@ -58,8 +58,8 @@ COLDNC:
 ; the listing and DIAG all run there, and the BIOS's stack keeps only warm
 ; boot's use (KE-173). LCDINIT clears the display, so CARD? goes with it,
 ; and a retry that fails shows it again. Mounted, it builds the vectors,
-; the stub and the RAM BIOS table, lists the drives, and runs on through
-; PZINIT into warm boot with drive A and user 0.
+; the stub and the RAM BIOS table, lists the drives, and runs on into warm
+; boot, whose PZINIT builds page zero, with drive A and user 0.
 COLDRT:	LD	SP,STKTOP	; the BDOS's stack, afresh for a retry
 	CALL	LCDINIT		; a blank display, CARD? gone
 	LD	HL,LCDBAN	; LCDINIT's count left B = 0, the top row
@@ -79,8 +79,8 @@ COLDRT:	LD	SP,STKTOP	; the BDOS's stack, afresh for a retry
 	CALL	SHOWVOL		; the drives on the console
 	CALL	LCDVOLS		; and A: and B: on the LCD
 	XOR	A		; drive A, user 0
-	LD	(PZDU),A
-	CALL	PZINIT		; then on into warm boot
+	LD	(PZDU),A	; then on into warm boot, which builds
+				; page zero once (KE-199)
 
 ; ---- Warm boot ---------------------------------------------------------------
 ; BIOS function 1, the JP at 0000h, and RSTENT for a program's exit into
