@@ -300,35 +300,21 @@ DELDONE:
 
 ; Create an empty extent in the first unused directory slot. The caller FCB
 ; is initialized independently of the directory-buffer representation.
-; Function 22. Returns 0 to 3 in A, or FFh when the directory is full.
+; Function 22. As CP/M 2.2's make, the FCB's EX and S2 are kept: the entry
+; made is that extent. Returns 0 to 3 in A, or FFh when the directory is full.
 FNMAKE:
 	CALL	CHKRO		; error 2 on a read-only drive
-	XOR	A		; WRTYPE 0: a file's first extent,
-	LD	(WRTYPE),A	; EX and S2 zero
 	CALL	MAKEFCB
 	JP	RETA		; 0 to 3, or FFh: the directory full
 
 ; Make a directory entry for the FCB at PARAM in the current drive's first
-; empty slot. WRTYPE 0 makes a file's first extent, EX and S2 zero; any other
-; keeps the FCB's EX and S2, the extent a write moves to. The FCB's fields
-; from EX to the allocation map are cleared, S2's bit 7 set, and the entry
-; written from them, the user its first byte. Returns the slot's place 0 to 3
-; in A, or FFh with the FCB untouched when the directory is full. Changes
-; every register, TARGEX and TARGS2.
+; empty slot, for the extent its EX and S2 name: a file's first for a make,
+; or the extent a write moves to. As CP/M 2.2's make, S1, RC and the
+; allocation map are cleared and EX kept; S2 keeps its module, its flag bits
+; cleared. The entry is written from the FCB, the user its first byte, and
+; then the FCB's S2 bit 7 set. Returns the slot's place 0 to 3 in A, or FFh
+; with the FCB untouched when the directory is full. Changes every register.
 MAKEFCB:
-	CALL	FCBEX		; HL: the FCB's EX
-	LD	A,(WRTYPE)
-	OR	A
-	JR	Z,MAKESRCH	; a first extent: nothing to keep
-	LD	A,(HL)		; a write's extent: EX and S2's module
-	LD	(TARGEX),A	; bits kept for the entry
-	INC	HL
-	INC	HL
-	LD	A,(HL)
-	AND	$3F		; S2 without its unmodified flag
-	LD	(TARGS2),A
-				; The first empty slot in the directory.
-MAKESRCH:
 	LD	HL,(PARAM)	; mode 3: an empty slot, searched for
 	LD	(SRCHFCB),HL	; in the whole directory, not only
 	LD	A,3		; to the mark
@@ -338,26 +324,20 @@ MAKESRCH:
 	CP	$FF
 	RET	Z		; the directory full: FFh
 
-				; Clear EX through the allocation map;
-				; CR and r0-r2 are left alone.
-	CALL	FCBEX
-	LD	B,20		; EX, S1, S2, RC and the 16-byte map
+	CALL	FCBEX		; EX kept; S1 cleared
+	INC	HL
+	LD	(HL),0
+	INC	HL		; S2: its module kept, its flags clear
+	LD	A,(HL)
+	AND	$3F
+	LD	(HL),A
+	INC	HL		; RC and the 16-byte map cleared;
+	LD	B,17		; CR and r0-r2 are left alone
 	XOR	A
 MAKEZERO:
 	LD	(HL),A
 	INC	HL
 	DJNZ	MAKEZERO
-
-	LD	A,(WRTYPE)	; a write's extent: its EX and S2 put
-	OR	A		; back in the cleared FCB
-	JR	Z,MAKECOPY	; a first extent keeps them zero
-	CALL	FCBEX
-	LD	A,(TARGEX)
-	LD	(HL),A
-	INC	HL
-	INC	HL		; past S1 to S2
-	LD	A,(TARGS2)
-	LD	(HL),A
 				; The entry: the current user, then the
 				; FCB's bytes 1 to 31.
 MAKECOPY:

@@ -191,8 +191,6 @@ and run.
 
 ## Known incompatibilities
 
-- **`^S`.** The key after `^S` is consumed and dropped, so `^C` there doesn't warm
-  boot as CP/M 2.2's does.
 - **`[more]`.** The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or

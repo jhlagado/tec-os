@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
 import { GLCD_SVC, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { rig } from "./lib/warmboot.mjs";
 
 test("with a PICO9918 and the matrix keyboard the screen is the console from the banner on, with no file, and nothing goes to serial (KS39)", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
@@ -352,4 +353,32 @@ test("SHOWVOL lists the drives without touching LINEBUF, the video terminal's bu
   m.runUntil(() => m.pc === lcdvols, 20_000_000, "LCDVOLS, after it");
   assert.deepEqual(Array.from({ length: 80 }, (_, i) => m.read(linebuf + i)), new Array(80).fill(0x5a));
   assert.match(m.serialText(), /A: SYSTEM {5}\r\nB: WORK {7}\r\n/);
+});
+
+test("^C as the key that ends a ^S pause ends the program by warm boot, as CP/M 2.2 does (KE-180)", () => {
+  const { m } = rig();
+  const text = 0x2000;
+  [...Buffer.from("x".repeat(400)), 0x24].forEach((v, i) => m.write(text + i, v));
+  const cpu = m.cpu.cpu;
+  m.write(0x0ffe, 0x00);
+  m.write(0x0fff, 0x0f);
+  Object.assign(cpu, { c: 9, d: text >> 8, e: text & 0xff, sp: 0x0ffe, pc: 0x0005 });
+  m.enqueueInput("\x13\x03");
+  const wboot = m.sym("RAMBIOS") + 3;
+  m.runUntil(() => (m.pumpInput(), m.pc === 0x0f00 || m.pc === wboot), 200_000_000, "the end of the output");
+  assert.equal(m.pending.length, 0, "both keys taken");
+  assert.equal(m.pc, wboot, "the program ended by warm boot, not returned to");
+});
+
+test("console output keeps the character for its column when a program's CONOUT in the RAM jump table destroys C (KE-181)", () => {
+  const r = rig();
+  const { m } = r;
+  const at = m.sym("RAMBIOS") + 0x0d;
+  const conout = m.read(at) | (m.read(at + 1) << 8);
+  [0xcd, conout & 0xff, conout >> 8, 0x0e, 0x78, 0xc9].forEach((v, i) => m.write(0x0e00 + i, v)); // CALL CONOUT, LD C,"x", RET
+  m.write(at, 0x00);
+  m.write(at + 1, 0x0e);
+  m.mark = m.output.length;
+  for (const ch of "\rAB\tX") r.bdos(2, ch.charCodeAt(0));
+  assert.equal(m.text(m.mark), "\rAB      X", "the tab goes to column 8");
 });

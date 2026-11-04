@@ -5,6 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { alv, rig as callRig } from "./lib/warmboot.mjs";
 
 const BACK = 0x0f00;
 const STACK = 0x1000;
@@ -151,4 +152,71 @@ test("a write after a new block on drive B reads a block of drive A", () => {
   const want = expected(16);
   want.fill(0x77, 5 * 128, 6 * 128);
   assert.deepEqual(volume(image, "A").read("KEEP.DAT"), want);
+});
+
+/** BIOS WRITE, through the RAM jump table, replaced by LD A,1 / RET: every write fails. Returns the restore. */
+function failWrites(m) {
+  const at = m.sym("RAMBIOS") + 0x2b;
+  const was = [m.read(at), m.read(at + 1)];
+  [0x3e, 0x01, 0xc9].forEach((v, i) => m.write(0x0e00 + i, v));
+  m.write(at, 0x00);
+  m.write(at + 1, 0x0e);
+  return () => was.forEach((v, i) => m.write(at + i, v));
+}
+
+test("a sequential write whose close of the extent it leaves fails returns 1 and leaves the FCB on record 128 (KE-175)", () => {
+  const image = standardCard();
+  const r = callRig(image);
+  const { m } = r;
+  r.fcb(0, "GONE    DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  for (let rec = 0; rec < 128; rec += 1) {
+    for (let k = 0; k < 128; k += 1) m.write(DMA + k, rec);
+    assert.equal(r.bdos(21), 0, `record ${rec}`);
+  }
+  [0, ...Buffer.from("GONE    DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x0200 + i, v));
+  assert.equal(r.bdos(19, 0x0200), 0, "the file deleted under the open FCB");
+  assert.equal(r.bdos(21), 1, "record 128: extent 0 cannot be closed, so the write is refused");
+  assert.deepEqual([m.read(FCB + 12), m.read(FCB + 32)], [0, 128], "the FCB stays on extent 0, record 128");
+  const disk = volume(image, "A");
+  const left = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).filter((e) => e[0] !== 0xe5 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "GONE    DAT");
+  assert.deepEqual(left, [], "no entry made for the deleted file");
+});
+
+test("a zero-filling write whose block fails returns the error with the program's DMA address back in the BIOS (KE-176)", () => {
+  const image = standardCard();
+  volume(image, "A").write("DATA.DAT", new Uint8Array(128).fill(0x5a));
+  const r = callRig(image);
+  const { m } = r;
+  [0, ...Buffer.from("DATA    DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x0200 + i, v));
+  assert.notEqual(r.bdos(15, 0x0200), 0xff, "DATA.DAT opened through a second FCB");
+  r.bdos(45, 0xff);
+  r.fcb(0, "NEW     DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  const restore = failWrites(m);
+  assert.equal(r.bdos(40), 0xff, "function 40: the block's zeroing fails, the error returned");
+  restore();
+  for (let k = 0; k < 128; k += 1) m.write(DMA + k, 0);
+  assert.equal(r.bdos(20, 0x0200), 0, "DATA.DAT's first record read, with no directory read before it");
+  assert.deepEqual(Array.from({ length: 128 }, (_, k) => m.read(DMA + k)), new Array(128).fill(0x5a), "the record is at the program's DMA address");
+});
+
+test("a write that fails after its block is claimed leaves no block marked used that no directory entry holds (KE-177)", () => {
+  const image = standardCard();
+  const r = callRig(image);
+  const { m } = r;
+  r.bdos(45, 0xff);
+  r.fcb(0, "LEAK    DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  const restore = failWrites(m);
+  assert.equal(r.bdos(21), 0xff, "the write fails, the error returned");
+  restore();
+  const block = m.read(FCB + 16) | (m.read(FCB + 17) << 8);
+  assert.notEqual(block, 0, "a block was claimed for record 0");
+  assert.notEqual(r.bdos(16), 0xff, "closed");
+  const used = (alv(m, 0)[block >> 3] >> (7 - (block & 7))) & 1;
+  const disk = volume(image, "A");
+  const entry = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).find((e) => e[0] === 0 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "LEAK    DAT");
+  const held = [...Array(8).keys()].some((i) => (entry[16 + 2 * i] | (entry[17 + 2 * i] << 8)) === block);
+  assert.ok(!used || held, `block ${block}: ${used ? "used in the vector" : "free"}, ${held ? "held" : "not held"} by LEAK.DAT's entry`);
 });

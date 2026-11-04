@@ -102,8 +102,8 @@ CONSTQ:
 
 ; The character in C to the console as functions 2 and 9 send it: a tab as
 ; spaces to the next column that is a multiple of 8, and before each
-; character a key waiting is taken (OUTONE). C is kept, but a tab leaves a
-; space. Changes A and what the BIOS's calls change, which must keep C.
+; character a key waiting is taken (OUTONE). Changes A, C and what the
+; BIOS's calls change.
 OUTCHAR:
 	LD	A,C
 	CP	TAB
@@ -133,15 +133,26 @@ ECHOONE:
 	CALL	CONSTAT		; the status, its answer unused
 	POP	BC
 
-; The character in C to the console as it is, and to the printer too while
-; ^P's echo is on. COLUMN follows it: 0 after CR, back one after BS, on one
-; after a character from a space up, unchanged after another control.
-; Changes A and what the BIOS's calls change, which must keep C.
+; The character in C to the printer while ^P's echo is on, then to the
+; console as it is. COLUMN is moved for it first (ECHOCOL), so nothing needs
+; C after a BIOS call: a CONOUT or LIST put in the RAM jump table need not
+; keep it, as CP/M 2.2's need not. Changes A, C and what the BIOS's calls
+; change.
 ECHORAW:
-	CALL	BIOCOT		; the console, through the RAM jump table
+	CALL	ECHOCOL		; COLUMN moved for C
 	LD	A,(LISTEN)	; 1 while ^P's echo is on
 	OR	A
-	CALL	NZ,BIOLST	; ^P's echo on: the printer too
+	JR	Z,ECHOCON	; off: the console alone
+	PUSH	BC		; the character, kept over the printer
+	CALL	BIOLST
+	POP	BC
+ECHOCON:
+	JP	BIOCOT		; the console, through the RAM jump table
+
+; COLUMN moved for the character in C: 0 after CR, back one after BS, on one
+; after a character from a space up, unchanged after another control.
+; Changes A; keeps C.
+ECHOCOL:
 	LD	A,C		; the column it leaves
 	CP	CR
 	JR	Z,COLZERO	; CR: column 0
@@ -156,8 +167,7 @@ ECHORAW:
 
 ; The character in C echoed, as line input and function 1 echo it: a tab as
 ; spaces to the next multiple of 8, any other through ECHOONE. No key is
-; taken. C is kept, but a tab leaves a space. Changes A and what the BIOS's
-; calls change.
+; taken. Changes A, C and what the BIOS's calls change.
 ECHOCHAR:
 	LD	A,C
 	CP	TAB
@@ -187,7 +197,8 @@ COLBACK:
 	RET
 
 ; During output, a key waiting is taken (CONSTQ: no cursor drawn). ^S pauses
-; until the next key, which is taken and dropped; ^P turns the printer echo
+; until the next key, which is taken: ^C ends the program by warm boot, as
+; CP/M 2.2's conbrk does, and any other is dropped. ^P turns the printer echo
 ; on or off; any other key is kept for the next console read. Changes A and
 ; what the BIOS's status and input change.
 CHKKEY:
@@ -197,7 +208,10 @@ CHKKEY:
 	CALL	GETCHAR		; a key ready: taken
 	CP	CTRLS		; ^S: a pause
 	JR	NZ,CHKPRN
-	JP	GETCHAR		; the next key resumes, dropped
+	CALL	GETCHAR		; the next key resumes
+	CP	CTRLC		; ^C: the program ends, with the rest
+	JP	Z,CHDROP	; of a chained line
+	RET			; any other: dropped
 
 ; The key in A, not ^S, during output: ^P turns the printer echo on or off;
 ; any other is kept for the next console read. Changes A.

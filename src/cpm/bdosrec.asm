@@ -60,10 +60,14 @@ WRITEBAD:
 ; 2.2's open_reel does: the write that needs the extent makes it. With the
 ; directory full that write returns 1 and the FCB is put back on its extent,
 ; record 128, so a write after an entry is freed makes the extent it needs.
+; A close that fails, no entry holding the extent, returns 1 the same way.
 ; Takes the FCB at PARAM. Returns A = 0 with CR 0 in the next extent, or 1.
-; Destroys every register, WRTYPE, TARGEX and TARGS2.
+; Destroys every register.
 ADVEXT:
 	CALL	CLOSEFCB	; this extent's entry brought up to date
+	INC	A		; Z: the close returned FFh
+	LD	A,1		; 1: the FCB left on record 128
+	RET	Z
 	CALL	FCBEX
 	LD	E,(HL)		; EX and S2, for a make that fails
 	INC	HL
@@ -73,8 +77,6 @@ ADVEXT:
 	CALL	NEXTEXT		; EX on one, the extent opened if it exists
 	OR	A
 	JR	Z,EXTCLEAR	; found: its entry's map now in the FCB
-	LD	A,1		; nonzero: MAKEFCB keeps the new EX and S2
-	LD	(WRTYPE),A
 	CALL	MAKEFCB		; a new directory entry for the extent
 	INC	A
 	JR	Z,EXTFULL	; FFh: the directory is full
@@ -235,7 +237,7 @@ RANDRET:
 ; the FCB at PARAM and ZEROFIL, nonzero for a write. Returns no carry and
 ; A = 0, or carry and A = 3 (the extent left cannot be closed), 4 (a read of
 ; an extent not written), 5 (the directory full) or 6 (past record 65535).
-; Destroys every register, SEQREC, TARGEX, TARGS2 and WRTYPE.
+; Destroys every register, SEQREC, TARGEX and TARGS2.
 RANDPREP:
 	CALL	FCBCR
 	INC	HL
@@ -322,7 +324,6 @@ RANDMISS:
 	OR	A		; zero: a read
 	LD	A,4		; 4: a read of an extent not written
 	JR	Z,RANDFAIL
-	LD	(WRTYPE),A	; any nonzero: MAKEFCB keeps EX and S2
 	CALL	MAKEFCB		; a new directory entry for the extent
 	INC	A
 	JR	NZ,RANDPOS	; made: on to the record
@@ -439,20 +440,23 @@ ALNEXT:
 	JR	ALLOCLOP
 
 ; Block DE is free: its bit set, the drive marked changed, and the block
-; written in the FCB's map cell for SEQREC. Returns A = 0.
+; written in the FCB's map cell for SEQREC, the FCB marked changed (S2's bit
+; 7 clear) at once, so that close writes the entry that holds the block even
+; when the record's write then fails. Returns A = 0.
 ALFOUND:
 	LD	A,(HL)
 	OR	C		; the block now in use
 	LD	(HL),A
-	PUSH	HL		; TEC-OS: the vector changed, the drive dirty
-	LD	HL,(DPHPTR)	; the drive's DPH
-	INC	HL
+	LD	HL,(DPHPTR)	; TEC-OS: the vector changed, the drive
+	INC	HL		; dirty
 	INC	HL
 	INC	HL
 	INC	HL
 	LD	(HL),1		; its byte 4 set: the vector changed
-	POP	HL
 	PUSH	DE		; the block, kept through FCBADDR
+	LD	DE,14		; S2's bit 7 clear: the FCB's map has
+	CALL	FCBOFF		; changed
+	RES	7,(HL)
 	CALL	FCBADDR		; HL at the record's map cell
 	POP	DE
 	LD	(HL),E		; the block's low byte
@@ -473,10 +477,12 @@ ALFULL:
 ; CP/M function 40 clears a newly allocated block before publishing the
 ; caller's target record. The BIOS directory buffer is reusable scratch here.
 ; Takes DE = the block and SEQREC = the target record. Writes 128 zero bytes
-; to each of the block's records, then sets the BIOS's DMA back to CURDMA.
-; Returns DE = the block and SEQREC as it was; a disk error goes to BADSECT.
-; Destroys A, BC, HL, IX, F, and TARGEX, ALLEFT and ZEROBN, used as
-; scratch, and through POSREC IOTRK and IOSEC.
+; to each of the block's records, the BIOS's DMA on them for each write and
+; back on CURDMA after it (DMABACK), so a failed write that function 45
+; returns leaves the program's DMA in the BIOS. Returns DE = the block and
+; SEQREC as it was; a disk error goes to BADSECT. Destroys A, BC, HL, IX, F,
+; and TARGEX, ALLEFT and ZEROBN, used as scratch, and through POSREC IOTRK
+; and IOSEC.
 ZEROBLK:
 	LD	(ZEROBN),DE	; the block, kept through POSREC
 	LD	A,(SEQREC)
@@ -488,10 +494,6 @@ ZEROBLK:
 	INC	DE		; copied on through the rest:
 	LD	BC,127
 	LDIR			; 128 zero bytes
-	LD	HL,(DIRPTR)
-	LD	B,H
-	LD	C,L
-	CALL	BIODMA		; the BIOS's DMA on them
 	LD	IX,(DPBPTR)
 	LD	A,(IX+3)	; BLM: the records in a block, less one
 	INC	A
@@ -505,10 +507,13 @@ ZEROBLK:
 ZEROLOOP:
 	LD	DE,(ZEROBN)
 	CALL	POSREC		; the BIOS on record SEQREC of the block
+	LD	HL,(DIRPTR)
+	LD	B,H
+	LD	C,L
+	CALL	BIODMA		; the BIOS's DMA on the zeros
 	LD	C,2		; write type 2: a block newly allocated
 	CALL	BIOWRS
-	OR	A
-	CALL	NZ,BADSECT	; a failed write ends the function here
+	CALL	DMABACK		; the DMA back; a failed write: error 1
 	LD	A,(SEQREC)
 	INC	A
 	LD	(SEQREC),A	; the block's next record
@@ -516,10 +521,6 @@ ZEROLOOP:
 	DEC	A
 	LD	(ALLEFT),A
 	JR	NZ,ZEROLOOP	; until every record of the block is zero
-	LD	HL,(CURDMA)
-	LD	B,H
-	LD	C,L
-	CALL	BIODMA		; the program's DMA back
 	LD	A,(TARGEX)
 	LD	(SEQREC),A	; the target record back
 	LD	DE,(ZEROBN)	; DE = the block, as on entry
