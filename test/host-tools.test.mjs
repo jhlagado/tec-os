@@ -229,23 +229,18 @@ test("tecvol marks one volume written behind with :wb, and refuses two or one re
 test("npm run build leaves dist/'s ROM, map and census equal to build/'s when dist/ is there (KE-188)", () => {
   const dist = resolve(ROOT, "dist");
   const names = [["tecos.rom", "tecos.rom"], ["tecos.d8.json", "tecos.d8.json"], ["census.json", "tecos.census.json"]];
+  const touched = [...names.map(([, to]) => to), "manifest.json"].map((n) => resolve(dist, n)); // all the build writes in dist/
   const kept = new Map();
   const there = existsSync(dist);
   mkdirSync(dist, { recursive: true });
-  for (const [, to] of names) {
-    const path = resolve(dist, to);
-    if (existsSync(path)) kept.set(path, readFileSync(path));
-    writeFileSync(path, "stale"); // as an older build's media left them
-  }
+  for (const path of touched) if (existsSync(path)) kept.set(path, readFileSync(path));
+  for (const [, to] of names) writeFileSync(resolve(dist, to), "stale"); // as an older build's media left them
   try {
     execFileSync(process.execPath, [resolve(ROOT, "tools/build.mjs")], { encoding: "utf8" });
     for (const [from, to] of names) assert.ok(readFileSync(resolve(dist, to)).equals(readFileSync(resolve(ROOT, "build/tecos", from))), `dist/${to} is build/tecos/${from}`);
   } finally {
+    // dist/ as it was found: each file the build may write put back, or removed if it wasn't there
     if (!there) rmSync(dist, { recursive: true });
-    else
-      for (const [, to] of names) {
-        const path = resolve(dist, to);
-        if (readFileSync(path, "latin1") === "stale") kept.has(path) ? writeFileSync(path, kept.get(path)) : rmSync(path);
-      }
+    else for (const path of touched) kept.has(path) ? writeFileSync(path, kept.get(path)) : rmSync(path, { force: true });
   }
 });

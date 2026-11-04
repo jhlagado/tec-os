@@ -119,6 +119,18 @@ test("on a board with both displays the starter's startup leaves the CCP stack's
   assert.notEqual(m.read(m.sym("SVCHEAD")), 0);
 });
 
+test("a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the field to CRT:, and then names GLCD.SVC takes the GLCD: the fallback puts the field back to TTY: before the line runs (KE-200)", () => {
+  const SETCRT = Uint8Array.from([0x3a, 0x03, 0x00, 0xe6, 0xfc, 0xf6, 0x01, 0x32, 0x03, 0x00, 0xc9]); // the IOBYTE's CON: field to CRT:
+  const m = start({ "GLCD.SVC": GLCD_SVC, "SETCRT.COM": SETCRT, "STARTUP.CMD": startupFile("CON CRT", "SETCRT", "GLCD.SVC") }, { tms: false });
+  assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
+  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD], "GLCD.SVC in, and the console");
+});
+
+test("a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200)", () => {
+  const m = start(both(["CON UC1"]));
+  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD], "GLCD.SVC in, and the console");
+});
+
 test("the GLCD's UNLOAD clears its INFO bit", () => {
   const m = start(both([]));
   say(m, "CON UC1");
