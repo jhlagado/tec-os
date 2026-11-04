@@ -12,7 +12,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
@@ -255,6 +255,13 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     const base = Math.max(...bare.map((r) => runs[r][k].deepest));
     const { reserved } = census[k];
     assert.ok((base + lim[k]) * 4 <= reserved * 3, `${k}: the base ${base} and the services' limit ${lim[k]} take more than three quarters of ${reserved}`);
+  }
+  // docs/services.md's stack table states these figures: it must say what this census measures.
+  const doc = readFileSync(resolve(ROOT, "docs/services.md"), "utf8");
+  for (const [k, name] of [["bdos", "BDOS"], ["bios", "BIOS"], ["ccp", "CCP"]]) {
+    const base = Math.max(...bare.map((r) => runs[r][k].deepest));
+    const row = `| ${name} | ${census[k].reserved} | ${base} | ${census[k].deepest} | ${lim[k]} |`;
+    assert.ok(doc.includes(row), `docs/services.md's stack table has no row ${row}`);
   }
 });
 
