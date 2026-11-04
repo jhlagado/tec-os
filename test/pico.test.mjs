@@ -684,6 +684,19 @@ test("the web host: power-on writes the width's CON PICO line and no driver, say
   assert.equal(startupText(image), "GLCD.SVC\r\nDIR\r\n");
 });
 
+test("the web host: a card whose STARTUP.CMD is read-only keeps it, and the page says why it boots as it is (KE-AR10)", () => {
+  const image = standardCard();
+  volume(image, "A").write("STARTUP.CMD", startupFile("DIR"), { readOnly: true });
+  const before = Uint8Array.from(image);
+  assert.deepEqual(prepareCard(image, "tms", "40"), {
+    problem: "This card's STARTUP.CMD is read-only, so the page can't set its display line; it boots as it is",
+    note: null,
+    changed: false,
+  });
+  assert.deepEqual(image, before, "the card byte for byte");
+  assert.equal(prepareCard(image, "tms", "80").problem, null, "no line to set: nothing to refuse");
+});
+
 test("the web host: a user's CON CRT width line goes with the page's own, so the selector's width stands", () => {
   const image = standardCard();
   const a = volume(image, "A");
