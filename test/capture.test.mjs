@@ -18,3 +18,9 @@ test("@press sends a key and goes on without a prompt: D, I, R, then Return run 
   assert.match(out, /A>DIR\nNO FILE\nA>/, "and Return ran it, on an empty card");
   assert.doesNotMatch(out, /@PRESS/i);
 });
+
+test("--card none reaches DIAG's prompt, R retry>, and stops there with the LCD's rows (KE-172)", () => {
+  const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--rom", resolve(ROOT, "build/tecos/tecos.rom"), "--card", "none", "--lcd"], { encoding: "utf8", timeout: 120_000 });
+  assert.match(out, /R retry> /, "the diagnostic prompt");
+  assert.match(out, /CARD\?/, "and CARD? on the LCD");
+});

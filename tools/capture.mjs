@@ -78,10 +78,11 @@ const atPrompt = (from) => () => {
   if (m.waitingForInput() && /\[more\]$/.test(m.text(from))) return true;
   return m.ready() && /[A-P]>$/.test(m.text(from));
 };
-// A card that won't mount stops at the diagnostic prompt instead.
+// A card that won't mount stops at the diagnostic prompt instead, "R retry> "
+// since KS36b dropped the header's dump (KE-172).
 const atDiag = () => {
   m.pumpInput();
-  return m.waitingForInput() && /header> $/.test(m.text(0)) && !(m.pending?.length);
+  return m.waitingForInput() && /retry> $/.test(m.text(0)) && !(m.pending?.length);
 };
 const settled = () => (sdImage ? atPrompt(0)() : false) || atDiag();
 m.runUntil(settled, LIMIT, "the first prompt");
