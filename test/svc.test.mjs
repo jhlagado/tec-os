@@ -581,7 +581,7 @@ const edit = (fn) => {
   return f;
 };
 const u16 = (at, v) => edit((_, d) => d.setUint16(at, v, true));
-const top = 0xb9; // (0006h)'s page on the card in standardCard()
+const top = 0xba; // (0006h)'s page on the card in standardCard()
 const extraFor = (n) => n - S;
 const MALFORMED = [
   ["the file shorter than its header", good.file.slice(0, 16), 0x110],

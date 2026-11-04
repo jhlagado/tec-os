@@ -165,12 +165,12 @@ test("PICO32.SVC writes the colours and an empty sprite table", () => {
 
 test("TPA after boot: one display, and both", () => {
   const top = (m) => word(m, 6) - 0x100;
-  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 46336);
-  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 46336);
+  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 46592);
+  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 46592);
   const m = start(both());
-  assert.equal(top(m), 45568, "a board with both, at boot: both in (KE-150)");
+  assert.equal(top(m), 45824, "a board with both, at boot: both in (KE-150)");
   say(m, "CON UC1");
-  assert.equal(top(m), 45568, "and CON UC1 loads nothing more");
+  assert.equal(top(m), 45824, "and CON UC1 loads nothing more");
 });
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/pico-screens.json"), "utf8"));
@@ -192,7 +192,7 @@ test("the starter card boots both drivers on a board with both, the PICO9918 the
   assert.deepEqual(files.map((f) => f.name), ["PICO.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45568], "both in, PICO.SVC the console (KE-150)");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45824], "both in, PICO.SVC the console (KE-150)");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 

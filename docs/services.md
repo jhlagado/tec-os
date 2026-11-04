@@ -115,7 +115,7 @@ makes its display the console where there is one, and elsewhere passes over it
 quietly and goes on. On a board with both, `GLCD.SVC`'s line loads and
 gives way quietly once `PICO.SVC` is the console, which keeps it, and `CON UC1:`
 then makes the GLCD the console with nothing more to load; the two together leave
-45,568 bytes of TPA on the starter card. Once, at the first prompt
+45,824 bytes of TPA on the starter card. Once, at the first prompt
 after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
 if no display driver is installed. That covers a missing file, a bad file, no
 `STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
