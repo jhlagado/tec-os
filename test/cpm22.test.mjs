@@ -221,3 +221,17 @@ test("a write in place reaches the card before any close, and the recovery guide
   assert.doesNotMatch(guide, /the card holds the volume as it was then/, "the card isn't said to hold the volume as it was");
   assert.match(guide, /already be on the card, written when their\s+lines were taken for other blocks/);
 });
+
+test("function 22 keeps the FCB's EX and S2, as CP/M 2.2's make does, and the entry it makes is that extent (KE-178)", () => {
+  const image = standardCard();
+  const r = rig(image);
+  const { m } = r;
+  r.fcb(0, "EXT     DAT");
+  m.write(FCB + 12, 3);
+  m.write(FCB + 14, 1);
+  assert.notEqual(r.bdos(22), 0xff);
+  assert.deepEqual([m.read(FCB + 12), m.read(FCB + 14)], [3, 0x81], "EX 3 and S2 1 kept, S2's bit 7 set: unmodified");
+  const disk = volume(image, "A");
+  const made = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).filter((e) => e[0] === 0 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "EXT     DAT");
+  assert.deepEqual(made.map((e) => [e[12], e[14], e[15]]), [[3, 1, 0]], "one entry, extent 3 of module 1, empty");
+});

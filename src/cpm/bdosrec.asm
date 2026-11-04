@@ -62,7 +62,7 @@ WRITEBAD:
 ; record 128, so a write after an entry is freed makes the extent it needs.
 ; A close that fails, no entry holding the extent, returns 1 the same way.
 ; Takes the FCB at PARAM. Returns A = 0 with CR 0 in the next extent, or 1.
-; Destroys every register, WRTYPE, TARGEX and TARGS2.
+; Destroys every register.
 ADVEXT:
 	CALL	CLOSEFCB	; this extent's entry brought up to date
 	INC	A		; Z: the close returned FFh
@@ -77,8 +77,6 @@ ADVEXT:
 	CALL	NEXTEXT		; EX on one, the extent opened if it exists
 	OR	A
 	JR	Z,EXTCLEAR	; found: its entry's map now in the FCB
-	LD	A,1		; nonzero: MAKEFCB keeps the new EX and S2
-	LD	(WRTYPE),A
 	CALL	MAKEFCB		; a new directory entry for the extent
 	INC	A
 	JR	Z,EXTFULL	; FFh: the directory is full
@@ -239,7 +237,7 @@ RANDRET:
 ; the FCB at PARAM and ZEROFIL, nonzero for a write. Returns no carry and
 ; A = 0, or carry and A = 3 (the extent left cannot be closed), 4 (a read of
 ; an extent not written), 5 (the directory full) or 6 (past record 65535).
-; Destroys every register, SEQREC, TARGEX, TARGS2 and WRTYPE.
+; Destroys every register, SEQREC, TARGEX and TARGS2.
 RANDPREP:
 	CALL	FCBCR
 	INC	HL
@@ -326,7 +324,6 @@ RANDMISS:
 	OR	A		; zero: a read
 	LD	A,4		; 4: a read of an extent not written
 	JR	Z,RANDFAIL
-	LD	(WRTYPE),A	; any nonzero: MAKEFCB keeps EX and S2
 	CALL	MAKEFCB		; a new directory entry for the extent
 	INC	A
 	JR	NZ,RANDPOS	; made: on to the record
