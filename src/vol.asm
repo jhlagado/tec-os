@@ -278,7 +278,7 @@ MNDESC:
   or (ix+DSTART+1)
   or (ix+DSTART+2)
   or (ix+DSTART+3)
-  jp z,MNDBAD
+  jp z,MNDBAD    ; reject sector zero
   push ix        ; start >= the previous
                  ; end
   pop hl

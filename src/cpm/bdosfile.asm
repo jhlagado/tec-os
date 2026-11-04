@@ -80,7 +80,7 @@ WRLOOP:
                  ; bound, nothing read
 ; DPH+4: the dirty flag
   ld hl,(DPHPTR)
-  ld bc,4
+  ld bc,4        ; DPH state offset
   add hl,bc
   ld a,(hl)
   or a
@@ -93,7 +93,7 @@ WRLOOP:
   inc hl
   inc hl
   ld a,(hl)
-  cp e
+  cp e           ; compare sum low byte
   jr nz,WRFULL   ; the low bytes differ:
                  ; changed
   inc hl

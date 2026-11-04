@@ -50,7 +50,7 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
       for (const token of p.operand?.match(tokens) ?? []) {
         if (register.test(token) && token !== token.toLowerCase()) fault('case', n, `lowercase ${token}`);
       }
-      if (p.comment >= 0 || header) { commented++; run = 0; }
+      if (p.comment >= 0) { commented++; run = 0; }
       else { run++; longestRun = Math.max(longestRun, run); }
     }
     if (p.comment >= 0) {

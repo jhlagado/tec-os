@@ -41,8 +41,8 @@ function pageZeroState() {
   const src = readFileSync(resolve(ROOT, "src/layout.asm"), "utf8");
   return [...src.matchAll(/^(\w+)\s+EQU\s+\$(004[0-9A-F])\b(?:[ \t]*;[ \t]*(.*))?/gm)]
     .map((m) => {
-      const notes = src.slice(0, m.index).match(/(?:^; .*\n)+$(?![\s\S])/m)?.[0];
-      const what = m[3] ?? notes?.trimEnd().split("\n").map((line) => line.slice(2)).join(" ") ?? "";
+      const preceding = src.slice(0, m.index);
+      const what = m[3] ?? preceding.match(/(?:^|\n); ([^\n]*)\n$/)?.[1] ?? "";
       return { at: parseInt(m[2], 16), name: m[1], what };
     })
     .sort((x, y) => x.at - y.at)

@@ -36,3 +36,9 @@ test('column-18 notes continue an adjacent inline note', () => {
   }
   assert.ok(rules(source + '\n\n' + continuation).includes('continuation'));
 });
+
+test('standalone notes do not count toward inline coverage', () => {
+  const text = ['; Load the byte.', 'ENTRY:', '; Read the input.', '  ld a,(hl)', '  ret'].join('\n');
+  assert.ok(rules(text).includes('density'));
+  assert.deepEqual(rules(text.replace('  ret', '  ret'.padEnd(17) + '; return the byte')), []);
+});
