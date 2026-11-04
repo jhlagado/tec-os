@@ -283,11 +283,7 @@ MNTERR:	PUSH	AF		; the code, across the unmount
 ; MNTLN and MNTCB set, or NZ if the read fails, with MNTCB FFh.
 ; Destroys AF, BC, DE and HL.
 MNBLK:	LD	(MNBUF+2),A	; the block, in MNBUF while it is free, so
-	LD	L,A		; that the stack stays shallow
-	LD	H,0		; SDLBA = the block, 32 bits
-	LD	(SDLBA),HL
-	LD	L,H		; and its top word 0
-	LD	(SDLBA+2),HL
+	CALL	MNLBA		; that the stack stays shallow; SDLBA it
 	CALL	CLOOK		; Z: a line holds it, A = the line
 	JR	NZ,MNB1
 	LD	C,A		; the line, across the test
@@ -303,10 +299,23 @@ MNB3:	LD	(MNTLN),A	; the line, and the block it now holds
 	RET
 MNB1:	CALL	CTAKE		; a line for it, the next in turn
 	JR	NZ,MNBF		; a dirty line's write failed
+	LD	C,A		; the line, kept
+	CALL	MNLBA		; SDLBA the table block again: a dirty
+	LD	A,C		; line's write remaps the BIOS's record
 MNB2:	CALL	CFILL		; keeps A, the line; Z if the card gave it
 	JR	Z,MNB3
 MNBF:	LD	A,$FF		; a failed read holds no table block;
 	LD	(MNTCB),A	; NZ still
+	RET
+
+; SDLBA = the table block kept in MNBUF+2, 32 bits, its top three bytes 0.
+; Destroys A and HL.
+MNLBA:	LD	A,(MNBUF+2)	; the block, 0-7
+	LD	L,A
+	LD	H,0		; the low word
+	LD	(SDLBA),HL
+	LD	L,H		; and the top word 0
+	LD	(SDLBA+2),HL
 	RET
 
 ; MNBUF = the 32 bytes at offset HL of the table block in MNTLN, copied out
