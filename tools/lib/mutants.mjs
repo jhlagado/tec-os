@@ -654,5 +654,6 @@ export const MUTANTS_KS36B = [
   { name: "promise 2: CWB3's order reversed, the directory line before the data", ...ks34(CACHEF, ["CWB3: LD A,C", "CALL CFLUSH"], ["CWB3: LD A,C", "PUSH AF", "CALL CWRITE", "POP AF", "CALL CFLUSH"], CTEST) },
   { name: "promise 3: the warm boot's flush removed", ...ks34(CACHEF, ["CWBOOT: CALL CFLALL"], ["CWBOOT: CP A"], CTEST) },
   { name: "a flush that stops at its first failure", ...ks34(CACHEF, ["POP BC", "JR Z,CFS2"], ["POP BC", "RET NZ", "JR CFS2"], CTEST) },
-  { name: "a mount that reads into fixed RAM", ...ks34("src/vol.asm", ["MNB2: CALL CFILL"], ["MNB2: LD HL,$0200", "CALL SDREAD"], CTEST) },
+  // The table block read into 0200h as well as into its line, so that the machine still boots and only the TPA test can tell (KS36b review).
+  { name: "a mount that reads into fixed RAM", ...ks34("src/vol.asm", ["MNB2: CALL CFILL"], ["MNB2: PUSH AF", "LD HL,$0200", "CALL SDREAD", "POP AF", "CALL CFILL"], CTEST) },
 ];
