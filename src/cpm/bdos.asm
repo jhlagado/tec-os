@@ -864,14 +864,14 @@ WRITEPOS:
 
 WRITEBLK:
         CALL    POSREC
-        CALL    ADVWRITE
         LD      A,(WRTYPE)
         LD      C,A
         CALL    BIOWRS
         OR      A
         JR      NZ,WRITEBAD
-        XOR     A
-        RET
+	JR	ADVWRITE	; the FCB moves on once the record is
+				; written: function 45's returned error
+				; leaves it on that record, as CP/M 3 does
 
 WRITEBAD:
         JP      BADSECT
@@ -970,11 +970,12 @@ READCHK:
         OR      E
         JR      Z,READ_EOF
         CALL    POSREC
-        CALL    FCBCR
-        INC     (HL)
         CALL    BIORDS
         OR      A
-        CALL    NZ,BADSECT
+	JP	NZ,BADSECT	; returned: the FCB on the record unread
+        CALL    FCBCR           ; read: the next
+        INC     (HL)
+        XOR     A
         RET
 
 READ_EOF:

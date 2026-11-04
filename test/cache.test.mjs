@@ -588,3 +588,49 @@ test("a BIOS WRITE of type 1 to a directory block no line holds, on the volume w
   assert.equal(after.at(-2), 2, "both before the directory, last");
   assert.deepEqual(m.violations, []);
 });
+
+/** Card block LBA's reads fail at SDREAD, as a card that won't give it. */
+function unreadable(m, lba) {
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("SDREAD")) {
+      const a = m.sym("SDLBA");
+      if ((m.read(a) | (m.read(a + 1) << 8) | (m.read(a + 2) << 16)) === lba) m.cpu.cpu.pc = m.sym("SDRCMD");
+    }
+    return step();
+  };
+}
+
+const fcbAt = (m, a) => Array.from({ length: 36 }, (_, i) => m.read(a + i));
+
+test("function 45's returned error leaves the FCB on the record a sequential read didn't read, as CP/M 3 does (KS36b review)", async () => {
+  const image = await load(card(false), [], { "R.DAT": pattern(8 * 128, (i) => (i >> 7) + 0x30) });
+  const lba = Buffer.from(image).indexOf(Buffer.alloc(128, 0x34)) / 512; // records 4 to 7's block
+  const m = start(image);
+  [1, ...Buffer.from("R       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 15, 0x5c);
+  bdos(m, 26, 0x2000);
+  for (let r = 0; r < 4; r += 1) bdos(m, 20, 0x5c);
+  bdos(m, 45, 0xff);
+  unreadable(m, lba);
+  const before = fcbAt(m, 0x5c);
+  bdos(m, 20, 0x5c);
+  assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 1], "a disk error, returned");
+  assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 4 next");
+});
+
+test("function 45's returned error leaves the FCB on the record a sequential write didn't write, as CP/M 3 does (KS36b review)", async () => {
+  const image = await load(card(false), []);
+  const m = start(image);
+  [2, ...Buffer.from("W       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 22, 0x5c);
+  bdos(m, 26, 0x2000);
+  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0xc3);
+  for (let r = 0; r < 3; r += 1) bdos(m, 21, 0x5c);
+  bdos(m, 45, 0xff);
+  failing(m, (block, data) => data.some((v) => v === 0xc3) && "fail");
+  const before = fcbAt(m, 0x5c);
+  bdos(m, 21, 0x5c);
+  assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 1], "a disk error, returned");
+  assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 3 next, the record count unraised");
+});
