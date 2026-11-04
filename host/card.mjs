@@ -4,7 +4,7 @@
 // CON PICO 40 or CON PICO 32 line, and 80 none.
 
 import { findVolume, parseContainer, volumePayload } from "../tools/lib/container.mjs";
-import { CpmVolume } from "../tools/lib/cpmfs.mjs";
+import { CpmError, CpmVolume } from "../tools/lib/cpmfs.mjs";
 import { FORMAT } from "../tools/lib/svc-format.mjs";
 import { fromLatin1, toLatin1 } from "../tools/lib/bytes.mjs";
 
@@ -65,6 +65,9 @@ export function prepareCard(image, display, width = 80) {
     if (changed) image.set(staged);
     return { problem, note: null, changed };
   } catch (e) {
+    // The user's read-only mark on STARTUP.CMD stands: write refuses it (KE-AR10),
+    // and the page says so rather than force it.
+    if (e instanceof CpmError && /STARTUP\.CMD is read-only$/.test(e.message)) return { problem: "This card's STARTUP.CMD is read-only, so the page can't set its display line; it boots as it is", note: null, changed: false };
     return { problem: `This card couldn't be prepared for the page (${e.message}), so it boots as it is.`, note: null, changed: false };
   }
 }
