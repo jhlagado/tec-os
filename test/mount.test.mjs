@@ -136,3 +136,34 @@ test("a warm boot with 0004h on a drive past D: or one with no volume comes back
     assert.equal(m.read(4), 0x30, `from ${at.toString(16)}h: user 3, drive A`);
   }
 });
+
+test("a mount onto the default drive gives functions 31 and 27 the new volume's DPB and allocation vector at once, with no function 14 (KE-AR9)", async () => {
+  const { rig } = await import("./lib/warmboot.mjs");
+  const image = createContainer(
+    [
+      { geometry: "G1M", label: "SYSTEM", mount: "A" },
+      { geometry: "G8M", label: "WORK", mount: "B" },
+      { geometry: "G1M", label: "SMALL", mount: "-" },
+    ],
+    { drives: 3 },
+  );
+  volume(image, "SMALL").write("OLD.DAT", new Uint8Array(128).fill(0x44));
+  const r = rig(image);
+  const { m } = r;
+  const hl = () => (m.cpu.cpu.h << 8) | m.cpu.cpu.l;
+  r.call(5, { c: 14, de: 1 }); // B:, the G8M volume, the default
+  r.call(5, { c: 31 });
+  const before = hl();
+  assert.equal(word(m, before + 5), 2047, "B:'s DPB is G8M's");
+  assert.equal(r.call(m.sym("ABICALL"), { c: 9, bc: 0x0109, de: 2 }), 0, "TNMOUNT B: <- SMALL");
+  const dph = m.sym("DPHTAB") + 16;
+  r.call(5, { c: 31 });
+  assert.equal(hl(), word(m, dph + 10), "function 31: the DPB in B:'s DPH now");
+  assert.notEqual(hl(), before);
+  assert.equal(word(m, hl() + 5), 511, "G1M's DSM");
+  r.call(5, { c: 27 });
+  assert.equal(hl(), word(m, dph + 14), "function 27: the allocation vector in B:'s DPH now");
+  assert.equal(r.call(5, { c: 25 }), 1, "B: still the default");
+  r.fcb(0, "OLD     DAT");
+  assert.notEqual(r.bdos(15), 0xff, "SMALL's file opened on the default drive");
+});

@@ -601,7 +601,9 @@ VSDSC:	CALL	VSIN
 	RET
 
 ; TNMOUNT's body: put volume E on drive C, replacing any volume there, after
-; the cache's dirty lines are written. Returns as VSMNT does.
+; the cache's dirty lines are written. A mount onto the default drive selects
+; it again (function 14), so functions 27 and 31 answer for the new volume
+; at once. Returns as VSMNT does.
 VMNT:	LD	A,C		; drive past D: refused
 	CP	MAXDRV
 	JR	NC,VBAD
@@ -627,7 +629,7 @@ VMNT:	LD	A,C		; drive past D: refused
 	ADD	HL,BC
 	INC	E
 	LD	(HL),E		; the drive is the volume's now
-	JR	VRESET		; the BDOS logs it in afresh
+	JR	VMNTRS		; reset, and the default selected again
 
 ; Carry if the slot of drive C won't hold the vector of the volume at IX: a
 ; payload of 4096 blocks or more needs a G8M slot (2), and any other a slot.
@@ -673,6 +675,20 @@ VOK:	XOR	A		; A = 0, carry clear
 VBAD:	LD	A,TNEBAD	; refused, nothing changed
 	SCF
 	RET
+
+; VMNT's end: drive C reset in the BDOS (VRESET), and selected again by
+; function 14 when it is the default, so that its DPB and vector are the new
+; volume's for functions 27 and 31. Returns A = 0 with carry clear.
+VMNTRS:	PUSH	BC		; the drive, kept over the reset
+	CALL	VRESET		; the BDOS logs it in afresh
+	LD	C,25		; the default drive
+	CALL	BDOS
+	POP	DE		; E = the drive mounted
+	CP	E
+	JR	NZ,VOK		; another drive: done
+	LD	C,14		; the default: selected again, its DPB
+	CALL	BDOS		; and vector the new volume's
+	JR	VOK
 
 ; C = the drive from B, and every table block to be read afresh. Keeps B, DE
 ; and HL. Destroys AF.

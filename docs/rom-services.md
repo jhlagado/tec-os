@@ -86,7 +86,9 @@ success, or a status with carry set and nothing changed; results come back as ea
 service lists, and `TNFIND` and `TNLIST` return the generation in A. IX, IY and the
 alternate registers are preserved, but `TNMOUNT`, `TNUNMNT` and `TNDESC` may change
 IX and the alternates. None calls the BDOS but `TNMOUNT` and `TNUNMNT`, which reset
-the drive through function 37 on the BDOS's own stack. A CP/M program that finds no signature is on
+the drive through function 37 on the BDOS's own stack; a `TNMOUNT` onto the default
+drive then selects it again through function 14, logging the new volume in, so
+functions 27 and 31 answer for it at once. A CP/M program that finds no signature is on
 another system and carries on without the TEC-1G's devices.
 
 | Status | Meaning |
