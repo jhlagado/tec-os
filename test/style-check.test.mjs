@@ -84,6 +84,12 @@ test("a name with a hyphen, or a type that isn't three letters, is no 8.3 name",
   for (const name of ["STYLE.ASM", "ABI.INC", "X.ASM"]) assert.deepEqual(rules(checkSource(GOOD, name)), [], name);
 });
 
+test("SET with a bit and a register is an instruction, the directive is not", () => {
+  const counted = (text) => checkSource(text, "X.ASM").codeLines;
+  assert.equal(counted(`; A header.\n${line("X:", "SET", "7,(HL)", "the flag")}\n${line("", "RET")}`), 2);
+  assert.equal(counted(`${line("Y", "SET", "5")}\n`), 0);
+});
+
 test("the limits are the style's", () => {
   assert.deepEqual(LIMITS, { share: 0.4, run: 4, bytes: 24_576, column: 33, end: 80 });
 });

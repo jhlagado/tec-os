@@ -63,9 +63,11 @@ export function parseLine(line) {
   let operand = mnemonic ? (m[5] || null) : null;
   // A label with no colon followed by EQU: the name is the label.
   const word = mnemonic?.toUpperCase();
+  // SET with a bit number and a register is the instruction, not the directive.
+  const bitSet = word === "SET" && /^[0-7]\s*,/.test(operand ?? "");
   const kind = !mnemonic
     ? label ? "label" : c >= 0 ? "comment" : line.trim() === "" ? "blank" : "other"
-    : mnemonic.startsWith("%") || DIRECTIVE.has(word) || (operand && /^EQU\b/i.test(operand))
+    : mnemonic.startsWith("%") || (DIRECTIVE.has(word) && !bitSet) || (operand && /^EQU\b/i.test(operand))
       ? "directive"
       : DATA.has(word)
         ? "data"
