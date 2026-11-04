@@ -561,8 +561,8 @@ CPPARSE:
 ; DEST may be a drive alone, or a blank name with a type: the source's whole
 ; name is used. Both names carry their drive, the current one if none was
 ; given, and a destination that names the source is a bad command, with
-; nothing opened. Takes the operands at ARGSTRT; nothing after DEST is
-; checked. Uses CMDFCB for SOURCE, RENFCB for DEST and DIRNUM for the count
+; nothing opened, as is any text after DEST. Takes the operands at ARGSTRT.
+; Uses CMDFCB for SOURCE, RENFCB for DEST and DIRNUM for the count
 ; of records; returns to the prompt.
 CMDCOPY:
 	LD	HL,(ARGSTRT)	; the operands
@@ -570,6 +570,7 @@ CMDCOPY:
 	CALL	CPNAME
 	LD	DE,RENFCB	; the destination into RENFCB
 	CALL	CPPARSE		; DE kept
+	CALL	ENDCHK		; nothing after it; DE kept
 	INC	DE
 	LD	A,(DE)		; its name's first byte, a space when
 	CP	SPACE		; only a drive or a type was given

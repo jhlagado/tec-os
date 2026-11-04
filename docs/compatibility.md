@@ -91,7 +91,8 @@ from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   make `B:X.COM`. A
   destination that names the source, on the same drive after the current
   drive is filled in, is a bad command and nothing is opened: `COPY X.DAT`,
-  `COPY X.DAT X.DAT` and `COPY X.DAT A:` on A: all print `COPY?`.
+  `COPY X.DAT X.DAT` and `COPY X.DAT A:` on A: all print `COPY?`, as does
+  any text after `DEST`.
 
 - `NAME.SVC` installs a service and `SERVICES` lists them, each with its pages.
   `UNLOAD` removes the lowest. A `.DRV` name is no longer a service: `NAME.DRV`

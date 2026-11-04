@@ -97,6 +97,8 @@ for (const [name, line, setup] of [
   ["onto itself, marked R/O", "COPY R.DAT R.DAT"],
   ["onto itself on B:, written behind", "COPY B:X.DAT X.DAT", ["B:"]],
   ["onto itself in user 1", "COPY X.DAT A:X.DAT", ["USER 1"]],
+  ["with text after the destination (KE-179)", "COPY X.DAT B:X.DAT JUNK"],
+  ["with a third name after the destination (KE-179)", "COPY X.DAT B:Y.DAT Z.DAT"],
 ])
   test(`COPY ${name} is a bad command and leaves the card as it was`, () => {
     const t = trial(line, setup);
