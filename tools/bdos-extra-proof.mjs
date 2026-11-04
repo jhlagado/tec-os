@@ -63,6 +63,9 @@ function proof(r,mutation){
  }
  for(const dsm of [63,1023])for(const deleted of [[],[0],[1,3],[0,1,2,3]]){
   const wide=dsm>255,n=(dsm>>3)+1,lists=[ [0,1,0,2,2,dsm,dsm+1], [3,0,wide?257:4,dsm], [0,0,0], [0,0,0] ];
+  // The last valid cell must carry a unique live block: truncating either
+  // the byte or word loop must alter both marking and clearing outcomes.
+  const cells=wide?8:16;while(lists[0].length<cells)lists[0].push(0);lists[0][cells-1]=wide?513:7;
   word(DPB+5,dsm);mem.fill(0,DIR,DIR+128);mem.fill(0,ALV,ALV+n);mem[ALV-1]=0x96;mem[ALV+n]=0x69;
   const expected=new Uint8Array(n);
   for(let j=0;j<4;j++){
@@ -84,10 +87,12 @@ function proof(r,mutation){
  }
  return {rows,stats};
 }
-const artifacts=dirs.map(rom),pair=artifacts.map(r=>proof(r));semantic(pair[1].rows,pair[0].rows,'paired required observations');
+const artifacts=dirs.map(rom);
+for(const name of ['PUBRR','PARCELL','FREECELL','PARCNT','FREECNT','CLRBLK'])assert.ok(artifacts[1].symbols.has(name),`mandatory candidate symbol ${name}`);
+const pair=artifacts.map(r=>proof(r));semantic(pair[1].rows,pair[0].rows,'paired required observations');
 const controls=[];
 function mutate(label,symbol,offset,expected,replacement){
- const r=artifacts[1];if(!r.symbols.has(symbol)){controls.push({label,notApplicable:true});return;}
+ const r=artifacts[1];assert.ok(r.symbols.has(symbol),`mandatory control symbol ${symbol}`);
  let rejected=false;
  try{proof(r,({mem,s})=>{assert.equal(mem[s(symbol)+offset],expected,'infrastructure: mutation opcode');mem[s(symbol)+offset]=replacement;});}
  catch(error){if(error.code==='ERR_ASSERTION'&&error.message.startsWith('semantic:'))rejected=true;else throw error;}
@@ -99,6 +104,12 @@ mutate('publisher omitted third byte','PUBRR',9,3,2);
 mutate('publisher wrong destination','PUBRR',4,33,32);
 mutate('walker wrong byte stride','PARCELL',3,0x23,0);
 mutate('walker wrong high byte','PARCELL',10,0x56,0x14);
+// Both count initializers select A=8 for word maps; reducing that immediate
+// skips their distinct final cell while still returning normally.
+mutate('mark truncated word count','PARCNT',-1,8,7);
+mutate('clear truncated word count','FREECNT',-1,8,7);
 mutate('clear without complemented mask','CLRBLK',4,0x2f,0);
+assert.equal(controls.length,7,'all required negative controls executed');
+assert.ok(controls.every(c=>c.rejected===true),'all required controls caught semantically');
 const result={kind:'paired pure-helper proof; actual OLDSP return for fn35 publication/fn36; no BIOS/disk proof',romHashes:artifacts.map(r=>hash(r.image)),equivalent:true,observations:pair[0].rows.length,stats:{incumbent:pair[0].stats,candidate:pair[1].stats},negativeControls:controls};
 writeFileSync(output,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));
