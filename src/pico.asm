@@ -403,13 +403,13 @@ TMSMBN:	INC	D		; the next row
 
 
 ; Registers 0-7.
-; - 80 columns (PICO9918 TEXT80, also the V9938 TEXT2 and F18A T80 mode):
-;   R0 bit 2 with text mode, names at a 4 KiB boundary (R2 low bits set as
-;   the V9938 requires), patterns at 0000h, white on dark blue. No unlock is
-;   needed.
+; - 80 columns (PICO9918 TEXT80, also the F18A T80 mode): R0 bit 2 with
+;   text mode, names at a 4 KiB boundary (R2 low bits set), patterns at
+;   0000h, white on dark blue. No unlock is needed. R1 is D0h: bit 7, the
+;   TMS9918A's 4/16K bit, set for 16K VRAM, like the 40 and 32-column sets.
 ; - 40 columns: text mode, the same colours.
 ; - Graphics I: patterns 0000h, colours 2000h, sprites 1B00h/3800h.
-REGS80:	DB	$04,$50,$1000/$400+3,$00,$00,$00,$00,$F4
+REGS80:	DB	$04,$D0,$1000/$400+3,$00,$00,$00,$00,$F4
 REGS40:	DB	$00,$D0,$0800/$400,$00,$00,$00,$00,$F4
 REGS32:	DB	$00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$F1
 

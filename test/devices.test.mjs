@@ -73,7 +73,7 @@ test("DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PIC
   m.typeMatrix("x");
   m.expect(/A>$/);
   const after = m.tec1g.state.display.tms9918.stateSnapshot();
-  assert.deepEqual([...after.registers.slice(0, 2)], [0x04, 0x50], "80-column text again");
+  assert.deepEqual([...after.registers.slice(0, 2)], [0x04, 0xd0], "80-column text again");
   assert.ok(m.screen().includes("Demo stopped."));
   assert.deepEqual(serializeTec1gUpdateFromRuntimeState(m.tec1g.state).digits, [0, 0, 0, 0, 0, 0]);
   assert.deepEqual(m.violations, []);

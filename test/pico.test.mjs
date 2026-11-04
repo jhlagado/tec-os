@@ -386,7 +386,7 @@ test("a claim with the ROM's console on CRT:: nothing drawn, and release restore
   gfx(m, PICOREG, { a: 0xc0, b: 1 });
   assert.equal(VREG1(m), 0xc0, "the program's mode");
   assert.equal(hw(m, VIDEO, 0), 0);
-  assert.equal(VREG1(m), 0x50, "text mode back");
+  assert.equal(VREG1(m), 0xd0, "text mode back");
 });
 
 test("a claim with the ROM's console in, on UC1:: release restores the VDP, and the GLCD stays the console", () => {
@@ -395,7 +395,7 @@ test("a claim with the ROM's console in, on UC1:: release restores the VDP, and 
   hw(m, VIDEO, 1);
   gfx(m, PICOREG, { a: 0xc0, b: 1 });
   assert.equal(hw(m, VIDEO, 0), 0);
-  assert.equal(VREG1(m), 0x50);
+  assert.equal(VREG1(m), 0xd0);
   assert.equal(m.read(m.sym("CONMOD")), UC1);
 });
 
@@ -437,7 +437,7 @@ function ports(m, fn) {
   }
 }
 
-const WIDTHS = [[80, 0x50], [40, 0xd0], [32, 0xc0]];
+const WIDTHS = [[80, 0xd0], [40, 0xd0], [32, 0xc0]];
 const vram = (m) => m.tec1g.state.display.tms9918.stateSnapshot().vram;
 const cold = (m, off) => hw(m, VIDEO, off);
 const ramAt = (m, a, n) => Array.from({ length: n }, (_, i) => m.read(a + i));
