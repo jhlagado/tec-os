@@ -2,7 +2,7 @@
 ;
 ; TEC-OS ROM-resident adaptation of Portable CP/M (see PROVENANCE.md). Code
 ; and constant text stay in ROM. Every variable and the BDOS stack live in the
-; RAM block at the end of this file, which the BIOS clears at cold and warm
+; BDOS RAM block in src/ram.asm, which the BIOS clears at cold and warm
 ; boot before setting CURDMA to $0080.
 
 BDOSBAS:
@@ -1033,28 +1033,18 @@ RANDPREP:
         LD      (SEQREC),A
 
         LD      A,C
-        AND     $80
-        RLCA
-        LD      B,A
+        RLCA                    ; r0 bit 7 becomes EX bit 0
         LD      A,D
-        ADD     A,A
-        AND     $1E
-        OR      B
+        RLA
+        AND     $1F
         LD      (TARGEX),A
 
-        LD      A,D
-        SRL     A
-        SRL     A
-        SRL     A
-        SRL     A
-        LD      B,A
-        LD      A,E
-        ADD     A,A
-        ADD     A,A
-        ADD     A,A
-        ADD     A,A
-        OR      B
-        AND     $3F
+        LD      A,D             ; r2 was proved zero before any FCB write
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        AND     $0F
         LD      (TARGS2),A
 
         CALL    FCBEX
@@ -1158,8 +1148,7 @@ FCBADDR:
         INC     HL
         INC     HL
         LD      C,(HL)          ; EXM
-        LD      DE,12
-        CALL    FCBOFF
+        CALL    FCBEX
         LD      A,(HL)
         AND     C
         LD      H,A
@@ -1526,16 +1515,8 @@ SIZEKEEP:
         JR      SIZELOOP
 
 SIZEDONE:
-        LD      DE,33
-        CALL    FCBOFF
-        LD      A,(FSIZE0)
-        LD      (HL),A
-        INC     HL
-        LD      A,(FSIZE1)
-        LD      (HL),A
-        INC     HL
-        LD      A,(FSIZE2)
-        LD      (HL),A
+        LD      DE,FSIZE0
+        CALL    PUBRR
         LD      A,$FF
         JP      RETA
 
@@ -1552,17 +1533,19 @@ FNSETRR:
         LD      A,(CAND2)
         ADC     A,0
         LD      (CAND2),A
-        LD      DE,33
-        CALL    FCBOFF
-        LD      A,(CAND0)
-        LD      (HL),A
-        INC     HL
-        LD      A,(CAND1)
-        LD      (HL),A
-        INC     HL
-        LD      A,(CAND2)
-        LD      (HL),A
+        LD      DE,CAND0
+        CALL    PUBRR
         JP      RETZERO
+
+; Publish three bytes from DE to the caller's random-record field.
+; HL/DE/BC are scratch; the callers finish through RETA or RETZERO.
+PUBRR:  LD      HL,(PARAM)
+        LD      BC,33
+        ADD     HL,BC
+        EX      DE,HL
+        LD      C,3             ; B is already zero
+        LDIR
+        RET
 
 ; Convert an FCB-shaped EX/S2 position at HL to its 24-bit record base.
 RECBASE:
@@ -2085,31 +2068,11 @@ DUSAVE:
         RET
 
 ; DE = the sum of the current drive's allocation vector, DSM / 8 + 1 bytes.
-ALVSUM: LD      HL,(DPBPTR)
-        LD      BC,5
-        ADD     HL,BC
-        LD      C,(HL)
-        INC     HL
-        LD      B,(HL)
-        SRL     B
-        RR      C
-        SRL     B
-        RR      C
-        SRL     B
-        RR      C
-        INC     BC
-        LD      HL,(ALVPTR)
-        LD      DE,0
-ALVSL:  LD      A,(HL)
-        ADD     A,E
-        LD      E,A
-        JR      NC,ALVS1
-        INC     D
-ALVS1:  INC     HL
-        DEC     BC
-        LD      A,B
-        OR      C
-        JR      NZ,ALVSL
+ALVSUM: CALL    ALVLEN
+        EX      DE,HL          ; existing SUMDE takes its source in DE
+        LD      HL,0
+        CALL    SUMDE
+        EX      DE,HL          ; sum in DE, pointer past the vector in HL
         RET
 
 DUPTR:
@@ -2118,9 +2081,9 @@ DUPTR:
         ADD     HL,BC
         RET
 
-; Clear the BIOS-owned allocation vector and copy the reserved-directory
-; bits supplied by the selected drive's DPB.
-INITALV:
+; Return BC = DSM / 8 + 1 allocation bytes, HL = the BIOS-owned vector.
+; Uses BC/HL and flags; preserves A/DE/IX/IY.
+ALVLEN:
         LD      HL,(DPBPTR)
         LD      BC,5
         ADD     HL,BC
@@ -2135,6 +2098,12 @@ INITALV:
         RR      C
         INC     BC
         LD      HL,(ALVPTR)
+        RET
+
+; Clear the BIOS-owned allocation vector and copy the reserved-directory
+; bits supplied by the selected drive's DPB.
+INITALV:
+        CALL    ALVLEN
 
 CLRAVL:
         ; Test the remaining count directly. Restoring AF here would restore
@@ -2188,48 +2157,31 @@ PARENT:
         LD      (DIRUSED),DE
         LD      DE,16
         ADD     HL,DE
-        LD      DE,(DPBPTR)
-        INC     DE
-        INC     DE
-        INC     DE
-        INC     DE
-        INC     DE
-        INC     DE
-        LD      A,(DE)
+        LD      IX,(DPBPTR)
+        LD      A,(IX+6)
         OR      A
-        JR      NZ,PARWORD
         LD      A,16
+        JR      Z,PARCNT
+        LD      A,8
+PARCNT:
         LD      (ALLEFT),A
-
-PARBYTE:
+PARCELL:
         LD      E,(HL)
         LD      D,0
         INC     HL
-        PUSH    HL
-        CALL    MARKBLK
-        POP     HL
-        LD      A,(ALLEFT)
-        DEC     A
-        LD      (ALLEFT),A
-        JR      NZ,PARBYTE
-        RET
-
-PARWORD:
-        LD      A,8
-        LD      (ALLEFT),A
-
-PARWLOOP:
-        LD      E,(HL)
-        INC     HL
+        LD      A,(IX+6)        ; BITPTR preserves/reloads this drive's DPB
+        OR      A
+        JR      Z,PARHAVE
         LD      D,(HL)
         INC     HL
+PARHAVE:
         PUSH    HL
         CALL    MARKBLK
         POP     HL
         LD      A,(ALLEFT)
         DEC     A
         LD      (ALLEFT),A
-        JR      NZ,PARWLOOP
+        JR      NZ,PARCELL
         RET
 
 FREEENT:
@@ -2239,39 +2191,28 @@ FREEENT:
         LD      IX,(DPBPTR)
         LD      A,(IX+6)
         OR      A
-        JR      NZ,FREEWORD
         LD      A,16
+        JR      Z,FREECNT
+        LD      A,8
+FREECNT:
         LD      (ALLEFT),A
-
-FREEBYTE:
+FREECELL:
         LD      E,(HL)
         LD      D,0
         INC     HL
-        PUSH    HL
-        CALL    CLRBLK
-        POP     HL
-        LD      A,(ALLEFT)
-        DEC     A
-        LD      (ALLEFT),A
-        JR      NZ,FREEBYTE
-        RET
-
-FREEWORD:
-        LD      A,8
-        LD      (ALLEFT),A
-
-FREEWLOP:
-        LD      E,(HL)
-        INC     HL
+        LD      A,(IX+6)        ; BITPTR preserves/reloads this drive's DPB
+        OR      A
+        JR      Z,FREEHAVE
         LD      D,(HL)
         INC     HL
+FREEHAVE:
         PUSH    HL
         CALL    CLRBLK
         POP     HL
         LD      A,(ALLEFT)
         DEC     A
         LD      (ALLEFT),A
-        JR      NZ,FREEWLOP
+        JR      NZ,FREECELL
         RET
 
 MARKBLK:
@@ -2386,15 +2327,8 @@ MASKLOOP:
         RET
 
 ; RONZ: NZ if the selected drive is read-only. Changes AF, DE, HL.
-RONZ:	CALL	DRVMASK		; HL = the drive's bit
-        LD      DE,(ROVEC)
-        LD      A,L
-        AND     E
-        LD      L,A
-        LD      A,H
-        AND     D
-        OR      L
-	RET
+RONZ:   LD      DE,(ROVEC)
+        JR      VTEST          ; DRVMASK preserves DE; same mask and Z result
 CHKRO:	CALL	RONZ		; writable: on
         RET     Z
         LD      HL,ERRRO
