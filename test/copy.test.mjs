@@ -151,3 +151,20 @@ test("every other case leaves the card and prints as COPY.COM does, with the TPA
     assert.equal(b.tpaChanged, 0, `COPY ${args}: the TPA kept`);
   }
 });
+
+test("on a write error COPY closes the destination: the records that fit are in it, their blocks in its entry (KE-179)", () => {
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G1M", label: "DATA", mount: "C" },
+  ]);
+  const c = volume(image, "C");
+  c.write("FILL.DAT", pattern(c.freeBytes() - 4096, 5));
+  const room = c.freeBytes();
+  volume(image, "A").write("BIG.DAT", pattern(room + 4096, 6));
+  const m = boot(image);
+  assert.equal(run(m, "COPY BIG.DAT C:DST.DAT"), "WRITE ERROR");
+  run(m, "\x03");
+  assert.deepEqual(m.violations, []);
+  assert.deepEqual(read(image, "C", "DST.DAT"), read(image, "A", "BIG.DAT").subarray(0, room), "the records written, closed");
+  assert.equal(volume(image, "C").freeBytes(), 0, "every block in a directory entry");
+});
