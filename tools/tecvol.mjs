@@ -121,9 +121,18 @@ async function main(argv) {
         const fs = new CpmVolume(volumePayload(image, v), v.g, { readOnly: v.readOnly });
         const issues = fs.verify();
         problems += issues.length;
+        // A block given twice or past DSM leaves the free space unknown: verify
+        // has it as a problem line, and the volumes after this one are still
+        // listed (KE-AR12).
+        let free;
+        try {
+          free = `${fs.freeBytes()} bytes free`;
+        } catch {
+          free = "free unknown";
+        }
         console.log(
           `  ${v.drive ?? "-"}: ${v.label.padEnd(11)} id ${v.id} ${v.g.name} start ${v.start} ` +
-            `${v.readOnly ? "ro" : "rw"}${v.writeBehind ? " wb" : ""} ${fs.list().length} file(s), ${fs.freeBytes()} bytes free`,
+            `${v.readOnly ? "ro" : "rw"}${v.writeBehind ? " wb" : ""} ${fs.list().length} file(s), ${free}`,
         );
         for (const issue of issues) console.log(`     problem: ${issue}`);
       }

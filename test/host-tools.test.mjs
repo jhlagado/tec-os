@@ -202,6 +202,43 @@ test("a file whose entry names a block past DSM is not read, by CpmVolume or tec
   assert.throws(() => readFileSync(out), /ENOENT/, "and writes no file");
 });
 
+test("tecvol info and verify give a damaged volume's fault as its problem line, its free space unknown, and list the volumes after it (KE-AR12)", () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-fault-"));
+  const tool = resolve(ROOT, "tools/tecvol.mjs");
+  const run = (...args) => {
+    try {
+      return { code: 0, out: execFileSync(process.execPath, [tool, ...args], { encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] }) };
+    } catch (e) {
+      return { code: e.status, out: e.stdout + e.stderr };
+    }
+  };
+  for (const [fault, block, said] of [["a block given to two files", null, /HELLO\.TXT: block \d+ allocated twice/], ["a block above DSM", 600, /HELLO\.TXT: block 600 beyond DSM/]]) {
+    const img = resolve(dir, `card-${block ?? "twice"}.img`);
+    const payload = resolve(dir, "data.bin");
+    run("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G8M:WORK:B");
+    writeFileSync(payload, new Uint8Array(3000).fill(0x55));
+    run("put", img, "A", payload, "MOUNT.COM");
+    writeFileSync(payload, Buffer.from("hello"));
+    run("put", img, "A", payload, "HELLO.TXT");
+    const image = readFileSync(img);
+    const a = volume(image, "A");
+    const hello = a.entry(a.scan().find((e) => e.name === "HELLO.TXT").index);
+    const b = block ?? a.scan().find((e) => e.name === "MOUNT.COM").blocks[0]; // MOUNT.COM's first block, which the later entry, HELLO.TXT, is found to share
+    hello[16] = b & 0xff;
+    hello[17] = b >> 8;
+    writeFileSync(img, image);
+    for (const cmd of ["info", "verify"]) {
+      const { code, out } = run(cmd, img);
+      assert.match(out, /^ {2}A: SYSTEM .* 2 file\(s\), free unknown$/m, `${fault}, ${cmd}: A:'s line`);
+      assert.match(out, said, `${fault}, ${cmd}: its problem line`);
+      assert.match(out, /problem: .*(allocated twice|beyond DSM)/);
+      assert.match(out, /^ {2}B: WORK .* 0 file\(s\), \d+ bytes free$/m, `${fault}, ${cmd}: B: listed after it`);
+      assert.doesNotMatch(out, /^tecvol:/m, `${fault}, ${cmd}: no error in place of the list`);
+      assert.equal(code, cmd === "verify" ? 1 : 0, `${fault}, ${cmd}: the exit code`);
+    }
+  }
+});
+
 test("a recipe builds a verified card and rejects a wrong digest", async () => {
   const files = { "HELLO.TXT": Buffer.from("hello\r\n\x1a") };
   const recipe = {
