@@ -4,7 +4,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { checkSource, LIMITS } from "../tools/lib/style.mjs";
+import { checkSource, LIMITS, toTabs } from "../tools/lib/style.mjs";
 
 /** TEXT followed by tabs to COL (1-based), with tab stops every 8. */
 function tabTo(text, col) {
@@ -86,4 +86,12 @@ test("a name with a hyphen, or a type that isn't three letters, is no 8.3 name",
 
 test("the limits are the style's", () => {
   assert.deepEqual(LIMITS, { share: 0.4, run: 4, bytes: 24_576, column: 33, end: 80 });
+});
+
+test("toTabs lays a spaced source out by tabs, a long label on its own line and every token kept", () => {
+  assert.equal(toTabs(GOOD.split("\n").map(spaced).join("\n")), GOOD);
+  assert.equal(toTabs("LONGLABEL: LD A,'X' ; a 'quoted' X"), `LONGLABEL:\n${line("", "LD", "A,'X'", "a 'quoted' X")}`);
+  assert.equal(toTabs("LONGNAME EQU 5 ; five"), "LONGNAME\tEQU\t5\t\t; five");
+  assert.equal(toTabs("   ; indented"), "\t\t\t\t; indented");
+  assert.deepEqual(rules(checkSource(toTabs("; A header.\nX: LD  A,B ; one\n RET\n"), "X.ASM")), []);
 });

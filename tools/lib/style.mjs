@@ -115,7 +115,10 @@ export function checkSource(text, name) {
       if (lone ? p.commentCol !== 1 && p.commentCol !== LIMITS.column : p.commentCol !== LIMITS.column) fault("column", n, `the comment starts at column ${p.commentCol}`);
     }
     if (p.kind === "code" || p.kind === "data" || p.kind === "directive") {
-      if (p.mnemonicCol !== null && p.mnemonicCol !== 9) fault("tabs", n, `the mnemonic at column ${p.mnemonicCol}`);
+      // A name of eight or more characters can't put EQU at 9: the next stop after it.
+      const long = p.kind === "directive" && p.label && p.label.length > 7;
+      const want = long ? Math.floor(p.label.length / 8) * 8 + 9 : 9;
+      if (p.mnemonicCol !== null && p.mnemonicCol !== want) fault("tabs", n, `the mnemonic at column ${p.mnemonicCol}`);
       if (p.operandCol !== null && p.operandCol !== 17 && p.kind !== "directive") fault("tabs", n, `the operand at column ${p.operandCol}`);
     }
     if (p.kind === "code") {
@@ -159,4 +162,60 @@ export function checkSource(text, name) {
   if (bytes > LIMITS.bytes) fault("size", 0, `${bytes} bytes`);
   if (!/^[A-Z0-9_]{1,8}\.[A-Z]{3}$/i.test(name) || name.includes("-")) fault("name", 0, `${name} is not an 8.3 name`);
   return { name, lines: lines.length, codeLines, commented, share, routines, headless, longestRun, longestAt, bytes, faults };
+}
+
+/** The column (1-based) after TEXT, tabs every 8. */
+const colAfter = (text) => columns(text).end + 1;
+
+/** TEXT with tabs to COL, or one tab past it when TEXT already reaches it. */
+function tabTo(text, col) {
+  let out = text;
+  let at = colAfter(out);
+  do {
+    out += "\t";
+    at = Math.floor((at - 1) / 8) * 8 + 9;
+  } while (at < col);
+  return out;
+}
+
+/**
+ * TEXT laid out by tabs as the style has it, every byte it assembles to the
+ * same: a label at 1 (one of more than seven characters on a line of its own,
+ * but for a directive's name), the mnemonic at 9, the operand at 17, and a
+ * comment beside code at 33; a comment on a line of its own stays at 1 or goes
+ * to 33. Strings, operands and comments keep their own spaces.
+ */
+export function toTabs(text) {
+  const crlf = text.includes("\r\n");
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  for (const line of lines) {
+    const p = parseLine(line);
+    if (p.kind === "blank") {
+      out.push("");
+      continue;
+    }
+    const comment = p.comment >= 0 ? line.slice(p.comment).replace(/\s+$/, "") : "";
+    if (p.kind === "comment") {
+      out.push(/^\s/.test(line) ? tabTo("", 33) + comment : comment);
+      continue;
+    }
+    if (p.kind === "other") {
+      out.push(line.replace(/\s+$/, ""));
+      continue;
+    }
+    let s = "";
+    if (p.label) {
+      if (p.label.length > 7 && p.kind !== "directive" && p.mnemonic) {
+        out.push(p.label);
+      } else s = p.label;
+    }
+    if (p.mnemonic) {
+      s = tabTo(s, 9) + p.mnemonic;
+      if (p.operand) s = tabTo(s, 17) + p.operand;
+    }
+    if (comment) s = tabTo(s, 33) + comment;
+    out.push(s);
+  }
+  return out.join(crlf ? "\r\n" : "\n");
 }
