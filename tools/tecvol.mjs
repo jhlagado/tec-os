@@ -8,9 +8,11 @@
 //   tecvol info IMAGE
 //   tecvol verify IMAGE
 //   tecvol dir IMAGE [DRIVE] [--user N]
-//   tecvol put IMAGE DRIVE FILE [CPMNAME] [--user N] [--text] [--ro] [--sys]
+//   tecvol put IMAGE DRIVE FILE [CPMNAME] [--user N] [--text] [--ro] [--sys] [--force]
 //   tecvol get IMAGE DRIVE CPMNAME [OUTFILE] [--user N] [--text]
-//   tecvol era IMAGE DRIVE CPMNAME [--user N]
+//   tecvol era IMAGE DRIVE CPMNAME [--user N] [--force]
+//                (put over, or era of, a file with the read-only attribute is
+//                refused, as TEC-OS refuses it, unless --force is given)
 //   tecvol recipe RECIPE.json IMAGE
 //   tecvol install IMAGE DEVICE --yes
 //
@@ -53,6 +55,7 @@ function parseArgs(argv) {
     else if (a === "--ro") opts.ro = true;
     else if (a === "--sys") opts.sys = true;
     else if (a === "--yes") opts.yes = true;
+    else if (a === "--force") opts.force = true; // a read-only file written over or erased (KE-AR10)
     else if (a.startsWith("--")) usage(`unknown option ${a}`);
     else args.push(a);
   }
@@ -140,7 +143,7 @@ async function main(argv) {
       if (!file) usage("put needs IMAGE DRIVE FILE");
       const { image, info } = openImage(imagePath);
       const { fs } = openVolume(image, info, drive);
-      fs.write(name ?? basename(file).toUpperCase(), readFileSync(file), { user, text: opts.text, readOnly: opts.ro, system: opts.sys });
+      fs.write(name ?? basename(file).toUpperCase(), readFileSync(file), { user, text: opts.text, readOnly: opts.ro, system: opts.sys, force: opts.force });
       saveImage(imagePath, image);
       break;
     }
@@ -158,7 +161,7 @@ async function main(argv) {
       const [, , drive, name] = args;
       const { image, info } = openImage(imagePath);
       const { fs } = openVolume(image, info, drive);
-      if (fs.erase(name, user) === 0) usage(`${name} not found`);
+      if (fs.erase(name, user, { force: opts.force }) === 0) usage(`${name} not found`);
       saveImage(imagePath, image);
       break;
     }

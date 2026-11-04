@@ -87,7 +87,8 @@ node tools/tecvol.mjs install card.img /dev/rdiskN --yes
 ```
 
 `install` overwrites the device from its first block; the card is dedicated
-to TEC-OS. Never change a card on the PC while the TEC-1G is using it.
+to TEC-OS. `put` over, or `era` of, a file with the read-only attribute is
+refused, as TEC-OS refuses it, unless `--force` is given. Never change a card on the PC while the TEC-1G is using it.
 
 ## Using it
 
