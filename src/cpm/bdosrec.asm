@@ -60,10 +60,14 @@ WRITEBAD:
 ; 2.2's open_reel does: the write that needs the extent makes it. With the
 ; directory full that write returns 1 and the FCB is put back on its extent,
 ; record 128, so a write after an entry is freed makes the extent it needs.
+; A close that fails, no entry holding the extent, returns 1 the same way.
 ; Takes the FCB at PARAM. Returns A = 0 with CR 0 in the next extent, or 1.
 ; Destroys every register, WRTYPE, TARGEX and TARGS2.
 ADVEXT:
 	CALL	CLOSEFCB	; this extent's entry brought up to date
+	INC	A		; Z: the close returned FFh
+	LD	A,1		; 1: the FCB left on record 128
+	RET	Z
 	CALL	FCBEX
 	LD	E,(HL)		; EX and S2, for a make that fails
 	INC	HL

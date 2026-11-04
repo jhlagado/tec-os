@@ -5,6 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { alv, rig as callRig } from "./lib/warmboot.mjs";
 
 const BACK = 0x0f00;
 const STACK = 0x1000;
@@ -151,4 +152,33 @@ test("a write after a new block on drive B reads a block of drive A", () => {
   const want = expected(16);
   want.fill(0x77, 5 * 128, 6 * 128);
   assert.deepEqual(volume(image, "A").read("KEEP.DAT"), want);
+});
+
+/** BIOS WRITE, through the RAM jump table, replaced by LD A,1 / RET: every write fails. Returns the restore. */
+function failWrites(m) {
+  const at = m.sym("RAMBIOS") + 0x2b;
+  const was = [m.read(at), m.read(at + 1)];
+  [0x3e, 0x01, 0xc9].forEach((v, i) => m.write(0x0e00 + i, v));
+  m.write(at, 0x00);
+  m.write(at + 1, 0x0e);
+  return () => was.forEach((v, i) => m.write(at + i, v));
+}
+
+test("a sequential write whose close of the extent it leaves fails returns 1 and leaves the FCB on record 128 (KE-175)", () => {
+  const image = standardCard();
+  const r = callRig(image);
+  const { m } = r;
+  r.fcb(0, "GONE    DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  for (let rec = 0; rec < 128; rec += 1) {
+    for (let k = 0; k < 128; k += 1) m.write(DMA + k, rec);
+    assert.equal(r.bdos(21), 0, `record ${rec}`);
+  }
+  [0, ...Buffer.from("GONE    DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x0200 + i, v));
+  assert.equal(r.bdos(19, 0x0200), 0, "the file deleted under the open FCB");
+  assert.equal(r.bdos(21), 1, "record 128: extent 0 cannot be closed, so the write is refused");
+  assert.deepEqual([m.read(FCB + 12), m.read(FCB + 32)], [0, 128], "the FCB stays on extent 0, record 128");
+  const disk = volume(image, "A");
+  const left = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).filter((e) => e[0] !== 0xe5 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "GONE    DAT");
+  assert.deepEqual(left, [], "no entry made for the deleted file");
 });
