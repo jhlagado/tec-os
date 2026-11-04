@@ -7,33 +7,37 @@
 ROMDATA:
 
 ; ---- bios.asm ----------------------------------------------------------------
-BIOSBAS:JP      COLD            ; 00 cold boot
-        JP      WBOOTR          ; 03 warm boot
-        JP      BCONSTC         ; 06
-        JP      BCONIN          ; 09
-        JP      BCONOUT         ; 0C
-        JP      BLIST           ; 0F
-        JP      BPUNCH          ; 12
-        JP      BREADER         ; 15
-        JP      BHOME           ; 18
-        JP      BSELDSK         ; 1B
-        JP      BSETTRK         ; 1E
-        JP      BSETSEC         ; 21
-        JP      BSETDMA         ; 24
-        JP      BREAD           ; 27
-        JP      BWRITE          ; 2A
-        JP      BLISTST         ; 2D
-        JP      BSECTRN         ; 30
+BIOSBAS:
+	JP	COLD		; 00 cold boot
+	JP	WBOOTR		; 03 warm boot
+	JP	BCONSTC		; 06
+	JP	BCONIN		; 09
+	JP	BCONOUT		; 0C
+	JP	BLIST		; 0F
+	JP	BPUNCH		; 12
+	JP	BREADER		; 15
+	JP	BHOME		; 18
+	JP	BSELDSK		; 1B
+	JP	BSETTRK		; 1E
+	JP	BSETSEC		; 21
+	JP	BSETDMA		; 24
+	JP	BREAD		; 27
+	JP	BWRITE		; 2A
+	JP	BLISTST		; 2D
+	JP	BSECTRN		; 30
 
 ; ---- keyboard.asm ------------------------------------------------------------
-KBARROW:DB      "ABDC"          ; up, down, left, right
-KBSPEC: DB      $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
-KBSHIFT:DB      "<_>?)!@#$%^&*( : +"
+KBARROW:
+	DB	"ABDC"		; up, down, left, right
+KBSPEC:	DB	$0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
+KBSHIFT:
+	DB	"<_>?)!@#$%^&*( : +"
 
 ; ---- lcd.asm -----------------------------------------------------------------
-LCDSEQ: DB      $38,$0C,$06,$01
+LCDSEQ:	DB	$38,$0C,$06,$01
 
-LCDROWS:DB      $80,$C0,$94,$D4
+LCDROWS:
+	DB	$80,$C0,$94,$D4
 
 ; ---- cpm/ccp.asm: the built-in commands -----------------------------------
 ; Each word, its 0, then its handler, in the order they are tried; a 0 ends.
@@ -63,14 +67,14 @@ KEYTAB:	DB	"DIR",0
 ; Each function's routine. FCBMAP has a bit for each function, bit n of
 ; byte n/8, set where the FCB's drive is bound first.
 FNTAB:
-        DW      FNZERO,FNCIN,FNCOUT,FNREAD,FNPUNCH,FNLIST
-        DW      FNDIRECT,FNGETIO,FNSETIO,FNPRINT,FNLINE,FNSTAT
-        DW      FNVERS,FNRESET,FNSEL,FNOPEN,FNCLSE,FNSRCHF
-        DW      FNSRCHN,FNDELETE,FNREADSQ,FNWRITE,FNMAKE,FNRENAME
-        DW      FNLOGIN,FNCURDSK,FNSETDMA,FNGETALV,FNWRPROT,FNGETRO
-        DW      FNATTR,FNGETDPB,FNUSER,FNRREAD,FNRWRITE,FNSIZE
-        DW      FNSETRR,FNRESETD,RETZERO,RETZERO,FNWRZERO
-FCBMAP: DB      %00000000,%10000000,%11111011,%01000000,%00001110,%00000001
+	DW	FNZERO,FNCIN,FNCOUT,FNREAD,FNPUNCH,FNLIST
+	DW	FNDIRECT,FNGETIO,FNSETIO,FNPRINT,FNLINE,FNSTAT
+	DW	FNVERS,FNRESET,FNSEL,FNOPEN,FNCLSE,FNSRCHF
+	DW	FNSRCHN,FNDELETE,FNREADSQ,FNWRITE,FNMAKE,FNRENAME
+	DW	FNLOGIN,FNCURDSK,FNSETDMA,FNGETALV,FNWRPROT,FNGETRO
+	DW	FNATTR,FNGETDPB,FNUSER,FNRREAD,FNRWRITE,FNSIZE
+	DW	FNSETRR,FNRESETD,RETZERO,RETZERO,FNWRZERO
+FCBMAP:	DB	%00000000,%10000000,%11111011,%01000000,%00001110,%00000001
 
 ; ---- services.asm ------------------------------------------------------------
 ; The numbered services, from TNINFO to TNLIST: abi.inc's order.
@@ -84,8 +88,8 @@ SVTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
 	DW	SVLST,HWSFONT	; 14 and 15
 
 ; ---- loader.asm and cpm/ccp.asm: FCB templates -------------------------------
-GLCFCB: DB      1,"GLCD    SVC"
-STFCB:  DB      1,"STARTUP CMD"
+GLCFCB:	DB	1,"GLCD    SVC"
+STFCB:	DB	1,"STARTUP CMD"
 
 ; ---- loader.asm --------------------------------------------------------------
-SVCLIM: DB      8,12,6          ; BDOS, BIOS, CCP: each stack's sum of services
+SVCLIM:	DB	8,12,6		; BDOS, BIOS, CCP: each stack's sum of services
