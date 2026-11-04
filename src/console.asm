@@ -44,13 +44,14 @@ CONINIT:LD      A,$40
         LD      (CONDEV),A
         JP      VIDINIT
 
-; Act on a changed IOBYTE CON: field. Preserves BC and DE.
+; Act on a changed IOBYTE CON: field: one that isn't the mode in effect, since
+; CONSW writes the mode it takes back into the field, the serial terminal for a
+; display or keyboard that isn't there. Preserves BC and DE.
 CONSEL: LD      A,(IOBYTE)
         AND     3
-        LD      HL,CONACT
+        LD      HL,CONMOD
         CP      (HL)
         RET     Z
-        LD      (HL),A
         PUSH    BC
         PUSH    DE
         CALL    CONSW
@@ -75,7 +76,7 @@ CONSW:  LD      B,A
 CONSW2: CP      CMBAT
         JR      Z,CONSWN
 CONSWT: LD      A,CMTTY         ; the serial terminal, also the fallback
-CONSWN: LD      (CONMOD),A
+CONSWN: CALL    CONMD
         LD      HL,0            ; no screen geometry
         LD      (VWID),HL
         RET
@@ -90,7 +91,7 @@ CONSWV: PUSH    BC              ; B = the video mode
         CALL    VTREGR
         POP     BC
         LD      A,B
-        LD      (CONMOD),A
+        CALL    CONMD
         CALL    VTOWN
         RET     NZ              ; selection must leave a claimed display alone
         CALL    VREST           ; the display in its mode before the clear
@@ -305,6 +306,10 @@ BRDWT:  IN      A,(KEYPORT)
         CALL    RXBITS
 BRDRX:  RET
 
+; A, the mode taken, in effect: CONMOD, and the IOBYTE's CON: field, so that a
+; driver or program reads the console in use there. Returns B = A. Destroys AF.
+CONMD:	LD	(CONMOD),A
+	LD	B,A
 ; Put B, a console mode, in the IOBYTE's CON: field. Keeps B. Destroys AF.
 CONFLD:	LD	A,(IOBYTE)
 	AND	$FC

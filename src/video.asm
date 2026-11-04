@@ -87,9 +87,6 @@ VIDHOFF: EX      DE,HL
         JR      NZ,VIDHF1
         LD      HL,CONDEV       ; CDGLC: no GLCD console now
         RES     2,(HL)
-VIDHF1: XOR     A
-        LD      (CONMOD),A
-        DEC     A
-        LD      (CONACT),A
-        OR      A               ; carry clear
-        RET
+VIDHF1: XOR     A               ; serial in effect, so a field naming the
+        LD      (CONMOD),A      ; display acts at the next console call
+        RET                     ; carry clear

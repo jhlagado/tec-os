@@ -53,7 +53,6 @@ VWRRV:  DS      2               ; write LINEBUF to row B
 VFNV:   DS      2               ; flip, begin and end a row move: A = 0, 1, 2
 VSTOP:  DS      1               ; scroll region, first and last row
 VSBOT:  DS      1
-CONACT: DS      1               ; IOBYTE CON: field last acted on
 VCLAIM:	DS	1		; CDCLM while a program owns the PICO9918
 CONMOD: DS      1               ; console mode in effect (CMTTY..CMUC1)
 

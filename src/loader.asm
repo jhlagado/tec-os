@@ -471,10 +471,8 @@ SVGIVE:	LD	A,(HL)
 	OR	A
 	JR	NZ,WRDCLR	; the other keeps the console, and GLCD? is false
 CONSET:	CALL	WRDCLR		; a display has come: the word is false
-	CALL	CONFLD		; the mode goes in the CON: field
-	LD	A,$FF		; CONACT no field: CONSEL acts
-	LD	(CONACT),A
-	JP	CONSEL
+	LD	A,B		; the mode, in the CON: field and in effect
+	JP	CONSW
 
 ; Clear the ROM's word from row 3 if it is still there, and otherwise leave the
 ; row as a program left it. Keeps B, and carry clear if it came clear. Destroys

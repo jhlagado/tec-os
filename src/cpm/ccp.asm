@@ -1102,7 +1102,7 @@ CONNXT:
         LD      C,4
 CONCMP:
         LD      A,(DE)
-	OR	A
+	CP	':'
 	JR	Z,CONMAT	; a three-letter name's end
         CP      (HL)
         JR      NZ,CONNO
@@ -1170,17 +1170,19 @@ CONFL:	CALL	CONFLD
         CALL    Z,GLCLD
 CONSHOW:
         LD      DE,CONHDR
-        CALL    PUTSTR
+        CALL    PUTSTR          ; the BIOS acts on the field: CONMOD next
         LD      A,(CONMOD)
+        ADD     A,A
         ADD     A,A
         LD      L,A
         LD      H,0
-        LD      DE,CONMSGS
+        LD      DE,CONNAMS      ; its name and colon, four bytes
         ADD     HL,DE
-        LD      E,(HL)
+        LD      B,4
+CONSH1: LD      E,(HL)
+        CALL    PUTCHAR         ; keeps BC and HL
         INC     HL
-        LD      D,(HL)
-        CALL    PUTSTR
+        DJNZ    CONSH1
         LD      DE,CRLFMSG
         CALL    PUTSTR
         JP      MAINLOOP

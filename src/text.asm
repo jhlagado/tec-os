@@ -34,23 +34,13 @@ CPCLOSE:
         DB      "CLOSE ERROR",CR,LF,'$'
 CPCOPIED:
         DB      "COPIED ",'$'
-CONNAMS:                        ; four bytes each, a 0 after three letters;
-        DB      "TTY",0,"CRT",0 ; the last, PICO's record name too
-        DB      "BAT",0,"UC1",0
+CONNAMS:                        ; four bytes each, a colon after three
+        DB      "TTY:CRT:"      ; letters; the last, PICO's record name too
+        DB      "BAT:UC1:"
         DB      "GLCDPICO    "
 CONWID: DB      "80",80,"40",40,"32",32 ; CON PICO's widths: typed, columns
 CONHDR:
         DB      "CON: ",'$'
-CONTTY:
-        DB      "TTY: serial terminal",'$'
-CONCRT:
-        DB      "CRT: PICO9918",'$'
-CONBAT:
-        DB      "BAT: reader and list",'$'
-CONUC1:
-        DB      "UC1: GLCD",'$'
-CONMSGS:
-        DW      CONTTY,CONCRT,CONBAT,CONUC1
 FILEEX:
         DB      "FILE EXISTS",'$'
 NOSPACE:

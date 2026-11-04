@@ -33,18 +33,18 @@ test("CON switches the console between devices and falls back to serial", () => 
   const image = standardCard();
   volume(image, "A").write("GLCD.SVC", GLCD_SVC); // CON UC1: loads the GLCD's resident
   const m = boot(image, { tms: true, matrix: true });
-  assert.match(m.command("CON"), /CON: CRT: PICO9918/);
+  assert.match(m.command("CON"), /CON: CRT:\r\n/);
   m.mark = m.output.length;
   m.typeMatrix("con uc1:\r");
   m.expect(/A>$/);
   assert.equal(m.read(3) & 3, 3);
-  assert.deepEqual(m.glcdScreen().slice(0, 3), ["CON: UC1: GLCD", "A>", ""]);
+  assert.deepEqual(m.glcdScreen().slice(0, 3), ["CON: UC1:", "A>", ""]);
   m.mark = m.output.length;
   m.typeMatrix("con tty\r");
-  assert.match(m.expect(/A>$/), /CON: TTY: serial terminal/);
-  assert.match(m.serialText(), /CON: TTY: serial terminal\r\nA>$/);
+  assert.match(m.expect(/A>$/), /CON: TTY:\r\n/);
+  assert.match(m.serialText(), /CON: TTY:\r\nA>$/);
   m.command("CON CRT");
-  assert.ok(m.screen().some((line) => line === "CON: CRT: PICO9918"));
+  assert.ok(m.screen().some((line) => line === "CON: CRT:"));
   assert.match(m.command("CON XYZ"), /\r\nXYZ\?/);
   assert.deepEqual(m.violations, []);
 });
@@ -72,7 +72,10 @@ test("CRT: without a PICO9918 falls back to the serial terminal", () => {
   m.mark = m.output.length;
   m.typeMatrix("con crt\r");
   m.expect(/A>$/);
-  assert.match(m.serialText(), /CON: TTY: serial terminal/);
+  assert.match(m.serialText(), /CON: TTY:\r\n/, "no description, the mode in effect");
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [0, 0], "the field holds the mode taken, TTY:");
+  assert.equal(m.symbols.get("CONACT"), undefined, "CONACT is gone");
+  for (const t of ["serial terminal", "PICO9918", "reader and list"]) assert.equal(romFor().rom.includes(t), false, `no "${t}" in the ROM`);
 });
 
 test("the matrix keyboard types at the prompt", () => {
@@ -327,7 +330,7 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   m.mark = m.output.length;
   m.typeMatrix("unload\r");
   m.expect(/A>$/);
-  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [3, 0], "IOBYTE stays UC1:, served by serial");
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [0, 0], "the field takes the mode in effect, TTY:, when serial serves it");
   assert.equal(m.read(6), stub, "its pages given back to the TPA");
   assert.equal(word(m.sym("GLVEC")), 0, "its table dropped");
   assert.deepEqual(m.violations, []);

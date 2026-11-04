@@ -332,7 +332,7 @@ test("REMOVE refuses while PICO.SVC is the console, and UNLOAD changes nothing; 
   m.mark = m.output.length;
   m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
   assert.equal(m.traps, 0);
-  assert.match(say(m, "CON CRT"), /serial terminal/, "CON CRT has no load, and falls back");
+  assert.match(say(m, "CON CRT"), /CON: TTY:\r\n/, "CON CRT has no load, and falls back");
   assert.match(say(m, "DIR HELLO.TXT"), /HELLO\.TXT/);
 });
 

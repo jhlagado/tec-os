@@ -370,20 +370,20 @@
     },
     {
       "input": "CON",
-      "output": "CON\r\r\nCON: TTY: serial terminal\r\nA>",
-      "calls": "10a148bb5eab960cf8a0e484df5c625c004be710cbe29c3cd78751cdda312342",
+      "output": "CON\r\r\nCON: TTY:\r\nA>",
+      "calls": "f7675f2932a0c547bd1241379df24591ef650fc03c070ed0e1fb3db8dc70c337",
       "peak": 12
     },
     {
       "input": "CON TTY",
-      "output": "CON TTY\r\r\nCON: TTY: serial terminal\r\nA>",
-      "calls": "10a148bb5eab960cf8a0e484df5c625c004be710cbe29c3cd78751cdda312342",
+      "output": "CON TTY\r\r\nCON: TTY:\r\nA>",
+      "calls": "f7675f2932a0c547bd1241379df24591ef650fc03c070ed0e1fb3db8dc70c337",
       "peak": 12
     },
     {
       "input": "CON TTY:",
-      "output": "CON TTY:\r\r\nCON: TTY: serial terminal\r\nA>",
-      "calls": "10a148bb5eab960cf8a0e484df5c625c004be710cbe29c3cd78751cdda312342",
+      "output": "CON TTY:\r\r\nCON: TTY:\r\nA>",
+      "calls": "f7675f2932a0c547bd1241379df24591ef650fc03c070ed0e1fb3db8dc70c337",
       "peak": 12
     },
     {
@@ -400,14 +400,14 @@
     },
     {
       "input": "CON UC1",
-      "output": "CON UC1\r\r\nCON: TTY: serial terminal\r\nA>",
-      "calls": "a7e3692b779c5d2f701d1627e548ae754b6270e5a41636d640a862b986ea5531",
+      "output": "CON UC1\r\r\nCON: TTY:\r\nA>",
+      "calls": "b4dc3f00659fe0ea4f40525e8bacf1c631b5c215ca65ece66285ebca86886be2",
       "peak": 14
     },
     {
       "input": "CON TTY",
-      "output": "CON TTY\r\r\nCON: TTY: serial terminal\r\nA>",
-      "calls": "10a148bb5eab960cf8a0e484df5c625c004be710cbe29c3cd78751cdda312342",
+      "output": "CON TTY\r\r\nCON: TTY:\r\nA>",
+      "calls": "f7675f2932a0c547bd1241379df24591ef650fc03c070ed0e1fb3db8dc70c337",
       "peak": 12
     },
     {
@@ -474,8 +474,8 @@
   "picoMatrix": [
     {
       "input": "CON UC1",
-      "output": "CON UC1\r\r\nCON: UC1: GLCD\r\nA>",
-      "calls": "edc7b58c23b5d17880b0707e44cc501884cfa779d2b5f143384f70b720772442",
+      "output": "CON UC1\r\r\nCON: UC1:\r\nA>",
+      "calls": "c3802534bbf29aa61026cbd793b7d97619faf1b23a68103bd4b8c03762f5c6d4",
       "peak": 14
     }
   ]
