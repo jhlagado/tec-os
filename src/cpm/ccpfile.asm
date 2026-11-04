@@ -8,7 +8,9 @@
 ; at ARGSTRT: a bad command if it does not parse or more follows it. Uses
 ; CMDFCB, LOADBUF as the DMA record, DIRCOL, DIRNCOL and DIRNUM; returns to
 ; the prompt, by FILENO when nothing matched.
-; DIR uses only search-first/search-next and the public DMA directory record.
+; DIR calls the BDOS for the DMA (26), search first and next (17, 18), the
+; drive's free space (46) and, when a page fills, a key (6); it reads only the
+; directory record search returns in the DMA.
 CMDDIR:
 	CALL	ARGSKIP		; the operand, past its spaces,
 	CALL	CMDPARSE	; into CMDFCB, or a bad command,
