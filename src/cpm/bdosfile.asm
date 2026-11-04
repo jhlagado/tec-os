@@ -261,9 +261,11 @@ ROTEST:	LD	DE,9		; t1, the type's first byte: its bit 7
 	JP	BDERR
 
 ; Function 19, delete file: every entry of the current user's files that the
-; FCB at PARAM names, wildcards allowed, freed in the allocation vector and
-; marked E5h. A read-only drive, or a read-only file met on the way, ends the
-; function in error. Returns 0 in A, or FFh when no entry matched.
+; FCB at PARAM names, wildcards allowed, marked E5h on the disk and then
+; freed in the allocation vector. A read-only drive, a read-only file met on
+; the way or a failed directory write ends the function in error, the
+; entries before it deleted and freed. Returns 0 in A, or FFh when no entry
+; matched.
 FNDELETE:
 	CALL	CHKRO		; error 2 on a read-only drive
 	LD	HL,(PARAM)	; the FCB the pattern, mode 2: user
@@ -280,10 +282,12 @@ DELLOOP:
 	JR	Z,DELDONE	; no more entries
 	LD	HL,(MATCHPTR)	; error 3 at a read-only file's entry;
 	CALL	ROTEST		; entries before it stay deleted
-	CALL	FREEENT		; its blocks freed in the vector
 	LD	HL,(MATCHPTR)
 	LD	(HL),$E5	; the entry marked empty
 	CALL	WRDIRNOW	; the BIOS still on its record
+	CALL	FREEENT		; written: only now its blocks freed, so
+				; a failed write function 45 returns
+				; leaves the vector as the card has it
 	LD	A,1		; WRTYPE 1: an entry deleted
 	LD	(WRTYPE),A
 	JR	DELLOOP

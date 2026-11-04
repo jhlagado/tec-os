@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, standardCard, volume } from "./lib/fixtures.mjs";
-import { rig } from "./lib/warmboot.mjs";
+import { alv, rig } from "./lib/warmboot.mjs";
 
 const FCB = 0x005c;
 const FCB2 = 0x0200;
@@ -241,4 +241,73 @@ test("function 22 clears S2 and keeps EX, as CP/M 2.2's make does after clrmodnu
   assert.deepEqual([m.read(FCB + 12), m.read(FCB + 14) & 0x3f], [0, 1], "the FCB on extent 0 of module 1");
   assert.notEqual(r.bdos(16), 0xff);
   assert.deepEqual(entries().map((e) => [e[12], e[14]]).sort((x, y) => x[1] - y[1] || x[0] - y[0]), [[3, 0], [0, 1]], "module 1's entry made beside the first");
+});
+
+/** The SD write after this call fails once, as a card's failed write does; later writes succeed. Returns a count of failures made. */
+function failOneSdWrite(m, skip = 0) {
+  const step = m.step.bind(m);
+  const sdwrite = m.sym("SDWRITE");
+  const sdfail = m.sym("SDFAIL");
+  const got = { failed: 0, seen: 0 };
+  m.step = () => {
+    if (m.pc === sdwrite && got.failed === 0 && got.seen++ === skip) {
+      got.failed += 1;
+      m.cpu.cpu.a = 5;
+      m.cpu.cpu.pc = sdfail;
+    }
+    return step();
+  };
+  got.restore = () => (m.step = step);
+  return got;
+}
+
+const blocksOf = (fs, name) => fs.list().find((f) => f.name === name)?.entries.flatMap((e) => e.blocks) ?? [];
+
+test("an erase whose directory write fails and returns the error frees none of the file's blocks, so a file made next takes others (KE-AR1)", () => {
+  for (const mode of [0xff, 0xfe]) {
+    const image = standardCard();
+    volume(image, "A").write("OLD.DAT", new Uint8Array(128).fill(0x11));
+    const r = rig(image);
+    const { m } = r;
+    r.bdos(45, mode);
+    const before = alv(m, 0);
+    r.fcb(0, "OLD     DAT");
+    const fail = failOneSdWrite(m);
+    assert.equal(r.bdos(19), 0xff, `mode ${mode.toString(16)}: the erase's error returned`);
+    fail.restore();
+    assert.equal(fail.failed, 1, "one SD write failed");
+    assert.deepEqual(alv(m, 0), before, "the vector as it was: OLD.DAT's blocks still used");
+    const oldBlocks = blocksOf(volume(image, "A"), "OLD.DAT");
+    assert.notDeepEqual(oldBlocks, [], "OLD.DAT still on the card");
+    r.fcb(0, "NEW     DAT");
+    assert.notEqual(r.bdos(22), 0xff);
+    for (let k = 0; k < 128; k += 1) m.write(DMA + k, 0x77);
+    assert.equal(r.bdos(21), 0);
+    assert.notEqual(r.bdos(16), 0xff);
+    const fs = volume(image, "A");
+    const newBlocks = blocksOf(fs, "NEW.DAT");
+    assert.ok(!newBlocks.some((b) => oldBlocks.includes(b)), `NEW.DAT's blocks ${newBlocks} are not OLD.DAT's ${oldBlocks}`);
+    assert.deepEqual(fs.verify(), []);
+    assert.deepEqual([...new Set(fs.read("OLD.DAT"))], [0x11], "OLD.DAT's bytes intact");
+  }
+});
+
+test("a wildcard erase whose second directory write fails keeps the first file erased and freed, and the second whole (KE-AR1)", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("ONE.DAT", new Uint8Array(128).fill(0x21));
+  a.write("TWO.DAT", new Uint8Array(128).fill(0x22));
+  const [one, two] = ["ONE.DAT", "TWO.DAT"].map((n) => blocksOf(a, n));
+  const r = rig(image);
+  const { m } = r;
+  r.bdos(45, 0xff);
+  r.fcb(0, "???     DAT");
+  const fail = failOneSdWrite(m, 1);
+  assert.equal(r.bdos(19), 0xff, "the second entry's write fails, the error returned");
+  fail.restore();
+  const fs = volume(image, "A");
+  assert.deepEqual(fs.list().map((f) => f.name), ["TWO.DAT"], "ONE.DAT erased on the card, TWO.DAT not");
+  const used = (b) => (alv(m, 0)[b >> 3] >> (7 - (b & 7))) & 1;
+  assert.deepEqual([...one.map(used), ...two.map(used)], [...one.map(() => 0), ...two.map(() => 1)], "ONE.DAT's blocks free, TWO.DAT's still used");
+  assert.deepEqual([...new Set(fs.read("TWO.DAT"))], [0x22]);
 });
