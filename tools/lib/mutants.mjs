@@ -676,3 +676,15 @@ export const MUTANTS_KS36B = [
   // The table block read into 0200h as well as into its line, so that the machine still boots and only the TPA test can tell (KS36b review).
   { name: "a mount that reads into fixed RAM", ...ks34("src/vol.asm", ["MNB2: CALL CFILL"], ["MNB2: PUSH AF", "LD HL,$0200", "CALL SDREAD", "POP AF", "CALL CFILL"], CTEST) },
 ];
+
+// KS39: one mutant a part of the PICO9918's console in the ROM (KG45).
+const K39 = ["test/ks39.test.mjs"];
+export const MUTANTS_KS39 = [
+  { name: "the start: with no matrix keyboard too", ...ks34(ROMPICOF, ["PISTART: BIT 0,(HL)", "RET Z"], ["PISTART: BIT 0,(HL)"], K39) },
+  { name: "the template: the record's version and table not copied", ...ks34(ROMPICOF, ["LD BC,PITPLN"], ["LD BC,PITPLN-3"], K39) },
+  { name: "REGHEAD: the record not registered", ...ks34(ROMPICOF, ["LD HL,PIREC", "LD (REGHEAD),HL"], ["LD HL,PIREC"], K39) },
+  { name: "TNDRVR: B = 1 taken", ...ks34("src/services.asm", ["SVDRV: LD A,B", "CP CMUC1", "JR Z,SVDRV1"], ["SVDRV: LD A,B", "CP CMUC1", "JR Z,SVDRV1", "CP CMCRT", "JR Z,SVDRV1"], K39) },
+  { name: "the give-way: GLCD.SVC takes the console whatever is in effect", ...ks34("src/loader.asm", ["LD A,(CONMOD)", "DEC A", "JR Z,WRDCLR"], [], ["test/pico.test.mjs"]) },
+  { name: "the width: 80 again at every warm boot", ...ks34(B, ["CALL HWVREL"], ["LD A,80", "CALL TMSW", "CALL HWVREL"], K39) },
+  { name: "the masked pairs: VPAIR with no DI, in the ROM", ...ks34(ROMPICOF, ["VPAIR: CALL IFFGET", "PUSH AF", "DI"], ["VPAIR: CALL IFFGET", "PUSH AF", "NOP"], MASK) },
+];
