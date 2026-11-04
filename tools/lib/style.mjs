@@ -120,7 +120,9 @@ export function checkSource(text, name) {
       // A name of eight or more characters can't put EQU at 9: the next stop after it.
       const long = p.kind === "directive" && p.label && p.label.length > 7;
       const want = long ? Math.floor(p.label.length / 8) * 8 + 9 : 9;
-      if (p.mnemonicCol !== null && p.mnemonicCol !== want) fault("tabs", n, `the mnemonic at column ${p.mnemonicCol}`);
+      // A % directive may stand at the margin, where the SVC builder looks for it.
+      const margin = p.mnemonic?.startsWith("%") && !p.label && p.mnemonicCol === 1;
+      if (p.mnemonicCol !== null && p.mnemonicCol !== want && !margin) fault("tabs", n, `the mnemonic at column ${p.mnemonicCol}`);
       if (p.operandCol !== null && p.operandCol !== 17 && p.kind !== "directive") fault("tabs", n, `the operand at column ${p.operandCol}`);
     }
     if (p.kind === "code") {
@@ -213,7 +215,8 @@ export function toTabs(text) {
       } else s = p.label;
     }
     if (p.mnemonic) {
-      s = tabTo(s, 9) + p.mnemonic;
+      // A % directive at the margin stays there.
+      s = p.mnemonic.startsWith("%") && !p.label && /^%/.test(line) ? p.mnemonic : tabTo(s, 9) + p.mnemonic;
       if (p.operand) s = tabTo(s, 17) + p.operand;
     }
     if (comment) s = tabTo(s, 33) + comment;

@@ -90,6 +90,11 @@ test("SET with a bit and a register is an instruction, the directive is not", ()
   assert.equal(counted(`${line("Y", "SET", "5")}\n`), 0);
 });
 
+test("a % directive may stand at the margin, where the SVC builder reads it, or at 9", () => {
+  for (const text of ['%INCLUDE "abi.inc"\n', '\t%INCLUDE "abi.inc"\n']) assert.deepEqual(rules(checkSource(text, "X.ASM")), [], text);
+  assert.equal(toTabs('%INCLUDE "abi.inc"'), '%INCLUDE\t"abi.inc"', "the operand at 17, as the builder's \\s+ takes");
+});
+
 test("the limits are the style's", () => {
   assert.deepEqual(LIMITS, { share: 0.4, run: 4, bytes: 24_576, column: 33, end: 80 });
 });
