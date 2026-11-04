@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// KS38b's mutants (KG42): MUTANTS_KS38B on a tree of REV, HEAD by default, built
+// KS38b's mutants (KG42): MUTANTS_KS38B on the registered tree 626ee41 by default, built
 // in build/model-ks38b/. --slice FROM:TO runs part of the set, for one at a
-// time under the memory guard; --list names them.
+// time under the memory guard; --list names them. Later CCP stages remove
+// CPSRC, so their trees are not substitutes for this historical gate.
 //
 //   node tools/ks38b-model.mjs [--landed REV] [--slice FROM:TO] [--list] --out FILE
 
@@ -11,7 +12,7 @@ import * as M from "./lib/model.mjs";
 import { MUTANTS_KS38B, mutate } from "./lib/mutants.mjs";
 
 const WORK = resolve(M.ROOT, "build/model-ks38b");
-const LANDED = M.arg("--landed", "HEAD");
+const LANDED = M.arg("--landed", "626ee41");
 
 async function main() {
   if (process.argv.includes("--list")) {
