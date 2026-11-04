@@ -90,7 +90,13 @@ for (const board of boards) {
     const defaultRegisters = [...m.tec1g.state.display.tms9918.stateSnapshot().registers];
     ok(call(m, "ABICALL", { c: ABI.TNVIDEO, b: 1 }));
     vreg(m, 7, 0x12);
-    const before = m.tec1g.state.display.tms9918.stateSnapshot();
+    // What the claim keeps: the VDP's registers and VRAM. Its frame count and
+    // status go on with the clock.
+    const held = () => {
+      const { registers, vram } = m.tec1g.state.display.tms9918.stateSnapshot();
+      return { registers, vram };
+    };
+    const before = held();
     const writes = watch(m, () => {
       m.write(3, 0); out(m, "A");
       m.write(3, 1);
@@ -99,7 +105,7 @@ for (const board of boards) {
       call(m, "BCONST");
     });
     assert.equal(writes.filter(([p]) => p === 0xbe || p === 0xbf).length, 0);
-    assert.deepEqual(m.tec1g.state.display.tms9918.stateSnapshot(), before);
+    assert.deepEqual(held(), before);
     assert.notEqual(m.read(m.sym("VCLAIM")), 0);
     assert.deepEqual(call(m, "ABICALL", { c: ABI.TNPUTAT, b: 0, h: 0x20, l: 0 }), { a: 2, carry: 1, z: 0 });
     ok(call(m, "ABICALL", { c: ABI.TNVIDEO, b: 0 }));
