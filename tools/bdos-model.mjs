@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
 import { ROOT, tree, build, rom, patch } from "./lib/model.mjs";
+import { offset, publish, walkers } from "./lib/bdos-extra.mjs";
 const BASE="022a4ef", WORK=resolve(ROOT,"build/bdos-model");
 const out=process.argv[2]??resolve(WORK,"figures.json");
 const sha=b=>createHash("sha256").update(b).digest("hex");
@@ -94,7 +95,8 @@ function random(d){
         AND     $0F
         LD      (TARGS2),A`);
 }
-const variants={incumbent(){},length,sum,mask,random,combined(d){length(d);sum(d);mask(d);random(d);}};
+function combined(d){length(d);sum(d);mask(d);random(d);}
+const variants={incumbent(){},length,sum,mask,random,combined,offset,publish,walkers,"combined-all"(d){combined(d);offset(d);publish(d);walkers(d);}};
 function engine(r){
   const memory=new Uint8Array(65536).fill(0xa5);memory.set(r.image,0xc000);
   const m=createZ80Runtime({memory,startAddress:0},0,{read:()=>255,write(){}});
@@ -147,13 +149,38 @@ function probes(r){
   }
   return {rows,cycles,peak,counts:{dsm:65536,checksum:60,initialize:20,masks:544,random:65536,overflow:30}};
 }
+function controls(r){
+  const at=n=>r.symbols.get(n)-0xc000;
+  const find=(from,to,needle)=>{
+    const hits=[];for(let p=at(from);p<=at(to)-needle.length;p++)if(needle.every((b,i)=>r.image[p+i]===b))hits.push(p);
+    assert.equal(hits.length,1,`one ${from} control pattern`);return hits[0];
+  };
+  const changes=[
+    ["allocation-length-minus-one",at("ALVLEN")+22,[3],[0]],
+    ["checksum-drops-carry",at("SUMDE")+5,[0x24],[0]],
+    ["readonly-mask-OR",at("VTEST")+4,[0xa3],[0xb3]],
+    ["random-loses-r0-high-bit",find("RANDPREP","RANDOPEN",[0x79,7,0x7a,0x17,0xe6,0x1f])+1,[7],[0]],
+    ["random-loses-S2-high-bit",find("RANDPREP","RANDOPEN",[0x7a,15,15,15,15,0xe6,15])+6,[15],[7]],
+    ["random-accepts-overflow",find("RANDPREP","RANDOPEN",[0x7b,0xb7,0x3e,6,0x20])+4,null,[0,0]],
+  ];
+  return changes.map(([name,p,before,after])=>{
+    const image=Uint8Array.from(r.image);if(before)assert.deepEqual([...image.slice(p,p+before.length)],before,`${name} opcode prerequisite`);image.set(after,p);
+    let error;try{probes({...r,image});}catch(e){if(e.code!=="ERR_ASSERTION")throw e;error=e.message;}
+    assert.ok(error,`${name} distinguished from unmutated passing probes`);
+    return {name,detected:true,address:p+0xc000,error};
+  });
+}
+const selected=(process.env.BDOS_VARIANTS??Object.keys(variants).join(",")).split(",");
+assert.equal(selected[0],"incumbent","a comparison must start with the incumbent");
+assert.ok(selected.every(n=>Object.hasOwn(variants,n)),"every requested variant exists");
 mkdirSync(WORK,{recursive:true});const result={baseline:BASE,runnerSha256:sha(readFileSync(new URL(import.meta.url))),variants:{}};let reference;
-for(const name of (process.env.BDOS_VARIANTS??Object.keys(variants).join(",")).split(",")){
+for(const name of selected){
   console.error(`BDOS model: ${name}`);const dir=tree(WORK,name,BASE);variants[name](dir);await build(dir);const r=rom(dir);
   if(name==="incumbent")assert.equal(sha(r.image),"ab2d0c6b8a8d5d36ad3c51af3ef22cfb166890cc412f51bb9352b7a80cb27ed6");
   const p=probes(r);reference??=p;assert.deepEqual(p.rows,reference.rows,`${name}: helper observations`);
   const d8=JSON.parse(readFileSync(resolve(dir,"build/tecos/tecos.d8.json"))),kinds={};for(const x of d8.files["cpm/bdos.asm"].segments)kinds[x.kind]=(kinds[x.kind]??0)+x.end-x.start;
   result.variants[name]={rom:r.census.rom.used,sha256:sha(r.image),bdos:kinds,ram:r.symbols.get("BDOSRME")-r.symbols.get("BDOSRAM"),stack:r.symbols.get("STKTOP")-r.symbols.get("STKBASE"),tpa:r.census.ram.tpa.bytes,probes:{equivalent:true,counts:p.counts,cycles:p.cycles,peak:p.peak},delta:r.census.rom.used-(result.variants.incumbent?.rom??r.census.rom.used)};
+  if(name==="combined"||name==="combined-all")result.variants[name].controls=controls(r);
   writeFileSync(out,JSON.stringify(result,null,2)+"\n");
 }
 console.log(JSON.stringify(result,null,2));
