@@ -19,6 +19,7 @@
 %INCLUDE "term.asm"
 %INCLUDE "video.asm"
 %INCLUDE "tms.asm"
+%INCLUDE "pico.asm"
 %INCLUDE "lcd.asm"
 %INCLUDE "sd.asm"
 %INCLUDE "vol.asm"

@@ -62,8 +62,7 @@ ERRFILE: DB     ": File R/O",0
 
 ; ---- loader.asm and cpm/ccp.asm: the LCD's words ----------------------------
 GLCMSG: DB      "GLCD?",0
-PICMSG:	DB	"PICO?"
-PICCLR:	DB	"     ",0	; PICO?'s blanks wipe any of these words
+PICCLR:	DB	"     ",0	; blanks wipe any of the words
 
 ; ---- cache.asm ---------------------------------------------------------------
 CWMSG:  DB      13,10,"Write lost",0
