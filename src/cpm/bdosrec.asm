@@ -287,23 +287,14 @@ RANDPREP:
 
 ; Leaving an extent closes it first, so its directory entry keeps the record
 ; count and blocks written through this FCB. The FCB then takes TARGEX and
-; TARGS2 and opens that extent, going to RANDMISS when it is not on the disk.
+; TARGS2, which keep its own EX and S2 (EXSWAP), and opens that extent,
+; going to RANDMISS when it is not on the disk. An open sets S2's bit 7.
 RANDOPEN:
 	CALL	CLOSEFCB
 	INC	A		; Z: the close returned FFh
 	LD	A,3		; 3: the extent cannot be closed
 	JR	Z,RANDFAIL
-	CALL	FCBEX
-	LD	A,(TARGEX)
-	LD	(HL),A		; EX = the record's extent
-	INC	HL
-	INC	HL
-	LD	A,(HL)
-	AND	$80		; S2's bit 7, the unchanged mark, kept
-	LD	B,A
-	LD	A,(TARGS2)
-	OR	B
-	LD	(HL),A		; S2 = the record's module
+	CALL	EXSWAP		; EX and S2 the record's, the old kept
 	CALL	NEXTFIND	; open the extent: its entry into the FCB
 	OR	A
 	JR	NZ,RANDMISS	; no entry for it on the disk
@@ -317,21 +308,48 @@ RANDPOS:
 	RET
 
 ; A read of an extent that was never made returns 4. A write makes the
-; extent, as CP/M does, and returns 5 when the directory is full. Returns as
-; RANDPREP.
+; extent, as CP/M does, and returns 5 when the directory is full. Either
+; failure puts the FCB's EX and S2 back (EXSWAP), so they name the extent
+; its RC and map still describe, and the next call opens the record's
+; extent again. Returns as RANDPREP.
 RANDMISS:
 	LD	A,(ZEROFIL)
 	OR	A		; zero: a read
 	LD	A,4		; 4: a read of an extent not written
-	JR	Z,RANDFAIL
+	JR	Z,RANDBACK
 	CALL	MAKEFCB		; a new directory entry for the extent
 	INC	A
 	JR	NZ,RANDPOS	; made: on to the record
 	LD	A,5		; FFh: 5, the directory is full
+RANDBACK:
+	LD	B,A		; the error, kept over the swap
+	CALL	EXSWAP		; the FCB's own EX and S2 back
+	LD	A,B
 
 ; A random record refused: carry, with A = the error code.
 RANDFAIL:
 	SCF			; carry: A is an error, the FCB not ready
+	RET
+
+; The FCB's EX and S2 exchanged with TARGEX and TARGS2, which follow each
+; other in memory: the FCB on the extent RANDPREP found, or back on its own.
+; Takes the FCB at PARAM. Changes A, C, DE, HL; keeps B.
+EXSWAP:
+	CALL	FCBEX		; HL at EX
+	LD	DE,TARGEX
+	CALL	SWAPB		; EX with TARGEX
+	INC	HL		; past S1 to S2, with TARGS2
+
+; The byte at HL exchanged with the byte at DE, and both moved on one.
+; Changes A, C, DE, HL.
+SWAPB:
+	LD	A,(DE)
+	LD	C,(HL)
+	LD	(HL),A		; one way
+	LD	A,C
+	LD	(DE),A		; and the other
+	INC	HL
+	INC	DE
 	RET
 
 ; Return in DE the block that holds record SEQREC of the FCB's extent, 0 for
