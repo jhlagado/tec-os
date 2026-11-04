@@ -21,3 +21,18 @@ test('compact layout checks routine headers and preserves literal case', () => {
   assert.ok(rules(source.replace(/ +; done/, ' ; done')).includes('column'));
   assert.ok(rules(source.replace('\n\nINNER:', '\nINNER:')).includes('blank'));
 });
+
+test('%INCLUDE starts at the left margin', () => {
+  const include = '%INCLUDE "file.asm"';
+  assert.deepEqual(rules(include + '\n' + source), []);
+  assert.ok(rules('  ' + include + '\n' + source).includes('column'));
+});
+
+test('column-18 notes continue an adjacent inline note', () => {
+  const continuation = ' '.repeat(17) + '; continued';
+  assert.deepEqual(rules(source + '\n' + continuation + '\n' + continuation), []);
+  for (const gap of ['\n', '\n\n', '\n; standalone\n']) {
+    assert.ok(rules(source.replace(/ +; done$/, '') + gap + continuation).includes('continuation'));
+  }
+  assert.ok(rules(source + '\n\n' + continuation).includes('continuation'));
+});

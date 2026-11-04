@@ -15,6 +15,7 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
   let codeLines = 0, commented = 0, run = 0, longestRun = 0;
   let routines = 0, headless = 0, header = 0;
   let previous = 'blank';
+  let inlineNote = false;
   for (const [i, line] of lines.entries()) {
     const p = parseLine(line);
     const n = i + 1;
@@ -25,6 +26,10 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
     if (wide.includes(line)) used.add(line);
     if (p.code.replace(/"[^"]*"|'[^']*'/g, '').includes('\t') || /^\t/.test(line)) fault('spaces', n, 'use spaces outside literals');
     if (label && label !== label.toUpperCase()) fault('case', n, 'uppercase label or constant');
+    if (p.mnemonic?.toUpperCase() === '%INCLUDE' && !/^%include\b/i.test(p.code)) {
+      fault('column', n, '%INCLUDE begins at column 1');
+    }
+    if (isContinuation && !inlineNote) fault('continuation', n, 'continue an inline note');
     if (p.kind === 'label') {
       if (previous === 'code' || previous === 'continuation') fault('blank', n, 'separate a code label from the preceding instruction');
       if (expected.delete(label)) {
@@ -58,6 +63,8 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
     }
     header = isBlock ? header + 1 : 0;
     if (p.kind === 'comment') run = 0;
+    inlineNote = isContinuation ? inlineNote : p.kind !== 'comment' && p.commentCol === 18
+      && p.code.length - p.code.trimEnd().length >= 2;
     previous = isContinuation ? 'continuation' : p.kind;
   }
   for (const entry of expected) fault('inventory', 0, `missing routine label ${entry}`);
