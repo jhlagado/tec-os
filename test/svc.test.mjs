@@ -305,6 +305,18 @@ test("a service whose records would take the registry past 256 is refused, and t
   assert.equal(t.find("PICO").carry, 0);
 });
 
+test("a registry a program has linked into a cycle: the next load returns, refused, with nothing published, and the prompt follows (KE-AR13)", async () => {
+  const t = await picoBoard();
+  assert.equal(t.load((await chain(1)).file).carry, 0);
+  const head = t.word(t.m.sym("REGHEAD"));
+  t.poke(head, head); // the newest record linked to itself
+  const top = t.word(6);
+  const r = t.load((await chain(1)).file); // returns within the bench's budget, or throws
+  assert.deepEqual([r.back, r.carry, r.rc], [true, 1, 1], "refused, REMOVE undoing INIT");
+  assert.deepEqual([t.word(6), t.word(t.m.sym("REGHEAD"))], [top, head], "its pages given back, nothing published");
+  t.prompt();
+});
+
 test("INIT returning 0 installs a service with no records", async () => {
   const t = await machine();
   assert.equal(t.load((await svc({ V_NONE: 1 })).file).carry, 0);

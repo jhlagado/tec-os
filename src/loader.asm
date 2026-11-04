@@ -249,7 +249,9 @@ SVCMN:	ADD	HL,DE		; the next slot
 	PUSH	HL		; the first record
 ; B = the records this service may add: TNFIND walks 256 at most, so with N
 ; in the registry, B = 1 - N refuses the (257 - N)th (KE-AR4); with none in,
-; or one, B = 0 refuses the 256th, as one service's limit.
+; or one, B = 0 refuses the 256th, as one service's limit. A 257th record,
+; which only a program's cycle or overwrite can make, refuses the load: the
+; walk is bounded as TNFIND's is (KE-AR13).
 	LD	HL,(REGHEAD)	; the registry, newest first
 	LD	B,0
 	LD	A,H
@@ -262,7 +264,8 @@ SVCNT:	LD	A,(HL)		; on by the link
 	OR	H
 	JR	Z,SVCNE		; the last counted
 	DEC	B		; one fewer for each after the first
-	JR	SVCNT
+	JR	NZ,SVCNT	; B = 0 again: 257 records, a cycle
+	JR	SVCRF		; refused, nothing published
 SVCNE:	POP	HL		; the first record again
 	PUSH	HL
 SVCWK:	LD	A,H
