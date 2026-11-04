@@ -22,6 +22,7 @@
 %INCLUDE "lcd.asm"
 %INCLUDE "sd.asm"
 %INCLUDE "vol.asm"
+%INCLUDE "volutil.asm"
 %INCLUDE "cpm/ccp.asm"
 %INCLUDE "cpm/ccpfile.asm"
 %INCLUDE "cpm/ccpcmd.asm"
