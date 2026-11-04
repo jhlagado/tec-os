@@ -634,3 +634,37 @@ test("function 45's returned error leaves the FCB on the record a sequential wri
   assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 1], "a disk error, returned");
   assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 3 next, the record count unraised");
 });
+
+test("when every line is dirty and the forced write of the next in turn fails, the next miss doesn't try that write again, and warm boot's flush does (KE-187)", async () => {
+  const image = card();
+  const m = start(image, { ram96: true });
+  const d = m.sym("CDIRTY") - 0x8000;
+  const table = m.sym("CTAB") - 0x8000;
+  const allDirty = () => Array.from({ length: 30 }, (_, i) => m.expand[1][d + i]).every((v) => v);
+  // B:Q.DAT made and written, not closed, until every line is dirty.
+  [2, ...Buffer.from("Q       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 22, 0x5c);
+  bdos(m, 26, 0x2000);
+  for (let r = 0; r < 128 && !allDirty(); r += 1) {
+    for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, (r * 3 + i) & 0xff);
+    bdos(m, 21, 0x5c);
+  }
+  assert.ok(allDirty(), "every line dirty");
+  const line = m.read(m.sym("CNEXT"));
+  const block = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
+  let tries = 0;
+  failing(m, (b) => b === block && (tries += 1) && "fail");
+  const base = word(m, 1) - 3; // the BIOS jump table
+  const bios = (n, bc) => [0x01, bc & 0xff, bc >> 8, 0xcd, (base + 3 * n) & 0xff, (base + 3 * n) >> 8];
+  const read = (track) => (stub(m, [...bios(9, 0), ...bios(10, track), ...bios(11, 0), ...bios(12, 0x2000), ...bios(13, 0)]), m.cpu.cpu.a);
+  assert.notEqual(read(20), 0, "the first miss: the forced write fails, and so does the read");
+  assert.equal(tries, 1, "that line's write tried once");
+  assert.equal(read(21), 0, "the next miss reads");
+  assert.equal(read(22), 0, "and the one after");
+  assert.equal(tries, 1, "the failed line's write not tried again by a miss");
+  m.mark = m.output.length;
+  m.cpu.cpu.pc = 0; // warm boot: the line, still dirty, tried by the flush
+  m.runUntil(() => m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
+  assert.equal(tries, 2, "the flush tried it");
+  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "and said so");
+});

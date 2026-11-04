@@ -65,7 +65,8 @@ MNMAG:	LD	A,(DE)
 	OR	A
 	SBC	HL,DE
 	JP	NZ,MNTERR	; A still MESIZE
-				; volume count: 1 to MAXVOL
+				; volume count: 1 to MAXVOL, or to MAXVOL0
+				; on a 1.0 card (minor 0)
 	LD	HL,(MNBUF+HCOUNT)
 	LD	A,H		; the word's high byte must be 0
 	OR	A
@@ -75,9 +76,14 @@ MNMAG:	LD	A,(DE)
 	OR	A
 	LD	A,MECOUNT
 	JP	Z,MNTERR
+	LD	A,(MNBUF+HMINOR)
+	OR	A		; minor 0: a 1.0 card, at most MAXVOL0
 	LD	A,L		; and no more than the table holds
-	CP	MAXVOL+1
-	LD	A,MECOUNT
+	JR	NZ,MNCNT1
+	CP	MAXVOL0+1	; 1.0: eight at most
+	JR	MNCNT2
+MNCNT1:	CP	MAXVOL+1	; 1.1 and on: 127 at most
+MNCNT2:	LD	A,MECOUNT
 	JP	NC,MNTERR
 	LD	A,L		; the count, for every walk of the table
 	LD	(MNTCNT),A

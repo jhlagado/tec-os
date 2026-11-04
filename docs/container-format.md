@@ -83,7 +83,7 @@ the error code on the diagnostic console:
 | 21h | Magic |
 | 22h | Major version |
 | 23h | Header or descriptor size, or a 1.1 drives field above 4 |
-| 24h | Volume count |
+| 24h | Volume count: 1–8 in 1.0, 1–127 in 1.1 |
 | 25h | Checksum, or the 1.1 table sum |
 | 26h | Descriptor id, flags, geometry, length or alignment |
 | 27h | Payload beyond the container, or a 32-bit sum that wraps |

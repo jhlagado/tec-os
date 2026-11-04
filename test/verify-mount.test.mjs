@@ -115,18 +115,19 @@ for (const minor of [0, 1]) {
     labels.copyWithin(desc(2, "label"), desc(1, "label"), desc(1, "label") + 11);
     const got = judge(reseal(labels), null);
     assert.equal(got.tecvol === "passes", minor === 0, "duplicate labels");
-    // More than 8 volumes: the ROM reads them from a 1.0 card, tecvol refuses it.
+    // More than 8 volumes: a 1.0 card's count is refused, by the ROM with 24h and by tecvol (KE-184).
     const nine = card(minor, 0, 9);
-    assert.equal(judge(nine, null).tecvol === "passes", minor === 1, "nine volumes");
+    assert.equal(judge(nine, minor ? null : "24").tecvol === "passes", minor === 1, "nine volumes");
+    assert.equal(judge(card(minor, 0, 8), null).tecvol, "passes", "eight volumes");
   });
 }
 
-test("tecvol verify refuses a wrong 1.1 table sum, as the ROM does, and a 1.0 card has none", () => {
+test("tecvol verify refuses a wrong 1.1 table sum, as the ROM does; a 1.0 card has none, and of 17 volumes both refuse its count", () => {
   for (const minor of [0, 1]) {
     const img = card(minor, 0, 17);
     img[desc(16, "label")] ^= 1; // a label byte in block 1
     reseal(img, { sum: false });
-    const got = judge(img, minor ? "25" : null);
+    const got = judge(img, minor ? "25" : "24"); // 17 volumes on a 1.0 card: its count (KE-184)
     assert.notEqual(got.tecvol, "passes", minor ? "the table sum" : "17 volumes on a 1.0 card");
   }
 });

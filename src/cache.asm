@@ -209,8 +209,10 @@ CFS2:	INC	A		; every line, failures or not
 
 ; A line for SDLBA's block: the next clean one in turn, or, with every line
 ; dirty, the next in turn written first. Z with A = the line; NZ if that
-; write failed, the line left dirty. CNEXT moves past the line taken. The
-; line keeps its entry: the caller fills or enters it. Destroys BC, DE, HL.
+; write failed, the line left dirty for a flush to try (KE-187). CNEXT moves
+; past the line taken, or the line that failed, so the next miss tries
+; another. The line keeps its entry: the caller fills or enters it.
+; Destroys BC, DE, HL.
 CTAKE:	LD	B,NLINES	; every line looked at once at most
 	LD	A,(CNEXT)	; from the next in turn, in the dirty bytes
 	ADD	A,CDIRTY-CTAB
@@ -233,7 +235,10 @@ CTK3:	LD	A,(LATCHV)	; EXPAND 0 back in view
 	DEC	B		; 0 when none was clean
 	JR	NZ,CTK5		; a clean line
 	CALL	CWRITE		; every line dirty: this one written first
-	RET	NZ
+	JR	Z,CTK5
+	CALL	CTK5		; failed: CNEXT past it all the same
+	OR	1		; NZ
+	RET
 CTK5:	LD	E,A		; the line taken
 	INC	A		; the next in turn is the one after it,
 	CP	NLINES		; line 0 after the last
