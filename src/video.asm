@@ -74,7 +74,8 @@ VTFN:	LD	L,A		; the function, across the tests
 ; columns and rows. Kept for CONSW, and HL = LINEBUF on return with carry clear,
 ; where VRDROW and VWRROW move a row; carry set and nothing changed if a table
 ; is kept already, or there is no matrix keyboard. HL = 0: the table dropped,
-; and the console chosen again at its next call, carry clear. Destroys AF, DE.
+; and, if mode A is in effect, the console chosen again at its next call; any
+; other mode is left as it is, its screen kept. Carry clear. Destroys AF, DE.
 VIDHOOK:
 	ADD	A,LOW(PIVEC)-1	; DE = PIVEC or GLVEC, the mode's word
 	LD	E,A
@@ -109,6 +110,9 @@ VIDHOFF:
 	JR	NZ,VIDHF1
 	LD	HL,CONDEV	; CDGLC: no GLCD console now
 	RES	2,(HL)
-VIDHF1:	XOR	A		; serial in effect, so a field naming the
-	LD	(CONMOD),A	; display acts at the next console call
-	RET			; carry clear
+VIDHF1:	SUB	LOW(PIVEC)	; A = the mode unhooked, 1 or 3
+	LD	HL,CONMOD
+	XOR	(HL)		; not the mode in effect: left alone,
+	RET	NZ		; carry clear, the screen kept (KE-190)
+	LD	(HL),A		; serial in effect, so a field naming the
+	RET			; display acts at the next call; NC

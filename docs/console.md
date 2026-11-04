@@ -133,7 +133,8 @@ driver keeps the 168 characters on screen and draws each 16-pixel graphics
 word by composing the glyph rows of the two to four 6-pixel cells that
 overlap it, so no 1 KiB pixel buffer is needed. Writing a character redraws
 the words its cell touches; scrolling moves the text and redraws each row,
-about 0.25 s at 4 MHz. Every access waits for the busy flag, bounded at 256 polls.
+about 0.25 s at 4 MHz. Every access waits for the busy flag, bounded at 256 polls;
+a byte the controller is not ready for by then is dropped, not sent.
 
 The CCP's `TYPE` and `DIR` use the display size to pause with `[more]` one
 line short of a full screen.

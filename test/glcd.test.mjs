@@ -178,3 +178,24 @@ test("the GLCD hook takes a table and returns LINEBUF, refuses a second, and wit
   assert.deepEqual(callHook(TABLE + 0x100), { hl: m.sym("LINEBUF"), carry: 0 }, "and a table taken again");
   assert.deepEqual(m.violations, []);
 });
+
+test("a GLCD that stops coming ready is sent nothing: GLCC and GLCDW drop a byte once the busy flag never clears (KE-198)", async () => {
+  const m = await board();
+  const hw = m.cpu.hardware;
+  const { ioRead, ioWrite } = hw;
+  const glcdPort = (port) => (port & 0xff) === 0x07 || (port & 0xff) === 0x87;
+  let stuck = false;
+  let sent = 0;
+  hw.ioRead = (port) => (stuck && glcdPort(port) ? 0xff : ioRead(port));
+  hw.ioWrite = (port, value) => {
+    if (glcdPort(port)) sent += 1;
+    return ioWrite(port, value);
+  };
+  run(m, "\r");
+  assert.ok(sent > 0, "a ready GLCD is sent the prompt");
+  stuck = true;
+  sent = 0;
+  run(m, "\r");
+  assert.equal(sent, 0, "a GLCD stuck busy is sent no byte");
+  assert.deepEqual(m.violations, []);
+});

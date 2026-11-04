@@ -312,6 +312,34 @@ test("a row move on the PICO9918 is built out of sight and shown when the progra
   assert.deepEqual(m.violations, []);
 });
 
+test("a second row move with no key asked between shows the first before it is built, the rows intact", () => {
+  const m = boot(standardCard(), { tms: true, matrix: true });
+  /** Bytes through BIOS CONOUT, then BIOS CONST if asked, from a stub at 0200h. */
+  const out = (text, constAfter = false) => {
+    const code = [];
+    for (const ch of text) code.push(0x0e, ch.charCodeAt(0), 0xcd, 0x0c, 0xbf);
+    if (constAfter) code.push(0xcd, 0x06, 0xbf);
+    code.push(0x18, 0xfe);
+    code.forEach((v, i) => m.write(0x200 + i, v));
+    const end = 0x200 + code.length - 2;
+    Object.assign(m.cpu.cpu, { sp: 0x100, pc: 0x200 });
+    m.runUntil(() => m.pc === end, 100_000_000, JSON.stringify(text));
+  };
+  out("\x1b[2J\x1b[HL1\r\nL2\r\nL3\r\nL4\r\nL5", true);
+  const rows = ["L1", "L2", "L3", "L4", "L5"];
+  assert.deepEqual(m.screen().slice(0, 5), rows);
+  out("\x1b[3;1H\x1b[L");
+  const before = m.tmsLayout().base;
+  assert.deepEqual(m.screen().slice(0, 5), rows, "the first move out of sight");
+  out("\x1b[1;1HX");
+  out("\x1b[3;1H\x1b[L");
+  assert.notEqual(m.tmsLayout().base, before, "the first move shown when the second began");
+  assert.deepEqual(m.screen().slice(0, 6), ["X1", "L2", "", "L3", "L4", "L5"], "the first move, shown");
+  out("", true);
+  assert.deepEqual(m.screen().slice(0, 6), ["X1", "L2", "", "", "L3", "L4"], "the second at the next CONST, the rows above it copied across");
+  assert.deepEqual(m.violations, []);
+});
+
 test("a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.SVC says so on the LCD", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });

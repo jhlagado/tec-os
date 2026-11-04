@@ -93,6 +93,21 @@ test("GLCD.SVC loaded and unloaded leaves REGHEAD at the ROM's record", () => {
   assert.deepEqual([m.read(m.sym("SVCHEAD")), word(m, m.sym("REGHEAD"))], [0, m.sym("PIREC")]);
 });
 
+test("UNLOAD of a GLCD.SVC that gave way to CRT: leaves the PICO9918's screen as it was (KE-190)", () => {
+  const image = standardCard();
+  volume(image, "A").write("GLCD.SVC", GLCD_SVC);
+  const m = start(image, { glcd: true });
+  say(m, "GLCD.SVC");
+  assert.deepEqual([m.read(m.sym("CONMOD")), m.read(3) & 3], [CRT, CRT], "it gave way");
+  assert.doesNotMatch(say(m, "UNLOAD"), /UNLOAD\?/);
+  assert.equal(m.read(m.sym("SVCHEAD")), 0, "unloaded");
+  const screen = m.screen();
+  assert.equal(screen[1], "TEC-OS 0.1 for TEC-1G", "the banner still there: no clear");
+  assert.ok(screen.some((row) => row.startsWith("A>GLCD.SVC")), "and the line that loaded it");
+  assert.ok(screen.some((row) => row.startsWith("A>UNLOAD")), "and the UNLOAD");
+  assert.deepEqual([m.read(m.sym("CONMOD")), m.read(3) & 3, word(m, m.sym("GLVEC"))], [CRT, CRT, 0]);
+});
+
 test("TNDRVR refuses B = 1, with a table or HL = 0, and the console is unchanged", () => {
   const m = start(standardCard());
   const before = [m.read(m.sym("CONMOD")), m.read(m.sym("VWID")), word(m, m.sym("PIVEC"))];
