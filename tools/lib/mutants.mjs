@@ -38,13 +38,50 @@ export const asm = (file, find, put) => ({ file, find, put });
 /** In FILE, the text FROM, once, replaced by TO. */
 export const text = (file, from, to) => ({ file, from, to });
 
-/** Where E's text stands in SRC: the line indexes of its matches, or for text, one entry a match. */
+/**
+ * CODES joined where a label stands alone: a label on a line of its own and
+ * the code of the line after it are one line, as a label of eight characters
+ * or more is laid out (KS38c). Each entry is its code and the lines it spans.
+ */
+function joined(codes) {
+  const out = [];
+  for (let i = 0; i < codes.length; i += 1) {
+    const next = codes[i + 1];
+    if (/^\w+:$/.test(codes[i]) && next && !/^\w+:/.test(next)) {
+      out.push({ code: `${codes[i]} ${next}`, at: i, lines: 2 });
+      i += 1;
+    } else out.push({ code: codes[i], at: i, lines: 1 });
+  }
+  return out;
+}
+
+/**
+ * Where E's text stands in SRC: for assembly, each match's first line and the
+ * lines it spans, a label alone on its line taken with the code after it; for
+ * text, one entry a match.
+ */
 function matches(src, e) {
   if (e.from !== undefined) return Array(src.split(e.from).length - 1).fill(0);
-  const codes = src.split("\n").map(code);
-  const want = e.find.map(code);
+  const codes = joined(src.split("\n").map(code));
+  const want = joined(e.find.map(code)).map((w) => w.code);
   const at = [];
-  for (let i = 0; i + want.length <= codes.length; i += 1) if (want.every((w, k) => codes[i + k] === w)) at.push(i);
+  const label = (c) => /^\w+:$/.test(c);
+  // A run ending in a bare label matches that label with its code after it;
+  // one starting with code matches that code after a label alone on its line,
+  // and leaves the label where it is.
+  const alike = (w, c, k) =>
+    c.code === w ||
+    (k === want.length - 1 && label(w) && c.code.startsWith(`${w} `)) ||
+    (k === 0 && !/^\w+:/.test(w) && c.lines === 2 && c.code.endsWith(` ${w}`) && label(c.code.slice(0, -w.length - 1)));
+  for (let i = 0; i + want.length <= codes.length; i += 1) {
+    if (want.every((w, k) => alike(w, codes[i + k], k))) {
+      const first = codes[i];
+      const end = codes[i + want.length - 1];
+      const from = first.at + (first.code === want[0] ? 0 : 1);
+      const bare = label(want.at(-1)) && end.lines === 2 && end.code !== want.at(-1);
+      at.push({ at: from, lines: end.at + end.lines - (bare ? 1 : 0) - from });
+    }
+  }
   return at;
 }
 
@@ -80,7 +117,7 @@ function apply(dir, e) {
   const lines = src.split("\n");
   // A label or an EQU's name at the margin, an instruction a tab in.
   const put = e.put.map((l) => (/^\w+:/.test(l) ? l.replace(/^(\w+:)\s*/, "$1\t") : /^\w+ EQU /i.test(l) ? l : `\t${l}`).replace(/ /, "\t").trimEnd());
-  lines.splice(at[0], e.find.length, ...put);
+  lines.splice(at[0].at, at[0].lines, ...put);
   writeFileSync(path, lines.join("\n"));
 }
 
