@@ -355,14 +355,31 @@ HWSFONT:LD	HL,FONT
 
 ; TNDRVR: B = the mode, then VIDHOOK's: HL = the driver's table, or 0 to drop
 ; it. Returns A = 0, carry clear, and HL = LINEBUF for a table taken. A
-; refusal returns A = TNEBAD with carry. Destroys DE, and HL for a drop.
+; refusal returns A = TNEBAD with carry, or TNENODV for a table offered by a
+; line from STARTUP.CMD while CON: is CRT:: that driver would only give way
+; to the ROM's console, so it stays out, quietly, and leaves the services'
+; stack room to others (KE-200). Destroys DE, and HL for a drop.
 SVDRV:	LD	A,B
 	CP	CMUC1		; UC1: alone: CRT:'s table is the ROM's
 	JR	Z,SVDRV1	; (KS39), and no other B has a word
 	LD	A,TNEBAD	; refused, nothing changed
 	SCF
 	RET
-SVDRV1:	CALL	VIDHOOK
+SVDRV1:	LD	A,H		; a drop is never refused
+	OR	L
+	JR	Z,SVDRV2
+	LD	A,(STFLAG)	; FFh in a startup line: D = 0 there
+	CPL
+	LD	D,A
+	LD	A,(IOBYTE)	; the CON: field, 1 for CRT:
+	AND	3
+	DEC	A		; 0 for CRT:
+	OR	D		; 0 for CRT: in a startup line
+	LD	A,TNENODV	; then refused, as an absent device
+	SCF			; is, nothing changed
+	RET	Z
+SVDRV2:	LD	A,B		; UC1:, the mode, for VIDHOOK
+	CALL	VIDHOOK
 	LD	A,TNEBAD	; kept already, or no matrix keyboard
 	RET	C
 	XOR	A		; taken or dropped: A = 0, carry clear

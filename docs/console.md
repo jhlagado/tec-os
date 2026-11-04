@@ -117,10 +117,10 @@ serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
 `GLCD.SVC` installs it and makes the GLCD the console; with no such line the
 console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
 too, and shows `GLCD?` on the LCD if it can't, which a display taking over clears. On a board with both displays
-the line loads it and gives way quietly to `CRT:`, which keeps the console,
-and `CON UC1:` then switches to it. Loaded while `CRT:` is in effect, typed or
-by a line, it gives way in the same way; loaded after `CON TTY`, it takes the
-console. A board without a GLCD refuses it,
+the line passes over it quietly while `CON:` is `CRT:`, which keeps the
+console, so it takes none of the services' stack room (KE-200), and `CON UC1:`
+then loads it and switches to it. Typed while `CRT:` is in effect, it loads and
+gives way; loaded after `CON TTY`, it takes the console. A board without a GLCD refuses it,
 quietly from `STARTUP.CMD`, and one without a matrix keyboard refuses it with
 `GLCD.SVC?`, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
 resident, removes it, and the console goes back to `CRT:` if the "PICO" record is

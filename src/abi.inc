@@ -73,7 +73,9 @@ TNDRVR	EQU	12		; B = 3 UC1:, HL = a video driver's
 				; LINEBUF. TNEBAD for B = 1, since
 				; CRT:'s table is the ROM's, if UC1:
 				; has a table, with no matrix
-				; keyboard, or for any other B.
+				; keyboard, or for any other B;
+				; TNENODV in a line from
+				; STARTUP.CMD while CON: is CRT:.
 				; HL = 0 drops the mode's table:
 				; A = 0, carry clear, HL destroyed.
 				; Stack 4
