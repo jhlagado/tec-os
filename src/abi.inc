@@ -118,8 +118,14 @@ PICOWR	EQU	20		; BC bytes from DE to VRAM address HL
 PICORD	EQU	22		; BC bytes from VRAM address HL to DE
 
 ; Version 3 adds the width, which CON PICO 80, 40 or 32 calls. It takes no
-; claim.
+; claim, and is refused while one is held.
 PICOVER	EQU	3		; the version with PICOWID
 PICOWID	EQU	24		; A = 80, 40 or 32 columns: the console
 				; at that width, cleared; carry if
 				; refused
+
+; The driver's own state, after its table, which a debugger reads: offsets
+; from the table, version 3's.
+PICOVRB	EQU	36		; the record's version byte
+PICOTPD	EQU	41		; the page drawn: 0, or TPGV's offset
+PICOTPS	EQU	42		; the page shown, the same

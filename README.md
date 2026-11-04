@@ -52,10 +52,11 @@ refused.
 
 The ROM is assembled with ATOM. There is one image for every board,
 `build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
-display's driver is `A:PICO.SVC`, built at 80 columns, 40, or 32 in Graphics I.
-The starter card holds the 80-column build; `npm run media` puts the other two
+display's driver is `A:PICO.SVC`, one driver for 80 columns, 40, or 32 in
+Graphics I, which `CON PICO 40` and the like switch between. The starter card's
+starts at 80 columns; `npm run media` puts the same driver starting at 40 and 32
 in `dist/files` as `PICO40.SVC` and `PICO32.SVC`, and the web page writes the
-width chosen as the card's `PICO.SVC`.
+start chosen as the card's `PICO.SVC`.
 
 ## In a web page
 

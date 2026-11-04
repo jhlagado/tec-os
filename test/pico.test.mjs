@@ -125,6 +125,37 @@ test("a service loading with GLCD.SVC in installs, and says nothing", async () =
   assert.doesNotMatch(say(m, "RES.SVC"), /RES\.SVC\?/);
 });
 
+test("one PICO.SVC for every width: CON PICO 40, CON CRT 32 and CON PICO 80 switch it, each screen cleared and working at its width (KD-174)", () => {
+  const m = start({ "PICO.SVC": PICO_SVC["PICO.SVC"], "STARTUP.CMD": startupFile("PICO.SVC") });
+  const top = word(m, 6);
+  for (const [line, cols] of [["CON PICO 40", 40], ["CON CRT 32", 32], ["CON PICO: 80", 80], ["CON PICO 32", 32]]) {
+    assert.doesNotMatch(say(m, line), /\?\r\n/, `${line} accepted`);
+    assert.deepEqual([m.read(3) & 3, m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], [CRT, cols, 24], line);
+    for (let i = 0; i < 26; i += 1) say(m, "DIR HELLO.TXT");
+    const screen = m.screen(cols);
+    assert.ok(screen.some((l) => l.startsWith("HELLO.TXT")), `${line}: the screen at ${cols} columns`);
+    assert.equal(word(m, 6), top, "nothing loaded");
+  }
+  const v = m.tec1g.state.display.tms9918.stateSnapshot().vram;
+  assert.deepEqual([...new Set(v.slice(0x2000, 0x2000 + 32))], [0xf1], "Graphics I's colours at 32");
+  assert.deepEqual(m.violations, []);
+});
+
+test("a width is refused, nothing changed, while the PICO9918 is claimed, and for a record at version 2", () => {
+  const m = start({ "PICO.SVC": PICO_SVC["PICO.SVC"], "STARTUP.CMD": startupFile("PICO.SVC") });
+  hw(m, VIDEO, 1);
+  assert.match(say(m, "CON PICO 40"), /\?\r\n/, "claimed");
+  hw(m, VIDEO, 0);
+  assert.equal(m.read(m.sym("VWID")), 80);
+  const table = picoTable(m, ABI.PICOVER);
+  m.write(table + ABI.PICOVRB, 2); // as a version 2 driver's record reads
+  assert.match(say(m, "CON PICO 40"), /\?\r\n/, "version 2");
+  assert.equal(m.read(m.sym("VWID")), 80);
+  m.write(table + ABI.PICOVRB, ABI.PICOVER);
+  assert.doesNotMatch(say(m, "CON PICO 40"), /\?\r\n/);
+  assert.equal(m.read(m.sym("VWID")), 40);
+});
+
 test("PICO32.SVC writes the colours and an empty sprite table", () => {
   const m = start({ "PICO32.SVC": PICO_SVC["PICO32.SVC"], "STARTUP.CMD": startupFile("PICO32.SVC") });
   const v = m.tec1g.state.display.tms9918.stateSnapshot().vram;
@@ -440,8 +471,8 @@ const ramAt = (m, a, n) => Array.from({ length: n }, (_, i) => m.read(a + i));
 for (const [name, cols, r1] of WIDTHS) {
   test(`${name}: each graphics entry against VRAM under a claim, then release and warm boot give the text back`, () => {
     const m = start({ [name]: PICO_SVC[name], "STARTUP.CMD": startupFile(name) });
-    assert.notEqual(picoTable(m, 2), null, "the record's version 2");
-    assert.equal(picoTable(m, 3), null, "and no higher");
+    assert.notEqual(picoTable(m, ABI.PICOVER), null, "the record's version 3, with the width");
+    assert.equal(picoTable(m, ABI.PICOVER + 1), null, "and no higher");
     const page = m.read(m.sym("SVCHEAD"));
     assert.equal(picoTable(m) >> 8, page, "the table is in the driver's page");
     assert.equal(cold(m, 1), 0);

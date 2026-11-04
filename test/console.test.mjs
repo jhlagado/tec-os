@@ -62,8 +62,6 @@ test("CON PICO and CON GLCD name CRT: and UC1:; a width goes after CRT or PICO a
   m.command("CON TTY");
   for (const line of ["CON PICO 50", "CON PICO 4", "CON PICO 400", "CON PICO 4O", "CON GLCD 40", "CON TTY 80", "CON PICOX", "CON PIC", "CON GLC 40"])
     assert.match(m.command(line), /\?\r\n/, `${line}: refused`);
-  // The PICO.SVC of this commit is table version 2, with no width: a width is refused, the field unchanged.
-  for (const line of ["CON PICO 40", "CON CRT 32", "CON PICO: 80"]) assert.match(m.command(line), /\?\r\n/, `${line}: no driver takes it`);
   assert.equal(m.read(3) & 3, 0, "nothing changed");
   assert.deepEqual(m.violations, []);
 });

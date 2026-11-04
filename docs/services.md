@@ -104,9 +104,11 @@ the whole record, runs without its last; one that starts at the 128th byte isn't
 run. A line that fails prints its usual message and the
 next runs.
 
-**Width is the driver's build.** `PICO.SVC` is built at 80 columns, 40, or 32 in
-Graphics I, and the ROM is one image for every board. The starter card carries the
-80-column build, and the web page writes the width chosen as `PICO.SVC`.
+**One driver for every width.** `PICO.SVC` runs at 80 columns, 40, or 32 in
+Graphics I, and `CON PICO 40`, `CON PICO 32` or `CON PICO 80` changes it while it
+runs. The width it starts at is the build's: the starter card carries the
+80-column start, and the web page writes the start chosen as `PICO.SVC`. The ROM
+is one image for every board.
 
 One card can serve every board: a line for the PICO9918, then `GLCD.SVC`. Each line
 makes its display the console where there is one, and elsewhere passes over it
@@ -235,10 +237,10 @@ A client finds a record with `TNFIND` (`docs/rom-services.md`):
 
 Each record's table is defined in a document with its interface version.
 
-### `PICO`, version 2
+### `PICO`, version 3
 
-`PICO.SVC`, at each width, offers `PICO` with the table it hands `TNDRVR`, followed
-by four words, the graphics entries:
+`PICO.SVC` offers `PICO` with the table it hands `TNDRVR`, followed by four
+words, the graphics entries, and from version 3 a fifth, the width:
 
 | Offset | `abi.inc` | Registers | Effect |
 | --- | --- | --- | --- |
@@ -246,12 +248,19 @@ by four words, the graphics entries:
 | 18 | `PICOFIL` | HL = VRAM address, DE = count, A = value | VRAM filled |
 | 20 | `PICOWR` | HL = VRAM address, DE = RAM address, BC = count | RAM copied to VRAM |
 | 22 | `PICORD` | The same | VRAM copied to RAM |
+| 24 | `PICOWID` | A = 80, 40 or 32 | The console at that width, cleared; carry, with nothing changed, for any other width or while the PICO9918 is claimed |
 
-Each assumes the caller holds the claim (hardware service `VIDEO`), as a program writing the
+The graphics entries each assume the caller holds the claim (hardware service `VIDEO`), as a program writing the
 ports does, and checks nothing. A count of 0 moves nothing. Each destroys AF, BC, DE
 and HL. `GLCD.SVC`'s `REMOVE` asks for version 1 and reads none of these. A board with
 a PICO9918 and no matrix keyboard refuses the driver, so it has no entries: a
 program there claims the VDP and writes the ports.
+
+Version 3 put the width at offset 24, so the driver's state after the table moved
+by two bytes: `abi.inc` names the record's version byte (`PICOVRB`, 36), the
+page drawn (`PICOTPD`, 41) and the page shown (`PICOTPS`, 42), for a debugger
+that reads them, and the build checks each against the driver. The name table,
+the second page, the row table and the registers follow the width at run time.
 
 ## Removal
 

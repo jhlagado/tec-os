@@ -1,15 +1,20 @@
-; PICO.SVC, PICO40.SVC and PICO32.SVC: the console on the PICO9918, a
-; TMS9918A-compatible VDP with the F18A's 80-column text mode, as a driver below
-; (0006h): 80 x 24 in 6-pixel cells, 40 x 24, or Graphics I at 32 x 24 in 8-pixel
-; cells, one file a width. Its INIT refuses if the ROM's probe found no VDP, and
-; hands the ROM its table through TNDRVR; the load then makes it the console, and
-; the ROM's terminal calls its routines directly, on the caller's stack. REMOVE
-; refuses while it is the console, since CON CRT can't load it back, and while
-; the PICO9918 is claimed, since the entries below may be in use. Its record,
-; "PICO", is how another service sees it. Version 2 of the record's table goes on
-; after the console's words with the graphics entries, abi.inc's PICOREG to
-; PICORD. A program finds them with TNFIND, holds the claim while it uses them,
-; and looks them up again rather than keep them across its own exit.
+; PICO.SVC: the console on the PICO9918, a TMS9918A-compatible VDP with the
+; F18A's 80-column text mode, as a driver below (0006h): 80 x 24 in 6-pixel
+; cells, 40 x 24, or Graphics I at 32 x 24 in 8-pixel cells, one driver for
+; every width (KD-174). It starts at COLS, which the build sets (PICO40.SVC and
+; PICO32.SVC are the same driver starting at 40 and 32), and CON PICO 80, 40 or
+; 32 changes it through PICOWID. Its INIT refuses if the ROM's probe found no
+; VDP, and hands the ROM its table through TNDRVR; the load then makes it the
+; console, and the ROM's terminal calls its routines directly, on the caller's
+; stack. REMOVE refuses while it is the console, since CON CRT can't load it
+; back, and while the PICO9918 is claimed, since the entries below may be in
+; use. Its record, "PICO", is how another service sees it. Version 3 of the
+; record's table goes on after the console's words with the graphics entries,
+; abi.inc's PICOREG to PICORD, and the width, PICOWID. A program finds them
+; with TNFIND, holds the claim while it uses them, and looks them up again
+; rather than keep them across its own exit. Everything that follows the
+; width, the name table, the second page, the row table and the registers,
+; is set by TMSW, so the state lies here and nowhere in the header.
 ;
 ; VRAM: patterns at 0000h, names at 0800h (1000h for 80 columns), Graphics I
 ; colours at 2000h and sprite attributes at 1B00h. Patterns 00h-7Fh are the
@@ -31,18 +36,22 @@ HDR:	DB	'D',SVCFMT,0,1	; removable
         DB      "PICO    "
 
 ; In the ROM's order: VPUT, VGET, VCLREOL, VREST, VRDROW, VWRROW, the row moves,
-; columns and rows. Then the graphics entries, at PICOREG to PICORD.
+; columns and rows. Then the graphics entries, at PICOREG to PICORD, and the
+; width, at PICOWID. abi.inc names each offset after VTAB, PICOVRB, PICOTPD and
+; PICOTPS among them, and the build checks them here.
 VTAB:   DW      TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
-        DB      COLS,24
+WID:    DB      COLS,24         ; the columns, TMSW's, and the rows
 	DW	GFXREG,GFXFIL	; PICOREG, PICOFIL
 	DW	GFXWR,GFXRD	; PICOWR, PICORD
+	DW	TMSWID		; PICOWID
 REC:    DW      0
-	DB	"PICO    ",2
+	DB	"PICO    ",PICOVER
         DW      VTAB
 LBUF:   DW      0               ; LINEBUF, from TNDRVR
 TPDRAW: DB      0               ; the page drawn and the page shown: offset
-TPSHOW: DB      0               ; high byte, 0 or TPG
+TPSHOW: DB      0               ; high byte, 0 or TPGV's
 TMVCOPY:DB      0               ; 1 while a row move builds the hidden page
+TPGV:   DB      0               ; the second page's offset, high byte
 
 INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
 	CALL	ABICALL		; refuses the number, and INIT with it
@@ -54,7 +63,9 @@ INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
 	BIT	1,B		; HWBPICO; STARTUP.CMD passes over quietly
         SCF
         RET     Z
-	LD	B,1		; CRT:
+	LD	A,(WID)		; the width it starts at
+	CALL	TMSW
+TMSHK:	LD	B,1		; CRT:
         LD      HL,VTAB
 	LD	C,TNDRVR
 	CALL	ABICALL
@@ -63,6 +74,79 @@ INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
         LD      HL,REC
         OR      A
         RET
+
+; PICOWID: A = 80, 40 or 32 columns. The table is dropped from the ROM, the
+; width set, and the table handed back, so the ROM chooses the console again at
+; its next call and clears it at the new width. Carry, with nothing changed,
+; for any other width or while the PICO9918 is claimed. Destroys AF, BC, DE
+; and HL.
+TMSWID:	CP	80
+	JR	Z,TMSWD1
+	CP	40
+	JR	Z,TMSWD1
+	CP	32
+	SCF
+	RET	NZ		; no such width
+TMSWD1:	PUSH	AF
+	LD	C,TNINFO	; B = the devices, with the claim bit
+	CALL	ABICALL
+	LD	A,B
+	AND	HWBCLM
+	JR	Z,TMSWD2
+	POP	AF		; claimed: a program may be using it
+	SCF
+	RET
+TMSWD2:	LD	B,1		; CRT:'s table dropped
+	LD	HL,0
+	LD	C,TNDRVR
+	CALL	ABICALL
+	POP	AF
+	CALL	TMSW
+	JR	TMSHK
+
+; The driver at A columns: WID, the name table's address and the second page's
+; offset (1000h and 1000h at 80 columns, 0800h and 0400h at 40 and 32), the
+; registers and the row table, and page 0 drawn and shown. Destroys AF, BC, DE
+; and HL.
+TMSW:	LD	(WID),A
+	LD	HL,REGS80
+	LD	BC,$1010	; B = the names' high byte, C = TPGV
+	CP	80
+	JR	Z,TMSW1
+	LD	HL,REGS40
+	LD	BC,$0804
+	CP	40
+	JR	Z,TMSW1
+	LD	HL,REGS32
+TMSW1:	LD	A,C
+	LD	(TPGV),A
+	PUSH	BC
+	LD	DE,TMSREGS	; this width's registers
+	LD	BC,8
+	LDIR
+	POP	HL		; H = the names' high byte
+	LD	L,C		; 0, from the LDIR
+	LD	DE,TMSROWT	; each row's address: names + row * WID
+	LD	A,(WID)
+	LD	C,A
+	LD	B,24
+TMSW2:	EX	DE,HL
+	LD	(HL),E
+	INC	HL
+	LD	(HL),D
+	INC	HL
+	EX	DE,HL
+	LD	A,L
+	ADD	A,C
+	LD	L,A
+	JR	NC,TMSW3
+	INC	H
+TMSW3:	DJNZ	TMSW2
+	XOR	A		; page 0 drawn and shown, no move
+	LD	(TPDRAW),A
+	LD	(TPSHOW),A
+	LD	(TMVCOPY),A
+	RET
 
 ; UNLOAD's check, and the undo of a refused record. Refuses, with carry, while
 ; the PICO9918 is claimed, or while this driver is the console. Otherwise takes
@@ -73,8 +157,8 @@ REMOVE:	LD	C,TNINFO	; B = the devices, with the claim bit,
 	AND	HWBCLM		; a claim: a program may be using the entries
 	SCF
 	RET	NZ
-	LD	A,L		; the console's columns
-	CP	COLS		; the console at this width is this driver
+	LD	A,(WID)		; the console's columns: at this width,
+	CP	L		; it is this driver
 	SCF
 	RET	Z
 	LD	B,1		; CRT:
@@ -154,7 +238,9 @@ TMSOUT: OUT     (VDPDAT),A
         DJNZ    TMSROW
         INC     D
         JR      NZ,TMSPAT
-%IF COLS == 32
+	LD	A,(WID)
+	CP	32
+	RET	NZ		; text mode: no colours or sprites
         LD      HL,COLOUR       ; Graphics I: white on black for every group
         CALL    TMSWA
         LD      B,32
@@ -165,7 +251,6 @@ TMSCOL: LD      A,$F1
         CALL    TMSWA
         LD      A,$D0
         OUT     (VDPDAT),A
-%ENDIF
         RET
 
 ; The graphics entries, reached through the record's table. Each assumes that
@@ -277,15 +362,19 @@ TMSRDR: LD      A,(TMVCOPY)
 TMSRD1: LD      C,0
         CALL    TMSCELL
         CALL    TMSRA
+	LD	A,(WID)
+	LD	B,A
+	LD	C,VDPDAT
         LD      HL,(LBUF)
-        LD      BC,COLS*256+VDPDAT
         INIR
         RET
 TMSWRR: LD      C,0
         CALL    TMSCELL
         CALL    TMSWA
+	LD	A,(WID)
+	LD	B,A
+	LD	C,VDPDAT
         LD      HL,(LBUF)
-        LD      BC,COLS*256+VDPDAT
         OTIR
         RET
 
@@ -304,12 +393,13 @@ TMSGET: CALL    TMSCELL
         RET
 
 ; Clear row B from column C to the end of the line.
-TMSCLR: LD      A,C
-        CP      COLS
-        RET     NC              ; pending wrap has no cells left to erase
+TMSCLR: LD      A,(WID)
+	CP	C
+	RET	C
+	RET	Z		; pending wrap has no cells left to erase
         CALL    TMSCELL
         CALL    TMSWA
-        LD      A,COLS
+	LD	A,(WID)
         SUB     C
         LD      B,A
 TMSCLL: LD      A,' '
@@ -329,8 +419,9 @@ TMSMBEG:LD      A,(TPDRAW)
         PUSH    BC
         CALL    TMSFLIP
         POP     BC
-TMSMB1: LD      A,(TPSHOW)
-        XOR     TPG
+TMSMB1: LD	HL,TPGV
+	LD	A,(TPSHOW)
+	XOR	(HL)
         LD      (TPDRAW),A
         LD      A,1
         LD      (TMVCOPY),A
@@ -357,12 +448,8 @@ TMSMBN: INC     D
         JR      NZ,TMSMBL
         RET
 
-TMSROWT:DW      NAMES,NAMES+COLS,NAMES+2*COLS,NAMES+3*COLS
-        DW      NAMES+4*COLS,NAMES+5*COLS,NAMES+6*COLS,NAMES+7*COLS
-        DW      NAMES+8*COLS,NAMES+9*COLS,NAMES+10*COLS,NAMES+11*COLS
-        DW      NAMES+12*COLS,NAMES+13*COLS,NAMES+14*COLS,NAMES+15*COLS
-        DW      NAMES+16*COLS,NAMES+17*COLS,NAMES+18*COLS,NAMES+19*COLS
-        DW      NAMES+20*COLS,NAMES+21*COLS,NAMES+22*COLS,NAMES+23*COLS
+TMSROWT:DS      48              ; each row's address, TMSW's
+TMSREGS:DS      8               ; this width's registers 0-7, TMSW's
 
 ; Registers 0-7.
 ; - 80 columns (PICO9918 TEXT80, also the V9938 TEXT2 and F18A T80 mode):
@@ -371,15 +458,9 @@ TMSROWT:DW      NAMES,NAMES+COLS,NAMES+2*COLS,NAMES+3*COLS
 ;   needed.
 ; - 40 columns: text mode, the same colours.
 ; - Graphics I: patterns 0000h, colours 2000h, sprites 1B00h/3800h.
-%IF COLS == 32
-TMSREGS:DB      $00,$C0,NAMES/$400,COLOUR/$40,$00,SPRITE/$80,$07,$F1
-%ENDIF
-%IF COLS == 80
-TMSREGS:DB      $04,$50,NAMES/$400+3,$00,$00,$00,$00,$F4
-%ENDIF
-%IF COLS == 40
-TMSREGS:DB      $00,$D0,NAMES/$400,$00,$00,$00,$00,$F4
-%ENDIF
+REGS80: DB      $04,$50,$1000/$400+3,$00,$00,$00,$00,$F4
+REGS40: DB      $00,$D0,$0800/$400,$00,$00,$00,$00,$F4
+REGS32: DB      $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$F1
 
 FONTP:	DW	0		; the ROM's font, from TNFONT
 IMGEND:

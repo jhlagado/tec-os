@@ -5,7 +5,7 @@ at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,421 bytes (`tecos`) and has 963 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,560 bytes (`tecos`) and has 824 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -206,7 +206,7 @@ carries its own.
 | Matrix keyboard (`keyboard.asm`) | 249 | 1, 2 | Stays |
 | ANSI terminal (`term.asm`) | 971 | 2 | Stays |
 | Video switch and the display drivers' hook (`video.asm`) | 118 | 2 | Stays |
-| PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, `PICO40.SVC` and `PICO32.SVC`; the probe stays |
+| PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, one driver for every width; the probe stays |
 | PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
 | Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: both display drivers share it through `TNFONT`; serial and the LCD need none |
@@ -264,7 +264,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->963<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->824<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

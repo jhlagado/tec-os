@@ -161,14 +161,16 @@ async function checkPicoTable() {
   const inc = readFileSync(resolve(SRC, "abi.inc"), "utf8");
   const offsets = new Map([...inc.matchAll(/^(PICO[A-Z]+)\s+EQU\s+(\d+)\b/gm)].map((m) => [m[1], Number(m[2])]));
   const entries = { PICOREG: "GFXREG", PICOFIL: "GFXFIL", PICOWR: "GFXWR", PICORD: "GFXRD", PICOWID: "TMSWID" };
-  check(offsets.size === Object.keys(entries).length + 1 && offsets.has("PICOVER"), "abi.inc: the PICO table's offsets");
+  const places = { PICOVRB: "REC+10", PICOTPD: "TPDRAW", PICOTPS: "TPSHOW" };
+  check(offsets.size === Object.keys(entries).length + Object.keys(places).length + 1 && offsets.has("PICOVER"), "abi.inc: the PICO table's offsets");
   for (const defs of Object.values(PICO_WIDTHS)) {
     const { file, symbols } = await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") });
-    const version = file[symbols.REC + 10];
-    for (const [n, label] of Object.entries(entries)) {
-      if (n === "PICOWID" && version < offsets.get("PICOVER")) continue;
-      const at = symbols.VTAB + offsets.get(n);
-      check((file[at] | (file[at + 1] << 8)) === symbols[label], `abi.inc: ${n} is not ${label} in the PICO table`);
+    const at = (n) => symbols.VTAB + offsets.get(n);
+    check(file[at("PICOVRB")] === offsets.get("PICOVER"), "abi.inc: the PICO record is not at PICOVER");
+    for (const [n, label] of Object.entries(entries)) check((file[at(n)] | (file[at(n) + 1] << 8)) === symbols[label], `abi.inc: ${n} is not ${label} in the PICO table`);
+    for (const [n, place] of Object.entries(places)) {
+      const [label, plus = 0] = place.split("+");
+      check(symbols.VTAB + offsets.get(n) === symbols[label] + Number(plus), `abi.inc: ${n} is not ${place}`);
     }
   }
 }

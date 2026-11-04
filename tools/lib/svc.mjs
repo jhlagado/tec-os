@@ -51,9 +51,9 @@ export const encoders = {
 
 // PICO.SVC, PICO40.SVC and PICO32.SVC: one source, a width each.
 export const PICO_WIDTHS = {
-  "PICO.SVC": { COLS: 80, NAMES: 0x1000, TPG: 0x10 },
-  "PICO40.SVC": { COLS: 40, NAMES: 0x0800, TPG: 0x04 },
-  "PICO32.SVC": { COLS: 32, NAMES: 0x0800, TPG: 0x04 },
+  "PICO.SVC": { COLS: 80 },
+  "PICO40.SVC": { COLS: 40 },
+  "PICO32.SVC": { COLS: 32 },
 };
 
 /** %IF expression ... %ENDIF, nested, resolved from defs. */
