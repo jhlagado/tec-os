@@ -369,3 +369,16 @@ test("^C as the key that ends a ^S pause ends the program by warm boot, as CP/M 
   assert.equal(m.pending.length, 0, "both keys taken");
   assert.equal(m.pc, wboot, "the program ended by warm boot, not returned to");
 });
+
+test("console output keeps the character for its column when a program's CONOUT in the RAM jump table destroys C (KE-181)", () => {
+  const r = rig();
+  const { m } = r;
+  const at = m.sym("RAMBIOS") + 0x0d;
+  const conout = m.read(at) | (m.read(at + 1) << 8);
+  [0xcd, conout & 0xff, conout >> 8, 0x0e, 0x78, 0xc9].forEach((v, i) => m.write(0x0e00 + i, v)); // CALL CONOUT, LD C,"x", RET
+  m.write(at, 0x00);
+  m.write(at + 1, 0x0e);
+  m.mark = m.output.length;
+  for (const ch of "\rAB\tX") r.bdos(2, ch.charCodeAt(0));
+  assert.equal(m.text(m.mark), "\rAB      X", "the tab goes to column 8");
+});
