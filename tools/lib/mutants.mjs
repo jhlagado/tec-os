@@ -400,15 +400,12 @@ export const MUTANTS_KS30 = [
   { name: "old VOLS: no RET, runs on into the data", edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: DB $00"])], tests: ["test/clients.test.mjs"], only: "^an old VOLS" },
   // The pinned DEMO.COM replaced by test/programs/demo.asm as this tree builds it.
   { name: "old binaries: a rebuilt fixture", edits: [{ file: "test/fixtures/edc2745/DEMO.COM", rebuild: "test/programs/demo.asm" }], tests: ["test/clients.test.mjs"] },
-  { name: "row 3: PICO? sets no flag", ...t30(["LD HL,PICMSG", "JP LCDWRD"], ["LD HL,PICMSG", "JP LCD3"], ["test/pico.test.mjs"], D) },
   { name: "row 3: GLCD? sets no flag", ...t30(["LD HL,GLCMSG", "JP LCDWRD"], ["LD HL,GLCMSG", "JP LCD3"], ["test/pico.test.mjs"], G) },
   { name: "row 3: a program's write leaves the flag", ...t30(["LD HL,CONDEV", "RES 7,(HL)", "HWSL1: LD HL,LCDROWS"], ["HWSL1: LD HL,LCDROWS"], ["test/pico.test.mjs"], H) },
   { name: "row 3: the wrong row resets it", ...t30(["LD A,B", "CP 3", "JR NZ,HWSL1"], ["LD A,B", "CP 2", "JR NZ,HWSL1"], ["test/pico.test.mjs"], H) },
   { name: "row 3: every take blanks it", ...t30(["WRDCLR: LD HL,CONDEV", "BIT 7,(HL)", "RET Z"], ["WRDCLR: LD HL,CONDEV"], ["test/pico.test.mjs"], G) },
   { name: "row 3: no take clears a word", ...t30(["WRDCLR: LD HL,CONDEV"], ["WRDCLR: OR A", "RET", "LD HL,CONDEV"], ["test/pico.test.mjs"], G) },
   { name: "row 3: the flag stays after a take", ...t30(["RET Z", "RES 7,(HL)", "PUSH BC"], ["RET Z", "PUSH BC"], ["test/pico.test.mjs"], G) },
-  { name: "row 3: a load under PICO.SVC leaves GLCD?", ...t30(["JR NZ,WRDCLR"], ["RET NZ"], ["test/pico.test.mjs"], G) },
-  { name: "row 3: STDONE not masked", ...t30(["AND $FF-CDWRD"], [], ["test/pico.test.mjs"], D) },
   { name: "row 3: the word cleared leaves carry set", ...t30(["POP BC", "OR A", "RET"], ["POP BC", "RET"], ["test/pico.test.mjs"], G) },
   { name: "row 3: INFO loses the bit", ...t30(["LD B,A", "LD DE,ROMVER"], ["AND $7F", "LD B,A", "LD DE,ROMVER"], ["test/pico.test.mjs"], H) },
 ];
@@ -540,7 +537,6 @@ export const MUTANTS_KS33 = [
 // KS34: kept vectors, the resident header, masks, the safe read and function
 // 47, each with the tests meant to catch it.
 const SVCF = "src/svc.asm";
-const PICOF = "drivers/pico.asm";
 // The PICO9918's console in the ROM (KS39): the driver's masked pairs, moved.
 const ROMPICOF = "src/pico.asm";
 const CONF = "src/console.asm";
@@ -652,16 +648,12 @@ export const MUTANTS_KS36C = [
   { name: "the font: service 15 one glyph out", ...ks34("src/services.asm", ["HWSFONT: LD HL,FONT"], ["HWSFONT: LD HL,FONT+8"], ["test/glcd.test.mjs"]) },
   { name: "the startup rule: quiet for TNEBAD, not TNENODV", ...ks34(CCPF, ["AND H", "XOR TNENODV"], ["AND H", "XOR TNEBAD"], ["test/startup.test.mjs"]) },
   { name: "the startup rule: quiet typed too, STFLAG not read", ...ks34(CCPF, ["LD A,(STFLAG)", "AND H"], ["LD A,$FF", "AND H"], ["test/startup.test.mjs"]) },
-  { name: "PICO giving way: PICO.SVC takes the console whatever is in", ...ks34("src/loader.asm", ["LD HL,GLVEC+1", "JR Z,SVGIVE"], ["LD HL,GLVEC+1", "JR Z,CONSET"], ["test/pico.test.mjs"]) },
   { name: "CON's aliases: GLCD taken for CRT:", ...ks34(CCPF, ["CPL", "ADD A,12"], ["CPL", "ADD A,10"], ["test/console.test.mjs"]) },
-  { name: "CON's width: 50 taken for 80", ...ks34("src/text.asm", ['CONWID: DB "80",80,"40",40,"32",32'], ['CONWID: DB "50",80,"40",40,"32",32'], ["test/console.test.mjs"]) },
-  { name: "the one driver: 40 and 32 columns on 80's name table and page", ...ks34(PICOF, ["LD BC,$0804"], ["LD BC,$1010"], ["test/pico.test.mjs"]) },
   { name: "function 44: a count of 1 refused", ...ks34(BDOSF, ["FNMULT: DEC E", "JR NZ,FNCHNO"], ["FNMULT: DEC E", "JR Z,FNCHNO"], CPM3) },
   { name: "function 46: one block short", ...ks34(BDOSF, ["LD D,(IX+6)", "INC DE", "LD BC,0"], ["LD D,(IX+6)", "LD BC,0"], CPM3) },
   { name: "function 99: returns 0", ...ks34(BDOSF, ["CP 99", "JR Z,FNCHNO"], [], CPM3) },
   { name: "the prompt: no user number", ...ks34(CCPF, ["OR A", "JR Z,MLDRV"], ["OR A", "JR MLDRV"], CPM3) },
   { name: "page zero: CONDEV written at 0045h too", ...ks34("src/console.asm", ["AND CDMTX", "LD (CONDEV),A"], ["AND CDMTX", "LD (CONDEV),A", "LD ($0045),A"], ["test/pagezero.test.mjs"]) },
-  { name: "part 6: REMOVE takes UC1: in the field for this driver", ...ks34(PICOF, ["AND 3", "DEC A", "SCF", "RET Z"], ["AND 3", "CP 3", "SCF", "RET Z"], ["test/pico.test.mjs"]) },
 ];
 
 // KS36b: one mutant a promise of the block store, and its two new rules (KG43).
