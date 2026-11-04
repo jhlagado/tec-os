@@ -7,7 +7,9 @@
 // Each LINE is typed at the prompt followed by Return, and the run waits for
 // the next prompt. A LINE of ^ and a letter, such as ^C, is that control key
 // alone. "@key X" types X without Return and waits for the next prompt, for a
-// program that stops on any key. "@start LINE" types LINE and Return and runs
+// program that stops on any key. "@press X" types X without Return and goes on
+// as soon as the machine has taken it, waiting for nothing (KB-25), for a key in
+// the middle of a line or of a program's input. "@start LINE" types LINE and Return and runs
 // on for 50 million T-states without waiting for a prompt, for a program that
 // runs until a key. "@run N" runs N million T-states. "@reset" presses the
 // reset button, which keeps RAM and the card, and waits for the prompt.
@@ -101,6 +103,9 @@ for (const line of lines) {
     m.runUntil(() => (m.pumpInput(), !m.pending?.length), LIMIT, line);
     const end = m.cycles + 50_000_000;
     m.runUntil(() => m.cycles >= end, LIMIT, line);
+  } else if (line.startsWith("@press ")) {
+    m.enqueueInput(line.slice(7), via);
+    m.runUntil(() => (m.pumpInput(), !m.pending?.length), LIMIT, line);
   } else if (line.startsWith("@key ")) {
     m.enqueueInput(line.slice(5), via);
     wait();
