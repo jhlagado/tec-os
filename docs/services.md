@@ -185,8 +185,10 @@ at the first, or 0 for none. A record is 13 bytes:
 | 11 | 2 | Its entry table's address |
 
 The loader checks that each record, its link and its table's address lie in the
-service's pages, for at most 255 records, and then links them. It can't check an
-entry table's contents. If a check fails it calls `REMOVE`; if `REMOVE` refuses,
+service's pages, for at most 255 records, and no more than keep the registry,
+the records already in with these, at 256, all that `TNFIND` walks, so the
+PICO9918 console's record stays findable (KE-AR4); then it links them. It can't
+check an entry table's contents. If a check fails it calls `REMOVE`; if `REMOVE` refuses,
 the service stays installed with no records and the load reports 2.
 
 `INIT` returning carry means it undid what it did. It installs hooks last, since
