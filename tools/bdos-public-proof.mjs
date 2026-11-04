@@ -81,7 +81,7 @@ function fullDirectory(r){
   const image=card(),a=volume(image,"A");for(let i=1;i<a.entries;i++)a.write(`F${i}.DAT`,new Uint8Array());
   const m=boot(r,image),peak=observeStack(m),rows=[];setup(m,1);rows.push(call(m,26,DMA));assert.notEqual(call(m,22).a,255);
   random(m,128);writeDma(m,128);const failed=call(m,34);rows.push(failed);assert.equal(failed.a,5,"random extent creation reports full directory");
-  assert.deepEqual(m.violations,[]);return {rows,peak:peak(),cardHash:sha(image)};
+  assert.deepEqual(m.violations,[]);assert.ok(peak()<=40,"full-directory path retains BDOS stack headroom");return {rows,peak:peak(),cardHash:sha(image)};
 }
 const result={romHashes:dirs.map(d=>sha(rom(d).image)),cases:{}};
 for(const [name,fn]of Object.entries({roundtrip,fullDirectory})){
