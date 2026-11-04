@@ -180,9 +180,11 @@ CWR9:	LD	C,A		; the line, kept
 	RET
 
 ; Write every dirty line (CFLALL), or every one but line A (CFLUSH). Each
-; is tried; one whose write fails is dropped, so the card's copy stands, and
-; the flush returns NZ if any did, Z if none. Returns A = the line left (FFh
-; for CFLALL). Destroys BC, DE and HL; SDLBA, BLKOFF and BLKSLOT are mapped
+; is tried, and the flush returns NZ if any write failed, Z if none. CFLALL
+; drops a line whose write fails, so the card's copy stands; CFLUSH, a
+; directory write's, leaves it dirty, the only copy of its records, for a
+; later flush to try (KE-AR8). Returns A = the line left (FFh for
+; CFLALL). Destroys BC, DE and HL; SDLBA, BLKOFF and BLKSLOT are mapped
 ; again from the BIOS's track and sector, as CWRITE leaves them.
 CFLALL:	LD	A,$FF		; no line is FFh: every one is written
 CFLUSH:	LD	C,A		; the line to leave
@@ -195,10 +197,15 @@ CFS1:	CP	C
 	CALL	NZ,CWRITE	; keeps A, NZ if the card refused it
 	POP	BC
 	JR	Z,CFS2
+	INC	B		; failed: counted
+	LD	E,A		; the line, kept
+	LD	A,C		; C FFh: CFLALL, which drops it
+	INC	A
+	LD	A,E
+	JR	NZ,CFS2		; CFLUSH: the line stays dirty
 	PUSH	BC
-	CALL	CDROP		; failed: dropped, the card's copy stands
+	CALL	CDROP		; dropped, the card's copy stands
 	POP	BC
-	INC	B		; and counted
 CFS2:	INC	A		; every line, failures or not
 	CP	NLINES
 	JR	C,CFS1
@@ -370,8 +377,10 @@ CWBT:	LD	A,C		; written through: the line to the card
 	RET
 CWB3:	LD	A,C		; a directory block: the volume's data first,
 	CALL	CFLUSH		; then the directory line; if either fails,
-	CALL	Z,CWRITE	; the line goes, so the card's directory
-	RET	Z		; stays the truth and is read again
+	CALL	Z,CWRITE	; the directory line goes, so the card's
+	RET	Z		; directory stays the truth and is read
+				; again; a data line that failed stays
+				; dirty, for the next flush
 CWBX:	CALL	CDROP		; A is the line, from CWRITE or CFLUSH
 	OR	1		; NZ
 	RET

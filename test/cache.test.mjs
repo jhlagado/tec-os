@@ -12,7 +12,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createContainer, headerChecksum } from "../tools/lib/container.mjs";
+import { createContainer, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
@@ -327,7 +327,7 @@ test("a directory write whose data line fails leaves the card's directory the tr
   const out = through(m, "SAVE 12 B:F2.DAT\r");
   assert.notEqual(bad, null, "a data line failed");
   assert.match(out, /Bad Sector/, "the close's flush failed, and the BDOS says so");
-  assert.doesNotMatch(out, /Write lost/, "the failed line was dropped by that flush, so warm boot has nothing to say (KS36b)");
+  assert.equal(out.match(/Write lost/g)?.length, 1, "the failed line was kept dirty by that flush, so warm boot tried it again and says Write lost once (KE-AR8)");
   through(m, "MOUNT B: ARCHIVE\r");
   through(m, "MOUNT B: WORK\r");
   check(image);
@@ -706,3 +706,50 @@ for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G
     const card = volume(image, "B").read("RAND.DAT");
     for (const rec of order) assert.deepEqual(card.subarray(rec * 128, rec * 128 + 128), recordOf(rec), `record ${rec}, on the card`);
   });
+
+// KE-AR8: a directory write on the volume written behind whose data lines
+// fail leaves those lines dirty and drops only its own, so a close retried
+// fails again until the card takes the data, and warm boot says Write lost.
+/** WB.DAT made on B: (G8M, written behind) and records 0-7 written, with function 45 in FFh mode; the card refuses B:'s data blocks while refuse() says so. */
+function closing(refuse) {
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },
+  ]);
+  const r = rig(image);
+  const m = r.m;
+  r.call(5, { c: 45, de: 0xff });
+  r.fcb(2, "WB      DAT");
+  assert.equal(r.bdos(22), 0, "made");
+  for (let rec = 0; rec < 8; rec += 1) {
+    recordOf(rec).forEach((v, k) => m.write(0x80 + k, v));
+    assert.equal(r.bdos(21), 0, `record ${rec}`);
+  }
+  const b = parseContainer(image).volumes[1];
+  const data = (block) => block >= b.start + 32 && block < b.start + b.length; // past G8M's 32 directory blocks
+  failing(m, (block) => refuse() && data(block) && "fail");
+  return { r, m, image };
+}
+
+test("a close whose data lines the card refuses fails, and retried fails again until the card takes them, then the file is whole (KE-AR8)", () => {
+  let refuse = true;
+  const { r, m, image } = closing(() => refuse);
+  assert.equal(r.bdos(16), 0xff, "the close fails");
+  assert.equal(m.cpu.cpu.h, 1, "a BDOS error");
+  assert.equal(r.bdos(16), 0xff, "retried with the card still refusing, it fails again");
+  refuse = false;
+  assert.equal(r.bdos(16), 0, "retried with the card taking the data, it succeeds");
+  r.warm();
+  const card = volume(image, "B").read("WB.DAT");
+  assert.equal(card.length, 8 * 128, "eight records");
+  for (let rec = 0; rec < 8; rec += 1) assert.deepEqual(card.subarray(rec * 128, rec * 128 + 128), recordOf(rec), `record ${rec}, on the card`);
+});
+
+test("a close whose data lines the card refuses leaves them for warm boot, which says Write lost, and the card's directory names no record (KE-AR8)", () => {
+  const { r, m, image } = closing(() => true);
+  assert.equal(r.bdos(16), 0xff, "the close fails");
+  r.warm();
+  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "Write lost, once");
+  const f = volume(image, "B").find("WB.DAT");
+  assert.ok(!f || f.records === 0, `the card's entry names ${f?.records} records`);
+});
