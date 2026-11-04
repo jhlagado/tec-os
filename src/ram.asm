@@ -17,7 +17,6 @@ BLKSLOT:DS      1               ; 128-byte record within the block, 0-3
 BUFOK:  DS      1
 BUFDRV: DS      1
 BUFBLK: DS      2
-BLKBUF: DS      512
 
 ; Drive table: start block (4), length in blocks (2), geometry (1), flags (1).
 ; A recognised reset copies it from RAM by its address alone (RSLCAP). A ROM
@@ -39,8 +38,10 @@ MNTBLK: DS      4               ; the container's length in blocks
 MNTPRV: DS      4               ; the previous descriptor's end, or the table's sum
 MNTSUM: DS      2               ; format 1.1: blocks 1-7's sum, from the header
 MNTDRV: DS      1               ; format 1.1: drives wanted; 0 for a 1.0 card
-MNTI:   DS      1               ; the descriptor being checked
-MNTCB:  DS      1               ; the table block in BLKBUF, FFh none
+MNTI:   DS      1               ; the descriptor being checked, or VDESC's
+MNTCB:  DS      1               ; the table block in MNTLN's line, FFh none
+MNTLN:  DS      1               ; the line that holds it
+MNBUF:  DS      32              ; 32 bytes of it: the header's, or a descriptor
 
 ; ---- Video terminal ---------------------------------------------------------
 LINEBUF:DS      80              ; one display row, for scrolling
@@ -129,6 +130,7 @@ CCPRME:
 ; ---- The BDOS's state and stack (cpm/bdos.asm) --------------------------------
 BDOSRAM EQU     CCPRME
 OLDSP:  DS      2
+ERRMODE:DS      1               ; function 45's mode: FFh return, FEh display; 0 at warm boot
 PARAM:  DS      2
 COLUMN: DS      1
 LISTEN: DS      1
@@ -198,8 +200,6 @@ SDXB:   DS      1               ; LATEXP while the block is a cache line
 
 ; ---- The block cache (cache.asm) ----------------------------------------------
 CNEXT:  DS      1               ; the next line in turn
-CFAIL:  DS      1               ; 1: a line's write failed since warm boot
-CSKIP:  DS      1               ; CFLUSH's line to leave
 CWTYPE: DS      1               ; BIOS WRITE's type, C
 CIFF:   DS      2               ; the flags a BIOS entry found: P/V, its interrupt state
 

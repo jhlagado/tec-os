@@ -125,30 +125,9 @@ MAPREC: LD      HL,(DSKSEC)
 MAPBAD: OR      1
         RET
 
-; Make BLKBUF hold the mapped block. Returns Z on success. With C not 0
-; it does not read a block it lacks: it clears BLKBUF to zeros instead, and
-; BUFOK is 2 while it holds that block.
-GETBLKW:LD      A,(BUFOK)
-        OR      A
-        JR      Z,GETRD
-        LD      A,(BUFDRV)
-        LD      B,A
-        LD      A,(DSKCUR)
-        CP      B
-        JR      NZ,GETRD
-        LD      HL,(BUFBLK)
-        LD      DE,(BLKOFF)
-        OR      A
-        SBC     HL,DE
-        RET     Z
-GETRD:  XOR     A
-        LD      (BUFOK),A
-        LD      HL,BLKBUF
-        OR      C
-        JR      NZ,GETZ
-        CALL    SDREAD
-        RET     NZ
-        LD      C,1             ; BUFOK 1: read
+; The no-pre-read rule's key: the block BLKOFF on drive DSKCUR, held as C
+; says (BUFOK: 2 cleared, not read), so that the next block of its allocation
+; block can be cleared rather than read. Returns Z. Destroys A and HL.
 GETKEY: LD      A,(DSKCUR)
         LD      (BUFDRV),A
         LD      HL,(BLKOFF)
@@ -156,25 +135,6 @@ GETKEY: LD      A,(DSKCUR)
         LD      A,C
         LD      (BUFOK),A
         XOR     A
-        RET
-GETZ:   LD      DE,BLKBUF+1     ; BUFOK 2: cleared, not read
-        LD      BC,511
-        LD      (HL),0
-        LDIR
-        LD      C,2
-        JR      GETKEY
-
-; HL = address of the mapped 128-byte record inside BLKBUF.
-SLOTADR:LD      A,(BLKSLOT)
-        RRCA                    ; A * 128 as a 16-bit offset
-        LD      H,A
-        AND     $80
-        LD      L,A
-        LD      A,H
-        AND     $01
-        LD      H,A
-        LD      DE,BLKBUF
-        ADD     HL,DE
         RET
 
 ; BIOS READ: copy the record to DSKDMA, through the cache. A = 0 on
@@ -186,13 +146,14 @@ BREAD:  CALL    CDI
 DSKERR: LD      A,1
         RET
 
-; BIOS WRITE: merge the record into its block and write the block through.
-; A block not in BLKBUF is read first, unless nothing in it is the card's to
-; keep: the write is of type 2 (C), the first to a newly allocated block, or
-; BLKBUF holds the block before, cleared rather than read, on this drive and
-; in the same allocation block. On the write-behind volume the record goes
-; to its block's line in the cache instead (CWRBH). A = 0 on success, 1 on
-; error; interrupts are off within, and back as they were.
+; BIOS WRITE: the record goes into its block's line in the cache (CWRBH),
+; the one write path. The block is read into the line first, unless nothing
+; in it is the card's to keep: the write is of type 2 (C), the first to a newly
+; allocated block, or the block before, cleared rather than read, is on this
+; drive and in the same allocation block (GETKEY's key). On a volume written
+; through the line goes to the card before the call returns; on the one written
+; behind it stays dirty until a directory write, warm boot or remount. A = 0 on
+; success, 1 on error; interrupts are off within, and back as they were.
 BWRITE: CALL    CDI
         LD      A,C
         LD      (CWTYPE),A
@@ -279,26 +240,10 @@ BWGET:  LD      A,(DSKCUR)
         CALL    DRVENT
         INC     HL
         BIT     1,(HL)          ; written behind
-        JP      NZ,CWRBH
-        CALL    GETBLKW
-        JP      NZ,DSKERR
-        CALL    SLOTADR
-        EX      DE,HL
-        LD      HL,(DSKDMA)
-        LD      BC,128
-        LDIR
-        LD      HL,BLKBUF
-        CALL    SDWRITE
-        JR      Z,BWOK
-        XOR     A               ; the buffer no longer matches the card,
-        LD      (BUFOK),A       ; nor does the block's line
-        CALL    CLOOK
-        CALL    Z,CDROP
-        OR      1               ; NZ: the error
-        RET
-BWOK:   CALL    CREFR           ; the block's line, if it has one, refreshed
-        XOR     A
-        RET
+	JP	NZ,CWRBH
+	LD	HL,CWTYPE	; written through: bit 7 tells CWRBH to
+	SET	7,(HL)		; write the line before it returns
+	JP	CWRBH
 
 ; P/V = the interrupt state. The second read is for an NMOS Z80, which can
 ; clear P/V if an interrupt is accepted during the first. Destroys A.

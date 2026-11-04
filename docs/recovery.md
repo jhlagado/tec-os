@@ -36,24 +36,32 @@ or power off before the close leaves depends on where the write went:
   evicts or flushes it on one written behind. The old contents are gone, closed
   or not: there is no copy to return to.
 
-If a data block cannot be
-written, it stays changed in the cache, and each warm boot tries it again
-and says `Write lost` while it still fails, dropping the rest of a chained
-line as a BDOS error does. Only a reset, or power off, gives it up.
+If a block cannot be written during a program's run, the BIOS returns the
+error, the BDOS says `Bad Sector` and the rest of a chained line goes. A
+flush, at a directory write on a volume written behind, at a warm boot, or at
+`MOUNT` or `UNMOUNT`, tries every changed line, drops each whose write fails,
+so the card's copy stands, and goes on to the rest. A warm boot whose flush
+dropped a line says `Write lost` once and drops the rest of a chained line as a
+BDOS error does; the next warm boot has nothing more to say.
 
 ## What a successful write means
 
-On every volume not written behind, a BIOS write returns success only after
-the SD card has accepted the 512-byte block and stopped reporting busy. The
-deblocking buffer always matches the card, or is marked invalid after a
-failed write, and the cache's copy of the block is refreshed from it, or
-dropped.
-Writing one 128-byte record reads its block first (unless the buffer already
-holds it), merges the record and writes the whole block back, so neighbouring
-records are never replaced by stale data. The exception is a block that holds
-nothing yet: the first write to a newly allocated block (CP/M's write type 2),
-and the next blocks of that allocation block as a program writes on into
-them. Such a block is not read; its records not yet written are zeros.
+Every BIOS write goes into the block's cache line; there is no other buffer.
+On every volume not written behind, the write returns success only after the
+line has gone to the card and the card has accepted the 512-byte block and
+stopped reporting busy. If that write fails, the line is dropped, so the
+next read of the block comes from the card.
+Writing one 128-byte record reads its block into a line first (unless a line
+already holds it), merges the record and writes the whole block back, so
+neighbouring records are never replaced by stale data. The exception is a
+block that holds nothing yet: the first write to a newly allocated block
+(CP/M's write type 2), and the next blocks of that allocation block as a
+program writes on into them. Such a block is not read; its records not yet
+written are zeros.
+
+When a program has asked for BDOS errors to be returned (function 45), a
+sequential read or write that fails leaves the FCB on the record it did not
+read or write, as CP/M 3 does, so the program can try that record again.
 
 Whether a card that has reported completion has also made the data durable
 against power loss is up to the card. That is not verified.
@@ -76,8 +84,8 @@ no journal, so power loss or reset can leave:
 - **On a volume written behind, during a flush.** The changed data blocks
   reach the card one by one in line order and the directory block last, so a
   cut leaves some new data blocks that no entry names, as above, and never a
-  directory entry naming a block whose data is not there. A flush stops at the
-  first line whose write fails, and the lines after it wait for a later flush.
+  directory entry naming a block whose data is not there. A flush tries every
+  line; one whose write fails is dropped and the rest are still written.
 - **During a block write.** One 512-byte block may hold old, new or mixed
   contents. If it is a directory block, up to 16 directory entries can be
   damaged.
@@ -162,8 +170,9 @@ is a different one. A card put in after that answers no read until reset.
 Press reset after changing cards.
 
 **Lines still dirty when a card comes out are lost.** That holds for the same
-card put back. Only cold boot starts a card, so each `^C` says `Write lost` again,
-and the reset that starts it discards the lines. Restarting a card to write to it
+card put back. Only cold boot starts a card, so the first warm boot after the
+card comes out says `Write lost` and drops those lines, and a reset discards any
+written behind since. Restarting a card to write to it
 is left out by choice: TEC-OS doesn't read a card's CID, so a different card would
 take these lines.
 

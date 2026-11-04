@@ -265,7 +265,7 @@ test("a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset
   m.swapCard(dead);
   let from = m.output.length;
   m.reset();
-  m.expect(/R retry, H header> $/, { from, maxCycles: 400_000_000 });
+  m.expect(/R retry> $/, { from, maxCycles: 400_000_000 });
   m.swapCard(good);
   from = m.output.length;
   m.type("R");
@@ -276,10 +276,10 @@ test("a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset
   n.swapCard(dead);
   from = n.output.length;
   n.reset();
-  n.expect(/R retry, H header> $/, { from, maxCycles: 400_000_000 });
+  n.expect(/R retry> $/, { from, maxCycles: 400_000_000 });
   from = n.output.length;
   n.reset();
-  n.expect(/R retry, H header> $/, { from, maxCycles: 400_000_000 });
+  n.expect(/R retry> $/, { from, maxCycles: 400_000_000 });
   n.swapCard(good);
   from = n.output.length;
   n.type("R");
@@ -287,7 +287,7 @@ test("a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset
   assert.deepEqual(idx(n), DEFAULTS, "RAM with no PZINIT behind it is unrecognised");
 });
 
-const DIAGP = /R retry, H header> $/;
+const DIAGP = /R retry> $/;
 /** M, its selection made on GOOD, reset with BAD in, to DIAG's prompt. */
 function toDiag(m, bad) {
   m.swapCard(bad);
@@ -302,17 +302,16 @@ function atDiag(m, key, until = DIAGP) {
   return m.expect(until, { from, maxCycles: 400_000_000 });
 }
 
-test("DIAG's retry uses the selection after the header dump and after a second failure", () => {
+test("DIAG's retry uses the selection after another key and after a second failure; H dumps nothing now (KS36b)", () => {
   const good = card();
   const dead = Uint8Array.from(good);
   dead[0] ^= 0xff;
   const m = remapped(good);
   toDiag(m, dead);
-  const dump = atDiag(m, "H");
-  assert.match(dump, /^H\r\n((?:[0-9A-F]{2} ){16}\r\n){4}R retry/, "the header dump");
+  assert.match(atDiag(m, "H"), /^H\r\nR retry> $/, "H only asks again: the header dump went with BLKBUF");
   m.swapCard(good);
   atDiag(m, "R", /A>$/);
-  assert.deepEqual(idx(m), [3, 2, 0, 0], "a retry after the header dump");
+  assert.deepEqual(idx(m), [3, 2, 0, 0], "a retry after another key");
 
   const n = remapped(good);
   toDiag(n, dead);
@@ -331,7 +330,7 @@ test("a card with no default A: under a valid retained A: reaches DIAG, and a re
   const from = m.output.length;
   m.reset();
   const text = m.expect(new RegExp(`${DIAGP.source}|A>$`), { from, maxCycles: 400_000_000 });
-  assert.match(text, /error 2A\r\nR retry, H header> $/, "MENOA, at DIAG");
+  assert.match(text, /error 2A\r\nR retry> $/, "MENOA, at DIAG");
   m.swapCard(good);
   atDiag(m, "R", /A>$/);
   assert.deepEqual(idx(m), [3, 2, 0, 0]);
@@ -494,7 +493,7 @@ test("a default drive beyond MNTDRV is refused with MEMOUNT", () => {
   resum(image, VOLUMES.length);
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });
-  m.expect(/R retry, H header> $/, { from: 0, maxCycles: 400_000_000 });
+  m.expect(/R retry> $/, { from: 0, maxCycles: 400_000_000 });
   assert.match(m.text(0), /error 29/);
 });
 
@@ -594,7 +593,7 @@ test("a held key skips startup on the selected A:", () => {
   assert.deepEqual(idx(m), [3, 2, 0, 0], "the skip keeps the selection");
 });
 
-test("a dirty line with CFAIL set is not written to a card of identical extents after a reset", () => {
+test("a dirty line is not written to a card of identical extents after a reset", () => {
   const image = card([VOLUMES[0], { ...VOLUMES[1], writeBehind: true }, ...VOLUMES.slice(2)]);
   const m = machine(image);
   // A file written and not closed: what a program holds when the button goes.
@@ -609,7 +608,6 @@ test("a dirty line with CFAIL set is not written to a card of identical extents 
   m.cpu.hardware.ioWrite(0xff, 0x05);
   assert.ok(lines.some((i) => m.read(m.sym("CDIRTY") + i)), "a dirty line");
   m.cpu.hardware.ioWrite(0xff, 0x01);
-  m.write(m.sym("CFAIL"), 1);
   const other = Uint8Array.from(image);
   const writes = [];
   m.swapCard(other, { onSdWrite: (lba) => writes.push(lba) });

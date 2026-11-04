@@ -219,7 +219,7 @@ test("a card removed with dirty lines leaves the console working, and warm boot 
   assert.match(cmd(m, "USER 0"), /\r\n[A-P]>$/, "the console works");
 });
 
-test("the same card put back isn't started: Write lost again at warm boot, and a reset loses the lines", async () => {
+test("the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)", async () => {
   const image = card();
   const m = start(image);
   dirty(m);
@@ -238,7 +238,7 @@ test("the same card put back isn't started: Write lost again at warm boot, and a
   };
   assert.match(warm(), /Write lost/);
   m.swapCard(image);
-  assert.match(warm(), /Write lost/);
+  assert.doesNotMatch(warm(), /Write lost/, "the failed lines were dropped: nothing is said twice");
   m.reset();
   m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
   assert.equal(volume(image, "B").read("Q.DAT").length, 0, "the name was on the card, and its records are gone");
@@ -325,7 +325,8 @@ test("a directory write whose data line fails leaves the card's directory the tr
   fillTpa(0xb2);
   const out = through(m, "SAVE 12 B:F2.DAT\r");
   assert.notEqual(bad, null, "a data line failed");
-  assert.match(out, /Write lost/, "warm boot tried it again");
+  assert.match(out, /Bad Sector/, "the close's flush failed, and the BDOS says so");
+  assert.doesNotMatch(out, /Write lost/, "the failed line was dropped by that flush, so warm boot has nothing to say (KS36b)");
   through(m, "MOUNT B: ARCHIVE\r");
   through(m, "MOUNT B: WORK\r");
   check(image);
@@ -459,4 +460,177 @@ test("the harness takes the copy core's writes below BD00h as the cache's only w
   stub(m, [0x21, 0x00, 0x90, 0x11, 0x00, 0x20, 0x01, 0x10, 0x00, 0xcd, mv & 0xff, mv >> 8]); // 16 bytes to 9000h, bank 1
   assert.equal(m.expand1Writes.length, 16, "a copy not called by the cache is reported");
   EXPAND1_WRITES.splice(0);
+});
+
+/** Where 128 bytes of V lie in IMAGE, or -1. */
+const runOf = (image, v) => Buffer.from(image).indexOf(Buffer.alloc(128, v));
+
+test("function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, which warm boot doesn't say again (KS36b)", async () => {
+  const image = card();
+  const m = start(image);
+  dirty(m);
+  assert.equal(runOf(image, 0xc3), -1, "the records are only in the cache");
+  bdos(m, 48, 0);
+  assert.equal(m.cpu.cpu.a, 0);
+  assert.notEqual(runOf(image, 0xc3), -1, "and on the card after function 48, before any close");
+
+  const failed = card();
+  const n = start(failed);
+  dirty(n);
+  failing(n, () => "fail");
+  bdos(n, 48, 0);
+  assert.equal(n.cpu.cpu.a, 0xff, "a failed write: FFh");
+  n.mark = n.output.length;
+  n.cpu.cpu.pc = 0;
+  n.runUntil(() => n.waitingForInput() && /\r\n[A-P]>$/.test(n.text(n.mark)), 400_000_000, "warm boot");
+  assert.doesNotMatch(n.text(n.mark), /Write lost/, "the failed line was dropped and reported by function 48");
+});
+
+test("function 45: FFh returns a BDOS error to the program, A = FFh and H the code, FEh says it first, and warm boot puts the default back (KS36b)", async () => {
+  const m = start(card());
+  for (const [mode, said] of [[0xff, false], [0xfe, true]]) {
+    bdos(m, 45, mode);
+    m.mark = m.output.length;
+    bdos(m, 14, 15); // select P:, which has no volume
+    assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 4], `mode ${mode.toString(16)}: a select error, returned`);
+    assert.equal(/Bdos Err On P: Select/.test(m.text(m.mark)), said, `mode ${mode.toString(16)}: the message ${said ? "said" : "not said"}`);
+  }
+  m.cpu.cpu.pc = 0;
+  m.runUntil(() => m.waitingForInput(), 400_000_000, "warm boot");
+  assert.equal(m.read(m.sym("ERRMODE")), 0, "warm boot: the default again");
+});
+
+test("function 47's warm boot puts the lines written behind on the card before the chained program loads (KS36b)", async () => {
+  const image = await load(card(), ["say"]);
+  const m = start(image);
+  dirty(m);
+  [..."SAY", 0].forEach((v, i) => m.write(0x2100 + i, typeof v === "string" ? v.charCodeAt(0) : v));
+  bdos(m, 26, 0x2100);
+  let onCard = null;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (onCard === null && m.pc === m.sym("LOADCOM")) onCard = runOf(image, 0xc3) !== -1;
+    return step();
+  };
+  m.mark = m.output.length;
+  m.write(0x3000, 0x0e); m.write(0x3001, 47); m.write(0x3002, 0xcd); m.write(0x3003, 0x05); m.write(0x3004, 0x00);
+  m.cpu.cpu.sp = 0x3100;
+  m.cpu.cpu.pc = 0x3000;
+  m.runUntil(() => m.waitingForInput() && /\nSAY\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "the chained SAY");
+  m.step = step;
+  assert.equal(onCard, true, "the records were on the card when the CCP began to load SAY");
+});
+
+test("a flush tries every line: the first line's write failing, the next still reaches the card, and warm boot says Write lost once (KS36b)", async () => {
+  const image = card();
+  const m = start(image);
+  // B:R.DAT, eight records not closed: a block of C3h and one of D4h, two dirty lines.
+  [2, ...Buffer.from("R       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 22, 0x5c);
+  for (const v of [0xc3, 0xd4])
+    for (let r = 0; r < 4; r += 1) {
+      for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, v);
+      bdos(m, 26, 0x2000);
+      bdos(m, 21, 0x5c);
+    }
+  failing(m, (block, data) => data.every((v) => v === 0xc3) && "fail");
+  m.mark = m.output.length;
+  m.cpu.cpu.pc = 0;
+  m.runUntil(() => m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
+  assert.equal(runOf(image, 0xc3), -1, "the failed line never reached the card");
+  assert.notEqual(runOf(image, 0xd4), -1, "the next line did");
+  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1);
+});
+
+test("the cold mount reads the table through a cache line, and leaves the TPA as it found it (KS36b)", () => {
+  const m = boot(standardCard(), { ramFill: 0x76 });
+  const tpa = Array.from({ length: 0x600 }, (_, i) => m.read(0x200 + i));
+  assert.ok(tpa.every((v) => v === 0x76), "0200h-07FFh untouched by the mount");
+});
+
+/** BIOS entry N (0 cold boot, 9 SELDSK, ...) with BC from a stub. */
+function bios(m, n, bc) {
+  const at = word(m, 1) - 3 + 3 * n;
+  stub(m, [0x01, bc & 0xff, bc >> 8, 0xcd, at & 0xff, at >> 8]);
+  return m.cpu.cpu;
+}
+
+test("a BIOS WRITE of type 1 to a directory block no line holds, on the volume written behind with dirty data lines, puts the data on the card first and then the directory (KS36b review)", async () => {
+  const image = await load(card(), [], { "BIG.DAT": pattern(40 * 512, (i) => i) });
+  const runs = (img) => (Buffer.from(img).toString("latin1").match(/\xc3{512}/g) ?? []).length;
+  const writes = [];
+  const m = start(image, { onSdWrite: (img) => writes.push(runs(img)) });
+  dirty(m);
+  // B:'s first directory record, read by the BIOS into 2400h.
+  const c = bios(m, 9, 1);
+  const dpb = word(m, ((c.h << 8) | c.l) + 10);
+  bios(m, 10, word(m, dpb + 13));
+  bios(m, 11, 0);
+  bios(m, 12, 0x2400);
+  assert.equal(bios(m, 13, 0).a, 0);
+  // A:BIG.DAT read through: its 40 blocks take every clean line, the directory's with it.
+  [1, ...Buffer.from("BIG     DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x2100 + i, v));
+  bdos(m, 15, 0x2100);
+  bdos(m, 26, 0x2200);
+  for (let r = 0; r < 160; r += 1) bdos(m, 20, 0x2100);
+  bdos(m, 26, 0x2000);
+  for (let r = 0; r < 4; r += 1) bdos(m, 21, 0x5c); // records 4 to 7: a dirty data line
+  assert.equal(runs(image), 0, "Q.DAT's two blocks dirty, none on the card");
+  const from = writes.length;
+  bios(m, 9, 1);
+  bios(m, 10, word(m, dpb + 13));
+  bios(m, 11, 0);
+  bios(m, 12, 0x2400);
+  assert.equal(bios(m, 14, 1).a, 0, "the directory record written back, type 1");
+  const after = writes.slice(from);
+  assert.ok(after.length >= 3, `the data and the directory reached the card (${after.length} card writes)`);
+  assert.equal(after[0], 1, "a data line first");
+  assert.equal(after.at(-2), 2, "both before the directory, last");
+  assert.deepEqual(m.violations, []);
+});
+
+/** Card block LBA's reads fail at SDREAD, as a card that won't give it. */
+function unreadable(m, lba) {
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("SDREAD")) {
+      const a = m.sym("SDLBA");
+      if ((m.read(a) | (m.read(a + 1) << 8) | (m.read(a + 2) << 16)) === lba) m.cpu.cpu.pc = m.sym("SDRCMD");
+    }
+    return step();
+  };
+}
+
+const fcbAt = (m, a) => Array.from({ length: 36 }, (_, i) => m.read(a + i));
+
+test("function 45's returned error leaves the FCB on the record a sequential read didn't read, as CP/M 3 does (KS36b review)", async () => {
+  const image = await load(card(false), [], { "R.DAT": pattern(8 * 128, (i) => (i >> 7) + 0x30) });
+  const lba = Buffer.from(image).indexOf(Buffer.alloc(128, 0x34)) / 512; // records 4 to 7's block
+  const m = start(image);
+  [1, ...Buffer.from("R       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 15, 0x5c);
+  bdos(m, 26, 0x2000);
+  for (let r = 0; r < 4; r += 1) bdos(m, 20, 0x5c);
+  bdos(m, 45, 0xff);
+  unreadable(m, lba);
+  const before = fcbAt(m, 0x5c);
+  bdos(m, 20, 0x5c);
+  assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 1], "a disk error, returned");
+  assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 4 next");
+});
+
+test("function 45's returned error leaves the FCB on the record a sequential write didn't write, as CP/M 3 does (KS36b review)", async () => {
+  const image = await load(card(false), []);
+  const m = start(image);
+  [2, ...Buffer.from("W       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
+  bdos(m, 22, 0x5c);
+  bdos(m, 26, 0x2000);
+  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0xc3);
+  for (let r = 0; r < 3; r += 1) bdos(m, 21, 0x5c);
+  bdos(m, 45, 0xff);
+  failing(m, (block, data) => data.some((v) => v === 0xc3) && "fail");
+  const before = fcbAt(m, 0x5c);
+  bdos(m, 21, 0x5c);
+  assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 1], "a disk error, returned");
+  assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 3 next, the record count unraised");
 });

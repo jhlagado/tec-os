@@ -119,8 +119,8 @@ CLADR:  ADD     A,A
 ; Read SDLBA's block straight into line A (CFILL), or write line A straight
 ; to its block (CWRITE). Z on success. CFILL enters the line on success and
 ; leaves it empty otherwise. CWRITE takes the block from the table, keeps
-; SDLBA, marks the line clean on success, and on a failure sets CFAIL and
-; leaves it dirty. Both keep A.
+; SDLBA, marks the line clean on success, and on a failure leaves it dirty
+; and returns NZ. Both keep A.
 CFILL:  PUSH    AF
         CALL    CLADR
         LD      A,LATEXP
@@ -168,29 +168,38 @@ CWRITE: PUSH    AF
         CALL    CDCLR           ; written: clean
         CP      A
         RET
-CWR9:   LD      C,1
-        LD      HL,CFAIL
-        LD      (HL),C
-        DEC     C
-        DEC     C               ; NZ
-        RET
+CWR9:	LD	C,A		; the line, kept
+	XOR	A
+	INC	A		; NZ: the write failed
+	LD	A,C
+	RET
 
-; Write every dirty line (CFLALL), or every one but line A (CFLUSH). NZ at
-; the first that fails; the rest stay dirty.
-CFLALL: LD      A,$FF
-CFLUSH: LD      (CSKIP),A
-        XOR     A
-CFS1:   LD      HL,CSKIP
-        CP      (HL)
-        JR      Z,CFS2
-        CALL    CDGET
-        CALL    NZ,CWRITE
-        RET     NZ
-CFS2:   INC     A
-        CP      NLINES
-        JR      C,CFS1
-        CP      A
-        RET
+; Write every dirty line (CFLALL), or every one but line A (CFLUSH). Each
+; is tried; one whose write fails is dropped, so the card's copy stands, and
+; the flush returns NZ if any did, Z if none. Returns A = the line left (FFh
+; for CFLALL). Destroys BC, DE and HL.
+CFLALL:	LD	A,$FF
+CFLUSH:	LD	C,A		; the line to leave
+	LD	B,0		; lines that failed
+	XOR	A
+CFS1:	CP	C
+	JR	Z,CFS2		; the one left
+	PUSH	BC
+	CALL	CDGET		; Z: clean, nothing to write
+	CALL	NZ,CWRITE	; keeps A, NZ if the card refused it
+	POP	BC
+	JR	Z,CFS2
+	PUSH	BC
+	CALL	CDROP		; failed: dropped, the card's copy stands
+	POP	BC
+	INC	B		; and counted
+CFS2:	INC	A		; every line, failures or not
+	CP	NLINES
+	JR	C,CFS1
+	LD	A,C		; the line left, for CWB3
+	INC	B
+	DEC	B		; NZ if any failed
+	RET
 
 ; A line for SDLBA's block: the next clean one in turn, or, with every line
 ; dirty, the next in turn written first. Z with A = the line; NZ if that
@@ -261,10 +270,12 @@ CRD1:   CALL    CRDREC
         XOR     A
         RET
 
-; BIOS WRITE on a write-behind volume, from BWRITE with its checks done and
-; C = 1 when the block needs no pre-read. The record goes into the block's
-; line, which is dirty; a directory write then writes every dirty line and
-; its own last, and never leaves its line dirty. Z on success.
+; BIOS WRITE, every volume, from BWRITE with its checks done and C = 1 when
+; the block needs no pre-read. The record goes into the block's line, which is
+; dirty. On a volume written through (CWTYPE bit 7) the line is written to the
+; card before the call returns, and dropped if that fails. On the one written
+; behind a directory write then writes every dirty line and its own last, and
+; never leaves its line dirty. Z on success.
 CWRBH:  PUSH    BC
         CALL    CLOOK
         POP     BC
@@ -273,6 +284,8 @@ CWRBH:  PUSH    BC
         CALL    CTAKE
         POP     BC
         RET     NZ
+	LD	HL,CWTYPE	; a line taken for this write
+	SET	6,(HL)
         INC     C
         DEC     C
         JR      Z,CWBF          ; the card's block first
@@ -312,44 +325,39 @@ CWB2:   PUSH    AF
         CALL    CDSET
         LD      C,A
         LD      A,(CWTYPE)
-        DEC     A
-        JR      Z,CWB3
+	OR	A
+	JP	M,CWBT		; written through: to the card now
+	RRCA			; type 1, a directory block: bit 0, as
+	JR	C,CWB3		; bit 6 may say a line was taken
         XOR     A               ; data: done
         RET
+CWBT:	LD	A,C		; written through: the line to the card
+	CALL	CWRITE
+	JR	NZ,CWBX		; failed: the line goes
+	LD	HL,CWTYPE
+	BIT	6,(HL)		; a line taken for this write is the next
+	RET	Z		; in turn again: writing through churns
+	LD	(CNEXT),A	; that one line, not the programs' blocks,
+	CP	A		; and keeps the block for its next record
+	RET
 CWB3:   LD      A,C             ; a directory block: the volume's data first,
         CALL    CFLUSH          ; then the directory line; if either fails,
-        LD      A,(CSKIP)       ; the line goes, so the card's directory
-        CALL    Z,CWRITE        ; stays the truth and is read again
-        RET     Z
-        CALL    CDROP
+	CALL	Z,CWRITE	; the line goes, so the card's directory
+        RET     Z               ; stays the truth and is read again
+CWBX:   CALL    CDROP
         OR      1               ; NZ
         RET
 
-; Warm boot: every dirty line written, and a failed write said. The rest of a
-; chained line goes, as it does on a BDOS error's exit.
-CWBOOT: CALL    CFLALL
-        LD      HL,CFAIL
-        LD      A,(HL)
-        OR      A
-        RET     Z
-        XOR     A
-        LD      (HL),A
-        LD      (CHPOS),A
-        LD      HL,CWMSG
-        JP      PUTS
+; Warm boot: every dirty line tried, and, if any failed and was dropped,
+; Write lost said once. The rest of a chained line goes, as it does on a BDOS
+; error's exit.
+CWBOOT:	CALL	CFLALL
+	RET	Z		; every line written
+	XOR	A
+	LD	(CHPOS),A	; the chained line goes
+	LD	HL,CWMSG
+	JP	PUTS
 
-; After a write through BLKBUF: the line that holds SDLBA's block, if one does,
-; takes the new contents, so that it can't hand back the old ones. Destroys AF,
-; BC, DE and HL.
-CREFR:	CALL	CLOOK		; A = the line, Z if there is one
-	RET	NZ		; not cached: nothing to keep true
-	LD	BC,$0001	; XMDST bank 1, XMSRC bank 0
-	LD	(XMDST),BC
-	CALL	CLADR		; HL = the line
-	LD	DE,BLKBUF	; from the block just written
-	LD	BC,512
-	CALL	MVCOPY		; a CALL: the host's guard on EXPAND 1 reads
-	RET			; the return address to name its writer
 CEND:
 
 ; MVCOPY: the cache's copy between EXPAND 0 and EXPAND 1. BC bytes from DE to

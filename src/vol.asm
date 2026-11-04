@@ -20,14 +20,14 @@ MENOA   EQU     $2A             ; no volume mounted as drive A
 ; Returns Z when drive A and any other assigned drives are mounted; else NZ
 ; with an ME* code in A and no drive mounted.
 MOUNT:  CALL    UNMOUNT
-        LD      HL,0
-        LD      (SDLBA),HL
-        LD      (SDLBA+2),HL
-        LD      HL,BLKBUF
-        CALL    SDREAD
+	LD	A,$FF		; every table block read afresh
+	LD	(MNTCB),A
+	XOR	A		; block 0, through a cache line
+	CALL	MNBLK
         LD      A,MEIO
         JP      NZ,MNTERR
-        LD      HL,BLKBUF       ; magic
+	CALL	MNHDR		; MNBUF = the header's first 32 bytes
+        LD      HL,MNBUF        ; magic
         LD      DE,FMTMAG
         LD      B,8
 MNMAG:  LD      A,(DE)
@@ -37,22 +37,22 @@ MNMAG:  LD      A,(DE)
         INC     HL
         INC     DE
         DJNZ    MNMAG
-        LD      A,(BLKBUF+HMAJOR)
+        LD      A,(MNBUF+HMAJOR)
         CP      FMTMAJ
         LD      A,MEVER
         JP      NZ,MNTERR
-        LD      HL,(BLKBUF+HHDRSZ)
+        LD      HL,(MNBUF+HHDRSZ)
         LD      DE,HDRSZ
         OR      A
         SBC     HL,DE
         LD      A,MESIZE
         JP      NZ,MNTERR
-        LD      HL,(BLKBUF+HDSCSZ)
+        LD      HL,(MNBUF+HDSCSZ)
         LD      DE,DSCSZ
         OR      A
         SBC     HL,DE
         JP      NZ,MNTERR
-        LD      HL,(BLKBUF+HCOUNT)
+        LD      HL,(MNBUF+HCOUNT)
         LD      A,H
         OR      A
         LD      A,MECOUNT
@@ -68,27 +68,26 @@ MNMAG:  LD      A,(DE)
         LD      A,L
         LD      (MNTCNT),A
         CALL    HDRSUM          ; HL = sum of all bytes except the checksum
-        LD      DE,(BLKBUF+HCKSUM)
         OR      A
-        SBC     HL,DE
+        SBC     HL,DE           ; DE = the checksum
         LD      A,MESUM
         JP      NZ,MNTERR
-        LD      HL,BLKBUF+HBLOCKS
+	CALL	MNHDR		; the header's fields again
+        LD      HL,MNBUF+HBLOCKS
         LD      DE,MNTBLK
         LD      BC,4
         LDIR
         XOR     A
-        LD      (MNTCB),A       ; block 0 is in the buffer
         LD      (MNTDRV),A
-        LD      A,(BLKBUF+HMINOR) ; a 1.0 card has no drives field or table sum;
+        LD      A,(MNBUF+HMINOR) ; a 1.0 card has no drives field or table sum;
         OR      A               ; its blocks 1-7 are free, as no volume starts
         JR      Z,MNV2          ; below block 8
-   LD      A,(BLKBUF+HDRIVES)
+   LD      A,(MNBUF+HDRIVES)
         LD      (MNTDRV),A
         CP      MAXDRV+1
         LD      A,MESIZE
         JP      NC,MNTERR
-        LD      HL,(BLKBUF+HTSUM)
+        LD      HL,(MNBUF+HTSUM)
         LD      (MNTSUM),HL
         ; Format 1.1: the table's blocks after block 0, count / 16 of them,
         ; sum to the header's tableSum.
@@ -110,11 +109,7 @@ MNSUMB: PUSH    BC
         LD      A,MEIO
         JP      NZ,MNTERR
         PUSH    BC
-        LD      HL,(MNTPRV)
-        LD      DE,BLKBUF
-        LD      BC,512
-	CALL	SUMDE		; the block added to the sum so far
-        LD      (MNTPRV),HL
+	CALL	MNSUM		; the block added to MNTPRV, the sum so far
         POP     BC
         INC     C
         DJNZ    MNSUMB
@@ -244,8 +239,7 @@ MNNEXT: LD      HL,MNTI
         OR      A
         LD      A,MENOA
         JR      Z,MNTERR
-        XOR     A
-        LD      (BUFOK),A       ; BLKBUF holds the table, not volume data
+        XOR     A               ; Z: mounted
         RET
 MNDBAD:	LD	A,MEDESC	; a descriptor check failed
 MNTERR: PUSH    AF
@@ -254,25 +248,80 @@ MNTERR: PUSH    AF
         OR      A
         RET
 
-; Read card block A (0-7, the container's table) into BLKBUF. NZ if it fails.
-MNBLK:  LD      (MNTCB),A
-        LD      L,A
-        XOR     A
-        LD      (BUFOK),A       ; metadata owns BLKBUF, even if the read fails
-        LD      H,0
-        LD      (SDLBA),HL
-        LD      L,H
-        LD      (SDLBA+2),HL
-        LD      HL,BLKBUF
-        CALL    SDREAD
-        RET     Z
-        LD      A,$FF
-        LD      (MNTCB),A       ; a failed read is not a cached table block
-        RET
+; Card block A (0-7, the container's table) in a cache line, MNTLN: read from
+; the card the first time it is asked for since MNTCB named another block, so
+; a mount reads the table as the card holds it. The line is an ordinary clean
+; one, left for the cache to take back in turn. NZ if the read fails.
+; Destroys AF, BC, DE and HL.
+MNBLK:	LD	(MNBUF+2),A	; the block, in MNBUF while it is free, so
+	LD	L,A		; that the stack stays shallow
+	LD	H,0
+	LD	(SDLBA),HL
+	LD	L,H
+	LD	(SDLBA+2),HL
+	CALL	CLOOK		; Z: a line holds it, A = the line
+	JR	NZ,MNB1
+	LD	C,A
+	LD	A,(MNTCB)
+	LD	HL,MNBUF+2
+	CP	(HL)		; read already since MNTCB was last set
+	LD	A,C
+	JR	NZ,MNB2		; held from before: read again
+MNB3:	LD	(MNTLN),A
+	LD	A,(MNBUF+2)
+	LD	(MNTCB),A
+	XOR	A
+	RET
+MNB1:	CALL	CTAKE		; a line for it, the next in turn
+	JR	NZ,MNBF
+MNB2:	CALL	CFILL		; keeps A, the line; Z if the card gave it
+	JR	Z,MNB3
+MNBF:	LD	A,$FF		; a failed read holds no table block;
+	LD	(MNTCB),A	; NZ still
+	RET
 
-; IX = descriptor A of the table, its block read into BLKBUF if it is not
-; already there (MNTCB). Block 0 holds 15 after the header, each later block
-; 16. NZ if the read fails.
+; MNBUF = the 32 bytes at offset HL of the table block in MNTLN, copied out
+; of EXPAND 1 (MNCP); MNHDR the header's first 32, where its fields are.
+; Destroys AF, BC, DE and HL.
+MNHDR:	LD	HL,0
+	JR	MNCPH
+MNCP:	LD	HL,(MNTPRV+2)	; MNSUM's offset; MNHDR's and DESCIX's
+MNCPH:	EX	DE,HL		; are given in HL: DE = the offset
+	LD	A,(MNTLN)
+	CALL	CLADR		; HL = the line
+	ADD	HL,DE
+	EX	DE,HL		; from the line, in EXPAND 1
+	LD	HL,MNBUF	; to MNBUF
+	LD	BC,$0100	; XMDST bank 0, XMSRC bank 1
+	LD	(XMDST),BC
+	LD	BC,32
+	JP	MVCOPY
+
+; MNTPRV's word = itself + the 512 bytes of the table block in MNTLN, 32 at a
+; time through MNBUF, since nothing runs with EXPAND 1 in view while it uses the
+; stack; the offset is kept in MNTPRV+2, so the stack stays shallow. Returns HL
+; = the sum. Destroys AF, BC and DE.
+MNSUM:	LD	HL,0
+	LD	(MNTPRV+2),HL	; the offset
+MNS1:	CALL	MNCP		; 32 bytes of it
+	LD	HL,(MNTPRV)
+	LD	DE,MNBUF
+	LD	BC,32
+	CALL	SUMDE		; added to the sum
+	LD	(MNTPRV),HL
+	LD	HL,(MNTPRV+2)
+	LD	DE,32		; the next 32
+	ADD	HL,DE
+	LD	(MNTPRV+2),HL
+	BIT	1,H		; 512 done
+	JR	Z,MNS1
+	LD	HL,(MNTPRV)
+	RET
+
+; IX = descriptor A of the table, copied into MNBUF from its block, which is
+; read first if it is not already in its line (MNBLK). Block 0 holds 15 after
+; the header, each later block 16. NZ if the read fails. Destroys AF, BC, DE
+; and HL.
 DESCIX: LD      C,0
         SUB     DSCBLK0
         JR      C,DX0
@@ -295,15 +344,17 @@ DX1:    LD      L,A
         ADD     HL,HL
         ADD     HL,HL
         ADD     HL,HL
-        LD      DE,BLKBUF
-        ADD     HL,DE
-        PUSH    HL
-        POP     IX
-        LD      A,(MNTCB)
-        CP      C
-        RET     Z
-        LD      A,C
-        JR      MNBLK
+	LD	(MNBUF),HL	; its offset in the block, in MNBUF
+	CALL	CDI		; while it is free (MNBLK keeps the
+	LD	A,C		; block at MNBUF+2); the cache walked
+	CALL	MNBLK		; with interrupts off, as a service's
+	CALL	CEI		; caller may have them on
+	RET	NZ
+	LD	HL,(MNBUF)
+	CALL	MNCPH
+	LD	IX,MNBUF
+	XOR	A		; Z
+	RET
 
 ; Install the descriptor at IX as drive (IX+DMOUNT). Preserves B and IX.
 MNONE:	PUSH	BC
@@ -491,10 +542,9 @@ VSMNT:	CALL	VSIN
 VSUNM:	CALL	VSIN
 	JR	VUNM
 VSDSC:	CALL	VSIN
-        PUSH    HL              ; describe
-        LD      A,E
-        CALL    VDESC
-        POP     DE
+        LD      A,E             ; describe
+	EX	DE,HL		; DE -> the caller's 32 bytes, which VDESC
+        CALL    VDESC           ; keeps, so that the stack stays shallow
         JR      NZ,VBAD
         PUSH    IX
         POP     HL
@@ -575,10 +625,10 @@ VBAD:	LD	A,TNEBAD	; refused, nothing changed
 	SCF
         RET
 
-; C = the drive from B, and BLKBUF marked as holding anything. Keeps B, DE, HL.
+; C = the drive from B, and every table block to be read afresh. Keeps B, DE, HL.
 VSIN:	LD	C,B
 	LD	A,$FF
-	LD	(MNTCB),A	; BLKBUF may hold anything
+	LD	(MNTCB),A	; no table block read yet
 	RET
 
 ; Before a drive's volume changes: write dirty cache lines, Z on success.
@@ -612,15 +662,16 @@ VCL1:   LD      (HL),0
         RET
 
 ; IX -> the descriptor at index A, A = the drive it is on (FFh none). NZ if A
-; is past the table or its block does not read.
+; is past the table or its block does not read. Keeps BC and DE; uses MNTI.
 VDESC:  LD      HL,MNTCNT
         CP      (HL)
         JR      NC,VDNO
         PUSH    BC
         PUSH    DE
-        PUSH    AF
-        CALL    DESCIX
-        POP     DE              ; D = the index
+	LD	(MNTI),A	; the index, off the stack, which a line
+        CALL    DESCIX          ; taken and written runs deep
+	LD	A,(MNTI)
+	LD	D,A		; D = the index
         JR      NZ,VDX
         INC     D
         LD      HL,DRVIDX
@@ -683,12 +734,14 @@ CMPNE:  CCF                     ; flags now describe (HL) - (DE)
         OR      1               ; (HL) > (DE): clear Z, carry already clear
         RET
 
-; Return HL = 16-bit sum of the header bytes, excluding the checksum field.
-HDRSUM: LD      HL,0
-        LD      DE,BLKBUF
-        LD      BC,HDRSZ
-	CALL	SUMDE		; every header byte
-        LD      DE,(BLKBUF+HCKSUM)
+; HL = 16-bit sum of the header's bytes, block 0 in MNTLN with MNBUF its first
+; 32, the checksum field left out, and DE = that checksum.
+HDRSUM:	LD	DE,(MNBUF+HCKSUM)
+	PUSH	DE		; the checksum, across the sum
+	LD	HL,0
+	LD	(MNTPRV),HL
+	CALL	MNSUM		; every header byte
+	POP	DE
         LD      A,E             ; take the two checksum bytes back out
         CALL    HSSUB
         LD      A,D

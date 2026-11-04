@@ -1,0 +1,105 @@
+{
+  "kind": "paired pure-helper proof; actual OLDSP return for fn35 publication/fn36; no BIOS/disk proof",
+  "romHashes": [
+    "ab2d0c6b8a8d5d36ad3c51af3ef22cfb166890cc412f51bb9352b7a80cb27ed6",
+    "3bcf5d24c78445fdf965c85c42447cae9192c4dd2818d2d116bbbab775564e4f"
+  ],
+  "equivalent": true,
+  "observations": 439,
+  "stats": {
+    "incumbent": {
+      "fcbaddr": {
+        "calls": 216,
+        "cycles": 98712,
+        "peakBytes": 4,
+        "actualReturnSP": 32768
+      },
+      "setrr": {
+        "calls": 192,
+        "cycles": 152064,
+        "peakBytes": 4,
+        "actualReturnSP": 32768
+      },
+      "size-publication": {
+        "calls": 7,
+        "cycles": 1414,
+        "peakBytes": 4,
+        "actualReturnSP": 32768
+      },
+      "pardir": {
+        "calls": 8,
+        "cycles": 52147,
+        "peakBytes": 12,
+        "actualReturnSP": 32768
+      },
+      "freeent": {
+        "calls": 16,
+        "cycles": 57208,
+        "peakBytes": 10,
+        "actualReturnSP": 32768
+      }
+    },
+    "candidate": {
+      "fcbaddr": {
+        "calls": 216,
+        "cycles": 98712,
+        "peakBytes": 4,
+        "actualReturnSP": 32768
+      },
+      "setrr": {
+        "calls": 192,
+        "cycles": 153408,
+        "peakBytes": 4,
+        "actualReturnSP": 32768
+      },
+      "size-publication": {
+        "calls": 7,
+        "cycles": 1463,
+        "peakBytes": 4,
+        "actualReturnSP": 32768
+      },
+      "pardir": {
+        "calls": 8,
+        "cycles": 59482,
+        "peakBytes": 12,
+        "actualReturnSP": 32768
+      },
+      "freeent": {
+        "calls": 16,
+        "cycles": 64112,
+        "peakBytes": 10,
+        "actualReturnSP": 32768
+      }
+    }
+  },
+  "negativeControls": [
+    {
+      "label": "publisher omitted third byte",
+      "rejected": true
+    },
+    {
+      "label": "publisher wrong destination",
+      "rejected": true
+    },
+    {
+      "label": "walker wrong byte stride",
+      "rejected": true
+    },
+    {
+      "label": "walker wrong high byte",
+      "rejected": true
+    },
+    {
+      "label": "mark truncated word count",
+      "rejected": true
+    },
+    {
+      "label": "clear truncated word count",
+      "rejected": true
+    },
+    {
+      "label": "clear without complemented mask",
+      "rejected": true
+    }
+  ]
+}

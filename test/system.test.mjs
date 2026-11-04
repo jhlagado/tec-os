@@ -21,7 +21,7 @@ test("cold boot leaves the overlay off, the classic bank selected and the CCP pr
   assert.equal(m.physicalBank, -1);
   const bdosVector = m.read(6) | (m.read(7) << 8);
   assert.equal(bdosVector, m.read(m.sym("STUBAD")) | (m.read(m.sym("STUBAD") + 1) << 8));
-  assert.equal(bdosVector, 0xb816, "the starter card's BDOS entry");
+  assert.equal(bdosVector, 0xb9f4, "the starter card's BDOS entry");
   assert.equal(m.read(0), 0xc3);
   assert.equal((m.read(1) | (m.read(2) << 8)) - 3, m.sym("RAMBIOS"));
   assert.equal(m.sym("RAMBIOS"), 0xbf00, "the RAM BIOS table is in the top page");
@@ -94,9 +94,9 @@ test("a clean boot's restart vectors are the defaults, and 0038h is EI; RETI", (
 test("without a card the diagnostic console reports and retries", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols });
-  assert.match(m.expect(/R retry, H header> $/, { from: 0, maxCycles: 80_000_000 }), /error 01/);
+  assert.match(m.expect(/R retry> $/, { from: 0, maxCycles: 80_000_000 }), /error 01/);
   m.type("R");
-  assert.match(m.expect(/R retry, H header> $/), /error 01/);
+  assert.match(m.expect(/R retry> $/), /error 01/);
 });
 
 test("without RAM at 8000h-BFFFh the boot says so on the serial console and stops", () => {
@@ -136,7 +136,7 @@ test("the ROM rejects an invalid container before mounting anything", () => {
     corrupt(image);
     const { rom, symbols } = romFor();
     const m = new Machine({ rom, symbols, sdImage: image });
-    const text = m.expect(/R retry, H header> $/, { from: 0, maxCycles: 80_000_000 });
+    const text = m.expect(/R retry> $/, { from: 0, maxCycles: 80_000_000 });
     assert.match(text, new RegExp(`error ${code}`), name);
   }
 });
@@ -165,9 +165,9 @@ test("BDOS file functions pass the probe", SLOW, async () => {
 const G1M = (mount, label) => ({ geometry: "G1M", label, mount });
 const G8M = (mount, label) => ({ geometry: "G8M", label, mount });
 const CARDS = [
-  { name: "the starter card", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK")], entry: 0xb816 },
-  { name: "the starter card with C:", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK"), G1M("C", "MORE")], entry: 0xb7d6 },
-  { name: "four 8 MiB volumes", volumes: ["A", "B", "C", "D"].map((d) => G8M(d, `VOL${d}`)), entry: 0xb556 },
+  { name: "the starter card", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK")], entry: 0xb9f4 },
+  { name: "the starter card with C:", volumes: [G1M("A", "SYSTEM"), G8M("B", "WORK"), G1M("C", "MORE")], entry: 0xb9b4 },
+  { name: "four 8 MiB volumes", volumes: ["A", "B", "C", "D"].map((d) => G8M(d, `VOL${d}`)), entry: 0xb734 },
 ];
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 

@@ -2,7 +2,7 @@
 ;
 ; TEC-OS ROM-resident adaptation of Portable CP/M (see PROVENANCE.md). Code
 ; and constant text stay in ROM. Every variable and the BDOS stack live in the
-; RAM block at the end of this file, which the BIOS clears at cold and warm
+; BDOS RAM block in src/ram.asm, which the BIOS clears at cold and warm
 ; boot before setting CURDMA to $0080.
 
 BDOSBAS:
@@ -89,8 +89,12 @@ BENTRY:
 	JP	Z,FNCHAIN
 	CP	44
 	JR	Z,FNMULT
+	CP	45
+	JR	Z,FNERRM
 	CP	46
 	JP	Z,FNFREE
+	CP	48
+	JR	Z,FNFLSH
 	CP	99
 	JR	Z,FNCHNO	; truncate: FFh, nothing changed
         CP      41
@@ -143,6 +147,21 @@ RETWORD:
 
 FNZERO:
         JP      BIOWBT
+
+; Function 45, CP/M 3's error mode: E = FFh, a BDOS error returns to the
+; program with A = FFh and H its code, and no message; FEh, the message and
+; then the same return; any other, the default: the message, a key, and the
+; program ends with the rest of a chained line. Warm boot puts it back to 0.
+FNERRM:	LD	A,E
+	LD	(ERRMODE),A
+	JR	RETZERO
+
+; Function 48, CP/M 3's flush: every changed line of the cache written. A = 0,
+; or FFh if any write failed, its line then dropped; E = FFh's purge is the same
+; flush, since dropping clean lines changes nothing a program can see.
+FNFLSH:	CALL	VFLUSH		; A = FFh, the line CFLALL leaves
+	JR	NZ,RETA		; a write failed: FFh
+	JR	RETZERO
 
 ; Function 108, CP/M 3's program return code: DE = FFFFh gets it into HL;
 ; any other DE sets it. One code for every program.
@@ -657,8 +676,8 @@ ROTEST: LD      DE,9
         BIT     7,(HL)
         RET     Z
         LD      HL,ERRFILE
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,3		; read-only file
+	JP	BDERR
 
 FNDELETE:
         CALL    CHKRO
@@ -858,14 +877,14 @@ WRITEPOS:
 
 WRITEBLK:
         CALL    POSREC
-        CALL    ADVWRITE
         LD      A,(WRTYPE)
         LD      C,A
         CALL    BIOWRS
         OR      A
         JR      NZ,WRITEBAD
-        XOR     A
-        RET
+	JR	ADVWRITE	; the FCB moves on once the record is
+				; written: function 45's returned error
+				; leaves it on that record, as CP/M 3 does
 
 WRITEBAD:
         JP      BADSECT
@@ -964,11 +983,12 @@ READCHK:
         OR      E
         JR      Z,READ_EOF
         CALL    POSREC
-        CALL    FCBCR
-        INC     (HL)
         CALL    BIORDS
         OR      A
-        CALL    NZ,BADSECT
+	JP	NZ,BADSECT	; returned: the FCB on the record unread
+        CALL    FCBCR           ; read: the next
+        INC     (HL)
+        XOR     A
         RET
 
 READ_EOF:
@@ -1027,28 +1047,18 @@ RANDPREP:
         LD      (SEQREC),A
 
         LD      A,C
-        AND     $80
-        RLCA
-        LD      B,A
+        RLCA                    ; r0 bit 7 becomes EX bit 0
         LD      A,D
-        ADD     A,A
-        AND     $1E
-        OR      B
+        RLA
+        AND     $1F
         LD      (TARGEX),A
 
-        LD      A,D
-        SRL     A
-        SRL     A
-        SRL     A
-        SRL     A
-        LD      B,A
-        LD      A,E
-        ADD     A,A
-        ADD     A,A
-        ADD     A,A
-        ADD     A,A
-        OR      B
-        AND     $3F
+        LD      A,D             ; r2 was proved zero before any FCB write
+        RRCA
+        RRCA
+        RRCA
+        RRCA
+        AND     $0F
         LD      (TARGS2),A
 
         CALL    FCBEX
@@ -1152,8 +1162,7 @@ FCBADDR:
         INC     HL
         INC     HL
         LD      C,(HL)          ; EXM
-        LD      DE,12
-        CALL    FCBOFF
+        CALL    FCBEX
         LD      A,(HL)
         AND     C
         LD      H,A
@@ -1564,16 +1573,8 @@ SIZEKEEP:
         JR      SIZELOOP
 
 SIZEDONE:
-        LD      DE,33
-        CALL    FCBOFF
-        LD      A,(FSIZE0)
-        LD      (HL),A
-        INC     HL
-        LD      A,(FSIZE1)
-        LD      (HL),A
-        INC     HL
-        LD      A,(FSIZE2)
-        LD      (HL),A
+        LD      DE,FSIZE0
+        CALL    PUBRR
         LD      A,$FF
         JP      RETA
 
@@ -1590,17 +1591,19 @@ FNSETRR:
         LD      A,(CAND2)
         ADC     A,0
         LD      (CAND2),A
-        LD      DE,33
-        CALL    FCBOFF
-        LD      A,(CAND0)
-        LD      (HL),A
-        INC     HL
-        LD      A,(CAND1)
-        LD      (HL),A
-        INC     HL
-        LD      A,(CAND2)
-        LD      (HL),A
+        LD      DE,CAND0
+        CALL    PUBRR
         JP      RETZERO
+
+; Publish three bytes from DE to the caller's random-record field.
+; HL/DE/BC are scratch; the callers finish through RETA or RETZERO.
+PUBRR:  LD      HL,(PARAM)
+        LD      BC,33
+        ADD     HL,BC
+        EX      DE,HL
+        LD      C,3             ; B is already zero
+        LDIR
+        RET
 
 ; Convert an FCB-shaped EX/S2 position at HL to its 24-bit record base.
 RECBASE:
@@ -2123,31 +2126,11 @@ DUSAVE:
         RET
 
 ; DE = the sum of the current drive's allocation vector, DSM / 8 + 1 bytes.
-ALVSUM: LD      HL,(DPBPTR)
-        LD      BC,5
-        ADD     HL,BC
-        LD      C,(HL)
-        INC     HL
-        LD      B,(HL)
-        SRL     B
-        RR      C
-        SRL     B
-        RR      C
-        SRL     B
-        RR      C
-        INC     BC
-        LD      HL,(ALVPTR)
-        LD      DE,0
-ALVSL:  LD      A,(HL)
-        ADD     A,E
-        LD      E,A
-        JR      NC,ALVS1
-        INC     D
-ALVS1:  INC     HL
-        DEC     BC
-        LD      A,B
-        OR      C
-        JR      NZ,ALVSL
+ALVSUM: CALL    ALVLEN
+        EX      DE,HL          ; existing SUMDE takes its source in DE
+        LD      HL,0
+        CALL    SUMDE
+        EX      DE,HL          ; sum in DE, pointer past the vector in HL
         RET
 
 DUPTR:
@@ -2156,9 +2139,9 @@ DUPTR:
         ADD     HL,BC
         RET
 
-; Clear the BIOS-owned allocation vector and copy the reserved-directory
-; bits supplied by the selected drive's DPB.
-INITALV:
+; Return BC = DSM / 8 + 1 allocation bytes, HL = the BIOS-owned vector.
+; Uses BC/HL and flags; preserves A/DE/IX/IY.
+ALVLEN:
         LD      HL,(DPBPTR)
         LD      BC,5
         ADD     HL,BC
@@ -2173,6 +2156,12 @@ INITALV:
         RR      C
         INC     BC
         LD      HL,(ALVPTR)
+        RET
+
+; Clear the BIOS-owned allocation vector and copy the reserved-directory
+; bits supplied by the selected drive's DPB.
+INITALV:
+        CALL    ALVLEN
 
 CLRAVL:
         ; Test the remaining count directly. Restoring AF here would restore
@@ -2226,48 +2215,31 @@ PARENT:
         LD      (DIRUSED),DE
         LD      DE,16
         ADD     HL,DE
-        LD      DE,(DPBPTR)
-        INC     DE
-        INC     DE
-        INC     DE
-        INC     DE
-        INC     DE
-        INC     DE
-        LD      A,(DE)
+        LD      IX,(DPBPTR)
+        LD      A,(IX+6)
         OR      A
-        JR      NZ,PARWORD
         LD      A,16
+        JR      Z,PARCNT
+        LD      A,8
+PARCNT:
         LD      (ALLEFT),A
-
-PARBYTE:
+PARCELL:
         LD      E,(HL)
         LD      D,0
         INC     HL
-        PUSH    HL
-        CALL    MARKBLK
-        POP     HL
-        LD      A,(ALLEFT)
-        DEC     A
-        LD      (ALLEFT),A
-        JR      NZ,PARBYTE
-        RET
-
-PARWORD:
-        LD      A,8
-        LD      (ALLEFT),A
-
-PARWLOOP:
-        LD      E,(HL)
-        INC     HL
+        LD      A,(IX+6)        ; BITPTR preserves/reloads this drive's DPB
+        OR      A
+        JR      Z,PARHAVE
         LD      D,(HL)
         INC     HL
+PARHAVE:
         PUSH    HL
         CALL    MARKBLK
         POP     HL
         LD      A,(ALLEFT)
         DEC     A
         LD      (ALLEFT),A
-        JR      NZ,PARWLOOP
+        JR      NZ,PARCELL
         RET
 
 FREEENT:
@@ -2277,39 +2249,28 @@ FREEENT:
         LD      IX,(DPBPTR)
         LD      A,(IX+6)
         OR      A
-        JR      NZ,FREEWORD
         LD      A,16
+        JR      Z,FREECNT
+        LD      A,8
+FREECNT:
         LD      (ALLEFT),A
-
-FREEBYTE:
+FREECELL:
         LD      E,(HL)
         LD      D,0
         INC     HL
-        PUSH    HL
-        CALL    CLRBLK
-        POP     HL
-        LD      A,(ALLEFT)
-        DEC     A
-        LD      (ALLEFT),A
-        JR      NZ,FREEBYTE
-        RET
-
-FREEWORD:
-        LD      A,8
-        LD      (ALLEFT),A
-
-FREEWLOP:
-        LD      E,(HL)
-        INC     HL
+        LD      A,(IX+6)        ; BITPTR preserves/reloads this drive's DPB
+        OR      A
+        JR      Z,FREEHAVE
         LD      D,(HL)
         INC     HL
+FREEHAVE:
         PUSH    HL
         CALL    CLRBLK
         POP     HL
         LD      A,(ALLEFT)
         DEC     A
         LD      (ALLEFT),A
-        JR      NZ,FREEWLOP
+        JR      NZ,FREECELL
         RET
 
 MARKBLK:
@@ -2424,28 +2385,21 @@ MASKLOOP:
         RET
 
 ; RONZ: NZ if the selected drive is read-only. Changes AF, DE, HL.
-RONZ:	CALL	DRVMASK		; HL = the drive's bit
-        LD      DE,(ROVEC)
-        LD      A,L
-        AND     E
-        LD      L,A
-        LD      A,H
-        AND     D
-        OR      L
-	RET
+RONZ:   LD      DE,(ROVEC)
+        JR      VTEST          ; DRVMASK preserves DE; same mask and Z result
 CHKRO:	CALL	RONZ		; writable: on
         RET     Z
         LD      HL,ERRRO
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,2		; read-only disk
+	JR	BDERR
 
 ; Failure diagnostics are deliberately kept behind one routine so later
 ; milestones can add the exact CP/M retry/abort interaction without coupling
 ; normal disk algorithms to console policy.
 SELFAIL:
         LD      HL,ERRSEL
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,4		; select
+	JR	BDERR
 
 ERRTEXT:
         LD      A,(HL)
@@ -2460,8 +2414,24 @@ ERRTEXT:
 
 BADSECT:
         LD      HL,ERRBAD
-        CALL    DISKERR
-        JP      CHDROP
+	LD	B,1		; disk I/O
+
+; A BDOS error, the message at HL and its code in B, as function 45's mode
+; says: returned to the program (FFh), said and returned (FEh), or said, a key
+; waited for and the program ended with the rest of a chained line (default).
+; A returned error leaves a chained line alone (KD-181).
+BDERR:	LD	A,(ERRMODE)
+	CP	$FE
+	JR	C,BDDEF		; the default
+	PUSH	BC
+	CALL	Z,DISKMSG	; FEh: the message first
+	POP	BC
+	LD	H,B		; H = the code, A = L = FFh
+	LD	L,$FF
+	JP	RETWORD
+BDDEF:	CALL	DISKMSG
+	CALL	GETCHAR		; a key, then the program ends
+	JP	CHDROP
 
 ; Reject corrupt allocation references before vector indexing or the 16-bit
 ; block-to-record shift. DE is the block; preserve it and HL/BC. IX identifies
@@ -2480,7 +2450,8 @@ BLKPAST:
         SBC     A,D
         RET
 
-DISKERR:
+; The message at HL after "Bdos Err On X".
+DISKMSG:
         PUSH    HL
         LD      HL,ERRHEAD
         CALL    ERRTEXT
@@ -2489,8 +2460,7 @@ DISKERR:
         LD      C,A
         CALL    OUTCHAR
         POP     HL
-        CALL    ERRTEXT
-        JR      GETCHAR
+        JR      ERRTEXT
 
 GETCHAR:
         LD      A,(PENDING)

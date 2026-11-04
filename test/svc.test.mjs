@@ -105,7 +105,7 @@ function ranges(m) {
     command: {
       "the CCP's and BDOS's state and stacks": [s("CCPRAM"), s("BDOSRME")],
       "the BIOS stack": [s("BSTKB"), s("BSTK")],
-      "the BIOS's block state and BLKBUF": [s("DSKCUR"), s("DRVTAB")],
+      "the BIOS's block state": [s("DSKCUR"), s("DRVTAB")],
       DIRBUF: [s("DIRBUF"), s("DIRBUF") + 128],
       LOGINV: [s("LOGINV"), s("LOGINV") + 2],
       "the SD and cache state": [s("SDBYTE"), s("KBMASK")],
@@ -581,7 +581,7 @@ const edit = (fn) => {
   return f;
 };
 const u16 = (at, v) => edit((_, d) => d.setUint16(at, v, true));
-const top = 0xb8; // (0006h)'s page on the card in standardCard()
+const top = 0xb9; // (0006h)'s page on the card in standardCard()
 const extraFor = (n) => n - S;
 const MALFORMED = [
   ["the file shorter than its header", good.file.slice(0, 16), 0x110],

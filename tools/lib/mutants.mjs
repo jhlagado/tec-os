@@ -662,3 +662,16 @@ export const MUTANTS_KS36C = [
   { name: "page zero: CONDEV written at 0045h too", ...ks34("src/console.asm", ["AND CDMTX", "LD (CONDEV),A"], ["AND CDMTX", "LD (CONDEV),A", "LD ($0045),A"], ["test/pagezero.test.mjs"]) },
   { name: "part 6: REMOVE takes UC1: in the field for this driver", ...ks34(PICOF, ["AND 3", "DEC A", "SCF", "RET Z"], ["AND 3", "CP 3", "SCF", "RET Z"], ["test/pico.test.mjs"]) },
 ];
+
+// KS36b: one mutant a promise of the block store, and its two new rules (KG43).
+const CACHEF = "src/cache.asm";
+const BIOSF = "src/bios.asm";
+const CTEST = ["test/cache.test.mjs"];
+export const MUTANTS_KS36B = [
+  { name: "promise 1: a volume written through no longer written before the call returns", ...ks34(BIOSF, ["LD HL,CWTYPE", "SET 7,(HL)", "JP CWRBH"], ["JP CWRBH"], CTEST) },
+  { name: "promise 2: CWB3's order reversed, the directory line before the data", ...ks34(CACHEF, ["CWB3: LD A,C", "CALL CFLUSH"], ["CWB3: LD A,C", "PUSH AF", "CALL CWRITE", "POP AF", "CALL CFLUSH"], CTEST) },
+  { name: "promise 3: the warm boot's flush removed", ...ks34(CACHEF, ["CWBOOT: CALL CFLALL"], ["CWBOOT: CP A"], CTEST) },
+  { name: "a flush that stops at its first failure", ...ks34(CACHEF, ["POP BC", "JR Z,CFS2"], ["POP BC", "RET NZ", "JR CFS2"], CTEST) },
+  // The table block read into 0200h as well as into its line, so that the machine still boots and only the TPA test can tell (KS36b review).
+  { name: "a mount that reads into fixed RAM", ...ks34("src/vol.asm", ["MNB2: CALL CFILL"], ["MNB2: PUSH AF", "LD HL,$0200", "CALL SDREAD", "POP AF", "CALL CFILL"], CTEST) },
+];

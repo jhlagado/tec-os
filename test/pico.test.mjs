@@ -165,12 +165,12 @@ test("PICO32.SVC writes the colours and an empty sprite table", () => {
 
 test("TPA after boot: one display, and both", () => {
   const top = (m) => word(m, 6) - 0x100;
-  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 46080);
-  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 46080);
+  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 46336);
+  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 46336);
   const m = start(both());
-  assert.equal(top(m), 45312, "a board with both, at boot: both in (KE-150)");
+  assert.equal(top(m), 45568, "a board with both, at boot: both in (KE-150)");
   say(m, "CON UC1");
-  assert.equal(top(m), 45312, "and CON UC1 loads nothing more");
+  assert.equal(top(m), 45568, "and CON UC1 loads nothing more");
 });
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/pico-screens.json"), "utf8"));
@@ -192,13 +192,13 @@ test("the starter card boots both drivers on a board with both, the PICO9918 the
   assert.deepEqual(files.map((f) => f.name), ["PICO.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45312], "both in, PICO.SVC the console (KE-150)");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45568], "both in, PICO.SVC the console (KE-150)");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 
 test("a dead card shows CARD? on the LCD, for a board with no terminal", () => {
   const m = new Machine({ ...romFor(), clock: TEST_CLOCK, tms: true, matrix: true });
-  m.expect(/R retry, H header> $/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/R retry> $/, { from: 0, maxCycles: 200_000_000 });
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "CARD?");
 });
 
@@ -206,11 +206,11 @@ test("a good retry clears CARD?, and a failed one shows it again", () => {
   const image = standardCard();
   image[0] ^= 0xff; // a card that starts, with no container to mount
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, matrix: true });
-  m.expect(/R retry, H header> $/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/R retry> $/, { from: 0, maxCycles: 200_000_000 });
   assert.equal(lcdRow(m, 3), "CARD?");
   m.mark = m.output.length;
   m.type("R");
-  m.expect(/R retry, H header> $/, { maxCycles: 200_000_000 });
+  m.expect(/R retry> $/, { maxCycles: 200_000_000 });
   assert.equal(lcdRow(m, 3), "CARD?");
   image[0] ^= 0xff;
   m.mark = m.output.length;

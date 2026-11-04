@@ -2,20 +2,20 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-46,870 bytes (`0100h–B815h`) on the starter card, and at least 46,166 on any
+47,348 bytes (`0100h–B9F3h`) on the starter card, and at least 46,645 on any
 card, since cold boot places the BDOS entry below the allocation vectors of
 the volumes mounted. A display's driver takes three pages under the stub's page,
-leaving 46,080 on the starter card and 45,312 with four 8 MiB volumes. A board
-with both displays, whose starter card installs both, has 45,312 on the starter
-card and 44,544 with four. The CCP loads a `.COM` up to the start of the page
+leaving 46,336 on the starter card and 45,824 with four 8 MiB volumes. A board
+with both displays, whose starter card installs both, has 45,568 on the starter
+card and 45,056 with four. The CCP loads a `.COM` up to the start of the page
 holding the word at `0006h`, so the largest it loads on the starter card is
-46,848 bytes (`0100h–B7FFh`), 21 below the TPA: a program may use the rest. It reports version 2.2.
+47,104 bytes (`0100h–B8FFh`), 244 below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
 
 The BDOS is an adaptation of Portable CP/M, which implements functions 0–40
 with their documented conventions; 38 and 39 return zero, and functions above
-40 return zero, except 47 and 108; CP/M 3's function 50 is not provided, and a
+40 return zero, except 45, 47, 48 and 108; CP/M 3's function 50 is not provided, and a
 program reaches the BIOS through the jump table at `(0001h)`. Function 108 is CP/M 3's program return code: `DE =
 FFFFh` gets it into `HL`, any other `DE` sets it; one code serves every
 program, and it is 0 after a reset. The CCP clears it as it takes each
@@ -24,7 +24,14 @@ built-in that fails. Function 47 is TEC-OS's chain, from CP/M 3's: the
 command at the DMA address, ended by a 0 within 128 bytes, replaces what is
 left of the CCP's line and the program ends by warm boot; a string with no 0
 there, or holding a CR or LF, returns `A = FFh` and the program goes on. `E`
-is ignored. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
+is ignored. Function 45 is CP/M 3's error mode: with `E = FFh` a BDOS error
+returns to the program with `A = FFh` and `H` its code (1 disk I/O, 2 read-only
+disk, 3 read-only file, 4 select) and no message, and the rest of a chained line
+stays; with `FEh` the message is said first; any other `E` is the default, the
+message, a key and the program's end. Warm boot puts the default back. Function
+48 is CP/M 3's flush: every changed line of the cache goes to the card, `A = 0`,
+or `FFh` if a write failed, that line then dropped; `E = FFh`'s purge is the same
+flush. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
 
 | Area | Functions | Result |
 | --- | --- | --- |
@@ -186,8 +193,8 @@ and run.
 - **`[more]`.** The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 46,165 bytes of TPA, may fail; how much a card gives depends on
-  its volumes, and on a board with a display driver 44,544 is the least.
+  more than 46,644 bytes of TPA, may fail; how much a card gives depends on
+  its volumes, and on a board with a display driver 45,056 is the least.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,
@@ -230,8 +237,8 @@ byte isn't `C3h`. A service claims its vectors in its flags, by `docs/services.m
 
 ### The BDOS
 
-Functions 0 to 40, 47, 50 and 108, as above. 38 and 39 return zero, and so does any
-other function above 40.
+Functions 0 to 40, 45, 47, 48 and 108, as above. Functions 38 and 39 and
+unsupported functions above 40 return zero.
 
 ### The service format
 
@@ -258,4 +265,4 @@ a chained line.
 | Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
 | Page zero | `0040h` holds `LATCHV` alone; `0041h` to `004Fh` are unused, the console's state moved above the RAM BIOS table (KS36c), and `MAINS` and `EXPANDS` are gone with MAIN 1's count. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
-| TPA | 46,870 on the starter card with no display, 46,080 with one display's driver and 45,312 with two | 45,830 at `7029f57` |
+| TPA | 47,348 on the starter card with no display, 46,336 with one display's driver and 45,568 with two, since KS36b's block store took `BLKBUF` out of the workspace | 45,830 at `7029f57` |

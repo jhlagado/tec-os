@@ -72,7 +72,7 @@ test("cold boot refuses a table out of order, an overlap, a payload past the con
   const { rom, symbols } = romFor();
   const errorOf = (image) => {
     const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });
-    const out = m.expect(/R retry, H header> $/, { from: 0, maxCycles: 200_000_000 });
+    const out = m.expect(/R retry> $/, { from: 0, maxCycles: 200_000_000 });
     return out.match(/error ([0-9A-F]{2})/)?.[1];
   };
   const reseal = (img) => {
