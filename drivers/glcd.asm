@@ -96,22 +96,24 @@ GLCWL:	IN	A,(GLCCMD)	; bit 7, busy, into carry
 GLCWOK:	XOR	A		; Z: ready
 	RET
 
-; Send command A once the controller is ready; after a timeout the byte
-; goes out all the same. Returns A = the byte; destroys F. Preserves BC, DE,
-; HL.
+; Send command A once the controller is ready; after a timeout the byte is
+; dropped, not sent. Returns A = the byte, Z if it was sent and NZ if not;
+; destroys F. Preserves BC, DE, HL.
 GLCC:	LD	(GLOUT),A	; held over the wait, off the stack
 	CALL	GLCWAIT
 	LD	A,(GLOUT)
+	RET	NZ		; never ready: nothing sent (KE-198)
 	OUT	(GLCCMD),A	; to the instruction register
 	RET
 
 ; Send data A, as GLCC does a command, to the graphics RAM at the
 ; controller's address: two bytes make a word, left half first, and the
-; address then moves to the next word. Returns A = the byte; destroys F.
-; Preserves BC, DE, HL.
+; address then moves to the next word. Returns A = the byte, Z if it was
+; sent and NZ if not; destroys F. Preserves BC, DE, HL.
 GLCDW:	LD	(GLOUT),A	; held over the wait, off the stack
 	CALL	GLCWAIT
 	LD	A,(GLOUT)
+	RET	NZ		; never ready: nothing sent
 	OUT	(GLCDAT),A	; to the data register
 	RET
 
