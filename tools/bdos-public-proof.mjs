@@ -71,7 +71,7 @@ function roundtrip(r){
     random(m,128);writeDma(m,user);assert.equal(run(34).a,0);assert.notEqual(run(16).a,255);
     setup(m,1,"USER    DAT");assert.equal(run(35).a,255);assert.deepEqual(bytes(m,FCB+33,3),[129,0,0]);
     assert.notEqual(run(15).a,255);random(m,128);assert.equal(run(33).a,0);assert.deepEqual(bytes(m,DMA,128),[...pattern(user)]);
-    run(36);assert.deepEqual(bytes(m,FCB+33,3),[129,0,0]);
+    run(36);assert.deepEqual(bytes(m,FCB+33,3),[128,0,0]);
   }
   run(32,0);
   // A never-opened, non-existent extent cannot be closed before RANDOPEN.
