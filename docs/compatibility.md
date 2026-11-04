@@ -62,6 +62,10 @@ next prompt in that number's low four bits.
 Function 13 resets the disks and selects drive A, and leaves the user number
 as it is, as CP/M 2.2's does.
 
+Function 22 makes the extent the FCB's `EX` names, of module 0: as CP/M
+2.2's make, it clears `S2` and keeps `EX`, and clears `S1`, the record
+count and the allocation map.
+
 A file with the read-only attribute (`t1`'s bit 7) is refused with
 `File R/O` (`Bdos Err On A: File R/O` for a file on A:), and the program
 ends after a key, for a write (21, 34, 40) through an FCB opened on it, a

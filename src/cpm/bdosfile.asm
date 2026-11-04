@@ -300,20 +300,27 @@ DELDONE:
 
 ; Create an empty extent in the first unused directory slot. The caller FCB
 ; is initialized independently of the directory-buffer representation.
-; Function 22. As CP/M 2.2's make, the FCB's EX and S2 are kept: the entry
-; made is that extent. Returns 0 to 3 in A, or FFh when the directory is full.
+; Function 22. As CP/M 2.2's make, which clears the module (clrmodnum)
+; first: S2 is cleared, full directory or not, and EX kept, so the entry
+; made is extent EX of module 0. Returns 0 to 3 in A, or FFh when the
+; directory is full.
 FNMAKE:
 	CALL	CHKRO		; error 2 on a read-only drive
+	CALL	FCBEX		; S2, two bytes past EX, cleared
+	INC	HL
+	INC	HL
+	LD	(HL),0
 	CALL	MAKEFCB
 	JP	RETA		; 0 to 3, or FFh: the directory full
 
 ; Make a directory entry for the FCB at PARAM in the current drive's first
-; empty slot, for the extent its EX and S2 name: a file's first for a make,
-; or the extent a write moves to. As CP/M 2.2's make, S1, RC and the
-; allocation map are cleared and EX kept; S2 keeps its module, its flag bits
-; cleared. The entry is written from the FCB, the user its first byte, and
-; then the FCB's S2 bit 7 set. Returns the slot's place 0 to 3 in A, or FFh
-; with the FCB untouched when the directory is full. Changes every register.
+; empty slot, for the extent its EX and S2 name: function 22's, its S2
+; cleared by FNMAKE, or the extent a write moves to (ADVEXT, RANDMISS), its
+; module kept. As CP/M 2.2's make, S1, RC and the allocation map are cleared
+; and EX kept; S2 keeps its module, its flag bits cleared. The entry is
+; written from the FCB, the user its first byte, and then the FCB's S2 bit 7
+; set. Returns the slot's place 0 to 3 in A, or FFh with the FCB untouched
+; when the directory is full. Changes every register.
 MAKEFCB:
 	LD	HL,(PARAM)	; mode 3: an empty slot, searched for
 	LD	(SRCHFCB),HL	; in the whole directory, not only
