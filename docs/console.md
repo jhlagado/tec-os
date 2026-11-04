@@ -13,8 +13,12 @@ field at `0003h`:
 A reset starts on `TTY:`, and a display driver's load takes the console
 unless the other display's driver is in already.
 The CCP's `CON` command shows the console in use; `CON TTY`, `CON CRT`,
-`CON BAT` and `CON UC1` (a colon may follow) change it, as `STAT CON:=CRT:`
-or any program writing the IOBYTE does. The BIOS acts on a change at the
+`CON BAT` and `CON UC1` (a colon may follow), or `CON PICO` for `CRT:` and
+`CON GLCD` for `UC1:`, change it, as `STAT CON:=CRT:` or any program writing
+the IOBYTE does. After `CRT` or `PICO` a width, 80, 40 or 32, sets the
+PICO9918's columns through `PICO.SVC`'s table (`PICOWID`, version 3 of the
+"PICO" record); any other width, a width after another name, or no driver in
+that takes one, and the command is refused with nothing changed. The BIOS acts on a change at the
 next console call: it clears and homes the new screen. `CRT:` or `UC1:`
 without its display or the keyboard falls back to the serial terminal, so
 there is always a console. The 20 × 4 LCD is never the console.

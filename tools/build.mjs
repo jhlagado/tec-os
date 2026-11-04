@@ -155,16 +155,18 @@ function checkAbi(at, rom) {
   for (const [n, cd] of Object.entries(bits)) check(at(n) === at(cd), `abi.inc: ${n} is not ${cd}`);
 }
 
-/** abi.inc's PICOREG to PICORD against each PICO driver's table: the word at
- *  that offset from VTAB is the entry. */
+/** abi.inc's PICOREG to PICORD, and PICOWID from version PICOVER, against each
+ *  PICO driver's table: the word at that offset from VTAB is the entry. */
 async function checkPicoTable() {
   const inc = readFileSync(resolve(SRC, "abi.inc"), "utf8");
   const offsets = new Map([...inc.matchAll(/^(PICO[A-Z]+)\s+EQU\s+(\d+)\b/gm)].map((m) => [m[1], Number(m[2])]));
-  const entries = { PICOREG: "GFXREG", PICOFIL: "GFXFIL", PICOWR: "GFXWR", PICORD: "GFXRD" };
-  check(offsets.size === Object.keys(entries).length, "abi.inc: the PICO table's offsets");
+  const entries = { PICOREG: "GFXREG", PICOFIL: "GFXFIL", PICOWR: "GFXWR", PICORD: "GFXRD", PICOWID: "TMSWID" };
+  check(offsets.size === Object.keys(entries).length + 1 && offsets.has("PICOVER"), "abi.inc: the PICO table's offsets");
   for (const defs of Object.values(PICO_WIDTHS)) {
     const { file, symbols } = await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") });
+    const version = file[symbols.REC + 10];
     for (const [n, label] of Object.entries(entries)) {
+      if (n === "PICOWID" && version < offsets.get("PICOVER")) continue;
       const at = symbols.VTAB + offsets.get(n);
       check((file[at] | (file[at + 1] << 8)) === symbols[label], `abi.inc: ${n} is not ${label} in the PICO table`);
     }

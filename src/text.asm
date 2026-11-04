@@ -34,8 +34,11 @@ CPCLOSE:
         DB      "CLOSE ERROR",CR,LF,'$'
 CPCOPIED:
         DB      "COPIED ",'$'
-CONNAMS:
-        DB      "TTYCRTBATUC1"
+CONNAMS:                        ; four bytes each, a 0 after three letters;
+        DB      "TTY",0,"CRT",0 ; the last, PICO's record name too
+        DB      "BAT",0,"UC1",0
+        DB      "GLCDPICO    "
+CONWID: DB      "80",80,"40",40,"32",32 ; CON PICO's widths: typed, columns
 CONHDR:
         DB      "CON: ",'$'
 CONTTY:

@@ -1099,34 +1099,99 @@ CMDUNL:	CALL	SVCUNL
 	JP	NC,STARTED	; carry: SVCUNL refused
 	JP	BADCMD
 
+; CON's name loop: not this name, so the next, or a bad command after six.
+CONNO:
+        POP     HL
+CONSKIP:
+        INC     DE              ; to the next name
+        DEC     C
+        JR      NZ,CONSKIP
+        INC     B
+        LD      A,B
+        CP      6
+        JR      NZ,CONNXT
+        JP      BADCMD
+
 ; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon
-; may follow) sets the IOBYTE CON: field. The BIOS switches at the next
-; console call, so the report appears on the new console, and names the
-; serial terminal when the chosen display or keyboard is missing.
+; may follow), or PICO for CRT: and GLCD for UC1:, sets the IOBYTE CON: field.
+; After CRT or PICO a width, 80, 40 or 32, goes to PICO.SVC through its table's
+; PICOWID entry, version 3 (KD-174); none in that takes it, or any other
+; width, and the command is refused. The BIOS switches at the next console
+; call, so the report appears on the new console, and names the serial
+; terminal when the chosen display or keyboard is missing.
 CMDCON:
         CALL    ARGSKIP         ; an error names the argument
-        JR      Z,CONSHOW
+	JP	Z,CONSHOW
         LD      DE,CONNAMS
         LD      B,0
 CONNXT:
         PUSH    HL
-        LD      C,3
+        LD      C,4
 CONCMP:
         LD      A,(DE)
+	OR	A
+	JR	Z,CONMAT	; a three-letter name's end
         CP      (HL)
         JR      NZ,CONNO
         INC     HL
         INC     DE
         DEC     C
         JR      NZ,CONCMP
-        POP     AF              ; matched: drop the saved text pointer
-        LD      A,(HL)
+CONMAT:	POP	AF		; matched: drop the saved text pointer
+	LD	A,B		; GLCD (4) is UC1:, PICO (5) CRT:, 11 - 2B
+	CP	4
+	JR	C,CONHIT
+	ADD	A,A
+	CPL
+	ADD	A,12
+	LD	B,A
+CONHIT:	LD	A,(HL)
         CP      ':'
-        JR      NZ,CONEND
+	JR	NZ,CONEND
         INC     HL
-CONEND:
-        CALL    ENDCHK
-        CALL    CONFLD
+CONEND:	CALL	SKIPSP
+	OR	A
+	JR	Z,CONNW		; no width
+	LD	A,B
+	CP	CMCRT
+	JP	NZ,BADCMD	; a width after CRT: alone
+	LD	DE,CONWID	; 80, 40 or 32: two digits, then the
+	LD	B,3		; columns
+CONW1:	LD	A,(DE)
+	INC	DE
+	CP	(HL)
+	LD	A,(DE)
+	INC	DE
+	INC	HL
+	JR	NZ,CONW2
+	CP	(HL)
+	JR	Z,CONW3
+CONW2:	DEC	HL
+	INC	DE
+	DJNZ	CONW1
+	JP	BADCMD
+CONW3:	INC	HL
+	CALL	ENDCHK
+	LD	A,(DE)		; the columns
+	PUSH	AF
+	LD	DE,CONNAMS+20	; "PICO    " at version 3
+	LD	BC,PICOVER*256+TNFIND
+	CALL	ABICALL
+	POP	BC		; B = the columns
+	JP	C,BADCMD	; none in that takes a width
+	LD	DE,PICOWID
+	ADD	HL,DE
+	LD	A,(HL)
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	LD	A,B
+	CALL	VHLJP		; A = the columns: carry if refused
+	JP	C,BADCMD
+	LD	B,CMCRT
+	JR	CONFL
+CONNW:	CALL	ENDCHK
+CONFL:	CALL	CONFLD
         LD      A,B             ; UC1: the GLCD's driver, if it is not in
         CP      CMUC1
         CALL    Z,GLCLD
@@ -1146,17 +1211,6 @@ CONSHOW:
         LD      DE,CRLFMSG
         CALL    PUTSTR
         JP      MAINLOOP
-CONNO:
-        POP     HL
-CONSKIP:
-        INC     DE              ; to the next name
-        DEC     C
-        JR      NZ,CONSKIP
-        INC     B
-        LD      A,B
-        CP      4
-        JR      NZ,CONNXT
-        JP      BADCMD
 
 ; USER accepts one decimal user number in the CP/M 2.2 range 0..15.
 CMDUSER:

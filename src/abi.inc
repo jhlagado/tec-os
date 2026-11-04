@@ -116,3 +116,10 @@ PICOREG	EQU	16		; register B = A
 PICOFIL	EQU	18		; DE bytes of A from VRAM address HL
 PICOWR	EQU	20		; BC bytes from DE to VRAM address HL
 PICORD	EQU	22		; BC bytes from VRAM address HL to DE
+
+; Version 3 adds the width, which CON PICO 80, 40 or 32 calls. It takes no
+; claim.
+PICOVER	EQU	3		; the version with PICOWID
+PICOWID	EQU	24		; A = 80, 40 or 32 columns: the console
+				; at that width, cleared; carry if
+				; refused

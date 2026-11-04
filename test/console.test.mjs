@@ -49,6 +49,25 @@ test("CON switches the console between devices and falls back to serial", () => 
   assert.deepEqual(m.violations, []);
 });
 
+test("CON PICO and CON GLCD name CRT: and UC1:; a width goes after CRT or PICO alone, 80, 40 or 32, and only to a driver whose table has the width (KD-174)", () => {
+  const image = standardCard();
+  volume(image, "A").write("GLCD.SVC", GLCD_SVC);
+  const m = boot(image, { tms: true, matrix: true });
+  m.command("CON GLCD");
+  assert.equal(m.read(3) & 3, 3, "GLCD is UC1:");
+  m.command("CON TTY");
+  assert.equal(m.read(3) & 3, 0);
+  m.command("CON PICO:");
+  assert.equal(m.read(3) & 3, 1, "PICO is CRT:");
+  m.command("CON TTY");
+  for (const line of ["CON PICO 50", "CON PICO 4", "CON PICO 400", "CON PICO 4O", "CON GLCD 40", "CON TTY 80", "CON PICOX", "CON PIC", "CON GLC 40"])
+    assert.match(m.command(line), /\?\r\n/, `${line}: refused`);
+  // The PICO.SVC of this commit is table version 2, with no width: a width is refused, the field unchanged.
+  for (const line of ["CON PICO 40", "CON CRT 32", "CON PICO: 80"]) assert.match(m.command(line), /\?\r\n/, `${line}: no driver takes it`);
+  assert.equal(m.read(3) & 3, 0, "nothing changed");
+  assert.deepEqual(m.violations, []);
+});
+
 test("CRT: without a PICO9918 falls back to the serial terminal", () => {
   const m = boot(standardCard(), { matrix: true });
   assert.equal(m.read(3) & 3, 3, "the GLCD is chosen at boot");
