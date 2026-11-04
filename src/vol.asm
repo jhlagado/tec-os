@@ -348,8 +348,10 @@ DX1:    LD      L,A
         ADD     HL,HL
         ADD     HL,HL
 	LD	(MNBUF),HL	; its offset in the block, in MNBUF
-	LD	A,C		; while it is free (MNBLK keeps the
-	CALL	MNBLK		; block at MNBUF+2)
+	CALL	CDI		; while it is free (MNBLK keeps the
+	LD	A,C		; block at MNBUF+2); the cache walked
+	CALL	MNBLK		; with interrupts off, as a service's
+	CALL	CEI		; caller may have them on
 	RET	NZ
 	LD	HL,(MNBUF)
 	CALL	MNCPH
@@ -543,10 +545,9 @@ VSMNT:	CALL	VSIN
 VSUNM:	CALL	VSIN
 	JR	VUNM
 VSDSC:	CALL	VSIN
-        PUSH    HL              ; describe
-        LD      A,E
-        CALL    VDESC
-        POP     DE
+        LD      A,E             ; describe
+	EX	DE,HL		; DE -> the caller's 32 bytes, which VDESC
+        CALL    VDESC           ; keeps, so that the stack stays shallow
         JR      NZ,VBAD
         PUSH    IX
         POP     HL
@@ -664,15 +665,16 @@ VCL1:   LD      (HL),0
         RET
 
 ; IX -> the descriptor at index A, A = the drive it is on (FFh none). NZ if A
-; is past the table or its block does not read.
+; is past the table or its block does not read. Keeps BC and DE; uses MNTI.
 VDESC:  LD      HL,MNTCNT
         CP      (HL)
         JR      NC,VDNO
         PUSH    BC
         PUSH    DE
-        PUSH    AF
-        CALL    DESCIX
-        POP     DE              ; D = the index
+	LD	(MNTI),A	; the index, off the stack, which a line
+        CALL    DESCIX          ; taken and written runs deep
+	LD	A,(MNTI)
+	LD	D,A		; D = the index
         JR      NZ,VDX
         INC     D
         LD      HL,DRVIDX

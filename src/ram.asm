@@ -38,7 +38,7 @@ MNTBLK: DS      4               ; the container's length in blocks
 MNTPRV: DS      4               ; the previous descriptor's end, or the table's sum
 MNTSUM: DS      2               ; format 1.1: blocks 1-7's sum, from the header
 MNTDRV: DS      1               ; format 1.1: drives wanted; 0 for a 1.0 card
-MNTI:   DS      1               ; the descriptor being checked
+MNTI:   DS      1               ; the descriptor being checked, or VDESC's
 MNTCB:  DS      1               ; the table block in MNTLN's line, FFh none
 MNTLN:  DS      1               ; the line that holds it
 MNBUF:  DS      32              ; 32 bytes of it: the header's, or a descriptor

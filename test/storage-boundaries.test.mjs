@@ -4,14 +4,14 @@ import { Machine } from './lib/machine.mjs';
 import { ABI, romFor, TEST_CLOCK, volume } from './lib/fixtures.mjs';
 import { createContainer, parseContainer } from '../tools/lib/container.mjs';
 
-function start() {
+function start(opts = {}) {
   const image = createContainer([
     { geometry: 'G1M', label: 'SYSTEM', mount: 'A' },
     { geometry: 'G8M', label: 'WORK', mount: 'B', writeBehind: true },
     { geometry: 'G1M', label: 'OTHER' },
   ], { drives: 4 });
   volume(image, 'A').write('KEEP.DAT', new Uint8Array(128).fill(0xaa));
-  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK });
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000);
   return { m, image };
@@ -169,32 +169,56 @@ for (const fn of [34, 40]) test(`BDOS ${fn} accepts random record 65535 with exa
   assert.deepEqual(bytes(m, 0x4000, 128), Uint8Array.from({ length: 128 }, (_, i) => i ^ 0xa5));
 });
 
-// A3: MOUNT and UNMOUNT write a drive's dirty lines first. Their stack, with
-// lines written behind waiting, stays within abi.inc's bound of 24 bytes below
-// the return address.
-test("MOUNT and UNMOUNT with dirty lines written behind stay within abi.inc's 24 bytes of stack, and write the lines (A3)", (t) => {
+// A3: MOUNT and UNMOUNT write a drive's dirty lines first. Each volume service's
+// stack stays within abi.inc's bound of 24 bytes below the return address, with
+// the cache clean and with every line dirty, so that taking a line for the
+// table writes one first (KS36b review).
+const dirtyLines = (m) => {
+  const at = m.sym('CDIRTY') - 0x8000;
+  return Array.from({ length: m.sym('NLINES') }, (_, i) => m.expand[1][at + i]).filter(Boolean).length;
+};
+/** Record R of B:'s data area, from track 2, holding VALUE. */
+function writeAt(m, r, value) {
+  call(m, 'BSELDSK', { c: 1 });
+  const dph = m.cpu.cpu.h << 8 | m.cpu.cpu.l;
+  const dpb = m.read(dph + 10) | m.read(dph + 11) << 8;
+  const spt = m.read(dpb) | m.read(dpb + 1) << 8;
+  word(m, 'DSKTRK', 2 + Math.floor(r / spt)); word(m, 'DSKSEC', r % spt); word(m, 'DSKDMA', 0x4000);
+  for (let i = 0; i < 128; i++) m.write(0x4000 + i, value);
+  assert.equal(call(m, 'BWRITE', { c: 0 }), 0, `record ${r}`);
+}
+test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean and with every line dirty, walk the cache with interrupts off, and MOUNT and UNMOUNT write the lines (A3)", (t) => {
   const deepest = {};
-  // B: is left dirty both times: UNMOUNT takes B: away, MOUNT puts OTHER on C:.
-  for (const [name, op, drive, index] of [["UNMOUNT", 1, 1, 0], ["MOUNT", 0, 2, 2]]) {
-    const { m, image } = start();
-    for (let sector = 0; sector < 24; sector += 1) writeRecord(m, 1, sector, 0x40 + sector);
-    const before = image.slice();
-    let low = 0x3000;
-    const step = m.step.bind(m);
-    m.step = () => {
-      const sp = m.cpu.cpu.sp;
-      if (sp < low && sp > 0x2f00) low = sp;
-      return step();
-    };
-    const got = op === 0 ? svc(m, op, drive, index) : svc(m, op, drive);
-    m.step = step;
-    deepest[name] = 0x3000 - low;
-    assert.equal(got, 0, `${name} succeeds`);
-    const [work, other] = parseContainer(image).volumes.slice(1, 3);
-    const changed = image.findIndex((v, i) => v !== before[i]);
-    assert.ok(changed >= work.start * 512 && changed < other.start * 512, `${name}: B:'s dirty lines reached the card, first change at ${changed}`);
-    assert.ok(deepest[name] <= 24, `${name}: ${deepest[name]} bytes below the return address`);
-  }
-  assert.ok(deepest.UNMOUNT > 0 && deepest.MOUNT > 0, JSON.stringify(deepest));
+  // B: is left dirty: UNMOUNT takes B: away, MOUNT puts OTHER on C:, DESCRIBE reads OTHER's descriptor.
+  for (const every of [false, true])
+    for (const [name, op, drive, index] of [['UNMOUNT', 1, 1, 0], ['MOUNT', 0, 2, 2], ['DESCRIBE', 2, 0, 2]]) {
+      const { m, image } = start({ ram96: true });
+      const n = every ? m.sym('NLINES') : 6;
+      for (let block = 0; block < n; block += 1) writeAt(m, 4 * block, 0x40 + block);
+      if (every) assert.equal(dirtyLines(m), m.sym('NLINES'), 'every line dirty');
+      const before = image.slice();
+      let low = 0x3000, walkedOn = 0;
+      const walk = new Set(['CLOOK', 'CTAKE', 'CFILL'].map((n) => m.sym(n)));
+      const step = m.step.bind(m);
+      m.step = () => {
+        const sp = m.cpu.cpu.sp;
+        if (sp < low && sp > 0x2f00) low = sp;
+        if (walk.has(m.pc) && m.cpu.cpu.iff1) walkedOn += 1;
+        return step();
+      };
+      m.cpu.cpu.iff1 = m.cpu.cpu.iff2 = 1; // called with interrupts on
+      const got = svc(m, op, drive, index);
+      m.step = step;
+      const key = `${name}${every ? ', every line dirty' : ''}`;
+      deepest[key] = 0x3000 - low;
+      assert.equal(got, 0, `${key} succeeds`);
+      assert.equal(walkedOn, 0, `${key}: the cache walked with interrupts off`);
+      if (name !== 'DESCRIBE') {
+        const [work, other] = parseContainer(image).volumes.slice(1, 3);
+        const changed = image.findIndex((v, i) => v !== before[i]);
+        assert.ok(changed >= work.start * 512 && changed < other.start * 512, `${key}: B:'s dirty lines reached the card, first change at ${changed}`);
+      }
+    }
   t.diagnostic(`stack below the return address: ${JSON.stringify(deepest)}`);
+  for (const [key, d] of Object.entries(deepest)) assert.ok(d > 0 && d <= 24, `${key}: ${d} bytes below the return address`);
 });
