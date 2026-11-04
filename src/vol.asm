@@ -262,25 +262,22 @@ MNBLK:	LD	(MNBUF+2),A	; the block, in MNBUF while it is free, so
 	CALL	CLOOK		; Z: a line holds it, A = the line
 	JR	NZ,MNB1
 	LD	C,A
-	LD	A,(MNBUF+2)
-	LD	B,A
 	LD	A,(MNTCB)
-	CP	B		; read already since MNTCB was last set
+	LD	HL,MNBUF+2
+	CP	(HL)		; read already since MNTCB was last set
 	LD	A,C
-	JR	Z,MNB3
-	JR	MNB2		; held from before: read again
-MNB1:	CALL	CTAKE		; a line for it, the next in turn
-	JR	NZ,MNBF
-MNB2:	CALL	CFILL		; keeps A, the line; Z if the card gave it
-	JR	NZ,MNBF
+	JR	NZ,MNB2		; held from before: read again
 MNB3:	LD	(MNTLN),A
 	LD	A,(MNBUF+2)
 	LD	(MNTCB),A
 	XOR	A
 	RET
-MNBF:	LD	A,$FF		; a failed read holds no table block
-	LD	(MNTCB),A
-	OR	A		; NZ
+MNB1:	CALL	CTAKE		; a line for it, the next in turn
+	JR	NZ,MNBF
+MNB2:	CALL	CFILL		; keeps A, the line; Z if the card gave it
+	JR	Z,MNB3
+MNBF:	LD	A,$FF		; a failed read holds no table block;
+	LD	(MNTCB),A	; NZ still
 	RET
 
 ; MNBUF = the 32 bytes at offset HL of the table block in MNTLN, copied out
