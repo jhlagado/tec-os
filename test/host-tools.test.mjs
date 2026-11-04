@@ -177,6 +177,31 @@ test("a read-only file is neither written over nor erased without force, by CpmV
   assert.doesNotMatch(run("dir", img, "A"), /KEEP/, "forced: written over, then erased");
 });
 
+test("a file whose entry names a block past DSM is not read, by CpmVolume or tecvol get: the error names the entry (KE-AR11)", () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-dsm-"));
+  const img = resolve(dir, "card.img");
+  const run = (...args) => execFileSync(process.execPath, [resolve(ROOT, "tools/tecvol.mjs"), ...args], { encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
+  run("create", img, "--volume", "G1M:SYSTEM:A");
+  const payload = resolve(dir, "data.bin");
+  writeFileSync(payload, new Uint8Array(128).fill(0x41));
+  run("put", img, "A", payload, "BAD.DAT");
+  run("put", img, "A", payload, "GOOD.DAT");
+  const image = readFileSync(img);
+  const a = volume(image, "A");
+  const e = a.scan().find((x) => x.name === "BAD.DAT");
+  const raw = a.entry(e.index);
+  raw[15] = 0x80; // 128 records, so the second slot is read
+  raw[18] = 0xff; // and it names block 32767, past G1M's DSM of 511
+  raw[19] = 0x7f;
+  writeFileSync(img, image);
+  assert.match(a.verify().join("\n"), /block 32767 beyond DSM/);
+  assert.throws(() => a.read("BAD.DAT"), /BAD\.DAT.*extent 0.*block 32767/, "CpmVolume.read refuses");
+  assert.equal(a.read("GOOD.DAT")[0], 0x41, "another file reads");
+  const out = resolve(dir, "out.bin");
+  assert.throws(() => run("get", img, "A", "BAD.DAT", out), /BAD\.DAT.*block 32767/, "tecvol get refuses");
+  assert.throws(() => readFileSync(out), /ENOENT/, "and writes no file");
+});
+
 test("a recipe builds a verified card and rejects a wrong digest", async () => {
   const files = { "HELLO.TXT": Buffer.from("hello\r\n\x1a") };
   const recipe = {

@@ -120,7 +120,11 @@ export class CpmVolume {
     return this.list({ user }).find((f) => f.key === key);
   }
 
-  /** Read a file's records. text: stop at the first ^Z and convert CRLF to LF. */
+  /**
+   * Read a file's records. text: stop at the first ^Z and convert CRLF to LF.
+   * An entry naming a block past DSM is damage, not data: it throws, naming
+   * the entry, rather than read zeros for that block (KE-AR11).
+   */
   read(name, { user = 0, text = false } = {}) {
     const f = this.find(name, user);
     if (!f) throw new CpmError(`${user}/${name} not found`);
@@ -133,6 +137,7 @@ export class CpmVolume {
       const end = e.extent * 128 + Math.min(e.rc, 128);
       // A slot's place in the entry fixes its records, holes included.
       for (const [k, b] of e.slots) {
+        if (b > this.d.dsm) throw new CpmError(`${user}/${name}: extent ${e.extent} (directory entry ${e.index}) names block ${b}, beyond DSM ${this.d.dsm}`);
         const record0 = firstLogical * 128 + k * recordsPerBlock;
         const n = Math.min(recordsPerBlock, end - record0, f.records - record0);
         if (n <= 0) continue;
