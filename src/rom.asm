@@ -23,6 +23,8 @@
 %INCLUDE "sd.asm"
 %INCLUDE "vol.asm"
 %INCLUDE "cpm/ccp.asm"
+%INCLUDE "cpm/ccpfile.asm"
+%INCLUDE "cpm/ccpcmd.asm"
 %INCLUDE "cpm/bdos.asm"
 %INCLUDE "cpm/bdosfile.asm"
 %INCLUDE "cpm/bdosrec.asm"
