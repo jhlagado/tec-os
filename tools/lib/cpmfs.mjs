@@ -128,10 +128,13 @@ export class CpmVolume {
     const recordsPerBlock = this.blockBytes / RECORD;
     for (const e of f.entries) {
       const firstLogical = e.extent - (e.extent % this.extentsPerEntry);
+      // The entry ends at its last logical extent's RC, whatever its blocks
+      // hold past it; records no entry holds stay zero.
+      const end = e.extent * 128 + Math.min(e.rc, 128);
       // A slot's place in the entry fixes its records, holes included.
       for (const [k, b] of e.slots) {
         const record0 = firstLogical * 128 + k * recordsPerBlock;
-        const n = Math.min(recordsPerBlock, f.records - record0);
+        const n = Math.min(recordsPerBlock, end - record0, f.records - record0);
         if (n <= 0) continue;
         out.set(this.data.subarray(b * this.blockBytes, b * this.blockBytes + n * RECORD), record0 * RECORD);
       }
