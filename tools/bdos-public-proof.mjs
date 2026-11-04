@@ -65,6 +65,15 @@ function roundtrip(r){
     // A different, never-created extent forces RANDOPEN/RANDMISS.
     random(m,1024);assert.equal(run(33).a,4);
   }
+  // Distinct user areas survive the same random I/O and publication paths.
+  for(const user of [5,31]){
+    run(32,user);setup(m,1,"USER    DAT");assert.notEqual(run(22).a,255);
+    random(m,128);writeDma(m,user);assert.equal(run(34).a,0);assert.notEqual(run(16).a,255);
+    setup(m,1,"USER    DAT");assert.equal(run(35).a,255);assert.deepEqual(bytes(m,FCB+33,3),[129,0,0]);
+    assert.notEqual(run(15).a,255);random(m,128);assert.equal(run(33).a,0);assert.deepEqual(bytes(m,DMA,128),[...pattern(user)]);
+    run(36);assert.deepEqual(bytes(m,FCB+33,3),[129,0,0]);
+  }
+  run(32,0);
   // A never-opened, non-existent extent cannot be closed before RANDOPEN.
   setup(m,1,"ABSENT  DAT");random(m,128);assert.equal(run(33).a,3);
   // Read-only file errors precede r2 overflow. Function30 can clear the bit.
@@ -74,7 +83,7 @@ function roundtrip(r){
   assert.deepEqual(m.violations,[]);assert.ok(peak()<=40,"BDOS keeps a quarter of54 bytes free");
   m.cpu.cpu.pc=0;m.runUntil(()=>m.ready()&&/A>$/.test(m.text()),400000000,"flush warm boot");
   const reopen=boot(r,image.slice());setup(reopen,1);const size=call(reopen,35);
-  const files=["A","B"].map(d=>({drive:d,files:volume(image,d).list().map(f=>({...f,hash:sha(volume(image,d).read(f.name))}))}));
+  const files=["A","B"].map(d=>({drive:d,files:volume(image,d).list().map(f=>({...f,hash:sha(volume(image,d).read(f.name,{user:f.user}))}))}));
   return {rows,peak:peak(),cardHash:sha(image),files,reopenedSize:size.fcbs.slice(33),reopenedOutput:reopen.text()};
 }
 function fullDirectory(r){
