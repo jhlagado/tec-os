@@ -187,7 +187,8 @@ COLBACK:
 	RET
 
 ; During output, a key waiting is taken (CONSTQ: no cursor drawn). ^S pauses
-; until the next key, which is taken and dropped; ^P turns the printer echo
+; until the next key, which is taken: ^C ends the program by warm boot, as
+; CP/M 2.2's conbrk does, and any other is dropped. ^P turns the printer echo
 ; on or off; any other key is kept for the next console read. Changes A and
 ; what the BIOS's status and input change.
 CHKKEY:
@@ -197,7 +198,10 @@ CHKKEY:
 	CALL	GETCHAR		; a key ready: taken
 	CP	CTRLS		; ^S: a pause
 	JR	NZ,CHKPRN
-	JP	GETCHAR		; the next key resumes, dropped
+	CALL	GETCHAR		; the next key resumes
+	CP	CTRLC		; ^C: the program ends, with the rest
+	JP	Z,CHDROP	; of a chained line
+	RET			; any other: dropped
 
 ; The key in A, not ^S, during output: ^P turns the printer echo on or off;
 ; any other is kept for the next console read. Changes A.
