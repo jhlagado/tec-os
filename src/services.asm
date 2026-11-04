@@ -311,6 +311,11 @@ RTCR1:  LD      A,$70           ; clock high, read, enabled
         POP     BC
         RET
 
+; TNFONT: HL = the console font in the ROM, the one both display drivers draw
+; from (KD-159).
+HWSFONT:LD	HL,FONT
+	JP	HWOK
+
 ; TNDRVR: B = the mode, then VIDHOOK's. A refusal returns A = TNEBAD with carry.
 SVDRV:	LD	A,B
 	CP	CMCRT		; CRT: or UC1:, and nothing else:

@@ -13,7 +13,7 @@
 ;
 ; VRAM: patterns at 0000h, names at 0800h (1000h for 80 columns), Graphics I
 ; colours at 2000h and sprite attributes at 1B00h. Patterns 00h-7Fh are the
-; console font, which is this driver's own, and 80h-FFh their reverse images. A
+; console font, copied from the ROM's at INIT, and 80h-FFh their reverse images. A
 ; second name table one page up lets row moves be built out of sight and shown
 ; with one register write. No VRAM access timing is enforced.
 %INCLUDE "../src/abi.inc"
@@ -44,7 +44,11 @@ TPDRAW: DB      0               ; the page drawn and the page shown: offset
 TPSHOW: DB      0               ; high byte, 0 or TPG
 TMVCOPY:DB      0               ; 1 while a row move builds the hidden page
 
-INIT:	LD	C,TNINFO	; B = what answered at cold boot
+INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
+	CALL	ABICALL		; refuses the number, and INIT with it
+	RET	C
+	LD	(FONTP),HL
+	LD	C,TNINFO	; B = what answered at cold boot
 	CALL	ABICALL
 	BIT	1,B		; HWBPICO
         SCF
@@ -132,12 +136,12 @@ TMSPAT: LD      A,D
         SUB     $20
         JR      NC,TMSCH
         XOR     A               ; codes below 20h are blank, the space glyph
-TMSCH:  LD      L,A             ; HL = FONT + 8 * (code - 20h)
+TMSCH:  LD      L,A             ; HL = the font + 8 * (code - 20h)
         LD      H,0
         ADD     HL,HL
         ADD     HL,HL
         ADD     HL,HL
-	LD	BC,FONT		; this driver's own, relocated
+	LD	BC,(FONTP)	; the ROM's, from TNFONT
         ADD     HL,BC
 TMSGLY: LD      B,8
 TMSROW: LD      A,(HL)
@@ -376,6 +380,5 @@ TMSREGS:DB      $04,$50,NAMES/$400+3,$00,$00,$00,$00,$F4
 TMSREGS:DB      $00,$D0,NAMES/$400,$00,$00,$00,$00,$F4
 %ENDIF
 
-; The console font, last in the image.
-%INCLUDE "font.asm"
+FONTP:	DW	0		; the ROM's font, from TNFONT
 IMGEND:

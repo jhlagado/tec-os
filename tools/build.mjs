@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
 import { FORMAT, PICO_WIDTHS, checkInterfaces, makeSvc } from "./lib/svc.mjs";
-import { driverFontSource } from "./lib/font.mjs";
+import { romFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = resolve(ROOT, "src");
@@ -132,6 +132,8 @@ GEOESZ  EQU     6
     );
   }
   writeFileSync(resolve(GEN, "geom.asm"), lines.join("\n") + "\n");
+  // The ROM's copy of the font, service 15's (KS36c), in the data block.
+  writeFileSync(resolve(GEN, "font.asm"), romFontSource(ROOT));
   return s;
 }
 
@@ -143,7 +145,7 @@ let currentDefinitions = {};
 function checkAbi(at, rom) {
   const byte = (a) => rom[a - 0xc000];
   check(String.fromCharCode(byte(at("ABITAB")), byte(at("ABITAB") + 1), byte(at("ABITAB") + 2)) === "TNA", "the signature at ABITAB");
-  check(byte(at("ABIMAJ")) === 5 && byte(at("ABIMIN")) === 0, "ABI 5.0 at ABIMAJ and ABIMIN");
+  check(byte(at("ABIMAJ")) === 5 && byte(at("ABIMIN")) === 1, "ABI 5.1 at ABIMAJ and ABIMIN");
   check(byte(at("ABICALL")) === 0xc3 && (byte(at("ABICALL") + 1) | (byte(at("ABICALL") + 2) << 8)) === at("SVCDSP"), "ABICALL is JP SVCDSP");
   check(at("ABIEND") === at("ABICALL") + 3 && at("ABIEND") - at("ABITAB") === 8, "the table is 8 bytes");
   check(at("SVCFMT") === FORMAT, `abi.inc's SVCFMT is ${at("SVCFMT")}, tools/lib/svc-format.mjs has ${FORMAT}`);
@@ -167,12 +169,6 @@ async function checkPicoTable() {
       check((file[at] | (file[at + 1] << 8)) === symbols[label], `abi.inc: ${n} is not ${label} in the PICO table`);
     }
   }
-}
-
-/** drivers/font.asm is committed, so that a driver builds with nothing
- *  generated first, and it stays the text the font file gives. */
-function checkDriverFont() {
-  check(readFileSync(resolve(ROOT, "drivers/font.asm"), "utf8") === driverFontSource(ROOT), "drivers/font.asm is not format/font5x7.txt");
 }
 
 /** A service's source reaches the ROM only through abi.inc's names. The build
@@ -250,7 +246,6 @@ async function buildProfile(name) {
   check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
   checkAbi(at, rom);
   await checkPicoTable();
-  checkDriverFont();
   checkServiceSources();
   check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);
   check(at("BDOSRME") === RAMBIOS, `the fixed workspace must end at the RAM BIOS table, not ${hex(at("BDOSRME"))}`);

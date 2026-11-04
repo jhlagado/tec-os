@@ -207,7 +207,7 @@ and run.
 
 ## The contract at this commit
 
-What another program or study may rely on, in one place. ABI 5.0 is not frozen
+What another program or study may rely on, in one place. ABI 5.1 is not frozen
 until a release. `src/abi.inc` is the published form, and the ROM assembles from it.
 
 ### The ROM table
@@ -216,8 +216,8 @@ until a release. `src/abi.inc` is the published form, and the ROM assembles from
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` |
 | `C006h` | `ABIMAJ` | Major version, 5 |
-| `C007h` | `ABIMIN` | Minor version, 0 |
-| `C008h` | `ABICALL` | `JP` to the 15 services numbered 0 to 14 in C: the hardware services, mount, unmount, describe, the video drivers' hook, find and list |
+| `C007h` | `ABIMIN` | Minor version, 1 |
+| `C008h` | `ABICALL` | `JP` to the 16 services numbered 0 to 15 in C: the hardware services, mount, unmount, describe, the video drivers' hook, find, list and the font |
 
 The table ends at `C00Bh`. `abi.inc` gives each service's arguments, results, carry and stack.
 `PUTAT` returns status 2 on the serial terminal, or while the PICO9918 is claimed and
@@ -257,4 +257,4 @@ a chained line.
 | Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
 | Page zero | `0040h` to `004Fh` hold the same names but `MAINS` at `0041h` and `EXPANDS` at `0044h`, gone with MAIN 1's count; both bytes are unused. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
-| TPA | 46,869 on the starter card with no display, 45,312 with one display's driver and 43,776 with two | 45,830 at `7029f57` |
+| TPA | 46,869 on the starter card with no display, 46,080 with one display's driver and 45,312 with two | 45,830 at `7029f57` |

@@ -3,7 +3,7 @@
 ; checks that the controller answers and hands the ROM its video table through
 ; TNDRVR; the CCP then takes the console, unless a PICO9918 has it, and the
 ; ROM's terminal calls its six routines directly, on the caller's stack. It
-; keeps its screen text, its counters and its own font here, and moves rows to
+; keeps its screen text and its counters here, draws from the ROM's font, and moves rows to
 ; and from the ROM's LINEBUF, whose address TNDRVR returns. Its REMOVE, at
 ; UNLOAD, gives the console back to serial.
 %INCLUDE "../src/abi.inc"
@@ -31,7 +31,11 @@ LBUF:   DW      0               ; LINEBUF, from TNDRVR
 ; ROM's loader leaves the console where it is (SVCGO): a line in STARTUP.CMD
 ; gives way to PICO.SVC quietly (KE-150). It publishes no record. REMOVE gives
 ; the console back, to PICO.SVC if that is in.
-INIT:	CALL	GLCWAIT
+INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
+	CALL	ABICALL		; refuses the number, and INIT with it
+	RET	C
+	LD	(FONTP),HL
+	CALL	GLCWAIT
         SCF
         RET     NZ
 	LD	B,3		; UC1:
@@ -342,10 +346,10 @@ GLGL1:  LD      L,A
         AND     7
         ADD     A,L
         LD      L,A
-	LD	A,LOW(FONT)	; the font's start, added by hand so that C
+	LD	A,(FONTP)	; the font's start, added by hand so that C
 	ADD	A,L		; and DE stay
         LD      L,A
-	LD	A,HIGH(FONT)
+	LD	A,(FONTP+1)
         ADC     A,H
         LD      H,A
         LD      A,(HL)
@@ -366,7 +370,6 @@ GLROWP: DS      2
 GLOFF:  DS      1
 GLWN:   DS      1
 GLOUT:  DS      1
+FONTP:  DW      0               ; the ROM's font, from TNFONT
 
-; The console font, last in the image.
-%INCLUDE "font.asm"
 IMGEND:

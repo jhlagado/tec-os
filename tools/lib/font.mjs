@@ -1,5 +1,5 @@
-// The console font, format/font5x7.txt: one parser for the display drivers' copy
-// (drivers/font.asm), the diagnostics ROM's and the tests.
+// The console font, format/font5x7.txt: one parser for the ROM's copy, which
+// the display drivers draw from, the diagnostics ROM's and the tests.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -41,4 +41,4 @@ export function fontSource(root, heading) {
 }
 
 /** drivers/font.asm's text. */
-export const driverFontSource = (root) => fontSource(root, "; The console font, 8 bytes a character from 20h, for each display driver. From\n; format/font5x7.txt: the build checks that the two agree. Do not edit.");
+export const romFontSource = (root) => fontSource(root, "; The console font, 8 bytes a character from 20h, service 15's. Generated from\n; format/font5x7.txt by tools/build.mjs. Do not edit.");

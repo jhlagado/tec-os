@@ -130,8 +130,9 @@ The display size is published in the table at `C003h` (the word at
 their screen without being rebuilt for each display.
 
 The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows. The
-ROM holds none: each display driver carries its own copy, `drivers/font.asm`, as
-the diagnostics ROM does, and the build checks it against that file.
+ROM holds one copy, built from that file, and both display drivers draw from it:
+each asks for it at `INIT` with `TNFONT`, service 15. The diagnostics ROM builds
+its own from the same file.
 
 ## Matrix keyboard
 

@@ -81,7 +81,7 @@ SVTAB:	DW	HWSINFO,HWSDIG	; 0 and 1
 	DW	HWSRTC,VSMNT	; 8 and 9
 	DW	VSUNM,VSDSC	; 10 and 11
 	DW	SVDRV,SVFND	; 12 and 13
-	DW	SVLST		; 14
+	DW	SVLST,HWSFONT	; 14 and 15
 
 ; ---- loader.asm and cpm/ccp.asm: FCB templates -------------------------------
 GLCFCB: DB      1,"GLCD    SVC"

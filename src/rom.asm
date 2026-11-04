@@ -10,6 +10,7 @@
 %INCLUDE "abi.asm"
 %INCLUDE "tables.asm"
 %INCLUDE "gen/geom.asm"
+%INCLUDE "gen/font.asm"
 %INCLUDE "text.asm"
 %INCLUDE "boot.asm"
 %INCLUDE "bios.asm"

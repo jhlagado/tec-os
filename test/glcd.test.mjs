@@ -104,9 +104,9 @@ test("the resident GLCD draws every screen of the workload as the driver did, by
   assert.deepEqual(m.violations, []);
 });
 
-test("on a GLCD board (0006h) is six pages lower than with the driver, and no more", { timeout: 1_800_000 }, async () => {
+test("on a GLCD board (0006h) is three pages lower than with the driver, and no more", { timeout: 1_800_000 }, async () => {
   const { bdosVector } = await workload;
-  assert.equal(bdosVector, REF.bdosVector - 0x606);
+  assert.equal(bdosVector, REF.bdosVector - 0x306);
 });
 
 test("a program on the CCP stack calls CONOUT directly in its 28 bytes, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async () => {
@@ -127,7 +127,7 @@ test("UNLOAD gives the console back to serial and the pages to the TPA, and outp
   m.type("UNLOAD\r");
   m.runUntil(() => m.waitingForInput() && m.read(m.sym("CONMOD")) === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
   assert.equal(word(m, 6), before);
-  assert.equal(loaded, (before & 0xff00) - 0x600);
+  assert.equal(loaded, (before & 0xff00) - 0x300);
   const s0 = m.serialText().length;
   m.type("FILL\r"); // HALT over the freed pages, then a line through the BDOS
   m.runUntil(() => m.serialText().slice(s0).includes("FILLED") && m.waitingForInput(), 60_000_000, "FILL's line on serial");

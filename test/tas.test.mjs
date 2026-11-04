@@ -123,7 +123,7 @@ async function underAtom(source, opt) {
   return (await assembleProgram(made.copy)).bytes;
 }
 
-const COMMON = { "ABI.INC": text("src/abi.inc"), "FONT.ASM": text("drivers/font.asm") };
+const COMMON = { "ABI.INC": text("src/abi.inc") };
 
 for (const [name, defs] of Object.entries(PICO_WIDTHS)) {
   test(`${name}'s source assembles under TAS to Atom's bytes`, { skip: TAS.skip, timeout: 900_000 }, async () => {

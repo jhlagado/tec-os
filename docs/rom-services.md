@@ -1,11 +1,11 @@
 # The ROM table and the hardware services
 
-Status: **Built**, ABI 5.0. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
-at `C008h`, to 15 *numbered services*: 9 *hardware services* in `src/services.asm`, and
-the volumes', the display drivers' hook and the registry's. `test/hwsvc.test.mjs`
+Status: **Built**, ABI 5.1. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
+at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.asm`, and
+the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,645 bytes (`tecos`) and has 1,739 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,421 bytes (`tecos`) and has 963 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -25,7 +25,7 @@ the ROM only through the table. The build checks this order from the symbol tabl
 
 ## The ROM table
 
-ABI 5.0. `src/abi.inc`, published in `dist/` as `abi.inc`, gives the table's
+ABI 5.1. `src/abi.inc`, published in `dist/` as `abi.inc`, gives the table's
 addresses and each service's number, arguments, results, carry and stack; the ROM
 assembles from the same file, so the two can't disagree. A program tests for major
 version 5 exactly: a new major may renumber the services, and a new minor only adds
@@ -37,13 +37,23 @@ built for ABI 4, is refused by the loader before its INIT runs.
 | --- | --- | --- |
 | `C003h` | `ABITAB` | `"TNA"` signature |
 | `C006h` | `ABIMAJ` | ABI major version, 5 |
-| `C007h` | `ABIMIN` | ABI minor version, 0 |
+| `C007h` | `ABIMIN` | ABI minor version, 1: 1 adds `TNFONT` |
 | `C008h` | `ABICALL` | `JP` to the service numbered in C |
 
 EXPAND 1 is TEC-OS's own, and no interface leaves it in view: `BF00h` and `BE00h`
 free, `BD00h` the command history, `BC00h` the block cache's table and
 `8000h–BBFFh` its 30 lines. Cold boot clears EXPAND 1, the cache with it; its
 contents do not survive a reset, and warm boot leaves them.
+
+## The font
+
+| C | Arguments | Returns |
+| --- | --- | --- |
+| 15, `TNFONT` | — | HL = the console font in the ROM: 96 characters of 8 bytes, one a row from the top, from 20h |
+
+Both display drivers draw from this copy, built from `format/font5x7.txt`, and
+ask for it at `INIT`; a ROM before ABI 5.1 refuses the number, and the driver's
+`INIT` with it. Serial and the LCD need no font.
 
 ## The registry
 
@@ -189,7 +199,7 @@ carries its own.
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
-| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 838 | 1, 2 | Stays |
+| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 840 | 1, 2 | Stays |
 | Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console (`boot.asm`) | 772 | 1 | Stays |
 | BIOS, with its entries' interrupt discipline (`bios.asm`) | 514 | 2 | Stays |
 | Serial console (`console.asm`) | 471 | 1, 2 | Stays |
@@ -199,20 +209,20 @@ carries its own.
 | PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, `PICO40.SVC` and `PICO32.SVC`; the probe stays |
 | PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
-| Font, 96 characters | — | | Moved: each display driver carries its own copy, `drivers/font.asm`, and serial and the LCD need none |
+| Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: both display drivers share it through `TNFONT`; serial and the LCD need none |
 | 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
 | SD driver (`sd.asm`) | 836 | 1 | Stays |
 | Container mount and checks (`vol.asm`) | 1,200 | 1 | Stays |
 | CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,520 | 2 | Stays |
 | BDOS (`cpm/bdos.asm`) | 3,854 | 2 | Stays |
-| Numbered services, `TNDRVR`'s among them (`services.asm`) | 495 | 3, 4 | Stays |
+| Numbered services, `TNDRVR`'s among them (`services.asm`) | 501 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 693 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
 | Service loader, registry and loading the display drivers (`loader.asm`) | 727 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 14,645 bytes used.
+census's 15,421 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
@@ -254,7 +264,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,739<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->963<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

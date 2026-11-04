@@ -8,7 +8,7 @@
 
 ABITAB	EQU	$C003		; signature "TNA"
 ABIMAJ	EQU	$C006		; major version, 5
-ABIMIN	EQU	$C007		; minor version, 0
+ABIMIN	EQU	$C007		; minor version, 1
 ABICALL	EQU	$C008		; CALL: the service numbered in C
 ABIEND	EQU	$C00B		; the table's end: 8 bytes
 
@@ -85,7 +85,11 @@ TNLIST	EQU	14		; B = an index from 0: -> carry clear,
 				; HL = that record, A = the
 				; generation; carry set past the
 				; last. Stack 8
-TNCOUNT	EQU	15		; how many services there are
+TNFONT	EQU	15		; -> HL = the console font in the
+				; ROM: 96 characters of 8 bytes, one a
+				; row from the top, from 20h; minor 1.
+				; Stack 4
+TNCOUNT	EQU	16		; how many services there are
 
 ; Status in A, with carry set.
 TNEBAD	EQU	1		; no such number, an argument out of

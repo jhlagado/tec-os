@@ -342,7 +342,7 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
 test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
-  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 15 }).carry, 1);
+  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 16 }).carry, 1); // past the last, TNFONT
   assert.equal(t.find("DEMO").carry, 0);
 });
 
@@ -852,7 +852,7 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
     if (opts.tms) {
       assert.equal(m.videoConsole(), true, "PICO.SVC is in");
       say("SERVICES");
-      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+PICO +6/);
+      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+PICO +3/);
     } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);

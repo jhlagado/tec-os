@@ -92,7 +92,7 @@ test("a board with both displays keeps the PICO9918; GLCD.SVC's line loads quiet
   const m = start(both());
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/, "no refusal");
   const two = word(m, 6);
-  const one = two + 0x600; // the GLCD's six pages, once it goes
+  const one = two + 0x300; // the GLCD's three pages, once it goes
   assert.equal(m.read(3) & 3, CRT, "PICO.SVC keeps the console");
   assert.match(say(m, "SERVICES"), /GLCD/, "GLCD.SVC in");
   say(m, "CON UC1");
@@ -134,12 +134,12 @@ test("PICO32.SVC writes the colours and an empty sprite table", () => {
 
 test("TPA after boot: one display, and both", () => {
   const top = (m) => word(m, 6) - 0x100;
-  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 45312);
-  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 45312);
+  assert.equal(top(start(both(["PICO.SVC"]), { glcd: false })), 46080);
+  assert.equal(top(start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, { tms: false })), 46080);
   const m = start(both());
-  assert.equal(top(m), 43776, "a board with both, at boot: both in (KE-150)");
+  assert.equal(top(m), 45312, "a board with both, at boot: both in (KE-150)");
   say(m, "CON UC1");
-  assert.equal(top(m), 43776, "and CON UC1 loads nothing more");
+  assert.equal(top(m), 45312, "and CON UC1 loads nothing more");
 });
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/pico-screens.json"), "utf8"));
@@ -161,7 +161,7 @@ test("the starter card boots both drivers on a board with both, the PICO9918 the
   assert.deepEqual(files.map((f) => f.name), ["PICO.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 43776], "both in, PICO.SVC the console (KE-150)");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, 45312], "both in, PICO.SVC the console (KE-150)");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 
@@ -339,7 +339,7 @@ test("a claimed VDP takes no row-move call: the driver isn't entered while a pro
   let entered = 0;
   const step = m.step.bind(m);
   m.step = () => {
-    if (m.pc >= base && m.pc < base + 0x600) entered += 1;
+    if (m.pc >= base && m.pc < base + 0x300) entered += 1;
     return step();
   };
   const STUB = 0x0060;
@@ -514,7 +514,7 @@ test("a claim held at UNLOAD after CON TTY: refused, the record still found, and
 });
 
 test("a refused record under a claim: REMOVE refuses, so the pages stay with the table hooked, and a warm boot is safe", async () => {
-  const text = readFileSync(resolve(ROOT, "drivers/pico.asm"), "utf8").replace('"../src/abi.inc"', '"../../src/abi.inc"').replace('"font.asm"', '"../../drivers/font.asm"');
+  const text = readFileSync(resolve(ROOT, "drivers/pico.asm"), "utf8").replace('"../src/abi.inc"', '"../../src/abi.inc"');
   const a = "        LD      HL,REC\n";
   assert.ok(text.includes(a));
   const dir = resolve(ROOT, "build/variants");
@@ -604,7 +604,7 @@ test("row 3: GLCD? stays while PICO.SVC keeps the console; the GLCD's driver typ
   assert.equal(lcdRow(m, 3), "GLCD?");
   const top = word(m, 6);
   assert.doesNotMatch(say(m, "GLCDX.SVC"), /GLCDX\.SVC\?/, "no refusal beside the PICO9918");
-  assert.equal(word(m, 6), top - 0x600, "it loaded");
+  assert.equal(word(m, 6), top - 0x300, "it loaded");
   assert.equal(m.read(3) & 3, CRT, "and gave way: PICO.SVC keeps the console");
   assert.equal(lcdRow(m, 3), "");
 });
