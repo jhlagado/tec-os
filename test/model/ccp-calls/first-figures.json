@@ -1,0 +1,614 @@
+{
+  "baseline": "304d268",
+  "runnerSha256": "9f43ee1c2c4f96674b7724f9eb04b065b726ab3be6e5a38c82cbad9ff763fdf3",
+  "selected": [
+    "incumbent",
+    "descriptor"
+  ],
+  "assembler": "atom-z80 0.3.7",
+  "commands": [
+    "",
+    " ! ! ",
+    ":",
+    "USER 0!USER 1!:USER 0",
+    "DIR",
+    "TYPE HELLO.TXT",
+    "DIR *.TXT",
+    "TYPE ABCDEFGHI.TXT",
+    "TYPE HELLO.TXTT",
+    "TYPE *.TXT",
+    "REN NEW.TXT=SECOND.TXT",
+    "COPY HELLO.TXT B:",
+    "TYPE B:HELLO.TXT",
+    "ERA NEW.TXT",
+    "DIR",
+    "USER 15",
+    "USER 16",
+    "USER 0",
+    "SAVE 0 ZERO.BIN",
+    "DIR ZERO.BIN",
+    "ERA ZERO.BIN",
+    "B:",
+    "PROBE A:FOO*.BAR BAZ.QUX",
+    "A:",
+    "CON TTY",
+    "SERVICES",
+    "UNLOAD",
+    "DIRX",
+    "DIR A B",
+    "REN =HELLO.TXT",
+    "COPY HELLO.TXT HELLO.TXT",
+    "TYPE HELLO.TXT!DIR",
+    "NOFILE!:DIR"
+  ],
+  "parserCases": 2972,
+  "variants": {
+    "incumbent": {
+      "sha256": "4eabdefb12ae8df7756385af61a228cf4a73445aafef93f4224c40c7380820e9",
+      "rom": 14577,
+      "ccp": 2452,
+      "romRegions": [
+        {
+          "label": "reset jump",
+          "start": 49152,
+          "end": 49155,
+          "bytes": 3
+        },
+        {
+          "label": "table",
+          "start": 49155,
+          "end": 49163,
+          "bytes": 8
+        },
+        {
+          "label": "data",
+          "start": 49163,
+          "end": 50001,
+          "bytes": 838
+        },
+        {
+          "label": "code",
+          "start": 50001,
+          "end": 63729,
+          "bytes": 13728
+        },
+        {
+          "label": "free",
+          "start": 63729,
+          "end": 65536,
+          "bytes": 1807
+        }
+      ],
+      "ramRegions": [
+        {
+          "label": "BDOS entry jump, starter card",
+          "start": 47125,
+          "end": 47128,
+          "bytes": 3
+        },
+        {
+          "label": "unused",
+          "start": 47128,
+          "end": 47128,
+          "bytes": 0
+        },
+        {
+          "label": "allocation vectors, starter card",
+          "start": 47128,
+          "end": 47448,
+          "bytes": 320
+        },
+        {
+          "label": "BIOS disk state and buffers",
+          "start": 47448,
+          "end": 48325,
+          "bytes": 877
+        },
+        {
+          "label": "BIOS stack",
+          "start": 48325,
+          "end": 48363,
+          "bytes": 38
+        },
+        {
+          "label": "CCP state and stack",
+          "start": 48363,
+          "end": 48759,
+          "bytes": 396
+        },
+        {
+          "label": "BDOS state and stack",
+          "start": 48759,
+          "end": 48896,
+          "bytes": 137
+        },
+        {
+          "label": "RAM BIOS table",
+          "start": 48896,
+          "end": 48947,
+          "bytes": 51
+        },
+        {
+          "label": "SD, keyboard and GLCD state",
+          "start": 48947,
+          "end": 49125,
+          "bytes": 178
+        },
+        {
+          "label": "unused",
+          "start": 49125,
+          "end": 49152,
+          "bytes": 27
+        }
+      ],
+      "stacks": {
+        "boot": {
+          "top": 32768
+        },
+        "bios": {
+          "base": 48325,
+          "top": 48363,
+          "bytes": 38
+        },
+        "ccp": {
+          "base": 48729,
+          "top": 48759,
+          "bytes": 30
+        },
+        "bdos": {
+          "base": 48842,
+          "top": 48896,
+          "bytes": 54
+        }
+      },
+      "ram": 396,
+      "tpa": 46869,
+      "parser": {
+        "mismatches": 0,
+        "examples": [],
+        "cycles": 11039700,
+        "peak": 8,
+        "worstCycleDelta": {
+          "input": "",
+          "cycles": 0
+        }
+      },
+      "outsideCcpBytes": 12125,
+      "session": {
+        "equivalent": true,
+        "peak": 18,
+        "bootPeak": 12,
+        "cycles": [
+          {
+            "command": "",
+            "cycles": 87460
+          },
+          {
+            "command": " ! ! ",
+            "cycles": 186213
+          },
+          {
+            "command": ":",
+            "cycles": 100648
+          },
+          {
+            "command": "USER 0!USER 1!:USER 0",
+            "cycles": 837692
+          },
+          {
+            "command": "DIR",
+            "cycles": 1913342
+          },
+          {
+            "command": "TYPE HELLO.TXT",
+            "cycles": 871856
+          },
+          {
+            "command": "DIR *.TXT",
+            "cycles": 1036285
+          },
+          {
+            "command": "TYPE ABCDEFGHI.TXT",
+            "cycles": 724606
+          },
+          {
+            "command": "TYPE HELLO.TXTT",
+            "cycles": 619297
+          },
+          {
+            "command": "TYPE *.TXT",
+            "cycles": 442238
+          },
+          {
+            "command": "REN NEW.TXT=SECOND.TXT",
+            "cycles": 1136035
+          },
+          {
+            "command": "COPY HELLO.TXT B:",
+            "cycles": 6543427
+          },
+          {
+            "command": "TYPE B:HELLO.TXT",
+            "cycles": 919677
+          },
+          {
+            "command": "ERA NEW.TXT",
+            "cycles": 1111193
+          },
+          {
+            "command": "DIR",
+            "cycles": 1764462
+          },
+          {
+            "command": "USER 15",
+            "cycles": 236814
+          },
+          {
+            "command": "USER 16",
+            "cycles": 330229
+          },
+          {
+            "command": "USER 0",
+            "cycles": 217990
+          },
+          {
+            "command": "SAVE 0 ZERO.BIN",
+            "cycles": 773368
+          },
+          {
+            "command": "DIR ZERO.BIN",
+            "cycles": 943761
+          },
+          {
+            "command": "ERA ZERO.BIN",
+            "cycles": 692364
+          },
+          {
+            "command": "B:",
+            "cycles": 129527
+          },
+          {
+            "command": "PROBE A:FOO*.BAR BAZ.QUX",
+            "cycles": 1167257
+          },
+          {
+            "command": "A:",
+            "cycles": 132564
+          },
+          {
+            "command": "CON TTY",
+            "cycles": 586678
+          },
+          {
+            "command": "SERVICES",
+            "cycles": 269788
+          },
+          {
+            "command": "UNLOAD",
+            "cycles": 366296
+          },
+          {
+            "command": "DIRX",
+            "cycles": 362405
+          },
+          {
+            "command": "DIR A B",
+            "cycles": 316941
+          },
+          {
+            "command": "REN =HELLO.TXT",
+            "cycles": 594178
+          },
+          {
+            "command": "COPY HELLO.TXT HELLO.TXT",
+            "cycles": 747817
+          },
+          {
+            "command": "TYPE HELLO.TXT!DIR",
+            "cycles": 2463797
+          },
+          {
+            "command": "NOFILE!:DIR",
+            "cycles": 652097
+          }
+        ]
+      },
+      "delta": 0
+    },
+    "descriptor": {
+      "sha256": "43c4b99c57860a89f703197ac2a90962aa798d1fdc0627dd530ee424521c11b2",
+      "rom": 14562,
+      "ccp": 2437,
+      "romRegions": [
+        {
+          "label": "reset jump",
+          "start": 49152,
+          "end": 49155,
+          "bytes": 3
+        },
+        {
+          "label": "table",
+          "start": 49155,
+          "end": 49163,
+          "bytes": 8
+        },
+        {
+          "label": "data",
+          "start": 49163,
+          "end": 50001,
+          "bytes": 838
+        },
+        {
+          "label": "code",
+          "start": 50001,
+          "end": 63714,
+          "bytes": 13713
+        },
+        {
+          "label": "free",
+          "start": 63714,
+          "end": 65536,
+          "bytes": 1822
+        }
+      ],
+      "ramRegions": [
+        {
+          "label": "BDOS entry jump, starter card",
+          "start": 47125,
+          "end": 47128,
+          "bytes": 3
+        },
+        {
+          "label": "unused",
+          "start": 47128,
+          "end": 47128,
+          "bytes": 0
+        },
+        {
+          "label": "allocation vectors, starter card",
+          "start": 47128,
+          "end": 47448,
+          "bytes": 320
+        },
+        {
+          "label": "BIOS disk state and buffers",
+          "start": 47448,
+          "end": 48325,
+          "bytes": 877
+        },
+        {
+          "label": "BIOS stack",
+          "start": 48325,
+          "end": 48363,
+          "bytes": 38
+        },
+        {
+          "label": "CCP state and stack",
+          "start": 48363,
+          "end": 48759,
+          "bytes": 396
+        },
+        {
+          "label": "BDOS state and stack",
+          "start": 48759,
+          "end": 48896,
+          "bytes": 137
+        },
+        {
+          "label": "RAM BIOS table",
+          "start": 48896,
+          "end": 48947,
+          "bytes": 51
+        },
+        {
+          "label": "SD, keyboard and GLCD state",
+          "start": 48947,
+          "end": 49125,
+          "bytes": 178
+        },
+        {
+          "label": "unused",
+          "start": 49125,
+          "end": 49152,
+          "bytes": 27
+        }
+      ],
+      "stacks": {
+        "boot": {
+          "top": 32768
+        },
+        "bios": {
+          "base": 48325,
+          "top": 48363,
+          "bytes": 38
+        },
+        "ccp": {
+          "base": 48729,
+          "top": 48759,
+          "bytes": 30
+        },
+        "bdos": {
+          "base": 48842,
+          "top": 48896,
+          "bytes": 54
+        }
+      },
+      "ram": 396,
+      "tpa": 46869,
+      "parser": {
+        "mismatches": 0,
+        "examples": [],
+        "cycles": 11039700,
+        "peak": 8,
+        "worstCycleDelta": {
+          "input": "",
+          "cycles": 0
+        }
+      },
+      "outsideCcpBytes": 12125,
+      "session": {
+        "equivalent": true,
+        "peak": 18,
+        "bootPeak": 12,
+        "cycles": [
+          {
+            "command": "",
+            "cycles": 87460
+          },
+          {
+            "command": " ! ! ",
+            "cycles": 186213
+          },
+          {
+            "command": ":",
+            "cycles": 100648
+          },
+          {
+            "command": "USER 0!USER 1!:USER 0",
+            "cycles": 837692
+          },
+          {
+            "command": "DIR",
+            "cycles": 1913810
+          },
+          {
+            "command": "TYPE HELLO.TXT",
+            "cycles": 872012
+          },
+          {
+            "command": "DIR *.TXT",
+            "cycles": 1036441
+          },
+          {
+            "command": "TYPE ABCDEFGHI.TXT",
+            "cycles": 724606
+          },
+          {
+            "command": "TYPE HELLO.TXTT",
+            "cycles": 619297
+          },
+          {
+            "command": "TYPE *.TXT",
+            "cycles": 442238
+          },
+          {
+            "command": "REN NEW.TXT=SECOND.TXT",
+            "cycles": 1136087
+          },
+          {
+            "command": "COPY HELLO.TXT B:",
+            "cycles": 6543871
+          },
+          {
+            "command": "TYPE B:HELLO.TXT",
+            "cycles": 919833
+          },
+          {
+            "command": "ERA NEW.TXT",
+            "cycles": 1111245
+          },
+          {
+            "command": "DIR",
+            "cycles": 1764878
+          },
+          {
+            "command": "USER 15",
+            "cycles": 236814
+          },
+          {
+            "command": "USER 16",
+            "cycles": 330229
+          },
+          {
+            "command": "USER 0",
+            "cycles": 217990
+          },
+          {
+            "command": "SAVE 0 ZERO.BIN",
+            "cycles": 773524
+          },
+          {
+            "command": "DIR ZERO.BIN",
+            "cycles": 943865
+          },
+          {
+            "command": "ERA ZERO.BIN",
+            "cycles": 692416
+          },
+          {
+            "command": "B:",
+            "cycles": 129527
+          },
+          {
+            "command": "PROBE A:FOO*.BAR BAZ.QUX",
+            "cycles": 1167551
+          },
+          {
+            "command": "A:",
+            "cycles": 132564
+          },
+          {
+            "command": "CON TTY",
+            "cycles": 586678
+          },
+          {
+            "command": "SERVICES",
+            "cycles": 269788
+          },
+          {
+            "command": "UNLOAD",
+            "cycles": 366296
+          },
+          {
+            "command": "DIRX",
+            "cycles": 362457
+          },
+          {
+            "command": "DIR A B",
+            "cycles": 316941
+          },
+          {
+            "command": "REN =HELLO.TXT",
+            "cycles": 594178
+          },
+          {
+            "command": "COPY HELLO.TXT HELLO.TXT",
+            "cycles": 747817
+          },
+          {
+            "command": "TYPE HELLO.TXT!DIR",
+            "cycles": 2464369
+          },
+          {
+            "command": "NOFILE!:DIR",
+            "cycles": 652149
+          }
+        ]
+      },
+      "delta": -15
+    }
+  },
+  "descriptorContract": {
+    "contract": {
+      "cases": 256,
+      "mismatches": 0
+    },
+    "controls": [
+      {
+        "mutation": "return-byte",
+        "cases": 256,
+        "mismatches": 256
+      },
+      {
+        "mutation": "FCB-selector",
+        "cases": 256,
+        "mismatches": 256
+      },
+      {
+        "mutation": "function",
+        "cases": 256,
+        "mismatches": 255
+      }
+    ]
+  }
+}
