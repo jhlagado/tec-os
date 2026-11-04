@@ -218,7 +218,7 @@ KBT1:   DS      1               ; and the bytes themselves
 KBT2:   DS      1
 
 ; ---- The GLCD console ------------------------------------------------------
-PIVEC:  DS      2               ; PICO.SVC's video table, from VIDHOOK; 0 for none
+PIVEC:  DS      2               ; PIBLK, set by PISTART; 0 with no console
 GLVEC:  DS      2               ; GLCD.SVC's, the same: indexed by CMCRT and CMUC1
 
 ; ---- Command-line history ------------------------------------------------------

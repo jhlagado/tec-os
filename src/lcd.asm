@@ -39,7 +39,7 @@ LCDWRD:	PUSH	HL		; the word, across the flag
 	POP	HL
 
 ; Write the zero-terminated string at HL to row 3, the row for a recovery
-; message: CARD?, GLCD? or PICO?, or blanks to clear one. Returns as LCDROW.
+; message: CARD? or GLCD?, or blanks to clear one. Returns as LCDROW.
 LCD3:	LD	B,3		; the bottom row, free of the volumes
 
 ; Write the zero-terminated string at HL from row B (0-3), column 0. Returns

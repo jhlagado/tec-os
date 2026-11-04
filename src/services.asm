@@ -98,8 +98,9 @@ HWSLC:  CALL    LCDWAIT
 
 ; Claim: the console stops drawing on the PICO9918 (output to it is dropped,
 ; no cursor, no page flips) and the program owns its registers and VRAM.
-; Release, or warm boot: with PICO.SVC in, text mode, font and page come back
-; and the screen is cleared; with none, the VDP is left as the program left it.
+; Release, or warm boot: with the ROM's console started, text mode, font and
+; page come back and the screen is cleared; with none, the VDP is left as the
+; program left it.
 HWSVID:	LD	A,B		; 0 or 1, and nothing else
 	CP	2
 	LD	A,TNEBAD

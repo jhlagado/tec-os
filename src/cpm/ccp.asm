@@ -1077,10 +1077,10 @@ CONSKIP:
 
 ; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon
 ; may follow), or PICO for CRT: and GLCD for UC1:, sets the IOBYTE CON: field.
-; After CRT or PICO a width, 80, 40 or 32, goes to PICO.SVC through its table's
-; PICOWID entry, version 3 (KD-174); none in that takes it, or any other
-; width, and the command is refused. The BIOS switches at the next console
-; call, so the report appears on the new console, and names the serial
+; After CRT or PICO a width, 80, 40 or 32, goes to the ROM's PICO9918 console
+; through its table's PICOWID entry (KD-174); with that console not started,
+; or any other width, the command is refused. The BIOS switches at the next
+; console call, so the report appears on the new console, and names the serial
 ; terminal when the chosen display or keyboard is missing.
 CMDCON:
         CALL    ARGSKIP         ; an error names the argument
