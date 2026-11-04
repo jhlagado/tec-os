@@ -2,68 +2,70 @@
 ; it.
 
 ; ---- boot.asm ----------------------------------------------------------------
-RAMMSG: DB      13,10,"TEC-OS needs 64K RAM",13,10,0
-BANNER: DB      13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0
-ROTXT:  DB      " (read-only)",0
-DGERR:  DB      "No volume mounted, error ",0
-DGPROM: DB      "R retry> ",0
-DGCARD: DB      "CARD?",0
+RAMMSG:	DB	13,10,"TEC-OS needs 64K RAM",13,10,0
+BANNER:	DB	13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0
+ROTXT:	DB	" (read-only)",0
+DGERR:	DB	"No volume mounted, error ",0
+DGPROM:	DB	"R retry> ",0
+DGCARD:	DB	"CARD?",0
 
 ; ---- cpm/ccp.asm -------------------------------------------------------------
 CRLFMSG:
-        DB      CR,LF,'$'
+	DB	CR,LF,'$'
 NOFILE:
-        DB      "NO FILE",'$'
+	DB	"NO FILE",'$'
 FILESMSG:
-        DB      " files, ",'$'
+	DB	" files, ",'$'
 FILEMSG:
-        DB      " file, ",'$'
+	DB	" file, ",'$'
 FREEMSG:
-        DB      "K free",'$'
+	DB	"K free",'$'
 MOREMSG:
-        DB      "[more]",'$'
+	DB	"[more]",'$'
 UNMORE:
-        DB      CR,"      ",CR,'$'
+	DB	CR,"      ",CR,'$'
 CPNOSRC:
-        DB      "NO SOURCE",CR,LF,'$'
+	DB	"NO SOURCE",CR,LF,'$'
 CPNODST:
-        DB      "CANNOT MAKE DEST",CR,LF,'$'
+	DB	"CANNOT MAKE DEST",CR,LF,'$'
 CPWRITE:
-        DB      "WRITE ERROR",CR,LF,'$'
+	DB	"WRITE ERROR",CR,LF,'$'
 CPCLOSE:
-        DB      "CLOSE ERROR",CR,LF,'$'
+	DB	"CLOSE ERROR",CR,LF,'$'
 CPCOPIED:
-        DB      "COPIED ",'$'
-CONNAMS:                        ; four bytes each, a colon after three
-        DB      "TTY:CRT:"      ; letters; the last, PICO's record name too
-        DB      "BAT:UC1:"
-        DB      "GLCDPICO    "
+	DB	"COPIED ",'$'
+CONNAMS:			; four bytes each, a colon after three
+	DB	"TTY:CRT:"	; letters; the last, PICO's record name too
+	DB	"BAT:UC1:"
+	DB	"GLCDPICO    "
 CONHDR:
-        DB      "CON: ",'$'
+	DB	"CON: ",'$'
 FILEEX:
-        DB      "FILE EXISTS",'$'
+	DB	"FILE EXISTS",'$'
 NOSPACE:
-        DB      "NO SPACE",'$'
+	DB	"NO SPACE",'$'
 ALLQUERY:
-        DB      "ALL (Y/N)?",'$'
+	DB	"ALL (Y/N)?",'$'
 BADCHARS:
-        DB      "<>,;:[]%|()/",92
+	DB	"<>,;:[]%|()/",92
 
 ; ---- lcd.asm -----------------------------------------------------------------
-LCDBAN: DB      "TEC-OS ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0
+LCDBAN:	DB	"TEC-OS ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0
 
 ; ---- cpm/bdos.asm ------------------------------------------------------------
-ERRHEAD: DB     CR,LF,"Bdos Err On ",0
-ERRSEL: DB      ": Select",0
-ERRBAD: DB      ": Bad Sector",0
-ERRRO:  DB      ": R/O",0
-ERRFILE: DB     ": File R/O",0
+ERRHEAD:
+	DB	CR,LF,"Bdos Err On ",0
+ERRSEL:	DB	": Select",0
+ERRBAD:	DB	": Bad Sector",0
+ERRRO:	DB	": R/O",0
+ERRFILE:
+	DB	": File R/O",0
 
 ; ---- loader.asm and cpm/ccp.asm: the LCD's words ----------------------------
-GLCMSG: DB      "GLCD?",0
+GLCMSG:	DB	"GLCD?",0
 PICCLR:	DB	"     ",0	; blanks wipe any of the words
 
 ; ---- cache.asm ---------------------------------------------------------------
-CWMSG:  DB      13,10,"Write lost",0
+CWMSG:	DB	13,10,"Write lost",0
 
 ROMCODE:
