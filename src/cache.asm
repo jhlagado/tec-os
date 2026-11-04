@@ -180,9 +180,11 @@ CWR9:	LD	C,A		; the line, kept
 	RET
 
 ; Write every dirty line (CFLALL), or every one but line A (CFLUSH). Each
-; is tried; one whose write fails is dropped, so the card's copy stands, and
-; the flush returns NZ if any did, Z if none. Returns A = the line left (FFh
-; for CFLALL). Destroys BC, DE and HL; SDLBA, BLKOFF and BLKSLOT are mapped
+; is tried, and the flush returns NZ if any write failed, Z if none. CFLALL
+; drops a line whose write fails, so the card's copy stands; CFLUSH, a
+; directory write's, leaves it dirty, the only copy of its records, for a
+; later flush to try (KE-AR8). Returns A = the line left (FFh for
+; CFLALL). Destroys BC, DE and HL; SDLBA, BLKOFF and BLKSLOT are mapped
 ; again from the BIOS's track and sector, as CWRITE leaves them.
 CFLALL:	LD	A,$FF		; no line is FFh: every one is written
 CFLUSH:	LD	C,A		; the line to leave
@@ -195,10 +197,15 @@ CFS1:	CP	C
 	CALL	NZ,CWRITE	; keeps A, NZ if the card refused it
 	POP	BC
 	JR	Z,CFS2
+	INC	B		; failed: counted
+	LD	E,A		; the line, kept
+	LD	A,C		; C FFh: CFLALL, which drops it
+	INC	A
+	LD	A,E
+	JR	NZ,CFS2		; CFLUSH: the line stays dirty
 	PUSH	BC
-	CALL	CDROP		; failed: dropped, the card's copy stands
+	CALL	CDROP		; dropped, the card's copy stands
 	POP	BC
-	INC	B		; and counted
 CFS2:	INC	A		; every line, failures or not
 	CP	NLINES
 	JR	C,CFS1
@@ -328,20 +335,24 @@ CWB1:	DEC	C
 	JR	CWB2
 CWBF:	CALL	CFILL		; the card's block first
 	RET	NZ
-				; BWRITE's key, if it names the block
-				; before this one as cleared, would have
-				; the rule clear this one, records and
-				; all, once its line had gone: so that
-				; key goes. The low bytes are enough: a
-				; false match costs only a read.
+				; A write that keeps a line's bytes, to
+				; any block but the key's own, ends the
+				; run of blocks cleared rather than read:
+				; the key goes, so that the rule never
+				; clears a block written after the key's,
+				; records and all (KE-AR7).
 CWBK:	LD	C,A		; C = the line, kept
-	LD	A,(BLKOFF)
-	DEC	A		; BLKOFF - 1 against the key's block
-	LD	HL,BUFBLK
+	LD	HL,(BLKOFF)	; this block against the key's
+	LD	DE,(BUFBLK)
+	OR	A		; carry clear for the compare
+	SBC	HL,DE
+	JR	NZ,CWBK0	; another block: the key goes
+	LD	A,(BUFDRV)	; the key's block number: on this drive?
+	LD	HL,DSKCUR
 	CP	(HL)
-	JR	NZ,CWBK1	; no match: the key stays
-	XOR	A		; a match: the key is dropped, BUFOK 0:
-	LD	(BUFOK),A	; not cleared, not read
+	JR	Z,CWBK1		; the key's own block: it stands
+CWBK0:	XOR	A		; the key dropped, BUFOK 0: not cleared,
+	LD	(BUFOK),A	; not read
 CWBK1:	LD	A,C		; the line again
 CWB2:	PUSH	AF
 	CALL	CWRREC		; the record into the line, now dirty
@@ -366,8 +377,10 @@ CWBT:	LD	A,C		; written through: the line to the card
 	RET
 CWB3:	LD	A,C		; a directory block: the volume's data first,
 	CALL	CFLUSH		; then the directory line; if either fails,
-	CALL	Z,CWRITE	; the line goes, so the card's directory
-	RET	Z		; stays the truth and is read again
+	CALL	Z,CWRITE	; the directory line goes, so the card's
+	RET	Z		; directory stays the truth and is read
+				; again; a data line that failed stays
+				; dirty, for the next flush
 CWBX:	CALL	CDROP		; A is the line, from CWRITE or CFLUSH
 	OR	1		; NZ
 	RET

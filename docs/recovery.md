@@ -18,7 +18,9 @@ Changed data blocks reach the card in the cache's line order, and the
 directory block after them. A write to the directory that cannot get its
 data to the card, or cannot write itself, drops the cache's copy of that
 directory block, so the card's directory stays the truth and is read again
-next time; the BDOS reports the failed write.
+next time; the BDOS reports the failed write. A data block that failed stays
+in the cache, still to be written, so a close tried again fails again until
+the card takes the data.
 
 A file is complete once it is closed, which is CP/M's own rule, but a write
 can reach the card before the close, and nothing is rolled back. What a reset
@@ -39,8 +41,9 @@ or power off before the close leaves depends on where the write went:
 If a block cannot be written during a program's run, the BIOS returns the
 error, the BDOS says `Bad Sector` and the rest of a chained line goes. A
 flush, at a directory write on a volume written behind, at a warm boot, or at
-`MOUNT` or `UNMOUNT`, tries every changed line, drops each whose write fails,
-so the card's copy stands, and goes on to the rest. A warm boot whose flush
+`MOUNT` or `UNMOUNT`, tries every changed line and goes on to the rest. A
+directory write's flush keeps each data line whose write fails, as above; the
+others drop it, so the card's copy stands. A warm boot whose flush
 dropped a line says `Write lost` once and drops the rest of a chained line as a
 BDOS error does; the next warm boot has nothing more to say.
 
