@@ -222,7 +222,7 @@ test("a write in place reaches the card before any close, and the recovery guide
   assert.match(guide, /already be on the card, written when their\s+lines were taken for other blocks/);
 });
 
-test("function 22 keeps the FCB's EX and S2, as CP/M 2.2's make does, and the entry it makes is that extent (KE-178)", () => {
+test("function 22 clears S2 and keeps EX, as CP/M 2.2's make does after clrmodnum, and a random write's make keeps the module it needs (KE-178)", () => {
   const image = standardCard();
   const r = rig(image);
   const { m } = r;
@@ -230,8 +230,15 @@ test("function 22 keeps the FCB's EX and S2, as CP/M 2.2's make does, and the en
   m.write(FCB + 12, 3);
   m.write(FCB + 14, 1);
   assert.notEqual(r.bdos(22), 0xff);
-  assert.deepEqual([m.read(FCB + 12), m.read(FCB + 14)], [3, 0x81], "EX 3 and S2 1 kept, S2's bit 7 set: unmodified");
-  const disk = volume(image, "A");
-  const made = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).filter((e) => e[0] === 0 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "EXT     DAT");
-  assert.deepEqual(made.map((e) => [e[12], e[14], e[15]]), [[3, 1, 0]], "one entry, extent 3 of module 1, empty");
+  assert.deepEqual([m.read(FCB + 12), m.read(FCB + 14)], [3, 0x80], "EX 3 kept, S2 0 with its bit 7 set: unmodified");
+  const disk = () => volume(image, "A");
+  const entries = () => Array.from({ length: disk().entries }, (_, i) => disk().entry(i)).filter((e) => e[0] === 0 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "EXT     DAT");
+  assert.deepEqual(entries().map((e) => [e[12], e[14], e[15]]), [[3, 0, 0]], "one entry, extent 3 of module 0, empty");
+  // Record 4096 is extent 0 of module 1: the random write makes that entry through MAKEFCB, its S2 kept.
+  [0x00, 0x10, 0x00].forEach((v, i) => m.write(FCB + 33 + i, v));
+  fill(1).forEach((v, k) => m.write(DMA + k, v));
+  assert.equal(r.bdos(34), 0, "record 4096 written");
+  assert.deepEqual([m.read(FCB + 12), m.read(FCB + 14) & 0x3f], [0, 1], "the FCB on extent 0 of module 1");
+  assert.notEqual(r.bdos(16), 0xff);
+  assert.deepEqual(entries().map((e) => [e[12], e[14]]).sort((x, y) => x[1] - y[1] || x[0] - y[0]), [[3, 0], [0, 1]], "module 1's entry made beside the first");
 });
