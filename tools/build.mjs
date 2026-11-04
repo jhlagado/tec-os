@@ -189,8 +189,12 @@ function checkServiceSources() {
   return checked;
 }
 
+// The emulated assembler's budget: the ROM took about 1.99 billion cycles at
+// 621201d, against atom-z80's default of 2 billion, so these give it headroom.
+const ATOM_BUDGET = { maxCycles: 4_000_000_000, maxInstructions: 400_000_000 };
+
 async function assemble() {
-  const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions });
+  const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions, ...ATOM_BUDGET });
   const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
   const symbols = new Map();
   for (const symbol of d8.symbols) symbols.set(symbol.name, symbol.address ?? symbol.value);
