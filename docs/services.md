@@ -165,6 +165,8 @@ A load runs only with no `INIT` or `REMOVE` running, which `SVCBSY` says. In ord
 Until step 5 a refusal leaves everything but the file as it was. `SVCLOAD`
 returns carry clear when installed. With carry set, `SVCRC` is 0 for refused,
 1 for a failure leaving nothing behind, and 2 for a failure with the pages kept.
+`SVCRA` holds `INIT`'s `A` when `INIT` failed, and 0 when a record `INIT`
+returned was refused, so a refused record never passes for an absent device.
 
 ## What a service must do
 

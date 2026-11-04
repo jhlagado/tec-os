@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { resolve } from "node:path";
 import { makeSvc } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 function start(files, { key = false, ...opts } = {}) {
   const image = standardCard();
@@ -90,6 +90,19 @@ test("a line from the file whose service fails for another cause, or has no file
     assert.match(m.text(0), new RegExp(`${line.replace(".", "\\.")}\\?`), line);
     assert.equal(user(m), 0, `${line}: the : line went`);
   }
+});
+
+test("a line from the file whose INIT succeeds with A = TNENODV and whose record is refused says so, and its : line goes (KE-192)", async () => {
+  const defs = { VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"WILD    "', RECNAME: '"WILD    "', RECVER: 1 };
+  for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"]) defs[v] = 0;
+  defs.V_WILD = 1;
+  const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
+  const m = start({ "WILD.SVC": file, "STARTUP.CMD": startupFile("WILD.SVC", ":USER 3") });
+  prompt(m);
+  assert.equal(m.read(m.sym("SVCRC")), 1, "the record refused, REMOVE ran: nothing left");
+  assert.notEqual(m.read(m.sym("SVCRA")), ABI.TNENODV, "no INIT failure to report");
+  assert.match(m.text(0), /WILD\.SVC\?/);
+  assert.equal(user(m), 0, "the : line went");
 });
 
 const SAY = (await program("say")).bytes;

@@ -107,7 +107,8 @@ INIT:
 %ENDIF
 %IF V_WILD
         LD      HL,$0200        ; a record outside the image
-        OR      A
+        LD      A,TNENODV       ; and A as an absent device's, with
+        OR      A               ; carry clear: success (KE-192)
         RET
 %ENDIF
 %IF V_LINK
