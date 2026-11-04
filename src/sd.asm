@@ -8,7 +8,7 @@
 SDIDLE	EQU	$05		; /CS high, MOSI high, CLK low
 
 SDENOCD	EQU	1		; no response to CMD0
-SDEINIT	EQU	2		; ACMD41 never reported ready
+SDEINIT	EQU	2		; ACMD41 never ready, or CMD55 refused
 SDEOCR	EQU	3		; CMD58 failed
 SDEBLEN	EQU	4		; CMD16 failed
 SDECMD	EQU	5		; read or write command rejected
@@ -17,6 +17,7 @@ SDEWRSP	EQU	7		; write not accepted
 SDEBUSY	EQU	8		; card stayed busy
 SDERNG	EQU	9		; a standard card's block past its 4 GiB
 SDEDTOK	EQU	10		; a data error token in place of the data
+SDEVOLT	EQU	11		; CMD8's echo wrong: voltage or pattern
 
 ; Send the byte in C to the card, most significant bit first. Selects the
 ; card: every write to SDIO here has /CS (bit 2) low. Takes C; returns C
@@ -127,9 +128,10 @@ SDCMDX:	PUSH	AF		; SETARG uses A
 	JR	SPIEND		; which SPIEND keeps
 
 ; Start the card in SPI mode and make it ready for 512-byte block I/O:
-; CMD0 to reset it, CMD8 for a version 2 card, ACMD41 until it is ready,
-; then CMD58 to find whether it takes block or byte addresses, and CMD16 to
-; fix a byte-addressed card's block at 512. Sets SDBYTE, SDERR and SDARG.
+; CMD0 to reset it, CMD8 for a version 2 card (its echo checked), CMD55
+; and ACMD41 until it is ready, then CMD58 to find whether it takes block
+; or byte addresses, and CMD16 to fix a byte-addressed card's block at 512.
+; Sets SDBYTE, SDERR and SDARG.
 ; Returns Z and A = 0 when ready; NZ and A = an SDE* code if not. Destroys
 ; F, BC, DE, HL.
 SDINIT:	XOR	A		; block addresses until CMD58 says
@@ -162,19 +164,27 @@ SDI8:	LD	DE,0		; CMD8: 2.7-3.6 V, check pattern AAh
 	CALL	SDCMD
 	CP	1		; idle, no error: a version 2 card
 	JR	NZ,SDI8X	; version 1 card: no R7 payload
-	LD	D,4		; R7: four bytes, read and discarded;
-SDI8R:	PUSH	DE		; the echoed pattern is not checked
-	CALL	SPIR
-	POP	DE
-	DEC	D
-	JR	NZ,SDI8R
+	CALL	SPIR		; R7 bytes 1 and 2: the command
+	CALL	SPIR		; version and reserved bits, not needed
+	CALL	SPIR		; byte 3: the voltage the card accepts,
+	AND	$0F		; in its low four bits
+	CP	1		; 1: 2.7-3.6 V, the range asked for
+	JR	NZ,SDI8F
+	CALL	SPIR		; byte 4: the check pattern echoed
+	CP	$AA
+	JR	Z,SDI8X		; AAh: the card took CMD8 as sent
+SDI8F:	CALL	SPIEND		; a wrong echo: a card this board can't
+	LD	A,SDEVOLT	; power, or that misread the command
+	JR	SDFAIL
 SDI8X:	CALL	SPIEND		; deselect after CMD8 either way
 	LD	C,0		; ACMD41 attempts, 256
 SDI41:	PUSH	BC
 	LD	DE,0		; CMD55, APP_CMD: the next command is
-	LD	HL,0		; an application command; its R1 is not
-	LD	A,55		; checked
+	LD	HL,0		; an application command
+	LD	A,55
 	CALL	SDCMDX
+	AND	$FE		; R1 00h, or 01h idle: any other bit is an
+	JR	NZ,SDI55F	; error, and no ACMD41 can follow
 	LD	DE,$4000	; HCS: host supports high capacity
 	LD	HL,0		; (argument bit 30)
 	LD	A,41		; ACMD41, SD_SEND_OP_COND: start the
@@ -186,7 +196,9 @@ SDI41:	PUSH	BC
 SDI41W:	DJNZ	SDI41W		; (256 turns of the loop)
 	DEC	C
 	JR	NZ,SDI41	; still idle: ask again
-	LD	A,SDEINIT	; never left the idle state
+	JR	SDI41F		; never left the idle state
+SDI55F:	POP	BC		; CMD55 refused: the count off the stack
+SDI41F:	LD	A,SDEINIT	; no initialisation
 	JR	SDFAIL
 SDI58:	LD	DE,0		; CMD58, READ_OCR, argument 0
 	LD	HL,0

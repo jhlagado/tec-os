@@ -138,3 +138,30 @@ test("a data error token after CMD17 fails the read at once, with SDEDTOK (0Ah),
   token = null;
   assert.equal(sdCall(m, "SDREAD", 1, BUF).z, 1, "the next read, the start token as usual, reads");
 });
+
+/** Cold boot on a machine from answering(FIX): "booted", or the error code DIAG shows. */
+function bootOf(fix) {
+  const m = answering(fix);
+  const out = m.expect(/R retry> $|A>$/, { from: 0, maxCycles: 200_000_000 });
+  return /A>$/.test(out) ? "booted" : out.match(/error ([0-9A-F]{2})/)?.[1];
+}
+
+test("SDINIT refuses a card whose CMD8 echo is wrong, in its check pattern or its voltage, with SDEVOLT (KE-183)", () => {
+  assert.equal(bootOf(() => null), "booted", "the card as it is");
+  assert.equal(bootOf((c) => c.cmd === 8 && [0x01, 0x00, 0x00, 0x01, 0x55]), "0B", "the pattern 55h, not AAh");
+  assert.equal(bootOf((c) => c.cmd === 8 && [0x01, 0x00, 0x00, 0x00, 0xaa]), "0B", "no voltage accepted");
+  assert.equal(bootOf((c) => c.cmd === 8 && [0x01, 0x00, 0x00, 0x02, 0xaa]), "0B", "the low-voltage range only");
+  assert.equal(bootOf((c) => c.cmd === 8 && [0x05]), "booted", "a version 1 card, CMD8 illegal, has no echo to check");
+});
+
+test("SDINIT refuses a card whose CMD55 R1 has an error bit, with SDEINIT at once (KE-183)", () => {
+  for (const r1 of [0x05, 0x04, 0x09, 0x41]) {
+    let acmd41 = 0;
+    const got = bootOf((c) => {
+      if (c.cmd === 41) acmd41 += 1;
+      return c.cmd === 55 && [r1];
+    });
+    assert.equal(got, "02", `CMD55's R1 ${r1.toString(16)}h`);
+    assert.equal(acmd41, 0, `R1 ${r1.toString(16)}h: no ACMD41 after it`);
+  }
+});
