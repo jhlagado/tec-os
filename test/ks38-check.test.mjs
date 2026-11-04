@@ -41,7 +41,7 @@ test("the image check passes on the same image and finds one byte changed", () =
 
 test("a label renamed: the image is the same, and the label check passes given the rename and fails without it", async () => {
   const renamed = await variant("rename", [
-    ["src/reset.asm", "RESET:  JP      RSTENT", "RESET:  JP      RESETIN"],
+    ["src/reset.asm", "RESET:\tJP\tRSTENT", "RESET:\tJP\tRESETIN"],
     ["src/boot.asm", "RSTENT:\tLD\tA,($0002)", "RESETIN:LD\tA,($0002)"],
     ["src/boot.asm", "CP\tHIGH(RSTENT)", "CP\tHIGH(RESETIN)"],
   ]);
