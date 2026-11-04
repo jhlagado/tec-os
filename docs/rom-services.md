@@ -216,9 +216,9 @@ carries its own.
 | Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: the PICO9918's console reads it and the GLCD's driver through `TNFONT`; serial and the LCD need none |
 | 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
 | SD driver (`sd.asm`) | 836 | 1 | Stays |
-| Container mount and checks (`vol.asm`) | 1,293 | 1 | Stays |
-| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,495 | 2 | Stays |
-| BDOS (`cpm/bdos.asm`) | 3,871 | 2 | Stays |
+| Container mount and checks (`vol.asm`, `volutil.asm`) | 1,293 | 1 | Stays |
+| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`, `ccpfile.asm`, `ccpcmd.asm`) | 2,495 | 2 | Stays |
+| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,871 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 497 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 690 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
