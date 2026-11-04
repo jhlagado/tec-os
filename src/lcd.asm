@@ -2,34 +2,36 @@
 ; the mounted drives on rows 1-2. Every wait on the busy flag is bounded, so
 ; a missing display costs only the time-out.
 
-LCDCMD  EQU     $04
-LCDDAT  EQU     $84
+LCDCMD	EQU	$04		; command write, busy flag and address read
+LCDDAT	EQU	$84		; character data
 
-; Initialise: 8-bit, two-line addressing, display on, cursor off, clear.
-LCDINIT:LD      HL,LCDSEQ
-        LD      B,4
-LCDI:   LD      A,(HL)
-        CALL    LCDC
-        INC     HL
-        DJNZ    LCDI
-        RET
+; Initialise: 8-bit, two-line addressing, display on, cursor off, clear: the
+; four commands of LCDSEQ. Destroys AF, B and HL.
+LCDINIT:LD	HL,LCDSEQ
+	LD	B,4		; four commands
+LCDI:	LD	A,(HL)
+	CALL	LCDC		; each sent once the display is ready
+	INC	HL
+	DJNZ	LCDI
+	RET
 
 ; Wait while the display is busy, at most 256 polls. Preserves BC, DE, HL.
-LCDWAIT:PUSH    BC
-        LD      B,0
-LCDW:   IN      A,(LCDCMD)
-        RLCA
-        JR      NC,LCDWX
-        DJNZ    LCDW
-LCDWX:  POP     BC
-        RET
+; Destroys AF.
+LCDWAIT:PUSH	BC
+	LD	B,0		; 256 polls at most
+LCDW:	IN	A,(LCDCMD)	; bit 7 high while busy
+	RLCA			; bit 7, the busy flag, to carry
+	JR	NC,LCDWX	; ready
+	DJNZ	LCDW
+LCDWX:	POP	BC		; ready, or timed out with no display
+	RET
 
-; Send command A.
-LCDC:   PUSH    AF
-        CALL    LCDWAIT
-        POP     AF
-        OUT     (LCDCMD),A
-        RET
+; Send command A once the display is ready. Keeps every register.
+LCDC:	PUSH	AF		; the command, across the wait
+	CALL	LCDWAIT
+	POP	AF
+	OUT	(LCDCMD),A
+	RET
 
 ; Write the word at HL to row 3 and mark that it is there, so that a take can
 ; tell the row is the ROM's to clear. HL = GLCMSG. Returns as LCDROW.
@@ -46,7 +48,7 @@ LCD3:	LD	B,3		; the bottom row, free of the volumes
 ; carry set, so a caller reporting a failure can end with a jump here, and NZ.
 ; Destroys AF, HL. BC and DE are kept.
 LCDROW:	LD	A,B
-	PUSH	HL
+	PUSH	HL		; the string, across the lookup
 	LD	HL,LCDROWS	; the row's address on the display
 	ADD	A,L
 	LD	L,A
@@ -54,54 +56,55 @@ LCDROW:	LD	A,B
 	INC	H		; the table's page changed
 LCDR1:	LD	A,(HL)
 	POP	HL
-	CALL	LCDC
+	CALL	LCDC		; the cursor to the row's start
 LCDS:	LD	A,(HL)
 	CP	1		; carry at the zero that ends the string
 	RET	C
-	PUSH	AF
+	PUSH	AF		; the character, across the wait
 	CALL	LCDWAIT
 	POP	AF
-	OUT	(LCDDAT),A
+	OUT	(LCDDAT),A	; the display steps to the next column
 	INC	HL
 	JR	LCDS
-; Show the drive letters and labels of drives A and B on rows 1 and 2.
-LCDVOLS:LD      C,0
-LCDV:   PUSH    BC
-        CALL    DRVDESC
-        POP     BC
-        JR      NZ,LCDVN
+; Show the drive letters and labels of drives A and B on rows 1 and 2; an
+; unmounted drive's row is left as it was. Destroys AF, BC, DE, HL and IX.
+LCDVOLS:LD	C,0		; drive A first
+LCDV:	PUSH	BC
+	CALL	DRVDESC		; IX = drive C's descriptor
+	POP	BC
+	JR	NZ,LCDVN	; no volume on it
 	LD	HL,LINEBUF	; the row's text, in the terminal's
 	CALL	DRVLAB		; buffer, which the LCD may use
-        PUSH    BC
-        LD      A,C
-        INC     A
-        LD      B,A
-        LD      HL,LINEBUF
-        CALL    LCDROW
-        POP     BC
-LCDVN:  INC     C
-        LD      A,C
-        CP      2               ; only A and B fit
-        JR      C,LCDV
-        RET
+	PUSH	BC
+	LD	A,C
+	INC	A
+	LD	B,A		; row 1 for A, 2 for B
+	LD	HL,LINEBUF	; the text DRVLAB made
+	CALL	LCDROW
+	POP	BC
+LCDVN:	INC	C		; the next drive
+	LD	A,C
+	CP	2		; only A and B fit
+	JR	C,LCDV
+	RET
 
-; HL -> 15 bytes = drive C's letter, ": " and the 11-byte label of its
-; descriptor at IX, then a 0: the drive walkers' shared text, LCDVOLS's rows
-; in LINEBUF and SHOWVOL's lines in CMDTXT. Keeps BC and IX. Destroys AF, DE
-; and HL.
+; HL -> 15 bytes = drive C's letter, ": " and the 11-byte label at DLABEL in
+; its descriptor at IX, then a 0: the drive walkers' shared text, LCDVOLS's
+; rows in LINEBUF and SHOWVOL's lines in CMDTXT. Keeps BC and IX. Destroys
+; AF, DE and HL: DE ends at the 0 and HL past the descriptor's label.
 DRVLAB:	LD	A,C
 	PUSH	BC
-	ADD	A,'A'		; the drive's letter, then ": "
+	ADD	A,'A'		; the drive's letter
 	LD	(HL),A
 	INC	HL
-	LD	(HL),':'
+	LD	(HL),':'	; then ": "
 	INC	HL
 	LD	(HL),' '
-	INC	HL
-	PUSH	IX
+	INC	HL		; HL = where the label goes
+	PUSH	IX		; DE = IX
 	POP	DE
-	EX	DE,HL		; DE = LINEBUF+3, HL = the descriptor
-	LD	BC,DLABEL
+	EX	DE,HL		; DE = the buffer's fourth byte, HL = the
+	LD	BC,DLABEL	; descriptor, then its label
 	ADD	HL,BC
 	LD	BC,11		; the label
 	LDIR
