@@ -311,3 +311,101 @@ test("a wildcard erase whose second directory write fails keeps the first file e
   assert.deepEqual([...one.map(used), ...two.map(used)], [...one.map(() => 0), ...two.map(() => 1)], "ONE.DAT's blocks free, TWO.DAT's still used");
   assert.deepEqual([...new Set(fs.read("TWO.DAT"))], [0x22]);
 });
+
+// KE-AR2: a random record in an extent not on the card, on drive A (G1M) and drive B (G8M). ONE.DAT holds one
+// record of 35h; record 1024 is extent 8 of module 0.
+const fcbFields = (m) => ({ ex: m.read(FCB + 12), s2: m.read(FCB + 14) & 0x3f, rc: m.read(FCB + 15), map: bytes(m, FCB + 16, 16) });
+const setRecord = (m, rec) => [rec & 0xff, rec >> 8, 0].forEach((v, i) => m.write(FCB + 33 + i, v));
+const fillDma = (m, v) => {
+  for (let k = 0; k < 128; k += 1) m.write(DMA + k, v);
+};
+function oneRecord(drive, prepare) {
+  const image = standardCard();
+  volume(image, drive).write("ONE.DAT", new Uint8Array(128).fill(0x35));
+  prepare?.(volume(image, drive));
+  const r = rig(image);
+  r.fcb(drive === "A" ? 1 : 2, "ONE     DAT");
+  assert.notEqual(r.bdos(15), 0xff, "ONE.DAT opened");
+  return { image, r, m: r.m, opened: fcbFields(r.m), card: () => volume(image, drive) };
+}
+const extents = (fs) => fs.list().find((f) => f.name === "ONE.DAT").entries.map((e) => e.extent).sort((x, y) => x - y);
+
+for (const drive of ["A", "B"]) {
+  test(`a random read of a missing extent returns 4 each time and leaves the FCB on its extent, on ${drive}: (KE-AR2)`, () => {
+    const { m, r, opened } = oneRecord(drive);
+    setRecord(m, 1024);
+    for (let i = 0; i < 3; i += 1) {
+      fillDma(m, 0xcc);
+      const got = r.bdos(33);
+      assert.deepEqual(bytes(m, DMA, 128), new Array(128).fill(0xcc), `read ${i + 1}: the DMA untouched`);
+      assert.equal(got, 4, `read ${i + 1}: an extent not written`);
+    }
+    assert.deepEqual(fcbFields(m), opened, "EX, S2, RC and the map those of extent 0");
+    fillDma(m, 0xcc);
+    assert.equal(r.bdos(20), 0, "a sequential read after the misses reads extent 0's record");
+    assert.deepEqual(bytes(m, DMA, 128), new Array(128).fill(0x35));
+  });
+
+  test(`a random write after a missed random read makes the extent and leaves record 0 alone, on ${drive}: (KE-AR2)`, () => {
+    const { m, r, card } = oneRecord(drive);
+    setRecord(m, 1024);
+    assert.equal(r.bdos(33), 4, "the miss");
+    fillDma(m, 0x77);
+    const wrote = r.bdos(34);
+    assert.deepEqual([...new Set(card().read("ONE.DAT").subarray(0, 128))], [0x35], "record 0 on the card untouched by the write");
+    assert.equal(wrote, 0, "record 1024 written");
+    assert.deepEqual([m.read(FCB + 12), m.read(FCB + 14) & 0x3f], [8, 0], "the FCB on extent 8");
+    assert.notEqual(r.bdos(16), 0xff, "closed");
+    const fs = card();
+    const data = fs.read("ONE.DAT");
+    assert.deepEqual([...new Set(data.subarray(0, 128))], [0x35], "record 0 on the card as it was");
+    assert.deepEqual([...new Set(data.subarray(1024 * 128, 1025 * 128))], [0x77], "record 1024 on the card");
+    assert.deepEqual(extents(fs), [0, 8]);
+    assert.deepEqual(fs.verify(), []);
+  });
+
+  /** ONE.DAT open on DRIVE with every free directory entry taken by an empty file F0000000.DAT on. */
+  const fullDirectory = () =>
+    oneRecord(drive, (fs) => {
+      let n = 0;
+      for (let i = 0; i < fs.entries; i += 1) {
+        const e = fs.entry(i);
+        if (e[0] !== 0xe5) continue;
+        e.fill(0);
+        e.set(Buffer.from(`F${String(n).padStart(7, "0")}DAT`), 1);
+        n += 1;
+      }
+    });
+  const record0 = (card) => [...new Set(card().read("ONE.DAT").subarray(0, 128))];
+
+  test(`a random write refused with the directory full is refused again, record 0 left alone, on ${drive}: (KE-AR2)`, () => {
+    const { m, r, card, opened } = fullDirectory();
+    setRecord(m, 1024);
+    for (const v of [0x77, 0x78]) {
+      fillDma(m, v);
+      const got = r.bdos(34);
+      assert.deepEqual(record0(card), [0x35], `the write of ${v.toString(16)}h: record 0 on the card untouched`);
+      assert.equal(got, 5, `the write of ${v.toString(16)}h: the directory full`);
+    }
+    assert.deepEqual(fcbFields(m), opened, "the FCB back on extent 0");
+    assert.deepEqual(extents(card()), [0]);
+  });
+
+  test(`a random write retried after the full directory gains a free entry makes the extent, record 0 left alone, on ${drive}: (KE-AR2)`, () => {
+    const { m, r, card } = fullDirectory();
+    setRecord(m, 1024);
+    fillDma(m, 0x77);
+    assert.equal(r.bdos(34), 5, "the directory full");
+    putFcb(m, FCB2, drive === "A" ? 1 : 2, "F0000000DAT");
+    assert.equal(r.call(5, { c: 19, de: FCB2 }), 0, "an entry freed");
+    fillDma(m, 0x79);
+    const got = r.bdos(34);
+    assert.deepEqual(record0(card), [0x35], "record 0 on the card untouched by the retry");
+    assert.equal(got, 0, "the retry makes extent 8 and writes record 1024");
+    assert.notEqual(r.bdos(16), 0xff, "closed");
+    const fs = card();
+    assert.deepEqual([...new Set(fs.read("ONE.DAT").subarray(1024 * 128, 1025 * 128))], [0x79], "record 1024 on the card");
+    assert.deepEqual(extents(fs), [0, 8]);
+    assert.deepEqual(fs.verify(), []);
+  });
+}
