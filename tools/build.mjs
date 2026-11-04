@@ -4,9 +4,10 @@
 // For each hardware profile: generate the configuration and format equates,
 // assemble once to measure the resident workspace, place TPATOP as high as
 // that workspace allows, assemble again, check every placement rule and write
-// the image, debug map and memory census to build/<profile>/.
+// the image, debug map and memory census to build/<profile>/, and to dist/ when
+// npm run media has made it.
 
-import { copyFileSync, mkdirSync, readdirSync, writeFileSync, readFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -308,7 +309,24 @@ async function buildProfile(name) {
     },
   };
   writeFileSync(resolve(outDir, "census.json"), JSON.stringify(census, null, 2) + "\n");
+  refreshDist(outDir, census);
   return census;
+}
+
+/** A dist/ that npm run media made gets the new ROM, map and census, under
+ *  the names media gives them, and the manifest's figures (KE-188): the rest of
+ *  dist/, the card and its files, waits for npm run media. */
+function refreshDist(outDir, census) {
+  const dist = resolve(ROOT, "dist");
+  if (!existsSync(dist)) return;
+  copyFileSync(resolve(outDir, "tecos.rom"), resolve(dist, "tecos.rom"));
+  copyFileSync(resolve(outDir, "tecos.d8.json"), resolve(dist, "tecos.d8.json"));
+  copyFileSync(resolve(outDir, "census.json"), resolve(dist, "tecos.census.json"));
+  const path = resolve(dist, "manifest.json");
+  if (!existsSync(path)) return;
+  const manifest = JSON.parse(readFileSync(path, "utf8"));
+  manifest[census.profile] = { sha256: census.sha256, romUsed: census.rom.used, tpaBytes: census.ram.tpa.bytes };
+  writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
 }
 
 export async function build() {
