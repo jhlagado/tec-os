@@ -14,10 +14,22 @@
         "a quiet line for an absent device is followed by a : line that runs, and the same line typed says NAME? (KD-173)"
       ]
     },
+    "the startup rule: quiet typed too, STFLAG not read": {
+      "caught": true,
+      "by": [
+        "a quiet line for an absent device is followed by a : line that runs, and the same line typed says NAME? (KD-173)"
+      ]
+    },
     "PICO giving way: PICO.SVC takes the console whatever is in": {
       "caught": true,
       "by": [
         "GLCD.SVC then PICO.SVC typed leaves the GLCD the console: PICO.SVC loads and gives way (KE-150)"
+      ]
+    },
+    "CON's aliases: GLCD taken for CRT:": {
+      "caught": true,
+      "by": [
+        "CON PICO and CON GLCD name CRT: and UC1:; a width goes after CRT or PICO alone, 80, 40 or 32, and only to a driver whose table has the width (KD-174)"
       ]
     },
     "CON's width: 50 taken for 80": {
@@ -75,20 +87,22 @@
     }
   },
   "mutantsAt": {
-    "the font: service 15 one glyph out": "4496d5c",
-    "the startup rule: quiet for TNEBAD, not TNENODV": "4496d5c",
-    "PICO giving way: PICO.SVC takes the console whatever is in": "4496d5c",
-    "CON's width: 50 taken for 80": "4496d5c",
-    "the one driver: 40 and 32 columns on 80's name table and page": "4496d5c",
-    "function 44: a count of 1 refused": "4496d5c",
-    "function 46: one block short": "4496d5c",
-    "function 99: returns 0": "4496d5c",
-    "the prompt: no user number": "4496d5c",
-    "page zero: CONDEV written at 0045h too": "4496d5c",
-    "part 6: REMOVE takes UC1: in the field for this driver": "4496d5c"
+    "the font: service 15 one glyph out": "b00123c",
+    "the startup rule: quiet for TNEBAD, not TNENODV": "b00123c",
+    "the startup rule: quiet typed too, STFLAG not read": "b00123c",
+    "PICO giving way: PICO.SVC takes the console whatever is in": "b00123c",
+    "CON's aliases: GLCD taken for CRT:": "b00123c",
+    "CON's width: 50 taken for 80": "b00123c",
+    "the one driver: 40 and 32 columns on 80's name table and page": "b00123c",
+    "function 44: a count of 1 refused": "b00123c",
+    "function 46: one block short": "b00123c",
+    "function 99: returns 0": "b00123c",
+    "the prompt: no user number": "b00123c",
+    "page zero: CONDEV written at 0045h too": "b00123c",
+    "part 6: REMOVE takes UC1: in the field for this driver": "b00123c"
   },
   "mutantScore": {
-    "caught": 11,
-    "total": 11
+    "caught": 13,
+    "total": 13
   }
 }
