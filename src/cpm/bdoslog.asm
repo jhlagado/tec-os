@@ -27,14 +27,7 @@ READDIR:
 	LD	C,L
 	CALL	BIODMA
 	CALL	BIORDS
-	PUSH	AF		; the read's result, 0 for success
-	LD	HL,(CURDMA)	; the program's DMA address back
-	LD	B,H
-	LD	C,L
-	CALL	BIODMA
-	POP	AF
-	OR	A		; NZ: the read failed
-	JP	NZ,BADSECT
+	CALL	DMABACK		; the DMA back; a failed read: error 1
 	JR	ADVSEC		; on to the next directory record
 
 ; Write the current directory buffer back to the exact record READDIR loaded.
@@ -67,15 +60,22 @@ WRDIRNOW:
 	CALL	BIODMA
 	LD	C,1		; type 1: a directory write, at once
 	CALL	BIOWRS
-	PUSH	AF		; the write's result, 0 for success
+
+; After a BIOS read or write from a BDOS buffer: the BIOS's DMA address set
+; back to CURDMA before A, the BIOS's result, is looked at, so that an error
+; function 45 returns to the program leaves the program's DMA in the BIOS.
+; Takes A = 0 for success; a failure takes the BDOS's bad-sector path.
+; Destroys AF, BC, HL.
+DMABACK:
+	PUSH	AF		; the BIOS's result, 0 for success
 	LD	HL,(CURDMA)	; the program's DMA address back
 	LD	B,H
 	LD	C,L
 	CALL	BIODMA
 	POP	AF
-	OR	A		; NZ: the write failed
-	CALL	NZ,BADSECT
-	RET
+	OR	A		; NZ: the read or write failed
+	RET	Z
+	JP	BADSECT
 
 ; Step CURSEC on to the next directory record: past the track's last
 ; sector (the DPB's SPT), CURSEC returns to 0 and CURTRK moves on one.

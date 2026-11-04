@@ -477,9 +477,11 @@ ALFULL:
 ; CP/M function 40 clears a newly allocated block before publishing the
 ; caller's target record. The BIOS directory buffer is reusable scratch here.
 ; Takes DE = the block and SEQREC = the target record. Writes 128 zero bytes
-; to each of the block's records, then sets the BIOS's DMA back to CURDMA.
-; Returns DE = the block and SEQREC as it was; a disk error goes to BADSECT.
-; Destroys A, BC, HL, IX, F, and TARGEX and ALLEFT, used as scratch.
+; to each of the block's records, the BIOS's DMA on them for each write and
+; back on CURDMA after it (DMABACK), so a failed write that function 45
+; returns leaves the program's DMA in the BIOS. Returns DE = the block and
+; SEQREC as it was; a disk error goes to BADSECT. Destroys A, BC, HL, IX, F,
+; and TARGEX and ALLEFT, used as scratch.
 ZEROBLK:
 	LD	(ZEROBN),DE	; the block, kept through POSREC
 	LD	A,(SEQREC)
@@ -491,10 +493,6 @@ ZEROBLK:
 	INC	DE		; copied on through the rest:
 	LD	BC,127
 	LDIR			; 128 zero bytes
-	LD	HL,(DIRPTR)
-	LD	B,H
-	LD	C,L
-	CALL	BIODMA		; the BIOS's DMA on them
 	LD	IX,(DPBPTR)
 	LD	A,(IX+3)	; BLM: the records in a block, less one
 	INC	A
@@ -508,10 +506,13 @@ ZEROBLK:
 ZEROLOOP:
 	LD	DE,(ZEROBN)
 	CALL	POSREC		; the BIOS on record SEQREC of the block
+	LD	HL,(DIRPTR)
+	LD	B,H
+	LD	C,L
+	CALL	BIODMA		; the BIOS's DMA on the zeros
 	LD	C,2		; write type 2: a block newly allocated
 	CALL	BIOWRS
-	OR	A
-	CALL	NZ,BADSECT	; a failed write ends the function here
+	CALL	DMABACK		; the DMA back; a failed write: error 1
 	LD	A,(SEQREC)
 	INC	A
 	LD	(SEQREC),A	; the block's next record
@@ -519,10 +520,6 @@ ZEROLOOP:
 	DEC	A
 	LD	(ALLEFT),A
 	JR	NZ,ZEROLOOP	; until every record of the block is zero
-	LD	HL,(CURDMA)
-	LD	B,H
-	LD	C,L
-	CALL	BIODMA		; the program's DMA back
 	LD	A,(TARGEX)
 	LD	(SEQREC),A	; the target record back
 	LD	DE,(ZEROBN)	; DE = the block, as on entry

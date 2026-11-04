@@ -182,3 +182,21 @@ test("a sequential write whose close of the extent it leaves fails returns 1 and
   const left = Array.from({ length: disk.entries }, (_, i) => disk.entry(i)).filter((e) => e[0] !== 0xe5 && Buffer.from(e.subarray(1, 12)).toString("latin1") === "GONE    DAT");
   assert.deepEqual(left, [], "no entry made for the deleted file");
 });
+
+test("a zero-filling write whose block fails returns the error with the program's DMA address back in the BIOS (KE-176)", () => {
+  const image = standardCard();
+  volume(image, "A").write("DATA.DAT", new Uint8Array(128).fill(0x5a));
+  const r = callRig(image);
+  const { m } = r;
+  [0, ...Buffer.from("DATA    DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x0200 + i, v));
+  assert.notEqual(r.bdos(15, 0x0200), 0xff, "DATA.DAT opened through a second FCB");
+  r.bdos(45, 0xff);
+  r.fcb(0, "NEW     DAT");
+  assert.notEqual(r.bdos(22), 0xff);
+  const restore = failWrites(m);
+  assert.equal(r.bdos(40), 0xff, "function 40: the block's zeroing fails, the error returned");
+  restore();
+  for (let k = 0; k < 128; k += 1) m.write(DMA + k, 0);
+  assert.equal(r.bdos(20, 0x0200), 0, "DATA.DAT's first record read, with no directory read before it");
+  assert.deepEqual(Array.from({ length: 128 }, (_, k) => m.read(DMA + k)), new Array(128).fill(0x5a), "the record is at the program's DMA address");
+});
