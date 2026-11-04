@@ -158,13 +158,14 @@ test("the ROM's console at every width: CON PICO 40, CON CRT 32 and CON PICO 80 
   for (const [line, cols] of [["CON PICO 40", 40], ["CON CRT 32", 32], ["CON PICO: 80", 80], ["CON PICO 32", 32]]) {
     assert.doesNotMatch(say(m, line), /\?\r\n/, `${line} accepted`);
     assert.deepEqual([m.read(3) & 3, m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], [CRT, cols, 24], line);
+    assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[7], 0x31, line);
     for (let i = 0; i < 26; i += 1) say(m, "DIR HELLO.TXT");
     const screen = m.screen(cols);
     assert.ok(screen.some((l) => l.startsWith("HELLO.TXT")), `${line}: the screen at ${cols} columns`);
     assert.equal(word(m, 6), top, "nothing loaded");
   }
   const v = m.tec1g.state.display.tms9918.stateSnapshot().vram;
-  assert.deepEqual([...new Set(v.slice(0x2000, 0x2000 + 32))], [0xf1], "Graphics I's colours at 32");
+  assert.deepEqual([...new Set(v.slice(0x2000, 0x2000 + 32))], [0x31], "Graphics I's colours at 32");
   assert.deepEqual(m.violations, []);
 });
 
@@ -186,7 +187,7 @@ test("a width is refused, nothing changed, while the PICO9918 is claimed, and fo
 test("the console at 32 columns writes the colours and an empty sprite table", () => {
   const m = start(at(32));
   const v = m.tec1g.state.display.tms9918.stateSnapshot().vram;
-  assert.deepEqual([...new Set(v.slice(0x2000, 0x2000 + 32))], [0xf1]);
+  assert.deepEqual([...new Set(v.slice(0x2000, 0x2000 + 32))], [0x31]);
   assert.equal(v[0x1b00], 0xd0);
 });
 
@@ -485,7 +486,7 @@ for (const [cols, r1] of WIDTHS) {
     assert.equal(m.read(0x2900), 0x77, "a count of zero reads nothing");
     assert.equal(cold(m, 0), 0);
     assert.equal(VREG1(m), r1, "release: text mode");
-    assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[7], cols === 32 ? 0xf1 : 0xf4);
+    assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[7], 0x31);
     cold(m, 1);
     gfx(m, PICOREG, { a: 0xe2, b: 1 });
     m.cpu.cpu.pc = 0;
@@ -505,6 +506,7 @@ for (const [cols, r1] of WIDTHS) {
     }).flat();
     const patterns = (label) => assert.deepEqual([...vram(m).slice(0, 0x800)], want, label);
     const wreck = () => vram(m).fill(0, 0, 0x800);
+    assert.equal(m.tec1g.state.display.tms9918.stateSnapshot().registers[7], 0x31, "cold boot palette");
     patterns("after the take");
     wreck();
     say(m, "CON TTY");
