@@ -92,8 +92,20 @@ function fullDirectory(r){
   random(m,128);writeDma(m,128);const failed=call(m,34);rows.push(failed);assert.equal(failed.a,5,"random extent creation reports full directory");
   assert.deepEqual(m.violations,[]);assert.ok(peak()<=40,"full-directory path retains BDOS stack headroom");return {rows,peak:peak(),cardHash:sha(image)};
 }
+function allocationWorkload(r){
+  const image=card();
+  for(const drive of ["A","B"]){const v=volume(image,drive);for(let i=0;i<16;i++)v.write(`WALK${String(i).padStart(4,"0")}.DAT`,new Uint8Array(4096).fill(i+1));}
+  const m=boot(r,image),peak=observeStack(m),rows=[];setup(m,1);
+  rows.push(call(m,13,0)); // Full A directory scan and allocation reconstruction.
+  rows.push(call(m,14,1)); // First B login: full word-allocation directory scan.
+  for(const drive of [1,2]){setup(m,drive,"WALK????DAT");const row=call(m,19);assert.notEqual(row.a,255);rows.push(row);}
+  m.cpu.cpu.pc=0;m.runUntil(()=>m.ready()&&/A>$/.test(m.text()),400000000,"flush after wildcard erase");
+  assert.deepEqual(m.violations,[]);assert.ok(peak()<=40);
+  for(const drive of ["A","B"])assert.deepEqual(volume(image,drive).list(),[]);
+  return {rows,peak:peak(),cardHash:sha(image)};
+}
 const result={romHashes:dirs.map(d=>sha(rom(d).image)),cases:{}};
-for(const [name,fn]of Object.entries({roundtrip,fullDirectory})){
+for(const [name,fn]of Object.entries({roundtrip,fullDirectory,allocationWorkload})){
   const pair=dirs.map(d=>fn(rom(d)));const semantics=x=>({...x,peak:undefined,rows:x.rows.map(({cycles,...row})=>row)});
   assert.deepEqual(semantics(pair[1]),semantics(pair[0]),name);result.cases[name]={equivalent:true,reference:pair[0],candidate:pair[1]};
   writeFileSync(output,JSON.stringify(result,null,2)+"\n");console.error(`${name}: equivalent`);
