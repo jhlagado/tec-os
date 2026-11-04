@@ -316,15 +316,13 @@ TMSOUT:
   cp 32
   ret nz         ; text mode: no colours
                  ; or sprites
-  ld hl,COLOUR   ; Graphics I: white on
-                 ; black for every group
+  ld hl,COLOUR   ; Graphics I colours
   call TMSWA
   ld b,32        ; 32 groups of eight
                  ; codes
 
 TMSCOL:
-  ld a,$F1       ; foreground 15, white;
-                 ; background 1, black
+  ld a,$31       ; light green on black
   out (VDPDAT),a
   djnz TMSCOL
   ld hl,SPRITE   ; no sprites
@@ -636,7 +634,7 @@ TMSMBN:
 ; the F18A T80 mode): R0 bit 2 with
 ; text mode, names at a 4 KiB boundary
 ; (R2 low bits set), patterns at
-; 0000h, white on dark blue. No unlock
+; 0000h, light green on black. No unlock
 ; is needed. R1 is D0h: bit 7, the
 ; TMS9918A's 4/16K bit, set for 16K
 ; VRAM, like the 40 and 32-column sets.
@@ -644,7 +642,7 @@ TMSMBN:
 ; colours.
 ; - Graphics I: patterns 0000h, colours
 ; 2000h, sprites 1B00h/3800h.
-REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$F4
-REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$F4
-REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$F1
+REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$31
+REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$31
+REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31
 

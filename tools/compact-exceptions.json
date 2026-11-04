@@ -83,9 +83,9 @@
   "src/pico.asm": {
     "lines": [
       "PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN",
-      "REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$F4",
-      "REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$F4",
-      "REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$F1"
+      "REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$31",
+      "REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$31",
+      "REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31"
     ],
     "headers": {}
   },
