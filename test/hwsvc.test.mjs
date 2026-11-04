@@ -175,6 +175,7 @@ test("hardware services: the DS1302 clock", () => {
   const set = bytes(m, BUF + 0x10, 7);
   assert.deepEqual(set.slice(1), [0x59, 0x12, 0x25, 0x12, 0x04, 0x26]);
   assert.ok(set[0] >= 0x30 && set[0] <= 0x31, "seconds as set");
+  assert.equal(m.rtc.registers[7] & 0x80, 0x80, "the write protect on again after the set (KE-194)");
   // The host stalls for 1.2 s between the set and the next read, and the
   // machine runs no cycles: the clock reads what it read before.
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1200);

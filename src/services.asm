@@ -255,8 +255,9 @@ HWSPL:	LD	A,(VWID)
 ; ---- Clock ------------------------------------------------------------------
 ; RTC. B = 0 reads, B = 1 sets, the seven BCD bytes at HL: seconds, minutes,
 ; hours, date, month, weekday, year. TNEBAD for any other B, TNENODV with no
-; DS1302. Setting leaves the clock's write protect off. Returns HL past the
-; seven. Destroys AF, BC, D, and E when setting.
+; DS1302. Setting turns the clock's write protect off for the burst, whose
+; control byte puts it on again. Returns HL past the seven. Destroys AF, BC,
+; D, and E when setting.
 HWSRTC:	LD	A,B		; 0 read or 1 set, and nothing else
 	CP	2
 	LD	A,TNEBAD
@@ -286,7 +287,7 @@ HWSRV:	LD	D,(HL)		; each time byte in turn
 	CALL	RTCWR
 	INC	HL
 	DJNZ	HWSRV
-	LD	D,0		; the control byte: write protect stays off
+	LD	D,$80		; the control byte: write protect on again
 	CALL	RTCWR
 RTCEND:	XOR	A		; enable low: the transfer ends
 	OUT	(RTCPORT),A
