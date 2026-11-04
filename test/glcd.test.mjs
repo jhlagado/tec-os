@@ -112,10 +112,10 @@ test("on a GLCD board (0006h) is three pages lower than with the driver, and no 
   assert.equal(bdosVector, ((stub >> 8) - 3) << 8);
 });
 
-test("a program on the CCP stack calls CONOUT directly in its 28 bytes, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async () => {
+test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async () => {
   const { m, depths } = await workload;
   const free = m.sym("CSTKTOP") - 2 - m.sym("CSTKBAS");
-  assert.equal(free, 28);
+  assert.equal(free, m.sym("CCPSTN") - 2, "the stack is CCPSTN, less the return word");
   assert.ok(depths.program > 0 && depths.program <= free, `CONOUT took ${depths.program} bytes of a program's ${free}`);
   const { reserved, deepest } = depths.bdos;
   assert.ok((reserved - deepest) * 4 >= reserved, `the BDOS stack used ${deepest} of ${reserved}`);
