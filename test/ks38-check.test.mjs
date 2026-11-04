@@ -5,7 +5,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import * as M from "../tools/lib/model.mjs";
 import { built, compareLabels, sameImage, searchNames } from "../tools/lib/ks38-check.mjs";
@@ -27,7 +27,9 @@ async function variant(name, edits) {
   return built(dir);
 }
 
-const SWAP = ["src/rom.asm", '%INCLUDE "tms.asm"\n%INCLUDE "lcd.asm"', '%INCLUDE "lcd.asm"\n%INCLUDE "tms.asm"'];
+// lcd.asm and the file included just before it, read from rom.asm, traded.
+const LCDPAIR = readFileSync(resolve(ROOT, "src/rom.asm"), "latin1").match(/^(%INCLUDE "[^"]+")\n(%INCLUDE "lcd\.asm")$/m);
+const SWAP = ["src/rom.asm", LCDPAIR[0], `${LCDPAIR[2]}\n${LCDPAIR[1]}`];
 
 test("the image check passes on the same image and finds one byte changed", () => {
   assert.equal(sameImage(base.image, base.image).same, true);
