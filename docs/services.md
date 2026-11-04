@@ -1,8 +1,9 @@
 # Services
 
-Status: **Built**, 2026-10-31: the loader, the registry, the commands, startup,
-`GLCD.SVC` and `PICO.SVC`. `test/svc.test.mjs`, `test/startup.test.mjs` and
-`test/pico.test.mjs` hold them.
+Status: **Built**, 2026-10-31: the loader, the registry, the commands, startup
+and `GLCD.SVC`; the PICO9918's console moved into the ROM (KS39).
+`test/svc.test.mjs`, `test/startup.test.mjs`, `test/pico.test.mjs` and
+`test/ks39.test.mjs` hold them.
 
 A *service* is what a `.SVC` file installs: a resident in EXPAND 0, below
 `(0006h)`, in whole pages. It publishes named *records* in the registry and
@@ -21,8 +22,7 @@ for it.
 A `.SVC` file is the image, made for page 0 with its header at the start, then
 the dependencies, then the relocation data. `tools/lib/svc.mjs` writes one from
 two assemblies. ATOM takes `%INCLUDE` only in a file's header, so the writer copies
-in any `%INCLUDE` below the `ORG`, which is how a display driver places its font
-last in the image, where its 768 bytes cost no gap bytes. Records are whole on disk, so a file's end is rounded, and the
+in any `%INCLUDE` below the `ORG`. Records are whole on disk, so a file's end is rounded, and the
 loader ignores what follows its relocation data.
 
 | Offset | Bytes | In the file | In memory |
@@ -47,7 +47,7 @@ With a service in, `(0006h)` is its page's start. The `JP` there goes straight i
 the BDOS, so a BDOS call is two jumps however many services are in, and every field a
 service needs lies at or above that word, where a program that sets SP from it can't
 reach. With none in, `(0006h)` is the stub directly below the allocation vectors,
-`B815h` on the starter card and lower on a card with more volumes.
+`B9A4h` on the starter card and lower on a card with more volumes.
 
 Format version 4 has version 1's layout. It rose with ABI 5, as 3 did with ABI 4:
 services test no ABI, and each major moved the table's entries, so the loader
@@ -70,18 +70,17 @@ won't read, or the load is refused or fails, the command's name comes back with
 a question mark, as for any command that won't run, with one exception: a line
 from `STARTUP.CMD` whose driver finds its device absent (`INIT` returns
 `TNENODV` with carry) says nothing, and leaves the code 0, so a `:` line after
-it runs. Typed, or for any other cause, it says `NAME?` as before. If a display
-driver's table is in its own first page it takes the console unless the other
-display's driver is in: each gives way to the one loaded first. Any other
-service leaves the console alone.
+it runs. Typed, or for any other cause, it says `NAME?` as before. `GLCD.SVC`
+takes the console unless `CRT:`, the ROM's PICO9918 console, is in effect, and
+then gives way to it. Any other service leaves the console alone.
 
-`SERVICES` prints one line for each service, the newest first: its name and its
-pages. It walks the owner list, so a service with no record is listed.
+`SERVICES` prints one line for each loaded service, the newest first: its name
+and its pages. It walks the owner list, so a service with no record is listed,
+and the ROM's PICO9918 console, which has no pages, is not.
 
 `UNLOAD` removes the lowest resident, as below, and answers the same way if it
-can't. `PICO.SVC`'s `REMOVE` refuses while it is the console, since `CON CRT` has no
-load, and while the PICO9918 is claimed, which it reads from `INFO`, until a release
-or a warm boot. `GLCD.SVC`'s gives the console back to `CRT:` if `PICO.SVC` is in.
+can't. It never removes the ROM's PICO9918 console. `GLCD.SVC`'s `REMOVE` gives the
+console back to `CRT:` if the "PICO" record is present.
 
 ## Startup
 
@@ -104,34 +103,36 @@ the whole record, runs without its last; one that starts at the 128th byte isn't
 run. A line that fails prints its usual message and the
 next runs.
 
-**One driver for every width.** `PICO.SVC` runs at 80 columns, 40, or 32 in
-Graphics I, and `CON PICO 40`, `CON PICO 32` or `CON PICO 80` changes it while it
-runs. The width it starts at is the build's: the starter card carries the
-80-column start, and the web page writes the start chosen as `PICO.SVC`. The ROM
-is one image for every board.
+**The PICO9918 needs no line.** When the VDP answers the ROM's probe and the
+matrix keyboard is fitted, cold boot starts the ROM's console before the banner,
+at 80 columns, and sets the IOBYTE's `CON:` field to `CRT:` (KS39). `CON PICO 40`,
+`CON PICO 32` or `CON PICO 80` changes the width; warm boot keeps it and a reset
+sets 80 again, so a `STARTUP.CMD` line such as `CON PICO 40` chooses the width
+at every reset. The ROM is one image for every board.
 
-One card can serve every board: a line for the PICO9918, then `GLCD.SVC`. Each line
-makes its display the console where there is one, and elsewhere passes over it
-quietly and goes on. On a board with both, `GLCD.SVC`'s line loads and
-gives way quietly once `PICO.SVC` is the console, which keeps it, and `CON UC1:`
-then makes the GLCD the console with nothing more to load; the two together leave
-45,824 bytes of TPA on the starter card. Once, at the first prompt
-after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
-if no display driver is installed. That covers a missing file, a bad file, no
-`STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD
-has taken over from a bad `PICO.SVC`, or after a good load and `CON TTY`, and a board
-with no matrix keyboard, which both drivers refuse, never shows it. A display driver
-installed later clears the word. `CON UC1:` shows `GLCD?` if it can't load, a take
-clears that too, and so does `GLCD.SVC` loading under `PICO.SVC`, which keeps the
-console. A word goes only if it is still there: a program's write to row 3 through
-hardware service `LCD` takes the row over, and no take clears it. A program writing the LCD's
-port directly is unseen. Until a
-display's line runs, the banner and volumes go to the serial terminal and the LCD. A
-card that won't mount shows `CARD?` on the LCD at every failure, and `R` starts the LCD
-again, so a good retry clears the word.
+One card can serve every board: the starter card's `STARTUP.CMD` holds `GLCD.SVC`
+alone. Where there is a GLCD and a matrix keyboard and no PICO9918 console, the
+line makes the GLCD the console; elsewhere it passes over it quietly and goes on.
+On a board with both displays, `GLCD.SVC`'s line loads and gives way quietly to
+`CRT:`, which keeps the console, and `CON UC1:` then makes the GLCD the console with
+nothing more to load; that leaves 46,336 bytes of TPA on the starter card. An old
+card's `PICO.SVC` line is refused at its `INIT`, since `TNDRVR` no longer takes
+`CRT:`, and prints `PICO.SVC?`, leaving nothing loaded.
 
-A board with no matrix keyboard refuses both drivers, so it has an unprogrammed VDP
-until a program claims it. A claim with no `PICO.SVC` in restores nothing on release.
+`CON UC1:` shows `GLCD?` on the LCD if it can't load, and a take clears it, as does
+`GLCD.SVC` loading and giving way to `CRT:`. A word goes only if it is still there:
+a program's write to row 3 through hardware service `LCD` takes the row over, and no
+take clears it. A program writing the LCD's port directly is unseen. Where the
+ROM's console doesn't start, the banner and volumes go to the serial terminal and
+the LCD until a display's line runs. A card that won't mount shows `CARD?` on the
+LCD at every failure, and DIAG's `R retry>` prompt on the console, the PICO9918's
+screen or the serial terminal; `R` starts the LCD again, so a good retry clears the
+word.
+
+A board with a PICO9918 and no matrix keyboard keeps its console on serial and has
+an unprogrammed VDP until a program claims it, and a board with no matrix keyboard
+refuses `GLCD.SVC`. A claim where the ROM's console didn't start restores nothing
+on release.
 
 **The skip.** A keypad key held through reset, until the prompt, skips the file:
 port `03h` bit 6 is read once, just before the open, about 1.46 s after reset. The
@@ -141,8 +142,9 @@ over this bit's polarity: a board that reads it the other way would skip on ever
 boot. The web host has no keypad and no tool to clear the file, which can only be
 overwritten by a copy or replaced with a new starter card.
 
-**Recovery needs serial.** After a skip, or with no file, a board has its LCD and the
-serial terminal: the matrix keyboard isn't read until a display's driver is in.
+**Recovery needs serial.** After a skip, or with no file, a board without the ROM's
+PICO9918 console has its LCD and the serial terminal: the matrix keyboard isn't read
+until a display's driver is in. A PICO board keeps the console it started on.
 
 ## Installation
 
@@ -241,8 +243,13 @@ Each record's table is defined in a document with its interface version.
 
 ### `PICO`, version 3
 
-`PICO.SVC` offers `PICO` with the table it hands `TNDRVR`, followed by four
-words, the graphics entries, and from version 3 a fifth, the width:
+The ROM's PICO9918 console offers `PICO`, version 3, with its console table
+followed by four words, the graphics entries, and from version 3 a fifth, the
+width. Its table, its record and its state are one 95-byte RAM block, `PIBLK`, in
+the BIOS's state, filled at cold boot from a ROM template and kept by warm boot.
+The record is registered only when the console started, and is the registry's
+permanent tail: `TNFIND` finds it and `TNLIST` returns it last (KS39). The offsets
+are from the table `TNFIND` returns:
 
 | Offset | `abi.inc` | Registers | Effect |
 | --- | --- | --- | --- |
@@ -255,13 +262,13 @@ words, the graphics entries, and from version 3 a fifth, the width:
 The graphics entries each assume the caller holds the claim (hardware service `VIDEO`), as a program writing the
 ports does, and checks nothing. A count of 0 moves nothing. Each destroys AF, BC, DE
 and HL. `GLCD.SVC`'s `REMOVE` asks for version 1 and reads none of these. A board with
-a PICO9918 and no matrix keyboard refuses the driver, so it has no entries: a
-program there claims the VDP and writes the ports.
+a PICO9918 and no matrix keyboard doesn't start the console, so it has no record and
+no entries: a program there claims the VDP and writes the ports.
 
-Version 3 put the width at offset 24, so the driver's state after the table moved
-by two bytes: `abi.inc` names the record's version byte (`PICOVRB`, 36), the
-page drawn (`PICOTPD`, 41) and the page shown (`PICOTPS`, 42), for a debugger
-that reads them, and the build checks each against the driver. The name table,
+Version 3 put the width at offset 24, so the state after the table moved by two
+bytes: `abi.inc` names the record's version byte (`PICOVRB`, 36), the page drawn
+(`PICOTPD`, 41) and the page shown (`PICOTPS`, 42), for a debugger that reads
+them, and the build checks each against the block. The name table,
 the second page, the row table and the registers follow the width at run time.
 
 ## Removal
@@ -277,8 +284,8 @@ boot keeps services and the registry; a reset empties both.
 ## Rules for a source
 
 A service calls the ROM table and nothing else, and carries what it needs
-that the ROM doesn't offer: each display driver has its own font, checked by the
-build against `format/font5x7.txt`. The build refuses a source
+that the ROM doesn't offer; a display driver draws from the ROM's font, which
+`TNFONT` returns. The build refuses a source
 in `drivers/`, or `test/programs/svc*.asm`, that names a ROM address; `abi.inc`'s
 names are the way in.
 
@@ -309,7 +316,7 @@ after a warm boot until a program or a service sets `EI`, and a warm-boot hook c
 into `WBOOTR` with no service code after it. TEC-OS never selects MAIN 1 and gives
 it no page zero.
 
-The ROM and the display drivers mask what an interrupt could split: `VPAIR` for each
+The ROM masks what an interrupt could split: `VPAIR` for each
 pair written to the VDP's control port, and serial's `TXBYTE` and `RXBITS` for a whole
 byte, while their start-bit polls stay open. A program holding the claim masks its
 own pairs. Function 47 from `INIT` or `REMOVE` is a warm boot there, like function 0,

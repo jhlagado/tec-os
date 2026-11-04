@@ -29,8 +29,8 @@ LBUF:   DW      0               ; LINEBUF, from TNDRVR
 ; INIT refuses if the controller doesn't answer or another GLCD.SVC has the
 ; console. With another display the console, it loads all the same and the
 ; ROM's loader leaves the console where it is (SVCGO): a line in STARTUP.CMD
-; gives way to PICO.SVC quietly (KE-150). It publishes no record. REMOVE gives
-; the console back, to PICO.SVC if that is in.
+; gives way to the ROM's PICO9918 console quietly (KE-150). It publishes no
+; record. REMOVE gives the console back, to CRT: if the ROM's console started.
 INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
 	CALL	ABICALL		; refuses the number, and INIT with it
 	RET	C

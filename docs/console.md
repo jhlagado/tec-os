@@ -6,19 +6,21 @@ field at `0003h`:
 | IOBYTE CON: | Device | Keys from | Output to | Size at `0048h` |
 | --- | --- | --- | --- | --- |
 | `TTY:` (0) | Serial terminal | Serial | Serial | 0 × 0 (programs assume 80 × 24) |
-| `CRT:` (1) | PICO9918 | Matrix keyboard | PICO9918 | 80, 40 or 32 × 24, by the driver |
+| `CRT:` (1) | PICO9918 | Matrix keyboard | PICO9918 | 80, 40 or 32 × 24, by `CON` |
 | `BAT:` (2) | CP/M batch | Reader (serial) | List (discarded) | 0 × 0 |
 | `UC1:` (3) | GLCD | Matrix keyboard | GLCD | 21 × 8 |
 
-A reset starts on `TTY:`, and a display driver's load takes the console
-unless the other display's driver is in already.
+A reset starts on `CRT:` when the PICO9918 answers and the matrix keyboard
+is fitted, and on `TTY:` otherwise. `GLCD.SVC`'s load takes the console unless
+`CRT:` is in effect.
 The CCP's `CON` command shows the console in use; `CON TTY`, `CON CRT`,
 `CON BAT` and `CON UC1` (a colon may follow), or `CON PICO` for `CRT:` and
 `CON GLCD` for `UC1:`, change it, as `STAT CON:=CRT:` or any program writing
 the IOBYTE does. After `CRT` or `PICO` a width, 80, 40 or 32, sets the
-PICO9918's columns through `PICO.SVC`'s table (`PICOWID`, version 3 of the
-"PICO" record); any other width, a width after another name, or no driver in
-that takes one, and the command is refused with nothing changed. The BIOS acts on a change at the
+PICO9918's columns through the ROM's console table (`PICOWID`, version 3 of
+the "PICO" record); warm boot keeps the width and a reset sets 80. Any other
+width, a width after another name, or no PICO9918 console, and the command is
+refused with nothing changed. The BIOS acts on a change at the
 next console call: it clears and homes the new screen. `CRT:` or `UC1:`
 without its display or the keyboard falls back to the serial terminal, so
 there is always a console. The 20 × 4 LCD is never the console.
@@ -27,9 +29,9 @@ there is always a console. The 20 × 4 LCD is never the console.
 | --- | --- | --- | --- |
 | FTDI serial, 4800 8N2 | in, out | always | Implemented |
 | Matrix keyboard | in | the board's Matrix configuration switch (port 03h bit 0) is on | Implemented |
-| PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh; `PICO.SVC` | Implemented |
-| PICO9918, 40 × 24 text | out | as above, `PICO.SVC` built at 40 columns | Implemented |
-| PICO9918, 32 × 24 Graphics I | out | as above, `PICO.SVC` built at 32 columns | Implemented |
+| PICO9918, 80 × 24 text (TEXT80) | out | the card answers at ports BEh/BFh and the matrix keyboard is fitted | Implemented |
+| PICO9918, 40 × 24 text | out | as above, `CON PICO 40` | Implemented |
+| PICO9918, 32 × 24 Graphics I | out | as above, `CON PICO 32` | Implemented |
 | ST7920 GLCD, 128 × 64 as 21 × 8 | out | the controller's busy flag clears | Implemented |
 | HD44780 LCD, 20 × 4 | status only | always | Banner and mounted drives at cold boot; not a console device |
 
@@ -87,40 +89,42 @@ line.
 ## Displays
 
 The video card is always a PICO9918. At cold boot the ROM records whether VRAM
-answers at ports BEh/BFh, and programs nothing: each display's console is a
-driver. Until one is in, output goes to the serial terminal and the LCD. The
-terminal reaches the display in use through the driver's table, so another
-display needs only those routines. `docs/services.md` has the rules.
+answers at ports BEh/BFh. The terminal reaches the display in use through a
+table of its routines, so another display needs only those routines.
+`docs/services.md` has the rules.
 
-The PICO9918's console is `PICO.SVC`, built at 80 columns, 40, or 32 in
-Graphics I; a card holds one, and the web page writes the width chosen. It takes six pages below the BDOS entry,
-so `(0006h)` is six pages under the stub's, with its own font and the graphics entries. It refuses with no PICO9918 and with no matrix
-keyboard, and a board with no matrix keyboard therefore has an unprogrammed VDP
-until a program claims it. Its `REMOVE` refuses while it is the console, since
-`CON CRT` has no load, and while the PICO9918 is claimed. Warm boot restores the mode of
-the display in use (see [compatibility.md](compatibility.md)).
+The PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I
+(KS39). When the VDP answers and the matrix keyboard is fitted, cold boot starts
+it before the banner at 80 columns and sets `CON:` to `CRT:`: the banner, the
+volume list, DIAG's `R retry>` prompt if the card won't mount, and the prompt all
+appear on its screen, with no file needed. Its table, its "PICO" record and its
+state are one 95-byte RAM block, `PIBLK`, in the BIOS's state, so it costs no TPA
+pages. With no matrix keyboard the console stays on serial, and the VDP stays
+unprogrammed until a program claims it. A terminal user on a PICO9918 board takes
+the console with `CON TTY`, or from cold boot with the Matrix switch off. Warm boot
+restores the mode of the display in use (see [compatibility.md](compatibility.md)).
 
 ## GLCD
 
 The GLCD console is a driver, `GLCD.SVC` on the starter card, not part of
-the ROM. Its code, its screen text and its font take six pages just below the
-BDOS entry, so on a board that loads it `(0006h)` is six pages under the stub's; a board
-without a GLCD loses nothing. Its INIT hands the terminal its six video
+the ROM. Its code and its screen text take three pages just below the BDOS
+entry, so on a board that loads it `(0006h)` is three pages under the stub's page;
+a board without a GLCD loses nothing. Its INIT hands the terminal its six video
 routines through `TNDRVR`, a service of the table at `C003h`, and the terminal calls them directly, on the
 caller's stack (see [rom-services.md](rom-services.md)). On a board with a GLCD, the matrix
-keyboard and no PICO9918, cold boot shows its banner and volumes on the
+keyboard and no PICO9918 console, cold boot shows its banner and volumes on the
 serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
 `GLCD.SVC` installs it and makes the GLCD the console; with no such line the
 console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
 too, and shows `GLCD?` on the LCD if it can't, which a display taking over clears. On a board with both displays
-the line loads it and gives way quietly to `PICO.SVC`, which keeps the console,
-and `CON UC1:` then switches to it; the two together cost 1,536 TPA bytes.
-Loaded after `PICO.SVC` has the console it gives way in the same way, and
-`PICO.SVC` loaded after it gives way to it. A board without a GLCD refuses it,
+the line loads it and gives way quietly to `CRT:`, which keeps the console,
+and `CON UC1:` then switches to it. Loaded while `CRT:` is in effect, typed or
+by a line, it gives way in the same way; loaded after `CON TTY`, it takes the
+console. A board without a GLCD refuses it,
 quietly from `STARTUP.CMD`, and one without a matrix keyboard refuses it with
 `GLCD.SVC?`, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
-resident, removes it, and the console goes back to `CRT:` if `PICO.SVC` is in and
-to serial if not.
+resident, removes it, and the console goes back to `CRT:` if the "PICO" record is
+present and to serial if not.
 
 The ST7920 runs in its extended instruction set with graphics on. The
 driver keeps the 168 characters on screen and draws each 16-pixel graphics
@@ -137,9 +141,9 @@ The display size is published in the table at `C003h` (the word at
 their screen without being rebuilt for each display.
 
 The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows. The
-ROM holds one copy, built from that file, and both display drivers draw from it:
-each asks for it at `INIT` with `TNFONT`, service 15. The diagnostics ROM builds
-its own from the same file.
+ROM holds one copy, built from that file, and the ROM's PICO9918 console and the
+GLCD's driver draw from it; the driver asks for it at `INIT` with `TNFONT`,
+service 15. The diagnostics ROM builds its own from the same file.
 
 ## Matrix keyboard
 

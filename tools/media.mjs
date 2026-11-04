@@ -10,7 +10,7 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
-import { displayFiles, widthDrivers } from "./lib/starter.mjs";
+import { displayFiles } from "./lib/starter.mjs";
 import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
 import { located } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
@@ -193,13 +193,6 @@ async function main() {
     writeFileSync(resolve(FILES, f.name), f.bytes);
     files.push(f);
   }
-  // The page's other widths: it writes one as the card's PICO.SVC. Not on the card,
-  // but pinned in the recipe's widths with the card's own.
-  const widths = { 80: { url: "files/PICO.SVC", sha256: sha(files.find((f) => f.name === "PICO.SVC").bytes) } };
-  for (const f of await widthDrivers(ROOT)) {
-    writeFileSync(resolve(FILES, f.name), f.bytes);
-    widths[f.cols] = { url: `files/${f.name}`, sha256: sha(f.bytes) };
-  }
   writeFileSync(resolve(FILES, "TED.COM"), ted);
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   // SAMPLE.ASM, a first program for TAS (KD-177), as a CP/M text file.
@@ -217,7 +210,6 @@ async function main() {
     name: "TEC-OS starter",
     instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or TED SAMPLE.ASM to read it. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",
-    widths,
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
       { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },

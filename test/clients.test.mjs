@@ -127,7 +127,7 @@ test("abi.inc's numbers reach the tests by name", () => {
 // driver runs.
 const OLD_PICO = "23513b3ba4931a183b097f0753209e0b03bbea6168127a56279fc41cfb95a58a";
 
-test("a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark, nothing loaded and PICO? still shown", () => {
+test("a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark, nothing loaded, the ROM's console in place", () => {
   const bytes = readFileSync(resolve(ROOT, "test/fixtures/2d5ce25/PICO.DRV"));
   assert.equal(createHash("sha256").update(bytes).digest("hex"), OLD_PICO, "the pinned binary");
   const image = standardCard();
@@ -138,7 +138,7 @@ test("a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
   assert.match(m.text(0), /PICO\.SVC\?/);
-  assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [0, 0, 0], "no INIT ran");
-  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "PICO?");
+  assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [0, 0, 1], "no INIT ran; CRT:, the ROM's");
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "", "no word on row 3");
   assert.deepEqual(m.violations, []);
 });

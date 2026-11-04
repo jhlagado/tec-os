@@ -12,9 +12,9 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 47,363 bytes on the
-  starter card and at least 46,660 on any card, and 46,592 and 45,824 on a board
-  with a display driver. EXPAND 1 is TEC-OS's own: its block cache and history. TEC-OS says so at boot and stops if either half
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 47,268 bytes on the
+  starter card and at least 46,564 on any card, and 46,336 with the GLCD's
+  driver. EXPAND 1 is TEC-OS's own: its block cache and history. TEC-OS says so at boot and stops if either half
   is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
@@ -52,11 +52,11 @@ refused.
 
 The ROM is assembled with ATOM. There is one image for every board,
 `build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
-display's driver is `A:PICO.SVC`, one driver for 80 columns, 40, or 32 in
-Graphics I, which `CON PICO 40` and the like switch between. The starter card's
-starts at 80 columns; `npm run media` puts the same driver starting at 40 and 32
-in `dist/files` as `PICO40.SVC` and `PICO32.SVC`, and the web page writes the
-start chosen as the card's `PICO.SVC`.
+PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I, which
+`CON PICO 40` and the like switch between; it starts at 80. The GLCD's console
+is a driver, `A:GLCD.SVC`. The web page writes a width chosen as a `CON PICO 40`
+or `CON PICO 32` line at the top of the card's `STARTUP.CMD`, and takes out any
+other `CON PICO` or `CON CRT` line with a width, which would override it.
 
 ## In a web page
 
@@ -91,13 +91,15 @@ to TEC-OS. Never change a card on the PC while the TEC-1G is using it.
 
 ## Using it
 
-TEC-OS starts on the serial terminal and the 20 × 4 LCD, and the starter card's
-`STARTUP.CMD` then moves the console to the PICO9918 or the GLCD when the
-board's Matrix switch is on. Otherwise it stays on the serial terminal: connect
+TEC-OS starts on the PICO9918 when the card answers and the board's Matrix
+switch is on, from the banner on, with no file needed. Otherwise it starts on the
+serial terminal and the 20 × 4 LCD, and the starter card's `STARTUP.CMD` moves
+the console to the GLCD when the Matrix switch is on. Otherwise it stays on the
+serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
-`SERVICES` lists the services installed and `UNLOAD` removes the last one. A line
+`SERVICES` lists the services loaded and `UNLOAD` removes the last one. A line
 chains commands with `!`, and a piece starting `:` runs only if the last command
 succeeded, as in `TED X.ASM!TAS X!:X`.
 `SAMPLE.ASM` on the starter card is a first program to build and read: `TAS SAMPLE`
@@ -108,11 +110,10 @@ the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary
 exit, from the volume selected as A:; a keypad key held from reset until the
-prompt skips it, and the console stays on the serial terminal. A board with a
-PICO9918 and a matrix keyboard shows `PICO?` on the LCD, once, if no display driver
-is installed at the first prompt after startup. If the card is missing
-or invalid the LCD shows `CARD?`, and a diagnostic prompt on the serial terminal
-shows the error code and offers a retry. A good retry clears the word.
+prompt skips it, and the console stays where cold boot put it. If the card is
+missing or invalid the LCD shows `CARD?`, and a diagnostic prompt on the console,
+the PICO9918 or the serial terminal, shows the error code and offers a retry. A
+good retry clears the word.
 
 Do not press the hex keypad while a CP/M program is running; see
 [docs/compatibility.md](docs/compatibility.md).
@@ -131,8 +132,8 @@ Do not press the hex keypad while a CP/M program is running; see
 `src/` holds the ROM. `src/cpm/` holds the CCP and BDOS adapted from Portable
 CP/M ([provenance](src/cpm/PROVENANCE.md)). `format/` holds the container and
 geometry definition, which both the ROM build and the host tools read, and
-the console font, which the display drivers' copy in `drivers/` is checked
-against. `tools/` holds the build, `tecvol` and the media script.
+the console font, from which the build makes the ROM's copy. `drivers/` holds
+the GLCD's driver. `tools/` holds the build, `tecvol` and the media script.
 `test/` holds the tests, their harness and the test programs.
 
 TEC-OS is licensed under GPL-3.0-or-later.

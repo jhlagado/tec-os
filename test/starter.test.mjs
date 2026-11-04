@@ -5,11 +5,11 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GLCD_SVC, PICO_SVC, ROOT, boot, program, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, boot, program, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 
@@ -30,13 +30,12 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly seven files, each by its hash", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
+test("the starter card holds exactly six files, each by its hash, the PICO9918's console being the ROM's (KS39)", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   const { card, recipe } = starter();
   const want = {
-    "STARTUP.CMD": Buffer.from("PICO.SVC\r\nGLCD.SVC\r\n\x1a", "latin1"),
-    "PICO.SVC": PICO_SVC["PICO.SVC"],
+    "STARTUP.CMD": Buffer.from("GLCD.SVC\r\n\x1a", "latin1"),
     "GLCD.SVC": GLCD_SVC,
     "MOUNT.COM": (await program("mount")).bytes,
     "TAS.COM": readFileSync(TAS.path),
@@ -51,12 +50,8 @@ test("the starter card holds exactly seven files, each by its hash", { skip: TED
     assert.equal(recipe.components.find((c) => c.name === name).files[0].sha256, sha(bytes), `${name} in the recipe`);
   }
   assert.deepEqual(volume(card, "B").list(), [], "B: is empty");
-  const widths = { 80: "PICO.SVC", 40: "PICO40.SVC", 32: "PICO32.SVC" };
-  assert.deepEqual(Object.keys(recipe.widths).sort(), Object.keys(widths).sort());
-  for (const [w, name] of Object.entries(widths)) {
-    assert.deepEqual(recipe.widths[w], { url: `files/${name}`, sha256: sha(PICO_SVC[name]) }, `the ${w}-column driver's pin`);
-    assert.equal(sha(readFileSync(resolve(ROOT, "dist/files", name))), sha(PICO_SVC[name]), `files/${name} as pinned`);
-  }
+  assert.equal(recipe.widths, undefined, "no drivers' widths in the recipe");
+  for (const name of ["PICO.SVC", "PICO40.SVC", "PICO32.SVC"]) assert.equal(existsSync(resolve(ROOT, "dist/files", name)), false, `no ${name} in dist/files`);
 });
 
 test("the starter card boots, and MOUNT lists its volumes", { skip: TED.skip || TAS.skip, timeout: 300_000 }, () => {

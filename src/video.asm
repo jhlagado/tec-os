@@ -8,7 +8,7 @@ VIDINIT:CALL    TMSINIT
         RET     NZ
         LD      HL,CONDEV
         SET     1,(HL)          ; CDTMS
-        RET
+	JP	PISTART		; the console, with the matrix keyboard
 
 VPUT:   LD      HL,(VPUTV)
         JP      (HL)
@@ -45,9 +45,9 @@ VTFN:   LD      L,A
         JP      (HL)
 
 ; ---- The video drivers' hook -----------------------------------------------
-; PICO.SVC and GLCD.SVC hand the ROM a table through TNDRVR (abi.inc), and
-; CONSW points the terminal's vector at it for CRT: and UC1:. Each REMOVE calls
-; it with HL = 0.
+; GLCD.SVC hands the ROM a table through TNDRVR (abi.inc), and CONSW points
+; the terminal's vector at it for UC1:; its REMOVE calls it with HL = 0. CRT:'s
+; table, PIVEC, is the ROM's own, set by PISTART.
 
 ; A = CMCRT or CMUC1, HL = the driver's table: the terminal's six words (VPUT,
 ; VGET, VCLREOL, VREST, VRDROW, VWRROW), the word for VTFN's functions, then

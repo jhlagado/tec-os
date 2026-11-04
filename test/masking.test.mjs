@@ -1,5 +1,5 @@
 // Interrupts off for each thing a stray interrupt could split: the VDP's
-// control pairs in PICO.SVC at every width, serial's two timed bytes, and each
+// control pairs of the ROM's PICO9918 console at every width, serial's two timed bytes, and each
 // state put back as it was found. An NMOS Z80 can clear P/V if an interrupt
 // comes during LD A,I, so each read that keeps the state is tried with P/V
 // cleared after its first read. No interrupt is raised: iff1 is read at the
@@ -7,10 +7,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import { PICO_SVC, ROOT, TEST_CLOCK, boot, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
-import { PICO_WIDTHS, makeSvc } from "../tools/lib/svc.mjs";
+import { TEST_CLOCK, boot, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060;
 const VDPCTL = 0xbf;
@@ -55,21 +53,18 @@ function watching(m, port, fn) {
   }
 }
 
-async function board(name) {
+/** A PICO9918 board on the ROM's console at COLS columns, its routines by their ROM labels. */
+async function board(cols) {
   const image = standardCard();
-  const a = volume(image, "A");
-  a.write(name, PICO_SVC[name]);
-  a.write("STARTUP.CMD", startupFile(name));
-  const width = { "PICO.SVC": 80, "PICO40.SVC": 40, "PICO32.SVC": 32 }[name];
+  if (cols !== 80) volume(image, "A").write("STARTUP.CMD", startupFile(`CON PICO ${cols}`));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "a usable prompt");
-  const made = await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs: PICO_WIDTHS[name], work: resolve(ROOT, "build/svc") });
-  const page = m.read(m.sym("SVCHEAD")) << 8;
-  return { m, at: (label) => page + made.symbols[label] };
+  assert.equal(m.read(m.sym("PIWID")), cols);
+  return { m, at: (label) => m.sym(label) };
 }
 
-for (const name of ["PICO.SVC", "PICO40.SVC", "PICO32.SVC"]) {
+for (const name of [80, 40, 32]) {
   for (const [label, regs, least] of [
     ["TMSR2", {}, 2],
     ["TMSSET", {}, 16],
@@ -77,7 +72,7 @@ for (const name of ["PICO.SVC", "PICO40.SVC", "PICO32.SVC"]) {
     ["TMSWA", { h: 0x12, l: 0x34 }, 2],
     ["TMSRA", { h: 0x12, l: 0x34 }, 2],
   ]) {
-    test(`${name}: ${label}'s pairs run with interrupts off, and the state comes back`, async () => {
+    test(`${name} columns: ${label}'s pairs run with interrupts off, and the state comes back`, async () => {
       const { m, at } = await board(name);
       for (const on of [true, false]) {
         const [after, seen] = watching(m, VDPCTL, () => call(m, at(label), regs, on));
@@ -158,7 +153,7 @@ test("the erratum: CDI, HACC and MVCOPY keep interrupts on when P/V is false", (
   assert.equal(erratum(m, m.sym("MVCOPY"), { h: 0x40, l: 0, d: 0x41, e: 0, b: 0, c: 1 }, read), true, "MVCOPY");
 });
 
-test("the erratum: VPAIR keeps interrupts on when P/V is false", async () => {
-  const { m, at } = await board("PICO.SVC");
-  assert.equal(erratum(m, at("VPAIR"), { h: 0x82, l: 0 }, at("VPAIR")), true);
+test("the erratum: VPAIR keeps interrupts on when P/V is false, through IFFGET's second read", async () => {
+  const { m, at } = await board(80);
+  assert.equal(erratum(m, at("VPAIR"), { h: 0x82, l: 0 }, at("IFFGET")), true);
 });

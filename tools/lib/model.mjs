@@ -354,9 +354,10 @@ export const BOARDS = {
 
 /**
  * The cases, each on the shipped card (the tree's dist/starter.img) as the
- * web host prepares it for the display chosen. missingDrivers: PICO.SVC and
- * GLCD.SVC, the two its startup file names, erased. badDriver: PICO.SVC's
- * bytes all 55h, its length kept. keypadSkip: a key held through reset.
+ * web host prepares it for the display chosen. missingDrivers: the display
+ * drivers its startup file names erased, on the GLCD board since the PICO9918's
+ * console is the ROM's (KS39). badDriver: GLCD.SVC's bytes all 55h, its length
+ * kept. keypadSkip: a key held through reset.
  * noCard: no card. badCard: its first byte inverted, so the card starts with
  * no container to mount. retry: the bad card put right at DIAG and R typed.
  */
@@ -367,8 +368,8 @@ export const CASES = {
   pico32: { board: "pico", display: ["tms", 32], profile: "debug80g32" },
   glcd: { board: "glcd", display: ["glcd", 80] },
   bothDisplays: { board: "both", display: ["tms", 80] },
-  missingDrivers: { board: "pico", card: "missing" },
-  badDriver: { board: "pico", card: "badDriver" },
+  missingDrivers: { board: "glcd", card: "missing" },
+  badDriver: { board: "glcd", card: "badDriver" },
   keypadSkip: { board: "pico", key: true },
   noCard: { board: "pico", card: "none" },
   badCard: { board: "pico", card: "badCard" },
@@ -423,11 +424,11 @@ export async function inTree(dir) {
       const image = shipped();
       if (c.display) card.prepareCard(image, ...c.display);
       const type = fileType(dir);
-      if (c.card === "missing") for (const n of ["PICO", "GLCD"]) fx.volume(image, "A").erase(`${n}.${type}`);
-      if (c.card === "badDriver") {
-        const a = fx.volume(image, "A");
-        a.write(`PICO.${type}`, new Uint8Array(a.read(`PICO.${type}`).length).fill(0x55));
-      }
+      const a = fx.volume(image, "A");
+      const has = (n) => a.list().some((f) => f.name === n);
+      if (c.card === "missing") for (const n of ["PICO", "GLCD"]) if (has(`${n}.${type}`)) a.erase(`${n}.${type}`);
+      const bad = has(`GLCD.${type}`) ? `GLCD.${type}` : `PICO.${type}`;
+      if (c.card === "badDriver") a.write(bad, new Uint8Array(a.read(bad).length).fill(0x55));
       if (c.card === "badCard") image[0] ^= 0xff;
       return image;
     },

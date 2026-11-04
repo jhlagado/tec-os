@@ -98,8 +98,9 @@ HWSLC:  CALL    LCDWAIT
 
 ; Claim: the console stops drawing on the PICO9918 (output to it is dropped,
 ; no cursor, no page flips) and the program owns its registers and VRAM.
-; Release, or warm boot: with PICO.SVC in, text mode, font and page come back
-; and the screen is cleared; with none, the VDP is left as the program left it.
+; Release, or warm boot: with the ROM's console started, text mode, font and
+; page come back and the screen is cleared; with none, the VDP is left as the
+; program left it.
 HWSVID:	LD	A,B		; 0 or 1, and nothing else
 	CP	2
 	LD	A,TNEBAD
@@ -318,10 +319,8 @@ HWSFONT:LD	HL,FONT
 
 ; TNDRVR: B = the mode, then VIDHOOK's. A refusal returns A = TNEBAD with carry.
 SVDRV:	LD	A,B
-	CP	CMCRT		; CRT: or UC1:, and nothing else:
-	JR	Z,SVDRV1	; another B would index past PIVEC's
-	CP	CMUC1		; pair of words (A1)
-	JR	Z,SVDRV1
+	CP	CMUC1		; UC1: alone: CRT:'s table is the ROM's
+	JR	Z,SVDRV1	; (KS39), and no other B has a word
 	LD	A,TNEBAD	; refused, nothing changed
 	SCF
 	RET

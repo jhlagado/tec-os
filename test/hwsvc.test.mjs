@@ -197,7 +197,7 @@ test("a volume or driver hook refusal is TNEBAD with carry, and nothing changes"
   fails(svc(m, ABI.TNUNMNT, { b: 0 }), ABI.TNEBAD); // A: is never left empty
   fails(svc(m, ABI.TNMOUNT, { b: 1, de: 0 }), ABI.TNEBAD); // SYSTEM is on A: already
   assert.deepEqual(drives(), before);
-  fails(svc(m, ABI.TNDRVR, { b: 1, hl: 0x3000 }), ABI.TNEBAD); // CRT: has PICO.SVC's table
+  fails(svc(m, ABI.TNDRVR, { b: 1, hl: 0x3000 }), ABI.TNEBAD); // CRT:'s table is the ROM's (KS39)
   assert.deepEqual(m.violations, []);
 });
 

@@ -400,15 +400,12 @@ export const MUTANTS_KS30 = [
   { name: "old VOLS: no RET, runs on into the data", edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: DB $00"])], tests: ["test/clients.test.mjs"], only: "^an old VOLS" },
   // The pinned DEMO.COM replaced by test/programs/demo.asm as this tree builds it.
   { name: "old binaries: a rebuilt fixture", edits: [{ file: "test/fixtures/edc2745/DEMO.COM", rebuild: "test/programs/demo.asm" }], tests: ["test/clients.test.mjs"] },
-  { name: "row 3: PICO? sets no flag", ...t30(["LD HL,PICMSG", "JP LCDWRD"], ["LD HL,PICMSG", "JP LCD3"], ["test/pico.test.mjs"], D) },
   { name: "row 3: GLCD? sets no flag", ...t30(["LD HL,GLCMSG", "JP LCDWRD"], ["LD HL,GLCMSG", "JP LCD3"], ["test/pico.test.mjs"], G) },
   { name: "row 3: a program's write leaves the flag", ...t30(["LD HL,CONDEV", "RES 7,(HL)", "HWSL1: LD HL,LCDROWS"], ["HWSL1: LD HL,LCDROWS"], ["test/pico.test.mjs"], H) },
   { name: "row 3: the wrong row resets it", ...t30(["LD A,B", "CP 3", "JR NZ,HWSL1"], ["LD A,B", "CP 2", "JR NZ,HWSL1"], ["test/pico.test.mjs"], H) },
   { name: "row 3: every take blanks it", ...t30(["WRDCLR: LD HL,CONDEV", "BIT 7,(HL)", "RET Z"], ["WRDCLR: LD HL,CONDEV"], ["test/pico.test.mjs"], G) },
   { name: "row 3: no take clears a word", ...t30(["WRDCLR: LD HL,CONDEV"], ["WRDCLR: OR A", "RET", "LD HL,CONDEV"], ["test/pico.test.mjs"], G) },
   { name: "row 3: the flag stays after a take", ...t30(["RET Z", "RES 7,(HL)", "PUSH BC"], ["RET Z", "PUSH BC"], ["test/pico.test.mjs"], G) },
-  { name: "row 3: a load under PICO.SVC leaves GLCD?", ...t30(["JR NZ,WRDCLR"], ["RET NZ"], ["test/pico.test.mjs"], G) },
-  { name: "row 3: STDONE not masked", ...t30(["AND $FF-CDWRD"], [], ["test/pico.test.mjs"], D) },
   { name: "row 3: the word cleared leaves carry set", ...t30(["POP BC", "OR A", "RET"], ["POP BC", "RET"], ["test/pico.test.mjs"], G) },
   { name: "row 3: INFO loses the bit", ...t30(["LD B,A", "LD DE,ROMVER"], ["AND $7F", "LD B,A", "LD DE,ROMVER"], ["test/pico.test.mjs"], H) },
 ];
@@ -540,7 +537,8 @@ export const MUTANTS_KS33 = [
 // KS34: kept vectors, the resident header, masks, the safe read and function
 // 47, each with the tests meant to catch it.
 const SVCF = "src/svc.asm";
-const PICOF = "drivers/pico.asm";
+// The PICO9918's console in the ROM (KS39): the driver's masked pairs, moved.
+const ROMPICOF = "src/pico.asm";
 const CONF = "src/console.asm";
 const ks34 = (file, find, put, tests) => ({ edits: [asm(file, find, put)], tests });
 const VEC = ["test/svc.test.mjs"];
@@ -570,18 +568,17 @@ export const MUTANTS_KS34 = [
   { name: "stub: a byte low", ...ks34("src/vol.asm", ["DEC HL", "DEC HL", "DEC HL", "LD (STUBAD),HL"], ["DEC HL", "DEC HL", "DEC HL", "DEC HL", "LD (STUBAD),HL"], SYS) },
   { name: "recognition: W = S refused", ...ks34(B, ["SBC HL,DE", "JR Z,RSLYES"], ["SBC HL,DE", "NOP", "NOP"], ["test/reset.test.mjs"]) },
   { name: "recognition: S below 8000h let through", ...ks34(B, ["LD A,H", "CP $80", "JR C,RSLNO", "LD DE,(STUBAD)"], ["LD A,H", "CP $80", "LD DE,(STUBAD)"], ["test/reset.test.mjs"]) },
-  { name: "mask: VPAIR with no DI", ...ks34(PICOF, ["VPAIR1: PUSH AF", "DI"], ["VPAIR1: PUSH AF", "NOP"], MASK) },
-  { name: "mask: VPAIR leaves them off", ...ks34(PICOF, ["RET PO", "EI", "RET"], ["RET PO", "RET"], MASK) },
-  { name: "mask: VPAIR turns them on", ...ks34(PICOF, ["RET PO", "EI", "RET"], ["NOP", "EI", "RET"], MASK) },
-  { name: "mask: GFXREG bare", ...ks34(PICOF, ["GFXREG: LD L,A", "LD A,B", "OR $80", "LD H,A", "JP VPAIR"], ["GFXREG: OUT (VDPCTL),A", "LD A,B", "OR $80", "OUT (VDPCTL),A", "RET"], MASK) },
-  { name: "mask: TMSR bare", ...ks34(PICOF, ["TMSR: LD A,(HL)", "PUSH HL", "LD L,A", "LD H,C", "CALL VPAIR", "POP HL"], ["TMSR: LD A,(HL)", "OUT (VDPCTL),A", "LD A,C", "OUT (VDPCTL),A"], MASK) },
+  { name: "mask: VPAIR with no DI", ...ks34(ROMPICOF, ["VPAIR: CALL IFFGET", "PUSH AF", "DI"], ["VPAIR: CALL IFFGET", "PUSH AF", "NOP"], MASK) },
+  { name: "mask: VPAIR leaves them off", ...ks34(ROMPICOF, ["RET PO", "EI", "RET"], ["RET PO", "RET"], MASK) },
+  { name: "mask: VPAIR turns them on", ...ks34(ROMPICOF, ["RET PO", "EI", "RET"], ["NOP", "EI", "RET"], MASK) },
+  { name: "mask: GFXREG bare", ...ks34(ROMPICOF, ["GFXREG: LD L,A", "LD A,B", "OR $80", "LD H,A", "JP VPAIR"], ["GFXREG: OUT (VDPCTL),A", "LD A,B", "OR $80", "OUT (VDPCTL),A", "RET"], MASK) },
+  { name: "mask: TMSR bare", ...ks34(ROMPICOF, ["TMSR: LD A,(HL)", "PUSH HL", "LD L,A", "LD H,C", "CALL VPAIR", "POP HL"], ["TMSR: LD A,(HL)", "OUT (VDPCTL),A", "LD A,C", "OUT (VDPCTL),A"], MASK) },
   { name: "mask: TXBYTE with no DI", ...ks34(CONF, ["CALL IFFGET", "PUSH AF", "DI", "LD B,9"], ["CALL IFFGET", "PUSH AF", "NOP", "LD B,9"], MASK) },
   { name: "mask: RXBITS with no DI", ...ks34(CONF, ["PUSH AF", "DI", "LD D,RXHALF"], ["PUSH AF", "NOP", "LD D,RXHALF"], MASK) },
   { name: "mask: TXBYTE leaves them off", ...ks34(CONF, ["JR NZ,TXS", "POP AF", "RET PO", "EI", "RET"], ["JR NZ,TXS", "POP AF", "RET"], MASK) },
   { name: "mask: RXBITS leaves them off", ...ks34(CONF, ["LD A,C", "RET PO", "EI", "RET"], ["LD A,C", "RET"], MASK) },
   { name: "mask: RXHALF not re-derived", edits: [text("tools/build.mjs", "1.5 * bit - 51 - 58.5 - kbLate / 2", "1.5 * bit - 51 - kbLate / 2")], tests: MASK },
   { name: "erratum: IFFGET's bare read", ...ks34("src/cache.asm", ["IFFGET: LD A,I", "RET PE", "LD A,I", "RET"], ["IFFGET: LD A,I", "RET"], MASK) },
-  { name: "erratum: VPAIR's bare read", ...ks34(PICOF, ["VPAIR: LD A,I", "JP PE,VPAIR1", "LD A,I"], ["VPAIR: LD A,I"], MASK) },
   { name: "47: the guard outlives a warm boot, from INIT", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC), only: "function 47 from INIT" },
   { name: "47: the guard outlives a warm boot, from REMOVE", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC), only: "function 47 from REMOVE" },
 ];
@@ -651,16 +648,12 @@ export const MUTANTS_KS36C = [
   { name: "the font: service 15 one glyph out", ...ks34("src/services.asm", ["HWSFONT: LD HL,FONT"], ["HWSFONT: LD HL,FONT+8"], ["test/glcd.test.mjs"]) },
   { name: "the startup rule: quiet for TNEBAD, not TNENODV", ...ks34(CCPF, ["AND H", "XOR TNENODV"], ["AND H", "XOR TNEBAD"], ["test/startup.test.mjs"]) },
   { name: "the startup rule: quiet typed too, STFLAG not read", ...ks34(CCPF, ["LD A,(STFLAG)", "AND H"], ["LD A,$FF", "AND H"], ["test/startup.test.mjs"]) },
-  { name: "PICO giving way: PICO.SVC takes the console whatever is in", ...ks34("src/loader.asm", ["LD HL,GLVEC+1", "JR Z,SVGIVE"], ["LD HL,GLVEC+1", "JR Z,CONSET"], ["test/pico.test.mjs"]) },
   { name: "CON's aliases: GLCD taken for CRT:", ...ks34(CCPF, ["CPL", "ADD A,12"], ["CPL", "ADD A,10"], ["test/console.test.mjs"]) },
-  { name: "CON's width: 50 taken for 80", ...ks34("src/text.asm", ['CONWID: DB "80",80,"40",40,"32",32'], ['CONWID: DB "50",80,"40",40,"32",32'], ["test/console.test.mjs"]) },
-  { name: "the one driver: 40 and 32 columns on 80's name table and page", ...ks34(PICOF, ["LD BC,$0804"], ["LD BC,$1010"], ["test/pico.test.mjs"]) },
   { name: "function 44: a count of 1 refused", ...ks34(BDOSF, ["FNMULT: DEC E", "JR NZ,FNCHNO"], ["FNMULT: DEC E", "JR Z,FNCHNO"], CPM3) },
   { name: "function 46: one block short", ...ks34(BDOSF, ["LD D,(IX+6)", "INC DE", "LD BC,0"], ["LD D,(IX+6)", "LD BC,0"], CPM3) },
   { name: "function 99: returns 0", ...ks34(BDOSF, ["CP 99", "JR Z,FNCHNO"], [], CPM3) },
   { name: "the prompt: no user number", ...ks34(CCPF, ["OR A", "JR Z,MLDRV"], ["OR A", "JR MLDRV"], CPM3) },
   { name: "page zero: CONDEV written at 0045h too", ...ks34("src/console.asm", ["AND CDMTX", "LD (CONDEV),A"], ["AND CDMTX", "LD (CONDEV),A", "LD ($0045),A"], ["test/pagezero.test.mjs"]) },
-  { name: "part 6: REMOVE takes UC1: in the field for this driver", ...ks34(PICOF, ["AND 3", "DEC A", "SCF", "RET Z"], ["AND 3", "CP 3", "SCF", "RET Z"], ["test/pico.test.mjs"]) },
 ];
 
 // KS36b: one mutant a promise of the block store, and its two new rules (KG43).
@@ -674,4 +667,16 @@ export const MUTANTS_KS36B = [
   { name: "a flush that stops at its first failure", ...ks34(CACHEF, ["POP BC", "JR Z,CFS2"], ["POP BC", "RET NZ", "JR CFS2"], CTEST) },
   // The table block read into 0200h as well as into its line, so that the machine still boots and only the TPA test can tell (KS36b review).
   { name: "a mount that reads into fixed RAM", ...ks34("src/vol.asm", ["MNB2: CALL CFILL"], ["MNB2: PUSH AF", "LD HL,$0200", "CALL SDREAD", "POP AF", "CALL CFILL"], CTEST) },
+];
+
+// KS39: one mutant a part of the PICO9918's console in the ROM (KG45).
+const K39 = ["test/ks39.test.mjs"];
+export const MUTANTS_KS39 = [
+  { name: "the start: with no matrix keyboard too", ...ks34(ROMPICOF, ["PISTART: BIT 0,(HL)", "RET Z"], ["PISTART: BIT 0,(HL)"], K39) },
+  { name: "the template: the record's version and table not copied", ...ks34(ROMPICOF, ["LD BC,PITPLN"], ["LD BC,PITPLN-3"], K39) },
+  { name: "REGHEAD: the record not registered", ...ks34(ROMPICOF, ["LD HL,PIREC", "LD (REGHEAD),HL"], ["LD HL,PIREC"], K39) },
+  { name: "TNDRVR: B = 1 taken", ...ks34("src/services.asm", ["SVDRV: LD A,B", "CP CMUC1", "JR Z,SVDRV1"], ["SVDRV: LD A,B", "CP CMUC1", "JR Z,SVDRV1", "CP CMCRT", "JR Z,SVDRV1"], K39) },
+  { name: "the give-way: GLCD.SVC takes the console whatever is in effect", ...ks34("src/loader.asm", ["LD A,(CONMOD)", "DEC A", "JR Z,WRDCLR"], [], ["test/pico.test.mjs"]) },
+  { name: "the width: 80 again at every warm boot", ...ks34(B, ["CALL HWVREL"], ["LD A,80", "CALL TMSW", "CALL HWVREL"], K39) },
+  { name: "the masked pairs: VPAIR with no DI, in the ROM", ...ks34(ROMPICOF, ["VPAIR: CALL IFFGET", "PUSH AF", "DI"], ["VPAIR: CALL IFFGET", "PUSH AF", "NOP"], MASK) },
 ];

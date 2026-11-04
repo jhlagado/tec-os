@@ -4,7 +4,7 @@
 
 import { Machine, symbolsFromD8 } from "../../host/machine.mjs";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { prepareCard, widthDrivers } from "../../host/card.mjs";
+import { prepareCard } from "../../host/card.mjs";
 import { parseContainer, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { buildRecipe } from "../../tools/lib/recipe.mjs";
@@ -65,7 +65,7 @@ async function starterCard() {
 // ---- Machine lifecycle ------------------------------------------------------
 
 // The card is changed by one thing at a time: a power on's preparation, which
-// may write PICO.SVC at the chosen width, and an import's publication take
+// may rewrite STARTUP.CMD for the display chosen, and an import's publication take
 // turns, so the later choice reaches both the running card and the saved one
 // (KE-168).
 let turn = Promise.resolve();
@@ -80,13 +80,7 @@ function powerOn() {
 }
 
 async function powerOnNow() {
-  let fetched = {};
-  if (state.display === "tms") {
-    const recipe = await fetch("starter.recipe.json", { cache: "no-cache" }).then((r) => r.json()).catch(() => ({}));
-    fetched = await widthDrivers(recipe, fetchBytes);
-  }
-  // null drivers: the fetch failed, and the card is left as it is.
-  const { problem, note, changed } = prepareCard(state.card, state.display, state.width, fetched.problem ? null : fetched.drivers);
+  const { problem, note, changed } = prepareCard(state.card, state.display, state.width);
   if (changed) state.cardDirty = true;
   const { rom, symbols } = await loadRom();
   state.machine = new Machine({
@@ -101,7 +95,7 @@ async function powerOnNow() {
   });
   state.serialSeen = 0;
   appendSerial("\n[power on]\n");
-  for (const words of [fetched.problem, problem, note]) if (words) appendSerial(`[${words}]\n`);
+  for (const words of [problem, note]) if (words) appendSerial(`[${words}]\n`);
 }
 
 function reset() {

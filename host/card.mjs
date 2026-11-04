@@ -1,6 +1,7 @@
-// What the web host needs of a card: the startup file's display pieces, the
-// PICO9918's driver at the width chosen, and a word for a card that can't drive
-// the display chosen. A card holds one PICO.SVC; the page writes it at its width.
+// What the web host needs of a card: the startup file's display pieces and a
+// word for a card that can't drive the display chosen. The PICO9918's console is
+// the ROM's (KS39), so the page writes no driver for it: its width is a
+// CON PICO 40 or CON PICO 32 line, and 80 none.
 
 import { findVolume, parseContainer, volumePayload } from "../tools/lib/container.mjs";
 import { CpmVolume } from "../tools/lib/cpmfs.mjs";
@@ -8,8 +9,10 @@ import { FORMAT } from "../tools/lib/svc-format.mjs";
 import { fromLatin1, toLatin1 } from "../tools/lib/bytes.mjs";
 
 // A display piece of a startup line, under either type: a card whose files were
-// renamed by hand still has its .DRV lines.
-const DISPLAY_PIECE = /^:?(PICO(40|32)?|GLCD)\.(SVC|DRV)$/i;
+// renamed by hand still has its .DRV lines, and an older card its PICO.SVC; and
+// a width line, the page's own CON PICO or a user's CON CRT, which would
+// override the selector's width if it stayed.
+const DISPLAY_PIECE = /^:?((PICO(40|32)?|GLCD)\.(SVC|DRV)|CON +(PICO|CRT):? +\d+)$/i;
 const OLD_DISPLAY = /^(PICO(40|32)?|GLCD)\.DRV$/;
 
 /** A:'s volume, read-only as its descriptor says. Its files are user 0's: the ROM loads from there. */
@@ -20,8 +23,8 @@ function driveA(image) {
 }
 const userZero = (a) => a.list({ user: 0 });
 
-/** The first line a card needs for DISPLAY, "tms" or "glcd". */
-export const displayFile = (display) => (display === "tms" ? "PICO.SVC" : "GLCD.SVC");
+/** The file a card needs for DISPLAY, "tms" or "glcd": none for the ROM's console. */
+export const displayFile = (display) => (display === "tms" ? null : "GLCD.SVC");
 
 /** Why the card can't show DISPLAY, or null. */
 export function cardProblem(image, display) {
@@ -34,6 +37,7 @@ export function cardProblem(image, display) {
   } catch {
     return "This card has no drive A: the diagnostic prompt is on the serial terminal below. A new starter card has one.";
   }
+  if (!name) return null;
   if (!files.some((f) => f.name === name)) {
     const asked = name.replace(".SVC", ".DRV");
     const old = files.find((f) => f.name === asked) ?? files.find((f) => OLD_DISPLAY.test(f.name));
@@ -46,72 +50,22 @@ export function cardProblem(image, display) {
 }
 
 /**
- * True if the card's file BYTES, a whole number of records, is BUILD as the
- * volume writes it: the build, then zeros to the record's end (KE-165).
+ * Ready the card for DISPLAY at WIDTH: the problem, if any, a note (none now),
+ * and whether the card changed. The startup file's first line is set for the
+ * display, and nothing else is written; a card from an older TEC-OS keeps its
+ * files.
  */
-const holds = (bytes, build) => bytes.length === Math.ceil(build.length / 128) * 128 && bytes.every((v, i) => v === (i < build.length ? build[i] : 0));
-
-/**
- * Ready the card for DISPLAY: the problem, if any, a note, and whether the card
- * changed. DRIVERS, the PICO9918's driver at each width by its column count,
- * puts WIDTH's on the card as A:PICO.SVC when the card has none, one of those
- * builds or one of an older format. A PICO.SVC of the card's owner is kept, and
- * a card from an older TEC-OS, with .DRV files, is left alone.
- */
-export function prepareCard(image, display, width, drivers) {
-  // Drivers that couldn't be had: the page has said the card is left as it is.
-  if (display === "tms" && drivers === null) return { problem: cardProblem(image, display), note: null, changed: false };
+export function prepareCard(image, display, width = 80) {
   // The changes are made on a copy, and reach the card only when all are made:
   // a read-only A: or a full directory leaves the card as it was, and it boots so.
   const staged = image.slice();
   try {
-    const r = prepare(staged, display, width, drivers);
-    if (r.changed) image.set(staged);
-    return r;
+    const problem = cardProblem(staged, display);
+    const changed = !problem && setDisplayLine(staged, display, width);
+    if (changed) image.set(staged);
+    return { problem, note: null, changed };
   } catch (e) {
     return { problem: `This card couldn't be prepared for the page (${e.message}), so it boots as it is.`, note: null, changed: false };
-  }
-}
-
-function prepare(image, display, width, drivers) {
-  let problem = cardProblem(image, display);
-  let note = null;
-  let wrote = false;
-  const driver = display === "tms" && drivers ? drivers[width] : undefined;
-  if (driver && (!problem || /^This card(?: has no|'s) PICO\.SVC/.test(problem))) {
-    const a = driveA(image);
-    const had = userZero(a).some((f) => f.name === "PICO.SVC") ? a.read("PICO.SVC") : null;
-    const ours = !had || had[1] !== FORMAT || Object.values(drivers).some((d) => holds(had, d));
-    if (!ours) note = `This card's own PICO.SVC is kept, at the width it was built for.`;
-    else if (!had || !holds(had, driver)) {
-      a.write("PICO.SVC", driver);
-      wrote = true;
-    }
-    problem = cardProblem(image, display);
-  }
-  return { problem, note, changed: problem ? wrote : setDisplayLine(image, display) || wrote };
-}
-
-const hex = (buf) => [...new Uint8Array(buf)].map((v) => v.toString(16).padStart(2, "0")).join("");
-
-/**
- * The PICO9918's drivers the recipe's widths pin, fetched by FETCHBYTES and each
- * checked by its SHA-256: { drivers } by column count, or { problem } when one
- * can't be had, and then the card is left as it is.
- */
-export async function widthDrivers(recipe, fetchBytes) {
-  try {
-    const drivers = {};
-    for (const [width, { url, sha256 }] of Object.entries(recipe.widths ?? {})) {
-      const bytes = await fetchBytes(url);
-      const got = hex(await globalThis.crypto.subtle.digest("SHA-256", bytes));
-      if (got !== sha256) throw new Error(`${url} has SHA-256 ${got}, the recipe pins ${sha256}`);
-      drivers[width] = bytes;
-    }
-    if (!Object.keys(drivers).length) throw new Error("the recipe names no drivers");
-    return { drivers };
-  } catch (e) {
-    return { problem: `The PICO9918's drivers couldn't be fetched (${e.message}), so the card is left as it is.` };
   }
 }
 
@@ -144,15 +98,16 @@ function withoutDisplay(lines) {
   return out;
 }
 
-/** Make STARTUP.CMD's first line the driver for DISPLAY, leaving the rest. True if it changed. */
-export function setDisplayLine(image, display) {
+/** Make STARTUP.CMD's first line DISPLAY's, leaving the rest: GLCD.SVC for the GLCD, CON PICO WIDTH for the PICO9918 at 40 or 32, and none at 80. True if it changed. */
+export function setDisplayLine(image, display, width = 80) {
   const a = driveA(image);
   const had = userZero(a).some((f) => f.name === "STARTUP.CMD");
   const old = had ? toLatin1(a.read("STARTUP.CMD")).split("\x1a")[0] : "";
   const rest = withoutDisplay(old.split(/\r?\n/));
   // The chosen display's line alone: CON UC1 loads GLCD.SVC itself, and a line
-  // for it on the page's board with both would only give way, GLCD.SVC? (KE-150).
-  const text = [displayFile(display), ...rest].map((l) => `${l}\r\n`).join("");
+  // for it on the page's board with both would only give way (KE-150).
+  const first = display === "tms" ? (Number(width) === 80 ? [] : [`CON PICO ${width}`]) : [displayFile(display)];
+  const text = [...first, ...rest].map((l) => `${l}\r\n`).join("");
   if (text === old) return false;
   a.write("STARTUP.CMD", fromLatin1(`${text}\x1a`));
   return true;

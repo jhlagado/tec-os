@@ -2,14 +2,14 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-47,363 bytes (`0100h–BA02h`) on the starter card, and at least 46,660 on any
+47,268 bytes (`0100h–B9A3h`) on the starter card, and at least 46,564 on any
 card, since cold boot places the BDOS entry below the allocation vectors of
-the volumes mounted. A display's driver takes three pages under the stub's page,
-leaving 46,592 on the starter card and 45,824 with four 8 MiB volumes. A board
-with both displays, whose starter card installs both, has 45,824 on the starter
-card and 45,056 with four. The CCP loads a `.COM` up to the start of the page
-holding the word at `0006h`, so the largest it loads on the starter card is
-47,104 bytes (`0100h–B8FFh`), 244 below the TPA: a program may use the rest. It reports version 2.2.
+the volumes mounted. A board with a PICO9918 has the same: its console is in the
+ROM and its RAM in the BIOS's state (KS39). The GLCD's driver takes three pages
+under the stub's page, leaving 46,336 on the starter card and 45,568 with four
+8 MiB volumes. The CCP loads a `.COM` up to the start of the page holding the
+word at `0006h`, so the largest it loads on the starter card is 47,104 bytes
+(`0100h–B8FFh`), 164 below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
 
@@ -142,7 +142,7 @@ neither.
 
 ## Base page
 
-Warm boot at `0000h`, BDOS vector at `0005h` (target `B815h` on the starter card, directly
+Warm boot at `0000h`, BDOS vector at `0005h` (target `B9A4h` on the starter card, directly
 below the allocation vectors), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
@@ -193,8 +193,8 @@ and run.
 - **`[more]`.** The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 46,644 bytes of TPA, may fail; how much a card gives depends on
-  its volumes, and on a board with a display driver 45,056 is the least.
+  more than 46,564 bytes of TPA, may fail; how much a card gives depends on
+  its volumes, and with the GLCD's driver 45,568 is the least.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,
@@ -262,7 +262,7 @@ a chained line.
 | Hardware services | 19 numbered from 0 became 9 numbered from 0: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`, then mount, unmount, describe, the drivers' hook, find and list as 9 to 14. A number past 14 returns status 1 | Added |
 | BDOS | Functions 47, 44, 46 and 99 added, the last three as CP/M 3's: 44 takes a count of 1 only and returns FFh for any other, 46 puts a drive's free records at the DMA address, and 99 returns FFh with nothing changed; function 50 gone. The prompt shows the user number before the drive unless it is 0, as `3A>`. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
-| Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The loaded display files replace the ROM's PICO9918 and GLCD consoles and the ROM's font | None |
+| Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The GLCD's console is a loaded driver; the PICO9918's console and the font are in the ROM (KS39) | None |
 | Page zero | `0040h` holds `LATCHV` alone; `0041h` to `004Fh` are unused, the console's state moved above the RAM BIOS table (KS36c), and `MAINS` and `EXPANDS` are gone with MAIN 1's count. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
-| TPA | 47,363 on the starter card with no display, 46,592 with one display's driver and 45,824 with two, since KS36b's block store took `BLKBUF` out of the workspace | 45,830 at `7029f57` |
+| TPA | 47,268 on the starter card with no display or with the PICO9918, and 46,336 with the GLCD's driver: KS36b's block store took `BLKBUF` out of the workspace, and KS39's console block in the BIOS's state took 95 | 45,830 at `7029f57` |

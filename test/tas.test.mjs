@@ -13,7 +13,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assembleProgram } from "../tools/lib/assemble.mjs";
-import { PICO_WIDTHS, makeSvc } from "../tools/lib/svc.mjs";
+import { makeSvc } from "../tools/lib/svc.mjs";
 import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
@@ -124,14 +124,6 @@ async function underAtom(source, opt) {
 }
 
 const COMMON = { "ABI.INC": text("src/abi.inc") };
-
-for (const [name, defs] of Object.entries(PICO_WIDTHS)) {
-  test(`${name}'s source assembles under TAS to Atom's bytes`, { skip: TAS.skip, timeout: 900_000 }, async () => {
-    const atom = await underAtom("drivers/pico.asm", { defs });
-    const tas = underTas(defs, "PICO.ASM", { ...COMMON, "PICO.ASM": text("drivers/pico.asm") }, atom.length);
-    assert.deepEqual([...tas], [...atom]);
-  });
-}
 
 test("GLCD.SVC's source assembles under TAS to Atom's bytes", { skip: TAS.skip, timeout: 900_000 }, async () => {
   const atom = await underAtom("drivers/glcd.asm", {});

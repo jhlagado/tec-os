@@ -36,7 +36,10 @@ COLDZ:	LD	A,LATCLAS	; RSLCAP used A
 	LD	BC,WSSPAN
 	LD	(HL),0
 	LDIR
-	LD	SP,BSTK		; the workspace is there to hold it now
+	LD	SP,STKTOP	; the workspace is there to hold it now: the
+				; BDOS's stack, unused before the CCP, so that
+				; the console's start and the banner keep off
+				; the BIOS's (KE-173)
 	CALL	CONINIT
 	CALL	RTCHAS		; the clock, once: INFO reads its bit
 	JR	NZ,COLDNC
@@ -423,7 +426,9 @@ ALVSKP: INC     C
 ; A = error code: SDE* (01h-0Fh) from the SD driver or ME* (20h-2Fh) from
 ; the mount checks. The console stays usable without a card.
 
-DIAG:	LD	SP,BSTK		; the stack the failed mount may have left deep
+DIAG:	LD	SP,STKTOP	; the BDOS's stack, as COLDRT's: the failed
+				; mount may have left it deep, and the BIOS's
+				; keeps only warm boot's use (KE-173)
 	PUSH	AF		; the code, kept across the messages
 	LD	HL,DGCARD	; the LCD, for a board with no terminal
 	CALL	LCD3

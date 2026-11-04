@@ -12,7 +12,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
-import { FORMAT, PICO_WIDTHS, checkInterfaces, makeSvc } from "./lib/svc.mjs";
+import { FORMAT, checkInterfaces, makeSvc } from "./lib/svc.mjs";
 import { romFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -155,23 +155,22 @@ function checkAbi(at, rom) {
   for (const [n, cd] of Object.entries(bits)) check(at(n) === at(cd), `abi.inc: ${n} is not ${cd}`);
 }
 
-/** abi.inc's PICOREG to PICORD, and PICOWID from version PICOVER, against each
- *  PICO driver's table: the word at that offset from VTAB is the entry. */
-async function checkPicoTable() {
+/** abi.inc's PICOREG to PICOWID, and the places a debugger reads, against the
+ *  ROM's console (KS39): each entry is the word at its offset in PITPL, the
+ *  template PIBLK is filled from, and each place lies at its offset in PIBLK. */
+function checkPicoTable(at, rom) {
+  const byte = (a) => rom[a - 0xc000];
   const inc = readFileSync(resolve(SRC, "abi.inc"), "utf8");
   const offsets = new Map([...inc.matchAll(/^(PICO[A-Z]+)\s+EQU\s+(\d+)\b/gm)].map((m) => [m[1], Number(m[2])]));
   const entries = { PICOREG: "GFXREG", PICOFIL: "GFXFIL", PICOWR: "GFXWR", PICORD: "GFXRD", PICOWID: "TMSWID" };
-  const places = { PICOVRB: "REC+10", PICOTPD: "TPDRAW", PICOTPS: "TPSHOW" };
+  const places = { PICOVRB: "PIREC+10", PICOTPD: "PITPD", PICOTPS: "PITPS" };
   check(offsets.size === Object.keys(entries).length + Object.keys(places).length + 1 && offsets.has("PICOVER"), "abi.inc: the PICO table's offsets");
-  for (const defs of Object.values(PICO_WIDTHS)) {
-    const { file, symbols } = await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") });
-    const at = (n) => symbols.VTAB + offsets.get(n);
-    check(file[at("PICOVRB")] === offsets.get("PICOVER"), "abi.inc: the PICO record is not at PICOVER");
-    for (const [n, label] of Object.entries(entries)) check((file[at(n)] | (file[at(n) + 1] << 8)) === symbols[label], `abi.inc: ${n} is not ${label} in the PICO table`);
-    for (const [n, place] of Object.entries(places)) {
-      const [label, plus = 0] = place.split("+");
-      check(symbols.VTAB + offsets.get(n) === symbols[label] + Number(plus), `abi.inc: ${n} is not ${place}`);
-    }
+  const word = (a) => byte(a) | (byte(a + 1) << 8);
+  check(byte(at("PITPL") + offsets.get("PICOVRB")) === offsets.get("PICOVER"), "abi.inc: the PICO record is not at PICOVER");
+  for (const [n, label] of Object.entries(entries)) check(word(at("PITPL") + offsets.get(n)) === at(label), `abi.inc: ${n} is not ${label} in the PICO table`);
+  for (const [n, place] of Object.entries(places)) {
+    const [label, plus = 0] = place.split("+");
+    check(at("PIBLK") + offsets.get(n) === at(label) + Number(plus), `abi.inc: ${n} is not ${place}`);
   }
 }
 
@@ -185,7 +184,7 @@ function checkServiceSources() {
       checked.push(`${dir}/${f}`);
     }
   }
-  check(checked.includes("drivers/pico.asm") && checked.includes("test/programs/svcdemo.asm"), `the service sources checked were ${checked.join(", ") || "none"}`);
+  check(checked.includes("drivers/glcd.asm") && checked.includes("test/programs/svcdemo.asm"), `the service sources checked were ${checked.join(", ") || "none"}`);
   return checked;
 }
 
@@ -249,7 +248,7 @@ async function buildProfile(name) {
   check(at("ROMDATA") <= at("ROMCODE") && at("ROMCODE") <= at("CODEEND"), "the table, the data and the code, in that order");
   check(at("CODEEND") <= 0x10000, "the code overruns the ROM");
   checkAbi(at, rom);
-  await checkPicoTable();
+  checkPicoTable(at, rom);
   checkServiceSources();
   check(at("RAMBIOS") === RAMBIOS, `RAM BIOS table must be at ${hex(RAMBIOS)}`);
   check(at("BDOSRME") === RAMBIOS, `the fixed workspace must end at the RAM BIOS table, not ${hex(at("BDOSRME"))}`);

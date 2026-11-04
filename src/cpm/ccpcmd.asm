@@ -27,10 +27,10 @@ CONSKIP:
 
 ; TEC-OS: CON shows the console in use; CON TTY, CRT, BAT or UC1 (a colon
 ; may follow), or PICO for CRT: and GLCD for UC1:, sets the IOBYTE CON: field.
-; After CRT or PICO a width, 80, 40 or 32, goes to PICO.SVC through its table's
-; PICOWID entry, version 3 (KD-174); none in that takes it, or any other
-; width, and the command is refused. The BIOS switches at the next console
-; call, so the report appears on the new console, and names the serial
+; After CRT or PICO a width, 80, 40 or 32, goes to the ROM's PICO9918 console
+; through its table's PICOWID entry (KD-174); with that console not started,
+; or any other width, the command is refused. The BIOS switches at the next
+; console call, so the report appears on the new console, and names the serial
 ; terminal when the chosen display or keyboard is missing. UC1: loads
 ; GLCD.SVC first if it is not in. Takes the argument at ARGSTRT; ends at
 ; MAINLOOP or BADCMD.
@@ -72,28 +72,28 @@ CONEND:	LD	A,(HL)		; a width only after a space: CRT80 is
 	LD	A,B
 	CP	CMCRT
 	JP	NZ,BADCMD	; a width after CRT: alone
-	LD	DE,CONWID	; 80, 40 or 32: two digits, then the
-	LD	B,3		; columns
-CONW1:	LD	A,(DE)		; the entry's first digit
-	INC	DE
-	CP	(HL)		; Z if the width's first is alike; the
-	LD	A,(DE)		; loads and increments after it keep
-	INC	DE		; the flags
-	INC	HL
-	JR	NZ,CONW2	; the first digit differs
-	CP	(HL)		; the second digit
-	JR	Z,CONW3		; both alike: this entry
-CONW2:	DEC	HL		; back to the width's first digit,
-	INC	DE		; and past the entry's columns
-	DJNZ	CONW1		; the next of the three
-	JP	BADCMD		; no such width
-CONW3:	INC	HL		; past the width's second digit
-	CALL	ENDCHK		; nothing after it; DE kept
-	LD	A,(DE)		; the columns
-	PUSH	AF		; kept across the ABI's call
+	LD	A,(HL)		; two decimal digits: the columns, which
+	SUB	'0'		; TMSWID judges (80, 40 or 32)
+	CP	10
+	JP	NC,BADCMD	; the first is no digit
+	LD	C,A
+	ADD	A,A		; the tens digit times 10:
+	ADD	A,A		; four times, plus itself, doubled
+	ADD	A,C
+	ADD	A,A		; the tens
+	LD	C,A
+	INC	HL		; the units digit
+	LD	A,(HL)
+	SUB	'0'
+	CP	10
+	JP	NC,BADCMD	; the second is no digit
+	ADD	A,C		; A = the columns
+	INC	HL		; past the width
+	PUSH	AF		; kept across ENDCHK and the ABI's call
+	CALL	ENDCHK		; nothing after the width
 	LD	DE,CONNAMS+20	; "PICO    " at version 3
 	LD	BC,PICOVER*256+TNFIND
-	CALL	ABICALL		; FIND: HL = PICO.SVC's entry table
+	CALL	ABICALL		; FIND: HL = the console's table, PIBLK
 	POP	BC		; B = the columns
 	JP	C,BADCMD	; none in that takes a width
 	LD	DE,PICOWID	; the table's width entry, its
@@ -540,8 +540,8 @@ CMDDL:	OR	A
 
 ; Startup. Once after cold boot one record of A:STARTUP.CMD is read, the
 ; position marked finished first, so that a failure can't repeat. STPOS is 0
-; until then, the next byte + 1 in the file, 80h up once it is finished, and FFh
-; when STDONE has looked at the console. Destroys AF, BC, DE, HL.
+; until then, the next byte + 1 in the file, and 80h up once it is finished.
+; Destroys AF, BC, DE, HL.
 STBOOT:	LD	HL,STPOS	; startup's state
 	LD	A,(HL)
 	OR	A
@@ -575,12 +575,12 @@ STBDMA:	LD	HL,DEFDMA	; the DMA address programs expect
 ; command buffer, echoed as if typed, and carry clear. Lines end at CR or LF
 ; and blank ones are passed over; a line's characters after its 127th are
 ; passed over too, as a typed line has no more. ^Z, a zero or the record's
-; last byte ends the file. Otherwise carry set, through STDONE once the file
-; has finished. Destroys AF, BC, DE, HL.
+; last byte ends the file. Otherwise carry set, once the file has finished.
+; Destroys AF, BC, DE, HL.
 STLINE:	LD	HL,STPOS
 	LD	A,(HL)
 	RLCA			; top bit to carry: the file is finished
-	JR	C,STDONE
+	RET	C		; the file finished: a line is typed
 	RRCA			; the position again
 	ADD	A,LOW(STREC)-1	; HL at the next byte: the record
 	LD	L,A		; is in one page
@@ -625,21 +625,3 @@ STL2:	LD	A,L
 	CALL	PUTSTR		; the echo, as if typed
 	OR	A		; carry clear: a line
 	RET
-
-; Once, at the first prompt after startup: with a PICO9918 and a
-; matrix keyboard fitted and no display driver in, the LCD says PICO?. That
-; board's screen is black and it may have no serial terminal. It covers a
-; missing file, a bad file, no STARTUP.CMD and a skip. HL = STPOS, A = STPOS
-; rotated left, carry set. Returns carry set for STLINE. Destroys AF, B, HL.
-STDONE:	INC	A		; FFh has been seen, and carry stays
-	RET	Z
-	LD	(HL),$FF	; once only
-	LD	A,(CONDEV)	; zero: both, no GLCD, whatever row 3 has
-	AND	$FF-CDWRD-CDRTC	; GLCD? may be up from a failed CON UC1
-	SUB	CDMTX+CDTMS	; CDGLC set means GLCD.SVC is in
-	LD	HL,PIVEC+1	; and a word here means PICO.SVC is
-	OR	(HL)
-	SCF
-	RET	NZ
-	LD	HL,PICMSG	; carry set by LCDROW
-	JP	LCDWRD
