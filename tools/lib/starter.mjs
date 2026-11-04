@@ -9,12 +9,10 @@ import { PICO_WIDTHS, makeSvc } from "./svc.mjs";
 
 export async function displayFiles(root) {
   const work = resolve(root, "build/svc");
-  const { file: pico } = await makeSvc(resolve(root, "drivers/pico.asm"), { defs: PICO_WIDTHS["PICO.SVC"], work });
   const { file: glcd } = await makeSvc(resolve(root, "drivers/glcd.asm"), { work });
   return [
-    { name: "PICO.SVC", description: `the PICO9918 console at ${PICO_WIDTHS["PICO.SVC"].COLS} columns, a driver`, bytes: pico },
     { name: "GLCD.SVC", description: "the GLCD console, a driver", bytes: glcd },
-    { name: "STARTUP.CMD", description: "the commands run at cold boot", bytes: Buffer.from("PICO.SVC\r\nGLCD.SVC\r\n\x1a", "latin1") },
+    { name: "STARTUP.CMD", description: "the commands run at cold boot", bytes: Buffer.from("GLCD.SVC\r\n\x1a", "latin1") },
   ];
 }
 

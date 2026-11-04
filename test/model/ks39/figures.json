@@ -1,0 +1,12 @@
+{
+  "base": "3975e6b (ks36c)",
+  "rom": { "base": 15451, "model": 16021, "free": 363, "floor": 256, "net": 570, "gross": 612,
+    "gross_parts": { "pico.asm": 610, "the template PITPL": 39, "PISTART": 37, "TMSWID": 30, "TMSW": 70, "register sets, three widths": 24, "VIDINIT's jump": 2 },
+    "removed": { "STDONE and its jump (ccp.asm)": 24, "SVCGO's PICO branch (loader.asm)": 9, "PICMSG (text.asm)": 5, "TNDRVR refusing B = 1 (services.asm)": 4 } },
+  "ram": { "block": 95, "at": "BBF6h-BC54h", "place": "the BIOS state after STUBAD, before CCPRAM: outside CPMINIT's span",
+    "parts": { "table": 26, "record": 13, "LBUF's place": 2, "state": 4, "register pointer": 2, "row table": 48 } },
+  "tpa": { "serial board": 46775, "PICO board, no GLCD": 46775, "change": -95, "ks36c PICO board with PICO.SVC": 46080 },
+  "starter": { "files": 6, "STARTUP.CMD": "GLCD.SVC" },
+  "smoke": { "PICO board": "banner, volumes and prompt on the screen, serial empty", "no matrix keyboard": "serial console",
+    "widths": "CON PICO 40 gives 40, CON CRT 32 gives 32, kept over warm boot, 80 after reset" }
+}

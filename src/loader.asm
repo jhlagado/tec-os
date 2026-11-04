@@ -445,9 +445,9 @@ GLCLD:	LD	A,(CONDEV)
 	LD	HL,GLCMSG	; the LCD says so, carry set
 	JP	LCDWRD
 
-; Read CMDFCB's service and install it. If its page holds a video table it takes
-; the console unless the other display's driver is in, and the ROM's word goes
-; from the LCD. Carry set if it wouldn't read or install, SVCRC and SVCRA then
+; Read CMDFCB's service and install it. If its page holds GLCD.SVC's table it
+; takes the console unless the PICO9918's, the ROM's, is in effect, and the
+; ROM's word goes from the LCD. Carry set if it wouldn't read or install, SVCRC and SVCRA then
 ; saying why (0 for a file that wouldn't read).
 SVCGO:	XOR	A		; no load's failure yet
 	LD	(SVCRC),A
@@ -456,20 +456,15 @@ SVCGO:	XOR	A		; no load's failure yet
 	CALL	SVCLOAD
 	RET	C
 	LD	A,(SVCHEAD)
-	LD	B,CMCRT		; PICO.SVC's table in this service's page?
-	LD	HL,PIVEC+1
-	CP	(HL)
-	LD	HL,GLVEC+1	; then it gives way to GLCD.SVC (KE-150)
-	JR	Z,SVGIVE
+	LD	HL,GLVEC+1	; GLCD.SVC's table in this service's page?
 	XOR	(HL)		; carry clear: any other service has loaded
 	RET	NZ
 	LD	HL,CONDEV
 	SET	2,(HL)		; CDGLC
 	LD	B,CMUC1
-	LD	HL,PIVEC+1	; GLCD.SVC gives way to PICO.SVC
-SVGIVE:	LD	A,(HL)
-	OR	A
-	JR	NZ,WRDCLR	; the other keeps the console, and GLCD? is false
+	LD	A,(CONMOD)	; the PICO9918 in effect keeps the console
+	DEC	A		; (KE-150), and GLCD? is false
+	JR	Z,WRDCLR
 CONSET:	CALL	WRDCLR		; a display has come: the word is false
 	LD	A,B		; the mode, in the CON: field and in effect
 	JP	CONSW

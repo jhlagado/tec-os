@@ -8,7 +8,7 @@ VIDINIT:CALL    TMSINIT
         RET     NZ
         LD      HL,CONDEV
         SET     1,(HL)          ; CDTMS
-        RET
+	JP	PISTART		; the console, with the matrix keyboard
 
 VPUT:   LD      HL,(VPUTV)
         JP      (HL)

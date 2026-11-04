@@ -32,7 +32,7 @@ LCDC:   PUSH    AF
         RET
 
 ; Write the word at HL to row 3 and mark that it is there, so that a take can
-; tell the row is the ROM's to clear. HL = PICMSG or GLCMSG. Returns as LCDROW.
+; tell the row is the ROM's to clear. HL = GLCMSG. Returns as LCDROW.
 LCDWRD:	PUSH	HL		; the word, across the flag
 	LD	HL,CONDEV
 	SET	7,(HL)		; CDWRD

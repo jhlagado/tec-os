@@ -318,10 +318,8 @@ HWSFONT:LD	HL,FONT
 
 ; TNDRVR: B = the mode, then VIDHOOK's. A refusal returns A = TNEBAD with carry.
 SVDRV:	LD	A,B
-	CP	CMCRT		; CRT: or UC1:, and nothing else:
-	JR	Z,SVDRV1	; another B would index past PIVEC's
-	CP	CMUC1		; pair of words (A1)
-	JR	Z,SVDRV1
+	CP	CMUC1		; UC1: alone: CRT:'s table is the ROM's
+	JR	Z,SVDRV1	; (KS39), and no other B has a word
 	LD	A,TNEBAD	; refused, nothing changed
 	SCF
 	RET

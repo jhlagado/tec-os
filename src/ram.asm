@@ -33,6 +33,21 @@ DIRBUF: DS      128
 CSVDUM: DS      2               ; check vector placeholder; CKS is zero
 STUBAD: DS      2               ; BDOS entry jump, the word at 0006h
 
+; ---- The PICO9918's console (pico.asm): PISTART's block, in PICO.SVC's order --
+; Its offsets are abi.inc's, from the table: the width at 14, PICOWID's word at
+; 24, the record from 26, its version at 36, the page drawn at 41 and shown at
+; 42. Outside CPMINIT's span, so warm boot keeps the width.
+PIBLK:  DS      14              ; the table: the terminal's seven words
+PIWID:  DS      12              ; the columns, rows and five entries
+PIREC:  DS      13              ; the record, the registry's tail
+        DS      2               ; PICO.SVC's LBUF: keeps TPSHOW at 42
+PITPD:  DS      1               ; the page drawn and the page shown: 0
+PITPS:  DS      1               ; or PITPG's offset, high byte
+PIMV:   DS      1               ; 1 while a row move builds the hidden page
+PITPG:  DS      1               ; the second page's offset, high byte
+PIREGP: DS      2               ; this width's registers 0-7, in the ROM
+PIROWT: DS      48              ; each row's address in the name table
+
 ; ---- Mount scratch ----------------------------------------------------------
 MNTCNT: DS      1               ; the rest above the table (packing)
 MNBUF:  DS      32              ; 32 bytes of it: the header's, or a descriptor

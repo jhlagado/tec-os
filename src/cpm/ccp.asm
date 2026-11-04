@@ -1120,25 +1120,25 @@ CONEND:	LD	A,(HL)		; a width only after a space: CRT80 is
 	LD	A,B
 	CP	CMCRT
 	JP	NZ,BADCMD	; a width after CRT: alone
-	LD	DE,CONWID	; 80, 40 or 32: two digits, then the
-	LD	B,3		; columns
-CONW1:	LD	A,(DE)
-	INC	DE
-	CP	(HL)
-	LD	A,(DE)
-	INC	DE
+	LD	A,(HL)		; two decimal digits: the columns, which
+	SUB	'0'		; TMSWID judges (80, 40 or 32)
+	CP	10
+	JP	NC,BADCMD
+	LD	C,A
+	ADD	A,A
+	ADD	A,A
+	ADD	A,C
+	ADD	A,A		; the tens
+	LD	C,A
 	INC	HL
-	JR	NZ,CONW2
-	CP	(HL)
-	JR	Z,CONW3
-CONW2:	DEC	HL
-	INC	DE
-	DJNZ	CONW1
-	JP	BADCMD
-CONW3:	INC	HL
-	CALL	ENDCHK
-	LD	A,(DE)		; the columns
+	LD	A,(HL)
+	SUB	'0'
+	CP	10
+	JP	NC,BADCMD
+	ADD	A,C
+	INC	HL
 	PUSH	AF
+	CALL	ENDCHK
 	LD	DE,CONNAMS+20	; "PICO    " at version 3
 	LD	BC,PICOVER*256+TNFIND
 	CALL	ABICALL
@@ -1568,8 +1568,7 @@ CMDDL:  OR      A
 
 ; Startup. Once after cold boot one record of A:STARTUP.CMD is read, the
 ; position marked finished first, so that a failure can't repeat. STPOS is 0
-; until then, the next byte + 1 in the file, 80h up once it is finished, and FFh
-; when STDONE has looked at the console.
+; until then, the next byte + 1 in the file, and 80h up once it is finished.
 STBOOT:	LD	HL,STPOS
 	LD	A,(HL)
 	OR	A
@@ -1603,12 +1602,12 @@ STBDMA:	LD	HL,DEFDMA	; the DMA address programs expect
 ; typed, and carry clear. Lines end at CR or LF and blank ones are passed
 ; over; a line's characters after its 127th are passed over too, as a typed
 ; line has no more. ^Z, a zero or the record's last byte ends the
-; file. Otherwise carry set, through STDONE once the file has finished.
+; file. Otherwise carry set, once the file has finished.
 ; Destroys AF, B, DE, HL.
 STLINE:	LD	HL,STPOS
 	LD	A,(HL)
 	RLCA			; top bit to carry: the file is finished
-	JR	C,STDONE
+	RET	C		; the file finished: a line is typed
 	RRCA			; the position again
 	ADD	A,LOW(STREC)-1
 	LD	L,A
@@ -1652,20 +1651,3 @@ STL2:	LD	A,L
 	OR	A
 	RET
 
-; Once, at the first prompt after startup: with a PICO9918 and a
-; matrix keyboard fitted and no display driver in, the LCD says PICO?. That
-; board's screen is black and it may have no serial terminal. It covers a
-; missing file, a bad file, no STARTUP.CMD and a skip. HL = STPOS, A = STPOS
-; rotated left, carry set. Returns carry set for STLINE. Destroys AF, B, HL.
-STDONE:	INC	A		; FFh has been seen, and carry stays
-	RET	Z
-	LD	(HL),$FF	; once only
-	LD	A,(CONDEV)	; zero: both, no GLCD, whatever row 3 has
-	AND	$FF-CDWRD-CDRTC	; GLCD? may be up from a failed CON UC1
-	SUB	CDMTX+CDTMS	; CDGLC set means GLCD.SVC is in
-	LD	HL,PIVEC+1	; and a word here means PICO.SVC is
-	OR	(HL)
-	SCF
-	RET	NZ
-	LD	HL,PICMSG	; carry set by LCDROW
-	JP	LCDWRD

@@ -38,7 +38,6 @@ CONNAMS:                        ; four bytes each, a colon after three
         DB      "TTY:CRT:"      ; letters; the last, PICO's record name too
         DB      "BAT:UC1:"
         DB      "GLCDPICO    "
-CONWID: DB      "80",80,"40",40,"32",32 ; CON PICO's widths: typed, columns
 CONHDR:
         DB      "CON: ",'$'
 FILEEX:
@@ -62,8 +61,7 @@ ERRFILE: DB     ": File R/O",0
 
 ; ---- loader.asm and cpm/ccp.asm: the LCD's words ----------------------------
 GLCMSG: DB      "GLCD?",0
-PICMSG:	DB	"PICO?"
-PICCLR:	DB	"     ",0	; PICO?'s blanks wipe any of these words
+PICCLR:	DB	"     ",0	; blanks wipe any of the words
 
 ; ---- cache.asm ---------------------------------------------------------------
 CWMSG:  DB      13,10,"Write lost",0
