@@ -230,8 +230,8 @@ byte isn't `C3h`. A service claims its vectors in its flags, by `docs/services.m
 
 ### The BDOS
 
-Functions 0 to 40, 47, 50 and 108, as above. 38 and 39 return zero, and so does any
-other function above 40.
+Functions 0 to 40, 47 and 108, as above. 38 and 39 return zero. Unsupported
+functions above 40 also return zero; 47 and 108 are the supported exceptions.
 
 ### The service format
 

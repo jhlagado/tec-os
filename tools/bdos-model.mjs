@@ -149,6 +149,18 @@ function probes(r){
   }
   return {rows,cycles,peak,counts:{dsm:65536,checksum:60,initialize:20,masks:544,random:65536,overflow:30}};
 }
+function randomFieldProbe(r){
+  const {m,mem,s}=engine(r),target=s("TARGS2");
+  const ends=[];for(let p=s("RANDPREP");p<s("RANDOPEN")-3;p++)if(mem[p]===0x32&&mem[p+1]===(target&255)&&mem[p+2]===(target>>8))ends.push(p+3);
+  assert.equal(ends.length,1,"normalized field boundary");
+  for(const record of [128,32768,65535,65536]){
+    mem.fill(0x39,0x1100,0x1124);for(let i=0;i<3;i++)mem[0x1121+i]=record>>>(i*8)&255;
+    Object.assign(m.cpu,{pc:s("RANDPREP"),sp:0x7ffe});
+    let n=0;while(m.cpu.pc!==ends[0]&&m.cpu.pc!==s("RANDFAIL")){if(++n>1000)throw new Error("random-field probe infrastructure: no boundary");m.step();}
+    assert.equal(m.cpu.pc,record>65535?s("RANDFAIL"):ends[0],"semantic: overflow rejected before publication");
+    if(record<=65535){assert.equal(mem[s("TARGEX")],record>>7&31,"semantic: EX high bit");assert.equal(mem[s("TARGS2")],record>>12,"semantic: S2 high bit");}
+  }
+}
 function controls(r){
   const at=n=>r.symbols.get(n)-0xc000;
   const find=(from,to,needle)=>{
@@ -165,10 +177,15 @@ function controls(r){
   ];
   return changes.map(([name,p,before,after])=>{
     const image=Uint8Array.from(r.image);if(before)assert.deepEqual([...image.slice(p,p+before.length)],before,`${name} opcode prerequisite`);image.set(after,p);
-    let error;try{probes({...r,image});}catch(e){if(e.code!=="ERR_ASSERTION")throw e;error=e.message;}
+    let error;try{(name.startsWith("random-")?randomFieldProbe:probes)({...r,image});}catch(e){if(e.code!=="ERR_ASSERTION")throw e;error=e.message;}
     assert.ok(error,`${name} distinguished from unmutated passing probes`);
     return {name,detected:true,address:p+0xc000,error};
   });
+}
+if(process.env.BDOS_CONTROL_DIR){
+  const r=rom(resolve(process.env.BDOS_CONTROL_DIR));randomFieldProbe(r);
+  const result={romSha256:sha(r.image),runnerSha256:sha(readFileSync(new URL(import.meta.url))),controls:controls(r)};
+  writeFileSync(out,JSON.stringify(result,null,2)+"\n");console.log(JSON.stringify(result));process.exit(0);
 }
 const selected=(process.env.BDOS_VARIANTS??Object.keys(variants).join(",")).split(",");
 assert.equal(selected[0],"incumbent","a comparison must start with the incumbent");
