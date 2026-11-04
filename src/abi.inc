@@ -1,4 +1,4 @@
-; TEC-OS's table, ABI 5.0, for programs: its 8 bytes at C003h, and the
+; TEC-OS's table, ABI 5.1, for programs: its 8 bytes at C003h, and the
 ; numbered services behind its one jump. A program checks for "TNA" at ABITAB
 ; and for major version 5 at ABIMAJ before it calls ABICALL. The ROM assembles
 ; from this file, and the build checks the table's bytes it makes.

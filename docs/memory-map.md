@@ -83,10 +83,10 @@ cache's lines are written as at any exit.
 
 | Stack | Range | Bytes |
 | --- | --- | ---: |
-| Cold boot | below 8000h | — |
-| BIOS (warm boot, diagnostics) | BCC5h–BCECh | 40 |
+| Cold boot | below 8000h, then the BDOS's once the workspace is clear (KE-173) | — |
+| BIOS (warm boot) | BCC5h–BCECh | 40 |
 | CCP | BE56h–BE75h | 32 |
-| BDOS | BECAh–BEFFh | 54 |
+| BDOS (and cold boot's mount and DIAG) | BECAh–BEFFh | 54 |
 
 ## Serial timing
 

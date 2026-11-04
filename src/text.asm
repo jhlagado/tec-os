@@ -1,5 +1,5 @@
-; The data block's text, after tables.asm and gen/geom.asm; the code follows
-; it.
+; The data block's text, after tables.asm, gen/geom.asm and gen/font.asm, the
+; font tools/build.mjs generates from format/font5x7.txt; the code follows it.
 
 ; ---- boot.asm ----------------------------------------------------------------
 RAMMSG:	DB	13,10,"TEC-OS needs 64K RAM",13,10,0
