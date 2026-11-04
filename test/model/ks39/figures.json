@@ -7,6 +7,11 @@
     "parts": { "table": 26, "record": 13, "LBUF's place": 2, "state": 4, "register pointer": 2, "row table": 48 } },
   "tpa": { "serial board": 46775, "PICO board, no GLCD": 46775, "change": -95, "ks36c PICO board with PICO.SVC": 46080 },
   "starter": { "files": 6, "STARTUP.CMD": "GLCD.SVC" },
+  "measured": { "build": "ks39, ROM sha256 8bb1637d52039f3c",
+    "rom": { "used": 15877, "free": 507, "net": 554, "note": "the model's 16,021 and 363 were from base 3975e6b; these are the branch's build against dc57bf0's 15,323" },
+    "ram": { "block": 95, "at": "BBE3h-BC41h" },
+    "tpa": { "starter card, serial or PICO board": 47268, "change from dc57bf0": -95, "GLCD board with GLCD.SVC": 46336, "GLCD change from dc57bf0": -256,
+      "note": "GLCD.SVC loads at the page below the stub's, so the 95-byte block, lowering the stub across a page boundary, costs a GLCD board a whole page: 46,592 at dc57bf0, 46,336 here" } },
   "smoke": { "PICO board": "banner, volumes and prompt on the screen, serial empty", "no matrix keyboard": "serial console",
     "widths": "CON PICO 40 gives 40, CON CRT 32 gives 32, kept over warm boot, 80 after reset" }
 }
