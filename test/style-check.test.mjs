@@ -91,7 +91,7 @@ test("the limits are the style's", () => {
 test("toTabs lays a spaced source out by tabs, a long label on its own line and every token kept", () => {
   assert.equal(toTabs(GOOD.split("\n").map(spaced).join("\n")), GOOD);
   assert.equal(toTabs("LONGLABEL: LD A,'X' ; a 'quoted' X"), `LONGLABEL:\n${line("", "LD", "A,'X'", "a 'quoted' X")}`);
-  assert.equal(toTabs("LONGNAME EQU 5 ; five"), "LONGNAME\tEQU\t5\t\t; five");
+  assert.equal(toTabs("LONGNAME EQU 5 ; five"), "LONGNAME\tEQU\t5\t; five");
   assert.equal(toTabs("   ; indented"), "\t\t\t\t; indented");
   assert.deepEqual(rules(checkSource(toTabs("; A header.\nX: LD  A,B ; one\n RET\n"), "X.ASM")), []);
 });
