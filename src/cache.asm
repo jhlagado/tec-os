@@ -327,8 +327,8 @@ CWB2:   PUSH    AF
         LD      A,(CWTYPE)
 	OR	A
 	JP	M,CWBT		; written through: to the card now
-        DEC     A
-        JR      Z,CWB3
+	RRCA			; type 1, a directory block: bit 0, as
+	JR	C,CWB3		; bit 6 may say a line was taken
         XOR     A               ; data: done
         RET
 CWBT:	LD	A,C		; written through: the line to the card

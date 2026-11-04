@@ -547,3 +547,44 @@ test("the cold mount reads the table through a cache line, and leaves the TPA as
   const tpa = Array.from({ length: 0x600 }, (_, i) => m.read(0x200 + i));
   assert.ok(tpa.every((v) => v === 0x76), "0200h-07FFh untouched by the mount");
 });
+
+/** BIOS entry N (0 cold boot, 9 SELDSK, ...) with BC from a stub. */
+function bios(m, n, bc) {
+  const at = word(m, 1) - 3 + 3 * n;
+  stub(m, [0x01, bc & 0xff, bc >> 8, 0xcd, at & 0xff, at >> 8]);
+  return m.cpu.cpu;
+}
+
+test("a BIOS WRITE of type 1 to a directory block no line holds, on the volume written behind with dirty data lines, puts the data on the card first and then the directory (KS36b review)", async () => {
+  const image = await load(card(), [], { "BIG.DAT": pattern(40 * 512, (i) => i) });
+  const runs = (img) => (Buffer.from(img).toString("latin1").match(/\xc3{512}/g) ?? []).length;
+  const writes = [];
+  const m = start(image, { onSdWrite: (img) => writes.push(runs(img)) });
+  dirty(m);
+  // B:'s first directory record, read by the BIOS into 2400h.
+  const c = bios(m, 9, 1);
+  const dpb = word(m, ((c.h << 8) | c.l) + 10);
+  bios(m, 10, word(m, dpb + 13));
+  bios(m, 11, 0);
+  bios(m, 12, 0x2400);
+  assert.equal(bios(m, 13, 0).a, 0);
+  // A:BIG.DAT read through: its 40 blocks take every clean line, the directory's with it.
+  [1, ...Buffer.from("BIG     DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x2100 + i, v));
+  bdos(m, 15, 0x2100);
+  bdos(m, 26, 0x2200);
+  for (let r = 0; r < 160; r += 1) bdos(m, 20, 0x2100);
+  bdos(m, 26, 0x2000);
+  for (let r = 0; r < 4; r += 1) bdos(m, 21, 0x5c); // records 4 to 7: a dirty data line
+  assert.equal(runs(image), 0, "Q.DAT's two blocks dirty, none on the card");
+  const from = writes.length;
+  bios(m, 9, 1);
+  bios(m, 10, word(m, dpb + 13));
+  bios(m, 11, 0);
+  bios(m, 12, 0x2400);
+  assert.equal(bios(m, 14, 1).a, 0, "the directory record written back, type 1");
+  const after = writes.slice(from);
+  assert.ok(after.length >= 3, `the data and the directory reached the card (${after.length} card writes)`);
+  assert.equal(after[0], 1, "a data line first");
+  assert.equal(after.at(-2), 2, "both before the directory, last");
+  assert.deepEqual(m.violations, []);
+});
