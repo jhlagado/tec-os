@@ -187,8 +187,16 @@ function writeAt(m, r, value) {
   for (let i = 0; i < 128; i++) m.write(0x4000 + i, value);
   assert.equal(call(m, 'BWRITE', { c: 0 }), 0, `record ${r}`);
 }
-test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean and with every line dirty, walk the cache with interrupts off, and MOUNT and UNMOUNT write the lines (A3)", (t) => {
+/** Drive D's entry in the drive table, and its DPB through BSELDSK. */
+function mounted(m, d) {
+  const entry = bytes(m, m.sym('DRVTAB') + 8 * d, 8);
+  call(m, 'BSELDSK', { c: d });
+  const dph = m.cpu.cpu.h << 8 | m.cpu.cpu.l;
+  return { entry, dpb: dph ? bytes(m, m.read(dph + 10) | m.read(dph + 11) << 8, 15) : null };
+}
+test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean and with every line dirty, walk the cache with interrupts off, and MOUNT and UNMOUNT write the lines (A3); with every line dirty DESCRIBE returns the card's descriptor and MOUNT installs C: as from a clean cache (KE-AR3)", (t) => {
   const deepest = {};
+  const clean = {}; // what each service gives with the cache clean
   // B: is left dirty: UNMOUNT takes B: away, MOUNT puts OTHER on C:, DESCRIBE reads OTHER's descriptor.
   for (const every of [false, true])
     for (const [name, op, drive, index] of [['UNMOUNT', 1, 1, 0], ['MOUNT', 0, 2, 2], ['DESCRIBE', 2, 0, 2]]) {
@@ -213,6 +221,15 @@ test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean
       deepest[key] = 0x3000 - low;
       assert.equal(got, 0, `${key} succeeds`);
       assert.equal(walkedOn, 0, `${key}: the cache walked with interrupts off`);
+      // KE-AR3: the table block read into the line taken, not the BIOS's record's block.
+      const result = name === 'DESCRIBE' ? { desc: bytes(m, 0x5000, 32) } : name === 'MOUNT' ? mounted(m, 2) : null;
+      if (result && !every) clean[name] = result;
+      if (result && every) assert.deepEqual(result, clean[name], `${key}: as with the cache clean`);
+      if (name === 'DESCRIBE') {
+        const card = image.slice(96, 128); // index 2's descriptor in block 0
+        assert.deepEqual([...result.desc].filter((_, i) => i !== 14), [...card].filter((_, i) => i !== 14), `${key}: the card's descriptor, but for its drive`);
+      }
+      if (name === 'MOUNT') assert.equal(result.entry[6], parseContainer(image).volumes[2].geometry, `${key}: C:'s geometry`);
       if (name !== 'DESCRIBE') {
         const [work, other] = parseContainer(image).volumes.slice(1, 3);
         const changed = image.findIndex((v, i) => v !== before[i]);
