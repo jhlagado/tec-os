@@ -31,22 +31,10 @@ PZLDRV	EQU	$0050		; the drive a program was loaded from,
 RST7    EQU     $0038
 DEFDMA  EQU     $0080
 
-; CP/M reserves 0040h-004Fh for BIOS scratch. TEC-OS keeps the state that must
-; stay visible whatever the bank window shows here.
+; CP/M reserves 0040h-004Fh for BIOS scratch. TEC-OS keeps only the latch's
+; shadow here, the one byte read while EXPAND 1 is in view; the console's state
+; is above the RAM BIOS table (ram.asm), and 0041h-004Fh are unused (KS36c).
 LATCHV  EQU     $0040           ; shadow copy of the system latch
-RXFULL  EQU     $0042           ; console byte waiting in RXCHAR
-RXCHAR  EQU     $0043           ; and the byte itself
-CONDEV  EQU     $0045           ; console devices present (CD* bits)
-VROW    EQU     $0046           ; video terminal cursor row
-VCOL    EQU     $0047           ; and column
-VWID    EQU     $0048           ; video columns
-VHGT    EQU     $0049           ; video rows
-ESCST   EQU     $004A           ; escape parser state
-ESCP1   EQU     $004B           ; first numeric parameter
-ESCP2   EQU     $004C           ; second numeric parameter
-KBLAST  EQU     $004D           ; matrix key held at the last poll, FFh none
-VATTR   EQU     $004E           ; 80h while reverse video is on
-VCURV   EQU     $004F           ; 1 while the cursor cell is inverted
 
 CDMTX   EQU     $01             ; matrix keyboard enabled
 CDTMS   EQU     $02             ; PICO9918 answered at cold boot

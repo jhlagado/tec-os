@@ -238,5 +238,20 @@ STFLAG: DS      1               ; FFh while a line from STARTUP.CMD runs, 0 type
 STPOS:	DS	1		; startup's state and position, as at STBOOT
 STREC:  DS      128             ; A:STARTUP.CMD's one record
 CHPOS:  DS      1               ; a chained line's next piece: its offset in CMDTXT + 1, 0 for none
+
+; ---- The console's state, read only with EXPAND 0 in view (page zero's once) --
+RXFULL: DS      1               ; console byte waiting in RXCHAR
+RXCHAR: DS      1               ; and the byte itself
+CONDEV: DS      1               ; console devices present (CD* bits)
+VROW:   DS      1               ; video terminal cursor row
+VCOL:   DS      1               ; and column
+VWID:   DS      1               ; video columns
+VHGT:   DS      1               ; video rows
+ESCST:  DS      1               ; escape parser state
+ESCP1:  DS      1               ; first numeric parameter
+ESCP2:  DS      1               ; second numeric parameter
+KBLAST: DS      1               ; matrix key held at the last poll, FFh none
+VATTR:  DS      1               ; 80h while reverse video is on
+VCURV:  DS      1               ; 1 while the cursor cell is inverted
 HIRME:
 WSEND   EQU     HIRME           ; end of the classic resident workspace
