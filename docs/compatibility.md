@@ -78,7 +78,10 @@ file, as CP/M 2.2's does, so a program can make it read-write again.
 syntax of the CP/M 2.2 CCP. `DIR`'s output is TEC-OS's own: `NAME.EXT`
 columns that fit the display, then the file count and free space. `TYPE`
 and `DIR` pause with `[more]` when the screen fills. Programs that parse
-DR's `DIR` layout will not find it. `SUBMIT` and batch files are not
+DR's `DIR` layout will not find it. `SAVE` on a full disk or directory
+differs from CP/M 2.2's, which prints its error with the file left open and
+its records in no directory entry: TEC-OS's closes the file first, keeping
+the records written, as `COPY` does, then prints `NO SPACE`. `SUBMIT` and batch files are not
 supported. A line of up to 127 characters, typed, from `STARTUP.CMD` or from
 function 47, is split at each `!`, and what is left of it runs after each
 program's warm boot, before any startup line; a piece that starts with `:`

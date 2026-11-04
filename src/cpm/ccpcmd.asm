@@ -231,9 +231,9 @@ SAVELOOP:
 	OR	A
 	JR	Z,SAVECLS	; every page written: close it
 	CALL	SAVE128		; a page is two records
-	JR	C,SAVENOSP
+	JR	C,SAVEWER
 	CALL	SAVE128
-	JR	C,SAVENOSP	; either unwritten: the disk is full
+	JR	C,SAVEWER	; either unwritten: the disk is full
 	LD	A,(SAVEPGS)
 	DEC	A
 	LD	(SAVEPGS),A	; one page fewer to write
@@ -267,6 +267,11 @@ SAVECLS:
 	JR	Z,SAVENOSP	; FFh: the close failed
 	JP	MAINLOOP
 
+; SAVE's write error: the file closed with the records written, as COPY's
+; destination is, where CP/M 2.2's SAVE leaves it open; then NO SPACE.
+SAVEWER:
+	CALL	DOSSEQ		; close CMDFCB's file, whatever the close
+	DB	16*2+0		; returns: BDOS 16, source FCB
 ; SAVE's failure: NO SPACE, through ERRGO, which marks the command failed.
 SAVENOSP:
 	LD	DE,NOSPACE	; "NO SPACE", then the prompt

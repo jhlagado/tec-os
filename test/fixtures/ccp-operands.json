@@ -365,7 +365,7 @@
     {
       "input": "SAVE 1 B:FULL.COM",
       "output": "SAVE 1 B:FULL.COM\r\r\nNO SPACE\r\nA>",
-      "calls": "446151e80a7e0ea6bc40b1bdad2b4e816fc955cfd4c96700af8809fb8ee12e91",
+      "calls": "7882c7054f59fccfdfccb9c58113ebbd49cd5c9b1a518aa56f201e396dcb8649",
       "peak": 14
     },
     {

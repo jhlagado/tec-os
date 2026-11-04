@@ -5,6 +5,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { TEST_CLOCK, boot, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
@@ -180,4 +181,21 @@ test("SAVE refuses a count past 255 as any bad count, whichever doubling carries
     assert.match(m.command(`SAVE ${n} B:BIG.COM`), new RegExp(`\\r\\n${n}\\?\\r\\n`), `SAVE ${n} refused`);
     assert.match(m.command("DIR B:"), /NO FILE/, `SAVE ${n} wrote nothing`);
   }
+});
+
+test("SAVE on a full disk closes the file before NO SPACE: the records written stay in the directory, as COPY's do (KE-201)", () => {
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G1M", label: "DATA", mount: "C" },
+  ]);
+  const c = volume(image, "C");
+  c.write("FILL.DAT", new Uint8Array(c.freeBytes() - 4096));
+  const room = c.freeBytes();
+  const m = boot(image);
+  for (let a = 0x100; a < 0x100 + 32 * 256; a += 1) m.write(a, (a * 7 + (a >> 8)) & 0xff);
+  const tpa = Uint8Array.from({ length: room }, (_, i) => m.read(0x100 + i));
+  assert.match(m.command("SAVE 32 C:X.COM"), /NO SPACE/);
+  m.command("C:");
+  assert.deepEqual(volume(m.sdImage, "C").read("X.COM"), tpa, "the records written, from 0100h");
+  assert.deepEqual(m.violations, []);
 });
