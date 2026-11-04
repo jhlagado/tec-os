@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_SVC, PICO_SVC, TEST_CLOCK, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, TEST_CLOCK, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 /** Every access to 0041h-004Fh while the CPU runs ROM code, from the first
  *  instruction: all but cold boot's clear of page zero, COLDZ's LDIR, which
@@ -30,7 +30,7 @@ function watch(m) {
 
 for (const [name, opts, files] of [
   ["serial and the matrix keyboard", { matrix: true }, {}],
-  ["the PICO9918 and the GLCD", { tms: true, matrix: true }, { "PICO.SVC": PICO_SVC["PICO.SVC"], "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("PICO.SVC", "GLCD.SVC") }],
+  ["the PICO9918 and the GLCD", { tms: true, matrix: true }, { "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }],
 ]) {
   test(`the ROM leaves 0041h-004Fh alone on ${name}: cold boot, commands, a scroll, escapes, CON, the keyboard and a warm boot`, () => {
     const image = standardCard();

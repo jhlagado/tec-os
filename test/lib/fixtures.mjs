@@ -6,7 +6,7 @@ import { dirname, resolve, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { assembleProgram } from "../../tools/lib/assemble.mjs";
-import { PICO_WIDTHS, makeSvc } from "../../tools/lib/svc.mjs";
+import { makeSvc } from "../../tools/lib/svc.mjs";
 import { Machine, loadSymbols } from "./machine.mjs";
 import { createContainer, parseContainer, findVolume, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
@@ -78,13 +78,6 @@ export const service = async (name) => (await makeSvc(resolve(ROOT, "test/progra
 /** GLCD.SVC, the GLCD console driver, built from drivers/glcd.asm. */
 export const GLCD_SVC = (await makeSvc(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/svc") })).file;
 
-/** PICO.SVC, PICO40.SVC and PICO32.SVC, by file name. */
-export const PICO_SVC = Object.fromEntries(
-  await Promise.all(Object.entries(PICO_WIDTHS).map(async ([name, defs]) => [name, (await makeSvc(resolve(ROOT, "drivers/pico.asm"), { defs, work: resolve(ROOT, "build/svc") })).file])),
-);
-
-/** The PICO driver's file for a width in columns: 80, 40 or 32. */
-export const picoFor = (width = 80) => ({ 40: "PICO40.SVC", 32: "PICO32.SVC" })[width] ?? "PICO.SVC";
 
 /**
  * The three type bytes in the CCP's FCB after M's last command. A name the
@@ -98,17 +91,22 @@ export const fcbType = (m) => String.fromCharCode(...[9, 10, 11].map((i) => m.re
 export const startupFile = (...lines) => Buffer.from(lines.map((l) => `${l}\r\n`).join("") + "\x1a", "latin1");
 
 /**
- * Put a board's display driver and a STARTUP.CMD naming it on drive A of IMAGE:
- * PICO.SVC at WIDTH, with the matrix keyboard and a PICO9918, and
- * GLCD.SVC with the keyboard alone. A card that has a STARTUP.CMD keeps it.
+ * Put a board's display on drive A of IMAGE: with the matrix keyboard and a
+ * PICO9918 the console is the ROM's, so only a width other than 80 needs a
+ * line, CON PICO WIDTH; with the keyboard alone, GLCD.SVC and a STARTUP.CMD
+ * naming it. A card that has a STARTUP.CMD keeps it.
  */
 export function withDisplay(image, { tms = false, matrix = false, width = 80 } = {}) {
   if (!matrix) return image;
-  const name = tms ? picoFor(width) : "GLCD.SVC";
   const a = volume(image, "A");
-  if (a.list().some((f) => f.name === name)) return image;
-  a.write(name, tms ? PICO_SVC[name] : GLCD_SVC);
-  if (!a.list().some((f) => f.name === "STARTUP.CMD")) a.write("STARTUP.CMD", startupFile(name));
+  const has = (n) => a.list().some((f) => f.name === n);
+  if (tms) {
+    if (width !== 80 && !has("STARTUP.CMD")) a.write("STARTUP.CMD", startupFile(`CON PICO ${width}`));
+    return image;
+  }
+  if (has("GLCD.SVC")) return image;
+  a.write("GLCD.SVC", GLCD_SVC);
+  if (!has("STARTUP.CMD")) a.write("STARTUP.CMD", startupFile("GLCD.SVC"));
   return image;
 }
 

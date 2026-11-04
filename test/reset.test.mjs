@@ -469,7 +469,7 @@ test("a written-behind volume keeps its flag through a reset", () => {
   assert.equal(m.read(entry(m, 1) + 7), flags);
 });
 
-test("from user 5, a drive and a video console, a reset reaches A:, user 0, on serial", () => {
+test("from user 5, a drive and a video console, a reset reaches A:, user 0, on the ROM's console (KS39)", () => {
   const image = card();
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
@@ -482,9 +482,9 @@ test("from user 5, a drive and a video console, a reset reaches A:, user 0, on s
   m.cpu.hardware.ioWrite(0xbf, 0x81);
   const serial = m.serial.length;
   reset(m);
-  assert.deepEqual([m.read(3), m.read(4), m.read(m.sym("CONMOD"))], [0, 0, 0], "IOBYTE, drive and user, console");
-  assert.ok(m.serial.length > serial, "on serial");
-  assert.match(m.serialText(serial), /A>$/);
+  assert.deepEqual([m.read(3), m.read(4), m.read(m.sym("CONMOD"))], [1, 0, 1], "IOBYTE's CON: CRT:, drive and user 0, the console CRT:");
+  assert.equal(m.serial.length, serial, "nothing on serial");
+  assert.ok(m.screen().includes("A>"), "the prompt on the screen, in its mode again");
 });
 
 test("a default drive beyond MNTDRV is refused with MEMOUNT", () => {

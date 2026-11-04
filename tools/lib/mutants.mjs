@@ -541,6 +541,8 @@ export const MUTANTS_KS33 = [
 // 47, each with the tests meant to catch it.
 const SVCF = "src/svc.asm";
 const PICOF = "drivers/pico.asm";
+// The PICO9918's console in the ROM (KS39): the driver's masked pairs, moved.
+const ROMPICOF = "src/pico.asm";
 const CONF = "src/console.asm";
 const ks34 = (file, find, put, tests) => ({ edits: [asm(file, find, put)], tests });
 const VEC = ["test/svc.test.mjs"];
@@ -570,18 +572,17 @@ export const MUTANTS_KS34 = [
   { name: "stub: a byte low", ...ks34("src/vol.asm", ["DEC HL", "DEC HL", "DEC HL", "LD (STUBAD),HL"], ["DEC HL", "DEC HL", "DEC HL", "DEC HL", "LD (STUBAD),HL"], SYS) },
   { name: "recognition: W = S refused", ...ks34(B, ["SBC HL,DE", "JR Z,RSLYES"], ["SBC HL,DE", "NOP", "NOP"], ["test/reset.test.mjs"]) },
   { name: "recognition: S below 8000h let through", ...ks34(B, ["LD A,H", "CP $80", "JR C,RSLNO", "LD DE,(STUBAD)"], ["LD A,H", "CP $80", "LD DE,(STUBAD)"], ["test/reset.test.mjs"]) },
-  { name: "mask: VPAIR with no DI", ...ks34(PICOF, ["VPAIR1: PUSH AF", "DI"], ["VPAIR1: PUSH AF", "NOP"], MASK) },
-  { name: "mask: VPAIR leaves them off", ...ks34(PICOF, ["RET PO", "EI", "RET"], ["RET PO", "RET"], MASK) },
-  { name: "mask: VPAIR turns them on", ...ks34(PICOF, ["RET PO", "EI", "RET"], ["NOP", "EI", "RET"], MASK) },
-  { name: "mask: GFXREG bare", ...ks34(PICOF, ["GFXREG: LD L,A", "LD A,B", "OR $80", "LD H,A", "JP VPAIR"], ["GFXREG: OUT (VDPCTL),A", "LD A,B", "OR $80", "OUT (VDPCTL),A", "RET"], MASK) },
-  { name: "mask: TMSR bare", ...ks34(PICOF, ["TMSR: LD A,(HL)", "PUSH HL", "LD L,A", "LD H,C", "CALL VPAIR", "POP HL"], ["TMSR: LD A,(HL)", "OUT (VDPCTL),A", "LD A,C", "OUT (VDPCTL),A"], MASK) },
+  { name: "mask: VPAIR with no DI", ...ks34(ROMPICOF, ["VPAIR: CALL IFFGET", "PUSH AF", "DI"], ["VPAIR: CALL IFFGET", "PUSH AF", "NOP"], MASK) },
+  { name: "mask: VPAIR leaves them off", ...ks34(ROMPICOF, ["RET PO", "EI", "RET"], ["RET PO", "RET"], MASK) },
+  { name: "mask: VPAIR turns them on", ...ks34(ROMPICOF, ["RET PO", "EI", "RET"], ["NOP", "EI", "RET"], MASK) },
+  { name: "mask: GFXREG bare", ...ks34(ROMPICOF, ["GFXREG: LD L,A", "LD A,B", "OR $80", "LD H,A", "JP VPAIR"], ["GFXREG: OUT (VDPCTL),A", "LD A,B", "OR $80", "OUT (VDPCTL),A", "RET"], MASK) },
+  { name: "mask: TMSR bare", ...ks34(ROMPICOF, ["TMSR: LD A,(HL)", "PUSH HL", "LD L,A", "LD H,C", "CALL VPAIR", "POP HL"], ["TMSR: LD A,(HL)", "OUT (VDPCTL),A", "LD A,C", "OUT (VDPCTL),A"], MASK) },
   { name: "mask: TXBYTE with no DI", ...ks34(CONF, ["CALL IFFGET", "PUSH AF", "DI", "LD B,9"], ["CALL IFFGET", "PUSH AF", "NOP", "LD B,9"], MASK) },
   { name: "mask: RXBITS with no DI", ...ks34(CONF, ["PUSH AF", "DI", "LD D,RXHALF"], ["PUSH AF", "NOP", "LD D,RXHALF"], MASK) },
   { name: "mask: TXBYTE leaves them off", ...ks34(CONF, ["JR NZ,TXS", "POP AF", "RET PO", "EI", "RET"], ["JR NZ,TXS", "POP AF", "RET"], MASK) },
   { name: "mask: RXBITS leaves them off", ...ks34(CONF, ["LD A,C", "RET PO", "EI", "RET"], ["LD A,C", "RET"], MASK) },
   { name: "mask: RXHALF not re-derived", edits: [text("tools/build.mjs", "1.5 * bit - 51 - 58.5 - kbLate / 2", "1.5 * bit - 51 - kbLate / 2")], tests: MASK },
   { name: "erratum: IFFGET's bare read", ...ks34("src/cache.asm", ["IFFGET: LD A,I", "RET PE", "LD A,I", "RET"], ["IFFGET: LD A,I", "RET"], MASK) },
-  { name: "erratum: VPAIR's bare read", ...ks34(PICOF, ["VPAIR: LD A,I", "JP PE,VPAIR1", "LD A,I"], ["VPAIR: LD A,I"], MASK) },
   { name: "47: the guard outlives a warm boot, from INIT", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC), only: "function 47 from INIT" },
   { name: "47: the guard outlives a warm boot, from REMOVE", ...ks34(B, ["LD HL,SVCBSY", "RES 7,(HL)"], ["LD HL,SVCBSY", "NOP", "NOP"], VEC), only: "function 47 from REMOVE" },
 ];

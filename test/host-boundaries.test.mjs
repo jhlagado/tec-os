@@ -260,7 +260,7 @@ test("a width chosen while an import's files are read is the width on the card t
     state, CpmVolume, parseContainer, volumePayload, $: (id) => elements[id],
     saveCard: async () => {}, reset: () => {}, refreshFiles: () => {}, appendSerial: () => {},
     fetch: async () => ({ json: async () => ({}) }), fetchBytes: async () => new Uint8Array(0),
-    widthDrivers: async () => ({ drivers: {} }), loadRom: async () => ({ rom: new Uint8Array(0), symbols: new Map() }),
+    loadRom: async () => ({ rom: new Uint8Array(0), symbols: new Map() }),
     Machine: class {},
     // The card's driver stood in for by a file on A: naming the width it was prepared at.
     prepareCard: (img, _display, width) => { volumeOf(img).write('WIDTH.TXT', new TextEncoder().encode(width)); return { problem: null, note: null, changed: true }; },

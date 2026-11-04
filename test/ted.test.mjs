@@ -179,8 +179,8 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'
 
 test("TED's text holds at least 33,052 bytes on the starter's files with no display, and 31,000 on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
-  // The starter's display files: on a board with both, GLCD.SVC gives way to
-  // PICO.SVC, so one driver is loaded; CON UC1 loads the second (the figures).
+  // The starter's display files: on a board with both, GLCD.SVC loads and gives
+  // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
   for (const [board, floor] of [[{ glcd: false }, 33_052], [{ tms: true, matrix: true, glcd: true }, 31_000]]) {
     const image = standardCard();
     const a = volume(image, "A");

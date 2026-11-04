@@ -2,7 +2,7 @@
 // suite, on the serial console, the PICO9918 and the GLCD with the matrix
 // keyboard, on the serial console with B: written behind, on the diagnostic
 // console without a card, and on the CCP's two deepest paths: CON UC1 loading
-// GLCD.SVC on a PICO9918 and matrix board and on a GLCD board, and PICO? reaching the LCD at the first prompt. Every memory write
+// GLCD.SVC on a PICO9918 and matrix board, whose console is the ROM's, and on a GLCD board. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
 // whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
@@ -16,7 +16,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_SVC, PICO_SVC, ROOT, TEST_CLOCK, program, romFor, service, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, service, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
 
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
 const COMMANDS = [
@@ -124,16 +124,12 @@ async function consoleRun(opts, { wb = false } = {}) {
 }
 
 /** A line such as CON UC1 loading GLCD.SVC, on a card with the display's files. */
-async function deepPaths(lines, opts = { tms: true, matrix: true }, { pico = true, files = {} } = {}) {
+async function deepPaths(lines, opts = { tms: true, matrix: true }, { files = {} } = {}) {
   const { rom, symbols } = romFor();
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }]);
   const a = volume(image, "A");
   a.write("GLCD.SVC", GLCD_SVC);
   for (const [name, bytes] of Object.entries(files)) a.write(name, bytes);
-  if (opts.tms && pico) {
-    a.write("PICO.SVC", PICO_SVC["PICO.SVC"]);
-    a.write("STARTUP.CMD", startupFile("PICO.SVC"));
-  }
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
@@ -217,14 +213,12 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     diagnostics: diagnosticRun(),
     conUc1: await deepPaths(["CON UC1\r"]),
     conUc1Glcd: await deepPaths(["CON UC1\r"], { matrix: true }),
-    picoNoDriver: await deepPaths(["DIR\r"], { tms: true, matrix: true }, { pico: false }),
-    unloadPico: await deepPaths(["CON TTY\r", "UNLOAD\r"]),
+    picoRom: await deepPaths(["DIR\r", "CON PICO 40\r", "DIR\r", "CON PICO 32\r", "DIR\r", "CON PICO 80\r"]),
     recognisedReset: await resetRun(),
     chained: await chainRun(),
     serialPlain: await deepPaths(["TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}),
     resident: await deepPaths(["RES.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}, { files: { "RES.SVC": await service("res") } }),
   };
-  assert.equal(runs.picoNoDriver.row3, "PICO?", "the run went through STDONE's LCD path");
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
   assert.equal(runs.glcd.conmod, 3, "the glcd run is on UC1:");
   assert.equal(runs.conUc1.conmod, 3, "both displays, CON UC1 took the GLCD");
@@ -236,7 +230,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; a PICO9918 and matrix board with no driver, through the LCD's PICO? at the first prompt; and PICO.SVC's UNLOAD after CON TTY, whose REMOVE calls INFO; a recognised reset with a remapped A:; and chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; and chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));
@@ -248,7 +242,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   // the limit together keep a quarter of each stack free (KE-173). SVCLIM is BDOS, BIOS, CCP.
   const { rom, symbols } = romFor();
   const lim = Object.fromEntries(["bdos", "bios", "ccp"].map((k, i) => [k, rom[symbols.get("SVCLIM") - 0xc000 + i]]));
-  const bare = ["serial", "pico9918", "writeBehind", "diagnostics", "picoNoDriver", "recognisedReset", "chained", "serialPlain"];
+  const bare = ["serial", "pico9918", "writeBehind", "diagnostics", "picoRom", "recognisedReset", "chained", "serialPlain"];
   for (const k of ["bdos", "ccp", "bios"]) {
     const base = Math.max(...bare.map((r) => runs[r][k].deepest));
     const { reserved } = census[k];

@@ -36,7 +36,10 @@ COLDZ:	LD	A,LATCLAS	; RSLCAP used A
 	LD	BC,WSSPAN
 	LD	(HL),0
 	LDIR
-	LD	SP,BSTK		; the workspace is there to hold it now
+	LD	SP,STKTOP	; the workspace is there to hold it now: the
+				; BDOS's stack, unused before the CCP, so that
+				; the console's start and the banner keep off
+				; the BIOS's (KE-173)
 	CALL	CONINIT
 	CALL	RTCHAS		; the clock, once: INFO reads its bit
 	JR	NZ,COLDNC

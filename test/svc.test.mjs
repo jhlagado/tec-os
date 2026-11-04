@@ -581,7 +581,7 @@ const edit = (fn) => {
   return f;
 };
 const u16 = (at, v) => edit((_, d) => d.setUint16(at, v, true));
-const top = 0xba; // (0006h)'s page on the card in standardCard()
+const top = 0xb9; // (0006h)'s page on the card in standardCard()
 const extraFor = (n) => n - S;
 const MALFORMED = [
   ["the file shorter than its header", good.file.slice(0, 16), 0x110],
@@ -850,9 +850,9 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
     say("SMASH");
     assert.equal(m.read(top - 1), 0xff, "the six bytes below (0006h) are the program's");
     if (opts.tms) {
-      assert.equal(m.videoConsole(), true, "PICO.SVC is in");
+      assert.equal(m.videoConsole(), true, "the ROM's PICO9918 console");
       say("SERVICES");
-      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+PICO +3/);
+      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+A>/, "the loaded two alone: the ROM's console is no service");
     } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
