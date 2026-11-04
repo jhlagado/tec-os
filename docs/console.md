@@ -109,8 +109,8 @@ serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
 `GLCD.SVC` installs it and makes the GLCD the console; with no such line the
 console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
 too, and shows `GLCD?` on the LCD if it can't, which a display taking over clears. On a board with both displays
-the line gives way to `PICO.SVC`, and only `CON UC1:` installs it; the two
-together cost 3,072 TPA bytes. A board without a GLCD or a matrix keyboard refuses
+the line loads it and gives way quietly to `PICO.SVC`, which keeps the console,
+and `CON UC1:` then switches to it; the two together cost 3,072 TPA bytes. A board without a GLCD or a matrix keyboard refuses
 it, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
 resident, removes it, and the console goes back to `CRT:` if `PICO.SVC` is in and
 to serial if not.

@@ -26,21 +26,12 @@ VTAB:   DW      GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
         DB      GLCOLS,GLROWS
 LBUF:   DW      0               ; LINEBUF, from TNDRVR
 
-; INIT refuses if the controller doesn't answer, another GLCD.SVC has the
-; console, or another display is the console and CON UC1 didn't ask: a line in
-; STARTUP.CMD gives way to PICO.SVC. It publishes no record. REMOVE gives the
-; console back, to PICO.SVC if that is in.
-INIT:   LD      A,(IOBYTE)
-        AND     3
-        CP      3
-        JR      Z,INIT1
-	LD	C,TNINFO	; L = the console's columns, 0 for serial
-	CALL	ABICALL
-	LD	A,L
-        OR      A
-        SCF
-        RET     NZ
-INIT1:  CALL    GLCWAIT
+; INIT refuses if the controller doesn't answer or another GLCD.SVC has the
+; console. With another display the console, it loads all the same and the
+; ROM's loader leaves the console where it is (SVCGO): a line in STARTUP.CMD
+; gives way to PICO.SVC quietly (KE-150). It publishes no record. REMOVE gives
+; the console back, to PICO.SVC if that is in.
+INIT:	CALL	GLCWAIT
         SCF
         RET     NZ
 	LD	B,3		; UC1:
