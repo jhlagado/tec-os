@@ -29,11 +29,12 @@ CONSKIP:
 ; may follow), or PICO for CRT: and GLCD for UC1:, sets the IOBYTE CON: field.
 ; After CRT or PICO a width, 80, 40 or 32, goes to the ROM's PICO9918 console
 ; through its table's PICOWID entry (KD-174); with that console not started,
-; or any other width, the command is refused. The BIOS switches at the next
-; console call, so the report appears on the new console, and names the serial
-; terminal when the chosen display or keyboard is missing. UC1: loads
-; GLCD.SVC first if it is not in. Takes the argument at ARGSTRT; ends at
-; MAINLOOP or BADCMD.
+; or any other width, the command is refused, but a line from STARTUP.CMD
+; on a board with no such console is quiet, as for an absent device. The
+; BIOS switches at the next console call, so the report appears on the new
+; console, and names the serial terminal when the chosen display or keyboard
+; is missing. UC1: loads GLCD.SVC first if it is not in. Takes the argument
+; at ARGSTRT; ends at MAINLOOP, STARTED or BADCMD.
 CMDCON:
 	CALL	ARGSKIP		; an error names the argument
 	JP	Z,CONSHOW	; no argument: show the console
@@ -95,8 +96,12 @@ CONEND:	LD	A,(HL)		; a width only after a space: CRT80 is
 	LD	BC,PICOVER*256+TNFIND
 	CALL	ABICALL		; FIND: HL = the console's table, PIBLK
 	POP	BC		; B = the columns
-	JP	C,BADCMD	; none in that takes a width
-	LD	DE,PICOWID	; the table's width entry, its
+	JR	NC,CONWD	; found: the width goes to it
+	LD	A,(STFLAG)	; none, as on a serial board: typed,
+	OR	A		; refused; from STARTUP.CMD, quiet,
+	JP	Z,BADCMD	; the code left 0, as for an absent
+	JP	STARTED		; device's service (KD-173)
+CONWD:	LD	DE,PICOWID	; the table's width entry, its
 	ADD	HL,DE
 	LD	A,(HL)		; address into HL
 	INC	HL
