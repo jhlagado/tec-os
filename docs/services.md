@@ -205,14 +205,16 @@ refuses a service that takes a stack's sum past its limit:
 | Stack | Reserved | Base | Census | Limit for services |
 | --- | --- | --- | --- | --- |
 | BDOS | 54 | 32 | 32 | 8 |
-| BIOS | 38 | 16 | 16 | 12 |
-| CCP | 30 | 16 | 22 | 6 |
+| BIOS | 40 | 18 | 18 | 12 |
+| CCP | 32 | 18 | 18 | 6 |
 
-The base is the deepest use on the serial and PICO9918 paths, with no resident.
-The census is the deepest use of all, the CCP's 22 being `GLCD.SVC`'s. A limit is
-counted from the base, so a stack holds its base and its limit with a quarter
-free, but a service's figure added to the census leaves less: the CCP's stack
-would then reach 28 of 30, the BDOS's 40 of 54. Nothing overflows. A declaration
+The base is the deepest use with no resident, on the serial and PICO9918 paths,
+the diagnostic console and a recognised reset; the census is the deepest use of
+all. The BIOS's 18 is warm boot's flush of the lines written behind: cold boot
+mounts and lists the drives on the BDOS's stack, which nothing else uses before
+the CCP runs. A limit is counted from the base, and a stack holds its base and
+its limit with a quarter free, which `test/stacks.test.mjs` checks: the BDOS's
+40 of 54, the BIOS's 30 of 40 and the CCP's 24 of 32. Nothing overflows. A declaration
 is the service's promise, and `test/svc.test.mjs` shows how a stack watch proves
 one: the ROM can't.
 

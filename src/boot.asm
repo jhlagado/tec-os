@@ -48,7 +48,10 @@ COLDNC:
 	CALL	MEMINIT		; the cache's lines empty, before any mount
 ; DIAG's retry comes back here. LCDINIT clears the display, so CARD? goes
 ; with it, and a retry that fails shows it again.
-COLDRT:	CALL	LCDINIT		; a blank display, CARD? gone
+COLDRT:	LD	SP,STKTOP	; the BDOS's stack, unused before the CCP
+	CALL	LCDINIT		; runs: the mount, the listing and DIAG run
+				; here, and the BIOS's stack keeps only warm
+				; boot's use (KE-173). A blank display, CARD? gone
 	LD	HL,LCDBAN	; LCDINIT's count left B = 0, the top row
 	CALL	LCDROW
 	CALL	SDINIT

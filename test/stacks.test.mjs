@@ -244,6 +244,16 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     const { reserved, deepest } = census[k];
     assert.ok((reserved - deepest) * 4 >= reserved, `${k} used ${deepest} of ${reserved}, less than a quarter left`);
   }
+  // A service's limit is counted from the base, the deepest use with no resident, so the base and
+  // the limit together keep a quarter of each stack free (KE-173). SVCLIM is BDOS, BIOS, CCP.
+  const { rom, symbols } = romFor();
+  const lim = Object.fromEntries(["bdos", "bios", "ccp"].map((k, i) => [k, rom[symbols.get("SVCLIM") - 0xc000 + i]]));
+  const bare = ["serial", "pico9918", "writeBehind", "diagnostics", "picoNoDriver", "recognisedReset", "chained", "serialPlain"];
+  for (const k of ["bdos", "ccp", "bios"]) {
+    const base = Math.max(...bare.map((r) => runs[r][k].deepest));
+    const { reserved } = census[k];
+    assert.ok((base + lim[k]) * 4 <= reserved * 3, `${k}: the base ${base} and the services' limit ${lim[k]} take more than three quarters of ${reserved}`);
+  }
 });
 
 test("RES.SVC declares the word MYCO pushes on the BDOS's stack", async () => {

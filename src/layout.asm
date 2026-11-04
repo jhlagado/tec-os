@@ -60,13 +60,15 @@ RAMBIOS EQU     $BF00           ; RAM copy of the BIOS jump table, top page
 BIOSLEN EQU     17*3
 
 ; ---- Resident stack sizes (measured by test/stacks.test.mjs) -------------
-; Each is its deepest use, as measured, and a quarter more. No NMI frame is
-; in the figures: the test takes an NMI only where 0066h holds RETN, which
-; TEC-OS never writes. The CCP stack is also a transient's default stack:
-; CP/M's eight levels and the return word need 18 bytes of it.
+; Each holds its base, the deepest use with no resident, and SVCLIM's limit
+; for services with a quarter free (KE-173): the BIOS's base is 18, warm
+; boot's flush, and the CCP's 18. No NMI frame is in the figures: the test
+; takes an NMI only where 0066h holds RETN, which TEC-OS never writes. The
+; CCP stack is also a transient's default stack: CP/M's eight levels and the
+; return word need 18 bytes of it.
 BDOSSTN EQU     54
-CCPSTN  EQU     30
-BIOSSTN EQU     38
+CCPSTN  EQU     32              ; within STKGUARD's 43, so no RAM
+BIOSSTN EQU     40
 
 ; ---- Disk geometry limits ---------------------------------------------------
 MAXDRV  EQU     4               ; drives A-D

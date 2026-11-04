@@ -13,7 +13,8 @@ DSKDMA: DS      2
 BLKOFF: DS      2               ; block number within the volume
 BLKSLOT:DS      1               ; 128-byte record within the block, 0-3
 
-; One-block deblocking buffer, keyed by drive and block number.
+; BWRITE's key (GETKEY): the block last cleared rather than read, by drive and
+; block number, so that the next one of its allocation block needs no read.
 BUFOK:  DS      1
 BUFDRV: DS      1
 BUFBLK: DS      2
