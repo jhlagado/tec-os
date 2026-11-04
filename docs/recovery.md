@@ -46,17 +46,22 @@ BDOS error does; the next warm boot has nothing more to say.
 
 ## What a successful write means
 
-On every volume not written behind, a BIOS write returns success only after
-the SD card has accepted the 512-byte block and stopped reporting busy. The
-deblocking buffer always matches the card, or is marked invalid after a
-failed write, and the cache's copy of the block is refreshed from it, or
-dropped.
-Writing one 128-byte record reads its block first (unless the buffer already
-holds it), merges the record and writes the whole block back, so neighbouring
-records are never replaced by stale data. The exception is a block that holds
-nothing yet: the first write to a newly allocated block (CP/M's write type 2),
-and the next blocks of that allocation block as a program writes on into
-them. Such a block is not read; its records not yet written are zeros.
+Every BIOS write goes into the block's cache line; there is no other buffer.
+On every volume not written behind, the write returns success only after the
+line has gone to the card and the card has accepted the 512-byte block and
+stopped reporting busy. If that write fails, the line is dropped, so the
+next read of the block comes from the card.
+Writing one 128-byte record reads its block into a line first (unless a line
+already holds it), merges the record and writes the whole block back, so
+neighbouring records are never replaced by stale data. The exception is a
+block that holds nothing yet: the first write to a newly allocated block
+(CP/M's write type 2), and the next blocks of that allocation block as a
+program writes on into them. Such a block is not read; its records not yet
+written are zeros.
+
+When a program has asked for BDOS errors to be returned (function 45), a
+sequential read or write that fails leaves the FCB on the record it did not
+read or write, as CP/M 3 does, so the program can try that record again.
 
 Whether a card that has reported completion has also made the data durable
 against power loss is up to the card. That is not verified.
