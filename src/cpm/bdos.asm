@@ -145,10 +145,9 @@ FNERRM:	LD	A,E
 ; Function 48, CP/M 3's flush: every changed line of the cache written. A = 0,
 ; or FFh if any write failed, its line then dropped; E = FFh's purge is the same
 ; flush, since dropping clean lines changes nothing a program can see.
-FNFLSH:	CALL	VFLUSH
-	JR	Z,RETZERO
-	LD	A,$FF
-	JR	RETA
+FNFLSH:	CALL	VFLUSH		; A = FFh, the line CFLALL leaves
+	JR	NZ,RETA		; a write failed: FFh
+	JR	RETZERO
 
 ; Function 108, CP/M 3's program return code: DE = FFFFh gets it into HL;
 ; any other DE sets it. One code for every program.
