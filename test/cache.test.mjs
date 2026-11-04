@@ -15,6 +15,7 @@ import { resolve } from "node:path";
 import { createContainer, headerChecksum } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { rig } from "./lib/warmboot.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const pattern = (n, f) => Uint8Array.from({ length: n }, (_, i) => f(i) & 0xff);
@@ -668,3 +669,40 @@ test("when every line is dirty and the forced write of the next in turn fails, t
   assert.equal(tries, 2, "the flush tried it");
   assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "and said so");
 });
+
+// KE-AR7: a write that reads its block first, to any block but the key's own,
+// ends the run of blocks cleared rather than read, so the key never names a
+// block before one already written. Random writes into a new allocation block
+// out of order: its first card block, its last, those between in turn, then
+// the last again. Each geometry, written through and written behind.
+const recordOf = (r) => Uint8Array.from({ length: 128 }, (_, k) => (r * 131 + k * 7 + 1) & 0xff);
+for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G8M", true]])
+  test(`random writes out of order into a new ${geometry} allocation block, ${wb ? "written behind" : "written through"}, keep every record, from the BDOS and on the card (KE-AR7)`, () => {
+    const image = createContainer([
+      { geometry: "G1M", label: "SYSTEM", mount: "A" },
+      { geometry, label: "WORK", mount: "B", writeBehind: wb },
+    ]);
+    const r = rig(image);
+    const m = r.m;
+    const n = geometry === "G1M" ? 4 : 8; // card blocks of 4 records an allocation block
+    const order = [0, 4 * (n - 1), ...Array.from({ length: n - 2 }, (_, i) => 4 * (i + 1)), 4 * (n - 1) + 1];
+    const rr = (rec) => [rec & 0xff, rec >> 8, 0].forEach((v, i) => m.write(0x5c + 33 + i, v));
+    r.fcb(2, "RAND    DAT");
+    assert.equal(r.bdos(22), 0, "made");
+    for (const rec of order) {
+      recordOf(rec).forEach((v, k) => m.write(0x80 + k, v));
+      rr(rec);
+      assert.equal(r.bdos(34), 0, `record ${rec} written`);
+    }
+    assert.notEqual(r.bdos(16), 255, "closed");
+    r.fcb(2, "RAND    DAT");
+    assert.notEqual(r.bdos(15), 255, "opened");
+    for (const rec of order) {
+      rr(rec);
+      assert.equal(r.bdos(33), 0, `record ${rec} read`);
+      assert.deepEqual(Uint8Array.from({ length: 128 }, (_, k) => m.read(0x80 + k)), recordOf(rec), `record ${rec}, from the BDOS`);
+    }
+    r.warm();
+    const card = volume(image, "B").read("RAND.DAT");
+    for (const rec of order) assert.deepEqual(card.subarray(rec * 128, rec * 128 + 128), recordOf(rec), `record ${rec}, on the card`);
+  });

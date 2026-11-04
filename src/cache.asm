@@ -328,20 +328,24 @@ CWB1:	DEC	C
 	JR	CWB2
 CWBF:	CALL	CFILL		; the card's block first
 	RET	NZ
-				; BWRITE's key, if it names the block
-				; before this one as cleared, would have
-				; the rule clear this one, records and
-				; all, once its line had gone: so that
-				; key goes. The low bytes are enough: a
-				; false match costs only a read.
+				; A write that keeps a line's bytes, to
+				; any block but the key's own, ends the
+				; run of blocks cleared rather than read:
+				; the key goes, so that the rule never
+				; clears a block written after the key's,
+				; records and all (KE-AR7).
 CWBK:	LD	C,A		; C = the line, kept
-	LD	A,(BLKOFF)
-	DEC	A		; BLKOFF - 1 against the key's block
-	LD	HL,BUFBLK
+	LD	HL,(BLKOFF)	; this block against the key's
+	LD	DE,(BUFBLK)
+	OR	A		; carry clear for the compare
+	SBC	HL,DE
+	JR	NZ,CWBK0	; another block: the key goes
+	LD	A,(BUFDRV)	; the key's block number: on this drive?
+	LD	HL,DSKCUR
 	CP	(HL)
-	JR	NZ,CWBK1	; no match: the key stays
-	XOR	A		; a match: the key is dropped, BUFOK 0:
-	LD	(BUFOK),A	; not cleared, not read
+	JR	Z,CWBK1		; the key's own block: it stands
+CWBK0:	XOR	A		; the key dropped, BUFOK 0: not cleared,
+	LD	(BUFOK),A	; not read
 CWBK1:	LD	A,C		; the line again
 CWB2:	PUSH	AF
 	CALL	CWRREC		; the record into the line, now dirty
