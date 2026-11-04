@@ -51,9 +51,9 @@ contents do not survive a reset, and warm boot leaves them.
 | --- | --- | --- |
 | 15, `TNFONT` | — | HL = the console font in the ROM: 96 characters of 8 bytes, one a row from the top, from 20h |
 
-Both display drivers draw from this copy, built from `format/font5x7.txt`, and
-ask for it at `INIT`; a ROM before ABI 5.1 refuses the number, and the driver's
-`INIT` with it. Serial and the LCD need no font.
+The PICO9918's console and the GLCD's driver draw from this copy, built from
+`format/font5x7.txt`; the driver asks for it at `INIT`, and a ROM before ABI 5.1
+refuses the number, and the driver's `INIT` with it. Serial and the LCD need no font.
 
 ## The registry
 
@@ -72,6 +72,9 @@ is safe on any stack. Each walk stops after 256 records, so a program that
 has overwritten a record can't loop it. A removal raises the generation by
 one; it is 8 bits, so after 256 removals it repeats and a stale pointer
 passes a comparison. There is no public removal: `UNLOAD` is the only way a service leaves.
+When the PICO9918's console started at cold boot, its "PICO" record is the
+registry's permanent tail: `TNFIND` finds it, `TNLIST` returns it last, and
+`UNLOAD` never removes it (KS39).
 
 ## Calling the services
 
@@ -105,14 +108,14 @@ The rules that make the hardware services safe for CP/M programs:
 
 ## A video driver's table
 
-The consoles on the PICO9918 and the GLCD are drivers, `PICO.SVC` and `GLCD.SVC`,
-below `(0006h)`. INIT calls `TNDRVR` (12) with B = 1 for `CRT:` or 3 for `UC1:` and HL
-pointing at eight words: the routines in the terminal's order (put, get, clear to
-the end of the line, restore, read a row, write a row), a routine for the page
-functions, then a byte of columns and a byte of rows. The seventh word may be 0 on
-a display that isn't `CRT:`, since only `CRT:` calls it, with A = 0 to show a finished
-row move, 1 to begin a move of rows B to C and 2 to end one, and never while a
-program has claimed the VDP. `CONSW` points the terminal's vector at the table
+The PICO9918's console is in the ROM, and its table is `CRT:`'s (KS39). The GLCD's
+console is a driver, `GLCD.SVC`, below `(0006h)`. Its INIT calls `TNDRVR` (12) with
+B = 3 for `UC1:` and HL pointing at eight words: the routines in the terminal's
+order (put, get, clear to the end of the line, restore, read a row, write a row), a
+routine for the page functions, then a byte of columns and a byte of rows. The
+seventh word may be 0 in a driver's table, since only `CRT:` calls it, with A = 0 to
+show a finished row move, 1 to begin a move of rows B to C and 2 to end one, and
+never while a program has claimed the VDP. `CONSW` points the terminal's vector at the table
 when it selects the mode, and the terminal then calls the routines directly, on the
 caller's stack: a program on the CCP stack can call the BIOS's `CONOUT` in the 28
 bytes it has. A program that pushes anything before calling the BIOS directly sets
@@ -120,10 +123,11 @@ up its own stack first. The routines run with the caller's interrupt state, so a
 interrupt handler must not print through the console.
 
 `TNDRVR` returns `LINEBUF`'s address in HL, where the row routines read and write a
-row, with A = 0 and carry clear. It returns `TNEBAD` with carry and nothing changed if
-that mode has a table already, or with no matrix keyboard. HL = 0 drops the mode's
-table, with carry clear, and the console is chosen again at its next call. It uses 4
-bytes of the caller's stack, the dispatcher's among them.
+row, with A = 0 and carry clear. It returns `TNEBAD` with carry and nothing changed for
+B = 1, since `CRT:`'s table is the ROM's, if that mode has a table already, or with no
+matrix keyboard. An old card's `PICO.SVC` is therefore refused at its INIT. HL = 0
+drops the mode's table, with carry clear, and the console is chosen again at its
+next call. It uses 4 bytes of the caller's stack, the dispatcher's among them.
 
 Page zero's restart vectors at `0008h–003Fh` are left to programs, debuggers and
 services. A warm boot, like a cold boot, puts seven zeros and a `RET`, or `EI; RETI`
@@ -136,7 +140,7 @@ unchanged. `docs/services.md` gives a service's rules.
 | C | Hardware service | Arguments | Results | Stack | ROM |
 | ---: | --- | --- | --- | ---: | ---: |
 | — | Dispatcher, exits, table | | | 4 | 50 |
-| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, as cold boot found it, 4 PICO9918 claimed (`HWBCLM`), 7 a word of the ROM's, `PICO?` or `GLCD?`, on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
+| 0 | `INFO` | — | `B` devices: bit 0 matrix keyboard, 1 PICO9918, 2 GLCD, 3 DS1302 clock, as cold boot found it, 4 PICO9918 claimed (`HWBCLM`), 7 the ROM's word `GLCD?` on LCD row 3 (`HWBWRD`); `DE` ROM version; `L` console columns, `H` rows (0 for serial) | 6 | 24 |
 | 1 | `DIGIT` | `HL` → 6 segment bytes, leftmost first | One scan, about 0.8 ms a digit, then all off | 4 | 26 |
 | 2 | `LCD` | `B` = row 0-3, `HL` → 20 characters | The row written; row 3 also clears `HWBWRD` | 10 | 44 |
 | 3 | `VIDEO` | `B` = 1 claim the PICO9918, 0 give it back | Status 2 without a PICO9918 | 12 | 81 |
@@ -158,12 +162,12 @@ Notes:
   calls `DIGIT` in its main loop.
 - While the PICO9918 is claimed the console drops output to it, draws no
   cursor and does not flip pages, and the program may set any mode and use
-  all of VRAM, through the ports or through `PICO.SVC`'s graphics entries
+  all of VRAM, through the ports or through the ROM console's graphics entries
   (`docs/services.md`). The claim has no owner. Releasing it, or a warm boot,
-  which releases a resident's claim too, restores the driver's text mode,
+  which releases a resident's claim too, restores the console's text mode,
   font and page and clears the screen.
 - `PUTAT` is a fast path for full-screen programs: through the driver's cell
-  routine it costs about 425 T-states a cell along a row on `PICO.SVC` at 80
+  routine it costs about 425 T-states a cell along a row on the PICO9918 at 80
   columns, against about 715 through BIOS `CONOUT` and about 3,860 through BDOS
   function 2. On the GLCD, whose cells are drawn pixel by pixel, each takes about
   35,000 T-states a cell or more, and they are within 10 percent.
@@ -199,30 +203,30 @@ carries its own.
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
-| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 781 | 1, 2 | Stays |
+| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 767 | 1, 2 | Stays |
 | Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console, its header dump gone (`boot.asm`) | 738 | 1 | Stays |
 | BIOS, with its entries' interrupt discipline (`bios.asm`) | 404 | 2 | Stays |
 | Serial console (`console.asm`) | 474 | 1, 2 | Stays |
 | Matrix keyboard (`keyboard.asm`) | 249 | 1, 2 | Stays |
 | ANSI terminal (`term.asm`) | 971 | 2 | Stays |
-| Video switch and the display drivers' hook (`video.asm`) | 113 | 2 | Stays |
-| PICO9918 text console and graphics | — | 1, 2 | Moved to `PICO.SVC`, one driver for every width; the probe stays |
+| Video switch and the display drivers' hook (`video.asm`) | 115 | 2 | Stays |
+| PICO9918 text console and graphics (`pico.asm`) | 603 | 1, 2 | Stays: the console from the banner on, its RAM a 95-byte block (KS39) |
 | PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
-| Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: both display drivers share it through `TNFONT`; serial and the LCD need none |
+| Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: the PICO9918's console reads it and the GLCD's driver through `TNFONT`; serial and the LCD need none |
 | 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
 | SD driver (`sd.asm`) | 836 | 1 | Stays |
 | Container mount and checks (`vol.asm`) | 1,293 | 1 | Stays |
-| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,519 | 2 | Stays |
+| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`) | 2,495 | 2 | Stays |
 | BDOS (`cpm/bdos.asm`) | 3,871 | 2 | Stays |
-| Numbered services, `TNDRVR`'s among them (`services.asm`) | 501 | 3, 4 | Stays |
+| Numbered services, `TNDRVR`'s among them (`services.asm`) | 497 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 690 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
-| Service loader, registry and loading the display drivers (`loader.asm`) | 728 | 2 | Stays |
+| Service loader, registry and loading the display driver (`loader.asm`) | 719 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 15,323 bytes used.
+census's 15,877 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.

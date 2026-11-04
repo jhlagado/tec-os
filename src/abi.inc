@@ -68,9 +68,10 @@ TNDESC	EQU	11		; E = container index, HL -> 32 bytes:
 				; its descriptor, the mount byte the
 				; drive it is on now or FFh. TNEBAD
 				; past the table. Stack 24
-TNDRVR	EQU	12		; B = 1 CRT: or 3 UC1:, HL = a video
-				; driver's table of eight words:
-				; -> HL = LINEBUF. TNEBAD if that mode
+TNDRVR	EQU	12		; B = 3 UC1:, HL = a video driver's
+				; table of eight words: -> HL =
+				; LINEBUF. TNEBAD for B = 1, since
+				; CRT:'s table is the ROM's, if UC1:
 				; has a table, with no matrix
 				; keyboard, or for any other B.
 				; HL = 0 drops the mode's table:
@@ -107,9 +108,9 @@ HWBPICO	EQU	$02		; a PICO9918 answered at cold boot
 HWBGLCD	EQU	$04		; GLCD.SVC is in
 HWBRTC	EQU	$08		; a DS1302 clock answered at cold boot
 HWBCLM	EQU	$10		; the PICO9918 is claimed
-HWBWRD	EQU	$80		; a word of the ROM's is on LCD row 3
+HWBWRD	EQU	$80		; the ROM's GLCD? is on LCD row 3
 
-; Version 2 of the "PICO" record's table: PICO.SVC's graphics entries, as
+; Version 2 of the "PICO" record's table: the console's graphics entries, as
 ; offsets. Each assumes that the caller holds the claim, and destroys AF, BC,
 ; DE and HL.
 PICOREG	EQU	16		; register B = A
@@ -117,15 +118,16 @@ PICOFIL	EQU	18		; DE bytes of A from VRAM address HL
 PICOWR	EQU	20		; BC bytes from DE to VRAM address HL
 PICORD	EQU	22		; BC bytes from VRAM address HL to DE
 
-; Version 3 adds the width, which CON PICO 80, 40 or 32 calls. It takes no
-; claim, and is refused while one is held.
+; Version 3, the ROM's PICO9918 console's (KS39), adds the width, which
+; CON PICO 80, 40 or 32 calls. It takes no claim, and is refused while one is
+; held.
 PICOVER	EQU	3		; the version with PICOWID
 PICOWID	EQU	24		; A = 80, 40 or 32 columns: the console
 				; at that width, cleared; carry if
 				; refused
 
-; The driver's own state, after its table, which a debugger reads: offsets
-; from the table, version 3's.
+; The console's own state, after its table in PIBLK, which a debugger reads:
+; offsets from the table TNFIND returns, version 3's.
 PICOVRB	EQU	36		; the record's version byte
 PICOTPD	EQU	41		; the page drawn: 0, or TPGV's offset
 PICOTPS	EQU	42		; the page shown, the same
