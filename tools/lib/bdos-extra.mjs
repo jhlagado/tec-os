@@ -34,9 +34,9 @@ PUBRR:  LD      HL,(PARAM)
 function body(prefix,operation){return `        LD      A,(IX+6)
         OR      A
         LD      A,16
-        JR      Z,${prefix}COUNT
+        JR      Z,${prefix}CNT
         LD      A,8
-${prefix}COUNT:
+${prefix}CNT:
         LD      (ALLEFT),A
 ${prefix}CELL:
         LD      E,(HL)
