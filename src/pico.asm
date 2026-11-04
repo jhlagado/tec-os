@@ -119,7 +119,8 @@ TMSFN:	OR	A
 	LD	(PIMV),A	; the move over, shown at the next flip
 	RET
 
-; Show the page drawn, if it is not already shown. Destroys AF, HL.
+; Show the page drawn, if it is not already shown. Keeps BC and DE.
+; Destroys AF, HL.
 TMSFLIP:
 	LD	A,(PITPD)
 	LD	HL,PITPS
@@ -370,9 +371,7 @@ TMSMBEG:
 	LD	HL,PITPS
 	CP	(HL)
 	JR	Z,TMSMB1	; nothing waiting to be shown
-	PUSH	BC		; the move's rows, across the flip
-	CALL	TMSFLIP		; the last move shown first
-	POP	BC
+	CALL	TMSFLIP		; the last move shown first, BC kept
 TMSMB1:	LD	HL,PITPG
 	LD	A,(PITPS)	; draw the page not shown
 	XOR	(HL)
