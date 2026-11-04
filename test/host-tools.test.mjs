@@ -146,6 +146,37 @@ test("tecvol --user takes an integer 0 to 15 only, and a refused one leaves the 
   assert.match(run("dir", img, "B", "--user", "15"), /15 Y\.BIN/);
 });
 
+test("a read-only file is neither written over nor erased without force, by CpmVolume or tecvol, and nothing changes (KE-AR10)", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("RO.TXT", Buffer.from("hello"), { readOnly: true });
+  const before = Uint8Array.from(image);
+  assert.throws(() => a.write("RO.TXT", Buffer.from("bye")), /read-only/, "write over it refused");
+  assert.throws(() => a.erase("RO.TXT"), /read-only/, "erase refused");
+  assert.deepEqual(image, before, "the card unchanged");
+  assert.equal(Buffer.from(a.read("RO.TXT")).subarray(0, 5).toString(), "hello");
+  assert.equal(a.write("RO.TXT", Buffer.from("bye"), { force: true }).records, 1, "forced: written");
+  assert.equal(a.find("RO.TXT").readOnly, false, "as a fresh file, without the attribute");
+  a.write("RO.TXT", Buffer.from("again"), { readOnly: true });
+  assert.equal(a.erase("RO.TXT", 0, { force: true }), 1, "forced: erased");
+  assert.equal(a.erase("NONE.TXT"), 0, "a missing file still 0");
+
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-ro-"));
+  const img = resolve(dir, "card.img");
+  const run = (...args) => execFileSync(process.execPath, [resolve(ROOT, "tools/tecvol.mjs"), ...args], { encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
+  run("create", img, "--volume", "G1M:SYSTEM:A");
+  const payload = resolve(dir, "data.bin");
+  writeFileSync(payload, Buffer.from("data"));
+  run("put", img, "A", payload, "KEEP.BIN", "--ro");
+  const card = readFileSync(img);
+  assert.throws(() => run("put", img, "A", payload, "KEEP.BIN"), /read-only/, "tecvol put refused");
+  assert.throws(() => run("era", img, "A", "KEEP.BIN"), /read-only/, "tecvol era refused");
+  assert.deepEqual(readFileSync(img), card, "the image unchanged");
+  run("put", img, "A", payload, "KEEP.BIN", "--ro", "--force");
+  run("era", img, "A", "KEEP.BIN", "--force");
+  assert.doesNotMatch(run("dir", img, "A"), /KEEP/, "forced: written over, then erased");
+});
+
 test("a recipe builds a verified card and rejects a wrong digest", async () => {
   const files = { "HELLO.TXT": Buffer.from("hello\r\n\x1a") };
   const recipe = {

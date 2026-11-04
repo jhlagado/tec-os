@@ -144,9 +144,15 @@ export class CpmVolume {
     return fromLatin1(toLatin1(z < 0 ? out : out.subarray(0, z)).replace(/\r\n/g, "\n"));
   }
 
-  erase(name, user = 0) {
+  /**
+   * Erase a file's entries; returns how many, 0 for no such file. A file with
+   * the read-only attribute is refused, as the BDOS refuses it, unless force
+   * is set (KE-AR10).
+   */
+  erase(name, user = 0, { force = false } = {}) {
     this.assertWritable();
     const key = toLatin1(cpmName(name));
+    if (!force && this.scan().some((e) => e.user === user && e.key === key && e.readOnly)) throw new CpmError(`${user}/${name} is read-only`);
     let n = 0;
     for (const e of this.scan()) {
       if (e.user === user && e.key === key) {
@@ -163,9 +169,10 @@ export class CpmVolume {
 
   /**
    * Write a file, replacing any file of the same name. text: convert LF to
-   * CRLF, end with ^Z and pad with ^Z; binary pads with zeros.
+   * CRLF, end with ^Z and pad with ^Z; binary pads with zeros. A file there
+   * with the read-only attribute is refused unless force is set (KE-AR10).
    */
-  write(name, bytes, { user = 0, text = false, readOnly = false, system = false } = {}) {
+  write(name, bytes, { user = 0, text = false, readOnly = false, system = false, force = false } = {}) {
     this.assertWritable();
     if (!Number.isInteger(user) || user < 0 || user > 15) throw new CpmError(`user ${user} outside 0-15`);
     const key = cpmName(name);
@@ -176,6 +183,7 @@ export class CpmVolume {
     padded.set(body);
     // Plan against the intact directory, reclaiming this file's allocations.
     const old = this.find(name, user);
+    if (old?.readOnly && !force) throw new CpmError(`${user}/${name} is read-only`);
     const reusable = new Set(old?.entries.map((e) => e.index) ?? []);
     const used = this.usedBlocks();
     for (const e of old?.entries ?? []) for (const b of e.blocks) used.delete(b);
@@ -190,7 +198,7 @@ export class CpmVolume {
     for (let i = 0; i < this.entries && slots.length < entryCount; i += 1) if (this.entry(i)[0] === 0xe5 || reusable.has(i)) slots.push(i);
     if (slots.length < entryCount) throw new CpmError("directory full");
     // No capacity check below this point can fail.
-    this.erase(name, user);
+    this.erase(name, user, { force: true }); // refused above if it had to be
     free.forEach((b, k) => {
       const chunk = padded.subarray(k * this.blockBytes, (k + 1) * this.blockBytes);
       this.data.set(chunk, b * this.blockBytes);
