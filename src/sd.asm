@@ -16,6 +16,7 @@ SDETOK	EQU	6		; no data token
 SDEWRSP	EQU	7		; write not accepted
 SDEBUSY	EQU	8		; card stayed busy
 SDERNG	EQU	9		; a standard card's block past its 4 GiB
+SDEDTOK	EQU	10		; a data error token in place of the data
 
 ; Send the byte in C to the card, most significant bit first. Selects the
 ; card: every write to SDIO here has /CS (bit 2) low. Takes C; returns C
@@ -255,7 +256,7 @@ LBAARG:	LD	HL,(SDLBA)	; SDLBA is little-endian: bits 15-0
 
 ; Read block SDLBA into the 512 bytes at HL (CMD17), a cache line in
 ; EXPAND 1 when SDXB is LATEXP. Returns Z and A = 0, or NZ and A = SDERNG,
-; SDECMD or SDETOK, also in SDERR. Destroys F, BC, DE, HL, I.
+; SDECMD, SDETOK or SDEDTOK, also in SDERR. Destroys F, BC, DE, HL, I.
 SDREAD:	PUSH	HL		; the buffer, across the command
 	CALL	LBAARG
 	JR	C,SDRNG		; no command for a block it can't name
@@ -271,12 +272,17 @@ SDRTOK:	PUSH	DE		; SPIR destroys E
 	POP	DE
 	CP	$FE		; the start block token; FFh while
 	JR	Z,SDRDAT	; the card reads
+	INC	A		; any other byte is a data error
+	JR	NZ,SDRERR	; token, 000xxxxx: no data follows
 	DEC	C
 	JR	NZ,SDRTOK
 	DEC	D
 	JR	NZ,SDRTOK
 	CALL	SPIEND		; no token in time
 	LD	A,SDETOK
+	JR	SDFAIL
+SDRERR:	CALL	SPIEND		; the card refused the read
+	LD	A,SDEDTOK
 	JR	SDFAIL
 SDRDAT:	CALL	SDRBLK		; the 512 data bytes
 	CALL	SPIR		; CRC, not checked

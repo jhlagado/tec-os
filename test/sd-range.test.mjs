@@ -105,3 +105,36 @@ test("past the card's image, a read and a write fail and change nothing; a high 
   assert.deepEqual(buf(), [...image.subarray(512, 1024)]);
   assert.deepEqual(image, before, "the card byte for byte");
 });
+
+/** A machine at its first prompt on the standard card, with the card's answer to each command FIX(command) able to replace. */
+function answering(fix) {
+  const m = new Machine({ ...romFor(), sdImage: standardCard(), clock: TEST_CLOCK, highCapacity: true });
+  const sd = m.sd;
+  const handle = sd.handleCommand.bind(sd);
+  sd.handleCommand = (c) => {
+    handle(c);
+    const r = fix(c);
+    if (r) sd.pendingResponse = r;
+  };
+  return m;
+}
+
+test("a data error token after CMD17 fails the read at once, with SDEDTOK (0Ah), not after 65,536 polls as SDETOK (KE-182)", () => {
+  let token = null;
+  const m = answering((c) => c.cmd === 17 && token !== null && [0x00, token]);
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
+  const BUF = 0x2000;
+  for (const t of [0x01, 0x08, 0x0f]) {
+    token = t;
+    for (let i = 0; i < 512; i += 1) m.write(BUF + i, 0x5a);
+    const from = m.cycles;
+    const r = sdCall(m, "SDREAD", 1, BUF);
+    const cycles = m.cycles - from;
+    assert.deepEqual(r, { z: 0, err: 10 }, `token ${t.toString(16)}h: SDEDTOK`);
+    assert.ok(cycles < 100_000, `token ${t.toString(16)}h: reported at once, in ${cycles} cycles`);
+    assert.ok(Array.from({ length: 512 }, (_, i) => m.read(BUF + i)).every((v) => v === 0x5a), "nothing read");
+  }
+  token = null;
+  assert.equal(sdCall(m, "SDREAD", 1, BUF).z, 1, "the next read, the start token as usual, reads");
+});
