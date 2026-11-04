@@ -215,6 +215,7 @@ SVCMN:  ADD     HL,DE
         LD      (PZBDOS+1),HL
         LD      L,DINI
         CALL    SVCCALL
+	LD	(SVCRA),A	; INIT's cause, kept for a failure
         CALL    SVCBND
         JR      C,SVCSCAN
         PUSH    HL              ; the first record
@@ -445,9 +446,12 @@ GLCLD:	LD	A,(CONDEV)
 	JP	LCDWRD
 
 ; Read CMDFCB's service and install it. If its page holds a video table it takes
-; the console: PICO.SVC always, GLCD.SVC unless PICO.SVC is in, and the ROM's
-; word goes from the LCD. Carry set if it wouldn't read or install.
-SVCGO:	CALL	LOADCOM
+; the console unless the other display's driver is in, and the ROM's word goes
+; from the LCD. Carry set if it wouldn't read or install, SVCRC and SVCRA then
+; saying why (0 for a file that wouldn't read).
+SVCGO:	XOR	A		; no load's failure yet
+	LD	(SVCRC),A
+	CALL	LOADCOM
 	RET	C
 	CALL	SVCLOAD
 	RET	C
@@ -455,16 +459,17 @@ SVCGO:	CALL	LOADCOM
 	LD	B,CMCRT		; PICO.SVC's table in this service's page?
 	LD	HL,PIVEC+1
 	CP	(HL)
-	JR	Z,CONSET
-	LD	HL,GLVEC+1
+	LD	HL,GLVEC+1	; then it gives way to GLCD.SVC (KE-150)
+	JR	Z,SVGIVE
 	XOR	(HL)		; carry clear: any other service has loaded
 	RET	NZ
 	LD	HL,CONDEV
 	SET	2,(HL)		; CDGLC
-	LD	A,(PIVEC+1)
-	OR	A
-	JR	NZ,WRDCLR	; PICO.SVC keeps the console, and GLCD? is false
 	LD	B,CMUC1
+	LD	HL,PIVEC+1	; GLCD.SVC gives way to PICO.SVC
+SVGIVE:	LD	A,(HL)
+	OR	A
+	JR	NZ,WRDCLR	; the other keeps the console, and GLCD? is false
 CONSET:	CALL	WRDCLR		; a display has come: the word is false
 	CALL	CONFLD		; the mode goes in the CON: field
 	LD	A,$FF		; CONACT no field: CONSEL acts

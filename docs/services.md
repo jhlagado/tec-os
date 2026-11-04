@@ -67,9 +67,13 @@ name's last; `makeSvc` never writes one.
 typed: `NAME` alone looks for `NAME.COM`, on A: too when it isn't on the current
 drive. If the file
 won't read, or the load is refused or fails, the command's name comes back with
-a question mark, as for any command that won't run. If a display driver's table is in
-its own first page it takes the console: `PICO.SVC` always, `GLCD.SVC` unless
-`PICO.SVC` is in. Any other service leaves the console alone.
+a question mark, as for any command that won't run, with one exception: a line
+from `STARTUP.CMD` whose driver finds its device absent (`INIT` returns
+`TNENODV` with carry) says nothing, and leaves the code 0, so a `:` line after
+it runs. Typed, or for any other cause, it says `NAME?` as before. If a display
+driver's table is in its own first page it takes the console unless the other
+display's driver is in: each gives way to the one loaded first. Any other
+service leaves the console alone.
 
 `SERVICES` prints one line for each service, the newest first: its name and its
 pages. It walks the owner list, so a service with no record is listed.
@@ -105,11 +109,11 @@ Graphics I, and the ROM is one image for every board. The starter card carries t
 80-column build, and the web page writes the width chosen as `PICO.SVC`.
 
 One card can serve every board: a line for the PICO9918, then `GLCD.SVC`. Each line
-makes its display the console where there is one, and elsewhere prints its name with
-a question mark and goes on. On a board with both, `GLCD.SVC`'s line loads and
+makes its display the console where there is one, and elsewhere passes over it
+quietly and goes on. On a board with both, `GLCD.SVC`'s line loads and
 gives way quietly once `PICO.SVC` is the console, which keeps it, and `CON UC1:`
 then makes the GLCD the console with nothing more to load; the two together leave
-43,776 bytes of TPA on the starter card. Once, at the first prompt
+45,312 bytes of TPA on the starter card. Once, at the first prompt
 after startup, a board with a PICO9918 and a matrix keyboard shows `PICO?` on the LCD
 if no display driver is installed. That covers a missing file, a bad file, no
 `STARTUP.CMD`, a file with no display line and a skip. It stays silent when the GLCD

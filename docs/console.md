@@ -10,8 +10,8 @@ field at `0003h`:
 | `BAT:` (2) | CP/M batch | Reader (serial) | List (discarded) | 0 × 0 |
 | `UC1:` (3) | GLCD | Matrix keyboard | GLCD | 21 × 8 |
 
-A reset starts on `TTY:`, and a display driver's load takes the console:
-`PICO.SVC` always, `GLCD.SVC` unless `PICO.SVC` is in.
+A reset starts on `TTY:`, and a display driver's load takes the console
+unless the other display's driver is in already.
 The CCP's `CON` command shows the console in use; `CON TTY`, `CON CRT`,
 `CON BAT` and `CON UC1` (a colon may follow) change it, as `STAT CON:=CRT:`
 or any program writing the IOBYTE does. The BIOS acts on a change at the
@@ -110,8 +110,11 @@ serial terminal and the 20 × 4 LCD, and a `STARTUP.CMD` line naming
 console stays serial, and the matrix keyboard isn't read. `CON UC1:` loads it
 too, and shows `GLCD?` on the LCD if it can't, which a display taking over clears. On a board with both displays
 the line loads it and gives way quietly to `PICO.SVC`, which keeps the console,
-and `CON UC1:` then switches to it; the two together cost 3,072 TPA bytes. A board without a GLCD or a matrix keyboard refuses
-it, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
+and `CON UC1:` then switches to it; the two together cost 1,536 TPA bytes.
+Loaded after `PICO.SVC` has the console it gives way in the same way, and
+`PICO.SVC` loaded after it gives way to it. A board without a GLCD refuses it,
+quietly from `STARTUP.CMD`, and one without a matrix keyboard refuses it with
+`GLCD.SVC?`, leaving nothing behind. Warm boot keeps it; `UNLOAD`, when it is the lowest
 resident, removes it, and the console goes back to `CRT:` if `PICO.SVC` is in and
 to serial if not.
 

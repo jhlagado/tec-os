@@ -81,7 +81,10 @@ MLREAD: CALL    SAVEDU
         JR      NZ,MLECHO
         LD      (CHPOS),A       ; none: A = 0
 	CALL	STLINE		; startup's next line
-        JR      NC,MLGOT
+	CCF			; STFLAG: FFh a line from the file, 0 a
+	SBC	A,A		; typed one; a chained piece keeps it
+	LD	(STFLAG),A
+	JR	NZ,MLGOT
         LD      DE,CMDBUF
         LD      HL,HFLAG        ; history for this line
         LD      (HL),$FF
@@ -253,7 +256,7 @@ KEYSK:	LD	A,(HL)		; past the word and its 0,
 	JR	NZ,KEYNXT	; another word; a 0 ends the table
         LD      DE,CMDFCB
         CALL    UNAMBIG
-        JR      C,BADCMD
+	JP	C,BADCMD
         LD      HL,(CMDFCB+9)   ; NAME.SVC installs
         LD      DE,'V'*256+'S'
         SBC     HL,DE
@@ -262,8 +265,15 @@ KEYSK:	LD	A,(HL)		; past the word and its 0,
         CP      'C'
         JR      NZ,CMDCOM
         CALL    SVCGO
-        JR      C,BADCMD
-        JP      STARTED
+        JR      NC,SVCOK
+	LD	HL,(SVCRC)	; L = SVCRC, H = SVCRA: an INIT that
+	LD	A,(STFLAG)	; found its device absent, in a line from
+	AND	H		; STARTUP.CMD, is quiet, and PRGCODE stays
+	XOR	TNENODV		; 0, so a : line after it runs (KD-173);
+	DEC	L		; typed, or for any other cause, it says
+	OR	L		; NAME? as before
+	JR	NZ,BADCMD
+SVCOK:	JP	STARTED
 CMDCOM: LD      A,'C'
         LD      (CMDFCB+9),A
         LD      A,'O'

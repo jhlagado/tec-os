@@ -324,12 +324,23 @@ test("on UC1: with no PICO driver, boot and a warm boot make no vector call", ()
   assert.equal(m.traps, 0);
 });
 
-test("PICO.SVC is refused with no PICO9918, and with no matrix keyboard", () => {
-  for (const opts of [{ tms: false }, { matrix: false }]) {
+test("PICO.SVC is refused with no PICO9918, quietly from STARTUP.CMD (TNENODV), and with no matrix keyboard, said (KD-173)", () => {
+  for (const [opts, said, cause] of [[{ tms: false }, false, ABI.TNENODV], [{ matrix: false }, true, ABI.TNEBAD]]) {
     const m = start({ "PICO.SVC": PICO_SVC["PICO.SVC"], "STARTUP.CMD": startupFile("PICO.SVC") }, opts);
-    assert.match(m.text(0), /PICO\.SVC\?/);
-    assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [1, 0, 0]);
+    assert.equal(/PICO\.SVC\?/.test(m.text(0)), said, JSON.stringify(opts));
+    assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCRA")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [1, cause, 0, 0]);
   }
+});
+
+test("GLCD.SVC then PICO.SVC typed leaves the GLCD the console: PICO.SVC loads and gives way (KE-150)", () => {
+  const m = start(both(["GLCD.SVC"]));
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [UC1, UC1], "the GLCD the console");
+  const top = word(m, 6);
+  assert.doesNotMatch(say(m, "PICO.SVC"), /PICO\.SVC\?/, "no refusal");
+  assert.equal(word(m, 6), top - 0x300, "it loaded");
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [UC1, UC1], "and gave way");
+  say(m, "CON CRT");
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [CRT, CRT], "CON CRT takes it");
 });
 
 test("a claimed VDP takes no row-move call: the driver isn't entered while a program owns it", () => {

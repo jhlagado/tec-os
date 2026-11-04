@@ -98,7 +98,7 @@ function ranges(m) {
       LOADTOP: [s("LOADTOP"), s("LOADTOP") + 2],
       SLN: [s("SLN"), s("SLN") + 2],
       SLDL: [s("SLDL"), s("SLDL") + 1],
-      SVCRC: [s("SVCRC"), s("SVCRC") + 1],
+      "SVCRC and SVCRA": [s("SVCRC"), s("SVCRA") + 1],
       LOADBUF: [s("LOADBUF"), s("LOADBUF") + 128],
     },
     // A command typed, or a warm boot: what any disk read and console line change.

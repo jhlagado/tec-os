@@ -36,7 +36,8 @@ INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
 	RET	C
 	LD	(FONTP),HL
 	CALL	GLCWAIT
-        SCF
+	LD	A,TNENODV	; no controller answers: absent, which a
+	SCF			; line in STARTUP.CMD passes over quietly
         RET     NZ
 	LD	B,3		; UC1:
         LD      HL,VTAB

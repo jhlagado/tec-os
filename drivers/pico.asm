@@ -50,7 +50,8 @@ INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1
 	LD	(FONTP),HL
 	LD	C,TNINFO	; B = what answered at cold boot
 	CALL	ABICALL
-	BIT	1,B		; HWBPICO
+	LD	A,TNENODV	; no PICO9918: absent, which a line in
+	BIT	1,B		; HWBPICO; STARTUP.CMD passes over quietly
         SCF
         RET     Z
 	LD	B,1		; CRT:

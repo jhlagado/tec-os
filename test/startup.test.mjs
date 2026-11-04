@@ -57,16 +57,40 @@ test("a key held through reset skips the file: a hanging INIT reaches a prompt, 
   assert.ok(free.pc < 0xc000, "in the service");
 });
 
-for (const [name, opts] of [["no GLCD", { matrix: true, glcd: false }], ["no matrix keyboard", {}]]) {
-  test(`a machine with ${name} refuses GLCD.SVC from the file and the prompt follows`, () => {
+for (const [name, opts, said] of [["no GLCD", { matrix: true, glcd: false }, false], ["no matrix keyboard", {}, true]]) {
+  test(`a machine with ${name} refuses GLCD.SVC from the file, ${said ? "saying so" : "quietly, the device absent (KD-173)"}, and the prompt follows`, () => {
     const m = start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC") }, opts);
     prompt(m);
-    assert.match(m.text(0), /GLCD\.SVC\?/);
+    assert.equal(/GLCD\.SVC\?/.test(m.text(0)), said);
     assert.equal(m.read(m.sym("SVCRC")), 1, "INIT ran and refused");
     assert.equal(m.read(m.sym("SVCHEAD")), 0);
     assert.equal(m.read(3) & 3, 0, "TTY:");
   });
 }
+
+test("a quiet line for an absent device is followed by a : line that runs, and the same line typed says NAME? (KD-173)", () => {
+  const m = start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile("GLCD.SVC", ":USER 3") }, { matrix: true, glcd: false });
+  prompt(m);
+  assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
+  assert.equal(user(m), 3, "the : line ran: the code stayed 0");
+  assert.match(m.command("GLCD.SVC"), /GLCD\.SVC\?/, "typed: said");
+  m.command("USER 0");
+  assert.match(m.command("GLCD.SVC!:USER 5"), /GLCD\.SVC\?/);
+  assert.equal(user(m), 0, "typed: a failure, so its : piece goes");
+});
+
+test("a line from the file whose service fails for another cause, or has no file, still says so, and its : line goes", async () => {
+  const defs = { VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"FAIL    "', RECNAME: '"FAIL    "', RECVER: 1 };
+  for (const v of ["V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"]) defs[v] = 0;
+  defs.V_FAIL = 1;
+  const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
+  for (const line of ["FAIL.SVC", "NONE.SVC"]) {
+    const m = start({ "FAIL.SVC": file, "STARTUP.CMD": startupFile(line, ":USER 3") });
+    prompt(m);
+    assert.match(m.text(0), new RegExp(`${line.replace(".", "\\.")}\\?`), line);
+    assert.equal(user(m), 0, `${line}: the : line went`);
+  }
+});
 
 const SAY = (await program("say")).bytes;
 const raw = (text) => Buffer.from(text, "latin1");
