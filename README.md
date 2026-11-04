@@ -55,7 +55,8 @@ The ROM is assembled with ATOM. There is one image for every board,
 PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I, which
 `CON PICO 40` and the like switch between; it starts at 80. The GLCD's console
 is a driver, `A:GLCD.SVC`. The web page writes a width chosen as a `CON PICO 40`
-or `CON PICO 32` line at the top of the card's `STARTUP.CMD`.
+or `CON PICO 32` line at the top of the card's `STARTUP.CMD`, and takes out any
+other `CON PICO` or `CON CRT` line with a width, which would override it.
 
 ## In a web page
 

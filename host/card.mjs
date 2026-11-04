@@ -10,8 +10,9 @@ import { fromLatin1, toLatin1 } from "../tools/lib/bytes.mjs";
 
 // A display piece of a startup line, under either type: a card whose files were
 // renamed by hand still has its .DRV lines, and an older card its PICO.SVC; and
-// the page's own width line.
-const DISPLAY_PIECE = /^:?((PICO(40|32)?|GLCD)\.(SVC|DRV)|CON PICO \d+)$/i;
+// a width line, the page's own CON PICO or a user's CON CRT, which would
+// override the selector's width if it stayed.
+const DISPLAY_PIECE = /^:?((PICO(40|32)?|GLCD)\.(SVC|DRV)|CON +(PICO|CRT):? +\d+)$/i;
 const OLD_DISPLAY = /^(PICO(40|32)?|GLCD)\.DRV$/;
 
 /** A:'s volume, read-only as its descriptor says. Its files are user 0's: the ROM loads from there. */

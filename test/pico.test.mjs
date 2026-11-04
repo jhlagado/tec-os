@@ -659,6 +659,20 @@ test("the web host: power-on writes the width's CON PICO line and no driver, say
   assert.equal(startupText(image), "GLCD.SVC\r\nDIR\r\n");
 });
 
+test("the web host: a user's CON CRT width line goes with the page's own, so the selector's width stands", () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("STARTUP.CMD", startupFile("CON CRT 32", "DIR!CON CRT: 40!USER 3", "con pico 40"));
+  assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true });
+  assert.equal(startupText(image), "DIR!USER 3\r\n", "no width line at 80");
+  a.write("STARTUP.CMD", startupFile("CON CRT 32", "DIR"));
+  prepareCard(image, "tms", "40");
+  assert.equal(startupText(image), "CON PICO 40\r\nDIR\r\n", "the selector's 40 alone");
+  a.write("STARTUP.CMD", startupFile("CON CRT", "CON UC1", "DIR"));
+  prepareCard(image, "tms", "80");
+  assert.equal(startupText(image), "CON CRT\r\nCON UC1\r\nDIR\r\n", "a CON line with no width stays");
+});
+
 const startupText = (image) => Buffer.from(volume(image, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0];
 
 test("the web host: a chained startup line loses its display pieces and keeps the rest", () => {
