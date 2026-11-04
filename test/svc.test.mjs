@@ -264,6 +264,47 @@ test("a chain of 255 records is taken and 256 is refused", async () => {
   assert.deepEqual([s.carry, s.rc], [1, 1]);
 });
 
+// KE-AR4: the registry, the ROM console's PICO record with the services', holds
+// at most 256 records, all that TNFIND walks; a service that would pass that is
+// refused. Counted by walking REGHEAD's links, since TNLIST's index is a byte.
+const picoBoard = async () => bench(boot(standardCard(), { tms: true, matrix: true }));
+function registry(t) {
+  const names = [];
+  for (let at = t.word(t.m.sym("REGHEAD")); at && names.length < 600; at = t.word(at)) names.push(String.fromCharCode(...Array.from({ length: 8 }, (_, k) => t.m.read(at + 2 + k))).trimEnd());
+  return names;
+}
+const chain = (n) => svc({ V_CHAIN: 1, CHAINB: n, XTRA: 13 * n });
+
+test("the registry at 256 records: PICO is the last and TNFIND finds it (KE-AR4)", async () => {
+  const t = await picoBoard();
+  assert.deepEqual(registry(t), ["PICO"]);
+  assert.equal(t.load((await chain(128)).file).carry, 0);
+  assert.equal(t.load((await chain(127)).file).carry, 0, "255 loaded records beside PICO");
+  const names = registry(t);
+  assert.deepEqual([names.length, names[255]], [256, "PICO"]);
+  assert.equal(t.find("PICO").carry, 0, "PICO found");
+});
+
+test("a service whose records would take the registry past 256 is refused, and the registry works after (KE-AR4)", async () => {
+  const t = await picoBoard();
+  assert.equal(t.load((await chain(128)).file).carry, 0);
+  const top = t.word(6);
+  const r = t.load((await chain(128)).file);
+  assert.deepEqual([r.carry, r.rc], [1, 1], "refused, REMOVE undoing INIT");
+  assert.equal(t.word(6), top, "its pages given back");
+  const names = registry(t);
+  assert.deepEqual([names.length, names[128]], [129, "PICO"]);
+  assert.equal(t.find("PICO").carry, 0, "TNFIND: PICO");
+  assert.equal(t.nth(0).carry, 0, "TNLIST: the first service's newest");
+  assert.equal(t.nth(128).carry, 0, "TNLIST: the last, PICO");
+  assert.equal(t.nth(129).carry, 1, "TNLIST: past it");
+  t.prompt();
+  assert.doesNotMatch(t.unload(), /UNLOAD\?/);
+  assert.deepEqual(registry(t), ["PICO"], "UNLOAD took the first service's records");
+  assert.equal(t.load((await chain(1)).file).carry, 0, "and another loads");
+  assert.equal(t.find("PICO").carry, 0);
+});
+
 test("INIT returning 0 installs a service with no records", async () => {
   const t = await machine();
   assert.equal(t.load((await svc({ V_NONE: 1 })).file).carry, 0);

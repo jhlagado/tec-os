@@ -69,7 +69,8 @@ Find returns the newest service's record when two publish one name. AF, BC, DE a
 HL are destroyed; IX and IY are kept. Each uses at most 8 bytes of the caller's
 stack, the dispatcher's among them, and makes no BDOS or BIOS call, so it
 is safe on any stack. Each walk stops after 256 records, so a program that
-has overwritten a record can't loop it. A removal raises the generation by
+has overwritten a record can't loop it; the loader refuses a service whose
+records would take the registry past 256, so every record is found (KE-AR4). A removal raises the generation by
 one; it is 8 bits, so after 256 removals it repeats and a stale pointer
 passes a comparison. There is no public removal: `UNLOAD` is the only way a service leaves.
 When the PICO9918's console started at cold boot, its "PICO" record is the

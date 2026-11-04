@@ -247,7 +247,24 @@ SVCMN:	ADD	HL,DE		; the next slot
 	CALL	SVCBND		; D and E bound the service's pages
 	JR	C,SVCSCAN	; INIT failed
 	PUSH	HL		; the first record
-	LD	B,0		; 255 records at most
+; B = the records this service may add: TNFIND walks 256 at most, so with N
+; in the registry, B = 1 - N refuses the (257 - N)th (KE-AR4); with none in,
+; or one, B = 0 refuses the 256th, as one service's limit.
+	LD	HL,(REGHEAD)	; the registry, newest first
+	LD	B,0
+	LD	A,H
+	OR	L
+	JR	Z,SVCNE		; none in: 255 allowed
+SVCNT:	LD	A,(HL)		; on by the link
+	INC	HL
+	LD	H,(HL)
+	LD	L,A
+	OR	H
+	JR	Z,SVCNE		; the last counted
+	DEC	B		; one fewer for each after the first
+	JR	SVCNT
+SVCNE:	POP	HL		; the first record again
+	PUSH	HL
 SVCWK:	LD	A,H
 	OR	L
 	JR	Z,SVCLK		; the chain's end: link it
@@ -268,7 +285,7 @@ SVCWK:	LD	A,H
 SVCWX:	POP	HL		; the next record
 	POP	BC
 	JR	C,SVCRF		; a check failed
-	DJNZ	SVCWK		; a 256th record is refused
+	DJNZ	SVCWK		; past B's limit: refused
 SVCRF:	POP	HL		; a record refused: REMOVE undoes INIT
 	XOR	A		; and SVCRA 0: INIT's A is no cause, so
 	LD	(SVCRA),A	; it can't pass for TNENODV (KE-192)
