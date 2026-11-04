@@ -157,7 +157,7 @@ test("hardware services: the claim, INFO's claim bit, and text at a position", (
   fails(svc(m, HW.PUTAT, { de: 0, b: 1, hl: BUF }), 2);
   ok(svc(m, HW.VIDEO, { b: 0 }));
   assert.equal(svc(m, HW.INFO).b & 0x10, 0, "released");
-  assert.deepEqual([...m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 2)], [0x04, 0x50], "text mode again");
+  assert.deepEqual([...m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 2)], [0x04, 0xd0], "text mode again");
   assert.deepEqual(m.violations, []);
 });
 

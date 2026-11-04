@@ -243,7 +243,7 @@ test("the default console is the PICO9918's 80 x 24 text mode", () => {
   const m = boot(image, { tms: true, matrix: true });
   const r = m.tec1g.state.display.tms9918.stateSnapshot().registers;
   assert.equal(r[0], 0x04, "R0: 80-column text");
-  assert.equal(r[1], 0x50, "R1: display on, text mode");
+  assert.equal(r[1], 0xd0, "R1: 16K VRAM, display on, text mode");
   assert.equal(r[2], 0x07, "R2: names at 1000h");
   assert.equal(m.read(m.sym("VWID")), 80);
   m.command("DIR");

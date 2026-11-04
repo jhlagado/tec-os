@@ -51,8 +51,8 @@ interprets this subset:
 | FF | Clear the screen and home the cursor |
 | `ESC [ n A`, `B`, `C`, `D` | Cursor up, down, right, left n (default 1), clamped |
 | `ESC [ r ; c H`, `f` | Cursor to row r, column c, 1-based |
-| `ESC [ J`, `ESC [ 2 J` | Clear to the end of the screen; clear the screen |
-| `ESC [ K` | Clear to the end of the line |
+| `ESC [ J`, `ESC [ 2 J` | Clear to the end of the screen; clear the screen. `ESC [ 1 J`, or any parameter but 2, also clears to the end of the screen |
+| `ESC [ K` | Clear to the end of the line. `ESC [ 1 K` and `ESC [ 2 K` do the same: any parameter clears to the end of the line |
 | `ESC [ 7 m`, `ESC [ 0 m` | Reverse video on; off |
 | `ESC [ n @`, `ESC [ n P` | Insert n blanks, or delete n characters, at the cursor; the rest of the line moves |
 | `ESC [ t ; b r`, `ESC [ r` | Scroll region rows t to b; the whole screen; the cursor goes home |
