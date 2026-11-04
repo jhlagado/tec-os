@@ -215,7 +215,7 @@ SVCMN:  ADD     HL,DE
         LD      (PZBDOS+1),HL
         LD      L,DINI
         CALL    SVCCALL
-	LD	(SVCRA),A	; INIT's cause, kept for a failure
+	LD	(SVCRA),A	; INIT's A: SVCRC 1 makes it the cause
         CALL    SVCBND
         JR      C,SVCSCAN
         PUSH    HL              ; the first record
