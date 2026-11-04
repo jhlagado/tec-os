@@ -6,7 +6,8 @@
 ;             list device, which discards it
 ;   UC1: (3)  GLCD screen and the matrix keyboard
 ;
-; Cold boot starts on TTY:, and a display driver's load takes the console. A
+; Cold boot takes CRT: before the banner when the PICO9918 answers and the
+; matrix keyboard is fitted, and TTY: otherwise; GLCD.SVC's load takes UC1:. A
 ; program or the CCP's CON command may change the IOBYTE at any time; the next
 ; console call acts on it, clearing and homing the new screen. CRT: or UC1:
 ; without its display or keyboard falls back to the serial terminal. VWID and

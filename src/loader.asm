@@ -91,7 +91,8 @@ SVCUNL:	LD	A,(SVCBSY)	; 0 here, and used as such below
 ; Install the file at 0100h, up to LOADTOP, in the steps docs/services.md's
 ; Installation lists. Carry clear: installed. Carry set: SVCRC is 0 refused,
 ; nothing changed but the file; 1 INIT failed, nothing left; 2 failed, its
-; pages reserved with no records. SVCRA holds INIT's A once INIT has run.
+; pages reserved with no records. SVCRA holds INIT's A once INIT has run,
+; or 0 once a record of INIT's is refused.
 ; Destroys AF, BC, DE, HL and whatever INIT and REMOVE destroy.
 SVCLOAD:
 	XOR	A
@@ -269,6 +270,8 @@ SVCWX:	POP	HL		; the next record
 	JR	C,SVCRF		; a check failed
 	DJNZ	SVCWK		; a 256th record is refused
 SVCRF:	POP	HL		; a record refused: REMOVE undoes INIT
+	XOR	A		; and SVCRA 0: INIT's A is no cause, so
+	LD	(SVCRA),A	; it can't pass for TNENODV (KE-192)
 	LD	H,D		; the service's page
 	LD	L,DREM
 	CALL	SVCCALL		; carry if REMOVE refuses

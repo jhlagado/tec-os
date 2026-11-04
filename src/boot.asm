@@ -58,8 +58,8 @@ COLDNC:
 ; the listing and DIAG all run there, and the BIOS's stack keeps only warm
 ; boot's use (KE-173). LCDINIT clears the display, so CARD? goes with it,
 ; and a retry that fails shows it again. Mounted, it builds the vectors,
-; the stub and the RAM BIOS table, lists the drives, and runs on through
-; PZINIT into warm boot with drive A and user 0.
+; the stub and the RAM BIOS table, lists the drives, and runs on into warm
+; boot, whose PZINIT builds page zero, with drive A and user 0.
 COLDRT:	LD	SP,STKTOP	; the BDOS's stack, afresh for a retry
 	CALL	LCDINIT		; a blank display, CARD? gone
 	LD	HL,LCDBAN	; LCDINIT's count left B = 0, the top row
@@ -79,8 +79,8 @@ COLDRT:	LD	SP,STKTOP	; the BDOS's stack, afresh for a retry
 	CALL	SHOWVOL		; the drives on the console
 	CALL	LCDVOLS		; and A: and B: on the LCD
 	XOR	A		; drive A, user 0
-	LD	(PZDU),A
-	CALL	PZINIT		; then on into warm boot
+	LD	(PZDU),A	; then on into warm boot, which builds
+				; page zero once (KE-199)
 
 ; ---- Warm boot ---------------------------------------------------------------
 ; BIOS function 1, the JP at 0000h, and RSTENT for a program's exit into
@@ -366,9 +366,9 @@ SHV:	PUSH	BC		; the drive, across the printing
 	CALL	DRVDESC		; IX at its volume's descriptor
 	JR	NZ,SHVN		; none on this drive
 	LD	HL,CMDTXT	; letter and label, in the CCP's line,
-	CALL	DRVLAB		; free at cold boot, before the CCP
-	LD	HL,CMDTXT	; has run; LINEBUF is the terminal's
-	CALL	PUTS
+	CALL	DRVLAB		; free before the CCP has run; not in
+	LD	HL,CMDTXT	; LINEBUF, where the terminal's scroll
+	CALL	PUTS		; puts a row while PUTS prints it
 	LD	A,(IX+DFLAGS)	; the volume's flags
 	AND	DFREAD
 	JR	Z,SHVRW		; writable: no note
@@ -465,10 +465,10 @@ ALVSKP:	INC	C		; the next drive, up to MAXDRV
 ; driver or ME* (20h-2Fh) from the mount checks. Shows CARD? on the LCD and
 ; the code on the console, then asks until R, which retries from COLDRT.
 ; The console stays usable without a card. Runs on STKTOP, the BDOS's
-; stack. Never returns.
-DIAG:	LD	SP,STKTOP	; the BDOS's stack, as COLDRT left it: the
-				; BIOS's keeps only warm boot's use (KE-173)
-	PUSH	AF		; the code, kept across the messages
+; stack, which COLDRT set and both its jumps here leave at its top, so the
+; BIOS's keeps only warm boot's use (KE-173); a retry sets it afresh.
+; Never returns.
+DIAG:	PUSH	AF		; the code, kept across the messages
 	LD	HL,DGCARD	; the LCD, for a board with no terminal
 	CALL	LCD3		; CARD? on row 3
 	LD	HL,DGERR	; and the message on the console
@@ -479,11 +479,11 @@ DIAG:	LD	SP,STKTOP	; the BDOS's stack, as COLDRT left it: the
 DGLOOP:	LD	HL,DGPROM	; ask until the key is one of ours
 	CALL	PUTS
 	CALL	BCONIN		; wait for a key
-	AND	$DF		; upper case
 	PUSH	AF
-	CALL	PUTA		; echo it, on a line of its own
+	CALL	PUTA		; echo it as typed, on a line of its own
 	CALL	PUTCRLF
 	POP	AF
+	AND	$DF		; upper case, for the test alone (KE-195)
 	CP	'R'
 	JP	Z,COLDRT	; retry: LCD, card and mount from the start
 	JR	DGLOOP		; any other key: the prompt again

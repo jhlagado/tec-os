@@ -158,10 +158,10 @@ ${expand1}
 
 | Stack | Range | Bytes |
 | --- | --- | ---: |
-| Cold boot | below 8000h | — |
-| BIOS (warm boot, diagnostics) | ${hex(s.bios.base)}–${hex(s.bios.top - 1)} | ${s.bios.bytes} |
+| Cold boot | below 8000h, then the BDOS's once the workspace is clear (KE-173) | — |
+| BIOS (warm boot) | ${hex(s.bios.base)}–${hex(s.bios.top - 1)} | ${s.bios.bytes} |
 | CCP | ${hex(s.ccp.base)}–${hex(s.ccp.top - 1)} | ${s.ccp.bytes} |
-| BDOS | ${hex(s.bdos.base)}–${hex(s.bdos.top - 1)} | ${s.bdos.bytes} |
+| BDOS (and cold boot's mount and DIAG) | ${hex(s.bdos.base)}–${hex(s.bdos.top - 1)} | ${s.bdos.bytes} |
 
 ## Serial timing
 

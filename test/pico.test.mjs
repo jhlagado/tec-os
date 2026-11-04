@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { prepareCard } from "../host/card.mjs";
 import { displayFiles } from "../tools/lib/starter.mjs";
+import { makeSvc } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { screens } from "./lib/pico-workload.mjs";
 import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, boot, fcbType, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
@@ -88,22 +89,34 @@ for (const cols of [80, 40, 32]) {
   });
 }
 
-test("a board with both displays keeps the PICO9918; GLCD.SVC's line loads quietly and gives way, and CON UC1 takes it (KE-150)", () => {
+test("a board with both displays keeps the PICO9918; GLCD.SVC's line stays out quietly (KE-150, KE-200), and CON UC1 loads it", () => {
   const m = start(both());
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/, "no refusal");
-  const two = word(m, 6);
-  const none = TPA_NONE + 0x100; // the ceiling with nothing loaded, once the GLCD goes
+  const none = TPA_NONE + 0x100; // the ceiling with nothing loaded
+  assert.equal(word(m, 6), none, "GLCD.SVC not in: it would only give way");
   assert.equal(m.read(3) & 3, CRT, "the ROM's console keeps the console");
   const listed = say(m, "SERVICES");
-  assert.match(listed, /GLCD/, "GLCD.SVC in");
+  assert.doesNotMatch(listed, /GLCD/, "GLCD.SVC not in");
   assert.doesNotMatch(listed, /PICO/, "the ROM's console is no service");
   say(m, "CON UC1");
-  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), word(m, 6)], [UC1, UC1, two], "CON UC1 takes it, loading nothing");
+  assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), word(m, 6)], [UC1, UC1, TPA_GLCD + 0x100], "CON UC1 loads it and takes it");
   say(m, "CON CRT");
   assert.equal(m.read(m.sym("CONMOD")), CRT);
   say(m, "CON UC1");
   say(m, "UNLOAD");
   assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD")), word(m, 6)], [CRT, CRT, none], "the GLCD's UNLOAD goes back to CRT:");
+});
+
+test("on a board with both displays the starter's startup leaves the CCP stack's room, so a service using it loads after (KE-200)", async () => {
+  const defs = { VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 2, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"CCPUSE  "', RECNAME: '"CCPUSE  "', RECVER: 1 };
+  for (const v of ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"]) defs[v] = 0;
+  const { file } = await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc") });
+  const set = Object.fromEntries((await displayFiles(ROOT)).map((f) => [f.name, f.bytes]));
+  const m = start({ ...set, "CCPUSE.SVC": file });
+  assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/, "the startup line quiet");
+  assert.equal(m.read(3) & 3, CRT, "the ROM's console the console");
+  assert.doesNotMatch(say(m, "CCPUSE.SVC"), /CCPUSE\.SVC\?/, "loaded");
+  assert.notEqual(m.read(m.sym("SVCHEAD")), 0);
 });
 
 test("the GLCD's UNLOAD clears its INFO bit", () => {
@@ -178,9 +191,9 @@ test("TPA after boot: the ROM's console alone, the GLCD's driver, and both", () 
   assert.equal(top(g), below(g));
   assert.equal(top(g), TPA_GLCD);
   const m = start(both());
-  assert.equal(top(m), TPA_GLCD, "a board with both, at boot: GLCD.SVC in beside the ROM's console (KE-150)");
+  assert.equal(top(m), TPA_NONE, "a board with both, at boot: the ROM's console alone, GLCD.SVC's line quiet (KE-200)");
   say(m, "CON UC1");
-  assert.equal(top(m), TPA_GLCD, "and CON UC1 loads nothing more");
+  assert.equal(top(m), TPA_GLCD, "and CON UC1 loads GLCD.SVC");
 });
 
 const REF = JSON.parse(readFileSync(resolve(ROOT, "test/pico-screens.json"), "utf8"));
@@ -197,12 +210,12 @@ test("a scroll, then ESC[2@ keeps the row it opens", () => {
   assert.equal(shots.find((s) => s.name === "insert characters").screen.some((l) => l === "  abcdef"), true);
 });
 
-test("the starter card boots the GLCD's driver beside the ROM's console on a board with both, and the GLCD on a board with one", async () => {
+test("the starter card boots the ROM's console alone on a board with both, and the GLCD on a board with one", async () => {
   const files = await displayFiles(ROOT);
   assert.deepEqual(files.map((f) => f.name), ["GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_GLCD], "GLCD.SVC in, the ROM's console the console (KE-150)");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200)");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 

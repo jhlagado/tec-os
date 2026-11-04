@@ -146,6 +146,8 @@ if (opt.lcd) {
 }
 if (opt.screen) {
   console.log("--- screen");
-  const rows = m.read(m.sym("CONMOD")) === 3 ? m.glcdScreen() : m.screen(m.read(0x48) || 80);
+  // The PICO9918's columns are the ROM's console's, at PIWID, which CON CRT 40
+  // or 32 sets (KE-189); 0 without a PICO9918.
+  const rows = m.read(m.sym("CONMOD")) === 3 ? m.glcdScreen() : m.screen(m.read(m.sym("PIWID")) || 80);
   console.log(rows.map((r) => r.trimEnd()).join("\n").replace(/\n+$/, ""));
 }

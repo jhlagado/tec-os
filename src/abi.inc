@@ -1,4 +1,4 @@
-; TEC-OS's table, ABI 5.0, for programs: its 8 bytes at C003h, and the
+; TEC-OS's table, ABI 5.1, for programs: its 8 bytes at C003h, and the
 ; numbered services behind its one jump. A program checks for "TNA" at ABITAB
 ; and for major version 5 at ABIMAJ before it calls ABICALL. The ROM assembles
 ; from this file, and the build checks the table's bytes it makes.
@@ -73,7 +73,9 @@ TNDRVR	EQU	12		; B = 3 UC1:, HL = a video driver's
 				; LINEBUF. TNEBAD for B = 1, since
 				; CRT:'s table is the ROM's, if UC1:
 				; has a table, with no matrix
-				; keyboard, or for any other B.
+				; keyboard, or for any other B;
+				; TNENODV in a line from
+				; STARTUP.CMD while CON: is CRT:.
 				; HL = 0 drops the mode's table:
 				; A = 0, carry clear, HL destroyed.
 				; Stack 4

@@ -77,10 +77,10 @@ KBEVAL:	XOR	A		; a full scan is complete
 KBMOD:	LD	A,E
 	CP	3
 	JR	C,KBNONE	; a modifier alone
-	CP	7
+	CP	7		; key 7 is caps lock
 	JR	Z,KBCAPS
-	CP	7		; keys 3-6 are the arrows: send ESC [ A-D
-	JR	NC,KBNOARR
+	JR	NC,KBNOARR	; the same CP: keys 3-6 are the arrows,
+				; sent as ESC [ A-D
 	SUB	3		; look up the arrow's letter
 	LD	HL,KBARROW
 	ADD	A,L

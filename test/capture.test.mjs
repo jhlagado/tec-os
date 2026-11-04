@@ -24,3 +24,16 @@ test("--card none reaches DIAG's prompt, R retry>, and stops there with the LCD'
   assert.match(out, /R retry> /, "the diagnostic prompt");
   assert.match(out, /CARD\?/, "and CARD? on the LCD");
 });
+
+for (const width of [40, 32]) {
+  test(`--screen dumps a ${width}-column screen as ${width}-column rows (KE-189)`, () => {
+    const dir = mkdtempSync(resolve(ROOT, "build/capture-"));
+    const card = resolve(dir, "card.img");
+    writeFileSync(card, standardCard());
+    const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--rom", resolve(ROOT, "build/tecos/tecos.rom"), "--card", card, "--board", "pico", "--screen", "--", `CON CRT ${width}`, "DIR"], { encoding: "utf8", timeout: 120_000 });
+    rmSync(dir, { recursive: true });
+    const rows = out.split("--- screen\n")[1].split("\n");
+    assert.ok(rows.every((r) => r.length <= width), `no row past ${width} columns`);
+    assert.ok(rows.includes("A>DIR") && rows.includes("NO FILE"), `each line its own row:\n${rows.join("\n")}`);
+  });
+}

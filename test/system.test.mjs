@@ -91,12 +91,36 @@ test("a clean boot's restart vectors are the defaults, and 0038h is EI; RETI", (
   assert.deepEqual(Array.from({ length: 0x38 }, (_, i) => m.read(0x08 + i)), want);
 });
 
+test("a cold boot rebuilds page zero once, in warm boot's PZINIT (KE-199)", () => {
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols, sdImage: standardCard() });
+  const at = m.sym("PZINIT");
+  let entries = 0;
+  m.runUntil(() => {
+    if (m.pc === at) entries += 1;
+    return m.ready() && /A>$/.test(m.text(0));
+  }, 400_000_000, "the first prompt");
+  assert.equal(entries, 1);
+  assert.equal(m.read(0), 0xc3, "page zero's jumps built");
+  assert.equal(m.read(5), 0xc3);
+});
+
 test("without a card the diagnostic console reports and retries", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols });
   assert.match(m.expect(/R retry> $/, { from: 0, maxCycles: 80_000_000 }), /error 01/);
   m.type("R");
   assert.match(m.expect(/R retry> $/), /error 01/);
+});
+
+test("the diagnostic console echoes a digit as the digit, and a lower-case r retries (KE-195)", () => {
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols });
+  m.expect(/R retry> $/, { from: 0, maxCycles: 80_000_000 });
+  m.type("1");
+  assert.match(m.expect(/R retry> $/), /^1\r\n/, "the key as typed, on its own line");
+  m.type("r");
+  assert.match(m.expect(/R retry> $/), /error 01/, "a retry");
 });
 
 test("without RAM at 8000h-BFFFh the boot says so on the serial console and stops", () => {

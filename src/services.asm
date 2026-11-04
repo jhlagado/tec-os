@@ -1,4 +1,4 @@
-; The numbered services, ABI 5.0 (docs/rom-services.md). CALL ABICALL with the
+; The numbered services, ABI 5.1 (docs/rom-services.md). CALL ABICALL with the
 ; number in C and arguments in B, DE and HL; abi.inc names each number, its
 ; arguments, results, carry and stack. Returns A = 0 with Z and carry clear on
 ; success, or A = a status with carry. The hardware services, 0 to 8, and the
@@ -255,8 +255,9 @@ HWSPL:	LD	A,(VWID)
 ; ---- Clock ------------------------------------------------------------------
 ; RTC. B = 0 reads, B = 1 sets, the seven BCD bytes at HL: seconds, minutes,
 ; hours, date, month, weekday, year. TNEBAD for any other B, TNENODV with no
-; DS1302. Setting leaves the clock's write protect off. Returns HL past the
-; seven. Destroys AF, BC, D, and E when setting.
+; DS1302. Setting turns the clock's write protect off for the burst, whose
+; control byte puts it on again. Returns HL past the seven. Destroys AF, BC,
+; D, and E when setting.
 HWSRTC:	LD	A,B		; 0 read or 1 set, and nothing else
 	CP	2
 	LD	A,TNEBAD
@@ -286,7 +287,7 @@ HWSRV:	LD	D,(HL)		; each time byte in turn
 	CALL	RTCWR
 	INC	HL
 	DJNZ	HWSRV
-	LD	D,0		; the control byte: write protect stays off
+	LD	D,$80		; the control byte: write protect on again
 	CALL	RTCWR
 RTCEND:	XOR	A		; enable low: the transfer ends
 	OUT	(RTCPORT),A
@@ -354,14 +355,31 @@ HWSFONT:LD	HL,FONT
 
 ; TNDRVR: B = the mode, then VIDHOOK's: HL = the driver's table, or 0 to drop
 ; it. Returns A = 0, carry clear, and HL = LINEBUF for a table taken. A
-; refusal returns A = TNEBAD with carry. Destroys DE, and HL for a drop.
+; refusal returns A = TNEBAD with carry, or TNENODV for a table offered by a
+; line from STARTUP.CMD while CON: is CRT:: that driver would only give way
+; to the ROM's console, so it stays out, quietly, and leaves the services'
+; stack room to others (KE-200). Destroys DE, and HL for a drop.
 SVDRV:	LD	A,B
 	CP	CMUC1		; UC1: alone: CRT:'s table is the ROM's
 	JR	Z,SVDRV1	; (KS39), and no other B has a word
 	LD	A,TNEBAD	; refused, nothing changed
 	SCF
 	RET
-SVDRV1:	CALL	VIDHOOK
+SVDRV1:	LD	A,H		; a drop is never refused
+	OR	L
+	JR	Z,SVDRV2
+	LD	A,(STFLAG)	; FFh in a startup line: D = 0 there
+	CPL
+	LD	D,A
+	LD	A,(IOBYTE)	; the CON: field, 1 for CRT:
+	AND	3
+	DEC	A		; 0 for CRT:
+	OR	D		; 0 for CRT: in a startup line
+	LD	A,TNENODV	; then refused, as an absent device
+	SCF			; is, nothing changed
+	RET	Z
+SVDRV2:	LD	A,B		; UC1:, the mode, for VIDHOOK
+	CALL	VIDHOOK
 	LD	A,TNEBAD	; kept already, or no matrix keyboard
 	RET	C
 	XOR	A		; taken or dropped: A = 0, carry clear

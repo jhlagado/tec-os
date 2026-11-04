@@ -28,10 +28,11 @@ VTAB:	DW	GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
 LBUF:	DW	0		; LINEBUF, from TNDRVR
 
 ; INIT refuses if the controller doesn't answer, or the ROM refuses UC1:'s
-; table: another GLCD.SVC has the console, or there is no matrix keyboard.
-; With another display the console, it loads all the same and the ROM's
-; loader leaves the console where it is (SVCGO): a line in STARTUP.CMD gives
-; way to the ROM's PICO9918 console quietly (KE-150). It publishes no record.
+; table: another GLCD.SVC has the console, or there is no matrix keyboard,
+; or, with TNENODV, a line in STARTUP.CMD offers it while CON: is CRT:, the
+; ROM's PICO9918 console, which it would only give way to (KE-200). Typed with
+; another display the console, it loads all the same and the ROM's loader
+; leaves the console where it is (SVCGO, KE-150). It publishes no record.
 ; Returns carry clear and HL = 0 when loaded, carry set and A = the status
 ; when refused. Destroys AF, BC, DE, HL.
 INIT:	LD	C,TNFONT	; the ROM's font; a ROM before ABI 5.1

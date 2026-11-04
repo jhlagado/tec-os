@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -224,4 +224,28 @@ test("tecvol marks one volume written behind with :wb, and refuses two or one re
   };
   assert.throws(() => parseContainer(resealed(32 + 32 + 15, 1)), /second volume written behind/);
   assert.throws(() => parseContainer(resealed(32 + 15, 3)), /unknown cache flags/);
+});
+
+test("npm run build leaves dist/'s ROM, map and census equal to build/'s when dist/ is there (KE-188)", () => {
+  const dist = resolve(ROOT, "dist");
+  const names = [["tecos.rom", "tecos.rom"], ["tecos.d8.json", "tecos.d8.json"], ["census.json", "tecos.census.json"]];
+  const kept = new Map();
+  const there = existsSync(dist);
+  mkdirSync(dist, { recursive: true });
+  for (const [, to] of names) {
+    const path = resolve(dist, to);
+    if (existsSync(path)) kept.set(path, readFileSync(path));
+    writeFileSync(path, "stale"); // as an older build's media left them
+  }
+  try {
+    execFileSync(process.execPath, [resolve(ROOT, "tools/build.mjs")], { encoding: "utf8" });
+    for (const [from, to] of names) assert.ok(readFileSync(resolve(dist, to)).equals(readFileSync(resolve(ROOT, "build/tecos", from))), `dist/${to} is build/tecos/${from}`);
+  } finally {
+    if (!there) rmSync(dist, { recursive: true });
+    else
+      for (const [, to] of names) {
+        const path = resolve(dist, to);
+        if (readFileSync(path, "latin1") === "stale") kept.has(path) ? writeFileSync(path, kept.get(path)) : rmSync(path);
+      }
+  }
 });

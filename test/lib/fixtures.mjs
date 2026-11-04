@@ -18,7 +18,7 @@ export const ABI = Object.fromEntries(
   [...readFileSync(resolve(ROOT, "src/abi.inc"), "utf8").matchAll(/^(\w+)\s+EQU\s+(\$[0-9A-F]+|\d+)\b/gm)].map((m) => [m[1], Number(m[2].replace("$", "0x"))]),
 );
 
-/** The one ROM, for every board and every width: the PICO9918 driver's width is the card's (picoFor). */
+/** The one ROM, for every board and every width: the ROM's console's width is a CON PICO line on the card (withDisplay). */
 export function romFor() {
   const dir = resolve(ROOT, "build", "tecos");
   const romPath = resolve(dir, "tecos.rom");

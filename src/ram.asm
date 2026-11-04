@@ -72,7 +72,7 @@ VSBOT:	DS	1
 VCLAIM:	DS	1		; CDCLM while a program owns the PICO9918
 CONMOD:	DS	1		; console mode in effect (CMTTY..CMUC1)
 
-; ---- BIOS stack used by warm boot and the diagnostic console ----------------
+; ---- BIOS stack, warm boot's: cold boot and DIAG run on STKTOP (KE-173) -----
 BSTKB:	DS	BIOSSTN
 BSTK:
 

@@ -72,7 +72,10 @@ from `STARTUP.CMD` whose driver finds its device absent (`INIT` returns
 `TNENODV` with carry) says nothing, and leaves the code 0, so a `:` line after
 it runs. Typed, or for any other cause, it says `NAME?` as before. `GLCD.SVC`
 takes the console unless `CRT:`, the ROM's PICO9918 console, is in effect, and
-then gives way to it. Any other service leaves the console alone.
+then gives way to it; in a line from `STARTUP.CMD` with `CON:` at `CRT:`,
+`TNDRVR` refuses its table with `TNENODV`, so the line passes over it quietly
+and it takes no stack room it would not use (KE-200). Any other service leaves
+the console alone.
 
 `SERVICES` prints one line for each loaded service, the newest first: its name
 and its pages. It walks the owner list, so a service with no record is listed,
@@ -114,9 +117,9 @@ The ROM is one image for every board.
 One card can serve every board: the starter card's `STARTUP.CMD` holds `GLCD.SVC`
 alone. Where there is a GLCD and a matrix keyboard and no PICO9918 console, the
 line makes the GLCD the console; elsewhere it passes over it quietly and goes on.
-On a board with both displays, `GLCD.SVC`'s line loads and gives way quietly to
-`CRT:`, which keeps the console, and `CON UC1:` then makes the GLCD the console with
-nothing more to load; that leaves 46,336 bytes of TPA on the starter card. An old
+On a board with both displays, `GLCD.SVC`'s line passes over it quietly, since
+`CRT:` keeps the console, and `CON UC1:` then loads it and makes the GLCD the console;
+that leaves 46,336 bytes of TPA on the starter card. An old
 card's `PICO.SVC` line is refused at its `INIT`, since `TNDRVR` no longer takes
 `CRT:`, and prints `PICO.SVC?`, leaving nothing loaded.
 
@@ -166,6 +169,8 @@ A load runs only with no `INIT` or `REMOVE` running, which `SVCBSY` says. In ord
 Until step 5 a refusal leaves everything but the file as it was. `SVCLOAD`
 returns carry clear when installed. With carry set, `SVCRC` is 0 for refused,
 1 for a failure leaving nothing behind, and 2 for a failure with the pages kept.
+`SVCRA` holds `INIT`'s `A` when `INIT` failed, and 0 when a record `INIT`
+returned was refused, so a refused record never passes for an absent device.
 
 ## What a service must do
 
