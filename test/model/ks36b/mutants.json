@@ -4,14 +4,16 @@
       "caught": true,
       "by": [
         "write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns",
-        "a failed write-through write drops its block's line, so a reread comes from the card"
+        "a failed write-through write drops its block's line, so a reread comes from the card",
+        "function 45's returned error leaves the FCB on the record a sequential write didn't write, as CP/M 3 does (KS36b review)"
       ]
     },
     "promise 2: CWB3's order reversed, the directory line before the data": {
       "caught": true,
       "by": [
         "at every card write while a file is erased and its blocks reused, the volume verifies and no entry names another file's data",
-        "a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount"
+        "a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount",
+        "a BIOS WRITE of type 1 to a directory block no line holds, on the volume written behind with dirty data lines, puts the data on the card first and then the directory (KS36b review)"
       ]
     },
     "promise 3: the warm boot's flush removed": {
@@ -33,18 +35,18 @@
     "a mount that reads into fixed RAM": {
       "caught": true,
       "by": [
-        "a file read again comes from the cache, with no card read, and the same bytes",
-        "write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns",
-        "on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot"
+        "a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount",
+        "a volume remounted on another drive, with another on its old drive, reads back right",
+        "the cold mount reads the table through a cache line, and leaves the TPA as it found it (KS36b)"
       ]
     }
   },
   "mutantsAt": {
-    "promise 1: a volume written through no longer written before the call returns": "8450378",
-    "promise 2: CWB3's order reversed, the directory line before the data": "8450378",
-    "promise 3: the warm boot's flush removed": "8450378",
-    "a flush that stops at its first failure": "8450378",
-    "a mount that reads into fixed RAM": "8450378"
+    "promise 1: a volume written through no longer written before the call returns": "52e7f40",
+    "promise 2: CWB3's order reversed, the directory line before the data": "52e7f40",
+    "promise 3: the warm boot's flush removed": "52e7f40",
+    "a flush that stops at its first failure": "52e7f40",
+    "a mount that reads into fixed RAM": "52e7f40"
   },
   "mutantScore": {
     "caught": 5,
