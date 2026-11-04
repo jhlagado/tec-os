@@ -1,0 +1,94 @@
+{
+  "mutants": {
+    "the font: service 15 one glyph out": {
+      "caught": true,
+      "by": [
+        "the resident GLCD draws every screen of the workload as the driver did, byte for byte"
+      ]
+    },
+    "the startup rule: quiet for TNEBAD, not TNENODV": {
+      "caught": true,
+      "by": [
+        "a machine with no GLCD refuses GLCD.SVC from the file, quietly, the device absent (KD-173), and the prompt follows",
+        "a machine with no matrix keyboard refuses GLCD.SVC from the file, saying so, and the prompt follows",
+        "a quiet line for an absent device is followed by a : line that runs, and the same line typed says NAME? (KD-173)"
+      ]
+    },
+    "PICO giving way: PICO.SVC takes the console whatever is in": {
+      "caught": true,
+      "by": [
+        "GLCD.SVC then PICO.SVC typed leaves the GLCD the console: PICO.SVC loads and gives way (KE-150)"
+      ]
+    },
+    "CON's width: 50 taken for 80": {
+      "caught": true,
+      "by": [
+        "CON PICO and CON GLCD name CRT: and UC1:; a width goes after CRT or PICO alone, 80, 40 or 32, and only to a driver whose table has the width (KD-174)"
+      ]
+    },
+    "the one driver: 40 and 32 columns on 80's name table and page": {
+      "caught": true,
+      "by": [
+        "PICO40.SVC is the console at 40 columns, and scrolls",
+        "PICO32.SVC is the console at 32 columns, and scrolls",
+        "one PICO.SVC for every width: CON PICO 40, CON CRT 32 and CON PICO 80 switch it, each screen cleared and working at its width (KD-174)"
+      ]
+    },
+    "function 44: a count of 1 refused": {
+      "caught": true,
+      "by": [
+        "function 44: a count of 1 succeeds, any other returns FFh"
+      ]
+    },
+    "function 46: one block short": {
+      "caught": true,
+      "by": [
+        "function 46: each drive's free records, three bytes at the DMA address, as the card's directory gives them, and the default drive kept",
+        "DIR's footer, from function 46, is the free space in kilobytes"
+      ]
+    },
+    "function 99: returns 0": {
+      "caught": true,
+      "by": [
+        "function 99, truncate, returns FFh and leaves the file as it was"
+      ]
+    },
+    "the prompt: no user number": {
+      "caught": true,
+      "by": [
+        "the prompt shows the user number before the drive unless it is 0, as CP/M 3 does: 3A>"
+      ]
+    },
+    "page zero: CONDEV written at 0045h too": {
+      "caught": true,
+      "by": [
+        "the ROM leaves 0041h-004Fh alone on serial and the matrix keyboard: cold boot, commands, a scroll, escapes, CON, the keyboard and a warm boot",
+        "the ROM leaves 0041h-004Fh alone on the PICO9918 and the GLCD: cold boot, commands, a scroll, escapes, CON, the keyboard and a warm boot"
+      ]
+    },
+    "part 6: REMOVE takes UC1: in the field for this driver": {
+      "caught": true,
+      "by": [
+        "REMOVE refuses while PICO.SVC is the console, and UNLOAD changes nothing; from serial it goes",
+        "REMOVE knows the console by the IOBYTE's field, not the columns: a program's CRT: there before the next console call keeps PICO.SVC (part 6)"
+      ]
+    }
+  },
+  "mutantsAt": {
+    "the font: service 15 one glyph out": "4496d5c",
+    "the startup rule: quiet for TNEBAD, not TNENODV": "4496d5c",
+    "PICO giving way: PICO.SVC takes the console whatever is in": "4496d5c",
+    "CON's width: 50 taken for 80": "4496d5c",
+    "the one driver: 40 and 32 columns on 80's name table and page": "4496d5c",
+    "function 44: a count of 1 refused": "4496d5c",
+    "function 46: one block short": "4496d5c",
+    "function 99: returns 0": "4496d5c",
+    "the prompt: no user number": "4496d5c",
+    "page zero: CONDEV written at 0045h too": "4496d5c",
+    "part 6: REMOVE takes UC1: in the field for this driver": "4496d5c"
+  },
+  "mutantScore": {
+    "caught": 11,
+    "total": 11
+  }
+}

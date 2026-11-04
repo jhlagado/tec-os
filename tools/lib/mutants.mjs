@@ -644,3 +644,19 @@ export const MUTANTS_KS38B = [
   { name: "PUTCHAR: HL not kept", ...ks34(CCPF, ["PUSH HL", "LD C,2", "CALL BDOS", "POP HL"], ["NOP", "LD C,2", "CALL BDOS", "NOP"], ["test/commands.test.mjs", "test/ccp-operands.test.mjs"]) },
   { name: "PUTCHAR: BC not kept", ...ks34(CCPF, ["PUTCHAR:", "PUSH BC", "PUSH HL", "LD C,2", "CALL BDOS", "POP HL", "POP BC"], ["PUTCHAR:", "NOP", "PUSH HL", "LD C,2", "CALL BDOS", "POP HL", "NOP"], ["test/commands.test.mjs", "test/ccp-operands.test.mjs"]) },
 ];
+
+// KS36c: one mutant a part (KG44).
+const CPM3 = ["test/cpm3.test.mjs"];
+export const MUTANTS_KS36C = [
+  { name: "the font: service 15 one glyph out", ...ks34("src/services.asm", ["HWSFONT: LD HL,FONT"], ["HWSFONT: LD HL,FONT+8"], ["test/glcd.test.mjs"]) },
+  { name: "the startup rule: quiet for TNEBAD, not TNENODV", ...ks34(CCPF, ["AND H", "XOR TNENODV"], ["AND H", "XOR TNEBAD"], ["test/startup.test.mjs"]) },
+  { name: "PICO giving way: PICO.SVC takes the console whatever is in", ...ks34("src/loader.asm", ["LD HL,GLVEC+1", "JR Z,SVGIVE"], ["LD HL,GLVEC+1", "JR Z,CONSET"], ["test/pico.test.mjs"]) },
+  { name: "CON's width: 50 taken for 80", ...ks34("src/text.asm", ['CONWID: DB "80",80,"40",40,"32",32'], ['CONWID: DB "50",80,"40",40,"32",32'], ["test/console.test.mjs"]) },
+  { name: "the one driver: 40 and 32 columns on 80's name table and page", ...ks34(PICOF, ["LD BC,$0804"], ["LD BC,$1010"], ["test/pico.test.mjs"]) },
+  { name: "function 44: a count of 1 refused", ...ks34(BDOSF, ["DEC A", "JR Z,RETA"], ["DEC A", "JR NZ,RETA"], CPM3) },
+  { name: "function 46: one block short", ...ks34(BDOSF, ["LD D,(IX+6)", "INC DE", "LD BC,0"], ["LD D,(IX+6)", "LD BC,0"], CPM3) },
+  { name: "function 99: returns 0", ...ks34(BDOSF, ["CP 99", "JR Z,FNTRUN"], [], CPM3) },
+  { name: "the prompt: no user number", ...ks34(CCPF, ["OR A", "JR Z,MLDRV"], ["OR A", "JR MLDRV"], CPM3) },
+  { name: "page zero: CONDEV written at 0045h too", ...ks34("src/console.asm", ["AND CDMTX", "LD (CONDEV),A"], ["AND CDMTX", "LD (CONDEV),A", "LD ($0045),A"], ["test/pagezero.test.mjs"]) },
+  { name: "part 6: REMOVE takes UC1: in the field for this driver", ...ks34(PICOF, ["AND 3", "DEC A", "SCF", "RET Z"], ["AND 3", "CP 3", "SCF", "RET Z"], ["test/pico.test.mjs"]) },
+];
