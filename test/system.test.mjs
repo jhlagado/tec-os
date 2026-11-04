@@ -99,6 +99,16 @@ test("without a card the diagnostic console reports and retries", () => {
   assert.match(m.expect(/R retry> $/), /error 01/);
 });
 
+test("the diagnostic console echoes a digit as the digit, and a lower-case r retries (KE-195)", () => {
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols });
+  m.expect(/R retry> $/, { from: 0, maxCycles: 80_000_000 });
+  m.type("1");
+  assert.match(m.expect(/R retry> $/), /^1\r\n/, "the key as typed, on its own line");
+  m.type("r");
+  assert.match(m.expect(/R retry> $/), /error 01/, "a retry");
+});
+
 test("without RAM at 8000h-BFFFh the boot says so on the serial console and stops", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: standardCard(), windowRam: false });

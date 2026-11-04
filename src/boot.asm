@@ -479,11 +479,11 @@ DIAG:	LD	SP,STKTOP	; the BDOS's stack, as COLDRT left it: the
 DGLOOP:	LD	HL,DGPROM	; ask until the key is one of ours
 	CALL	PUTS
 	CALL	BCONIN		; wait for a key
-	AND	$DF		; upper case
 	PUSH	AF
-	CALL	PUTA		; echo it, on a line of its own
+	CALL	PUTA		; echo it as typed, on a line of its own
 	CALL	PUTCRLF
 	POP	AF
+	AND	$DF		; upper case, for the test alone (KE-195)
 	CP	'R'
 	JP	Z,COLDRT	; retry: LCD, card and mount from the start
 	JR	DGLOOP		; any other key: the prompt again
