@@ -55,7 +55,7 @@ ${prefix}HAVE:
         DEC     A
         LD      (ALLEFT),A
         JR      NZ,${prefix}CELL
-        RET`};}
+        RET`;}
 export function walkers(d){
   // Exact source regions, not a permissive instruction-pattern substitution.
   const parent=`        LD      DE,(DPBPTR)
