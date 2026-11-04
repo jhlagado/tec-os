@@ -5,7 +5,7 @@ at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,877 bytes (`tecos`) and has 507 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,931 bytes (`tecos`) and has 453 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -204,29 +204,29 @@ carries its own.
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
 | Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 767 | 1, 2 | Stays |
-| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console, its header dump gone (`boot.asm`) | 738 | 1 | Stays |
+| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console, its header dump gone (`boot.asm`) | 732 | 1 | Stays |
 | BIOS, with its entries' interrupt discipline (`bios.asm`) | 404 | 2 | Stays |
 | Serial console (`console.asm`) | 474 | 1, 2 | Stays |
-| Matrix keyboard (`keyboard.asm`) | 249 | 1, 2 | Stays |
+| Matrix keyboard (`keyboard.asm`) | 247 | 1, 2 | Stays |
 | ANSI terminal (`term.asm`) | 971 | 2 | Stays |
-| Video switch and the display drivers' hook (`video.asm`) | 115 | 2 | Stays |
-| PICO9918 text console and graphics (`pico.asm`) | 603 | 1, 2 | Stays: the console from the banner on, its RAM a 95-byte block (KS39) |
+| Video switch and the display drivers' hook (`video.asm`) | 119 | 2 | Stays |
+| PICO9918 text console and graphics (`pico.asm`) | 601 | 1, 2 | Stays: the console from the banner on, its RAM a 95-byte block (KS39) |
 | PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
 | Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: the PICO9918's console reads it and the GLCD's driver through `TNFONT`; serial and the LCD need none |
 | 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
-| SD driver (`sd.asm`) | 836 | 1 | Stays |
-| Container mount and checks (`vol.asm`, `volutil.asm`) | 1,293 | 1 | Stays |
-| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`, `ccpfile.asm`, `ccpcmd.asm`) | 2,495 | 2 | Stays |
-| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,871 | 2 | Stays |
-| Numbered services, `TNDRVR`'s among them (`services.asm`) | 497 | 3, 4 | Stays |
-| Block cache (`cache.asm`) | 690 | 1, 2 | Stays: every read goes through it |
+| SD driver (`sd.asm`) | 872 | 1 | Stays |
+| Container mount and checks (`vol.asm`, `volutil.asm`) | 1,303 | 1 | Stays |
+| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`, `ccpfile.asm`, `ccpcmd.asm`) | 2,517 | 2 | Stays |
+| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,831 | 2 | Stays |
+| Numbered services, `TNDRVR`'s among them (`services.asm`) | 518 | 3, 4 | Stays |
+| Block cache (`cache.asm`) | 697 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
-| Service loader, registry and loading the display driver (`loader.asm`) | 719 | 2 | Stays |
+| Service loader, registry and loading the display driver (`loader.asm`) | 723 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 15,877 bytes used.
+census's 15,931 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
@@ -268,7 +268,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->507<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->453<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
