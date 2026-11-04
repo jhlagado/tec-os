@@ -1,0 +1,67 @@
+{
+  "mutants": {
+    "the start: with no matrix keyboard too": {
+      "caught": true,
+      "by": [
+        "on a PICO9918 board with no PICO.SVC the banner, volumes and prompt are on the screen; with no matrix keyboard the console is serial"
+      ]
+    },
+    "the template: the record's version and table not copied": {
+      "caught": true,
+      "by": [
+        "TNFIND finds PICO at version 3, its table PIBLK, and TNLIST returns its record last",
+        "CON PICO 40 and CON CRT 32 switch the width, kept over warm boot, and 80 after reset",
+        "a debugger reads TPSHOW, TPDRAW and the version through abi.inc's offsets from the table TNFIND gives"
+      ]
+    },
+    "REGHEAD: the record not registered": {
+      "caught": true,
+      "by": [
+        "TNFIND finds PICO at version 3, its table PIBLK, and TNLIST returns its record last",
+        "GLCD.SVC loaded and unloaded leaves REGHEAD at the ROM's record",
+        "an old card's PICO.SVC line, KS36c's driver, is refused, saying so, with nothing left"
+      ]
+    },
+    "TNDRVR: B = 1 taken": {
+      "caught": true,
+      "by": [
+        "TNDRVR refuses B = 1, with a table or HL = 0, and the console is unchanged"
+      ]
+    },
+    "the give-way: GLCD.SVC takes the console whatever is in effect": {
+      "caught": true,
+      "by": [
+        "a board with both displays keeps the PICO9918; GLCD.SVC's line loads quietly and gives way, and CON UC1 takes it (KE-150)",
+        "the starter card boots the GLCD's driver beside the ROM's console on a board with both, and the GLCD on a board with one",
+        "row 3: the word is cleared by a take, and the flag doesn't stay for the next"
+      ]
+    },
+    "the width: 80 again at every warm boot": {
+      "caught": true,
+      "by": [
+        "CON PICO 40 and CON CRT 32 switch the width, kept over warm boot, and 80 after reset"
+      ]
+    },
+    "the masked pairs: VPAIR with no DI, in the ROM": {
+      "caught": true,
+      "by": [
+        "80 columns: TMSR2's pairs run with interrupts off, and the state comes back",
+        "80 columns: TMSSET's pairs run with interrupts off, and the state comes back",
+        "80 columns: GFXREG's pairs run with interrupts off, and the state comes back"
+      ]
+    }
+  },
+  "mutantsAt": {
+    "the start: with no matrix keyboard too": "89e5e6f",
+    "the template: the record's version and table not copied": "89e5e6f",
+    "REGHEAD: the record not registered": "89e5e6f",
+    "TNDRVR: B = 1 taken": "89e5e6f",
+    "the give-way: GLCD.SVC takes the console whatever is in effect": "89e5e6f",
+    "the width: 80 again at every warm boot": "afdbc70",
+    "the masked pairs: VPAIR with no DI, in the ROM": "afdbc70"
+  },
+  "mutantScore": {
+    "caught": 7,
+    "total": 7
+  }
+}
