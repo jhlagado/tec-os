@@ -60,8 +60,12 @@ test("CON PICO and CON GLCD name CRT: and UC1:; a width goes after CRT or PICO a
   m.command("CON PICO:");
   assert.equal(m.read(3) & 3, 1, "PICO is CRT:");
   m.command("CON TTY");
-  for (const line of ["CON PICO 50", "CON PICO 4", "CON PICO 400", "CON PICO 4O", "CON GLCD 40", "CON TTY 80", "CON PICOX", "CON PIC", "CON GLC 40"])
+  for (const line of ["CON PICO 50", "CON PICO 4", "CON PICO 400", "CON PICO 4O", "CON GLCD 40", "CON TTY 80", "CON PICOX", "CON PIC", "CON GLC 40", "CON CRT80", "CON PICO80", "CON PICO:80"])
     assert.match(m.command(line), /\?\r\n/, `${line}: refused`);
+  // The error names what is wrong: the width when the name is right, the word when it isn't (KS36c review).
+  assert.match(m.command("CON PICO 50"), /\r\n50\?\r\n/);
+  assert.match(m.command("CON GLCD 40"), /\r\n40\?\r\n/);
+  assert.match(m.command("CON CRT80"), /\r\nCRT80\?\r\n/);
   assert.equal(m.read(3) & 3, 0, "nothing changed");
   assert.deepEqual(m.violations, []);
 });

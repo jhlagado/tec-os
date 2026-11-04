@@ -388,8 +388,8 @@
     },
     {
       "input": "CON TTY X",
-      "output": "CON TTY X\r\r\nTTY?\r\n\r\nA>",
-      "calls": "404e6c3be55e4dd105d9e9aebf19bebf9f3d8cc6db3b5faafa9cc6d2cec2c6de",
+      "output": "CON TTY X\r\r\nX?\r\n\r\nA>",
+      "calls": "f0acd05db7faf8dd2d3416bb6aefb1ec9482d371160cb11be1b293e4adbde993",
       "peak": 12
     },
     {

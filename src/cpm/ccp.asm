@@ -1112,9 +1112,11 @@ CONHIT:	LD	A,(HL)
         CP      ':'
 	JR	NZ,CONEND
         INC     HL
-CONEND:	CALL	SKIPSP
-	OR	A
-	JR	Z,CONNW		; no width
+CONEND:	LD	A,(HL)		; a width only after a space: CRT80 is
+	CP	SPACE		; a bad name, and its end ENDCHK's
+	JR	NZ,CONNW
+	CALL	CMDSKIP		; the width, named by an error
+	JR	Z,CONNW		; spaces alone: no width
 	LD	A,B
 	CP	CMCRT
 	JP	NZ,BADCMD	; a width after CRT: alone
