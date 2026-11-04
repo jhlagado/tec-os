@@ -76,13 +76,6 @@ CHDROP: XOR     A
         LD      (CHPOS),A
         JP      BIOWBT
 
-; Function 44, CP/M 3's multi-sector count: E = 1, the only count, succeeds;
-; any other returns FFh. Function 99, truncate, returns FFh at FNCHNO with
-; nothing changed.
-FNMULT:	LD	A,E
-	DEC	A
-	JR	Z,RETA		; A = 0
-FNTRUN:	JR	FNCHNO
 
 
 BENTRY:
@@ -99,7 +92,7 @@ BENTRY:
 	CP	46
 	JP	Z,FNFREE
 	CP	99
-	JR	Z,FNTRUN
+	JR	Z,FNCHNO	; truncate: FFh, nothing changed
         CP      41
         JR      NC,RETZERO
         ADD     A,A
@@ -128,6 +121,12 @@ FCBBIT: RLCA                    ; 8 - (C mod 8) turns: the bit in carry
 DISPATCH:
         LD      DE,(PARAM)
         JP      (HL)
+
+; Function 44, CP/M 3's multi-sector count: E = 1, the only count, succeeds;
+; any other returns FFh at FNCHNO, as function 99, truncate, does with nothing
+; changed.
+FNMULT:	DEC	E
+	JR	NZ,FNCHNO
 
 RETZERO:
         XOR     A

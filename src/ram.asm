@@ -233,7 +233,7 @@ REGHEAD:DS      2               ; the first record
 SVCHEAD:DS      1               ; the lowest service's page, 0 for none
 SVCGEN: DS      1               ; raised by each removal
 SVCRC:  DS      1               ; the last load's failure
-SVCRA:  DS      1               ; INIT's A, whatever came: a cause only when SVCRC is 1
+SVCRA:  DS      1               ; INIT's A: a cause only when SVCRC is 1
 STFLAG: DS      1               ; FFh while a line from STARTUP.CMD runs, 0 typed
 STPOS:	DS	1		; startup's state and position, as at STBOOT
 STREC:  DS      128             ; A:STARTUP.CMD's one record
