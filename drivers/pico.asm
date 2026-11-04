@@ -23,6 +23,7 @@
 ; with one register write. No VRAM access timing is enforced.
 %INCLUDE "../src/abi.inc"
 
+IOBYTE  EQU     $0003           ; CP/M's; its CON: field the console in use
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
 COLOUR  EQU     $2000
@@ -151,14 +152,15 @@ TMSW3:	DJNZ	TMSW2
 ; UNLOAD's check, and the undo of a refused record. Refuses, with carry, while
 ; the PICO9918 is claimed, or while this driver is the console. Otherwise takes
 ; its table back from the ROM. Destroys AF, BC, DE and HL.
-REMOVE:	LD	C,TNINFO	; B = the devices, with the claim bit,
-	CALL	ABICALL		; L = the console's columns
+REMOVE:	LD	C,TNINFO	; B = the devices, with the claim bit
+	CALL	ABICALL
 	LD	A,B
 	AND	HWBCLM		; a claim: a program may be using the entries
 	SCF
 	RET	NZ
-	LD	A,(WID)		; the console's columns: at this width,
-	CP	L		; it is this driver
+	LD	A,(IOBYTE)	; the console field, which the ROM keeps as
+	AND	3		; the mode in effect: CRT: is this driver
+	DEC	A
 	SCF
 	RET	Z
 	LD	B,1		; CRT:

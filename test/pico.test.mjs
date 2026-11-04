@@ -336,6 +336,18 @@ test("REMOVE refuses while PICO.SVC is the console, and UNLOAD changes nothing; 
   assert.match(say(m, "DIR HELLO.TXT"), /HELLO\.TXT/);
 });
 
+test("REMOVE knows the console by the IOBYTE's field, not the columns: a program's CRT: there before the next console call keeps PICO.SVC (part 6)", () => {
+  const m = start(both(["PICO.SVC"]));
+  say(m, "CON TTY");
+  const top = word(m, 6);
+  m.write(3, (m.read(3) & 0xfc) | CRT); // as a program writes it; the console still serial, its columns 0
+  const c = callAt(m, m.sym("SVCUNL"), {});
+  assert.equal(c.flags.C, 1, "refused: the field names this driver");
+  assert.equal(word(m, 6), top);
+  m.write(3, m.read(3) & 0xfc);
+  assert.equal(callAt(m, m.sym("SVCUNL"), {}).flags.C, 0, "with TTY: in the field it goes");
+});
+
 test("no driver: reset to a prompt on serial with no file, a bad file and no vector call", () => {
   for (const files of [{}, { "PICO.SVC": new Uint8Array(200).fill(0x55), "STARTUP.CMD": startupFile("PICO.SVC") }]) {
     const m = start(files);
