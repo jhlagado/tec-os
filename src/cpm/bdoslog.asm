@@ -321,13 +321,10 @@ ALVLEN:
 INITALV:
 	CALL	ALVLEN		; BC bytes at HL
 CLRAVL:
-				; Test the remaining count directly. An AF
-				; restored here would bring back an old Z
-				; flag and stop after the first byte.
 	LD	(HL),0		; each byte cleared
 	INC	HL
-	DEC	BC
-	LD	A,B
+	DEC	BC		; DEC BC sets no flag: the OR
+	LD	A,B		; tests the count
 	OR	C		; until no bytes are left
 	JR	NZ,CLRAVL
 
@@ -391,7 +388,8 @@ PARCELL:
 	LD	E,(HL)		; the block's low byte,
 	LD	D,0
 	INC	HL
-	LD	A,(IX+6)	; BITPTR preserves/reloads this drive's DPB
+	LD	A,(IX+6)	; DSM's high byte again; IX is still the
+				; DPB, which BLKPAST reloads
 	OR	A
 	JR	Z,PARHAVE	; 8-bit blocks: no high byte
 	LD	D,(HL)		; else the high byte too
@@ -425,7 +423,8 @@ FREECELL:
 	LD	E,(HL)		; the block's low byte,
 	LD	D,0
 	INC	HL
-	LD	A,(IX+6)	; BITPTR preserves/reloads this drive's DPB
+	LD	A,(IX+6)	; DSM's high byte again; IX is still the
+				; DPB, which BLKPAST reloads
 	OR	A
 	JR	Z,FREEHAVE	; 8-bit blocks: no high byte
 	LD	D,(HL)		; else the high byte too
@@ -499,10 +498,9 @@ BITDONE:
 	OR	A		; NZ: the block has its bit
 	RET
 
-; Z means the current drive needs its allocation vector rebuilt. The BIOS
-; receives the normalized result separately in E; the mask itself may be wide.
-; NZ if the current drive's bit is set in LOGINV (LOGTEST) or in DE (VTEST).
-; Destroys AF, B, HL; keeps DE.
+; LOGTEST: NZ if the current drive's bit is set in LOGINV, DE then the login
+; vector; Z means the drive needs its allocation vector rebuilt. VTEST: the
+; same against the vector in DE, which it keeps. Both destroy AF, B and HL.
 LOGTEST:
 	LD	DE,(LOGINV)	; the logged-in drives
 VTEST:	CALL	DRVMASK		; HL = the current drive's bit,
@@ -572,10 +570,8 @@ CHKRO:	CALL	RONZ		; writable: on
 	LD	B,2		; read-only disk
 	JR	BDERR
 
-; Failure diagnostics are deliberately kept behind one routine so later
-; milestones can add the exact CP/M retry/abort interaction without coupling
-; normal disk algorithms to console policy. HL = the select message and
-; B = 4, the BDOS's error for a drive with no volume.
+; The select error: ERRSEL and code 4, through BDERR, which ends the function
+; and never comes back here.
 SELFAIL:
 	LD	HL,ERRSEL
 	LD	B,4		; select

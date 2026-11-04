@@ -7,7 +7,7 @@
 ; FCB to its next extent first (ADVEXT). Takes the FCB at PARAM and ZEROFIL,
 ; bit 0 to zero-fill a new block. Returns A = 0 written, 1 with the directory
 ; full, 2 with the disk full; a disk error goes to BADSECT. Destroys every
-; register, SEQREC and WRTYPE.
+; register, SEQREC and WRTYPE, and through ADVEXT TARGEX and TARGS2.
 WRITESEQ:
 	CALL	FCBCR		; HL at CR
 	LD	A,(HL)
@@ -475,7 +475,8 @@ ALFULL:
 ; Takes DE = the block and SEQREC = the target record. Writes 128 zero bytes
 ; to each of the block's records, then sets the BIOS's DMA back to CURDMA.
 ; Returns DE = the block and SEQREC as it was; a disk error goes to BADSECT.
-; Destroys A, BC, HL, IX, F, and TARGEX and ALLEFT, used as scratch.
+; Destroys A, BC, HL, IX, F, and TARGEX, ALLEFT and ZEROBN, used as
+; scratch, and through POSREC IOTRK and IOSEC.
 ZEROBLK:
 	LD	(ZEROBN),DE	; the block, kept through POSREC
 	LD	A,(SEQREC)

@@ -577,9 +577,9 @@ VTOWN:	LD	A,(VCLAIM)
 	OR	A		; not claimed: Z
 	RET	Z
 	LD	A,(CONMOD)
-	XOR	CMCRT		; claimed, but the console is elsewhere
-	JR	Z,VTOWN1
-	XOR	A		; A = 0, Z: the terminal draws
+	XOR	CMCRT		; Z: the console is the CRT, the claimed
+	JR	Z,VTOWN1	; screen
+	XOR	A		; elsewhere: A = 0, Z, the terminal draws
 	RET
 VTOWN1:	INC	A		; A = 1, NZ
 	RET

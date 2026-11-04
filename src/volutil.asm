@@ -29,7 +29,8 @@ GEOF:	CP	(HL)		; the entry's id
 	RET
 
 ; Compare the 32-bit little-endian values at HL and DE. C when (HL) < (DE),
-; Z when equal. Destroys A, B; HL and DE end at the low bytes.
+; Z when equal, with HL and DE at the low bytes; otherwise they stop at the
+; first byte, from the top, that differs. Destroys A and B.
 CMP32:	INC	HL		; from the top bytes down
 	INC	HL
 	INC	HL		; HL at its top byte

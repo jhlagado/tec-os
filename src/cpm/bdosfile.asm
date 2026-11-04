@@ -35,8 +35,9 @@ RSTAIL:	XOR	A		; both resets: drive A current and
 ; then. A drive the BDOS or a BIOS directory write has changed (its DPH's
 ; dirty flag) is rebuilt, at its next selection, from the entries up to its
 ; mark (WARMV); any other is scanned in full. ROVEC is cleared, as CP/M 2.2's
-; warm boot clears it. Entered from FNRESET with A zero; ends in its tail,
-; RSTAIL. Changes every register, CURDRV, LOGINV and WARMV.
+; warm boot clears it. Entered from FNRESET with WRFLAG, nonzero, still in A;
+; starts from drive A and ends in the tail both resets share, RSTAIL.
+; Changes every register, CURDRV, LOGINV and WARMV.
 WRESET:	XOR	A		; each drive in turn, A to P
 WRLOOP:	LD	(CURDRV),A
 	CALL	LOGTEST		; Z: not logged in, nothing to keep
@@ -93,10 +94,10 @@ SETDEF:
 	LD	(DEFALV),HL
 	JP	RETZERO		; the function's end
 
-; A is a zero-based physical drive. Bind its geometry before any file access.
-; Clobbers AF/BC/DE/HL/IX. Same-drive access must still honor reset/login state.
-; An invalid or absent drive takes the fatal selection path, never a return.
-; Returns with CURDRV the drive and its tables bound.
+; A = the drive, 0 to 15. Binds its tables through LOGIN unless it is the
+; current drive and still logged in. A drive past P or without a volume takes
+; SELFAIL and never returns here. Returns with CURDRV the drive and its tables
+; bound. Destroys AF, BC, DE, HL, IX.
 SELDRV:
 	CP	16		; drives A to P only
 	JP	NC,SELFAIL
@@ -248,7 +249,7 @@ FNSRCHN:
 ; File R/O, as CP/M 2.2's check_rofile and check_rodir: a write's FCB, or the
 ; directory entry at HL of a rename or an erase, with t1's bit 7 set goes no
 ; further. ROFCB checks the drive first. Returns when writable, changing AF,
-; DE and HL; otherwise ends the function through BDERR, error 2 or 3.
+; B, DE and HL; otherwise ends the function through BDERR, error 2 or 3.
 ROFCB:	CALL	CHKRO		; error 2 on a read-only drive
 	LD	HL,(PARAM)
 ROTEST:	LD	DE,9		; t1, the type's first byte: its bit 7

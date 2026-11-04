@@ -167,9 +167,9 @@ DIRSUM2:
 	CALL	PUTSTR		; the word, singular or plural
 	LD	A,(CMDFCB)	; the drive named, 1 for A:,
 	DEC	A		; as the BDOS numbers it, 0 for A:
-	JP	P,DIRFREE	; none named: the current drive,
-	LD	A,(CURDSK)	; from page zero's 0004h,
-	AND	$0F		; its low nibble; the user is above
+	JP	P,DIRFREE	; a drive named: its number
+	LD	A,(CURDSK)	; none named: the current drive, from
+	AND	$0F		; 0004h's low nibble; the user is above
 DIRFREE:
 	LD	E,A		; BDOS 46: the drive's free records,
 	LD	C,46		; 24 bits, into the DMA record LOADBUF
@@ -641,10 +641,9 @@ CPFAIL:
 	JP	ERRGO		; the message at DE as a failure
 
 ; One inline byte after CALL: BDOS function*2 + destination bit (0=CMDFCB,
-; 1=RENFCB). Advance the return PC past it, preserving HL, B and A. BDOS owns
-; DE/C and its normal result registers/flags. SRL changes incoming flags;
-; BENTRY overwrites them with CP before any handler dispatch. No frame is
-; added here; the READSRC terminal CALL/byte/RET holds one extra return word.
+; 1=RENFCB). Advance the return PC past it, preserving HL, B and A. Keeps A,
+; B and HL; the BDOS has C, DE and the result. No frame is added here; the
+; READSRC terminal CALL/byte/RET holds one extra return word.
 DOSSEQ:
 	EX	(SP),HL		; HL at the descriptor byte
 	LD	C,(HL)
