@@ -465,10 +465,10 @@ ALVSKP:	INC	C		; the next drive, up to MAXDRV
 ; driver or ME* (20h-2Fh) from the mount checks. Shows CARD? on the LCD and
 ; the code on the console, then asks until R, which retries from COLDRT.
 ; The console stays usable without a card. Runs on STKTOP, the BDOS's
-; stack. Never returns.
-DIAG:	LD	SP,STKTOP	; the BDOS's stack, as COLDRT left it: the
-				; BIOS's keeps only warm boot's use (KE-173)
-	PUSH	AF		; the code, kept across the messages
+; stack, which COLDRT set and both its jumps here leave at its top, so the
+; BIOS's keeps only warm boot's use (KE-173); a retry sets it afresh.
+; Never returns.
+DIAG:	PUSH	AF		; the code, kept across the messages
 	LD	HL,DGCARD	; the LCD, for a board with no terminal
 	CALL	LCD3		; CARD? on row 3
 	LD	HL,DGERR	; and the message on the console
