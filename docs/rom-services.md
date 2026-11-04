@@ -5,7 +5,7 @@ at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,931 bytes (`tecos`) and has 453 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,938 bytes (`tecos`) and has 446 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -218,7 +218,7 @@ carries its own.
 | SD driver (`sd.asm`) | 872 | 1 | Stays |
 | Container mount and checks (`vol.asm`, `volutil.asm`) | 1,303 | 1 | Stays |
 | CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`, `ccpfile.asm`, `ccpcmd.asm`) | 2,517 | 2 | Stays |
-| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,831 | 2 | Stays |
+| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,838 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 518 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 697 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
@@ -226,7 +226,7 @@ carries its own.
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 15,931 bytes used.
+census's 15,938 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
@@ -268,7 +268,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->453<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->446<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
