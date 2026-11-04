@@ -20,7 +20,9 @@ the IOBYTE does. After `CRT` or `PICO` a width, 80, 40 or 32, sets the
 PICO9918's columns through the ROM's console table (`PICOWID`, version 3 of
 the "PICO" record); warm boot keeps the width and a reset sets 80. Any other
 width, a width after another name, or no PICO9918 console, and the command is
-refused with nothing changed. The BIOS acts on a change at the
+refused with nothing changed; but a line from `STARTUP.CMD` on a board with no
+PICO9918 console passes quietly, as a service's line for an absent device
+does, and a `:` line after it runs. The BIOS acts on a change at the
 next console call: it clears and homes the new screen. `CRT:` or `UC1:`
 without its display or the keyboard falls back to the serial terminal, so
 there is always a console. The 20 × 4 LCD is never the console.

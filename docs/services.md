@@ -108,7 +108,8 @@ matrix keyboard is fitted, cold boot starts the ROM's console before the banner,
 at 80 columns, and sets the IOBYTE's `CON:` field to `CRT:` (KS39). `CON PICO 40`,
 `CON PICO 32` or `CON PICO 80` changes the width; warm boot keeps it and a reset
 sets 80 again, so a `STARTUP.CMD` line such as `CON PICO 40` chooses the width
-at every reset. The ROM is one image for every board.
+at every reset; on a board with no PICO9918 console the line passes quietly.
+The ROM is one image for every board.
 
 One card can serve every board: the starter card's `STARTUP.CMD` holds `GLCD.SVC`
 alone. Where there is a GLCD and a matrix keyboard and no PICO9918 console, the

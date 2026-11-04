@@ -557,12 +557,14 @@ CPPARSE:
 ; TEC-OS: COPY SOURCE DEST copies a file a record at a time through the
 ; default DMA record, as COPY.COM does: open the source, erase and make the
 ; destination, read and write to the end, close, and print COPIED nnnn
-; (records, hex) or the same error text. Nothing in the TPA is touched.
+; (records, hex) or the same error text. On a write error the destination
+; is closed with the records written, where COPY.COM leaves it open.
+; Nothing in the TPA is touched.
 ; DEST may be a drive alone, or a blank name with a type: the source's whole
 ; name is used. Both names carry their drive, the current one if none was
 ; given, and a destination that names the source is a bad command, with
-; nothing opened. Takes the operands at ARGSTRT; nothing after DEST is
-; checked. Uses CMDFCB for SOURCE, RENFCB for DEST and DIRNUM for the count
+; nothing opened, as is any text after DEST. Takes the operands at ARGSTRT.
+; Uses CMDFCB for SOURCE, RENFCB for DEST and DIRNUM for the count
 ; of records; returns to the prompt.
 CMDCOPY:
 	LD	HL,(ARGSTRT)	; the operands
@@ -570,6 +572,7 @@ CMDCOPY:
 	CALL	CPNAME
 	LD	DE,RENFCB	; the destination into RENFCB
 	CALL	CPPARSE		; DE kept
+	CALL	ENDCHK		; nothing after it; DE kept
 	INC	DE
 	LD	A,(DE)		; its name's first byte, a space when
 	CP	SPACE		; only a drive or a type was given
@@ -617,8 +620,7 @@ CPLOOP:
 	CALL	DOSSEQ		; written to the destination
 	DB	21*2+1		; BDOS 21, destination FCB
 	OR	A		; nonzero: the disk or directory is full
-	LD	DE,CPWRITE
-	JR	NZ,CPFAIL	; WRITE ERROR
+	JR	NZ,CPWERR	; WRITE ERROR, the destination closed
 	LD	HL,(DIRNUM)	; one more record copied
 	INC	HL
 	LD	(DIRNUM),HL
@@ -637,6 +639,10 @@ CPDONE:
 	CALL	CPHEX
 	LD	DE,CRLFMSG
 	JP	PRTGO		; then CR LF and the prompt
+CPWERR:
+	CALL	DOSSEQ		; close the destination, so that the
+	DB	16*2+1		; records written are in its entry
+	LD	DE,CPWRITE	; then WRITE ERROR, whatever the close
 CPFAIL:
 	JP	ERRGO		; the message at DE as a failure
 

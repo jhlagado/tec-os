@@ -79,6 +79,18 @@ test("a quiet line for an absent device is followed by a : line that runs, and t
   assert.equal(user(m), 0, "typed: a failure, so its : piece goes");
 });
 
+test("on a serial board, with no PICO9918 console, a width from the file is quiet and its : line runs; typed, it says the width? (KE-191)", () => {
+  const m = start({ "STARTUP.CMD": startupFile("CON PICO 32", ":USER 3", "CON CRT 40") });
+  prompt(m);
+  assert.doesNotMatch(m.text(0), /\d\d\?/, "nothing said at boot");
+  assert.equal(user(m), 3, "the : line ran: the code stayed 0");
+  assert.equal(m.read(3) & 3, 0, "TTY: kept");
+  assert.match(m.command("CON PICO 32"), /\r\n32\?\r\n/, "typed: refused");
+  m.command("USER 0");
+  assert.match(m.command("CON CRT 40!:USER 5"), /\r\n40\?\r\n/);
+  assert.equal(user(m), 0, "typed: a failure, so its : piece goes");
+});
+
 test("a line from the file whose service fails for another cause, or has no file, still says so, and its : line goes", async () => {
   const defs = { VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: '"FAIL    "', RECNAME: '"FAIL    "', RECVER: 1 };
   for (const v of ["V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"]) defs[v] = 0;

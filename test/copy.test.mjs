@@ -97,6 +97,8 @@ for (const [name, line, setup] of [
   ["onto itself, marked R/O", "COPY R.DAT R.DAT"],
   ["onto itself on B:, written behind", "COPY B:X.DAT X.DAT", ["B:"]],
   ["onto itself in user 1", "COPY X.DAT A:X.DAT", ["USER 1"]],
+  ["with text after the destination (KE-179)", "COPY X.DAT B:X.DAT JUNK"],
+  ["with a third name after the destination (KE-179)", "COPY X.DAT B:Y.DAT Z.DAT"],
 ])
   test(`COPY ${name} is a bad command and leaves the card as it was`, () => {
     const t = trial(line, setup);
@@ -148,4 +150,21 @@ test("every other case leaves the card and prints as COPY.COM does, with the TPA
     assert.equal(sha(b.image), sha(c.image), `COPY ${args}: the card`);
     assert.equal(b.tpaChanged, 0, `COPY ${args}: the TPA kept`);
   }
+});
+
+test("on a write error COPY closes the destination: the records that fit are in it, their blocks in its entry (KE-179)", () => {
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G1M", label: "DATA", mount: "C" },
+  ]);
+  const c = volume(image, "C");
+  c.write("FILL.DAT", pattern(c.freeBytes() - 4096, 5));
+  const room = c.freeBytes();
+  volume(image, "A").write("BIG.DAT", pattern(room + 4096, 6));
+  const m = boot(image);
+  assert.equal(run(m, "COPY BIG.DAT C:DST.DAT"), "WRITE ERROR");
+  run(m, "\x03");
+  assert.deepEqual(m.violations, []);
+  assert.deepEqual(read(image, "C", "DST.DAT"), read(image, "A", "BIG.DAT").subarray(0, room), "the records written, closed");
+  assert.equal(volume(image, "C").freeBytes(), 0, "every block in a directory entry");
 });
