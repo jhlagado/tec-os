@@ -33,24 +33,50 @@ Node.js 20 or later.
 
 ```sh
 npm ci
-npx playwright install chromium   # once: the browser the page's tests drive
-npm run inputs   # once on a fresh clone: TED.COM and TAS.COM at their pins, in .inputs/
-npm run build    # the ROM image in build/tecos/, and in dist/ once media made it
+npm run inputs   # pinned TED.COM and TAS.COM
+mkdir -p .inputs
+if [ -d .inputs/tas-host ]; then
+  node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
+else
+  tas_stage=$(mktemp -d "$PWD/.inputs/.tas-host.XXXXXX")
+  git clone https://github.com/jhlagado/thorium.git "$tas_stage"
+  git -C "$tas_stage" checkout --detach 3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689
+  (cd "$tas_stage" && npm ci)
+  TECOS_TAS_HOST="$tas_stage" node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
+  mv "$tas_stage" .inputs/tas-host
+fi
+npm run build    # main ROM, map and census
+npm run diag     # diagnostic ROM, map and census
+npm run media    # ROM, programs, recipes and starter card in dist/
+npm run web      # the browser page in web/dist/
+npx playwright install chromium   # once for the browser tests
 npm test         # host and emulator tests, several minutes
-npm run media    # dist/: ROMs, maps, starter programs, recipe and card
 ```
+
+The host is pinned to the KS42 runner and its locked Z80 runtime. Setup
+verifies the runner, lock, runtime and TAS executable before moving the
+temporary host into place. Repeating setup verifies the prepared host
+without reinstalling it. `npm run inputs` validates both application pins
+and fetches missing inputs into verified temporary files before replacement.
+A failed preparation keeps previous verified files. Assembly uses local
+inputs and makes no downloads.
 
 The web page's tests (`test/web-touch.test.mjs`, `test/web-store.test.mjs`) drive
 Chromium through `playwright`, pinned in `package.json`; `npx playwright install
 chromium` fetches the browser that version expects.
 
-`npm run media` and the tests take TED and TAS from the files named by `TED_COM`
-and `TAS_COM`, else `../thorium/dist/TED.COM` and `../thorium/dist/TAS.COM`,
-else `.inputs/`, which `npm run inputs` fills from each pin's repository and
-commit. A file that is missing or not the build pinned in `test/inputs.json` is
-refused.
+Assembly, media and tests select TED and TAS from an explicit `TED_COM`
+or `TAS_COM`, then `.inputs/NAME`, then the legacy sibling paths
+`../thorium/dist/TED.COM` and `../thorium/dist/TAS.COM`. A selected override
+or local file must match its pin and cannot fall through to another file.
+Input setup fetches the pinned local binary when a legacy sibling is stale.
 
-The ROM is assembled with ATOM. There is one image for every board,
+TAS is the default assembler for the main and diagnostic ROMs, GLCD.SVC,
+MOUNT.COM and DEMO.COM. The host is selected from `TECOS_TAS_HOST`, then
+`.inputs/tas-host`. `TECOS_ROM_ASSEMBLER=atom` selects the ATOM reference
+build and needs no TAS host. Historical builds and test-only assembly
+fixtures retain their explicit ATOM paths. Unknown selections fail.
+There is one image for every board,
 `build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
 PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I, which
 `CON PICO 40` and the like switch between; it starts at 80. The GLCD's console

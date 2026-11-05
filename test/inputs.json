@@ -1,5 +1,5 @@
 {
-  "note": "Application inputs from outside this repository, pinned by SHA-256 (test/lib/inputs.mjs). Each is read from env, else default, relative to this repository, else .inputs/, where `npm run inputs` fetches it from its repo at its commit. Recorded from the checkouts at the commits named in source.",
+  "note": "Application inputs from outside this repository, pinned by SHA-256 (test/lib/inputs.mjs). Each is read from env, else .inputs/, else default relative to this repository, where `npm run inputs` fetches it from its repo at its commit. Recorded from the checkouts at the commits named in source.",
   "inputs": {
     "TAS.COM": {
       "env": "TAS_COM",

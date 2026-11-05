@@ -9,6 +9,8 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, syml
 import { resolve } from "node:path";
 import * as M from "../tools/lib/model.mjs";
 import { built, compareLabels, sameImage, searchNames } from "../tools/lib/ks38-check.mjs";
+import { located } from "../tools/lib/pins.mjs";
+import { romBackend, tasAssembler } from "../tools/lib/tas-rom.mjs";
 import { ROOT } from "./lib/fixtures.mjs";
 
 const WORK = resolve(ROOT, "build/ks38-test");
@@ -23,7 +25,18 @@ async function variant(name, edits) {
   for (const e of readdirSync(ROOT)) if (!/^(build|dist|node_modules|web|\..*)$/.test(e)) cpSync(resolve(ROOT, e), resolve(dir, e), { recursive: true });
   symlinkSync(resolve(ROOT, "node_modules"), resolve(dir, "node_modules"));
   for (const [file, from, to] of edits) M.patch(dir, file, from, to);
-  await M.build(dir);
+  let options;
+  if (romBackend() === "tas") {
+    // Copies exclude .inputs. Verify the root toolchain and relay only its
+    // selected paths into this test's child build.
+    await tasAssembler();
+    const entry = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs["TAS.COM"];
+    options = { env: {
+      TECOS_TAS_HOST: resolve(process.env.TECOS_TAS_HOST ?? resolve(ROOT, ".inputs/tas-host")),
+      TAS_COM: located(ROOT, "TAS.COM", entry),
+    } };
+  }
+  await M.build(dir, [], options);
   return built(dir);
 }
 

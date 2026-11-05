@@ -59,7 +59,7 @@ for (const [name, entry] of Object.entries(inputs)) {
     writeFileSync(download, execFileSync("git", ["show", `${entry.commit}:${entry.path}`], { cwd: work, maxBuffer: 1 << 26 }));
     const got = digest(entry, download);
     if (got !== entry.sha256 || readFileSync(download).length !== entry.bytes) {
-        throw new Error(`sha256 ${got}, pinned ${entry.sha256}: refused, nothing kept`);
+      throw new Error(`sha256 ${got}, pinned ${entry.sha256}: refused, nothing kept`);
     }
     renameSync(download, target);
     console.log(`${name}: fetched from ${entry.repo} ${entry.commit.slice(0, 7)} ${entry.path}, as pinned`);

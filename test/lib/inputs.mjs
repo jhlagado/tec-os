@@ -1,6 +1,6 @@
 // Application inputs that live outside this repository, pinned by SHA-256 in
-// test/inputs.json. Each comes from its environment variable, its default
-// path beside this repository, or .inputs/, where `npm run inputs` fetches it
+// test/inputs.json. Each comes from its environment variable, .inputs/, then its legacy default
+// path beside this repository, where `npm run inputs` fetches it
 // from the repository and commit its entry names. A file is pinned by its own hash; a directory
 // by the hash of "sha256  path" lines for every file under its listed
 // folders, sorted by path. A hash mismatch fails the test. A missing input
