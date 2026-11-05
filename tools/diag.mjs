@@ -1,3 +1,4 @@
+import { fontPackage } from "./lib/font-package.mjs";
 #!/usr/bin/env node
 // Build the TEC-1G diagnostics ROM.
 //
@@ -100,6 +101,7 @@ async function assembleDiagAtom() {
 }
 
 export async function buildDiag() {
+  const fontNotices = fontPackage(ROOT).notices;
   const backend = romBackend();
   const run = backend === "tas" ? await tasAssembler() : null;
   const serial = writeGenerated();
@@ -130,6 +132,7 @@ export async function buildDiag() {
   rom[ROM_SIZE - 1] = sum >> 8;
   mkdirSync(OUT, { recursive: true });
   writeFileSync(resolve(OUT, "diag.rom"), rom);
+  writeFileSync(resolve(OUT, "FONT-NOTICES.txt"), fontNotices);
   writeFileSync(resolve(OUT, "diag.d8.json"), JSON.stringify(d8, null, 2));
   const info = {
     id: Buffer.from(imageId(rom)).toString("hex").toUpperCase(),

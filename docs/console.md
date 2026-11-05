@@ -143,7 +143,7 @@ The display size is published in the table at `C003h` (the word at
 `INFO`, service 0, returns columns in L and rows in H), so programs such as an editor can lay out
 their screen without being rebuilt for each display.
 
-The font is `format/font5x7.txt`, an original 5 × 7 design in 8-pixel rows. The
+The font is `format/font5x7.txt`, TEC Compact in the existing five-cell, eight-row encoding. The
 ROM holds one copy, built from that file, and the ROM's PICO9918 console and the
 GLCD's driver draw from it; the driver asks for it at `INIT` with `TNFONT`,
 service 15. The diagnostics ROM builds its own from the same file.
@@ -166,3 +166,7 @@ the serial line continuously while waiting for input; a start bit is seen at
 most 38 T-states late, and the receiver allows for half of that. On `CRT:`
 and `UC1:` it scans the matrix keyboard and does not poll the serial line.
 Input typed while a program is busy and not polling is lost.
+
+The cold PICO9918 working width is 40. Explicit 32/40/80 selection and warm width preservation remain supported. Bare CON CRT/PICO retains the selected width.
+
+See [FONT-NOTICES](../format/FONT-NOTICES.txt) for the complete X11/Spleen notices, deliberate edits, recoverable original and unresolved legacy-glyph origin.

@@ -1,7 +1,7 @@
 // What the web host needs of a card: the startup file's display pieces and a
 // word for a card that can't drive the display chosen. The PICO9918's console is
 // the ROM's (KS39), so the page writes no driver for it: its width is a
-// CON PICO 40 or CON PICO 32 line, and 80 none.
+// CON PICO WIDTH line for every explicit host selection.
 
 import { findVolume, parseContainer, volumePayload } from "../tools/lib/container.mjs";
 import { CpmError, CpmVolume } from "../tools/lib/cpmfs.mjs";
@@ -101,7 +101,7 @@ function withoutDisplay(lines) {
   return out;
 }
 
-/** Make STARTUP.CMD's first line DISPLAY's, leaving the rest: GLCD.SVC for the GLCD, CON PICO WIDTH for the PICO9918 at 40 or 32, and none at 80. True if it changed. */
+/** Make STARTUP.CMD's first line DISPLAY's, leaving the rest: GLCD.SVC for the GLCD, CON PICO WIDTH for every PICO9918 width. True if it changed. */
 export function setDisplayLine(image, display, width = 80) {
   const a = driveA(image);
   const had = userZero(a).some((f) => f.name === "STARTUP.CMD");
@@ -109,7 +109,7 @@ export function setDisplayLine(image, display, width = 80) {
   const rest = withoutDisplay(old.split(/\r?\n/));
   // The chosen display's line alone: CON UC1 loads GLCD.SVC itself, and a line
   // for it on the page's board with both would only give way (KE-150).
-  const first = display === "tms" ? (Number(width) === 80 ? [] : [`CON PICO ${width}`]) : [displayFile(display)];
+  const first = display === "tms" ? [`CON PICO ${width}`] : [displayFile(display)];
   const text = [...first, ...rest].map((l) => `${l}\r\n`).join("");
   if (text === old) return false;
   a.write("STARTUP.CMD", fromLatin1(`${text}\x1a`));

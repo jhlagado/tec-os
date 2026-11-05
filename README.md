@@ -174,3 +174,6 @@ the GLCD's driver. `tools/` holds the build, `tecvol` and the media script.
 `test/` holds the tests, their harness and the test programs.
 
 TEC-OS is licensed under GPL-3.0-or-later.
+
+Font sources, deliberate edits and legacy provenance limits are in [FONT-NOTICES](format/FONT-NOTICES.txt).
+The PICO9918 starts at 40 columns. Use `CON PICO 80` or `CON PICO 32` for another width. Bare `CON CRT` and `CON PICO` preserve the selected width.

@@ -1,0 +1,31 @@
+{
+  "designCommit": "dd42012ce7722241493615fce55ed6de399c2404",
+  "slots": 96,
+  "first": 32,
+  "last": 127,
+  "rowsPerSlot": 8,
+  "setBits": "7..3",
+  "byteOrder": "ascending code, then top-to-bottom row",
+  "compactSha256": "5d732cefca4013fe6082728a00cae5e3aceaf3e6eb99aaa31e0289c0b3efe1d8",
+  "originalSha256": "43eb0ec9a8513a670df112948435801b9ae91874e1d17f1283d8990e586e0fb0",
+  "del": {
+    "treatment": "unchanged original, not supplied by X11 or Spleen",
+    "bytes": [
+      248,
+      248,
+      248,
+      248,
+      248,
+      248,
+      248,
+      248
+    ]
+  },
+  "normalPatternsOnly": true,
+  "reverseTreatment": "consumer derives reverse using its qualified original algorithm; preview uses XOR FF",
+  "sources": {
+    "x11.bdf": "6cdcaa87c2b22517a8265e3f5ea103a36d64642a9a727a7aeb6e1e9bc3961bdf",
+    "spleen.bdf": "40488184d075d0c752cdd239b441c5ece51e50b353156f2496c756c384ab01cb",
+    "original-font5x7.txt": "ba4aaea026956d45e384de39e622a02d5b672e3df17f74714732bb05a27c3c3e"
+  }
+}

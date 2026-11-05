@@ -92,7 +92,7 @@ export const startupFile = (...lines) => Buffer.from(lines.map((l) => `${l}\r\n`
 
 /**
  * Put a board's display on drive A of IMAGE: with the matrix keyboard and a
- * PICO9918 the console is the ROM's, so only a width other than 80 needs a
+ * PICO9918 the console is the ROM's, so only a width other than 40 needs a
  * line, CON PICO WIDTH; with the keyboard alone, GLCD.SVC and a STARTUP.CMD
  * naming it. A card that has a STARTUP.CMD keeps it.
  */
@@ -101,7 +101,7 @@ export function withDisplay(image, { tms = false, matrix = false, width = 80 } =
   const a = volume(image, "A");
   const has = (n) => a.list().some((f) => f.name === n);
   if (tms) {
-    if (width !== 80 && !has("STARTUP.CMD")) a.write("STARTUP.CMD", startupFile(`CON PICO ${width}`));
+    if (width !== 40 && !has("STARTUP.CMD")) a.write("STARTUP.CMD", startupFile(`CON PICO ${width}`));
     return image;
   }
   if (has("GLCD.SVC")) return image;

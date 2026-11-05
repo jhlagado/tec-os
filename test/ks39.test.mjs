@@ -145,7 +145,7 @@ test("CON PICO 40 and CON CRT 32 switch the width, kept over warm boot, and 80 a
   assert.deepEqual([m.read(m.sym("PIWID")), m.read(m.sym("VWID"))], [32, 32], "kept over warm boot");
   m.reset();
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after reset");
-  assert.deepEqual([m.read(m.sym("PIWID")), m.read(m.sym("VWID"))], [80, 80], "80 after reset");
+  assert.deepEqual([m.read(m.sym("PIWID")), m.read(m.sym("VWID"))], [40, 40], "cold width after reset (historical test name retained)");
 });
 
 test("a debugger reads TPSHOW, TPDRAW and the version through abi.inc's offsets from the table TNFIND gives", () => {

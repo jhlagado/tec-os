@@ -15,11 +15,14 @@ export function fontGlyphs(root) {
     if (line.trim() === "" || (line.startsWith("#") && !/^[#.]{5}$/.test(line))) continue;
     const head = /^= ([0-9A-F]{2})$/.exec(line);
     if (head) {
+      const code = parseInt(head[1], 16);
+      if (code < 0x20 || code > 0x7f || glyphs.has(code)) throw new Error(`font: duplicate or out-of-range glyph ${head[1]}`);
       rows = [];
       glyphs.set(parseInt(head[1], 16), rows);
       continue;
     }
     if (!/^[#.]{5}$/.test(line)) throw new Error(`font: bad row ${JSON.stringify(line)}`);
+    if (!rows || rows.length >= 8) throw new Error("font: row outside an eight-row glyph");
     rows.push(parseInt(line.replace(/#/g, "1").replace(/\./g, "0"), 2) << 3);
   }
   const out = [];

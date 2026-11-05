@@ -1,0 +1,41 @@
+TEC Compact research design
+
+X11 Misc Fixed 5x7
+Source notice: Public domain font.  Share and enjoy.
+The complete BDF and its notice are retained in ../preview/x11.bdf.
+
+Spleen 5x8
+Copyright (c) 2018-2026, Frederic Cambus
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+TEC-OS original i, t and DEL
+Retained from TEC-OS fe2097f4bad3f7578aa41b8bce8aa571c451dbc7.
+Upstream authorship of the original bitmap is not established by the research.
+No new upstream attribution or licence is inferred for those glyphs.
+
+Modifications
+X11 rows translated down one row. Spleen supplies lowercase, digits, braces and O,
+except original TEC-OS i/t. One pixel removed from each e/r shoulder and t tip.
+DEL retained unchanged. This is a research export, not product qualification.

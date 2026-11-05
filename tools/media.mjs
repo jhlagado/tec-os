@@ -1,3 +1,4 @@
+import { fontPackage } from "./lib/font-package.mjs";
 #!/usr/bin/env node
 // Produce the release set in dist/: the ROM image, its map and census,
 // the starter programs, a recipe that lists them with their digests, the
@@ -166,6 +167,7 @@ loop ${census.serial.txBitCycles}, receive loop ${census.serial.rxBitCycles}.
 }
 
 async function main() {
+  const fontNotices = fontPackage(ROOT).notices;
   const backend = romBackend();
   const builds = Object.keys(PROFILES).map(profile => {
     const dir = resolve(ROOT, "build", profile);
@@ -250,6 +252,7 @@ async function main() {
   for (const [ref, bytes] of buffers) writeFileSync(resolve(DIST, ref), bytes);
   writeFileSync(resolve(FILES, "DEMO.COM"), demo);
   writeFileSync(resolve(DIST, "abi.inc"), abi);
+  writeFileSync(resolve(DIST, "FONT-NOTICES.txt"), fontNotices);
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
   saveImage(resolve(DIST, "starter.img"), starter);
   writeFileSync(resolve(DIST, "page.recipe.json"), JSON.stringify(page, null, 2) + "\n");

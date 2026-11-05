@@ -44,8 +44,8 @@ function start(files, { key = false, ...opts } = {}) {
   return m;
 }
 const both = (lines = ["GLCD.SVC"], more = {}) => ({ "GLCD.SVC": GLCD_SVC, ...(lines.length ? { "STARTUP.CMD": startupFile(...lines) } : {}), ...more });
-/** A:'s files with the console at COLS columns: a CON PICO line in STARTUP.CMD for 40 and 32, none for 80. */
-const at = (cols, files = {}) => (cols === 80 ? files : { "STARTUP.CMD": startupFile(`CON PICO ${cols}`), ...files });
+/** A:'s files with the console at COLS columns: an explicit CON PICO line in STARTUP.CMD at every requested width. */
+const at = (cols, files = {}) => ({ "STARTUP.CMD": startupFile(`CON PICO ${cols}`), ...files });
 const say = (m, line) => {
   m.mark = m.output.length;
   if (m.videoConsole()) m.typeMatrix(`${line.toLowerCase()}\r`);
@@ -170,7 +170,7 @@ test("the ROM's console at every width: CON PICO 40, CON CRT 32 and CON PICO 80 
 });
 
 test("a width is refused, nothing changed, while the PICO9918 is claimed, and for a record at version 2", () => {
-  const m = start({});
+  const m = start(at(80));
   hw(m, VIDEO, 1);
   assert.match(say(m, "CON PICO 40"), /\?\r\n/, "claimed");
   hw(m, VIDEO, 0);
@@ -429,7 +429,7 @@ test("a claim with no console on the PICO9918, with no matrix keyboard: refused 
 });
 
 test("a program reading VRAM on the ROM's console sees the names and patterns it saw", () => {
-  const m = start({});
+  const m = start(at(80));
   const v = m.tec1g.state.display.tms9918.stateSnapshot().vram;
   assert.deepEqual([...v.slice(0x41 * 8, 0x41 * 8 + 8)], [...Machine.font.subarray(0x21 * 8, 0x22 * 8)]);
   assert.ok([...v.slice(0x1000, 0x1000 + 80 * 24)].includes(0x41), "the screen's A> in the name table");
@@ -679,8 +679,8 @@ test("the web host: power-on writes the width's CON PICO line and no driver, say
   assert.equal(prepareCard(image, "tms", "40").changed, false);
   assert.deepEqual(prepareCard(image, "tms", "32"), { problem: null, note: null, changed: true }, "a width change");
   assert.equal(startupText(image), "CON PICO 32\r\nDIR\r\n");
-  assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true }, "and back: no line at 80");
-  assert.equal(startupText(image), "DIR\r\n");
+  assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true }, "explicit 80 line");
+  assert.equal(startupText(image), "CON PICO 80\r\nDIR\r\n");
   volume(image, "A").write("GLCD.SVC", GLCD_SVC);
   assert.deepEqual(prepareCard(image, "glcd", "40"), { problem: null, note: null, changed: true }, "the GLCD's line first");
   assert.equal(startupText(image), "GLCD.SVC\r\nDIR\r\n");
@@ -696,7 +696,7 @@ test("the web host: a card whose STARTUP.CMD is read-only keeps it, and the page
     changed: false,
   });
   assert.deepEqual(image, before, "the card byte for byte");
-  assert.equal(prepareCard(image, "tms", "80").problem, null, "no line to set: nothing to refuse");
+  assert.match(prepareCard(image, "tms", "80").problem, /read-only/, "explicit 80 also needs its line");
 });
 
 test("the web host: a user's CON CRT width line goes with the page's own, so the selector's width stands", () => {
@@ -704,13 +704,13 @@ test("the web host: a user's CON CRT width line goes with the page's own, so the
   const a = volume(image, "A");
   a.write("STARTUP.CMD", startupFile("CON CRT 32", "DIR!CON CRT: 40!USER 3", "con pico 40"));
   assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "DIR!USER 3\r\n", "no width line at 80");
+  assert.equal(startupText(image), "CON PICO 80\r\nDIR!USER 3\r\n", "explicit 80 line");
   a.write("STARTUP.CMD", startupFile("CON CRT 32", "DIR"));
   prepareCard(image, "tms", "40");
   assert.equal(startupText(image), "CON PICO 40\r\nDIR\r\n", "the selector's 40 alone");
   a.write("STARTUP.CMD", startupFile("CON CRT", "CON UC1", "DIR"));
   prepareCard(image, "tms", "80");
-  assert.equal(startupText(image), "CON CRT\r\nCON UC1\r\nDIR\r\n", "a CON line with no width stays");
+  assert.equal(startupText(image), "CON PICO 80\r\nCON CRT\r\nCON UC1\r\nDIR\r\n", "a CON line with no width stays");
 });
 
 const startupText = (image) => Buffer.from(volume(image, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0];
@@ -720,7 +720,7 @@ test("the web host: a chained startup line loses its display pieces and keeps th
   const a = volume(image, "A");
   a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC!CON PICO 32"));
   assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "DIR\r\nDIR!:USER 3\r\n");
+  assert.equal(startupText(image), "CON PICO 80\r\nDIR\r\nDIR!:USER 3\r\n");
   assert.equal(prepareCard(image, "tms").changed, false);
 });
 
@@ -738,7 +738,7 @@ test("the web host: a removed piece's colon passes to the piece after it, and on
     const a = volume(image, "A");
     a.write("STARTUP.CMD", startupFile(line));
     prepareCard(image, "tms");
-    assert.equal(startupText(image), `${want}\r\n`, line);
+    assert.equal(startupText(image), `CON PICO 80\r\n${want}\r\n`, line);
     assert.equal(prepareCard(image, "tms").changed, false, line);
   }
 });
@@ -756,7 +756,7 @@ test("the web host: a next line's first colon goes with the display piece it hun
     const a = volume(image, "A");
     a.write("STARTUP.CMD", startupFile(...lines));
     prepareCard(image, "tms");
-    assert.equal(startupText(image), `${want}\r\n`, lines.join("|"));
+    assert.equal(startupText(image), `CON PICO 80\r\n${want}\r\n`, lines.join("|"));
   }
 });
 
@@ -816,7 +816,7 @@ test("the web host: a card whose files were renamed by hand has its .DRV display
   const a = volume(image, "A");
   a.write("STARTUP.CMD", startupFile("PICO.DRV", "GLCD.DRV", "MY.DRV"));
   assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "MY.DRV\r\n");
+  assert.equal(startupText(image), "CON PICO 80\r\nMY.DRV\r\n");
 });
 
 test("a failed CON UC1 leaves the console as it was, and a later one takes the GLCD", () => {
@@ -837,7 +837,7 @@ test("the web host: the page's card boots on the board with both displays with n
   for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
   assert.equal(startupText(image), "GLCD.SVC\r\n", "the starter's own line, for a real board");
   assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "", "the page writes the chosen display's line alone, none for the ROM's console at 80");
+  assert.equal(startupText(image), "CON PICO 80\r\n", "the page explicitly selects 80");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: true });
   m.runUntil(() => m.ready() && m.screen().some((l) => /^A>$/.test(l.trim())), 800_000_000, "the prompt");
   assert.doesNotMatch(m.screen().join("\n"), /\?/, "no line refused on the screen");
@@ -868,7 +868,7 @@ test("the web host: a read-only A: is left byte for byte, and the card boots as 
   ]);
   volume(image, "A").write("STARTUP.CMD", startupFile("DIR"));
   const before = image.slice();
-  const got = prepareCard(image, "tms", "40");
+  const got = prepareCard(image, "tms", "80");
   assert.equal(got.changed, false);
   assert.match(got.problem, /couldn't be prepared .*read-only.*boots as it is/);
   assert.deepEqual(image, before);
@@ -881,10 +881,10 @@ test("the web host: a full directory leaves the card as it was, and it boots (KE
   for (let i = 0; a.list().length < a.entries; i += 1) a.write(`F${i}.DAT`, new Uint8Array());
   const before = image.slice();
   let got;
-  assert.doesNotThrow(() => (got = prepareCard(image, "tms", "40")));
+  assert.doesNotThrow(() => (got = prepareCard(image, "tms", "80")));
   assert.equal(got.changed, false);
   assert.match(got.problem, /couldn't be prepared .*boots as it is/);
   assert.deepEqual(image, before);
   const m = bootsToPrompt(image);
-  assert.deepEqual([m.read(m0(m)), m.read(m.sym("VWID"))], [CRT, 80], "the original card boots, at 80 columns");
+  assert.deepEqual([m.read(m0(m)), m.read(m.sym("VWID"))], [CRT, 40], "the unchanged card boots at the cold width");
 });

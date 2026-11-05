@@ -6,6 +6,7 @@ import { boot, ROOT, volume } from '../../lib/fixtures.mjs';
 
 const image = new Uint8Array(readFileSync(resolve(ROOT, 'dist/starter.img')));
 const m = boot(image, { tms: true, matrix: true });
+m.command("CON PICO 80"); // preserve this historical explicit-80 route
 const screen = () => m.screen().map(line => line.trimEnd());
 const status = () => screen()[23];
 const keys = (input, description, done) => {

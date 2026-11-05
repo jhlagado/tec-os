@@ -1,3 +1,4 @@
+import { fontPackage } from "./lib/font-package.mjs";
 #!/usr/bin/env node
 // Build the TEC-OS ROM images.
 //
@@ -339,12 +340,15 @@ function refreshDist(outDir, census) {
 }
 
 export async function build() {
+  const fontNotices = fontPackage(ROOT).notices;
   let assemble = assembleAtom;
   if (romBackend() === "tas") {
     const run = await tasAssembler();
     assemble = (phase, origin) => run({ root: SRC, entry: "rom.asm", origin, phase, target: "tecos.rom", rom: true });
   }
-  return [await buildProfile("tecos", assemble)];
+  const result = [await buildProfile("tecos", assemble)];
+  if (existsSync(resolve(ROOT, "dist"))) writeFileSync(resolve(ROOT, "dist/FONT-NOTICES.txt"), fontNotices);
+  return result;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

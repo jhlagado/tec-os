@@ -1,3 +1,5 @@
+PIDEFLT EQU 40  ; cold working width
+
 ; The PICO9918's console and graphics
 ; entries, in the ROM (KS39): a
 ; TMS9918A- compatible VDP with the
@@ -34,7 +36,7 @@ SPRITE EQU $1B00
 ; permanent tail of the registry.
 
 PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
-  DB 80,24       ; the columns, TMSW's,
+  DB PIDEFLT,24       ; the columns, TMSW's,
                  ; and the rows
 
 ; PICOREG, PICOFIL
@@ -71,7 +73,7 @@ PISTART:
   ld de,PIBLK
   ld bc,PITPLN
   ldir
-  ld a,80        ; the widest text first
+  ld a,PIDEFLT        ; the widest text first
   call TMSW      ; a width it knows: no
                  ; carry
   ld hl,PIBLK    ; CRT:'s table

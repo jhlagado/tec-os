@@ -1,0 +1,16 @@
+{
+  "productPin": "ea3ef3de9133931e925a0220d51c0e971c1fd8dd",
+  "fontPin": "77d828b9",
+  "fontFiles": {
+    "export/export.py": "826b58576c589fc6ebfe44790d05dbbf31310726edb715eb3000dfa9bd73a613",
+    "export/manifest.json": "86b97e36f615b9687e8f5208c58780bc60a15b1aaa7d1077e118d88433820ca4",
+    "export/NOTICES.txt": "d68a88da1786b08b1ee6790a1cb583e967cb797a2edc19b1d96dfa71f20283ae",
+    "export/README.md": "c1971fb13562a1fb71485089b96ce855155fbe93f35a754f5018bf5848959747",
+    "export/original-font.bin": "43eb0ec9a8513a670df112948435801b9ae91874e1d17f1283d8990e586e0fb0",
+    "export/original-font5x7.txt": "ba4aaea026956d45e384de39e622a02d5b672e3df17f74714732bb05a27c3c3e",
+    "export/tec-compact.bin": "5d732cefca4013fe6082728a00cae5e3aceaf3e6eb99aaa31e0289c0b3efe1d8",
+    "export/tec-compact.txt": "b215a6532f84a237aaf646dec555112f7dae1ed830106f9445aff2ec69f099a6",
+    "preview/x11.bdf": "6cdcaa87c2b22517a8265e3f5ea103a36d64642a9a727a7aeb6e1e9bc3961bdf",
+    "preview/spleen.bdf": "40488184d075d0c752cdd239b441c5ece51e50b353156f2496c756c384ab01cb"
+  }
+}

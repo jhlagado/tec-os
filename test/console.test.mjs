@@ -240,7 +240,7 @@ test("the default console is the PICO9918's 80 x 24 text mode", () => {
   const a = volume(image, "A");
   for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) a.write(n, new Uint8Array(300));
   a.write("WIDE.TXT", Buffer.from(`${"y".repeat(79)}Z\n${"w".repeat(85)}\n`), { text: true });
-  const m = boot(image, { tms: true, matrix: true });
+  const m = boot(image, { tms: true, matrix: true, width: 80 });
   const r = m.tec1g.state.display.tms9918.stateSnapshot().registers;
   assert.equal(r[0], 0x04, "R0: 80-column text");
   assert.equal(r[1], 0xd0, "R1: 16K VRAM, display on, text mode");
