@@ -40,3 +40,17 @@ export function validateNotices({source,dist,diag},{canonical,expected}){
  eq(dist,source,'source/dist notices equal');eq(diag,source,'source/diag notices equal');
  return {entrypoint:'validateNotices',sha256:sha(source),canonicalBytes:canonical.length,bytes:source.length};
 }
+
+// Evergreen checks use the current mapped slot, without freezing unrelated code.
+export function validateCurrentFont(image,map,font) {
+ const symbol=map.symbols.find(s=>s.name==='FONT');assert.ok(symbol,'mapped FONT');
+ const at=(symbol.address??symbol.value)-0xc000;assert.ok(at>=0&&at+768<=image.length);
+ assert.equal(sha(font),'5d732cefca4013fe6082728a00cae5e3aceaf3e6eb99aaa31e0289c0b3efe1d8','fixed chosen font');
+ eq(image.subarray(at,at+768),font,'current mapped FONT bytes');
+ return {entrypoint:'validateCurrentFont',fontAt:at+0xc000,fontBytes:768};
+}
+export function validateCurrentDiagnostic(image,map,font) {
+ const result=validateCurrentFont(image,map,font);
+ eq(image.subarray(0x3ff6),deriveDiagnosticTrailer(image),'current diagnostic derived ID/checksum');
+ return {...result,entrypoint:'validateCurrentDiagnostic'};
+}

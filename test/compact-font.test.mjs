@@ -5,7 +5,7 @@ import {join,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {fontPackage,validateFontNotices} from '../tools/lib/font-package.mjs';
-import {validateMain,validateDiagnostic,deriveDiagnosticTrailer,validateNotices} from './lib/font-validation.mjs';
+import {validateMain,validateDiagnostic,deriveDiagnosticTrailer,validateNotices,validateCurrentFont,validateCurrentDiagnostic} from './lib/font-validation.mjs';
 const root=resolve(import.meta.dirname,'..'),read=f=>readFileSync(join(root,f));
 const data=JSON.parse(read('test/fixtures/compact-font/native.json'));
 const font=read('format/tec-compact/export/tec-compact.bin');
@@ -21,7 +21,8 @@ test('TEC Compact reconstructs every fixed slot and rejects eight conversion fau
  }finally{rmSync(temp,{recursive:true,force:true})}
 });
 test('TEC Compact actual native images use the same validator as corruptions',()=>{
- const main=read('build/tecos/tecos.rom'),diag=read('build/diag/diag.rom');
+ // Frozen KG53 migration account and outside-byte controls retain their inputs.
+ const main=read('test/fixtures/compact-font/migration-main.bin'),diag=read('test/fixtures/compact-font/migration-diag.bin');
  assert.equal(validateMain(main,mainContext).changedBytes,429);validateDiagnostic(diag,diagContext);
  for(const [at,value] of [[data.fontAt,main[data.fontAt]^8],[data.defaultOperands[0],80],[0,main[0]^1]]){
   const b=Buffer.from(main);b[at]=value;assert.throws(()=>validateMain(b,mainContext),/main exact/);
@@ -29,6 +30,18 @@ test('TEC Compact actual native images use the same validator as corruptions',()
  for(const [at,trailer] of [[0,false],[0x3ff6,false],[0x3ffe,false],[0,true],[data.diagFontAt,true]]){
   const b=Buffer.from(diag);b[at]^=8;if(trailer)deriveDiagnosticTrailer(b).copy(b,0x3ff6);
   assert.throws(()=>validateDiagnostic(b,diagContext),/diagnostic (exact|derived)/);
+ }
+ // Actual current artifacts use mapped font/trailer validators on both paths.
+ const current=read('build/tecos/tecos.rom'),dm=read('build/diag/diag.rom');
+ const map=JSON.parse(read('build/tecos/tecos.d8.json')),diagMap=JSON.parse(read('build/diag/diag.d8.json'));
+ const fontAt=validateCurrentFont(current,map,font).fontAt-0xc000;
+ const diagAt=validateCurrentDiagnostic(dm,diagMap,font).fontAt-0xc000;
+ const wrong=Buffer.from(current);wrong[fontAt]^=8;
+ assert.throws(()=>validateCurrentFont(wrong,map,font),/current mapped FONT/);
+ for(const at of [diagAt,0x3ff6,0x3ffe]){
+  const b=Buffer.from(dm);b[at]^=8;
+  if(at===diagAt)deriveDiagnosticTrailer(b).copy(b,0x3ff6);
+  assert.throws(()=>validateCurrentDiagnostic(b,diagMap,font),/current (mapped FONT|diagnostic derived)/);
  }
 });
 test('TEC Compact complete notices survive source, media and diagnostics and reject omissions',()=>{

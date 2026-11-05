@@ -15,12 +15,15 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
-import {restoreHistoricalFont,validateHistoricalFont} from "./lib/historical-font.mjs";
+import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from "./lib/historical-font.mjs";
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
 assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"750ad7ae1b5cd9ace4837bb264a984857dd54314d5029097f3ce5c0be255bc4c","unchanged historical command list and oracle");
 const REF = JSON.parse(referenceBytes);
+// Bind the clone to this build's untouched input, not to a permanent ROM pin.
+const productionInput = romFor();
+const historicalContext = historicalFontContext(productionInput.rom,productionInput.symbols);
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "conout", "fill"];
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 
@@ -39,7 +42,7 @@ async function board({ matrix = true, historicalFont = false } = {}) {
   let { rom, symbols } = romFor();
   if (historicalFont) {
     const original=readFileSync(resolve(ROOT,"format/font-original.bin"));
-    rom=restoreHistoricalFont(rom,symbols.get("FONT")-0xc000,original);
+    rom=restoreHistoricalFont(rom,symbols.get("FONT")-0xc000,original,historicalContext);
   }
   const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });
   m.historicalFont = historicalFont;
@@ -114,17 +117,17 @@ const workload = workloadRun(); // production input for TPA/CONOUT-stack reading
 test("the resident GLCD draws every screen of the workload as the driver did, byte for byte", { timeout: 1_800_000 }, async () => {
   const {rom:selected,symbols}=romFor(),at=symbols.get("FONT")-0xc000;
   const original=readFileSync(resolve(ROOT,"format/font-original.bin")),before=Buffer.from(selected);
-  const restored=restoreHistoricalFont(selected,at,original);
+  const restored=restoreHistoricalFont(selected,at,original,historicalContext);
   assert.deepEqual(Buffer.from(selected),before,"production source buffer unchanged");
-  assert.throws(()=>restoreHistoricalFont(selected,at,undefined),/original font required/);
+  assert.throws(()=>restoreHistoricalFont(selected,at,undefined,historicalContext),/original font required/);
   const wrongOriginal=Buffer.from(original);wrongOriginal[0]^=8;
-  assert.throws(()=>restoreHistoricalFont(selected,at,wrongOriginal),/original font identity/);
-  assert.throws(()=>restoreHistoricalFont(selected,at,selected.subarray(at,at+768)),/original font identity/);
+  assert.throws(()=>restoreHistoricalFont(selected,at,wrongOriginal,historicalContext),/original font identity/);
+  assert.throws(()=>restoreHistoricalFont(selected,at,selected.subarray(at,at+768),historicalContext),/original font identity/);
   const wrongSelected=Buffer.from(selected);wrongSelected[0]^=1;
-  assert.throws(()=>restoreHistoricalFont(wrongSelected,at,original),/selected production identity/);
+  assert.throws(()=>restoreHistoricalFont(wrongSelected,at,original,historicalContext),/selected production identity/);
   const outside=Buffer.from(restored);outside[0]^=1;
-  assert.throws(()=>validateHistoricalFont(selected,outside,at,original),/unchanged native prefix/);
-  assert.throws(()=>validateHistoricalFont(selected,selected,at,original),/exact historical font bytes/);
+  assert.throws(()=>validateHistoricalFont(selected,outside,at,original,historicalContext),/unchanged native prefix/);
+  assert.throws(()=>validateHistoricalFont(selected,selected,at,original,historicalContext),/exact historical font bytes/);
   const { m, screens } = await workloadRun({ historicalFont: true });
   assert.equal(m.historicalFont, true);
   assert.deepEqual(screens, REF.screens, `historical-font input: the ST7920's graphics RAM against ${REF.from}'s driver`);

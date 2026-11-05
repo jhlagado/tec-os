@@ -61,3 +61,13 @@ keep their own unmodified-production workload. Other board() calls also stay
 on production input. The fixed-font GLCD alias validator gains old-font and
 wrong-font rejection on actual A-cell pixels. The proposal awaits independent
 source review and allocation; no corrected workload has run.
+
+Whole-image migration ownership is test-only. Frozen migration-main.bin and
+migration-diag.bin retain KG53's normal-TAS artifacts and all outside-byte
+corruption controls against the fixed baseline. Actual current images use the
+same mapped-FONT validator for positive/fault inputs, plus derived diagnostic
+ID/checksum checks. The external stage qualification still requires exact
+fa63989b…302d/17e4aae5…1665 and the registered outside-byte delta. The historical
+GLCD clone binds to a separate untouched current-build input identity and mapped
+FONT/cold operands, allowing later qualified code changes without freezing the
+whole live ROM to this migration. This separation is proposed and unrun.
