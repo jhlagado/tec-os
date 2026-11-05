@@ -245,12 +245,15 @@ PICOTPS EQU 42   ; the page shown, the
 
 ; Debugger display constants.
 SYSLAT EQU $FF   ; write-only system
+                 ; latch
 LATEXP EQU $04   ; EXPAND: EXPAND 1 at
+                 ; 8000h-BFFFh
 
 ; shadow copy of the system latch
 
 LATCHV EQU $0040
 LCDCMD EQU $04   ; command write, busy
+                 ; flag and address read
 LCDDAT EQU $84   ; character data
 VDPDAT EQU $BE
 VDPCTL EQU $BF

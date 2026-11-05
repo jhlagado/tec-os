@@ -5,7 +5,6 @@
 ; bounded, so a missing display costs
 ; only the time-out.
 
-                 ; flag and address read
 
 ; Initialise: 8-bit, two-line
 ; addressing, display on, cursor off,

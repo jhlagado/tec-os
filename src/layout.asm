@@ -23,7 +23,6 @@ SDIO EQU $FD     ; SD SPI: out bit 0
 
 ; in bit 7 MISO
 
-                 ; latch
 
 ; ---- System latch values
 ; --------------------------------------
@@ -35,7 +34,6 @@ LATKEEP EQU $83  ; bits kept by bank
 
 ; PROTECT and CAPS
 
-                 ; 8000h-BFFFh
 
 ; classic profile: overlay off, base
 ; window
