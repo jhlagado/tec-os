@@ -80,7 +80,7 @@ function run(dir, args, { env = {}, quiet = true } = {}) {
 }
 
 /** Build DIR's ROM: every profile, or those named. */
-export const build = (dir, profiles = []) => node(dir, ["tools/build.mjs", ...profiles]);
+export const build = (dir, profiles = [], opts) => node(dir, ["tools/build.mjs", ...profiles], opts);
 
 /** The loaded file type of tree DIR, by its source: src/svc.asm, or src/loader.asm since KS38, means .SVC, and every new name; neither .DRV, and every old one. */
 export const fileType = (dir) => (["src/svc.asm", "src/loader.asm"].some((f) => existsSync(resolve(dir, f))) ? "SVC" : "DRV");

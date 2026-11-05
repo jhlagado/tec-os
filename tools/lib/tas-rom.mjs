@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join, posix, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -70,7 +70,7 @@ export async function tasAssembler(root) {
       assert.equal(result.code, 0, result.console);
       assert.ok(result.bytes && result.dbg, 'TAS did not produce both ROM and debug output');
       const output = tasImage(Buffer.from(result.dbg), Buffer.from(result.bytes), staged, tasPin, source);
-      console.error(`tecos ROM assembler=tas phase=${phase} runner=${runnerPin} tstates=${result.tstates}`);
+      traceRom({ backend: "tas", phase, root, runner: runnerPin, tstates: result.tstates });
       return output;
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -82,4 +82,12 @@ export function romBackend() {
   const backend = process.env.TECOS_ROM_ASSEMBLER ?? 'atom';
   assert.ok(backend === 'atom' || backend === 'tas', 'unknown TECOS_ROM_ASSEMBLER: ' + backend);
   return backend;
+}
+
+export function traceRom(event) {
+  const line = JSON.stringify(event);
+  console.error('tecos ROM ' + line);
+  if (process.env.TECOS_ROM_TRACE) {
+    appendFileSync(process.env.TECOS_ROM_TRACE, line + '\n');
+  }
 }

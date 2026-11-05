@@ -14,6 +14,7 @@ import { displayFiles } from "./lib/starter.mjs";
 import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
 import { located } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
+import { romBackend, traceRom } from "./lib/tas-rom.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = resolve(ROOT, "dist");
@@ -175,17 +176,24 @@ loop ${census.serial.txBitCycles}, receive loop ${census.serial.rxBitCycles}.
 }
 
 async function main() {
+  const backend = romBackend();
+  const builds = Object.keys(PROFILES).map(profile => {
+    const dir = resolve(ROOT, "build", profile);
+    const map = JSON.parse(readFileSync(resolve(dir, "tecos.d8.json"), "utf8"));
+    if (map.generator?.name !== backend) throw new Error(`main ROM map was not generated with ${backend}; rebuild with the selected assembler`);
+    return { profile, dir };
+  });
   const tas = pinnedBytes("TAS.COM");
   const ted = pinnedBytes("TED.COM");
   rmSync(FILES, { recursive: true, force: true }); // what the page copies: nothing from an older set
   mkdirSync(FILES, { recursive: true });
   const censuses = {};
-  for (const profile of Object.keys(PROFILES)) {
-    const dir = resolve(ROOT, "build", profile);
+  for (const { profile, dir } of builds) {
     copyFileSync(resolve(dir, "tecos.rom"), resolve(DIST, "tecos.rom"));
     copyFileSync(resolve(dir, "tecos.d8.json"), resolve(DIST, "tecos.d8.json"));
     copyFileSync(resolve(dir, "census.json"), resolve(DIST, "tecos.census.json"));
     censuses[profile] = JSON.parse(readFileSync(resolve(dir, "census.json"), "utf8"));
+    traceRom({ backend, phase: "media", root: dir, sha256: censuses[profile].sha256 });
   }
   const files = [];
   for (const p of PROGRAMS) {

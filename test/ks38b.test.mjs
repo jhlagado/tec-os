@@ -16,9 +16,10 @@ const KG42 = JSON.parse(readFileSync(resolve(ROOT, "test/model/ks38b/kg42.json")
 
 test("historical KG42 at 626ee41: the ROM falls by the merges' stated bytes, only their routines differ, and the hot paths are equal", { timeout: 300_000 }, async () => {
   const dir = M.tree(resolve(ROOT, "build/ks38b-test"), "baseline", KG42.baseline);
-  await M.build(dir);
+  const reference = { env: { TECOS_ROM_ASSEMBLER: "atom" } };
+  await M.build(dir, [], reference);
   const landed = M.tree(resolve(ROOT, "build/ks38b-test"), "landed", "626ee41");
-  await M.build(landed);
+  await M.build(landed, [], reference);
   const r = compareLabels(built(dir), built(landed), { markers: KG42.markers });
   const merges = Object.values(KG42.merges);
   const stated = merges.reduce((n, m) => n + m.bytes, 0);

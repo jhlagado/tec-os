@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
 import { FORMAT, checkInterfaces, makeSvc } from "./lib/svc.mjs";
-import { romBackend, tasAssembler } from "./lib/tas-rom.mjs";
+import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 import { romFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -201,7 +201,7 @@ async function assembleAtom(phase) {
     check(image.address >= ROM_START, `ROM byte emitted at ${hex(image.address)}`);
   }
   const { bytes } = materializeAtomGeneration(result.generation, { base: ROM_START, fill: 0xff });
-  console.error(`tecos ROM assembler=atom phase=${phase}`);
+  traceRom({ backend: "atom", phase, root: SRC });
   return { d8, bytes };
 }
 
@@ -235,7 +235,10 @@ async function buildProfile(name, assemble) {
   const profile = { name, ...PROFILES[name] };
   const probeBase = 0x8000;
   writeGenerated(profile, probeBase);
-  const probe = globals((await assemble("probe")).d8);
+  const probeMap = (await assemble("probe")).d8;
+  const probe = globals(probeMap);
+  const marker = probeMap.symbols.find(symbol => symbol.name === "BDOSRME");
+  check(marker?.kind === "label", "missing or invalid workspace sizing marker BDOSRME");
   const workspaceBytes = need(probe, "BDOSRME") - probeBase;
   const wsbase = RAMBIOS - workspaceBytes;
   check(workspaceBytes > 0 && wsbase >= probeBase, "invalid workspace sizing marker");
