@@ -5,7 +5,7 @@ at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,018 bytes (`tecos`) and has 366 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,020 bytes (`tecos`) and has 364 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -225,11 +225,11 @@ carries its own.
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 518 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 714 | 1, 2 | Stays: every read goes through it |
 | Command history (`history.asm`) | 211 | 2 | Stays |
-| Service loader, registry and loading the display driver (`loader.asm`) | 742 | 2 | Stays |
+| Service loader, registry and loading the display driver (`loader.asm`) | 744 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes, and
 the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 16,018 bytes used.
+census's 16,020 bytes used.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
@@ -271,7 +271,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->366<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->364<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

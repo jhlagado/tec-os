@@ -1,0 +1,20 @@
+{
+  "interrupted": {
+    "codePin": "00410a48c364ee9f40912f9364c653424ba5d70e",
+    "status": "intentionally interrupted",
+    "reason": "The rollback observer read RAMBIOS+10 (CONIN), not word0001h+HOOKAT10 (CONOUT at RAMBIOS+13). Marker assertions were valid, but this hook observation was not. Process-group SIGTERM caused the cancellation diagnostics; they are not a Node/runtime failure.",
+    "guardExit": 241
+  },
+  "acceptedMeasurement": {
+    "codePin": "071d6d7de743afcca18da10b285e0ad9b57390bc",
+    "strict": "revised/strict.log",
+    "guard": "revised/strict-guard.jsonl",
+    "tests": 726,
+    "fail": 0,
+    "skipped": 0,
+    "originalAbsoluteDeadline": "2026-11-05T09:15:02Z",
+    "completedBeforeDeadline": true,
+    "comparison": "revised/comparison.log",
+    "hookControl": "hook-mutant/result.json"
+  }
+}

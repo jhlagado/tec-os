@@ -1,0 +1,3639 @@
+{
+  "tests": 726,
+  "pass": 726,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "cases": [
+    {
+      "name": "DIV16 divides HL by DE for divisors up to 8000h, in at most 1,300 T-states",
+      "milliseconds": 188.030125,
+      "status": "pass"
+    },
+    {
+      "name": "PUTDEC prints HL in decimal without leading zeros",
+      "milliseconds": 244.490292,
+      "status": "pass"
+    },
+    {
+      "name": "random records at the end of the 8 MiB volume are written and read where the host puts them",
+      "milliseconds": 777.863459,
+      "status": "pass"
+    },
+    {
+      "name": "a file read again comes from the cache, with no card read, and the same bytes",
+      "milliseconds": 1109.597084,
+      "status": "pass"
+    },
+    {
+      "name": "write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns",
+      "milliseconds": 5900.746958,
+      "status": "pass"
+    },
+    {
+      "name": "on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot",
+      "milliseconds": 1823.503625,
+      "status": "pass"
+    },
+    {
+      "name": "at every card write while a file is erased and its blocks reused, the volume verifies and no entry names another file's data",
+      "milliseconds": 797.70775,
+      "status": "pass"
+    },
+    {
+      "name": "a write after the block before it was cleared keeps a block's records that its line no longer holds",
+      "milliseconds": 1783.631709,
+      "status": "pass"
+    },
+    {
+      "name": "a card removed with dirty lines leaves the console working, and warm boot says the write was lost",
+      "milliseconds": 630.671542,
+      "status": "pass"
+    },
+    {
+      "name": "the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)",
+      "milliseconds": 806.339,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM before the cache, 4ea57f7, mounts a :wb volume written through",
+      "milliseconds": 681.055708,
+      "status": "pass"
+    },
+    {
+      "name": "a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount",
+      "milliseconds": 1434.27475,
+      "status": "pass"
+    },
+    {
+      "name": "a block that needs no pre-read reaches the card with its unwritten records zero, on a volume written behind and through",
+      "milliseconds": 3096.80225,
+      "status": "pass"
+    },
+    {
+      "name": "more than the cache written behind with no directory write between: dirty lines evicted, and the file the same from the cache and from the card",
+      "milliseconds": 1604.280042,
+      "status": "pass"
+    },
+    {
+      "name": "an unclosed file's records reach the card at warm boot",
+      "milliseconds": 635.854708,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT writes the dirty lines before it changes a drive",
+      "milliseconds": 621.340417,
+      "status": "pass"
+    },
+    {
+      "name": "a failed write-through write drops its block's line, so a reread comes from the card",
+      "milliseconds": 253.566542,
+      "status": "pass"
+    },
+    {
+      "name": "a volume remounted on another drive, with another on its old drive, reads back right",
+      "milliseconds": 1941.736667,
+      "status": "pass"
+    },
+    {
+      "name": "descriptor byte 15's other bits reach no drive flag",
+      "milliseconds": 448.936833,
+      "status": "pass"
+    },
+    {
+      "name": "the harness takes the copy core's writes below BD00h as the cache's only when the cache called it",
+      "milliseconds": 585.722041,
+      "status": "pass"
+    },
+    {
+      "name": "function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, which warm boot doesn't say again (KS36b)",
+      "milliseconds": 1191.191791,
+      "status": "pass"
+    },
+    {
+      "name": "function 45: FFh returns a BDOS error to the program, A = FFh and H the code, FEh says it first, and warm boot puts the default back (KS36b)",
+      "milliseconds": 239.380041,
+      "status": "pass"
+    },
+    {
+      "name": "function 47's warm boot puts the lines written behind on the card before the chained program loads (KS36b)",
+      "milliseconds": 695.473708,
+      "status": "pass"
+    },
+    {
+      "name": "a flush tries every line: the first line's write failing, the next still reaches the card, and warm boot says Write lost once (KS36b)",
+      "milliseconds": 606.714875,
+      "status": "pass"
+    },
+    {
+      "name": "the cold mount reads the table through a cache line, and leaves the TPA as it found it (KS36b)",
+      "milliseconds": 254.906,
+      "status": "pass"
+    },
+    {
+      "name": "a BIOS WRITE of type 1 to a directory block no line holds, on the volume written behind with dirty data lines, puts the data on the card first and then the directory (KS36b review)",
+      "milliseconds": 1025.059292,
+      "status": "pass"
+    },
+    {
+      "name": "function 45's returned error leaves the FCB on the record a sequential read didn't read, as CP/M 3 does (KS36b review)",
+      "milliseconds": 234.329292,
+      "status": "pass"
+    },
+    {
+      "name": "function 45's returned error leaves the FCB on the record a sequential write didn't write, as CP/M 3 does (KS36b review)",
+      "milliseconds": 612.344875,
+      "status": "pass"
+    },
+    {
+      "name": "when every line is dirty and the forced write of the next in turn fails, the next miss doesn't try that write again, and warm boot's flush does (KE-187)",
+      "milliseconds": 990.715583,
+      "status": "pass"
+    },
+    {
+      "name": "random writes out of order into a new G1M allocation block, written through, keep every record, from the BDOS and on the card (KE-AR7)",
+      "milliseconds": 521.329667,
+      "status": "pass"
+    },
+    {
+      "name": "random writes out of order into a new G1M allocation block, written behind, keep every record, from the BDOS and on the card (KE-AR7)",
+      "milliseconds": 480.32675,
+      "status": "pass"
+    },
+    {
+      "name": "random writes out of order into a new G8M allocation block, written through, keep every record, from the BDOS and on the card (KE-AR7)",
+      "milliseconds": 805.995458,
+      "status": "pass"
+    },
+    {
+      "name": "random writes out of order into a new G8M allocation block, written behind, keep every record, from the BDOS and on the card (KE-AR7)",
+      "milliseconds": 722.085125,
+      "status": "pass"
+    },
+    {
+      "name": "a close whose data lines the card refuses fails, and retried fails again until the card takes them, then the file is whole (KE-AR8)",
+      "milliseconds": 668.81875,
+      "status": "pass"
+    },
+    {
+      "name": "a close whose data lines the card refuses leaves them for warm boot, which says Write lost, and the card's directory names no record (KE-AR8)",
+      "milliseconds": 631.608667,
+      "status": "pass"
+    },
+    {
+      "name": "@press sends a key and goes on without a prompt: D, I, R, then Return run DIR (KB-25)",
+      "milliseconds": 434.035333,
+      "status": "pass"
+    },
+    {
+      "name": "--card none reaches DIAG's prompt, R retry>, and stops there with the LCD's rows (KE-172)",
+      "milliseconds": 216.692125,
+      "status": "pass"
+    },
+    {
+      "name": "--screen dumps a 40-column screen as 40-column rows (KE-189)",
+      "milliseconds": 489.551458,
+      "status": "pass"
+    },
+    {
+      "name": "--screen dumps a 32-column screen as 32-column rows (KE-189)",
+      "milliseconds": 411.699542,
+      "status": "pass"
+    },
+    {
+      "name": "the built-ins' operands keep their output, BDOS calls and stack",
+      "milliseconds": 4674.639834,
+      "status": "pass"
+    },
+    {
+      "name": "CON UC1 on a PICO9918 and matrix board keeps its stack peak",
+      "milliseconds": 411.151708,
+      "status": "pass"
+    },
+    {
+      "name": "a line of two, three and four pieces runs each in turn, each echoed after its prompt",
+      "milliseconds": 267.460083,
+      "status": "pass"
+    },
+    {
+      "name": "an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line",
+      "milliseconds": 250.2875,
+      "status": "pass"
+    },
+    {
+      "name": "a line of 127 characters runs whole: 32 pieces",
+      "milliseconds": 603.761875,
+      "status": "pass"
+    },
+    {
+      "name": "a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets",
+      "milliseconds": 665.361625,
+      "status": "pass"
+    },
+    {
+      "name": "a startup line holding ! runs all its pieces before the next startup line",
+      "milliseconds": 243.830416,
+      "status": "pass"
+    },
+    {
+      "name": "history gives the chained line back whole, as typed, and it runs again",
+      "milliseconds": 269.078541,
+      "status": "pass"
+    },
+    {
+      "name": ": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?",
+      "milliseconds": 348.515084,
+      "status": "pass"
+    },
+    {
+      "name": "after a failed : piece the rest of the line goes, and the prompt comes back",
+      "milliseconds": 215.415584,
+      "status": "pass"
+    },
+    {
+      "name": "the code is cleared as each piece is taken, before the command is looked for",
+      "milliseconds": 330.068208,
+      "status": "pass"
+    },
+    {
+      "name": "a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file",
+      "milliseconds": 842.507708,
+      "status": "pass"
+    },
+    {
+      "name": "function 47's command starts with the default FCBs, tail, DMA and stack of the same command typed",
+      "milliseconds": 741.844375,
+      "status": "pass"
+    },
+    {
+      "name": "function 47 copies the command before anything loads: a target that loads over the caller's DMA",
+      "milliseconds": 258.969875,
+      "status": "pass"
+    },
+    {
+      "name": "function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on",
+      "milliseconds": 834.058125,
+      "status": "pass"
+    },
+    {
+      "name": "function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt",
+      "milliseconds": 515.846792,
+      "status": "pass"
+    },
+    {
+      "name": "a chained command missing, unreadable or too large reaches NAME? and the prompt",
+      "milliseconds": 1185.093125,
+      "status": "pass"
+    },
+    {
+      "name": "a chain from a startup line runs before the next startup line, and may hold ! and :",
+      "milliseconds": 272.268792,
+      "status": "pass"
+    },
+    {
+      "name": "^C at a program's line input drops the rest of the line",
+      "milliseconds": 204.725542,
+      "status": "pass"
+    },
+    {
+      "name": "a BDOS error's exit drops the rest of the line",
+      "milliseconds": 383.172791,
+      "status": "pass"
+    },
+    {
+      "name": "a read-only drive's exit drops the rest of the line",
+      "milliseconds": 303.325459,
+      "status": "pass"
+    },
+    {
+      "name": "a failed select's exit drops the rest of the line",
+      "milliseconds": 262.581792,
+      "status": "pass"
+    },
+    {
+      "name": "a directory read that fails drops the rest of the line",
+      "milliseconds": 252.164958,
+      "status": "pass"
+    },
+    {
+      "name": "ERA's read-only file drops the rest of the line",
+      "milliseconds": 227.761542,
+      "status": "pass"
+    },
+    {
+      "name": "SAVE's NO SPACE sets FF00h: a full directory and a full disk",
+      "milliseconds": 1199.63325,
+      "status": "pass"
+    },
+    {
+      "name": "a write lost at warm boot drops the rest of the line",
+      "milliseconds": 451.836208,
+      "status": "pass"
+    },
+    {
+      "name": "^C at TYPE's or DIR's [more] drops the rest of the line",
+      "milliseconds": 3654.813166,
+      "status": "pass"
+    },
+    {
+      "name": "Esc or Q at [more], and ERA *.* answered N, are answers: the code stays 0 and the line goes on",
+      "milliseconds": 2907.14525,
+      "status": "pass"
+    },
+    {
+      "name": "a reset clears the rest of the line",
+      "milliseconds": 455.662333,
+      "status": "pass"
+    },
+    {
+      "name": "KE-127: a startup line of 128 characters runs its first 127, and leaves 0100h as loaded",
+      "milliseconds": 338.443875,
+      "status": "pass"
+    },
+    {
+      "name": "KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded",
+      "milliseconds": 696.917917,
+      "status": "pass"
+    },
+    {
+      "name": "DEMO refuses major 3",
+      "milliseconds": 711.698042,
+      "status": "pass"
+    },
+    {
+      "name": "DEMO refuses no TNA tag",
+      "milliseconds": 256.406667,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT B: refuses major 3",
+      "milliseconds": 215.679792,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT B: refuses no TNA tag",
+      "milliseconds": 205.36975,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT refuses major 3",
+      "milliseconds": 206.265541,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT refuses no TNA tag",
+      "milliseconds": 217.38375,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT lists and unmounts on major 5",
+      "milliseconds": 266.748125,
+      "status": "pass"
+    },
+    {
+      "name": "DEMO's own tables: each hex digit's pattern, each colour port and random colours",
+      "milliseconds": 872.950833,
+      "status": "pass"
+    },
+    {
+      "name": "a program's digest covers what it includes, nested",
+      "milliseconds": 2.768333,
+      "status": "pass"
+    },
+    {
+      "name": "abi.inc's numbers reach the tests by name",
+      "milliseconds": 0.171209,
+      "status": "pass"
+    },
+    {
+      "name": "a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark, nothing loaded, the ROM's console in place",
+      "milliseconds": 213.508125,
+      "status": "pass"
+    },
+    {
+      "name": "CCP says so with no file, and runs a file of that name",
+      "milliseconds": 606.018958,
+      "status": "pass"
+    },
+    {
+      "name": "EXIT says so with no file, and runs a file of that name",
+      "milliseconds": 605.72875,
+      "status": "pass"
+    },
+    {
+      "name": "UNLOAD is refused with no resident, and removes residents last in, first out",
+      "milliseconds": 375.23725,
+      "status": "pass"
+    },
+    {
+      "name": "nothing is kept for a level: the table ends at ABICALL's jump and the page at BE00h is free",
+      "milliseconds": 312.347458,
+      "status": "pass"
+    },
+    {
+      "name": "a write to BE00h-BFFFh in EXPAND 1 fails the host's watch, and one to BDFFh, the history's, does not (A12)",
+      "milliseconds": 335.43625,
+      "status": "pass"
+    },
+    {
+      "name": "startup lines go on after ^C at a program",
+      "milliseconds": 272.588791,
+      "status": "pass"
+    },
+    {
+      "name": "ERA frees each directory entry's blocks once",
+      "milliseconds": 368.662459,
+      "status": "pass"
+    },
+    {
+      "name": "NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no program of the name",
+      "milliseconds": 409.605,
+      "status": "pass"
+    },
+    {
+      "name": "REN takes one drive from either name, and a name on another drive is refused",
+      "milliseconds": 1222.992708,
+      "status": "pass"
+    },
+    {
+      "name": "ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)",
+      "milliseconds": 1461.012042,
+      "status": "pass"
+    },
+    {
+      "name": "ERA *.* answered with Return alone erases nothing and takes no second Return",
+      "milliseconds": 881.626625,
+      "status": "pass"
+    },
+    {
+      "name": "the CCP's printer keeps OUTCHAR's column count and ^P echo",
+      "milliseconds": 383.432625,
+      "status": "pass"
+    },
+    {
+      "name": "FNPRINT ends at $",
+      "milliseconds": 351.772042,
+      "status": "pass"
+    },
+    {
+      "name": "SAVE refuses a count past 255 as any bad count, whichever doubling carries (KE-174)",
+      "milliseconds": 839.09975,
+      "status": "pass"
+    },
+    {
+      "name": "SAVE on a full disk closes the file before NO SPACE: the records written stay in the directory, as COPY's do (KE-201)",
+      "milliseconds": 824.709333,
+      "status": "pass"
+    },
+    {
+      "name": "compact layout checks routine headers and preserves literal case",
+      "milliseconds": 3.934959,
+      "status": "pass"
+    },
+    {
+      "name": "%INCLUDE starts at the left margin",
+      "milliseconds": 0.246125,
+      "status": "pass"
+    },
+    {
+      "name": "column-18 notes continue an adjacent inline note",
+      "milliseconds": 0.381375,
+      "status": "pass"
+    },
+    {
+      "name": "standalone notes do not count toward inline coverage",
+      "milliseconds": 0.710291,
+      "status": "pass"
+    },
+    {
+      "name": "80: erase at pending wrap preserves following row",
+      "milliseconds": 174.344125,
+      "status": "pass"
+    },
+    {
+      "name": "80: zero PUTAT does not read input or touch display",
+      "milliseconds": 196.304542,
+      "status": "pass"
+    },
+    {
+      "name": "80: relative cursor B clamps before and after carry",
+      "milliseconds": 206.408916,
+      "status": "pass"
+    },
+    {
+      "name": "80: relative cursor C clamps before and after carry",
+      "milliseconds": 196.144792,
+      "status": "pass"
+    },
+    {
+      "name": "80: switching to a claimed display preserves registers and VRAM until release",
+      "milliseconds": 204.915417,
+      "status": "pass"
+    },
+    {
+      "name": "40: erase at pending wrap preserves following row",
+      "milliseconds": 268.4155,
+      "status": "pass"
+    },
+    {
+      "name": "40: zero PUTAT does not read input or touch display",
+      "milliseconds": 243.219125,
+      "status": "pass"
+    },
+    {
+      "name": "40: relative cursor B clamps before and after carry",
+      "milliseconds": 245.826542,
+      "status": "pass"
+    },
+    {
+      "name": "40: relative cursor C clamps before and after carry",
+      "milliseconds": 209.993167,
+      "status": "pass"
+    },
+    {
+      "name": "40: switching to a claimed display preserves registers and VRAM until release",
+      "milliseconds": 249.801,
+      "status": "pass"
+    },
+    {
+      "name": "32: erase at pending wrap preserves following row",
+      "milliseconds": 230.371416,
+      "status": "pass"
+    },
+    {
+      "name": "32: zero PUTAT does not read input or touch display",
+      "milliseconds": 203.544375,
+      "status": "pass"
+    },
+    {
+      "name": "32: relative cursor B clamps before and after carry",
+      "milliseconds": 242.062125,
+      "status": "pass"
+    },
+    {
+      "name": "32: relative cursor C clamps before and after carry",
+      "milliseconds": 205.004625,
+      "status": "pass"
+    },
+    {
+      "name": "32: switching to a claimed display preserves registers and VRAM until release",
+      "milliseconds": 217.447916,
+      "status": "pass"
+    },
+    {
+      "name": "glcd: erase at pending wrap preserves following row",
+      "milliseconds": 415.024584,
+      "status": "pass"
+    },
+    {
+      "name": "glcd: zero PUTAT does not read input or touch display",
+      "milliseconds": 331.287459,
+      "status": "pass"
+    },
+    {
+      "name": "glcd: relative cursor B clamps before and after carry",
+      "milliseconds": 535.98775,
+      "status": "pass"
+    },
+    {
+      "name": "glcd: relative cursor C clamps before and after carry",
+      "milliseconds": 536.706834,
+      "status": "pass"
+    },
+    {
+      "name": "console boundary stack high-water marks",
+      "milliseconds": 0.179916,
+      "status": "pass"
+    },
+    {
+      "name": "with a PICO9918 and the matrix keyboard the screen is the console from the banner on, with no file, and nothing goes to serial (KS39)",
+      "milliseconds": 169.090625,
+      "status": "pass"
+    },
+    {
+      "name": "without the matrix keyboard the serial terminal is the console, even with a display",
+      "milliseconds": 217.914084,
+      "status": "pass"
+    },
+    {
+      "name": "CON switches the console between devices and falls back to serial",
+      "milliseconds": 371.248875,
+      "status": "pass"
+    },
+    {
+      "name": "CON PICO and CON GLCD name CRT: and UC1:; a width goes after CRT or PICO alone, 80, 40 or 32, and only to a driver whose table has the width (KD-174)",
+      "milliseconds": 596.136791,
+      "status": "pass"
+    },
+    {
+      "name": "CRT: without a PICO9918 falls back to the serial terminal",
+      "milliseconds": 347.307042,
+      "status": "pass"
+    },
+    {
+      "name": "the matrix keyboard types at the prompt",
+      "milliseconds": 246.458334,
+      "status": "pass"
+    },
+    {
+      "name": "the video terminal implements its ANSI subset",
+      "milliseconds": 312.543041,
+      "status": "pass"
+    },
+    {
+      "name": "CON PICO 32 uses TMS9918 Graphics I",
+      "milliseconds": 192.524959,
+      "status": "pass"
+    },
+    {
+      "name": "the 20 x 4 LCD shows the banner and mounted drives",
+      "milliseconds": 184.951375,
+      "status": "pass"
+    },
+    {
+      "name": "DIR lays out names to fit the display and reports free space",
+      "milliseconds": 906.273208,
+      "status": "pass"
+    },
+    {
+      "name": "the GLCD is the console when no TMS9918 answers",
+      "milliseconds": 478.054834,
+      "status": "pass"
+    },
+    {
+      "name": "TYPE pauses a screen at a time on the 8-row GLCD and can be stopped",
+      "milliseconds": 983.586417,
+      "status": "pass"
+    },
+    {
+      "name": "TYPE fills a 24-row, 40-column screen before pausing, and long lines count as wrapped",
+      "milliseconds": 317.747709,
+      "status": "pass"
+    },
+    {
+      "name": "a long DIR pauses too",
+      "milliseconds": 1857.117708,
+      "status": "pass"
+    },
+    {
+      "name": "matrix arrow keys arrive as ANSI cursor sequences",
+      "milliseconds": 257.030541,
+      "status": "pass"
+    },
+    {
+      "name": "the default console is the PICO9918's 80 x 24 text mode",
+      "milliseconds": 236.9995,
+      "status": "pass"
+    },
+    {
+      "name": "the video terminal inserts and deletes characters and lines",
+      "milliseconds": 272.76425,
+      "status": "pass"
+    },
+    {
+      "name": "the cursor shows while a program polls for a key, and goes with the next output",
+      "milliseconds": 219.175042,
+      "status": "pass"
+    },
+    {
+      "name": "a scroll region scrolls only its own rows",
+      "milliseconds": 227.349541,
+      "status": "pass"
+    },
+    {
+      "name": "a row move on the PICO9918 is built out of sight and shown when the program asks for a key",
+      "milliseconds": 255.258125,
+      "status": "pass"
+    },
+    {
+      "name": "a second row move with no key asked between shows the first before it is built, the rows intact",
+      "milliseconds": 183.639875,
+      "status": "pass"
+    },
+    {
+      "name": "a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.SVC says so on the LCD",
+      "milliseconds": 194.554375,
+      "status": "pass"
+    },
+    {
+      "name": "UNLOAD removes the GLCD's resident and the console goes back to serial",
+      "milliseconds": 487.118959,
+      "status": "pass"
+    },
+    {
+      "name": "cold boot lists each drive's whole 11-character label, its spaces too (KS38b's DRVLAB)",
+      "milliseconds": 174.511375,
+      "status": "pass"
+    },
+    {
+      "name": "SHOWVOL lists the drives without touching LINEBUF, the video terminal's buffer (KS38b's review)",
+      "milliseconds": 42.384917,
+      "status": "pass"
+    },
+    {
+      "name": "^C as the key that ends a ^S pause ends the program by warm boot, as CP/M 2.2 does (KE-180)",
+      "milliseconds": 178.966875,
+      "status": "pass"
+    },
+    {
+      "name": "console output keeps the character for its column when a program's CONOUT in the RAM jump table destroys C (KE-181)",
+      "milliseconds": 247.940584,
+      "status": "pass"
+    },
+    {
+      "name": "COPY X.COM B: copies under the source's name, as COPY X.COM B:X.COM does",
+      "milliseconds": 1356.85075,
+      "status": "pass"
+    },
+    {
+      "name": "COPY B:X.COM A: copies under the source's name, as COPY B:X.COM A:X.COM does",
+      "milliseconds": 1880.540209,
+      "status": "pass"
+    },
+    {
+      "name": "COPY X.COM B:.TXT copies under the source's name, as COPY X.COM B:X.COM does",
+      "milliseconds": 1517.755333,
+      "status": "pass"
+    },
+    {
+      "name": "COPY X.COM B:.* copies under the source's name, as COPY X.COM B:X.COM does",
+      "milliseconds": 1762.724083,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto itself is a bad command and leaves the card as it was",
+      "milliseconds": 323.918917,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto itself, the destination's drive named is a bad command and leaves the card as it was",
+      "milliseconds": 261.756,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto itself, the source's drive named is a bad command and leaves the card as it was",
+      "milliseconds": 295.436125,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto its own drive alone is a bad command and leaves the card as it was",
+      "milliseconds": 251.861667,
+      "status": "pass"
+    },
+    {
+      "name": "COPY with no destination is a bad command and leaves the card as it was",
+      "milliseconds": 280.652708,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto itself, marked SYS is a bad command and leaves the card as it was",
+      "milliseconds": 255.013958,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto itself, marked R/O is a bad command and leaves the card as it was",
+      "milliseconds": 256.684833,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto itself on B:, written behind is a bad command and leaves the card as it was",
+      "milliseconds": 610.689,
+      "status": "pass"
+    },
+    {
+      "name": "COPY onto itself in user 1 is a bad command and leaves the card as it was",
+      "milliseconds": 266.2035,
+      "status": "pass"
+    },
+    {
+      "name": "COPY with text after the destination (KE-179) is a bad command and leaves the card as it was",
+      "milliseconds": 307.401,
+      "status": "pass"
+    },
+    {
+      "name": "COPY with a third name after the destination (KE-179) is a bad command and leaves the card as it was",
+      "milliseconds": 278.209,
+      "status": "pass"
+    },
+    {
+      "name": "COPY X.DAT B:X.DAT on A: still copies",
+      "milliseconds": 729.588459,
+      "status": "pass"
+    },
+    {
+      "name": "COPY A:X.DAT X.DAT on B: still copies",
+      "milliseconds": 712.790916,
+      "status": "pass"
+    },
+    {
+      "name": "after B: and A:, a plain name is on A: again: a copy works, and one onto itself is refused",
+      "milliseconds": 1419.712584,
+      "status": "pass"
+    },
+    {
+      "name": "COPY X.DAT X.DAQ copies: the names differ in one byte",
+      "milliseconds": 449.073,
+      "status": "pass"
+    },
+    {
+      "name": "COPY X.DAT Y.DAT copies: the names differ in one byte",
+      "milliseconds": 475.923709,
+      "status": "pass"
+    },
+    {
+      "name": "every other case leaves the card and prints as COPY.COM does, with the TPA kept",
+      "milliseconds": 54753.184458,
+      "status": "pass"
+    },
+    {
+      "name": "on a write error COPY closes the destination: the records that fit are in it, their blocks in its entry (KE-179)",
+      "milliseconds": 883.260375,
+      "status": "pass"
+    },
+    {
+      "name": "a sequential write that needs an extent with the directory full returns 1, and once an entry is freed carries on with no extent missing",
+      "milliseconds": 1782.655333,
+      "status": "pass"
+    },
+    {
+      "name": "a sequential write of 128 records makes one extent, not an empty second one",
+      "milliseconds": 1212.915666,
+      "status": "pass"
+    },
+    {
+      "name": "function 32 keeps E's low five bits, for every E from 10h to FEh, and FFh gets the user number",
+      "milliseconds": 192.161958,
+      "status": "pass"
+    },
+    {
+      "name": "function 32 with E5h is user 5: erased entries stay erased",
+      "milliseconds": 205.898125,
+      "status": "pass"
+    },
+    {
+      "name": "function 13 from user 5 leaves the user number 5, on drive A",
+      "milliseconds": 570.994708,
+      "status": "pass"
+    },
+    {
+      "name": "functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the card is unchanged",
+      "milliseconds": 235.548792,
+      "status": "pass"
+    },
+    {
+      "name": "function 16 of a never-opened FCB on a drive function 28 made read-only returns success and writes nothing, as CP/M 2.2's close does (A8, KE-148)",
+      "milliseconds": 172.055292,
+      "status": "pass"
+    },
+    {
+      "name": "function 30 still changes a read-only file's attributes, as CP/M 2.2's does, and the file can then be written",
+      "milliseconds": 208.2985,
+      "status": "pass"
+    },
+    {
+      "name": "a write in place reaches the card before any close, and the recovery guide says so (KE-156)",
+      "milliseconds": 183.975958,
+      "status": "pass"
+    },
+    {
+      "name": "function 22 clears S2 and keeps EX, as CP/M 2.2's make does after clrmodnum, and a random write's make keeps the module it needs (KE-178)",
+      "milliseconds": 213.818792,
+      "status": "pass"
+    },
+    {
+      "name": "an erase whose directory write fails and returns the error frees none of the file's blocks, so a file made next takes others (KE-AR1)",
+      "milliseconds": 420.397542,
+      "status": "pass"
+    },
+    {
+      "name": "a wildcard erase whose second directory write fails keeps the first file erased and freed, and the second whole (KE-AR1)",
+      "milliseconds": 179.047666,
+      "status": "pass"
+    },
+    {
+      "name": "a random read of a missing extent returns 4 each time and leaves the FCB on its extent, on A: (KE-AR2)",
+      "milliseconds": 180.04975,
+      "status": "pass"
+    },
+    {
+      "name": "a random write after a missed random read makes the extent and leaves record 0 alone, on A: (KE-AR2)",
+      "milliseconds": 197.436916,
+      "status": "pass"
+    },
+    {
+      "name": "a random write refused with the directory full is refused again, record 0 left alone, on A: (KE-AR2)",
+      "milliseconds": 359.349375,
+      "status": "pass"
+    },
+    {
+      "name": "a random write retried after the full directory gains a free entry makes the extent, record 0 left alone, on A: (KE-AR2)",
+      "milliseconds": 426.663416,
+      "status": "pass"
+    },
+    {
+      "name": "a random read of a missing extent returns 4 each time and leaves the FCB on its extent, on B: (KE-AR2)",
+      "milliseconds": 506.905916,
+      "status": "pass"
+    },
+    {
+      "name": "a random write after a missed random read makes the extent and leaves record 0 alone, on B: (KE-AR2)",
+      "milliseconds": 490.444834,
+      "status": "pass"
+    },
+    {
+      "name": "a random write refused with the directory full is refused again, record 0 left alone, on B: (KE-AR2)",
+      "milliseconds": 1566.718417,
+      "status": "pass"
+    },
+    {
+      "name": "a random write retried after the full directory gains a free entry makes the extent, record 0 left alone, on B: (KE-AR2)",
+      "milliseconds": 1591.491584,
+      "status": "pass"
+    },
+    {
+      "name": "function 44: a count of 1 succeeds, any other returns FFh",
+      "milliseconds": 167.443417,
+      "status": "pass"
+    },
+    {
+      "name": "function 46: each drive's free records, three bytes at the DMA address, as the card's directory gives them, and the default drive kept",
+      "milliseconds": 484.894041,
+      "status": "pass"
+    },
+    {
+      "name": "DIR's footer, from function 46, is the free space in kilobytes",
+      "milliseconds": 521.048917,
+      "status": "pass"
+    },
+    {
+      "name": "function 99, truncate, returns FFh and leaves the file as it was",
+      "milliseconds": 178.90675,
+      "status": "pass"
+    },
+    {
+      "name": "the prompt shows the user number before the drive unless it is 0, as CP/M 3 does: 3A>",
+      "milliseconds": 447.089167,
+      "status": "pass"
+    },
+    {
+      "name": "a block past the end of A:'s directory leaves the prompt reachable",
+      "milliseconds": 177.780708,
+      "status": "pass"
+    },
+    {
+      "name": "the file with that block says Bad Sector when it's read, and ERA takes it",
+      "milliseconds": 310.962,
+      "status": "pass"
+    },
+    {
+      "name": "a write to a read-only volume says R/O, and the card is unchanged",
+      "milliseconds": 354.954917,
+      "status": "pass"
+    },
+    {
+      "name": "function 29 lists a read-only volume once its drive is selected",
+      "milliseconds": 324.319875,
+      "status": "pass"
+    },
+    {
+      "name": "playwright is a devDependency at an exact version, and the lock pins it and its core (KE-157)",
+      "milliseconds": 3.795458,
+      "status": "pass"
+    },
+    {
+      "name": "a model reads an older tree's own inputs.json, whatever this tree pins: TED from that tree's pin, by PINS_DIR",
+      "milliseconds": 4.421916,
+      "status": "pass"
+    },
+    {
+      "name": "test/inputs.json holds only what a live test reads, each one file with its repo, commit and path",
+      "milliseconds": 1.757083,
+      "status": "pass"
+    },
+    {
+      "name": "the table at C003h: TNA, ABI 5.1 and one jump to the services, 8 bytes, and the old entries gone",
+      "milliseconds": 168.114542,
+      "status": "pass"
+    },
+    {
+      "name": "warm boot turns the GLCD display and graphics back on",
+      "milliseconds": 420.626959,
+      "status": "pass"
+    },
+    {
+      "name": "punch and reader are the serial port, eight bits wide",
+      "milliseconds": 255.750208,
+      "status": "pass"
+    },
+    {
+      "name": "DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PICO9918",
+      "milliseconds": 386.624792,
+      "status": "pass"
+    },
+    {
+      "name": "the automatic tests pass on the Debug80 model and the report lists them",
+      "milliseconds": 7009.194917,
+      "status": "pass"
+    },
+    {
+      "name": "a pattern that reads back wrong from the card says where, and the block is put back",
+      "milliseconds": 4850.740458,
+      "status": "pass"
+    },
+    {
+      "name": "on an F18A-compatible VDP the probe reads the identity, scrolls one row and locks again",
+      "milliseconds": 4312.6675,
+      "status": "pass"
+    },
+    {
+      "name": "T21 sets the DS1302, sees it roll over and puts the time back",
+      "milliseconds": 5077.254667,
+      "status": "pass"
+    },
+    {
+      "name": "a clock that halts when T21 sets it fails, with what was read and expected",
+      "milliseconds": 5027.696958,
+      "status": "pass"
+    },
+    {
+      "name": "a clock that takes the time but never counts on fails, with what was read and expected",
+      "milliseconds": 5090.625834,
+      "status": "pass"
+    },
+    {
+      "name": "a bad bit in the variables page is reported without a stack, and nothing more runs",
+      "milliseconds": 944.523875,
+      "status": "pass"
+    },
+    {
+      "name": "without RAM in the window the ROM reports it and carries on",
+      "milliseconds": 5726.10175,
+      "status": "pass"
+    },
+    {
+      "name": "the interactive tests run from the serial terminal, keypad, matrix and joystick",
+      "milliseconds": 23468.913333,
+      "status": "pass"
+    },
+    {
+      "name": "without EXPAND 1, cold boot says TEC-OS needs 64K and stops, before the banner",
+      "milliseconds": 137.876125,
+      "status": "pass"
+    },
+    {
+      "name": "cold boot clears EXPAND 1 but for the cache's table; warm boot leaves it",
+      "milliseconds": 208.668375,
+      "status": "pass"
+    },
+    {
+      "name": "the harness sees a program's write to EXPAND 1 below the history ring",
+      "milliseconds": 207.989458,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS function 50 is gone: it returns 0, as every number past 40 does",
+      "milliseconds": 191.316083,
+      "status": "pass"
+    },
+    {
+      "name": "the harness sees a program's write to EXPAND 1's free top page, BF00h-BFFFh, as well (A12)",
+      "milliseconds": 217.031292,
+      "status": "pass"
+    },
+    {
+      "name": "a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and its file's lines reach the card (B1)",
+      "milliseconds": 661.665083,
+      "status": "pass"
+    },
+    {
+      "name": "a write to EXPAND 1 by ROM code outside the cache, between CDI and CTADR, fails the host's watch (KS38a's review)",
+      "milliseconds": 223.686375,
+      "status": "pass"
+    },
+    {
+      "name": "an entry of one record before the file's last exports that record, not the rest of its block, and tecvol get the same (KE-AR5)",
+      "milliseconds": 180.223667,
+      "status": "pass"
+    },
+    {
+      "name": "an entry covering two logical extents (EXM 1) ends at its own record count, its last block's slack left out (KE-AR5)",
+      "milliseconds": 2.745666,
+      "status": "pass"
+    },
+    {
+      "name": "a sparse file the BDOS made exports zeros where it wrote nothing, not an erased file's bytes (KE-AR5)",
+      "milliseconds": 211.684625,
+      "status": "pass"
+    },
+    {
+      "name": "the resident GLCD draws every screen of the workload as the driver did, byte for byte",
+      "milliseconds": 21452.638792,
+      "status": "pass"
+    },
+    {
+      "name": "on a GLCD board (0006h) is three pages lower than with the driver, and no more",
+      "milliseconds": 1.157,
+      "status": "pass"
+    },
+    {
+      "name": "a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free",
+      "milliseconds": 0.421958,
+      "status": "pass"
+    },
+    {
+      "name": "UNLOAD gives the console back to serial and the pages to the TPA, and output then reaches serial",
+      "milliseconds": 2631.116917,
+      "status": "pass"
+    },
+    {
+      "name": "a second GLCD.SVC is refused whole, and the first keeps the console",
+      "milliseconds": 415.248791,
+      "status": "pass"
+    },
+    {
+      "name": "the GLCD hook takes a table and returns LINEBUF, refuses a second, and with 0 gives the console back",
+      "milliseconds": 243.610708,
+      "status": "pass"
+    },
+    {
+      "name": "a GLCD that stops coming ready is sent nothing: GLCC and GLCDW drop a byte once the busy flag never clears (KE-198)",
+      "milliseconds": 437.938458,
+      "status": "pass"
+    },
+    {
+      "name": "^W recalls the lines typed at the prompt, newest first, and ^N steps forward",
+      "milliseconds": 252.570334,
+      "status": "pass"
+    },
+    {
+      "name": "a recalled line is erased in place and cut at the buffer's maximum",
+      "milliseconds": 335.342958,
+      "status": "pass"
+    },
+    {
+      "name": "over many lines the ring wraps and every recall is a whole line",
+      "milliseconds": 1919.930875,
+      "status": "pass"
+    },
+    {
+      "name": "a line repeated, a line holding a 0 and an empty line are not stored",
+      "milliseconds": 288.223125,
+      "status": "pass"
+    },
+    {
+      "name": "a program's function 10 takes ^W as a character and its line is not stored",
+      "milliseconds": 245.597583,
+      "status": "pass"
+    },
+    {
+      "name": "the ring is kept by warm boot and emptied by cold boot",
+      "milliseconds": 460.586584,
+      "status": "pass"
+    },
+    {
+      "name": "replaced CONOUT, CONIN and CONST see the BDOS's console traffic, and ^C reaches the replaced WBOOT",
+      "milliseconds": 313.627625,
+      "status": "pass"
+    },
+    {
+      "name": "replaced CONOUT and WBOOT stay in the table across a ^C warm boot",
+      "milliseconds": 270.192958,
+      "status": "pass"
+    },
+    {
+      "name": "a BDOS disk error reaches the replaced WBOOT, and its message the replaced CONOUT",
+      "milliseconds": 369.218875,
+      "status": "pass"
+    },
+    {
+      "name": "JP 0000h and BDOS function 0 reach the replaced WBOOT",
+      "milliseconds": 391.00375,
+      "status": "pass"
+    },
+    {
+      "name": "a cold boot puts the ROM's warm-boot entry back in the table",
+      "milliseconds": 391.806291,
+      "status": "pass"
+    },
+    {
+      "name": "failed replacement preserves every byte on full disk",
+      "milliseconds": 23.199291,
+      "status": "pass"
+    },
+    {
+      "name": "failed replacement preserves every byte on full directory",
+      "milliseconds": 118.487666,
+      "status": "pass"
+    },
+    {
+      "name": "replacement reuses all old entries and blocks at both capacity limits",
+      "milliseconds": 116.203583,
+      "status": "pass"
+    },
+    {
+      "name": "recipe seals read-only descriptors across 15 volumes",
+      "milliseconds": 2.867125,
+      "status": "pass"
+    },
+    {
+      "name": "recipe seals read-only descriptors across 16 volumes",
+      "milliseconds": 5.752958,
+      "status": "pass"
+    },
+    {
+      "name": "recipe seals read-only descriptors across 17 volumes",
+      "milliseconds": 4.038042,
+      "status": "pass"
+    },
+    {
+      "name": "verify diagnoses the exact second descriptor despite a numeric label",
+      "milliseconds": 138.653458,
+      "status": "pass"
+    },
+    {
+      "name": "browser stages the whole import before saving or publishing",
+      "milliseconds": 5.006958,
+      "status": "pass"
+    },
+    {
+      "name": "browser import restores running=true after success",
+      "milliseconds": 8.627667,
+      "status": "pass"
+    },
+    {
+      "name": "browser import restores running=true after read",
+      "milliseconds": 1.413416,
+      "status": "pass"
+    },
+    {
+      "name": "browser import restores running=true after save",
+      "milliseconds": 1.606834,
+      "status": "pass"
+    },
+    {
+      "name": "browser import restores running=false after success",
+      "milliseconds": 4.1475,
+      "status": "pass"
+    },
+    {
+      "name": "browser import restores running=false after read",
+      "milliseconds": 1.289834,
+      "status": "pass"
+    },
+    {
+      "name": "browser import restores running=false after save",
+      "milliseconds": 1.485625,
+      "status": "pass"
+    },
+    {
+      "name": "browser import guard excludes competing operations, running=true, failure=false",
+      "milliseconds": 2.4995,
+      "status": "pass"
+    },
+    {
+      "name": "browser import guard excludes competing operations, running=true, failure=true",
+      "milliseconds": 4.639833,
+      "status": "pass"
+    },
+    {
+      "name": "browser import guard excludes competing operations, running=false, failure=false",
+      "milliseconds": 1.79975,
+      "status": "pass"
+    },
+    {
+      "name": "browser import guard excludes competing operations, running=false, failure=true",
+      "milliseconds": 3.772541,
+      "status": "pass"
+    },
+    {
+      "name": "a width chosen while an import's files are read is the width on the card the import publishes (KE-168)",
+      "milliseconds": 4.031916,
+      "status": "pass"
+    },
+    {
+      "name": "every geometry satisfies the firmware limits",
+      "milliseconds": 2.097125,
+      "status": "pass"
+    },
+    {
+      "name": "a new container validates and describes its volumes",
+      "milliseconds": 3.480542,
+      "status": "pass"
+    },
+    {
+      "name": "corrupt, truncated and inconsistent containers are rejected",
+      "milliseconds": 35.872,
+      "status": "pass"
+    },
+    {
+      "name": "files round-trip as binary and text across extent boundaries",
+      "milliseconds": 8.651625,
+      "status": "pass"
+    },
+    {
+      "name": "full disks and full directories are reported, not corrupted",
+      "milliseconds": 135.705291,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol creates, edits and reads a container atomically",
+      "milliseconds": 683.626708,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol --user takes an integer 0 to 15 only, and a refused one leaves the image byte for byte (KE-152)",
+      "milliseconds": 2186.589166,
+      "status": "pass"
+    },
+    {
+      "name": "a read-only file is neither written over nor erased without force, by CpmVolume or tecvol, and nothing changes (KE-AR10)",
+      "milliseconds": 779.19875,
+      "status": "pass"
+    },
+    {
+      "name": "a file whose entry names a block past DSM is not read, by CpmVolume or tecvol get: the error names the entry (KE-AR11)",
+      "milliseconds": 465.265333,
+      "status": "pass"
+    },
+    {
+      "name": "damaged-volume reports and terminal CLI errors finish under normal and guarded Node settings (KE-AR12, KE-202)",
+      "milliseconds": 6718.715584,
+      "status": "pass"
+    },
+    {
+      "name": "a recipe builds a verified card and rejects a wrong digest",
+      "milliseconds": 6.36125,
+      "status": "pass"
+    },
+    {
+      "name": "CpmVolume refuses writes to a read-only volume",
+      "milliseconds": 1.643125,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol makes and reads format 1.1: more than 8 volumes, a drives field, unique labels",
+      "milliseconds": 290.59,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol marks one volume written behind with :wb, and refuses two or one read-only",
+      "milliseconds": 483.487041,
+      "status": "pass"
+    },
+    {
+      "name": "npm run build leaves dist/'s ROM, map and census equal to build/'s when dist/ is there (KE-188)",
+      "milliseconds": 2583.381459,
+      "status": "pass"
+    },
+    {
+      "name": "hardware services: information, bad numbers, digits, LCD, tone",
+      "milliseconds": 179.748458,
+      "status": "pass"
+    },
+    {
+      "name": "hardware services: joystick and matrix keys",
+      "milliseconds": 290.154958,
+      "status": "pass"
+    },
+    {
+      "name": "hardware services: the claim, INFO's claim bit, and text at a position",
+      "milliseconds": 211.88325,
+      "status": "pass"
+    },
+    {
+      "name": "hardware services: the DS1302 clock",
+      "milliseconds": 1511.162208,
+      "status": "pass"
+    },
+    {
+      "name": "a volume or driver hook refusal is TNEBAD with carry, and nothing changes",
+      "milliseconds": 187.931791,
+      "status": "pass"
+    },
+    {
+      "name": "VIDEO, RTC and the driver hook refuse any other B with TNEBAD, and nothing changes (A1)",
+      "milliseconds": 180.061416,
+      "status": "pass"
+    },
+    {
+      "name": "hardware services: a claim stops PUTAT only while the PICO9918 is the console",
+      "milliseconds": 275.678792,
+      "status": "pass"
+    },
+    {
+      "name": "hardware services: stack depths",
+      "milliseconds": 0.972833,
+      "status": "pass"
+    },
+    {
+      "name": "every service keeps IY, and all but MOUNT, UNMOUNT and DESCRIBE keep IX and the alternates too (A4)",
+      "milliseconds": 202.938625,
+      "status": "pass"
+    },
+    {
+      "name": "the image check passes on the same image and finds one byte changed",
+      "milliseconds": 3.068583,
+      "status": "pass"
+    },
+    {
+      "name": "a label renamed: the image is the same, and the label check passes given the rename and fails without it",
+      "milliseconds": 2582.799291,
+      "status": "pass"
+    },
+    {
+      "name": "two files trade places: the image check fails, the label check passes with addresses taken by their labels",
+      "milliseconds": 3034.831416,
+      "status": "pass"
+    },
+    {
+      "name": "with the files traded, the label check finds an operand changed and a jump retargeted",
+      "milliseconds": 6349.302917,
+      "status": "pass"
+    },
+    {
+      "name": "the names search finds old names as whole words in src/, and nothing in history or generated files",
+      "milliseconds": 23.847958,
+      "status": "pass"
+    },
+    {
+      "name": "a byte that is the low or high half of one label's address is taken by its label only in an unchanged LOW( or HIGH( line, and an unrelated byte that happens to equal one is not",
+      "milliseconds": 0.924208,
+      "status": "pass"
+    },
+    {
+      "name": "a relative jump whose displacement changes but whose target is the same label is taken by it, and one to elsewhere is not",
+      "milliseconds": 0.4665,
+      "status": "pass"
+    },
+    {
+      "name": "a JR NZ turned into JR NC is a difference, even where its two bytes read as an address of the same place (KE-169)",
+      "milliseconds": 0.359916,
+      "status": "pass"
+    },
+    {
+      "name": "a marker that shared its address with a label moved away is reported, and left out when named",
+      "milliseconds": 0.267166,
+      "status": "pass"
+    },
+    {
+      "name": "KG41: none of KS38a's old file and label names is left in src/",
+      "milliseconds": 9.93725,
+      "status": "pass"
+    },
+    {
+      "name": "historical KG42 at 626ee41: the ROM falls by the merges' stated bytes, only their routines differ, and the hot paths are equal",
+      "milliseconds": 79788.0665,
+      "status": "pass"
+    },
+    {
+      "name": "on a PICO9918 board with no PICO.SVC the banner, volumes and prompt are on the screen; with no matrix keyboard the console is serial",
+      "milliseconds": 394.913125,
+      "status": "pass"
+    },
+    {
+      "name": "TNFIND finds PICO at version 3, its table PIBLK, and TNLIST returns its record last",
+      "milliseconds": 218.304791,
+      "status": "pass"
+    },
+    {
+      "name": "GLCD.SVC loaded and unloaded leaves REGHEAD at the ROM's record",
+      "milliseconds": 357.778292,
+      "status": "pass"
+    },
+    {
+      "name": "UNLOAD of a GLCD.SVC that gave way to CRT: leaves the PICO9918's screen as it was (KE-190)",
+      "milliseconds": 206.649166,
+      "status": "pass"
+    },
+    {
+      "name": "TNDRVR refuses B = 1, with a table or HL = 0, and the console is unchanged",
+      "milliseconds": 179.535917,
+      "status": "pass"
+    },
+    {
+      "name": "an old card's PICO.SVC line, KS36c's driver, is refused, saying so, with nothing left",
+      "milliseconds": 252.288417,
+      "status": "pass"
+    },
+    {
+      "name": "CON PICO 40 and CON CRT 32 switch the width, kept over warm boot, and 80 after reset",
+      "milliseconds": 427.264167,
+      "status": "pass"
+    },
+    {
+      "name": "a debugger reads TPSHOW, TPDRAW and the version through abi.inc's offsets from the table TNFIND gives",
+      "milliseconds": 384.773875,
+      "status": "pass"
+    },
+    {
+      "name": "a PICO9918 board booting the starter's display files has the no-display figure's TPA: nothing loaded",
+      "milliseconds": 1314.590417,
+      "status": "pass"
+    },
+    {
+      "name": "80 columns: TMSR2's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 165.665208,
+      "status": "pass"
+    },
+    {
+      "name": "80 columns: TMSSET's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 203.880084,
+      "status": "pass"
+    },
+    {
+      "name": "80 columns: GFXREG's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 196.266208,
+      "status": "pass"
+    },
+    {
+      "name": "80 columns: TMSWA's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 189.54925,
+      "status": "pass"
+    },
+    {
+      "name": "80 columns: TMSRA's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 180.51725,
+      "status": "pass"
+    },
+    {
+      "name": "40 columns: TMSR2's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 197.545542,
+      "status": "pass"
+    },
+    {
+      "name": "40 columns: TMSSET's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 210.051708,
+      "status": "pass"
+    },
+    {
+      "name": "40 columns: GFXREG's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 196.569417,
+      "status": "pass"
+    },
+    {
+      "name": "40 columns: TMSWA's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 190.471459,
+      "status": "pass"
+    },
+    {
+      "name": "40 columns: TMSRA's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 233.380208,
+      "status": "pass"
+    },
+    {
+      "name": "32 columns: TMSR2's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 185.751417,
+      "status": "pass"
+    },
+    {
+      "name": "32 columns: TMSSET's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 197.858,
+      "status": "pass"
+    },
+    {
+      "name": "32 columns: GFXREG's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 217.703125,
+      "status": "pass"
+    },
+    {
+      "name": "32 columns: TMSWA's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 192.139833,
+      "status": "pass"
+    },
+    {
+      "name": "32 columns: TMSRA's pairs run with interrupts off, and the state comes back",
+      "milliseconds": 191.0575,
+      "status": "pass"
+    },
+    {
+      "name": "TXBYTE's port writes run with interrupts off, and the state comes back",
+      "milliseconds": 188.762833,
+      "status": "pass"
+    },
+    {
+      "name": "RXBITS's eight samples run with interrupts off, and the state comes back",
+      "milliseconds": 178.260584,
+      "status": "pass"
+    },
+    {
+      "name": "RXBITS samples bit 0 at its middle, with interrupts on and off",
+      "milliseconds": 179.466,
+      "status": "pass"
+    },
+    {
+      "name": "the erratum: CDI, HACC and MVCOPY keep interrupts on when P/V is false",
+      "milliseconds": 183.356042,
+      "status": "pass"
+    },
+    {
+      "name": "the erratum: VPAIR keeps interrupts on when P/V is false, through IFFGET's second read",
+      "milliseconds": 185.714166,
+      "status": "pass"
+    },
+    {
+      "name": "a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume",
+      "milliseconds": 533.738,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT takes a volume by label or index, refuses one in use, A: left empty and a drive without a slot, and unmounts",
+      "milliseconds": 822.756542,
+      "status": "pass"
+    },
+    {
+      "name": "a reset keeps the selected volume",
+      "milliseconds": 726.474084,
+      "status": "pass"
+    },
+    {
+      "name": "cold boot refuses a table out of order, an overlap, a payload past the container and a wrong table sum",
+      "milliseconds": 307.218792,
+      "status": "pass"
+    },
+    {
+      "name": "on a card of more than 15 volumes, the boot lists and the LCD show each drive's own volume",
+      "milliseconds": 413.611416,
+      "status": "pass"
+    },
+    {
+      "name": "unmounting the current drive leaves the prompt on A:, and the next command runs",
+      "milliseconds": 699.063,
+      "status": "pass"
+    },
+    {
+      "name": "a warm boot with 0004h on a drive past D: or one with no volume comes back on A:, in the same user",
+      "milliseconds": 451.447083,
+      "status": "pass"
+    },
+    {
+      "name": "a mount onto the default drive gives functions 31 and 27 the new volume's DPB and allocation vector at once, with no function 14 (KE-AR9)",
+      "milliseconds": 617.023291,
+      "status": "pass"
+    },
+    {
+      "name": "a test failing on the unmutated tree catches nothing, is named as not credited, and alone is an error (KE-162)",
+      "milliseconds": 1605.760292,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM leaves 0041h-004Fh alone on serial and the matrix keyboard: cold boot, commands, a scroll, escapes, CON, the keyboard and a warm boot",
+      "milliseconds": 624.051084,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM leaves 0041h-004Fh alone on the PICO9918 and the GLCD: cold boot, commands, a scroll, escapes, CON, the keyboard and a warm boot",
+      "milliseconds": 807.751625,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM's console at 80 columns, and it scrolls",
+      "milliseconds": 516.142208,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM's console at 40 columns, and it scrolls",
+      "milliseconds": 593.959708,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM's console at 32 columns, and it scrolls",
+      "milliseconds": 687.482166,
+      "status": "pass"
+    },
+    {
+      "name": "a board with both displays keeps the PICO9918; GLCD.SVC's line stays out quietly (KE-150, KE-200), and CON UC1 loads it",
+      "milliseconds": 560.78275,
+      "status": "pass"
+    },
+    {
+      "name": "on a board with both displays the starter's startup leaves the CCP stack's room, so a service using it loads after (KE-200)",
+      "milliseconds": 1386.724334,
+      "status": "pass"
+    },
+    {
+      "name": "a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the field to CRT:, and then names GLCD.SVC takes the GLCD: the fallback puts the field back to TTY: before the line runs (KE-200)",
+      "milliseconds": 354.04475,
+      "status": "pass"
+    },
+    {
+      "name": "a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200)",
+      "milliseconds": 282.597417,
+      "status": "pass"
+    },
+    {
+      "name": "the GLCD's UNLOAD clears its INFO bit",
+      "milliseconds": 340.80025,
+      "status": "pass"
+    },
+    {
+      "name": "CON UC1, CON TTY, UNLOAD stays on serial: only UC1: moves to CRT:",
+      "milliseconds": 397.447833,
+      "status": "pass"
+    },
+    {
+      "name": "a service loading with GLCD.SVC in installs, and says nothing",
+      "milliseconds": 429.251584,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM's console at every width: CON PICO 40, CON CRT 32 and CON PICO 80 switch it, each screen cleared and working at its width (KD-174)",
+      "milliseconds": 2106.419125,
+      "status": "pass"
+    },
+    {
+      "name": "a width is refused, nothing changed, while the PICO9918 is claimed, and for a record at version 2",
+      "milliseconds": 217.1955,
+      "status": "pass"
+    },
+    {
+      "name": "the console at 32 columns writes the colours and an empty sprite table",
+      "milliseconds": 246.86075,
+      "status": "pass"
+    },
+    {
+      "name": "TPA after boot: the ROM's console alone, the GLCD's driver, and both",
+      "milliseconds": 774.823416,
+      "status": "pass"
+    },
+    {
+      "name": "at 80 columns the screens equal the ROM console's, step by step",
+      "milliseconds": 256.859209,
+      "status": "pass"
+    },
+    {
+      "name": "at 40 columns the screens equal the ROM console's, step by step",
+      "milliseconds": 282.150084,
+      "status": "pass"
+    },
+    {
+      "name": "at 32 columns the screens equal the ROM console's, step by step",
+      "milliseconds": 272.667459,
+      "status": "pass"
+    },
+    {
+      "name": "a scroll, then ESC[2@ keeps the row it opens",
+      "milliseconds": 269.443167,
+      "status": "pass"
+    },
+    {
+      "name": "the starter card boots the ROM's console alone on a board with both, and the GLCD on a board with one",
+      "milliseconds": 1618.659291,
+      "status": "pass"
+    },
+    {
+      "name": "a dead card shows CARD? on the LCD, for a board with no terminal",
+      "milliseconds": 33.190458,
+      "status": "pass"
+    },
+    {
+      "name": "a good retry clears CARD?, and a failed one shows it again",
+      "milliseconds": 289.369875,
+      "status": "pass"
+    },
+    {
+      "name": "a PICO9918 board with no STARTUP.CMD has the ROM's console, and the LCD says nothing",
+      "milliseconds": 234.265959,
+      "status": "pass"
+    },
+    {
+      "name": "a PICO9918 board with a file with no display line has the ROM's console, and the LCD says nothing",
+      "milliseconds": 242.937417,
+      "status": "pass"
+    },
+    {
+      "name": "a PICO9918 board with a missing PICO.SVC has the ROM's console, and the LCD says nothing",
+      "milliseconds": 245.232542,
+      "status": "pass"
+    },
+    {
+      "name": "a PICO9918 board with a bad PICO.SVC has the ROM's console, and the LCD says nothing",
+      "milliseconds": 259.228333,
+      "status": "pass"
+    },
+    {
+      "name": "a PICO9918 board with a skip past the file has the ROM's console, and the LCD says nothing",
+      "milliseconds": 235.870375,
+      "status": "pass"
+    },
+    {
+      "name": "GLCLD returns carry through LCDROW when GLCD.SVC won't load",
+      "milliseconds": 235.664291,
+      "status": "pass"
+    },
+    {
+      "name": "a line left without an end, and a record full to its last byte, run to a prompt on the ROM's console, the LCD saying nothing",
+      "milliseconds": 523.065959,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM's console or GLCD.SVC, then CON TTY in the file: the LCD stays silent",
+      "milliseconds": 544.275708,
+      "status": "pass"
+    },
+    {
+      "name": "the LCD stays silent with no PICO9918, and with no matrix keyboard",
+      "milliseconds": 504.176625,
+      "status": "pass"
+    },
+    {
+      "name": "the GLCD's UNLOAD with CRT: as the console leaves it there",
+      "milliseconds": 430.972333,
+      "status": "pass"
+    },
+    {
+      "name": "UNLOAD leaves the ROM's console, on CRT: and from serial, and a warm boot and CON CRT find it",
+      "milliseconds": 319.020458,
+      "status": "pass"
+    },
+    {
+      "name": "no matrix keyboard: reset to a prompt on serial with no file, a bad file and no vector call",
+      "milliseconds": 638.06975,
+      "status": "pass"
+    },
+    {
+      "name": "on UC1: with no PICO driver, boot and a warm boot make no vector call",
+      "milliseconds": 364.558125,
+      "status": "pass"
+    },
+    {
+      "name": "after CON TTY, GLCD.SVC typed takes the console from the ROM's, and CON CRT takes it back (KE-150)",
+      "milliseconds": 427.356959,
+      "status": "pass"
+    },
+    {
+      "name": "a claimed VDP takes no row-move call: the console's code isn't entered while a program owns it",
+      "milliseconds": 239.938708,
+      "status": "pass"
+    },
+    {
+      "name": "the take runs only for a service with its table in its own page",
+      "milliseconds": 405.990417,
+      "status": "pass"
+    },
+    {
+      "name": "a claim with the ROM's console on CRT:: nothing drawn, and release restores it",
+      "milliseconds": 246.693458,
+      "status": "pass"
+    },
+    {
+      "name": "a claim with the ROM's console in, on UC1:: release restores the VDP, and the GLCD stays the console",
+      "milliseconds": 371.279584,
+      "status": "pass"
+    },
+    {
+      "name": "a claim with no console on the PICO9918, with no matrix keyboard: refused by nothing, and nothing is restored",
+      "milliseconds": 238.558542,
+      "status": "pass"
+    },
+    {
+      "name": "a program reading VRAM on the ROM's console sees the names and patterns it saw",
+      "milliseconds": 230.200375,
+      "status": "pass"
+    },
+    {
+      "name": "at 80 columns: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+      "milliseconds": 259.7055,
+      "status": "pass"
+    },
+    {
+      "name": "at 80 columns: the whole pattern table after the take, CONSWV, a release and a warm boot",
+      "milliseconds": 293.41725,
+      "status": "pass"
+    },
+    {
+      "name": "at 40 columns: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+      "milliseconds": 283.145625,
+      "status": "pass"
+    },
+    {
+      "name": "at 40 columns: the whole pattern table after the take, CONSWV, a release and a warm boot",
+      "milliseconds": 302.752958,
+      "status": "pass"
+    },
+    {
+      "name": "at 32 columns: each graphics entry against VRAM under a claim, then release and warm boot give the text back",
+      "milliseconds": 276.429541,
+      "status": "pass"
+    },
+    {
+      "name": "at 32 columns: the whole pattern table after the take, CONSWV, a release and a warm boot",
+      "milliseconds": 298.581167,
+      "status": "pass"
+    },
+    {
+      "name": "INIT failing leaves no record and the old ceiling",
+      "milliseconds": 515.942083,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: a take leaves a program's row alone, with nothing up",
+      "milliseconds": 377.403125,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: a program's write over GLCD? survives the take that follows",
+      "milliseconds": 283.802667,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: the word is cleared by a take, and the flag doesn't stay for the next",
+      "milliseconds": 399.723167,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: GLCD? stays while the ROM's console keeps the console; the GLCD's driver typed loads, gives way and clears it (KE-150)",
+      "milliseconds": 286.601459,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: a program's write to rows 0 to 2 leaves the word for a take to clear",
+      "milliseconds": 276.978583,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: a failed load by hand leaves the word",
+      "milliseconds": 254.353833,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: a service with no video table leaves the word",
+      "milliseconds": 367.208667,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: the word lasts through a program's warm boot, for a take to clear",
+      "milliseconds": 287.0495,
+      "status": "pass"
+    },
+    {
+      "name": "row 3: GLCD? shows on the ROM's console after a failed CON UC1 in the file",
+      "milliseconds": 239.249375,
+      "status": "pass"
+    },
+    {
+      "name": "INFO's HWBWRD follows the word: up, overwritten and cleared",
+      "milliseconds": 271.502666,
+      "status": "pass"
+    },
+    {
+      "name": "the probe needs both patterns: a VDP that answers one way is not present",
+      "milliseconds": 225.211875,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a stored card with an old GLCD.SVC says so and offers a new starter",
+      "milliseconds": 6.465625,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: power-on writes the width's CON PICO line and no driver, says what a card lacks, and a card with no drive A doesn't stop it",
+      "milliseconds": 8.68775,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a card whose STARTUP.CMD is read-only keeps it, and the page says why it boots as it is (KE-AR10)",
+      "milliseconds": 11.951416,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a user's CON CRT width line goes with the page's own, so the selector's width stands",
+      "milliseconds": 4.227625,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a chained startup line loses its display pieces and keeps the rest",
+      "milliseconds": 3.955917,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a removed piece's colon passes to the piece after it, and one that hung on a display piece goes",
+      "milliseconds": 19.222792,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a next line's first colon goes with the display piece it hung on, and no colon crosses a line",
+      "milliseconds": 8.654125,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: VOLS on the line after an old PICO.SVC line runs, with no display line left",
+      "milliseconds": 352.110542,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: the piece after a display piece loses its colon and runs",
+      "milliseconds": 347.299417,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a card with .DRV files is refused in its own words and left alone",
+      "milliseconds": 2.07075,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: an old card's words name the display asked for, or else what it has",
+      "milliseconds": 2.611875,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a card whose files were renamed by hand has its .DRV display lines taken out",
+      "milliseconds": 1.804,
+      "status": "pass"
+    },
+    {
+      "name": "a failed CON UC1 leaves the console as it was, and a later one takes the GLCD",
+      "milliseconds": 401.563125,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: the page's card boots on the board with both displays with no line refused (KE-150)",
+      "milliseconds": 1263.101209,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a GLCD.SVC in user 3 isn't A:'s (KE-154)",
+      "milliseconds": 0.73725,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a read-only A: is left byte for byte, and the card boots as it is (KE-154)",
+      "milliseconds": 305.1925,
+      "status": "pass"
+    },
+    {
+      "name": "the web host: a full directory leaves the card as it was, and it boots (KE-154)",
+      "milliseconds": 525.688,
+      "status": "pass"
+    },
+    {
+      "name": "latch bit 3 switches only MAIN and bit 2 only EXPAND, as the 96K board does",
+      "milliseconds": 17.526833,
+      "status": "pass"
+    },
+    {
+      "name": "without MAIN 1, bit 3 changes nothing",
+      "milliseconds": 9.885416,
+      "status": "pass"
+    },
+    {
+      "name": "a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary",
+      "milliseconds": 431.690167,
+      "status": "pass"
+    },
+    {
+      "name": "all four drives are kept: a remapped D:",
+      "milliseconds": 366.848084,
+      "status": "pass"
+    },
+    {
+      "name": "a selected volume of another geometry than the drive's default gets its own DPH",
+      "milliseconds": 755.8975,
+      "status": "pass"
+    },
+    {
+      "name": "a drive other than A: selected with another geometry than its default's gets its own DPH",
+      "milliseconds": 856.65375,
+      "status": "pass"
+    },
+    {
+      "name": "a warm boot keeps the selection",
+      "milliseconds": 333.771666,
+      "status": "pass"
+    },
+    {
+      "name": "a drive unmounted before a reset stays so, and can be mounted after it",
+      "milliseconds": 531.60275,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses (0000h)",
+      "milliseconds": 502.091667,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses (0001h) low",
+      "milliseconds": 498.928917,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses (0002h) high",
+      "milliseconds": 548.539625,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses (0005h)",
+      "milliseconds": 504.987542,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses the stub's JP",
+      "milliseconds": 498.436083,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses the stub's target, low",
+      "milliseconds": 498.729542,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses the stub's target, high",
+      "milliseconds": 502.870458,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses W's low byte",
+      "milliseconds": 507.077375,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses W below 8000h",
+      "milliseconds": 498.286916,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses W at 7F01h",
+      "milliseconds": 500.514917,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses W = S below 8000h",
+      "milliseconds": 514.623666,
+      "status": "pass"
+    },
+    {
+      "name": "recognition refuses W above S",
+      "milliseconds": 536.02775,
+      "status": "pass"
+    },
+    {
+      "name": "W at exactly 8000h and at S's page is recognised",
+      "milliseconds": 676.203875,
+      "status": "pass"
+    },
+    {
+      "name": "a real service loaded is recognised, and is gone after the reset",
+      "milliseconds": 705.7745,
+      "status": "pass"
+    },
+    {
+      "name": "a hung INIT is recognised, W below PZTOP, and the reset recovers from it",
+      "milliseconds": 866.563917,
+      "status": "pass"
+    },
+    {
+      "name": "a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset at DIAG doesn't",
+      "milliseconds": 1082.061417,
+      "status": "pass"
+    },
+    {
+      "name": "DIAG's retry uses the selection after another key and after a second failure; H dumps nothing now (KS36b)",
+      "milliseconds": 1074.15175,
+      "status": "pass"
+    },
+    {
+      "name": "a card with no default A: under a valid retained A: reaches DIAG, and a retry uses the selection",
+      "milliseconds": 531.991167,
+      "status": "pass"
+    },
+    {
+      "name": "an index moved by new volumes at lower starts is kept, and regenerated",
+      "milliseconds": 498.946167,
+      "status": "pass"
+    },
+    {
+      "name": "a retained volume moved on the card gives the defaults whole",
+      "milliseconds": 517.594709,
+      "status": "pass"
+    },
+    {
+      "name": "a retained volume changed flags on the card gives the defaults whole",
+      "milliseconds": 508.6125,
+      "status": "pass"
+    },
+    {
+      "name": "a retained volume removed on the card gives the defaults whole",
+      "milliseconds": 509.192333,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive resized gives the defaults whole",
+      "milliseconds": 657.6265,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive of another start gives the defaults whole",
+      "milliseconds": 654.254959,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive of changed geometry gives the defaults whole",
+      "milliseconds": 656.919333,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive of changed flags gives the defaults whole",
+      "milliseconds": 655.352167,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive duplicated in RSLBUF gives the defaults whole",
+      "milliseconds": 648.248833,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive absent from A: gives the defaults whole",
+      "milliseconds": 648.632458,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive on a drive with no slot gives the defaults whole",
+      "milliseconds": 652.01225,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive of geometry 0 is not retained, whatever its other bytes, and no volume is on two drives",
+      "milliseconds": 514.312916,
+      "status": "pass"
+    },
+    {
+      "name": "a retained drive left with no slot on a card of identical extents gives the defaults whole",
+      "milliseconds": 506.205833,
+      "status": "pass"
+    },
+    {
+      "name": "a G8M volume kept on a drive whose slot is G1M's gives the defaults, and one that fits doesn't",
+      "milliseconds": 711.25175,
+      "status": "pass"
+    },
+    {
+      "name": "a failed read in step 1 leaves the defaults whole",
+      "milliseconds": 608.410417,
+      "status": "pass"
+    },
+    {
+      "name": "a card of 1.1 with drives keeps its selection, and each index past the first block",
+      "milliseconds": 645.410875,
+      "status": "pass"
+    },
+    {
+      "name": "a written-behind volume keeps its flag through a reset",
+      "milliseconds": 514.52375,
+      "status": "pass"
+    },
+    {
+      "name": "from user 5, a drive and a video console, a reset reaches A:, user 0, on the ROM's console (KS39)",
+      "milliseconds": 515.122834,
+      "status": "pass"
+    },
+    {
+      "name": "a default drive beyond MNTDRV is refused with MEMOUNT",
+      "milliseconds": 48.036791,
+      "status": "pass"
+    },
+    {
+      "name": "a default drive within MNTDRV boots",
+      "milliseconds": 186.949625,
+      "status": "pass"
+    },
+    {
+      "name": "startup runs once per reset from the selected A:, at user 0",
+      "milliseconds": 670.31975,
+      "status": "pass"
+    },
+    {
+      "name": "startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit",
+      "milliseconds": 626.136417,
+      "status": "pass"
+    },
+    {
+      "name": "startup is marked before it opens",
+      "milliseconds": 563.11425,
+      "status": "pass"
+    },
+    {
+      "name": "a selected A: with no STARTUP.CMD reaches a serial prompt",
+      "milliseconds": 558.284834,
+      "status": "pass"
+    },
+    {
+      "name": "an unreadable STARTUP.CMD on the selected A: leaves a prompt",
+      "milliseconds": 1134.574792,
+      "status": "pass"
+    },
+    {
+      "name": "a held key skips startup on the selected A:",
+      "milliseconds": 527.063167,
+      "status": "pass"
+    },
+    {
+      "name": "a dirty line is not written to a card of identical extents after a reset",
+      "milliseconds": 800.098375,
+      "status": "pass"
+    },
+    {
+      "name": "RAM from 4b6877b, a resident in, is unrecognised and nothing old runs",
+      "milliseconds": 629.578917,
+      "status": "pass"
+    },
+    {
+      "name": "RAM from dbdce5c, a resident in, is unrecognised and nothing old runs",
+      "milliseconds": 623.889833,
+      "status": "pass"
+    },
+    {
+      "name": "random RAM, 200 seeded runs: unrecognised, and each stops at the decision with nothing written",
+      "milliseconds": 657.002833,
+      "status": "pass"
+    },
+    {
+      "name": "random RAM all the way to a prompt, 4 seeded runs, gives the defaults",
+      "milliseconds": 1443.177125,
+      "status": "pass"
+    },
+    {
+      "name": "a recognised image with a random DRVTAB, 24 seeded runs, boots with the defaults",
+      "milliseconds": 4409.677291,
+      "status": "pass"
+    },
+    {
+      "name": "BIOS function 0 with MAIN 1 selected on the 96K option is recognised",
+      "milliseconds": 700.144583,
+      "status": "pass"
+    },
+    {
+      "name": "BIOS function 0 with EXPAND 1 selected on the 96K option is recognised",
+      "milliseconds": 689.443583,
+      "status": "pass"
+    },
+    {
+      "name": "BIOS function 0 with both selected on the 96K option is recognised",
+      "milliseconds": 684.053084,
+      "status": "pass"
+    },
+    {
+      "name": "recognised: only the ROM runs from COLD to MEMINIT, and nothing is written outside the boot stack before the decision",
+      "milliseconds": 687.480458,
+      "status": "pass"
+    },
+    {
+      "name": "unrecognised: only the ROM runs from COLD to MEMINIT, and nothing is written outside the boot stack before the decision",
+      "milliseconds": 718.70575,
+      "status": "pass"
+    },
+    {
+      "name": "abi.inc is ABI 5: INFO is service 0 and the table one jump at C008h",
+      "milliseconds": 0.131125,
+      "status": "pass"
+    },
+    {
+      "name": "a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it",
+      "milliseconds": 2408.5415,
+      "status": "pass"
+    },
+    {
+      "name": "residents are removed last in, first out, each REMOVE undoing its INIT",
+      "milliseconds": 417.378833,
+      "status": "pass"
+    },
+    {
+      "name": "a cold boot clears every resident",
+      "milliseconds": 549.199583,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS function 108 gets and sets the program return code, kept across a warm boot",
+      "milliseconds": 248.061875,
+      "status": "pass"
+    },
+    {
+      "name": "SAMPLE.ASM's table names are abi.inc's, at abi.inc's values, and it fits the style's limits",
+      "milliseconds": 2.029458,
+      "status": "pass"
+    },
+    {
+      "name": "TAS builds SAMPLE on TEC-OS, and SAMPLE runs on the PICO9918 board and returns to the prompt",
+      "milliseconds": 527.114583,
+      "status": "pass"
+    },
+    {
+      "name": "a standard card's volume past block 7FFFFFh is refused at mount, error 27, and the card is left as it was (KE-151, KE-158)",
+      "milliseconds": 564.753167,
+      "status": "pass"
+    },
+    {
+      "name": "on a standard card, LBAARG names block 7FFFFFh and refuses 800000h: the bound is exact",
+      "milliseconds": 174.645208,
+      "status": "pass"
+    },
+    {
+      "name": "past the card's image, a read and a write fail and change nothing; a high block doesn't wrap to a low one (KE-155)",
+      "milliseconds": 183.314625,
+      "status": "pass"
+    },
+    {
+      "name": "a data error token after CMD17 fails the read at once, with SDEDTOK (0Ah), not after 65,536 polls as SDETOK (KE-182)",
+      "milliseconds": 180.2125,
+      "status": "pass"
+    },
+    {
+      "name": "SDINIT refuses a card whose CMD8 echo is wrong, in its check pattern or its voltage, with SDEVOLT (KE-183)",
+      "milliseconds": 428.759292,
+      "status": "pass"
+    },
+    {
+      "name": "SDINIT refuses a card whose CMD55 R1 has an error bit, with SDEINIT at once (KE-183)",
+      "milliseconds": 132.552167,
+      "status": "pass"
+    },
+    {
+      "name": "on B:, a .COM only on A: runs, and B:'s own copy comes first",
+      "milliseconds": 457.375792,
+      "status": "pass"
+    },
+    {
+      "name": "a drive named in the command looks there only, and A: looks nowhere else",
+      "milliseconds": 469.677875,
+      "status": "pass"
+    },
+    {
+      "name": "0050h is the drive a program came from: a typed B:NAME, a plain name, the search and a chained B:NAME (KD-178)",
+      "milliseconds": 608.905875,
+      "status": "pass"
+    },
+    {
+      "name": "under user 3, the search looks in A:'s user 3, then A:'s user 0, and puts the user back (A7)",
+      "milliseconds": 622.075042,
+      "status": "pass"
+    },
+    {
+      "name": "the current or named drive looks in user 0 after the current user too: A: under user 3, B:NAME, and B:'s user 0 before A: (A7)",
+      "milliseconds": 664.789208,
+      "status": "pass"
+    },
+    {
+      "name": "each stack keeps a quarter of its reservation free, and every STKGUARD byte survives the deepest built-in and error paths",
+      "milliseconds": 92265.461375,
+      "status": "pass"
+    },
+    {
+      "name": "RES.SVC declares the word MYCO pushes on the BDOS's stack",
+      "milliseconds": 77.263833,
+      "status": "pass"
+    },
+    {
+      "name": "the starter card holds exactly six files, each by its hash, the PICO9918's console being the ROM's (KS39)",
+      "milliseconds": 671.520375,
+      "status": "pass"
+    },
+    {
+      "name": "the starter card boots, and MOUNT lists its volumes",
+      "milliseconds": 251.749167,
+      "status": "pass"
+    },
+    {
+      "name": "the web page's card is the starter with DEMO.COM, which the starter lacks (KD-170)",
+      "milliseconds": 9.997208,
+      "status": "pass"
+    },
+    {
+      "name": "the web build starts clean: a file left in web/dist from an older build doesn't reach the page",
+      "milliseconds": 268.612334,
+      "status": "pass"
+    },
+    {
+      "name": "each line runs, echoed, and a failing one prints its message; a warm boot doesn't run the file",
+      "milliseconds": 212.843625,
+      "status": "pass"
+    },
+    {
+      "name": "a file with no lines, and no file, reach the prompt; a file over one record ends at it",
+      "milliseconds": 817.974166,
+      "status": "pass"
+    },
+    {
+      "name": "a key held through reset skips the file: a hanging INIT reaches a prompt, and with no key it hangs",
+      "milliseconds": 1996.614125,
+      "status": "pass"
+    },
+    {
+      "name": "a machine with no GLCD refuses GLCD.SVC from the file, quietly, the device absent (KD-173), and the prompt follows",
+      "milliseconds": 266.035916,
+      "status": "pass"
+    },
+    {
+      "name": "a machine with no matrix keyboard refuses GLCD.SVC from the file, saying so, and the prompt follows",
+      "milliseconds": 258.787459,
+      "status": "pass"
+    },
+    {
+      "name": "a quiet line for an absent device is followed by a : line that runs, and the same line typed says NAME? (KD-173)",
+      "milliseconds": 349.398208,
+      "status": "pass"
+    },
+    {
+      "name": "on a serial board, with no PICO9918 console, a width from the file is quiet and its : line runs; typed, it says the width? (KE-191)",
+      "milliseconds": 295.332625,
+      "status": "pass"
+    },
+    {
+      "name": "a line from the file whose service fails for another cause, or has no file, still says so, and its : line goes",
+      "milliseconds": 1823.639833,
+      "status": "pass"
+    },
+    {
+      "name": "a line from the file whose INIT succeeds with A = TNENODV and whose record is refused says so, and its : line goes (KE-192)",
+      "milliseconds": 559.127167,
+      "status": "pass"
+    },
+    {
+      "name": "a file of exactly 128 bytes runs its last byte, and reads no further",
+      "milliseconds": 248.032875,
+      "status": "pass"
+    },
+    {
+      "name": "^Z and a zero each end the file",
+      "milliseconds": 479.063792,
+      "status": "pass"
+    },
+    {
+      "name": "the DMA address is the default's after the read, with a file and without",
+      "milliseconds": 437.248792,
+      "status": "pass"
+    },
+    {
+      "name": "a read that returns an error starts nothing, whatever the record holds",
+      "milliseconds": 384.916833,
+      "status": "pass"
+    },
+    {
+      "name": "NAME.SVX is no service: the type must be SVC in full",
+      "milliseconds": 303.297167,
+      "status": "pass"
+    },
+    {
+      "name": "a reset clears the position, so the file runs again",
+      "milliseconds": 531.149,
+      "status": "pass"
+    },
+    {
+      "name": "lines from the file equal the same lines typed: a built-in then a line",
+      "milliseconds": 697.60575,
+      "status": "pass"
+    },
+    {
+      "name": "lines from the file equal the same lines typed: a program's warm boot then a line",
+      "milliseconds": 684.305708,
+      "status": "pass"
+    },
+    {
+      "name": "lines from the file equal the same lines typed: a failing line then a line",
+      "milliseconds": 776.853708,
+      "status": "pass"
+    },
+    {
+      "name": "lines from the file equal the same lines typed: USER 3 then a line",
+      "milliseconds": 891.265458,
+      "status": "pass"
+    },
+    {
+      "name": "an unreadable file reaches a prompt, and what it held doesn't run",
+      "milliseconds": 1152.149875,
+      "status": "pass"
+    },
+    {
+      "name": "a file that cold boots the machine runs for ever, and the skip breaks it",
+      "milliseconds": 1624.895,
+      "status": "pass"
+    },
+    {
+      "name": "a startup file whose program jumps to C000h warm boots once, as a program's run into the ROM does (B1), and the prompt comes back",
+      "milliseconds": 721.857708,
+      "status": "pass"
+    },
+    {
+      "name": "describe invalidates the deblocking key before metadata reuse",
+      "milliseconds": 317.89075,
+      "status": "pass"
+    },
+    {
+      "name": "rejected mount invalidates the deblocking key before metadata reuse",
+      "milliseconds": 447.66225,
+      "status": "pass"
+    },
+    {
+      "name": "failed descriptor read invalidates the deblocking key before metadata reuse",
+      "milliseconds": 253.623875,
+      "status": "pass"
+    },
+    {
+      "name": "mount restores the requested drive and descriptor after a clean flush",
+      "milliseconds": 350.2545,
+      "status": "pass"
+    },
+    {
+      "name": "mount restores the requested drive and descriptor after a dirty flush",
+      "milliseconds": 255.232625,
+      "status": "pass"
+    },
+    {
+      "name": "failed flush aborts mount without publishing mapping or descriptor changes",
+      "milliseconds": 303.367167,
+      "status": "pass"
+    },
+    {
+      "name": "failed flush aborts unmount without publishing mapping or descriptor changes",
+      "milliseconds": 330.229417,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 33 rejects record 10000 with code 6 and retains the complete FCB",
+      "milliseconds": 254.657042,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 33 rejects record 3ffff with code 6 and retains the complete FCB",
+      "milliseconds": 325.6595,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 33 rejects record 40000 with code 6 and retains the complete FCB",
+      "milliseconds": 283.200333,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 33 rejects record ffffff with code 6 and retains the complete FCB",
+      "milliseconds": 360.907417,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 34 rejects record 10000 with code 6 and retains the complete FCB",
+      "milliseconds": 235.838709,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 34 rejects record 3ffff with code 6 and retains the complete FCB",
+      "milliseconds": 236.78325,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 34 rejects record 40000 with code 6 and retains the complete FCB",
+      "milliseconds": 279.4625,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 34 rejects record ffffff with code 6 and retains the complete FCB",
+      "milliseconds": 310.640625,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 40 rejects record 10000 with code 6 and retains the complete FCB",
+      "milliseconds": 236.907625,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 40 rejects record 3ffff with code 6 and retains the complete FCB",
+      "milliseconds": 258.292708,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 40 rejects record 40000 with code 6 and retains the complete FCB",
+      "milliseconds": 239.899667,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 40 rejects record ffffff with code 6 and retains the complete FCB",
+      "milliseconds": 227.763083,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 34 accepts random record 65535 with exact extent and current record",
+      "milliseconds": 552.232625,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS 40 accepts random record 65535 with exact extent and current record",
+      "milliseconds": 574.758959,
+      "status": "pass"
+    },
+    {
+      "name": "MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean and with every line dirty, walk the cache with interrupts off, and MOUNT and UNMOUNT write the lines (A3); with every line dirty DESCRIBE returns the card's descriptor and MOUNT installs C: as from a clean cache (KE-AR3)",
+      "milliseconds": 3701.025458,
+      "status": "pass"
+    },
+    {
+      "name": "a source that keeps every rule has no fault, and its figures are counted",
+      "milliseconds": 4.015584,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the tabs rule has tabs faults and no other",
+      "milliseconds": 0.339042,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the column rule has column faults and no other",
+      "milliseconds": 0.167,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the end rule has end faults and no other",
+      "milliseconds": 0.177875,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the header rule has header faults and no other",
+      "milliseconds": 0.908667,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the density rule has density faults and no other",
+      "milliseconds": 0.163333,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the run rule has run faults and no other",
+      "milliseconds": 0.177708,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the size rule has size faults and no other",
+      "milliseconds": 1.729458,
+      "status": "pass"
+    },
+    {
+      "name": "a source breaking only the name rule has name faults and no other",
+      "milliseconds": 0.16825,
+      "status": "pass"
+    },
+    {
+      "name": "a name with a hyphen, or a type that isn't three letters, is no 8.3 name",
+      "milliseconds": 0.417,
+      "status": "pass"
+    },
+    {
+      "name": "SET with a bit and a register is an instruction, the directive is not",
+      "milliseconds": 0.254041,
+      "status": "pass"
+    },
+    {
+      "name": "a % directive may stand at the margin, where the SVC builder reads it, or at 9",
+      "milliseconds": 0.308583,
+      "status": "pass"
+    },
+    {
+      "name": "the limits are the style's",
+      "milliseconds": 0.1705,
+      "status": "pass"
+    },
+    {
+      "name": "toTabs lays a spaced source out by tabs, a long label on its own line and every token kept",
+      "milliseconds": 0.370375,
+      "status": "pass"
+    },
+    {
+      "name": "80 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+      "milliseconds": 949.572834,
+      "status": "pass"
+    },
+    {
+      "name": "40 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+      "milliseconds": 372.024959,
+      "status": "pass"
+    },
+    {
+      "name": "32 columns: a service installs, is found and enumerated, is called and unloads, leaving everything as it was",
+      "milliseconds": 262.781167,
+      "status": "pass"
+    },
+    {
+      "name": "a load refused by the window reports refused",
+      "milliseconds": 527.054542,
+      "status": "pass"
+    },
+    {
+      "name": "every image byte is its file's, and only the fixups gain the page, across gaps of 255 and more",
+      "milliseconds": 563.4745,
+      "status": "pass"
+    },
+    {
+      "name": "every dependency is checked, and with all present the relocation data still follows them",
+      "milliseconds": 687.449583,
+      "status": "pass"
+    },
+    {
+      "name": "the older registry follows a service's last record, so every record stays found",
+      "milliseconds": 713.638708,
+      "status": "pass"
+    },
+    {
+      "name": "a record whose end leaves the service's pages is refused",
+      "milliseconds": 436.597208,
+      "status": "pass"
+    },
+    {
+      "name": "enumerate returns the record itself and the generation",
+      "milliseconds": 222.919792,
+      "status": "pass"
+    },
+    {
+      "name": "a file ending exactly at LOADTOP is whole",
+      "milliseconds": 200.762958,
+      "status": "pass"
+    },
+    {
+      "name": "the scan reaches the table's entry 0",
+      "milliseconds": 563.461083,
+      "status": "pass"
+    },
+    {
+      "name": "the scan reaches the table's entry 16",
+      "milliseconds": 688.186167,
+      "status": "pass"
+    },
+    {
+      "name": "a chain of 255 records is taken and 256 is refused",
+      "milliseconds": 1217.422709,
+      "status": "pass"
+    },
+    {
+      "name": "the registry at 256 records: PICO is the last and TNFIND finds it (KE-AR4)",
+      "milliseconds": 806.730083,
+      "status": "pass"
+    },
+    {
+      "name": "a service whose records would take the registry past 256 is refused, and the registry works after (KE-AR4)",
+      "milliseconds": 629.429291,
+      "status": "pass"
+    },
+    {
+      "name": "registry edge existing 255 plus 1 (KE-AR13)",
+      "milliseconds": 843.761833,
+      "status": "pass"
+    },
+    {
+      "name": "registry edge existing 256 plus 0 (KE-AR13)",
+      "milliseconds": 623.4245,
+      "status": "pass"
+    },
+    {
+      "name": "registry edge existing 256 plus 1 (KE-AR13)",
+      "milliseconds": 224.691166,
+      "status": "pass"
+    },
+    {
+      "name": "cyclic registry rollback, REMOVE refusal 0 (KE-AR13)",
+      "milliseconds": 650.034125,
+      "status": "pass"
+    },
+    {
+      "name": "cyclic registry rollback, REMOVE refusal 1 (KE-AR13)",
+      "milliseconds": 489.757083,
+      "status": "pass"
+    },
+    {
+      "name": "a shell load refuses a cyclic registry and the next command runs (KE-AR13)",
+      "milliseconds": 193.136958,
+      "status": "pass"
+    },
+    {
+      "name": "INIT returning 0 installs a service with no records",
+      "milliseconds": 479.981333,
+      "status": "pass"
+    },
+    {
+      "name": "REMOVE calling the removal by its ROM address is refused, and UNLOAD goes on",
+      "milliseconds": 661.667292,
+      "status": "pass"
+    },
+    {
+      "name": "NAME.SVC installs, from a drive too; a file that won't read and a refused load go to BADCMD",
+      "milliseconds": 627.531833,
+      "status": "pass"
+    },
+    {
+      "name": "an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing loaded",
+      "milliseconds": 239.228416,
+      "status": "pass"
+    },
+    {
+      "name": "SERVICES lists each service and its pages, the newest first, with none and after UNLOAD",
+      "milliseconds": 648.614083,
+      "status": "pass"
+    },
+    {
+      "name": "a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation",
+      "milliseconds": 0.327917,
+      "status": "pass"
+    },
+    {
+      "name": "a dependency's name over 8 bytes is refused by the writer",
+      "milliseconds": 261.140083,
+      "status": "pass"
+    },
+    {
+      "name": "the relocation data decodes to the same fixups by delta, and a long gap takes 255s",
+      "milliseconds": 0.413959,
+      "status": "pass"
+    },
+    {
+      "name": "the table has no removal: function 2 is refused and the service stays",
+      "milliseconds": 229.509875,
+      "status": "pass"
+    },
+    {
+      "name": "warm boot keeps a service, and a reset empties both",
+      "milliseconds": 465.3995,
+      "status": "pass"
+    },
+    {
+      "name": "INIT fails cleanly: failed, and the state is as it was",
+      "milliseconds": 219.715,
+      "status": "pass"
+    },
+    {
+      "name": "a record outside the image: failed, and the state is as it was",
+      "milliseconds": 608.742042,
+      "status": "pass"
+    },
+    {
+      "name": "a link outside the image: failed, and the state is as it was",
+      "milliseconds": 508.891167,
+      "status": "pass"
+    },
+    {
+      "name": "a cyclic chain: failed, and the state is as it was",
+      "milliseconds": 700.210791,
+      "status": "pass"
+    },
+    {
+      "name": "an entry table outside the image: failed, and the state is as it was",
+      "milliseconds": 460.31975,
+      "status": "pass"
+    },
+    {
+      "name": "INIT fails with a hook left: the pages stay, nothing is registered, UNLOAD refuses",
+      "milliseconds": 489.458,
+      "status": "pass"
+    },
+    {
+      "name": "INIT lies and REMOVE refuses: installed with no records, and the load says so",
+      "milliseconds": 409.736292,
+      "status": "pass"
+    },
+    {
+      "name": "INIT calling a load is refused",
+      "milliseconds": 629.784166,
+      "status": "pass"
+    },
+    {
+      "name": "INIT calling a removal is refused",
+      "milliseconds": 415.232708,
+      "status": "pass"
+    },
+    {
+      "name": "no client can see a record while its INIT runs",
+      "milliseconds": 415.76325,
+      "status": "pass"
+    },
+    {
+      "name": "a warm boot inside INIT rolls the ceiling back",
+      "milliseconds": 440.349417,
+      "status": "pass"
+    },
+    {
+      "name": "a warm boot from inside REMOVE clears the guard, the service stays, and a later load works",
+      "milliseconds": 726.732166,
+      "status": "pass"
+    },
+    {
+      "name": "a warm boot inside INIT after a hook leaves it dangling, which is why hooks go last",
+      "milliseconds": 568.008167,
+      "status": "pass"
+    },
+    {
+      "name": "a dependency absent is refused and nothing changes",
+      "milliseconds": 459.320625,
+      "status": "pass"
+    },
+    {
+      "name": "a dependency below the least version is refused",
+      "milliseconds": 407.932791,
+      "status": "pass"
+    },
+    {
+      "name": "a dependency present is bound at INIT, and last in is first out",
+      "milliseconds": 189.238334,
+      "status": "pass"
+    },
+    {
+      "name": "two services publishing one record: the newest, and removal uncovers the older",
+      "milliseconds": 374.199958,
+      "status": "pass"
+    },
+    {
+      "name": "REMOVE refuses: UNLOAD says so and changes nothing",
+      "milliseconds": 391.619792,
+      "status": "pass"
+    },
+    {
+      "name": "not removable: UNLOAD says so and changes nothing",
+      "milliseconds": 393.374041,
+      "status": "pass"
+    },
+    {
+      "name": "STKB: past its limit refused, at it installed, and a second past the sum refused",
+      "milliseconds": 732.501583,
+      "status": "pass"
+    },
+    {
+      "name": "STKI: past its limit refused, at it installed, and a second past the sum refused",
+      "milliseconds": 744.037333,
+      "status": "pass"
+    },
+    {
+      "name": "STKC: past its limit refused, at it installed, and a second past the sum refused",
+      "milliseconds": 730.578125,
+      "status": "pass"
+    },
+    {
+      "name": "the scan can't see a GLVEC-style vector: INIT failed, pages freed, the vector left",
+      "milliseconds": 396.906334,
+      "status": "pass"
+    },
+    {
+      "name": "a program that makes a link a cycle can't loop find or enumerate",
+      "milliseconds": 181.236166,
+      "status": "pass"
+    },
+    {
+      "name": "a resident that keeps a pointer past removal runs into freed pages, and the generation tells it",
+      "milliseconds": 427.143125,
+      "status": "pass"
+    },
+    {
+      "name": "a source naming a ROM address is refused; abi.inc's names pass",
+      "milliseconds": 0.648833,
+      "status": "pass"
+    },
+    {
+      "name": "18 malformed files, each field",
+      "milliseconds": 0.085125,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: the file shorter than its header",
+      "milliseconds": 180.079542,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: a wrong magic",
+      "milliseconds": 178.935458,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: format version 2, whose service reads the font at ABIFONT",
+      "milliseconds": 189.64225,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: the image size overflowing the address space",
+      "milliseconds": 181.6325,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: the image size past the file",
+      "milliseconds": 180.349209,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: the image size below the header",
+      "milliseconds": 178.967083,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: image and extra overflowing",
+      "milliseconds": 206.392708,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: a dependency list past the file",
+      "milliseconds": 180.020875,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: the relocation size past the file",
+      "milliseconds": 178.763584,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: the relocation size overflowing",
+      "milliseconds": 178.856541,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: a fixup past the image",
+      "milliseconds": 179.782125,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: a fixup one byte past the image",
+      "milliseconds": 181.719667,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: INIT before the image",
+      "milliseconds": 177.790375,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: INIT at the image's end",
+      "milliseconds": 213.989791,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: INIT far outside",
+      "milliseconds": 179.819125,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: REMOVE before the image",
+      "milliseconds": 179.032042,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: REMOVE at the image's end",
+      "milliseconds": 179.947167,
+      "status": "pass"
+    },
+    {
+      "name": "refused, nothing changed: a base below 8000h",
+      "milliseconds": 184.974208,
+      "status": "pass"
+    },
+    {
+      "name": "accepted at the edge: a base of exactly 8000h",
+      "milliseconds": 188.866875,
+      "status": "pass"
+    },
+    {
+      "name": "accepted at the edge: a fixup on the image's last byte",
+      "milliseconds": 197.091834,
+      "status": "pass"
+    },
+    {
+      "name": "accepted at the edge: INIT on the image's last byte, a RET",
+      "milliseconds": 214.279208,
+      "status": "pass"
+    },
+    {
+      "name": "slack past the file's end is tolerated",
+      "milliseconds": 178.082333,
+      "status": "pass"
+    },
+    {
+      "name": "each declared stack figure is proved by the watch, and a false one fails it",
+      "milliseconds": 1439.876292,
+      "status": "pass"
+    },
+    {
+      "name": "makeSvc stops at a source with no INIT, as TAS does",
+      "milliseconds": 64.963375,
+      "status": "pass"
+    },
+    {
+      "name": "makeSvc stops at a source with no REMOVE, as TAS does",
+      "milliseconds": 62.409875,
+      "status": "pass"
+    },
+    {
+      "name": "a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h",
+      "milliseconds": 432.249417,
+      "status": "pass"
+    },
+    {
+      "name": "the bound: a jump at or below the top goes, and one above it stays",
+      "milliseconds": 221.021958,
+      "status": "pass"
+    },
+    {
+      "name": "the bound with no service: a jump into the stub's page below the stub goes",
+      "milliseconds": 225.087625,
+      "status": "pass"
+    },
+    {
+      "name": "UNLOAD gives a vector into its pages and a slot it declared their defaults, and reports success",
+      "milliseconds": 433.951,
+      "status": "pass"
+    },
+    {
+      "name": "a vector into freed pages goes at UNLOAD with no declaration",
+      "milliseconds": 442.822167,
+      "status": "pass"
+    },
+    {
+      "name": "a failed INIT's vector goes with its pages",
+      "milliseconds": 426.840209,
+      "status": "pass"
+    },
+    {
+      "name": "a failed INIT's claimed slot goes, even with a jump outside its pages, so a retry loads",
+      "milliseconds": 618.50425,
+      "status": "pass"
+    },
+    {
+      "name": "a warm boot inside INIT takes the vector it set",
+      "milliseconds": 438.953125,
+      "status": "pass"
+    },
+    {
+      "name": "a second claim is refused with nothing changed",
+      "milliseconds": 489.680958,
+      "status": "pass"
+    },
+    {
+      "name": "a claim on a free slot installs, and format 3's flags of 1 claim nothing",
+      "milliseconds": 851.937333,
+      "status": "pass"
+    },
+    {
+      "name": "a service with a vector is gone at a recognised reset, and the vector with it",
+      "milliseconds": 455.642667,
+      "status": "pass"
+    },
+    {
+      "name": "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, serial",
+      "milliseconds": 1001.640208,
+      "status": "pass"
+    },
+    {
+      "name": "a program setting SP from (0006h) leaves SERVICES and UNLOAD working, PICO",
+      "milliseconds": 344.711292,
+      "status": "pass"
+    },
+    {
+      "name": "a BDOS call is two jumps from CALL 5, with no service, one and two",
+      "milliseconds": 218.293083,
+      "status": "pass"
+    },
+    {
+      "name": "function 47 from INIT rolls the load back, and the chained line runs",
+      "milliseconds": 463.322458,
+      "status": "pass"
+    },
+    {
+      "name": "function 47 from REMOVE keeps the service listed, and the chained line runs",
+      "milliseconds": 485.256667,
+      "status": "pass"
+    },
+    {
+      "name": "makeSvc finds an include whatever its case, as CP/M and TAS do: ABI.INC is abi.inc (B2)",
+      "milliseconds": 192.069875,
+      "status": "pass"
+    },
+    {
+      "name": "cold boot leaves the overlay off, the classic bank selected and the CCP prompting",
+      "milliseconds": 167.997333,
+      "status": "pass"
+    },
+    {
+      "name": "reset from a non-default bank and a dirty latch boots cleanly, repeatedly",
+      "milliseconds": 873.214041,
+      "status": "pass"
+    },
+    {
+      "name": "warm boot by ^C keeps the drive and user number",
+      "milliseconds": 541.224625,
+      "status": "pass"
+    },
+    {
+      "name": "warm boot clears the restart vectors except jumps into ROM, and a stale RST returns",
+      "milliseconds": 305.934583,
+      "status": "pass"
+    },
+    {
+      "name": "a clean boot's restart vectors are the defaults, and 0038h is EI; RETI",
+      "milliseconds": 190.257583,
+      "status": "pass"
+    },
+    {
+      "name": "a cold boot rebuilds page zero once, in warm boot's PZINIT (KE-199)",
+      "milliseconds": 229.545833,
+      "status": "pass"
+    },
+    {
+      "name": "without a card the diagnostic console reports and retries",
+      "milliseconds": 58.685708,
+      "status": "pass"
+    },
+    {
+      "name": "the diagnostic console echoes a digit as the digit, and a lower-case r retries (KE-195)",
+      "milliseconds": 86.992917,
+      "status": "pass"
+    },
+    {
+      "name": "without RAM at 8000h-BFFFh the boot says so on the serial console and stops",
+      "milliseconds": 58.452541,
+      "status": "pass"
+    },
+    {
+      "name": "the ROM rejects an invalid container before mounting anything",
+      "milliseconds": 140.187458,
+      "status": "pass"
+    },
+    {
+      "name": "a standard-capacity card (byte addressing) works",
+      "milliseconds": 284.122083,
+      "status": "pass"
+    },
+    {
+      "name": "BDOS file functions pass the probe",
+      "milliseconds": 3712.702458,
+      "status": "pass"
+    },
+    {
+      "name": "cold boot packs each drive's allocation vector, DSM / 8 + 1 bytes, below the workspace and puts the BDOS entry below them",
+      "milliseconds": 11455.327542,
+      "status": "pass"
+    },
+    {
+      "name": "on a card of four 8 MiB volumes the BDOS probe passes",
+      "milliseconds": 4110.416708,
+      "status": "pass"
+    },
+    {
+      "name": "DIR with only a drive lists that drive, and SAVE writes to a drive named",
+      "milliseconds": 666.067292,
+      "status": "pass"
+    },
+    {
+      "name": "text and binary files cross between the PC and TEC-OS, and survive power loss",
+      "milliseconds": 1271.586916,
+      "status": "pass"
+    },
+    {
+      "name": "files over 16 KiB cross between TEC-OS and the PC on a volume whose entries hold two extents",
+      "milliseconds": 6504.259666,
+      "status": "pass"
+    },
+    {
+      "name": "sparse files and a block written after a reopen survive on both volumes",
+      "milliseconds": 6748.448209,
+      "status": "pass"
+    },
+    {
+      "name": "a read-only volume refuses writes without changing it",
+      "milliseconds": 388.191584,
+      "status": "pass"
+    },
+    {
+      "name": "TAS assembles a program on TEC-OS and the program runs",
+      "milliseconds": 386.577416,
+      "status": "pass"
+    },
+    {
+      "name": "the starter card holds TAS.COM by its hash",
+      "milliseconds": 14.635,
+      "status": "pass"
+    },
+    {
+      "name": "the media tool refuses a TAS.COM missing or not as pinned",
+      "milliseconds": 269.835584,
+      "status": "pass"
+    },
+    {
+      "name": "TAS X X.SVC makes a service that loads",
+      "milliseconds": 446.125958,
+      "status": "pass"
+    },
+    {
+      "name": "a failed build stops TAS BAD!:X through FF00h, with a stale X.COM there",
+      "milliseconds": 351.740292,
+      "status": "pass"
+    },
+    {
+      "name": "TAS refuses a read-only output and leaves it as it was",
+      "milliseconds": 468.614417,
+      "status": "pass"
+    },
+    {
+      "name": "GLCD.SVC's source assembles under TAS to Atom's bytes",
+      "milliseconds": 2381.195583,
+      "status": "pass"
+    },
+    {
+      "name": "svcdemo.asm assembles under TAS to Atom's bytes",
+      "milliseconds": 1092.790208,
+      "status": "pass"
+    },
+    {
+      "name": "TED edits, saves and reopens a file on TEC-OS with the PICO9918 (80 x 24)",
+      "milliseconds": 867.084958,
+      "status": "pass"
+    },
+    {
+      "name": "TED edits, saves and reopens a file on TEC-OS with the PICO9918 (40 x 24)",
+      "milliseconds": 927.106625,
+      "status": "pass"
+    },
+    {
+      "name": "TED edits, saves and reopens a file on TEC-OS with the PICO9918 (32 x 24)",
+      "milliseconds": 991.65625,
+      "status": "pass"
+    },
+    {
+      "name": "TED does the same on the GLCD (21 x 8)",
+      "milliseconds": 1525.811583,
+      "status": "pass"
+    },
+    {
+      "name": "the line argument: TED NOTES.TXT 2 opens at line 2",
+      "milliseconds": 750.48375,
+      "status": "pass"
+    },
+    {
+      "name": "the round on A: with the PICO9918: ^T B at the error, ^T D's TDB? and back, the fix, ^T R",
+      "milliseconds": 3706.12525,
+      "status": "pass"
+    },
+    {
+      "name": "the round on B:, written behind, with the PICO9918",
+      "milliseconds": 4128.046417,
+      "status": "pass"
+    },
+    {
+      "name": "the round on A: with a serial terminal",
+      "milliseconds": 4200.788833,
+      "status": "pass"
+    },
+    {
+      "name": "TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'s TAS",
+      "milliseconds": 3056.694834,
+      "status": "pass"
+    },
+    {
+      "name": "TED's text holds at least 33,052 bytes on the starter's files with no display, and 31,000 on a board with both displays as it boots",
+      "milliseconds": 3165.031667,
+      "status": "pass"
+    },
+    {
+      "name": "C:TED from B: edits B:'s file, and ^T B runs C:'s TAS and comes back to C:'s TED, item E's load drive",
+      "milliseconds": 3108.293417,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol verify refuses every 1.0 card the ROM's MOUNT refuses, check by check",
+      "milliseconds": 5430.016833,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol verify refuses every 1.1 card the ROM's MOUNT refuses, check by check",
+      "milliseconds": 5350.453541,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol verify refuses a wrong 1.1 table sum, as the ROM does; a 1.0 card has none, and of 17 volumes both refuse its count",
+      "milliseconds": 342.820042,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol verify and the ROM agree on a volume on each drive with every drives value, at both minor versions",
+      "milliseconds": 9186.52075,
+      "status": "pass"
+    },
+    {
+      "name": "tecvol create refuses a volume on a drive past the drives it gives",
+      "milliseconds": 174.834583,
+      "status": "pass"
+    },
+    {
+      "name": "the walk with a source that fails: the prompt comes back with TAS's message, and :x doesn't run",
+      "milliseconds": 534.572417,
+      "status": "pass"
+    },
+    {
+      "name": "the walk with a source that assembles: X runs",
+      "milliseconds": 615.1115,
+      "status": "pass"
+    },
+    {
+      "name": "a warm boot with nothing changed reads no block, in a tenth of the time",
+      "milliseconds": 181.572583,
+      "status": "pass"
+    },
+    {
+      "name": "after SAVE the warm boot rebuilds A from its directory up to the mark",
+      "milliseconds": 549.162917,
+      "status": "pass"
+    },
+    {
+      "name": "a file written and never closed frees its blocks at the warm boot, as CP/M 2.2 does",
+      "milliseconds": 929.334125,
+      "status": "pass"
+    },
+    {
+      "name": "a vector a program wrote over is scanned in full",
+      "milliseconds": 571.109583,
+      "status": "pass"
+    },
+    {
+      "name": "a program's BIOS write of a directory entry above the mark is read at the warm boot",
+      "milliseconds": 506.65625,
+      "status": "pass"
+    },
+    {
+      "name": "function 13 from a program scans the whole directory",
+      "milliseconds": 225.042416,
+      "status": "pass"
+    },
+    {
+      "name": "a drive set read-only is read-write again after a warm boot",
+      "milliseconds": 191.124166,
+      "status": "pass"
+    },
+    {
+      "name": "a mount on B: then a warm boot scans B's new volume in full",
+      "milliseconds": 1305.33275,
+      "status": "pass"
+    },
+    {
+      "name": "the web page's bundle uses no Node globals",
+      "milliseconds": 76.496333,
+      "status": "pass"
+    },
+    {
+      "name": "the real store's saveCard throws when IndexedDB can't open, or a put fails (KE-153)",
+      "milliseconds": 6.821542,
+      "status": "pass"
+    },
+    {
+      "name": "the page keeps a card it couldn't save unsaved, says so, and saves it once storage works (KE-153)",
+      "milliseconds": 8007.782875,
+      "status": "pass"
+    },
+    {
+      "name": "the page saves one card at a time, and after three failures says saving keeps failing (D2, D3)",
+      "milliseconds": 3.583458,
+      "status": "pass"
+    },
+    {
+      "name": "a file import during a timer's save saves after it, so the stored card holds the copied files (KE-163)",
+      "milliseconds": 1.962375,
+      "status": "pass"
+    },
+    {
+      "name": "the real store's loadCard gives null for no card and throws when the read fails, so the page can tell them apart (KE-164)",
+      "milliseconds": 5.879875,
+      "status": "pass"
+    },
+    {
+      "name": "a saved card that won't read, or won't parse, is left as it is: the page runs a starter unsaved and says so (KE-164)",
+      "milliseconds": 10811.671292,
+      "status": "pass"
+    },
+    {
+      "name": "on a phone, tapping the screen and typing dir on the phone's keyboard lists the directory",
+      "milliseconds": 2495.3295,
+      "status": "pass"
+    },
+    {
+      "name": "a 16 KiB save reads no data block, only the directory",
+      "milliseconds": 864.021416,
+      "status": "pass"
+    },
+    {
+      "name": "a newly allocated block holds zeros in the records not yet written",
+      "milliseconds": 221.326125,
+      "status": "pass"
+    },
+    {
+      "name": "every write is on the card when WRITE returns",
+      "milliseconds": 531.424583,
+      "status": "pass"
+    },
+    {
+      "name": "a random write into an allocated block keeps its neighbours",
+      "milliseconds": 617.770875,
+      "status": "pass"
+    },
+    {
+      "name": "a write after a new block on drive B reads a block of drive A",
+      "milliseconds": 684.160416,
+      "status": "pass"
+    },
+    {
+      "name": "a sequential write whose close of the extent it leaves fails returns 1 and leaves the FCB on record 128 (KE-175)",
+      "milliseconds": 1194.12075,
+      "status": "pass"
+    },
+    {
+      "name": "a zero-filling write whose block fails returns the error with the program's DMA address back in the BIOS (KE-176)",
+      "milliseconds": 206.180916,
+      "status": "pass"
+    },
+    {
+      "name": "a write that fails after its block is claimed leaves no block marked used that no directory entry holds (KE-177)",
+      "milliseconds": 202.634708,
+      "status": "pass"
+    }
+  ]
+}

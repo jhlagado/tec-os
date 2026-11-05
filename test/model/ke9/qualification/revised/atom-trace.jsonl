@@ -1,0 +1,7 @@
+{"backend":"atom","phase":"probe","target":"tecos.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/src"}
+{"backend":"atom","phase":"final","target":"tecos.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/src"}
+{"backend":"atom","phase":"final","target":"diag.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/diag"}
+{"backend":"atom","phase":"final","target":"MOUNT.COM","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference"}
+{"backend":"atom","phase":"final","target":"GLCD.SVC","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference"}
+{"backend":"atom","phase":"final","target":"DEMO.COM","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference"}
+{"backend":"atom","phase":"media","target":"tecos.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/build/tecos","sha256":"2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09"}

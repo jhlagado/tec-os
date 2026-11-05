@@ -1,0 +1,217 @@
+{
+  "bdos": {
+    "reserved": 54,
+    "deepest": 30
+  },
+  "ccp": {
+    "reserved": 32,
+    "deepest": 18
+  },
+  "bios": {
+    "reserved": 40,
+    "deepest": 18
+  },
+  "runs": {
+    "serial": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 28
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 0
+    },
+    "pico9918": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 30
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 1
+    },
+    "glcd": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 30
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 3
+    },
+    "writeBehind": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 28
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 18
+      },
+      "conmod": 0
+    },
+    "diagnostics": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 12
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 0
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 0
+      },
+      "lines": 8,
+      "conmod": 0
+    },
+    "diagnosticsPico": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 22
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 0
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 0
+      },
+      "lines": 37,
+      "conmod": 1
+    },
+    "conUc1": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 30
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 14
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 3,
+      "row3": ""
+    },
+    "conUc1Glcd": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 22
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 16
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 3,
+      "row3": ""
+    },
+    "picoRom": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 26
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 1,
+      "row3": ""
+    },
+    "recognisedReset": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 22
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 8
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      }
+    },
+    "chained": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 28
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      }
+    },
+    "serialPlain": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 22
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 0,
+      "row3": ""
+    },
+    "resident": {
+      "bdos": {
+        "reserved": 54,
+        "deepest": 22
+      },
+      "ccp": {
+        "reserved": 32,
+        "deepest": 18
+      },
+      "bios": {
+        "reserved": 40,
+        "deepest": 12
+      },
+      "conmod": 0,
+      "row3": ""
+    }
+  },
+  "workload": "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; and chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C. An NMI at each new depth where 0066h holds RETN."
+}

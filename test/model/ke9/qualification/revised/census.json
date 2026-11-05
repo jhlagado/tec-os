@@ -1,0 +1,157 @@
+{
+  "profile": "tecos",
+  "description": "the TEC-1G, on the board and in Debug80",
+  "sha256": "2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09",
+  "serial": {
+    "txdly": 49,
+    "rxdly": 50,
+    "rxhalf": 70,
+    "txstop": 105,
+    "rxpoll": 77,
+    "txBitCycles": 833,
+    "rxBitCycles": 838,
+    "bitCycles": 833.3333333333334
+  },
+  "rom": {
+    "bytes": 16384,
+    "used": 16020,
+    "free": 364,
+    "regions": [
+      {
+        "label": "reset jump",
+        "start": 49152,
+        "end": 49155,
+        "bytes": 3
+      },
+      {
+        "label": "table",
+        "start": 49155,
+        "end": 49163,
+        "bytes": 8
+      },
+      {
+        "label": "data",
+        "start": 49163,
+        "end": 50698,
+        "bytes": 1535
+      },
+      {
+        "label": "code",
+        "start": 50698,
+        "end": 65172,
+        "bytes": 14474
+      },
+      {
+        "label": "free",
+        "start": 65172,
+        "end": 65536,
+        "bytes": 364
+      }
+    ]
+  },
+  "ram": {
+    "tpa": {
+      "start": 256,
+      "end": 47524,
+      "bytes": 47268,
+      "card": "starter"
+    },
+    "bdosVector": 47524,
+    "cards": {
+      "starter": {
+        "entry": 47524,
+        "alvBase": 47527,
+        "tpa": 47268
+      },
+      "fourG8M": {
+        "entry": 46820,
+        "alvBase": 46823,
+        "tpa": 46564
+      }
+    },
+    "fixedBase": 47847,
+    "ramBios": 48896,
+    "regions": [
+      {
+        "label": "BDOS entry jump, starter card",
+        "start": 47524,
+        "end": 47527,
+        "bytes": 3
+      },
+      {
+        "label": "unused",
+        "start": 47527,
+        "end": 47527,
+        "bytes": 0
+      },
+      {
+        "label": "allocation vectors, starter card",
+        "start": 47527,
+        "end": 47847,
+        "bytes": 320
+      },
+      {
+        "label": "BIOS disk state and buffers",
+        "start": 47847,
+        "end": 48325,
+        "bytes": 478
+      },
+      {
+        "label": "BIOS stack",
+        "start": 48325,
+        "end": 48365,
+        "bytes": 40
+      },
+      {
+        "label": "CCP state and stack",
+        "start": 48365,
+        "end": 48758,
+        "bytes": 393
+      },
+      {
+        "label": "BDOS state and stack",
+        "start": 48758,
+        "end": 48896,
+        "bytes": 138
+      },
+      {
+        "label": "RAM BIOS table",
+        "start": 48896,
+        "end": 48947,
+        "bytes": 51
+      },
+      {
+        "label": "SD, keyboard and GLCD state",
+        "start": 48947,
+        "end": 49152,
+        "bytes": 205
+      },
+      {
+        "label": "unused",
+        "start": 49152,
+        "end": 49152,
+        "bytes": 0
+      }
+    ],
+    "stacks": {
+      "boot": {
+        "top": 32768
+      },
+      "bios": {
+        "base": 48325,
+        "top": 48365,
+        "bytes": 40
+      },
+      "ccp": {
+        "base": 48726,
+        "top": 48758,
+        "bytes": 32
+      },
+      "bdos": {
+        "base": 48842,
+        "top": 48896,
+        "bytes": 54
+      }
+    }
+  }
+}

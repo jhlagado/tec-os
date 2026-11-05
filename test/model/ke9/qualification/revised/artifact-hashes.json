@@ -1,0 +1,21 @@
+{
+  "build/tecos/tecos.rom": "2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09",
+  "build/tecos/tecos.d8.json": "7a1c34139119d3f40a67e794df0efd0d5dfdddf7a2d10ff27e1573e6460020f5",
+  "build/tecos/census.json": "59ecde839d60da67c014ed045895b37b0b749f14bf5905a1b5bfaa4cf5829c12",
+  "build/diag/diag.rom": "66412ce96f99aaf4b67afaaad0d8c6597f81e1e46a5c33d40180a24a8a5ea343",
+  "build/diag/diag.d8.json": "ea22ff0c18072a81462e329f225a527bd00063de13b167e2b80c099378c9a4a0",
+  "build/diag/diag.json": "384d5adc4b5251f7770eb84e40a17896b5fd9f5ccef8c98a8b6d3ea6836fac36",
+  "build/stack-census.json": "416d288a903b6ae80045b31124f5448df987eed9518e818b1cae65e0c5d9fe5e",
+  "build/hwsvc-stacks.json": "5595c289804bd01ef0a8137324701750027d6ba684a6ec5ea7be83fdbfa9f557",
+  "dist/tecos.rom": "2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09",
+  "dist/tecos.d8.json": "7a1c34139119d3f40a67e794df0efd0d5dfdddf7a2d10ff27e1573e6460020f5",
+  "dist/tecos.census.json": "59ecde839d60da67c014ed045895b37b0b749f14bf5905a1b5bfaa4cf5829c12",
+  "dist/starter.img": "093228f78368a7c734fad860a006b9479aebc54a49dfd84d19d59ce330dffe8d",
+  "dist/starter.recipe.json": "e83752c3fff6fc11d5302590956b3f4390f440bc0a3ef1db3eee81f1eb699c51",
+  "dist/page.recipe.json": "b57ea4d1433348b69f9fbc929ef7e62fb84326a5742e5da6018808308351a029",
+  "dist/files/GLCD.SVC": "ac040f75f8d91226fd80ff9be1764673dec0ec5cde606769425bd815fb75e736",
+  "dist/files/MOUNT.COM": "5273f0ba443817f9168a1909fe7c934a5ad186ba1480d35b7ab169c27ead83cc",
+  "dist/files/DEMO.COM": "7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d",
+  "docs/memory-map.md": "e2945269f58537604452c8c0b2ef641e94b25637b630c817693640c13a833df2",
+  "docs/rom-services.md": "6fcdd1d84b12ada0a3b9a4a38b66fddb2dadc0e070ecbe10875b7093310b4dcb"
+}

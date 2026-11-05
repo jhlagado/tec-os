@@ -1,0 +1,660 @@
+mem-guard 19:45:02 ke9-exact-strict: started, limit 900 MB, heap 675 MB, memory free 35 percent, load 4.13, waited 0 s
+
+added 7 packages, and audited 10 packages in 2s
+
+1 moderate severity vulnerability
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+npm warn allow-scripts 2 packages have install scripts not yet covered by allowScripts:
+npm warn allow-scripts   esbuild@0.24.2 (postinstall: node install.js)
+npm warn allow-scripts   fsevents@2.3.2 (install: (install scripts present))
+npm warn allow-scripts
+npm warn allow-scripts Run `npm approve-scripts --allow-scripts-pending` to review, or `npm approve-scripts <pkg>` to allow.
+
+> tec-os@0.1.0 inputs
+> node tools/inputs.mjs
+
+TAS.COM: /Users/johnhardy/projects/thorium/dist/TAS.COM, as pinned
+TED.COM: fetched from jhlagado/thorium 128edb7 dist/TED.COM, as pinned
+Cloning into '/Users/johnhardy/projects/tec-os-ke9-qualification/.inputs/.tas-host.vyFjEj'...
+HEAD is now at 3d16b30 TED: a name typed at a prompt keeps the project's drive, so a refused ^T O and Save As no longer move saves to the current drive (Edit's COMNAME overlaid, FCB+0 from SESDRV); a bare start looks for the only .ASM on the session's drive; the ABI 5 stubs refuse a call but TNINFO; comments; 11,925 bytes, 834e0075, resident 1,026 of 1,027
+
+added 1 package, and audited 2 packages in 807ms
+
+found 0 vulnerabilities
+
+> tec-os@0.1.0 check
+> npm run build && npm test && npm run media && npm run web
+
+
+> tec-os@0.1.0 build
+> node tools/build.mjs
+
+tecos ROM {"backend":"tas","phase":"probe","target":"tecos.rom","origin":32768,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":96230746}
+tecos ROM {"backend":"tas","phase":"final","target":"tecos.rom","origin":47847,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":94647481}
+tecos: ROM 16020/16384 bytes, TPA $0100-$B9A3 (47268 bytes), sha256 2b719d6cbcfc50d4
+
+> tec-os@0.1.0 test
+> node --test --test-concurrency=1 test/*.test.mjs
+
+✔ DIV16 divides HL by DE for divisors up to 8000h, in at most 1,300 T-states (189.468125ms)
+✔ PUTDEC prints HL in decimal without leading zeros (237.229209ms)
+✔ random records at the end of the 8 MiB volume are written and read where the host puts them (773.250333ms)
+✔ a file read again comes from the cache, with no card read, and the same bytes (845.270833ms)
+✔ write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns (5900.456833ms)
+✔ on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot (1875.570708ms)
+✔ at every card write while a file is erased and its blocks reused, the volume verifies and no entry names another file's data (817.691ms)
+✔ a write after the block before it was cleared keeps a block's records that its line no longer holds (1759.945791ms)
+✔ a card removed with dirty lines leaves the console working, and warm boot says the write was lost (596.853375ms)
+✔ the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b) (816.181541ms)
+✔ the ROM before the cache, 4ea57f7, mounts a :wb volume written through (693.59875ms)
+✔ a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount (1473.210792ms)
+✔ a block that needs no pre-read reaches the card with its unwritten records zero, on a volume written behind and through (3246.639416ms)
+✔ more than the cache written behind with no directory write between: dirty lines evicted, and the file the same from the cache and from the card (1639.997ms)
+✔ an unclosed file's records reach the card at warm boot (631.818792ms)
+✔ MOUNT writes the dirty lines before it changes a drive (628.909917ms)
+✔ a failed write-through write drops its block's line, so a reread comes from the card (271.731333ms)
+✔ a volume remounted on another drive, with another on its old drive, reads back right (2064.2055ms)
+✔ descriptor byte 15's other bits reach no drive flag (477.664ms)
+✔ the harness takes the copy core's writes below BD00h as the cache's only when the cache called it (616.731791ms)
+✔ function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, which warm boot doesn't say again (KS36b) (1210.853875ms)
+✔ function 45: FFh returns a BDOS error to the program, A = FFh and H the code, FEh says it first, and warm boot puts the default back (KS36b) (237.766083ms)
+✔ function 47's warm boot puts the lines written behind on the card before the chained program loads (KS36b) (663.136583ms)
+✔ a flush tries every line: the first line's write failing, the next still reaches the card, and warm boot says Write lost once (KS36b) (624.177042ms)
+✔ the cold mount reads the table through a cache line, and leaves the TPA as it found it (KS36b) (257.186333ms)
+✔ a BIOS WRITE of type 1 to a directory block no line holds, on the volume written behind with dirty data lines, puts the data on the card first and then the directory (KS36b review) (1040.229042ms)
+✔ function 45's returned error leaves the FCB on the record a sequential read didn't read, as CP/M 3 does (KS36b review) (258.414625ms)
+✔ function 45's returned error leaves the FCB on the record a sequential write didn't write, as CP/M 3 does (KS36b review) (700.048375ms)
+✔ when every line is dirty and the forced write of the next in turn fails, the next miss doesn't try that write again, and warm boot's flush does (KE-187) (1048.048083ms)
+✔ random writes out of order into a new G1M allocation block, written through, keep every record, from the BDOS and on the card (KE-AR7) (542.492584ms)
+✔ random writes out of order into a new G1M allocation block, written behind, keep every record, from the BDOS and on the card (KE-AR7) (519.411958ms)
+✔ random writes out of order into a new G8M allocation block, written through, keep every record, from the BDOS and on the card (KE-AR7) (840.638292ms)
+✔ random writes out of order into a new G8M allocation block, written behind, keep every record, from the BDOS and on the card (KE-AR7) (766.989958ms)
+✔ a close whose data lines the card refuses fails, and retried fails again until the card takes them, then the file is whole (KE-AR8) (711.61575ms)
+✔ a close whose data lines the card refuses leaves them for warm boot, which says Write lost, and the card's directory names no record (KE-AR8) (657.670083ms)
+card /Users/johnhardy/projects/tec-os-ke9-qualification/build/capture-QEBkSp/card.img: SHA-256 f4e75253c206c653c7fe5de761024cd1038c2cb7ede6694a91ea271bee88a697
+card /Users/johnhardy/projects/tec-os-ke9-qualification/build/capture-65f4d4/card.img: SHA-256 f4e75253c206c653c7fe5de761024cd1038c2cb7ede6694a91ea271bee88a697
+card /Users/johnhardy/projects/tec-os-ke9-qualification/build/capture-gSGgMT/card.img: SHA-256 f4e75253c206c653c7fe5de761024cd1038c2cb7ede6694a91ea271bee88a697
+✔ @press sends a key and goes on without a prompt: D, I, R, then Return run DIR (KB-25) (421.329375ms)
+✔ --card none reaches DIAG's prompt, R retry>, and stops there with the LCD's rows (KE-172) (194.675958ms)
+✔ --screen dumps a 40-column screen as 40-column rows (KE-189) (443.648333ms)
+✔ --screen dumps a 32-column screen as 32-column rows (KE-189) (474.530125ms)
+✔ the built-ins' operands keep their output, BDOS calls and stack (4741.6445ms)
+✔ CON UC1 on a PICO9918 and matrix board keeps its stack peak (404.647916ms)
+✔ a line of two, three and four pieces runs each in turn, each echoed after its prompt (290.729ms)
+✔ an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line (257.622292ms)
+✔ a line of 127 characters runs whole: 32 pieces (657.976667ms)
+✔ a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets (639.445417ms)
+✔ a startup line holding ! runs all its pieces before the next startup line (321.038541ms)
+✔ history gives the chained line back whole, as typed, and it runs again (296.096708ms)
+✔ : runs a piece after a success, and not after a program's FF00h, FFFEh or NAME? (379.11375ms)
+✔ after a failed : piece the rest of the line goes, and the prompt comes back (236.780459ms)
+✔ the code is cleared as each piece is taken, before the command is looked for (354.387083ms)
+✔ a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file (880.518ms)
+✔ function 47's command starts with the default FCBs, tail, DMA and stack of the same command typed (759.208416ms)
+✔ function 47 copies the command before anything loads: a target that loads over the caller's DMA (273.906375ms)
+✔ function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on (756.813584ms)
+✔ function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt (572.304542ms)
+✔ a chained command missing, unreadable or too large reaches NAME? and the prompt (1273.542375ms)
+✔ a chain from a startup line runs before the next startup line, and may hold ! and : (296.257667ms)
+✔ ^C at a program's line input drops the rest of the line (220.999417ms)
+✔ a BDOS error's exit drops the rest of the line (416.152875ms)
+✔ a read-only drive's exit drops the rest of the line (244.205875ms)
+✔ a failed select's exit drops the rest of the line (232.348917ms)
+✔ a directory read that fails drops the rest of the line (276.213417ms)
+✔ ERA's read-only file drops the rest of the line (262.357792ms)
+✔ SAVE's NO SPACE sets FF00h: a full directory and a full disk (918.895375ms)
+✔ a write lost at warm boot drops the rest of the line (227.901583ms)
+✔ ^C at TYPE's or DIR's [more] drops the rest of the line (3021.957916ms)
+✔ Esc or Q at [more], and ERA *.* answered N, are answers: the code stays 0 and the line goes on (2987.069291ms)
+✔ a reset clears the rest of the line (481.376792ms)
+✔ KE-127: a startup line of 128 characters runs its first 127, and leaves 0100h as loaded (350.054708ms)
+✔ KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded (757.959166ms)
+✔ DEMO refuses major 3 (739.910708ms)
+✔ DEMO refuses no TNA tag (290.665875ms)
+✔ MOUNT B: refuses major 3 (236.112583ms)
+✔ MOUNT B: refuses no TNA tag (253.310166ms)
+✔ MOUNT refuses major 3 (272.332375ms)
+✔ MOUNT refuses no TNA tag (235.695625ms)
+✔ MOUNT lists and unmounts on major 5 (271.543458ms)
+✔ DEMO's own tables: each hex digit's pattern, each colour port and random colours (955.158625ms)
+✔ a program's digest covers what it includes, nested (2.817083ms)
+✔ abi.inc's numbers reach the tests by name (0.160917ms)
+✔ a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark, nothing loaded, the ROM's console in place (217.650458ms)
+✔ CCP says so with no file, and runs a file of that name (603.429666ms)
+✔ EXIT says so with no file, and runs a file of that name (586.683875ms)
+✔ UNLOAD is refused with no resident, and removes residents last in, first out (471.436208ms)
+✔ nothing is kept for a level: the table ends at ABICALL's jump and the page at BE00h is free (320.557375ms)
+✔ a write to BE00h-BFFFh in EXPAND 1 fails the host's watch, and one to BDFFh, the history's, does not (A12) (332.617625ms)
+✔ startup lines go on after ^C at a program (279.715875ms)
+✔ ERA frees each directory entry's blocks once (364.662791ms)
+✔ NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no program of the name (375.784834ms)
+✔ REN takes one drive from either name, and a name on another drive is refused (1291.829708ms)
+✔ ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149) (1585.106125ms)
+✔ ERA *.* answered with Return alone erases nothing and takes no second Return (1103.4245ms)
+✔ the CCP's printer keeps OUTCHAR's column count and ^P echo (403.115208ms)
+✔ FNPRINT ends at $ (373.969208ms)
+✔ SAVE refuses a count past 255 as any bad count, whichever doubling carries (KE-174) (1135.926542ms)
+✔ SAVE on a full disk closes the file before NO SPACE: the records written stay in the directory, as COPY's do (KE-201) (853.15225ms)
+✔ compact layout checks routine headers and preserves literal case (3.933625ms)
+✔ %INCLUDE starts at the left margin (0.25125ms)
+✔ column-18 notes continue an adjacent inline note (0.367333ms)
+✔ standalone notes do not count toward inline coverage (0.167ms)
+✔ 80: erase at pending wrap preserves following row (174.260792ms)
+✔ 80: zero PUTAT does not read input or touch display (193.405042ms)
+✔ 80: relative cursor B clamps before and after carry (206.712458ms)
+✔ 80: relative cursor C clamps before and after carry (227.419709ms)
+✔ 80: switching to a claimed display preserves registers and VRAM until release (205.199292ms)
+✔ 40: erase at pending wrap preserves following row (215.132125ms)
+✔ 40: zero PUTAT does not read input or touch display (206.214083ms)
+✔ 40: relative cursor B clamps before and after carry (205.590542ms)
+✔ 40: relative cursor C clamps before and after carry (204.938834ms)
+✔ 40: switching to a claimed display preserves registers and VRAM until release (244.489792ms)
+✔ 32: erase at pending wrap preserves following row (201.65225ms)
+✔ 32: zero PUTAT does not read input or touch display (198.856667ms)
+✔ 32: relative cursor B clamps before and after carry (203.02525ms)
+✔ 32: relative cursor C clamps before and after carry (200.499667ms)
+✔ 32: switching to a claimed display preserves registers and VRAM until release (209.998ms)
+✔ glcd: erase at pending wrap preserves following row (382.610375ms)
+✔ glcd: zero PUTAT does not read input or touch display (317.6915ms)
+✔ glcd: relative cursor B clamps before and after carry (534.009625ms)
+✔ glcd: relative cursor C clamps before and after carry (530.681375ms)
+✔ console boundary stack high-water marks (0.193083ms)
+ℹ {"BCONOUT":16,"ABICALL/7/0":4,"ABICALL/7/1":18,"ABICALL/3/1":12,"CONSEL":10,"BCONST":6,"ABICALL/3/0":10}
+✔ with a PICO9918 and the matrix keyboard the screen is the console from the banner on, with no file, and nothing goes to serial (KS39) (175.088875ms)
+✔ without the matrix keyboard the serial terminal is the console, even with a display (212.279458ms)
+✔ CON switches the console between devices and falls back to serial (354.945792ms)
+✔ CON PICO and CON GLCD name CRT: and UC1:; a width goes after CRT or PICO alone, 80, 40 or 32, and only to a driver whose table has the width (KD-174) (585.611167ms)
+✔ CRT: without a PICO9918 falls back to the serial terminal (343.724458ms)
+✔ the matrix keyboard types at the prompt (236.94225ms)
+✔ the video terminal implements its ANSI subset (308.76425ms)
+✔ CON PICO 32 uses TMS9918 Graphics I (189.128292ms)
+✔ the 20 x 4 LCD shows the banner and mounted drives (175.80675ms)
+✔ DIR lays out names to fit the display and reports free space (976.822917ms)
+✔ the GLCD is the console when no TMS9918 answers (466.801125ms)
+✔ TYPE pauses a screen at a time on the 8-row GLCD and can be stopped (920.460708ms)
+✔ TYPE fills a 24-row, 40-column screen before pausing, and long lines count as wrapped (311.380792ms)
+✔ a long DIR pauses too (1797.321167ms)
+✔ matrix arrow keys arrive as ANSI cursor sequences (268.635333ms)
+✔ the default console is the PICO9918's 80 x 24 text mode (234.806958ms)
+✔ the video terminal inserts and deletes characters and lines (272.462375ms)
+✔ the cursor shows while a program polls for a key, and goes with the next output (206.128792ms)
+✔ a scroll region scrolls only its own rows (226.204792ms)
+✔ a row move on the PICO9918 is built out of sight and shown when the program asks for a key (218.224917ms)
+✔ a second row move with no key asked between shows the first before it is built, the rows intact (180.137958ms)
+✔ a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.SVC says so on the LCD (197.783292ms)
+✔ UNLOAD removes the GLCD's resident and the console goes back to serial (637.091833ms)
+✔ cold boot lists each drive's whole 11-character label, its spaces too (KS38b's DRVLAB) (212.085416ms)
+✔ SHOWVOL lists the drives without touching LINEBUF, the video terminal's buffer (KS38b's review) (59.351541ms)
+✔ ^C as the key that ends a ^S pause ends the program by warm boot, as CP/M 2.2 does (KE-180) (214.358417ms)
+✔ console output keeps the character for its column when a program's CONOUT in the RAM jump table destroys C (KE-181) (267.233583ms)
+✔ COPY X.COM B: copies under the source's name, as COPY X.COM B:X.COM does (1294.162833ms)
+✔ COPY B:X.COM A: copies under the source's name, as COPY B:X.COM A:X.COM does (1718.57375ms)
+✔ COPY X.COM B:.TXT copies under the source's name, as COPY X.COM B:X.COM does (1408.390125ms)
+✔ COPY X.COM B:.* copies under the source's name, as COPY X.COM B:X.COM does (1560.833416ms)
+✔ COPY onto itself is a bad command and leaves the card as it was (279.933208ms)
+✔ COPY onto itself, the destination's drive named is a bad command and leaves the card as it was (247.359208ms)
+✔ COPY onto itself, the source's drive named is a bad command and leaves the card as it was (281.434417ms)
+✔ COPY onto its own drive alone is a bad command and leaves the card as it was (250.361459ms)
+✔ COPY with no destination is a bad command and leaves the card as it was (239.586041ms)
+✔ COPY onto itself, marked SYS is a bad command and leaves the card as it was (248.43375ms)
+✔ COPY onto itself, marked R/O is a bad command and leaves the card as it was (286.886959ms)
+✔ COPY onto itself on B:, written behind is a bad command and leaves the card as it was (585.932541ms)
+✔ COPY onto itself in user 1 is a bad command and leaves the card as it was (297.473334ms)
+✔ COPY with text after the destination (KE-179) is a bad command and leaves the card as it was (256.358709ms)
+✔ COPY with a third name after the destination (KE-179) is a bad command and leaves the card as it was (283.769625ms)
+✔ COPY X.DAT B:X.DAT on A: still copies (671.452417ms)
+✔ COPY A:X.DAT X.DAT on B: still copies (700.969709ms)
+✔ after B: and A:, a plain name is on A: again: a copy works, and one onto itself is refused (1341.042166ms)
+✔ COPY X.DAT X.DAQ copies: the names differ in one byte (414.262417ms)
+✔ COPY X.DAT Y.DAT copies: the names differ in one byte (412.547375ms)
+✔ every other case leaves the card and prints as COPY.COM does, with the TPA kept (51864.038833ms)
+✔ on a write error COPY closes the destination: the records that fit are in it, their blocks in its entry (KE-179) (838.86075ms)
+✔ a sequential write that needs an extent with the directory full returns 1, and once an entry is freed carries on with no extent missing (1848.654459ms)
+✔ a sequential write of 128 records makes one extent, not an empty second one (944.50325ms)
+✔ function 32 keeps E's low five bits, for every E from 10h to FEh, and FFh gets the user number (228.512833ms)
+✔ function 32 with E5h is user 5: erased entries stay erased (223.9595ms)
+✔ function 13 from user 5 leaves the user number 5, on drive A (642.093958ms)
+✔ functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the card is unchanged (265.158834ms)
+✔ function 16 of a never-opened FCB on a drive function 28 made read-only returns success and writes nothing, as CP/M 2.2's close does (A8, KE-148) (200.65625ms)
+✔ function 30 still changes a read-only file's attributes, as CP/M 2.2's does, and the file can then be written (222.473208ms)
+✔ a write in place reaches the card before any close, and the recovery guide says so (KE-156) (208.574042ms)
+✔ function 22 clears S2 and keeps EX, as CP/M 2.2's make does after clrmodnum, and a random write's make keeps the module it needs (KE-178) (234.171916ms)
+✔ an erase whose directory write fails and returns the error frees none of the file's blocks, so a file made next takes others (KE-AR1) (493.370917ms)
+✔ a wildcard erase whose second directory write fails keeps the first file erased and freed, and the second whole (KE-AR1) (215.5045ms)
+✔ a random read of a missing extent returns 4 each time and leaves the FCB on its extent, on A: (KE-AR2) (202.090209ms)
+✔ a random write after a missed random read makes the extent and leaves record 0 alone, on A: (KE-AR2) (245.58175ms)
+✔ a random write refused with the directory full is refused again, record 0 left alone, on A: (KE-AR2) (420.210583ms)
+✔ a random write retried after the full directory gains a free entry makes the extent, record 0 left alone, on A: (KE-AR2) (445.471791ms)
+✔ a random read of a missing extent returns 4 each time and leaves the FCB on its extent, on B: (KE-AR2) (512.256375ms)
+✔ a random write after a missed random read makes the extent and leaves record 0 alone, on B: (KE-AR2) (523.386417ms)
+✔ a random write refused with the directory full is refused again, record 0 left alone, on B: (KE-AR2) (1708.498209ms)
+✔ a random write retried after the full directory gains a free entry makes the extent, record 0 left alone, on B: (KE-AR2) (1806.410208ms)
+✔ function 44: a count of 1 succeeds, any other returns FFh (167.9715ms)
+✔ function 46: each drive's free records, three bytes at the DMA address, as the card's directory gives them, and the default drive kept (504.79725ms)
+✔ DIR's footer, from function 46, is the free space in kilobytes (546.351042ms)
+✔ function 99, truncate, returns FFh and leaves the file as it was (191.940125ms)
+✔ the prompt shows the user number before the drive unless it is 0, as CP/M 3 does: 3A> (476.340084ms)
+✔ a block past the end of A:'s directory leaves the prompt reachable (179.227167ms)
+✔ the file with that block says Bad Sector when it's read, and ERA takes it (313.829541ms)
+✔ a write to a read-only volume says R/O, and the card is unchanged (351.229667ms)
+✔ function 29 lists a read-only volume once its drive is selected (323.068458ms)
+✔ playwright is a devDependency at an exact version, and the lock pins it and its core (KE-157) (4.522042ms)
+✔ a model reads an older tree's own inputs.json, whatever this tree pins: TED from that tree's pin, by PINS_DIR (5.096583ms)
+✔ test/inputs.json holds only what a live test reads, each one file with its repo, commit and path (2.005375ms)
+✔ the table at C003h: TNA, ABI 5.1 and one jump to the services, 8 bytes, and the old entries gone (174.445584ms)
+✔ warm boot turns the GLCD display and graphics back on (429.566792ms)
+✔ punch and reader are the serial port, eight bits wide (265.754834ms)
+✔ DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PICO9918 (430.525208ms)
+tecos ROM {"backend":"tas","phase":"final","target":"diag.rom","origin":32256,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification/diag","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":49592289}
+✔ the automatic tests pass on the Debug80 model and the report lists them (7247.03475ms)
+✔ a pattern that reads back wrong from the card says where, and the block is put back (5063.268167ms)
+✔ on an F18A-compatible VDP the probe reads the identity, scrolls one row and locks again (4425.114333ms)
+✔ T21 sets the DS1302, sees it roll over and puts the time back (5119.269ms)
+✔ a clock that halts when T21 sets it fails, with what was read and expected (5030.272166ms)
+✔ a clock that takes the time but never counts on fails, with what was read and expected (5442.387084ms)
+✔ a bad bit in the variables page is reported without a stack, and nothing more runs (937.870083ms)
+✔ without RAM in the window the ROM reports it and carries on (5806.0455ms)
+✔ the interactive tests run from the serial terminal, keypad, matrix and joystick (24930.370083ms)
+✔ without EXPAND 1, cold boot says TEC-OS needs 64K and stops, before the banner (136.181041ms)
+✔ cold boot clears EXPAND 1 but for the cache's table; warm boot leaves it (220.223292ms)
+✔ the harness sees a program's write to EXPAND 1 below the history ring (208.389083ms)
+✔ BDOS function 50 is gone: it returns 0, as every number past 40 does (193.498375ms)
+✔ the harness sees a program's write to EXPAND 1's free top page, BF00h-BFFFh, as well (A12) (219.946459ms)
+✔ a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and its file's lines reach the card (B1) (678.44525ms)
+✔ a write to EXPAND 1 by ROM code outside the cache, between CDI and CTADR, fails the host's watch (KS38a's review) (223.146708ms)
+✔ an entry of one record before the file's last exports that record, not the rest of its block, and tecvol get the same (KE-AR5) (161.908291ms)
+✔ an entry covering two logical extents (EXM 1) ends at its own record count, its last block's slack left out (KE-AR5) (2.952709ms)
+✔ a sparse file the BDOS made exports zeros where it wrote nothing, not an erased file's bytes (KE-AR5) (218.706625ms)
+✔ the resident GLCD draws every screen of the workload as the driver did, byte for byte (22175.736834ms)
+✔ on a GLCD board (0006h) is three pages lower than with the driver, and no more (0.515542ms)
+✔ a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free (0.361792ms)
+✔ UNLOAD gives the console back to serial and the pages to the TPA, and output then reaches serial (2647.6505ms)
+✔ a second GLCD.SVC is refused whole, and the first keeps the console (403.910875ms)
+✔ the GLCD hook takes a table and returns LINEBUF, refuses a second, and with 0 gives the console back (230.891209ms)
+✔ a GLCD that stops coming ready is sent nothing: GLCC and GLCDW drop a byte once the busy flag never clears (KE-198) (460.731917ms)
+✔ ^W recalls the lines typed at the prompt, newest first, and ^N steps forward (253.114ms)
+✔ a recalled line is erased in place and cut at the buffer's maximum (300.057958ms)
+✔ over many lines the ring wraps and every recall is a whole line (1776.794666ms)
+✔ a line repeated, a line holding a 0 and an empty line are not stored (321.783666ms)
+✔ a program's function 10 takes ^W as a character and its line is not stored (230.491666ms)
+✔ the ring is kept by warm boot and emptied by cold boot (500.170583ms)
+✔ replaced CONOUT, CONIN and CONST see the BDOS's console traffic, and ^C reaches the replaced WBOOT (326.39175ms)
+✔ replaced CONOUT and WBOOT stay in the table across a ^C warm boot (265.877125ms)
+✔ a BDOS disk error reaches the replaced WBOOT, and its message the replaced CONOUT (346.123833ms)
+✔ JP 0000h and BDOS function 0 reach the replaced WBOOT (449.319792ms)
+✔ a cold boot puts the ROM's warm-boot entry back in the table (393.71975ms)
+✔ failed replacement preserves every byte on full disk (22.188792ms)
+✔ failed replacement preserves every byte on full directory (117.726916ms)
+✔ replacement reuses all old entries and blocks at both capacity limits (113.808292ms)
+✔ recipe seals read-only descriptors across 15 volumes (2.6535ms)
+✔ recipe seals read-only descriptors across 16 volumes (4.877625ms)
+✔ recipe seals read-only descriptors across 17 volumes (2.566875ms)
+✔ verify diagnoses the exact second descriptor despite a numeric label (127.223625ms)
+✔ browser stages the whole import before saving or publishing (4.862166ms)
+✔ browser import restores running=true after success (9.098542ms)
+✔ browser import restores running=true after read (1.622125ms)
+✔ browser import restores running=true after save (1.612916ms)
+✔ browser import restores running=false after success (1.511042ms)
+✔ browser import restores running=false after read (1.341333ms)
+✔ browser import restores running=false after save (5.142333ms)
+✔ browser import guard excludes competing operations, running=true, failure=false (3.006959ms)
+✔ browser import guard excludes competing operations, running=true, failure=true (1.799458ms)
+✔ browser import guard excludes competing operations, running=false, failure=false (1.703375ms)
+✔ browser import guard excludes competing operations, running=false, failure=true (4.12825ms)
+✔ a width chosen while an import's files are read is the width on the card the import publishes (KE-168) (2.518209ms)
+tecvol: volume is read-only
+{"cliNode":"v24.18.0","NODE_OPTIONS":""}
+{"cliNode":"v24.18.0","NODE_OPTIONS":"--max-old-space-size=450"}
+✔ every geometry satisfies the firmware limits (2.110208ms)
+✔ a new container validates and describes its volumes (3.775459ms)
+✔ corrupt, truncated and inconsistent containers are rejected (36.967584ms)
+✔ files round-trip as binary and text across extent boundaries (11.086084ms)
+✔ full disks and full directories are reported, not corrupted (140.703583ms)
+✔ tecvol creates, edits and reads a container atomically (710.220792ms)
+✔ tecvol --user takes an integer 0 to 15 only, and a refused one leaves the image byte for byte (KE-152) (2216.962542ms)
+✔ a read-only file is neither written over nor erased without force, by CpmVolume or tecvol, and nothing changes (KE-AR10) (799.973375ms)
+✔ a file whose entry names a block past DSM is not read, by CpmVolume or tecvol get: the error names the entry (KE-AR11) (465.41125ms)
+✔ damaged-volume reports and terminal CLI errors finish under normal and guarded Node settings (KE-AR12, KE-202) (6780.147042ms)
+tecos ROM {"backend":"tas","phase":"probe","target":"tecos.rom","origin":32768,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":96230746}
+tecos ROM {"backend":"tas","phase":"final","target":"tecos.rom","origin":47847,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":94647481}
+✔ a recipe builds a verified card and rejects a wrong digest (7.773084ms)
+✔ CpmVolume refuses writes to a read-only volume (1.366209ms)
+✔ tecvol makes and reads format 1.1: more than 8 volumes, a drives field, unique labels (268.29425ms)
+✔ tecvol marks one volume written behind with :wb, and refuses two or one read-only (472.224208ms)
+✔ npm run build leaves dist/'s ROM, map and census equal to build/'s when dist/ is there (KE-188) (2360.278834ms)
+{"0":4,"1":4,"2":10,"3":10,"4":4,"5":4,"6":4,"7":22,"8":8,"9":22,"10":4,"11":4,"12":4,"16":0,"17":0,"18":0,"19":0,"20":0,"21":0,"22":0,"23":0,"24":0,"25":0,"26":0,"27":0,"28":0,"29":0,"30":0,"31":0,"32":0,"33":0,"34":0,"35":0,"36":0,"37":0,"38":0,"39":0,"40":0,"41":0,"42":0,"43":0,"44":0,"45":0,"46":0,"47":0,"48":0,"49":0,"50":0,"51":0,"52":0,"53":0,"54":0,"55":0,"56":0,"57":0,"58":0,"59":0,"60":0,"61":0,"62":0,"63":0,"64":0,"65":0,"66":0,"67":0,"68":0,"69":0,"70":0,"71":0,"72":0,"73":0,"74":0,"75":0,"76":0,"77":0,"78":0,"79":0,"80":0,"81":0,"82":0,"83":0,"84":0,"85":0,"86":0,"87":0,"88":0,"89":0,"90":0,"91":0,"92":0,"93":0,"94":0,"95":0,"96":0,"97":0,"98":0,"99":0,"100":0,"101":0,"102":0,"103":0,"104":0,"105":0,"106":0,"107":0,"108":0,"109":0,"110":0,"111":0,"112":0,"113":0,"114":0,"115":0,"116":0,"117":0,"118":0,"119":0,"120":0,"121":0,"122":0,"123":0,"124":0,"125":0,"126":0,"127":0,"128":0,"129":0,"130":0,"131":0,"132":0,"133":0,"134":0,"135":0,"136":0,"137":0,"138":0,"139":0,"140":0,"141":0,"142":0,"143":0,"144":0,"145":0,"146":0,"147":0,"148":0,"149":0,"150":0,"151":0,"152":0,"153":0,"154":0,"155":0,"156":0,"157":0,"158":0,"159":0,"160":0,"161":0,"162":0,"163":0,"164":0,"165":0,"166":0,"167":0,"168":0,"169":0,"170":0,"171":0,"172":0,"173":0,"174":0,"175":0,"176":0,"177":0,"178":0,"179":0,"180":0,"181":0,"182":0,"183":0,"184":0,"185":0,"186":0,"187":0,"188":0,"189":0,"190":0,"191":0,"192":0,"193":0,"194":0,"195":0,"196":0,"197":0,"198":0,"199":0,"200":0,"201":0,"202":0,"203":0,"204":0,"205":0,"206":0,"207":0,"208":0,"209":0,"210":0,"211":0,"212":0,"213":0,"214":0,"215":0,"216":0,"217":0,"218":0,"219":0,"220":0,"221":0,"222":0,"223":0,"224":0,"225":0,"226":0,"227":0,"228":0,"229":0,"230":0,"231":0,"232":0,"233":0,"234":0,"235":0,"236":0,"237":0,"238":0,"239":0,"240":0,"241":0,"242":0,"243":0,"244":0,"245":0,"246":0,"247":0,"248":0,"249":0,"250":0,"251":0,"252":0,"253":0,"254":0,"255":0}
+✔ hardware services: information, bad numbers, digits, LCD, tone (174.557291ms)
+✔ hardware services: joystick and matrix keys (307.436542ms)
+✔ hardware services: the claim, INFO's claim bit, and text at a position (187.608542ms)
+✔ hardware services: the DS1302 clock (1491.971958ms)
+✔ a volume or driver hook refusal is TNEBAD with carry, and nothing changes (195.864792ms)
+✔ VIDEO, RTC and the driver hook refuse any other B with TNEBAD, and nothing changes (A1) (177.755416ms)
+✔ hardware services: a claim stops PUTAT only while the PICO9918 is the console (274.618084ms)
+✔ hardware services: stack depths (1.063375ms)
+✔ every service keeps IY, and all but MOUNT, UNMOUNT and DESCRIBE keep IX and the alternates too (A4) (192.279125ms)
+✔ the image check passes on the same image and finds one byte changed (3.092625ms)
+✔ a label renamed: the image is the same, and the label check passes given the rename and fails without it (2528.740834ms)
+✔ two files trade places: the image check fails, the label check passes with addresses taken by their labels (3335.91975ms)
+✔ with the files traded, the label check finds an operand changed and a jump retargeted (6401.799708ms)
+✔ the names search finds old names as whole words in src/, and nothing in history or generated files (22.008375ms)
+✔ a byte that is the low or high half of one label's address is taken by its label only in an unchanged LOW( or HIGH( line, and an unrelated byte that happens to equal one is not (0.738708ms)
+✔ a relative jump whose displacement changes but whose target is the same label is taken by it, and one to elsewhere is not (0.36375ms)
+✔ a JR NZ turned into JR NC is a difference, even where its two bytes read as an address of the same place (KE-169) (0.244375ms)
+✔ a marker that shared its address with a label moved away is reported, and left out when named (0.284125ms)
+✔ KG41: none of KS38a's old file and label names is left in src/ (10.095416ms)
+✔ historical KG42 at 626ee41: the ROM falls by the merges' stated bytes, only their routines differ, and the hot paths are equal (79108.246875ms)
+✔ on a PICO9918 board with no PICO.SVC the banner, volumes and prompt are on the screen; with no matrix keyboard the console is serial (408.355333ms)
+✔ TNFIND finds PICO at version 3, its table PIBLK, and TNLIST returns its record last (229.108ms)
+✔ GLCD.SVC loaded and unloaded leaves REGHEAD at the ROM's record (345.591083ms)
+✔ UNLOAD of a GLCD.SVC that gave way to CRT: leaves the PICO9918's screen as it was (KE-190) (210.983791ms)
+✔ TNDRVR refuses B = 1, with a table or HL = 0, and the console is unchanged (182.357459ms)
+✔ an old card's PICO.SVC line, KS36c's driver, is refused, saying so, with nothing left (244.168584ms)
+✔ CON PICO 40 and CON CRT 32 switch the width, kept over warm boot, and 80 after reset (424.012667ms)
+✔ a debugger reads TPSHOW, TPDRAW and the version through abi.inc's offsets from the table TNFIND gives (376.860042ms)
+✔ a PICO9918 board booting the starter's display files has the no-display figure's TPA: nothing loaded (1318.238333ms)
+✔ 80 columns: TMSR2's pairs run with interrupts off, and the state comes back (180.513042ms)
+✔ 80 columns: TMSSET's pairs run with interrupts off, and the state comes back (202.003583ms)
+✔ 80 columns: GFXREG's pairs run with interrupts off, and the state comes back (196.380583ms)
+✔ 80 columns: TMSWA's pairs run with interrupts off, and the state comes back (189.468ms)
+✔ 80 columns: TMSRA's pairs run with interrupts off, and the state comes back (178.890834ms)
+✔ 40 columns: TMSR2's pairs run with interrupts off, and the state comes back (202.383458ms)
+✔ 40 columns: TMSSET's pairs run with interrupts off, and the state comes back (206.623666ms)
+✔ 40 columns: GFXREG's pairs run with interrupts off, and the state comes back (193.8895ms)
+✔ 40 columns: TMSWA's pairs run with interrupts off, and the state comes back (192.292375ms)
+✔ 40 columns: TMSRA's pairs run with interrupts off, and the state comes back (224.040334ms)
+✔ 32 columns: TMSR2's pairs run with interrupts off, and the state comes back (187.447ms)
+✔ 32 columns: TMSSET's pairs run with interrupts off, and the state comes back (194.656375ms)
+✔ 32 columns: GFXREG's pairs run with interrupts off, and the state comes back (214.45325ms)
+✔ 32 columns: TMSWA's pairs run with interrupts off, and the state comes back (190.276791ms)
+✔ 32 columns: TMSRA's pairs run with interrupts off, and the state comes back (191.199292ms)
+✔ TXBYTE's port writes run with interrupts off, and the state comes back (184.177042ms)
+✔ RXBITS's eight samples run with interrupts off, and the state comes back (177.58125ms)
+✔ RXBITS samples bit 0 at its middle, with interrupts on and off (175.632417ms)
+✔ the erratum: CDI, HACC and MVCOPY keep interrupts on when P/V is false (209.313625ms)
+✔ the erratum: VPAIR keeps interrupts on when P/V is false, through IFFGET's second read (179.814084ms)
+✔ a format 1.1 card of 20 volumes boots, its vectors in two G8M slots, and MOUNT lists every volume (525.346375ms)
+✔ MOUNT takes a volume by label or index, refuses one in use, A: left empty and a drive without a slot, and unmounts (819.545ms)
+✔ a reset keeps the selected volume (737.52325ms)
+✔ cold boot refuses a table out of order, an overlap, a payload past the container and a wrong table sum (314.701ms)
+✔ on a card of more than 15 volumes, the boot lists and the LCD show each drive's own volume (328.463792ms)
+✔ unmounting the current drive leaves the prompt on A:, and the next command runs (579.510583ms)
+✔ a warm boot with 0004h on a drive past D: or one with no volume comes back on A:, in the same user (373.554958ms)
+✔ a mount onto the default drive gives functions 31 and 27 the new volume's DPB and allocation vector at once, with no function 14 (KE-AR9) (646.674625ms)
+mutant text named in src/old.asm found in src/value.asm: the set names a file it has left
+mutant moved: caught; 1 failing unmutated, not credited
+mutant the value changed: caught; 1 failing unmutated, not credited
+mutants: 2 of 2 caught
+✔ a test failing on the unmutated tree catches nothing, is named as not credited, and alone is an error (KE-162) (1571.101791ms)
+✔ the ROM leaves 0041h-004Fh alone on serial and the matrix keyboard: cold boot, commands, a scroll, escapes, CON, the keyboard and a warm boot (653.324333ms)
+✔ the ROM leaves 0041h-004Fh alone on the PICO9918 and the GLCD: cold boot, commands, a scroll, escapes, CON, the keyboard and a warm boot (815.535041ms)
+✔ the ROM's console at 80 columns, and it scrolls (551.825583ms)
+✔ the ROM's console at 40 columns, and it scrolls (553.670375ms)
+✔ the ROM's console at 32 columns, and it scrolls (670.556208ms)
+✔ a board with both displays keeps the PICO9918; GLCD.SVC's line stays out quietly (KE-150, KE-200), and CON UC1 loads it (570.05925ms)
+✔ on a board with both displays the starter's startup leaves the CCP stack's room, so a service using it loads after (KE-200) (1363.347583ms)
+✔ a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the field to CRT:, and then names GLCD.SVC takes the GLCD: the fallback puts the field back to TTY: before the line runs (KE-200) (352.34325ms)
+✔ a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200) (290.996583ms)
+✔ the GLCD's UNLOAD clears its INFO bit (369.403125ms)
+✔ CON UC1, CON TTY, UNLOAD stays on serial: only UC1: moves to CRT: (403.681917ms)
+✔ a service loading with GLCD.SVC in installs, and says nothing (429.480667ms)
+✔ the ROM's console at every width: CON PICO 40, CON CRT 32 and CON PICO 80 switch it, each screen cleared and working at its width (KD-174) (2089.941459ms)
+✔ a width is refused, nothing changed, while the PICO9918 is claimed, and for a record at version 2 (210.286041ms)
+✔ the console at 32 columns writes the colours and an empty sprite table (234.988ms)
+✔ TPA after boot: the ROM's console alone, the GLCD's driver, and both (733.103791ms)
+✔ at 80 columns the screens equal the ROM console's, step by step (231.601708ms)
+✔ at 40 columns the screens equal the ROM console's, step by step (272.106584ms)
+✔ at 32 columns the screens equal the ROM console's, step by step (267.059125ms)
+✔ a scroll, then ESC[2@ keeps the row it opens (257.466792ms)
+✔ the starter card boots the ROM's console alone on a board with both, and the GLCD on a board with one (1559.471333ms)
+✔ a dead card shows CARD? on the LCD, for a board with no terminal (31.773584ms)
+✔ a good retry clears CARD?, and a failed one shows it again (277.981667ms)
+✔ a PICO9918 board with no STARTUP.CMD has the ROM's console, and the LCD says nothing (227.311209ms)
+✔ a PICO9918 board with a file with no display line has the ROM's console, and the LCD says nothing (232.34675ms)
+✔ a PICO9918 board with a missing PICO.SVC has the ROM's console, and the LCD says nothing (237.856541ms)
+✔ a PICO9918 board with a bad PICO.SVC has the ROM's console, and the LCD says nothing (249.699375ms)
+✔ a PICO9918 board with a skip past the file has the ROM's console, and the LCD says nothing (223.1265ms)
+✔ GLCLD returns carry through LCDROW when GLCD.SVC won't load (225.567291ms)
+✔ a line left without an end, and a record full to its last byte, run to a prompt on the ROM's console, the LCD saying nothing (518.059541ms)
+✔ the ROM's console or GLCD.SVC, then CON TTY in the file: the LCD stays silent (518.012042ms)
+✔ the LCD stays silent with no PICO9918, and with no matrix keyboard (506.342792ms)
+✔ the GLCD's UNLOAD with CRT: as the console leaves it there (427.595792ms)
+✔ UNLOAD leaves the ROM's console, on CRT: and from serial, and a warm boot and CON CRT find it (311.6885ms)
+✔ no matrix keyboard: reset to a prompt on serial with no file, a bad file and no vector call (577.680125ms)
+✔ on UC1: with no PICO driver, boot and a warm boot make no vector call (358.308708ms)
+✔ after CON TTY, GLCD.SVC typed takes the console from the ROM's, and CON CRT takes it back (KE-150) (424.236542ms)
+✔ a claimed VDP takes no row-move call: the console's code isn't entered while a program owns it (225.727334ms)
+✔ the take runs only for a service with its table in its own page (388.604042ms)
+✔ a claim with the ROM's console on CRT:: nothing drawn, and release restores it (236.398416ms)
+✔ a claim with the ROM's console in, on UC1:: release restores the VDP, and the GLCD stays the console (356.031084ms)
+✔ a claim with no console on the PICO9918, with no matrix keyboard: refused by nothing, and nothing is restored (228.224917ms)
+✔ a program reading VRAM on the ROM's console sees the names and patterns it saw (229.928208ms)
+✔ at 80 columns: each graphics entry against VRAM under a claim, then release and warm boot give the text back (249.979125ms)
+✔ at 80 columns: the whole pattern table after the take, CONSWV, a release and a warm boot (274.36825ms)
+✔ at 40 columns: each graphics entry against VRAM under a claim, then release and warm boot give the text back (280.911125ms)
+✔ at 40 columns: the whole pattern table after the take, CONSWV, a release and a warm boot (293.59525ms)
+✔ at 32 columns: each graphics entry against VRAM under a claim, then release and warm boot give the text back (271.533375ms)
+✔ at 32 columns: the whole pattern table after the take, CONSWV, a release and a warm boot (291.577042ms)
+✔ INIT failing leaves no record and the old ceiling (505.562875ms)
+✔ row 3: a take leaves a program's row alone, with nothing up (353.069542ms)
+✔ row 3: a program's write over GLCD? survives the take that follows (262.300834ms)
+✔ row 3: the word is cleared by a take, and the flag doesn't stay for the next (389.21125ms)
+✔ row 3: GLCD? stays while the ROM's console keeps the console; the GLCD's driver typed loads, gives way and clears it (KE-150) (264.042458ms)
+✔ row 3: a program's write to rows 0 to 2 leaves the word for a take to clear (263.047708ms)
+✔ row 3: a failed load by hand leaves the word (262.111167ms)
+✔ row 3: a service with no video table leaves the word (380.474084ms)
+✔ row 3: the word lasts through a program's warm boot, for a take to clear (307.364125ms)
+✔ row 3: GLCD? shows on the ROM's console after a failed CON UC1 in the file (249.092625ms)
+✔ INFO's HWBWRD follows the word: up, overwritten and cleared (304.056375ms)
+✔ the probe needs both patterns: a VDP that answers one way is not present (224.979166ms)
+✔ the web host: a stored card with an old GLCD.SVC says so and offers a new starter (1.542834ms)
+✔ the web host: power-on writes the width's CON PICO line and no driver, says what a card lacks, and a card with no drive A doesn't stop it (16.944417ms)
+✔ the web host: a card whose STARTUP.CMD is read-only keeps it, and the page says why it boots as it is (KE-AR10) (3.824833ms)
+✔ the web host: a user's CON CRT width line goes with the page's own, so the selector's width stands (9.93475ms)
+✔ the web host: a chained startup line loses its display pieces and keeps the rest (2.785416ms)
+✔ the web host: a removed piece's colon passes to the piece after it, and one that hung on a display piece goes (17.934375ms)
+✔ the web host: a next line's first colon goes with the display piece it hung on, and no colon crosses a line (9.925125ms)
+✔ the web host: VOLS on the line after an old PICO.SVC line runs, with no display line left (336.713042ms)
+✔ the web host: the piece after a display piece loses its colon and runs (352.126458ms)
+✔ the web host: a card with .DRV files is refused in its own words and left alone (2.569417ms)
+✔ the web host: an old card's words name the display asked for, or else what it has (12.905667ms)
+✔ the web host: a card whose files were renamed by hand has its .DRV display lines taken out (4.765334ms)
+✔ a failed CON UC1 leaves the console as it was, and a later one takes the GLCD (414.058333ms)
+✔ the web host: the page's card boots on the board with both displays with no line refused (KE-150) (1273.120083ms)
+✔ the web host: a GLCD.SVC in user 3 isn't A:'s (KE-154) (1.046958ms)
+✔ the web host: a read-only A: is left byte for byte, and the card boots as it is (KE-154) (307.138625ms)
+✔ the web host: a full directory leaves the card as it was, and it boots (KE-154) (523.467875ms)
+✔ latch bit 3 switches only MAIN and bit 2 only EXPAND, as the 96K board does (18.020917ms)
+✔ without MAIN 1, bit 3 changes nothing (9.791333ms)
+✔ a recognised reset keeps a remapped A:, the boot list and the LCD say so, and the TPA doesn't vary (474.967333ms)
+✔ all four drives are kept: a remapped D: (400.761541ms)
+✔ a selected volume of another geometry than the drive's default gets its own DPH (767.19425ms)
+✔ a drive other than A: selected with another geometry than its default's gets its own DPH (874.966708ms)
+✔ a warm boot keeps the selection (345.882542ms)
+✔ a drive unmounted before a reset stays so, and can be mounted after it (523.487833ms)
+✔ recognition refuses (0000h) (506.826208ms)
+✔ recognition refuses (0001h) low (505.377042ms)
+✔ recognition refuses (0002h) high (572.148542ms)
+✔ recognition refuses (0005h) (533.92025ms)
+✔ recognition refuses the stub's JP (528.734542ms)
+✔ recognition refuses the stub's target, low (515.198ms)
+✔ recognition refuses the stub's target, high (523.995375ms)
+✔ recognition refuses W's low byte (534.527209ms)
+✔ recognition refuses W below 8000h (520.786208ms)
+✔ recognition refuses W at 7F01h (536.825875ms)
+✔ recognition refuses W = S below 8000h (540.776916ms)
+✔ recognition refuses W above S (534.683042ms)
+✔ W at exactly 8000h and at S's page is recognised (744.590333ms)
+✔ a real service loaded is recognised, and is gone after the reset (728.468417ms)
+✔ a hung INIT is recognised, W below PZTOP, and the reset recovers from it (904.766166ms)
+✔ a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset at DIAG doesn't (1149.424833ms)
+✔ DIAG's retry uses the selection after another key and after a second failure; H dumps nothing now (KS36b) (1132.994083ms)
+✔ a card with no default A: under a valid retained A: reaches DIAG, and a retry uses the selection (550.878167ms)
+✔ an index moved by new volumes at lower starts is kept, and regenerated (528.058167ms)
+✔ a retained volume moved on the card gives the defaults whole (543.001792ms)
+✔ a retained volume changed flags on the card gives the defaults whole (531.134834ms)
+✔ a retained volume removed on the card gives the defaults whole (551.013583ms)
+✔ a retained drive resized gives the defaults whole (680.090291ms)
+✔ a retained drive of another start gives the defaults whole (675.479916ms)
+✔ a retained drive of changed geometry gives the defaults whole (673.422ms)
+✔ a retained drive of changed flags gives the defaults whole (668.681958ms)
+✔ a retained drive duplicated in RSLBUF gives the defaults whole (674.902084ms)
+✔ a retained drive absent from A: gives the defaults whole (678.437541ms)
+✔ a retained drive on a drive with no slot gives the defaults whole (683.338291ms)
+✔ a retained drive of geometry 0 is not retained, whatever its other bytes, and no volume is on two drives (564.433166ms)
+✔ a retained drive left with no slot on a card of identical extents gives the defaults whole (550.000417ms)
+✔ a G8M volume kept on a drive whose slot is G1M's gives the defaults, and one that fits doesn't (745.847458ms)
+✔ a failed read in step 1 leaves the defaults whole (632.428708ms)
+✔ a card of 1.1 with drives keeps its selection, and each index past the first block (691.972084ms)
+✔ a written-behind volume keeps its flag through a reset (542.290208ms)
+✔ from user 5, a drive and a video console, a reset reaches A:, user 0, on the ROM's console (KS39) (532.233ms)
+✔ a default drive beyond MNTDRV is refused with MEMOUNT (45.299667ms)
+✔ a default drive within MNTDRV boots (189.540708ms)
+✔ startup runs once per reset from the selected A:, at user 0 (562.587584ms)
+✔ startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit (592.872ms)
+✔ startup is marked before it opens (603.974042ms)
+✔ a selected A: with no STARTUP.CMD reaches a serial prompt (567.394083ms)
+✔ an unreadable STARTUP.CMD on the selected A: leaves a prompt (1144.834125ms)
+✔ a held key skips startup on the selected A: (555.7715ms)
+✔ a dirty line is not written to a card of identical extents after a reset (868.000583ms)
+✔ RAM from 4b6877b, a resident in, is unrecognised and nothing old runs (592.912875ms)
+✔ RAM from dbdce5c, a resident in, is unrecognised and nothing old runs (611.301458ms)
+✔ random RAM, 200 seeded runs: unrecognised, and each stops at the decision with nothing written (668.472583ms)
+✔ random RAM all the way to a prompt, 4 seeded runs, gives the defaults (1521.697542ms)
+✔ a recognised image with a random DRVTAB, 24 seeded runs, boots with the defaults (4755.910334ms)
+✔ BIOS function 0 with MAIN 1 selected on the 96K option is recognised (688.380167ms)
+✔ BIOS function 0 with EXPAND 1 selected on the 96K option is recognised (679.079375ms)
+✔ BIOS function 0 with both selected on the 96K option is recognised (700.636708ms)
+✔ recognised: only the ROM runs from COLD to MEMINIT, and nothing is written outside the boot stack before the decision (696.707083ms)
+✔ unrecognised: only the ROM runs from COLD to MEMINIT, and nothing is written outside the boot stack before the decision (751.489542ms)
+✔ abi.inc is ABI 5: INFO is service 0 and the table one jump at C008h (0.14125ms)
+✔ a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it (2486.214ms)
+✔ residents are removed last in, first out, each REMOVE undoing its INIT (392.095917ms)
+✔ a cold boot clears every resident (509.664416ms)
+✔ BDOS function 108 gets and sets the program return code, kept across a warm boot (189.92975ms)
+✔ SAMPLE.ASM's table names are abi.inc's, at abi.inc's values, and it fits the style's limits (2.036042ms)
+✔ TAS builds SAMPLE on TEC-OS, and SAMPLE runs on the PICO9918 board and returns to the prompt (566.918ms)
+✔ a standard card's volume past block 7FFFFFh is refused at mount, error 27, and the card is left as it was (KE-151, KE-158) (534.19425ms)
+✔ on a standard card, LBAARG names block 7FFFFFh and refuses 800000h: the bound is exact (179.751625ms)
+✔ past the card's image, a read and a write fail and change nothing; a high block doesn't wrap to a low one (KE-155) (221.981875ms)
+✔ a data error token after CMD17 fails the read at once, with SDEDTOK (0Ah), not after 65,536 polls as SDETOK (KE-182) (186.486333ms)
+✔ SDINIT refuses a card whose CMD8 echo is wrong, in its check pattern or its voltage, with SDEVOLT (KE-183) (455.6955ms)
+✔ SDINIT refuses a card whose CMD55 R1 has an error bit, with SDEINIT at once (KE-183) (129.040833ms)
+✔ on B:, a .COM only on A: runs, and B:'s own copy comes first (431.371584ms)
+✔ a drive named in the command looks there only, and A: looks nowhere else (454.933583ms)
+✔ 0050h is the drive a program came from: a typed B:NAME, a plain name, the search and a chained B:NAME (KD-178) (598.188584ms)
+✔ under user 3, the search looks in A:'s user 3, then A:'s user 0, and puts the user back (A7) (675.979875ms)
+✔ the current or named drive looks in user 0 after the current user too: A: under user 3, B:NAME, and B:'s user 0 before A: (A7) (630.736458ms)
+{"bdos":{"reserved":54,"deepest":30},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":18},"runs":{"serial":{"bdos":{"reserved":54,"deepest":28},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":12},"conmod":0},"pico9918":{"bdos":{"reserved":54,"deepest":30},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":12},"conmod":1},"glcd":{"bdos":{"reserved":54,"deepest":30},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":12},"conmod":3},"writeBehind":{"bdos":{"reserved":54,"deepest":28},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":18},"conmod":0},"diagnostics":{"bdos":{"reserved":54,"deepest":12},"ccp":{"reserved":32,"deepest":0},"bios":{"reserved":40,"deepest":0},"lines":8,"conmod":0},"diagnosticsPico":{"bdos":{"reserved":54,"deepest":22},"ccp":{"reserved":32,"deepest":0},"bios":{"reserved":40,"deepest":0},"lines":37,"conmod":1},"conUc1":{"bdos":{"reserved":54,"deepest":30},"ccp":{"reserved":32,"deepest":14},"bios":{"reserved":40,"deepest":12},"conmod":3,"row3":""},"conUc1Glcd":{"bdos":{"reserved":54,"deepest":22},"ccp":{"reserved":32,"deepest":16},"bios":{"reserved":40,"deepest":12},"conmod":3,"row3":""},"picoRom":{"bdos":{"reserved":54,"deepest":26},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":12},"conmod":1,"row3":""},"recognisedReset":{"bdos":{"reserved":54,"deepest":22},"ccp":{"reserved":32,"deepest":8},"bios":{"reserved":40,"deepest":12}},"chained":{"bdos":{"reserved":54,"deepest":28},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":12}},"serialPlain":{"bdos":{"reserved":54,"deepest":22},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":12},"conmod":0,"row3":""},"resident":{"bdos":{"reserved":54,"deepest":22},"ccp":{"reserved":32,"deepest":18},"bios":{"reserved":40,"deepest":12},"conmod":0,"row3":""}},"workload":"From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; and chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C. An NMI at each new depth where 0066h holds RETN."}
+✔ each stack keeps a quarter of its reservation free, and every STKGUARD byte survives the deepest built-in and error paths (92726.980167ms)
+✔ RES.SVC declares the word MYCO pushes on the BDOS's stack (76.47525ms)
+✔ the starter card holds exactly six files, each by its hash, the PICO9918's console being the ROM's (KS39) (579.527083ms)
+✔ the starter card boots, and MOUNT lists its volumes (255.789708ms)
+✔ the web page's card is the starter with DEMO.COM, which the starter lacks (KD-170) (14.4285ms)
+✔ the web build starts clean: a file left in web/dist from an older build doesn't reach the page (264.768375ms)
+✔ each line runs, echoed, and a failing one prints its message; a warm boot doesn't run the file (214.195ms)
+✔ a file with no lines, and no file, reach the prompt; a file over one record ends at it (1023.783792ms)
+✔ a key held through reset skips the file: a hanging INIT reaches a prompt, and with no key it hangs (2243.449208ms)
+✔ a machine with no GLCD refuses GLCD.SVC from the file, quietly, the device absent (KD-173), and the prompt follows (257.221625ms)
+✔ a machine with no matrix keyboard refuses GLCD.SVC from the file, saying so, and the prompt follows (248.81775ms)
+✔ a quiet line for an absent device is followed by a : line that runs, and the same line typed says NAME? (KD-173) (337.067042ms)
+✔ on a serial board, with no PICO9918 console, a width from the file is quiet and its : line runs; typed, it says the width? (KE-191) (288.600875ms)
+✔ a line from the file whose service fails for another cause, or has no file, still says so, and its : line goes (747.861333ms)
+✔ a line from the file whose INIT succeeds with A = TNENODV and whose record is refused says so, and its : line goes (KE-192) (480.513625ms)
+✔ a file of exactly 128 bytes runs its last byte, and reads no further (242.589042ms)
+✔ ^Z and a zero each end the file (463.953375ms)
+✔ the DMA address is the default's after the read, with a file and without (450.969458ms)
+✔ a read that returns an error starts nothing, whatever the record holds (281.837ms)
+✔ NAME.SVX is no service: the type must be SVC in full (269.846583ms)
+✔ a reset clears the position, so the file runs again (517.472084ms)
+✔ lines from the file equal the same lines typed: a built-in then a line (750.5655ms)
+✔ lines from the file equal the same lines typed: a program's warm boot then a line (717.082458ms)
+✔ lines from the file equal the same lines typed: a failing line then a line (714.405125ms)
+✔ lines from the file equal the same lines typed: USER 3 then a line (615.785375ms)
+✔ an unreadable file reaches a prompt, and what it held doesn't run (920.160583ms)
+✔ a file that cold boots the machine runs for ever, and the skip breaks it (1201.031625ms)
+✔ a startup file whose program jumps to C000h warm boots once, as a program's run into the ROM does (B1), and the prompt comes back (363.280708ms)
+
+Interrupted while running:
+
+⚠ test/storage-boundaries.test.mjs (test/storage-boundaries.test.mjs:1:1)
+Command exit -15, wall 645.757 seconds
+✖ test/storage-boundaries.test.mjs (7018.395834ms)
+✖ test/style-check.test.mjs
+✖ test/svc.test.mjs
+✖ test/system.test.mjs
+✖ test/tas.test.mjs
+✖ test/ted.test.mjs
+✖ test/verify-mount.test.mjs
+✖ test/walk.test.mjs
+✖ test/warmboot.test.mjs
+✖ test/web-bundle.test.mjs
+✖ test/web-store.test.mjs
+✖ test/web-touch.test.mjs
+✖ test/write.test.mjs
+ℹ tests 534
+ℹ suites 0
+ℹ pass 521
+ℹ fail 0
+ℹ cancelled 13
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 631784.215042
+
+✖ failing tests:
+
+test at test/storage-boundaries.test.mjs:1:1
+✖ test/storage-boundaries.test.mjs (7018.395834ms)
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/style-check.test.mjs:1:1
+✖ test/style-check.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/svc.test.mjs:1:1
+✖ test/svc.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/system.test.mjs:1:1
+✖ test/system.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/tas.test.mjs:1:1
+✖ test/tas.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/ted.test.mjs:1:1
+✖ test/ted.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/verify-mount.test.mjs:1:1
+✖ test/verify-mount.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/walk.test.mjs:1:1
+✖ test/walk.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/warmboot.test.mjs:1:1
+✖ test/warmboot.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/web-bundle.test.mjs:1:1
+✖ test/web-bundle.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/web-store.test.mjs:1:1
+✖ test/web-store.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/web-touch.test.mjs:1:1
+✖ test/web-touch.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+
+test at test/write.test.mjs:1:1
+✖ test/write.test.mjs
+  'Promise resolution is still pending but the event loop has already resolved'
+mem-guard 19:55:48 ke9-exact-strict: exit 241, peak 466 MB, 10 processes at most, 646.1 s

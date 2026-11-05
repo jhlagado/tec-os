@@ -1,0 +1,69 @@
+✖ cyclic registry rollback, REMOVE refusal 1 (KE-AR13) (553.345834ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1545.418834
+
+✖ failing tests:
+
+test at test/svc.test.mjs:356:3
+✖ cyclic registry rollback, REMOVE refusal 1 (KE-AR13) (553.345834ms)
+  AssertionError [ERR_ASSERTION]: retained pages publish no records and preserve generation, hooks and vectors
+  + actual - expected
+  
+    {
+      busy: 0,
+      ceiling: 47104,
+      generation: 0,
+  +   hook: 46936,
+  -   hook: 52175,
+      owner: 184,
+      registry: 47203,
+      top: 47104,
+      vectors: [
+        0,
+  
+      at TestContext.<anonymous> (file:///Users/johnhardy/projects/tec-os-ke9-hook-mutant/test/svc.test.mjs:376:14)
+      at async Test.run (node:internal/test_runner/test:1332:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:385:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: {
+      top: 47104,
+      ceiling: 47104,
+      registry: 47203,
+      owner: 184,
+      generation: 0,
+      busy: 0,
+      hook: 46936,
+      vectors: [
+          0,   0,  0,   0, 0, 0, 0, 201, 0, 0, 0,   0,
+          0,   0,  0, 201, 0, 0, 0,   0, 0, 0, 0, 201,
+          0,   0,  0,   0, 0, 0, 0, 201, 0, 0, 0,   0,
+          0,   0,  0, 201, 0, 0, 0,   0, 0, 0, 0, 201,
+        251, 237, 77,   0, 0, 0, 0,   0
+      ]
+    },
+    expected: {
+      top: 47104,
+      ceiling: 47104,
+      registry: 47203,
+      owner: 184,
+      generation: 0,
+      busy: 0,
+      hook: 52175,
+      vectors: [
+          0,   0,  0,   0, 0, 0, 0, 201, 0, 0, 0,   0,
+          0,   0,  0, 201, 0, 0, 0,   0, 0, 0, 0, 201,
+          0,   0,  0,   0, 0, 0, 0, 201, 0, 0, 0,   0,
+          0,   0,  0, 201, 0, 0, 0,   0, 0, 0, 0, 201,
+        251, 237, 77,   0, 0, 0, 0,   0
+      ]
+    },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,2 @@
+{"name":"ke9-exact-strict","command":"python3 deadline.py 1800 bash strict.sh tec-os-ke9-qualification qualification","limitMB":900,"heapMB":675,"event":"start","at":"2026-11-05T08:45:02.160Z","freePercent":35,"load":4.13,"waitedSeconds":0}
+{"name":"ke9-exact-strict","command":"python3 deadline.py 1800 bash strict.sh tec-os-ke9-qualification qualification","limitMB":900,"heapMB":675,"event":"end","at":"2026-11-05T08:55:48.258Z","outcome":"exit 241","code":241,"peakMB":466,"processes":10,"seconds":646.1,"freePercentAtEnd":37}

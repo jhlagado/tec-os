@@ -1,0 +1,14 @@
+{
+  "args": [
+    "--test",
+    "--test-name-pattern=cyclic registry rollback, REMOVE refusal 1",
+    "test/svc.test.mjs"
+  ],
+  "cwd": "/Users/johnhardy/projects/tec-os-ke9-hook-mutant",
+  "code": 1,
+  "signal": null,
+  "testSha256": "23c547221c5d827b2271ef05dfd70ef26b06ee3aa850d63a77e1dca768d2f18a",
+  "fixtureSha256": "2c0e55d3aece9133be6c772e67a0d911e239b311b5051e0f00c0ba39721ecc37",
+  "romSha256": "2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09",
+  "expectedFailure": "The unchanged V_REFUSE=1 test reaches the loader-state comparison after checking natural SP, RESULT=2 and rc=2. The omitted OLDCO restoration differs at the actual hook."
+}

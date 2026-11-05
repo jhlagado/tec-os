@@ -1,0 +1,70 @@
+mem-guard 21:23:45 ke9-comparison-and-hook-control: started, limit 600 MB, heap 450 MB, memory free 32 percent, load 4.15, waited 0 s
+
+> tec-os@0.1.0 build
+> node tools/build.mjs
+
+tecos ROM {"backend":"tas","phase":"probe","target":"tecos.rom","origin":32768,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":96230746}
+tecos ROM {"backend":"tas","phase":"final","target":"tecos.rom","origin":47847,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":94647481}
+tecos: ROM 16020/16384 bytes, TPA $0100-$B9A3 (47268 bytes), sha256 2b719d6cbcfc50d4
+
+> tec-os@0.1.0 diag
+> node tools/diag.mjs
+
+tecos ROM {"backend":"tas","phase":"final","target":"diag.rom","origin":32256,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2/diag","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":49592289}
+diag: ROM 16318/16384 bytes, 56 free, image D90143609F53FAAB, checksum $47C0
+
+> tec-os@0.1.0 media
+> node tools/media.mjs
+
+tecos ROM {"backend":"tas","phase":"final","target":"MOUNT.COM","origin":256,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":3319456}
+tecos ROM {"backend":"tas","phase":"flat","target":"GLCD.SVC","origin":256,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4163881}
+tecos ROM {"backend":"tas","phase":"flat","target":"GLCD.SVC","origin":512,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4163881}
+tecos ROM {"backend":"tas","phase":"final","target":"DEMO.COM","origin":256,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":5337982}
+tecos ROM {"backend":"tas","phase":"media","target":"tecos.rom","root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2/build/tecos","sha256":"2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09"}
+dist: 1 ROM profiles, 6 starter files, starter.img
+REPEATED_TAS_OUTPUTS_MATCH
+
+> tec-os@0.1.0 build
+> node tools/build.mjs
+
+tecos ROM {"backend":"atom","phase":"probe","target":"tecos.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/src"}
+tecos ROM {"backend":"atom","phase":"final","target":"tecos.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/src"}
+tecos: ROM 16020/16384 bytes, TPA $0100-$B9A3 (47268 bytes), sha256 2b719d6cbcfc50d4
+
+> tec-os@0.1.0 diag
+> node tools/diag.mjs
+
+tecos ROM {"backend":"atom","phase":"final","target":"diag.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/diag"}
+diag: ROM 16318/16384 bytes, 56 free, image D90143609F53FAAB, checksum $47C0
+
+> tec-os@0.1.0 media
+> node tools/media.mjs
+
+tecos ROM {"backend":"atom","phase":"final","target":"MOUNT.COM","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference"}
+tecos ROM {"backend":"atom","phase":"final","target":"GLCD.SVC","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference"}
+tecos ROM {"backend":"atom","phase":"final","target":"DEMO.COM","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference"}
+tecos ROM {"backend":"atom","phase":"media","target":"tecos.rom","root":"/Users/johnhardy/projects/tec-os-ke9-atom-reference/build/tecos","sha256":"2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09"}
+dist: 1 ROM profiles, 6 starter files, starter.img
+2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09  build/tecos/tecos.rom
+59ecde839d60da67c014ed045895b37b0b749f14bf5905a1b5bfaa4cf5829c12  build/tecos/census.json
+66412ce96f99aaf4b67afaaad0d8c6597f81e1e46a5c33d40180a24a8a5ea343  build/diag/diag.rom
+384d5adc4b5251f7770eb84e40a17896b5fd9f5ccef8c98a8b6d3ea6836fac36  build/diag/diag.json
+2b719d6cbcfc50d48498a5d2a8a7449b23df82306d989c1d7018e4830edf7f09  dist/tecos.rom
+093228f78368a7c734fad860a006b9479aebc54a49dfd84d19d59ce330dffe8d  dist/starter.img
+e83752c3fff6fc11d5302590956b3f4390f440bc0a3ef1db3eee81f1eb699c51  dist/starter.recipe.json
+b57ea4d1433348b69f9fbc929ef7e62fb84326a5742e5da6018808308351a029  dist/page.recipe.json
+ac040f75f8d91226fd80ff9be1764673dec0ec5cde606769425bd815fb75e736  dist/files/GLCD.SVC
+5273f0ba443817f9168a1909fe7c934a5ad186ba1480d35b7ab169c27ead83cc  dist/files/MOUNT.COM
+7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d  dist/files/DEMO.COM
+2b9291a8c50fc2fbf6673112627bcfc849cf0f7578d20e4104b86f9e1516e49f  dist/files/TED.COM
+45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2  dist/files/TAS.COM
+0544eba7fbdb498d8d9114e64ad3ddbf48825e5430ee4665940ce82098ab6776  dist/files/SAMPLE.ASM
+22c64e3fe8e98eabb6540ce49ef2b032e00139c178fb3c57663aeb379cdfe06d  dist/files/STARTUP.CMD
+tecos ROM {"backend":"tas","phase":"control-flat","target":"GLCD.SVC","origin":256,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4163881}
+tecos ROM {"backend":"tas","phase":"control-flat","target":"GLCD.SVC","origin":512,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4163881}
+tecos ROM {"backend":"tas","phase":"control-flat","target":"GLCD.SVC","origin":37376,"root":"/Users/johnhardy/projects/tec-os-ke9-qualification-v2","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4163842}
+ROMs, D8 maps, census, media, GLCD third page and artifact controls passed
+SAME_SOURCE_ATOM_TAS_ARTIFACTS_AND_D8_MATCH
+Refusing-REMOVE fixture mutant rejected by the unchanged actual-hook assertion
+Command exit 0, wall 37.577 seconds
+mem-guard 21:24:23 ke9-comparison-and-hook-control: exit 0, peak 210 MB, 5 processes at most, 37.8 s
