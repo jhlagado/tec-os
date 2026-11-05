@@ -5,6 +5,9 @@
 // the BIOS's CONOUT directly in the 28 bytes it has; and UNLOAD gives the
 // console and the pages back. Emulator evidence.
 // The screens that show SAVE to a read-only volume were retaken: it came to say R/O.
+// KS48 keeps this historical oracle on its original-font input. Only the
+// historical pixel workload uses a disposable FONT-span restoration. Other
+// GLCD tests and Compact alias/rendering tests use the unmodified production ROM.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -29,9 +32,24 @@ async function card() {
 
 /** A GLCD board at its first prompt, the GLCD console loaded; or, with
  *  matrix false, a serial board on the same card, which never loads it. */
-async function board({ matrix = true } = {}) {
-  const { rom, symbols } = romFor();
+async function board({ matrix = true, historicalFont = false } = {}) {
+  let { rom, symbols } = romFor();
+  if (historicalFont) {
+    const before=Buffer.from(rom),at=symbols.get("FONT")-0xc000;
+    const original=readFileSync(resolve(ROOT,"format/font-original.bin"));
+    const digest=bytes=>createHash("sha256").update(bytes).digest("hex");
+    assert.equal(digest(before),"fa63989b65d1e7e7a07f45e2a2b33e52f785d74216a3fde38af86b2d913f302d","actual production ROM input");
+    assert.equal(original.length,768);
+    assert.equal(digest(original),"43eb0ec9a8513a670df112948435801b9ae91874e1d17f1283d8990e586e0fb0","historical original-font identity");
+    assert.equal(digest(before.subarray(at,at+768)),"5d732cefca4013fe6082728a00cae5e3aceaf3e6eb99aaa31e0289c0b3efe1d8","selected font span");
+    rom=Buffer.from(before);original.copy(rom,at);
+    assert.deepEqual(rom.subarray(0,at),before.subarray(0,at),"unchanged native prefix");
+    assert.deepEqual(rom.subarray(at+768),before.subarray(at+768),"unchanged native suffix");
+    assert.deepEqual(rom.subarray(at,at+768),original,"only the historical font restored");
+    assert.equal([...rom.keys()].filter(i=>rom[i]!==before[i]).length,427);
+  }
   const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });
+  m.historicalFont = historicalFont;
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;
@@ -86,8 +104,8 @@ function watch(m) {
   return () => ({ program, bdos: { reserved: top - base, deepest: top - bdosLow } });
 }
 
-const workload = (async () => {
-  const m = await board();
+async function workloadRun({ historicalFont = false } = {}) {
+  const m = await board({ historicalFont });
   const depths = watch(m);
   const bdosVector = word(m, 6);
   const screens = REF.screens.map(({ line }) => {
@@ -96,16 +114,20 @@ const workload = (async () => {
     return { line, gdram };
   });
   return { m, bdosVector, screens, depths: depths() };
-})();
+}
+
+const workload = workloadRun(); // production input for TPA/CONOUT-stack readings
 
 test("the resident GLCD draws every screen of the workload as the driver did, byte for byte", { timeout: 1_800_000 }, async () => {
-  const { m, screens } = await workload;
-  assert.deepEqual(screens, REF.screens, `the ST7920's graphics RAM against ${REF.from}'s driver`);
+  const { m, screens } = await workloadRun({ historicalFont: true });
+  assert.equal(m.historicalFont, true);
+  assert.deepEqual(screens, REF.screens, `historical-font input: the ST7920's graphics RAM against ${REF.from}'s driver`);
   assert.deepEqual(m.violations, []);
 });
 
 test("on a GLCD board (0006h) is three pages lower than with the driver, and no more", { timeout: 1_800_000 }, async () => {
   const { m, bdosVector } = await workload;
+  assert.equal(m.historicalFont, false, "TPA reading uses production font");
   // Three pages under the stub's page, the stub being where (0006h) is with no driver. The
   // reference's own figure, REF.bdosVector - 306h, held until KS36b moved the stub up 479 bytes.
   const stub = word(m, m.sym("STUBAD"));
@@ -114,6 +136,7 @@ test("on a GLCD board (0006h) is three pages lower than with the driver, and no 
 
 test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async () => {
   const { m, depths } = await workload;
+  assert.equal(m.historicalFont, false, "CONOUT stack reading uses production font");
   const free = m.sym("CSTKTOP") - 2 - m.sym("CSTKBAS");
   assert.equal(free, m.sym("CCPSTN") - 2, "the stack is CCPSTN, less the return word");
   assert.ok(depths.program > 0 && depths.program <= free, `CONOUT took ${depths.program} bytes of a program's ${free}`);

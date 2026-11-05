@@ -1,4 +1,5 @@
 import {test} from 'node:test';
+import {validateGlcdCell} from './lib/glcd-bitmap.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -110,8 +111,14 @@ let peak=0;
 for(let code=0;code<256;code++){
  const r=call(g,word(g,table),{a:code,b:0,c:0});peak=Math.max(peak,r.stack);
  const bytes=g.tec1g.state.display.glcdCtrl.glcd;
- for(let y=0;y<8;y++)for(let x=0;x<6;x++)
-  assert.equal((bytes[y*16]>>(7-x))&1,(expected(code)[y]>>(7-x))&1,'GLCD six-cell '+code+'/'+y+'/'+x);
+ validateGlcdCell(bytes,code,font);
+ if(code===65){
+  const original=readFileSync(root+'/format/font-original.bin');
+  assert.throws(()=>validateGlcdCell(bytes,code,original),/fixed-font GLCD cell/);
+  const wrong=Buffer.from(font);wrong[(65-32)*8]^=8;
+  assert.throws(()=>validateGlcdCell(bytes,code,wrong),/fixed-font GLCD cell/);
+ }
+
 }
 assert.deepEqual(g.violations,[]);
 rows.push({case:'glcd',width:21,rows:8,aliases:256,stack:peak,reversePadding:'consumer complements all six cells'});

@@ -52,3 +52,12 @@ intentional host-helper mutation control. stacks.test uses withDisplay; TED
 uses boot; pico's at loop and masking's board loop now explicitly select80.
 The new raw/default and transition helpers construct Machine without a hidden
 width fixture. Diagnostic ROM tests program their own diagnostic80 mode.
+
+The first complete qualification found KG24(c)'s original-font golden in
+GLCD's twenty-command workload. The proposed repair keeps glcd-screens.json
+byte-exact. A separate historical-only workload uses a checked disposable ROM
+copy with just the original FONT span restored. TPA and CONOUT-stack readings
+keep their own unmodified-production workload. Other board() calls also stay
+on production input. The fixed-font GLCD alias validator gains old-font and
+wrong-font rejection on actual A-cell pixels. The proposal awaits independent
+source review and allocation; no corrected workload has run.
