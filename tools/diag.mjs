@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build the TEC-1G diagnostics ROM with ATOM.
+// Build the TEC-1G diagnostics ROM.
 //
 // Generates diag/gen/config.asm (version, serial delays, stopwatch constants)
 // and diag/gen/font.asm, assembles diag/diag.asm, fills the 16 KiB image with
@@ -10,7 +10,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
+import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 import { fontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -87,20 +87,31 @@ export function imageId(image) {
   return createHash("sha256").update(blank).digest().subarray(0, ID_LEN);
 }
 
-export async function buildDiag() {
-  const serial = writeGenerated();
+async function assembleDiagAtom() {
+  const { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } = await import("atom-z80");
   const result = await assembleAtomProject({ root: SRC, entry: "diag.asm" });
   const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
+  for (const image of result.generation.images) {
+    check(image.address >= ROM_START, `ROM byte emitted at ${hex(image.address)}`);
+  }
+  const { bytes } = materializeAtomGeneration(result.generation, { base: ROM_START, fill: 0xff });
+  traceRom({ backend: "atom", phase: "final", target: "diag.rom", root: SRC });
+  return { d8, bytes };
+}
+
+export async function buildDiag() {
+  const backend = romBackend();
+  const run = backend === "tas" ? await tasAssembler() : null;
+  const serial = writeGenerated();
+  const { d8, bytes } = run ? await run({
+    root: SRC, entry: "diag.asm", origin: 0x7e00, phase: "final", target: "diag.rom", rom: true,
+  }) : await assembleDiagAtom();
   const symbols = new Map(d8.symbols.map((s) => [s.name.toUpperCase(), s.address ?? s.value]));
   const at = (name) => {
     const v = symbols.get(name);
     if (typeof v !== "number") throw new Error(`symbol ${name} missing from the map`);
     return v;
   };
-  for (const image of result.generation.images) {
-    check(image.address >= ROM_START, `ROM byte emitted at ${hex(image.address)}`);
-  }
-  const { bytes } = materializeAtomGeneration(result.generation, { base: ROM_START, fill: 0xff });
   check(at("RESET") === 0xc000, "RESET must be at C000h");
   check(at("INT38") === 0xc038, "INT38 must be at C038h");
   check(at("NMIROM") === 0xc066, "NMIROM must be at C066h");

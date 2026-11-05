@@ -2,12 +2,15 @@ import assert from 'node:assert/strict';
 import { posix } from 'node:path';
 
 const romBase = 0xc000;
+const romRules = {
+  'rom.asm': { ramFile: 'ram.asm', resetFile: 'reset.asm', resetLine: 1, ramLimit: romBase },
+  'diag.asm': { ramFile: 'vars.asm', resetFile: 'boot.asm', resetLine: 8, ramLimit: 0x7f00 },
+};
 const definition = /^\s*([A-Za-z_][A-Za-z0-9_]*)(?:(:)|\s+(EQU)\b)/i;
 const names = ' ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_';
 const codeOrData = new Set('adc add and bit call ccf cp cpd cpdr cpi cpir cpl daa dec di djnz ei ex exx halt im in inc ind indr ini inir jp jr ld ldd lddr ldi ldir neg nop or out outd otdr outi otir pop push res ret reti retn rl rla rlc rlca rld rr rra rrc rrca rrd rst sbc scf set sla sra srl sub xor db dw cstr pstr istr'.split(' '));
 
-function decodeDebug(dbg, raw, staged) {
-  const partsByName = new Map([...staged].map(([file, row]) => [row.name, file]));
+export function decodeImage(dbg, raw, expectedOrigin) {
   assert.ok(dbg.length >= 256 && dbg.length % 128 === 0, 'TDBG records');
   const header = dbg.subarray(-128);
   assert.equal(header.subarray(0, 4).toString(), 'TDBG');
@@ -16,13 +19,13 @@ function decodeDebug(dbg, raw, staged) {
   const origin = header.readUInt16LE(6), end = header.readUInt16LE(8) || 0x10000;
   const globalsAt = header.readUInt16LE(12) * 128, count = header.readUInt16LE(14);
   assert.ok(globalsAt > 0 && globalsAt + count * 8 <= dbg.length - 128, 'TDBG global extent');
-  assert.ok(origin < romBase && end > romBase && end <= 0x10000, 'ROM image extent');
+  assert.equal(origin, expectedOrigin, 'wrong TDBG origin');
+  assert.ok(end > origin && end <= 0x10000, 'TDBG image extent');
   const len = end - origin;
-  assert.equal(raw.length, Math.ceil(len / 128) * 128, 'CP/M image extent');
+  assert.equal(raw.length, origin === 0x100 ? len : Math.ceil(len / 128) * 128, 'TDBG span length');
   const sum = raw.subarray(0, len).reduce((total, b) => (total + b) & 0xffff, 0);
   assert.equal(sum, header.readUInt16LE(10), 'TDBG checksum');
   assert.ok(raw.subarray(len).every(b => b === 0), 'nonzero record padding');
-  assert.ok(raw.subarray(0, romBase - origin).every(b => b === 0), 'nonzero reservation bytes before ROM');
   const globals = new Map();
   for (let i = 0; i < count; i++) {
     const r = dbg.subarray(globalsAt + 8 * i, globalsAt + 8 * (i + 1));
@@ -39,6 +42,11 @@ function decodeDebug(dbg, raw, staged) {
     assert.ok(!negative || kind === 'constant', 'negative label');
     globals.set(name, { kind, value: r.readUInt16LE(6) - (negative ? 0x10000 : 0) });
   }
+  return { origin, end, globals, globalsAt, image: raw.subarray(0, len) };
+}
+
+function decodeStatements(dbg, staged, end, globalsAt) {
+  const partsByName = new Map([...staged].map(([file, row]) => [row.name, file]));
   let cursor = 0, address = 0, line = 0, part = -1, ended = false;
   const statements = [], regions = [], parts = [];
   const lengths = new Map();
@@ -91,7 +99,7 @@ function decodeDebug(dbg, raw, staged) {
     assert.equal(lengths.get(i), staged.get(parts[i]).bytes.length, 'TDBG part length differs');
   }
   for (const s of statements) assert.ok(parts[s.part], 'unknown TDBG statement part');
-  return { origin, end, globals, statements, regions, parts };
+  return { statements, regions, parts };
 }
 
 function lines(bytes) {
@@ -108,7 +116,8 @@ function lines(bytes) {
   return result;
 }
 
-export function scanSource(sources) {
+export function scanSource(sources, entry) {
+  const { ramFile, resetFile, resetLine } = romRules[entry];
   const perFile = new Map([...sources].map(([file, bytes]) => [file, lines(bytes)]));
   const definitions = new Map(), fileList = [], visited = new Set();
   function visit(file) {
@@ -138,15 +147,17 @@ export function scanSource(sources) {
       const statement = (match ? text.slice(match[0].length) : text).trimStart();
       if (statement === '' || statement.startsWith(';')) continue;
       const [op] = statement.toLowerCase().split(/\s+|;/, 1);
-      const resetOrigin = file === 'reset.asm' && i === 0 && /^ORG\s+\$C000\s*(?:;.*)?$/i.test(statement);
-      const workspace = file === 'ram.asm' && (op === 'org' || op === 'ds');
-      assert.ok(resetOrigin || workspace || (file !== 'ram.asm' && codeOrData.has(op)),
+      const resetOrigin = file === resetFile && i + 1 === resetLine && /^ORG\s+\$C000\s*(?:;.*)?$/i.test(statement);
+      const workspace = file === ramFile && (op === 'org' || op === 'ds');
+      const filled = entry === 'diag.asm' && (file === 'boot.asm' || file === 'display.asm') &&
+        op === 'ds' && /^DS\s+[^,;]+,\s*(?:\$[0-9a-f]+|' ')\s*(?:;.*)?$/i.test(statement);
+      assert.ok(resetOrigin || workspace || filled || (file !== ramFile && codeOrData.has(op)),
         file + ':' + (i + 1) + ': unsupported statement or possible ROM gap: ' + op);
-      Object.assign(row, { op, statement });
+      Object.assign(row, { op, statement, filled });
     }
     fileList.push(file);
   }
-  visit('rom.asm');
+  visit(entry);
   assert.equal(visited.size, perFile.size, 'unreferenced staged sources');
   return { perFile, definitions, fileList };
 }
@@ -169,8 +180,13 @@ function ramOperand(text, globals) {
   return left * right;
 }
 
-export function tasImage(dbg, raw, staged, pin, source) {
-  const { origin, end, globals, statements, regions, parts } = decodeDebug(dbg, raw, staged);
+export function tasImage(dbg, raw, staged, pin, source, entry, expectedOrigin) {
+  const { origin, end, globals, globalsAt } = decodeImage(dbg, raw, expectedOrigin);
+  const { ramFile, ramLimit } = romRules[entry];
+  const diagnostic = entry === 'diag.asm';
+  assert.ok(origin < romBase && end > romBase && end <= (diagnostic ? 0xfff6 : 0x10000), 'ROM image extent');
+  assert.ok(raw.subarray(0, romBase - origin).every(b => b === 0), 'nonzero reservation bytes before ROM');
+  const { statements, regions, parts } = decodeStatements(dbg, staged, end, globalsAt);
   const { perFile, definitions, fileList } = source;
   const files = Object.fromEntries(fileList.map(f => [f, {}]));
   const symbols = [];
@@ -192,9 +208,9 @@ export function tasImage(dbg, raw, staged, pin, source) {
   const isData = new Set(['db', 'dw', 'cstr', 'pstr', 'istr']);
   const unplaced = new Set();
   for (const [file, rows] of perFile) {
-    if (file === 'ram.asm') continue;
+    if (file === ramFile) continue;
     for (const [i, row] of rows.entries()) {
-      if (codeOrData.has(row.op)) unplaced.add(file + ':' + (i + 1));
+      if (codeOrData.has(row.op) || row.filled) unplaced.add(file + ':' + (i + 1));
     }
   }
   let region = -1;
@@ -202,29 +218,41 @@ export function tasImage(dbg, raw, staged, pin, source) {
     while (region + 1 < regions.length && regions[region + 1].at <= s.address) region++;
     const file = parts[s.part], source = perFile.get(file)[s.line - 1];
     const kind = regions[region]?.kind ?? 'data';
-    assert.ok(source?.op && codeOrData.has(source.op), 'TDBG points outside an emitting source line');
-    assert.equal(kind, isData.has(source.op) ? 'data' : 'code', file + ':' + s.line + ': ROM region kind mismatch');
+    assert.ok(source?.op && (codeOrData.has(source.op) || source.filled), 'TDBG points outside an emitting source line');
+    assert.equal(kind, isData.has(source.op) || source.filled ? 'data' : 'code', file + ':' + s.line + ': ROM region kind mismatch');
     assert.ok(unplaced.delete(file + ':' + s.line), 'duplicate emitting source line');
     const endAt = statements[i + 1]?.address ?? end;
-    ranges.get(file).push({ start: s.address, end: endAt, line: s.line, kind });
+    if (source.filled) {
+      const [count, fill] = source.statement.replace(/^DS\s+/i, '').split(';', 1)[0].split(',').map(x => x.trim());
+      const expression = /^(\w+)-\(\$-(\$[0-9a-f]+|\w+)\)$/i.exec(count);
+      assert.ok(expression, 'unsupported diagnostic fill expression: ' + count);
+      const expectedSize = ramOperand(expression[1], globals) - (s.address - ramOperand(expression[2], globals));
+      assert.ok(expectedSize > 0 && endAt - s.address === expectedSize, 'ROM fill range differs from its source');
+      const value = fill === "' '" ? 0x20 : Number.parseInt(fill.slice(1), 16);
+      assert.ok(value <= 0xff, 'ROM fill is not a byte');
+      assert.ok(raw.subarray(s.address - origin, endAt - origin).every(b => b === value), 'ROM fill bytes differ');
+    }
+    // D8 classifies emitted DS fills as code. TAS encodes them as byte regions.
+    ranges.get(file).push({ start: s.address, end: endAt, line: s.line, kind: source.filled ? 'code' : kind });
   }
   assert.equal(unplaced.size, 0, 'missing emitting source lines');
   let cursor;
-  for (const [i, s] of perFile.get('ram.asm').entries()) {
+  for (const [i, s] of perFile.get(ramFile).entries()) {
     if (!s.op) continue;
     const text = s.statement.replace(/^[A-Z]+\s+/i, '').split(';', 1)[0].trim();
     const n = ramOperand(text, globals);
     if (s.op === 'org') {
-      assert.ok(n >= (cursor ?? origin) && n < romBase, 'RAM origin moved backwards or outside RAM');
+      assert.ok(n >= (cursor ?? origin) && n < ramLimit, 'RAM origin moved backwards or outside RAM');
+      if (diagnostic) assert.equal(cursor, undefined, 'diagnostic variables must have one origin');
       if (cursor === undefined) assert.equal(n, origin, 'initial RAM origin differs from TDBG origin');
       cursor = n;
     } else {
-      assert.ok(cursor !== undefined && Number.isInteger(n) && n > 0 && cursor + n <= romBase, 'bad RAM reserve');
-      ranges.get('ram.asm').push({ start: cursor, end: cursor + n, line: i + 1, kind: 'directive' });
+      assert.ok(cursor !== undefined && Number.isInteger(n) && n > 0 && cursor + n <= ramLimit, 'bad RAM reserve');
+      ranges.get(ramFile).push({ start: cursor, end: cursor + n, line: i + 1, kind: 'directive' });
       cursor += n;
     }
   }
-  assert.equal(cursor, romBase, 'reserved workspace did not end at ROM base');
+  assert.equal(cursor, diagnostic ? globals.get('VARSEND')?.value : romBase, 'reserved workspace end differs');
 
   let listing = 1;
   for (const file of fileList) {
@@ -247,7 +275,7 @@ export function tasImage(dbg, raw, staged, pin, source) {
   }
   const d8 = { format: 'd8-debug-map', version: 1, arch: 'z80', addressWidth: 16, endianness: 'little',
     files, segments: [{ start: romBase, end }], fileList, symbols,
-    generator: { name: 'tas', tool: 'tas', version: pin, inputs: { entry: 'rom.asm' }, entryAddress: 0 } };
+    generator: { name: 'tas', tool: 'tas', version: pin, inputs: { entry }, entryAddress: 0 } };
   return { d8, bytes: raw.subarray(romBase - origin, end - origin) };
 }
 

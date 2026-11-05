@@ -11,7 +11,6 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, writeFileSync, readFi
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
 import { FORMAT, checkInterfaces, makeSvc } from "./lib/svc.mjs";
 import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
@@ -195,13 +194,14 @@ function checkServiceSources() {
 const ATOM_BUDGET = { maxCycles: 4_000_000_000, maxInstructions: 400_000_000 };
 
 async function assembleAtom(phase) {
+  const { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } = await import("atom-z80");
   const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions, ...ATOM_BUDGET });
   const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
   for (const image of result.generation.images) {
     check(image.address >= ROM_START, `ROM byte emitted at ${hex(image.address)}`);
   }
   const { bytes } = materializeAtomGeneration(result.generation, { base: ROM_START, fill: 0xff });
-  traceRom({ backend: "atom", phase, root: SRC });
+  traceRom({ backend: "atom", phase, target: "tecos.rom", root: SRC });
   return { d8, bytes };
 }
 
@@ -235,7 +235,7 @@ async function buildProfile(name, assemble) {
   const profile = { name, ...PROFILES[name] };
   const probeBase = 0x8000;
   writeGenerated(profile, probeBase);
-  const probeMap = (await assemble("probe")).d8;
+  const probeMap = (await assemble("probe", probeBase)).d8;
   const probe = globals(probeMap);
   const marker = probeMap.symbols.find(symbol => symbol.name === "BDOSRME");
   check(marker?.kind === "label", "missing or invalid workspace sizing marker BDOSRME");
@@ -244,7 +244,7 @@ async function buildProfile(name, assemble) {
   check(workspaceBytes > 0 && wsbase >= probeBase, "invalid workspace sizing marker");
 
   const serial = writeGenerated(profile, wsbase);
-  const { d8, bytes } = await assemble("final");
+  const { d8, bytes } = await assemble("final", wsbase);
   const symbols = globals(d8);
   check(need(symbols, "WSBASE") === wsbase, "final workspace base differs from the probe placement");
   check(bytes.length <= ROM_SIZE, `image is ${bytes.length} bytes`);
@@ -339,7 +339,11 @@ function refreshDist(outDir, census) {
 }
 
 export async function build() {
-  const assemble = romBackend() === "tas" ? await tasAssembler(SRC) : assembleAtom;
+  let assemble = assembleAtom;
+  if (romBackend() === "tas") {
+    const run = await tasAssembler();
+    assemble = (phase, origin) => run({ root: SRC, entry: "rom.asm", origin, phase, target: "tecos.rom", rom: true });
+  }
   return [await buildProfile("tecos", assemble)];
 }
 

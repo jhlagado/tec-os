@@ -4,14 +4,14 @@ import { appendFileSync, mkdtempSync, readFileSync, readdirSync, realpathSync, r
 import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, posix, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { scanSource, tasImage } from './tas-d8.mjs';
+import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
 const runnerPin = '3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689';
 const tasPin = 'dbee66a90816df9a5884a08754ebc2d458a38325';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 
-function stage(root) {
+function stage(root, entry, origin, rom) {
   const sourceRoot = realpathSync(root);
   function inside(file) {
     assert.ok(!posix.isAbsolute(file) && file !== '..' && !file.startsWith('../'), 'include escapes source root: ' + file);
@@ -27,7 +27,14 @@ function stage(root) {
     assert.match(name, /^[A-Z0-9$_-]{1,8}\.(ASM|INC)$/);
     assert.ok(!names.has(name), 'ambiguous CP/M name: ' + name);
     names.add(name);
-    const original = readFileSync(inside(file));
+    let original = readFileSync(inside(file));
+    if (!rom && file === entry) {
+      const org = /^([ \t]*ORG[ \t]+)\$0100([ \t]*)$/gim;
+      const text = original.toString('latin1');
+      assert.equal([...text.matchAll(org)].length, 1, 'expected one $0100 origin in ' + entry);
+      original = Buffer.from(text.replace(org, (_, prefix, suffix) =>
+        prefix + '$' + origin.toString(16).padStart(4, '0') + suffix), 'latin1');
+    }
     sources.set(file, original);
     const row = { name };
     staged.set(file, row);
@@ -46,13 +53,15 @@ function stage(root) {
     }), 'latin1');
     return name;
   }
-  visit('rom.asm');
-  const source = scanSource(sources);
-  assert.equal(source.definitions.get('BDOSRME')?.kind, 'label', 'missing or invalid workspace sizing marker BDOSRME');
+  visit(entry);
+  const source = rom ? scanSource(sources, entry) : undefined;
+  if (entry === 'rom.asm') {
+    assert.equal(source.definitions.get('BDOSRME')?.kind, 'label', 'missing or invalid workspace sizing marker BDOSRME');
+  }
   return { staged, source };
 }
 
-export async function tasAssembler(root) {
+export async function tasAssembler() {
   assert.ok(process.env.TECOS_TAS_HOST, 'set TECOS_TAS_HOST to the prepared Thorium runner directory');
   assert.ok(process.env.TAS_COM, 'set TAS_COM to the pinned TAS.COM');
   const host = resolve(process.env.TECOS_TAS_HOST);
@@ -69,18 +78,20 @@ export async function tasAssembler(root) {
   }
   assert.equal(hash.digest('hex'), 'd49287b51d474e5825d68ed4c766cd63632c9da68cded2641e881de00960219c', 'Thorium Z80 runtime pin mismatch');
   const { assemble } = await import(pathToFileURL(runner).href);
-  return async (phase) => {
-    const { staged, source } = stage(root);
+  return async ({ root, entry, origin, phase, target, rom = false }) => {
+    const { staged, source } = stage(root, entry, origin, rom);
     const dir = mkdtempSync(join(tmpdir(), 'tecos-tas-'));
     try {
       for (const row of staged.values()) writeFileSync(join(dir, row.name), row.bytes);
       const executable = join(dir, 'TAS.COM');
       writeFileSync(executable, com);
-      const result = await assemble({ dir, root: 'ROM.ASM', out: 'ROM.BIN', com: executable });
+      const input = staged.get(entry).name;
+      const result = await assemble({ dir, root: input, out: input.replace(/\.ASM$/, '.BIN'), com: executable });
       assert.equal(result.code, 0, result.console);
       assert.ok(result.bytes && result.dbg, 'TAS did not produce both ROM and debug output');
-      const output = tasImage(Buffer.from(result.dbg), Buffer.from(result.bytes), staged, tasPin, source);
-      traceRom({ backend: "tas", phase, root, runner: runnerPin, tstates: result.tstates });
+      const dbg = Buffer.from(result.dbg), raw = Buffer.from(result.bytes);
+      const output = rom ? tasImage(dbg, raw, staged, tasPin, source, entry, origin) : decodeImage(dbg, raw, origin);
+      traceRom({ backend: "tas", phase, target, origin, root, runner: runnerPin, tstates: result.tstates });
       return output;
     } finally {
       rmSync(dir, { recursive: true, force: true });
