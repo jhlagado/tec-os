@@ -20,12 +20,13 @@ const keys = (input, description, done) => {
 };
 const disk = volume(image, 'A');
 const edited = 'Hello from the TEC-OS.';
-const line = disk.read('SAMPLE.ASM', { text: true }).split('\n')
+const sample = () => Buffer.from(disk.read('SAMPLE.ASM', { text: true })).toString('utf8');
+const line = sample().split('\n')
   .findIndex(text => text.startsWith('HELLO:')) + 1;
 assert.ok(line > 0);
 keys(`ted sample.asm ${line}\r`, 'TED at the hello line', () => status().includes(`L${line} C1`));
 keys('\x1b[C'.repeat(22) + 'the ', 'edit the greeting', () => screen().some(text => text.includes(edited)));
-keys('\x13', 'save SAMPLE.ASM', () => disk.read('SAMPLE.ASM', { text: true }).includes(edited));
+keys('\x13', 'save SAMPLE.ASM', () => sample().includes(edited));
 let mark = m.output.length;
 keys('\x14b', 'build SAMPLE', () => /TED\r\n/.test(m.text(mark)) && /SAMPLE\.ASM/.test(status()));
 assert.match(m.text(mark), /SAMPLE\.COM written/);
