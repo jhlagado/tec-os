@@ -1,0 +1,120 @@
+{
+  "stage": "KS48",
+  "gate": "KG53",
+  "baseline": "ea3ef3de9133931e925a0220d51c0e971c1fd8dd",
+  "testedSource": "8b8664a7d93c6dc2e8bce509b9770585e106eedc",
+  "recordScope": "Record-only descendant. Executable source/native inputs unchanged; no further run is claimed for the record commit.",
+  "developmentEvidenceComplete": true,
+  "independentFinalResultReview": "pending",
+  "landing": "not performed",
+  "evidence": {
+    "repository": "jhlagado/origo",
+    "commit": "569e0f27d21000931b0c87ec2741ef8191c589fd",
+    "path": "studies/p3-tec-os/evidence/ks48-strict-successor-result",
+    "sha256": {
+      "strict-one-results.json": "9f62a9c3c14de66e10fb3b48714d1342743010c2a069e8ccdba576d5091cf589",
+      "strict-two-results.json": "9f62a9c3c14de66e10fb3b48714d1342743010c2a069e8ccdba576d5091cf589",
+      "strict-one-stack-census.json": "416d288a903b6ae80045b31124f5448df987eed9518e818b1cae65e0c5d9fe5e",
+      "strict-two-stack-census.json": "416d288a903b6ae80045b31124f5448df987eed9518e818b1cae65e0c5d9fe5e",
+      "strict-one-hwsvc-stacks.json": "5595c289804bd01ef0a8137324701750027d6ba684a6ec5ea7be83fdbfa9f557",
+      "strict-two-hwsvc-stacks.json": "5595c289804bd01ef0a8137324701750027d6ba684a6ec5ea7be83fdbfa9f557",
+      "strict-one-stack-account.json": "0776c2dba563bd41ae491ae5fbdb2a9ea82faa30e4034c7caf76a21b1bd9421a",
+      "strict-two-stack-account.json": "0776c2dba563bd41ae491ae5fbdb2a9ea82faa30e4034c7caf76a21b1bd9421a",
+      "artifact-inventory.json": "89f727fe8fa705860b1db50c95a679083318674075c50f05141e07dc721fdff1",
+      "artifact-validation.json": "64a316001748c0d21becba7a170efc43350cd1883742b17d8b7aebd83ff9a3c1",
+      "artifact-hashes.json": "685e3a26069d22f0344a76e2f0335eec316a089c8584d823a6ad7fccd400a6d6",
+      "reuse.json": "27f081fdd52a639583422d2fe8390b74110902006899b46ed4ad42d541f2dcaa",
+      "guard.jsonl": "6cb2aa5f6f24d8cb1aafa7743725f9e8855098d2a40c73799758f8e41308699a",
+      "complete-output.tar.gz": "52c8d0314ad6f1e160327eda9480a60928e07412ae6f2d4f5f20d37bff113494"
+    }
+  },
+  "controller": "3ccf11f418d2a7c17a481a077633ee7a766fd63d",
+  "strict": {
+    "runs": 2,
+    "passPerRun": 741,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "identicalOrderedResults": true,
+    "baselineNamesRetained": 734,
+    "newRegressionNames": 7
+  },
+  "native": {
+    "mainSha256": "fa63989b65d1e7e7a07f45e2a2b33e52f785d74216a3fde38af86b2d913f302d",
+    "diagnosticSha256": "17e4aae5e7944fef60997123b8c41ac7c8a06eea2564dc339ecfa38395911665",
+    "fontSha256": "5d732cefca4013fe6082728a00cae5e3aceaf3e6eb99aaa31e0289c0b3efe1d8",
+    "noticeSha256": "577c3e97edcf1d7e183f4b668ec93a3125c90a414a6203fb3194ba6a6c612b41",
+    "romUsed": 16020,
+    "romFree": 364,
+    "starterTpa": 47268,
+    "fourG8MTpa": 46564,
+    "ramDelta": 0,
+    "fontTableBytes": 768,
+    "changedFontBytes": 427,
+    "changedColdOperands": 2,
+    "coldOperandAddresses": [
+      "D1BB",
+      "D1E3"
+    ],
+    "sourceInputIdentityProof": "Prior normal TAS/ATOM/repeat/workflow evidence at source23cbe84 reused only after unchanged executable/generated/data identities were proven on testedSource8b8664a."
+  },
+  "stacks": {
+    "order": [
+      "bdos",
+      "ccp",
+      "bios"
+    ],
+    "bareMaximum": [
+      30,
+      18,
+      18
+    ],
+    "actualRomSvclim": [
+      8,
+      6,
+      12
+    ],
+    "sums": [
+      38,
+      24,
+      30
+    ],
+    "reserved": [
+      54,
+      32,
+      40
+    ],
+    "observedWorkloadMaximum": [
+      30,
+      18,
+      18
+    ],
+    "hardwareMaximum": 22,
+    "validatedAfterEachStrictRun": true
+  },
+  "artifacts": {
+    "completeFiles": 37,
+    "completeDirectories": 9,
+    "missingExtraControlsPassed": true,
+    "buildDistCopiesAndMetadataExact": true
+  },
+  "costs": {
+    "thisJobSeconds": 995.017,
+    "thisGuardSeconds": 995.1,
+    "peakMB": 629,
+    "maxProcesses": 8,
+    "guardWaitSeconds": 0,
+    "guardedStageSecondsIncludingFailures": 1849.7
+  },
+  "remaining": [
+    "Independent final result review and driver landing",
+    "Owning consumers decide adoption and pins",
+    "Physical screen/board and actual debugger qualification are outside this proof"
+  ],
+  "preservedFailures": [
+    "d2c20786 first complete qualification740/741 historical GLCD font mismatch",
+    "623ca66c first accounting memory stop645MB under600MB cap"
+  ],
+  "dependentOffer": "OFFER.md in the evidence path; complete font/original/source/notices plus images, costs and actual40/80 workflows."
+}
