@@ -14,6 +14,7 @@ import { displayFiles } from "./lib/starter.mjs";
 import { buildRecipe, saveImage } from "./tecvol.mjs";
 import { pinnedBytes as readPinnedBytes } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
+import { pageZeroDeclarations } from "./lib/media-source.mjs";
 import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 
 import { assembleDistributionCom, assembleGlcd } from "./lib/tas-distribution.mjs";
@@ -36,13 +37,7 @@ function pinnedBytes(name) {
 /** TEC-OS's fixed state in page zero, 0040h-004Fh, from the EQUs in src/layout.asm. */
 function pageZeroState() {
   const src = readFileSync(resolve(ROOT, "src/layout.asm"), "utf8");
-  return [...src.matchAll(/^(\w+)\s+EQU\s+\$(004[0-9A-F])\b(?:[ \t]*;[ \t]*(.*))?/gm)]
-    .map((m) => {
-      const preceding = src.slice(0, m.index);
-      const what = m[3] ?? preceding.match(/(?:^|\n); ([^\n]*)\n$/)?.[1] ?? "";
-      return { at: parseInt(m[2], 16), name: m[1], what };
-    })
-    .sort((x, y) => x.at - y.at)
+  return pageZeroDeclarations(src)
     .map((r) => `| ${hex(r.at)} | \`${r.name}\` | ${r.what} |`)
     .join("\n");
 }
