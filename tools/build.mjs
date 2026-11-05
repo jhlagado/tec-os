@@ -269,11 +269,6 @@ async function buildProfile(name, assemble) {
   const starter = cardLayout(at("WSBASE"), CARDS.starter);
   check(starter.entry - 0x100 >= 45830, `the starter card's TPA is ${starter.entry - 0x100} bytes`);
 
-  const outDir = resolve(ROOT, "build", name);
-  mkdirSync(outDir, { recursive: true });
-  writeFileSync(resolve(outDir, "tecos.rom"), rom);
-  writeFileSync(resolve(outDir, "tecos.d8.json"), JSON.stringify(d8, null, 2));
-
   const census = {
     profile: name,
     description: profile.description,
@@ -317,6 +312,11 @@ async function buildProfile(name, assemble) {
       },
     },
   };
+
+  const outDir = resolve(ROOT, "build", name);
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(resolve(outDir, "tecos.rom"), rom);
+  writeFileSync(resolve(outDir, "tecos.d8.json"), JSON.stringify(d8, null, 2));
   writeFileSync(resolve(outDir, "census.json"), JSON.stringify(census, null, 2) + "\n");
   refreshDist(outDir, census);
   return census;

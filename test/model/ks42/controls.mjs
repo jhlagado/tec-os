@@ -80,6 +80,21 @@ try {
   assert.equal(census.ram.ramBios - census.ram.fixedBase, 1050);
   assert.equal(census.ram.cards.starter.tpa, 47267);
   assert.equal(census.ram.cards.fourG8M.tpa, 46563);
+  const previous = new Map(['tecos.rom', 'tecos.d8.json', 'census.json'].map(name => {
+    const path = join(work, 'build/tecos', name);
+    return [path, readFileSync(path)];
+  }));
+  const qualifiedRam = readFileSync(ram, 'latin1');
+  const stack = /^STKBASE:$/m;
+  assert.match(qualifiedRam, stack);
+  writeFileSync(ram, qualifiedRam.replace(stack, 'BADSTKB:'), 'latin1');
+  const late = build();
+  assert.equal(late.status, 1, late.stdout + late.stderr);
+  assert.match(late.stderr, /symbol STKBASE missing from the map/);
+  for (const [path, bytes] of previous) assert.deepEqual(readFileSync(path), bytes, path);
+  console.log('Missing STKBASE leaves all prior build artifacts intact');
+  writeFileSync(ram, qualifiedRam, 'latin1');
+
   const dist = join(work, 'dist');
   cpSync(join(root, 'dist'), dist, { recursive: true });
   const published = join(dist, 'tecos.rom');
