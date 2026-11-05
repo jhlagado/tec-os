@@ -76,6 +76,10 @@ function readdirSyncSafe(path) {
 
 export async function tasAssembler() {
   const root = fileURLToPath(new URL('../../', import.meta.url));
+  const entry = JSON.parse(readFileSync(join(root, 'test/inputs.json'), 'utf8')).inputs['TAS.COM'];
+  assert.equal(entry.commit, tasPin, 'unsupported TAS manifest commit');
+  assert.equal(entry.sha256, '45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2', 'unsupported TAS manifest hash');
+  assert.equal(entry.bytes, 10295, 'unsupported TAS manifest byte count');
   const override = process.env.TECOS_TAS_HOST;
   assert.ok(override !== '', 'TECOS_TAS_HOST is empty: unset it or select the prepared pinned host');
   const host = resolve(override ?? join(inputsDir(root), 'tas-host'));

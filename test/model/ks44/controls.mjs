@@ -41,6 +41,13 @@ try {
   assert.equal(run(['tools/inputs.mjs']).status, 0);
   assert.deepEqual(snapshot(), previous);
   assert.equal(run(verifier).status, 0);
+  for (const [field, value] of [['commit', '0'.repeat(40)], ['sha256', '0'.repeat(64)], ['bytes', 10296]]) {
+    const changed = structuredClone(manifest);
+    changed.inputs['TAS.COM'][field] = value;
+    writeFileSync(manifestPath, JSON.stringify(changed));
+    reject(verifier, {}, /unsupported TAS manifest/);
+    writeFileSync(manifestPath, JSON.stringify(manifest));
+  }
   const wrong = join(work, 'wrong.com');
   writeFileSync(wrong, 'wrong');
   for (const args of [verifier, ['tools/media.mjs'], ['tools/inputs.mjs']]) {
