@@ -3,7 +3,8 @@ import { createHash } from 'node:crypto';
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, isAbsolute, join, posix, relative, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { inputsDir, pinnedBytes } from './pins.mjs';
 import { decodeImage, scanSource, tasImage } from './tas-d8.mjs';
 
 const runnerPin = '3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689';
@@ -68,12 +69,18 @@ function stage(root, entry, origin, rom) {
   return { staged, source };
 }
 
+function readdirSyncSafe(path) {
+  try { readdirSync(path); return true; }
+  catch (error) { if (error.code === 'ENOENT') return false; throw error; }
+}
+
 export async function tasAssembler() {
-  assert.ok(process.env.TECOS_TAS_HOST, 'set TECOS_TAS_HOST to the prepared Thorium runner directory');
-  assert.ok(process.env.TAS_COM, 'set TAS_COM to the pinned TAS.COM');
-  const host = resolve(process.env.TECOS_TAS_HOST);
-  const com = readFileSync(resolve(process.env.TAS_COM));
-  assert.equal(sha(com), '45c0cf054c089163b18d40d9d009715d01a691ffee1c797a61333c3fb7963bd2', 'TAS.COM pin mismatch');
+  const root = fileURLToPath(new URL('../../', import.meta.url));
+  const override = process.env.TECOS_TAS_HOST;
+  assert.ok(override !== '', 'TECOS_TAS_HOST is empty: unset it or select the prepared pinned host');
+  const host = resolve(override ?? join(inputsDir(root), 'tas-host'));
+  assert.ok(readdirSyncSafe(host), 'no TAS host at ' + host + ': prepare .inputs/tas-host as described in README.md or set TECOS_TAS_HOST');
+  const com = pinnedBytes(root, 'TAS.COM');
   const runner = join(host, 'tools/tas.mjs');
   assert.equal(sha(readFileSync(runner)), 'e68e24d900bdc9aa391086f0425d0a56feedeb7257c5a71facdd4bd6f8f7bade', 'Thorium runner pin mismatch');
   assert.equal(sha(readFileSync(join(host, 'package-lock.json'))), 'fc8bcae3046fa185048627e0df26c602772cfb3b190a54089e2fe6764839bf2a', 'Thorium lock pin mismatch');
@@ -107,7 +114,7 @@ export async function tasAssembler() {
 }
 
 export function romBackend() {
-  const backend = process.env.TECOS_ROM_ASSEMBLER ?? 'atom';
+  const backend = process.env.TECOS_ROM_ASSEMBLER ?? 'tas';
   assert.ok(backend === 'atom' || backend === 'tas', 'unknown TECOS_ROM_ASSEMBLER: ' + backend);
   return backend;
 }
