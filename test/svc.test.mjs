@@ -47,7 +47,7 @@ function bench(m) {
     c.sp = top - 2;
     c.pc = addr;
     m.runUntil(() => m.pc === STUB || m.pc === m.sym("CCPENT"), 60_000_000, `return from ${addr.toString(16)}`);
-    return { back: m.pc === STUB, carry: c.flags.C, a: c.a, hl: (c.h << 8) | c.l };
+    return { sp: c.sp, de: (c.d << 8) | c.e, back: m.pc === STUB, carry: c.flags.C, a: c.a, hl: (c.h << 8) | c.l };
   };
   const entry = () => assert.ok(word(6) === word(m.sym("STUBAD")) || (word(6) & 0xff) === 0, "(0006h) is the stub or a page's start");
   const load = (file, end) => {
@@ -303,6 +303,92 @@ test("a service whose records would take the registry past 256 is refused, and t
   assert.deepEqual(registry(t), ["PICO"], "UNLOAD took the first service's records");
   assert.equal(t.load((await chain(1)).file).carry, 0, "and another loads");
   assert.equal(t.find("PICO").carry, 0);
+});
+
+// Natural return must be checked before any helper that resets PC or SP.
+function loaderState(t) {
+  return {
+    top: t.word(6), ceiling: t.word(t.m.sym("PZTOP")),
+    registry: t.word(t.m.sym("REGHEAD")), owner: t.m.read(t.m.sym("SVCHEAD")),
+    generation: t.m.read(t.m.sym("SVCGEN")), busy: t.m.read(t.m.sym("SVCBSY")),
+    hook: t.word(t.m.sym("RAMBIOS") + 10),
+    vectors: Array.from({ length: 56 }, (_, i) => t.m.read(8 + i)),
+  };
+}
+function returned(t, r) {
+  assert.equal(r.back, true);
+  assert.equal(t.m.pc, STUB);
+  assert.equal(r.sp, t.m.sym("CSTKTOP"), "the caller's stack returned naturally");
+  assert.equal(t.m.cpu.cpu.sp, r.sp);
+  assert.equal(t.m.read(t.m.sym("SVCBSY")), 0, "INIT/REMOVE window closed");
+}
+
+for (const [existing, added] of [[255, 1], [256, 0], [256, 1]]) {
+  test(`registry edge existing ${existing} plus ${added} (KE-AR13)`, async () => {
+    const t = await picoBoard();
+    assert.equal(t.load((await chain(254)).file).carry, 0);
+    if (existing === 256) assert.equal(t.load((await chain(1)).file).carry, 0);
+    assert.equal(registry(t).length, existing);
+    const before = loaderState(t);
+    const d = await svc({ V_HOOK: 1, V_NONE: added === 0 ? 1 : 0 });
+    const r = t.load(d.file);
+    returned(t, r);
+    assert.equal(t.m.read(t.m.sym("SVCRA")), 0);
+    const after = loaderState(t);
+    if (existing + added > 256) {
+      assert.deepEqual([r.carry, r.rc], [1, 1]);
+      assert.equal(t.m.read((r.de & 0xff00) + d.symbols.RESULT), 2, "REMOVE executed");
+      assert.deepEqual(after, before, "heads, ceiling, generation, hook and vectors restored");
+    } else {
+      assert.deepEqual([r.carry, r.rc], [0, 0]);
+      assert.ok(after.top < before.top && after.top === after.ceiling);
+      assert.notEqual(after.owner, before.owner);
+      assert.equal(after.generation, before.generation);
+      assert.deepEqual(after.vectors, before.vectors);
+      if (!added) assert.equal(after.registry, before.registry, "zero records published");
+    }
+    assert.equal(registry(t).length, Math.min(256, existing + added));
+    assert.equal(t.find("PICO").carry, 0, "tail remains reachable");
+  });
+}
+
+for (const refuses of [0, 1]) {
+  test(`cyclic registry rollback, REMOVE refusal ${refuses} (KE-AR13)`, async () => {
+    const t = await picoBoard();
+    assert.equal(t.load((await chain(1)).file).carry, 0);
+    const head = t.word(t.m.sym("REGHEAD"));
+    t.poke(head, head);
+    const before = loaderState(t);
+    const d = await svc({ V_HOOK: 1, V_REFUSE: refuses });
+    const r = t.load(d.file);
+    returned(t, r);
+    const base = r.de & 0xff00;
+    assert.equal(t.m.read(base + d.symbols.RESULT), 2, "REMOVE ran");
+    assert.deepEqual([r.carry, r.rc], [1, refuses ? 2 : 1]);
+    assert.equal(t.m.read(t.m.sym("SVCRA")), 0);
+    const after = loaderState(t);
+    if (!refuses) assert.deepEqual(after, before);
+    else {
+      assert.ok(after.top < before.top);
+      assert.equal(after.top, base);
+      assert.equal(after.ceiling, base);
+      assert.equal(after.owner << 8, base);
+      assert.deepEqual({ ...after, top: before.top, ceiling: before.ceiling, owner: before.owner }, before,
+        "retained pages publish no records and preserve generation, hooks and vectors");
+    }
+    assert.equal(t.word(head), head, "the pre-existing corrupted registry is untouched");
+  });
+}
+
+test("a shell load refuses a cyclic registry and the next command runs (KE-AR13)", async () => {
+  const image = standardCard();
+  volume(image, "A").write("NEXT.SVC", (await svc()).file);
+  const t = bench(boot(image, { tms: true, matrix: true }));
+  const head = t.word(t.m.sym("REGHEAD"));
+  t.poke(head, head);
+  assert.match(t.m.command("NEXT.SVC"), /NEXT\.SVC\?/);
+  assert.equal(t.m.read(t.m.sym("SVCBSY")), 0);
+  assert.match(t.m.command("USER 3"), /D>/);
 });
 
 test("INIT returning 0 installs a service with no records", async () => {

@@ -47,6 +47,8 @@ INIT:
         RET
 %ENDIF
 %IF V_HOOK
+        LD      A,1
+        LD      (RESULT),A      ; INIT marker for rollback tests
         LD      HL,($0001)      ; CONOUT, in the table
         LD      DE,HOOKAT
         ADD     HL,DE
@@ -168,6 +170,8 @@ CHAIN1: LD      DE,13
 
 REMOVE:
 %IF V_HOOK
+        LD      A,2
+        LD      (RESULT),A      ; REMOVE ran, even if it refuses
         LD      HL,($0001)
         LD      DE,HOOKAT
         ADD     HL,DE
