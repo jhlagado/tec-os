@@ -62,6 +62,13 @@ const work = resolve(reference, 'build/ks43-reference');
 const assemble = origin => run({ root: candidate, entry: GLCD_SOURCE, origin, target: 'GLCD.SVC', phase: 'control-flat' });
 const [at1, at2] = [await assemble(0x100), await assemble(0x200)];
 const { at0, fixups, symbols } = relocateGlcd(at1, at2);
+const thirdFlat = await assemble(0x9200);
+for (const [label, field] of [['INIT', 15], ['REMOVE', 4]]) {
+  const value = thirdFlat.globals.get(label);
+  assert.equal(value.kind, 'label');
+  assert.equal(value.value - 0x9200, symbols[label] - 0x100);
+  assert.equal(read(candidate, 'dist/files/GLCD.SVC').readUInt16LE(field), value.value - 0x9200);
+}
 const ref0 = await assembleAt(source, 0, work);
 const ref1 = await assembleAt(source, 0x100, work);
 assert.deepEqual(at0, Buffer.from(ref0));
@@ -78,7 +85,9 @@ for (const delta of svc.subarray(placed.length)) {
   assert.ok(delta && cursor >= DHLEN && cursor < placed.length);
   if (delta !== 255) placed[cursor] += third >> 8;
 }
-assert.deepEqual(placed.subarray(DHLEN), Buffer.from((await assembleAt(source, third, work)).subarray(DHLEN)));
+const refThird = Buffer.from(await assembleAt(source, third, work));
+assert.deepEqual(thirdFlat.image, refThird);
+assert.deepEqual(placed.subarray(DHLEN), refThird.subarray(DHLEN));
 const header = Buffer.from(at2.image);
 header[3]++;
 assert.throws(() => relocateGlcd(at1, { ...at2, image: header }), /header varies/);

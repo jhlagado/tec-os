@@ -6,6 +6,7 @@
 import { resolve } from "node:path";
 import { makeSvc } from "./svc.mjs";
 
+// Tests use the ATOM fixture path. Media supplies the selected TAS builder.
 export async function displayFiles(root, assembleGlcd) {
   const work = resolve(root, "build/svc");
   const glcd = assembleGlcd ? await assembleGlcd() : (await makeSvc(resolve(root, "drivers/glcd.asm"), { work })).file;

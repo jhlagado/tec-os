@@ -178,7 +178,6 @@ loop ${census.serial.txBitCycles}, receive loop ${census.serial.rxBitCycles}.
 
 async function main() {
   const backend = romBackend();
-  const run = backend === "tas" ? await tasAssembler() : null;
   const builds = Object.keys(PROFILES).map(profile => {
     const dir = resolve(ROOT, "build", profile);
     const mapBytes = readFileSync(resolve(dir, "tecos.d8.json"));
@@ -195,6 +194,7 @@ async function main() {
   });
   const tas = pinnedBytes("TAS.COM");
   const ted = pinnedBytes("TED.COM");
+  const run = backend === "tas" ? await tasAssembler() : null;
   async function program(name, source, base = 0x100) {
     if (run) return assembleDistributionCom(ROOT, run, name);
     const { bytes } = await assembleProgram(resolve(ROOT, source), { base });
