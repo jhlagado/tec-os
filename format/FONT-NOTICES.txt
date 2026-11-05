@@ -43,3 +43,5 @@ DEL retained unchanged. This is a research export, not product qualification.
 Selected derivative dd42012c, exact export at Origo 77d828b9.
 X11 rows lowered one row; Spleen digits, braces, O and lowercase; original i/t, followed by the three chosen pixel removals e(3,2), r(3,2), t(4,5). Original DEL retained.
 Retained sources are under format/tec-compact; original source/bytes are format/font5x7-original.txt and format/font-original.bin.
+
+Paths in the retained export notice above are relative to format/tec-compact/export in the source tree. The complete BDF sources are format/tec-compact/preview/x11.bdf and format/tec-compact/preview/spleen.bdf. Copies distributed beside ROM images retain these source-tree references.

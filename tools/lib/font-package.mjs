@@ -17,5 +17,5 @@ export function fontPackage(root) {
 }
 /** Exact full copyright, conditions, disclaimer, origin limits and edits. */
 export function validateFontNotices(notices) {
-  assert.equal(sha(notices),'36ab503d3fef3a231cbfcced867e1089089c1e7519da7f6fb3666d7c9993d870','complete selected font notices');
+  assert.equal(sha(notices),'577c3e97edcf1d7e183f4b668ec93a3125c90a414a6203fb3194ba6a6c612b41','complete selected font notices');
 }
