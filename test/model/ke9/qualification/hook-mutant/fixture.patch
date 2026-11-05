@@ -1,0 +1,18 @@
+diff --git a/test/programs/svcdemo.asm b/test/programs/svcdemo.asm
+index fb0de92..9efe7d7 100644
+--- a/test/programs/svcdemo.asm
++++ b/test/programs/svcdemo.asm
+@@ -172,13 +172,6 @@ REMOVE:
+ %IF V_HOOK
+         LD      A,2
+         LD      (RESULT),A      ; REMOVE ran, even if it refuses
+-        LD      HL,($0001)
+-        LD      DE,HOOKAT
+-        ADD     HL,DE
+-        LD      DE,(OLDCO)
+-        LD      (HL),E
+-        INC     HL
+-        LD      (HL),D
+ %ENDIF
+ %IF V_STK
+ 	LD	B,3
