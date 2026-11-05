@@ -43,6 +43,20 @@ try {
   }
   writeFileSync(reset, originalReset, 'latin1');
 
+  const entry = join(work, 'src/rom.asm');
+  const originalEntry = readFileSync(entry, 'latin1');
+  writeFileSync(join(work, 'outside.asm'), '; outside the source root');
+  symlinkSync('../outside.asm', join(work, 'src/escape.asm'));
+  for (const [include, error] of [
+    ['../outside.asm', /include escapes source root/],
+    [join(work, 'outside.asm'), /absolute include path/],
+    ['escape.asm', /include symlink escapes source root/],
+  ]) {
+    writeFileSync(entry, originalEntry + '\n%INCLUDE "' + include + '"\n', 'latin1');
+    reject('include escape ' + include, error);
+  }
+  writeFileSync(entry, originalEntry, 'latin1');
+
   const ram = join(work, 'src/ram.asm');
   const originalRam = readFileSync(ram, 'latin1');
   const mark = /^BDOSRME:$/m;
@@ -66,6 +80,28 @@ try {
   assert.equal(census.ram.ramBios - census.ram.fixedBase, 1050);
   assert.equal(census.ram.cards.starter.tpa, 47267);
   assert.equal(census.ram.cards.fourG8M.tpa, 46563);
+  const dist = join(work, 'dist');
+  cpSync(join(root, 'dist'), dist, { recursive: true });
+  const published = join(dist, 'tecos.rom');
+  const originalPublished = readFileSync(published);
+  const publishedMap = readFileSync(join(dist, 'tecos.d8.json'));
+  const starter = readFileSync(join(dist, 'starter.img'));
+  const generated = readFileSync(join(dist, 'files/SAMPLE.ASM'));
+  const candidate = readFileSync(artifact);
+  const wrongROM = Buffer.from(candidate);
+  wrongROM[0] ^= 1;
+  for (const broken of [wrongROM, candidate.subarray(0, -1)]) {
+    writeFileSync(artifact, broken);
+    const media = spawnSync(process.execPath, ['tools/media.mjs'], { ...opts, env: tas });
+    assert.equal(media.status, 1, media.stdout + media.stderr);
+    assert.match(media.stderr, /main ROM size or SHA-256 differs from the census/);
+    assert.doesNotMatch(media.stderr, /"phase":"media"/);
+    assert.deepEqual(readFileSync(published), originalPublished);
+    assert.deepEqual(readFileSync(join(dist, 'tecos.d8.json')), publishedMap);
+    assert.deepEqual(readFileSync(join(dist, 'starter.img')), starter);
+    assert.deepEqual(readFileSync(join(dist, 'files/SAMPLE.ASM')), generated);
+  }
+  console.log('Media refused wrong bytes and a short ROM with the existing dist intact');
   console.log('DS 1 derives 1,050 bytes and WSBASE BAE6h, with both TPAs one byte smaller');
 } finally {
   rmSync(work, { recursive: true, force: true });

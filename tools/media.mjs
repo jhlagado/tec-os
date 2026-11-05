@@ -181,19 +181,25 @@ async function main() {
     const dir = resolve(ROOT, "build", profile);
     const map = JSON.parse(readFileSync(resolve(dir, "tecos.d8.json"), "utf8"));
     if (map.generator?.name !== backend) throw new Error(`main ROM map was not generated with ${backend}; rebuild with the selected assembler`);
-    return { profile, dir };
+    const rom = readFileSync(resolve(dir, "tecos.rom"));
+    const census = JSON.parse(readFileSync(resolve(dir, "census.json"), "utf8"));
+    const sha256 = sha(rom);
+    if (rom.length !== 0x4000 || census.rom.bytes !== rom.length || census.sha256 !== sha256) {
+      throw new Error(`main ROM size or SHA-256 differs from the census for ${profile}`);
+    }
+    return { profile, dir, rom, census, sha256 };
   });
   const tas = pinnedBytes("TAS.COM");
   const ted = pinnedBytes("TED.COM");
   rmSync(FILES, { recursive: true, force: true }); // what the page copies: nothing from an older set
   mkdirSync(FILES, { recursive: true });
   const censuses = {};
-  for (const { profile, dir } of builds) {
-    copyFileSync(resolve(dir, "tecos.rom"), resolve(DIST, "tecos.rom"));
+  for (const { profile, dir, rom, census, sha256 } of builds) {
+    writeFileSync(resolve(DIST, "tecos.rom"), rom);
     copyFileSync(resolve(dir, "tecos.d8.json"), resolve(DIST, "tecos.d8.json"));
     copyFileSync(resolve(dir, "census.json"), resolve(DIST, "tecos.census.json"));
-    censuses[profile] = JSON.parse(readFileSync(resolve(dir, "census.json"), "utf8"));
-    traceRom({ backend, phase: "media", root: dir, sha256: censuses[profile].sha256 });
+    censuses[profile] = census;
+    traceRom({ backend, phase: "media", root: dir, sha256 });
   }
   const files = [];
   for (const p of PROGRAMS) {

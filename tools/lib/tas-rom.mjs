@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join, posix, resolve } from 'node:path';
+import { basename, isAbsolute, join, posix, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { scanSource, tasImage } from './tas-d8.mjs';
 
@@ -12,24 +12,32 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 
 function stage(root) {
+  const sourceRoot = realpathSync(root);
+  function inside(file) {
+    assert.ok(!posix.isAbsolute(file) && file !== '..' && !file.startsWith('../'), 'include escapes source root: ' + file);
+    const path = realpathSync(join(sourceRoot, file));
+    const rel = relative(sourceRoot, path);
+    assert.ok(rel !== '..' && !rel.startsWith('../') && !isAbsolute(rel), 'include symlink escapes source root: ' + file);
+    return path;
+  }
   const sources = new Map(), staged = new Map(), names = new Set();
   function visit(file) {
     if (sources.has(file)) return staged.get(file).name;
-    assert.ok(!posix.isAbsolute(file) && !file.startsWith('../'), 'include escapes source root');
     const name = basename(file).toUpperCase();
     assert.match(name, /^[A-Z0-9$_-]{1,8}\.(ASM|INC)$/);
     assert.ok(!names.has(name), 'ambiguous CP/M name: ' + name);
     names.add(name);
-    const original = readFileSync(join(root, file));
+    const original = readFileSync(inside(file));
     sources.set(file, original);
     const row = { name };
     staged.set(file, row);
     row.bytes = Buffer.from(original.toString('latin1').replace(include, (_, before, path, after) => {
       // ATOM tries the including directory first, then the project root.
-      const relative = posix.normalize(posix.join(posix.dirname(file), path));
-      let selected = relative;
+      assert.ok(!posix.isAbsolute(path), 'absolute include path: ' + path);
+      const local = posix.normalize(posix.join(posix.dirname(file), path));
+      let selected = local;
       try {
-        readFileSync(join(root, relative));
+        inside(local);
       } catch (error) {
         if (error.code !== 'ENOENT') throw error;
         selected = posix.normalize(path);
@@ -39,7 +47,9 @@ function stage(root) {
     return name;
   }
   visit('rom.asm');
-  return { staged, source: scanSource(sources) };
+  const source = scanSource(sources);
+  assert.equal(source.definitions.get('BDOSRME')?.kind, 'label', 'missing or invalid workspace sizing marker BDOSRME');
+  return { staged, source };
 }
 
 export async function tasAssembler(root) {
