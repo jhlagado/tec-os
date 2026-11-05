@@ -1,138 +1,203 @@
-; SAMPLE.ASM: a first program for TEC-OS, in TAS's language. It says hello
-; on the console through the BDOS, asks TEC-OS for the screen's size and
-; prints it, writes a line on the LCD, shows 123456 on the digits for a
-; moment, beeps, and goes back to the prompt. Build it and run it:
+; A first program for TEC-OS.
+; Build it with TAS SAMPLE.
+; Run it with SAMPLE.
 ;
-; 	A>TAS SAMPLE
-; 	A>SAMPLE
-;
-; Any CP/M program can say hello. The rest uses TEC-OS's table, so the
-; program looks for the table first and stops politely without it.
+; Say hello through CP/M BDOS, then
+; check for the TEC-OS ABI 5 table.
+; Print the screen size, write to
+; LCD row 2, show 123456 and beep.
 
-; TEC-OS's table and service numbers, by the names abi.inc gives them.
-ABITAB	EQU	$C003		; "TNA", then the major version
-ABIMAJ	EQU	$C006		; the major version this speaks: 5
-ABICALL	EQU	$C008		; CALL here with the service in C
-TNINFO	EQU	0		; -> L = columns, H = rows
-TNDIGIT	EQU	1		; HL -> six digit patterns
-TNLCD	EQU	2		; B = row 0-3, HL -> 20 characters
-TNTONE	EQU	4		; B = pitch, DE = length
-BDOS	EQU	5		; CP/M's entry, for the console
+; TEC-OS's table and service numbers, by
+; the names abi.inc gives them.
+; "TNA", then the major version
+ABITAB EQU $C003
+; the major version this speaks: 5
+ABIMAJ EQU $C006
+; CALL here with the service in C
+ABICALL EQU $C008
+TNINFO EQU 0     ; -> L = columns, H =
+                 ; rows
+TNDIGIT EQU 1    ; HL -> six digit
+                 ; patterns
+TNLCD EQU 2      ; B = row 0-3, HL -> 20
+                 ; characters
+TNTONE EQU 4     ; B = pitch, DE =
+                 ; length
+BDOS EQU 5       ; CP/M's entry, for the
+                 ; console
 
-	ORG	$0100		; CP/M runs a program from here
+  ORG $0100      ; CP/M runs a program
+                 ; from here
 
-; Say hello: BDOS function 9 prints from DE up to the $.
-START:	LD	DE,HELLO
-	CALL	SAY
+; Say hello: BDOS function 9 prints from
+; DE up to the $.
+START:
+  ld de,HELLO
+  call SAY
 
-; Is this TEC-OS? Its table starts "TNA", and this program needs major 5.
-	LD	HL,ABITAB	; what is at the table's address
-	LD	DE,TNA		; against the signature
-	LD	B,3		; three letters
-CHECK:	LD	A,(DE)
-	CP	(HL)
-	JR	NZ,OTHER	; another system: stop here
-	INC	HL		; on to the next letter of each
-	INC	DE
-	DJNZ	CHECK
-	LD	A,(ABIMAJ)	; the version of the table
-	CP	5
-	JR	NZ,OTHER	; a version this doesn't speak
+; Is this TEC-OS? Its table starts
+; "TNA", and this program needs major 5.
+  ld hl,ABITAB   ; what is at the
+                 ; table's address
+  ld de,TNA      ; against the signature
+  ld b,3         ; three letters
 
-; The screen's size from INFO: L columns, H rows, 0 on a serial terminal.
-	LD	C,TNINFO	; service 0
-	CALL	ABICALL
-	LD	(SIZE),HL	; kept: the BDOS changes HL
-	LD	DE,SCREEN	; "Screen: "
-	CALL	SAY
-	LD	A,(SIZE)	; the columns
-	CALL	DECIMAL
-	LD	DE,BY		; " by "
-	CALL	SAY
-	LD	A,(SIZE+1)	; the rows
-	CALL	DECIMAL
-	LD	DE,CRLF		; and the line's end
-	CALL	SAY
+CHECK:
+  ld a,(de)
+  cp (hl)
+  jr nz,OTHER    ; another system: stop
+                 ; here
+  inc hl         ; on to the next letter
+                 ; of each
+  inc de
+  djnz CHECK
+  ld a,(ABIMAJ)  ; the version of the
+                 ; table
+  cp 5
+  jr nz,OTHER    ; a version this
+                 ; doesn't speak
 
-; A line on the LCD's second row: rows count from 0.
-	LD	B,1
-	LD	HL,LCDTXT	; exactly 20 characters
-	LD	C,TNLCD
-	CALL	ABICALL
+; The screen's size from INFO: L
+; columns, H rows, 0 on a serial
+; terminal.
+  ld c,TNINFO    ; service 0
+  call ABICALL
+  ld (SIZE),hl   ; kept: the BDOS
+                 ; changes HL
+  ld de,SCREEN   ; "Screen: "
+  call SAY
+  ld a,(SIZE)    ; the columns
+  call DECIMAL
+  ld de,BY       ; " by "
+  call SAY
+  ld a,(SIZE+1)  ; the rows
+  call DECIMAL
+  ld de,CRLF     ; and the line's end
+  call SAY
 
-; 123456 on the digits. One call lights them once, for about 5 ms, so a
-; loop of 200 calls shows them for about a second.
-	LD	B,200		; the passes
-SHOW:	PUSH	BC		; the service changes B
-	LD	HL,DIGITS	; a pattern for each digit, left first
-	LD	C,TNDIGIT
-	CALL	ABICALL
-	POP	BC
-	DJNZ	SHOW		; until the passes are done
+; A line on the LCD's second row: rows
+; count from 0.
+  ld b,1
+  ld hl,LCDTXT   ; exactly 20 characters
+  ld c,TNLCD
+  call ABICALL
 
-; A short beep. B sets the pitch: each half of a cycle is 16 x B + 51
-; T-states, about 2 kHz here. DE half cycles make it about 0.1 s long.
-	LD	B,60
-	LD	DE,400
-	LD	C,TNTONE
-	CALL	ABICALL
-	LD	DE,DONE		; and say so
-; Print DE's message, then return to the CCP, which shows the prompt.
-OTHER:	CALL	SAY
-	RET			; the CCP's return address is on the stack
+; 123456 on the digits. One call lights
+; them once, for about 5 ms, so a
+; loop of 200 calls shows them for about
+; a second.
+  ld b,200       ; the passes
 
-; SAY: print the string at DE, up to its $. Changes AF, BC, DE, HL.
-SAY:	LD	C,9		; BDOS function 9
-	JP	BDOS		; which returns to SAY's caller
+SHOW:
+  push bc        ; the service changes B
+  ld hl,DIGITS   ; a pattern for each
+                 ; digit, left first
+  ld c,TNDIGIT
+  call ABICALL
+  pop bc
+  djnz SHOW      ; until the passes are
+                 ; done
 
-; DECIMAL: print A, 0 to 255, in decimal without leading zeros. Changes
+; A short beep. B sets the pitch: each
+; half of a cycle is 16 x B + 51
+; T-states, about 2 kHz here. DE half
+; cycles make it about 0.1 s long.
+  ld b,60
+  ld de,400
+  ld c,TNTONE
+  call ABICALL
+  ld de,DONE     ; and say so
+; Print DE's message, then return to the
+; CCP, which shows the prompt.
+OTHER:
+  call SAY
+; the CCP's return address is on the
+; stack
+  ret
+
+; SAY: print the string at DE, up to its
+; $. Changes AF, BC, DE, HL.
+SAY:
+  ld c,9         ; BDOS function 9
+  jp BDOS        ; which returns to
+                 ; SAY's caller
+
+; DECIMAL: print A, 0 to 255, in decimal
+; without leading zeros. Changes
 ; AF, BC, DE, HL.
-DECIMAL:	PUSH	AF	; the number, across the flag's reset
-	XOR	A		; no digit printed yet
-	LD	(LEAD),A
-	POP	AF
-	LD	B,100		; the hundreds
-	CALL	PLACE
-	LD	B,10		; the tens
-	CALL	PLACE
-	ADD	A,'0'		; the units, always printed
-	LD	E,A
-	LD	C,2		; BDOS function 2: one character
-	JP	BDOS
+DECIMAL:
+  push af        ; the number, across
+                 ; the flag's reset
+  xor a          ; no digit printed yet
+  ld (LEAD),a
+  pop af
+  ld b,100       ; the hundreds
+  call PLACE
+  ld b,10        ; the tens
+  call PLACE
+  add a,'0'      ; the units, always
+                 ; printed
+  ld e,a
+  ld c,2         ; BDOS function 2: one
+                 ; character
+  jp BDOS
 
-; PLACE: print how many times B goes into A, unless it is a leading zero.
-; Returns A less those times B. Changes BC, DE, HL.
-PLACE:	LD	C,'0'-1		; one before the digit 0
-PLACE1:	INC	C		; count each B taken away
-	SUB	B
-	JR	NC,PLACE1	; until A goes below 0
-	ADD	A,B		; one B too many: put it back
-	LD	D,A		; what is left, for the next place
-	LD	A,C
-	CP	'0'
-	JR	NZ,PLACE2	; a digit above 0 is always printed
-	LD	A,(LEAD)	; and 0 only after another digit
-	OR	A
-	JR	Z,PLACE3
-PLACE2:	LD	(LEAD),A	; a digit is out now
-	LD	E,C
-	PUSH	DE		; the BDOS changes D
-	LD	C,2		; BDOS function 2: one character
-	CALL	BDOS
-	POP	DE
-PLACE3:	LD	A,D		; what is left
-	RET
+; PLACE: print how many times B goes
+; into A, unless it is a leading zero.
+; Returns A less those times B. Changes
+; BC, DE, HL.
+PLACE:
+  ld c,'0'-1     ; one before the digit
+                 ; 0
+
+PLACE1:
+  inc c          ; count each B taken
+                 ; away
+  sub b
+  jr nc,PLACE1   ; until A goes below 0
+  add a,b        ; one B too many: put
+                 ; it back
+  ld d,a         ; what is left, for the
+                 ; next place
+  ld a,c
+  cp '0'
+  jr nz,PLACE2   ; a digit above 0 is
+                 ; always printed
+  ld a,(LEAD)    ; and 0 only after
+                 ; another digit
+  or a
+  jr z,PLACE3
+
+PLACE2:
+  ld (LEAD),a    ; a digit is out now
+  ld e,c
+  push de        ; the BDOS changes D
+  ld c,2         ; BDOS function 2: one
+                 ; character
+  call BDOS
+  pop de
+
+PLACE3:
+  ld a,d         ; what is left
+  ret
 
 ; The text and the patterns.
-TNA:	DB	"TNA"		; TEC-OS's signature
-HELLO:	DB	"Hello from TEC-OS.",13,10,"$"
-SCREEN:	DB	"Screen: $"	; the size, as "80 by 24"
-BY:	DB	" by $"
-CRLF:	DB	13,10,"$"	; return, then a new line
-DONE:	DB	"Back to the prompt.",13,10,"$"
-; The LCD's row: 20 characters, padded with blanks.
-LCDTXT:	DB	"Hello from SAMPLE   "
-DIGITS:	DB	$28,$CD,$AD	; 1, 2 and 3, a bit a segment
-	DB	$2E,$A7,$E7	; 4, 5 and 6
-SIZE:	DW	0		; INFO's columns, then rows
-LEAD:	DB	0		; 1 once a digit is printed
+TNA: DB "TNA"    ; TEC-OS's signature
+HELLO: DB "Hello from TEC-OS.",13,10,"$"
+; the size, as "80 by 24"
+SCREEN: DB "Screen: $"
+BY: DB " by $"
+; return, then a new line
+CRLF: DB 13,10,"$"
+DONE: DB "Back to the prompt.",13,10,"$"
+; The LCD's row: 20 characters, padded
+; with blanks.
+LCDTXT: DB "Hello from SAMPLE   "
+; 1, 2 and 3, a bit a segment
+DIGITS: DB $28,$CD,$AD
+; 4, 5 and 6
+  DB $2E,$A7,$E7
+SIZE: DW 0       ; INFO's columns, then
+                 ; rows
+LEAD: DB 0       ; 1 once a digit is
+                 ; printed

@@ -190,10 +190,10 @@ TMSOUT:	OUT	(VDPDAT),A	; the VDP moves its own address on
 	LD	A,(PIWID)
 	CP	32
 	RET	NZ		; text mode: no colours or sprites
-	LD	HL,COLOUR	; Graphics I: white on black for every group
+	LD	HL,COLOUR	; Graphics I: light green on black
 	CALL	TMSWA
 	LD	B,32		; 32 groups of eight codes
-TMSCOL:	LD	A,$F1		; foreground 15, white; background 1, black
+TMSCOL:	LD	A,$31		; light green on black
 	OUT	(VDPDAT),A
 	DJNZ	TMSCOL
 	LD	HL,SPRITE	; no sprites
@@ -405,11 +405,11 @@ TMSMBN:	INC	D		; the next row
 ; Registers 0-7.
 ; - 80 columns (PICO9918 TEXT80, also the F18A T80 mode): R0 bit 2 with
 ;   text mode, names at a 4 KiB boundary (R2 low bits set), patterns at
-;   0000h, white on dark blue. No unlock is needed. R1 is D0h: bit 7, the
+;   0000h, light green on black. No unlock is needed. R1 is D0h: bit 7, the
 ;   TMS9918A's 4/16K bit, set for 16K VRAM, like the 40 and 32-column sets.
 ; - 40 columns: text mode, the same colours.
 ; - Graphics I: patterns 0000h, colours 2000h, sprites 1B00h/3800h.
-REGS80:	DB	$04,$D0,$1000/$400+3,$00,$00,$00,$00,$F4
-REGS40:	DB	$00,$D0,$0800/$400,$00,$00,$00,$00,$F4
-REGS32:	DB	$00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$F1
+REGS80:	DB	$04,$D0,$1000/$400+3,$00,$00,$00,$00,$31
+REGS40:	DB	$00,$D0,$0800/$400,$00,$00,$00,$00,$31
+REGS32:	DB	$00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31
 
