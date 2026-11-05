@@ -6,9 +6,9 @@
 import { resolve } from "node:path";
 import { makeSvc } from "./svc.mjs";
 
-export async function displayFiles(root) {
+export async function displayFiles(root, assembleGlcd) {
   const work = resolve(root, "build/svc");
-  const { file: glcd } = await makeSvc(resolve(root, "drivers/glcd.asm"), { work });
+  const glcd = assembleGlcd ? await assembleGlcd() : (await makeSvc(resolve(root, "drivers/glcd.asm"), { work })).file;
   return [
     { name: "GLCD.SVC", description: "the GLCD console, a driver", bytes: glcd },
     { name: "STARTUP.CMD", description: "the commands run at cold boot", bytes: Buffer.from("GLCD.SVC\r\n\x1a", "latin1") },

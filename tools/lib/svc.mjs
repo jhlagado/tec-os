@@ -101,6 +101,17 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   if (symbols.INIT === undefined || symbols.REMOVE === undefined) throw new Error(`${source}: INIT and REMOVE required`);
   if (at0.length !== at1.length) throw new Error(`${source}: the two assemblies differ in length`);
   const fixups = fixupsOf(at0, at1, DHLEN, basename(source));
+  return { ...packSvc(at0, symbols, fixups, { deps, reloc }), copy };
+}
+
+export function packSvc(at0, symbols, fixups, { deps = [], reloc = "delta" } = {}) {
+  let previous = -1;
+  for (const offset of fixups) {
+    if (!Number.isInteger(offset) || offset <= previous || offset >= at0.length - DHLEN) {
+      throw new Error("relocation offset outside the service body or unordered");
+    }
+    previous = offset;
+  }
   const data = encoders[reloc](fixups, at0.length - DHLEN);
   for (const d of deps) if (d.name.length > 8) throw new Error(`${d.name}: a dependency's name is at most 8 bytes`);
   const list = Uint8Array.from(deps.flatMap((d) => [d.version, ...Buffer.from(d.name.padEnd(8), "latin1")]));
@@ -119,5 +130,5 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   put(10, data.length);
   put(15, symbols.INIT - 0x100);
   const offsets = Object.fromEntries(Object.entries(symbols).map(([k, v]) => [k, v - 0x100]));
-  return { file, symbols: offsets, image: at0.length, fixups, data, copy };
+  return { file, symbols: offsets, image: at0.length, fixups, data };
 }

@@ -5,16 +5,18 @@
 //
 // Run after npm run build.
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
 import { displayFiles } from "./lib/starter.mjs";
-import { buildRecipe, fileFetcher, saveImage } from "./tecvol.mjs";
+import { buildRecipe, saveImage } from "./tecvol.mjs";
 import { located } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
-import { romBackend, traceRom } from "./lib/tas-rom.mjs";
+import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
+
+import { assembleDistributionCom, assembleGlcd } from "./lib/tas-distribution.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = resolve(ROOT, "dist");
@@ -70,7 +72,7 @@ function romServicesFigures(census) {
     if (!re.test(text)) throw new Error(`docs/rom-services.md has no ${name} span`);
     text = text.replace(re, (_, open, close) => `${open}${value}${close}`);
   }
-  writeFileSync(path, text);
+  return { path, text };
 }
 
 function memoryMap(census, symbols) {
@@ -176,6 +178,7 @@ loop ${census.serial.txBitCycles}, receive loop ${census.serial.rxBitCycles}.
 
 async function main() {
   const backend = romBackend();
+  const run = backend === "tas" ? await tasAssembler() : null;
   const builds = Object.keys(PROFILES).map(profile => {
     const dir = resolve(ROOT, "build", profile);
     const mapBytes = readFileSync(resolve(dir, "tecos.d8.json"));
@@ -192,35 +195,25 @@ async function main() {
   });
   const tas = pinnedBytes("TAS.COM");
   const ted = pinnedBytes("TED.COM");
-  rmSync(FILES, { recursive: true, force: true }); // what the page copies: nothing from an older set
-  mkdirSync(FILES, { recursive: true });
-  const censuses = {};
-  for (const { profile, dir, rom, mapBytes, censusBytes, census, sha256 } of builds) {
-    writeFileSync(resolve(DIST, "tecos.rom"), rom);
-    writeFileSync(resolve(DIST, "tecos.d8.json"), mapBytes);
-    writeFileSync(resolve(DIST, "tecos.census.json"), censusBytes);
-    censuses[profile] = census;
-    traceRom({ backend, phase: "media", root: dir, sha256 });
+  async function program(name, source, base = 0x100) {
+    if (run) return assembleDistributionCom(ROOT, run, name);
+    const { bytes } = await assembleProgram(resolve(ROOT, source), { base });
+    traceRom({ backend, phase: "final", target: name, root: ROOT });
+    return bytes;
   }
   const files = [];
   for (const p of PROGRAMS) {
-    const { bytes } = await assembleProgram(resolve(ROOT, p.source), { base: p.base ?? 0x100 });
-    writeFileSync(resolve(FILES, p.name), bytes);
-    files.push({ ...p, bytes });
+    files.push({ ...p, bytes: await program(p.name, p.source, p.base) });
   }
-  for (const f of await displayFiles(ROOT)) {
-    writeFileSync(resolve(FILES, f.name), f.bytes);
-    files.push(f);
-  }
-  writeFileSync(resolve(FILES, "TED.COM"), ted);
+  files.push(...await displayFiles(ROOT, run ? () => assembleGlcd(ROOT, run) : undefined));
+  if (!run) traceRom({ backend, phase: "final", target: "GLCD.SVC", root: ROOT });
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   // SAMPLE.ASM, a first program for TAS (KD-177), as a CP/M text file.
   const sample = Buffer.from(readFileSync(resolve(ROOT, "programs/SAMPLE.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
-  writeFileSync(resolve(FILES, "SAMPLE.ASM"), sample);
   files.push({ name: "SAMPLE.ASM", description: "a first program to build: TAS SAMPLE, then SAMPLE", bytes: sample });
-  writeFileSync(resolve(FILES, "TAS.COM"), tas);
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
-  copyFileSync(resolve(ROOT, "src/abi.inc"), resolve(DIST, "abi.inc"));
+  const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
+  const demo = await program("DEMO.COM", "test/programs/demo.asm");
 
   const recipe = {
     schema: "tecos-file-recipe-v1",
@@ -240,12 +233,6 @@ async function main() {
       files: [{ name: f.name, url: `files/${f.name}`, drive: "A", bytes: f.bytes.length, sha256: sha(f.bytes) }],
     })),
   };
-  writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
-  saveImage(resolve(DIST, "starter.img"), await buildRecipe(recipe, fileFetcher(DIST)));
-
-  // The web page's card (KD-170): the starter's files and DEMO.COM.
-  const { bytes: demo } = await assembleProgram(resolve(ROOT, "test/programs/demo.asm"), { base: 0x100 });
-  writeFileSync(resolve(FILES, "DEMO.COM"), demo);
   const page = {
     ...recipe,
     id: "page",
@@ -256,14 +243,31 @@ async function main() {
       { id: "demo-com", name: "DEMO.COM", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918", files: [{ name: "DEMO.COM", url: "files/DEMO.COM", drive: "A", bytes: demo.length, sha256: sha(demo) }] },
     ],
   };
+  const buffers = new Map(files.map(f => [`files/${f.name}`, f.bytes]));
+  const starter = await buildRecipe(recipe, ref => buffers.get(ref));
+  const figures = romServicesFigures(builds.find(({ profile }) => profile === "tecos").census);
+  const manifest = Object.fromEntries(builds.map(({ profile, census: c }) =>
+    [profile, { sha256: c.sha256, romUsed: c.rom.used, tpaBytes: c.ram.tpa.bytes }]));
+
+  // Every assembly and recipe input has been checked before replacing files.
+  rmSync(FILES, { recursive: true, force: true });
+  mkdirSync(FILES, { recursive: true });
+  for (const { dir, rom, mapBytes, censusBytes, sha256 } of builds) {
+    writeFileSync(resolve(DIST, "tecos.rom"), rom);
+    writeFileSync(resolve(DIST, "tecos.d8.json"), mapBytes);
+    writeFileSync(resolve(DIST, "tecos.census.json"), censusBytes);
+    traceRom({ backend, phase: "media", target: "tecos.rom", root: dir, sha256 });
+  }
+  for (const [ref, bytes] of buffers) writeFileSync(resolve(DIST, ref), bytes);
+  writeFileSync(resolve(FILES, "DEMO.COM"), demo);
+  writeFileSync(resolve(DIST, "abi.inc"), abi);
+  writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
+  saveImage(resolve(DIST, "starter.img"), starter);
   writeFileSync(resolve(DIST, "page.recipe.json"), JSON.stringify(page, null, 2) + "\n");
   writeFileSync(resolve(ROOT, "docs/memory-map.md"), builds.find(({ profile }) => profile === "tecos").mapDocument);
-  romServicesFigures(censuses.tecos);
-  const manifest = Object.fromEntries(
-    Object.entries(censuses).map(([k, c]) => [k, { sha256: c.sha256, romUsed: c.rom.used, tpaBytes: c.ram.tpa.bytes }]),
-  );
+  writeFileSync(figures.path, figures.text);
   writeFileSync(resolve(DIST, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
-  console.log(`dist: ${Object.keys(censuses).length} ROM profiles, ${files.length} starter files, starter.img`);
+  console.log(`dist: ${builds.length} ROM profiles, ${files.length} starter files, starter.img`);
 }
 
 main().catch((e) => {
