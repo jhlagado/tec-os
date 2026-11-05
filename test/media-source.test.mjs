@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { pageZeroDeclarations } from '../tools/lib/media-source.mjs';
 
 test('media keeps the latch Contents caption from the actual separated and reflowed layout source', () => {
-  const src = readFileSync(new URL('../src/layout.asm', import.meta.url), 'utf8');
+  const src = ['abi.inc', 'layout.asm'].map(file => readFileSync(new URL('../src/' + file, import.meta.url), 'utf8')).join('\n');
   assert.deepEqual(pageZeroDeclarations(src), [
     { at: 0x40, name: 'LATCHV', what: 'shadow copy of the system latch' },
   ]);

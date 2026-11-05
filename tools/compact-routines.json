@@ -408,7 +408,8 @@
     "TMSPUT",
     "TMSGET",
     "TMSCLR",
-    "TMSMBEG"
+    "TMSMBEG",
+    "PIICLR"
   ],
   "src/reset.asm": [
     "RESET"

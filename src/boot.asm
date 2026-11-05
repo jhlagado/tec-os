@@ -184,6 +184,8 @@ WBOOTR:
   out (SYSLAT),a
   ld sp,BSTK     ; the BIOS's stack, now
                  ; in view
+  call PIICLR    ; end IE before the
+                 ; handler sweep
   call HWVREL    ; a program that
                  ; claimed the PICO9918
                  ; gives

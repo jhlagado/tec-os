@@ -270,7 +270,14 @@ TMSSET:
                  ; write flag
 
 TMSR:
-  ld a,(hl)      ; the value
+  ld a,c         ; only R1 carries the
+  cp $81         ; tracked IE bit
+  ld a,(hl)
+  jr nz,TMSRI
+  ld a,(PITIE)   ; keep this session's
+  or (hl)        ; supported IE setting
+
+TMSRI:      ; the value
   push hl
   ld l,a
   ld h,c         ; and the register, as
@@ -362,14 +369,52 @@ TMSCOL:
 ; destroys AF, BC, DE and HL. A count of
 ; zero moves nothing.
 
-; Set register B to A.
+; Set register B to A while claimed.
+; R1 tracks IE for restore and release;
+; raw port writes do not. Destroys AF,
+; BC, DE and HL; flags are not a result.
 
 GFXREG:
   ld l,a         ; the value goes first
   ld a,b
+  cp 1           ; other registers leave
+  jr nz,GFXRG1    ; tracked IE alone
+  ld a,l
+  and $20        ; only the IE bit, not
+  ld (PITIE),a   ; the caller's mode
+
+GFXRG1:
+  ld a,b
   or $80         ; then the register,
                  ; with its write flag
   ld h,a
+  jp VPAIR
+
+; End the transient IE session before
+; real boot removes its handler. Takes
+; no arguments. Clears the shadow even
+; without a VDP; otherwise writes R1
+; with IE off, using this mode's bits
+; or the safe bare-VDP default. Changes
+; AF and HL; flags are not a result.
+; Keeps BC and DE. No ownership change.
+
+PIICLR:
+  xor a          ; an ended session must
+  ld (PITIE),a   ; never be restored
+  ld a,(CONDEV)
+  and CDTMS      ; absent VDP: no port
+  ret z          ; access at all
+  ld hl,REGS32+1 ; safe with no console
+  ld a,(PIREGP+1)
+  or a           ; a console has its
+  jr z,PIICR1    ; current mode table
+  ld hl,(PIREGP)
+  inc hl         ; that mode's R1
+
+PIICR1:
+  ld l,(hl)      ; table values have IE
+  ld h,$81       ; off; select R1
   jp VPAIR
 
 ; Fill DE bytes of VRAM from address HL
@@ -679,6 +724,6 @@ TMSMBN:
 ; - Graphics I: patterns 0000h, colours
 ; 2000h, sprites 1B00h/3800h.
 
-REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$31
-REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$31
-REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31
+REGS80: DB $04,PIR180,$1000/$400+3,$00,$00,$00,$00,$31
+REGS40: DB $00,PIR140,$0800/$400,$00,$00,$00,$00,$31
+REGS32: DB $00,PIR132,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31

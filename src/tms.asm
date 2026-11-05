@@ -5,8 +5,6 @@
 ; graphics entries are the ROM's, in
 ; pico.asm.
 
-VDPDAT EQU $BE
-VDPCTL EQU $BF
 
 ; Whether VRAM answers with what was
 ; written, at its last address, with two

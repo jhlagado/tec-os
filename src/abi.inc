@@ -222,7 +222,8 @@ PICORD EQU 22    ; BC bytes from VRAM
 ; takes no claim, and is refused while
 ; one is held.
 
-PICOVER EQU 3    ; the version with
+PICOWVER EQU 3
+PICOVER EQU 4    ; the version with
                  ; PICOWID
 PICOWID EQU 24   ; A = 80, 40 or 32
                  ; columns: the console
@@ -241,3 +242,22 @@ PICOTPD EQU 41   ; the page drawn: 0, or
                  ; TPGV's offset
 PICOTPS EQU 42   ; the page shown, the
                  ; same
+
+; Debugger display constants.
+SYSLAT EQU $FF   ; write-only system
+LATEXP EQU $04   ; EXPAND: EXPAND 1 at
+
+; shadow copy of the system latch
+
+LATCHV EQU $0040
+LCDCMD EQU $04   ; command write, busy
+LCDDAT EQU $84   ; character data
+VDPDAT EQU $BE
+VDPCTL EQU $BF
+PIR180 EQU $D0
+PIR140 EQU $D0
+PIR132 EQU $C0
+PINT80 EQU $3000
+PINT40 EQU $3000
+PINT32 EQU $3000
+PICOMNT EQU $3000

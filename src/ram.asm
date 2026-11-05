@@ -89,7 +89,8 @@ PIWID: DS 12     ; the columns, rows and
                  ; five entries
 PIREC: DS 13     ; the record, the
                  ; registry's tail
-  DS 2           ; PICO.SVC's LBUF:
+PITIE: DS 1      ; tracked supported IE
+  DS 1           ; PICO.SVC's LBUF:
                  ; keeps TPSHOW at 42
 PITPD: DS 1      ; the page drawn and
                  ; the page shown: 0

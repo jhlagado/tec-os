@@ -161,7 +161,7 @@ CONEND:
 ; "PICO " at version 3
 
   ld de,CONNAMS+20
-  ld bc,PICOVER*256+TNFIND
+  ld bc,PICOWVER*256+TNFIND
   call ABICALL   ; FIND: HL = the
                  ; console's table,
                  ; PIBLK

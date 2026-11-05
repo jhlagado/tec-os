@@ -5,9 +5,7 @@
 ; bounded, so a missing display costs
 ; only the time-out.
 
-LCDCMD EQU $04   ; command write, busy
                  ; flag and address read
-LCDDAT EQU $84   ; character data
 
 ; Initialise: 8-bit, two-line
 ; addressing, display on, cursor off,

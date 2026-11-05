@@ -9,8 +9,8 @@
 
 BDOS    EQU     $0005
 HWSVC   EQU     ABICALL         ; the numbered services
-VDPDAT  EQU     $BE
-VDPCTL  EQU     $BF
+
+
 LEDSEL	EQU	$05		; 8 x 8 matrix: row select, then the colours
 LEDR	EQU	$06		; red, green and blue columns
 LEDG	EQU	$F8

@@ -23,7 +23,6 @@ SDIO EQU $FD     ; SD SPI: out bit 0
 
 ; in bit 7 MISO
 
-SYSLAT EQU $FF   ; write-only system
                  ; latch
 
 ; ---- System latch values
@@ -36,7 +35,6 @@ LATKEEP EQU $83  ; bits kept by bank
 
 ; PROTECT and CAPS
 
-LATEXP EQU $04   ; EXPAND: EXPAND 1 at
                  ; 8000h-BFFFh
 
 ; classic profile: overlay off, base
@@ -87,7 +85,6 @@ DEFDMA EQU $0080
 ; (KS36c). shadow copy of the system
 ; latch
 
-LATCHV EQU $0040
 
 CDMTX EQU $01    ; matrix keyboard
                  ; enabled
