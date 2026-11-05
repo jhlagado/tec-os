@@ -84,6 +84,33 @@ try {
     const path = join(work, 'build/tecos', name);
     return [path, readFileSync(path)];
   }));
+  const checkPrevious = () => {
+    for (const [path, bytes] of previous) assert.deepEqual(readFileSync(path), bytes, path);
+  };
+  const host = tas.TECOS_TAS_HOST;
+  const lock = join(wrongHost, 'package-lock.json');
+  cpSync(join(host, 'tools/tas.mjs'), join(wrongHost, 'tools/tas.mjs'));
+  writeFileSync(lock, '{}');
+  const runtimePath = 'node_modules/@jhlagado/debug80-runtime';
+  const runtime = join(wrongHost, runtimePath);
+  for (const [pin, error, prepare, env = tas] of [
+    ['TAS.COM', /TAS.COM pin mismatch/, () => {}, { ...tas, TAS_COM: wrong }],
+    ['lock', /Thorium lock pin mismatch/, () => {}, { ...tas, TECOS_TAS_HOST: wrongHost }],
+    ['runtime', /Thorium Z80 runtime pin mismatch/, () => {
+      cpSync(join(host, 'package-lock.json'), lock);
+      cpSync(join(host, runtimePath), runtime, { recursive: true });
+      const core = join(runtime, 'dist/z80/runtime.js');
+      writeFileSync(core, Buffer.concat([readFileSync(core), Buffer.from('\n// tampered\n')]));
+    }, { ...tas, TECOS_TAS_HOST: wrongHost }],
+  ]) {
+    prepare();
+    const refused = build(env);
+    assert.equal(refused.status, 1, refused.stdout + refused.stderr);
+    assert.match(refused.stderr, error);
+    assert.doesNotMatch(refused.stderr, /"phase":"(?:probe|final)"/);
+    checkPrevious();
+    console.log('Refused wrong ' + pin + ' with prior build artifacts intact');
+  }
   const qualifiedRam = readFileSync(ram, 'latin1');
   const stack = /^STKBASE:$/m;
   assert.match(qualifiedRam, stack);
@@ -91,7 +118,7 @@ try {
   const late = build();
   assert.equal(late.status, 1, late.stdout + late.stderr);
   assert.match(late.stderr, /symbol STKBASE missing from the map/);
-  for (const [path, bytes] of previous) assert.deepEqual(readFileSync(path), bytes, path);
+  checkPrevious();
   console.log('Missing STKBASE leaves all prior build artifacts intact');
   writeFileSync(ram, qualifiedRam, 'latin1');
 

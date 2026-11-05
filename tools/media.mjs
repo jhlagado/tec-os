@@ -73,10 +73,9 @@ function romServicesFigures(census) {
   writeFileSync(path, text);
 }
 
-function memoryMap(census) {
+function memoryMap(census, symbols) {
   const rows = (list) => list.map((r) => `| ${hex(r.start)}–${hex(r.end - 1)} | ${r.bytes} | ${r.label} |`).join("\n");
   const s = census.ram.stacks;
-  const symbols = JSON.parse(readFileSync(resolve(ROOT, `build/${census.profile}/tecos.d8.json`), "utf8")).symbols;
   const at = (name) => {
     const x = symbols.find((y) => y.name === name);
     return x.address ?? x.value;
@@ -179,25 +178,27 @@ async function main() {
   const backend = romBackend();
   const builds = Object.keys(PROFILES).map(profile => {
     const dir = resolve(ROOT, "build", profile);
-    const map = JSON.parse(readFileSync(resolve(dir, "tecos.d8.json"), "utf8"));
+    const mapBytes = readFileSync(resolve(dir, "tecos.d8.json"));
+    const map = JSON.parse(mapBytes);
     if (map.generator?.name !== backend) throw new Error(`main ROM map was not generated with ${backend}; rebuild with the selected assembler`);
     const rom = readFileSync(resolve(dir, "tecos.rom"));
-    const census = JSON.parse(readFileSync(resolve(dir, "census.json"), "utf8"));
+    const censusBytes = readFileSync(resolve(dir, "census.json"));
+    const census = JSON.parse(censusBytes);
     const sha256 = sha(rom);
     if (rom.length !== 0x4000 || census.rom.bytes !== rom.length || census.sha256 !== sha256) {
       throw new Error(`main ROM size or SHA-256 differs from the census for ${profile}`);
     }
-    return { profile, dir, rom, census, sha256 };
+    return { profile, dir, rom, mapBytes, censusBytes, census, sha256, mapDocument: memoryMap(census, map.symbols) };
   });
   const tas = pinnedBytes("TAS.COM");
   const ted = pinnedBytes("TED.COM");
   rmSync(FILES, { recursive: true, force: true }); // what the page copies: nothing from an older set
   mkdirSync(FILES, { recursive: true });
   const censuses = {};
-  for (const { profile, dir, rom, census, sha256 } of builds) {
+  for (const { profile, dir, rom, mapBytes, censusBytes, census, sha256 } of builds) {
     writeFileSync(resolve(DIST, "tecos.rom"), rom);
-    copyFileSync(resolve(dir, "tecos.d8.json"), resolve(DIST, "tecos.d8.json"));
-    copyFileSync(resolve(dir, "census.json"), resolve(DIST, "tecos.census.json"));
+    writeFileSync(resolve(DIST, "tecos.d8.json"), mapBytes);
+    writeFileSync(resolve(DIST, "tecos.census.json"), censusBytes);
     censuses[profile] = census;
     traceRom({ backend, phase: "media", root: dir, sha256 });
   }
@@ -256,7 +257,7 @@ async function main() {
     ],
   };
   writeFileSync(resolve(DIST, "page.recipe.json"), JSON.stringify(page, null, 2) + "\n");
-  writeFileSync(resolve(ROOT, "docs/memory-map.md"), memoryMap(censuses.tecos));
+  writeFileSync(resolve(ROOT, "docs/memory-map.md"), builds.find(({ profile }) => profile === "tecos").mapDocument);
   romServicesFigures(censuses.tecos);
   const manifest = Object.fromEntries(
     Object.entries(censuses).map(([k, c]) => [k, { sha256: c.sha256, romUsed: c.rom.used, tpaBytes: c.ram.tpa.bytes }]),
