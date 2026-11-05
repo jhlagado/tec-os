@@ -3,7 +3,7 @@ set -euo pipefail
 qualification_root=$1
 evidence_dir=$2
 cd "$qualification_root"
-test "$(git rev-parse HEAD)" = 00410a48c364ee9f40912f9364c653424ba5d70e
+test "$(git rev-parse HEAD)" = "${3:?expected code pin}"
 unset TECOS_ROM_ASSEMBLER TECOS_TAS_HOST TAS_COM TED_COM NODE_PATH
 node --input-type=module - "$evidence_dir/setup.sh" <<'JS'
 import {readFileSync,writeFileSync} from 'node:fs';

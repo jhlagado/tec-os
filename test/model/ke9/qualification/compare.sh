@@ -3,8 +3,8 @@ set -euo pipefail
 candidate=$1
 reference=$2
 evidence_dir=$3
-test "$(git -C "$candidate" rev-parse HEAD)" = 00410a48c364ee9f40912f9364c653424ba5d70e
-test "$(git -C "$reference" rev-parse HEAD)" = 00410a48c364ee9f40912f9364c653424ba5d70e
+test "$(git -C "$candidate" rev-parse HEAD)" = "${4:?expected code pin}"
+test "$(git -C "$reference" rev-parse HEAD)" = "${4:?expected code pin}"
 unset TECOS_ROM_ASSEMBLER TECOS_TAS_HOST TAS_COM TED_COM NODE_PATH
 cd "$candidate"
 export TECOS_ROM_TRACE="$evidence_dir/repeat-trace.jsonl"

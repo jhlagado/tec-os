@@ -4,7 +4,10 @@ import subprocess
 import sys
 import time
 
-seconds = int(sys.argv[1])
+seconds = float(sys.argv[1][1:]) - time.time() if sys.argv[1].startswith("@") else int(sys.argv[1])
+if seconds <= 0:
+    print("Hard deadline already reached", flush=True)
+    sys.exit(124)
 started = time.monotonic()
 child = subprocess.Popen(sys.argv[2:], start_new_session=True)
 try:
