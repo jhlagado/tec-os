@@ -1,6 +1,6 @@
 // Shared application input resolution for assembly, media and tests.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
@@ -17,10 +17,21 @@ export function candidates(root, name, entry) {
   return [resolve(inputsDir(root), name), resolve(root, entry.default)];
 }
 
+/** A selected directory entry remains authoritative even when its link is broken. */
+export function inputExists(path) {
+  try {
+    lstatSync(path);
+    return true;
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
 /** The first of the candidates that exists, or the first if none does, for the message. */
 export function located(root, name, entry) {
   const paths = candidates(root, name, entry);
-  return paths.find((p) => existsSync(p)) ?? paths[0];
+  return paths.find((p) => inputExists(p)) ?? paths[0];
 }
 
 /** Read the selected application bytes once and require their recorded pin. */

@@ -60,6 +60,20 @@ try {
     writeFileSync(path, bytes);
     assert.deepEqual(snapshot(), previous);
   }
+  for (const name of ['TAS.COM', 'TED.COM']) {
+    const path = join(work, '.inputs', name);
+    const bytes = readFileSync(path);
+    rmSync(path);
+    symlinkSync('missing-target', path);
+    for (const args of [['tools/media.mjs'], ['tools/inputs.mjs']]) {
+      const result = run(args);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /(?:no .* at .*\.inputs|selected .* not pinned)/);
+    }
+    rmSync(path);
+    writeFileSync(path, bytes);
+    assert.deepEqual(snapshot(), previous);
+  }
   for (const path of ['package-lock.json', 'node_modules/@jhlagado/debug80-runtime/dist/z80/runtime.js']) {
     const file = join(work, '.inputs/tas-host', path);
     const bytes = readFileSync(file);

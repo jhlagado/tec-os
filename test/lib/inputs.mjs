@@ -9,7 +9,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT } from "./fixtures.mjs";
-import { located } from "../../tools/lib/pins.mjs";
+import { inputExists, located } from "../../tools/lib/pins.mjs";
 import { digest } from "./digest.mjs";
 
 const MANIFEST = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs;
@@ -28,6 +28,7 @@ export function pinned(name) {
   const found = existsSync(path) && (entry.tree ? statSync(path).isDirectory() : statSync(path).isFile());
   if (!found) {
     const why = `no ${name} at ${path} (set ${entry.env}, or STRICT=1 to fail)`;
+    if (inputExists(path)) return { path, skip: false, problem: why };
     return STRICT ? { path, skip: false, problem: why } : { path, skip: why };
   }
   const got = digest(entry, path);

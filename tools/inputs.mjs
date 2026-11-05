@@ -6,7 +6,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { inputsDir } from "./lib/pins.mjs";
+import { inputExists, inputsDir } from "./lib/pins.mjs";
 import { digest } from "../test/lib/digest.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,7 +36,7 @@ for (const [name, entry] of Object.entries(inputs)) {
   try {
     const override = process.env[entry.env];
     const target = resolve(OUT, name);
-    const local = existsSync(target);
+    const local = inputExists(target);
     if (override !== undefined && !override) throw new Error(`${entry.env} is empty: unset it or select the pinned ${name}`);
     const selected = override !== undefined ? resolve(override) : local ? target : resolve(ROOT, entry.default);
     if (override !== undefined || local) {
