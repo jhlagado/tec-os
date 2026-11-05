@@ -1,1487 +1,1370 @@
 {
   "baseline": "ea3ef3d",
-  "policy": "Legacy boot/withDisplay default argument stays80 and now writes explicit80 when no startup. Cold40 proof constructs Machine directly. Existing startup always wins. All baseline names retained even where historical wording describes80 as default.",
-  "files": [
+  "search": "all test/source width80 conditional omissions, direct Machine constructors, PIWID/VWID/fixed-name-table assertions and startup-bearing fixtures inspected",
+  "helpers": [
+    {
+      "path": "test/lib/fixtures.mjs",
+      "helper": "boot / withDisplay",
+      "decision": "default argument80 retained. For TMS+matrix with no existing STARTUP,80/32 get explicit lines,40 gets no line. Existing STARTUP always takes precedence. Serial/GLCD paths unchanged."
+    },
+    {
+      "path": "test/masking.test.mjs",
+      "helper": "board(cols)",
+      "decision": "direct Machine. Always writes requested CON PICO cols, including80, then asserts PIWID before measuring interrupt state. All80/40/32 names retained."
+    },
+    {
+      "path": "test/pico.test.mjs",
+      "helper": "start / at(cols)",
+      "decision": "start is raw and uses actual provided files. at always writes requested width. Claimed-refusal and1000h-name-table cases explicitly use at80; raw other cases observe current state without an80 width assertion."
+    },
+    {
+      "path": "test/ks39.test.mjs",
+      "helper": "start",
+      "decision": "direct raw Machine. Explicit transitions retained. Reset asserts new cold40. Existing old type,registry and ABI checks use live state, not hardcoded80."
+    },
+    {
+      "path": "test/console.test.mjs",
+      "helper": "boot and direct Machine",
+      "decision": "no-file/banner explicitly asks40 to avoid injection. Historical80-wrap case explicitly asks80. DIR40 expects six files rather than incidental startup. Serial/GLCD and geometry-boundary checks retain actual dimensions."
+    },
+    {
+      "path": "test/ted.test.mjs",
+      "helper": "editOnTecOs / round",
+      "decision": "editOnTecOs passes cols explicitly for80/40/32. Other PICO rounds use boot default80 with no competing startup; fixed filenames on these cards do not include STARTUP."
+    },
+    {
+      "path": "test/stacks.test.mjs",
+      "helper": "watch / rig / deepPaths",
+      "decision": "TMS standard workloads use withDisplay. CON UC1 cases load GLCD explicitly. picoRom switches40/32/80 itself. Diagnostic cases retain separate diagnostic behavior; no default80 branch in this file."
+    },
+    {
+      "path": "test/startup.test.mjs",
+      "helper": "start",
+      "decision": "direct Machine preserves exact startup under test. Explicit CON PICO32 / CON CRT40 precedence case retained. No injected default proof."
+    },
+    {
+      "path": "test/compact-display.test.mjs",
+      "helper": "boot",
+      "decision": "raw direct Machine; only ROWS.TXT for cold40. Reject forced startup40. Separate explicit startup40/80 tests and command width loop."
+    },
+    {
+      "path": "test/compact-transitions.test.mjs",
+      "helper": "boot",
+      "decision": "raw direct Machine, then explicit everywidth command before each directed transition and claim test."
+    },
+    {
+      "path": "test/diag.test.mjs",
+      "helper": "diagnostic Machine",
+      "decision": "separate diagnostic ROM deliberately programs80 itself. Main cold width does not set diagnostic width."
+    },
+    {
+      "path": "test/model/ks42/starter.mjs",
+      "helper": "boot",
+      "decision": "starter STARTUP suppresses injection. Explicit CON PICO80 added after boot to preserve historical80 workflow."
+    },
+    {
+      "path": "test/model/ks48/workflow.mjs",
+      "helper": "raw actual-media Machine",
+      "decision": "actual starter unmodified for default40. Second case adds explicit80 before retained startup lines. Both actual widths asserted."
+    }
+  ],
+  "cases": [
     {
       "file": "test/ccp-operands.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 85,
-          "source": "start() {",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "start() {"
         },
         {
           "line": 115,
-          "source": "log.start();",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "log.start();"
         },
         {
           "line": 129,
-          "source": "const m = boot(await card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(await card());"
         },
         {
           "line": 137,
-          "source": "const m = boot(await card({ glcd: true }), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(await card({ glcd: true }), { tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/chain.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 1,
-          "source": "// KS32's chained command line: a line, typed, from STARTUP.CMD or from BDOS",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "// KS32's chained command line: a line, typed, from STARTUP.CMD or from BDOS"
         },
         {
           "line": 48,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 57,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 64,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 71,
-          "source": "const m = boot(card({ \"HI.COM\": SAY }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"HI.COM\": SAY }));"
         },
         {
           "line": 78,
-          "source": "const m = boot(card({ \"STARTUP.CMD\": startupFile(\"SAY!USER 2!USER 0\", \"SAY!USER 5\") }));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = boot(card({ \"STARTUP.CMD\": startupFile(\"SAY!USER 2!USER 0\", \"SAY!USER 5\") }));"
         },
         {
           "line": 85,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 98,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 115,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 124,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 143,
-          "source": "const m = boot(card({ \"X.COM\": Uint8Array.from([0xc9]) }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"X.COM\": Uint8Array.from([0xc9]) }));"
         },
         {
           "line": 174,
-          "source": "const typed = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const typed = boot(card());"
         },
         {
           "line": 177,
-          "source": "const chained = boot(card({ \"CHAIN.COM\": chainTo(\"SAY B:ONE.TXT TWO.DAT and the rest\") }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const chained = boot(card({ \"CHAIN.COM\": chainTo(\"SAY B:ONE.TXT TWO.DAT and the rest\") }));"
         },
         {
           "line": 180,
-          "source": "const piece = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const piece = boot(card());"
         },
         {
           "line": 191,
-          "source": "const m = boot(card({ \"BIG.COM\": fixed, \"CHAIN.COM\": chainTo(\"BIG!SAY\") }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"BIG.COM\": fixed, \"CHAIN.COM\": chainTo(\"BIG!SAY\") }));"
         },
         {
           "line": 203,
-          "source": "const m = boot(card({ \"CHAIN.COM\": chainWith(bytes) }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"CHAIN.COM\": chainWith(bytes) }));"
         },
         {
           "line": 211,
-          "source": "const m = boot(card({ \"CHAIN.COM\": chainTo(long), \"EMPTY.COM\": chainTo(\"\") }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"CHAIN.COM\": chainTo(long), \"EMPTY.COM\": chainTo(\"\") }));"
         },
         {
           "line": 221,
-          "source": "const m = boot(card({ \"CHAIN.COM\": chainTo(\"NOSUCH\"), \"C2.COM\": chainTo(\"HUGE\"), \"C3.COM\": chainTo(\"SAY\"), \"HUGE.COM\": huge }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"CHAIN.COM\": chainTo(\"NOSUCH\"), \"C2.COM\": chainTo(\"HUGE\"), \"C3.COM\": chainTo(\"SAY\"), \"HUGE.COM\": huge }));"
         },
         {
           "line": 241,
-          "source": "const m = boot(card({ \"CHAIN.COM\": chainTo(\"USER 0!RC FF00!:SAY!SAY\"), \"C2.COM\": chainTo(\"say!:user 4\"), \"STARTUP.CMD\": startupFile(\"CHAIN\", \"C2\", \"USER 3\") }));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = boot(card({ \"CHAIN.COM\": chainTo(\"USER 0!RC FF00!:SAY!SAY\"), \"C2.COM\": chainTo(\"say!:user 4\"), \"STARTUP.CMD\": startupFile(\"CHAIN\", \"C2\", \"USER 3\") }));"
         },
         {
           "line": 249,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 269,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 295,
-          "source": "const m = boot(card({ \"ROX.COM\": ROX }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"ROX.COM\": ROX }));"
         },
         {
           "line": 303,
-          "source": "const m = boot(card({ \"SEL16.COM\": SEL16 }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"SEL16.COM\": SEL16 }));"
         },
         {
           "line": 310,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 338,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 355,
-          "source": "const m = boot(card({}, full));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({}, full));"
         },
         {
           "line": 366,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 409,
-          "source": "const m = boot(pagedCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(pagedCard());"
         },
         {
           "line": 420,
-          "source": "const m = boot(pagedCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(pagedCard());"
         },
         {
           "line": 442,
-          "source": "const m = boot(card());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card());"
         },
         {
           "line": 468,
-          "source": "const m = new Machine({ ...romFor(), sdImage: card({ \"X.COM\": X128, \"STARTUP.CMD\": raw(line) }), clock: TEST_CLOCK });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = new Machine({ ...romFor(), sdImage: card({ \"X.COM\": X128, \"STARTUP.CMD\": raw(line) }), clock: TEST_CLOCK });"
         },
         {
           "line": 482,
-          "source": "const m = boot(card({ \"X.COM\": X128, \"CHAIN.COM\": chainTo(line) }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(card({ \"X.COM\": X128, \"CHAIN.COM\": chainTo(line) }));"
         }
       ]
     },
     {
       "file": "test/clients.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 22,
-          "source": "const m = new Machine({ rom: patched, symbols, sdImage: image, clock: TEST_CLOCK });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom: patched, symbols, sdImage: image, clock: TEST_CLOCK });"
         },
         {
           "line": 56,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 136,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\"));"
         },
         {
           "line": 137,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/commands.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 20,
-          "source": "return boot(image, opts);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "return boot(image, opts);"
         },
         {
           "line": 77,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"WAIT\", \"USER 3\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"WAIT\", \"USER 3\"));"
         },
         {
           "line": 78,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK });"
         },
         {
           "line": 194,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
+        }
+      ]
+    },
+    {
+      "file": "test/compact-display.test.mjs",
+      "callSites": [
+        {
+          "line": 19,
+          "source": "if(startup!==undefined)disk.write('STARTUP.CMD',Buffer.from(startup+'\\r\\n\\x1a'));"
+        },
+        {
+          "line": 23,
+          "source": "function boot(image,opts={tms:true,matrix:true,glcd:false},variant='combined'){"
+        },
+        {
+          "line": 25,
+          "source": "const m=new Machine({...selected,sdImage:image,clock:new Date('2026-01-01T12:00:00Z'),...opts});"
+        },
+        {
+          "line": 51,
+          "source": "assert.ok(!new CpmVolume(volumePayload(image,a),a.g).list().some(f=>f.name==='STARTUP.CMD'),'raw default forbids startup injection');"
+        },
+        {
+          "line": 54,
+          "source": "const cold=boot(raw);rawDefault(cold,raw);"
+        },
+        {
+          "line": 57,
+          "source": "rows.push({case:'raw-cold',width:40,noStartup:true,noFixtureInjection:true});"
+        },
+        {
+          "line": 59,
+          "source": "const m=boot(card());"
+        },
+        {
+          "line": 90,
+          "source": "const m=boot(card('CON PICO '+width));"
+        },
+        {
+          "line": 97,
+          "source": "const g=boot(glcdImage,{tms:false,matrix:true,glcd:true});"
+        },
+        {
+          "line": 117,
+          "source": "rows.push({case:'glcd',width:21,rows:8,aliases:256,stack:peak,reversePadding:'consumer complements all six cells'});"
+        }
+      ]
+    },
+    {
+      "file": "test/compact-transitions.test.mjs",
+      "callSites": [
+        {
+          "line": 15,
+          "source": "function boot(variant){"
+        },
+        {
+          "line": 16,
+          "source": "const m=new Machine({rom:read(variant,'build/tecos/tecos.rom'),symbols:symbolsFromD8(JSON.parse(read(variant,'build/tecos/tecos.d8.json'))),sdImage:createContainer([{geometry:'G1M',label:'SYSTEM',mount:'A'}]),tms:true,matrix:true,glcd:false,clock:new Date('2026-01-01T12:00:00Z')});"
+        },
+        {
+          "line": 53,
+          "source": "const m=boot('combined');"
+        },
+        {
+          "line": 63,
+          "source": "const b=boot(variant);b.command('CON PICO '+width);state(b,width,variant==='combined'?font:old);"
+        },
+        {
+          "line": 70,
+          "source": "const snapshot=()=>{const s=b.tec1g.state.display.tms9918.stateSnapshot();return {registers:[...s.registers],vramSha256:hash(s.vram),width:b.read(b.sym('PIWID')),claim:b.read(b.sym('VCLAIM'))}};"
         }
       ]
     },
     {
       "file": "test/console-boundaries.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 7,
-          "source": "function start(board) {",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "function start(board) {"
         },
         {
           "line": 8,
-          "source": "return boot(standardCard(), { width: board === \"glcd\" ? 80 : board, tms: board !== \"glcd\", matrix: true });",
-          "disposition": "explicit width retained"
+          "source": "return boot(standardCard(), { width: board === \"glcd\" ? 80 : board, tms: board !== \"glcd\", matrix: true });"
         },
         {
           "line": 47,
-          "source": "const m = start(board), width = m.read(m.sym(\"VWID\"));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(board), width = m.read(m.sym(\"VWID\"));"
         },
         {
           "line": 59,
-          "source": "const m = start(board);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(board);"
         },
         {
           "line": 79,
-          "source": "const m = start(board), width = m.read(m.sym(\"VWID\")), height = m.read(m.sym(\"VHGT\"));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(board), width = m.read(m.sym(\"VWID\")), height = m.read(m.sym(\"VHGT\"));"
         },
         {
           "line": 89,
-          "source": "const m = start(board);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(board);"
         }
       ]
     },
     {
       "file": "test/console.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 12,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true, width: 40 });"
         },
         {
           "line": 24,
-          "source": "const m = boot(standardCard(), { tms: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true });"
         },
         {
           "line": 34,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 54,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 73,
-          "source": "const m = boot(standardCard(), { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { matrix: true });"
         },
         {
           "line": 85,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true });"
         },
         {
           "line": 100,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 115,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true, width: 32 });",
-          "disposition": "explicit width retained"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true, width: 32 });"
         },
         {
           "line": 121,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 133,
-          "source": "const tms = boot(image, { tms: true, matrix: true, width: 40 });",
-          "disposition": "explicit width retained"
-        },
-        {
-          "line": 140,
-          "source": "\"STARTUP.CMD\",",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const tms = boot(image, { tms: true, matrix: true, width: 40 });"
         },
         {
           "line": 145,
-          "source": "const glcd = boot(small, { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const glcd = boot(small, { matrix: true });"
         },
         {
           "line": 148,
-          "source": "const from = g.indexOf(\"COPY.COM\"); // GLCD.SVC and STARTUP.CMD are on A: too",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const from = g.indexOf(\"COPY.COM\"); // GLCD.SVC and STARTUP.CMD are on A: too"
         },
         {
           "line": 154,
-          "source": "const m = boot(standardCard(), { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { matrix: true });"
         },
         {
           "line": 174,
-          "source": "const m = boot(image, { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { matrix: true });"
         },
         {
           "line": 195,
-          "source": "const m = boot(image, { tms: true, matrix: true, width: 40 });",
-          "disposition": "explicit width retained"
+          "source": "const m = boot(image, { tms: true, matrix: true, width: 40 });"
         },
         {
           "line": 210,
-          "source": "const m = boot(image, { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { matrix: true });"
         },
         {
           "line": 231,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 243,
-          "source": "const m = boot(image, { tms: true, matrix: true, width: 80 });",
-          "disposition": "explicit width retained"
+          "source": "const m = boot(image, { tms: true, matrix: true, width: 80 });"
         },
         {
           "line": 265,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 275,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 294,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 303,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 316,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true });"
         },
         {
           "line": 345,
-          "source": "const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });"
         },
         {
           "line": 355,
-          "source": "const stub = boot(standardCard()).read(6);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const stub = boot(standardCard()).read(6);"
         },
         {
           "line": 356,
-          "source": "const m = boot(standardCard(), { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { matrix: true });"
         },
         {
           "line": 371,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 377,
-          "source": "const m = new Machine({ rom, symbols, sdImage: standardCard(), clock: TEST_CLOCK });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: standardCard(), clock: TEST_CLOCK });"
         }
       ]
     },
     {
       "file": "test/devices.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 13,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 26,
-          "source": "const m = boot(image, { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { matrix: true });"
         },
         {
           "line": 38,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 58,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/diag.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 29,
-          "source": "const m = new Machine({ rom, symbols, sdImage: standardCard(), tms: true, matrix: true, ramFill: 0x76, rtc: false, ...options });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: standardCard(), tms: true, matrix: true, ramFill: 0x76, rtc: false, ...options });"
         }
       ]
     },
     {
       "file": "test/glcd.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 34,
-          "source": "const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });"
         }
       ]
     },
     {
       "file": "test/host-boundaries.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 254,
-          "source": "const state = { card: image, display: 'tms', width: '80' };",
-          "disposition": "explicit width retained"
+          "source": "const state = { card: image, display: 'tms', width: '80' };"
+        }
+      ]
+    },
+    {
+      "file": "test/host-font-width.test.mjs",
+      "callSites": [
+        {
+          "line": 12,
+          "source": "const startup=image=>Buffer.from(disk(image).read('STARTUP.CMD')).toString().split('\\x1a')[0];"
+        },
+        {
+          "line": 15,
+          "source": "const image=card();disk(image).write('STARTUP.CMD',Buffer.from('CON CRT 32\\r\\nDIR!PICO.SVC!:USER 3\\r\\n\\x1a'));"
+        },
+        {
+          "line": 21,
+          "source": "const readOnly=card();disk(readOnly).write('STARTUP.CMD',Buffer.from('DIR\\r\\n\\x1a'),{readOnly:true});const before=readOnly.slice();assert.match(prepare(readOnly,'tms',80).problem,/read-only/);assert.deepEqual(readOnly,before);"
         }
       ]
     },
     {
       "file": "test/hwsvc.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 84,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 128,
-          "source": "const m = boot(standardCard(), { matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { matrix: true });"
         },
         {
           "line": 146,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true });"
         },
         {
           "line": 165,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 194,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true });"
         },
         {
           "line": 206,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true });"
         },
         {
           "line": 224,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 241,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/ks39.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 20,
-          "source": "function start(image, opts = {}) {",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "function start(image, opts = {}) {"
         },
         {
           "line": 21,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, ...opts });"
         },
         {
           "line": 56,
-          "source": "const m = start(standardCard());",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(standardCard());"
         },
         {
           "line": 61,
-          "source": "const serial = start(standardCard(), { matrix: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const serial = start(standardCard(), { matrix: false });"
         },
         {
           "line": 69,
-          "source": "const m = start(image, { glcd: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(image, { glcd: true });"
         },
         {
           "line": 86,
-          "source": "const m = start(image, { glcd: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(image, { glcd: true });"
         },
         {
           "line": 99,
-          "source": "const m = start(image, { glcd: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(image, { glcd: true });"
         },
         {
           "line": 112,
-          "source": "const m = start(standardCard());",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(standardCard());"
         },
         {
           "line": 130,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\"));"
         },
         {
           "line": 131,
-          "source": "const m = start(image);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(image);"
         },
         {
           "line": 138,
-          "source": "const m = start(standardCard());",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(standardCard());"
         },
         {
           "line": 152,
-          "source": "const m = start(standardCard());",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(standardCard());"
         },
         {
           "line": 164,
-          "source": "const pico = start(image, { glcd: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const pico = start(image, { glcd: false });"
         },
         {
           "line": 166,
-          "source": "const serial = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const serial = boot(standardCard());"
         }
       ]
     },
     {
       "file": "test/masking.test.mjs",
-      "cases": [
+      "callSites": [
+        {
+          "line": 57,
+          "source": "async function board(cols) {"
+        },
         {
           "line": 59,
-          "source": "if (cols !== 80) volume(image, \"A\").write(\"STARTUP.CMD\", startupFile(`CON PICO ${cols}`));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "volume(image, \"A\").write(\"STARTUP.CMD\", startupFile(`CON PICO ${cols}`));"
         },
         {
           "line": 60,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });"
         },
         {
           "line": 88,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 98,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 112,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         },
         {
           "line": 143,
-          "source": "const m = boot(standardCard());",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard());"
         }
       ]
     },
     {
       "file": "test/pagezero.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 33,
-          "source": "[\"the PICO9918 and the GLCD\", { tms: true, matrix: true }, { \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }],",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "[\"the PICO9918 and the GLCD\", { tms: true, matrix: true }, { \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }],"
         },
         {
           "line": 39,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });"
         },
         {
           "line": 42,
-          "source": "m.runUntil(() => m.ready(), 400_000_000, \"a usable prompt, after STARTUP.CMD\");",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "m.runUntil(() => m.ready(), 400_000_000, \"a usable prompt, after STARTUP.CMD\");"
         }
       ]
     },
     {
       "file": "test/pico.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 25,
-          "source": "function start(files, { key = false, ...opts } = {}) {",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "function start(files, { key = false, ...opts } = {}) {"
         },
         {
           "line": 30,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, ...opts });"
         },
         {
           "line": 46,
-          "source": "const both = (lines = [\"GLCD.SVC\"], more = {}) => ({ \"GLCD.SVC\": GLCD_SVC, ...(lines.length ? { \"STARTUP.CMD\": startupFile(...lines) } : {}), ...more });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const both = (lines = [\"GLCD.SVC\"], more = {}) => ({ \"GLCD.SVC\": GLCD_SVC, ...(lines.length ? { \"STARTUP.CMD\": startupFile(...lines) } : {}), ...more });"
         },
         {
           "line": 47,
-          "source": "/** A:'s files with the console at COLS columns: an explicit CON PICO line in STARTUP.CMD at every requested width. */",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "/** A:'s files with the console at COLS columns: an explicit CON PICO line in STARTUP.CMD at every requested width. */"
         },
         {
           "line": 48,
-          "source": "const at = (cols, files = {}) => ({ \"STARTUP.CMD\": startupFile(`CON PICO ${cols}`), ...files });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const at = (cols, files = {}) => ({ \"STARTUP.CMD\": startupFile(`CON PICO ${cols}`), ...files });"
         },
         {
           "line": 84,
-          "source": "const m = start(at(cols));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(at(cols));"
         },
         {
           "line": 93,
-          "source": "const m = start(both());",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both());"
         },
         {
           "line": 115,
-          "source": "const m = start({ ...set, \"CCPUSE.SVC\": file });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({ ...set, \"CCPUSE.SVC\": file });"
         },
         {
           "line": 122,
-          "source": "test(\"a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the field to CRT:, and then names GLCD.SVC takes the GLCD: the fallback puts the field back to TTY: before the line runs (KE-200)\", () => {",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "test(\"a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the field to CRT:, and then names GLCD.SVC takes the GLCD: the fallback puts the field back to TTY: before the line runs (KE-200)\", () => {"
         },
         {
           "line": 124,
-          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"SETCRT.COM\": SETCRT, \"STARTUP.CMD\": startupFile(\"CON CRT\", \"SETCRT\", \"GLCD.SVC\") }, { tms: false });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"SETCRT.COM\": SETCRT, \"STARTUP.CMD\": startupFile(\"CON CRT\", \"SETCRT\", \"GLCD.SVC\") }, { tms: false });"
         },
         {
           "line": 129,
-          "source": "test(\"a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200)\", () => {",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "test(\"a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200)\", () => {"
         },
         {
           "line": 130,
-          "source": "const m = start(both([\"CON UC1\"]));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both([\"CON UC1\"]));"
         },
         {
           "line": 135,
-          "source": "const m = start(both([]));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both([]));"
         },
         {
           "line": 143,
-          "source": "const m = start(both([]));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both([]));"
         },
         {
           "line": 151,
-          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"RES.SVC\": await service(\"res\"), \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, { tms: false });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"RES.SVC\": await service(\"res\"), \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, { tms: false });"
         },
         {
           "line": 155,
-          "source": "test(\"the ROM's console at every width: CON PICO 40, CON CRT 32 and CON PICO 80 switch it, each screen cleared and working at its width (KD-174)\", () => {",
-          "disposition": "explicit width retained"
+          "source": "test(\"the ROM's console at every width: CON PICO 40, CON CRT 32 and CON PICO 80 switch it, each screen cleared and working at its width (KD-174)\", () => {"
         },
         {
           "line": 156,
-          "source": "const m = start({});",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({});"
         },
         {
           "line": 173,
-          "source": "const m = start(at(80));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(at(80));"
         },
         {
           "line": 188,
-          "source": "const m = start(at(32));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(at(32));"
         },
         {
           "line": 201,
-          "source": "const pico = start({}, { glcd: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const pico = start({}, { glcd: false });"
         },
         {
           "line": 203,
-          "source": "const g = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, { tms: false });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const g = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, { tms: false });"
         },
         {
           "line": 206,
-          "source": "const m = start(both());",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both());"
         },
         {
           "line": 215,
-          "source": "const m = boot(standardCard(), { width: cols, tms: true, matrix: true });",
-          "disposition": "explicit width retained"
+          "source": "const m = boot(standardCard(), { width: cols, tms: true, matrix: true });"
         },
         {
           "line": 221,
-          "source": "const m = boot(standardCard(), { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(standardCard(), { tms: true, matrix: true });"
         },
         {
           "line": 228,
-          "source": "assert.deepEqual(files.map((f) => f.name), [\"GLCD.SVC\", \"STARTUP.CMD\"]);",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "assert.deepEqual(files.map((f) => f.name), [\"GLCD.SVC\", \"STARTUP.CMD\"]);"
         },
         {
           "line": 230,
-          "source": "const pico = start(set);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const pico = start(set);"
         },
         {
           "line": 232,
-          "source": "assert.equal(start(set, { tms: false }).read(3) & 3, UC1);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "assert.equal(start(set, { tms: false }).read(3) & 3, UC1);"
         },
         {
           "line": 236,
-          "source": "const m = new Machine({ ...romFor(), clock: TEST_CLOCK, tms: true, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), clock: TEST_CLOCK, tms: true, matrix: true });"
         },
         {
           "line": 244,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, matrix: true });"
         },
         {
           "line": 262,
-          "source": "[\"no STARTUP.CMD\", {}, {}],",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "[\"no STARTUP.CMD\", {}, {}],"
         },
         {
           "line": 263,
-          "source": "[\"a file with no display line\", { \"STARTUP.CMD\": startupFile(\"USER 0\") }, {}],",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "[\"a file with no display line\", { \"STARTUP.CMD\": startupFile(\"USER 0\") }, {}],"
         },
         {
           "line": 264,
-          "source": "[\"a missing PICO.SVC\", { \"STARTUP.CMD\": startupFile(\"PICO.SVC\") }, {}],",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "[\"a missing PICO.SVC\", { \"STARTUP.CMD\": startupFile(\"PICO.SVC\") }, {}],"
         },
         {
           "line": 265,
-          "source": "[\"a bad PICO.SVC\", { \"PICO.SVC\": BAD, \"STARTUP.CMD\": startupFile(\"PICO.SVC\") }, {}],",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "[\"a bad PICO.SVC\", { \"PICO.SVC\": BAD, \"STARTUP.CMD\": startupFile(\"PICO.SVC\") }, {}],"
         },
         {
           "line": 266,
-          "source": "[\"a skip past the file\", { \"STARTUP.CMD\": startupFile(\"CON TTY\") }, { key: true }],",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "[\"a skip past the file\", { \"STARTUP.CMD\": startupFile(\"CON TTY\") }, { key: true }],"
         },
         {
           "line": 269,
-          "source": "const m = start(files, opts);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(files, opts);"
         },
         {
           "line": 277,
-          "source": "const m = start({}, { tms: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({}, { tms: false });"
         },
         {
           "line": 291,
-          "source": "const m = start({ \"STARTUP.CMD\": file });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": file });"
         },
         {
           "line": 299,
-          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(...lines) });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(...lines) });"
         },
         {
           "line": 307,
-          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"USER 0\") }, opts);",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"USER 0\") }, opts);"
         },
         {
           "line": 313,
-          "source": "const m = start(both([]));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both([]));"
         },
         {
           "line": 322,
-          "source": "const m = start({});",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({});"
         },
         {
           "line": 340,
-          "source": "for (const files of [{}, { \"PICO.SVC\": BAD, \"STARTUP.CMD\": startupFile(\"PICO.SVC\") }]) {",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "for (const files of [{}, { \"PICO.SVC\": BAD, \"STARTUP.CMD\": startupFile(\"PICO.SVC\") }]) {"
         },
         {
           "line": 341,
-          "source": "const m = start(files, { matrix: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(files, { matrix: false });"
         },
         {
           "line": 350,
-          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, { tms: false });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, { tms: false });"
         },
         {
           "line": 359,
-          "source": "const m = start(both([]));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both([]));"
         },
         {
           "line": 371,
-          "source": "const m = start({});",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({});"
         },
         {
           "line": 388,
-          "source": "const m = start(both([], { \"RES.SVC\": await service(\"res\") }));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both([], { \"RES.SVC\": await service(\"res\") }));"
         },
         {
           "line": 397,
-          "source": "const m = start({});",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({});"
         },
         {
           "line": 406,
-          "source": "const m = start(both([]));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(both([]));"
         },
         {
           "line": 416,
-          "source": "const m = start({}, { matrix: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({}, { matrix: false });"
         },
         {
           "line": 432,
-          "source": "const m = start(at(80));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(at(80));"
         },
         {
           "line": 460,
-          "source": "const m = start(at(cols));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(at(cols));"
         },
         {
           "line": 501,
-          "source": "const m = start(at(cols));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(at(cols));"
         },
         {
           "line": 530,
-          "source": "const plain = word(start({}, opts), 6);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const plain = word(start({}, opts), 6);"
         },
         {
           "line": 531,
-          "source": "const m = start({ ...files, \"STARTUP.CMD\": startupFile(name) }, opts);",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ ...files, \"STARTUP.CMD\": startupFile(name) }, opts);"
         },
         {
           "line": 545,
-          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC }, { tms: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC }, { tms: false });"
         },
         {
           "line": 554,
-          "source": "const m = start({ \"GLCDX.SVC\": GLCD_SVC, ...files });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({ \"GLCDX.SVC\": GLCD_SVC, ...files });"
         },
         {
           "line": 626,
-          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"CON UC1\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"CON UC1\") });"
         },
         {
           "line": 633,
-          "source": "const m = start({ \"GLCDX.SVC\": GLCD_SVC });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({ \"GLCDX.SVC\": GLCD_SVC });"
         },
         {
           "line": 647,
-          "source": "const m = new Machine({ ...romFor(), sdImage: standardCard(), clock: TEST_CLOCK, tms: true, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: standardCard(), clock: TEST_CLOCK, tms: true, matrix: true });"
         },
         {
           "line": 673,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\", \"GLCD.SVC\", \"DIR\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\", \"GLCD.SVC\", \"DIR\"));"
         },
         {
           "line": 689,
-          "source": "test(\"the web host: a card whose STARTUP.CMD is read-only keeps it, and the page says why it boots as it is (KE-AR10)\", () => {",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "test(\"the web host: a card whose STARTUP.CMD is read-only keeps it, and the page says why it boots as it is (KE-AR10)\", () => {"
         },
         {
           "line": 691,
-          "source": "volume(image, \"A\").write(\"STARTUP.CMD\", startupFile(\"DIR\"), { readOnly: true });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "volume(image, \"A\").write(\"STARTUP.CMD\", startupFile(\"DIR\"), { readOnly: true });"
         },
         {
           "line": 694,
-          "source": "problem: \"This card's STARTUP.CMD is read-only, so the page can't set its display line; it boots as it is\",",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "problem: \"This card's STARTUP.CMD is read-only, so the page can't set its display line; it boots as it is\","
         },
         {
           "line": 705,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"CON CRT 32\", \"DIR!CON CRT: 40!USER 3\", \"con pico 40\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"CON CRT 32\", \"DIR!CON CRT: 40!USER 3\", \"con pico 40\"));"
         },
         {
           "line": 708,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"CON CRT 32\", \"DIR\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"CON CRT 32\", \"DIR\"));"
         },
         {
           "line": 711,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"CON CRT\", \"CON UC1\", \"DIR\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"CON CRT\", \"CON UC1\", \"DIR\"));"
         },
         {
           "line": 716,
-          "source": "const startupText = (image) => Buffer.from(volume(image, \"A\").read(\"STARTUP.CMD\")).toString(\"latin1\").split(\"\\x1a\")[0];",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const startupText = (image) => Buffer.from(volume(image, \"A\").read(\"STARTUP.CMD\")).toString(\"latin1\").split(\"\\x1a\")[0];"
         },
         {
           "line": 721,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC!GLCD.SVC!DIR\", \"DIR!:GLCD.SVC!USER 3\", \"PICO40.SVC!CON PICO 32\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC!GLCD.SVC!DIR\", \"DIR!:GLCD.SVC!USER 3\", \"PICO40.SVC!CON PICO 32\"));"
         },
         {
           "line": 739,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(line));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(line));"
         },
         {
           "line": 757,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(...lines));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(...lines));"
         },
         {
           "line": 767,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\", \":VOLS\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC\", \":VOLS\"));"
         },
         {
           "line": 769,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });"
         },
         {
           "line": 779,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC!:VOLS\", \"DIR!GLCD.SVC!PICO.SVC!:USER 3!:USER 0\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.SVC!:VOLS\", \"DIR!GLCD.SVC!PICO.SVC!:USER 3!:USER 0\"));"
         },
         {
           "line": 782,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });"
         },
         {
           "line": 793,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.DRV\", \"GLCD.DRV\", \"MY.DRV\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.DRV\", \"GLCD.DRV\", \"MY.DRV\"));"
         },
         {
           "line": 817,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.DRV\", \"GLCD.DRV\", \"MY.DRV\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(\"PICO.DRV\", \"GLCD.DRV\", \"MY.DRV\"));"
         },
         {
           "line": 823,
-          "source": "const m = start({ \"GLCD.XXX\": GLCD_SVC });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({ \"GLCD.XXX\": GLCD_SVC });"
         },
         {
           "line": 841,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: true });"
         },
         {
           "line": 851,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });"
         },
         {
           "line": 869,
-          "source": "volume(image, \"A\").write(\"STARTUP.CMD\", startupFile(\"DIR\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "volume(image, \"A\").write(\"STARTUP.CMD\", startupFile(\"DIR\"));"
         },
         {
           "line": 875,
-          "source": "assert.match(bootsToPrompt(image).text(0), />DIR\\r/, \"its own STARTUP.CMD ran\");",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "assert.match(bootsToPrompt(image).text(0), />DIR\\r/, \"its own STARTUP.CMD ran\");"
         },
         {
           "line": 880,
-          "source": "const a = volume(image, \"A\"); // no STARTUP.CMD: the width's line needs a new entry",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const a = volume(image, \"A\"); // no STARTUP.CMD: the width's line needs a new entry"
         }
       ]
     },
     {
       "file": "test/reset.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 87,
-          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, ...opts });"
         },
         {
           "line": 475,
-          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });"
         },
         {
           "line": 495,
-          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK });"
         },
         {
           "line": 507,
-          "source": "volume(image, \"SYSTEM\").write(\"STARTUP.CMD\", startupFile(\"USER 9\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "volume(image, \"SYSTEM\").write(\"STARTUP.CMD\", startupFile(\"USER 9\"));"
         },
         {
           "line": 509,
-          "source": "a.write(\"STARTUP.CMD\", startupFile(...lines));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "a.write(\"STARTUP.CMD\", startupFile(...lines));"
         },
         {
           "line": 549,
-          "source": "test(\"a selected A: with no STARTUP.CMD reaches a serial prompt\", () => {",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "test(\"a selected A: with no STARTUP.CMD reaches a serial prompt\", () => {"
         },
         {
           "line": 551,
-          "source": "volume(image, \"SYSTEM\").write(\"STARTUP.CMD\", startupFile(\"USER 9\"));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "volume(image, \"SYSTEM\").write(\"STARTUP.CMD\", startupFile(\"USER 9\"));"
         },
         {
           "line": 558,
-          "source": "test(\"an unreadable STARTUP.CMD on the selected A: leaves a prompt\", () => {",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "test(\"an unreadable STARTUP.CMD on the selected A: leaves a prompt\", () => {"
         }
       ]
     },
     {
       "file": "test/sample.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 32,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/stacks.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 116,
-          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });"
         },
         {
           "line": 133,
-          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });"
         },
         {
           "line": 159,
-          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });"
         },
         {
           "line": 177,
-          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });"
         },
         {
           "line": 200,
-          "source": "const m = new Machine({ rom, symbols, clock: TEST_CLOCK, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ rom, symbols, clock: TEST_CLOCK, ...opts });"
         },
         {
           "line": 225,
-          "source": "serialPlain: await deepPaths([\"TYPE STARTUP.CMD\\r\", \"DIR\\r\", \"CON\\r\"], {}),",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "serialPlain: await deepPaths([\"TYPE STARTUP.CMD\\r\", \"DIR\\r\", \"CON\\r\"], {}),"
         },
         {
           "line": 226,
-          "source": "resident: await deepPaths([\"RES.SVC\\r\", \"TYPE STARTUP.CMD\\r\", \"DIR\\r\", \"CON\\r\"], {}, { files: { \"RES.SVC\": await service(\"res\") } }),",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "resident: await deepPaths([\"RES.SVC\\r\", \"TYPE STARTUP.CMD\\r\", \"DIR\\r\", \"CON\\r\"], {}, { files: { \"RES.SVC\": await service(\"res\") } }),"
         }
       ]
     },
     {
       "file": "test/starter.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 38,
-          "source": "\"STARTUP.CMD\": Buffer.from(\"GLCD.SVC\\r\\n\\x1a\", \"latin1\"),",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "\"STARTUP.CMD\": Buffer.from(\"GLCD.SVC\\r\\n\\x1a\", \"latin1\"),"
         },
         {
           "line": 58,
-          "source": "const m = boot(Uint8Array.from(starter().card));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(Uint8Array.from(starter().card));"
         }
       ]
     },
     {
       "file": "test/startup.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 1,
-          "source": "// A:STARTUP.CMD at cold boot: its one record, its lines run from MLREAD, the",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "// A:STARTUP.CMD at cold boot: its one record, its lines run from MLREAD, the"
         },
         {
           "line": 12,
-          "source": "function start(files, { key = false, ...opts } = {}) {",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "function start(files, { key = false, ...opts } = {}) {"
         },
         {
           "line": 17,
-          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });"
         },
         {
           "line": 25,
-          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"NOSUCH\", \"\", \"USER 3\", \"TYPE HELLO.TXT\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"NOSUCH\", \"\", \"USER 3\", \"TYPE HELLO.TXT\") });"
         },
         {
           "line": 38,
-          "source": "prompt(start({ \"STARTUP.CMD\": new Uint8Array(0) }));",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "prompt(start({ \"STARTUP.CMD\": new Uint8Array(0) }));"
         },
         {
           "line": 39,
-          "source": "prompt(start({}));",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "prompt(start({}));"
         },
         {
           "line": 40,
-          "source": "const m = start({ \"STARTUP.CMD\": Buffer.from(\"USER 1\\r\\n\".repeat(60) + \"USER 2\\r\\n\\x1a\", \"latin1\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": Buffer.from(\"USER 1\\r\\n\".repeat(60) + \"USER 2\\r\\n\\x1a\", \"latin1\") });"
         },
         {
           "line": 51,
-          "source": "const files = { \"HANG.SVC\": file, \"STARTUP.CMD\": startupFile(\"HANG.SVC\") };",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const files = { \"HANG.SVC\": file, \"STARTUP.CMD\": startupFile(\"HANG.SVC\") };"
         },
         {
           "line": 52,
-          "source": "const held = start(files, { key: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const held = start(files, { key: true });"
         },
         {
           "line": 55,
-          "source": "const free = start(files);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const free = start(files);"
         },
         {
           "line": 62,
-          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, opts);",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\") }, opts);"
         },
         {
           "line": 72,
-          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\", \":USER 3\") }, { matrix: true, glcd: false });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"GLCD.SVC\": GLCD_SVC, \"STARTUP.CMD\": startupFile(\"GLCD.SVC\", \":USER 3\") }, { matrix: true, glcd: false });"
         },
         {
           "line": 83,
-          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"CON PICO 32\", \":USER 3\", \"CON CRT 40\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"CON PICO 32\", \":USER 3\", \"CON CRT 40\") });"
         },
         {
           "line": 100,
-          "source": "const m = start({ \"FAIL.SVC\": file, \"STARTUP.CMD\": startupFile(line, \":USER 3\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"FAIL.SVC\": file, \"STARTUP.CMD\": startupFile(line, \":USER 3\") });"
         },
         {
           "line": 112,
-          "source": "const m = start({ \"WILD.SVC\": file, \"STARTUP.CMD\": startupFile(\"WILD.SVC\", \":USER 3\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"WILD.SVC\": file, \"STARTUP.CMD\": startupFile(\"WILD.SVC\", \":USER 3\") });"
         },
         {
           "line": 124,
-          "source": "const m = start({ \"STARTUP.CMD\": raw(\"\\r\".repeat(121) + \"USER 13\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": raw(\"\\r\".repeat(121) + \"USER 13\") });"
         },
         {
           "line": 132,
-          "source": "const m = start({ \"STARTUP.CMD\": raw(`USER 3\\r\\n${end}\\r\\nUSER 4\\r\\n`) });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": raw(`USER 3\\r\\n${end}\\r\\nUSER 4\\r\\n`) });"
         },
         {
           "line": 139,
-          "source": "for (const files of [{}, { \"STARTUP.CMD\": raw(\"\\x1a\") }]) {",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "for (const files of [{}, { \"STARTUP.CMD\": raw(\"\\x1a\") }]) {"
         },
         {
           "line": 140,
-          "source": "const m = start(files);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(files);"
         },
         {
           "line": 147,
-          "source": "const m = start({ \"STARTUP.CMD\": new Uint8Array(0) });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": new Uint8Array(0) });"
         },
         {
           "line": 158,
-          "source": "const m = start({ \"SAY.COM\": SAY });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start({ \"SAY.COM\": SAY });"
         },
         {
           "line": 164,
-          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"USER 3\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"USER 3\") });"
         },
         {
           "line": 209,
-          "source": "const f = start({ \"SAY.COM\": SAY, \"STARTUP.CMD\": startupFile(...lines) });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const f = start({ \"SAY.COM\": SAY, \"STARTUP.CMD\": startupFile(...lines) });"
         },
         {
           "line": 212,
-          "source": "const t = start({ \"SAY.COM\": SAY, \"STARTUP.CMD\": raw(\"\\x1a\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const t = start({ \"SAY.COM\": SAY, \"STARTUP.CMD\": raw(\"\\x1a\") });"
         },
         {
           "line": 222,
-          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"NEVERRUN\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"STARTUP.CMD\": startupFile(\"NEVERRUN\") });"
         },
         {
           "line": 247,
-          "source": "const files = { \"RESET.COM\": COLDBOOT, \"STARTUP.CMD\": startupFile(\"RESET\") };",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const files = { \"RESET.COM\": COLDBOOT, \"STARTUP.CMD\": startupFile(\"RESET\") };"
         },
         {
           "line": 248,
-          "source": "const m = start(files);",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = start(files);"
         },
         {
           "line": 256,
-          "source": "const held = start(files, { key: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const held = start(files, { key: true });"
         },
         {
           "line": 262,
-          "source": "const m = start({ \"JUMP.COM\": Uint8Array.from([0xc3, 0x00, 0xc0]), \"STARTUP.CMD\": startupFile(\"JUMP\") });",
-          "disposition": "existing startup takes precedence; no fixture replacement"
+          "source": "const m = start({ \"JUMP.COM\": Uint8Array.from([0xc3, 0x00, 0xc0]), \"STARTUP.CMD\": startupFile(\"JUMP\") });"
         }
       ]
     },
     {
       "file": "test/svc.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 87,
-          "source": "return bench(boot(standardCard(), opts));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "return bench(boot(standardCard(), opts));"
         },
         {
           "line": 270,
-          "source": "const picoBoard = async () => bench(boot(standardCard(), { tms: true, matrix: true }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const picoBoard = async () => bench(boot(standardCard(), { tms: true, matrix: true }));"
         },
         {
           "line": 386,
-          "source": "const t = bench(boot(image, { tms: true, matrix: true }));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const t = bench(boot(image, { tms: true, matrix: true }));"
         },
         {
           "line": 420,
-          "source": "const t = bench(boot(image));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const t = bench(boot(image));"
         },
         {
           "line": 435,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 444,
-          "source": "const t = bench(boot(image));",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const t = bench(boot(image));"
         },
         {
           "line": 797,
-          "source": "const m = new Machine({ ...romFor(\"debug80\"), sdImage: standardCard(), clock: TEST_CLOCK, tms: false, matrix: true });",
-          "disposition": "direct raw boot uses cold40; explicit80 added only to geometry-specific cases"
+          "source": "const m = new Machine({ ...romFor(\"debug80\"), sdImage: standardCard(), clock: TEST_CLOCK, tms: false, matrix: true });"
         },
         {
           "line": 947,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 966,
-          "source": "const m = boot(image, opts);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, opts);"
         }
       ]
     },
     {
       "file": "test/tas.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 31,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 64,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 78,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 93,
-          "source": "const m = boot(image);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image);"
         },
         {
           "line": 112,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/ted.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 42,
-          "source": "function editOnTecOs({ tms, cols = 80 }) {",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "function editOnTecOs({ tms, cols = 80 }) {"
         },
         {
           "line": 48,
-          "source": "let m = boot(image, { tms, width: cols, matrix: true });",
-          "disposition": "explicit width retained"
+          "source": "let m = boot(image, { tms, width: cols, matrix: true });"
         },
         {
           "line": 64,
-          "source": "m = boot(image, { tms, width: cols, matrix: true, ramFill: 0x76 });",
-          "disposition": "explicit width retained"
+          "source": "m = boot(image, { tms, width: cols, matrix: true, ramFill: 0x76 });"
         },
         {
           "line": 87,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 107,
-          "source": "const m = boot(image, tms ? { tms: true, matrix: true } : {});",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, tms ? { tms: true, matrix: true } : {});"
         },
         {
           "line": 163,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         },
         {
           "line": 189,
-          "source": "const m = boot(image, board);",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, board);"
         },
         {
           "line": 203,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/walk.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 30,
-          "source": "const m = boot(image, { tms: true, matrix: true });",
-          "disposition": "legacy boot fixture selects80 when no existing startup; serial/GLCD unaffected"
+          "source": "const m = boot(image, { tms: true, matrix: true });"
         }
       ]
     },
     {
       "file": "test/web-touch.test.mjs",
-      "cases": [
+      "callSites": [
         {
           "line": 66,
-          "source": "const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });",
-          "disposition": "explicit width retained"
+          "source": "const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });"
         }
       ]
     }
   ],
-  "hostPolicy": "prepareCard/setDisplayLine keep public default80; every TMS choice writes its explicit width. Colon/chaining/atomicity cases retain names and account for the added line."
+  "remainingOld80Omission": "intentional malformed host source control only"
 }

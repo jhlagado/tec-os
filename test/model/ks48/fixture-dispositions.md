@@ -43,3 +43,12 @@ case now requests cold40 so it retains the banner without an injected startup.
 The DIR40 case expects the actual six files and 1004K free, with no incidental
 STARTUP.CMD. The PISTART header now states cold40 and both changed instructions
 keep the existing inline comment column.
+
+The separate masking.test board(cols) helper constructs Machine directly. Its
+old cols!==80 branch is removed. It now writes CON PICO for every requested
+width before asserting PIWID and observing interrupt discipline. A search of
+all test/source helpers found no remaining cold80 omission outside the
+intentional host-helper mutation control. stacks.test uses withDisplay; TED
+uses boot; pico's at loop and masking's board loop now explicitly select80.
+The new raw/default and transition helpers construct Machine without a hidden
+width fixture. Diagnostic ROM tests program their own diagnostic80 mode.

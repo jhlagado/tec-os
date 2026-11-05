@@ -56,7 +56,7 @@ function watching(m, port, fn) {
 /** A PICO9918 board on the ROM's console at COLS columns, its routines by their ROM labels. */
 async function board(cols) {
   const image = standardCard();
-  if (cols !== 80) volume(image, "A").write("STARTUP.CMD", startupFile(`CON PICO ${cols}`));
+  volume(image, "A").write("STARTUP.CMD", startupFile(`CON PICO ${cols}`));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "a usable prompt");
