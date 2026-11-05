@@ -9,7 +9,7 @@ import { GLCD_SVC, TEST_CLOCK, boot, program, romFor, standardCard, volume } fro
 import { rig } from "./lib/warmboot.mjs";
 
 test("with a PICO9918 and the matrix keyboard the screen is the console from the banner on, with no file, and nothing goes to serial (KS39)", () => {
-  const m = boot(standardCard(), { tms: true, matrix: true });
+  const m = boot(standardCard(), { tms: true, matrix: true, width: 40 });
   const screen = m.screen();
   assert.deepEqual(screen.slice(0, 4), ["", "TEC-OS 0.1 for TEC-1G", "A: SYSTEM", "B: WORK"], "the banner and volumes on the screen");
   const at = screen.indexOf("A>");
@@ -137,8 +137,8 @@ test("DIR lays out names to fit the display and reports free space", () => {
   assert.deepEqual(s.slice(at + 1, at + 5), [
     "COPY.COM     TERM.COM     PROBE.COM",
     "MANUAL.TXT   README.TXT   X",
-    "STARTUP.CMD",
-    "7 files, 1002K free",
+    "6 files, 1004K free",
+    "A>",
   ]);
   const small = standardCard();
   for (const n of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) volume(small, "A").write(n, new Uint8Array(300));

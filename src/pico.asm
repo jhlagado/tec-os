@@ -39,7 +39,7 @@ SPRITE EQU $1B00
 PIDEFLT EQU 40
 
 PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
-  DB PIDEFLT,24   ; the columns, TMSW's,
+  DB PIDEFLT,24  ; the columns, TMSW's,
                  ; and the rows
 
 ; PICOREG, PICOFIL
@@ -59,7 +59,7 @@ PITPLN EQU $-PITPL
 ; The console at cold boot, from VIDINIT
 ; with CONDEV in HL: on a board with the
 ; VDP and the matrix keyboard, the block
-; filled at 80 columns, the table hooked
+; filled at 40 columns, the table hooked
 ; for CRT:, the record registered and
 ; CRT: in the field. Otherwise nothing.
 ; The VDP itself is programmed later, by
@@ -76,7 +76,7 @@ PISTART:
   ld de,PIBLK
   ld bc,PITPLN
   ldir
-  ld a,PIDEFLT    ; cold working width
+  ld a,PIDEFLT   ; cold working width
   call TMSW      ; a width it knows: no
                  ; carry
   ld hl,PIBLK    ; CRT:'s table

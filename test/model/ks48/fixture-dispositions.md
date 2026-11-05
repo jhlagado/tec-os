@@ -37,3 +37,9 @@ It separately covers explicit startup40/80. The fixed font/native/notice and
 all-six-transition tests use the production artifacts. The source-only host
 mapping test also rejects the old implicit80 omission through its real mapping
 entrypoint before any native product measurement.
+
+The first focused check also exposed two console fixtures. The no-file banner
+case now requests cold40 so it retains the banner without an injected startup.
+The DIR40 case expects the actual six files and 1004K free, with no incidental
+STARTUP.CMD. The PISTART header now states cold40 and both changed instructions
+keep the existing inline comment column.
