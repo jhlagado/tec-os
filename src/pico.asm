@@ -1,44 +1,48 @@
 ; The PICO9918's console and graphics
 ; entries, in the ROM (KS39): a
-; TMS9918A-
-; compatible VDP with the F18A's
-; 80-column text mode, at 80 x 24 in
-; 6-pixel
-; cells, 40 x 24, or Graphics I at 32 x
-; 24 in 8-pixel cells, CON PICO
-; choosing.
-; When the VDP and the matrix keyboard
-; both answer at cold boot, PISTART
-; fills
-; PIBLK from PITPL, sets the width,
-; hands the table to the terminal
-; through
-; PIVEC, registers the record and puts
-; CRT: in the IOBYTE's CON: field; the
-; first console call then programs the
-; VDP through CONSWV, as for a driver.
-; PIBLK is the table, the record and the
-; state in the order PICO.SVC had them
-; (version 3), so abi.inc's offsets and
-; a debugger's reading hold; it lies in
-; the BIOS's state, which warm boot
-; leaves, so the width is kept.
+; TMS9918A- compatible VDP with the
+; F18A's 80-column text mode, at 80 x 24
+; in 6-pixel cells, 40 x 24, or Graphics
+; I at 32 x 24 in 8-pixel cells, CON
+; PICO choosing. When the VDP and the
+; matrix keyboard both answer at cold
+; boot, PISTART fills PIBLK from PITPL,
+; sets the width, hands the table to the
+; terminal through PIVEC, registers the
+; record and puts CRT: in the IOBYTE's
+; CON: field; the first console call
+; then programs the VDP through CONSWV,
+; as for a driver. PIBLK is the table,
+; the record and the state in the order
+; PICO.SVC had them (version 3), so
+; abi.inc's offsets and a debugger's
+; reading hold; it lies in the BIOS's
+; state, which warm boot leaves, so the
+; width is kept.
 
 ; Graphics I's colour table in VRAM
+
 COLOUR EQU $2000
+
 ; and its sprite attribute table
+
 SPRITE EQU $1B00
 
 ; PIBLK's first 39 bytes: the table, as
 ; the terminal and abi.inc's PICOREG to
 ; PICOWID read it, then the record, the
 ; permanent tail of the registry.
+
 PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
   DB 80,24       ; the columns, TMSW's,
                  ; and the rows
+
 ; PICOREG, PICOFIL
+
   DW GFXREG,GFXFIL
+
 ; PICOWR, PICORD
+
   DW GFXWR,GFXRD
   DW TMSWID      ; PICOWID
   DW 0           ; the record: no link,
@@ -54,8 +58,9 @@ PITPLN EQU $-PITPL
 ; for CRT:, the record registered and
 ; CRT: in the field. Otherwise nothing.
 ; The VDP itself is programmed later, by
-; VREST when CONSW takes CRT:.
-; Destroys AF, BC, DE and HL.
+; VREST when CONSW takes CRT:. Destroys
+; AF, BC, DE and HL.
+
 PISTART:
   bit 0,(hl)     ; CDMTX: keys for the
                  ; screen
@@ -87,9 +92,9 @@ PISTART:
 ; so the terminal takes the new columns
 ; and clears the screen. Carry, with
 ; nothing changed, for any other width
-; or
-; while the PICO9918 is claimed.
+; or while the PICO9918 is claimed.
 ; Destroys AF, BC, DE and HL.
+
 TMSWID:
   ld hl,VCLAIM
   inc (hl)       ; VCLAIM tested for
@@ -113,16 +118,16 @@ TMSWID:
 
 ; The console at A columns, 80, 40 or
 ; 32: PIWID, the name table's address
-; and
-; the second page's offset (1000h and
-; 1000h at 80 columns, 0800h and 0400h
-; at
-; 40 and 32), the registers and the row
-; table, and page 0 drawn and shown.
-; Only memory changes: VREST (TMSSET)
-; puts the registers in the VDP.
-; Carry, with nothing changed, for any
-; other A. Destroys AF, BC, DE and HL.
+; and the second page's offset (1000h
+; and 1000h at 80 columns, 0800h and
+; 0400h at 40 and 32), the registers and
+; the row table, and page 0 drawn and
+; shown. Only memory changes: VREST
+; (TMSSET) puts the registers in the
+; VDP. Carry, with nothing changed, for
+; any other A. Destroys AF, BC, DE and
+; HL.
+
 TMSW:
   ld hl,REGS80
   ld bc,$1010    ; B = the names' high
@@ -142,7 +147,9 @@ TMSW:
 
 TMSW1:
   ld (PIWID),a
+
 ; this width's registers
+
   ld (PIREGP),hl
   ld a,c         ; the second page's
                  ; offset
@@ -185,9 +192,10 @@ TMSW3:
 
 ; The ROM's word for VTFN: A = 0 show
 ; the page drawn, 1 begin a move of rows
-; B
-; to C, 2 end one. Destroys AF, and for
-; 0 and 1 what TMSFLIP and TMSMBEG do.
+; B to C, 2 end one. Destroys AF, and
+; for 0 and 1 what TMSFLIP and TMSMBEG
+; do.
+
 TMSFN:
   or a
   jr z,TMSFLIP   ; 0: show the page
@@ -202,6 +210,7 @@ TMSFN:
 ; Show the page drawn, if it is not
 ; already shown. Keeps BC and DE.
 ; Destroys AF, HL.
+
 TMSFLIP:
   ld a,(PITPD)
   ld hl,PITPS
@@ -209,10 +218,12 @@ TMSFLIP:
   ret z          ; already shown
   ld (hl),a      ; it becomes the page
                  ; shown
+
 ; Point register 2 at the page shown:
 ; the name table's base for this width
 ; plus PITPS's offset. Keeps BC and DE.
 ; Destroys AF, HL.
+
 TMSR2:
   ld a,(PITPS)   ; the offset's high
                  ; byte, 00h, 04h or
@@ -220,7 +231,9 @@ TMSR2:
   rrca           ; in R2's units of
                  ; 0400h: 0, 1 or 4
   rrca
+
 ; register 2's value for this width
+
   ld hl,(PIREGP)
   inc hl
   inc hl
@@ -233,16 +246,19 @@ TMSR2:
 
 ; VREST: load registers 0-7, the font
 ; and its reverse images, and in
-; Graphics I
-; the colours and an empty sprite table,
-; so a program that changed the mode or
-; the patterns leaves a working console.
-; The page drawn is shown, any move
-; ended. The name table, and so the text
-; on the screen, is left alone.
-; Destroys AF, BC, D and HL.
+; Graphics I the colours and an empty
+; sprite table, so a program that
+; changed the mode or the patterns
+; leaves a working console. The page
+; drawn is shown, any move ended. The
+; name table, and so the text on the
+; screen, is left alone. Destroys AF,
+; BC, D and HL.
+
 TMSSET:
+
 ; this width's eight values
+
   ld hl,(PIREGP)
   ld b,8
   ld c,$80       ; register 0, with the
@@ -305,7 +321,9 @@ TMSROW:
   cpl
 
 TMSOUT:
+
 ; the VDP moves its own address on
+
   out (VDPDAT),a
   inc hl
   djnz TMSROW
@@ -336,11 +354,11 @@ TMSCOL:
 ; the record's table. Each assumes that
 ; the caller holds the claim, as a
 ; program writing the ports does, and
-; destroys
-; AF, BC, DE and HL. A count of zero
-; moves nothing.
+; destroys AF, BC, DE and HL. A count of
+; zero moves nothing.
 
 ; Set register B to A.
+
 GFXREG:
   ld l,a         ; the value goes first
   ld a,b
@@ -351,6 +369,7 @@ GFXREG:
 
 ; Fill DE bytes of VRAM from address HL
 ; with A.
+
 GFXFIL:
   ld c,a         ; the value, across the
                  ; addressing
@@ -369,6 +388,7 @@ GFXFL:
 
 ; Copy BC bytes from DE to VRAM address
 ; HL.
+
 GFXWR:
   call TMSWA
   ex de,hl       ; HL = the source
@@ -387,6 +407,7 @@ GFXWL:
 
 ; Copy BC bytes from VRAM address HL to
 ; DE.
+
 GFXRD:
   call TMSRA
   ex de,hl       ; HL = the destination
@@ -406,6 +427,7 @@ GFXRL:
 ; Set the VRAM write address to HL, of
 ; 0000h-3FFFh. Keeps BC, DE and L.
 ; Destroys AF and H.
+
 TMSWA:
   ld a,h
   and $3F        ; the address's top six
@@ -413,21 +435,24 @@ TMSWA:
   or $40         ; and the write flag
   ld h,a
   jp VPAIR
+
 ; Set the VRAM read address to HL: the
 ; same, the flag clear.
+
 TMSRA:
   ld a,h
   and $3F        ; the address's top six
                  ; bits, to read
   ld h,a
+
 ; Write L then H to the control port
 ; with interrupts off, and put their
-; state
-; back: an interrupt's own VDP read
-; between the two would split the pair.
-; IFFGET reads the state as an NMOS Z80
-; needs. Keeps BC, DE and HL.
+; state back: an interrupt's own VDP
+; read between the two would split the
+; pair. IFFGET reads the state as an
+; NMOS Z80 needs. Keeps BC, DE and HL.
 ; Destroys AF.
+
 VPAIR:
   call IFFGET    ; P/V = the interrupt
                  ; state
@@ -447,8 +472,9 @@ VPAIR:
   ret
 
 ; HL = address of row B, column C in the
-; page being drawn. Keeps BC.
-; Destroys AF, DE.
+; page being drawn. Keeps BC. Destroys
+; AF, DE.
+
 TMSCELL:
   ld a,b         ; DE = 2 * B, the row's
                  ; entry
@@ -476,6 +502,7 @@ TMSCELL:
 ; While a move builds the hidden page,
 ; rows are read from the page on show.
 ; Destroys AF, BC, DE, HL.
+
 TMSRDR:
   ld a,(PIMV)
   or a
@@ -506,8 +533,8 @@ TMSRD1:
 
 ; Copy LINEBUF to row B of the page
 ; drawn as one block. Destroys AF, BC,
-; DE,
-; HL.
+; DE, HL.
+
 TMSWRR:
   ld c,0         ; from column 0
   call TMSCELL
@@ -522,19 +549,23 @@ TMSWRR:
 
 ; Put A at row B, column C of the page
 ; drawn. Keeps BC. Destroys AF, DE, HL.
+
 TMSPUT:
   push af        ; the character, across
                  ; the addressing
   call TMSCELL
   call TMSWA
   pop af
+
 ; into the cell
+
   out (VDPDAT),a
   ret
 
 ; A = the character at row B, column C
-; of the page drawn. Keeps BC.
-; Destroys F, DE, HL.
+; of the page drawn. Keeps BC. Destroys
+; F, DE, HL.
+
 TMSGET:
   call TMSCELL
   call TMSRA     ; the cell, to read
@@ -543,9 +574,10 @@ TMSGET:
 
 ; Clear row B of the page drawn from
 ; column C to the end of the line,
-; nothing
-; when C is at or past the width. Keeps
-; C. Destroys AF, B, DE, HL.
+; nothing when C is at or past the
+; width. Keeps C. Destroys AF, B, DE,
+; HL.
+
 TMSCLR:
   ld a,(PIWID)
   cp c
@@ -569,13 +601,13 @@ TMSCLL:
 ; page drawn is already the page shown,
 ; draw the other one from now on,
 ; copying the rows outside B to C
-; across;
-; the move then reads the shown page and
-; writes the hidden one. A move still
-; waiting to be shown is shown first, so
-; output is never more than one move
-; behind. Keeps BC and E. Destroys AF,
-; D, HL and LINEBUF.
+; across; the move then reads the shown
+; page and writes the hidden one. A move
+; still waiting to be shown is shown
+; first, so output is never more than
+; one move behind. Keeps BC and E.
+; Destroys AF, D, HL and LINEBUF.
+
 TMSMBEG:
   ld a,(PITPD)
   ld hl,PITPS
@@ -628,7 +660,6 @@ TMSMBN:
   jr nz,TMSMBL
   ret
 
-
 ; Registers 0-7.
 ; - 80 columns (PICO9918 TEXT80, also
 ; the F18A T80 mode): R0 bit 2 with
@@ -642,7 +673,7 @@ TMSMBN:
 ; colours.
 ; - Graphics I: patterns 0000h, colours
 ; 2000h, sprites 1B00h/3800h.
+
 REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$31
 REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$31
 REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31
-

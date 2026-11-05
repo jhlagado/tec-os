@@ -2,15 +2,14 @@
 ; Processor, CP/M 2.2 interface profile.
 ;
 ; This is an independent implementation
-; against the public CP/M interfaces
-; and reviewed black-box CCP fixtures.
-; ATOM is its assembler.
+; against the public CP/M interfaces and
+; reviewed black-box CCP fixtures. ATOM
+; is its assembler.
 ;
 ; TEC-OS ROM-resident adaptation (see
 ; PROVENANCE.md). The code and text are
-; in
-; ROM; the command buffers, scratch FCBs
-; and stack are in src/ram.asm. The
+; in ROM; the command buffers, scratch
+; FCBs and stack are in src/ram.asm. The
 ; transient ceiling is the page of the
 ; BDOS entry jump (the byte at 0007h),
 ; rather than the CCP origin.
@@ -24,10 +23,11 @@ FCBONE EQU $005C
 FCBTWO EQU $006C
 CMDTAIL EQU $0080
 TPA EQU $0100
+
 ; FF00h, function 108's code for a
 ; failure
-RCFAIL EQU 255*256
 
+RCFAIL EQU 255*256
 
 ; Cold and warm boot both enter here
 ; with C holding the CP/M 2.2 page-zero
@@ -35,14 +35,14 @@ RCFAIL EQU 255*256
 ; in bits 0-3. The BIOS has just reset
 ; the BDOS state, so rebuild the disk
 ; state and restore both before
-; prompting.
-; TEC-OS: a drive with no volume,
-; unmounted or past D:, cannot be
-; selected,
-; and its Select error would warm boot
-; back here to fail again; the CCP takes
-; A: instead, and the prompt's 0004h
-; then says so. It never returns.
+; prompting. TEC-OS: a drive with no
+; volume, unmounted or past D:, cannot
+; be selected, and its Select error
+; would warm boot back here to fail
+; again; the CCP takes A: instead, and
+; the prompt's 0004h then says so. It
+; never returns.
+
 CCPENT:
   ld sp,CSTKTOP  ; the CCP's own stack,
                  ; in RAM
@@ -67,7 +67,9 @@ CCPDA:
   xor a          ; no volume: A:
 
 CCPDR:
+
 ; the drive to select after the reset
+
   ld (BOOTDRV),a
   ld a,c
   rrca           ; the user, bits 4-7 to
@@ -102,16 +104,18 @@ CCPDR:
 ; A new line and then the prompt: every
 ; command, error and empty line ends
 ; here.
+
 STARTED:
   ld de,CRLFMSG  ; the prompt on a line
                  ; of its own
   call PUTSTR
 
 ; The command loop: the stack reset, the
-; prompt (MLREAD), then the next
-; line: a chained line's next piece
-; first, then startup's next line, and
-; only then one typed at the console.
+; prompt (MLREAD), then the next line: a
+; chained line's next piece first, then
+; startup's next line, and only then one
+; typed at the console.
+
 MAINLOOP:
   ld sp,CSTKTOP  ; a command's leftover
                  ; stack dropped
@@ -165,6 +169,7 @@ MLDRV:
 ; long in CMDTXT: a 0 after it, and its
 ; first piece taken as a chained line's
 ; would be.
+
 MLGOT:
   ld hl,CMDLEN
   ld e,(hl)      ; the line's length
@@ -183,6 +188,7 @@ MLGOT:
 
 ; A chained piece, echoed as STLINE
 ; echoes a line, up to its ! or the end.
+
 MLECHO:
   push hl        ; the piece's start,
                  ; kept
@@ -203,24 +209,25 @@ MLEC2:
                  ; piece's start
 
 ; Take the piece at HL. One that starts
-; with : runs only if the last
-; command succeeded: its code, function
-; 108's, is not FF00h to FFFEh; after a
-; failure the rest of the line goes.
-; Then upper case up to its ! or the
-; line's end, the ! made its end and
-; CHPOS the next piece's, or 0 at the
-; end,
-; and the code cleared, before the
-; command is looked for. ARGSTRT holds
-; it.
-; A piece that is only a drive, B:,
-; selects it; any other is a command.
+; with : runs only if the last command
+; succeeded: its code, function 108's,
+; is not FF00h to FFFEh; after a failure
+; the rest of the line goes. Then upper
+; case up to its ! or the line's end,
+; the ! made its end and CHPOS the next
+; piece's, or 0 at the end, and the code
+; cleared, before the command is looked
+; for. ARGSTRT holds it. A piece that is
+; only a drive, B:, selects it; any
+; other is a command.
+
 MLTAKE:
   ld a,(hl)
   cp ':'
   jr nz,MLTK0    ; no :, so it runs
+
 ; the last command's code
+
   ld de,(PRGCODE)
   ld a,d
   inc a
@@ -265,7 +272,9 @@ MLTK2:
   inc hl
   ld a,l         ; the next piece's
                  ; offset in CMDTXT
+
 ; plus 1, from the low bytes alone
+
   sub LOW(CMDTXT-1)
 
 MLTK3:
@@ -288,13 +297,17 @@ MLTK3:
   inc hl
   ld a,(hl)
   cp ':'
+
 ; with no : after it
+
   jr nz,NOTDRIVE
   inc hl
   call SKIPSP    ; skip after drive
   ld a,(hl)
   or a
+
 ; more after it, as in B:NAME
+
   jr nz,NOTDRIVE
   ld a,b
   sub 'A'        ; the drive, 0 for A:
@@ -307,10 +320,11 @@ MLTK3:
   jp STARTED
 
 ; HL = a chained line's next piece, past
-; spaces and !, from CHPOS; A its
-; first character, with Z when none is
-; left (A = 0). CHSK1 does the same
-; from HL. Destroys DE.
+; spaces and !, from CHPOS; A its first
+; character, with Z when none is left (A
+; = 0). CHSK1 does the same from HL.
+; Destroys DE.
+
 CHSKIP:
   ld a,(CHPOS)
   or a
@@ -318,7 +332,9 @@ CHSKIP:
                  ; 0
   ld e,a
   ld d,0
+
 ; CHPOS counts from 1
+
   ld hl,CMDTXT-1
   add hl,de
 
@@ -343,6 +359,7 @@ CHSK3:
 ; in A and C, and the user in bits 4-7
 ; of B. Destroys DE and HL, through the
 ; BDOS.
+
 SAVEDU:
   ld e,$FF
   ld c,32        ; BDOS 32 with FFh: get
@@ -368,26 +385,29 @@ SAVEDU:
 
 ; A command: the piece from ARGSTRT,
 ; upper case and ending in a 0. A
-; built-in
-; command's word runs its handler,
-; NAME.SVC installs a service, and any
-; other
-; name loads as NAME.COM and runs at
-; 0100h: from the drive named, or from
-; the
-; current drive and then A:, each in the
-; current user and then user 0.
+; built-in command's word runs its
+; handler, NAME.SVC installs a service,
+; and any other name loads as NAME.COM
+; and runs at 0100h: from the drive
+; named, or from the current drive and
+; then A:, each in the current user and
+; then user 0.
+
 NOTDRIVE:
   ld de,CRLFMSG  ; the command's output
                  ; on a new line
   call PUTSTR
+
 ; the piece
+
   ld hl,(ARGSTRT)
   call CMDSKIP   ; past spaces, noted
                  ; for an error
   call CMDPARSE  ; its first word into
                  ; CMDFCB
+
 ; the arguments start after it
+
   ld (ARGSTRT),hl
   ld de,KEYTAB   ; the built-in
                  ; commands' words
@@ -427,9 +447,13 @@ KEYSK:
                  ; file's name
   jp c,BADCMD    ; empty, or with a
                  ; wildcard
+
 ; NAME.SVC installs
+
   ld hl,(CMDFCB+9)
+
 ; the type's S and V, low byte first
+
   ld de,'V'*256+'S'
   sbc hl,de      ; carry clear from
                  ; UNAMBIG
@@ -467,7 +491,9 @@ CMDCOM:
   ld a,'O'
   ld (CMDFCB+10),a
   ld a,'M'
+
 ; made COM
+
   ld (CMDFCB+11),a
   call LOADA     ; the named or current
                  ; drive: user, user 0
@@ -497,11 +523,12 @@ CMDRUN:
                  ; came from, as
   ld (PZLDRV),a  ; CP/M 3 keeps it: 0
                  ; the current, 1 A:
+
 ; Keep the return word outside default
-; DMA
-; ($0080..$00FF). The resident stack has
-; 30 bytes free beneath this two-byte
-; word.
+; DMA ($0080..$00FF). The resident stack
+; has 30 bytes free beneath this
+; two-byte word.
+
   ld sp,CSTKTOP
   ld hl,WBOOT    ; the program's last
                  ; RET warm boots
@@ -509,28 +536,34 @@ CMDRUN:
   jp TPA         ; and the program runs
 
 ; An argument: from ARGSTRT, or from HL
-; at CMDSKIP, past its spaces, noted
-; for an error. HL is at it and A holds
-; its first character, with Z at the
-; end of the line.
+; at CMDSKIP, past its spaces, noted for
+; an error. HL is at it and A holds its
+; first character, with Z at the end of
+; the line.
+
 ARGSKIP:
   ld hl,(ARGSTRT)
 
 CMDSKIP:
   call SKIPSP
+
 ; where an error's echo starts
+
   ld (CMDSTRT),hl
   or a           ; Z for the line's end
   ret
 
 ; One unambiguous name at HL into
 ; CMDFCB, and nothing after it.
+
 ONENAME:
   call CMDPARSE
   call CPCHK     ; a bad command if
                  ; empty or ambiguous
+
 ; A bad command unless only spaces are
 ; left. B is kept.
+
 ENDCHK:
   call SKIPSP
   or a
@@ -540,12 +573,11 @@ ENDCHK:
 
 ; The name at HL into CMDFCB, or at
 ; FCBPARSE into the FCB at DE, HL left
-; at
-; its delimiter, or a bad command.
+; at its delimiter, or a bad command.
 ; BADCMD: the word from CMDSTRT echoed
-; with
-; a ?, the code a failure, and the
+; with a ?, the code a failure, and the
 ; prompt again.
+
 CMDPARSE:
   ld de,CMDFCB
 
@@ -554,7 +586,9 @@ FCBPARSE:
   ret nc         ; a good name
 
 BADCMD:
+
 ; the word that failed
+
   ld hl,(CMDSTRT)
 
 BADLOOP:
@@ -575,14 +609,18 @@ BADEND:
   call PUTCHAR
   ld de,CRLFMSG  ; and the new line as
                  ; the message
+
 ; A command's error message at DE: the
-; code FF00h, a failure for a piece
-; that starts with :, then the message
-; and the prompt. PRTGO: the message
-; and the prompt, the code as it is.
+; code FF00h, a failure for a piece that
+; starts with :, then the message and
+; the prompt. PRTGO: the message and the
+; prompt, the code as it is.
+
 ERRGO:
   ld hl,RCFAIL
+
 ; a : piece after this one does not run
+
   ld (PRGCODE),hl
 
 PRTGO:
@@ -591,13 +629,13 @@ PRTGO:
   jp STARTED
 
 ; LOADA: LOADCOM on CMDFCB's drive, in
-; the current user and then, if it
-; isn't there and the user isn't 0, in
-; user 0 (A7): no SYS attribute needed.
-; The user is put back before it
-; returns. Carry as LOADCOM's: Z for not
-; found.
+; the current user and then, if it isn't
+; there and the user isn't 0, in user 0
+; (A7): no SYS attribute needed. The
+; user is put back before it returns.
+; Carry as LOADCOM's: Z for not found.
 ; Destroys BC, DE and HL.
+
 LOADA:
   call LOADCOM
   ret nc         ; loaded in the current
@@ -638,12 +676,12 @@ LOADA:
 ; public BDOS FCB/DMA interface: the
 ; file in CMDFCB, a record at a time
 ; from 0100h up to the BDOS entry's
-; page.
-; Carry reports missing, unreadable, or
-; oversized input, with Z for missing
-; only. Once loaded, LOADTOP holds the
-; end of the last record read. Destroys
-; BC, DE and HL.
+; page. Carry reports missing,
+; unreadable, or oversized input, with Z
+; for missing only. Once loaded, LOADTOP
+; holds the end of the last record read.
+; Destroys BC, DE and HL.
+
 LOADCOM:
   call DOSSEQ    ; the BDOS, by the byte
                  ; after the call
@@ -656,7 +694,9 @@ LOADCOM:
                  ; address
 
 LOADLOOP:
+
 ; up to the BDOS entry's page
+
   ld a,(PZBDOS+2)
   cp h
   jr z,LOADLIM   ; full: one read more
@@ -676,11 +716,11 @@ LOADLOOP:
 
 ; One scratch read distinguishes an
 ; exact-TPA image from an oversized
-; image
-; without allowing a further record to
-; overwrite the RAM above the TPA.
-; Carry set unless that read finds the
-; file's end.
+; image without allowing a further
+; record to overwrite the RAM above the
+; TPA. Carry set unless that read finds
+; the file's end.
+
 LOADLIM:
   push hl
   ld de,LOADBUF  ; into scratch, past
@@ -695,8 +735,9 @@ LOADLIM:
   ret
 
 ; The read stopped short of the ceiling:
-; code 1, the file's end, is a load
-; and any other a read error.
+; code 1, the file's end, is a load and
+; any other a read error.
+
 LOADEND:
   cp 1
   jr nz,LOADBAD  ; a read error
@@ -704,9 +745,12 @@ LOADEND:
 ; Loaded: HL, the end of the last record
 ; read, kept in LOADTOP, and the file
 ; closed. Carry clear.
+
 LOADOK:
+
 ; retain record-rounded extent before
 ; CLOSE
+
   ld (LOADTOP),hl
   call DOSSEQ    ; the BDOS, by the byte
                  ; after the call
@@ -718,6 +762,7 @@ LOADOK:
 
 ; A read error: carry set, with NZ from
 ; LOADEND's compare.
+
 LOADBAD:
   scf
   ret
@@ -728,6 +773,7 @@ LOADBAD:
 ; return word plus its own return word.
 ; A returns 0 for a record read, 1 at
 ; the file's end, otherwise an error.
+
 READSRC:
   ld c,26        ; BDOS 26: the DMA
                  ; address at DE

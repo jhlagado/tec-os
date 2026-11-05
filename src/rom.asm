@@ -3,6 +3,7 @@
 ; read-only data and one block of code,
 ; with the free space at the end.
 ; Include order is assembly order.
+
 %INCLUDE "abi.inc"
 %INCLUDE "gen/config.asm"
 %INCLUDE "gen/format.asm"

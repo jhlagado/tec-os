@@ -1,16 +1,17 @@
-; Matrix keys for PICO9918 and GLCD.
-; The console polls port FEh by row.
-; Key k is row k/8, bit k%8. One low
-; address bit in the high byte picks
-; the row. Keys 0-2 are Shift, Ctrl
-; and Fn. Key 7 toggles Caps Lock.
-; A held key does not repeat.
+; Matrix keys for PICO9918 and GLCD. The
+; console polls port FEh by row. Key k
+; is row k/8, bit k%8. One low address
+; bit in the high byte picks the row.
+; Keys 0-2 are Shift, Ctrl and Fn. Key 7
+; toggles Caps Lock. A held key does not
+; repeat.
 
 ; Scan eight rows from the last stop.
 ; CDMTX in CONDEV enables the scan.
 ; NZ: RXCHAR ready and RXFULL set.
 ; Z: no key. A = 0 if disabled.
 ; Clobbers AF, BC, DE and HL.
+
 KBPOLL:
   ld a,(CONDEV)
   and CDMTX
@@ -26,11 +27,12 @@ KBPL:
   jr nz,KBPL
   ret            ; Z from count
 
-; Scan the KBMASK row. Keep the last
-; two keys in KBE and KBD. Evaluate
-; after row 7. NZ: RXCHAR ready and
-; RXFULL set. Z: no key ready yet.
-; Clobbers AF, BC, DE and HL.
+; Scan the KBMASK row. Keep the last two
+; keys in KBE and KBD. Evaluate after
+; row 7. NZ: RXCHAR ready and RXFULL
+; set. Z: no key ready yet. Clobbers AF,
+; BC, DE and HL.
+
 KBSTEP:
   ld hl,KBMASK
   ld b,(hl)      ; Active-low row mask
@@ -139,11 +141,12 @@ KBCAPS:
   xor a          ; Z: no character
   ret
 
-; Translate key E to ASCII in A.
-; D: FFh none, 0 Shift, 1 Ctrl, 2 Fn.
-; Uses KBSPEC and KBSHIFT. Letters
-; follow Caps Lock in LATCHV bit 7.
-; Clobbers F, B, C and HL.
+; Translate key E to ASCII in A. D: FFh
+; none, 0 Shift, 1 Ctrl, 2 Fn. Uses
+; KBSPEC and KBSHIFT. Letters follow
+; Caps Lock in LATCHV bit 7. Clobbers F,
+; B, C and HL.
+
 KBASCII:
   ld a,e
   ld hl,KBSPEC   ; Return, Esc, space,

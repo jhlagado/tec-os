@@ -4,14 +4,15 @@
 ; then BDOSRAM) and end at the RAM BIOS
 ; table at BF00h; the SD, keyboard and
 ; GLCD state sit above the table.
-; Nothing
-; here is initialised by the image: cold
-; and warm boot clear and set it.
+; Nothing here is initialised by the
+; image: cold and warm boot clear and
+; set it.
 
   ORG WSBASE
 
 ; ---- BIOS disk state
 ; --------------------------------------
+
 DSKCUR: DS 1     ; selected drive
 DSKTRK: DS 2
 DSKSEC: DS 2
@@ -27,34 +28,42 @@ BLKSLOT:
 ; cleared rather than read, by drive and
 ; block number, so that the next one of
 ; its allocation block needs no read.
+
 BUFOK: DS 1
 BUFDRV: DS 1
 BUFBLK: DS 2
 
 ; Drive table: start block (4), length
 ; in blocks (2), geometry (1), flags
-; (1).
-; A recognised reset copies it from RAM
-; by its address alone (RSLCAP). A ROM
-; with the same BENTRY and STUBAD
+; (1). A recognised reset copies it from
+; RAM by its address alone (RSLCAP). A
+; ROM with the same BENTRY and STUBAD
 ; addresses and a different DRVTAB would
-; be
-; taken for this one: the 32 bytes then
-; fail RESEL's match or name a volume
-; the card has, so the harm stops at a
-; validated volume on a drive.
+; be taken for this one: the 32 bytes
+; then fail RESEL's match or name a
+; volume the card has, so the harm stops
+; at a validated volume on a drive.
+
 DRVTAB: DS MAXDRV*DRVESZ
+
 ; each drive's volume: container index
+
 DRVIDX: DS MAXDRV
+
 ; + 1, 0 for none
+
 DRVSLOT:
   DS MAXDRV      ; each drive's vector
                  ; slot: 0 none,
+
 ; 1 G1M's, 2 G8M's
+
 DPHTAB: DS MAXDRV*DPHSZ
 LOGINV: DS 2     ; the BDOS's logged
                  ; drives, kept across
+
 ; a warm boot
+
 DIRBUF: DS 128
 CSVDUM: DS 2     ; check vector
                  ; placeholder; CKS is
@@ -72,6 +81,7 @@ STUBAD: DS 2     ; BDOS entry jump, the
 ; 36, the page drawn at 41 and shown at
 ; 42. Outside CPMINIT's span, so warm
 ; boot keeps the width.
+
 PIBLK: DS 14     ; the table: the
                  ; terminal's seven
                  ; words
@@ -98,6 +108,7 @@ PIROWT: DS 48    ; each row's address in
 
 ; ---- Mount scratch
 ; --------------------------------------
+
 MNTCNT: DS 1     ; the rest above the
                  ; table (packing)
 MNBUF: DS 32     ; 32 bytes of it: the
@@ -106,6 +117,7 @@ MNBUF: DS 32     ; 32 bytes of it: the
 
 ; ---- Video terminal
 ; --------------------------------------
+
 LINEBUF:
   DS 80          ; one display row, for
                  ; scrolling
@@ -131,6 +143,7 @@ CONMOD: DS 1     ; console mode in
 ; ---- BIOS stack, warm boot's: cold
 ; boot and DIAG run on STKTOP (KE-173)
 ; -----
+
 BSTKB: DS BIOSSTN
 BSTK:
 
@@ -143,10 +156,10 @@ CCPRAM EQU BIOSRME
 ; Up to CCPCLR, kept over warm boot: the
 ; command line, for the pieces of a
 ; chained line still to run (CHPOS), and
-; the two FCBs before it, which each
-; use parses in full. CPMINIT clears
-; from CCPCLR; cold boot clears them
-; all.
+; the two FCBs before it, which each use
+; parses in full. CPMINIT clears from
+; CCPCLR; cold boot clears them all.
+
 CMDFCB:
   DS 36
 RENFCB:
@@ -188,17 +201,21 @@ ERAANS:
   DS 1
 ERAALL:
   DS 1
+
 ; This is both the oversize
 ; discriminator and ordinary CCP scratch
 ; storage.
+
 LOADBUF:
   DS 128
+
 ; A fixed sentinel separates reusable
 ; command scratch from the
 ; downward-growing resident stack. The
 ; host proof checks that every byte
 ; survives the deepest built-in and
 ; error-recovery paths.
+
 STKGUARD:
   DS 43-CCPSTN
 STKGUEND:
@@ -210,12 +227,15 @@ CCPRME:
 ; ---- The BDOS's state and stack
 ; (cpm/bdos.asm)
 ; -------------------------------
+
 BDOSRAM EQU CCPRME
 OLDSP: DS 2
 ERRMODE:
   DS 1           ; function 45's mode:
                  ; FFh return, FEh
+
 ; display; 0 at warm boot
+
 PARAM: DS 2
 COLUMN: DS 1
 LISTEN: DS 1
@@ -292,8 +312,10 @@ STKTOP:
 BDOSRME:
 
   ORG RAMBIOS+BIOSLEN
+
 ; ---- SD card state
 ; --------------------------------------
+
 SDBYTE: DS 1     ; 1 when the card takes
                  ; byte addresses
 SDARG: DS 4      ; command argument,
@@ -306,14 +328,17 @@ SDXB: DS 1       ; LATEXP while the
 
 ; ---- The block cache (cache.asm)
 ; --------------------------------------
+
 CNEXT: DS 1      ; the next line in turn
 CWTYPE: DS 1     ; BIOS WRITE's type, C
 CIFF: DS 2       ; the flags a BIOS
                  ; entry found: P/V,
+
 ; its interrupt state
 
 ; ---- Matrix keyboard scan state
 ; --------------------------------------
+
 KBMASK: DS 1     ; row select for the
                  ; next row, one bit low
 KBBASE: DS 1     ; key number of that
@@ -330,21 +355,25 @@ KBT2: DS 1
 
 ; ---- The GLCD console
 ; --------------------------------------
+
 PIVEC: DS 2      ; PIBLK, set by
                  ; PISTART; 0 with no
                  ; console
 GLVEC: DS 2      ; GLCD.SVC's, the same:
                  ; indexed by
+
 ; CMCRT and CMUC1
 
 ; ---- Command-line history
 ; --------------------------------------
+
 HHEAD: DS 1      ; the offset the next
                  ; line goes in at
 
 ; ---- MVCOPY's banks: 0 the program's
 ; view, 1 EXPAND 1
 ; ----------------------
+
 XMDST: DS 1
 XMSRC: DS 1
 MVREST: DS 2     ; MVCOPY: the bytes
@@ -381,7 +410,9 @@ SVCRA: DS 1      ; INIT's A: a cause
                  ; only when SVCRC is 1
 STFLAG: DS 1     ; FFh while a line from
                  ; STARTUP.CMD runs,
+
 ; 0 typed
+
 STPOS: DS 1      ; startup's state and
                  ; position, as at
                  ; STBOOT
@@ -389,11 +420,13 @@ STREC: DS 128    ; A:STARTUP.CMD's one
                  ; record
 CHPOS: DS 1      ; a chained line's next
                  ; piece: its offset
+
 ; in CMDTXT + 1, 0 for none
 
 ; ---- The console's state, read only
 ; with EXPAND 0 in view (page zero's
 ; once) -
+
 RXFULL: DS 1     ; console byte waiting
                  ; in RXCHAR
 RXCHAR: DS 1     ; and the byte itself
@@ -424,12 +457,15 @@ VCURV: DS 1      ; 1 while the cursor
 ; table runs to C000h with no gap
 ; (KS36c's packing): warm boot clears
 ; none of it, as below.
+
 MNTBLK: DS 4     ; the container's
                  ; length in blocks
 MNTPRV: DS 4     ; the previous
                  ; descriptor's end, or
                  ; the
+
 ; table's sum
+
 MNTSUM: DS 2     ; format 1.1: blocks
                  ; 1-7's sum, from the
                  ; header

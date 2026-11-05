@@ -3,38 +3,42 @@
 ; after ALVINIT has given the card's
 ; defaults their slots, so that neither
 ; slots nor TPA vary with the selection.
-; Step 1 reads and changes nothing:
-; one walk of the descriptors, each
-; compared with every retained drive on
-; the eight bytes MNFILL builds. A
-; descriptor goes to the first drive it
-; matches and no other is tried, so a
-; second drive holding the same entry is
-; left with no match. A drive of
-; geometry 0 is not retained, whatever
-; its
-; other seven bytes: no descriptor MOUNT
-; accepts has geometry 0, so none
-; matches it. Step 1 gives up, leaving
-; the defaults whole, on a failed read,
-; a volume whose slot wouldn't hold its
-; vector by VMNT's rule, or a retained
-; drive (geometry not 0) left with no
-; match. Step 2 reads nothing and can't
-; fail: RSLBUF replaces DRVTAB and
-; DRVIDX, and each drive's DPH is built.
-; Drives not retained stay empty, even
-; if the card names them. Takes the
-; selection in RSLBUF, with RSLIDX and
-; RSLTMP after it as scratch.
-; Destroys AF, BC, DE, HL and IX.
+; Step 1 reads and changes nothing: one
+; walk of the descriptors, each compared
+; with every retained drive on the eight
+; bytes MNFILL builds. A descriptor goes
+; to the first drive it matches and no
+; other is tried, so a second drive
+; holding the same entry is left with no
+; match. A drive of geometry 0 is not
+; retained, whatever its other seven
+; bytes: no descriptor MOUNT accepts has
+; geometry 0, so none matches it. Step 1
+; gives up, leaving the defaults whole,
+; on a failed read, a volume whose slot
+; wouldn't hold its vector by VMNT's
+; rule, or a retained drive (geometry
+; not 0) left with no match. Step 2
+; reads nothing and can't fail: RSLBUF
+; replaces DRVTAB and DRVIDX, and each
+; drive's DPH is built. Drives not
+; retained stay empty, even if the card
+; names them. Takes the selection in
+; RSLBUF, with RSLIDX and RSLTMP after
+; it as scratch. Destroys AF, BC, DE, HL
+; and IX.
+
 RESEL:
+
 ; no retained A: means no selection
+
   ld a,(RSLBUF+6)
   or a
   ret z
   ld hl,0        ; no drive matched yet
+
 ; all four indices
+
   ld (RSLIDX),hl
   ld (RSLIDX+2),hl
   xor a          ; MNTI walks the table
@@ -69,8 +73,10 @@ RSDRV:
   ld (hl),a      ; kept for step 2
   jr RSDESC      ; no other drive is
                  ; tried: a duplicate is
+
 ; left with no match, which gives up
 ; below
+
 RSNEXT:
   ld hl,DRVESZ   ; the next retained
                  ; drive
@@ -91,7 +97,9 @@ RSDESC:
                  ; walked
   ld c,0         ; every retained drive
                  ; must have matched
+
 ; HL at each geometry
+
   ld hl,RSLBUF+6
   ld de,RSLIDX   ; DE at each index
 
@@ -114,7 +122,9 @@ RSCHK1:
   ld a,c
   cp MAXDRV      ; all four
   jr c,RSCHK
+
 ; step 2: the entries, then the indices,
+
   ld hl,RSLBUF   ; over DRVTAB and the
                  ; DRVIDX after it
   ld de,DRVTAB
@@ -150,8 +160,8 @@ RSDPH1:
 
 ; Z if the eight bytes at DE equal
 ; RSLTMP's. Keeps C and DE. Destroys AF,
-; B
-; and HL.
+; B and HL.
+
 RSEQ:
   push de        ; the caller's place in
                  ; RSLBUF
@@ -177,19 +187,20 @@ RSEQ2:
 ; and TNDESC (abi.inc). B = the drive
 ; for a mount or unmount, E = the
 ; container index for a mount or a
-; describe,
-; HL -> 32 bytes for a describe, its
-; mount byte the drive it is on now (FFh
-; none). Returns A = 0 with carry clear,
-; or A = TNEBAD with carry and nothing
-; changed: an index past the table, a
-; drive past D, a volume already on
-; another drive, a slot too small, or
-; drive A to be left empty. A mount or
-; unmount resets the drive in the BDOS,
-; as function 37 does, so its next
-; access logs it in from its directory.
-; Destroys AF, BC, DE, HL and IX.
+; describe, HL -> 32 bytes for a
+; describe, its mount byte the drive it
+; is on now (FFh none). Returns A = 0
+; with carry clear, or A = TNEBAD with
+; carry and nothing changed: an index
+; past the table, a drive past D, a
+; volume already on another drive, a
+; slot too small, or drive A to be left
+; empty. A mount or unmount resets the
+; drive in the BDOS, as function 37
+; does, so its next access logs it in
+; from its directory. Destroys AF, BC,
+; DE, HL and IX.
+
 VSMNT:
   call VSIN      ; C = the drive
   jr VMNT
@@ -214,7 +225,9 @@ VSDSC:
   ldir
   ex de,hl       ; the mount byte: where
                  ; it is now
+
 ; back from the copy's end
+
   ld de,DMOUNT-DSCSZ
   add hl,de
   ld (hl),a      ; VDESC's drive or FFh,
@@ -227,8 +240,9 @@ VSDSC:
 ; the cache's dirty lines are written. A
 ; mount onto the default drive selects
 ; it again (function 14), so functions
-; 27 and 31 answer for the new volume
-; at once. Returns as VSMNT does.
+; 27 and 31 answer for the new volume at
+; once. Returns as VSMNT does.
+
 VMNT:
   ld a,c         ; drive past D: refused
   cp MAXDRV
@@ -244,8 +258,10 @@ VMNT:
   jr c,VBAD
   call VFLUSH    ; old data safe first
   jr nz,VBAD
+
 ; publish only after the old data is
 ; safe
+
   ld (ix+DMOUNT),c
   push bc        ; the drive and index,
                  ; across the install
@@ -275,8 +291,11 @@ VMNT:
 ; G8M slot (2), and any other a slot.
 ; Keeps C, DE and IX. Destroys AF, B and
 ; HL.
+
 VSLOT:
+
 ; the payload's high byte
+
   ld a,(ix+DLEN+1)
   cp $10
   ld a,2         ; 2 needed, or 1 with
@@ -299,11 +318,11 @@ VSLOT:
 ; the cache's dirty lines are written.
 ; Drive A is never emptied. VRESET,
 ; which TNMOUNT shares, resets drive C
-; in
-; the BDOS (function 37) and returns A =
-; 0 with carry clear; VOK returns
+; in the BDOS (function 37) and returns
+; A = 0 with carry clear; VOK returns
 ; that alone and VBAD returns TNEBAD
 ; with carry.
+
 VUNM:
   ld a,c         ; the drive
   or a
@@ -354,6 +373,7 @@ VBAD:
 ; that its DPB and vector are the new
 ; volume's for functions 27 and 31.
 ; Returns A = 0 with carry clear.
+
 VMNTRS:
   push bc        ; the drive, kept over
                  ; the reset
@@ -373,6 +393,7 @@ VMNTRS:
 ; C = the drive from B, and every table
 ; block to be read afresh. Keeps B, DE
 ; and HL. Destroys AF.
+
 VSIN:
   ld c,b         ; the drive argument,
                  ; in C as VMNT wants
@@ -382,13 +403,13 @@ VSIN:
   ret
 
 ; Before a drive's volume changes: write
-; dirty cache lines, Z on success.
-; Keep the requested drive (BC),
-; descriptor index (DE) and pointer
-; (IX).
-; CDI/CEI use HL/AF; CFLALL and its
+; dirty cache lines, Z on success. Keep
+; the requested drive (BC), descriptor
+; index (DE) and pointer (IX). CDI/CEI
+; use HL/AF; CFLALL and its
 ; SDWRITE/MAPREC path destroy BC/DE/HL.
 ; Destroys AF and HL.
+
 VFLUSH:
   push bc        ; the caller's drive,
                  ; index and
@@ -408,9 +429,10 @@ VFLUSH:
   ret
 
 ; Forget the volume on drive A, which C
-; must also hold: its drive-table
-; entry and DRVIDX. Keeps C. Destroys
-; AF, B, DE and HL.
+; must also hold: its drive-table entry
+; and DRVIDX. Keeps C. Destroys AF, B,
+; DE and HL.
+
 VCLEAR:
   push bc
   call DRVENT    ; HL -> the geometry
@@ -437,6 +459,7 @@ VCL1:
 ; is past the table or its block does
 ; not read. Keeps BC and DE; uses MNTI.
 ; Destroys HL.
+
 VDESC:
   ld hl,MNTCNT   ; index past the table:
                  ; refused

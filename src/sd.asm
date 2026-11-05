@@ -7,8 +7,7 @@
 ; rising edge. Every wait is bounded.
 ; Routines return Z on success; on
 ; failure NZ and A holds an SDE* code,
-; also
-; kept in SDERR.
+; also kept in SDERR.
 
 SDIDLE EQU $05   ; /CS high, MOSI high,
                  ; CLK low
@@ -37,6 +36,7 @@ SDEVOLT EQU 11   ; CMD8's echo wrong:
 ; unchanged, as eight RLCs bring it
 ; round, and CLK left high. Destroys AF,
 ; B.
+
 SPIW:
   ld b,8         ; eight bits
 
@@ -58,6 +58,7 @@ SPIWB:
 ; FFh (MOSI held high), with /CS low.
 ; Returns the byte in A, CLK left low.
 ; Destroys F, B, E.
+
 SPIR:
   ld b,8         ; eight bits
 
@@ -81,10 +82,11 @@ SPIRB:
   ret
 
 ; Deselect the card, then give it eight
-; clocks with /CS high so that it
-; lets go of MISO. Keeps every register,
-; so a command's R1 in A and its
-; flags pass through.
+; clocks with /CS high so that it lets
+; go of MISO. Keeps every register, so a
+; command's R1 in A and its flags pass
+; through.
+
 SPIEND:
   push af
   push bc
@@ -110,10 +112,10 @@ SPIEB:
 ; an illegal command; bit 7 is always
 ; clear. A with bit 7 set (FFh from an
 ; absent card) means no R1 came within
-; 16 bytes. Leaves /CS low so that
-; the caller can read the rest of a
-; longer response. Destroys F, BC, DE,
-; HL.
+; 16 bytes. Leaves /CS low so that the
+; caller can read the rest of a longer
+; response. Destroys F, BC, DE, HL.
+
 SDCMD:
   ld d,a         ; D keeps the index
   ld c,$FF       ; one idle byte first,
@@ -139,10 +141,11 @@ SDCMD:
   inc hl
   ld c,(hl)      ; bits 7-0
   call SPIW
+
 ; Last byte: CRC7 and the end bit. The
-; card
-; checks it only for CMD0 and CMD8 in
-; SPI mode.
+; card checks it only for CMD0 and CMD8
+; in SPI mode.
+
   ld c,$95       ; valid CRC for CMD0
   ld a,d
   or a           ; CMD0?
@@ -172,6 +175,7 @@ SDR1:
 ; stored big-endian as the card takes
 ; it: D first. Destroys A; the flags are
 ; kept.
+
 SETARG:
   ld a,d         ; bits 31-24
   ld (SDARG),a
@@ -187,6 +191,7 @@ SETARG:
 ; deselect the card, for commands whose
 ; response is R1 alone. Returns R1 in A,
 ; as SDCMD. Destroys F, BC, DE, HL.
+
 SDCMDX:
   push af        ; SETARG uses A
   call SETARG
@@ -195,17 +200,18 @@ SDCMDX:
   jr SPIEND      ; which SPIEND keeps
 
 ; Start the card in SPI mode and make it
-; ready for 512-byte block I/O:
-; CMD0 to reset it, CMD8 for a version 2
-; card (its echo checked), CMD55
-; and ACMD41 until it is ready, then
-; CMD58 to find whether it takes block
-; or byte addresses, and CMD16 to fix a
+; ready for 512-byte block I/O: CMD0 to
+; reset it, CMD8 for a version 2 card
+; (its echo checked), CMD55 and ACMD41
+; until it is ready, then CMD58 to find
+; whether it takes block or byte
+; addresses, and CMD16 to fix a
 ; byte-addressed card's block at 512.
-; Sets SDBYTE, SDERR and SDARG.
-; Returns Z and A = 0 when ready; NZ and
-; A = an SDE* code if not. Destroys
-; F, BC, DE, HL.
+; Sets SDBYTE, SDERR and SDARG. Returns
+; Z and A = 0 when ready; NZ and A = an
+; SDE* code if not. Destroys F, BC, DE,
+; HL.
+
 SDINIT:
   xor a          ; block addresses until
                  ; CMD58 says
@@ -372,9 +378,10 @@ SDI58F:
                  ; SDFAIL
 
 ; Fail with the SDE* code in A, which is
-; never 0: keep it in SDERR and
-; return NZ with it in A. The common
-; exit of every routine here.
+; never 0: keep it in SDERR and return
+; NZ with it in A. The common exit of
+; every routine here.
+
 SDFAIL:
   ld (SDERR),a
   or a           ; NZ
@@ -382,6 +389,7 @@ SDFAIL:
 
 ; Succeed: clear SDERR and return Z with
 ; A = 0.
+
 SDIOK:
   xor a          ; A = 0, Z, carry clear
   ld (SDERR),a
@@ -390,16 +398,18 @@ SDIOK:
 ; Load SDARG from SDLBA, converting to a
 ; byte address for standard-capacity
 ; cards. Carry, and SDARG unchanged, for
-; a standard card's block at 800000h
-; or above, whose byte address would
-; lose its top bits and name a lower
-; block
+; a standard card's block at 800000h or
+; above, whose byte address would lose
+; its top bits and name a lower block
 ; (KE-151). Destroys AF, DE, HL.
+
 LBAARG:
   ld hl,(SDLBA)  ; SDLBA is
                  ; little-endian: bits
                  ; 15-0
+
 ; and bits 31-16
+
   ld de,(SDLBA+2)
   ld a,(SDBYTE)
   or a           ; 0: the card takes
@@ -428,11 +438,12 @@ LBAARG:
   jp SETARG      ; DEHL = LBA * 512
 
 ; Read block SDLBA into the 512 bytes at
-; HL (CMD17), a cache line in
-; EXPAND 1 when SDXB is LATEXP. Returns
-; Z and A = 0, or NZ and A = SDERNG,
-; SDECMD, SDETOK or SDEDTOK, also in
-; SDERR. Destroys F, BC, DE, HL, I.
+; HL (CMD17), a cache line in EXPAND 1
+; when SDXB is LATEXP. Returns Z and A =
+; 0, or NZ and A = SDERNG, SDECMD,
+; SDETOK or SDEDTOK, also in SDERR.
+; Destroys F, BC, DE, HL, I.
+
 SDREAD:
   push hl        ; the buffer, across
                  ; the command
@@ -485,6 +496,7 @@ SDRDAT:
 ; rejected CMD17 or CMD24: deselect it
 ; first. Jumped to from SDREAD and
 ; SDWRITE, with the buffer popped.
+
 SDRCMD:
   call SPIEND    ; /CS high: the card is
                  ; left idle
@@ -495,6 +507,7 @@ SDRCMD:
 ; SDWRITE when LBAARG refuses the block:
 ; the buffer's address is still on the
 ; stack, and the card is untouched.
+
 SDRNG:
   pop hl         ; the buffer's address
   ld a,SDERNG    ; refused before any
@@ -508,6 +521,7 @@ SDRNG:
 ; Two bytes a pass, each bit unrolled; I
 ; counts the 256 passes. Destroys AF,
 ; BC, DE, I.
+
 SDRBLK:
   ld a,(SDXB)    ; LATEXP: the buffer is
                  ; a cache line, and
@@ -623,16 +637,19 @@ SDRB2:
   out (c),d      ; leave CLK low
   ld a,(LATCHV)  ; the latch as it was:
                  ; EXPAND 1 out
+
 ; of view again if it was brought in
+
   out (SYSLAT),a
   ret
 
 ; Send the 512 bytes at HL after the
-; start token; HL ends 512 bytes on.
-; /CS low on entry (CLK may be high, as
-; SPIW leaves it); CLK low on return.
-; Each bit unrolled; MOSI changes with
-; CLK low. Destroys AF, BC, DE.
+; start token; HL ends 512 bytes on. /CS
+; low on entry (CLK may be high, as SPIW
+; leaves it); CLK low on return. Each
+; bit unrolled; MOSI changes with CLK
+; low. Destroys AF, BC, DE.
+
 SDWBLK:
   ld a,(SDXB)    ; as SDRBLK
   ld b,a
@@ -714,6 +731,7 @@ SDWB2:
 ; and A = SDERNG, SDECMD, SDEWRSP or
 ; SDEBUSY, also in SDERR. Destroys F,
 ; BC, DE, HL.
+
 SDWRITE:
   push hl        ; the buffer, across
                  ; the command

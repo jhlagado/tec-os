@@ -3,13 +3,13 @@
 ; name that is all ? (*.*, on any drive)
 ; first asks ALL (Y/N)? and deletes
 ; nothing unless the answer starts with
-; Y. NO FILE when nothing matched; a
-; bad command with no operand, or one
-; that does not parse. Uses CMDFCB,
-; ERAANS and ERAALL; returns to the
-; prompt.
-; ERA deletes through BDOS only after
-; the complete operand has parsed.
+; Y. NO FILE when nothing matched; a bad
+; command with no operand, or one that
+; does not parse. Uses CMDFCB, ERAANS
+; and ERAALL; returns to the prompt. ERA
+; deletes through BDOS only after the
+; complete operand has parsed.
+
 CMDERA:
   call ARGSKIP
   jp z,BADCMD    ; no operand
@@ -19,7 +19,9 @@ CMDERA:
   ld (ERAALL),a  ; not a whole-drive
                  ; erase unless
                  ; confirmed
+
 ; is every name and type byte ?
+
   ld hl,CMDFCB+1
   ld b,11
 
@@ -30,7 +32,9 @@ ERACHK:
                  ; without asking
   inc hl
   djnz ERACHK
+
 ; all are: ask ALL (Y/N)?
+
   ld de,ALLQUERY
   call PUTSTR
   ld c,1         ; BDOS 1, a key, echoed
@@ -63,6 +67,7 @@ ERAGOT:
 ; FILE when none does. After the ALL
 ; question the prompt starts on a new
 ; line.
+
 ERADEL:
   call DOSSEQ    ; delete: A FFh when
                  ; nothing matched
@@ -81,15 +86,16 @@ ERADEL:
 ; REN's public syntax is NEW=OLD. A
 ; separate destination FCB permits an
 ; existence check before the function-23
-; mutation FCB is assembled.
-; Both names are unambiguous and on one
-; drive: either one's, the other
-; naming none or the same. FILE EXISTS
-; when NEW is there already, NO FILE
-; when OLD is not, and a bad command
-; otherwise. Uses CMDFCB for OLD, RENFCB
-; for NEW, and LOADBUF as the DMA
-; record; returns to the prompt.
+; mutation FCB is assembled. Both names
+; are unambiguous and on one drive:
+; either one's, the other naming none or
+; the same. FILE EXISTS when NEW is
+; there already, NO FILE when OLD is
+; not, and a bad command otherwise. Uses
+; CMDFCB for OLD, RENFCB for NEW, and
+; LOADBUF as the DMA record; returns to
+; the prompt.
+
 CMDREN:
   call ARGSKIP
   jp z,BADCMD    ; no operand
@@ -156,7 +162,9 @@ RENTEST:
 
   ld hl,RENFCB   ; the new drive and
                  ; name into CMDFCB's
+
 ; second half, where BDOS 23 reads them
+
   ld de,CMDFCB+16
   ld bc,12
   ldir
@@ -169,21 +177,23 @@ RENTEST:
 
 ; The FILE EXISTS error: the new name is
 ; taken, and nothing is renamed.
+
 RENEXIST:
   ld de,FILEEX
   jp ERRGO       ; the message at DE as
                  ; a failure
 
 ; Parse the next name at HL into the FCB
-; at DE, unambiguous (CPNAME); parse
-; it (CPPARSE), keeping DE, with the
+; at DE, unambiguous (CPNAME); parse it
+; (CPPARSE), keeping DE, with the
 ; current drive from 0004h in a 0 drive
 ; byte; check the FCB just parsed is
 ; unambiguous (CPCHK). A bad command
 ; otherwise. PARSEFCB clears the rest of
-; the FCB. Each leaves HL at the
-; name's delimiter and destroys AF and
-; BC; CPPARSE returns the drive in A.
+; the FCB. Each leaves HL at the name's
+; delimiter and destroys AF and BC;
+; CPPARSE returns the drive in A.
+
 CPNAME:
   call CPPARSE   ; parse, then check as
                  ; CPCHK
@@ -214,29 +224,32 @@ CPPARSE:
   ret
 
 ; TEC-OS: COPY SOURCE DEST copies a file
-; a record at a time through the
-; default DMA record, as COPY.COM does:
-; open the source, erase and make the
+; a record at a time through the default
+; DMA record, as COPY.COM does: open the
+; source, erase and make the
 ; destination, read and write to the
 ; end, close, and print COPIED nnnn
 ; (records, hex) or the same error text.
-; On a write error the destination
-; is closed with the records written,
-; where COPY.COM leaves it open.
-; Nothing in the TPA is touched.
-; DEST may be a drive alone, or a blank
-; name with a type: the source's whole
-; name is used. Both names carry their
-; drive, the current one if none was
-; given, and a destination that names
-; the source is a bad command, with
-; nothing opened, as is any text after
-; DEST. Takes the operands at ARGSTRT.
-; Uses CMDFCB for SOURCE, RENFCB for
-; DEST and DIRNUM for the count
-; of records; returns to the prompt.
+; On a write error the destination is
+; closed with the records written, where
+; COPY.COM leaves it open. Nothing in
+; the TPA is touched. DEST may be a
+; drive alone, or a blank name with a
+; type: the source's whole name is used.
+; Both names carry their drive, the
+; current one if none was given, and a
+; destination that names the source is a
+; bad command, with nothing opened, as
+; is any text after DEST. Takes the
+; operands at ARGSTRT. Uses CMDFCB for
+; SOURCE, RENFCB for DEST and DIRNUM for
+; the count of records; returns to the
+; prompt.
+
 CMDCOPY:
+
 ; the operands
+
   ld hl,(ARGSTRT)
   ld de,CMDFCB   ; the source into
                  ; CMDFCB, unambiguous
@@ -252,7 +265,9 @@ CMDCOPY:
   cp SPACE       ; only a drive or a
                  ; type was given
   jr nz,CPD1
+
 ; no name: the source's name and type
+
   ld hl,CMDFCB+1
   ld bc,11
   ldir
@@ -301,7 +316,9 @@ CPGO:
   ld de,CPNODST
   jr z,CPFAIL    ; CANNOT MAKE DEST
   ld hl,0
+
 ; DIRNUM counts the records copied
+
   ld (DIRNUM),hl
 
 CPLOOP:
@@ -319,7 +336,9 @@ CPLOOP:
                  ; directory is full
   jr nz,CPWERR   ; WRITE ERROR, the
                  ; destination closed
+
 ; one more record copied
+
   ld hl,(DIRNUM)
   inc hl
   ld (DIRNUM),hl
@@ -332,10 +351,14 @@ CPDONE:
   inc a          ; FFh: the close failed
   ld de,CPCLOSE
   jr z,CPFAIL    ; CLOSE ERROR
+
 ; COPIED and the count in hex,
+
   ld de,CPCOPIED
   call PUTSTR
+
 ; the high byte first
+
   ld a,(DIRNUM+1)
   call CPHEX     ; print high byte
   ld a,(DIRNUM)
@@ -359,13 +382,14 @@ CPFAIL:
 
 ; One inline byte after CALL: BDOS
 ; function*2 + destination bit
-; (0=CMDFCB,
-; 1=RENFCB). Advance the return PC past
-; it, preserving HL, B and A. Keeps A,
-; B and HL; the BDOS has C, DE and the
-; result. No frame is added here; the
-; READSRC terminal CALL/byte/RET holds
-; one extra return word.
+; (0=CMDFCB, 1=RENFCB). Advance the
+; return PC past it, preserving HL, B
+; and A. Keeps A, B and HL; the BDOS has
+; C, DE and the result. No frame is
+; added here; the READSRC terminal
+; CALL/byte/RET holds one extra return
+; word.
+
 DOSSEQ:
   ex (sp),hl     ; HL at the descriptor
                  ; byte
@@ -387,8 +411,8 @@ DOSGO:
 
 ; Print A as two hex digits by BDOS
 ; function 2, through console.asm's
-; HEXHL.
-; Destroys AF, BC, DE, HL.
+; HEXHL. Destroys AF, BC, DE, HL.
+
 CPHEX:
   ld hl,CPHEXC   ; each digit through
                  ; PUTCHAR

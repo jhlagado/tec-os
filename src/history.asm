@@ -10,29 +10,28 @@
 ; written forward from HHEAD with the
 ; offset wrapping at 256. After the
 ; terminator, bytes are zeroed forward
-; up
-; to and including the next one already
-; 0, which removes what is left of the
-; oldest line it overwrote. So
+; up to and including the next one
+; already 0, which removes what is left
+; of the oldest line it overwrote. So
 ; ring[HHEAD-1] and ring[HHEAD] are both
-; 0, and
-; a walk back from the newest stops at
-; an empty entry. A line holding a 0 is
-; not stored; nor is one equal to the
-; newest. The ring's page, HRING, is
-; fixed, and cold boot clears it.
+; 0, and a walk back from the newest
+; stops at an empty entry. A line
+; holding a 0 is not stored; nor is one
+; equal to the newest. The ring's page,
+; HRING, is fixed, and cold boot clears
+; it.
 
 HRING EQU $BD00  ; its page, in EXPAND 1
 
 ; A = the ring's byte at L (HGET), or
 ; that byte = A (HPUT), with H the
-; ring's
-; page, HRING>>8. EXPAND 1 is in view
-; for the access alone, with interrupts
-; off, and no stack is used while it is,
-; since it may cover the stack.
-; Interrupts are left as they were.
-; Keeps BC, DE and HL; destroys F.
+; ring's page, HRING>>8. EXPAND 1 is in
+; view for the access alone, with
+; interrupts off, and no stack is used
+; while it is, since it may cover the
+; stack. Interrupts are left as they
+; were. Keeps BC, DE and HL; destroys F.
+
 HPUT:
   push bc
   ld b,a         ; B = the byte to write
@@ -77,6 +76,7 @@ HACC2:
 ; L = an entry's terminator: L = its
 ; first byte, L itself when it is empty.
 ; H the ring's page. Destroys AF.
+
 HSTART:
   dec l          ; the byte before L: a
                  ; 0 there
@@ -98,6 +98,7 @@ HSTART:
 ; buffer (LINPTR, LINCNT, cut at LINMAX)
 ; and echoed. Changes AF, BC, HL and
 ; what LINERASE and ECHOCHAR change.
+
 HREC:
   ld h,HRING>>8
   ld a,(HPOS)    ; L = the shown line's
@@ -148,7 +149,9 @@ HRCOPY:
                  ; line's terminator
   cp l
   ret z
+
 ; C the maximum, B the count
+
   ld bc,(LINMAX)
   ld a,c
   cp b
@@ -172,12 +175,12 @@ HRCOPY:
   jr HRCOPY
 
 ; The line function 10 returns, B bytes
-; at DE (B not 0), into the ring,
-; unless it holds a 0 or equals the
-; newest line. HHEAD moves past it.
-; Keeps
-; C; destroys AF and HL, and B and DE
-; when the line is stored.
+; at DE (B not 0), into the ring, unless
+; it holds a 0 or equals the newest
+; line. HHEAD moves past it. Keeps C;
+; destroys AF and HL, and B and DE when
+; the line is stored.
+
 HSTORE:
   ld h,HRING>>8
   ld a,(HHEAD)   ; HHEAD-1, the newest's

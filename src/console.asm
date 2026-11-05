@@ -15,16 +15,15 @@
 ; when the PICO9918 answers and the
 ; matrix keyboard is fitted, and TTY:
 ; otherwise; GLCD.SVC's load takes UC1:.
-; A
-; program or the CCP's CON command may
+; A program or the CCP's CON command may
 ; change the IOBYTE at any time; the
-; next
-; console call acts on it, clearing and
-; homing the new screen. CRT: or UC1:
-; without its display or keyboard falls
-; back to the serial terminal. VWID and
-; VHGT give the size of the console in
-; use, 0 for the serial terminal.
+; next console call acts on it, clearing
+; and homing the new screen. CRT: or
+; UC1: without its display or keyboard
+; falls back to the serial terminal.
+; VWID and VHGT give the size of the
+; console in use, 0 for the serial
+; terminal.
 ;
 ; Serial is bit-banged at 4800 baud, 8
 ; data bits, no parity, 2 stop bits. TX
@@ -53,8 +52,8 @@
 ; CONDEV records the matrix keyboard if
 ; the board's switch enables it, and
 ; VIDINIT adds the PICO9918 if it
-; answers.
-; Destroys AF, B and HL.
+; answers. Destroys AF, B and HL.
+
 CONINIT:
   ld a,$40       ; TX high: the line
                  ; idles at mark
@@ -79,7 +78,9 @@ CONINIT:
   ld a,$FE       ; select row 0, its bit
                  ; low
   ld (KBMASK),a
+
 ; the Matrix switch enables the keyboard
+
   in a,(STSPORT)
   and CDMTX
   ld (CONDEV),a  ; CDMTX or nothing
@@ -88,12 +89,12 @@ CONINIT:
 
 ; Act on a changed IOBYTE CON: field:
 ; one that isn't the mode in effect,
-; since
-; CONSW writes the mode it takes back
-; into the field, the serial terminal
-; for a
-; display or keyboard that isn't there.
-; Preserves BC and DE; destroys AF, HL.
+; since CONSW writes the mode it takes
+; back into the field, the serial
+; terminal for a display or keyboard
+; that isn't there. Preserves BC and DE;
+; destroys AF, HL.
+
 CONSEL:
   ld a,(IOBYTE)
   and 3          ; the CON: field
@@ -119,17 +120,19 @@ CONSEL:
 ; put back in its mode, cleared and the
 ; cursor homed. Without a table the
 ; serial terminal is taken. TTY: and
-; BAT:
-; set no geometry. The mode taken goes
-; into CONMOD and the CON: field.
+; BAT: set no geometry. The mode taken
+; goes into CONMOD and the CON: field.
 ; Destroys AF, BC, DE, HL.
+
 CONSW:
   ld b,a
   rrca           ; bit 0 set: a video
                  ; mode
   ld a,b
   jr nc,CONSW2
+
 ; CRT: or UC1:, its driver's table
+
   add a,LOW(PIVEC)-1
   ld l,a         ; 1 gives PIVEC, 3
                  ; GLVEC
@@ -196,14 +199,14 @@ CONSWV:
   jp VTCLS       ; a clear screen
 
 ; BIOS CONST: A = FFh if a character is
-; ready, else 00h. With nothing ready
-; on a video console the cursor is
-; drawn, since a program that polls is
-; waiting for a key; the next output
-; removes it. The BDOS's own check for
-; ^S
-; during output uses BCONST, which draws
+; ready, else 00h. With nothing ready on
+; a video console the cursor is drawn,
+; since a program that polls is waiting
+; for a key; the next output removes it.
+; The BDOS's own check for ^S during
+; output uses BCONST, which draws
 ; nothing. Destroys F, BC, DE, HL.
+
 BCONSTC:
   call BCONST
   or a           ; a character: no
@@ -217,13 +220,13 @@ BCONSTC:
   ret
 
 ; Console status without the cursor: A =
-; FFh, NZ if a character is ready,
-; else A = 0, Z. A byte found is held in
-; RXCHAR with RXFULL set. On the
-; serial port it listens for RXPOLL
-; loops for a start bit. Acts first on a
-; changed CON: field. Destroys BC, DE,
-; HL.
+; FFh, NZ if a character is ready, else
+; A = 0, Z. A byte found is held in
+; RXCHAR with RXFULL set. On the serial
+; port it listens for RXPOLL loops for a
+; start bit. Acts first on a changed
+; CON: field. Destroys BC, DE, HL.
+
 BCONST:
   call CONSEL
   call VTFLIP    ; show the program the
@@ -248,7 +251,9 @@ CSTMXE:
   ret
 
 CSTSER:
+
 ; lets Debug80 start a queued byte
+
   in a,(KEYPORT)
   ld e,RXPOLL    ; how long to listen
 
@@ -281,11 +286,12 @@ CSTYES:
   ret
 
 ; BIOS CONIN: wait for a character and
-; return it in A with bit 7 clear.
-; NUL is not delivered (Debug80 sends
-; one ahead of its first input byte).
-; Acts first on a changed CON: field.
+; return it in A with bit 7 clear. NUL
+; is not delivered (Debug80 sends one
+; ahead of its first input byte). Acts
+; first on a changed CON: field.
 ; Destroys F, BC, DE, HL.
+
 BCONIN:
   call CONSEL
   call VTFLIP    ; show the program the
@@ -314,11 +320,12 @@ CINME:
   ret
 
 ; Return in A the byte held in RXCHAR.
-; The rest of a keyboard arrow
-; sequence (KBTN bytes in KBT1 and KBT2)
-; moves up behind it and RXFULL stays
-; set; with none left RXFULL is cleared.
-; Destroys F.
+; The rest of a keyboard arrow sequence
+; (KBTN bytes in KBT1 and KBT2) moves up
+; behind it and RXFULL stays set; with
+; none left RXFULL is cleared. Destroys
+; F.
+
 CINTAKE:
   ld a,(KBTN)    ; bytes of an arrow
                  ; sequence still to
@@ -350,8 +357,11 @@ CINTAIL:
 ; (TTY: and BAT:), with no timeout, and
 ; return it in A with bit 7 clear; NUL
 ; is skipped. Destroys F, BC, D.
+
 CINLP:
+
 ; lets Debug80 start a queued byte
+
   in a,(KEYPORT)
   in a,(STSPORT)
   rlca           ; carry set: RX high,
@@ -371,9 +381,9 @@ CINRX:
 ; just been seen. Samples the middle of
 ; each data bit, least significant
 ; first, with interrupts off and then
-; back
-; as they were. Returns it in A;
+; back as they were. Returns it in A;
 ; destroys F, BC, D.
+
 RXBITS:
   call IFFGET    ; interrupts off for
                  ; the byte: 65 or 52
@@ -411,10 +421,11 @@ RXD:
   ret
 
 ; BIOS CONOUT: send C to the serial port
-; or the video terminal, by the
-; console; BAT: discards it, as the list
-; device does. Acts first on a changed
-; CON: field. Destroys AF, BC, DE, HL.
+; or the video terminal, by the console;
+; BAT: discards it, as the list device
+; does. Acts first on a changed CON:
+; field. Destroys AF, BC, DE, HL.
+
 BCONOUT:
   call CONSEL
   call VTOWN     ; a program owns the
@@ -437,6 +448,7 @@ BCOSER:
 ; off and then back as they were. Each
 ; bit takes 49+16*TXDLY T-states.
 ; Destroys AF, B, DE.
+
 TXBYTE:
   ld e,a         ; the byte, shifted out
                  ; from E
@@ -482,6 +494,7 @@ TXS:
 ; Print the zero-terminated string at HL
 ; on the console. Returns HL at the
 ; terminating zero. Destroys AF, BC, DE.
+
 PUTS:
   ld a,(hl)
   or a           ; the zero ends it
@@ -496,8 +509,8 @@ PUTS:
 
 ; Print CR and LF on the console
 ; (PUTCRLF), or the character in A
-; (PUTA).
-; Destroys AF, BC, DE, HL.
+; (PUTA). Destroys AF, BC, DE, HL.
+
 PUTCRLF:
   ld a,13        ; CR, then LF by
                  ; falling into PUTA
@@ -510,11 +523,12 @@ PUTA:
 
 ; Print A as two hex digits on the
 ; console (PUTHEX), or through the
-; routine at
-; HL, which takes each digit in A and
-; may destroy any register (HEXHL); the
-; CCP's CPHEX prints through BDOS
-; function 2 so. Destroys AF, BCDE, HL.
+; routine at HL, which takes each digit
+; in A and may destroy any register
+; (HEXHL); the CCP's CPHEX prints
+; through BDOS function 2 so. Destroys
+; AF, BCDE, HL.
+
 PUTHEX:
   ld hl,PUTA     ; the console, by the
                  ; BIOS
@@ -544,11 +558,11 @@ HEXNIB:
 
 ; The list device is not fitted: its
 ; output is discarded and it reports
-; ready.
-; Punch and reader are the serial port,
-; and BREADER waits for a byte with no
-; timeout. BLIST changes nothing;
-; BLISTST returns A = FFh.
+; ready. Punch and reader are the serial
+; port, and BREADER waits for a byte
+; with no timeout. BLIST changes
+; nothing; BLISTST returns A = FFh.
+
 BLIST:
   ret
 
@@ -563,13 +577,17 @@ BLISTST:
 ; PUNCH sends C and destroys AF, B, DE;
 ; READER returns the byte in A and
 ; destroys F, BC, D.
+
 BPUNCH:
   ld a,c         ; TXBYTE sends A
   jp TXBYTE
 
 BREADER:
+
 BRDWT:
+
 ; lets Debug80 start a queued byte
+
   in a,(KEYPORT)
   in a,(STSPORT)
   rlca           ; carry set: RX high,
@@ -584,11 +602,14 @@ BRDRX:
 ; and the IOBYTE's CON: field, so that a
 ; driver or program reads the console in
 ; use there. Returns B = A. Destroys AF.
+
 CONMD:
   ld (CONMOD),a
   ld b,a         ; then into the IOBYTE
+
 ; Put B, a console mode, in the IOBYTE's
 ; CON: field. Keeps B. Destroys AF.
+
 CONFLD:
   ld a,(IOBYTE)
   and $FC        ; the other devices'

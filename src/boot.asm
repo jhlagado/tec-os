@@ -1,21 +1,19 @@
 ; Cold boot, warm boot and the
 ; diagnostic console. The reset jump is
-; in
-; reset.asm.
+; in reset.asm.
 
 ; ---- Cold boot
 ; --------------------------------------
 ; Entered from RSTENT at reset, or BIOS
-; function 0. One entry, and
-; three paths through the ROM: an
-; ordinary exit is warm boot, below, and
-; never
-; comes here; a recognised reset keeps
-; the selected volumes, by RSLCAP and
-; RESEL; an unrecognised reset takes the
-; card's defaults.
-; the workspace, less the byte LDIR
-; starts from
+; function 0. One entry, and three paths
+; through the ROM: an ordinary exit is
+; warm boot, below, and never comes
+; here; a recognised reset keeps the
+; selected volumes, by RSLCAP and RESEL;
+; an unrecognised reset takes the card's
+; defaults. the workspace, less the byte
+; LDIR starts from
+
 WSSPAN EQU WSEND-WSBASE-1
 
 ; ---- Reset entry
@@ -26,22 +24,24 @@ WSSPAN EQU WSEND-WSBASE-1
 ; finds BF03h empty there and runs on
 ; through zeros into the ROM (B1). At
 ; reset the overlay is on and 0002h
-; holds
-; the jump's high byte; otherwise it
-; holds the RAM BIOS's, and warm boot,
-; which puts EXPAND 0 back, writes the
-; cache's dirty lines as any exit does.
-; No stack is set on entry. COLD, BIOS
-; function 0, starts on the boot stack
-; in fixed RAM and moves to STKTOP, the
-; BDOS's, once the workspace is
-; cleared; it runs on into warm boot and
-; never returns.
+; holds the jump's high byte; otherwise
+; it holds the RAM BIOS's, and warm
+; boot, which puts EXPAND 0 back, writes
+; the cache's dirty lines as any exit
+; does. No stack is set on entry. COLD,
+; BIOS function 0, starts on the boot
+; stack in fixed RAM and moves to
+; STKTOP, the BDOS's, once the workspace
+; is cleared; it runs on into warm boot
+; and never returns.
+
 RSTENT:
   ld a,($0002)   ; the overlay's copy of
                  ; RESET's target, or
                  ; RAM's
+
 ; equal only at reset
+
   cp HIGH(RSTENT)
   jp nz,WBOOTR   ; a program's exit:
                  ; keep its writes
@@ -80,11 +80,11 @@ COLDZ:
   ld sp,STKTOP   ; the workspace is
                  ; there to hold it now:
                  ; the
+
 ; BDOS's stack, unused before the CCP,
-; so that
-; the console's start and the banner
-; keep off
-; the BIOS's (KE-173)
+; so that the console's start and the
+; banner keep off the BIOS's (KE-173)
+
   call CONINIT   ; the serial line,
                  ; keyboard and PICO9918
   call RTCHAS    ; the clock, once: INFO
@@ -103,19 +103,19 @@ COLDNC:
 
 ; The card's part of cold boot, and
 ; DIAG's retry, which comes back here.
-; It
-; runs on STKTOP, the BDOS's stack,
+; It runs on STKTOP, the BDOS's stack,
 ; unused before the CCP runs: the mount,
 ; the listing and DIAG all run there,
 ; and the BIOS's stack keeps only warm
 ; boot's use (KE-173). LCDINIT clears
 ; the display, so CARD? goes with it,
 ; and a retry that fails shows it again.
-; Mounted, it builds the vectors,
-; the stub and the RAM BIOS table, lists
-; the drives, and runs on into warm
-; boot, whose PZINIT builds page zero,
-; with drive A and user 0.
+; Mounted, it builds the vectors, the
+; stub and the RAM BIOS table, lists the
+; drives, and runs on into warm boot,
+; whose PZINIT builds page zero, with
+; drive A and user 0.
+
 COLDRT:
   ld sp,STKTOP   ; the BDOS's stack,
                  ; afresh for a retry
@@ -135,8 +135,10 @@ COLDRT:
   call RESEL     ; a retained selection,
                  ; if the card still has
                  ; it
+
 ; no residents yet: the TPA's top is the
 ; stub
+
   ld hl,(STUBAD)
   ld (PZTOP),hl
   ld hl,BIOSBAS  ; the RAM BIOS table,
@@ -155,6 +157,7 @@ COLDRT:
   xor a          ; drive A, user 0
   ld (PZDU),a    ; then on into warm
                  ; boot, which builds
+
 ; page zero once (KE-199)
 
 ; ---- Warm boot
@@ -169,9 +172,9 @@ COLDRT:
 ; BDOS's state, puts the display mode
 ; and scroll region back, writes the
 ; cache's dirty lines, and enters the
-; CCP
-; with page zero's drive and user in C.
-; Never returns.
+; CCP with page zero's drive and user in
+; C. Never returns.
+
 WBOOTR:
   di             ; no interrupt while
                  ; page zero is rebuilt
@@ -184,9 +187,10 @@ WBOOTR:
   call HWVREL    ; a program that
                  ; claimed the PICO9918
                  ; gives
+
 ; it back first: its interrupt, an NMI,
-; off
-; before page zero is rebuilt
+; off before page zero is rebuilt
+
   call PZINIT    ; the jumps, the stub
                  ; and the RST vectors
   ld hl,SVCBSY   ; no INIT or REMOVE
@@ -230,9 +234,9 @@ WBOOTR:
 ; finds it. Otherwise RSLBUF's A:
 ; geometry is 0, which means no
 ; selection. Runs on the boot stack,
-; clear of
-; all it reads. Destroys AF, BC, DE and
-; HL.
+; clear of all it reads. Destroys AF,
+; BC, DE and HL.
+
 RSLCAP:
   ld a,($0000)   ; the warm boot jump
   cp $C3         ; JP
@@ -240,7 +244,9 @@ RSLCAP:
   ld hl,($0001)  ; to the RAM BIOS
                  ; table's warm boot
                  ; entry
+
 ; which never moves
+
   ld de,RAMBIOS+3
   sbc hl,de      ; carry is clear: the
                  ; CP was equal
@@ -248,7 +254,9 @@ RSLCAP:
   ld a,(PZBDOS)  ; the jump at 0005h
   cp $C3         ; JP
   jr nz,RSLNO
+
 ; S, the stub
+
   ld hl,(STUBAD)
   ld a,(hl)      ; S holds JP BENTRY,
                  ; the layout's test
@@ -263,7 +271,9 @@ RSLCAP:
   cp HIGH(BENTRY)
   jr nz,RSLNO    ; another layout, or no
                  ; BDOS behind it
+
 ; W, which any resident has lowered
+
   ld hl,(PZBDOS+1)
   ld a,h         ; no service or stub
                  ; goes below 8000h
@@ -295,17 +305,19 @@ RSLYES:
 RSLNO:
   xor a          ; no selection: the
                  ; card's defaults
+
 ; A:'s geometry, 0
+
   ld (RSLBUF+6),a
   ret
 
 ; Cold boot: clear EXPAND 1, which
 ; RAMCHK found, and empty the cache's
-; lines.
-; EXPAND 1 hides the workspace and the
-; stack in it, so nothing here touches
-; the stack until EXPAND 0 is back.
-; Destroys AF, BC, DE and HL.
+; lines. EXPAND 1 hides the workspace
+; and the stack in it, so nothing here
+; touches the stack until EXPAND 0 is
+; back. Destroys AF, BC, DE and HL.
+
 MEMINIT:
   ld a,(LATCHV)  ; EXPAND 1 in view, no
                  ; stack: clear it all
@@ -322,7 +334,9 @@ MEMINIT:
   ld hl,CTAB     ; the cache's lines all
                  ; empty
   ld de,CTAB+1
+
 ; 4 bytes a line, FFFFFFFFh for no block
+
   ld bc,NLINES*4-1
   ld (hl),$FF
   ldir
@@ -340,6 +354,7 @@ MEMINIT:
 ; the bit set. Takes LATCHV. Returns A =
 ; 1 or 2, and the latch as LATCHV.
 ; Destroys F, BC and DE.
+
 DETECT:
   ld e,a         ; E: the latch with the
                  ; bit
@@ -349,7 +364,9 @@ DETECT:
   ld e,a
   ld b,(hl)      ; the byte without the
                  ; bit
+
 ; the bit set
+
   out (SYSLAT),a
   ld c,(hl)      ; the byte with it, or
                  ; the same one again
@@ -359,7 +376,9 @@ DETECT:
                  ; written with the bit
                  ; set
   ld a,d
+
 ; and clear again
+
   out (SYSLAT),a
   ld a,(hl)      ; the byte without the
                  ; bit, after the write
@@ -382,25 +401,30 @@ DETECT:
   ret
 
 ; Rebuild the classic page-zero vectors
-; and the BDOS entry jump, and
-; put the restart vectors back as a
-; clean boot leaves them. IOBYTE and the
-; drive/user byte are left alone. Takes
-; PZTOP, the TPA's top, and STUBAD,
-; the stub's address. Runs on into PZSWP
-; and returns as it does.
+; and the BDOS entry jump, and put the
+; restart vectors back as a clean boot
+; leaves them. IOBYTE and the drive/user
+; byte are left alone. Takes PZTOP, the
+; TPA's top, and STUBAD, the stub's
+; address. Runs on into PZSWP and
+; returns as it does.
+
 PZINIT:
   ld a,$C3       ; JP, for each of the
                  ; three jumps
   ld ($0000),a
+
 ; warm boot, by the RAM BIOS table
+
   ld hl,RAMBIOS+3
   ld ($0001),hl
   ld (PZBDOS),a
   ld hl,(PZTOP)  ; the lowest resident's
                  ; entry, or the stub
   ld (PZBDOS+1),hl
+
 ; the stub: JP BENTRY
+
   ld hl,(STUBAD)
   ld (hl),a
   inc hl         ; its target, low byte
@@ -408,30 +432,33 @@ PZINIT:
   ld (hl),LOW(BENTRY)
   inc hl
   ld (hl),HIGH(BENTRY)
+
 ; The restart vectors 0008h-003Fh, here
 ; and after a service goes: each one
 ; that is not a jump above the top
-; becomes seven zeros and a RET,
-; so an RST through it returns at once,
-; with the interrupt state unchanged,
-; and never runs into the next vector,
-; and 0038h takes EI; RETI. Such a jump,
+; becomes seven zeros and a RET, so an
+; RST through it returns at once, with
+; the interrupt state unchanged, and
+; never runs into the next vector, and
+; 0038h takes EI; RETI. Such a jump,
 ; into a service, the workspace or ROM,
 ; keeps its three bytes and the rest of
 ; its vector is cleared. A program's
 ; vector into the TPA does not outlive
-; it,
-; one into a service's pages does not
-; outlive the service, and a cold boot
-; leaves the same bytes. Takes PZTOP.
-; Returns carry clear. Destroys AF, BC
-; and HL.
+; it, one into a service's pages does
+; not outlive the service, and a cold
+; boot leaves the same bytes. Takes
+; PZTOP. Returns carry clear. Destroys
+; AF, BC and HL.
+
 PZSWP:
   ld hl,$0008    ; RST 08h's vector
                  ; first
 
 RSTCLR:
+
 ; seven zeros, then RET
+
   ld bc,7*256+$C9
   ld a,(hl)
   cp $C3         ; a jump: its target
@@ -442,7 +469,9 @@ RSTCLR:
   ld a,(PZTOP)
   sub (hl)
   inc hl
+
 ; then the high bytes, with the borrow
+
   ld a,(PZTOP+1)
   sbc a,(hl)
   dec hl         ; back to the vector's
@@ -480,22 +509,24 @@ RSTZERO:
   ret
 
 ; The stack guard's bytes.
+
 STKGN EQU STKGUEND-STKGUARD
 
 ; Reset the CCP and BDOS writable state
-; as a fresh disk load would: zeros
-; from CCPCLR to BDOSRME, the BDOS's
-; stack at STKTOP among them; the DMA at
-; 0080h; the command buffer's size; and
-; the stack guard's pattern. The
-; command line, below CCPCLR, is kept
-; for a chained line's next piece.
-; BUFOK goes to 0, so BWRITE's key from
-; before the warm boot (GETKEY) no
-; longer lets a block be cleared rather
-; than read. Runs on the BIOS's
-; stack, outside the span it clears.
-; Destroys AF, BC, DE and HL.
+; as a fresh disk load would: zeros from
+; CCPCLR to BDOSRME, the BDOS's stack at
+; STKTOP among them; the DMA at 0080h;
+; the command buffer's size; and the
+; stack guard's pattern. The command
+; line, below CCPCLR, is kept for a
+; chained line's next piece. BUFOK goes
+; to 0, so BWRITE's key from before the
+; warm boot (GETKEY) no longer lets a
+; block be cleared rather than read.
+; Runs on the BIOS's stack, outside the
+; span it clears. Destroys AF, BC, DE
+; and HL.
+
 CPMINIT:
   ld hl,CCPCLR   ; zeros from CCPCLR to
                  ; BDOSRME
@@ -509,8 +540,10 @@ CPMINIT:
   ld a,127       ; the longest line the
                  ; CCP's buffer takes
   ld (CMDBUF),a
+
 ; between the CCP's scratch and its
 ; stack
+
   ld hl,STKGUARD
   ld b,STKGN     ; each guard byte gets
                  ; the pattern a check
@@ -542,6 +575,7 @@ CPMIG:
 ; cleared yet. The boot stack is in
 ; fixed RAM. Returns only with 64K.
 ; Destroys AF, BC, DE and HL.
+
 RAMCHK:
   ld de,$55AA    ; one pattern, then its
                  ; complement
@@ -558,9 +592,10 @@ RAMCHK:
                  ; EXPAND 1
 
 ; Write D at 8000h and E at BFFFh, then
-; read both back. Returns if both
-; held; otherwise goes to RAMBAD, which
-; never returns. Destroys AF and HL.
+; read both back. Returns if both held;
+; otherwise goes to RAMBAD, which never
+; returns. Destroys AF and HL.
+
 RAMPAT:
   ld hl,$8000
   ld (hl),d      ; both ends written
@@ -573,9 +608,11 @@ RAMPAT:
   ld a,($BFFF)
   cp e
   ret z          ; both held
+
 ; RAMMSG straight to the serial port,
 ; which needs nothing above 8000h, and
 ; stop for good.
+
 RAMBAD:
   ld hl,RAMMSG
   ld a,$40       ; serial idle, for the
@@ -595,10 +632,11 @@ RAMSTOP:
   jr RAMSTOP     ; nothing more runs
 
 ; Print the mounted drives: letter and
-; label, and (read-only) for a volume
-; so flagged, a line each. Runs at cold
-; boot, before the CCP. Destroys AF,
-; BC, DE, HL and IX.
+; label, and (read-only) for a volume so
+; flagged, a line each. Runs at cold
+; boot, before the CCP. Destroys AF, BC,
+; DE, HL and IX.
+
 SHOWVOL:
   ld c,0         ; each mounted drive,
                  ; in drive order
@@ -617,7 +655,9 @@ SHV:
                  ; terminal's scroll
   call PUTS      ; puts a row while PUTS
                  ; prints it
+
 ; the volume's flags
+
   ld a,(ix+DFLAGS)
   and DFREAD
   jr z,SHVRW     ; writable: no note
@@ -637,24 +677,27 @@ SHVN:
   ret
 
 ; Pack the allocation vectors down from
-; WSBASE, in drive order, and put
-; each one's address in its DPH. A
-; format 1.1 card that asks for N drives
-; gets a G8M-sized slot (256 bytes) for
-; each of drives 0 to N-1, mounted or
-; not, so any drive may later take any
-; volume; any other card gets a slot
-; for each mounted drive, DSM / 8 + 1
-; bytes, as before. DRVSLOT records what
-; each slot holds. The BDOS entry jump
-; goes directly below them. Takes
-; MOUNT's drive table and MNTDRV.
-; Returns STUBAD at the jump's place.
-; Destroys AF, BC, DE and HL.
+; WSBASE, in drive order, and put each
+; one's address in its DPH. A format 1.1
+; card that asks for N drives gets a
+; G8M-sized slot (256 bytes) for each of
+; drives 0 to N-1, mounted or not, so
+; any drive may later take any volume;
+; any other card gets a slot for each
+; mounted drive, DSM / 8 + 1 bytes, as
+; before. DRVSLOT records what each slot
+; holds. The BDOS entry jump goes
+; directly below them. Takes MOUNT's
+; drive table and MNTDRV. Returns STUBAD
+; at the jump's place. Destroys AF, BC,
+; DE and HL.
+
 ALVINIT:
   ld hl,WSBASE   ; the vectors end at
                  ; WSBASE
+
 ; the lowest vector so far
+
   ld (STUBAD),hl
   ld c,0         ; drive A first
 
@@ -718,7 +761,9 @@ ALVPUT:
                  ; else 0
   inc a
   ld (hl),a
+
 ; the slot goes below the last
+
   ld hl,(STUBAD)
   or a
   sbc hl,de
@@ -755,20 +800,20 @@ ALVSKP:
   ret
 
 ; Diagnostic console, entered by a jump
-; from COLDRT when the card or
-; container cannot be mounted. A = error
-; code: SDE* (01h-0Fh) from the SD
-; driver or ME* (20h-2Fh) from the mount
-; checks. Shows CARD? on the LCD and
-; the code on the console, then asks
-; until R, which retries from COLDRT.
-; The console stays usable without a
-; card. Runs on STKTOP, the BDOS's
-; stack, which COLDRT set and both its
-; jumps here leave at its top, so the
-; BIOS's keeps only warm boot's use
-; (KE-173); a retry sets it afresh.
+; from COLDRT when the card or container
+; cannot be mounted. A = error code:
+; SDE* (01h-0Fh) from the SD driver or
+; ME* (20h-2Fh) from the mount checks.
+; Shows CARD? on the LCD and the code on
+; the console, then asks until R, which
+; retries from COLDRT. The console stays
+; usable without a card. Runs on STKTOP,
+; the BDOS's stack, which COLDRT set and
+; both its jumps here leave at its top,
+; so the BIOS's keeps only warm boot's
+; use (KE-173); a retry sets it afresh.
 ; Never returns.
+
 DIAG:
   push af        ; the code, kept across
                  ; the messages

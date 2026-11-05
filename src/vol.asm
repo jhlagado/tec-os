@@ -3,24 +3,21 @@
 ;
 ; Block 0 of the card holds the
 ; container header
-; (container-format.md). The
-; header and every descriptor are
-; checked before any drive is mounted,
-; and a
-; volume is never written outside the
-; range its descriptor gives. All block
-; arithmetic is 32-bit and a carry out
-; of the top byte is an error.
+; (container-format.md). The header and
+; every descriptor are checked before
+; any drive is mounted, and a volume is
+; never written outside the range its
+; descriptor gives. All block arithmetic
+; is 32-bit and a carry out of the top
+; byte is an error.
 ;
 ; Here: the mount, the table's blocks
 ; through the cache, the descriptors,
-; the
-; drive table and DPHs, the reselection
-; at cold boot and the volume services.
-; The helpers they share (UNMOUNT,
-; GEOFIND, CMP32, the sums, DRVDESC)
-; follow in
-; volutil.asm.
+; the drive table and DPHs, the
+; reselection at cold boot and the
+; volume services. The helpers they
+; share (UNMOUNT, GEOFIND, CMP32, the
+; sums, DRVDESC) follow in volutil.asm.
 
 MEIO EQU $20     ; header block
                  ; unreadable
@@ -33,7 +30,9 @@ MECOUNT EQU $24  ; volume count
 MESUM EQU $25    ; header checksum
 MEDESC EQU $26   ; descriptor id, flags,
                  ; geometry, length
+
 ; or alignment
+
 MERANGE EQU $27  ; payload beyond the
                  ; container or wrapping
 MEOVLAP EQU $28  ; overlapping payloads
@@ -45,14 +44,15 @@ MENOA EQU $2A    ; no volume mounted as
 ; Validate the card's container and
 ; mount its volumes on the drives their
 ; descriptors name, at cold boot. Takes
-; the card started (SDINIT, SDBYTE
-; set). Returns Z when drive A and any
-; other assigned drives are mounted;
-; else NZ with an ME* code in A and no
-; drive mounted. Uses MNBUF and the
-; MNT* workspace, and a cache line for
-; each table block. Destroys AF, BC,
-; DE, HL, IX and IY.
+; the card started (SDINIT, SDBYTE set).
+; Returns Z when drive A and any other
+; assigned drives are mounted; else NZ
+; with an ME* code in A and no drive
+; mounted. Uses MNBUF and the MNT*
+; workspace, and a cache line for each
+; table block. Destroys AF, BC, DE, HL,
+; IX and IY.
+
 MOUNT:
   call UNMOUNT   ; every drive empty
                  ; while the card is
@@ -83,13 +83,17 @@ MNMAG:
   inc hl         ; the next pair
   inc de
   djnz MNMAG
+
 ; only the major version this ROM reads
+
   ld a,(MNBUF+HMAJOR)
   cp FMTMAJ
   ld a,MEVER     ; another major
                  ; version: refused
   jp nz,MNTERR
+
 ; header size: exactly the format's
+
   ld hl,(MNBUF+HHDRSZ)
   ld de,HDRSZ
   or a           ; carry clear for the
@@ -97,16 +101,19 @@ MNMAG:
   sbc hl,de
   ld a,MESIZE    ; another size: refused
   jp nz,MNTERR
+
 ; descriptor size: exactly the format's
 ; too
+
   ld hl,(MNBUF+HDSCSZ)
   ld de,DSCSZ
   or a
   sbc hl,de
   jp nz,MNTERR   ; A still MESIZE
+
 ; volume count: 1 to MAXVOL, or to
-; MAXVOL0
-; on a 1.0 card (minor 0)
+; MAXVOL0 on a 1.0 card (minor 0)
+
   ld hl,(MNBUF+HCOUNT)
   ld a,h         ; the word's high byte
                  ; must be 0
@@ -146,7 +153,9 @@ MNCNT2:
   jp nz,MNTERR
   call MNHDR     ; the header's fields
                  ; again
+
 ; the container's length, 32 bits, kept
+
   ld hl,MNBUF+HBLOCKS
   ld de,MNTBLK   ; in MNTBLK for the
                  ; range checks
@@ -155,29 +164,36 @@ MNCNT2:
   xor a          ; no drives field until
                  ; read: 0 for 1.0
   ld (MNTDRV),a
+
 ; a 1.0 card (minor 0) has no drives
 ; field
+
   ld a,(MNBUF+HMINOR)
   or a           ; or table sum; its
                  ; blocks 1-7 are free,
                  ; as
   jr z,MNV2      ; no volume starts
                  ; below block 8
+
 ; format 1.1: the drives it wants, 0 to
 ; 4
+
   ld a,(MNBUF+HDRIVES)
   ld (MNTDRV),a
   cp MAXDRV+1
   ld a,MESIZE    ; more than there are:
                  ; refused
   jp nc,MNTERR
+
 ; the table's sum, for after the walk
+
   ld hl,(MNBUF+HTSUM)
   ld (MNTSUM),hl
+
 ; Format 1.1: the table's blocks after
 ; block 0, count / 16 of them, sum to
-; the
-; header's tableSum.
+; the header's tableSum.
+
   ld a,(MNTCNT)
   rrca           ; count / 16: 15 in
                  ; block 0, then 16 a
@@ -190,7 +206,9 @@ MNCNT2:
                  ; block 0: no sum
   ld b,a         ; B counts the blocks
   ld hl,0
+
 ; the sum so far
+
   ld (MNTPRV),hl
   ld c,1         ; C = the block, from 1
 
@@ -210,7 +228,9 @@ MNSUMB:
   pop bc
   inc c          ; the next block
   djnz MNSUMB
+
 ; the walk's sum against the header's
+
   ld de,(MNTSUM)
   or a
   sbc hl,de
@@ -221,8 +241,8 @@ MNSUMB:
 ; One pass in table order: each
 ; descriptor valid, starting at or after
 ; the previous one's end, and mounted as
-; it
-; is checked.
+; it is checked.
+
 MNV2:
   ld hl,0        ; the previous end:
                  ; none yet, block 0
@@ -238,18 +258,24 @@ MNDESC:
                  ; in MNBUF
   ld a,MEIO      ; its block won't read
   jp nz,MNTERR
+
 ; volume id must be nonzero
+
   ld a,(ix+DVOLID)
   or (ix+DVOLID+1)
   or (ix+DVOLID+2)
   or (ix+DVOLID+3)
   jp z,MNDBAD    ; all four zero: an
                  ; empty slot
+
 ; no flag but read-only may be set
+
   ld a,(ix+DFLAGS)
   and $FF-DFREAD
   jp nz,MNDBAD
+
 ; a geometry this ROM knows
+
   ld a,(ix+DGEOM)
   call GEOFIND   ; HL -> geometry entry,
                  ; Z if known
@@ -264,16 +290,24 @@ MNDESC:
   ld a,(hl)
   cp (ix+DLEN+1)
   jp nz,MNDBAD
+
 ; and the top two zero, as every payload
+
   ld a,(ix+DLEN+2)
+
 ; is under 65,536 blocks
+
   or (ix+DLEN+3)
   jp nz,MNDBAD
+
 ; start: nonzero and aligned
+
   ld a,(ix+DSTART)
   and ALIGNB-1
   jp nz,MNDBAD
+
 ; nonzero: all four bytes ORed
+
   ld a,(ix+DSTART)
   or (ix+DSTART+1)
   or (ix+DSTART+2)
@@ -292,7 +326,9 @@ MNDESC:
   jp c,MNTERR
   ld iy,MNTPRV   ; the new end replaces
                  ; the previous one
+
 ; end = start + length, no wrap
+
   ld l,(ix+DSTART)
   ld h,(ix+DSTART+1)
   ld e,(ix+DLEN)
@@ -301,7 +337,9 @@ MNDESC:
   ld (iy+0),l    ; into MNTPRV's low
                  ; word
   ld (iy+1),h
+
 ; the high word, with the low's carry
+
   ld l,(ix+DSTART+2)
   ld h,(ix+DSTART+3)
   ld e,(ix+DLEN+2)
@@ -347,7 +385,9 @@ MNSTX:
   jp MNTERR
 
 MNSTOK:
+
 ; drive letter: none, or A-D, once
+
   ld a,(ix+DMOUNT)
   cp DUNMNT
   jr z,MNNEXT    ; unmounted: checked,
@@ -361,11 +401,15 @@ MNSTOK:
   dec a          ; wraps, and every
                  ; default drive is
                  ; slotted
+
 ; carry: the drive is past the Nth
+
   cp (ix+DMOUNT)
   ld a,MEMOUNT
   jp c,MNTERR
+
 ; HL -> the drive's DRVIDX byte
+
   ld e,(ix+DMOUNT)
   ld d,0
   ld hl,DRVIDX
@@ -390,7 +434,9 @@ MNNEXT:
                  ; reached
   cp (hl)
   jp nz,MNDESC
+
 ; drive A must have a volume
+
   ld a,(DRVTAB+6)
   or a           ; (its geometry byte, 0
                  ; when empty)
@@ -416,23 +462,23 @@ MNTERR:
 
 ; Card block A (0-7, the container's
 ; table) in a cache line, MNTLN: read
-; from
-; the card the first time it is asked
-; for since MNTCB named another block,
-; so
-; a mount reads the table as the card
-; holds it. The line is an ordinary
-; clean
-; one, left for the cache to take back
-; in turn. Walks the cache as it is:
-; DESCIX turns interrupts off around it
-; for a service. Returns Z with
-; MNTLN and MNTCB set, or NZ if the read
-; fails, with MNTCB FFh.
-; Destroys AF, BC, DE and HL.
+; from the card the first time it is
+; asked for since MNTCB named another
+; block, so a mount reads the table as
+; the card holds it. The line is an
+; ordinary clean one, left for the cache
+; to take back in turn. Walks the cache
+; as it is: DESCIX turns interrupts off
+; around it for a service. Returns Z
+; with MNTLN and MNTCB set, or NZ if the
+; read fails, with MNTCB FFh. Destroys
+; AF, BC, DE and HL.
+
 MNBLK:
+
 ; the block, in MNBUF while it is free,
 ; so
+
   ld (MNBUF+2),a
   call MNLBA     ; that the stack stays
                  ; shallow; SDLBA it
@@ -453,7 +499,9 @@ MNBLK:
 MNB3:
   ld (MNTLN),a   ; the line, and the
                  ; block it now holds
+
 ; so that it is not read again
+
   ld a,(MNBUF+2)
   ld (MNTCB),a
   xor a          ; Z
@@ -483,10 +531,12 @@ MNBF:
 
 ; SDLBA = the table block kept in
 ; MNBUF+2, 32 bits, its top three bytes
-; 0.
-; Destroys A and HL.
+; 0. Destroys A and HL.
+
 MNLBA:
+
 ; the block, 0-7
+
   ld a,(MNBUF+2)
   ld l,a
   ld h,0         ; the low word
@@ -499,16 +549,18 @@ MNLBA:
 ; the table block in MNTLN, copied out
 ; of EXPAND 1 (MNCPH); MNHDR the
 ; header's first 32, where its fields
-; are;
-; MNCP the 32 at the offset in MNTPRV+2,
-; MNSUM's. Returns A = 0. Destroys
-; AF, BC, DE and HL.
+; are; MNCP the 32 at the offset in
+; MNTPRV+2, MNSUM's. Returns A = 0.
+; Destroys AF, BC, DE and HL.
+
 MNHDR:
   ld hl,0        ; the header: offset 0
   jr MNCPH
 
 MNCP:
+
 ; MNSUM's offset; MNHDR's and DESCIX's
+
   ld hl,(MNTPRV+2)
 
 MNCPH:
@@ -536,19 +588,26 @@ MNCPH:
 ; MNTPRV+2, so the stack stays shallow.
 ; Returns HL = the sum. Destroys AF, BC
 ; and DE.
+
 MNSUM:
   ld hl,0
+
 ; the offset
+
   ld (MNTPRV+2),hl
 
 MNS1:
   call MNCP      ; 32 bytes of it
+
 ; the sum so far
+
   ld hl,(MNTPRV)
   ld de,MNBUF
   ld bc,32
   call SUMDE     ; added to the sum
+
 ; kept off the stack
+
   ld (MNTPRV),hl
   ld hl,(MNTPRV+2)
   ld de,32       ; the next 32
@@ -556,7 +615,9 @@ MNS1:
   ld (MNTPRV+2),hl
   bit 1,h        ; 512 done
   jr z,MNS1
+
 ; the sum, for the caller
+
   ld hl,(MNTPRV)
   ret
 
@@ -566,9 +627,9 @@ MNS1:
 ; line (MNBLK). Block 0 holds 15 after
 ; the header, each later block 16.
 ; Returns Z with IX = MNBUF, or NZ if
-; the
-; read fails. Destroys AF, BC, DE and
-; HL.
+; the read fails. Destroys AF, BC, DE
+; and HL.
+
 DESCIX:
   ld c,0         ; block 0, unless past
                  ; its fifteen
@@ -590,7 +651,9 @@ DESCIX:
   jr DX1         ; A = the slot
 
 DX0:
+
 ; block 0: after the header's slot
+
   add a,DSCBLK0+1
 
 DX1:
@@ -621,12 +684,15 @@ DX1:
   ret
 
 ; Install the descriptor at IX as drive
-; (IX+DMOUNT): its drive-table entry
-; and DPH. Keeps BC and IX. Destroys AF,
-; DE and HL.
+; (IX+DMOUNT): its drive-table entry and
+; DPH. Keeps BC and IX. Destroys AF, DE
+; and HL.
+
 MNONE:
   push bc
+
 ; the drive the descriptor names
+
   ld a,(ix+DMOUNT)
   push af        ; the drive, across the
                  ; entry
@@ -639,7 +705,9 @@ MNONE:
                  ; bytes
   pop af         ; the drive again, for
                  ; its DPH
+
 ; and its geometry
+
   ld c,(ix+DGEOM)
   call MNDPH
   pop bc         ; the caller's B
@@ -651,11 +719,11 @@ MNONE:
 ; with written-behind beside read-only.
 ; The start's four bytes and the
 ; length's low two follow each other in
-; the
-; descriptor (DSTART, DLEN), so they go
-; in one LDIR. Keeps IX. Destroys A, BC
-; and DE, and leaves HL at the eighth
+; the descriptor (DSTART, DLEN), so they
+; go in one LDIR. Keeps IX. Destroys A,
+; BC and DE, and leaves HL at the eighth
 ; byte.
+
 MNFILL:
   ex de,hl       ; DE = the entry
   push ix        ; HL = IX
@@ -668,27 +736,34 @@ MNFILL:
   ldir
   ex de,hl       ; HL = the entry's
                  ; seventh byte
+
 ; geometry
+
   ld a,(ix+DGEOM)
   ld (hl),a
   inc hl         ; the eighth byte: the
                  ; drive's flags
+
 ; written behind (DCWB, bit 0): the
 ; drive's
+
   ld a,(ix+DCACHE)
   and DCWB       ; flag bit 1
   add a,a        ; bit 0 to bit 1
+
 ; beside read-only
+
   or (ix+DFLAGS)
   ld (hl),a
   ret
 
 ; Build drive A's DPH for geometry C: no
-; XLT, zeroed scratch words, the
-; shared DIRBUF, the geometry's DPB and
-; CSVDUM. Leaves its ALV word, which
-; ALVINIT sets. Keeps C and IX. Destroys
-; AF, B, DE and HL.
+; XLT, zeroed scratch words, the shared
+; DIRBUF, the geometry's DPB and CSVDUM.
+; Leaves its ALV word, which ALVINIT
+; sets. Keeps C and IX. Destroys AF, B,
+; DE and HL.
+
 MNDPH:
   call DPHADR    ; HL = this drive's DPH
   ld b,8         ; XLT and BDOS scratch

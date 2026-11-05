@@ -3,9 +3,33 @@ import { LIMITS, parseLine } from './style.mjs';
 const register = /^(?:af'?|bc|de|hl|sp|ix[hl]?|iy[hl]?|[abcdehlir]|nz|z|nc|po|pe|p|m)$/i;
 const tokens = /"[^"]*"|'[^']*'|\b[A-Za-z_][\w]*'?(?![\w])/g;
 
+/** Labels naming instructions, including consecutive aliases, not data. */
+function codeLabels(parsed) {
+  const found = new Set();
+  for (let i = 0; i < parsed.length; i++) {
+    if (parsed[i].kind !== 'label') continue;
+    for (let j = i + 1; j < parsed.length; j++) {
+      if (['blank', 'comment', 'label'].includes(parsed[j].kind)) continue;
+      if (parsed[j].kind === 'code') found.add(i);
+      break;
+    }
+  }
+  return found;
+}
+
+/** Only the nearest margin header across one required blank belongs here. */
+function headerLines(lines, at) {
+  if (lines[at - 1] !== '') return 0;
+  let count = 0;
+  for (let i = at - 2; i >= 0 && lines[i].startsWith(';'); i--) count++;
+  return count;
+}
+
 /** Check compact layout. Entry names come from the routine inventory. */
 export function checkCompactSource(text, name, entries = [], exceptions = {}) {
   const lines = text.replace(/\r\n/g, '\n').replace(/\n$/, '').split('\n');
+  const parsed = lines.map(parseLine);
+  const labels = codeLabels(parsed);
   const faults = [];
   const fault = (rule, line, what) => faults.push({ rule, line, what });
   const expected = new Set(entries);
@@ -13,11 +37,10 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
   const wide = exceptions.lines ?? [];
   const longHeaders = { ...exceptions.headers };
   let codeLines = 0, commented = 0, run = 0, longestRun = 0;
-  let routines = 0, headless = 0, header = 0;
-  let previous = 'blank';
+  let routines = 0, headless = 0;
   let inlineNote = false;
   for (const [i, line] of lines.entries()) {
-    const p = parseLine(line);
+    const p = parsed[i];
     const n = i + 1;
     const isBlock = p.kind === 'comment' && p.commentCol === 1;
     const isContinuation = p.kind === 'comment' && p.commentCol === 18;
@@ -31,9 +54,10 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
     }
     if (isContinuation && !inlineNote) fault('continuation', n, 'continue an inline note');
     if (p.kind === 'label') {
-      if (previous === 'code' || previous === 'continuation') fault('blank', n, 'separate a code label from the preceding instruction');
+      if (labels.has(i) && i > 0 && lines[i - 1] !== '') fault('blank', n, 'put a blank line above every code label');
       if (expected.delete(label)) {
         routines++;
+        const header = headerLines(lines, i);
         if (!header) {
           headless++;
           fault('header', n, `${label} has no header`);
@@ -42,8 +66,13 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
         if (header === longHeaders[label]) delete longHeaders[label];
       }
     }
+    if (isBlock) {
+      if (i > 0 && !lines[i - 1].startsWith(';') && lines[i - 1] !== '') fault('block-before', n, 'put a blank line above a margin block');
+      if (i + 1 < lines.length && !lines[i + 1].startsWith(';') && lines[i + 1] !== '') fault('block-after', n, 'put a blank line below a margin block');
+    }
     if (p.kind === 'code') {
       codeLines++;
+      if (p.label) fault('label-line', n, 'give a code label its own line');
       const prefix = p.operand ? `  ${p.mnemonic} ${p.operand}` : `  ${p.mnemonic}`;
       if (p.code.trimEnd() !== prefix) fault('spacing', n, 'put the instruction on its own line with two leading spaces and one operand separator');
       if (p.mnemonic !== p.mnemonic.toLowerCase()) fault('case', n, 'lowercase mnemonic');
@@ -61,11 +90,9 @@ export function checkCompactSource(text, name, entries = [], exceptions = {}) {
       }
       if (p.comment + 1 < line.length && line[p.comment + 1] !== ' ') fault('spacing', n, 'space after semicolon');
     }
-    header = isBlock ? header + 1 : 0;
     if (p.kind === 'comment') run = 0;
     inlineNote = isContinuation ? inlineNote : p.kind !== 'comment' && p.commentCol === 18
       && p.code.length - p.code.trimEnd().length >= 2;
-    previous = isContinuation ? 'continuation' : p.kind;
   }
   for (const entry of expected) fault('inventory', 0, `missing routine label ${entry}`);
   for (const line of wide) if (!used.has(line)) fault('exception', 0, `unused line exception: ${line}`);

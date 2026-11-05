@@ -1,12 +1,12 @@
 ; The data block's text, after
 ; tables.asm, gen/geom.asm and
-; gen/font.asm, the
-; font tools/build.mjs generates from
-; format/font5x7.txt; the code follows
-; it.
+; gen/font.asm, the font tools/build.mjs
+; generates from format/font5x7.txt; the
+; code follows it.
 
 ; ---- boot.asm
 ; --------------------------------------
+
 RAMMSG: DB 13,10,"TEC-OS needs 64K RAM",13,10,0
 BANNER: DB 13,10,"TEC-OS ",VERHI+'0','.',VERLO+'0'," for TEC-1G",13,10,0
 ROTXT: DB " (read-only)",0
@@ -16,6 +16,7 @@ DGCARD: DB "CARD?",0
 
 ; ---- cpm/ccp.asm
 ; --------------------------------------
+
 CRLFMSG:
   DB CR,LF,'$'
 NOFILE:
@@ -41,7 +42,9 @@ CPCLOSE:
 CPCOPIED:
   DB "COPIED ",'$'
 CONNAMS:
+
 ; four bytes each, a colon after three
+
   DB "TTY:CRT:"  ; letters; the last,
                  ; PICO's record name
                  ; too
@@ -60,10 +63,12 @@ BADCHARS:
 
 ; ---- lcd.asm
 ; --------------------------------------
+
 LCDBAN: DB "TEC-OS ",VERHI+'0','.',VERLO+'0',"  TEC-1G",0
 
 ; ---- cpm/bdos.asm
 ; --------------------------------------
+
 ERRHEAD:
   DB CR,LF,"Bdos Err On ",0
 ERRSEL: DB ": Select",0
@@ -75,12 +80,16 @@ ERRFILE:
 ; ---- loader.asm and cpm/ccp.asm: the
 ; LCD's words
 ; ----------------------------
+
 GLCMSG: DB "GLCD?",0
+
 ; blanks wipe any of the words
+
 PICCLR: DB "     ",0
 
 ; ---- cache.asm
 ; --------------------------------------
+
 CWMSG: DB 13,10,"Write lost",0
 
 ROMCODE:

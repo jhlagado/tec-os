@@ -2,16 +2,16 @@
 ; vol.asm: the drive table cleared
 ; (UNMOUNT), a geometry looked up
 ; (GEOFIND), 32-bit block numbers
-; compared
-; (CMP32), the header's and the table's
-; sums (HDRSUM, SUMDE), and a drive's
-; descriptor read back (DRVDESC) for the
-; boot listing and the LCD.
+; compared (CMP32), the header's and the
+; table's sums (HDRSUM, SUMDE), and a
+; drive's descriptor read back (DRVDESC)
+; for the boot listing and the LCD.
 
 ; Forget every mounted volume: DRVTAB
 ; and DRVIDX zeroed, and the BIOS's
 ; buffered record dropped. Destroys AF,
 ; B and HL.
+
 UNMOUNT:
   ld hl,DRVTAB   ; and DRVIDX, which
                  ; follows it
@@ -31,6 +31,7 @@ UNM:
 ; its GEOTAB entry (id, 0, payload
 ; blocks, DPB), or NZ. Keeps C, and A
 ; when found. Destroys B and DE.
+
 GEOFIND:
   ld hl,GEOTAB   ; GEOCNT entries of
                  ; GEOESZ bytes
@@ -47,11 +48,11 @@ GEOF:
 
 ; Compare the 32-bit little-endian
 ; values at HL and DE. C when (HL) <
-; (DE),
-; Z when equal, with HL and DE at the
-; low bytes; otherwise they stop at the
-; first byte, from the top, that
+; (DE), Z when equal, with HL and DE at
+; the low bytes; otherwise they stop at
+; the first byte, from the top, that
 ; differs. Destroys A and B.
+
 CMP32:
   inc hl         ; from the top bytes
                  ; down
@@ -83,10 +84,11 @@ CMPNE:
   ret
 
 ; HL = 16-bit sum of the header's bytes,
-; block 0 in MNTLN with MNBUF its
-; first 32, the checksum field left out,
-; and DE = that checksum. Destroys
-; AF and BC.
+; block 0 in MNTLN with MNBUF its first
+; 32, the checksum field left out, and
+; DE = that checksum. Destroys AF and
+; BC.
+
 HDRSUM:
   ld de,(MNBUF+HCKSUM)
   push de        ; the checksum, across
@@ -114,6 +116,7 @@ HSSUB:
 ; table blocks' (MOUNT). BC from 1; 0 is
 ; 65,536. Returns DE past the bytes and
 ; BC = 0. Destroys AF.
+
 SUMDE:
   ld a,(de)
   add a,l        ; the byte into the low
@@ -135,8 +138,9 @@ SUMDE1:
 ; IX -> the descriptor of the volume on
 ; drive C, read from its block of the
 ; table. NZ if the drive has none or the
-; block does not read. Keeps C.
-; Destroys AF, B, DE and HL.
+; block does not read. Keeps C. Destroys
+; AF, B, DE and HL.
+
 DRVDESC:
   ld hl,DRVIDX   ; the drive's index + 1
   ld b,0

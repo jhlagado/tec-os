@@ -1,25 +1,24 @@
 ; The BDOS's records: sequential and
 ; random reads and writes, the FCB's
-; fields,
-; block allocation and zero fill, and a
-; record's place on the disk. Included
-; after bdosfile.asm by rom.asm.
+; fields, block allocation and zero
+; fill, and a record's place on the
+; disk. Included after bdosfile.asm by
+; rom.asm.
 
 ; Write the DMA's record at the FCB's
 ; current record, CR, and move CR on:
-; for
-; function 21 and, through RANDPREP,
+; for function 21 and, through RANDPREP,
 ; functions 34 and 40. CR at 128 moves
-; the
-; FCB to its next extent first (ADVEXT).
-; Takes the FCB at PARAM and ZEROFIL,
-; bit 0 to zero-fill a new block.
-; Returns A = 0 written, 1 with the
-; directory
-; full, 2 with the disk full; a disk
-; error goes to BADSECT. Destroys every
-; register, SEQREC and WRTYPE, and
-; through ADVEXT TARGEX and TARGS2.
+; the FCB to its next extent first
+; (ADVEXT). Takes the FCB at PARAM and
+; ZEROFIL, bit 0 to zero-fill a new
+; block. Returns A = 0 written, 1 with
+; the directory full, 2 with the disk
+; full; a disk error goes to BADSECT.
+; Destroys every register, SEQREC and
+; WRTYPE, and through ADVEXT TARGEX and
+; TARGS2.
+
 WRITESEQ:
   call FCBCR     ; HL at CR
   ld a,(hl)
@@ -36,10 +35,11 @@ WRITESEQ:
   ld a,(hl)
 
 ; Write the DMA's record as record A of
-; the FCB's extent, claiming a block
-; for it when the map has none. Takes A
-; = the record, 0..127, and the FCB at
+; the FCB's extent, claiming a block for
+; it when the map has none. Takes A =
+; the record, 0..127, and the FCB at
 ; PARAM; returns as WRITESEQ.
+
 WRITEPOS:
   ld (SEQREC),a  ; the record within the
                  ; extent
@@ -50,7 +50,9 @@ WRITEPOS:
                  ; block, 0 for none
   ld a,d
   or e
+
 ; a block in the map: write to it
+
   jr nz,WRITEBLK
   call ALLOCBLK  ; a free block, put in
                  ; the FCB's map
@@ -63,15 +65,17 @@ WRITEPOS:
   ld a,(ZEROFIL)
   rra            ; bit 0 into carry:
                  ; function 40's fill
+
 ; every record of block DE zeroed, DE
 ; kept
+
   call c,ZEROBLK
 
 ; Write the DMA's record, SEQREC of
 ; block DE, with WRTYPE's write type,
-; then
-; move the FCB on. Returns A = 0; a disk
-; error goes to BADSECT.
+; then move the FCB on. Returns A = 0; a
+; disk error goes to BADSECT.
+
 WRITEBLK:
   call POSREC    ; the BIOS on the
                  ; record's track and
@@ -81,33 +85,37 @@ WRITEBLK:
                  ; type
   call BIOWRS
   or a
+
 ; nonzero: the BIOS failed the write
+
   jr nz,WRITEBAD
   jr ADVWRITE    ; the FCB moves on once
                  ; the record is
+
 ; written: function 45's returned error
 ; leaves it on that record, as CP/M 3
 ; does
 
 ; A failed write: the BDOS's disk I/O
 ; error, which does not come back.
+
 WRITEBAD:
   jp BADSECT
 
 ; A sequential write past record 127
 ; moves to the next extent first, as
-; CP/M
-; 2.2's open_reel does: the write that
-; needs the extent makes it. With the
-; directory full that write returns 1
-; and the FCB is put back on its extent,
-; record 128, so a write after an entry
-; is freed makes the extent it needs.
-; A close that fails, no entry holding
-; the extent, returns 1 the same way.
-; Takes the FCB at PARAM. Returns A = 0
-; with CR 0 in the next extent, or 1.
-; Destroys every register.
+; CP/M 2.2's open_reel does: the write
+; that needs the extent makes it. With
+; the directory full that write returns
+; 1 and the FCB is put back on its
+; extent, record 128, so a write after
+; an entry is freed makes the extent it
+; needs. A close that fails, no entry
+; holding the extent, returns 1 the same
+; way. Takes the FCB at PARAM. Returns A
+; = 0 with CR 0 in the next extent, or
+; 1. Destroys every register.
+
 ADVEXT:
   call CLOSEFCB  ; this extent's entry
                  ; brought up to date
@@ -138,6 +146,7 @@ ADVEXT:
 ; The FCB on its new extent: CR to 0.
 ; Takes the saved EX and S2 on the
 ; stack, dropped here. Returns A = 0.
+
 EXTCLEAR:
   pop de         ; the saved EX and S2,
                  ; not needed
@@ -152,6 +161,7 @@ EXTCLEAR:
 ; goes back to its EX and S2, saved on
 ; the stack, with CR still 128. Returns
 ; A = 1.
+
 EXTFULL:
   call FCBEX
   pop de         ; E = the old EX, D =
@@ -165,11 +175,12 @@ EXTFULL:
   ret
 
 ; A record written: CR on one, RC raised
-; to CR when CR passes it, and the
-; FCB marked changed, S2's bit 7 clear,
-; for close to write its entry. Takes
-; the FCB at PARAM. Returns A = 0;
-; destroys B, DE, HL, F.
+; to CR when CR passes it, and the FCB
+; marked changed, S2's bit 7 clear, for
+; close to write its entry. Takes the
+; FCB at PARAM. Returns A = 0; destroys
+; B, DE, HL, F.
+
 ADVWRITE:
   call FCBCR
   inc (hl)       ; CR on to the next
@@ -199,6 +210,7 @@ WRITERC:
 ; FCB's next record into the DMA, and
 ; READSEQ's result returned to the
 ; program.
+
 FNREADSQ:
   call READSEQ
   jp RETA        ; A to the program in A
@@ -209,28 +221,31 @@ FNREADSQ:
 ; moves the FCB to its next extent
 ; first. Takes the FCB at PARAM. Returns
 ; A = 0 read, 1 at the end of the file;
-; a disk error goes to BADSECT.
-; Destroys every register and SEQREC.
+; a disk error goes to BADSECT. Destroys
+; every register and SEQREC.
+
 READSEQ:
   call FCBCR     ; HL at CR
   ld a,(hl)
   cp 128         ; CR 0..127: a record
                  ; in this extent
   jr c,READCHK
+
 ; Close before moving on, as CP/M 2.2's
 ; open_reel does: the reopen replaces
-; the
-; allocation map, so blocks written
-; through
-; this FCB since its open must reach the
-; directory first.
+; the allocation map, so blocks written
+; through this FCB since its open must
+; reach the directory first.
+
   call CLOSEFCB
   inc a
   jr z,READ_EOF  ; FFh: the close failed
   call NEXTEXT   ; the next extent,
                  ; opened
   or a
+
 ; none on the disk: the file ends
+
   jr nz,READ_EOF
   call FCBCR
   xor a
@@ -241,6 +256,7 @@ READSEQ:
 ; at CR, if the extent's record count
 ; and its allocation map hold it.
 ; Returns as READSEQ.
+
 READCHK:
   ld a,(hl)
   ld (SEQREC),a  ; the record within the
@@ -276,6 +292,7 @@ READCHK:
 
 ; The end of the file, or a record not
 ; yet written: A = 1.
+
 READ_EOF:
   ld a,1         ; 1: no record read
   ret
@@ -283,9 +300,10 @@ READ_EOF:
 ; Function 33, read random: record r0-r1
 ; of the FCB into the DMA, CR left on
 ; it. Returns A = 0, 1 for a record not
-; written, 3 when the extent left
-; cannot be closed, 4 for an extent not
+; written, 3 when the extent left cannot
+; be closed, 4 for an extent not
 ; written, 6 past record 65535.
+
 FNRREAD:
   xor a          ; ZEROFIL 0: a read
   ld (ZEROFIL),a
@@ -299,26 +317,26 @@ FNRREAD:
 
 ; ZEROFIL is zero for reads and
 ; sequential writes. Random writes set
-; bit 7,
-; which marks a write for RANDMISS, and
-; function 40 also sets bit 0 to
-; zero-fill each newly allocated block.
-; Function 34, write random: the DMA's
-; record to record r0-r1 of the FCB, CR
-; left on it. Returns as function 40.
+; bit 7, which marks a write for
+; RANDMISS, and function 40 also sets
+; bit 0 to zero-fill each newly
+; allocated block. Function 34, write
+; random: the DMA's record to record
+; r0-r1 of the FCB, CR left on it.
+; Returns as function 40.
+
 FNRWRITE:
   ld a,$80       ; a write, no zero fill
   jr RANDWRT
 
 ; Function 40, write random with zero
 ; fill: as function 34, but a block
-; newly
-; claimed for the record has every
+; newly claimed for the record has every
 ; record zeroed first. Returns A = 0, 2
-; with
-; the disk full, 3 when the extent left
-; cannot be closed, 5 with the
+; with the disk full, 3 when the extent
+; left cannot be closed, 5 with the
 ; directory full, 6 past record 65535.
+
 FNWRZERO:
   ld a,$81       ; a write, with zero
                  ; fill
@@ -328,6 +346,7 @@ FNWRZERO:
 ; further (ROFCB); the record written
 ; and the result returned as function
 ; 40.
+
 RANDWRT:
   ld (ZEROFIL),a
   call ROFCB     ; R/O drive or file: an
@@ -343,6 +362,7 @@ RANDWRT:
 ; back on the record, SEQREC, as CP/M
 ; leaves it, and A, the result, returned
 ; to the program.
+
 RANDDONE:
   push af        ; the result
   call FCBCR
@@ -353,6 +373,7 @@ RANDDONE:
 
 ; Return A, a random read's or write's
 ; result, to the program.
+
 RANDRET:
   jp RETA
 
@@ -361,14 +382,14 @@ RANDRET:
 ; the record within it; an extent not on
 ; the disk is made for a write. Takes
 ; the FCB at PARAM and ZEROFIL, nonzero
-; for a write. Returns no carry and
-; A = 0, or carry and A = 3 (the extent
-; left cannot be closed), 4 (a read of
-; an extent not written), 5 (the
-; directory full) or 6 (past record
-; 65535).
+; for a write. Returns no carry and A =
+; 0, or carry and A = 3 (the extent left
+; cannot be closed), 4 (a read of an
+; extent not written), 5 (the directory
+; full) or 6 (past record 65535).
 ; Destroys every register, SEQREC,
 ; TARGEX and TARGS2.
+
 RANDPREP:
   call FCBCR
   inc hl
@@ -383,7 +404,9 @@ RANDPREP:
   or a
   ld a,6         ; 6: past the last
                  ; record
+
 ; reject before changing any FCB field
+
   jr nz,RANDFAIL
   ld a,c
   and $7F        ; r0's low seven bits:
@@ -416,7 +439,9 @@ RANDPREP:
   ld b,a
   ld a,(TARGEX)
   cp b
+
 ; another extent: close this, open that
+
   jr nz,RANDOPEN
   inc hl
   inc hl
@@ -434,9 +459,10 @@ RANDPREP:
 ; count and blocks written through this
 ; FCB. The FCB then takes TARGEX and
 ; TARGS2, which keep its own EX and S2
-; (EXSWAP), and opens that extent,
-; going to RANDMISS when it is not on
-; the disk. An open sets S2's bit 7.
+; (EXSWAP), and opens that extent, going
+; to RANDMISS when it is not on the
+; disk. An open sets S2's bit 7.
+
 RANDOPEN:
   call CLOSEFCB
   inc a          ; Z: the close returned
@@ -450,11 +476,14 @@ RANDOPEN:
   call NEXTFIND  ; open the extent: its
                  ; entry into the FCB
   or a
+
 ; no entry for it on the disk
+
   jr nz,RANDMISS
 
 ; The FCB on the record's extent: CR =
 ; SEQREC. Returns no carry and A = 0.
+
 RANDPOS:
   call FCBCR
   ld a,(SEQREC)
@@ -467,10 +496,11 @@ RANDPOS:
 ; extent, as CP/M does, and returns 5
 ; when the directory is full. Either
 ; failure puts the FCB's EX and S2 back
-; (EXSWAP), so they name the extent
-; its RC and map still describe, and the
-; next call opens the record's
-; extent again. Returns as RANDPREP.
+; (EXSWAP), so they name the extent its
+; RC and map still describe, and the
+; next call opens the record's extent
+; again. Returns as RANDPREP.
+
 RANDMISS:
   ld a,(ZEROFIL)
   or a           ; zero: a read
@@ -494,6 +524,7 @@ RANDBACK:
 
 ; A random record refused: carry, with A
 ; = the error code.
+
 RANDFAIL:
   scf            ; carry: A is an error,
                  ; the FCB not ready
@@ -505,6 +536,7 @@ RANDFAIL:
 ; RANDPREP found, or back on its own.
 ; Takes the FCB at PARAM. Changes A, C,
 ; DE, HL; keeps B.
+
 EXSWAP:
   call FCBEX     ; HL at EX
   ld de,TARGEX
@@ -513,8 +545,9 @@ EXSWAP:
                  ; TARGS2
 
 ; The byte at HL exchanged with the byte
-; at DE, and both moved on one.
-; Changes A, C, DE, HL.
+; at DE, and both moved on one. Changes
+; A, C, DE, HL.
+
 SWAPB:
   ld a,(de)
   ld c,(hl)
@@ -527,12 +560,12 @@ SWAPB:
 
 ; Return in DE the block that holds
 ; record SEQREC of the FCB's extent, 0
-; for
-; none. A map cell is one byte when DSM
-; is below 256 and two otherwise. Takes
-; the FCB at PARAM. Returns HL at the
-; cell's last byte and IX = the DPB;
+; for none. A map cell is one byte when
+; DSM is below 256 and two otherwise.
+; Takes the FCB at PARAM. Returns HL at
+; the cell's last byte and IX = the DPB;
 ; destroys A, BC, F.
+
 FCBLOCK:
   call FCBADDR   ; HL at the record's
                  ; map cell
@@ -549,8 +582,9 @@ FCBLOCK:
   ret
 
 ; Return HL at the FCB's CR, its current
-; record, byte 32. Destroys DE and
-; the carry.
+; record, byte 32. Destroys DE and the
+; carry.
+
 FCBCR:
   ld de,32       ; CR's offset in the
                  ; FCB
@@ -558,6 +592,7 @@ FCBCR:
 
 ; Return HL at the FCB's EX, its extent,
 ; byte 12. Destroys DE and the carry.
+
 FCBEX:
   ld de,12       ; EX's offset in the
                  ; FCB
@@ -565,6 +600,7 @@ FCBEX:
 ; Return HL at byte DE of the program's
 ; FCB, at PARAM. Keeps A, BC and DE;
 ; destroys the carry.
+
 FCBOFF:
   ld hl,(PARAM)  ; the FCB the program
                  ; passed in DE
@@ -573,13 +609,15 @@ FCBOFF:
 
 ; Return the allocation-map cell for
 ; SEQREC in HL. The record's place in
-; the
-; entry is (EX AND EXM) * 128 + SEQREC,
-; shifted right by BSH. Takes the FCB
-; at PARAM; BSH is at least 1. Destroys
-; A, BC, DE, F.
+; the entry is (EX AND EXM) * 128 +
+; SEQREC, shifted right by BSH. Takes
+; the FCB at PARAM; BSH is at least 1.
+; Destroys A, BC, DE, F.
+
 FCBADDR:
+
 ; the drive's DPB: BSH at 2, EXM at 4
+
   ld hl,(DPBPTR)
   inc hl
   inc hl
@@ -641,11 +679,16 @@ BLOCKBYT:
 ; byte 4. Returns A = 0, or A = 2 with
 ; no block free. Destroys BC, HL, F;
 ; leaves IX = the DPB.
+
 ALLOCBLK:
+
 ; the vector: a bit for each block, bit
 ; 7
+
   ld hl,(ALVPTR)
+
 ; of the first byte for block 0
+
   ld ix,(DPBPTR)
   ld de,0        ; DE = the block the
                  ; bit stands for
@@ -669,7 +712,9 @@ ALLOCLOP:
 ALNEXT:
   inc de         ; the next block
   srl c
+
 ; its bit in the same byte
+
   jr nz,ALLOCLOP
   inc hl
   ld c,$80       ; or bit 7 of the next
@@ -680,16 +725,18 @@ ALNEXT:
 ; drive marked changed, and the block
 ; written in the FCB's map cell for
 ; SEQREC, the FCB marked changed (S2's
-; bit
-; 7 clear) at once, so that close writes
-; the entry that holds the block even
-; when the record's write then fails.
-; Returns A = 0.
+; bit 7 clear) at once, so that close
+; writes the entry that holds the block
+; even when the record's write then
+; fails. Returns A = 0.
+
 ALFOUND:
   ld a,(hl)
   or c           ; the block now in use
   ld (hl),a
+
 ; TEC-OS: the vector changed, the drive
+
   ld hl,(DPHPTR)
   inc hl         ; dirty
   inc hl
@@ -721,6 +768,7 @@ ALLOCDON:
 
 ; Every block through DSM in use: A = 2,
 ; the disk full.
+
 ALFULL:
   ld a,2         ; 2: no block free
   ret
@@ -729,22 +777,24 @@ ALFULL:
 ; allocated block before publishing the
 ; caller's target record. The BIOS
 ; directory buffer is reusable scratch
-; here.
-; Takes DE = the block and SEQREC = the
-; target record. Writes 128 zero bytes
-; to each of the block's records, the
-; BIOS's DMA on them for each write and
-; back on CURDMA after it (DMABACK), so
-; a failed write that function 45
+; here. Takes DE = the block and SEQREC
+; = the target record. Writes 128 zero
+; bytes to each of the block's records,
+; the BIOS's DMA on them for each write
+; and back on CURDMA after it (DMABACK),
+; so a failed write that function 45
 ; returns leaves the program's DMA in
 ; the BIOS. Returns DE = the block and
 ; SEQREC as it was; a disk error goes to
 ; BADSECT. Destroys A, BC, HL, IX, F,
 ; and TARGEX, ALLEFT and ZEROBN, used as
-; scratch, and through POSREC IOTRK
-; and IOSEC.
+; scratch, and through POSREC IOTRK and
+; IOSEC.
+
 ZEROBLK:
+
 ; the block, kept through POSREC
+
   ld (ZEROBN),de
   ld a,(SEQREC)
   ld (TARGEX),a  ; the target record,
@@ -795,13 +845,17 @@ ZEROLOOP:
   ld a,(ALLEFT)
   dec a
   ld (ALLEFT),a
+
 ; until every record of the block is
 ; zero
+
   jr nz,ZEROLOOP
   ld a,(TARGEX)
   ld (SEQREC),a  ; the target record
                  ; back
+
 ; DE = the block, as on entry
+
   ld de,(ZEROBN)
   ret
 
@@ -809,16 +863,18 @@ ZEROLOOP:
 ; allocation block DE: the track and the
 ; sector set through the BIOS, the
 ; sector translated by the drive's XLT.
-; A
-; block past DSM goes to BADSECT. Leaves
-; the track, OFF added, in IOTRK and
-; the untranslated sector in IOSEC.
+; A block past DSM goes to BADSECT.
+; Leaves the track, OFF added, in IOTRK
+; and the untranslated sector in IOSEC.
 ; Destroys A, BC, DE, HL, IX, F.
+
 POSREC:
   call CHKBLK    ; a block past DSM is a
                  ; disk error
   ex de,hl       ; HL = the block
+
 ; the drive's DPB: BSH at 2
+
   ld de,(DPBPTR)
   inc de
   inc de
@@ -834,7 +890,9 @@ BLOCKSHF:
   djnz BLOCKSHF  ; shifted left by BSH
 
 BLOCKSCA:
+
 ; the DPB again: BLM at 3
+
   ld de,(DPBPTR)
   inc de
   inc de
@@ -886,6 +944,7 @@ BLOCKSCA:
 ; quotient in, each bit a shift behind
 ; its trial subtraction. Returns A = D;
 ; destroys F, BC.
+
 DIV16:
   ld a,h
   ld c,l         ; A:C = the dividend
@@ -919,12 +978,12 @@ DIV16S:
 
 ; Move the FCB to its next extent and
 ; open it: EX on one, and past 31 back
-; to
-; 0 with S2, the module, on one, its bit
-; 7 kept. Takes the FCB at PARAM.
+; to 0 with S2, the module, on one, its
+; bit 7 kept. Takes the FCB at PARAM.
 ; Returns A = 0 with the entry's fields
 ; in the FCB, or A = 1 with no entry for
 ; the extent. Destroys every register.
+
 NEXTEXT:
   call FCBEX
   ld a,(hl)
@@ -932,7 +991,9 @@ NEXTEXT:
   and $1F        ; EX on one, 31
                  ; wrapping to 0
   ld (hl),a
+
 ; no wrap: S2 stands
+
   jr nz,NEXTFIND
   inc hl
   inc hl
@@ -949,14 +1010,17 @@ NEXTEXT:
   ld (hl),a
 
 ; Open the FCB's extent as its EX and S2
-; stand: the directory searched in
-; mode 1, open, a match's fields copied
-; into the FCB. Takes the FCB at PARAM.
+; stand: the directory searched in mode
+; 1, open, a match's fields copied into
+; the FCB. Takes the FCB at PARAM.
 ; Returns A = 0 found, 1 not; destroys
 ; every register.
+
 NEXTFIND:
   ld hl,(PARAM)
+
 ; the search's FCB: the program's
+
   ld (SRCHFCB),hl
   ld a,1         ; mode 1: open, the
                  ; entry into the FCB
@@ -971,6 +1035,7 @@ NEXTFIND:
 
 ; No directory entry for the extent: A =
 ; 1.
+
 NEXTMISS:
   ld a,1         ; 1: not found
   ret

@@ -1,6 +1,6 @@
 ; The CCP's file commands: DIR with its
-; paging and its footer, TYPE, ERA,
-; REN and COPY, with the decimal and hex
+; paging and its footer, TYPE, ERA, REN
+; and COPY, with the decimal and hex
 ; printers they share. Included after
 ; ccp.asm, in this order, by rom.asm.
 
@@ -15,27 +15,32 @@
 ; CMDFCB, LOADBUF as the DMA record,
 ; DIRCOL, DIRNCOL and DIRNUM; returns to
 ; the prompt, by FILENO when nothing
-; matched.
-; DIR calls the BDOS for the DMA (26),
-; search first and next (17, 18), the
-; drive's free space (46) and, when a
-; page fills, a key (6); it reads only
-; the
-; directory record search returns in the
-; DMA.
+; matched. DIR calls the BDOS for the
+; DMA (26), search first and next (17,
+; 18), the drive's free space (46) and,
+; when a page fills, a key (6); it reads
+; only the directory record search
+; returns in the DMA.
+
 CMDDIR:
   call ARGSKIP   ; the operand, past its
                  ; spaces,
   call CMDPARSE  ; into CMDFCB, or a bad
                  ; command,
   call ENDCHK    ; with nothing after it
+
 ; no name, with or without a drive:
 ; every file
+
   ld a,(CMDFCB+1)
   cp SPACE
+
 ; a name given: searched for as it is
+
   jr nz,DIRREADY
+
 ; else all 11 name and type bytes
+
   ld hl,CMDFCB+1
   ld b,11        ; 8 name + 3 type bytes
   ld a,'?'
@@ -51,9 +56,10 @@ DIRWILD:
 ; LOADBUF, no row is started, no file
 ; counted, and DIRNCOL takes the count
 ; of entries a row holds, at least one.
-; The pager starts a new screen, and
-; the first search's result goes to
-; DIRLOOP in A.
+; The pager starts a new screen, and the
+; first search's result goes to DIRLOOP
+; in A.
+
 DIRREADY:
   ld de,LOADBUF  ; BDOS 26: the DMA
                  ; record, where each
@@ -65,7 +71,9 @@ DIRREADY:
                  ; entry starts one
   ld h,a
   ld l,a
+
 ; no file listed yet
+
   ld (DIRNUM),hl
   ld a,(VWID)    ; TEC-OS: columns of 13
                  ; that fit the console
@@ -94,7 +102,9 @@ DIRWSET:
   inc a          ; still has one column
 
 DIRWOK:
+
 ; the entries on a full row
+
   ld (DIRNCOL),a
   call PGINIT    ; the pager starts a
                  ; new screen
@@ -108,6 +118,7 @@ DIRWOK:
 ; when no more match. A system file is
 ; passed over; any other is printed, a
 ; new row begun when the last is full.
+
 DIRLOOP:
   inc a          ; FFh: the search is
                  ; over
@@ -150,12 +161,14 @@ DIRLOOP:
 ; entries a full row holds. Every row
 ; but the first begins with CR LF
 ; through the pager, which may pause
-; there,
-; and the listing stops if the key says
-; so. The entry's address is on the
-; stack.
+; there, and the listing stops if the
+; key says so. The entry's address is on
+; the stack.
+
 DIRHEAD:
+
 ; columns remaining in this row
+
   ld a,(DIRNCOL)
   ld (DIRCOL),a
   ld hl,(DIRNUM)
@@ -171,10 +184,13 @@ DIRHEAD:
 ; One entry as NAME.EXT, padded to 12
 ; unless it ends the line. Takes the
 ; entry's address on the stack; counts
-; it in DIRNUM and DIRCOL and goes on
-; to the next search.
+; it in DIRNUM and DIRCOL and goes on to
+; the next search.
+
 DIRNAME:
+
 ; one more file listed
+
   ld hl,(DIRNUM)
   inc hl
   ld (DIRNUM),hl
@@ -218,6 +234,7 @@ DIRPADC:
 
 ; The next match, by search next, to
 ; DIRLOOP with its result in A.
+
 DIRNEXT:
   call DOSSEQ    ; the next match's
                  ; index, or FFh
@@ -227,6 +244,7 @@ DIRNEXT:
 ; The search is over: NO FILE when
 ; nothing was listed, else the footer.
 ; Returns to the prompt.
+
 DIRDONE:
   ld hl,(DIRNUM)
   ld a,h         ; not one file listed
@@ -235,12 +253,15 @@ DIRDONE:
 
 ; Footer: "n files, nK free" for the
 ; drive listed.
+
   call PGCRLF    ; end the last row
   jp c,STARTED   ; stopped at a page
                  ; pause
   ld hl,(DIRNUM)
   call PUTDEC    ; the count of files
+
 ; " files, " for any count
+
   ld de,FILESMSG
   ld hl,(DIRNUM)
   dec hl         ; but one: " file, "
@@ -269,9 +290,13 @@ DIRFREE:
   ld c,46        ; 24 bits, into the DMA
                  ; record LOADBUF
   call BDOS
+
 ; kilobytes = records / 8
+
   ld hl,(LOADBUF)
+
 ; the count in A:H:L
+
   ld a,(LOADBUF+2)
   ld b,3         ; three halvings
 
@@ -291,15 +316,13 @@ DIRFK:
 ; --------------------------------------
 ; TYPE and DIR count the lines they
 ; print, including lines that wrap at
-; the
-; console width. One line short of a
+; the console width. One line short of a
 ; full screen they show [more] and wait
-; for
-; a key: ^C, Esc or Q stops the listing,
-; anything else shows the next screen.
-; The size comes from the console
-; geometry; a serial-only console is 80
-; x 24.
+; for a key: ^C, Esc or Q stops the
+; listing, anything else shows the next
+; screen. The size comes from the
+; console geometry; a serial-only
+; console is 80 x 24.
 
 ; Start a listing on a new screen: no
 ; lines counted and the column at 0,
@@ -307,6 +330,7 @@ DIRFK:
 ; the pause prompt, and its width from
 ; the console geometry, or 24 by 80 for
 ; a serial console. Destroys AF.
+
 PGINIT:
   xor a
   ld (PGLINE),a  ; no lines printed on
@@ -339,6 +363,7 @@ PGIW:
 ; set when the user stops the listing.
 ; Destroys AF, DE and HL, and BC when it
 ; pauses.
+
 PGCRLF:
   ld e,CR
   call PGPUT
@@ -350,12 +375,13 @@ PGCRLF:
 ; Print E, counting lines and pausing
 ; when the screen is full. Carry set
 ; when the user stops the listing. PGCOL
-; follows the column: CR returns it
-; to 0, a backspace steps it back, a tab
+; follows the column: CR returns it to
+; 0, a backspace steps it back, a tab
 ; moves it to the next multiple of 8,
 ; and a printable character at the width
-; begins a wrapped line. Destroys AF,
-; DE and HL, and BC when it pauses.
+; begins a wrapped line. Destroys AF, DE
+; and HL, and BC when it pauses.
+
 PGPUT:
   ld a,e
   cp LF          ; line feed: a new
@@ -424,15 +450,17 @@ PGTAB:
 PGLF:
   call PUTCHAR   ; the line feed itself
                  ; first
+
 ; A new line begins. Pause first if the
-; screen is full: show [more], wait
-; for a key and erase the prompt. ^C,
-; Esc or Q return carry set to stop the
+; screen is full: show [more], wait for
+; a key and erase the prompt. ^C, Esc or
+; Q return carry set to stop the
 ; listing; any other key starts a new
 ; screen. Otherwise the line is counted
 ; and the column set to 0, with carry
 ; clear. Destroys AF, DE and HL, and BC
 ; when it pauses.
+
 PGNEWL:
   ld a,(PGLINE)
   inc a          ; this screen's lines
@@ -475,10 +503,12 @@ PGNL1:
                  ; clear: go on
   ld (PGCOL),a
   ret
+
 ; ^C drops the rest of a chained line,
 ; as it does at a program's line input;
 ; Esc and Q stop only the listing. Both
 ; return carry set.
+
 PGDROP:
   xor a
   ld (CHPOS),a   ; no chained piece left
@@ -495,6 +525,7 @@ PGSTOP:
 ; printed in C, which runs on from its
 ; value at entry. Leaves HL after the
 ; field and B at 0. Destroys AF and DE.
+
 PUTTRIM:
   ld a,(hl)
   and $7F        ; the character without
@@ -517,6 +548,7 @@ PUTTSK:
 ; 10 go on the stack above a 10, which
 ; no digit equals, and print in reverse.
 ; Destroys AF, BC, DE and HL.
+
 PUTDEC:
   ld de,10       ; the divisor, and the
                  ; end marker
@@ -548,15 +580,16 @@ PUTDP:
   jr PUTDP
 
 ; TYPE name: print a text file through
-; the pager, up to its first ^Z or
-; its end, then close it. NO FILE when
-; no name is given or the file is not
+; the pager, up to its first ^Z or its
+; end, then close it. NO FILE when no
+; name is given or the file is not
 ; there; a bad command for an ambiguous
-; name or more after it. Uses CMDFCB
-; and LOADBUF as the DMA record; returns
-; to the prompt.
-; TYPE streams public 128-byte records
-; and stops at CP/M text EOF.
+; name or more after it. Uses CMDFCB and
+; LOADBUF as the DMA record; returns to
+; the prompt. TYPE streams public
+; 128-byte records and stops at CP/M
+; text EOF.
+
 CMDTYPE:
   call ARGSKIP   ; the operand: none is
                  ; NO FILE
@@ -577,6 +610,7 @@ CMDTYPE:
 ; The next record into LOADBUF. A
 ; nonzero result is the file's end, or a
 ; read error, and ends the listing.
+
 TYPEREAD:
   call DOSSEQ    ; read sequential: A 0
                  ; for a record
@@ -588,9 +622,10 @@ TYPEREAD:
   ld b,128
 
 ; Each byte of the record through the
-; pager, up to a ^Z, CP/M's end of
-; text. HL points to the byte and B
-; counts those left in the record.
+; pager, up to a ^Z, CP/M's end of text.
+; HL points to the byte and B counts
+; those left in the record.
+
 TYPEBYTE:
   ld a,(hl)
   cp $1A         ; ^Z: the text ends
@@ -612,6 +647,7 @@ TYPEBYTE:
 
 ; Close the file and return to the
 ; prompt on a new line.
+
 TYPEEND:
   call DOSSEQ    ; close it
   DB 16*2+0      ; BDOS 16, source FCB
@@ -620,6 +656,7 @@ TYPEEND:
 
 ; The NO FILE error: the message, the
 ; failure code and the prompt.
+
 FILENO:
   ld de,NOFILE
   jp ERRGO       ; the message at DE as

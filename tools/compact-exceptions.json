@@ -5,29 +5,29 @@
       "  DB 0,3, 2,4, 5,3, 8,3, 10,4, 13,3, 16,3, 18,3"
     ],
     "headers": {
-      "INIT": 17
+      "INIT": 16
     }
   },
   "src/bios.asm": {
     "lines": [],
     "headers": {
-      "BWRITE": 24
+      "BWRITE": 21
     }
   },
   "src/boot.asm": {
     "lines": [],
     "headers": {
-      "RSTENT": 19,
-      "RSLCAP": 23,
-      "PZSWP": 18,
+      "RSTENT": 18,
+      "RSLCAP": 22,
+      "PZSWP": 17,
       "RAMCHK": 17
     }
   },
   "src/cache.asm": {
     "lines": [],
     "headers": {
-      "CWRBH": 20,
-      "MVCOPY": 25
+      "CWRBH": 16,
+      "MVCOPY": 22
     }
   },
   "src/cpm/bdos.asm": {
@@ -39,45 +39,45 @@
   "src/cpm/bdosfile.asm": {
     "lines": [],
     "headers": {
-      "WRESET": 17,
-      "MAKEFCB": 17
+      "WRESET": 16,
+      "MAKEFCB": 16
     }
   },
   "src/cpm/bdosfn.asm": {
     "lines": [],
     "headers": {
-      "FINDENT": 23,
-      "MATCHFCB": 24
+      "FINDENT": 20,
+      "MATCHFCB": 20
     }
   },
   "src/cpm/bdoslog.asm": {
     "lines": [],
     "headers": {
-      "LOGIN": 17
+      "LOGIN": 16
     }
   },
   "src/cpm/bdosrec.asm": {
     "lines": [],
     "headers": {
-      "ZEROBLK": 18
+      "ZEROBLK": 17
     }
   },
   "src/cpm/ccpcmd.asm": {
     "lines": [],
     "headers": {
-      "CMDCON": 21
+      "CMDCON": 20
     }
   },
   "src/cpm/ccpfile.asm": {
     "lines": [],
     "headers": {
-      "CMDDIR": 19
+      "CMDDIR": 17
     }
   },
   "src/loader.asm": {
     "lines": [],
     "headers": {
-      "SVCUNL": 20
+      "SVCUNL": 17
     }
   },
   "src/pico.asm": {
@@ -92,7 +92,7 @@
   "src/services.asm": {
     "lines": [],
     "headers": {
-      "HWSVID": 17
+      "HWSVID": 16
     }
   },
   "src/tables.asm": {
@@ -119,15 +119,11 @@
   },
   "src/video.asm": {
     "lines": [],
-    "headers": {
-      "VIDHOOK": 18
-    }
+    "headers": {}
   },
   "src/vol.asm": {
     "lines": [],
-    "headers": {
-      "MNBLK": 16
-    }
+    "headers": {}
   },
   "src/cpm/ccpmut.asm": {
     "lines": [],
@@ -138,7 +134,7 @@
   "src/volsvc.asm": {
     "lines": [],
     "headers": {
-      "RESEL": 30,
+      "RESEL": 29,
       "VSMNT": 17
     }
   }

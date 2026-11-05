@@ -12,16 +12,16 @@
 ; Four records share one 512-byte SD
 ; block. Reads go through the block
 ; cache (cache.asm). Writes go through
-; to
-; the card before success is reported,
-; except on the one volume written
-; behind, whose writes stay in the cache
-; until it writes them.
+; to the card before success is
+; reported, except on the one volume
+; written behind, whose writes stay in
+; the cache until it writes them.
 
 ; BIOS HOME (track 0) and SETTRK: BC =
-; the track, kept in DSKTRK for the
-; next READ or WRITE. Nothing moves: the
-; card has no head. HOME destroys BC.
+; the track, kept in DSKTRK for the next
+; READ or WRITE. Nothing moves: the card
+; has no head. HOME destroys BC.
+
 BHOME:
   ld bc,0        ; HOME is SETTRK with
                  ; track 0
@@ -32,30 +32,34 @@ BSETTRK:
 
 ; BIOS SETSEC: BC = the sector, kept in
 ; DSKSEC; MAPREC checks it.
+
 BSETSEC:
   ld (DSKSEC),bc
   ret
 
 ; BIOS SETDMA: BC = the address the next
 ; record goes to or comes from.
+
 BSETDMA:
   ld (DSKDMA),bc
   ret
 
 ; BIOS SECTRAN: BC = the logical sector,
-; DE = the table, unused. Returns
-; HL = BC, the same sector.
+; DE = the table, unused. Returns HL =
+; BC, the same sector.
+
 BSECTRN:
   ld h,b         ; no skew
   ld l,c
   ret
 
 ; C = drive. Returns HL = DPH, or 0 when
-; the drive has no mounted volume.
-; A selected drive becomes DSKCUR; a
+; the drive has no mounted volume. A
+; selected drive becomes DSKCUR; a
 ; refused one leaves it as it was. E's
 ; first-login bit is not looked at.
 ; Keeps BC; destroys A, DE and F.
+
 BSELDSK:
   ld a,c
   cp MAXDRV      ; past the last drive:
@@ -73,8 +77,10 @@ BSELDSK:
 DPHADR:
   ld l,a         ; HL = DPHTAB + 16 *
                  ; drive A, for BSELDSK,
+
 ; MNDPH and ALVINIT; keeps BC, destroys
 ; DE
+
   ld h,0
   add hl,hl      ; 16 bytes a DPH
   add hl,hl
@@ -92,6 +98,7 @@ SELBAD:
 ; A = drive. Returns HL = address of its
 ; drive-table geometry byte (offset 6),
 ; and preserves BC. Destroys A and DE.
+
 DRVENT:
   add a,a        ; 8 bytes a drive's
                  ; entry (DRVESZ)
@@ -109,10 +116,11 @@ DRVENT:
 ; Translate DSKTRK/DSKSEC on DSKCUR into
 ; BLKOFF, BLKSLOT and SDLBA. Returns Z
 ; with A = 0 when the record lies inside
-; the volume; NZ when the sector,
-; the track or the block is out of
-; range, SDLBA then unchanged. Destroys
-; BC, DE and HL.
+; the volume; NZ when the sector, the
+; track or the block is out of range,
+; SDLBA then unchanged. Destroys BC, DE
+; and HL.
+
 MAPREC:
   ld hl,(DSKSEC)
   ld a,h         ; sectors 0-63 only
@@ -121,7 +129,9 @@ MAPREC:
   ld a,l         ; and below 64
   cp 64
   jr nc,MAPBAD
+
 ; tracks 0-1023 only
+
   ld hl,(DSKTRK)
   ld a,h         ; tracks above 1023
                  ; overflow 16-bit
@@ -147,7 +157,9 @@ MAPREC:
   rr l
   srl h
   rr l
+
 ; the block within the volume
+
   ld (BLKOFF),hl
   ld a,(DSKCUR)  ; compare with the
                  ; volume length
@@ -169,7 +181,9 @@ MAPREC:
   dec hl         ; HL -> start block
                  ; byte 3
   ld de,SDLBA+3
+
 ; the block, added below
+
   ld bc,(BLKOFF)
   ld a,(hl)      ; SDLBA = start +
                  ; block, little-endian
@@ -192,7 +206,9 @@ MAPREC:
                  ; the low word
   add hl,bc
   ld (SDLBA),hl
+
 ; and its carry to the high word
+
   ld hl,(SDLBA+2)
   ld bc,0
   adc hl,bc
@@ -205,11 +221,12 @@ MAPBAD:
   ret
 
 ; The no-pre-read rule's key: the block
-; BLKOFF on drive DSKCUR, held as C
-; says (BUFOK: 2 cleared, not read), so
-; that the next block of its allocation
-; block can be cleared rather than read.
+; BLKOFF on drive DSKCUR, held as C says
+; (BUFOK: 2 cleared, not read), so that
+; the next block of its allocation block
+; can be cleared rather than read.
 ; Returns Z. Destroys A and HL.
+
 GETKEY:
   ld a,(DSKCUR)  ; the drive and block,
                  ; as BWRITE compares
@@ -222,10 +239,11 @@ GETKEY:
   ret
 
 ; BIOS READ: copy the record to DSKDMA,
-; through the cache. A = 0 on
-; success, 1 on error. Interrupts are
-; off within, and back as they were.
-; Destroys BC, DE and HL.
+; through the cache. A = 0 on success, 1
+; on error. Interrupts are off within,
+; and back as they were. Destroys BC, DE
+; and HL.
+
 BREAD:
   call CDI
   call MAPREC    ; a record outside the
@@ -236,34 +254,33 @@ BREAD:
 ; A BIOS WRITE refused before any
 ; change: A = 1, with NZ from the test
 ; that came here.
+
 DSKERR:
   ld a,1
   ret
 
 ; BIOS WRITE: the record goes into its
-; block's line in the cache (CWRBH),
-; the one write path. The block is read
-; into the line first, unless nothing
-; in it is the card's to keep: the write
-; is of type 2 (C), the first to a newly
+; block's line in the cache (CWRBH), the
+; one write path. The block is read into
+; the line first, unless nothing in it
+; is the card's to keep: the write is of
+; type 2 (C), the first to a newly
 ; allocated block, or the block before,
 ; cleared rather than read, is on this
 ; drive and in the same allocation block
 ; (GETKEY's key). On a volume written
 ; through the line goes to the card
 ; before the call returns; on the one
-; written
-; behind it stays dirty until a
+; written behind it stays dirty until a
 ; directory write, warm boot or remount.
-; A = 0 on
-; success, 1 on error; interrupts are
-; off within, and back as they were.
-; A directory write also marks its
-; drive's DPH: the word at offset 4 set
-; to
-; 1, and the one at 6 raised to cover
-; the block's entries. Destroys BC, DE
-; and HL.
+; A = 0 on success, 1 on error;
+; interrupts are off within, and back as
+; they were. A directory write also
+; marks its drive's DPH: the word at
+; offset 4 set to 1, and the one at 6
+; raised to cover the block's entries.
+; Destroys BC, DE and HL.
+
 BWRITE:
   call CDI
   ld a,c         ; the type: 0 data, 1
@@ -412,6 +429,7 @@ BWGET:
 ; read is for an NMOS Z80, which can
 ; clear P/V if an interrupt is accepted
 ; during the first. Destroys A.
+
 IFFGET:
   ld a,i         ; P/V = IFF2: PE,
                  ; interrupts on
@@ -421,8 +439,9 @@ IFFGET:
   ret
 
 ; Interrupts off for a BIOS entry, their
-; state kept in CIFF. Destroys A,
-; F and HL.
+; state kept in CIFF. Destroys A, F and
+; HL.
+
 CDI:
   call IFFGET
   di
@@ -437,6 +456,7 @@ CDI:
 ; Z, 1 for NZ (BRET); then, for any
 ; entry, interrupts back as CDI found
 ; them, keeping A and the flags (CEI).
+
 BRET:
   ld a,0         ; BIOS READ and WRITE:
                  ; A from Z or NZ, and

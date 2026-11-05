@@ -1,10 +1,8 @@
 ; Video terminal: interprets console
-; output for a character display of
-; VWID columns by VHGT rows. Serial
-; output is passed through untouched;
-; the
-; remote terminal does its own
-; interpretation.
+; output for a character display of VWID
+; columns by VHGT rows. Serial output is
+; passed through untouched; the remote
+; terminal does its own interpretation.
 ;
 ; A character in the last column leaves
 ; the cursor past the edge; the line
@@ -16,33 +14,30 @@
 ; home), and these ANSI sequences: ESC [
 ; n A/B/C/D (cursor moves), ESC [ r;c H
 ; and f (position, 1-based), ESC [ J and
-; 2J (clear to end, clear screen),
-; ESC [ K (clear to end of line), ESC [
-; 0 m and 7 m (normal, reverse),
-; ESC [ n @ and n P (insert and delete
-; characters at the cursor, shifting the
-; rest of the line), ESC [ t ; b r
-; (scroll region), ESC [ n L and n M
-; (insert
-; and delete lines at the cursor row
-; within the scroll region; the cursor
-; goes to column 1). Other sequences are
+; 2J (clear to end, clear screen), ESC [
+; K (clear to end of line), ESC [ 0 m
+; and 7 m (normal, reverse), ESC [ n @
+; and n P (insert and delete characters
+; at the cursor, shifting the rest of
+; the line), ESC [ t ; b r (scroll
+; region), ESC [ n L and n M (insert and
+; delete lines at the cursor row within
+; the scroll region; the cursor goes to
+; column 1). Other sequences are
 ; consumed and ignored. Characters at
 ; 80h-FFh are the reverse images of
 ; 00h-7Fh, which also draws the cursor.
-; The
-; cursor is shown only while console
+; The cursor is shown only while console
 ; input is awaited, so output does not
-; pay
-; for redrawing it.
+; pay for redrawing it.
 ;
 ; The display driver's table, copied
 ; into the vectors by CONSW, supplies
-; VPUT
-; (A at row B, column C), VGET, VCLREOL
-; (from row B, column C), and VRDROW and
-; VWRROW (row B to and from LINEBUF);
-; video.asm calls through them.
+; VPUT (A at row B, column C), VGET,
+; VCLREOL (from row B, column C), and
+; VRDROW and VWRROW (row B to and from
+; LINEBUF); video.asm calls through
+; them.
 
 ; Output C to the video terminal: a
 ; printable character at the cursor, a
@@ -50,6 +45,7 @@
 ; next byte of an escape sequence. The
 ; cursor, if drawn, is removed first.
 ; Destroys AF, BC, DE, HL.
+
 VTOUT:
   call CURHIDE
   ld a,(ESCST)   ; inside a sequence:
@@ -102,11 +98,11 @@ VTDONE:
   ret
 
 ; The control characters VTOUT acts on,
-; A = C = the character: CR, LF, BS,
-; HT, FF, and ESC, which starts a
-; sequence; the rest are ignored.
-; Destroys
-; AF, BC, DE, HL.
+; A = C = the character: CR, LF, BS, HT,
+; FF, and ESC, which starts a sequence;
+; the rest are ignored. Destroys AF, BC,
+; DE, HL.
+
 VTCTL:
   cp 13          ; CR
   jr z,VTCR
@@ -176,10 +172,11 @@ VTFF:
   jr VTDONE
 
 ; Move down a line. At the bottom of the
-; scroll region the region scrolls up
-; a line; below the region the cursor
+; scroll region the region scrolls up a
+; line; below the region the cursor
 ; stops at the last row. Destroys AF,
 ; HL, and when it scrolls BC and DE too.
+
 VTLF:
   ld a,(VROW)
   ld hl,VSBOT
@@ -204,6 +201,7 @@ VTLFS:
 
 ; The scroll region is the whole screen:
 ; rows 0 to VHGT-1. Destroys AF.
+
 VTREGR:
   xor a
   ld (VSTOP),a   ; the top row, 0
@@ -217,6 +215,7 @@ VTREGR:
 ; through VCLREOL; the cursor is not
 ; moved. Destroys AF, BC and what the
 ; driver's VCLREOL does.
+
 VTCLS:
   ld b,0         ; from row 0
 
@@ -238,12 +237,12 @@ VTCLL:
 ; 2 in the first parameter, 3 in the
 ; second. Entered from VTOUT with A =
 ; ESCST and C = the byte; ESCP1 and
-; ESCP2
-; collect the parameters, ESCP2 FFh
-; while there is no second one. A final
-; byte, 40h or above, ends the sequence
-; and is dispatched to its action.
-; Destroys AF, BC, DE, HL.
+; ESCP2 collect the parameters, ESCP2
+; FFh while there is no second one. A
+; final byte, 40h or above, ends the
+; sequence and is dispatched to its
+; action. Destroys AF, BC, DE, HL.
+
 VTESC:
   cp 1           ; past ESC: a parameter
                  ; or the end
@@ -355,10 +354,10 @@ VTPFIN:
 ; b (1-based; absent or 0 means the
 ; screen's first or last row). The
 ; region must cover two rows or more;
-; the
-; cursor goes home, as on a VT100. A
+; the cursor goes home, as on a VT100. A
 ; region that doesn't fit is ignored.
 ; Destroys AF, C, HL.
+
 VTREG:
   ld a,(ESCP1)
   or a           ; 0 is row 1, else
@@ -405,6 +404,7 @@ VTREGC:
 
 ; Count from ESCP1, at least 1, in B.
 ; Destroys AF.
+
 VTN:
   ld a,(ESCP1)
   or a           ; absent or 0 counts as
@@ -420,12 +420,12 @@ VTN1:
 ; VTPFIN with the sequence ended and the
 ; parameters in ESCP1 and ESCP2, and
 ; return through VTDONE. Each destroys
-; AF,
-; BC, DE, HL. Cursor moves stop at the
-; screen's edges, not the region's.
+; AF, BC, DE, HL. Cursor moves stop at
+; the screen's edges, not the region's.
 
 ; ESC [ n A: up n rows, stopping at row
 ; 0.
+
 VTUP:
   call VTN
   ld a,(VROW)    ; row less the count
@@ -437,8 +437,10 @@ VTUP:
 VTSETR:
   ld (VROW),a    ; the new row
   jp VTDONE
+
 ; ESC [ n B: down n rows, stopping at
 ; the last row.
+
 VTDOWN:
   call VTN
   ld a,(VROW)    ; row plus the count
@@ -452,8 +454,10 @@ VTDN1:
   ld hl,VHGT
   call VTCLIP    ; to VHGT-1
   jr VTSETR
+
 ; ESC [ n C: right n columns, stopping
 ; at the last column.
+
 VTRIGHT:
   call VTN
   ld a,(VCOL)    ; column plus the count
@@ -469,8 +473,10 @@ VTRT1:
 VTSETC:
   ld (VCOL),a    ; the new column
   jp VTDONE
+
 ; ESC [ n D: left n columns, stopping at
 ; column 0.
+
 VTLEFT:
   call VTN
   ld a,(VCOL)    ; column less the count
@@ -479,8 +485,10 @@ VTLEFT:
                  ; the screen
   xor a
   jr VTSETC
+
 ; ESC [ r ; c H and f: row r, column c,
 ; each clipped to the screen.
+
 VTPOS:
   ld a,(ESCP1)   ; 1-based, 0 means 1
   or a
@@ -506,10 +514,12 @@ VTPC:
   ld hl,VWID
   call VTCLIP    ; to VWID-1
   jr VTSETC
+
 ; ESC [ 2 J clears the screen; ESC [ J,
-; and any other parameter, clears
-; from the cursor to the end of the
-; screen. The cursor stays.
+; and any other parameter, clears from
+; the cursor to the end of the screen.
+; The cursor stays.
+
 VTED:
   ld a,(ESCP1)
   cp 2           ; 2: the whole screen
@@ -537,8 +547,10 @@ VTEDL:
 VTED2:
   call VTCLS     ; the cursor kept
   jp VTDONE
+
 ; ESC [ K, whatever its parameter: clear
 ; from the cursor to the line's end.
+
 VTEL:
   ld hl,(VROW)
   ld b,l         ; B = row, C = column
@@ -546,18 +558,21 @@ VTEL:
   call VCLREOL   ; from the cursor to
                  ; the edge
   jp VTDONE
+
 ; ESC [ m: each of the two parameters, 0
 ; normal and 7 reverse, in turn.
+
 VTSGR:
   ld a,(ESCP1)
   call VTSGR1    ; the first parameter
   ld a,(ESCP2)
   call VTSGR1    ; then the second
   jp VTDONE
+
 ; Act on one attribute parameter in A:
-; FFh (absent) and values other than
-; 0 and 7 change nothing. Destroys AF,
-; B.
+; FFh (absent) and values other than 0
+; and 7 change nothing. Destroys AF, B.
+
 VTSGR1:
   cp $FF         ; absent
   ret z
@@ -583,6 +598,7 @@ VTSGRS:
 ; the cursor to the end of the line, C =
 ; those cells. Z when the cursor is past
 ; the edge, else NZ. Destroys AF, HL.
+
 VTNC:
   ld a,(VWID)
   ld hl,VCOL
@@ -610,6 +626,7 @@ VTNCZ:
   ret
 
 ; HL = LINEBUF + A. Preserves BC, DE.
+
 LBADR:
   push de
   ld e,a         ; DE = the offset A
@@ -622,6 +639,7 @@ LBADR:
 ; Read the cursor row into LINEBUF.
 ; Destroys AF, B and what the driver's
 ; VRDROW does.
+
 VTRDC:
   ld a,(VROW)
   ld b,a         ; B = the cursor row
@@ -630,9 +648,9 @@ VTRDC:
 
 ; ESC [ n @: insert n blanks at the
 ; cursor; the cells from it move right
-; and
-; those pushed past the edge are lost.
-; Destroys AF, BC, DE, HL.
+; and those pushed past the edge are
+; lost. Destroys AF, BC, DE, HL.
+
 VTICH:
   call VTNC
   jp z,VTDONE    ; past the edge:
@@ -689,6 +707,7 @@ VTBLL:
 ; cursor; the cells after them move left
 ; and blanks fill in at the right.
 ; Destroys AF, BC, DE, HL.
+
 VTDCH:
   call VTNC
   jp z,VTDONE    ; past the edge:
@@ -726,13 +745,13 @@ VTDCF:
   jr VTBLNK
 
 ; ESC [ n L and ESC [ n M work from the
-; cursor row to the bottom of the
-; scroll region, and do nothing when the
-; cursor is outside it. B = the count
-; clipped to those rows, C = the cursor
-; row; Z when outside. Inside, the
-; cursor goes to column 0. Destroys AF,
-; E, HL.
+; cursor row to the bottom of the scroll
+; region, and do nothing when the cursor
+; is outside it. B = the count clipped
+; to those rows, C = the cursor row; Z
+; when outside. Inside, the cursor goes
+; to column 0. Destroys AF, E, HL.
+
 VTNR:
   ld a,(VROW)
   ld hl,VSTOP
@@ -765,6 +784,7 @@ VTNRNO:
 ; ESC [ n L and ESC [ n M: insert or
 ; delete n lines at the cursor row.
 ; Destroys AF, BC, DE, HL.
+
 VTIL:
   call VTNR
   call nz,VTILR  ; inside: lines
@@ -777,9 +797,10 @@ VTDL:
   jp VTDONE
 
 ; Insert B blank lines at row C: rows C
-; to VSBOT move down, the last B lost.
-; B is 1 or more and C+B at most
-; VSBOT+1. Destroys AF, BC, DE, HL.
+; to VSBOT move down, the last B lost. B
+; is 1 or more and C+B at most VSBOT+1.
+; Destroys AF, BC, DE, HL.
+
 VTILR:
   push bc
   call VTMBEG    ; the driver told rows
@@ -816,9 +837,10 @@ VTILL:
   jr VTILL
 
 ; Delete B lines at row C: rows below
-; move up to VSBOT, blanks fill in.
-; B is 1 or more and C+B at most
-; VSBOT+1. Destroys AF, BC, DE, HL.
+; move up to VSBOT, blanks fill in. B is
+; 1 or more and C+B at most VSBOT+1.
+; Destroys AF, BC, DE, HL.
+
 VTDLR:
   push bc
   call VTMBEG    ; the driver told rows
@@ -860,8 +882,9 @@ VTDLC:
                  ; blanked
 
 ; Clear B rows from row C, then end the
-; move. B must be 1 or more.
-; Destroys AF, BC, DE, HL.
+; move. B must be 1 or more. Destroys
+; AF, BC, DE, HL.
+
 VTCLRN:
   push bc
   ld b,c         ; the whole of row C
@@ -875,6 +898,7 @@ VTCLRN:
 
 ; Limit A to one less than (HL).
 ; Destroys F.
+
 VTCLIP:
   cp (hl)
   ret c          ; below the limit: kept
@@ -887,6 +911,7 @@ VTCLIP:
 ; PICO9918 and it is the console screen:
 ; the terminal then leaves it alone.
 ; Returns A = 1 then, else A = 0 and Z.
+
 VTOWN:
   ld a,(VCLAIM)
   or a           ; not claimed: Z
@@ -906,10 +931,11 @@ VTOWN1:
 ; Draw or remove the cursor: the cell at
 ; the cursor shows its reverse image.
 ; VCURV records whether it is drawn, so
-; each acts only once; neither touches
-; a claimed display. Preserves BC;
+; each acts only once; neither touches a
+; claimed display. Preserves BC;
 ; destroys AF, HL and what VGET and VPUT
 ; do.
+
 CURSHOW:
   call VTOWN
   ret nz

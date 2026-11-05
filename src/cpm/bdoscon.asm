@@ -2,8 +2,7 @@
 ; the error messages and their mode
 ; (function 45), the block check, and
 ; the console's characters, tabs, echo
-; and
-; ^P. Included after bdoslog.asm by
+; and ^P. Included after bdoslog.asm by
 ; rom.asm.
 
 ; The zero-ended text at HL to the
@@ -11,6 +10,7 @@
 ; expanded and ^S and ^P are taken.
 ; Returns HL at the 0. Changes A, C and
 ; what OUTCHAR changes.
+
 ERRTEXT:
   ld a,(hl)      ; the next character
   or a
@@ -27,6 +27,7 @@ ERRTEXT:
 ; disk read or write that failed or a
 ; block reference past the drive's end;
 ; it falls into BDERR.
+
 BADSECT:
   ld hl,ERRBAD   ; its message
   ld b,1         ; disk I/O
@@ -35,22 +36,27 @@ BADSECT:
 ; its code in B, as function 45's mode
 ; says: returned to the program (FFh),
 ; said and returned (FEh), or said, a
-; key
-; waited for and the program ended with
-; the rest of a chained line (default).
-; A returned error leaves a chained line
-; alone (KD-181). It never returns to
-; its caller: RETWORD gives the program
-; A = L = FFh and B = H = the code.
+; key waited for and the program ended
+; with the rest of a chained line
+; (default). A returned error leaves a
+; chained line alone (KD-181). It never
+; returns to its caller: RETWORD gives
+; the program A = L = FFh and B = H =
+; the code.
+
 BDERR:
+
 ; function 45's mode
+
   ld a,(ERRMODE)
   cp $FE         ; FEh or FFh: the error
                  ; returned
   jr c,BDDEF     ; the default
   push bc        ; the code, kept over
                  ; the message
+
 ; FEh: the message first
+
   call z,DISKMSG
   pop bc
   ld h,b         ; H = the code, A = L =
@@ -69,9 +75,10 @@ BDDEF:
 ; before vector indexing or the 16-bit
 ; block-to-record shift. DE is the
 ; block; preserve it and HL/BC. IX
-; identifies
-; the current DPB on return. Invalid
-; references take BADSECT's error 1.
+; identifies the current DPB on return.
+; Invalid references take BADSECT's
+; error 1.
+
 CHKBLK:
   call BLKPAST   ; carry if past the
                  ; end; IX = the DPB
@@ -82,6 +89,7 @@ CHKBLK:
 ; Carry if block DE is past the end of
 ; the current drive. Sets IX to its DPB.
 ; Changes A; keeps BC, DE and HL.
+
 BLKPAST:
   ld ix,(DPBPTR)
   ld a,(ix+5)    ; DSM, the drive's last
@@ -93,9 +101,10 @@ BLKPAST:
   ret
 
 ; The message at HL after "Bdos Err On
-; X", on a new line, X the current
-; drive (CURDRV). Changes A, C, HL and
-; what OUTCHAR changes.
+; X", on a new line, X the current drive
+; (CURDRV). Changes A, C, HL and what
+; OUTCHAR changes.
+
 DISKMSG:
   push hl        ; the message, kept
   ld hl,ERRHEAD  ; CR, LF and "Bdos Err
@@ -109,12 +118,15 @@ DISKMSG:
   jr ERRTEXT     ; then the message
 
 ; The next key, in A, not echoed: one a
-; status check read and kept
-; (PENDING), or else the BIOS's console
-; input, which waits for one. Changes
-; A and what the BIOS's input changes.
+; status check read and kept (PENDING),
+; or else the BIOS's console input,
+; which waits for one. Changes A and
+; what the BIOS's input changes.
+
 GETCHAR:
+
 ; a key kept by a status check?
+
   ld a,(PENDING)
   or a
   jp z,BIOCIN    ; none kept: wait for
@@ -125,12 +137,15 @@ GETCHAR:
   ret
 
 ; A not 0 if a key is ready: one kept (A
-; = 1), or one the BIOS's console
-; status sees through the RAM jump table
-; (FFh). Changes A and what the
-; BIOS's status changes.
+; = 1), or one the BIOS's console status
+; sees through the RAM jump table (FFh).
+; Changes A and what the BIOS's status
+; changes.
+
 CONSTAT:
+
 ; 1 with a key kept
+
   ld a,(PENDING)
   or a
   ret nz
@@ -139,11 +154,13 @@ CONSTAT:
 
 ; As CONSTAT, but through the ROM's
 ; BCONST, not the RAM jump table, so
-; that
-; no cursor is drawn: the check made
-; during output.
+; that no cursor is drawn: the check
+; made during output.
+
 CONSTQ:
+
 ; 1 with a key kept
+
   ld a,(PENDING)
   or a
   ret nz
@@ -157,6 +174,7 @@ CONSTQ:
 ; character a key waiting is taken
 ; (OUTONE). Changes A, C and what the
 ; BIOS's calls change.
+
 OUTCHAR:
   ld a,c
   cp TAB
@@ -177,6 +195,7 @@ TABLOOP:
 ; taken first (CHKKEY: ^S pauses, ^P
 ; turns the printer echo on or off, any
 ; other is kept), then ECHORAW sends it.
+
 OUTONE:
   push bc        ; the character, kept
                  ; over the key check
@@ -189,6 +208,7 @@ OUTONE:
 ; console's status is asked first
 ; (CONSTAT), its answer unused. It falls
 ; into ECHORAW.
+
 ECHOONE:
   push bc        ; the character, kept
                  ; over the status
@@ -199,12 +219,13 @@ ECHOONE:
 ; The character in C to the printer
 ; while ^P's echo is on, then to the
 ; console as it is. COLUMN is moved for
-; it first (ECHOCOL), so nothing needs
-; C after a BIOS call: a CONOUT or LIST
+; it first (ECHOCOL), so nothing needs C
+; after a BIOS call: a CONOUT or LIST
 ; put in the RAM jump table need not
 ; keep it, as CP/M 2.2's need not.
 ; Changes A, C and what the BIOS's calls
 ; change.
+
 ECHORAW:
   call ECHOCOL   ; COLUMN moved for C
   ld a,(LISTEN)  ; 1 while ^P's echo is
@@ -226,6 +247,7 @@ ECHOCON:
 ; after a character from a space up,
 ; unchanged after another control.
 ; Changes A; keeps C.
+
 ECHOCOL:
   ld a,c         ; the column it leaves
   cp CR
@@ -247,6 +269,7 @@ ECHOCOL:
 ; other through ECHOONE. No key is
 ; taken. Changes A, C and what the
 ; BIOS's calls change.
+
 ECHOCHAR:
   ld a,c
   cp TAB
@@ -263,6 +286,7 @@ ECHOTAB:
   ret
 
 ; COLUMN to 0, after a CR. Changes A.
+
 COLZERO:
   xor a          ; the screen line's
                  ; start
@@ -272,6 +296,7 @@ COLZERO:
 ; COLUMN back one, after a BS or an
 ; erased character, never below 0.
 ; Changes A.
+
 COLBACK:
   ld a,(COLUMN)
   or a
@@ -283,13 +308,13 @@ COLBACK:
 ; During output, a key waiting is taken
 ; (CONSTQ: no cursor drawn). ^S pauses
 ; until the next key, which is taken: ^C
-; ends the program by warm boot, as
-; CP/M 2.2's conbrk does, and any other
-; is dropped. ^P turns the printer echo
-; on or off; any other key is kept for
-; the next console read. Changes A and
-; what the BIOS's status and input
-; change.
+; ends the program by warm boot, as CP/M
+; 2.2's conbrk does, and any other is
+; dropped. ^P turns the printer echo on
+; or off; any other key is kept for the
+; next console read. Changes A and what
+; the BIOS's status and input change.
+
 CHKKEY:
   call CONSTQ    ; TEC-OS: the check
                  ; draws no cursor
@@ -309,19 +334,25 @@ CHKKEY:
 ; ^P turns the printer echo on or off;
 ; any other is kept for the next console
 ; read. Changes A.
+
 CHKPRN:
   cp CTRLP
   jr z,TOGLIST   ; ^P: the printer echo
+
 ; TEC-OS: any other key is kept for the
+
   ld (PENDCHR),a
+
 ; next console read, as CP/M 2.2 does,
 ; so typing during output is not lost.
+
   ld a,1         ; and marked as kept
   ld (PENDING),a
   ret
 
 ; ^P: the printer echo (LISTEN) turned
 ; on or off. Changes A.
+
 TOGLIST:
   ld a,(LISTEN)
   xor 1          ; 0 off, 1 on
@@ -329,10 +360,11 @@ TOGLIST:
   ret
 
 ; The character before the cursor erased
-; from the screen, straight through
-; the BIOS (not echoed to the printer),
-; and COLUMN back one. Changes A, C
-; and what the BIOS's output changes.
+; from the screen, straight through the
+; BIOS (not echoed to the printer), and
+; COLUMN back one. Changes A, C and what
+; the BIOS's output changes.
+
 ERASE1:
   ld c,BACKSP    ; back over it,
   call BIOCOT    ; through the RAM jump

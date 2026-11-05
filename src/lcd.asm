@@ -1,10 +1,9 @@
 ; HD44780 20 x 4 LCD status display.
 ; Cold boot shows the banner on row 0
-; and
-; the mounted drives on rows 1-2. Every
-; wait on the busy flag is bounded, so
-; a missing display costs only the
-; time-out.
+; and the mounted drives on rows 1-2.
+; Every wait on the busy flag is
+; bounded, so a missing display costs
+; only the time-out.
 
 LCDCMD EQU $04   ; command write, busy
                  ; flag and address read
@@ -12,9 +11,9 @@ LCDDAT EQU $84   ; character data
 
 ; Initialise: 8-bit, two-line
 ; addressing, display on, cursor off,
-; clear: the
-; four commands of LCDSEQ. Destroys AF,
-; B and HL.
+; clear: the four commands of LCDSEQ.
+; Destroys AF, B and HL.
+
 LCDINIT:
   ld hl,LCDSEQ
   ld b,4         ; four commands
@@ -30,6 +29,7 @@ LCDI:
 ; Wait while the display is busy, at
 ; most 256 polls. Preserves BC, DE, HL.
 ; Destroys AF.
+
 LCDWAIT:
   push bc
   ld b,0         ; 256 polls at most
@@ -48,6 +48,7 @@ LCDWX:
 
 ; Send command A once the display is
 ; ready. Keeps every register.
+
 LCDC:
   push af        ; the command, across
                  ; the wait
@@ -60,6 +61,7 @@ LCDC:
 ; that it is there, so that a take can
 ; tell the row is the ROM's to clear. HL
 ; = GLCMSG. Returns as LCDROW.
+
 LCDWRD:
   push hl        ; the word, across the
                  ; flag
@@ -71,6 +73,7 @@ LCDWRD:
 ; to row 3, the row for a recovery
 ; message: CARD? or GLCD?, or blanks to
 ; clear one. Returns as LCDROW.
+
 LCD3:
   ld b,3         ; the bottom row, free
                  ; of the volumes
@@ -79,8 +82,9 @@ LCD3:
 ; from row B (0-3), column 0. Returns
 ; carry set, so a caller reporting a
 ; failure can end with a jump here, and
-; NZ.
-; Destroys AF, HL. BC and DE are kept.
+; NZ. Destroys AF, HL. BC and DE are
+; kept.
+
 LCDROW:
   ld a,b
   push hl        ; the string, across
@@ -108,14 +112,18 @@ LCDS:
                  ; the wait
   call LCDWAIT
   pop af
+
 ; the display steps to the next column
+
   out (LCDDAT),a
   inc hl
   jr LCDS
+
 ; Show the drive letters and labels of
 ; drives A and B on rows 1 and 2; an
 ; unmounted drive's row is left as it
 ; was. Destroys AF, BC, DE, HL and IX.
+
 LCDVOLS:
   ld c,0         ; drive A first
 
@@ -151,9 +159,10 @@ LCDVN:
 ; its descriptor at IX, then a 0: the
 ; drive walkers' shared text, LCDVOLS's
 ; rows in LINEBUF and SHOWVOL's lines in
-; CMDTXT. Keeps BC and IX. Destroys
-; AF, DE and HL: DE ends at the 0 and HL
+; CMDTXT. Keeps BC and IX. Destroys AF,
+; DE and HL: DE ends at the 0 and HL
 ; past the descriptor's label.
+
 DRVLAB:
   ld a,c
   push bc

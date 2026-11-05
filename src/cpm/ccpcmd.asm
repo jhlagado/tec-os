@@ -3,13 +3,14 @@
 ; transient's tail and page, a file name
 ; into an FCB, the keyword table's
 ; lookup, the console's output, services
-; by name and the startup file.
-; Included after ccpfile.asm by rom.asm.
+; by name and the startup file. Included
+; after ccpfile.asm by rom.asm.
 
 ; UNLOAD: the lowest resident goes, or
 ; the command comes back with a question
 ; mark. Takes nothing from the line;
 ; ends at STARTED or BADCMD.
+
 CMDUNL:
   call SVCUNL    ; its REMOVE run, and
                  ; its pages freed
@@ -24,6 +25,7 @@ CMDUNL:
 ; argument's address on the stack; goes
 ; back to CONNXT with HL at the argument
 ; again.
+
 CONNO:
   pop hl         ; the argument's first
                  ; letter again
@@ -41,26 +43,26 @@ CONSKIP:
   jp BADCMD      ; none of them matched
 
 ; TEC-OS: CON shows the console in use;
-; CON TTY, CRT, BAT or UC1 (a colon
-; may follow), or PICO for CRT: and GLCD
-; for UC1:, sets the IOBYTE CON: field.
+; CON TTY, CRT, BAT or UC1 (a colon may
+; follow), or PICO for CRT: and GLCD for
+; UC1:, sets the IOBYTE CON: field.
 ; After CRT or PICO a width, 80, 40 or
 ; 32, goes to the ROM's PICO9918 console
 ; through its table's PICOWID entry
 ; (KD-174); with that console not
-; started,
-; or any other width, the command is
-; refused, but a line from STARTUP.CMD
-; on a board with no such console is
-; quiet, as for an absent device. The
-; BIOS switches at the next console
-; call, so the report appears on the new
-; console, and names the serial terminal
-; when the chosen display or keyboard
-; is missing. UC1: loads GLCD.SVC first
-; if it is not in. Takes the argument
-; at ARGSTRT; ends at MAINLOOP, STARTED
-; or BADCMD.
+; started, or any other width, the
+; command is refused, but a line from
+; STARTUP.CMD on a board with no such
+; console is quiet, as for an absent
+; device. The BIOS switches at the next
+; console call, so the report appears on
+; the new console, and names the serial
+; terminal when the chosen display or
+; keyboard is missing. UC1: loads
+; GLCD.SVC first if it is not in. Takes
+; the argument at ARGSTRT; ends at
+; MAINLOOP, STARTED or BADCMD.
+
 CMDCON:
   call ARGSKIP   ; an error names the
                  ; argument
@@ -155,7 +157,9 @@ CONEND:
                  ; and the ABI's call
   call ENDCHK    ; nothing after the
                  ; width
+
 ; "PICO " at version 3
+
   ld de,CONNAMS+20
   ld bc,PICOVER*256+TNFIND
   call ABICALL   ; FIND: HL = the
@@ -233,6 +237,7 @@ CONSH1:
 ; is a bad command. Takes the argument
 ; at ARGSTRT; ends at MAINLOOP or
 ; BADCMD.
+
 CMDUSER:
   call ARGSKIP   ; A = its first
                  ; character
@@ -249,7 +254,9 @@ CMDUSER:
   cp '0'         ; a second digit?
   jr c,USERDONE
   cp '9'+1
+
 ; no: one digit, 0 to 9
+
   jr nc,USERDONE
   ld a,b
   cp 1
@@ -276,10 +283,10 @@ USERDONE:
 ; TPA. A count reaching the page of the
 ; BDOS entry jump is rejected rather
 ; than saving it or the workspace. SAVE
-; n
-; NAME writes n pages from 0100h up as
+; n NAME writes n pages from 0100h up as
 ; NAME. Takes the arguments at ARGSTRT;
 ; ends at MAINLOOP, BADCMD or NO SPACE.
+
 CMDSAVE:
   call ARGSKIP   ; A = the count's first
                  ; character
@@ -295,7 +302,9 @@ SAVENUM:
   cp '0'
   jr c,SAVENEND
   cp '9'+1
+
 ; not a digit: the count's end
+
   jr nc,SAVENEND
   sub '0'
   ld e,a         ; E = the digit's value
@@ -324,14 +333,18 @@ SAVENEND:
   cp SPACE       ; a space must follow
                  ; the count
   jp nz,BADCMD
+
 ; the BDOS entry's page
+
   ld a,(PZBDOS+2)
   ld c,a
   ld a,b
   cp c
   jp nc,BADCMD   ; the pages would reach
                  ; it
+
 ; the pages to write
+
   ld (SAVEPGS),a
   call SKIPSP
   ld a,(hl)
@@ -349,7 +362,9 @@ SAVENEND:
   jr z,SAVENOSP  ; FFh: the directory is
                  ; full
   ld hl,TPA
+
 ; the first record's bytes, 0100h
+
   ld (SAVEADR),hl
 
 SAVELOOP:
@@ -364,7 +379,9 @@ SAVELOOP:
                  ; disk is full
   ld a,(SAVEPGS)
   dec a
+
 ; one page fewer to write
+
   ld (SAVEPGS),a
   jr SAVELOOP
 
@@ -373,6 +390,7 @@ SAVELOOP:
 ; past them. Returns carry if the write
 ; failed, the disk or directory full.
 ; Destroys AF, BC, DE, HL.
+
 SAVE128:
   ld de,(SAVEADR)
   ld c,26        ; BDOS 26: the DMA
@@ -388,7 +406,9 @@ SAVE128:
   ld hl,(SAVEADR)
   ld de,128
   add hl,de
+
 ; the next record's bytes
+
   ld (SAVEADR),hl
   or a           ; carry clear: written
   ret
@@ -397,6 +417,7 @@ SAVE128:
 ; its directory entry is written. A
 ; failed close is NO SPACE too. Ends at
 ; MAINLOOP or the error.
+
 SAVECLS:
   call DOSSEQ    ; close CMDFCB's file
   DB 16*2+0      ; BDOS 16, source FCB
@@ -408,13 +429,16 @@ SAVECLS:
 ; with the records written, as COPY's
 ; destination is, where CP/M 2.2's SAVE
 ; leaves it open; then NO SPACE.
+
 SAVEWER:
   call DOSSEQ    ; close CMDFCB's file,
                  ; whatever the close
   DB 16*2+0      ; returns: BDOS 16,
                  ; source FCB
+
 ; SAVE's failure: NO SPACE, through
 ; ERRGO, which marks the command failed.
+
 SAVENOSP:
   ld de,NOSPACE  ; "NO SPACE", then the
                  ; prompt
@@ -422,15 +446,17 @@ SAVENOSP:
 
 ; Publish only documented page-zero
 ; transient state after loading
-; succeeds:
-; the first two names in the arguments
-; at ARGSTRT go in the FCBs at 005Ch and
-; 006Ch, the arguments as the tail at
-; 0080h, its length before it and a 0
-; after it, and the DMA address is
-; 0080h. Destroys AF, BC, DE, HL.
+; succeeds: the first two names in the
+; arguments at ARGSTRT go in the FCBs at
+; 005Ch and 006Ch, the arguments as the
+; tail at 0080h, its length before it
+; and a 0 after it, and the DMA address
+; is 0080h. Destroys AF, BC, DE, HL.
+
 PREPPAGE:
+
 ; the text after the command's name
+
   ld hl,(ARGSTRT)
   push hl        ; kept for the tail
   call SKIPSP
@@ -459,7 +485,9 @@ TAILLOOP:
 
 TAILDONE:
   ld a,b
+
 ; the length before the tail,
+
   ld (CMDTAIL),a
   xor a
   ld (de),a      ; and a 0 after it
@@ -469,18 +497,21 @@ TAILDONE:
   jp BDOS
 
 ; Parse one CP/M file reference into a
-; cleared 36-byte FCB. HL points
-; at the first token byte and returns at
-; its delimiter. A '*' expands to '?'
+; cleared 36-byte FCB. HL points at the
+; first token byte and returns at its
+; delimiter. A '*' expands to '?'
 ; through the remainder of its current
 ; field. Takes the FCB at DE, noted in
 ; FCBBASE. Returns carry for a bad
 ; drive, a forbidden character or a
-; field
-; too long; an empty reference leaves
-; the FCB blank. Destroys AF, B, DE.
+; field too long; an empty reference
+; leaves the FCB blank. Destroys AF, B,
+; DE.
+
 PARSEFCB:
+
 ; the FCB's start, for UNAMBIG
+
   ld (FCBBASE),de
   push de
   xor a
@@ -496,17 +527,15 @@ FCBSPACE:
   inc de
   djnz FCBSPACE
   xor a
+
 ; A parsed FCB is reusable command
-; state, so
-; the whole tail is reset: EX, S1, S2,
-; RC, the
-; allocation map, CR and the random
-; record.
-; A CR left behind would make the
-; command
-; after TYPE load from record one rather
-; than
-; from the start of its COM file.
+; state, so the whole tail is reset: EX,
+; S1, S2, RC, the allocation map, CR and
+; the random record. A CR left behind
+; would make the command after TYPE load
+; from record one rather than from the
+; start of its COM file.
+
   ld b,24        ; the 24 bytes after
                  ; the type
 
@@ -531,7 +560,9 @@ FCBZERO:
   cp 'A'
   jr c,FCBDRBAD
   cp 'Q'
+
 ; A to P only
+
   jr nc,FCBDRBAD
   sub 'A'-1
   ld (de),a      ; the drive byte: 1 for
@@ -575,13 +606,14 @@ FCBDRBAD:
 ; One field of an FCB, the name's 8
 ; bytes or the type's 3: B characters
 ; from HL into DE, up to a delimiter as
-; FCBEND finds one. Returns carry for
-; a forbidden character or a field too
+; FCBEND finds one. Returns carry for a
+; forbidden character or a field too
 ; long. Otherwise returns Z, carry
 ; clear, A and HL at the delimiter, DE
 ; past the field's filled bytes and B
 ; the bytes left unfilled. Destroys AF,
 ; B, DE.
+
 PARFLD:
   call FCBEND
   ret z          ; the delimiter: the
@@ -614,14 +646,13 @@ PLEND:
 
 ; Commands that name exactly one file
 ; reject an empty name or either
-; wildcard.
-; Preserve the parser's delimiter
-; pointer in HL; FCBBASE identifies the
-; FCB
-; because PARSEFCB advances DE while
-; filling it. Returns carry for an empty
-; or ambiguous name. Keeps BC and HL;
-; destroys AF.
+; wildcard. Preserve the parser's
+; delimiter pointer in HL; FCBBASE
+; identifies the FCB because PARSEFCB
+; advances DE while filling it. Returns
+; carry for an empty or ambiguous name.
+; Keeps BC and HL; destroys AF.
+
 UNAMBIG:
   push hl
   push bc
@@ -645,8 +676,9 @@ UNAMBIG:
 ; asterisk remain available to the
 ; ambiguous DIR and ERA forms. Takes the
 ; character in A and keeps it; returns
-; carry if it is forbidden. Keeps BC
-; and HL; destroys F.
+; carry if it is forbidden. Keeps BC and
+; HL; destroys F.
+
 VALIDCHR:
   push hl
   push bc
@@ -655,10 +687,12 @@ VALIDCHR:
                  ; characters
   cpir           ; equality means a
                  ; forbidden byte
+
 ; Both scans preserve HL/BC and return
 ; carry for a match (invalid/ambiguous).
 ; Takes Z for a match, with BC and HL
 ; pushed in that order.
+
 CHRRET:
   pop bc
   pop hl
@@ -674,6 +708,7 @@ CHRRET:
 ; of the field's text at HL passed over
 ; to its delimiter. Returns as PARFLD
 ; does when it succeeds.
+
 PARSTAR:
   ld a,'?'       ; any character matches
 
@@ -693,9 +728,9 @@ PARIGN:
 
 ; Z at the end of a name: a zero, a
 ; space, '=' or '.'. A holds the
-; character.
-; Takes HL at the character; destroys AF
-; only.
+; character. Takes HL at the character;
+; destroys AF only.
+
 FCBEND:
   ld a,(hl)
   or a
@@ -707,12 +742,14 @@ FCBEND:
   cp '.'
   ret            ; a type follows; NZ
                  ; for any other
+
 ; character
 
 ; Move HL past spaces. Returns A = the
 ; first other character, with NZ, and
 ; carry when it is below a space, as the
 ; line's 0 is. Destroys AF.
+
 SKIPSP:
   ld a,(hl)
   cp SPACE
@@ -726,12 +763,15 @@ SKIPSP:
 ; immediately after the keyword. Takes
 ; DE at the keyword and the word at
 ; CMDSTRT. Returns Z for a match, with
-; DE
-; at the keyword's 0; NZ with DE at the
-; byte that differed, or at the 0 when
-; the word goes on. Destroys AF, HL.
+; DE at the keyword's 0; NZ with DE at
+; the byte that differed, or at the 0
+; when the word goes on. Destroys AF,
+; HL.
+
 ISCMD:
+
 ; the command word
+
   ld hl,(CMDSTRT)
 
 KEYLOOP:
@@ -756,8 +796,9 @@ KEYEND:
                  ; it, else NZ
 
 ; Print the '$'-terminated string at DE
-; by BDOS function 9. Destroys AF,
-; BC, DE and HL, as the BDOS may.
+; by BDOS function 9. Destroys AF, BC,
+; DE and HL, as the BDOS may.
+
 PUTSTR:
   ld c,9         ; BDOS 9: print a
                  ; string
@@ -767,6 +808,7 @@ PUTSTR:
 ; OUTCHAR's column count and ^P echo.
 ; Keeps BC and HL, which every caller
 ; wants kept. Destroys AF and DE.
+
 PUTCHAR:
   push bc        ; kept for the caller,
                  ; as the BDOS
@@ -783,8 +825,11 @@ PUTCHAR:
 ; each, from the lowest up, the name
 ; without its spaces and the pages in
 ; decimal. Ends at MAINLOOP.
+
 CMDSVC:
+
 ; the lowest owner's page, 0 for none
+
   ld a,(SVCHEAD)
 
 CMDDL:
@@ -822,10 +867,10 @@ CMDDL:
 ; record of A:STARTUP.CMD is read, the
 ; position marked finished first, so
 ; that a failure can't repeat. STPOS is
-; 0
-; until then, the next byte + 1 in the
+; 0 until then, the next byte + 1 in the
 ; file, and 80h up once it is finished.
 ; Destroys AF, BC, DE, HL.
+
 STBOOT:
   ld hl,STPOS    ; startup's state
   ld a,(hl)
@@ -834,7 +879,9 @@ STBOOT:
                  ; here already
   set 7,(hl)     ; finished, whatever
                  ; follows
+
 ; a keypad key held skips it: bit 6 low
+
   in a,(STSPORT)
   and $40
   ret z
@@ -865,22 +912,24 @@ STBOOT:
 STBDMA:
   ld hl,DEFDMA   ; the DMA address
                  ; programs expect
+
 ; set in the BDOS's own variable
+
   ld (CURDMA),hl
   ret
 
 ; Startup's next line, from STREC at
 ; STPOS. With a line left: it goes in
-; the
-; command buffer, echoed as if typed,
-; and carry clear. Lines end at CR or LF
-; and blank ones are passed over; a
-; line's characters after its 127th are
-; passed over too, as a typed line has
-; no more. ^Z, a zero or the record's
-; last byte ends the file. Otherwise
-; carry set, once the file has finished.
-; Destroys AF, BC, DE, HL.
+; the command buffer, echoed as if
+; typed, and carry clear. Lines end at
+; CR or LF and blank ones are passed
+; over; a line's characters after its
+; 127th are passed over too, as a typed
+; line has no more. ^Z, a zero or the
+; record's last byte ends the file.
+; Otherwise carry set, once the file has
+; finished. Destroys AF, BC, DE, HL.
+
 STLINE:
   ld hl,STPOS
   ld a,(hl)
@@ -889,7 +938,9 @@ STLINE:
   ret c          ; the file finished: a
                  ; line is typed
   rrca           ; the position again
+
 ; HL at the next byte: the record
+
   add a,LOW(STREC)-1
   ld l,a         ; is in one page
   ld h,HIGH(STREC)
@@ -925,12 +976,16 @@ STL1:
   jr STL1
 
 STLE:
+
 ; STPOS 80h, finished
+
   ld l,LOW(STLAST)
 
 STL2:
   ld a,l
+
 ; the next byte + 1
+
   sub LOW(STREC)-1
   ld (STPOS),a
   ld a,e         ; the line's length
@@ -945,9 +1000,11 @@ STL2:
   inc hl         ; makes the line's 0
   ld (hl),'$'    ; and the echo's end,
                  ; for PUTSTR
+
 ; (at 127 characters this '$' is in
 ; BOOTDRV, past CMDTXT, read only
 ; before)
+
   ld de,CMDTXT
   call PUTSTR    ; the echo, as if typed
   or a           ; carry clear: a line

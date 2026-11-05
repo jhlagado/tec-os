@@ -6,17 +6,17 @@
 ; hands the ROM its video table through
 ; TNDRVR; the CCP then takes the
 ; console, unless a PICO9918 has it, and
-; the
-; ROM's terminal calls its six routines
-; directly, on the caller's stack. It
-; keeps its screen text and its counters
-; here, draws from the ROM's font, and
-; moves rows to and from the ROM's
-; LINEBUF, whose address TNDRVR returns.
-; Its
-; REMOVE, at UNLOAD, gives the console
-; back: to CRT: if the ROM's PICO9918
-; console started, otherwise to serial.
+; the ROM's terminal calls its six
+; routines directly, on the caller's
+; stack. It keeps its screen text and
+; its counters here, draws from the
+; ROM's font, and moves rows to and from
+; the ROM's LINEBUF, whose address
+; TNDRVR returns. Its REMOVE, at UNLOAD,
+; gives the console back: to CRT: if the
+; ROM's PICO9918 console started,
+; otherwise to serial.
+
 %INCLUDE "../src/abi.inc"
 
 GLCOLS EQU 21
@@ -24,7 +24,9 @@ GLROWS EQU 8
 IOBYTE EQU $0003
 
   ORG $0100
+
 ; removable
+
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,0,0     ; REMOVE, size, extra,
                  ; relocation: the
@@ -37,6 +39,7 @@ HDR: DB 'D',SVCFMT,0,1
 ; The video vector, in the ROM's order:
 ; VPUT, VGET, VCLREOL, VREST, VRDROW,
 ; VWRROW.
+
 VTAB: DW GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
   DW 0           ; only the PICO9918 has
                  ; row moves to show
@@ -47,19 +50,19 @@ LBUF: DW 0       ; LINEBUF, from TNDRVR
 ; answer, or the ROM refuses UC1:'s
 ; table: another GLCD.SVC has the
 ; console, or there is no matrix
-; keyboard,
-; or, with TNENODV, a line in
+; keyboard, or, with TNENODV, a line in
 ; STARTUP.CMD offers it while CON: is
-; CRT:, the
-; ROM's PICO9918 console, which it would
-; only give way to (KE-200). Typed with
-; another display the console, it loads
-; all the same and the ROM's loader
-; leaves the console where it is (SVCGO,
-; KE-150). It publishes no record.
-; Returns carry clear and HL = 0 when
-; loaded, carry set and A = the status
-; when refused. Destroys AF, BC, DE, HL.
+; CRT:, the ROM's PICO9918 console,
+; which it would only give way to
+; (KE-200). Typed with another display
+; the console, it loads all the same and
+; the ROM's loader leaves the console
+; where it is (SVCGO, KE-150). It
+; publishes no record. Returns carry
+; clear and HL = 0 when loaded, carry
+; set and A = the status when refused.
+; Destroys AF, BC, DE, HL.
+
 INIT:
   ld c,TNFONT    ; the ROM's font; a ROM
                  ; before ABI 5.1
@@ -91,16 +94,18 @@ INIT:
 
 ; REMOVE, at UNLOAD: if the ROM's
 ; PICO9918 console registered its record
-; and
-; UC1: is the console, the console field
-; becomes CRT:. UC1:'s table then
+; and UC1: is the console, the console
+; field becomes CRT:. UC1:'s table then
 ; goes, and the ROM chooses the console
 ; again at its next call. Returns as
 ; TNDRVR does, A = 0 and carry clear.
 ; Destroys AF, BC, DE, HL.
+
 REMOVE:
   ld de,PICONAM
+
 ; version 1 or later
+
   ld bc,$0100+TNFIND
   call ABICALL   ; carry: no record, the
                  ; ROM's console
@@ -129,6 +134,7 @@ PICONAM:
 
 ; The ST7920's ports: commands and the
 ; busy flag, and display data.
+
 GLCCMD EQU $07
 GLCDAT EQU $87
 
@@ -138,9 +144,9 @@ GLCDAT EQU $87
 ; ready; NZ and A = 1 when it never was:
 ; no controller, or one stuck busy.
 ; Preserves BC, DE, HL; the count is
-; kept
-; in GLWN, not on the stack, since the
-; routines run on their caller's.
+; kept in GLWN, not on the stack, since
+; the routines run on their caller's.
+
 GLCWAIT:
   xor a          ; 0: the first DEC
                  ; makes it 255,
@@ -168,6 +174,7 @@ GLCWOK:
 ; dropped, not sent. Returns A = the
 ; byte, Z if it was sent and NZ if not;
 ; destroys F. Preserves BC, DE, HL.
+
 GLCC:
   ld (GLOUT),a   ; held over the wait,
                  ; off the stack
@@ -175,18 +182,20 @@ GLCC:
   ld a,(GLOUT)
   ret nz         ; never ready: nothing
                  ; sent (KE-198)
+
 ; to the instruction register
+
   out (GLCCMD),a
   ret
 
 ; Send data A, as GLCC does a command,
 ; to the graphics RAM at the
 ; controller's address: two bytes make a
-; word, left half first, and the
-; address then moves to the next word.
-; Returns A = the byte, Z if it was
-; sent and NZ if not; destroys F.
-; Preserves BC, DE, HL.
+; word, left half first, and the address
+; then moves to the next word. Returns A
+; = the byte, Z if it was sent and NZ if
+; not; destroys F. Preserves BC, DE, HL.
+
 GLCDW:
   ld (GLOUT),a   ; held over the wait,
                  ; off the stack
@@ -194,14 +203,16 @@ GLCDW:
   ld a,(GLOUT)
   ret nz         ; never ready: nothing
                  ; sent
+
 ; to the data register
+
   out (GLCDAT),a
   ret
 
 ; VRDROW: copy text row B's 21
 ; characters to LINEBUF. Destroys AF,
-; BC, DE,
-; HL.
+; BC, DE, HL.
+
 GLRDR:
   ld c,0         ; from column 0
   call GLCADR    ; HL = the row in
@@ -214,6 +225,7 @@ GLRDR:
 ; VWRROW: copy LINEBUF's 21 characters
 ; to text row B and redraw the row.
 ; Destroys AF, C, DE, HL; B is kept.
+
 GLWRR:
   push bc        ; B, the row, for the
                  ; redraw
@@ -230,11 +242,12 @@ GLWRR:
 ; VREST, at install and at warm boot:
 ; put the controller in graphics mode
 ; with the display on and its text layer
-; clear. Graphics RAM keeps whatever
-; a program drew until the console next
+; clear. Graphics RAM keeps whatever a
+; program drew until the console next
 ; writes over it. Returns NZ, nothing
 ; sent, if the controller doesn't
 ; answer. Destroys AF, B, HL.
+
 GLCRST:
   call GLCWAIT   ; NZ: no controller to
                  ; set
@@ -250,15 +263,18 @@ GLCRSL:
   inc hl
   djnz GLCRSL
   ret
+
 ; 30h the basic set, 0Ch display on with
-; no cursor, 01h clear the text
-; layer, 34h the extended set, 36h the
-; extended set with graphics shown.
+; no cursor, 01h clear the text layer,
+; 34h the extended set, 36h the extended
+; set with graphics shown.
+
 GLCMOD: DB $30,$0C,$01,$34,$36
 
 ; HL = GLTEXT address of row B, column
 ; C: GLTEXT + 21B + C. Preserves BC, DE;
 ; destroys AF.
+
 GLCADR:
   push de
   ld hl,GLTEXT
@@ -287,6 +303,7 @@ GLCAC:
 ; Bit 7 of A set draws the cell
 ; reversed. Destroys AF, C, DE, HL; B is
 ; kept.
+
 GLCPUT:
   push af        ; the character, over
                  ; the address
@@ -362,6 +379,7 @@ GLCPN:
 
 ; VGET: A = the character at row B,
 ; column C. Destroys F, HL.
+
 GLCGET:
   call GLCADR
   ld a,(hl)      ; bit 7 set for a
@@ -375,6 +393,7 @@ GLCGET:
 ; fill would run on through the text,
 ; the counters and FONTP. Destroys AF,
 ; C, DE, HL; B is kept.
+
 GLCCLR:
   ld a,c
   cp GLCOLS
@@ -397,10 +416,13 @@ GLCCL:
 ; address, the controller moving on a
 ; word by itself. Destroys AF, C, DE,
 ; HL; B is kept.
+
 GLCROW:
   ld c,0
   call GLCADR
+
 ; the row's text, for GLCCMP
+
   ld (GLROWP),hl
   ld a,b         ; pixel row 8B, the
                  ; text row's top
@@ -443,6 +465,7 @@ GLCRW:
 ; screen's lower half, rows 32-63, as
 ; rows 0-31 at words 8-15. Destroys AF,
 ; B.
+
 GLCSETA:
   ld a,(GLY)
   ld b,0         ; the upper half: words
@@ -465,9 +488,10 @@ GLCSU:
 ; DE = the 16 pixels of word GLW on
 ; pixel row GLY, D on the left, from the
 ; text row at GLROWP. A cell's glyph row
-; is 6 pixels (5 of glyph, 1 of
-; space); a reverse cell inverts all 6.
-; Destroys AF, BC, HL and GLOFF.
+; is 6 pixels (5 of glyph, 1 of space);
+; a reverse cell inverts all 6. Destroys
+; AF, BC, HL and GLOFF.
+
 GLCCMP:
   ld a,(GLW)     ; two bytes an entry in
                  ; GLCSPAN
@@ -501,13 +525,17 @@ GLCCS:
   ld (GLOFF),a   ; the first cell's
                  ; start, from the
                  ; word's
+
 ; left edge
+
   ld de,0        ; the word's pixels
                  ; gathered here
 
 GLCCH:
   push bc
+
 ; the character in the text row
+
   ld hl,(GLROWP)
   ld a,b
   add a,l
@@ -528,7 +556,9 @@ GLCCG:
   jr z,GLCCO
   jp m,GLCCLF    ; negative: the cell
                  ; starts in the word
+
 ; to the left
+
 GLCCR:
   srl h          ; positive: shifted
                  ; right, and what
@@ -566,10 +596,11 @@ GLCCO:
   ret
 
 ; A = glyph row (GLY mod 8) of character
-; A in bits 7-2, reversed when bit 7
-; of the character is set; control codes
+; A in bits 7-2, reversed when bit 7 of
+; the character is set; control codes
 ; draw as a space. Preserves B, DE;
 ; destroys F, C, HL, which GLCCMP keeps.
+
 GLGLY:
   ld c,a         ; bit 7, reverse, kept
                  ; for the end
@@ -611,6 +642,7 @@ GLGL1:
 
 ; For each word: the first character it
 ; touches and how many.
+
 GLCSPAN:
   DB 0,3, 2,4, 5,3, 8,3, 10,4, 13,3, 16,3, 18,3
 
@@ -619,6 +651,7 @@ GLCSPAN:
 ; -----------------
 ; GLTEXT holds the 21 x 8 characters,
 ; row by row.
+
 GLTEXT: DS GLCOLS*GLROWS,' '
 GLY: DS 1        ; the pixel row being
                  ; drawn, 0-63

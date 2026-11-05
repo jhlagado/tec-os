@@ -1,40 +1,39 @@
 ; The block cache: 30 lines of 512 bytes
-; in EXPAND 1 at 8000h-BBFFh, keyed
-; by card block, with its table in the
-; page at BC00h: each line's block,
-; 4 bytes from BC00h (FFFFFFFFh for an
-; empty line), and its dirty byte from
-; BC80h. Every volume's reads go through
-; it. A volume whose descriptor has
-; byte 15 bit 0 set is written behind:
-; its writes stay in their lines until
-; a directory write of the volume, no
+; in EXPAND 1 at 8000h-BBFFh, keyed by
+; card block, with its table in the page
+; at BC00h: each line's block, 4 bytes
+; from BC00h (FFFFFFFFh for an empty
+; line), and its dirty byte from BC80h.
+; Every volume's reads go through it. A
+; volume whose descriptor has byte 15
+; bit 0 set is written behind: its
+; writes stay in their lines until a
+; directory write of the volume, no
 ; clean line left, warm boot or a
 ; remount writes them, data before
 ; directory. Every other volume is
-; written
-; through as before, and its line
-; refreshed.
+; written through as before, and its
+; line refreshed.
 ;
 ; Blocks go straight between the card
 ; and a line: SDREAD and SDWRITE put
 ; EXPAND 1 in view around their block
 ; loops when SDXB is LATEXP. Nothing
 ; here uses the stack while EXPAND 1 is
-; in view, and the BIOS entries run
-; with interrupts off (CDI, CEI), so
-; none can arrive while it is.
+; in view, and the BIOS entries run with
+; interrupts off (CDI, CEI), so none can
+; arrive while it is.
 
 ; CTAB, CDIRTY and NLINES are in
 ; layout.asm.
 
 ; HL = line A's block in the table
 ; (CTADR), or entry A of the page
-; (CTENT),
-; and A = the latch value with EXPAND 1
-; in view (CXON), for the caller's OUT.
-; Takes A < 64 for CTADR, so that A * 4
-; fits L. Destroys F.
+; (CTENT), and A = the latch value with
+; EXPAND 1 in view (CXON), for the
+; caller's OUT. Takes A < 64 for CTADR,
+; so that A * 4 fits L. Destroys F.
+
 CTADR:
   add a,a        ; 4 bytes a line's
                  ; block
@@ -53,9 +52,10 @@ CXON:
   ret
 
 ; Look up SDLBA's block: Z with A = its
-; line; NZ if no line has it.
-; Takes SDLBA. Destroys BC, DE, HL; the
-; latch is left as LATCHV.
+; line; NZ if no line has it. Takes
+; SDLBA. Destroys BC, DE, HL; the latch
+; is left as LATCHV.
+
 CLOOK:
   ld de,(SDLBA)  ; the block wanted in
                  ; BCDE, low byte in E
@@ -118,6 +118,7 @@ CLK3:
 ; Line A's entry: block SDLBA and clean
 ; (CSET), or empty (CDROP). Keeps A.
 ; Returns Z. Destroys BC, DE, HL.
+
 CSET:
   ld de,(SDLBA)  ; the block to enter,
                  ; as CLOOK compares it
@@ -158,6 +159,7 @@ CDCLR:
 ; keeps A, returns Z for a clean line
 ; and NZ for a dirty one, and destroys
 ; B, C and HL.
+
 CDGET:
   ld c,$FF       ; FFh: read, nothing
                  ; written
@@ -168,8 +170,10 @@ CDSET:
 
 CDPUT:
   push af        ; the line, kept
+
 ; the dirty bytes follow the blocks in
 ; the
+
   add a,CDIRTY-CTAB
   call CTENT     ; table's page
   out (SYSLAT),a
@@ -191,6 +195,7 @@ CDP1:
 
 ; HL = line A's address: 8000h + A *
 ; 512. Destroys A.
+
 CLADR:
   add a,a        ; two pages a line,
                  ; from 80h
@@ -200,20 +205,20 @@ CLADR:
   ret
 
 ; Read SDLBA's block straight into line
-; A (CFILL), or write line A straight
-; to its block (CWRITE). Z on success.
+; A (CFILL), or write line A straight to
+; its block (CWRITE). Z on success.
 ; CFILL enters the line on success and
 ; leaves it empty otherwise. CWRITE
 ; takes the block from the table, keeps
 ; SDLBA, marks the line clean on
 ; success, and on a failure leaves it
-; dirty
-; and returns NZ. CWRITE keeps A; CFILL
-; keeps it on success only, a failure
-; returning A = the line OR 1. Both
-; destroy BC, DE and HL; CWRITE maps the
-; record again (MAPREC), so BLKOFF and
-; BLKSLOT are set as before.
+; dirty and returns NZ. CWRITE keeps A;
+; CFILL keeps it on success only, a
+; failure returning A = the line OR 1.
+; Both destroy BC, DE and HL; CWRITE
+; maps the record again (MAPREC), so
+; BLKOFF and BLKSLOT are set as before.
+
 CFILL:
   push af        ; the line
   call CLADR     ; the card's block to
@@ -285,19 +290,20 @@ CWR9:
   ret
 
 ; Write every dirty line (CFLALL), or
-; every one but line A (CFLUSH). Each
-; is tried, and the flush returns NZ if
-; any write failed, Z if none. CFLALL
-; drops a line whose write fails, so the
+; every one but line A (CFLUSH). Each is
+; tried, and the flush returns NZ if any
+; write failed, Z if none. CFLALL drops
+; a line whose write fails, so the
 ; card's copy stands; CFLUSH, a
 ; directory write's, leaves it dirty,
 ; the only copy of its records, for a
 ; later flush to try (KE-AR8). Returns A
-; = the line left (FFh for
-; CFLALL). Destroys BC, DE and HL;
-; SDLBA, BLKOFF and BLKSLOT are mapped
-; again from the BIOS's track and
-; sector, as CWRITE leaves them.
+; = the line left (FFh for CFLALL).
+; Destroys BC, DE and HL; SDLBA, BLKOFF
+; and BLKSLOT are mapped again from the
+; BIOS's track and sector, as CWRITE
+; leaves them.
+
 CFLALL:
   ld a,$FF       ; no line is FFh: every
                  ; one is written
@@ -313,7 +319,9 @@ CFS1:
   push bc
   call CDGET     ; Z: clean, nothing to
                  ; write
+
 ; keeps A, NZ if the card refused it
+
   call nz,CWRITE
   pop bc
   jr z,CFS2
@@ -344,14 +352,15 @@ CFS2:
 ; A line for SDLBA's block: the next
 ; clean one in turn, or, with every line
 ; dirty, the next in turn written first.
-; Z with A = the line; NZ if that
-; write failed, the line left dirty for
-; a flush to try (KE-187). CNEXT moves
+; Z with A = the line; NZ if that write
+; failed, the line left dirty for a
+; flush to try (KE-187). CNEXT moves
 ; past the line taken, or the line that
 ; failed, so the next miss tries
 ; another. The line keeps its entry: the
-; caller fills or enters it.
-; Destroys BC, DE, HL.
+; caller fills or enters it. Destroys
+; BC, DE, HL.
+
 CTAKE:
   ld b,NLINES    ; every line looked at
                  ; once at most
@@ -360,7 +369,9 @@ CTAKE:
                  ; bytes
   add a,CDIRTY-CTAB
   call CTENT
+
 ; the table in view
+
   out (SYSLAT),a
 
 CTK1:
@@ -412,17 +423,19 @@ CTK4:
   ret
 
 ; Copy the mapped record between line A
-; and DSKDMA: to DSKDMA (CRDREC) or
-; from it (CWRREC), by MVCOPY. Takes
-; BLKSLOT, the record in the block.
-; Returns A = 0. Destroys BC, DE and HL.
-; CRECAD alone returns HL = the
-; record's address in line A, and
-; destroys A.
+; and DSKDMA: to DSKDMA (CRDREC) or from
+; it (CWRREC), by MVCOPY. Takes BLKSLOT,
+; the record in the block. Returns A =
+; 0. Destroys BC, DE and HL. CRECAD
+; alone returns HL = the record's
+; address in line A, and destroys A.
+
 CRECAD:
   call CLADR
+
 ; slot * 128: its half page in L, its
 ; page
+
   ld a,(BLKSLOT)
   srl a          ; added to H
   rr l
@@ -458,8 +471,9 @@ CREC:
 ; straight into the next line, then
 ; copied from it. Takes SDLBA and
 ; BLKSLOT from MAPREC. Z with A = 0 on
-; success; NZ on a card error.
-; Destroys BC, DE and HL.
+; success; NZ on a card error. Destroys
+; BC, DE and HL.
+
 CREAD:
   call CLOOK
   jr z,CRD1      ; a hit: A is its line
@@ -480,22 +494,19 @@ CRD1:
 ; with its checks done and C = 1 when
 ; the block needs no pre-read. The
 ; record goes into the block's line,
-; which is
-; dirty. On a volume written through
-; (CWTYPE bit 7) the line is written to
-; the
-; card before the call returns, and
-; dropped if that fails. On the one
-; written
-; behind a directory write then writes
-; every dirty line and its own last, and
-; never leaves its line dirty. Z on
-; success. Takes CWTYPE (the BDOS's
-; write
-; type in bits 0 and 1, bit 7 written
-; through) and sets its bit 6 when a
-; line is taken for the write. Destroys
-; A, BC, DE and HL.
+; which is dirty. On a volume written
+; through (CWTYPE bit 7) the line is
+; written to the card before the call
+; returns, and dropped if that fails. On
+; the one written behind a directory
+; write then writes every dirty line and
+; its own last, and never leaves its
+; line dirty. Z on success. Takes CWTYPE
+; (the BDOS's write type in bits 0 and
+; 1, bit 7 written through) and sets its
+; bit 6 when a line is taken for the
+; write. Destroys A, BC, DE and HL.
+
 CWRBH:
   push bc        ; C, the pre-read
                  ; rule's answer, kept
@@ -546,17 +557,19 @@ CWBF:
   call CFILL     ; the card's block
                  ; first
   ret nz
+
 ; A write that keeps a line's bytes, to
 ; any block but the key's own, ends the
 ; run of blocks cleared rather than
-; read:
-; the key goes, so that the rule never
-; clears a block written after the
-; key's,
-; records and all (KE-AR7).
+; read: the key goes, so that the rule
+; never clears a block written after the
+; key's, records and all (KE-AR7).
+
 CWBK:
   ld c,a         ; C = the line, kept
+
 ; this block against the key's
+
   ld hl,(BLKOFF)
   ld de,(BUFBLK)
   or a           ; carry clear for the
@@ -627,8 +640,10 @@ CWB3:
                  ; goes, so the card's
   ret z          ; directory stays the
                  ; truth and is read
+
 ; again; a data line that failed stays
 ; dirty, for the next flush
+
 CWBX:
   call CDROP     ; A is the line, from
                  ; CWRITE or CFLUSH
@@ -639,10 +654,10 @@ CWBX:
 ; and, if any failed and was dropped,
 ; Write lost said once. The rest of a
 ; chained line goes, as it does on a
-; BDOS
-; error's exit. Returns Z when every
-; line was written. Destroys A, BC, DE
-; and HL.
+; BDOS error's exit. Returns Z when
+; every line was written. Destroys A,
+; BC, DE and HL.
+
 CWBOOT:
   call CFLALL
   ret z          ; every line written
@@ -656,29 +671,27 @@ CEND:
 
 ; MVCOPY: the cache's copy between
 ; EXPAND 0 and EXPAND 1. BC bytes from
-; DE to
-; HL, forward as LDIR does, XMDST and
-; XMSRC the destination's and source's
-; banks: 0 the program's view, 1 EXPAND
-; 1. Returns A = 0 with HL and DE
-; advanced by BC. Destroys BC and F, and
-; MVREST; the alternate registers are
-; kept, and the latch and the interrupt
-; state are as it found them.
+; DE to HL, forward as LDIR does, XMDST
+; and XMSRC the destination's and
+; source's banks: 0 the program's view,
+; 1 EXPAND 1. Returns A = 0 with HL and
+; DE advanced by BC. Destroys BC and F,
+; and MVREST; the alternate registers
+; are kept, and the latch and the
+; interrupt state are as it found them.
 ;
 ; With interrupts off, EXPAND 1 is
 ; switched in only around code that uses
-; no
-; stack, as the caller's stack may be in
-; EXPAND 0. Within one bank: LDIR in
+; no stack, as the caller's stack may be
+; in EXPAND 0. Within one bank: LDIR in
 ; that bank's view. Across banks, the
 ; bank-0 end's part below 8000h, in the
 ; fixed RAM, copies by LDIR with EXPAND
-; 1 in view; its part in EXPAND 0
-; copies a byte at a time, the latch
-; switched between each read and write,
-; with the two latch values in D' and
-; E'.
+; 1 in view; its part in EXPAND 0 copies
+; a byte at a time, the latch switched
+; between each read and write, with the
+; two latch values in D' and E'.
+
 MVCOPY:
   ld a,b         ; nothing to copy: done
                  ; at once
@@ -703,13 +716,17 @@ MVCOPY:
   jr z,MV1       ; source in bank 0:
                  ; EXPAND 0 for it
   set 2,d
+
 ; the destination's bank, the same way
+
 MV1:
   ld a,(XMDST)
   or a
   jr z,MV2
   set 2,e
+
 ; equal latches: both ends in one bank
+
 MV2:
   ld a,d
   cp e
@@ -751,7 +768,9 @@ MV4:
   or a
   sbc hl,bc      ; the count less that
                  ; part
+
 ; and the part in EXPAND 0
+
   ld (MVREST),hl
   pop hl         ; the destination again
   exx
@@ -770,7 +789,9 @@ MV4:
   and e          ; EXPAND 0 in view
   out (c),a
   exx
+
 ; the rest by the byte loop, from where
+
   ld bc,(MVREST)
   jr MVBYTE      ; LDIR left HL and DE
 
@@ -826,7 +847,9 @@ MVEND:
   exx
   pop af         ; P/V clear (PO):
                  ; interrupts were off,
+
 ; and stay so
+
   jp po,MVOK
   ei
 
