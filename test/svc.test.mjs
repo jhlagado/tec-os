@@ -388,7 +388,7 @@ test("a shell load refuses a cyclic registry and the next command runs (KE-AR13)
   t.poke(head, head);
   assert.match(t.m.command("NEXT.SVC"), /NEXT\.SVC\?/);
   assert.equal(t.m.read(t.m.sym("SVCBSY")), 0);
-  assert.match(t.m.command("DIR"), /NEXT\s+SVC/);
+  assert.match(t.m.command("DIR"), /NEXT\.SVC/);
 });
 
 test("INIT returning 0 installs a service with no records", async () => {

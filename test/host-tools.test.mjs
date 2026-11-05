@@ -306,7 +306,7 @@ test("tecvol makes and reads format 1.1: more than 8 volumes, a drives field, un
   const dir = mkdtempSync(resolve(tmpdir(), "tecvol-11-"));
   const img = resolve(dir, "big.img");
   const vols = Array.from({ length: 12 }, (_, i) => ["--volume", `G1M:V${i}:${i < 2 ? "AB"[i] : "-"}`]).flat();
-  execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "create", img, ...vols, "--drives", "3"]);
+  execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "create", img, ...vols, "--drives", "3"], { timeout: 5000, stdio: ["ignore", "pipe", "pipe"] });
   const info = execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "verify", img], { timeout: 5000, encoding: "utf8" });
   assert.match(info, /format 1\.1, .* 12 volume\(s\), 3 drive\(s\) wanted/);
   const parsed = parseContainer(readFileSync(img));
