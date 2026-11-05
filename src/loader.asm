@@ -442,7 +442,8 @@ SVCNT:
   jr z,SVCNE     ; the last counted
   dec b          ; one fewer for each
                  ; after the first
-  jr SVCNT
+  jr nz,SVCNT    ; a 257th link: refuse
+  jr SVCRF       ; REMOVE undoes INIT
 
 SVCNE:
   pop hl         ; the first record

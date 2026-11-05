@@ -214,7 +214,7 @@ refuses a service that takes a stack's sum past its limit:
 
 | Stack | Reserved | Base | Census | Limit for services |
 | --- | --- | --- | --- | --- |
-| BDOS | 54 | 32 | 32 | 8 |
+| BDOS | 54 | 30 | 30 | 8 |
 | BIOS | 40 | 18 | 18 | 12 |
 | CCP | 32 | 18 | 18 | 6 |
 
@@ -224,7 +224,7 @@ all. The BIOS's 18 is warm boot's flush of the lines written behind: cold boot
 mounts and lists the drives on the BDOS's stack, which nothing else uses before
 the CCP runs. A limit is counted from the base, and a stack holds its base and
 its limit with a quarter free, which `test/stacks.test.mjs` checks: the BDOS's
-40 of 54, the BIOS's 30 of 40 and the CCP's 24 of 32. Nothing overflows. A declaration
+38 of 54, the BIOS's 30 of 40 and the CCP's 24 of 32. Nothing overflows. A declaration
 is the service's promise, and `test/svc.test.mjs` shows how a stack watch proves
 one: the ROM can't.
 

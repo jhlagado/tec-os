@@ -121,13 +121,22 @@ async function main(argv) {
         const fs = new CpmVolume(volumePayload(image, v), v.g, { readOnly: v.readOnly });
         const issues = fs.verify();
         problems += issues.length;
+        // A block given twice or past DSM leaves the free space unknown: verify
+        // has it as a problem line, and the volumes after this one are still
+        // listed (KE-AR12).
+        let free;
+        try {
+          free = `${fs.freeBytes()} bytes free`;
+        } catch {
+          free = "free unknown";
+        }
         console.log(
           `  ${v.drive ?? "-"}: ${v.label.padEnd(11)} id ${v.id} ${v.g.name} start ${v.start} ` +
-            `${v.readOnly ? "ro" : "rw"}${v.writeBehind ? " wb" : ""} ${fs.list().length} file(s), ${fs.freeBytes()} bytes free`,
+            `${v.readOnly ? "ro" : "rw"}${v.writeBehind ? " wb" : ""} ${fs.list().length} file(s), ${free}`,
         );
         for (const issue of issues) console.log(`     problem: ${issue}`);
       }
-      if (cmd === "verify" && problems) process.exit(1);
+      if (cmd === "verify" && problems) process.exitCode = 1;
       break;
     }
     case "dir": {
@@ -192,6 +201,6 @@ async function main(argv) {
 if (process.argv[1] && resolve(process.argv[1]) === resolve(new URL(import.meta.url).pathname)) {
   main(process.argv.slice(2)).catch((e) => {
     console.error(`tecvol: ${e.message}`);
-    process.exit(1);
+    process.exitCode = 1;
   });
 }
