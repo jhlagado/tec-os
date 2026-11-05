@@ -1,5 +1,5 @@
-import { fontPackage } from "./lib/font-package.mjs";
 #!/usr/bin/env node
+import { fontPackage } from "./lib/font-package.mjs";
 // Produce the release set in dist/: the ROM image, its map and census,
 // the starter programs, a recipe that lists them with their digests, the
 // starter card built from that recipe, and the memory map document.

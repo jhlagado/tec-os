@@ -1482,5 +1482,6 @@
         }
       ]
     }
-  ]
+  ],
+  "hostPolicy": "prepareCard/setDisplayLine keep public default80; every TMS choice writes its explicit width. Colon/chaining/atomicity cases retain names and account for the added line."
 }

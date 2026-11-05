@@ -46,7 +46,13 @@ const expected=code=>{
 test('raw cold40 and all PICO/GLCD aliases, reverse and row7 rendering on production media',()=>{
 const raw=card();const info=parseContainer(raw),a=findVolume(info,'A');
 assert.deepEqual(new CpmVolume(volumePayload(raw,a),a.g).list().map(f=>f.name),['ROWS.TXT']);
-const cold=boot(raw);assert.equal(cold.read(cold.sym('PIWID')),40,'raw cold default without STARTUP or injected width');
+function rawDefault(m,image){
+ const a=findVolume(parseContainer(image),'A');
+ assert.ok(!new CpmVolume(volumePayload(image,a),a.g).list().some(f=>f.name==='STARTUP.CMD'),'raw default forbids startup injection');
+ assert.equal(m.read(m.sym('PIWID')),40,'raw cold default without STARTUP or injected width');
+}
+const cold=boot(raw);rawDefault(cold,raw);
+assert.throws(()=>rawDefault(cold,card('CON PICO 40')),/forbids startup/);
 assert.equal(cold.tec1g.state.display.tms9918.stateSnapshot().registers[7],0x31);
 rows.push({case:'raw-cold',width:40,noStartup:true,noFixtureInjection:true});
 for(const width of [32,40,80]){

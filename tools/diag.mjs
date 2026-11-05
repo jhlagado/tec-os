@@ -1,5 +1,5 @@
-import { fontPackage } from "./lib/font-package.mjs";
 #!/usr/bin/env node
+import { fontPackage } from "./lib/font-package.mjs";
 // Build the TEC-1G diagnostics ROM.
 //
 // Generates diag/gen/config.asm (version, serial delays, stopwatch constants)
