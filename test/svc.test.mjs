@@ -311,7 +311,7 @@ function loaderState(t) {
     top: t.word(6), ceiling: t.word(t.m.sym("PZTOP")),
     registry: t.word(t.m.sym("REGHEAD")), owner: t.m.read(t.m.sym("SVCHEAD")),
     generation: t.m.read(t.m.sym("SVCGEN")), busy: t.m.read(t.m.sym("SVCBSY")),
-    hook: t.word(t.m.sym("RAMBIOS") + 10),
+    hook: t.word(t.word(1) + 10),
     vectors: Array.from({ length: 56 }, (_, i) => t.m.read(8 + i)),
   };
 }
