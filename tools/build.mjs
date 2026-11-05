@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Build the TEC-OS ROM images with ATOM.
+// Build the TEC-OS ROM images.
 //
 // For each hardware profile: generate the configuration and format equates,
 // assemble once to measure the resident workspace, place TPATOP as high as
@@ -14,6 +14,7 @@ import { fileURLToPath } from "node:url";
 import { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } from "atom-z80";
 import { format, geometryInfo } from "./lib/format.mjs";
 import { FORMAT, checkInterfaces, makeSvc } from "./lib/svc.mjs";
+import { romBackend, tasAssembler } from "./lib/tas-rom.mjs";
 import { romFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -193,12 +194,19 @@ function checkServiceSources() {
 // 621201d, against atom-z80's default of 2 billion, so these give it headroom.
 const ATOM_BUDGET = { maxCycles: 4_000_000_000, maxInstructions: 400_000_000 };
 
-async function assemble() {
+async function assembleAtom(phase) {
   const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions, ...ATOM_BUDGET });
   const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
-  const symbols = new Map();
-  for (const symbol of d8.symbols) symbols.set(symbol.name, symbol.address ?? symbol.value);
-  return { result, d8, symbols };
+  for (const image of result.generation.images) {
+    check(image.address >= ROM_START, `ROM byte emitted at ${hex(image.address)}`);
+  }
+  const { bytes } = materializeAtomGeneration(result.generation, { base: ROM_START, fill: 0xff });
+  console.error(`tecos ROM assembler=atom phase=${phase}`);
+  return { d8, bytes };
+}
+
+function globals(d8) {
+  return new Map(d8.symbols.map(symbol => [symbol.name, symbol.address ?? symbol.value]));
 }
 
 function need(symbols, name) {
@@ -223,25 +231,19 @@ function cardLayout(wsbase, dsms) {
   return { entry, alvBase, tpa: entry - 0x100 };
 }
 
-// The resident workspace below the RAM BIOS table does not depend on the
-// profile, so one probe assembly sizes it for every profile.
-let workspaceBytes;
-
-async function buildProfile(name) {
+async function buildProfile(name, assemble) {
   const profile = { name, ...PROFILES[name] };
-  if (workspaceBytes === undefined) {
-    writeGenerated(profile, 0x8000);
-    const probe = await assemble();
-    workspaceBytes = need(probe.symbols, "BDOSRME") - 0x8000;
-  }
+  const probeBase = 0x8000;
+  writeGenerated(profile, probeBase);
+  const probe = globals((await assemble("probe")).d8);
+  const workspaceBytes = need(probe, "BDOSRME") - probeBase;
   const wsbase = RAMBIOS - workspaceBytes;
-  const serial = writeGenerated(profile, wsbase);
-  const { result, d8, symbols } = await assemble();
+  check(workspaceBytes > 0 && wsbase >= probeBase, "invalid workspace sizing marker");
 
-  for (const image of result.generation.images) {
-    check(image.address >= ROM_START, `ROM byte emitted at ${hex(image.address)}`);
-  }
-  const { bytes } = materializeAtomGeneration(result.generation, { base: ROM_START, fill: 0xff });
+  const serial = writeGenerated(profile, wsbase);
+  const { d8, bytes } = await assemble("final");
+  const symbols = globals(d8);
+  check(need(symbols, "WSBASE") === wsbase, "final workspace base differs from the probe placement");
   check(bytes.length <= ROM_SIZE, `image is ${bytes.length} bytes`);
   const rom = new Uint8Array(ROM_SIZE).fill(0xff);
   rom.set(bytes);
@@ -334,7 +336,8 @@ function refreshDist(outDir, census) {
 }
 
 export async function build() {
-  return [await buildProfile("tecos")];
+  const assemble = romBackend() === "tas" ? await tasAssembler(SRC) : assembleAtom;
+  return [await buildProfile("tecos", assemble)];
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
