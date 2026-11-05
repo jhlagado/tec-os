@@ -97,7 +97,7 @@ table of its routines, so another display needs only those routines.
 
 The PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I
 (KS39). When the VDP answers and the matrix keyboard is fitted, cold boot starts
-it before the banner at 80 columns and sets `CON:` to `CRT:`: the banner, the
+it before the banner at 40 columns and sets `CON:` to `CRT:`: the banner, the
 volume list, DIAG's `R retry>` prompt if the card won't mount, and the prompt all
 appear on its screen, with no file needed. Its table, its "PICO" record and its
 state are one 95-byte RAM block, `PIBLK`, in the BIOS's state, so it costs no TPA
