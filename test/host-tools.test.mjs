@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createContainer, parseContainer, headerChecksum, ContainerError } from "../tools/lib/container.mjs";
 import { CpmVolume } from "../tools/lib/cpmfs.mjs";
@@ -108,7 +108,7 @@ test("tecvol creates, edits and reads a container atomically", () => {
   const dir = mkdtempSync(resolve(tmpdir(), "tecvol-"));
   const img = resolve(dir, "card.img");
   const tool = resolve(ROOT, "tools/tecvol.mjs");
-  const run = (...args) => execFileSync(process.execPath, [tool, ...args], { encoding: "latin1" });
+  const run = (...args) => execFileSync(process.execPath, [tool, ...args], { timeout: 5000, encoding: "latin1" });
   run("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G1M:WORK:B", "--volume", "G1M:ARCHIVE:C:ro");
   const payload = resolve(dir, "data.bin");
   writeFileSync(payload, Buffer.from([...Array(1000).keys()].map((i) => i & 0xff)));
@@ -125,7 +125,7 @@ test("tecvol --user takes an integer 0 to 15 only, and a refused one leaves the 
   const dir = mkdtempSync(resolve(tmpdir(), "tecvol-user-"));
   const img = resolve(dir, "card.img");
   const tool = resolve(ROOT, "tools/tecvol.mjs");
-  const run = (...args) => execFileSync(process.execPath, [tool, ...args], { encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
+  const run = (...args) => execFileSync(process.execPath, [tool, ...args], { timeout: 5000, encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
   run("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G1M:WORK:B");
   const payload = resolve(dir, "data.bin");
   writeFileSync(payload, Buffer.from("data"));
@@ -163,7 +163,7 @@ test("a read-only file is neither written over nor erased without force, by CpmV
 
   const dir = mkdtempSync(resolve(tmpdir(), "tecvol-ro-"));
   const img = resolve(dir, "card.img");
-  const run = (...args) => execFileSync(process.execPath, [resolve(ROOT, "tools/tecvol.mjs"), ...args], { encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
+  const run = (...args) => execFileSync(process.execPath, [resolve(ROOT, "tools/tecvol.mjs"), ...args], { timeout: 5000, encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
   run("create", img, "--volume", "G1M:SYSTEM:A");
   const payload = resolve(dir, "data.bin");
   writeFileSync(payload, Buffer.from("data"));
@@ -180,7 +180,7 @@ test("a read-only file is neither written over nor erased without force, by CpmV
 test("a file whose entry names a block past DSM is not read, by CpmVolume or tecvol get: the error names the entry (KE-AR11)", () => {
   const dir = mkdtempSync(resolve(tmpdir(), "tecvol-dsm-"));
   const img = resolve(dir, "card.img");
-  const run = (...args) => execFileSync(process.execPath, [resolve(ROOT, "tools/tecvol.mjs"), ...args], { encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
+  const run = (...args) => execFileSync(process.execPath, [resolve(ROOT, "tools/tecvol.mjs"), ...args], { timeout: 5000, encoding: "latin1", stdio: ["ignore", "pipe", "pipe"] });
   run("create", img, "--volume", "G1M:SYSTEM:A");
   const payload = resolve(dir, "data.bin");
   writeFileSync(payload, new Uint8Array(128).fill(0x41));
@@ -200,6 +200,68 @@ test("a file whose entry names a block past DSM is not read, by CpmVolume or tec
   const out = resolve(dir, "out.bin");
   assert.throws(() => run("get", img, "A", "BAD.DAT", out), /BAD\.DAT.*block 32767/, "tecvol get refuses");
   assert.throws(() => readFileSync(out), /ENOENT/, "and writes no file");
+});
+
+test("damaged-volume reports and terminal CLI errors finish under normal and guarded Node settings (KE-AR12, KE-202)", { timeout: 110_000 }, () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-terminal-"));
+  const tool = resolve(ROOT, "tools/tecvol.mjs");
+  function run(args, options = "") {
+    const { NODE_OPTIONS, NODE_TEST_CONTEXT, ...env } = process.env;
+    const result = spawnSync(process.execPath, [tool, ...args], {
+      encoding: "utf8", timeout: 5000, killSignal: "SIGKILL",
+      stdio: ["ignore", "pipe", "pipe"], env: { ...env, NODE_OPTIONS: options },
+    });
+    assert.equal(result.error, undefined, `CLI failed or timed out: ${result.error}; ${result.stderr}`);
+    assert.equal(result.signal, null, `CLI was signalled: ${result.signal}`);
+    return result;
+  }
+  const must = (...args) => {
+    const result = run(args);
+    assert.equal(result.status, 0, result.stderr);
+  };
+  try {
+    const cards = [];
+    for (const block of [null, 600]) {
+      const img = resolve(dir, `card-${block ?? "twice"}.img`);
+      const payload = resolve(dir, "payload.bin");
+      must("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G8M:WORK:B");
+      writeFileSync(payload, new Uint8Array(3000).fill(0x55));
+      must("put", img, "A", payload, "MOUNT.COM");
+      writeFileSync(payload, Buffer.from("hello"));
+      must("put", img, "A", payload, "HELLO.TXT");
+      const image = readFileSync(img);
+      const a = volume(image, "A");
+      const hello = a.entry(a.scan().find(e => e.name === "HELLO.TXT").index);
+      const use = block ?? a.scan().find(e => e.name === "MOUNT.COM").blocks[0];
+      hello[16] = use & 255;
+      hello[17] = use >> 8;
+      writeFileSync(img, image);
+      cards.push({ img, block });
+    }
+    for (const options of ["", "--max-old-space-size=450"]) {
+      console.log(JSON.stringify({ cliNode: process.version, NODE_OPTIONS: options }));
+      for (let repeat = 0; repeat < 4; repeat++) {
+        for (const { img, block } of cards) {
+          for (const cmd of ["info", "verify"]) {
+            const r = run([cmd, img], options);
+            assert.equal(r.status, cmd === "verify" ? 1 : 0, r.stderr);
+            assert.equal(r.stderr, "");
+            assert.match(r.stdout, /^ {2}A: SYSTEM .* 2 file\(s\), free unknown$/m);
+            assert.match(r.stdout, block === null ? /problem: HELLO\.TXT: block \d+ allocated twice/ : /problem: HELLO\.TXT: block 600 beyond DSM/);
+            assert.match(r.stdout, /^ {2}B: WORK .* 0 file\(s\), \d+ bytes free$/m);
+          }
+        }
+        const fatal = run(["verify", resolve(dir, "missing.img")], options);
+        assert.equal(fatal.status, 1);
+        assert.match(fatal.stderr, /^tecvol: .*ENOENT/m);
+        const usage = run(["unknown-command"], options);
+        assert.equal(usage.status, 2, "usage remains an abort, not a graceful continuation");
+        assert.match(usage.stderr, /usage: tecvol/);
+      }
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("a recipe builds a verified card and rejects a wrong digest", async () => {
@@ -245,7 +307,7 @@ test("tecvol makes and reads format 1.1: more than 8 volumes, a drives field, un
   const img = resolve(dir, "big.img");
   const vols = Array.from({ length: 12 }, (_, i) => ["--volume", `G1M:V${i}:${i < 2 ? "AB"[i] : "-"}`]).flat();
   execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "create", img, ...vols, "--drives", "3"]);
-  const info = execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "verify", img], { encoding: "utf8" });
+  const info = execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "verify", img], { timeout: 5000, encoding: "utf8" });
   assert.match(info, /format 1\.1, .* 12 volume\(s\), 3 drive\(s\) wanted/);
   const parsed = parseContainer(readFileSync(img));
   assert.deepEqual([parsed.minor, parsed.drives, parsed.volumes.length, parsed.volumes[11].label], [1, 3, 12, "V11"]);
@@ -256,7 +318,7 @@ test("tecvol makes and reads format 1.1: more than 8 volumes, a drives field, un
 
 test("tecvol marks one volume written behind with :wb, and refuses two or one read-only", () => {
   const dir = mkdtempSync(resolve(tmpdir(), "tecvol-wb-"));
-  const tecvol = (...args) => execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  const tecvol = (...args) => execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), ...args], { timeout: 5000, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   const img = resolve(dir, "wb.img");
   tecvol("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G8M:WORK:B:wb");
   const info = parseContainer(new Uint8Array(readFileSync(img)));
@@ -292,7 +354,7 @@ test("npm run build leaves dist/'s ROM, map and census equal to build/'s when di
   for (const path of touched) if (existsSync(path)) kept.set(path, readFileSync(path));
   for (const [, to] of names) writeFileSync(resolve(dist, to), "stale"); // as an older build's media left them
   try {
-    execFileSync(process.execPath, [resolve(ROOT, "tools/build.mjs")], { encoding: "utf8" });
+    execFileSync(process.execPath, [resolve(ROOT, "tools/build.mjs")], { timeout: 120000, encoding: "utf8" });
     for (const [from, to] of names) assert.ok(readFileSync(resolve(dist, to)).equals(readFileSync(resolve(ROOT, "build/tecos", from))), `dist/${to} is build/tecos/${from}`);
   } finally {
     // dist/ as it was found: each file the build may write put back, or removed if it wasn't there

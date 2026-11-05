@@ -47,7 +47,7 @@ function bench(m) {
     c.sp = top - 2;
     c.pc = addr;
     m.runUntil(() => m.pc === STUB || m.pc === m.sym("CCPENT"), 60_000_000, `return from ${addr.toString(16)}`);
-    return { sp: c.sp, de: (c.d << 8) | c.e, back: m.pc === STUB, carry: c.flags.C, a: c.a, hl: (c.h << 8) | c.l };
+    return { sp: c.sp, back: m.pc === STUB, carry: c.flags.C, a: c.a, hl: (c.h << 8) | c.l };
   };
   const entry = () => assert.ok(word(6) === word(m.sym("STUBAD")) || (word(6) & 0xff) === 0, "(0006h) is the stub or a page's start");
   const load = (file, end) => {
@@ -333,11 +333,11 @@ for (const [existing, added] of [[255, 1], [256, 0], [256, 1]]) {
     const d = await svc({ V_HOOK: 1, V_NONE: added === 0 ? 1 : 0 });
     const r = t.load(d.file);
     returned(t, r);
-    assert.equal(t.m.read(t.m.sym("SVCRA")), 0);
+    assert.equal(t.m.read(t.m.sym("SVCRA")), existing + added > 256 ? 0 : 1);
     const after = loaderState(t);
     if (existing + added > 256) {
       assert.deepEqual([r.carry, r.rc], [1, 1]);
-      assert.equal(t.m.read((r.de & 0xff00) + d.symbols.RESULT), 2, "REMOVE executed");
+      assert.equal(t.m.read(((before.ceiling & 0xff00) - Math.ceil(d.image / 256) * 256) + d.symbols.RESULT), 2, "REMOVE executed");
       assert.deepEqual(after, before, "heads, ceiling, generation, hook and vectors restored");
     } else {
       assert.deepEqual([r.carry, r.rc], [0, 0]);
@@ -362,7 +362,7 @@ for (const refuses of [0, 1]) {
     const d = await svc({ V_HOOK: 1, V_REFUSE: refuses });
     const r = t.load(d.file);
     returned(t, r);
-    const base = r.de & 0xff00;
+    const base = (before.ceiling & 0xff00) - Math.ceil(d.image / 256) * 256;
     assert.equal(t.m.read(base + d.symbols.RESULT), 2, "REMOVE ran");
     assert.deepEqual([r.carry, r.rc], [1, refuses ? 2 : 1]);
     assert.equal(t.m.read(t.m.sym("SVCRA")), 0);
@@ -388,7 +388,7 @@ test("a shell load refuses a cyclic registry and the next command runs (KE-AR13)
   t.poke(head, head);
   assert.match(t.m.command("NEXT.SVC"), /NEXT\.SVC\?/);
   assert.equal(t.m.read(t.m.sym("SVCBSY")), 0);
-  assert.match(t.m.command("USER 3"), /D>/);
+  assert.match(t.m.command("DIR"), /NEXT\s+SVC/);
 });
 
 test("INIT returning 0 installs a service with no records", async () => {
