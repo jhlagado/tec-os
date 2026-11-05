@@ -4,10 +4,11 @@ Tested source is `8b8664a7d93c6dc2e8bce509b9770585e106eedc`, from `ea3ef3d`.
 This entry is a later record-only descendant. No executable source changed,
 and no additional test/build run is claimed for this metadata commit.
 
-Two complete strict runs passed741/741 with identical ordered names/results,
-all734 baseline names and seven regressions retained. Each pass validated
-BDOS30+8=38, CCP18+6=24 and BIOS18+12=30 from its new census and actual ROM
-SVCLIM. Full native inputs and all37 artifact files/nine directories retained
+Two complete strict runs passed 741/741 with identical ordered names/results,
+all 734 baseline names and seven regressions retained. Each pass validated
+BDOS 30 + 8 = 38, CCP 18 + 6 = 24 and BIOS 18 + 12 = 30 from its new
+census and actual ROM SVCLIM. Full native inputs and all 37 artifact files
+and nine directories retained
 their expected identities; missing/extra controls and metadata checks passed.
 
 The exact evidence is Origo `569e0f27d21000931b0c87ec2741ef8191c589fd`, under
@@ -16,8 +17,8 @@ its readable results, resource records, complete archive, input reuse chain
 and final artifact inventory by hash. That packet includes the concrete
 dependent source/font/notice offer. Earlier failed attempts remain preserved.
 
-The job took995.017seconds with629MB peak. Total guarded stage execution,
-including failed/model/focused/accounting attempts, is1,849.7seconds. Complete
+The job took 995.017 seconds with 629 MB peak. Total guarded stage execution,
+including failed/model/focused/accounting attempts, is 1,849.7 seconds. Complete
 normal TAS/ATOM/repeat/workflow evidence was reused only after exact executable
 input identity; the suite's internal assembly tests still ran normally.
 
