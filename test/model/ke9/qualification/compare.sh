@@ -46,5 +46,6 @@ npm run media
 # at the repair pin. The old stage's exact hash snapshots remain historical.
 cd "$candidate"
 unset TECOS_ROM_ASSEMBLER
+export TECOS_ROM_TRACE="$evidence_dir/comparison-trace.jsonl"
 node test/model/ks43/compare.mjs "$candidate" "$reference"
 echo SAME_SOURCE_ATOM_TAS_ARTIFACTS_AND_D8_MATCH
