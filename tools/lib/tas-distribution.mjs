@@ -10,6 +10,8 @@ const relativeSymbols = ({ globals, origin }) => Object.fromEntries([...globals]
 ]));
 
 export function relocateGlcd(at1, at2) {
+  assert.equal(at1.origin, 0x100, 'GLCD first origin');
+  assert.equal(at2.origin, 0x200, 'GLCD second origin');
   assert.equal(at1.image.length, at2.image.length, 'GLCD flat lengths differ');
   assert.ok(at1.image.length > DHLEN, 'GLCD image has no body');
   assert.deepEqual(relativeSymbols(at1), relativeSymbols(at2), 'GLCD page-relative symbols differ');
@@ -40,7 +42,15 @@ export async function assembleGlcd(root, run) {
 export async function assembleDistributionCom(root, run, name) {
   assert.ok(name === 'MOUNT.COM' || name === 'DEMO.COM', 'unsupported TAS distribution program');
   const entry = 'test/programs/' + name.replace('.COM', '.asm').toLowerCase();
-  const { image } = await run({ root, entry, origin: 0x100, target: name, phase: 'final' });
-  // The decoded image includes DS bytes, including the final DEMO buffers.
+  const { image, globals } = await run({ root, entry, origin: 0x100, target: name, phase: 'final' });
+  const reserves = name === 'MOUNT.COM' ? [['NAME', 11], ['DESC', 32], ['MNTL', 11]]
+    : [['DIGBUF', 6, 30], ['LEDBUF', 24, 24]];
+  for (const [label, size, fromEnd] of reserves) {
+    const symbol = globals.get(label);
+    const start = symbol?.value - 0x100;
+    assert.ok(symbol?.kind === 'label' && start >= 0 && start + size <= image.length, label + ' reserve extent');
+    if (fromEnd !== undefined) assert.equal(start, image.length - fromEnd, label + ' trailing reserve');
+    assert.ok(image.subarray(start, start + size).every(byte => byte === 0), label + ' reserve must be zero');
+  }
   return image;
 }

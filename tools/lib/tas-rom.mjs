@@ -35,6 +35,13 @@ function stage(root, entry, origin, rom) {
       original = Buffer.from(text.replace(org, (_, prefix, suffix) =>
         prefix + '$' + origin.toString(16).padStart(4, '0') + suffix), 'latin1');
     }
+    if (!rom) {
+      for (const line of original.toString('latin1').split(/\r?\n/)) {
+        if (line.trimStart().startsWith('%')) {
+          assert.match(line, /^[ \t]*%INCLUDE[ \t]+"[^"]+"[ \t]*(?:;.*)?$/i, 'unsupported distribution source directive');
+        }
+      }
+    }
     sources.set(file, original);
     const row = { name };
     staged.set(file, row);
