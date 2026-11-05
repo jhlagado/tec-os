@@ -277,7 +277,7 @@ TMSR:
   ld a,(PITIE)   ; keep this session's
   or (hl)        ; supported IE setting
 
-TMSRI:      ; the value
+TMSRI:
   push hl
   ld l,a
   ld h,c         ; and the register, as
@@ -405,7 +405,10 @@ PIICLR:
   ld a,(CONDEV)
   and CDTMS      ; absent VDP: no port
   ret z          ; access at all
-  ld hl,REGS32+1 ; safe with no console
+
+; A bare VDP has no console table.
+
+  ld hl,REGS32+1
   ld a,(PIREGP+1)
   or a           ; a console has its
   jr z,PIICR1    ; current mode table
