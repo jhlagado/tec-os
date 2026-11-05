@@ -62,11 +62,11 @@ for(const width of [32,40,80]){
  for(const variant of ['combined']){
   const b=boot(variant);b.command('CON PICO '+width);state(b,width,variant==='combined'?font:old);
   const acquired=call(b,b.sym('ABICALL'),{b:1,c:b.sym('TNVIDEO')});assert.equal(acquired.a,0);assert.equal(acquired.carry,0,'VIDEO acquisition carry clear');assert.equal(b.sym('CDCLM'),sourceClaims[variant],'map/source CDCLM agreement');assert.equal(b.read(b.sym('VCLAIM')),b.sym('CDCLM'),'exact source-defined claim value');
-  
+
   // Establish distinctive hardware state while owned, through PICOREG.
   const reg=call(b,b.sym('GFXREG'),{a:0x1c,b:7});
   assert.equal(b.tec1g.state.display.tms9918.stateSnapshot().registers[7],0x1c,'GFXREG established distinctive owned register 7');
-  
+
   const snapshot=()=>{const s=b.tec1g.state.display.tms9918.stateSnapshot();return {registers:[...s.registers],vramSha256:hash(s.vram),width:b.read(b.sym('PIWID')),claim:b.read(b.sym('VCLAIM'))}};
   const original=snapshot(),steps=[];
   for(const selector of ['CON CRT','CON PICO']){
