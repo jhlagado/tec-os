@@ -3,10 +3,10 @@
   "gate": "KG53",
   "baseline": "ea3ef3de9133931e925a0220d51c0e971c1fd8dd",
   "testedSource": "8b8664a7d93c6dc2e8bce509b9770585e106eedc",
-  "recordScope": "Record-only descendant. Executable source/native inputs unchanged; no further run is claimed for the record commit.",
+  "recordScope": "Record-only descendant. Executable source/native inputs unchanged. No further run is claimed for this record commit.",
   "developmentEvidenceComplete": true,
-  "independentFinalResultReview": "pending",
-  "landing": "not performed",
+  "independentFinalResultReview": "closed; KG53 accepted for landing",
+  "landing": "pending driver fast-forward; not performed by this record",
   "evidence": {
     "repository": "jhlagado/origo",
     "commit": "569e0f27d21000931b0c87ec2741ef8191c589fd",
@@ -57,7 +57,7 @@
       "D1BB",
       "D1E3"
     ],
-    "sourceInputIdentityProof": "Prior normal TAS/ATOM/repeat/workflow evidence at source23cbe84 reused only after unchanged executable/generated/data identities were proven on testedSource8b8664a."
+    "sourceInputIdentityProof": "Prior normal TAS/ATOM/repeat/workflow evidence at source 23cbe84 reused only after unchanged executable/generated/data identities were proven on tested source 8b8664a."
   },
   "stacks": {
     "order": [
@@ -108,13 +108,19 @@
     "guardedStageSecondsIncludingFailures": 1849.7
   },
   "remaining": [
-    "Independent final result review and driver landing",
+    "Driver landing after the closed independent final result review",
     "Owning consumers decide adoption and pins",
     "Physical screen/board and actual debugger qualification are outside this proof"
   ],
   "preservedFailures": [
-    "d2c20786 first complete qualification740/741 historical GLCD font mismatch",
-    "623ca66c first accounting memory stop645MB under600MB cap"
+    "d2c20786 first complete qualification 740/741 historical GLCD font mismatch",
+    "623ca66c first accounting memory stop at 645 MB under the 600 MB cap"
   ],
-  "dependentOffer": "OFFER.md in the evidence path; complete font/original/source/notices plus images, costs and actual40/80 workflows."
+  "dependentOffer": "OFFER.md in the evidence path; complete font/original/source/notices plus images, costs and actual40/80 workflows.",
+  "independentFinalReviewSource": {
+    "repository": "jhlagado/origo",
+    "commit": "43d5f3280d5867ef0b4939744c77c5b88ab8b793",
+    "path": "studies/p3-tec-os/reviews/compact-font-40-result.md",
+    "sha256": "4f1f5e23736769f9528b90140eabd79cc990b44fad82ad65d2c86255edc48f73"
+  }
 }
