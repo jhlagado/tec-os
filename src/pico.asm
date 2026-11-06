@@ -378,7 +378,7 @@ GFXREG:
   ld l,a         ; the value goes first
   ld a,b
   cp 1           ; other registers leave
-  jr nz,GFXRG1    ; tracked IE alone
+  jr nz,GFXRG1   ; tracked IE alone
   ld a,l
   and $20        ; only the IE bit, not
   ld (PITIE),a   ; the caller's mode
