@@ -244,6 +244,7 @@ PICOTPS EQU 42   ; the page shown, the
                  ; same
 
 ; Debugger display constants.
+
 SYSLAT EQU $FF   ; write-only system
                  ; latch
 LATEXP EQU $04   ; EXPAND: EXPAND 1 at
