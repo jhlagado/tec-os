@@ -12,6 +12,7 @@
     "tecvol": "tools/tecvol.mjs"
   },
   "scripts": {
+    "start": "esbuild --servedir=web/dist --serve=127.0.0.1:8765",
     "build": "node tools/build.mjs",
     "diag": "node tools/diag.mjs",
     "test": "node --test --test-concurrency=1 test/*.test.mjs",

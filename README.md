@@ -98,8 +98,11 @@ other `CON PICO` or `CON CRT` line with a width, which would override it.
 
 ```sh
 npm run build && npm run media && npm run web
-python3 -m http.server 8765 --directory web/dist
+npm start
 ```
+
+For an existing build, just run `npm start`. This uses the installed esbuild
+development server; Python is not needed.
 
 Open `http://localhost:8765`. The page runs the same Debug80 TEC-1G model
 the tests use, at 4 MHz, with a TMS9918 screen, the 7-segment digits, the
