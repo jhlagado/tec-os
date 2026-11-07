@@ -1,16 +1,13 @@
-; TEC-OS's table, ABI 5.1, for programs:
-; its 8 bytes at C003h, and the numbered
-; services behind its one jump. A
-; program checks for "TNA" at ABITAB and
-; for major version 5 at ABIMAJ before
-; it calls ABICALL. The ROM assembles
-; from this file, and the build checks
-; the table's bytes it makes.
-;
-; The table: "TNA", the major, the
-; minor, then JP to the services. A new
-; major may renumber the services; a new
-; minor only adds numbers at the end.
+; Public TEC-OS ABI 5.1: eight bytes at
+; C003h..C00Ah, containing TNA, major,
+; minor and JP SVCDSP. Test TNA at
+; ABITAB and major 5 at ABIMAJ before
+; calling ABICALL. A new major may
+; renumber services. A minor only
+; appends services. The ROM includes
+; these declarations before emitting the
+; table. The build checks its bytes and
+; addresses.
 
 ; signature "TNA"
 
@@ -32,181 +29,225 @@ ABICALL EQU $C008
 
 ABIEND EQU $C00B
 
-; Calling. C = the service's number, its
-; arguments in B, DE and HL; A is never
-; an argument. Each returns A = 0 with Z
-; set and carry clear on success, or A =
-; a status below with carry set and
-; nothing changed, but FIND and LIST,
-; whose rows say what they return. Each
-; returns with the interrupt state as it
-; found it, runs on the caller's stack
-; and keeps IX, IY and the alternate
-; registers, but MOUNT, UNMOUNT and
-; DESCRIBE, which may change IX and the
-; alternates. None calls the BDOS, but
-; MOUNT and UNMOUNT, which reset the
-; drive through function 37 on the
-; BDOS's own stack, so a program calls
-; them from outside its own BDOS calls.
-; Registers not named as results are
-; destroyed. Stack is a bound on what
-; each takes below its return address,
-; the dispatcher's included: none takes
-; more, and some take less. Any number
-; from TNCOUNT up returns TNEBAD with B,
-; DE and HL as they came.
+; Numbered calls take C=service and
+; arguments in B/DE/HL, never A.
+; Ordinary success returns A=0, Z and
+; carry clear. Failure returns a status
+; with carry. FIND/LIST instead return
+; generation A and a carry result.
+; Unnamed result registers may be
+; destroyed.
+; Calls use the caller's stack and
+; preserve interrupt state, IX/IY and
+; alternates, except
+; MOUNT/UNMOUNT/DESCRIBE may change IX
+; and alternates. Only MOUNT/UNMOUNT
+; call BDOS to reset drives. Call them
+; outside other BDOS calls.
+; Stack figures are upper bounds below
+; the return address, including
+; dispatch. Numbers >=TNCOUNT return
+; TNEBAD with B/DE/HL preserved. Refusal
+; effects are service-specific:
+; workspace, cache or hardware state may
+; already have changed.
 
-TNINFO EQU 0     ; -> B = devices (HWB*
-                 ; below),
+; INFO: B=CONDEV OR VCLAIM, DE=ROMVER,
+; L=columns and H=rows, zero for serial.
+; Read stored state without device
+; access. Stack bound 6.
 
-; DE = ROM version, L = console columns,
-; H = rows (0 for serial). Stack 6
+TNINFO EQU 0
 
-TNDIGIT EQU 1    ; HL -> 6 segment
-                 ; bytes, leftmost
+; DIGIT: HL points to six segment bytes,
+; leftmost first. Scan all six, turning
+; each off before the next latch. Finish
+; all off with TX idle and HL advanced
+; six. Stack bound 4.
 
-; first: one scan of the digits. Stack 4
+TNDIGIT EQU 1
 
-TNLCD EQU 2      ; B = row 0-3, HL -> 20
-                 ; characters:
+; LCD: B=row 0..3, HL points to exactly
+; twenty bytes, including zeros. Invalid
+; row returns TNEBAD before output. Row
+; 3 clears CDWRD. Advance HL twenty.
+; Stack bound 10.
 
-; the LCD row written. Stack 10
+TNLCD EQU 2
 
-TNVIDEO EQU 3    ; B = 1 claim the
-                 ; PICO9918, 0 give it
+; VIDEO: B=1 claims PICO9918, B=0
+; releases. Other B returns TNEBAD,
+; absent PICO returns TNENODV. Claim
+; suppresses ROM console drawing on
+; PICO9918 while CRT is effective. UC1
+; output continues. Release only a held
+; claim: clear VCLAIM, call PIVEC's
+; restore if present, then blank only
+; effective CRT. Stack bound 12.
 
-; back. TNEBAD for any other B, TNENODV
-; without one. Stack 12
+TNVIDEO EQU 3
 
-TNTONE EQU 4     ; B = half period in 16
-                 ; T-states,
+; TONE: B is the delay count, DE half
+; cycles. Each half cycle includes 16*B
+; plus loop overhead. With B=0, execute
+; 256 delay iterations. For DE=0, return
+; without tone output. Keep TX idle and
+; finish speaker low. Stack bound 4.
 
-; DE = half cycles: a square wave on the
-; speaker. Stack 4
+TNTONE EQU 4
 
-TNJOY EQU 5      ; -> B = joystick bits,
-                 ; 1 for each one
+; JOY: return complemented joystick byte
+; in B, one bits for pressed controls.
+; Stack bound 4.
 
-; pressed. Stack 4
+TNJOY EQU 5
 
-TNKEYS EQU 6     ; HL -> 8 bytes: the
-                 ; matrix rows, 1
+; KEYS: HL points to eight writable row
+; bytes. Store complemented active-low
+; matrix input and advance HL eight.
+; Stack bound 4.
 
-; for each key down. Stack 4
+TNKEYS EQU 6
 
-TNPUTAT EQU 7    ; D = row, E = column,
-                 ; B = count,
+; PUTAT: D=row, E=column, B=count,
+; HL=characters. Require video routing
+; and no held PICO claim for effective
+; CRT, otherwise TNENODV before drawing.
+; Zero count reads no source and leaves
+; cursor state alone. Clip to screen and
+; right edge, preserving cursor
+; coordinates. Stack bound 22.
 
-; HL -> characters: written on the video
-; console, cursor unmoved, clipped.
-; TNENODV on serial or while the
-; PICO9918 is claimed and is the
-; console. Stack 22
+TNPUTAT EQU 7
 
-TNRTC EQU 8      ; B = 0 read, 1 set
-                 ; (TNEBAD for any
+; RTC: B=0 reads, 1 sets seven BCD bytes
+; at HL: seconds, minutes, hours, date,
+; month, weekday and year. Other B
+; returns TNEBAD before clock access.
+; Probe seconds<60h for presence. On
+; absence return TNENODV. No BCD
+; validity check. Set disables write
+; protection, then restores it in burst
+; control. Advance HL seven on success.
+; Stack bound 8.
 
-; other B) the 7 BCD bytes at HL:
-; seconds, minutes, hours, date, month,
-; weekday, year. TNENODV without a
-; clock. Stack 8
+TNRTC EQU 8
 
-TNMOUNT EQU 9    ; B = drive 0-3, E =
-                 ; container index:
+; MOUNT: B=drive 0..3, E=container
+; index. Require valid descriptor,
+; unmounted volume and sufficient fixed
+; vector slot. An existing mount on the
+; same drive is also refused. Flush
+; before publishing replacement, reset
+; with BDOS 37 and reselect with 14 if
+; default. Invalid input,
+; descriptor/flush failure returns
+; TNEBAD. Stack bound 24.
 
-; the volume mounted there, the drive
-; reset in the BDOS. TNEBAD for an index
-; past the table, a drive past D:, a
-; volume on another drive, a slot too
-; small. Stack 24
+TNMOUNT EQU 9
 
-TNUNMNT EQU 10   ; B = drive 1-3:
-                 ; unmounted, the drive
+; UNMOUNT: B=drive 1..3. A: cannot be
+; emptied. Flush all dirty lines before
+; clearing selection and reset through
+; BDOS 37. Invalid drive or flush error
+; returns TNEBAD. Stack bound 24.
 
-; reset. TNEBAD for A: or past D:. Stack
-; 24
+TNUNMNT EQU 10
 
-TNDESC EQU 11    ; E = container index,
-                 ; HL -> 32 bytes:
+; DESCRIBE: E=container index, HL points
+; to 32 writable bytes. Copy its
+; descriptor with mount byte replaced by
+; current drive or FFh. Invalid index or
+; read failure returns TNEBAD before
+; caller-buffer copy. Scratch/cache
+; effects may precede refusal. Stack
+; bound 24.
 
-; its descriptor, the mount byte the
-; drive it is on now or FFh. TNEBAD past
-; the table. Stack 24
+TNDESC EQU 11
 
-TNDRVR EQU 12    ; B = 3 UC1:, HL = a
-                 ; video driver's
+; DRIVER: only B=3 (UC1). HL points to
+; seven routine words then columns/rows,
+; sixteen bytes total. Acceptance
+; returns HL=LINEBUF. An occupied UC1
+; slot or disabled matrix returns
+; TNEBAD. Nonzero table during
+; STFLAG=FFh startup with IOBYTE CON=CRT
+; returns TNENODV. HL=0 drops the table,
+; bypassing those checks after B
+; validation, and may invalidate CONMOD
+; for lazy routing. Stack bound 4.
 
-; table of eight words: -> HL = LINEBUF.
-; TNEBAD for B = 1, since CRT:'s table
-; is the ROM's, if UC1: has a table,
-; with no matrix keyboard, or for any
-; other B; TNENODV in a line from
-; STARTUP.CMD while CON: is CRT:. HL = 0
-; drops the mode's table: A = 0, carry
-; clear, HL destroyed. Stack 4
+TNDRVR EQU 12
 
-TNFIND EQU 13    ; DE -> a record's
-                 ; name, 8 bytes
+; FIND: DE points to eight space-padded
+; name bytes, B=minimum version. Search
+; newest first, at most 256 records.
+; Success: table HL, generation A, carry
+; clear. Failure: carry set, no ordinary
+; status/Z result. Registry pointers
+; refer to resident storage. Reconsider
+; them after removal/generation change.
+; Eight-bit generation repeats after 256
+; removals. Stack bound 8.
 
-; padded with spaces, B = the least
-; version: -> carry clear, HL = its
-; entry table, A = the generation; carry
-; set for none. Stack 8
+TNFIND EQU 13
 
-TNLIST EQU 14    ; B = an index from 0:
-                 ; -> carry clear,
+; LIST: B=newest-first index from zero.
+; Success: record HL, generation A,
+; carry clear. Failure: carry set.
+; Record layout: link word, eight name
+; bytes, version byte, table word.
+; FIND's pointer lifetime and generation
+; limit apply. Stack bound 8.
 
-; HL = that record, A = the generation;
-; carry set past the last. Stack 8
+TNLIST EQU 14
 
-TNFONT EQU 15    ; -> HL = the console
-                 ; font in the
+; FONT: return HL=FONT in ROM, 96
+; eight-byte glyphs from character 20h,
+; top row first. Added at ABI minor 1.
+; Stack bound 4.
 
-; ROM: 96 characters of 8 bytes, one a
-; row from the top, from 20h; minor 1.
-; Stack 4
+TNFONT EQU 15
 
-TNCOUNT EQU 16   ; how many services
-                 ; there are
+; TNCOUNT is the exclusive service
+; bound, not callable. Failures return
+; status A with carry:
+; TNEBAD=invalid/refused operation,
+; TNENODV=unavailable device/routing. A
+; failure does not imply unchanged
+; workspace, cache or hardware.
 
-; Status in A, with carry set.
+TNCOUNT EQU 16
 
-TNEBAD EQU 1     ; no such number, an
-                 ; argument out of
+TNEBAD EQU 1
 
-; range, or refused with nothing changed
+TNENODV EQU 2
 
-TNENODV EQU 2    ; the device is not
-                 ; fitted, or not the
-
-; console
-
-; A service's format, the header's
-; second byte after 'D'. The loader
-; refuses any other: each major moves
-; the table's entries.
+; Service header format byte after 'D'.
+; The loader rejects other formats
+; before INIT. A new ABI major may move
+; table entries.
 
 SVCFMT EQU 4
 
-; TNINFO's bits in B.
+; INFO B flags. Matrix is switch enable,
+; not a presence probe. PICO/RTC flags
+; are cold probe results. Other bits
+; reflect current state.
 
-HWBMTX EQU $01   ; a matrix keyboard
-HWBPICO EQU $02  ; a PICO9918 answered
-                 ; at cold boot
-HWBGLCD EQU $04  ; GLCD.SVC is in
-HWBRTC EQU $08   ; a DS1302 clock
-                 ; answered at cold boot
-HWBCLM EQU $10   ; the PICO9918 is
-                 ; claimed
-HWBWRD EQU $80   ; the ROM's GLCD? is on
-                 ; LCD row 3
+HWBMTX EQU $01   ; matrix enabled
+HWBPICO EQU $02  ; cold PICO probe
+HWBGLCD EQU $04  ; GLCD installed
+HWBRTC EQU $08   ; cold RTC probe
+HWBCLM EQU $10   ; PICO claim held
+HWBWRD EQU $80   ; LCD row 3 ROM word
 
-; Version 2 of the "PICO" record's
-; table: the console's graphics entries,
-; as offsets. Each assumes that the
-; caller holds the claim, and destroys
-; AF, BC, DE and HL.
+; Version 2 PICO table offsets. Hold the
+; claim before calling these direct
+; entries. Unlike numbered dispatch,
+; they accept A arguments. AF/BC/DE/HL
+; may change. Zero payload counts still
+; program the VRAM address.
 
 PICOREG EQU 16   ; register B = A
 PICOFIL EQU 18   ; DE bytes of A from
@@ -216,28 +257,63 @@ PICOWR EQU 20    ; BC bytes from DE to
 PICORD EQU 22    ; BC bytes from VRAM
                  ; address HL to DE
 
-; Version 3, the ROM's PICO9918
-; console's (KS39), adds the width,
-; which CON PICO 80, 40 or 32 calls. It
-; takes no claim, and is refused while
-; one is held.
+; Version 3 adds PICOWID (KS39).
+; A=80/40/32 selects width without
+; taking a claim. Invalid width or a
+; held claim returns carry. Success
+; updates memory. Only effective CRT is
+; invalidated for later console
+; reselection and clearing.
 
-PICOVER EQU 3    ; the version with
-                 ; PICOWID
-PICOWID EQU 24   ; A = 80, 40 or 32
-                 ; columns: the console
+PICOWVER EQU 3
+PICOVER EQU 4    ; current ROM record
+PICOWID EQU 24   ; width entry,
+                 ; A=columns
 
-; at that width, cleared; carry if
-; refused
+; State offsets from the PICO table
+; returned by TNFIND, in PIBLK. Its ROM
+; registry record persists. Page values
+; are zero or PITPG's high-byte offset.
 
-; The console's own state, after its
-; table in PIBLK, which a debugger
-; reads: offsets from the table TNFIND
-; returns, version 3's.
+PICOVRB EQU 36   ; record version byte
+PICOTPD EQU 41   ; drawn page high
+                 ; offset
+PICOTPS EQU 42   ; shown page high
+                 ; offset
 
-PICOVRB EQU 36   ; the record's version
-                 ; byte
-PICOTPD EQU 41   ; the page drawn: 0, or
-                 ; TPGV's offset
-PICOTPS EQU 42   ; the page shown, the
-                 ; same
+; Shared hardware and debugger values.
+
+SYSLAT EQU $FF   ; write-only system
+                 ; latch
+LATEXP EQU $04   ; EXPAND: EXPAND 1 at
+                 ; 8000h-BFFFh
+
+; shadow copy of the system latch
+
+LATCHV EQU $0040
+LCDCMD EQU $04   ; command write, busy
+                 ; flag and address read
+LCDDAT EQU $84   ; character data
+VDPDAT EQU $BE
+VDPCTL EQU $BF
+
+; IE-off R1 bases for 80/40/32 columns.
+
+PIR180 EQU $D0
+PIR140 EQU $D0
+PIR132 EQU $C0
+
+; Version 4 reserves 3000h..37FFh from
+; console writes at every width. These
+; aliases allocate no new memory.
+; Release before changing width, then
+; re-read geometry and redraw: pixels
+; need not survive the change. Monitor
+; R2 is 0Fh at 80 columns, 0Ch at 40/32.
+; Use version 4 for these guarantees;
+; width-only clients can request 3.
+
+PINT80 EQU $3000
+PINT40 EQU $3000
+PINT32 EQU $3000
+PICOMNT EQU $3000

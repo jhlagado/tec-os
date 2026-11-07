@@ -1,5 +1,5 @@
-; POLL.COM: waits for a key by polling BDOS function 6, as full-screen
-; programs do, then returns.
+; POLL.COM: wait by polling BDOS 6, then return on a nonzero result.
+; Returned NUL keeps polling. The console test watches the waiting cursor.
 
 BDOS    EQU     $0005
 

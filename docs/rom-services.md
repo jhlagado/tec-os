@@ -5,7 +5,7 @@ at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,020 bytes (`tecos`) and has 364 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,072 bytes (`tecos`) and has 312 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -166,9 +166,12 @@ Notes:
 - While the PICO9918 is claimed the console drops output to it, draws no
   cursor and does not flip pages, and the program may set any mode and use
   all of VRAM, through the ports or through the ROM console's graphics entries
-  (`docs/services.md`). The claim has no owner. Releasing it, or a warm boot,
-  which releases a resident's claim too, restores the console's text mode,
-  font and page and clears the screen.
+  (`docs/services.md`). The claim has no owner. Releasing it restores the
+  console's text mode, font and page and clears the screen, preserving IE
+  tracked by supported PICO version-4 register writes. Real warm boot clears
+  hardware IE and its shadow before the handler sweep, even when unclaimed,
+  then releases the display and restores the console. A transient client clears
+  IE before tearing down its vector. Raw register writes remain untracked.
 - `PUTAT` is a fast path for full-screen programs: through the driver's cell
   routine it costs about 425 T-states a cell along a row on the PICO9918 at 80
   columns, against about 715 through BIOS `CONOUT` and about 3,860 through BDOS
@@ -271,7 +274,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->364<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->312<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

@@ -1,148 +1,136 @@
 ; Resident workspace in the classic
-; bank, from WSBASE upwards. The CCP and
-; BDOS blocks follow this one (CCPRAM,
-; then BDOSRAM) and end at the RAM BIOS
-; table at BF00h; the SD, keyboard and
-; GLCD state sit above the table.
-; Nothing here is initialised by the
-; image: cold and warm boot clear and
-; set it.
+; bank. The lower region ends at
+; RAMBIOS. High state follows its
+; 51-byte BIOS table. DS bytes are not
+; initialised by the ROM image.
+; Cold boot clears WSBASE..WSEND. Warm
+; CPMINIT clears CCPCLR..BDOSRME, sets
+; CMDBUF's size and invalidates BUFOK.
+; Other warm work can update kept state.
 
   ORG WSBASE
 
-; ---- BIOS disk state
-; --------------------------------------
+; BIOS disk selection and mapped record.
 
 DSKCUR: DS 1     ; selected drive
 DSKTRK: DS 2
 DSKSEC: DS 2
 DSKDMA: DS 2
-BLKOFF: DS 2     ; block number within
-                 ; the volume
+BLKOFF: DS 2     ; volume-relative block
 
 BLKSLOT:
-  DS 1           ; 128-byte record
-                 ; within the block, 0-3
+  DS 1           ; 128-byte slot, 0-3
 
-; BWRITE's key (GETKEY): the block last
-; cleared rather than read, by drive and
-; block number, so that the next one of
-; its allocation block needs no read.
+; BWRITE's no-pre-read key. BUFOK=2 tags
+; the last block cleared on BUFDRV. The
+; immediately following physical block
+; on that drive may also be cleared
+; unless it starts an allocation block.
+; Writes preserving bytes of another
+; block invalidate the key. CPMINIT and
+; UNMOUNT invalidate it too.
 
 BUFOK: DS 1
 BUFDRV: DS 1
 BUFBLK: DS 2
 
-; Drive table: start block (4), length
-; in blocks (2), geometry (1), flags
-; (1). A recognised reset copies it from
-; RAM by its address alone (RSLCAP). A
-; ROM with the same BENTRY and STUBAD
-; addresses and a different DRVTAB would
-; be taken for this one: the 32 bytes
-; then fail RESEL's match or name a
-; volume the card has, so the harm stops
-; at a validated volume on a drive.
+; Four 8-byte drive entries: start LBA
+; (4 LE), block length (2 LE), geometry
+; (1) and flags (1).
+; RSLCAP checks fixed vectors and
+; addresses, not a complete ROM layout.
+; RESEL matches each retained entry to
+; validated card volumes and slot
+; capacity before committing selection.
 
 DRVTAB: DS MAXDRV*DRVESZ
 
-; each drive's volume: container index
+; DRVIDX: descriptor index+1, 0 for
+; none. DRVSLOT: 0 none, 1 a 64-byte
+; ALV, 2 a 256-byte ALV. These capacity
+; codes differ from geometry IDs 1 G8M
+; and 2 G1M. Format 1.1 may reserve
+; slots for unmounted requested drives.
 
 DRVIDX: DS MAXDRV
 
-; + 1, 0 for none
-
 DRVSLOT:
-  DS MAXDRV      ; each drive's vector
-                 ; slot: 0 none,
+  DS MAXDRV
 
-; 1 G1M's, 2 G8M's
+; Four DPHs, logged-drive bits and
+; directory/check scratch. Explicit disk
+; reset can change LOGINV outside
+; CPMINIT's bulk clear.
+; STUBAD holds the BDOS stub's address.
+; PZINIT writes JP BENTRY there and
+; PZTOP, which may differ, to 0006h.
 
 DPHTAB: DS MAXDRV*DPHSZ
-LOGINV: DS 2     ; the BDOS's logged
-                 ; drives, kept across
-
-; a warm boot
+LOGINV: DS 2     ; logged-drive bits
 
 DIRBUF: DS 128
-CSVDUM: DS 2     ; check vector
-                 ; placeholder; CKS is
-                 ; zero
-STUBAD: DS 2     ; BDOS entry jump, the
-                 ; word at 0006h
+CSVDUM: DS 2     ; CKS=0 placeholder
+STUBAD: DS 2
 
-; ---- The PICO9918's console
-; (pico.asm): PISTART's block,
-; PICO.SVC's order ---
-; Its offsets are abi.inc's, from the
-; table: the width at 14, PICOWID's word
-; at
-; 24, the record from 26, its version at
-; 36, the page drawn at 41 and shown at
-; 42. Outside CPMINIT's span, so warm
-; boot keeps the width.
+; ROM console block in PICO.SVC's
+; version 3 order. Its first 39 bytes
+; are PITPL. Offsets: width 14, PICOWID
+; 24, record 26, version 36, drawn 41,
+; shown 42. Page bytes hold 0 or PITPG.
+; CPMINIT does not clear it. PISTART
+; copies PITPL then TMSW sets width,
+; page state and 24 row addresses. That
+; copy excludes PITIE at offset 39:
+; cold clear initializes it; real boot
+; clears it through PIICLR. Width stays.
 
-PIBLK: DS 14     ; the table: the
-                 ; terminal's seven
-                 ; words
-PIWID: DS 12     ; the columns, rows and
-                 ; five entries
-PIREC: DS 13     ; the record, the
-                 ; registry's tail
-  DS 2           ; PICO.SVC's LBUF:
-                 ; keeps TPSHOW at 42
-PITPD: DS 1      ; the page drawn and
-                 ; the page shown: 0
-PITPS: DS 1      ; or PITPG's offset,
-                 ; high byte
-PIMV: DS 1       ; 1 while a row move
-                 ; builds the hidden
-                 ; page
-PITPG: DS 1      ; the second page's
-                 ; offset, high byte
-PIREGP: DS 2     ; this width's
-                 ; registers 0-7, in the
-                 ; ROM
-PIROWT: DS 48    ; each row's address in
-                 ; the name table
+PIBLK: DS 14     ; seven vector words
+PIWID: DS 12     ; columns, rows, five
+                 ; entries
+PIREC: DS 13     ; 13-byte registry tail
+PITIE: DS 1      ; tracked supported IE
+  DS 1           ; remaining LBUF pad:
+                 ; keeps shown at 42
+PITPD: DS 1      ; drawn: 0 or PITPG
+PITPS: DS 1      ; shown: 0 or PITPG
+PIMV: DS 1       ; 1 builds hidden page
+PITPG: DS 1      ; page offset high byte
+PIREGP: DS 2     ; width's ROM registers
+PIROWT: DS 48    ; 24 LE row addresses
 
-; ---- Mount scratch
-; --------------------------------------
+; These 33 mount scratch bytes precede
+; RAMBIOS. 14 more follow the BIOS
+; table. MNBUF overlays header,
+; descriptor and temporary block data by
+; phase.
 
-MNTCNT: DS 1     ; the rest above the
-                 ; table (packing)
-MNBUF: DS 32     ; 32 bytes of it: the
-                 ; header's, or a
-                 ; descriptor
+MNTCNT: DS 1     ; descriptor count
+MNBUF: DS 32     ; shared 32-byte buffer
 
-; ---- Video terminal
-; --------------------------------------
+; Shared terminal row buffer and
+; vectors. CONSWV copies seven words in
+; declaration order. Scroll endpoints
+; are inclusive. LINEBUF is also text
+; scratch for terminal/LCD/volume work.
 
 LINEBUF:
-  DS 80          ; one display row, for
-                 ; scrolling
-VPUTV: DS 2      ; driver vectors set by
-                 ; CONSWV
+  DS 80          ; 80-byte row buffer
+VPUTV: DS 2      ; copied driver vectors
 VGETV: DS 2
 VCLRV: DS 2
 VRSTV: DS 2
-VRDRV: DS 2      ; read row B into
-                 ; LINEBUF
-VWRRV: DS 2      ; write LINEBUF to row
-                 ; B
-VFNV: DS 2       ; flip, begin and end a
-                 ; row move: A = 0, 1, 2
-VSTOP: DS 1      ; scroll region, first
-                 ; and last row
+VRDRV: DS 2      ; row B to LINEBUF
+VWRRV: DS 2      ; LINEBUF to row B
+VFNV: DS 2       ; A=0 flip, A=1 begin
+                 ; A=2 end row move
+VSTOP: DS 1      ; inclusive scroll rows
 VSBOT: DS 1
-VCLAIM: DS 1     ; CDCLM while a program
-                 ; owns the PICO9918
-CONMOD: DS 1     ; console mode in
-                 ; effect (CMTTY..CMUC1)
+VCLAIM: DS 1     ; CDCLM while claimed
+CONMOD: DS 1     ; effective mode
 
-; ---- BIOS stack, warm boot's: cold
-; boot and DIAG run on STKTOP (KE-173)
-; -----
+; Warm boot's BIOS stack, outside
+; CCPCLR..BDOSRME. Cold boot and DIAG
+; use STKTOP (KE-173).
 
 BSTKB: DS BIOSSTN
 BSTK:
@@ -150,15 +138,12 @@ BSTK:
 BIOSRME:
 CCPRAM EQU BIOSRME
 
-; ---- The CCP's state and stack
-; (cpm/ccp.asm)
-; ---------------------------------
-; Up to CCPCLR, kept over warm boot: the
-; command line, for the pieces of a
-; chained line still to run (CHPOS), and
-; the two FCBs before it, which each use
-; parses in full. CPMINIT clears from
-; CCPCLR; cold boot clears them all.
+; FCBs and pending command text precede
+; CCPCLR. CPMINIT clears from there to
+; BDOSRME but sets CMDBUF capacity to
+; 127. Other pre-clear bytes support
+; pending chained text and are parsed
+; again as needed. Cold boot clears all.
 
 CMDFCB:
   DS 36
@@ -202,19 +187,19 @@ ERAANS:
 ERAALL:
   DS 1
 
-; This is both the oversize
-; discriminator and ordinary CCP scratch
-; storage.
+; 128-byte CCP scratch. LOADCOM also
+; reads an extra record here at the TPA
+; ceiling to distinguish exact fit from
+; overflow.
 
 LOADBUF:
   DS 128
 
-; A fixed sentinel separates reusable
-; command scratch from the
-; downward-growing resident stack. The
-; host proof checks that every byte
-; survives the deepest built-in and
-; error-recovery paths.
+; A5h guard between CCP scratch and the
+; downward-growing stack. Guard plus
+; stack occupies 43 bytes. The host
+; stack test checks every guard byte on
+; its built-in/error-recovery workloads.
 
 STKGUARD:
   DS 43-CCPSTN
@@ -224,17 +209,20 @@ CSTKBAS:
 CSTKTOP:
 CCPRME:
 
-; ---- The BDOS's state and stack
-; (cpm/bdos.asm)
-; -------------------------------
+; BDOS state and stack. CPMINIT clears
+; this span then sets CURDMA to 0080h.
+; OLDSP is the active caller's SP and
+; PARAM the DE parameter word.
 
 BDOSRAM EQU CCPRME
 OLDSP: DS 2
-ERRMODE:
-  DS 1           ; function 45's mode:
-                 ; FFh return, FEh
 
-; display; 0 at warm boot
+; Function 45: FFh return, FEh display
+; then return, others terminate. Warm
+; boot defaults ERRMODE to 0.
+
+ERRMODE:
+  DS 1
 
 PARAM: DS 2
 COLUMN: DS 1
@@ -246,19 +234,17 @@ PENDCHR:
 LINPTR: DS 2
 LINMAX: DS 1
 LINCNT: DS 1
-HFLAG: DS 1      ; FFh: the CCP's
-                 ; prompt, with history
-HPOS: DS 1       ; the history line
-                 ; shown: its terminator
+HFLAG: DS 1      ; FFh CCP
+                 ; prompt/history
+HPOS: DS 1       ; history terminator
+                 ; offset
 CURDRV: DS 1
 DEFDRV: DS 1
 DEFDPB: DS 2
 DEFALV: DS 2
 USERNO: DS 1
-WRFLAG: DS 1     ; set by the CCP for
-                 ; its reset at entry
-WARMV: DS 2      ; drives to rebuild to
-                 ; their mark
+WRFLAG: DS 1     ; CCP one-shot reset
+WARMV: DS 2      ; drive rebuild bitmap
 ROVEC: DS 2
 CURDMA: DS 2
 DPHPTR: DS 2
@@ -311,175 +297,168 @@ STKBASE:
 STKTOP:
 BDOSRME:
 
+; SD state after the 51-byte BIOS table.
+; Argument and LBA use different byte
+; orders. SDXB=0 keeps the saved latch
+; view.
+
   ORG RAMBIOS+BIOSLEN
 
-; ---- SD card state
-; --------------------------------------
+SDBYTE: DS 1     ; 0 block, 1 byte
+                 ; address
+SDARG: DS 4      ; command argument, BE
+SDLBA: DS 4      ; card LBA, LE
+SDERR: DS 1      ; last status, 0=OK
+SDXB: DS 1       ; LATEXP for cache line
 
-SDBYTE: DS 1     ; 1 when the card takes
-                 ; byte addresses
-SDARG: DS 4      ; command argument,
-                 ; big-endian
-SDLBA: DS 4      ; block address,
-                 ; little-endian
-SDERR: DS 1      ; last error code
-SDXB: DS 1       ; LATEXP while the
-                 ; block is a cache line
+; CNEXT is a replacement cursor, not
+; access-order LRU. CWTYPE is BIOS type
+; with bit 7 for write-through and bit 6
+; for a taken line.
+; CIFF saves AF from IFFGET, including
+; sampled A and flags/PV. CEI restores
+; maskable IFF from PV. It does not save
+; I or exclude NMI.
 
-; ---- The block cache (cache.asm)
-; --------------------------------------
+CNEXT: DS 1
+CWTYPE: DS 1
+CIFF: DS 2
 
-CNEXT: DS 1      ; the next line in turn
-CWTYPE: DS 1     ; BIOS WRITE's type, C
-CIFF: DS 2       ; the flags a BIOS
-                 ; entry found: P/V,
+; Matrix scan state and pending arrow
+; bytes. Arrow input returns ESC first
+; then queues [ and direction.
 
-; its interrupt state
-
-; ---- Matrix keyboard scan state
-; --------------------------------------
-
-KBMASK: DS 1     ; row select for the
-                 ; next row, one bit low
-KBBASE: DS 1     ; key number of that
-                 ; row's bit 0
-KBE: DS 1        ; last key seen in this
-                 ; scan, FFh none
-KBD: DS 1        ; the key seen before
-                 ; it
-KBTN: DS 1       ; arrow-sequence bytes
-                 ; still to deliver
-KBT1: DS 1       ; and the bytes
-                 ; themselves
+KBMASK: DS 1     ; next row, one bit low
+KBBASE: DS 1     ; row's first key
+                 ; number
+KBE: DS 1        ; last scan key, FFh
+                 ; none
+KBD: DS 1        ; prior key, FFh none
+KBTN: DS 1       ; pending arrow bytes
+KBT1: DS 1       ; queued [ + direction
 KBT2: DS 1
 
-; ---- The GLCD console
-; --------------------------------------
+; Console table pointers. PIVEC points
+; to the ROM console's PIBLK in RAM, 0
+; if absent. GLVEC holds a resident UC1
+; table or 0. CONSW indexes this word
+; pair with modes 1 and 3. Both words
+; must share a page. Installed tables
+; must remain valid.
 
-PIVEC: DS 2      ; PIBLK, set by
-                 ; PISTART; 0 with no
-                 ; console
-GLVEC: DS 2      ; GLCD.SVC's, the same:
-                 ; indexed by
+PIVEC: DS 2
+GLVEC: DS 2
 
-; CMCRT and CMUC1
+; The 256-byte command history ring is
+; at BD00h in EXPAND 1. Cold boot clears
+; it. HHEAD is outside CPMINIT's clear
+; span.
 
-; ---- Command-line history
-; --------------------------------------
+HHEAD: DS 1      ; next-store offset
 
-HHEAD: DS 1      ; the offset the next
-                 ; line goes in at
-
-; ---- MVCOPY's banks: 0 the program's
-; view, 1 EXPAND 1
-; ----------------------
+; MVCOPY selectors: 0 is the saved
+; program view, 1 EXPAND 1. Any nonzero
+; sets the EXPAND bit.
+; Destination/source bytes are adjacent
+; for a word store. MVREST is the
+; byte-loop remainder on cross-bank
+; paths only.
 
 XMDST: DS 1
 XMSRC: DS 1
-MVREST: DS 2     ; MVCOPY: the bytes
-                 ; left for the byte
-                 ; loop
-PZTOP: DS 2      ; the current top,
-                 ; which warm boot puts
-                 ; at 0006h
+MVREST: DS 2
+
+; Accepted TPA top and service-loader
+; state. INIT may lower 0006h before
+; PZTOP changes. Warm boot restores
+; 0006h from PZTOP. SVCGEN wraps.
+
+PZTOP: DS 2      ; accepted TPA top
 
 PRGCODE:
-  DS 2           ; BDOS function 108's
-                 ; program return code
+  DS 2           ; BDOS 108 return code
 
 LOADTOP:
   DS 2           ; successful LOADCOM
                  ; exclusive record end
-SLN: DS 2        ; the service loader:
-                 ; the last record so
-                 ; far
-SLDL: DS 1       ; and relocation delta
-SVCBSY: DS 1     ; 80h while an INIT or
-                 ; REMOVE runs
+SLN: DS 2        ; last registry record
+SLDL: DS 1       ; relocation page delta
+SVCBSY: DS 1     ; 80h for INIT/REMOVE
 
 REGHEAD:
-  DS 2           ; the first record
+  DS 2           ; first record pointer
 SVCHEAD:
-  DS 1           ; the lowest service's
-                 ; page, 0 for none
-SVCGEN: DS 1     ; raised by each
-                 ; removal
-SVCRC: DS 1      ; the last load's
-                 ; failure
-SVCRA: DS 1      ; INIT's A: a cause
-                 ; only when SVCRC is 1
-STFLAG: DS 1     ; FFh while a line from
-                 ; STARTUP.CMD runs,
+  DS 1           ; lowest owner page, 0
+                 ; none
+SVCGEN: DS 1     ; removal generation
 
-; 0 typed
+; On SVCLOAD failure (carry set):
+; SVCRC: 0 refused, 1 failed with pages
+; removed, 2 failed with pages retained.
+; For 1, SVCRA gives INIT's A or 0 after
+; registry validation failure.
 
-STPOS: DS 1      ; startup's state and
-                 ; position, as at
-                 ; STBOOT
-STREC: DS 128    ; A:STARTUP.CMD's one
-                 ; record
-CHPOS: DS 1      ; a chained line's next
-                 ; piece: its offset
+SVCRC: DS 1
+SVCRA: DS 1
 
-; in CMDTXT + 1, 0 for none
+; Startup and chaining state. Chained
+; pieces inherit STFLAG. STBOOT marks
+; startup finished before file I/O and
+; reads at most one record from
+; A:STARTUP.CMD.
 
-; ---- The console's state, read only
-; with EXPAND 0 in view (page zero's
-; once) -
+STFLAG: DS 1     ; FFh startup, 0 typed
 
-RXFULL: DS 1     ; console byte waiting
-                 ; in RXCHAR
-RXCHAR: DS 1     ; and the byte itself
-CONDEV: DS 1     ; console devices
-                 ; present (CD* bits)
-VROW: DS 1       ; video terminal cursor
-                 ; row
+STPOS: DS 1      ; 0 untried, bit7 done
+                 ; else 1-based offset
+STREC: DS 128    ; one 128-byte record
+CHPOS: DS 1      ; CMDTXT offset+1, 0
+                 ; none
+
+; Relocated page-zero console state.
+; Access requires the classic bank. INFO
+; combines CONDEV with VCLAIM.
+
+RXFULL: DS 1     ; pending RXCHAR flag
+RXCHAR: DS 1     ; pending console byte
+CONDEV: DS 1     ; device/status bits
+VROW: DS 1       ; logical cursor row
 VCOL: DS 1       ; and column
-VWID: DS 1       ; video columns
-VHGT: DS 1       ; video rows
+VWID: DS 1       ; columns
+VHGT: DS 1       ; rows
 ESCST: DS 1      ; escape parser state
-ESCP1: DS 1      ; first numeric
-                 ; parameter
-ESCP2: DS 1      ; second numeric
-                 ; parameter
-KBLAST: DS 1     ; matrix key held at
-                 ; the last poll, FFh
+ESCP1: DS 1      ; numeric parameter 1
+ESCP2: DS 1      ; numeric parameter 2
+KBLAST: DS 1     ; held key, FFh none
+VATTR: DS 1      ; 80h reverse video
+VCURV: DS 1      ; 1 logical inversion
+
+; Fourteen upper mount scratch bytes
+; complete MNTCNT/MNBUF (KS36c's
+; packing) and end at C000h. CPMINIT
+; excludes this region from its bulk
+; clear.
+
+MNTBLK: DS 4     ; container block count
+
+; MNTPRV overlays previous exclusive end
+; (4 bytes), sum low word and copy
+; offset at +2 by phase.
+
+MNTPRV: DS 4
+
+; MOUNT compares HTSUM only for
+; count>15.
+
+MNTSUM: DS 2     ; 1.1 header table sum
+                 ; for blocks 1-7
+MNTDRV: DS 1     ; 1.1 requested drives.
+                 ; 0 for 1.0
+MNTI: DS 1       ; descriptor index
+MNTCB: DS 1      ; table block 0-7, FFh
                  ; none
-VATTR: DS 1      ; 80h while reverse
-                 ; video is on
-VCURV: DS 1      ; 1 while the cursor
-                 ; cell is inverted
-
-; ---- The mount scratch's 14 bytes,
-; MNTCNT and MNBUF below the table
-; ---------
-; Here so that the workspace above the
-; table runs to C000h with no gap
-; (KS36c's packing): warm boot clears
-; none of it, as below.
-
-MNTBLK: DS 4     ; the container's
-                 ; length in blocks
-MNTPRV: DS 4     ; the previous
-                 ; descriptor's end, or
-                 ; the
-
-; table's sum
-
-MNTSUM: DS 2     ; format 1.1: blocks
-                 ; 1-7's sum, from the
-                 ; header
-MNTDRV: DS 1     ; format 1.1: drives
-                 ; wanted; 0 for a 1.0
-                 ; card
-MNTI: DS 1       ; the descriptor being
-                 ; checked, or VDESC's
-MNTCB: DS 1      ; the table block in
-                 ; MNTLN's line, FFh
-                 ; none
-MNTLN: DS 1      ; the line that holds
-                 ; it
+MNTLN: DS 1      ; cached table line
 
 HIRME:
-WSEND EQU HIRME  ; end of the classic
-                 ; resident workspace
+WSEND EQU HIRME  ; exclusive workspace
+                 ; end

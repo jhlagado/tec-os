@@ -1,9 +1,11 @@
 #!/usr/bin/env node
-// Lays out each FILE by tabs as the assembly style has it (tools/lib/style.mjs's
+// Legacy tab-layout formatter. Do not use on current compact ROM sources.
+// Lays out each legacy FILE by tabs (tools/lib/style.mjs's
 // toTabs), in place: the bytes it assembles to don't change, which
 // tools/ks38-check.mjs same then shows for the ROM.
 //
 //   node tools/style-tabs.mjs FILE...
+// See docs/assembly-style.md for current compact and retained legacy profiles.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { toTabs } from "./lib/style.mjs";

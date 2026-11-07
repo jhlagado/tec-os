@@ -1,5 +1,5 @@
-; SETRC n: sets BDOS function 108's program return code to the digit n
-; given in its command tail, then returns.
+; SETRC n: use one expected digit at 0082h to set BDOS 108's return code.
+; No tail/digit validation: byte minus '0' modulo 256, D=0; then return.
 
 BDOS    EQU     $0005
 

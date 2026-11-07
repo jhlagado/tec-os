@@ -37,7 +37,7 @@ function pinnedBytes(name) {
 
 /** TEC-OS's fixed state in page zero, 0040h-004Fh, from the EQUs in src/layout.asm. */
 function pageZeroState() {
-  const src = readFileSync(resolve(ROOT, "src/layout.asm"), "utf8");
+  const src = ["abi.inc", "layout.asm"].map(file => readFileSync(resolve(ROOT, "src", file), "utf8")).join("\n");
   return pageZeroDeclarations(src)
     .map((r) => `| ${hex(r.at)} | \`${r.name}\` | ${r.what} |`)
     .join("\n");

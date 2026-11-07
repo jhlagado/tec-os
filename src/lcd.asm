@@ -1,115 +1,98 @@
-; HD44780 20 x 4 LCD status display.
-; Cold boot shows the banner on row 0
-; and the mounted drives on rows 1-2.
-; Every wait on the busy flag is
-; bounded, so a missing display costs
-; only the time-out.
+; HD44780 20 x 4 status LCD.
+; Cold boot uses row 0 for the banner
+; and rows 1/2 for A: and B: labels.
 
-LCDCMD EQU $04   ; command write, busy
-                 ; flag and address read
-LCDDAT EQU $84   ; character data
 
-; Initialise: 8-bit, two-line
-; addressing, display on, cursor off,
-; clear: the four commands of LCDSEQ.
-; Destroys AF, B and HL.
+; Attempt LCDSEQ's four commands:
+; 8-bit, two-line, display on, cursor
+; off, incrementing writes, clear.
+; Changes AF, B, HL; returns B=0 for
+; cold boot's row-zero write.
 
 LCDINIT:
   ld hl,LCDSEQ
-  ld b,4         ; four commands
+  ld b,4
 
 LCDI:
   ld a,(hl)
-  call LCDC      ; each sent once the
-                 ; display is ready
+  call LCDC
   inc hl
   djnz LCDI
   ret
 
-; Wait while the display is busy, at
-; most 256 polls. Preserves BC, DE, HL.
-; Destroys AF.
+; Return after ready or 256 polls.
+; Carry is the last busy bit (bit 7).
+; Changes AF; keeps BC, DE and HL.
 
 LCDWAIT:
   push bc
-  ld b,0         ; 256 polls at most
+  ld b,0
 
 LCDW:
-  in a,(LCDCMD)  ; bit 7 high while busy
-  rlca           ; bit 7, the busy flag,
-                 ; to carry
-  jr nc,LCDWX    ; ready
+  in a,(LCDCMD)
+  rlca
+  jr nc,LCDWX
   djnz LCDW
 
 LCDWX:
-  pop bc         ; ready, or timed out
-                 ; with no display
+  pop bc
   ret
 
-; Send command A once the display is
-; ready. Keeps every register.
+; Output command A after the bounded
+; wait, even if still busy. Keeps AF,
+; BC, DE and HL.
 
 LCDC:
-  push af        ; the command, across
-                 ; the wait
+  push af
   call LCDWAIT
   pop af
   out (LCDCMD),a
   ret
 
-; Write the word at HL to row 3 and mark
-; that it is there, so that a take can
-; tell the row is the ROM's to clear. HL
-; = GLCMSG. Returns as LCDROW.
+; Mark row 3 ROM-owned (CDWRD), then
+; attempt HL's zero-terminated text.
+; Returns B=3; otherwise as LCDROW.
 
 LCDWRD:
-  push hl        ; the word, across the
-                 ; flag
+  push hl
   ld hl,CONDEV
-  set 7,(hl)     ; CDWRD
+  set 7,(hl)
   pop hl
 
-; Write the zero-terminated string at HL
-; to row 3, the row for a recovery
-; message: CARD? or GLCD?, or blanks to
-; clear one. Returns as LCDROW.
+; Attempt recovery text at HL on row 3.
+; It must end in zero; ownership stays
+; unchanged. B=3; otherwise as LCDROW.
 
 LCD3:
-  ld b,3         ; the bottom row, free
-                 ; of the volumes
+  ld b,3
 
-; Write the zero-terminated string at HL
-; from row B (0-3), column 0. Returns
-; carry set, so a caller reporting a
-; failure can end with a jump here, and
-; NZ. Destroys AF, HL. BC and DE are
-; kept.
+; Requires row B=0..3, a readable
+; zero-terminated string at HL.
+; Starts at column 0; no 20-column
+; clipping. Empty text sets the address.
+; HL stops on zero; A=0, carry set, NZ.
+; Keeps BC/DE; changes AF/HL.
+; Bytes are attempted even if busy.
 
 LCDROW:
   ld a,b
-  push hl        ; the string, across
-                 ; the lookup
-  ld hl,LCDROWS  ; the row's address on
-                 ; the display
+  push hl
+  ld hl,LCDROWS
   add a,l
   ld l,a
   jr nc,LCDR1
-  inc h          ; the table's page
-                 ; changed
+  inc h          ; table page carry
 
 LCDR1:
   ld a,(hl)
   pop hl
-  call LCDC      ; the cursor to the
-                 ; row's start
+  call LCDC
 
 LCDS:
   ld a,(hl)
-  cp 1           ; carry at the zero
-                 ; that ends the string
+  cp 1           ; zero: carry, NZ
   ret c
-  push af        ; the character, across
-                 ; the wait
+  push af        ; LCDWAIT changes A
   call LCDWAIT
   pop af
 
@@ -119,71 +102,68 @@ LCDS:
   inc hl
   jr LCDS
 
-; Show the drive letters and labels of
-; drives A and B on rows 1 and 2; an
-; unmounted drive's row is left as it
-; was. Destroys AF, BC, DE, HL and IX.
+; Show A:/B: labels on LCD rows 1/2.
+; A missing volume or descriptor-read
+; failure leaves that row unchanged.
+; LINEBUF is scroll scratch: no console
+; call while its label text is live.
+; Changes AF, BC, DE, HL, IX. A physical
+; descriptor fill can also change I;
+; completed fills leave I=0, but reuse
+; and early failure need not.
 
 LCDVOLS:
-  ld c,0         ; drive A first
+  ld c,0
 
 LCDV:
   push bc
-  call DRVDESC   ; IX = drive C's
-                 ; descriptor
+  call DRVDESC   ; Z: IX=descriptor
   pop bc
-  jr nz,LCDVN    ; no volume on it
-  ld hl,LINEBUF  ; the row's text, in
-                 ; the terminal's row
-  call DRVLAB    ; buffer, free between
-                 ; console calls
+  jr nz,LCDVN    ; absent/read error
+  ld hl,LINEBUF
+  call DRVLAB
   push bc
   ld a,c
   inc a
-  ld b,a         ; row 1 for A, 2 for B
-  ld hl,LINEBUF  ; the text DRVLAB made,
-                 ; which LCDROW
-  call LCDROW    ; writes without the
-                 ; console
+  ld b,a
+  ld hl,LINEBUF
+  call LCDROW
   pop bc
 
 LCDVN:
-  inc c          ; the next drive
+  inc c
   ld a,c
-  cp 2           ; only A and B fit
+  cp 2
   jr c,LCDV
   ret
 
-; HL -> 15 bytes = drive C's letter, ":
-; " and the 11-byte label at DLABEL in
-; its descriptor at IX, then a 0: the
-; drive walkers' shared text, LCDVOLS's
-; rows in LINEBUF and SHOWVOL's lines in
-; CMDTXT. Keeps BC and IX. Destroys AF,
-; DE and HL: DE ends at the 0 and HL
-; past the descriptor's label.
+; Format C's drive letter, ": ", the
+; 11 raw label bytes at IX+DLABEL and
+; a zero into 15 writable bytes at HL.
+; C=0..3; buffer must allow the forward
+; copy. Keeps BC/IX; changes AF/DE/HL.
+; DE ends on zero; HL just past label.
+; LCDVOLS uses LINEBUF; SHOWVOL uses
+; CMDTXT because PUTS can scroll.
 
 DRVLAB:
   ld a,c
   push bc
-  add a,'A'      ; the drive's letter
+  add a,'A'
   ld (hl),a
   inc hl
-  ld (hl),':'    ; then ": "
+  ld (hl),':'
   inc hl
   ld (hl),' '
-  inc hl         ; HL = where the label
-                 ; goes
-  push ix        ; DE = IX
+  inc hl
+  push ix
   pop de
-  ex de,hl       ; DE = the buffer's
-                 ; fourth byte, HL = the
-  ld bc,DLABEL   ; descriptor, then its
-                 ; label
+  ex de,hl       ; DE=buffer+3, HL=IX
+  ld bc,DLABEL
   add hl,bc
-  ld bc,11       ; the label
+  ld bc,11
   ldir
-  xor a          ; and its end
+  xor a
   ld (de),a
   pop bc
   ret

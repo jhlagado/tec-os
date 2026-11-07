@@ -1,7 +1,8 @@
-; FILL.COM: fill the TPA above this program up to (0006h)
-; with HALT, then print through the BDOS. After UNLOAD of a resident GLCD,
-; this overwrites the pages it had; a console vector still pointing there
-; halts the machine instead of printing.
+; FILL.COM: fill retired GLCD pages with HALT, then print FILLED via BDOS.
+; The UNLOAD test exposes a console vector still pointing into those pages.
+; Starting at END, stops once the incremented H is at least the high byte
+; of (0006h). Ignores the low byte; writes at least once. Interrupts or NMI
+; can resume a HALT.
 
         ORG     $0100
         LD      HL,END

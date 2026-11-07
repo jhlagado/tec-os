@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// The assembly style's checks (tools/lib/style.mjs) on the ROM's sources and
+// Compact assembly checks (tools/lib/style-compact.mjs) on the ROM sources and
 // the drivers: src/ and its subfolders, src/gen/ excluded, and drivers/. Prints
 // each file's figures and, with --faults, each fault.
 //
 //   node tools/style-check.mjs [--json FILE] [--faults] [--strict] [FILE...]
 //
 // --strict exits 1 when any file breaks a rule; without it the run reports.
+// Current rules and protected legacy profiles: docs/assembly-style.md.
 
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, relative, resolve } from "node:path";

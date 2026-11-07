@@ -1,8 +1,17 @@
-; Interactive tests. Each asks before it starts, so any of them can be
-; skipped, and each ends by itself when nothing happens for a while.
+; Interactive tests can be skipped at
+; RUNIT. T30 follows T29 without it.
+; Serial waveform phases may wait
+; indefinitely for missing edges.
 
-; Wait for a serial byte. A = time-out in half seconds. Returns NC and A =
-; the byte (8 bits), or C on time-out. Destroys AF, BC, DE, HL.
+; A counts 25000-poll quanta.
+; NC: A=nonzero 8-bit byte, C: timeout.
+; Ignore NUL. RXBITS changes C, so NUL
+; retries alter the initial budget.
+; A=0: 256 quanta. Uses AF/BC/DE/HL.
+; Idle-high, nonzero A:
+; A*(59*25000+21)+13 nominal T.
+; A=60: ~22.125 s at 4 MHz (KE400).
+
 SERGET: LD      C,A
 SERG1:  LD      HL,SERINR
 SERG2:  IN      A,(KEYPORT)
@@ -19,12 +28,18 @@ SERG2:  IN      A,(KEYPORT)
         RET
 SERG3:  CALL    RXBITS
         OR      A
-        JR      Z,SERG2         ; NUL from Debug80
+        JR      Z,SERG2
         RET
 SERINR  EQU     25000
 
-; Wait for a start bit. A = time-out in half seconds. Returns NC as soon as
-; the line goes low, C on time-out. Destroys AF, C, HL.
+; A counts 25000-poll quanta, 0 -> 256.
+; NC on RX low, C on budget exhaustion.
+; Uses AF/C/HL. Keeps B/DE.
+; Idle-high, nonzero A:
+; A*(57*25000+21)+13 nominal T.
+; A=60: ~21.375 s at 4 MHz (KE400).
+; Bounds start only, not later edges.
+
 SERSTB: LD      C,A
 SERS1:  LD      HL,SERINR
 SERS2:  IN      A,(KEYPORT)
@@ -40,7 +55,18 @@ SERS2:  IN      A,(KEYPORT)
         SCF
         RET
 
-; ---- T27 serial RX --------------------------------------------------------------
+; T27: RUNIT, then serial SERGET.
+; Nonzero non-Esc 8-bit bytes count in
+; SAVE (16 bits). Hex+space each, quoted
+; character only for 20h-7Eh, then CRLF.
+; OUTC also records if REC and room.
+; No per-byte LCD. TBEGIN/RESULT update
+; the display at test/result boundaries.
+; Final ASK uses GETKEY: serial, keypad,
+; enabled matrix. Serial keys are 7-bit
+; and uppercase. Y PASS, N FAIL, Esc or
+; timeout SKIP, others retry (KE406).
+; The 30s prompt keeps KE400's mismatch.
 
 TSERRX: CALL    TBEGIN
         DB      27,"SERRX  ","Serial RX: typed characters come back",0
@@ -84,10 +110,13 @@ TSRX3:  CALL    ASK
         DB      " bytes received",0
         JP      REND
 
-; ---- T28 serial bit time ----------------------------------------------------------
+; After a proper U (55h) start, count
+; four rises and following falls, ending
+; at bit 7: eight bit times. Ordinary
+; polls cost 33 T, HL wraps at 65536.
+; Uses AF/B. Continued edges required,
+; with no timeout on a stuck level.
 
-; From the start bit of a "U" (55h) the line falls four more times, the last
-; at the start of bit 7: eight bit times. Each poll is 33 T-states.
 SBMEAS: LD      HL,0
         LD      B,4
 SBM1:   INC     HL              ; 6  wait for the line to rise
@@ -100,6 +129,17 @@ SBM2:   INC     HL              ; and to fall
         JR      C,SBM2
         DJNZ    SBM1
         RET
+
+; Up to eight U samples after RUNIT.
+; Idle-high qualification and waveform
+; edges are unbounded. SERSTB bounds
+; only start. SAVE is a 16-bit sum,
+; SAVE+2 samples. Zero samples -> SKIP.
+; Q=(33*sum+64*samples)/(8*samples),
+; using integer division. Bit T is
+; Q's low 16 bits. PASS iff
+; abs(bit-TXBITC)<=BITTOL, rounded
+; TXBITC/50. Counters must fit.
 
 TSERBIT:CALL    TBEGIN
         DB      28,"SERBIT ","The terminal's bit time from typed U",0
@@ -175,7 +215,7 @@ TSB4A:  CALL    STDVD
         CALL    DIV16
         LD      HL,(DVD)
         LD      (SAVE+4),HL
-        LD      DE,TXBITC       ; within 2% of the ROM's own bit time
+        LD      DE,TXBITC       ; nominal reference
         OR      A
         SBC     HL,DE
         JR      NC,TSB5
@@ -208,14 +248,25 @@ TSB6:   CALL    RESULT
         DB      " T +-2%",0
         JP      REND
 
-; ---- T29-T30 hex keypad and its NMI ----------------------------------------------
+; RUNIT for T29 only, T30 follows.
+; Clear counts before the prompt. NMIs
+; can count then, PRESS/PSEEN need later
+; KDA. PADUP is bounded, so a held key
+; can repeat. PRESS is 8-bit. PSEEN
+; records 0..19. Shift is printed, not
+; required for the 20-code PASS.
+; AD=13h twice or idle budget ends.
+; Idle: 40*28000 ordinary 52 T polls,
+; ~14.560 s at nominal 4 MHz (KE400).
+; T30 INFO compares 16-bit NMICNT to
+; 8-bit PRESS. Nonatomic, both may wrap.
 
 TKEYPAD:CALL    TBEGIN
         DB      29,"KEYPAD ","Hex keypad on 00h: every key and Shift",0
         CALL    RUNIT
         RET     NZ
-        XOR     A               ; counts start before the prompt: a key
-        LD      (PRESS),A       ; pressed while it prints still counts
+        XOR     A
+        LD      (PRESS),A
         LD      HL,0
         LD      (PSEEN),HL
         LD      (PSEEN+1),HL
@@ -225,7 +276,7 @@ TKEYPAD:CALL    TBEGIN
         DB      "AD twice in a row ends, as do 15 s with no key.",13,10,0
         LD      A,$FF
         LD      (SAVE),A        ; the last key
-TKP1:   LD      C,40            ; 40 x 0.5 s
+TKP1:   LD      C,40
 TKP2:   LD      HL,KEYINR*2
 TKP3:   IN      A,(STSPORT)
         BIT     6,A
@@ -247,7 +298,7 @@ TKP4:   IN      A,(KEYPORT)
         LD      (SAVE+2),A
         CP      20
         JR      NC,TKP5
-        LD      HL,PSEEN        ; set bit A of PSEEN
+        LD      HL,PSEEN
         LD      B,A
         SRL     B
         SRL     B
@@ -293,7 +344,7 @@ TKP6:   CALL    PRI
         JR      Z,TKP9
 TKP8:   LD      (SAVE),A
         JP      TKP1
-TKP9:   LD      HL,PSEEN        ; count the keys seen
+TKP9:   LD      HL,PSEEN
         LD      C,0
         LD      D,3
 TKPC1:  LD      A,(HL)
@@ -360,10 +411,13 @@ TKN2:   CALL    PRI
         DB      "not one per press",0
         JP      REND
 
-; ---- T31 matrix keyboard ---------------------------------------------------------
+; Set KSEEN=0, previous raw SAVE=FFh.
+; 15000 idle scans with B=0 delay
+; between. Serial ends, new down bits
+; restart. Print row*8+bit, INFO map.
+; Roughly 1 ms/scan at 4 MHz plus work.
+; Runs even with the Matrix switch off.
 
-; Scan once every millisecond or so. A key going down prints its number
-; (row x 8 + bit, as TEC-OS numbers them).
 TMATRIX:CALL    TBEGIN
         DB      31,"MATRIX ","Matrix keyboard on FEh: row and bit of each key",0
         CALL    RUNIT
@@ -424,8 +478,12 @@ TMXC3:  DJNZ    TMXC2
         CALL    PRBYTES
         JP      REND
 
-; One scan. Returns C if a serial start bit was seen, else NZ if a key went
-; down. Destroys AF, BC, DE, HL.
+; Serial start -> RXBITS, C. Else new
+; down=(~newRaw)&oldRaw. Store raw SAVE,
+; OR KSEEN, print row*8+bit. Final NC,
+; NZ iff new downs. Uses AF/BC/DE/HL.
+; Shared state, sequential calls only.
+
 TMXSCAN:IN      A,(STSPORT)
         RLCA
         JP      NC,TMXS9
@@ -503,9 +561,13 @@ TMXS9:  CALL    RXBITS
         SCF
         RET
 
-; ---- T32 joystick ---------------------------------------------------------------
+; Shared matrix row 3, input inverted.
+; SAVE=last active-high, SAVE+1=seen.
+; Change restarts 15000 polls, serial
+; also ends. INFO, not a wiring verdict.
 
 ; MON-3 reads the joystick at port FEh with only A11 low (BC = F7FEh).
+
 TJOY:   CALL    TBEGIN
         DB      32,"JOY    ","Joystick on FEh with A11 low",0
         CALL    RUNIT
@@ -556,10 +618,11 @@ TJ6:    LD      A,RINFO
         DB      " (01 up 02 down 04 left 08 right 10 fire2 20 pin9 40 fire1 80 fire3)",0
         JP      REND
 
-; ---- T33-T34 stopwatch tests ---------------------------------------------------
+; Print 3,2,1 with BEEP and WAITDS A=9.
+; GO text precedes the timed interval:
+; next caller BEEP's first speaker edge.
+; Nominal spacing plus output overhead.
 
-; Count down with three beeps a second apart, then print GO. The timed
-; interval starts with the next BEEP.
 CDOWN:  CALL    PRI
         DB      "Ready:",0
         LD      B,'3'
@@ -579,8 +642,11 @@ CDN1:   PUSH    BC
         DB      " GO",13,10,0
         RET
 
-; Ask for the stopwatch reading. Returns NC and HL = tenths of a second, or
-; C when none was given.
+; Return NC, HL=1..7FFFh tenths. C for
+; GETNUM failure, zero or high bit set.
+; DIV16 needs positive divisor <8000h.
+; Input accumulates 16 bits, may wrap.
+
 ASKSW:  CALL    PRI
         DB      "STOP",13,10,"Type the stopwatch reading in tenths of a second (601 for",13,10
         DB      "60.1 s), then Return or GO: ",0
@@ -596,7 +662,9 @@ ASKSW:  CALL    PRI
         OR      A
         RET
 
-; Print HL tenths as "n.n s".
+; HL tenths -> decimal "n.n s".
+; Uses AF/BC/DE/HL.
+
 PRTENTH:LD      DE,0
         LD      C,10
         CALL    DIV8
@@ -611,8 +679,11 @@ PRTENTH:LD      DE,0
         DB      " s",0
         RET
 
-; About one million T-states with the caller's CALL and DJNZ. Destroys AF,
-; DE.
+; With caller CALL and taken DJNZ:
+; 26*38460+45=1,000,005 nominal T.
+; Final DJNZ costs 5 T less. Uses AF/DE,
+; keeps B for the caller loop.
+
 DELAYU: LD      DE,DELAYN       ; 10
 DELU1:  DEC     DE              ; 6
         LD      A,D             ; 4
@@ -621,8 +692,12 @@ DELU1:  DEC     DE              ; 6
         RET                     ; 10
 DELAYN  EQU     38460           ; with the CALL and DJNZ: 26 x 38460 + 45
 
-; T33: the CPU clock from a stopwatch. The interval from the first speaker
-; edge of the GO beep to the first edge of the STOP beep is SWTOT T-states.
+; T33: 240 DELAYU calls between caller
+; BEEP first speaker edges. SWTOT is a
+; historical Debug80 timing reference,
+; 240400396 T. Valid ASKSW -> INFO Hz
+; from SWTOT*10/tenths, else SKIP.
+
 TCLOCK: CALL    TBEGIN
         DB      33,"CLOCK  ","CPU clock by stopwatch, about 60 s",0
         CALL    RUNIT
@@ -667,7 +742,17 @@ TCK2:   PUSH    HL
         DB      " Hz",0
         JP      REND
 
-; T34: 256 block reads timed by stopwatch, and by the RTC when there is one.
+; T34: SDOK else SKIP. RUNIT can skip.
+; 256 reads of 512 bytes between BEEPs,
+; no writes. Errors all, token-poll sum
+; successful reads only. Optional RTC
+; samples bracket both BEEPs. Sequential
+; minutes/seconds reads aren't atomic,
+; difference handles one hour wrap.
+; Valid ASKSW -> INFO bytes/s from
+; 1310720/tenths, no performance PASS.
+; Without a stopwatch reading, no rate.
+
 TSDTIME:CALL    TBEGIN
         DB      34,"SDTIME ","SD read rate by stopwatch: 256 blocks, 128 KiB",0
         LD      A,(SDOK)

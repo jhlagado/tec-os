@@ -1,6 +1,7 @@
-; DIRTY: makes B:DIRTY.DAT, writes 8 records and ends without closing it,
-; so that on a volume written behind its lines are still dirty when warm
-; boot writes them.
+; DIRTY: attempt eight writes to B:DIRTY.DAT, then warm boot without CLOSE.
+; The stack test uses a successful write-behind volume, leaving dirty lines
+; for warm boot. DELETE, MAKE and WRITE results are ignored; the program
+; does not initialize the data at DMA 0200h.
 
 BDOS    EQU     $0005
 

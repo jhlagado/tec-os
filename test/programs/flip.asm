@@ -1,5 +1,5 @@
-; FLIP.COM: writes three lines, deletes the first with ESC [ M, then asks
-; for console status once (BDOS function 11) and returns.
+; FLIP.COM: write three lines, delete the first, then ask for console status.
+; BDOS 11 exposes the pending page flip; the program then returns.
 
 BDOS    EQU     $0005
 

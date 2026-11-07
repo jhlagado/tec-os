@@ -1,16 +1,15 @@
-; WBTEST: writes and reads back on drive B: before closing, so that on a
-; volume written behind the reads come from dirty cache lines.
-;   SEQ.DAT: 64 records written in turn, record r filled with r * 3 + 1;
-;            each read back by random read (function 33), then closed.
-;   RND.DAT: records 0, 40 and 100 written by random write (function 34),
-;            record r filled with r XOR 5Ah; each read back, then closed.
-; Prints "WB OK", or "WB BAD" and the file's first letter.
+; WBTEST: write/read B:SEQ.DAT's 64 records and RND.DAT's 0/40/100 before CLOSE.
+; SEQ uses r*3+1, RND r XOR 5Ah; reads compare all 128 bytes. The successful
+; write-behind fixture keeps these reads cached; host tests check the card
+; after warm boot. Setup/delete/make/close statuses are ignored.
+; WB OK means the explicit write/read/pattern predicates reached success;
+; WB BAD S/R selects the failing file.
 
 BDOS    EQU     $0005
 
         ORG     $0100
         LD      SP,STACK
-        LD      DE,SEQ          ; SEQ.DAT
+        LD      DE,SEQ          
         CALL    FRESH
         XOR     A
         LD      (REC),A
@@ -42,7 +41,7 @@ SQR:    LD      A,(REC)
         JR      C,SQR
         LD      C,16
         CALL    FCALL
-        LD      DE,RND          ; RND.DAT
+        LD      DE,RND          
         CALL    FRESH
         LD      HL,RECS
 RNW:    LD      A,(HL)
@@ -89,7 +88,8 @@ SAY:    LD      C,9
         CALL    BDOS
         JP      0
 
-; The FCB at DE copied to FCB, the old file deleted and a new one made.
+; Copy the 12-byte name at DE, clear the other 24 FCB bytes and set DMA BUF,
+; then attempt DELETE/MAKE. Main ignores their returned status.
 FRESH:  LD      HL,FCB
         EX      DE,HL
         LD      BC,12

@@ -1,5 +1,7 @@
-; COPY.COM: COPY SOURCE DEST copies a file record by record.
-; Prints "COPIED nnnn" (records, hex) or an error, then returns to the CCP.
+; COPY SOURCE DEST is the record-copy reference used as XCOPY in tests.
+; Prints COPIED nnnn (16-bit record count, hex) or an error, then returns.
+; Any nonzero read ends copying. DELETE is unchecked; error exits do not
+; promise to close the destination.
 
 BDOS    EQU     $0005
 FCB1    EQU     $005C
@@ -7,7 +9,7 @@ FCB2    EQU     $006C
 DMA     EQU     $0080
 
         ORG     $0100
-START:  LD      HL,FCB2         ; keep the destination name before FCB1 is used
+START:  LD      HL,FCB2         ; FCB2 overlaps FCB1: save its name before OPEN
         LD      DE,DEST
         LD      BC,16
         LDIR

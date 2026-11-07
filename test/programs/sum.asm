@@ -1,5 +1,7 @@
-; SUM NAME: reads the file named in the command tail to its end and prints
-; "SUM ssss RECS rrrr": the 16-bit sum of its bytes and its records, in hex.
+; SUM NAME: print byte sum and record count, both modulo 65536, in hex.
+; Includes all 128 bytes of each record, including padding. OPEN FFh is silent;
+; any nonzero READ prints current totals. No explicit close; a BDOS disk
+; error may warm boot instead.
 
 BDOS    EQU     $0005
 FCB     EQU     $005C
@@ -47,6 +49,7 @@ DONE:   LD      DE,SUMM
         LD      C,9
         JP      BDOS
 
+; HEX4 keeps HL across BDOS output so the low byte survives the high byte.
 HEX4:   LD      A,H
         CALL    HEX2
         LD      A,L

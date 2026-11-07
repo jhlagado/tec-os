@@ -1,256 +1,260 @@
-; Command-line history: lines typed at
-; the CCP prompt, kept in one page of
-; EXPAND 1 from cold boot. ^W at the
-; prompt recalls the line before, ^N the
-; line after. Function 10 called by a
-; program is CP/M 2.2's, with ^W and ^N
-; as characters.
-;
-; The ring: each line followed by a 0,
-; written forward from HHEAD with the
-; offset wrapping at 256. After the
-; terminator, bytes are zeroed forward
-; up to and including the next one
-; already 0, which removes what is left
-; of the oldest line it overwrote. So
-; ring[HHEAD-1] and ring[HHEAD] are both
-; 0, and a walk back from the newest
-; stops at an empty entry. A line
-; holding a 0 is not stored; nor is one
-; equal to the newest. The ring's page,
-; HRING, is fixed, and cold boot clears
-; it.
+; Prompt history occupies HRING in
+; EXPAND1. Cold boot clears the ring.
+; Warm reset retains its head and
+; contents. HFLAG restricts ^W/^N and
+; storage to prompt input. Program
+; function 10 treats ^W/^N as
+; characters.
+; Zero-ended lines grow forward with L
+; wrapping inside the page. HHEAD and
+; HHEAD-1 are zero. Storage rejects
+; embedded zeros and exact newest-line
+; duplicates. After writing, clear the
+; overwritten oldest fragment through
+; its first old zero.
 
-HRING EQU $BD00  ; its page, in EXPAND 1
+HRING EQU $BD00
 
-; A = the ring's byte at L (HGET), or
-; that byte = A (HPUT), with H the
-; ring's page, HRING>>8. EXPAND 1 is in
-; view for the access alone, with
-; interrupts off, and no stack is used
-; while it is, since it may cover the
-; stack. Interrupts are left as they
-; were. Keeps BC, DE and HL; destroys F.
+; H=HRING high byte, L=ring offset. HPUT
+; writes A and returns readback, HGET
+; reads A. Preserve BC/DE/HL. F is not a
+; test of returned A.
+; Save BC and sampled maskable IFF
+; before mapping LATCHV OR LATEXP into
+; 8000h..BFFFh (EXPAND1). No stack
+; access occurs while mapped. Restore
+; the LATCHV shadow before pops and
+; conditional EI. This is not a physical
+; latch snapshot or an NMI exclusion.
 
 HPUT:
   push bc
-  ld b,a         ; B = the byte to write
-  ld c,1         ; C = 1: write, then
-                 ; read back
+  ld b,a
+  ld c,1
   jr HACC
 
 HGET:
   push bc
-  ld c,0         ; C = 0: read only
+  ld c,0
 
 HACC:
-  call IFFGET    ; P/V = interrupts on,
-  di             ; kept on the stack
-                 ; while they are off
+  call IFFGET
+  di
   push af
-  ld a,(LATCHV)  ; EXPAND 1 into view at
-                 ; 8000h-BFFFh
+  ld a,(LATCHV)
   or LATEXP
   out (SYSLAT),a
-  dec c          ; Z for HPUT only
+  dec c
   jr nz,HACC1
   ld (hl),b
 
 HACC1:
-  ld b,(hl)      ; the byte, read (or
-                 ; read back)
-  ld a,(LATCHV)  ; the usual memory
-                 ; back, as the latch
-                 ; had it
+  ld b,(hl)
+  ld a,(LATCHV)
   out (SYSLAT),a
   pop af
-  jp po,HACC2    ; interrupts were off:
-                 ; leave them so
+  jp po,HACC2
   ei
 
 HACC2:
-  ld a,b         ; the byte in A
+  ld a,b
   pop bc
   ret
 
-; L = an entry's terminator: L = its
-; first byte, L itself when it is empty.
-; H the ring's page. Destroys AF.
+; Find the first byte of the line ending
+; at L. An empty line leaves L
+; unchanged. Wrap within the ring page
+; until the preceding zero sentinel.
+; Changes AF/HL.
 
 HSTART:
-  dec l          ; the byte before L: a
-                 ; 0 there
-  call HGET      ; makes L the entry's
-                 ; start
+  dec l
+  call HGET
   inc l
   or a
   ret z
-  dec l          ; else one back and
-                 ; look again
+  dec l
   jr HSTART
 
-; ^W or ^N, in C, at the CCP prompt: the
-; line in the buffer replaced by the
-; line before or after the one shown.
+; Recall prompt history for C=^W/^N.
 ; HPOS is the shown line's terminator,
-; HHEAD's empty entry when none is
-; shown. The new line is copied into the
-; buffer (LINPTR, LINCNT, cut at LINMAX)
-; and echoed. Changes AF, BC, HL and
-; what LINERASE and ECHOCHAR change.
+; or HHEAD when no entry is shown. For
+; ^N, enter HRNEW. For ^W, move to the
+; preceding line. Do nothing at the
+; oldest empty boundary. Changes
+; AF/BC/DE/HL and rendering state.
 
 HREC:
   ld h,HRING>>8
-  ld a,(HPOS)    ; L = the shown line's
-                 ; terminator
+  ld a,(HPOS)
   ld l,a
   ld a,c
   cp CTRLN
-  jr z,HRNEW     ; ^N: the line after
-  call HSTART    ; ^W: the shown line's
-                 ; first byte,
-  dec l          ; the line before's
-                 ; terminator
-  dec l          ; and its last byte: a
-                 ; 0 there
-  call HGET      ; means that line is
-                 ; empty, the end
+  jr z,HRNEW
+  call HSTART
+  dec l
+  dec l
+  call HGET
   inc l
   or a
-  ret z          ; none before: stay
+  ret z
   jr HRSHOW
+
+; ^N at HHEAD leaves typed input
+; unchanged. Otherwise find the next
+; terminator. Passing the newest line
+; selects HHEAD and clears the logical
+; line. It does not restore an abandoned
+; draft.
 
 HRNEW:
   ld a,(HHEAD)
   cp l
-  ret z          ; none shown
-
-HRNEW1:
-  inc l          ; forward to the next
-                 ; terminator,
-  call HGET      ; the next line's; past
-                 ; the newest
-  or a           ; that is HHEAD's empty
-                 ; entry
-  jr nz,HRNEW1
-
-HRSHOW:
-  ld a,l         ; the line to show, by
-                 ; its terminator
-  ld (HPOS),a
-  call HSTART    ; L = its first byte
-  push hl
-  call LINERASE  ; the typed line off
-                 ; the screen and out
-  pop hl         ; of the buffer
-
-HRCOPY:
-  ld a,(HPOS)    ; up to the shown
-                 ; line's terminator
-  cp l
   ret z
 
-; C the maximum, B the count
+HRNEW1:
+  inc l
+  call HGET
+  or a
+  jr nz,HRNEW1
+
+; Save the selected terminator in HPOS
+; and find its first byte. Preserve that
+; ring pointer across LINERASE, which
+; resets logical count/pointer and emits
+; BS SPACE BS for each counted byte. It
+; does not wipe the old buffer.
+
+HRSHOW:
+  ld a,l
+  ld (HPOS),a
+  call HSTART
+  push hl
+  call LINERASE
+  pop hl
+
+; Copy recalled bytes until HPOS or the
+; logical line limit. Adjacent
+; LINMAX/LINCNT load as C=limit,
+; B=count. Save ring HL across buffer
+; writes and ECHOCHAR, then advance L
+; with page wrap. No terminator is
+; copied. LINDONE publishes the count
+; later.
+
+HRCOPY:
+  ld a,(HPOS)
+  cp l
+  ret z
 
   ld bc,(LINMAX)
   ld a,c
   cp b
-  ret z          ; cut at the buffer's
-                 ; maximum
-  call HGET      ; the next byte of the
-                 ; line,
-  ld c,a         ; into the buffer
+  ret z
+  call HGET
+  ld c,a
   push hl
   ld hl,(LINPTR)
-  ld (hl),c      ; at the buffer's next
-                 ; place
+  ld (hl),c
   inc hl
   ld (LINPTR),hl
-  ld hl,LINCNT   ; counted
+  ld hl,LINCNT
   inc (hl)
-  call ECHOCHAR  ; and echoed, as if
-                 ; typed
+  call ECHOCHAR
   pop hl
   inc l
   jr HRCOPY
 
-; The line function 10 returns, B bytes
-; at DE (B not 0), into the ring, unless
-; it holds a 0 or equals the newest
-; line. HHEAD moves past it. Keeps C;
-; destroys AF and HL, and B and DE when
-; the line is stored.
+; Store prompt input from DE with
+; positive B=1..127. Reject embedded
+; zero or an exact newest-line
+; duplicate. Preserve C. Changes AF/HL,
+; and B/DE only when stored. HHEAD-1
+; locates the newest terminator before
+; comparison.
 
 HSTORE:
   ld h,HRING>>8
-  ld a,(HHEAD)   ; HHEAD-1, the newest's
-                 ; terminator
+  ld a,(HHEAD)
   dec a
   ld l,a
-  call HSTART    ; L = the newest's
-                 ; first byte
+  call HSTART
   push de
   push bc
-  ld c,0         ; 0 while the line
-                 ; matches the newest
+  ld c,0
+
+; Check all B bytes for embedded zero
+; even after a mismatch. Positive B<=127
+; keeps mismatch count C from wrapping.
+; Reject a duplicate only if every byte
+; matches and L reaches the newest
+; terminator. Restore saved DE/BC before
+; storing at HHEAD.
 
 HSCMP:
   ld a,(de)
   or a
-  jr z,HSKEEP    ; a 0 in it: not stored
-  call HGET      ; the newest's byte
-                 ; against the line's
+  jr z,HSKEEP
+  call HGET
   ex de,hl
   cp (hl)
   ex de,hl
   jr z,HSCMP1
-  inc c          ; a difference
+  inc c
 
 HSCMP1:
   inc de
   inc l
   djnz HSCMP
-  ld a,(HHEAD)   ; matched, and the
-                 ; newest ends here too
-  dec a          ; (L at its terminator,
-                 ; HHEAD-1)
+  ld a,(HHEAD)
+  dec a
   sub l
   or c
-  jr z,HSKEEP    ; the same as the
-                 ; newest: not stored
+  jr z,HSKEEP
   pop bc
   pop de
-  ld a,(HHEAD)   ; written from HHEAD on
+  ld a,(HHEAD)
   ld l,a
+
+; Write exactly B bytes, advancing DE
+; and ring L. Append zero and publish
+; HHEAD only after the full line.
+; Continue into HSCLR to clear the
+; overwritten oldest fragment.
 
 HSPUT:
   ld a,(de)
   call HPUT
   inc de
-  inc l          ; wrapping at 256
-                 ; within the page
-  djnz HSPUT
-  xor a
-  call HPUT      ; the terminator
   inc l
-  ld a,l         ; HHEAD past it
-  ld (HHEAD),a
-
-HSCLR:
-  call HGET      ; zero forward through
-                 ; the next 0
-  ld b,a         ; B = the byte as it
-                 ; was
+  djnz HSPUT
   xor a
   call HPUT
   inc l
-  or b           ; stop once a 0 is
-                 ; cleared
+  ld a,l
+  ld (HHEAD),a
+
+; At the new head, save each old byte in
+; B before replacing it with zero. HPUT
+; preserves B. Stop after clearing the
+; first old zero, leaving the head empty
+; and no stale oldest fragment.
+
+HSCLR:
+  call HGET
+  ld b,a
+  xor a
+  call HPUT
+  inc l
+  or b
   jr nz,HSCLR
   ret
 
+; Reject storage by restoring saved
+; BC/DE. Ring contents and HHEAD stay
+; unchanged. AF/HL may change.
+
 HSKEEP:
-  pop bc         ; not stored: BC and DE
-                 ; as they came
+  pop bc
   pop de
   ret

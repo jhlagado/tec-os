@@ -1,30 +1,23 @@
-; CP/M 2.2 BIOS. Cold boot copies the
-; ROM table below to RAMBIOS. That
-; page-aligned copy is the one that
-; runs: the BDOS calls it, and programs
-; reach it by the vector at 0001h.
-;
-; Disk records map to volumes linearly:
-; record = track * 64 + sector. Every
-; version 1 geometry has 64 records per
-; track and no reserved tracks; the
-; build checks this against format.json.
-; Four records share one 512-byte SD
-; block. Reads go through the block
-; cache (cache.asm). Writes go through
-; to the card before success is
-; reported, except on the one volume
-; written behind, whose writes stay in
-; the cache until it writes them.
+; Cold boot copies BIOSBAS from
+; tables.asm to page-aligned RAMBIOS.
+; BDOS calls that table. The page-zero
+; vector reaches its warm-boot entry.
+; Record = track*64+sector, four
+; 128-byte records per SD block. Version
+; 1 geometries require SPT=64 and OFF=0,
+; checked by geometryInfo during the
+; build. Reads use the block cache.
+; Write-through completion and
+; write-behind persistence differ.
 
-; BIOS HOME (track 0) and SETTRK: BC =
-; the track, kept in DSKTRK for the next
-; READ or WRITE. Nothing moves: the card
-; has no head. HOME destroys BC.
+; HOME sets BC=0 and falls into SETTRK.
+; SETTRK stores BC in DSKTRK for later
+; MAPREC validation. Flags are
+; preserved. SETTRK keeps BC, HOME
+; changes it. No physical seek occurs.
 
 BHOME:
-  ld bc,0        ; HOME is SETTRK with
-                 ; track 0
+  ld bc,0
 
 BSETTRK:
   ld (DSKTRK),bc
@@ -32,6 +25,7 @@ BSETTRK:
 
 ; BIOS SETSEC: BC = the sector, kept in
 ; DSKSEC; MAPREC checks it.
+; Preserve registers and flags.
 
 BSETSEC:
   ld (DSKSEC),bc
@@ -39,6 +33,8 @@ BSETSEC:
 
 ; BIOS SETDMA: BC = the address the next
 ; record goes to or comes from.
+; Preserve registers and flags. Keep the
+; DMA buffer valid through that call.
 
 BSETDMA:
   ld (DSKDMA),bc
@@ -47,431 +43,397 @@ BSETDMA:
 ; BIOS SECTRAN: BC = the logical sector,
 ; DE = the table, unused. Returns HL =
 ; BC, the same sector.
+; Preserve BC/DE and flags.
 
 BSECTRN:
-  ld h,b         ; no skew
+  ld h,b
   ld l,c
   ret
 
-; C = drive. Returns HL = DPH, or 0 when
-; the drive has no mounted volume. A
-; selected drive becomes DSKCUR; a
-; refused one leaves it as it was. E's
-; first-login bit is not looked at.
-; Keeps BC; destroys A, DE and F.
+; Select C below MAXDRV with nonzero
+; mounted geometry. Return its DPH in HL
+; and store DSKCUR. Failure returns HL=0
+; without changing DSKCUR, with no
+; common error-flag result. Ignore E's
+; first-login flag. Preserve BC.
+; AF/DE/HL may change.
 
 BSELDSK:
   ld a,c
-  cp MAXDRV      ; past the last drive:
-                 ; refused
+  cp MAXDRV
   jr nc,SELBAD
   call DRVENT
-  ld a,(hl)      ; HL points at the
-                 ; geometry byte
-  or a           ; 0: no volume mounted
-                 ; on the drive
+  ld a,(hl)
+  or a
   jr z,SELBAD
-  ld a,c         ; the drive selected
+  ld a,c
   ld (DSKCUR),a
 
-DPHADR:
-  ld l,a         ; HL = DPHTAB + 16 *
-                 ; drive A, for BSELDSK,
+; For valid drive A, return
+; HL=DPHTAB+16*A. Preserve BC. Change
+; DE/F. This computes an address without
+; validation. SELBAD returns HL=0
+; without setting flags.
 
-; MNDPH and ALVINIT; keeps BC, destroys
-; DE
+DPHADR:
+  ld l,a
 
   ld h,0
-  add hl,hl      ; 16 bytes a DPH
   add hl,hl
   add hl,hl
   add hl,hl
-  ld de,DPHTAB   ; plus the table's base
+  add hl,hl
+  ld de,DPHTAB
   add hl,de
   ret
 
 SELBAD:
-  ld hl,0        ; HL = 0: the BDOS's
-                 ; select error
+  ld hl,0
   ret
 
-; A = drive. Returns HL = address of its
-; drive-table geometry byte (offset 6),
-; and preserves BC. Destroys A and DE.
+; For valid drive A=0..MAXDRV-1, return
+; HL=DRVTAB+8*A+6, its geometry byte. No
+; bounds check occurs here. Preserve BC.
+; Change AF/DE.
 
 DRVENT:
-  add a,a        ; 8 bytes a drive's
-                 ; entry (DRVESZ)
   add a,a
   add a,a
-  add a,6        ; past the start block
-                 ; (4) and length (2)
-  ld e,a         ; DE = the offset into
-                 ; the table
+  add a,a
+  add a,6
+  ld e,a
   ld d,0
   ld hl,DRVTAB
   add hl,de
   ret
 
-; Translate DSKTRK/DSKSEC on DSKCUR into
-; BLKOFF, BLKSLOT and SDLBA. Returns Z
-; with A = 0 when the record lies inside
-; the volume; NZ when the sector, the
-; track or the block is out of range,
-; SDLBA then unchanged. Destroys BC, DE
-; and HL.
+; Map DSKTRK/DSKSEC on mounted DSKCUR.
+; Require sector 0..63, track 0..1023
+; and block below volume length. Store
+; BLKSLOT=record AND 3 and
+; BLKOFF=record/4 before checking
+; length. Only then set 32-bit
+; SDLBA=start+block.
+; Success: A=0/Z/carry clear. Failure:
+; NZ, SDLBA unchanged, mapping scratch
+; may have changed. Change AF/BC/DE/HL.
 
 MAPREC:
   ld hl,(DSKSEC)
-  ld a,h         ; sectors 0-63 only
+  ld a,h
   or a
   jr nz,MAPBAD
-  ld a,l         ; and below 64
+  ld a,l
   cp 64
   jr nc,MAPBAD
 
-; tracks 0-1023 only
-
   ld hl,(DSKTRK)
-  ld a,h         ; tracks above 1023
-                 ; overflow 16-bit
-                 ; records
+  ld a,h
   cp 4
   jr nc,MAPBAD
-  add hl,hl      ; record = track * 64 +
-                 ; sector
   add hl,hl
   add hl,hl
-  add hl,hl      ; six doublings: track
-                 ; * 64
   add hl,hl
   add hl,hl
-  ld a,(DSKSEC)  ; the sector in the six
-                 ; low bits, which
-  or l           ; the shift left clear
+  add hl,hl
+  add hl,hl
+  ld a,(DSKSEC)
+  or l
   ld l,a
-  and 3          ; the record's place in
-                 ; its block
+  and 3
   ld (BLKSLOT),a
-  srl h          ; block = record / 4
+  srl h
   rr l
   srl h
   rr l
 
-; the block within the volume
-
   ld (BLKOFF),hl
-  ld a,(DSKCUR)  ; compare with the
-                 ; volume length
+  ld a,(DSKCUR)
   call DRVENT
-  dec hl         ; back from the
-                 ; geometry byte to the
-  ld d,(hl)      ; length, high byte
-                 ; first
   dec hl
-  ld e,(hl)      ; DE = length in blocks
-  push hl        ; the entry, kept for
-                 ; the start block
+  ld d,(hl)
+  dec hl
+  ld e,(hl)
+  push hl
   ld hl,(BLKOFF)
   or a
-  sbc hl,de      ; no borrow: the block
-                 ; is past the end
+  sbc hl,de
   pop hl
   jr nc,MAPBAD
-  dec hl         ; HL -> start block
-                 ; byte 3
+  dec hl
   ld de,SDLBA+3
 
-; the block, added below
-
   ld bc,(BLKOFF)
-  ld a,(hl)      ; SDLBA = start +
-                 ; block, little-endian
-  dec hl         ; copied from the top
-                 ; byte down
-  ld (de),a
-  dec de
-  ld a,(hl)      ; byte 2
+  ld a,(hl)
   dec hl
   ld (de),a
   dec de
-  ld a,(hl)      ; byte 1
+  ld a,(hl)
   dec hl
   ld (de),a
   dec de
-  ld a,(hl)      ; byte 0
-  ld (de),a      ; SDLBA now holds the
-                 ; start block
-  ld hl,(SDLBA)  ; the block added to
-                 ; the low word
+  ld a,(hl)
+  dec hl
+  ld (de),a
+  dec de
+  ld a,(hl)
+  ld (de),a
+  ld hl,(SDLBA)
   add hl,bc
   ld (SDLBA),hl
-
-; and its carry to the high word
 
   ld hl,(SDLBA+2)
   ld bc,0
   adc hl,bc
   ld (SDLBA+2),hl
-  xor a          ; Z: inside the volume
+  xor a
   ret
 
 MAPBAD:
-  or 1           ; NZ: outside it
+  or 1
   ret
 
-; The no-pre-read rule's key: the block
-; BLKOFF on drive DSKCUR, held as C says
-; (BUFOK: 2 cleared, not read), so that
-; the next block of its allocation block
-; can be cleared rather than read.
-; Returns Z. Destroys A and HL.
+; Save DSKCUR/BLKOFF and C as
+; BUFDRV/BUFBLK/BUFOK. C=2 means cleared
+; without pre-read. This key can qualify
+; only the next block on the same drive
+; within the allocation block. Cache
+; writeback can invalidate it. Warm
+; CPMINIT clears it. Return A=0/Z/carry
+; clear. Change HL.
 
 GETKEY:
-  ld a,(DSKCUR)  ; the drive and block,
-                 ; as BWRITE compares
-  ld (BUFDRV),a  ; them
+  ld a,(DSKCUR)
+  ld (BUFDRV),a
   ld hl,(BLKOFF)
   ld (BUFBLK),hl
-  ld a,c         ; how the block was had
+  ld a,c
   ld (BUFOK),a
   xor a
   ret
 
-; BIOS READ: copy the record to DSKDMA,
-; through the cache. A = 0 on success, 1
-; on error. Interrupts are off within,
-; and back as they were. Destroys BC, DE
-; and HL.
+; Read 128 bytes into DSKDMA through the
+; cache after successful MAPREC. CDI
+; disables interrupts, BRET restores the
+; saved state and returns A=0 success or
+; 1 error. DMA is needed only through
+; this call. Change BC/DE/HL and flags.
+; A full cache fill also changes I.
 
 BREAD:
   call CDI
-  call MAPREC    ; a record outside the
-                 ; volume: NZ, an error
+  call MAPREC
   call z,CREAD
   jp BRET
 
-; A BIOS WRITE refused before any
-; change: A = 1, with NZ from the test
-; that came here.
+; Refuse before record/cache output.
+; Return A=1 with incoming NZ from
+; mapping or the read-only test. CWTYPE
+; and mapping scratch may already have
+; changed.
 
 DSKERR:
   ld a,1
   ret
 
-; BIOS WRITE: the record goes into its
-; block's line in the cache (CWRBH), the
-; one write path. The block is read into
-; the line first, unless nothing in it
-; is the card's to keep: the write is of
-; type 2 (C), the first to a newly
-; allocated block, or the block before,
-; cleared rather than read, is on this
-; drive and in the same allocation block
-; (GETKEY's key). On a volume written
-; through the line goes to the card
-; before the call returns; on the one
-; written behind it stays dirty until a
-; directory write, warm boot or remount.
-; A = 0 on success, 1 on error;
-; interrupts are off within, and back as
-; they were. A directory write also
-; marks its drive's DPH: the word at
-; offset 4 set to 1, and the one at 6
-; raised to cover the block's entries.
-; Destroys BC, DE and HL.
+; Write 128 bytes from DSKDMA through
+; CWRBH. C=0 data, 1 directory, 2 new
+; allocation block's first record. Save
+; CWTYPE before validation. Type 2 or
+; the exact no-pre-read key permits
+; zero-fill. Otherwise retain/read
+; neighbouring bytes.
+; Write-through success includes card
+; output. Write-behind may defer it to
+; directory writes, warm boot, remount
+; or eviction. BRET returns A=0 success
+; or 1 error and restores saved
+; interrupt state. Change BC/DE/HL/F.
+; A full cache pre-read also changes I.
 
 BWRITE:
   call CDI
-  ld a,c         ; the type: 0 data, 1
-                 ; directory, 2 the
-  ld (CWTYPE),a  ; first of a new
-                 ; allocation block
+  ld a,c
+  ld (CWTYPE),a
   call BWR0
   jp BRET
 
+; Preserve incoming BC across MAPREC.
+; Mapping/read-only refusal precedes
+; record output, after possible
+; CWTYPE/mapping changes. Classify
+; directory blocks by address,
+; independently of C write type: first
+; 32 SD blocks for geometry 1, 16 for
+; geometry 2.
+
 BWR0:
-  push bc        ; C, the type, kept
-                 ; over MAPREC
+  push bc
   call MAPREC
   pop bc
-  jr nz,DSKERR   ; outside the volume
-  ld a,(DSKCUR)  ; read-only volumes
-                 ; refuse before any
-                 ; change
+  jr nz,DSKERR
+  ld a,(DSKCUR)
   call DRVENT
-  inc hl         ; the flags: bit 0
-                 ; read-only
+  inc hl
   bit 0,(hl)
   jr nz,DSKERR
-  dec hl         ; the geometry byte
-                 ; again
-  push hl        ; a directory block:
-                 ; its drive dirty, its
-                 ; mark
-  push bc        ; raised over the block
-  ld b,(hl)      ; the geometry: 1 G8M,
-                 ; 2 G1M
+  dec hl
+  push hl
+  push bc
+  ld b,(hl)
   ld a,64
 
 BWDN:
-  srl a          ; the directory's SD
-                 ; blocks: 32 G8M, 16
-                 ; G1M
+  srl a
   djnz BWDN
   ld bc,(BLKOFF)
-  inc b          ; block 256 or more:
-                 ; data
+  inc b
   dec b
   jr nz,BWND
-  cp c           ; at or past the
-                 ; directory's end: data
+  cp c
   jr c,BWND
   jr z,BWND
-  ld a,(DSKCUR)  ; a directory block:
-                 ; the drive's DPH
+
+; Mark mapped directory output before
+; CWRBH: DPH+4 low byte=1, with its high
+; byte zero from MNDPH. Raise the
+; little-endian word at +6 to at least
+; 16*(BLKOFF+1). Marks may remain raised
+; after later cache/card failure.
+
+  ld a,(DSKCUR)
   call DPHADR
-  ld de,4        ; the DPH's word at 4:
-                 ; 1, the drive dirty
+  ld de,4
   add hl,de
   ld (hl),1
-  inc hl         ; the word at 6, the
-                 ; mark
   inc hl
-  ld a,c         ; DE = (SD block + 1) *
-                 ; 16: the block's
-  inc a          ; entries, all of them
-                 ; under the mark
+  inc hl
+  ld a,c
+  inc a
   ld e,a
   ld d,0
-  ex de,hl       ; HL the count, DE the
-                 ; mark's address
-  add hl,hl      ; 16 entries of 32
-                 ; bytes an SD block
+  ex de,hl
   add hl,hl
   add hl,hl
   add hl,hl
-  ex de,hl       ; and back
-  ld a,e         ; the mark at HL:
-                 ; raised to DE if lower
+  add hl,hl
+  ex de,hl
+  ld a,e
   sub (hl)
   inc hl
   ld a,d
-  sbc a,(hl)     ; borrow: the mark is
-                 ; already past DE
+  sbc a,(hl)
   jr c,BWND
-  ld (hl),d      ; the new mark, high
-                 ; byte first
+  ld (hl),d
   dec hl
   ld (hl),e
 
+; Stack: saved BC above geometry HL.
+; Choose C=1 for no pre-read, otherwise
+; C=0. Type 2 qualifies directly. Other
+; types need BUFOK=2, the same drive and
+; BUFBLK exactly one block before
+; BLKOFF. Reject the first block of an
+; allocation block: geometry 1 has eight
+; SD blocks, geometry 2 four.
+
 BWND:
-  pop bc         ; C, the type, and HL
-                 ; the geometry byte
+  pop bc
   pop hl
   ld a,c
   cp 2
-  jr z,BWNEW     ; type 2: nothing in
-                 ; the block to keep
-  ld c,0         ; read first, unless
-                 ; the key says
-                 ; otherwise
+  jr z,BWNEW
+  ld c,0
   ld a,(BUFOK)
-  cp 2           ; the key's block was
-                 ; cleared, not read
+  cp 2
   jr nz,BWGET
-  ld a,(BUFDRV)  ; and on this drive
+  ld a,(BUFDRV)
   ld e,a
   ld a,(DSKCUR)
   cp e
-  jr nz,BWGET    ; another drive's key
-  ld b,(hl)      ; the geometry: 1 G8M,
-                 ; 2 G1M
+  jr nz,BWGET
+  ld b,(hl)
   ld a,16
 
 BWMASK:
-  srl a          ; SD blocks in an
-                 ; allocation block
+  srl a
   djnz BWMASK
-  dec a          ; the mask of a block's
-                 ; place in it
+  dec a
   ld hl,(BLKOFF)
   and l
-  jr z,BWGET     ; the first of its
-                 ; allocation block
-  dec hl         ; the key names the
-                 ; block before this one
+  jr z,BWGET
+  dec hl
   ld de,(BUFBLK)
   or a
   sbc hl,de
-  jr nz,BWGET    ; another block: read
-                 ; first
+  jr nz,BWGET
 
 BWNEW:
-  ld c,1         ; no pre-read
+  ld c,1
+
+; Keep C's pre-read choice.
+; Selected-drive flag bit 1 chooses
+; write-behind, otherwise set CWTYPE bit
+; 7 for write-through completion.
+; Tail-enter the common CWRBH path.
 
 BWGET:
-  ld a,(DSKCUR)  ; C decided: the
-                 ; volume's policy next
+  ld a,(DSKCUR)
   call DRVENT
-  inc hl         ; the flags: bit 1
-                 ; written behind
-  bit 1,(hl)     ; set: the line stays
-                 ; in the cache
+  inc hl
+  bit 1,(hl)
   jp nz,CWRBH
-  ld hl,CWTYPE   ; written through: bit
-                 ; 7 tells CWRBH to
-  set 7,(hl)     ; write the line before
-                 ; it returns
+  ld hl,CWTYPE
+  set 7,(hl)
   jp CWRBH
 
-; P/V = the interrupt state. The second
-; read is for an NMOS Z80, which can
-; clear P/V if an interrupt is accepted
-; during the first. Destroys A.
+; Return IFF2 in P/V through LD A,I. On
+; initial PO read again for the NMOS Z80
+; interrupt-acceptance case. Change A/F
+; without disabling interrupts. Callers
+; save the result and apply DI
+; separately.
 
 IFFGET:
-  ld a,i         ; P/V = IFF2: PE,
-                 ; interrupts on
+  ld a,i
   ret pe
-  ld a,i         ; PO: off, or the NMOS
-                 ; fault; read again
+  ld a,i
   ret
 
-; Interrupts off for a BIOS entry, their
-; state kept in CIFF. Destroys A, F and
-; HL.
+; Sample IFFGET, disable interrupts and
+; store AF in CIFF. Flag bit 2 in its
+; low byte records the prior enable
+; state. Pair CDI/CEI around a
+; non-nested interval: CIFF is shared
+; storage. Change AF/HL.
 
 CDI:
   call IFFGET
   di
-  push af        ; the flags, P/V among
-                 ; them, into HL
+  push af
   pop hl
-  ld (CIFF),hl   ; L: the flags, P/V in
-                 ; bit 2
+  ld (CIFF),hl
   ret
 
-; BIOS READ and WRITE's exit: A = 0 for
-; Z, 1 for NZ (BRET); then, for any
-; entry, interrupts back as CDI found
-; them, keeping A and the flags (CEI).
+; BRET maps incoming Z to A=0, NZ to 1,
+; then enters CEI. CEI restores the
+; saved enable state from CIFF bit 2
+; while preserving entry AF. It may also
+; follow CDI directly to retain a
+; caller's status. EI takes effect after
+; POP AF, before RET.
 
 BRET:
-  ld a,0         ; BIOS READ and WRITE:
-                 ; A from Z or NZ, and
-  jr z,CEI       ; interrupts as they
-                 ; were
-  inc a          ; 1: an error
+  ld a,0
+  jr z,CEI
+  inc a
 
 CEI:
-  push af        ; A and the flags, kept
-  ld a,(CIFF)    ; bit 2, P/V: they were
-                 ; on
+  push af
+  ld a,(CIFF)
   and 4
   jr z,CEI1
-  ei             ; on again after the
-                 ; next instruction
+  ei
 
 CEI1:
   pop af

@@ -1,6 +1,6 @@
-; CHAIN: BDOS function 47 with its DMA address at STR, the file's end, where
-; a test puts the command and what follows it. Refused, it prints REFUSED
-; when A is FFh, and NOT FF otherwise, and returns.
+; CHAIN: test BDOS 47 with the command appended at STR, the image's end.
+; Acceptance warm boots without returning. A missing zero within 128 bytes
+; or a CR/LF refuses it: print REFUSED for FFh, NOT FF for another return.
 
 BDOS    EQU     $0005
 

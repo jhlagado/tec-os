@@ -176,6 +176,9 @@ the console font, from which the build makes the ROM's copy. `drivers/` holds
 the GLCD's driver. `tools/` holds the build, `tecvol` and the media script.
 `test/` holds the tests, their harness and the test programs.
 
+[Assembly source style](docs/assembly-style.md) describes the current compact
+layout, comment contracts, 8.3 names and retained diagnostic/test profiles.
+
 TEC-OS is licensed under GPL-3.0-or-later.
 
 Font sources, deliberate edits and legacy provenance limits are in [FONT-NOTICES](format/FONT-NOTICES.txt).

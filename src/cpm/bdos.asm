@@ -1,23 +1,21 @@
-; Portable CP/M BDOS, CP/M 2.2 interface
-; profile.
-;
-; TEC-OS ROM-resident adaptation of
-; Portable CP/M (see PROVENANCE.md).
+; Portable CP/M BDOS with the CP/M 2.2
+; interface, adapted for TEC-OS ROM
+; residency. Provenance: PROVENANCE.md.
 ; Code and constant text stay in ROM.
-; Every variable and the BDOS stack live
-; in the BDOS RAM block in src/ram.asm,
-; which the BIOS clears at cold and warm
-; boot before setting CURDMA to $0080.
+; The BDOS workspace and stack are in
+; src/ram.asm. CPMINIT clears that RAM
+; at cold/warm boot and sets
+; CURDMA=0080h.
 
 BDOSBAS:
 
-; The BDOS reaches the BIOS through the
-; RAM copy of its jump table, as CP/M
-; 2.2 does with its BIOS in RAM, so a
-; program that replaces an entry there
-; sees the BDOS's own calls: its console
-; output and input, ^C and the warm boot
-; after a disk error.
+; These aliases name RAM BIOS entries.
+; Calls through them reach installed
+; hooks for BDOS input, output and warm
+; boot.
+; CONSTQ is the exception: output-time
+; polling calls ROM BCONST without
+; drawing the cursor.
 
 BIOWBT EQU RAMBIOS+$03
 BIOCST EQU RAMBIOS+$06
@@ -51,105 +49,86 @@ CTRLN EQU 14
 SPACE EQU 32
 DELETE EQU $7F
 
-; Function 47, chain (TEC-OS's, from
-; CP/M 3's): the command at the DMA
-; address, ended by a 0 within 128 bytes
-; and holding no CR or LF, replaces what
-; is left of the CCP's line, and the
-; program ends by warm boot; the CCP
-; runs it next, before any startup line.
-; It may hold ! and :, and E is ignored.
-; Otherwise A = FFh and the program goes
-; on, the line unchanged. FNCHNO is also
-; the FFh return for functions 44 and
-; 99.
+; Function 47: replace the chained
+; remainder with text at the DMA address
+; in CURDMA. E is ignored. The text must
+; contain zero within 128 bytes and no
+; CR/LF before it. ! and : are allowed.
+; Validate before changing CMDTXT/CHPOS,
+; then copy all 128 DMA bytes, set
+; CHPOS=1 and jump through BIOWBT. The
+; CCP runs the chain before startup.
+; Invalid input returns A=FFh through
+; RETA with the command unchanged.
+; FNCHNO is also the FFh tail for 44/99.
 
 FNCHAIN:
 
-; the command at the DMA address
-
   ld hl,(CURDMA)
-  ld b,128       ; its 0 must come
-                 ; within 128 bytes
+  ld b,128       ; terminator bound
 
 FNCH1:
-  ld a,(hl)      ; the command's next
-                 ; byte
+  ld a,(hl)      ; next DMA byte
   or a
-  jr z,FNCH2     ; its 0: the command
-                 ; fits
-  cp CR          ; a CR or LF would end
-                 ; the CCP's line
+  jr z,FNCH2     ; zero ends validation
+  cp CR          ; no CR/LF before zero
   jr z,FNCHNO
   cp LF
   jr z,FNCHNO
-  inc hl         ; none of those: on
-  djnz FNCH1     ; no 0 in 128 bytes:
-                 ; refused
+  inc hl
+  djnz FNCH1     ; 128 bytes, no zero
 
 FNCHNO:
-  ld a,$FF       ; refused, or not
-                 ; supported: A = FFh
+  ld a,$FF       ; invalid/unsupported
   jr RETA
 
 FNCH2:
 
-; the command, its 0 and what follows
-
   ld hl,(CURDMA)
-  ld de,CMDTXT   ; over the CCP's
-                 ; command line
-  ld bc,128      ; the 128 bytes the
-                 ; check allowed
+  ld de,CMDTXT   ; replace command text
+  ld bc,128      ; copy full DMA record
   ldir
-  ld a,1         ; its first piece next
+  ld a,1         ; start chained pieces
   ld (CHPOS),a
-  jp BIOWBT      ; the program ends; the
-                 ; CCP runs it
+  jp BIOWBT      ; RAM warm-boot hook
 
-; ^C at a line's start and a BDOS
-; error's exit end the program by warm
-; boot, and the rest of a chained line
-; goes with it. Never returns.
+; Discard the chained remainder by
+; clearing CHPOS, then jump through
+; BIOWBT. The normal warm-boot hook ends
+; the transient without returning here.
 
 CHDROP:
-  xor a          ; no chained piece left
-  ld (CHPOS),a   ; the CCP reads it
-                 ; after warm boot
+  xor a
+  ld (CHPOS),a   ; drop chained pieces
   jp BIOWBT
 
-; The BDOS's entry, reached by CALL
-; 0005h with C the function and DE its
-; parameter. It keeps the caller's SP in
-; OLDSP and DE in PARAM, and runs on the
-; BDOS's own stack. Functions 44 to 48,
-; 99 and 108 go to their routines here,
-; and any other past 40 returns A = 0.
-; The rest go through FNTAB, those with
-; their bit set in FCBMAP after their
-; FCB's drive is bound (FCBSEL). Each
-; routine is entered by a jump, with C
-; the function and DE the parameter, and
-; ends at RETZERO, RETA or RETWORD,
-; which return to the program. Any
-; register may change.
+; BDOS entry: CALL 0005h with C=function
+; and DE=parameter. Save SP in OLDSP and
+; DE in PARAM. Use stack STKTOP.
+; Handle 44-48, 99 and 108 directly.
+; Other values above 40 return zero.
+; For 0-40 look up the handler in FNTAB.
+; A set FCBMAP bit requires FCBSEL drive
+; binding. FCBSEL receives the original
+; C but binding may change C. Save the
+; handler over that call, reload DE from
+; PARAM and jump to it.
+; RETZERO/RETA/RETWORD return to the
+; program on OLDSP. Any register may
+; change.
 
 BENTRY:
-  ld (OLDSP),sp  ; the caller's stack,
-                 ; for the return
-  ld sp,STKTOP   ; the BDOS's own stack
-  ld (PARAM),de  ; the parameter, for
-                 ; the function
+  ld (OLDSP),sp  ; save caller stack
+  ld sp,STKTOP   ; internal BDOS stack
+  ld (PARAM),de  ; save original
+                 ; parameter
   ld a,c
-  cp 108         ; the functions FNTAB
-                 ; does not hold
-  jr z,FNRETC    ; 108: the program's
-                 ; return code
+  cp 108         ; direct dispatch cases
+  jr z,FNRETC    ; 108: return-code slot
   cp 47
   jp z,FNCHAIN   ; 47: chain
   cp 44
-  jr z,FNMULT    ; 44: the multi-sector
-                 ; count
+  jr z,FNMULT    ; 44: count 1 only
   cp 45
   jr z,FNERRM    ; 45: the error mode
   cp 46
@@ -157,644 +136,569 @@ BENTRY:
   cp 48
   jr z,FNFLSH    ; 48: flush
   cp 99
-  jr z,FNCHNO    ; truncate: FFh,
-                 ; nothing changed
-  cp 41          ; FNTAB's 41: functions
-                 ; 0 to 40
-  jr nc,RETZERO  ; any other past 40: A
-                 ; = 0
-  add a,a        ; FNTAB's word for
-                 ; function C
+  jr z,FNCHNO    ; 99: unsupported
+  cp 41          ; 41 FNTAB entries
+  jr nc,RETZERO  ; other functions: zero
+  add a,a        ; word index for C
   ld e,a
   ld d,0
   ld hl,FNTAB
-  add hl,de      ; HL -> the routine's
-                 ; address
-  ld e,(hl)      ; its address, low byte
-                 ; first
+  add hl,de      ; handler pointer cell
+  ld e,(hl)      ; low byte of handler
   inc hl
   ld d,(hl)      ; DE = the routine
 
-; its FCB bit: byte C/8, bit C mod 8
+; FCBMAP: byte C/8, bit C mod 8.
 
   ld hl,FCBMAP-1
   ld a,c
 
 FCBBYTE:
-  inc hl         ; a byte on for each 8
-                 ; in C
-  sub 8          ; until C/8 bytes are
-                 ; passed
+  inc hl         ; next bitmap byte
+  sub 8          ; advance by eight
   jr nc,FCBBYTE
   ld b,a         ; (C mod 8) - 8
-  ld a,(hl)      ; the function's byte
-                 ; of FCBMAP
+  ld a,(hl)      ; function bitmap byte
 
 FCBBIT:
-  rlca           ; 8 - (C mod 8) turns:
-                 ; the bit in carry
+  rlca           ; rotate selected bit
   inc b
   jr nz,FCBBIT
   ex de,hl       ; HL = the routine
 
-; no FCB: straight to it
-
   jr nc,DISPATCH
-  push hl        ; the routine, kept
-                 ; over FCBSEL
-  call FCBSEL    ; the FCB's drive bound
-                 ; first
+  push hl        ; save handler address
+  call FCBSEL    ; bind caller FCB drive
   pop hl
 
 DISPATCH:
-  ld de,(PARAM)  ; DE as the program
-                 ; gave it
-  jp (hl)        ; the function; C still
-                 ; holds its number
+  ld de,(PARAM)  ; restore caller DE
+  jp (hl)        ; enter saved handler
 
-; Function 44, CP/M 3's multi-sector
-; count: E = 1, the only count,
-; succeeds; any other returns FFh at
-; FNCHNO, as function 99, truncate, does
-; with nothing changed.
+; Function 44 accepts only E=1. Other
+; counts return FFh through FNCHNO.
+; Function 99 always returns FFh without
+; truncating a file.
 
 FNMULT:
-  dec e          ; Z: a count of 1
+  dec e          ; E=1 succeeds
   jr nz,FNCHNO
 
-; A function's return with A = 0, as
-; RETA below.
+; Return zero through RETA.
 
 RETZERO:
-  xor a          ; success, or nothing
-                 ; to return
+  xor a
 
-; A function's return with A, also in L,
-; and H = 0, as RETWORD below.
+; Return A in L with H=0 through
+; RETWORD.
 
 RETA:
-  ld l,a         ; the value in HL too
+  ld l,a
   ld h,0
 
-; A function's return with HL, also in A
-; (L) and B (H), as CP/M 2.2 gives a
-; function's value, to the program on
-; its own stack (OLDSP). Any other
-; register is as the function left it.
+; Return HL to the program with A=L and
+; B=H. Restore OLDSP before RET,
+; discarding internal BDOS call frames.
+; Other registers remain as the function
+; left them.
 
 RETWORD:
-  ld a,l         ; CP/M 2.2's
-                 ; convention: A = L, B
-                 ; = H
+  ld a,l         ; A=L result alias
   ld b,h
-  ld sp,(OLDSP)  ; the caller's stack
-                 ; back
-  ret            ; to the program
+  ld sp,(OLDSP)  ; restore program stack
+  ret
 
-; Function 0, system reset: the program
-; ends by warm boot. Never returns.
+; Function 0: jump through RAM BIOWBT.
+; The normal hook ends the transient.
+; This entry does not clear CHPOS.
 
 FNZERO:
-  jp BIOWBT      ; through the RAM jump
-                 ; table
+  jp BIOWBT      ; RAM warm-boot hook
 
-; Function 45, CP/M 3's error mode: E =
-; FFh, a BDOS error returns to the
-; program with A = FFh and H its code,
-; and no message; FEh, the message and
-; then the same return; any other, the
-; default: the message, a key, and the
-; program ends with the rest of a
-; chained line. Warm boot puts it back
-; to 0. Returns A = 0.
+; Function 45: set ERRMODE from E and
+; return A=0. Warm boot resets it to 0.
+; Later errors use FFh for silent
+; return, FEh for message then return
+; and other values for message, key and
+; CHDROP.
+; Returned errors have A=L=FFh and
+; B=H=code.
 
 FNERRM:
-  ld a,e         ; the mode, kept until
-                 ; warm boot
+  ld a,e         ; mode until warm boot
   ld (ERRMODE),a
   jr RETZERO
 
-; Function 48, CP/M 3's flush: every
-; changed line of the cache written. A =
-; 0, or FFh if any write failed, its
-; line then dropped; E = FFh's purge is
-; the same flush, since dropping clean
-; lines changes nothing a program can
-; see.
+; Function 48: flush every dirty cache
+; line through VFLUSH/CFLALL. Return 0
+; if all writes succeed or FFh if any
+; fail. Failed lines are dropped.
+; E is ignored so E=FFh uses the same
+; flush without a separate purge.
 
 FNFLSH:
-  call VFLUSH    ; A = FFh, the line
-                 ; CFLALL leaves
-  jr nz,RETA     ; a write failed: FFh
+  call VFLUSH    ; flush dirty lines
+  jr nz,RETA     ; NZ: FFh failure
   jr RETZERO
 
-; Function 108, CP/M 3's program return
-; code: DE = FFFFh gets it into HL; any
-; other DE sets it, returning A = 0. One
-; code for every program.
+; Function 108: DE=FFFFh queries shared
+; PRGCODE through RETWORD. Any other DE
+; stores the code and returns zero.
+; PRGCODE is outside CPMINIT's cleared
+; span. The CCP tests it for conditional
+; pieces and clears it before dispatch.
 
 FNRETC:
-  ld hl,(PARAM)  ; DE: FFFFh or the code
+  ld hl,(PARAM)  ; query marker or code
   ld a,h
   and l
-  inc a          ; Z: DE = FFFFh, a
-                 ; query
+  inc a          ; Z: query FFFFh
   jr z,FNRETG
-
-; any other: the new code
 
   ld (PRGCODE),hl
   jr RETZERO
 
 FNRETG:
 
-; the code, returned in HL
+; Query the shared result word.
 
   ld hl,(PRGCODE)
   jr RETWORD
 
-; Function 1, console input: the next
-; key, waited for and echoed, a tab as
-; spaces. Returns it in A. Any register
-; may change.
+; Function 1: get a pending character or
+; wait through GETCHAR, then echo it.
+; TAB echoes as spaces but the original
+; byte returns in A/L. Any register may
+; change.
 
 FNCIN:
-  call GETCHAR   ; a key kept by a
-                 ; status check first
-  ld c,a         ; ECHOCHAR takes it in
-                 ; C
-  push af        ; the key, kept over
-                 ; the echo
+  call GETCHAR   ; pending byte first
+  ld c,a         ; echo input C
+  push af        ; save original byte
   call ECHOCHAR
   pop af
   jr RETA
 
-; Function 2, console output: E to the
-; console, a tab as spaces, ^S and ^P
-; taken from the keyboard first. Returns
-; A = 0.
+; Function 2: send E through OUTCHAR
+; with tab expansion and ready-key
+; handling for ^S, ^P and ordinary
+; input. Return zero.
 
 FNCOUT:
-  ld a,(PARAM)   ; E, the character
-  ld c,a         ; OUTCHAR takes it in C
+  ld a,(PARAM)   ; E: output byte
+  ld c,a         ; OUTCHAR input
   call OUTCHAR
   jr RETZERO
 
-; Function 3, reader input: a byte from
-; the BIOS's reader, returned in A.
+; Function 3: read a byte through RAM
+; BIORDR and return it through RETA.
 
 FNREAD:
-  call BIORDR    ; through the RAM jump
-                 ; table
+  call BIORDR    ; RAM reader hook
   jr RETA
 
-; Function 4, punch output: E to the
-; BIOS's punch. Returns A = 0.
+; Function 4: send E as C through RAM
+; BIOPUN. Return zero.
 
 FNPUNCH:
-  ld a,(PARAM)   ; E, the byte
-  ld c,a         ; the BIOS takes it in
-                 ; C
+  ld a,(PARAM)   ; E: output byte
+  ld c,a         ; BIOS argument C
   call BIOPUN
   jr RETZERO
 
-; Function 5, list output: E to the
-; BIOS's printer. Returns A = 0.
+; Function 5: send E as C through RAM
+; BIOLST. Return zero.
 
 FNLIST:
-  ld a,(PARAM)   ; E, the byte
-  ld c,a         ; the BIOS takes it in
-                 ; C
+  ld a,(PARAM)   ; E: output byte
+  ld c,a         ; BIOS argument C
   call BIOLST
   jp RETZERO
 
-; Function 6, direct console I/O: E =
-; FFh returns a key in A, or 0 with none
-; ready, neither waiting nor echoing.
-; Any other E goes to DIROUT.
+; Function 6: E=FFh checks CONSTAT.
+; Return zero if none is ready,
+; otherwise get a pending/BIOS byte
+; without echo. This is nonblocking
+; under the normal status/input
+; contract. Other E values enter DIROUT.
 
 FNDIRECT:
-  ld a,(PARAM)   ; E
-  cp $FF         ; FFh: input
+  ld a,(PARAM)   ; E selects mode
+  cp $FF         ; FFh: direct input
   jr nz,DIROUT   ; not FFh: output
-  call CONSTAT   ; a key ready, or one
-                 ; kept?
+  call CONSTAT   ; pending or BIOS ready
   or a
-  jp z,RETZERO   ; none: A = 0
-  call GETCHAR   ; the key, not echoed
+  jp z,RETZERO   ; no character: zero
+  call GETCHAR   ; unechoed input
   jp RETA
 
-; Function 6's output: A, its E, to the
-; console as it is, with no tab
-; expanded, no ^S or ^P taken and no
-; column counted. Returns A = 0.
+; Function 6 output: A is parameter E.
+; Send it as C directly through BIOCOT.
+; No tab expansion, CHKKEY, printer echo
+; or COLUMN update. Return zero.
 
 DIROUT:
-  ld c,a         ; the BIOS takes it in
-                 ; C
-  call BIOCOT    ; straight to the
-                 ; BIOS's console output
+  ld c,a         ; BIOS output C
+  call BIOCOT    ; RAM console hook
   jp RETZERO
 
-; Function 7, get IOBYTE: the I/O
-; assignments, returned in A.
+; Function 7: return IOBYTE at 0003h
+; through RETA.
 
 FNGETIO:
-  ld a,(IOBYTE)  ; at 0003h
+  ld a,(IOBYTE)
   jp RETA
 
-; Function 8, set IOBYTE: E becomes the
-; I/O assignments. Returns A = 0.
+; Function 8: store E in IOBYTE and
+; return zero. Console entry points
+; apply a changed CON: field on their
+; next call.
 
 FNSETIO:
-  ld a,(PARAM)   ; E
+  ld a,(PARAM)
   ld (IOBYTE),a
   jp RETZERO
 
-; Function 9, print string: the text at
-; DE, up to a '$', to the console as
-; function 2 sends each character.
-; Returns A = 0.
+; Function 9: print text at DE/PARAM
+; through OUTCHAR before the first
+; dollar byte. Return zero.
+; Save the scan pointer across output
+; and BIOS-hook clobbers.
 
 FNPRINT:
-  ld hl,(PARAM)  ; DE, the text
+  ld hl,(PARAM)  ; caller text pointer
 
 PRLOOP:
   ld a,(hl)
-  cp '$'         ; its end, not sent
+  cp '$'         ; excluded terminator
   jp z,RETZERO
-  inc hl         ; the next character's
-                 ; place
-  push hl        ; the place, kept over
-                 ; the output
+  inc hl
+  push hl        ; save scan position
   ld c,a
   call OUTCHAR
   pop hl
   jr PRLOOP
 
-; Function 10, read console buffer: a
-; line typed into the buffer at DE,
-; whose first byte is its maximum; the
-; count goes in the second and the
-; characters follow. CR or LF ends it,
-; as does reaching the maximum. The
-; editing keys: BS and DEL take the last
-; character back (BS erases it, DEL
-; echoes it), ^C at the line's start
-; ends the program, ^E starts a new
-; screen line, ^R retypes the line, ^U
-; discards it, ^X erases it and ^P turns
-; the printer echo on or off. At the
-; CCP's prompt (HFLAG) ^W and ^N recall
-; the history's lines, and the line is
-; stored there. Returns A = 0. Any
-; register may change. The labels from
-; LINTGL to LINDONE are its parts.
+; Function 10: edit a line in the buffer
+; addressed by DE/PARAM. Byte 0 is the
+; maximum, byte 1 receives the count and
+; data starts at byte 2. CR/LF complete
+; it without storing a terminator.
+; Handle editing keys before the
+; ordinary-character capacity check. A
+; stored byte that fills the buffer
+; completes with C=CR. If already full
+; echo the triggering key without
+; storing it even at maximum 0.
+; BS/DEL, ^C/^E/^R/^U/^X/^P and
+; prompt-only ^W/^N use the handlers
+; below. Return zero. Any register may
+; change.
 
 FNLINE:
-  ld a,(HHEAD)   ; no line shown from
-                 ; the history yet
-  ld (HPOS),a    ; HREC's starting point
-  ld hl,(PARAM)  ; the buffer
+  ld a,(HHEAD)   ; initial history entry
+  ld (HPOS),a    ; HREC starting point
+  ld hl,(PARAM)  ; caller buffer address
   ld a,(hl)
-  ld (LINMAX),a  ; its maximum
+  ld (LINMAX),a  ; buffer capacity
   inc hl
-  xor a          ; nothing typed yet
-  ld (hl),a      ; its count 0, and
-                 ; LINCNT's
+  xor a          ; initial count zero
+  ld (hl),a      ; buffer count byte
   ld (LINCNT),a
   inc hl
-
-; the next character goes at its start
 
   ld (LINPTR),hl
 
 LINLOOP:
-  call GETCHAR   ; the next key, not yet
-                 ; echoed
-  ld c,a         ; the key, in C for the
-                 ; echo
-  cp CR          ; CR or LF: the line
-                 ; ends
+  call GETCHAR   ; next unechoed key
+  ld c,a         ; C: key/echo argument
+  cp CR          ; CR/LF completes
   jp z,LINDONE
   cp LF
   jp z,LINDONE
-  cp CTRLP       ; ^P: the printer echo
+  cp CTRLP       ; ^P: printer toggle
   jr z,LINTGL
-  cp BACKSP      ; BS: back one, erased
+  cp BACKSP      ; BS: logical removal
   jr z,LINBACK
-  cp DELETE      ; DEL: back one, echoed
+  cp DELETE      ; DEL: rubout echo
   jr z,LINDEL
-  cp CTRLC       ; ^C: the program ends
+  cp CTRLC       ; ^C: start-only abort
   jp z,LINABRT
-  cp CTRLE       ; ^E: a new screen line
+  cp CTRLE       ; ^E: display newline
   jp z,LINEOL
-  cp CTRLR       ; ^R: the line retyped
+  cp CTRLR       ; ^R: retype line
   jp z,LINRETY
-  cp CTRLU       ; ^U: the line
-                 ; discarded
+  cp CTRLU       ; ^U: discard line
   jp z,LINCTU
-  cp CTRLX       ; ^X: the line erased
+  cp CTRLX       ; ^X: clear logical
+                 ; line
   jp z,LINCLEAR
-  cp CTRLW       ; ^W or ^N: the history
+  cp CTRLW       ; ^W: older history
   jr z,LINHIST
-  cp CTRLN       ; ^N: the line after
+  cp CTRLN       ; ^N: newer history
   jr z,LINHIST
 
 LINCHR:
-  ld a,(LINCNT)  ; any other: a
-                 ; character, if it fits
+  ld a,(LINCNT)  ; current logical count
   ld b,a
   ld a,(LINMAX)
   cp b
-  jp z,LINDONE   ; full: the key echoed
-                 ; and the line ends
-  ld a,c         ; the character stored
-
-; at the buffer's next place
+  jp z,LINDONE   ; full: echo key only
+  ld a,c         ; key to store
 
   ld hl,(LINPTR)
   ld (hl),a
   inc hl
   ld (LINPTR),hl
-  ld a,b         ; and counted
+  ld a,b         ; increment stored
+                 ; count
   inc a
   ld (LINCNT),a
-  call ECHOCHAR  ; the character shown
-  ld a,(LINCNT)  ; full now?
+  call ECHOCHAR  ; echo stored byte
+  ld a,(LINCNT)  ; post-store capacity
   ld b,a
   ld a,(LINMAX)
   cp b
-  jr nz,LINLOOP  ; room for more
-  ld c,CR        ; full: the line ends
-                 ; as if by CR
+  jr nz,LINLOOP  ; room for another byte
+  ld c,CR        ; capacity end: echo CR
   jp LINDONE
 
-; ^P in a line: the printer echo turned
-; on or off; nothing stored.
+; ^P toggles LISTEN through TOGLIST and
+; resumes input without storing the key.
 
 LINTGL:
-  call TOGLIST   ; LISTEN 0 or 1
+  call TOGLIST   ; printer echo toggle
   jr LINLOOP
 
-; ^W or ^N in a line, in C: at the CCP's
-; prompt, the history's line before or
-; after the one shown replaces the line;
-; in a program's line, a character.
+; C = ^W or ^N. With HFLAG nonzero call
+; HREC for the older/newer history line.
+; Otherwise store the control byte
+; through LINCHR.
+; The CCP sets HFLAG=FFh only for typed
+; prompt input.
 
 LINHIST:
-  ld a,(HFLAG)   ; FFh at the CCP's
-                 ; prompt
+  ld a,(HFLAG)   ; prompt history gate
   or a
-  jr z,LINCHR    ; a program's call: a
-                 ; character
-  call HREC      ; the line before (^W)
-                 ; or after (^N)
+  jr z,LINCHR    ; program: ordinary
+                 ; byte
+  call HREC      ; ^W older, ^N newer
   jr LINLOOP
 
-; BS in a line: the last character taken
-; back and erased from the screen;
-; nothing at the line's start.
+; BS: if nonempty, decrement LINCNT and
+; LINPTR and call ERASE1 once. It sends
+; BS, SPACE, BS without overwriting the
+; removed buffer byte. Empty input is
+; unchanged.
 
 LINBACK:
-  ld a,(LINCNT)  ; any character to take
-                 ; back?
+  ld a,(LINCNT)  ; logical count
   or a
-  jr z,LINLOOP   ; an empty line:
-                 ; nothing to take back
-  dec a          ; one fewer counted
+  jr z,LINLOOP   ; empty: unchanged
+  dec a          ; remove one byte
   ld (LINCNT),a
-
-; the buffer's place back one
 
   ld hl,(LINPTR)
   dec hl
   ld (LINPTR),hl
-  call ERASE1    ; backspace, space,
-                 ; backspace
+  call ERASE1    ; BS-SPACE-BS once
   jp LINLOOP
 
-; DEL in a line: the last character
-; taken back and echoed, as CP/M 2.2's
-; rubout shows it; nothing at the line's
-; start.
+; DEL: if nonempty, decrement LINCNT and
+; LINPTR and echo the removed byte
+; through ECHOCHAR. Old buffer storage
+; remains. Empty input is unchanged.
 
 LINDEL:
-  ld a,(LINCNT)  ; any character to take
-                 ; back?
+  ld a,(LINCNT)  ; logical count
   or a
-  jp z,LINLOOP   ; an empty line:
-                 ; nothing to take back
-  dec a          ; one fewer counted
+  jp z,LINLOOP   ; empty: unchanged
+  dec a          ; remove one byte
   ld (LINCNT),a
-
-; the buffer's place back one
 
   ld hl,(LINPTR)
   dec hl
   ld (LINPTR),hl
-  ld c,(hl)      ; the character taken
-                 ; back, echoed
+  ld c,(hl)      ; removed byte to echo
   call ECHOCHAR
   jp LINLOOP
 
-; ^C in a line: at its start, ^C is
-; echoed and the program ends by warm
-; boot with the rest of a chained line
-; (CHDROP); anywhere else it is ignored.
+; ^C: ignore it on a nonempty line. At
+; the start, store CTRLC through LINPTR,
+; echo literal ^C and enter CHDROP to
+; discard the chain before warm boot.
 
 LINABRT:
-  ld a,(LINCNT)  ; the line's start?
+  ld a,(LINCNT)  ; start-only abort
   or a
-  jp nz,LINLOOP  ; within a line:
-                 ; ignored
+  jp nz,LINLOOP  ; nonempty: ignore ^C
 
-; a ^C left at the buffer's start
+; Store the abort byte at the input
+; pointer.
 
   ld hl,(LINPTR)
   ld (hl),CTRLC
-  ld c,'^'       ; echoed as ^C
+  ld c,'^'       ; literal ^C display
   call ECHOCHAR
   ld c,'C'
   call ECHOCHAR
-  jp CHDROP      ; the program ends by
-                 ; warm boot
+  jp CHDROP      ; drop chain, warm boot
 
-; ^E in a line: CR and LF to the
-; console, the line going on; nothing
-; stored.
+; ^E: send CR/LF through ECHOONE and
+; continue the same logical line. Store
+; no byte and leave its count unchanged.
 
 LINEOL:
   ld c,CR
-  call ECHOONE   ; a new screen line,
-                 ; the column 0
+  call ECHOONE   ; display newline
   ld c,LF
   call ECHOONE
   jp LINLOOP
 
-; ^R in a line: # and a new screen line,
-; then the line so far retyped.
+; ^R: print #, CR, LF and re-echo LINCNT
+; bytes from the buffer at (PARAM)+2.
+; Keep LINCNT/LINPTR unchanged and
+; resume input.
 
 LINRETY:
-  ld c,'#'       ; the old screen line
-                 ; marked as left
+  ld c,'#'       ; mark retyped line
   call ECHOONE
-  ld c,CR        ; then a new screen
-                 ; line
+  ld c,CR        ; new display line
   call ECHOONE
   ld c,LF
   call ECHOONE
-  ld hl,(PARAM)  ; the buffer's
-                 ; characters
-  inc hl         ; past the maximum and
-                 ; the count
+  ld hl,(PARAM)  ; caller buffer pointer
+  inc hl         ; skip max/count bytes
   inc hl
-  ld a,(LINCNT)  ; B = how many
+  ld a,(LINCNT)  ; retype byte count
   ld b,a
 
 RETYLP:
   ld a,b
   or a
-  jp z,LINLOOP   ; an empty line:
-                 ; nothing to retype
-  ld c,(hl)      ; the next character
-  push bc        ; the count and place,
-                 ; kept over the echo
-  push hl
-  call ECHOCHAR  ; the character, a tab
-                 ; as spaces
+  jp z,LINLOOP   ; no more bytes
+  ld c,(hl)      ; next stored byte
+  push bc        ; save loop count
+  push hl        ; save scan pointer
+  call ECHOCHAR  ; echo byte, expand TAB
   pop hl
   pop bc
   inc hl
-  djnz RETYLP    ; the next
+  djnz RETYLP    ; restored byte count
   jp LINLOOP
 
-; ^U in a line: # and a new screen line,
-; and the line discarded, its count 0.
+; ^U: print #, CR, LF, set LINCNT=0 and
+; LINPTR=(PARAM)+2, then resume input.
+; Old character bytes remain.
 
 LINCTU:
-  ld c,'#'       ; the old screen line
-                 ; marked as left
+  ld c,'#'       ; mark discarded line
   call ECHOONE
-  ld c,CR        ; then a new screen
-                 ; line
+  ld c,CR        ; new display line
   call ECHOONE
   ld c,LF
   call ECHOONE
-  xor a          ; the line discarded:
-                 ; its count 0
+  xor a          ; reset logical count
   ld (LINCNT),a
-  ld hl,(PARAM)  ; and the next
-                 ; character at its
-                 ; start
-  inc hl         ; past the maximum and
-                 ; the count
+  ld hl,(PARAM)  ; caller buffer pointer
+  inc hl         ; skip max/count bytes
   inc hl
   ld (LINPTR),hl
   jp LINLOOP
 
-; ^X in a line: every character erased
-; from the screen and the buffer.
+; ^X: call LINERASE to clear logical
+; input and emit one ERASE1 sequence per
+; counted byte, then resume input.
+; Buffer bytes are not wiped.
 
 LINCLEAR:
   call LINERASE
   jp LINLOOP
 
-; The line so far erased from the
-; screen, a character at a time, and
-; from the buffer: LINCNT to 0 and
-; LINPTR back to the buffer's start.
-; Also called by the history (HRSHOW).
-; Changes A, C, HL and what the BIOS's
-; output does.
+; For each byte counted by LINCNT call
+; ERASE1 and decrement LINCNT/LINPTR.
+; Return with count 0 and the pointer
+; rewound by the original count. At
+; count 0 leave LINPTR unchanged.
+; Also used by history HRSHOW. Clobbers
+; A, C, HL and BIOS-output clobbers. Old
+; buffer bytes remain.
 
 LINERASE:
-  ld a,(LINCNT)  ; any character left?
+  ld a,(LINCNT)  ; remaining byte count
   or a
-  ret z          ; nothing left
-  call ERASE1    ; the last character
-                 ; erased
-  ld a,(LINCNT)  ; one fewer counted
+  ret z          ; zero: pointer
+                 ; unchanged
+  call ERASE1    ; BS-SPACE-BS once
+  ld a,(LINCNT)  ; decrement logical
+                 ; count
   dec a
   ld (LINCNT),a
 
-; the buffer's place back one
-
   ld hl,(LINPTR)
-  dec hl
-
-; and taken from the buffer
+  dec hl         ; rewind input pointer
 
   ld (LINPTR),hl
   jr LINERASE
 
-; The line ended by the key in C, which
-; is echoed: CR or LF, or the key that
-; found the buffer full. The count goes
-; in the buffer's second byte, and at
-; the CCP's prompt a line of a byte or
-; more goes into the history. HFLAG is
-; cleared, so a program's later line is
-; not stored. Returns A = 0.
+; Echo completion key C and write LINCNT
+; to buffer byte 1. Data begins at byte
+; 2 and has no appended CR/NUL
+; terminator.
+; Clear HFLAG before calling HSTORE.
+; Warm boot also clears HFLAG. A
+; nonempty CCP prompt line can be stored
+; unless HSTORE rejects NUL data or a
+; newest duplicate.
+; Return zero. Capacity completion uses
+; C=CR. The already-full path echoes its
+; triggering key instead.
 
 LINDONE:
-  call ECHOCHAR  ; the key that ended
-                 ; the line
-  ld hl,(PARAM)  ; the count into the
-                 ; buffer
+  call ECHOCHAR  ; echo completion key
+  ld hl,(PARAM)  ; caller buffer pointer
   inc hl
-  ld a,(LINCNT)  ; the count, in the
-                 ; second byte
+  ld a,(LINCNT)  ; returned byte count
   ld (hl),a
-  inc hl         ; DE = its characters,
-                 ; B = the count
+  inc hl         ; DE: data, B: count
   ex de,hl
   ld b,a
-  ld hl,HFLAG    ; the CCP's line, once:
-                 ; warm boot clears it
-                 ; too
-  ld a,(hl)      ; FFh at the CCP's
-                 ; prompt, else 0
+  ld hl,HFLAG    ; one-shot history gate
+  ld a,(hl)      ; FFh prompt, 0 program
   ld (hl),0
-  and b          ; NZ: the CCP's prompt
-                 ; and a count
-
-; a CCP line of at least one byte
+  and b          ; prompt with data
 
   call nz,HSTORE
   jp RETZERO
 
-; Function 11, console status: A = 1 if
-; a key is ready, else 0. A key found
-; ready is read at once and kept
-; (PENDING, PENDCHR) for the next read.
+; Function 11: return 1 for pending or
+; BIOS-ready input, otherwise 0. An
+; existing pending byte is not consumed.
+; A newly ready BIOS byte is read into
+; PENDCHR and marked PENDING=1 for
+; GETCHAR.
 
 FNSTAT:
 
-; a key already kept?
-
   ld a,(PENDING)
   or a
-  jr nz,STATYES  ; one kept: ready
-  call BIOCST    ; the BIOS's status,
-                 ; FFh or 0
+  jr nz,STATYES  ; pending: ready
+  call BIOCST    ; RAM BIOS readiness
   or a
-  jp z,RETZERO   ; none: A = 0
-  call BIOCIN    ; read and kept for the
-                 ; next read
+  jp z,RETZERO   ; not ready: zero
+  call BIOCIN    ; capture BIOS byte
   ld (PENDCHR),a
-  ld a,1         ; marked as kept
+  ld a,1         ; mark pending input
   ld (PENDING),a
 
 STATYES:
-  ld a,1         ; ready: A = 1, as CP/M
-                 ; 2.2 returns
+  ld a,1         ; ready result 1
   jp RETA
 
-; Function 12, version: HL = 0022h, CP/M
-; 2.2 (A = 22h, B = H = 0).
+; Function 12: CP/M 2.2 version. Return
+; HL=0022h, A=22h and B=H=0, identifying
+; CP/M rather than MP/M.
 
 FNVERS:
-  ld a,$22       ; 2.2; H = 0: CP/M, not
-                 ; MP/M
+  ld a,$22       ; CP/M 2.2 version
   jp RETA

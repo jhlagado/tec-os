@@ -1,4 +1,5 @@
-; KEYS.COM: read six console bytes with BDOS function 6 and print each in hex.
+; KEYS.COM: print six nonzero results from un-echoed BDOS 6 polling in hex.
+; Returned NUL looks like no ready input and is not counted.
 
 BDOS    EQU     $0005
 

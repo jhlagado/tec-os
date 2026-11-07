@@ -1,157 +1,150 @@
-; The volume code's helpers, after
-; vol.asm: the drive table cleared
-; (UNMOUNT), a geometry looked up
-; (GEOFIND), 32-bit block numbers
-; compared (CMP32), the header's and the
-; table's sums (HDRSUM, SUMDE), and a
-; drive's descriptor read back (DRVDESC)
-; for the boot listing and the LCD.
 
-; Forget every mounted volume: DRVTAB
-; and DRVIDX zeroed, and the BIOS's
-; buffered record dropped. Destroys AF,
-; B and HL.
+; Clear DRVTAB and following DRVIDX,
+; then BUFOK. Return A=0/Z, carry clear,
+; B=0 and HL past the indices. Change
+; AF/B/HL. Leave DPHs, slots, vectors,
+; mount scratch and cache lines alone.
+; This is not the public
+; unmount/flush service.
 
 UNMOUNT:
-  ld hl,DRVTAB   ; and DRVIDX, which
-                 ; follows it
+  ld hl,DRVTAB
   ld b,MAXDRV*DRVESZ+MAXDRV
 
 UNM:
-  ld (hl),0      ; every entry and index
-                 ; byte zero
+  ld (hl),0
   inc hl
   djnz UNM
-  xor a          ; BUFOK 0: no record
-                 ; buffered
+  xor a
   ld (BUFOK),a
   ret
 
-; A = geometry id. Returns Z and HL ->
-; its GEOTAB entry (id, 0, payload
-; blocks, DPB), or NZ. Keeps C, and A
-; when found. Destroys B and DE.
+; Find geometry id A in GEOTAB's GEOCNT
+; six-byte entries: id, zero, payload
+; word and DPB pointer. Return Z with HL
+; at the entry and A unchanged, or NZ
+; with A=input OR 1 and HL past the
+; table. Keep C. Change AF/B/DE/HL.
 
 GEOFIND:
-  ld hl,GEOTAB   ; GEOCNT entries of
-                 ; GEOESZ bytes
+  ld hl,GEOTAB
   ld b,GEOCNT
 
 GEOF:
-  cp (hl)        ; the entry's id
+  cp (hl)
   ret z
-  ld de,GEOESZ   ; the next entry
+  ld de,GEOESZ
   add hl,de
   djnz GEOF
-  or 1           ; NZ: no such geometry
+  or 1
   ret
 
-; Compare the 32-bit little-endian
-; values at HL and DE. C when (HL) <
-; (DE), Z when equal, with HL and DE at
-; the low bytes; otherwise they stop at
-; the first byte, from the top, that
-; differs. Destroys A and B.
+; Compare unsigned little-endian 32-bit
+; values at HL and DE. C means first <
+; second, Z means equal. On a
+; difference, pointers stop at the
+; highest differing byte. Equality
+; leaves each pointer one byte before
+; its original low byte, modulo 65536,
+; and B=0. Change A/B/F.
 
 CMP32:
-  inc hl         ; from the top bytes
-                 ; down
   inc hl
-  inc hl         ; HL at its top byte
+  inc hl
+  inc hl
   inc de
   inc de
-  inc de         ; and DE at its
-  ld b,4         ; four bytes at most
+  inc de
+  ld b,4
 
 CMPL:
   ld a,(de)
-  cp (hl)        ; (DE) - (HL), the
-                 ; first difference
-                 ; decides
+  cp (hl)
   jr nz,CMPNE
-  dec hl         ; equal so far: the
-                 ; next byte down
+  dec hl
   dec de
   djnz CMPL
-  ret            ; Z: all four equal
-
-CMPNE:
-  ccf            ; flags now describe
-                 ; (HL) - (DE)
-  ret c
-  or 1           ; (HL) > (DE): clear Z,
-                 ; carry already clear
   ret
 
-; HL = 16-bit sum of the header's bytes,
-; block 0 in MNTLN with MNBUF its first
-; 32, the checksum field left out, and
-; DE = that checksum. Destroys AF and
-; BC.
+CMPNE:
+  ccf
+  ret c
+  or 1
+  ret
+
+; Sum block 0 in MNTLN modulo 65536,
+; excluding its two checksum bytes.
+; MNBUF must hold its first 32 bytes.
+; Return HL=sum and DE=stored checksum.
+; Change AF/BC and MNBUF/MNTPRV scratch.
+; Subtract each checksum byte, not the
+; stored word.
 
 HDRSUM:
   ld de,(MNBUF+HCKSUM)
-  push de        ; the checksum, across
-                 ; the sum
-  ld hl,0        ; MNSUM adds to
-                 ; MNTPRV's word, from 0
+  push de
+  ld hl,0
   ld (MNTPRV),hl
-  call MNSUM     ; every header byte
+  call MNSUM
   pop de
-  ld a,e         ; take the two checksum
-                 ; bytes back out
+
+; HSSUB subtracts unsigned byte A from
+; HL with no input borrow. Keep DE.
+; Change BC/F. HDRSUM calls for E then
+; falls through for D.
+
+  ld a,e
   call HSSUB
-  ld a,d         ; HSSUB's second pass,
-                 ; by falling in
+  ld a,d
 
 HSSUB:
-  ld c,a         ; HL less the byte in A
+  ld c,a
   ld b,0
-  or a           ; no borrow in
+  or a
   sbc hl,bc
   ret
 
-; HL = HL + each of the BC bytes at DE,
-; unsigned, for the header's sum and the
-; table blocks' (MOUNT). BC from 1; 0 is
-; 65,536. Returns DE past the bytes and
-; BC = 0. Destroys AF.
+; Add BC unsigned bytes at DE to HL
+; modulo 65536. BC=0 means 65536 bytes.
+; Return BC=0/Z, carry clear and DE past
+; the bytes with 16-bit wrap. Change AF.
+; Used for table/header sums and BDOS
+; allocation-vector checksums. No
+; source-bound check.
 
 SUMDE:
   ld a,(de)
-  add a,l        ; the byte into the low
-                 ; half,
+  add a,l
   ld l,a
   jr nc,SUMDE1
-  inc h          ; its carry into the
-                 ; high
+  inc h
 
 SUMDE1:
   inc de
-  dec bc         ; BC counts the bytes
-                 ; left
+  dec bc
   ld a,b
   or c
-  jr nz,SUMDE    ; every byte
+  jr nz,SUMDE
   ret
 
-; IX -> the descriptor of the volume on
-; drive C, read from its block of the
-; table. NZ if the drive has none or the
-; block does not read. Keeps C. Destroys
-; AF, B, DE and HL.
+; Read drive C's descriptor (C=0..3).
+; Return A=FFh and carry/NZ for an empty
+; drive. On read failure return NZ
+; without an IX result guarantee.
+; Success gives IX=MNBUF/Z. Keep C.
+; Change AF/B/DE/HL and IX as result. A
+; full metadata fill sets I=0. DESCIX's
+; shared-buffer and bank/IFF
+; conditions apply.
 
 DRVDESC:
-  ld hl,DRVIDX   ; the drive's index + 1
+  ld hl,DRVIDX
   ld b,0
   add hl,bc
   ld a,(hl)
-  sub 1          ; carry from 0: no
-                 ; volume
-  ret c          ; NZ as well: none here
-  push bc        ; C, which DESCIX
-                 ; destroys
-  call DESCIX    ; A = the index: IX ->
-                 ; its copy
+  sub 1
+  ret c
+  push bc
+  call DESCIX
   pop bc
   ret

@@ -1,5 +1,6 @@
-// The assembly style's machine-checkable rules (Origo's
-// bindings/z80-cpm/assembly-style.md), for one source's text:
+// Shared line reader and the legacy tab-layout checks for one source's text.
+// Current compact checks are in style-compact.mjs; see docs/assembly-style.md.
+// checkSource and toTabs below retain the earlier layout for its references:
 //
 // - tabs: no run of spaces aligns anything outside a string or a comment, and
 //   a mnemonic sits at column 9, its operand at 17;

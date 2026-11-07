@@ -1,24 +1,12 @@
-; The PICO9918's console and graphics
-; entries, in the ROM (KS39): a
-; TMS9918A- compatible VDP with the
-; F18A's 80-column text mode, at 80 x 24
-; in 6-pixel cells, 40 x 24, or Graphics
-; I at 32 x 24 in 8-pixel cells, CON
-; PICO choosing. When the VDP and the
-; matrix keyboard both answer at cold
-; boot, PISTART fills PIBLK from PITPL,
-; sets the width, hands the table to the
-; terminal through PIVEC, registers the
-; record and puts CRT: in the IOBYTE's
-; CON: field; the first console call
-; then programs the VDP through CONSWV,
-; as for a driver. PIBLK is the table,
-; the record and the state in the order
-; PICO.SVC had them (version 3), so
-; abi.inc's offsets and a debugger's
-; reading hold; it lies in the BIOS's
-; state, which warm boot leaves, so the
-; width is kept.
+; ROM PICO console, record version 4.
+; 80 x 24 and 40 x 24 use 6-pixel cells.
+; Graphics I is 32 x 24 in 8-pixel
+; cells. CON PICO selects the width.
+; Cold installation needs the VDP and
+; matrix keyboard. Reset selects 40
+; columns. Warm boot keeps the width;
+; PIICLR ends its supported IE session.
+; ABI state offsets retain v3 layout.
 
 ; Graphics I's colour table in VRAM
 
@@ -28,19 +16,17 @@ COLOUR EQU $2000
 
 SPRITE EQU $1B00
 
-; PIBLK's first 39 bytes: the table, as
-; the terminal and abi.inc's PICOREG to
-; PICOWID read it, then the record, the
-; permanent tail of the registry.
-
-; The cold working width. Bare console
+; Cold width and 39-byte PIBLK template:
+; seven terminal words, columns/rows,
+; four graphics words, PICOWID and the
+; 13-byte record. The record is the
+; permanent registry tail. Bare console
 ; selection keeps the current width.
 
 PIDEFLT EQU 40
 
 PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
-  DB PIDEFLT,24  ; the columns, TMSW's,
-                 ; and the rows
+  DB PIDEFLT,24  ; Columns, rows.
 
 ; PICOREG, PICOFIL
 
@@ -50,616 +36,583 @@ PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN
 
   DW GFXWR,GFXRD
   DW TMSWID      ; PICOWID
-  DW 0           ; the record: no link,
-                 ; its name, version
+  DW 0           ; Record link = 0.
   DB "PICO    ",PICOVER
-  DW PIBLK       ; and the table
+  DW PIBLK       ; Record table.
 PITPLN EQU $-PITPL
 
-; The console at cold boot, from VIDINIT
-; with CONDEV in HL: on a board with the
-; VDP and the matrix keyboard, the block
-; filled at 40 columns, the table hooked
-; for CRT:, the record registered and
-; CRT: in the field. Otherwise nothing.
-; The VDP itself is programmed later, by
-; VREST when CONSW takes CRT:. Destroys
-; AF, BC, DE and HL.
+; Install the cold console from VIDINIT
+; after its successful VDP probe,
+; HL=CONDEV. Without CDMTX, return. Copy
+; PITPL, initialise width and publish
+; PIVEC/REGHEAD. Set IOBYTE=CMCRT, other
+; fields zero. CONMOD stays CMTTY for
+; next-call selection/programming.
+; Changes AF, BC, DE and HL.
 
 PISTART:
-  bit 0,(hl)     ; CDMTX: keys for the
-                 ; screen
-  ret z          ; none: the serial
-                 ; console stays
-  ld hl,PITPL    ; the template into the
-                 ; block
+  bit 0,(hl)
+  ret z
+  ld hl,PITPL
   ld de,PIBLK
   ld bc,PITPLN
   ldir
-  ld a,PIDEFLT   ; cold working width
-  call TMSW      ; a width it knows: no
-                 ; carry
-  ld hl,PIBLK    ; CRT:'s table
+  ld a,PIDEFLT
+  call TMSW
+  ld hl,PIBLK
   ld (PIVEC),hl
-  ld hl,PIREC    ; the registry's tail
+  ld hl,PIREC
   ld (REGHEAD),hl
-  ld a,CMCRT     ; CRT: in effect from
-                 ; the first console
-                 ; call
-  ld (IOBYTE),a  ; the other fields 0;
-                 ; CONMOD is still
-  ret            ; CMTTY, so CONSEL sees
-                 ; the change
+  ld a,CMCRT
+  ld (IOBYTE),a
+  ret
 
-; PICOWID: A = 80, 40 or 32 columns. The
-; width set, and CRT:, if in effect,
-; chosen again at the next console call,
-; so the terminal takes the new columns
-; and clears the screen. Carry, with
-; nothing changed, for any other width
-; or while the PICO9918 is claimed.
-; Destroys AF, BC, DE and HL.
+; Set width A=80, 40 or 32. CF=1 for a
+; claim or invalid width, with stored
+; width/mode unchanged on normal return.
+; CF=0 selects RAM geometry. Active CRT
+; is reselected and cleared at the next
+; console call. Other consoles stay
+; selected. Changes AF, BC, DE and HL.
 
 TMSWID:
   ld hl,VCLAIM
-  inc (hl)       ; VCLAIM tested for
-                 ; zero, left as it was
+  inc (hl)       ; Transient claim test.
   dec (hl)
-  scf            ; carry for the refusal
-  ret nz         ; claimed: a program
-                 ; may be using it
-  call TMSW      ; the new width, in
-                 ; memory alone
-  ret c          ; no such width
+  scf            ; CF=1 if claimed.
+  ret nz
+  call TMSW
+  ret c
   ld hl,CONMOD
   ld a,(hl)
-  dec a          ; CRT: in effect:
-                 ; serial for now, so
-                 ; that
-  ret nz         ; CONSEL takes CRT:
-                 ; again (carry clear)
-  ld (hl),a      ; CMTTY
+  dec a
+  ret nz
+  ld (hl),a
   ret
 
-; The console at A columns, 80, 40 or
-; 32: PIWID, the name table's address
-; and the second page's offset (1000h
-; and 1000h at 80 columns, 0800h and
-; 0400h at 40 and 32), the registers and
-; the row table, and page 0 drawn and
-; shown. Only memory changes: VREST
-; (TMSSET) puts the registers in the
-; VDP. Carry, with nothing changed, for
-; any other A. Destroys AF, BC, DE and
-; HL.
+; Select RAM geometry for A=80, 40 or
+; 32. CF=1 for invalid A before any
+; store. Valid return: A=0, Z, CF=0.
+; Build 24 row addresses at names + row
+; * PIWID and reset drawn/shown pages
+; and move state. TMSSET programs the
+; VDP later. Changes AF, BC, DE and HL.
 
 TMSW:
   ld hl,REGS80
-  ld bc,$1010    ; B = the names' high
-                 ; byte, C = PITPG
+  ld bc,$1010    ; Names/PITPG high
+                 ; bytes.
   cp 80
-  jr z,TMSW1     ; 80 columns
+  jr z,TMSW1
   ld hl,REGS40
-  ld bc,$0804    ; names at 0800h, the
-                 ; second page 0400h on
+  ld bc,$0804    ; Names 0800h, page
+                 ; 0400h.
   cp 40
-  jr z,TMSW1     ; 40 columns
-  ld hl,REGS32   ; Graphics I, at 40's
-                 ; addresses
+  jr z,TMSW1
+  ld hl,REGS32
   cp 32
-  scf            ; carry for the refusal
-  ret nz         ; no such width
+  scf
+  ret nz
 
 TMSW1:
   ld (PIWID),a
 
-; this width's registers
-
   ld (PIREGP),hl
-  ld a,c         ; the second page's
-                 ; offset
+  ld a,c
   ld (PITPG),a
-  ld h,b         ; each row's address:
-                 ; names + row * PIWID
+  ld h,b         ; Row table base.
   ld l,0
-  ld de,PIROWT   ; DE walks the row
-                 ; table
-  ld a,(PIWID)   ; C = a row's length
+  ld de,PIROWT
+  ld a,(PIWID)
   ld c,a
-  ld b,24        ; 24 rows at every
-                 ; width
+  ld b,24
 
 TMSW2:
-  ex de,hl       ; the row's address
-                 ; into the table
+  ex de,hl
   ld (hl),e
   inc hl
   ld (hl),d
   inc hl
-  ex de,hl       ; HL back on the
-                 ; address
-  ld a,l         ; on by one row's
-                 ; length
+  ex de,hl
+  ld a,l
   add a,c
   ld l,a
   jr nc,TMSW3
-  inc h          ; the carry into the
-                 ; high byte
+  inc h
 
 TMSW3:
   djnz TMSW2
-  xor a          ; page 0 drawn and
-                 ; shown, no move
+  xor a          ; Reset pages and move.
   ld (PITPD),a
   ld (PITPS),a
   ld (PIMV),a
   ret
 
-; The ROM's word for VTFN: A = 0 show
-; the page drawn, 1 begin a move of rows
-; B to C, 2 end one. Destroys AF, and
-; for 0 and 1 what TMSFLIP and TMSMBEG
-; do.
+; Page functions: A=0 shows the drawn
+; page, 1 begins inclusive rows B..C, 2
+; ends a move without flipping. Other
+; values store A-2 in PIMV. Changes AF.
+; Functions 0/1 inherit TMSFLIP/TMSMBEG
+; clobbers.
 
 TMSFN:
   or a
-  jr z,TMSFLIP   ; 0: show the page
-                 ; drawn
+  jr z,TMSFLIP
   dec a
-  jp z,TMSMBEG   ; 1: a move begins
-  dec a          ; 2 leaves 0
-  ld (PIMV),a    ; the move over, shown
-                 ; at the next flip
+  jp z,TMSMBEG
+  dec a
+  ld (PIMV),a
   ret
 
-; Show the page drawn, if it is not
-; already shown. Keeps BC and DE.
-; Destroys AF, HL.
+; Show the drawn page if not already
+; shown. Keeps BC/DE. Changes AF/HL.
 
 TMSFLIP:
   ld a,(PITPD)
   ld hl,PITPS
   cp (hl)
-  ret z          ; already shown
-  ld (hl),a      ; it becomes the page
-                 ; shown
+  ret z
+  ld (hl),a
 
-; Point register 2 at the page shown:
-; the name table's base for this width
-; plus PITPS's offset. Keeps BC and DE.
-; Destroys AF, HL.
+; Select the shown name page in R2: this
+; width's base plus PITPS's offset.
+; PITPS holds high-byte offset 00h, 04h
+; or 10h. Keeps BC/DE. Changes AF/HL.
 
 TMSR2:
-  ld a,(PITPS)   ; the offset's high
-                 ; byte, 00h, 04h or
-                 ; 10h,
-  rrca           ; in R2's units of
-                 ; 0400h: 0, 1 or 4
+  ld a,(PITPS)   ; PITPS / 4: R2 units.
   rrca
-
-; register 2's value for this width
+  rrca
 
   ld hl,(PIREGP)
   inc hl
   inc hl
-  add a,(hl)     ; plus the page's
-                 ; offset
-  ld l,a         ; the value first,
-  ld h,$82       ; then register 2 with
-                 ; the write flag
+  add a,(hl)     ; Add selected R2 base.
+  ld l,a
+  ld h,$82
   jp VPAIR
 
-; VREST: load registers 0-7, the font
-; and its reverse images, and in
-; Graphics I the colours and an empty
-; sprite table, so a program that
-; changed the mode or the patterns
-; leaves a working console. The page
-; drawn is shown, any move ended. The
-; name table, and so the text on the
-; screen, is left alone. Destroys AF,
-; BC, D and HL.
+; Restore mode, font and latest drawn
+; page after a program. End any row
+; move. Name bytes stay, but
+; mode/font/page can change the picture.
+; Write 256 eight-byte patterns at
+; 0000h..07FFh. R1 combines mode bits
+; with the supported IE shadow PITIE.
+; Raw R1 writes are not remembered.
+; Keeps E.
+; Changes AF, BC, D and HL. Maskable
+; interrupts are excluded only within
+; each control pair.
 
 TMSSET:
 
-; this width's eight values
-
   ld hl,(PIREGP)
   ld b,8
-  ld c,$80       ; register 0, with the
-                 ; write flag
+  ld c,$80       ; R0, write flag.
 
 TMSR:
-  ld a,(hl)      ; the value
+  ld a,c         ; only R1 carries the
+  cp $81         ; tracked IE bit
+  ld a,(hl)
+  jr nz,TMSRI
+  ld a,(PITIE)   ; keep this session's
+  or (hl)        ; supported IE setting
+
+TMSRI:
   push hl
   ld l,a
-  ld h,c         ; and the register, as
-                 ; VPAIR's pair
+  ld h,c
   call VPAIR
   pop hl
-  inc hl         ; the next value and
-                 ; register
+  inc hl
   inc c
   djnz TMSR
-  xor a          ; show the latest page,
-                 ; any move finished
+  xor a          ; End move, show PITPD.
   ld (PIMV),a
   ld a,(PITPD)
   ld (PITPS),a
-  call TMSR2     ; register 2 on it,
-                 ; over REGS's page 0
-  ld hl,0        ; 256 patterns: font,
-                 ; then its reverse
-  call TMSWA     ; from 0000h, the
-                 ; pattern table
-  ld d,0         ; character code
+  call TMSR2
+  ld hl,0        ; Pattern base 0000h.
+  call TMSWA
+  ld d,0         ; Character code.
 
 TMSPAT:
   ld a,d
-  and $7F        ; 80h-FFh: the glyph of
-                 ; the code less 80h
+  and $7F        ; Map low seven bits.
   sub $20
-  jr nc,TMSCH    ; 20h-7Fh: a glyph of
-                 ; the font's
-  xor a          ; codes below 20h are
-                 ; blank, the space
-                 ; glyph
+  jr nc,TMSCH    ; 20h..7Fh: FONT glyph.
+  xor a          ; Controls use space.
 
 TMSCH:
-  ld l,a         ; HL = the font + 8 *
-                 ; (code - 20h)
+  ld l,a
   ld h,0
   add hl,hl
   add hl,hl
   add hl,hl
-  ld bc,FONT     ; the ROM's
+  ld bc,FONT
   add hl,bc
 
 TMSGLY:
-  ld b,8         ; eight rows a glyph
+  ld b,8         ; Eight rows per glyph.
 
 TMSROW:
   ld a,(hl)
-  bit 7,d        ; codes 80h and up:
-                 ; reverse video
+  bit 7,d        ; High bit reverses.
   jr z,TMSOUT
   cpl
 
 TMSOUT:
 
-; the VDP moves its own address on
-
   out (VDPDAT),a
   inc hl
   djnz TMSROW
   inc d
-  jr nz,TMSPAT   ; until the code wraps
-                 ; to 0
+  jr nz,TMSPAT
   ld a,(PIWID)
   cp 32
-  ret nz         ; text mode: no colours
-                 ; or sprites
-  ld hl,COLOUR   ; Graphics I colours
+  ret nz         ; 32 only below.
+  ld hl,COLOUR
   call TMSWA
-  ld b,32        ; 32 groups of eight
-                 ; codes
+  ld b,32        ; 32 groups of 8 codes.
 
 TMSCOL:
-  ld a,$31       ; light green on black
+  ld a,$31       ; Light green on black.
   out (VDPDAT),a
   djnz TMSCOL
-  ld hl,SPRITE   ; no sprites
+  ld hl,SPRITE
   call TMSWA
-  ld a,$D0       ; a Y of D0h ends the
-                 ; sprite list
+  ld a,$D0       ; D0h terminator only.
   out (VDPDAT),a
   ret
 
-; The graphics entries, reached through
-; the record's table. Each assumes that
-; the caller holds the claim, as a
-; program writing the ports does, and
-; destroys AF, BC, DE and HL. A count of
-; zero moves nothing.
+; Graphics entries require the caller's
+; PICO claim and valid
+; register/address/buffer ranges and
+; visibility. No local checks. Each may
+; change AF, BC, DE and HL. With zero
+; count, fill/copy entries program the
+; VRAM address but transfer no payload.
 
-; Set register B to A.
+; Write A to VDP register B. For B=1,
+; save A bit 5 in PITIE before writing
+; the original value. Other registers
+; leave PITIE alone; raw port writes
+; never update it. Claim and register
+; range are the caller's responsibility.
+; Changes AF/BC/DE/HL. No flag result.
 
 GFXREG:
-  ld l,a         ; the value goes first
+  ld l,a
   ld a,b
-  or $80         ; then the register,
-                 ; with its write flag
+  cp 1
+  jr nz,GFXRG1   ; non-R1: no tracking
+  ld a,l
+  and $20
+  ld (PITIE),a
+
+GFXRG1:
+  ld a,b
+  or $80         ; register-write pair
   ld h,a
   jp VPAIR
 
-; Fill DE bytes of VRAM from address HL
-; with A.
+; End the transient supported IE session
+; before real boot removes its handler.
+; No arguments. Always clear PITIE.
+; Without CDTMS, touch no VDP ports;
+; otherwise write IE-off R1 from the
+; current mode or the bare-VDP default.
+; No ownership change or restoration of
+; arbitrary transient mode bits. Keep
+; BC/DE; change AF/HL, no flags result.
+
+PIICLR:
+  xor a
+  ld (PITIE),a
+  ld a,(CONDEV)
+  and CDTMS
+  ret z          ; no detected VDP
+
+; A bare VDP uses REGS32's R1. Nonzero
+; PIREGP high byte selects the current
+; ROM mode table. The high-byte test
+; does not validate arbitrary pointers.
+
+  ld hl,REGS32+1
+  ld a,(PIREGP+1)
+  or a
+  jr z,PIICR1    ; zero: bare fallback
+  ld hl,(PIREGP)
+  inc hl
+
+PIICR1:
+  ld l,(hl)
+  ld h,$81       ; R1 write selector
+  jp VPAIR
+
+; Fill DE bytes at VRAM HL with A. No
+; software wrap/range guard.
 
 GFXFIL:
-  ld c,a         ; the value, across the
-                 ; addressing
+  ld c,a         ; Fill byte, past
+                 ; TMSWA.
   call TMSWA
 
 GFXFL:
-  ld a,d         ; tested first, so that
-                 ; 0 fills nothing
+  ld a,d
   or e
-  ret z          ; the count has run out
-  ld a,c         ; the VDP moves its own
-                 ; address on
+  ret z
+  ld a,c
   out (VDPDAT),a
   dec de
   jr GFXFL
 
-; Copy BC bytes from DE to VRAM address
-; HL.
+; Copy BC bytes from CPU source DE to
+; VRAM destination HL. Keep source RAM
+; visible and readable throughout.
 
 GFXWR:
   call TMSWA
-  ex de,hl       ; HL = the source
+  ex de,hl
 
 GFXWL:
-  ld a,b         ; tested first, so that
-                 ; 0 copies nothing
+  ld a,b
   or c
-  ret z          ; the count has run out
-  ld a,(hl)      ; the VDP moves its own
-                 ; address on
+  ret z
+  ld a,(hl)
   out (VDPDAT),a
   inc hl
   dec bc
   jr GFXWL
 
-; Copy BC bytes from VRAM address HL to
-; DE.
+; Copy BC bytes from VRAM source HL to
+; CPU destination DE, writable
+; throughout. No explicit dummy read.
 
 GFXRD:
   call TMSRA
-  ex de,hl       ; HL = the destination
+  ex de,hl
 
 GFXRL:
-  ld a,b         ; tested first, so that
-                 ; 0 copies nothing
+  ld a,b
   or c
-  ret z          ; the count has run out
-  in a,(VDPDAT)  ; the VDP moves its own
-                 ; address on
+  ret z
+  in a,(VDPDAT)
   ld (hl),a
   inc hl
   dec bc
   jr GFXRL
 
-; Set the VRAM write address to HL, of
-; 0000h-3FFFh. Keeps BC, DE and L.
-; Destroys AF and H.
+; Set VRAM write address HL,
+; 0000h..3FFFh. Higher bits are masked.
+; Keeps BC/DE/L. Changes AF/H.
 
 TMSWA:
   ld a,h
-  and $3F        ; the address's top six
-                 ; bits
-  or $40         ; and the write flag
+  and $3F
+  or $40
   ld h,a
   jp VPAIR
 
-; Set the VRAM read address to HL: the
-; same, the flag clear.
+; Set VRAM read address HL,
+; 0000h..3FFFh, with the write flag
+; clear. Higher bits are masked. Keeps
+; BC/DE/L. Changes AF/H.
 
 TMSRA:
   ld a,h
-  and $3F        ; the address's top six
-                 ; bits, to read
+  and $3F
   ld h,a
 
-; Write L then H to the control port
-; with interrupts off, and put their
-; state back: an interrupt's own VDP
-; read between the two would split the
-; pair. IFFGET reads the state as an
-; NMOS Z80 needs. Keeps BC, DE and HL.
-; Destroys AF.
+; Write L then H to VDPCTL without a
+; maskable handler splitting the pair.
+; IFFGET samples IFF2 with its NMOS
+; workaround. Restore that sampled
+; state. No NMI exclusion or
+; payload-wide mask. Keeps BC/DE/HL and
+; I. Changes AF.
 
 VPAIR:
-  call IFFGET    ; P/V = the interrupt
-                 ; state
+  call IFFGET
   push af
   di
-  ld a,l         ; the low byte, or a
-                 ; register's value
+  ld a,l
   out (VDPCTL),a
-  ld a,h         ; then the high bits
-                 ; and flags
+  ld a,h
   out (VDPCTL),a
-  pop af         ; P/V as IFFGET found
-                 ; it
-  ret po         ; they were off: left
-                 ; off
+  pop af
+  ret po
   ei
   ret
 
-; HL = address of row B, column C in the
-; page being drawn. Keeps BC. Destroys
-; AF, DE.
+; HL = drawn-page cell at valid row B
+; (0..23), column C. Requires the
+; width's PIROWT and page state. No
+; bounds check. Keeps BC. Changes AF/DE.
 
 TMSCELL:
-  ld a,b         ; DE = 2 * B, the row's
-                 ; entry
+  ld a,b
   add a,a
   ld e,a
   ld d,0
   ld hl,PIROWT
-  add hl,de      ; its place in the row
-                 ; table
+  add hl,de
   ld a,(hl)
   inc hl
   ld h,(hl)
-  ld l,a         ; HL = the row's
-                 ; address on page 0
-  ld a,(PITPD)   ; plus the page's
-                 ; offset, a high byte
+  ld l,a
+  ld a,(PITPD)
   add a,h
   ld h,a
-  ld e,c         ; plus the column; D is
-                 ; still 0
+  ld e,c
   add hl,de
   ret
 
-; Copy row B to LINEBUF as one block.
-; While a move builds the hidden page,
-; rows are read from the page on show.
-; Destroys AF, BC, DE, HL.
+; Read valid row B into LINEBUF: PIWID
+; bytes at width 32, 40 or 80. During a
+; move, read the shown page through
+; temporary PITPD substitution, restored
+; on normal return. Otherwise read the
+; drawn page. Shared state/buffer.
+; Changes AF, BC, DE and HL. No
+; whole-row mask.
 
 TMSRDR:
   ld a,(PIMV)
   or a
-  jr z,TMSRD1    ; no move: from the
-                 ; page drawn
-  ld a,(PITPD)   ; else the page shown,
-                 ; for this row,
+  jr z,TMSRD1
+  ld a,(PITPD)   ; Save drawn page.
   push af
   ld a,(PITPS)
   ld (PITPD),a
   call TMSRD1
-  pop af         ; and the page drawn
-                 ; put back
+  pop af         ; Restore drawn page.
   ld (PITPD),a
   ret
 
 TMSRD1:
-  ld c,0         ; from column 0
+  ld c,0
   call TMSCELL
   call TMSRA
-  ld a,(PIWID)   ; the row's length
+  ld a,(PIWID)
   ld b,a
   ld c,VDPDAT
   ld hl,LINEBUF
-  inir           ; the VDP moves its own
-                 ; address on
+  inir
   ret
 
-; Copy LINEBUF to row B of the page
-; drawn as one block. Destroys AF, BC,
-; DE, HL.
+; Write LINEBUF to valid row B of the
+; drawn page: PIWID bytes at width 32,
+; 40 or 80. Keep the buffer visible.
+; Changes AF, BC, DE and HL. No
+; whole-row mask.
 
 TMSWRR:
-  ld c,0         ; from column 0
+  ld c,0
   call TMSCELL
   call TMSWA
-  ld a,(PIWID)   ; the row's length
+  ld a,(PIWID)
   ld b,a
   ld c,VDPDAT
-  ld hl,LINEBUF  ; the terminal's row
-                 ; buffer
+  ld hl,LINEBUF
   otir
   ret
 
-; Put A at row B, column C of the page
-; drawn. Keeps BC. Destroys AF, DE, HL.
+; Put character A at valid row B, column
+; C of the drawn page. Keeps BC. Changes
+; AF, DE and HL.
 
 TMSPUT:
-  push af        ; the character, across
-                 ; the addressing
+  push af
   call TMSCELL
   call TMSWA
   pop af
 
-; into the cell
-
   out (VDPDAT),a
   ret
 
-; A = the character at row B, column C
-; of the page drawn. Keeps BC. Destroys
-; F, DE, HL.
+; A = character at valid row B, column C
+; of the drawn page, including during a
+; move. Keeps BC. Changes F, DE and HL.
 
 TMSGET:
   call TMSCELL
-  call TMSRA     ; the cell, to read
+  call TMSRA
   in a,(VDPDAT)
   ret
 
-; Clear row B of the page drawn from
-; column C to the end of the line,
-; nothing when C is at or past the
-; width. Keeps C. Destroys AF, B, DE,
-; HL.
+; Clear valid row B of the drawn page
+; from C to its edge. C at/past width
+; returns before addressing or writing,
+; including pending wrap. Keeps C.
+; Changes AF, B, DE and HL.
 
 TMSCLR:
   ld a,(PIWID)
   cp c
-  ret c          ; C past the row's end
-  ret z          ; pending wrap has no
-                 ; cells left to erase
+  ret c
+  ret z
   call TMSCELL
   call TMSWA
-  ld a,(PIWID)   ; B = the cells from C
-                 ; to the end
+  ld a,(PIWID)
   sub c
   ld b,a
 
 TMSCLL:
-  ld a,' '       ; a space in each
+  ld a,' '
   out (VDPDAT),a
   djnz TMSCLL
   ret
 
-; Start a move of rows B to C. If the
-; page drawn is already the page shown,
-; draw the other one from now on,
-; copying the rows outside B to C
-; across; the move then reads the shown
-; page and writes the hidden one. A move
-; still waiting to be shown is shown
-; first, so output is never more than
-; one move behind. Keeps BC and E.
-; Destroys AF, D, HL and LINEBUF.
+; Begin a move of valid inclusive rows
+; B..C within 0..23. Show any pending
+; page first, then draw the other page.
+; Copy rows outside B..C from shown to
+; hidden. The caller writes the
+; interval, ends the move with TMSFN 2
+; and polling later flips it. Keeps
+; BC/E. Changes AF, D, HL and LINEBUF.
 
 TMSMBEG:
   ld a,(PITPD)
   ld hl,PITPS
   cp (hl)
-  jr z,TMSMB1    ; nothing waiting to be
-                 ; shown
-  call TMSFLIP   ; the last move shown
-                 ; first, BC kept
+  jr z,TMSMB1
+  call TMSFLIP   ; Show pending page.
 
 TMSMB1:
   ld hl,PITPG
-  ld a,(PITPS)   ; draw the page not
-                 ; shown
+  ld a,(PITPS)   ; Shown XOR PITPG.
   xor (hl)
   ld (PITPD),a
-  ld a,1         ; rows read from the
-                 ; page shown
+  ld a,1         ; Reads use shown page.
   ld (PIMV),a
-  ld d,0         ; D = each row, 0 to 23
+  ld d,0
 
 TMSMBL:
   ld a,d
   cp b
-  jr c,TMSMBC    ; above the move:
-                 ; copied across
+  jr c,TMSMBC    ; Outside: copy across.
   cp c
-  jr c,TMSMBN    ; within B to C: the
-                 ; move writes it
+  jr c,TMSMBN    ; Inside: caller
+                 ; writes.
   jr z,TMSMBN
 
 TMSMBC:
-  push bc        ; the move's rows and
-                 ; the row kept
+  push bc
   push de
-  ld b,d         ; the row from the page
-                 ; shown
+  ld b,d
   call TMSRDR
   pop de
   push de
-  ld b,d         ; to the same row of
-                 ; the page drawn
+  ld b,d
   call TMSWRR
   pop de
   pop bc
 
 TMSMBN:
-  inc d          ; the next row
+  inc d
   ld a,d
   cp 24
   jr nz,TMSMBL
@@ -679,6 +632,6 @@ TMSMBN:
 ; - Graphics I: patterns 0000h, colours
 ; 2000h, sprites 1B00h/3800h.
 
-REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$31
-REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$31
-REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31
+REGS80: DB $04,PIR180,$1000/$400+3,$00,$00,$00,$00,$31
+REGS40: DB $00,PIR140,$0800/$400,$00,$00,$00,$00,$31
+REGS32: DB $00,PIR132,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31

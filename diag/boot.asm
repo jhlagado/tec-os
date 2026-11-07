@@ -1,9 +1,9 @@
-; Reset, interrupt vectors and the first RAM check.
-;
-; This mirrors src/boot.asm. At reset the latch is 00h, so the first 2 KiB of
-; the image also appear at 0000h. The CPU starts there, loads SP with fixed
-; RAM, then jumps to the same code at its C000h alias before removing the
-; overlay. Interrupts stay disabled; IM 1 and the RETN at 0066h match TEC-OS.
+; Diagnostics reset, vectors and RAM.
+; Overlay on: C000h-C7FFh also maps at
+; 0000h-07FFh. Load SP, DI then jump to
+; high COLD before removing overlay.
+; DI masks IRQs, not NMI. This is reset,
+; not the TEC-OS warm-entry test.
 
         ORG     $C000
 RESET:  LD      SP,BOOTSTK
@@ -15,18 +15,25 @@ INT38:  EI
         RETI
 
         DS      NMIVEC-($-$C000),$FF
-        ; NMI while the overlay is on: return at once.
+
+; Overlay NMI: RETN uses the CPU-pushed
+; return word. DI does not block NMI.
+
 NMIROM: RETN
 
 ROMSIG: DB      "TEC-1G DIAG",0
 ROMVERS:DW      ROMVER
+
+; Remove overlay from high ROM, select
+; IM 1 then install RAM's NMI return.
+; Loading SP is not a stack access.
 
 COLD:   DI
         LD      SP,BOOTSTK
         LD      A,LATSHAD
         OUT     (SYSLAT),A      ; overlay off; execution is at C0xxh
         IM      1
-        LD      HL,$45ED        ; RETN at 0066h before anything else
+        LD      HL,$45ED        ; RETN at 0066h
         LD      (NMIVEC),HL
         LD      A,$40           ; serial idle, digits and speaker off
         OUT     (DIGPORT),A
@@ -38,13 +45,19 @@ COLD:   DI
         OUT     (LEDBLU),A
         LD      A,SDIDLE        ; SD deselected, activity lamp off
         OUT     (SDIO),A
-        ; fall through
 
-; ---- T01: the variables and stack page ---------------------------------------
-; 7E00h-7FFFh holds the variables and the stack, so it is proved before
-; anything uses it: four fill-and-verify passes with registers only. On a
-; failure the address and bits go to the serial port, again with no stack,
-; and the ROM goes no further.
+; Fall through to HOMECHK.
+
+; T01: destructive 7E00h-7FFFh check
+; before explicit stack/workspace use.
+; Four fill/verify passes use L XOR H
+; XOR 00h/FFh/55h/AAh, not flat fills.
+; Own instructions use no stack or
+; initialised workspace and change
+; AF/BC/HL/IX. Mismatch: HL=address,
+; A=expected, NZ. HCBAD rereads actual.
+; Success jumps to START to clear vars.
+
 HOMECHK:LD      IX,HCPATS
         LD      B,4
 HCPASS: LD      C,(IX+0)
@@ -72,8 +85,16 @@ HCVER:  LD      A,L
         JP      START
 HCPATS: DB      $00,$FF,$55,$AA
 
-; HL = failing address, A = the value written. The alternate registers hold
-; them while the message is printed a nibble at a time.
+; HL=failed address, A=expected byte.
+; Reread actual into E. EXX retains
+; address and expected/actual DE while
+; the other bank walks HCTEXT with C.
+; Eight markers print address, expected
+; then reread nibbles, high first.
+; TXNS jumps through IY=HCNEXT.
+; Repeat forever, never START.
+; Own instructions use no stack.
+
 HCBAD:  LD      D,A
         LD      E,(HL)
         EXX
@@ -115,7 +136,12 @@ HCN2:   EXX
         DAA
 HCSEND: LD      IY,HCNEXT
         JP      TXNS
-HCWAIT: LD      B,16            ; about 6.8 s, then say it again
+
+; Sixteen 65536-count delays take about
+; 6.816 s at nominal 4 MHz, plus message
+; and branch overhead, then repeat.
+
+HCWAIT: LD      B,16
 HCW1:   LD      DE,0
 HCW2:   DEC     DE
         LD      A,D
@@ -127,7 +153,14 @@ HCW2:   DEC     DE
 HCTEXT: DB      13,10,"T01 HOME    FAIL  RAM 7E00-7FFF at ",1,1,1,1
         DB      " wrote ",1,1," read ",1,1,13,10,0
 
-; TXBYTE without a stack: send A, then continue at IY. Destroys AF, BDE.
+; Send A: start bit then 8 data bits,
+; low first, on DIGPORT bit 6. Other
+; digit/speaker outputs stay off.
+; Drive TX high for TXSTOP then jump
+; through mapped IY. Changes AF/B/D/E.
+; Own code keeps C/HL and alternates
+; without explicit stack access.
+
 TXNS:   LD      E,A
         LD      B,9
         OR      A

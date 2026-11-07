@@ -1,11 +1,12 @@
-; Hardware and memory contract for the diagnostics ROM.
-;
-; Port numbers come from the TEC-1G documentation, MON-3 and the Debug80
-; model; docs/diagnostics.md lists where they disagree. The ROM image is
-; C000h-FFFFh and its first 2 KiB also appear at 0000h while the boot
-; overlay is on, exactly as for TEC-OS.
+; Diagnostic ROM hardware and memory.
+; Ports follow TEC-1G docs, MON-3 and
+; Debug80. docs/diagnostics.md records
+; their differences. Image: C000h-FFFFh.
+; Reset overlay aliases its first 2 KiB
+; at 0000h, as for TEC-OS.
 
-; ---- Ports ------------------------------------------------------------------
+; Ports.
+
 KEYPORT EQU     $00             ; keypad encoder: bits 0-4 key, bit 5 Shift (0 = down)
 DIGPORT EQU     $01             ; bits 0-5 digit select, 6 serial TX, 7 speaker
 SEGPORT EQU     $02             ; 7-segment segment latch
@@ -25,13 +26,25 @@ SDIO    EQU     $FD             ; SD SPI: bit 0 MOSI, 1 CLK, 2 /CS; in bit 7 MIS
 MTXPORT EQU     $FE             ; matrix keyboard; row select on A8-A15
 SYSLAT  EQU     $FF             ; system latch, write-only on the board
 
-; ---- System latch -------------------------------------------------------------
+; System latch bits. EXPAND applies to
+; the 8000h-BFFFh window.
+
 LATSHAD EQU     $01             ; /SHADOW high: boot overlay removed
 LATPROT EQU     $02             ; PROTECT: 4000h-7FFFh read-only
 LATEXP  EQU     $04             ; EXPAND
 LATCAPS EQU     $80             ; CAPS lamp
 
-; ---- Memory -------------------------------------------------------------------
+; Memory and generated ROM metadata.
+; RPTEND is exclusive. OUTC still sends
+; serial bytes after the report is full.
+; BOOTSTK is one past the stack. Loading
+; SP is not a stack access. VRAM pages
+; are 256 bytes. SD tests reuse both as
+; one 512-byte span starting at VBUFA.
+; ROMID: first 8 SHA256 bytes with the
+; final 10 image bytes set to FFh.
+; ROMCKS sums after installing ROMID.
+
 NMIVEC  EQU     $0066
 RST7    EQU     $0038
 OVLPRB  EQU     $07FF           ; last byte under the boot overlay
@@ -46,16 +59,20 @@ WINDOW  EQU     $8000           ; bank window 8000h-BFFFh
 ROMID   EQU     $FFF6           ; the image ID, 8 bytes, set by the build
 ROMCKS  EQU     $FFFE           ; 16-bit sum of C000h-FFFDh, set by the build
 
-; ---- Result codes -----------------------------------------------------------
+; Result codes index six counters and
+; text slots. Supply a valid code.
+; LOOK needs eye/ear judgment in an
+; automatic run. NONE also covers no
+; response, not proof of absence.
+
 RPASS   EQU     0
 RFAIL   EQU     1
-RINFO   EQU     2               ; a measured value, no verdict
+RINFO   EQU     2               ; information, no verdict
 RSKIP   EQU     3               ; not run
 RLOOK   EQU     4               ; visual or audible: check it by eye or ear
 RNONE   EQU     5               ; device not fitted or not answering
 NRESULT EQU     6
 
-; ---- Keys -----------------------------------------------------------------------
 KESC    EQU     $1B
 KCR     EQU     $0D
 

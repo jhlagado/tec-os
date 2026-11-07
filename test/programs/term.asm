@@ -1,7 +1,6 @@
-; TERM.COM: draws with the ANSI subset the video terminal supports.
-; Clears the screen, writes X at row 5 column 10 and a reverse R after it,
-; and clears the rest of row 1 after "AB". TERM S also prints 30 numbered
-; lines, to scroll.
+; TERM.COM: clear screen, leave AB on row 1, X at row 5, column 10,
+; and reverse R after X. Any nonempty tail (including S) adds 30 scroll lines.
+; A fresh L00 image yields L00-L29; entry resets only units, not tens.
 
 BDOS    EQU     $0005
 
@@ -9,7 +8,7 @@ BDOS    EQU     $0005
         LD      DE,DRAW
         LD      C,9
         CALL    BDOS
-        LD      A,($0080)       ; any command tail: scroll test
+        LD      A,($0080)       
         OR      A
         RET     Z
         LD      B,30
@@ -19,7 +18,7 @@ LOOP:   PUSH    BC
         LD      DE,LINE
         LD      C,9
         CALL    BDOS
-        LD      HL,LINE+2       ; next two-digit number
+        LD      HL,LINE+2       
         INC     (HL)
         LD      A,(HL)
         CP      '9'+1

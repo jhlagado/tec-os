@@ -1,68 +1,66 @@
-; Video displays. VIDINIT records in
-; CONDEV whether the PICO9918 answers;
-; the console mode then points the
-; terminal's driver vectors at a
-; driver's table: VPUT (A at row B,
-; column C), VGET, VCLREOL, VREST, which
-; puts back the display mode and
-; character set after a program may have
-; changed them, leaving the picture
-; alone, and VRDROW and VWRROW, which
-; copy row B to and from LINEBUF.
-; Scrolling is a line delete in the
-; terminal.
+; Video console dispatch through vectors
+; installed by CONSWV. VPUT/VGET use row
+; B, column C. Row transfers use
+; LINEBUF. Wrappers overwrite HL, then
+; use the driver's contract. Installed
+; vectors and valid coordinates are
+; required. Scrolling is terminal line
+; deletion.
 
-; From CONINIT at cold boot, with CONDEV
-; holding CDMTX or nothing: when the
-; PICO9918 answers, CDTMS set in CONDEV
-; and PISTART run, which makes it the
-; console if the matrix keyboard is
-; there too. Destroys AF, BC, DE and HL.
+; Cold CONINIT tail, CONDEV=CDMTX or 0.
+; Probe failure returns. Success sets
+; CDTMS and enters PISTART, which
+; installs the console only with a
+; keyboard. A bare VDP has no console
+; table/record. Changes AF, BC, DE and
+; HL.
 
 VIDINIT:
-  call TMSINIT   ; Z: VRAM keeps what is
-                 ; written
-  ret nz         ; no PICO9918
+  call TMSINIT   ; Z: both patterns
+                 ; match.
+  ret nz
   ld hl,CONDEV
-  set 1,(hl)     ; CDTMS
-  jp PISTART     ; the console, with the
-                 ; matrix keyboard
+  set 1,(hl)     ; CDTMS.
+  jp PISTART
 
-; The terminal's calls into the driver
-; in effect, each through the vector
-; CONSWV copied from the driver's table.
-; Registers are as the driver takes and
-; leaves them.
+; Character and clear calls through the
+; selected driver. No local pointer,
+; coordinate or claim check.
 
 ; VPUT: A at row B, column C.
 
 VPUT:
-  ld hl,(VPUTV)  ; the driver's entry
+  ld hl,(VPUTV)
   jp (hl)
 
 ; VGET: A = the character at row B,
 ; column C.
 
 VGET:
-  ld hl,(VGETV)  ; the driver's entry
+  ld hl,(VGETV)
   jp (hl)
 
 ; VCLREOL: row B cleared from column C
 ; to its end.
 
 VCLREOL:
-  ld hl,(VCLRV)  ; the driver's entry
+  ld hl,(VCLRV)
   jp (hl)
 
-; VREST: the display's mode and
-; character set back, the picture left
-; alone.
+; Restore the selected driver. PICO
+; reloads mode/font and shows the latest
+; drawn page, keeping name bytes. GLCD
+; restores graphics mode and clears its
+; text layer, keeping graphics RAM.
+; TMSSET/GLCRST define clobbers and
+; failure.
 
 VREST:
-  ld hl,(VRSTV)  ; the driver's entry
+  ld hl,(VRSTV)
 
-; Jump to HL, so that a CALL VHLJP calls
-; the routine at HL.
+; Jump to valid HL. After CALL VHLJP the
+; selected routine returns directly to
+; that call's return address.
 
 VHLJP:
   jp (hl)
@@ -70,143 +68,130 @@ VHLJP:
 ; VRDROW: row B into LINEBUF.
 
 VRDROW:
-  ld hl,(VRDRV)  ; the driver's entry
+  ld hl,(VRDRV)
   jp (hl)
 
 ; VWRROW: LINEBUF to row B.
 
 VWRROW:
-  ld hl,(VWRRV)  ; the driver's entry
+  ld hl,(VWRRV)
   jp (hl)
 
-; The word for what only the PICO9918
-; does, when it is the console and no
-; program has claimed it: A = 0 show a
-; finished row move; 1 begin a move of
-; rows C to VSBOT; 2 end one. Destroys
-; AF, HL and what the driver's word does
-; (the ROM's: D, for a move begun);
-; VTMBEG also sets B and C for it.
+; Begin moving inclusive rows C..VSBOT.
+; For active CRT with an unclaimed PICO,
+; call VFNV with A=1, B=C and C=VSBOT.
+; Changes AF/HL/BC plus driver effects:
+; D and LINEBUF for PICO begin. Gate
+; flags are not a status result. UC1
+; remains drawable under a PICO claim.
 
 VTMBEG:
-  ld b,c         ; the driver's B to C:
-                 ; rows C to VSBOT
+  ld b,c         ; Inclusive B..C.
   ld a,(VSBOT)
   ld c,a
-  ld a,1         ; a move begins
+  ld a,1
   jr VTFN
 
-; End a row move: VTFN's 2.
+; End the row move without flipping:
+; function 2 through VTFN's CRT/claim
+; gates.
 
 VTMEND:
-  ld a,2         ; the move ends
+  ld a,2
   jr VTFN
 
-; Show the page drawn: VTFN's 0.
+; Show the drawn page: function 0
+; through VTFN's CRT/claim gates.
 
 VTFLIP:
-  xor a          ; the page drawn shown
+  xor a
 
 VTFN:
-  ld l,a         ; the function, across
-                 ; the tests
+  ld l,a
   ld a,(CONMOD)
   cp CMCRT
-  ret nz         ; the PICO9918 is not
-                 ; the console
+  ret nz
   call VTOWN
-  ret nz         ; a program owns it:
-                 ; hands off
+  ret nz
   ld a,l
-  ld hl,(VFNV)   ; the driver's word, A
-                 ; = the function
+  ld hl,(VFNV)
   jp (hl)
 
-; ---- The video drivers' hook
-; --------------------------------------
-; GLCD.SVC hands the ROM a table through
-; TNDRVR (abi.inc), and CONSW points the
-; terminal's vector at it for UC1:; its
-; REMOVE calls it with HL = 0. CRT:'s
-; table, PIVEC, is the ROM's own, set by
-; PISTART.
+; GLCD.SVC installs its resident table
+; through TNDRVR for UC1. REMOVE drops
+; it with HL=0. CONSW copies the
+; entries. Public SVDRV accepts UC1
+; only. PIVEC is the ROM's CRT table
+; from PISTART. SVCGO tests the table's
+; high byte against SVCHEAD before
+; automatic console selection.
 
-; A = CMCRT or CMUC1, HL = the driver's
-; table: the terminal's six words (VPUT,
-; VGET, VCLREOL, VREST, VRDROW, VWRROW),
-; the word for VTFN's functions, then
-; columns and rows. Kept for CONSW, and
-; HL = LINEBUF on return with carry
-; clear, where VRDROW and VWRROW move a
-; row; carry set and nothing changed if
-; a table is kept already, or there is
-; no matrix keyboard. HL = 0: the table
-; dropped, and, if mode A is in effect,
-; the console chosen again at its next
-; call; any other mode is left as it is,
-; its screen kept. Carry clear. Destroys
-; AF, DE.
+; Internal hook: A=CMCRT/CMUC1, HL=table
+; or 0 to drop. PIVEC/GLVEC must share a
+; page. Table: six terminal words, VTFN
+; word, columns byte and rows byte. RAM
+; tables are at 0100h or above. Install
+; needs matrix and an empty pointer.
+; CF=1 refuses with table state
+; unchanged. On install: CF=0,
+; HL=LINEBUF. Caller keeps table/buffer
+; valid and visible. Keeps BC. Changes
+; AF/DE/HL. SVDRV adds UC1/startup
+; checks.
 
 VIDHOOK:
-
-; DE = PIVEC or GLVEC, the mode's word
 
   add a,LOW(PIVEC)-1
   ld e,a
   ld d,HIGH(PIVEC)
-  ld a,h         ; test table pointer
+  ld a,h
   or l
-  jr z,VIDHOFF   ; HL = 0: the table
-                 ; dropped
-  ld a,(CONDEV)  ; CDMTX, bit 0
-  rrca           ; into carry,
-  ccf            ; then carry if there
-                 ; is no keyboard
+  jr z,VIDHOFF
+  ld a,(CONDEV)
+  rrca
+  ccf
   ret c
   inc de
-  ld a,(de)      ; a table in RAM is at
-                 ; 0100h or above
+  ld a,(de)      ; High byte 0 = empty.
   dec de
-  or a           ; so a high byte of 0
-                 ; is no table
+  or a
   scf
-  ret nz         ; one is kept already
-  ex de,hl       ; HL = the word, DE =
-                 ; the table
+  ret nz
+  ex de,hl
   ld (hl),e
   inc hl
   ld (hl),d
-  ld hl,LINEBUF  ; where VRDROW and
-                 ; VWRROW move a row
-  or a           ; carry clear
+  ld hl,LINEBUF
+  or a
   ret
 
 VIDHOFF:
-  ex de,hl       ; HL = the word, D = 0
-  ld (hl),d      ; the word cleared
+  ex de,hl
+  ld (hl),d
   inc hl
   ld (hl),d
   ld a,l
 
-; GLVEC's: GLCD.SVC has gone
+; Only GLVEC removal clears CDGLC.
 
   cp LOW(GLVEC+1)
   jr nz,VIDHF1
-  ld hl,CONDEV   ; CDGLC: no GLCD
-                 ; console now
+  ld hl,CONDEV
   res 2,(hl)
 
 VIDHF1:
 
-; A = the mode unhooked, 1 or 3
+; Other active mode and screen stay
+; unchanged (KE-190). If this mode was
+; active, set CMTTY for next-call IOBYTE
+; reselection. IOBYTE stays unchanged.
+; No driver call or VRAM clear occurs
+; here. Returns carry clear. Changes
+; AF/DE/HL.
 
   sub LOW(PIVEC)
   ld hl,CONMOD
-  xor (hl)       ; not the mode in
-                 ; effect: left alone,
-  ret nz         ; carry clear, the
-                 ; screen kept (KE-190)
-  ld (hl),a      ; serial in effect, so
-                 ; a field naming the
-  ret            ; display acts at the
-                 ; next call; NC
+  xor (hl)
+  ret nz
+  ld (hl),a
+  ret

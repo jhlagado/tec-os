@@ -1,20 +1,14 @@
-; The TEC-OS table, ABI 5.1, at C003h
-; after the reset jump: "TNA", the
-; major, the minor, then the one jump to
-; the numbered services. Its addresses
-; and the services' numbers are
-; abi.inc's, which rom.asm includes
-; first, so a program and the ROM read
-; them from one file. The build checks
-; the bytes here and that the data block
-; follows them.
+; Emit ABI 5.1 at abi.inc's
+; C003h..C00Ah: TNA, major, minor and JP
+; SVCDSP. The ROM includes the shared
+; declarations first. Minor 1 adds
+; TNFONT. The build checks table
+; bytes/addresses and the following data
+; block.
 
-  DB "TNA"       ; C003h ABITAB, the
-                 ; signature
-  DB 5           ; C006h ABIMAJ, the
-                 ; major version
+  DB "TNA"
+  DB 5
   DB 1           ; C007h ABIMIN, the
                  ; minor version: 1 adds
                  ; TNFONT
-  jp SVCDSP      ; C008h ABICALL: the
-                 ; service numbered in C
+  jp SVCDSP

@@ -3,8 +3,7 @@
 ;   MOUNT B: NAME   the volume labelled NAME, found through describe
 ;   MOUNT B: 5      the volume at container index 5, as the list numbers them
 ;   MOUNT B:        unmounts B: (A: is never left empty)
-; Prints the drive and the volume's label (also when it is there already),
-; or the reason it would not.
+; Prints the drive and label, even when already mounted, or a generic failure.
 %INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
@@ -12,28 +11,28 @@ TAIL    EQU     $0081
 
         ORG     $0100
 ; This program speaks ABI 5's table: on anything else it says so and stops.
-	LD	HL,ABITAB	; what is at the table's address
-	LD	DE,ABITAG	; against what should be
+	LD	HL,ABITAB	
+	LD	DE,ABITAG	
 	LD	B,3
-CHKTAG:	LD	A,(DE)		; each byte of the tag
+CHKTAG:	LD	A,(DE)		
 	CP	(HL)
-	JR	NZ,NOABI	; not TEC-OS's table
-	INC	HL		; on to the next of each
+	JR	NZ,NOABI	
+	INC	HL		
 	INC	DE
 	DJNZ	CHKTAG
-	LD	A,(HL)		; HL = ABIMAJ now
+	LD	A,(HL)		
 	CP	5		; exactly: entries may move at each major
 	JR	Z,ABIOK
-NOABI:	LD	DE,NOABIM	; the word, and back to the CCP
-	LD	C,9		; BDOS: print to $
+NOABI:	LD	DE,NOABIM	
+	LD	C,9		
 	JP	BDOS
 ABITAG:	DB	"TNA"
 NOABIM:	DB	"MOUNT needs TEC-OS with ABI 5.",13,10,"$"
 ABIOK:
         LD      HL,TAIL
         CALL    SKIP
-	OR	A		; no argument at all
-	JP	Z,LIST		; lists the volumes
+	OR	A		
+	JP	Z,LIST		
         SUB     'A'             ; the drive letter, A-D, then a colon
         CP      4
         JP      NC,USAGE
@@ -46,7 +45,7 @@ ABIOK:
         CALL    SKIP
         OR      A
         JR      NZ,WHICH
-        LD      A,(DRIVE)       ; no volume: unmount
+        LD      A,(DRIVE)       
 	LD	B,A
 	LD	C,TNUNMNT
 	CALL	ABICALL
@@ -56,7 +55,9 @@ ABIOK:
         LD      DE,UNMNT
         JP      SAY
 
-WHICH:  CP      '0'             ; a number is an index
+; A leading digit selects a decimal index. The byte accumulator wraps;
+; stop at the first nondigit without checking the rest of the tail.
+WHICH:  CP      '0'             
         JR      C,BYNAME
         CP      '9'+1
         JR      NC,BYNAME
@@ -79,7 +80,9 @@ NUM:    LD      A,(HL)
 GOTNUM: LD      A,B
         JR      MOUNTA
 
-BYNAME: LD      DE,NAME         ; the name, padded to 11 with spaces
+; Match the first 11 name bytes exactly, stopping at space/NUL and padding
+; with spaces. This routine neither folds case nor rejects a longer name.
+BYNAME: LD      DE,NAME         
         LD      B,11
 NM1:    LD      A,(HL)
         OR      A
@@ -95,7 +98,7 @@ NMPAD:  LD      A,' '
 NM2:    LD      (DE),A
         INC     DE
         DJNZ    NM2
-FIND:   XOR     A               ; each index's label, until one matches
+FIND:   XOR     A               
         LD      (IDX),A
 FIND1:  LD      A,(IDX)
         LD      E,A
@@ -120,9 +123,9 @@ FIND2:  LD      HL,IDX
         INC     (HL)
         JR      FIND1
 
-MOUNTA: LD      E,A             ; mount index A on the drive
+MOUNTA: LD      E,A             
         LD      (IDX),A
-	LD	C,TNDESC	; already there? then say so, not an error
+	LD	C,TNDESC	; already on this drive: report success
         LD      HL,DESC
 	CALL	ABICALL
         OR      A
@@ -141,7 +144,8 @@ MOUNTA: LD      E,A             ; mount index A on the drive
         OR      A
         LD      DE,NOMNT
         JP      NZ,SAY
-        LD      A,(IDX)         ; say what is there now
+; Redescription supplies the displayed label; its status is not checked.
+        LD      A,(IDX)         
         LD      E,A
 	LD	C,TNDESC
         LD      HL,DESC
@@ -156,23 +160,23 @@ SHOW:   LD      A,(DRIVE)
         LD      DE,MNTD
         JP      SAY
 
-; LIST: each volume on the card, through describe, on a line of its own: its
-; index, label, geometry, R/O when read-only, and the drive it is on now.
-; Takes IDX at 0, as loaded. Returns to the CCP past the last one.
-LIST:	LD	A,(IDX)		; the next index
+; List descriptors from IDX 0: index, label, geometry, R/O and current drive.
+; Indices from 100 use three digits; mount FFh means no drive. Any nonzero
+; describe result ends the list, without a separate error diagnosis.
+LIST:	LD	A,(IDX)		
 	LD	E,A
-	LD	C,TNDESC	; describe
+	LD	C,TNDESC	
 	LD	HL,DESC
 	CALL	ABICALL
 	OR	A
-	RET	NZ		; past the table: done
-	LD	A,(IDX)		; the index, two digits
+	RET	NZ		
+	LD	A,(IDX)		
 	CALL	DEC2
 	CALL	SPACE
-	LD	HL,DESC+16	; the label, 11 bytes
+	LD	HL,DESC+16	
 	LD	B,11
 LIST1:	LD	E,(HL)
-	PUSH	BC		; PUT changes them
+	PUSH	BC		; protect count and descriptor pointer
 	PUSH	HL
 	CALL	PUT
 	POP	HL
@@ -180,19 +184,19 @@ LIST1:	LD	E,(HL)
 	INC	HL
 	DJNZ	LIST1
 	CALL	SPACE
-	LD	DE,G8M		; the geometry: 1 is G8M
+	LD	DE,G8M		
 	LD	A,(DESC+12)
 	DEC	A
 	JR	Z,LIST2
-	LD	DE,G1M		; else G1M
-LIST2:	LD	C,9		; print to $
+	LD	DE,G1M		
+LIST2:	LD	C,9		
 	CALL	BDOS
-	LD	A,(DESC+13)	; bit 0: read-only
+	LD	A,(DESC+13)	
 	RRCA
 	LD	DE,RO
 	LD	C,9
 	CALL	C,BDOS
-	LD	A,(DESC+14)	; the drive it is on, FFh for none
+	LD	A,(DESC+14)	
 	CP	$FF
 	JR	Z,LIST3
 	ADD	A,'A'
@@ -200,20 +204,20 @@ LIST2:	LD	C,9		; print to $
 	LD	DE,ONDRV
 	LD	C,9
 	CALL	BDOS
-LIST3:	LD	DE,CRLF		; the line's end
+LIST3:	LD	DE,CRLF		
 	LD	C,9
 	CALL	BDOS
-	LD	HL,IDX		; on to the next index
+	LD	HL,IDX		
 	INC	(HL)
 	JR	LIST
 
-; DEC2: A (0 to 127) as two decimal digits, or three from 100. Changes A, BC,
-; DE.
+; DEC2: print A (0-127), two decimal digits or three from 100.
+; Uses BDOS output, with no general register or flag preservation.
 DEC2:	LD	C,100
 	CP	C
-	JR	C,DEC10		; under 100: two digits
+	JR	C,DEC10		
 	LD	B,'0'-1
-DEC1:	INC	B		; the hundreds
+DEC1:	INC	B		
 	SUB	C
 	JR	NC,DEC1
 	ADD	A,C
@@ -222,10 +226,10 @@ DEC1:	INC	B		; the hundreds
 	CALL	PUT
 	POP	AF
 DEC10:	LD	B,'0'-1
-DECT:	INC	B		; the tens
+DECT:	INC	B		
 	SUB	10
 	JR	NC,DECT
-	ADD	A,10+'0'	; the units, as a digit
+	ADD	A,10+'0'	
 	PUSH	AF
 	LD	E,B
 	CALL	PUT
@@ -233,9 +237,9 @@ DECT:	INC	B		; the tens
 	LD	E,A
 	JR	PUT
 
-; SPACE and PUT: a blank, or the character in E, to the console. Changes A, C.
+; SPACE/PUT send a blank or E through BDOS 2, which may change any register.
 SPACE:	LD	E,' '
-PUT:	LD	C,2		; console output
+PUT:	LD	C,2		
 	JP	BDOS
 
 USAGE:  LD      DE,USE

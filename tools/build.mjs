@@ -163,7 +163,7 @@ function checkAbi(at, rom) {
 function checkPicoTable(at, rom) {
   const byte = (a) => rom[a - 0xc000];
   const inc = readFileSync(resolve(SRC, "abi.inc"), "utf8");
-  const offsets = new Map([...inc.matchAll(/^(PICO[A-Z]+)\s+EQU\s+(\d+)\b/gm)].map((m) => [m[1], Number(m[2])]));
+  const offsets = new Map([...inc.matchAll(/^(PICO[A-Z]+)\s+EQU\s+(\d+)\b/gm)].filter((m) => m[1] !== "PICOWVER").map((m) => [m[1], Number(m[2])]));
   const entries = { PICOREG: "GFXREG", PICOFIL: "GFXFIL", PICOWR: "GFXWR", PICORD: "GFXRD", PICOWID: "TMSWID" };
   const places = { PICOVRB: "PIREC+10", PICOTPD: "PITPD", PICOTPS: "PITPS" };
   check(offsets.size === Object.keys(entries).length + Object.keys(places).length + 1 && offsets.has("PICOVER"), "abi.inc: the PICO table's offsets");

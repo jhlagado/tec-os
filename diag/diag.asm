@@ -1,4 +1,6 @@
-; TEC-1G diagnostics ROM image, C000h-FFFFh. Include order is assembly order.
+; TEC-1G diagnostics, C000h-FFFFh.
+; Include order is assembly order.
+
 %INCLUDE "gen/config.asm"
 %INCLUDE "defs.asm"
 %INCLUDE "vars.asm"

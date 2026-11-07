@@ -1,6 +1,7 @@
-; READF NAME: reads the file named in the command tail to its end through
-; the BDOS, 128 bytes at a time into the default DMA at 0080h, and prints
-; nothing: a file read through, as the block cache sees it.
+; READF NAME: a silent sequential-read workload for the block-cache tests.
+; Uses the default FCB and DMA 0080h, reading 128-byte records while A is 0.
+; OPEN FFh returns; any nonzero READ ends the loop, without explicit CLOSE.
+; A default-mode BDOS disk error can warm boot instead.
 
 BDOS    EQU     $0005
 FCB     EQU     $005C

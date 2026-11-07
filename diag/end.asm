@@ -1,4 +1,5 @@
-; End of the code. The build fills the rest of the image with FFh and puts
-; the image ID and the ROM checksum in the last ten bytes.
+; Exclusive code/font end. The builder
+; pads with FFh and stores the image ID
+; and checksum in the last ten bytes.
 
 CODEEND:

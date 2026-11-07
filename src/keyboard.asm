@@ -6,10 +6,12 @@
 ; toggles Caps Lock. A held key does not
 ; repeat.
 
-; Scan eight rows from the last stop.
-; CDMTX in CONDEV enables the scan.
-; NZ: RXCHAR ready and RXFULL set.
-; Z: no key. A = 0 if disabled.
+; Poll up to eight rows for a new key.
+; Starts at KBMASK. NZ ends the poll:
+; RXCHAR ready and RXFULL set.
+; Z: none ready. Disabled: A = 0.
+; CDMTX in CONDEV enables scanning.
+; Requires RXFULL = 0.
 ; Clobbers AF, BC, DE and HL.
 
 KBPOLL:
@@ -27,19 +29,20 @@ KBPL:
   jr nz,KBPL
   ret            ; Z from count
 
-; Scan the KBMASK row. Keep the last two
-; keys in KBE and KBD. Evaluate after
+; Scan one KBMASK row. KBE/KBD hold the
+; last two pressed keys. Evaluate after
 ; row 7. NZ: RXCHAR ready and RXFULL
-; set. Z: no key ready yet. Clobbers AF,
-; BC, DE and HL.
+; set. Z: none ready.
+; Requires RXFULL = 0. Clobbers AF, BC,
+; DE and HL.
 
 KBSTEP:
   ld hl,KBMASK
   ld b,(hl)      ; Active-low row mask
   ld c,$FE       ; Keyboard port
-  in a,(c)       ; Pressed bits are low
+  in a,(c)       ; Pressed bits low
   cpl
-  jr z,KBSNEXT   ; row is empty
+  jr z,KBSNEXT   ; Z from IN: raw 00h
   ld d,a         ; bits for row
   inc hl
   ld a,(hl)      ; KBBASE: first key
@@ -97,8 +100,7 @@ KBMOD:
   jr c,KBNONE    ; modifier alone
   cp 7           ; Caps Lock key
   jr z,KBCAPS
-  jr nc,KBNOARR  ; Keys 3-6 are arrows
-                 ; Send ESC [ A-D.
+  jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
   sub 3          ; index arrow letter
   ld hl,KBARROW
   add a,l
@@ -134,18 +136,17 @@ KBNONE:
 
 KBCAPS:
   ld a,(LATCHV)
-  xor $80        ; toggle Caps Lock
-                 ; LED and case bit
+  xor $80        ; Caps bit and LED
   ld (LATCHV),a
   out (SYSLAT),a
   xor a          ; Z: no character
   ret
 
-; Translate key E to ASCII in A. D: FFh
-; none, 0 Shift, 1 Ctrl, 2 Fn. Uses
-; KBSPEC and KBSHIFT. Letters follow
-; Caps Lock in LATCHV bit 7. Clobbers F,
-; B, C and HL.
+; Translate key E to ASCII in A.
+; D: FFh none, 0 Shift, 1 Ctrl, 2 Fn.
+; Letters use Ctrl first, then Shift or
+; Caps Lock in LATCHV bit 7.
+; Clobbers F, B, C and HL.
 
 KBASCII:
   ld a,e

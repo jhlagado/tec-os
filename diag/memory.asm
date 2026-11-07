@@ -1,13 +1,16 @@
 ; RAM, ROM, boot overlay, PROTECT, the latch read-back, the status port and
 ; the bank field.
 
-; ---- Pattern test -------------------------------------------------------------
-
-; Test BC bytes from HL with E passes and record the outcome at IX: status
-; (0 pass, 1 fail), failing address, value written, value read. Pass 0
-; writes L xor H, pass 1 its complement, pass 2 L+H and pass 3 its
-; complement, so every bit is written both ways and two addresses that alias
-; read back each other's values. Returns Z on a pass.
+; Destructively test the range HL/BC for E passes. BC = 0 covers 65536 bytes;
+; E = 0 runs 256 passes. Keep active code, stack and the writable IX record
+; outside that range unless the caller has relocated them.
+; Passes repeat L xor H, its complement, low-byte L+H, its complement.
+; These patterns exercise both bit values, but do not detect every alias:
+; 0001h and 0100h produce the same bytes in all four passes.
+; IX names five bytes: status, failing address low/high, expected, read.
+; A = 0/Z on success writes only status 0; A = 1/NZ on the first mismatch
+; refreshes the whole record. HL/BC and requested E survive; D is the current
+; or completed pass count; AF is clobbered.
 MEMTST: LD      D,0
 MEMTP:  PUSH    DE
         LD      E,0             ; E = the complement mask for this pass
@@ -91,19 +94,19 @@ MVBAD:  LD      (IX+3),A
         LD      (IX+2),H
         LD      A,1
         LD      (IX+0),A
-        OR      A               ; NZ
+        OR      A               
         RET
-
-; ---- RAM ----------------------------------------------------------------------
 
 ; Run the three RAM tests before anything is recorded: the report buffer
 ; is in the RAM under test. The outcomes are kept in RRLO, RRWIN, RRHOME.
+; The low test overwrites 0066h before the RETN stub is restored. Neither
+; that later stub nor the relocated home stack excludes asynchronous NMIs.
 RAMTST: LD      HL,0            ; fixed RAM below the variables
         LD      BC,VARS
         LD      E,4
         LD      IX,RRLO
         CALL    MEMTST
-        LD      HL,$45ED        ; RETN at 0066h again at once
+        LD      HL,$45ED        ; restore RETN after the low-RAM test
         LD      (NMIVEC),HL
         LD      A,LATSHAD       ; the window as the base mapping
         CALL    SETLAT
@@ -153,9 +156,10 @@ RAMREP: CALL    TBEGIN
         CALL    TBEGIN
         DB      4,"RAMHOME","RAM 7E00h-7FFFh again, 4 passes, stack in the window",0
         LD      IX,RRHOME
-        ; fall through
 
 ; Report the outcome at IX.
+; Status 2 skips, 0 passes, other values fail. Only a fresh failing record
+; supplies address/value details. The PASS caption is not an exhaustive alias proof.
 RAMRES: LD      A,(IX+0)
         CP      2
         JR      Z,RAMRS
@@ -172,9 +176,8 @@ RAMRS:  LD      A,RSKIP
         JP      REND
 RAMRF:  LD      A,RFAIL
         CALL    RESULT
-        ; fall through
 
-; Print " at hhhh wrote xx read yy bits zz" from the outcome at IX.
+; Print a fresh failing IX record: address, expected/read bytes and their XOR.
 RAMBAD: CALL    PRI
         DB      "at ",0
         LD      L,(IX+1)
@@ -194,8 +197,6 @@ RAMBAD: CALL    PRI
         XOR     (IX+4)
         CALL    PRHEX
         JP      REND
-
-; ---- ROM ----------------------------------------------------------------------
 
 TROMSUM:CALL    TBEGIN
         DB      5,"ROMSUM ","ROM C000h-FFFDh sums to the word at FFFEh",0
@@ -251,15 +252,14 @@ ROMWTW: LD      (HL),A          ; the deliberate ROM write
         JP      REND
 ROMWT:  DB      $A5
 
-; ---- Boot overlay -------------------------------------------------------------
-
-; T07: with /SHADOW low, 07FFh reads the ROM byte at C7FFh and 0800h still
-; reads RAM. T08: where a write to 07FFh goes while the
-; overlay is on.
+; T07 checks the overlay boundary at 07FFh/0800h. T08 reports where a write
+; to 07FFh went, using the seeded RAM byte rather than its pre-test contents.
+; Restore LATCHV before output. Under the expected mapping an NMI meets the
+; ROM RETN at C066h; overlay selection does not mask NMI or protect its stack.
 TOVL:   CALL    TBEGIN
         DB      7,"OVERLAY","Latch bit 0: ROM C000h-C7FFh appears at 0000h-07FFh",0
         LD      A,($C000+OVLPRB)
-        LD      B,A             ; B = ROM byte, C = RAM value before
+        LD      B,A             ; B = ROM byte; C will hold its complement
         CPL
         LD      C,A
         LD      (OVLPRB),A
@@ -268,7 +268,7 @@ TOVL:   CALL    TBEGIN
         LD      (OVLPRB+1),A    ; 0800h: not overlaid
         LD      A,(LATCHV)
         AND     $FE
-        OUT     (SYSLAT),A      ; overlay on; NMI meets the RETN at C066h
+        OUT     (SYSLAT),A      ; select the boot overlay directly
         LD      A,(OVLPRB)
         LD      D,A             ; D = 07FFh read with the overlay on
         LD      A,(OVLPRB+1)
@@ -324,7 +324,7 @@ TOVL1:  CALL    RESZ
         CP      B
         JR      Z,TOVLR
         LD      HL,SAVE
-        CP      (HL)            ; C: RAM before
+        CP      (HL)            ; compare with the seeded RAM complement
         JR      Z,TOVLD
         CALL    PRI
         DB      "RAM changed to ",0
@@ -338,15 +338,14 @@ TOVLD:  CALL    PRI
         DB      "is dropped",0
 TOVLX:  CALL    PRI
         DB      "; read under overlay ",0
-        LD      A,(SAVE+5)      ; H
+        LD      A,(SAVE+5)      
         CALL    PRHEX
         JP      REND
 
-; ---- PROTECT ------------------------------------------------------------------
-
-; Latch bit 1 should make 4000h-7FFFh read-only and leave 3FFFh writable.
-; The stack is in the protected range, so nothing between the two latch
-; writes uses it.
+; T09 compares writes at 4000h/7DFFh with the writable 3FFFh control while
+; latch bit 1 is set. Explicit instructions between the latch writes use
+; no stack because it lies in the protected range; an asynchronous NMI still
+; uses that stack. Keep the status sample at SAVE+5 for the later T11 report.
 TPROT:  CALL    TBEGIN
         DB      9,"PROTECT","Latch bit 1: 4000h-7FFFh read-only, 3FFFh writable",0
         LD      HL,$4000
@@ -398,9 +397,9 @@ TPROT1: CALL    RESZ
         CALL    PRHEX
         JP      REND
 
-; ---- Latch read-back and the status port ------------------------------------
-
-; The board documents the latch as write-only; Debug80 lets it be read.
+; T10 reports latch read-back, which Debug80 supports but the board documents
+; as write-only. It restores LATCHV and leaves T09's SAVE+5 sample intact.
+; Any mismatch prints "write-only"; that label is not a physical-port proof.
 TLATRD: CALL    TBEGIN
         DB      10,"LATCHRD","Reading port FFh after writing it",0
         LD      HL,LATVALS
@@ -446,10 +445,11 @@ TLAT4:  CALL    PRI
         JP      REND
 LATVALS:DB      $01,$05,$0D,$81
 
-; Port 03h with the latch at 01h, 03h (PROTECT, read during T09), 05h
-; (EXPAND) and 81h (CAPS). The board's documentation puts the Matrix,
-; Protect and Expand switches in bits 0-2 and the EXPAND latch bit in bit 3;
-; Debug80 shows PROTECT and EXPAND in bits 1-2.
+; In main's sequence T11 prints port 03h for latch 01h/03h/05h/81h.
+; T09 supplied the earlier 03h sample; the other three are taken here.
+; Board docs assign switch inputs to bits 0-2 and EXPAND latch state to bit 3;
+; Debug80 instead reflects PROTECT/EXPAND in bits 1-2. This is INFO, not a
+; verdict on either wiring model. Restore LATCHV before reporting.
 TSTATUS:CALL    TBEGIN
         DB      11,"STATUS ","Port 03h for latch values 01h, 03h, 05h, 81h",0
         IN      A,(STSPORT)
@@ -484,8 +484,6 @@ TSTS1:  LD      A,(DE)
         JP      REND
 LATST:  DB      $01,$03,$05,$81
 
-; ---- Bank field ---------------------------------------------------------------
-
 ; Select bank field value A (0-15) with EXPAND on.
 BSEL:   RLCA
         RLCA
@@ -493,11 +491,11 @@ BSEL:   RLCA
         OR      LATSHAD+LATEXP
         JP      SETLAT
 
-; Write a tag to each field value from 15 down to 0, then the base mapping
-; (EXPAND off), and read every tag back. Values that share RAM read the tag
-; of the last one written, so each value maps to the lowest value that shares
-; its RAM; the base mapping reads EEh. A tag is checked at 8000h, 8001h and
-; BFFFh, so a part-decoded chip shows as no RAM (FFh).
+; T12 maps bank-field aliases by tagging values 15 down to 0, then the base
+; mapping with EEh. Shared RAM retains the last tag, so BANKMAP records its
+; lowest field value, EEh for base, or FFh for inconsistent probe bytes.
+; Probes cover only 8000h/8001h/BFFFh; agreement does not prove a whole bank.
+; Restore the base mapping before output; this observation is INFO.
 TBANKS: CALL    TBEGIN
         DB      12,"BANKS  ","What each bank field value (latch bits 3-6) selects",0
         LD      B,16
@@ -583,7 +581,8 @@ BTAG:   LD      (WINDOW),A
         XOR     $A5
         LD      (WINDOW+1),A
         RET
-; Read the tag: A = tag, or FFh if the three bytes disagree.
+; Read the three tag probes: A = tag/Z, or FFh/NZ on disagreement. C/AF work;
+; a deliberately written FFh tag can also agree, though T12 never writes one.
 BREAD:  LD      A,(WINDOW)
         LD      C,A
         LD      A,($BFFF)
@@ -596,7 +595,9 @@ BREAD:  LD      A,(WINDOW)
 BREADN: LD      A,$FF
         RET
 
-; T13: pattern-test each bank found, two passes each.
+; T13 tests only self-owned BANKMAP entries, with two XOR/complement passes.
+; No such entries gives RNONE. Stop at the first failure, retain its field
+; and fresh RRBANK record, and restore the base mapping before any report.
 TBNKRAM:CALL    TBEGIN
         DB      13,"BANKRAM","Each distinct bank, 8000h-BFFFh, 2 passes",0
         XOR     A

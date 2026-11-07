@@ -32,7 +32,8 @@ checks on the board. Two builds from the same sources give identical images.
 
 The sources are in `diag/`. They reuse TEC-OS's reset path, serial routines,
 SD driver and font. `tools/diag.mjs` generates `diag/gen/config.asm` and
-`diag/gen/font.asm` before assembling with ATOM.
+`diag/gen/font.asm` before assembling with TAS by default. Set
+`TECOS_ROM_ASSEMBLER=atom` for the ATOM reference build.
 
 ## Running it on a board
 

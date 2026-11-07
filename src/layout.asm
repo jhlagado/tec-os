@@ -1,174 +1,133 @@
-; TEC-OS memory and port contract.
-;
-; Fixed RAM is 0000h-7FFFh, the bank
-; window is 8000h-BFFFh and ROM is
-; C000h-FFFFh. The classic transient
-; program area runs from 0100h to the
-; BDOS entry jump, which cold boot
-; places below the resident workspace at
-; the top of EXPAND 0.
+; Fixed RAM: 0000h-7FFFh. Bank window:
+; 8000h-BFFFh. ROM: C000h-FFFFh.
+; With no resident service the TPA runs
+; from 0100h to the BDOS stub below the
+; workspace and allocation vectors in
+; EXPAND 0. Services lower the current
+; top through PZTOP.
 
-; ---- Ports
-; --------------------------------------
+KEYPORT EQU $00  ; keypad encoder. Read
+                 ; can start Debug80's
+                 ; queued serial RX
+DIGPORT EQU $01  ; TX bit 6, digits 0-5.
+                 ; Speaker bit 7
+STSPORT EQU $03  ; RX input bit 7
+SDIO EQU $FD     ; out bits 0/1/2:
+                 ; MOSI, CLK, /CS
+                 ; in bit 7: MISO
 
-KEYPORT EQU $00  ; keypad encoder; read
-                 ; pumps Debug80 serial
-                 ; RX
-DIGPORT EQU $01  ; bit 6 serial TX, bits
-                 ; 0-5 digit select
-STSPORT EQU $03  ; status input; bit 7
-                 ; serial RX
-SDIO EQU $FD     ; SD SPI: out bit 0
-                 ; MOSI, 1 CLK, 2 /CS;
+; LATKEEP preserves /SHADOW, PROTECT and
+; CAPS during bank changes.
 
-; in bit 7 MISO
+LATSHAD EQU $01  ; /SHADOW high:
+                 ; overlay off
+LATKEEP EQU $83
 
-SYSLAT EQU $FF   ; write-only system
-                 ; latch
-
-; ---- System latch values
-; --------------------------------------
-
-LATSHAD EQU $01  ; /SHADOW high: boot
-                 ; overlay removed
-LATKEEP EQU $83  ; bits kept by bank
-                 ; changes: /SHADOW,
-
-; PROTECT and CAPS
-
-LATEXP EQU $04   ; EXPAND: EXPAND 1 at
-                 ; 8000h-BFFFh
-
-; classic profile: overlay off, base
-; window
+; Classic latch: overlay off, base bank.
 
 LATCLAS EQU LATSHAD
 
-; and for EXPAND 1
+; EXPAND window base/test address.
 
 DETEXP EQU $8000
-CTAB EQU $BC00   ; the block cache's
-                 ; table: the lines'
-                 ; blocks,
 
-; 4 bytes each, and their dirty bytes
+; EXPAND 1 cache: 30 lines of 512 bytes
+; at 8000h-BBFFh. CTAB has 30 four-byte
+; LBA keys, FFFFFFFFh for empty. CDIRTY
+; has one separate dirty byte per line.
+
+CTAB EQU $BC00   ; four-byte LBA keys
 
 CDIRTY EQU $BC80
-NLINES EQU 30    ; lines of 512 bytes at
-                 ; 8000h-BBFFh
+NLINES EQU 30    ; cache lines
 
-; ---- Page zero (CP/M 2.2 base page)
-; --------------------------------------
+; CP/M 2.2 base-page fields. PZDU packs
+; user in bits 4-7 and drive in bits
+; 0-3.
 
 IOBYTE EQU $0003
-PZDU EQU $0004   ; user number (bits
-                 ; 4-7) and drive (bits
-                 ; 0-3)
+PZDU EQU $0004
 
-; JP to the BDOS stub
+; Page-zero JP. Target at 0006h is
+; PZTOP: lowest service entry or stub.
 
 PZBDOS EQU $0005
 
-; the drive a program was loaded from,
+; Loaded-drive byte, CP/M 3's extension:
+; 0 current, 1 A, 2 B and so on.
 
 PZLDRV EQU $0050
-
-; 0 the current, 1 A: (CP/M 3's)
 
 RST7 EQU $0038
 DEFDMA EQU $0080
 
-; CP/M reserves 0040h-004Fh for BIOS
-; scratch. TEC-OS keeps only the latch's
-; shadow here, the one byte read while
-; EXPAND 1 is in view; the console's
-; state is above the RAM BIOS table
-; (ram.asm), and 0041h-004Fh are unused
-; (KS36c). shadow copy of the system
-; latch
+; BIOS scratch 0040h-004Fh now holds
+; only LATCHV, visible with EXPAND 1 in
+; view. The former page-zero console
+; bytes moved above RAMBIOS (KS36c).
+; PICO state, LINEBUF, VCLAIM and CONMOD
+; remain below it.
+CDMTX EQU $01    ; matrix enabled
+CDTMS EQU $02    ; PICO cold probe
+CDGLC EQU $04    ; GLCD.SVC installed
+CDRTC EQU $08    ; RTC cold probe
+CDCLM EQU $10    ; VCLAIM when claimed
+CDWRD EQU $80    ; ROM word on LCD row 3
 
-LATCHV EQU $0040
-
-CDMTX EQU $01    ; matrix keyboard
-                 ; enabled
-CDTMS EQU $02    ; PICO9918 answered at
-                 ; cold boot
-CDGLC EQU $04    ; GLCD.SVC is in
-CDRTC EQU $08    ; a DS1302 answered at
-                 ; cold boot
-CDCLM EQU $10    ; VCLAIM's value: the
-                 ; PICO9918 is claimed
-CDWRD EQU $80    ; a word of the ROM's
-                 ; is on LCD row 3
-
-; Console modes: the IOBYTE CON: field
-; in effect (CONMOD). Odd means a video
-; display with the matrix keyboard.
+; Effective console modes in CONMOD.
+; IOBYTE's requested CON: field takes
+; effect through CONSEL. Odd modes use a
+; display and matrix keyboard.
 
 CMTTY EQU 0      ; serial terminal
-CMCRT EQU 1      ; PICO9918 and matrix
-                 ; keyboard
-CMBAT EQU 2      ; keys from the serial
-                 ; reader, output
-                 ; discarded
-CMUC1 EQU 3      ; GLCD and matrix
-                 ; keyboard
+CMCRT EQU 1      ; PICO + matrix keys
+CMBAT EQU 2      ; serial reader. List
+                 ; output discarded
+CMUC1 EQU 3      ; GLCD + matrix keys
 
-; ---- Classic resident region (top of
-; the classic bank)
-; ----------------------
-; cold-boot stack top, fixed RAM
+; BOOTSTK is the fixed-RAM stack top.
+; WSBASE is generated so the lower
+; classic-bank workspace ends at
+; RAMBIOS. ALVINIT packs vectors below
+; WSBASE then the BDOS stub below them.
 
 BOOTSTK EQU $8000
 
-; WSBASE, the first byte of the fixed
-; workspace, comes from the generated
-; configuration: the build places it so
-; that the workspace ends at RAMBIOS.
-; Below it, cold boot packs the
-; allocation vectors and the BDOS entry
-; jump (STUBAD) for the volumes mounted.
-; RAM copy of the BIOS jump table, top
-; page
+; RAM copy of the 17-entry BIOS table.
 
 RAMBIOS EQU $BF00
 BIOSLEN EQU 17*3
 
-; ---- Resident stack sizes (measured by
-; test/stacks.test.mjs) -------------
-; Each holds its base, the deepest use
-; with no resident, and SVCLIM's limit
-; for services with a quarter free
-; (KE-173): the BIOS's base is 18, warm
-; boot's flush, and the CCP's 18. No NMI
-; frame is in the figures: the test
-; takes an NMI only where 0066h holds
-; RETN, which TEC-OS never writes. The
-; CCP stack is also a transient's
-; default stack: CP/M's eight levels and
-; the
-; return word need 18 bytes of it.
+; Resident stack reservations and
+; service room from SVCLIM, with a
+; quarter free (KE-173). Historical bare
+; use: BIOS 18 bytes for warm flush, CCP
+; 18 bytes. A transient's eight call
+; levels plus return word require 18
+; bytes of CCP stack.
+; No NMI frame is counted. The test
+; takes NMI only with RETN at 0066h,
+; which TEC-OS does not install. CCP
+; guard plus stack stays 43 bytes.
 
 BDOSSTN EQU 54
-CCPSTN EQU 32    ; within STKGUARD's 43,
-                 ; so no RAM
+CCPSTN EQU 32    ; guard + stack stay 43
 BIOSSTN EQU 40
-
-; ---- Disk geometry limits
-; --------------------------------------
 
 MAXDRV EQU 4     ; drives A-D
 DPHSZ EQU 16
-DRVESZ EQU 8     ; drive table entry
-                 ; size
+DRVESZ EQU 8     ; drive entry bytes
 
-; A reset's retained selection, in the
-; TPA, which nothing writes between COLD
-; and MEMINIT: DRVTAB's copy, then each
-; drive's index + 1, in DRVIDX's order
-; after it, then RESEL's working copy of
-; one descriptor. RSLBUF+6, A:'s
-; geometry, is 0 for no selection.
+; RSLCAP captures DRVTAB here before
+; workspace clearing. After capture the
+; cold path leaves it until MEMINIT.
+; RESEL rebuilds the four
+; current-container indices+1, with 0
+; for none, and uses eight-byte
+; descriptor scratch. RSLBUF+6=0 means
+; no retained selection. The 36-byte
+; selection is committed only after all
+; retained drives and slots match.
 
 RSLBUF EQU $0100
 RSLIDX EQU RSLBUF+MAXDRV*DRVESZ

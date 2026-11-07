@@ -1,26 +1,19 @@
-; ERA name: delete the files the name
-; matches, which may be ambiguous. A
-; name that is all ? (*.*, on any drive)
-; first asks ALL (Y/N)? and deletes
-; nothing unless the answer starts with
-; Y. NO FILE when nothing matched; a bad
-; command with no operand, or one that
-; does not parse. Uses CMDFCB, ERAANS
-; and ERAALL; returns to the prompt. ERA
-; deletes through BDOS only after the
-; complete operand has parsed.
+; CCP ERA, REN and COPY commands.
+; ERA: require one complete pattern
+; before deleting. For eleven '?'
+; name/type bytes, ask ALLQUERY and
+; drain the reply through CR. Only
+; first-character Y/y confirms. An
+; immediate CR cancels. Cancellation
+; enters STARTED without ERRGO.
 
 CMDERA:
   call ARGSKIP
-  jp z,BADCMD    ; no operand
-  call CMDPARSE  ; the name into CMDFCB,
-  call ENDCHK    ; with nothing after it
+  jp z,BADCMD
+  call CMDPARSE
+  call ENDCHK
   xor a
-  ld (ERAALL),a  ; not a whole-drive
-                 ; erase unless
-                 ; confirmed
-
-; is every name and type byte ?
+  ld (ERAALL),a
 
   ld hl,CMDFCB+1
   ld b,11
@@ -28,397 +21,339 @@ CMDERA:
 ERACHK:
   ld a,(hl)
   cp '?'
-  jr nz,ERADEL   ; one is not: delete
-                 ; without asking
+  jr nz,ERADEL
   inc hl
   djnz ERACHK
 
-; all are: ask ALL (Y/N)?
-
   ld de,ALLQUERY
   call PUTSTR
-  ld c,1         ; BDOS 1, a key, echoed
+  ld c,1
   call BDOS
-  cp CR          ; Return alone is no:
-  jp z,STARTED   ; nothing is deleted
-  and $DF        ; the answer in upper
-                 ; case, kept
-  ld (ERAANS),a  ; while the line is
-                 ; read out
+  cp CR
+  jp z,STARTED
+  and $DF
+  ld (ERAANS),a
 
 ERADRAIN:
-  ld c,1         ; the rest of the
-                 ; answer's line,
-  call BDOS      ; read and dropped up
-                 ; to its Return
+  ld c,1
+  call BDOS
   cp CR
   jr nz,ERADRAIN
 
 ERAGOT:
   ld a,(ERAANS)
-  cp 'Y'         ; an answer starting
-                 ; with Y or y
-  jp nz,STARTED  ; erases; any other
-                 ; erases nothing
+  cp 'Y'
+  jp nz,STARTED
   ld a,1
-  ld (ERAALL),a  ; confirmed
+  ld (ERAALL),a
 
-; Delete every file CMDFCB matches; NO
-; FILE when none does. After the ALL
-; question the prompt starts on a new
-; line.
+; Delete CMDFCB through DOSSEQ 19. FFh
+; enters FILENO. Otherwise a confirmed
+; wildcard delete enters STARTED, and an
+; unprompted delete enters MAINLOOP.
 
 ERADEL:
-  call DOSSEQ    ; delete: A FFh when
-                 ; nothing matched
-  DB 19*2+0      ; BDOS 19, source FCB
+  call DOSSEQ
+  DB 19*2+0
   inc a
-  jr z,FILENO    ; nothing matched: NO
-                 ; FILE
+  jr z,FILENO
   ld a,(ERAALL)
-  or a           ; after the question's
-                 ; answer,
-  jp nz,STARTED  ; a new line before the
-                 ; prompt
-  jp MAINLOOP    ; else the prompt at
-                 ; once
+  or a
+  jp nz,STARTED
+  jp MAINLOOP
 
-; REN's public syntax is NEW=OLD. A
-; separate destination FCB permits an
-; existence check before the function-23
-; mutation FCB is assembled. Both names
-; are unambiguous and on one drive:
-; either one's, the other naming none or
-; the same. FILE EXISTS when NEW is
-; there already, NO FILE when OLD is
-; not, and a bad command otherwise. Uses
-; CMDFCB for OLD, RENFCB for NEW, and
-; LOADBUF as the DMA record; returns to
-; the prompt.
+; REN NEW=OLD: require unambiguous
+; complete names with no spaces around
+; '='. Parse NEW into RENFCB and OLD
+; into CMDFCB. Copy a single explicit
+; drive to the omitted side. Reject two
+; distinct explicit drives. Both omitted
+; drives stay zero for BDOS default
+; selection.
 
 CMDREN:
   call ARGSKIP
-  jp z,BADCMD    ; no operand
+  jp z,BADCMD
   cp '='
-  jp z,BADCMD    ; no new name before
-                 ; the =
-  ld de,RENFCB   ; the new name into
-                 ; RENFCB,
+  jp z,BADCMD
+  ld de,RENFCB
   call FCBPARSE
-  call CPCHK     ; unambiguous,
+  call CPCHK
   ld a,(hl)
-  cp '='         ; with the = straight
-                 ; after it
+  cp '='
   jp nz,BADCMD
   inc hl
-  ld a,(hl)      ; the old name straight
-                 ; after the =:
-  or a           ; not the line's end,
-  jp z,BADCMD
-  cp SPACE       ; a space
-  jp z,BADCMD
-  cp '='         ; or a second =
-  jp z,BADCMD
-  call ONENAME   ; the old name into
-                 ; CMDFCB, and no more
-
-  ld hl,CMDFCB   ; one drive for both
-                 ; names: the new one's
-  ld a,(RENFCB)  ; or the old one's; two
-                 ; different are bad
+  ld a,(hl)
   or a
-  jr z,RENOLD    ; the new names none:
-                 ; the old one's
+  jp z,BADCMD
+  cp SPACE
+  jp z,BADCMD
+  cp '='
+  jp z,BADCMD
+  call ONENAME
+
+  ld hl,CMDFCB
+  ld a,(RENFCB)
+  or a
+  jr z,RENOLD
   cp (hl)
-  jr z,RENTEST   ; both name the same
-                 ; drive
+  jr z,RENTEST
   ld b,a
   ld a,(hl)
-  or a           ; the old names
-                 ; another: a bad
-                 ; command
+  or a
   jp nz,BADCMD
-  ld (hl),b      ; the old names none:
-                 ; the new one's
+  ld (hl),b
 
 RENOLD:
-  ld a,(hl)      ; CMDFCB's drive into
-                 ; RENFCB
+  ld a,(hl)
   ld (RENFCB),a
 
+; Set search DMA to LOADBUF and search
+; RENFCB with BDOS 17. Any non-FFh
+; result enters RENEXIST. Otherwise copy
+; its twelve reference bytes to
+; CMDFCB+16 and rename through DOSSEQ
+; 23. FFh enters FILENO, other returned
+; results MAINLOOP. H is not inspected.
+
 RENTEST:
-  ld de,LOADBUF  ; BDOS 26: the search's
-                 ; directory
-  ld c,26        ; record goes to
-                 ; LOADBUF
+  ld de,LOADBUF
+  ld c,26
   call BDOS
-  ld de,RENFCB   ; BDOS 17, search
-                 ; first, for the new
-  ld c,17        ; name, called directly
+  ld de,RENFCB
+  ld c,17
   call BDOS
-  inc a          ; found: the new name
-                 ; is taken
+  inc a
   jr nz,RENEXIST
 
-  ld hl,RENFCB   ; the new drive and
-                 ; name into CMDFCB's
-
-; second half, where BDOS 23 reads them
+  ld hl,RENFCB
 
   ld de,CMDFCB+16
   ld bc,12
   ldir
-  call DOSSEQ    ; rename: A FFh when
-                 ; OLD is not there
-  DB 23*2+0      ; BDOS 23, source FCB
+  call DOSSEQ
+  DB 23*2+0
   inc a
-  jp z,FILENO    ; not there: NO FILE
-  jp MAINLOOP    ; renamed: the prompt
+  jp z,FILENO
+  jp MAINLOOP
 
-; The FILE EXISTS error: the new name is
-; taken, and nothing is renamed.
+; Report FILEEX through ERRGO before
+; rename. ERRGO sets PRGCODE=FF00h.
 
 RENEXIST:
   ld de,FILEEX
-  jp ERRGO       ; the message at DE as
-                 ; a failure
+  jp ERRGO
 
-; Parse the next name at HL into the FCB
-; at DE, unambiguous (CPNAME); parse it
-; (CPPARSE), keeping DE, with the
-; current drive from 0004h in a 0 drive
-; byte; check the FCB just parsed is
-; unambiguous (CPCHK). A bad command
-; otherwise. PARSEFCB clears the rest of
-; the FCB. Each leaves HL at the name's
-; delimiter and destroys AF and BC;
-; CPPARSE returns the drive in A.
+; CPNAME parses one unambiguous
+; reference. CPPARSE skips spaces,
+; preserves DE across PARSEFCB and
+; rejects carry through BADCMD. If drive
+; is zero, store (CURDSK AND 0Fh)+1.
+; CPPARSE returns that drive in A.
+; Success leaves HL at the delimiter and
+; DE at the FCB base. CPCHK preserves
+; delimiter HL around UNAMBIG. CPNAME
+; does not preserve CPPARSE's A result.
 
 CPNAME:
-  call CPPARSE   ; parse, then check as
-                 ; CPCHK
+  call CPPARSE
 
 CPCHK:
-  call UNAMBIG   ; carry: an empty or
-                 ; ambiguous name
+  call UNAMBIG
   jr c,CPBAD
   ret
 
 CPPARSE:
-  call SKIPSP    ; past the spaces
-                 ; before the name
+  call SKIPSP
   push de
-  call PARSEFCB  ; carry: a name that
-                 ; does not parse
+  call PARSEFCB
   pop de
   jr c,CPBAD
   ld a,(de)
-  or a           ; a drive given is kept
+  or a
   ret nz
-  ld a,(CURDSK)  ; the drive in use
-  and $0F        ; its low nibble, 0 for
-                 ; A:,
-  inc a          ; as an FCB's drive, 1
-                 ; for A:
+  ld a,(CURDSK)
+  and $0F
+  inc a
   ld (de),a
   ret
 
-; TEC-OS: COPY SOURCE DEST copies a file
-; a record at a time through the default
-; DMA record, as COPY.COM does: open the
-; source, erase and make the
-; destination, read and write to the
-; end, close, and print COPIED nnnn
-; (records, hex) or the same error text.
-; On a write error the destination is
-; closed with the records written, where
-; COPY.COM leaves it open. Nothing in
-; the TPA is touched. DEST may be a
-; drive alone, or a blank name with a
-; type: the source's whole name is used.
-; Both names carry their drive, the
-; current one if none was given, and a
-; destination that names the source is a
-; bad command, with nothing opened, as
-; is any text after DEST. Takes the
-; operands at ARGSTRT. Uses CMDFCB for
-; SOURCE, RENFCB for DEST and DIRNUM for
-; the count of records; returns to the
-; prompt.
+; COPY source destination: require two
+; unambiguous references and validate
+; the full tail before I/O. Source uses
+; CMDFCB, destination RENFCB. A blank
+; destination name copies all eleven
+; source name/type bytes, replacing any
+; supplied type. Use DEFDMA for 128-byte
+; payloads and DIRNUM for the 16-bit
+; successful-write count.
 
 CMDCOPY:
 
-; the operands
-
   ld hl,(ARGSTRT)
-  ld de,CMDFCB   ; the source into
-                 ; CMDFCB, unambiguous
+  ld de,CMDFCB
   call CPNAME
-  ld de,RENFCB   ; the destination into
-                 ; RENFCB
-  call CPPARSE   ; DE kept
-  call ENDCHK    ; nothing after it; DE
-                 ; kept
+  ld de,RENFCB
+  call CPPARSE
+  call ENDCHK
   inc de
-  ld a,(de)      ; its name's first
-                 ; byte, a space when
-  cp SPACE       ; only a drive or a
-                 ; type was given
+  ld a,(de)
+  cp SPACE
   jr nz,CPD1
-
-; no name: the source's name and type
 
   ld hl,CMDFCB+1
   ld bc,11
   ldir
 
 CPD1:
-  call CPCHK     ; the destination
-                 ; unambiguous
-  ld hl,CMDFCB   ; the source itself?
-  ld de,RENFCB   ; drive, name and type
-                 ; compared,
-  ld b,12        ; 12 bytes
+  call CPCHK
+  ld hl,CMDFCB
+  ld de,RENFCB
+  ld b,12
+
+; Compare twelve raw drive/name/type
+; bytes after default-drive filling. All
+; equal enters BADCMD before I/O. Any
+; difference enters CPGO. Unlike BDOS
+; matching, no name-attribute masking
+; occurs here.
 
 CPSAME:
   ld a,(de)
   cp (hl)
-  jr nz,CPGO     ; a byte differs:
-                 ; another file
+  jr nz,CPGO
   inc hl
   inc de
   djnz CPSAME
 
 CPBAD:
-  jp BADCMD      ; the same file, or a
-                 ; bad name
+  jp BADCMD
+
+; Use DMA=0080h and open the source. FFh
+; open reports CPNOSRC through CPFAIL.
+; Delete the destination before making
+; it anew. FFh make reports CPNODST.
+; Clear DIRNUM only after creation.
+; Replacement is destructive before
+; copying begins.
 
 CPGO:
-  ld de,DEFDMA   ; BDOS 26: records pass
-                 ; through
-  ld c,26        ; the default DMA
-                 ; record at 0080h
+  ld de,DEFDMA
+  ld c,26
   call BDOS
-  call DOSSEQ    ; open the source
-  DB 15*2+0      ; BDOS 15, source FCB
-  inc a          ; FFh: not found
+  call DOSSEQ
+  DB 15*2+0
+  inc a
   ld de,CPNOSRC
-  jr z,CPFAIL    ; NO SOURCE
-  call DOSSEQ    ; erase any old
-                 ; destination,
-  DB 19*2+1      ; BDOS 19, destination
-                 ; FCB
-  call DOSSEQ    ; then make it anew
-  DB 22*2+1      ; BDOS 22, destination
-                 ; FCB
-  inc a          ; FFh: no directory
-                 ; entry free
+  jr z,CPFAIL
+  call DOSSEQ
+  DB 19*2+1
+  call DOSSEQ
+  DB 22*2+1
+  inc a
   ld de,CPNODST
-  jr z,CPFAIL    ; CANNOT MAKE DEST
+  jr z,CPFAIL
   ld hl,0
-
-; DIRNUM counts the records copied
 
   ld (DIRNUM),hl
 
-CPLOOP:
-  call DOSSEQ    ; the source's next
-                 ; record
-  DB 20*2+0      ; BDOS 20, source FCB
-  or a           ; nonzero: the source's
-                 ; end
-  jr nz,CPDONE
-  call DOSSEQ    ; written to the
-                 ; destination
-  DB 21*2+1      ; BDOS 21, destination
-                 ; FCB
-  or a           ; nonzero: the disk or
-                 ; directory is full
-  jr nz,CPWERR   ; WRITE ERROR, the
-                 ; destination closed
+; Read one source record. Any nonzero
+; returned result, including read
+; errors, enters CPDONE. Write a
+; zero-result record to the destination.
+; A nonzero write enters CPWERR. Count
+; only successful writes, modulo 65536.
 
-; one more record copied
+CPLOOP:
+  call DOSSEQ
+  DB 20*2+0
+  or a
+  jr nz,CPDONE
+  call DOSSEQ
+  DB 21*2+1
+  or a
+  jr nz,CPWERR
 
   ld hl,(DIRNUM)
   inc hl
   ld (DIRNUM),hl
   jr CPLOOP
 
-CPDONE:
-  call DOSSEQ    ; close the destination
-  DB 16*2+1      ; BDOS 16, destination
-                 ; FCB
-  inc a          ; FFh: the close failed
-  ld de,CPCLOSE
-  jr z,CPFAIL    ; CLOSE ERROR
+; Close only the destination through
+; function 16. FFh reports CPCLOSE
+; through CPFAIL. Otherwise print COPIED
+; and four hex digits of DIRNUM, high
+; byte first, then CR/LF and PRTGO. No
+; source close is attempted.
 
-; COPIED and the count in hex,
+CPDONE:
+  call DOSSEQ
+  DB 16*2+1
+  inc a
+  ld de,CPCLOSE
+  jr z,CPFAIL
 
   ld de,CPCOPIED
   call PUTSTR
 
-; the high byte first
-
   ld a,(DIRNUM+1)
-  call CPHEX     ; print high byte
+  call CPHEX
   ld a,(DIRNUM)
   call CPHEX
   ld de,CRLFMSG
-  jp PRTGO       ; then CR LF and the
-                 ; prompt
+  jp PRTGO
+
+; After a returned write failure,
+; attempt destination close and ignore
+; its ordinary result. Report CPWRITE
+; through ERRGO. Earlier writes are not
+; undone. BDOS errors can exit
+; nonlocally. CPFAIL takes the message
+; in DE.
 
 CPWERR:
-  call DOSSEQ    ; close the
-                 ; destination, so that
-                 ; the
-  DB 16*2+1      ; records written are
-                 ; in its entry
-  ld de,CPWRITE  ; then WRITE ERROR,
-                 ; whatever the close
+  call DOSSEQ
+  DB 16*2+1
+  ld de,CPWRITE
 
 CPFAIL:
-  jp ERRGO       ; the message at DE as
-                 ; a failure
+  jp ERRGO
 
-; One inline byte after CALL: BDOS
-; function*2 + destination bit
-; (0=CMDFCB, 1=RENFCB). Advance the
-; return PC past it, preserving HL, B
-; and A. Keeps A, B and HL; the BDOS has
-; C, DE and the result. No frame is
-; added here; the READSRC terminal
-; CALL/byte/RET holds one extra return
-; word.
+; Call BDOS using the byte after CALL:
+; function*2 plus FCB selector bit 0.
+; Zero selects CMDFCB, one RENFCB.
+; Advance the saved return PC past this
+; byte.
+; A/B/HL are preserved only during
+; decoding. Tail-enter BDOS without
+; another CALL frame. Returned values
+; follow BDOS, including A=L and B=H.
+; READSRC's terminal CALL/byte/RET holds
+; one extra return word.
 
 DOSSEQ:
-  ex (sp),hl     ; HL at the descriptor
-                 ; byte
+  ex (sp),hl
   ld c,(hl)
-  inc hl         ; the return address
-                 ; past it,
-  ex (sp),hl     ; and the caller's HL
-                 ; back
-  srl c          ; C the function, carry
-                 ; the FCB bit
-  ld de,CMDFCB   ; 0: the source FCB
+  inc hl
+  ex (sp),hl
+  srl c
+  ld de,CMDFCB
   jr nc,DOSGO
-  ld de,RENFCB   ; 1: the destination
-                 ; FCB
+  ld de,RENFCB
 
 DOSGO:
-  jp BDOS        ; which returns to the
-                 ; caller
+  jp BDOS
 
-; Print A as two hex digits by BDOS
-; function 2, through console.asm's
-; HEXHL. Destroys AF, BC, DE, HL.
+; Print A as two uppercase hex digits
+; through HEXHL. CPHEXC passes each
+; digit in A through E to PUTCHAR/BDOS
+; 2. CPHEX preserves BC and changes
+; AF/DE/HL.
 
 CPHEX:
-  ld hl,CPHEXC   ; each digit through
-                 ; PUTCHAR
+  ld hl,CPHEXC
   jp HEXHL
 
 CPHEXC:
-  ld e,a         ; function 2 takes the
-                 ; character in E
+  ld e,a
   jp PUTCHAR

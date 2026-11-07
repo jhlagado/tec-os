@@ -1,22 +1,24 @@
-; VIDMODE.COM: leave the display unusable for text, then return to CP/M. On
-; the PICO9918, select Graphics II with the display off and zero the first
-; 2 KiB of VRAM, where the console patterns live. On the GLCD, return the
-; controller to its basic instruction set with graphics and display off.
+; VIDMODE.COM: damage display state, then warm boot to exercise restoration.
+; Both port sets are written without probing: PICO Graphics II/display off,
+; first 2 KiB VRAM zero; GLCD basic set, graphics and display off.
+; B=0 delays are 256 DJNZ iterations, subject to clock/interrupt/NMI variation.
+; Multi-instruction port sequences are unguarded.
+; Restoration depends on the active console driver.
 
 VDPDAT  EQU     $BE
 VDPCTL  EQU     $BF
 GLCCMD  EQU     $07
 
         ORG     $0100
-        LD      A,$02           ; R0: Graphics II
+        LD      A,$02           
         OUT     (VDPCTL),A
         LD      A,$80
         OUT     (VDPCTL),A
-        LD      A,$80           ; R1: 16K, display off
+        LD      A,$80           
         OUT     (VDPCTL),A
         LD      A,$81
         OUT     (VDPCTL),A
-        XOR     A               ; write from VRAM 0000h
+        XOR     A               
         OUT     (VDPCTL),A
         LD      A,$40
         OUT     (VDPCTL),A
@@ -27,15 +29,15 @@ ZERO:   XOR     A
         LD      A,B
         OR      C
         JR      NZ,ZERO
-        LD      A,$34           ; GLCD: extended set, graphics off
+        LD      A,$34           
         OUT     (GLCCMD),A
         LD      B,0
 WAIT:   DJNZ    WAIT
-        LD      A,$30           ; basic set
+        LD      A,$30           
         OUT     (GLCCMD),A
         LD      B,0
 WAIT2:  DJNZ    WAIT2
-        LD      A,$08           ; display off
+        LD      A,$08           
         OUT     (GLCCMD),A
         LD      B,0
 WAIT3:  DJNZ    WAIT3

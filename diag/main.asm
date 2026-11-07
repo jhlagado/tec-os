@@ -1,8 +1,12 @@
-; Main sequence: the automatic tests, then the interactive ones if chosen,
-; then the report. The report can be printed again at any time afterwards.
+; Run automatic diagnostics, optionally run interactive tests, then replay
+; the retained report. Further interactive runs append while room remains;
+; NCOUNT result-code byte counters continue rather than starting a new report.
+; COLD has proved home RAM before START selects the stack and clears VARS.
+; Keep recording off until RAMTST finishes: it destroys the report area and
+; NMI vector. Reinstall the counter and initialise RPTP afterwards.
 
 START:  LD      SP,BOOTSTK
-        LD      HL,VARS         ; clear the variables
+        LD      HL,VARS         
         LD      DE,VARS+1
         LD      BC,$FF
         LD      (HL),0
@@ -10,7 +14,7 @@ START:  LD      SP,BOOTSTK
         LD      A,LATSHAD
         LD      (LATCHV),A
         CALL    NMIINS
-        IN      A,(STSPORT)     ; the Matrix switch, as TEC-OS reads it
+        IN      A,(STSPORT)     ; sample the Matrix switch once at startup
         AND     1
         LD      (MTXON),A
         CALL    LCDINIT
@@ -122,7 +126,8 @@ LCDHELLO:DB     "I/+ for interactive",0
 LCDRAM: DB      "RAM tests running",0
 LCDDONE:DB      "Done: R = report",0
 
-; The NMI counter copied to 0066h: every NMI adds one to NMICNT.
+; Copied handler at 0066h: increment NMICNT modulo 65536, preserving AF/HL.
+; Uses the interrupted stack; the two-byte count is not an atomic snapshot.
 NMITPL: PUSH    AF
         PUSH    HL
         LD      HL,NMICNT
@@ -135,7 +140,8 @@ NMITP1: POP     HL
         RETN
 NMITPE:
 
-; Install the NMI counter at 0066h.
+; Copy the counter handler to 0066h and zero NMICNT. Changes BC, DE, HL,
+; flags. Copy/reset is not atomic and does not mask NMI.
 NMIINS: LD      HL,NMITPL
         LD      DE,NMIVEC
         LD      BC,NMITPE-NMITPL

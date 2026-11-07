@@ -1,836 +1,683 @@
-; The BDOS's drive and file functions
-; that read the tables: the login and
-; read-only vectors, the DMA address,
-; the allocation vector, free space, the
-; DPB, the user, a file's size and
-; random record, and the directory
-; search. Included after bdosrec.asm by
-; rom.asm.
+; BDOS default/vector queries, DMA/user
+; operations, free space and file size,
+; position conversion and shared
+; directory iteration.
 
-; Function 24, the login vector: a bit
-; for each drive logged in since its
-; last reset, drive A in bit 0. Returns
-; it in HL, with A = L and B = H.
-; Changes AF, B and HL.
+; Function 24: return LOGINV in HL with
+; A=L/B=H. Bit 0 is drive A through bit
+; 15 for P. Changes AF/B/HL.
 
 FNLOGIN:
 
-; bit n set: drive n is logged in
-
   ld hl,(LOGINV)
-  jp RETWORD     ; return the vector
+  jp RETWORD
 
-; Function 25, the current drive: the
-; default drive, 0 for A. Returns it in
-; A and HL, with B = 0. Changes AF, B
-; and HL.
+; Function 25: return logical default
+; DEFDRV (0=A) through RETA: A=L, H=B=0.
+; An explicit FCB drive can change
+; CURDRV without changing this result.
+; Changes AF/B/HL.
 
 FNCURDSK:
-  ld a,(DEFDRV)  ; not CURDRV, the last
-                 ; an FCB selected
+  ld a,(DEFDRV)  ; logical default
   jp RETA
 
-; Function 26, set DMA: DE (PARAM) is
-; where the next record read or written
-; goes, and where a search puts its
-; directory record. It is kept in
-; CURDMA, which the directory's reads
-; and writes go back to, and passed to
-; the BIOS. Returns A = 0. Changes AF,
-; BC, HL and what the BIOS's SETDMA
-; changes.
+; Function 26: save caller DE in CURDMA
+; and pass it as BC to RAM BIODMA.
+; Record I/O and search use this DMA
+; address. Directory I/O restores it
+; before testing BIOS status, including
+; on error.
+; Return A=0. Changes AF/BC/HL and BIOS
+; SETDMA clobbers.
 
 FNSETDMA:
-  ld hl,(PARAM)  ; the caller's DE
+  ld hl,(PARAM)  ; saved caller DE
   ld (CURDMA),hl
-  ld b,h         ; BC for BIOS SETDMA
+  ld b,h         ; BIOS BC argument
   ld c,l
-  call BIODMA    ; through the RAM copy
-                 ; of the BIOS's table
+  call BIODMA    ; RAM SETDMA hook
   jp RETZERO
 
-; Function 27, the allocation vector's
-; address: the default drive's, a bit
-; for each block, block 0 in bit 7 of
-; its first byte. Returns it in HL, with
-; A = L and B = H. Changes AF, B and HL.
+; Function 27: return DEFALV in HL with
+; A=L/B=H without rebinding the drive or
+; replacing search state. Blocks start
+; at 0, bit 7 first in each byte.
+; Changes AF/B/HL.
 
 FNGETALV:
 
-; kept from the default drive's
-; selection
-
   ld hl,(DEFALV)
-  jp RETWORD     ; return ALV address
+  jp RETWORD
 
-; Function 46, CP/M 3's free space:
-; drive E's free blocks, from its
-; allocation vector, as records, in the
-; three bytes at the DMA address, low
-; first. The drive is selected as an
-; FCB's would be, and the default stays.
-; E is 0 for A; a drive past P, or one
-; absent, takes SELDRV's fatal path.
-; Returns A = 0. Changes every register
-; and IX; CURDRV is left on drive E.
+; Function 46: select drive E=0..15
+; through SELDRV, leaving DEFDRV
+; unchanged and CURDRV selected. Count
+; clear ALV bits for blocks 0..DSM
+; inclusive.
+; Write free blocks << BSH as three
+; little-endian bytes at CURDMA and
+; return A=0. BSH must be positive.
+; Supplied G1M/G8M values are 4/5. IX is
+; the DPB. All registers may change.
+; Selection errors enter BDERR
+; nonlocally.
 
 FNFREE:
-  ld a,e         ; the drive, 0 for A
-  call SELDRV    ; logged in if need be:
-                 ; DPBPTR, ALVPTR
+  ld a,e         ; 0=A..15=P
+  call SELDRV    ; bind selected tables
   ld ix,(DPBPTR)
 
-; block 0 in bit 7 of the first byte
-
   ld hl,(ALVPTR)
-  ld e,(ix+5)    ; DSM low byte
-  ld d,(ix+6)    ; DSM, the drive's last
-                 ; block
-  inc de         ; DE = the drive's
-                 ; blocks
-  ld bc,0        ; the free ones
-  ld a,$80       ; the bit within the
-                 ; current byte
+  ld e,(ix+5)    ; DPB DSM low byte
+  ld d,(ix+6)    ; DSM high byte
+  inc de         ; count DSM+1 blocks
+  ld bc,0        ; free-block count
+  ld a,$80       ; MSB-first block mask
 
 FRBIT:
-  push af        ; save the bit mask
-  and (hl)       ; the block's bit set:
-                 ; in use
+  push af        ; mask across AND
+  and (hl)       ; NZ: allocated
   jr nz,FRUSED
-  inc bc         ; a free block counted
+  inc bc
 
 FRUSED:
   pop af
-  rrca           ; the next block's bit;
-                 ; a carry when it
-  jr nc,FRSAME   ; wraps from bit 0 to
-                 ; bit 7, the next byte
-  inc hl         ; next vector byte
+  rrca           ; carry on mask wrap
+  jr nc,FRSAME   ; no wrap: same byte
+  inc hl
 
 FRSAME:
-  dec de         ; one block fewer to
-                 ; look at
-  push af        ; the mask kept while
-                 ; DE is tested
-  ld a,d         ; test remaining blocks
+  dec de
+  push af        ; mask across DE test
+  ld a,d
   or e
-  jr z,FREND     ; every block counted
-  pop af         ; restore the bit mask
+  jr z,FREND     ; all blocks counted
+  pop af         ; restore next bit mask
   jr FRBIT
 
 FREND:
-  pop af         ; the mask dropped
-  ld h,b         ; records = blocks <<
-                 ; BSH, 24 bits
-  ld l,c         ; free blocks low byte
-  xor a          ; A: the top byte
-  ld b,(ix+2)    ; BSH: a block holds
-                 ; 2^BSH records
+  pop af         ; balance mask push
+  ld h,b         ; BC free blocks -> HL
+  ld l,c
+  xor a          ; 24-bit top byte
+  ld b,(ix+2)    ; positive BSH required
 
 FRSH:
   add hl,hl      ; shift low 16 bits
-  rla            ; H's top bit into A
+  rla            ; carry into top byte
   djnz FRSH
   ex de,hl
 
-; the answer at the DMA address, low
-; first
-
   ld hl,(CURDMA)
-  ld (hl),e      ; store the low byte
+  ld (hl),e      ; low byte
   inc hl
-  ld (hl),d      ; store the middle byte
+  ld (hl),d      ; middle byte
   inc hl
-  ld (hl),a      ; the top byte
+  ld (hl),a      ; high byte
   jp RETZERO
 
-; Function 28, write protect: the
-; default drive's bit set in ROVEC, the
-; read-only vector, until a reset,
-; function 13 or 37, clears it. Returns
-; A = 0. Changes AF, B, DE and HL.
+; Function 28: OR the DEFDRV bit into
+; ROVEC and return A=0. Functions 13/37
+; clear software flags. LOGIN can
+; reapply mounted-volume read-only
+; state. Changes AF/B/DE/HL.
 
 FNWRPROT:
-  ld a,(DEFDRV)  ; default drive number
-  call MASKA     ; HL = the drive's bit
+  ld a,(DEFDRV)  ; logical default drive
+  call MASKA     ; HL=drive mask
   ex de,hl
-  ld hl,(ROVEC)  ; ORed into the
-                 ; read-only vector:
+  ld hl,(ROVEC)  ; existing protection
   ld a,l
-  or e           ; drives A to H
+  or e           ; A..H bits
   ld l,a
   ld a,h
-  or d           ; and I to P
+  or d           ; I..P bits
   ld h,a
-  ld (ROVEC),hl  ; save read-only vector
+  ld (ROVEC),hl
   jp RETZERO
 
-; Function 29, the read-only vector: a
-; bit for each read-only drive, drive A
-; in bit 0. Returns it in HL, with A = L
-; and B = H. Changes AF, B and HL.
+; Function 29: return ROVEC in HL with
+; A=L/B=H, bit 0 for A. Includes
+; explicit and mounted-volume
+; protection. Changes AF/B/HL.
 
 FNGETRO:
-  ld hl,(ROVEC)  ; set by function 28 or
-                 ; a read-only mount
-  jp RETWORD     ; return the vector
+  ld hl,(ROVEC)  ; software/mount flags
+  jp RETWORD
 
-; Function 31, the DPB's address: the
-; default drive's disk parameter block.
-; Returns it in HL, with A = L and B =
-; H. Changes AF, B and HL.
+; Function 31: return DEFDPB in HL with
+; A=L/B=H. Default selection retains
+; this pointer, so the query leaves an
+; explicit-drive search intact. Changes
+; AF/B/HL.
 
 FNGETDPB:
 
-; kept from the default drive's
-; selection
-
   ld hl,(DEFDPB)
-  jp RETWORD     ; return DPB address
+  jp RETWORD
 
-; Function 32, the user number. E = FFh
-; gets the user number; any other E sets
-; it to its low five bits, as CP/M 2.2
-; does, so no E reaches E5h, an erased
-; entry's user byte. Returns A = 0 after
-; a set. Changes AF, B and HL.
+; Function 32: E=FFh queries through
+; GETUSER. Otherwise set USERNO=E&1Fh
+; and return A=0. User 0..31 cannot
+; equal erased-entry marker E5h. Changes
+; AF/B/HL.
 
 FNUSER:
-  ld a,(PARAM)   ; the caller's E
-  cp $FF         ; read current user?
-  jr z,GETUSER   ; FFh: get it
-  and $1F        ; 0 to 31
+  ld a,(PARAM)   ; saved caller E
+  cp $FF         ; FFh query
+  jr z,GETUSER
+  and $1F        ; five-bit user
   ld (USERNO),a
   jp RETZERO
 
-; Function 32's get: returns the user
-; number, 0 to 31, in A and HL, with B =
-; 0. Changes AF, B and HL.
+; Return USERNO (0..31) through RETA in
+; A/L with H=B=0. Changes AF/B/HL.
 
 GETUSER:
-  ld a,(USERNO)  ; the user the
-                 ; directory matches
+  ld a,(USERNO)
   jp RETA
 
-; Function 35, file size: the FCB at DE
-; (PARAM) names the file, a '?' matching
-; any character. Every extent of it in
-; the directory has an end, (S2 * 32 +
-; EX) * 128 + RC records; the largest,
-; the file's size in records, goes to
-; the FCB's random-record field, r0 to
-; r2, low first, 0 when there is no
-; extent: the highest logical record
-; boundary across every matching extent.
-; The dispatch has selected the FCB's
-; drive. Function 35 returns $FF like
-; CP/M (SIZEDONE). Changes every
-; register.
+; Function 35: find the largest logical
+; end across current-user/name matches
+; at (PARAM), with '?' name wildcards.
+; The dispatcher binds its FCB drive.
+; Mode 2 scans to DIRUSED, replacing
+; active search state.
+; For each entry, compute
+; ((S2&3Fh)*32+(EX&1Fh))*128+RC in 24
+; bits. Keep the maximum in FSIZE0..2,
+; zero if none. Wildcards can span
+; files. This is not a sum. RC is not
+; clamped.
+; SIZEDONE publishes the result to
+; r0..r2 and returns FFh. Any register
+; may change.
 
 FNSIZE:
   ld hl,(PARAM)
 
-; the FCB the search matches
-
   ld (SRCHFCB),hl
-  ld a,2         ; mode 2: every extent
-                 ; of the name
+  ld a,2         ; mode 2: all extents
   ld (OPENMOD),a
   xor a
-  ld (FSIZE0),a  ; the largest end so
-                 ; far: none
+  ld (FSIZE0),a  ; zero maximum
   ld (FSIZE1),a
   ld (FSIZE2),a
-  call NEWSRCH   ; from the directory's
-                 ; first entry
+  call NEWSRCH
 
 SIZELOOP:
   call FINDENT
-  cp $FF         ; directory exhausted?
-  jr z,SIZEDONE  ; no extent left
-
-; the entry: EX and S2 where an FCB has
-; them
+  cp $FF         ; FFh: no next extent
+  jr z,SIZEDONE
 
   ld hl,(MATCHPTR)
-  call RECBASE   ; CAND = its last
-                 ; extent's first record
+  call RECBASE   ; CAND=extent base
   ld hl,(MATCHPTR)
   ld de,15
   add hl,de
-  ld e,(hl)      ; RC, byte 15: that
-                 ; extent's records
+  ld e,(hl)      ; unsigned entry RC
   ld d,0
-  ld hl,(CAND0)  ; CAND += RC, 24 bits:
-                 ; this entry's end
+  ld hl,(CAND0)  ; CAND += RC
   add hl,de
   ld (CAND0),hl
   ld a,(CAND2)
-  adc a,0        ; the carry into the
-                 ; top byte
+  adc a,0        ; 24-bit carry
   ld (CAND2),a
 
-  ld b,a         ; CAND against FSIZE,
-                 ; top bytes first
-  ld a,(FSIZE2)  ; compare high byte
+  ld b,a         ; compare high to low
+  ld a,(FSIZE2)
   cp b
-  jr c,SIZEKEEP  ; this end is the
-                 ; larger
-
-; the smaller: the next extent
+  jr c,SIZEKEEP  ; larger end: keep it
 
   jr nz,SIZELOOP
-  ld a,(CAND1)   ; top bytes equal: the
-                 ; middle ones
+  ld a,(CAND1)   ; high equal: middle
   ld b,a
-  ld a,(FSIZE1)  ; compare middle byte
+  ld a,(FSIZE1)
   cp b
-  jr c,SIZEKEEP  ; larger
-
-; smaller
+  jr c,SIZEKEEP  ; larger end
 
   jr nz,SIZELOOP
-  ld a,(CAND0)   ; and then the low ones
+  ld a,(CAND0)   ; middle equal: low
   ld b,a
-  ld a,(FSIZE0)  ; compare low byte
+  ld a,(FSIZE0)
   cp b
-
-; not larger: FSIZE stands
 
   jr nc,SIZELOOP
 
 SIZEKEEP:
-  ld hl,(CAND0)  ; CAND0 and CAND1 as a
-                 ; word, into
-
-; FSIZE0 and FSIZE1, which follow
+  ld hl,(CAND0)  ; low/middle as word
 
   ld (FSIZE0),hl
   ld a,(CAND2)
-  ld (FSIZE2),a  ; and the top byte
+  ld (FSIZE2),a  ; publish high byte
   jr SIZELOOP
 
-; FNSIZE's end: the largest end found,
-; the file's size, to the FCB's
-; random-record field. Returns A = FFh,
-; as CP/M's search leaves it at the
-; directory's end, in A and HL, with B =
-; 0. Changes every register.
+; Publish FSIZE0..2 to caller FCB bytes
+; 33..35, low first. Return FFh through
+; RETA, also for no-match size zero.
+; HL=00FFh and B=0. The size is in the
+; FCB, not the return registers.
 
 SIZEDONE:
   ld de,FSIZE0
-  call PUBRR     ; r0 to r2 = FSIZE0 to
-                 ; FSIZE2
+  call PUBRR     ; size -> FCB r0..r2
   ld a,$FF
   jp RETA
 
-; Function 36, set random record:
-; convert the sequential EX/S2/CR
-; position of the FCB at DE (PARAM) to
-; the public 24-bit random record, (S2 *
-; 32 + EX) * 128 + CR, in its
-; random-record field, r0 to r2, for a
-; random read or write to go on from.
-; Returns A = 0. Changes every register.
+; Function 36: convert sequential
+; position in the FCB at (PARAM) to
+; r0..r2. Add CR to RECBASE's masked
+; EX/S2 base with 24-bit carry and
+; publish low first.
+; Normal CR is 0..128. Arbitrary input
+; bytes are not clamped. Return A=0. Any
+; register may change.
 
 FNSETRR:
   ld hl,(PARAM)
-  call RECBASE   ; CAND = the extent's
-                 ; first record
-  call FCBCR     ; HL = the FCB's CR,
-                 ; the next record
-  ld e,(hl)      ; DE = CR, 0 to 128
+  call RECBASE   ; CAND=extent base
+  call FCBCR     ; caller next-record CR
+  ld e,(hl)      ; unsigned CR
   ld d,0
-  ld hl,(CAND0)  ; CAND += CR, 24 bits
+  ld hl,(CAND0)  ; CAND += CR
   add hl,de
   ld (CAND0),hl
   ld a,(CAND2)
-  adc a,0        ; the carry into the
-                 ; top byte
+  adc a,0        ; 24-bit carry
   ld (CAND2),a
   ld de,CAND0
-  call PUBRR     ; r0 to r2 = CAND0 to
-                 ; CAND2
+  call PUBRR     ; position -> r0..r2
   jp RETZERO
 
-; Publish three bytes from DE, low
-; first, to the caller's random-record
-; field, r0 to r2, bytes 33 to 35 of the
-; FCB at PARAM. Keeps A; changes BC, DE,
-; HL and the flags. The callers finish
-; through RETA or RETZERO.
+; Copy three low-first bytes from DE to
+; caller FCB bytes 33..35 at (PARAM).
+; Preserve A. Changes BC/DE/HL/F. The
+; caller chooses its return tail.
 
 PUBRR:
   ld hl,(PARAM)
-  ld bc,33       ; r0, byte 33
+  ld bc,33       ; caller r0 offset
   add hl,bc
-  ex de,hl       ; from DE to the field
-  ld c,3         ; B is already zero
+  ex de,hl       ; DE source -> HL
+  ld c,3         ; B=0 from BC=33
   ldir
   ret
 
-; Convert an FCB-shaped EX/S2 position
-; at HL, an FCB or a directory entry, to
-; its 24-bit record base, the extent's
-; first record: (S2 * 32 + EX) * 128,
-; from EX's low five bits (byte 12) and
-; S2's low six (byte 14), which leave
-; out S2's bit 7, an FCB's unmodified
-; mark. Returns it in CAND0 to CAND2,
-; low first, with its top byte in A as
-; well. Changes AF, BC, DE and HL; B is
-; 0 after.
+; Compute a record base from the FCB or
+; entry base in HL:
+; ((S2&3Fh)*32+(EX&1Fh))*128. EX is byte
+; 12 and S2 byte 14. Both upper S2 bits
+; are excluded.
+; Store three little-endian bytes in
+; CAND0..2 and return its top byte in A,
+; B=0. Changes AF/BC/DE/HL.
 
 RECBASE:
   ld de,12
-  add hl,de      ; EX, byte 12
+  add hl,de      ; EX offset
   ld a,(hl)
-  and $1F        ; the extent within its
-                 ; S2, 0 to 31
+  and $1F        ; EX low five bits
   ld c,a
   inc hl
-  inc hl         ; S2, byte 14: 32
-                 ; extents a step
+  inc hl         ; skip S1 to S2
   ld a,(hl)
-  and $3F        ; without the
-                 ; unmodified mark
+  and $3F        ; S2 low six bits
   ld h,0
   ld l,a
-  add hl,hl      ; S2 * 32, five
-                 ; doublings
+  add hl,hl      ; five shifts: S2*32
   add hl,hl
   add hl,hl
   add hl,hl
   add hl,hl
-  ld e,c         ; + EX: the extent's
-                 ; number, below 2048
+  ld e,c         ; EX adds extent index
   ld d,0
   add hl,de
-  xor a          ; A: the result's top
-                 ; byte
-  ld b,7         ; * 128: seven 24-bit
-                 ; doublings
+  xor a          ; 24-bit top byte
+  ld b,7         ; seven shifts: *128
 
 RECBSHFT:
   add hl,hl
-  rla            ; H's top bit into A
+  rla            ; carry into top byte
   djnz RECBSHFT
-  ld (CAND0),hl  ; CAND0 and CAND1
+  ld (CAND0),hl  ; low/middle bytes
   ld (CAND2),a
   ret
 
-; Function 37, reset drives: each drive
-; whose bit is set in DE (PARAM), drive
-; A in bit 0, comes out of the login
-; vector, the read-only vector and
-; WARMV, so that its next selection logs
-; it in afresh, with a full directory
-; scan. Returns A = 0. Changes AF, BC,
-; DE and HL.
+; Function 37: DE is a drive mask, bit
+; 0=A. Clear selected LOGINV/ROVEC/WARMV
+; bits through ANDV. The next bind
+; performs a full scan. Mounted
+; read-only flags can be reapplied.
+; Return A=0. Changes AF/BC/DE/HL.
 
 FNRESETD:
   ld de,(PARAM)
-  ld a,e         ; BC = the mask
-                 ; complemented, a bit
-  cpl            ; for each drive kept
+  ld a,e         ; complement drive mask
+  cpl            ; bits for kept drives
   ld c,a
   ld a,d
-  cpl            ; drives I to P
+  cpl            ; high eight drives
   ld b,a
   ld hl,LOGINV
-  call ANDV      ; logged out
+  call ANDV      ; clear selected login
   ld hl,ROVEC
-  call ANDV      ; writable again
+  call ANDV      ; clear software R/O
   ld hl,WARMV
-  call ANDV      ; no rebuild to a mark
-                 ; waiting
+  call ANDV      ; clear bounded rebuild
   jp RETZERO
 
-; Start a directory search at the first
-; entry of the selected drive: SRCHIDX =
-; 0, the drive homed, and CURTRK and
-; CURSEC on the directory's first
-; record, sector 0 of track OFF, the
-; first past the reserved tracks.
-; FINDENT reads that record when it
-; first runs. Takes DPBPTR. Changes AF,
-; BC, DE, HL and what the BIOS's HOME
-; changes.
+; Restart directory iteration on DPBPTR:
+; clear SRCHIDX, call RAM BIOHOM, set
+; CURTRK from DPB+13 OFF and CURSEC=0.
+; FINDENT reads the first record later.
+; Changes AF/BC/DE/HL and BIOS HOME
+; clobbers. BC is loaded with 13.
 
 NEWSRCH:
   ld hl,0
 
-; the entry FINDENT looks at next
-
   ld (SRCHIDX),hl
-  call BIOHOM    ; the BIOS's HOME:
-                 ; track 0
+  call BIOHOM    ; RAM HOME hook
   ld hl,(DPBPTR)
-  ld bc,13
-  add hl,bc      ; OFF, the DPB's byte
-                 ; 13
+  ld bc,13       ; DPB OFF offset
+  add hl,bc      ; reserved-track count
   ld e,(hl)
   inc hl
   ld d,(hl)
 
-; the directory's first track
-
   ld (CURTRK),de
   ld hl,0
-
-; and its first sector
 
   ld (CURSEC),hl
   ret
 
-; Return the next matching directory
-; slot (0..3), or $FF when no entry is
-; left: from SRCHIDX on, the next entry
-; that matches the FCB at SRCHFCB as
-; OPENMOD asks (MATCHFCB has the modes).
-; The slot is the entry's place in the
-; 128-byte record at DIRPTR, kept in
-; RETCODE too, with MATCHPTR on the
-; entry and SRCHIDX past it. Make (mode
-; 3) and the raw search (5) look through
-; every entry, DIRCNT; the others stop
-; at DIRUSED, the directory's high-water
-; mark. Search (modes 0 and 5) copies
-; the containing 128-byte directory
-; record to the caller's DMA; open (1)
-; instead copies the entry's bytes 1 to
-; 31, the name to the allocation map,
-; into the supplied FCB. Takes NEWSRCH's
-; start or the last call's place.
-; Changes every register.
+; Find the next match from SRCHIDX using
+; SRCHFCB/OPENMOD. Keep the pointed-to
+; pattern usable until continuation
+; ends. Modes 3/5 stop at DIRCNT. Others
+; at DIRUSED.
+; READDIR fetches each four-entry record
+; at slot 0 and advances the record
+; cursor. Set RETCODE=index&3 and
+; MATCHPTR=(DIRPTR)+32*slot. Test
+; MATCHFCB's A explicitly. Its flags are
+; not boolean.
+; A match enters FOUNDIT. Otherwise
+; advance SRCHIDX. Return FFh at the
+; limit. Registers/search state may
+; change.
 
 FINDENT:
   ld hl,(SRCHIDX)
 
-; the limit: the high-water mark
-
   ld de,(DIRUSED)
   ld a,(OPENMOD)
   cp 3
-  jr z,FULLDIR   ; make: free entries
-                 ; past the mark too
+  jr z,FULLDIR   ; make scans past mark
   cp 5
   jr nz,FINDLIM
 
 FULLDIR:
 
-; make and raw search: every entry
-
   ld de,(DIRCNT)
 
 FINDLIM:
   or a
-  sbc hl,de      ; SRCHIDX against the
-                 ; limit
-  jp nc,NOENTRY  ; at the limit: no
-                 ; entry left
+  sbc hl,de      ; index against limit
+  jp nc,NOENTRY  ; at/past exclusive end
   ld hl,(SRCHIDX)
   ld a,l
   and 3
-
-; a record's first entry: the record
-; read
 
   call z,READDIR
 
   ld hl,(SRCHIDX)
   ld a,l
-  and 3          ; the entry's slot in
-                 ; the record
-
-; returned if it matches
+  and 3          ; slot 0..3
 
   ld (RETCODE),a
-  add a,a        ; scale slot to offset
+  add a,a        ; slot *32
   add a,a
   add a,a
   add a,a
-  add a,a        ; 32 bytes a slot
+  add a,a        ; byte offset in record
   ld e,a
   ld d,0
   ld hl,(DIRPTR)
   add hl,de
 
-; the entry
-
   ld (MATCHPTR),hl
-  call MATCHFCB  ; A = 1 if it matches
-                 ; the FCB
-  or a
-  jr nz,FOUNDIT  ; A = 1: it matches
+  call MATCHFCB  ; A result, not flags
+  or a           ; normalize match flags
+  jr nz,FOUNDIT  ; NZ: A=1
   ld hl,(SRCHIDX)
   inc hl
-
-; no match: the next entry
 
   ld (SRCHIDX),hl
   jr FINDENT
 
-; FINDENT's match: SRCHIDX steps past
-; it, and the mode says what is copied:
-; the record to the DMA address in modes
-; 0 and 5, the entry into the FCB in
-; mode 1 (OPENHIT), nothing in any
-; other. Returns A = the slot, 0 to 3.
-; Changes every register.
+; Advance SRCHIDX after a match. Modes
+; 0/5 copy the whole 128-byte record at
+; (DIRPTR) to the address in CURDMA.
+; Mode 1 enters OPENHIT. Other modes
+; return without copying.
+; Return RETCODE, slot 0..3 in the
+; record. Registers may change.
 
 FOUNDIT:
   ld hl,(SRCHIDX)
   inc hl
 
-; the next call goes on past this entry
-
   ld (SRCHIDX),hl
   ld a,(OPENMOD)
   or a
-  jr z,COPYDIR   ; mode 0, search: the
-                 ; record copied
+  jr z,COPYDIR   ; normal search copy
   cp 5
-  jr nz,OPENHIT  ; and mode 5, the raw
-                 ; search, the same
+  jr nz,OPENHIT  ; other modes: OPENHIT
 
 COPYDIR:
   ld hl,(DIRPTR)
   ld de,(CURDMA)
-  ld bc,128      ; the whole record, as
-                 ; CP/M 2.2's search
-  ldir           ; returns it, the slot
-                 ; its index
+  ld bc,128      ; whole DMA record
+  ldir           ; DIRPTR -> CURDMA
   ld a,(RETCODE)
   ret
 
-; The FCB keeps the logical extent it
-; asked for. The entry's extent byte is
-; the highest it holds, and its record
-; count is that extent's: an earlier
-; extent in the entry is full (128
-; records), a later one empty. In mode
-; 1, open, the entry's bytes 1 to 31,
-; the name, EX, S1, S2, RC and the
-; allocation map, go into the FCB at
-; SRCHFCB, and S2's bit 7 marks it
-; unmodified; modes 2 to 4 go to NOCOPY.
-; Takes A = OPENMOD. Returns A = the
-; slot, 0 to 3. Changes every register.
+; Import an open entry. Input A=OPENMOD:
+; mode 1 copies entry bytes 1..31 into
+; the caller FCB at (SRCHFCB),
+; preserving drive/CR/random bytes.
+; Other modes enter NOCOPY.
+; Save requested EX&1Fh and restore it
+; after copying. Against entry EX&1Fh:
+; equal keeps RC, earlier request sets
+; RC=128 and later sets RC=0. Set caller
+; S2 bit 7 unmodified after the import.
+; S2 otherwise comes from the entry.
+; Return slot 0..3. Registers may
+; change.
 
 OPENHIT:
   cp 1
-  jr nz,NOCOPY   ; delete, size, make
-                 ; and close: no copy
+  jr nz,NOCOPY   ; only mode 1 imports
   ld hl,(SRCHFCB)
   ld de,12
   add hl,de
-  ld a,(hl)      ; the FCB's EX: the
-                 ; extent asked for
+  ld a,(hl)      ; requested EX
   and $1F
-  push af        ; kept while the entry
-                 ; overwrites it
+  push af        ; save masked request
   ld hl,(MATCHPTR)
-  inc hl         ; from byte 1, the
-                 ; name: the entry's
-
-; user byte and the FCB's drive byte
+  inc hl         ; entry source byte 1
 
   ld de,(SRCHFCB)
-  inc de         ; are left as they are
+  inc de         ; caller destination +1
   ld bc,31
-  ldir           ; to byte 31, the map's
-                 ; end
+  ldir           ; through map byte 31
   ld hl,(SRCHFCB)
   ld de,12
   add hl,de
-  ld a,(hl)      ; the entry's EX, now
-                 ; in the FCB
+  ld a,(hl)      ; copied entry EX
   and $1F
-  ld c,a         ; the entry's extent
-  pop af         ; A = the extent asked
-                 ; for
-  ld (hl),a      ; the FCB's EX back to
-                 ; the one asked for
+  ld c,a         ; entry EX&1Fh
+  pop af         ; restore request
+  ld (hl),a      ; normalized caller EX
   cp c
-  jr z,OPENRC    ; the entry's last
-                 ; extent: its RC stands
-  ld b,$80       ; earlier than the
-                 ; entry's: full
+  jr z,OPENRC    ; same: retain RC
+  ld b,$80       ; earlier: full 128
   jr c,OPENSET
-  ld b,0         ; later: nothing in it
-                 ; yet
+  ld b,0         ; later: zero records
 
 OPENSET:
   inc hl
   inc hl
   inc hl
-  ld (hl),b      ; RC, byte 15
+  ld (hl),b      ; caller RC byte 15
   dec hl
   dec hl
-  dec hl         ; back on EX
+  dec hl         ; back to EX
 
 OPENRC:
   inc hl
   inc hl
-  ld a,(hl)      ; S2, byte 14
-  or $80         ; bit 7: unmodified, so
-                 ; close writes
-  ld (hl),a      ; nothing until a write
-                 ; changes the FCB
-
-; the slot
+  ld a,(hl)      ; caller S2 byte 14
+  or $80         ; unmodified marker
+  ld (hl),a      ; only caller FCB
 
   ld a,(RETCODE)
   ret
 
-; FINDENT's match in modes 2 to 4, which
-; copy nothing. Returns A = the slot, 0
-; to 3. Changes A.
+; Modes 2..4: return RETCODE (slot 0..3)
+; in A without copying entry or record.
+; This tail changes A only.
 
 NOCOPY:
 
-; the entry's slot in its record
-
   ld a,(RETCODE)
   ret
 
-; FINDENT's end: no entry left to match.
-; Returns A = FFh, CP/M's code for no
-; file. Changes A.
+; Return A=FFh when no candidate
+; remains. This tail changes A only.
+; FINDENT may already have changed other
+; registers.
 
 NOENTRY:
-  ld a,$FF       ; no further match
+  ld a,$FF
   ret
 
-; Match the directory entry at HL
-; against the FCB at SRCHFCB: A = 1 if
-; it matches, 0 if not; the flags do not
-; say. OPENMOD is the kind of match: 0
-; search, 1 open and 4 close: the user,
-; the name and the extent; 2 delete,
-; rename, attributes and size: the user
-; and the name; 3 make: a free entry,
-; its user byte E5h; 5 search with a '?'
-; drive: every entry, used or free. The
-; user is the current one and the name
-; 8.3. Question marks in the FCB are
-; single-character wildcards. Directory
-; attribute bits are not name bits. Open
-; also requires the requested logical
-; extent: an entry holds EXM + 1 logical
-; extents, so the extent bytes are
-; compared outside the EXM bits. A
-; search's '?' in EX matches any extent.
-; Changes AF, BC, DE and HL.
+; Choose the directory match policy. HL
+; points to an entry. SRCHFCB holds the
+; pattern address and OPENMOD the mode.
+; Mode 5 accepts every entry, used/free.
+; Mode 3 accepts E5h only. Modes 0/1/2/4
+; compare user/name at MATCHUSR. Mode 2
+; ignores extent. Modes 0/1/4 use masked
+; EX/S2 except for the literal EX='?'
+; bypass there.
+; Return A=1 for match or 0 for none.
+; Callers must test A. Flags are not a
+; boolean result. Changes AF/BC/DE/HL.
 
 MATCHFCB:
   ld a,(OPENMOD)
   cp 5
-  jr z,ISMATCH   ; the raw search: every
-                 ; entry
+  jr z,ISMATCH   ; mode 5: used/free
   cp 3
   jr nz,MATCHUSR
-  ld a,(hl)      ; make: the user byte
-                 ; alone decides
-  cp $E5
-  jr z,ISMATCH   ; E5h: erased or never
-                 ; used, free
+  ld a,(hl)
+  cp $E5         ; E5h free marker
+  jr z,ISMATCH
   jr NOMATCH
 
-; MATCHFCB's match in modes 0, 1, 2 and
-; 4: the user, the 8.3 name and, but in
-; mode 2, the extent and S2. Takes HL =
-; the entry. Returns A = 1 for a match,
-; 0 for none. Changes AF, BC, DE and HL.
+; Match USERNO and 11 name/type bytes
+; with bit 7 masked on both sides. A
+; pattern '?' matches one position. HL
+; is the entry base. SRCHFCB points to
+; the pattern.
+; Mode 2 accepts after the name. Modes
+; 0/1/4 accept literal EX=3Fh before EXM
+; or S2 checks. Otherwise low-five EX
+; differences must lie within DPB.EXM,
+; then S2&3Fh must agree. S1 is skipped.
+; Return A=1/0 through shared tails.
+; Flags are not boolean. Changes
+; AF/BC/DE/HL.
 
 MATCHUSR:
   ld a,(USERNO)
-  ld b,a         ; the current user
+  ld b,a         ; current user number
   ld a,(hl)
-  cp b           ; another user's, or a
-                 ; free entry's E5h
+  cp b           ; exclude other/free
   jr nz,NOMATCH
-  inc hl         ; the name, bytes 1 to
-                 ; 11
+  inc hl         ; name/type byte 1
   ld de,(SRCHFCB)
   inc de
   ld b,11
 
 NAMELOOP:
   ld a,(de)
-  and $7F        ; the FCB's character,
-                 ; attribute bit off
+  and $7F        ; mask pattern
+                 ; attribute
   cp '?'
-  jr z,NAMEOK    ; a wildcard: any
-                 ; character
+  jr z,NAMEOK    ; ?: one name position
   ld c,a
   ld a,(hl)
-  and $7F        ; the entry's,
-                 ; attribute bit off
+  and $7F        ; mask entry attribute
   cp c
   jr nz,NOMATCH
 
 NAMEOK:
   inc hl
   inc de
-  djnz NAMELOOP  ; the eleven characters
+  djnz NAMELOOP  ; 11 name/type bytes
   ld a,(OPENMOD)
-  cp 2           ; the name matches; the
-                 ; extent next
-  jr z,ISMATCH   ; mode 2: the name
-                 ; alone, any extent
-  ld a,(de)      ; the FCB's EX, byte 12
+  cp 2
+  jr z,ISMATCH   ; mode 2 skips extent
+  ld a,(de)      ; FCB EX, unmasked
   cp '?'
-  jr z,ISMATCH   ; a search's '?': every
-                 ; extent
-  xor (hl)       ; extents differ only
-                 ; in the bits EXM masks
+  jr z,ISMATCH   ; 3Fh skips EXM/S2
+  xor (hl)       ; differing EX bits
   and $1F
-  jr z,EXSAME    ; the same extent
+  jr z,EXSAME    ; same EX: test S2
   push hl
-  ld c,a         ; the bits that differ
-
-; the DPB: EXM is byte 4
+  ld c,a         ; retain differences
 
   ld hl,(DPBPTR)
-  inc hl         ; skip to extent mask
+  inc hl         ; four steps to EXM
   inc hl
   inc hl
   inc hl
-  ld a,(hl)      ; EXM
-  cpl            ; the bits EXM leaves
-                 ; out
-  and c          ; one outside EXM:
-                 ; another entry's
-  pop hl         ; the entry's EX again
+  ld a,(hl)      ; extent mask
+  cpl            ; outside-mask bits
+  and c          ; mismatch outside EXM
+  pop hl         ; restore entry EX
   jr nz,NOMATCH
 
 EXSAME:
   inc hl
   inc hl
   inc de
-  inc de         ; S2, byte 14; S1 is
-                 ; not compared
+  inc de         ; skip S1 to S2
   ld a,(de)
-  and $3F        ; without an FCB's
-                 ; unmodified mark
+  and $3F        ; pattern S2 low six
   ld c,a
   ld a,(hl)
   and $3F
   cp c
-  jr nz,NOMATCH  ; another S2: 32
-                 ; extents away
+  jr nz,NOMATCH  ; module mismatch
 
-; MATCHFCB's yes: returns A = 1, the
-; entry matches. Changes A.
+; Return A=1. LD preserves incoming
+; flags. Z/carry do not encode match.
+; This tail changes A only.
 
 ISMATCH:
   ld a,1
   ret
 
-; MATCHFCB's no: returns A = 0, the
-; entry does not match. Changes AF.
+; Return A=0 and change flags (XOR A).
+; The shared matcher still requires an A
+; test because ISMATCH preserves flags.
+; Changes AF.
 
 NOMATCH:
   xor a

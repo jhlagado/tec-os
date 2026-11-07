@@ -1,900 +1,778 @@
-; The BDOS's directory blocks and
-; drives: reading and writing directory
-; records, login, the allocation vectors
-; and their bits, and the drive masks.
-; Included after bdosfn.asm by rom.asm.
+; BDOS directory-record I/O, drive
+; login, allocation-vector access and
+; drive masks.
 
-; Read the directory record at
-; CURTRK/CURSEC into the drive's
-; directory buffer (DIRPTR), keeping its
-; place in DIRTRK/DIRSEC for WRITEDIR,
-; then step CURSEC/CURTRK on to the next
-; record (ADVSEC). The DMA address is
-; set back to CURDMA. A read error takes
-; the BDOS's bad-sector path. Destroys
-; AF, BC, DE, HL.
+; Read the next logical directory record
+; at CURTRK/CURSEC into the buffer at
+; (DIRPTR). Save its coordinates in
+; DIRTRK/DIRSEC for WRITEDIR. Translate
+; the sector through XLTPTR and use RAM
+; BIOS entries.
+; DMABACK restores caller DMA before
+; testing status. Only a successful read
+; advances CURSEC/CURTRK through ADVSEC.
+; Failure enters BADSECT nonlocally.
+; Changes AF/BC/DE/HL and BIOS clobbers.
 
 READDIR:
 
-; the record's track,
-
   ld hl,(CURTRK)
-
-; kept for WRITEDIR
 
   ld (DIRTRK),hl
   ld b,h
   ld c,l
-  call BIOTRK    ; select read track
-
-; its logical sector, kept too,
+  call BIOTRK    ; RAM track selection
 
   ld hl,(CURSEC)
   ld (DIRSEC),hl
   ld b,h
   ld c,l
 
-; through the DPH's skew table
-
   ld de,(XLTPTR)
-  call BIOTRN    ; to the physical
-                 ; sector
+  call BIOTRN    ; logical -> physical
   ld b,h
   ld c,l
-  call BIOSEC    ; select read sector
-
-; read into the directory buffer
+  call BIOSEC    ; RAM sector selection
 
   ld hl,(DIRPTR)
   ld b,h
   ld c,l
-  call BIODMA    ; use directory DMA
-  call BIORDS    ; read directory record
-  call DMABACK   ; the DMA back; a
-                 ; failed read: error 1
-  jr ADVSEC      ; on to the next
-                 ; directory record
+  call BIODMA    ; temporary BIOS DMA
+  call BIORDS    ; read before advance
+  call DMABACK   ; restore before error
+  jr ADVSEC      ; success: next record
 
-; Write the current directory buffer
-; back to the exact record READDIR
-; loaded. Takes DIRTRK/DIRSEC, then goes
-; on as WRDIRNOW. A write error takes
-; the BDOS's bad-sector path. Destroys
-; AF, BC, DE, HL.
+; Write the modified buffer at (DIRPTR)
+; back to READDIR's saved DIRTRK/DIRSEC
+; using the skew table at (XLTPTR). Fall
+; into WRDIRNOW. Do not use the
+; advancing CURTRK/CURSEC.
+; Errors enter BADSECT after DMA
+; restoration. Changes AF/BC/DE/HL and
+; BIOS clobbers.
 
 WRITEDIR:
-
-; the record's track again,
 
   ld hl,(DIRTRK)
   ld b,h
   ld c,l
-  call BIOTRK    ; select write track
-
-; and its sector,
+  call BIOTRK
 
   ld hl,(DIRSEC)
   ld b,h
   ld c,l
 
-; translated through the skew table
-
   ld de,(XLTPTR)
-  call BIOTRN    ; translate sector
+  call BIOTRN    ; translate saved
+                 ; sector
   ld b,h
   ld c,l
-  call BIOSEC    ; select write sector
+  call BIOSEC
 
-; On into WRDIRNOW's write.
-
-; The delete loop writes immediately
-; after READDIR, so the BIOS remains on
-; the matching directory record and only
-; the DMA needs changing. Writes the
-; directory buffer (DIRPTR) as a
-; directory write and sets the DMA
-; address back to CURDMA. A write error
-; takes the BDOS's bad-sector path.
-; Destroys AF, BC, DE, HL.
+; Write the directory buffer at (DIRPTR)
+; using the BIOS's current record
+; position. The delete loop enters here
+; before freeing blocks, while that
+; position still matches READDIR. Other
+; callers must establish it first.
+; Set directory DMA, write with type 1
+; and fall into DMABACK. Failure follows
+; BDERR policy. Changes AF/BC/DE/HL and
+; BIOS clobbers.
 
 WRDIRNOW:
-
-; write from the directory buffer
 
   ld hl,(DIRPTR)
   ld b,h
   ld c,l
-  call BIODMA    ; use directory DMA
-  ld c,1         ; type 1: a directory
-                 ; write, at once
-  call BIOWRS    ; write directory
+  call BIODMA    ; temporary BIOS DMA
+  ld c,1         ; type 1: directory
+  call BIOWRS
 
-; After a BIOS read or write from a BDOS
-; buffer: the BIOS's DMA address set
-; back to CURDMA before A, the BIOS's
-; result, is looked at, so that an error
-; function 45 returns to the program
-; leaves the program's DMA in the BIOS.
-; Takes A = 0 for success; a failure
-; takes the BDOS's bad-sector path.
-; Destroys AF, BC, HL.
+; Restore BIOS DMA to the address in
+; CURDMA before testing input A, the
+; saved BIOS I/O status. A=0 returns.
+; Nonzero enters BADSECT without
+; resuming this caller.
+; This restoration also precedes an I/O
+; error returned to the program under
+; ERRMODE, set by function 45. Changes
+; AF/BC/HL and BIOS SETDMA clobbers.
 
 DMABACK:
-  push af        ; the BIOS's result, 0
-                 ; for success
-
-; the program's DMA address back
+  push af        ; status across SETDMA
 
   ld hl,(CURDMA)
   ld b,h
   ld c,l
-  call BIODMA    ; restore caller DMA
-  pop af         ; recover BIOS status
-  or a           ; NZ: the read or write
-                 ; failed
-  ret z          ; success
-  jp BADSECT     ; report disk error
+  call BIODMA    ; restore before test
+  pop af         ; saved BIOS status
+  or a           ; NZ: failed I/O
+  ret z
+  jp BADSECT     ; nonlocal error 1
 
-; Step CURSEC on to the next directory
-; record: past the track's last sector
-; (the DPB's SPT), CURSEC returns to 0
-; and CURTRK moves on one. Destroys AF,
-; BC, DE, HL.
+; Advance a valid logical directory
+; cursor by one record. Compare
+; incremented CURSEC with the 16-bit SPT
+; at (DPBPTR). Below SPT enters SECSAME.
+; Otherwise set CURSEC=0 and increment
+; CURTRK. Changes AF/BC/DE/HL.
 
 ADVSEC:
 
-; the next sector,
-
   ld hl,(CURSEC)
   inc hl
-  ex de,hl       ; held in DE
-
-; against the DPB's first word,
+  ex de,hl
 
   ld hl,(DPBPTR)
-  ld c,(hl)      ; SPT, the sectors on a
-                 ; track
+  ld c,(hl)      ; DPB SPT low byte
   inc hl
   ld b,(hl)      ; SPT high byte
   ex de,hl
-  or a           ; clear carry
-  sbc hl,bc      ; carry: still on this
-                 ; track
+  or a           ; unsigned comparison
+  sbc hl,bc      ; borrow: below SPT
   jr c,SECSAME
-  ld hl,0        ; else sector 0
+  ld hl,0        ; roll over to sector 0
   ld (CURSEC),hl
-
-; of the next track
 
   ld hl,(CURTRK)
   inc hl
   ld (CURTRK),hl
   ret
 
-; ADVSEC's next sector on the same
-; track: HL is that sector less SPT and
-; BC is SPT. Sets CURSEC. Destroys HL
-; and flags.
+; Recover a same-track next sector: HL
+; is incremented CURSEC minus SPT, with
+; borrow. BC=SPT. Add BC back and
+; publish CURSEC. Changes HL/F.
 
 SECSAME:
-  add hl,bc      ; the sector itself
-                 ; again
+  add hl,bc
   ld (CURSEC),hl
   ret
 
-; Select the current drive and capture
-; its public tables. Set the directory
-; counters on each selection: by a scan
-; on first login/reset, from the DPH's
-; mark when already logged in. Clear
-; allocations only on first login/reset:
-; a logged-in vector also owns
-; reservations in open, not-yet-closed
-; FCBs. Takes CURDRV. Sets DPHPTR,
-; XLTPTR, DIRPTR, DPBPTR, ALVPTR, DIRCNT
-; and DIRUSED, marks the drive in LOGINV
-; (and in ROVEC when its volume is
-; read-only) and starts a new directory
-; search. A drive with no volume takes
-; the select-error path. Destroys AF,
-; BC, DE, HL, IX.
+; Bind CURDRV through BIOS SELDSK. E bit
+; 0: 0=first login, 1=already logged. A
+; zero DPH enters SELFAIL. Import
+; XLTPTR/DIRPTR/DPBPTR/ALVPTR from
+; DPH+0/8/10/14. Reapply mounted
+; read-only state.
+; Keep logged vectors, including
+; open-FCB reservations, through LOGFAST
+; without rescan. Otherwise
+; clear/reserve ALV, set LOGINV, clear
+; counters and scan all records or
+; ceil(saved mark/4) for WARMV.
+; Binding resets search state.
+; Default-pointer queries do not bind.
+; Changes AF/BC/DE/HL/IX.
 
 LOGIN:
-  call LOGTEST   ; Z: not yet logged in
-  push af        ; kept to choose a scan
-                 ; or the fast path
-  ld e,0         ; E bit 0 for the BIOS:
-                 ; 0 a first select,
+  call LOGTEST   ; Z: not logged
+  push af        ; login state across
+                 ; BIOS
+  ld e,0         ; BIOS E bit 0: first
   jr z,LOGSEL
-  inc e          ; 1 a drive already
-                 ; logged in
+  inc e          ; already logged
 
 LOGSEL:
   ld a,(CURDRV)
-  ld c,a         ; drive for BIOS
-  call BIOSEL    ; HL = the DPH, 0 for
-                 ; no volume
+  ld c,a         ; BIOS drive C
+  call BIOSEL    ; HL=DPH, 0=absent
   ld a,h
   or l
   jr nz,LOGOK
-  pop af         ; no volume: the select
-                 ; error
-  jp SELFAIL     ; drive unavailable
+  pop af         ; balance saved status
+  jp SELFAIL     ; no volume: error 4
 
 LOGOK:
   ld (DPHPTR),hl
 
-  ld e,(hl)      ; DPH+0: the skew table
+  ld e,(hl)      ; DPH+0: skew pointer
   inc hl
   ld d,(hl)
   ld (XLTPTR),de
 
-  ld bc,7        ; HL is DPH+1 here: on
-                 ; to DPH+8,
+  ld bc,7        ; from DPH+1 to +8
   add hl,bc
-  ld e,(hl)      ; the directory buffer
+  ld e,(hl)      ; buffer pointer low
   inc hl
   ld d,(hl)
   ld (DIRPTR),de
   inc hl
-  ld e,(hl)      ; DPH+10: the DPB
+  ld e,(hl)      ; DPH+10: DPB pointer
   inc hl
   ld d,(hl)
   ld (DPBPTR),de
-  inc hl         ; past DPH+12, the
-                 ; check vector,
+  inc hl         ; skip check-vector
+                 ; word
   inc hl
   inc hl
-  ld e,(hl)      ; to DPH+14: the
-                 ; allocation vector
+  ld e,(hl)      ; DPH+14: ALV pointer
   inc hl
   ld d,(hl)
   ld (ALVPTR),de
 
-  ld a,(CURDRV)  ; a volume mounted
-                 ; read-only is in ROVEC
-  call DRVENT    ; from each selection,
-                 ; past a warm boot's
-                 ; clear
-  inc hl         ; the drive entry's
-                 ; byte 7, the volume's
-                 ; flags:
-  bit 0,(hl)     ; bit 0, read-only
+  ld a,(CURDRV)  ; selected drive
+  call DRVENT
+  inc hl         ; volume flags byte 7
+  bit 0,(hl)     ; mounted read-only
   ld hl,ROVEC
-  call nz,VSET   ; mark read-only
-  pop af         ; NZ: logged in
-                 ; already,
-  jr nz,LOGFAST  ; its vector kept
-  call INITALV   ; first login: a fresh
-                 ; vector,
-  ld hl,LOGINV   ; and the drive marked
-                 ; logged in
-  call VSET      ; mark drive logged in
+  call nz,VSET   ; reapply software bit
+  pop af         ; recover login state
+  jr nz,LOGFAST  ; keep reservations
+  call INITALV   ; clear/reserve ALV
+  ld hl,LOGINV   ; publish login bit
+  call VSET
 
-  ld hl,0        ; no entries counted or
-                 ; used yet
+  ld hl,0        ; rebuild counters
   ld (DIRCNT),hl
   ld (DIRUSED),hl
 
-; the directory's records:
-
   ld hl,(DPBPTR)
-  ld bc,7        ; DRM, the entries less
-                 ; 1, at DPB+7,
+  ld bc,7        ; DPB+7: DRM
   add hl,bc
   ld e,(hl)
   inc hl
   ld d,(hl)
-  ex de,hl       ; DRM in HL,
-  srl h          ; over 4 entries a
-                 ; record,
+  ex de,hl       ; DRM in HL
+  srl h          ; four entries/record
   rr l
   srl h
   rr l
-  inc hl         ; plus 1: every record
-                 ; to scan
+  inc hl         ; floor(DRM/4)+1
   ld (DIRLEFT),hl
-  ld de,(WARMV)  ; TEC-OS: a rebuild, to
-                 ; the mark only
-  call VTEST     ; Z: not in WARMV, scan
-                 ; every record
+  ld de,(WARMV)  ; bounded-rebuild bits
+  call VTEST     ; Z: full scan
   jr z,LOGNEW
-  call DUPTR     ; else the DPH's
-                 ; directory mark,
+  call DUPTR     ; saved DPH mark
   ld a,(hl)
   inc hl
   ld h,(hl)
   ld l,a
-  ld de,3        ; rounded up to whole
-                 ; records,
+  ld de,3        ; round up mark/4
   add hl,de
-  srl h          ; over 4 entries a
-                 ; record,
+  srl h          ; entries -> records
   rr l
   srl h
   rr l
-
-; the records to scan
 
   ld (DIRLEFT),hl
 
 LOGNEW:
 
-; Binding a disk replaces the directory
-; iteration state: the same start as a
-; new file search. Default-pointer
-; queries do not enter LOGIN, so they
-; keep their active search position.
+; Rebuild allocation state from DIRLEFT
+; directory records. NEWSRCH resets the
+; cursor. READDIR fetches each record,
+; PARDIR processes its four entries and
+; DIRLEFT counts down to LOGDONE.
+; Binding replaces active search state.
+; Default-pointer queries do not enter
+; this path.
 
-  call NEWSRCH   ; the directory's first
-                 ; record
+  call NEWSRCH   ; replace search state
 
 DIRSCAN:
-
-; records left to scan:
 
   ld hl,(DIRLEFT)
   ld a,h
   or l
-  jr z,LOGDONE   ; none, the scan is
-                 ; complete
-  call READDIR   ; the next record,
-  call PARDIR    ; its four entries
-                 ; counted and marked
-
-; one record fewer to go
+  jr z,LOGDONE   ; all records processed
+  call READDIR   ; fetch/advance record
+  call PARDIR    ; mark four entries
 
   ld hl,(DIRLEFT)
   dec hl
   ld (DIRLEFT),hl
   jr DIRSCAN
 
-; TEC-OS: a drive that is already logged
-; in keeps its allocation vector, so
-; only its directory high-water mark is
-; restored, from the third DPH scratch
-; word where DR's BDOS keeps the same
-; value. DIRCNT covers every entry, as
-; it does after a full scan. LOGCNT sets
-; DIRCNT and starts a new search for
-; LOGDONE too. Destroys AF, BC, DE, HL.
+; LOGFAST preserves the logged vector
+; and restores DIRUSED from DPH+6. This
+; one-past high-water mark may stay high
+; after deletion. It is not a live-entry
+; count.
+; LOGCNT sets DIRCNT=DRM+1 for total
+; capacity and enters NEWSRCH. LOGDONE
+; joins it after a scan. Changes
+; AF/BC/DE/HL.
 
 LOGFAST:
-  call DUPTR     ; the DPH's directory
-                 ; mark
+  call DUPTR     ; saved high-water
   ld e,(hl)
   inc hl
   ld d,(hl)
-
-; is the highest entry in use
 
   ld (DIRUSED),de
 
 LOGCNT:
 
-; DIRCNT counts every entry:
-
   ld hl,(DPBPTR)
-  ld bc,7        ; DRM at DPB+7,
+  ld bc,7        ; DPB+7: DRM
   add hl,bc
   ld e,(hl)
   inc hl
   ld d,(hl)
-  inc de         ; plus 1
+  inc de         ; total slots=DRM+1
   ld (DIRCNT),de
-  jp NEWSRCH     ; searches start from
-                 ; the first record
+  jp NEWSRCH     ; reset shared iterator
 
-; TEC-OS: the end of a scan. The mark
-; saved, the vector's sum taken for the
-; next warm boot, the dirty flag and
-; WARMV's bit cleared. Then on as
-; LOGCNT. Destroys AF, BC, DE, HL.
+; Finish a rebuild: retain the maximum
+; mark through DUSAVE and save ALVSUM's
+; 16-bit sum at DPH+2. Clear dirty byte
+; DPH+4 and the current WARMV bit. Join
+; LOGCNT for total capacity and search
+; reset. Changes AF/BC/DE/HL.
 
 LOGDONE:
-  call DUSAVE    ; the mark kept in the
-                 ; DPH
-  call ALVSUM    ; DE = the vector's
-                 ; sum,
+  call DUSAVE    ; retain maximum mark
+  call ALVSUM    ; DE=ALV checksum
   ld hl,(DPHPTR)
-  inc hl         ; into DPH+2, the first
-                 ; scratch word
+  inc hl         ; DPH+2 checksum word
   inc hl
   ld (hl),e
   inc hl
   ld (hl),d
-  inc hl         ; DPH+4: the dirty
-                 ; flag, cleared
+  inc hl         ; DPH+4 dirty byte
   ld (hl),0
-  ld hl,WARMV    ; no rebuild left to do
-  call VCLR      ; clear rebuild bit
-  jr LOGCNT      ; DIRCNT set and a new
-                 ; search
+  ld hl,WARMV    ; clear pending rebuild
+  call VCLR
+  jr LOGCNT
 
-; Record DIRUSED for the current drive
-; in its DPH, unless the mark there is
-; higher already: a BIOS directory write
-; may have raised it. Takes DPHPTR.
-; Destroys AF, BC, DE, HL.
+; Raise the current drive's saved DPH+6
+; mark to DIRUSED only when lower. A
+; BIOS write may already have raised it.
+; Input DPHPTR identifies the DPH.
+; Changes AF/BC/DE/HL.
 
 DUSAVE:
-  call DUPTR     ; HL = the DPH's mark
+  call DUPTR     ; HL=DPH+6 mark
   ld de,(DIRUSED)
-  ld c,(hl)      ; BC = the mark there
+  ld c,(hl)      ; saved mark low
   inc hl
   ld b,(hl)
-  push hl        ; its high byte's
+  push hl        ; save high-byte
                  ; address
   ld h,b
   ld l,c
   or a
-  sbc hl,de      ; no carry: the mark >=
-                 ; DIRUSED,
+  sbc hl,de      ; saved mark vs DIRUSED
   pop hl
-  ret nc         ; so kept
-  ld (hl),d      ; else DIRUSED replaces
-                 ; it
+  ret nc         ; NC: saved mark >= it
+  ld (hl),d      ; publish larger mark
   dec hl
   ld (hl),e
   ret
 
-; DE = the sum of the current drive's
-; allocation vector, DSM / 8 + 1 bytes.
-; Returns HL past the vector and BC = 0.
-; Destroys AF.
+; Sum floor(DSM/8)+1 allocation-vector
+; bytes from ALVLEN, modulo 65536
+; through SUMDE. Return DE=sum, HL past
+; the vector and BC=0. Changes AF. Equal
+; sums do not prove identical bytes.
 
 ALVSUM:
-  call ALVLEN    ; BC bytes at HL
-  ex de,hl       ; existing SUMDE takes
-                 ; its source in DE
-  ld hl,0        ; the sum from 0
-  call SUMDE     ; sum directory bytes
-  ex de,hl       ; sum in DE, pointer
-                 ; past the vector in HL
+  call ALVLEN    ; vector bytes at HL
+  ex de,hl       ; SUMDE source in DE
+  ld hl,0        ; 16-bit sum from zero
+  call SUMDE     ; allocation bytes
+  ex de,hl       ; DE=sum, HL=end
   ret
 
-; HL = the address of the current
-; drive's directory mark, the third DPH
-; scratch word (DPH+6). Takes DPHPTR.
-; Destroys BC and flags.
+; Return HL=(DPHPTR)+6, the current
+; drive's directory-mark word. Changes
+; BC/F.
 
 DUPTR:
   ld hl,(DPHPTR)
-  ld bc,6        ; past the skew table
-                 ; and two scratch words
+  ld bc,6        ; DPH directory mark
   add hl,bc
   ret
 
-; Return BC = DSM / 8 + 1 allocation
-; bytes, HL = the BIOS-owned vector.
-; Uses BC/HL and flags; preserves
-; A/DE/IX/IY.
+; Return BC=floor(DSM/8)+1 from DPB
+; bytes 5/6 and HL=(ALVPTR), the BIOS
+; allocation vector. Preserve
+; A/DE/IX/IY. Changes BC/HL/F.
 
 ALVLEN:
 
-; the vector's length:
-
   ld hl,(DPBPTR)
-  ld bc,5        ; DSM, the last block,
-                 ; at DPB+5,
+  ld bc,5        ; DPB+5: DSM word
   add hl,bc
   ld c,(hl)
   inc hl
   ld b,(hl)
-  srl b          ; over 8 blocks a byte,
+  srl b          ; three shifts: /8
   rr c
   srl b
   rr c
-  srl b          ; the third of three
-                 ; halvings
+  srl b
   rr c
-  inc bc         ; plus 1: the bytes
-
-; and the vector itself
+  inc bc         ; include final byte
 
   ld hl,(ALVPTR)
   ret
 
-; Clear the BIOS-owned allocation vector
-; and copy the reserved-directory bits
-; supplied by the selected drive's DPB.
-; Destroys AF, BC, DE, HL.
+; Clear the current allocation vector
+; using ALVLEN's base/count. Reserve
+; directory blocks by copying DPB
+; AL0/AL1 (bytes 9/10) to its first two
+; bytes. The supported vector must hold
+; both bytes. Changes AF/BC/DE/HL.
 
 INITALV:
-  call ALVLEN    ; BC bytes at HL
+  call ALVLEN    ; vector length/base
 
 CLRAVL:
-  ld (hl),0      ; each byte cleared
+  ld (hl),0
   inc hl
-  dec bc         ; DEC BC sets no flag:
-                 ; the OR
-  ld a,b         ; tests the count
-  or c           ; until no bytes are
-                 ; left
+  dec bc         ; DEC BC keeps flags
+  ld a,b         ; explicit count test
+  or c
   jr nz,CLRAVL
 
-; DPB+9: AL0 and AL1, the blocks
-
   ld hl,(DPBPTR)
-  ld bc,9        ; the directory itself
-                 ; takes,
+  ld bc,9        ; DPB+9: AL0/AL1
   add hl,bc
 
-; as the vector's first two bytes
-
   ld de,(ALVPTR)
-  ld a,(hl)      ; AL0
+  ld a,(hl)      ; reserved blocks 0..7
   ld (de),a
   inc hl
   inc de
-  ld a,(hl)      ; then AL1
+  ld a,(hl)      ; reserved blocks 8..15
   ld (de),a
   ret
 
-; Count and mark the four 32-byte
-; entries of the directory record in the
-; directory buffer (DIRPTR), each
-; through PARENT. Uses ENTPTR and
-; ENTLEFT. Destroys AF, BC, DE, HL, IX.
+; Process the four 32-byte entries at
+; (DIRPTR) through PARENT. Set ENTPTR to
+; the record base and ENTLEFT=4. Uses
+; that shared scratch. Changes
+; AF/BC/DE/HL/IX.
 
 PARDIR:
 
-; from the record's first entry,
-
   ld hl,(DIRPTR)
   ld (ENTPTR),hl
-  ld a,4         ; four entries to a
-                 ; record
+  ld a,4         ; four slots/record
   ld (ENTLEFT),a
 
 PARELOOP:
-  call PARENT    ; each entry in turn
+  call PARENT    ; count/mark next entry
   ld a,(ENTLEFT)
   dec a
   ld (ENTLEFT),a
 
-; until all four are done
-
   jr nz,PARELOOP
   ret
 
-; Count the directory entry at ENTPTR
-; and step ENTPTR to the next. DIRCNT
-; counts every entry; a used one (first
-; byte not E5h) sets DIRUSED, the
-; directory mark, to that count and has
-; each block in its allocation map
-; marked in the vector (MARKBLK).
-; Destroys AF, BC, DE, HL, IX.
+; Process the entry at (ENTPTR), advance
+; ENTPTR and increment DIRCNT. If the
+; user byte is E5h, skip allocation
+; work. Otherwise set DIRUSED to that
+; one-past count and mark blocks from
+; byte 16.
+; DSM<256 uses 16 byte cells. Otherwise
+; use eight little-endian words. ALLEFT
+; counts cells. Save traversal HL around
+; MARKBLK, which skips zero/past-DSM
+; references. IX remains the DPB for
+; width tests, even after a zero cell.
+; Changes AF/BC/DE/HL/IX.
 
 PARENT:
 
-; this entry,
-
   ld hl,(ENTPTR)
-  push hl
-  ld de,32       ; the next 32 bytes on
+  push hl        ; keep current entry
+  ld de,32       ; 32-byte stride
   add hl,de
   ld (ENTPTR),hl
   pop hl
 
-; one more entry seen
-
   ld de,(DIRCNT)
   inc de
   ld (DIRCNT),de
-  ld a,(hl)      ; the user byte:
-  cp $E5         ; E5h, an empty entry,
-  ret z          ; has no blocks
-
-; used: the mark reaches it at least
+  ld a,(hl)
+  cp $E5         ; E5h: empty only
+  ret z
 
   ld (DIRUSED),de
-  ld de,16       ; the allocation map at
-                 ; byte 16
+  ld de,16       ; map offset 16
   add hl,de
   ld ix,(DPBPTR)
-  ld a,(ix+6)    ; DSM's high byte: 0
-                 ; for 8-bit
-  or a           ; block numbers, 16 of
-                 ; them,
+  ld a,(ix+6)    ; DSM high byte
+  or a           ; Z: byte cells
   ld a,16
   jr z,PARCNT
-  ld a,8         ; else 8 of 16 bits
+  ld a,8         ; eight word cells
 
 PARCNT:
-  ld (ALLEFT),a  ; the map's cells left
+  ld (ALLEFT),a  ; shared cell count
 
 PARCELL:
-  ld e,(hl)      ; the block's low byte,
+  ld e,(hl)      ; block low byte
   ld d,0
   inc hl
-  ld a,(ix+6)    ; DSM's high byte
-                 ; again; IX is still
-                 ; the
-
-; DPB, which BLKPAST reloads
+  ld a,(ix+6)    ; IX still DPB
 
   or a
-  jr z,PARHAVE   ; 8-bit blocks: no high
-                 ; byte
-  ld d,(hl)      ; else the high byte
-                 ; too
+  jr z,PARHAVE   ; byte cells: no high
+  ld d,(hl)      ; word high byte
   inc hl
 
 PARHAVE:
-  push hl        ; the map's place kept
-  call MARKBLK   ; the block's bit set
+  push hl        ; map cursor across
+                 ; call
+  call MARKBLK   ; skip zero/past DSM
   pop hl
   ld a,(ALLEFT)
   dec a
   ld (ALLEFT),a
-  jr nz,PARCELL  ; every cell of the map
+  jr nz,PARCELL  ; remaining map cells
   ret
 
-; Free the blocks of the directory entry
-; at MATCHPTR: each block in its
-; allocation map has its bit cleared in
-; the vector (CLRBLK). Destroys AF, BC,
-; DE, HL, IX.
+; Free blocks from the deleted entry at
+; (MATCHPTR), after its caller has
+; successfully written the deletion.
+; Walk byte 16's map: 16 byte cells for
+; DSM<256 or eight little-endian words
+; otherwise.
+; CLRBLK skips zero/past-DSM cells. Save
+; traversal HL around it. ALLEFT counts
+; cells and IX remains the DPB for width
+; tests. Changes AF/BC/DE/HL/IX.
 
 FREEENT:
 
-; the entry's allocation map,
-
   ld hl,(MATCHPTR)
-  ld de,16       ; at byte 16
+  ld de,16       ; map offset 16
   add hl,de
   ld ix,(DPBPTR)
-  ld a,(ix+6)    ; DSM's high byte: 0
-                 ; for 8-bit
-  or a           ; block numbers, 16 of
-                 ; them,
+  ld a,(ix+6)    ; DSM high byte
+  or a           ; Z: byte cells
   ld a,16
   jr z,FREECNT
-  ld a,8         ; else 8 of 16 bits
+  ld a,8         ; eight word cells
 
 FREECNT:
-  ld (ALLEFT),a  ; the map's cells left
+  ld (ALLEFT),a  ; shared cell count
 
 FREECELL:
-  ld e,(hl)      ; the block's low byte,
+  ld e,(hl)      ; block low byte
   ld d,0
   inc hl
-  ld a,(ix+6)    ; DSM's high byte
-                 ; again; IX is still
-                 ; the
-
-; DPB, which BLKPAST reloads
+  ld a,(ix+6)    ; IX still DPB
 
   or a
-  jr z,FREEHAVE  ; 8-bit blocks: no high
-                 ; byte
-  ld d,(hl)      ; else the high byte
-                 ; too
+  jr z,FREEHAVE  ; byte cells: no high
+  ld d,(hl)      ; word high byte
   inc hl
 
 FREEHAVE:
-  push hl        ; the map's place kept
-  call CLRBLK    ; the block's bit
-                 ; cleared
+  push hl        ; map cursor across
+                 ; call
+  call CLRBLK    ; skip zero/past DSM
   pop hl
   ld a,(ALLEFT)
   dec a
   ld (ALLEFT),a
-
-; every cell of the map
 
   jr nz,FREECELL
   ret
 
-; Set block DE's bit in the allocation
-; vector, as an entry's block is logged;
-; a block with no bit (BITPTR) is passed
-; over. Destroys AF, BC, DE, HL; may set
-; IX to the DPB.
+; Mark block DE allocated. BITPTR skips
+; 0/past-DSM references. Otherwise OR
+; its mask into the vector byte. Changes
+; AF/BC/DE/HL. IX may become the DPB.
 
 MARKBLK:
-  call BITPTR    ; HL = its byte, A =
-                 ; its bit
-  ret z          ; no bit: nothing to
-                 ; mark
-  or (hl)        ; the bit set among the
-                 ; others
+  call BITPTR    ; HL=byte, A=mask
+  ret z          ; Z: no vector bit
+  or (hl)
   ld (hl),a
   ret
 
-; Clear block DE's bit in the allocation
-; vector, as an entry's block is freed;
-; a block with no bit (BITPTR) is passed
-; over. Destroys AF, BC, DE, HL; may set
-; IX to the DPB.
+; Free block DE's allocation bit. BITPTR
+; skips 0/past-DSM references. Otherwise
+; AND the vector byte with the
+; complemented mask, keeping other bits.
+; Changes AF/BC/DE/HL. IX may become the
+; DPB.
 
 CLRBLK:
-  call BITPTR    ; HL = its byte, A =
-                 ; its bit
-  ret z          ; no bit: nothing to
-                 ; free
-  cpl            ; every bit but this
-                 ; block's
-  and (hl)       ; kept as it was
+  call BITPTR    ; HL=byte, A=mask
+  ret z          ; Z: no vector bit
+  cpl            ; keep every other bit
+  and (hl)
   ld (hl),a
   ret
 
-; Z if DE is 0 or past the volume's end:
-; such a block has no bit, so a
-; directory with one can still be logged
-; in and its file erased. Reading it is
-; refused. Else NZ, HL = the vector byte
-; that holds block DE's bit and A = the
-; bit, bit 7 for the byte's first block.
-; Destroys BC, DE; sets IX to the DPB
-; (BLKPAST) unless DE is 0.
+; Locate block DE's MSB-first vector
+; bit. For DE=0 return Z without loading
+; IX. For DE>DSM return Z after BLKPAST
+; sets IX. Marking/freeing tolerate
+; these cells. A zero block reads as
+; EOF. A nonzero past-DSM read instead
+; takes CHKBLK's error.
+; Otherwise return NZ,
+; HL=(ALVPTR)+floor(DE/8) and
+; A=80h>>(DE&7). BC/DE change. A/HL/F
+; are results. IX is the DPB for nonzero
+; input.
 
 BITPTR:
   ld a,d
   or e
-  ret z          ; block 0: an unused
-                 ; cell
+  ret z          ; 0: unallocated cell
   call BLKPAST   ; carry: past DSM
-  sbc a,a        ; FFh if past the end
-  inc a          ; then 0, so Z
+  sbc a,a        ; carry -> FFh
+  inc a          ; FFh -> 0/Z
   ret z
   ld a,e
-  and 7          ; the bit's place in
-                 ; its byte
+  and 7          ; bit position 0..7
   ld b,a
-  ex de,hl       ; HL = the block,
-  srl h          ; over 8 blocks a byte,
+  ex de,hl       ; block index -> HL
+  srl h          ; byte index: /8
   rr l
   srl h
   rr l
-  srl h          ; the third of three
-                 ; halvings
+  srl h          ; third right shift
   rr l
-
-; into the vector
 
   ld de,(ALVPTR)
   add hl,de
-  ld a,$80       ; a byte's first block
-                 ; is bit 7,
+  ld a,$80       ; first block: bit 7
   ld c,a
   ld a,b
-  or a           ; Z: the first block,
-                 ; no shift
+  or a           ; Z: no mask shift
   ld a,c
   jr z,BITDONE
 
 SHIFBIT:
-  rrca           ; one bit right for
-                 ; each block on
+  rrca           ; MSB-first mask
   djnz SHIFBIT
 
 BITDONE:
-  or a           ; NZ: the block has its
-                 ; bit
+  or a           ; NZ: valid mask
   ret
 
-; LOGTEST: NZ if the current drive's bit
-; is set in LOGINV, DE then the login
-; vector; Z means the drive needs its
-; allocation vector rebuilt. VTEST: the
-; same against the vector in DE, which
-; it keeps. Both destroy AF, B and HL.
+; Test CURDRV's bit. LOGTEST loads
+; LOGINV's 16-bit value into DE. VTEST
+; takes that value directly and
+; preserves DE. Return NZ if set or Z if
+; clear. An absent login bit requires a
+; rebuild at next login. Changes
+; AF/B/HL.
 
 LOGTEST:
-
-; the logged-in drives
 
   ld de,(LOGINV)
 
 VTEST:
-  call DRVMASK   ; HL = the current
-                 ; drive's bit,
+  call DRVMASK   ; HL=current drive bit
   ld a,l
   and e
   ld l,a
-  ld a,h         ; and with DE a byte at
-                 ; a time
+  ld a,h         ; high eight drives
   and d
-  or l           ; NZ: the bit is set in
-                 ; DE
+  or l           ; NZ: drive bit set
   ret
 
-; The current drive's bit cleared (VCLR)
-; or set (VSET) in the vector at HL;
-; ANDV ands the vector at HL with BC.
-; VCLR destroys AF, BC, HL; VSET AF, B,
-; DE, HL; ANDV AF, HL.
+; VCLR clears CURDRV's bit in the
+; two-byte vector at HL. Save its
+; address over DRVMASK and form BC as
+; the complemented drive mask. Changes
+; AF/BC/HL.
+; ANDV applies input BC as a keep mask
+; to both bytes at HL. Changes AF/HL.
+; Both entries update the vector in
+; place.
 
 VCLR:
-  push hl        ; the vector's address
-                 ; kept
+  push hl        ; keep vector address
   call DRVMASK
-  ld a,l         ; BC = every drive but
-                 ; this one:
+  ld a,l         ; complement low mask
   cpl
   ld c,a
-  ld a,h         ; drives I to P in the
-                 ; high byte
+  ld a,h         ; complement high mask
   cpl
   ld b,a
   pop hl
 
 ANDV:
-  ld a,(hl)      ; the vector's low
-                 ; byte, A to H,
+  ld a,(hl)      ; A..H byte
   and c
   ld (hl),a
   inc hl
-  ld a,(hl)      ; then its high byte, I
-                 ; to P
+  ld a,(hl)      ; I..P byte
   and b
   ld (hl),a
   ret
 
+; Set CURDRV's bit in the two-byte
+; vector at HL. Save the address across
+; DRVMASK and OR its DE mask into both
+; bytes. Keep other bits. Changes
+; AF/B/DE/HL.
+
 VSET:
-  push hl        ; the vector's address
-                 ; kept
+  push hl        ; keep vector address
   call DRVMASK
-  ex de,hl       ; DE = the drive's bit
+  ex de,hl       ; DE=current drive bit
   pop hl
-  ld a,(hl)      ; added to the low byte
+  ld a,(hl)      ; A..H byte
   or e
   ld (hl),a
   inc hl
-  ld a,(hl)      ; and to the high
+  ld a,(hl)      ; I..P byte
   or d
   ld (hl),a
   ret
 
-; HL = the drive's bit in a 16-bit drive
-; vector, bit 0 for A: to bit 15 for P:,
-; for CURDRV (DRVMASK) or the drive in A
-; (MASKA). Leaves A the drive. Destroys
-; B and flags; keeps C and DE.
+; Form HL=1<<drive for a valid drive
+; 0..15. DRVMASK reads CURDRV. MASKA
+; takes A directly. Return A=drive,
+; preserving C/DE. Changes B/F. Drive 0
+; needs no loop. No input validation is
+; performed here.
 
 DRVMASK:
   ld a,(CURDRV)
 
 MASKA:
-  ld b,a         ; B = the drive, the
-                 ; shifts to make
-  ld hl,1        ; drive A's bit
+  ld b,a         ; drive shift count
+  ld hl,1        ; drive A bit
   or a
-  ret z          ; drive A: no shift
+  ret z          ; drive 0: no shift
 
 MASKLOOP:
-  add hl,hl      ; the bit one drive
-                 ; higher
+  add hl,hl
   djnz MASKLOOP
   ret
 
-; RONZ: NZ if the selected drive is
-; read-only. Changes AF, B, DE, HL.
-; CHKRO returns if the drive is
-; writable, else takes the read-only
-; error.
+; RONZ returns NZ when CURDRV is
+; read-only in ROVEC, using VTEST. CHKRO
+; returns only when writable. Otherwise
+; enter BDERR with ERRRO and error 2.
+; The internal caller is not resumed,
+; including under returned-error policy.
+; Changes AF/B/DE/HL.
 
 RONZ:
-  ld de,(ROVEC)  ; the read-only drives
-  jr VTEST       ; DRVMASK preserves DE;
-                 ; same mask and Z
-                 ; result
+  ld de,(ROVEC)  ; software/mount R/O
+  jr VTEST       ; VTEST preserves DE
 
 CHKRO:
-  call RONZ      ; writable: on
+  call RONZ
   ret z
-  ld hl,ERRRO    ; the read-only message
-  ld b,2         ; read-only disk
+  ld hl,ERRRO
+  ld b,2         ; error 2: drive R/O
   jr BDERR
 
-; The select error: ERRSEL and code 4,
-; through BDERR, which ends the function
-; and never comes back here.
+; End the function through BDERR with
+; HL=ERRSEL and B=4. Error policy
+; chooses return to the program or
+; abort. The internal caller is not
+; resumed.
 
 SELFAIL:
   ld hl,ERRSEL
-  ld b,4         ; select
+  ld b,4         ; error 4: select
   jr BDERR

@@ -1,663 +1,587 @@
-; The CCP's file commands: DIR with its
-; paging and its footer, TYPE, ERA, REN
-; and COPY, with the decimal and hex
-; printers they share. Included after
-; ccp.asm, in this order, by rom.asm.
+; CCP DIR, paging, field/decimal output
+; and TYPE. ERA/REN/COPY and hex output
+; belong to ccpmut.asm.
 
-; DIR [d:][name]: list the matching
-; files, system files hidden, in as many
-; columns of 13 as the console's width
-; holds, through the pager, then a
-; footer of the count of files and the
-; drive's free space. Takes the operand
-; at ARGSTRT: a bad command if it does
-; not parse or more follows it. Uses
-; CMDFCB, LOADBUF as the DMA record,
-; DIRCOL, DIRNCOL and DIRNUM; returns to
-; the prompt, by FILENO when nothing
-; matched. DIR calls the BDOS for the
-; DMA (26), search first and next (17,
-; 18), the drive's free space (46) and,
-; when a page fills, a key (6); it reads
-; only the directory record search
-; returns in the DMA.
+; DIR [d:][name]: list visible matches
+; through the pager, then file count and
+; free space. System entries are hidden.
+; NO FILE: none was listed, even if
+; hidden entries matched.
+; Parse the optional operand into CMDFCB
+; and reject errors/non-space suffixes.
+; If the first name byte is SPACE, fill
+; all 11 name/type bytes with '?' while
+; keeping any explicit drive. Uses
+; LOADBUF as public search DMA.
 
 CMDDIR:
-  call ARGSKIP   ; the operand, past its
-                 ; spaces,
-  call CMDPARSE  ; into CMDFCB, or a bad
-                 ; command,
-  call ENDCHK    ; with nothing after it
-
-; no name, with or without a drive:
-; every file
+  call ARGSKIP   ; optional operand
+  call CMDPARSE  ; parse pattern
+  call ENDCHK    ; reject extra text
 
   ld a,(CMDFCB+1)
   cp SPACE
 
-; a name given: searched for as it is
-
   jr nz,DIRREADY
 
-; else all 11 name and type bytes
-
   ld hl,CMDFCB+1
-  ld b,11        ; 8 name + 3 type bytes
-  ld a,'?'
+  ld b,11        ; whole name/type
+  ld a,'?'       ; wildcard fill byte
 
 DIRWILD:
   ld (hl),a
   inc hl
-  djnz DIRWILD   ; become ?, which
-                 ; matches anything
+  djnz DIRWILD
 
-; Set up the listing: the directory
-; records the searches return go to
-; LOADBUF, no row is started, no file
-; counted, and DIRNCOL takes the count
-; of entries a row holds, at least one.
-; The pager starts a new screen, and the
-; first search's result goes to DIRLOOP
-; in A.
+; Set DMA=LOADBUF and clear
+; DIRCOL/DIRNUM. Use
+; DIRNCOL=max(1,floor(width/13)), with
+; VWID=0 meaning 80. A formatted entry
+; uses up to 12 positions plus an
+; inter-entry space. Initialise the
+; pager and search first through BDOS
+; 17. Pass result A to DIRLOOP.
 
 DIRREADY:
-  ld de,LOADBUF  ; BDOS 26: the DMA
-                 ; record, where each
-  ld c,26        ; search returns a
-                 ; directory record
+  ld de,LOADBUF  ; public search DMA
+  ld c,26        ; 26: LOADBUF
   call BDOS
   xor a
-  ld (DIRCOL),a  ; no row yet: the first
-                 ; entry starts one
+  ld (DIRCOL),a  ; no row yet
   ld h,a
   ld l,a
 
-; no file listed yet
-
   ld (DIRNUM),hl
-  ld a,(VWID)    ; TEC-OS: columns of 13
-                 ; that fit the console
-  or a           ; 0 when no video
-                 ; console is fitted
+  ld a,(VWID)    ; active console width
+  or a           ; zero: serial fallback
   jr nz,DIRWID
-  ld a,80        ; serial only: assume
-                 ; 80
+  ld a,80        ; serial width 80
 
 DIRWID:
-  ld b,0         ; B counts the columns
-                 ; that fit
+  ld b,0         ; columns that fit
 
 DIRWDIV:
-  sub 13         ; 12 for a name, one
-                 ; space between
-  jr c,DIRWSET   ; no room for another
+  sub 13         ; 12 plus separator
+  jr c,DIRWSET   ; no further column
   inc b
   jr DIRWDIV
 
 DIRWSET:
   ld a,b
-  or a           ; a console under 13
-                 ; wide
+  or a           ; width below 13
   jr nz,DIRWOK
-  inc a          ; still has one column
+  inc a          ; minimum one column
 
 DIRWOK:
 
-; the entries on a full row
-
   ld (DIRNCOL),a
-  call PGINIT    ; the pager starts a
-                 ; new screen
-  call DOSSEQ    ; the first match, by
-                 ; search first
-  DB 17*2+0      ; BDOS 17, source FCB
+  call PGINIT    ; initialise pager
+  call DOSSEQ    ; first public match
+  DB 17*2+0      ; 17: CMDFCB
 
-; One search result in A: the matching
-; entry's index, 0 to 3, in the
-; directory record at LOADBUF, or FFh
-; when no more match. A system file is
-; passed over; any other is printed, a
-; new row begun when the last is full.
+; Handle search result A: FFh ends.
+; Otherwise slot 0..3 selects
+; LOADBUF+32*slot. Skip entry byte 10
+; bit 7 (system) without changing the
+; visible count.
+; For a visible entry save its pointer
+; until DIRNAME. DIRCOL=0 starts a row.
+; Otherwise print one separator. Pager
+; abort abandons that word until
+; MAINLOOP resets SP.
 
 DIRLOOP:
-  inc a          ; FFh: the search is
-                 ; over
+  inc a          ; FFh: search ended
   jp z,DIRDONE
   dec a
-  ld l,a         ; the entry at LOADBUF
-                 ; + 32 * index
+  ld l,a         ; slot 0..3
   ld h,0
-  add hl,hl      ; five doublings: 32
-                 ; bytes an entry
+  add hl,hl      ; slot *32
   add hl,hl
   add hl,hl
   add hl,hl
   add hl,hl
-  ld de,LOADBUF  ; from the record's
-                 ; start
+  ld de,LOADBUF  ; DMA record base
   add hl,de
-  push hl
-  ld de,10       ; the type's second
-                 ; byte, whose bit 7
+  push hl        ; keep entry base
+  ld de,10       ; system byte offset
   add hl,de
-  bit 7,(hl)     ; is the system
-                 ; attribute
+  bit 7,(hl)     ; t2 attribute bit
   pop hl
-  jr nz,DIRNEXT  ; a system file: not
-                 ; listed
-  push hl        ; live until DIRNAME;
-                 ; abort resets SP
-  ld a,(DIRCOL)  ; entries still to go
-                 ; on this row
+  jr nz,DIRNEXT  ; hidden: no count
+  push hl        ; entry until DIRNAME
+  ld a,(DIRCOL)  ; columns remaining
   or a
-  jr z,DIRHEAD   ; none: this entry
-                 ; starts a new row
-  ld e,SPACE     ; else one space after
-                 ; the last entry
+  jr z,DIRHEAD   ; new visible row
+  ld e,SPACE     ; inter-entry separator
   call PUTCHAR
   jr DIRNAME
 
-; A new row: DIRCOL takes the count of
-; entries a full row holds. Every row
-; but the first begins with CR LF
-; through the pager, which may pause
-; there, and the listing stops if the
-; key says so. The entry's address is on
-; the stack.
+; Start a row with DIRCOL=DIRNCOL. The
+; first visible row needs no leading
+; newline. Later rows use PGCRLF. Carry
+; enters STARTED with the saved entry
+; pointer abandoned until MAINLOOP
+; resets SP.
 
 DIRHEAD:
-
-; columns remaining in this row
 
   ld a,(DIRNCOL)
   ld (DIRCOL),a
   ld hl,(DIRNUM)
-  ld a,h         ; no file listed yet:
-                 ; the first row
-  or l           ; needs no line break
-                 ; before it
-  jr z,DIRNAME
-  call PGCRLF    ; end the last row
-  jp c,STARTED   ; stopped at a page
-                 ; pause
+  ld a,h
+  or l
+  jr z,DIRNAME   ; first row: no newline
+  call PGCRLF    ; pager row break
+  jp c,STARTED   ; abort abandons word
 
-; One entry as NAME.EXT, padded to 12
-; unless it ends the line. Takes the
-; entry's address on the stack; counts
-; it in DIRNUM and DIRCOL and goes on to
-; the next search.
+; Print the saved entry and increment
+; visible DIRNUM. Skip its user byte,
+; set C=0 and print eight name bytes
+; through PUTTRIM. If the first type
+; byte is SPACE, omit dot and the entire
+; type. Otherwise count the dot and
+; print three type bytes. Attribute bits
+; and all spaces are omitted.
 
 DIRNAME:
-
-; one more file listed
 
   ld hl,(DIRNUM)
   inc hl
   ld (DIRNUM),hl
-  pop hl         ; the entry, its user
-                 ; byte first,
-  inc hl         ; and then its 8-byte
-                 ; name
-  ld b,8
-  ld c,0         ; characters printed
-  call PUTTRIM   ; the name without its
-                 ; spaces
-  ld a,(hl)      ; the type's first
-                 ; byte, its attribute
-  and $7F        ; cleared: a space when
-                 ; there is no type
+  pop hl         ; recover entry base
+  inc hl         ; skip user byte
+  ld b,8         ; positive name length
+  ld c,0         ; printed width count
+  call PUTTRIM   ; all spaces omitted
+  ld a,(hl)      ; first type byte
+  and $7F        ; ignore attribute bit
   cp SPACE
-  jr z,DIRPAD    ; and then no dot
+  jr z,DIRPAD    ; SPACE: omit all type
   ld e,'.'
   call PUTCHAR
-  inc c          ; the dot counts toward
-                 ; the 12
-  ld b,3
-  call PUTTRIM   ; then the 3-byte type
+  inc c          ; dot adds to width
+  ld b,3         ; positive type length
+  call PUTTRIM   ; print masked type
+
+; After an entry decrement DIRCOL. The
+; row's last column skips padding.
+; Others add spaces until C=12. The next
+; visible entry supplies its separate
+; one-space separator.
 
 DIRPAD:
-  ld hl,DIRCOL   ; one fewer entry left
-                 ; on this row
+  ld hl,DIRCOL   ; one fewer column
   dec (hl)
-  jr z,DIRNEXT   ; the row's last entry:
-                 ; no padding
+  jr z,DIRNEXT   ; last column: no pad
 
 DIRPADC:
-  ld a,c         ; spaces after the
-                 ; entry
+  ld a,c         ; current printed width
   cp 12
-  jr nc,DIRNEXT  ; until it is 12 wide
+  jr nc,DIRNEXT  ; pad only to 12
   ld e,SPACE
   call PUTCHAR
-  inc c
+  inc c          ; include padding
   jr DIRPADC
 
-; The next match, by search next, to
-; DIRLOOP with its result in A.
+; Continue through BDOS 18 and enter
+; DIRLOOP with A's result. Hidden system
+; entries reach this path without
+; changing the visible count or columns.
 
 DIRNEXT:
-  call DOSSEQ    ; the next match's
-                 ; index, or FFh
-  DB 18*2+0      ; BDOS 18, source FCB
+  call DOSSEQ    ; public continuation
+  DB 18*2+0      ; 18: CMDFCB
   jp DIRLOOP
 
-; The search is over: NO FILE when
-; nothing was listed, else the footer.
-; Returns to the prompt.
+; Finish DIR: zero visible DIRNUM enters
+; FILENO, including an all-hidden
+; result. Otherwise complete the row
+; through PGCRLF and allow pager abort
+; before the footer.
 
 DIRDONE:
   ld hl,(DIRNUM)
-  ld a,h         ; not one file listed
+  ld a,h         ; visible count only
   or l
-  jp z,FILENO    ; is the NO FILE error
+  jp z,FILENO    ; none visible: NO FILE
 
-; Footer: "n files, nK free" for the
-; drive listed.
+; Print the visible count, singular only
+; for one. Query BDOS 46 for the
+; explicit CMDFCB drive (1..16 mapped to
+; 0..15) or CURDSK's low nibble. Current
+; DMA LOADBUF receives a 24-bit
+; free-record count.
+; Shift right three for KiB and print HL
+; plus K free, then STARTED. The
+; supported drive sizes fit this 16-bit
+; KiB result. Arbitrary 24-bit counts
+; need not.
 
-  call PGCRLF    ; end the last row
-  jp c,STARTED   ; stopped at a page
-                 ; pause
+  call PGCRLF    ; last row break
+  jp c,STARTED   ; pager abort
   ld hl,(DIRNUM)
-  call PUTDEC    ; the count of files
-
-; " files, " for any count
+  call PUTDEC    ; decimal visible count
 
   ld de,FILESMSG
   ld hl,(DIRNUM)
-  dec hl         ; but one: " file, "
+  dec hl         ; one file is singular
   ld a,h
   or l
   jr nz,DIRSUM2
   ld de,FILEMSG
 
 DIRSUM2:
-  call PUTSTR    ; the word, singular or
-                 ; plural
-  ld a,(CMDFCB)  ; the drive named, 1
-                 ; for A:,
-  dec a          ; as the BDOS numbers
-                 ; it, 0 for A:
-  jp p,DIRFREE   ; a drive named: its
-                 ; number
-  ld a,(CURDSK)  ; none named: the
-                 ; current drive, from
-  and $0F        ; 0004h's low nibble;
-                 ; the user is above
+  call PUTSTR
+  ld a,(CMDFCB)  ; encoded drive byte
+  dec a          ; FCB 1..16 -> 0..15
+  jp p,DIRFREE   ; explicit drive
+  ld a,(CURDSK)  ; saved default drive
+  and $0F        ; remove user nibble
 
 DIRFREE:
-  ld e,a         ; BDOS 46: the drive's
-                 ; free records,
-  ld c,46        ; 24 bits, into the DMA
-                 ; record LOADBUF
+  ld e,a         ; 0-based query drive
+  ld c,46        ; 46: records to DMA
   call BDOS
-
-; kilobytes = records / 8
 
   ld hl,(LOADBUF)
 
-; the count in A:H:L
-
   ld a,(LOADBUF+2)
-  ld b,3         ; three halvings
+  ld b,3         ; records /8 -> KiB
 
 DIRFK:
   srl a
   rr h
   rr l
-  djnz DIRFK     ; HL the kilobytes,
-                 ; which a drive fits
+  djnz DIRFK     ; KiB in HL
   call PUTDEC
-  ld de,FREEMSG  ; "K free"
+  ld de,FREEMSG  ; K free suffix
   call PUTSTR
-  jp STARTED     ; a new line and the
-                 ; prompt
+  jp STARTED
 
-; ---- Page pauses (TEC-OS)
-; --------------------------------------
-; TYPE and DIR count the lines they
-; print, including lines that wrap at
-; the console width. One line short of a
-; full screen they show [more] and wait
-; for a key: ^C, Esc or Q stops the
-; listing, anything else shows the next
-; screen. The size comes from the
-; console geometry; a serial-only
-; console is 80 x 24.
+; TYPE and DIR share geometry-aware page
+; accounting. Pause one row before a
+; full screen. Serial fallback is 80x24.
+; Mask each key with DFh. Value 03h
+; drops remaining chained pieces and
+; stops the listing. Value 1Bh or Q
+; stops only the listing. Other masked
+; values continue.
 
-; Start a listing on a new screen: no
-; lines counted and the column at 0,
-; with the screen's rows, less one for
-; the pause prompt, and its width from
-; the console geometry, or 24 by 80 for
-; a serial console. Destroys AF.
+; Start pager bookkeeping:
+; PGLINE=PGCOL=0, PGROWS=height-1 and
+; PGWID=width. Zero VHGT defaults to 24.
+; Zero VWID to 80 independently. Active
+; video requires supported geometry.
+; Changes AF.
 
 PGINIT:
   xor a
-  ld (PGLINE),a  ; no lines printed on
-                 ; this screen
-  ld (PGCOL),a   ; at the start of a
-                 ; line
-  ld a,(VHGT)    ; the video console's
-                 ; rows,
-  or a           ; 0 when there is none
+  ld (PGLINE),a  ; zero line count
+  ld (PGCOL),a   ; zero column
+  ld a,(VHGT)    ; active video height
+  or a
   jr nz,PGIH
-  ld a,24        ; a serial terminal's
-                 ; 24
+  ld a,24        ; serial height 24
 
 PGIH:
-  dec a          ; the last row holds
-                 ; the pause prompt
+  dec a          ; reserve pause row
   ld (PGROWS),a
-  ld a,(VWID)    ; the columns,
-                 ; likewise,
+  ld a,(VWID)    ; active video width
   or a
   jr nz,PGIW
-  ld a,80        ; or a serial
-                 ; terminal's 80
+  ld a,80        ; serial width 80
 
 PGIW:
   ld (PGWID),a
   ret
 
-; Print CR LF through the pager. Carry
-; set when the user stops the listing.
-; Destroys AF, DE and HL, and BC when it
-; pauses.
+; Print CR through PGPUT and propagate
+; carry abort. Otherwise fall into PGPUT
+; with E=LF. LF is output before its
+; pause check. Changes AF/DE/HL and BC
+; on a pause.
 
 PGCRLF:
-  ld e,CR
+  ld e,CR        ; CR first
   call PGPUT
-  ret c          ; stopped at a page
-                 ; pause
-  ld e,LF        ; then the line feed,
-                 ; by PGPUT below
+  ret c          ; propagate abort
+  ld e,LF        ; fall through with LF
 
-; Print E, counting lines and pausing
-; when the screen is full. Carry set
-; when the user stops the listing. PGCOL
-; follows the column: CR returns it to
-; 0, a backspace steps it back, a tab
-; moves it to the next multiple of 8,
-; and a printable character at the width
-; begins a wrapped line. Destroys AF, DE
-; and HL, and BC when it pauses.
+; Print E with pager accounting.
+; Dispatch LF/CR/BS/tab separately.
+; Other bytes below SPACE take no
+; columns. For other bytes at least
+; SPACE, check width before output.
+; At/beyond it call PGNEWL with DE saved
+; and suppress the byte on abort.
+; Otherwise advance PGCOL and output.
+; Carry set stops the listing. Clear
+; continues. Changes AF/DE/HL and BC on
+; pause.
 
 PGPUT:
   ld a,e
-  cp LF          ; line feed: a new
-                 ; line, perhaps a pause
+  cp LF          ; LF: output then count
   jr z,PGLF
-  cp CR          ; carriage return:
-                 ; column 0
+  cp CR          ; CR: reset column
   jr z,PGCR
-  cp 8           ; backspace: one column
-                 ; back
+  cp 8           ; BS: saturating left
   jr z,PGBS
-  cp 9           ; tab: to the next
-                 ; multiple of 8
+  cp 9           ; tab: next multiple 8
   jr z,PGTAB
   cp SPACE
-  jr c,PGOUT     ; other control bytes
-                 ; take no room
-  ld a,(PGCOL)   ; a printable
-                 ; character: at the
-                 ; width
-  ld hl,PGWID
+  jr c,PGOUT     ; controls: no column
+  ld a,(PGCOL)   ; current column
+  ld hl,PGWID    ; width threshold
   cp (hl)
-  jr c,PGINC     ; or past it, it wraps;
-                 ; short of it, fits
-  push de        ; this character starts
-                 ; a wrapped line
-  call PGNEWL
+  jr c,PGINC     ; below width: fits
+  push de        ; keep pending byte
+  call PGNEWL    ; wrap before output
   pop de
-  ret c          ; stopped at a page
-                 ; pause
-  xor a          ; from column 0 of the
-                 ; new line
+  ret c          ; abort suppresses byte
+  xor a          ; new line column zero
 
 PGINC:
-  inc a          ; the column after this
-                 ; character
+  inc a          ; column after byte
 
 PGSETC:
-  ld (PGCOL),a
+  ld (PGCOL),a   ; publish column
 
 PGOUT:
-  call PUTCHAR
-  or a           ; carry clear: the
-                 ; listing goes on
+  call PUTCHAR   ; output original E
+  or a           ; continue: carry clear
   ret
 
+; CR resets PGCOL to zero. BS decrements
+; it only when nonzero. Both output the
+; original control byte through
+; PGSETC/PGOUT and return carry clear.
+
 PGCR:
-  xor a
-  jr PGSETC      ; the column back to 0
+  xor a          ; CR column zero
+  jr PGSETC
 
 PGBS:
   ld a,(PGCOL)
-  or a           ; a backspace at column
-                 ; 0 stays there
+  or a           ; BS at zero stays
   jr z,PGOUT
-  dec a          ; else one column left
+  dec a          ; BS one column left
   jr PGSETC
+
+; Set PGCOL=(PGCOL OR 7)+1 in its
+; eight-bit counter and output the tab.
+; No PGNEWL call occurs here. A later
+; byte at least SPACE performs the width
+; check.
 
 PGTAB:
   ld a,(PGCOL)
-  or 7           ; the next column that
-                 ; is a multiple of 8
+  or 7           ; next multiple of 8
   inc a
   jr PGSETC
 
-PGLF:
-  call PUTCHAR   ; the line feed itself
-                 ; first
+; Output LF first, then enter PGNEWL.
+; Printable-wrap entry instead checks
+; before outputting its pending
+; character.
 
-; A new line begins. Pause first if the
-; screen is full: show [more], wait for
-; a key and erase the prompt. ^C, Esc or
-; Q return carry set to stop the
-; listing; any other key starts a new
-; screen. Otherwise the line is counted
-; and the column set to 0, with carry
-; clear. Destroys AF, DE and HL, and BC
-; when it pauses.
+PGLF:
+  call PUTCHAR   ; LF before pause
+
+; Begin a line: compare PGLINE+1 with
+; PGROWS. Below threshold count it and
+; reset column/carry. At/above threshold
+; print [more] and poll BDOS 6, E=FFh,
+; until a nonzero key.
+; Save the key across prompt erasure,
+; then mask with DFh. Value 03h enters
+; PGDROP. Value 1Bh or Q enters PGSTOP.
+; Other masked values reset PGLINE/PGCOL
+; to zero. Abort leaves these counters
+; unchanged here. Changes AF/DE/HL and
+; BC on pause.
 
 PGNEWL:
-  ld a,(PGLINE)
-  inc a          ; this screen's lines
-                 ; with the new one
-  ld hl,PGROWS
+  ld a,(PGLINE)  ; current line count
+  inc a          ; new line candidate
+  ld hl,PGROWS   ; pause threshold
   cp (hl)
-  jr c,PGNL1     ; still room: count it
-  ld de,MOREMSG  ; full: [more] on the
-                 ; last row
+  jr c,PGNL1     ; room: keep count
+  ld de,MOREMSG  ; pause prompt
   call PUTSTR
 
 PGWAIT:
-  ld e,$FF       ; direct console input,
-                 ; no echo
-  ld c,6         ; BDOS 6, which returns
-                 ; 0 with no key
+  ld e,$FF       ; non-echo input
+  ld c,6         ; 6: poll until key
   call BDOS
   or a
-  jr z,PGWAIT    ; wait for one
-  push af        ; the key, kept across
-                 ; the erase
-  ld de,UNMORE   ; spaces over [more],
-                 ; back to column 0
+  jr z,PGWAIT    ; 0: poll again
+  push af        ; key across erasure
+  ld de,UNMORE   ; erase prompt only
   call PUTSTR
   pop af
-  and $DF        ; upper case; ^C and
-                 ; Esc are unaffected
-  cp 3           ; ^C
+  and $DF        ; mask every key
+  cp 3           ; 03h: drop chain
   jr z,PGDROP
-  cp $1B         ; Esc
+  cp $1B         ; 1Bh: stop listing
   jr z,PGSTOP
-  cp 'Q'
+  cp 'Q'         ; Q stops listing
   jr z,PGSTOP
-  xor a          ; any other key: a new
-                 ; screen
+  xor a          ; continue: page zero
 
 PGNL1:
-  ld (PGLINE),a
-  xor a          ; column 0, and carry
-                 ; clear: go on
+  ld (PGLINE),a  ; publish new count
+  xor a          ; reset column/carry
   ld (PGCOL),a
   ret
 
-; ^C drops the rest of a chained line,
-; as it does at a program's line input;
-; Esc and Q stop only the listing. Both
-; return carry set.
+; Masked value 03h clears CHPOS before
+; the shared carry-set return. Values
+; 1Bh/Q leave CHPOS intact and stop only
+; this listing. No STPOS/startup-file
+; position is cleared.
 
 PGDROP:
   xor a
-  ld (CHPOS),a   ; no chained piece left
-                 ; to run
+  ld (CHPOS),a   ; drop chained pieces
 
 PGSTOP:
-  scf            ; carry: the listing
-                 ; stops
+  scf            ; listing abort carry
   ret
 
-; Print up to B characters from HL,
-; without their attribute bits and
-; passing over spaces; count those
-; printed in C, which runs on from its
-; value at entry. Leaves HL after the
-; field and B at 0. Destroys AF and DE.
+; Print a field from HL with positive
+; B=1..255. Current callers use 8 or 3.
+; Examine exactly B bytes, mask bit 7
+; and skip every SPACE, including
+; internal ones. Increment C per output
+; from its incoming value.
+; Return HL advanced by original B and
+; B=0. Changes AF/DE. B=0 would iterate
+; 256 times, not perform a zero-length
+; operation.
 
 PUTTRIM:
   ld a,(hl)
-  and $7F        ; the character without
-                 ; its attribute
+  and $7F        ; ignore attribute bit
   cp SPACE
-  jr z,PUTTSK    ; a space is not
-                 ; printed
+  jr z,PUTTSK    ; skip every SPACE
   ld e,a
-  call PUTCHAR   ; which keeps B, C and
-                 ; HL
-  inc c
+  call PUTCHAR   ; keeps BC/HL
+  inc c          ; accumulate width
 
 PUTTSK:
   inc hl
-  djnz PUTTRIM   ; the rest of the field
+  djnz PUTTRIM   ; positive-B loop
   ret
 
-; Print HL in decimal without leading
-; zeros: the remainders of division by
-; 10 go on the stack above a 10, which
-; no digit equals, and print in reverse.
-; Destroys AF, BC, DE and HL.
+; Print unsigned HL in decimal,
+; including zero, without leading zeros.
+; Divide repeatedly by 10 through DIV16
+; and push remainder digits above
+; sentinel word 10. Pop/print in reverse
+; until that sentinel.
+; At most five digit words plus sentinel
+; are used, excluding call frames.
+; Divisor 10 meets DIV16's 1..8000h
+; bound. Changes AF/BC/DE/HL.
 
 PUTDEC:
-  ld de,10       ; the divisor, and the
-                 ; end marker
+  ld de,10       ; divisor and sentinel
   push de
 
 PUTDL:
-  call DIV16     ; HL mod 10 in HL, HL /
-                 ; 10 in DE
-  push hl        ; a digit, the lowest
-                 ; first
-  ex de,hl       ; on with the quotient
-  or l           ; A = H: DIV16 leaves A
-                 ; = D
-  ld de,10
-  jr nz,PUTDL    ; until the quotient is
-                 ; 0
+  call DIV16     ; quotient DE, rem HL
+  push hl        ; low digit first
+  ex de,hl       ; continue quotient
+  or l           ; A=H: test quotient
+  ld de,10       ; restore divisor 10
+  jr nz,PUTDL    ; nonzero quotient
 
 PUTDP:
-  pop hl         ; the digits, the
-                 ; highest first
+  pop hl         ; high digit first
   ld a,l
-  cp 10          ; the end marker: all
-                 ; printed
+  cp 10          ; sentinel, not digit
   ret z
-  add a,'0'      ; the digit as a
-                 ; character
+  add a,'0'      ; digit character
   ld e,a
   call PUTCHAR
   jr PUTDP
 
-; TYPE name: print a text file through
-; the pager, up to its first ^Z or its
-; end, then close it. NO FILE when no
-; name is given or the file is not
-; there; a bad command for an ambiguous
-; name or more after it. Uses CMDFCB and
-; LOADBUF as the DMA record; returns to
-; the prompt. TYPE streams public
-; 128-byte records and stops at CP/M
-; text EOF.
+; TYPE name: require one unambiguous
+; complete reference. No operand or FFh
+; open result enters FILENO. Set
+; DMA=LOADBUF, initialise the pager and
+; stream 128-byte records, stopping
+; before 1Ah.
 
 CMDTYPE:
-  call ARGSKIP   ; the operand: none is
-                 ; NO FILE
-  jr z,FILENO
-  call ONENAME   ; one unambiguous name
-                 ; into CMDFCB
-  call DOSSEQ    ; open it
-  DB 15*2+0      ; BDOS 15, source FCB
+  call ARGSKIP   ; missing operand
+  jr z,FILENO    ; NO FILE branch
+  call ONENAME   ; one complete name
+  call DOSSEQ    ; open descriptor
+  DB 15*2+0      ; 15: CMDFCB
   inc a
-  jr z,FILENO    ; FFh: not found
-  ld de,LOADBUF  ; BDOS 26: records are
-                 ; read
-  ld c,26        ; into LOADBUF
+  jr z,FILENO    ; FFh open: NO FILE
+  ld de,LOADBUF  ; record DMA buffer
+  ld c,26        ; 26: LOADBUF
   call BDOS
-  call PGINIT    ; the pager starts a
-                 ; new screen
+  call PGINIT    ; pager initial state
 
-; The next record into LOADBUF. A
-; nonzero result is the file's end, or a
-; read error, and ends the listing.
+; Read CMDFCB's next record through BDOS
+; 20. On zero set HL=LOADBUF and B=128
+; for the byte loop. Any nonzero
+; returned result enters TYPEEND without
+; distinguishing EOF/read error. Other
+; BDOS errors may abort nonlocally.
 
 TYPEREAD:
-  call DOSSEQ    ; read sequential: A 0
-                 ; for a record
-  DB 20*2+0      ; BDOS 20, source FCB
+  call DOSSEQ    ; sequential read
+  DB 20*2+0      ; 20: CMDFCB
   or a
-  jr nz,TYPEEND  ; the file's end
-  ld hl,LOADBUF  ; the record's 128
-                 ; bytes in turn
-  ld b,128
+  jr nz,TYPEEND  ; all nonzero statuses
+  ld hl,LOADBUF  ; record start
+  ld b,128       ; 128 byte counter
 
-; Each byte of the record through the
-; pager, up to a ^Z, CP/M's end of text.
-; HL points to the byte and B counts
-; those left in the record.
+; Print record bytes until 1Ah, detected
+; before output. Preserve BC/HL around
+; PGPUT, restoring count/pointer even on
+; carry abort. Carry enters TYPEEND.
+; Otherwise advance until the next
+; record.
 
 TYPEBYTE:
   ld a,(hl)
-  cp $1A         ; ^Z: the text ends
-                 ; here
+  cp $1A         ; 1Ah before output
   jr z,TYPEEND
   ld e,a
-  push bc        ; the pager destroys
-                 ; HL, and BC
-  push hl        ; when it pauses
+  push bc        ; count across pager
+  push hl        ; pointer across pager
   call PGPUT
   pop hl
   pop bc
-  jr c,TYPEEND   ; stopped at a page
-                 ; pause
+  jr c,TYPEEND   ; carry after restore
   inc hl
-  djnz TYPEBYTE  ; the rest of the
-                 ; record,
-  jr TYPEREAD    ; then the next
+  djnz TYPEBYTE  ; remaining record
+  jr TYPEREAD    ; next record
 
-; Close the file and return to the
-; prompt on a new line.
+; Attempt to close CMDFCB, ignoring its
+; ordinary result, then enter STARTED
+; for newline and command loop. This
+; handles text EOF, nonzero reads and
+; pager abort.
 
 TYPEEND:
-  call DOSSEQ    ; close it
-  DB 16*2+0      ; BDOS 16, source FCB
-  jp STARTED     ; a new line and the
-                 ; prompt
+  call DOSSEQ    ; unchecked close
+  DB 16*2+0      ; 16: CMDFCB
+  jp STARTED     ; newline/prompt
 
-; The NO FILE error: the message, the
-; failure code and the prompt.
+; Report NOFILE through ERRGO: set
+; PRGCODE=FF00h, print the message and
+; join STARTED. Includes missing TYPE
+; operand/FFh open and DIR with no
+; visible entries.
 
 FILENO:
   ld de,NOFILE
-  jp ERRGO       ; the message at DE as
-                 ; a failure
+  jp ERRGO       ; failure-code message

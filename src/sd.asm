@@ -1,554 +1,486 @@
-; SD card block driver: SPI mode,
-; bit-banged on port FDh.
-;
-; Port bits out: 0 MOSI, 1 CLK, 2 /CS.
-; In: bit 7 MISO. Data changes while CLK
-; is low and the card samples on the
-; rising edge. Every wait is bounded.
-; Routines return Z on success; on
-; failure NZ and A holds an SDE* code,
-; also kept in SDERR.
+; SD SPI on FDh. Outputs are MOSI bit 0,
+; CLK bit 1 and active-low CS bit 2.
+; Input is MISO bit 7. Counts bound
+; software polls, not wall time.
+; SDINIT/SDREAD/SDWRITE return A=0/Z or
+; nonzero SDE*/NZ and store A in SDERR.
+; Helpers below have separate results.
 
 SDIDLE EQU $05   ; /CS high, MOSI high,
                  ; CLK low
 
-SDENOCD EQU 1    ; no response to CMD0
+SDENOCD EQU 1    ; CMD0 never returned
+                 ; 01h
 SDEINIT EQU 2    ; ACMD41 never ready,
                  ; or CMD55 refused
 SDEOCR EQU 3     ; CMD58 failed
 SDEBLEN EQU 4    ; CMD16 failed
-SDECMD EQU 5     ; read or write command
-                 ; rejected
+SDECMD EQU 5     ; read/write R1 nonzero
 SDETOK EQU 6     ; no data token
 SDEWRSP EQU 7    ; write not accepted
 SDEBUSY EQU 8    ; card stayed busy
-SDERNG EQU 9     ; a standard card's
-                 ; block past its 4 GiB
-SDEDTOK EQU 10   ; a data error token in
-                 ; place of the data
+SDERNG EQU 9     ; SDSC LBA >=800000h
+SDEDTOK EQU 10   ; read token not
+                 ; FEh/FFh
 SDEVOLT EQU 11   ; CMD8's echo wrong:
                  ; voltage or pattern
 
-; Send the byte in C to the card, most
-; significant bit first. Selects the
-; card: every write to SDIO here has /CS
-; (bit 2) low. Takes C; returns C
-; unchanged, as eight RLCs bring it
-; round, and CLK left high. Destroys AF,
-; B.
+; Send C most significant bit first with
+; CS low. Each bit sets data with CLK
+; low then raises CLK. Return C
+; unchanged after eight rotations, B=0
+; and CLK high. Change AF. DE/HL and
+; SDERR stay intact.
 
 SPIW:
-  ld b,8         ; eight bits
+  ld b,8
 
 SPIWB:
-  xor a          ; /CS low, CLK low,
-                 ; MOSI 0 so far
-  rlc c          ; next bit, top first,
-                 ; to carry
-  rla            ; and into bit 0, MOSI
-  out (SDIO),a   ; data out while CLK is
-                 ; low
-  or 2           ; bit 1, CLK, high:
-  out (SDIO),a   ; the card samples MOSI
-                 ; on this edge
+  xor a
+  rlc c
+  rla
+  out (SDIO),a
+  or 2
+  out (SDIO),a
   djnz SPIWB
   ret
 
-; Receive a byte from the card, sending
-; FFh (MOSI held high), with /CS low.
-; Returns the byte in A, CLK left low.
-; Destroys F, B, E.
+; Receive eight bits with CS low and
+; MOSI high. Return the byte in A with
+; CLK low and B=0. Change F/E. C/D/HL
+; and SDERR stay intact. Eight shifts
+; remove the old E bits.
 
 SPIR:
-  ld b,8         ; eight bits
+  ld b,8
 
 SPIRB:
-  ld a,1         ; MOSI high, CLK low,
-                 ; /CS low
-  out (SDIO),a   ; the card shifts its
-                 ; next bit out
-  ld a,3         ; the same with CLK
-                 ; high:
-  out (SDIO),a   ; the bit is valid
-                 ; after the rise
-  in a,(SDIO)    ; MISO is bit 7
-  rla            ; to carry,
-  rl e           ; and into E, top bit
-                 ; first
-  djnz SPIRB
-  ld a,1         ; finish with CLK low
+  ld a,1
   out (SDIO),a
-  ld a,e         ; the byte received
+  ld a,3
+  out (SDIO),a
+  in a,(SDIO)
+  rla
+  rl e
+  djnz SPIRB
+  ld a,1
+  out (SDIO),a
+  ld a,e
   ret
 
-; Deselect the card, then give it eight
-; clocks with /CS high so that it lets
-; go of MISO. Keeps every register, so a
-; command's R1 in A and its flags pass
-; through.
+; Deselect and emit eight trailing
+; clocks with CS/MOSI high, ending CLK
+; low. Preserve all registers and flags
+; so the response in A passes through.
 
 SPIEND:
   push af
   push bc
-  ld b,8         ; eight clocks, one
-                 ; byte's worth
+  ld b,8
 
 SPIEB:
-  ld a,SDIDLE+2  ; /CS high, MOSI high,
-                 ; CLK high
+  ld a,SDIDLE+2
   out (SDIO),a
-  ld a,SDIDLE    ; and CLK low again
+  ld a,SDIDLE
   out (SDIO),a
   djnz SPIEB
-  pop bc         ; the caller's
-                 ; registers back,
-  pop af         ; R1 and flags included
+  pop bc
+  pop af
   ret
 
-; Send command A (its index, 0-63) with
-; the 32-bit argument in SDARG and
-; return its R1 response in A: 00h
-; ready, bit 0 in the idle state, bit 2
-; an illegal command; bit 7 is always
-; clear. A with bit 7 set (FFh from an
-; absent card) means no R1 came within
-; 16 bytes. Leaves /CS low so that the
-; caller can read the rest of a longer
-; response. Destroys F, BC, DE, HL.
+; Send FFh, 40h OR command A=0..63, four
+; big-endian SDARG bytes and CRC/end
+; byte. Poll at most sixteen bytes for
+; R1. A bit 7 clear means response, set
+; means exhausted search. Both return Z.
+; Leave CS low for longer responses.
+; Change AF/BC/DE/HL. SDERR stays
+; intact.
 
 SDCMD:
-  ld d,a         ; D keeps the index
-  ld c,$FF       ; one idle byte first,
-                 ; card selected
+  ld d,a
+  ld c,$FF
   call SPIW
-  ld a,d         ; first byte: 01 then
-                 ; the index,
-  or $40         ; start bit 0,
-                 ; transmission bit 1
+  ld a,d
+  or $40
   ld c,a
   call SPIW
-  ld hl,SDARG    ; the argument, most
-                 ; significant byte
-                 ; first
-  ld c,(hl)      ; bits 31-24
+  ld hl,SDARG
+  ld c,(hl)
   call SPIW
   inc hl
-  ld c,(hl)      ; bits 23-16
+  ld c,(hl)
   call SPIW
   inc hl
-  ld c,(hl)      ; bits 15-8
+  ld c,(hl)
   call SPIW
   inc hl
-  ld c,(hl)      ; bits 7-0
+  ld c,(hl)
   call SPIW
 
-; Last byte: CRC7 and the end bit. The
-; card checks it only for CMD0 and CMD8
-; in SPI mode.
+; CRC/end byte is 95h for CMD0 argument
+; 0. CMD8 argument 1AAh uses 87h. Other
+; commands use 01h. Callers must supply
+; the matching arguments. No CRC is
+; calculated here.
 
-  ld c,$95       ; valid CRC for CMD0
+  ld c,$95
   ld a,d
-  or a           ; CMD0?
+  or a
   jr z,SDCRC
-  ld c,$87       ; valid CRC for CMD8
-                 ; with argument 1AAh
-  cp 8           ; CMD8?
+  ld c,$87
+  cp 8
   jr z,SDCRC
-  ld c,$01       ; any other: no CRC,
-                 ; just the end bit
+  ld c,$01
 
 SDCRC:
   call SPIW
-  ld d,16        ; poll up to 16 bytes
-                 ; for R1
+  ld d,16
 
 SDR1:
   call SPIR
-  bit 7,a        ; R1 has bit 7 clear;
-                 ; FFh is idle line
-  ret z          ; the response
+  bit 7,a
+  ret z
   dec d
-  jr nz,SDR1     ; not yet: read again
-  ret            ; none: A has bit 7 set
+  jr nz,SDR1
+  ret
 
-; Set SDARG to the 32-bit value DEHL,
-; stored big-endian as the card takes
-; it: D first. Destroys A; the flags are
-; kept.
+; Store 32-bit DEHL in SDARG, D first.
+; Return A=L. Preserve flags/BC/DE/HL.
+; No port access.
 
 SETARG:
-  ld a,d         ; bits 31-24
+  ld a,d
   ld (SDARG),a
-  ld a,e         ; bits 23-16
+  ld a,e
   ld (SDARG+1),a
-  ld a,h         ; bits 15-8
+  ld a,h
   ld (SDARG+2),a
-  ld a,l         ; bits 7-0
+  ld a,l
   ld (SDARG+3),a
   ret
 
-; Run command A with argument DEHL and
-; deselect the card, for commands whose
-; response is R1 alone. Returns R1 in A,
-; as SDCMD. Destroys F, BC, DE, HL.
+; Send command A with argument DEHL,
+; then deselect through SPIEND. Return
+; SDCMD byte/flags unchanged. Change
+; AF/BC/DE/HL. SDERR stays intact.
 
 SDCMDX:
-  push af        ; SETARG uses A
+  push af
   call SETARG
   pop af
-  call SDCMD     ; R1 in A,
-  jr SPIEND      ; which SPIEND keeps
+  call SDCMD
+  jr SPIEND
 
-; Start the card in SPI mode and make it
-; ready for 512-byte block I/O: CMD0 to
-; reset it, CMD8 for a version 2 card
-; (its echo checked), CMD55 and ACMD41
-; until it is ready, then CMD58 to find
-; whether it takes block or byte
-; addresses, and CMD16 to fix a
-; byte-addressed card's block at 512.
-; Sets SDBYTE, SDERR and SDARG. Returns
-; Z and A = 0 when ready; NZ and A = an
-; SDE* code if not. Destroys F, BC, DE,
-; HL.
+; Prepare SPI block I/O, initially using
+; block addresses. Return A=0/Z or
+; SDE*/NZ. Store A in SDERR. Set
+; SDBYTE/SDARG and change F/BC/DE/HL.
+; SDXB stays intact. CMD58 selects
+; addressing mode and CMD16 sets
+; byte-card blocks to 512 bytes.
 
 SDINIT:
-  xor a          ; block addresses until
-                 ; CMD58 says
-  ld (SDBYTE),a  ; otherwise
-  ld a,SDIDLE    ; deselect: /CS high,
-                 ; CLK low
+  xor a
+  ld (SDBYTE),a
+  ld a,SDIDLE
   out (SDIO),a
-  ld d,10        ; CMD0 attempts
+  ld d,10
+
+; Up to ten CMD0 attempts, each preceded
+; by 80 deselected clocks. Only R1=01h
+; proceeds. Other responses or timeouts
+; exhaust to SDENOCD.
 
 SDI0:
   push de
-  ld b,80        ; at least 74 clocks
-                 ; with /CS high
+  ld b,80
 
 SDICK:
-  ld a,SDIDLE+2  ; the power-up clocks
-                 ; the card needs
-  out (SDIO),a   ; before its first
-                 ; command
+  ld a,SDIDLE+2
+  out (SDIO),a
   ld a,SDIDLE
   out (SDIO),a
   djnz SDICK
-  ld de,0        ; CMD0, GO_IDLE_STATE,
-                 ; argument 0:
-  ld hl,0        ; with /CS low it puts
-                 ; the card into
-  xor a          ; SPI mode
+  ld de,0
+  ld hl,0
+  xor a
   call SDCMDX
   pop de
-  cp 1           ; R1 01h: idle, as a
-                 ; reset card is
+  cp 1
   jr z,SDI8
   dec d
-  jr nz,SDI0     ; try again, clocks
-                 ; first
-  ld a,SDENOCD   ; no card, or one that
-                 ; never answered
+  jr nz,SDI0
+  ld a,SDENOCD
   jp SDFAIL
 
+; CMD8 argument 1AAh: only R1=01h enters
+; R7 checks. Discard two bytes, then
+; test the third low nibble for 1.
+; Read/test the fourth for AAh only if
+; that passes. Mismatch deselects with
+; SDEVOLT. Other R1/timeout outcomes
+; skip R7 and continue, without
+; identifying card generation.
+
 SDI8:
-  ld de,0        ; CMD8: 2.7-3.6 V,
-                 ; check pattern AAh
-  ld hl,$01AA    ; (SEND_IF_COND,
-                 ; version 2 cards only)
+  ld de,0
+  ld hl,$01AA
   call SETARG
   ld a,8
   call SDCMD
-  cp 1           ; idle, no error: a
-                 ; version 2 card
-  jr nz,SDI8X    ; version 1 card: no R7
-                 ; payload
-  call SPIR      ; R7 bytes 1 and 2: the
-                 ; command
-  call SPIR      ; version and reserved
-                 ; bits, not needed
-  call SPIR      ; byte 3: the voltage
-                 ; the card accepts,
-  and $0F        ; in its low four bits
-  cp 1           ; 1: 2.7-3.6 V, the
-                 ; range asked for
+  cp 1
+  jr nz,SDI8X
+  call SPIR
+  call SPIR
+  call SPIR
+  and $0F
+  cp 1
   jr nz,SDI8F
-  call SPIR      ; byte 4: the check
-                 ; pattern echoed
+  call SPIR
   cp $AA
-  jr z,SDI8X     ; AAh: the card took
-                 ; CMD8 as sent
+  jr z,SDI8X
 
 SDI8F:
-  call SPIEND    ; a wrong echo: a card
-                 ; this board can't
-  ld a,SDEVOLT   ; power, or that
-                 ; misread the command
+  call SPIEND
+  ld a,SDEVOLT
   jr SDFAIL
 
 SDI8X:
-  call SPIEND    ; deselect after CMD8
-                 ; either way
-  ld c,0         ; ACMD41 attempts, 256
+  call SPIEND
+  ld c,0
+
+; Up to 256 attempts. Accept only CMD55
+; R1=00h/01h, otherwise pop BC and fail
+; SDEINIT. ACMD41 sends HCS=40000000h.
+; Zero proceeds to OCR. Every nonzero
+; result pauses 256 turns before retry.
+; Exhaustion is SDEINIT.
 
 SDI41:
   push bc
-  ld de,0        ; CMD55, APP_CMD: the
-                 ; next command is
-  ld hl,0        ; an application
-                 ; command
+  ld de,0
+  ld hl,0
   ld a,55
   call SDCMDX
-  and $FE        ; R1 00h, or 01h idle:
-                 ; any other bit is an
-  jr nz,SDI55F   ; error, and no ACMD41
-                 ; can follow
-  ld de,$4000    ; HCS: host supports
-                 ; high capacity
-  ld hl,0        ; (argument bit 30)
-  ld a,41        ; ACMD41,
-                 ; SD_SEND_OP_COND:
-                 ; start the
-  call SDCMDX    ; card's initialisation
+  and $FE
+  jr nz,SDI55F
+  ld de,$4000
+  ld hl,0
+  ld a,41
+  call SDCMDX
   pop bc
-  or a           ; R1 00h: initialised,
-                 ; out of idle
+  or a
   jr z,SDI58
-  ld b,0         ; short pause between
-                 ; attempts
+  ld b,0
 
 SDI41W:
-  djnz SDI41W    ; (256 turns of the
-                 ; loop)
+  djnz SDI41W
   dec c
-  jr nz,SDI41    ; still idle: ask again
-  jr SDI41F      ; never left the idle
-                 ; state
+  jr nz,SDI41
+  jr SDI41F
 
 SDI55F:
-  pop bc         ; CMD55 refused: the
-                 ; count off the stack
+  pop bc
 
 SDI41F:
-  ld a,SDEINIT   ; no initialisation
+  ld a,SDEINIT
   jr SDFAIL
 
+; On CMD58 R1=0, read all four OCR bytes
+; and retain first-byte CCS. Nonzero R1:
+; deselect and return SDEOCR. Set CCS
+; keeps block mode. Clear CCS sets
+; SDBYTE=1 and requires CMD16(512) R1=0
+; or SDEBLEN. Failure can follow a state
+; change.
+
 SDI58:
-  ld de,0        ; CMD58, READ_OCR,
-                 ; argument 0
+  ld de,0
   ld hl,0
   call SETARG
   ld a,58
-  call SDCMD     ; R3: R1, then the
-                 ; 32-bit OCR
-  or a           ; R1 must be 00h
+  call SDCMD
+  or a
   jr nz,SDI58F
-  call SPIR      ; OCR byte 0: bit 6 is
-                 ; CCS
+  call SPIR
   push af
-  call SPIR      ; OCR bits 23-0: the
-                 ; voltage window,
-  call SPIR      ; not needed
+  call SPIR
+  call SPIR
   call SPIR
   call SPIEND
-  pop af         ; OCR bits 31-24 again
-  bit 6,a        ; CCS: card capacity
-                 ; status
-  jr nz,SDIOK    ; high capacity: block
-                 ; addresses
-  ld a,1         ; standard capacity:
-                 ; the card takes
-  ld (SDBYTE),a  ; byte addresses
-                 ; (LBAARG converts)
-  ld de,0        ; CMD16, SET_BLOCKLEN,
-                 ; 512 bytes
+  pop af
+  bit 6,a
+  jr nz,SDIOK
+  ld a,1
+  ld (SDBYTE),a
+  ld de,0
   ld hl,512
   ld a,16
   call SDCMDX
-  or a           ; R1 00h: block length
-                 ; set
+  or a
   jr z,SDIOK
   ld a,SDEBLEN
   jr SDFAIL
 
 SDI58F:
-  call SPIEND    ; CMD58 refused:
-                 ; deselect
-  ld a,SDEOCR    ; and fail through
-                 ; SDFAIL
+  call SPIEND
+  ld a,SDEOCR
 
-; Fail with the SDE* code in A, which is
-; never 0: keep it in SDERR and return
-; NZ with it in A. The common exit of
-; every routine here.
+; SDINIT/SDREAD/SDWRITE failure tail:
+; nonzero SDE code A is stored in SDERR.
+; Return A/NZ/carry clear. The caller
+; must already have deselected or made
+; no card access.
 
 SDFAIL:
   ld (SDERR),a
-  or a           ; NZ
+  or a
   ret
 
-; Succeed: clear SDERR and return Z with
-; A = 0.
+; Success tail: store SDERR=0 and return
+; A=0/Z/carry clear. Deselect is
+; caller-owned.
 
 SDIOK:
-  xor a          ; A = 0, Z, carry clear
+  xor a
   ld (SDERR),a
   ret
 
-; Load SDARG from SDLBA, converting to a
-; byte address for standard-capacity
-; cards. Carry, and SDARG unchanged, for
-; a standard card's block at 800000h or
-; above, whose byte address would lose
-; its top bits and name a lower block
-; (KE-151). Destroys AF, DE, HL.
+; Convert little-endian SDLBA to
+; big-endian SDARG. SDBYTE=0 uses block
+; addressing. Otherwise multiply by 512,
+; refusing LBA>=800000h with carry and
+; SDARG unchanged (KE-151). Accepted
+; paths return carry clear. Change
+; AF/DE/HL. BC stays intact. No port
+; access.
 
 LBAARG:
-  ld hl,(SDLBA)  ; SDLBA is
-                 ; little-endian: bits
-                 ; 15-0
-
-; and bits 31-16
+  ld hl,(SDLBA)
 
   ld de,(SDLBA+2)
   ld a,(SDBYTE)
-  or a           ; 0: the card takes
-                 ; block numbers
-  jp z,SETARG    ; block addressing:
-                 ; carry clear
-  ld a,d         ; bits 24-31 of the
-                 ; block
+  or a
+  jp z,SETARG
+  ld a,d
   or a
   scf
-  ret nz         ; past 4 GiB: refused
-  bit 7,e        ; bit 23
+  ret nz
+  bit 7,e
   scf
-  ret nz         ; and so is this
-  ld d,e         ; DEHL = LBA << 8
+  ret nz
+  ld d,e
   ld e,h
   ld h,l
   ld l,0
-  add hl,hl      ; << 1 more, carrying
-                 ; into DE
-  ex de,hl       ; (bit 23 was clear, so
-                 ; nothing
-  adc hl,hl      ; carries out: carry
-                 ; clear)
+  add hl,hl
   ex de,hl
-  jp SETARG      ; DEHL = LBA * 512
+  adc hl,hl
+  ex de,hl
+  jp SETARG
 
-; Read block SDLBA into the 512 bytes at
-; HL (CMD17), a cache line in EXPAND 1
-; when SDXB is LATEXP. Returns Z and A =
-; 0, or NZ and A = SDERNG, SDECMD,
-; SDETOK or SDEDTOK, also in SDERR.
-; Destroys F, BC, DE, HL, I.
+; Read SDLBA into 512 writable bytes at
+; HL. SDXB=0 or LATEXP selects the
+; buffer bank. Return A=0/Z or SDE*/NZ.
+; Store A in SDERR. Change F/BC/DE/HL. A
+; full payload sets I=0. Caller supplies
+; safe bank/interrupt state. CRC bytes
+; are consumed unchecked.
 
 SDREAD:
-  push hl        ; the buffer, across
-                 ; the command
+  push hl
   call LBAARG
-  jr c,SDRNG     ; no command for a
-                 ; block it can't name
-  ld a,17        ; CMD17,
-                 ; READ_SINGLE_BLOCK
+  jr c,SDRNG
+  ld a,17
   call SDCMD
   pop hl
-  or a           ; R1 00h: accepted
+  or a
   jr nz,SDRCMD
-  ld c,0         ; token wait: 65536
-                 ; polls
-  ld d,0         ; (C inner, D outer)
+  ld c,0
+  ld d,0
+
+; Up to 65,536 byte polls. FEh starts
+; payload, FFh waits and every other
+; byte is SDEDTOK after deselect.
+; Exhaustion is SDETOK. No destination
+; data is written before the payload.
 
 SDRTOK:
-  push de        ; SPIR destroys E
+  push de
   call SPIR
   pop de
-  cp $FE         ; the start block
-                 ; token; FFh while
-  jr z,SDRDAT    ; the card reads
-  inc a          ; any other byte is a
-                 ; data error
-  jr nz,SDRERR   ; token, 000xxxxx: no
-                 ; data follows
+  cp $FE
+  jr z,SDRDAT
+  inc a
+  jr nz,SDRERR
   dec c
   jr nz,SDRTOK
   dec d
   jr nz,SDRTOK
-  call SPIEND    ; no token in time
+  call SPIEND
   ld a,SDETOK
   jr SDFAIL
 
 SDRERR:
-  call SPIEND    ; the card refused the
-                 ; read
+  call SPIEND
   ld a,SDEDTOK
   jr SDFAIL
 
 SDRDAT:
-  call SDRBLK    ; the 512 data bytes
-  call SPIR      ; CRC, not checked
+  call SDRBLK
+  call SPIR
   call SPIR
   call SPIEND
   jr SDIOK
 
-; Fail with SDECMD after the card
-; rejected CMD17 or CMD24: deselect it
-; first. Jumped to from SDREAD and
-; SDWRITE, with the buffer popped.
+; Read/write command failure with buffer
+; word already popped: deselect then
+; return SDECMD through SDFAIL.
 
 SDRCMD:
-  call SPIEND    ; /CS high: the card is
-                 ; left idle
+  call SPIEND
   ld a,SDECMD
   jr SDFAIL
 
-; Fail with SDERNG, from SDREAD or
-; SDWRITE when LBAARG refuses the block:
-; the buffer's address is still on the
-; stack, and the card is untouched.
+; Range failure with buffer word still
+; on stack: pop HL and return SDERNG
+; before card access. SDARG stays
+; unchanged.
 
 SDRNG:
-  pop hl         ; the buffer's address
-  ld a,SDERNG    ; refused before any
-                 ; command
+  pop hl
+  ld a,SDERNG
   jr SDFAIL
 
-; Receive 512 bytes into the buffer at
-; HL, sending FFh, after the start
-; token; HL ends 512 bytes on. /CS low
-; and CLK low on entry and on return.
-; Two bytes a pass, each bit unrolled; I
-; counts the 256 passes. Destroys AF,
-; BC, DE, I.
+; After start token with CS/CLK low,
+; read 512 bytes to writable HL with
+; MOSI high. SDXB=0/LATEXP selects
+; LATCHV OR SDXB view. I counts 256
+; two-byte passes. Return HL advanced,
+; I=0 and CLK low. Change AF/BC/DE.
+; Restore LATCHV before RET. The mapped
+; loop uses no stack. Caller supplies
+; interrupt protection.
 
 SDRBLK:
-  ld a,(SDXB)    ; LATEXP: the buffer is
-                 ; a cache line, and
-  ld b,a         ; EXPAND 1 is in view
-                 ; for the loop, which
-  ld a,(LATCHV)  ; uses no stack
-  or b           ; (SDXB 0: the latch as
-                 ; it was)
+  ld a,(SDXB)
+  ld b,a
+  ld a,(LATCHV)
+  or b
   out (SYSLAT),a
-  ld c,SDIO      ; for OUT (C) and IN
-                 ; (C)
-  ld de,$0103    ; D: CLK low, E: CLK
-                 ; high; MOSI high, /CS
-                 ; low
-  xor a          ; I = 0: 256 passes
-  ld i,a         ; (I, as the stack may
-                 ; be out of view)
+  ld c,SDIO
+  ld de,$0103
+  xor a
+  ld i,a
 
 SDRB2:
   out (c),d      ; bit 7: CLK low, the
                  ; card shifts it out
-  out (c),e      ; and high again
-  in a,(c)       ; MISO, in bit 7, to
-                 ; carry
+  out (c),e
+  in a,(c)
   rla
-  rl b           ; and into B, top bit
-                 ; first
+  rl b
   out (c),d      ; bit 6
   out (c),e
   in a,(c)
@@ -583,8 +515,7 @@ SDRB2:
   out (c),e
   in a,(c)
   rla
-  rl b           ; B is the pass's first
-                 ; byte
+  rl b
   ld (hl),b
   inc hl
   out (c),d      ; second byte: bit 7
@@ -626,181 +557,180 @@ SDRB2:
   out (c),e
   in a,(c)
   rla
-  rl b           ; B is the second byte
+  rl b
   ld (hl),b
   inc hl
-  ld a,i         ; count the pass in I
+  ld a,i
   dec a
   ld i,a
-  jp nz,SDRB2    ; Z from DEC A: 256
-                 ; passes done
-  out (c),d      ; leave CLK low
-  ld a,(LATCHV)  ; the latch as it was:
-                 ; EXPAND 1 out
-
-; of view again if it was brought in
+  jp nz,SDRB2
+  out (c),d
+  ld a,(LATCHV)
 
   out (SYSLAT),a
   ret
 
-; Send the 512 bytes at HL after the
-; start token; HL ends 512 bytes on. /CS
-; low on entry (CLK may be high, as SPIW
-; leaves it); CLK low on return. Each
-; bit unrolled; MOSI changes with CLK
-; low. Destroys AF, BC, DE.
+; After start token with CS low, send
+; 512 bytes from HL. SDXB=0/LATEXP
+; selects LATCHV OR SDXB view. MOSI
+; changes with CLK low. Two passes of
+; 256 bytes advance HL. Return CLK low
+; and latch=LATCHV. Change AF/BC/DE. I
+; stays intact. The mapped loop uses no
+; stack. Caller supplies interrupt
+; protection.
 
 SDWBLK:
-  ld a,(SDXB)    ; as SDRBLK
+  ld a,(SDXB)
   ld b,a
   ld a,(LATCHV)
-  or b           ; EXPAND 1 in view for
-                 ; a cache line
+  or b
   out (SYSLAT),a
-  ld c,SDIO      ; for OUT (C)
-  ld de,$0200    ; 2 passes of 256 bytes
+  ld c,SDIO
+  ld de,$0200
 
 SDWB2:
-  ld b,(hl)      ; the next byte
+  ld b,(hl)
   xor a          ; bit 7: /CS low, CLK
                  ; low
-  rl b           ; the bit to carry
-  rla            ; and on to MOSI
+  rl b
+  rla
   out (c),a
-  or 2           ; CLK high: the card
-                 ; takes it
+  or 2
   out (c),a
   xor a          ; bit 6
   rl b
   rla
   out (c),a
-  or 2           ; CLK high
+  or 2
   out (c),a
   xor a          ; bit 5
   rl b
   rla
   out (c),a
-  or 2           ; CLK high
+  or 2
   out (c),a
   xor a          ; bit 4
   rl b
   rla
   out (c),a
-  or 2           ; CLK high
+  or 2
   out (c),a
   xor a          ; bit 3
   rl b
   rla
   out (c),a
-  or 2           ; CLK high
+  or 2
   out (c),a
   xor a          ; bit 2
   rl b
   rla
   out (c),a
-  or 2           ; CLK high
+  or 2
   out (c),a
   xor a          ; bit 1
   rl b
   rla
   out (c),a
-  or 2           ; CLK high
+  or 2
   out (c),a
   xor a          ; bit 0
   rl b
   rla
   out (c),a
-  or 2           ; CLK high
+  or 2
   out (c),a
   inc hl
-  dec e          ; 256 bytes a pass
+  dec e
   jp nz,SDWB2
-  dec d          ; then the second pass
+  dec d
   jp nz,SDWB2
-  and $FD        ; CLK low
+  and $FD
   out (c),a
-  ld a,(LATCHV)  ; the latch as it was
+  ld a,(LATCHV)
   out (SYSLAT),a
   ret
 
-; Write the 512 bytes at HL to block
-; SDLBA (CMD24), waiting until the card
-; has finished programming; the buffer
-; is a cache line in EXPAND 1 when SDXB
-; is LATEXP. Returns Z and A = 0, or NZ
-; and A = SDERNG, SDECMD, SDEWRSP or
-; SDEBUSY, also in SDERR. Destroys F,
-; BC, DE, HL.
+; Write SDLBA from 512 bytes at HL in
+; SDXB=0 or LATEXP bank. Require CMD24
+; R1=0, then send FFh, FEh and payload.
+; Return A=0/Z or SDE*/NZ. Store A in
+; SDERR. Change F/BC/DE/HL. Source is
+; used through payload completion. A
+; reported error may follow card
+; effects. Caller supplies safe
+; bank/interrupt state.
 
 SDWRITE:
-  push hl        ; the buffer, across
-                 ; the command
+  push hl
   call LBAARG
-  jp c,SDRNG     ; nothing written for a
-                 ; block it can't name
-  ld a,24        ; CMD24, WRITE_BLOCK
+  jp c,SDRNG
+  ld a,24
   call SDCMD
   pop hl
-  or a           ; R1 00h: accepted
+  or a
   jp nz,SDRCMD
-  ld c,$FF       ; one idle byte, then
-                 ; the start token
+  ld c,$FF
   call SPIW
-  ld c,$FE       ; FEh: a single block's
-                 ; data follows
+  ld c,$FE
   call SPIW
   call SDWBLK
-  ld c,$FF       ; CRC, ignored in SPI
-                 ; mode
-  call SPIW      ; (C comes back FFh for
-                 ; the
-  call SPIW      ; second byte)
-  ld d,16        ; data response token
+
+; Send two FFh CRC bytes without local
+; CRC calculation.
+
+  ld c,$FF
+  call SPIW
+  call SPIW
+  ld d,16
+
+; Poll up to sixteen response bytes,
+; skipping FFh. Accept only low five
+; bits 05h. Rejection or exhaustion
+; deselects with SDEWRSP.
 
 SDWRS:
-  push de        ; SPIR destroys E
+  push de
   call SPIR
   pop de
-  cp $FF         ; FFh until the token
-                 ; comes
+  cp $FF
   jr nz,SDWRG
   dec d
   jr nz,SDWRS
 
 SDWRG:
-  and $1F        ; token xxx0sss1: sss
-                 ; 010 accepted,
-  cp $05         ; 101 CRC error, 110
-                 ; write error
+  and $1F
+  cp $05
   jr z,SDWBSY
-  call SPIEND    ; rejected, or no token
-                 ; at all
+  call SPIEND
   ld a,SDEWRSP
   jp SDFAIL
 
+; After accepted response, poll up to
+; 65,536 bytes. Zero is busy. Any
+; nonzero byte completes. Exhaustion
+; deselects with SDEBUSY. Completion
+; deselects, then SDIOK returns A=0/Z.
+; No readback.
+
 SDWBSY:
-  ld c,0         ; busy while the card
-                 ; returns 00h
-  ld d,0         ; (holding MISO low):
-                 ; 65536 polls
+  ld c,0
+  ld d,0
 
 SDWB:
   push de
   call SPIR
   pop de
-  or a           ; anything but 00h:
-                 ; programmed
+  or a
   jr nz,SDWDON
   dec c
   jr nz,SDWB
-  dec d          ; C wrapped: the next
-                 ; 256
+  dec d
   jr nz,SDWB
-  call SPIEND    ; still busy after
-                 ; every poll
+  call SPIEND
   ld a,SDEBUSY
   jp SDFAIL
 
 SDWDON:
-  call SPIEND    ; deselect: written
+  call SPIEND
   jp SDIOK

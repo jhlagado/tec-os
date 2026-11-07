@@ -1,17 +1,17 @@
-; CONOUT.COM: a program on the CCP stack that calls the BIOS's
-; CONOUT directly, through the table at (0001h), with text that wraps and
-; scrolls the screen, then inserts and deletes characters and lines, so the
-; console takes its deepest paths on the caller's stack.
+; CONOUT.COM: exercise console wrapping, scrolling and insertion/deletion
+; through BIOS CONOUT on the CCP stack. RET uses the CCP's WBOOT word.
+; GLCD stack checks use production font; the historical pixel oracle is separate.
+; (0001h) holds WBOOT's table-entry address; CONOUT is three entries on.
 
         ORG     $0100
-        LD      HL,($0001)      ; WBOOT's entry; CONOUT is three entries on
+        LD      HL,($0001)      
         LD      DE,9
         ADD     HL,DE
         LD      (CO+1),HL
         LD      HL,TEXT
 NEXT:   LD      A,(HL)
         OR      A
-        RET     Z               ; to WBOOT, which the CCP pushed
+        RET     Z               
         PUSH    HL
         LD      C,A
         CALL    CO

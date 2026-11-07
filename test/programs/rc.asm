@@ -1,5 +1,5 @@
-; RC hhhh: sets BDOS function 108's program return code to the four hex
-; digits of its command tail, then returns.
+; RC hhhh: consume four uppercase hex digits at 0082h, without validation.
+; BDOS 108 sets that code except FFFFh, which queries the old code; return.
 
 BDOS    EQU     $0005
 

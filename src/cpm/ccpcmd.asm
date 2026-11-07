@@ -1,301 +1,272 @@
-; The CCP's other commands and its
-; parsing: UNLOAD, CON, USER and SAVE, a
-; transient's tail and page, a file name
-; into an FCB, the keyword table's
-; lookup, the console's output, services
-; by name and the startup file. Included
-; after ccpfile.asm by rom.asm.
+; CCP built-ins UNLOAD/CON/USER/SAVE,
+; file-reference parsing, page-zero
+; preparation, output wrappers, service
+; listing and startup record handling.
 
-; UNLOAD: the lowest resident goes, or
-; the command comes back with a question
-; mark. Takes nothing from the line;
-; ends at STARTED or BADCMD.
+; UNLOAD: call SVCUNL without validating
+; arguments. Carry clear enters STARTED.
+; Carry enters BADCMD. Loader prechecks
+; may refuse before REMOVE. The loader
+; owns hook execution and page/registry
+; release.
 
 CMDUNL:
-  call SVCUNL    ; its REMOVE run, and
-                 ; its pages freed
-  jp nc,STARTED  ; carry: SVCUNL refused
+  call SVCUNL    ; loader owns refusal
+  jp nc,STARTED  ; NC: unload completed
   jp BADCMD
 
-; CON's name loop: not this name, so the
-; next, or a bad command after six.
-; Takes DE in CONNAMS at the byte that
-; differed, C the name's bytes left
-; there, B the name's number and the
-; argument's address on the stack; goes
-; back to CONNXT with HL at the argument
-; again.
+; Retry the next console name. Input DE
+; is the differing table byte, C
+; includes the unconsumed suffix, B is
+; the name index and the argument
+; pointer is on the stack. Pop that
+; pointer to HL, skip C table bytes and
+; retry. Index 6 enters BADCMD.
 
 CONNO:
-  pop hl         ; the argument's first
-                 ; letter again
+  pop hl         ; trial text to HL
 
 CONSKIP:
-  inc de         ; to the next name
+  inc de         ; skip unmatched suffix
   dec c
   jr nz,CONSKIP
-  inc b          ; the next name's
-                 ; number: six names,
-  ld a,b         ; TTY, CRT, BAT, UC1,
-                 ; GLCD and PICO
-  cp 6
+  inc b          ; next name index
+  ld a,b
+  cp 6           ; six name records
   jr nz,CONNXT
-  jp BADCMD      ; none of them matched
+  jp BADCMD
 
-; TEC-OS: CON shows the console in use;
-; CON TTY, CRT, BAT or UC1 (a colon may
-; follow), or PICO for CRT: and GLCD for
-; UC1:, sets the IOBYTE CON: field.
-; After CRT or PICO a width, 80, 40 or
-; 32, goes to the ROM's PICO9918 console
-; through its table's PICOWID entry
-; (KD-174); with that console not
-; started, or any other width, the
-; command is refused, but a line from
-; STARTUP.CMD on a board with no such
-; console is quiet, as for an absent
-; device. The BIOS switches at the next
-; console call, so the report appears on
-; the new console, and names the serial
-; terminal when the chosen display or
-; keyboard is missing. UC1: loads
-; GLCD.SVC first if it is not in. Takes
-; the argument at ARGSTRT; ends at
-; MAINLOOP, STARTED or BADCMD.
+; CON reports the effective console or
+; selects TTY/CRT/BAT/UC1. GLCD maps to
+; UC1 and PICO to CRT. A colon is
+; optional. An optional two-digit width
+; after CRT/PICO uses the versioned
+; PICOWID entry (KD-174).
+; Match six four-byte CONNAMS records.
+; Three-letter names stop at the table
+; colon. Aliases consume four letters.
+; Save the argument pointer per trial
+; for CONNO.
 
 CMDCON:
-  call ARGSKIP   ; an error names the
-                 ; argument
-  jp z,CONSHOW   ; no argument: show the
-                 ; console
-  ld de,CONNAMS  ; the names, four bytes
-                 ; each,
-  ld b,0         ; counted in B from
-                 ; TTY's 0
+  call ARGSKIP   ; argument/error start
+  jp z,CONSHOW   ; no operand: report
+  ld de,CONNAMS  ; four-byte name table
+  ld b,0         ; TTY index 0
 
 CONNXT:
-  push hl        ; the argument, for the
-                 ; next name
-  ld c,4         ; a name's bytes
+  push hl        ; save trial argument
+  ld c,4         ; four bytes remaining
 
 CONCMP:
-  ld a,(de)      ; a letter of the name,
-                 ; or its colon
+  ld a,(de)      ; table letter/colon
   cp ':'
-  jr z,CONMAT    ; a three-letter name's
-                 ; end
-  cp (hl)        ; the argument's letter
-                 ; differs:
-  jr nz,CONNO    ; the next name
+  jr z,CONMAT    ; three-letter end
+  cp (hl)
+  jr nz,CONNO    ; retry at mismatch
   inc hl
   inc de
   dec c
-  jr nz,CONCMP   ; all four letters
-                 ; alike: a match
+  jr nz,CONCMP   ; four-letter alias
+
+; Map matched CON index to B mode: 0..3
+; unchanged, GLCD 4->UC1 3 and PICO
+; 5->CRT 1 (11-2B). Discard the saved
+; argument word and consume an optional
+; colon. HL then points at following
+; text.
 
 CONMAT:
-  pop af         ; matched: drop the
-                 ; saved text pointer
-  ld a,b         ; GLCD (4) is UC1:,
-                 ; PICO (5) CRT:, 11 -
-                 ; 2B
+  pop af         ; discard saved pointer
+  ld a,b         ; matched name index
   cp 4
-  jr c,CONHIT    ; TTY to UC1: the
-                 ; number is the mode
+  jr c,CONHIT    ; 0..3 already modes
   add a,a
-  cpl            ; -2B - 1, and 12 more
-                 ; makes 11 - 2B:
-  add a,12       ; 3 for GLCD, 1 for
-                 ; PICO
-  ld b,a         ; B = the console mode,
-                 ; CMTTY to CMUC1
+  cpl
+  add a,12       ; 11-2B: aliases
+  ld b,a         ; selected mode
 
 CONHIT:
   ld a,(hl)
   cp ':'
   jr nz,CONEND
-  inc hl         ; past a colon after
-                 ; the name
+  inc hl         ; optional colon
+
+; Width requires spaces after the
+; console name and CRT mode. Parse
+; exactly two decimal digits and require
+; no non-space suffix. Preserve the
+; width for the table lookup below.
 
 CONEND:
-  ld a,(hl)      ; a width only after a
-                 ; space: CRT80 is
-  cp SPACE       ; a bad name, and its
-                 ; end ENDCHK's
+  ld a,(hl)      ; width needs a space
+  cp SPACE
   jr nz,CONNW
-  call CMDSKIP   ; the width, named by
-                 ; an error
-  jr z,CONNW     ; spaces alone: no
-                 ; width
+  call CMDSKIP   ; record width operand
+  jr z,CONNW     ; spaces only: no width
   ld a,b
   cp CMCRT
-  jp nz,BADCMD   ; a width after CRT:
-                 ; alone
-  ld a,(hl)      ; two decimal digits:
-                 ; the columns, which
-  sub '0'        ; TMSWID judges (80, 40
-                 ; or 32)
+  jp nz,BADCMD   ; CRT/PICO width only
+  ld a,(hl)      ; first decimal digit
+  sub '0'
   cp 10
-  jp nc,BADCMD   ; the first is no digit
+  jp nc,BADCMD   ; reject nondigit
   ld c,a
-  add a,a        ; the tens digit times
-                 ; 10:
-  add a,a        ; four times, plus
-                 ; itself, doubled
+  add a,a        ; tens multiplication
+  add a,a
   add a,c
-  add a,a        ; the tens
+  add a,a
   ld c,a
-  inc hl         ; the units digit
+  inc hl         ; second digit
   ld a,(hl)
   sub '0'
   cp 10
-  jp nc,BADCMD   ; the second is no
-                 ; digit
-  add a,c        ; A = the columns
-  inc hl         ; past the width
-  push af        ; kept across ENDCHK
-                 ; and the ABI's call
-  call ENDCHK    ; nothing after the
-                 ; width
+  jp nc,BADCMD   ; reject nondigit
+  add a,c        ; binary width
+  inc hl
+  push af        ; width across calls
+  call ENDCHK    ; reject suffix
 
-; "PICO " at version 3
+; FIND the PICO table at PICOVER through
+; TNFIND. Keep the width across
+; ENDCHK/FIND and recover it in B. If no
+; table is found, typed input enters
+; BADCMD. A startup line enters STARTED
+; without changing CON. Width validation
+; has not run yet (KD-173).
 
   ld de,CONNAMS+20
-  ld bc,PICOVER*256+TNFIND
-  call ABICALL   ; FIND: HL = the
-                 ; console's table,
-                 ; PIBLK
-  pop bc         ; B = the columns
-  jr nc,CONWD    ; found: the width goes
-                 ; to it
-  ld a,(STFLAG)  ; none, as on a serial
-                 ; board: typed,
-  or a           ; refused; from
-                 ; STARTUP.CMD, quiet,
-  jp z,BADCMD    ; the code left 0, as
-                 ; for an absent
-  jp STARTED     ; device's service
-                 ; (KD-173)
+  ld bc,PICOWVER*256+TNFIND
+  call ABICALL   ; FIND result table
+  pop bc         ; B=saved width
+  jr nc,CONWD    ; NC: table found
+  ld a,(STFLAG)  ; startup origin flag
+  or a
+  jp z,BADCMD    ; typed: bad command
+  jp STARTED
+
+; FIND returned the PICO table in HL.
+; Load its little-endian PICOWID entry
+; and invoke through VHLJP with A=width.
+; Carry enters BADCMD. Success joins
+; CONFL with B=CMCRT. The ROM accepts
+; 80/40/32 and refuses nonzero VCLAIM
+; before changing width.
 
 CONWD:
-  ld de,PICOWID  ; the table's width
-                 ; entry, its
+  ld de,PICOWID  ; table width offset
   add hl,de
-  ld a,(hl)      ; address into HL
+  ld a,(hl)      ; entry address low
   inc hl
   ld h,(hl)
   ld l,a
   ld a,b
-  call VHLJP     ; A = the columns:
-                 ; carry if refused
-  jp c,BADCMD
-  ld b,CMCRT     ; the width set: CRT:
-                 ; the console
+  call VHLJP     ; width call: A=B
+  jp c,BADCMD    ; carry: refused
+  ld b,CMCRT     ; width set: CRT mode
   jr CONFL
 
 CONNW:
-  call ENDCHK    ; nothing after the
-                 ; name
+  call ENDCHK    ; name-only suffix
+
+; Select B through CONFLD. UC1 calls
+; GLCLD to reuse/load GLCD. After a
+; returned failure, GLCLD copies
+; then-current CONMOD through B into CON
+; bits, keeping other IOBYTE fields. It
+; reads no pre-call snapshot. CONHDR
+; output triggers routing. Report
+; resulting CONMOD and enter MAINLOOP.
+; Cold PISTART skips PIVEC setup when
+; CDMTX is clear.
 
 CONFL:
-  call CONFLD    ; B into the IOBYTE's
-                 ; CON: field
-  ld a,b         ; UC1: the GLCD's
-                 ; driver, if it is not
-                 ; in
-  cp CMUC1       ; (a failure puts the
-                 ; field back)
-  call z,GLCLD
+  call CONFLD    ; write requested mode
+  ld a,b
+  cp CMUC1       ; UC1 requires GLCD
+  call z,GLCLD   ; load/reuse driver
 
 CONSHOW:
-  ld de,CONHDR   ; "CON: "
-  call PUTSTR    ; the BIOS acts on the
-                 ; field: CONMOD next
-  ld a,(CONMOD)
-  add a,a        ; the mode times four:
-                 ; its name's
-  add a,a        ; offset in CONNAMS
+  ld de,CONHDR   ; report after routing
+  call PUTSTR    ; output triggers route
+  ld a,(CONMOD)  ; effective mode
+  add a,a        ; four bytes per name
+  add a,a
   ld l,a
   ld h,0
-  ld de,CONNAMS  ; its name and colon,
-                 ; four bytes
+  ld de,CONNAMS  ; effective name table
   add hl,de
   ld b,4
 
 CONSH1:
   ld e,(hl)
-  call PUTCHAR   ; keeps BC and HL
+  call PUTCHAR   ; keeps BC/HL
   inc hl
   djnz CONSH1
   ld de,CRLFMSG
   call PUTSTR
-  jp MAINLOOP    ; the next prompt
+  jp MAINLOOP    ; next prompt
 
-; USER accepts one decimal user number
-; in the CP/M 2.2 range 0..15 and sets
-; it by BDOS function 32; anything else
-; is a bad command. Takes the argument
-; at ARGSTRT; ends at MAINLOOP or
-; BADCMD.
+; USER: require one decimal number 0..15
+; with no non-space suffix. Pass E=B to
+; BDOS 32 and enter MAINLOOP.
+; Invalid/missing input enters BADCMD.
+; This command range is narrower than
+; the five-bit BDOS setter.
 
 CMDUSER:
-  call ARGSKIP   ; A = its first
-                 ; character
+  call ARGSKIP   ; decimal operand
   cp '0'
   jp c,BADCMD
   cp '9'+1
-  jp nc,BADCMD   ; not a digit, or no
-                 ; argument
+  jp nc,BADCMD   ; reject empty/nondigit
   sub '0'
-  ld b,a         ; B = the first digit's
-                 ; value
+  ld b,a         ; first digit value
   inc hl
   ld a,(hl)
-  cp '0'         ; a second digit?
+  cp '0'         ; optional second digit
   jr c,USERDONE
   cp '9'+1
-
-; no: one digit, 0 to 9
 
   jr nc,USERDONE
   ld a,b
   cp 1
-  jp nz,BADCMD   ; two digits must be 10
-                 ; to 15
+  jp nz,BADCMD   ; two digits: 1x only
   ld a,(hl)
-  cp '6'         ; the second at most 5
-  jp nc,BADCMD
-  sub '0'-10     ; B = 10 + the second
-                 ; digit
+  cp '6'
+  jp nc,BADCMD   ; second digit <=5
+  sub '0'-10     ; 10 plus second digit
   ld b,a
-  inc hl         ; past it
+  inc hl
 
 USERDONE:
-  call ENDCHK    ; nothing after the
-                 ; number; B kept
+  call ENDCHK    ; validate entire token
   ld e,b
-  ld c,32        ; BDOS 32: set the user
-                 ; to E
+  ld c,32        ; 32: set user
   call BDOS
   jp MAINLOOP
 
-; SAVE writes 256-byte pages from the
-; TPA. A count reaching the page of the
-; BDOS entry jump is rejected rather
-; than saving it or the workspace. SAVE
-; n NAME writes n pages from 0100h up as
-; NAME. Takes the arguments at ARGSTRT;
-; ends at MAINLOOP, BADCMD or NO SPACE.
+; SAVE n NAME: write n 256-byte TPA
+; pages from 0100h. Reject eight-bit
+; overflow and require count <
+; (PZBDOS+2), the BDOS entry page byte
+; at 0007h. Require a space then one
+; unambiguous complete name.
+; Delete the existing target before
+; making it anew. FFh make enters
+; SAVENOSP. Save the count and start
+; address, then write two records per
+; page. If make succeeds with count
+; zero, skip data writes and attempt
+; close. Ends at MAINLOOP or error.
 
 CMDSAVE:
-  call ARGSKIP   ; A = the count's first
-                 ; character
+  call ARGSKIP   ; decimal page count
   cp '0'
   jp c,BADCMD
   cp '9'+1
-  jp nc,BADCMD   ; not a digit, or no
-                 ; argument
-  ld b,0         ; B = the count so far
+  jp nc,BADCMD   ; reject empty/nondigit
+  ld b,0         ; eight-bit count
 
 SAVENUM:
   ld a,(hl)
@@ -303,224 +274,204 @@ SAVENUM:
   jr c,SAVENEND
   cp '9'+1
 
-; not a digit: the count's end
-
   jr nc,SAVENEND
   sub '0'
-  ld e,a         ; E = the digit's value
-  ld a,b         ; B times ten, a bad
-                 ; command past
-  add a,a        ; 255: twice B, kept in
-                 ; D,
+  ld e,a         ; next digit value
+  ld a,b
+  add a,a        ; overflow at B*2
   jp c,BADCMD
   ld d,a
-  add a,a        ; then four times B, a
-                 ; carry bad,
+  add a,a        ; overflow at B*4
   jp c,BADCMD
-  add a,a        ; and eight times B, a
-                 ; carry bad
+  add a,a        ; overflow at B*8
   jp c,BADCMD
-  add a,d        ; and twice B added, a
-                 ; carry bad
+  add a,d        ; overflow at B*10
   jp c,BADCMD
-  add a,e        ; and the digit
+  add a,e        ; overflow adding digit
   jp c,BADCMD
   ld b,a
   inc hl
-  jr SAVENUM     ; the next digit
+  jr SAVENUM
 
 SAVENEND:
-  cp SPACE       ; a space must follow
-                 ; the count
+  cp SPACE       ; count/name separator
   jp nz,BADCMD
-
-; the BDOS entry's page
 
   ld a,(PZBDOS+2)
   ld c,a
   ld a,b
   cp c
-  jp nc,BADCMD   ; the pages would reach
-                 ; it
-
-; the pages to write
+  jp nc,BADCMD   ; reject reaching it
 
   ld (SAVEPGS),a
   call SKIPSP
   ld a,(hl)
   or a
-  jp z,BADCMD    ; no name
-  call ONENAME   ; one unambiguous name
-                 ; into CMDFCB
+  jp z,BADCMD    ; missing filename
+  call ONENAME   ; one complete name
 
-  call DOSSEQ    ; delete any file of
-                 ; that name
-  DB 19*2+0      ; BDOS 19, source FCB
-  call DOSSEQ    ; and make it anew
-  DB 22*2+0      ; BDOS 22, source FCB
+  call DOSSEQ    ; destructive delete
+  DB 19*2+0      ; 19: CMDFCB
+  call DOSSEQ    ; create replacement
+  DB 22*2+0      ; 22: CMDFCB
   inc a
-  jr z,SAVENOSP  ; FFh: the directory is
-                 ; full
+  jr z,SAVENOSP  ; FFh make: NO SPACE
   ld hl,TPA
 
-; the first record's bytes, 0100h
-
   ld (SAVEADR),hl
+
+; Write each remaining page as two
+; SAVE128 records. Either carry enters
+; SAVEWER. Decrement SAVEPGS only after
+; both succeed. On zero remaining pages
+; enter SAVECLS.
 
 SAVELOOP:
   ld a,(SAVEPGS)
   or a
-  jr z,SAVECLS   ; every page written:
-                 ; close it
-  call SAVE128   ; a page is two records
+  jr z,SAVECLS   ; no pages: close
+  call SAVE128   ; first half-page
   jr c,SAVEWER
-  call SAVE128
-  jr c,SAVEWER   ; either unwritten: the
-                 ; disk is full
+  call SAVE128   ; second half-page
+  jr c,SAVEWER   ; returned write error
   ld a,(SAVEPGS)
   dec a
-
-; one page fewer to write
 
   ld (SAVEPGS),a
   jr SAVELOOP
 
-; Write the 128 bytes at SAVEADR as
-; CMDFCB's next record, and move SAVEADR
-; past them. Returns carry if the write
-; failed, the disk or directory full.
-; Destroys AF, BC, DE, HL.
+; Write CMDFCB's next record from
+; (SAVEADR). Set DMA through BDOS 26,
+; then call function 21 through DOSSEQ.
+; On nonzero returned A set carry
+; without changing SAVEADR. On zero
+; advance it by 128 and return carry
+; clear.
+; BDOS errors may exit nonlocally.
+; Changes AF/BC/DE/HL.
 
 SAVE128:
   ld de,(SAVEADR)
-  ld c,26        ; BDOS 26: the DMA
-                 ; address, the record
+  ld c,26        ; 26: set DMA
   call BDOS
-  call DOSSEQ    ; write it as the
-                 ; file's next record
-  DB 21*2+0      ; BDOS 21, source FCB
+  call DOSSEQ    ; sequential write
+  DB 21*2+0      ; 21: CMDFCB
   or a
   scf
-  ret nz         ; A nonzero: not
-                 ; written, carry
+  ret nz         ; NZ: keep SAVEADR
   ld hl,(SAVEADR)
   ld de,128
   add hl,de
 
-; the next record's bytes
-
   ld (SAVEADR),hl
-  or a           ; carry clear: written
+  or a           ; carry clear
   ret
 
-; SAVE's end: the file closed, so that
-; its directory entry is written. A
-; failed close is NO SPACE too. Ends at
-; MAINLOOP or the error.
+; Attempt to close CMDFCB through DOSSEQ
+; function 16. FFh enters SAVENOSP.
+; Other returned codes enter MAINLOOP.
+; BDOS errors may exit nonlocally.
 
 SAVECLS:
-  call DOSSEQ    ; close CMDFCB's file
-  DB 16*2+0      ; BDOS 16, source FCB
+  call DOSSEQ    ; close attempt
+  DB 16*2+0      ; 16: CMDFCB
   inc a
-  jr z,SAVENOSP  ; FFh: the close failed
+  jr z,SAVENOSP  ; FFh close: NO SPACE
   jp MAINLOOP
 
-; SAVE's write error: the file closed
-; with the records written, as COPY's
-; destination is, where CP/M 2.2's SAVE
-; leaves it open; then NO SPACE.
+; After a returned write failure,
+; attempt to close CMDFCB, ignoring its
+; ordinary result, then enter SAVENOSP.
+; Earlier writes are not undone.
 
 SAVEWER:
-  call DOSSEQ    ; close CMDFCB's file,
-                 ; whatever the close
-  DB 16*2+0      ; returns: BDOS 16,
-                 ; source FCB
+  call DOSSEQ    ; cleanup close attempt
+  DB 16*2+0      ; ignore close result
 
-; SAVE's failure: NO SPACE, through
-; ERRGO, which marks the command failed.
+; Report NOSPACE through ERRGO, setting
+; PRGCODE=FF00h before the message and
+; STARTED. A later conditional piece
+; observes failure.
 
 SAVENOSP:
-  ld de,NOSPACE  ; "NO SPACE", then the
-                 ; prompt
+  ld de,NOSPACE  ; error message
   jp ERRGO
 
-; Publish only documented page-zero
-; transient state after loading
-; succeeds: the first two names in the
-; arguments at ARGSTRT go in the FCBs at
-; 005Ch and 006Ch, the arguments as the
-; tail at 0080h, its length before it
-; and a 0 after it, and the DMA address
-; is 0080h. Destroys AF, BC, DE, HL.
+; Prepare transient page zero after a
+; successful load. Input (ARGSTRT) is
+; the bounded zero-ended argument tail.
+; Save its original start, parse into
+; FCBONE/FCBTWO, then copy the full tail
+; with length at 0080h and zero after
+; it. Set DMA=0080h through BDOS 26.
+; FCBBASE/scratch and AF/BC/DE/HL may
+; change.
 
 PREPPAGE:
 
-; the text after the command's name
+; Both parses ignore carry. An early
+; error can leave the next parse at the
+; same byte and partial FCB contents.
+; The 36-byte areas at 005Ch/006Ch
+; overlap. The second reaches 008Fh.
+; Copy the original tail only after both
+; parses.
 
   ld hl,(ARGSTRT)
-  push hl        ; kept for the tail
+  push hl        ; tail before trimming
   call SKIPSP
-  ld de,FCBONE
-  call PARSEFCB  ; the first name, any
-                 ; error ignored
+  ld de,FCBONE   ; first default FCB
+  call PARSEFCB  ; ignore parser carry
   call SKIPSP
-  ld de,FCBTWO
-  call PARSEFCB  ; the second: its 36
-                 ; bytes reach 008Fh,
-  pop hl         ; so the tail is copied
-                 ; after both
+  ld de,FCBTWO   ; overlapping FCB
+  call PARSEFCB  ; ignore parser carry
+  pop hl         ; restore original tail
   ld de,CMDTAIL+1
-  ld b,0         ; B counts the tail's
-                 ; bytes
+  ld b,0         ; tail byte count
 
 TAILLOOP:
   ld a,(hl)
   or a
-  jr z,TAILDONE  ; the piece's 0 ends it
-  ld (de),a      ; a byte of the tail,
+  jr z,TAILDONE  ; zero-ended piece
+  ld (de),a
   inc hl
   inc de
-  inc b          ; counted
+  inc b
   jr TAILLOOP
 
 TAILDONE:
   ld a,b
 
-; the length before the tail,
-
   ld (CMDTAIL),a
   xor a
-  ld (de),a      ; and a 0 after it
+  ld (de),a      ; zero after tail
   ld de,CMDTAIL
-  ld c,26        ; BDOS 26: the DMA
-                 ; address 0080h
+  ld c,26        ; 26: default DMA
   jp BDOS
 
-; Parse one CP/M file reference into a
-; cleared 36-byte FCB. HL points at the
-; first token byte and returns at its
-; delimiter. A '*' expands to '?'
-; through the remainder of its current
-; field. Takes the FCB at DE, noted in
-; FCBBASE. Returns carry for a bad
-; drive, a forbidden character or a
-; field too long; an empty reference
-; leaves the FCB blank. Destroys AF, B,
-; DE.
+; Parse from HL into 36 writable FCB
+; bytes at DE, saved in FCBBASE.
+; Initialise drive=0, eleven name/type
+; spaces and 24 trailing zero bytes.
+; Empty input succeeds with a blank FCB.
+; Uppercase A..P before a colon encodes
+; drive 1..16.
+; On success HL reaches the delimiter.
+; Invalid drive leaves it at the token
+; start. Field errors follow PARFLD.
+; AF/B/DE change, C is preserved and HL
+; is the position result. Errors can
+; leave partial copied fields.
 
 PARSEFCB:
 
-; the FCB's start, for UNAMBIG
-
   ld (FCBBASE),de
-  push de
+  push de        ; keep destination base
   xor a
-  ld (de),a      ; drive 0: the current
-                 ; drive
+  ld (de),a      ; logical default drive
   inc de
   ld b,11
-  ld a,SPACE     ; the name and type: 11
-                 ; spaces
+  ld a,SPACE     ; blank name/type
 
 FCBSPACE:
   ld (de),a
@@ -528,484 +479,446 @@ FCBSPACE:
   djnz FCBSPACE
   xor a
 
-; A parsed FCB is reusable command
-; state, so the whole tail is reset: EX,
-; S1, S2, RC, the allocation map, CR and
-; the random record. A CR left behind
-; would make the command after TYPE load
-; from record one rather than from the
-; start of its COM file.
+; Clear EX/S1/S2/RC, allocation map, CR
+; and random fields before reuse. A
+; stale CR could make a later COM load
+; start at record one instead of zero.
 
-  ld b,24        ; the 24 bytes after
-                 ; the type
+  ld b,24        ; clear trailing state
 
 FCBZERO:
   ld (de),a
   inc de
   djnz FCBZERO
-  pop de         ; DE = the FCB's drive
-                 ; byte
+  pop de         ; recover FCB base
   ld a,(hl)
   or a
-  ret z          ; nothing to parse: a
-                 ; blank name
+  ret z          ; empty token: success
   inc hl
-  ld a,(hl)      ; a colon second means
-                 ; a drive
+  ld a,(hl)      ; drive colon position
   dec hl
   cp ':'
-  jr nz,FCBNAME  ; no colon: the current
-                 ; drive
-  ld a,(hl)      ; the drive's letter
-  cp 'A'
+  jr nz,FCBNAME  ; no prefix: default
+  ld a,(hl)
+  cp 'A'         ; drive lower bound
   jr c,FCBDRBAD
   cp 'Q'
 
-; A to P only
-
   jr nc,FCBDRBAD
   sub 'A'-1
-  ld (de),a      ; the drive byte: 1 for
-                 ; A to 16 for P
+  ld (de),a      ; FCB drive 1..16
   inc hl
-  inc hl         ; past the letter and
-                 ; colon
+  inc hl         ; past drive prefix
+
+; Parse eight name slots through PARFLD.
+; Propagate carry errors. After a dot,
+; advance DE by unfilled B slots to the
+; type field, including address carry,
+; then parse three slots. Otherwise
+; return carry clear. FCBDRBAD rejects
+; all drive letters outside A..P,
+; including below A.
 
 FCBNAME:
-  inc de         ; the name field
-  ld b,8         ; eight characters
+  inc de         ; name field
+  ld b,8         ; positive name bound
   call PARFLD
-  ret c          ; a bad character or
-                 ; too long
+  ret c          ; propagate field error
   ld a,(hl)
   cp '.'
-  jr z,FCBDOT    ; a type follows
-  or a           ; carry clear: parsed
+  jr z,FCBDOT    ; type follows dot
+  or a           ; successful parse
   ret
 
 FCBDOT:
-  inc hl         ; past the dot
-  ld a,e         ; B is the unfilled
-                 ; part of the name
-                 ; field
-  add a,b
+  inc hl         ; consume type dot
+  ld a,e         ; field end low byte
+  add a,b        ; skip unfilled slots
   ld e,a
   jr nc,FCBTYP
-  inc d          ; DE at the type field
+  inc d          ; type address carry
 
 FCBTYP:
-  ld b,3         ; three characters,
-                 ; PARFLD returning
-  jr PARFLD      ; for PARSEFCB
+  ld b,3         ; positive type bound
+  jr PARFLD
 
 FCBDRBAD:
-  scf            ; a drive letter past
-                 ; P: carry
+  scf            ; invalid drive letter
   ret
 
-; One field of an FCB, the name's 8
-; bytes or the type's 3: B characters
-; from HL into DE, up to a delimiter as
-; FCBEND finds one. Returns carry for a
-; forbidden character or a field too
-; long. Otherwise returns Z, carry
-; clear, A and HL at the delimiter, DE
-; past the field's filled bytes and B
-; the bytes left unfilled. Destroys AF,
-; B, DE.
+; Parse a field with positive B=8 or 3,
+; source HL and destination DE. FCBEND
+; defines delimiters. A star enters
+; PARSTAR. Validate other bytes before
+; copying.
+; Forbidden bytes return carry at that
+; byte. A full field succeeds only
+; before a delimiter. Otherwise scan to
+; one and return carry. Success: Z/carry
+; clear, A/HL at delimiter, DE after
+; output and B slots left. C is
+; preserved.
 
 PARFLD:
-  call FCBEND
-  ret z          ; the delimiter: the
-                 ; field ends early
+  call FCBEND    ; test exact delimiter
+  ret z          ; short field succeeds
   cp '*'
-  jr z,PARSTAR   ; '?' to the field's
-                 ; end
-  call VALIDCHR
-  ret c          ; a forbidden character
+  jr z,PARSTAR   ; expand field suffix
+  call VALIDCHR  ; validate copied byte
+  ret c          ; early invalid byte
   ld (de),a
   inc de
   inc hl
-  djnz PARFLD    ; the next, while the
-                 ; field has room
+  djnz PARFLD    ; bounded field copy
 
 PARSKIP:
   call FCBEND
-  ret z          ; full, and a delimiter
-                 ; next
+  ret z          ; exactly full succeeds
 
 PARLONG:
   inc hl
   call FCBEND
-  jr nz,PARLONG  ; too long: on to its
-                 ; delimiter,
+  jr nz,PARLONG  ; overlong: scan to end
 
 PLEND:
-  scf            ; and carry
+  scf            ; overlong carry
   ret
 
-; Commands that name exactly one file
-; reject an empty name or either
-; wildcard. Preserve the parser's
-; delimiter pointer in HL; FCBBASE
-; identifies the FCB because PARSEFCB
-; advances DE while filling it. Returns
-; carry for an empty or ambiguous name.
-; Keeps BC and HL; destroys AF.
+; Require an unambiguous parsed name at
+; (FCBBASE). Reject first name byte
+; SPACE or '?' in any of the 11
+; name/type bytes. Parsed stars have
+; expanded to question marks. Raw stars
+; are not scanned here.
+; Preserve BC/HL/DE. Return carry for
+; rejection through CHRRET. A is not
+; preserved.
 
 UNAMBIG:
-  push hl
-  push bc
+  push hl        ; delimiter pointer
+  push bc        ; caller BC
   ld hl,(FCBBASE)
-  inc hl         ; the name's first byte
+  inc hl
   ld a,(hl)
   cp SPACE
-  jr z,CHRRET    ; a space: no name,
-                 ; carry
-  ld bc,11       ; the name and type,
-                 ; for a '?'
+  jr z,CHRRET    ; blank name rejected
+  ld bc,11       ; name/type scan length
   ld a,'?'
-  cpir           ; equality means an
-                 ; ambiguous name
+  cpir           ; find parsed wildcard
   jr CHRRET
 
-; CP/M 2.2 reserves these characters
-; inside filename and filetype fields.
-; Dot and equals are handled as grammar
-; delimiters, while question mark and
-; asterisk remain available to the
-; ambiguous DIR and ERA forms. Takes the
-; character in A and keeps it; returns
-; carry if it is forbidden. Keeps BC and
-; HL; destroys F.
+; Test input A against BADCHARS' 13-byte
+; blacklist. Dot/equals are separate
+; delimiters. Question/star are grammar.
+; No other control/high-bit filtering is
+; added here.
+; Preserve A/BC/HL. Change F. CHRRET
+; sets carry for membership.
 
 VALIDCHR:
-  push hl
-  push bc
+  push hl        ; caller HL
+  push bc        ; caller BC
   ld hl,BADCHARS
-  ld bc,13       ; the 13 forbidden
-                 ; characters
-  cpir           ; equality means a
-                 ; forbidden byte
+  ld bc,13       ; 13 forbidden bytes
+  cpir           ; membership -> Z
 
-; Both scans preserve HL/BC and return
-; carry for a match (invalid/ambiguous).
-; Takes Z for a match, with BC and HL
-; pushed in that order.
+; Shared scan return: callers pushed HL
+; then BC, so BC is above HL. Pop BC
+; then HL. Incoming Z returns carry set.
+; Incoming NZ uses OR A to clear carry.
+; VALIDCHR preserves input A. UNAMBIG
+; does not.
 
 CHRRET:
-  pop bc
-  pop hl
-  scf
-  ret z          ; Z from the scan:
-                 ; carry
-  or a           ; none found: carry
-                 ; clear
+  pop bc         ; BC above HL
+  pop hl         ; restore delimiter
+  scf            ; carry for match
+  ret z          ; incoming Z
+  or a           ; nonmatch: carry clear
   ret
 
-; A '*' in a field: '?' through the B
-; bytes left of it at DE, and the rest
-; of the field's text at HL passed over
-; to its delimiter. Returns as PARFLD
-; does when it succeeds.
+; Expand a star into positive B
+; remaining slots at DE, filling '?' and
+; leaving B=0. Advance HL past the star
+; and skip its suffix to an FCBEND
+; delimiter without further validation.
+; Return PARFLD's successful
+; delimiter/flags result.
 
 PARSTAR:
-  ld a,'?'       ; any character matches
+  ld a,'?'       ; parsed wildcard byte
 
 STARLOOP:
   ld (de),a
   inc de
-  djnz STARLOOP  ; the field's bytes
-                 ; left; B = 0 after
-  inc hl         ; past the '*'
+  djnz STARLOOP  ; positive B slots
+  inc hl         ; skip the star
 
 PARIGN:
-  call FCBEND
-  ret z          ; the delimiter
-  inc hl         ; characters after the
-                 ; '*' are ignored
+  call FCBEND    ; delimiter test only
+  ret z
+  inc hl         ; ignored suffix
   jr PARIGN
 
-; Z at the end of a name: a zero, a
-; space, '=' or '.'. A holds the
-; character. Takes HL at the character;
-; destroys AF only.
+; Read (HL) without advancing. Zero,
+; SPACE, '=' and '.' return Z/carry
+; clear with that byte in A. Other bytes
+; return NZ with flags from CP '.'.
+; Changes AF only.
 
 FCBEND:
   ld a,(hl)
   or a
-  ret z          ; the line's end
+  ret z          ; zero delimiter
   cp SPACE
-  ret z          ; the next argument
-  cp '='
-  ret z          ; a second name follows
-  cp '.'
-  ret            ; a type follows; NZ
-                 ; for any other
+  ret z          ; SPACE delimiter
+  cp '='         ; equals delimiter
+  ret z
+  cp '.'         ; dot delimiter
+  ret            ; other byte: NZ
 
-; character
-
-; Move HL past spaces. Returns A = the
-; first other character, with NZ, and
-; carry when it is below a space, as the
-; line's 0 is. Destroys AF.
+; Skip literal SPACE bytes from HL.
+; Return A=(HL), NZ and carry if the
+; first other byte is below SPACE,
+; including zero. Callers needing
+; end-of-line Z must OR A. Changes AF
+; and HL.
 
 SKIPSP:
   ld a,(hl)
-  cp SPACE
-  ret nz         ; not a space: HL at it
-  inc hl
+  cp SPACE       ; flags from CP SPACE
+  ret nz         ; NZ even at zero
+  inc hl         ; literal spaces only
   jr SKIPSP
 
-; Compare the parsed command word with a
-; zero-terminated keyword. Equality
-; requires a command delimiter or end
-; immediately after the keyword. Takes
-; DE at the keyword and the word at
-; CMDSTRT. Returns Z for a match, with
-; DE at the keyword's 0; NZ with DE at
-; the byte that differed, or at the 0
-; when the word goes on. Destroys AF,
-; HL.
+; Compare keyword at DE with text at
+; (CMDSTRT). Match requires the
+; keyword's zero and command zero/SPACE
+; together. Return Z with DE at keyword
+; zero. On mismatch return NZ with DE at
+; the differing byte or keyword zero for
+; a longer command.
+; Changes AF/HL. DE advances during
+; matching. KEYNXT skips only the
+; unmatched suffix.
 
 ISCMD:
-
-; the command word
 
   ld hl,(CMDSTRT)
 
 KEYLOOP:
   ld a,(de)
   or a
-  jr z,KEYEND    ; the keyword's 0: does
-                 ; the word end?
+  jr z,KEYEND    ; keyword ended
   cp (hl)
-  ret nz         ; a letter differs: NZ
+  ret nz         ; differing byte
   inc de
   inc hl
-  jr KEYLOOP     ; alike: the next
-                 ; letter
+  jr KEYLOOP     ; matched prefix
 
 KEYEND:
   ld a,(hl)
   or a
-  ret z          ; the line's end: Z, a
-                 ; match
+  ret z          ; command zero: match
   cp SPACE
-  ret            ; Z for a space after
-                 ; it, else NZ
+  ret            ; SPACE is also match
 
-; Print the '$'-terminated string at DE
-; by BDOS function 9. Destroys AF, BC,
-; DE and HL, as the BDOS may.
+; Print the dollar-ended string at DE
+; through BDOS 9. Tail-enter BDOS
+; without a private save frame. Changes
+; AF/BC/DE/HL according to BDOS.
 
 PUTSTR:
-  ld c,9         ; BDOS 9: print a
-                 ; string
+  ld c,9         ; 9: dollar string
   jp BDOS
 
-; Print E by BDOS function 2, through
-; OUTCHAR's column count and ^P echo.
-; Keeps BC and HL, which every caller
-; wants kept. Destroys AF and DE.
+; Print E through BDOS 2 with OUTCHAR
+; bookkeeping and printer echo.
+; Save/restore BC/HL around the call.
+; AF/DE may change. Callers rely on that
+; traversal/count preservation.
 
 PUTCHAR:
-  push bc        ; kept for the caller,
-                 ; as the BDOS
-  push hl        ; may change them
-  ld c,2         ; BDOS 2: the console,
-                 ; E
+  push bc        ; save caller BC
+  push hl        ; save caller HL
+  ld c,2         ; 2: character E
   call BDOS
   pop hl
   pop bc
   ret
 
-; SERVICES: each service's name and
-; pages, from the owner list: one line
-; each, from the lowest up, the name
-; without its spaces and the pages in
-; decimal. Ends at MAINLOOP.
+; SERVICES: follow SVCHEAD/DOWN from the
+; lowest resident upward, ending at
+; MAINLOOP on zero. Print the eight-byte
+; name through PUTTRIM and the decimal
+; page span: SVCABV(DOWN) minus this
+; owner's page. Zero DOWN resolves to
+; the stub.
+; Save owner HL across decimal/string
+; output, then reload DOWN.
 
 CMDSVC:
-
-; the lowest owner's page, 0 for none
 
   ld a,(SVCHEAD)
 
 CMDDL:
   or a
-  jp z,MAINLOOP  ; the list's end
-  ld h,a         ; HL at the owner's
-                 ; name
+  jp z,MAINLOOP  ; end of owner chain
+  ld h,a         ; owner name address
   ld l,DNAM
-  ld b,8
-  call PUTTRIM   ; up to 8 characters,
-                 ; spaces passed over
-  ld e,' '       ; a space before the
-                 ; pages
+  ld b,8         ; eight name bytes
+  call PUTTRIM   ; masked nonspaces
+  ld e,' '       ; page-count separator
   call PUTCHAR
-  push hl        ; H = the owner's page
-  ld l,DOWN
-  ld a,(hl)      ; the next owner up, 0
-                 ; for none,
-  call SVCABV    ; gives the page above
-                 ; this one,
-  sub h          ; and less its own, its
-                 ; pages
+  push hl        ; owner page across I/O
+  ld l,DOWN      ; next-owner link
+  ld a,(hl)      ; 0 means stub above
+  call SVCABV    ; upper page boundary
+  sub h          ; owned page count
   ld l,a
   ld h,0
-  call PUTDEC    ; in decimal
+  call PUTDEC    ; decimal span
   ld de,CRLFMSG
   call PUTSTR
   pop hl
   ld l,DOWN
-  ld a,(hl)      ; the next owner's
-                 ; page, 0 at the last
+  ld a,(hl)      ; reload next owner
   jr CMDDL
 
-; Startup. Once after cold boot one
-; record of A:STARTUP.CMD is read, the
-; position marked finished first, so
-; that a failure can't repeat. STPOS is
-; 0 until then, the next byte + 1 in the
-; file, and 80h up once it is finished.
-; Destroys AF, BC, DE, HL.
+; Attempt startup only at STPOS=0. Set
+; 80h before access, then bypass if raw
+; STSPORT bit 6 is low. Otherwise open
+; A:STARTUP.CMD and read one record into
+; STREC. Failure leaves the finished
+; state. A zero read result sets
+; STPOS=1.
+; On the returning I/O path set
+; CURDMA=DEFDMA directly. No close is
+; attempted. Changes AF/BC/DE/HL.
 
 STBOOT:
-  ld hl,STPOS    ; startup's state
+  ld hl,STPOS    ; one-shot state
   ld a,(hl)
   or a
-  ret nz         ; cold boot has passed
-                 ; here already
-  set 7,(hl)     ; finished, whatever
-                 ; follows
-
-; a keypad key held skips it: bit 6 low
+  ret nz         ; attempt already done
+  set 7,(hl)     ; mark before access
 
   in a,(STSPORT)
-  and $40
-  ret z
-  ld hl,STFCB    ; the file's name, for
-                 ; the BDOS
+  and $40        ; bit 6 bypass test
+  ret z          ; low: bypass startup
+  ld hl,STFCB    ; A:STARTUP.CMD
   ld de,CMDFCB
-  ld bc,12       ; its drive, name and
-                 ; type
+  ld bc,12       ; 12-byte reference
   ldir
-  ld de,STREC    ; the record goes where
-                 ; STLINE reads it
-  ld c,26        ; BDOS 26: the DMA
-                 ; address
+  ld de,STREC    ; one-record DMA
+  ld c,26        ; 26: STREC DMA
   call BDOS
-  call DOSSEQ    ; open A:STARTUP.CMD
-  DB 15*2+0      ; BDOS 15, source FCB
+  call DOSSEQ    ; open descriptor
+  DB 15*2+0      ; 15: CMDFCB
   inc a
-  jr z,STBDMA    ; FFh: no such file
-  call DOSSEQ    ; read its first record
-  DB 20*2+0      ; BDOS 20, source FCB
+  jr z,STBDMA    ; FFh: leave finished
+  call DOSSEQ    ; read one record
+  DB 20*2+0      ; 20: CMDFCB
   or a
-  jr nz,STBDMA   ; not read: finished,
-                 ; nothing to run
-  inc a          ; STPOS 1, the file's
-                 ; first byte
+  jr nz,STBDMA   ; NZ: leave finished
+  inc a          ; one-based first byte
   ld (STPOS),a
 
 STBDMA:
-  ld hl,DEFDMA   ; the DMA address
-                 ; programs expect
-
-; set in the BDOS's own variable
+  ld hl,DEFDMA   ; default DMA value
 
   ld (CURDMA),hl
   ret
 
-; Startup's next line, from STREC at
-; STPOS. With a line left: it goes in
-; the command buffer, echoed as if
-; typed, and carry clear. Lines end at
-; CR or LF and blank ones are passed
-; over; a line's characters after its
-; 127th are passed over too, as a typed
-; line has no more. ^Z, a zero or the
-; record's last byte ends the file.
-; Otherwise carry set, once the file has
-; finished. Destroys AF, BC, DE, HL.
+; Get a startup line from STREC. If
+; STPOS bit 7 is set, return carry with
+; no line. Otherwise require active
+; STPOS=1..7Fh and the same-page record
+; layout. Decode that one-based position
+; and copy at most 127 characters to
+; CMDTXT.
+; Skip blank lines. For nonempty output
+; set CMDLEN/buffer and return carry
+; clear after dollar-string echo.
+; Changes AF/BC/DE/HL.
 
 STLINE:
-  ld hl,STPOS
+  ld hl,STPOS    ; startup position
   ld a,(hl)
-  rlca           ; top bit to carry: the
-                 ; file is finished
-  ret c          ; the file finished: a
-                 ; line is typed
-  rrca           ; the position again
-
-; HL at the next byte: the record
+  rlca           ; finished bit -> carry
+  ret c          ; finished: no line
+  rrca           ; recover position
 
   add a,LOW(STREC)-1
-  ld l,a         ; is in one page
+  ld l,a         ; same-page layout
   ld h,HIGH(STREC)
   ld de,CMDTXT
-  ld b,127       ; the characters a line
-                 ; may hold
+  ld b,127       ; 127 output slots
+
+; Scan within the single 128-byte STREC.
+; Check its end before reading. Zero/1Ah
+; ends the source; CR/LF ends a line.
+; Store at most 127 characters, then
+; consume the rest of that line without
+; storing. A final record byte reached
+; within a line can be data.
 
 STL1:
   ld a,l
   cp LOW(STREC+128)
-  jr z,STLE      ; the record has run
-                 ; out
+  jr z,STLE      ; end reached: finish
   ld a,(hl)
-  inc hl
+  inc hl         ; consume source byte
   or a
-  jr z,STLE      ; a zero ends the file
+  jr z,STLE      ; zero ends source
   cp 26
-  jr z,STLE      ; and so does ^Z
-  cp 13          ; CR or LF: the line's
-                 ; end
+  jr z,STLE      ; 1Ah ends source
+  cp 13          ; CR ends line
   jr z,STL2
-  cp 10
+  cp 10          ; LF ends line
   jr z,STL2
-  inc b          ; B 0, the line full? A
-                 ; kept
+  inc b          ; test full, keep A
   dec b
-  jr z,STL1      ; past the 127th:
-                 ; passed over
-  ld (de),a      ; a character of the
-                 ; line
+  jr z,STL1      ; full: consume only
+  ld (de),a      ; store acquired byte
   inc de
-  dec b
+  dec b          ; one fewer free slot
   jr STL1
 
 STLE:
 
-; STPOS 80h, finished
+; At EOF use STLAST=STREC+127 so the
+; position conversion stores 80h.
+; Otherwise save the next one-based
+; position. Bit 7 at the boundary:
+; finished. If output is empty retry
+; STLINE.
+; Store CMDLEN and append CR/dollar for
+; PUTSTR echo. An embedded '$' stops
+; echo early. CMDLEN/CMDTXT retain all
+; stored characters. MLGOT replaces the
+; length-boundary CR with zero.
+; At 127 characters the dollar occupies
+; adjacent BOOTDRV, already consumed by
+; CCPENT before STLINE.
 
   ld l,LOW(STLAST)
 
 STL2:
   ld a,l
 
-; the next byte + 1
-
   sub LOW(STREC)-1
-  ld (STPOS),a
-  ld a,e         ; the line's length
+  ld (STPOS),a   ; save position/state
+  ld a,e
   sub LOW(CMDTXT)
-  jr z,STLINE    ; a blank line: the
-                 ; next one
-  ld (CMDLEN),a  ; where function 10
-                 ; leaves it
+  jr z,STLINE    ; skip blank output
+  ld (CMDLEN),a  ; counted input layout
   ex de,hl
-  ld (hl),13     ; a CR for the echo,
-                 ; which MLGOT
-  inc hl         ; makes the line's 0
-  ld (hl),'$'    ; and the echo's end,
-                 ; for PUTSTR
-
-; (at 127 characters this '$' is in
-; BOOTDRV, past CMDTXT, read only
-; before)
+  ld (hl),13     ; CR for echo
+  inc hl         ; next byte for dollar
+  ld (hl),'$'    ; PUTSTR echo end
 
   ld de,CMDTXT
-  call PUTSTR    ; the echo, as if typed
-  or a           ; carry clear: a line
+  call PUTSTR    ; stops at embedded $
+  or a           ; carry-clear line
   ret

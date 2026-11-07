@@ -1,8 +1,8 @@
-; PROBE.COM: BDOS file-function probe for the TEC-OS acceptance tests.
-;
-; Each check prints "Tnn ok" or "Tnn FAIL" on its own line, then the program
-; prints "DONE" and ends with BDOS function 0. It expects drive B to be
-; writable and leaves PROBE2.DAT on A and U3.DAT in user 3 erased.
+; PROBE.COM: sixteen BDOS file checks, reporting Tnn ok/FAIL then DONE.
+; Uses the default FCB/DMA and a writable B:. Checks share user/drive/file
+; state; a fatal BDOS error can warm boot before later reports.
+; T14 attempts U3.DAT cleanup with unchecked erase status; T16 checks
+; PROBE2.DAT deletion. An ok result does not promise all cleanup.
 
 BDOS    EQU     $0005
 FCB     EQU     $005C
@@ -24,7 +24,7 @@ T01:
 T02:
         LD      HL,NPROBE
         CALL    SETFCB
-        LD      C,19            ; delete any old copy
+        LD      C,19            
         CALL    FCBCALL
         LD      C,22
         CALL    FCBCALL
@@ -82,7 +82,7 @@ T05:
         JR      NZ,.RD
         LD      C,20
         CALL    FCBCALL
-        CP      1               ; end of file
+        CP      1               
         JR      .RDR
 .RDF:   OR      1
 .RDR:   CALL    RESULT
@@ -95,6 +95,7 @@ T06:
 
 ; T07 random write of record 5, then records 4, 5 and 6 read back: the
 ; neighbours share its 512-byte SD block and must be unchanged
+; Records 4/6 use the full pattern check; record 5 checks only byte 2.
 T07:
         LD      HL,5
         LD      (RECNO),HL
@@ -125,7 +126,7 @@ T07:
         CP      $A5
 .RWF:   CALL    RESULT
 
-; T08 file size is NREC records
+; T08 compare file size's low 16 bits with NREC; r2 and A are not checked.
 T08:
         LD      C,35
         CALL    FCBCALL
@@ -135,7 +136,7 @@ T08:
         SBC     HL,DE
         CALL    RESULT
 
-; T09 sparse random write at record 1000; size becomes 1001; close
+; T09 write sparse record 1000; T10 closes, reopens and checks its size.
 T09:
         LD      HL,1000
         LD      (RECNO),HL
@@ -245,7 +246,9 @@ T13:
 .SRF:   OR      1
 .SRR:   CALL    RESULT
 
-; T14 user areas: a file made in user 3 is not visible from user 0
+; T14 check user 3 isolation. CLOSE is unchecked; after MAKE/isolation pass,
+; attempt unchecked erase, restore user 0 and force ok. This does not check
+; whether U3.DAT was erased; earlier failure may leave user 3 selected.
 T14:
         LD      E,3
         LD      C,32
@@ -267,7 +270,7 @@ T14:
         CALL    FCBCALL
         INC     A
         JR      NZ,.USF
-        LD      E,3             ; tidy: erase it from user 3
+        LD      E,3             
         LD      C,32
         CALL    BDOS
         LD      HL,NU3
@@ -283,6 +286,7 @@ T14:
 .USR:   CALL    RESULT
 
 ; T15 drive B: select it, make and close a file, return to A
+; Failed predicates can leave B selected.
 T15:
         LD      E,1
         LD      C,14
@@ -335,8 +339,6 @@ T16:
         CALL    BDOS
         LD      C,0
         JP      BDOS
-
-; ---- helpers ----------------------------------------------------------------
 
 ; Copy the 12-byte name at HL to the default FCB and clear the rest.
 SETFCB: LD      DE,FCB

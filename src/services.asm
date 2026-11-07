@@ -1,122 +1,106 @@
-; The numbered services, ABI 5.1
-; (docs/rom-services.md). CALL ABICALL
-; with the number in C and arguments in
-; B, DE and HL; abi.inc names each
-; number, its arguments, results, carry
-; and stack. Returns A = 0 with Z and
-; carry clear on success, or A = a
-; status with carry. The hardware
-; services, 0 to 8, and the driver
-; hook's are here; the volumes' are
-; vol.asm's and the registry's
-; loader.asm's. Any program may call
-; them: they run on the caller's stack
-; and keep their state in the resident
-; workspace.
-;
-; The hardware services are the calls
-; that would otherwise fight the OS for
-; a port: the digit and speaker port
-; (01h) also carries the serial transmit
-; line, which must stay idle, and the
-; PICO9918 may be the console.
+; ABI 5.1 services: CALL ABICALL with
+; C=number and B/DE/HL=arguments. See
+; docs/rom-services.md and abi.inc.
+; Hardware 0-8, hook 12 and font 15 are
+; here. Volume and registry calls have
+; their own results and effects.
+; Hardware/font/hook use resident state
+; and caller stack in the classic bank.
+; No BDOS call. IX/IY, alternates and
+; caller maskable-interrupt state stay.
+; No console interrupt re-entry.
+; Success: A=0, Z, NC. Failure: nonzero
+; status, carry. Port 01h bit 6 is
+; serial-idle during digit/tone output.
+; No NMI exclusion.
 
-RTCPORT EQU $FC  ; DS1302: bit 4 enable,
-                 ; 6 clock, 7 data out,
+RTCPORT EQU $FC  ; DS1302: enable bit4,
+                 ; clock6, output7,
+                 ; read mode5, input0.
 
-; 5 data in, read on bit 0
+SEGPORT EQU $02  ; segment latch
+TXIDLE EQU $40   ; serial idle,
+                 ; speaker/digits off
 
-SEGPORT EQU $02  ; 7-segment segment
-                 ; latch
-TXIDLE EQU $40   ; port 01h bit 6:
-                 ; serial line idle,
-                 ; speaker off
-
-; The dispatcher, ABICALL's target. C =
-; the number, B, DE and HL its
-; arguments, which reach the service
-; whole: the service is entered by a RET
-; to its address, so the caller's return
-; address is next on the stack. Any
-; number from TNCOUNT up returns TNEBAD
-; with the other registers as they were.
-; Destroys AF and what the service does.
+; Dispatch C through SVTAB, preserving
+; B/C/DE/HL. C>=TNCOUNT returns
+; TNEBAD with those registers unchanged.
+; RET enters the selected service with
+; the original caller return next on
+; stack. Uses four temporary bytes.
+; Changes AF and service-defined regs.
 
 SVCDSP:
   ld a,c
   cp TNCOUNT
   ld a,TNEBAD
-  jr nc,HWERR    ; past the table
-  push hl        ; the arguments, across
-                 ; the lookup
+  jr nc,HWERR
+  push hl
   push de
-  ld a,c         ; two bytes an entry
+  ld a,c
   add a,a
   ld e,a
-  ld d,0         ; DE = the entry's
-                 ; offset
+  ld d,0
   ld hl,SVTAB
   add hl,de
-  ld e,(hl)      ; DE = its routine
+  ld e,(hl)
   inc hl
   ld d,(hl)
-  ex de,hl       ; HL = its routine
-  pop de         ; the caller's DE back
+  ex de,hl
+  pop de
   ex (sp),hl     ; the routine is the
                  ; return address,
   ret            ; and the caller's HL
                  ; comes back
 
-; A service's failure: A = the status,
-; set by the caller, returned with carry
-; set and NZ (no status is 0). Other
-; registers are kept.
+; Failure exit: A must be nonzero.
+; Returns the same A, NZ and carry set.
+; Other registers stay. No rollback.
 
 HWERR:
-  or a           ; NZ, carry clear
-  scf            ; then carry: the
-                 ; failure
+  or a
+  scf
   ret
 
-; A service's success: A = 0 with Z and
-; carry clear. Other registers kept.
+; Success exit: A=0, Z, carry clear.
+; Other registers stay.
 
 HWOK:
-  xor a          ; A = 0, Z, carry clear
+  xor a
   ret
 
-; INFO. Returns B = CONDEV's bits, the
-; clock's from cold boot, with HWBCLM,
-; VCLAIM's value, while the PICO9918 is
-; claimed; DE = the ROM's version; HL =
-; columns and rows. It reads no device.
-; Destroys AF.
+; INFO: B=CONDEV OR VCLAIM, DE=ROMVER,
+; L=columns, H=rows. Reads resident
+; state, RTC flag from cold boot.
+; No device I/O.
+; Changes AF. Other registers stay.
 
 HWSINFO:
   ld a,(CONDEV)
-  ld hl,VCLAIM   ; holds HWBCLM's value
-                 ; while claimed
+  ld hl,VCLAIM
   or (hl)
-  ld b,a         ; the devices, the
-                 ; claim among them
+  ld b,a
   ld de,ROMVER
   ld hl,(VWID)   ; L = VWID, H = VHGT,
                  ; the next byte
   jp HWOK
 
-; DIGIT. HL -> six segment bytes,
-; leftmost first: one pass over the six
-; digits, each lit for about 0.8 ms;
-; then all off. Returns HL past the six.
-; Destroys AF and BC.
+; DIGIT: HL -> six segment bytes,
+; leftmost first. First latch assumes
+; digits off.
+; One scan, about 0.8 ms per digit at
+; 4 MHz, then digits and speaker off.
+; Serial TX stays idle. Each delay has
+; 256 DJNZ iterations, not all 13T.
+; Returns HL past six bytes.
+; Changes AF/BC. DE stays.
 
 HWSDIG:
   ld c,$20       ; bit 5 is the leftmost
                  ; digit
 
 HWSDL:
-  ld a,(hl)      ; this digit's
-                 ; segments, latched
+  ld a,(hl)
 
 ; while every digit is off
 
@@ -131,99 +115,78 @@ HWSDL:
   ld b,0
 
 HWSDD:
-  djnz HWSDD     ; 256 turns of 13
-                 ; T-states, the lit
-                 ; time
-  ld a,TXIDLE    ; every digit off, the
-                 ; line idle
+  djnz HWSDD
+  ld a,TXIDLE
   out (DIGPORT),a
-  inc hl         ; the next byte, for
-                 ; the digit to the
-                 ; right
+  inc hl
   srl c
-  jr nz,HWSDL    ; until the select bit
-                 ; leaves bit 0
+  jr nz,HWSDL
   jp HWOK
 
-; LCD. B = the row, 0 to 3, HL -> 20
-; characters: the row written, every
-; byte sent as it is. A row past 3
-; returns TNEBAD with nothing written.
-; Writing row 3 clears CDWRD: the
-; program's text replaces any word of
-; the ROM's. Returns HL past the 20.
-; Destroys AF, B and DE.
+; LCD: B=row 0-3, HL -> 20 raw bytes.
+; B>=4 returns TNEBAD before effects.
+; Row 3 clears CDWRD so ROM cleanup
+; cannot erase the program's text.
+; All 20 bytes, including zero, are sent
+; after bounded busy polling, including
+; a timeout. No device acknowledgement.
+; Returns HL past 20. Changes AF/B/DE.
+; C stays.
 
 HWSLCD:
   ld a,b
   cp 4
-  ld a,TNEBAD    ; refused: no such row
+  ld a,TNEBAD
   jr nc,HWERR
-  push hl        ; the text, across the
-                 ; row's address
-  ld a,b         ; a program takes row
-                 ; 3: no word of the
-                 ; ROM's
-  cp 3           ; is left there for a
-                 ; take to clear
+  push hl
+  ld a,b
+  cp 3
   jr nz,HWSL1
   ld hl,CONDEV
-  res 7,(hl)     ; CDWRD
+  res 7,(hl)
 
 HWSL1:
-  ld hl,LCDROWS  ; the row's DDRAM
-                 ; address command,
-  ld e,b         ; from the table
+  ld hl,LCDROWS
+  ld e,b
   ld d,0
   add hl,de
   ld a,(hl)
-  call LCDC      ; the cursor to the
-                 ; row's start
+  call LCDC
   pop hl
-  ld b,20        ; the row's width
+  ld b,20
 
 HWSLC:
-  call LCDWAIT   ; each character once
-                 ; the LCD is ready
+  call LCDWAIT
   ld a,(hl)
   out (LCDDAT),a
   inc hl
-  djnz HWSLC     ; all 20, zeros and all
+  djnz HWSLC
   jp HWOK
 
-; VIDEO. B = 1 claims the PICO9918, B =
-; 0 releases it; any other B returns
-; TNEBAD, and TNENODV with no PICO9918
-; found at cold boot. Claim: the console
-; stops drawing on the PICO9918 (output
-; to it is dropped, no cursor, no page
-; flips) and the program owns its
-; registers and VRAM. Release, or warm
-; boot through HWVREL: with the ROM's
-; console started, text mode, font and
-; page come back, and the screen is
-; cleared while it is the console; with
-; none, the VDP is left as the program
-; left it. Destroys AF, DE, HL and what
-; CURHIDE, the driver's restore and
-; VTCLS do.
+; VIDEO: B=1 claims PICO, B=0 releases.
+; Other B: TNEBAD before effects.
+; No detected PICO: TNENODV. Claim hides
+; the cursor only when CRT is current
+; then sets VCLAIM. Output, cursor and
+; page flips stop on that current PICO.
+; UC1 remains usable. No owner identity.
+; Release behaviour is HWVREL's below.
+; Changes AF/DE/HL and callee registers,
+; including BC during restoration.
 
 HWSVID:
-  ld a,b         ; 0 or 1, and nothing
-                 ; else
+  ld a,b
   cp 2
   ld a,TNEBAD
   jp nc,HWERR    ; refused, nothing
                  ; changed (A1)
   ld a,(CONDEV)
-  and CDTMS      ; a PICO9918 answered
-                 ; at cold boot
+  and CDTMS
   ld a,TNENODV
-  jp z,HWERR     ; none: no device to
-                 ; claim
+  jp z,HWERR
   ld a,b
   or a
-  jr z,HWVREL    ; B = 0: give it back
+  jr z,HWVREL
   ld a,(CONMOD)
   cp CMCRT       ; the console's screen:
                  ; its cursor removed
@@ -231,25 +194,30 @@ HWSVID:
 ; before the claim stops the terminal
 
   call z,CURHIDE
-  ld a,CDCLM     ; HWBCLM, as INFO
-                 ; reports it
+  ld a,CDCLM
   ld (VCLAIM),a
   jp HWOK
 
-; The release, also warm boot's. Nothing
-; is done unless the PICO9918 is
-; claimed. Returns A = 0, Z and carry
-; clear. Destroys F, DE, HL and what the
-; driver's restore and VTCLS do.
+; Release PICO. Real warm boot calls
+; PIICLR before reaching this entry.
+; No claim: no display action. Otherwise
+; clear VCLAIM first. No PIVEC: no VDP
+; restore. Else VREST restores mode/font
+; and latest drawn page, even under UC1.
+; Only current CRT is cleared and
+; cursor homed. Supported v4 restore
+; preserves tracked IE; ordinary release
+; does not end the interrupt session.
+; Returns A=0, Z, NC. Changes AF/DE/HL
+; and restore/clear clobbers, including
+; BC. Uses the caller stack.
 
 HWVREL:
   ld a,(VCLAIM)
   or a
-  jp z,HWOK      ; not claimed: nothing
-                 ; to give back
+  jp z,HWOK
   xor a
-  ld (VCLAIM),a  ; the terminal may draw
-                 ; again
+  ld (VCLAIM),a
   ld hl,(PIVEC)  ; registers, font, page
                  ; shown, by its driver
   ld a,h
@@ -268,60 +236,48 @@ HWVREL:
   call VHLJP
   ld a,(CONMOD)
   cp CMCRT
-  jp nz,HWOK     ; not the console: the
-                 ; screen left alone
-  call VTCLS     ; a clear screen, the
-                 ; cursor at the top
-                 ; left
+  jp nz,HWOK
+  call VTCLS
   xor a
   ld (VROW),a
   ld (VCOL),a
   jp HWOK
 
-; ---- Speaker
-; --------------------------------------
-; TONE. Square wave on port 01h bit 7:
-; DE half cycles of B units of 16
-; T-states (plus 51 a half cycle; B = 0
-; is 256 units), the serial line held
-; idle throughout. DE = 0 sounds
-; nothing. Destroys AF, C and DE.
+; TONE: DE half cycles, B delay units
+; (0=256). DE=0 returns without output.
+; Repeated intervals are 16*N+51T for
+; N=B or 256, excluding entry/exit.
+; Bit 7 toggles with serial TX idle.
+; Ends with speaker/digits off. B and HL
+; stay. Changes AF/C/DE.
 
 HWSTONE:
   ld a,d
   or e
-  jp z,HWOK      ; no half cycles
-  ld a,TXIDLE    ; the port's byte: line
-                 ; idle, speaker low
+  jp z,HWOK
+  ld a,TXIDLE
 
 HWSTL:
-  xor $80        ; the speaker bit
-                 ; flipped, a half cycle
+  xor $80
   out (DIGPORT),a
   ld c,b
 
 HWSTD:
-  dec c          ; B turns of 16
-                 ; T-states
+  dec c
   jr nz,HWSTD
   dec de
-  ld c,a         ; the port's byte kept
-                 ; across the test
+  ld c,a
   ld a,d
   or e
   ld a,c
-  jr nz,HWSTL    ; until DE half cycles
-                 ; are sent
-  ld a,TXIDLE    ; the speaker left low,
-                 ; the line idle
+  jr nz,HWSTL
+  ld a,TXIDLE
   out (DIGPORT),a
   jp HWOK
 
-; ---- Joystick and keys
-; --------------------------------------
-; JOY. Returns B = the joystick's bits,
-; 1 for each one pressed. Destroys AF
-; and C.
+; JOY: sample F7FEh, complement into B.
+; Set result bits mean pressed inputs.
+; Raw sample, no debounce. Changes AF/C.
 
 HWSJOY:
   ld bc,$F7FE    ; port FEh with address
@@ -332,54 +288,45 @@ HWSJOY:
   ld b,a
   jp HWOK
 
-; KEYS. HL -> 8 bytes: the matrix's
-; rows, one byte each, 1 for each key
-; down. Returns HL past the eight.
-; Destroys AF and BC.
+; KEYS: HL -> eight output bytes.
+; Sample FEFEh then rotate the low row
+; select bit through all eight rows.
+; Set result bits mean keys down.
+; Returns HL past eight. Changes AF/BC.
 
 HWSKEYS:
-  ld bc,$FEFE    ; row select in the
-                 ; high byte, one bit
-                 ; low
+  ld bc,$FEFE
 
 HWSKL:
-  in a,(c)       ; the row whose select
-                 ; bit is low
-  cpl            ; the port reads 0 for
-                 ; down
+  in a,(c)
+  cpl
   ld (hl),a
   inc hl
-  rlc b          ; the low bit to the
-                 ; next row; carry clear
-  jr c,HWSKL     ; once it has left bit
-                 ; 7, after eight
+  rlc b
+  jr c,HWSKL
   jp HWOK
 
-; ---- Text at a position
-; --------------------------------------
-; PUTAT. On a video console, B
-; characters from HL at row D, column E,
-; clipped to the screen, without moving
-; the cursor. Status 2 on the serial
-; terminal, or while the PICO9918 is
-; claimed and is the console. A row past
-; the screen writes nothing; a row is
-; cut at its last column. Destroys AF,
-; BC, DE, HL and what CURHIDE and VPUT
-; do.
+; PUTAT: B raw bytes at HL to row D,
+; column E, clipped without moving the
+; cursor coordinates. Serial/batch or
+; claimed current PICO: TNENODV before
+; source access.
+; Available video, B=0: no source read
+; or cursor change. Otherwise hide the
+; cursor before clipping. Off-screen
+; coordinates succeed without writing
+; but may have hidden the cursor. HL/E
+; advance only for written cells.
+; Changes AF/BC/DE/HL and driver regs.
 
 HWSPUT:
   call VTOWN
   ld a,TNENODV
-  jp nz,HWERR    ; claimed and the
-                 ; console: not ours
+  jp nz,HWERR
   ld a,(CONMOD)
-  rrca           ; bit 0: CMCRT and
-                 ; CMUC1, the video
-                 ; modes
+  rrca
   ld a,TNENODV
-  jp nc,HWERR    ; serial or batch: no
-                 ; screen
+  jp nc,HWERR
   ld a,b
   or a
   jp z,HWOK      ; no source read or
@@ -398,76 +345,63 @@ HWSPUT:
   ld a,(VHGT)
   dec a
   cp d
-  jp c,HWOK      ; row D past the last:
-                 ; nothing written
+  jp c,HWOK
 
 HWSPL:
   ld a,(VWID)
   cp e
-  jp z,HWOK      ; column E at or past
-                 ; the width:
-  jp c,HWOK      ; the rest is clipped
+  jp z,HWOK
+  jp c,HWOK
   ld a,(hl)
-  push bc        ; count, row and
-                 ; column, and the
-                 ; source,
-  push de        ; across the driver
+  push bc
+  push de
   push hl
-  ld b,d         ; VPUT takes row B,
-                 ; column C
+  ld b,d
   ld c,e
-  call VPUT      ; character A drawn in
-                 ; the cell
+  call VPUT
   pop hl
   pop de
   pop bc
-  inc hl         ; the next character,
-                 ; one column on
+  inc hl
   inc e
   djnz HWSPL
   jp HWOK
 
-; ---- Clock
-; --------------------------------------
-; RTC. B = 0 reads, B = 1 sets, the
-; seven BCD bytes at HL: seconds,
-; minutes, hours, date, month, weekday,
-; year. TNEBAD for any other B, TNENODV
-; with no DS1302. Setting turns the
-; clock's write protect off for the
-; burst, whose control byte puts it on
-; again. Returns HL past the seven.
-; Destroys AF, BC, D, and E when
-; setting.
+; RTC: B=0 reads, B=1 writes seven bytes
+; at HL: seconds, minutes, hours, date,
+; month, weekday, year. Other B: TNEBAD
+; before port I/O. Probe NZ gives
+; TNENODV before buffer transfer.
+; Write protection is disabled for the
+; burst and enabled by its control byte.
+; Chip disabled on completion. No BCD
+; validation or rollback. HL advances 7.
+; Changes AF/BC/D, also E when writing.
 
 HWSRTC:
-  ld a,b         ; 0 read or 1 set, and
-                 ; nothing else
+  ld a,b
   cp 2
   ld a,TNEBAD
   jp nc,HWERR    ; refused, the clock
                  ; untouched (A1)
-  push bc        ; B, the direction,
-                 ; across the probe
+  push bc
   call RTCHAS
   pop bc
   ld a,TNENODV
-  jp nz,HWERR    ; no clock answered
+  jp nz,HWERR
   ld a,b
   or a
-  jr nz,HWSRW    ; B = 1: set
-  ld d,$BF       ; clock burst read
+  jr nz,HWSRW
+  ld d,$BF
   call RTCCMD
-  ld b,7         ; the seven time bytes,
-                 ; not the control
+  ld b,7
 
 HWSRR:
   call RTCRD
   ld (hl),d
   inc hl
   djnz HWSRR
-  jr RTCEND      ; the burst ended by
-                 ; the enable going low
+  jr RTCEND
 
 HWSRW:
   ld de,$8E00    ; write protect off
@@ -478,8 +412,7 @@ HWSRW:
   ld b,7
 
 HWSRV:
-  ld d,(hl)      ; each time byte in
-                 ; turn
+  ld d,(hl)
   call RTCWR
   inc hl
   djnz HWSRV
@@ -489,73 +422,66 @@ HWSRV:
   call RTCWR
 
 RTCEND:
-  xor a          ; enable low: the
-                 ; transfer ends
+  xor a
   out (RTCPORT),a
   jp HWOK
 
-; Z when a DS1302 answers: its seconds
-; register reads below 60h. Returns A =
-; 0 with Z, or A = 1 with NZ. Keeps BC.
-; Destroys F and D.
+; Probe seconds using command 81h and
+; disable the chip. Unsigned byte <60h:
+; A=0, Z. Otherwise nonzero A, NZ. This
+; is not full BCD validation. BC/E/HL
+; stay. Changes AF/D. Callers use Z/NZ.
 
 RTCHAS:
-  ld d,$81       ; read the seconds
-                 ; register
+  ld d,$81
   call RTCCMD
   call RTCRD
-  xor a          ; enable low: the
-                 ; transfer ends
+  xor a
   out (RTCPORT),a
   ld a,d
-  cp $60         ; 60h or above is no
-                 ; BCD second
+  cp $60
   jr nc,RTCNO
-  xor a          ; A = 0, Z
+  xor a
   ret
 
 RTCNO:
-  or 1           ; A = 1, NZ
+  or 1           ; nonzero A, NZ
   ret
 
-; Write register D = E: D is the
-; register's write command. Ends with
-; the chip disabled. Keeps BC and E.
-; Destroys AF and D.
+; Write register command D with value E
+; then disable the chip. BC/E/HL stay.
+; Changes AF/D. No data validation.
 
 RTCPUT:
   call RTCCMD
-  ld d,e         ; the value follows the
-                 ; command
+  ld d,e
   call RTCWR
-  xor a          ; enable low: the write
-                 ; is done
+  xor a
   out (RTCPORT),a
   ret
 
-; Enable the chip and send the command
-; byte in D. Keeps BC. Destroys AF and
-; D.
+; Enable the chip, clock low, then fall
+; through RTCWR to send command D.
+; Chip stays enabled. BC/E/HL stay.
+; Changes AF/D.
 
 RTCCMD:
-  ld a,$10       ; enable high, clock
-                 ; low
+  ld a,$10
   out (RTCPORT),a
 
-; Send D, least significant bit first,
-; the chip left enabled with the clock
-; high. Keeps BC. Destroys AF; D ends 0.
+; Send D, eight bits LSB first. Data is
+; set with clock low before each rising
+; edge. Ends enabled, clock high, D=0.
+; BC/E/HL stay. Changes AF.
 
 RTCWR:
   push bc
   ld b,8
 
 RTCW1:
-  srl d          ; the next bit, from
-                 ; bit 0, to carry
+  srl d
   ld a,$20
-  rra            ; data bit to bit 7,
-                 ; enable to bit 4
+  rra
 
 ; the bit set up with the clock low
 
@@ -569,15 +495,16 @@ RTCW1:
   pop bc
   ret
 
-; D = the next byte from the clock,
-; least significant bit first, the chip
-; left enabled. Keeps BC. Destroys AF.
+; Read eight bits LSB first into D from
+; an enabled chip, sampling input bit 0
+; after each falling clock edge. Ends
+; enabled, clock low. BC/E/HL stay.
+; Changes AF.
 
 RTCRD:
   push bc
   ld bc,8*256+RTCPORT
-  ld d,0         ; B = 8 bits, C = the
-                 ; port, D the byte
+  ld d,0
 
 RTCR1:
   ld a,$70       ; clock high, read,
@@ -594,26 +521,25 @@ RTCR1:
   pop bc
   ret
 
-; TNFONT: HL = the console font in the
-; ROM, the one both display drivers draw
-; from (KD-159). Destroys AF.
+; TNFONT (15): HL=FONT, the ROM font
+; shared by PICO and GLCD (KD-159).
+; Changes AF. Other registers stay.
 
 HWSFONT:
   ld hl,FONT
   jp HWOK
 
-; TNDRVR: B = the mode, then VIDHOOK's:
-; HL = the driver's table, or 0 to drop
-; it. Returns A = 0, carry clear, and HL
-; = LINEBUF for a table taken. A refusal
-; returns A = TNEBAD with carry, or
-; TNENODV for a table offered by a line
-; from STARTUP.CMD while CON: is CRT::
-; that driver would only give way to the
-; ROM's console, so it stays out,
-; quietly, and leaves the services'
-; stack room to others (KE-200).
-; Destroys DE, and HL for a drop.
+; TNDRVR: B=3 (UC1), HL=eight-word
+; table or 0 to drop. Other B: TNEBAD.
+; Drop bypasses startup rejection.
+; Startup + CRT field + nonzero HL:
+; TNENODV before hook (KE-200), saving
+; service stack room. Otherwise VIDHOOK
+; requires a matrix and no UC1 table,
+; else TNEBAD. Accepted: HL=LINEBUF.
+; Table/code stay live until removal.
+; Drop may defer console reselection.
+; AF/DE may change, also HL on drop.
 
 SVDRV:
   ld a,b
@@ -621,8 +547,7 @@ SVDRV:
                  ; table is the ROM's
   jr z,SVDRV1    ; (KS39), and no other
                  ; B has a word
-  ld a,TNEBAD    ; refused, nothing
-                 ; changed
+  ld a,TNEBAD
   scf
   ret
 
@@ -647,12 +572,9 @@ SVDRV1:
   ret z
 
 SVDRV2:
-  ld a,b         ; UC1:, the mode, for
-                 ; VIDHOOK
+  ld a,b
   call VIDHOOK
-  ld a,TNEBAD    ; kept already, or no
-                 ; matrix keyboard
+  ld a,TNEBAD
   ret c
-  xor a          ; taken or dropped: A =
-                 ; 0, carry clear
+  xor a
   ret

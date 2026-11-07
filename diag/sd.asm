@@ -1,11 +1,13 @@
-; SD card on port FDh: the TEC-OS driver (src/sd.asm), recording what the
-; card answers at each step, and the tests that use it.
+; Diagnostic SPI on FDh, derived from src/sd.asm but with fewer checks.
+; Attempt/response fields record selected branches, not complete card state.
+; CMD8 echo, CMD55 reply, data-error tokens and byte-address range rejection
+; are not checked here. No production SDERR or hardware-readiness guarantee.
 
-SDENOCD EQU     1               ; no response to CMD0
+SDENOCD EQU     1               ; CMD0 never returned idle 01h
 SDEINIT EQU     2               ; ACMD41 never reported ready
 SDEOCR  EQU     3               ; CMD58 failed
 SDEBLEN EQU     4               ; CMD16 failed
-SDECMD  EQU     5               ; read command rejected
+SDECMD  EQU     5               ; read/write command rejected
 SDETOK  EQU     6               ; no data token
 
 ; Send C, most significant bit first, with /CS low. Destroys AF, B.
@@ -19,7 +21,8 @@ SPIWB:  XOR     A
         DJNZ    SPIWB
         RET
 
-; Receive a byte into A, sending FFh, with /CS low. Destroys B, E.
+; Receive eight MISO bits into A with MOSI high and /CS low; CLK ends low.
+; AF/B/E work; C/D/HL survive. Eight shifts replace the previous E contents.
 SPIR:   LD      B,8
 SPIRB:  LD      A,1
         OUT     (SDIO),A
@@ -47,8 +50,10 @@ SPIEB:  LD      A,SDIDLE+2
         POP     AF
         RET
 
-; Send command A with the argument in SDARG; return R1 in A (FFh when the card
-; never answers). Leaves /CS low. Destroys BCDE, HL.
+; Send command A and big-endian SDARG, then poll at most 16 bytes for bit 7
+; clear. Return that candidate R1 in A, or the last bit-7-set byte on timeout
+; (not necessarily FFh). /CS stays low; AF/BC/DE/HL work. Callers inspect A.
+; CRCs are fixed for CMD0=0/CMD8=1AAh, otherwise 01h, not computed generally.
 SDCMD:  LD      D,A
         LD      C,$FF
         CALL    SPIW
@@ -68,7 +73,7 @@ SDCMD:  LD      D,A
         INC     HL
         LD      C,(HL)
         CALL    SPIW
-        LD      C,$95           ; valid CRC for CMD0
+        LD      C,$95           ; fixed CRC for CMD0 with argument 0
         LD      A,D
         OR      A
         JR      Z,SDCRC
@@ -96,14 +101,16 @@ SETARG: LD      A,D
         LD      (SDARG+3),A
         RET
 
-; Run command A with argument DEHL and deselect. Returns R1 in A.
+; Send command A with argument DEHL, then deselect. A/flags retain SDCMD's
+; raw outcome; an exhausted bit-7-set response is not a valid R1.
 SDCMDX: PUSH    AF
         CALL    SETARG
         POP     AF
         CALL    SDCMD
         JP      SPIEND
 
-; Read B bytes into HL with /CS low. Destroys AF, B, DE.
+; Read B bytes into writable HL with /CS low; B = 0 means 256 writes.
+; HL ends after them, B at zero. AF/B/DE work; C survives. No CRC check.
 SDRDN:  PUSH    BC
         CALL    SPIR
         POP     BC
@@ -112,9 +119,13 @@ SDRDN:  PUSH    BC
         DJNZ    SDRDN
         RET
 
-; Initialise the card as TEC-OS does, recording CMD0 attempts, the CMD8
-; answer, ACMD41 attempts and the OCR. Returns Z when it is ready, or NZ
-; and A = an SDE* code.
+; Initialise and record CMD0/CMD8/ACMD41/OCR trace fields. At most 10 CMD0
+; attempts seek idle 01h; at most 256 ACMD41 attempts seek zero. CMD8 R1=1
+; stores four R7 bytes without checking echo/voltage; other replies skip R7.
+; CMD55's reply is ignored. OCR bit 6 chooses block addressing; otherwise
+; set SDBYTE and require CMD16=0. A0/Z means this init path passed; NZ returns
+; the selected SDE* code and may leave partial state. No elapsed-time bound
+; or full production-driver parity follows from the counted retries.
 SDINIT: XOR     A
         LD      (SDBYTE),A
         LD      (SDR8),A
@@ -155,7 +166,7 @@ SDI8:   LD      DE,0            ; CMD8: 2.7-3.6 V, check pattern AAh
         CALL    SDCMD
         LD      (SDR8),A
         CP      1
-        JR      NZ,SDI8X        ; version 1 card: no R7 payload
+        JR      NZ,SDI8X        ; any other reply skips the R7 read
         LD      HL,SDR7
         LD      B,4
         CALL    SDRDN
@@ -206,18 +217,19 @@ SDI58:  LD      DE,0
         JR      SDFAIL
 SDI58F: CALL    SPIEND
         LD      A,SDEOCR
-SDFAIL: OR      A               ; NZ
+SDFAIL: OR      A               
         RET
 SDIOK:  XOR     A
         RET
 
-; Load SDARG from SDLBA, as a byte address for standard-capacity cards.
+; Convert little-endian SDLBA to big-endian SDARG. SDBYTE=0 keeps blocks;
+; any nonzero value shifts left 9 modulo 2^32, with no overflow rejection.
 LBAARG: LD      HL,(SDLBA)
         LD      DE,(SDLBA+2)
         LD      A,(SDBYTE)
         OR      A
         JP      Z,SETARG
-        LD      D,E             ; DEHL = LBA << 9
+        LD      D,E             ; DEHL = low 32 bits of LBA << 9
         LD      E,H
         LD      H,L
         LD      L,0
@@ -227,8 +239,14 @@ LBAARG: LD      HL,(SDLBA)
         EX      DE,HL
         JP      SETARG
 
-; Read block SDLBA into the 512 bytes at HL, counting the polls for the data
-; token in SDTOK. Each poll is 678 T-states and each data byte 677.
+; Read block SDLBA into 512 writable bytes at HL. A0/Z advances HL by 512;
+; NZ returns code 5 for command rejection or 6 for token exhaustion.
+; SDTOK is unchanged on rejection, cleared after command acceptance, then
+; stores unsuccessful polls preceding FEh (0..65535). Exhaustion leaves 0.
+; Poll at most 65536 bytes, ignoring other tokens; discard both CRC bytes.
+; AF/BC/DE/HL work. The continuing failed-token path is 688 nominal Z80
+; T-states; ordinary data iterations are 677, with boundary/final paths
+; different. Command overhead, waits and interrupts are additional.
 SDREAD: PUSH    HL
         CALL    LBAARG
         LD      A,17
@@ -273,7 +291,9 @@ SDRCMD: CALL    SPIEND
         OR      A
         RET
 
-; Read the 16-byte register of command A (9 CSD, 10 CID) into HL.
+; Read command A's register (9 CSD, 10 CID) into at least 18 writable HL bytes:
+; 16 payload plus two unchecked CRC bytes. Poll at most 1024 bytes for FEh.
+; A0/Z advances HL by 18; NZ returns 5 for rejection or 6 for token timeout.
 SDREG:  PUSH    HL
         LD      HL,0
         LD      D,H
@@ -305,8 +325,9 @@ SDRG2:  LD      B,18            ; 16 bytes and the CRC
         XOR     A
         RET
 
-; ---- T19 SD -------------------------------------------------------------------
-
+; T19 sets SDOK after init, before CSD/CID/block0 reads. Register failures
+; suppress their payload output; the final result uses block0 read status.
+; SDOK therefore does not mean every later I/O passed.
 TSD:    CALL    TBEGIN
         DB      19,"SD     ","SD card on FDh: initialise, CSD, CID, block 0",0
         XOR     A
@@ -443,11 +464,11 @@ TSD7:   CALL    PRI
         DB      " (5 rejected, 6 no token)",0
         JP      REND
 
-; ---- T20 SDBLKS ----------------------------------------------------------------
-
-; Read block 0 twice and compare, then blocks 0-63, tracking the token
-; wait. A block costs 354,216 + 678 x polls T-states (measured on the
-; Debug80 model with no polls).
+; Compare two complete block0 reads, then survey blocks 0-63 for protocol
+; errors/token waits. PASS needs repeat equality and no survey errors; the
+; other blocks are not compared with known contents. Missing init or either
+; preliminary read failure skips. Token counts are not elapsed time; the
+; report's x678 text differs from SDREAD's continuing failed-token path.
 TSDBLK: CALL    TBEGIN
         DB      20,"SDBLKS ","Blocks 0-63: errors and token waits",0
         LD      A,(SDOK)
@@ -514,8 +535,10 @@ TSDBN:  LD      A,RSKIP
         DB      "no card, or block 0 unreadable",0
         JP      REND
 
-; Read blocks 0 to B-1 (B = 0 for 256) into SDBUF, recording errors and the
-; token polls in SDBAD, SDTMIN, SDTMAX and SDTOT.
+; Read low blocks 0..B-1 into SDBUF (B = 0 means 256); SDRUN64 supplies 64.
+; Failures increment SDBAD. Only successes update token min/max/32-bit total,
+; excluding each terminal FEh sample. If all reads fail, FFFFh/0/0 sentinels remain.
+; SDLBA advances after each attempt; SAVE timing fields are not touched.
 SDRUN64:LD      B,64
 SDRUN:  LD      HL,0
         LD      (SDLBA),HL
@@ -559,8 +582,14 @@ SDRN5:  LD      HL,(SDLBA)
         DJNZ    SDRN1
         RET
 
-; Write the 512 bytes at HL to block SDLBA, as TEC-OS's SDWRITE does, waiting
-; until the card has finished; the busy polls go in SDBSY. Z on success.
+; Send 512 bytes from HL to block SDLBA. CMD24 rejection returns 5/NZ;
+; data-response/busy failures return NZ without a distinct general error code.
+; After payload/dummy CRC, accept the first non-FFh response only if its low
+; five bits are 05h (at most 16 samples), then seek a nonzero card byte in
+; at most 65536 busy samples. Only success refreshes SDBSY, including that
+; last nonzero sample (65536 wraps to 0), then returns A0/Z after deselecting.
+; Failures can leave an older SDBSY and device effects; no rollback/persistence
+; proof follows. HL advances 512 after payload send.
 SDWR:   PUSH    HL
         CALL    LBAARG
         LD      A,24
@@ -613,12 +642,17 @@ SDWDON: LD      (SDBSY),BC
         XOR     A
         RET
 
-; T37: TEC-OS writes blocks, so the write path is tested on a block no
-; container uses. Block 0 is the header and every volume starts at a nonzero
-; multiple of 8 (docs/container-format.md), so blocks 1-7 belong to nothing.
-; Only a card whose block 0 has the TEC-OS magic is written. Block 7 is read,
-; written with a pattern, read back, written with what it held and read back
-; again.
+; T37 automatically tests block7 after T20. Admission is only SDOK plus
+; block0's eight magic bytes: no version/count/layout/checksum check.
+; WARNING: docs/container-format.md places live descriptors in block7 for
+; valid 1.1 cards with 112-127 volumes. Payload alignment does not free it.
+; The normal path saves 512 bytes in VBUFA, writes/checks a pattern, then
+; writes the backup and compares a final read. This is not universal restore:
+; pattern-write or protocol-read failure exits without attempting it; a
+; pattern mismatch attempts backup write without checking/verifying restore.
+; Code 3 includes protocol-read failure, which can print stale SAVE mismatch
+; details. SDBSY is only the latest successful write's count, not every attempt.
+; Ordinary I/O failure as well as power loss can leave this block changed.
 TSDWR:  CALL    TBEGIN
         DB      37,"SDWRITE","SD write on block 7, outside every volume, then restored",0
         LD      A,(SDOK)
@@ -718,8 +752,8 @@ TSWE:   CALL    PRI
         LD      HL,(SDBSY)
         CALL    PRDEC
         JP      REND
-TSW8:   LD      HL,VBUFA        ; the pattern did not read back: put the
-        CALL    SDWR            ; block back all the same
+TSW8:   LD      HL,VBUFA        ; pattern mismatch: attempt the backup write
+        CALL    SDWR            ; status ignored; no restore verification here
         LD      C,3
         JR      TSW9
 SWTXT:  DB      "pattern read back, block restored",0
@@ -736,8 +770,11 @@ SDBLK:  LD      (SDLBA),HL
         LD      HL,SDBUF
         JP      SDREAD
 
-; The pattern for byte i: low byte of i xor high byte xor 5Ah. SWPAT fills
-; SDBUF with it; SWCHK checks SDBUF against it, NZ on a difference.
+; SWPAT fills SDBUF with low(HL) xor high(HL) xor 5Ah, using absolute address
+; (first byte at 0C00h is 56h). SWCHK returns Z after all 512 agree, or NZ at
+; the first mismatch and refreshes SAVE address/expected/read. The high-byte
+; end test relies on the aligned 0C00h-0DFFh region; backup 0E00h-0FFFh is
+; disjoint and spans both VDP scratch pages, below the report at 1000h.
 SWPAT:  LD      HL,SDBUF
 SWP1:   CALL    SWVAL
         LD      (HL),A

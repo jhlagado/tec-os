@@ -1,10 +1,9 @@
 ; The RTC, 7-segment display, speaker, 8 x 8 LED matrix, status LED bar and
 ; CAPS lamp, and the NMI count.
 
-; ---- DS1302 ---------------------------------------------------------------------
-
 ; Read DS1302 register D (a read command, odd). Returns A. Destroys BC, DE.
-; Always 1,196 T-states, whatever the data.
+; The fixed path costs 1196 nominal Z80 T-states including RET, excluding
+; the caller's CALL, waits and interrupts. CE ends low; HL is unchanged.
 RTCRD:  LD      C,RTCPORT       ; 7
         LD      A,$10           ; 7   CE high, clock low
         OUT     (C),A           ; 12
@@ -40,8 +39,11 @@ BCD59:  AND     $7F
         CCF
         RET
 
-; T21: read only. The detection reads as MON-3's does, but nothing is
-; written, so the clock and its trickle charger keep their settings.
+; T21 detects seconds BCD and weekday 1-7, then sets RTCOK for later users.
+; A halted clock reports INFO; a failed calibration reports FAIL. Otherwise
+; RTCSET writes the clock and write-protect registers. No trickle-charge
+; command is sent. RTCOK is detection, not a certificate that later tests pass.
+; SAVE holds the initial separate register reads, not an atomic snapshot.
 TRTC:   CALL    TBEGIN
         DB      21,"RTC    ","DS1302 on FCh (optional): time, ticking, clock check",0
         XOR     A
@@ -211,12 +213,18 @@ RTCP1:  LD      E,(HL)
         JR      NZ,RTCP1
         RET
 
-; T21's set: wait until the seconds are below 50, keep the time and the
-; write-protect bit, set 2099-12-31 23:59:58, read it back, wait 2.5 s for
-; the roll-over to 2100, then write back the kept time plus the seconds the
-; set took and the write-protect bit, and read it back. The trickle charger
-; is not touched. Returns A = 0, or 1 read back wrong, 2 no roll-over, 3
-; restore read back wrong.
+; Save clock/WP after an unbounded wait for raw seconds below 50h, clear WP and
+; test 2099-12-31 23:59:58. Initial readback checks seconds 58/59 and all six
+; remaining bytes. Either mismatch returns code 1 WITHOUT restoring clock/WP.
+; Later paths wait nominally 2.5 s and check only minutes/hour/date/month
+; against RTCNEW, plus raw seconds below 10h: weekday/year are unchecked.
+; They restore the saved registers with seconds adjusted by new seconds+2,
+; or a guessed 3 on rollover failure, then write the old WP. This adjustment
+; has no minute carry: admitted old 49 plus new 09+2 can become 60.
+; Restore comparison covers minutes/hour/date/month/weekday, not seconds,
+; year or WP. A = 0 if these predicates pass, 2 for failed rollover, or 3
+; when the restore comparison fails (overriding 2). Trickle charge is untouched.
+; RTCORG is modified by the adjustment; neither reads nor restore are atomic.
 RTCSET: LD      D,$81
         CALL    RTCRD
         AND     $7F
@@ -248,7 +256,7 @@ RTCSET: LD      D,$81
         CALL    WAITDS
         LD      HL,RTCBUF
         CALL    RTCGET
-        LD      HL,RTCBUF+1     ; 2100-01-01 00:00, any seconds below 10
+        LD      HL,RTCBUF+1     ; compare minute/hour/date/month only
         LD      DE,RTCNEW+1
         LD      B,4
         CALL    RTCCMP
@@ -263,7 +271,7 @@ RTCSET: LD      D,$81
         LD      C,0
         JR      RTCS8
 RTCS8B: LD      A,3
-RTCS8:  LD      HL,RTCORG       ; seconds + elapsed, in BCD, below 60
+RTCS8:  LD      HL,RTCORG       ; add the estimate without minute carry
         ADD     A,(HL)
         DAA
         LD      (HL),A
@@ -284,7 +292,8 @@ RTCS8:  LD      HL,RTCORG       ; seconds + elapsed, in BCD, below 60
         LD      C,3
 RTCS9:  LD      A,C
         RET
-; Compare B bytes at HL and DE. Z if equal.
+; Compare B bytes at HL/DE (B = 0 means 256). Z advances past equal bytes;
+; NZ leaves both pointers at the first mismatch. AF/B/HL/DE work; C survives.
 RTCCMP: LD      A,(DE)
         CP      (HL)
         RET     NZ
@@ -313,7 +322,8 @@ RTCZ1:  ADD     HL,BC
         INC     DE
         RET
 
-; Print the time read into SAVE as 20yy-mm-dd hh:mm:ss.
+; Print SAVE's separate reads as 20yy-mm-dd hh:mm:ss. Mask hour with 3Fh
+; and seconds with 7Fh; PRHEX does not validate the remaining BCD/calendar.
 PRTIME: CALL    PRI
         DB      "20",0
         LD      A,(SAVE+6)
@@ -340,14 +350,18 @@ PRTIME: CALL    PRI
         AND     $7F
         JP      PRHEX
 
-; Count polls of the seconds register across one second. Returns NC and
-; HL = polls, each 1,282 T-states, or C when the seconds do not change.
+; Count polls between two changes of the raw seconds byte. NC returns HL;
+; C means a count limit expired. IY names shared OLDSEC; AF/DE/HL/IY work.
+; First-edge reads stop before count 2800h; second-edge reads include 4000h.
+; A continuing second-edge iteration costs 1282 nominal Z80 T-states; final
+; paths differ. Physical one-second ticks and no added waits are premises,
+; not a measured clock guarantee or an elapsed-time deadline.
 RTCCAL: LD      IY,OLDSEC
         LD      D,$81
         CALL    RTCRD
         LD      (OLDSEC),A
         LD      HL,0
-RTCC1:  INC     HL              ; the next edge, within about 3 s
+RTCC1:  INC     HL              ; at most 10239 first-edge samples
         LD      A,H
         CP      $28
         SCF
@@ -372,7 +386,8 @@ RTCC3:  OR      A
 RTCC4:  SCF
         RET
 
-; Seconds since the hour from the RTC: HL = minutes x 60 + seconds.
+; HL = separately read minutes x 60 + seconds; a rollover can split them.
+; BCDBIN converts raw nibbles without BCD validation. AF/BC/DE/HL work.
 RTCSECS:LD      D,$83
         CALL    RTCRD
         CALL    BCDBIN
@@ -411,10 +426,10 @@ BCDBIN: LD      C,A
         ADD     A,B
         RET
 
-; ---- 7-segment display and speaker ----------------------------------------------
-
-; Multiplex segments E on the digits in mask H (bit 5 left, bit 0 right) for
-; C frames of about 6 ms. Port 01h bit 6 stays high: the serial line idles.
+; Scan segments E on digit mask H (bit 5 left, bit 0 right), C frames;
+; C = 0 means 256. About 6 ms/frame assumes 4 MHz without extra waits/work.
+; Digit writes keep serial bit 6 high. Exit blanks digits and segments;
+; AF/B/C/D work while E/H/L survive.
 MUXD:   LD      B,$20
 MUXD1:  LD      A,B
         AND     H
@@ -474,8 +489,11 @@ TSG2:   PUSH    HL
         JP      REND
 SEGORD: DB      $01,$08,$20,$80,$40,$02,$04,$10
 
-; Sound DE half cycles of 51+13*H T-states on the speaker (port 01h bit 7),
-; keeping the serial line high. Destroys AF, BC, DE.
+; Toggle speaker bit 7 for DE half cycles, keeping serial bit 6 high.
+; DE = 0 means 65536; H = 0 gives 256 DJNZ turns. The continuing OUT gap
+; is 51+13*H nominal T-states, final forced-idle gap 53+13*H (use 256 for H0).
+; These exclude waits/interrupts. Exit forces port 01h to 40h rather than
+; restoring its old state. AF/BC/DE work; HL survives.
 TONE:   LD      A,$40
 TONE1:  OUT     (DIGPORT),A     ; 11
         LD      B,H             ; 4
@@ -509,15 +527,16 @@ TSPKR:  CALL    TBEGIN
         DB      "port 01h bit 7",0
         JP      REND
 
-; Beep for the stopwatch tests: 1203 Hz for 0.1 s.
+; Stopwatch beep: about 1203 Hz for 0.1 s at nominal 4 MHz. Callers use its
+; first speaker edge as their interval convention, not a measured duration.
 BEEP:   LD      H,124
         LD      DE,240
         JP      TONE
 
-; ---- 8 x 8 RGB LED matrix ----------------------------------------------------
-
-; Show H frames of about 9 ms: colours C (bit 0 red, 1 green, 2 blue), rows
-; full when L = 0 or a diagonal when L = 1. Row r is bit r of port 05h.
+; Show H frames (0 means 256): C bits 0/1/2 select red/green/blue; L = 0
+; fills rows, any nonzero L selects the diagonal. Row r is bit r of port 05h.
+; Blank rows while changing columns. About 9 ms/frame is nominal at 4 MHz.
+; AF/B/D/E/H work; C/L survive. LEDOFF also enters the all-ports-dark exit.
 LEDFRM: LD      B,1
 LEDF1:  XOR     A
         OUT     (LEDROW),A      ; dark while the columns change
@@ -582,11 +601,11 @@ TRGB2:  CALL    VISUAL
         JP      REND
 RGBSEQ: DB      1,0,2,0,4,0,7,0,7,1,7,1,0
 
-; ---- Status LED bar and CAPS lamp ---------------------------------------------
-
-; Walk a one through latch bits 1-7 with bit 0 high, then show 00h, about
-; 0.4 s each. PROTECT is on for one step and the stack is in its range, so
-; this runs on registers alone.
+; Show all ten BARSEQ latch values directly, then restore LATCHV. Each DE0
+; delay runs 65536 turns, nominally about 0.426 s at 4 MHz. Intermediate
+; writes leave the shadow unchanged. No explicit stack operation occurs
+; while PROTECT covers the stack, but NMI entry still pushes there; this
+; register-only sequence is not asynchronous-stack safety.
 TLEDBAR:CALL    TBEGIN
         DB      25,"LEDBAR ","Latch FFh on the STATUS LED bar and the CAPS lamp",0
         CALL    PRI
@@ -613,8 +632,11 @@ TBAR2:  DEC     DE
         JP      REND
 BARSEQ: DB      $01,$03,$05,$09,$11,$21,$41,$81,$00,$01
 
-; ---- NMI count --------------------------------------------------------------------
-
+; Classify one NMICNT load as PASS for zero, INFO otherwise; a separate load
+; supplies the printed count. NMI service between instructions can change
+; those observations, without interrupting either individual LD HL,(NMICNT).
+; The 16-bit count wraps and was reset after RAMTST. Overlay RETN periods
+; do not run its handler, so this is not every NMI since boot or every event.
 TNMI:   CALL    TBEGIN
         DB      26,"NMI    ","NMIs during the automatic tests (none expected)",0
         LD      HL,(NMICNT)

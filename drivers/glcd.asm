@@ -1,21 +1,18 @@
-; GLCD.SVC: the ST7920 128 x 64 GLCD
-; console as a driver below (0006h), 21
-; columns x 8 rows of 6 x 8 cells, built
-; from the ROM's GLCD code. Its INIT
-; checks that the controller answers and
-; hands the ROM its video table through
-; TNDRVR; the CCP then takes the
-; console, unless a PICO9918 has it, and
-; the ROM's terminal calls its six
-; routines directly, on the caller's
-; stack. It keeps its screen text and
-; its counters here, draws from the
-; ROM's font, and moves rows to and from
-; the ROM's LINEBUF, whose address
-; TNDRVR returns. Its REMOVE, at UNLOAD,
-; gives the console back: to CRT: if the
-; ROM's PICO9918 console started,
-; otherwise to serial.
+; ST7920 128x64 console: 21x8 cells,
+; each 6x8 pixels. Resident text/state
+; use the ROM font and LINEBUF.
+; Pages lie below the prior top. The new
+; (0006h) then names entry below body.
+; Keep resident storage until removal.
+; Calls use the caller stack and classic
+; bank mapping. Resident code/state,
+; font, LINEBUF and the return stack
+; must be mapped during each call.
+; No interrupt printing or overlapping
+; calls: drawing, poll and saved-output
+; scratch are shared.
+; Busy polling neither identifies the
+; device nor acknowledges rendering.
 
 %INCLUDE "../src/abi.inc"
 
@@ -25,106 +22,82 @@ IOBYTE EQU $0003
 
   ORG $0100
 
-; removable
+; Removable format-4 header, no deps.
+; Writer fills REMOVE, size, relocation
+; and INIT. Extra RAM is zero. Declared
+; stack use: BDOS 2, BIOS 0, CCP 6.
 
 HDR: DB 'D',SVCFMT,0,1
-  DW 0,0,0,0     ; REMOVE, size, extra,
-                 ; relocation: the
-                 ; writer's
-  DB 2,0,6       ; over the base: BDOS,
-                 ; BIOS, CCP
-  DW 0           ; INIT: the writer's
+  DW 0,0,0,0
+  DB 2,0,6
+  DW 0
   DB "GLCD    "
 
-; The video vector, in the ROM's order:
-; VPUT, VGET, VCLREOL, VREST, VRDROW,
-; VWRROW.
+; Six terminal vectors in ROM order,
+; then no page-function vector: only
+; CRT uses page moves. Geometry follows.
+; LBUF keeps the returned LINEBUF until
+; the hook is removed.
 
 VTAB: DW GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR
-  DW 0           ; only the PICO9918 has
-                 ; row moves to show
+  DW 0
   DB GLCOLS,GLROWS
-LBUF: DW 0       ; LINEBUF, from TNDRVR
+LBUF: DW 0
 
-; INIT refuses if the controller doesn't
-; answer, or the ROM refuses UC1:'s
-; table: another GLCD.SVC has the
-; console, or there is no matrix
-; keyboard, or, with TNENODV, a line in
-; STARTUP.CMD offers it while CON: is
-; CRT:, the ROM's PICO9918 console,
-; which it would only give way to
-; (KE-200). Typed with another display
-; the console, it loads all the same and
-; the ROM's loader leaves the console
-; where it is (SVCGO, KE-150). It
-; publishes no record. Returns carry
-; clear and HL = 0 when loaded, carry
-; set and A = the status when refused.
-; Destroys AF, BC, DE, HL.
+; Install UC1's hook last. Font failure,
+; busy timeout, no matrix or an occupied
+; table causes failure. CON=CRT startup
+; gives TNENODV (KE-200). Local state
+; may change on failure. No hook/record
+; is published. Typed load may stay as
+; CRT keeps selection (SVCGO, KE-150).
+; Success: A=0, NC, HL=0, no records,
+; LBUF=LINEBUF. Selection is via SVCGO.
+; Failure: carry, A=status.
+; Changes AF/BC/DE/HL.
 
 INIT:
-  ld c,TNFONT    ; the ROM's font; a ROM
-                 ; before ABI 5.1
-  call ABICALL   ; refuses the number,
-                 ; and INIT with it
+  ld c,TNFONT
+  call ABICALL
   ret c
-  ld (FONTP),hl  ; kept for GLGLY
-  call GLCWAIT   ; Z: the controller
-                 ; answers
-  ld a,TNENODV   ; no controller
-                 ; answers: absent,
-                 ; which a
-  scf            ; line in STARTUP.CMD
-                 ; passes over quietly
+  ld (FONTP),hl
+  call GLCWAIT
+  ld a,TNENODV
+  scf
   ret nz
   ld b,3         ; UC1:
-  ld hl,VTAB     ; the table the
-                 ; terminal calls
-                 ; through
+  ld hl,VTAB
   ld c,TNDRVR
-  call ABICALL   ; HL = LINEBUF, or
-                 ; carry: refused
+  call ABICALL
   ret c
-  ld (LBUF),hl   ; where GLRDR and GLWRR
-                 ; move rows
-  ld hl,0        ; no record to register
-  or a           ; carry clear: loaded
+  ld (LBUF),hl
+  ld hl,0
+  or a
   ret
 
-; REMOVE, at UNLOAD: if the ROM's
-; PICO9918 console registered its record
-; and UC1: is the console, the console
-; field becomes CRT:. UC1:'s table then
-; goes, and the ROM chooses the console
-; again at its next call. Returns as
-; TNDRVR does, A = 0 and carry clear.
-; Destroys AF, BC, DE, HL.
+; UNLOAD: find PICO version >=1.
+; Found and CON field=UC1: change only
+; that field to CRT. Drop UC1's hook.
+; If UC1 is in effect, reset CONMOD for
+; lazy reselection. Other modes stay.
+; No graphics reset. Returns A=0, Z, NC.
+; Changes AF/BC/DE/HL.
 
 REMOVE:
   ld de,PICONAM
-
-; version 1 or later
-
   ld bc,$0100+TNFIND
-  call ABICALL   ; carry: no record, the
-                 ; ROM's console
-  jr c,REMOV1    ; never started
-  ld hl,IOBYTE   ; UC1: becomes CRT:,
-                 ; and no other field
-                 ; changes
-  ld a,(hl)      ; the console field,
-                 ; bits 0-1: 3 for
-  cpl            ; UC1:, so 0 once
-                 ; complemented
+  call ABICALL
+  jr c,REMOV1
+  ld hl,IOBYTE
+  ld a,(hl)
+  cpl
   and 3
-  jr nz,REMOV1   ; another device has
-                 ; the console
-  res 1,(hl)     ; 3 to 1: CRT:
+  jr nz,REMOV1
+  res 1,(hl)
 
 REMOV1:
-  ld b,3         ; UC1:'s table dropped
-  ld hl,0        ; HL = 0: no table
+  ld b,3
+  ld hl,0
   ld c,TNDRVR
   jp ABICALL
 
@@ -138,533 +111,477 @@ PICONAM:
 GLCCMD EQU $07
 GLCDAT EQU $87
 
-; Wait until the controller is ready,
-; polling its busy flag at most 256
-; times. Returns Z, NC and A = 0 when
-; ready; NZ and A = 1 when it never was:
-; no controller, or one stuck busy.
-; Preserves BC, DE, HL; the count is
-; kept in GLWN, not on the stack, since
-; the routines run on their caller's.
+; Poll busy bit 7 at most 256 times.
+; Ready: A=0, Z, NC. Timeout: A=1, NZ,
+; NC. Keeps BC/DE/HL. Uses shared GLWN,
+; no extra counter push. No elapsed-time
+; or permanent-absence guarantee.
 
 GLCWAIT:
-  xor a          ; 0: the first DEC
-                 ; makes it 255,
-  ld (GLWN),a    ; so 256 polls
+  xor a
+  ld (GLWN),a
 
 GLCWL:
   in a,(GLCCMD)  ; bit 7, busy, into
                  ; carry
   rlca
-  jr nc,GLCWOK   ; not busy: ready
-  ld a,(GLWN)    ; one poll fewer left
+  jr nc,GLCWOK
+  ld a,(GLWN)
   dec a
   ld (GLWN),a
   jr nz,GLCWL
-  or 1           ; A is 0 here: NZ for
-                 ; the timeout
+  or 1
   ret
 
 GLCWOK:
-  xor a          ; Z: ready
+  xor a
   ret
 
-; Send command A once the controller is
-; ready; after a timeout the byte is
-; dropped, not sent. Returns A = the
-; byte, Z if it was sent and NZ if not;
-; destroys F. Preserves BC, DE, HL.
+; Send command A after bounded polling.
+; NZ: byte dropped, no OUT. Z: sent.
+; Returns the original A, carry clear.
+; Keeps BC/DE/HL. Changes F. Shared
+; GLOUT makes overlapping calls unsafe.
 
 GLCC:
-  ld (GLOUT),a   ; held over the wait,
-                 ; off the stack
+  ld (GLOUT),a
   call GLCWAIT
   ld a,(GLOUT)
-  ret nz         ; never ready: nothing
-                 ; sent (KE-198)
-
-; to the instruction register
-
+  ret nz         ; no OUT (KE-198)
   out (GLCCMD),a
   ret
 
-; Send data A, as GLCC does a command,
-; to the graphics RAM at the
-; controller's address: two bytes make a
-; word, left half first, and the address
-; then moves to the next word. Returns A
-; = the byte, Z if it was sent and NZ if
-; not; destroys F. Preserves BC, DE, HL.
+; Data A, with GLCC's per-byte result:
+; original A, Z sent/NZ dropped, NC.
+; Keeps BC/DE/HL. Changes F.
+; Graphics words send high byte first,
+; then low. A drop is not rolled back
+; or aggregated into a redraw result.
 
 GLCDW:
-  ld (GLOUT),a   ; held over the wait,
-                 ; off the stack
+  ld (GLOUT),a
   call GLCWAIT
   ld a,(GLOUT)
-  ret nz         ; never ready: nothing
-                 ; sent
-
-; to the data register
-
+  ret nz
   out (GLCDAT),a
   ret
 
-; VRDROW: copy text row B's 21
-; characters to LINEBUF. Destroys AF,
-; BC, DE, HL.
+; VRDROW: valid row B=0..7 to installed
+; LINEBUF, exactly 21 bytes of text.
+; No graphics I/O. Changes AF/BC/DE/HL.
+; BC ends at zero, HL/DE advance 21.
 
 GLRDR:
-  ld c,0         ; from column 0
-  call GLCADR    ; HL = the row in
-                 ; GLTEXT
+  ld c,0
+  call GLCADR
   ld de,(LBUF)   ; to LINEBUF
   ld bc,GLCOLS
   ldir
   ret
 
-; VWRROW: copy LINEBUF's 21 characters
-; to text row B and redraw the row.
-; Destroys AF, C, DE, HL; B is kept.
+; VWRROW: 21 LINEBUF bytes to valid row
+; B=0..7, then redraw. Keeps B through
+; copy and redraw. Changes AF/C/DE/HL.
+; Text is copied even if graphics bytes
+; later drop.
 
 GLWRR:
-  push bc        ; B, the row, for the
-                 ; redraw
+  push bc
   ld c,0
-  call GLCADR    ; DE = the row in
-                 ; GLTEXT, HL = LINEBUF
+  call GLCADR
+
+; Exchange that row address into DE,
+; then use LINEBUF as the copy source.
+
   ex de,hl
   ld hl,(LBUF)
   ld bc,GLCOLS
-  ldir           ; the row in
+  ldir
   pop bc
-  jp GLCROW      ; and drawn
+  jp GLCROW
 
-; VREST, at install and at warm boot:
-; put the controller in graphics mode
-; with the display on and its text layer
-; clear. Graphics RAM keeps whatever a
-; program drew until the console next
-; writes over it. Returns NZ, nothing
-; sent, if the controller doesn't
-; answer. Destroys AF, B, HL.
+; VREST: attempt graphics-mode setup.
+; First poll timeout: A=1/NZ, no output.
+; Else attempt all five GLCMOD bytes,
+; even after an earlier byte drops.
+; Final Z/NZ describes only the last
+; byte, not the whole sequence. No
+; GLTEXT clear or explicit graphics-RAM
+; write occurs here.
+; Changes AF/B/HL. Keeps C/DE.
 
 GLCRST:
-  call GLCWAIT   ; NZ: no controller to
-                 ; set
+  call GLCWAIT
   ret nz
-  ld hl,GLCMOD   ; the five commands, in
-                 ; order
+  ld hl,GLCMOD
   ld b,5
 
 GLCRSL:
   ld a,(hl)
-  call GLCC      ; each once the last
-                 ; has finished
+  call GLCC
   inc hl
   djnz GLCRSL
   ret
 
-; 30h the basic set, 0Ch display on with
-; no cursor, 01h clear the text layer,
-; 34h the extended set, 36h the extended
-; set with graphics shown.
+; Basic set, display on/no cursor, text
+; clear, extended set, graphics on.
 
 GLCMOD: DB $30,$0C,$01,$34,$36
 
-; HL = GLTEXT address of row B, column
-; C: GLTEXT + 21B + C. Preserves BC, DE;
-; destroys AF.
+; HL=GLTEXT+21*B+C, B=0..7/C=0..20.
+; C=0 for row bases. No bounds check.
+; Keeps BC/DE. Changes AF.
 
 GLCADR:
   push de
   ld hl,GLTEXT
-  ld de,GLCOLS   ; a row's length
-  ld a,b         ; row 0: no rows to
-                 ; pass
+  ld de,GLCOLS
+  ld a,b
   or a
   jr z,GLCAC
 
 GLCAM:
-  add hl,de      ; one row on, B times
+  add hl,de
   dec a
   jr nz,GLCAM
 
 GLCAC:
-  ld e,c         ; D is 0: DE = the
-                 ; column
+  ld e,c         ; D=0 from DE=21
   add hl,de
   pop de
   ret
 
-; Put A at row B, column C and redraw
-; the words its cell touches: on each of
-; the cell's eight pixel rows, the one
-; or two words its six pixels fall in.
-; Bit 7 of A set draws the cell
-; reversed. Destroys AF, C, DE, HL; B is
-; kept.
+; VPUT: A at valid B=0..7/C=0..20. Store
+; the full byte, bit 7 means reverse.
+; Redraw words floor(6*C/16) through
+; floor((6*C+5)/16) on eight pixel rows
+; from 8*B. Send high byte then low.
+; Keeps B. Changes AF/C/DE/HL and shared
+; drawing/poll/output scratch. Drops do
+; not undo text or stop the loops.
 
 GLCPUT:
-  push af        ; the character, over
-                 ; the address
+  push af
   call GLCADR
   pop af
-  ld (hl),a      ; into the screen text
+  ld (hl),a
   push bc
-  ld c,0         ; the row's start, for
-                 ; GLCCMP
+  ld c,0
   call GLCADR
   pop bc
   ld (GLROWP),hl
-  ld a,c         ; the cell spans pixels
-                 ; 6C to 6C+5
+  ld a,c         ; pixels 6*C..6*C+5
   add a,a
   ld e,a
   add a,a
-  add a,e        ; A = 6C
+  add a,e
   ld e,a
-  srl a          ; 16 pixels a word
+  srl a
   srl a
   srl a
   srl a
   ld d,a         ; first word
   ld a,e
-  add a,5        ; the cell's last pixel
+  add a,5
   srl a
   srl a
   srl a
   srl a
   ld e,a         ; last word
-  ld a,b         ; pixel row 8B, the
-                 ; cell's top
+  ld a,b
   add a,a
   add a,a
   add a,a
   ld (GLY),a
-  ld c,8         ; eight pixel rows
+  ld c,8
 
 GLCPR:
-  ld a,d         ; each from the first
-                 ; word
+  ld a,d
 
 GLCPW:
   ld (GLW),a
   push bc
-  push de        ; the words, over
-                 ; GLCCMP
-  call GLCSETA   ; an address for each
-                 ; word
-  call GLCCMP    ; DE = the word's
-                 ; pixels
-  ld a,d         ; left half first
+  push de        ; word bounds over
+                 ; address/composition
+  call GLCSETA
+  call GLCCMP
+  ld a,d
   call GLCDW
   ld a,e
-  call GLCDW     ; then the right
+  call GLCDW
   pop de
   pop bc
   ld a,(GLW)
-  cp e           ; the last word drawn:
-                 ; the next row
+  cp e
   jr z,GLCPN
-  inc a          ; otherwise the next
-                 ; word
+  inc a
   jr GLCPW
 
 GLCPN:
-  ld hl,GLY      ; the next pixel row
+  ld hl,GLY
   inc (hl)
   dec c
   jr nz,GLCPR
   ret
 
-; VGET: A = the character at row B,
-; column C. Destroys F, HL.
+; VGET: A=stored byte at valid row B,
+; column C, including reverse bit 7.
+; Software text, not graphics RAM.
+; Changes F/HL. Keeps BC/DE.
 
 GLCGET:
   call GLCADR
-  ld a,(hl)      ; bit 7 set for a
-                 ; reversed cell
+  ld a,(hl)
   ret
 
-; VCLREOL: clear row B from column C to
-; the end of the line and redraw the
-; row. At a pending wrap C is past the
-; row: the count would be 256 and the
-; fill would run on through the text,
-; the counters and FONTP. Destroys AF,
-; C, DE, HL; B is kept.
+; VCLREOL: C>=21 keeps text/drawing
+; unchanged. Else clear 21-C cells, draw
+; valid row B. Pending-wrap C=21 would
+; give a zero count and a 256-byte fill
+; without this guard. Keeps B. Changes
+; AF/C/DE/HL on redraw. Byte drops can
+; leave graphics partial, text cleared.
 
 GLCCLR:
   ld a,c
   cp GLCOLS
-  ret nc         ; no cells left to
-                 ; erase
+  ret nc
   call GLCADR
-  ld a,GLCOLS    ; the cells from C to
-                 ; the end
+  ld a,GLCOLS
   sub c
 
 GLCCL:
-  ld (hl),' '    ; a space in each
+  ld (hl),' '
   inc hl
   dec a
   jr nz,GLCCL
-  jr GLCROW      ; B kept: the row drawn
+  jr GLCROW
 
-; Redraw text row B: eight pixel rows,
-; each streamed as eight words from one
-; address, the controller moving on a
-; word by itself. Destroys AF, C, DE,
-; HL; B is kept.
+; Redraw valid row B=0..7: eight pixel
+; rows from 8*B, eight high/low words
+; each, composed from software text.
+; One address pair per pixel row relies
+; on controller word auto-advance.
+; Keeps B. Changes AF/C/DE/HL and shared
+; scratch. Byte drops do not stop the
+; loops or form an aggregate status.
 
 GLCROW:
   ld c,0
   call GLCADR
-
-; the row's text, for GLCCMP
-
   ld (GLROWP),hl
-  ld a,b         ; pixel row 8B, the
-                 ; text row's top
+  ld a,b
   add a,a
   add a,a
   add a,a
   ld (GLY),a
-  ld c,8         ; eight pixel rows
+  ld c,8
 
 GLCRL:
-  xor a          ; each from word 0
+  xor a
   ld (GLW),a
   push bc
-  call GLCSETA   ; one address for the
-                 ; pixel row
+  call GLCSETA
 
 GLCRW:
-  call GLCCMP    ; DE = the word's
-                 ; pixels
-  ld a,d         ; left half, then right
+  call GLCCMP
+  ld a,d
   call GLCDW
   ld a,e
   call GLCDW
-  ld hl,GLW      ; the next word, up to
-                 ; the eighth
+  ld hl,GLW
   inc (hl)
   ld a,(hl)
   cp 8
-  jr nz,GLCRW    ; no new address: the
-                 ; controller's moved on
+  jr nz,GLCRW    ; controller advances
   pop bc
-  ld hl,GLY      ; the next pixel row
+  ld hl,GLY
   inc (hl)
   dec c
   jr nz,GLCRL
   ret
 
-; Set the graphics address to pixel row
-; GLY, word GLW. The ST7920 maps the
-; screen's lower half, rows 32-63, as
-; rows 0-31 at words 8-15. Destroys AF,
-; B.
+; Address valid GLY=0..63/GLW=0..7.
+; Lower rows subtract 32 from vertical
+; and add 8 to horizontal: rows 32..63
+; map to rows 0..31, words 8..15.
+; Set bit 7 on both, vertical first.
+; Final Z/NZ is horizontal only.
+; Changes AF/B. Keeps C/DE/HL.
 
 GLCSETA:
   ld a,(GLY)
-  ld b,0         ; the upper half: words
-                 ; 0-7
+  ld b,0
   cp 32
   jr c,GLCSU
-  sub 32         ; the lower half: rows
-                 ; 0-31 again,
-  ld b,8         ; words 8-15
+  sub 32
+  ld b,8
 
 GLCSU:
-  or $80         ; the vertical address
-                 ; first
+  or $80
   call GLCC
-  ld a,(GLW)     ; then the horizontal
+  ld a,(GLW)
   add a,b
   or $80
   jp GLCC
 
-; DE = the 16 pixels of word GLW on
-; pixel row GLY, D on the left, from the
-; text row at GLROWP. A cell's glyph row
-; is 6 pixels (5 of glyph, 1 of space);
-; a reverse cell inverts all 6. Destroys
-; AF, BC, HL and GLOFF.
+; Compose word GLW=0..7 at GLY=0..63
+; from a valid GLROWP 21-character row.
+; Returns DE pixels, D left/high.
+; Signed offset=6*first-16*word. Shift
+; right for positive, left for negative,
+; discard outside bits then OR pieces.
+; GLGLY keeps accumulating DE. Only loop
+; BC is saved around it, not whole-call
+; BC or F/HL. Changes AF/BC/HL/GLOFF.
 
 GLCCMP:
-  ld a,(GLW)     ; two bytes an entry in
-                 ; GLCSPAN
+  ld a,(GLW)
   add a,a
   ld hl,GLCSPAN
   add a,l
   ld l,a
-  jr nc,GLCCS    ; the table may cross a
-                 ; page
+  jr nc,GLCCS    ; table page carry
   inc h
 
 GLCCS:
-  ld b,(hl)      ; first character
+  ld b,(hl)
   inc hl
-  ld c,(hl)      ; how many
-  ld a,b         ; offset = 6 * first -
-                 ; 16 * word, signed
+  ld c,(hl)
+  ld a,b
   add a,a
   ld l,a
   add a,a
   add a,l
-  ld l,a         ; L = 6 * first
-  ld a,(GLW)     ; less 16 * word
+  ld l,a
+  ld a,(GLW)
   add a,a
   add a,a
   add a,a
   add a,a
-  neg            ; made negative, and 6
-                 ; * first added
+  neg
   add a,l
-  ld (GLOFF),a   ; the first cell's
-                 ; start, from the
-                 ; word's
-
-; left edge
-
-  ld de,0        ; the word's pixels
-                 ; gathered here
+  ld (GLOFF),a
+  ld de,0
 
 GLCCH:
   push bc
-
-; the character in the text row
-
   ld hl,(GLROWP)
   ld a,b
   add a,l
   ld l,a
-  jr nc,GLCCG    ; the row may cross a
-                 ; page
+  jr nc,GLCCG    ; text-row page carry
   inc h
 
 GLCCG:
   ld a,(hl)
-  call GLGLY     ; A = its pixels on
-                 ; this pixel row
-  ld h,a         ; HL = them at the left
-                 ; of 16 bits
+  call GLGLY
+  ld h,a
   ld l,0
   ld a,(GLOFF)
-  or a           ; offset 0: in place
+  or a
   jr z,GLCCO
-  jp m,GLCCLF    ; negative: the cell
-                 ; starts in the word
-
-; to the left
+  jp m,GLCCLF
 
 GLCCR:
-  srl h          ; positive: shifted
-                 ; right, and what
-  rr l           ; leaves L is the next
-                 ; word's
+  srl h
+  rr l
   dec a
   jr nz,GLCCR
   jr GLCCO
 
 GLCCLF:
-  neg            ; shifted left by
-                 ; -offset, and what
+  neg
 
 GLCCLL:
-  add hl,hl      ; leaves H is the word
-                 ; to the left's
+  add hl,hl
   dec a
   jr nz,GLCCLL
 
 GLCCO:
-  ld a,d         ; merged into the word
+  ld a,d
   or h
   ld d,a
-  ld a,e         ; and its right half
+  ld a,e
   or l
   ld e,a
-  ld a,(GLOFF)   ; the next cell starts
-                 ; 6 pixels on
+  ld a,(GLOFF)
   add a,6
   ld (GLOFF),a
   pop bc
-  inc b          ; the next character
+  inc b
   dec c
   jr nz,GLCCH
   ret
 
-; A = glyph row (GLY mod 8) of character
-; A in bits 7-2, reversed when bit 7 of
-; the character is set; control codes
-; draw as a space. Preserves B, DE;
-; destroys F, C, HL, which GLCCMP keeps.
+; A=character, FONTP from successful
+; INIT. Return font row GLY&7 in A.
+; Low-seven-bit controls use a space.
+; Normal font: five pixels and a blank
+; column in bits 7..2. Input bit 7
+; reverses all six, low two bits stay 0.
+; Keeps B/DE. Changes F/C/HL. GLCCMP
+; saves only local BC around this call.
 
 GLGLY:
-  ld c,a         ; bit 7, reverse, kept
-                 ; for the end
+  ld c,a
   and $7F
-  sub $20        ; the font starts at
-                 ; the space
+  sub $20
   jr nc,GLGL1
-  xor a          ; control codes draw as
-                 ; a space
+  xor a
 
 GLGL1:
-  ld l,a         ; HL = 8 bytes a
-                 ; character
+  ld l,a
   ld h,0
   add hl,hl
   add hl,hl
   add hl,hl
-  ld a,(GLY)     ; one byte a pixel row
+  ld a,(GLY)
   and 7
-  add a,l        ; L's low three bits
-                 ; are 0: no carry
+  add a,l        ; low three bits of
+                 ; 8*glyph are zero
   ld l,a
-  ld a,(FONTP)   ; the font's start,
-                 ; added by hand so that
-                 ; C
-  add a,l        ; and DE stay
+
+; Add the full font pointer with carry,
+; keeping character C and pixels DE.
+
+  ld a,(FONTP)
+  add a,l
   ld l,a
   ld a,(FONTP+1)
   adc a,h
   ld h,a
-  ld a,(hl)      ; the glyph row's
-                 ; pixels
+  ld a,(hl)
   bit 7,c
-  ret z          ; normal video
-  cpl            ; reversed: the six
-                 ; pixels inverted,
-  and $FC        ; bits 1-0 left clear
+  ret z
+  cpl
+  and $FC
   ret
 
 ; For each word: the first character it
-; touches and how many.
+; touches and how many. Final two screen
+; pixels remain blank.
 
 GLCSPAN:
   DB 0,3, 2,4, 5,3, 8,3, 10,4, 13,3, 16,3, 18,3
 
-; ---- State: the screen's characters
-; and the drawing counters
-; -----------------
-; GLTEXT holds the 21 x 8 characters,
-; row by row.
+; GLTEXT: 21x8 cells in row order.
+; At GLCSETA/GLCCMP use, GLY=0..63
+; and GLW=0..7. After eight pixel rows,
+; GLY=8*B+8, up to 64 for valid B=7.
+; GLCROW also leaves GLW=8. Early clear
+; returns before redraw set no endpoint.
+; GLROWP is established per operation.
+; Shared scratch is not re-entrant.
 
 GLTEXT: DS GLCOLS*GLROWS,' '
-GLY: DS 1        ; the pixel row being
-                 ; drawn, 0-63
-GLW: DS 1        ; the word being drawn,
-                 ; 0-7
-GLROWP: DS 2     ; the text row being
-                 ; drawn
-GLOFF: DS 1      ; the cell's start from
-                 ; the word's edge
-GLWN: DS 1       ; GLCWAIT's polls left
-GLOUT: DS 1      ; GLCC's and GLCDW's
-                 ; byte over the wait
-FONTP: DW 0      ; the ROM's font, from
-                 ; TNFONT
+GLY: DS 1
+GLW: DS 1
+GLROWP: DS 2
+GLOFF: DS 1      ; signed cell offset
+                 ; from word edge
+GLWN: DS 1       ; busy polls left
+GLOUT: DS 1      ; byte over polling
+FONTP: DW 0      ; INIT's ROM font
 
 IMGEND:

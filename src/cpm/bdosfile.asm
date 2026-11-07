@@ -1,588 +1,484 @@
-; The BDOS's drives and files: reset,
-; selection, and the file functions that
-; work on whole entries: open, close,
-; search, delete, make, rename and the
-; attributes. Included after bdos.asm,
-; in this order, by rom.asm.
+; BDOS drive reset/selection and
+; whole-entry file operations: open,
+; close, search, delete, make, rename
+; and attributes.
 
-; Function 13, reset disk system. Reset
-; to drive A, restore the standard DMA
-; address, and discover all disk
-; geometry and work areas through the
-; public BIOS DPH/DPB boundary. The user
-; number stays as it is, as in CP/M 2.2.
-; Takes WRFLAG, which the CCP sets for
-; its reset at entry, and clears it.
-; Returns 0 in A through RETZERO;
-; changes every register.
+; Function 13: reset to drive A and DMA
+; 0080h in BDOS and BIOS. Retain USERNO.
+; BIOS DPH/DPB structures supply
+; geometry and workspace pointers.
+; Consume WRFLAG once: zero clears
+; LOGINV/WARMV. Nonzero enters WRESET.
+; RSTAIL clears ROVEC, logs in A and
+; publishes its default pointers. LOGIN
+; can reapply mounted read-only state.
+; Return A=0 through RETZERO. Any
+; register may change. Errors follow
+; BDERR policy.
 
 FNRESET:
-  ld hl,WRFLAG   ; the CCP's reset at
-                 ; its entry: WRESET
-  ld a,(hl)      ; the flag read and
-                 ; cleared, so it holds
-  ld (hl),0      ; for this one reset
-                 ; only
+  ld hl,WRFLAG   ; one-shot CCP reset
+  ld a,(hl)
+  ld (hl),0      ; consume before reset
   or a
   jr nz,WRESET
-  ld h,a         ; a full reset: no
-                 ; drive logged in,
-  ld l,a         ; none to rebuild to
-                 ; its mark
+  ld h,a         ; full reset vectors
+  ld l,a
   ld (LOGINV),hl
   ld (WARMV),hl
 
 RSTAIL:
-  xor a          ; both resets: drive A
-                 ; current and
-  ld (CURDRV),a  ; no drive read-only
+  xor a          ; common reset tail
+  ld (CURDRV),a  ; drive A
   ld h,a
   ld l,a
   ld (ROVEC),hl
-  ld hl,$0080    ; the standard DMA
-                 ; buffer, in the BDOS
-
-; and in the BIOS
+  ld hl,$0080    ; standard DMA
 
   ld (CURDMA),hl
   ld b,h
   ld c,l
-  call BIODMA
-  call LOGIN     ; drive A bound,
-                 ; scanned if not logged
-  jr SETDEF      ; and made the default
+  call BIODMA    ; BIOS DMA too
+  call LOGIN     ; bind A, scan if
+                 ; needed
+  jr SETDEF      ; publish default
 
-; TEC-OS: the CCP's reset keeps each
-; logged drive whose allocation vector
-; nothing has changed since its last
-; scan and that still sums as it did
-; then. A drive the BDOS or a BIOS
-; directory write has changed (its DPH's
-; dirty flag) is rebuilt, at its next
-; selection, from the entries up to its
-; mark (WARMV); any other is scanned in
-; full. ROVEC is cleared, as CP/M 2.2's
-; warm boot clears it. Entered from
-; FNRESET with WRFLAG, nonzero, still in
-; A; starts from drive A and ends in the
-; tail both resets share, RSTAIL.
-; Changes every register, CURDRV, LOGINV
-; and WARMV.
+; Retain or rebuild logged allocation
+; vectors for the CCP reset. Enter from
+; FNRESET with WRFLAG nonzero in A.
+; Skip unlogged drives. LOGIN binds each
+; logged drive without a directory
+; rescan. With DPH+4 nonzero, clear its
+; login bit and set WARMV for a rebuild
+; to its mark. Otherwise retain login
+; only if ALVSUM equals the saved DPH+2
+; sum. A mismatch requires a full scan.
+; Equal sums do not prove unchanged
+; bytes.
+; Finish at RSTAIL. Changes all
+; registers, CURDRV, LOGINV and WARMV.
 
 WRESET:
-  xor a          ; each drive in turn, A
-                 ; to P
+  xor a
 
 WRLOOP:
   ld (CURDRV),a
-  call LOGTEST   ; Z: not logged in,
-                 ; nothing to keep
+  call LOGTEST   ; Z: unlogged
   jr z,WRNEXT
-  call LOGIN     ; logged: its pointers
-                 ; bound, nothing read
-
-; DPH+4: the dirty flag
+  call LOGIN     ; bind, no rescan
 
   ld hl,(DPHPTR)
-  ld bc,4        ; DPH state offset
+  ld bc,4        ; DPH dirty byte +4
   add hl,bc
   ld a,(hl)
   or a
-  jr nz,WRDIRTY  ; changed by a write:
-                 ; rebuild to the mark
-  call ALVSUM    ; DE: the vector's sum
-                 ; now, against the
-
-; sum at DPH+2, taken at its last scan
+  jr nz,WRDIRTY  ; dirty: bounded
+                 ; rebuild
+  call ALVSUM    ; DE=16-bit ALV sum
 
   ld hl,(DPHPTR)
   inc hl
   inc hl
   ld a,(hl)
-  cp e           ; compare sum low byte
-  jr nz,WRFULL   ; the low bytes differ:
-                 ; changed
+  cp e           ; saved sum low byte
+  jr nz,WRFULL   ; sum differs: full
+                 ; scan
   inc hl
   ld a,(hl)
   cp d
-  jr z,WRNEXT    ; the same: the drive
-                 ; stays logged in
+  jr z,WRNEXT    ; equal sum: keep login
 
 WRFULL:
-  ld hl,LOGINV   ; logged out, for a
-                 ; full scan at its
-  call VCLR      ; next selection
+  ld hl,LOGINV   ; clear login for scan
+  call VCLR
   jr WRNEXT
 
 WRDIRTY:
-  ld hl,LOGINV   ; logged out, and
-                 ; marked in WARMV for
-  call VCLR      ; a rebuild from the
-                 ; entries up to its
-  ld hl,WARMV    ; mark at its next
-                 ; selection
+  ld hl,LOGINV   ; clear login
+  call VCLR
+  ld hl,WARMV    ; rebuild to saved mark
   call VSET
 
 WRNEXT:
-  ld a,(CURDRV)  ; on to the next of the
-                 ; 16 drives
+  ld a,(CURDRV)  ; drive loop A..P
   inc a
   cp 16
   jr nz,WRLOOP
-  jr RSTAIL      ; then the tail both
-                 ; resets share
+  jr RSTAIL
 
-; Function 14, select disk: the drive in
-; E, 0 for A to 15 for P, becomes the
-; current drive and the default. Returns
-; 0 in A through RETZERO; changes every
-; register. A drive that cannot be
-; selected takes the fatal path.
+; Function 14: select drive E=0..15
+; (A..P), then publish it as the logical
+; default through SETDEF. Return A=0.
+; Any register may change.
+; Invalid/unavailable drives enter
+; SELFAIL/BDERR nonlocally.
 
 FNSEL:
-  ld a,(PARAM)   ; E at entry: the drive
-  call SELDRV    ; bound, or the fatal
-                 ; selection path
+  ld a,(PARAM)   ; saved caller E
+  call SELDRV    ; bind before publish
 
-; Publish a logical default only after
-; BIOS selection succeeds. Retained
-; pointers let functions 27/31 query
-; that default without replacing an
-; active explicit-drive search's
-; directory buffer or cursor. Takes
-; CURDRV, DPBPTR and ALVPTR as LOGIN
-; left them. Returns 0 in A through
-; RETZERO.
+; Publish CURDRV/DPBPTR/ALVPTR as
+; DEFDRV/DEFDPB/DEFALV after successful
+; selection. Return A=0 through RETZERO.
+; Functions 25/27/31 can query these
+; default values without rebinding an
+; explicit-drive search or replacing its
+; buffer/cursor.
 
 SETDEF:
-  ld a,(CURDRV)  ; the selected drive is
-                 ; the default
+  ld a,(CURDRV)  ; publish selected
+                 ; drive
   ld (DEFDRV),a
 
-; with its DPB and allocation vector,
-
   ld hl,(DPBPTR)
-
-; for functions 31 and 27
 
   ld (DEFDPB),hl
   ld hl,(ALVPTR)
   ld (DEFALV),hl
-  jp RETZERO     ; the function's end
+  jp RETZERO
 
-; A = the drive, 0 to 15. Binds its
-; tables through LOGIN unless it is the
-; current drive and still logged in. A
-; drive past P or without a volume takes
-; SELFAIL and never returns here.
-; Returns with CURDRV the drive and its
-; tables bound. Destroys AF, BC, DE, HL,
-; IX.
+; Bind drive A=0..15 through LOGIN.
+; Reuse the tables only when this drive
+; is current and logged in. Return with
+; CURDRV and its tables bound.
+; Invalid/unavailable drives enter
+; SELFAIL nonlocally. Changes
+; AF/BC/DE/HL/IX.
 
 SELDRV:
-  cp 16          ; drives A to P only
+  cp 16          ; reject past P
   jp nc,SELFAIL
   ld b,a
-  ld a,(CURDRV)  ; NZ: another drive, so
-                 ; its tables
-  cp b           ; are bound by LOGIN
+  ld a,(CURDRV)
+  cp b           ; compare bound drive
   ld a,b
-  ld (CURDRV),a  ; the loads keep the
-                 ; flags
+  ld (CURDRV),a  ; LD keeps compare F
   jp nz,LOGIN
-  call LOGTEST   ; the same drive, still
-                 ; logged in: its
-  ret nz         ; tables are bound
-                 ; already
-  jp LOGIN       ; reset since: logged
-                 ; in again
+  call LOGTEST   ; same drive: login bit
+  ret nz         ; NZ: tables still
+                 ; bound
+  jp LOGIN
 
-; PARAM names the caller FCB; its drive
-; byte is never rewritten. C still
-; identifies the dispatched function.
-; Zero means logical default; 1..16
-; means A..P. Only Search First admits
-; '?' as a raw-directory request. Binds
-; the drive as SELDRV does and changes
-; what it changes; a '?' in another
-; function, or a drive past P, takes the
-; fatal selection path.
+; Resolve the FCB drive at (PARAM)
+; without changing its byte. Input C is
+; the function number. Drive byte:
+; 0=DEFDRV, 1..16=A..P.
+; Accept literal '?' for function 17
+; default-drive raw search only. Reject
+; '?' in other functions through
+; SELFAIL. Bind ordinary drive bytes
+; through SELDRV, which rejects drives
+; past P. Inherit its clobbers. C need
+; not survive.
 
 FCBSEL:
-  ld hl,(PARAM)  ; the FCB's drive byte
+  ld hl,(PARAM)  ; caller FCB base
   ld a,(hl)
   cp '?'
   jr nz,FCBORD
-  ld a,c         ; '?' only in function
-                 ; 17, search first,
-  cp 17          ; where it means the
-                 ; default drive's
-  jp nz,SELFAIL  ; whole directory
+  ld a,c         ; entry C, not
+                 ; preserved
+  cp 17
+  jp nz,SELFAIL  ; raw search only
   xor a
 
 FCBORD:
-  or a           ; 0: the logical
-                 ; default drive
+  or a           ; 0: logical default
   jr nz,FCBEXPL
   ld a,(DEFDRV)
   jr SELDRV
 
 FCBEXPL:
-  dec a          ; 1 to 16 become drives
-                 ; 0 to 15;
-  jr SELDRV      ; SELDRV refuses any
-                 ; past P
+  dec a          ; FCB 1..16 -> A..P
+  jr SELDRV
 
-; Open uses the same public-directory
-; iterator as search, then imports only
-; the directory-owned FCB fields. Bit 7
-; of S2 marks the FCB unmodified, which
-; lets close avoid a disk write until a
-; later mutation function changes it.
-; Function 15. Returns the entry's place
-; 0 to 3 in A, or FFh when no entry
-; holds the extent, through RETA.
+; Function 15: open through SETSRCH mode
+; 1. OPENHIT imports entry bytes 1..31
+; but restores requested EX&1Fh and sets
+; S2 bit 7 unmodified. Drive, CR and
+; random bytes are outside the copy.
+; Return slot 0..3 or FFh through RETA.
+; MATCHUSR defines the EX='?' exception.
 
 FNOPEN:
-  ld a,1         ; search mode 1: open
+  ld a,1
   jr SETSRCH
 
-; Function 16, close file: the FCB's
-; extent written back to its directory
-; entry. Returns 0 to 3 in A, or FFh
-; when no entry holds the extent.
+; Function 16: close through CLOSEFCB.
+; Return its slot 0..3, zero for
+; no-write success or FFh if the entry
+; is missing. BDERR errors exit
+; nonlocally.
 
 FNCLSE:
   call CLOSEFCB
-  jp RETA        ; CLOSEFCB's result to
-                 ; the caller
+  jp RETA
 
-; Close the FCB at PARAM on the current
-; drive: its extent's record count and
-; allocation map written to the
-; directory entry, unless S2's bit 7
-; says the FCB is unmodified since open
-; or make. Returns in A the entry's
-; place 0 to 3, 0 when nothing needed
-; writing, or FFh when no entry holds
-; the extent. Changes every register.
+; Close the FCB at (PARAM) on the
+; current drive. If S2 bit 7 is set,
+; return A=0 without reading an entry.
+; Otherwise enter CLOSEDIR.
+; Return A=slot 0..3, zero for no-write
+; success or FFh if no entry matches.
+; Any register may change.
 
 CLOSEFCB:
-  ld de,14       ; S2's bit 7 set:
-                 ; unmodified, nothing
-  call FCBOFF    ; to write
+  ld de,14       ; S2 unmodified bit
+  call FCBOFF
   bit 7,(hl)
   jr z,CLOSEDIR
-  xor a          ; success, with no
-                 ; entry read
+  xor a          ; no entry read
   ret
 
-; An FCB on an earlier extent than its
-; entry's writes back only the
-; allocation map: the entry's extent and
-; record count describe its last extent.
-; On a read-only drive it writes nothing
-; and returns success, as CP/M 2.2's
-; close does (A8, restating KE-148).
-; Takes and returns as CLOSEFCB.
+; Write modified extent metadata. A
+; read-only drive returns A=0 without
+; writing. Historical close citation:
+; (A8, restating KE-148).
+; Find the entry through FINDEXCT. If
+; FCB EX&1Fh is earlier than entry
+; EX&1Fh, copy only the 16-byte map to
+; avoid lowering its last-extent
+; metadata. Otherwise copy 20 bytes from
+; EX through the map. S2 is not compared
+; here.
+; Write the record and return RETCODE.
+; Missing entry returns FFh. Other
+; inputs/clobbers are as CLOSEFCB. Disk
+; errors exit through BDERR.
 
 CLOSEDIR:
-  call RONZ      ; NZ: the drive is
-                 ; read-only
+  call RONZ      ; NZ: drive read-only
   ld a,0
-  ret nz         ; nothing written, and
-                 ; success
-  call FINDEXCT  ; the entry holding
-                 ; this extent
+  ret nz         ; no-write success
+  call FINDEXCT
   cp $FF
-  ret z          ; none: FFh
-  ld hl,(PARAM)  ; HL: the FCB's EX
+  ret z          ; FFh: missing entry
+  ld hl,(PARAM)  ; caller FCB base
   ld bc,12
   add hl,bc
-
-; DE: the entry's, at the same offset
 
   ld de,(MATCHPTR)
   ex de,hl
   add hl,bc
   ex de,hl
-  ld a,(de)      ; the extents compared
-                 ; without S2:
-  and $1F        ; carry if the FCB's is
-                 ; the earlier
+  ld a,(de)      ; entry EX
+  and $1F        ; entry EX&1Fh
   ld c,a
   ld a,(hl)
   and $1F
-  cp c
-  ld bc,20       ; EX to the map's end,
-                 ; 20 bytes, unless
-  jr nc,CLOSECP  ; the FCB's extent is
-                 ; before the entry's
-  ld c,4         ; skip EX, S1, S2 and
-                 ; RC
+  cp c           ; FCB EX vs entry EX
+  ld bc,20       ; EX through map
+  jr nc,CLOSECP  ; FCB not earlier
+  ld c,4         ; skip EX/S1/S2/RC
   add hl,bc
   ex de,hl
   add hl,bc
   ex de,hl
-  ld c,16        ; the 16-byte
-                 ; allocation map alone
+  ld c,16        ; map only
 
 CLOSECP:
-  ldir           ; the FCB's fields into
-                 ; the entry
-  call WRITEDIR  ; and its record to the
-                 ; disk
-
-; the entry's place, 0 to 3
+  ldir           ; FCB -> entry
+  call WRITEDIR  ; persist directory
 
   ld a,(RETCODE)
   ret
 
-; Search the current drive for the
-; directory entry that holds the FCB's
-; extent, as close needs it: the FCB at
-; PARAM the pattern, search mode 4, the
-; entries up to the drive's mark.
-; Returns the entry's place 0 to 3 in A
-; with MATCHPTR at it, or FFh. Changes
-; every register and the search state.
+; Find the current-drive entry for the
+; FCB at (PARAM): set SRCHFCB and mode
+; 4, restart the search and enter
+; FINDENT. Mode 4 stops at DIRUSED and
+; copies no entry. MATCHUSR defines
+; matching, including EX='?'.
+; Return A=slot 0..3 with MATCHPTR or
+; FFh. Replaces search state. Registers
+; may change.
 
 FINDEXCT:
-  ld hl,(PARAM)  ; the caller's FCB is
-                 ; the pattern
+  ld hl,(PARAM)  ; caller FCB pattern
   ld (SRCHFCB),hl
-  ld a,4         ; mode 4: user, name,
-                 ; extent and S2
-
-; match, and nothing is copied
+  ld a,4         ; mode 4: close lookup
 
   ld (OPENMOD),a
-  call NEWSRCH   ; from the directory's
-                 ; first entry
+  call NEWSRCH
   jp FINDENT
 
-; Function 17, search for first: the FCB
-; at PARAM matched against the current
-; drive's directory. A '?' drive byte
-; asks for every entry, mode 5; any
-; other search clears the FCB's S2 and
-; matches the user, name and extent,
-; mode 0. Returns 0 to 3 in A with the
-; record at the DMA, or FFh.
+; Function 17: start search at the FCB
+; in (PARAM). Drive '?' selects mode 5
+; raw enumeration. Otherwise clear
+; caller S2 and use mode 0
+; current-user/name/extent matching.
+; MATCHUSR defines the EX='?' bypass.
+; Return slot 0..3 with its 128-byte
+; record at CURDMA or FFh on exhaustion.
 
 FNSRCHF:
   ld hl,(PARAM)
   ld a,(hl)
-  cp '?'         ; '?': every entry, in
-                 ; mode 5
+  cp '?'         ; drive ?: raw mode
   ld a,5
   jr z,SETSRCH
-  ld de,14       ; any other: S2
-                 ; cleared, so only
-                 ; module
-  add hl,de      ; 0 matches
+  ld de,14       ; S2 byte 14
+  add hl,de      ; caller S2 address
   ld (hl),0
-  xor a          ; mode 0: a search
+  xor a          ; normal search mode
 
-; Start a search of the current drive in
-; mode A, the FCB at PARAM its pattern,
-; and return the first match through
-; RETA: its place 0 to 3 in A, or FFh.
-; Mode 0 copies the entry's record to
-; the DMA, mode 1 (open) the entry's
-; fields to the FCB, and mode 5 matches
-; every entry.
+; Start mode A with the pattern at
+; (PARAM). Save OPENMOD/SRCHFCB, call
+; NEWSRCH then FINDENT and return
+; through RETA. Keep the pointed-to
+; pattern usable for continuation.
+; Modes 0/5 copy the record to CURDMA.
+; Mode 1 imports open fields.
 
 SETSRCH:
-  ld hl,(PARAM)  ; the pattern, kept for
-                 ; search next
+  ld hl,(PARAM)  ; retain pattern
+                 ; pointer
   ld (SRCHFCB),hl
 
-; and the mode with it
-
   ld (OPENMOD),a
-  call NEWSRCH   ; from the directory's
-                 ; first entry
+  call NEWSRCH
   call FINDENT
-  jp RETA        ; 0 to 3, or FFh
+  jp RETA        ; slot or FFh
 
-; Function 18, search for next: the
-; search function 17 started goes on
-; from the entry after its last match,
-; in its mode. DE is not an FCB argument
-; here. Returns 0 to 3 in A, or FFh,
-; through RETA.
+; Function 18: continue the saved search
+; from SRCHIDX with OPENMOD/SRCHFCB. DE
+; is not a new FCB argument. Return slot
+; 0..3 or FFh through RETA.
 
 FNSRCHN:
-  call FINDENT   ; on from SRCHIDX, the
-                 ; saved place
+  call FINDENT
   jp RETA
 
-; File R/O, as CP/M 2.2's check_rofile
-; and check_rodir: a write's FCB, or the
-; directory entry at HL of a rename or
-; an erase, with t1's bit 7 set goes no
-; further. ROFCB checks the drive first.
-; Returns when writable, changing AF, B,
-; DE and HL; otherwise ends the function
-; through BDERR, error 2 or 3.
+; Reject read-only drive/file access.
+; ROFCB checks CHKRO (error 2), then the
+; FCB at (PARAM). ROTEST takes an entry
+; base in HL.
+; Both test type byte 9 bit 7: clear
+; returns. Set enters BDERR error 3
+; nonlocally. Changes AF/B/DE/HL.
 
 ROFCB:
-  call CHKRO     ; error 2 on a
-                 ; read-only drive
+  call CHKRO     ; drive gate first
   ld hl,(PARAM)
 
 ROTEST:
-  ld de,9        ; t1, the type's first
-                 ; byte: its bit 7
-  add hl,de      ; is the read-only
-                 ; attribute
+  ld de,9        ; t1 attribute byte
+  add hl,de
   bit 7,(hl)
-  ret z          ; clear: the file may
-                 ; be written
+  ret z          ; Z: file writable
   ld hl,ERRFILE
-  ld b,3         ; read-only file
+  ld b,3         ; error 3: file R/O
   jp BDERR
 
-; Function 19, delete file: every entry
-; of the current user's files that the
-; FCB at PARAM names, wildcards allowed,
-; marked E5h on the disk and then freed
-; in the allocation vector. A read-only
-; drive, a read-only file met on the way
-; or a failed directory write ends the
-; function in error, the entries before
-; it deleted and freed. Returns 0 in A,
-; or FFh when no entry matched.
+; Function 19: delete current-user/name
+; matches across extents in mode 2 to
+; DIRUSED. Check drive write permission
+; first and each file before changing
+; it.
+; Mark the entry E5h and write it before
+; freeing its blocks. Earlier completed
+; entries stay deleted/freed if a later
+; gate or write fails. Return A=0 if any
+; changed or FFh otherwise through
+; DELDONE.
 
 FNDELETE:
-  call CHKRO     ; error 2 on a
-                 ; read-only drive
-  ld hl,(PARAM)  ; the FCB the pattern,
-                 ; mode 2: user
-
-; and name, any extent, the entries
+  call CHKRO     ; drive gate
+  ld hl,(PARAM)  ; caller match pattern
 
   ld (SRCHFCB),hl
-  ld a,2         ; up to the drive's
-                 ; mark
+  ld a,2         ; mode 2: all extents
   ld (OPENMOD),a
   call NEWSRCH
-  xor a          ; WRTYPE 0: nothing
-                 ; deleted yet
+  xor a          ; no completed writes
   ld (WRTYPE),a
-
-; Each matching entry in turn.
 
 DELLOOP:
   call FINDENT
   cp $FF
-  jr z,DELDONE   ; no more entries
-
-; error 3 at a read-only file's entry;
+  jr z,DELDONE   ; scan exhausted
 
   ld hl,(MATCHPTR)
-  call ROTEST    ; entries before it
-                 ; stay deleted
+  call ROTEST    ; file gate per entry
   ld hl,(MATCHPTR)
-  ld (hl),$E5    ; the entry marked
-                 ; empty
-  call WRDIRNOW  ; the BIOS still on its
-                 ; record
-  call FREEENT   ; written: only now its
-                 ; blocks freed, so
+  ld (hl),$E5    ; mark buffer empty
+  call WRDIRNOW  ; BIOS still on record
+  call FREEENT   ; free only after write
 
-; a failed write function 45 returns
-; leaves the vector as the card has it
+; A failed write ends this function
+; before FREEENT, including a return to
+; the program under ERRMODE. The buffer
+; is already marked E5h. No entry
+; rollback is performed here.
 
-  ld a,1         ; WRTYPE 1: an entry
-                 ; deleted
+  ld a,1         ; completed deletion
   ld (WRTYPE),a
   jr DELLOOP
 
-; The end of delete, rename and set
-; attributes: WRTYPE non-zero when an
-; entry was changed. Returns 0 in A, or
-; FFh when none was, through RETA.
+; Return the delete/rename/attributes
+; result through RETA: A=0 if WRTYPE
+; records a completed entry write or FFh
+; if none completed.
 
 DELDONE:
   ld a,(WRTYPE)
-  or a           ; Z: no entry matched
+  or a           ; Z: no completed entry
   ld a,$FF
-  jp z,RETA      ; FFh: no such file
+  jp z,RETA      ; FFh: none changed
   xor a
-  jp RETA        ; 0: at least one entry
-                 ; changed
+  jp RETA
 
-; Create an empty extent in the first
-; unused directory slot. The caller FCB
-; is initialized independently of the
-; directory-buffer representation.
-; Function 22. As CP/M 2.2's make, which
-; clears the module (clrmodnum) first:
-; S2 is cleared, full directory or not,
-; and EX kept, so the entry made is
-; extent EX of module 0. Returns 0 to 3
-; in A, or FFh when the directory is
-; full.
+; Function 22: reject a read-only drive,
+; clear caller S2, keep EX and call
+; MAKEFCB. Even a directory-full return
+; leaves S2 cleared.
+; Return slot 0..3 or FFh when full
+; through RETA. Other errors enter
+; BDERR.
 
 FNMAKE:
-  call CHKRO     ; error 2 on a
-                 ; read-only drive
-  call FCBEX     ; S2, two bytes past
-                 ; EX, cleared
+  call CHKRO     ; gate before FCB
+                 ; change
+  call FCBEX     ; HL=caller EX
   inc hl
   inc hl
-  ld (hl),0
+  ld (hl),0      ; S2 clear even if full
   call MAKEFCB
-  jp RETA        ; 0 to 3, or FFh: the
-                 ; directory full
+  jp RETA
 
-; Make a directory entry for the FCB at
-; PARAM in the current drive's first
-; empty slot, for the extent its EX and
-; S2 name: function 22's, its S2 cleared
-; by FNMAKE, or the extent a write moves
-; to (ADVEXT, RANDMISS), its module
-; kept. As CP/M 2.2's make, S1, RC and
-; the allocation map are cleared and EX
-; kept; S2 keeps its module, its flag
-; bits cleared. The entry is written
-; from the FCB, the user its first byte,
-; and then the FCB's S2 bit 7 set.
-; Returns the slot's place 0 to 3 in A,
-; or FFh with the FCB untouched when the
-; directory is full. Changes every
-; register.
+; Allocate an empty directory slot for
+; the FCB at (PARAM) on the current
+; drive. Mode 3 scans all DIRCNT
+; entries. No slot returns FFh without
+; changing the FCB here. FNMAKE may
+; already have cleared S2.
+; Keep EX, clear S1, retain S2&3Fh and
+; clear RC plus the 16-byte map. Leave
+; CR/random bytes unchanged.
+; ADVEXT/RANDMISS retain their chosen
+; module. Continue at MAKECOPY. Any
+; register may change.
 
 MAKEFCB:
-  ld hl,(PARAM)  ; mode 3: an empty
-                 ; slot, searched for
-
-; in the whole directory, not only
+  ld hl,(PARAM)  ; caller FCB
 
   ld (SRCHFCB),hl
-  ld a,3         ; to the mark
+  ld a,3         ; mode 3: free slot
   ld (OPENMOD),a
-  call NEWSRCH   ; from the directory's
-                 ; first entry
+  call NEWSRCH
   call FINDENT
   cp $FF
-  ret z          ; the directory full:
-                 ; FFh
+  ret z          ; FFh, FCB unchanged
 
-  call FCBEX     ; EX kept; S1 cleared
+  call FCBEX     ; keep requested EX
   inc hl
   ld (hl),0
-  inc hl         ; S2: its module kept,
-                 ; its flags clear
+  inc hl         ; caller S2
   ld a,(hl)
-  and $3F
+  and $3F        ; keep module bits
   ld (hl),a
-  inc hl         ; RC and the 16-byte
-                 ; map cleared;
-  ld b,17        ; CR and r0-r2 are left
-                 ; alone
+  inc hl         ; RC then 16-byte map
+  ld b,17        ; exclude CR/random
   xor a
 
 MAKEZERO:
@@ -590,175 +486,148 @@ MAKEZERO:
   inc hl
   djnz MAKEZERO
 
-; The entry: the current user, then the
-; FCB's bytes 1 to 31.
+; Publish USERNO and FCB bytes 1..31 to
+; the empty MATCHPTR entry, then set S2
+; bit 7 only in the caller FCB. Drive,
+; CR and random bytes are not copied.
+; Raise DIRUSED to one-past-slot SRCHIDX
+; if needed and save it through DUSAVE
+; before WRITEDIR. Return RETCODE after
+; success. FCB/mark changes precede the
+; write and are not rolled back here.
 
 MAKECOPY:
-
-; the empty slot's user byte
 
   ld hl,(MATCHPTR)
   ld a,(USERNO)
   ld (hl),a
   inc hl
-  ex de,hl       ; then name to map,
-                 ; from the FCB
-  ld hl,(PARAM)
+  ex de,hl       ; entry destination +1
+  ld hl,(PARAM)  ; caller FCB source
   inc hl
-  ld bc,31
+  ld bc,31       ; name through map
   ldir
 
-  ld de,14       ; S2's bit 7 set: the
-                 ; FCB unmodified
-  call FCBOFF    ; since its entry was
-                 ; made
+  ld de,14       ; caller S2 offset
+  call FCBOFF    ; caller FCB, not entry
   ld a,(hl)
-  or $80
+  or $80         ; mark unmodified
   ld (hl),a
 
-; one past the slot: it raises the
-
   ld hl,(SRCHIDX)
-
-; drive's mark when it passes it
 
   ld de,(DIRUSED)
   or a
   sbc hl,de
-  jr c,MAKEUSED  ; below the mark: the
-                 ; mark stands
+  jr c,MAKEUSED  ; below mark: keep it
   ld hl,(SRCHIDX)
   ld (DIRUSED),hl
-  call DUSAVE    ; and the DPH keeps the
-                 ; new mark
-
-; The record with the new entry to disk.
+  call DUSAVE    ; save raised DPH mark
 
 MAKEUSED:
-  call WRITEDIR
-
-; the slot's place, 0 to 3
+  call WRITEDIR  ; state already changed
 
   ld a,(RETCODE)
   ret
 
-; Function 21, write sequential: the
-; FCB's next record written from the
-; DMA, with no zero fill of a new block.
-; A read-only drive or file ends the
-; function in error. Returns WRITESEQ's
-; code in A through RETA: 0 when the
-; record is written.
+; Function 21: reject read-only
+; drive/file access, set ZEROFIL=0 and
+; call WRITESEQ on DMA data without
+; new-block zero fill.
+; Return WRITESEQ's A through RETA: 0
+; written, 1 directory full or 2 disk
+; full. Disk I/O errors enter
+; BADSECT/BDERR nonlocally.
 
 FNWRITE:
-  call ROFCB     ; error 2 or 3: a
-                 ; read-only drive or
-                 ; file
-  xor a          ; ZEROFIL 0: a new
-                 ; block is not
-
-; cleared first
+  call ROFCB     ; drive/file R/O gate
+  xor a          ; no new-block fill
 
   ld (ZEROFIL),a
   call WRITESEQ
   jp RETA
 
-; Function 30, set file attributes: the
-; FCB's name, with its attribute bits,
-; written into every entry of the file.
-; Returns 0 in A, or FFh when no entry
-; matches, through RETA.
+; Function 30: set attributes in every
+; current-user/name match. Require a
+; writable drive but allow read-only
+; files. Supply HL=(PARAM)+1 to MUTALL,
+; including attribute bits in the
+; 11-byte name/type source.
+; Return A=0 if any changed or FFh if
+; none matched.
 
 FNATTR:
-  call CHKRO     ; error 2 on a
-                 ; read-only drive
-  ld hl,(PARAM)  ; the source: the FCB's
-                 ; own name and
-  inc hl         ; type, at byte 1
+  call CHKRO     ; drive R/O gate
+  ld hl,(PARAM)  ; caller FCB source
+  inc hl         ; attributes: offset 1
   jr MUTALL
 
-; Function 23, rename file: the new
-; name, at byte 17 of the FCB, written
-; into every entry of the file its first
-; half names; a read-only file is
-; refused. Returns 0 in A, or FFh when
-; no entry matches, through RETA.
+; Function 23: rename current-user/name
+; matches. Require a writable drive and
+; reject read-only files through error
+; 3. The first FCB half is the pattern.
+; HL=(PARAM)+17 supplies the second
+; half's 11-byte name/type after its
+; drive byte.
+; Return A=0 if any changed or FFh if
+; none matched.
 
 FNRENAME:
-  call CHKRO     ; error 2 on a
-                 ; read-only drive
-  ld de,17       ; the source: the
-                 ; second half's name,
-  call FCBOFF    ; past its drive byte
+  call CHKRO     ; drive R/O gate
+  ld de,17       ; rename: offset 17
+  call FCBOFF    ; HL=(PARAM)+17
 
-; Rename and set-attributes apply to
-; every extent belonging to the file.
-; Keep the replacement field outside the
-; directory buffer because FINDENT
-; replaces that buffer whenever the scan
-; crosses a physical directory record.
-; Takes HL, the 11-byte name and type to
-; write. Returns through DELDONE;
-; changes every register.
+; Update all matching extents to DIRUSED
+; in mode 2. Input HL must be (PARAM)+1
+; for attributes or (PARAM)+17 for
+; rename. Keep pattern/replacement bytes
+; usable and outside the directory
+; buffer: FINDENT replaces directory
+; records. COPYPTR retains the source
+; address.
+; The offset's bit 4 selects rename's
+; ROTEST gate. Attributes bypass it.
+; Copy 11 bytes to entry+1 and write
+; each record before setting WRTYPE.
+; Earlier completed writes remain if a
+; later call fails. End through DELDONE.
+; Changes every register.
 
 MUTALL:
 
-; the source, outside the buffer
-
   ld (COPYPTR),hl
-  ld hl,(PARAM)  ; mode 2: every extent
-                 ; of the user's
-
-; files the FCB names, to the mark
+  ld hl,(PARAM)  ; original FCB pattern
 
   ld (SRCHFCB),hl
   ld a,2
   ld (OPENMOD),a
-  xor a          ; WRTYPE 0: no entry
-                 ; changed yet
+  xor a          ; no completed writes
   ld (WRTYPE),a
   call NEWSRCH
-
-; Each matching entry in turn.
 
 MUTLOOP:
   call FINDENT
   cp $FF
-  jp z,DELDONE   ; no more entries: the
-                 ; result
-
-; a rename's name is 17 bytes in,
-; function
+  jp z,DELDONE   ; scan exhausted
 
   ld a,(COPYPTR)
-  ld hl,PARAM    ; 30's 1: a rename of a
-                 ; read-only file is
-  sub (hl)       ; refused, as CP/M 2.2
-                 ; refuses it, and its
-  and $10        ; attributes can still
-                 ; be changed
+  ld hl,PARAM    ; HL->PARAM low byte
+  sub (hl)       ; offset modulo 256
+  and $10        ; bit 4: rename only
   jr z,MUTCOPY
 
-; a rename: error 3 at a read-only
-
   ld hl,(MATCHPTR)
-  call ROTEST    ; file's entry
+  call ROTEST    ; rename file R/O gate
 
 MUTCOPY:
 
-; the name and type, 11 bytes, over the
-
   ld hl,(COPYPTR)
-
-; entry's, past its user byte
 
   ld de,(MATCHPTR)
   inc de
   ld bc,11
   ldir
-  call WRITEDIR  ; its record to the
-                 ; disk at once
-  ld a,1         ; WRTYPE 1: an entry
-                 ; changed
+  call WRITEDIR  ; persist this entry
+  ld a,1         ; completed update
   ld (WRTYPE),a
   jr MUTLOOP

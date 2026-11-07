@@ -1,6 +1,7 @@
-; Serial TX, the LCD, the GLCD and the PICO9918.
-
-; ---- T14 serial TX --------------------------------------------------------------
+; Serial TX, LCD, GLCD and PICO9918.
+; T14 sends a pangram and ASCII 20h-7Eh.
+; VISUAL gives the answer or LOOK.
+; Printed timings: generated nominal T.
 
 TSERTX: CALL    TBEGIN
         DB      14,"SERTX  ","Serial TX at 4800 8N2: two known lines follow",0
@@ -29,14 +30,17 @@ TSTX1:  PUSH    AF
         DB      " T",0
         JP      REND
 
-; Visual or audible check: with the interactive tests chosen, ask the
-; question that follows the CALL and return its answer in A; otherwise return
-; RLOOK.
+; CALL's return address points at a
+; zero-terminated question. Advance it
+; past the text in either branch.
+; INTER=0: A=LOOK. Else print and use
+; ASK1's PASS/FAIL/SKIP answer in A.
+
 VISUAL: EX      (SP),HL
         LD      A,(INTER)
         OR      A
         JR      NZ,VISQ
-VISSK:  LD      A,(HL)          ; skip the question
+VISSK:  LD      A,(HL)
         INC     HL
         OR      A
         JR      NZ,VISSK
@@ -49,7 +53,12 @@ VISQ:   CALL    PRS
         DB      " (Y/N) ",0
         JP      ASK1
 
-; ---- T15 LCD --------------------------------------------------------------------
+; T15: initial busy timeout gives NONE.
+; Write/read 20 bytes at row 3, then
+; restore diagnostic headings, not the
+; prior picture. Zero mismatches pass.
+; Later output is not acknowledged by
+; the recorded clear-busy count.
 
 TLCD:   CALL    TBEGIN
         DB      15,"LCD    ","HD44780 at 04h/84h: busy flag, DDRAM read-back",0
@@ -60,7 +69,10 @@ TLCD:   CALL    TBEGIN
         CALL    PRI
         DB      "busy flag never clears",0
         JP      REND
-TLCD1:  LD      A,$01           ; clear: busy for about 1.5 ms
+
+; Clear: typical busy time 1.5 ms.
+
+TLCD1:  LD      A,$01
         OUT     (LCDCMD),A
         CALL    BUSYCNT
         LD      (SAVE),HL
@@ -100,23 +112,30 @@ TLCD3:  INC     HL
         JP      REND
 LCDPAT: DB      "LCD READ-BACK 012345",0
 
-; Count polls of status port C bit 7 until it is clear, at most 4096; the
-; port is LCDCMD unless BUSYGL is used. Returns HL; one poll is 50
-; T-states. Destroys AF, C.
+; BUSYCNT selects LCD, BUSYGL GLCD.
+; HL counts busy reads, up to 4096.
+; Ready read is not counted: zero means
+; busy never seen. Cap is not readiness.
+; Changes AF/C, returns HL.
+; Nominal T: busy 50, ready 27, cap 55.
+; RET NC: 5 busy/11 ready. Keeps B/DE.
+
 BUSYCNT:LD      C,LCDCMD
 BUSYC:  LD      HL,0
 BUSYC1: IN      A,(C)           ; 12
         RLCA                    ; 4
-        RET     NC              ; 5
+        RET     NC              ; 5/11
         INC     HL              ; 6
         LD      A,H             ; 4
         CP      $10             ; 7
-        JR      NZ,BUSYC1       ; 12 (50 in all)
+        JR      NZ,BUSYC1       ; 12/7
         RET
 BUSYGL: LD      C,GLCCMD
         JR      BUSYC
 
-; Print the poll count in SAVE as "n polls x 50 T" or "never seen".
+; SAVE: 0=busy never seen, 4096=stuck,
+; else count x nominal 50 T busy loops.
+
 PRPOLLS:LD      HL,(SAVE)
         LD      A,H
         OR      L
@@ -135,10 +154,10 @@ PRPL2:  CALL    PRDEC
         DB      " polls x 50 T",0
         RET
 
-; ---- T16 GLCD -------------------------------------------------------------------
+; Poll GLCD busy at most 256 times.
+; NC ready, C timeout. Changes AF.
+; Keeps BC/DE/HL.
 
-; Wait until the GLCD is ready, at most 256 polls. NC when ready, C after the
-; time-out. Preserves BC, DE, HL.
 GLWAIT: PUSH    BC
         LD      B,0
 GLW1:   IN      A,(GLCCMD)
@@ -148,6 +167,11 @@ GLW1:   IN      A,(GLCCMD)
         SCF
 GLW2:   POP     BC
         RET
+
+; GLC/GLD keep incoming AF and still
+; OUT after timeout, unlike the driver.
+; GLRD still reads and keeps wait carry.
+
 GLC:    PUSH    AF
         CALL    GLWAIT
         POP     AF
@@ -162,7 +186,11 @@ GLRD:   CALL    GLWAIT
         IN      A,(GLCDAT)
         RET
 
-; Graphics address of pixel row D, word 0. Preserves BC, DE, HL.
+; Valid D=0..63: address word 0. Low
+; five row bits are vertical, bit 5
+; selects the half. Keeps BC/DE/HL.
+; Changes AF. GLC's timeout still sends.
+
 GLADDR: LD      A,D
         CP      32
         JR      NC,GLADL
@@ -175,8 +203,10 @@ GLADL:  ADD     A,$80-32
         LD      A,$88
         JP      GLC
 
-; Test value for row D, byte E: the row in the high nibble, the byte xor a
-; quarter of the row in the low one, so rows 16 apart differ.
+; D=0..63, E=0..15 -> A. High nibble is
+; D&0Fh, low is (E XOR (D>>2))&0Fh.
+; Rows 16 apart differ. C used, DE kept.
+
 GLVAL:  LD      A,D
         RRCA
         RRCA
@@ -192,7 +222,10 @@ GLVAL:  LD      A,D
         OR      C
         RET
 
-; Test pattern for row D, byte E: 8 x 8 checkerboard inside a frame.
+; D=0..63, E=0..15 -> A, an 8x8
+; checkerboard inside a one-pixel frame.
+; Keeps DE. Changes AF/C.
+
 GLPAT:  LD      A,D
         OR      A
         JR      Z,GLPF
@@ -218,7 +251,11 @@ GLP3:   LD      A,C
 GLPF:   LD      A,$FF
         RET
 
-; Fill graphics RAM from the function at HL (GLVAL or GLPAT).
+; HL=GLVAL/GLPAT, in shared SAVE+6.
+; Write 64x16 bytes. Pushed GLF3 is the
+; return. Callback A=byte, DE kept.
+; Timeouts still send. Not reentrant.
+
 GLFILL: LD      (SAVE+6),HL
         LD      D,0
 GLF1:   CALL    GLADDR
@@ -238,6 +275,11 @@ GLF3:   CALL    GLD
         JR      NZ,GLF1
         RET
 
+; GLCOK marks the initial answer only.
+; GLVAL's destructive readback counts
+; errors, then GLPAT supplies VISUAL.
+; Errors force FAIL, else answer/LOOK.
+
 TGLCD:  CALL    TBEGIN
         DB      16,"GLCD   ","ST7920 at 07h/87h: busy flag, graphics RAM read-back",0
         CALL    GLWAIT
@@ -253,7 +295,10 @@ TGL1:   LD      A,1
         CALL    GLC
         LD      A,$0C           ; display on
         CALL    GLC
-        LD      A,$01           ; clear: busy for about 1.6 ms
+
+; Clear: typical busy time 1.6 ms.
+
+        LD      A,$01
         CALL    GLC
         CALL    BUSYGL
         LD      (SAVE),HL
@@ -307,7 +352,11 @@ TGL6:   CALL    RESULT
         DB      ", pattern drawn",0
         JP      REND
 
-; ---- T17-T18 PICO9918 -----------------------------------------------------------
+; VRAM addresses use HL's low 14 bits.
+; VWA/VRA keep BC/DE/HL, change AF.
+; VPOKE keeps A across write addressing,
+; VPEEK returns read A. Paired control
+; writes have no interrupt lock.
 
 VWA:    LD      A,L             ; VRAM write address HL
         OUT     (VDPCTL),A
@@ -331,8 +380,11 @@ VPEEK:  CALL    VRA
         IN      A,(VDPDAT)
         RET
 
-; Registers 0-7 for the TEC-OS console: 80-column text, names at 1000h,
-; patterns at 0000h, white on dark blue, interrupts off.
+; Diagnostic 80 cols, names 1000h,
+; patterns 0000h, white on dark blue.
+; VDP IRQ off. R1/R7=50h/F4h versus
+; production D0h/31h (KE398).
+
 VREGS:  LD      HL,VREGT
         LD      BC,8*256+$80
 VREG1:  LD      A,(HL)
@@ -345,6 +397,9 @@ VREG1:  LD      A,(HL)
         RET
 VREGT:  DB      $04,$50,$07,$00,$00,$00,$00,$F4
 VNAME   EQU     $1000
+
+; Probe success sets VDPOK, not PASS.
+; Destructive tests end at TVCLK.
 
 TVDP:   CALL    TBEGIN
         DB      17,"VDP    ","PICO9918 at BEh/BFh: VRAM size, speed, 80 columns",0
@@ -401,7 +456,11 @@ TVDP2:  CALL    VPEEK
         LD      (VERR),HL
         CALL    VSLOW
         CALL    VTEXT           ; adds name-table read-back errors to VERR
-        ; pass: the tags, the full-speed and the slow test all clean
+
+; Pass decision: all tags and both error
+; totals must be clean. VTEXT's errors
+; belong to the slow total above.
+
         LD      HL,SAVE
         LD      A,$11
         LD      B,4
@@ -439,7 +498,9 @@ TVDP6:  CALL    RESULT
         CALL    REND
         JP      TVCLK
 
-; Fill VBUFA with i xor D.
+; Fill aligned 256-byte VBUFA with low
+; index XOR D. INC L wraps to page base.
+
 VBUF:   LD      HL,VBUFA
 VBUF1:  LD      A,L
         XOR     D
@@ -447,7 +508,10 @@ VBUF1:  LD      A,L
         INC     L
         JR      NZ,VBUF1
         RET
-; Count the bytes of VBUFB that differ from i xor D into VERR.
+
+; Aligned VBUFB vs index XOR D, add to
+; VERR. Keeps BC/DE, HL ends page base.
+
 VCMP:   LD      HL,VBUFB
 VCMP1:  LD      A,L
         XOR     D
@@ -462,8 +526,11 @@ VCMP2:  INC     L
         JR      NZ,VCMP1
         RET
 
-; VRAM timing: write all 16 KiB with OUTI, 16 T-states a byte, then read it with INI.
-; No delays: the display stays on in 80-column mode as TEC-OS runs it.
+; Write/read 64x256 bytes, 80 cols on.
+; OUTI/INI bursts: 16 T each, no pacing.
+; Group/page work adds time. Initialise
+; VERR before this accumulating pass.
+
 VFAST:  LD      HL,0
         CALL    VWA
         LD      D,0
@@ -520,7 +587,10 @@ VFR2:   INI
         JR      NZ,VFR1
         RET
 
-; The same at 104 T-states a byte.
+; Same 64-page coverage, add to VERR.
+; 104 nominal T per nonfinal byte, final
+; 5 T less. Page/compare work is extra.
+
 VSLOW:  LD      HL,0
         CALL    VWA
         LD      D,0
@@ -533,7 +603,7 @@ VSW2:   LD      A,(HL)          ; 7
         LD      E,4             ; 7
 VSW3:   DEC     E               ; 4
         JR      NZ,VSW3         ; 12/7
-        DJNZ    VSW2            ; 13
+        DJNZ    VSW2            ; 13/8
         INC     D
         LD      A,D
         CP      $40
@@ -557,8 +627,11 @@ VSR3:   DEC     E
         JR      NZ,VSR1
         RET
 
-; Load the font as TEC-OS does (codes 80h-FFh reversed), draw the test
-; screen and read the name table back, adding errors to VERR.
+; Upload 256 eight-row patterns: glyphs
+; 20h-7Fh, controls as space, high codes
+; reversed. Draw/read 1920 names at
+; 1000h, add VERR. Patterns not reread.
+
 VTEXT:  LD      HL,0
         CALL    VWA
         LD      D,0
@@ -621,7 +694,10 @@ VTR3:   INC     C
         JR      NZ,VTR1
         RET
 
-; The test screen's character at row B, column C. Destroys DE, HL.
+; B=0..23, C=0..79 -> A. Keeps BC.
+; Rows 0/12 title/reverse, 1/23 rulers,
+; else printable. Changes AF/DE/HL.
+
 VNCH:   LD      A,B
         OR      A
         JR      Z,VNTTL
@@ -631,7 +707,11 @@ VNCH:   LD      A,B
         JR      Z,VNRUL
         CP      23
         JR      Z,VNRUL
-        ADD     A,A             ; rows 2-22: the printable set, shifted by row
+
+; Rows 2..22 except already-branched 12:
+; printable characters shifted by 3*B.
+
+        ADD     A,A
         ADD     A,B
         ADD     A,C
 VNM:    SUB     95
@@ -656,9 +736,11 @@ VNREV:  CALL    VNTTL
 VTITLE: DB      "TEC-1G DIAGNOSTICS: PICO9918 80 x 24 text. Rows 2, 24 rulers; row 13 reversed."
         DS      80-($-VTITLE),' '
 
-; T18: count 16 frames of the status flag. Each poll is 33 T-states, so the
-; frame is (33 x polls + 123) / 16 T-states, and the CPU clock follows if
-; the PICO9918's refresh rate (50 or 60 Hz) is known.
+; VDPOK: sync, then 16 frames without
+; timeout. Frame=(33*polls+123)/16
+; nominal T. Polls must fit HL. Known
+; refresh gives CPU clock inference.
+
 TVCLK:  CALL    TBEGIN
         DB      18,"VDPCLK ","PICO9918 frame flag as a clock: 16 frames",0
         LD      A,(VDPOK)
@@ -671,7 +753,12 @@ TVCLK:  CALL    TBEGIN
         JP      REND
 TVC0:   IN      A,(VDPCTL)      ; clear the flag
         LD      HL,0
-TVC1:   DEC     HL              ; wait for the next frame, at most 2.7M T
+
+; First sync only: 65535*51+24 nominal T
+; with no edge, excluding setup
+; (3,342,309 T, KE399).
+
+TVC1:   DEC     HL
         LD      A,H
         OR      L
         JP      Z,TVCN
@@ -722,19 +809,22 @@ TVCN:   LD      A,RFAIL
         DB      "frame flag never set",0
         JP      REND
 
-; ---- T35 page select ------------------------------------------------------------
+; Write A to VDP register C=0..63.
+; Above 7 needs unlocked F18A extension.
+; Keeps BC/DE/HL, changes AF. No unlock,
+; validation or interrupt masking here.
 
-; Write A to VDP register C (0-63; above 7 only once the F18A registers are
-; unlocked). Preserves BC, DE, HL.
 VREG:   OUT     (VDPCTL),A
         LD      A,C
         OR      $80
         OUT     (VDPCTL),A
         RET
 
-; Read status register A through VR15, then select status register 0 again.
-; Only an unlocked F18A-compatible VDP takes VR15; a plain TMS9918 takes the
-; write as register 7, so the caller rewrites registers 0-7 afterwards.
+; Read status register A -> A, VR15=0.
+; Changes F/C, keeps B/DE/HL. Plain
+; TMS9918 aliases VR15 to R7: caller
+; rewrites 0..7, not full prior state.
+
 VSTAT:  LD      C,15
         CALL    VREG
         IN      A,(VDPCTL)
@@ -744,15 +834,18 @@ VSTAT:  LD      C,15
         POP     AF
         RET
 
-; Wait about a second. Destroys AF, BC.
+; WAITDS A=10: ~1 s, nominal 4 MHz.
+; Uses AF/BC, keeps DE/HL.
+
 WAIT1S: LD      A,10
         JP      WAITDS
 
-; TEC-OS page-flips in 80 columns: the console's names are at 1000h
-; (R2 = 07h) and row moves are built at 2000h (R2 = 0Bh). The page is
-; (R2 & 0Ch) << 10 as TEC-OS and the emulator decode it. Page 2 is filled
-; with 2s under its own title, then R2 alternates three times and is left
-; at 07h.
+; VDPOK: 1920 names at 2000h, alternate
+; R2=0Bh/07h three times, nominal waits.
+; Mask 0Ch selects 2000h/1000h. Leave
+; 07h, not saved state. Answer or LOOK.
+; Paging at 80 cols, not cold default.
+
 TVPAGE: CALL    TBEGIN
         DB      35,"VDPPAGE","PICO9918 page select: R2 07h and 0Bh",0
         LD      A,(VDPOK)
@@ -804,15 +897,13 @@ TVPG5:  PUSH    BC
 VPAGE2  EQU     $2000
 VPG2T:  DB      "PAGE 2: NAMES AT 2000h, R2 = 0Bh ",0
 
-; ---- T36 F18A identity and vertical scroll ------------------------------------
+; With VDPOK, read locked SR1, unlock
+; then SR1/SR14. If SR1 passes, request
+; VR28 scroll, then 0 and VR50 reset.
+; R2=04h means 1000h under both page
+; masks, 0Ch locked/0Fh unlocked.
+; VREGS restores the diagnostic table.
 
-; Unlock as the F18A does (1Ch to register 57, twice), read status registers
-; 1 (identity) and 14 (version) through VR15, set VR28 to 8 to scroll the
-; 80-column text up one row, then clear VR28 and write VR50 bit 7, which
-; resets every register and locks them again. Registers 0-7 are then set
-; back to TEC-OS's 80-column values. Unlocked, the PICO9918 decodes R2 with
-; mask 0Fh instead of 0Ch, so the names are selected with R2 = 04h, which
-; means 1000h under either mask.
 TF18A:  CALL    TBEGIN
         DB      36,"F18A   ","F18A identity, version and vertical scroll",0
         LD      A,(VDPOK)
@@ -823,7 +914,7 @@ TF18A:  CALL    TBEGIN
         CALL    PRI
         DB      "no PICO9918",0
         JP      REND
-TF181:  LD      A,1             ; locked: SR1 must not be readable
+TF181:  LD      A,1             ; locked-path SR1
         CALL    VSTAT
         LD      (SAVE),A
         CALL    VUNLOCK
@@ -833,6 +924,11 @@ TF181:  LD      A,1             ; locked: SR1 must not be readable
         LD      A,14
         CALL    VSTAT
         LD      (SAVE+2),A
+
+; E0h mask accepts E0h-FFh. The report's
+; E0h-EFh differs (KE401). Intended
+; compatible range remains unresolved.
+
         LD      A,(SAVE+1)
         AND     $E0
         CP      $E0
@@ -865,14 +961,19 @@ TF182:  LD      A,$04           ; names at 1000h under either mask
         CALL    VISUAL
         DB      "Did the text move up one row, the top row wrapping to the bottom?",0
         LD      (SAVE+3),A
-        LD      A,$80           ; VR50 bit 7: reset the registers, locked
+        LD      A,$80           ; request VR50 reset
         LD      C,50
         CALL    VREG
         LD      A,1
         CALL    VSTAT
         LD      (SAVE+4),A
         CALL    VREGS
-        LD      A,(SAVE+1)      ; still unlocked if SR1 reads back
+
+; Saved unlocked SR1 equal -> FAIL.
+; Else VISUAL's answer. Inequality alone
+; is not proof of full reset or lock.
+
+        LD      A,(SAVE+1)
         LD      HL,SAVE+4
         CP      (HL)
         LD      A,RFAIL
@@ -903,7 +1004,10 @@ TF183:  CALL    RESULT
         DB      " STILL UNLOCKED",0
         JP      REND
 
-; The F18A unlock: value 1Ch to register 57, twice in a row.
+; R57=1Ch twice, then tail-return.
+; Uses AF/C, keeps B/DE/HL. Later reads
+; test the response, not return alone.
+
 VUNLOCK:LD      C,57
         LD      A,$1C
         CALL    VREG

@@ -1,23 +1,23 @@
-; DEMO.COM: the TEC-1G's hardware. A beep, then until a key is pressed: a
-; title on the 20 x 4 LCD with the time on its last row when a DS1302 clock
-; answers, a hex counter on the 7-segment digits, a moving rainbow on the
-; 8 x 8 LEDs and, on a PICO9918, colour bars with a bouncing ball in
-; Graphics I that takes a random colour at each bounce. The screen goes back
-; to the console when it stops. The segment patterns, the LED scan and the
-; random numbers are its own: the ROM drives neither of those displays.
+; DEMO.COM: beep, show a hex counter and an LED rainbow, and move a ball
+; over PICO9918 colour bars until a nonzero console key arrives. LCD row 3
+; shows the time while RTC reads succeed. Requires TNA and ABI major 5.
+; Segment patterns, LED multiplexing and random state are local; ROM scans
+; the six digits. Video ownership is cooperative; VDP address pairs are not
+; interrupt-atomic.
+; ABI calls use this stack and may destroy registers not named as results.
 %INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
-HWSVC   EQU     ABICALL         ; the numbered services
-VDPDAT  EQU     $BE
-VDPCTL  EQU     $BF
-LEDSEL	EQU	$05		; 8 x 8 matrix: row select, then the colours
-LEDR	EQU	$06		; red, green and blue columns
+HWSVC   EQU     ABICALL         
+
+
+LEDSEL	EQU	$05		
+LEDR	EQU	$06		
 LEDG	EQU	$F8
 LEDB	EQU	$F9
 
         ORG     $0100
-        LD      HL,ABITAB       ; TEC-OS's table
+        LD      HL,ABITAB       
         LD      DE,ABITAG
         LD      B,3
 CHKTAG: LD      A,(DE)
@@ -26,11 +26,13 @@ CHKTAG: LD      A,(DE)
         INC     HL
         INC     DE
         DJNZ    CHKTAG
-	LD	A,(ABIMAJ)	; another major has other numbers
-	CP	5		; exactly: a later major may renumber
+	LD	A,(ABIMAJ)	; exact major: service numbers can move
+	CP	5		
 	JP	NZ,NOHW
 
-	LD	C,TNINFO	; which devices answered
+; INFO reads flags, not devices: PICO/RTC presence comes from cold boot;
+; GLCD presence and video claim are current. Save this mixed snapshot.
+	LD	C,TNINFO	
         CALL    HWSVC
         LD      A,B
         LD      (DEVS),A
@@ -50,16 +52,18 @@ CHKTAG: LD      A,(DE)
         CALL    YESNO
         LD      DE,KEYMSG
         CALL    PRINT
-        LD      B,120           ; TONE: about 1 kHz for 0.2 s
+; About 1 kHz for 0.2 s at 4 MHz; service overhead and interrupts affect it.
+        LD      B,120           
         LD      DE,400
-	LD	C,TNTONE	; the beep
+	LD	C,TNTONE	
         CALL    HWSVC
 
-        LD      HL,LCDTXT       ; the LCD's four rows
+; Four 20-character LCD rows; save loop state across each service call.
+        LD      HL,LCDTXT       
         LD      B,0
 LCDLP:  PUSH    BC
         PUSH    HL
-	LD	C,TNLCD		; row B, 20 characters from HL
+	LD	C,TNLCD		
         CALL    HWSVC
         POP     HL
         LD      DE,20
@@ -70,16 +74,20 @@ LCDLP:  PUSH    BC
         CP      4
         JR      NZ,LCDLP
 
-        LD      A,(DEVS)        ; claim the PICO9918 if there is one
+; Claim only when the saved PICO bit is set. The client does not check the
+; result; it relies on the ROM accepting a valid present-device claim.
+        LD      A,(DEVS)        
         AND     2
         JR      Z,LOOP
         LD      B,1
-	LD	C,TNVIDEO	; B = 1: the claim, then the ports are ours
+	LD	C,TNVIDEO	
         CALL    HWSVC
         LD      A,1
         LD      (CLAIMED),A
         CALL    VDPSET
 
+; FR counts loops, not video frames. Read the clock every 32 iterations;
+; scan digits and LEDs once per pass, then poll for nonzero BDOS 6 input.
 LOOP:   LD      HL,FR
         INC     (HL)
         LD      A,(HL)
@@ -87,31 +95,33 @@ LOOP:   LD      HL,FR
         CALL    Z,CLOCK
         CALL    COUNT
         CALL    MKDIG
-        LD      HL,DIGBUF       ; DIGITS: one scan
-	LD	C,TNDIGIT	; six patterns from HL
+        LD      HL,DIGBUF       
+	LD	C,TNDIGIT	
         CALL    HWSVC
         CALL    MKLED
-	LD	HL,LEDBUF	; one scan of the LEDs
-	CALL	LEDSCAN		; no hardware service does them
+	LD	HL,LEDBUF	
+	CALL	LEDSCAN		
         LD      A,(CLAIMED)
         OR      A
         CALL    NZ,BALL
-        LD      E,$FF           ; stop on any key
+        LD      E,$FF           
         LD      C,6
         CALL    BDOS
         OR      A
         JR      Z,LOOP
 
-        LD      HL,ZEROS        ; digits and LEDs off
-	LD	C,TNDIGIT	; a dark pass
+; Zero scans darken digits and LEDs. Release a claimed PICO; text restoration
+; depends on the ROM's active console and driver, not a full state rollback.
+        LD      HL,ZEROS        
+	LD	C,TNDIGIT	
         CALL    HWSVC
         LD      HL,ZEROS
-	CALL	LEDSCAN		; a dark pass
-        LD      A,(CLAIMED)     ; give the screen back to the console
+	CALL	LEDSCAN		
+        LD      A,(CLAIMED)     
         OR      A
         JR      Z,DONE
         LD      B,0
-	LD	C,TNVIDEO	; B = 0: release, and text comes back
+	LD	C,TNVIDEO	
         CALL    HWSVC
 DONE:   LD      DE,BYE
         JP      PRINT
@@ -130,15 +140,14 @@ YESNO:  PUSH    AF
         LD      DE,NOMSG
         JR      PRINT
 
-; ---- Clock ---------------------------------------------------------------------
-
-; LCD row 3 = the DS1302's time, when there is one.
+; Try RTC only if INFO saw it at cold boot. Each read probes again; failure
+; leaves row 3 alone. A successful read supplies its HH:MM:SS display.
 CLOCK:  LD      A,(DEVS)
         AND     8
         RET     Z
-        LD      HL,TIME         ; RTC: seconds, minutes, hours, ...
+        LD      HL,TIME         
         LD      B,0
-	LD	C,TNRTC		; B = 0: read
+	LD	C,TNRTC		
         CALL    HWSVC
         RET     NZ
         LD      HL,CLKROW+9
@@ -150,11 +159,12 @@ CLOCK:  LD      A,(DEVS)
         INC     HL
         LD      A,(TIME)
         CALL    BCD2
-        LD      HL,CLKROW       ; LCDROW 3
+        LD      HL,CLKROW       
         LD      B,3
-	LD	C,TNLCD		; the last row
+	LD	C,TNLCD		
         JP      HWSVC
-; (HL), (HL+1) = the two BCD digits of A; HL moves past them.
+; BCD2 writes both nibbles of A as ASCII and advances HL by two;
+; BCD1 writes one. Neither validates BCD.
 BCD2:   PUSH    AF
         RRCA
         RRCA
@@ -167,8 +177,6 @@ BCD1:   AND     $0F
         LD      (HL),A
         INC     HL
         RET
-
-; ---- 7-segment counter ------------------------------------------------------
 
 COUNT:  LD      HL,CNT
         INC     (HL)
@@ -202,20 +210,19 @@ MKDL:   PUSH    BC
         RET
 ; The low four bits of A as a segment pattern at DE, which moves on. Destroys
 ; AF, BC and HL.
-SEG:	AND	$0F		; one hex digit
+SEG:	AND	$0F		
 	LD	C,A
-	LD	B,0		; BC = the digit
+	LD	B,0		
 	LD	HL,SEGTAB
-	ADD	HL,BC		; the digit's own pattern
+	ADD	HL,BC		
 	LD	A,(HL)
-	LD	(DE),A		; into the caller's buffer
+	LD	(DE),A		
 	INC	DE
 	RET
 
-; ---- 8 x 8 rainbow ----------------------------------------------------------
-
-; Each LED gets colour (row + column + phase) mod 8, with 0 shown as white:
-; bit 0 red, bit 1 green, bit 2 blue. The phase moves every 8 frames.
+; Build eight RGB triples: colour = (row + column + phase) mod 8; zero is white.
+; Bits 0/1/2 select red/green/blue. Phase advances every eight loop iterations,
+; not at a measured display rate.
 MKLED:  LD      A,(FR)
         RRCA
         RRCA
@@ -224,10 +231,10 @@ MKLED:  LD      A,(FR)
         LD      (PH),A
         LD      HL,LEDBUF
         LD      (LPTR),HL
-        LD      D,0             ; row
-MKLR:   LD      BC,0            ; B red, C green, H blue
+        LD      D,0             
+MKLR:   LD      BC,0            
         LD      H,0
-        LD      E,7             ; column, from the right
+        LD      E,7             
 MKLC:   LD      A,(PH)
         ADD     A,D
         ADD     A,E
@@ -264,34 +271,33 @@ MKL3:   DEC     E
         JR      NZ,MKLR
         RET
 
-; One pass over the eight rows of red, green and blue bytes at HL, each row lit
-; for about 0.4 ms, then all off. Each row's colours go out with the rows dark
-; from the pass before. Destroys AF, BC and HL.
+; Scan eight RGB triples at HL, darkening each row before the next.
+; Entry assumes rows already dark; it does not blank before the first RGB.
+; At 4 MHz each delay is about 0.4 ms, subject to interrupt/NMI jitter.
+; Returns all rows dark; destroys AF, BC and HL.
 LEDSCAN:
-	LD	C,1		; the row's select bit
-LEDSL:	LD	A,(HL)		; red
+	LD	C,1		
+LEDSL:	LD	A,(HL)		
 	OUT	(LEDR),A
 	INC	HL
-	LD	A,(HL)		; green
+	LD	A,(HL)		
 	OUT	(LEDG),A
 	INC	HL
-	LD	A,(HL)		; blue
+	LD	A,(HL)		
 	OUT	(LEDB),A
 	INC	HL
-	LD	A,C		; the row lights
+	LD	A,C		
 	OUT	(LEDSEL),A
-	LD	B,128		; about 0.4 ms at 4 MHz
+	LD	B,128		
 LEDSD:	DJNZ	LEDSD
-	XOR	A		; dark before the next row's colours
+	XOR	A		
 	OUT	(LEDSEL),A
 	SLA	C
-	JR	NC,LEDSL	; the bit has left after the eighth row
+	JR	NC,LEDSL	
 	RET
 
-; ---- PICO9918 Graphics I ----------------------------------------------------
-
-; Graphics I: names 1800h, colours 2000h, patterns 0000h, sprite attributes
-; 1B00h, sprite patterns 3800h, 16 x 16 sprites, black border.
+; With video claimed, Graphics I: names 1800h, colours 2000h, patterns 0000h,
+; sprite attributes 1B00h, sprite patterns 3800h, 16 x 16 sprites, black border.
 VDPSET: LD      HL,VDPREGS
         LD      C,$80
 VDPR:   LD      A,(HL)
@@ -303,7 +309,7 @@ VDPR:   LD      A,(HL)
         LD      A,C
         CP      $88
         JR      NZ,VDPR
-        LD      HL,$0000        ; patterns: every eighth one solid, the rest blank
+        LD      HL,$0000        
         CALL    VWA
         LD      D,0
 VPAT:   LD      A,D
@@ -316,7 +322,7 @@ VPAT2:  OUT     (VDPDAT),A
         DJNZ    VPAT2
         INC     D
         JR      NZ,VPAT
-        LD      HL,$2000        ; colours: eight bars, then black
+        LD      HL,$2000        
         CALL    VWA
         LD      HL,BARS
         LD      B,32
@@ -324,12 +330,12 @@ VCOL:   LD      A,(HL)
         OUT     (VDPDAT),A
         INC     HL
         DJNZ    VCOL
-        LD      HL,$1800        ; names: bars four columns wide
+        LD      HL,$1800        
         CALL    VWA
         LD      D,24
 VNR:    LD      E,0
 VNC:    LD      A,E
-        AND     $1C             ; (column / 4) * 8: a solid pattern in group column / 4
+        AND     $1C             
         ADD     A,A
         OUT     (VDPDAT),A
         INC     E
@@ -338,7 +344,7 @@ VNC:    LD      A,E
         JR      NZ,VNC
         DEC     D
         JR      NZ,VNR
-        LD      HL,$3800        ; the ball
+        LD      HL,$3800        
         CALL    VWA
         LD      HL,BALLPAT
         LD      B,32
@@ -346,7 +352,7 @@ VBP:    LD      A,(HL)
         OUT     (VDPDAT),A
         INC     HL
         DJNZ    VBP
-        LD      HL,$1B00        ; one sprite, white, then the end marker
+        LD      HL,$1B00        
         CALL    VWA
         LD      A,(BY)
         OUT     (VDPDAT),A
@@ -360,7 +366,8 @@ VBP:    LD      A,(HL)
         OUT     (VDPDAT),A
         RET
 
-; Move the ball two pixels and bounce it off the edges.
+; Move each axis by its signed two-pixel step, with bounds 240/176.
+; A bounce on either axis chooses one new colour, 8-15, for this loop.
 BALL:   LD      HL,BX
         LD      DE,DX
         LD      C,240
@@ -380,7 +387,7 @@ BALL:   LD      HL,BX
         RET     Z
         XOR     A
         LD      (BOUNCE),A
-	CALL	RANDOM		; a new colour, 8-15
+	CALL	RANDOM		
         AND     7
         OR      8
         PUSH    AF
@@ -389,28 +396,29 @@ BALL:   LD      HL,BX
         POP     AF
         OUT     (VDPDAT),A
         RET
-; The next of the xorshift16 (7, 9, 8) numbers, period 65,535 from any nonzero
-; seed. Returns it in HL, with its low byte in A too. Destroys F.
-RANDOM:	LD	HL,(SEED)	; the last number
-	LD	A,H		; x ^= x << 7, as two rotates through carry
+; The xorshift16 (7, 9, 8) recurrence has period 65,535 for nonzero state.
+; Save the next state; return HL and A = L. Destroys F.
+RANDOM:	LD	HL,(SEED)	
+	LD	A,H		
 	RRA
 	LD	A,L
 	RRA
 	XOR	H
-	LD	H,A		; the first step's high byte
-	LD	A,L		; x ^= x >> 9
+	LD	H,A		
+	LD	A,L		
 	RRA
 	LD	A,H
 	RRA
 	XOR	L
-	LD	L,A		; the second step's low byte
-	XOR	H		; x ^= x << 8
+	LD	L,A		
+	XOR	H		
 	LD	H,A
-	LD	(SEED),HL	; for the next call
-	LD	A,L		; the byte callers use
+	LD	(SEED),HL	
+	LD	A,L		
 	RET
 
-; (HL) += (DE), reversing (DE) at 0 and at C.
+; Add (DE) to (HL); reverse direction and set BOUNCE at result 0 or >= C.
+; Actual positions are even, steps +/-2, bounds 240/176. Overshoot is not clamped.
 STEP:   LD      A,(DE)
         ADD     A,(HL)
         LD      (HL),A
@@ -424,15 +432,13 @@ STEPR:  LD      A,(DE)
         LD      (BOUNCE),A
         RET
 
-; Set the VRAM write address to HL.
+; Set VRAM write address HL, low byte then high | 40h; the pair is not atomic.
 VWA:    LD      A,L
         OUT     (VDPCTL),A
         LD      A,H
         OR      $40
         OUT     (VDPCTL),A
         RET
-
-; ---- Data -------------------------------------------------------------------
 
 ABITAG: DB      "TNA"
 TITLE:  DB      13,10,"TEC-OS hardware services demo",13,10,"$"
@@ -477,5 +483,6 @@ FR:     DB      0
 PH:     DB      0
 CNT:    DB      0,0,0
 LPTR:   DW      0
+; Distribution checks these final 6 + 24 zero-byte reserves.
 DIGBUF: DS      6
 LEDBUF: DS      24

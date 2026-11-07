@@ -1,48 +1,41 @@
-; The PICO9918 on the TEC-Deck video
-; card: what the ROM keeps of it, the
-; probe. Port BEh is VRAM data and BFh
-; is control. The console and the
-; graphics entries are the ROM's, in
-; pico.asm.
+; PICO9918 presence probe. BEh is VRAM
+; data, BFh control. Console and
+; graphics entries are in pico.asm.
 
-VDPDAT EQU $BE
-VDPCTL EQU $BF
 
-; Whether VRAM answers with what was
-; written, at its last address, with two
-; patterns that between them test every
-; bit. Returns Z when present. Destroys
-; AF and B.
+; Probe VRAM 3FFFh with 5Ah then A5h.
+; First mismatch returns NZ. Z means
+; both matched at that one address, not
+; full-device conformance. Cold caller
+; has executed DI. Overwrites the byte.
+; Changes AF/B.
 
 TMSINIT:
-  ld a,$5A       ; alternating bits,
-                 ; then their inverse
+  ld a,$5A       ; Complementary
+                 ; patterns.
   call TMSTRY
-  ret nz         ; one failure is enough
+  ret nz
   ld a,$A5
 
-; Write A to VRAM address 3FFFh and read
-; it back: Z if it came back.
+; Write pattern A to VRAM 3FFFh and read
+; it back. Return A=readback, B=pattern,
+; flags from CP B. Keeps C, DE, HL and
+; I. Raw pairs have no local interrupt
+; guard. VRAM and address/prefetch state
+; are not restored.
 
 TMSTRY:
-  ld b,a         ; the pattern, across
-                 ; the addressing
-  ld a,$FF       ; the address's low
-                 ; byte, for both
-                 ; directions
+  ld b,a
+  ld a,$FF
   out (VDPCTL),a
-  ld a,$3F+$40   ; its high bits, and
-                 ; the write flag
+  ld a,$3F+$40
   out (VDPCTL),a
-  ld a,b         ; the pattern goes to
-                 ; VRAM
+  ld a,b
   out (VDPDAT),a
-  ld a,$FF       ; the same address, to
-                 ; read
+  ld a,$FF
   out (VDPCTL),a
-  ld a,$3F       ; its high bits, with
-                 ; no write flag
+  ld a,$3F
   out (VDPCTL),a
-  in a,(VDPDAT)  ; what VRAM holds now
-  cp b           ; Z: the VDP has it
+  in a,(VDPDAT)
+  cp b
   ret

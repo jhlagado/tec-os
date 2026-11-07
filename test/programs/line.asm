@@ -1,5 +1,5 @@
-; LINE: reads a line from the console by BDOS function 10, then prints GOT
-; and returns.
+; LINE: call BDOS 10 with a 20-character buffer; print GOT on return.
+; Leading ^C warm boots before GOT. The chain tests use this input wait.
 
 BDOS    EQU     $0005
 

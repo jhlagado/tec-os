@@ -1,357 +1,330 @@
-; The BDOS's errors and console output:
-; the error messages and their mode
-; (function 45), the block check, and
-; the console's characters, tabs, echo
-; and ^P. Included after bdoslog.asm by
-; rom.asm.
+; BDOS error handling, allocation-block
+; bounds and shared console output/echo
+; helpers. ERRMODE is set by function
+; 45.
 
-; The zero-ended text at HL to the
-; console, through OUTCHAR, so a tab is
-; expanded and ^S and ^P are taken.
-; Returns HL at the 0. Changes A, C and
-; what OUTCHAR changes.
+; Print zero-terminated text at HL
+; through OUTCHAR with tab expansion and
+; ^S/^P checking. Return HL at the zero.
+; Clobbers A, C and OUTCHAR clobbers.
+; Save the scan pointer across output.
 
 ERRTEXT:
-  ld a,(hl)      ; the next character
+  ld a,(hl)      ; next text byte
   or a
-  ret z          ; the 0: the text's end
+  ret z          ; zero terminator
   inc hl
-  push hl        ; the place, kept over
-                 ; the output
+  push hl        ; save scan position
   ld c,a
   call OUTCHAR
   pop hl
   jr ERRTEXT
 
-; BDOS error 1, ": Bad Sector", for a
-; disk read or write that failed or a
-; block reference past the drive's end;
-; it falls into BDERR.
+; Bad-sector error 1: ERRBAD in HL, B=1,
+; then fall through to BDERR. Disk I/O
+; failures and allocation references
+; beyond DSM use this entry.
 
 BADSECT:
-  ld hl,ERRBAD   ; its message
-  ld b,1         ; disk I/O
+  ld hl,ERRBAD   ; error message suffix
+  ld b,1         ; bad-sector code 1
 
-; A BDOS error, the message at HL and
-; its code in B, as function 45's mode
-; says: returned to the program (FFh),
-; said and returned (FEh), or said, a
-; key waited for and the program ended
-; with the rest of a chained line
-; (default). A returned error leaves a
-; chained line alone (KD-181). It never
-; returns to its caller: RETWORD gives
-; the program A = L = FFh and B = H =
-; the code.
+; Handle a BDOS error: HL=message and
+; B=code. ERRMODE=FFh returns silently.
+; FEh prints through OUTCHAR before
+; returning. Its normal key handling can
+; abort output. Returned errors exit
+; nonlocally through RETWORD with
+; A=L=FFh and B=H=code, preserving CHPOS
+; (KD-181).
+; Other modes print, read a key and
+; enter CHDROP to discard the chain. The
+; normal warm-boot hook ends the
+; transient. No path resumes the
+; internal caller.
 
 BDERR:
 
-; function 45's mode
-
   ld a,(ERRMODE)
-  cp $FE         ; FEh or FFh: the error
-                 ; returned
-  jr c,BDDEF     ; the default
-  push bc        ; the code, kept over
-                 ; the message
+  cp $FE         ; FEh/FFh return modes
+  jr c,BDDEF     ; other modes: abort
+  push bc        ; save error code
 
-; FEh: the message first
+; FEh prints before the error return.
 
   call z,DISKMSG
   pop bc
-  ld h,b         ; H = the code, A = L =
-                 ; FFh
+  ld h,b         ; H: code, L: FFh
   ld l,$FF
   jp RETWORD
 
 BDDEF:
   call DISKMSG
-  call GETCHAR   ; a key, then the
-                 ; program ends
-  jp CHDROP      ; with the rest of a
-                 ; chained line
+  call GETCHAR   ; key before abort
+  jp CHDROP      ; discard chained rest
 
-; Reject corrupt allocation references
-; before vector indexing or the 16-bit
-; block-to-record shift. DE is the
-; block; preserve it and HL/BC. IX
-; identifies the current DPB on return.
-; Invalid references take BADSECT's
-; error 1.
+; Validate allocation block DE against
+; current DPB.DSM before block-to-record
+; scaling. A value above DSM enters
+; BADSECT error 1. Zero and DSM are
+; valid here.
+; Keeps DE, HL and BC on return. IX =
+; current DPB. BITPTR uses BLKPAST
+; directly for its tolerant vector path.
 
 CHKBLK:
-  call BLKPAST   ; carry if past the
-                 ; end; IX = the DPB
-  jr c,BADSECT   ; past the drive's end:
-                 ; error 1
+  call BLKPAST   ; C: DE past DSM
+  jr c,BADSECT   ; invalid: error 1
   ret
 
-; Carry if block DE is past the end of
-; the current drive. Sets IX to its DPB.
-; Changes A; keeps BC, DE and HL.
+; Compare unsigned DE with DPB.DSM at
+; offsets 5/6. Carry set iff DE>DSM.
+; Set IX=DPB. Keep BC, DE and HL.
+; Clobber A and flags.
 
 BLKPAST:
   ld ix,(DPBPTR)
-  ld a,(ix+5)    ; DSM, the drive's last
-                 ; block,
-  cp e           ; less DE: carry if DE
-                 ; is past it
-  ld a,(ix+6)    ; its high byte
+  ld a,(ix+5)    ; DSM low byte
+  cp e           ; low-byte borrow
+  ld a,(ix+6)    ; DSM high byte
   sbc a,d
   ret
 
-; The message at HL after "Bdos Err On
-; X", on a new line, X the current drive
-; (CURDRV). Changes A, C, HL and what
-; OUTCHAR changes.
+; Print ERRHEAD, drive letter 'A'+CURDRV
+; and the suffix at HL through ERRTEXT.
+; Save its pointer across prefix output.
+; Clobbers A, C, HL and OUTCHAR
+; clobbers.
 
 DISKMSG:
-  push hl        ; the message, kept
-  ld hl,ERRHEAD  ; CR, LF and "Bdos Err
-                 ; On "
+  push hl        ; save suffix pointer
+  ld hl,ERRHEAD  ; CR/LF and error
+                 ; prefix
   call ERRTEXT
-  ld a,(CURDRV)  ; the drive's letter
-  add a,'A'      ; drive 0 is A
+  ld a,(CURDRV)  ; current drive number
+  add a,'A'      ; A-based drive letter
   ld c,a
   call OUTCHAR
   pop hl
-  jr ERRTEXT     ; then the message
+  jr ERRTEXT     ; print suffix
 
-; The next key, in A, not echoed: one a
-; status check read and kept (PENDING),
-; or else the BIOS's console input,
-; which waits for one. Changes A and
-; what the BIOS's input changes.
+; Return an unechoed byte in A. Consume
+; PENDCHR first when PENDING is nonzero,
+; clearing PENDING. Otherwise tail-jump
+; through RAM BIOCIN, which normally
+; waits for input.
+; Clobbers A, flags and input-hook
+; clobbers.
 
 GETCHAR:
 
-; a key kept by a status check?
-
   ld a,(PENDING)
   or a
-  jp z,BIOCIN    ; none kept: wait for
-                 ; one
-  xor a          ; the kept key, taken
+  jp z,BIOCIN    ; normal BIOS wait
+  xor a          ; consume pending byte
   ld (PENDING),a
   ld a,(PENDCHR)
   ret
 
-; A not 0 if a key is ready: one kept (A
-; = 1), or one the BIOS's console status
-; sees through the RAM jump table (FFh).
-; Changes A and what the BIOS's status
-; changes.
+; Return nonzero A for a pending BDOS
+; byte without consuming it. Otherwise
+; tail-jump through RAM BIOCST for its
+; normal FFh/0 status. BIOS status may
+; fill RXCHAR/RXFULL.
+; Clobbers A and status-hook clobbers.
 
 CONSTAT:
 
-; 1 with a key kept
-
   ld a,(PENDING)
   or a
   ret nz
-  jp BIOCST      ; else the BIOS's FFh
-                 ; or 0
+  jp BIOCST      ; RAM status hook
 
-; As CONSTAT, but through the ROM's
-; BCONST, not the RAM jump table, so
-; that no cursor is drawn: the check
-; made during output.
+; Output-time status: if PENDING is
+; nonzero return its value. Otherwise
+; jump directly to ROM BCONST. This
+; bypasses RAM BIOCST and its cursor
+; wrapper. BCONST can poll devices and
+; buffer BIOS input without drawing a
+; cursor.
 
 CONSTQ:
 
-; 1 with a key kept
-
   ld a,(PENDING)
   or a
   ret nz
-  jp BCONST      ; else FFh or 0, no
-                 ; cursor drawn
+  jp BCONST      ; ROM status, no cursor
 
-; The character in C to the console as
-; functions 2 and 9 send it: a tab as
-; spaces to the next column that is a
-; multiple of 8, and before each
-; character a key waiting is taken
-; (OUTONE). Changes A, C and what the
-; BIOS's calls change.
+; Output character C as functions 2/9
+; do. Non-tabs enter OUTONE. TAB emits
+; at least one space through OUTONE
+; until COLUMN modulo 8 is 0. OUTONE
+; checks input before each emitted byte.
+; Clobbers A, C and BIOS-call clobbers.
+; COLUMN is an 8-bit logical output
+; count.
 
 OUTCHAR:
   ld a,c
   cp TAB
-  jr nz,OUTONE   ; not a tab: as it is
+  jr nz,OUTONE   ; non-tab output
 
 TABLOOP:
-  ld c,SPACE     ; a tab: spaces to a
-                 ; multiple of 8
+  ld c,SPACE     ; emit tab space
   call OUTONE
-  ld a,(COLUMN)  ; as ECHORAW has moved
-                 ; it on
+  ld a,(COLUMN)  ; updated logical
+                 ; column
   and 7
-  jr nz,TABLOOP  ; not yet at a tab stop
+  jr nz,TABLOOP  ; until column mod8=0
   ret
 
-; One character, C, to the console with
-; no tab expanded: a key waiting is
-; taken first (CHKKEY: ^S pauses, ^P
-; turns the printer echo on or off, any
-; other is kept), then ECHORAW sends it.
+; Output C without tab expansion. CHKKEY
+; handles ready input: ^S pauses, ^P
+; toggles printer echo and ordinary keys
+; are staged. Save BC over that check,
+; then enter ECHORAW.
 
 OUTONE:
-  push bc        ; the character, kept
-                 ; over the key check
-  call CHKKEY    ; ^S, ^P or a key kept
+  push bc        ; save output byte
+  call CHKKEY    ; handle ready key
   pop bc
   jr ECHORAW
 
-; One character, C, echoed with no tab
-; expanded and no key taken: the
-; console's status is asked first
-; (CONSTAT), its answer unused. It falls
-; into ECHORAW.
+; Echo C without tab expansion or CHKKEY
+; consumption. Call CONSTAT with BC
+; saved. Discard its result and fall
+; through to ECHORAW. The status call
+; may buffer BIOS input.
 
 ECHOONE:
-  push bc        ; the character, kept
-                 ; over the status
-  call CONSTAT   ; the status, its
-                 ; answer unused
+  push bc        ; save echo byte
+  call CONSTAT   ; status result unused
   pop bc
 
-; The character in C to the printer
-; while ^P's echo is on, then to the
-; console as it is. COLUMN is moved for
-; it first (ECHOCOL), so nothing needs C
-; after a BIOS call: a CONOUT or LIST
-; put in the RAM jump table need not
-; keep it, as CP/M 2.2's need not.
-; Changes A, C and what the BIOS's calls
-; change.
+; Output raw character C. Update logical
+; COLUMN through ECHOCOL before BIOS
+; hooks can clobber C.
+; With LISTEN nonzero save BC across
+; BIOLST to retain C for console output.
+; Then tail-jump through BIOCOT.
+; Clobbers A, C and BIOS-call clobbers.
 
 ECHORAW:
-  call ECHOCOL   ; COLUMN moved for C
-  ld a,(LISTEN)  ; 1 while ^P's echo is
-                 ; on
+  call ECHOCOL   ; account before hooks
+  ld a,(LISTEN)  ; printer echo enabled
   or a
-  jr z,ECHOCON   ; off: the console
-                 ; alone
-  push bc        ; the character, kept
-                 ; over the printer
+  jr z,ECHOCON   ; console only
+  push bc        ; save byte for console
   call BIOLST
   pop bc
 
 ECHOCON:
-  jp BIOCOT      ; the console, through
-                 ; the RAM jump table
+  jp BIOCOT      ; RAM console hook
 
-; COLUMN moved for the character in C: 0
-; after CR, back one after BS, on one
-; after a character from a space up,
-; unchanged after another control.
-; Changes A; keeps C.
+; Update COLUMN for C: CR sets 0, BS
+; decrements with a floor at 0, bytes
+; >=SPACE increment it and other
+; controls leave it unchanged. The byte
+; can wrap at 256, including for DEL.
+; Keep C. Clobber A and flags.
 
 ECHOCOL:
-  ld a,c         ; the column it leaves
+  ld a,c         ; character to account
   cp CR
-  jr z,COLZERO   ; CR: column 0
+  jr z,COLZERO   ; CR: reset column
   cp BACKSP
-  jr z,COLBACK   ; BS: back one
+  jr z,COLBACK   ; BS: saturating back
   cp SPACE
-  ret c          ; another control: no
-                 ; column
-  ld a,(COLUMN)  ; a character shown: on
-                 ; one
+  ret c          ; other control: no
+                 ; move
+  ld a,(COLUMN)  ; count displayed byte
   inc a
   ld (COLUMN),a
   ret
 
-; The character in C echoed, as line
-; input and function 1 echo it: a tab as
-; spaces to the next multiple of 8, any
-; other through ECHOONE. No key is
-; taken. Changes A, C and what the
-; BIOS's calls change.
+; Echo C through ECHOONE. Expand TAB as
+; at least one space until COLUMN modulo
+; 8 is 0. No GETCHAR/CHKKEY consumption
+; occurs, though ECHOONE calls CONSTAT.
+; Clobbers A, C and BIOS-call clobbers.
 
 ECHOCHAR:
   ld a,c
   cp TAB
-  jr nz,ECHOONE  ; not a tab: as it is
+  jr nz,ECHOONE  ; non-tab echo
 
 ECHOTAB:
-  ld c,SPACE     ; a tab: spaces to a
-                 ; multiple of 8
+  ld c,SPACE     ; emit tab space
   call ECHOONE
-  ld a,(COLUMN)  ; as ECHORAW has moved
-                 ; it on
+  ld a,(COLUMN)  ; updated logical
+                 ; column
   and 7
-  jr nz,ECHOTAB  ; not yet at a tab stop
+  jr nz,ECHOTAB  ; until column mod8=0
   ret
 
-; COLUMN to 0, after a CR. Changes A.
+; Set COLUMN=0 after CR. Changes A.
 
 COLZERO:
-  xor a          ; the screen line's
-                 ; start
+  xor a
   ld (COLUMN),a
   ret
 
-; COLUMN back one, after a BS or an
-; erased character, never below 0.
-; Changes A.
+; Decrement logical COLUMN if nonzero.
+; Leave 0 unchanged. Used by BS
+; accounting and ERASE1. Clobbers A and
+; flags.
 
 COLBACK:
   ld a,(COLUMN)
   or a
-  ret z          ; already at the start
+  ret z          ; zero stays zero
   dec a
   ld (COLUMN),a
   ret
 
-; During output, a key waiting is taken
-; (CONSTQ: no cursor drawn). ^S pauses
-; until the next key, which is taken: ^C
-; ends the program by warm boot, as CP/M
-; 2.2's conbrk does, and any other is
-; dropped. ^P turns the printer echo on
-; or off; any other key is kept for the
-; next console read. Changes A and what
-; the BIOS's status and input change.
+; Poll through CONSTQ without drawing a
+; cursor. Return immediately if no key
+; is ready. Otherwise GETCHAR consumes
+; it.
+; ^S waits for a second key to resume.
+; Only ^C in that second position enters
+; CHDROP to discard the chain and warm
+; boot. Other resume keys are discarded.
+; A first key other than ^S goes to
+; CHKPRN. Clobbers A and
+; status/input-hook clobbers.
 
 CHKKEY:
-  call CONSTQ    ; TEC-OS: the check
-                 ; draws no cursor
+  call CONSTQ    ; quiet ROM status
   or a
-  ret z          ; no key: the output
-                 ; goes on
-  call GETCHAR   ; a key ready: taken
-  cp CTRLS       ; ^S: a pause
+  ret z          ; not ready: continue
+  call GETCHAR   ; consume ready key
+  cp CTRLS       ; ^S: wait for resume
   jr nz,CHKPRN
-  call GETCHAR   ; the next key resumes
-  cp CTRLC       ; ^C: the program ends,
-                 ; with the rest
-  jp z,CHDROP    ; of a chained line
-  ret            ; any other: dropped
+  call GETCHAR   ; consume resume key
+  cp CTRLC       ; resume ^C: abort
+  jp z,CHDROP    ; drop chain, warm boot
+  ret            ; discard resume key
 
-; The key in A, not ^S, during output:
-; ^P turns the printer echo on or off;
-; any other is kept for the next console
-; read. Changes A.
+; Handle output-time key A, already
+; known not to be ^S. ^P enters TOGLIST.
+; Any other byte goes to PENDCHR with
+; PENDING=1 for later input.
+; Clobbers A and flags.
 
 CHKPRN:
   cp CTRLP
-  jr z,TOGLIST   ; ^P: the printer echo
-
-; TEC-OS: any other key is kept for the
+  jr z,TOGLIST   ; ^P: printer toggle
 
   ld (PENDCHR),a
 
-; next console read, as CP/M 2.2 does,
-; so typing during output is not lost.
-
-  ld a,1         ; and marked as kept
+  ld a,1         ; mark pending byte
   ld (PENDING),a
   ret
 
-; ^P: the printer echo (LISTEN) turned
-; on or off. Changes A.
+; Toggle LISTEN bit 0. Initialised state
+; 0/1 represents printer echo off/on.
+; Clobbers A and flags.
 
 TOGLIST:
   ld a,(LISTEN)
@@ -359,18 +332,21 @@ TOGLIST:
   ld (LISTEN),a
   ret
 
-; The character before the cursor erased
-; from the screen, straight through the
-; BIOS (not echoed to the printer), and
-; COLUMN back one. Changes A, C and what
-; the BIOS's output changes.
+; Send BS, SPACE, BS directly through
+; RAM BIOCOT even at COLUMN=0 without
+; printer echo. Reload C for each hook
+; call then enter COLBACK to decrement
+; logical COLUMN with a floor at 0.
+; Clobbers A, C and BIOS-output
+; clobbers. This does not wipe buffer
+; bytes or establish a physical cursor
+; state.
 
 ERASE1:
-  ld c,BACKSP    ; back over it,
-  call BIOCOT    ; through the RAM jump
-                 ; table
-  ld c,SPACE     ; a space over it,
+  ld c,BACKSP    ; first backspace
+  call BIOCOT    ; RAM output hook
+  ld c,SPACE     ; middle space byte
   call BIOCOT
-  ld c,BACKSP    ; and back again
+  ld c,BACKSP    ; final backspace
   call BIOCOT
-  jr COLBACK     ; the column back one
+  jr COLBACK     ; logical column back

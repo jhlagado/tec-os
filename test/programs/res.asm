@@ -1,18 +1,20 @@
-; RES.SVC: a service with no record. Its INIT replaces CONOUT in the RAM BIOS
-; table with a routine that counts the characters passing through it and
-; chains to the entry it replaced; its REMOVE puts that entry back.
+; RES.SVC: count CONOUT characters, then chain the saved RAM BIOS target.
+; INIT hooks without a registry record; REMOVE restores the target.
+; Warm boot keeps the chain; cold boot restores the table. Remove owners LIFO.
 
         ORG     $0100
 HDR:	DB	'D',4,0,1	; removable, format 4 (abi.inc's SVCFMT)
         DW      0,0,0,0         ; REMOVE, size, extra, relocation: the writer's
-        DB      2,0,0           ; MYCO's PUSH, on the BDOS's stack
+        DB      2,0,0           ; declared BDOS/BIOS/CCP stack charge
         DW      0               ; INIT: the writer's
         DB      "RES     "
 
-; Replace CONOUT, the table's fourth entry after WBOOT: (0001h) + 9.
+; (0001h) points to WBOOT's JP entry; CONOUT is three entries on, target +10.
+; Save that target in OLDCO, an executable JP operand. INIT returns HL=0,
+; carry clear. The two-byte target patch is not atomic.
 INIT:   LD      HL,($0001)
         LD      DE,9+1
-        ADD     HL,DE           ; HL = the JP's target in the table
+        ADD     HL,DE           
         LD      E,(HL)
         INC     HL
         LD      D,(HL)
@@ -35,12 +37,14 @@ REMOVE: LD      HL,($0001)
         OR      A
         RET
 
+; The wrapper keeps HL and flags while COUNT wraps at 16 bits, then chains.
+; PUSH uses the actual caller's stack; the saved target has its own clobbers.
 MYCO:   PUSH    HL
         LD      HL,(COUNT)
         INC     HL
         LD      (COUNT),HL
         POP     HL
-        DB      $C3             ; JP to the entry replaced
+        DB      $C3             
 OLDCO:  DW      0
 COUNT:  DW      0
 IMGEND:

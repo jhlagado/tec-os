@@ -4,75 +4,47 @@
       "VTAB: DW GLCPUT,GLCGET,GLCCLR,GLCRST,GLRDR,GLWRR",
       "  DB 0,3, 2,4, 5,3, 8,3, 10,4, 13,3, 16,3, 18,3"
     ],
-    "headers": {
-      "INIT": 16
-    }
+    "headers": {}
   },
   "src/bios.asm": {
     "lines": [],
-    "headers": {
-      "BWRITE": 21
-    }
+    "headers": {}
   },
   "src/boot.asm": {
     "lines": [],
-    "headers": {
-      "RSTENT": 18,
-      "RSLCAP": 22,
-      "PZSWP": 17,
-      "RAMCHK": 17
-    }
+    "headers": {}
   },
   "src/cache.asm": {
     "lines": [],
-    "headers": {
-      "CWRBH": 16,
-      "MVCOPY": 22
-    }
+    "headers": {}
   },
   "src/cpm/bdos.asm": {
     "lines": [],
-    "headers": {
-      "FNLINE": 18
-    }
+    "headers": {}
   },
   "src/cpm/bdosfile.asm": {
     "lines": [],
-    "headers": {
-      "WRESET": 16,
-      "MAKEFCB": 16
-    }
+    "headers": {}
   },
   "src/cpm/bdosfn.asm": {
     "lines": [],
-    "headers": {
-      "FINDENT": 20,
-      "MATCHFCB": 20
-    }
+    "headers": {}
   },
   "src/cpm/bdoslog.asm": {
     "lines": [],
-    "headers": {
-      "LOGIN": 16
-    }
+    "headers": {}
   },
   "src/cpm/bdosrec.asm": {
     "lines": [],
-    "headers": {
-      "ZEROBLK": 17
-    }
+    "headers": {}
   },
   "src/cpm/ccpcmd.asm": {
     "lines": [],
-    "headers": {
-      "CMDCON": 20
-    }
+    "headers": {}
   },
   "src/cpm/ccpfile.asm": {
     "lines": [],
-    "headers": {
-      "CMDDIR": 17
-    }
+    "headers": {}
   },
   "src/loader.asm": {
     "lines": [],
@@ -83,17 +55,15 @@
   "src/pico.asm": {
     "lines": [
       "PITPL: DW TMSPUT,TMSGET,TMSCLR,TMSSET,TMSRDR,TMSWRR,TMSFN",
-      "REGS80: DB $04,$D0,$1000/$400+3,$00,$00,$00,$00,$31",
-      "REGS40: DB $00,$D0,$0800/$400,$00,$00,$00,$00,$31",
-      "REGS32: DB $00,$C0,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31"
+      "REGS80: DB $04,PIR180,$1000/$400+3,$00,$00,$00,$00,$31",
+      "REGS40: DB $00,PIR140,$0800/$400,$00,$00,$00,$00,$31",
+      "REGS32: DB $00,PIR132,$0800/$400,COLOUR/$40,$00,SPRITE/$80,$07,$31"
     ],
     "headers": {}
   },
   "src/services.asm": {
     "lines": [],
-    "headers": {
-      "HWSVID": 16
-    }
+    "headers": {}
   },
   "src/tables.asm": {
     "lines": [
@@ -127,15 +97,10 @@
   },
   "src/cpm/ccpmut.asm": {
     "lines": [],
-    "headers": {
-      "CMDCOPY": 22
-    }
+    "headers": {}
   },
   "src/volsvc.asm": {
     "lines": [],
-    "headers": {
-      "RESEL": 29,
-      "VSMNT": 17
-    }
+    "headers": {}
   }
 }

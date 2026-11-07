@@ -107,12 +107,12 @@ run. A line that fails prints its usual message and the
 next runs.
 
 **The PICO9918 needs no line.** When the VDP answers the ROM's probe and the
-matrix keyboard is fitted, cold boot starts the ROM's console before the banner,
-at 80 columns, and sets the IOBYTE's `CON:` field to `CRT:` (KS39). `CON PICO 40`,
-`CON PICO 32` or `CON PICO 80` changes the width; warm boot keeps it and a reset
-sets 80 again, so a `STARTUP.CMD` line such as `CON PICO 40` chooses the width
-at every reset; on a board with no PICO9918 console the line passes quietly.
-The ROM is one image for every board.
+matrix keyboard is fitted, cold boot starts the ROM's console before the banner
+at 40 columns and sets the IOBYTE's `CON:` field to `CRT:`. `CON PICO 32`,
+`CON PICO 40` and `CON PICO 80` select a width explicitly. Bare `CON PICO` and
+`CON CRT` keep the current width. Warm boot keeps it and reset restores 40;
+a `STARTUP.CMD` width line overrides that default. On a board without the PICO9918
+console the line passes quietly. The ROM is one image for every board.
 
 One card can serve every board: the starter card's `STARTUP.CMD` holds `GLCD.SVC`
 alone. Where there is a GLCD and a matrix keyboard and no PICO9918 console, the
@@ -249,9 +249,9 @@ A client finds a record with `TNFIND` (`docs/rom-services.md`):
 
 Each record's table is defined in a document with its interface version.
 
-### `PICO`, version 3
+### `PICO`, version 4
 
-The ROM's PICO9918 console offers `PICO`, version 3, with its console table
+The ROM's PICO9918 console offers `PICO`, version 4, with its console table
 followed by four words, the graphics entries, and from version 3 a fifth, the
 width. Its table, its record and its state are one 95-byte RAM block, `PIBLK`, in
 the BIOS's state, filled at cold boot from a ROM template and kept by warm boot.
@@ -278,6 +278,26 @@ bytes: `abi.inc` names the record's version byte (`PICOVRB`, 36), the page drawn
 (`PICOTPD`, 41) and the page shown (`PICOTPS`, 42), for a debugger that reads
 them, and the build checks each against the block. The name table,
 the second page, the row table and the registers follow the width at run time.
+
+Version 4 reserves all VRAM `3000h`–`37FFh` against console writes at every
+width. These pixels need not survive a permitted width change: release the
+claim first, re-read the geometry and redraw. A debugger's name-table R2 is
+`0Fh` at 80 columns and `0Ch` at 40 or 32. The public table and state offsets
+remain those of version 3. Width-only clients can still request at least 3;
+a debugger using the version-4 guarantees requests at least 4 and diagnoses
+or falls back on an older record. ABI remains 5.1.
+
+While the caller holds the existing `VIDEO` claim, a supported `PICOREG` write
+to register 1 tracks its IE bit. Raw port writes remain untracked. Restore,
+accepted width selection and ordinary release preserve that tracked bit with
+the current mode's other R1 bits. There is no hardware getter or new owner
+registry. The caller checks conflicting vector ownership before arming.
+
+Real warm boot ends the transient session: hardware IE and its shadow clear
+before `PZINIT` removes a TPA handler, even when the display is unclaimed.
+Quit and abort must clear IE before vector teardown or follow the proved
+disabled-interrupt path into real boot. This contract adds no IRQ handler and
+makes no physical interrupt, wiring or paired-write atomicity guarantee.
 
 ## Removal
 

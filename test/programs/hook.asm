@@ -1,17 +1,14 @@
-; HOOK.COM: replaces WBOOT, CONST, CONIN and CONOUT in the RAM BIOS table
-; with routines that record what passes through them and chain to the
-; entries they replaced, then drives the BDOS:
-;   HOOK    functions 2, 6 and 9 write A, B and CD; function 1 reads a key,
-;           function 6 polls for one, function 10 reads a line, and a second
-;           function 10 waits for ^C.
-;   HOOK E  makes a file on the read-only C:, for the BDOS's error.
-;   HOOK J  ends by JP 0000h.
-;   HOOK B  ends by BDOS function 0.
-; The record is at 4000h, where the test reads it after the warm boot:
-;   4000h   warm boots through the replaced WBOOT
-;   4002h   calls of the replaced CONST (word)
-;   4004h   next free byte of the CONOUT record (word), from 4100h
-;   4006h   next free byte of the CONIN record (word), from 4200h
+; HOOK.COM: log WBOOT, CONST, CONIN and CONOUT, then chain their old RAM
+; BIOS entries. Warm boot keeps the hooks; cold boot restores the table.
+; Hooks and logs occupy the TPA: new programs can overwrite them, and logs
+; have no bounds checks. The test supplies bounded input and output.
+;
+; No tail: BDOS 2/6/9 write ABCD, 1 reads a key, 6 polls, 10 reads twice.
+; A leading ^C on the second line warm boots. Tail J jumps to 0000h; B uses
+; BDOS 0; any other first byte (such as E) attempts MAKE on read-only C:.
+;
+; 4000h: warm-boot byte count. 4002h: CONST word count.
+; 4004h/4006h: next-free CONOUT/CONIN word pointers, initially 4100h/4200h.
 
 BDOS    EQU     $0005
 WBCNT   EQU     $4000
@@ -22,7 +19,7 @@ COREC   EQU     $4100
 CIREC   EQU     $4200
 
         ORG     $0100
-        LD      HL,WBCNT        ; clear the record
+        LD      HL,WBCNT        
         LD      DE,WBCNT+1
         LD      BC,$02FF
         LD      (HL),0
@@ -31,7 +28,7 @@ CIREC   EQU     $4200
         LD      (COPTR),HL
         LD      HL,CIREC
         LD      (CIPTR),HL
-        LD      HL,($0001)      ; HL = the table's WBOOT entry
+        LD      HL,($0001)      
         LD      DE,OLDWB
         LD      BC,MYWB
         CALL    PATCH
@@ -44,7 +41,7 @@ CIREC   EQU     $4200
         LD      DE,OLDCO
         LD      BC,MYCO
         CALL    PATCH
-        LD      A,($0080)       ; a command tail picks the ending
+        LD      A,($0080)       
         OR      A
         JR      Z,CONS
         LD      A,($0082)
@@ -74,7 +71,7 @@ POLL:   LD      E,$FF
         LD      DE,LINE
         LD      C,10
         CALL    BDOS
-        LD      DE,LINE         ; ^C here warm boots
+        LD      DE,LINE         
         LD      C,10
         CALL    BDOS
         RET
@@ -84,8 +81,9 @@ DISK:   LD      DE,FCB
         CALL    BDOS
         RET
 
-; Save the target of the JP at HL+1 to (DE) and point it at BC; HL moves to
-; the next entry.
+; HL -> JP entry, DE -> saved target operand. Save the two target bytes,
+; replace them with BC, and advance HL to the next three-byte entry.
+; DE advances one byte. Installation is not atomic.
 PATCH:  INC     HL
         LD      A,(HL)
         LD      (DE),A
@@ -100,7 +98,7 @@ PATCH:  INC     HL
 
 MYWB:   LD      HL,WBCNT
         INC     (HL)
-        DB      $C3             ; JP to the old entry
+        DB      $C3             
 OLDWB:  DW      0
 
 MYCS:   PUSH    HL

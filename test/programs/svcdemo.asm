@@ -1,6 +1,6 @@
-; SVCDEMO: a library publishing one record, "DEMO" version 2, a table of one
-; entry: A = its count of calls, raised. Assembled with one V_ name set to
-; make each of the failure cases.
+; SVCDEMO: service-loader fixtures. Defaults publish DEMO version 2 with one
+; entry returning its incremented byte count in A. Writer definitions combine
+; valid and failing paths; some deliberately leave side effects after failure.
 %INCLUDE "../../src/abi.inc"
 
         ORG     $0100
@@ -9,23 +9,23 @@ HDR:	DB	'D',SVCFMT,0,FLAGS
         DB      STKB,STKI,STKC
         DW      0               ; INIT: the writer's
         DB      HDRNAME
-; ---- the image ----------------------------------------------------------------
 INIT:
 %IF V_HANG
-        JR      INIT            ; a broken service
+        JR      INIT            
 %ENDIF
 %IF V_FAIL
         SCF
         RET
 %ENDIF
 %IF V_PROBE
-        LD      DE,REC+2        ; can a client see this record yet?
-	LD	BC,$0100+TNFIND	; version 1 or later
+        LD      DE,REC+2        ; INIT's record must not be visible yet
+	LD	BC,$0100+TNFIND	
 	CALL	ABICALL
         LD      A,0
         ADC     A,A
         LD      (RESULT),A
 %ENDIF
+; Private reentry addresses come from the test; the busy window must refuse.
 %IF V_LOAD
         CALL    RAWLOAD
         LD      A,0
@@ -46,10 +46,12 @@ INIT:
         SCF
         RET
 %ENDIF
+; HOOKAT defaults to 10: CONOUT's target at WBOOT+10; tests select other entries.
+; Hooks can outlive INIT failure or warm boot: this exposes retained/dangling use.
 %IF V_HOOK
         LD      A,1
         LD      (RESULT),A      ; INIT marker for rollback tests
-        LD      HL,($0001)      ; CONOUT, in the table
+        LD      HL,($0001)      
         LD      DE,HOOKAT
         ADD     HL,DE
         LD      E,(HL)
@@ -65,6 +67,8 @@ INIT:
         SCF
         RET
 %ENDIF
+; Vector variants test inside/outside targets, claimed slots and failure.
+; These are distinct from the GLVEC pointer the BIOS-entry scan cannot see.
 %IF V_VEC
         LD      A,$C3           ; a restart vector into this service
         LD      (VECAT),A
@@ -72,18 +76,19 @@ INIT:
         LD      (VECAT+1),HL
 %ENDIF
 %IF V_VECX
-	LD	HL,ABICALL	; the vector outside this service
+	LD	HL,ABICALL	
         LD      (VECAT+1),HL
 %ENDIF
 %IF V_VECFL
         SCF
         RET
 %ENDIF
+; Accepted BDOS 47 and JP 0 end INIT by warm boot, without an ordinary return.
 %IF V_CHI
-        CALL    CHAIN47         ; function 47 from INIT
+        CALL    CHAIN47         
 %ENDIF
 %IF V_WB
-        JP      0               ; a warm boot from inside INIT
+        JP      0               
 %ENDIF
 %IF V_STK
 	LD	B,3
@@ -92,7 +97,7 @@ INIT:
 	CALL	ABICALL
         RET     C
 %IF DEPTH
-        PUSH    AF              ; six bytes of the CCP's stack
+        PUSH    AF              ; three pushes: six bytes with DEPTH enabled
         PUSH    BC
         PUSH    HL
         POP     HL
@@ -102,7 +107,7 @@ INIT:
 %ENDIF
 %IF V_DEP
         LD      DE,DEPNAME      ; bound once, at INIT
-	LD	BC,$0100+TNFIND	; version 1 or later
+	LD	BC,$0100+TNFIND	
 	CALL	ABICALL
         RET     C
         LD      (DEPTAB),HL
@@ -114,29 +119,31 @@ INIT:
         RET
 %ENDIF
 %IF V_LINK
-        LD      HL,ABITAB       ; a link outside the image
+        LD      HL,ABITAB       
         LD      (REC),HL
 %ENDIF
 %IF V_CYCLE
-        LD      HL,REC          ; a record linked to itself
+        LD      HL,REC          
         LD      (REC),HL
 %ENDIF
 %IF V_TABLE
-        LD      HL,$0300        ; an entry table outside the image
+        LD      HL,$0300        
         LD      (REC+11),HL
 %ENDIF
 %IF V_END
-        LD      HL,HDR+253      ; a record running off the service's last page
+        LD      HL,HDR+253      ; crosses the one-page fixture's end
         OR      A
         RET
 %ENDIF
+; Extra memory must cover 13 bytes per record. The loop sets links/tables,
+; leaving name/version bytes as found there; B=0 means 256 iterations.
 %IF V_CHAIN
-        LD      HL,IMGEND       ; CHAINB records, in the extra memory; 0 for 256
+        LD      HL,IMGEND       ; caller-sized extra memory
         LD      B,CHAINB
 CHAIN1: LD      DE,13
         PUSH    HL
         ADD     HL,DE
-        EX      DE,HL           ; DE = the next
+        EX      DE,HL           
         POP     HL
         LD      (HL),E
         INC     HL
@@ -152,7 +159,7 @@ CHAIN1: LD      DE,13
         DJNZ    CHAIN1
         LD      DE,-13
         ADD     HL,DE
-        LD      (HL),0          ; the last link
+        LD      (HL),0          
         INC     HL
         LD      (HL),0
         LD      HL,IMGEND
@@ -160,14 +167,16 @@ CHAIN1: LD      DE,13
         RET
 %ENDIF
 %IF V_NONE
-        LD      HL,0            ; no records
+        LD      HL,0            
         OR      A
         RET
 %ENDIF
-        LD      HL,REC          ; the record, published by the loader
+        LD      HL,REC          
         OR      A
         RET
 
+; REMOVE can undo hooks/drop the driver before refusing, or end through
+; chaining/warm boot. The loader's outcome is tested separately.
 REMOVE:
 %IF V_HOOK
         LD      A,2
@@ -191,10 +200,10 @@ REMOVE:
         RET
 %ENDIF
 %IF V_CHR
-	CALL	CHAIN47		; function 47 from REMOVE
+	CALL	CHAIN47		
 %ENDIF
 %IF V_REMWB
-	JP	0		; a warm boot from inside REMOVE
+	JP	0		
 %ENDIF
 %IF V_REMWIN
 	CALL	RAWUNL		; refused while REMOVE runs
@@ -211,10 +220,11 @@ SERVICE:LD      HL,COUNT
         RET
 
 %IF V_LATE
-; A resident that looks up later and keeps the pointer: the violation. LOOK
-; finds DEMO and keeps its table; USE calls it, unchecked; SAFE checks.
+; LOOK caches DEMO's table and generation byte; USE calls it unchecked.
+; SAFE requires a fresh FIND and matching generation, then uses that cache.
+; It does not rebind the pointer; 256 generation changes can alias this byte.
 LOOK:   LD      DE,DEPNAME
-	LD	BC,$0100+TNFIND	; version 1 or later
+	LD	BC,$0100+TNFIND	
 	CALL	ABICALL
         RET     C
         LD      (DEPTAB),HL
@@ -223,7 +233,7 @@ LOOK:   LD      DE,DEPNAME
 USE:    LD      HL,(DEPTAB)
         JP      (HL)
 SAFE:   LD      DE,DEPNAME
-	LD	BC,$0100+TNFIND	; version 1 or later
+	LD	BC,$0100+TNFIND	
 	CALL	ABICALL
         RET     C
         LD      HL,GEN
@@ -262,12 +272,12 @@ REC2:   DW      0
 COUNT:  DB      0
 RESULT: DB      $FF
 %IF V_VEC
-VHAND:  LD      A,$5A           ; a restart vector's handler
+VHAND:  LD      A,$5A           
         LD      (RESULT),A
         RET
 %ENDIF
 %IF V_CHN
-CHAIN47:LD      DE,CMD47        ; the command at the DMA address, then 47
+CHAIN47:LD      DE,CMD47        
         LD      C,26
         CALL    5
         LD      C,47
@@ -278,6 +288,7 @@ CMD47:  DB      "USER 3",0
 DEPNAME:DB      "DEMO    "
 DEPTAB: DW      0
 %ENDIF
+; The byte hook preserves HL, changes flags, then chains through OLDCO.
 %IF V_HOOK
 MYCO:   PUSH    HL
         LD      HL,HITS
@@ -288,7 +299,9 @@ OLDCO:  DW      0
 HITS:   DB      0
 %ENDIF
 %IF V_GLVEC+V_STK
-; The ROM's six video routines, each using six bytes of its caller's stack.
+; Fixture table: six VRT entries, optional function 0, columns 21/rows 8.
+; DEPTH enables three balanced pushes per stub: six explicit bytes, separate
+; from caller and dispatcher frames. The ROM calls this table.
 VTAB:   DW      VRT,VRT,VRT,VRT,VRT,VRT,0
         DB      21,8
 VRT:
