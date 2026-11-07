@@ -194,5 +194,5 @@ test('KS40 DEMO and VIDMODE retain baseline native bytes and DEMO equals actual 
   const {bytes}=await assembleProgram(root+'/test/programs/'+name+'.asm');assert.equal(bytes.length,length);assert.equal(sha(bytes),hash,'exact measured baseline native '+name);
   if(name==='demo')assert.ok(Buffer.from(bytes).equals(readFileSync(root+'/dist/files/DEMO.COM')),'actual TAS media DEMO');
  }
- assert.equal(sha(readFileSync(root+'/test/programs/demo.asm')),'3407a8ee825e0f989f7075f1920b303f82d2a5f482d187344e447d41da35624f');
+ assert.equal(sha(readFileSync(root+'/test/programs/demo.asm')),'a73196ac0e2d4affe083dc7db27935cb602672729b31f7456b5c0c0eadbe00a9');
 });

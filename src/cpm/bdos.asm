@@ -68,7 +68,7 @@ FNCHAIN:
   ld b,128       ; terminator bound
 
 FNCH1:
-  ld a,(hl)      ; next DMA byte
+  ld a,(hl)
   or a
   jr z,FNCH2     ; zero ends validation
   cp CR          ; no CR/LF before zero
@@ -85,7 +85,7 @@ FNCHNO:
 FNCH2:
 
   ld hl,(CURDMA)
-  ld de,CMDTXT   ; replace command text
+  ld de,CMDTXT
   ld bc,128      ; copy full DMA record
   ldir
   ld a,1         ; start chained pieces
@@ -99,7 +99,7 @@ FNCH2:
 
 CHDROP:
   xor a
-  ld (CHPOS),a   ; drop chained pieces
+  ld (CHPOS),a
   jp BIOWBT
 
 ; BDOS entry: CALL 0005h with C=function
@@ -118,10 +118,9 @@ CHDROP:
 ; change.
 
 BENTRY:
-  ld (OLDSP),sp  ; save caller stack
-  ld sp,STKTOP   ; internal BDOS stack
-  ld (PARAM),de  ; save original
-                 ; parameter
+  ld (OLDSP),sp
+  ld sp,STKTOP
+  ld (PARAM),de
   ld a,c
   cp 108         ; direct dispatch cases
   jr z,FNRETC    ; 108: return-code slot
@@ -143,8 +142,8 @@ BENTRY:
   ld e,a
   ld d,0
   ld hl,FNTAB
-  add hl,de      ; handler pointer cell
-  ld e,(hl)      ; low byte of handler
+  add hl,de
+  ld e,(hl)
   inc hl
   ld d,(hl)      ; DE = the routine
 
@@ -154,14 +153,14 @@ BENTRY:
   ld a,c
 
 FCBBYTE:
-  inc hl         ; next bitmap byte
-  sub 8          ; advance by eight
+  inc hl
+  sub 8
   jr nc,FCBBYTE
   ld b,a         ; (C mod 8) - 8
-  ld a,(hl)      ; function bitmap byte
+  ld a,(hl)
 
 FCBBIT:
-  rlca           ; rotate selected bit
+  rlca
   inc b
   jr nz,FCBBIT
   ex de,hl       ; HL = the routine
@@ -172,8 +171,8 @@ FCBBIT:
   pop hl
 
 DISPATCH:
-  ld de,(PARAM)  ; restore caller DE
-  jp (hl)        ; enter saved handler
+  ld de,(PARAM)
+  jp (hl)
 
 ; Function 44 accepts only E=1. Other
 ; counts return FFh through FNCHNO.
@@ -203,9 +202,9 @@ RETA:
 ; left them.
 
 RETWORD:
-  ld a,l         ; A=L result alias
+  ld a,l
   ld b,h
-  ld sp,(OLDSP)  ; restore program stack
+  ld sp,(OLDSP)
   ret
 
 ; Function 0: jump through RAM BIOWBT.
@@ -225,7 +224,7 @@ FNZERO:
 ; B=H=code.
 
 FNERRM:
-  ld a,e         ; mode until warm boot
+  ld a,e
   ld (ERRMODE),a
   jr RETZERO
 
@@ -273,7 +272,7 @@ FNRETG:
 
 FNCIN:
   call GETCHAR   ; pending byte first
-  ld c,a         ; echo input C
+  ld c,a
   push af        ; save original byte
   call ECHOCHAR
   pop af
@@ -286,7 +285,7 @@ FNCIN:
 
 FNCOUT:
   ld a,(PARAM)   ; E: output byte
-  ld c,a         ; OUTCHAR input
+  ld c,a
   call OUTCHAR
   jr RETZERO
 
@@ -302,7 +301,7 @@ FNREAD:
 
 FNPUNCH:
   ld a,(PARAM)   ; E: output byte
-  ld c,a         ; BIOS argument C
+  ld c,a
   call BIOPUN
   jr RETZERO
 
@@ -311,7 +310,7 @@ FNPUNCH:
 
 FNLIST:
   ld a,(PARAM)   ; E: output byte
-  ld c,a         ; BIOS argument C
+  ld c,a
   call BIOLST
   jp RETZERO
 
@@ -338,7 +337,7 @@ FNDIRECT:
 ; or COLUMN update. Return zero.
 
 DIROUT:
-  ld c,a         ; BIOS output C
+  ld c,a
   call BIOCOT    ; RAM console hook
   jp RETZERO
 
@@ -366,7 +365,7 @@ FNSETIO:
 ; and BIOS-hook clobbers.
 
 FNPRINT:
-  ld hl,(PARAM)  ; caller text pointer
+  ld hl,(PARAM)
 
 PRLOOP:
   ld a,(hl)
@@ -398,11 +397,11 @@ PRLOOP:
 FNLINE:
   ld a,(HHEAD)   ; initial history entry
   ld (HPOS),a    ; HREC starting point
-  ld hl,(PARAM)  ; caller buffer address
+  ld hl,(PARAM)
   ld a,(hl)
   ld (LINMAX),a  ; buffer capacity
   inc hl
-  xor a          ; initial count zero
+  xor a
   ld (hl),a      ; buffer count byte
   ld (LINCNT),a
   inc hl
@@ -444,14 +443,13 @@ LINCHR:
   ld a,(LINMAX)
   cp b
   jp z,LINDONE   ; full: echo key only
-  ld a,c         ; key to store
+  ld a,c
 
   ld hl,(LINPTR)
   ld (hl),a
   inc hl
   ld (LINPTR),hl
-  ld a,b         ; increment stored
-                 ; count
+  ld a,b
   inc a
   ld (LINCNT),a
   call ECHOCHAR  ; echo stored byte
@@ -492,10 +490,10 @@ LINHIST:
 ; unchanged.
 
 LINBACK:
-  ld a,(LINCNT)  ; logical count
+  ld a,(LINCNT)
   or a
   jr z,LINLOOP   ; empty: unchanged
-  dec a          ; remove one byte
+  dec a
   ld (LINCNT),a
 
   ld hl,(LINPTR)
@@ -510,10 +508,10 @@ LINBACK:
 ; remains. Empty input is unchanged.
 
 LINDEL:
-  ld a,(LINCNT)  ; logical count
+  ld a,(LINCNT)
   or a
   jp z,LINLOOP   ; empty: unchanged
-  dec a          ; remove one byte
+  dec a
   ld (LINCNT),a
 
   ld hl,(LINPTR)
@@ -532,9 +530,6 @@ LINABRT:
   ld a,(LINCNT)  ; start-only abort
   or a
   jp nz,LINLOOP  ; nonempty: ignore ^C
-
-; Store the abort byte at the input
-; pointer.
 
   ld hl,(LINPTR)
   ld (hl),CTRLC
@@ -567,7 +562,7 @@ LINRETY:
   call ECHOONE
   ld c,LF
   call ECHOONE
-  ld hl,(PARAM)  ; caller buffer pointer
+  ld hl,(PARAM)
   inc hl         ; skip max/count bytes
   inc hl
   ld a,(LINCNT)  ; retype byte count
@@ -577,7 +572,7 @@ RETYLP:
   ld a,b
   or a
   jp z,LINLOOP   ; no more bytes
-  ld c,(hl)      ; next stored byte
+  ld c,(hl)
   push bc        ; save loop count
   push hl        ; save scan pointer
   call ECHOCHAR  ; echo byte, expand TAB
@@ -598,9 +593,9 @@ LINCTU:
   call ECHOONE
   ld c,LF
   call ECHOONE
-  xor a          ; reset logical count
+  xor a
   ld (LINCNT),a
-  ld hl,(PARAM)  ; caller buffer pointer
+  ld hl,(PARAM)
   inc hl         ; skip max/count bytes
   inc hl
   ld (LINPTR),hl
@@ -630,13 +625,12 @@ LINERASE:
   ret z          ; zero: pointer
                  ; unchanged
   call ERASE1    ; BS-SPACE-BS once
-  ld a,(LINCNT)  ; decrement logical
-                 ; count
+  ld a,(LINCNT)
   dec a
   ld (LINCNT),a
 
   ld hl,(LINPTR)
-  dec hl         ; rewind input pointer
+  dec hl
 
   ld (LINPTR),hl
   jr LINERASE
@@ -656,9 +650,9 @@ LINERASE:
 
 LINDONE:
   call ECHOCHAR  ; echo completion key
-  ld hl,(PARAM)  ; caller buffer pointer
+  ld hl,(PARAM)
   inc hl
-  ld a,(LINCNT)  ; returned byte count
+  ld a,(LINCNT)
   ld (hl),a
   inc hl         ; DE: data, B: count
   ex de,hl
@@ -688,11 +682,11 @@ FNSTAT:
   jp z,RETZERO   ; not ready: zero
   call BIOCIN    ; capture BIOS byte
   ld (PENDCHR),a
-  ld a,1         ; mark pending input
+  ld a,1
   ld (PENDING),a
 
 STATYES:
-  ld a,1         ; ready result 1
+  ld a,1
   jp RETA
 
 ; Function 12: CP/M 2.2 version. Return

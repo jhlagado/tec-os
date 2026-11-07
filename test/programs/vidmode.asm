@@ -10,15 +10,15 @@ VDPCTL  EQU     $BF
 GLCCMD  EQU     $07
 
         ORG     $0100
-        LD      A,$02           
+        LD      A,$02
         OUT     (VDPCTL),A
         LD      A,$80
         OUT     (VDPCTL),A
-        LD      A,$80           
+        LD      A,$80
         OUT     (VDPCTL),A
         LD      A,$81
         OUT     (VDPCTL),A
-        XOR     A               
+        XOR     A
         OUT     (VDPCTL),A
         LD      A,$40
         OUT     (VDPCTL),A
@@ -29,15 +29,15 @@ ZERO:   XOR     A
         LD      A,B
         OR      C
         JR      NZ,ZERO
-        LD      A,$34           
+        LD      A,$34
         OUT     (GLCCMD),A
         LD      B,0
 WAIT:   DJNZ    WAIT
-        LD      A,$30           
+        LD      A,$30
         OUT     (GLCCMD),A
         LD      B,0
 WAIT2:  DJNZ    WAIT2
-        LD      A,$08           
+        LD      A,$08
         OUT     (GLCCMD),A
         LD      B,0
 WAIT3:  DJNZ    WAIT3

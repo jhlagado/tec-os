@@ -179,7 +179,7 @@ MUL8:   LD      (MULTD),HL
         LD      D,H
         LD      E,L
         LD      B,8
-MUL8L:  ADD     HL,HL           
+MUL8L:  ADD     HL,HL
         RL      E
         RL      D
         RLC     C               ; next multiplier bit, most significant first
@@ -284,7 +284,7 @@ UPPER:  CP      'a'
         CP      'z'+1
         JR      NC,UPPER1
         SUB     $20
-UPPER1: OR      A               
+UPPER1: OR      A
         RET
 GETKPAD:IN      A,(KEYPORT)
         AND     $1F
@@ -322,7 +322,7 @@ GETKM1: LD      A,(HL)
         JR      NC,GETKM2
         LD      A,E
         ADD     A,$1D           ; matrix codes 0Fh..3Fh map to digits/capitals
-GETKM2: OR      A               
+GETKM2: OR      A
         RET
 MTXASC: DB      $0A,KCR,$0C,KESC,$0D,' ',$FF,'?'
 KEYINR  EQU     14000           ; idle polls per timeout quantum

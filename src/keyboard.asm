@@ -18,7 +18,7 @@ KBPOLL:
   ld a,(CONDEV)
   and CDMTX
   ret z          ; keyboard absent
-  ld l,8         ; eight rows
+  ld l,8
 
 KBPL:
   push hl
@@ -43,7 +43,7 @@ KBSTEP:
   in a,(c)       ; Pressed bits low
   cpl
   jr z,KBSNEXT   ; Z from IN: raw 00h
-  ld d,a         ; bits for row
+  ld d,a
   inc hl
   ld a,(hl)      ; KBBASE: first key
 
@@ -57,14 +57,14 @@ KBSBIT:
   ld (KBE),a     ; new last key
 
 KBSN:
-  inc a          ; next key number
+  inc a
   inc d          ; any bits left?
   dec d
   jr nz,KBSBIT
   ld hl,KBMASK
 
 KBSNEXT:
-  rlc (hl)       ; next row
+  rlc (hl)
   inc hl
   ld a,(hl)
   add a,8        ; eight keys per row
@@ -75,7 +75,7 @@ KBSNEXT:
   ret
 
 KBEVAL:
-  xor a          ; scan complete
+  xor a
   ld (hl),a      ; start at key 0
   ld hl,(KBE)    ; L: last, H: prior
   ld de,$FFFF    ; clear for next scan
@@ -206,16 +206,16 @@ KBNOCTL:
   ret nc         ; Caps off: lower case
 
 KBUPPER:
-  ld a,c         ; upper case
+  ld a,c
   sub $20
   ret
 
 KBIDX:
-  add a,l        ; index into table
+  add a,l
   ld l,a
   jr nc,KBIDX1   ; handle page carry
   inc h
 
 KBIDX1:
-  ld a,(hl)      ; table entry
+  ld a,(hl)
   ret

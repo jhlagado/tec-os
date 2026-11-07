@@ -291,22 +291,27 @@ One block costs 354,216 T-states plus 678 for each poll, about 89 ms at
 4 MHz. These two lines show whether the card fitted keeps up with the
 bit-bang rate.
 
-T37 writes one block, outside every volume, and puts it back. Every other
-test only reads the card.
+T37 writes block 7 and attempts to restore it. This can damage container
+metadata or leave changed data after an I/O failure. Every other test only
+reads the card. Use a disposable card with no data to preserve for T37.
 
 ### T37 SDWRITE
 
-TEC-OS writes blocks, so the write path needs a test of its own, on a block
-that no container uses. Block 0 is the header and every volume starts at a
-nonzero multiple of 8 ([container-format.md](container-format.md)), so
-blocks 1–7 belong to nothing. T37 writes only when block 0 holds the
-`TECOSVOL` magic, so a card holding anything else is left alone and the line
-says so. It keeps block 7 in RAM, writes a pattern there (byte i is the low
-byte of i xor its high byte xor `5Ah`), reads it back, writes the kept block
-back and reads that back. The line gives the card's busy polls after the last
-write. If the pattern reads back wrong the block is still written back. A
-power cut during T37 is the only way it can leave block 7 changed, and
-nothing reads block 7. T37 runs straight after T20.
+T37 runs automatically after T20 and writes block 7. Admission checks only
+`SDOK` and block 0's eight `TECOSVOL` magic bytes. It does not validate the
+format version, descriptor count, layout or checksum. Valid format 1.1 cards
+with 112–127 volumes use block 7 for descriptors. Aligned volume payloads do
+not make that block free ([container-format.md](container-format.md)).
+
+The normal path saves block 7 in RAM, writes a pattern, reads it back,
+writes the saved block back and compares a final read. The pattern is each
+buffer byte's address low byte xor high byte xor `5Ah`. A pattern-write or
+protocol-read failure returns without attempting restoration. A pattern
+mismatch attempts the saved-block write but does not check its status or
+verify restoration. Ordinary I/O failures and power loss can leave block 7
+changed. The displayed busy count is from the latest successful write and
+can be stale after a failure. The current test is unsuitable for a card
+whose data must survive.
 
 ### T21 RTC
 
@@ -317,17 +322,24 @@ clock running, T21 counts polls of the seconds register across one second.
 Each poll is 1,282 T-states, which gives the CPU clock directly. A halted
 clock (CH set) is reported and left halted.
 
-TEC-OS's hardware services set the clock, so T21 then sets it too. It waits
-until the seconds are below 50, keeps the seven time registers and the
-write-protect bit, clears write-protect and sets 2099-12-31 23:59:58, a
-Thursday. It reads the time back, waits 2.5 s and expects 2100-01-01 00:00.
-Then it writes back the kept time plus the seconds the set took and the
-write-protect bit as it was, and reads the time back. The wait below 50
-seconds means the seconds added back never carry into the minutes. The
-trickle-charge register is never written. The line ends with `read back,
-rolled over, restored`, or with the step that went wrong, which is a `FAIL`.
-The restored clock is behind by at most the fraction of a second between
-reading the kept time and setting the test time.
+T21 also sets the clock. It waits without a poll bound for raw seconds below
+`50h`, saves the seven time registers and write-protect byte, clears write
+protection and writes 2099-12-31 23:59:58, a Thursday. An initial readback
+mismatch returns failure without restoring the clock or write protection.
+
+Later paths wait nominally 2.5 s and check rollover minutes, hours, date and
+month plus raw seconds below `10h`. Weekday and year are unchecked at this
+step. Restoration adds the new seconds plus two, or a guessed three after
+rollover failure, to the saved seconds. There is no minute carry: saved 49
+plus new 09 plus two can become 60. The saved `RTCORG` seconds are modified.
+The code then attempts to write the adjusted time and old write protection.
+Its final comparison checks minutes, hours, date, month and weekday but not
+seconds, year or write protection. Neither reading nor restoration is atomic.
+
+The line can end `read back, rolled over, restored` when these limited checks
+pass. It does not establish exact clock restoration or a maximum time loss.
+The trickle-charge register is untouched. Use a clock whose time can be reset
+after this test.
 
 ### T22 SEG7 and T23 SPEAKER
 

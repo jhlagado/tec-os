@@ -81,8 +81,7 @@ HWSINFO:
   or (hl)
   ld b,a
   ld de,ROMVER
-  ld hl,(VWID)   ; L = VWID, H = VHGT,
-                 ; the next byte
+  ld hl,(VWID)
   jp HWOK
 
 ; DIGIT: HL -> six segment bytes,
@@ -178,8 +177,7 @@ HWSVID:
   ld a,b
   cp 2
   ld a,TNEBAD
-  jp nc,HWERR    ; refused, nothing
-                 ; changed (A1)
+  jp nc,HWERR
   ld a,(CONDEV)
   and CDTMS
   ld a,TNENODV
@@ -188,11 +186,7 @@ HWSVID:
   or a
   jr z,HWVREL
   ld a,(CONMOD)
-  cp CMCRT       ; the console's screen:
-                 ; its cursor removed
-
-; before the claim stops the terminal
-
+  cp CMCRT
   call z,CURHIDE
   ld a,CDCLM
   ld (VCLAIM),a
@@ -218,21 +212,16 @@ HWVREL:
   jp z,HWOK
   xor a
   ld (VCLAIM),a
-  ld hl,(PIVEC)  ; registers, font, page
-                 ; shown, by its driver
+  ld hl,(PIVEC)
   ld a,h
   or l
-  jp z,HWOK      ; none: nothing is
-                 ; restored
-  ld de,6        ; the table's fourth
-                 ; word, VREST, the
-  add hl,de      ; PICO9918's own even
-                 ; while UC1: is the
-  ld a,(hl)      ; console
+  jp z,HWOK
+  ld de,6        ; VREST table offset
+  add hl,de
+  ld a,(hl)
   inc hl
   ld h,(hl)
-  ld l,a         ; HL = the restore
-                 ; routine
+  ld l,a
   call VHLJP
   ld a,(CONMOD)
   cp CMCRT
@@ -329,9 +318,7 @@ HWSPUT:
   jp nc,HWERR
   ld a,b
   or a
-  jp z,HWOK      ; no source read or
-                 ; cursor change for
-                 ; zero count
+  jp z,HWOK
   push bc
   push de
   push hl
@@ -382,8 +369,7 @@ HWSRTC:
   ld a,b
   cp 2
   ld a,TNEBAD
-  jp nc,HWERR    ; refused, the clock
-                 ; untouched (A1)
+  jp nc,HWERR
   push bc
   call RTCHAS
   pop bc
@@ -552,8 +538,7 @@ SVDRV:
   ret
 
 SVDRV1:
-  ld a,h         ; a drop is never
-                 ; refused
+  ld a,h
   or l
   jr z,SVDRV2
   ld a,(STFLAG)  ; FFh in a startup
@@ -563,7 +548,7 @@ SVDRV1:
   ld a,(IOBYTE)  ; the CON: field, 1 for
                  ; CRT:
   and 3
-  dec a          ; 0 for CRT:
+  dec a
   or d           ; 0 for CRT: in a
                  ; startup line
   ld a,TNENODV   ; then refused, as an

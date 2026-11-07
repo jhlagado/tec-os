@@ -224,9 +224,9 @@ all. The BIOS's 18 is warm boot's flush of the lines written behind: cold boot
 mounts and lists the drives on the BDOS's stack, which nothing else uses before
 the CCP runs. A limit is counted from the base, and a stack holds its base and
 its limit with a quarter free, which `test/stacks.test.mjs` checks: the BDOS's
-38 of 54, the BIOS's 30 of 40 and the CCP's 24 of 32. Nothing overflows. A declaration
-is the service's promise, and `test/svc.test.mjs` shows how a stack watch proves
-one: the ROM can't.
+38 of 54, the BIOS's 30 of 40 and the CCP's 24 of 32. A service must stay within
+its declared stack use. `test/svc.test.mjs` checks this with a stack watch.
+The ROM does not enforce the declaration at runtime.
 
 A program's stack can't be checked, so a service's own document states what a
 program must leave. On the BDOS's stack a service may not call the BDOS, as

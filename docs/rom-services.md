@@ -14,7 +14,7 @@ gives programs the TEC-1G's hardware, and what belongs on the card instead.
 
 | Addresses | Contents |
 | --- | --- |
-| `C000h–C002h` | `JP COLD`: at reset the CPU runs it through the boot overlay at `0000h` |
+| `C000h–C002h` | `JP RSTENT`: reset runs through the boot overlay at `0000h`. RSTENT distinguishes reset from warm entry before COLD or WBOOTR |
 | `C003h` | The ROM table, below: the one fixed address in the ROM |
 | after the table | One block of read-only data: messages, the geometry and format tables, the CCP's and the BDOS's tables, and the BIOS jump table that cold boot copies to RAM |
 | after the data | One block of code |
@@ -81,10 +81,13 @@ registry's permanent tail: `TNFIND` finds it, `TNLIST` returns it last, and
 
 A program checks for `"TNA"` at `ABITAB` and ABI major version 5 at
 `ABIMAJ`, then calls `ABICALL` with the service's number in C and arguments in
-B, DE and HL; A is never an argument. `abi.inc` names each number and status code. On return A holds the status, with Z set and carry clear on
-success, or a status with carry set and nothing changed; results come back as each
-service lists, and `TNFIND` and `TNLIST` return the generation in A. IX, IY and the
-alternate registers are preserved, but `TNMOUNT`, `TNUNMNT` and `TNDESC` may change
+B, DE and HL; A is never an argument. `abi.inc` names each number and status code.
+Ordinary status calls return A=0 with Z set and carry clear on success, or a
+nonzero status with carry set on failure. Effects on failure are specific to
+the service: scratch, cache or card state may already have changed.
+`TNFIND` and `TNLIST` instead return
+the generation in A with carry clear, or carry set when no record matches.
+IX, IY and the alternate registers are preserved, but `TNMOUNT`, `TNUNMNT` and `TNDESC` may change
 IX and the alternates. None calls the BDOS but `TNMOUNT` and `TNUNMNT`, which reset
 the drive through function 37 on the BDOS's own stack; a `TNMOUNT` onto the default
 drive then selects it again through function 14, logging the new volume in, so
@@ -155,7 +158,8 @@ unchanged. `docs/services.md` gives a service's rules.
 | | **Total** | | | | **485** |
 
 Numbers 9 to 14 are the volumes', the drivers' hook and the registry's, above and in
-`abi.inc`. Every number from 15 to 255 returns status 1 with the other registers
+`abi.inc`. Number 15 is `TNFONT`. Every number from 16 (`TNCOUNT`) to 255
+returns status 1 with the other registers
 as they came. Stack is the deepest measured use of the
 caller's stack below the return address.
 

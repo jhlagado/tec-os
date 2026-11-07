@@ -24,7 +24,7 @@ T01:
 T02:
         LD      HL,NPROBE
         CALL    SETFCB
-        LD      C,19            
+        LD      C,19
         CALL    FCBCALL
         LD      C,22
         CALL    FCBCALL
@@ -82,7 +82,7 @@ T05:
         JR      NZ,.RD
         LD      C,20
         CALL    FCBCALL
-        CP      1               
+        CP      1
         JR      .RDR
 .RDF:   OR      1
 .RDR:   CALL    RESULT
@@ -270,7 +270,7 @@ T14:
         CALL    FCBCALL
         INC     A
         JR      NZ,.USF
-        LD      E,3             
+        LD      E,3
         LD      C,32
         CALL    BDOS
         LD      HL,NU3

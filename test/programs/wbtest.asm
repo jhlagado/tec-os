@@ -9,7 +9,7 @@ BDOS    EQU     $0005
 
         ORG     $0100
         LD      SP,STACK
-        LD      DE,SEQ          
+        LD      DE,SEQ
         CALL    FRESH
         XOR     A
         LD      (REC),A
@@ -41,7 +41,7 @@ SQR:    LD      A,(REC)
         JR      C,SQR
         LD      C,16
         CALL    FCALL
-        LD      DE,RND          
+        LD      DE,RND
         CALL    FRESH
         LD      HL,RECS
 RNW:    LD      A,(HL)

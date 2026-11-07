@@ -114,7 +114,7 @@ WRNEXT:
 ; SELFAIL/BDERR nonlocally.
 
 FNSEL:
-  ld a,(PARAM)   ; saved caller E
+  ld a,(PARAM)
   call SELDRV    ; bind before publish
 
 ; Publish CURDRV/DPBPTR/ALVPTR as
@@ -126,8 +126,7 @@ FNSEL:
 ; buffer/cursor.
 
 SETDEF:
-  ld a,(CURDRV)  ; publish selected
-                 ; drive
+  ld a,(CURDRV)
   ld (DEFDRV),a
 
   ld hl,(DPBPTR)
@@ -172,7 +171,7 @@ SELDRV:
 ; not survive.
 
 FCBSEL:
-  ld hl,(PARAM)  ; caller FCB base
+  ld hl,(PARAM)
   ld a,(hl)
   cp '?'
   jr nz,FCBORD
@@ -232,8 +231,7 @@ CLOSEFCB:
 
 ; Write modified extent metadata. A
 ; read-only drive returns A=0 without
-; writing. Historical close citation:
-; (A8, restating KE-148).
+; writing.
 ; Find the entry through FINDEXCT. If
 ; FCB EX&1Fh is earlier than entry
 ; EX&1Fh, copy only the 16-byte map to
@@ -253,7 +251,7 @@ CLOSEDIR:
   call FINDEXCT
   cp $FF
   ret z          ; FFh: missing entry
-  ld hl,(PARAM)  ; caller FCB base
+  ld hl,(PARAM)
   ld bc,12
   add hl,bc
 
@@ -261,8 +259,8 @@ CLOSEDIR:
   ex de,hl
   add hl,bc
   ex de,hl
-  ld a,(de)      ; entry EX
-  and $1F        ; entry EX&1Fh
+  ld a,(de)
+  and $1F
   ld c,a
   ld a,(hl)
   and $1F
@@ -294,7 +292,7 @@ CLOSECP:
 ; may change.
 
 FINDEXCT:
-  ld hl,(PARAM)  ; caller FCB pattern
+  ld hl,(PARAM)
   ld (SRCHFCB),hl
   ld a,4         ; mode 4: close lookup
 
@@ -331,8 +329,7 @@ FNSRCHF:
 ; Mode 1 imports open fields.
 
 SETSRCH:
-  ld hl,(PARAM)  ; retain pattern
-                 ; pointer
+  ld hl,(PARAM)
   ld (SRCHFCB),hl
 
   ld (OPENMOD),a
@@ -460,7 +457,7 @@ FNMAKE:
 ; register may change.
 
 MAKEFCB:
-  ld hl,(PARAM)  ; caller FCB
+  ld hl,(PARAM)
 
   ld (SRCHFCB),hl
   ld a,3         ; mode 3: free slot
@@ -473,7 +470,7 @@ MAKEFCB:
   call FCBEX     ; keep requested EX
   inc hl
   ld (hl),0
-  inc hl         ; caller S2
+  inc hl
   ld a,(hl)
   and $3F        ; keep module bits
   ld (hl),a
@@ -503,7 +500,7 @@ MAKECOPY:
   ld (hl),a
   inc hl
   ex de,hl       ; entry destination +1
-  ld hl,(PARAM)  ; caller FCB source
+  ld hl,(PARAM)
   inc hl
   ld bc,31       ; name through map
   ldir
@@ -558,7 +555,7 @@ FNWRITE:
 
 FNATTR:
   call CHKRO     ; drive R/O gate
-  ld hl,(PARAM)  ; caller FCB source
+  ld hl,(PARAM)
   inc hl         ; attributes: offset 1
   jr MUTALL
 
@@ -596,7 +593,7 @@ FNRENAME:
 MUTALL:
 
   ld (COPYPTR),hl
-  ld hl,(PARAM)  ; original FCB pattern
+  ld hl,(PARAM)
 
   ld (SRCHFCB),hl
   ld a,2
@@ -611,7 +608,7 @@ MUTLOOP:
   jp z,DELDONE   ; scan exhausted
 
   ld a,(COPYPTR)
-  ld hl,PARAM    ; HL->PARAM low byte
+  ld hl,PARAM
   sub (hl)       ; offset modulo 256
   and $10        ; bit 4: rename only
   jr z,MUTCOPY

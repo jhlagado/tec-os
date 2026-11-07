@@ -10,7 +10,7 @@
 ; Save the scan pointer across output.
 
 ERRTEXT:
-  ld a,(hl)      ; next text byte
+  ld a,(hl)
   or a
   ret z          ; zero terminator
   inc hl
@@ -101,8 +101,8 @@ DISKMSG:
   ld hl,ERRHEAD  ; CR/LF and error
                  ; prefix
   call ERRTEXT
-  ld a,(CURDRV)  ; current drive number
-  add a,'A'      ; A-based drive letter
+  ld a,(CURDRV)
+  add a,'A'
   ld c,a
   call OUTCHAR
   pop hl
@@ -170,7 +170,7 @@ OUTCHAR:
   jr nz,OUTONE   ; non-tab output
 
 TABLOOP:
-  ld c,SPACE     ; emit tab space
+  ld c,SPACE
   call OUTONE
   ld a,(COLUMN)  ; updated logical
                  ; column
@@ -229,7 +229,7 @@ ECHOCON:
 ; Keep C. Clobber A and flags.
 
 ECHOCOL:
-  ld a,c         ; character to account
+  ld a,c
   cp CR
   jr z,COLZERO   ; CR: reset column
   cp BACKSP
@@ -254,7 +254,7 @@ ECHOCHAR:
   jr nz,ECHOONE  ; non-tab echo
 
 ECHOTAB:
-  ld c,SPACE     ; emit tab space
+  ld c,SPACE
   call ECHOONE
   ld a,(COLUMN)  ; updated logical
                  ; column
@@ -318,7 +318,7 @@ CHKPRN:
 
   ld (PENDCHR),a
 
-  ld a,1         ; mark pending byte
+  ld a,1
   ld (PENDING),a
   ret
 
@@ -343,10 +343,10 @@ TOGLIST:
 ; state.
 
 ERASE1:
-  ld c,BACKSP    ; first backspace
+  ld c,BACKSP
   call BIOCOT    ; RAM output hook
-  ld c,SPACE     ; middle space byte
+  ld c,SPACE
   call BIOCOT
-  ld c,BACKSP    ; final backspace
+  ld c,BACKSP
   call BIOCOT
   jr COLBACK     ; logical column back

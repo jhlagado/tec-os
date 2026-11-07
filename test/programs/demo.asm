@@ -8,16 +8,16 @@
 %INCLUDE "../../src/abi.inc"
 
 BDOS    EQU     $0005
-HWSVC   EQU     ABICALL         
+HWSVC   EQU     ABICALL
 
 
-LEDSEL	EQU	$05		
-LEDR	EQU	$06		
+LEDSEL	EQU	$05
+LEDR	EQU	$06
 LEDG	EQU	$F8
 LEDB	EQU	$F9
 
         ORG     $0100
-        LD      HL,ABITAB       
+        LD      HL,ABITAB
         LD      DE,ABITAG
         LD      B,3
 CHKTAG: LD      A,(DE)
@@ -27,12 +27,12 @@ CHKTAG: LD      A,(DE)
         INC     DE
         DJNZ    CHKTAG
 	LD	A,(ABIMAJ)	; exact major: service numbers can move
-	CP	5		
+	CP	5
 	JP	NZ,NOHW
 
 ; INFO reads flags, not devices: PICO/RTC presence comes from cold boot;
 ; GLCD presence and video claim are current. Save this mixed snapshot.
-	LD	C,TNINFO	
+	LD	C,TNINFO
         CALL    HWSVC
         LD      A,B
         LD      (DEVS),A
@@ -53,17 +53,17 @@ CHKTAG: LD      A,(DE)
         LD      DE,KEYMSG
         CALL    PRINT
 ; About 1 kHz for 0.2 s at 4 MHz; service overhead and interrupts affect it.
-        LD      B,120           
+        LD      B,120
         LD      DE,400
-	LD	C,TNTONE	
+	LD	C,TNTONE
         CALL    HWSVC
 
 ; Four 20-character LCD rows; save loop state across each service call.
-        LD      HL,LCDTXT       
+        LD      HL,LCDTXT
         LD      B,0
 LCDLP:  PUSH    BC
         PUSH    HL
-	LD	C,TNLCD		
+	LD	C,TNLCD
         CALL    HWSVC
         POP     HL
         LD      DE,20
@@ -76,11 +76,11 @@ LCDLP:  PUSH    BC
 
 ; Claim only when the saved PICO bit is set. The client does not check the
 ; result; it relies on the ROM accepting a valid present-device claim.
-        LD      A,(DEVS)        
+        LD      A,(DEVS)
         AND     2
         JR      Z,LOOP
         LD      B,1
-	LD	C,TNVIDEO	
+	LD	C,TNVIDEO
         CALL    HWSVC
         LD      A,1
         LD      (CLAIMED),A
@@ -95,16 +95,16 @@ LOOP:   LD      HL,FR
         CALL    Z,CLOCK
         CALL    COUNT
         CALL    MKDIG
-        LD      HL,DIGBUF       
-	LD	C,TNDIGIT	
+        LD      HL,DIGBUF
+	LD	C,TNDIGIT
         CALL    HWSVC
         CALL    MKLED
-	LD	HL,LEDBUF	
-	CALL	LEDSCAN		
+	LD	HL,LEDBUF
+	CALL	LEDSCAN
         LD      A,(CLAIMED)
         OR      A
         CALL    NZ,BALL
-        LD      E,$FF           
+        LD      E,$FF
         LD      C,6
         CALL    BDOS
         OR      A
@@ -112,16 +112,16 @@ LOOP:   LD      HL,FR
 
 ; Zero scans darken digits and LEDs. Release a claimed PICO; text restoration
 ; depends on the ROM's active console and driver, not a full state rollback.
-        LD      HL,ZEROS        
-	LD	C,TNDIGIT	
+        LD      HL,ZEROS
+	LD	C,TNDIGIT
         CALL    HWSVC
         LD      HL,ZEROS
-	CALL	LEDSCAN		
-        LD      A,(CLAIMED)     
+	CALL	LEDSCAN
+        LD      A,(CLAIMED)
         OR      A
         JR      Z,DONE
         LD      B,0
-	LD	C,TNVIDEO	
+	LD	C,TNVIDEO
         CALL    HWSVC
 DONE:   LD      DE,BYE
         JP      PRINT
@@ -145,9 +145,9 @@ YESNO:  PUSH    AF
 CLOCK:  LD      A,(DEVS)
         AND     8
         RET     Z
-        LD      HL,TIME         
+        LD      HL,TIME
         LD      B,0
-	LD	C,TNRTC		
+	LD	C,TNRTC
         CALL    HWSVC
         RET     NZ
         LD      HL,CLKROW+9
@@ -159,9 +159,9 @@ CLOCK:  LD      A,(DEVS)
         INC     HL
         LD      A,(TIME)
         CALL    BCD2
-        LD      HL,CLKROW       
+        LD      HL,CLKROW
         LD      B,3
-	LD	C,TNLCD		
+	LD	C,TNLCD
         JP      HWSVC
 ; BCD2 writes both nibbles of A as ASCII and advances HL by two;
 ; BCD1 writes one. Neither validates BCD.
@@ -210,13 +210,13 @@ MKDL:   PUSH    BC
         RET
 ; The low four bits of A as a segment pattern at DE, which moves on. Destroys
 ; AF, BC and HL.
-SEG:	AND	$0F		
+SEG:	AND	$0F
 	LD	C,A
-	LD	B,0		
+	LD	B,0
 	LD	HL,SEGTAB
-	ADD	HL,BC		
+	ADD	HL,BC
 	LD	A,(HL)
-	LD	(DE),A		
+	LD	(DE),A
 	INC	DE
 	RET
 
@@ -231,10 +231,10 @@ MKLED:  LD      A,(FR)
         LD      (PH),A
         LD      HL,LEDBUF
         LD      (LPTR),HL
-        LD      D,0             
-MKLR:   LD      BC,0            
+        LD      D,0
+MKLR:   LD      BC,0
         LD      H,0
-        LD      E,7             
+        LD      E,7
 MKLC:   LD      A,(PH)
         ADD     A,D
         ADD     A,E
@@ -276,24 +276,24 @@ MKL3:   DEC     E
 ; At 4 MHz each delay is about 0.4 ms, subject to interrupt/NMI jitter.
 ; Returns all rows dark; destroys AF, BC and HL.
 LEDSCAN:
-	LD	C,1		
-LEDSL:	LD	A,(HL)		
+	LD	C,1
+LEDSL:	LD	A,(HL)
 	OUT	(LEDR),A
 	INC	HL
-	LD	A,(HL)		
+	LD	A,(HL)
 	OUT	(LEDG),A
 	INC	HL
-	LD	A,(HL)		
+	LD	A,(HL)
 	OUT	(LEDB),A
 	INC	HL
-	LD	A,C		
+	LD	A,C
 	OUT	(LEDSEL),A
-	LD	B,128		
+	LD	B,128
 LEDSD:	DJNZ	LEDSD
-	XOR	A		
+	XOR	A
 	OUT	(LEDSEL),A
 	SLA	C
-	JR	NC,LEDSL	
+	JR	NC,LEDSL
 	RET
 
 ; With video claimed, Graphics I: names 1800h, colours 2000h, patterns 0000h,
@@ -309,7 +309,7 @@ VDPR:   LD      A,(HL)
         LD      A,C
         CP      $88
         JR      NZ,VDPR
-        LD      HL,$0000        
+        LD      HL,$0000
         CALL    VWA
         LD      D,0
 VPAT:   LD      A,D
@@ -322,7 +322,7 @@ VPAT2:  OUT     (VDPDAT),A
         DJNZ    VPAT2
         INC     D
         JR      NZ,VPAT
-        LD      HL,$2000        
+        LD      HL,$2000
         CALL    VWA
         LD      HL,BARS
         LD      B,32
@@ -330,12 +330,12 @@ VCOL:   LD      A,(HL)
         OUT     (VDPDAT),A
         INC     HL
         DJNZ    VCOL
-        LD      HL,$1800        
+        LD      HL,$1800
         CALL    VWA
         LD      D,24
 VNR:    LD      E,0
 VNC:    LD      A,E
-        AND     $1C             
+        AND     $1C
         ADD     A,A
         OUT     (VDPDAT),A
         INC     E
@@ -344,7 +344,7 @@ VNC:    LD      A,E
         JR      NZ,VNC
         DEC     D
         JR      NZ,VNR
-        LD      HL,$3800        
+        LD      HL,$3800
         CALL    VWA
         LD      HL,BALLPAT
         LD      B,32
@@ -352,7 +352,7 @@ VBP:    LD      A,(HL)
         OUT     (VDPDAT),A
         INC     HL
         DJNZ    VBP
-        LD      HL,$1B00        
+        LD      HL,$1B00
         CALL    VWA
         LD      A,(BY)
         OUT     (VDPDAT),A
@@ -387,7 +387,7 @@ BALL:   LD      HL,BX
         RET     Z
         XOR     A
         LD      (BOUNCE),A
-	CALL	RANDOM		
+	CALL	RANDOM
         AND     7
         OR      8
         PUSH    AF
@@ -398,23 +398,23 @@ BALL:   LD      HL,BX
         RET
 ; The xorshift16 (7, 9, 8) recurrence has period 65,535 for nonzero state.
 ; Save the next state; return HL and A = L. Destroys F.
-RANDOM:	LD	HL,(SEED)	
-	LD	A,H		
+RANDOM:	LD	HL,(SEED)
+	LD	A,H
 	RRA
 	LD	A,L
 	RRA
 	XOR	H
-	LD	H,A		
-	LD	A,L		
+	LD	H,A
+	LD	A,L
 	RRA
 	LD	A,H
 	RRA
 	XOR	L
-	LD	L,A		
-	XOR	H		
+	LD	L,A
+	XOR	H
 	LD	H,A
-	LD	(SEED),HL	
-	LD	A,L		
+	LD	(SEED),HL
+	LD	A,L
 	RET
 
 ; Add (DE) to (HL); reverse direction and set BOUNCE at result 0 or >= C.

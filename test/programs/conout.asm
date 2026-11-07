@@ -4,14 +4,14 @@
 ; (0001h) holds WBOOT's table-entry address; CONOUT is three entries on.
 
         ORG     $0100
-        LD      HL,($0001)      
+        LD      HL,($0001)
         LD      DE,9
         ADD     HL,DE
         LD      (CO+1),HL
         LD      HL,TEXT
 NEXT:   LD      A,(HL)
         OR      A
-        RET     Z               
+        RET     Z
         PUSH    HL
         LD      C,A
         CALL    CO

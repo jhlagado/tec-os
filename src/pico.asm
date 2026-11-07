@@ -67,7 +67,10 @@ PISTART:
   ld (IOBYTE),a
   ret
 
-; Set width A=80, 40 or 32. CF=1 for a
+; Set the PICO console width.
+; PICOWID is the public table offset
+; of TMSWID's address, at byte 24.
+; A=80, 40 or 32. CF=1 for a
 ; claim or invalid width, with stored
 ; width/mode unchanged on normal return.
 ; CF=0 selects RAM geometry. Active CRT

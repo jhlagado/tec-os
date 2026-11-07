@@ -6,7 +6,7 @@
 ; NMI vector. Reinstall the counter and initialise RPTP afterwards.
 
 START:  LD      SP,BOOTSTK
-        LD      HL,VARS         
+        LD      HL,VARS
         LD      DE,VARS+1
         LD      BC,$FF
         LD      (HL),0

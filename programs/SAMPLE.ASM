@@ -1,7 +1,7 @@
 ; First TEC-OS program: TAS SAMPLE to
 ; build, SAMPLE to run. Say hello via
 ; CP/M BDOS before checking ABI 5. Then
-; print geometry, write LCD row 2, scan
+; print geometry, write LCD row 1, scan
 ; 123456 and beep. Service status is not
 ; checked by this example.
 
@@ -67,8 +67,9 @@ CHECK:
   ld de,CRLF
   call SAY
 
-; B=1 selects LCD row two, counting from
-; zero. Exactly 20 bytes, no terminator.
+; B=1 selects the second physical row,
+; zero-based row 1. Send 20 raw bytes.
+; No terminator is read.
 ; HWSLCD attempts output after timeout.
 
   ld b,1

@@ -10,29 +10,29 @@ BDOS    EQU     $0005
 TAIL    EQU     $0081
 
         ORG     $0100
-; This program speaks ABI 5's table: on anything else it says so and stops.
-	LD	HL,ABITAB	
-	LD	DE,ABITAG	
+; Require the TNA signature and ABI major 5. Otherwise print an error and stop.
+	LD	HL,ABITAB
+	LD	DE,ABITAG
 	LD	B,3
-CHKTAG:	LD	A,(DE)		
+CHKTAG:	LD	A,(DE)
 	CP	(HL)
-	JR	NZ,NOABI	
-	INC	HL		
+	JR	NZ,NOABI
+	INC	HL
 	INC	DE
 	DJNZ	CHKTAG
-	LD	A,(HL)		
+	LD	A,(HL)
 	CP	5		; exactly: entries may move at each major
 	JR	Z,ABIOK
-NOABI:	LD	DE,NOABIM	
-	LD	C,9		
+NOABI:	LD	DE,NOABIM
+	LD	C,9
 	JP	BDOS
 ABITAG:	DB	"TNA"
 NOABIM:	DB	"MOUNT needs TEC-OS with ABI 5.",13,10,"$"
 ABIOK:
         LD      HL,TAIL
         CALL    SKIP
-	OR	A		
-	JP	Z,LIST		
+	OR	A
+	JP	Z,LIST
         SUB     'A'             ; the drive letter, A-D, then a colon
         CP      4
         JP      NC,USAGE
@@ -45,7 +45,7 @@ ABIOK:
         CALL    SKIP
         OR      A
         JR      NZ,WHICH
-        LD      A,(DRIVE)       
+        LD      A,(DRIVE)
 	LD	B,A
 	LD	C,TNUNMNT
 	CALL	ABICALL
@@ -57,7 +57,7 @@ ABIOK:
 
 ; A leading digit selects a decimal index. The byte accumulator wraps;
 ; stop at the first nondigit without checking the rest of the tail.
-WHICH:  CP      '0'             
+WHICH:  CP      '0'
         JR      C,BYNAME
         CP      '9'+1
         JR      NC,BYNAME
@@ -82,7 +82,7 @@ GOTNUM: LD      A,B
 
 ; Match the first 11 name bytes exactly, stopping at space/NUL and padding
 ; with spaces. This routine neither folds case nor rejects a longer name.
-BYNAME: LD      DE,NAME         
+BYNAME: LD      DE,NAME
         LD      B,11
 NM1:    LD      A,(HL)
         OR      A
@@ -98,7 +98,7 @@ NMPAD:  LD      A,' '
 NM2:    LD      (DE),A
         INC     DE
         DJNZ    NM2
-FIND:   XOR     A               
+FIND:   XOR     A
         LD      (IDX),A
 FIND1:  LD      A,(IDX)
         LD      E,A
@@ -123,7 +123,7 @@ FIND2:  LD      HL,IDX
         INC     (HL)
         JR      FIND1
 
-MOUNTA: LD      E,A             
+MOUNTA: LD      E,A
         LD      (IDX),A
 	LD	C,TNDESC	; already on this drive: report success
         LD      HL,DESC
@@ -145,7 +145,7 @@ MOUNTA: LD      E,A
         LD      DE,NOMNT
         JP      NZ,SAY
 ; Redescription supplies the displayed label; its status is not checked.
-        LD      A,(IDX)         
+        LD      A,(IDX)
         LD      E,A
 	LD	C,TNDESC
         LD      HL,DESC
@@ -163,17 +163,17 @@ SHOW:   LD      A,(DRIVE)
 ; List descriptors from IDX 0: index, label, geometry, R/O and current drive.
 ; Indices from 100 use three digits; mount FFh means no drive. Any nonzero
 ; describe result ends the list, without a separate error diagnosis.
-LIST:	LD	A,(IDX)		
+LIST:	LD	A,(IDX)
 	LD	E,A
-	LD	C,TNDESC	
+	LD	C,TNDESC
 	LD	HL,DESC
 	CALL	ABICALL
 	OR	A
-	RET	NZ		
-	LD	A,(IDX)		
+	RET	NZ
+	LD	A,(IDX)
 	CALL	DEC2
 	CALL	SPACE
-	LD	HL,DESC+16	
+	LD	HL,DESC+16
 	LD	B,11
 LIST1:	LD	E,(HL)
 	PUSH	BC		; protect count and descriptor pointer
@@ -184,19 +184,19 @@ LIST1:	LD	E,(HL)
 	INC	HL
 	DJNZ	LIST1
 	CALL	SPACE
-	LD	DE,G8M		
+	LD	DE,G8M
 	LD	A,(DESC+12)
 	DEC	A
 	JR	Z,LIST2
-	LD	DE,G1M		
-LIST2:	LD	C,9		
+	LD	DE,G1M
+LIST2:	LD	C,9
 	CALL	BDOS
-	LD	A,(DESC+13)	
+	LD	A,(DESC+13)
 	RRCA
 	LD	DE,RO
 	LD	C,9
 	CALL	C,BDOS
-	LD	A,(DESC+14)	
+	LD	A,(DESC+14)
 	CP	$FF
 	JR	Z,LIST3
 	ADD	A,'A'
@@ -204,10 +204,10 @@ LIST2:	LD	C,9
 	LD	DE,ONDRV
 	LD	C,9
 	CALL	BDOS
-LIST3:	LD	DE,CRLF		
+LIST3:	LD	DE,CRLF
 	LD	C,9
 	CALL	BDOS
-	LD	HL,IDX		
+	LD	HL,IDX
 	INC	(HL)
 	JR	LIST
 
@@ -215,9 +215,9 @@ LIST3:	LD	DE,CRLF
 ; Uses BDOS output, with no general register or flag preservation.
 DEC2:	LD	C,100
 	CP	C
-	JR	C,DEC10		
+	JR	C,DEC10
 	LD	B,'0'-1
-DEC1:	INC	B		
+DEC1:	INC	B
 	SUB	C
 	JR	NC,DEC1
 	ADD	A,C
@@ -226,10 +226,10 @@ DEC1:	INC	B
 	CALL	PUT
 	POP	AF
 DEC10:	LD	B,'0'-1
-DECT:	INC	B		
+DECT:	INC	B
 	SUB	10
 	JR	NC,DECT
-	ADD	A,10+'0'	
+	ADD	A,10+'0'
 	PUSH	AF
 	LD	E,B
 	CALL	PUT
@@ -239,7 +239,7 @@ DECT:	INC	B
 
 ; SPACE/PUT send a blank or E through BDOS 2, which may change any register.
 SPACE:	LD	E,' '
-PUT:	LD	C,2		
+PUT:	LD	C,2
 	JP	BDOS
 
 USAGE:  LD      DE,USE

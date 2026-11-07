@@ -217,7 +217,7 @@ SDI58:  LD      DE,0
         JR      SDFAIL
 SDI58F: CALL    SPIEND
         LD      A,SDEOCR
-SDFAIL: OR      A               
+SDFAIL: OR      A
         RET
 SDIOK:  XOR     A
         RET

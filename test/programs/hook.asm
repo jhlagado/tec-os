@@ -19,7 +19,7 @@ COREC   EQU     $4100
 CIREC   EQU     $4200
 
         ORG     $0100
-        LD      HL,WBCNT        
+        LD      HL,WBCNT
         LD      DE,WBCNT+1
         LD      BC,$02FF
         LD      (HL),0
@@ -28,7 +28,7 @@ CIREC   EQU     $4200
         LD      (COPTR),HL
         LD      HL,CIREC
         LD      (CIPTR),HL
-        LD      HL,($0001)      
+        LD      HL,($0001)
         LD      DE,OLDWB
         LD      BC,MYWB
         CALL    PATCH
@@ -41,7 +41,7 @@ CIREC   EQU     $4200
         LD      DE,OLDCO
         LD      BC,MYCO
         CALL    PATCH
-        LD      A,($0080)       
+        LD      A,($0080)
         OR      A
         JR      Z,CONS
         LD      A,($0082)
@@ -71,7 +71,7 @@ POLL:   LD      E,$FF
         LD      DE,LINE
         LD      C,10
         CALL    BDOS
-        LD      DE,LINE         
+        LD      DE,LINE
         LD      C,10
         CALL    BDOS
         RET
@@ -98,7 +98,7 @@ PATCH:  INC     HL
 
 MYWB:   LD      HL,WBCNT
         INC     (HL)
-        DB      $C3             
+        DB      $C3
 OLDWB:  DW      0
 
 MYCS:   PUSH    HL

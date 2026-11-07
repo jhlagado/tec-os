@@ -3,8 +3,7 @@
 ;
 ; This is an independent implementation
 ; against the public CP/M interfaces and
-; reviewed black-box CCP fixtures. ATOM
-; is its assembler.
+; reviewed black-box CCP fixtures.
 ;
 ; TEC-OS ROM-resident adaptation (see
 ; PROVENANCE.md). The code and text are
@@ -45,7 +44,7 @@ RCFAIL EQU 255*256
 ; return.
 
 CCPENT:
-  ld sp,CSTKTOP  ; CCP stack in RAM
+  ld sp,CSTKTOP
   ld a,c
   and $0F        ; saved drive nibble
   cp MAXDRV
@@ -116,7 +115,7 @@ MAINLOOP:
 MLREAD:
   call SAVEDU    ; A=drive, B=user bits
   push af        ; save drive for prompt
-  ld a,b         ; packed user
+  ld a,b
   rrca
   rrca
   rrca
@@ -190,7 +189,7 @@ MLEC1:
   jr MLEC1
 
 MLEC2:
-  pop hl         ; restore piece start
+  pop hl
 
 ; Dispatch the piece at HL. For leading
 ; ':', run only with PRGCODE below FF00h
@@ -225,7 +224,7 @@ MLTAKE:
   jp STARTED
 
 MLTKC:
-  inc hl         ; skip leading colon
+  inc hl
 
 MLTK0:
   ld (ARGSTRT),hl
@@ -255,7 +254,7 @@ MLTK2:
   sub LOW(CMDTXT-1)
 
 MLTK3:
-  ld (CHPOS),a   ; save next/zero
+  ld (CHPOS),a
   ld hl,0        ; new command success
   ld (PRGCODE),hl
   ld hl,(ARGSTRT)
@@ -347,7 +346,7 @@ SAVEDU:
   ld c,25        ; 25: logical default
   call BDOS
   pop bc
-  ld c,a         ; return drive in C
+  ld c,a
   or b
   ld (CURDSK),a  ; packed page-zero byte
   ld a,c
@@ -383,7 +382,7 @@ KEYNXT:
   ex de,hl       ; HL=remaining suffix
   jr nz,KEYSK    ; skip unmatched suffix
   inc hl
-  ld a,(hl)      ; handler low byte
+  ld a,(hl)
   inc hl
   ld h,(hl)
   ld l,a
@@ -446,7 +445,7 @@ SVCOK:
 ; controls each drive's user-0 retry.
 
 CMDCOM:
-  ld a,'C'       ; force COM extension
+  ld a,'C'
   ld (CMDFCB+9),a
   ld a,'O'
   ld (CMDFCB+10),a
@@ -608,7 +607,7 @@ LOADA:
   scf
   ret z          ; user 0: no retry
   push af
-  ld e,0         ; 32: user 0
+  ld e,0
   ld c,32
   call BDOS
   call LOADCOM   ; same drive/file
@@ -620,10 +619,10 @@ LOADA:
   rrca
   rrca
   rrca
-  ld e,a         ; restore saved user
+  ld e,a
   ld c,32
   call BDOS
-  pop af         ; restore retry A/F
+  pop af
   ret
 
 ; Load CMDFCB through public BDOS
@@ -662,7 +661,7 @@ LOADLOOP:
   or a
   jr nz,LOADEND  ; nonzero read result
   ld de,128
-  add hl,de      ; next 128-byte record
+  add hl,de
   jr LOADLOOP
 
 ; At the exclusive load ceiling, read

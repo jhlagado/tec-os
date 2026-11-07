@@ -14,7 +14,7 @@ HDR:	DB	'D',4,0,1	; removable, format 4 (abi.inc's SVCFMT)
 ; carry clear. The two-byte target patch is not atomic.
 INIT:   LD      HL,($0001)
         LD      DE,9+1
-        ADD     HL,DE           
+        ADD     HL,DE
         LD      E,(HL)
         INC     HL
         LD      D,(HL)
@@ -44,7 +44,7 @@ MYCO:   PUSH    HL
         INC     HL
         LD      (COUNT),HL
         POP     HL
-        DB      $C3             
+        DB      $C3
 OLDCO:  DW      0
 COUNT:  DW      0
 IMGEND:

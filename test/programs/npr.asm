@@ -14,7 +14,7 @@ BDOS    EQU     $0005
         ORG     $0100
         LD      SP,STACK
         CALL    BIGRD
-        LD      HL,ONAME        
+        LD      HL,ONAME
         CALL    SETF
         LD      C,15
         CALL    FCALL
@@ -22,19 +22,19 @@ BDOS    EQU     $0005
         CALL    SETR
         LD      C,33
         CALL    FCALL
-        LD      C,19            
+        LD      C,19
         CALL    FCALL
         LD      HL,GNAME
         CALL    SETF
         LD      C,22
         CALL    FCALL
-        LD      A,0             
+        LD      A,0
         LD      E,$11
         CALL    WREC
-        LD      A,5             
+        LD      A,5
         LD      E,$55
         CALL    WREC
-        LD      HL,HNAME        
+        LD      HL,HNAME
         CALL    SETF2
         LD      DE,FCB2
         LD      C,22
@@ -42,11 +42,11 @@ BDOS    EQU     $0005
         LD      DE,FCB2
         LD      C,16
         CALL    BDOS
-        CALL    BIGRD           
-        LD      A,6             
+        CALL    BIGRD
+        LD      A,6
         LD      E,$66
         CALL    WREC
-        LD      A,5             
+        LD      A,5
         CALL    SETR
         LD      C,33
         CALL    FCALL

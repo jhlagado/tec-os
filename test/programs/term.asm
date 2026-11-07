@@ -8,7 +8,7 @@ BDOS    EQU     $0005
         LD      DE,DRAW
         LD      C,9
         CALL    BDOS
-        LD      A,($0080)       
+        LD      A,($0080)
         OR      A
         RET     Z
         LD      B,30
@@ -18,7 +18,7 @@ LOOP:   PUSH    BC
         LD      DE,LINE
         LD      C,9
         CALL    BDOS
-        LD      HL,LINE+2       
+        LD      HL,LINE+2
         INC     (HL)
         LD      A,(HL)
         CP      '9'+1

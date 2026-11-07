@@ -24,13 +24,13 @@ CMDUNL:
 ; retry. Index 6 enters BADCMD.
 
 CONNO:
-  pop hl         ; trial text to HL
+  pop hl
 
 CONSKIP:
   inc de         ; skip unmatched suffix
   dec c
   jr nz,CONSKIP
-  inc b          ; next name index
+  inc b
   ld a,b
   cp 6           ; six name records
   jr nz,CONNXT
@@ -78,7 +78,7 @@ CONCMP:
 
 CONMAT:
   pop af         ; discard saved pointer
-  ld a,b         ; matched name index
+  ld a,b
   cp 4
   jr c,CONHIT    ; 0..3 already modes
   add a,a
@@ -90,7 +90,7 @@ CONHIT:
   ld a,(hl)
   cp ':'
   jr nz,CONEND
-  inc hl         ; optional colon
+  inc hl
 
 ; Width requires spaces after the
 ; console name and CRT mode. Parse
@@ -127,7 +127,7 @@ CONEND:
   push af        ; width across calls
   call ENDCHK    ; reject suffix
 
-; FIND the PICO table at PICOVER through
+; FIND PICO at minimum PICOWVER through
 ; TNFIND. Keep the width across
 ; ENDCHK/FIND and recover it in B. If no
 ; table is found, typed input enters
@@ -156,7 +156,7 @@ CONEND:
 CONWD:
   ld de,PICOWID  ; table width offset
   add hl,de
-  ld a,(hl)      ; entry address low
+  ld a,(hl)
   inc hl
   ld h,(hl)
   ld l,a
@@ -194,7 +194,7 @@ CONSHOW:
   add a,a
   ld l,a
   ld h,0
-  ld de,CONNAMS  ; effective name table
+  ld de,CONNAMS
   add hl,de
   ld b,4
 
@@ -205,7 +205,7 @@ CONSH1:
   djnz CONSH1
   ld de,CRLFMSG
   call PUTSTR
-  jp MAINLOOP    ; next prompt
+  jp MAINLOOP
 
 ; USER: require one decimal number 0..15
 ; with no non-space suffix. Pass E=B to
@@ -221,7 +221,7 @@ CMDUSER:
   cp '9'+1
   jp nc,BADCMD   ; reject empty/nondigit
   sub '0'
-  ld b,a         ; first digit value
+  ld b,a
   inc hl
   ld a,(hl)
   cp '0'         ; optional second digit
@@ -276,7 +276,7 @@ SAVENUM:
 
   jr nc,SAVENEND
   sub '0'
-  ld e,a         ; next digit value
+  ld e,a
   ld a,b
   add a,a        ; overflow at B*2
   jp c,BADCMD
@@ -394,7 +394,7 @@ SAVEWER:
 ; observes failure.
 
 SAVENOSP:
-  ld de,NOSPACE  ; error message
+  ld de,NOSPACE
   jp ERRGO
 
 ; Prepare transient page zero after a
@@ -425,9 +425,9 @@ PREPPAGE:
   call SKIPSP
   ld de,FCBTWO   ; overlapping FCB
   call PARSEFCB  ; ignore parser carry
-  pop hl         ; restore original tail
+  pop hl
   ld de,CMDTAIL+1
-  ld b,0         ; tail byte count
+  ld b,0
 
 TAILLOOP:
   ld a,(hl)
@@ -531,8 +531,8 @@ FCBNAME:
   ret
 
 FCBDOT:
-  inc hl         ; consume type dot
-  ld a,e         ; field end low byte
+  inc hl
+  ld a,e
   add a,b        ; skip unfilled slots
   ld e,a
   jr nc,FCBTYP
@@ -595,8 +595,8 @@ PLEND:
 ; preserved.
 
 UNAMBIG:
-  push hl        ; delimiter pointer
-  push bc        ; caller BC
+  push hl
+  push bc
   ld hl,(FCBBASE)
   inc hl
   ld a,(hl)
@@ -616,8 +616,8 @@ UNAMBIG:
 ; sets carry for membership.
 
 VALIDCHR:
-  push hl        ; caller HL
-  push bc        ; caller BC
+  push hl
+  push bc
   ld hl,BADCHARS
   ld bc,13       ; 13 forbidden bytes
   cpir           ; membership -> Z
@@ -630,8 +630,8 @@ VALIDCHR:
 ; does not.
 
 CHRRET:
-  pop bc         ; BC above HL
-  pop hl         ; restore delimiter
+  pop bc
+  pop hl
   scf            ; carry for match
   ret z          ; incoming Z
   or a           ; nonmatch: carry clear
@@ -646,18 +646,18 @@ CHRRET:
 ; delimiter/flags result.
 
 PARSTAR:
-  ld a,'?'       ; parsed wildcard byte
+  ld a,'?'
 
 STARLOOP:
   ld (de),a
   inc de
   djnz STARLOOP  ; positive B slots
-  inc hl         ; skip the star
+  inc hl
 
 PARIGN:
   call FCBEND    ; delimiter test only
   ret z
-  inc hl         ; ignored suffix
+  inc hl
   jr PARIGN
 
 ; Read (HL) without advancing. Zero,
@@ -739,8 +739,8 @@ PUTSTR:
 ; traversal/count preservation.
 
 PUTCHAR:
-  push bc        ; save caller BC
-  push hl        ; save caller HL
+  push bc
+  push hl
   ld c,2         ; 2: character E
   call BDOS
   pop hl
@@ -868,7 +868,7 @@ STL1:
   cp LOW(STREC+128)
   jr z,STLE      ; end reached: finish
   ld a,(hl)
-  inc hl         ; consume source byte
+  inc hl
   or a
   jr z,STLE      ; zero ends source
   cp 26
@@ -880,9 +880,9 @@ STL1:
   inc b          ; test full, keep A
   dec b
   jr z,STL1      ; full: consume only
-  ld (de),a      ; store acquired byte
+  ld (de),a
   inc de
-  dec b          ; one fewer free slot
+  dec b
   jr STL1
 
 STLE:
@@ -915,7 +915,7 @@ STL2:
   ld (CMDLEN),a  ; counted input layout
   ex de,hl
   ld (hl),13     ; CR for echo
-  inc hl         ; next byte for dollar
+  inc hl
   ld (hl),'$'    ; PUTSTR echo end
 
   ld de,CMDTXT

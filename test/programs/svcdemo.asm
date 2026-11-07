@@ -11,7 +11,7 @@ HDR:	DB	'D',SVCFMT,0,FLAGS
         DB      HDRNAME
 INIT:
 %IF V_HANG
-        JR      INIT            
+        JR      INIT
 %ENDIF
 %IF V_FAIL
         SCF
@@ -19,7 +19,7 @@ INIT:
 %ENDIF
 %IF V_PROBE
         LD      DE,REC+2        ; INIT's record must not be visible yet
-	LD	BC,$0100+TNFIND	
+	LD	BC,$0100+TNFIND
 	CALL	ABICALL
         LD      A,0
         ADC     A,A
@@ -51,7 +51,7 @@ INIT:
 %IF V_HOOK
         LD      A,1
         LD      (RESULT),A      ; INIT marker for rollback tests
-        LD      HL,($0001)      
+        LD      HL,($0001)
         LD      DE,HOOKAT
         ADD     HL,DE
         LD      E,(HL)
@@ -76,7 +76,7 @@ INIT:
         LD      (VECAT+1),HL
 %ENDIF
 %IF V_VECX
-	LD	HL,ABICALL	
+	LD	HL,ABICALL
         LD      (VECAT+1),HL
 %ENDIF
 %IF V_VECFL
@@ -85,10 +85,10 @@ INIT:
 %ENDIF
 ; Accepted BDOS 47 and JP 0 end INIT by warm boot, without an ordinary return.
 %IF V_CHI
-        CALL    CHAIN47         
+        CALL    CHAIN47
 %ENDIF
 %IF V_WB
-        JP      0               
+        JP      0
 %ENDIF
 %IF V_STK
 	LD	B,3
@@ -107,7 +107,7 @@ INIT:
 %ENDIF
 %IF V_DEP
         LD      DE,DEPNAME      ; bound once, at INIT
-	LD	BC,$0100+TNFIND	
+	LD	BC,$0100+TNFIND
 	CALL	ABICALL
         RET     C
         LD      (DEPTAB),HL
@@ -119,15 +119,15 @@ INIT:
         RET
 %ENDIF
 %IF V_LINK
-        LD      HL,ABITAB       
+        LD      HL,ABITAB
         LD      (REC),HL
 %ENDIF
 %IF V_CYCLE
-        LD      HL,REC          
+        LD      HL,REC
         LD      (REC),HL
 %ENDIF
 %IF V_TABLE
-        LD      HL,$0300        
+        LD      HL,$0300
         LD      (REC+11),HL
 %ENDIF
 %IF V_END
@@ -143,7 +143,7 @@ INIT:
 CHAIN1: LD      DE,13
         PUSH    HL
         ADD     HL,DE
-        EX      DE,HL           
+        EX      DE,HL
         POP     HL
         LD      (HL),E
         INC     HL
@@ -159,7 +159,7 @@ CHAIN1: LD      DE,13
         DJNZ    CHAIN1
         LD      DE,-13
         ADD     HL,DE
-        LD      (HL),0          
+        LD      (HL),0
         INC     HL
         LD      (HL),0
         LD      HL,IMGEND
@@ -167,11 +167,11 @@ CHAIN1: LD      DE,13
         RET
 %ENDIF
 %IF V_NONE
-        LD      HL,0            
+        LD      HL,0
         OR      A
         RET
 %ENDIF
-        LD      HL,REC          
+        LD      HL,REC
         OR      A
         RET
 
@@ -200,10 +200,10 @@ REMOVE:
         RET
 %ENDIF
 %IF V_CHR
-	CALL	CHAIN47		
+	CALL	CHAIN47
 %ENDIF
 %IF V_REMWB
-	JP	0		
+	JP	0
 %ENDIF
 %IF V_REMWIN
 	CALL	RAWUNL		; refused while REMOVE runs
@@ -224,7 +224,7 @@ SERVICE:LD      HL,COUNT
 ; SAFE requires a fresh FIND and matching generation, then uses that cache.
 ; It does not rebind the pointer; 256 generation changes can alias this byte.
 LOOK:   LD      DE,DEPNAME
-	LD	BC,$0100+TNFIND	
+	LD	BC,$0100+TNFIND
 	CALL	ABICALL
         RET     C
         LD      (DEPTAB),HL
@@ -233,7 +233,7 @@ LOOK:   LD      DE,DEPNAME
 USE:    LD      HL,(DEPTAB)
         JP      (HL)
 SAFE:   LD      DE,DEPNAME
-	LD	BC,$0100+TNFIND	
+	LD	BC,$0100+TNFIND
 	CALL	ABICALL
         RET     C
         LD      HL,GEN
@@ -272,12 +272,12 @@ REC2:   DW      0
 COUNT:  DB      0
 RESULT: DB      $FF
 %IF V_VEC
-VHAND:  LD      A,$5A           
+VHAND:  LD      A,$5A
         LD      (RESULT),A
         RET
 %ENDIF
 %IF V_CHN
-CHAIN47:LD      DE,CMD47        
+CHAIN47:LD      DE,CMD47
         LD      C,26
         CALL    5
         LD      C,47

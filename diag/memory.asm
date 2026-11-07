@@ -94,7 +94,7 @@ MVBAD:  LD      (IX+3),A
         LD      (IX+2),H
         LD      A,1
         LD      (IX+0),A
-        OR      A               
+        OR      A
         RET
 
 ; Run the three RAM tests before anything is recorded: the report buffer
@@ -338,7 +338,7 @@ TOVLD:  CALL    PRI
         DB      "is dropped",0
 TOVLX:  CALL    PRI
         DB      "; read under overlay ",0
-        LD      A,(SAVE+5)      
+        LD      A,(SAVE+5)
         CALL    PRHEX
         JP      REND
 

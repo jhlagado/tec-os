@@ -169,6 +169,8 @@ Do not press the hex keypad while a CP/M program is running; see
 
 ## Sources
 
+[Reading the source](docs/reading.md) gives a file order, call paths and symbol prefixes.
+
 `src/` holds the ROM. `src/cpm/` holds the CCP and BDOS adapted from Portable
 CP/M ([provenance](src/cpm/PROVENANCE.md)). `format/` holds the container and
 geometry definition, which both the ROM build and the host tools read, and
