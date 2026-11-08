@@ -1,0 +1,464 @@
+{
+  "kind": "R1_ALL_DECLARED_CONTROLS_UNRUN",
+  "runtimeAuthority": false,
+  "positive": [
+    {
+      "id": "d-absent",
+      "phase": "direct",
+      "device": false,
+      "pointer": "valid installed table fixture",
+      "claim": 0,
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": "unchanged",
+      "vdpPortAccess": 0
+    },
+    {
+      "id": "d-bare-off",
+      "phase": "direct",
+      "device": true,
+      "pointer": 0,
+      "claim": 0,
+      "seedR1": 224,
+      "shadow": 32,
+      "iff": false,
+      "expectedR1": 128
+    },
+    {
+      "id": "d-pico-32",
+      "phase": "direct",
+      "device": true,
+      "width": 32,
+      "claim": 1,
+      "seedR1": 255,
+      "shadow": 32,
+      "iff": false,
+      "expectedR1": 192
+    },
+    {
+      "id": "d-pico-40",
+      "phase": "direct",
+      "device": true,
+      "width": 40,
+      "claim": 1,
+      "seedR1": 255,
+      "shadow": 32,
+      "iff": false,
+      "expectedR1": 208
+    },
+    {
+      "id": "d-pico-80",
+      "phase": "direct",
+      "device": true,
+      "width": 80,
+      "claim": 1,
+      "seedR1": 255,
+      "shadow": 32,
+      "iff": false,
+      "expectedR1": 208
+    },
+    {
+      "id": "d-bare-on",
+      "phase": "direct",
+      "device": true,
+      "pointer": 0,
+      "claim": 1,
+      "seedR1": 0,
+      "shadow": 32,
+      "iff": true,
+      "expectedR1": 128
+    },
+    {
+      "id": "w-absent",
+      "phase": "warm-before-PZINIT",
+      "device": false,
+      "pointer": 0,
+      "claim": 0,
+      "shadow": 32,
+      "vdpPortAccess": 0
+    },
+    {
+      "id": "w-bare-0",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "matrix": false,
+      "pointer": 0,
+      "claim": 0,
+      "seedR1": 224,
+      "shadow": 32,
+      "expectedR1": 128,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-bare-1",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "matrix": false,
+      "pointer": 0,
+      "claim": 1,
+      "seedR1": 224,
+      "shadow": 32,
+      "expectedR1": 128,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-32-0-crt",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 32,
+      "claim": 0,
+      "route": "CRT",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 192,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-32-0-tty",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 32,
+      "claim": 0,
+      "route": "TTY",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 192,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-32-0-uc1",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 32,
+      "claim": 0,
+      "route": "UC1",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 192,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-32-1-crt",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 32,
+      "claim": 1,
+      "route": "CRT",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 192,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-32-1-tty",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 32,
+      "claim": 1,
+      "route": "TTY",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 192,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-32-1-uc1",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 32,
+      "claim": 1,
+      "route": "UC1",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 192,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-40-0-crt",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 40,
+      "claim": 0,
+      "route": "CRT",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-40-0-tty",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 40,
+      "claim": 0,
+      "route": "TTY",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-40-0-uc1",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 40,
+      "claim": 0,
+      "route": "UC1",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-40-1-crt",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 40,
+      "claim": 1,
+      "route": "CRT",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-40-1-tty",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 40,
+      "claim": 1,
+      "route": "TTY",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-40-1-uc1",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 40,
+      "claim": 1,
+      "route": "UC1",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-80-0-crt",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 80,
+      "claim": 0,
+      "route": "CRT",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-80-0-tty",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 80,
+      "claim": 0,
+      "route": "TTY",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-80-0-uc1",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 80,
+      "claim": 0,
+      "route": "UC1",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-80-1-crt",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 80,
+      "claim": 1,
+      "route": "CRT",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-80-1-tty",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 80,
+      "claim": 1,
+      "route": "TTY",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "w-80-1-uc1",
+      "phase": "warm-before-PZINIT",
+      "device": true,
+      "width": 80,
+      "claim": 1,
+      "route": "UC1",
+      "seedR1": 255,
+      "shadow": 32,
+      "expectedR1": 208,
+      "expectedClaim": 0
+    },
+    {
+      "id": "c-absent",
+      "phase": "successful-cold-through-warm-prefix",
+      "device": false,
+      "matrix": false,
+      "expectedR1": "unchanged",
+      "checkpoints": [
+        "before-CONINIT",
+        "after-VIDINIT",
+        "before-PIICLR",
+        "after-PIICLR",
+        "before-PZINIT"
+      ],
+      "coldProbePortsExcludedFromNoPortAssertion": true
+    },
+    {
+      "id": "c-bare",
+      "phase": "successful-cold-through-warm-prefix",
+      "device": true,
+      "matrix": false,
+      "expectedR1": 128,
+      "checkpoints": [
+        "before-CONINIT",
+        "after-VIDINIT",
+        "before-PIICLR",
+        "after-PIICLR",
+        "before-PZINIT"
+      ],
+      "coldProbePortsExcludedFromNoPortAssertion": true
+    },
+    {
+      "id": "c-pico40",
+      "phase": "successful-cold-through-warm-prefix",
+      "device": true,
+      "matrix": true,
+      "expectedR1": 208,
+      "checkpoints": [
+        "before-CONINIT",
+        "after-VIDINIT",
+        "before-PIICLR",
+        "after-PIICLR",
+        "before-PZINIT"
+      ],
+      "coldProbePortsExcludedFromNoPortAssertion": true
+    },
+    {
+      "id": "c-bare-sd-failure",
+      "phase": "cold-before-DIAG-entry",
+      "device": true,
+      "matrix": false,
+      "seedR1": 224,
+      "expectedR1": 224,
+      "noR1WritesBeforeBoundary": true,
+      "doesNotQualifyLaterDIAG": true
+    },
+    {
+      "id": "c-bare-mount-failure",
+      "phase": "cold-before-DIAG-entry",
+      "device": true,
+      "matrix": false,
+      "seedR1": 224,
+      "expectedR1": 224,
+      "noR1WritesBeforeBoundary": true,
+      "doesNotQualifyLaterDIAG": true
+    }
+  ],
+  "faults": [
+    {
+      "id": "n-old-c0",
+      "fault": "bare fallback C0 rather than80",
+      "mustFail": "d-bare-off full R1=80"
+    },
+    {
+      "id": "n-global-32-blank",
+      "fault": "real32 R1 changed C0 to80",
+      "mustFail": "d-pico-32 full R1=C0"
+    },
+    {
+      "id": "n-skip-clear",
+      "fault": "warm CALL PIICLR bypassed",
+      "mustFail": "w-40-0-tty full R1=D0/IE off beforePZINIT"
+    },
+    {
+      "id": "n-stale-shadow",
+      "fault": "PITIE clear store bypassed",
+      "mustFail": "d-bare-off shadow zero"
+    },
+    {
+      "id": "n-absent-port",
+      "fault": "absent RET gate bypassed",
+      "mustFail": "d-absent zero VDP port accesses"
+    },
+    {
+      "id": "n-other-console-skip",
+      "fault": "unclaimed non-CRT teardown improperly skipped",
+      "mustFail": "w-40-0-uc1 full R1=D0/IE off beforePZINIT"
+    }
+  ],
+  "implementedPositiveIDs": [
+    "d-absent",
+    "d-bare-off",
+    "d-pico-32",
+    "d-pico-40",
+    "d-pico-80",
+    "d-bare-on"
+  ],
+  "implementedFaultIDs": [
+    "n-old-c0",
+    "n-global-32-blank",
+    "n-stale-shadow",
+    "n-absent-port"
+  ],
+  "incompletePositiveIDs": [
+    "w-absent",
+    "w-bare-0",
+    "w-bare-1",
+    "w-32-0-crt",
+    "w-32-0-tty",
+    "w-32-0-uc1",
+    "w-32-1-crt",
+    "w-32-1-tty",
+    "w-32-1-uc1",
+    "w-40-0-crt",
+    "w-40-0-tty",
+    "w-40-0-uc1",
+    "w-40-1-crt",
+    "w-40-1-tty",
+    "w-40-1-uc1",
+    "w-80-0-crt",
+    "w-80-0-tty",
+    "w-80-0-uc1",
+    "w-80-1-crt",
+    "w-80-1-tty",
+    "w-80-1-uc1",
+    "c-absent",
+    "c-bare",
+    "c-pico40",
+    "c-bare-sd-failure",
+    "c-bare-mount-failure"
+  ],
+  "incompleteFaultIDs": [
+    "n-skip-clear",
+    "n-other-console-skip"
+  ]
+}
