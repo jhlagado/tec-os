@@ -2,7 +2,7 @@
   "kind": "P3_KG56_COMMAND02_ALLOCATION",
   "runtimeAuthority": false,
   "job": "warm",
-  "offerSha256": "51305c9f313a42542d4126cf5052ca6bd9740a846bce93c8a4ba8701c6ee0b25",
+  "offerSha256": "2ed886c3ca8fe4455ab1e36d0f5c3b68718e29ff2a4ccf002541fa2aa11f4e97",
   "launcherSha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
   "budget": {
     "sampledMB": 600,

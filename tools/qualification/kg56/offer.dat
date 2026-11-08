@@ -1,6 +1,6 @@
 {
-  "state": "INACTIVE_PRODUCT_WARM_OFFER_SOURCE_ONLY",
-  "active": false,
+  "state": "FUTURE_ACTIVE_WARM_PROJECTION_NOT_RUNTIME_AUTHORITY",
+  "active": true,
   "job": "warm",
   "cwd": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02",
   "argv": [
@@ -33,7 +33,7 @@
     "LANG": "C.UTF-8",
     "LC_ALL": "C.UTF-8",
     "TMPDIR": "/tmp",
-    "KG56_BINDING_SHA256": "8abb8286fd22472188a257405009786929ba0115648a9f3f4f0448fc5c593436"
+    "KG56_BINDING_SHA256": "63505fe58cff8837833d93b006963d401e5db7127a47d6e0f2015aed8564569f"
   },
   "members": [
     {
@@ -11904,9 +11904,9 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
-      "bytes": 954532,
+      "bytes": 954543,
       "mode": "0644",
-      "sha256": "8abb8286fd22472188a257405009786929ba0115648a9f3f4f0448fc5c593436"
+      "sha256": "63505fe58cff8837833d93b006963d401e5db7127a47d6e0f2015aed8564569f"
     }
   ],
   "symlinks": [

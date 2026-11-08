@@ -1,6 +1,6 @@
 {
-  "kind": "UNAPPLIED_EXACT_METADATA_ACTIVATION_ACCOUNT",
-  "applied": false,
+  "kind": "APPLIED_EXACT_METADATA_ACTIVATION_ACCOUNT",
+  "applied": true,
   "runtimeAuthority": false,
   "sourceAllocation": "898d8b87",
   "actualLeafAndMeterAuthoritiesStillRequired": true,
@@ -96,5 +96,16 @@
     "warm.mjs": "13bf83f3bacd7592f58843cead78d59d747a9aef09c80b6a7ae16679c2c810dd",
     "meter.py": "80f49c8525ba9f06a03538c0107d964258ea36dfb2e61572822527bf162881be"
   },
-  "noActualRuntimeOrWarmAcceptance": true
+  "noActualRuntimeOrWarmAcceptance": true,
+  "rootMaterialisation": {
+    "selectionCommit": "da0df1018a65565d7b73d8adacad8e8e5ecb4c1b",
+    "sourceAdmissionCommit": "40a643421b18b43fdea43c094fe80f72cef288a7",
+    "localDate": "2026-11-09",
+    "timezone": "Australia/Melbourne",
+    "runtimeAllocationIssued": false,
+    "authorityTemplatesRemainFalse": true,
+    "beforeAndProjectedRowsRetainedAsOriginalProvenance": true,
+    "exactFiveProjectedFilesCopied": true,
+    "targetedPublicationReadbackPending": true
+  }
 }

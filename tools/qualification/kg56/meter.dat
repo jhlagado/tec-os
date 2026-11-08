@@ -60,9 +60,9 @@
     "jobs": 1,
     "queueWait": 0
   },
-  "readyOfferSha256": "51305c9f313a42542d4126cf5052ca6bd9740a846bce93c8a4ba8701c6ee0b25",
+  "readyOfferSha256": "2ed886c3ca8fe4455ab1e36d0f5c3b68718e29ff2a4ccf002541fa2aa11f4e97",
   "collectorSha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
-  "bindingSha256": "8abb8286fd22472188a257405009786929ba0115648a9f3f4f0448fc5c593436",
+  "bindingSha256": "63505fe58cff8837833d93b006963d401e5db7127a47d6e0f2015aed8564569f",
   "references": [
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/warm.mjs",
@@ -396,23 +396,23 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
-      "bytes": 954532,
+      "bytes": 954543,
       "mode": "0644",
-      "sha256": "8abb8286fd22472188a257405009786929ba0115648a9f3f4f0448fc5c593436"
+      "sha256": "63505fe58cff8837833d93b006963d401e5db7127a47d6e0f2015aed8564569f"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
-      "bytes": 753190,
+      "bytes": 753201,
       "mode": "0644",
-      "sha256": "51305c9f313a42542d4126cf5052ca6bd9740a846bce93c8a4ba8701c6ee0b25"
+      "sha256": "2ed886c3ca8fe4455ab1e36d0f5c3b68718e29ff2a4ccf002541fa2aa11f4e97"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "bytes": 540,
       "mode": "0644",
-      "sha256": "155ee77ca2ad0f0704ad04e56a0513849ed17ab2f9e6403b74254c7308245ce6"
+      "sha256": "d8d61e1d393c653f590b5ce212c0c1e1f6b47abbd5cff2c24daab1e589692353"
     },
     {
       "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/launch.py",
