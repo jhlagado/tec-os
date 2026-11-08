@@ -1,0 +1,104 @@
+{
+  "kind": "UNAPPLIED_EXACT_MEMORY_METADATA_PROJECTION",
+  "applied": false,
+  "runtimeAuthority": false,
+  "sourceAllocation": "a2431e27",
+  "actualLeafAndMeterAuthoritiesStillRequired": true,
+  "conditions": [
+    "Different complete source/provider/combined-command/retention/price review accepts exact current and future bytes.",
+    "Root separately admits exact metadata and current qualification exclusions.",
+    "Original root preflight verifies every future effective input/tree/link/absence and fresh output name before meter startup.",
+    "Root separately creates actual leaf and meter authority with exact published packet and preflight hash."
+  ],
+  "literalChanges": [
+    "bind: descriptive state and six source/mechanism admission booleans false to true; cheap full120 price flag remains false.",
+    "offer: descriptive state, active and subreaperCapabilityAccepted false to true, exact future binding hash/member.",
+    "leaf: exact future offer hash only, runtimeAuthority remains false.",
+    "meter: exact future binding/offer hashes and three reference rows only.",
+    "alloc: exact future meter/ready offer hashes only, runtimeAuthority remains false."
+  ],
+  "currentRows": [
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
+      "bytes": 968440,
+      "mode": "0644",
+      "sha256": "2a3291f5dfca1ba865aa5a992738f9fe832536e4beb2adab98fd661d86a58b33"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
+      "bytes": 760807,
+      "mode": "0644",
+      "sha256": "5f89ddcde5854780bca6345e5ed98e20be1747916c0ad5d50f7aab513c6507cf"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/leaf.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/leaf.dat",
+      "bytes": 540,
+      "mode": "0644",
+      "sha256": "3c30a09cded27314483738d7b2d5aaa21e9e10278df6ded6a5b72fc4472a463e"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/meter.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/meter.dat",
+      "bytes": 29991,
+      "mode": "0644",
+      "sha256": "ec632b940a550f88fcc382b55834957244205e3017b5f2e1431250cbc4bca29b"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/alloc.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/alloc.dat",
+      "bytes": 530,
+      "mode": "0644",
+      "sha256": "e0d0b68aabe8b67666add7841d79d9d7885dcd48ad34dd2331ee344da8c0b007"
+    }
+  ],
+  "projectedRows": [
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
+      "bytes": 968450,
+      "mode": "0644",
+      "sha256": "41cd34bc67e4ed214c5f6e50df5639f66525499cf7c28b937e5508c7cf038f1f"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
+      "bytes": 760826,
+      "mode": "0644",
+      "sha256": "5d568d9069e820dad1891149dabc3ba50643f9c493bcc095584bbac20c7b52a4"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/leaf.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/leaf.dat",
+      "bytes": 540,
+      "mode": "0644",
+      "sha256": "aef1ddddbd3702a3cd7b213530d661ad38d6de07b15050e78041e1256cb53ed0"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/meter.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/meter.dat",
+      "bytes": 29991,
+      "mode": "0644",
+      "sha256": "4ea4c4d993130216ba53a48febd40c228f7d5ab5baf11dd819752e3256942740"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/alloc.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/alloc.dat",
+      "bytes": 530,
+      "mode": "0644",
+      "sha256": "c3b2988373d6937d1e9aef500c0fa284860aad08932c020d1f517dc670fc15fe"
+    }
+  ],
+  "unmodifiedCode": {
+    "warm.mjs": "cf8d697a720b1cd109103c474538770a88ad5a428d91196cc1b4720fb4bd9189",
+    "meter.py": "be78ac01e053172326f8d36e4c1089443366263db1978bb3f34feec212f4cde0",
+    "launch.py": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
+    "watch.py": "a8fec310ce2fd4c540702b515c5c247c49968127d8b95386a511358bcea30337",
+    "super.py": "0768416b6919dc164a394993e462ad2ed0f19abef0040dec53da58b0546e0f4e"
+  },
+  "futureProjectionOutsideSource": "/workspace/scratch/kg56mem-source01/future",
+  "noActualRuntimeOrWarmAcceptance": true,
+  "rootMaterialisation": null
+}

@@ -1,0 +1,17 @@
+{
+  "kind": "P3_KG56_COMMAND02_ALLOCATION",
+  "runtimeAuthority": false,
+  "job": "warm",
+  "offerSha256": "5f89ddcde5854780bca6345e5ed98e20be1747916c0ad5d50f7aab513c6507cf",
+  "launcherSha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
+  "budget": {
+    "sampledMB": 600,
+    "heapMB": 450,
+    "hardSeconds": 120,
+    "jobs": 1,
+    "queueWait": 0
+  },
+  "sourceAllocation": "a2431e27",
+  "proofContextSha256": "737fd65a9489ea534c091e7829439d9491aef6e2a6c3398a353a79d585341a37",
+  "execution_performed": false
+}
