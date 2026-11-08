@@ -60,9 +60,9 @@
     "jobs": 1,
     "queueWait": 0
   },
-  "readyOfferSha256": "e7e962d228ed663479ac3206c005b8b74370159f95c429f1c970717602d8aeb5",
+  "readyOfferSha256": "51305c9f313a42542d4126cf5052ca6bd9740a846bce93c8a4ba8701c6ee0b25",
   "collectorSha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
-  "bindingSha256": "33de1f0ea35eb35dbfc63a3b3fee07214a4f7ab649443991ed93d4d76427ea21",
+  "bindingSha256": "8abb8286fd22472188a257405009786929ba0115648a9f3f4f0448fc5c593436",
   "references": [
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/warm.mjs",
@@ -123,9 +123,9 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/tail.md",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/tail.md",
-      "bytes": 5668,
+      "bytes": 5946,
       "mode": "0644",
-      "sha256": "95f52e3295fca48706b906c5c9f217f8bf3db92b6066bf559eceed79e460155d"
+      "sha256": "210ca365f46d5059964f22a5a89c82abc78d37f6fa41ac21e0adee201c438671"
     },
     {
       "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-inert-healthy01-acceptance.md",
@@ -396,23 +396,23 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
-      "bytes": 953690,
+      "bytes": 954532,
       "mode": "0644",
-      "sha256": "33de1f0ea35eb35dbfc63a3b3fee07214a4f7ab649443991ed93d4d76427ea21"
+      "sha256": "8abb8286fd22472188a257405009786929ba0115648a9f3f4f0448fc5c593436"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
       "bytes": 753190,
       "mode": "0644",
-      "sha256": "e7e962d228ed663479ac3206c005b8b74370159f95c429f1c970717602d8aeb5"
+      "sha256": "51305c9f313a42542d4126cf5052ca6bd9740a846bce93c8a4ba8701c6ee0b25"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "bytes": 540,
       "mode": "0644",
-      "sha256": "2c3df5f4a7824f398a80736698578e73b259703b6fe42d82a7735e8a5c77036b"
+      "sha256": "155ee77ca2ad0f0704ad04e56a0513849ed17ab2f9e6403b74254c7308245ce6"
     },
     {
       "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/launch.py",
