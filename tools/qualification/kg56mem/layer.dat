@@ -1,0 +1,66 @@
+{
+  "kind": "UNAPPLIED_CURRENT_TEST_PROJECTION",
+  "applied": false,
+  "current": {
+    "path": "/workspace/tec-os/test/ks40.test.mjs",
+    "realpath": "/workspace/tec-os/test/ks40.test.mjs",
+    "bytes": 13024,
+    "mode": "0600",
+    "sha256": "47c116292bd66f1c669d101e8e257e0ee53d5fff623af3a909e0488819bc044e"
+  },
+  "projection": {
+    "bytes": 13024,
+    "sha256": "47d4465c12bea852fe916ceed919017a051873c34d984c31d80515f2fe023d12",
+    "replacementBefore": "held?10:4",
+    "replacementAfter": "held?12:4",
+    "occurrences": 1
+  },
+  "literalDiff": [
+    "--- current source\n",
+    "+++ unapplied projection\n",
+    "@@ -134,7 +134,7 @@\n",
+    " test('KS40 real warm boot clears hardware and shadow before PZINIT claimed or unclaimed',()=>{\n",
+    "  for(const held of [false,true]){\n",
+    "   const {m,table}=fresh();armed(m,table,40);if(!held)claim(m,0);\n",
+    "-  assert.equal(ie(m),32);const depth=warm(m);assert.equal(ie(m),0);assert.equal(shadow(m),0);assert.ok(depth<=(held?10:4));\n",
+    "+  assert.equal(ie(m),32);const depth=warm(m);assert.equal(ie(m),0);assert.equal(shadow(m),0);assert.ok(depth<=(held?12:4));\n",
+    "   call(m,word(m,table+6));assert.equal(ie(m),0);\n",
+    "  }\n",
+    "  for(const kind of ['skip-clear','stale-shadow']){\n"
+  ],
+  "demoSource": {
+    "path": "/workspace/tec-os/test/programs/demo.asm",
+    "realpath": "/workspace/tec-os/test/programs/demo.asm",
+    "bytes": 11872,
+    "mode": "0600",
+    "sha256": "8357f4a3f895d3112ac05821ac89a2585f9b084eea98a1dff4584efe7972424d"
+  },
+  "demoDigestRetained": "8357f4a3f895d3112ac05821ac89a2585f9b084eea98a1dff4584efe7972424d",
+  "package": {
+    "path": "/workspace/tec-os/package.json",
+    "realpath": "/workspace/tec-os/package.json",
+    "bytes": 882,
+    "mode": "0600",
+    "sha256": "02f47f16d3631fc44a83565b45d607a64f20bb381d54874fe19c03c181deb417"
+  },
+  "npmStartPreserved": "esbuild --servedir=web/dist --serve=127.0.0.1:8765",
+  "historical607cfTestMustNotOverwriteCurrent": true,
+  "full751Qualified": false,
+  "currentProfile": {
+    "path": "/workspace/tec-os/tools/compact-exceptions.json",
+    "realpath": "/workspace/tec-os/tools/compact-exceptions.json",
+    "bytes": 2494,
+    "mode": "0600",
+    "sha256": "7293c041cb87945517da9452ca4bae6b3eaa7b6da195b92d5d6ea17a4043979f"
+  },
+  "approvedReferenceProfile": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/approved-profile.json",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/approved-profile.json",
+    "bytes": 2969,
+    "mode": "0600",
+    "sha256": "e4d8a1e70dce476302056ad4509d9b2ee8338cb7bcd49a736a426786bd91a387"
+  },
+  "profileRebound": false,
+  "currentMapCoordinatesQualified": false,
+  "XR04DisplayPolicyResolved": false
+}

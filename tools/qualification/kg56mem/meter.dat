@@ -1,0 +1,676 @@
+{
+  "state": "INACTIVE_PRODUCT_WARM_MEMORY_METER_SOURCE_ONLY",
+  "runtimeAuthority": false,
+  "job": "warm",
+  "python": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+  "cwd": "/workspace/tec-os/tools/qualification/kg56mem",
+  "launchSurface": [
+    "/usr/bin/env",
+    "-i",
+    "PATH=/usr/bin:/bin",
+    "LANG=C.UTF-8",
+    "LC_ALL=C.UTF-8",
+    "TMPDIR=/tmp",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+    "-I",
+    "-S",
+    "-B",
+    "/workspace/tec-os/tools/qualification/kg56mem/launch.py",
+    "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
+    "/workspace/scratch/kg56mc01.alc"
+  ],
+  "outerLaunchSurface": [
+    "/usr/bin/env",
+    "-i",
+    "PATH=/usr/bin:/bin",
+    "LANG=C.UTF-8",
+    "LC_ALL=C.UTF-8",
+    "TMPDIR=/tmp",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12",
+    "-I",
+    "-S",
+    "-B",
+    "/workspace/tec-os/tools/qualification/kg56mem/meter.py",
+    "/workspace/scratch/kg56mc01.mac"
+  ],
+  "leafAllocation": "/workspace/scratch/kg56mc01.alc",
+  "receipt": "/workspace/scratch/kg56mc01.met",
+  "waitReceipt": "/workspace/scratch/kg56mc01.wat",
+  "preflight": "/workspace/scratch/kg56mc01.pre",
+  "collectorReceipt": "/workspace/scratch/kg56mc01.col",
+  "stdout": "/workspace/scratch/kg56mc01.out",
+  "stderr": "/workspace/scratch/kg56mc01.err",
+  "guardLog": "/workspace/scratch/kg56mc01.gua",
+  "workerOutput": "/workspace/scratch/kg56mc01.wrk",
+  "supervisionOutput": "/workspace/scratch/kg56mc01.sup",
+  "leafOutputs": [
+    "/workspace/scratch/kg56mc01.out",
+    "/workspace/scratch/kg56mc01.err",
+    "/workspace/scratch/kg56mc01.col",
+    "/workspace/scratch/kg56mc01.gua",
+    "/workspace/scratch/kg56mc01.wrk",
+    "/workspace/scratch/kg56mc01.sup"
+  ],
+  "guardName": "p3-kg56-mem01",
+  "guardShownCommand": "python3.12 -I -S -B watch.py bind.dat warm kg56mc01.sup",
+  "budget": {
+    "sampledMB": 600,
+    "heapMB": 450,
+    "hardSeconds": 120,
+    "jobs": 1,
+    "queueWait": 0
+  },
+  "readyOfferSha256": "5f89ddcde5854780bca6345e5ed98e20be1747916c0ad5d50f7aab513c6507cf",
+  "collectorSha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
+  "bindingSha256": "2a3291f5dfca1ba865aa5a992738f9fe832536e4beb2adab98fd661d86a58b33",
+  "references": [
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/kg56-finalization-expiry-short01-result/input-union-index.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/kg56-finalization-expiry-short01-result/input-union-index.json",
+      "bytes": 709131,
+      "mode": "0600",
+      "sha256": "b0051fdd32b0de4b6c066833b06076459911a6c09bfb280d904b0b29674a41aa"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/kg56-finalization-expiry-short01-result/manifest.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/kg56-finalization-expiry-short01-result/manifest.json",
+      "bytes": 5413,
+      "mode": "0600",
+      "sha256": "81df9437b144581be572b090dd636cfcd2a1e86f8fc021b2a635bc85a300d070"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/kg56-finalization-expiry-short01-result/overlay-and-result.tar.gz",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/kg56-finalization-expiry-short01-result/overlay-and-result.tar.gz",
+      "bytes": 214721,
+      "mode": "0600",
+      "sha256": "d27b9cb72f05c07b4590f77757a938f9723e39be9dfdb8d51e2538f369392a2d"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/approved-profile.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/approved-profile.json",
+      "bytes": 2969,
+      "mode": "0600",
+      "sha256": "e4d8a1e70dce476302056ad4509d9b2ee8338cb7bcd49a736a426786bd91a387"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/artifact-policy.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/artifact-policy.json",
+      "bytes": 11294,
+      "mode": "0600",
+      "sha256": "d334adb4bda46aaa5e93828f47100983952c320eceb8c159362f4fd970a7331c"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/new-regressions.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/new-regressions.json",
+      "bytes": 868,
+      "mode": "0600",
+      "sha256": "a48a0e35dca7555f2a4608f4b9dae3b896e6a76a55899db216c55afedfee65c4"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/source-closure.mjs",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/source-closure.mjs",
+      "bytes": 3849,
+      "mode": "0600",
+      "sha256": "e1b26da0a5b467dd1bb8389ba4c0d1aa4d819434c0c2940b4130c5a6ff0db90c"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/source-delta.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg55-registration/source-delta.json",
+      "bytes": 3319,
+      "mode": "0600",
+      "sha256": "7ad93c94d432544c7c90dbce30bc0fb1c4d93462c60d6e0aa957464094de9a88"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/bindings/warm.proposed.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/bindings/warm.proposed.json",
+      "bytes": 1075730,
+      "mode": "0600",
+      "sha256": "454755260ee4ede81c55298f6c8fdee9f1ad207968de54cc24ca4994ba97eba8"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/launch.py",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/launch.py",
+      "bytes": 18529,
+      "mode": "0600",
+      "sha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/offers/warm.proposed.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/offers/warm.proposed.json",
+      "bytes": 894821,
+      "mode": "0600",
+      "sha256": "2cd3e3a4a17e00e6516cf3b4c4f8b55119c13f3ba965a66aa65e3012fa95047c"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/supervisor.py",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/supervisor.py",
+      "bytes": 7003,
+      "mode": "0600",
+      "sha256": "1458fe3480c431eb26c39bb2c7db9aa827742366ac0a9cd79e2d37eee441b33f"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/watchdog.py",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/watchdog.py",
+      "bytes": 10089,
+      "mode": "0600",
+      "sha256": "e274d726ae7cdeb5af7ad742a23a66148431d28408073c047561a75942be0206"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-inert-healthy01-meter/meter.py",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-inert-healthy01-meter/meter.py",
+      "bytes": 9940,
+      "mode": "0600",
+      "sha256": "54def8ba5e6be9a15846ae4b7e489202899a38565b5f39b2f9b074f226c28376"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/candidate-manifest.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/candidate-manifest.json",
+      "bytes": 94181,
+      "mode": "0600",
+      "sha256": "d41ac479ae79f9225d082c4b3c3699c13cf0adc32bb6e0883ff8932d683ee195"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/control-matrix.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/control-matrix.json",
+      "bytes": 4829,
+      "mode": "0600",
+      "sha256": "add94a3cbfbd36d452a7d8149f532ecc9bb2cad70e651953dc8c80730be62fa7"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/frozen/diagnostic/model-check.mjs",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/frozen/diagnostic/model-check.mjs",
+      "bytes": 16910,
+      "mode": "0600",
+      "sha256": "1dfcb248de0e7f3881179b904ae7ae1fabb72aa7612e7da4ee7811a674d122d9"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/frozen/diagnostic/production-test.mjs",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/frozen/diagnostic/production-test.mjs",
+      "bytes": 13024,
+      "mode": "0600",
+      "sha256": "98cbcfd056b732d4bc410074d0ad2a52842bdb2b911a43cb880b95964870cfe7"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/proposed/test/ks40.test.mjs",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/proposed/test/ks40.test.mjs",
+      "bytes": 13024,
+      "mode": "0600",
+      "sha256": "607cf163a7553db11f6e6dad6c8893316e6603dc6c1ec3dd099ae302688d2cb2"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/test-source-delta.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/test-source-delta.json",
+      "bytes": 1480,
+      "mode": "0600",
+      "sha256": "4b4887281872ae18033d16f23e87f6939e1080fc4c1e7dedb96229078d028933"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/warm-controls.mjs",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/warm-controls.mjs",
+      "bytes": 9745,
+      "mode": "0600",
+      "sha256": "1fdaa8aaf882f7912e850544948f26100fbc31688e27a078543831a3cf945a8f"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-registration/KG56.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-registration/KG56.md",
+      "bytes": 3767,
+      "mode": "0600",
+      "sha256": "ab95dcde58df5fb4bf6c78895436a4fb9d9f2551df50121a1485ae2f7c53b562"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-registration/registered-lock.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-registration/registered-lock.json",
+      "bytes": 2374,
+      "mode": "0600",
+      "sha256": "ee0f89c78da06207a78289b9f2e0f10e1085936a2c2645c1edfb558226365a4a"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/README.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/README.md",
+      "bytes": 692,
+      "mode": "0600",
+      "sha256": "1b18c7577143006b9a38bd47110f16c305d284494df0daad8d964ee2e37c2f84"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/index.dat",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/index.dat",
+      "bytes": 1238,
+      "mode": "0600",
+      "sha256": "d82c4341c6123a4a40ec5582fe36f6556972949db0acbc6d47af73ef9778d8a6"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/plan.gz",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/plan.gz",
+      "bytes": 104985,
+      "mode": "0600",
+      "sha256": "ca5903d8659be3211dcf41eae3684a1a8ec6e03f23c145e3f829602481d1f833"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/plan.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/plan.md",
+      "bytes": 13907,
+      "mode": "0600",
+      "sha256": "d57c2db96692171580774cbeb76f25bdcb8d545b03ba31f53953691886e79dd1"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/review.gz",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/review.gz",
+      "bytes": 100403,
+      "mode": "0600",
+      "sha256": "b2c01991fe4db572988e30eea18a7da31b70d3f056eaa61ae4a00f399d99ea30"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/review.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/review.md",
+      "bytes": 15375,
+      "mode": "0600",
+      "sha256": "f5a4e0d1f3ef0454d5788c0399bb6cc7298440fcddf31038f47e50006a89b09c"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/gates.lock.json",
+      "realpath": "/workspace/origo/studies/p3-tec-os/gates.lock.json",
+      "bytes": 2374,
+      "mode": "0600",
+      "sha256": "ee0f89c78da06207a78289b9f2e0f10e1085936a2c2645c1edfb558226365a4a"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/gates.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/gates.md",
+      "bytes": 163272,
+      "mode": "0600",
+      "sha256": "3cace16a1858fcc51e16122fd8ae73726a0afb4914edf6f7ab03286956f139d3"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/kg56-barrier-delay01-acceptance.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/kg56-barrier-delay01-acceptance.md",
+      "bytes": 1168,
+      "mode": "0600",
+      "sha256": "a5a3409c1cf9c17f794d5d7be79740e248545ff192813911285e392f5454ade1"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/kg56-barrier-delay01-result-independent-review.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/kg56-barrier-delay01-result-independent-review.md",
+      "bytes": 16504,
+      "mode": "0600",
+      "sha256": "0a5329303c30ade9505d804fbb7d0e53c417f807b4bd6f5995e4c004c4b1d9cc"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/kg56-finalization-expiry-short01-acceptance.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/kg56-finalization-expiry-short01-acceptance.md",
+      "bytes": 2308,
+      "mode": "0600",
+      "sha256": "579b69a275e7ae396e250d3fd36b3b551b2f5c6529026b608fa150947bef73ee"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/kg56-finalization-expiry-short01-actual-independent-review.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/kg56-finalization-expiry-short01-actual-independent-review.md",
+      "bytes": 18916,
+      "mode": "0600",
+      "sha256": "071b882bd402782704e06493479da2c75b822a7f8c27cb9a8d6505b296e97a05"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/kg56-finalization-expiry-short01-provenance-correction.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/kg56-finalization-expiry-short01-provenance-correction.md",
+      "bytes": 914,
+      "mode": "0600",
+      "sha256": "cd2795ce1589dd7cc232fac8d15f1b8615019923d1618a2fd28ec2991762592f"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/kg56-warm-source-allocation01.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/kg56-warm-source-allocation01.md",
+      "bytes": 3263,
+      "mode": "0600",
+      "sha256": "b972a59775ec3879291f97cfade5d9a6007cd88e35b6ca63797ad141b793c950"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-adoption01-acceptance.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-adoption01-acceptance.md",
+      "bytes": 1623,
+      "mode": "0600",
+      "sha256": "727bcee232e9088bcf1220ed54a45e353d8e38d9b00775201153ae8330dbf851"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-adoption01-result-independent.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-adoption01-result-independent.md",
+      "bytes": 14220,
+      "mode": "0600",
+      "sha256": "efcbba1b4002b07020895e6e4b73044d88fcb9d93cd4ea933eb480eb15abc4a1"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-command02-correction01-independent.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-command02-correction01-independent.md",
+      "bytes": 9852,
+      "mode": "0600",
+      "sha256": "441b49f9ed76730209529bd75617898c073d92fd099e2225dd95a1ff8333dd67"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-command02-independent.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-command02-independent.md",
+      "bytes": 21696,
+      "mode": "0600",
+      "sha256": "18ea8e4b93003d7213b88b506460620e49e4ab05fdc0cbd8fff4b28f881de771"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-inert-healthy01-acceptance.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-inert-healthy01-acceptance.md",
+      "bytes": 1608,
+      "mode": "0600",
+      "sha256": "ebc80e170f045101564e364cf5630d9a44379c7c1988d70eab6a687e8204a7c9"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-inert-healthy01-result-independent.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-inert-healthy01-result-independent.md",
+      "bytes": 14876,
+      "mode": "0600",
+      "sha256": "bc79e7ab01258a76a2257c8c359e9b6a9c9013c04b105eb5a254bad02396b199"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-prearm-refusal01-acceptance.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-prearm-refusal01-acceptance.md",
+      "bytes": 1308,
+      "mode": "0600",
+      "sha256": "ba723878d4acce7ca4ed01a37439026eebbec07b6644b19c913c8d4a059f74be"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-prearm-refusal01-result-independent-review.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-prearm-refusal01-result-independent-review.md",
+      "bytes": 14106,
+      "mode": "0600",
+      "sha256": "4e26e7fcd01cc31c8f3642823706383e09ba0126cc0ad3a3ba0e6df80a83df19"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/programme-independent-review-2026-11-08.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/programme-independent-review-2026-11-08.md",
+      "bytes": 15542,
+      "mode": "0600",
+      "sha256": "e9fa267ff78bc336b3a7e8a11405ff5662ab2966b0924528c963aaf929ff1f1f"
+    },
+    {
+      "path": "/workspace/origo/studies/p3-tec-os/reviews/wmmem01.md",
+      "realpath": "/workspace/origo/studies/p3-tec-os/reviews/wmmem01.md",
+      "bytes": 2860,
+      "mode": "0600",
+      "sha256": "1c99929625d6a47f2cdf7da4b75e3a08b5f45a774ebbc3357ecb1d4cec838be1"
+    },
+    {
+      "path": "/workspace/tec-os/package.json",
+      "realpath": "/workspace/tec-os/package.json",
+      "bytes": 882,
+      "mode": "0600",
+      "sha256": "02f47f16d3631fc44a83565b45d607a64f20bb381d54874fe19c03c181deb417"
+    },
+    {
+      "path": "/workspace/tec-os/test/ks40.test.mjs",
+      "realpath": "/workspace/tec-os/test/ks40.test.mjs",
+      "bytes": 13024,
+      "mode": "0600",
+      "sha256": "47c116292bd66f1c669d101e8e257e0ee53d5fff623af3a909e0488819bc044e"
+    },
+    {
+      "path": "/workspace/tec-os/test/programs/demo.asm",
+      "realpath": "/workspace/tec-os/test/programs/demo.asm",
+      "bytes": 11872,
+      "mode": "0600",
+      "sha256": "8357f4a3f895d3112ac05821ac89a2585f9b084eea98a1dff4584efe7972424d"
+    },
+    {
+      "path": "/workspace/tec-os/tools/compact-exceptions.json",
+      "realpath": "/workspace/tec-os/tools/compact-exceptions.json",
+      "bytes": 2494,
+      "mode": "0600",
+      "sha256": "7293c041cb87945517da9452ca4bae6b3eaa7b6da195b92d5d6ea17a4043979f"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/activate.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/activate.dat",
+      "bytes": 4859,
+      "mode": "0644",
+      "sha256": "1e5904bbc960936a40cf76671c6b19c0438cc19c1c27e85a0b0091c48094b05d"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "bytes": 531,
+      "mode": "0644",
+      "sha256": "d7c56977b0d2ba5cee994b444dc51b562cc49cd785ae136e56b59bbbd4b26644"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "bytes": 954543,
+      "mode": "0644",
+      "sha256": "63505fe58cff8837833d93b006963d401e5db7127a47d6e0f2015aed8564569f"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/extract.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/extract.dat",
+      "bytes": 3113,
+      "mode": "0644",
+      "sha256": "0df89d1d0df11f40c7b3f6d2b137f9d4e2404a1e9ac4fc109cb74cc87c4b6977"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/layer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/layer.dat",
+      "bytes": 2780,
+      "mode": "0644",
+      "sha256": "920dab027e3701fe636a44e56c555686237ad23306bc1d1294bfcb9c823bb9d8"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "bytes": 540,
+      "mode": "0644",
+      "sha256": "d8d61e1d393c653f590b5ce212c0c1e1f6b47abbd5cff2c24daab1e589692353"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/matrix.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/matrix.dat",
+      "bytes": 4829,
+      "mode": "0644",
+      "sha256": "add94a3cbfbd36d452a7d8149f532ecc9bb2cad70e651953dc8c80730be62fa7"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "bytes": 22708,
+      "mode": "0644",
+      "sha256": "2e4f1c66f792233b156c837bbf1b8a2325aeb9d192a18d2bdcb67efe0f243158"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/meter.py",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.py",
+      "bytes": 23795,
+      "mode": "0644",
+      "sha256": "80f49c8525ba9f06a03538c0107d964258ea36dfb2e61572822527bf162881be"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "bytes": 753201,
+      "mode": "0644",
+      "sha256": "2ed886c3ca8fe4455ab1e36d0f5c3b68718e29ff2a4ccf002541fa2aa11f4e97"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/prior.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/prior.dat",
+      "bytes": 3654,
+      "mode": "0644",
+      "sha256": "fe9065be2197a1386533a5754832d1f937093744ec08d131a9369854ab839563"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/proofs.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/proofs.dat",
+      "bytes": 7043,
+      "mode": "0644",
+      "sha256": "687ad3d6b0bb0dacf9ba65ecd7164dadf61336931384030daa89a63f73c7702d"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/readme.md",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/readme.md",
+      "bytes": 5716,
+      "mode": "0644",
+      "sha256": "9070ed69a9fff8b93e022dec716d76ef9dd2d8f372f56e7f7f393a393d7501ac"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/tail.md",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/tail.md",
+      "bytes": 5946,
+      "mode": "0644",
+      "sha256": "210ca365f46d5059964f22a5a89c82abc78d37f6fa41ac21e0adee201c438671"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/warm.mjs",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/warm.mjs",
+      "bytes": 9955,
+      "mode": "0644",
+      "sha256": "13bf83f3bacd7592f58843cead78d59d747a9aef09c80b6a7ae16679c2c810dd"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
+      "bytes": 968440,
+      "mode": "0644",
+      "sha256": "2a3291f5dfca1ba865aa5a992738f9fe832536e4beb2adab98fd661d86a58b33"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/extract.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/extract.dat",
+      "bytes": 3113,
+      "mode": "0644",
+      "sha256": "0df89d1d0df11f40c7b3f6d2b137f9d4e2404a1e9ac4fc109cb74cc87c4b6977"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/launch.py",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/launch.py",
+      "bytes": 18529,
+      "mode": "0644",
+      "sha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/layer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/layer.dat",
+      "bytes": 2780,
+      "mode": "0644",
+      "sha256": "920dab027e3701fe636a44e56c555686237ad23306bc1d1294bfcb9c823bb9d8"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/leaf.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/leaf.dat",
+      "bytes": 540,
+      "mode": "0644",
+      "sha256": "3c30a09cded27314483738d7b2d5aaa21e9e10278df6ded6a5b72fc4472a463e"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/matrix.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/matrix.dat",
+      "bytes": 4829,
+      "mode": "0644",
+      "sha256": "add94a3cbfbd36d452a7d8149f532ecc9bb2cad70e651953dc8c80730be62fa7"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/meter.py",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/meter.py",
+      "bytes": 23792,
+      "mode": "0644",
+      "sha256": "be78ac01e053172326f8d36e4c1089443366263db1978bb3f34feec212f4cde0"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
+      "bytes": 760807,
+      "mode": "0644",
+      "sha256": "5f89ddcde5854780bca6345e5ed98e20be1747916c0ad5d50f7aab513c6507cf"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/prior.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/prior.dat",
+      "bytes": 9413,
+      "mode": "0644",
+      "sha256": "1bb4e2c49cecb6ef49a51abb9e55717b3e1a80b14538e48a8825deb6f611ec06"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/proofs.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/proofs.dat",
+      "bytes": 7187,
+      "mode": "0644",
+      "sha256": "737fd65a9489ea534c091e7829439d9491aef6e2a6c3398a353a79d585341a37"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/readme.md",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/readme.md",
+      "bytes": 5745,
+      "mode": "0644",
+      "sha256": "09f7a5f91ce93ef4655cf8c464de4da4241258bd8ce0e25ee23bc170cb78987c"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/super.py",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/super.py",
+      "bytes": 7002,
+      "mode": "0644",
+      "sha256": "0768416b6919dc164a394993e462ad2ed0f19abef0040dec53da58b0546e0f4e"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/tail.md",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/tail.md",
+      "bytes": 6368,
+      "mode": "0644",
+      "sha256": "e68d4bb2fe55b5a3fa2c4d55afff6e82f1d793ebbb69688a3cd042cf8394a2dc"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/warm.mjs",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/warm.mjs",
+      "bytes": 10286,
+      "mode": "0644",
+      "sha256": "cf8d697a720b1cd109103c474538770a88ad5a428d91196cc1b4720fb4bd9189"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56mem/watch.py",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56mem/watch.py",
+      "bytes": 10084,
+      "mode": "0644",
+      "sha256": "a8fec310ce2fd4c540702b515c5c247c49968127d8b95386a511358bcea30337"
+    }
+  ],
+  "normalActors": [
+    "meter",
+    "collector",
+    "guard",
+    "watchdog",
+    "supervisor",
+    "warm Node",
+    "one synchronous guard query"
+  ],
+  "normalPrice": "O+6T+8388608<=629145600; max with separately measured sequential original preflight peak",
+  "normalActorBound": 7,
+  "unexpectedExtraAdoptedLostHeldMayUseNormalPrice": false,
+  "rawWaitReceiptMaxBytes": 4096,
+  "meterReceiptMaxBytes": 8192,
+  "finalSampleMaxBytes": 512,
+  "finalTailReserveBytes": 8388608,
+  "actualPrice": null,
+  "currentCandidateQualificationHeldForXR04": true,
+  "currentProfileNotRebound": true,
+  "nativeAcceptance": false,
+  "productAcceptance": false,
+  "resourceReleaseAccepted": false,
+  "execution_performed": false,
+  "originalPreflightTemplate": {
+    "kind": "P3_KG56_MEM01_ROOT_PREFLIGHT",
+    "completedBeforeMeterStartup": false,
+    "originalGuardAbsent": false,
+    "allEffectiveFilesAndProvidersVerified": false,
+    "allTreesLinksAbsencesVerified": false,
+    "allSourceProjectionAndOutputNamesVerified": false,
+    "meterOfferSha256": null,
+    "leafOfferSha256": null,
+    "meterSha256": null,
+    "dataSelfPeakBytes": null,
+    "bootId": null,
+    "packetCommit": null
+  },
+  "rootShellRule": "Use exec before the exact outerLaunchSurface. env replaces itself with Python; no shell or wrapper remains as an extra concurrent actor.",
+  "rootShellCommand": "exec /usr/bin/env -i PATH=/usr/bin:/bin LANG=C.UTF-8 LC_ALL=C.UTF-8 TMPDIR=/tmp /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12 -I -S -B /workspace/tec-os/tools/qualification/kg56mem/meter.py /workspace/scratch/kg56mc01.mac",
+  "workerOldSpaceMiB": 64,
+  "guardFamilyHeapMiB": 450
+}

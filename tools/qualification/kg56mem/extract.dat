@@ -1,0 +1,104 @@
+{
+  "kind": "KG56_EXPECTED_EXTRACTION_AND_ROM_DATA",
+  "observed": false,
+  "extractions": [
+    {
+      "label": "production exact helper declarations",
+      "start": "const word=(m,a)=>",
+      "end": "const geometry=w=>",
+      "startOffset": 543,
+      "endOffset": 3258,
+      "sha256": "54614c599877312d4bfb123a5fa92958275fd2e492dc7cc0114d75c0ff529edb"
+    },
+    {
+      "label": "model exact helper declarations",
+      "start": "const word=(m,a)=>",
+      "end": "const geometry=w=>",
+      "startOffset": 546,
+      "endOffset": 3276,
+      "sha256": "e80d306fe966aa487521e1bf643908e7e989089a733c4095f313caea76c6781f"
+    },
+    {
+      "label": "production fresh/armed/warm",
+      "start": "const fresh=()=>",
+      "end": "\ntest('KS40 common",
+      "startOffset": 3940,
+      "endOffset": 4434,
+      "sha256": "a39a3058578d926e67edd58c6205762049e3d2d2173368cb3325ef335d9910e0"
+    },
+    {
+      "label": "model geometry validators",
+      "start": "const geometry=w=>",
+      "end": "function negative(",
+      "startOffset": 3276,
+      "endOffset": 3926,
+      "sha256": "6f84aedaa6c2a60581ea7e350b319fae021cd8dd24471e2f8d0e50fef95cfb39"
+    },
+    {
+      "label": "model exact complete prewarm",
+      "start": " const m=make(variant);\n",
+      "end": " // Real warm boot boundary: before any PZINIT sweep, both representations off.",
+      "startOffset": 4112,
+      "endOffset": 7997,
+      "sha256": "4427acd087788384e11078a6f2f4b5a0e7cbb58d7dfe1bf8e46ab582370e6bae"
+    },
+    {
+      "label": "model original prewarm and both original warm states",
+      "start": " const m=make(variant);\n",
+      "end": " // Target hooks do not run real WBOOTR:",
+      "startOffset": 4112,
+      "endOffset": 8951,
+      "sha256": "8dcec0ebd152fe6b49dce0657db7c1e13e5ef55ddcb318d8898d0574729bd944"
+    }
+  ],
+  "helperNames": [
+    "word",
+    "setword",
+    "make",
+    "call",
+    "select",
+    "init",
+    "state",
+    "ie",
+    "shadow",
+    "find",
+    "claim",
+    "reg"
+  ],
+  "PZINIT": 51040,
+  "window": "After BSTK installation/minsp reset to before PZINIT body",
+  "rom": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command01/staged/product/build/tecos/tecos.rom",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command01/staged/product/build/tecos/tecos.rom",
+    "bytes": 16384,
+    "mode": "0600",
+    "sha256": "7f47502910061da185229fa10e697132da650fb52a925c2ee0dfe97be490956b"
+  },
+  "map": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command01/staged/product/build/tecos/tecos.d8.json",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command01/staged/product/build/tecos/tecos.d8.json",
+    "bytes": 2406292,
+    "mode": "0600",
+    "sha256": "3c164abefad1813c4b87a5c42e357286b83510229781a43cbbff30406e0fe824"
+  },
+  "expectedPatch": {
+    "offset": 1696,
+    "target": 63192,
+    "before": [
+      205,
+      216,
+      246
+    ],
+    "after": [
+      205,
+      0,
+      104
+    ],
+    "trampoline": [
+      205,
+      216,
+      246,
+      201
+    ]
+  }
+}

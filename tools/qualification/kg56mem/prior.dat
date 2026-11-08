@@ -1,0 +1,216 @@
+{
+  "kind": "KG56_MEMORY_SUCCESSOR_SOURCE_PROVENANCE",
+  "runtimeAuthority": false,
+  "sourceAllocation": "a2431e27",
+  "functionalCandidate": "b597c3bf212a965004b28cb3f8137f400203b8cf",
+  "currentSourceContext": "b68eb527f257fc8ee4a09b67d603db46a7df0e79",
+  "workerBasis": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/warm-controls.mjs",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-prospective-source/warm-controls.mjs",
+    "bytes": 9745,
+    "mode": "0600",
+    "sha256": "1fdaa8aaf882f7912e850544948f26100fbc31688e27a078543831a3cf945a8f"
+  },
+  "normalMeterBasis": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-inert-healthy01-meter/meter.py",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-inert-healthy01-meter/meter.py",
+    "bytes": 9940,
+    "mode": "0600",
+    "sha256": "54def8ba5e6be9a15846ae4b7e489202899a38565b5f39b2f9b074f226c28376"
+  },
+  "immutableCollector": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/launch.py",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/launch.py",
+    "bytes": 18529,
+    "mode": "0600",
+    "sha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef"
+  },
+  "immutableWatchdog": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/watchdog.py",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/watchdog.py",
+    "bytes": 10089,
+    "mode": "0600",
+    "sha256": "e274d726ae7cdeb5af7ad742a23a66148431d28408073c047561a75942be0206"
+  },
+  "immutableSupervisor": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/supervisor.py",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02/supervisor.py",
+    "bytes": 7003,
+    "mode": "0600",
+    "sha256": "1458fe3480c431eb26c39bb2c7db9aa827742366ac0a9cd79e2d37eee441b33f"
+  },
+  "oldWarmOffer": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/offers/warm.proposed.json",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/offers/warm.proposed.json",
+    "bytes": 894821,
+    "mode": "0600",
+    "sha256": "2cd3e3a4a17e00e6516cf3b4c4f8b55119c13f3ba965a66aa65e3012fa95047c"
+  },
+  "oldWarmBinding": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/bindings/warm.proposed.json",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks40-kg56-cloud-command02-correction01/bindings/warm.proposed.json",
+    "bytes": 1075730,
+    "mode": "0600",
+    "sha256": "454755260ee4ede81c55298f6c8fdee9f1ad207968de54cc24ca4994ba97eba8"
+  },
+  "sourceCommentSkill": {
+    "path": "/workspace/origo/method/skills/human-writing/SKILL.md",
+    "realpath": "/workspace/origo/method/skills/human-writing/SKILL.md",
+    "bytes": 33069,
+    "mode": "0600",
+    "sha256": "f0b3d045db7699341a330f3fcbc3e34b7c6fddd08c906ba64eb6b30a3fe06739"
+  },
+  "sourceCommentGuide": {
+    "path": "/workspace/origo/method/skills/source-comments.md",
+    "realpath": "/workspace/origo/method/skills/source-comments.md",
+    "bytes": 4018,
+    "mode": "0600",
+    "sha256": "a11328ec3ceb7b36bb2dc7d94dcf6b38aa8b97bd412492b5bf1498b024c594d1"
+  },
+  "productTestsOrOldCapsulesEdited": false,
+  "subjectExecuted": false,
+  "referenceOnly": true,
+  "currentQualificationHeldForXR04": true,
+  "currentProfile7293NotSubstitutedForApprovedE4d8": true,
+  "historicalRom814Affected": false,
+  "oldWarmProductCommit": "64ad649d81ef29e5e4c4bf90a8f2f902be3b95f2",
+  "preservedOldProductRows": [
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/activate.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/activate.dat",
+      "bytes": 4859,
+      "mode": "0644",
+      "sha256": "1e5904bbc960936a40cf76671c6b19c0438cc19c1c27e85a0b0091c48094b05d"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "bytes": 531,
+      "mode": "0644",
+      "sha256": "d7c56977b0d2ba5cee994b444dc51b562cc49cd785ae136e56b59bbbd4b26644"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "bytes": 954543,
+      "mode": "0644",
+      "sha256": "63505fe58cff8837833d93b006963d401e5db7127a47d6e0f2015aed8564569f"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/extract.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/extract.dat",
+      "bytes": 3113,
+      "mode": "0644",
+      "sha256": "0df89d1d0df11f40c7b3f6d2b137f9d4e2404a1e9ac4fc109cb74cc87c4b6977"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/layer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/layer.dat",
+      "bytes": 2780,
+      "mode": "0644",
+      "sha256": "920dab027e3701fe636a44e56c555686237ad23306bc1d1294bfcb9c823bb9d8"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "bytes": 540,
+      "mode": "0644",
+      "sha256": "d8d61e1d393c653f590b5ce212c0c1e1f6b47abbd5cff2c24daab1e589692353"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/matrix.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/matrix.dat",
+      "bytes": 4829,
+      "mode": "0644",
+      "sha256": "add94a3cbfbd36d452a7d8149f532ecc9bb2cad70e651953dc8c80730be62fa7"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "bytes": 22708,
+      "mode": "0644",
+      "sha256": "2e4f1c66f792233b156c837bbf1b8a2325aeb9d192a18d2bdcb67efe0f243158"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/meter.py",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.py",
+      "bytes": 23795,
+      "mode": "0644",
+      "sha256": "80f49c8525ba9f06a03538c0107d964258ea36dfb2e61572822527bf162881be"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "bytes": 753201,
+      "mode": "0644",
+      "sha256": "2ed886c3ca8fe4455ab1e36d0f5c3b68718e29ff2a4ccf002541fa2aa11f4e97"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/prior.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/prior.dat",
+      "bytes": 3654,
+      "mode": "0644",
+      "sha256": "fe9065be2197a1386533a5754832d1f937093744ec08d131a9369854ab839563"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/proofs.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/proofs.dat",
+      "bytes": 7043,
+      "mode": "0644",
+      "sha256": "687ad3d6b0bb0dacf9ba65ecd7164dadf61336931384030daa89a63f73c7702d"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/readme.md",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/readme.md",
+      "bytes": 5716,
+      "mode": "0644",
+      "sha256": "9070ed69a9fff8b93e022dec716d76ef9dd2d8f372f56e7f7f393a393d7501ac"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/tail.md",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/tail.md",
+      "bytes": 5946,
+      "mode": "0644",
+      "sha256": "210ca365f46d5059964f22a5a89c82abc78d37f6fa41ac21e0adee201c438671"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/warm.mjs",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/warm.mjs",
+      "bytes": 9955,
+      "mode": "0644",
+      "sha256": "13bf83f3bacd7592f58843cead78d59d747a9aef09c80b6a7ae16679c2c810dd"
+    }
+  ],
+  "designAllocation": {
+    "path": "/workspace/origo/studies/p3-tec-os/reviews/wmmem01.md",
+    "realpath": "/workspace/origo/studies/p3-tec-os/reviews/wmmem01.md",
+    "bytes": 2860,
+    "mode": "0600",
+    "sha256": "1c99929625d6a47f2cdf7da4b75e3a08b5f45a774ebbc3357ecb1d4cec838be1"
+  },
+  "admittedDesign": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/plan.md",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/plan.md",
+    "bytes": 13907,
+    "mode": "0600",
+    "sha256": "d57c2db96692171580774cbeb76f25bdcb8d545b03ba31f53953691886e79dd1"
+  },
+  "differentDesignReview": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/review.md",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/wmmem01/review.md",
+    "bytes": 15375,
+    "mode": "0600",
+    "sha256": "f5a4e0d1f3ef0454d5788c0399bb6cc7298440fcddf31038f47e50006a89b09c"
+  },
+  "oldWarmFailedActualReview": {
+    "path": "/workspace/origo/studies/p3-tec-os/reviews/kg56-warm17-actual01-independent-review.md",
+    "realpath": "/workspace/origo/studies/p3-tec-os/reviews/kg56-warm17-actual01-independent-review.md",
+    "bytes": 19551,
+    "mode": "0600",
+    "sha256": "80794da1745af0c4fe54b9276bc14dcfcc7a840211a2e2893b7bb74a5f95bf62"
+  },
+  "oldWarmPriceBytes": 1070030848,
+  "newGuardFamilyHeapMiB": 450,
+  "newWorkerOldSpaceMiB": 64,
+  "fitClaimed": false
+}
