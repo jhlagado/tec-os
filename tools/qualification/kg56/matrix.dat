@@ -1,0 +1,166 @@
+{
+  "state": "PROSPECTIVE_UNRUN",
+  "boundary": "After BSTK installation and minsp reset to before PZINIT body.",
+  "active_cases": [
+    {
+      "setup": "fresh",
+      "requested_width": 32,
+      "held": false,
+      "expected_depth": 4,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "fresh",
+      "requested_width": 32,
+      "held": true,
+      "expected_depth": 12,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "fresh",
+      "requested_width": 40,
+      "held": false,
+      "expected_depth": 4,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "fresh",
+      "requested_width": 40,
+      "held": true,
+      "expected_depth": 12,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "fresh",
+      "requested_width": 80,
+      "held": false,
+      "expected_depth": 4,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "fresh",
+      "requested_width": 80,
+      "held": true,
+      "expected_depth": 12,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "reused",
+      "requested_width": 32,
+      "held": false,
+      "expected_depth": 4,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "reused",
+      "requested_width": 32,
+      "held": true,
+      "expected_depth": 12,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "reused",
+      "requested_width": 40,
+      "held": false,
+      "expected_depth": 4,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "reused",
+      "requested_width": 40,
+      "held": true,
+      "expected_depth": 12,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "reused",
+      "requested_width": 80,
+      "held": false,
+      "expected_depth": 4,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    },
+    {
+      "setup": "reused",
+      "requested_width": 80,
+      "held": true,
+      "expected_depth": 12,
+      "explicit_CONSWV_after_PICOWID": true,
+      "expected_IE_shadow_before": 32,
+      "expected_IE_shadow_after": 0
+    }
+  ],
+  "reused_setup": "Exact original complete model prewarm, independently repeated per cell, then explicit production armed helper with select.",
+  "deferred_original": {
+    "source": {
+      "revision": "771b87f826d87f4330204ee3dfc3ece0bc584488",
+      "retained_path": "frozen/diagnostic/model-check.mjs",
+      "sha256": "1dfcb248de0e7f3881179b904ae7ae1fabb72aa7612e7da4ee7811a674d122d9"
+    },
+    "setup": "Exact original prewarm and original warm loop, no inserted select.",
+    "expected": [
+      {
+        "held": false,
+        "depth": 4
+      },
+      {
+        "held": true,
+        "depth": 10
+      }
+    ],
+    "comparisons_retained_verbatim": true
+  },
+  "added_frame_cases": [
+    {
+      "width": 32,
+      "held": true,
+      "setup": "fresh active console",
+      "observed_depth_required": "healthy observed depth+2",
+      "semantic_failure_required": "unchanged active claimed<=12 rejects completed observation",
+      "observation_available": false
+    },
+    {
+      "width": 40,
+      "held": true,
+      "setup": "fresh active console",
+      "observed_depth_required": "healthy observed depth+2",
+      "semantic_failure_required": "unchanged active claimed<=12 rejects completed observation",
+      "observation_available": false
+    },
+    {
+      "width": 80,
+      "held": true,
+      "setup": "fresh active console",
+      "observed_depth_required": "healthy observed depth+2",
+      "semantic_failure_required": "unchanged active claimed<=12 rejects completed observation",
+      "observation_available": false
+    }
+  ],
+  "BIOS_reservation_bytes": 40,
+  "complete_warm_or_interrupt_maximum_claimed": false,
+  "NMI_suppressed": true,
+  "NMI_qualified": false,
+  "zero_ROM_RAM_TPA_growth": "Prospective policy/test-only change; unchanged product bytes. No fresh native/resource measurement.",
+  "all_other_KG55_requirements_unchanged": true
+}

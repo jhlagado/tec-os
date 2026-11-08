@@ -1,0 +1,100 @@
+{
+  "kind": "UNAPPLIED_EXACT_METADATA_ACTIVATION_ACCOUNT",
+  "applied": false,
+  "runtimeAuthority": false,
+  "sourceAllocation": "898d8b87",
+  "actualLeafAndMeterAuthoritiesStillRequired": true,
+  "conditions": [
+    "Different complete source/command/provider/retention/price review accepts these exact current and future projections.",
+    "Root publishes and admits the exact metadata projection; no code or source figure changes.",
+    "Root separately records XR04 scope. This packet never qualifies current display/profile/maps or historical ROM814.",
+    "Root original preflight verifies complete projected source/provider graph and fresh namespace before meter startup.",
+    "Root creates the separate actual leaf/meter authorities, including source packet commit and preflight hash."
+  ],
+  "literalChanges": [
+    "bind.dat: five source admission booleans false to true, descriptive state only.",
+    "offer.dat: active false to true, descriptive state, exact binding environment hash/member row.",
+    "leaf.dat: exact projected offer hash only; runtimeAuthority stays false.",
+    "meter.dat: exact projected binding/offer hashes and three reference rows.",
+    "alloc.dat: exact projected meter/leaf offer hashes only; runtimeAuthority stays false."
+  ],
+  "currentRows": [
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "bytes": 953690,
+      "mode": "0644",
+      "sha256": "33de1f0ea35eb35dbfc63a3b3fee07214a4f7ab649443991ed93d4d76427ea21"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "bytes": 753190,
+      "mode": "0644",
+      "sha256": "e7e962d228ed663479ac3206c005b8b74370159f95c429f1c970717602d8aeb5"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "bytes": 540,
+      "mode": "0644",
+      "sha256": "2c3df5f4a7824f398a80736698578e73b259703b6fe42d82a7735e8a5c77036b"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "bytes": 22708,
+      "mode": "0644",
+      "sha256": "f970ba1f06ae8fb342bf8e2df87554a67930f032a846880eb33311e737ebf28f"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "bytes": 531,
+      "mode": "0644",
+      "sha256": "bf4fc8f719229a53fe2ae1026a12cf114ccc83054dc2a9decfdcd6f243872f45"
+    }
+  ],
+  "projectedRows": [
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
+      "bytes": 953701,
+      "mode": "0644",
+      "sha256": "19c1dd96f3d38c02c3876258aae06d84bc4c709fd98d81d33717785fd3227282"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
+      "bytes": 753201,
+      "mode": "0644",
+      "sha256": "61cd82ff864959689dadd4648ee14280b1f155b452072bd9fa3a6f60273162c4"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
+      "bytes": 540,
+      "mode": "0644",
+      "sha256": "6ad3ccaf42e0a1cb5b51d82e5b7bd93598acc0a375b5bb7fb2b3136e1c33ee10"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
+      "bytes": 22708,
+      "mode": "0644",
+      "sha256": "b383fc3274ab05bcf187c45f42d8923f679abee6e9ee3a936767e01f3745d07d"
+    },
+    {
+      "path": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "realpath": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
+      "bytes": 531,
+      "mode": "0644",
+      "sha256": "a33389d63778cda26b07bfa9ba5f7d7480b907f242268399ca5e98717772a425"
+    }
+  ],
+  "unmodifiedCode": {
+    "warm.mjs": "13bf83f3bacd7592f58843cead78d59d747a9aef09c80b6a7ae16679c2c810dd",
+    "meter.py": "80f49c8525ba9f06a03538c0107d964258ea36dfb2e61572822527bf162881be"
+  },
+  "noActualRuntimeOrWarmAcceptance": true
+}
