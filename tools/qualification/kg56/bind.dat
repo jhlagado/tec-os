@@ -1,12 +1,12 @@
 {
-  "state": "INACTIVE_PRODUCT_WARM_BINDING_SOURCE_ONLY",
+  "state": "FUTURE_ADMITTED_WARM_BINDING_PROJECTION_NOT_AN_ALLOCATION",
   "gate": "KG56",
   "candidate": "b597c3bf212a965004b28cb3f8137f400203b8cf",
-  "registered": false,
-  "sourceReviewAccepted": false,
-  "commandHostContractAccepted": false,
-  "runtimeInputClosureAccepted": false,
-  "allocationIssued": false,
+  "registered": true,
+  "sourceReviewAccepted": true,
+  "commandHostContractAccepted": true,
+  "runtimeInputClosureAccepted": true,
+  "allocationIssued": true,
   "workerSha256": "13bf83f3bacd7592f58843cead78d59d747a9aef09c80b6a7ae16679c2c810dd",
   "node": {
     "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
