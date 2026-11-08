@@ -1,0 +1,12 @@
+{
+  "kind": "P3_KG56_WARM01_METER_ALLOCATION",
+  "runtimeAuthority": false,
+  "job": "warm",
+  "meterSha256": "80f49c8525ba9f06a03538c0107d964258ea36dfb2e61572822527bf162881be",
+  "meterOfferSha256": "f970ba1f06ae8fb342bf8e2df87554a67930f032a846880eb33311e737ebf28f",
+  "readyOfferSha256": "e7e962d228ed663479ac3206c005b8b74370159f95c429f1c970717602d8aeb5",
+  "collectorSha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
+  "leafAllocationSha256": null,
+  "preflightSha256": null,
+  "packetCommit": null
+}
