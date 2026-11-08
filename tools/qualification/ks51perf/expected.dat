@@ -1,0 +1,184 @@
+{
+  "sourceOnlyUnobserved": true,
+  "promptCases": [
+    {
+      "id": "usable-prompt-row-0",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "id": "usable-prompt-row-1",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "id": "usable-prompt-row-12",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "id": "usable-prompt-row-23",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "id": "editor-body-not-ready",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "body-not-whole-row",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "stale-screen",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "substring-no-line-boundary",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "wrong-current-row",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "wrong-column",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "wrong-drive",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "pending-key",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "not-input-wait",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "not-ccp-ready",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "wrong-mode",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "id": "short-rows",
+      "rejected": true,
+      "errorType": "DiagnosticEvidenceError",
+      "reason": "invalid screen evidence"
+    },
+    {
+      "id": "bad-row-type",
+      "rejected": true,
+      "errorType": "DiagnosticEvidenceError",
+      "reason": "invalid prompt evidence"
+    },
+    {
+      "id": "bad-column-type",
+      "rejected": true,
+      "errorType": "DiagnosticEvidenceError",
+      "reason": "invalid prompt evidence"
+    },
+    {
+      "id": "bad-pending",
+      "rejected": true,
+      "errorType": "DiagnosticEvidenceError",
+      "reason": "invalid prompt-state evidence"
+    },
+    {
+      "id": "bad-waiting",
+      "rejected": true,
+      "errorType": "DiagnosticEvidenceError",
+      "reason": "invalid prompt-state evidence"
+    },
+    {
+      "id": "bad-ready",
+      "rejected": true,
+      "errorType": "DiagnosticEvidenceError",
+      "reason": "invalid prompt-state evidence"
+    },
+    {
+      "id": "bad-mode",
+      "rejected": true,
+      "errorType": "DiagnosticEvidenceError",
+      "reason": "invalid prompt-state evidence"
+    }
+  ],
+  "ordinaryKeysSha256": "a6b10cce0ca920889e74f76a405a20a6b21945c553fa85e19451364c10ce0035",
+  "rulerNames": [
+    "same-size-wrong-ROM",
+    "wrong-valid-LDIR-terminal-cost",
+    "SPIR-false-wait-control",
+    "always-miss-hit-counter",
+    "capacity-off-by-one",
+    "attempt-renamed-completion",
+    "model-commit-renamed-firmware-success",
+    "token-delay-hidden-by-ruler",
+    "double-count-cycle-bucket",
+    "completion-exceeds-attempt",
+    "unknown-zero-runtime-cycle",
+    "zero-copy-counter-equal-view32-iff0",
+    "zero-copy-counter-equal-view32-iff1",
+    "zero-copy-counter-fixed-prefix128-iff0",
+    "zero-copy-counter-fixed-prefix128-iff1",
+    "zero-copy-counter-byte-window128-iff0",
+    "zero-copy-counter-byte-window128-iff1",
+    "zero-copy-counter-cross8000-split128-iff0",
+    "zero-copy-counter-cross8000-split128-iff1",
+    "zero-copy-counter-fixed-prefix128-reverse-iff0",
+    "zero-copy-counter-fixed-prefix128-reverse-iff1",
+    "zero-copy-counter-byte-window128-reverse-iff0",
+    "zero-copy-counter-byte-window128-reverse-iff1",
+    "zero-copy-counter-cross8000-split128-reverse-iff0",
+    "zero-copy-counter-cross8000-split128-reverse-iff1",
+    "wrong-flush-cause-through-data",
+    "wrong-flush-cause-dirty-eviction",
+    "wrong-flush-cause-directory",
+    "wrong-flush-cause-warmboot",
+    "wrong-flush-cause-mount",
+    "wrong-flush-cause-unmount",
+    "stale-BDOS48-frame",
+    "BDOS48-borrows-following-normal-writes",
+    "COPY-retains-old-destination",
+    "COPY-wrong-payload",
+    "COPY-equal-preimage-is-vacuous"
+  ],
+  "timingReadings": [
+    {
+      "name": "LDIR-1",
+      "cycles": 16
+    },
+    {
+      "name": "LDIR-2",
+      "cycles": 37
+    },
+    {
+      "name": "LDIR-128",
+      "cycles": 2683
+    },
+    {
+      "name": "LDIR-512",
+      "cycles": 10747
+    },
+    {
+      "name": "NOP",
+      "cycles": 4
+    }
+  ],
+  "noActualCaseOrCycleResult": true
+}

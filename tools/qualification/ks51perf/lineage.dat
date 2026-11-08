@@ -1,0 +1,169 @@
+{
+  "kind": "C21_PRODUCT_ORDINARY_SOURCE_LINEAGE",
+  "sourceAllocation": "92019fce",
+  "authority": [
+    "KD-236",
+    "KD-248",
+    "5f8b23f1",
+    "2e3e58db"
+  ],
+  "maintainedImplementationRepository": "jhlagado/tec-os",
+  "dataCapsuleHistoricalNotMaintainedSource": "/workspace/scratch/ks51perf-data01",
+  "ordinaryBasis": {
+    "path": "/workspace/origo/studies/p3-tec-os/evidence/ks51-fixture-feasibility/prospective/runner.mjs",
+    "realpath": "/workspace/origo/studies/p3-tec-os/evidence/ks51-fixture-feasibility/prospective/runner.mjs",
+    "bytes": 32538,
+    "mode": "0o600",
+    "sha256": "67e36b313ae1e124c7246bc8ece0f1bf663d2b86a1fc77e6f8fda9596cb29cfa"
+  },
+  "corrected5524Source": {
+    "path": "/workspace/scratch/ks51-prompt-5524-source/packet/runner.mjs",
+    "realpath": "/workspace/scratch/ks51-prompt-5524-source/packet/runner.mjs",
+    "bytes": 33528,
+    "mode": "0o600",
+    "sha256": "6186ed178ffba782782fd4103ff6f8727e0bdbfe2abb7530b3802a698928ac8b"
+  },
+  "predicateBasis": {
+    "path": "/workspace/scratch/ks51-prompt-5524-source/packet/diagnostic.mjs",
+    "realpath": "/workspace/scratch/ks51-prompt-5524-source/packet/diagnostic.mjs",
+    "bytes": 10743,
+    "mode": "0o600",
+    "sha256": "9782206047d3bf6fe39d1257b020a58196410b5ba6dc1b087ef9edc12629ae96"
+  },
+  "imports": [
+    {
+      "new": "observer.mjs",
+      "old": "/workspace/origo/studies/p3-tec-os/evidence/ks51-fixture-feasibility/prospective/observer.mjs",
+      "body": "whole bytes unchanged"
+    },
+    {
+      "new": "accounts.mjs",
+      "old": "/workspace/origo/studies/p3-tec-os/evidence/ks51-fixture-feasibility/prospective/ruler-accounts.mjs",
+      "body": "whole bytes unchanged"
+    },
+    {
+      "new": "probes.mjs",
+      "old": "/workspace/origo/studies/p3-tec-os/evidence/ks51-fixture-feasibility/prospective/account-probes.mjs",
+      "body": "one import specifier alias only"
+    },
+    {
+      "new": "prompt.mjs",
+      "old": "5524 diagnostic.mjs",
+      "body": "exact DiagnosticEvidenceError, need closure and whole proposedReturnedPrompt; export need for separate synthetic leaf"
+    },
+    {
+      "new": "endctrl.mjs",
+      "old": "5524 diagnostic.mjs",
+      "body": "unchanged inherited endpoint/error functions and WeakMap; no fs/performance/logger imported; not part of ordinary measured imports"
+    },
+    {
+      "new": "controls.mjs",
+      "old": "5524 observation-controls.mjs",
+      "body": "actual ordinary source extraction; count actual enqueue calls instead of diagnostic hooks; same22 cases plus inherited/error contrasts"
+    }
+  ],
+  "dataMappings": {
+    "source": "/workspace/scratch/ks51perf-data01/product",
+    "productSources": 374,
+    "runtimePackage": "/workspace/scratch/ks51perf-data01/product/node_modules/@jhlagado/debug80-runtime",
+    "runtimeLeaves": 219,
+    "legacyPacket": "/workspace/scratch/ks51perf-data01/packet",
+    "retainedLegacyFiles": 48,
+    "historicalPathsCaseRetainedAsDataOnly": true
+  },
+  "preservation": {
+    "keys": {
+      "originalSha256": "d451dce7704ef09cf7d9f40133a455117d475c093936efe381e90337e4ebc4d2",
+      "newSha256": "d451dce7704ef09cf7d9f40133a455117d475c093936efe381e90337e4ebc4d2",
+      "matchesExactAllowedQuitSplices": true,
+      "nonQuitBodyUnchanged": true
+    },
+    "workload": {
+      "originalSha256": "d0f37215b8f4a1c61b82c437231b2e1803b0884b03edc8d9607ef1f2f2bc6282",
+      "newSha256": "0dcc1916c1552e63a611c13fbe97cf2e73b61d975440a9d9b17d045e2705623b",
+      "matchesExactAllowedQuitSplices": true,
+      "nonQuitBodyUnchanged": true
+    },
+    "sample": {
+      "originalSha256": "6b1fcfb427e05366e484db124a16c7767a3a79f76002d0e59030526ae5e24934",
+      "newSha256": "badd9e11f84a18de861efcb9302aad898b562b18e435c09864c5afd866e8d1bc",
+      "matchesExactAllowedQuitSplices": true,
+      "nonQuitBodyUnchanged": true
+    },
+    "rulers": {
+      "originalSha256": "15507285a10324d71f4cfe677e93036e3250fc27164c07c08e5dc975fadc5db9",
+      "newSha256": "15507285a10324d71f4cfe677e93036e3250fc27164c07c08e5dc975fadc5db9",
+      "matchesExactAllowedQuitSplices": true,
+      "nonQuitBodyUnchanged": true
+    },
+    "wrapper": {
+      "sha256": "9ec2083bc6aaaacc96ba407653dd8b430d0e5ea7c23d667c1ea722ba698bc371",
+      "exact": true,
+      "mUsesIncludingDeclaration": 4,
+      "freshUses": 1
+    },
+    "predicate": {
+      "sha256": "ee386325267c9c1ebed6e331cc49d2d8509a91474533378305b534bbafaeb419",
+      "exact": true,
+      "typedErrorClassUnchanged": true,
+      "needFunctionBodyUnchangedExportAdded": true
+    }
+  },
+  "diagnosticInstrumentationImported": false,
+  "diagnosticDispatchImported": false,
+  "oldSealExceptionImported": false,
+  "sourceOnly": true,
+  "runtimeAuthority": false,
+  "directImportMap": {
+    "ordinary": [
+      "node:fs",
+      "node:path",
+      "node:crypto",
+      "node:url",
+      "node:perf_hooks",
+      "./observer.mjs",
+      "./accounts.mjs",
+      "./probes.mjs",
+      "./prompt.mjs"
+    ],
+    "promptControls": [
+      "node:fs",
+      "node:path",
+      "node:vm",
+      "node:assert/strict",
+      "node:crypto",
+      "node:url",
+      "./prompt.mjs",
+      "./endctrl.mjs"
+    ],
+    "ordinaryDynamicRoots": [
+      "/workspace/scratch/ks51perf-data01/product/host/machine.mjs",
+      "/workspace/scratch/ks51perf-data01/product/tools/lib/container.mjs",
+      "/workspace/scratch/ks51perf-data01/product/tools/lib/cpmfs.mjs"
+    ],
+    "relativeHostLeaves": [
+      "tools/lib/bytes.mjs",
+      "tools/lib/format.mjs",
+      "format/format.json"
+    ],
+    "runtimePackageExports": {
+      "@jhlagado/debug80-runtime/platforms/tec1g/runtime": "dist/platforms/tec1g/runtime.js",
+      "@jhlagado/debug80-runtime/platforms/tec1g/tec1g-memory": "dist/platforms/tec1g/tec1g-memory.js",
+      "@jhlagado/debug80-runtime/platforms/tec1g/sd-spi": "dist/platforms/tec1g/sd-spi.js",
+      "@jhlagado/debug80-runtime/z80/runtime": "dist/z80/runtime.js",
+      "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap": "dist/platforms/tec1g/matrix-keymap.js",
+      "@jhlagado/debug80-runtime/platforms/tec1g/ds1302": "dist/platforms/tec1g/ds1302.js"
+    },
+    "transitivePackageClosure": "All219 exact files retained; no install or lifecycle hook; builtin imports covered by pinned Node/runtime providers.",
+    "childOrWorkerPathFoundInSelectedMachineRuntimeSourceReading": false
+  },
+  "effectiveHeapVariant": {
+    "standingMaximumMiB": 450,
+    "effectiveOldSpaceMiB": 64,
+    "source01PreservedAt": "/workspace/scratch/ks51perf-source02/before",
+    "source01FreezeSha256": "940dd3f5416390b1d8cacef5808b5561df433d026b6b227b616e33920be38c14",
+    "ordinaryWorkflowObserverAccountsRulersAnd641InputsUnchanged": true,
+    "fitOrRuntimeResultClaimed": false,
+    "sweepOrFallbackAllocated": false
+  }
+}

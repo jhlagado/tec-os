@@ -1,0 +1,13 @@
+{
+  "kind": "P3_C21_ORIGINAL_PREFLIGHT_AUTHORIZATION",
+  "runtimeAuthority": false,
+  "offerSha256": null,
+  "launcherSha256": "43b607044429618ed068db4ebe3c2fcd27baf9a75dabd67e10b60d6c0b3f6a11",
+  "preflightSourceSha256": "2ca3a88912802f22532ea6a594a279fc027727ee4dab39154cdd8d0ed7f8258c",
+  "sourceSealSha256": "997cd62e1f81ab9aa2464a2b32b88f7cd91bb61e24e4b294af9648566f01a38c",
+  "packetCommit": null,
+  "acceptedPromptControls": null,
+  "acceptedRulers": null,
+  "rulerStatusSha256": null,
+  "currentExecutionAuthority": false
+}
