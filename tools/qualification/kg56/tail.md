@@ -76,8 +76,11 @@ on arbitrary allocator, kernel or failed filesystem behaviour.
 
 The original 120-second independent watchdog is not replaced with an inner 112
 or a renewed deadline. It is prearmed before child verification and remains
-active through interpreter shutdown. Meter and containing external 120 checks
-also include their own startup, pre/postflight and ending. Original full 120
+active through interpreter shutdown. The meter main ENTRY sample follows Python module imports. Its unchanged
+120-second interval contains subsequent setup, pre/postflight, wait and ending,
+not interpreter or module startup before main. The separate continuous root
+external 120 interval starts before original preflight and interpreter startup
+and ends after actual terminal, capture closure and the receipt tail. Original full 120
 expiry is unobserved and its optional infeasible offer stays inactive. The
 accepted short 5 result qualifies only its labelled dispatch/known-ending scope.
 No physical cutoff, IRQ/NMI, hardware or universal cleanup claim is made.

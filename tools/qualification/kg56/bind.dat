@@ -4382,9 +4382,9 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/tail.md",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/tail.md",
-      "bytes": 5668,
+      "bytes": 5946,
       "mode": "0644",
-      "sha256": "95f52e3295fca48706b906c5c9f217f8bf3db92b6066bf559eceed79e460155d"
+      "sha256": "210ca365f46d5059964f22a5a89c82abc78d37f6fa41ac21e0adee201c438671"
     },
     {
       "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-inert-healthy01-acceptance.md",
@@ -4660,8 +4660,8 @@
     "jobs": 1,
     "queueWait": 0
   },
-  "registration_context": "Rows currently bind exact prospective proposal/lock copied from caa4d4b8, not live KG56 registration. Before execution root binds actual registered gate text/lock in a fresh exact binding/offer and independently reviews them. Flags stay false now.",
-  "sourceReview": "Exact worker source CLEAR at caa4d4b8; root admission and actual command/binding are separate.",
+  "registration_context": "These 14 rows bind actual canonical KG56 registration: current gates.md, immutable KG56.md and registered-lock, gates.lock and inherited policy/profile/source evidence. They are not a proposed replacement registration. All five admission flags remain false in this current source packet; root must separately admit exact metadata and actual authorities.",
+  "sourceReview": "caa4d4b8 cleared the original 9745-byte worker basis 1fdaa8aaf882f7912e850544948f26100fbc31688e27a078543831a3cf945a8f, not this 9955-byte worker 13bf83f3bacd7592f58843cead78d59d747a9aef09c80b6a7ae16679c2c810dd or meter 80f49c8525ba9f06a03538c0107d964258ea36dfb2e61572822527bf162881be. Different complete source01 review, /workspace/scratch/kg56-warm-source01-independent-review.md, 25334 bytes, SHA256 89a5f1350b7297ed943784145787ea793800ebb9fa0135569878e7e05d9bcaed, found no new executable defect and one low provenance-description finding KW-SRC-01. This metadata successor addresses that finding and clarifies meter main ENTRY after imports. Exact successor readback and separate root admission remain outstanding. No root completion, projection application, runtime, warm result or current-candidate qualification is claimed.",
   "source_generation_performed": false,
   "native_generation_performed": false,
   "newCoverage": 0,
@@ -16426,9 +16426,9 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/tail.md",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/tail.md",
-      "bytes": 5668,
+      "bytes": 5946,
       "mode": "0644",
-      "sha256": "95f52e3295fca48706b906c5c9f217f8bf3db92b6066bf559eceed79e460155d"
+      "sha256": "210ca365f46d5059964f22a5a89c82abc78d37f6fa41ac21e0adee201c438671"
     },
     {
       "path": "/workspace/origo/studies/p3-tec-os/reviews/ks40-kg56-adoption01-result-independent.md",

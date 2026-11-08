@@ -22,74 +22,74 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
-      "bytes": 953690,
+      "bytes": 954532,
       "mode": "0644",
-      "sha256": "33de1f0ea35eb35dbfc63a3b3fee07214a4f7ab649443991ed93d4d76427ea21"
+      "sha256": "8abb8286fd22472188a257405009786929ba0115648a9f3f4f0448fc5c593436"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
       "bytes": 753190,
       "mode": "0644",
-      "sha256": "e7e962d228ed663479ac3206c005b8b74370159f95c429f1c970717602d8aeb5"
+      "sha256": "51305c9f313a42542d4126cf5052ca6bd9740a846bce93c8a4ba8701c6ee0b25"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "bytes": 540,
       "mode": "0644",
-      "sha256": "2c3df5f4a7824f398a80736698578e73b259703b6fe42d82a7735e8a5c77036b"
+      "sha256": "155ee77ca2ad0f0704ad04e56a0513849ed17ab2f9e6403b74254c7308245ce6"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
       "bytes": 22708,
       "mode": "0644",
-      "sha256": "f970ba1f06ae8fb342bf8e2df87554a67930f032a846880eb33311e737ebf28f"
+      "sha256": "62e2c1c1c107de6dbbcaa50d6a23831b1de9de4ef33664bffa7774a5c107473a"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
       "bytes": 531,
       "mode": "0644",
-      "sha256": "bf4fc8f719229a53fe2ae1026a12cf114ccc83054dc2a9decfdcd6f243872f45"
+      "sha256": "e418f1d103c844572c58ac91d8c384390d7692e328cf8a938515ee515a1aa7dc"
     }
   ],
   "projectedRows": [
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/bind.dat",
-      "bytes": 953701,
+      "bytes": 954543,
       "mode": "0644",
-      "sha256": "19c1dd96f3d38c02c3876258aae06d84bc4c709fd98d81d33717785fd3227282"
+      "sha256": "63505fe58cff8837833d93b006963d401e5db7127a47d6e0f2015aed8564569f"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/offer.dat",
       "bytes": 753201,
       "mode": "0644",
-      "sha256": "61cd82ff864959689dadd4648ee14280b1f155b452072bd9fa3a6f60273162c4"
+      "sha256": "2ed886c3ca8fe4455ab1e36d0f5c3b68718e29ff2a4ccf002541fa2aa11f4e97"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/leaf.dat",
       "bytes": 540,
       "mode": "0644",
-      "sha256": "6ad3ccaf42e0a1cb5b51d82e5b7bd93598acc0a375b5bb7fb2b3136e1c33ee10"
+      "sha256": "d8d61e1d393c653f590b5ce212c0c1e1f6b47abbd5cff2c24daab1e589692353"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/meter.dat",
       "bytes": 22708,
       "mode": "0644",
-      "sha256": "b383fc3274ab05bcf187c45f42d8923f679abee6e9ee3a936767e01f3745d07d"
+      "sha256": "2e4f1c66f792233b156c837bbf1b8a2325aeb9d192a18d2bdcb67efe0f243158"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56/alloc.dat",
       "bytes": 531,
       "mode": "0644",
-      "sha256": "a33389d63778cda26b07bfa9ba5f7d7480b907f242268399ca5e98717772a425"
+      "sha256": "d7c56977b0d2ba5cee994b444dc51b562cc49cd785ae136e56b59bbbd4b26644"
     }
   ],
   "unmodifiedCode": {
