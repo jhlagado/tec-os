@@ -25,7 +25,9 @@ INIT:
         ADC     A,A
         LD      (RESULT),A
 %ENDIF
-; Private reentry addresses come from the test; the busy window must refuse.
+; Private reentry addresses come from
+; the test. Calls during the busy window
+; must be rejected.
 %IF V_LOAD
         CALL    RAWLOAD
         LD      A,0
@@ -113,9 +115,12 @@ INIT:
         LD      (DEPTAB),HL
 %ENDIF
 %IF V_WILD
-        LD      HL,$0200        ; a record outside the image
-        LD      A,TNENODV       ; and A as an absent device's, with
-        OR      A               ; carry clear: success (KE-192)
+; A=TNENODV does not fail INIT when
+; carry is clear. HL still names a
+; record outside the resident image.
+        LD      HL,$0200
+        LD      A,TNENODV
+        OR      A
         RET
 %ENDIF
 %IF V_LINK

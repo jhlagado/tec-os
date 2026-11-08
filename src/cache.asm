@@ -172,10 +172,12 @@ CLADR:
   ret
 
 ; Fill valid line A from SDLBA via
-; SDREAD with SDXB=LATEXP, then reset
-; SDXB=0. Success tags it clean and
-; returns Z with A=line. Failure drops
-; it and returns NZ with A=line OR 1.
+; SDREAD with SDXB=LATEXP. Restore
+; SDXB=0 afterwards for transfers in
+; the program's memory view. Success
+; tags it clean and returns Z with
+; A=line. Failure drops it and returns
+; NZ with A=line OR 1.
 ; Change BC/DE/HL/F. A full payload read
 ; also sets I=0.
 
@@ -200,13 +202,14 @@ CFL9:
   ret
 
 ; Write line A to the block in its tag
-; using SDWRITE with SDXB=LATEXP, then
-; reset SDXB=0. MAPREC recomputes
-; SDLBA/BLKOFF/BLKSLOT from the current
-; BIOS request. Keep A and return the
-; saved SDWRITE Z result. Success clears
-; dirty state. Failure leaves it dirty.
-; Change BC/DE/HL/F.
+; using SDWRITE with SDXB=LATEXP. Then
+; reset SDXB=0 so later transfers use
+; the program's memory view. MAPREC
+; rebuilds SDLBA/BLKOFF/BLKSLOT from
+; the current BIOS request. Keep A and
+; return the saved SDWRITE Z result.
+; Success clears dirty state. Failure
+; leaves it dirty. Changes BC/DE/HL/F.
 
 CWRITE:
   push af
@@ -248,7 +251,7 @@ CWR9:
   ld a,c
   ret
 
-; CFLALL tries all dirty lines and drops
+; CFLALL writes dirty lines and drops
 ; failures. CFLUSH excludes line A and
 ; retains failed lines for retry
 ; (KE-AR8). Both continue through every
@@ -296,13 +299,14 @@ CFS2:
   ret
 
 ; Take the first clean line cyclically
-; from valid CNEXT. All dirty: write
-; CNEXT first. Return Z with A=line or
-; NZ on write failure, leaving that line
-; dirty (KE-187). Advance CNEXT even
-; after failure. The caller must
-; fill/tag the line. Change AF/BC/DE/HL.
-; Writeback can remap the BIOS request.
+; from valid CNEXT. When all are dirty,
+; write CNEXT first. Return Z with
+; A=line, or NZ on write failure with
+; that line still dirty (KE-187).
+; Advance CNEXT even after failure.
+; The caller must fill/tag the line.
+; Changes AF/BC/DE/HL. Writeback can
+; remap the BIOS request.
 
 CTAKE:
   ld b,NLINES

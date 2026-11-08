@@ -48,10 +48,12 @@ SVCDSP:
   ld d,(hl)
   ex de,hl
   pop de
-  ex (sp),hl     ; the routine is the
-                 ; return address,
-  ret            ; and the caller's HL
-                 ; comes back
+
+; Put the target on the stack and
+; restore the caller's HL before RET.
+
+  ex (sp),hl
+  ret
 
 ; Failure exit: A must be nonzero.
 ; Returns the same A, NZ and carry set.
@@ -101,15 +103,12 @@ HWSDIG:
 HWSDL:
   ld a,(hl)
 
-; while every digit is off
+; Update segments with all digits off,
+; then enable only the current digit.
 
   out (SEGPORT),a
   ld a,c
-  or TXIDLE      ; the serial line kept
-                 ; idle
-
-; light this digit alone
-
+  or TXIDLE
   out (DIGPORT),a
   ld b,0
 
@@ -322,12 +321,13 @@ HWSPUT:
   push bc
   push de
   push hl
-  call CURHIDE   ; the cursor's cell put
-                 ; right first, so a
-  pop hl         ; character written
-                 ; there is not later
-  pop de         ; turned to its reverse
-                 ; image
+
+; Remove cursor inversion before a new
+; character overwrites that position.
+
+  call CURHIDE
+  pop hl
+  pop de
   pop bc
   ld a,(VHGT)
   dec a
@@ -469,13 +469,8 @@ RTCW1:
   ld a,$20
   rra
 
-; the bit set up with the clock low
-
   out (RTCPORT),a
   or $40         ; clock high
-
-; the chip takes the bit on this edge
-
   out (RTCPORT),a
   djnz RTCW1
   pop bc
@@ -499,10 +494,9 @@ RTCR1:
   and $BF        ; clock low: the chip
                  ; puts out the next bit
   out (c),a
-  in a,(c)       ; the bit on bit 0,
-  rra            ; to carry
-  rr d           ; and into D from the
-                 ; top
+  in a,(c)
+  rra
+  rr d
   djnz RTCR1
   pop bc
   ret
@@ -517,6 +511,7 @@ HWSFONT:
 
 ; TNDRVR: B=3 (UC1), HL=eight-word
 ; table or 0 to drop. Other B: TNEBAD.
+; CRT uses the ROM table.
 ; Drop bypasses startup rejection.
 ; Startup + CRT field + nonzero HL:
 ; TNENODV before hook (KE-200), saving
@@ -529,10 +524,8 @@ HWSFONT:
 
 SVDRV:
   ld a,b
-  cp CMUC1       ; UC1: alone: CRT:'s
-                 ; table is the ROM's
-  jr z,SVDRV1    ; (KS39), and no other
-                 ; B has a word
+  cp CMUC1
+  jr z,SVDRV1
   ld a,TNEBAD
   scf
   ret
@@ -551,9 +544,8 @@ SVDRV1:
   dec a
   or d           ; 0 for CRT: in a
                  ; startup line
-  ld a,TNENODV   ; then refused, as an
-                 ; absent device
-  scf            ; is, nothing changed
+  ld a,TNENODV
+  scf
   ret z
 
 SVDRV2:

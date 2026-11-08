@@ -81,7 +81,7 @@ STUBAD: DS 2
 ; copies PITPL then TMSW sets width,
 ; page state and 24 row addresses. That
 ; copy excludes PITIE at offset 39:
-; cold clear initializes it; real boot
+; cold clear initialises it. Real boot
 ; clears it through PIICLR. Width stays.
 
 PIBLK: DS 14     ; seven vector words

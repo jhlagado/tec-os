@@ -1,7 +1,10 @@
-; DIRTY: attempt eight writes to B:DIRTY.DAT, then warm boot without CLOSE.
-; The stack test uses a successful write-behind volume, leaving dirty lines
-; for warm boot. DELETE, MAKE and WRITE results are ignored; the program
-; does not initialize the data at DMA 0200h.
+; Attempt eight writes to B:DIRTY.DAT,
+; then warm boot without CLOSE.
+; The stack test uses a successful
+; write-behind volume, leaving dirty
+; lines for warm boot. DELETE, MAKE and
+; WRITE results are ignored. Data at
+; DMA 0200h is not initialised.
 
 BDOS    EQU     $0005
 

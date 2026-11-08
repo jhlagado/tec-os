@@ -1,7 +1,10 @@
-; COPY SOURCE DEST is the record-copy reference used as XCOPY in tests.
-; Prints COPIED nnnn (16-bit record count, hex) or an error, then returns.
-; Any nonzero read ends copying. DELETE is unchecked; error exits do not
-; promise to close the destination.
+; Copy records from SOURCE to DEST.
+; Tests run this reference as XCOPY.
+; Print COPIED nnnn (16-bit hex record
+; count) or an error, then return.
+; Any nonzero read ends copying.
+; DELETE is unchecked. Error exits can
+; leave the destination open.
 
 BDOS    EQU     $0005
 FCB1    EQU     $005C

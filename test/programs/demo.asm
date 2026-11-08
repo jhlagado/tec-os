@@ -140,8 +140,10 @@ YESNO:  PUSH    AF
         LD      DE,NOMSG
         JR      PRINT
 
-; Try RTC only if INFO saw it at cold boot. Each read probes again; failure
-; leaves row 3 alone. A successful read supplies its HH:MM:SS display.
+; Read RTC when INFO's saved cold-probe
+; flag is set. Each read probes again.
+; Failure leaves LCD row 3 unchanged.
+; A successful read supplies HH:MM:SS.
 CLOCK:  LD      A,(DEVS)
         AND     8
         RET     Z
@@ -366,8 +368,10 @@ VBP:    LD      A,(HL)
         OUT     (VDPDAT),A
         RET
 
-; Move each axis by its signed two-pixel step, with bounds 240/176.
-; A bounce on either axis chooses one new colour, 8-15, for this loop.
+; Move each axis by its signed two-pixel
+; step, with bounds 240/176. A bounce
+; on either axis sets a new colour,
+; 8-15, for this loop.
 BALL:   LD      HL,BX
         LD      DE,DX
         LD      C,240

@@ -118,8 +118,9 @@ SETR:   LD      (FCB+33),A
         LD      (FCB+35),A
         RET
 
-; BUF filled with record A's byte: A * 3 + 1 (FILLS), A XOR 5Ah (FILLR);
-; PATS and PATR set the byte in PAT only.
+; Fill BUF with record A's pattern.
+; FILLS uses A*3+1 and FILLR uses A XOR
+; 5Ah. PATS/PATR store only PAT.
 PATS:   LD      B,A
         ADD     A,A
         ADD     A,B

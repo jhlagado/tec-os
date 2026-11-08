@@ -23,13 +23,11 @@ WRITESEQ:
   cp 128         ; CR 0..127: a record
                  ; in this extent
   jr c,WRITEPOS
-  call ADVEXT    ; past the extent: the
-                 ; next, made if new
+  call ADVEXT    ; open/make next extent
   or a
   ret nz         ; 1: no directory entry
                  ; for it
-  call FCBCR     ; CR, now 0 in the new
-                 ; extent
+  call FCBCR     ; new extent's CR=0
   ld a,(hl)
 
 ; Write DMA data to record A, 0..127, of

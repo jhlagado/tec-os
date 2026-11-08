@@ -251,10 +251,12 @@ GLP3:   LD      A,C
 GLPF:   LD      A,$FF
         RET
 
-; HL=GLVAL/GLPAT, in shared SAVE+6.
-; Write 64x16 bytes. Pushed GLF3 is the
-; return. Callback A=byte, DE kept.
-; Timeouts still send. Not reentrant.
+; Fill the GLCD through GLVAL or GLPAT
+; at HL, saved in shared SAVE+6. Write
+; 64 rows of 16 bytes. Each callback
+; returns A=byte through GLF3 and keeps
+; DE. GLD still sends after a timeout.
+; Do not re-enter: SAVE+6 is shared.
 
 GLFILL: LD      (SAVE+6),HL
         LD      D,0

@@ -1,8 +1,13 @@
-; PROBE.COM: sixteen BDOS file checks, reporting Tnn ok/FAIL then DONE.
-; Uses the default FCB/DMA and a writable B:. Checks share user/drive/file
-; state; a fatal BDOS error can warm boot before later reports.
-; T14 attempts U3.DAT cleanup with unchecked erase status; T16 checks
-; PROBE2.DAT deletion. An ok result does not promise all cleanup.
+; Run sixteen BDOS file checks. Report
+; Tnn ok/FAIL then DONE. Use the default
+; FCB/DMA and a writable B:. The checks
+; share user/drive/file state. A fatal
+; error can warm boot before later
+; reports. T14 attempts U3.DAT cleanup
+; without checking erase status. T16
+; checks PROBE2.DAT deletion. An ok
+; result does not establish complete
+; cleanup.
 
 BDOS    EQU     $0005
 FCB     EQU     $005C

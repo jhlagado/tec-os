@@ -52,8 +52,8 @@ COLD:   DI
 ; before explicit stack/workspace use.
 ; Four fill/verify passes use L XOR H
 ; XOR 00h/FFh/55h/AAh, not flat fills.
-; Own instructions use no stack or
-; initialised workspace and change
+; These instructions use no stack or
+; initialised workspace. They change
 ; AF/BC/HL/IX. Mismatch: HL=address,
 ; A=expected, NZ. HCBAD rereads actual.
 ; Success jumps to START to clear vars.
@@ -93,7 +93,7 @@ HCPATS: DB      $00,$FF,$55,$AA
 ; then reread nibbles, high first.
 ; TXNS jumps through IY=HCNEXT.
 ; Repeat forever, never START.
-; Own instructions use no stack.
+; These instructions do not use a stack.
 
 HCBAD:  LD      D,A
         LD      E,(HL)
@@ -158,7 +158,7 @@ HCTEXT: DB      13,10,"T01 HOME    FAIL  RAM 7E00-7FFF at ",1,1,1,1
 ; digit/speaker outputs stay off.
 ; Drive TX high for TXSTOP then jump
 ; through mapped IY. Changes AF/B/D/E.
-; Own code keeps C/HL and alternates
+; Keeps C/HL and alternate registers
 ; without explicit stack access.
 
 TXNS:   LD      E,A

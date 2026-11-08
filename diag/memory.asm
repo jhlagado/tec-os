@@ -560,7 +560,9 @@ TBNK4:  DJNZ    TBNK3
         DB      ", base RAM bad",0
 TBNK5:  JP      REND
 
-; Count the field values that own their RAM. Returns A. Destroys DE, HL.
+; Count bank fields whose saved tag
+; matches the field value. Return A.
+; Changes DE and HL.
 NBANKS: LD      HL,BANKMAP
         LD      DE,0            ; D = value, E = count
 NBNK1:  LD      A,(HL)
@@ -595,9 +597,13 @@ BREAD:  LD      A,(WINDOW)
 BREADN: LD      A,$FF
         RET
 
-; T13 tests only self-owned BANKMAP entries, with two XOR/complement passes.
-; No such entries gives RNONE. Stop at the first failure, retain its field
-; and fresh RRBANK record, and restore the base mapping before any report.
+; T13 tests BANKMAP entries tagged with
+; their field value, using two
+; XOR/complement passes. Report RNONE
+; when none match. Stop at first failure
+; and retain its field and fresh RRBANK
+; record. Restore the base mapping
+; before any report.
 TBNKRAM:CALL    TBEGIN
         DB      13,"BANKRAM","Each distinct bank, 8000h-BFFFh, 2 passes",0
         XOR     A

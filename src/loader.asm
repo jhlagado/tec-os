@@ -619,6 +619,7 @@ SVCIN:
   ccf            ; carry: at/past end
   ret
 
+; Find an entry table by record name.
 ; TNFIND: DE = eight-byte name padded
 ; with spaces, B = minimum version.
 ; Carry clear: HL = entry table, A =
@@ -630,6 +631,7 @@ SVFND:
   ld b,0         ; 256 records at most
   jr REGFIND
 
+; Read a registry record by index.
 ; TNLIST: B = index, newest first at 0.
 ; Carry clear: HL = record, A =
 ; generation. Carry set: past the end.
@@ -654,9 +656,9 @@ SVCS1:
   ld l,a
   jr SVCS1
 
-; Find the newest record with the
-; eight-byte name at DE and version >=
-; C.
+; Find the newest record matching the
+; eight-byte name at DE, with version
+; at least C.
 ; Walk at most B records or 256 for B=0.
 ; Carry clear: HL = entry table, A =
 ; generation, BC = record address. Carry

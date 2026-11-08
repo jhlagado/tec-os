@@ -1,6 +1,9 @@
-; CHAIN: test BDOS 47 with the command appended at STR, the image's end.
-; Acceptance warm boots without returning. A missing zero within 128 bytes
-; or a CR/LF refuses it: print REFUSED for FFh, NOT FF for another return.
+; Test BDOS 47 with a command appended
+; at STR, the image's end. Acceptance
+; warm boots without returning. A CR/LF
+; or missing zero within 128 bytes
+; causes rejection. Print REFUSED for
+; FFh, NOT FF for another return.
 
 BDOS    EQU     $0005
 

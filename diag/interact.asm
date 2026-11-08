@@ -619,9 +619,10 @@ TJ6:    LD      A,RINFO
         JP      REND
 
 ; Print 3,2,1 with BEEP and WAITDS A=9.
-; GO text precedes the timed interval:
-; next caller BEEP's first speaker edge.
-; Nominal spacing plus output overhead.
+; Output adds to the nominal spacing.
+; Print GO, then return. Timing starts
+; at the first speaker edge of the
+; caller's next BEEP, after this text.
 
 CDOWN:  CALL    PRI
         DB      "Ready:",0
@@ -692,11 +693,12 @@ DELU1:  DEC     DE              ; 6
         RET                     ; 10
 DELAYN  EQU     38460           ; with the CALL and DJNZ: 26 x 38460 + 45
 
-; T33: 240 DELAYU calls between caller
-; BEEP first speaker edges. SWTOT is a
-; historical Debug80 timing reference,
-; 240400396 T. Valid ASKSW -> INFO Hz
-; from SWTOT*10/tenths, else SKIP.
+; T33 measures 240 DELAYU calls between
+; the first speaker edges of two BEEPs.
+; SWTOT=240400396 T is the historical
+; Debug80 timing reference. A valid
+; ASKSW reading gives INFO Hz from
+; SWTOT*10/tenths, otherwise SKIP.
 
 TCLOCK: CALL    TBEGIN
         DB      33,"CLOCK  ","CPU clock by stopwatch, about 60 s",0

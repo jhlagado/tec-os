@@ -100,13 +100,13 @@ STARTED:
 ; supplies the drive and packed four-bit
 ; user. Print a nonzero user, drive
 ; letter and >.
-; Prefer CHSKIP's next chain piece,
+; Use CHSKIP's next chain piece,
 ; keeping STFLAG. Otherwise clear CHPOS
-; and ask STLINE. Set STFLAG=FFh for its
-; carry-clear startup line or 0 for
-; carry-set typed input. Startup enters
-; MLGOT. Typed input sets HFLAG=FFh and
-; uses BDOS 10 on CMDBUF.
+; and call STLINE. Set STFLAG=FFh on
+; its carry-clear startup line, or 0
+; on carry-set typed input. Startup
+; enters MLGOT. Typed input sets
+; HFLAG=FFh and uses BDOS 10 on CMDBUF.
 
 MAINLOOP:
   ld sp,CSTKTOP  ; discard leftover

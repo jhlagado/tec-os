@@ -1,8 +1,9 @@
 ; ST7920 128x64 console: 21x8 cells,
 ; each 6x8 pixels. Resident text/state
 ; use the ROM font and LINEBUF.
-; Pages lie below the prior top. The new
-; (0006h) then names entry below body.
+; Pages lie below the prior top. The
+; word at 0006h points to the BDOS entry
+; below the resident body.
 ; Keep resident storage until removal.
 ; Calls use the caller stack and classic
 ; bank mapping. Resident code/state,
@@ -49,8 +50,8 @@ LBUF: DW 0
 ; table causes failure. CON=CRT startup
 ; gives TNENODV (KE-200). Local state
 ; may change on failure. No hook/record
-; is published. Typed load may stay as
-; CRT keeps selection (SVCGO, KE-150).
+; is published. A typed load can leave
+; CRT selected (SVCGO, KE-150).
 ; Success: A=0, NC, HL=0, no records,
 ; LBUF=LINEBUF. Selection is via SVCGO.
 ; Failure: carry, A=status.
@@ -569,8 +570,9 @@ GLCSPAN:
 ; At GLCSETA/GLCCMP use, GLY=0..63
 ; and GLW=0..7. After eight pixel rows,
 ; GLY=8*B+8, up to 64 for valid B=7.
-; GLCROW also leaves GLW=8. Early clear
-; returns before redraw set no endpoint.
+; GLCROW also leaves GLW=8. A clear
+; that skips redraw does not establish
+; these endpoint values.
 ; GLROWP is established per operation.
 ; Shared scratch is not re-entrant.
 

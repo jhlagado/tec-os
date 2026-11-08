@@ -292,8 +292,7 @@ FNSETRR:
 
 ; Copy three low-first bytes from DE to
 ; caller FCB bytes 33..35 at (PARAM).
-; Preserve A. Changes BC/DE/HL/F. The
-; caller chooses its return tail.
+; Preserve A. Changes BC/DE/HL/F.
 
 PUBRR:
   ld hl,(PARAM)
@@ -395,8 +394,8 @@ NEWSRCH:
 ; Find the next match from SRCHIDX using
 ; SRCHFCB/OPENMOD. Keep the pointed-to
 ; pattern usable until continuation
-; ends. Modes 3/5 stop at DIRCNT. Others
-; at DIRUSED.
+; ends. Modes 3/5 stop at DIRCNT.
+; Other modes stop at DIRUSED.
 ; READDIR fetches each four-entry record
 ; at slot 0 and advances the record
 ; cursor. Set RETCODE=index&3 and

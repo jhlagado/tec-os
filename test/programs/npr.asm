@@ -98,7 +98,8 @@ SETR:   LD      (FCB+33),A
         LD      (FCB+34),A
         LD      (FCB+35),A
         RET
-; The name at HL into FCB (SETF) or FCB2 (SETF2), the rest cleared.
+; Copy the name at HL into FCB (SETF)
+; or FCB2 (SETF2), clearing the rest.
 SETF:   LD      DE,FCB
         JR      SETX
 SETF2:  LD      DE,FCB2

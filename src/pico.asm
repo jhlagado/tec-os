@@ -202,7 +202,7 @@ TMSR2:
 ; Write 256 eight-byte patterns at
 ; 0000h..07FFh. R1 combines mode bits
 ; with the supported IE shadow PITIE.
-; Raw R1 writes are not remembered.
+; Raw R1 writes do not update PITIE.
 ; Keeps E.
 ; Changes AF, BC, D and HL. Maskable
 ; interrupts are excluded only within
@@ -320,8 +320,9 @@ GFXRG1:
   ld h,a
   jp VPAIR
 
-; End the transient supported IE session
-; before real boot removes its handler.
+; End the transient's supported VDP
+; interrupt-enable session before real
+; boot removes its handler.
 ; No arguments. Always clear PITIE.
 ; Without CDTMS, touch no VDP ports;
 ; otherwise write IE-off R1 from the

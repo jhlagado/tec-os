@@ -7,11 +7,11 @@
 ; arguments. Carry clear enters STARTED.
 ; Carry enters BADCMD. Loader prechecks
 ; may refuse before REMOVE. The loader
-; owns hook execution and page/registry
+; handles hook calls and page/registry
 ; release.
 
 CMDUNL:
-  call SVCUNL    ; loader owns refusal
+  call SVCUNL
   jp nc,STARTED  ; NC: unload completed
   jp BADCMD
 
@@ -391,7 +391,7 @@ SAVEWER:
 ; Report NOSPACE through ERRGO, setting
 ; PRGCODE=FF00h before the message and
 ; STARTED. A later conditional piece
-; observes failure.
+; tests this failure code.
 
 SAVENOSP:
   ld de,NOSPACE
@@ -890,8 +890,8 @@ STLE:
 ; At EOF use STLAST=STREC+127 so the
 ; position conversion stores 80h.
 ; Otherwise save the next one-based
-; position. Bit 7 at the boundary:
-; finished. If output is empty retry
+; position. Bit 7 marks the finished
+; state. If output is empty retry
 ; STLINE.
 ; Store CMDLEN and append CR/dollar for
 ; PUTSTR echo. An embedded '$' stops

@@ -49,20 +49,15 @@ VTOUT:
   ld hl,VATTR
   or (hl)
   ld e,a
-  ld a,(VCOL)    ; a pending wrap
-                 ; happens before the
-                 ; character
+  ld a,(VCOL)
   ld hl,VWID
-  cp (hl)        ; column VWID: past the
-                 ; edge
+  cp (hl)
   jr c,VTNOWR
-  xor a          ; column 0 of the next
-                 ; line
+  xor a
   ld (VCOL),a
-  push de        ; the character,
-                 ; through a scroll
+  push de        ; glyph over scroll
   call VTLF
-  pop de         ; the character back
+  pop de
 
 VTNOWR:
   ld a,e
@@ -70,9 +65,8 @@ VTNOWR:
   ld b,l
   ld c,h
   call VPUT
-  ld a,(VCOL)    ; may reach VWID: the
-                 ; wrap waits
-  inc a          ; one column on
+  ld a,(VCOL)
+  inc a
 
 VTCOL:
   ld (VCOL),a
@@ -268,11 +262,9 @@ VTPD:
   jp VTDONE
 
 VTPNOD:
-  cp ';'         ; the second parameter
-                 ; starts at 0
+  cp ';'
   jr nz,VTPFIN
-  xor a          ; the second parameter
-                 ; now collects
+  xor a
   ld (ESCP2),a
   ld a,3         ; state 3
   ld (ESCST),a
@@ -640,10 +632,12 @@ VTICH:
   sub b
   call LBADR
   pop af
-  ld c,a         ; BC = the cells to
-                 ; move, from the
-  ld b,0         ; right end so none is
-                 ; overwritten
+
+; Copy from the right to preserve cells
+; whose source and destination overlap.
+
+  ld c,a
+  ld b,0
   lddr
 
 VTICF:
@@ -658,8 +652,7 @@ VTBLL:
   ld (hl),' '    ; a blank in each cell
   inc hl
   djnz VTBLL
-  ld a,(VROW)    ; the row back on the
-                 ; screen
+  ld a,(VROW)
   ld b,a
   call VWRROW    ; LINEBUF back to row B
   jp VTDONE
@@ -691,9 +684,8 @@ VTDCH:
   add a,b
   call LBADR
   pop af
-  ld c,a         ; BC = the cells to
-                 ; move, left
-  ld b,0         ; to right
+  ld c,a
+  ld b,0
   ldir
 
 VTDCF:
@@ -850,8 +842,7 @@ VTCLRN:
   pop bc
   inc c          ; the next row
   djnz VTCLRN    ; B rows in all
-  jp VTMEND      ; the driver told the
-                 ; move is done
+  jp VTMEND
 
 ; A=min(A,(HL)-1), positive dimension.
 ; Keeps HL/BC/DE. Changes F.
@@ -913,20 +904,16 @@ CURFLIP:
   ld a,(VCOL)    ; no cursor cell while
                  ; a wrap is pending
   ld hl,VWID
-  cp (hl)        ; VCOL is VWID: past
-                 ; the edge
+  cp (hl)
   ret nc
-  push bc        ; the caller's BC kept
+  push bc
   ld hl,(VROW)   ; L = row, H = column
-  ld b,l         ; the cursor cell, row
-                 ; B, column C
+  ld b,l
   ld c,h
   push bc
-  call VGET      ; A = the character
-                 ; there
-  pop bc         ; its row and column
-                 ; again
-  xor $80        ; its reverse image
+  call VGET
+  pop bc         ; position over VGET
+  xor $80        ; toggle reverse bit
   call VPUT
   pop bc
   ret

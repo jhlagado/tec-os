@@ -1,5 +1,5 @@
-; SAY: prints "SAY" by BDOS function 9, then returns: a program for the
-; chain's tests, whose output marks each piece that ran.
+; Mark a command-chain step by printing
+; "SAY" through BDOS 9, then return.
 
 BDOS    EQU     $0005
 

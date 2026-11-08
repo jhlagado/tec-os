@@ -1,5 +1,7 @@
-; REGION.COM: a scroll region of rows 2-4. "top" on row 1 and "bottom" on
-; row 5 stay put while four lines written into the region scroll it.
+; Set a scroll region covering rows 2-4.
+; Keep "top" on row 1 and "bottom" on
+; row 5 while four lines scroll within
+; the region.
 
 BDOS    EQU     $0005
 
