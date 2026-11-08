@@ -60,9 +60,9 @@
     "jobs": 1,
     "queueWait": 0
   },
-  "readyOfferSha256": "5f89ddcde5854780bca6345e5ed98e20be1747916c0ad5d50f7aab513c6507cf",
+  "readyOfferSha256": "5d568d9069e820dad1891149dabc3ba50643f9c493bcc095584bbac20c7b52a4",
   "collectorSha256": "797b58e1714805b9b09b9d551cf1b17b0595f8b2e939be280c0494b22bed87ef",
-  "bindingSha256": "2a3291f5dfca1ba865aa5a992738f9fe832536e4beb2adab98fd661d86a58b33",
+  "bindingSha256": "41cd34bc67e4ed214c5f6e50df5639f66525499cf7c28b937e5508c7cf038f1f",
   "references": [
     {
       "path": "/workspace/origo/studies/p3-tec-os/evidence/kg56-finalization-expiry-short01-result/input-union-index.json",
@@ -529,9 +529,9 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56mem/bind.dat",
-      "bytes": 968440,
+      "bytes": 968450,
       "mode": "0644",
-      "sha256": "2a3291f5dfca1ba865aa5a992738f9fe832536e4beb2adab98fd661d86a58b33"
+      "sha256": "41cd34bc67e4ed214c5f6e50df5639f66525499cf7c28b937e5508c7cf038f1f"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56mem/extract.dat",
@@ -559,7 +559,7 @@
       "realpath": "/workspace/tec-os/tools/qualification/kg56mem/leaf.dat",
       "bytes": 540,
       "mode": "0644",
-      "sha256": "3c30a09cded27314483738d7b2d5aaa21e9e10278df6ded6a5b72fc4472a463e"
+      "sha256": "aef1ddddbd3702a3cd7b213530d661ad38d6de07b15050e78041e1256cb53ed0"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56mem/matrix.dat",
@@ -578,9 +578,9 @@
     {
       "path": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
       "realpath": "/workspace/tec-os/tools/qualification/kg56mem/offer.dat",
-      "bytes": 760807,
+      "bytes": 760826,
       "mode": "0644",
-      "sha256": "5f89ddcde5854780bca6345e5ed98e20be1747916c0ad5d50f7aab513c6507cf"
+      "sha256": "5d568d9069e820dad1891149dabc3ba50643f9c493bcc095584bbac20c7b52a4"
     },
     {
       "path": "/workspace/tec-os/tools/qualification/kg56mem/prior.dat",

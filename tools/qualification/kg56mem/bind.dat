@@ -1,12 +1,12 @@
 {
-  "state": "INACTIVE_KG56_MEMORY_SOURCE_ONLY",
+  "state": "FUTURE_ADMITTED_MEMORY_BINDING_NOT_AN_ALLOCATION",
   "gate": "KG56",
   "candidate": "b597c3bf212a965004b28cb3f8137f400203b8cf",
-  "registered": false,
-  "sourceReviewAccepted": false,
-  "commandHostContractAccepted": false,
-  "runtimeInputClosureAccepted": false,
-  "allocationIssued": false,
+  "registered": true,
+  "sourceReviewAccepted": true,
+  "commandHostContractAccepted": true,
+  "runtimeInputClosureAccepted": true,
+  "allocationIssued": true,
   "workerSha256": "cf8d697a720b1cd109103c474538770a88ad5a428d91196cc1b4720fb4bd9189",
   "node": {
     "realpath": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
@@ -4842,7 +4842,7 @@
   "newCoverage": 0,
   "job": "warm",
   "watchdogSeconds": 120,
-  "subreaperCapabilityAccepted": false,
+  "subreaperCapabilityAccepted": true,
   "cheapControlPricesAccepted": false,
   "nodeEnvironment": {
     "PATH": "/usr/bin:/bin",
