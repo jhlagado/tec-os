@@ -96,6 +96,7 @@ FREEL:    DS    4
 BLK:      DS    4
 WRFAIL:   DS    2
 WRN:      DS    2
+WRB:      DS    2
 WRTRY:    DS    1
 WRSTEP:   DS    1
 WRAT:     DS    2

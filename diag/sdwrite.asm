@@ -112,10 +112,12 @@ S8G:
 
 S8H:
   call PROBE     ; A: 0 none, 1 alias,
-  or a           ; 2 a read failed
+  or a           ; 2 unread, 3 unstable
   jp z,S8K
   cp 2
   jp z,S8J       ; a read failed
+  cp 3
+  jp z,S8J3
   ld a,RFAIL     ; a block reads as 0:
   call RESULT    ; the card wraps
   call FIELDS
@@ -147,6 +149,15 @@ S8J:
   DB " code=",0,FHEX
   DW ERRCODE
   DB " blocks=0 fail=0",0,0
+  jp ENDL
+
+S8J3:
+  ld a,RFAIL     ; two probe reads of
+  call RESULT    ; BLK differed
+  call FIELDS
+  DB " probe-unstable at=",0,FD32
+  DW BLK
+  DB " blocks=0 fail=0",0,0
   jp ENDL        ; nothing written
 
 ; Ask with a key pair no other prompt
@@ -166,7 +177,8 @@ S8K:
 S8L:
   ld hl,0        ; no blocks yet
   ld (WRFAIL),hl
-  ld (WRN),hl    ; WRN = 0
+  ld (WRN),hl    ; tested,
+  ld (WRB),hl    ; and written
   xor a
   ld (S8STOP),a  ; no stop yet
   ld a,1         ; read 0-7 after each
@@ -338,7 +350,21 @@ S8Z1:
   call ENDL
   ld a,(S8STOP)  ; 1: a copy of block 0
   cp 1
+  jp nz,S8Z2
+  ld hl,(WRB)    ; at the first block:
+  ld a,h         ; nothing was written
+  or l
   jp z,NOTE0
+  call NOTE      ; after writes: this
+  DB "SD8 a free block holds a copy of"
+  DB " block 0: either the card wraps,"
+  DB " or the free area holds an old"
+  DB " copy. Nothing was written to"
+  DB " this block",0
+  call ENDL
+  jr NOTEBK      ; and restore the card
+
+S8Z2:
   cp 4           ; 4, 5: nothing changed
   ret z          ; 4: AD
   cp 5
@@ -360,7 +386,7 @@ NOTEBK:
 S8TAIL:
   call FIELDS    ; the counts
   DB " blocks=",0,FD16
-  DW WRN
+  DW WRB
   DB " fail=",0,FD16
   DW WRFAIL
   DB " free=",0,0
@@ -412,34 +438,48 @@ CHKREF:
   jp CMP512      ; the second as SD7's?
 
 ; Read each power-of-two block from 8 to
-; the card's end, and compare it with
-; block 0. Reading inside the container
-; is harmless, and no volume block of a
-; real card holds the header. A card
-; that ignores its high address bits
-; reads one of them as block 0. A=0/Z:
-; none did. A=1: BLK did. A=2: BLK did
-; not read, its code in ERRCODE.
+; the card's end twice, and compare both
+; reads with block 0. Reading inside the
+; container is harmless, and no volume
+; block of a real card holds the header.
+; A card that ignores its high address
+; bits reads one of them as block 0.
+; A=0/Z: none did. A=1: BLK did. A=2:
+; BLK did not read, its code in ERRCODE.
+; A=3: its two reads differed.
 
 PROBE:
-  ld hl,0        ; from block 8, inside
-  ld (BLK+2),hl  ; the container too, so
-  ld l,8         ; a wrap below its end
-  ld (BLK),hl    ; shows
+  ld hl,0        ; BLK = 8, the first
+  ld (BLK+2),hl  ; power of two after
+  ld l,8         ; blocks 0-7
+  ld (BLK),hl
 
 PB1:
   ld hl,BLK      ; the card's end: done
   ld de,CARDBLK
-  call CMP32     ; BLK < CARDBLK?
+  call CMP32
   jr nc,PB3
   call LBABLK
-  ld hl,BUFB
-  call SDREAD    ; read only
+  ld hl,BUFB     ; the first read
+  call SDREAD
   jr nz,PB4      ; unread
-  ld hl,BUFB     ; as block 0?
+  call LBABLK
+  ld hl,BUFA     ; and the second
+  call SDREAD
+  jr nz,PB4
+  ld hl,BUFB     ; either as block 0:
+  ld de,REF0     ; an alias
+  call CMP512
+  jr z,PB5       ; the first read
+                 ; matches
+  ld hl,BUFA
   ld de,REF0
-  call CMP512    ; as block 0?
-  jr z,PB5       ; yes: an alias
+  call CMP512
+  jr z,PB5       ; the second matches
+  ld hl,BUFA     ; the two reads differ:
+  ld de,BUFB     ; unstable
+  call CMP512
+  jr nz,PB6
 
 PB2:
   ld hl,BLK      ; the next power of two
@@ -454,7 +494,12 @@ PB4:
   ld (ERRCODE),a
   ld a,2         ; a read failed,
   or a           ; with NZ
-  ret            ; kept
+  ret            ; its error code
+
+PB6:
+  ld a,3         ; the reads differ,
+  or a           ; with NZ
+  ret
 
 PB5:
   ld a,1         ; BLK reads as block 0,
@@ -570,6 +615,9 @@ WOX1:
   ret            ; carry: stop
 
 WO1A:
+  ld hl,(WRB)    ; one more block to
+  inc hl         ; be written
+  ld (WRB),hl
   call PATTERN   ; BUFA from BLK
   call LBABLK
   ld hl,BUFA     ; written, counted
@@ -791,14 +839,13 @@ WOLINE:
   DB "SD8 block ",0
   ld hl,BLK
   call PRDEC
-  ld a,(WRSTEP)  ; a failure at either
-  ld hl,(RSTEP)  ; stage, or a pattern
-  or l           ; in 0-7, or an unread
-                 ; low
-  ld hl,THIS07   ; block, counts once
+  ld a,(WRSTEP)  ; any of four counts
+  ld hl,(RSTEP)  ; once: the pattern,
+  or l           ; the restore,
+  ld hl,THIS07   ; an alias in 0-7
   or (hl)
-  ld hl,RDF07
-  or (hl)
+  ld hl,RDF07    ; or an unread low
+  or (hl)        ; block
   jr z,WL1       ; no failure
   ld hl,(WRFAIL)
   inc hl         ; one more failed
