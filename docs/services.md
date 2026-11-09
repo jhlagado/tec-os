@@ -295,7 +295,9 @@ registry. The caller checks conflicting vector ownership before arming.
 
 Real warm boot ends the transient session: hardware IE and its shadow clear
 before `PZINIT` removes a TPA handler, even when the display is unclaimed.
-Quit and abort must clear IE before vector teardown or follow the proved
+Boot writes the whole of R1: the current PICO mode's value with IE off, or
+`80h` (16K, display blanked) on a detected VDP with no PICO mode. It writes
+no other register. Quit and abort must clear IE before vector teardown or follow the proved
 disabled-interrupt path into real boot. This contract adds no IRQ handler and
 makes no physical interrupt, wiring or paired-write atomicity guarantee.
 
