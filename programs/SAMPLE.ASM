@@ -1,25 +1,48 @@
-; First TEC-OS program: TAS SAMPLE to
-; build, SAMPLE to run. Say hello via
-; CP/M BDOS before checking ABI 5. Then
-; print geometry, write LCD row 1, scan
-; 123456 and beep. Service status is not
-; checked by this example.
+; A first program for TEC-OS. Build it
+; with TAS SAMPLE. Run it with SAMPLE.
 
-; Standalone ABI 5 declarations avoid a
-; shipped include. ABITAB starts "TNA",
-; ABIMAJ is the major byte. CALL ABICALL
-; with C=service and its arguments.
+; Say hello through CP/M BDOS, then
+; check for the TEC-OS ABI 5 table.
+; Print the screen size, write to LCD
+; row 2, show 123456 and beep.
 
-ABITAB EQU $C003
-ABIMAJ EQU $C006
-ABICALL EQU $C008
-TNINFO EQU 0     ; -> L columns, H rows
-TNDIGIT EQU 1    ; HL -> six patterns
-TNLCD EQU 2      ; B row, HL -> 20 bytes
-TNTONE EQU 4     ; B delay, DE halves
-BDOS EQU 5       ; CP/M console entry
+; TEC-OS's table and service numbers use
+; the names from abi.inc. ABITAB points
+; to "TNA", then the major version.
 
-  ORG $0100      ; CP/M transient entry
+ABITAB    EQU   $C003
+
+; The major version this speaks: 5.
+
+ABIMAJ    EQU   $C006
+
+; CALL here with the service in C.
+
+ABICALL   EQU   $C008
+
+; INFO returns L=columns, H=rows.
+
+TNINFO    EQU   0
+
+; HL points to six digit patterns.
+
+TNDIGIT   EQU   1
+
+; B=row 0-3, HL points to 20 characters.
+
+TNLCD     EQU   2
+
+; B=pitch, DE=length.
+
+TNTONE    EQU   4
+
+; CP/M's entry for the console.
+
+BDOS      EQU   5
+
+; CP/M runs a program from here.
+
+  ORG $0100
 
 ; Say hello: BDOS function 9 prints from
 ; DE up to the $.
@@ -28,187 +51,176 @@ START:
   ld de,HELLO
   call SAY
 
-; Require "TNA" and major 5, no minor
-; check. Mismatch reaches OTHER before
-; hardware calls. Signature failure
-; leaves DE within TNA. After all three
-; comparisons DE points at HELLO.
+; Is this TEC-OS? Its table starts
+; "TNA", and this program needs major 5.
 
-  ld hl,ABITAB
-  ld de,TNA
-  ld b,3
+  ld hl,ABITAB   ; table's address
+  ld de,TNA      ; against the signature
+  ld b,3         ; three letters
 
 CHECK:
   ld a,(de)
   cp (hl)
-  jr nz,OTHER
-  inc hl
+  jr nz,OTHER    ; not TEC-OS: stop
+  inc hl         ; next letter of each
   inc de
   djnz CHECK
-  ld a,(ABIMAJ)
+  ld a,(ABIMAJ)  ; table's version
   cp 5
-  jr nz,OTHER
+  jr nz,OTHER    ; unsupported version
 
-; INFO returns L=columns, H=rows, both
-; zero for serial. Save before BDOS
-; output can change register values.
+; INFO returns L columns and H rows,
+; both 0 on a serial terminal.
 
-  ld c,TNINFO
+  ld c,TNINFO    ; service 0
   call ABICALL
-  ld (SIZE),hl
-  ld de,SCREEN
+  ld (SIZE),hl   ; save HL across BDOS
+  ld de,SCREEN   ; "Screen: "
   call SAY
-  ld a,(SIZE)
+  ld a,(SIZE)    ; the columns
   call DECIMAL
-  ld de,BY
+  ld de,BY       ; " by "
   call SAY
-  ld a,(SIZE+1)
+  ld a,(SIZE+1)  ; the rows
   call DECIMAL
-  ld de,CRLF
+  ld de,CRLF     ; and the line's end
   call SAY
 
-; B=1 selects the second physical row,
-; zero-based row 1. Send 20 raw bytes.
-; No terminator is read.
-; HWSLCD attempts output after timeout.
+; A line on the LCD's second row: rows
+; count from 0.
 
   ld b,1
-  ld hl,LCDTXT
+  ld hl,LCDTXT   ; exactly 20 characters
   ld c,TNLCD
   call ABICALL
 
-; Each call scans all six patterns,
-; leftmost first, then digits off. About
-; 5 ms per scan at nominal 4 MHz gives
-; about 1 s for 200 scans plus overhead.
+; Each digit call lights 123456 once
+; for about 5 ms. Repeating it 200 times
+; shows the digits for about a second.
 
-  ld b,200
+  ld b,200       ; the passes
 
 SHOW:
-  push bc        ; DIGIT changes B/C
-  ld hl,DIGITS
+  push bc        ; the service changes B
+  ld hl,DIGITS   ; leftmost digit first
   ld c,TNDIGIT
   call ABICALL
   pop bc
-  djnz SHOW
+  djnz SHOW      ; more display passes
 
-; B=60 gives repeated half cycles of
-; 16*60+51=1011 T, about 1.98 kHz at
-; nominal 4 MHz. DE=400 gives about
-; 0.101 s apart from boundary costs.
+; A short beep. B sets the pitch: each
+; half cycle is 16 x B + 51 T-states,
+; about 2 kHz here. DE counts half
+; cycles, about 0.1 s here.
 
   ld b,60
   ld de,400
   ld c,TNTONE
   call ABICALL
-  ld de,DONE
+  ld de,DONE     ; and say so
 
-; Print current DE, then RET through the
-; CCP's WBOOT return word. Normal path
-; uses DONE, mismatches keep DE from the
-; guard. No replacement stack is made.
+; Print DE's message, then return to the
+; CCP, which shows the prompt.
 
 OTHER:
   call SAY
+
+; Return via the CCP address on stack.
+
   ret
 
-; SAY: DE -> '$'-terminated text.
-; BDOS 9 tail jump returns to caller on
-; its restored SP. AF/BC/DE/HL and any
-; installed BIOS-hook clobbers apply.
+; SAY: print the string at DE, up to its
+; $. Changes AF, BC, DE, HL.
 
 SAY:
-  ld c,9
-  jp BDOS
+  ld c,9         ; BDOS function 9
+  jp BDOS        ; returns to caller
 
-; Print byte A=0..255 without leading
-; zeros. Keep A while clearing LEAD. Use
-; PLACE for hundreds/tens, always print
-; units. LEAD is shared state.
-; Changes AF/BC/DE/HL and BDOS effects.
-; BDOS returns its result to the caller,
-; not the original input byte.
+; DECIMAL: print A, 0 to 255, in decimal
+; without leading zeros. Changes AF, BC,
+; DE, HL.
 
 DECIMAL:
-  push af
-  xor a
+  push af        ; A across LEAD reset
+  xor a          ; no digit printed yet
   ld (LEAD),a
   pop af
-  ld b,100
+  ld b,100       ; the hundreds
   call PLACE
-  ld b,10
+  ld b,10        ; the tens
   call PLACE
-  add a,'0'      ; units always print,
-                 ; without setting LEAD
+  add a,'0'      ; units always printed
   ld e,a
-  ld c,2
+  ld c,2         ; BDOS 2: one character
   jp BDOS
 
-; B=100 on byte input, then B=10 on its
-; remainder. Print the quotient unless
-; it is a leading zero. Return remainder
-; in A, saving it across BDOS output.
-; Changes F/BC/DE/HL and callee effects.
-; No result flags or arbitrary-B use.
+; PLACE: print how many times B goes
+; into A, unless it is a leading zero.
+; Returns A less those times B. Changes
+; BC, DE, HL.
 
 PLACE:
-  ld c,'0'-1
+  ld c,'0'-1     ; one before '0'
 
 PLACE1:
-  inc c
+  inc c          ; count subtractions
   sub b
-  jr nc,PLACE1
-  add a,b
-  ld d,a
+  jr nc,PLACE1   ; until A goes below 0
+  add a,b        ; restore last B
+  ld d,a         ; next place remainder
   ld a,c
   cp '0'
-  jr nz,PLACE2
-  ld a,(LEAD)
+  jr nz,PLACE2   ; print nonzero digit
+  ld a,(LEAD)    ; zero after a digit
   or a
   jr z,PLACE3
 
 PLACE2:
-  ld (LEAD),a
+  ld (LEAD),a    ; a digit is out now
   ld e,c
-  push de        ; keep remainder over
-                 ; BDOS output
-  ld c,2
+  push de        ; the BDOS changes D
+  ld c,2         ; BDOS 2: one character
   call BDOS
   pop de
 
 PLACE3:
-  ld a,d
+  ld a,d         ; what is left
   ret
 
-; TNA immediately precedes HELLO, so a
-; signature mismatch prints its current
-; DE through the same '$' terminator.
+; TEC-OS's signature, text and patterns.
 
-TNA: DB "TNA"
-HELLO: DB "Hello from TEC-OS.",13,10,"$"
+TNA:      DB    "TNA"
+HELLO:    DB    "Hello from TEC-OS."
+  DB 13,10,"$"
 
-; Geometry text is illustrative, not a
-; fixed 80x24 screen requirement.
+; The size, as "80 by 24".
 
-SCREEN: DB "Screen: $"
-BY: DB " by $"
-CRLF: DB 13,10,"$"
-DONE: DB "Back to the prompt.",13,10,"$"
+SCREEN:   DB    "Screen: $"
+BY:       DB    " by $"
 
-; Fixed 20-byte LCD row, padded with
-; blanks and no terminator.
+; Return, then a new line.
 
-LCDTXT: DB "Hello from SAMPLE   "
+CRLF:     DB    13,10,"$"
+DONE:     DB    "Back to the prompt."
+  DB 13,10,"$"
 
-; Six segment patterns for 123456,
-; leftmost first.
+; The LCD's row: 20 characters, padded
+; with blanks.
 
-DIGITS: DB $28,$CD,$AD
+LCDTXT:   DB    "Hello from SAMPLE   "
+
+; 1, 2 and 3, a bit a segment.
+
+DIGITS:   DB    $28,$CD,$AD
+
+; 4, 5 and 6.
+
   DB $2E,$A7,$E7
-SIZE: DW 0       ; columns, then rows
-LEAD: DB 0       ; ASCII higher-place
-                 ; state, 0 if none
 
-; PLACE sets or keeps nonzero ASCII
-; state. Units output does not update
-; LEAD. Inputs 0..9 can leave it zero.
+; INFO's columns, then rows.
+
+SIZE:     DW    0
+
+; Leading-zero suppression flag.
+
+LEAD:     DB    0
