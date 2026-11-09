@@ -68,8 +68,8 @@ SC2:
   call RTCRD     ; 17 + 1196
   inc hl         ; 6
   ld c,a         ; 4
-  ld a,h         ; 4
-  or l           ; 4
+  ld a,h
+  or l
   jr z,SCTO      ; 7
   ld a,(OLDSEC)  ; 13
   cp c           ; 4
@@ -93,7 +93,7 @@ CLKCHK:
   call BEGIN
   ld a,(RTCOK)   ; no RTC: no clock
   or a
-  jr nz,CK1
+  jp nz,CK1
   call SKIPR
   DB "nortc",0
   ret
@@ -122,7 +122,7 @@ CK1:
   ld hl,M32A     ; / 100,
   ld c,100
   call DIVB      ; / 100
-  ld hl,M32A     ; / 100
+  ld hl,M32A
   ld c,100
   call DIVB      ; / 100
   ld hl,(M32A)   ; below 3.92 MHz
@@ -139,7 +139,7 @@ CK1:
   ld a,RPASS     ; within 2%
 
 CK2:
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " mhz=",0,FFIX
   DW M32A
@@ -148,7 +148,7 @@ CK2:
   DB " hz=",0,FD32
   DW CLKHZ
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 CKTO:
   call SKIPR     ; the seconds stopped
@@ -249,14 +249,14 @@ FC1:
 FC2:
   inc hl         ; 6
   ld a,h         ; 4
-  or l           ; 4
+  or l
   jr z,FCTO      ; 7
   in a,(VDPC)    ; 11
   rlca           ; 4
   jr nc,FC2      ; 12: 48 in all
   djnz FC2       ; the next frame
   or a           ; no carry
-  ret            ; no carry
+  ret
 
 FCTO:
   scf            ; no frame flag
@@ -270,7 +270,7 @@ FCTO:
 
 LCDCHK:
   ld hl,RLCD
-  call BEGIN     ; the record
+  call BEGIN
   ld b,LROW2+5   ; address 45h
   ld c,MLCDCMD
   rst $10        ; set the address
@@ -291,7 +291,7 @@ LCDCHK:
   ld a,RPASS     ; both as set
 
 LC1:
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " ac=",0,FHEX
   DW PRON
@@ -326,7 +326,7 @@ LA2:
 
 GLCCHK:
   ld hl,RGLC
-  call BEGIN     ; the record
+  call BEGIN
   ld b,0         ; 256 reads
 
 GC1:
@@ -356,7 +356,7 @@ GC2:
 
 RTCCHK:
   ld hl,RRTC
-  call BEGIN     ; the record
+  call BEGIN
   ld a,(RTCOK)   ; found at the start?
   or a
   jr nz,RT1      ; present
@@ -460,7 +460,7 @@ RT5:
 
 INTCHK:
   ld hl,RINT
-  call BEGIN     ; the record
+  call BEGIN
   ld a,(VDPOK)   ; no VDP: no source
   or a
   jr nz,IC1      ; a VDP is there
@@ -568,7 +568,7 @@ NH1:
 
 KEYCHK:
   ld hl,RKEY
-  call BEGIN     ; the record
+  call BEGIN
   call NOTE
   DB "KEYS press keypad or matrix keys,"
   DB " AD ends",0
@@ -593,7 +593,7 @@ KC1:
   ld c,MSCANS    ; digits
   rst $10        ; the digits
   ld c,MSCANK    ; the keypad
-  rst $10        ; the keypad
+  rst $10
   jr nz,KC1      ; no key
   jr nc,KC1      ; held from before
   cp KAD         ; AD: the end
@@ -603,7 +603,7 @@ KC1:
   DB "KEY pad=",0
   pop af
   call PRHEX     ; its code
-  call ENDL      ; the line's end
+  call ENDL
   ld hl,NPAD     ; one more
   inc (hl)       ; one more key
   jr KC1
@@ -617,7 +617,7 @@ KC2:
   DB " matrix=",0,FD8
   DW NMTX
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 ; Scan the eight matrix rows and print a
 ; line for each key newly down: its row,
@@ -682,7 +682,7 @@ MN1:
   DB " code=",0,FD8
   DW PROFF
   DB 0,0
-  call ENDL      ; the line's end
+  call ENDL
   ld hl,NMTX     ; one more
   inc (hl)       ; one more key
   pop de

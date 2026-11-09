@@ -345,7 +345,7 @@ BG2:
 ; registers.
 
 RESULT:
-  push af        ; the status
+  push af
   ld hl,NRES     ; its total
   ld e,a
   ld d,0

@@ -4,155 +4,220 @@
 ; SD8's pattern writes, which go through
 ; the counted MWRITE (sdcard.asm).
 
-; SD8: the write test, on blocks SD7
-; showed free only: from the container's
-; end to the block before the card's
-; last. Asks first: GO writes, AD skips.
+; SD8: the write test. It writes only
+; blocks SD7 showed free, from the
+; container's end to the block before
+; the card's last, and never blocks 0-7.
+; It runs only when SD2, SD3, SD4, SD5
+; and SD7 passed, block 0 reads twice as
+; SD7 found it, and a read-only probe
+; finds no power-of-two block that reads
+; as block 0. It asks for 8 then GO; AD
+; between blocks stops it.
 
 SD8:
-  ld hl,RSD8
-  call BEGIN     ; SD8's record
-  call NEEDSD
-  ret nz         ; no card: skipped
-  ld a,(SD7OK)   ; no container: no
-  or a           ; free blocks known
-  jr nz,S8A      ; SD7 passed
+  ld hl,RSD8     ; SD8's record
+  call BEGIN
+  call NEEDSD    ; SD2 failed: skipped
+  ret nz
+  ld a,(S3ST)    ; SD3 PASS or WARN
+  cp RFAIL
+  jr c,S8A       ; PASS 0 or WARN 1
   call SKIPR
-  DB "sd7",0
-  ret            ; SD8 done
+  DB "sd3",0
+  ret            ; skipped
 
 S8A:
-  ld a,(CSDOK)   ; no size: no end
+  ld a,(S5ST)    ; SD5 PASS
   or a
-  jr nz,S8B      ; the size is known
+  jr z,S8B       ; PASS
   call SKIPR
-  DB "sd4",0
-  ret            ; SD8 done
+  DB "sd5",0
+  ret            ; skipped
 
 S8B:
-  ld hl,CTEND    ; the first free block
+  ld a,(SD7OK)   ; SD7 PASS: the free
+  or a           ; blocks are known
+  jr nz,S8C      ; passed
+  call SKIPR
+  DB "sd7",0
+  ret            ; skipped
+
+S8C:
+  ld a,(CSDOK)   ; SD4: a size, and
+  or a           ; addressing that
+                 ; agrees
+  jr z,S8C1      ; with the CSD
+  ld a,(CCSBAD)  ; CCS against the CSD
+  or a
+  jr z,S8D       ; they agree
+
+S8C1:
+  call SKIPR
+  DB "sd4",0
+  ret            ; skipped
+
+; The free range: FREE0, the container's
+; end, to FREEL, the block before the
+; card's last, and on SDSC at most
+; 7FFFFFh.
+
+S8D:
+  ld hl,CTEND    ; FREE0 = CTEND
   ld de,FREE0
-  call CPY32     ; FREE0 = CTEND
-  ld hl,LASTBLK  ; the last free one:
-  ld de,FREEL    ; before the last
+  call CPY32     ; FREE0
+  ld hl,LASTBLK  ; FREEL = LASTBLK - 1
+  ld de,FREEL
   call CPY32     ; FREEL = LASTBLK
   ld hl,FREEL
   call DEC32     ; - 1
-  ld a,(SDBYTE)  ; SDSC: below 800000h,
-  or a           ; TEC-OS's range
-  jr z,S8C       ; SDHC: no limit
-  ld hl,FREEL+3
-  ld a,(hl)      ; the top byte
-  dec hl
-  or a           ; top byte set?
-  jr nz,S8L      ; past it
-  ld a,(hl)      ; or byte 2 >= 80h
+  ld a,(SDBYTE)  ; SDHC: no limit
+  or a
+  jr z,S8F       ; SDHC
+  ld hl,FREEL+3  ; the top byte set,
+  ld a,(hl)      ; or byte 2 at least
+  dec hl         ; 80h: past SDSC's
+  or a           ; range
+  jr nz,S8E
+  ld a,(hl)      ; byte 2
   cp $80
-  jr c,S8C       ; under 80h: within
+  jr c,S8F       ; below 80h: within
 
-S8L:
-  ld hl,SDSCTOP  ; 7FFFFFh at most
+S8E:
+  ld hl,SDSCTOP  ; FREEL = 7FFFFFh
   ld de,FREEL
   call CPY32     ; FREEL = 7FFFFFh
 
-S8C:
+S8F:
   ld hl,FREEL    ; FREEL < FREE0:
   ld de,FREE0    ; no free block
   call CMP32
-  jr nc,S8D      ; FREE0 <= FREEL
+  jr nc,S8G      ; FREE0 <= FREEL
   call SKIPR
   DB "nofree",0
-  ret            ; SD8 done
+  ret            ; skipped
 
-S8D:
-  call NOTE
+; Read-only checks before any write:
+; block 0 twice, as SD7 found it, then
+; the power-of-two probe.
+
+S8G:
+  call CHKREF    ; Z: block 0 is steady
+  jr z,S8H       ; steady
+  ld a,RFAIL
+  call RESULT    ; FAIL
+  call PRI
+  DB " blk0=unstable blocks=0 fail=0",0
+  jp ENDL        ; nothing written
+
+S8H:
+  call PROBE     ; A: 0 none, 1 alias,
+  or a           ; 2 a read failed
+  jp z,S8K
+  cp 2
+  jp z,S8J       ; a read failed
+  ld a,RFAIL     ; a block reads as 0:
+  call RESULT    ; the card wraps
+  call FIELDS
+  DB " alias at=",0,FD32
+  DW BLK
+  DB " probe=read-only"
+  DB " blocks=0 fail=0",0,0
+  call ENDL      ; the line's end
+  call NOTE      ; what it means
+  DB "SD8 the card wraps: it holds less"
+  DB " than it claims. Nothing was"
+  DB " written; do not use it",0
+  jp ENDL        ; nothing written
+
+S8J:
+  ld a,RFAIL     ; a probe read failed
+  call RESULT    ; FAIL
+  call FIELDS
+  DB " probe-read at=",0,FD32
+  DW BLK
+  DB " code=",0,FHEX
+  DW ERRCODE
+  DB " blocks=0 fail=0",0,0
+  jp ENDL        ; nothing written
+
+; Ask with a key pair no other prompt
+; uses: 8, then GO.
+
+S8K:
+  call NOTE      ; the range
   DB "SD8 free blocks ",0
-  call PRFREE    ; FREE0-FREEL
+  call PRFREE
   call ENDL      ; the note's end
-  ld de,HWRITE   ; ask: GO or AD
-  call ASK
-  DB "SD8 GO writes and restores free"
-  DB " blocks, AD skips",0
-  jr z,S8E       ; GO
-  call SKIPR
+  call ASK8
+  jr z,S8L       ; 8 then GO
+  call SKIPR     ; AD, or any other key
   DB "user",0
-  ret            ; SD8 done
+  ret            ; skipped
 
-S8E:
+S8L:
   ld hl,0        ; no blocks yet
   ld (WRFAIL),hl
   ld (WRN),hl    ; WRN = 0
-  xor a          ; no alias seen
-  ld (ALIASM),a  ; none yet
-  call SAVE07    ; blocks 0-7 kept
-  jr z,S8F       ; kept
-  call SKIPR     ; not read: no writes
-  DB "save07",0
-  ret            ; SD8 done
-
-S8F:
-  ld a,1         ; spot blocks: check
-                 ; 0-7
-  ld (SPOT),a    ; on
+  xor a
+  ld (S8STOP),a  ; no stop yet
+  ld a,1         ; read 0-7 after each
+  ld (SPOT),a    ; spot block's write
   ld hl,FREE0    ; the first free block
   ld de,BLK
   call CPY32     ; BLK = FREE0
-  call WRONE     ; test it
-  jp c,S8V       ; not put back: stop
-  ld hl,FREEL    ; the middle one:
-  ld de,BLK      ; FREE0 + (FREEL -
-  call CPY32     ; FREE0) / 2
-  ld hl,BLK
-  ld de,FREE0
-  call SUB32     ; FREEL - FREE0
-  ld hl,BLK
-  call SHR32     ; / 2
-  ld hl,BLK
-  ld de,FREE0
-  call ADD32     ; + FREE0
-  call WRONE     ; test it
-  jr c,S8V
-  ld hl,FREEL    ; the last free one
-  ld de,BLK
-  call CPY32     ; BLK = FREEL
-  call WRONE     ; test it
-  jr c,S8V
+  call WRONE     ; no AD poll first
+  jp c,S8V       ; stopped
 
 ; Each power-of-two block in the free
-; area: on a card that ignores its high
-; address bits, as fake cards do, one of
-; these lands on block 0.
+; range, ascending.
 
-  ld hl,0        ; BLK = 1
-  ld (BLK+2),hl
-  inc hl
-  ld (BLK),hl    ; BLK = 1
+  ld hl,0
+  ld (BLK+2),hl  ; BLK = 1
+  inc hl         ; BLK = 1
+  ld (BLK),hl
 
 S8P:
-  ld hl,FREEL    ; past the last: done
+  ld hl,FREEL    ; past FREEL: done
   ld de,BLK
-  call CMP32     ; FREEL < BLK?
-  jr c,S8Q
-  ld hl,BLK      ; below the first free:
-  ld de,FREE0    ; not free
   call CMP32
-  jr c,S8P1      ; BLK < FREE0?
-  call WRONE     ; test it
-  jp c,S8V       ; stop
+  jr c,S8Q       ; past FREEL: done
+  ld hl,BLK      ; below FREE0: not free
+  ld de,FREE0
+  call CMP32
+  jr c,S8P1      ; below FREE0: skip
+  call WRNEXT    ; test it
+  jp c,S8V       ; stopped
 
 S8P1:
   ld hl,BLK      ; the next power of two
   call SHL32     ; x 2
   jr nc,S8P      ; until it overflows
 
+; The middle of the free range: FREE0 +
+; (FREEL - FREE0) / 2.
+
 S8Q:
+  ld hl,FREEL
+  ld de,BLK
+  call CPY32     ; BLK = FREEL
+  ld hl,BLK
+  ld de,FREE0
+  call SUB32     ; - FREE0
+  ld hl,BLK
+  call SHR32     ; / 2
+  ld hl,BLK
+  ld de,FREE0
+  call ADD32     ; + FREE0
+  call WRNEXT    ; test it
+  jp c,S8V       ; stopped
 
-; A run of 32 blocks from the first free
-; one, stopping at the last.
+; A run of 32 from the first free block,
+; without the 0-7 reads, then the last
+; free block.
 
-  xor a          ; no 0-7 check in the
-                 ; run
-  ld (SPOT),a    ; off for the run
+  xor a
+  ld (SPOT),a    ; no 0-7 reads
   ld hl,FREE0
   ld de,BLK
   call CPY32     ; BLK = FREE0
@@ -160,37 +225,47 @@ S8Q:
   ld (COUNT),a   ; COUNT = 32
 
 S8R:
-  ld hl,FREEL    ; past the last: done
+  ld hl,FREEL    ; past FREEL: done
   ld de,BLK
-  call CMP32     ; FREEL < BLK?
-  jr c,S8V
-  call WRONE     ; test it
-  jr c,S8V       ; not put back: stop
-  ld hl,BLK      ; the next block
+  call CMP32
+  jr c,S8S       ; past FREEL: done
+  call WRNEXT    ; test it
+  jp c,S8V       ; stopped
+  ld hl,BLK
   call INC32     ; the next block
-  ld hl,COUNT
+  ld hl,COUNT    ; 32 blocks
   dec (hl)
-  jr nz,S8R      ; up to 32
+  jr nz,S8R      ; 32 blocks
 
-; The verdict: FAIL for any failure;
-; WARN when the busy wait or the
-; response used more than a quarter of
-; TEC-OS's bound.
+S8S:
+  ld a,1
+  ld (SPOT),a    ; 0-7 reads again
+  ld hl,FREEL
+  ld de,BLK
+  call CPY32     ; BLK = FREEL
+  call WRNEXT    ; the last block
+
+; The verdict. A stop (S8STOP) is FAIL
+; with its reason, but AD with no
+; failure, a SKIP. Otherwise FAIL for a
+; failure, and WARN when the busy wait
+; or the response used more than a
+; quarter of TEC-OS's bound.
 
 S8V:
-  ld a,(ALIASM)  ; blocks 0-7 changed:
-  or a           ; the card wraps
-  jp nz,S8X      ; an alias: FAIL
+  ld a,(S8STOP)
+  or a
+  jp nz,S8X      ; a stop
   ld hl,(WRFAIL)
-  ld a,h         ; any failure
-  or l
+  ld a,h         ; a failure: FAIL
+  or l           ; any failure?
   ld a,RFAIL
-  jr nz,S8W      ; a failure: FAIL
-  ld a,(WRSMAX)  ; more than 4 of 16
+  jr nz,S8W      ; FAIL
+  ld a,(WRSMAX)  ; over 4 of 16
   cp 5
   ld a,RWARN
   jr nc,S8W      ; over: WARN
-  ld hl,QTOK     ; 16,384 < BSYMAX?
+  ld hl,QTOK     ; over 16,384
   ld de,BSYMAX
   call CMP32     ; over a quarter?
   ld a,RWARN
@@ -199,265 +274,313 @@ S8V:
 
 S8W:
   call RESULT    ; the status
-  call FIELDS
+  call S8TAIL    ; the common fields
+  jp ENDL
+
+; A stop: the reason's word and the
+; block, then the common fields. An
+; alias or a block left changed also
+; gets the note to restore the card from
+; its backup.
+
+S8X:
+  cp 4           ; AD with no failure
+  jr nz,S8Y      ; a stop with no
+                 ; failure?
+  ld hl,(WRFAIL)
+  ld a,h
+  or l
+  jr nz,S8Y      ; a failure: FAIL
+  ld a,RSKIP
+  call RESULT    ; SKIP
+  call PRI
+  DB " reason=user-abort",0
+  call S8TAIL    ; the common fields
+  jp ENDL
+
+S8Y:
+  ld a,RFAIL
+  call RESULT    ; FAIL
+  ld a,(S8STOP)  ; the reason's word
+  ld hl,STOPS
+  call PRNTH     ; the reason
+  call FIELDS    ; and the block
+  DB " at=",0,FD32
+  DW BLK
+  DB 0,0
+  ld a,(S8STOP)  ; 2: the low blocks
+  cp 2           ; that hold the pattern
+  jr nz,S8Z      ; not 2
+  call PRI
+  DB " low=",0
+  ld a,(THIS07)
+  call PRMASK    ; the low blocks
+
+S8Z:
+  ld a,(S8STOP)  ; 6: those unread
+  cp 6
+  jr nz,S8Z1     ; not 6
+  call PRI
+  DB " low=",0
+  ld a,(RDF07)
+  call PRMASK    ; the low blocks
+
+S8Z1:
+  call S8TAIL    ; the common fields
+  call ENDL
+  ld a,(S8STOP)  ; 1, 4, 5: nothing
+  cp 1           ; left changed
+  ret z          ; 1: nothing written
+  cp 4
+  ret z          ; 4: AD
+  cp 5
+  ret z          ; 5: nothing written
+
+; Tell the owner to restore the card
+; from the backup.
+
+NOTEBK:
+  call NOTE      ; the advice
+  DB "SD8 the card may be changed:"
+  DB " restore it from your backup"
+  DB " before using it",0
+  jp ENDL        ; its end
+
+; The fields every SD8 result line ends
+; with.
+
+S8TAIL:
+  call FIELDS    ; the counts
   DB " blocks=",0,FD16
   DW WRN
   DB " fail=",0,FD16
   DW WRFAIL
   DB " free=",0,0
-  call PRFREE    ; the free range
-  call FIELDS
+  call PRFREE    ; the range
+  call FIELDS    ; the margins
   DB " busymax=",0,FD32
   DW BSYMAX
   DB "/65536 wrsmax=",0,FD8
   DW WRSMAX
   DB "/16",0,0
-  jp ENDL        ; the line's end
+  ret            ; done
 
-; FAIL alias: the free block whose
-; pattern write changed blocks 0-7, the
-; low blocks changed, and those still
-; not put back.
+; Print the A'th zero-ended text at HL,
+; from 1.
 
-S8X:
-  ld a,RFAIL
-  call RESULT    ; the status
-  call FIELDS
-  DB " alias at=",0,FD32
-  DW ALIASB
-  DB " low=",0,0
-  ld a,(ALIASM)
-  call PRMASK    ; the low blocks hit
-  call PRI
-  DB " unrestored=",0
-  ld a,(LEFT07)
-  call PRMASK    ; those still wrong
-  call FIELDS
-  DB " blocks=",0,FD16
-  DW WRN
-  DB 0,0
-  jp ENDL        ; the line's end
+PRNTH:
+  dec a          ; this one?
+  jp z,PRS       ; found: print it
 
-; Print the bits of A as block numbers
-; 0-7 joined by commas, or "none".
+PN1:
+  ld b,a         ; the count kept
+  ld a,(hl)      ; past one text
+  inc hl
+  or a           ; zero: its end
+  ld a,b
+  jr nz,PN1      ; until the zero
+  jr PRNTH       ; and count down
 
-PRMASK:
-  or a           ; no bits
-  jr nz,PM0      ; some set
-  call PRI
-  DB "none",0
-  ret            ; none
+; Z if block 0 reads the same twice and
+; as SD7 found it (REF0).
 
-PM0:
-  ld c,a         ; the bits
-  ld b,0         ; the bit's number
-  ld e,0         ; numbers printed
+CHKREF:
+  ld hl,0
+  call LBA16
+  ld hl,BUFA     ; the first read
+  call SDREAD
+  ret nz         ; unread
+  ld hl,0
+  call LBA16
+  ld hl,BUFB     ; the second
+  call SDREAD
+  ret nz         ; unread
+  ld hl,BUFA     ; the first read
+  ld de,REF0
+  call CMP512    ; the first as SD7's?
+  ret nz
+  ld hl,BUFB     ; and the second
+  ld de,REF0
+  jp CMP512      ; the second as SD7's?
 
-PM1:
-  srl c          ; the next bit
-  jr nc,PM2      ; not set
-  ld a,e         ; a comma between
-  or a
-  ld a,','
-  call nz,PUTC   ; before all but the
-                 ; first
-  ld a,b         ; the number
-  add a,'0'
-  call PUTC      ; the number
-  inc e          ; one more printed
+; Read each power-of-two block from
+; FREE0 to the card's end, and compare
+; it with block 0. A card that ignores
+; its high address bits reads one of
+; them as block 0. A=0/Z: none did. A=1:
+; BLK did. A=2: BLK did not read, its
+; code in ERRCODE.
 
-PM2:
-  inc b          ; the next bit's number
-  ld a,c         ; more bits?
-  or a
-  jr nz,PM1      ; until no bits remain
-  ret
+PROBE:
+  ld hl,0
+  ld (BLK+2),hl  ; BLK = 1
+  inc hl         ; BLK = 1
+  ld (BLK),hl
 
-; Read blocks 0-7 into BLK07. NZ if one
-; can't be read.
+PB1:
+  ld hl,BLK      ; the card's end: done
+  ld de,CARDBLK
+  call CMP32     ; BLK < CARDBLK?
+  jr nc,PB3      ; no: done
+  ld hl,BLK      ; below FREE0: skip
+  ld de,FREE0
+  call CMP32     ; BLK < FREE0?
+  jr c,PB2       ; yes: skip it
+  call LBABLK
+  ld hl,BUFB
+  call SDREAD    ; read only
+  jr nz,PB4      ; unread
+  ld hl,BUFB     ; as block 0?
+  ld de,REF0
+  call CMP512    ; as block 0?
+  jr z,PB5       ; yes: an alias
 
-SAVE07:
-  xor a          ; from block 0
-  ld (K07),a     ; K07 = 0
+PB2:
+  ld hl,BLK      ; the next power of two
+  call SHL32     ; x 2
+  jr nc,PB1      ; until it overflows
 
-SV1:
-  call AT07      ; DE: its copy's place
-  ex de,hl
-  push hl        ; the place
-  ld a,(K07)     ; SDLBA = K07
-  ld l,a
-  ld h,0
-  call LBA16     ; SDLBA = K07
-  pop hl
-  call SDREAD    ; TEC-OS's read
-  ret nz         ; not read
-  ld hl,K07      ; the next block
-  inc (hl)
-  ld a,(hl)      ; the next block
-  cp 8
-  jr c,SV1       ; up to 7
-  xor a          ; Z: all kept
+PB3:
+  xor a          ; no alias found
   ret            ; Z
 
-; DE = block K07's copy in BLK07: BLK07
-; + K07 x 512. Changes AF/DE/HL.
+PB4:
+  ld (ERRCODE),a
+  ld a,2         ; a read failed
+  or a           ; kept
+  ret            ; NZ
 
-AT07:
-  ld a,(K07)     ; x 512: x 2 in the
-  add a,a        ; high byte
-  ld d,a
-  ld e,0         ; E = 0
-  ld hl,BLK07
-  add hl,de      ; + BLK07
-  ex de,hl
-  ret            ; in DE
+PB5:
+  ld a,1         ; BLK reads as block 0
+  or a
+  ret            ; NZ
 
-; Read blocks 0-7 and compare them with
-; BLK07. A and MASK07: the bits of the
-; blocks that differ or don't read; Z if
-; none.
+; Ask for 8 then GO, the only key pair
+; that writes the card. Z for 8 then GO;
+; NZ for anything else, AD included.
 
-CHK07:
-  xor a          ; none differ yet
-  ld (MASK07),a
-  ld (K07),a     ; K07 = 0
-
-CK7A:
-  ld a,(K07)     ; read block K07
-  ld l,a
-  ld h,0
-  call LBA16     ; SDLBA = K07
-  ld hl,BUFB
-  call SDREAD    ; TEC-OS's read
-  jr nz,CK7B     ; unread counts as a
-  call AT07      ; difference
-  ld hl,BUFB     ; compared with the
-                 ; copy
-  call CMP512    ; as saved?
-  jr z,CK7C      ; the same
-
-CK7B:
-  call BIT07     ; its bit in MASK07
-  ld hl,MASK07
-  or (hl)        ; added to the mask
-  ld (hl),a
-
-CK7C:
-  ld hl,K07      ; the next block
-  inc (hl)       ; the next block
-  ld a,(hl)
+ASK8:
+  call NOTE      ; on serial
+  DB "SD8 press 8 then GO to write"
+  DB " free blocks, AD skips",0
+  call ENDL      ; the note's end
+  ld hl,HWRITE
+  ld a,LROW4
+  call LCDROW    ; and on the LCD
+  call GETKEY    ; 8 first
   cp 8
-  jr c,CK7A      ; up to 7
-  ld a,(MASK07)
-  or a           ; Z if none
-  ret
+  jr nz,AK1      ; not 8: no
+  call GETKEY    ; then GO
+  cp KGO
+  jr z,AK2       ; GO: yes
 
-; A = the bit of block K07. Changes
-; AF/B.
+AK1:
+  or 1           ; NZ: not written
 
-BIT07:
-  ld a,(K07)     ; bit K07 set
-  inc a
-  ld b,a         ; K07 + 1 turns
-  ld a,$80
+AK2:
+  push af        ; the answer
+  call TOTALS
+  call SHOWDIG   ; the digit back
+  pop af
+  ret            ; Z: 8 then GO
 
-BT1:
-  rlca           ; the bit moves up
-  djnz BT1
-  ret            ; in A
+; Test BLK unless AD was pressed since
+; the last block. Carry: stop, with
+; S8STOP saying why.
 
-; Write back each block 0-7 still
-; different from its copy, with SDWRITE,
-; then compare them all again. A and
-; LEFT07: those still different.
+WRNEXT:
+  ld c,MSCANK    ; one scan of the keys
+  rst $10        ; scanKeys
+  jr nz,WRONE    ; none down
+  jr nc,WRONE    ; held from before
+  cp KAD
+  jr nz,WRONE    ; not AD
+  ld a,4         ; AD: stop here
+  ld (S8STOP),a  ; kept
+  scf
+  ret            ; carry: stop
 
-FIX07:
-  call CHK07     ; which still differ
-  ld (LEFT07),a  ; kept
-  ret z          ; none
-  xor a          ; from block 0
-  ld (K07),a     ; K07 = 0
-
-FX1:
-  call BIT07     ; this one differs?
-  ld hl,LEFT07
-  and (hl)       ; differs?
-  jr z,FX2       ; no: skip it
-  ld a,(K07)     ; write its copy back
-  ld l,a
-  ld h,0
-  call LBA16     ; SDLBA = K07
-  call AT07
-  ex de,hl       ; HL: its copy
-  call SDWRITE   ; TEC-OS's write
-
-FX2:
-  ld hl,K07      ; the next block
-  inc (hl)       ; the next block
-  ld a,(hl)
-  cp 8
-  jr c,FX1       ; up to 7
-  call CHK07     ; all back now?
-  ld (LEFT07),a  ; kept for SD8's line
-  ret            ; Z if all back
-
-; Print the free range as FREE0-FREEL.
-
-PRFREE:
-  ld hl,FREE0
-  call PRDEC     ; the first
-  ld a,'-'
-  call PUTC      ; the dash
-  ld hl,FREEL
-  jp PRDEC       ; the last
-
-; Test block BLK. Save it, write a
-; pattern that depends on the block
-; (with the counted MWRITE), read it
-; back and compare. Then always put the
-; saved data back with SDWRITE, read it
-; and compare, up to three times. Prints
-; a "# SD8 block" line. Carry: the block
-; could not be put back, so stop.
+; Test block BLK. Read it twice: it must
+; read the same, and not as block 0.
+; Write the pattern for the block with
+; the counted MWRITE, read it back and
+; compare. For a spot block, read blocks
+; 0-7 to see whether the pattern reached
+; one. Then put the saved data back with
+; SDWRITE, read and compare, up to three
+; times. Prints a "# SD8 block" line.
+; Carry: stop, with S8STOP saying why.
 
 WRONE:
   ld hl,(WRN)    ; one more block
   inc hl
   ld (WRN),hl    ; kept
-  xor a          ; no failure yet
+  xor a          ; no outcome yet
   ld (WRSTEP),a
   ld (RSTEP),a
   ld (ERRCODE),a
-  ld (THIS07),a  ; all clear
-  call LBABLK    ; SDLBA = BLK
-  ld hl,BUFS     ; save the block
-  call SDREAD    ; into BUFS
-  jr z,WO1       ; saved
+  ld (THIS07),a
+  ld (RDF07),a   ; none yet
+  call LBABLK
+  ld hl,BUFS     ; the saved copy
+  call SDREAD    ; the first read
+  jr nz,WO0      ; unread
+  call LBABLK
+  ld hl,BUFB     ; and a second read
+  call SDREAD    ; the second read
+  jr z,WO1       ; read
+
+WO0:
   ld (ERRCODE),a
-  ld a,1         ; step 1, and nothing
-  ld (WRSTEP),a  ; is written
+  ld a,1         ; nothing written
+  ld (WRSTEP),a  ; step 1
   call WOLINE    ; and say so
-  or a           ; no carry: carry on
-  ret            ; no carry
+  or a           ; carry on
+  ret            ; no carry: carry on
 
 WO1:
+  ld hl,BUFS     ; the two reads differ:
+  ld de,BUFB     ; step 8, stop
+  call CMP512
+  ld a,8         ; step 8
+  jr nz,WOX      ; they differ
+  ld hl,BUFS     ; it reads as block 0:
+  ld de,REF0     ; step 9, an alias
+  call CMP512
+  ld a,9         ; step 9
+  jr nz,WO1A     ; not as block 0
+
+WOX:
+  ld (WRSTEP),a  ; nothing written
+  sub 8          ; 8: stop 5, 9: stop 1
+  ld a,5         ; unstable: stop 5
+  jr z,WOX1
+  ld a,1         ; as block 0: stop 1
+
+WOX1:
+  ld (S8STOP),a
+  call WOLINE    ; and say so
+  scf
+  ret            ; carry: stop
+
+WO1A:
   call PATTERN   ; BUFA from BLK
-  call LBABLK    ; SDLBA = BLK
-  ld hl,BUFA     ; write it, counted
-  call MWRITE    ; the pattern, counted
+  call LBABLK
+  ld hl,BUFA     ; written, counted
+  call MWRITE    ; the pattern
   ld b,2         ; step 2: the write
   jr nz,WO2      ; failed
-  call LBABLK    ; SDLBA = BLK
-  ld hl,BUFB     ; read it back
+  call LBABLK
+  ld hl,BUFB     ; read back
   call SDREAD    ; into BUFB
   ld b,3         ; step 3: the read
   jr nz,WO2      ; failed
   ld hl,BUFB     ; as written?
   ld de,BUFA
-  call CMP512    ; the same?
+  call CMP512    ; as written?
   jr z,WO3       ; yes
-  ld de,BUFB     ; the offset at which
-  or a           ; it differs
+  ld de,BUFB     ; the offset of the
+  or a           ; first difference
   sbc hl,de      ; the offset
   ld (WRAT),hl   ; kept
   ld a,$FF       ; step 4: a difference
@@ -468,47 +591,35 @@ WO2:
   ld a,b         ; the pattern's failure
   ld (WRSTEP),a  ; the first failure
 
-; Put the saved block back, whatever the
+; For a spot block, read blocks 0-7
+; (CHK07), only reading. Then put the
+; saved block back, whatever the
 ; pattern's outcome.
 
 WO3:
-  xor a          ; no alias for this
-                 ; block
-  ld (THIS07),a  ; THIS07 = 0
-  ld a,(SPOT)    ; a spot block: did
-  or a           ; the write reach 0-7?
-  jr z,WO3A      ; not a spot block
-  call CHK07     ; blocks 0-7 changed?
-  jr z,WO3A      ; no
-  ld (THIS07),a  ; it did
-  ld hl,ALIASM
-  or (hl)
-  ld (hl),a      ; added to ALIASM
-  ld hl,BLK      ; the block that did it
-  ld de,ALIASB
-  call CPY32     ; ALIASB = BLK
-
-WO3A:
+  ld a,(SPOT)    ; a spot block?
+  or a
+  call nz,CHK07  ; then read 0-7
   xor a          ; no tries yet
-  ld (WRTRY),a   ; WRTRY = 0
+  ld (WRTRY),a   ; no tries yet
 
 WO4:
-  ld hl,WRTRY    ; this try's number
+  ld hl,WRTRY    ; try 1, 2 or 3
   inc (hl)       ; try 1, 2 or 3
-  call LBABLK    ; SDLBA = BLK
+  call LBABLK
   ld hl,BUFS     ; TEC-OS's own write
-  call SDWRITE
+  call SDWRITE   ; TEC-OS's write
   ld b,5         ; step 5: the write
   jr nz,WO5      ; failed
   call LBABLK
-  ld hl,BUFB     ; read it back
+  ld hl,BUFB     ; read back
   call SDREAD    ; into BUFB
   ld b,6         ; step 6: the read
   jr nz,WO5      ; failed
   ld hl,BUFB     ; as saved?
   ld de,BUFS
   call CMP512    ; as saved?
-  jr z,WO6       ; restored
+  jr z,WO6       ; yes
   ld de,BUFB     ; where it differs
   or a
   sbc hl,de      ; the offset
@@ -523,30 +634,148 @@ WO5:
   ld a,(WRTRY)   ; up to three tries
   cp 3
   jr c,WO4       ; try again
-  call WO7       ; blocks 0-7 too
+  ld a,3         ; not restored: stop 3
+  ld (S8STOP),a  ; stop 3
   call WOLINE    ; and say so
-  scf            ; not restored: stop
+  scf
   ret            ; carry: stop
 
-WO6:
-  xor a          ; restored
-  ld (RSTEP),a
-  call WO7       ; blocks 0-7 too
-  call WOLINE    ; and say so
-  ld a,(THIS07)  ; an alias: stop
-  or a           ; no alias: go on
-  ret z          ; no carry: carry on
-  scf            ; an alias: stop
-  ret
+; Restored. Stop after an alias (2) or a
+; low block that did not read (6).
 
-; After an alias, put back blocks 0-7
-; that still differ.
+WO6:
+  xor a
+  ld (RSTEP),a
+  call WOLINE    ; and say so
+  ld a,(THIS07)  ; the pattern in 0-7
+  or a
+  ld b,2
+  jr nz,WO7      ; an alias: stop 2
+  ld a,(RDF07)   ; 0-7 unread
+  or a
+  ld b,6
+  jr nz,WO7      ; unread: stop 6
+  ret            ; no carry: carry on
 
 WO7:
-  ld a,(THIS07)
-  or a           ; any alias?
-  ret z          ; no alias
-  jp FIX07       ; put 0-7 back
+  ld a,b
+  ld (S8STOP),a  ; kept
+  scf
+  ret            ; carry: stop
+
+; Read blocks 0-7, without writing them.
+; A block that reads as the pattern in
+; BUFA, twice, is aliased: its bit goes
+; in THIS07. A block that does not read
+; goes in RDF07, and is not counted as
+; an alias.
+
+CHK07:
+  xor a          ; from block 0
+  ld (K07),a     ; K07 = 0
+
+C7A:
+  call K07LBA
+  ld hl,BUFB
+  call SDREAD    ; read only
+  jr nz,C7F      ; a read failure
+  ld hl,BUFB     ; the pattern there?
+  ld de,BUFA
+  call CMP512
+  jr nz,C7N      ; not the pattern
+  call K07LBA    ; then confirm it
+  ld hl,BUFB
+  call SDREAD    ; read again
+  jr nz,C7F      ; unread
+  ld hl,BUFB
+  ld de,BUFA
+  call CMP512    ; the pattern again?
+  jr nz,C7N      ; no
+  call BIT07     ; twice: aliased
+  ld hl,THIS07
+  jr C7M         ; and add it there
+
+C7F:
+  call BIT07     ; unread
+  ld hl,RDF07    ; and add it there
+
+C7M:
+  or (hl)        ; its bit added
+  ld (hl),a      ; added
+
+C7N:
+  ld hl,K07      ; the next block
+  inc (hl)       ; the next block
+  ld a,(hl)
+  cp 8
+  jr c,C7A       ; up to 7
+  ret            ; THIS07 and RDF07 set
+
+; SDLBA = K07.
+
+K07LBA:
+  ld a,(K07)
+  ld l,a         ; K07 as a block
+  ld h,0
+  jp LBA16       ; SDLBA = it
+
+; A = the bit of block K07. Changes
+; AF/B.
+
+BIT07:
+  ld a,(K07)     ; K07 + 1 turns
+  inc a
+  ld b,a         ; K07 + 1 turns
+  ld a,$80
+
+BT1:
+  rlca
+  djnz BT1       ; the bit moves up
+  ret            ; in A
+
+; Print the bits of A as block numbers
+; 0-7 joined by commas, or "none".
+
+PRMASK:
+  or a
+  jr nz,PM0
+  call PRI
+  DB "none",0
+  ret
+
+PM0:
+  ld c,a         ; the bits
+  ld b,0         ; the bit's number
+  ld e,0         ; numbers printed
+
+PM1:
+  srl c          ; the next bit
+  jr nc,PM2
+  ld a,e         ; a comma between
+  or a
+  ld a,','
+  call nz,PUTC
+  ld a,b         ; the number
+  add a,'0'
+  call PUTC
+  inc e
+
+PM2:
+  inc b
+  ld a,c         ; more bits?
+  or a
+  jr nz,PM1
+  ret
+
+; Print the free range as FREE0-FREEL.
+
+PRFREE:
+  ld hl,FREE0
+  call PRDEC     ; the first
+  ld a,'-'
+  call PUTC      ; the dash
+  ld hl,FREEL
+  jp PRDEC       ; the last
 
 ; Print the "# SD8 block" line for BLK,
 ; and count a failure in WRFAIL.
@@ -555,11 +784,11 @@ WOLINE:
   call NOTE
   DB "SD8 block ",0
   ld hl,BLK
-  call PRDEC     ; its number
+  call PRDEC
   ld a,(WRSTEP)  ; a failure at either
-  ld hl,(RSTEP)  ; stage counts once
-  or l
-  ld hl,THIS07   ; or an alias
+  ld hl,(RSTEP)  ; stage, or a pattern
+  or l           ; in 0-7, counts once
+  ld hl,THIS07
   or (hl)
   jr z,WL1       ; no failure
   ld hl,(WRFAIL)
@@ -569,15 +798,17 @@ WOLINE:
 WL1:
   call PRI
   DB " pattern=",0
-  ld a,(WRSTEP)  ; the pattern's outcome
+  ld a,(WRSTEP)
   ld hl,(ERRCODE)
   call PRSTEP    ; its outcome
-  ld a,(WRSTEP)  ; not saved: nothing
+  ld a,(WRSTEP)  ; 1, 8 or 9: nothing
   cp 1           ; was written
-  jp z,ENDL      ; nothing written
+  jp z,ENDL
+  cp 8
+  jp nc,ENDL     ; nothing written
   call PRI
   DB " restore=",0
-  ld a,(RSTEP)   ; the restore's outcome
+  ld a,(RSTEP)
   ld hl,(RCODE)
   call PRSTEP    ; its outcome
   call FIELDS
@@ -586,62 +817,55 @@ WL1:
   DB " busy=",0,FD16
   DW BSYN
   DB 0,0
-  ld a,(THIS07)  ; blocks 0-7 changed
+  ld a,(THIS07)  ; the pattern in 0-7
   or a
-  jp z,ENDL      ; no alias: done
+  jr z,WL2       ; no alias
   call PRI
   DB " alias=",0
   ld a,(THIS07)
-  call PRMASK    ; which low blocks
+  call PRMASK    ; the low blocks
+
+WL2:
+  ld a,(RDF07)   ; 0-7 unread
+  or a
+  jp z,ENDL      ; none unread
+  call PRI
+  DB " lowread=",0
+  ld a,(RDF07)
+  call PRMASK
   jp ENDL        ; the line's end
 
 ; Print step A's outcome with code L:
-; "ok", or the step's name and the code,
-; with the offset for a difference.
+; "ok", or the step's name, and for
+; steps 1-7 the code and, after a
+; difference, its offset.
 
 PRSTEP:
   ld h,a         ; the step
-  or a           ; 0: no failure
+  or a
   jr nz,PS1      ; a failure
   call PRI
   DB "ok",0
   ret            ; done
 
 PS1:
-  push hl        ; the code
-  ld a,h
-  ld hl,STEPS    ; the step's name
-
-PS2:
-  dec a          ; step A's?
-  jr z,PS4       ; found it
-
-PS3:
-  bit 7,(hl)     ; past one name
-  inc hl
-  jr z,PS3       ; until bit 7
-  jr PS2         ; and on
-
-PS4:
-  ld a,(hl)      ; print its letters,
-  push af        ; the last with bit 7
-  and $7F
-  call PUTC      ; one letter
-  inc hl
-  pop af
-  rlca
-  jr nc,PS4      ; until the last
-  ld a,':'
-  call PUTC      ; the colon
+  push hl
+  ld hl,STEPS    ; the names
+  call PRNTH     ; the step's name
   pop hl
+  ld a,h         ; 8 and 9: no code
+  cp 8
+  ret nc
+  ld a,':'
+  call PUTC
   ld a,l         ; the SDE* code, or FFh
-  call PRHEX     ; as hex
+  call PRHEX
   inc l          ; FFh: a difference
-  ret nz         ; not FFh: done
-  call PRI       ; and where
+  ret nz
+  call PRI
   DB "@",0
   ld hl,(WRAT)
-  jp PRD16       ; the offset
+  jp PRD16
 
 ; Fill BUFA with block BLK's pattern:
 ; byte i is i + seed, the second half
@@ -707,7 +931,7 @@ SD9:
   jr z,S9A       ; GO
   call SKIPR
   DB "user",0
-  ret            ; SD9 done
+  ret
 
 S9A:
   xor a          ; no card now
@@ -715,7 +939,7 @@ S9A:
   ld hl,0        ; read block 0 out
   call LBA16     ; SDLBA = 0
   ld hl,BUFA
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   ld (S9OR),a    ; TEC-OS's error
   call SDINIT    ; and init's
   ld (S9OI),a    ; kept for the line
@@ -736,7 +960,7 @@ S9A:
   ld hl,0        ; read block 0
   call LBA16     ; SDLBA = 0
   ld hl,BUFB
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   ld (S9RD),a
   jr nz,S9V      ; failed
   ld hl,BUFB     ; as before?
@@ -768,7 +992,7 @@ S9V:
   ld a,RPASS     ; all well
 
 S9W:
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " out_read=",0,FD8
   DW S9OR
@@ -781,17 +1005,19 @@ S9W:
   DB " same=",0,FD8
   DW S9SM
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
-; The SD8 steps' names, each ending with
-; bit 7 set on its last letter, and the
-; prompts.
+; The names of SD8's steps and of its
+; reasons to stop, each zero-ended, from
+; 1, and the prompts.
 
-STEPS:    DB    "sav",'e'+$80,"writ"
-  DB 'e'+$80,"rea",'d'+$80,"dif",'f'+$80
-  DB "writ",'e'+$80,"rea",'d'+$80,"dif"
-  DB 'f'+$80
+STEPS:    DB    "save",0,"write",0
+  DB "read",0,"diff",0,"write",0,"read"
+  DB 0,"diff",0,"unstable",0,"block0",0
+STOPS:    DB    " alias",0," alias",0
+  DB " restore-failed",0," user-abort",0
+  DB " unstable",0," lowread",0
 SDSCTOP:  DB    $FF,$FF,$7F,0
-HWRITE:   DB    "GO=write AD=skip",0
+HWRITE:   DB    "8 then GO=write",0
 HPULL:    DB    "Card out, then GO",0
 HBACK:    DB    "Card back, then GO",0
