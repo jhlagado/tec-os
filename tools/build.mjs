@@ -35,7 +35,7 @@ export const PROFILES = {
 const hex = (value, width = 4) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 
 /** Delay-loop counts for the bit-banged serial routines in console.asm. */
-function serialTiming() {
+export function serialTiming() {
   const bit = CPU_HZ / BAUD;
   const txdly = Math.round((bit - 49) / 16); // TXB loop: 49 + 16n T-states
   const rxdly = Math.round((bit - 38) / 16); // RXB loop: 38 + 16n

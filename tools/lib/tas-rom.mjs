@@ -12,7 +12,7 @@ const tasPin = 'dbee66a90816df9a5884a08754ebc2d458a38325';
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const include = /^([ \t]*%INCLUDE[ \t]+")([^"\r\n]+)(")/gim;
 
-function stage(root, entry, origin, rom) {
+function stage(root, entry, origin, rom, flat) {
   const sourceRoot = realpathSync(root);
   function inside(file) {
     assert.ok(!posix.isAbsolute(file) && file !== '..' && !file.startsWith('../'), 'include escapes source root: ' + file);
@@ -29,7 +29,7 @@ function stage(root, entry, origin, rom) {
     assert.ok(!names.has(name), 'ambiguous CP/M name: ' + name);
     names.add(name);
     let original = readFileSync(inside(file));
-    if (!rom && file === entry) {
+    if (!rom && !flat && file === entry) {
       const org = /^([ \t]*ORG[ \t]+)\$0100([ \t]*)$/gim;
       const text = original.toString('latin1');
       assert.equal([...text.matchAll(org)].length, 1, 'expected one $0100 origin in ' + entry);
@@ -96,8 +96,10 @@ export async function tasAssembler() {
   }
   assert.equal(hash.digest('hex'), 'd49287b51d474e5825d68ed4c766cd63632c9da68cded2641e881de00960219c', 'Thorium Z80 runtime pin mismatch');
   const { assemble } = await import(pathToFileURL(runner).href);
-  return async ({ root, entry, origin, phase, target, rom = false }) => {
-    const { staged, source } = stage(root, entry, origin, rom);
+  // flat: a program whose own ORG sets its addresses, such as the RAM
+  // diagnostics at 4000h. Its image starts at the first ORG (`origin`).
+  return async ({ root, entry, origin, phase, target, rom = false, flat = false }) => {
+    const { staged, source } = stage(root, entry, origin, rom, flat);
     const dir = mkdtempSync(join(tmpdir(), 'tecos-tas-'));
     try {
       for (const row of staged.values()) writeFileSync(join(dir, row.name), row.bytes);
