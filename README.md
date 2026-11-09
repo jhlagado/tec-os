@@ -71,8 +71,9 @@ A failed preparation keeps previous verified files. Assembly uses local
 inputs and makes no downloads.
 
 The web page's browser tests moved to TEC-OS Viewer (KD-239), which owns the
-page. `playwright` stays pinned in `package.json` for the local `web/` copy
-that `npm start` serves; no test here drives a browser.
+page; no test here drives a browser. `playwright` stays pinned in
+`package.json` for the local `web/` copy that `npm start` serves, and
+`npx playwright install chromium` fetches the browser that version expects.
 
 Assembly, media and tests select TED and TAS from an explicit `TED_COM`
 or `TAS_COM`, then `.inputs/NAME`, then the legacy sibling paths
