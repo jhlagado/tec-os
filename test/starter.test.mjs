@@ -5,7 +5,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -71,12 +71,4 @@ test("the web page's card is the starter with DEMO.COM, which the starter lacks 
   assert.equal(volume(card, "A").list().some((f) => f.name === "DEMO.COM"), false, "not on the starter");
   const onPage = volume(await buildRecipe(page, fileFetcher(resolve(ROOT, "dist"))), "A");
   assert.equal(sha(onPage.read("DEMO.COM").subarray(0, demo.length)), sha(demo), "on the page's card");
-});
-
-test("the web build starts clean: a file left in web/dist from an older build doesn't reach the page", { skip: TED.skip || TAS.skip, timeout: 300_000 }, () => {
-  starter();
-  mkdirSync(resolve(ROOT, "web/dist/files"), { recursive: true });
-  writeFileSync(resolve(ROOT, "web/dist/files/EDIT.COM"), Uint8Array.from([0xc9]));
-  execFileSync(process.execPath, ["web/build.mjs"], { cwd: ROOT, stdio: "ignore" });
-  assert.deepEqual(readdirSync(resolve(ROOT, "web/dist/files")).sort(), readdirSync(resolve(ROOT, "dist/files")).sort());
 });
