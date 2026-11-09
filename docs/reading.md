@@ -66,10 +66,9 @@ the generated outputs and evidence cover.
    ROM and generates inputs under `src/gen/` from `format/`.
    [tools/media.mjs](../tools/media.mjs) packages the release files and card
    images. `test/` contains host/emulator tests, `test/lib/` their harness and
-   `test/programs/` executable fixtures. `diag/` is the standalone board
-   diagnostic, documented in [diagnostics.md](diagnostics.md). Its SD-write
-   and RTC tests have destructive effects and restoration limits described
-   there.
+   `test/programs/` executable fixtures. `diag/` is the board diagnostic, a
+   RAM program that MON3 loads; [diagnostics.md](diagnostics.md) describes
+   it. It includes `src/sd.asm` and `src/tms.asm` rather than copying them.
 
 ## Symbol families
 

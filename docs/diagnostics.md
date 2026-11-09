@@ -1,19 +1,21 @@
-# Diagnostics ROM
+# Board diagnostics
 
-The diagnostics ROM is a separate 16 KiB image for `C000h–FFFFh`, for the
-first runs of TEC-OS on a real TEC-1G. It exercises every piece of
-hardware TEC-OS uses and reports what the board does. Several questions about
-the board can be answered only by running on one, and the ROM measures each
-of them: what a write under the boot overlay reaches, how the latch's bank
-field is decoded, whether VRAM keeps up without delays, and whether a card
-keeps up with the bit-bang SD rate.
+The diagnostics are a small RAM program that the TEC-1G's own monitor,
+MON3, loads and runs. MON3 stays in the ROM socket. The program checks, on a
+real board, the hardware that TEC-OS assumes: above all the SD card, then RAM,
+the system latch, the clock and the devices TEC-OS looks for. It prints one
+line for each check on the serial port, so a board run gives a log that can be
+pasted back.
 
-**Emulator results are not board evidence.** The ROM passes its automatic
-and interactive tests on the Debug80 TEC-1G model (`test/diag.test.mjs`).
-That proves the ROM's own logic and its timing arithmetic. It says nothing
-about a physical board, because the model supplies the answers. A result
-becomes board evidence only when a run on a real TEC-1G is recorded with the
-board revision.
+TEC-OS's SD results so far all come from the Debug80 emulator. Its SD model
+answers at once, always reports a version 2 card and never stalls. A real card
+answers slowly and differently from card to card, so the SD checks measure how
+much of each of TEC-OS's waits a real card uses.
+
+**Emulator results are not board evidence.** `test/diag.test.mjs` runs the
+program on the Debug80 model. That proves the program's own logic and its
+arithmetic, and that the write test leaves a card as it was. It says nothing
+about a board, because the model supplies the answers.
 
 ## Building
 
@@ -21,572 +23,325 @@ board revision.
 npm run diag
 ```
 
-The build writes `build/diag/diag.rom` (16,384 bytes), the symbol map
-`build/diag/diag.d8.json` and `build/diag/diag.json` with the image ID, the
-image's SHA-256, its checksum and the serial delay counts. Unused bytes are
-`FFh`. The image ID is the first 8 bytes of the SHA-256 of the image with
-`FFF6h–FFFFh` blank (`FFh`). The build stores it at `FFF6h–FFFDh`, and the
-banner and the report print it, so a pasted report names the image that ran.
-The last two bytes hold the 16-bit sum of `C000h–FFFDh`, which test T05
-checks on the board. Two builds from the same sources give identical images.
+The build writes `build/diag/`:
 
-The sources are in `diag/`. They reuse TEC-OS's reset path, serial routines,
-SD driver and font. `tools/diag.mjs` generates `diag/gen/config.asm` and
-`diag/gen/font.asm` before assembling with TAS by default. Set
-`TECOS_ROM_ASSEMBLER=atom` for the ATOM reference build.
-
-## Running it on a board
-
-[board-run.md](board-run.md) is the run plan for someone at a board who
-knows the TEC-1G but not TEC-OS. In short:
-
-1. Burn `diag.rom` where the TEC-OS ROM goes. It is entered through the same
-   2 KiB boot overlay at reset.
-2. Connect a terminal to the FTDI port at 4800 baud, 8 data bits, no parity
-   and 2 stop bits. Turn on the terminal's session log so the report can be
-   kept as a file.
-3. Reset the board. The ROM tests its own variables and stack page first,
-   then prints a banner and waits 5 s.
-4. Press `I` or `Y` on the terminal, or `+` on the hex keypad, within those
-   5 s to include the interactive tests. Otherwise only the automatic tests
-   run, which needs nobody at the board.
-5. Keep off the hex keypad while the RAM tests run (about 6 s at 4 MHz) and
-   during T09 and T25. A keypad press raises an NMI. During the RAM tests its
-   return address would land in the RAM under test. During T09 and T25 the
-   stack is write-protected.
-6. At the end the ROM prints the report between `==== TEC-1G DIAGNOSTICS
-   REPORT ====` and `==== END ====`. `R` prints it again. `I` runs the
-   interactive tests afterwards and adds their results.
-
-Answers come from the terminal, the hex keypad or the matrix keyboard. On the
-keypad `+` means yes, `-` means no, `GO` is Return and `AD` is Esc. Each
-interactive test asks first, so `N` or Esc skips it. A question left
-unanswered for a minute counts as skipped.
-
-The LCD shows the test in progress on row 1, the last result on row 2 and
-the totals of PASS, FAIL, INFO and SKIP on row 3.
-
-## Results
-
-Each test ends with one line in the report:
-
-```text
-T12 BANKS   INFO  field 0-F: 0122446688AACCEE (B base, - none); 9 banks + base
-```
-
-The report starts with the version and the image ID. Every `FAIL` line
-says what was expected and what was read, except the error counts, which
-the report's second line says expect 0. A `FAIL` on a visual or audible test
-is the operator's answer No to the question it asked.
-
-| Result | Meaning |
+| File | What it is |
 | --- | --- |
-| `PASS` | The board did what TEC-OS relies on |
-| `FAIL` | It did not; the line says what was read |
-| `INFO` | A measured value with no verdict, often the answer to one of those questions |
-| `SKIP` | Not run: skipped, or a test it depends on failed |
-| `LOOK` | A visual or audible check in an automatic run; the interactive run asks Y/N instead |
-| `NONE` | The device is not fitted or does not answer |
+| `DIAG.HEX` | Intel HEX for 4000h, 16-byte records, ending `:00000001FF` |
+| `DIAG.BIN` | The same bytes, for 4000h |
+| `diag.d8.json` | The symbol map |
+| `diag.json` | Version, image ID, SHA-256, size and memory use |
 
-Times are in T-states. Every timing loop has a fixed cost per pass, given in
-the line and in the source. Three tests measure the real clock: T18 against
-the PICO9918's frame rate, T21 against the RTC and T33 against a stopwatch.
-Dividing a T-state count by that clock gives seconds.
+The image ID is the first 8 bytes of the SHA-256 of the image with the ID
+itself zero. The header line prints it, so a log names the image that ran.
 
-## Memory map while the ROM runs
+The sources are in `diag/`. They include TEC-OS's SD driver (`src/sd.asm`)
+and its PICO9918 probe (`src/tms.asm`) instead of copying them, so the board
+runs exactly the code TEC-OS runs. `tools/diag.mjs` generates
+`diag/gen/config.asm` and `diag/gen/fmt.asm`: the serial delays from the same
+derivation `tools/build.mjs` uses for TEC-OS, and the container format's
+fields from `format/format.json`. It assembles with TAS.
+
+## Memory
 
 | Range | Use |
 | --- | --- |
-| `0066h` | NMI handler that counts NMIs (after the RAM tests) |
-| `07FFh–0800h` | Overlay probes (T07, T08) |
-| `0C00h–0DFFh` | SD block buffer |
-| `0E00h–0FFFh` | VRAM test pages, second SD block buffer, T37's kept block |
-| `1000h–2FFFh` | Report text |
-| `7E00h–7EFFh` | Variables |
-| `7F00h–7FFFh` | Stack |
-
-The latch is `01h` throughout except inside the tests that change it.
-Interrupts stay disabled with `IM 1` selected, as in TEC-OS.
-
-## Automatic tests
-
-### T01 HOME: variables and stack page
-
-Four fill-and-verify passes over `7E00h–7FFFh` before anything uses the
-stack. The code runs on registers alone. On a failure it prints the address,
-the value written and the value read on the serial port, again without a
-stack, and repeats the message about every 6.8 s. Nothing else runs, because every
-later test needs this page. This test proves the RAM the ROM itself depends
-on.
-
-### T02–T04 RAM
-
-T02 tests `0000h–7DFFh` and T03 tests the window `8000h–BFFFh` with EXPAND
-off. Each runs four passes: `L xor H`, its complement, `L+H` and its
-complement. Every bit is therefore written as 0 and as 1. Two addresses that
-alias read back each other's values, so a missing or shorted address line
-fails. T04 tests `7E00h–7FFFh` again in full. It copies the page into the
-window, moves the stack into the copy, tests the original and copies the page
-back. T04 is skipped when T03 fails. A failure line gives the address, the
-value written, the value read and the bad bits.
-
-T02 overwrites the NMI vector at `0066h` while it runs, which is the reason
-to keep off the keypad.
-
-### T05 ROMSUM and T06 ROMWR
-
-T05 sums `C000h–FFFDh` and compares the sum with the word at `FFFEh`, which
-proves the chip was burned and is read correctly. T06 writes the complement
-over a known ROM byte and reads it back unchanged.
-
-### T07 OVERLAY and T08 OVLWR
-
-With latch bit 0 low, `07FFh` should read the ROM byte at `C7FFh` and `0800h`
-should still read RAM. T07 checks both. T08 then writes `07FFh` with the
-overlay on, turns the overlay off and reads the RAM there. It reports whether
-the write reached the RAM underneath or was dropped. Debug80 sends the write
-to the RAM. The board's documents select the ROM instead (`/RAM_CS` observes
-SHADOW on the MEMbus connector, J7), which gives "is dropped", or a changed
-ROM byte at `C7FFh` if the chip takes writes (T06). TEC-OS never writes
-there with the overlay on, so either answer is safe.
-
-### T09 PROTECT
-
-With latch bit 1 set, writes to `4000h` and `7DFFh` should be ignored and a
-write to `3FFFh` should succeed. Nothing between the two latch writes touches
-the stack. T09 also reads port `03h` with PROTECT on for T11.
-
-### T10 LATCHRD
-
-The board documentation describes the latch as write-only. Debug80 lets it
-be read. T10 writes `01h`, `05h`, `0Dh` and `81h` and reports what port
-`FFh` returns for each. TEC-OS never reads the latch, so this is information
-only.
-
-### T11 STATUS
-
-Port `03h` read with the latch at `01h`, `03h`, `05h` and `81h`. The two
-descriptions of this port disagree:
-
-| Bit | TEC-1G documentation | Debug80 |
-| --- | --- | --- |
-| 0 | Matrix switch | Matrix mode |
-| 1 | Protect switch | PROTECT latch bit |
-| 2 | Expand switch | EXPAND latch bit |
-| 3 | EXPAND latch bit | Cartridge |
-| 4 | Cartridge, 0 when fitted | Raw key |
-| 5 | GIMP input | GIMP input |
-| 6 | KDA, 0 while a keypad key is down | No key, 1 when none is down |
-| 7 | Serial RX | Serial RX |
-
-Comparing the four values shows which bits follow the latch on the board.
-TEC-OS reads only bit 0 (the Matrix switch) and bit 7 (serial RX).
-
-### T12 BANKS and T13 BANKRAM
-
-T12 writes a tag into the window for each value of the bank field, latch
-bits 3–6 with EXPAND on, from 15 down to 0. It then writes a different tag
-with EXPAND off and reads every tag back. Values that share RAM read the tag
-of the last one written, so each value maps to the lowest value that shares
-its RAM. The line shows the field values 0–F in order: a hex digit names the
-value whose RAM it shares, `B` means the base mapping and `-` means no
-consistent RAM. Debug80 gives `0122446688AACCEE`, nine banks plus the base:
-its model decodes latch bits 3–6 as a bank field for the window. The documented board, with
-one 32 KiB chip in U9 and bits 3–6 unconnected, should give `0000000000000000`
-and one bank plus the base. The board's line settles how the field is
-decoded.
-
-T13 runs two pattern passes over each bank T12 found.
-
-### T14 SERTX
-
-Prints a pangram and every printable ASCII character. The line gives the
-ROM's bit time, 833 T-states, which is 4800 baud at 4 MHz. Answering Y over
-the terminal proves reception as well.
-
-### T15 LCD
-
-Times the busy flag after a clear in polls of 50 T-states, writes 20
-characters to row 4 and reads them back through port `84h`. TEC-OS only
-writes the LCD, but a working read-back shows the busy flag and the data bus
-are sound.
-
-### T16 GLCD
-
-The ST7920 at `07h`/`87h`. Times the busy flag after a clear, fills the
-graphics RAM with a pattern that differs between rows 16 apart and reads it
-back with the controller's dummy read. It then draws a framed 8 × 8
-checkerboard. A board without the GLCD gives `NONE`.
-
-### T17 VDP and T18 VDPCLK
-
-T17 detects the PICO9918 as TEC-OS does and sets TEC-OS's 80-column
-registers (`04 50 07 00 00 00 00 F4`). It writes a tag every 4 KiB to show
-16 KiB of distinct VRAM. Then it writes and reads all 16 KiB at full speed,
-16 T-states a byte with `OUTI` and `INI`, and again at 104 T-states a byte,
-counting the bytes that come back wrong. TEC-OS inserts no VRAM delays, so
-errors at full speed with none at the slower rate would show that it needs
-them. Last, T17 loads the font and draws the test screen: a title on
-row 1, rulers on rows 2 and 24, the printable characters between them and
-the title in reverse video on row 13. The name table is read back as well.
-
-T18 counts 16 frames of the status register's frame flag in polls of 33
-T-states. It reports the frame length and the CPU clock that follows for a
-50 Hz and a 60 Hz refresh. The PICO9918's refresh rate is a setting of its
-own, so the right figure is the one near 4 MHz.
-
-### T35 VDPPAGE: page select
-
-TEC-OS page-flips in 80 columns. The
-console's name table is at `1000h` (R2 = `07h`). Row moves are built in a
-second table at `2000h` (R2 = `0Bh`) and shown by rewriting R2. T35 fills
-`2000h` with 2s under the title `PAGE 2: NAMES AT 2000h, R2 = 0Bh`, leaves
-the T17 test screen at `1000h`, and switches R2 between `0Bh` and `07h`
-three times, a second each. R2 is left at `07h`. TEC-OS and the emulator
-renderers take the page as `(R2 & 0Ch) << 10`, so the board must show page
-2 for `0Bh` and the test screen for `07h`. Registers are write-only, so only
-the operator can confirm what the screen shows. In an automatic run the
-result is `LOOK`.
-
-### T36 F18A: identity and vertical scroll
-
-The PICO9918 firmware's VDP core (`vrEmuTms9918.c` in
-[vrEmuTms9918](https://github.com/visrealm/vrEmuTms9918), the PICO9918
-submodule) keeps registers above 7 locked until `1Ch` is written to register
-57 twice in a row. Unlocked, VR15 selects the status register read at `BFh`.
-SR1 reads `E8h`: `E0h` is the F18A identity and the firmware sets `08h` to
-mark a PICO9918. SR14 holds the version, `1Ah` in that source. VR28 scrolls
-80-column text up by that many pixel lines, wrapping at 192 (240 with the
-30-row bit in VR49). Writing VR50 with bit 7 set resets every register and
-locks them again.
-
-T36 reads SR1 through VR15 while locked, unlocks, reads SR1 and SR14, and
-reports them. A value of SR1 outside `E0h–EFh` means the VDP is not
-F18A-compatible, and T36 reports `INFO` with what it read. A plain TMS9918
-takes the unlock and VR15 writes as writes to R1 and R7, so the test sets
-registers 0–7 back to TEC-OS's values either way. On an F18A-compatible
-answer it sets VR28 to 8 for 2 s, which moves the text up one row with the
-top row wrapping to the bottom. It then clears VR28, writes VR50 bit 7 and
-rewrites registers 0–7. Reading SR1 once more shows whether the reset locked
-the registers again, and a line ending `STILL UNLOCKED` is a `FAIL`. TEC-OS
-never unlocks, so a reset of the board also leaves the console locked.
-
-Unlocked, the firmware decodes R2 in 80 columns with mask `0Fh` instead of
-`0Ch`, so R2 = `07h` would select names at `1C00h`. T36 sets R2 to `04h`
-during the scroll check, which means `1000h` under either mask. A program
-that unlocks the PICO9918 under TEC-OS needs the same care.
-
-On the board, T36 needs the operator for the scroll check and settles the
-identity, version and relocking from the readings. On the Debug80 model it
-reports `not F18A-compatible`, because the model has only registers 0–7.
-
-### T19 SD and T20 SDBLKS
-
-T19 initialises the card with TEC-OS's driver and records each answer: the
-CMD0 attempts, the CMD8 R1 and R7 bytes, the ACMD41 attempts and the OCR. It
-reads the CSD and the CID with the product name and block 0. No card gives
-`NONE`. T20 reads block 0 twice and compares the copies, then reads blocks
-0–63 and reports errors and the fewest and most polls for the data token.
-One block costs 354,216 T-states plus 678 for each poll, about 89 ms at
-4 MHz. These two lines show whether the card fitted keeps up with the
-bit-bang rate.
-
-T37 writes block 7 and attempts to restore it. This can damage container
-metadata or leave changed data after an I/O failure. Every other test only
-reads the card. Use a disposable card with no data to preserve for T37.
-
-### T37 SDWRITE
-
-T37 runs automatically after T20 and writes block 7. Admission checks only
-`SDOK` and block 0's eight `TECOSVOL` magic bytes. It does not validate the
-format version, descriptor count, layout or checksum. Valid format 1.1 cards
-with 112–127 volumes use block 7 for descriptors. Aligned volume payloads do
-not make that block free ([container-format.md](container-format.md)).
-
-The normal path saves block 7 in RAM, writes a pattern, reads it back,
-writes the saved block back and compares a final read. The pattern is each
-buffer byte's address low byte xor high byte xor `5Ah`. A pattern-write or
-protocol-read failure returns without attempting restoration. A pattern
-mismatch attempts the saved-block write but does not check its status or
-verify restoration. Ordinary I/O failures and power loss can leave block 7
-changed. The displayed busy count is from the latest successful write and
-can be stale after a failure. The current test is unsuitable for a card
-whose data must survive.
-
-### T21 RTC
-
-The DS1302 add-on on port `FCh`. The ROM detects it with MON-3's checks, a
-valid seconds value and a weekday from 1 to 7. MON-3 first clears the
-write-protect and trickle-charge registers, and the ROM does not. With the
-clock running, T21 counts polls of the seconds register across one second.
-Each poll is 1,282 T-states, which gives the CPU clock directly. A halted
-clock (CH set) is reported and left halted.
-
-T21 also sets the clock. It waits without a poll bound for raw seconds below
-`50h`, saves the seven time registers and write-protect byte, clears write
-protection and writes 2099-12-31 23:59:58, a Thursday. An initial readback
-mismatch returns failure without restoring the clock or write protection.
-
-Later paths wait nominally 2.5 s and check rollover minutes, hours, date and
-month plus raw seconds below `10h`. Weekday and year are unchecked at this
-step. Restoration adds the new seconds plus two, or a guessed three after
-rollover failure, to the saved seconds. There is no minute carry: saved 49
-plus new 09 plus two can become 60. The saved `RTCORG` seconds are modified.
-The code then attempts to write the adjusted time and old write protection.
-Its final comparison checks minutes, hours, date, month and weekday but not
-seconds, year or write protection. Neither reading nor restoration is atomic.
-
-The line can end `read back, rolled over, restored` when these limited checks
-pass. It does not establish exact clock restoration or a maximum time loss.
-The trickle-charge register is untouched. Use a clock whose time can be reset
-after this test.
-
-### T22 SEG7 and T23 SPEAKER
-
-T22 lights each segment on all six digits in turn, then `8.` on each digit
-from left to right, then all of them. Port `01h` bit 6 stays high throughout
-so the serial line idles. The segment bits on port `02h` are a `01h`, b
-`08h`, c `20h`, d `80h`, e `40h`, f `02h`, g `04h` and the point `10h`.
-T23 plays 601 Hz, 1203 Hz and 2407 Hz for 0.3 s each on port `01h` bit 7.
-
-### T24 RGB8X8
-
-Multiplexes the 8 × 8 matrix row by row: red, green, blue, white and a white
-diagonal. The ROM drives port `05h` as the row latch and `06h`, `F8h` and
-`F9h` as the red, green and blue columns, which is how Debug80 decodes them.
-MON-3 names `05h` the horizontal latch and `06h` the vertical one, with `F8h`
-green and `F9h` blue. The TEC-1G port list calls `05h` the X axis and `06h`
-the Y axis. What the fitted display shows for this sequence settles which
-reading the board follows. The matrix is left dark.
-
-### T25 LEDBAR
-
-The STATUS LED bar shows the latch. T25 walks a 1 through bits 1–7 with bit
-0 high, lighting the CAPS lamp with bit 7. It then writes `00h`, which turns
-the boot overlay on and changes only bit 0, and returns to `01h`. Each step
-lasts about 0.4 s. PROTECT is on for one step, so this test also runs on
-registers alone.
-
-### T26 NMI
-
-The number of NMIs taken while the automatic tests ran. None is expected,
-because the PICO9918's frame interrupt stays disabled.
-
-## Interactive tests
-
-### T27 SERRX
-
-Each character typed comes back as its hex code and the character. Esc ends
-the test. The verdict is the answer to the question that follows, which
-arrives over the same line.
-
-### T28 SERBIT
-
-Typing a capital `U` (`55h`) gives a falling edge at the start of every
-second bit. The ROM times eight bit periods per character in polls of 33
-T-states, over eight characters, and compares the terminal's bit time with
-its own. It passes within 2%. A failure means the board's clock and the
-terminal disagree on 4800 baud, whatever the cause.
-
-### T29 KEYPAD and T30 KEYNMI
-
-Pressing each of the 20 keypad keys prints its code from port `00h` and
-whether bit 5 (Shift) was low. `AD` twice in a row ends the test. T29 passes
-when all 20 codes were seen. T30 compares the NMIs counted at `0066h` with
-the presses. The 74C923 raises its data-available output once for each key
-press and drops it on release, so a press of the same key again strobes it
-again, and with the NMI on that edge each press gives one NMI; T30 shows
-whether the board does it. It needs the keypad NMI jumper, which TEC-OS
-itself leaves off. T29 clears its counts
-before it prints the instructions, so a key pressed while they print still
-counts. Before that order was fixed, a press arriving within the last line
-of the prompt was lost, which showed as 20 NMIs for 21 presses.
-
-### T31 MATRIX
-
-Each matrix key going down prints its number, row and bit, numbered as
-TEC-OS numbers them (row × 8 + bit, row selected by a low address line on
-`A8–A15`). The report keeps a map of every key seen as eight row bytes. The
-test ends after 15 s with no new key or on any key from the terminal.
-
-### T32 JOY
-
-The joystick, read as MON-3 reads it: port `FEh` with only A11 low
-(`BC = F7FEh`). Bits are 01 up, 02 down, 04 left, 08 right, 10 fire 2, 20
-pin 9, 40 fire 1 and 80 fire 3. The joystick shares row 3 with the matrix
-keyboard, so keys in that row show here too.
-
-### T33 CLOCK
-
-A stopwatch measurement of the CPU clock. After three countdown beeps a
-second apart, the ROM beeps at GO and again at STOP. The interval from the
-first speaker edge of one beep to the first edge of the other is 240,400,396
-T-states, about 60.1 s at 4 MHz. Typing the stopwatch reading in tenths of a
-second gives the clock in Hz. Starting and stopping on the beeps cancels most
-of the reaction time, so a careful reading is good to about 0.3%. The
-interval constant is `STOPWATCH_T` in `tools/diag.mjs`. The emulator test
-counts it from the speaker edges on every run.
-
-### T34 SDTIME
-
-256 block reads (128 KiB) between a GO beep and a STOP beep. Typing the
-stopwatch reading gives the read rate in bytes per second. With the RTC
-fitted the line also gives the RTC's elapsed seconds.
-
-## Checked against the board's documents
-
-Every test is checked against the TEC-1G documentation
-(`TEC-1G/Documentation`: `memmap.md`, `ioports.md`, `connectors.md`,
-`Functional Description.md` and `Assembly/Jumpers+Switches.md`), not
-against the Debug80 model. Checked 28 October 2026 for diag 0.2.
-
-| Test | Ports and addresses | Documents | Verdict |
-| --- | --- | --- | --- |
-| T01 HOME | RAM `7E00h–7FFFh` | memmap.md, Memory Banks; Recommended Memory Configuration (U8 32K) | Agrees |
-| T02 RAMLO | RAM `0000h–7DFFh`, latch `01h` | memmap.md, SHADOW Memory | Agrees |
-| T03 RAMWIN | `8000h–BFFFh`, latch `01h` | memmap.md, EXPAND Page Switching; Recommended Memory Configuration | Differs, kept (1) |
-| T04 RAMHOME | `7E00h–7FFFh`, stack at `8000h` | as T01 and T03 | Agrees |
-| T05 ROMSUM | `C000h–FFFFh` | memmap.md, ROM Lo/Hi; Functional Description, ROM and RAM | Agrees (2) |
-| T06 ROMWR | one ROM byte written | not stated | Assumption A7 |
-| T07 OVERLAY | latch `00h`/`01h`; `07FFh`, `0800h` | ioports.md, Port FFh bit 0; memmap.md, SHADOW Memory | Agrees |
-| T08 OVLWR | `07FFh` written with latch `00h` | connectors.md, J7 (`/RAM_CS` and `/ROM_CS` observe SHADOW) | Differs from the model, kept (3) |
-| T09 PROTECT | latch `03h`; `4000h`, `7DFFh`, `3FFFh` | ioports.md, Port FFh bit 1; memmap.md, PROTECT; Functional Description, Memory Protection | Agrees |
-| T10 LATCHRD | `IN FFh` | ioports.md, Port FFh; Functional Description, System Latch Port | Agrees: write-only, information |
-| T11 STATUS | `IN 03h` at latch `01h`, `03h`, `05h`, `81h` | ioports.md, Port 03; Functional Description, System Input Port | Agrees; differs from the model, kept (4) |
-| T12 BANKS | latch bits 2–6; `8000h`, `8001h`, `BFFFh` | ioports.md, Port FFh bits 3–6; connectors.md, J7; Functional Description, Memory Management Unit | Agrees; differs from the model, kept (5) |
-| T13 BANKRAM | as T12 | as T12 | Agrees |
-| T14 SERTX | `01h` bit 6 | ioports.md, Port 01; Functional Description, FTDI Port | Agrees; framing A14 |
-| T15 LCD | `04h`, `84h` | ioports.md, Port 04 and 84h; connectors.md, LCD1 (RS on A7, R/W from inverted /RD) | Agrees; the documents differ, kept (6) |
-| T16 GLCD | `07h`, `87h` | ioports.md, Port 07; connectors.md, J1 pin 28 and J6 | Assumption A4 |
-| T17 VDP, T18 VDPCLK, T35 VDPPAGE, T36 F18A | `BEh`, `BFh` | not in the documents | Assumption A1 (7) |
-| T19 SD, T20 SDBLKS, T34 SDTIME, T37 SDWRITE | `FDh` | ioports.md, Port FDh; connectors.md, J10 | Port agrees; bits A2 |
-| T21 RTC | `FCh` | ioports.md, Port FCh | Port agrees; bits A3 |
-| T22 SEG7 | `01h` bits 0–5, `02h` | ioports.md, Port 01 and Port 02 | Agrees: every segment bit and the digit order |
-| T23 SPEAKER | `01h` bit 7 | ioports.md, Port 01 | Agrees |
-| T24 RGB8X8 | `05h`, `06h`, `F8h`, `F9h` | ioports.md, Port 05 and Port 06; connectors.md, J3 and J6 | Differs, kept (8) |
-| T25 LEDBAR | `FFh` | ioports.md, Port FFh (STATUS bar, bit 0 rightmost and active low) | Agrees |
-| T26 NMI | `0066h` | Jumpers+Switches.md, NMI Jumper | Agrees |
-| T27 SERRX, T28 SERBIT | `03h` bit 7 | ioports.md, Port 03 | Agrees; framing A14 |
-| T29 KEYPAD | `00h` bits 0–5, `03h` bit 6 | ioports.md, Port 00 and Port 03; Functional Description, HexPad Encoder | Agrees with ioports.md; the documents differ (9) |
-| T30 KEYNMI | `0066h` | Jumpers+Switches.md, NMI Jumper | Agrees |
-| T31 MATRIX | `FEh`, rows on `A8–A15` | ioports.md, Port FEh; Functional Description, Matrix Keyboard and Joystick | Agrees (key down reads 0); row select A5 |
-| T32 JOY | `FEh` with A11 low | connectors.md, J9 | Assumption A6; labels differ, kept (10) |
-| T33 CLOCK | `01h` bit 7 | Functional Description, CPU Clock Generation (4.0 MHz) | Agrees |
-
-1. The recommended configuration leaves U9 empty, and a board built to it
-   fails T03 with `FF` read at `8000h`. TEC-OS needs a 32K RAM in U9, so
-   `FAIL` is the right verdict for it. The run plan says so.
-2. A 32K ROM chip shows only the half that SW6 selects, so the run plan
-   has the image burned into both halves.
-3. The documents select the ROM, not the RAM, for `0000h–07FFh` while SHADOW
-   is on, so the documented board answers "is dropped". Debug80 sends the
-   write to the RAM. TEC-OS never writes there with the overlay on.
-4. The documents put the three config switches in bits 0–2 and the EXPAND
-   latch bit in bit 3. Debug80 puts PROTECT and EXPAND in bits 1–2. TEC-OS
-   reads only bits 0 and 7, where they agree. This document said TEC-OS
-   also reads bit 6; it does not, and that is corrected.
-5. The documents connect latch bits 3–6 only to J7 and leave U9 outside
-   the MMU, with EXPAND selecting its half, so the documented board gives
-   `0000000000000000` and one bank plus the base. Debug80 decodes bits 3–6
-   as a bank field and gives nine.
-6. `Functional Description.md` says 40 × 4. `connectors.md` and `readme.md`
-   say 20 × 4, and LCD1 has one E line where a 40 × 4 module needs two, so
-   the ROM uses the 20 × 4 row addresses.
-7. `BEh` and `BFh` are outside both onboard decoders (`00h–07h`, with the
-   diode OR on A3–A6, and `F8h–FFh`), so nothing on the board answers
-   there. The register behaviour is the PICO9918 firmware's.
-8. The documents make `05h` the X latch (bit 0 the left column) and `06h`
-   the Y latch (bit 0 the bottom row), and leave `F8h` and `F9h` free for
-   the user. The ROM drives `05h` as rows and `06h`, `F8h` and `F9h` as red,
-   green and blue columns, as Debug80 and TEC-OS's `DEMO.COM` do. The
-   run plan says what each reading shows.
-9. `ioports.md` says KDA reads 0 while a key is down; `Functional
-   Description.md` says the 74C923 "generates a high on KDA". The ROM reads
-   0 as down (A13). TEC-OS reads that bit once, at cold boot, for startup's
-   skip, and does not otherwise read the keypad.
-10. J9 wires two buttons (pins 6 and 7) and nothing to pins 5 and 9. The
-    ROM labels the bits as MON-3 does, with `pin9` and `fire3`. The line is
-    `INFO`, and the bits seen settle it.
-
-Two differences were in the ROM's own text and are fixed in 0.2: four test
-titles began with question labels that nothing a reader has defines,
-and the banner said the RAM tests take about 30 s, where they take about
-6 s at 4 MHz.
-
-### What the ROM assumes that the documents do not state
-
-| | Assumption | The report line that answers it |
-| --- | --- | --- |
-| A1 | The PICO9918 answers at `BEh`/`BFh` | T17: tags, or `NONE` |
-| A2 | The SD adaptor on `FDh`: bit 0 MOSI, 1 CLK, 2 /CS, in bit 7 MISO | T19: the card's answers |
-| A3 | The DS1302 on `FCh`: bit 4 CE, 6 CLK, 7 data out, 5 read, in bit 0 | T21: the time read |
-| A4 | The GLCD is an ST7920 with its data at `87h` | T16: busy flag and read-back |
-| A5 | A low address line on `A8–A15` selects a matrix row | T31: the row and bit of each key |
-| A6 | The joystick reads at `FEh` with A11 low, MON-3's bit layout | T32: the bits seen |
-| A7 | The ROM chip ignores writes | T06 |
-| A8 | Where a write under the overlay goes | T08 |
-| A9 | What latch bits 3–6 do | T12 |
-| A10 | Which bits of `03h` follow the latch | T11 |
-| A11 | How the 8 × 8 matrix decodes `05h`, `06h`, `F8h`, `F9h` | T24: the operator's description |
-| A12 | The LCD is 20 × 4 | T15: the row 4 read-back |
-| A13 | KDA reads 0 while a keypad key is down | T29, and the banner's 5 s wait |
-| A14 | The terminal link is 8N2 | T14 and T27 |
-| A15 | VRAM keeps up at 16 T-states a byte | T17: errors at each rate |
-| A16 | The card keeps up with the bit-bang rate | T20 and T34 |
-| A17 | Whether port `FFh` reads back | T10 |
-| A18 | One keypad NMI for each press | T30 |
-| A19 | The CPU clock is 4 MHz | T18, T21 and T33 |
-
-## Recording a board run
-
-[board-run.md](board-run.md) lists what to send back: the whole terminal
-log and a form of the board's details and the visual answers.
-`tools/diag-check.mjs` compares a pasted log with the model's run of the
-same image and names the TEC-OS behaviour behind each difference. Lines that
-carry measured values (T14's bit times, T15 and T16's busy polls, T18's
-frame, T19's ACMD41 count, OCR and polls, T20's and T37's polls, and T21's
-clock, which the model doesn't have) are compared by their form, and the
-board's values are printed beside the model's rather than counted:
-
-```bash
-node tools/diag-check.mjs board-log.txt
+| `0800h–0FFFh` | MON3's stack and RAM, not touched but for the user vectors in the INT check |
+| `1000h–2715h` | Variables and buffers: three block buffers and a copy of blocks 0–7 |
+| `4000h–` about `6800h` | Code and tables, about 10 KiB |
+
+The build checks that code and tables end below `8000h`, with a spare byte
+for the PROTECT check, and that the variables end below `4000h`. Nothing the
+program writes is in `4000h–7FFFh`, which MON3's PROTECT switch can make
+read-only. The program uses MON3's stack as it finds it. The RAM check
+overwrites free RAM: `1000h–3FFFh` after the variables, `4000h–7FFFh` after
+the program, and the `8000h–BFFFh` window in both EXPAND settings.
+
+## Loading and running
+
+Two routes. [board-run.md](board-run.md) is the owner's checklist.
+
+**Intel HEX over the FTDI port.** Connect a terminal at 4800 baud, 8 data
+bits, no parity, 2 stop bits. In MON3's main menu choose Intel HEX Load, then
+send `DIAG.HEX` from the terminal as a plain text file. MON3 shows `PASS` on
+the digits when the load is good. MON3 receives bit by bit, so if the load
+fails, set the terminal to wait a few milliseconds after each character or
+line and send it again.
+
+**From a FAT32 SD card.** Copy `DIAG.HEX` to the root of a FAT32 card, fit it,
+and load it with MON3's Drive Access, Catalog (`Fn-F`). MON3 converts the
+HEX file as it loads. The program then asks for the card to test, so the
+FAT32 card can be swapped for the TEC-OS card first. This also checks that
+TEC-OS's driver starts a card that was changed after power-on.
+
+Either way, start it from MON3's data entry mode with the address at `4000h`
+and `GO`. The program waits for `GO` before it sends anything (the LCD's last
+row reads `Log on? GO=send`), so the terminal's log can be started first. It
+then prints its header and asks for the card to test: `GO` starts, `AD`
+returns to MON3.
+
+The keys are MON3's: `GO` goes on and `AD` skips or leaves. On the matrix
+keyboard these are Enter and Esc. The LCD shows the check on row 2, its
+result on row 3 and the totals of PASS, WARN, FAIL and SKIP on row 4. One
+digit shows the check's number in hex: 1–9 for SD1–SD9, A RAM, b PROT, C
+SHAD, d CLK, E the devices, F INT. At a prompt all six digits are scanned.
+On exit the program sets every latch bit back through MON3's set calls and
+returns with `RST 00h`.
+
+## The output
+
+Every check prints one line:
+
+```text
+SD3 PASS r1max=2/16 tokmax=412/65536 acmd41=37/256 cmd0=1/10 reads=64 err=0
 ```
+
+The line is the check's ID, a status, then fields of `key=value`; a few
+fields are a bare word, such as `alias`. A count against a bound is
+`used/limit`. Other lines start with `# `: notes, prompts and SD8's line for
+each block. The first line and the last are:
+
+```text
+TEC1G-DIAG 1.0 image=0123456789ABCDEF bytes=10247
+SUMMARY pass=17 warn=1 fail=0 skip=1
+```
+
+| Status | Meaning |
+| --- | --- |
+| `PASS` | The board did what TEC-OS relies on |
+| `WARN` | It worked, with a figure worth a look, given in the line |
+| `FAIL` | It did not; the line says what was read |
+| `SKIP` | Not run: skipped by a key, nothing fitted, or an earlier check failed; `reason=` says which |
+
+Error codes are TEC-OS's own: `SDE*` from `src/sd.asm` (1 no card answered
+CMD0, 2 ACMD41 never ready, 3 CMD58, 4 CMD16, 5 an R1 that was not 00h, 6 no
+data token, 7 write refused, 8 still busy, 9 SDSC range, 10 a data error
+token, 11 a wrong CMD8 echo), and `ME*` from `src/vol.asm` for SD7.
+
+## The SD checks
+
+TEC-OS's driver keeps no counts of its waits. Where a check needs one, the
+program repeats the driver's sequence with the driver's own routines
+(`SDCMD`, `SPIR`, `SPIW`, `SPIEND`, `SDRBLK`, `SDWBLK`) and counts each wait
+against the same bound. The counting loops take about as long a turn as
+TEC-OS's. Everything else calls `SDINIT`, `SDREAD` and `SDWRITE` directly.
+
+The SD hardware is the TEC-1G GPIO board with an HW-125 style microSD
+module. It has no card-detect line, so a missing card shows only as a card
+that does not answer. Its output latch cannot be read back, and the program
+never reads port `FDh`'s output bits. The board's DISC ACTIVITY LED should
+flash during the SD checks. Which signal drives it has not been checked: the
+old diagnostics ROM switched it off with the card deselected, which suggests
+it follows `/CS`.
+
+**SD1, the idle line.** With `/CS` high and no clock, MISO (port `FDh` bit 7)
+is read 16 times and should be 1. Many HW-125 modules leave their MISO buffer
+on, so a deselected card's output may float. A low reading is therefore a
+`WARN` with `note=miso-not-idle-high`, not a failure: only SD2 decides whether
+the card works.
+
+**SD2, initialisation.** First a counted run along `SDINIT`'s own path, then
+`SDINIT` itself, which decides the status. The line gives `err`, `SDINIT`'s
+code; `cmd0`, the CMD0 tries of TEC-OS's 10; `cmd8`, CMD8's R1; `r7`, the four
+R7 bytes, only after R1 01h; `acmd41`, the ACMD41 tries of TEC-OS's 256;
+`ocr`; `type`, SDHC for block addresses or SDSC for byte addresses; and
+`counted`, the counted run's code. A version 1 card rejects CMD8: TEC-OS then
+goes on to ACMD41 without the R7 check and finds the type from the OCR, and
+so does this check. A counted run that fails where `SDINIT` passes is a
+`WARN`. With no card, CMD0 is never answered and the line is `FAIL err=1`,
+and SD3–SD9 skip with `reason=sd2`.
+
+**SD3, margins.** This is the key result. 64 counted reads of blocks 0–63
+give the most polls each wait used against TEC-OS's bound: `r1max` against 16
+R1 polls, `tokmax` against 65,536 data-token polls, and SD2's `acmd41` and
+`cmd0`. A `WARN` with `over=` names any wait that used more than a quarter of
+its bound: such a card works, but closer to TEC-OS's limit than a slower day
+or an older card might allow. The write waits are measured in SD8.
+
+**SD4, CSD and CID.** The capacity in blocks from the CSD, and in MiB, then
+the maker (`mid`), OEM (`oid`), product name (`pnm`), revision (`prv`) and
+serial number (`psn`) from the CID. `class` is the smallest card size as sold
+(128 MB to 1 TB, in decimal bytes) that the capacity fits. A card with less
+than 90% of its class is a `WARN`: a card sold as 4 GB should show about
+3,700–3,815 MiB and `class=4GB`. A size well under the marked one, or a class
+above it, points to a fake or relabelled card. The CSD can lie too, which SD8's
+alias check catches.
+
+**SD5, reads.** Block 0 is read 16 times and compared with the first copy.
+Then blocks 1–7, the container's last block, the middle of the card and its
+last block (from SD4) are each read twice and compared. `err` counts failures
+and differences, with the last one's block and code. On an SDSC card TEC-OS
+refuses blocks from 8,388,608 with `SDERNG`, and the line says how many were
+refused.
+
+**SD6, read speed.** With the DS1302 fitted, the program counts block reads
+over 5 whole seconds and prints `bps`, bytes a second. Without it, it beeps,
+reads 256 blocks and beeps again; time the beeps with a stopwatch, and 131,072
+bytes divided by the seconds is the rate.
+
+**SD7, the container.** A read-only check that follows `MOUNT` in
+`src/vol.asm` step by step, with its codes
+([container-format.md](container-format.md)): the `TECOSVOL` magic, major
+version 1, the header and descriptor sizes, the volume count (1–8 in 1.0,
+1–127 in 1.1), the header checksum, in 1.1 the drives field and the sum of the
+table blocks 1–7, then each descriptor in table order: a nonzero id, known
+flags and geometry, the geometry's exact length, a nonzero start that is a
+multiple of 8, no overlap with the previous volume, an end that does not wrap
+or pass the header's length (or 800000h on SDSC), and a drive letter that is
+valid and not used twice. Drive A must be mounted. Two checks go beyond
+`MOUNT`: each volume must end within the card (code 2Bh) and its first
+directory block must read (2Ch). The line gives the version, volume count,
+drives, the header's length, `lastvol`, the highest block a volume uses, and
+`free_from`, the first block past everything the container uses.
+
+**SD8, the write test.** TEC-OS writes the card, so this check writes it
+too, under one rule: **it writes only blocks SD7 proved free**, from
+`free_from` to the block before the card's last block. It never writes blocks
+0–7 or any volume's blocks. If SD7 did not pass or SD4 gave no size, it skips
+and writes nothing; it also skips when there is no free block. It asks first:
+`GO` writes, `AD` skips.
+
+The blocks are the first free block, the middle of the free area, the last
+free block, every power of two in the free area, and a run of 32 from the
+first. For each block the program saves it, writes a pattern that depends on
+the block number, reads it back and compares. Then, whatever happened, it
+writes the saved data back with TEC-OS's `SDWRITE`, reads it and compares,
+up to three times. The pattern writes go through the counted copy of
+`SDWRITE`, which gives `busymax` against TEC-OS's 65,536 busy polls and
+`wrsmax` against its 16 data-response polls; more than a quarter of either is
+a `WARN`. Each block gets a `# SD8 block` line with the outcome of both
+stages, the tries and the busy polls.
+
+Blocks 0–7 are saved at the start. After the pattern write to each block
+other than those in the run of 32, the program reads blocks 0–7 again. A card
+that ignores its high address bits, as fake cards do, wraps a high block onto
+a low one, and one of the power-of-two blocks then lands on block 0. Any
+change reports `SD8 FAIL alias`, with the block written (`at`) and the low
+blocks changed (`low`). The block is still put back, the program then writes
+back any of blocks 0–7 that still differ from their saved copies, and says
+which, if any, stayed wrong (`unrestored`). SD8 stops writing after an alias
+or a block it could not put back.
+
+The rule makes the test safe on a card with data, but use a card whose
+contents are backed up all the same: a power cut during the test leaves one
+free block with the pattern.
+
+**SD9, card removal.** Pull the card when asked and press `GO`. With no
+card-detect line, the program sees the card's absence as TEC-OS would: a read
+of block 0 fails with `SDECMD` (5), since no R1 comes, and `SDINIT` fails with
+`SDENOCD` (1), since CMD0 goes unanswered. Put the card back and press `GO`:
+`SDINIT` and a block 0 read must work, and block 0 must match its copy from
+before. A read that works with the card out, or a changed block 0, is a
+`WARN`. `AD` at the first question skips the check.
+
+## The other checks
+
+These are cut down from the old diagnostics ROM's tests.
+
+**RAM.** Two passes over each area, each byte written `L xor H` and then its
+complement, all read back after all are written, so a missing or shorted
+address line shows. The areas are `1000h–3FFFh` after the variables,
+`4000h–7FFFh` after the program, and the `8000h–BFFFh` window with EXPAND
+(latch bit 2) off and on. Then a tag written in each EXPAND setting must
+survive the other: TEC-OS keeps its block cache in EXPAND 1, so the two
+settings must select different RAM and both must hold data. PROTECT is off
+through MON3 meanwhile; MON3's EXPAND and PROTECT settings are put back. A
+failure gives the area, the address and the bytes written and read.
+
+**PROT.** PROTECT (latch bit 1) is set through MON3's `setProtect`, and a
+write to the first byte after the program must leave it unchanged. Then it is
+cleared and the write must land. The byte and MON3's setting are put back.
+
+**SHAD.** TEC-OS calls latch bit 0 `/SHADOW`: 1 removes the boot overlay, so
+`0000h–07FFh` is RAM, and 0 shows the ROM's first 2 KiB there. MON3 calls
+`01h` "shadow on". With interrupts off, the program writes the latch with
+bit 0 clear and set, counting the bytes of `0000h–07FFh` that differ from
+`C000h–C7FFh` each time, then does the same after MON3's `setShadow(01h)`.
+The line shows what each setting gave, `rom` (no difference) or `ram`, with
+the count: `bit0=0:rom(0) bit0=1:ram(1932) mon3on:rom(0)`. `PASS` means bit 0
+behaves as TEC-OS assumes. The program's own code at `4000h` and the stack at
+`0800h` are outside the overlay, but the vectors at `0038h` and `0066h` are
+the ROM's while it shows, so keep off the keypad during this check.
+
+**CLK.** The CPU clock, from one second of the DS1302: the number of seconds
+reads in the second times their known cost, 1,274 T-states. TEC-OS's 4800-baud
+serial and its SD timing assume 4 MHz. Outside 3.92–4.08 MHz is a `WARN`.
+
+**VDP.** The PICO9918 at `BEh`/`BFh`, found with TEC-OS's own probe
+(`TMSINIT`: a byte written to VRAM and read back). Then the status register's
+frame flag is timed over 8 frames, giving the frame in T-states and the rate
+in Hz at the measured clock (or at 4 MHz, `at=4mhz`, without the RTC).
+
+**LCD.** Two DDRAM addresses set through MON3 and read back from the busy
+flag's port, `04h`. TEC-OS only writes the LCD; a read-back shows it is there.
+
+**GLCD.** The ST7920 at `07h`: present if its busy flag clears within 256
+reads. Nothing is written to it.
+
+**RTC.** The DS1302 on port `FCh`, found as TEC-OS finds it (a seconds byte
+below `60h`). The seven time registers and the write-protect byte are read,
+not set; a field that is not valid BCD in range is a `WARN`. `ch=1` means the
+clock is halted.
+
+**INT.** With the VDP present, MON3's user vectors at `0892h` (IM 1) and
+`0894h` (NMI) are pointed at counting handlers, the VDP's frame interrupt is
+turned on for about 0.2 s, and both are counted. `PASS` means IM 1
+interrupts reach `0892h`. If the frames arrive only as NMIs, as on the Debug80
+model, there is no IM 1 source to test, and the line is `SKIP
+reason=nmi-only`. The vectors are put back and the VDP's interrupt turned off;
+register 1 is left at `C0h`. TEC-OS itself never enables the VDP interrupt.
+
+**KEYS.** Each keypad key pressed prints its MON3 code, and each matrix key
+going down prints its row, bit and code (row × 8 + bit, the row selected by a
+low address line on `A8–A15` at port `FEh`). `AD` ends it.
+
+## What it cannot check
+
+The program runs under MON3, so it cannot check TEC-OS's own power-on boot:
+the reset overlay entry, the ROM's cold boot, the mount and the console with
+the TEC-OS ROM fitted. That stays part of the owner's smoke test with the
+TEC-OS ROM in the socket.
+
+Other limits: the counted SD routines are copies of the driver's sequences,
+not the driver itself, though they call its primitives; the busy and
+data-response margins come from SD8's pattern writes only; the PICO9918's
+display output, the 8 × 8 LED matrix, the speaker and the status LED bar are
+not checked.
+
+## Hardware facts kept from the old ROM
+
+The old 16 KiB diagnostics ROM, which replaced MON3 in the socket, is
+retired. Some of what it recorded still matters:
+
+- Port `03h` bit 6 (KDA, a keypad key down): the TEC-1G port list reads 0 as
+  down, while the functional description says the 74C923 drives KDA high.
+  TEC-OS reads that bit once at cold boot for the startup file's skip. Which
+  is true on the board is still open.
+- The latch is write-only on the board; Debug80 lets it be read. TEC-OS
+  never reads it, and neither does this program.
+- The board's documents select the ROM, not the RAM, for writes to
+  `0000h–07FFh` while the overlay shows; Debug80 sends them to RAM. TEC-OS
+  never writes there with the overlay on, and neither does this program.
+- Debug80 decodes latch bits 3–6 as a bank field for the window; the
+  documented board leaves them unconnected. TEC-OS and this program change
+  only bit 2 there.
 
 ## The emulator test
 
-`test/diag.test.mjs` builds the ROM and runs it on the Debug80 model:
+`test/diag.test.mjs` runs the program on the Debug80 TEC-1G model with a
+stub monitor, `test/programs/mon3stub.asm`, at `C000h`. The stub implements
+only the calls the program uses: the LCD calls, `scanKeys` and its wait,
+`scanSegments`, `timeDelay`, `beep`, the latch get and set calls on a latch
+copy written to port `FFh`, and the IM 1 and NMI dispatch through `0892h` and
+`0894h`. Keys come from a script. The model's CSD is fixed at 16 MiB, so the
+test gives each card a CSD that matches its image.
 
-- the automatic run with the PICO9918, matrix keyboard and a card, checking
-  every result and the model's answers on the bank field and the write
-  under the overlay, the frame length, the
-  80-column screen, the page the harness decodes while R2 is `0Bh` and `07h`
-  and the registers T36 leaves behind;
-- T21's set against the runtime's own DS1302 (0.3.1), which counts on from
-  a written time, checking the read-back, the roll-over to 2100 and that the
-  restored clock is within 2 s of where it would have been. The DS1302 keeps
-  host time, so the test moves a mocked host clock on with the cycles at
-  4 MHz;
-- T37's write, checking the card image's block 7 is unchanged after two
-  writes, and a pattern that reads back wrong, whose line gives the offset,
-  the byte read and the byte expected, with the block still put back;
-- a clock that halts when T21 sets it, and one that takes the time but
-  never counts on, whose lines give the registers read and expected;
-- the report's image ID, and `tools/diag-check.mjs` on the model's own
-  report (no difference), on a copy with a `FAIL`, an `INFO` value and a
-  missing test edited in (three), on a copy with every measured value
-  changed and a clock line (none), and on that copy with a measured line
-  failing in form and another failing outright (two);
-- the F18A probe against a stub of the firmware's register behaviour: the
-  unlock, the VR15 reads, VR28 set to 8 and back to 0, R2 = `04h` during the
-  scroll, the VR50 reset and TEC-OS's registers afterwards;
-- a stuck bit in the variables page, which must give the stackless T01
-  message and nothing else;
-- no RAM in the window, which must fail T03, skip T04 and report no banks;
-- the interactive run, driven over the serial port, keypad, matrix keyboard
-  and joystick, checking the measured bit time and the stopwatch interval.
-
-The only memory writes the ROM makes to ROM or under the overlay are the two
-deliberate ones in T06 and T08, and the test checks that too.
-
-None of this shows what a real PICO9918 displays. The page shown for each R2
-value, the scroll and the identity and version a card reports need a board.
+It checks: a starter-layout card passes SD1–SD9 and the other checks, with
+INT skipped because the model delivers frame interrupts as NMIs; the card is
+byte-identical afterwards and every block written was past the container and
+before the last block; a 4 GB card, as a sparse image, reads and writes
+blocks above `400000h`; a card that wraps at 1 GiB fails SD8 as an alias and
+its blocks 0–7 are put back; a card without a container fails SD7 and SD8
+writes nothing; with no card SD2 fails with code 1 and the rest of the SD
+checks skip; `AD` at SD8's question writes nothing; and without an RTC SD6
+times with beeps. The test sets `QUICK` in the loaded image to shorten SD6.
