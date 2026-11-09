@@ -2,9 +2,8 @@
 // reopens a file at every console's size, opens at a line, and runs the round
 // of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
-// from the listing of Thorium 8fcc6ea's build (build/ted/ted.sym), whose
-// workspace 128edb7 keeps:
-// the pin's hash holds them.
+// from the listing of Thorium 168e89c's build (build/ted/ted.sym); the
+// pin's hash holds them.
 
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
