@@ -208,12 +208,14 @@ function run({ cardOf = () => null, answers = {}, rtc = true, quick = true } = {
 /** Fields of a result line as an object; a word with no "=" maps to true. */
 const fields = (detail) => Object.fromEntries(detail.split(" ").map((f) => (f.includes("=") ? f.split(/=(.*)/s).slice(0, 2) : [f, true])));
 
-/** SD8's rule: no write addressed blocks 0-7 or the container; none landed
- *  there either, but on the blocks `landedOk` lists; and blocks 0-7 and every
- *  volume block are byte-identical to BEFORE. */
-function assertSafe(log, image, before, containerBlocks, landedOk = []) {
-  for (const b of log.writes) assert.ok(b >= 8 && b >= containerBlocks, `block ${b} addressed`);
-  for (const b of log.landed) assert.ok(b >= containerBlocks || landedOk.includes(b), `a write landed on block ${b}`);
+/** SD8's rule: every write addressed a block from the container's end to
+ *  the one before the card's last (BLOCKS - 2), never blocks 0-7; none landed
+ *  outside that range either, but on the blocks `landedOk` lists; and blocks
+ *  0-7 and every volume block are byte-identical to BEFORE. */
+function assertSafe(log, image, before, containerBlocks, blocks, landedOk = []) {
+  const top = blocks - 2;
+  for (const b of log.writes) assert.ok(b >= 8 && b >= containerBlocks && b <= top, `block ${b} addressed`);
+  for (const b of log.landed) assert.ok((b >= containerBlocks && b <= top) || landedOk.includes(b), `a write landed on block ${b}`);
   const n = containerBlocks * BLOCK;
   for (let i = 0; i < n; i += 1) if (image[i] !== before[i]) assert.fail(`byte ${i} of the container changed`);
 }
@@ -280,7 +282,7 @@ test("a starter card passes every check, and SD8 leaves the card as it was", SLO
   const order = [free0, ...pow, middle, ...Array.from({ length: 32 }, (_, i) => free0 + i), freeL];
   assert.deepEqual(log.writes.filter((_, i) => i % 2 === 0), order);
   assert.ok(Buffer.from(image).equals(Buffer.from(before)), "the card is unchanged");
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, blocks);
   for (const b of log.writes) assert.ok(b < blocks - 1, `block ${b} is before the last`);
   // MON3's state is back: the latch, its user vectors, and no unknown call.
   assert.equal(m.read(0x0880), 0x01, "the stub's latch copy");
@@ -301,7 +303,7 @@ test("an SDSC card, byte-addressed, passes SD8 inside TEC-OS's range", SLOW, () 
   assert.match(lines.get("SD5").detail, / sdsc_limit=8388608 refused=0$/);
   assert.equal(lines.get("SD8").status, "PASS", JSON.stringify(lines.get("SD8")));
   assert.ok(log.writes.length > 0);
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, blocks);
   assert.ok(Buffer.from(image).equals(Buffer.from(before)));
 });
 
@@ -318,7 +320,7 @@ test("SDHC block numbers above 400000h work on a 4 GB card", SLOW, () => {
   assert.ok(log.reads.includes(1 << 22), "the probe read block 400000h");
   assert.ok(log.writes.some((b) => b > 0x400000), "a block past 2 GiB written");
   assert.ok(log.writes.includes(blocks - 2), "the last free block written");
-  assertSafe(log, container, before, containerBlocks);
+  assertSafe(log, container, before, containerBlocks, blocks);
   assert.ok(sparse.untouched(), "every free block is as it was");
 });
 
@@ -337,7 +339,7 @@ test("a fake card twice its flash is caught by the read-only probe before any wr
   assert.match(text, NOTE0);
   assert.doesNotMatch(text, /SD8 press 8/, "the owner is not asked");
   assert.deepEqual(log.writes, []);
-  assertSafe(log, container, before, containerBlocks);
+  assertSafe(log, container, before, containerBlocks, blocks);
 });
 
 test("a card that wraps at 1 GiB is caught by the probe as well", SLOW, () => {
@@ -348,7 +350,7 @@ test("a card that wraps at 1 GiB is caught by the probe as well", SLOW, () => {
   const { lines, log } = run({ cardOf: (log) => card(sparse.image, blocks, log, { physical: sparse.physical }), answers: SD9 });
   assert.match(lines.get("SD8").detail, /^alias at=2097152 probe=read-only /);
   assert.deepEqual(log.writes, []);
-  assertSafe(log, container, before, containerBlocks);
+  assertSafe(log, container, before, containerBlocks, blocks);
   assert.equal(lines.get("SD9").status, "PASS");
 });
 
@@ -367,7 +369,7 @@ test("a pattern write that reaches block 3 fails SD8 as an alias, and the block'
   assert.match(lines.get("SD8").detail, new RegExp(`^alias at=${containerBlocks} low=3 blocks=1 fail=1 `));
   assert.match(text, /# SD8 the card may be changed: restore it from your backup before using it\r\n/);
   assert.equal(log.writes.length, 2, "the pattern and its restore, then a stop");
-  assertSafe(log, container, before, containerBlocks, [3]);
+  assertSafe(log, container, before, containerBlocks, blocks, [3]);
 });
 
 test("a card that wraps below the container's end is caught by a probe from block 8", SLOW, () => {
@@ -382,13 +384,17 @@ test("a card that wraps below the container's end is caught by a probe from bloc
   assert.match(lines.get("SD8").detail, /^alias at=16384 probe=read-only blocks=0 fail=0$/);
   assert.match(text, NOTE0);
   assert.deepEqual(log.writes, []);
-  assertSafe(log, container, before, containerBlocks);
+  assertSafe(log, container, before, containerBlocks, blocks);
 });
 
 // Each SD7 rejection leaves SD8 skipped with nothing written.
 const REJECTS = {
   "a bad version": [(img) => ((img[8] = 2), resum(img)), "22h", "version"],
   "a bad volume count": [(img) => ((img[14] = 0), resum(img)), "24h", "count"],
+  "a bad header checksum": [(img) => (img[30] = 1), "25h", "checksum"],
+  "unknown descriptor flags": [(img) => ((img[descriptorAt(0) + 13] = 2), resum(img)), "26h", "descriptor"],
+  "a 1.1 drives field above 4": [(img) => ((img[9] = 1), (img[22] = 5), resum(img)), "23h", "size"],
+  "a drive assigned twice": [(img) => ((img[descriptorAt(1) + 14] = 0), resum(img)), "29h", "drive"],
   "overlapping volumes": [
     (img) => {
       const o = descriptorAt(1) + 4; // WORK's start into SYSTEM
@@ -409,7 +415,7 @@ for (const [name, [edit, code, reason]] of Object.entries(REJECTS)) {
     assert.equal(lines.get("SD7").detail.split(" idx=")[0], `code=${code} reason=${reason}`);
     assert.deepEqual(lines.get("SD8"), { status: "SKIP", detail: "reason=sd7" });
     assert.deepEqual(log.writes, []);
-    assertSafe(log, image, before, containerBlocks);
+    assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
   });
 }
 
@@ -420,7 +426,7 @@ test("SD7 rejects a volume past the card's end and SD8 writes nothing", SLOW, ()
   assert.equal(lines.get("SD7").detail, "code=2Bh reason=card idx=1");
   assert.deepEqual(lines.get("SD8"), { status: "SKIP", detail: "reason=sd7" });
   assert.deepEqual(log.writes, []);
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, 16384);
 });
 
 test("a card without a container fails SD7, and SD8 writes nothing", SLOW, () => {
@@ -440,7 +446,7 @@ test("a failed pattern write is reported, the block restored, and nothing low wr
   assert.match(text, new RegExp(`# SD8 block ${containerBlocks} pattern=write:05 restore=ok tries=1 `));
   assert.equal(lines.get("SD8").status, "FAIL");
   assert.match(lines.get("SD8").detail, /^blocks=\d+ fail=1 /);
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
   assert.ok(Buffer.from(image).equals(Buffer.from(before)), "the restore put the block back");
 });
 
@@ -453,7 +459,7 @@ test("a restore that fails three times stops SD8 and says to restore the card", 
   assert.match(lines.get("SD8").detail, new RegExp(`^restore-failed at=${containerBlocks} blocks=1 fail=1 `));
   assert.match(text, /# SD8 the card may be changed: restore it from your backup before using it\r\n/);
   assert.equal(log.writes.length, 4, "the pattern and three restores, then a stop");
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
 });
 
 test("a corrupted read of block 0 before SD8 writes stops it with nothing written", SLOW, () => {
@@ -467,7 +473,7 @@ test("a corrupted read of block 0 before SD8 writes stops it with nothing writte
   });
   assert.deepEqual(lines.get("SD8"), { status: "FAIL", detail: "blk0=unstable blocks=0 fail=0" });
   assert.deepEqual(log.writes, []);
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
 });
 
 test("AD between blocks stops SD8 cleanly, each block put back first", SLOW, () => {
@@ -477,17 +483,17 @@ test("AD between blocks stops SD8 cleanly, each block put back first", SLOW, () 
   assert.equal(lines.get("SD8").status, "SKIP");
   assert.match(lines.get("SD8").detail, /^reason=user-abort blocks=3 fail=0 /);
   assert.equal(log.writes.length, 6, "three blocks, each written and put back");
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
   assert.ok(Buffer.from(image).equals(Buffer.from(before)));
 });
 
 /** Run a starter card with OPTIONS for card() and answer SD8 with 8 then GO;
  *  the card, its copy from before and the run. */
-function starterRun(options = {}, edit = () => {}) {
+function starterRun(options = () => ({}), edit = () => {}, onMachine = () => {}) {
   const { image, containerBlocks } = starterCard();
   edit(image);
   const before = Uint8Array.from(image);
-  const r = run({ cardOf: (log) => card(image, image.length / BLOCK, log, options(log)), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  const r = run({ cardOf: (log, m) => (onMachine(m), card(image, image.length / BLOCK, log, options(log, m))), answers: { "SD8 press 8": WRITE, ...SD9 } });
   return { image, before, containerBlocks, ...r };
 }
 
@@ -504,7 +510,7 @@ for (const [name, [options, id, status, reason]] of Object.entries(GATES)) {
     if (id === "SD4") assert.match(lines.get("SD4").detail, / ccs=mismatch$/);
     assert.deepEqual(lines.get("SD8"), { status: "SKIP", detail: `reason=${reason}` });
     assert.deepEqual(log.writes, []);
-    assertSafe(log, image, before, containerBlocks);
+    assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
   });
 }
 
@@ -514,22 +520,60 @@ test("SD8 stops with nothing written when a target reads two ways", SLOW, () => 
     faults: { corrupt: (b) => b === 20480 && once && !(once = false) },
   }));
   assert.match(text, /# SD8 block 20480 pattern=unstable\r\n/);
-  assert.match(lines.get("SD8").detail, /^unstable at=20480 blocks=1 fail=1 /);
+  assert.match(lines.get("SD8").detail, /^unstable at=20480 blocks=0 fail=1 /);
   assert.deepEqual(log.writes, []);
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
 });
 
 test("a copy of block 0 in free space stops SD8 with nothing written, at the probe or at the target", SLOW, () => {
   for (const [at, detail] of [
     [65536, /^alias at=65536 probe=read-only blocks=0 fail=0$/],
-    [20480, /^alias at=20480 blocks=1 fail=1 /],
+    [20480, /^alias at=20480 blocks=0 fail=1 /],
   ]) {
     const { image, before, containerBlocks, lines, text, log } = starterRun(() => ({}), (img) => img.copyWithin(at * BLOCK, 0, BLOCK));
     assert.match(lines.get("SD8").detail, detail);
     assert.match(text, NOTE0);
     assert.deepEqual(log.writes, []);
-    assertSafe(log, image, before, containerBlocks);
+    assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
   }
+});
+
+test("a copy of block 0 mid-run stops SD8, says nothing was written to that block, and gives the backup note", SLOW, () => {
+  // Review 03's E3: the probe passes, four blocks are written and put back,
+  // then the middle block reads as block 0.
+  const { image, before, containerBlocks, lines, text, log } = starterRun(() => ({}), (img) => img.copyWithin(133119 * BLOCK, 0, BLOCK));
+  assert.match(lines.get("SD8").detail, /^alias at=133119 blocks=4 fail=1 /);
+  assert.match(text, /# SD8 a free block holds a copy of block 0: either the card wraps, or the free area holds an old copy\. Nothing was written to this block\r\n# SD8 the card may be changed: restore it from your backup before using it\r\n/);
+  assert.deepEqual(log.writes, [20480, 20480, 32768, 32768, 65536, 65536, 131072, 131072]);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
+});
+
+test("one corrupted probe read cannot hide a wrap below the container's end", SLOW, () => {
+  // Review 03's E4: the DG-11 card, with the probe's first read of block
+  // 16384 corrupted. Its second read still shows block 0.
+  const { image: container, containerBlocks } = starterCard(0);
+  const before = Uint8Array.from(container);
+  const blocks = 22528;
+  const sparse = sparseCard(container, blocks * BLOCK, 16384 * BLOCK);
+  let m;
+  let once = true;
+  const faults = { corrupt: (b) => b === 16384 && once && /\r\nSD7 PASS/.test(m.serialText()) && !(once = false) };
+  const { lines, log } = run({ cardOf: (log, mm) => ((m = mm), card(sparse.image, blocks, log, { physical: sparse.physical, faults })), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  assert.equal(once, false, "the probe's read was corrupted");
+  assert.match(lines.get("SD8").detail, /^alias at=16384 probe=read-only blocks=0 fail=0$/);
+  assert.deepEqual(log.writes, []);
+  assertSafe(log, container, before, containerBlocks, blocks);
+});
+
+test("two probe reads that differ stop SD8 as probe-unstable, with nothing written", SLOW, () => {
+  let m;
+  let once = true;
+  const { image, before, containerBlocks, lines, log } = starterRun((log, mm) => ({
+    faults: { corrupt: (b) => b === 32768 && once && /\r\nSD7 PASS/.test(m.serialText()) && !(once = false) },
+  }), () => {}, (mm) => (m = mm));
+  assert.equal(lines.get("SD8").detail, "probe-unstable at=32768 blocks=0 fail=0");
+  assert.deepEqual(log.writes, []);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
 });
 
 test("a low block that does not read after a pattern write stops SD8, counted as a failure", SLOW, () => {
@@ -538,7 +582,7 @@ test("a low block that does not read after a pattern write stops SD8, counted as
   assert.match(text, /# SD8 block 20480 pattern=ok restore=ok tries=1 busy=\d+ lowread=5\r\n/);
   assert.match(lines.get("SD8").detail, /^lowread at=20480 low=5 blocks=1 fail=1 /);
   assert.equal(log.writes.length, 2, "the block was put back first");
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
   assert.ok(Buffer.from(image).equals(Buffer.from(before)));
 });
 
@@ -546,7 +590,7 @@ test("a probe read that fails stops SD8 with nothing written", SLOW, () => {
   const { image, before, containerBlocks, lines, log } = starterRun(() => ({ faults: { failRead: (b) => b === 32768 } }));
   assert.equal(lines.get("SD8").detail, "probe-read at=32768 code=05 blocks=0 fail=0");
   assert.deepEqual(log.writes, []);
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, image.length / BLOCK);
 });
 
 test("a card the container fills skips SD8 with nofree", SLOW, () => {
@@ -569,7 +613,7 @@ test("a 1.1 card of 20 volumes, with a table block, passes SD7 and SD8 stays out
   assert.ok(log.reads.includes(1), "the table block was read");
   assert.equal(lines.get("SD8").status, "PASS", JSON.stringify(lines.get("SD8")));
   assert.ok(log.writes.length > 0);
-  assertSafe(log, image, before, containerBlocks);
+  assertSafe(log, image, before, containerBlocks, blocks);
   assert.ok(Buffer.from(image).equals(Buffer.from(before)));
 });
 
