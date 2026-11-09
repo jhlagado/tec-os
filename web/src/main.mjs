@@ -80,6 +80,10 @@ function powerOn() {
 }
 
 async function powerOnNow() {
+  // Detach the old machine first, so it
+  // cannot write the card while it is
+  // prepared, as at a real power-off.
+  state.machine = null;
   const { problem, note, changed } = prepareCard(state.card, state.display, state.width);
   if (changed) state.cardDirty = true;
   const { rom, symbols } = await loadRom();
@@ -597,6 +601,10 @@ async function useCard(image) {
   }
   parseContainer(image);
   state.card = image;
+  // Let a save of the old card finish
+  // first, so the new card is the one
+  // stored and an unsaved one says so.
+  while (state.saving) await state.saveDone;
   await save(image);
   await powerOn();
   refreshCard();
