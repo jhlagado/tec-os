@@ -59,7 +59,6 @@ npm run build    # main ROM, map and census
 npm run diag     # diagnostic ROM, map and census
 npm run media    # ROM, programs, recipes and starter card in dist/
 npm run web      # the browser page in web/dist/
-npx playwright install chromium   # once for the browser tests
 npm test         # host and emulator tests, several minutes
 ```
 
@@ -71,9 +70,9 @@ and fetches missing inputs into verified temporary files before replacement.
 A failed preparation keeps previous verified files. Assembly uses local
 inputs and makes no downloads.
 
-The web page's tests (`test/web-touch.test.mjs`, `test/web-store.test.mjs`) drive
-Chromium through `playwright`, pinned in `package.json`; `npx playwright install
-chromium` fetches the browser that version expects.
+The web page's browser tests moved to TEC-OS Viewer (KD-239), which owns the
+page. `playwright` stays pinned in `package.json` for the local `web/` copy
+that `npm start` serves; no test here drives a browser.
 
 Assembly, media and tests select TED and TAS from an explicit `TED_COM`
 or `TAS_COM`, then `.inputs/NAME`, then the legacy sibling paths
