@@ -56,7 +56,7 @@ After setup, the normal commands need no toolchain environment variables.
 
 ```sh
 npm run build    # main ROM, map and census
-npm run diag     # diagnostic ROM, map and census
+npm run diag     # board diagnostics for MON3: DIAG.HEX and DIAG.BIN
 npm run media    # ROM, programs, recipes and starter card in dist/
 npm run web      # the browser page in web/dist/
 npm test         # host and emulator tests, several minutes
@@ -82,10 +82,10 @@ or `TAS_COM`, then `.inputs/NAME`, then the legacy sibling paths
 or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
 
-TAS is the default assembler for the main and diagnostic ROMs, GLCD.SVC,
+TAS is the default assembler for the main ROM, the diagnostics, GLCD.SVC,
 MOUNT.COM and DEMO.COM. The host is selected from `TECOS_TAS_HOST`, then
 `.inputs/tas-host`. `TECOS_ROM_ASSEMBLER=atom` selects the ATOM reference
-build and needs no TAS host. Historical builds and test-only assembly
+build and needs no TAS host; the diagnostics always use TAS. Historical builds and test-only assembly
 fixtures retain their explicit ATOM paths. Unknown selections fail.
 There is one image for every board,
 `build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
@@ -180,7 +180,7 @@ the GLCD's driver. `tools/` holds the build, `tecvol` and the media script.
 `test/` holds the tests, their harness and the test programs.
 
 [Assembly source style](docs/assembly-style.md) describes the current compact
-layout, comment contracts, 8.3 names and retained diagnostic/test profiles.
+layout, comment contracts, 8.3 names and retained test profiles.
 
 TEC-OS is licensed under GPL-3.0-or-later.
 
