@@ -47,9 +47,9 @@ fields from `format/format.json`. It assembles with TAS.
 | Range | Use |
 | --- | --- |
 | `0800h–0FFFh` | MON3's stack and RAM, not touched but for the user vectors in the INT check |
-| `1000h–1914h` | Variables and buffers: three block buffers and block 0 as SD7 validated it |
-| `1915h–1A14h` | The program's own stack, 256 bytes; `START` loads SP with `1A15h` |
-| `4000h–6B82h` | Code and tables, 11,139 bytes |
+| `1000h–1916h` | Variables and buffers: three block buffers and block 0 as SD7 validated it |
+| `1917h–1A16h` | The program's own stack, 256 bytes; `START` loads SP with `1A17h` |
+| `4000h–6C81h` | Code and tables, 11,394 bytes |
 
 `START` keeps the SP MON3 entered with and prints it in the header line
 (`sp=`), then uses its own stack, so the RAM check cannot overwrite a stack
@@ -59,12 +59,12 @@ variables and stack end below `4000h`.
 
 The program's code and tables are never written. Two checks write
 `4000h–7FFFh` on purpose, with PROTECT turned off through MON3 first: the RAM
-check, from the first byte after the program (`6B83h`) to `7FFFh`, and PROT,
+check, from the first byte after the program (`6C82h`) to `7FFFh`, and PROT,
 which writes that first byte and puts it back. The RAM check overwrites three
 areas of free RAM, and nothing else:
 
-- `1A15h–3FFFh`, from the end of the stack;
-- `6B83h–7FFFh`, from the end of the program;
+- `1A17h–3FFFh`, from the end of the stack;
+- `6C82h–7FFFh`, from the end of the program;
 - `8000h–BFFFh`, in both EXPAND settings.
 
 ## Loading and running
@@ -115,7 +115,7 @@ fields are a bare word, such as `alias`. A count against a bound is
 each block. The first line and the last are:
 
 ```text
-TEC1G-DIAG 1.0 image=0123456789ABCDEF bytes=11139 sp=087E
+TEC1G-DIAG 1.0 image=0123456789ABCDEF bytes=11394 sp=087E
 SUMMARY pass=17 warn=1 fail=0 skip=1
 ```
 
@@ -228,13 +228,15 @@ is no free block (`nofree`). Then, before it asks:
 1. Block 0 is read twice and must match the header SD7 validated, both
    times. Otherwise SD8 fails with `blk0=unstable`, and nothing is written.
 2. A read-only probe reads each power-of-two block from block 8 to the
-   card's end, ascending, inside the container too, and compares it with
-   block 0. A card that ignores its high address bits, as fake cards do,
-   reads one of them as block 0, even when it wraps below the container's
-   end. Then SD8 fails with `alias at=<block> probe=read-only` and nothing
-   is written. The note allows both causes: the card wraps, or the free area
-   holds an old copy of block 0. A probe read that fails is reported as
-   `probe-read`, also with nothing written.
+   card's end, ascending, inside the container too, twice, and compares
+   both reads with block 0. A card that ignores its high address bits, as
+   fake cards do, reads one of them as block 0, even when it wraps below the
+   container's end. If either read matches, SD8 fails with `alias at=<block>
+   probe=read-only` and nothing is written; one corrupted read cannot hide
+   the wrap. The note allows both causes: the card wraps, or the free area
+   holds an old copy of block 0. Two reads that differ are reported as
+   `probe-unstable`, and a read that fails as `probe-read`, each with
+   nothing written.
 
 Only then does it ask: `8` then `GO` writes, and `AD` or any other key skips.
 The blocks, in order, are the first free block, every power of two in the
@@ -245,8 +247,12 @@ stops it at the next block, after the block in hand is put back
 
 For each block the program reads it twice; the two reads must match
 (`unstable` otherwise) and must not read as block 0 (`alias`, with the same
-note as the probe's). Either stops SD8 before that block is written. It then writes a pattern that
-depends on the block number, reads it back and compares. For every block
+note as the probe's). Either stops SD8 before that block is written. If
+earlier blocks were written, the note says nothing was written to this
+block, and the backup note follows: a free block that reads as block 0 in
+mid-run may mean an alias the probe missed, and the earlier writes may have
+landed in used blocks, though each was put back. It then writes a pattern
+that depends on the block number, reads it back and compares. For every block
 but those of the run of 32, it then reads blocks 0–7: a low block that reads
 as the pattern just written, on two reads, has been reached by the write.
 A low block that does not read is reported as `lowread`, not as an alias.
@@ -261,8 +267,8 @@ busy polls.
 
 SD8 stops at the first alias, failed restore, unstable read or unread low
 block, and its line names it: `alias at=<block> low=<blocks>`,
-`restore-failed at=<block>`, `lowread` and so on, with `blocks=` and
-`fail=`, which counts each block with any of these. After an alias seen
+`restore-failed at=<block>`, `lowread` and so on, with `blocks=`, the
+blocks written, and `fail=`, which counts each block with any of these. After an alias seen
 after a write, or a failed restore, a note says to restore the card from its
 backup before using it: the free block, or the low block the write landed
 on, may hold the pattern. A reset or power cut during SD8 can leave the
@@ -286,8 +292,8 @@ These are cut down from the old diagnostics ROM's tests.
 
 **RAM.** Two passes over each area, each byte written `L xor H` and then its
 complement, all read back after all are written, so a missing or shorted
-address line shows. The areas are `1A15h–3FFFh` after the variables and the
-stack, `6B83h–7FFFh` after the program, and the `8000h–BFFFh` window with
+address line shows. The areas are `1A17h–3FFFh` after the variables and the
+stack, `6C82h–7FFFh` after the program, and the `8000h–BFFFh` window with
 EXPAND (latch bit 2) off and on. Then a tag written in each EXPAND setting must
 survive the other: TEC-OS keeps its block cache in EXPAND 1, so the two
 settings must select different RAM and both must hold data. PROTECT is off
@@ -404,9 +410,10 @@ state. Keys come from a script. The model's CSD is fixed at 16 MiB, so the
 test gives each card a CSD that matches its image.
 
 Every case that reaches SD8 asserts that no write addressed blocks 0–7 or the
-container, that no write landed there (the sparse card images record the
-block each write lands on), except where a case expects it, and that blocks
-0–7 and every volume block are byte-identical afterwards. The cases:
+container or past the block before the card's last, that no write landed
+outside that range (the sparse card images record the block each write lands
+on), except where a case expects it, and that blocks 0–7 and every volume
+block are byte-identical afterwards. The cases:
 
 - a starter-layout card passes every check, with INT skipped because the
   model delivers frame interrupts as NMIs; SD8 writes in the stated order,
@@ -421,15 +428,18 @@ block each write lands on), except where a case expects it, and that blocks
 - a card that sends the first free block to block 3: both its writes land on
   block 3, the 0–7 reads see the pattern, SD8 fails as an alias and the
   block's restore puts block 3 back;
-- SD7 rejecting a bad version, a bad volume count, overlapping volumes, a
-  volume past the card's end and a card without a container, each with SD8
-  skipped and nothing written;
+- SD7 rejecting a bad version, a bad volume count, a bad header checksum,
+  unknown descriptor flags, a 1.1 drives field above 4, a drive assigned
+  twice, overlapping volumes, a volume past the card's end and a card
+  without a container, each with SD8 skipped and nothing written;
 - a refused pattern write, a restore that fails three times, and a corrupted
   read of block 0 before SD8 writes, each reported as it happened;
 - the `sd3`, `sd5` and `sd4` (`ccs=mismatch`) skips, `nofree`, a target
-  that reads two ways, a copy of block 0 in free space (at the probe and at
-  a target), an unread low block (`lowread`, counted in `fail=`) and a probe
-  read that fails;
+  that reads two ways, a copy of block 0 in free space (at the probe, at the
+  first target and in mid-run, after four blocks were written), an unread
+  low block (`lowread`, counted in `fail=`), a probe read that fails, two
+  probe reads that differ, and one corrupted probe read on a card that wraps
+  below the container's end;
 - a 1.1 card of 20 volumes, with a table block;
 - `AD` between blocks, any answer but `8` then `GO`, no card, and a board
   without an RTC.
