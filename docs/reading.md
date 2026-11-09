@@ -2,8 +2,8 @@
 
 Start with the ROM's memory and entry points, then follow a console call and
 a disk request. This order explains the shared state before the larger CP/M
-files. It describes the current branch source. Generated ROMs, maps and media
-may lag behind it, as recorded in [the WIP notice](wip.md).
+files. It describes the current source; [release status](wip.md) records what
+the generated outputs and evidence cover.
 
 ## Recommended order
 

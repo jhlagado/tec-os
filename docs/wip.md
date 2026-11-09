@@ -1,15 +1,21 @@
-# Current source work
+# Release 1 status
 
-This branch combines the debugger-support source with the shorter assembly
-comments and local source-style documentation. It starts from the existing
-Compact-font and cold 40-column baseline and preserves the local server command.
-The functional source comes from `b597c3bf212a965004b28cb3f8137f400203b8cf`.
-The bounded comment revision has completed independent source review. Functional
-qualification is still open. The programme review identifies a PICO R1 policy
-question and an old profile/map identity mismatch; both need disposition before
-this branch can be adopted.
+This branch is the TEC-OS release 1 candidate in Origo's release roadmap
+(P3: KD-258, KD-259). It combines:
 
-Generated ROMs, maps, media and web output still describe the earlier baseline.
-They have not been regenerated or qualified against this branch. Source review,
-affected controls and full product qualification precede adoption. The viewer
-retains its own firmware pin and receiving checks.
+- the debugger-support interfaces (KS40);
+- the shorter assembly comments;
+- the bare-VDP boot fix (XR-04);
+- the Compact font with 40 columns by default;
+- the owner's 40-column `SAMPLE.ASM`.
+
+The boot R1 policy is decided: with a PICO installed, real boot writes the
+selected mode's R1 with the frame interrupt off (KD-258 D1). A ROM-owned
+interrupt dispatcher is next-stage work (KD-259).
+
+The generated ROM, maps and media are built from this source. The ROM is
+`0f93acdc…`, 16,071 bytes, and `docs/memory-map.md` and
+`docs/rom-services.md` are generated from it. Strict test runs are recorded
+in Origo. All evidence so far comes from emulation; a physical TEC-1G smoke
+test is still owed before release 1 is declared. The viewer keeps its own
+firmware pin and receiving checks.

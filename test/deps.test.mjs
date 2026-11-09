@@ -1,6 +1,7 @@
-// KE-157: what the tests load is declared and pinned. The page's tests drive
-// Chromium through playwright, so package.json declares it at an exact version
-// and package-lock.json pins that version and its core.
+// KE-157: what the tests load is declared and pinned. playwright, which drives
+// Chromium against the local web/ page, is declared at an exact version and
+// package-lock.json pins that version and its core. The page's own browser
+// tests moved to the Viewer (KD-239).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
