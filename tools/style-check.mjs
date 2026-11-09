@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Compact assembly checks (tools/lib/style-compact.mjs) on the ROM sources and
-// the drivers: src/ and its subfolders, src/gen/ excluded, and drivers/. Prints
+// Compact assembly checks (tools/lib/style-compact.mjs) on the ROM sources, the
+// drivers and the diagnostics: src/ and its subfolders, drivers/, diag/ (the
+// gen/ folders excluded), SAMPLE.ASM and the diagnostics' MON3 stub. Prints
 // each file's figures and, with --faults, each fault.
 //
 //   node tools/style-check.mjs [--json FILE] [--faults] [--strict] [FILE...]
@@ -24,14 +25,15 @@ export function sources(root = ROOT) {
   const walk = (dir) => {
     for (const name of readdirSync(resolve(root, dir)).sort()) {
       const path = `${dir}/${name}`;
-      if (path === "src/gen") continue;
+      if (path === "src/gen" || path === "diag/gen") continue;
       if (statSync(resolve(root, path)).isDirectory()) walk(path);
       else if (/\.(asm|inc)$/i.test(name)) out.push(path);
     }
   };
   walk("src");
   walk("drivers");
-  out.push("programs/SAMPLE.ASM");
+  walk("diag");
+  out.push("programs/SAMPLE.ASM", "test/programs/mon3stub.asm");
   return out;
 }
 

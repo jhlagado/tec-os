@@ -6,9 +6,10 @@ a three-letter type and no hyphen. Preserve case-sensitive include paths.
 Historical model inputs, generated includes, font data and notices keep their
 own exact source and provenance; they are not formatting targets.
 
-The ROM sources under `src/`, `drivers/glcd.asm` and `programs/SAMPLE.ASM` use
-the compact layout. Diagnostics and other live test programs retain their
-existing layout. A comment edit does not authorize a layout or case migration.
+The ROM sources under `src/`, `drivers/glcd.asm`, `programs/SAMPLE.ASM`, the
+diagnostics in `diag/` and `test/programs/mon3stub.asm` use the compact layout.
+Other live test programs retain their existing layout. A comment edit does not
+authorize a layout or case migration.
 
 ## Compact layout
 

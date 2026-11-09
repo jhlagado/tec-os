@@ -102,5 +102,57 @@
   "src/volsvc.asm": {
     "lines": [],
     "headers": {}
+  },
+  "diag/defs.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/devices.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/diag.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/main.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/math.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/memory.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/report.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/sdcard.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/sdtests.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/sdvol.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/sdwrite.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "diag/vars.asm": {
+    "lines": [],
+    "headers": {}
+  },
+  "test/programs/mon3stub.asm": {
+    "lines": [],
+    "headers": {}
   }
 }
