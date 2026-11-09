@@ -6,9 +6,9 @@ ROM socket. The result is a serial log to paste back.
 
 ## Before the run: the card
 
-SD8 writes the card. It writes only blocks the card does not use and puts
-each one back, but a fake card, a fault or a power cut can still leave a
-block changed. So:
+SD8 writes the card. It addresses only blocks the card does not use and puts
+each one back, but a fake card can send a write elsewhere, and a fault or a
+power cut can leave a block changed. So:
 
 1. **Use a card you can lose, or image it first.** On the computer, save the
    whole card to a file: for example
