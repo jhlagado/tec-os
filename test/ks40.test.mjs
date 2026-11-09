@@ -134,7 +134,7 @@ test('KS40 accepted widths preserve IE and claimed or invalid widths change noth
 test('KS40 real warm boot clears hardware and shadow before PZINIT claimed or unclaimed',()=>{
  for(const held of [false,true]){
   const {m,table}=fresh();armed(m,table,40);if(!held)claim(m,0);
-  assert.equal(ie(m),32);const depth=warm(m);assert.equal(ie(m),0);assert.equal(shadow(m),0);assert.ok(depth<=(held?10:4));
+  assert.equal(ie(m),32);const depth=warm(m);assert.equal(ie(m),0);assert.equal(shadow(m),0);assert.equal(depth,held?12:4,"KD-250 warm depth");
   call(m,word(m,table+6));assert.equal(ie(m),0);
  }
  for(const kind of ['skip-clear','stale-shadow']){
