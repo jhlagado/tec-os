@@ -123,12 +123,20 @@ S8H:
   DW BLK
   DB " probe=read-only"
   DB " blocks=0 fail=0",0,0
-  call ENDL      ; the line's end
-  call NOTE      ; what it means
-  DB "SD8 the card wraps: it holds less"
-  DB " than it claims. Nothing was"
-  DB " written; do not use it",0
-  jp ENDL        ; nothing written
+  call ENDL
+
+; A copy of block 0 where it should not
+; be: the card wraps, or the free area
+; holds an old copy. Nothing was
+; written.
+
+NOTE0:
+  call NOTE
+  DB "SD8 a free block holds a copy of"
+  DB " block 0: either the card wraps,"
+  DB " or the free area holds an old"
+  DB " copy. Nothing was written",0
+  jp ENDL
 
 S8J:
   ld a,RFAIL     ; a probe read failed
@@ -173,7 +181,7 @@ S8L:
 ; range, ascending.
 
   ld hl,0
-  ld (BLK+2),hl  ; BLK = 1
+  ld (BLK+2),hl
   inc hl         ; BLK = 1
   ld (BLK),hl
 
@@ -181,7 +189,7 @@ S8P:
   ld hl,FREEL    ; past FREEL: done
   ld de,BLK
   call CMP32
-  jr c,S8Q       ; past FREEL: done
+  jr c,S8Q
   ld hl,BLK      ; below FREE0: not free
   ld de,FREE0
   call CMP32
@@ -228,7 +236,7 @@ S8R:
   ld hl,FREEL    ; past FREEL: done
   ld de,BLK
   call CMP32
-  jr c,S8S       ; past FREEL: done
+  jr c,S8S
   call WRNEXT    ; test it
   jp c,S8V       ; stopped
   ld hl,BLK
@@ -328,10 +336,10 @@ S8Z:
 S8Z1:
   call S8TAIL    ; the common fields
   call ENDL
-  ld a,(S8STOP)  ; 1, 4, 5: nothing
-  cp 1           ; left changed
-  ret z          ; 1: nothing written
-  cp 4
+  ld a,(S8STOP)  ; 1: a copy of block 0
+  cp 1
+  jp z,NOTE0
+  cp 4           ; 4, 5: nothing changed
   ret z          ; 4: AD
   cp 5
   ret z          ; 5: nothing written
@@ -403,29 +411,27 @@ CHKREF:
   ld de,REF0
   jp CMP512      ; the second as SD7's?
 
-; Read each power-of-two block from
-; FREE0 to the card's end, and compare
-; it with block 0. A card that ignores
-; its high address bits reads one of
-; them as block 0. A=0/Z: none did. A=1:
-; BLK did. A=2: BLK did not read, its
-; code in ERRCODE.
+; Read each power-of-two block from 8 to
+; the card's end, and compare it with
+; block 0. Reading inside the container
+; is harmless, and no volume block of a
+; real card holds the header. A card
+; that ignores its high address bits
+; reads one of them as block 0. A=0/Z:
+; none did. A=1: BLK did. A=2: BLK did
+; not read, its code in ERRCODE.
 
 PROBE:
-  ld hl,0
-  ld (BLK+2),hl  ; BLK = 1
-  inc hl         ; BLK = 1
-  ld (BLK),hl
+  ld hl,0        ; from block 8, inside
+  ld (BLK+2),hl  ; the container too, so
+  ld l,8         ; a wrap below its end
+  ld (BLK),hl    ; shows
 
 PB1:
   ld hl,BLK      ; the card's end: done
   ld de,CARDBLK
   call CMP32     ; BLK < CARDBLK?
-  jr nc,PB3      ; no: done
-  ld hl,BLK      ; below FREE0: skip
-  ld de,FREE0
-  call CMP32     ; BLK < FREE0?
-  jr c,PB2       ; yes: skip it
+  jr nc,PB3
   call LBABLK
   ld hl,BUFB
   call SDREAD    ; read only
@@ -442,18 +448,18 @@ PB2:
 
 PB3:
   xor a          ; no alias found
-  ret            ; Z
+  ret
 
 PB4:
   ld (ERRCODE),a
-  ld a,2         ; a read failed
-  or a           ; kept
-  ret            ; NZ
+  ld a,2         ; a read failed,
+  or a           ; with NZ
+  ret            ; kept
 
 PB5:
-  ld a,1         ; BLK reads as block 0
-  or a
-  ret            ; NZ
+  ld a,1         ; BLK reads as block 0,
+  or a           ; with NZ
+  ret
 
 ; Ask for 8 then GO, the only key pair
 ; that writes the card. Z for 8 then GO;
@@ -705,7 +711,7 @@ C7M:
 
 C7N:
   ld hl,K07      ; the next block
-  inc (hl)       ; the next block
+  inc (hl)
   ld a,(hl)
   cp 8
   jr c,C7A       ; up to 7
@@ -787,8 +793,11 @@ WOLINE:
   call PRDEC
   ld a,(WRSTEP)  ; a failure at either
   ld hl,(RSTEP)  ; stage, or a pattern
-  or l           ; in 0-7, counts once
-  ld hl,THIS07
+  or l           ; in 0-7, or an unread
+                 ; low
+  ld hl,THIS07   ; block, counts once
+  or (hl)
+  ld hl,RDF07
   or (hl)
   jr z,WL1       ; no failure
   ld hl,(WRFAIL)
