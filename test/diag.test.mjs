@@ -106,18 +106,22 @@ function sparseCard(container, bytes, wrap, map = (b) => b) {
     set: (_, k, v) => (set(Number(k), v), true),
   });
   const untouched = () => [...pages.values()].every((p) => p.every((b) => b === 0xc3));
-  return { image, untouched };
+  // The block a write to logical block B lands on.
+  const physical = (b) => Math.floor(at(b * BLOCK) / BLOCK);
+  return { image, untouched, physical };
 }
 
 /**
- * An SdSpi card on IMAGE whose CSD gives BLOCKS, recording the block of each
- * CMD24 and CMD17 (byte addresses divided down on SDSC). `faults` can refuse
- * the Nth CMD24 (`failWrite(n)`, from 0) and corrupt a block read
- * (`corrupt(block)`).
+ * An SdSpi card on IMAGE whose CSD gives BLOCKS. It records the block each
+ * CMD24 addresses (log.writes) and the block each accepted one lands on
+ * (log.landed, through `physical`), and the block of each CMD17; byte
+ * addresses are divided down on SDSC. `faults` can refuse the Nth CMD24
+ * (`failWrite(n)`, from 0), refuse a read (`failRead(block)`) and corrupt a
+ * read (`corrupt(block)`). `csdV1` gives a v1 CSD whatever the addressing.
  */
-function card(image, blocks, log, { highCapacity = true, faults = {} } = {}) {
+function card(image, blocks, log, { highCapacity = true, faults = {}, physical = (b) => b, csdV1 = !highCapacity } = {}) {
   const sd = new SdSpi({ image, highCapacity });
-  sd.makeCsd = () => csdFor(blocks, highCapacity);
+  sd.makeCsd = () => csdFor(blocks, !csdV1);
   const block = (arg) => (highCapacity ? arg : arg / BLOCK);
   const handle = sd.handleCommand.bind(sd);
   sd.handleCommand = (c) => {
@@ -129,8 +133,16 @@ function card(image, blocks, log, { highCapacity = true, faults = {} } = {}) {
         sd.delayBytes = 1;
         return;
       }
+      log.landed.push(physical(block(c.arg)));
     }
-    if (c.cmd === 17) log.reads.push(block(c.arg));
+    if (c.cmd === 17) {
+      log.reads.push(block(c.arg));
+      if (faults.failRead?.(block(c.arg))) {
+        sd.pendingResponse = [0x40];
+        sd.delayBytes = 1;
+        return;
+      }
+    }
     handle(c);
   };
   const read = sd.readBlock.bind(sd);
@@ -149,7 +161,7 @@ function card(image, blocks, log, { highCapacity = true, faults = {} } = {}) {
  * listed is answered GO.
  */
 function run({ cardOf = () => null, answers = {}, rtc = true, quick = true } = {}) {
-  const log = { writes: [], reads: [] };
+  const log = { writes: [], landed: [], reads: [] };
   const m = new Machine({ rom, symbols: new Map(), tms: true, matrix: true, rtc, clock: new Date(2026, 0, 1, 12, 0, 0) });
   m.newCard = () => (m.sd = cardOf(log, m));
   m.newCard();
@@ -196,13 +208,17 @@ function run({ cardOf = () => null, answers = {}, rtc = true, quick = true } = {
 /** Fields of a result line as an object; a word with no "=" maps to true. */
 const fields = (detail) => Object.fromEntries(detail.split(" ").map((f) => (f.includes("=") ? f.split(/=(.*)/s).slice(0, 2) : [f, true])));
 
-/** SD8's rule: no write ever reached blocks 0-7 or the container, and blocks
- *  0-7 and every volume block are byte-identical to BEFORE. */
-function assertSafe(log, image, before, containerBlocks) {
-  for (const b of log.writes) assert.ok(b >= 8 && b >= containerBlocks, `block ${b} written`);
+/** SD8's rule: no write addressed blocks 0-7 or the container; none landed
+ *  there either, but on the blocks `landedOk` lists; and blocks 0-7 and every
+ *  volume block are byte-identical to BEFORE. */
+function assertSafe(log, image, before, containerBlocks, landedOk = []) {
+  for (const b of log.writes) assert.ok(b >= 8 && b >= containerBlocks, `block ${b} addressed`);
+  for (const b of log.landed) assert.ok(b >= containerBlocks || landedOk.includes(b), `a write landed on block ${b}`);
   const n = containerBlocks * BLOCK;
   for (let i = 0; i < n; i += 1) if (image[i] !== before[i]) assert.fail(`byte ${i} of the container changed`);
 }
+
+const NOTE0 = /# SD8 a free block holds a copy of block 0: either the card wraps, or the free area holds an old copy\. Nothing was written\r\n/;
 
 const SD_PULL = [{ key: GO, before: (m) => (m.sd = null) }];
 const SD_BACK = [{ key: GO, before: (m) => m.newCard() }];
@@ -294,7 +310,7 @@ test("SDHC block numbers above 400000h work on a 4 GB card", SLOW, () => {
   const before = Uint8Array.from(container);
   const blocks = 7580 * 1024; // 3,974 MB: a card sold as 4 GB
   const sparse = sparseCard(container, blocks * BLOCK);
-  const { lines, log } = run({ cardOf: (log) => card(sparse.image, blocks, log), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  const { lines, log } = run({ cardOf: (log) => card(sparse.image, blocks, log, { physical: sparse.physical }), answers: { "SD8 press 8": WRITE, ...SD9 } });
   for (const id of ["SD4", "SD5", "SD7", "SD8", "SD9"]) assert.equal(lines.get(id)?.status, "PASS", `${id} ${JSON.stringify(lines.get(id))}`);
   assert.match(lines.get("SD4").detail, /^blocks=7761920 mib=3790 class=4GB /);
   assert.equal(fields(lines.get("SD5").detail).last, String(blocks - 1));
@@ -315,10 +331,10 @@ test("a fake card twice its flash is caught by the read-only probe before any wr
   const middle = containerBlocks + Math.floor((blocks - 2 - containerBlocks) / 2);
   assert.ok(middle % (1 << 22) >= 4096 && middle % (1 << 22) < containerBlocks, "the middle wraps into WORK");
   const sparse = sparseCard(container, blocks * BLOCK, (1 << 22) * BLOCK);
-  const { lines, text, log } = run({ cardOf: (log) => card(sparse.image, blocks, log), answers: SD9 });
+  const { lines, text, log } = run({ cardOf: (log) => card(sparse.image, blocks, log, { physical: sparse.physical }), answers: SD9 });
   assert.equal(lines.get("SD8").status, "FAIL");
   assert.match(lines.get("SD8").detail, /^alias at=4194304 probe=read-only blocks=0 fail=0$/);
-  assert.match(text, /# SD8 the card wraps: it holds less than it claims\. Nothing was written; do not use it\r\n/);
+  assert.match(text, NOTE0);
   assert.doesNotMatch(text, /SD8 press 8/, "the owner is not asked");
   assert.deepEqual(log.writes, []);
   assertSafe(log, container, before, containerBlocks);
@@ -329,7 +345,7 @@ test("a card that wraps at 1 GiB is caught by the probe as well", SLOW, () => {
   const before = Uint8Array.from(container);
   const blocks = 7580 * 1024;
   const sparse = sparseCard(container, blocks * BLOCK, 1 << 30);
-  const { lines, log } = run({ cardOf: (log) => card(sparse.image, blocks, log), answers: SD9 });
+  const { lines, log } = run({ cardOf: (log) => card(sparse.image, blocks, log, { physical: sparse.physical }), answers: SD9 });
   assert.match(lines.get("SD8").detail, /^alias at=2097152 probe=read-only /);
   assert.deepEqual(log.writes, []);
   assertSafe(log, container, before, containerBlocks);
@@ -337,18 +353,35 @@ test("a card that wraps at 1 GiB is caught by the probe as well", SLOW, () => {
 });
 
 test("a pattern write that reaches block 3 fails SD8 as an alias, and the block's restore puts it back", SLOW, () => {
-  // A card whose controller sends the first free block to block 3: the
-  // probe of the powers of two cannot see it, so the 0-7 reads after the
-  // pattern write must, without writing blocks 0-7 themselves.
+  // A card whose controller sends the first free block to block 3. The probe
+  // of the powers of two cannot see it, so the pattern write and its restore
+  // both land on block 3, though SD8 addresses only the free block. The 0-7
+  // reads after the pattern write must catch it, and the restore puts it back.
   const { image: container, containerBlocks } = starterCard(0);
   const before = Uint8Array.from(container);
   const blocks = 240 * 1024;
   const sparse = sparseCard(container, blocks * BLOCK, 0, (b) => (b === containerBlocks ? 3 : b));
-  const { lines, text, log } = run({ cardOf: (log) => card(sparse.image, blocks, log), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  const { lines, text, log } = run({ cardOf: (log) => card(sparse.image, blocks, log, { physical: sparse.physical }), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  assert.deepEqual(log.landed, [3, 3], "the pattern and its restore both landed on block 3");
   assert.match(text, new RegExp(`# SD8 block ${containerBlocks} pattern=ok restore=ok tries=1 busy=\\d+ alias=3\r\n`));
   assert.match(lines.get("SD8").detail, new RegExp(`^alias at=${containerBlocks} low=3 blocks=1 fail=1 `));
   assert.match(text, /# SD8 the card may be changed: restore it from your backup before using it\r\n/);
   assert.equal(log.writes.length, 2, "the pattern and its restore, then a stop");
+  assertSafe(log, container, before, containerBlocks, [3]);
+});
+
+test("a card that wraps below the container's end is caught by a probe from block 8", SLOW, () => {
+  // The starter container (20,480 blocks) on a card that claims 22,528 and
+  // wraps at 16,384: no power of two lies in the free range, so a probe from
+  // free_from would read nothing, and every write would land in a volume.
+  const { image: container, containerBlocks } = starterCard(0);
+  const before = Uint8Array.from(container);
+  const blocks = 22528;
+  const sparse = sparseCard(container, blocks * BLOCK, 16384 * BLOCK);
+  const { lines, text, log } = run({ cardOf: (log) => card(sparse.image, blocks, log, { physical: sparse.physical }), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  assert.match(lines.get("SD8").detail, /^alias at=16384 probe=read-only blocks=0 fail=0$/);
+  assert.match(text, NOTE0);
+  assert.deepEqual(log.writes, []);
   assertSafe(log, container, before, containerBlocks);
 });
 
@@ -444,6 +477,98 @@ test("AD between blocks stops SD8 cleanly, each block put back first", SLOW, () 
   assert.equal(lines.get("SD8").status, "SKIP");
   assert.match(lines.get("SD8").detail, /^reason=user-abort blocks=3 fail=0 /);
   assert.equal(log.writes.length, 6, "three blocks, each written and put back");
+  assertSafe(log, image, before, containerBlocks);
+  assert.ok(Buffer.from(image).equals(Buffer.from(before)));
+});
+
+/** Run a starter card with OPTIONS for card() and answer SD8 with 8 then GO;
+ *  the card, its copy from before and the run. */
+function starterRun(options = {}, edit = () => {}) {
+  const { image, containerBlocks } = starterCard();
+  edit(image);
+  const before = Uint8Array.from(image);
+  const r = run({ cardOf: (log) => card(image, image.length / BLOCK, log, options(log)), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  return { image, before, containerBlocks, ...r };
+}
+
+// SD8's gates: each skip writes nothing.
+const GATES = {
+  "a failed SD3 read": [(log) => ({ faults: { failRead: (b) => b === 10 } }), "SD3", "FAIL", "sd3"],
+  "a failed SD5 read": [(log) => ({ faults: { failRead: (b) => b === 122880 } }), "SD5", "FAIL", "sd5"],
+  "an OCR whose CCS disagrees with the CSD": [() => ({ csdV1: true }), "SD4", "WARN", "sd4"],
+};
+for (const [name, [options, id, status, reason]] of Object.entries(GATES)) {
+  test(`SD8 skips after ${name}, writing nothing`, SLOW, () => {
+    const { image, before, containerBlocks, lines, log } = starterRun(options);
+    assert.equal(lines.get(id).status, status, JSON.stringify(lines.get(id)));
+    if (id === "SD4") assert.match(lines.get("SD4").detail, / ccs=mismatch$/);
+    assert.deepEqual(lines.get("SD8"), { status: "SKIP", detail: `reason=${reason}` });
+    assert.deepEqual(log.writes, []);
+    assertSafe(log, image, before, containerBlocks);
+  });
+}
+
+test("SD8 stops with nothing written when a target reads two ways", SLOW, () => {
+  let once = true;
+  const { image, before, containerBlocks, lines, text, log } = starterRun(() => ({
+    faults: { corrupt: (b) => b === 20480 && once && !(once = false) },
+  }));
+  assert.match(text, /# SD8 block 20480 pattern=unstable\r\n/);
+  assert.match(lines.get("SD8").detail, /^unstable at=20480 blocks=1 fail=1 /);
+  assert.deepEqual(log.writes, []);
+  assertSafe(log, image, before, containerBlocks);
+});
+
+test("a copy of block 0 in free space stops SD8 with nothing written, at the probe or at the target", SLOW, () => {
+  for (const [at, detail] of [
+    [65536, /^alias at=65536 probe=read-only blocks=0 fail=0$/],
+    [20480, /^alias at=20480 blocks=1 fail=1 /],
+  ]) {
+    const { image, before, containerBlocks, lines, text, log } = starterRun(() => ({}), (img) => img.copyWithin(at * BLOCK, 0, BLOCK));
+    assert.match(lines.get("SD8").detail, detail);
+    assert.match(text, NOTE0);
+    assert.deepEqual(log.writes, []);
+    assertSafe(log, image, before, containerBlocks);
+  }
+});
+
+test("a low block that does not read after a pattern write stops SD8, counted as a failure", SLOW, () => {
+  let log0;
+  const { image, before, containerBlocks, lines, text, log } = starterRun((log) => ((log0 = log), { faults: { failRead: (b) => b === 5 && log0.writes.length > 0 } }));
+  assert.match(text, /# SD8 block 20480 pattern=ok restore=ok tries=1 busy=\d+ lowread=5\r\n/);
+  assert.match(lines.get("SD8").detail, /^lowread at=20480 low=5 blocks=1 fail=1 /);
+  assert.equal(log.writes.length, 2, "the block was put back first");
+  assertSafe(log, image, before, containerBlocks);
+  assert.ok(Buffer.from(image).equals(Buffer.from(before)));
+});
+
+test("a probe read that fails stops SD8 with nothing written", SLOW, () => {
+  const { image, before, containerBlocks, lines, log } = starterRun(() => ({ faults: { failRead: (b) => b === 32768 } }));
+  assert.equal(lines.get("SD8").detail, "probe-read at=32768 code=05 blocks=0 fail=0");
+  assert.deepEqual(log.writes, []);
+  assertSafe(log, image, before, containerBlocks);
+});
+
+test("a card the container fills skips SD8 with nofree", SLOW, () => {
+  const { image, containerBlocks } = starterCard(0);
+  const { lines, log } = run({ cardOf: (log) => card(image, containerBlocks, log), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  assert.equal(lines.get("SD7").status, "PASS");
+  assert.deepEqual(lines.get("SD8"), { status: "SKIP", detail: "reason=nofree" });
+  assert.deepEqual(log.writes, []);
+});
+
+test("a 1.1 card of 20 volumes, with a table block, passes SD7 and SD8 stays outside it", SLOW, () => {
+  const container = createContainer(Array.from({ length: 20 }, (_, i) => ({ geometry: "G1M", label: `VOL${i}`, mount: i === 0 ? "A" : "-" })));
+  const containerBlocks = container.length / BLOCK;
+  const blocks = Math.ceil((containerBlocks + 2048) / 1024) * 1024;
+  const image = new Uint8Array(blocks * BLOCK).fill(0xc3);
+  image.set(container);
+  const before = Uint8Array.from(image);
+  const { lines, log } = run({ cardOf: (log) => card(image, blocks, log), answers: { "SD8 press 8": WRITE, ...SD9 } });
+  assert.match(lines.get("SD7").detail, /^ver=1\.1 vols=20 /);
+  assert.ok(log.reads.includes(1), "the table block was read");
+  assert.equal(lines.get("SD8").status, "PASS", JSON.stringify(lines.get("SD8")));
+  assert.ok(log.writes.length > 0);
   assertSafe(log, image, before, containerBlocks);
   assert.ok(Buffer.from(image).equals(Buffer.from(before)));
 });
