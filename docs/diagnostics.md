@@ -49,7 +49,7 @@ fields from `format/format.json`. It assembles with TAS.
 | `0800h–0FFFh` | MON3's stack and RAM, not touched but for the user vectors in the INT check |
 | `1000h–1914h` | Variables and buffers: three block buffers and block 0 as SD7 validated it |
 | `1915h–1A14h` | The program's own stack, 256 bytes; `START` loads SP with `1A15h` |
-| `4000h–6B62h` | Code and tables, 11,107 bytes |
+| `4000h–6B82h` | Code and tables, 11,139 bytes |
 
 `START` keeps the SP MON3 entered with and prints it in the header line
 (`sp=`), then uses its own stack, so the RAM check cannot overwrite a stack
@@ -59,12 +59,12 @@ variables and stack end below `4000h`.
 
 The program's code and tables are never written. Two checks write
 `4000h–7FFFh` on purpose, with PROTECT turned off through MON3 first: the RAM
-check, from the first byte after the program (`6B63h`) to `7FFFh`, and PROT,
+check, from the first byte after the program (`6B83h`) to `7FFFh`, and PROT,
 which writes that first byte and puts it back. The RAM check overwrites three
 areas of free RAM, and nothing else:
 
 - `1A15h–3FFFh`, from the end of the stack;
-- `6B63h–7FFFh`, from the end of the program;
+- `6B83h–7FFFh`, from the end of the program;
 - `8000h–BFFFh`, in both EXPAND settings.
 
 ## Loading and running
@@ -115,7 +115,7 @@ fields are a bare word, such as `alias`. A count against a bound is
 each block. The first line and the last are:
 
 ```text
-TEC1G-DIAG 1.0 image=0123456789ABCDEF bytes=11107 sp=087E
+TEC1G-DIAG 1.0 image=0123456789ABCDEF bytes=11139 sp=087E
 SUMMARY pass=17 warn=1 fail=0 skip=1
 ```
 
@@ -287,7 +287,7 @@ These are cut down from the old diagnostics ROM's tests.
 **RAM.** Two passes over each area, each byte written `L xor H` and then its
 complement, all read back after all are written, so a missing or shorted
 address line shows. The areas are `1A15h–3FFFh` after the variables and the
-stack, `6B63h–7FFFh` after the program, and the `8000h–BFFFh` window with
+stack, `6B83h–7FFFh` after the program, and the `8000h–BFFFh` window with
 EXPAND (latch bit 2) off and on. Then a tag written in each EXPAND setting must
 survive the other: TEC-OS keeps its block cache in EXPAND 1, so the two
 settings must select different RAM and both must hold data. PROTECT is off
