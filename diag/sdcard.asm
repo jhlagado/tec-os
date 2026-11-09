@@ -272,7 +272,7 @@ MRT:
   call SPIR      ; one byte
   inc ix         ; one more poll
   cp $FE         ; the start token
-  jr z,MRDAT     ; the start token
+  jr z,MRDAT
   inc a          ; not FFh: an error
                  ; token
   jr nz,MRBAD
@@ -302,7 +302,7 @@ MRDAT:
 
 MRCMD:
   call SPIEND    ; R1 not 00h
-  ld a,SDECMD    ; R1 not 00h
+  ld a,SDECMD
   jp SDFAIL
 
 MRRNG:
@@ -383,7 +383,7 @@ MWB1:
   jp SDFAIL
 
 MWDON:
-  call SPIEND    ; done
+  call SPIEND
   call BSYCNT    ; count the polls
   jp SDIOK
 
@@ -454,7 +454,7 @@ NS1:
   call SKIPR     ; no card to test
   DB "sd2",0
   or 1           ; NZ: skipped
-  ret            ; NZ
+  ret
 
 ; SD1: with /CS high and no clocks, MISO
 ; (port FDh bit 7) should read 1. Many
@@ -497,7 +497,7 @@ S1B:
   jp nz,ENDL     ; low: say why it
   call PRI
   DB " note=miso-not-idle-high",0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 ; SD2: the counted initialisation, then
 ; TEC-OS's SDINIT, which must succeed.
@@ -527,7 +527,7 @@ S2F:
   ld a,RFAIL     ; TEC-OS's failed
 
 S2R:
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " err=",0,FD8
   DW INERR
@@ -567,7 +567,7 @@ S2B:
   DB " counted=",0,FD8
   DW CIERR
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 ; SD3: 64 counted reads of blocks 0-63.
 ; Shows the most polls each wait took
@@ -599,7 +599,7 @@ S3A:
 
 S3B:
   ld hl,COUNT    ; the next block
-  inc (hl)       ; the next block
+  inc (hl)
   ld a,(hl)
   cp 64          ; to 63
   jr c,S3A
@@ -654,7 +654,8 @@ S3G:
   ld a,RFAIL     ; errors: FAIL
 
 S3H:
-  call RESULT    ; the status
+  ld (S3ST),a    ; for SD8
+  call RESULT
   call FIELDS
   DB " r1max=",0,FD8
   DW R1MAX
@@ -724,6 +725,33 @@ SD4:
   ld (CSDOK),a   ; for SD5 and SD8
   call CLASS     ; the size class
   ld (S4ST),a    ; PASS or WARN
+
+; The OCR's CCS must agree with the CSD:
+; v2 for block addresses (SDBYTE 0), v1
+; for byte addresses. A mismatch is a
+; WARN, and SD8 then skips.
+
+  ld a,(CSD)     ; 00h v1, 40h v2
+  and $C0
+  ld b,a
+  ld a,(SDBYTE)  ; byte addresses
+  or a           ; want v1
+  ld a,b
+  jr z,CC1
+  or a           ; v1: 00h
+  jr CC2
+
+CC1:
+  cp $40         ; block addresses: v2
+
+CC2:
+  jr z,CC3       ; they agree
+  ld a,1
+  ld (CCSBAD),a
+  ld a,RWARN
+  ld (S4ST),a
+
+CC3:
   ld a,(CSD)     ; the CSD version:
   rlca           ; structure + 1
   rlca
@@ -772,17 +800,22 @@ SD4:
   DB " psn=",0,FHEX4
   DW CID+9
   DB 0,0
-  jp ENDL        ; the line's end
+  ld a,(CCSBAD)  ; CCS and CSD disagree
+  or a
+  jp z,ENDL      ; they agree
+  call PRI
+  DB " ccs=mismatch",0
+  jp ENDL
 
 S4F:
   ld (ERRCODE),a
   ld a,RFAIL     ; the read's error
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " err=",0,FD8
   DW ERRCODE
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 ; Print B CID characters from HL, with
 ; anything but a letter or digit shown
@@ -796,13 +829,13 @@ PRTXT:
   cp 'z'+1       ; above the letters
   jr nc,PT2
   cp '9'+1       ; a digit
-  jr c,PT3       ; a digit
+  jr c,PT3
   cp 'A'
   jr c,PT2
   cp 'Z'+1       ; upper case
   jr c,PT3
   cp 'a'         ; lower case
-  jr nc,PT3      ; lower case
+  jr nc,PT3
 
 PT2:
   ld a,'_'       ; anything else
@@ -892,8 +925,8 @@ CV3:
   ret
 
 CV4:
-  or 1           ; NZ
-  ret            ; NZ
+  or 1
+  ret
 
 ; MIBV = CARDBLK / 2048, the capacity in
 ; MiB, and CLSNM the smallest class in
@@ -942,7 +975,7 @@ CA3:
   inc de
   inc de         ; blocks: its 90%
   ld hl,CARDBLK  ; card < 90%?
-  call CMP32     ; card < 90%?
+  call CMP32
   ld a,RWARN
   ret c          ; under 90%: WARN
   ld a,RPASS

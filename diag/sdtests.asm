@@ -32,7 +32,7 @@ CM1:
   ld a,b         ; to the block's end
   or c
   jr nz,CM1      ; all 512
-  ret            ; Z
+  ret
 
 ; Read block SDLBA twice, into BUFA and
 ; BUFB, and compare. A failed read or a
@@ -89,7 +89,7 @@ SD5:
   ld (RNGN),a    ; RNGN = 0
   call LBA16     ; block 0
   ld hl,BUFS     ; the reference copy
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   call nz,R2E
   ld a,15        ; and 15 more reads
   ld (COUNT),a   ; COUNT = 15
@@ -98,7 +98,7 @@ S5A:
   ld hl,0        ; block 0 again
   call LBA16     ; SDLBA = 0
   ld hl,BUFA
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   jr nz,S5B      ; failed
   ld hl,BUFA     ; as the reference?
   ld de,BUFS
@@ -172,7 +172,8 @@ S5F:
   ld a,RFAIL     ; errors: FAIL
 
 S5G:
-  call RESULT    ; the status
+  ld (S5ST),a    ; for SD8
+  call RESULT
   call FIELDS
   DB " blk0=16 err=",0,FD16
   DW ERRS
@@ -207,7 +208,7 @@ S5I:
   DB " refused=",0,FD8
   DW RNGN
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 ; Z if the B bytes at HL and DE match.
 ; Changes AF/B/DE/HL.
@@ -256,8 +257,8 @@ S6L:
   ld l,a
   ld h,0
   call LBA16     ; SDLBA = it
-  ld hl,BUFA     ; TEC-OS's read
-  call SDREAD    ; TEC-OS's read
+  ld hl,BUFA
+  call SDREAD
   jp nz,S6E      ; failed
   ld hl,COUNT    ; one more block
   call INC32     ; COUNT + 1
@@ -289,7 +290,7 @@ S6B:
   call LD16      ; M32B = the seconds
   call DIV32     ; M32A: bytes a second
   ld a,RPASS
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " blocks=",0,FD32
   DW COUNT
@@ -298,22 +299,22 @@ S6B:
   DB " bps=",0,FD32
   DW M32A
   DB " timer=rtc",0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 S6T:
   call SKIPR     ; the clock is stopped
   DB "rtc-stopped",0
-  ret            ; SD6 done
+  ret
 
 S6E:
   ld (ERRCODE),a
   ld a,RFAIL     ; a read failed
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " err=",0,FD8
   DW ERRCODE
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 ; Without the RTC: beep, read N blocks
 ; (256, or 8 with QUICK), beep. The
@@ -332,7 +333,7 @@ S6X:
   DB "SD6 time from beep to beep",0
   call ENDL
   ld c,MBEEP     ; the first beep
-  rst $10        ; the first beep
+  rst $10
 
 S6Y:
   ld a,(COUNT)   ; blocks 0-63 in turn
@@ -341,7 +342,7 @@ S6Y:
   ld h,0
   call LBA16     ; SDLBA = it
   ld hl,BUFA
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   jr nz,S6E      ; failed
   ld hl,COUNT    ; one more
   call INC32     ; COUNT + 1
@@ -351,7 +352,7 @@ S6Y:
   sbc hl,de      ; N read?
   jr nz,S6Y      ; not yet
   ld c,MBEEP     ; the second beep
-  rst $10        ; the second beep
+  rst $10
   ld hl,COUNT    ; the bytes read
   ld de,M32A
   call CPY32     ; M32A = COUNT
@@ -362,11 +363,11 @@ S6Z:
   call SHL32
   djnz S6Z       ; x 512
   ld a,RPASS
-  call RESULT    ; the status
+  call RESULT
   call FIELDS
   DB " blocks=",0,FD32
   DW COUNT
   DB " bytes=",0,FD32
   DW M32A
   DB " timer=stopwatch",0,0
-  jp ENDL        ; the line's end
+  jp ENDL

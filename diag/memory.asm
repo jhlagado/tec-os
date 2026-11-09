@@ -293,7 +293,7 @@ PRTCHK:
 
 PC1:
   ld a,c
-  call RESULT    ; the status
+  call RESULT
   call PRI
   DB " addr=",0
   ld hl,PROGEND
@@ -350,36 +350,67 @@ SHDCHK:
   out (SYSLAT),a
   call OVCMP     ; through the latch
   ld (SH1),hl    ; the bytes not the ROM
-  ld a,(LATCHV)  ; as it was
+  ld a,(LATCHV)  ; as it was, with the
   out (SYSLAT),a
+
+; MON3's setShadow(01h) is called with
+; the latch as found, so its RST 10h
+; runs through RAM. The latch is then
+; written back directly, before MON3 is
+; called again to put its own copy back.
+
   ld a,LATSHAD   ; MON3's "on"
-  ld c,MSETSHD   ; LATCHV's value again
-  rst $10        ; MON3's setShadow
-  call OVCMP
-  ld (SHM),hl    ; what it shows
-  ld a,(SVSHD)   ; MON3's setting back
   ld c,MSETSHD
   rst $10
-  ld a,(LATCHV)  ; and LATCHV's
+  call OVCMP
+  ld (SHM),hl    ; what MON3's "on"
+                 ; shows
+  ld a,(LATCHV)  ; the latch as found,
+  out (SYSLAT),a
+  ld a,(SVSHD)   ; before any RST 10h,
+  ld c,MSETSHD   ; then MON3's copy of
+  rst $10        ; the same state
+  ld a,(LATCHV)
   out (SYSLAT),a
 
 ; PASS: bit 0 clear shows the ROM and
 ; set shows RAM, as TEC-OS's /SHADOW.
+; Any other result is a WARN naming what
+; was found; the other checks go on,
+; with LATCHV as measured at the start.
 
-  ld hl,(SH0)    ; clear: all the ROM?
+  ld hl,(SH0)    ; clear: the ROM?
   ld a,h
   or l
-  ld c,RFAIL     ; some differ: FAIL
-  jr nz,SC1
-  ld hl,(SH1)    ; set: not the ROM?
+  jr nz,SH0L
+  ld hl,(SH1)    ; set: RAM?
   ld a,h
   or l
-  jr z,SC1       ; none differ: FAIL
-  ld c,RPASS     ; as TEC-OS expects
+  ld hl,CVTEC    ; as TEC-OS expects
+  ld c,RPASS
+  jr nz,SH1L
+  ld hl,CVNONE   ; the ROM both ways
+  jr SH2L
 
-SC1:
+SH0L:
+  ld hl,(SH1)    ; clear shows RAM:
+  ld a,h         ; set the ROM?
+  or l
+  ld hl,CVINV    ; the other way round
+  jr z,SH2L
+  ld hl,CVNONE   ; RAM both ways
+
+SH2L:
+  ld c,RWARN
+
+SH1L:
+  ld (DESC),hl   ; the convention's name
   ld a,c
   call RESULT    ; the status
+  call PRI
+  DB " convention=",0
+  ld hl,(DESC)
+  call PRS       ; its name
   call PRI
   DB " bit0=0:",0
   ld hl,(SH0)    ; what each showed
@@ -449,5 +480,8 @@ OC2:
 ; The areas' names, each ending with bit
 ; 7 set on its last letter.
 
+CVTEC:    DB    "tecos",0
+CVINV:    DB    "inverted",0
+CVNONE:   DB    "none",0
 AREAS:    DB    "lo",'w'+$80,"hig"
   DB 'h'+$80,"exp",'0'+$80,"exp",'1'+$80

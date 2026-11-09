@@ -10,7 +10,7 @@
 ; uses, for SD8.
 
 SD7:
-  ld hl,RSD7     ; the record
+  ld hl,RSD7
   call BEGIN
   call NEEDSD
   ret nz         ; no card: skipped
@@ -93,8 +93,12 @@ S7E:
   ld a,1         ; SD8 may write after
                  ; it
   ld (SD7OK),a
+  ld hl,BUFS     ; block 0 as validated,
+  ld de,REF0     ; for SD8
+  ld bc,512
+  ldir
   ld hl,CTPRV    ; the last block used
-  call DEC32     ; the last block used
+  call DEC32
   ld a,RPASS
   call RESULT    ; PASS
   call FIELDS
@@ -111,7 +115,7 @@ S7E:
   DB " free_from=",0,FD32
   DW CTEND
   DB 0,0
-  jp ENDL        ; the line's end
+  jp ENDL
 
 ; Walk the header and descriptors.
 ; Return A=0/Z, or an ME* code with NZ.
@@ -120,7 +124,7 @@ CTWALK:
   ld hl,0        ; block 0: the header
   call LBA16     ; SDLBA = 0
   ld hl,BUFS
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   ld a,$20       ; MEIO: unreadable
   ret nz
   ld hl,BUFS     ; "TECOSVOL"
@@ -186,7 +190,7 @@ CW3:
   ld a,$25       ; MESUM
   ret nz         ; they differ
   ld hl,BUFS+HBLOCKS
-  ld de,CTHB     ; the header declares
+  ld de,CTHB     ; the declared length
   call CPY32     ; CTHB
   ld a,(CTMIN)   ; 1.0: no drives
   or a           ; field or table sum
@@ -218,7 +222,7 @@ CW4:
   ld h,0         ; the block number
   call LBA16
   ld hl,BUFA
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   pop bc
   ld a,$20       ; MEIO
   jr nz,CWX      ; unreadable
@@ -268,11 +272,11 @@ CW6:
   ld a,$2A       ; MENOA
   jr nc,CWX      ; no drive A
   xor a          ; all passed
-  ret            ; Z
+  ret
 
 CWX:
   or a           ; the code, NZ
-  ret            ; NZ
+  ret
 
 ; Check descriptor IX (index CTIDX)
 ; against MOUNT's rules, then the card's
@@ -311,7 +315,7 @@ DCHECK:
 
 DC1:
   ld a,$26       ; MEDESC
-  or a           ; NZ
+  or a
   ret            ; the code
 
 ; The start must not be below the
@@ -408,7 +412,7 @@ DC5:
   ld de,CTPRV
   call CMP32     ; CARDBLK < end?
   ld a,$2B       ; past the card
-  jr c,DCX       ; past the card
+  jr c,DCX
 
 DC6:
   ld hl,(DESC)   ; the first block,
@@ -417,15 +421,15 @@ DC6:
   ld de,SDLBA
   call CPY32     ; SDLBA = the start
   ld hl,BUFB
-  call SDREAD    ; TEC-OS's read
+  call SDREAD
   ld a,$2C       ; unreadable
-  jr nz,DCX      ; unreadable
+  jr nz,DCX
   xor a          ; Z: all passed
-  ret            ; Z
+  ret
 
 DCX:
   or a           ; the code, NZ
-  ret            ; NZ
+  ret
 
 ; HL = the payload length of geometry A
 ; from GEOTAB. NZ for an unknown one.
@@ -447,11 +451,11 @@ GL1:
   jr nz,GL1      ; not this one
   ex de,hl       ; HL: the length
   xor a
-  ret            ; Z
+  ret
 
 GL2:
   inc a          ; NZ: unknown
-  ret            ; NZ
+  ret
 
 ; HL = descriptor CTIDX's address: block
 ; 0's slots 1-15, then 16 a block in
@@ -484,15 +488,15 @@ DP1:
   ld l,a
   ld h,0         ; SDLBA = it
   push bc
-  call LBA16
+  call LBA16     ; SDLBA = it
   ld hl,BUFA
-  call SDREAD    ; TEC-OS's read
+  call SDREAD    ; into BUFA
   pop bc
   jr z,DP2       ; read
   ld a,$FF       ; not read: none there
   ld (CTBUF),a   ; nothing in BUFA
   or a
-  ret            ; NZ
+  ret
 
 DP2:
   ld a,c         ; its slot, mod 16
@@ -509,7 +513,7 @@ DP3:
   add hl,hl      ; x 32
   add hl,de      ; in its block
   xor a
-  ret            ; Z
+  ret
 
 ; HL = the 16-bit sum of BUFS's 512
 ; bytes but the checksum's own two.

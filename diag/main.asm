@@ -12,15 +12,25 @@
 START:
   di             ; TEC-OS's own
                  ; discipline
+  ld hl,0        ; the entry SP
+  add hl,sp
+  ld sp,STKTOP   ; our own stack, which
+  push hl        ; the RAM check spares
   ld a,i         ; MON3's I, for EXIT
   push af
-  ld hl,VARS     ; all variables zero
-  ld de,VARS+1
-  ld bc,VARSEND-VARS-1
-  ld (hl),0      ; from 1000h to VARSEND
-  ldir
-  pop af         ; I back from the stack
-  ld (SAVEI),a
+  ld hl,VARS     ; the variables zero,
+  ld de,VARS+1   ; up to the stack
+  ld bc,STACK-VARS-1
+  ld (hl),0
+  ldir           ; cleared
+  pop af
+  ld (SAVEI),a   ; kept for EXIT
+  pop hl         ; for the header
+  ld (ENTSP),hl
+  ld a,RSKIP     ; SD3-SD5 not run yet
+  ld (S3ST),a
+  ld (S4ST),a
+  ld (S5ST),a
   call LATGET    ; MON3's latch state
   ld hl,TITLE    ; the title on row 1
   ld a,LROW1
@@ -166,7 +176,9 @@ HEADER:
   call FIELDS    ; then print it
   DB " bytes=",0,FD16
   DW NBLK
-  DB 0,0
+  DB " sp=",0,0
+  ld hl,(ENTSP)  ; MON3's SP at GO
+  call PRHL
   call ENDL      ; the header's end
   call NOTE      ; MON3's latch state
   DB "mon3",0
@@ -186,8 +198,8 @@ HEADER:
 
 ; The checks in order.
 
-CHECKS:   DW    SD1,SD2,SD3,SD4,SD5,SD6
-  DW SD7,SD8,SD9,RAMCHK,PRTCHK,SHDCHK
+CHECKS:   DW    SHDCHK,SD1,SD2,SD3,SD4
+  DW SD5,SD6,SD7,SD8,SD9,RAMCHK,PRTCHK
   DW CLKCHK,VDPCHK,LCDCHK,GLCCHK,RTCCHK
   DW INTCHK,KEYCHK,0
 

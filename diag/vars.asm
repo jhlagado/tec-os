@@ -107,12 +107,14 @@ S9IN:     DS    1
 S9RD:     DS    1
 S9SM:     DS    1
 K07:      DS    1
-MASK07:   DS    1
-ALIASM:   DS    1
-ALIASB:   DS    4
 SPOT:     DS    1
 THIS07:   DS    1
-LEFT07:   DS    1
+RDF07:    DS    1
+S8STOP:   DS    1
+S3ST:     DS    1
+S5ST:     DS    1
+CCSBAD:   DS    1
+ENTSP:    DS    2
 MIBV:     DS    4
 CLSNM:    DS    2
 S4ST:     DS    1
@@ -153,10 +155,17 @@ BUFA:     DS    512
 BUFB:     DS    512
 BUFS:     DS    512
 
-; Blocks 0-7 as SD8 found them, to show
-; a write to a free block that reaches
-; them.
+; Block 0 as SD7 validated it, for SD8's
+; alias checks.
 
-BLK07:    DS    4096
+REF0:     DS    512
+
+; The program's own stack, 256 bytes,
+; which the RAM check does not touch: it
+; tests from VARSEND.
+
+STACK:    DS    256
+
+STKTOP:
 
 VARSEND:
