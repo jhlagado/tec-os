@@ -665,7 +665,7 @@ const CONF38 = "src/console.asm";
 const LCDF = "src/lcd.asm";
 const MNT = ["test/mount.test.mjs", "test/verify-mount.test.mjs"];
 export const MUTANTS_KS38B = [
-  { name: "HEXHL: a digit one off", ...ks34(CONF38, ["ADC A,$40", "DAA", "JP (HL)"], ["ADC A,$41", "DAA", "JP (HL)"], ["test/copy.test.mjs", "test/diag.test.mjs"]) },
+  { name: "HEXHL: a digit one off", ...ks34(CONF38, ["ADC A,$40", "DAA", "JP (HL)"], ["ADC A,$41", "DAA", "JP (HL)"], ["test/copy.test.mjs"]) },
   { name: "SUMDE: the carry dropped", ...ks34(VOLF, ["JR NC,SUMDE1", "INC H"], ["JR NC,SUMDE1", "NOP"], MNT) },
   { name: "DPHADR from ALVINIT: the DPB word one off", ...ks34(B, ["CALL DPHADR", "LD DE,10"], ["CALL DPHADR", "LD DE,12"], ["test/mount.test.mjs", "test/system.test.mjs"]) },
   { name: "DPHADR from MNDPH: the next drive's DPH", ...ks34(VOLF, ["MNDPH: CALL DPHADR"], ["MNDPH: INC A", "CALL DPHADR"], ["test/mount.test.mjs", "test/system.test.mjs"]) },

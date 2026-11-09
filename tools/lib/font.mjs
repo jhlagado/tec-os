@@ -1,5 +1,5 @@
 // The console font, format/font5x7.txt: one parser for the ROM's copy, which
-// the display drivers draw from, the diagnostics ROM's and the tests.
+// the display drivers draw from, and the tests.
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";

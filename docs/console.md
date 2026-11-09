@@ -146,7 +146,7 @@ their screen without being rebuilt for each display.
 The font is `format/font5x7.txt`, TEC Compact in the existing five-cell, eight-row encoding. The
 ROM holds one copy, built from that file, and the ROM's PICO9918 console and the
 GLCD's driver draw from it; the driver asks for it at `INIT` with `TNFONT`,
-service 15. The diagnostics ROM builds its own from the same file.
+service 15.
 
 ## Matrix keyboard
 
