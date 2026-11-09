@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Historical: targets the retired diagnostics ROM; runs on pre-diag2 trees only.
 // KS33's model: the file type .SVC, measured on the prototype against the
 // brief's baseline. Every figure "Gates to register" needs: the ROM census
 // and its net cost; the memory figures; the four choices, each option built
