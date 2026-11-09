@@ -326,7 +326,8 @@ GFXRG1:
 ; No arguments. Always clear PITIE.
 ; Without CDTMS, touch no VDP ports;
 ; otherwise write IE-off R1 from the
-; current mode or the bare-VDP default.
+; current mode, or blanked 80h for a
+; bare VDP with no PICO mode table.
 ; No ownership change or restoration of
 ; arbitrary transient mode bits. Keep
 ; BC/DE; change AF/HL, no flags result.
@@ -338,20 +339,21 @@ PIICLR:
   and CDTMS
   ret z          ; no detected VDP
 
-; A bare VDP uses REGS32's R1. Nonzero
-; PIREGP high byte selects the current
-; ROM mode table. The high-byte test
-; does not validate arbitrary pointers.
+; A bare VDP gets 80h: 16K, display
+; and IE off. Nonzero PIREGP high byte
+; selects the current ROM mode table's
+; R1. The high-byte test does not
+; validate arbitrary pointers.
 
-  ld hl,REGS32+1
+  ld l,$80       ; bare: blanked R1
   ld a,(PIREGP+1)
   or a
   jr z,PIICR1    ; zero: bare fallback
   ld hl,(PIREGP)
   inc hl
+  ld l,(hl)      ; mode table's R1
 
 PIICR1:
-  ld l,(hl)
   ld h,$81       ; R1 write selector
   jp VPAIR
 

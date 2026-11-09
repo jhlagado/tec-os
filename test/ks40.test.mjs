@@ -163,6 +163,9 @@ test('KS40 bare and absent VDP paths clear safely without absent-device port acc
  const bare=make('bit',{matrix:false});bare.write(bare.sym('PITIE'),32);
  bare.cpu.hardware.ioWrite(191,0xe0);bare.cpu.hardware.ioWrite(191,0x81);warm(bare);
  assert.equal(ie(bare),0);assert.equal(shadow(bare),0);assert.equal(word(bare,bare.sym('PIREGP')),0);
+ // XR-04: a bare VDP is left blanked (80h), not unblanked by the 32-column C0h.
+ assert.equal(state(bare).registers[1],0x80,'bare warm boot writes blanked R1');
+ assert.deepEqual(bare.vdpPorts.filter(p=>p.direction==='write').slice(-2).map(p=>p.value),[0x80,0x81]);
  const missing=make('bit',{tms:false,matrix:false});missing.write(missing.sym('PITIE'),32);warm(missing);
  assert.equal(shadow(missing),0);assert.deepEqual(missing.vdpPorts,[]);
  const bad=make('bit',{tms:false,matrix:false,mutate:(rom,at)=>{const p=at('PIICLR')+9;assert.equal(rom[p],0xc8);rom[p]=0}});
