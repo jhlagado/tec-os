@@ -4,12 +4,30 @@ A short checklist for running the diagnostics on a TEC-1G with MON3 in the
 ROM socket. The result is a serial log to paste back.
 [diagnostics.md](diagnostics.md) says what each check does.
 
+## Before the run: the card
+
+SD8 writes the card. It writes only blocks the card does not use and puts
+each one back, but a fake card, a fault or a power cut can still leave a
+block changed. So:
+
+1. **Use a card you can lose, or image it first.** On the computer, save the
+   whole card to a file: for example
+   `sudo dd if=/dev/sdX of=card-backup.img bs=1M` on Linux or macOS (with the
+   card's own device for `/dev/sdX`), or Read in Win32 Disk Imager on
+   Windows.
+2. **Write the TEC-OS starter image to it**, `dist/starter.img` from
+   `npm run media`, with `tecvol install` or the same tools
+   (`sudo dd if=dist/starter.img of=/dev/sdX bs=1M`, or Write in Win32 Disk
+   Imager).
+3. **After the run**, if the log shows `SD8 FAIL alias`, `SD8 FAIL
+   restore-failed`, or the note `restore it from your backup`, re-image the
+   card before using it: write `dist/starter.img`, or your backup, back to it.
+   Do not run TEC-OS on the card first.
+
 ## What you need
 
 - The TEC-1G with MON3, the GPIO board and its microSD module, and the card
-  to test: a TEC-OS card, such as the starter card. Back up the card first.
-  SD8 writes only blocks the card does not use and puts each one back, but a
-  power cut during it would leave one of them changed.
+  prepared as above.
 - The USB-C FTDI adapter on the TEC-1G's FTDI header, and a terminal program
   on the computer that can send a text file and log to a file.
 - `build/diag/DIAG.HEX`, from `npm run diag`, or from whoever sent it.
@@ -41,13 +59,14 @@ swapped then.
 3. Press `GO`. The header and a note of MON3's latch state appear on the
    terminal.
 4. Fit the card to test if it is not in, and press `GO` (`AD` leaves).
-5. Watch the DISC ACTIVITY LED: it should flash during SD1–SD9.
-6. **SD8** asks before it writes: press `GO` to run the write test, `AD` to
-   skip it.
-7. **SD9** asks you to pull the card out: do so, then press `GO`. When asked,
+5. **Keep off the keypad for a moment.** The latch check, SHAD, runs at once
+   after that `GO`, while the LCD's second row reads `Latch bit 0`. It is done
+   when the row changes to `SD1 MISO idle`, under a second later.
+6. Watch the DISC ACTIVITY LED: it should flash during SD1–SD9.
+7. **SD8** asks before it writes. To write, press `8`, then `GO`. Any other
+   key skips it. While it runs, hold `AD` to stop it at the next block.
+8. **SD9** asks you to pull the card out: do so, then press `GO`. When asked,
    put it back and press `GO`. `AD` at the first question skips it.
-8. Keep off the keypad during the SHAD check (the LCD's second row reads
-   `Latch bit 0`).
 9. **KEYS**: press a few keypad keys, and a few matrix keys if a keyboard is
    fitted. Each prints a `# KEY` line. Press `AD` to end.
 10. At `SUMMARY`, press `GO` to return to MON3, and stop the log.

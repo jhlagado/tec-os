@@ -8,7 +8,7 @@ line for each check on the serial port, so a board run gives a log that can be
 pasted back.
 
 TEC-OS's SD results so far all come from the Debug80 emulator. Its SD model
-answers at once, always reports a version 2 card and never stalls. A real card
+answers at once, reports a version 2 card by default and never stalls. A real card
 answers slowly and differently from card to card, so the SD checks measure how
 much of each of TEC-OS's waits a real card uses.
 
@@ -47,15 +47,25 @@ fields from `format/format.json`. It assembles with TAS.
 | Range | Use |
 | --- | --- |
 | `0800h–0FFFh` | MON3's stack and RAM, not touched but for the user vectors in the INT check |
-| `1000h–2715h` | Variables and buffers: three block buffers and a copy of blocks 0–7 |
-| `4000h–` about `6800h` | Code and tables, about 10 KiB |
+| `1000h–1914h` | Variables and buffers: three block buffers and block 0 as SD7 validated it |
+| `1915h–1A14h` | The program's own stack, 256 bytes; `START` loads SP with `1A15h` |
+| `4000h–6B62h` | Code and tables, 11,107 bytes |
 
-The build checks that code and tables end below `8000h`, with a spare byte
-for the PROTECT check, and that the variables end below `4000h`. Nothing the
-program writes is in `4000h–7FFFh`, which MON3's PROTECT switch can make
-read-only. The program uses MON3's stack as it finds it. The RAM check
-overwrites free RAM: `1000h–3FFFh` after the variables, `4000h–7FFFh` after
-the program, and the `8000h–BFFFh` window in both EXPAND settings.
+`START` keeps the SP MON3 entered with and prints it in the header line
+(`sp=`), then uses its own stack, so the RAM check cannot overwrite a stack
+MON3 may have put in free RAM. The build checks that code and tables end
+below `8000h`, with a spare byte for the PROTECT check, and that the
+variables and stack end below `4000h`.
+
+The program's code and tables are never written. Two checks write
+`4000h–7FFFh` on purpose, with PROTECT turned off through MON3 first: the RAM
+check, from the first byte after the program (`6B63h`) to `7FFFh`, and PROT,
+which writes that first byte and puts it back. The RAM check overwrites three
+areas of free RAM, and nothing else:
+
+- `1A15h–3FFFh`, from the end of the stack;
+- `6B63h–7FFFh`, from the end of the program;
+- `8000h–BFFFh`, in both EXPAND settings.
 
 ## Loading and running
 
@@ -78,9 +88,12 @@ Either way, start it from MON3's data entry mode with the address at `4000h`
 and `GO`. The program waits for `GO` before it sends anything (the LCD's last
 row reads `Log on? GO=send`), so the terminal's log can be started first. It
 then prints its header and asks for the card to test: `GO` starts, `AD`
-returns to MON3.
+returns to MON3. SHAD runs at once after that `GO`, before any SD access; keep
+off the keypad until the LCD's second row changes from `Latch bit 0` to
+`SD1 MISO idle`, under a second later.
 
-The keys are MON3's: `GO` goes on and `AD` skips or leaves. On the matrix
+The keys are MON3's: `GO` goes on and `AD` skips or leaves. The one prompt
+that writes the card, SD8's, needs `8` then `GO`. On the matrix
 keyboard these are Enter and Esc. The LCD shows the check on row 2, its
 result on row 3 and the totals of PASS, WARN, FAIL and SKIP on row 4. One
 digit shows the check's number in hex: 1–9 for SD1–SD9, A RAM, b PROT, C
@@ -102,7 +115,7 @@ fields are a bare word, such as `alias`. A count against a bound is
 each block. The first line and the last are:
 
 ```text
-TEC1G-DIAG 1.0 image=0123456789ABCDEF bytes=10247
+TEC1G-DIAG 1.0 image=0123456789ABCDEF bytes=11107 sp=087E
 SUMMARY pass=17 warn=1 fail=0 skip=1
 ```
 
@@ -113,6 +126,7 @@ SUMMARY pass=17 warn=1 fail=0 skip=1
 | `FAIL` | It did not; the line says what was read |
 | `SKIP` | Not run: skipped by a key, nothing fitted, or an earlier check failed; `reason=` says which |
 
+The header's `sp=` is the stack pointer MON3 started the program with.
 Error codes are TEC-OS's own: `SDE*` from `src/sd.asm` (1 no card answered
 CMD0, 2 ACMD41 never ready, 3 CMD58, 4 CMD16, 5 an R1 that was not 00h, 6 no
 data token, 7 write refused, 8 still busy, 9 SDSC range, 10 a data error
@@ -164,8 +178,10 @@ serial number (`psn`) from the CID. `class` is the smallest card size as sold
 (128 MB to 1 TB, in decimal bytes) that the capacity fits. A card with less
 than 90% of its class is a `WARN`: a card sold as 4 GB should show about
 3,700–3,815 MiB and `class=4GB`. A size well under the marked one, or a class
-above it, points to a fake or relabelled card. The CSD can lie too, which SD8's
-alias check catches.
+above it, points to a fake or relabelled card; the CSD can lie too, which
+SD8's probe looks for. The addressing the OCR gave (CCS, SDHC or SDSC) must
+agree with the CSD's version, v2 or v1. A mismatch is a `WARN` with
+`ccs=mismatch`, and SD8 then skips.
 
 **SD5, reads.** Block 0 is read 16 times and compared with the first copy.
 Then blocks 1–7, the container's last block, the middle of the card and its
@@ -196,40 +212,63 @@ drives, the header's length, `lastvol`, the highest block a volume uses, and
 
 **SD8, the write test.** TEC-OS writes the card, so this check writes it
 too, under one rule: **it writes only blocks SD7 proved free**, from
-`free_from` to the block before the card's last block. It never writes blocks
-0–7 or any volume's blocks. If SD7 did not pass or SD4 gave no size, it skips
-and writes nothing; it also skips when there is no free block. It asks first:
-`GO` writes, `AD` skips.
+`free_from` to the block before the card's last block. It never writes
+blocks 0–7 or any volume's blocks, on any path: every check of blocks 0–7 only
+reads them.
 
-The blocks are the first free block, the middle of the free area, the last
-free block, every power of two in the free area, and a run of 32 from the
-first. For each block the program saves it, writes a pattern that depends on
-the block number, reads it back and compares. Then, whatever happened, it
-writes the saved data back with TEC-OS's `SDWRITE`, reads it and compares,
-up to three times. The pattern writes go through the counted copy of
-`SDWRITE`, which gives `busymax` against TEC-OS's 65,536 busy polls and
-`wrsmax` against its 16 data-response polls; more than a quarter of either is
-a `WARN`. Each block gets a `# SD8 block` line with the outcome of both
-stages, the tries and the busy polls.
+It writes nothing, and skips with the reason, unless SD2 passed
+(`reason=sd2`), SD3 passed or warned (`sd3`), SD5 passed (`sd5`), SD7 passed
+(`sd7`), and SD4 gave a size with addressing that agrees with the CSD
+(`sd4`; a size-class `WARN` alone does not stop it). It also skips when there
+is no free block (`nofree`). Then, before it asks:
 
-Blocks 0–7 are saved at the start. After the pattern write to each block
-other than those in the run of 32, the program reads blocks 0–7 again. A card
-that ignores its high address bits, as fake cards do, wraps a high block onto
-a low one, and one of the power-of-two blocks then lands on block 0. Any
-change reports `SD8 FAIL alias`, with the block written (`at`) and the low
-blocks changed (`low`). The block is still put back, the program then writes
-back any of blocks 0–7 that still differ from their saved copies, and says
-which, if any, stayed wrong (`unrestored`). SD8 stops writing after an alias
-or a block it could not put back.
+1. Block 0 is read twice and must match the header SD7 validated, both
+   times. Otherwise SD8 fails with `blk0=unstable`, and nothing is written.
+2. A read-only probe reads each power-of-two block from `free_from` to the
+   card's end, ascending, and compares it with block 0. A card that ignores
+   its high address bits, as fake cards do, reads one of them as block 0.
+   Then SD8 fails with `alias at=<block> probe=read-only`, nothing is
+   written, and a note says the card holds less than it claims. A probe read
+   that fails is reported as `probe-read`, also with nothing written.
 
-The rule makes the test safe on a card with data, but use a card whose
-contents are backed up all the same: a power cut during the test leaves one
-free block with the pattern.
+Only then does it ask: `8` then `GO` writes, and `AD` or any other key skips.
+The blocks, in order, are the first free block, every power of two in the
+free range ascending, the middle of the free range, a run of 32 from the
+first free block, and the last free block. Pressing `AD` while SD8 runs
+stops it at the next block, after the block in hand is put back
+(`reason=user-abort`); hold the key until it stops.
+
+For each block the program reads it twice; the two reads must match
+(`unstable` otherwise) and must not read as block 0 (`block0`, an alias).
+Either stops SD8 before that block is written. It then writes a pattern that
+depends on the block number, reads it back and compares. For every block
+but those of the run of 32, it then reads blocks 0–7: a low block that reads
+as the pattern just written, on two reads, has been reached by the write.
+A low block that does not read is reported as `lowread`, not as an alias.
+Whatever happened, it then writes the saved data back with TEC-OS's
+`SDWRITE`, reads it and compares, up to three times.
+
+The pattern writes go through the counted copy of `SDWRITE`, which gives
+`busymax` against TEC-OS's 65,536 busy polls and `wrsmax` against its 16
+data-response polls; more than a quarter of either is a `WARN`. Each block
+gets a `# SD8 block` line with the outcome of both stages, the tries and the
+busy polls.
+
+SD8 stops at the first alias, failed restore, unstable read or unread low
+block, and its line names it: `alias at=<block> low=<blocks>`,
+`restore-failed at=<block>` and so on, with `blocks=` and `fail=`. After an
+alias or a failed restore a note says to restore the card from its backup
+before using it: the free block, or the low block the alias reached, may
+hold the pattern. A reset or power cut during SD8 can leave the block in
+hand with the pattern; that block is free unless the card aliases in a way
+the checks did not catch, so keep the backup until the run is over.
 
 **SD9, card removal.** Pull the card when asked and press `GO`. With no
 card-detect line, the program sees the card's absence as TEC-OS would: a read
-of block 0 fails with `SDECMD` (5), since no R1 comes, and `SDINIT` fails with
-`SDENOCD` (1), since CMD0 goes unanswered. Put the card back and press `GO`:
+of block 0 fails, normally with `SDECMD` (5) since no R1 comes, and `SDINIT`
+fails, normally with `SDENOCD` (1) since CMD0 goes unanswered. On a module
+whose MISO floats low the codes can differ, for example `SDEDTOK` (10); any
+failure counts. Put the card back and press `GO`:
 `SDINIT` and a block 0 read must work, and block 0 must match its copy from
 before. A read that works with the card out, or a changed block 0, is a
 `WARN`. `AD` at the first question skips the check.
@@ -240,9 +279,9 @@ These are cut down from the old diagnostics ROM's tests.
 
 **RAM.** Two passes over each area, each byte written `L xor H` and then its
 complement, all read back after all are written, so a missing or shorted
-address line shows. The areas are `1000h–3FFFh` after the variables,
-`4000h–7FFFh` after the program, and the `8000h–BFFFh` window with EXPAND
-(latch bit 2) off and on. Then a tag written in each EXPAND setting must
+address line shows. The areas are `1A15h–3FFFh` after the variables and the
+stack, `6B63h–7FFFh` after the program, and the `8000h–BFFFh` window with
+EXPAND (latch bit 2) off and on. Then a tag written in each EXPAND setting must
 survive the other: TEC-OS keeps its block cache in EXPAND 1, so the two
 settings must select different RAM and both must hold data. PROTECT is off
 through MON3 meanwhile; MON3's EXPAND and PROTECT settings are put back. A
@@ -252,16 +291,25 @@ failure gives the area, the address and the bytes written and read.
 write to the first byte after the program must leave it unchanged. Then it is
 cleared and the write must land. The byte and MON3's setting are put back.
 
-**SHAD.** TEC-OS calls latch bit 0 `/SHADOW`: 1 removes the boot overlay, so
-`0000h–07FFh` is RAM, and 0 shows the ROM's first 2 KiB there. MON3 calls
-`01h` "shadow on". With interrupts off, the program writes the latch with
-bit 0 clear and set, counting the bytes of `0000h–07FFh` that differ from
-`C000h–C7FFh` each time, then does the same after MON3's `setShadow(01h)`.
-The line shows what each setting gave, `rom` (no difference) or `ram`, with
-the count: `bit0=0:rom(0) bit0=1:ram(1932) mon3on:rom(0)`. `PASS` means bit 0
-behaves as TEC-OS assumes. The program's own code at `4000h` and the stack at
-`0800h` are outside the overlay, but the vectors at `0038h` and `0066h` are
-the ROM's while it shows, so keep off the keypad during this check.
+**SHAD.** It runs first, before the SD checks. TEC-OS calls latch bit 0
+`/SHADOW`: 1 removes the boot overlay, so `0000h–07FFh` is RAM, and 0 shows
+the ROM's first 2 KiB there. MON3 calls `01h` "shadow on". With interrupts
+off, the program writes the latch directly with bit 0 clear and set,
+counting the bytes of `0000h–07FFh` that differ from `C000h–C7FFh` each
+time. It then calls MON3's `setShadow(01h)` with the latch as found, so that
+call's `RST 10h` runs through RAM, and counts again. It writes the latch back
+directly before calling MON3 again, with `setShadow` and MON3's own setting,
+so no `RST 10h` runs while the ROM may show at `0000h`, and MON3's copy of the
+latch agrees with the latch afterwards.
+
+The line names the convention found, then what each setting gave, `rom` (no
+difference) or `ram`, with the count:
+`convention=tecos bit0=0:rom(0) bit0=1:ram(1932) mon3on:rom(0)`. `tecos` is
+`PASS`. `inverted` (bit 0 clear shows RAM, set the ROM) or `none` (no
+difference between them) is a `WARN`: TEC-OS's own boot would not work as
+designed, but the other checks go on, using the latch value measured at the
+start. Keep off the keypad while it runs: the vectors at `0038h` and `0066h`
+are the ROM's while it shows.
 
 **CLK.** The CPU clock, from one second of the DS1302: the number of seconds
 reads in the second times their known cost, 1,274 T-states. TEC-OS's 4800-baud
@@ -302,11 +350,19 @@ the reset overlay entry, the ROM's cold boot, the mount and the console with
 the TEC-OS ROM fitted. That stays part of the owner's smoke test with the
 TEC-OS ROM in the socket.
 
-Other limits: the counted SD routines are copies of the driver's sequences,
-not the driver itself, though they call its primitives; the busy and
-data-response margins come from SD8's pattern writes only; the PICO9918's
-display output, the 8 × 8 LED matrix, the speaker and the status LED bar are
-not checked.
+Other limits:
+
+- The counted SD routines are copies of the driver's sequences, not the
+  driver itself, though they call its primitives. The busy and data-response
+  margins come from SD8's pattern writes only.
+- SD8's alias checks look for a card that wraps onto block 0 at a power of
+  two (the probe), a block that reads as block 0, and a write that reaches
+  blocks 0–7 (for every block but the run of 32). An alias onto a block of
+  a volume, other than through block 0, is not seen.
+- `SDREAD` does not check the CRC bytes, so a corrupted read can look good.
+  SD5 and SD8's double reads make one less likely to pass unseen.
+- The PICO9918's display output, the 8 × 8 LED matrix, the speaker and the
+  status LED bar are not checked.
 
 ## Hardware facts kept from the old ROM
 
@@ -333,15 +389,30 @@ stub monitor, `test/programs/mon3stub.asm`, at `C000h`. The stub implements
 only the calls the program uses: the LCD calls, `scanKeys` and its wait,
 `scanSegments`, `timeDelay`, `beep`, the latch get and set calls on a latch
 copy written to port `FFh`, and the IM 1 and NMI dispatch through `0892h` and
-`0894h`. Keys come from a script. The model's CSD is fixed at 16 MiB, so the
+`0894h`. Its `setShadow(01h)` clears bit 0, which the MON3 manual does not
+state. Keys come from a script. The model's CSD is fixed at 16 MiB, so the
 test gives each card a CSD that matches its image.
 
-It checks: a starter-layout card passes SD1–SD9 and the other checks, with
-INT skipped because the model delivers frame interrupts as NMIs; the card is
-byte-identical afterwards and every block written was past the container and
-before the last block; a 4 GB card, as a sparse image, reads and writes
-blocks above `400000h`; a card that wraps at 1 GiB fails SD8 as an alias and
-its blocks 0–7 are put back; a card without a container fails SD7 and SD8
-writes nothing; with no card SD2 fails with code 1 and the rest of the SD
-checks skip; `AD` at SD8's question writes nothing; and without an RTC SD6
-times with beeps. The test sets `QUICK` in the loaded image to shorten SD6.
+Every case that reaches SD8 asserts that no write addressed blocks 0–7 or the
+container, and that blocks 0–7 and every volume block are byte-identical
+afterwards. The cases:
+
+- a starter-layout card passes every check, with INT skipped because the
+  model delivers frame interrupts as NMIs; SD8 writes in the stated order,
+  and the card is byte-identical afterwards;
+- an SDSC card, byte-addressed, with a v1 CSD;
+- a 4 GB card, as a sparse image, reads and writes blocks above `400000h`;
+- a fake card that claims 2^23 blocks and wraps at 2^22, where the old
+  order's middle block would have landed in the WORK volume, and a card that
+  wraps at 1 GiB: the probe catches both with nothing written;
+- a card that sends the first free block to block 3: the 0–7 reads see the
+  pattern, SD8 fails as an alias and the block's restore puts block 3 back;
+- SD7 rejecting a bad version, a bad volume count, overlapping volumes, a
+  volume past the card's end and a card without a container, each with SD8
+  skipped and nothing written;
+- a refused pattern write, a restore that fails three times, and a corrupted
+  read of block 0 before SD8 writes, each reported as it happened;
+- `AD` between blocks, any answer but `8` then `GO`, no card, and a board
+  without an RTC.
+
+The test sets `QUICK` in the loaded image to shorten SD6.
