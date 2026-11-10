@@ -9,7 +9,7 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
 - the Compact font with 40 columns by default;
 - the owner's 40-column `SAMPLE.ASM`;
 - BASIC and TED's language support (KD-262): BAZA's `BAZA.COM` and
-  `BAZA.RTL` from Baza `5239149`, the sample `TIMES.BAS`, and TED from
+  `BAZA.RTL` from Baza `747b9a7`, the sample `TIMES.BAS`, and TED from
   Thorium `b69d544`, whose language table builds a `.BAS` with BAZA. The
   starter card holds nine files; the Viewer's page card adds `DEMO.ASM`,
   which `TAS DEMO` builds into the demo, and Baza's `BOUNCE.BAS` sprite
