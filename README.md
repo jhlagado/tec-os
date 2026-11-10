@@ -147,8 +147,9 @@ succeeded, as in `TED X.ASM!TAS X!:X`.
 assembles it and `SAMPLE` runs it, printing the screen's size, writing the LCD,
 lighting the digits and beeping through the ROM's services by `abi.inc`'s names.
 `TIMES.BAS` beside it is a first BASIC program: it asks a name and a number
-and prints that number's times table. `BAZA TIMES` will compile it once BAZA
-is on the card (Origo KD-262); until then it is there to read.
+and prints that number's times table. `BAZA TIMES` compiles it with the card's
+`BAZA.COM` and `BAZA.RTL` and `TIMES` runs it; in `TED TIMES.BAS`, ^T B and
+^T R build and run it with BAZA as they do an `.ASM` with TAS.
 `DEMO.COM`, on the viewer's demo card, shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.

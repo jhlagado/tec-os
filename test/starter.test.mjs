@@ -1,7 +1,7 @@
-// The starter card that `npm run media` builds: exactly seven files on A:, each
+// The starter card that `npm run media` builds: exactly nine files on A:, each
 // the bytes its source or pin gives, the page's width drivers pinned in its
 // recipe, and it boots to a MOUNT that lists its volumes. Emulator evidence.
-// TED.COM and TAS.COM are pinned inputs (test/inputs.json).
+// TED.COM, TAS.COM, BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json).
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -15,6 +15,8 @@ import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
+const BAZA = pinned("BAZA.COM");
+const RTL = pinned("BAZA.RTL");
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const text = (name) => Buffer.from(readFileSync(resolve(ROOT, "programs", name), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 
@@ -31,9 +33,11 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly seven files, each by its hash, the PICO9918's console being the ROM's (KS39)", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
+test("the starter card holds exactly nine files, each by its hash, the PICO9918's console being the ROM's (KS39)", { skip: TED.skip || TAS.skip || BAZA.skip || RTL.skip, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
+  check(BAZA);
+  check(RTL);
   const { card, recipe } = starter();
   const want = {
     "STARTUP.CMD": Buffer.from("GLCD.SVC\r\n\x1a", "latin1"),
@@ -41,6 +45,8 @@ test("the starter card holds exactly seven files, each by its hash, the PICO9918
     "MOUNT.COM": (await program("mount")).bytes,
     "TAS.COM": readFileSync(TAS.path),
     "TED.COM": readFileSync(TED.path),
+    "BAZA.COM": readFileSync(BAZA.path),
+    "BAZA.RTL": readFileSync(RTL.path),
     "SAMPLE.ASM": text("SAMPLE.ASM"),
     "TIMES.BAS": text("TIMES.BAS"),
   };
@@ -56,13 +62,13 @@ test("the starter card holds exactly seven files, each by its hash, the PICO9918
   for (const name of ["PICO.SVC", "PICO40.SVC", "PICO32.SVC"]) assert.equal(existsSync(resolve(ROOT, "dist/files", name)), false, `no ${name} in dist/files`);
 });
 
-test("the starter card boots, and MOUNT lists its volumes", { skip: TED.skip || TAS.skip, timeout: 300_000 }, () => {
+test("the starter card boots, and MOUNT lists its volumes", { skip: TED.skip || TAS.skip || BAZA.skip || RTL.skip, timeout: 300_000 }, () => {
   const m = boot(Uint8Array.from(starter().card));
   assert.match(m.command("MOUNT"), /^00 SYSTEM +G1M A:\r\n01 WORK +G8M B:\r\n/m);
   assert.deepEqual(m.violations, []);
 });
 
-test("the web page's card is the starter with DEMO.COM, which the starter lacks (KD-170)", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
+test("the web page's card is the starter with DEMO.COM, which the starter lacks (KD-170)", { skip: TED.skip || TAS.skip || BAZA.skip || RTL.skip, timeout: 300_000 }, async () => {
   const { card, recipe } = starter();
   const page = JSON.parse(readFileSync(resolve(ROOT, "dist/page.recipe.json"), "utf8"));
   const demo = (await program("demo")).bytes;

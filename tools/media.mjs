@@ -185,6 +185,8 @@ async function main() {
   });
   const tas = pinnedBytes("TAS.COM");
   const ted = pinnedBytes("TED.COM");
+  const baza = pinnedBytes("BAZA.COM");
+  const rtl = pinnedBytes("BAZA.RTL");
   const run = backend === "tas" ? await tasAssembler() : null;
   async function program(name, source, base = 0x100) {
     if (run) return assembleDistributionCom(ROOT, run, name);
@@ -198,22 +200,24 @@ async function main() {
   }
   files.push(...await displayFiles(ROOT, run ? () => assembleGlcd(ROOT, run) : undefined));
   if (!run) traceRom({ backend, phase: "final", target: "GLCD.SVC", root: ROOT });
-  files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
+  files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM or NAME.BAS, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   // SAMPLE.ASM, a first program for TAS (KD-177), and TIMES.BAS, a first
   // program for BAZA (KD-262), as CP/M text files.
   const text = (name) => Buffer.from(readFileSync(resolve(ROOT, "programs", name), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
   files.push({ name: "SAMPLE.ASM", description: "a first program to build: TAS SAMPLE, then SAMPLE", bytes: text("SAMPLE.ASM") });
   files.push({ name: "TIMES.BAS", description: "a first BASIC program: BAZA TIMES, then TIMES", bytes: text("TIMES.BAS") });
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
+  files.push({ name: "BAZA.COM", description: "BAZA, the BASIC compiler: BAZA NAME, NAME.BAS to NAME.COM", bytes: baza });
+  files.push({ name: "BAZA.RTL", description: "BAZA's runtime library, which it copies into each program", bytes: rtl });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM", "test/programs/demo.asm");
 
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "5",
+    revision: "6",
     name: "TEC-OS starter",
-    instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or TED SAMPLE.ASM to read it. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -230,7 +234,7 @@ async function main() {
     ...recipe,
     id: "page",
     name: "TEC-OS starter, with the demo",
-    instruction: "At A>, type DEMO to see the hardware, or TAS SAMPLE and SAMPLE to build and run a first program, or TED SAMPLE.ASM to read it. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DEMO to see the hardware, or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     components: [
       ...recipe.components,
       { id: "demo-com", name: "DEMO.COM", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918", files: [{ name: "DEMO.COM", url: "files/DEMO.COM", drive: "A", bytes: demo.length, sha256: sha(demo) }] },
