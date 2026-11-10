@@ -17,12 +17,20 @@ function engine(r,mutation){
  const word=(a,v)=>{mem[a]=v&255;mem[a+1]=v>>>8&255;};
  const wordAt=a=>mem[a]|mem[a+1]<<8;
  word(s('PARAM'),FCB);word(s('DPBPTR'),DPB);word(s('ALVPTR'),ALV);word(s('DIRPTR'),DIR);word(s('MATCHPTR'),DIR);
- if(mutation)mutation({mem,s});
- function invoke(name,regs={}){
+ // A mutation either patches the image once, or patches it only while the
+ // routine it names runs, so a shared instruction can be charged to one caller.
+ if(mutation&&!mutation.during)mutation.patch({mem,s});
+ // A BDOS function runs on BENTRY's frame: OLDSP holds the program's return
+ // and the first word on the BDOS stack is RETA, which a function may reach
+ // by RET. Other routines return straight to STOP.
+ function invoke(name,regs={},bdos=false){
   word(TOP-2,STOP);word(s('OLDSP'),TOP-2);
-  Object.assign(rt.cpu,{a:0x3c,b:0x5a,c:0x69,d:0x45,e:0x67,h:0x12,l:0x34,sp:TOP-2,pc:s(name),...regs});
-  let cycles=0,low=TOP-2,n=0;
+  const sp=bdos?TOP-4:TOP-2;if(bdos)word(TOP-4,s('RETA'));
+  const patched=mutation?.during===name?mem.slice(0xc000):null;if(patched)mutation.patch({mem,s});
+  Object.assign(rt.cpu,{a:0x3c,b:0x5a,c:0x69,d:0x45,e:0x67,h:0x12,l:0x34,sp,pc:s(name),...regs});
+  let cycles=0,low=sp,n=0;
   while(rt.cpu.pc!==STOP){if(++n>100000)throw new Error(`infrastructure: ${name} did not return`);cycles+=rt.step().cycles;low=Math.min(low,rt.cpu.sp);}
+  if(patched)mem.set(patched,0xc000);
   const c=rt.cpu;assert.equal(c.sp,TOP,`semantic: ${name} returned SP`);
   return {a:c.a,hl:c.h<<8|c.l,de:c.d<<8|c.e,bc:c.b<<8|c.c,b:c.b,carry:c.flags.C,z:c.flags.Z,sp:c.sp,pc:c.pc,cycles,peakBytes:TOP-low};
  }
@@ -46,10 +54,11 @@ function proof(r,mutation){
   }
  }
  // Fn36 runs its actual RETZERO/RETA/OLDSP return, not a stop before epilogue.
+ // DISPATCH enters it with DE=PARAM, the FCB.
  for(const ex of [0,1,2,31,32,255])for(const s2 of [0,1,15,16,63,64,128,255])for(const cr of [0,127,128,255]){
   mem.fill(0x96,FCB-1,FCB+37);mem[FCB+12]=ex;mem[FCB+14]=s2;mem[FCB+32]=cr;
   const before=mem.slice(FCB-1,FCB+37),value=(((s2&63)*32+(ex&31))*128+cr);
-  const got=invoke('FNSETRR'),expected=before.slice();for(let i=0;i<3;i++)expected[34+i]=value>>>(8*i)&255;
+  const got=invoke('FNSETRR',{d:FCB>>>8,e:FCB&255},true),expected=before.slice();for(let i=0;i<3;i++)expected[34+i]=value>>>(8*i)&255;
   semantic([...mem.slice(FCB-1,FCB+37)],[...expected],'fn36 full FCB and canaries');semantic([got.a,got.hl,got.b],[0,0,0],'fn36 return');
   add('setrr',[ex,s2,cr],got,{fcb:[...mem.slice(FCB-1,FCB+37)],a:got.a,hl:got.hl,b:got.b,sp:got.sp});
  }
@@ -58,7 +67,7 @@ function proof(r,mutation){
  for(const value of [0,255,256,65535,65536,0x123456,0xffffff]){
   mem.fill(0x69,FCB-1,FCB+37);const expected=mem.slice(FCB-1,FCB+37);
   for(let i=0;i<3;i++){mem[s('FSIZE0')+i]=value>>>(8*i)&255;expected[34+i]=value>>>(8*i)&255;}
-  const got=invoke('SIZEDONE');semantic([...mem.slice(FCB-1,FCB+37)],[...expected],'fn35 publication and canaries');semantic([got.a,got.hl,got.b],[255,255,0],'fn35 return');
+  const got=invoke('SIZEDONE',{},true);semantic([...mem.slice(FCB-1,FCB+37)],[...expected],'fn35 publication and canaries');semantic([got.a,got.hl,got.b],[255,255,0],'fn35 return');
   add('size-publication',value,got,{fcb:[...expected],a:got.a,hl:got.hl,b:got.b,sp:got.sp});
  }
  for(const dsm of [63,1023])for(const deleted of [[],[0],[1,3],[0,1,2,3]]){
@@ -88,13 +97,14 @@ function proof(r,mutation){
  return {rows,stats};
 }
 const artifacts=dirs.map(rom);
-for(const name of ['PUBRR','PARCELL','FREECELL','PARCNT','FREECNT','CLRBLK'])assert.ok(artifacts[1].symbols.has(name),`mandatory candidate symbol ${name}`);
+for(const name of ['PUBRR','PARCELL','FREECELL','ENTCNT','ENTCELL','CLRBLK'])assert.ok(artifacts[1].symbols.has(name),`mandatory candidate symbol ${name}`);
 const pair=artifacts.map(r=>proof(r));semantic(pair[1].rows,pair[0].rows,'paired required observations');
 const controls=[];
-function mutate(label,symbol,offset,expected,replacement){
+function mutate(label,symbol,offset,expected,replacement,during){
  const r=artifacts[1];assert.ok(r.symbols.has(symbol),`mandatory control symbol ${symbol}`);
  let rejected=false;
- try{proof(r,({mem,s})=>{assert.equal(mem[s(symbol)+offset],expected,'infrastructure: mutation opcode');mem[s(symbol)+offset]=replacement;});}
+ const patch=({mem,s})=>{assert.equal(mem[s(symbol)+offset],expected,'infrastructure: mutation opcode');mem[s(symbol)+offset]=replacement;};
+ try{proof(r,{patch,during});}
  catch(error){if(error.code==='ERR_ASSERTION'&&error.message.startsWith('semantic:'))rejected=true;else throw error;}
  assert.ok(rejected,`negative control escaped: ${label}`);controls.push({label,rejected:true});
 }
@@ -102,12 +112,15 @@ function mutate(label,symbol,offset,expected,replacement){
 // earns credit. Missing symbols, bad opcodes and timeouts remain setup failures.
 mutate('publisher omitted third byte','PUBRR',9,3,2);
 mutate('publisher wrong destination','PUBRR',4,33,32);
-mutate('walker wrong byte stride','PARCELL',3,0x23,0);
-mutate('walker wrong high byte','PARCELL',10,0x56,0x14);
-// Both count initializers select A=8 for word maps; reducing that immediate
-// skips their distinct final cell while still returning normally.
-mutate('mark truncated word count','PARCNT',-1,8,7);
-mutate('clear truncated word count','FREECNT',-1,8,7);
+// ENTCELL reads each map cell for both walkers.
+mutate('walker wrong byte stride','ENTCELL',3,0x23,0);
+mutate('walker wrong high byte','ENTCELL',9,0x56,0x14);
+// ENTCNT's count initializer selects A=8 for word maps for both walkers;
+// reducing that immediate skips the distinct final cell while still
+// returning normally. Each walker must catch it on its own, so the second
+// control patches it only while FREEENT runs.
+mutate('mark truncated word count','ENTCN1',-1,8,7);
+mutate('clear truncated word count','ENTCN1',-1,8,7,'FREEENT');
 mutate('clear without complemented mask','CLRBLK',4,0x2f,0);
 assert.equal(controls.length,7,'all required negative controls executed');
 assert.ok(controls.every(c=>c.rejected===true),'all required controls caught semantically');
