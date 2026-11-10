@@ -125,7 +125,7 @@ test("on the page's card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with spr
   let s = vdp();
   assert.deepEqual(text(s.registers), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I with 16 x 16 sprites");
   const font = m.sym("FONT");
-  assert.deepEqual(Array.from(s.vram.slice(0x100, 0x400)), Array.from({ length: 768 }, (_, i) => m.read(font + i)), 'the ROM\'s font at 0100h, found by REG("HL")');
+  assert.deepEqual(Array.from(s.vram.slice(0x100, 0x400)), Array.from({ length: 768 }, (_, i) => m.read(font + i)), 'the ROM\'s font at 0100h, found by reg("HL")');
   const title = " BAZA BASIC ON THE PICO9918 ";
   assert.equal(Buffer.from(s.vram.slice(0x1802, 0x1802 + title.length)).toString("latin1"), title, "the title in the name table");
   const attrs = (v) => Array.from(v.slice(0x1b00, 0x1b18));
