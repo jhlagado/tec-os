@@ -12,6 +12,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { check, pinned } from "./lib/inputs.mjs";
 import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, romMutant, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
@@ -569,4 +570,297 @@ test("KG59 mutant: without SVCENT's carry test, REL.SVC /E jumps outside the ser
   m.runUntil(() => m.pc === cmdrn1, 100_000_000, "the entry's jump");
   const hl = (m.cpu.cpu.h << 8) | m.cpu.cpu.l;
   assert.ok(hl < p << 8 || hl >= (p + 8) << 8, `the entry ${hl.toString(16)} is outside the service's pages`);
+});
+
+// MON3.SVC's session: what it takes in page zero, what each way out gives
+// back, the warm-boot hook an exit can leave, and a second entry.
+
+/**
+ * MON3.SVC built from drivers/mon3.asm with EDITS ([old, new], each found
+ * once) applied to its source: a mutant or a variant, built beside the build.
+ */
+const mon3Variant = memo(async (edits) => {
+  let text = readFileSync(resolve(ROOT, "drivers/mon3.asm"), "utf8");
+  for (const [old, now] of edits) {
+    assert.equal(text.split(old).length, 2, `the edit's text stands once: ${old}`);
+    text = text.replace(old, now);
+  }
+  const dir = resolve(ROOT, "build/mon3-variants", sha(JSON.stringify(edits)).slice(0, 16));
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(resolve(dir, "mon3.asm"), text.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
+  return makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc") });
+});
+
+const SLOTS = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
+const DEFAULT_SLOT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
+const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
+
+/** The page of the installed service named NAME, the newest first. */
+const pageOf = (m, name = "MON3") => pages(m).find((p) => String.fromCharCode(...bytesAt(m, (p << 8) + 17, 8)).trimEnd() === name);
+
+/** SVC's bytes from file offset AT, N of them, as loaded at PAGE: the page added where it relocates. */
+const asLoaded = (svc, page, at, n) => Array.from({ length: n }, (_, i) => (svc.file[at + i] + (svc.fixups.includes(at + i - 25) ? page : 0)) & 0xff);
+
+/** Restart slots and the NMI entry whose JP, or session form, targets [LO, HI). */
+function vectorsInto(m, lo, hi) {
+  const out = [];
+  for (const s of [...SLOTS, 0x38, 0x66]) {
+    const b = bytesAt(m, s, 4);
+    const t = b[0] === 0xc3 ? b[1] | (b[2] << 8) : b[0] === 0xe5 && b[1] === 0x21 ? b[2] | (b[3] << 8) : -1;
+    if (t >= lo && t < hi) out.push(s.toString(16));
+  }
+  return out;
+}
+
+/** Run M to the CCP's prompt, answering a BDOS error's key. */
+function toPrompt(m, from = m.mark) {
+  for (let i = 0; i < 20; i += 1) {
+    const n = m.output.length;
+    const end = m.cycles + 40_000_000;
+    m.runUntil(() => m.cycles >= end || (m.waitingForInput() && PROMPT.test(m.text(from))), 60_000_000, "the CCP's prompt");
+    if (m.waitingForInput() && PROMPT.test(m.text(from))) return m.text(from);
+    if (m.waitingForInput() && m.output.length === n) m.type("\r");
+  }
+  throw new Error(`no prompt: ${m.text(from)}`);
+}
+
+/** The test programs a session runs. ENTRY is MON3.SVC's execution entry, for REC.BIN. */
+const PROGRAMS = (entry = 0) => ({
+  "RST0.BIN": bin(0xc7), // RST 00h
+  "JP0.BIN": bin(0xc3, 0, 0), // JP 0000h
+  "XP.BIN": bin(0x3a, 0x40, 0x00, 0xf6, 0x04, 0xd3, 0xff, 0xc3, 0x00, 0x00), // EXPAND on, JP 0000h
+  "REC.BIN": bin(0xcd, entry & 0xff, entry >> 8, 0xc9), // CALL the entry; RET
+  "X.COM": bin(0xc9),
+});
+/** A program that leaves JP TARGET in SLOT, in the form warm boot keeps: the JP, then five zeros. */
+const setJp = (slot, target) => bin(0x21, slot, 0x00, 0x36, 0xc3, 0x23, 0x36, target & 0xff, 0x23, 0x36, target >> 8, 0x21, slot + 7, 0x00, 0x36, 0x00, 0xc9);
+
+/** A machine with MON3.SVC (FILE, or the build's) installed, the programs on A:. */
+async function installed(file, extra = {}) {
+  const m = boot({ "MON3.SVC": file ?? (await mon3File()), ...PROGRAMS(0xb129), ...extra });
+  m.command("MON3.SVC");
+  return m;
+}
+
+/** MON3.SVC /E refused at its entry: the message, FF00h, and page zero and the service's pages as at the entry. */
+function refusedAtEntry(m, message) {
+  const p = pageOf(m);
+  const entry = (p << 8) + 41;
+  const service = () => bytesAt(m, p << 8, 0x800);
+  m.mark = m.output.length;
+  m.type("MON3.SVC /E\r");
+  m.runUntil(() => m.pc === entry, 100_000_000, "the entry");
+  const [pz, svc] = [bytesAt(m, 0, 0x100), service()];
+  const out = toPrompt(m);
+  assert.ok(out.includes(message), `${message} in ${JSON.stringify(out)}`);
+  assert.equal(code(m), 0xff00, "FF00h");
+  const moved = (now, was, base) => now.flatMap((v, i) => (v === was[i] ? [] : [`${(base + i).toString(16)}: ${was[i].toString(16)} to ${v.toString(16)}`]));
+  assert.deepEqual(moved(bytesAt(m, 0, 0x100), pz, 0), [], "0000h-00FFh as at the entry");
+  assert.deepEqual(moved(service(), svc, p << 8), [], "the service as at the entry");
+}
+
+/** CLAIMnn.SVC: a test service claiming slot nn and writing its JP there. */
+const claimFiles = async (slots) => Object.fromEntries(await Promise.all(slots.map(async (s) => [`CLAIM${hex2(s)}.SVC`, (await demoSvc({ V_VEC: 1, VECAT: s, FLAGS: 1 | (1 << (s >> 3)) })).file])));
+
+test("KG61 held slot refused", async () => {
+  const sets = Object.fromEntries(SLOTS.map((s) => [`SET${hex2(s)}.COM`, setJp(s, 0xc003)]));
+  const m = await installed(undefined, { ...sets, ...(await claimFiles(SLOTS)) });
+  for (const s of SLOTS) {
+    // A JP into ROM that a finished program left, which warm boot keeps.
+    m.command(`SET${hex2(s)}`);
+    assert.deepEqual(bytesAt(m, s, 3), [0xc3, 0x03, 0xc0]);
+    refusedAtEntry(m, `RST ${hex2(s)} held: UNLOAD or reset\r\n`);
+    bytesAt(m, s, 8).forEach((_, i) => m.write(s + i, DEFAULT_SLOT[i]));
+    // A claiming service's JP.
+    assert.equal(typed(m, `CLAIM${hex2(s)}.SVC`).code, 0, `CLAIM${hex2(s)}.SVC claims it`);
+    assert.equal(m.read(s), 0xc3);
+    m.command("X"); // a warm boot puts the slot in the form it keeps
+    refusedAtEntry(m, `RST ${hex2(s)} held: UNLOAD or reset\r\n`);
+    m.command("UNLOAD");
+    assert.deepEqual(bytesAt(m, s, 8), DEFAULT_SLOT);
+  }
+});
+
+test("KG61 0038h held", async () => {
+  const m = await installed(undefined, await claimFiles([0x38]));
+  const claim = (await demoSvc({ V_VEC: 1, VECAT: 0x38, FLAGS: 1 | 0x80 })).file;
+  assert.ok(claim);
+  assert.equal(typed(m, "CLAIM38.SVC").code, 0);
+  m.command("X");
+  const held = bytesAt(m, 0x38, 8);
+  assert.equal(held[0], 0xc3, "0038h holds the claim's JP");
+  const r = typed(m, "MON3.SVC /E");
+  assert.ok(r.mon3, "the session starts");
+  assert.match(r.out, /RST 38 held: no interrupts\r\n(?:(?!MON3>)[^])*MON3>$/, "the message before the first MON3>");
+  assert.deepEqual(bytesAt(m, 0x38, 8), held, "0038h as it was in the session");
+  leave(m, r);
+  assert.deepEqual(bytesAt(m, 0x38, 8), held, "and after EXIT");
+});
+
+/** The session's page zero for MON3.SVC (SVC) at PAGE: { slots, stub, nmi, target }. */
+function sessionForm(svc, page) {
+  const at = (name) => (page << 8) + svc.symbols[name];
+  const form = (h) => [0xe5, 0x21, h & 0xff, h >> 8, 0xc3, 0x41, 0x00, 0x00];
+  const slots = Object.fromEntries([...SLOTS, 0x38].map((s) => [s, form(at(`R${hex2(s)}`))]));
+  return { slots, stub: asLoaded(svc, page, svc.symbols.PZCODE, 15), nmi: asLoaded(svc, page, svc.symbols.NMIC, 6), target: at("HOOK") };
+}
+
+test("KG61 session page zero", async () => {
+  const svc = await mon3Build();
+  const m = await installed();
+  const p = pageOf(m);
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  const want = sessionForm(svc, p);
+  for (const [s, form] of Object.entries(want.slots)) assert.deepEqual(bytesAt(m, Number(s), 8), form, `slot ${Number(s).toString(16)}h: E5 21 lo hi C3 41 00`);
+  assert.deepEqual(bytesAt(m, 0x41, 15), want.stub, "0041h-004Fh: the stub, GO's return and the RETN");
+  assert.deepEqual(bytesAt(m, 0x41, 15).slice(13), [0xed, 0x45], "004Eh: RETN");
+  assert.deepEqual(bytesAt(m, 0x66, 6), want.nmi, "0066h: MON-3's NMI entry");
+  assert.deepEqual(bytesAt(m, 0x66, 6), [0xe5, 0x2a, 0x94, 0x08, 0xe3, 0xc9]);
+  assert.equal(warmTarget(m), want.target, "the warm-boot target is the hook");
+  leave(m, { mon3: true });
+});
+
+/** Leave a session by HOW, from MON3> on M: the text to the CCP's prompt. */
+function exitBy(m, how) {
+  m.mark = m.output.length;
+  if (how === "EXIT") m.type("EXIT\r");
+  else if (how === "^C") m.type("\x03");
+  else if (how === "LOAD error") m.type("LOAD E:NONE.BIN\r");
+  else {
+    assert.match(line(m, `LOAD ${how}`).out, /MON3>$/);
+    m.mark = m.output.length;
+    m.type("GO\r");
+  }
+  return toPrompt(m);
+}
+
+const EXITS = ["EXIT", "^C", "RST0.BIN", "JP0.BIN", "LOAD error", "XP.BIN"];
+
+async function sixExits(svc, exits = EXITS) {
+  svc ??= await mon3Build();
+  const m = await installed(svc.file);
+  const p = pageOf(m);
+  for (const how of exits) {
+    const before = bytesAt(m, 0, 0x100);
+    assert.ok(line(m, "MON3.SVC /E").mon3, how);
+    const out = exitBy(m, how);
+    if (how === "LOAD error") assert.match(out, /E:/, "the BDOS's error on E:");
+    const expand = how === "XP.BIN";
+    assert.deepEqual(vectorsInto(m, p << 8, (p + 8) << 8), [], `${how}: no vector into MON3.SVC`);
+    assert.deepEqual(bytesAt(m, 0x08, 0x38), before.slice(0x08, 0x40), `${how}: 0008h-003Fh as before /E`);
+    if (!expand) assert.deepEqual(bytesAt(m, 3, 2), before.slice(3, 5), `${how}: 0003h-0004h as before`);
+    if (!expand) assert.equal(m.cpu.cpu.imode, 1, `${how}: IM 1`);
+  }
+}
+test("KG61 six exits", () => sixExits());
+
+async function staleInactive(svc) {
+  svc ??= await mon3Build();
+  const m = await installed(svc.file);
+  // 0066h lies in the default FCB, which the CCP writes for each command:
+  // this tail's type puts "YZ" there, which a hook that acted would put back.
+  assert.ok(line(m, "MON3.SVC /E A.XYZ").mon3);
+  exitBy(m, "XP.BIN");
+  assert.equal(warmTarget(m), (pageOf(m) << 8) + svc.symbols.HOOK, "the EXPAND 1 exit passed the hook");
+  m.command("CON BAT");
+  const io = m.read(3);
+  m.command("X");
+  assert.equal(m.read(3), io, "IOBYTE as CON set it");
+  assert.deepEqual(bytesAt(m, 0x66, 6), [0x20, 0x20, 0, 0, 0, 0], "0066h as the CCP wrote it for X, not put back");
+  assert.equal(warmTarget(m), m.sym("WBOOTR"), "the hook is gone");
+  m.command("CON TTY");
+}
+test("KG61 stale hook inactive", () => staleInactive());
+
+async function staleThenEntry(svc) {
+  svc ??= await mon3Build();
+  const m = await installed(svc.file);
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  exitBy(m, "XP.BIN");
+  assert.ok(line(m, "MON3.SVC /E").mon3, "entry with a stale hook");
+  assert.ok(!line(m, "EXIT", { maxCycles: 100_000_000 }).mon3);
+  assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A>$/, "a .COM's exit reaches the prompt");
+  assert.equal(warmTarget(m), m.sym("WBOOTR"));
+}
+test("KG61 stale hook then entry", () => staleThenEntry());
+
+async function recursion(svc) {
+  svc ??= await mon3Build();
+  const m = await installed(svc.file);
+  const entry = (pageOf(m) << 8) + 41;
+  assert.equal(entry, 0xb129, "REC.BIN calls the entry at B129h");
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.match(line(m, "LOAD REC.BIN").out, /MON3>$/);
+  const pz = bytesAt(m, 0, 0x100);
+  let back = false;
+  m.mark = m.output.length;
+  m.type("GO\r");
+  m.runUntil(() => {
+    if (m.pc === 0x4003) back = true; // the program's RET, after the call
+    return m.waitingForInput() && MON3.test(m.text(m.mark));
+  }, 100_000_000, "MON3> after the program");
+  const out = m.text(m.mark);
+  assert.match(out, /MON3 active\r\n/);
+  assert.ok(back, "the call returned to the program");
+  assert.deepEqual(bytesAt(m, 0, 0x100), pz, "the session's page zero");
+  leave(m, { mon3: true });
+}
+test("KG61 recursion", () => recursion());
+
+const BAZA = pinned("BAZA.COM");
+const RTL = pinned("BAZA.RTL");
+// TIMES.COM as the pinned BAZA compiles programs/TIMES.BAS (test/times.test.mjs).
+const TIMES_COM = "34196b4c364942ef7c28f92b87566ecdb6b55fa0508439894d45136cca8bcde0";
+
+test("KG61 baza and 0038h after", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, async () => {
+  check(BAZA);
+  check(RTL);
+  const image = card({ "MON3.SVC": await mon3File(), "BAZA.COM": readFileSync(BAZA.path), "BAZA.RTL": readFileSync(RTL.path), ...(await claimFiles([0x38])) });
+  volume(image, "A").write("TIMES.BAS", readFileSync(resolve(ROOT, "programs/TIMES.BAS")), { text: true });
+  const m = countOpens(machine(image));
+  const r = typed(m, "MON3.SVC /E");
+  assert.ok(r.mon3);
+  leave(m, r);
+  assert.match(line(m, "BAZA TIMES", { maxCycles: 2_000_000_000 }).out, /COM written\r\n/, "BAZA compiles TIMES after a session");
+  assert.equal(sha(volume(image, "A").read("TIMES.COM")), TIMES_COM, "TIMES.COM's bytes");
+  const ask = (text, want) => {
+    m.mark = m.output.length;
+    m.type(text);
+    return m.expect(want, { maxCycles: 400_000_000 });
+  };
+  ask("TIMES\r", /WHAT IS YOUR NAME\? $/);
+  ask("TEC\r", /PICK A NUMBER, 1 TO 12\? $/);
+  ask("13\r", /PLEASE PICK 1 TO 12\.\r\nPICK A NUMBER, 1 TO 12\? $/);
+  const out = ask("7\r", /\r\nA>$/);
+  assert.match(out, / 7  X 7  = 49 [^]*THEY ADD UP TO 546 [^]*GOODBYE, TEC!/, "TIMES runs");
+  // 0038h is the default after the session, so a claim on it loads.
+  assert.equal(typed(m, "CLAIM38.SVC").code, 0, "a claim on 0038h loads");
+  assert.equal(m.read(0x38), 0xc3);
+  assert.deepEqual(m.violations, []);
+});
+
+// KG61's service mutants: each is MON3.SVC built with one step changed, and
+// each must fail the figure named.
+
+test("KG61 mutant: a session form starting with C3h is kept by the sweep after the EXPAND 1 exit", async () => {
+  const svc = await mon3Variant([
+    ["  ld a,$E5       ; PUSH HL\n  ld (de),a\n  inc de\n  ld a,$21       ; LD HL,nn\n  ld (de),a\n  inc de\n", "  ld a,$C3\n  ld (de),a\n  inc de\n"],
+    ["  ld (de),a      ; the eighth byte\n  inc de\n", "  ld (de),a\n  inc de\n  ld (de),a\n  inc de\n"],
+  ]);
+  await assert.rejects(sixExits(svc, ["XP.BIN"]), /XP\.BIN: no vector into MON3\.SVC/);
+});
+
+test("KG61 mutant: a hook that acts without the session form puts IOBYTE back after CON BAT", async () => {
+  const svc = await mon3Variant([["  ld a,($0010)\n  cp $E5         ; a form?\n  jr nz,HOOK1\n  ld hl,($0012)\n  ld a,l\n  cp LOW(R10)\n  jr nz,HOOK1\n  ld a,h\n  cp HIGH(R10)   ; and ours?\n  jr nz,HOOK1\n", ""]]);
+  await assert.rejects(staleInactive(svc), /IOBYTE as CON set it/);
+});
+
+test("KG61 mutant: an entry that leaves a stale hook warm boots for ever", async () => {
+  const svc = await mon3Variant([["  call UNHOOK    ; a stale hook out\n", ""]]);
+  await assert.rejects(staleThenEntry(svc), /within 100000000 cycles/);
+});
+
+test("KG61 mutant: without the recursion test a second session starts and the program's stack is lost", async () => {
+  const svc = await mon3Variant([["  call ACTIVE    ; Z: in a session\n  ld de,MBUSY\n  jr z,REFUSE\n", ""]]);
+  await assert.rejects(recursion(svc));
 });
