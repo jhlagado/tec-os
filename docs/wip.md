@@ -11,8 +11,9 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
 - BASIC and TED's language support (KD-262): BAZA's `BAZA.COM` and
   `BAZA.RTL` from Baza `a9e7b2f`, the sample `TIMES.BAS`, and TED from
   Thorium `b69d544`, whose language table builds a `.BAS` with BAZA. The
-  starter card holds nine files; the Viewer's page card adds `DEMO.COM`,
-  its source `DEMO.ASM`, and Baza's `BOUNCE.BAS` sprite game. Whether
+  starter card holds nine files; the Viewer's page card adds `DEMO.ASM`,
+  which `TAS DEMO` builds into the demo, and Baza's `BOUNCE.BAS` sprite
+  game. Whether
   `BOUNCE.BAS` also goes on the starter card is open.
 
 The boot R1 policy is decided: with a PICO installed, real boot writes the

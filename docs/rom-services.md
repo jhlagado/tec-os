@@ -3,7 +3,7 @@
 Status: **Built**, ABI 5.1. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
 at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.asm`, and
 the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
-calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, on the viewer's demo card, shows them.
+calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the viewer's demo card's `DEMO.ASM`, shows them.
 
 The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,077 bytes (`tecos`) and has 307 free,
 in one gap after the code at the end of the ROM.<!-- end --> This

@@ -1,5 +1,5 @@
 // DEMO.ASM, the page card's demo source: TAS DEMO on TEC-OS builds it from
-// the card into the DEMO.COM the page card ships, byte for byte, with no
+// the card into the DEMO.COM that cards once shipped, byte for byte, with no
 // include file, since TAS reads only the current drive. Emulator evidence.
 // TAS.COM is a pinned input (test/inputs.json).
 
@@ -29,7 +29,7 @@ test("DEMO.ASM stands alone, with abi.inc's names at abi.inc's values, and fits 
   assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
 });
 
-test("TAS DEMO on TEC-OS builds the DEMO.COM the page card ships", { skip: TAS.skip, timeout: 900_000 }, async () => {
+test("TAS DEMO on TEC-OS builds the DEMO.COM that cards shipped", { skip: TAS.skip, timeout: 900_000 }, async () => {
   check(TAS);
   const image = standardCard();
   const a = volume(image, "A");

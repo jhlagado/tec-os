@@ -156,15 +156,15 @@ writing the LCD, lighting the digits and beeping through the ROM's services by
 lower case: it asks a name and a number and prints that number's times table.
 `BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
 runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
-an `.ASM` with TAS. `DEMO.COM`, on the viewer's demo card, shows the hardware:
-the LCD, the 7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I.
-Its source, `DEMO.ASM`, is beside it: `TED DEMO.ASM` reads it and `TAS DEMO`
-builds the same `DEMO.COM`. `BOUNCE.BAS`, also on that card only, is Baza's
-sprite game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in
-Graphics I through `call`; tap W, A, S and D to steer the ship, and Q gives the
-display back. A BASIC program that has claimed the display and stops on an error
-gives it back first, so its message shows. A command that names a `.COM` file
-runs it, and `NAME.SVC` installs a service.
+an `.ASM` with TAS. The viewer's demo card holds `DEMO.ASM`, a tour of the
+hardware: `TAS DEMO` builds `DEMO.COM` and `DEMO` runs it, showing the LCD, the
+7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I, and
+`TED DEMO.ASM` reads it. `BOUNCE.BAS`, also on that card only, is Baza's sprite
+game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in Graphics I
+through `call`; tap W, A, S and D to steer the ship, and Q gives the display
+back. A BASIC program that has claimed the display and stops on an error gives
+it back first, so its message shows. A command that names a `.COM` file runs it,
+and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary
 exit, from the volume selected as A:; a keypad key held from reset until the
 prompt skips it, and the console stays where cold boot put it. If the card is

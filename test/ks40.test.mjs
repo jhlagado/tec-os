@@ -195,7 +195,7 @@ test('KS40 PICO version4 keeps width minimum3 ABI5.1 and every public state offs
 test('KS40 DEMO and VIDMODE retain baseline native bytes and DEMO equals actual TAS media',async()=>{
  for(const [name,length,hash]of [['demo',1191,'7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d'],['vidmode',61,'db1ea487e5cd573149bdfa61853366efefc19e450b0920094ab111dc2ba665df']]){
   const {bytes}=await assembleProgram(root+(name==='demo'?'/programs/DEMO.ASM':'/test/programs/'+name+'.asm'));assert.equal(bytes.length,length);assert.equal(sha(bytes),hash,'exact measured baseline native '+name);
-  if(name==='demo')assert.ok(Buffer.from(bytes).equals(readFileSync(root+'/dist/files/DEMO.COM')),'actual TAS media DEMO');
+  if(name==='demo')assert.ok(Buffer.from(bytes).equals(readFileSync(root+'/dist/DEMO.COM')),'actual TAS media DEMO');
  }
  // DEMO.ASM's exact text: the page card ships it, comments and all, so a
  // change to any line, not only to the code, must be seen.
