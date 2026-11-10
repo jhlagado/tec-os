@@ -266,6 +266,9 @@ async function buildProfile(name, assemble) {
   check(at("SDBYTE") === RAMBIOS + 51, "the state above the RAM BIOS table follows it");
   check(at("WSEND") <= 0xc000, `workspace ends at ${hex(at("WSEND"))}`);
   check(at("BSTK") <= at("CCPRAM"), "BIOS stack overlaps the CCP workspace");
+  // DESCIX splits descriptor index+1 into block*16+slot, which holds only
+  // while block 0 has 15 descriptors after the header.
+  check(at("DSCBLK0") === 15, `DESCIX needs DSCBLK0 15, the format gives ${at("DSCBLK0")}`);
 
   const starter = cardLayout(at("WSBASE"), CARDS.starter);
   check(starter.entry - 0x100 >= 45830, `the starter card's TPA is ${starter.entry - 0x100} bytes`);
