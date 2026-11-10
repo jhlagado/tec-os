@@ -87,7 +87,7 @@ COLDNC:
 ; cold/retry path alone copies the
 ; table. List drives and fall into warm
 ; boot with PZDU=0. Page zero is built
-; once (KE-199).
+; once.
 
 COLDRT:
   ld sp,STKTOP

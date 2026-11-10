@@ -157,8 +157,9 @@ SETARG:
   ld (SDARG+3),a
   ret
 
-; SDCMDX with argument 0 (SDCMDZ) or
-; with HL=0, DE the caller's (SDCMDH).
+; SDCMDX with argument 0 (SDCMDZ), or
+; with DE the caller's and HL=0
+; (SDCMDH).
 
 SDCMDZ:
   ld de,0
@@ -323,6 +324,10 @@ SDI58:
 SDI58F:
   ld a,SDEOCR
 
+; Deselect, then end through SDFAIL with
+; code A: an SDE code, or 0 for success.
+; SPIEND keeps AF.
+
 SDFEND:
   call SPIEND    ; keeps AF
 
@@ -330,7 +335,8 @@ SDFEND:
 ; nonzero SDE code A is stored in SDERR.
 ; Return A/NZ/carry clear. The caller
 ; must already have deselected or made
-; no card access.
+; no card access. SDIOK and SDFEND enter
+; with A=0 for success: SDERR=0 and Z.
 
 SDFAIL:
   ld (SDERR),a
@@ -343,13 +349,13 @@ SDFAIL:
 
 SDIOK:
   xor a
-  jr SDFAIL      ; stores 0, Z
+  jr SDFAIL      ; stores 0, returns Z
 
 ; Convert little-endian SDLBA to
 ; big-endian SDARG. SDBYTE=0 uses block
 ; addressing. Otherwise multiply by 512,
 ; refusing LBA>=800000h with carry and
-; SDARG unchanged (KE-151). Accepted
+; SDARG unchanged. Accepted
 ; paths return carry clear. Change
 ; AF/DE/HL. BC stays intact. No port
 ; access.

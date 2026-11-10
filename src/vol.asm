@@ -36,7 +36,7 @@ MENOA EQU $2A    ; no volume mounted as
 ; drive A mounted, or an ME* code/NZ
 ; with DRVTAB, DRVIDX and BUFOK clear.
 ; Use MNBUF/MNT* and the shared cache.
-; Change AF/BC/DE/HL/IX/IY. Full
+; Change AF/BC/DE/HL/IX. Full
 ; metadata reads also set I=0.
 
 MOUNT:
@@ -95,7 +95,7 @@ MNTENZ:
 
 MNCNT1:
   dec l          ; count-1: 0 wraps
-  cp l           ; above the limit?
+  cp l           ; carry: 0 or too many
   inc l
   ld a,MECOUNT
   jp c,MNTERR
@@ -256,7 +256,7 @@ MNDBZ:
 ; the container. Byte-addressed cards
 ; also require end <= 00800000h, making
 ; the last included block at most
-; 007FFFFFh (KE-158).
+; 007FFFFFh.
 
   ld l,(ix+DSTART)
   ld h,(ix+DSTART+1)
@@ -296,10 +296,10 @@ MNSTX:
   ld a,MERANGE
 
 MNTEJ:
-  jr MNTERR
+  jr MNTERR      ; MOUNT's failure exit
 
 MNEMNT:
-  ld a,MEMOUNT
+  ld a,MEMOUNT   ; bad mount letter
   jr MNTEJ
 
 MNSTOK:
@@ -514,7 +514,8 @@ MNS1:
 ; The caller checks the table count.
 
 DESCIX:
-  inc a          ; the header is slot 0
+  inc a          ; header is block 0's
+                 ; slot 0
   ld c,a
   and $0F        ; slot in the block
   ld l,a
@@ -523,7 +524,7 @@ DESCIX:
   add hl,hl
   add hl,hl
   add hl,hl
-  add hl,hl
+  add hl,hl      ; slot*32: its offset
 
 ; Keep the slot offset in MNBUF while
 ; MNBLK uses MNBUF+2 for its request.
@@ -533,12 +534,12 @@ DESCIX:
 
   ld (MNBUF),hl
   call CDI
-  ld a,c
+  ld a,c         ; index+1
   rrca
   rrca
   rrca
   rrca
-  and $0F        ; block
+  and $0F        ; its block
   call MNBLK
   call CEI
   ret nz

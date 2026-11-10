@@ -266,7 +266,7 @@ MLTK3:
   sub 'A'
   cp 16          ; A..P?
   jr nc,NOTDRIVE
-  ld b,a         ; possible drive letter
+  ld b,a         ; possible drive 0..15
   inc hl
   ld a,(hl)
   cp ':'
@@ -274,7 +274,7 @@ MLTK3:
   jr nz,NOTDRIVE
   inc hl
   call SKIPSP    ; drive-only suffix
-  or a
+  or a           ; A: the next byte
 
   jr nz,NOTDRIVE
   ld a,b
@@ -456,7 +456,7 @@ SVCOK:
 CMDCOM:
   ld hl,'O'*256+'C'
   ld (CMDFCB+9),hl
-  ld a,'M'
+  ld a,'M'       ; type COM
 
   ld (CMDFCB+11),a
   call LOADA     ; first drive/user try
@@ -680,9 +680,10 @@ LOADLOOP:
   jr LOADLOOP
 
 ; At the exclusive load ceiling, read
-; once into LOADBUF while preserving HL.
-; Code 1 is EOF: enter LOADOK. Otherwise
-; return carry/NZ: 0 is an extra record
+; once into LOADBUF while preserving HL,
+; then fall into LOADEND's test. Code 1
+; is EOF: LOADOK. Otherwise LOADBAD
+; returns carry/NZ: 0 is an extra record
 ; and other values are read errors. No
 ; probe data reaches the resident
 ; ceiling.

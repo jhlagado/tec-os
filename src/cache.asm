@@ -81,7 +81,7 @@ CLK2:
 CLK3:
   ld a,(LATCHV)
   out (SYSLAT),a
-  ret nz
+  ret nz         ; miss: no line
   ld a,l
   rrca
   rrca

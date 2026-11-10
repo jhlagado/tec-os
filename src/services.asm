@@ -514,7 +514,7 @@ RTCR1:
   ret
 
 ; TNFONT (15): HL=FONT, the ROM font
-; shared by PICO and GLCD (KD-159).
+; shared by PICO and GLCD.
 ; Changes AF. Other registers stay.
 
 HWSFONT:

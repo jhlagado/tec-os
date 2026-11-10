@@ -122,9 +122,9 @@ GETCHAR:
   ld a,(hl)
   or a
   jp z,BIOCIN    ; normal BIOS wait
-  ld (hl),0
+  ld (hl),0      ; consume pending byte
   inc hl
-  ld a,(hl)
+  ld a,(hl)      ; PENDCHR
   ret
 
 ; Return nonzero A for a pending BDOS
@@ -316,10 +316,13 @@ CHKPRN:
   cp CTRLP
   jr z,TOGLIST   ; ^P: printer toggle
 
+; Keep byte A for later input: PENDCHR,
+; with PENDING=1. Function 11 enters
+; here for a byte it took from the BIOS.
+; Returns A=1. Clobbers flags.
 
 CHKPND:
   ld (PENDCHR),a
-
   ld a,1
   ld (PENDING),a
   ret

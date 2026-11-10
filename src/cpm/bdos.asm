@@ -333,7 +333,7 @@ FNDIRECT:
   call GETCHAR   ; unechoed input
   ret
 
-; Function 6 output: A is parameter E.
+; Function 6 output: E is the byte.
 ; Send it as C directly through BIOCOT.
 ; No tab expansion, CHKKEY, printer echo
 ; or COLUMN update. Return zero.
@@ -367,7 +367,7 @@ FNSETIO:
 ; and BIOS-hook clobbers.
 
 FNPRINT:
-  ex de,hl       ; DE: the string
+  ex de,hl       ; HL: the string
 
 PRLOOP:
   ld a,(hl)
@@ -399,7 +399,7 @@ PRLOOP:
 FNLINE:
   ld a,(HHEAD)   ; initial history entry
   ld (HPOS),a    ; HREC starting point
-  ex de,hl       ; DE: the buffer
+  ex de,hl       ; HL: the buffer
   ld a,(hl)
   ld (LINMAX),a  ; buffer capacity
   inc hl
@@ -441,7 +441,7 @@ LINLOOP:
 
 LINCHR:
   ld hl,(LINMAX)
-  ld a,l
+  ld a,l         ; LINMAX, H=LINCNT
   cp h
   jr z,TOLINDON  ; full: echo key only
   ld hl,(LINPTR)
@@ -452,7 +452,7 @@ LINCHR:
   inc (hl)
   call ECHOCHAR  ; echo stored byte
   ld hl,(LINMAX)
-  ld a,l
+  ld a,l         ; post-store capacity
   cp h
   jr nz,LINLOOP  ; room for another byte
   ld c,CR        ; capacity end: echo CR
@@ -491,7 +491,7 @@ LINHIST:
 LINBACK:
   call LINDROP   ; C: empty, unchanged
   call nc,ERASE1
-  jr LINLOOP
+  jr LINLOOP     ; after BS-SPACE-BS
 
 ; DEL: if nonempty, decrement LINCNT and
 ; LINPTR and echo the removed byte
@@ -502,7 +502,7 @@ LINDEL:
   call LINDROP   ; C: empty, unchanged
   ld c,(hl)      ; removed byte to echo
   call nc,ECHOCHAR
-  jr LINLOOP
+  jr LINLOOP     ; after its echo
 
 ; ^C: ignore it on a nonempty line. At
 ; the start, store CTRLC through LINPTR,
@@ -512,7 +512,7 @@ LINDEL:
 LINABRT:
   ld a,(LINCNT)  ; start-only abort
   or a
-  jr nz,TOLINLP
+  jr nz,TOLINLP  ; nonempty: ignore ^C
 
   ld hl,(LINPTR)
   ld (hl),CTRLC
@@ -579,7 +579,7 @@ RETYLP:
   djnz RETYLP    ; restored byte count
 
 RETYX:
-  jr TOLINLP
+  jr TOLINLP     ; resume input
 
 ; ^X: call LINERASE to clear logical
 ; input and emit one ERASE1 sequence per
@@ -613,10 +613,10 @@ LINERASE:
 LINDROP:
   ld hl,(LINPTR)
   ld a,(LINCNT)
-  sub 1
+  sub 1          ; carry only from 0
   ret c          ; empty
   ld (LINCNT),a
-  dec hl
+  dec hl         ; back over the byte
   ld (LINPTR),hl
   ret
 
