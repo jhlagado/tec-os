@@ -22,7 +22,9 @@ test("DEMO.ASM stands alone, with abi.inc's names at abi.inc's values, and fits 
   assert.ok(equs.length >= 11);
   for (const [, name, v] of equs) assert.equal(Number(v.replace("$", "0x")), ABI[name], name);
   assert.doesNotMatch(SOURCE, /%include/i, "no include: TAS on the card can't follow a path");
-  assert.ok(Buffer.byteLength(SOURCE) <= 24_576);
+  // The assembly style's file limit, which keeps a source editable in TED's
+  // text room on the smallest system; TED has 33,466 bytes on the starter card.
+  assert.ok(Buffer.byteLength(SOURCE) <= 24_576, "the style's 24,576-byte limit");
   assert.ok(SOURCE.split("\n").every((line) => line.length <= 40), "fits 40 columns");
   assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
 });

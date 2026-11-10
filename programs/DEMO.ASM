@@ -6,8 +6,8 @@
 ; hex on the digits, runs a rainbow over
 ; the 8 x 8 LEDs and, with a PICO9918,
 ; moves a ball over colour bars. LCD row
-; 3 shows the time while the clock
-; reads.
+; 3 shows the time while the clock can
+; be read.
 
 ; The ROM drives the digits, the LCD,
 ; the tone and the clock. The LEDs have
@@ -92,7 +92,7 @@ CHKTAG:
   ld a,(DEVS)
   and 4          ; bit 2: GLCD
   call YESNO
-  ld de,CLKMSG   ; "clock: "
+  ld de,CLKMSG
   ld a,(DEVS)
   and 8          ; bit 3: the clock
   call YESNO
@@ -193,7 +193,7 @@ DONE:
   jp PRINT       ; and back to the CCP
 
 NOHW:
-  ld de,NOHWMSG
+  ld de,NOHWMSG  ; and on into PRINT
 
 ; PRINT: print the string at DE, up to
 ; its $, by BDOS function 9.
@@ -474,7 +474,8 @@ VPAT2:
   inc d
   jr nz,VPAT     ; all 256
 
-; The colours: eight bars, then blue.
+; The colours: eight bars, then black
+; for the unused characters.
 
   ld hl,$2000    ; the colour table
   call VWA
@@ -666,8 +667,8 @@ LCDTXT:   DB    "TEC-OS hardware demo"
 VDPREGS:  DB    $00,$C2,$06,$80
   DB $00,$36,$07,$01
 
-; The colour table: eight bars, then
-; blue on black.
+; The colour table: eight bars on
+; black, then black on black.
 
 BARS:     DB    $81,$91,$A1,$B1
   DB $31,$21,$71,$51
