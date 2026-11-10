@@ -64,13 +64,6 @@ HWERR:
   scf
   ret
 
-; Success exit: A=0, Z, carry clear.
-; Other registers stay.
-
-HWOK:
-  xor a
-  ret
-
 ; INFO: B=CONDEV OR VCLAIM, DE=ROMVER,
 ; L=columns, H=rows. Reads resident
 ; state, RTC flag from cold boot.
@@ -443,7 +436,6 @@ RTCHAS:
   cp $60
   sbc a,a        ; below 60h: FFh
   inc a          ; Z present, else A=1
-  ret
   ret
 
 ; Write register command D with value E
