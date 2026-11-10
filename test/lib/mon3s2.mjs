@@ -4,6 +4,7 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { volume } from "./fixtures.mjs";
 import { MON3, PROMPT, bytesAt, card, line, machine, mon3Svc, word } from "./mon3.mjs";
 
 export const sha = (b) => createHash("sha256").update(b).digest("hex");
@@ -38,8 +39,15 @@ export function countOpens(m) {
   return m;
 }
 
-/** A machine on a card with FILES on A:, counting opens. OPTS as lib/mon3's machine. */
-export const boot = (files, opts) => countOpens(machine(card(files), opts));
+/** A machine on a card with FILES on A:, and TEXT written as text files, counting opens. OPTS as lib/mon3's machine. */
+export function boot(files, opts, text = {}) {
+  const image = card(files);
+  const a = volume(image, "A");
+  for (const [name, bytes] of Object.entries(text)) a.write(name, bytes, { text: true });
+  const m = countOpens(machine(image, opts));
+  m.image = image;
+  return m;
+}
 
 /** The pages of the services installed, newest first. */
 export function pages(m) {
@@ -60,10 +68,10 @@ export const state = (m, svc, name) => m.read((pageOf(m) << 8) + svc.symbols[nam
 /** Nonzero after a good load. */
 export const runnable = (m, svc) => state(m, svc, "RUNOK");
 
-/** A session on a card with FILES, MON3.SVC (SVC, or the build) installed and entered. */
-export async function inSession(files = {}, { svc, machine: opts } = {}) {
+/** A session on a card with FILES and TEXT files, MON3.SVC (SVC, or the build) installed and entered. */
+export async function inSession(files = {}, { svc, machine: opts, text } = {}) {
   svc ??= await mon3Build();
-  const m = boot({ "MON3.SVC": svc.file, ...files }, opts);
+  const m = boot({ "MON3.SVC": svc.file, ...files }, opts, text);
   m.command("MON3.SVC");
   assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
   return { m, svc };

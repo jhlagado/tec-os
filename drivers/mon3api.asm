@@ -314,3 +314,18 @@ DERR1:
   ret
 
 ERRT: DB $C7,$4B,$4B,$EB,$4B,$00
+
+; Call 7, stringCompare: B bytes at HL
+; and DE, 0 for 256. Z if they match.
+; Clobbers A, BC, DE and HL.
+
+SCMP:
+  ld a,(hl)
+  ld c,a
+  ld a,(de)
+  cp c           ; Z: equal so far
+  ret nz
+  inc hl
+  inc de
+  djnz SCMP      ; each byte
+  ret
