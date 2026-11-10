@@ -145,8 +145,8 @@ STFCB: DB 1,"STARTUP CMD"
 
 SVCLIM: DB 8,12,6
 
-; CSI final bytes and their handlers,
-; VTPFIN's.
+; CSI final bytes for VTPFIN's scan:
+; each byte is followed by its handler.
 
 VTFTAB: DB 'A'
   DW VTUP

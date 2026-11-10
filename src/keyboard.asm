@@ -51,8 +51,8 @@ KBSBIT:
   srl d          ; lowest bit first
   jr nc,KBSN
   ld hl,(KBE)    ; KBD follows KBE
-  ld h,l
-  ld l,a
+  ld h,l         ; the prior key to KBD
+  ld l,a         ; the new one to KBE
   ld (KBE),hl
 
 KBSN:
@@ -101,13 +101,13 @@ KBMOD:
   jr z,KBCAPS
   jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
   ld hl,KBARROW-3
-  call KBIDX
+  call KBIDX     ; keys 3-6: A-D
   ld hl,KBT2     ; KBTN,KBT1,KBT2
-  ld (hl),a
+  ld (hl),a      ; queue arrow letter
   dec hl
-  ld (hl),'['
+  ld (hl),'['    ; queue '[' first
   dec hl
-  ld (hl),2
+  ld (hl),2      ; CINTAKE reads both
   ld a,$1B       ; deliver ESC now
   jr KBDELIV
 
@@ -161,7 +161,7 @@ KBSP:
   jr nc,KBALPHA
   add a,$1D      ; digits/punct 2Ch-3Dh
   inc d
-  dec d          ; a modifier?
+  dec d          ; Z: Shift (D=0)
   ret nz         ; plain character
   sub $2C        ; index into KBSHIFT
   ld hl,KBSHIFT
@@ -171,7 +171,7 @@ KBSPHIT:
   ld a,(hl)
   inc hl         ; then shifted value
   inc d
-  dec d          ; a modifier?
+  dec d          ; Z: Shift (D=0)
   ret nz         ; plain unless Shift
   ld a,(hl)
   ret
@@ -182,14 +182,14 @@ KBALPHA:
   add a,$3D      ; 24h-3Dh: a to z
   ld c,a
   ld a,d
-  dec a          ; Ctrl alone?
+  dec a          ; Z: Ctrl (D=1)
   jr nz,KBNOCTL
   ld a,c         ; Ctrl makes 01h-1Ah
   sub $60
   ret
 
 KBNOCTL:
-  inc a          ; D again
+  inc a          ; D again, Z: Shift
   jr z,KBUPPER
   ld a,(LATCHV)  ; Caps Lock
   rlca           ; bit 7 into carry
@@ -200,6 +200,9 @@ KBUPPER:
   ld a,c
   sub $20
   ret
+
+; Return A = the byte at HL+A, in any
+; page. Changes F and HL.
 
 KBIDX:
   add a,l

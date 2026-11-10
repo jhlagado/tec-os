@@ -153,7 +153,7 @@ ADVWRITE:
 
 WRITERC:
   dec hl         ; S2 precedes RC
-  res 7,(hl)
+  res 7,(hl)     ; mark FCB changed
   xor a          ; 0: written
   ret
 
@@ -687,12 +687,13 @@ ZEROLOOP:
 ; Position the BIOS at SEQREC within
 ; allocation block DE. Validate DE<=DSM
 ; before the 16-bit block shift. Invalid
-; blocks take BADSECT.
+; blocks take BADSECT. BSH, BLM and SPT
+; are read through IX, which CHKBLK
+; leaves at the DPB.
 ; Divide the data-relative record by
-; SPT. Add OFF to the quotient and
-; translate the remainder through XLT.
-; IOTRK holds the final track. IOSEC
-; holds the untranslated sector.
+; SPT. Add OFF to the quotient, then
+; SEEKP selects IOTRK and translates
+; IOSEC, the remainder, through XLT.
 ; Clobbers A, BC, DE, HL, IX and F.
 
 POSREC:
@@ -700,7 +701,7 @@ POSREC:
   ex de,hl       ; HL = the block
   ld a,(ix+2)    ; BSH: CHKBLK set IX
   or a
-  jr z,BLOCKSCA
+  jr z,BLOCKSCA  ; BSH 0: no shift
   ld b,a
 
 BLOCKSHF:
@@ -709,7 +710,7 @@ BLOCKSHF:
 
 BLOCKSCA:
   ld a,(SEQREC)
-  and (ix+3)     ; BLM
+  and (ix+3)     ; BLM: record in block
   ld e,a
   ld d,0
   add hl,de      ; data-relative record
@@ -724,7 +725,7 @@ BLOCKSCA:
   ld (IOTRK),hl
 
   ld hl,IOTRK    ; IOSEC follows
-  jp SEEKP
+  jp SEEKP       ; track, XLT sector
 
 ; Unsigned HL / DE: quotient in DE,
 ; remainder in HL. Requires 1<=DE<=8000h

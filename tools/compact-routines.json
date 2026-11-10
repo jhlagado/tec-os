@@ -215,7 +215,8 @@
     "CHKKEY",
     "CHKPRN",
     "TOGLIST",
-    "ERASE1"
+    "ERASE1",
+    "CHKPND"
   ],
   "src/cpm/bdosfile.asm": [
     "FNRESET",
@@ -423,7 +424,8 @@
   "src/keyboard.asm": [
     "KBPOLL",
     "KBSTEP",
-    "KBASCII"
+    "KBASCII",
+    "KBIDX"
   ],
   "src/lcd.asm": [
     "LCDINIT",
@@ -507,7 +509,8 @@
     "SDRBLK",
     "SDWBLK",
     "SDWRITE",
-    "SDCMDZ"
+    "SDCMDZ",
+    "SDFEND"
   ],
   "src/services.asm": [
     "SVCDSP",
@@ -563,7 +566,8 @@
     "VTCLRN",
     "VTCLIP",
     "VTOWN",
-    "CURSHOW"
+    "CURSHOW",
+    "VTHOME"
   ],
   "src/tms.asm": [
     "TMSINIT",

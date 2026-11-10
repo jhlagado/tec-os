@@ -38,12 +38,13 @@ DIRWILD:
 ; DIRNCOL=max(1,floor(width/13)), with
 ; VWID=0 meaning 80. A formatted entry
 ; uses up to 12 positions plus an
-; inter-entry space. Initialise the
-; pager and search first through BDOS
-; 17. Pass result A to DIRLOOP.
+; inter-entry space. PGINIT sets up the
+; pager and gives that width. Search
+; first through BDOS 17 and pass result
+; A to DIRLOOP.
 
 DIRREADY:
-  call SETLB
+  call SETLB     ; search DMA LOADBUF
   xor a
   ld (DIRCOL),a  ; no row yet
   ld h,a
@@ -51,8 +52,6 @@ DIRREADY:
 
   ld (DIRNUM),hl
   call PGINIT    ; A=the paging width
-
-DIRWID:
   ld b,$FF       ; columns that fit
 
 DIRWDIV:
@@ -85,9 +84,9 @@ DIRLOOP:
   inc a          ; FFh: search ended
   jr z,DIRDONE
   dec a
-  rrca
-  rrca
-  rrca           ; slot*32
+  rrca           ; slot 0..3 times 32:
+  rrca           ; its offset in the
+  rrca           ; record
   ld l,a
   ld h,0
   ld de,LOADBUF  ; DMA record base
@@ -513,7 +512,7 @@ CMDTYPE:
   DB 15*2+0      ; 15: CMDFCB
   inc a
   jr z,FILENO    ; FFh open: NO FILE
-  call SETLB
+  call SETLB     ; record DMA LOADBUF
   call PGINIT    ; pager initial state
 
 ; Read CMDFCB's next record through BDOS

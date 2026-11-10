@@ -124,7 +124,7 @@ TMSW1:
   ld e,a         ; width
   ld a,c
   ld (PITPG),a
-  ld c,e
+  ld c,e         ; C = width per row
   ld h,b         ; Row table base.
   ld l,0
   ld de,PIROWT
@@ -146,7 +146,7 @@ TMSW2:
 TMSW3:
   djnz TMSW2
   ld hl,PITPD    ; PITPD,PITPS,PIMV
-  xor a
+  xor a          ; Reset pages and move.
   ld (hl),a
   inc hl
   ld (hl),a
@@ -427,7 +427,7 @@ TMSWA:
 ; BC/DE/L. Changes AF/H.
 
 TMSRA:
-  res 6,h
+  res 6,h        ; read: flag clear
 
 TMSA7:
   res 7,h        ; 14-bit address

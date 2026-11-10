@@ -39,19 +39,19 @@ READDIR:
 SEEKP:
   ld c,(hl)
   inc hl
-  ld b,(hl)
+  ld b,(hl)      ; BC = track
   inc hl
-  push hl
-  call BIOTRK
+  push hl        ; at the sector word
+  call BIOTRK    ; RAM track selection
   pop hl
   ld c,(hl)
   inc hl
-  ld b,(hl)
+  ld b,(hl)      ; BC = logical sector
   ld de,(XLTPTR)
-  call BIOTRN
+  call BIOTRN    ; logical -> physical
   ld b,h
   ld c,l         ; translated sector
-  jp BIOSEC
+  jp BIOSEC      ; RAM sector selection
 
 ; Write the modified buffer at (DIRPTR)
 ; back to READDIR's saved DIRTRK/DIRSEC
@@ -445,7 +445,7 @@ PARDIR:
 PARELOOP:
   call PARENT    ; count/mark next entry
   ld hl,ENTLEFT
-  dec (hl)
+  dec (hl)       ; entries left
   jr nz,PARELOOP
   ret
 
@@ -485,9 +485,9 @@ PARENT:
 PARCELL:
   call ENTCELL   ; DE=next block
   push hl        ; save map pointer
-  call MARKBLK
+  call MARKBLK   ; skip zero/past DSM
   ld hl,ALLEFT
-  dec (hl)
+  dec (hl)       ; cells left
   pop hl
   jr nz,PARCELL
   ret
@@ -511,9 +511,9 @@ FREEENT:
 FREECELL:
   call ENTCELL   ; DE=next block
   push hl        ; save map pointer
-  call CLRBLK
+  call CLRBLK    ; skip zero/past DSM
   ld hl,ALLEFT
-  dec (hl)
+  dec (hl)       ; cells left
   pop hl
   jr nz,FREECELL
   ret
@@ -529,13 +529,13 @@ ENTCNT:
   add hl,de
   ld ix,(DPBPTR)
   ld a,(ix+6)    ; DSM high byte
-  or a
+  or a           ; Z: byte cells
   ld a,16
   jr z,ENTCN1
-  ld a,8
+  ld a,8         ; eight word cells
 
 ENTCN1:
-  ld (ALLEFT),a
+  ld (ALLEFT),a  ; cell count
   ret
 
 ; DE=the block number in the map cell
@@ -543,13 +543,13 @@ ENTCN1:
 ; Changes AF.
 
 ENTCELL:
-  ld e,(hl)
+  ld e,(hl)      ; block low byte
   ld d,0
   inc hl
   ld a,(ix+6)    ; DSM high byte
   or a
-  ret z          ; byte cells
-  ld d,(hl)
+  ret z          ; byte cells: no high
+  ld d,(hl)      ; word high byte
   inc hl
   ret
 
@@ -610,8 +610,8 @@ BITPTR:
 
   ld de,(ALVPTR)
   add hl,de
-  inc b
-  ld a,1         ; 80h after the first
+  inc b          ; 1..8 rotates
+  ld a,1         ; the first gives 80h
 
 SHIFBIT:
   rrca           ; MSB-first mask
@@ -688,7 +688,8 @@ ANDV:
 ; vector at HL. Save the address across
 ; DRVMASK and OR its DE mask into both
 ; bytes. Keep other bits. Changes
-; AF/B/DE/HL.
+; AF/B/DE/HL. VSETDE takes the mask in
+; DE and changes only AF and HL.
 
 VSET:
   push hl        ; keep vector address

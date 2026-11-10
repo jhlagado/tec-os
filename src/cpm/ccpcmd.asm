@@ -38,7 +38,7 @@ CONSKIP:
   jr nz,CONNXT
 
 CONBAD:
-  jr TOBADCMD
+  jr TOBADCMD    ; CON's refusals
 
 ; CON reports the effective console or
 ; selects TTY/CRT/BAT/UC1. GLCD maps to
@@ -109,11 +109,11 @@ CONEND:
   call CMDSKIP   ; record width operand
   jr z,CONNW     ; spaces only: no width
   ld a,b
-  cp CMCRT
+  cp CMCRT       ; CRT/PICO width only
   jr nz,CONBAD
   ld a,(hl)      ; first decimal digit
   sub '0'
-  cp 10
+  cp 10          ; reject nondigit
   jr nc,CONBAD
   ld c,a
   add a,a        ; tens multiplication
@@ -124,7 +124,7 @@ CONEND:
   inc hl         ; second digit
   ld a,(hl)
   sub '0'
-  cp 10
+  cp 10          ; reject nondigit
   jr nc,CONBAD
   add a,c        ; binary width
   inc hl
@@ -145,7 +145,7 @@ CONEND:
   pop bc         ; B=saved width
   jr nc,CONWD    ; NC: table found
   ld a,(STFLAG)  ; startup origin flag
-  or a
+  or a           ; typed: bad command
   jr z,CONBAD
   jp STARTED
 
@@ -166,7 +166,7 @@ CONWD:
   ld l,a
   ld a,b
   call VHLJP     ; width call: A=B
-  jr c,CONBAD
+  jr c,CONBAD    ; carry: refused
   ld b,CMCRT     ; width set: CRT mode
   jr CONFL
 
@@ -247,7 +247,7 @@ USERDONE:
   jr CONMAIN
 
 USRBAD:
-  jp BADCMD
+  jp BADCMD      ; USER, SAVE refusals
 
 ; SAVE n NAME: write n 256-byte TPA
 ; pages from 0100h. Reject eight-bit
@@ -346,7 +346,7 @@ SAVELOOP:
 
 SAVE128:
   ld de,(SAVEADR)
-  call SETDMA
+  call SETDMA    ; 26: the half-page
   call DOSSEQ    ; sequential write
   DB 21*2+0      ; 21: CMDFCB
   or a
@@ -354,7 +354,7 @@ SAVE128:
   ret nz         ; NZ: keep SAVEADR
   ld hl,(SAVEADR)
   ld de,128
-  add hl,de
+  add hl,de      ; no carry below BDOS
 
   ld (SAVEADR),hl
   ret
@@ -438,7 +438,7 @@ TAILDONE:
   xor a
   ld (de),a      ; zero after tail
   ld de,CMDTAIL
-  jp SETDMA
+  jp SETDMA      ; 26: default DMA
 
 ; Parse from HL into 36 writable FCB
 ; bytes at DE, saved in FCBBASE.
@@ -491,7 +491,7 @@ FCBZERO:
   cp ':'
   jr nz,FCBNAME  ; no prefix: default
   ld a,(hl)
-  sub 'A'        ; drive lower bound
+  sub 'A'        ; A..P to 0..15
   cp 16
   jr nc,PLEND    ; not A..P: carry
   inc a
@@ -565,7 +565,7 @@ PARLONG:
   jr nz,PARLONG  ; overlong: scan to end
 
 PLEND:
-  scf            ; overlong carry
+  scf            ; overlong, bad drive
   ret
 
 ; Require an unambiguous parsed name at
@@ -808,7 +808,7 @@ STBOOT:
   ld bc,12       ; 12-byte reference
   ldir
   ld de,STREC    ; one-record DMA
-  call SETDMA
+  call SETDMA    ; 26: STREC DMA
   call DOSSEQ    ; open descriptor
   DB 15*2+0      ; 15: CMDFCB
   inc a

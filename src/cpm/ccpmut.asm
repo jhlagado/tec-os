@@ -67,7 +67,7 @@ ERAMAIN:
   jp MAINLOOP
 
 RENBAD:
-  jp BADCMD
+  jp BADCMD      ; ERA and REN refusals
 
 ; REN NEW=OLD: require unambiguous
 ; complete names with no spaces around
@@ -124,7 +124,7 @@ RENOLD:
 ; results MAINLOOP. H is not inspected.
 
 RENTEST:
-  call SETLB
+  call SETLB     ; search DMA LOADBUF
   call DOSSEQ
   DB 17*2+1      ; 17: RENFCB
   inc a
@@ -243,7 +243,7 @@ CPBAD:
 
 CPGO:
   ld de,DEFDMA
-  call SETDMA
+  call SETDMA    ; 26: DMA DEFDMA
   call DOSSEQ
   DB 15*2+0
   inc a

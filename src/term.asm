@@ -136,6 +136,10 @@ VTTAB:
 VTFF:
   call VTCLS
 
+; Home the cursor: VROW and VCOL to 0.
+; FF, CSI r and the PICO release enter
+; here. Changes HL.
+
 VTHOME:
   ld hl,0        ; VROW and VCOL
   ld (VROW),hl
@@ -505,10 +509,13 @@ VTSGRS:
 
 ; Character edits use LINEBUF, then
 ; write the complete row back. VTNC:
-; Z at/past width, B/C not results.
-; Else NZ, C=cells remaining and B=count
-; clipped to C, at least 1. DE stays.
-; Changes AF/HL plus B/C results.
+; Z at/past width, B/C not results, DE
+; kept. Else NZ, C=cells remaining and
+; B=count clipped to C, at least 1, with
+; the cursor row read into LINEBUF
+; through VRDROW, which may change DE
+; and driver registers. Changes AF/HL
+; plus B/C results.
 
 VTNC:
   ld a,(VWID)
@@ -532,7 +539,7 @@ VTNC1:
   ld b,a
   call VRDROW    ; row to LINEBUF
   pop bc
-  or 1
+  or 1           ; NZ for the caller
   ret
 
 VTNCZ:
