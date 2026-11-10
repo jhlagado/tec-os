@@ -422,9 +422,10 @@ RTCEND:
 
 ; Probe seconds using command 81h and
 ; disable the chip. Unsigned byte <60h:
-; A=0, Z. Otherwise nonzero A, NZ. This
-; is not full BCD validation. BC/E/HL
-; stay. Changes AF/D. Callers use Z/NZ.
+; A=0, Z and carry set. Otherwise A=1,
+; NZ, carry clear. This is not full BCD
+; validation. BC/E/HL stay. Changes
+; AF/D. Callers use Z/NZ.
 
 RTCHAS:
   ld d,$81
