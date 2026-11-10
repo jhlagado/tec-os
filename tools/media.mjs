@@ -211,6 +211,9 @@ async function main() {
   files.push({ name: "BAZA.RTL", description: "BAZA's runtime library, which it copies into each program", bytes: rtl });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM", "test/programs/demo.asm");
+  // BOUNCE.BAS, Baza's CALL demonstration (P7 BZ-37), pinned as LF text: the
+  // page card holds it as a CP/M text file, as TIMES.BAS is held.
+  const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
 
   const recipe = {
     schema: "tecos-file-recipe-v1",
@@ -233,11 +236,13 @@ async function main() {
   const page = {
     ...recipe,
     id: "page",
+    revision: "7",
     name: "TEC-OS starter, with the demo",
-    instruction: "At A>, type DEMO to see the hardware, or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DEMO to see the hardware, BAZA BOUNCE then BOUNCE for a game (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     components: [
       ...recipe.components,
       { id: "demo-com", name: "DEMO.COM", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918", files: [{ name: "DEMO.COM", url: "files/DEMO.COM", drive: "A", bytes: demo.length, sha256: sha(demo) }] },
+      { id: "bounce-bas", name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D steer, Q quits", files: [{ name: "BOUNCE.BAS", url: "files/BOUNCE.BAS", drive: "A", bytes: bounce.length, sha256: sha(bounce) }] },
     ],
   };
   const buffers = new Map(files.map(f => [`files/${f.name}`, f.bytes]));
@@ -257,6 +262,7 @@ async function main() {
   }
   for (const [ref, bytes] of buffers) writeFileSync(resolve(DIST, ref), bytes);
   writeFileSync(resolve(FILES, "DEMO.COM"), demo);
+  writeFileSync(resolve(FILES, "BOUNCE.BAS"), bounce);
   writeFileSync(resolve(DIST, "abi.inc"), abi);
   writeFileSync(resolve(DIST, "FONT-NOTICES.txt"), fontNotices);
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
