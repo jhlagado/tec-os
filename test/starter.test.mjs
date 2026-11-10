@@ -91,7 +91,7 @@ test("the web page's card is the starter with DEMO.COM and BOUNCE.BAS, which the
   assert.equal(page.components.find((c) => c.name === "DEMO.COM").files[0].sha256, sha(demo));
   assert.equal(page.components.find((c) => c.name === "BOUNCE.BAS").files[0].sha256, sha(bounce));
   assert.match(page.instruction, /DEMO/);
-  assert.match(page.instruction, /BAZA BOUNCE then BOUNCE/);
+  assert.match(page.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
   for (const name of ["DEMO.COM", "BOUNCE.BAS"]) assert.equal(volume(card, "A").list().some((f) => f.name === name), false, `${name} not on the starter`);
   const onPage = volume(pc, "A");
   assert.equal(sha(onPage.read("DEMO.COM").subarray(0, demo.length)), sha(demo), "DEMO.COM on the page's card");
@@ -124,6 +124,8 @@ test("on the page's card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with spr
   run(150_000_000);
   let s = vdp();
   assert.deepEqual(text(s.registers), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I with 16 x 16 sprites");
+  const font = m.sym("FONT");
+  assert.deepEqual(Array.from(s.vram.slice(0x100, 0x400)), Array.from({ length: 768 }, (_, i) => m.read(font + i)), 'the ROM\'s font at 0100h, found by REG("HL")');
   const title = " BAZA BASIC ON THE PICO9918 ";
   assert.equal(Buffer.from(s.vram.slice(0x1802, 0x1802 + title.length)).toString("latin1"), title, "the title in the name table");
   const attrs = (v) => Array.from(v.slice(0x1b00, 0x1b18));

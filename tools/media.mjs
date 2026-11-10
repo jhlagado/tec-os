@@ -215,6 +215,9 @@ async function main() {
   // page card holds it as a CP/M text file, as TIMES.BAS is held.
   const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
 
+  // A recipe's revision rises when its set of files changes, not when a
+  // pinned file's bytes change. The page's revision is kept separately from
+  // the starter's, since the page adds its own files.
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
@@ -238,7 +241,7 @@ async function main() {
     id: "page",
     revision: "7",
     name: "TEC-OS starter, with the demo",
-    instruction: "At A>, type DEMO to see the hardware, BAZA BOUNCE then BOUNCE for a game (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DEMO to see the hardware, BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     components: [
       ...recipe.components,
       { id: "demo-com", name: "DEMO.COM", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918", files: [{ name: "DEMO.COM", url: "files/DEMO.COM", drive: "A", bytes: demo.length, sha256: sha(demo) }] },
