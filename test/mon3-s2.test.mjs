@@ -513,13 +513,7 @@ function apiRows() {
   }
   for (const hl of [0x0000, 0x4a2f, 0xffff]) add(call(8, { name: `call 8, HL ${hl.toString(16)}`, regs: { hl, de: 0x0900 } }));
   add(...withA(9, [0x00, 0x5c, 0xff], { regs: { de: 0x0900 } }));
-  // scanSegments ends with XOR A where MON-3's A is already 0, for the TX
-  // bit and the 5,601 T: F is 44h, where MON-3's is 81h from RRC B.
-  const f10 = (R, S) => {
-    assert.equal(R.regs.f, 0x81, "MON-3's F after call 10");
-    assert.equal(S.regs.f, 0x44, "the session's F after call 10");
-  };
-  add(call(10, { name: "call 10", regs: { de: 0x0900 }, mem: [0x0900, [0xeb, 0x28, 0xcd, 0xad, 0x2e, 0xa7]], tx6: true, skip: ["f"], check: f10 }));
+  add(call(10, { name: "call 10", regs: { de: 0x0900 }, mem: [0x0900, [0xeb, 0x28, 0xcd, 0xad, 0x2e, 0xa7]], tx6: true }));
   add(call(11, { name: "call 11", events: [press(K5, 200_000)], release: keys(K5), skip: ["h", "l"], tx6: true, waits: true }));
   // The LCD's address counter, which a status read returns, set alike.
   add(call(12, { name: "call 12", reads: [0x04], setup: (side) => side.m.tec1g.ioHandlers.write(0x04, 0x80) }));
@@ -706,7 +700,7 @@ async function preInit(svc) {
 }
 
 
-// Timing, on the same runtime: timeDelay equal; scanSegments 5,601 T to
+// Timing, on the same runtime: timeDelay equal; scanSegments 5,604 T to
 // MON-3's 5,495; equal tone periods; txByte's writes at equal intervals,
 // 833 T a data bit; each restart 101 T to the handler's first instruction
 // after POP HL; the interrupt 103 T; the NMI equal to MON-3's.
@@ -764,7 +758,7 @@ async function timing(sides) {
   const [R10, S10] = [ref.run(scan(ref), image), ses.run(scan(ses), image)];
   out.scan = { ref: routineT(R10), ses: routineT(S10) };
   assert.equal(routineT(R10), 5495, "MON-3's scanSegments");
-  assert.equal(routineT(S10), 5601, "the session's scanSegments");
+  assert.equal(routineT(S10), 5604, "the session's scanSegments");
   for (const row of [call(3, { name: "call 3" }), { name: "call 34", regs: { bc: 0x8c00 | 34, hl: 0x19 } }, { name: "call 34, HL 7Fh", regs: { bc: 0x0100 | 34, hl: 0x7f } }, call(35, { name: "call 35", regs: { de: 0x0900 }, mem: [0x0900, [0x06, 0x00, 0x0a, 0x1f]] })]) {
     const [R, S] = both(row);
     assert.ok(tones(R).every((t) => t.length > 8), `${row.name}: tones`);
@@ -803,7 +797,7 @@ const timingMutant = (name, edits, pattern) =>
     await assert.rejects(timing({ ref: (await theKeypadSides()).ref, ses: await sessionSide({ svc }) }), pattern);
   });
 
-timingMutant("scanSegments's on-delay 41h takes 5,679 T", [["  ld b,$40\n  djnz $         ; on for a while\n", "  ld b,$41\n  djnz $         ; on for a while\n"]], /the session's scanSegments/);
+timingMutant("scanSegments's on-delay 41h takes 5,682 T", [["  ld b,$40\n  djnz $         ; on for a while\n", "  ld b,$41\n  djnz $         ; on for a while\n"]], /the session's scanSegments/);
 timingMutant("txByte reading BAUD plus one", [["  ld hl,(BAUD)   ; the bit's delay\n", "  ld hl,(BAUD)   ; the bit's delay\n  inc hl\n"]], /txByte 0: its port 01h writes/);
 timingMutant("one more instruction in the latch stub takes 105 T", [
   ["GORET EQU $0049", "GORET EQU $004A"],
