@@ -112,14 +112,14 @@ function mutate(label,symbol,offset,expected,replacement,during){
 // earns credit. Missing symbols, bad opcodes and timeouts remain setup failures.
 mutate('publisher omitted third byte','PUBRR',9,3,2);
 mutate('publisher wrong destination','PUBRR',4,33,32);
-// ENTCELL reads each map cell for both walkers.
-mutate('walker wrong byte stride','ENTCELL',3,0x23,0);
-mutate('walker wrong high byte','ENTCELL',9,0x56,0x14);
-// ENTCNT's count initializer selects A=8 for word maps for both walkers;
-// reducing that immediate skips the distinct final cell while still
-// returning normally. Each walker must catch it on its own, so the second
-// control patches it only while FREEENT runs.
-mutate('mark truncated word count','ENTCN1',-1,8,7);
+// ENTCELL and ENTCNT are shared by both walkers. Each control patches the
+// shared code only while the walker it is charged to runs, so that walker
+// must catch it on its own: PARDIR for the mark side, FREEENT for clear.
+mutate('walker wrong byte stride','ENTCELL',3,0x23,0,'PARDIR');
+mutate('walker wrong high byte','ENTCELL',9,0x56,0x14,'PARDIR');
+// ENTCNT's count initializer selects A=8 for word maps; reducing that
+// immediate skips the distinct final cell while still returning normally.
+mutate('mark truncated word count','ENTCN1',-1,8,7,'PARDIR');
 mutate('clear truncated word count','ENTCN1',-1,8,7,'FREEENT');
 mutate('clear without complemented mask','CLRBLK',4,0x2f,0);
 assert.equal(controls.length,7,'all required negative controls executed');
