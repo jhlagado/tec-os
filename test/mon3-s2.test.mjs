@@ -7,9 +7,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ROOT } from "./lib/fixtures.mjs";
-import { MON3, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Variant, runFor, word } from "./lib/mon3.mjs";
-import { compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
+import { ROOT, volume } from "./lib/fixtures.mjs";
+import { PROGRAMS, realBuild, realProgram } from "./lib/mon3src.mjs";
+import { MON3, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Variant, runFor, services, word } from "./lib/mon3.mjs";
+import { compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, mon3Go, referenceHexLoad, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
 import { BIG16K, END, HASHES, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
@@ -170,8 +171,11 @@ async function hexLoads(svc) {
   svc ??= await mon3Build();
   const h = await hello3();
   const P = figures(svc).top;
+  const mz = await realProgram("matrixz80");
+  const mzBlocks = [[0x4000, mz.subarray(0, 0x38)], [0x4100, mz.subarray(0x100, 0x118)]];
   const text = {
     "HELLO3.HEX": hexFile([[0x4000, h]]),
+    "MZ80.HEX": hexFile(mzBlocks),
     "LOWER.HEX": Buffer.from(hexFile([[0x4000, h]]).toString("latin1").toLowerCase(), "latin1"),
     "BIG16K.HEX": hexFile([[0x4000, BIG16K]]),
     ...Object.fromEntries(Object.entries(edges(P)).map(([n, b]) => [n, hexFile(b)])),
@@ -182,12 +186,19 @@ async function hexLoads(svc) {
   const { m } = await inSession({ "BINARY.HEX": hexFile([[0x4000, h]]) }, { svc, text });
   for (const [file, blocks] of [
     ["HELLO3.HEX", [[0x4000, h]]],
+    ["MZ80.HEX", mzBlocks],
     ["LOWER.HEX", [[0x4000, h]]],
     ["BINARY.HEX", [[0x4000, h]]],
     ["BIG16K.HEX", [[0x4000, BIG16K]]],
     ...Object.entries(edges(P)),
   ]) {
     loadsAs(m, svc, file, blocks);
+  }
+  // HELLO3.HEX and MZ80.HEX load under MON-3's own intelHexLoad too, to the same bytes.
+  assert.equal(sha(text["MZ80.HEX"]), HASHES["MZ80.HEX"], "MZ80.HEX by the rule");
+  for (const [file, blocks] of [["HELLO3.HEX", [[0x4000, h]]], ["MZ80.HEX", mzBlocks]]) {
+    const read = await referenceHexLoad(text[file]);
+    for (const [at, b] of blocks) assert.deepEqual(Array.from(b, (_, i) => read(at + i)), [...b], `${file} under MON-3's call 24`);
   }
   // GO with no address runs at 4000h, with KG60's registers.
   assert.ok(ok(line(m, "LOAD HELLO3.HEX")));
@@ -970,3 +981,142 @@ sumMutant("the range ending before HOOKAT misses OLDWB", [["SUMLEN EQU SUMEND-HD
 sumMutant("RST 30h's digits written into its text warn on a clean RST 30h", [["  ld de,HEXT\n  call HLSTR     ; its digits\n", "  ld de,MBRK\n  call HLSTR     ; its digits\n"]], clean, /RST 30h 1/);
 sumMutant("the flag cleared at entry gives no warning at re-entry", [["  ld a,(DMG)\n  or a           ; damaged before?\n", "  xor a\n  ld (DMG),a\n  ld a,(DMG)\n  or a           ; damaged before?\n"]], (svc) => damaged(svc, "LISTST"), /the warning at re-entry/);
 sumMutant("call 2's checksum checked after WSINIT warns", [["  call CHECK     ; before RUNOK goes\n  call WSINIT    ; the workspace anew\n", "  call WSINIT    ; the workspace anew\n  call CHECK     ; before RUNOK goes\n"]], preInit, /no warning/);
+
+// KG66: the real programs at the pin, converted, loaded by LOAD, run by GO
+// and compared with the same binary under MON-3's GO. A reset ends each.
+
+const LCD_ROWS = (m) => [0, 1, 2, 3].map((r) => String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(r * 20, r * 20 + 20)));
+const MATRIX_PORTS = new Set([0x05, 0x06, 0xf8, 0xf9]);
+
+/** NAME's file (BIN, or HEX of its two blocks when HEX) loaded and run by GO in a session, to 4000h: { m, files }. */
+async function programSession(name, bytes, { hex = false, svc } = {}) {
+  const file = hex ? "PROG.HEX" : "PROG.BIN";
+  const text = hex ? { [file]: mz80Hex(bytes) } : {};
+  const files = hex ? {} : { [file]: bytes };
+  const { m } = await inSession(files, { svc, text });
+  assert.ok(ok(line(m, `LOAD ${file}`)), `${name}: LOAD ${file}`);
+  const a = volume(m.image, "A");
+  const before = Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))]));
+  goTo(m, "GO", 0x4000, 20_000_000);
+  return { m, before };
+}
+
+/** MZ80.HEX: matrixz80's two ORG blocks, 4000h-4037h and 4100h-4117h, by the record rule. */
+const mz80Hex = (bytes) => hexFile([[0x4000, bytes.subarray(0, 0x38)], [0x4100, bytes.subarray(0x100, 0x118)]]);
+
+/** The first N writes to the 8x8 ports, from now, as [port, value]. */
+function matrixWrites(side, n = 4096, max = 100_000_000) {
+  const io = side.m.tec1g.ioHandlers;
+  const write = io.write;
+  const got = [];
+  io.write = (port, value) => {
+    if (MATRIX_PORTS.has(port & 0xff) && got.length < n) got.push([port & 0xff, value & 0xff]);
+    return write(port, value);
+  };
+  side.m.runUntil(() => got.length >= n, max, `${n} 8x8 writes`);
+  io.write = write;
+  return got;
+}
+
+const ran = {};
+
+test("KG66 program binaries", async () => {
+  for (const [name, p] of Object.entries(PROGRAMS)) {
+    const b = await realProgram(name);
+    assert.equal(b.length, p.bytes, `${name}: ${p.bytes} bytes at 4000h`);
+    assert.equal(sha(b), p.sha256, `${name}: its pinned hash`);
+  }
+  assert.equal(sha(mz80Hex(await realProgram("matrixz80"))), HASHES["MZ80.HEX"], "MZ80.HEX by the record rule");
+});
+
+async function lcdTest(svc) {
+  const { bytes, symbols } = await realBuild("lcd-test");
+  const run = await programSession("lcd-test", bytes, { svc });
+  run.m.runUntil(() => run.m.pc === symbols.DONE, 5_000_000, "lcd-test's DONE");
+  const ref = mon3Go(bytes);
+  ref.m.runUntil(() => ref.m.pc === symbols.DONE, 10_000_000, "lcd-test's DONE under MON-3");
+  assert.deepEqual(LCD_ROWS(run.m), LCD_ROWS(ref.m), "the LCD as under MON-3");
+  return run;
+}
+
+test("KG66 lcd-test", async () => {
+  ran["lcd-test"] = await lcdTest();
+});
+
+test("KG66 serial", async () => {
+  const bytes = await realProgram("serial");
+  const run = await programSession("serial", bytes);
+  const ref = mon3Go(bytes);
+  ref.m.runUntil(() => ref.m.pc === 0x4000, 5_000_000, "serial at 4000h under MON-3");
+  const outs = [run.m, ref.m].map((m) => {
+    const from = m.serial.length;
+    const step = (input) => {
+      if (input) {
+        m.tec1g.queueSerial([...Buffer.from(input, "latin1")]);
+        m.tec1g.ioHandlers.read(0x00);
+      }
+      runFor(m, 5_000_000);
+      return Buffer.from(m.serial.slice(from)).toString("latin1");
+    };
+    return [step(), step("AB\r"), step("CD\r")];
+  });
+  const [s, r] = outs;
+  assert.equal(s[0], "TEC-1G MON-3 SERIAL OK\r\n", "the first line");
+  assert.equal(s[1], `${s[0]}B\u0000\r\n`, "after AB CR: 42h 00h 0Dh 0Ah");
+  assert.equal(s[2], `${s[1]}CD\r\n`, "after CD CR");
+  assert.deepEqual(s, r, "as under MON-3");
+  ran.serial = run;
+});
+
+async function matrixProgram(name, { hex = false, svc } = {}) {
+  const bytes = await realProgram(name);
+  const run = await programSession(name, bytes, { hex, svc });
+  const ref = mon3Go(bytes);
+  ref.m.runUntil(() => ref.m.pc === 0x4000, 5_000_000, `${name} at 4000h under MON-3`);
+  assert.deepEqual(matrixWrites({ m: run.m }), matrixWrites(ref), `${name}${hex ? " from MZ80.HEX" : ""}: the first 4,096 8x8 writes as under MON-3`);
+  return run;
+}
+
+test("KG66 matrix programs", async () => {
+  for (const name of ["matrix-demo", "matrix-demo-rgb", "matrixz80"]) ran[name] = await matrixProgram(name);
+  ran["matrixz80 hex"] = await matrixProgram("matrixz80", { hex: true });
+});
+
+test("KG66 reset after", async () => {
+  assert.equal(Object.keys(ran).length, 6, "each program ran");
+  for (const [name, { m, before }] of Object.entries(ran)) {
+    m.reset();
+    m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+    m.runUntil(() => m.ready(), 400_000_000, `the prompt after ${name}'s reset`);
+    const a = volume(m.image, "A");
+    assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);
+    assert.deepEqual(services(m), [], `${name}: no service after the reset`);
+    assert.equal(word(m, 6), 0xb9a4, `${name}: (0006h) B9A4h`);
+  }
+});
+
+test("KG66 mutant: the HEX loader's second pass writing each record one byte high", async () => {
+  const svc = await mon3Variant([["  ld ix,(HADR)   ; where it goes\n", "  ld ix,(HADR)   ; where it goes\n  inc ix\n"]]);
+  await assert.rejects(matrixProgram("matrixz80", { hex: true, svc }), /from MZ80\.HEX: the first 4,096/);
+});
+
+test("KG66 mutant: LOAD's BIN read starting one record late", async () => {
+  const svc = await mon3Variant([["  jr c,LFAIL     ; it would not fit\n  ld hl,(LDAT)\n", "  jr c,LFAIL     ; it would not fit\n  ld hl,(LDAT)\n  ld de,128\n  add hl,de\n"]]);
+  await assert.rejects(lcdTest(svc), /lcd-test's DONE|the LCD as under MON-3/);
+});
+
+test("KG66 mutant: a conversion that leaves ORG blocks in source order", async () => {
+  await assert.rejects(realProgram("matrixz80", { keepOrder: true }), /IMAGE records descend or overlap/);
+});
+
+test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
+  // RST 20h's flags taken from the digit scan, as KG60's mutant does.
+  const svc = await mon3Variant([["  call SCANS     ; the digits\n  call SKEYS     ; the keys\n", "  call SKEYS     ; the keys\n  call SCANS     ; the digits\n"]]);
+  const { m } = await inSession({ "HELLO3.BIN": await hello3() }, { svc });
+  assert.ok(ok(line(m, "LOAD HELLO3.BIN")));
+  goTo(m, "GO", 0x4000, 20_000_000);
+  runFor(m, 1_000_000);
+  m.tec1g.applyKey(KAD, true);
+  const from = m.output.length;
+  assert.throws(() => m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD"), /no MON3> after AD/);
+});

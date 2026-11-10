@@ -60,6 +60,56 @@
       "path": "roms/tec1g/mon-3/mon3.bin",
       "bytes": 16384,
       "sha256": "9eacfdc8ef5937a27a39cf4a10a3479334695b8fb94d1076a58a8306f144c1ac"
+    },
+    "MON3 lcd-test.asm": {
+      "env": "MON3_LCD_TEST_ASM",
+      "default": "../debug80-tec1g-mon3/src/lcd-test.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/lcd-test.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/lcd-test.asm",
+      "bytes": 1903,
+      "sha256": "5186a0b6f272446000546b298645225f6d8ec319cb762c93aa15ce48fd9a63e8"
+    },
+    "MON3 serial.asm": {
+      "env": "MON3_SERIAL_ASM",
+      "default": "../debug80-tec1g-mon3/src/serial.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/serial.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/serial.asm",
+      "bytes": 3276,
+      "sha256": "0def08ed176b8d55b92fb7820a28c9ca755e68e86666655e2c66327544e86984"
+    },
+    "MON3 matrix-demo.asm": {
+      "env": "MON3_MATRIX_DEMO_ASM",
+      "default": "../debug80-tec1g-mon3/src/matrix-demo.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/matrix-demo.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/matrix-demo.asm",
+      "bytes": 1989,
+      "sha256": "ec1375e425ddc71c33e74e718decc2b6e4406780a4ff6cb592d6a7f72c58c30b"
+    },
+    "MON3 matrix-demo-rgb.asm": {
+      "env": "MON3_MATRIX_DEMO_RGB_ASM",
+      "default": "../debug80-tec1g-mon3/src/matrix-demo-rgb.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/matrix-demo-rgb.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/matrix-demo-rgb.asm",
+      "bytes": 2334,
+      "sha256": "a05216db536762ebe4210cc4ab5997ea7f15fa80d9db34e06e674154415c1905"
+    },
+    "MON3 matrixz80.asm": {
+      "env": "MON3_MATRIXZ80_ASM",
+      "default": "../debug80-tec1g-mon3/src/matrixz80.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/matrixz80.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/matrixz80.asm",
+      "bytes": 1093,
+      "sha256": "21a5b4ca8c6f50f57836d117a3ec5dc417487d0907d79f5dba090b80838fc1fa"
     }
   }
 }

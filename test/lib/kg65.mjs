@@ -309,3 +309,55 @@ export function compareRows(ref, ses, rows) {
   }
   return bad;
 }
+
+// MON-3's own addresses, from its listing at the pin.
+export const MON3_KEYGO = 0xc284; // where its GO key's handler starts
+export const MON3_PASS = 0xcc34; // displayPass, where intelHexLoad ends well
+
+/** BYTES of Intel HEX through MON-3's call 24 from the fixed image: the reference's memory then. */
+export async function referenceHexLoad(text) {
+  const ref = await referenceSide();
+  ref.run({ name: "call 24", regs: { bc: 0x1200 | 24 }, atRestart: (side) => {
+    side.m.tec1g.queueSerial([...text]);
+    side.m.tec1g.ioHandlers.read(0x00);
+  }, stopAt: MON3_PASS, max: 200_000_000 }, fixedImage());
+  return (a) => ref.m.read(a);
+}
+
+/**
+ * BIN run by MON-3's GO on the pinned runtime, from the fixed image: a
+ * HostMachine at MON-3's GO key with HL 4000h, as its monitor leaves it.
+ * MATRIX: the matrix fitted.
+ */
+export function mon3Go(bin, { matrix = false } = {}) {
+  const rom = mon3Rom();
+  const m = new HostMachine({ rom, symbols: new Map(), matrix, clock: TEST_CLOCK, rtc: false });
+  m.tec1g.ioHandlers.write(0xff, 0x01);
+  for (let i = 0; i < 0x100; i += 1) m.write(i, rom[i]);
+  const image = fixedImage();
+  for (let i = 0; i < image.length; i += 1) m.write(0x800 + i, image[i]);
+  for (let i = 0x0c; i < 0x10; i += 1) m.write(0x0886 + i, rom[DEFAULTS + i]);
+  bin.forEach((b, i) => m.write(0x4000 + i, b));
+  const c = m.cpu.cpu;
+  c.pc = MON3_KEYGO;
+  c.sp = 0x0880;
+  c.h = 0x40;
+  c.l = 0x00;
+  const side = new Side("reference", m, {});
+  primeRxAt(m);
+  c.pc = MON3_KEYGO;
+  return side;
+}
+
+/** The RX prime with the CPU held in place. */
+function primeRxAt(m) {
+  const pc = m.cpu.cpu.pc;
+  m.write(0x3ff0, 0x18);
+  m.write(0x3ff1, 0xfe); // JR $
+  m.cpu.cpu.pc = 0x3ff0;
+  m.tec1g.queueSerial([0]);
+  m.tec1g.ioHandlers.read(0x00);
+  const end = m.cycles + 40_000;
+  m.runUntil(() => m.cycles >= end, 100_000, "the RX prime");
+  m.cpu.cpu.pc = pc;
+}
