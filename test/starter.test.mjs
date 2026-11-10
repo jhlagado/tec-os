@@ -1,8 +1,8 @@
 // The starter card that `npm run media` builds: exactly nine files on A:, each
 // the bytes its source or pin gives, the page's width drivers pinned in its
 // recipe, and it boots to a MOUNT that lists its volumes. The page's card adds
-// DEMO.COM, its source DEMO.ASM, and BOUNCE.BAS, which BAZA compiles and which
-// runs its sprites on the PICO9918. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and
+// DEMO.ASM, which TAS builds into the demo, and BOUNCE.BAS, which BAZA compiles
+// and which runs its sprites on the PICO9918. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and
 // BOUNCE.BAS are pinned inputs (test/inputs.json).
 
 import { execFileSync } from "node:child_process";
@@ -79,24 +79,22 @@ async function pageCard() {
   return { page, card: await buildRecipe(page, fileFetcher(resolve(ROOT, "dist"))) };
 }
 
-test("the web page's card is the starter with DEMO.COM, DEMO.ASM and BOUNCE.BAS, which the starter lacks", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the web page's card is the starter with DEMO.ASM and BOUNCE.BAS, which the starter lacks, and no DEMO.COM", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(BOUNCE);
   const { card, recipe } = starter();
   const { page, card: pc } = await pageCard();
-  const demo = (await program("demo")).bytes;
   // Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
   const bounce = Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
   const names = (r) => r.components.map((c) => c.name).sort();
-  assert.deepEqual(names(page), [...names(recipe), "BOUNCE.BAS", "DEMO.ASM", "DEMO.COM"].sort());
-  assert.equal(page.components.find((c) => c.name === "DEMO.COM").files[0].sha256, sha(demo));
+  assert.deepEqual(names(page), [...names(recipe), "BOUNCE.BAS", "DEMO.ASM"].sort());
   assert.equal(page.components.find((c) => c.name === "BOUNCE.BAS").files[0].sha256, sha(bounce));
   const demoSource = Buffer.from(readFileSync(resolve(ROOT, "programs/DEMO.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
   assert.equal(page.components.find((c) => c.name === "DEMO.ASM").files[0].sha256, sha(demoSource));
-  assert.match(page.instruction, /DEMO/);
+  assert.match(page.instruction, /TAS DEMO then DEMO/);
   assert.match(page.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
   for (const name of ["DEMO.COM", "DEMO.ASM", "BOUNCE.BAS"]) assert.equal(volume(card, "A").list().some((f) => f.name === name), false, `${name} not on the starter`);
   const onPage = volume(pc, "A");
-  assert.equal(sha(onPage.read("DEMO.COM").subarray(0, demo.length)), sha(demo), "DEMO.COM on the page's card");
+  assert.ok(!onPage.list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
   assert.equal(sha(onPage.read("BOUNCE.BAS").subarray(0, bounce.length)), sha(bounce), "BOUNCE.BAS on the page's card");
   assert.equal(sha(onPage.read("DEMO.ASM").subarray(0, demoSource.length)), sha(demoSource), "DEMO.ASM on the page's card");
 });
@@ -154,5 +152,31 @@ test("on the page's card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with spr
   assert.deepEqual(text(vdp().registers), console40, "the console's VDP mode back");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.ok(m.screen().some((l) => /^THANKS FOR PLAYING\. SCORE/.test(l)), "on the console's screen");
+  assert.deepEqual(m.violations, []);
+});
+
+// The page's card holds the demo as source only: TAS DEMO makes DEMO.COM, the
+// 1,191 bytes cards once shipped, and DEMO runs it.
+test("on the page's card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { skip: PAGE_SKIP, timeout: 1_800_000 }, async () => {
+  const { card } = await pageCard();
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  let mark = m.output.length;
+  const keys = (s, what, done) => {
+    m.enqueueInput(s, "matrix");
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
+  };
+  keys("tas demo\r", "TAS's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /DEMO\.COM written/);
+  const demo = Buffer.from(volume(card, "A").read("DEMO.COM")).subarray(0, 1191);
+  assert.equal(sha(demo), "7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d", "the DEMO.COM cards shipped");
+  mark = m.output.length;
+  keys("demo\r", "the demo's loop", () => /Press any key to stop\./.test(m.text(mark)));
+  const end = m.cycles + 100_000_000;
+  m.runUntil(() => m.cycles >= end, 101_000_000, "the demo running");
+  assert.deepEqual(Array.from(m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 8)), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I on the PICO9918");
+  assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "TEC-OS hardware demo", "the LCD's first row");
+  m.enqueueInput(" ", "matrix");
+  m.runUntilChecked(() => (m.pumpInput(), m.ready() && /Demo stopped\.\r\n[^]*A>$/.test(m.text(mark))), 400_000_000, "the prompt after a key");
+  assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.deepEqual(m.violations, []);
 });

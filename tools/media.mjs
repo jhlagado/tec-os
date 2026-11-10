@@ -240,13 +240,12 @@ async function main() {
   const page = {
     ...recipe,
     id: "page",
-    revision: "8",
+    revision: "9",
     name: "TEC-OS starter, with the demo",
-    instruction: "At A>, type DEMO to see the hardware, BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), TED DEMO.ASM to read the demo, or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     components: [
       ...recipe.components,
-      { id: "demo-com", name: "DEMO.COM", description: "a demonstration of the hardware: LCD, digits, LEDs, PICO9918", files: [{ name: "DEMO.COM", url: "files/DEMO.COM", drive: "A", bytes: demo.length, sha256: sha(demo) }] },
-      { id: "demo-asm", name: "DEMO.ASM", description: "DEMO.COM's source: TED DEMO.ASM to read it, TAS DEMO to build it", files: [{ name: "DEMO.ASM", url: "files/DEMO.ASM", drive: "A", bytes: demoSource.length, sha256: sha(demoSource) }] },
+      { id: "demo-asm", name: "DEMO.ASM", description: "a demonstration of the hardware, LCD, digits, LEDs and PICO9918, as source: TAS DEMO builds DEMO.COM, TED DEMO.ASM reads it", files: [{ name: "DEMO.ASM", url: "files/DEMO.ASM", drive: "A", bytes: demoSource.length, sha256: sha(demoSource) }] },
       { id: "bounce-bas", name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D steer, Q quits", files: [{ name: "BOUNCE.BAS", url: "files/BOUNCE.BAS", drive: "A", bytes: bounce.length, sha256: sha(bounce) }] },
     ],
   };
@@ -266,7 +265,9 @@ async function main() {
     traceRom({ backend, phase: "media", target: "tecos.rom", root: dir, sha256 });
   }
   for (const [ref, bytes] of buffers) writeFileSync(resolve(DIST, ref), bytes);
-  writeFileSync(resolve(FILES, "DEMO.COM"), demo);
+  // DEMO.COM is built and checked here, but the page card holds only its
+  // source: TAS DEMO on the card makes it.
+  writeFileSync(resolve(DIST, "DEMO.COM"), demo);
   writeFileSync(resolve(FILES, "BOUNCE.BAS"), bounce);
   writeFileSync(resolve(FILES, "DEMO.ASM"), demoSource);
   writeFileSync(resolve(DIST, "abi.inc"), abi);
