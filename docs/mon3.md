@@ -2,8 +2,8 @@
 
 Status: **S2**, 2026-11-10 (KS53): install, `/E`, `LOAD` of a `.BIN` or a
 `.HEX`, `GO`, `EXIT` and re-entry; MON-3's restarts and 46 of its 63
-`RST 10h` calls, the matrix keyboard, and the checksum of TEC-OS's tables on
-a program's return. `test/mon3.test.mjs`, `test/ks53-hello.test.mjs` and
+`RST 10h` calls (42 implemented, 4 translated), the matrix keyboard, and
+the checksum of TEC-OS's tables on a program's return. `test/mon3.test.mjs`, `test/ks53-hello.test.mjs` and
 `test/mon3-s2.test.mjs` hold it, the last comparing each call with MON-3's
 own ROM on the same emulator. All of it is emulator evidence.
 
@@ -185,7 +185,7 @@ The next `/E` takes it out first, and `UNLOAD` does too.
 Each restart reaches its handler 101 T after the `RST`, the interrupt 103 T
 after its acknowledge.
 
-`RST 10h` calls implemented: 0 `softwareID`, 1 `versionID`, 2 `preInit`,
+`RST 10h` calls implemented, 42 of them: 0 `softwareID`, 1 `versionID`,
 3 `beepAlways`, 4 `convAToSeg`, 5 `regAToASCII`, 6 `ASCIItoSegment`,
 7 `stringCompare`, 8 `HLToString`, 9 `AToString`, 10 `scanSegments`,
 11 `displayError`, 12 `LCDBusy`, 13 `stringToLCD`, 14 `charToLCD`,
@@ -194,16 +194,16 @@ after its acknowledge.
 23 `rxByte`, 25 `sendToSerial`, 26 `receiveFromSerial`, 28 `sendHex`,
 29 `genDataDump`, 30 `checkStartEnd`, 33 `timeDelay`, 34 `playNote`,
 35 `playTune`, 37 `getCaps`, 38 `getShadow`, 39 `getProtect`,
-40 `getExpand`, 41 `setCaps`, 43 `setProtect`, 45 `stringToSerial`,
-48 `toggleCaps`, 49 `random`, 53 `matrixScanASCII`, 54 `parseMatrixScan`,
+40 `getExpand`, 45 `stringToSerial`, 49 `random`, 53 `matrixScanASCII`, 54 `parseMatrixScan`,
 55 `LCDConfirm`, 56 `getGLCDTerm` and 62 `RGBScan`. With the matrix
 keyboard fitted (port 03h's bit 0 set), calls 16 and 17, `RST 08h` and
 `RST 20h` read it at port FEh as MON-3 does, a row at a time.
 
-Translated, on TEC-OS's resources: 2 `preInit` sets the workspace up again
-and returns to `MON3>` with nothing runnable, after checking the tables;
-41 `setCaps`, 43 `setProtect` and 48 `toggleCaps` write the latch as `GO`
-takes it, PROTECT and CAPS with the overlay off, and `LATCHV` with it.
+Translated, on TEC-OS's resources, 4 of them: 2 `preInit`, 41 `setCaps`,
+43 `setProtect` and 48 `toggleCaps`. Call 2 sets the workspace up again and
+returns to `MON3>` with nothing runnable, after checking the tables. Calls
+41, 43 and 48 write the latch as `GO` takes it, PROTECT and CAPS with the
+overlay off, and `LATCHV` with it.
 PROTECT set by call 43 takes effect at once, as in MON-3, and the return to
 `MON3>` clears it.
 
