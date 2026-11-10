@@ -50,11 +50,10 @@ KBSTEP:
 KBSBIT:
   srl d          ; lowest bit first
   jr nc,KBSN
-  ld e,a
-  ld a,(KBE)     ; previous last key
-  ld (KBD),a     ; keep the prior key
-  ld a,e
-  ld (KBE),a     ; new last key
+  ld hl,(KBE)    ; KBD follows KBE
+  ld h,l
+  ld l,a
+  ld (KBE),hl
 
 KBSN:
   inc a
@@ -101,20 +100,14 @@ KBMOD:
   cp 7           ; Caps Lock key
   jr z,KBCAPS
   jr nc,KBNOARR  ; Keys 3-6: ESC [ A-D
-  sub 3          ; index arrow letter
-  ld hl,KBARROW
-  add a,l
-  ld l,a
-  jr nc,KBARR1   ; handle page carry
-  inc h
-
-KBARR1:
-  ld a,(hl)
-  ld (KBT2),a    ; queue arrow letter
-  ld a,'['
-  ld (KBT1),a    ; queue '[' first
-  ld a,2         ; CINTAKE reads both
-  ld (KBTN),a
+  ld hl,KBARROW-3
+  call KBIDX
+  ld hl,KBT2     ; KBTN,KBT1,KBT2
+  ld (hl),a
+  dec hl
+  ld (hl),'['
+  dec hl
+  ld (hl),2
   ld a,$1B       ; deliver ESC now
   jr KBDELIV
 
@@ -135,9 +128,10 @@ KBNONE:
   ret
 
 KBCAPS:
-  ld a,(LATCHV)
+  ld hl,LATCHV
+  ld a,(hl)
   xor $80        ; Caps bit and LED
-  ld (LATCHV),a
+  ld (hl),a
   out (SYSLAT),a
   xor a          ; Z: no character
   ret
@@ -166,21 +160,18 @@ KBSP:
   cp $21
   jr nc,KBALPHA
   add a,$1D      ; digits/punct 2Ch-3Dh
-  ld c,a
-  ld a,d
-  or a           ; Shift is 0
-  ld a,c
+  inc d
+  dec d          ; a modifier?
   ret nz         ; plain character
   sub $2C        ; index into KBSHIFT
   ld hl,KBSHIFT
   jr KBIDX
 
 KBSPHIT:
-  ld c,(hl)      ; plain value first
+  ld a,(hl)
   inc hl         ; then shifted value
-  ld a,d
-  or a           ; Shift is 0
-  ld a,c
+  inc d
+  dec d          ; a modifier?
   ret nz         ; plain unless Shift
   ld a,(hl)
   ret
@@ -191,14 +182,14 @@ KBALPHA:
   add a,$3D      ; 24h-3Dh: a to z
   ld c,a
   ld a,d
-  cp 1
+  dec a          ; Ctrl alone?
   jr nz,KBNOCTL
   ld a,c         ; Ctrl makes 01h-1Ah
   sub $60
   ret
 
 KBNOCTL:
-  or a           ; Shift
+  inc a          ; D again
   jr z,KBUPPER
   ld a,(LATCHV)  ; Caps Lock
   rlca           ; bit 7 into carry

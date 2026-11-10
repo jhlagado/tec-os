@@ -13,6 +13,8 @@
 CMDUNL:
   call SVCUNL
   jp nc,STARTED  ; NC: unload completed
+
+BADCMDJ1:
   jp BADCMD
 
 ; Retry the next console name. Input DE
@@ -34,7 +36,9 @@ CONSKIP:
   ld a,b
   cp 6           ; six name records
   jr nz,CONNXT
-  jp BADCMD
+
+CONBAD:
+  jr BADCMDJ1
 
 ; CON reports the effective console or
 ; selects TTY/CRT/BAT/UC1. GLCD maps to
@@ -106,11 +110,11 @@ CONEND:
   jr z,CONNW     ; spaces only: no width
   ld a,b
   cp CMCRT
-  jp nz,BADCMD   ; CRT/PICO width only
+  jr nz,CONBAD
   ld a,(hl)      ; first decimal digit
   sub '0'
   cp 10
-  jp nc,BADCMD   ; reject nondigit
+  jr nc,CONBAD
   ld c,a
   add a,a        ; tens multiplication
   add a,a
@@ -121,7 +125,7 @@ CONEND:
   ld a,(hl)
   sub '0'
   cp 10
-  jp nc,BADCMD   ; reject nondigit
+  jr nc,CONBAD
   add a,c        ; binary width
   inc hl
   push af        ; width across calls
@@ -142,7 +146,7 @@ CONEND:
   jr nc,CONWD    ; NC: table found
   ld a,(STFLAG)  ; startup origin flag
   or a
-  jp z,BADCMD    ; typed: bad command
+  jr z,CONBAD
   jp STARTED
 
 ; FIND returned the PICO table in HL.
@@ -162,7 +166,7 @@ CONWD:
   ld l,a
   ld a,b
   call VHLJP     ; width call: A=B
-  jp c,BADCMD    ; carry: refused
+  jr c,CONBAD
   ld b,CMCRT     ; width set: CRT mode
   jr CONFL
 
@@ -205,6 +209,8 @@ CONSH1:
   djnz CONSH1
   ld de,CRLFMSG
   call PUTSTR
+
+MAINLOJ2:
   jp MAINLOOP
 
 ; USER: require one decimal number 0..15
@@ -216,26 +222,20 @@ CONSH1:
 
 CMDUSER:
   call ARGSKIP   ; decimal operand
-  cp '0'
-  jp c,BADCMD
-  cp '9'+1
-  jp nc,BADCMD   ; reject empty/nondigit
   sub '0'
-  ld b,a
+  cp 10          ; a digit must lead
+  jr nc,USRBAD
+  ld b,a         ; tens or units
   inc hl
   ld a,(hl)
-  cp '0'         ; optional second digit
-  jr c,USERDONE
-  cp '9'+1
-
+  sub '0'        ; optional second digit
+  cp 10
   jr nc,USERDONE
-  ld a,b
-  cp 1
-  jp nz,BADCMD   ; two digits: 1x only
-  ld a,(hl)
-  cp '6'
-  jp nc,BADCMD   ; second digit <=5
-  sub '0'-10     ; 10 plus second digit
+  cp 6           ; only 10..15
+  jr nc,USRBAD
+  dec b          ; after a leading 1
+  jr nz,USRBAD
+  add a,10       ; 10..15
   ld b,a
   inc hl
 
@@ -244,7 +244,10 @@ USERDONE:
   ld e,b
   ld c,32        ; 32: set user
   call BDOS
-  jp MAINLOOP
+  jr MAINLOJ2
+
+USRBAD:
+  jp BADCMD
 
 ; SAVE n NAME: write n 256-byte TPA
 ; pages from 0100h. Reject eight-bit
@@ -262,52 +265,45 @@ USERDONE:
 
 CMDSAVE:
   call ARGSKIP   ; decimal page count
-  cp '0'
-  jp c,BADCMD
-  cp '9'+1
-  jp nc,BADCMD   ; reject empty/nondigit
+  sub '0'
+  cp 10          ; a digit must lead
+  jr nc,USRBAD
   ld b,0         ; eight-bit count
 
 SAVENUM:
   ld a,(hl)
-  cp '0'
-  jr c,SAVENEND
-  cp '9'+1
-
-  jr nc,SAVENEND
   sub '0'
+  cp 10          ; a digit?
+  jr nc,SAVENEND
   ld e,a
   ld a,b
-  add a,a        ; overflow at B*2
-  jp c,BADCMD
+  cp 26          ; 26*10 overflows
+  jr nc,USRBAD
+  add a,a
   ld d,a
-  add a,a        ; overflow at B*4
-  jp c,BADCMD
-  add a,a        ; overflow at B*8
-  jp c,BADCMD
-  add a,d        ; overflow at B*10
-  jp c,BADCMD
-  add a,e        ; overflow adding digit
-  jp c,BADCMD
+  add a,a
+  add a,a        ; B*8
+  add a,d        ; B*10, below 256
+  add a,e        ; plus the digit
+  jr c,USRBAD    ; past 255
   ld b,a
   inc hl
   jr SAVENUM
 
 SAVENEND:
-  cp SPACE       ; count/name separator
-  jp nz,BADCMD
+  cp $F0         ; SPACE less '0'
+  jr nz,USRBAD   ; need one space
 
   ld a,(PZBDOS+2)
   ld c,a
   ld a,b
-  cp c
-  jp nc,BADCMD   ; reject reaching it
+  cp c           ; below BDOS's page?
+  jr nc,USRBAD
 
   ld (SAVEPGS),a
-  call SKIPSP
-  ld a,(hl)
+  call SKIPSP    ; A=first name byte
   or a
-  jp z,BADCMD    ; missing filename
+  jr z,USRBAD    ; no name
   call ONENAME   ; one complete name
 
   call DOSSEQ    ; destructive delete
@@ -334,10 +330,8 @@ SAVELOOP:
   jr c,SAVEWER
   call SAVE128   ; second half-page
   jr c,SAVEWER   ; returned write error
-  ld a,(SAVEPGS)
-  dec a
-
-  ld (SAVEPGS),a
+  ld hl,SAVEPGS
+  dec (hl)
   jr SAVELOOP
 
 ; Write CMDFCB's next record from
@@ -352,8 +346,7 @@ SAVELOOP:
 
 SAVE128:
   ld de,(SAVEADR)
-  ld c,26        ; 26: set DMA
-  call BDOS
+  call SETDMA
   call DOSSEQ    ; sequential write
   DB 21*2+0      ; 21: CMDFCB
   or a
@@ -364,7 +357,6 @@ SAVE128:
   add hl,de
 
   ld (SAVEADR),hl
-  or a           ; carry clear
   ret
 
 ; Attempt to close CMDFCB through DOSSEQ
@@ -446,8 +438,7 @@ TAILDONE:
   xor a
   ld (de),a      ; zero after tail
   ld de,CMDTAIL
-  ld c,26        ; 26: default DMA
-  jp BDOS
+  jp SETDMA
 
 ; Parse from HL into 36 writable FCB
 ; bytes at DE, saved in FCBBASE.
@@ -500,12 +491,10 @@ FCBZERO:
   cp ':'
   jr nz,FCBNAME  ; no prefix: default
   ld a,(hl)
-  cp 'A'         ; drive lower bound
-  jr c,FCBDRBAD
-  cp 'Q'
-
-  jr nc,FCBDRBAD
-  sub 'A'-1
+  sub 'A'        ; drive lower bound
+  cp 16
+  jr nc,PLEND    ; not A..P: carry
+  inc a
   ld (de),a      ; FCB drive 1..16
   inc hl
   inc hl         ; past drive prefix
@@ -540,11 +529,6 @@ FCBDOT:
 
 FCBTYP:
   ld b,3         ; positive type bound
-  jr PARFLD
-
-FCBDRBAD:
-  scf            ; invalid drive letter
-  ret
 
 ; Parse a field with positive B=8 or 3,
 ; source HL and destination DE. FCBEND
@@ -723,6 +707,19 @@ KEYEND:
   cp SPACE
   ret            ; SPACE is also match
 
+; BDOS 26, set DMA: to LOADBUF (SETLB)
+; or to the caller's DE (SETDMA).
+; Changes AF/BC/DE/HL according to BDOS.
+
+SETLB:
+  ld de,LOADBUF
+
+SETDMA:
+  ld c,26        ; 26: set DMA
+
+BDOSJ1:
+  jp BDOS
+
 ; Print the dollar-ended string at DE
 ; through BDOS 9. Tail-enter BDOS
 ; without a private save frame. Changes
@@ -730,7 +727,7 @@ KEYEND:
 
 PUTSTR:
   ld c,9         ; 9: dollar string
-  jp BDOS
+  jr BDOSJ1
 
 ; Print E through BDOS 2 with OUTCHAR
 ; bookkeeping and printer echo.
@@ -811,8 +808,7 @@ STBOOT:
   ld bc,12       ; 12-byte reference
   ldir
   ld de,STREC    ; one-record DMA
-  ld c,26        ; 26: STREC DMA
-  call BDOS
+  call SETDMA
   call DOSSEQ    ; open descriptor
   DB 15*2+0      ; 15: CMDFCB
   inc a

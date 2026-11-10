@@ -121,13 +121,13 @@ TMSW1:
   ld (PIWID),a
 
   ld (PIREGP),hl
+  ld e,a         ; width
   ld a,c
   ld (PITPG),a
+  ld c,e
   ld h,b         ; Row table base.
   ld l,0
   ld de,PIROWT
-  ld a,(PIWID)
-  ld c,a
   ld b,24
 
 TMSW2:
@@ -145,10 +145,13 @@ TMSW2:
 
 TMSW3:
   djnz TMSW2
-  xor a          ; Reset pages and move.
-  ld (PITPD),a
-  ld (PITPS),a
-  ld (PIMV),a
+  ld hl,PITPD    ; PITPD,PITPS,PIMV
+  xor a
+  ld (hl),a
+  inc hl
+  ld (hl),a
+  inc hl
+  ld (hl),a
   ret
 
 ; Page functions: A=0 shows the drawn
@@ -308,7 +311,7 @@ TMSCOL:
 GFXREG:
   ld l,a
   ld a,b
-  cp 1
+  dec a          ; R1?
   jr nz,GFXRG1   ; non-R1: no tracking
   ld a,l
   and $20
@@ -318,7 +321,7 @@ GFXRG1:
   ld a,b
   or $80         ; register-write pair
   ld h,a
-  jp VPAIR
+  jr VPAIR
 
 ; End the transient's supported VDP
 ; interrupt-enable session before real
@@ -355,7 +358,7 @@ PIICLR:
 
 PIICR1:
   ld h,$81       ; R1 write selector
-  jp VPAIR
+  jr VPAIR
 
 ; Fill DE bytes at VRAM HL with A. No
 ; software wrap/range guard.
@@ -415,11 +418,8 @@ GFXRL:
 ; Keeps BC/DE/L. Changes AF/H.
 
 TMSWA:
-  ld a,h
-  and $3F
-  or $40
-  ld h,a
-  jp VPAIR
+  set 6,h        ; write flag
+  jr TMSA7
 
 ; Set VRAM read address HL,
 ; 0000h..3FFFh, with the write flag
@@ -427,9 +427,10 @@ TMSWA:
 ; BC/DE/L. Changes AF/H.
 
 TMSRA:
-  ld a,h
-  and $3F
-  ld h,a
+  res 6,h
+
+TMSA7:
+  res 7,h        ; 14-bit address
 
 ; Write L then H to VDPCTL without a
 ; maskable handler splitting the pair.
@@ -581,13 +582,7 @@ TMSCLL:
 ; BC/E. Changes AF, D, HL and LINEBUF.
 
 TMSMBEG:
-  ld a,(PITPD)
-  ld hl,PITPS
-  cp (hl)
-  jr z,TMSMB1
   call TMSFLIP   ; Show pending page.
-
-TMSMB1:
   ld hl,PITPG
   ld a,(PITPS)   ; Shown XOR PITPG.
   xor (hl)

@@ -106,17 +106,14 @@ SDCMD:
   ld c,a
   call SPIW
   ld hl,SDARG
-  ld c,(hl)
+  ld e,4
+
+SDCA:
+  ld c,(hl)      ; high byte first
   call SPIW
   inc hl
-  ld c,(hl)
-  call SPIW
-  inc hl
-  ld c,(hl)
-  call SPIW
-  inc hl
-  ld c,(hl)
-  call SPIW
+  dec e
+  jr nz,SDCA
 
 ; CRC/end byte is 95h for CMD0 argument
 ; 0. CMD8 argument 1AAh uses 87h. Other
@@ -160,6 +157,15 @@ SETARG:
   ld (SDARG+3),a
   ret
 
+; SDCMDX with argument 0 (SDCMDZ) or
+; with HL=0, DE the caller's (SDCMDH).
+
+SDCMDZ:
+  ld de,0
+
+SDCMDH:
+  ld hl,0
+
 ; Send command A with argument DEHL,
 ; then deselect through SPIEND. Return
 ; SDCMD byte/flags unchanged. Change
@@ -194,20 +200,15 @@ SDINIT:
 
 SDI0:
   push de
-  ld b,80
+  ld b,10        ; ten SPIENDs: 80
 
 SDICK:
-  ld a,SDIDLE+2
-  out (SDIO),a
-  ld a,SDIDLE
-  out (SDIO),a
+  call SPIEND
   djnz SDICK
-  ld de,0
-  ld hl,0
   xor a
-  call SDCMDX
+  call SDCMDZ
   pop de
-  cp 1
+  dec a          ; idle?
   jr z,SDI8
   dec d
   jr nz,SDI0
@@ -229,22 +230,21 @@ SDI8:
   call SETARG
   ld a,8
   call SDCMD
-  cp 1
+  dec a          ; idle?
   jr nz,SDI8X
   call SPIR
   call SPIR
   call SPIR
   and $0F
-  cp 1
+  dec a
   jr nz,SDI8F
   call SPIR
   cp $AA
   jr z,SDI8X
 
 SDI8F:
-  call SPIEND
   ld a,SDEVOLT
-  jr SDFAIL
+  jr SDFEND
 
 SDI8X:
   call SPIEND
@@ -259,16 +259,13 @@ SDI8X:
 
 SDI41:
   push bc
-  ld de,0
-  ld hl,0
   ld a,55
-  call SDCMDX
+  call SDCMDZ
   and $FE
   jr nz,SDI55F
   ld de,$4000
-  ld hl,0
   ld a,41
-  call SDCMDX
+  call SDCMDH
   pop bc
   or a
   jr z,SDI58
@@ -324,8 +321,10 @@ SDI58:
   jr SDFAIL
 
 SDI58F:
-  call SPIEND
   ld a,SDEOCR
+
+SDFEND:
+  call SPIEND    ; keeps AF
 
 ; SDINIT/SDREAD/SDWRITE failure tail:
 ; nonzero SDE code A is stored in SDERR.
@@ -344,8 +343,7 @@ SDFAIL:
 
 SDIOK:
   xor a
-  ld (SDERR),a
-  ret
+  jr SDFAIL      ; stores 0, Z
 
 ; Convert little-endian SDLBA to
 ; big-endian SDARG. SDBYTE=0 uses block
@@ -362,7 +360,7 @@ LBAARG:
   ld de,(SDLBA+2)
   ld a,(SDBYTE)
   or a
-  jp z,SETARG
+  jr z,SETARGJ1
   ld a,d
   or a
   scf
@@ -378,6 +376,8 @@ LBAARG:
   ex de,hl
   adc hl,hl
   ex de,hl
+
+SETARGJ1:
   jp SETARG
 
 ; Read SDLBA into 512 writable bytes at
@@ -418,30 +418,27 @@ SDRTOK:
   jr nz,SDRTOK
   dec d
   jr nz,SDRTOK
-  call SPIEND
   ld a,SDETOK
-  jr SDFAIL
+  jr SDFEND
 
 SDRERR:
-  call SPIEND
   ld a,SDEDTOK
-  jr SDFAIL
+  jr SDFEND
 
 SDRDAT:
   call SDRBLK
   call SPIR
   call SPIR
-  call SPIEND
-  jr SDIOK
+  xor a
+  jr SDFEND
 
 ; Read/write command failure with buffer
 ; word already popped: deselect then
 ; return SDECMD through SDFAIL.
 
 SDRCMD:
-  call SPIEND
   ld a,SDECMD
-  jr SDFAIL
+  jr SDFEND
 
 ; Range failure with buffer word still
 ; on stack: pop HL and return SDERNG
@@ -702,9 +699,10 @@ SDWRG:
   and $1F
   cp $05
   jr z,SDWBSY
-  call SPIEND
   ld a,SDEWRSP
-  jp SDFAIL
+
+SDFENDJ1:
+  jp SDFEND
 
 ; After accepted response, poll up to
 ; 65,536 bytes. Zero is busy. Any
@@ -727,10 +725,9 @@ SDWB:
   jr nz,SDWB
   dec d
   jr nz,SDWB
-  call SPIEND
   ld a,SDEBUSY
-  jp SDFAIL
+  jr SDFENDJ1
 
 SDWDON:
-  call SPIEND
-  jp SDIOK
+  xor a
+  jr SDFENDJ1

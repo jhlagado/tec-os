@@ -92,9 +92,8 @@ LCDS:
   ld a,(hl)
   cp 1           ; zero: carry, NZ
   ret c
-  push af        ; LCDWAIT changes A
   call LCDWAIT
-  pop af
+  ld a,(hl)      ; LCDWAIT took A
 
 ; the display steps to the next column
 
