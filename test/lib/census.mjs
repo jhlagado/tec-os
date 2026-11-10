@@ -49,7 +49,7 @@ export function watch(m) {
 export function run(m, line, re = /\r\n[A-P]>$/) {
   m.mark = m.output.length;
   m.type(line);
-  // Not the prompt before a chained line's next piece (KS32).
+  // Not the prompt before a chained line's next piece.
   const prompt = { test: (t) => re.test(t) && m.read(m.sym("CHPOS")) === 0 };
   let seen = -1;
   for (let i = 0; i < 400; i += 1) {
