@@ -28,7 +28,7 @@ try {
   }
   reject({ TECOS_TAS_HOST: '' }, /set TECOS_TAS_HOST/);
   reject({ TECOS_TAS_HOST: join(work, 'absent') }, /ENOENT/);
-  const demo = join(work, 'test/programs/demo.asm');
+  const demo = join(work, 'programs/DEMO.ASM');
   const text = readFileSync(demo, 'latin1');
   assert.match(text, /LEDBUF:\s+DS\s+24/);
   writeFileSync(demo, text.replace(/(LEDBUF:\s+DS\s+)24/, (_, prefix) => prefix + '23'), 'latin1');

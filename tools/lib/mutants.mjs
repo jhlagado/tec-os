@@ -435,8 +435,8 @@ export const MUTANTS_KS30 = [
   { name: "old MOUNT unmounting: reaches the mount service", ...oldFwd(1, "^an old MOUNT, to unmount") },
   { name: "old MOUNT mounting: reaches the mount service", ...oldFwd(0, "^an old MOUNT, to mount") },
   { name: "old VOLS: no RET, runs on into the data", edits: [NORETCHECK, asm(DATA, ["OLDVOL: DB $C9"], ["OLDVOL: DB $00"])], tests: ["test/clients.test.mjs"], only: "^an old VOLS" },
-  // The pinned DEMO.COM replaced by test/programs/demo.asm as this tree builds it.
-  { name: "old binaries: a rebuilt fixture", edits: [{ file: "test/fixtures/edc2745/DEMO.COM", rebuild: "test/programs/demo.asm" }], tests: ["test/clients.test.mjs"] },
+  // The pinned DEMO.COM replaced by programs/DEMO.ASM as this tree builds it.
+  { name: "old binaries: a rebuilt fixture", edits: [{ file: "test/fixtures/edc2745/DEMO.COM", rebuild: "programs/DEMO.ASM" }], tests: ["test/clients.test.mjs"] },
   { name: "row 3: GLCD? sets no flag", ...t30(["LD HL,GLCMSG", "JP LCDWRD"], ["LD HL,GLCMSG", "JP LCD3"], ["test/pico.test.mjs"], G) },
   { name: "row 3: a program's write leaves the flag", ...t30(["LD HL,CONDEV", "RES 7,(HL)", "HWSL1: LD HL,LCDROWS"], ["HWSL1: LD HL,LCDROWS"], ["test/pico.test.mjs"], H) },
   { name: "row 3: the wrong row resets it", ...t30(["LD A,B", "CP 3", "JR NZ,HWSL1"], ["LD A,B", "CP 2", "JR NZ,HWSL1"], ["test/pico.test.mjs"], H) },

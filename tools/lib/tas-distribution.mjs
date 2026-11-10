@@ -41,7 +41,7 @@ export async function assembleGlcd(root, run) {
 
 export async function assembleDistributionCom(root, run, name) {
   assert.ok(name === 'MOUNT.COM' || name === 'DEMO.COM', 'unsupported TAS distribution program');
-  const entry = 'test/programs/' + name.replace('.COM', '.asm').toLowerCase();
+  const entry = name === 'DEMO.COM' ? 'programs/DEMO.ASM' : 'test/programs/' + name.replace('.COM', '.asm').toLowerCase();
   const { image, globals } = await run({ root, entry, origin: 0x100, target: name, phase: 'final' });
   const reserves = name === 'MOUNT.COM' ? [['NAME', 11], ['DESC', 32], ['MNTL', 11]]
     : [['DIGBUF', 6, 30], ['LEDBUF', 24, 24]];
