@@ -151,14 +151,14 @@ succeeded, as in `TED X.ASM!TAS X!:X`.
 `SAMPLE.ASM` on the starter card is a first program to build and read: `TAS SAMPLE`
 assembles it and `SAMPLE` runs it, printing the screen's size, writing the LCD,
 lighting the digits and beeping through the ROM's services by `abi.inc`'s names.
-`TIMES.BAS` beside it is a first BASIC program: it asks a name and a number
-and prints that number's times table. `BAZA TIMES` compiles it with the card's
+`TIMES.BAS` beside it is a first BASIC program, written in lower case: it asks
+a name and a number and prints that number's times table. `BAZA TIMES` compiles it with the card's
 `BAZA.COM` and `BAZA.RTL` and `TIMES` runs it; in `TED TIMES.BAS`, ^T B and
 ^T R build and run it with BAZA as they do an `.ASM` with TAS.
 `DEMO.COM`, on the viewer's demo card, shows the hardware: the LCD, the 7-segment digits,
 the 8 × 8 LEDs and the PICO9918 in Graphics I. `BOUNCE.BAS`, also on that card
 only, is Baza's sprite game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the
-PICO9918 in Graphics I through `CALL`; tap W, A, S and D to steer the ship, and
+PICO9918 in Graphics I through `call`; tap W, A, S and D to steer the ship, and
 Q gives the display back. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary

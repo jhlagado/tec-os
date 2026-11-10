@@ -1,6 +1,6 @@
-// TIMES.BAS (KD-262), the starter's first BASIC program: PRINT, INPUT, a FOR
-// loop and a little arithmetic, in the dialect BAZA compiles: numbered lines
-// in ascending order, upper case, 40 columns. BAZA builds it on TEC-OS and
+// TIMES.BAS, the starter's first BASIC program: print, input, a for loop
+// and a little arithmetic, in the dialect BAZA compiles: numbered lines in
+// ascending order, in lower case outside its strings, 40 columns. BAZA builds it on TEC-OS and
 // TIMES runs on the PICO9918 at 40 columns, turns away a number outside 1 to
 // 12 and returns to the prompt. With GLCD.SVC loaded and a JP held in RST 1,
 // BAZA takes RST 1 while it compiles and gives the held JP back, TIMES runs,
@@ -85,15 +85,16 @@ function buildAndRun(m, during = () => {}) {
   return m.text(mark);
 }
 
-test("TIMES.BAS has ascending line numbers, is upper case and fits 40 columns", () => {
+test("TIMES.BAS has ascending line numbers, is lower case outside its strings and fits 40 columns", () => {
   const lines = SOURCE.split("\n");
   assert.equal(lines.pop(), "", "ends with a newline");
   const numbers = lines.map((l) => Number(/^(\d+) \S/.exec(l)?.[1]));
   assert.ok(numbers.every((n, i) => n > 0 && (i === 0 || n > numbers[i - 1])), "numbered, ascending");
   assert.ok(lines.every((l) => l.length <= 40), "fits 40 columns");
-  assert.equal(SOURCE, SOURCE.toUpperCase(), "upper case");
+  const outside = SOURCE.replace(/"[^"\n]*"/g, '""');
+  assert.equal(outside, outside.toLowerCase(), "lower case outside the strings");
   assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
-  for (const word of ["PRINT", "INPUT", "FOR", "NEXT"]) assert.match(SOURCE, new RegExp(`^\\d+ ${word} `, "m"), word);
+  for (const word of ["rem", "print", "input", "for", "next"]) assert.match(SOURCE, new RegExp(`^\\d+ ${word} `, "m"), word);
 });
 
 test("BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to the prompt", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
@@ -137,7 +138,7 @@ test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it com
 // a chained line's : piece is skipped (test/chain.test.mjs).
 test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs no TIMES, and BAZA TIMES!:TIMES does", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const image = card();
-  volume(image, "A").write("BAD.BAS", Buffer.from("10 PRINT (\n"), { text: true });
+  volume(image, "A").write("BAD.BAS", Buffer.from("10 print (\n"), { text: true });
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
   keys(m, "baza times!:times\r", "the good chain", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
@@ -177,7 +178,7 @@ test("a compile onto a read-only drive fails with return code FF00h, gives back 
   const out = m.text(mark);
   assert.match(out, /Bdos Err On C: R\/O/, "the BDOS's message, which returns");
   assert.match(out, /File I\/O failed\r\n\r\nA>:type c:times\.bas\r\nA>$/, `BAZA's failure, then the : piece skipped at A>:\n${out}`);
-  assert.doesNotMatch(out, /10 REM/, "TYPE didn't run");
+  assert.doesNotMatch(out, /10 rem/, "TYPE didn't run");
   assert.ok(taken, "BAZA took RST 1 while it compiled");
   assert.deepEqual(rst1(), held, "the held JP after the failure");
   assert.equal(code(m), 0xff00, "the return code, which the skipped piece leaves");
