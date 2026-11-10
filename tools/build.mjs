@@ -269,6 +269,24 @@ async function buildProfile(name, assemble) {
   // DESCIX splits descriptor index+1 into block*16+slot, which holds only
   // while block 0 has 15 descriptors after the header.
   check(at("DSCBLK0") === 15, `DESCIX needs DSCBLK0 15, the format gives ${at("DSCBLK0")}`);
+  // RAM the ROM reads or writes as a word, or steps through by INC/DEC HL,
+  // so each name must follow the first at its offset.
+  const runs = [
+    ["PENDING", "PENDCHR"], // GETCHAR
+    ["KBE", "KBD"], // KBSBIT's word store
+    ["KBTN", "KBT1", "KBT2"], // the arrow queue, written down from KBT2
+    ["PITPD", "PITPS", "PIMV"], // TMSW's reset
+    ["VSTOP", "VSBOT"], // CSI r's word store, VTLFS
+    ["VROW", "VCOL"], // VTHOME's word store
+    ["ESCP1", "ESCP2"], // VTESC's word store
+    ["PGLINE", "PGCOL"], // PGINIT's word store
+    ["LINMAX", "LINCNT"], // LINCHR's word load
+    ["FSIZE0", "FSIZE1", "FSIZE2"], // SIZECP and PUBRR
+    ["CAND0", "CAND1", "CAND2"], // SIZECP, ADDCAND and PUBRR
+  ];
+  for (const run of runs) run.forEach((n, i) => check(at(n) === at(run[0]) + i, `${n} must be ${run[0]}+${i}`));
+  // SEEKP reads a track word, then the sector word after it.
+  for (const [trk, sec] of [["DIRTRK", "DIRSEC"], ["IOTRK", "IOSEC"]]) check(at(sec) === at(trk) + 2, `${sec} must be ${trk}+2`);
 
   const starter = cardLayout(at("WSBASE"), CARDS.starter);
   check(starter.entry - 0x100 >= 45830, `the starter card's TPA is ${starter.entry - 0x100} bytes`);
