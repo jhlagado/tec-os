@@ -199,9 +199,11 @@ async function main() {
   files.push(...await displayFiles(ROOT, run ? () => assembleGlcd(ROOT, run) : undefined));
   if (!run) traceRom({ backend, phase: "final", target: "GLCD.SVC", root: ROOT });
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
-  // SAMPLE.ASM, a first program for TAS (KD-177), as a CP/M text file.
-  const sample = Buffer.from(readFileSync(resolve(ROOT, "programs/SAMPLE.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
-  files.push({ name: "SAMPLE.ASM", description: "a first program to build: TAS SAMPLE, then SAMPLE", bytes: sample });
+  // SAMPLE.ASM, a first program for TAS (KD-177), and TIMES.BAS, a first
+  // program for BAZA (KD-262), as CP/M text files.
+  const text = (name) => Buffer.from(readFileSync(resolve(ROOT, "programs", name), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
+  files.push({ name: "SAMPLE.ASM", description: "a first program to build: TAS SAMPLE, then SAMPLE", bytes: text("SAMPLE.ASM") });
+  files.push({ name: "TIMES.BAS", description: "a first BASIC program: BAZA TIMES, then TIMES", bytes: text("TIMES.BAS") });
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM", "test/programs/demo.asm");
@@ -209,7 +211,7 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "4",
+    revision: "5",
     name: "TEC-OS starter",
     instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or TED SAMPLE.ASM to read it. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",

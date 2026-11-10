@@ -16,6 +16,7 @@ import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
 const sha = (b) => createHash("sha256").update(b).digest("hex");
+const text = (name) => Buffer.from(readFileSync(resolve(ROOT, "programs", name), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 
 let built;
 /** The starter card and its recipe, made once by tools/media.mjs. */
@@ -30,7 +31,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly six files, each by its hash, the PICO9918's console being the ROM's (KS39)", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
+test("the starter card holds exactly seven files, each by its hash, the PICO9918's console being the ROM's (KS39)", { skip: TED.skip || TAS.skip, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   const { card, recipe } = starter();
@@ -40,7 +41,8 @@ test("the starter card holds exactly six files, each by its hash, the PICO9918's
     "MOUNT.COM": (await program("mount")).bytes,
     "TAS.COM": readFileSync(TAS.path),
     "TED.COM": readFileSync(TED.path),
-    "SAMPLE.ASM": Buffer.from(readFileSync(resolve(ROOT, "programs/SAMPLE.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1"),
+    "SAMPLE.ASM": text("SAMPLE.ASM"),
+    "TIMES.BAS": text("TIMES.BAS"),
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
