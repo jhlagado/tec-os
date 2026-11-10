@@ -5,7 +5,8 @@
 // 12 and returns to the prompt. With GLCD.SVC loaded and a JP held in RST 1,
 // BAZA takes RST 1 while it compiles and gives the held JP back, TIMES runs,
 // and the GLCD is still the console. A failed compile's return code stops a
-// chained line. Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs
+// chained line, and a compile onto a read-only drive fails through BAZA's
+// own exit. Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs
 // (test/inputs.json).
 
 import { test } from "node:test";
@@ -13,6 +14,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { createContainer } from "../tools/lib/container.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const BAZA = pinned("BAZA.COM");
@@ -36,16 +38,23 @@ const RUN = [
   "GOODBYE, TEC!",
 ];
 
-/** A card with BAZA, its library and TIMES.BAS on A:. */
-function card() {
+/** A card with BAZA, its library and TIMES.BAS on A:, or on IMAGE's A:. */
+function card(image = standardCard()) {
   check(BAZA);
   check(RTL);
-  const image = standardCard();
   const a = volume(image, "A");
   a.write("BAZA.COM", new Uint8Array(readFileSync(BAZA.path)));
   a.write("BAZA.RTL", new Uint8Array(readFileSync(RTL.path)));
   a.write("TIMES.BAS", Buffer.from(SOURCE), { text: true });
   return image;
+}
+
+/** Plant JP ABICALL in RST 1, which a warm boot's sweep keeps (test/svc.test.mjs): the three bytes. */
+function holdRst1(m) {
+  const abicall = m.sym("ABICALL");
+  const held = [0xc3, abicall & 0xff, abicall >> 8];
+  held.forEach((b, i) => m.write(0x08 + i, b));
+  return held;
 }
 
 /** Keys for M, each when it waits for one, then until it waits with nothing queued and DONE holds. */
@@ -94,12 +103,8 @@ test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it com
   const m = boot(card(), { matrix: true });
   assert.ok(m.videoConsole(), "the GLCD is the console");
   assert.match(m.command("SERVICES"), /GLCD/, "GLCD.SVC loaded");
-  // JP ABICALL is above PZTOP, so a warm boot's sweep keeps it
-  // (test/svc.test.mjs): once BAZA has taken RST 1, only BAZA's own restore
-  // puts the JP back.
-  const abicall = m.sym("ABICALL");
-  const held = [0xc3, abicall & 0xff, abicall >> 8];
-  held.forEach((b, i) => m.write(0x08 + i, b));
+  // Once BAZA has taken RST 1, only BAZA's own restore puts the held JP back.
+  const held = holdRst1(m);
   const rst1 = () => [0, 1, 2].map((i) => m.read(0x08 + i));
   const rest = () => Array.from({ length: 0x28 }, (_, i) => m.read(0x10 + i)); // RST 2 to RST 6, 10h-37h
   const others = rest();
@@ -119,12 +124,9 @@ test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it com
   assert.deepEqual(m.violations, []);
 });
 
-// KD-262 item 3: a failed compile sets the return code, so a chained line
-// stops. A : piece runs unless the code is FF00h to FFFEh (test/chain.test.mjs),
-// as TAS sets FF00h; BAZA b6ecccf ends a failed compile with code 1
-// (src/errors.asm, ERRDONE), so the line goes on. Marked todo until BAZA
-// sets a failure code.
-test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs no TIMES, and BAZA TIMES!:TIMES does", { skip: BAZA.skip || RTL.skip, todo: "BAZA b6ecccf returns 1, not FF00h, on a failed compile", timeout: 900_000 }, () => {
+// KD-262 item 3: a failed compile sets the return code FF00h, as TAS does, so
+// a chained line's : piece is skipped (test/chain.test.mjs).
+test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs no TIMES, and BAZA TIMES!:TIMES does", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const image = card();
   volume(image, "A").write("BAD.BAS", Buffer.from("10 PRINT (\n"), { text: true });
   const m = boot(image, { tms: true, matrix: true });
@@ -138,5 +140,37 @@ test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs 
   assert.match(out, /\?SYNTAX ERROR IN 10/, "BAZA's error");
   assert.doesNotMatch(out, /HELLO FROM BASIC|WHAT IS YOUR NAME/, `no TIMES after the failure:\n${out}`);
   assert.ok(!volume(image, "A").list().some((f) => f.name === "BAD.COM"), "no BAD.COM");
+  assert.deepEqual(m.violations, []);
+});
+
+// BAZA sets CP/M 3's error mode FEh (BDOS function 45), so a disk error
+// returns to it and it leaves through its own exit.
+test("a compile onto a read-only drive fails with FF00h, gives back RST 1's held JP, leaves no file and ends at A>", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
+  const image = card(createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G8M", label: "WORK", mount: "B" },
+    { geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true },
+  ]));
+  const c = volume(image, "C");
+  c.write("TIMES.BAS", Buffer.from(SOURCE), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  const held = holdRst1(m);
+  const rst1 = () => [0, 1, 2].map((i) => m.read(0x08 + i));
+  let taken = false;
+  const mark = m.output.length;
+  m.enqueueInput("baza c:times!:type c:times.bas\r", "matrix");
+  m.runUntilChecked(() => {
+    m.pumpInput();
+    taken ||= rst1().some((b, i) => b !== held[i]);
+    return !m.pending?.length && m.waitingForInput() && m.ready() && /A>$/.test(m.text(mark));
+  }, LIMIT, "the failed compile and the prompt");
+  const out = m.text(mark);
+  assert.match(out, /Bdos Err On C: R\/O/, "the BDOS's message, which returns");
+  assert.match(out, /File I\/O failed\r\n\r\nA>:type c:times\.bas\r\nA>$/, `BAZA's failure, then the : piece skipped at A>:\n${out}`);
+  assert.doesNotMatch(out, /10 REM/, "TYPE didn't run");
+  assert.ok(taken, "BAZA took RST 1 while it compiled");
+  assert.deepEqual(rst1(), held, "the held JP after the failure");
+  assert.deepEqual(volume(image, "C").list().map((f) => f.name), ["TIMES.BAS"], "no partial or temporary file on C:");
+  assert.equal(m.read(4) & 15, 0, "A: still current");
   assert.deepEqual(m.violations, []);
 });
