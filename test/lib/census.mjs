@@ -1,6 +1,6 @@
 // The stack census's watch: the lowest address written in each of the
 // ROM's three stacks, an NMI pressed at each new depth, and a line typed and
-// run to its prompt. test/stacks.test.mjs and the KS53 census share it.
+// run to its prompt. test/stacks.test.mjs and test/lib/mon3.mjs's census share it.
 
 import assert from "node:assert/strict";
 

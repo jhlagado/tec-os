@@ -15,8 +15,8 @@ export { EXPAND1_WRITES, bootMachine } from "../../host/machine.mjs";
 
 // With TECOS_TEST_RESIDENT naming a .SVC file, every machine started on a
 // card installs that service by a first line in A:STARTUP.CMD, so a test's
-// own steps run with it installed and no session active (KS53's inactive
-// runs, test/mon3.test.mjs). TECOS_TEST_RESIDENT_LOG names a file that gets
+// own steps run with it installed and no session active (test/mon3.test.mjs
+// reruns existing tests that way). TECOS_TEST_RESIDENT_LOG names a file that gets
 // one line for each such machine: the BDOS entry's word at its first prompt.
 const RESIDENT = process.env.TECOS_TEST_RESIDENT;
 const RESIDENT_LOG = process.env.TECOS_TEST_RESIDENT_LOG;
