@@ -5,8 +5,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MON3, PROMPT, bin, bytesAt, line, mon3Variant, word } from "./lib/mon3.mjs";
-import { goTo, inSession, ok, pageOf, refused, toMon3, toPrompt } from "./lib/mon3s2.mjs";
+import { MON3, PROMPT, bin, bytesAt, hello3, line, mon3Variant, word } from "./lib/mon3.mjs";
+import { goTo, hexFile, inSession, ok, pageOf, refused, runnable, toMon3, toPrompt, tpaDigest } from "./lib/mon3s2.mjs";
 
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
 
@@ -90,4 +90,42 @@ test("KG65 mutant: the hook's BDOS 37 through 0005h hangs after RST 00h", async 
 test("KG65 mutant: LOAD's BDOS 15 through 0005h fails the static check", async () => {
   const svc = await mon3Variant([["  ld c,15        ; open\n  call BDOS\n", "  ld c,15        ; open\n  call $0005\n"]]);
   await assert.rejects(noCall5(svc), /no CD 05 00/);
+});
+
+// File names: a wildcard, a name over eight characters or a type over
+// three is refused before BDOS 15, for .BIN and .HEX alike.
+
+const NAMES = (t) => [`LOAD HELLO?.${t}`, `LOAD H*.${t}`, `LOAD HELLO3.${t[0]}?${t[2]}`, `LOAD ABCDEFGHI.${t}`, `LOAD HELLO3.${t}X`];
+
+async function fileNames(svc) {
+  const h = await hello3();
+  const files = { "HELLO3.BIN": h, "ABCDEFGH.BIN": h, "HELLO3.HEX": hexFile([[0x4000, h]]), "ABCDEFGH.HEX": hexFile([[0x4000, h]]), "ONE.BIN": bin(0xc9) };
+  const { m, svc: s } = await inSession(files, { svc });
+  for (const cmd of [...NAMES("BIN"), ...NAMES("HEX")]) {
+    assert.ok(ok(line(m, "LOAD ONE.BIN 5000")), "a good load first");
+    const [before, opens] = [tpaDigest(m), m.opens.length];
+    const r = line(m, cmd);
+    assert.ok(refused(r), `${cmd}: ? (${JSON.stringify(r.out)})`);
+    assert.deepEqual(m.opens.slice(opens), [], `${cmd}: BDOS 15 never called`);
+    assert.equal(tpaDigest(m), before, `${cmd}: nothing written`);
+    assert.equal(runnable(m, s), 0, `${cmd}: nothing runnable`);
+  }
+  assert.ok(!line(m, "EXIT").mon3);
+}
+
+test("KG64 file names", () => fileNames());
+
+test("KG64 mutant: the wildcard test removed loads HELLO?.BIN", async () => {
+  const svc = await mon3Variant([["  cp '?'\n  scf\n  ret z          ; a wildcard\n  cp '*'\n  scf\n  ret z          ; and the other\n", ""]]);
+  await assert.rejects(fileNames(svc), /LOAD HELLO\?\.BIN: \?/);
+});
+
+test("KG64 mutant: the name-length test removed loads ABCDEFGH.BIN for ABCDEFGHI.BIN", async () => {
+  const svc = await mon3Variant([["  ret c          ; a wildcard\n  bit 7,b        ; B below 0: too long\n  scf\n  ret nz\n", "  ret c          ; a wildcard\n"]]);
+  await assert.rejects(fileNames(svc), /LOAD ABCDEFGHI\.BIN: \?/);
+});
+
+test("KG64 mutant: the type-length test removed loads HELLO3.BIN for HELLO3.BINX", async () => {
+  const svc = await mon3Variant([["  ret c          ; a wildcard\n  bit 7,b        ; too long\n  scf\n  ret nz\n", "  ret c          ; a wildcard\n"]]);
+  await assert.rejects(fileNames(svc), /LOAD HELLO3\.BINX: \?/);
 });

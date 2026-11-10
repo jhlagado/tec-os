@@ -31,9 +31,9 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 2,040 bytes of header and image in **8 pages**: the
-word at `0006h` goes from `B9A4h` to `B100h`, and the TPA from 47,268 bytes to
-**45,056**. The monitor, its line buffer, its FCB, its saved page zero and its
+On the starter card it is 2,062 bytes of header and image in **9 pages**: the
+word at `0006h` goes from `B9A4h` to `B000h`, and the TPA from 47,268 bytes to
+**44,800**. The monitor, its line buffer, its FCB, its saved page zero and its
 stack are all in those pages, above anything a MON-3 program may load into.
 
 ## Commands
@@ -43,7 +43,9 @@ prints `?`.
 
 - **`LOAD name.BIN [addr]`** loads the file at 4000h, or at the hexadecimal
   `addr`, in whole records. The address has one to four digits and ends at a
-  space or the line's end, and a drive is A: to P:. Anything else prints `?`. CP/M keeps no byte length, so a file's last
+  space or the line's end, and a drive is A: to P:. The name has at most
+  eight characters and the type three, and neither may hold `?` or `*`.
+  Anything else prints `?`, and such a name is never looked up. CP/M keeps no byte length, so a file's last
   record loads whole, with its padding. The size is read first. Every byte
   must lie between 0100h and the page of `(0006h)`, and none in 0800h–08FFh,
   MON-3's stack and variables. The file must hold a record. Otherwise the
