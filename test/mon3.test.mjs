@@ -1266,3 +1266,50 @@ test("KG63 inactive", { timeout: 3_600_000 }, async () => {
   for (const e of entries) assert.ok(e.entry <= 0xb100, `${e.file}: MON3.SVC installed, (0006h) ${e.entry.toString(16)}h`);
   assert.equal(r.status, 0);
 });
+
+// KG68: what the docs say about /E and MON3.SVC, read against the build.
+
+test("KG68 docs agree", async () => {
+  const doc = (n) => readFileSync(resolve(ROOT, "docs", n), "utf8").replace(/\s+/g, " ");
+  const services_ = doc("services.md");
+  const { EXENTRY, hasExecRecord } = await import("../tools/lib/svc.mjs");
+  const { symbols } = romFor();
+  // The record's layout and the reserved prefix.
+  assert.equal(symbols.get("DHLEN"), 25);
+  assert.match(services_, /Sixteen bytes at the start of the image, file offset 25/);
+  assert.match(services_, new RegExp(`\\| ${EXENTRY} \\| 2 \\| The entry, from the header's start, as \`INIT\` and \`REMOVE\` are \\|`));
+  assert.ok(hasExecRecord(Uint8Array.from([...new Array(25).fill(0), 0x45, 0x58, 0x01])), "45h 58h 01h is the record's prefix");
+  assert.match(services_, /must not start its image with 45h 58h 01h/);
+  // The symbols the contract names are the build's.
+  for (const n of ["CSTKTOP", "LATCLAS", "PZLDRV", "SVCRC", "TNENODV"]) {
+    assert.ok(services_.includes(`\`${n}\``), `services.md names ${n}`);
+    assert.ok(symbols.has(n), `${n} is a build symbol`);
+  }
+  for (const f of FORMS.map((x) => x.slice("MON3.SVC ".length))) assert.ok(services_.includes(`\`${f}\``), `services.md names ${f}`);
+  for (const s of ["BC points at the eight-byte name", "The entry is bounded at install", "never becomes ready", "skips that step", "HL is the entry address. A, BC, DE, IX and IY are undefined", "`NAME.SVC X /E` only installs"])
+    assert.ok(services_.includes(s), `services.md: ${s}`);
+  // 0041h-004Fh, in the map and the compatibility notes.
+  assert.match(doc("memory-map.md"), /A `MON3\.SVC` session holds 0041h–004Fh while it runs/);
+  assert.match(doc("compatibility.md"), /A `MON3\.SVC` session holds `0041h` to `004Fh`/);
+  assert.match(doc("compatibility.md"), /entered with HL 0100h and DE 0000h/);
+  // docs/mon3.md's figures.
+  const mon3 = doc("mon3.md");
+  const svc = await mon3Build();
+  assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **8 pages**`), "the size");
+  assert.ok(mon3.includes("from `B9A4h` to `B100h`, and the TPA from 47,268 bytes to **45,056**"));
+  const src = readFileSync(resolve(ROOT, "drivers/mon3.asm"), "utf8");
+  const equ = (n) => Number(new RegExp(`^${n} EQU \\$([0-9A-F]+)`, "m").exec(src)[1].replace(/^/, "0x"));
+  const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
+  assert.ok(mon3.includes(`| SP | ${h4(equ("MSTK3") - 2)}, holding the return address ${h4(equ("GORET"))} |`), "GO's SP and return");
+  for (const [n, name] of [["UINT", "USER_INT"], ["UNMI", "USER_NMI"], ["SYSMD", "SYS_MODE"], ["PROTM", "PROT_MODE"]])
+    assert.ok(mon3.includes(`\`${name}\` (${h4(equ(n))})`), `mon3.md: ${name} at ${h4(equ(n))}`);
+  // The calls the doc lists as built are those the service's table does not send to the error display.
+  const table = src.slice(src.indexOf("\nAPI:")).split("\n\n")[0];
+  const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].split(",").map((w) => w.trim()));
+  assert.equal(words.length, 63, "MON-3's 63 calls");
+  const built = words.flatMap((w, i) => (w === "DERR" && i !== 11 ? [] : [i]));
+  const listed = [...mon3.slice(mon3.indexOf("calls implemented:")).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
+  assert.deepEqual(listed, built, "the implemented calls");
+  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes B9A4h–BFFFh/);
+  assert.match(mon3, /Not yet shipped:\*\* HEX loading, the matrix keyboard .*checksum/);
+});
