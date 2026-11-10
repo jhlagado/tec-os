@@ -208,7 +208,7 @@ export const bin = (...bytes) => Uint8Array.from(bytes.flat());
 export { GLCD_SVC };
 
 /**
- * The KS53 lines of the stack census, on the serial console: a refused
+ * The NAME.SVC /E lines of the stack census, on the serial console: a refused
  * switch, /E installing and entering, re-entry, a never-ready /E install
  * removed, and UNLOAD of MON3.SVC. The census's depths: { bdos, ccp, bios }.
  */

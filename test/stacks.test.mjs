@@ -169,7 +169,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     chained: await chainRun(),
     serialPlain: await deepPaths(["TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}),
     resident: await deepPaths(["RES.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}, { files: { "RES.SVC": await service("res") } }),
-    // NAME.SVC /E (KS53): a refused switch, install and entry, re-entry, a
+    // NAME.SVC /E: a refused switch, install and entry, re-entry, a
     // never-ready install removed, and UNLOAD; and MON3.SVC resident, then unloaded.
     ks53: await ks53Census(),
     mon3: await deepPaths(["MON3.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r", "UNLOAD\r"], {}, { files: { "MON3.SVC": (await mon3Svc()).file } }),
