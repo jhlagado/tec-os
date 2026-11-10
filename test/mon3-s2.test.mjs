@@ -5,8 +5,11 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ROOT } from "./lib/fixtures.mjs";
 import { MON3, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Variant, runFor, word } from "./lib/mon3.mjs";
-import { compareRows, fixedImage, matrixDown, matrixUp, referenceSide, sessionSide } from "./lib/kg65.mjs";
+import { compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
 import { BIG16K, END, HASHES, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
@@ -432,3 +435,458 @@ test("KG64 mutant: scanKeys without its matrix branch sees no matrix key", async
   const bad = compareRows(await referenceSide({ matrix: true }), ses, matrixRows("call 16", call(16)));
   assert.ok(bad.some((b) => b.startsWith("call 16, A")), bad.join("\n"));
 });
+
+// KG65: every implemented and translated RST 10h call, and the restarts,
+// against MON-3 on its fixed inputs (stages/ks53-api-table.md).
+
+const KEY = (k) => k ^ 0x20; // the runtime's keypad code for MON-3's key K
+const K5 = KEY(0x05);
+const KC = KEY(0x0c);
+const KAD = KEY(0x13);
+const press = (code, at = 0) => ({ at, fire: keyDown(code) });
+const lift = (code, at = 0) => ({ at, fire: keyUp(code) });
+const keys = (...codes) => (side) => codes.forEach((c) => keyUp(c)(side));
+const bytes16 = (n, seed) => Array.from({ length: n }, (_, i) => (i * 37 + seed) & 0xff);
+const hexes = (v) => v.toString(16).padStart(2, "0");
+
+/** The keypad rows of a call or restart: no key, 5 new, 5 held, AD. WAITS: each key goes down after 200,000 cycles. */
+function keypadRows(name, base, waits = false) {
+  if (!waits)
+    return [
+      { ...base, name: `${name}, no key` },
+      { ...base, name: `${name}, key 5 new`, atRestart: keyDown(K5), release: keys(K5) },
+      { ...base, name: `${name}, key 5 held`, mem: [0x0889, [0x05, 0x00]], atRestart: keyDown(K5), release: keys(K5) },
+      { ...base, name: `${name}, key AD`, atRestart: keyDown(KAD), release: keys(KAD) },
+    ];
+  return [
+    { ...base, name: `${name}, no key`, events: [press(K5, 200_000)], release: keys(K5) },
+    { ...base, name: `${name}, key 5 new`, events: [press(K5, 200_000)], release: keys(K5) },
+    { ...base, name: `${name}, key 5 held`, mem: [0x0889, [0x05, 0x00]], atRestart: keyDown(K5), events: [lift(K5, 200_000), press(K5, 400_000)], release: keys(K5) },
+    { ...base, name: `${name}, key AD`, events: [press(KAD, 200_000)], release: keys(KAD) },
+  ];
+}
+
+/** Rows for SEL with each value of A in AS, and MORE. */
+const withA = (sel, as, more = {}) => as.map((a) => call(sel, { ...more, name: `call ${sel}, A ${hexes(a)}`, regs: { ...more.regs, a } }));
+
+/** The RX rows: BYTES queued at the restart. */
+const rx = (bytes) => (side) => {
+  side.m.tec1g.queueSerial(bytes);
+  side.m.tec1g.ioHandlers.read(0x00);
+};
+
+const PATTERN = bytes16(128, 5);
+const SETTERS = { 41: "setCaps", 43: "setProtect" };
+const GETTERS = [37, 38, 39, 40];
+
+function apiRows() {
+  const rows = [];
+  const add = (...r) => rows.push(...r);
+  add(call(0, { name: "call 0", skip: ["h", "l"], strAtHL: 8 }));
+  add(call(1, { name: "call 1", skip: ["h", "l"], strAtHL: 8 }));
+  add(call(3, { name: "call 3", tx6: true }));
+  add(...withA(4, [0x00, 0x5a, 0xa5, 0xff], { regs: { de: 0x0900 }, skip: ["b", "c"] }));
+  add(...withA(5, [0x00, 0x2c, 0x9f, 0xff]));
+  add(...withA(6, [0x00, 0x1f, 0x20, 0x41, 0x7e, 0x7f, 0x80, 0xff]));
+  for (const b of [1, 4, 0]) {
+    const n = b || 256;
+    const s1 = bytes16(n, 9);
+    for (const differ of [false, true]) {
+      const s2 = [...s1];
+      if (differ) s2[n - 1] ^= 0x55;
+      const mem = Array(0x200).fill(0);
+      mem.splice(0, n, ...s1);
+      mem.splice(0x100, n, ...s2);
+      add(call(7, { name: `call 7, B ${b}, ${differ ? "differing at the last byte" : "equal"}`, regs: { bc: (b << 8) | 7, hl: 0x0900, de: 0x0a00 }, mem: [0x0900, mem] }));
+    }
+  }
+  for (const hl of [0x0000, 0x4a2f, 0xffff]) add(call(8, { name: `call 8, HL ${hl.toString(16)}`, regs: { hl, de: 0x0900 } }));
+  add(...withA(9, [0x00, 0x5c, 0xff], { regs: { de: 0x0900 } }));
+  // scanSegments ends with XOR A where MON-3's A is already 0, for the TX
+  // bit and the 5,601 T: F is 44h, where MON-3's is 81h from RRC B.
+  const f10 = (R, S) => {
+    assert.equal(R.regs.f, 0x81, "MON-3's F after call 10");
+    assert.equal(S.regs.f, 0x44, "the session's F after call 10");
+  };
+  add(call(10, { name: "call 10", regs: { de: 0x0900 }, mem: [0x0900, [0xeb, 0x28, 0xcd, 0xad, 0x2e, 0xa7]], tx6: true, skip: ["f"], check: f10 }));
+  add(call(11, { name: "call 11", events: [press(K5, 200_000)], release: keys(K5), skip: ["h", "l"], tx6: true, waits: true }));
+  // The LCD's address counter, which a status read returns, set alike.
+  add(call(12, { name: "call 12", reads: [0x04], setup: (side) => side.m.tec1g.ioHandlers.write(0x04, 0x80) }));
+  add(call(13, { name: "call 13", regs: { hl: 0x0900 }, mem: [0x0900, [0x41, 0x42, 0x00]] }));
+  add(call(14, { name: "call 14", regs: { a: 0x41 } }));
+  for (const b of [0x01, 0x80]) add({ name: `call 15, B ${hexes(b)}`, regs: { bc: (b << 8) | 15 } });
+  add(...keypadRows("call 16", call(16)));
+  add(...keypadRows("call 17", call(17), true));
+  for (const [what, mask] of [["none", 0], ["up", 0x01], ["fire 1", 0x40], ["up and right", 0x09]])
+    add(call(19, { name: `call 19, ${what}`, atRestart: (side) => side.m.tec1g.setJoystickState(mask), release: (side) => side.m.tec1g.setJoystickState(0) }));
+  add(call(20, { name: "call 20" }));
+  add(call(21, { name: "call 21" }));
+  add(...withA(22, [0x00, 0x55, 0xff]));
+  for (const b of [0x00, 0x55, 0xff]) add(call(23, { name: `call 23, ${hexes(b)} queued`, atRestart: rx([b]), max: 200_000 }));
+  for (const de of [1, 16, 17]) {
+    add(call(25, { name: `call 25, DE ${de}`, regs: { hl: 0x0980, de }, mem: [0x0980, PATTERN] }));
+    add(call(28, { name: `call 28, DE ${de}`, regs: { hl: 0x0980, de }, mem: [0x0980, PATTERN] }));
+  }
+  add(call(26, { name: "call 26", regs: { hl: 0x0900, de: 3 }, atRestart: rx([1, 2, 3]) }));
+  for (const b of [1, 8]) add(call(29, { name: `call 29, B ${b}`, regs: { bc: (b << 8) | 29, hl: 0x0900, de: 0x0980 }, mem: [0x0900, bytes16(16, 3)] }));
+  for (const [st, en] of [[0x4000, 0x40ff], [0x4000, 0x4000], [0x4001, 0x4000]])
+    add(call(30, { name: `call 30, ${st.toString(16)} to ${en.toString(16)}`, regs: { hl: 0x0900 }, mem: [0x0900, [st & 0xff, st >> 8, en & 0xff, en >> 8]] }));
+  for (const hl of [0, 1, 0x1000]) add(call(33, { name: `call 33, HL ${hl.toString(16)}`, regs: { hl } }));
+  for (const [hl, b] of [[0x19, 0x8c], [0x7f, 0x01]]) add({ name: `call 34, HL ${hl.toString(16)}, B ${hexes(b)}`, regs: { bc: (b << 8) | 34, hl }, tx6: true });
+  add(call(35, { name: "call 35", regs: { de: 0x0900 }, mem: [0x0900, [0x06, 0x00, 0x0a, 0x1f]], tx6: true }));
+  for (const [sel, name] of Object.entries(SETTERS))
+    for (const a of [0x00, 0x80, 0x02, 0xff]) {
+      add(call(Number(sel), { name: `call ${sel} ${name}, A ${hexes(a)}`, regs: { a } }));
+      for (const g of GETTERS) add(call(Number(sel), { name: `call ${sel}, A ${hexes(a)}, then call ${g}`, regs: { a }, regs2: { bc: 0x1200 | g } }));
+    }
+  add(call(48, { name: "call 48" }));
+  for (const g of GETTERS) add(call(48, { name: `call 48, then call ${g}`, regs2: { bc: 0x1200 | g } }));
+  for (const g of [...GETTERS, 56]) add(call(g, { name: `call ${g}` }));
+  add(call(45, { name: "call 45", regs: { hl: 0x0900 }, mem: [0x0900, [0x4f, 0x4b, 0x00]] }));
+  for (const seed of [0x00, 0x01, 0x80, 0xff]) add(call(49, { name: `call 49, RNG_SEED ${hexes(seed)}`, mem: [0x08b0, [seed]], skip: ["a", "f"] }));
+  add(call(55, { name: "call 55, key C", events: [press(KC, 200_000)], release: keys(KC), skip: ["h", "l"] }));
+  add(call(55, { name: "call 55, key 5", events: [press(K5, 200_000)], release: keys(K5), skip: ["h", "l"] }));
+  add(call(62, { name: "call 62", regs: { iy: 0x0900 }, mem: [0x0900, bytes16(24, 11)] }));
+  for (const b of [19, 0xff]) add(call(46, { name: `call 46, B ${b}`, regs: { bc: (b << 8) | 46 } }));
+  return rows;
+}
+
+function restartRows() {
+  const digits = [0x0900, [0xeb, 0x28, 0xcd, 0xad, 0x2e, 0xa7]];
+  return [
+    ...keypadRows("RST 08h", { op: RST[0x08] }, true),
+    ...keypadRows("RST 20h", { op: RST[0x20], regs: { de: 0x0900 }, mem: digits, tx6: true }),
+    { name: "RST 28h", op: RST[0x28] },
+    { name: "RST 38h", op: RST[0x38], memFrom: "INTH" },
+  ];
+}
+
+/** Rows that need the driver's own addresses: USER_INT at its handler. */
+const placed = (rows, sym) => rows.map((r) => (r.memFrom ? { ...r, mem: [0x0892, [sym[r.memFrom] & 0xff, sym[r.memFrom] >> 8]] } : r));
+
+let keypadSides;
+const theKeypadSides = async () => (keypadSides ??= { ref: await referenceSide(), ses: await sessionSide() });
+
+test("KG65 rst 10h calls", { timeout: 900_000 }, async () => {
+  const { ref, ses } = await theKeypadSides();
+  const bad = compareRows(ref, ses, apiRows());
+  bad.push(...(await matrixKeys(await theMatrixSides())));
+  assert.deepEqual(bad, []);
+  // Call 2 is judged on the session's side alone.
+  await preInit();
+});
+
+test("KG65 restarts", async () => {
+  const { ref, ses } = await theKeypadSides();
+  assert.deepEqual(compareRows(ref, ses, placed(restartRows(), ref.sym)), []);
+});
+
+// Refusals: each deferred or unsupported selector, 63 and FFh show
+// displayError as call 11 does, and change nothing else. RTCAPI answers
+// with carry and A = B. RST 18h stays refused.
+
+const DEFERRED = [24, 27, 31, 32, 36, 47, 50, 51, 52, 57];
+const UNSUPPORTED = [42, 44, 58, 59, 60, 61];
+const REFUSED = [...DEFERRED, ...UNSUPPORTED, 63, 0xff];
+
+/** A refusal row for selector SEL (or restart OP), compared with MON-3's call 11 on the same key. */
+const refusalRow = (sel, op) => ({
+  name: op ? "RST 18h" : `call ${sel}`,
+  ...(op ? { op } : call(sel, { regs: { a: 0xff } })),
+  ref: { op: RST[0x10], regs: { bc: 0x1200 | 11, a: 0xff } },
+  events: [press(K5, 200_000)],
+  release: keys(K5),
+  skip: ["h", "l"],
+  tx6: true,
+  waits: true,
+});
+
+/** 0800h-0DFFh as the fixed image, outside DISP_BUFF and the key variables: the addresses that differ. */
+function changedOutside(mem) {
+  const img = fixedImage();
+  const out = [];
+  for (let i = 0; i < 0x600; i += 1) {
+    const a = 0x800 + i;
+    if ((a >= 0x880 && a < 0x886) || (a >= 0x889 && a < 0x88c) || a === 0x88e || (a >= 0x892 && a < 0x896)) continue;
+    if (mem[i] !== img[i]) out.push(a.toString(16));
+  }
+  return out;
+}
+
+async function refusals(sides) {
+  const { ref, ses } = sides ?? (await theKeypadSides());
+  const rows = [...REFUSED.map((s) => refusalRow(s)), refusalRow(0, RST[0x18])];
+  for (const r of rows)
+    r.check = (R, S) => {
+      assert.deepEqual(changedOutside(S.mem), [], `${r.name}: nothing else in 0800h-0DFFh changed`);
+      assert.equal(S.latch, 0x01, `${r.name}: the latch unchanged`);
+    };
+  const bad = compareRows(ref, ses, rows);
+  // RTCAPI: carry and A = B for every B, and no port.
+  const image = fixedImage();
+  for (const b of [0, 2, 18, 19, 0xff]) {
+    const S = ses.run(call(46, { name: `call 46, B ${b}`, regs: { bc: (b << 8) | 46 } }), image);
+    if (S.regs.a !== b || !(S.regs.f & 1) || S.writes.length) bad.push(`call 46, B ${b}: A ${hexes(S.regs.a)}, F ${hexes(S.regs.f)}, ${S.writes.length} port writes`);
+  }
+  return bad;
+}
+
+test("KG65 refusals", async () => {
+  assert.deepEqual(await refusals(), []);
+});
+
+test("KG65 mutant: a deferred selector's word pointed at TDLY returns as a success", async () => {
+  const svc = await mon3Variant([["  DW DERR        ; 24 intelHexLoad\n", "  DW TDLY        ; 24 intelHexLoad\n"]]);
+  const bad = compareRows((await theKeypadSides()).ref, await sessionSide({ svc }), [refusalRow(24)]);
+  assert.ok(bad.length, "call 24 caught");
+});
+
+// The latch: calls 43 with 02h and 41 with 80h, then a return, reach MON3>
+// with PROTECT clear and CAPS set, LATCHV equal.
+
+async function latchCalls(svc) {
+  const prog = bin(0x3e, 0x02, 0x0e, 43, 0xd7, 0x3e, 0x80, 0x0e, 41, 0xd7, 0xc9); // LD A,2; LD C,43; RST 10h; LD A,80h; LD C,41; RST 10h; RET
+  const { m } = await inSession({ "LATCH.BIN": prog }, { svc });
+  assert.ok(ok(line(m, "LOAD LATCH.BIN")));
+  goTo(m, "GO", 0x400a, 5_000_000);
+  assert.equal(m.sysCtrl & 0x82, 0x82, "PROTECT and CAPS in the latch at the program's RET");
+  assert.equal(m.read(0x40), m.sysCtrl, "LATCHV equal at the RET");
+  toMon3(m, 5_000_000);
+  assert.equal(m.sysCtrl & 0x02, 0, "PROTECT clear at MON3>");
+  assert.equal(m.sysCtrl & 0x80, 0x80, "CAPS set at MON3>");
+  assert.equal(m.read(0x40), m.sysCtrl, "LATCHV equal at MON3>");
+  assert.ok(!line(m, "EXIT").mon3);
+}
+
+test("KG65 latch calls", async () => {
+  await latchCalls();
+  // 42 and 44 change nothing: the refusal rows, here with A FFh, keep the latch and SYS_MODE.
+  const { ses } = await theKeypadSides();
+  for (const sel of [42, 44]) {
+    const S = ses.run(refusalRow(sel), fixedImage());
+    assert.equal(S.latch, 0x01, `call ${sel}: the latch`);
+    assert.equal(S.latchv, 0x01, `call ${sel}: LATCHV`);
+    assert.deepEqual([S.mem[0x9d], S.mem[0x9e], S.mem[0x9f]], [0x01, 0, 0], `call ${sel}: SYS_MODE, PROT_MODE, XPND_MODE`);
+  }
+});
+
+test("KG65 mutant: setCaps writing the latch without LATCHV", async () => {
+  const svc = await mon3Variant([["  or LATSHD      ; the overlay off\n  ld (LATCH),a\n  out (SYSLAT),a\n  pop af\n", "  or LATSHD      ; the overlay off\n  out (SYSLAT),a\n  pop af\n"]]);
+  await assert.rejects(latchCalls(svc), /LATCHV equal/);
+});
+
+// Call 2, preInit, on the session's side alone: the workspace set up again
+// and the return path run, MON3> with nothing runnable and no warning.
+
+async function preInit(svc) {
+  const ses = await sessionSide({ svc });
+  const { m } = ses;
+  const garbage = Array.from({ length: 0xb0 }, (_, i) => (i * 13 + 7) & 0xff);
+  m.mark = m.output.length;
+  ses.run(call(2, { name: "call 2", mem: [0x0800, garbage], stopAt: ses.at("PROMPT"), max: 20_000_000 }), fixedImage());
+  const out = toMon3(m, 10_000_000);
+  assert.deepEqual(bytesAt(m, 0x800, 16), [...Buffer.from("MON3.1G\u00002025.16\u0000", "latin1")], "ROMSIG set again");
+  assert.deepEqual(bytesAt(m, 0x886, 0x0c), [...fixedImage().subarray(0x86, 0x92)], "MON-3's defaults from 0886h");
+  assert.deepEqual([m.read(0x8b1), m.read(0x8b2)], [0x1b, 0x00], "BAUD 001Bh");
+  assert.equal(m.read(ses.at("RUNOK")), 0, "nothing runnable");
+  assert.doesNotMatch(out, /Tables damaged/, "no warning");
+  assert.ok(refused(line(m, "GO")), "GO refused");
+  assert.ok(!line(m, "EXIT").mon3);
+}
+
+
+// Timing, on the same runtime: timeDelay equal; scanSegments 5,601 T to
+// MON-3's 5,495; equal tone periods; txByte's writes at equal intervals,
+// 833 T a data bit; each restart 101 T to the handler's first instruction
+// after POP HL; the interrupt 103 T; the NMI equal to MON-3's.
+
+/** A row that marks the cycle its routine starts at, and its RET's arrival back at the driver's NEXT. */
+const timed = (side, row, sel) => ({ ...row, watch: { entry: routineOf(side, sel), back: side.sym.NEXT } });
+const routineT = (R) => R.marks.back - R.marks.entry;
+/**
+ * The speaker's half periods in each tone: the cycle gaps between port 01h
+ * writes that change bit 7, a tone ending at a gap of over 50,000 T. The
+ * last write of each tone ends it and is not a period: there the session
+ * loads TXI where MON-3 clears A, 3 T more.
+ */
+function tones(x) {
+  const out = [];
+  let tone = [];
+  let level = null;
+  let last = null;
+  for (const w of x.writes.filter((v) => v.port === 0x01)) {
+    if (last !== null && w.cycle - last > 50_000) {
+      out.push(tone);
+      tone = [];
+      last = null;
+      level = null;
+    }
+    const b = w.value & 0x80;
+    if (level === null || b !== level) {
+      if (last !== null) tone.push(w.cycle - last);
+      last = w.cycle;
+    }
+    level = b;
+  }
+  out.push(tone);
+  return out.map((t) => t.slice(0, -1));
+}
+const gaps = (x, port) => {
+  const c = x.writes.filter((v) => v.port === port).map((v) => v.cycle);
+  return c.slice(1).map((v, i) => v - c[i]);
+};
+
+/** The restart handlers' first instruction after POP HL, in the session. */
+const HANDLERS = { 0x08: "R08", 0x10: "R10", 0x18: "R18", 0x20: "R20", 0x28: "R28", 0x30: "R30", 0x38: "R38" };
+
+async function timing(sides) {
+  const { ref, ses } = sides ?? (await theKeypadSides());
+  const image = fixedImage();
+  const both = (row) => [ref.run(row, image), ses.run(row, image)];
+  const out = {};
+  for (const hl of [0, 1, 0x1000]) {
+    const row = (side) => timed(side, call(33, { name: `call 33, HL ${hl}`, regs: { hl } }), 33);
+    const [R, S] = [ref.run(row(ref), image), ses.run(row(ses), image)];
+    assert.equal(routineT(S), routineT(R), `timeDelay, HL ${hl}: ${routineT(S)} T to MON-3's ${routineT(R)}`);
+  }
+  const scan = (side) => timed(side, call(10, { name: "call 10", regs: { de: 0x0900 } }), 10);
+  const [R10, S10] = [ref.run(scan(ref), image), ses.run(scan(ses), image)];
+  out.scan = { ref: routineT(R10), ses: routineT(S10) };
+  assert.equal(routineT(R10), 5495, "MON-3's scanSegments");
+  assert.equal(routineT(S10), 5601, "the session's scanSegments");
+  for (const row of [call(3, { name: "call 3" }), { name: "call 34", regs: { bc: 0x8c00 | 34, hl: 0x19 } }, { name: "call 34, HL 7Fh", regs: { bc: 0x0100 | 34, hl: 0x7f } }, call(35, { name: "call 35", regs: { de: 0x0900 }, mem: [0x0900, [0x06, 0x00, 0x0a, 0x1f]] })]) {
+    const [R, S] = both(row);
+    assert.ok(tones(R).every((t) => t.length > 8), `${row.name}: tones`);
+    assert.deepEqual(tones(S), tones(R), `${row.name}: equal tone periods`);
+  }
+  for (const a of [0x00, 0x55, 0xff]) {
+    const [R, S] = both(call(22, { name: `call 22, A ${a}`, regs: { a } }));
+    assert.deepEqual(gaps(S, 0x01), gaps(R, 0x01), `txByte ${a}: its port 01h writes at equal intervals`);
+    assert.deepEqual(gaps(S, 0x01).slice(1, 8), Array(7).fill(833), `txByte ${a}: 833 T a data bit`);
+  }
+  // The restarts, by RST, then the interrupt and the NMI.
+  out.rst = {};
+  for (const [n, h] of Object.entries(HANDLERS)) {
+    const S = ses.run({ name: `RST ${n}`, op: RST[n], regs: { bc: 0x1200 | 3 }, stopAt: ses.at(h) + 1 }, image);
+    out.rst[n] = S.end - S.atRestart;
+  }
+  for (const [n, t] of Object.entries(out.rst)) assert.equal(t, 101, `RST ${Number(n).toString(16)}h: ${t} T to the handler after POP HL`);
+  const irq = (nmi, stop) => ({ name: nmi ? "the NMI" : "the interrupt", op: 0xfb, next: "WAIT", events: [{ at: 200, fire: (side) => side.interrupt(nmi) }], mem: [nmi ? 0x0894 : 0x0892, [ref.sym.INTH & 0xff, ref.sym.INTH >> 8]], stopAt: stop });
+  const SI = ses.run(irq(false, ses.at("R38") + 1), image);
+  out.irq = SI.end - SI.irqAt;
+  assert.equal(out.irq, 103, `the interrupt: ${out.irq} T from its acknowledge`);
+  const [RN, SN] = [ref.run(irq(true, ref.sym.INTH), image), ses.run(irq(true, ref.sym.INTH), image)];
+  out.nmi = { ref: RN.end - RN.irqAt, ses: SN.end - SN.irqAt };
+  assert.equal(out.nmi.ses, out.nmi.ref, `the NMI: ${out.nmi.ses} T to MON-3's ${out.nmi.ref}`);
+  return out;
+}
+
+test("KG65 timing", async () => {
+  const t = await timing();
+  console.log(`scanSegments ${t.scan.ses} T (MON-3 ${t.scan.ref}); restarts ${Object.values(t.rst).join(", ")} T; interrupt ${t.irq} T; NMI ${t.nmi.ses} T (MON-3 ${t.nmi.ref})`);
+});
+
+const timingMutant = (name, edits, pattern) =>
+  test(`KG65 mutant: ${name}`, async () => {
+    const svc = await mon3Variant(edits);
+    await assert.rejects(timing({ ref: (await theKeypadSides()).ref, ses: await sessionSide({ svc }) }), pattern);
+  });
+
+timingMutant("scanSegments's on-delay 41h takes 5,679 T", [["  ld b,$40\n  djnz $         ; on for a while\n", "  ld b,$41\n  djnz $         ; on for a while\n"]], /the session's scanSegments/);
+timingMutant("txByte reading BAUD plus one", [["  ld hl,(BAUD)   ; the bit's delay\n", "  ld hl,(BAUD)   ; the bit's delay\n  inc hl\n"]], /txByte 0: its port 01h writes/);
+timingMutant("one more instruction in the latch stub takes 105 T", [
+  ["GORET EQU $0049", "GORET EQU $004A"],
+  ["NRETN EQU $004E", "NRETN EQU $004F"],
+  ["  pop af\n  jp (hl)        ; to the handler\n", "  pop af\n  nop\n  jp (hl)        ; to the handler\n"],
+  ["  DB $18,$F3     ; JR 0041h\n", "  DB $18,$F2     ; JR 0041h\n"],
+], /RST 8h: 105 T/);
+timingMutant("the 0066h stub with one more instruction", [
+  ["  ret            ; and run\n\n; MON-3's variables", "  nop\n  ret            ; and run\n\n; MON-3's variables"],
+  ["  ld de,NMIV     ; MON-3's NMI code\n  ld c,6\n", "  ld de,NMIV     ; MON-3's NMI code\n  ld c,7\n"],
+], /the NMI/);
+
+// KG65's mutants, one for each implemented or translated selector
+// (stages/ks53-api-table.md, "KG65's mutants"). A shim takes the call's
+// table word and runs the routine with the change; a change inside a
+// routine is a patch of its source.
+
+const apiText = () => readFileSync(resolve(ROOT, "drivers/mon3api.asm"), "utf8");
+/** The edits that point selector SEL's table word at a shim of LINES. */
+function shim(sel, lines) {
+  const word = new RegExp(`^  DW \\S+ +; ${sel} \\S+\\n`, "m").exec(apiText())[0];
+  return [
+    [word, `  DW SHIMX       ; ${sel} shim\n`],
+    ["\nAPI:\n", `\nSHIMX:\n${lines.map((l) => `  ${l}\n`).join("")}\nAPI:\n`],
+  ];
+}
+const flipBits = (bits) => ["push af", "ex (sp),hl", "ld a,l", `xor ${bits}`, "ld l,a", "ex (sp),hl", "pop af", "ret"];
+const firstAtDE = (routine) => ["push de", `call ${routine}`, "ex (sp),hl", "inc (hl)", "pop hl", "ret"];
+const latchFlip = (routine, bit) => [`call ${routine}`, "push af", "ld a,(LATCH)", `xor ${bit}`, "ld (LATCH),a", "out (SYSLAT),a", "pop af", "ret"];
+const after = (routine, ...ops) => [`call ${routine}`, ...ops, "ret"];
+const before = (routine, ...ops) => [...ops, `jp ${routine}`];
+
+const API_MUTANTS = [
+  [0, "HL + 1 on return", shim(0, after("SWID", "inc hl"))],
+  [1, "BC + 1", shim(1, after("VERID", "inc bc"))],
+  [2, "WSINIT skipped", [["  call WSINIT    ; the workspace anew\n", ""]]],
+  [3, "the first port 01h write's value + 1", [["  ld c,$40       ; half cycles\n  ld a,TXI\n", "  ld c,$40       ; half cycles\n  ld a,TXI+1\n"]]],
+  [4, "the first byte written at DE + 1", shim(4, firstAtDE("TOSEG"))],
+  [5, "H + 1", shim(5, after("ATOAS", "inc h"))],
+  [6, "A + 1", shim(6, after("A2S", "inc a"))],
+  [7, "Z flipped", shim(7, [`call SCMP`, ...flipBits("$40")])],
+  [8, "the first byte written at DE + 1", shim(8, firstAtDE("HLSTR"))],
+  [9, "the first byte written at DE + 1", shim(9, firstAtDE("HEXA"))],
+  [10, "the first port 02h write's value + 1", [["SCN1:\n  ld a,(de)      ; its segments\n  out (SSEG),a\n", "SCN1:\n  ld a,(de)      ; its segments\n  inc a\n  out (SSEG),a\n"]]],
+  [11, "the first byte of DISP_BUFF + 1", shim(11, after("DERR", "push hl", "ld hl,DISPB", "inc (hl)", "pop hl"))],
+  [12, "returns without reading port 04h", shim(12, ["ret"])],
+  [13, "the first LCD data write's value + 1", [["  out (LCDD),a   ; the character\n  jr LCDSTR\n", "  inc a\n  out (LCDD),a   ; the character\n  dec a\n  jr LCDSTR\n"]]],
+  [14, "the LCD data write's value + 1", shim(14, before("LCDCHR", "inc a"))],
+  [15, "the LCD command write's value + 1", shim(15, ["inc b", "call LCDCO", "dec b", "ret"])],
+  [16, "A + 1", shim(16, after("SKEYS", "inc a"))],
+  [17, "A + 1", shim(17, after("KWAIT", "inc a"))],
+  [18, "E + 1", shim(18, after("MSCAN", "inc e"))],
+  [19, "A + 1", shim(19, after("JOYS", "inc a"))],
+  [20, "the port 01h write's value + 1", [["SERON:\n  ld a,TXI\n", "SERON:\n  ld a,TXI+1\n"]]],
+  [21, "the port 01h write's value + 1", [["SEROFF:\n  xor a          ; all low\n", "SEROFF:\n  ld a,1\n"]]],
+  [22, "the byte sent + 1", shim(22, before("TXB", "inc a"))],
+  [23, "A + 1", shim(23, after("RXB", "inc a"))],
+  [25, "the first byte sent + 1", shim(25, before("SNDS", "inc (hl)"))],
+  [26, "the first byte stored + 1", shim(26, ["push hl", "call RCVS", "ex (sp),hl", "inc (hl)", "pop hl", "ret"])],
+  [28, "the first character sent + 1", [["  jr z,SHEX4     ; the text's end\n  call TXB\n", "  jr z,SHEX4     ; the text's end\n  inc a\n  call TXB\n"]]],
+  [29, "the first byte written at DE + 1", shim(29, firstAtDE("GDUMP"))],
+  [30, "C flipped", shim(30, after("CHKSE", "ccf"))],
+  [33, "HL + 1 before the routine", shim(33, before("TDLY", "inc hl"))],
+  [34, "HL + 1 before the routine", shim(34, before("PNOTE", "inc hl"))],
+  [35, "DE + 1 before the routine", shim(35, before("PTUNE", "inc de"))],
+  [37, "A + 1", shim(37, after("GETCAP", "inc a"))],
+  [38, "A + 1", shim(38, after("GETSHD", "inc a"))],
+  [39, "A + 1", shim(39, after("GETPRT", "inc a"))],
+  [40, "A + 1", shim(40, after("GETEXP", "inc a"))],
+  [41, "the latch value with bit 7 flipped", shim(41, latchFlip("SETCAP", "$80"))],
+  [43, "the latch value with bit 1 flipped", shim(43, latchFlip("SETPRT", "$02"))],
+  [45, "the first byte sent + 1", shim(45, before("STRSER", "inc (hl)"))],
+  [48, "the latch value with bit 7 flipped", shim(48, latchFlip("TOGCAP", "$80"))],
+  [49, "B + 1", shim(49, after("RAND", "inc b"))],
+  [53, "A + 1", shim(53, after("MSASC", "inc a"))],
+  [54, "A + 1", shim(54, after("PMSCN", "inc a"))],
+  [55, "Z flipped", shim(55, [`call LCDCF`, ...flipBits("$40")])],
+  [56, "A + 1", shim(56, after("GETGT", "inc a"))],
+  [62, "the first port 06h write's value + 1", [["  ld a,(iy+0)\n  out (SRED),a   ; the row's red\n", "  ld a,(iy+0)\n  inc a\n  out (SRED),a   ; the row's red\n"]]],
+];
+
+const MATRIX_SELS = [18, 53, 54];
+for (const [sel, what, edits] of API_MUTANTS) {
+  test(`KG65 mutant: call ${sel}, ${what}`, { timeout: 300_000 }, async () => {
+    const svc = await mon3Variant(edits);
+    if (sel === 2) return assert.rejects(preInit(svc), /ROMSIG set again/);
+    const mine = (r) => new RegExp(`^call ${sel}([ ,]|$)`).test(r.name);
+    let bad;
+    if (MATRIX_SELS.includes(sel)) {
+      bad = (await matrixKeys({ ref: (await theMatrixSides()).ref, ses: await sessionSide({ svc, matrix: true }) })).filter((b) => mine({ name: b }));
+    } else {
+      bad = compareRows((await theKeypadSides()).ref, await sessionSide({ svc }), apiRows().filter(mine));
+    }
+    assert.ok(bad.length, `call ${sel}'s rows catch it`);
+  });
+}
+

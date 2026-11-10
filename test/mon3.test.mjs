@@ -1429,7 +1429,8 @@ test("KG68 docs agree", async () => {
   const table = src.slice(src.indexOf("\nAPI:")).split("\n\n")[0];
   const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].replace(/;.*$/, "").split(",").map((w) => w.trim()));
   assert.equal(words.length, 63, "MON-3's 63 calls");
-  const built = words.flatMap((w, i) => (w === "DERR" && i !== 11 ? [] : [i]));
+  // RTCAPI answers every function with carry, as MON-3 a missing one.
+  const built = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [] : [i]));
   const listed = [...mon3.slice(mon3.indexOf("calls implemented:")).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listed, built, "the implemented calls");
   assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes B9A4h–BFFFh/);

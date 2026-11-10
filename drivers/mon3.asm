@@ -328,9 +328,9 @@ NMIC:
 ; Clobbers AF, BC, DE and HL.
 
 WSINIT:
-  ld hl,SIG      ; MON3.1G
+  ld hl,SIG      ; MON3.1G, 2025.16
   ld de,$0800    ; at ROMSIG
-  ld bc,8
+  ld bc,16
   ldir
   ld hl,DEFS     ; the defaults
   ld de,CEL      ; from 0886h
@@ -346,9 +346,17 @@ WSINIT:
   ld (PROTM),a   ; no PROTECT
   ld (PROTM+1),a
   ld (RUNOK),a   ; nothing to run
+  ld hl,$001B    ; 4800 baud, as MON-3
+  ld (BAUD),hl   ; sets it with no RTC
+  ld a,r
+  ld (RNGSD),a   ; seeded from R
   ret
 
+; ROMSIG as MON-3 writes it: its name
+; and its release.
+
 SIG: DB "MON3.1G",0
+VERS: DB "2025.16",0
 
 ; MON-3's defaults, 0886h-089Ch.
 
@@ -684,6 +692,15 @@ GO2:
   ld de,GORET
   push de        ; RET comes back
   jp (hl)
+
+; Call 2, preInit: MON-3's restart is a
+; new workspace here, then the return.
+
+PREIN:
+  di
+  ld sp,MSTK     ; our own stack
+  call WSINIT    ; the workspace anew
+  jr MRET
 
 ; A program's RET lands here, through
 ; the latch stub. Every drive's vector
@@ -1032,6 +1049,7 @@ HEXC:
   ret
 
 %INCLUDE "mon3api.asm"
+%INCLUDE "mon3io.asm"
 %INCLUDE "mon3hex.asm"
 
 MPROM: DB 13,10,"MON3>$"

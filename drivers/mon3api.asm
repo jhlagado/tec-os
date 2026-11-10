@@ -100,16 +100,16 @@ R38:
 ; does not have.
 
 API:
-  DW DERR        ; 0 softwareID
-  DW DERR        ; 1 versionID
-  DW DERR        ; 2 preInit
+  DW SWID        ; 0 softwareID
+  DW VERID       ; 1 versionID
+  DW PREIN       ; 2 preInit
   DW BEEP        ; 3 beepAlways
   DW TOSEG       ; 4 convAToSeg
-  DW DERR        ; 5 regAToASCII
-  DW DERR        ; 6 ASCIItoSegment
-  DW DERR        ; 7 stringCompare
-  DW DERR        ; 8 HLToString
-  DW DERR        ; 9 AToString
+  DW ATOAS       ; 5 regAToASCII
+  DW A2S         ; 6 ASCIItoSegment
+  DW SCMP        ; 7 stringCompare
+  DW HLSTR       ; 8 HLToString
+  DW HEXA        ; 9 AToString
   DW SCANS       ; 10 scanSegments
   DW DERR        ; 11 displayError
   DW LCDB        ; 12 LCDBusy
@@ -119,50 +119,50 @@ API:
   DW SKEYS       ; 16 scanKeys
   DW KWAIT       ; 17 scanKeysWait
   DW MSCAN       ; 18 matrixScan
-  DW DERR        ; 19 joystickScan
-  DW DERR        ; 20 serialEnable
-  DW DERR        ; 21 serialDisable
-  DW DERR        ; 22 txByte
-  DW DERR        ; 23 rxByte
+  DW JOYS        ; 19 joystickScan
+  DW SERON       ; 20 serialEnable
+  DW SEROFF      ; 21 serialDisable
+  DW TXB         ; 22 txByte
+  DW RXB         ; 23 rxByte
   DW DERR        ; 24 intelHexLoad
-  DW DERR        ; 25 sendToSerial
-  DW DERR        ; 26 receiveFromSerial
+  DW SNDS        ; 25 sendToSerial
+  DW RCVS        ; 26 receiveFromSerial
   DW DERR        ; 27 sendAssembly
-  DW DERR        ; 28 sendHex
-  DW DERR        ; 29 genDataDump
-  DW DERR        ; 30 checkStartEnd
+  DW SHEX        ; 28 sendHex
+  DW GDUMP       ; 29 genDataDump
+  DW CHKSE       ; 30 checkStartEnd
   DW DERR        ; 31 menuDriver
   DW DERR        ; 32 paramDriver
   DW TDLY        ; 33 timeDelay
-  DW DERR        ; 34 playNote
-  DW DERR        ; 35 playTune
+  DW PNOTE       ; 34 playNote
+  DW PTUNE       ; 35 playTune
   DW DERR        ; 36 playTuneMenu
   DW GETCAP      ; 37 getCaps
-  DW DERR        ; 38 getShadow
-  DW DERR        ; 39 getProtect
-  DW DERR        ; 40 getExpand
-  DW DERR        ; 41 setCaps
+  DW GETSHD      ; 38 getShadow
+  DW GETPRT      ; 39 getProtect
+  DW GETEXP      ; 40 getExpand
+  DW SETCAP      ; 41 setCaps
   DW DERR        ; 42 setShadow
-  DW DERR        ; 43 setProtect
+  DW SETPRT      ; 43 setProtect
   DW DERR        ; 44 setExpand
-  DW DERR        ; 45 stringToSerial
-  DW DERR        ; 46 RTCAPI
+  DW STRSER      ; 45 stringToSerial
+  DW RTCAPI      ; 46 RTCAPI
   DW DERR        ; 47 menuPop
   DW TOGCAP      ; 48 toggleCaps
-  DW DERR        ; 49 random
+  DW RAND        ; 49 random
   DW DERR        ; 50 setDisStart
   DW DERR        ; 51 getDisNext
   DW DERR        ; 52 getDisassembly
   DW MSASC       ; 53 matrixScanASCII
   DW PMSCN       ; 54 parseMatrixScan
-  DW DERR        ; 55 LCDConfirm
-  DW DERR        ; 56 getGLCDTerm
+  DW LCDCF       ; 55 LCDConfirm
+  DW GETGT       ; 56 getGLCDTerm
   DW DERR        ; 57 setGLCDTerm
   DW DERR        ; 58 loadFromDisk
   DW DERR        ; 59 openFile
   DW DERR        ; 60 readSector
   DW DERR        ; 61 writeSector
-  DW DERR        ; 62 RGBScan
+  DW RGBS        ; 62 RGBScan
 
 ; Call 3, beep: MON-3's tone, with the
 ; serial line held idle. A=0. Keeps BC.
@@ -187,6 +187,9 @@ BEEP1:
 
 ; Call 4, convAToSeg: A as two segment
 ; bytes at DE, DE+2. Clobbers A and BC.
+; F is that of MON-3's lookup, which
+; adds the digit to 1Fh, its table's
+; place in its page.
 
 TOSEG:
   push af        ; the low digit
@@ -199,7 +202,9 @@ TOSEG:
 
 TOSEG1:
   and $0F        ; one digit
-  ld bc,SEGT
+  add a,$1F      ; F as MON-3 makes it
+  push af
+  ld bc,SEGT-$1F
   add a,c
   ld c,a         ; BC at its code
   jr nc,TOSEG2
@@ -209,6 +214,10 @@ TOSEG2:
   ld a,(bc)
   ld (de),a      ; the segments
   inc de
+  pop bc         ; C: that F
+  ld b,a
+  push bc
+  pop af         ; the code, that F
   ret
 
 ; MON-3's segment codes for 0 to F.
@@ -470,18 +479,26 @@ TD1:
   ret
 
 ; Call 11, displayError, and every call
-; not built: MON-3's error on the
-; digits until a key, then back to the
-; caller. Clobbers AF, B and DE.
+; not built: MON-3's error, written to
+; DISP_BUFF and shown on the digits
+; until a key, then back to the caller
+; with A the key, Z and C, as a key
+; press gives. Clobbers BC, DE and HL.
 
 DERR:
+  ld hl,ERRT
+  ld de,DISPB
+  ld bc,6
+  ldir           ; Err into DISP_BUFF
+
+DERR0:
   call SKEYS     ; the keys
   ld a,(KPRESS)
   or a
-  jr z,DERR      ; wait for key up
+  jr z,DERR0     ; wait for key up
 
 DERR1:
-  ld de,ERRT     ; Err on the digits
+  ld de,DISPB    ; Err on the digits
   call SCANS     ; one scan
   call SKEYS
   jr nz,DERR1    ; until a press
@@ -690,4 +707,241 @@ LATSET:
   ld (LATCH),a
   out (SYSLAT),a
   pop af
+  ret
+
+; Call 0, softwareID: HL at "MON3.1G".
+
+SWID:
+  ld hl,SIG
+  ret
+
+; Call 1, versionID: HL at MON-3's own
+; release, with its numbers in BC and
+; DE as MON-3 gives them.
+
+VERID:
+  ld hl,VERS     ; "2025.16"
+  ld bc,$07E9    ; 2025
+  ld de,$0016    ; 16
+  ret
+
+; Call 5, regAToASCII: A as two hex
+; digits, the high in H, the low in L
+; and A.
+
+ATOAS:
+  push af
+  rrca
+  rrca
+  rrca
+  rrca           ; the high digit
+  call HEXC
+  ld h,a
+  pop af
+  call HEXC      ; the low digit
+  ld l,a
+  ret
+
+; Call 6, ASCIItoSegment: A as a digit's
+; segments, 0 outside 20h-7Fh. Keeps
+; HL. As in MON-3, F is that of adding
+; A-20h to 4Fh, its table's place in
+; its page, and 7Fh reads the byte
+; after the table.
+
+A2S:
+  sub $20
+  jr c,A2SX      ; below the space
+  cp $60
+  jr c,A2SL      ; in the table
+
+A2SX:
+  xor a          ; none
+  ret
+
+A2SL:
+  push hl
+  add a,$4F      ; F as MON-3 makes it
+  push af
+  ld hl,ASCT-$4F
+  add a,l        ; the entry's address
+  ld l,a
+  adc a,h        ; with the carry
+  sub l
+  ld h,a
+  ld a,(hl)      ; the segments
+  pop hl         ; L: that F
+  ld h,a
+  push hl
+  pop af         ; the entry, that F
+  pop hl
+  ret
+
+; MON-3's segments for 20h to 7Eh, and
+; the byte it reads for 7Fh.
+
+ASCT:
+  DB $00,$18,$0A,$EE,$A7,$5C,$2C,$02
+  DB $83,$89,$A3,$46,$40,$04,$10,$4C
+  DB $EB,$28,$CD,$AD,$2E,$A7,$E7,$29
+  DB $EF,$AF,$81,$A1,$07,$84,$0D,$5D
+  DB $ED,$6F,$E6,$C3,$EC,$C7,$47,$E3
+  DB $6E,$42,$E8,$67,$C2,$61,$6B,$EB
+  DB $4F,$8F,$4B,$A7,$C6,$EA,$EA,$8A
+  DB $6E,$AE,$CD,$C3,$26,$A9,$0B,$80
+  DB $08,$ED,$E6,$C4,$EC,$CF,$47,$AF
+  DB $66,$40,$A0,$67,$42,$60,$64,$E4
+  DB $4F,$2F,$44,$A7,$C6,$E0,$E0,$60
+  DB $6E,$AE,$CD,$2C,$42,$46,$01,$4F
+
+; Call 29, genDataDump: "AAAA: xx ...",0
+; at DE for B bytes from HL. DE ends at
+; the zero, HL past the bytes.
+
+GDUMP:
+  push bc
+  call HLSTR     ; the address
+  ld a,':'
+  ld (de),a
+  inc de
+
+GDUMP1:
+  ld a,' '
+  ld (de),a      ; a space
+  inc de
+  ld a,(hl)
+  call HEXA      ; and the byte
+  inc hl
+  djnz GDUMP1
+  xor a
+  ld (de),a      ; the end
+  pop bc
+  ret
+
+; Call 30, checkStartEnd: HL at START
+; and END. HL = START, BC = END-START+1,
+; carry if END is below START.
+; Clobbers DE.
+
+CHKSE:
+  ld e,(hl)
+  inc hl
+  ld d,(hl)      ; DE = START
+  inc hl
+  ld c,(hl)
+  inc hl
+  ld h,(hl)
+  ld l,c         ; HL = END
+  or a
+  sbc hl,de      ; carry: END below
+  ld c,l
+  ld b,h
+  inc bc         ; the length
+  ex de,hl
+  ret
+
+; Call 38, getShadow: A = (SYS_MODE AND
+; 01h) XOR 01h, 0 in a session.
+
+GETSHD:
+  ld a,(SYSMD)
+  and $01        ; the overlay bit
+  xor $01        ; active low
+  ret
+
+; Call 39, getProtect: A = PROT_MODE.
+
+GETPRT:
+  ld a,(PROTM)
+  ret
+
+; Call 40, getExpand: A = SYS_MODE AND
+; 04h, 0 in a session.
+
+GETEXP:
+  ld a,(SYSMD)
+  and $04
+  ret
+
+; Call 41, setCaps: CAPS_LOCK = A AND
+; 80h, and SYS_MODE's bit 7 with it.
+; A = SYS_MODE. The latch takes it as
+; GO does.
+
+SETCAP:
+  push bc
+  and $80
+  ld (CAPSL),a
+  ld b,a         ; the new bit
+  ld a,(SYSMD)
+  and $7F        ; the old one out
+
+; SYS_MODE = A OR B, and the latch.
+
+UPDMD:
+  or b
+  call LATSET
+  pop bc
+  ret
+
+; Call 43, setProtect: PROT_MODE = A AND
+; 02h, and SYS_MODE's bit 1 with it, in
+; the latch at once, as in MON-3.
+
+SETPRT:
+  push bc
+  and $02
+  ld (PROTM),a
+  ld b,a         ; the new bit
+  ld a,(SYSMD)
+  and $FD        ; the old one out
+  jr UPDMD
+
+; Call 46, RTCAPI, not built: carry and
+; A = B, as MON-3 answers a function it
+; does not have. No port is touched.
+
+RTCAPI:
+  ld a,b
+  cp 19          ; MON-3's count
+  scf
+  ret
+
+; Call 49, random: MON-3's generator.
+; RNG_SEED and B the new seed, A the
+; seed plus R. Clobbers B.
+
+RAND:
+  ld a,(RNGSD)
+  ld b,a
+  sla b
+  sbc a,a        ; FFh if bit 7 was set
+  and $5F
+  xor b
+  ld (RNGSD),a   ; the new seed
+  ld b,a
+  ld a,r
+  add a,b
+  ret
+
+; Call 55, LCDConfirm: the question on a
+; clear LCD, then a key. Z if it is C.
+; Clobbers B and HL.
+
+LCDCF:
+  ld hl,CONFT
+  ld b,$01       ; clear the LCD
+  call LCDCO
+  call LCDSTR
+  rst $08        ; a key
+  cp $0C         ; C?
+  ret
+
+CONFT: DB "Press 'C' to Confirm",0
+
+; Call 56, getGLCDTerm: A = GLCD_TERM,
+; 0 until the GLCD terminal is built.
+
+GETGT:
+  ld a,(GTERM)
   ret
