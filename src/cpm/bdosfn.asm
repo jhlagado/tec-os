@@ -20,7 +20,7 @@ FNLOGIN:
 
 FNCURDSK:
   ld a,(DEFDRV)  ; logical default
-  jp RETA
+  ret
 
 ; Function 26: save caller DE in CURDMA
 ; and pass it as BC to RAM BIODMA.
@@ -167,16 +167,15 @@ FNUSER:
   ld (USERNO),a
 
 RETZERJ1:
-  jp RETZERO
+  xor a
+  ret
 
 ; Return USERNO (0..31) through RETA in
 ; A/L with H=B=0. Changes AF/B/HL.
 
 GETUSER:
   ld a,(USERNO)
-
-RETAJ4:
-  jp RETA
+  ret
 
 ; Function 35: find the largest logical
 ; end across current-user/name matches
@@ -247,7 +246,7 @@ SIZEDONE:
   ld de,FSIZE0
   call PUBRR     ; size -> FCB r0..r2
   ld a,$FF
-  jr RETAJ4
+  ret
 
 ; Function 36: convert sequential
 ; position in the FCB at (PARAM) to
@@ -354,7 +353,8 @@ FNRESETD:
   call ANDV      ; clear software R/O
   ld hl,WARMV
   call ANDV      ; clear bounded rebuild
-  jp RETZERO
+  xor a
+  ret
 
 ; Start a search in mode A on the FCB at
 ; (PARAM): set OPENMOD and SRCHFCB, then

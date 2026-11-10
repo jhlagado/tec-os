@@ -80,7 +80,7 @@ FNCH1:
 
 FNCHNO:
   ld a,$FF       ; invalid/unsupported
-  jr RETA
+  ret
 
 FNCH2:
 
@@ -106,7 +106,9 @@ CHDROP:
 
 ; BDOS entry: CALL 0005h with C=function
 ; and DE=parameter. Save SP in OLDSP and
-; DE in PARAM. Use stack STKTOP.
+; DE in PARAM. Use stack STKTOP, with
+; RETA pushed first: a function's RET
+; returns its A through RETA.
 ; Handle 44-48, 99 and 108 directly.
 ; Other values above 40 return zero.
 ; For 0-40 look up the handler in FNTAB.
@@ -114,14 +116,15 @@ CHDROP:
 ; binding. FCBSEL receives the original
 ; C but binding may change C. Save the
 ; handler over that call, reload DE from
-; PARAM and jump to it.
-; RETZERO/RETA/RETWORD return to the
-; program on OLDSP. Any register may
-; change.
+; PARAM and jump to it. RETZERO, RETA
+; and RETWORD return on OLDSP. Any
+; register may change.
 
 BENTRY:
   ld (OLDSP),sp
   ld sp,STKTOP
+  ld hl,RETA     ; functions return
+  push hl        ; their A by RET
   ld (PARAM),de
   ld a,c
   cp 108         ; direct dispatch cases
@@ -239,7 +242,7 @@ FNERRM:
 
 FNFLSH:
   call VFLUSH    ; flush dirty lines
-  jr nz,RETA     ; NZ: FFh failure
+  ret nz         ; NZ: FFh failure
   jr RETZERO
 
 ; Function 108: DE=FFFFh queries shared
@@ -278,7 +281,7 @@ FNCIN:
   push af        ; save original byte
   call ECHOCHAR
   pop af
-  jr RETA
+  ret
 
 ; Function 2: send E through OUTCHAR
 ; with tab expansion and ready-key
@@ -295,7 +298,7 @@ FNCOUT:
 
 FNREAD:
   call BIORDR    ; RAM reader hook
-  jr RETA
+  ret
 
 ; Function 4: send E as C through RAM
 ; BIOPUN. Return zero.
@@ -326,9 +329,9 @@ FNDIRECT:
   jr nz,DIROUT   ; not FFh: output
   call CONSTAT   ; pending or BIOS ready
   or a
-  jr z,RETZERO   ; no character: zero
+  ret z          ; A=0: zero
   call GETCHAR   ; unechoed input
-  jr RETA
+  ret
 
 ; Function 6 output: A is parameter E.
 ; Send it as C directly through BIOCOT.
@@ -345,7 +348,7 @@ DIROUT:
 
 FNGETIO:
   ld a,(IOBYTE)
-  jr RETA
+  ret
 
 ; Function 8: store E in IOBYTE and
 ; return zero. Console entry points
@@ -645,9 +648,8 @@ LINDONE:
   and b          ; prompt with data
 
   call nz,HSTORE
-
-RETZERJ2:
-  jp RETZERO
+  xor a
+  ret
 
 ; Function 11: return 1 for pending or
 ; BIOS-ready input, otherwise 0. An
@@ -663,15 +665,13 @@ FNSTAT:
   jr nz,STATYES  ; pending: ready
   call BIOCST    ; RAM BIOS readiness
   or a
-  jr z,RETZERJ2  ; not ready: zero
+  ret z          ; A=0: zero
   call BIOCIN    ; capture BIOS byte
   call CHKPND    ; pending, A=1
 
 STATYES:
   ld a,1
-
-RETAJ2:
-  jp RETA
+  ret
 
 ; Function 12: CP/M 2.2 version. Return
 ; HL=0022h, A=22h and B=H=0, identifying
@@ -679,4 +679,4 @@ RETAJ2:
 
 FNVERS:
   ld a,$22       ; CP/M 2.2 version
-  jr RETAJ2
+  ret
