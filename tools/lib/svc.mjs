@@ -78,9 +78,10 @@ export function fixupsOf(at0, at1, skip, name) {
 /**
  * The .SVC for SOURCE. defs: %IF names, EQUs and strings for the source; deps:
  * [{ name, version }]; raw: EQUs naming ROM addresses, for variants that break
- * the interface rule on purpose; reloc: an encoder's name.
+ * the interface rule on purpose; reloc: an encoder's name; relocatedEntry: let
+ * an execution record's entry carry a fixup, for the test of the ROM's refusal.
  */
-export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, reloc = "delta" }) {
+export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, reloc = "delta", relocatedEntry = false }) {
   const text = readFileSync(source, "utf8");
   checkInterfaces(text, basename(source));
   mkdirSync(work, { recursive: true });
@@ -101,10 +102,23 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   if (symbols.INIT === undefined || symbols.REMOVE === undefined) throw new Error(`${source}: INIT and REMOVE required`);
   if (at0.length !== at1.length) throw new Error(`${source}: the two assemblies differ in length`);
   const fixups = fixupsOf(at0, at1, DHLEN, basename(source));
-  return { ...packSvc(at0, symbols, fixups, { deps, reloc }), copy };
+  return { ...packSvc(at0, symbols, fixups, { deps, reloc, relocatedEntry }), copy };
 }
 
-export function packSvc(at0, symbols, fixups, { deps = [], reloc = "delta" } = {}) {
+/** The offset in the image of an execution record's entry word: "EX", version 1, a state byte, then the word. */
+export const EXENTRY = 4;
+
+/**
+ * Whether the image AT0 starts with an execution record. The ROM adds the
+ * service's page to the record's entry itself, so the word is an offset from
+ * the header, as INIT and REMOVE are, and must carry no fixup.
+ */
+export const hasExecRecord = (at0) => at0[DHLEN] === 0x45 && at0[DHLEN + 1] === 0x58 && at0[DHLEN + 2] === 1;
+
+export function packSvc(at0, symbols, fixups, { deps = [], reloc = "delta", relocatedEntry = false } = {}) {
+  if (!relocatedEntry && hasExecRecord(at0) && (fixups.includes(EXENTRY) || fixups.includes(EXENTRY + 1))) {
+    throw new Error("the execution record's entry is relocated: write it as an offset from the header");
+  }
   let previous = -1;
   for (const offset of fixups) {
     if (!Number.isInteger(offset) || offset <= previous || offset >= at0.length - DHLEN) {
