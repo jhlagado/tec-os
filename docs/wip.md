@@ -20,7 +20,7 @@ selected mode's R1 with the frame interrupt off (KD-258 D1). A ROM-owned
 interrupt dispatcher is next-stage work (KD-259).
 
 The generated ROM, maps and media are built from this source. The ROM is
-`0f93acdc…`, 16,071 bytes, and `docs/memory-map.md` and
+`3ed68c47…`, 16,077 bytes, and `docs/memory-map.md` and
 `docs/rom-services.md` are generated from it. Strict test runs are recorded
 in Origo. All evidence so far comes from emulation; a physical TEC-1G smoke
 test is still owed before release 1 is declared, and KD-262 adds the D5

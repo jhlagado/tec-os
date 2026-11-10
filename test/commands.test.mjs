@@ -1,6 +1,7 @@
 // What is left of the CCP's own commands once nested levels went: CCP and EXIT
 // are names like any other, UNLOAD is last in, first out, the freed page of
-// EXPAND 1 stays free, and a program's and a warm boot's route to the prompt.
+// EXPAND 1 stays free, DEL is ERA by another name, and a program's and a warm
+// boot's route to the prompt.
 // Emulator evidence.
 
 import { test } from "node:test";
@@ -151,6 +152,59 @@ test("ERA *.* answered with Return alone erases nothing and takes no second Retu
   m.type("y\r");
   m.expect(/A>$/, { from: again, maxCycles: 50_000_000 });
   assert.match(m.command("DIR B:"), /NO FILE/);
+});
+
+const code = (m) => word(m, m.sym("PRGCODE"));
+
+test("DEL is ERA by another name: it erases a file, and a file pattern, as ERA does", async () => {
+  const m = await machine();
+  for (const n of ["ONE.COM", "TWO.COM", "KEEP.DAT"]) m.command(`SAVE 1 B:${n}`);
+  assert.equal(m.command("DEL B:ONE.COM"), "DEL B:ONE.COM\r\r\nA>");
+  assert.equal(m.command("ERA B:TWO.COM"), "ERA B:TWO.COM\r\r\nA>");
+  assert.match(m.command("DIR B:"), /^DIR B:\r\r\nKEEP\.DAT *\r\n1 file,/);
+  for (const n of ["ONE.COM", "TWO.COM"]) m.command(`SAVE 1 B:${n}`);
+  m.command("DEL B:*.COM"); // a pattern short of *.* asks nothing
+  assert.match(m.command("DIR B:"), /^DIR B:\r\r\nKEEP\.DAT *\r\n1 file,/);
+  assert.equal(m.command("DEL B:NONE.COM"), m.command("ERA B:NONE.COM").replace("ERA", "DEL"), "a missing file, the same answer");
+  assert.deepEqual(m.violations, []);
+});
+
+test("DEL *.* asks ALL (Y/N)? as ERA *.* does: N keeps the files, Y erases them", async () => {
+  const m = await machine();
+  m.command("SAVE 1 B:KEEP.COM");
+  const ask = (line, answer) => {
+    const from = m.output.length;
+    m.type(`${line}\r`);
+    m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
+    m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
+    m.type(`${answer}\r`);
+    m.expect(/A>$/, { from, maxCycles: 50_000_000 });
+    return m.text(from);
+  };
+  const del = ask("DEL B:*.*", "n");
+  assert.equal(del, ask("ERA B:*.*", "n").replace("ERA", "DEL"), "the same question and answer");
+  assert.equal(code(m), 0, "N is an answer, not a failure");
+  assert.match(m.command("DIR B:"), /KEEP\.COM/);
+  ask("DEL B:*.*", "y");
+  assert.match(m.command("DIR B:"), /NO FILE/);
+});
+
+test("DEL with no name says ? and fails as ERA with none does", async () => {
+  const m = await machine();
+  const era = m.command("ERA");
+  const eraCode = code(m);
+  assert.equal(m.command("DEL"), era.replace("ERA", "DEL"));
+  assert.equal(code(m), eraCode);
+  assert.equal(eraCode, 0xff00, "a failed built-in");
+});
+
+test("the built-in DEL comes before a DEL.COM, as ERA before ERA.COM; A:DEL and DEL.COM still run the file", async () => {
+  const m = await machine({ "DEL.COM": SAY, "ERA.COM": SAY });
+  for (const name of ["DEL", "ERA"]) {
+    assert.match(m.command(name), new RegExp(`^${name}\\r\\r\\n\\?\\r\\n`), `${name}: the built-in`);
+    assert.match(m.command(`A:${name}`), /C\r\n/, `A:${name}: the file`);
+    assert.match(m.command(`${name}.COM`), /C\r\n/, `${name}.COM: the file`);
+  }
 });
 
 test("the CCP's printer keeps OUTCHAR's column count and ^P echo", async () => {
