@@ -5,7 +5,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MON3, PROMPT, bin, bytesAt, figures, hello3, line, mon3Variant, word } from "./lib/mon3.mjs";
+import { MON3, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Variant, runFor, word } from "./lib/mon3.mjs";
+import { compareRows, fixedImage, matrixDown, matrixUp, referenceSide, sessionSide } from "./lib/kg65.mjs";
 import { BIG16K, END, HASHES, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
@@ -321,3 +322,113 @@ hexMutant("the after-the-end test removed loads AFTEREND.HEX", [["  jr z,HE1    
 hexMutant("the lower-case path removed refuses the lower-case HELLO3.HEX", [["  cp 'a'\n  jr c,HEXD1     ; not lower case\n  sub $20        ; a to A\n", ""]], hexLoads, /LOAD LOWER\.HEX/);
 hexMutant("the 00h acceptance after the end record removed refuses the binary-written HELLO3.HEX", [["  ret z          ; the text's end, NC\n  or a\n  jr z,HE1       ; 00h\n", "  ret z          ; the text's end, NC\n"]], hexLoads, /LOAD BINARY\.HEX/);
 hexMutant("the loader reading the file three times misses the time", [["  cp 2\n  jr c,CHEX1     ; then the writing pass\n", "  cp 3\n  jr c,CHEX1     ; then the writing pass\n"]], hexTime, /at most 70,000,000/);
+
+// The matrix keyboard, read at port FEh, against MON-3 with the matrix
+// fitted on both sides: calls 16, 17, 18, 53 and 54, RST 08h and RST 20h.
+
+const MK = { A: 0x24, S: 0x36, D0: 0x13, D1: 0x14, D5: 0x18, ENTER: 0x0a, ESC: 0x0c, SHIFT: 0x00, CTRL: 0x01, FN: 0x02, CAPS: 0x07 };
+const MATRIX_LIST = [
+  ["no key", []],
+  ["A", [MK.A]],
+  ["0", [MK.D0]],
+  ["Enter", [MK.ENTER]],
+  ["Esc", [MK.ESC]],
+  ["Fn with 1", [MK.FN, MK.D1]],
+  ["Shift with A", [MK.SHIFT, MK.A]],
+  ["Ctrl with A", [MK.CTRL, MK.A]],
+  ["A and S", [MK.A, MK.S]],
+];
+const RST = { 0x08: 0xcf, 0x10: 0xd7, 0x18: 0xdf, 0x20: 0xe7, 0x28: 0xef, 0x30: 0xf7, 0x38: 0xff };
+const call = (sel, more = {}) => ({ ...more, regs: { bc: 0x1200 | sel, ...more.regs } });
+const holding = (keys, more = {}) => ({ release: (side) => matrixUp(...keys)(side), ...more, atRestart: (side) => matrixDown(...keys)(side) });
+
+/**
+ * The rows of the matrix list for a call or restart. WAITS, for a call that
+ * waits for a press: the keys go down after 200,000 cycles, 5 for "no key".
+ */
+function matrixRows(name, base, waits = false) {
+  return MATRIX_LIST.map(([what, keys]) => {
+    if (!waits) return holding(keys, { ...base, name: `${name}, ${what}` });
+    const press = keys.length ? keys : [MK.D5];
+    const events = [{ at: 200_000, fire: matrixDown(...press) }];
+    // Two letters are no key to MON-3, which waits on: S goes up later.
+    if (what === "A and S") events.push({ at: 400_000, fire: matrixUp(MK.S) });
+    return { ...base, name: `${name}, ${what}`, events, release: matrixUp(...press) };
+  });
+}
+
+let matrixSides;
+const theMatrixSides = async () => (matrixSides ??= { ref: await referenceSide({ matrix: true }), ses: await sessionSide({ matrix: true }) });
+
+async function matrixKeys(sides) {
+  const { ref, ses } = sides ?? (await theMatrixSides());
+  const digits = [0x0900, [0xeb, 0x28, 0xcd, 0xad, 0x2e, 0xa7]];
+  const rows = [
+    ...matrixRows("call 16", call(16)),
+    ...matrixRows("call 17", call(17), true),
+    ...matrixRows("call 18", call(18)),
+    ...matrixRows("RST 08h", { op: RST[0x08] }, true),
+    ...matrixRows("RST 20h", { op: RST[0x20], regs: { de: 0x0900 }, mem: digits, tx6: true }),
+  ];
+  const bad = compareRows(ref, ses, rows);
+  // Calls 53 and 54 take DE and Z from call 18, with CAPS_LOCK 0 and 80h.
+  const image = fixedImage();
+  const keyRows = [];
+  for (const [what, keys] of [...MATRIX_LIST, ["Caps", [MK.CAPS]]]) {
+    const r18 = ref.run(holding(keys, { ...call(18), name: "call 18 for DE" }), image);
+    const de = (r18.regs.d << 8) | r18.regs.e;
+    for (const caps of [0x00, 0x80]) {
+      const mem = [0x089c, [caps]];
+      keyRows.push(holding(keys, { ...call(53, { regs: { de } }), mem, name: `call 53, ${what}, CAPS_LOCK ${caps}`, skip: ["h", "l"] }));
+      keyRows.push(holding(keys, { ...call(54, { regs: { de, f: r18.regs.f } }), flags: [r18.regs.f], mem, name: `call 54, ${what}, CAPS_LOCK ${caps}`, skip: ["h", "l"] }));
+    }
+  }
+  // 54's repeat: KEY_BUFF the held key and KEY_REPEAT 01h, one call.
+  const rA = ref.run(holding([MK.A], { ...call(18), name: "call 18 for A" }), image);
+  keyRows.push(holding([MK.A], { ...call(54, { regs: { de: (rA.regs.d << 8) | rA.regs.e, f: rA.regs.f } }), flags: [rA.regs.f], mem: [0x0889, [rA.regs.e, 0x20, 0x01]], name: "call 54, A repeated", skip: ["h", "l"] }));
+  bad.push(...compareRows(ref, ses, keyRows));
+  return bad;
+}
+
+/** HELLO3 on a session with the matrix fitted: 5 gives KG60's key-5 result, and Esc returns to MON3>. */
+async function hello3Matrix(svc) {
+  const { m } = await inSession({ "HELLO3.BIN": await hello3() }, { svc, machine: { matrix: true } });
+  assert.ok(ok(line(m, "LOAD HELLO3.BIN")));
+  goTo(m, "GO", 0x4000, 20_000_000);
+  runFor(m, 3_000_000);
+  const e0 = m.edges;
+  m.tec1g.applyMatrixKey(MK.D5 >> 3, MK.D5 & 7, true);
+  runFor(m, 400_000);
+  m.tec1g.applyMatrixKey(MK.D5 >> 3, MK.D5 & 7, false);
+  runFor(m, 400_000);
+  assert.equal(m.edges - e0, 64, "one beep for 5");
+  assert.equal(digitsOf(m).key, 0x05, "5 on the right two digits");
+  m.tec1g.applyMatrixKey(MK.ESC >> 3, MK.ESC & 7, true);
+  const from = m.output.length;
+  m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after Esc");
+  m.tec1g.applyMatrixKey(MK.ESC >> 3, MK.ESC & 7, false);
+  m.runUntil(() => m.waitingForInput() && MON3.test(m.text(from)), 10_000_000, "MON3> after Esc");
+  assert.ok(!line(m, "EXIT").mon3, "EXIT");
+}
+
+test("KG64 matrix keys", async () => {
+  const sides = await theMatrixSides();
+  assert.deepEqual(await matrixKeys(sides), []);
+  // Caps through call 54 sets CAPS in the latch, with LATCHV equal.
+  const { ses } = sides;
+  const image = fixedImage();
+  const r18 = ses.run(holding([MK.CAPS], { ...call(18), name: "Caps by 18" }), image);
+  const S = ses.run(holding([MK.CAPS], { ...call(54, { regs: { de: (r18.regs.d << 8) | r18.regs.e, f: r18.regs.f } }), name: "Caps by 54" }), image);
+  assert.equal(S.latch & 0x80, 0x80, "CAPS in the latch");
+  assert.equal(S.latchv, S.latch, "LATCHV equal");
+  assert.equal(S.mem[0x9c], 0x80, "CAPS_LOCK 80h");
+  await hello3Matrix();
+});
+
+test("KG64 mutant: scanKeys without its matrix branch sees no matrix key", async () => {
+  const svc = await mon3Variant([["  rrca\n  jr c,KBSCAN    ; bit 0: the matrix\n", "  rrca\n"]]);
+  // Call 16's rows differ first; the waiting calls then never see a key.
+  const ses = await sessionSide({ svc, matrix: true });
+  const bad = compareRows(await referenceSide({ matrix: true }), ses, matrixRows("call 16", call(16)));
+  assert.ok(bad.some((b) => b.startsWith("call 16, A")), bad.join("\n"));
+});

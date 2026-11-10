@@ -1427,7 +1427,7 @@ test("KG68 docs agree", async () => {
     assert.ok(mon3.includes(`\`${name}\` (${h4(equ(n))})`), `mon3.md: ${name} at ${h4(equ(n))}`);
   // The calls the doc lists as built are those the service's table does not send to the error display.
   const table = src.slice(src.indexOf("\nAPI:")).split("\n\n")[0];
-  const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].split(",").map((w) => w.trim()));
+  const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].replace(/;.*$/, "").split(",").map((w) => w.trim()));
   assert.equal(words.length, 63, "MON-3's 63 calls");
   const built = words.flatMap((w, i) => (w === "DERR" && i !== 11 ? [] : [i]));
   const listed = [...mon3.slice(mon3.indexOf("calls implemented:")).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));

@@ -16,6 +16,8 @@ const ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H
 const TEXT = Buffer.from("ONE\r\nTWO\r\nTHREE\r\n\x1a", "latin1");
 const BIG = Uint8Array.from({ length: 300 * 128 }, (_, i) => (i * 7 + (i >> 8)) & 0xff);
 const skip = MON3_BIN.skip;
+/** The matrix's row and column for the keypad's 5 and AD: 5, and Esc. */
+const MATRIX_KEY = { [KEY5]: [3, 0], [KEYAD]: [1, 4] };
 
 let ref;
 const theReference = async () => (ref ??= reference(await hello3()));
@@ -53,22 +55,30 @@ async function slice(consoleKind, file) {
   };
   runFor(m, 3_000_000);
   out.after = { rows: lcdRows(m), edges: m.edges - e0, digits: digitsOf(m) };
+  // With the matrix fitted, as the GLCD console needs, MON-3's scanKeys
+  // reads the matrix and not the keypad: 5 and Esc, which it takes as AD.
+  const glcd = consoleKind === "glcd";
+  const key = (code, down) => (glcd ? m.tec1g.applyMatrixKey(...MATRIX_KEY[code], down) : m.tec1g.applyKey(code, down));
   const e1 = m.edges;
-  m.tec1g.applyKey(KEY5, true);
+  key(KEY5, true);
   runFor(m, 400_000);
-  m.tec1g.applyKey(KEY5, false);
+  key(KEY5, false);
   runFor(m, 400_000);
   out.key = { edges: m.edges - e1, digits: digitsOf(m) };
-  m.tec1g.applyKey(KEYAD, true);
+  key(KEYAD, true);
   const from = m.output.length;
   try {
+    // On the matrix, Esc goes up at the program's return, before the
+    // console can read it as a keystroke.
+    if (glcd) m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after AD");
+    if (glcd) key(KEYAD, false);
     m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD");
     out.back = true;
   } catch {
     out.back = false;
     return out;
   }
-  m.tec1g.applyKey(KEYAD, false);
+  if (!glcd) key(KEYAD, false);
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the MON3> line's read");
   out.exit = !line(m, "EXIT").mon3;
   out.pageZeroAfter = bytesAt(m, 0, 0x50);
