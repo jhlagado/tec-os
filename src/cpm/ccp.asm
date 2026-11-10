@@ -222,7 +222,7 @@ MLTAKE:
   xor a          ; failed colon: discard
   ld (CHPOS),a
 
-STARTEJ1:
+TOSTART:
   jp STARTED
 
 MLTKC:
@@ -262,7 +262,7 @@ MLTK3:
   ld hl,(ARGSTRT)
   call SKIPSP    ; skip command spaces
   or a
-  jr z,STARTEJ1  ; empty colon piece
+  jr z,TOSTART   ; empty colon piece
   sub 'A'
   cp 16          ; A..P?
   jr nc,NOTDRIVE
@@ -283,7 +283,7 @@ MLTK3:
   ld c,14        ; 14: select drive
   call BDOS
   call SAVEDU    ; save selected drive
-  jr STARTEJ1
+  jr TOSTART
 
 ; Find a nonempty chain piece. CHSKIP
 ; with CHPOS=0 returns A=0/Z and leaves

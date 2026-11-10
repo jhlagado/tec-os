@@ -91,7 +91,7 @@ FNCH2:
   ld a,1         ; start chained pieces
   ld (CHPOS),a
 
-BIOWBTJ1:
+TOBIOWBT:
   jp BIOWBT      ; RAM warm-boot hook
 
 ; Discard the chained remainder by
@@ -102,7 +102,7 @@ BIOWBTJ1:
 CHDROP:
   xor a
   ld (CHPOS),a
-  jr BIOWBTJ1
+  jr TOBIOWBT
 
 ; BDOS entry: CALL 0005h with C=function
 ; and DE=parameter. Save SP in OLDSP and
@@ -217,7 +217,7 @@ RETWORD:
 ; This entry does not clear CHPOS.
 
 FNZERO:
-  jr BIOWBTJ1    ; RAM warm-boot hook
+  jr TOBIOWBT    ; RAM warm-boot hook
 
 ; Function 45: set ERRMODE from E and
 ; return A=0. Warm boot resets it to 0.
@@ -414,9 +414,9 @@ LINLOOP:
   call GETCHAR   ; next unechoed key
   ld c,a         ; C: key/echo argument
   cp CR          ; CR/LF completes
-  jr z,LINDONJ1
+  jr z,TOLINDON
   cp LF
-  jr z,LINDONJ1
+  jr z,TOLINDON
   cp CTRLP       ; ^P: printer toggle
   jr z,LINTGL
   cp BACKSP      ; BS: logical removal
@@ -443,7 +443,7 @@ LINCHR:
   ld hl,(LINMAX)
   ld a,l
   cp h
-  jr z,LINDONJ1  ; full: echo key only
+  jr z,TOLINDON  ; full: echo key only
   ld hl,(LINPTR)
   ld (hl),c
   inc hl
@@ -457,7 +457,7 @@ LINCHR:
   jr nz,LINLOOP  ; room for another byte
   ld c,CR        ; capacity end: echo CR
 
-LINDONJ1:
+TOLINDON:
   jp LINDONE
 
 ; ^P toggles LISTEN through TOGLIST and
@@ -512,7 +512,7 @@ LINDEL:
 LINABRT:
   ld a,(LINCNT)  ; start-only abort
   or a
-  jr nz,LINLOOJ1
+  jr nz,TOLINLP
 
   ld hl,(LINPTR)
   ld (hl),CTRLC
@@ -532,7 +532,7 @@ LINEOL:
   ld c,LF
   call ECHOONE
 
-LINLOOJ1:
+TOLINLP:
   jp LINLOOP
 
 ; ^U: set LINCNT=0 and LINPTR=(PARAM)+2
@@ -579,7 +579,7 @@ RETYLP:
   djnz RETYLP    ; restored byte count
 
 RETYX:
-  jr LINLOOJ1
+  jr TOLINLP
 
 ; ^X: call LINERASE to clear logical
 ; input and emit one ERASE1 sequence per
@@ -588,7 +588,7 @@ RETYX:
 
 LINCLEAR:
   call LINERASE
-  jr LINLOOJ1
+  jr TOLINLP
 
 ; For each byte counted by LINCNT call
 ; ERASE1 and decrement LINCNT/LINPTR.
