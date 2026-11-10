@@ -5,8 +5,8 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { MON3, PROMPT, bin, bytesAt, hello3, line, mon3Variant, word } from "./lib/mon3.mjs";
-import { goTo, hexFile, inSession, ok, pageOf, refused, runnable, toMon3, toPrompt, tpaDigest } from "./lib/mon3s2.mjs";
+import { MON3, PROMPT, bin, bytesAt, figures, hello3, line, mon3Variant, word } from "./lib/mon3.mjs";
+import { BIG16K, END, HASHES, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
 
@@ -129,3 +129,195 @@ test("KG64 mutant: the type-length test removed loads HELLO3.BIN for HELLO3.BINX
   const svc = await mon3Variant([["  ret c          ; a wildcard\n  bit 7,b        ; too long\n  scf\n  ret nz\n", "  ret c          ; a wildcard\n"]]);
   await assert.rejects(fileNames(svc), /LOAD HELLO3\.BINX: \?/);
 });
+
+// HEX loading. Each good file writes its records' bytes and nothing else in
+// the TPA, and leaves a program runnable at 4000h; each bad one is refused
+// with nothing written and nothing runnable, also after a good load.
+
+/** The TPA's bytes that differ from BEFORE, outside the [address, bytes] blocks; and the blocks' bytes as loaded. */
+function written(m, before, blocks) {
+  const now = tpaBytes(m);
+  const inside = (a) => blocks.some(([at, b]) => a >= at && a < at + b.length);
+  const stray = [];
+  for (let i = 0; i < now.length; i += 1) if (now[i] !== before[i] && !inside(i + 0x100)) stray.push((i + 0x100).toString(16));
+  return { stray, blocks: blocks.map(([at, b]) => [at, [...bytesAt(m, at, b.length)]]) };
+}
+
+/** Load FILE in M, checking the blocks, the rest of the TPA, and RUNOK. */
+function loadsAs(m, svc, file, blocks) {
+  const before = tpaBytes(m);
+  const r = line(m, `LOAD ${file}`);
+  assert.ok(ok(r), `LOAD ${file}: ${JSON.stringify(r.out)}`);
+  const w = written(m, before, blocks);
+  assert.deepEqual(w.stray, [], `${file}: nothing written outside its records`);
+  assert.deepEqual(w.blocks, blocks.map(([at, b]) => [at, [...b]]), `${file}: its records' bytes`);
+  assert.equal(runnable(m, svc), 1, `${file}: runnable`);
+}
+
+/** One-record files at the edges of what may load: P is the page of (0006h). */
+const edges = (P) => ({
+  "TOP.HEX": [[P - 16, Uint8Array.from({ length: 16 }, (_, i) => i + 1)]],
+  "LOW.HEX": [[0x0100, Uint8Array.from({ length: 16 }, (_, i) => 0x30 + i)]],
+  "B07FF.HEX": [[0x07f0, Uint8Array.from({ length: 16 }, (_, i) => 0x50 + i)]],
+  "A0900.HEX": [[0x0900, Uint8Array.from({ length: 16 }, (_, i) => 0x70 + i)]],
+});
+
+async function hexLoads(svc) {
+  svc ??= await mon3Build();
+  const h = await hello3();
+  const P = figures(svc).top;
+  const text = {
+    "HELLO3.HEX": hexFile([[0x4000, h]]),
+    "LOWER.HEX": Buffer.from(hexFile([[0x4000, h]]).toString("latin1").toLowerCase(), "latin1"),
+    "BIG16K.HEX": hexFile([[0x4000, BIG16K]]),
+    ...Object.fromEntries(Object.entries(edges(P)).map(([n, b]) => [n, hexFile(b)])),
+  };
+  assert.equal(sha(text["HELLO3.HEX"]), HASHES["HELLO3.HEX"], "HELLO3.HEX by the rule");
+  assert.equal(sha(text["BIG16K.HEX"]), HASHES["BIG16K.HEX"], "BIG16K.HEX by the rule");
+  assert.equal(sha(BIG16K), HASHES["BIG16K.BIN"], "BIG16K.BIN by the rule");
+  const { m } = await inSession({ "BINARY.HEX": hexFile([[0x4000, h]]) }, { svc, text });
+  for (const [file, blocks] of [
+    ["HELLO3.HEX", [[0x4000, h]]],
+    ["LOWER.HEX", [[0x4000, h]]],
+    ["BINARY.HEX", [[0x4000, h]]],
+    ["BIG16K.HEX", [[0x4000, BIG16K]]],
+    ...Object.entries(edges(P)),
+  ]) {
+    loadsAs(m, svc, file, blocks);
+  }
+  // GO with no address runs at 4000h, with KG60's registers.
+  assert.ok(ok(line(m, "LOAD HELLO3.HEX")));
+  goTo(m, "GO", 0x4000, 20_000_000);
+  const c = m.cpu.cpu;
+  assert.deepEqual([c.a, c.b, c.c, (c.d << 8) | c.e, (c.h << 8) | c.l, c.sp & 0xffff, c.iff1 ? 1 : 0], [0xff, 0x01, 0x00, 0x0049, 0x4000, 0x087e, 0], "KG60's registers at 4000h");
+  return m;
+}
+
+test("KG64 hex loads", () => hexLoads());
+
+/** The cycles LOAD FILE takes in M, from the CR's reception to MON3>. */
+function loadCycles(m, file) {
+  m.mark = m.output.length;
+  m.type(`LOAD ${file}\r`);
+  const from = m.cycles;
+  toMon3(m, 200_000_000);
+  return m.cycles - from;
+}
+
+const HEX_CEILING = 70_000_000;
+
+async function hexTime(svc) {
+  const { m, svc: s } = await inSession({}, { svc, text: { "BIG16K.HEX": hexFile([[0x4000, BIG16K]]) } });
+  const t = loadCycles(m, "BIG16K.HEX");
+  assert.ok(ok({ out: m.text(m.mark), mon3: true }), "BIG16K.HEX loads");
+  assert.equal(runnable(m, s), 1);
+  console.log(`LOAD BIG16K.HEX: ${t.toLocaleString("en")} cycles, the ceiling ${HEX_CEILING.toLocaleString("en")}`);
+  assert.ok(t <= HEX_CEILING, `${t.toLocaleString("en")} cycles, at most ${HEX_CEILING.toLocaleString("en")}`);
+}
+
+test("KG64 hex time", () => hexTime());
+
+/** HELLO3's data records, and the file with RECORDS in place of the last ones. */
+const helloRecords = async () => dataRecords([[0x4000, await hello3()]]);
+
+/** The bad HEX files by name: [bytes, written as text]. P is the page of (0006h). */
+async function badFiles(P) {
+  const recs = await helloRecords();
+  const last = recs.at(-1);
+  const badSum = last.slice(0, -2) + ((parseInt(last.slice(-2), 16) + 1) & 0xff).toString(16).toUpperCase().padStart(2, "0");
+  const sixteen = (b) => Array.from({ length: 16 }, (_, i) => b + i);
+  const one = (at, data = sixteen(1)) => record(at, 0, data);
+  const files = {
+    "BADSUM.HEX": [...recs.slice(0, -1), badSum, END],
+    "BADDIG.HEX": [...recs.slice(0, -1), last.slice(0, 11) + "G" + last.slice(12), END],
+    "EMPTYREC.HEX": [record(0x4000, 0, []), END],
+    ...Object.fromEntries([2, 3, 4, 5, 6].map((t) => [`TYPE${t}.HEX`, [record(0x4000, t, [0, 0x40]), END]])),
+    "WRAP.HEX": [one(0xfff8), END],
+    "OVERTOP.HEX": [one(P - 15), END],
+    "UNDER.HEX": [one(0x00f0), END],
+    "INTO800.HEX": [one(0x07f1), END],
+    "AT8FF.HEX": [one(0x08ff), END],
+    "AFTEROOR.HEX": [one(0x0800), one(0x4000), END],
+    "NOEND.HEX": recs,
+    "AFTEREND.HEX": [...recs, END, one(0x5000)],
+    "ENDLEN.HEX": [...recs, record(0, 1, [0])],
+    "ENDSUM.HEX": [...recs, ":00000001FE"],
+  };
+  const out = Object.fromEntries(Object.entries(files).map(([n, ls]) => [n, [lines(ls), true]]));
+  // Text other than CR and LF between records, and 00h before the end record.
+  const joined = (sep) => Buffer.from(`${recs[0]}\r\n${sep}${recs.slice(1).join("\r\n")}\r\n${END}\r\n`, "latin1");
+  out["SPACE.HEX"] = [joined(" "), true];
+  out["NUL.HEX"] = [joined("\0"), true];
+  out["ENDNUL.HEX"] = [Buffer.concat([lines([...recs, END]), Buffer.from("\0", "latin1"), lines([one(0x5000)])]), true];
+  out["EMPTY.HEX"] = [new Uint8Array(0), false];
+  out["SUB.HEX"] = [new Uint8Array(0), true];
+  return out;
+}
+
+async function hexRefused(svc) {
+  svc ??= await mon3Build();
+  const P = figures(svc).top;
+  const bad = await badFiles(P);
+  // At 5000h, so that a bad file's good records would change the TPA.
+  const text = { "GOOD.HEX": hexFile([[0x5000, await hello3()]]) };
+  const files = {};
+  for (const [n, [b, t]] of Object.entries(bad)) (t ? text : files)[n] = b;
+  const { m } = await inSession(files, { svc, text });
+  for (const cmd of [...Object.keys(bad).map((n) => `LOAD ${n}`), "LOAD GOOD.HEX 5000"]) {
+    assert.ok(ok(line(m, "LOAD GOOD.HEX")), "a good load first");
+    const before = tpaDigest(m);
+    const r = line(m, cmd);
+    assert.ok(refused(r), `${cmd}: ? (${JSON.stringify(r.out)})`);
+    assert.equal(tpaDigest(m), before, `${cmd}: nothing written`);
+    assert.equal(runnable(m, svc), 0, `${cmd}: nothing runnable`);
+  }
+  assert.ok(!line(m, "EXIT").mon3);
+}
+
+test("KG64 hex refused", () => hexRefused());
+
+/** A disk error in the pass WRITING (0 or 1): the session ends at A>, and nothing is runnable at re-entry. */
+async function hexDiskError(writing) {
+  const svc = await mon3Build();
+  const { m } = await inSession({}, { svc, text: { "BIG16K.HEX": hexFile([[0x4000, BIG16K]]) } });
+  const p = pageOf(m) << 8;
+  const fcb = p + svc.symbols.FCB;
+  m.mark = m.output.length;
+  m.type("LOAD BIG16K.HEX\r");
+  m.runUntil(() => m.read(p + svc.symbols.HWRT) === writing && m.read(fcb + 12) === 1, 200_000_000, `the ${writing ? "second" : "first"} pass's second extent`);
+  const sd = m.sd;
+  m.sd = null; // the card taken out
+  const from = m.mark;
+  m.runUntil(() => m.waitingForInput() && /Bad Sector$/.test(m.text(from)), 200_000_000, "the BDOS's error");
+  m.sd = sd;
+  m.type("\r");
+  assert.match(toPrompt(m, from), /Bdos Err On A: Bad Sector\r\nA>$/, "warm boot to A>");
+  assert.equal(word(m, word(m, 1) + 1), m.sym("WBOOTR"), "the session ended");
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.equal(runnable(m, svc), 0, "nothing runnable");
+  assert.ok(refused(line(m, "GO")), "GO refused at re-entry");
+  assert.ok(!line(m, "EXIT").mon3);
+}
+
+test("KG64 hex disk error", async () => {
+  await hexDiskError(0);
+  await hexDiskError(1);
+});
+
+// The loader's mutants, each caught by its row.
+
+const hexMutant = (name, edits, run, pattern) =>
+  test(`KG64 mutant: ${name}`, async () => {
+    const svc = await mon3Variant(edits);
+    await assert.rejects(run(svc), pattern);
+  });
+
+hexMutant("single-pass loading leaves the bad-checksum file's good records written", [["  xor a          ; the checking pass\n", "  ld a,1\n"]], hexRefused, /LOAD BADSUM\.HEX: nothing written/);
+hexMutant("the checksum test removed loads BADSUM.HEX", [["  ld a,c\n  or a           ; Z: the sum is 0\n  jr z,HP1       ; good: the next\n  scf\n  ret\n", "  jr HP1\n"]], hexRefused, /LOAD BADSUM\.HEX: \?/);
+hexMutant("the type test removed loads type 02h as data", [["  inc a          ; 00h: data\n  scf\n  ret nz         ; not data\n", ""]], hexRefused, /LOAD TYPE2\.HEX: \?/);
+hexMutant("the per-record range test removed loads into 0800h-08FFh", [["  call RANGE     ; as a .BIN load is\n  pop de\n  ret c          ; out of bounds\n", "  pop de\n"]], hexRefused, /LOAD (WRAP|OVERTOP|UNDER|INTO800|AT8FF)\.HEX: \?/);
+hexMutant("the end-record requirement removed loads NOEND.HEX", [["  jr z,HP1       ; LF\n  scf            ; anything else\n", "  jr z,HP1       ; LF\n  cp $1A\n  ret z\n  scf\n"]], hexRefused, /LOAD NOEND\.HEX: \?/);
+hexMutant("the after-the-end test removed loads AFTEREND.HEX", [["  jr z,HE1       ; LF\n  scf            ; anything else\n  ret\n", "  jr z,HE1       ; LF\n  jr HE1\n"]], hexRefused, /LOAD AFTEREND\.HEX: \?/);
+hexMutant("the lower-case path removed refuses the lower-case HELLO3.HEX", [["  cp 'a'\n  jr c,HEXD1     ; not lower case\n  sub $20        ; a to A\n", ""]], hexLoads, /LOAD LOWER\.HEX/);
+hexMutant("the 00h acceptance after the end record removed refuses the binary-written HELLO3.HEX", [["  ret z          ; the text's end, NC\n  or a\n  jr z,HE1       ; 00h\n", "  ret z          ; the text's end, NC\n"]], hexLoads, /LOAD BINARY\.HEX/);
+hexMutant("the loader reading the file three times misses the time", [["  cp 2\n  jr c,CHEX1     ; then the writing pass\n", "  cp 3\n  jr c,CHEX1     ; then the writing pass\n"]], hexTime, /at most 70,000,000/);

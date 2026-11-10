@@ -1273,7 +1273,7 @@ test("KG62 mutant: without GO's BDOS 48 the hung program's reset loses the unclo
 
 test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is taken", async () => {
   const svc = await mon3Variant([
-    ["LS1:\n  ld a,d\n  cp $08\n  jr z,LFAIL     ; starts in 08xxh\n  jr nc,LS2      ; starts above it\n  ld a,h\n  cp $08\n  jr c,LS2       ; ends below it\n  jr nz,LFAIL    ; runs through it\n  ld a,l\n  or a\n  jr nz,LFAIL    ; ends inside it\n", "LS1:\n"],
+    ["RNG1:\n  ld a,d\n  cp $08\n  jr z,RNGX      ; starts in 08xxh\n  ret nc         ; starts above it\n  ld a,h\n  cp $08\n  ccf\n  ret nc         ; ends below it\n  jr nz,RNGX     ; runs through it\n  ld a,l\n  cp 1\n  ccf            ; ends inside it\n  ret\n", "RNG1:\n  or a\n  ret\n"],
   ]);
   await assert.rejects(refusedLoads(svc), /LOAD THREE\.BIN 700: \?/);
 });

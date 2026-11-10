@@ -479,22 +479,27 @@ SKIP1:
 ; is refused with nothing written.
 ; Nothing is runnable until it ends
 ; well. A read error ends the session.
+; A .HEX file goes to the HEX loader.
 
 CLOAD:
   xor a
   ld (RUNOK),a   ; nothing runnable
   call FCBP      ; the name
   jp c,BAD       ; no name
+  push hl        ; the text
+  ld hl,FCB+9
+  ld de,THEX
+  ld b,3
+  call SCMP      ; Z: the type is HEX
+  pop hl
+  jp z,CHEX
   ld de,$4000    ; the default
   call SKIP
   call nz,HEXW   ; an address
   jp c,BAD       ; a bad one
   ld (LDAT),de
-  ld de,FCB
-  ld c,15        ; open
-  call BDOS
-  inc a          ; FFh: none
-  jp z,LFAIL     ; not found
+  call OPEN
+  jr z,LFAIL     ; not found
   ld de,FCB
   ld c,35        ; size in records
   call BDOS
@@ -514,33 +519,8 @@ LSH:
   add hl,hl      ; records to bytes
   djnz LSH
   ld de,(LDAT)   ; the start
-  ld a,d
-  or a
-  jr z,LFAIL     ; page zero
-  add hl,de      ; HL = the end
-  jr c,LFAIL     ; past FFFFh
-  ld a,(TPATOP)  ; the TPA's top
-  cp h
-  jr c,LFAIL     ; above it
-  jr nz,LS1
-  ld a,l
-  or a
-  jr nz,LFAIL    ; into that page
-
-LS1:
-  ld a,d
-  cp $08
-  jr z,LFAIL     ; starts in 08xxh
-  jr nc,LS2      ; starts above it
-  ld a,h
-  cp $08
-  jr c,LS2       ; ends below it
-  jr nz,LFAIL    ; runs through it
-  ld a,l
-  or a
-  jr nz,LFAIL    ; ends inside it
-
-LS2:
+  call RANGE
+  jr c,LFAIL     ; it would not fit
   ld hl,(LDAT)
 
 LRD:
@@ -562,6 +542,10 @@ LEND:
   dec a          ; 1 is the end
   jr nz,LFAIL
   ld hl,(LDAT)
+
+; A good load at HL: runnable now.
+
+LGOOD:
   ld (RUNAT),hl  ; for GO
   ld a,1
   ld (RUNOK),a   ; runnable now
@@ -571,6 +555,56 @@ LEND:
 LFAIL:
   call DMA80
   jp BAD         ; ? and nothing run
+
+; Open FCB. Z if there is no such file.
+
+OPEN:
+  ld de,FCB
+  ld c,15        ; open
+  call BDOS
+  inc a          ; FFh: none
+  ret
+
+; Carry unless DE to DE+HL-1 lies from
+; 0100h to below the TPA's top page,
+; clear of 0800h-08FFh, MON-3's stack
+; and variables. HL ends at DE+HL.
+
+RANGE:
+  ld a,d
+  cp 1
+  ret c          ; page zero
+  add hl,de      ; HL = the end
+  ret c          ; past FFFFh
+  ld a,(TPATOP)  ; the TPA's top
+  cp h
+  ret c          ; above it
+  jr nz,RNG1
+  ld a,l
+  cp 1
+  ccf
+  ret c          ; into that page
+
+RNG1:
+  ld a,d
+  cp $08
+  jr z,RNGX      ; starts in 08xxh
+  ret nc         ; starts above it
+  ld a,h
+  cp $08
+  ccf
+  ret nc         ; ends below it
+  jr nz,RNGX     ; runs through it
+  ld a,l
+  cp 1
+  ccf            ; ends inside it
+  ret
+
+RNGX:
+  scf
+  ret
+
+THEX: DB "HEX"
 
 ; Put the DMA back at 0080h.
 
@@ -927,10 +961,15 @@ HEXW2:
   ccf            ; carry: text joined
   ret
 
-; A hex digit's value from A. Carry if
-; it is none.
+; A hex digit's value from A, either
+; case. Carry if it is none.
 
 HEXD:
+  cp 'a'
+  jr c,HEXD1     ; not lower case
+  sub $20        ; a to A
+
+HEXD1:
   sub '0'
   ret c          ; below 0
   cp 10
@@ -978,6 +1017,7 @@ HEXC:
   ret
 
 %INCLUDE "mon3api.asm"
+%INCLUDE "mon3hex.asm"
 
 MPROM: DB 13,10,"MON3>$"
 MCRLF: DB 13,10,'$'
@@ -1002,6 +1042,9 @@ RUNOK: DB 0
 INT38: DB 0
 RUNAT: DW $4000
 LDAT: DW 0
+HADR: DW 0       ; a HEX record's start
+HWRT: DB 0       ; 1: the writing pass
+HSP: DW 0        ; the HEX pass's stack
 HOOKAT: DW 0
 OLDWB: DW 0
 

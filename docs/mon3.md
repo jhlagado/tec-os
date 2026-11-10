@@ -31,9 +31,9 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 2,062 bytes of header and image in **9 pages**: the
-word at `0006h` goes from `B9A4h` to `B000h`, and the TPA from 47,268 bytes to
-**44,800**. The monitor, its line buffer, its FCB, its saved page zero and its
+On the starter card it is 2,356 bytes of header and image in **10 pages**: the
+word at `0006h` goes from `B9A4h` to `AF00h`, and the TPA from 47,268 bytes to
+**44,544**. The monitor, its line buffer, its FCB, its saved page zero and its
 stack are all in those pages, above anything a MON-3 program may load into.
 
 ## Commands
@@ -41,7 +41,7 @@ stack are all in those pages, above anything a MON-3 program may load into.
 The line is read by BDOS 10 and made upper case. Anything but these three
 prints `?`.
 
-- **`LOAD name.BIN [addr]`** loads the file at 4000h, or at the hexadecimal
+- **`LOAD name.BIN [addr]`**, or any type but `HEX`, loads the file at 4000h, or at the hexadecimal
   `addr`, in whole records. The address has one to four digits and ends at a
   space or the line's end, and a drive is A: to P:. The name has at most
   eight characters and the type three, and neither may hold `?` or `*`.
@@ -53,6 +53,21 @@ prints `?`.
   load ends well nothing is runnable, so a refused load leaves nothing
   runnable. A disk error during the load ends the session, as any BDOS error
   does.
+- **`LOAD name.HEX`** loads an Intel HEX file at its records' own
+  addresses, and takes no address. The file is read twice, a 128-byte record
+  at a time into 0080h: the first pass checks every record and writes
+  nothing, the second writes them. So a file with any fault prints `?` with
+  nothing written and nothing runnable, and a good one leaves the program
+  runnable at 4000h, `GO`'s default. The digits may be of either case. Each
+  record is `:`, a length, an address, a type, its data and its checksum.
+  A data record (type 00h) holds at least one byte, and each byte must lie
+  where a `.BIN` load may write. Between records only CR and LF may come.
+  The end record (type 01h, no data) must come; after it only CR, LF and 00h,
+  up to the text's end: the first 1Ah, or the end of the file's last record.
+  Any other type, a bad digit or checksum, a record past FFFFh, or text out
+  of place is refused. A disk error during either pass ends the session.
+  `BIG16K.HEX`, 16 KB in 46,093 characters, loads in about 64 million
+  T-states, 16 s at 4 MHz.
 - **`GO [addr]`** runs the last good load, or `addr`. With neither it prints
   `?`. It first flushes the cache (BDOS 48), so a program that hangs loses
   nothing written before it ran. Then it does what MON-3's `GO` does: the LCD

@@ -43,7 +43,10 @@
     "FCBF",
     "HEXW",
     "HEXD",
-    "HLSTR"
+    "HLSTR",
+    "LGOOD",
+    "OPEN",
+    "RANGE"
   ],
   "drivers/mon3api.asm": [
     "R08",
@@ -63,7 +66,17 @@
     "SKEYS",
     "KWAIT",
     "TDLY",
-    "DERR"
+    "DERR",
+    "SCMP"
+  ],
+  "drivers/mon3hex.asm": [
+    "CHEX",
+    "HPASS",
+    "HREC",
+    "HEND",
+    "GETB",
+    "GETC",
+    "HREAD"
   ],
   "programs/SAMPLE.ASM": [
     "START",
