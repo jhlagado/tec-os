@@ -142,7 +142,8 @@
     "BWRITE",
     "IFFGET",
     "CDI",
-    "BRET"
+    "BRET",
+    "CURENT"
   ],
   "src/boot.asm": [
     "RSTENT",
@@ -231,7 +232,8 @@
     "LINERASE",
     "LINDONE",
     "FNSTAT",
-    "FNVERS"
+    "FNVERS",
+    "LINDROP"
   ],
   "src/cpm/bdoscon.asm": [
     "ERRTEXT",
@@ -307,7 +309,9 @@
     "MATCHFCB",
     "MATCHUSR",
     "ISMATCH",
-    "NOMATCH"
+    "NOMATCH",
+    "SRCHA",
+    "ADDCAND"
   ],
   "src/cpm/bdoslog.asm": [
     "READDIR",
@@ -334,7 +338,11 @@
     "VCLR",
     "DRVMASK",
     "RONZ",
-    "SELFAIL"
+    "SELFAIL",
+    "SEEKP",
+    "ENTCNT",
+    "ENTCELL",
+    "SRLHL2"
   ],
   "src/cpm/bdosrec.asm": [
     "WRITESEQ",
@@ -374,8 +382,7 @@
     "POSREC",
     "DIV16",
     "NEXTEXT",
-    "NEXTFIND",
-    "NEXTMISS"
+    "NEXTFIND"
   ],
   "src/cpm/ccp.asm": [
     "CCPENT",
@@ -424,7 +431,8 @@
     "PUTCHAR",
     "CMDSVC",
     "STBOOT",
-    "STLINE"
+    "STLINE",
+    "SETLB"
   ],
   "src/cpm/ccpfile.asm": [
     "CMDDIR",
@@ -539,7 +547,8 @@
     "SDRNG",
     "SDRBLK",
     "SDWBLK",
-    "SDWRITE"
+    "SDWRITE",
+    "SDCMDZ"
   ],
   "src/services.asm": [
     "SVCDSP",
@@ -586,7 +595,6 @@
     "VTSGR1",
     "VTNC",
     "LBADR",
-    "VTRDC",
     "VTICH",
     "VTDCH",
     "VTNR",

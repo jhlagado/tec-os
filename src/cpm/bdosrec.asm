@@ -153,9 +153,7 @@ ADVWRITE:
 
 WRITERC:
   dec hl         ; S2 precedes RC
-  ld a,(hl)
-  and $7F        ; mark FCB changed
-  ld (hl),a
+  res 7,(hl)
   xor a          ; 0: written
   ret
 
@@ -165,6 +163,8 @@ WRITERC:
 
 FNREADSQ:
   call READSEQ
+
+RETAJ3:
   jp RETA        ; A result in A and HL
 
 ; Read PARAM's FCB record CR into DMA.
@@ -303,7 +303,7 @@ RANDDONE:
 ; the program through RETA.
 
 RANDRET:
-  jp RETA
+  jr RETAJ3
 
 ; Prepare FCB random record r0-r2:
 ; select its extent and set CR. A write
@@ -668,20 +668,15 @@ ZEROBLK:
 ZEROLOOP:
   ld de,(ZEROBN)
   call POSREC    ; position zero record
-  ld hl,(DIRPTR)
-  ld b,h
-  ld c,l
+  ld bc,(DIRPTR)
   call BIODMA    ; DMA at zero buffer
   ld c,2         ; type 2: new block
   call BIOWRS
   call DMABACK   ; restore DMA, test I/O
-  ld a,(SEQREC)
-  inc a
-  ld (SEQREC),a  ; next record to zero
-  ld a,(ALLEFT)
-  dec a
-  ld (ALLEFT),a  ; Z: block fully zeroed
-
+  ld hl,SEQREC
+  inc (hl)       ; next record
+  ld hl,ALLEFT
+  dec (hl)       ; records left
   jr nz,ZEROLOOP
   ld a,(TARGEX)
   ld (SEQREC),a  ; restore target record
@@ -705,37 +700,21 @@ ZEROLOOP:
 POSREC:
   call CHKBLK    ; reject block past DSM
   ex de,hl       ; HL = the block
-
-; DPB offset 2 is BSH.
-
-  ld de,(DPBPTR)
-  inc de
-  inc de
-  ld a,(de)      ; BSH
-  ld b,a
-  ld a,b
+  ld a,(ix+2)    ; BSH: CHKBLK set IX
   or a
-  jr z,BLOCKSCA  ; BSH 0: no shift
+  jr z,BLOCKSCA
+  ld b,a
 
 BLOCKSHF:
   add hl,hl      ; block to first record
   djnz BLOCKSHF  ; one shift per BSH bit
 
 BLOCKSCA:
-
-  ld de,(DPBPTR)
-  inc de
-  inc de
-  inc de
-  ld a,(de)      ; BLM
-  ld b,a
   ld a,(SEQREC)
-  and b          ; record within block
+  and (ix+3)     ; BLM
   ld e,a
   ld d,0
   add hl,de      ; data-relative record
-
-  ld ix,(DPBPTR)
   ld e,(ix+0)
   ld d,(ix+1)    ; SPT: records/track
   call DIV16     ; DE track, HL sector
@@ -746,17 +725,8 @@ BLOCKSCA:
   add hl,de      ; the track on the disk
   ld (IOTRK),hl
 
-  ld b,h
-  ld c,l
-  call BIOTRK    ; the BIOS on track BC
-  ld hl,(IOSEC)
-  ld b,h
-  ld c,l
-  ld de,(XLTPTR)
-  call BIOTRN    ; XLT sector mapping
-  ld b,h
-  ld c,l
-  jp BIOSEC      ; set BIOS sector
+  ld hl,IOTRK    ; IOSEC follows
+  jp SEEKP
 
 ; Unsigned HL / DE: quotient in DE,
 ; remainder in HL. Requires 1<=DE<=8000h
@@ -828,20 +798,10 @@ NEXTEXT:
 ; Clobbers every register.
 
 NEXTFIND:
-  ld hl,(PARAM)
-
-  ld (SRCHFCB),hl
   ld a,1         ; mode 1: open into FCB
-  ld (OPENMOD),a
-  call NEWSRCH   ; first directory entry
+  call SRCHA     ; first directory entry
   call FINDENT
-  cp $FF
-  jr z,NEXTMISS  ; FFh: no entry
-  xor a          ; 0: the extent open
-  ret
-
-; No directory entry: return A=1.
-
-NEXTMISS:
-  ld a,1         ; 1: not found
+  add a,1        ; FFh: carry
+  ld a,0
+  adc a,a        ; 0 open, 1 not found
   ret

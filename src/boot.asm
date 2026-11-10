@@ -95,9 +95,11 @@ COLDRT:
   ld hl,LCDBAN
   call LCDROW
   call SDINIT
+
+DIAGJ1:
   jp nz,DIAG
   call MOUNT
-  jp nz,DIAG
+  jr nz,DIAGJ1
   call ALVINIT
   call RESEL
 

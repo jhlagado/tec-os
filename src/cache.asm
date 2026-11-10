@@ -76,14 +76,12 @@ CLK2:
   ld l,a
   cp NLINES*4
   jr c,CLK1
-  ld a,(LATCHV)
-  out (SYSLAT),a
-  or 1
-  ret
+  or a           ; miss: NZ
 
 CLK3:
   ld a,(LATCHV)
   out (SYSLAT),a
+  ret nz
   ld a,l
   rrca
   rrca
@@ -587,7 +585,7 @@ CEND:
 MVCOPY:
   ld a,b
   or c
-  jp z,MVOK
+  ret z          ; A=0, as MVOK
   call IFFGET
   di
   push af

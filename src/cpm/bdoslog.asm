@@ -19,28 +19,39 @@ READDIR:
   ld hl,(CURTRK)
 
   ld (DIRTRK),hl
-  ld b,h
-  ld c,l
-  call BIOTRK    ; RAM track selection
-
   ld hl,(CURSEC)
   ld (DIRSEC),hl
-  ld b,h
-  ld c,l
+  ld hl,DIRTRK   ; that pair
+  call SEEKP
 
-  ld de,(XLTPTR)
-  call BIOTRN    ; logical -> physical
-  ld b,h
-  ld c,l
-  call BIOSEC    ; RAM sector selection
-
-  ld hl,(DIRPTR)
-  ld b,h
-  ld c,l
+  ld bc,(DIRPTR)
   call BIODMA    ; temporary BIOS DMA
   call BIORDS    ; read before advance
   call DMABACK   ; restore before error
   jr ADVSEC      ; success: next record
+
+; Seek the track word at HL and the
+; sector word after it: BIOTRK, the
+; skew table at (XLTPTR) through BIOTRN,
+; then BIOSEC. Changes AF/BC/DE/HL and
+; BIOS clobbers.
+
+SEEKP:
+  ld c,(hl)
+  inc hl
+  ld b,(hl)
+  inc hl
+  push hl
+  call BIOTRK
+  pop hl
+  ld c,(hl)
+  inc hl
+  ld b,(hl)
+  ld de,(XLTPTR)
+  call BIOTRN
+  ld b,h
+  ld c,l         ; translated sector
+  jp BIOSEC
 
 ; Write the modified buffer at (DIRPTR)
 ; back to READDIR's saved DIRTRK/DIRSEC
@@ -53,21 +64,8 @@ READDIR:
 
 WRITEDIR:
 
-  ld hl,(DIRTRK)
-  ld b,h
-  ld c,l
-  call BIOTRK
-
-  ld hl,(DIRSEC)
-  ld b,h
-  ld c,l
-
-  ld de,(XLTPTR)
-  call BIOTRN    ; translate saved
-                 ; sector
-  ld b,h
-  ld c,l
-  call BIOSEC
+  ld hl,DIRTRK   ; READDIR's pair
+  call SEEKP
 
 ; Write the directory buffer at (DIRPTR)
 ; using the BIOS's current record
@@ -82,9 +80,7 @@ WRITEDIR:
 
 WRDIRNOW:
 
-  ld hl,(DIRPTR)
-  ld b,h
-  ld c,l
+  ld bc,(DIRPTR)
   call BIODMA    ; temporary BIOS DMA
   ld c,1         ; type 1: directory
   call BIOWRS
@@ -102,9 +98,7 @@ WRDIRNOW:
 DMABACK:
   push af        ; status across SETDMA
 
-  ld hl,(CURDMA)
-  ld b,h
-  ld c,l
+  ld bc,(CURDMA)
   call BIODMA    ; restore before test
   pop af         ; saved BIOS status
   or a           ; NZ: failed I/O
@@ -235,10 +229,7 @@ LOGOK:
   inc hl
   ld d,(hl)
   ex de,hl       ; DRM in HL
-  srl h          ; four entries/record
-  rr l
-  srl h
-  rr l
+  call SRLHL2    ; entries/4
   inc hl         ; floor(DRM/4)+1
   ld (DIRLEFT),hl
   ld de,(WARMV)  ; bounded-rebuild bits
@@ -251,10 +242,7 @@ LOGOK:
   ld l,a
   ld de,3        ; round up mark/4
   add hl,de
-  srl h          ; entries -> records
-  rr l
-  srl h
-  rr l
+  call SRLHL2
 
   ld (DIRLEFT),hl
 
@@ -456,10 +444,8 @@ PARDIR:
 
 PARELOOP:
   call PARENT    ; count/mark next entry
-  ld a,(ENTLEFT)
-  dec a
-  ld (ENTLEFT),a
-
+  ld hl,ENTLEFT
+  dec (hl)
   jr nz,PARELOOP
   ret
 
@@ -494,38 +480,16 @@ PARENT:
   ret z
 
   ld (DIRUSED),de
-  ld de,16       ; map offset 16
-  add hl,de
-  ld ix,(DPBPTR)
-  ld a,(ix+6)    ; DSM high byte
-  or a           ; Z: byte cells
-  ld a,16
-  jr z,PARCNT
-  ld a,8         ; eight word cells
-
-PARCNT:
-  ld (ALLEFT),a  ; shared cell count
+  call ENTCNT    ; ALLEFT cells, IX=DPB
 
 PARCELL:
-  ld e,(hl)      ; block low byte
-  ld d,0
-  inc hl
-  ld a,(ix+6)    ; IX still DPB
-
-  or a
-  jr z,PARHAVE   ; byte cells: no high
-  ld d,(hl)      ; word high byte
-  inc hl
-
-PARHAVE:
-  push hl        ; map cursor across
-                 ; call
-  call MARKBLK   ; skip zero/past DSM
+  call ENTCELL   ; DE=next block
+  push hl        ; save map pointer
+  call MARKBLK
+  ld hl,ALLEFT
+  dec (hl)
   pop hl
-  ld a,(ALLEFT)
-  dec a
-  ld (ALLEFT),a
-  jr nz,PARCELL  ; remaining map cells
+  jr nz,PARCELL
   ret
 
 ; Free blocks from the deleted entry at
@@ -542,39 +506,51 @@ PARHAVE:
 FREEENT:
 
   ld hl,(MATCHPTR)
+  call ENTCNT    ; ALLEFT cells, IX=DPB
+
+FREECELL:
+  call ENTCELL   ; DE=next block
+  push hl        ; save map pointer
+  call CLRBLK
+  ld hl,ALLEFT
+  dec (hl)
+  pop hl
+  jr nz,FREECELL
+  ret
+
+; HL=a directory entry. Step HL to its
+; block map at byte 16, set IX=DPB and
+; ALLEFT to the cell count: 16 bytes
+; for DSM<256, else eight words.
+; Changes AF/DE.
+
+ENTCNT:
   ld de,16       ; map offset 16
   add hl,de
   ld ix,(DPBPTR)
   ld a,(ix+6)    ; DSM high byte
-  or a           ; Z: byte cells
+  or a
   ld a,16
-  jr z,FREECNT
-  ld a,8         ; eight word cells
+  jr z,ENTCN1
+  ld a,8
 
-FREECNT:
-  ld (ALLEFT),a  ; shared cell count
+ENTCN1:
+  ld (ALLEFT),a
+  ret
 
-FREECELL:
-  ld e,(hl)      ; block low byte
+; DE=the block number in the map cell
+; at HL, HL stepped past it. IX=DPB.
+; Changes AF.
+
+ENTCELL:
+  ld e,(hl)
   ld d,0
   inc hl
-  ld a,(ix+6)    ; IX still DPB
-
+  ld a,(ix+6)    ; DSM high byte
   or a
-  jr z,FREEHAVE  ; byte cells: no high
-  ld d,(hl)      ; word high byte
+  ret z          ; byte cells
+  ld d,(hl)
   inc hl
-
-FREEHAVE:
-  push hl        ; map cursor across
-                 ; call
-  call CLRBLK    ; skip zero/past DSM
-  pop hl
-  ld a,(ALLEFT)
-  dec a
-  ld (ALLEFT),a
-
-  jr nz,FREECELL
   ret
 
 ; Mark block DE allocated. BITPTR skips
@@ -629,28 +605,30 @@ BITPTR:
   and 7          ; bit position 0..7
   ld b,a
   ex de,hl       ; block index -> HL
-  srl h          ; byte index: /8
-  rr l
-  srl h
-  rr l
-  srl h          ; third right shift
-  rr l
+  call SRLHL2
+  call SRLHL     ; block/8
 
   ld de,(ALVPTR)
   add hl,de
-  ld a,$80       ; first block: bit 7
-  ld c,a
-  ld a,b
-  or a           ; Z: no mask shift
-  ld a,c
-  jr z,BITDONE
+  inc b
+  ld a,1         ; 80h after the first
 
 SHIFBIT:
   rrca           ; MSB-first mask
   djnz SHIFBIT
-
-BITDONE:
   or a           ; NZ: valid mask
+  ret
+
+; HL shifted right two places (SRLHL2)
+; or one (SRLHL). Changes F.
+
+SRLHL2:
+  srl h
+  rr l
+
+SRLHL:
+  srl h
+  rr l
   ret
 
 ; Test CURDRV's bit. LOGTEST loads
@@ -717,6 +695,8 @@ VSET:
   call DRVMASK
   ex de,hl       ; DE=current drive bit
   pop hl
+
+VSETDE:
   ld a,(hl)      ; A..H byte
   or e
   ld (hl),a
