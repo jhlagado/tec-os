@@ -31,9 +31,9 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 3,475 bytes of header and image in **14 pages**: the
-word at `0006h` goes from `B9A4h` to `AB00h`, and the TPA from 47,268 bytes to
-**43,520**. The monitor, its line buffer, its FCB, its saved page zero and its
+On the starter card it is 3,606 bytes of header and image in **15 pages**: the
+word at `0006h` goes from `B9A4h` to `AA00h`, and the TPA from 47,268 bytes to
+**43,264**. The monitor, its line buffer, its FCB, its saved page zero and its
 stack are all in those pages, above anything a MON-3 program may load into.
 
 ## Commands
@@ -98,6 +98,21 @@ next use (BDOS 37), and a form feed gives the console back. A program that
 pushes into MON-3's 128-byte stack, or past it into the TPA below 0800h,
 still comes back: what it overwrote in the TPA is its own loss, and the
 service's pages are untouched.
+
+## The tables' checksum
+
+`GO` sums, modulo 65,536, the service's own bytes from its header to its
+saved page zero (code, tables, text, the load state, the hook's word and
+the target it replaced) and the RAM BIOS table's 51 bytes, with the hook
+linked. All of these stay fixed while a program runs. When the program
+returns, by `RET`, `RST 30h` or call 2, the sum is taken again before
+anything in it is written. A difference prints
+`Tables damaged: EXIT and reset` and sets a flag that only a reset clears,
+since a reset also removes the service: every later `LOAD` prints the
+warning again and is refused without opening the file, and each re-entry
+prints it before its first `MON3>`. `GO` and `EXIT` still run. The sum
+itself, the flag, the digits `RST 30h` and `GO` write, the line buffer, the
+FCB and the stack lie outside the summed bytes, which the monitor rewrites.
 
 ## What a program finds
 

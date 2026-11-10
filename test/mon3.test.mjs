@@ -1079,9 +1079,10 @@ test("KG62 stack", async () => {
   const { m } = await inSession({ "S63.BIN": pushes(63), "S80.BIN": pushes(80) });
   const p = pageOf(m);
   const svc = await mon3Build();
-  // The service's code, constants and its saved page zero: all but its line
-  // buffer, FCB and stack, which the monitor itself uses between commands.
-  const kept = () => [...bytesAt(m, p << 8, svc.symbols.HEXT)];
+  // The service's code, constants and its saved page zero: all but the sum
+  // GO takes, its line buffer, FCB and stack, which the monitor itself
+  // uses between commands.
+  const kept = () => [...bytesAt(m, p << 8, svc.symbols.SUMEND)];
   for (const [file, low] of [["S63.BIN", 0x800], ["S80.BIN", 0x7de]]) {
     assert.ok(ok(line(m, `LOAD ${file}`)));
     const svcBefore = kept();
