@@ -17,6 +17,8 @@ import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
 import { GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, service, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
+import { run, watch } from "./lib/census.mjs";
+import { ks53Census, mon3Svc } from "./lib/mon3.mjs";
 
 const PROGRAMS = ["probe", "term", "insdel", "region", "flip", "vidmode", "dirty"];
 const COMMANDS = [
@@ -39,63 +41,6 @@ const COMMANDS = [
   "DIR E:\r",
   "E:\r",
 ];
-
-/** Watch the three resident stacks of `m`, pressing an NMI at each new depth. */
-function watch(m) {
-  const s = (n) => m.sym(n);
-  const guardHits = [];
-  const stacks = { bdos: [s("STKBASE"), s("STKTOP")], ccp: [s("CSTKBAS"), s("CSTKTOP")], bios: [s("BSTKB"), s("BSTK")] };
-  const low = Object.fromEntries(Object.entries(stacks).map(([k, [, top]]) => [k, top]));
-  const lowSp = { ...low };
-  const [guard, guardEnd] = [s("STKGUARD"), s("STKGUEND")];
-  const write = m.cpu.hardware.memWrite;
-  m.cpu.hardware.memWrite = (addr, value) => {
-    const pc = m.cpu.cpu.pc;
-    const ldir = (m.read(pc) === 0xed && m.read(pc + 1) === 0xb0) || (m.read(pc - 1) === 0xed && m.read(pc) === 0xb0);
-    if (!ldir) for (const [k, [b, t]] of Object.entries(stacks)) if (addr >= b && addr < t && addr < low[k]) low[k] = addr;
-    if (!ldir && addr >= guard && addr < guardEnd && value !== 0xa5) guardHits.push(addr);
-    write(addr, value);
-  };
-  const step = m.step.bind(m);
-  m.step = () => {
-    const r = step();
-    if (m.pc !== 0x66 && m.pc !== 0x67 && m.read(0x66) === 0xed && m.read(0x67) === 0x45) {
-      const sp = m.cpu.cpu.sp & 0xffff;
-      for (const [k, [b, t]] of Object.entries(stacks)) {
-        if (sp >= b && sp <= t && sp < lowSp[k]) {
-          lowSp[k] = sp;
-          m.tec1g.applyKey(0x00);
-        }
-      }
-    }
-    return r;
-  };
-  // The pattern is set at warm boot, which the diagnostic console never reaches.
-  return ({ pattern = true } = {}) => {
-    assert.deepEqual(guardHits, [], "a write to STKGUARD");
-    if (pattern) assert.deepEqual(Array.from({ length: guardEnd - guard }, (_, i) => m.read(guard + i)), new Array(guardEnd - guard).fill(0xa5), "STKGUARD holds its pattern");
-    return Object.fromEntries(Object.entries(stacks).map(([k, [b, t]]) => [k, { reserved: t - b, deepest: t - low[k] }]));
-  };
-}
-
-/** Type a line and run to the prompt, answering a [more] or an error's key. */
-function run(m, line) {
-  m.mark = m.output.length;
-  m.type(line);
-  const re = /\r\n[A-P]>$/;
-  // Not the prompt before a chained line's next piece (KS32).
-  const prompt = { test: (t) => re.test(t) && m.read(m.sym("CHPOS")) === 0 };
-  let seen = -1;
-  for (let i = 0; i < 400; i += 1) {
-    const end = m.cycles + 20_000_000;
-    m.runUntil(() => m.cycles >= end || (m.waitingForInput() && prompt.test(m.text(m.mark))), 30_000_000, line);
-    const t = m.text(m.mark);
-    if (prompt.test(t) && m.waitingForInput()) return;
-    if (m.output.length === seen && m.waitingForInput()) m.type(/\[more\]$/.test(t) ? " " : "\r");
-    seen = m.output.length;
-  }
-  throw new Error(`no prompt after ${JSON.stringify(line)}: ${m.text(m.mark)}`);
-}
 
 // With B: written behind: its lines written inside BIOS WRITE at each
 // directory write, and by warm boot after DIRTY leaves a file unclosed.
@@ -224,6 +169,10 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     chained: await chainRun(),
     serialPlain: await deepPaths(["TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}),
     resident: await deepPaths(["RES.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}, { files: { "RES.SVC": await service("res") } }),
+    // NAME.SVC /E (KS53): a refused switch, install and entry, re-entry, a
+    // never-ready install removed, and UNLOAD; and MON3.SVC resident, then unloaded.
+    ks53: await ks53Census(),
+    mon3: await deepPaths(["MON3.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r", "UNLOAD\r"], {}, { files: { "MON3.SVC": (await mon3Svc()).file } }),
   };
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
   assert.equal(runs.diagnosticsPico.conmod, 1, "the PICO9918 DIAG run is on CRT:");
@@ -233,12 +182,15 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   for (const [k, more] of [["bdos", 2], ["bios", 0], ["ccp", 0]]) {
     assert.ok(runs.resident[k].deepest <= runs.serialPlain[k].deepest + more, `RES.SVC declares ${more} on the ${k} stack`);
   }
+  for (const [k, more] of [["bdos", 0], ["bios", 0], ["ccp", 0]]) {
+    assert.ok(runs.mon3[k].deepest <= runs.serialPlain[k].deepest + more, `MON3.SVC declares ${more} on the ${k} stack`);
+  }
   const census = Object.fromEntries(
     ["bdos", "ccp", "bios"].map((k) => [k, { reserved: runs.serial[k].reserved, deepest: Math.max(...Object.values(runs).map((r) => r[k].deepest)) }]),
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; and chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C; NAME.SVC /E refused, installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));
