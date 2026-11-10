@@ -12,13 +12,14 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assembleProgram } from "./lib/assemble.mjs";
 import { displayFiles } from "./lib/starter.mjs";
+import { makeSvc } from "./lib/svc.mjs";
 import { buildRecipe, saveImage } from "./tecvol.mjs";
 import { pinnedBytes as readPinnedBytes } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
 import { pageZeroDeclarations } from "./lib/media-source.mjs";
 import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 
-import { assembleDistributionCom, assembleGlcd } from "./lib/tas-distribution.mjs";
+import { assembleDistributionCom, assembleGlcd, assembleMon3 } from "./lib/tas-distribution.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = resolve(ROOT, "dist");
@@ -211,6 +212,10 @@ async function main() {
   files.push({ name: "BAZA.RTL", description: "BAZA's runtime library, which it copies into each program", bytes: rtl });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM", "programs/DEMO.ASM");
+  // MON3.SVC, the MON-3 session service, is built and kept beside the ROM. It
+  // is on no card yet.
+  const mon3 = run ? await assembleMon3(ROOT, run) : (await makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc") })).file;
+  if (!run) traceRom({ backend, phase: "final", target: "MON3.SVC", root: ROOT });
   const demoSource = text("DEMO.ASM");
   // BOUNCE.BAS, Baza's CALL demonstration (P7 BZ-37), pinned as LF text: the
   // page card holds it as a CP/M text file, as TIMES.BAS is held.
@@ -268,6 +273,7 @@ async function main() {
   // DEMO.COM is built and checked here, but the page card holds only its
   // source: TAS DEMO on the card makes it.
   writeFileSync(resolve(DIST, "DEMO.COM"), demo);
+  writeFileSync(resolve(DIST, "MON3.SVC"), mon3);
   writeFileSync(resolve(FILES, "BOUNCE.BAS"), bounce);
   writeFileSync(resolve(FILES, "DEMO.ASM"), demoSource);
   writeFileSync(resolve(DIST, "abi.inc"), abi);
