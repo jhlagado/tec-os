@@ -151,12 +151,24 @@ ENT1:
   call z,PRINT   ; held: say so
   jp PROMPT
 
-; Name the held slot in the message.
+; Name the held slot. Its digits go
+; out by BDOS 2, so a refusal leaves
+; these pages as they were.
 
 HELD:
   ld a,l
-  ld de,MHELD+4  ; the two digits
-  call HEXA
+  push af        ; the slot
+  ld de,MRST
+  call PRINT
+  pop af
+  push af
+  rrca
+  rrca
+  rrca
+  rrca           ; the high digit
+  call PUTN
+  pop af
+  call PUTN      ; the low digit
   ld de,MHELD
 
 REFUSE:
@@ -170,6 +182,15 @@ REFUSE:
 
 PRINT:
   ld c,9
+  jp BDOS
+
+; Print A's low four bits as a hex
+; digit.
+
+PUTN:
+  call HEXC
+  ld e,a
+  ld c,2         ; console out
   jp BDOS
 
 ; Z when slot 0010h holds this session's
@@ -917,13 +938,20 @@ HEXA:
   pop af
 
 HEXN:
+  call HEXC
+  ld (de),a
+  inc de
+  ret
+
+; A's low four bits as a hex digit's
+; character. Clobbers F.
+
+HEXC:
   and $0F
   add a,$90
   daa
   adc a,$40
   daa            ; 0-9, A-F
-  ld (de),a
-  inc de
   ret
 
 ; MON-3's restarts. Each form pushed HL
@@ -1245,8 +1273,9 @@ MCRLF: DB 13,10,'$'
 MQ: DB "?",13,10,'$'
 MFF: DB 12,'$'
 MBUSY: DB "MON3 active",13,10,'$'
-MHELD: DB "RST xx held: UNLOAD or"
-  DB " reset",13,10,'$'
+MRST: DB "RST $"
+MHELD: DB " held: UNLOAD or reset"
+  DB 13,10,'$'
 MNOINT: DB "RST 38 held: no"
   DB " interrupts",13,10,'$'
 MBRK: DB "BRK xxxx",13,10,'$'
