@@ -3,15 +3,11 @@
 ; MON3> line: LOAD name.BIN [addr],
 ; GO [addr] and EXIT. A loaded program
 ; finds MON-3's restarts, variables and
-; stack where MON-3 keeps them.
-; The restart slots, 0041h-004Fh and
-; the NMI entry are taken for a session
-; only, and given back at EXIT. Every
-; warm boot also sweeps the slots, as
-; none starts with a JP.
-; The monitor, its buffers and its
-; stack stay in these pages, above
-; everything a MON-3 program may use.
+; stack where MON-3 keeps them. The
+; monitor, its buffers and its stack
+; stay in these pages, above anything a
+; MON-3 program may use. The session's
+; page zero and exits: docs/mon3.md.
 
 %INCLUDE "../src/abi.inc"
 
@@ -56,11 +52,9 @@ NMIV EQU $0066
   ORG $0100
 
 ; Removable, no dependencies, no claims,
-; and no use of the ROM's stacks: INIT
-; and REMOVE make no call, and the hook
-; uses no stack. The entry runs from
-; CSTKTOP as a transient does, and moves
-; to its own stack once its checks pass.
+; and no use of the ROM's stacks. The
+; entry runs from CSTKTOP as a
+; transient does, then on its own.
 
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,0,0
@@ -92,12 +86,12 @@ INIT:
   ld h,b
   ld l,c         ; HL = the name
   ld de,EXNAM
-  ld bc,8
+  ld bc,8        ; into the record
   ldir
   ld hl,EXRDY
   ld (hl),1      ; ready
   ld hl,0        ; no records
-  xor a
+  xor a          ; A=0 and NC
   ret
 
 ; Not ready, and the warm-boot hook out
@@ -111,19 +105,16 @@ REMOVE:
 
 ; The execution entry, from the CCP as
 ; a transient, or called by a program.
-; A second entry while a session is
-; active, and a restart slot that holds
-; a JP, are refused on the caller's
-; stack: a message, return code FF00h
-; and RET, with nothing changed.
+; A second entry, or a restart slot
+; that holds a JP, is refused on the
+; caller's stack with nothing changed.
 ; Otherwise save page zero's bytes,
-; take them, set MON-3's variables and
-; give the MON3> line.
+; take them and give the MON3> line.
 
 ENTRY:
   call ACTIVE    ; Z: in a session
-  ld de,MBUSY
-  jr z,REFUSE
+  ld de,MBUSY    ; MON3 active
+  jr z,REFUSE    ; so refuse it
   call UNHOOK    ; a stale hook out
   ld hl,$0008    ; RST 08h's slot
   ld b,6         ; 08h to 30h
@@ -131,28 +122,28 @@ ENTRY:
 ENT1:
   ld a,(hl)
   cp $C3         ; a kept JP holds it
-  jr z,HELD
+  jr z,HELD      ; so refuse
   ld a,l
   add a,8        ; the next slot
   ld l,a
-  djnz ENT1
+  djnz ENT1      ; six slots
   ld sp,MSTK     ; our own stack
   ld hl,IOBYTE   ; and the drive
-  ld de,SAVE0
+  ld de,SAVE0    ; saved first
   ld bc,2
   ldir
   ld hl,$0008    ; the seven slots
   ld bc,$38
-  ldir
+  ldir           ; into SAVEV
   ld hl,STUB     ; 0041h-004Fh
   ld bc,15
-  ldir
+  ldir           ; into SAVEZ
   ld hl,NMIV     ; the NMI entry
   ld bc,6
-  ldir
-  call FORMS
-  call WSINIT
-  call HOOKIN
+  ldir           ; into SAVEN
+  call FORMS     ; page zero taken
+  call WSINIT    ; MON-3's variables
+  call HOOKIN    ; warm boot hooked
   ld a,(INT38)
   or a           ; 0038h ours?
   ld de,MNOINT
@@ -167,9 +158,9 @@ HELD:
   ld a,l
   push af        ; the slot
   ld de,MRST
-  call PRINT
+  call PRINT     ; "RST "
   pop af
-  push af
+  push af        ; for the low digit
   rrca
   rrca
   rrca
@@ -180,16 +171,16 @@ HELD:
   ld de,MHELD
 
 REFUSE:
-  call PRINT
+  call PRINT     ; the reason
   ld de,0-256    ; FF00h: failed
-  ld c,108
+  ld c,108       ; the return code
   call BDOS
   ret            ; to the caller
 
 ; Print the $-ended string at DE.
 
 PRINT:
-  ld c,9
+  ld c,9         ; print string
   jp BDOS
 
 ; Print A's low four bits as a hex
@@ -197,7 +188,7 @@ PRINT:
 
 PUTN:
   call HEXC
-  ld e,a
+  ld e,a         ; its character
   ld c,2         ; console out
   jp BDOS
 
@@ -210,50 +201,47 @@ PUTN:
 ACTIVE:
   ld a,($0010)
   cp $E5         ; PUSH HL
-  ret nz
+  ret nz         ; NZ: no form
   ld hl,($0012)  ; the form's target
   ld a,l
   cp LOW(R10)
-  ret nz
+  ret nz         ; another's form
   ld a,h
   cp HIGH(R10)   ; Z: ours
   ret
 
-; Write the session's page zero: a form
-; in 08h-30h, and in 0038h if it holds
-; the default EI or our own form; the
-; stub, GO's return and the RETN at
-; 0041h; MON-3's NMI dispatch at 0066h.
-; INT38 is nonzero when 0038h is ours.
-; Clobbers AF, BC, DE and HL.
+; Write the session's page zero. 0038h
+; is taken only from its default EI or
+; our own form. Clobbers AF, BC, DE
+; and HL.
 
 FORMS:
-  ld hl,RTAB
-  ld de,$0008
+  ld hl,RTAB     ; the handlers
+  ld de,$0008    ; from RST 08h
   ld b,6         ; 08h to 30h
 
 FRM1:
   call FORM
-  djnz FRM1
+  djnz FRM1      ; each slot's form
   ld a,($0038)
   cp $FB         ; the default EI
   jr z,FRM2
   cp $E5         ; or a form
-  ld a,0
+  ld a,0         ; INT38: not ours
   jr nz,FRM3     ; held: leave it
 
 FRM2:
   call FORM      ; HL at R38's word
-  ld a,1
+  ld a,1         ; INT38: ours
 
 FRM3:
   ld (INT38),a
-  ld hl,PZCODE
+  ld hl,PZCODE   ; 0041h-004Fh
   ld de,STUB
   ld bc,PZLEN
   ldir
   ld hl,NMIC     ; B is 0
-  ld de,NMIV
+  ld de,NMIV     ; MON-3's NMI code
   ld c,6
   ldir
   ret
@@ -271,14 +259,14 @@ FORM:
   ld (de),a
   inc de
   ldi            ; the handler
-  ldi
+  ldi            ; its high byte
   inc bc
   inc bc         ; LDI's count back
   ld a,$C3       ; JP 0041h
   ld (de),a
   inc de
   ld a,LOW(STUB)
-  ld (de),a
+  ld (de),a      ; its low byte
   inc de
   xor a
   ld (de),a      ; its high byte
@@ -297,10 +285,10 @@ RTAB: DW R08,R10,R18,R20,R28,R30,R38
 
 PZCODE:
   push af
-  ld a,(LATCH)
+  ld a,(LATCH)   ; the shadow
   out (SYSLAT),a
   pop af
-  jp (hl)
+  jp (hl)        ; to the handler
   DB $21         ; LD HL,MRET
   DW MRET
   DB $18,$F3     ; JR 0041h
@@ -312,23 +300,20 @@ PZLEN EQU $-PZCODE
 NMIC:
   push hl
   ld hl,(UNMI)   ; the user's handler
-  ex (sp),hl
-  ret
+  ex (sp),hl     ; on the stack
+  ret            ; and run
 
 ; MON-3's variables, where MON-3 keeps
-; them: its signature at 0800h, its
-; defaults from CEL, the interrupt
-; vectors, the latch copy, no PROTECT
-; and no EXPAND. Nothing is runnable.
+; them. Nothing is runnable.
 ; Clobbers AF, BC, DE and HL.
 
 WSINIT:
-  ld hl,SIG
-  ld de,$0800    ; ROMSIG
+  ld hl,SIG      ; MON3.1G
+  ld de,$0800    ; at ROMSIG
   ld bc,8
   ldir
-  ld hl,DEFS
-  ld de,CEL
+  ld hl,DEFS     ; the defaults
+  ld de,CEL      ; from 0886h
   ld bc,DEFLEN
   ldir
   ld hl,RETIS
@@ -336,11 +321,11 @@ WSINIT:
   ld hl,NRETN
   ld (UNMI),hl   ; the RETN at 004Eh
   ld a,(LATCH)
-  ld (SYSMD),a
+  ld (SYSMD),a   ; SYS_MODE: the latch
   xor a
-  ld (PROTM),a
+  ld (PROTM),a   ; no PROTECT
   ld (PROTM+1),a
-  ld (RUNOK),a
+  ld (RUNOK),a   ; nothing to run
   ret
 
 SIG: DB "MON3.1G",0
@@ -367,15 +352,15 @@ RETIS:
 ; Runs on this service's own stack.
 
 PROMPT:
-  ld sp,MSTK
+  ld sp,MSTK     ; our own stack
   ld de,MPROM
-  call PRINT
-  ld de,LBUF
+  call PRINT     ; MON3>
+  ld de,LBUF     ; 40 characters
   ld c,10        ; read a line
   call BDOS
   ld hl,LBUF+1
   ld b,(hl)      ; its length
-  inc b
+  inc b          ; and one for the end
 
 UPC:
   inc hl
@@ -383,21 +368,21 @@ UPC:
   jr z,UPCE      ; the line's end
   ld a,(hl)
   cp 'a'
-  jr c,UPC
+  jr c,UPC       ; below a
   cp 'z'+1
   jr nc,UPC      ; not a letter
-  sub $20
+  sub $20        ; a to A
   ld (hl),a      ; upper case
   jr UPC
 
 UPCE:
   ld (hl),0      ; end the line
   ld de,MCRLF
-  call PRINT
+  call PRINT     ; a new line
   ld hl,LBUF+2
-  call SKIP
+  call SKIP      ; the first word
   jr z,PROMPT    ; an empty line
-  ld de,CMDS
+  ld de,CMDS     ; the keywords
 
 CMD1:
   ld a,(de)
@@ -405,7 +390,7 @@ CMD1:
   jr z,BAD       ; the table's end
   push hl        ; the line's start
   call WORD
-  jr z,CMD2
+  jr z,CMD2      ; this keyword
   pop hl
   inc de
   inc de         ; past its handler
@@ -413,19 +398,19 @@ CMD1:
 
 CMD2:
   pop af         ; drop the start
-  ex de,hl
+  ex de,hl       ; HL at the word
   ld a,(hl)
   inc hl
   ld h,(hl)
   ld l,a         ; the handler
   ex de,hl
   call SKIP      ; Z: no operand
-  push de
+  push de        ; its address
   ret            ; to the handler
 
 BAD:
   ld de,MQ
-  call PRINT
+  call PRINT     ; a question mark
   jr PROMPT
 
 ; Match the keyword at DE, zero-ended,
@@ -439,9 +424,9 @@ WORD:
   inc de
   or a
   jr z,WORD2     ; the keyword's end
-  cp (hl)
+  cp (hl)        ; the line's letter
   inc hl
-  jr z,WORD
+  jr z,WORD      ; equal so far
 
 WORD1:
   ld a,(de)      ; skip the rest
@@ -475,7 +460,7 @@ CMDS:
 SKIP:
   ld a,(hl)
   cp ' '
-  jr nz,SKIP1
+  jr nz,SKIP1    ; not a space
   inc hl
   jr SKIP
 
@@ -483,36 +468,33 @@ SKIP1:
   or a           ; Z at the end
   ret
 
-; LOAD name.BIN [addr]. Whole records,
+; LOAD name.BIN [addr]: whole records,
 ; at addr or 4000h. The size is read
-; first: every byte must lie in 0100h
-; up to the BDOS's page and outside
-; 0800h-08FFh, and the file must hold a
-; record, or nothing is written.
+; first, and a file that would not fit
+; is refused with nothing written.
 ; Nothing is runnable until it ends
-; well. A read error ends the session,
-; as any BDOS error does.
+; well. A read error ends the session.
 
 CLOAD:
   xor a
   ld (RUNOK),a   ; nothing runnable
-  call FCBP
+  call FCBP      ; the name
   jp c,BAD       ; no name
-  ld de,$4000
+  ld de,$4000    ; the default
   call SKIP
   call nz,HEXW   ; an address
-  jp c,BAD
+  jp c,BAD       ; a bad one
   ld (LDAT),de
   ld de,FCB
   ld c,15        ; open
   call BDOS
-  inc a
+  inc a          ; FFh: none
   jp z,LFAIL     ; not found
   ld de,FCB
   ld c,35        ; size in records
   call BDOS
   ld hl,(FCB+33)
-  ld a,(FCB+35)
+  ld a,(FCB+35)  ; the size's top
   or a
   jr nz,LFAIL    ; over 64K records
   ld a,h
@@ -521,12 +503,12 @@ CLOAD:
   ld a,h
   cp $02
   jr nc,LFAIL    ; 64K or more
-  ld b,7
+  ld b,7         ; 128 bytes each
 
 LSH:
   add hl,hl      ; records to bytes
   djnz LSH
-  ld de,(LDAT)
+  ld de,(LDAT)   ; the start
   ld a,d
   or a
   jr z,LFAIL     ; page zero
@@ -557,7 +539,7 @@ LS2:
   ld hl,(LDAT)
 
 LRD:
-  push hl
+  push hl        ; the target
   ex de,hl
   ld c,26        ; DMA = the target
   call BDOS
@@ -565,17 +547,17 @@ LRD:
   ld c,20        ; read a record
   call BDOS
   pop hl
-  or a
+  or a           ; 0: a record read
   jr nz,LEND     ; the end, or bad
   ld de,128
-  add hl,de
+  add hl,de      ; the next record
   jr LRD
 
 LEND:
   dec a          ; 1 is the end
   jr nz,LFAIL
   ld hl,(LDAT)
-  ld (RUNAT),hl
+  ld (RUNAT),hl  ; for GO
   ld a,1
   ld (RUNOK),a   ; runnable now
   call DMA80
@@ -583,7 +565,7 @@ LEND:
 
 LFAIL:
   call DMA80
-  jp BAD
+  jp BAD         ; ? and nothing run
 
 ; Put the DMA back at 0080h.
 
@@ -593,22 +575,16 @@ DMA80:
   jp BDOS
 
 ; GO [addr]: the last good load, or the
-; address given. As MON-3 does it: the
-; LCD cleared, "Running at: nnnn" on
-; row 4, a beep, the latch written,
-; KEY_BUFF FFh, then the program with
-; A=FFh, B=the latch copy, C=0, HL=its
-; address and SP=087Eh. DE and the
-; return address are 0049h, which comes
-; back to MRET. The cache is flushed
-; first, so a program that hangs loses
-; nothing written.
+; address given, run as MON-3's GO runs
+; it (docs/mon3.md). The cache is
+; flushed first, so a program that
+; hangs loses nothing written.
 
 CGO:
   jr z,GO1       ; no address
   call HEXW
   jp c,BAD
-  ex de,hl
+  ex de,hl       ; HL = the address
   jr GO2
 
 GO1:
@@ -626,20 +602,20 @@ GO2:
   ld b,$D6       ; row 4, column 3
   call LCDCO
   ld hl,MRUN
-  call LCDSTR
+  call LCDSTR    ; "Running at: "
   pop hl
-  push hl
+  push hl        ; the address again
   ld de,HEXT
-  call HLSTR
+  call HLSTR     ; the address
   xor a
   ld (de),a      ; end the digits
   ld hl,HEXT
-  call LCDSTR
+  call LCDSTR    ; on the LCD
   ld a,(KBEEP)
   or a
   call z,BEEP    ; unless it is off
   ld a,(SYSMD)
-  ld b,a
+  ld b,a         ; B: SYS_MODE
   ld a,(PROTM)
   or b           ; PROTECT if asked
   and GOKEEP     ; no EXPAND or bank
@@ -649,33 +625,30 @@ GO2:
   ld a,$FF
   ld (KBUFF),a   ; no key held
   ld c,0
-  pop hl
-  ld sp,MSTK3
+  pop hl         ; the program
+  ld sp,MSTK3    ; MON-3's stack
   ld de,GORET
   push de        ; RET comes back
   jp (hl)
 
 ; A program's RET lands here, through
-; the latch stub. Interrupts off, our
-; own stack, PROTECT clear, TX idle,
-; the forms written again, and every
-; drive's vector to be rebuilt from its
-; directory at its next use. A form
-; feed gives the console back.
+; the latch stub. Every drive's vector
+; is rebuilt at its next use, and a
+; form feed gives the console back.
 
 MRET:
-  di
-  ld sp,MSTK
+  di             ; interrupts off
+  ld sp,MSTK     ; our own stack
   ld a,(LATCH)
   and $FD        ; PROTECT off
   ld (LATCH),a
   out (SYSLAT),a
   ld a,TXI
   out (SDIG),a   ; TX idle, no digit
-  call FORMS
-  call RESETD
+  call FORMS     ; page zero again
+  call RESETD    ; and the vectors
   ld de,MFF
-  call PRINT
+  call PRINT     ; a form feed
   jp PROMPT
 
 ; BDOS 37 for every drive.
@@ -693,16 +666,16 @@ RESETD:
 CEXIT:
   di
   im 1
-  call RESETD
-  call REST
-  call UNHOOK
+  call RESETD    ; the drives reset
+  call REST      ; page zero back
+  call UNHOOK    ; the hook out
   xor a
   out (SSEG),a   ; segments off
   out ($05),a
   out ($06),a    ; the LED matrix
   ld a,TXI
-  out (SDIG),a
-  jp 0
+  out (SDIG),a   ; TX idle
+  jp 0           ; the real warm boot
 
 ; Put back the saved IOBYTE and drive,
 ; 0008h-003Fh, 0041h-004Fh and the NMI
@@ -710,73 +683,69 @@ CEXIT:
 
 REST:
   ld hl,SAVE0
-  ld de,IOBYTE
+  ld de,IOBYTE   ; and the drive
   ld bc,2
   ldir
   ld de,$0008    ; the slots
   ld bc,$38
   ldir
-  ld de,STUB
+  ld de,STUB     ; HL at SAVEZ
   ld bc,15
   ldir
-  ld de,NMIV
+  ld de,NMIV     ; HL at SAVEN
   ld bc,6
   ldir
   ret
 
 ; The warm-boot hook, on the RAM BIOS
-; table's warm-boot entry for a
-; session. It uses no stack.
-; In a session, which slot 0010h tells
-; before the sweep runs: IM 1, TX
-; idle, and the saved IOBYTE and drive,
-; 0038h-003Fh, 0041h-004Fh and NMI
-; entry put back. The sweep does
-; 0008h-0037h.
-; Either way it takes itself out and
-; goes on to the entry it replaced, so
-; one left by an exit that passed it
-; does nothing later but leave.
+; table's warm-boot entry. In a
+; session, which slot 0010h tells
+; before the sweep runs, it resets the
+; drives and gives back what the sweep
+; does not. Either way it takes itself
+; out and goes on to the entry it
+; replaced, so one left by an exit
+; that passed it does nothing.
 
 HOOK:
-  di
+  di             ; interrupts off
   ld a,($0010)
   cp $E5         ; a form?
-  jr nz,HOOK1
+  jr nz,HOOK1    ; no session
   ld hl,($0012)
   ld a,l
-  cp LOW(R10)
+  cp LOW(R10)    ; to our RST 10h?
   jr nz,HOOK1
   ld a,h
   cp HIGH(R10)   ; and ours?
   jr nz,HOOK1
-  im 1
+  im 1           ; TEC-OS's mode
   ld a,TXI
-  out (SDIG),a
+  out (SDIG),a   ; TX idle
   ld sp,MSTK     ; our own stack
   call RESETD    ; vectors rebuilt
   ld hl,SAVE0
-  ld de,IOBYTE
+  ld de,IOBYTE   ; and the drive
   ld bc,2
   ldir
   ld hl,SAVEV+$30
-  ld de,$0038
+  ld de,$0038    ; RST 38h's slot
   ld c,8         ; B is 0
   ldir
   ld de,STUB     ; HL is at SAVEZ
   ld c,15
   ldir
-  ld de,NMIV
+  ld de,NMIV     ; HL at SAVEN
   ld c,6
   ldir
 
 HOOK1:
   ld hl,(HOOKAT)
-  ld a,(OLDWB)
+  ld a,(OLDWB)   ; its low byte
   ld (hl),a      ; the old target
   inc hl
   ld a,(OLDWB+1)
-  ld (hl),a
+  ld (hl),a      ; back in the table
   ld hl,(OLDWB)
   jp (hl)        ; and on to it
 
@@ -785,15 +754,15 @@ HOOK1:
 ; old target. Clobbers DE and HL.
 
 HOOKIN:
-  ld hl,($0001)
-  inc hl
+  ld hl,($0001)  ; the JP to the BIOS
+  inc hl         ; its target word
   ld (HOOKAT),hl
   ld e,(hl)
   inc hl
   ld d,(hl)      ; the old target
   ld (OLDWB),de
   ld de,HOOK
-  ld (hl),d
+  ld (hl),d      ; ours in its place
   dec hl
   ld (hl),e
   ret
@@ -803,13 +772,13 @@ HOOKIN:
 ; Clobbers DE and HL.
 
 UNHOOK:
-  ld hl,($0001)
+  ld hl,($0001)  ; the JP to the BIOS
   inc hl
   ld e,(hl)
   inc hl
   ld d,(hl)      ; the target now
   ld a,e
-  cp LOW(HOOK)
+  cp LOW(HOOK)   ; our hook?
   jr nz,UNHK1
   ld a,d
   cp HIGH(HOOK)
@@ -820,20 +789,20 @@ UNHOOK:
   ld (hl),e      ; the old one back
 
 UNHK1:
-  xor a
+  xor a          ; A=0 and NC
   ret
 
 ; Parse d:name.typ at HL into FCB,
-; cleared first. Carry if no name.
-; HL ends at the delimiter.
-; Clobbers A, BC and DE.
+; cleared first. Carry if no name, or a
+; drive outside A to P. HL ends at the
+; delimiter. Clobbers A, BC and DE.
 
 FCBP:
   ld de,FCB
-  push hl
+  push hl        ; the text
   ld h,d
   ld l,e
-  ld (hl),0
+  ld (hl),0      ; the drive: default
   inc de
   ld bc,35
   ldir           ; zeros throughout
@@ -844,13 +813,13 @@ FCB0:
   ld (hl),' '    ; a blank name
   inc hl
   djnz FCB0
-  pop hl
+  pop hl         ; the text
   ld a,(hl)
   or a
   scf
   ret z          ; nothing there
   inc hl
-  ld a,(hl)
+  ld a,(hl)      ; the next one
   dec hl
   cp ':'
   jr nz,FCB1     ; no drive
@@ -862,18 +831,18 @@ FCB0:
   inc a
   ld (FCB),a     ; 1 is A:
   inc hl
-  inc hl
+  inc hl         ; past the colon
 
 FCB1:
   ld de,FCB+1
-  ld b,8
+  ld b,8         ; eight characters
   call FCBF      ; the name
   ld a,(hl)
   cp '.'
-  jr nz,FCB2
+  jr nz,FCB2     ; no type
   inc hl
   ld de,FCB+9
-  ld b,3
+  ld b,3         ; three for the type
   call FCBF      ; the type
 
 FCB2:
@@ -886,17 +855,20 @@ FCB2:
 FCBF:
   ld a,(hl)
   cp '.'
-  ret z
+  ret z          ; the name's end
   cp ' '+1
   ret c          ; the field's end
-  ld (de),a
+  ld (de),a      ; one more in
   inc de
   inc hl
-  djnz FCBF
+  djnz FCBF      ; until it is full
   ret
 
-; Read a hex word at HL into DE. Carry
-; if it has no digit. HL ends past it.
+; Read a hex word of one to four digits
+; at HL into DE. Carry if it has no
+; digit, a fifth digit, or anything but
+; a space or the end after it. HL ends
+; past it. Clobbers A and B.
 
 HEXW:
   ld de,0
@@ -906,13 +878,13 @@ HEXW:
   ret c          ; no digit
 
 HEXW1:
-  ex de,hl
+  ex de,hl       ; HL = the word
   add hl,hl
   add hl,hl
   add hl,hl
   add hl,hl      ; one digit up
   or l
-  ld l,a
+  ld l,a         ; the new digit in
   ex de,hl
   inc hl
   ld a,(hl)
@@ -933,11 +905,11 @@ HEXW2:
 
 HEXD:
   sub '0'
-  ret c
+  ret c          ; below 0
   cp 10
   ccf
   ret nc         ; 0 to 9
-  sub 7
+  sub 7          ; A to F as 10-15
   cp 10
   ret c          ; between 9 and A
   cp 16
@@ -949,11 +921,11 @@ HEXD:
 
 HLSTR:
   ld a,h
-  call HEXA
+  call HEXA      ; the high byte
   ld a,l
 
 HEXA:
-  push af
+  push af        ; the low digit
   rrca
   rrca
   rrca
@@ -963,7 +935,7 @@ HEXA:
 
 HEXN:
   call HEXC
-  ld (de),a
+  ld (de),a      ; the character
   inc de
   ret
 
@@ -972,7 +944,7 @@ HEXN:
 
 HEXC:
   and $0F
-  add a,$90
+  add a,$90      ; DAA's hex trick
   daa
   adc a,$40
   daa            ; 0-9, A-F
@@ -995,27 +967,27 @@ R08:
 ; to the error display.
 
 R10:
-  pop hl
+  pop hl         ; the caller's HL
   push af
   ld a,c
   cp 63          ; MON-3's count
-  jr nc,R10X
+  jr nc,R10X     ; not MON-3's
   push bc
   push hl
   ld hl,API
-  add a,a
+  add a,a        ; two bytes a call
   ld c,a
   ld b,0
   add hl,bc      ; the call's word
   ld a,(hl)
   inc hl
   ld h,(hl)
-  ld l,a
+  ld l,a         ; its routine
   push hl
   pop ix         ; IX = the routine
   pop hl
   pop bc
-  pop af
+  pop af         ; as the caller had
   jp (ix)
 
 R10X:
@@ -1035,8 +1007,8 @@ R18:
 
 R20:
   pop hl
-  call SCANS
-  call SKEYS
+  call SCANS     ; the digits
+  call SKEYS     ; the keys
   jr R28A
 
 ; RST 28h: wait for the LCD.
@@ -1057,10 +1029,10 @@ R30:
   pop hl
   pop hl         ; the return address
   ld de,MBRK+4
-  call HLSTR
+  call HLSTR     ; into the message
   ld de,MBRK
   call PRINT
-  jp MRET
+  jp MRET        ; as a return
 
 ; RST 38h: MON-3's interrupt dispatch.
 
@@ -1068,8 +1040,8 @@ R38:
   pop hl
   push hl
   ld hl,(UINT)   ; the user's handler
-  ex (sp),hl
-  ret
+  ex (sp),hl     ; on the stack
+  ret            ; and run
 
 ; MON-3's 63 calls. Those not built go
 ; to the error display, as MON-3 sends
@@ -1127,7 +1099,7 @@ TOSEG:
   pop af
 
 TOSEG1:
-  and $0F
+  and $0F        ; one digit
   ld bc,SEGT
   add a,c
   ld c,a
@@ -1154,7 +1126,7 @@ SCANS:
   ld b,$20       ; the leftmost
 
 SCN1:
-  ld a,(de)
+  ld a,(de)      ; its segments
   out (SSEG),a
   ld a,b
   or TXI
@@ -1166,7 +1138,7 @@ SCN1:
   ld b,a         ; the digit's bit
   ld a,TXI
   out (SDIG),a   ; off again
-  rrc b
+  rrc b          ; the next digit
   jr nc,SCN1     ; six digits
   xor a
   out (SSEG),a
@@ -1194,7 +1166,7 @@ LCDSTR:
   or a
   ret z          ; the string's end
   call LCDB
-  out (LCDD),a
+  out (LCDD),a   ; the character
   jr LCDSTR
 
 ; Call 14, charToLCD: A.
@@ -1230,11 +1202,11 @@ SKEYS:
 SK1:
   ld a,(KPRESS)
   or a
-  ld a,(KBUFF)
+  ld a,(KBUFF)   ; the key held
   ret z          ; held: no carry
   xor a
-  ld (KPRESS),a
-  in a,(SKEYB)
+  ld (KPRESS),a  ; now held
+  in a,(SKEYB)   ; the key's code
   and $3F
   xor $20        ; MON-3's Fn bit
   cp a           ; Z
@@ -1284,7 +1256,7 @@ DERR:
   jr z,DERR      ; wait for key up
 
 DERR1:
-  ld de,ERRT
+  ld de,ERRT     ; Err on the digits
   call SCANS
   call SKEYS
   jr nz,DERR1    ; until a press

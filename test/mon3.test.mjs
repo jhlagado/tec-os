@@ -592,11 +592,11 @@ const mon3Variant = memo(async (edits) => {
   return makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc") });
 });
 
-// Steps of drivers/mon3.asm that more than one mutant names: the hook's IM 1,
+// Steps of drivers/mon3.asm that the IM and IOBYTE mutants name: the hook's IM 1,
 // and the IOBYTE's copy in the hook and in EXIT's restore.
-const HOOK_IM1 = "  im 1\n  ld a,TXI\n  out (SDIG),a\n  ld sp,MSTK";
-const HOOK_IO = "  call RESETD    ; vectors rebuilt\n  ld hl,SAVE0\n  ld de,IOBYTE\n";
-const REST_IO = "REST:\n  ld hl,SAVE0\n  ld de,IOBYTE\n";
+const HOOK_IM1 = "  im 1           ; TEC-OS's mode\n";
+const HOOK_IO = "  call RESETD    ; vectors rebuilt\n  ld hl,SAVE0\n  ld de,IOBYTE   ; and the drive\n";
+const REST_IO = "REST:\n  ld hl,SAVE0\n  ld de,IOBYTE   ; and the drive\n";
 
 const SLOTS = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
 const DEFAULT_SLOT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
@@ -876,27 +876,27 @@ test("KG61 mutant: a session form starting with C3h is kept by the sweep after t
 });
 
 test("KG61 mutant: a hook without IM 1 leaves IM 2 after RST 00h", async () => {
-  const svc = await mon3Variant([[HOOK_IM1, HOOK_IM1.replace("  im 1\n", "")]]);
+  const svc = await mon3Variant([[HOOK_IM1, ""]]);
   await assert.rejects(sixExits(svc, ["RST0.BIN"]), /RST0\.BIN: IM 1/);
 });
 
 test("KG61 mutant: an EXIT without IM 1 leaves IM 2", async () => {
-  const svc = await mon3Variant([["  di\n  im 1\n  call RESETD\n", "  di\n  call RESETD\n"]]);
+  const svc = await mon3Variant([["  im 1\n  call RESETD    ; the drives reset\n", "  call RESETD    ; the drives reset\n"]]);
   await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: IM 1/);
 });
 
 test("KG61 mutant: a hook that skips the IOBYTE's copy leaves the program's after JP 0000h", async () => {
-  const svc = await mon3Variant([[HOOK_IO, HOOK_IO.replace("ld de,IOBYTE", "ld de,LBUF")]]);
+  const svc = await mon3Variant([[HOOK_IO, HOOK_IO.replace("ld de,IOBYTE  ", "ld de,LBUF    ")]]);
   await assert.rejects(sixExits(svc, ["JP0.BIN"]), /JP0\.BIN: 0003h-0004h as before/);
 });
 
 test("KG61 mutant: an EXIT that skips the IOBYTE's copy leaves the program's", async () => {
-  const svc = await mon3Variant([[REST_IO, REST_IO.replace("ld de,IOBYTE", "ld de,LBUF")]]);
+  const svc = await mon3Variant([[REST_IO, REST_IO.replace("ld de,IOBYTE  ", "ld de,LBUF    ")]]);
   await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: 0003h-0004h as before/);
 });
 
 test("KG61 mutant: a hook that acts without the session form puts IOBYTE back after CON BAT", async () => {
-  const svc = await mon3Variant([["  ld a,($0010)\n  cp $E5         ; a form?\n  jr nz,HOOK1\n  ld hl,($0012)\n  ld a,l\n  cp LOW(R10)\n  jr nz,HOOK1\n  ld a,h\n  cp HIGH(R10)   ; and ours?\n  jr nz,HOOK1\n", ""]]);
+  const svc = await mon3Variant([["  ld a,($0010)\n  cp $E5         ; a form?\n  jr nz,HOOK1    ; no session\n  ld hl,($0012)\n  ld a,l\n  cp LOW(R10)    ; to our RST 10h?\n  jr nz,HOOK1\n  ld a,h\n  cp HIGH(R10)   ; and ours?\n  jr nz,HOOK1\n", ""]]);
   await assert.rejects(staleInactive(svc), /IOBYTE as CON set it/);
 });
 
@@ -906,7 +906,7 @@ test("KG61 mutant: an entry that leaves a stale hook warm boots for ever", async
 });
 
 test("KG61 mutant: without the recursion test a second session starts and the program's stack is lost", async () => {
-  const svc = await mon3Variant([["  call ACTIVE    ; Z: in a session\n  ld de,MBUSY\n  jr z,REFUSE\n", ""]]);
+  const svc = await mon3Variant([["  call ACTIVE    ; Z: in a session\n  ld de,MBUSY    ; MON3 active\n  jr z,REFUSE    ; so refuse it\n", ""]]);
   await assert.rejects(recursion(svc));
 });
 
@@ -1240,8 +1240,8 @@ test("KG62 expand in view", () => expandInView());
 
 test("KG62 mutant: without BDOS 37 at the program's return and at EXIT, a new file takes a used block", async () => {
   const svc = await mon3Variant([
-    ["  call FORMS\n  call RESETD\n", "  call FORMS\n"],
-    ["  im 1\n  call RESETD\n", "  im 1\n"],
+    ["  call FORMS     ; page zero again\n  call RESETD    ; and the vectors\n", "  call FORMS     ; page zero again\n"],
+    ["  im 1\n  call RESETD    ; the drives reset\n", "  im 1\n"],
   ]);
   await assert.rejects(vectorExchange(svc), /intact|cross-link/);
 });
