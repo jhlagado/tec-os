@@ -171,6 +171,19 @@ SVCLOAD:
   call SVCIN
   ret c
 
+; An execution record's entry must lie
+; inside the image too. BC is still the
+; image length, and carry is clear.
+
+  ld h,HIGH(DF)
+  call EXMAG     ; staged record?
+  jr nz,SVCNX    ; none: no entry
+  ld hl,(DF+DHLEN+4)
+  call SVCIN     ; entry offset
+  ret c          ; outside the image
+
+SVCNX:
+
 ; Allocate pages with base >= 8000h.
 
   ld hl,(DF+DXTR)
@@ -348,6 +361,10 @@ SVCMN:
 ; Carry clear: HL is the first record or
 ; 0. Carry set goes to SVCSCAN.
 
+; BC is the eight-byte name the file was
+; read by, for an execution record.
+
+  ld bc,CMDFCB+1
   ld l,DINI
   call SVCCALL   ; INIT record result
 
@@ -715,6 +732,146 @@ REGF3:
   ld l,a
   djnz REGF1     ; until the limit
   scf
+  ret
+
+; NAME.SVC /E: HL is at the slash. Any
+; other switch, or text joined to the E,
+; is refused before a file is read.
+; Enter the one installed service whose
+; ready record holds CMDFCB's name. With
+; none, read and install the file, then
+; enter it. Two or more are refused.
+; A staged file with no record is
+; refused before it installs. A service
+; that never became ready is removed.
+; Refusals enter BADCMD. A failed
+; install enters the CCP's SVCFAIL.
+; Entry joins CMDRN1 with HL = the
+; entry address. Never returns.
+
+SVCEX:
+  inc hl         ; past the slash
+  ld a,(hl)
+  cp 'E'
+  jr nz,SVBAD    ; unknown switch
+  inc hl
+  ld a,(hl)
+  cp SPACE+1     ; zero or space ends
+  jr nc,SVBAD    ; text joined to /E
+  ld (ARGSTRT),hl
+  call EXFIND    ; A=matches, C=page
+  dec a
+  jr z,SVCENT    ; one: enter it
+  inc a
+  jr nz,SVBAD    ; two or more
+  call LOADCOM   ; none: stage file
+  jr c,SVBAD     ; no file, or too big
+  ld h,HIGH(DF)
+  call EXMAG     ; staged record?
+  jr nz,SVBAD    ; none: no install
+  call SVCLOAD
+  jp c,SVCFAIL   ; CCP failure path
+  call EXFIND    ; ready, same name?
+  dec a
+  jr z,SVCENT
+  call SVCUNL    ; never ready: remove
+  jr SVBAD
+
+; C is the service's page. Add it to the
+; record's entry offset, which SVCLOAD
+; bounded in the staged image. A word
+; that was relocated carries here: page
+; plus page, each at least 80h.
+
+SVCENT:
+  ld h,c
+  ld l,DHLEN+4   ; entry offset
+  ld e,(hl)
+  inc l
+  ld a,(hl)
+  add a,h        ; offset high + page
+  jr c,SVBAD     ; relocated word
+  ld d,a
+  ex de,hl       ; HL = entry address
+  jp CMDRN1
+
+SVBAD:
+  jp BADCMD
+
+; Count installed services whose ready
+; execution record holds CMDFCB's eight
+; name bytes. Walk SVCHEAD and DOWN.
+; Returns A = B = count and C = the
+; last match's page. Clobbers DE and HL.
+
+EXFIND:
+  ld bc,0        ; count, page
+  ld a,(SVCHEAD)
+
+EXF1:
+  or a
+  jr z,EXFE      ; owner list ended
+  ld h,a
+  call EXREC     ; ready record?
+  jr nz,EXFN
+  ld l,DHLEN+6   ; its install name
+  ld de,CMDFCB+1
+  push bc        ; keep count, page
+  ld b,8
+
+EXF2:
+  ld a,(de)      ; the command's name
+  cp (hl)
+  jr nz,EXF3     ; another name
+  inc de
+  inc hl
+  djnz EXF2      ; Z after all eight
+
+EXF3:
+  pop bc
+  jr nz,EXFN
+  inc b          ; one more match
+  ld c,h
+
+EXFN:
+  ld l,DOWN
+  ld a,(hl)      ; next owner page
+  jr EXF1
+
+EXFE:
+  ld a,b
+  ret
+
+; Z if page H's image starts with an
+; execution record of version 1 that
+; INIT has set ready. Clobbers A and L.
+
+EXREC:
+  call EXMAG
+  ret nz         ; no record
+  inc l
+  ld a,(hl)      ; state byte
+  or $FE
+  inc a          ; Z when bit 0 set
+  ret
+
+; Z if page H's image starts with "EX"
+; and version 1. Leaves L at the
+; version byte and carry clear on Z.
+; Clobbers A and L.
+
+EXMAG:
+  ld l,DHLEN     ; image offset 0
+  ld a,(hl)
+  cp 'E'
+  ret nz         ; no magic
+  inc l
+  ld a,(hl)
+  cp 'X'
+  ret nz         ; no magic
+  inc l
+  ld a,(hl)
+  dec a          ; version 1
   ret
 
 ; Loaded display driver
