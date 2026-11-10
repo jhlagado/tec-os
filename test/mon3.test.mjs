@@ -314,11 +314,11 @@ test("KG59 name rule", async () => {
   assert.deepEqual([r.mon3, r.code], [false, 0xff00]);
   assert.match(r.out, /\r\nGLCD\.SVC\?\r\n/);
   // A renamed copy is its own service.
-  assert.equal(enteredAt(m, "M2.SVC /E", [p3, p3 - 8]), p3 - 8, "M2.SVC /E installs and enters the new copy");
+  assert.equal(enteredAt(m, "M2.SVC /E", [p3, p3 - FIG.pages]), p3 - FIG.pages, "M2.SVC /E installs and enters the new copy");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   leave(m, { mon3: true });
   assert.deepEqual(services(m), [FIG.line, FIG.line]);
-  assert.equal(enteredAt(m, "MON3.SVC /E", [p3, p3 - 8]), p3, "MON3.SVC /E enters the one named MON3");
+  assert.equal(enteredAt(m, "MON3.SVC /E", [p3, p3 - FIG.pages]), p3, "MON3.SVC /E enters the one named MON3");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   leave(m, { mon3: true });
   // With only M2 installed, MON3.SVC /E installs its own copy.
@@ -330,7 +330,7 @@ test("KG59 name rule", async () => {
   leave(m, r);
   const [p2] = pages(m);
   const n = m.opens.length;
-  assert.equal(enteredAt(m, "MON3.SVC /E", [p2, p2 - 8]), p2 - 8, "a new copy, named MON3");
+  assert.equal(enteredAt(m, "MON3.SVC /E", [p2, p2 - FIG.pages]), p2 - FIG.pages, "a new copy, named MON3");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   assert.deepEqual(opensSince(m, n), ["MON3.SVC"]);
   leave(m, { mon3: true });
@@ -386,7 +386,7 @@ test("KG59 relocated entry", async () => {
     assert.deepEqual([r.mon3, r.code], [false, 0xff00], "refused at entry");
     assert.match(r.out, /\r\nREL\.SVC\?\r\n/);
     assert.deepEqual(services(m), [FIG.line], "installed once, and kept");
-    assert.equal(word(m, 6), (top & 0xff00) - 0x800, "(0006h) lower by its eight pages");
+    assert.equal(word(m, 6), (top & 0xff00) - (FIG.pages << 8), "(0006h) lower by its pages");
   }
   m.command("UNLOAD");
   assert.deepEqual(services(m), []);
