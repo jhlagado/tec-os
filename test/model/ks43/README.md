@@ -2,7 +2,8 @@
 
 ATOM remains the default. With the [KS42 pinned inputs](../ks42/README.md)
 and `TECOS_ROM_ASSEMBLER=tas`, TAS builds the main and diagnostic ROMs,
-GLCD.SVC, MOUNT.COM and DEMO.COM. Web publishes those existing outputs.
+GLCD.SVC, MOUNT.COM and DEMO.COM. Web publishes those of them that ship in
+`dist/files`.
 The ATOM reference and test-only program and service fixtures still use
 ATOM.
 
