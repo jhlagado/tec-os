@@ -13,7 +13,8 @@ import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
-import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, romMutant, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
+import { EXPAND1_WRITES } from "./lib/machine.mjs";
+import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, romMutant, runFor, services, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -863,4 +864,300 @@ test("KG61 mutant: an entry that leaves a stale hook warm boots for ever", async
 test("KG61 mutant: without the recursion test a second session starts and the program's stack is lost", async () => {
   const svc = await mon3Variant([["  call ACTIVE    ; Z: in a session\n  ld de,MBUSY\n  jr z,REFUSE\n", ""]]);
   await assert.rejects(recursion(svc));
+});
+
+// KG62: LOAD and GO, what a program's return gives back, and the disk.
+
+const pattern = (records, seed = 0) => Uint8Array.from({ length: records * 128 }, (_, i) => (i * 7 + (i >> 7) + seed) & 0xff);
+const tpaDigest = (m) => sha(Uint8Array.from(bytesAt(m, 0x100, (word(m, 6) & 0xff00) - 0x100)));
+const runnable = (m, svc) => m.read((pageOf(m) << 8) + svc.symbols.RUNOK);
+
+/** A session on a card with FILES and the programs, MON3.SVC installed and entered. */
+async function inSession(files = {}, opts) {
+  const svc = opts?.svc ?? (await mon3Build());
+  const m = boot({ "MON3.SVC": svc.file, ...PROGRAMS(0xb129), ...files }, opts?.machine);
+  m.command("MON3.SVC");
+  const pz = bytesAt(m, 0, 0x100);
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  return { m, svc, pz };
+}
+const refused = (r) => /\r\n\?\r\n\r\nMON3>$/.test(r.out);
+const ok = (r) => r.mon3 && !/\r\n\?\r\n/.test(r.out);
+
+test("KG62 bin loads", async () => {
+  const top = 0xb100; // (0006h) with MON3.SVC alone on the starter card
+  const full = pattern((top - 0x4000) / 128);
+  const low = pattern((0x800 - 0x100) / 128, 1);
+  const one = pattern(1, 2);
+  const { m, svc } = await inSession({ "FULL.BIN": full, "LOW.BIN": low, "ONE.BIN": one });
+  assert.equal(word(m, 6), top);
+  for (const [cmd, at, bytes] of [["LOAD FULL.BIN", 0x4000, full], ["LOAD LOW.BIN 100", 0x100, low], ["LOAD ONE.BIN 900", 0x900, one]]) {
+    const r = line(m, cmd);
+    assert.ok(ok(r), `${cmd}: ${JSON.stringify(r.out)}`);
+    assert.deepEqual(bytesAt(m, at, bytes.length), [...bytes], `${cmd}: whole records at ${at.toString(16)}h`);
+    assert.equal(runnable(m, svc), 1, `${cmd}: runnable`);
+  }
+  leave(m, { mon3: true });
+});
+
+async function refusedLoads(variant) {
+  const top = 0xb100;
+  const { m, svc } = await inSession({ "OVER.BIN": pattern((top - 0x4000) / 128 + 1), "THREE.BIN": pattern(3), "FIFTEEN.BIN": pattern(15), "EMPTY.BIN": new Uint8Array(0), "ONE.BIN": pattern(1) }, { svc: variant });
+  for (const cmd of [
+    "LOAD OVER.BIN", // one record past the top
+    "LOAD ONE.BIN 0", // page zero
+    "LOAD ONE.BIN 80",
+    "LOAD ONE.BIN FF80", // wraps past FFFFh into page zero
+    "LOAD THREE.BIN 700", // ends inside 08xxh
+    "LOAD ONE.BIN 800", // starts in it
+    "LOAD ONE.BIN 8F0",
+    "LOAD FIFTEEN.BIN 100", // 0100h-087Fh
+    "LOAD EMPTY.BIN",
+    "LOAD NONE.BIN", // not found
+  ]) {
+    assert.ok(ok(line(m, "LOAD ONE.BIN 5000")), "a good load first");
+    const before = tpaDigest(m);
+    const r = line(m, cmd);
+    assert.ok(refused(r), `${cmd}: ? (${JSON.stringify(r.out)})`);
+    assert.equal(tpaDigest(m), before, `${cmd}: nothing written in the TPA`);
+    assert.equal(runnable(m, svc), 0, `${cmd}: nothing runnable`);
+  }
+  leave(m, { mon3: true });
+}
+test("KG62 refused loads", () => refusedLoads());
+
+test("KG62 disk error", async () => {
+  const { m, svc } = await inSession({ "BIG.BIN": pattern(200) });
+  m.mark = m.output.length;
+  m.type("LOAD BIG.BIN\r");
+  const at40 = pattern(41).subarray(40 * 128, 40 * 128 + 2);
+  m.runUntil(() => m.read(0x4000 + 40 * 128) === at40[0] && m.read(0x4001 + 40 * 128) === at40[1], 200_000_000, "40 records read");
+  const sd = m.sd;
+  m.sd = null; // the card taken out
+  const from = m.mark;
+  m.runUntil(() => m.waitingForInput() && /Bad Sector$/.test(m.text(from)), 200_000_000, "the BDOS's error");
+  m.sd = sd; // and put back before the key
+  m.type("\r");
+  const out = toPrompt(m, from);
+  assert.match(out, /Bdos Err On A: Bad Sector\r\nA>$/, "warm boot to A>");
+  assert.equal(warmTarget(m), m.sym("WBOOTR"), "the session ended");
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.equal(runnable(m, svc), 0);
+  assert.ok(refused(line(m, "GO")), "nothing runnable at re-entry");
+  leave(m, { mon3: true });
+});
+
+test("KG62 go", async () => {
+  const { m } = await inSession({ "RET.BIN": bin(0xc9) });
+  assert.ok(refused(line(m, "GO")), "GO before any good load");
+  assert.ok(ok(line(m, "LOAD RET.BIN")));
+  assert.ok(refused(line(m, "LOAD NONE.BIN")));
+  assert.ok(refused(line(m, "GO")), "GO after a refused load");
+  assert.ok(ok(line(m, "LOAD RET.BIN 5000")));
+  m.mark = m.output.length;
+  m.type("GO 5000\r");
+  runToPc(m, 0x5000);
+  m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 50_000_000, "MON3>");
+  leave(m, { mon3: true });
+});
+const runToPc = (m, pc) => m.runUntil(() => m.pc === pc, 50_000_000, `pc ${pc.toString(16)}`);
+
+test("KG62 restoration", async () => {
+  // IM 1 with USER_INT on EI; RETI at 4020h, PROT_MODE written, then the
+  // latch with PROTECT and CAPS, and RET.
+  const prog = new Uint8Array(0x80);
+  prog.set([0x21, 0x20, 0x40, 0x22, 0x92, 0x08, 0xed, 0x56, 0xfb, 0x3e, 0x01, 0x32, 0x9e, 0x08, 0x3a, 0x40, 0x00, 0xf6, 0x82, 0xd3, 0xff, 0xc9]);
+  prog.set([0xfb, 0xed, 0x4d], 0x20);
+  const { m, pz } = await inSession({ "REST.BIN": prog });
+  let port1 = -1;
+  const write = m.tec1g.ioHandlers.write;
+  m.tec1g.ioHandlers.write = (port, value) => {
+    if ((port & 0xff) === 0x01) port1 = value;
+    return write(port, value);
+  };
+  assert.ok(ok(line(m, "LOAD REST.BIN")));
+  m.mark = m.output.length;
+  m.type("GO\r");
+  runToPc(m, 0x4015); // the program's RET, with its latch written
+  assert.equal(m.sysCtrl & 0x82, 0x82, "the program set PROTECT and CAPS");
+  m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 50_000_000, "MON3>");
+  assert.equal(m.cpu.cpu.iff1 ? 1 : 0, 0, "interrupts off at MON3>");
+  assert.equal(m.sysCtrl, m.read(0x40), "the latch equals LATCHV");
+  assert.equal(m.sysCtrl & 0x02, 0, "PROTECT clear");
+  assert.equal(m.sysCtrl & 0x80, 0, "CAPS as LATCHV holds it: clear");
+  assert.equal(port1 & 0x40, 0x40, "port 01h's bit 6 high: TX idle");
+  leave(m, { mon3: true });
+  assert.equal(m.cpu.cpu.imode, 1, "IM 1 after EXIT");
+  assert.equal(m.sysCtrl, m.sym("LATCLAS"), "the latch LATCLAS");
+  assert.deepEqual(bytesAt(m, 0x41, 15), pz.slice(0x41, 0x50), "0041h-004Fh as before the session");
+});
+
+test("KG62 stack", async () => {
+  // PUSH HL n times, POP them, RET: 63 words fill 0800h-087Dh under GO's
+  // return word, and 80 run on into 07xxh.
+  const pushes = (n) => bin(0x06, n, 0xe5, 0x10, 0xfd, 0x06, n, 0xe1, 0x10, 0xfd, 0xc9);
+  const { m } = await inSession({ "S63.BIN": pushes(63), "S80.BIN": pushes(80) });
+  const p = pageOf(m);
+  const svc = await mon3Build();
+  // The service's code, constants and its saved page zero: all but its line
+  // buffer, FCB and stack, which the monitor itself uses between commands.
+  const kept = () => [...bytesAt(m, p << 8, svc.symbols.HEXT)];
+  for (const [file, low] of [["S63.BIN", 0x800], ["S80.BIN", 0x7de]]) {
+    assert.ok(ok(line(m, `LOAD ${file}`)));
+    const svcBefore = kept();
+    m.mark = m.output.length;
+    m.type("GO\r");
+    let sp = 0xffff;
+    m.runUntil(() => {
+      if (m.pc >= 0x4000 && m.pc < 0x4010) sp = Math.min(sp, m.cpu.cpu.sp & 0xffff);
+      return m.waitingForInput() && MON3.test(m.text(m.mark));
+    }, 50_000_000, "MON3>");
+    assert.equal(sp, low, `${file}: the program's deepest SP`);
+    const now = kept();
+    assert.deepEqual(now.flatMap((v, i) => (v === svcBefore[i] ? [] : [i])), [], `${file}: the service byte-equal, by offset`);
+  }
+  assert.equal(String.fromCharCode(...bytesAt(m, 0x800, 7)) === "MON3.1G", false, "ROMSIG overwritten by the program");
+  leave(m, { mon3: true });
+});
+
+/** Drive A's allocation vector in M: { at, bytes } (the DPH's word at 14, DSM / 8 + 1 bytes). */
+function vectorA(m) {
+  const dph = m.sym("DPHTAB");
+  const at = word(m, dph + 14);
+  const dsm = word(m, word(m, dph + 10) + 5);
+  return { at, bytes: bytesAt(m, at, (dsm >> 3) + 1) };
+}
+
+async function vectorExchange(svc) {
+  const data = { "DATA1.DAT": pattern(128, 3), "DATA2.DAT": pattern(64, 4) };
+  const exch = bin(0x3a, 0, 0, 0x47, 0x3a, 0, 0, 0x32, 0, 0, 0x78, 0x32, 0, 0, 0xc9); // A=(x); B=A; A=(y); (x)=A; (y)=B
+  const { m } = await inSession({ ...data, "EXCH.BIN": exch }, { svc });
+  assert.ok(ok(line(m, "LOAD EXCH.BIN")));
+  const v = vectorA(m);
+  const free = v.bytes.findIndex((b) => b !== 0xff); // the byte holding the first free block
+  assert.ok(free >= 2, "a fully used byte below the first free block");
+  const x = v.at + 1;
+  const y = v.at + free + 2;
+  assert.deepEqual([m.read(x), m.read(y)], [0xff, 0x00]);
+  for (const [o, a] of [[1, x], [5, y], [8, x], [12, y]]) [m.write(0x4000 + o, a & 0xff), m.write(0x4001 + o, a >> 8)];
+  const sum = v.bytes.reduce((a, b) => a + b, 0);
+  assert.ok(ok(line(m, "GO")));
+  assert.deepEqual([m.read(x), m.read(y)], [0x00, 0xff], "the program exchanged the two bytes");
+  assert.equal(vectorA(m).bytes.reduce((a, b) => a + b, 0), sum, "the vector's sum unchanged");
+  leave(m, { mon3: true });
+  const saved = {};
+  for (const [n, seed] of [["N1.COM", 5], ["N2.COM", 6], ["N3.COM", 7]]) {
+    const bytes = pattern(16, seed);
+    bytes.forEach((b, i) => m.write(0x100 + i, b));
+    assert.doesNotMatch(m.command(`SAVE 8 ${n}`), /\?/);
+    saved[n] = bytes;
+  }
+  const a = volume(m.sdImage, "A");
+  assert.deepEqual(a.verify(), [], "the card's directory holds no cross-link");
+  for (const [n, bytes] of Object.entries({ ...data, ...saved })) assert.deepEqual([...a.read(n)], [...bytes], `${n} intact`);
+}
+test("KG62 vector exchange", () => vectorExchange());
+
+/** A program at 4000h that opens B:NAME, writes its record 0 in place from 4100h, closes it if CLOSE, and returns. */
+function writer(name, close) {
+  const call = (fn, de) => [0x11, de & 0xff, de >> 8, 0x0e, fn, 0xcd, 0x05, 0x00];
+  const code = [...call(15, 0x4080), ...call(26, 0x4100), ...call(21, 0x4080), ...(close ? call(16, 0x4080) : []), 0xc9];
+  const p = new Uint8Array(0x180);
+  p.set(code);
+  const [base, type] = name.split(".");
+  p.set([2, ...Buffer.from(base.padEnd(8) + type.padEnd(3), "latin1")], 0x80);
+  for (let i = 0; i < 128; i += 1) p[0x100 + i] = 0xa0 + (i & 15);
+  return p;
+}
+
+async function hangAndReset(svc) {
+  svc ??= await mon3Build();
+  const { createContainer } = await import("../tools/lib/container.mjs");
+  const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true }]);
+  const a = volume(image, "A");
+  for (const [n, b] of Object.entries({ "MON3.SVC": svc.file, "WC.BIN": writer("F.DAT", true), "WU.BIN": writer("G.DAT", false), "LOOP.BIN": bin(0x18, 0xfe) })) a.write(n, b);
+  volume(image, "B").write("F.DAT", new Uint8Array(512).fill(0x11));
+  volume(image, "B").write("G.DAT", new Uint8Array(512).fill(0x22));
+  const m = machine(image);
+  const written = writer("X.X", false).subarray(0x100);
+  const onCard = (n) => [...volume(image, "B").read(n).subarray(0, 128)];
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  for (const f of ["WC.BIN", "WU.BIN"]) {
+    assert.ok(ok(line(m, `LOAD ${f}`)));
+    assert.ok(ok(line(m, "GO")));
+  }
+  assert.deepEqual(onCard("F.DAT"), [...written], "the closed file is on the card at its close");
+  assert.ok(ok(line(m, "LOAD LOOP.BIN")));
+  m.type("GO\r");
+  runFor(m, 5_000_000);
+  assert.equal(m.pc, 0x4000, "the program loops");
+  assert.deepEqual(onCard("F.DAT"), [...written], "the closed file, while the program hangs");
+  assert.deepEqual(onCard("G.DAT"), [...written], "the unclosed write, flushed by GO");
+  m.reset();
+  m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt after the reset");
+  assert.deepEqual(onCard("F.DAT"), [...written], "and after the reset");
+  assert.deepEqual(onCard("G.DAT"), [...written]);
+  assert.deepEqual(volume(image, "B").verify(), []);
+}
+test("KG62 hang and reset", () => hangAndReset());
+
+async function expandInView(svc) {
+  // EXPAND on through port FFh, then RST 10h call 33 (timeDelay), and RET.
+  const prog = bin(0x3a, 0x40, 0x00, 0xf6, 0x04, 0xd3, 0xff, 0x21, 0x0a, 0x00, 0x0e, 0x21, 0xd7, 0xc9);
+  const { m } = await inSession({ "XV.BIN": prog }, { svc });
+  const fetches = [];
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.sysCtrl & 0x04 && m.pc >= 0x8000 && m.pc < 0xc000 && fetches.length < 8) fetches.push(m.pc.toString(16));
+    return step();
+  };
+  assert.ok(ok(line(m, "LOAD XV.BIN")));
+  let expanded = false;
+  m.mark = m.output.length;
+  m.type("GO\r");
+  let back = true;
+  try {
+    m.runUntil(() => {
+      expanded ||= m.pc === 0x4007 && (m.sysCtrl & 0x04) !== 0;
+      return m.waitingForInput() && MON3.test(m.text(m.mark));
+    }, 50_000_000, "MON3>");
+  } catch {
+    back = false;
+  }
+  assert.ok(expanded, "the program set EXPAND");
+  assert.deepEqual(fetches, [], "no fetch from 8000h-BFFFh while the latch holds EXPAND");
+  assert.ok(back, "back at MON3>");
+  leave(m, { mon3: true });
+}
+test("KG62 expand in view", () => expandInView());
+
+// KG62's service mutants.
+
+test("KG62 mutant: without BDOS 37 at the program's return and at EXIT, a new file takes a used block", async () => {
+  const svc = await mon3Variant([
+    ["  call FORMS\n  call RESETD\n", "  call FORMS\n"],
+    ["  im 1\n  call RESETD\n", "  im 1\n"],
+  ]);
+  await assert.rejects(vectorExchange(svc), /intact|cross-link/);
+});
+
+test("KG62 mutant: forms that jump straight to the handler fetch from 8000h-BFFFh under EXPAND", async () => {
+  const svc = await mon3Variant([["  ld a,$C3       ; JP 0041h\n  ld (de),a\n  inc de\n  ld a,LOW(STUB)\n", "  ld a,$E9\n  ld (de),a\n  inc de\n  xor a\n"]]);
+  const n = EXPAND1_WRITES.length;
+  await assert.rejects(expandInView(svc), /no fetch from 8000h-BFFFh/);
+  // What the mutant ran in EXPAND 1 wrote there too: the fetch is its failure.
+  EXPAND1_WRITES.splice(n);
+});
+
+test("KG62 mutant: without GO's BDOS 48 the hung program's reset loses the unclosed write", async () => {
+  const svc = await mon3Variant([["  push hl\n  ld c,48        ; flush\n  call BDOS\n", "  push hl\n"]]);
+  await assert.rejects(hangAndReset(svc), /flushed by GO/);
+});
+
+test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is taken", async () => {
+  const svc = await mon3Variant([
+    ["LS1:\n  ld a,d\n  cp $08\n  jr z,LFAIL     ; starts in 08xxh\n  jr nc,LS2      ; starts above it\n  ld a,h\n  cp $08\n  jr c,LS2       ; ends below it\n  jr nz,LFAIL    ; runs through it\n  ld a,l\n  or a\n  jr nz,LFAIL    ; ends inside it\n", "LS1:\n"],
+  ]);
+  await assert.rejects(refusedLoads(svc), /LOAD THREE\.BIN 700: \?/);
 });
