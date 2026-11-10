@@ -49,7 +49,13 @@ function card(image = standardCard()) {
   return image;
 }
 
-/** Plant JP ABICALL in RST 1, which a warm boot's sweep keeps (test/svc.test.mjs): the three bytes. */
+/** The BDOS 108 return code (test/chain.test.mjs). */
+const code = (m) => m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8);
+
+/**
+ * Plant JP ABICALL in RST 1, which a warm boot's sweep keeps
+ * (test/svc.test.mjs): the three bytes.
+ */
 function holdRst1(m) {
   const abicall = m.sym("ABICALL");
   const held = [0xc3, abicall & 0xff, abicall >> 8];
@@ -63,7 +69,10 @@ function keys(m, s, what, done) {
   m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), LIMIT, what);
 }
 
-/** BAZA TIMES, then TIMES answered TEC, 13 and 7: the console's output from the run. DURING runs at each step of the build. */
+/**
+ * BAZA TIMES, then TIMES answered TEC, 13 and 7: the console's output from
+ * the run. DURING runs at each step of the build.
+ */
 function buildAndRun(m, during = () => {}) {
   let mark = m.output.length;
   m.enqueueInput("baza times\r", "matrix");
@@ -138,6 +147,7 @@ test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs 
   keys(m, "baza bad!:times\r", "the failed chain", () => (m.ready() && /A>$/.test(m.text(mark))) || /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
   const out = m.text(mark);
   assert.match(out, /\?SYNTAX ERROR IN 10/, "BAZA's error");
+  assert.equal(code(m), 0xff00, "the return code");
   assert.doesNotMatch(out, /HELLO FROM BASIC|WHAT IS YOUR NAME/, `no TIMES after the failure:\n${out}`);
   assert.ok(!volume(image, "A").list().some((f) => f.name === "BAD.COM"), "no BAD.COM");
   assert.deepEqual(m.violations, []);
@@ -145,7 +155,7 @@ test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs 
 
 // BAZA sets CP/M 3's error mode FEh (BDOS function 45), so a disk error
 // returns to it and it leaves through its own exit.
-test("a compile onto a read-only drive fails with FF00h, gives back RST 1's held JP, leaves no file and ends at A>", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
+test("a compile onto a read-only drive fails with return code FF00h, gives back RST 1's held JP and ends at A>", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const image = card(createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry: "G8M", label: "WORK", mount: "B" },
@@ -170,7 +180,9 @@ test("a compile onto a read-only drive fails with FF00h, gives back RST 1's held
   assert.doesNotMatch(out, /10 REM/, "TYPE didn't run");
   assert.ok(taken, "BAZA took RST 1 while it compiled");
   assert.deepEqual(rst1(), held, "the held JP after the failure");
-  assert.deepEqual(volume(image, "C").list().map((f) => f.name), ["TIMES.BAS"], "no partial or temporary file on C:");
+  assert.equal(code(m), 0xff00, "the return code, which the skipped piece leaves");
+  // A guard only: the emulated read-only volume keeps C: as it was whatever BAZA does.
+  assert.deepEqual(volume(image, "C").list().map((f) => f.name), ["TIMES.BAS"], "C: unchanged");
   assert.equal(m.read(4) & 15, 0, "A: still current");
   assert.deepEqual(m.violations, []);
 });
