@@ -3,13 +3,50 @@
 import assert from "node:assert/strict";
 import { appendFileSync, readFileSync } from "node:fs";
 import { after, afterEach, beforeEach } from "node:test";
-import { resolve } from "node:path";
-import { EXPAND1_WRITES, Machine, symbolsFromD8 } from "../../host/machine.mjs";
+import { basename, resolve } from "node:path";
+import { EXPAND1_WRITES, Machine as HostMachine, symbolsFromD8 } from "../../host/machine.mjs";
+import { findVolume, parseContainer, volumePayload } from "../../tools/lib/container.mjs";
+import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { fontBytes } from "../../tools/lib/font.mjs";
 
-Machine.font = fontBytes(resolve(import.meta.dirname, "../.."));
+HostMachine.font = fontBytes(resolve(import.meta.dirname, "../.."));
 
-export { EXPAND1_WRITES, Machine, bootMachine } from "../../host/machine.mjs";
+export { EXPAND1_WRITES, bootMachine } from "../../host/machine.mjs";
+
+// With TECOS_TEST_RESIDENT naming a .SVC file, every machine started on a
+// card installs that service by a first line in A:STARTUP.CMD, so a test's
+// own steps run with it installed and no session active (KS53's inactive
+// runs, test/mon3.test.mjs). TECOS_TEST_RESIDENT_LOG names a file that gets
+// one line for each such machine: the BDOS entry's word at its first prompt.
+const RESIDENT = process.env.TECOS_TEST_RESIDENT;
+const RESIDENT_LOG = process.env.TECOS_TEST_RESIDENT_LOG;
+
+/** Put the RESIDENT file on IMAGE's A: and name it first in its STARTUP.CMD. */
+function addResident(image) {
+  const v = findVolume(parseContainer(image), "A");
+  const a = new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
+  const name = basename(RESIDENT).toUpperCase();
+  a.write(name, readFileSync(RESIDENT));
+  const startup = a.list().some((f) => f.name === "STARTUP.CMD") ? a.read("STARTUP.CMD", { text: true }) : new Uint8Array(0);
+  a.write("STARTUP.CMD", Buffer.concat([Buffer.from(`${name}\n`, "latin1"), startup]), { text: true });
+}
+
+export class Machine extends HostMachine {
+  constructor(options) {
+    if (RESIDENT && options.sdImage) addResident(options.sdImage);
+    super(options);
+    this.resident = RESIDENT && options.sdImage ? "pending" : undefined;
+  }
+
+  ready() {
+    const r = super.ready();
+    if (r && this.resident === "pending") {
+      this.resident = "logged";
+      if (RESIDENT_LOG) appendFileSync(RESIDENT_LOG, `${JSON.stringify({ file: process.argv[1], entry: this.read(6) | (this.read(7) << 8) })}\n`);
+    }
+    return r;
+  }
+}
 
 // Every test file that runs a machine: EXPAND 1 at 8000h-BCFFh is the block
 // cache's, BE00h-BFFFh is free, and after cold boot's clear nothing but the
