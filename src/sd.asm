@@ -360,7 +360,7 @@ LBAARG:
   ld de,(SDLBA+2)
   ld a,(SDBYTE)
   or a
-  jr z,SETARGJ1
+  jr z,TOSETARG
   ld a,d
   or a
   scf
@@ -377,7 +377,7 @@ LBAARG:
   adc hl,hl
   ex de,hl
 
-SETARGJ1:
+TOSETARG:
   jp SETARG
 
 ; Read SDLBA into 512 writable bytes at
@@ -701,7 +701,7 @@ SDWRG:
   jr z,SDWBSY
   ld a,SDEWRSP
 
-SDFENDJ1:
+TOSDFEND:
   jp SDFEND
 
 ; After accepted response, poll up to
@@ -726,8 +726,8 @@ SDWB:
   dec d
   jr nz,SDWB
   ld a,SDEBUSY
-  jr SDFENDJ1
+  jr TOSDFEND
 
 SDWDON:
   xor a
-  jr SDFENDJ1
+  jr TOSDFEND

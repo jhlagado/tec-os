@@ -96,10 +96,10 @@ COLDRT:
   call LCDROW
   call SDINIT
 
-DIAGJ1:
+DIAGNZ:
   jp nz,DIAG
   call MOUNT
-  jr nz,DIAGJ1
+  jr nz,DIAGNZ
   call ALVINIT
   call RESEL
 

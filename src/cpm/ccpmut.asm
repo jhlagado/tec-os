@@ -44,7 +44,7 @@ ERAGOT:
   ld a,(ERAANS)
   cp 'Y'
 
-STARTEJ3:
+STARTNZ:
   jp nz,STARTED
   ld a,1
   ld (ERAALL),a
@@ -61,9 +61,9 @@ ERADEL:
   jr z,FILENO
   ld a,(ERAALL)
   or a
-  jr nz,STARTEJ3
+  jr nz,STARTNZ
 
-MAINLOJ1:
+ERAMAIN:
   jp MAINLOOP
 
 RENBAD:
@@ -139,7 +139,7 @@ RENTEST:
   DB 23*2+0
   inc a
   jp z,FILENO
-  jr MAINLOJ1
+  jr ERAMAIN
 
 ; Report FILEEX through ERRGO before
 ; rename. ERRGO sets PRGCODE=FF00h.

@@ -10,7 +10,7 @@
 FNLOGIN:
 
   ld hl,(LOGINV)
-  jr RETWORJ1
+  jr TORETWRD
 
 ; Function 25: return logical default
 ; DEFDRV (0=A) through RETA: A=L, H=B=0.
@@ -37,7 +37,7 @@ FNSETDMA:
   ld b,h         ; BIOS BC argument
   ld c,l
   call BIODMA    ; RAM SETDMA hook
-  jr RETZERJ1
+  jr ZERORET
 
 ; Function 27: return DEFALV in HL with
 ; A=L/B=H without rebinding the drive or
@@ -49,7 +49,7 @@ FNGETALV:
 
   ld hl,(DEFALV)
 
-RETWORJ1:
+TORETWRD:
   jp RETWORD
 
 ; Function 46: select drive E=0..15
@@ -117,7 +117,7 @@ FRSH:
   ld (hl),d      ; middle byte
   inc hl
   ld (hl),a      ; high byte
-  jr RETZERJ1
+  jr ZERORET
 
 ; Function 28: OR the DEFDRV bit into
 ; ROVEC and return A=0. Functions 13/37
@@ -131,7 +131,7 @@ FNWRPROT:
   ex de,hl
   ld hl,ROVEC
   call VSETDE
-  jr RETZERJ1
+  jr ZERORET
 
 ; Function 29: return ROVEC in HL with
 ; A=L/B=H, bit 0 for A. Includes
@@ -140,7 +140,7 @@ FNWRPROT:
 
 FNGETRO:
   ld hl,(ROVEC)  ; software/mount flags
-  jr RETWORJ1
+  jr TORETWRD
 
 ; Function 31: return DEFDPB in HL with
 ; A=L/B=H. Default selection retains
@@ -151,7 +151,7 @@ FNGETRO:
 FNGETDPB:
 
   ld hl,(DEFDPB)
-  jr RETWORJ1
+  jr TORETWRD
 
 ; Function 32: E=FFh queries through
 ; GETUSER. Otherwise set USERNO=E&1Fh
@@ -166,7 +166,7 @@ FNUSER:
   and $1F        ; five-bit user
   ld (USERNO),a
 
-RETZERJ1:
+ZERORET:
   xor a
   ret
 
@@ -265,7 +265,7 @@ FNSETRR:
   call ADDCAND
   ld de,CAND0
   call PUBRR     ; position -> r0..r2
-  jr RETZERJ1
+  jr ZERORET
 
 ; Copy three low-first bytes from DE to
 ; caller FCB bytes 33..35 at (PARAM).

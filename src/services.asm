@@ -319,13 +319,13 @@ HWSPUT:
   call VTOWN
   ld a,TNENODV
 
-HWERRJ1:
+HWERRNZ:
   jp nz,HWERR
   ld a,(CONMOD)
   rrca
   ld a,TNENODV
 
-HWERRJ2:
+HWERRNC:
   jp nc,HWERR
   ld a,b
   or a
@@ -384,12 +384,12 @@ HWSRTC:
   ld a,b
   cp 2
   ld a,TNEBAD
-  jr nc,HWERRJ2
+  jr nc,HWERRNC
   push bc
   call RTCHAS
   pop bc
   ld a,TNENODV
-  jr nz,HWERRJ1
+  jr nz,HWERRNZ
   ld a,b
   or a
   jr nz,HWSRW
