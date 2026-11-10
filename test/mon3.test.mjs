@@ -1430,10 +1430,14 @@ test("KG68 docs agree", async () => {
   const table = src.slice(src.indexOf("\nAPI:")).split("\n\n")[0];
   const words = [...table.matchAll(/^\s+DW (.*)$/gm)].flatMap((x) => x[1].replace(/;.*$/, "").split(",").map((w) => w.trim()));
   assert.equal(words.length, 63, "MON-3's 63 calls");
-  // RTCAPI answers every function with carry, as MON-3 a missing one.
+  // RTCAPI answers every function with carry, as MON-3 a missing one. The
+  // translated calls run on TEC-OS's resources: the session and the latch.
+  const TRANSLATED = { 2: "PREIN", 41: "SETCAP", 43: "SETPRT", 48: "TOGCAP" };
+  for (const [n, w] of Object.entries(TRANSLATED)) assert.equal(words[n], w, `call ${n} is ${w} in the table`);
   const built = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [] : [i]));
-  const listed = [...mon3.slice(mon3.indexOf("calls implemented:")).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
-  assert.deepEqual(listed, built, "the implemented calls");
+  const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
+  assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
+  assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
   assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes B9A4h–BFFFh/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
