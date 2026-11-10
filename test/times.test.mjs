@@ -1,10 +1,11 @@
 // TIMES.BAS (KD-262), the starter's first BASIC program: PRINT, INPUT, a FOR
 // loop and a little arithmetic, in the dialect BAZA compiles: numbered lines
 // in ascending order, upper case, 40 columns. BAZA builds it on TEC-OS and
-// TIMES runs on the PICO9918 at 40 columns and returns to the prompt; with
-// GLCD.SVC loaded, BAZA, which claims RST 1 to RST 6 while it runs, and TIMES
-// both run, the restart vectors are as they were at the next prompt (a warm
-// boot's sweep would also mend them) and the GLCD is still the console. Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs
+// TIMES runs on the PICO9918 at 40 columns, turns away a number outside 1 to
+// 12 and returns to the prompt. With GLCD.SVC loaded and a JP held in RST 1,
+// BAZA takes RST 1 while it compiles and gives the held JP back, TIMES runs,
+// and the GLCD is still the console. A failed compile's return code stops a
+// chained line. Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs
 // (test/inputs.json).
 
 import { test } from "node:test";
@@ -18,12 +19,15 @@ const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const SOURCE = readFileSync(resolve(ROOT, "programs/TIMES.BAS"), "utf8");
 const LIMIT = 400_000_000;
-// A number prints with a space each side, as in Microsoft BASIC.
-const TABLE = Array.from({ length: 12 }, (_, i) => ` ${i + 1} X 7 = ${(i + 1) * 7} `);
+// A number prints with a space each side, as in Microsoft BASIC, and TAB(4)
+// and TAB(9) line up the X and the = whatever the numbers' widths.
+const TABLE = Array.from({ length: 12 }, (_, i) => `${` ${i + 1} `.padEnd(4)}X 7 `.padEnd(9) + `= ${(i + 1) * 7} `);
 const RUN = [
   "HELLO FROM BASIC ON TEC-OS.",
   "WHAT IS YOUR NAME? TEC",
   "HI, TEC.",
+  "PICK A NUMBER, 1 TO 12? 13",
+  "PLEASE PICK 1 TO 12.",
   "PICK A NUMBER, 1 TO 12? 7",
   "THE 7 TIMES TABLE:",
   ...TABLE,
@@ -50,13 +54,15 @@ function keys(m, s, what, done) {
   m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), LIMIT, what);
 }
 
-/** BAZA TIMES, then TIMES answered TEC and 7: the console's output from the run. */
-function buildAndRun(m) {
+/** BAZA TIMES, then TIMES answered TEC, 13 and 7: the console's output from the run. DURING runs at each step of the build. */
+function buildAndRun(m, during = () => {}) {
   let mark = m.output.length;
-  keys(m, "baza times\r", "BAZA's build", () => /COM written\r\n/.test(m.text(mark)) && m.ready());
+  m.enqueueInput("baza times\r", "matrix");
+  m.runUntilChecked(() => (m.pumpInput(), during(), !m.pending?.length && m.waitingForInput() && /COM written\r\n/.test(m.text(mark)) && m.ready()), LIMIT, "BAZA's build");
   mark = m.output.length;
   keys(m, "times\r", "the first question", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
   keys(m, "TEC\r", "the second question", () => /PICK A NUMBER, 1 TO 12\? $/.test(m.text(mark)));
+  keys(m, "13\r", "the question again", () => /PLEASE PICK 1 TO 12\.\r\nPICK A NUMBER, 1 TO 12\? $/.test(m.text(mark)));
   keys(m, "7\r", "the table and the prompt", () => m.ready());
   return m.text(mark);
 }
@@ -84,19 +90,53 @@ test("BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to t
   assert.deepEqual(m.violations, []);
 });
 
-test("with GLCD.SVC loaded, BAZA builds TIMES and TIMES runs, the restart vectors are as they were, and the GLCD is still the console", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
+test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back, TIMES runs, and the GLCD is still the console", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const m = boot(card(), { matrix: true });
-  const vectors = () => Array.from({ length: 0x30 }, (_, i) => m.read(0x08 + i)); // RST 1 to RST 6, 08h-37h
   assert.ok(m.videoConsole(), "the GLCD is the console");
   assert.match(m.command("SERVICES"), /GLCD/, "GLCD.SVC loaded");
-  const before = vectors();
-  const run = buildAndRun(m);
+  // JP ABICALL is above PZTOP, so a warm boot's sweep keeps it
+  // (test/svc.test.mjs): once BAZA has taken RST 1, only BAZA's own restore
+  // puts the JP back.
+  const abicall = m.sym("ABICALL");
+  const held = [0xc3, abicall & 0xff, abicall >> 8];
+  held.forEach((b, i) => m.write(0x08 + i, b));
+  const rst1 = () => [0, 1, 2].map((i) => m.read(0x08 + i));
+  const rest = () => Array.from({ length: 0x28 }, (_, i) => m.read(0x10 + i)); // RST 2 to RST 6, 10h-37h
+  const others = rest();
+  let taken;
+  const run = buildAndRun(m, () => {
+    if (!taken && rst1().some((b, i) => b !== held[i])) taken = rst1();
+  });
+  assert.ok(taken, "BAZA took RST 1 while it compiled");
+  assert.deepEqual(rst1(), held, "the held JP after BAZA and TIMES");
+  assert.deepEqual(rest(), others, "RST 2 to RST 6 after BAZA and TIMES");
   assert.ok(run.includes(RUN.join("\r\n") + "\r\n"), run);
-  assert.deepEqual(vectors(), before, "RST 1 to RST 6 after BAZA and TIMES");
   assert.ok(m.videoConsole(), "the GLCD is still the console");
   keys(m, "dir times.*\r", "DIR", () => m.ready());
   const g = m.glcdScreen();
   assert.ok(g.includes("TIMES.BAS") && g.includes("TIMES.COM"), g.join("\n"));
   assert.equal(g.filter((l) => l.trim()).at(-1), "A>", "the GLCD's prompt");
+  assert.deepEqual(m.violations, []);
+});
+
+// KD-262 item 3: a failed compile sets the return code, so a chained line
+// stops. A : piece runs unless the code is FF00h to FFFEh (test/chain.test.mjs),
+// as TAS sets FF00h; BAZA b6ecccf ends a failed compile with code 1
+// (src/errors.asm, ERRDONE), so the line goes on. Marked todo until BAZA
+// sets a failure code.
+test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs no TIMES, and BAZA TIMES!:TIMES does", { skip: BAZA.skip || RTL.skip, todo: "BAZA b6ecccf returns 1, not FF00h, on a failed compile", timeout: 900_000 }, () => {
+  const image = card();
+  volume(image, "A").write("BAD.BAS", Buffer.from("10 PRINT (\n"), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  let mark = m.output.length;
+  keys(m, "baza times!:times\r", "the good chain", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
+  assert.match(m.text(mark), /COM written\r\n[^]*HELLO FROM BASIC ON TEC-OS\./, "TIMES ran after a good compile");
+  keys(m, "TEC\r7\r", "the prompt", () => m.ready());
+  mark = m.output.length;
+  keys(m, "baza bad!:times\r", "the failed chain", () => (m.ready() && /A>$/.test(m.text(mark))) || /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
+  const out = m.text(mark);
+  assert.match(out, /\?SYNTAX ERROR IN 10/, "BAZA's error");
+  assert.doesNotMatch(out, /HELLO FROM BASIC|WHAT IS YOUR NAME/, `no TIMES after the failure:\n${out}`);
+  assert.ok(!volume(image, "A").list().some((f) => f.name === "BAD.COM"), "no BAD.COM");
   assert.deepEqual(m.violations, []);
 });
