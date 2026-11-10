@@ -31,9 +31,9 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 2,713 bytes of header and image in **11 pages**: the
-word at `0006h` goes from `B9A4h` to `AE00h`, and the TPA from 47,268 bytes to
-**44,288**. The monitor, its line buffer, its FCB, its saved page zero and its
+On the starter card it is 3,475 bytes of header and image in **14 pages**: the
+word at `0006h` goes from `B9A4h` to `AB00h`, and the TPA from 47,268 bytes to
+**43,520**. The monitor, its line buffer, its FCB, its saved page zero and its
 stack are all in those pages, above anything a MON-3 program may load into.
 
 ## Commands
@@ -163,13 +163,20 @@ The next `/E` takes it out first, and `UNLOAD` does too.
 | `RST 38h` | `USER_INT` | through `USER_INT`, when 0038h held its default at entry |
 | NMI | `USER_NMI` | through `USER_NMI` at 0066h, in a session |
 
-`RST 10h` calls implemented: 3 `beep`, 4 `convAToSeg`, 10 `scanSegments`,
+`RST 10h` calls implemented: 0 `softwareID`, 1 `versionID`, 2 `preInit`,
+3 `beepAlways`, 4 `convAToSeg`, 5 `regAToASCII`, 6 `ASCIItoSegment`,
+7 `stringCompare`, 8 `HLToString`, 9 `AToString`, 10 `scanSegments`,
 11 `displayError`, 12 `LCDBusy`, 13 `stringToLCD`, 14 `charToLCD`,
 15 `commandToLCD`, 16 `scanKeys`, 17 `scanKeysWait`, 18 `matrixScan`,
-33 `timeDelay`, 37 `getCaps`, 48 `toggleCaps`, 53 `matrixScanASCII` and
-54 `parseMatrixScan`. With the matrix keyboard fitted (port 03h's bit 0
-set), calls 16 and 17, `RST 08h` and `RST 20h` read it at port FEh as
-MON-3 does. As in MON-3, the dispatch passes AF, BC and HL as the caller
+19 `joystickScan`, 20 `serialEnable`, 21 `serialDisable`, 22 `txByte`,
+23 `rxByte`, 25 `sendToSerial`, 26 `receiveFromSerial`, 28 `sendHex`,
+29 `genDataDump`, 30 `checkStartEnd`, 33 `timeDelay`, 34 `playNote`,
+35 `playTune`, 37 `getCaps`, 38 `getShadow`, 39 `getProtect`,
+40 `getExpand`, 41 `setCaps`, 43 `setProtect`, 45 `stringToSerial`,
+48 `toggleCaps`, 49 `random`, 53 `matrixScanASCII`, 54 `parseMatrixScan`,
+55 `LCDConfirm`, 56 `getGLCDTerm` and 62 `RGBScan`. With the matrix
+keyboard fitted (port 03h's bit 0 set), calls 16 and 17, `RST 08h` and
+`RST 20h` read it at port FEh as MON-3 does. As in MON-3, the dispatch passes AF, BC and HL as the caller
 left them, and IX is lost. `displayError` is MON-3's own refusal: no call
 that isn't built returns as if it had worked. The beep keeps port 01h's bit 6
 high, so the serial line stays idle. The tested program is `HELLO3`

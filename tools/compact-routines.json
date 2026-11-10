@@ -46,7 +46,8 @@
     "HLSTR",
     "LGOOD",
     "OPEN",
-    "RANGE"
+    "RANGE",
+    "PREIN"
   ],
   "drivers/mon3api.asm": [
     "R08",
@@ -76,6 +77,21 @@
     "GETCAP",
     "TOGCAP",
     "LATSET"
+  ],
+  "drivers/mon3io.asm": [
+    "JOYS",
+    "SERON",
+    "SEROFF",
+    "TXB",
+    "RXB",
+    "TXRDY",
+    "SNDS",
+    "RCVS",
+    "SHEX",
+    "PNOTE",
+    "PTUNE",
+    "STRSER",
+    "RGBS"
   ],
   "drivers/mon3hex.asm": [
     "CHEX",

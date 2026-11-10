@@ -90,15 +90,15 @@ class Side {
     if (this.kind === "session") this.m.write(0x40, value);
   }
 
-  /** Raise an interrupt (NMI when NMI) after the next instruction. */
+  /** Raise an interrupt (NMI when NMI) after the next instruction; irqAt is then the cycle its acknowledge starts at. */
   interrupt(nmi) {
     const tick = this.tick;
-    let done = false;
+    this.irqAt = undefined;
+    this.irqTaken = false;
     this.m.cpu.hardware.ioTick = () => {
-      const r = tick();
-      if (done) return r;
-      done = true;
       this.m.cpu.hardware.ioTick = tick;
+      tick();
+      this.irqTaken = true;
       return { interrupt: { nonMaskable: nmi, data: 0xff } };
     };
   }
@@ -126,8 +126,9 @@ class Side {
     put(s("MEMB"), bytes);
     m.write(s("OP1"), row.op ?? 0xd7);
     m.write(s("OP2"), row.op2 ?? 0xd7);
-    const next = row.regs2 ? s("CALL2") : s("STOP");
+    const next = row.next ? s(row.next) : row.regs2 ? s("CALL2") : s("STOP");
     put(s("NEXT") + 1, [next & 0xff, next >> 8]);
+    row.setup?.(this);
     m.cpu.cpu.pc = s("START");
     const serialFrom = m.serial.length;
     const start = m.cycles;
@@ -139,13 +140,18 @@ class Side {
     const stopAt = row.stopAt ?? s("STOP");
     const marks = {};
     const watch = row.watch ?? {};
+    this.irqTaken = false;
+    this.irqAt = undefined;
     m.runUntil(() => {
+      if (this.irqTaken && this.irqAt === undefined) this.irqAt = m.cycles;
       while (events.length && m.cycles - at >= events[0].at) events.shift().fire(this);
       for (const [name, pc] of Object.entries(watch)) if (m.pc === pc && marks[name] === undefined) marks[name] = m.cycles;
       return m.pc === stopAt;
     }, row.max ?? 20_000_000, `the row's stop (${row.name})`);
     row.atStop?.(this);
     const c = m.cpu.cpu;
+    const hl = (c.h << 8) | c.l;
+    const str = row.strAtHL ? Array.from({ length: row.strAtHL }, (_, i) => m.read(hl + i)) : undefined;
     const flags = (c.flags.S << 7) | (c.flags.Z << 6) | (c.flags.Y << 5) | (c.flags.H << 4) | (c.flags.X << 3) | (c.flags.P << 2) | (c.flags.N << 1) | c.flags.C;
     const out = {
       regs: { a: c.a, f: flags, b: c.b, c: c.c, d: c.d, e: c.e, h: c.h, l: c.l, iy: c.iy & 0xffff, sp: c.sp & 0xffff, iff1: c.iff1 ? 1 : 0 },
@@ -160,6 +166,8 @@ class Side {
       atRestart: at,
       end: m.cycles,
       marks,
+      str,
+      irqAt: this.irqAt,
     };
     row.release?.(this);
     return out;
@@ -173,6 +181,8 @@ export async function referenceSide({ matrix = false } = {}) {
   const m = new HostMachine({ rom, symbols: new Map(), matrix, clock: TEST_CLOCK, rtc: false });
   m.tec1g.ioHandlers.write(0xff, 0x01);
   for (let i = 0; i < 0x100; i += 1) m.write(i, rom[i]);
+  // USER_INT and USER_NMI as MON-3's reset leaves them: its RETI and RETN.
+  for (let i = 0x0c; i < 0x10; i += 1) m.write(0x0886 + i, rom[DEFAULTS + i]);
   bytes.forEach((b, i) => m.write(0x4000 + i, b));
   m.cpu.cpu.pc = symbols.WAIT;
   m.cpu.cpu.sp = 0x3f00;
@@ -275,6 +285,7 @@ export function differences(row, R, S) {
   if (row.tx6) {
     if (S.serial.length) out.push(`serial from the session: ${S.serial.map(h2).join(" ")}`);
   } else if (R.serial.join() !== S.serial.join()) out.push(`serial: ${R.serial.map(h2).join(" ")} vs ${S.serial.map(h2).join(" ")}`);
+  if (R.str && R.str.join() !== S.str.join()) out.push(`the string at HL: ${R.str.map(h2).join(" ")} vs ${S.str.map(h2).join(" ")}`);
   if (R.latch !== S.latch) out.push(`latch: ${h2(R.latch)} vs ${h2(S.latch)}`);
   if (S.latchv !== S.latch) out.push(`LATCHV ${h2(S.latchv)} is not the latch ${h2(S.latch)}`);
   for (const w of S.stub) if (w.value !== w.latchv) out.push(`the stub wrote ${h2(w.value)} with LATCHV ${h2(w.latchv)}`);
@@ -288,7 +299,8 @@ export function compareRows(ref, ses, rows) {
   for (const row of rows) {
     for (const f of row.flags ?? [0x00, 0xff]) {
       const r = { ...row, regs: { ...row.regs, f: row.regs?.f ?? f } };
-      const R = ref.run(r, image);
+      // A row the reference runs otherwise: a refusal against call 11.
+      const R = ref.run(row.ref ? { ...r, ...row.ref, regs: { ...r.regs, ...row.ref.regs } } : r, image);
       const S = ses.run(r, image);
       row.check?.(R, S);
       const d = differences(r, R, S);
