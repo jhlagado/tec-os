@@ -254,14 +254,14 @@ VMNT:
 VSLOT:
 
   ld a,(ix+DLEN+1)
-  cp $10
+  cp $10         ; carry: below 4096
   ld a,1
-  sbc a,0
+  sbc a,0        ; slot needed less one
   ld hl,DRVSLOT
   ld b,0
   add hl,bc
   cp (hl)
-  ccf
+  ccf            ; carry: slot too small
   ret
 
 ; Unmount drive C=1..3 after global

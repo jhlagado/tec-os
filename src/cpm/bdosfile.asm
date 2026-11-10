@@ -119,7 +119,7 @@ FNSEL:
 
 ; Publish CURDRV/DPBPTR/ALVPTR as
 ; DEFDRV/DEFDPB/DEFALV after successful
-; selection. Return A=0 through RETZERO.
+; selection. Return A=0 through RETA.
 ; Functions 25/27/31 can query these
 ; default values without rebinding an
 ; explicit-drive search or replacing its
@@ -309,7 +309,7 @@ FINDEXCT:
 ; record at CURDMA or FFh on exhaustion.
 
 FNSRCHF:
-  ex de,hl       ; DE: the FCB
+  ex de,hl       ; HL: the FCB
   ld a,(hl)
   cp '?'         ; drive ?: raw mode
   ld a,5
@@ -320,10 +320,11 @@ FNSRCHF:
   xor a          ; normal search mode
 
 ; Start mode A with the pattern at
-; (PARAM). Save OPENMOD/SRCHFCB, call
-; NEWSRCH then FINDENT and return
-; through RETA. Keep the pointed-to
-; pattern usable for continuation.
+; (PARAM). SRCHA saves OPENMOD/SRCHFCB
+; and calls NEWSRCH, then FINDENT's
+; result returns through RETA. Keep the
+; pointed-to pattern usable for
+; continuation.
 ; Modes 0/5 copy the record to CURDMA.
 ; Mode 1 imports open fields.
 
@@ -492,7 +493,7 @@ MAKECOPY:
 
   ld de,14       ; caller S2 offset
   call FCBOFF    ; caller FCB, not entry
-  set 7,(hl)
+  set 7,(hl)     ; mark unmodified
 
   ld hl,(SRCHIDX)
 

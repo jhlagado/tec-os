@@ -32,7 +32,7 @@ FNCURDSK:
 ; SETDMA clobbers.
 
 FNSETDMA:
-  ex de,hl       ; DE: the address
+  ex de,hl       ; HL: the address
   ld (CURDMA),hl
   ld b,h         ; BIOS BC argument
   ld c,l
@@ -130,7 +130,7 @@ FNWRPROT:
   call MASKA     ; HL=drive mask
   ex de,hl
   ld hl,ROVEC
-  call VSETDE
+  call VSETDE    ; OR DE into ROVEC
   jr ZERORET
 
 ; Function 29: return ROVEC in HL with
@@ -160,7 +160,7 @@ FNGETDPB:
 ; AF/B/HL.
 
 FNUSER:
-  ld a,e
+  ld a,e         ; caller E
   cp $FF         ; FFh query
   jr z,GETUSER
   and $1F        ; five-bit user
@@ -203,7 +203,7 @@ FNSIZE:
 
 SIZELOOP:
   call FINDENT
-  inc a
+  inc a          ; FFh: no next extent
   jr z,SIZEDONE
 
   ld hl,(MATCHPTR)
@@ -211,8 +211,8 @@ SIZELOOP:
   ld hl,(MATCHPTR)
   ld de,15
   add hl,de
-  ld e,(hl)
-  call ADDCAND
+  ld e,(hl)      ; unsigned entry RC
+  call ADDCAND   ; CAND += RC
 
   ld hl,FSIZE2
   ld de,CAND2
@@ -221,9 +221,9 @@ SIZELOOP:
 SIZECP:
   ld a,(de)      ; candidate, high first
   cp (hl)
-  jr c,SIZELOOP  ; smaller
+  jr c,SIZELOOP  ; smaller end
   jr nz,SIZEKEEP
-  dec hl
+  dec hl         ; equal: next byte
   dec de
   djnz SIZECP
   jr SIZELOOP    ; equal
@@ -258,11 +258,11 @@ SIZEDONE:
 ; register may change.
 
 FNSETRR:
-  ex de,hl       ; DE: the FCB
+  ex de,hl       ; HL: the FCB
   call RECBASE   ; CAND=extent base
   call FCBCR     ; caller next-record CR
-  ld e,(hl)
-  call ADDCAND
+  ld e,(hl)      ; unsigned CR
+  call ADDCAND   ; CAND += CR
   ld de,CAND0
   call PUBRR     ; position -> r0..r2
   jr ZERORET
@@ -329,7 +329,7 @@ ADDCAND:
   add hl,de
   ld (CAND0),hl
   ld a,(CAND2)
-  adc a,0
+  adc a,0        ; 24-bit carry
   ld (CAND2),a
   ret
 
@@ -401,10 +401,10 @@ NEWSRCH:
 ; MATCHPTR=(DIRPTR)+32*slot. Test
 ; MATCHFCB's A explicitly. Its flags are
 ; not boolean.
-; A match enters FOUNDIT. Otherwise
-; advance SRCHIDX. Return FFh at the
-; limit. Registers/search state may
-; change.
+; Advance SRCHIDX past each entry. A
+; match enters FOUNDIT. Return FFh at
+; the limit. Registers and search state
+; may change.
 
 FINDENT:
   ld hl,(SRCHIDX)
@@ -433,9 +433,9 @@ FINDLIM:
   and 3          ; slot 0..3
 
   ld (RETCODE),a
-  rrca
-  rrca
-  rrca           ; slot*32
+  rrca           ; slot 0..3 times 32:
+  rrca           ; byte offset in the
+  rrca           ; record
   ld e,a
   ld d,0
   ld hl,(DIRPTR)
@@ -444,14 +444,15 @@ FINDLIM:
   ld (MATCHPTR),hl
   call MATCHFCB  ; A result, not flags
   ld hl,(SRCHIDX)
-  inc hl
+  inc hl         ; past this entry
   ld (SRCHIDX),hl
   or a
   jr z,FINDENT   ; no match: next
 
-; Advance SRCHIDX after a match. Modes
-; 0/5 copy the whole 128-byte record at
-; (DIRPTR) to the address in CURDMA.
+; A match, with SRCHIDX already past
+; it, falls in here. Modes 0/5 copy the
+; whole 128-byte record at (DIRPTR) to
+; the address in CURDMA.
 ; Mode 1 enters OPENHIT. Other modes
 ; return without copying.
 ; Return RETCODE, slot 0..3 in the
@@ -512,11 +513,11 @@ OPENHIT:
   cp c
   jr z,OPENRC    ; same: retain RC
   ld a,0
-  rra            ; carry: 80h
+  rra            ; earlier: 80h, else 0
   inc hl
   inc hl
   inc hl
-  ld (hl),a
+  ld (hl),a      ; caller RC byte 15
   dec hl
   dec hl
   dec hl         ; back to EX
@@ -524,8 +525,7 @@ OPENHIT:
 OPENRC:
   inc hl
   inc hl
-  set 7,(hl)
-
+  set 7,(hl)     ; caller S2 unmodified
 
 ; Modes 2..4 enter here: return RETCODE
 ; (slot 0..3) in A, nothing copied.
@@ -583,7 +583,7 @@ MATCHFCB:
 
 MATCHUSR:
   ld a,(USERNO)
-  cp (hl)
+  cp (hl)        ; exclude other/free
   jr nz,NOMATCH
   inc hl         ; name/type byte 1
   ld de,(SRCHFCB)
