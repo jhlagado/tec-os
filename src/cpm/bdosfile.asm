@@ -153,12 +153,12 @@ SELDRV:
   cp b           ; compare bound drive
   ld a,b
   ld (CURDRV),a  ; LD keeps compare F
-  jr nz,LOGINJ1
+  jr nz,TOLOGIN
   call LOGTEST   ; same drive: login bit
   ret nz         ; NZ: tables still
                  ; bound
 
-LOGINJ1:
+TOLOGIN:
   jp LOGIN
 
 ; Resolve the FCB drive at (PARAM)

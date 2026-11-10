@@ -14,7 +14,7 @@ CMDUNL:
   call SVCUNL
   jp nc,STARTED  ; NC: unload completed
 
-BADCMDJ1:
+TOBADCMD:
   jp BADCMD
 
 ; Retry the next console name. Input DE
@@ -38,7 +38,7 @@ CONSKIP:
   jr nz,CONNXT
 
 CONBAD:
-  jr BADCMDJ1
+  jr TOBADCMD
 
 ; CON reports the effective console or
 ; selects TTY/CRT/BAT/UC1. GLCD maps to
@@ -210,7 +210,7 @@ CONSH1:
   ld de,CRLFMSG
   call PUTSTR
 
-MAINLOJ2:
+CONMAIN:
   jp MAINLOOP
 
 ; USER: require one decimal number 0..15
@@ -244,7 +244,7 @@ USERDONE:
   ld e,b
   ld c,32        ; 32: set user
   call BDOS
-  jr MAINLOJ2
+  jr CONMAIN
 
 USRBAD:
   jp BADCMD
@@ -717,7 +717,7 @@ SETLB:
 SETDMA:
   ld c,26        ; 26: set DMA
 
-BDOSJ1:
+TOBDOS:
   jp BDOS
 
 ; Print the dollar-ended string at DE
@@ -727,7 +727,7 @@ BDOSJ1:
 
 PUTSTR:
   ld c,9         ; 9: dollar string
-  jr BDOSJ1
+  jr TOBDOS
 
 ; Print E through BDOS 2 with OUTCHAR
 ; bookkeeping and printer echo.

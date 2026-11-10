@@ -123,7 +123,7 @@ DIRHEAD:
   jr z,DIRNAME   ; first row: no newline
   call PGCRLF    ; pager row break
 
-STARTEJ2:
+STARTC:
   jp c,STARTED   ; abort abandons word
 
 ; Print the saved entry and increment
@@ -210,7 +210,7 @@ DIRDONE:
 ; need not.
 
   call PGCRLF    ; last row break
-  jr c,STARTEJ2  ; pager abort
+  jr c,STARTC    ; pager abort
   ld hl,(DIRNUM)
   call PUTDEC    ; decimal visible count
 
