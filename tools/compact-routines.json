@@ -515,7 +515,6 @@
   "src/services.asm": [
     "SVCDSP",
     "HWERR",
-    "HWOK",
     "HWSINFO",
     "HWSDIG",
     "HWSLCD",
