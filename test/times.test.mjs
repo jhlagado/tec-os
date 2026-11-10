@@ -1,13 +1,13 @@
 // TIMES.BAS, the starter's first BASIC program: print, input, a for loop
 // and a little arithmetic, in the dialect BAZA compiles: numbered lines in
-// ascending order, in lower case outside its strings, 40 columns. BAZA builds it on TEC-OS and
-// TIMES runs on the PICO9918 at 40 columns, turns away a number outside 1 to
-// 12 and returns to the prompt. With GLCD.SVC loaded and a JP held in RST 1,
-// BAZA takes RST 1 while it compiles and gives the held JP back, TIMES runs,
-// and the GLCD is still the console. A failed compile's return code stops a
-// chained line, and a compile onto a read-only drive fails through BAZA's
-// own exit. Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs
-// (test/inputs.json).
+// ascending order, in lower case outside its strings, spaced out within 80
+// columns. BAZA builds it on TEC-OS and TIMES runs on the PICO9918 at 40
+// columns, turns away a number outside 1 to 12 and returns to the prompt.
+// With GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it
+// compiles and gives the held JP back, TIMES runs, and the GLCD is still the
+// console. A failed compile's return code stops a chained line, and a
+// compile onto a read-only drive fails through BAZA's own exit. Emulator
+// evidence. BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -85,12 +85,12 @@ function buildAndRun(m, during = () => {}) {
   return m.text(mark);
 }
 
-test("TIMES.BAS has ascending line numbers, is lower case outside its strings and fits 40 columns", () => {
+test("TIMES.BAS has ascending line numbers, is lower case outside its strings and fits 80 columns", () => {
   const lines = SOURCE.split("\n");
   assert.equal(lines.pop(), "", "ends with a newline");
   const numbers = lines.map((l) => Number(/^(\d+) \S/.exec(l)?.[1]));
   assert.ok(numbers.every((n, i) => n > 0 && (i === 0 || n > numbers[i - 1])), "numbered, ascending");
-  assert.ok(lines.every((l) => l.length <= 40), "fits 40 columns");
+  assert.ok(lines.every((l) => l.length <= 80), "fits 80 columns");
   const outside = SOURCE.replace(/"[^"\n]*"/g, '""');
   assert.equal(outside, outside.toLowerCase(), "lower case outside the strings");
   assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
