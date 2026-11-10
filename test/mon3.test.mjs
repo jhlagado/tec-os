@@ -134,7 +134,7 @@ const leave = (m, r) => {
   if (r.mon3) assert.ok(!line(m, "EXIT").mon3, "EXIT gives the CCP's prompt");
 };
 
-// KG58: the ROM's figure.
+// The ROM's size, hash and ABI against the baseline.
 
 const BASELINE = { used: 16077, cap: 171, tpa: 47268, abi: "1c687c87d5c4e25d091b9c532a630037b5ce22290e8d6e49f795e071be67a677" };
 
@@ -162,7 +162,7 @@ test("KG58 rom cap", () => {
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
 });
 
-// KG59: the switch, the identity rule and the entry contract.
+// The switch, the identity rule and the entry contract.
 
 const FORMS = ["MON3.SVC /X", "MON3.SVC /", "MON3.SVC //E", "MON3.SVC /EX", "MON3.SVC /E5"];
 
@@ -487,7 +487,7 @@ test("KG59 duplicates unchanged", async () => {
   assert.deepEqual(services(m), ["MON3 8", "MON3 8"]);
 });
 
-// KG59's ROM mutants: each is the build's ROM with one test of the /E path
+// ROM mutants: each is the build's ROM with one test of the /E path
 // taken out, and each must fail the case named.
 
 /** A machine with ROM mutant MUT on a card with FILES. */
@@ -840,7 +840,7 @@ test("KG61 baza and 0038h after", { skip: BAZA.skip || RTL.skip, timeout: 900_00
   assert.deepEqual(m.violations, []);
 });
 
-// KG61's service mutants: each is MON3.SVC built with one step changed, and
+// Service mutants of the session: each is MON3.SVC built with one step changed, and
 // each must fail the figure named.
 
 test("KG61 mutant: a session form starting with C3h is kept by the sweep after the EXPAND 1 exit", async () => {
@@ -866,7 +866,7 @@ test("KG61 mutant: without the recursion test a second session starts and the pr
   await assert.rejects(recursion(svc));
 });
 
-// KG62: LOAD and GO, what a program's return gives back, and the disk.
+// LOAD and GO, what a program's return gives back, and the disk.
 
 const pattern = (records, seed = 0) => Uint8Array.from({ length: records * 128 }, (_, i) => (i * 7 + (i >> 7) + seed) & 0xff);
 const tpaDigest = (m) => sha(Uint8Array.from(bytesAt(m, 0x100, (word(m, 6) & 0xff00) - 0x100)));
@@ -1132,7 +1132,7 @@ async function expandInView(svc) {
 }
 test("KG62 expand in view", () => expandInView());
 
-// KG62's service mutants.
+// Service mutants of LOAD, GO and the return.
 
 test("KG62 mutant: without BDOS 37 at the program's return and at EXIT, a new file takes a used block", async () => {
   const svc = await mon3Variant([
@@ -1162,7 +1162,7 @@ test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is tak
   await assert.rejects(refusedLoads(svc), /LOAD THREE\.BIN 700: \?/);
 });
 
-// KG63: MON3.SVC's size, its life over warm boot, reset and UNLOAD, and
+// MON3.SVC's size, its life over warm boot, reset and UNLOAD, and
 // TEC-OS with it installed and no session.
 
 test("KG63 size and tpa", async () => {
@@ -1267,7 +1267,7 @@ test("KG63 inactive", { timeout: 3_600_000 }, async () => {
   assert.equal(r.status, 0);
 });
 
-// KG68: what the docs say about /E and MON3.SVC, read against the build.
+// What the docs say about /E and MON3.SVC, read against the build.
 
 test("KG68 docs agree", async () => {
   const doc = (n) => readFileSync(resolve(ROOT, "docs", n), "utf8").replace(/\s+/g, " ");
