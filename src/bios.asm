@@ -91,7 +91,8 @@ SELBAD:
   ld hl,0
   ret
 
-; DRVENT for the current drive DSKCUR.
+; DRVENT for the current drive DSKCUR:
+; load it and fall into DRVENT.
 
 CURENT:
   ld a,(DSKCUR)
@@ -114,11 +115,12 @@ DRVENT:
 
 ; Map DSKTRK/DSKSEC on mounted DSKCUR.
 ; Require sector 0..63, track 0..1023
-; and block below volume length. Store
-; BLKSLOT=record AND 3 and
-; BLKOFF=record/4 before checking
-; length. Only then set 32-bit
-; SDLBA=start+block.
+; and block below volume length. The
+; block is track*16 plus sector/4, kept
+; in BC. Store BLKSLOT=sector AND 3 and
+; BLKOFF=block before checking length.
+; Only then set 32-bit SDLBA to the
+; volume's start plus the block.
 ; Success: A=0/Z/carry clear. Failure:
 ; NZ, SDLBA unchanged, mapping scratch
 ; may have changed. Change AF/BC/DE/HL.
@@ -400,6 +402,7 @@ BREAD:
 ; or 1 error and restores saved
 ; interrupt state. Change BC/DE/HL/F.
 ; A full cache pre-read also changes I.
+; Falls into BRET.
 
 BWRITE:
   call CDI

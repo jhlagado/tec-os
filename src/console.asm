@@ -32,8 +32,7 @@
 CONINIT:
   ld a,$40
   out (DIGPORT),a
-  ld a,$FF       ; the rest: zero from
-                 ; COLD's clear
+  ld a,$FF       ; no last key
   ld (KBLAST),a
   ld (KBE),a
   ld (KBD),a
@@ -92,12 +91,12 @@ CONSWN:
 
 CONSWO:
   add a,LOW(PIVEC)-1
-  ld l,a
+  ld l,a         ; 1: PIVEC, 3: GLVEC
   ld h,HIGH(PIVEC)
   ld a,(hl)
   inc hl
   ld h,(hl)
-  ld l,a
+  ld l,a         ; HL = the table
   or h
   jr z,CONSWT    ; none: TTY
 
@@ -178,9 +177,9 @@ CSTMXE:
 ; RXPOLL window. No start returns
 ; zero/Z. A received NUL restarts the
 ; window, so NUL streams can extend the
-; call indefinitely. Store other
-; seven-bit characters in RXCHAR/RXFULL
-; and return FFh/NZ.
+; call indefinitely. KBDELIV stores
+; other seven-bit characters in
+; RXCHAR/RXFULL and returns FFh/NZ.
 
 CSTSER:
 
@@ -203,7 +202,7 @@ CSTRX:
   and $7F
   ld e,RXPOLL
   jr z,CSTPOLL
-  jp KBDELIV     ; pending, A=FFh
+  jp KBDELIV     ; pending: A=FFh/NZ
 
 CSTYES:
   ld a,$FF
