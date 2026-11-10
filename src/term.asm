@@ -70,8 +70,6 @@ VTNOWR:
 
 VTCOL:
   ld (VCOL),a
-
-VTDONE:
   ret
 
 ; Control byte A=C: CR sets column 0, LF
@@ -333,7 +331,7 @@ VTN1:
   ret
 
 ; Final actions enter with ESCST=0 and
-; ESCP1/ESCP2 set, return via VTDONE.
+; ESCP1/ESCP2 set, and return by RET.
 ; They may change AF/BC/DE/HL. Cursor
 ; moves clip to screen, not the region.
 ; CSI n A: subtract VTN count from row,
