@@ -38,6 +38,14 @@ UNMI EQU $0894   ; NMI handler
 SYSMD EQU $089D  ; latch copy
 PROTM EQU $089E
 
+; The latch bits GO takes from SYS_MODE:
+; PROTECT and CAPS. EXPAND and the bank
+; would hide these pages and TEC-OS's
+; cache, and the overlay page zero.
+
+GOKEEP EQU $82
+LATSHD EQU $01   ; overlay off
+
 ; Page zero bytes a session uses.
 
 STUB EQU $0041   ; latch stub
@@ -634,6 +642,8 @@ GO2:
   ld b,a
   ld a,(PROTM)
   or b           ; PROTECT if asked
+  and GOKEEP     ; no EXPAND or bank
+  or LATSHD      ; and the overlay off
   ld (LATCH),a
   out (SYSLAT),a
   ld a,$FF
@@ -743,6 +753,8 @@ HOOK:
   im 1
   ld a,TXI
   out (SDIG),a
+  ld sp,MSTK     ; our own stack
+  call RESETD    ; vectors rebuilt
   ld hl,SAVE0
   ld de,IOBYTE
   ld bc,2
@@ -843,7 +855,11 @@ FCB0:
   cp ':'
   jr nz,FCB1     ; no drive
   ld a,(hl)
-  sub 'A'-1
+  sub 'A'
+  cp 16          ; carry: A to P
+  ccf
+  ret c          ; no such drive
+  inc a
   ld (FCB),a     ; 1 is A:
   inc hl
   inc hl
@@ -884,6 +900,7 @@ FCBF:
 
 HEXW:
   ld de,0
+  ld b,4         ; at most four digits
   ld a,(hl)
   call HEXD
   ret c          ; no digit
@@ -900,8 +917,15 @@ HEXW1:
   inc hl
   ld a,(hl)
   call HEXD
-  jr nc,HEXW1
-  or a           ; NC: a word
+  jr c,HEXW2     ; the number's end
+  djnz HEXW1
+  scf            ; a fifth digit
+  ret
+
+HEXW2:
+  ld a,(hl)
+  cp ' '+1       ; a space or the end
+  ccf            ; carry: text joined
   ret
 
 ; A hex digit's value from A. Carry if
