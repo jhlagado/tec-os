@@ -75,6 +75,24 @@ export function fixupsOf(at0, at1, skip, name) {
   return fixups;
 }
 
+/** An %INCLUDE line below a source's ORG, whose file is copied in. */
+const BELOW = /^%INCLUDE\s+"([^"]+)"\s*$/gm;
+
+/** The files SOURCE includes below its ORG, and those they include: paths. */
+export function includedFiles(source) {
+  const out = [];
+  const visit = (file, text) => {
+    for (const [, p] of text.matchAll(BELOW)) {
+      const path = onDisk(dirname(file), p);
+      out.push(path);
+      visit(path, readFileSync(path, "utf8"));
+    }
+  };
+  const text = readFileSync(source, "utf8");
+  visit(source, text.slice(Math.max(0, text.search(ORG_LINE))));
+  return out;
+}
+
 /**
  * The .SVC for SOURCE. defs: %IF names, EQUs and strings for the source; deps:
  * [{ name, version }]; raw: EQUs naming ROM addresses, for variants that break
@@ -94,8 +112,17 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   // ATOM takes %INCLUDE only in a file's header, so those above the ORG go to it
   // with their paths moved, and one below it, the font placed last, is copied in.
   const org = body.search(ORG_LINE);
-  const inside = (p) => readFileSync(onDisk(dirname(source), p), "utf8");
-  body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, onDisk(dirname(source), p))}"`) + prelude + body.slice(org).replace(/^%INCLUDE\s+"([^"]+)"\s*$/gm, (_, p) => inside(p));
+  // An included file may include others; each is held to the interface rule
+  // and takes the same %IF and string definitions as the source.
+  const inside = (p, dir) => {
+    const path = onDisk(dir, p);
+    const t = readFileSync(path, "utf8");
+    checkInterfaces(t, basename(path));
+    let b = conditions(t, defs);
+    for (const [k, v] of Object.entries(defs)) if (typeof v === "string") b = b.replaceAll(k, v);
+    return b.replace(BELOW, (_, q) => inside(q, dirname(path)));
+  };
+  body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, onDisk(dirname(source), p))}"`) + prelude + body.slice(org).replace(BELOW, (_, p) => inside(p, dirname(source)));
   writeFileSync(copy, body);
   const at0 = await assembleAt(copy, 0, work);
   const { bytes: at1, symbols } = await assembleProgram(copy, { base: 0x100 });

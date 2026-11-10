@@ -14,7 +14,7 @@ import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES } from "./lib/machine.mjs";
-import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, romMutant, runFor, runTo, services, warmTarget, word } from "./lib/mon3.mjs";
+import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -580,17 +580,7 @@ test("KG59 mutant: without SVCENT's carry test, REL.SVC /E jumps outside the ser
  * MON3.SVC built from drivers/mon3.asm with EDITS ([old, new], each found
  * once) applied to its source: a mutant or a variant, built beside the build.
  */
-const mon3Variant = memo(async (edits) => {
-  let text = readFileSync(resolve(ROOT, "drivers/mon3.asm"), "utf8");
-  for (const [old, now] of edits) {
-    assert.equal(text.split(old).length, 2, `the edit's text stands once: ${old}`);
-    text = text.replace(old, now);
-  }
-  const dir = resolve(ROOT, "build/mon3-variants", sha(JSON.stringify(edits)).slice(0, 16));
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(resolve(dir, "mon3.asm"), text.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
-  return makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc") });
-});
+const mon3Variant = memo(async (edits) => libVariant(edits));
 
 // Steps of drivers/mon3.asm that the IM and IOBYTE mutants name: the hook's IM 1,
 // and the IOBYTE's copy in the hook and in EXIT's restore.
@@ -1421,7 +1411,7 @@ test("KG68 docs agree", async () => {
   const svc = await mon3Build();
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **8 pages**`), "the size");
   assert.ok(mon3.includes("from `B9A4h` to `B100h`, and the TPA from 47,268 bytes to **45,056**"));
-  const src = readFileSync(resolve(ROOT, "drivers/mon3.asm"), "utf8");
+  const src = mon3Text();
   const equ = (n) => Number(new RegExp(`^${n} EQU \\$([0-9A-F]+)`, "m").exec(src)[1].replace(/^/, "0x"));
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`| SP | ${h4(equ("MSTK3") - 2)}, holding the return address ${h4(equ("GORET"))} |`), "GO's SP and return");
