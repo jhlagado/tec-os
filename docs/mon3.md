@@ -229,6 +229,12 @@ Where the session differs from MON-3, by design:
   10, 34 and 35 and in the digit scans of 11 and `RST 20h`, so the line stays
   idle. A scan takes 5,604 T against MON-3's 5,495, with MON-3's registers
   and flags; the tones' periods are MON-3's.
+- Each restart enters through the latch stub at 0041h, which writes the
+  latch from `LATCHV` to port FFh before the handler runs: one more write
+  to port FFh at every restart than MON-3 makes, of the value already
+  there.
+- Calls 0 and 1 return HL at their strings in the service, `MON3.1G` and
+  `2025.16`, not in MON-3's ROM. The strings are MON-3's.
 - With the matrix fitted, MON-3 and the session read the matrix, not the
   keypad.
 
