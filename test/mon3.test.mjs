@@ -958,6 +958,19 @@ test("KG62 go", async () => {
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 50_000_000, "MON3>");
   leave(m, { mon3: true });
 });
+test("KG62 operands", async () => {
+  const { m, svc } = await inSession({ "ONE.BIN": pattern(1) });
+  for (const cmd of ["LOAD ONE.BIN 14000", "LOAD ONE.BIN 04000", "LOAD ONE.BIN 4000X", "LOAD 1:ONE.BIN", "LOAD Q:ONE.BIN", "LOAD @:ONE.BIN", "GO 14000", "GO 4000X"]) {
+    assert.ok(ok(line(m, "LOAD ONE.BIN 5000")), "a good load first");
+    const before = tpaDigest(m);
+    const r = line(m, cmd);
+    assert.ok(refused(r), `${cmd}: ? (${JSON.stringify(r.out)})`);
+    assert.equal(tpaDigest(m), before, `${cmd}: nothing written in the TPA`);
+    if (cmd.startsWith("LOAD")) assert.equal(runnable(m, svc), 0, `${cmd}: nothing runnable`);
+  }
+  assert.ok(ok(line(m, "LOAD A:ONE.BIN 4000")), "A: and four digits load");
+  leave(m, { mon3: true });
+});
 const runToPc = (m, pc) => m.runUntil(() => m.pc === pc, 50_000_000, `pc ${pc.toString(16)}`);
 
 test("KG62 restoration", async () => {
@@ -989,6 +1002,37 @@ test("KG62 restoration", async () => {
   assert.equal(m.sysCtrl, m.sym("LATCLAS"), "the latch LATCLAS");
   assert.deepEqual(bytesAt(m, 0x41, 15), pz.slice(0x41, 0x50), "0041h-004Fh as before the session");
 });
+
+/**
+ * A program that sets SYS_MODE (089Dh) to EXPAND, to the overlay on, and to
+ * every bank bit, each followed by a second GO: GO writes PROTECT and CAPS
+ * from it, but never EXPAND, the bank or the overlay, so the second program
+ * starts and returns with the latch and LATCHV equal, B still SYS_MODE.
+ */
+async function sysModeAtGo(svc) {
+  // LD A,(4010h); LD (089Dh),A; RET, with the value at 4010h.
+  const prog = new Uint8Array(0x80);
+  prog.set([0x3a, 0x10, 0x40, 0x32, 0x9d, 0x08, 0xc9]);
+  const { m } = await inSession({ "SM.BIN": prog }, { svc });
+  assert.ok(ok(line(m, "LOAD SM.BIN")));
+  for (const mode of [0x05, 0x00, 0x79]) {
+    const what = `SYS_MODE ${hex2(mode)}h`;
+    m.write(0x4010, mode);
+    assert.ok(ok(line(m, "GO")), `${what}: the first GO comes back`);
+    assert.equal(m.read(0x089d), mode, `${what}: set by the program`);
+    m.mark = m.output.length;
+    m.type("GO\r");
+    m.runUntil(() => m.pc === 0x4000, 5_000_000, `${what}: the second GO reaches 4000h`);
+    assert.equal(m.cpu.cpu.b, mode, `${what}: B is SYS_MODE`);
+    assert.equal(m.sysCtrl & 0x7d, 0x01, `${what}: the overlay off, EXPAND 0 and bank 0 at 4000h`);
+    assert.equal(m.read(0x40), m.sysCtrl, `${what}: LATCHV equals the latch at 4000h`);
+    m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 5_000_000, `${what}: MON3> after the second GO`);
+    assert.equal(m.sysCtrl, m.read(0x40), `${what}: the latch equals LATCHV at MON3>`);
+    assert.equal(m.sysCtrl & 0x7d, 0x01, `${what}: and holds no EXPAND, bank or overlay`);
+  }
+  leave(m, { mon3: true });
+}
+test("KG62 sys_mode at go", () => sysModeAtGo());
 
 test("KG62 stack", async () => {
   // PUSH HL n times, POP them, RET: 63 words fill 0800h-087Dh under GO's
@@ -1026,9 +1070,11 @@ function vectorA(m) {
   return { at, bytes: bytesAt(m, at, (dsm >> 3) + 1) };
 }
 
-async function vectorExchange(svc) {
+/** A program that exchanges a used and a free byte of A's vector, then returns by RET or, with JP0, ends the session by JP 0000h. */
+async function vectorExchange(svc, jp0 = false) {
   const data = { "DATA1.DAT": pattern(128, 3), "DATA2.DAT": pattern(64, 4) };
-  const exch = bin(0x3a, 0, 0, 0x47, 0x3a, 0, 0, 0x32, 0, 0, 0x78, 0x32, 0, 0, 0xc9); // A=(x); B=A; A=(y); (x)=A; (y)=B
+  const tail = jp0 ? [0xc3, 0x00, 0x00] : [0xc9];
+  const exch = bin(0x3a, 0, 0, 0x47, 0x3a, 0, 0, 0x32, 0, 0, 0x78, 0x32, 0, 0, ...tail); // A=(x); B=A; A=(y); (x)=A; (y)=B
   const { m } = await inSession({ ...data, "EXCH.BIN": exch }, { svc });
   assert.ok(ok(line(m, "LOAD EXCH.BIN")));
   const v = vectorA(m);
@@ -1039,10 +1085,23 @@ async function vectorExchange(svc) {
   assert.deepEqual([m.read(x), m.read(y)], [0xff, 0x00]);
   for (const [o, a] of [[1, x], [5, y], [8, x], [12, y]]) [m.write(0x4000 + o, a & 0xff), m.write(0x4001 + o, a >> 8)];
   const sum = v.bytes.reduce((a, b) => a + b, 0);
-  assert.ok(ok(line(m, "GO")));
-  assert.deepEqual([m.read(x), m.read(y)], [0x00, 0xff], "the program exchanged the two bytes");
-  assert.equal(vectorA(m).bytes.reduce((a, b) => a + b, 0), sum, "the vector's sum unchanged");
-  leave(m, { mon3: true });
+  if (jp0) {
+    let swapped = false;
+    m.mark = m.output.length;
+    m.type("GO\r");
+    m.runUntil(() => {
+      if (m.pc === 0x400e) swapped = m.read(x) === 0x00 && m.read(y) === 0xff && vectorA(m).bytes.reduce((a, b) => a + b, 0) === sum;
+      return m.pc === 0x400e;
+    }, 50_000_000, "the program's JP 0000h");
+    assert.ok(swapped, "the program exchanged the two bytes, the vector's sum unchanged");
+    assert.match(toPrompt(m), /A>$/, "JP 0000h ends the session");
+    assert.equal(warmTarget(m), m.sym("WBOOTR"), "the hook is out");
+  } else {
+    assert.ok(ok(line(m, "GO")));
+    assert.deepEqual([m.read(x), m.read(y)], [0x00, 0xff], "the program exchanged the two bytes");
+    assert.equal(vectorA(m).bytes.reduce((a, b) => a + b, 0), sum, "the vector's sum unchanged");
+    leave(m, { mon3: true });
+  }
   const saved = {};
   for (const [n, seed] of [["N1.COM", 5], ["N2.COM", 6], ["N3.COM", 7]]) {
     const bytes = pattern(16, seed);
@@ -1055,6 +1114,7 @@ async function vectorExchange(svc) {
   for (const [n, bytes] of Object.entries({ ...data, ...saved })) assert.deepEqual([...a.read(n)], [...bytes], `${n} intact`);
 }
 test("KG62 vector exchange", () => vectorExchange());
+test("KG62 vector exchange, then JP 0000h", () => vectorExchange(undefined, true));
 
 /** A program at 4000h that opens B:NAME, writes its record 0 in place from 4100h, closes it if CLOSE, and returns. */
 function writer(name, close) {
@@ -1146,6 +1206,26 @@ test("KG62 mutant: forms that jump straight to the handler fetch from 8000h-BFFF
   await assert.rejects(expandInView(svc), /no fetch from 8000h-BFFFh/);
   // What the mutant ran in EXPAND 1 wrote there too: the fetch is its failure.
   EXPAND1_WRITES.splice(n);
+});
+
+test("KG62 mutant: GO writing SYS_MODE to the latch unmasked leaves EXPAND on for the next program", async () => {
+  const svc = await mon3Variant([["  and GOKEEP     ; no EXPAND or bank\n  or LATSHD      ; and the overlay off\n", ""]]);
+  const n = EXPAND1_WRITES.length;
+  await assert.rejects(sysModeAtGo(svc), /SYS_MODE 05h: /);
+  // What the mutant ran in EXPAND 1 wrote there too: the latch is its failure.
+  EXPAND1_WRITES.splice(n);
+});
+
+test("KG62 mutant: GO clearing only EXPAND from SYS_MODE lets the overlay over page zero", async () => {
+  const svc = await mon3Variant([["  and GOKEEP     ; no EXPAND or bank\n  or LATSHD      ; and the overlay off\n", "  and $FB\n"]]);
+  const n = EXPAND1_WRITES.length;
+  await assert.rejects(sysModeAtGo(svc), /SYS_MODE 00h: /);
+  EXPAND1_WRITES.splice(n);
+});
+
+test("KG62 mutant: a hook without BDOS 37 has a new file take a used block after JP 0000h", async () => {
+  const svc = await mon3Variant([["  call RESETD    ; vectors rebuilt\n", ""]]);
+  await assert.rejects(vectorExchange(svc, true), /intact|cross-link/);
 });
 
 test("KG62 mutant: without GO's BDOS 48 the hung program's reset loses the unclosed write", async () => {

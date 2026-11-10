@@ -31,7 +31,7 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 2,016 bytes of header and image in **8 pages**: the
+On the starter card it is 2,040 bytes of header and image in **8 pages**: the
 word at `0006h` goes from `B9A4h` to `B100h`, and the TPA from 47,268 bytes to
 **45,056**. The monitor, its line buffer, its FCB, its saved page zero and its
 stack are all in those pages, above anything a MON-3 program may load into.
@@ -42,7 +42,8 @@ The line is read by BDOS 10 and made upper case. Anything but these three
 prints `?`.
 
 - **`LOAD name.BIN [addr]`** loads the file at 4000h, or at the hexadecimal
-  `addr`, in whole records. CP/M keeps no byte length, so a file's last
+  `addr`, in whole records. The address has one to four digits and ends at a
+  space or the line's end, and a drive is A: to P:. Anything else prints `?`. CP/M keeps no byte length, so a file's last
   record loads whole, with its padding. The size is read first. Every byte
   must lie between 0100h and the page of `(0006h)`, and none in 0800h–08FFh,
   MON-3's stack and variables. The file must hold a record. Otherwise the
@@ -55,7 +56,10 @@ prints `?`.
   nothing written before it ran. Then it does what MON-3's `GO` does: the LCD
   cleared and `Running at: nnnn` on row 4, a beep unless `KEY_BEEP` turns it
   off, the latch written from `SYS_MODE` with `PROT_MODE`, and `KEY_BUFF` set
-  to FFh. The program starts with interrupts off and:
+  to FFh. Only the PROTECT and CAPS bits are taken: whatever a program left
+  in `SYS_MODE`, GO never sets EXPAND or a bank bit, which would hide the
+  service and TEC-OS's cache, and never lets the boot overlay over page zero.
+  The same value goes to `LATCHV`. The program starts with interrupts off and:
 
   | Register | Value |
   | --- | --- |
@@ -92,7 +96,7 @@ In a session, and only then, the service holds these bytes of page zero:
 | Bytes | In a session |
 | --- | --- |
 | 0008h–0030h, each slot | `PUSH HL`, `LD HL,handler`, `JP 0041h`, a zero |
-| 0038h | the same, if it held the default `EI; RETI`. A `JP` held there is left alone, and the session says `RST 38 held: no interrupts` |
+| 0038h | the same, if it held the default, which starts with `EI`. A `JP` held there is left alone, and the session says `RST 38 held: no interrupts` |
 | 0041h–0048h | the latch stub: the latch reloaded from `LATCHV`, so EXPAND 0 is in view before the service runs, then `JP (HL)` |
 | 0049h–004Dh | GO's return: `LD HL,` the return handler, `JR 0041h` |
 | 004Eh–004Fh | `RETN`, the default NMI handler |
@@ -100,9 +104,10 @@ In a session, and only then, the service holds these bytes of page zero:
 
 No slot starts with a `JP`, so every warm boot's sweep clears them. The RAM
 BIOS table's warm-boot entry points at the service's hook for the session.
-At a warm boot the hook puts back the IOBYTE and drive, 0038h–003Fh,
-0041h–004Fh and 0066h as they were before `/E`, sets IM 1 and idles the
-serial line. The sweep does 0008h–0037h.
+At a warm boot the hook sets IM 1, idles the serial line, resets the drives
+(BDOS 37, on the service's own stack), and puts back the IOBYTE and drive,
+0038h–003Fh, 0041h–004Fh and 0066h as they were before `/E`. The sweep does
+0008h–0037h.
 
 Entry is refused, with return code FF00h and nothing changed:
 
@@ -116,12 +121,15 @@ Entry is refused, with return code FF00h and nothing changed:
 `EXIT`, ^C at `MON3>`, a program's `RST 00h`, `JP 0000h` or BDOS 0, and a BDOS
 error all end the session at `A>` through the warm boot, with 0008h–003Fh,
 0041h–004Fh, the NMI entry, the IOBYTE and the drive as they were, and IM 1.
+Each also resets the drives, so every allocation vector is rebuilt from its
+directory at its next use, as after a program's `RET`.
 
 A program that sets EXPAND through port FFh and jumps to 0000h is the one
 exit that passes the hook: under EXPAND 1 the RAM BIOS table is not the one
 hooked. The sweep still clears the slots, so no vector is left pointing into
 the service, but the IOBYTE, IM and the NMI entry stay as the program left
-them. The hook it leaves behind only takes itself out at the next warm boot.
+them, and the drives are not reset. The hook it leaves behind only takes
+itself out at the next warm boot.
 The next `/E` takes it out first, and `UNLOAD` does too.
 
 ## Coverage in S1
@@ -158,7 +166,8 @@ high, so the serial line stays idle. The tested program is `HELLO3`
 - **The accepted disk hazard.** A MON-3 program that writes B9A4h–BFFFh, the
   BDOS entry, the allocation vectors, the workspace and the RAM BIOS table, can
   damage TEC-OS's disk tables. The protections are the flush before `GO`,
-  BDOS 37 on every return and at `EXIT`, and the latch stub. S2 adds the
+  BDOS 37 on every return, at `EXIT` and at every other way out but the
+  EXPAND one, and the latch stub. S2 adds the
   tables' checksum on return. Nothing snapshots TEC-OS's state around a
   program.
 - **EXPAND 1 is TEC-OS's cache.** The service doesn't use it, and a program
