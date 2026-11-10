@@ -16,15 +16,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
-import { check, pinned } from "./lib/inputs.mjs";
+import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const SOURCE = readFileSync(resolve(ROOT, "programs/TIMES.BAS"), "utf8");
 const LIMIT = 400_000_000;
-// TIMES.COM as the pinned BAZA compiles TIMES.BAS: 8,960 bytes. It moves
-// with BAZA.COM and BAZA.RTL, whose runtime it carries.
-const TIMES_COM = "cfd128210690ec47858d57c6b61ade7312f5c949fe2606eaf42a299a341def09";
 // A number prints with a space each side, as in Microsoft BASIC, and TAB(4)
 // and TAB(9) line up the X and the = whatever the numbers' widths.
 const TABLE = Array.from({ length: 12 }, (_, i) => `${` ${i + 1} `.padEnd(4)}X 7 `.padEnd(9) + `= ${(i + 1) * 7} `);
