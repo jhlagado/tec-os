@@ -84,7 +84,8 @@ HWSINFO:
   ld b,a
   ld de,ROMVER
   ld hl,(VWID)
-  jp HWOK
+  xor a
+  ret
 
 ; DIGIT: HL -> six segment bytes,
 ; leftmost first. First latch assumes
@@ -119,7 +120,8 @@ HWSDD:
   inc hl
   srl c
   jr nz,HWSDL
-  jp HWOK
+  xor a
+  ret
 
 ; LCD: B=row 0-3, HL -> 20 raw bytes.
 ; B>=4 returns TNEBAD before effects.
@@ -159,7 +161,8 @@ HWSLC:
   out (LCDDAT),a
   inc hl
   djnz HWSLC
-  jp HWOK
+  xor a
+  ret
 
 ; VIDEO: B=1 claims PICO, B=0 releases.
 ; Other B: TNEBAD before effects.
@@ -176,11 +179,11 @@ HWSVID:
   ld a,b
   cp 2
   ld a,TNEBAD
-  jp nc,HWERR
+  jr nc,HWERR
   ld a,(CONDEV)
   and CDTMS
   ld a,TNENODV
-  jp z,HWERR
+  jr z,HWERR
   ld a,b
   or a
   jr z,HWVREL
@@ -189,7 +192,8 @@ HWSVID:
   call z,CURHIDE
   ld a,CDCLM
   ld (VCLAIM),a
-  jp HWOK
+  xor a
+  ret
 
 ; Release PICO. Real warm boot calls
 ; PIICLR before reaching this entry.
@@ -208,13 +212,13 @@ HWSVID:
 HWVREL:
   ld a,(VCLAIM)
   or a
-  jp z,HWOK
+  ret z          ; A=0, no carry
   xor a
   ld (VCLAIM),a
   ld hl,(PIVEC)
   ld a,h
   or l
-  jp z,HWOK
+  ret z
   ld de,6        ; VREST table offset
   add hl,de
   ld a,(hl)
@@ -224,12 +228,13 @@ HWVREL:
   call VHLJP
   ld a,(CONMOD)
   cp CMCRT
-  jp nz,HWOK
+  jr nz,HWVRX
   call VTCLS
+  call VTHOME    ; cursor home
+
+HWVRX:
   xor a
-  ld (VROW),a
-  ld (VCOL),a
-  jp HWOK
+  ret
 
 ; TONE: DE half cycles, B delay units
 ; (0=256). DE=0 returns without output.
@@ -242,7 +247,7 @@ HWVREL:
 HWSTONE:
   ld a,d
   or e
-  jp z,HWOK
+  ret z          ; A=0, no carry
   ld a,TXIDLE
 
 HWSTL:
@@ -261,7 +266,8 @@ HWSTD:
   jr nz,HWSTL
   ld a,TXIDLE
   out (DIGPORT),a
-  jp HWOK
+  xor a
+  ret
 
 ; JOY: sample F7FEh, complement into B.
 ; Set result bits mean pressed inputs.
@@ -274,7 +280,8 @@ HWSJOY:
   cpl            ; the port reads 0 for
                  ; pressed
   ld b,a
-  jp HWOK
+  xor a
+  ret
 
 ; KEYS: HL -> eight output bytes.
 ; Sample FEFEh then rotate the low row
@@ -292,7 +299,8 @@ HWSKL:
   inc hl
   rlc b
   jr c,HWSKL
-  jp HWOK
+  xor a
+  ret
 
 ; PUTAT: B raw bytes at HL to row D,
 ; column E, clipped without moving the
@@ -310,14 +318,18 @@ HWSKL:
 HWSPUT:
   call VTOWN
   ld a,TNENODV
+
+HWERRJ1:
   jp nz,HWERR
   ld a,(CONMOD)
   rrca
   ld a,TNENODV
+
+HWERRJ2:
   jp nc,HWERR
   ld a,b
   or a
-  jp z,HWOK
+  ret z          ; A=0, no carry
   push bc
   push de
   push hl
@@ -332,13 +344,13 @@ HWSPUT:
   ld a,(VHGT)
   dec a
   cp d
-  jp c,HWOK
+  jr c,HWSPX
 
 HWSPL:
   ld a,(VWID)
   cp e
-  jp z,HWOK
-  jp c,HWOK
+  jr z,HWSPX
+  jr c,HWSPX
   ld a,(hl)
   push bc
   push de
@@ -352,7 +364,10 @@ HWSPL:
   inc hl
   inc e
   djnz HWSPL
-  jp HWOK
+
+HWSPX:
+  xor a
+  ret
 
 ; RTC: B=0 reads, B=1 writes seven bytes
 ; at HL: seconds, minutes, hours, date,
@@ -369,12 +384,12 @@ HWSRTC:
   ld a,b
   cp 2
   ld a,TNEBAD
-  jp nc,HWERR
+  jr nc,HWERRJ2
   push bc
   call RTCHAS
   pop bc
   ld a,TNENODV
-  jp nz,HWERR
+  jr nz,HWERRJ1
   ld a,b
   or a
   jr nz,HWSRW
@@ -410,7 +425,7 @@ HWSRV:
 RTCEND:
   xor a
   out (RTCPORT),a
-  jp HWOK
+  ret            ; A=0 from XOR A
 
 ; Probe seconds using command 81h and
 ; disable the chip. Unsigned byte <60h:
@@ -426,12 +441,9 @@ RTCHAS:
   out (RTCPORT),a
   ld a,d
   cp $60
-  jr nc,RTCNO
-  xor a
+  sbc a,a        ; below 60h: FFh
+  inc a          ; Z present, else A=1
   ret
-
-RTCNO:
-  or 1           ; nonzero A, NZ
   ret
 
 ; Write register command D with value E
@@ -507,7 +519,8 @@ RTCR1:
 
 HWSFONT:
   ld hl,FONT
-  jp HWOK
+  xor a
+  ret
 
 ; TNDRVR: B=3 (UC1), HL=eight-word
 ; table or 0 to drop. Other B: TNEBAD.

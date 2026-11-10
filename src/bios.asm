@@ -91,6 +91,11 @@ SELBAD:
   ld hl,0
   ret
 
+; DRVENT for the current drive DSKCUR.
+
+CURENT:
+  ld a,(DSKCUR)
+
 ; For valid drive A=0..MAXDRV-1, return
 ; HL=DRVTAB+8*A+6, its geometry byte. No
 ; bounds check occurs here. Preserve BC.
@@ -135,57 +140,45 @@ MAPREC:
   add hl,hl
   add hl,hl
   add hl,hl
-  add hl,hl
-  add hl,hl
   ld a,(DSKSEC)
-  or l
-  ld l,a
-  and 3
+  ld e,a
+  and 3          ; record in the block
   ld (BLKSLOT),a
-  srl h
-  rr l
-  srl h
-  rr l
+  xor e          ; sector less its slot
+  rrca
+  rrca           ; sector/4
+  or l           ; with track*16
+  ld l,a
 
   ld (BLKOFF),hl
-  ld a,(DSKCUR)
-  call DRVENT
+  ld b,h
+  ld c,l         ; BC=block number
+  call CURENT
   dec hl
   ld d,(hl)
   dec hl
-  ld e,(hl)
-  push hl
-  ld hl,(BLKOFF)
-  or a
-  sbc hl,de
-  pop hl
+  ld e,(hl)      ; DE=volume length
+  ld a,c
+  sub e
+  ld a,b
+  sbc a,d        ; block below it?
   jr nc,MAPBAD
   dec hl
-  ld de,SDLBA+3
-
-  ld bc,(BLKOFF)
+  ld d,(hl)
+  dec hl
+  ld e,(hl)      ; DE=start, high word
+  dec hl
   ld a,(hl)
   dec hl
-  ld (de),a
-  dec de
-  ld a,(hl)
-  dec hl
-  ld (de),a
-  dec de
-  ld a,(hl)
-  dec hl
-  ld (de),a
-  dec de
-  ld a,(hl)
-  ld (de),a
-  ld hl,(SDLBA)
+  ld l,(hl)
+  ld h,a         ; HL=start, low word
   add hl,bc
   ld (SDLBA),hl
+  jr nc,MAPLBA
+  inc de
 
-  ld hl,(SDLBA+2)
-  ld bc,0
-  adc hl,bc
-  ld (SDLBA+2),hl
+MAPLBA:
+  ld (SDLBA+2),de
   xor a
   ret
 
@@ -212,20 +205,6 @@ GETKEY:
   xor a
   ret
 
-; Read 128 bytes into DSKDMA through the
-; cache after successful MAPREC. CDI
-; disables interrupts, BRET restores the
-; saved state and returns A=0 success or
-; 1 error. DMA is needed only through
-; this call. Change BC/DE/HL and flags.
-; A full cache fill also changes I.
-
-BREAD:
-  call CDI
-  call MAPREC
-  call z,CREAD
-  jp BRET
-
 ; Refuse before record/cache output.
 ; Return A=1 with incoming NZ from
 ; mapping or the read-only test. CWTYPE
@@ -235,28 +214,6 @@ BREAD:
 DSKERR:
   ld a,1
   ret
-
-; Write 128 bytes from DSKDMA through
-; CWRBH. C=0 data, 1 directory, 2 new
-; allocation block's first record. Save
-; CWTYPE before validation. Type 2 or
-; the exact no-pre-read key permits
-; zero-fill. Otherwise retain/read
-; neighbouring bytes.
-; Write-through success includes card
-; output. Write-behind may defer it to
-; directory writes, warm boot, remount
-; or eviction. BRET returns A=0 success
-; or 1 error and restores saved
-; interrupt state. Change BC/DE/HL/F.
-; A full cache pre-read also changes I.
-
-BWRITE:
-  call CDI
-  ld a,c
-  ld (CWTYPE),a
-  call BWR0
-  jp BRET
 
 ; Preserve incoming BC across MAPREC.
 ; Mapping/read-only refusal precedes
@@ -272,8 +229,7 @@ BWR0:
   call MAPREC
   pop bc
   jr nz,DSKERR
-  ld a,(DSKCUR)
-  call DRVENT
+  call CURENT
   inc hl
   bit 0,(hl)
   jr nz,DSKERR
@@ -284,7 +240,7 @@ BWR0:
   ld a,64
 
 BWDN:
-  srl a
+  rrca           ; ids 1,2: no wrap
   djnz BWDN
   ld bc,(BLKOFF)
   inc b
@@ -356,7 +312,7 @@ BWND:
   ld a,16
 
 BWMASK:
-  srl a
+  rrca
   djnz BWMASK
   dec a
   ld hl,(BLKOFF)
@@ -378,13 +334,14 @@ BWNEW:
 ; Tail-enter the common CWRBH path.
 
 BWGET:
-  ld a,(DSKCUR)
-  call DRVENT
+  call CURENT
   inc hl
   bit 1,(hl)
-  jp nz,CWRBH
+  jr nz,BWGO
   ld hl,CWTYPE
   set 7,(hl)
+
+BWGO:
   jp CWRBH
 
 ; Return IFF2 in P/V through LD A,I. On
@@ -414,6 +371,41 @@ CDI:
   pop hl
   ld (CIFF),hl
   ret
+
+; Read 128 bytes into DSKDMA through the
+; cache after successful MAPREC. CDI
+; disables interrupts, BRET restores the
+; saved state and returns A=0 success or
+; 1 error. DMA is needed only through
+; this call. Change BC/DE/HL and flags.
+; A full cache fill also changes I.
+
+BREAD:
+  call CDI
+  call MAPREC
+  call z,CREAD
+  jr BRET
+
+; Write 128 bytes from DSKDMA through
+; CWRBH. C=0 data, 1 directory, 2 new
+; allocation block's first record. Save
+; CWTYPE before validation. Type 2 or
+; the exact no-pre-read key permits
+; zero-fill. Otherwise retain/read
+; neighbouring bytes.
+; Write-through success includes card
+; output. Write-behind may defer it to
+; directory writes, warm boot, remount
+; or eviction. BRET returns A=0 success
+; or 1 error and restores saved
+; interrupt state. Change BC/DE/HL/F.
+; A full cache pre-read also changes I.
+
+BWRITE:
+  call CDI
+  ld a,c
+  ld (CWTYPE),a
+  call BWR0
 
 ; BRET maps incoming Z to A=0, NZ to 1,
 ; then enters CEI. CEI restores the

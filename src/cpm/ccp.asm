@@ -221,6 +221,8 @@ MLTAKE:
   jr z,MLTKC     ; FFFFh: permit
   xor a          ; failed colon: discard
   ld (CHPOS),a
+
+STARTEJ1:
   jp STARTED
 
 MLTKC:
@@ -260,10 +262,9 @@ MLTK3:
   ld hl,(ARGSTRT)
   call SKIPSP    ; skip command spaces
   or a
-  jp z,STARTED   ; empty colon piece
-  cp 'A'
-  jr c,NOTDRIVE
-  cp 'P'+1
+  jr z,STARTEJ1  ; empty colon piece
+  sub 'A'
+  cp 16          ; A..P?
   jr nc,NOTDRIVE
   ld b,a         ; possible drive letter
   inc hl
@@ -273,18 +274,16 @@ MLTK3:
   jr nz,NOTDRIVE
   inc hl
   call SKIPSP    ; drive-only suffix
-  ld a,(hl)
   or a
 
   jr nz,NOTDRIVE
   ld a,b
-  sub 'A'        ; A..P -> 0..15
   ld (BOOTDRV),a
   ld e,a
   ld c,14        ; 14: select drive
   call BDOS
   call SAVEDU    ; save selected drive
-  jp STARTED
+  jr STARTEJ1
 
 ; Find a nonempty chain piece. CHSKIP
 ; with CHPOS=0 returns A=0/Z and leaves
@@ -455,10 +454,8 @@ SVCOK:
 ; controls each drive's user-0 retry.
 
 CMDCOM:
-  ld a,'C'
-  ld (CMDFCB+9),a
-  ld a,'O'
-  ld (CMDFCB+10),a
+  ld hl,'O'*256+'C'
+  ld (CMDFCB+9),hl
   ld a,'M'
 
   ld (CMDFCB+11),a
@@ -696,10 +693,6 @@ LOADLIM:
   ld de,LOADBUF  ; probe in LOADBUF
   call READSRC
   pop hl
-  cp 1
-  jr z,LOADOK    ; EOF: exact fit
-  scf            ; extra record/error
-  ret
 
 ; Classify a nonzero read result before
 ; the ceiling: code 1 enters LOADOK,

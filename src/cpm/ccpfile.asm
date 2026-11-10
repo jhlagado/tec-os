@@ -43,30 +43,22 @@ DIRWILD:
 ; 17. Pass result A to DIRLOOP.
 
 DIRREADY:
-  ld de,LOADBUF  ; public search DMA
-  ld c,26        ; 26: LOADBUF
-  call BDOS
+  call SETLB
   xor a
   ld (DIRCOL),a  ; no row yet
   ld h,a
   ld l,a
 
   ld (DIRNUM),hl
-  ld a,(VWID)    ; active console width
-  or a           ; zero: serial fallback
-  jr nz,DIRWID
-  ld a,80        ; serial width 80
+  call PGINIT    ; A=the paging width
 
 DIRWID:
-  ld b,0         ; columns that fit
+  ld b,$FF       ; columns that fit
 
 DIRWDIV:
-  sub 13         ; 12 plus separator
-  jr c,DIRWSET   ; no further column
   inc b
-  jr DIRWDIV
-
-DIRWSET:
+  sub 13         ; 12 plus separator
+  jr nc,DIRWDIV
   ld a,b
   or a           ; width below 13
   jr nz,DIRWOK
@@ -75,7 +67,6 @@ DIRWSET:
 DIRWOK:
 
   ld (DIRNCOL),a
-  call PGINIT    ; initialise pager
   call DOSSEQ    ; first public match
   DB 17*2+0      ; 17: CMDFCB
 
@@ -92,15 +83,13 @@ DIRWOK:
 
 DIRLOOP:
   inc a          ; FFh: search ended
-  jp z,DIRDONE
+  jr z,DIRDONE
   dec a
-  ld l,a         ; slot 0..3
+  rrca
+  rrca
+  rrca           ; slot*32
+  ld l,a
   ld h,0
-  add hl,hl      ; slot *32
-  add hl,hl
-  add hl,hl
-  add hl,hl
-  add hl,hl
   ld de,LOADBUF  ; DMA record base
   add hl,de
   push hl        ; keep entry base
@@ -133,6 +122,8 @@ DIRHEAD:
   or l
   jr z,DIRNAME   ; first row: no newline
   call PGCRLF    ; pager row break
+
+STARTEJ2:
   jp c,STARTED   ; abort abandons word
 
 ; Print the saved entry and increment
@@ -192,7 +183,7 @@ DIRPADC:
 DIRNEXT:
   call DOSSEQ    ; public continuation
   DB 18*2+0      ; 18: CMDFCB
-  jp DIRLOOP
+  jr DIRLOOP
 
 ; Finish DIR: zero visible DIRNUM enters
 ; FILENO, including an all-hidden
@@ -219,7 +210,7 @@ DIRDONE:
 ; need not.
 
   call PGCRLF    ; last row break
-  jp c,STARTED   ; pager abort
+  jr c,STARTEJ2  ; pager abort
   ld hl,(DIRNUM)
   call PUTDEC    ; decimal visible count
 
@@ -273,12 +264,11 @@ DIRFK:
 ; PGWID=width. Zero VHGT defaults to 24.
 ; Zero VWID to 80 independently. Active
 ; video requires supported geometry.
-; Changes AF.
+; Returns A=PGWID. Changes AF/HL.
 
 PGINIT:
-  xor a
-  ld (PGLINE),a  ; zero line count
-  ld (PGCOL),a   ; zero column
+  ld hl,0        ; PGLINE and PGCOL
+  ld (PGLINE),hl
   ld a,(VHGT)    ; active video height
   or a
   jr nz,PGIH
@@ -523,9 +513,7 @@ CMDTYPE:
   DB 15*2+0      ; 15: CMDFCB
   inc a
   jr z,FILENO    ; FFh open: NO FILE
-  ld de,LOADBUF  ; record DMA buffer
-  ld c,26        ; 26: LOADBUF
-  call BDOS
+  call SETLB
   call PGINIT    ; pager initial state
 
 ; Read CMDFCB's next record through BDOS

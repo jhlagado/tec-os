@@ -10,7 +10,7 @@
 FNLOGIN:
 
   ld hl,(LOGINV)
-  jp RETWORD
+  jr RETWORJ1
 
 ; Function 25: return logical default
 ; DEFDRV (0=A) through RETA: A=L, H=B=0.
@@ -32,12 +32,12 @@ FNCURDSK:
 ; SETDMA clobbers.
 
 FNSETDMA:
-  ld hl,(PARAM)  ; saved caller DE
+  ex de,hl       ; DE: the address
   ld (CURDMA),hl
   ld b,h         ; BIOS BC argument
   ld c,l
   call BIODMA    ; RAM SETDMA hook
-  jp RETZERO
+  jr RETZERJ1
 
 ; Function 27: return DEFALV in HL with
 ; A=L/B=H without rebinding the drive or
@@ -48,6 +48,8 @@ FNSETDMA:
 FNGETALV:
 
   ld hl,(DEFALV)
+
+RETWORJ1:
   jp RETWORD
 
 ; Function 46: select drive E=0..15
@@ -115,7 +117,7 @@ FRSH:
   ld (hl),d      ; middle byte
   inc hl
   ld (hl),a      ; high byte
-  jp RETZERO
+  jr RETZERJ1
 
 ; Function 28: OR the DEFDRV bit into
 ; ROVEC and return A=0. Functions 13/37
@@ -127,15 +129,9 @@ FNWRPROT:
   ld a,(DEFDRV)  ; logical default drive
   call MASKA     ; HL=drive mask
   ex de,hl
-  ld hl,(ROVEC)  ; existing protection
-  ld a,l
-  or e           ; A..H bits
-  ld l,a
-  ld a,h
-  or d           ; I..P bits
-  ld h,a
-  ld (ROVEC),hl
-  jp RETZERO
+  ld hl,ROVEC
+  call VSETDE
+  jr RETZERJ1
 
 ; Function 29: return ROVEC in HL with
 ; A=L/B=H, bit 0 for A. Includes
@@ -144,7 +140,7 @@ FNWRPROT:
 
 FNGETRO:
   ld hl,(ROVEC)  ; software/mount flags
-  jp RETWORD
+  jr RETWORJ1
 
 ; Function 31: return DEFDPB in HL with
 ; A=L/B=H. Default selection retains
@@ -155,7 +151,7 @@ FNGETRO:
 FNGETDPB:
 
   ld hl,(DEFDPB)
-  jp RETWORD
+  jr RETWORJ1
 
 ; Function 32: E=FFh queries through
 ; GETUSER. Otherwise set USERNO=E&1Fh
@@ -164,11 +160,13 @@ FNGETDPB:
 ; AF/B/HL.
 
 FNUSER:
-  ld a,(PARAM)   ; saved caller E
+  ld a,e
   cp $FF         ; FFh query
   jr z,GETUSER
   and $1F        ; five-bit user
   ld (USERNO),a
+
+RETZERJ1:
   jp RETZERO
 
 ; Return USERNO (0..31) through RETA in
@@ -176,6 +174,8 @@ FNUSER:
 
 GETUSER:
   ld a,(USERNO)
+
+RETAJ4:
   jp RETA
 
 ; Function 35: find the largest logical
@@ -195,20 +195,16 @@ GETUSER:
 ; may change.
 
 FNSIZE:
-  ld hl,(PARAM)
-
-  ld (SRCHFCB),hl
-  ld a,2         ; mode 2: all extents
-  ld (OPENMOD),a
   xor a
   ld (FSIZE0),a  ; zero maximum
   ld (FSIZE1),a
   ld (FSIZE2),a
-  call NEWSRCH
+  ld a,2         ; mode 2: all extents
+  call SRCHA
 
 SIZELOOP:
   call FINDENT
-  cp $FF         ; FFh: no next extent
+  inc a
   jr z,SIZEDONE
 
   ld hl,(MATCHPTR)
@@ -216,34 +212,22 @@ SIZELOOP:
   ld hl,(MATCHPTR)
   ld de,15
   add hl,de
-  ld e,(hl)      ; unsigned entry RC
-  ld d,0
-  ld hl,(CAND0)  ; CAND += RC
-  add hl,de
-  ld (CAND0),hl
-  ld a,(CAND2)
-  adc a,0        ; 24-bit carry
-  ld (CAND2),a
+  ld e,(hl)
+  call ADDCAND
 
-  ld b,a         ; compare high to low
-  ld a,(FSIZE2)
-  cp b
-  jr c,SIZEKEEP  ; larger end: keep it
+  ld hl,FSIZE2
+  ld de,CAND2
+  ld b,3
 
-  jr nz,SIZELOOP
-  ld a,(CAND1)   ; high equal: middle
-  ld b,a
-  ld a,(FSIZE1)
-  cp b
-  jr c,SIZEKEEP  ; larger end
-
-  jr nz,SIZELOOP
-  ld a,(CAND0)   ; middle equal: low
-  ld b,a
-  ld a,(FSIZE0)
-  cp b
-
-  jr nc,SIZELOOP
+SIZECP:
+  ld a,(de)      ; candidate, high first
+  cp (hl)
+  jr c,SIZELOOP  ; smaller
+  jr nz,SIZEKEEP
+  dec hl
+  dec de
+  djnz SIZECP
+  jr SIZELOOP    ; equal
 
 SIZEKEEP:
   ld hl,(CAND0)  ; low/middle as word
@@ -263,7 +247,7 @@ SIZEDONE:
   ld de,FSIZE0
   call PUBRR     ; size -> FCB r0..r2
   ld a,$FF
-  jp RETA
+  jr RETAJ4
 
 ; Function 36: convert sequential
 ; position in the FCB at (PARAM) to
@@ -275,20 +259,14 @@ SIZEDONE:
 ; register may change.
 
 FNSETRR:
-  ld hl,(PARAM)
+  ex de,hl       ; DE: the FCB
   call RECBASE   ; CAND=extent base
   call FCBCR     ; caller next-record CR
-  ld e,(hl)      ; unsigned CR
-  ld d,0
-  ld hl,(CAND0)  ; CAND += CR
-  add hl,de
-  ld (CAND0),hl
-  ld a,(CAND2)
-  adc a,0        ; 24-bit carry
-  ld (CAND2),a
+  ld e,(hl)
+  call ADDCAND
   ld de,CAND0
   call PUBRR     ; position -> r0..r2
-  jp RETZERO
+  jr RETZERJ1
 
 ; Copy three low-first bytes from DE to
 ; caller FCB bytes 33..35 at (PARAM).
@@ -343,6 +321,19 @@ RECBSHFT:
   ld (CAND2),a
   ret
 
+; Add E to the 24-bit CAND0..CAND2.
+; Changes AF/D/HL.
+
+ADDCAND:
+  ld d,0
+  ld hl,(CAND0)
+  add hl,de
+  ld (CAND0),hl
+  ld a,(CAND2)
+  adc a,0
+  ld (CAND2),a
+  ret
+
 ; Function 37: DE is a drive mask, bit
 ; 0=A. Clear selected LOGINV/ROVEC/WARMV
 ; bits through ANDV. The next bind
@@ -351,7 +342,6 @@ RECBSHFT:
 ; Return A=0. Changes AF/BC/DE/HL.
 
 FNRESETD:
-  ld de,(PARAM)
   ld a,e         ; complement drive mask
   cpl            ; bits for kept drives
   ld c,a
@@ -365,6 +355,15 @@ FNRESETD:
   ld hl,WARMV
   call ANDV      ; clear bounded rebuild
   jp RETZERO
+
+; Start a search in mode A on the FCB at
+; (PARAM): set OPENMOD and SRCHFCB, then
+; fall into NEWSRCH. Changes as NEWSRCH.
+
+SRCHA:
+  ld (OPENMOD),a
+  ld hl,(PARAM)
+  ld (SRCHFCB),hl
 
 ; Restart directory iteration on DPBPTR:
 ; clear SRCHIDX, call RAM BIOHOM, set
@@ -425,22 +424,18 @@ FINDLIM:
   or a
   sbc hl,de      ; index against limit
   jp nc,NOENTRY  ; at/past exclusive end
-  ld hl,(SRCHIDX)
-  ld a,l
+  ld a,(SRCHIDX)
   and 3
 
   call z,READDIR
 
-  ld hl,(SRCHIDX)
-  ld a,l
+  ld a,(SRCHIDX)
   and 3          ; slot 0..3
 
   ld (RETCODE),a
-  add a,a        ; slot *32
-  add a,a
-  add a,a
-  add a,a
-  add a,a        ; byte offset in record
+  rrca
+  rrca
+  rrca           ; slot*32
   ld e,a
   ld d,0
   ld hl,(DIRPTR)
@@ -448,13 +443,11 @@ FINDLIM:
 
   ld (MATCHPTR),hl
   call MATCHFCB  ; A result, not flags
-  or a           ; normalize match flags
-  jr nz,FOUNDIT  ; NZ: A=1
   ld hl,(SRCHIDX)
   inc hl
-
   ld (SRCHIDX),hl
-  jr FINDENT
+  or a
+  jr z,FINDENT   ; no match: next
 
 ; Advance SRCHIDX after a match. Modes
 ; 0/5 copy the whole 128-byte record at
@@ -465,10 +458,6 @@ FINDLIM:
 ; record. Registers may change.
 
 FOUNDIT:
-  ld hl,(SRCHIDX)
-  inc hl
-
-  ld (SRCHIDX),hl
   ld a,(OPENMOD)
   or a
   jr z,COPYDIR   ; normal search copy
@@ -480,8 +469,7 @@ COPYDIR:
   ld de,(CURDMA)
   ld bc,128      ; whole DMA record
   ldir           ; DIRPTR -> CURDMA
-  ld a,(RETCODE)
-  ret
+  jr NOCOPY
 
 ; Import an open entry. Input A=OPENMOD:
 ; mode 1 copies entry bytes 1..31 into
@@ -523,15 +511,12 @@ OPENHIT:
   ld (hl),a      ; normalized caller EX
   cp c
   jr z,OPENRC    ; same: retain RC
-  ld b,$80       ; earlier: full 128
-  jr c,OPENSET
-  ld b,0         ; later: zero records
-
-OPENSET:
+  ld a,0
+  rra            ; carry: 80h
   inc hl
   inc hl
   inc hl
-  ld (hl),b      ; caller RC byte 15
+  ld (hl),a
   dec hl
   dec hl
   dec hl         ; back to EX
@@ -539,19 +524,13 @@ OPENSET:
 OPENRC:
   inc hl
   inc hl
-  ld a,(hl)      ; caller S2 byte 14
-  or $80         ; unmodified marker
-  ld (hl),a      ; only caller FCB
+  set 7,(hl)
 
-  ld a,(RETCODE)
-  ret
 
-; Modes 2..4: return RETCODE (slot 0..3)
-; in A without copying entry or record.
-; This tail changes A only.
+; Modes 2..4 enter here: return RETCODE
+; (slot 0..3) in A, nothing copied.
 
 NOCOPY:
-
   ld a,(RETCODE)
   ret
 
@@ -604,9 +583,7 @@ MATCHFCB:
 
 MATCHUSR:
   ld a,(USERNO)
-  ld b,a         ; current user number
-  ld a,(hl)
-  cp b           ; exclude other/free
+  cp (hl)
   jr nz,NOMATCH
   inc hl         ; name/type byte 1
   ld de,(SRCHFCB)

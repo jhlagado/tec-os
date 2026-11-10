@@ -114,7 +114,7 @@ WRNEXT:
 ; SELFAIL/BDERR nonlocally.
 
 FNSEL:
-  ld a,(PARAM)
+  ld a,e
   call SELDRV    ; bind before publish
 
 ; Publish CURDRV/DPBPTR/ALVPTR as
@@ -152,10 +152,12 @@ SELDRV:
   cp b           ; compare bound drive
   ld a,b
   ld (CURDRV),a  ; LD keeps compare F
-  jp nz,LOGIN
+  jr nz,LOGINJ1
   call LOGTEST   ; same drive: login bit
   ret nz         ; NZ: tables still
                  ; bound
+
+LOGINJ1:
   jp LOGIN
 
 ; Resolve the FCB drive at (PARAM)
@@ -211,7 +213,7 @@ FNOPEN:
 
 FNCLSE:
   call CLOSEFCB
-  jp RETA
+  jr RETAJ1
 
 ; Close the FCB at (PARAM) on the
 ; current drive. If S2 bit 7 is set,
@@ -292,12 +294,8 @@ CLOSECP:
 ; may change.
 
 FINDEXCT:
-  ld hl,(PARAM)
-  ld (SRCHFCB),hl
   ld a,4         ; mode 4: close lookup
-
-  ld (OPENMOD),a
-  call NEWSRCH
+  call SRCHA
   jp FINDENT
 
 ; Function 17: start search at the FCB
@@ -310,7 +308,7 @@ FINDEXCT:
 ; record at CURDMA or FFh on exhaustion.
 
 FNSRCHF:
-  ld hl,(PARAM)
+  ex de,hl       ; DE: the FCB
   ld a,(hl)
   cp '?'         ; drive ?: raw mode
   ld a,5
@@ -329,12 +327,10 @@ FNSRCHF:
 ; Mode 1 imports open fields.
 
 SETSRCH:
-  ld hl,(PARAM)
-  ld (SRCHFCB),hl
-
-  ld (OPENMOD),a
-  call NEWSRCH
+  call SRCHA
   call FINDENT
+
+RETAJ1:
   jp RETA        ; slot or FFh
 
 ; Function 18: continue the saved search
@@ -344,7 +340,7 @@ SETSRCH:
 
 FNSRCHN:
   call FINDENT
-  jp RETA
+  jr RETAJ1
 
 ; Reject read-only drive/file access.
 ; ROFCB checks CHKRO (error 2), then the
@@ -381,18 +377,14 @@ ROTEST:
 
 FNDELETE:
   call CHKRO     ; drive gate
-  ld hl,(PARAM)  ; caller match pattern
-
-  ld (SRCHFCB),hl
   ld a,2         ; mode 2: all extents
-  ld (OPENMOD),a
-  call NEWSRCH
+  call SRCHA
   xor a          ; no completed writes
   ld (WRTYPE),a
 
 DELLOOP:
   call FINDENT
-  cp $FF
+  inc a
   jr z,DELDONE   ; scan exhausted
 
   ld hl,(MATCHPTR)
@@ -419,11 +411,9 @@ DELLOOP:
 
 DELDONE:
   ld a,(WRTYPE)
-  or a           ; Z: no completed entry
-  ld a,$FF
-  jp z,RETA      ; FFh: none changed
-  xor a
-  jp RETA
+  sub 1          ; none: carry
+  sbc a,a        ; FFh none, 0 done
+  jr RETAJ1
 
 ; Function 22: reject a read-only drive,
 ; clear caller S2, keep EX and call
@@ -441,7 +431,7 @@ FNMAKE:
   inc hl
   ld (hl),0      ; S2 clear even if full
   call MAKEFCB
-  jp RETA
+  jr RETAJ1
 
 ; Allocate an empty directory slot for
 ; the FCB at (PARAM) on the current
@@ -457,12 +447,8 @@ FNMAKE:
 ; register may change.
 
 MAKEFCB:
-  ld hl,(PARAM)
-
-  ld (SRCHFCB),hl
   ld a,3         ; mode 3: free slot
-  ld (OPENMOD),a
-  call NEWSRCH
+  call SRCHA
   call FINDENT
   cp $FF
   ret z          ; FFh, FCB unchanged
@@ -507,9 +493,7 @@ MAKECOPY:
 
   ld de,14       ; caller S2 offset
   call FCBOFF    ; caller FCB, not entry
-  ld a,(hl)
-  or $80         ; mark unmodified
-  ld (hl),a
+  set 7,(hl)
 
   ld hl,(SRCHIDX)
 
@@ -593,18 +577,14 @@ FNRENAME:
 MUTALL:
 
   ld (COPYPTR),hl
-  ld hl,(PARAM)
-
-  ld (SRCHFCB),hl
-  ld a,2
-  ld (OPENMOD),a
   xor a          ; no completed writes
   ld (WRTYPE),a
-  call NEWSRCH
+  ld a,2         ; mode 2: all extents
+  call SRCHA
 
 MUTLOOP:
   call FINDENT
-  cp $FF
+  inc a
   jp z,DELDONE   ; scan exhausted
 
   ld a,(COPYPTR)

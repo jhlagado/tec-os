@@ -19,8 +19,9 @@
 
 ; Cold setup requires cleared workspace
 ; and disabled maskable interrupts. Set
-; TX idle high. Clear RXFULL/CONDEV,
-; VATTR/VCURV, ESCST/CONMOD and KBBASE.
+; TX idle high. RXFULL, VATTR/VCURV,
+; ESCST/CONMOD and KBBASE keep the zero
+; of that cleared workspace.
 ; Initialise last-key bytes to FFh and
 ; row mask FEh. Take matrix enable from
 ; CDMTX and tail-enter VIDINIT. Geometry
@@ -31,15 +32,8 @@
 CONINIT:
   ld a,$40
   out (DIGPORT),a
-  xor a
-  ld (RXFULL),a
-  ld (CONDEV),a
-  ld (VATTR),a
-  ld (VCURV),a
-  ld (ESCST),a
-  ld (CONMOD),a
-  ld (KBBASE),a
-  dec a
+  ld a,$FF       ; the rest: zero from
+                 ; COLD's clear
   ld (KBLAST),a
   ld (KBE),a
   ld (KBD),a
@@ -83,20 +77,7 @@ CONSW:
   ld b,a
   rrca
   ld a,b
-  jr nc,CONSW2
-
-  add a,LOW(PIVEC)-1
-  ld l,a
-  ld h,HIGH(PIVEC)
-  ld a,(hl)
-  inc hl
-  ld h,(hl)
-  ld l,a
-  or h
-  jr nz,CONSWV
-  jr CONSWT
-
-CONSW2:
+  jr c,CONSWO    ; CRT/UC1: a table?
   cp CMBAT
   jr z,CONSWN
 
@@ -108,6 +89,17 @@ CONSWN:
   ld hl,0
   ld (VWID),hl
   ret
+
+CONSWO:
+  add a,LOW(PIVEC)-1
+  ld l,a
+  ld h,HIGH(PIVEC)
+  ld a,(hl)
+  inc hl
+  ld h,(hl)
+  ld l,a
+  or h
+  jr z,CONSWT    ; none: TTY
 
 ; Copy seven vector words VPUTV..VFNV
 ; and geometry. Reset region and publish
@@ -211,9 +203,7 @@ CSTRX:
   and $7F
   ld e,RXPOLL
   jr z,CSTPOLL
-  ld (RXCHAR),a
-  ld a,$FF
-  ld (RXFULL),a
+  jp KBDELIV     ; pending, A=FFh
 
 CSTYES:
   ld a,$FF
@@ -424,7 +414,7 @@ PUTCRLF:
 
 PUTA:
   ld c,a
-  jp BCONOUT
+  jr BCONOUT
 
 ; PUTHEX prints A as two uppercase hex
 ; digits through PUTA. HEXHL takes A and
@@ -479,7 +469,7 @@ BLISTST:
 
 BPUNCH:
   ld a,c
-  jp TXBYTE
+  jr TXBYTE
 
 BREADER:
 

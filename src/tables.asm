@@ -144,3 +144,36 @@ STFCB: DB 1,"STARTUP CMD"
 ; and stores the remaining room.
 
 SVCLIM: DB 8,12,6
+
+; CSI final bytes and their handlers,
+; VTPFIN's.
+
+VTFTAB: DB 'A'
+  DW VTUP
+  DB 'B'
+  DW VTDOWN
+  DB 'C'
+  DW VTRIGHT
+  DB 'D'
+  DW VTLEFT
+  DB 'H'
+  DW VTPOS
+  DB 'f'
+  DW VTPOS
+  DB 'J'
+  DW VTED
+  DB 'K'
+  DW VTEL
+  DB 'm'
+  DW VTSGR
+  DB '@'
+  DW VTICH
+  DB 'P'
+  DW VTDCH
+  DB 'L'
+  DW VTIL
+  DB 'M'
+  DW VTDL
+  DB 'r'
+  DW VTREG
+VTFCNT EQU ($-VTFTAB)/3

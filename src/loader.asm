@@ -320,7 +320,8 @@ SVCMC:
   ld c,a         ; the claims left
   ld a,(hl)
   cp $C3         ; JP already installed
-  jp z,SLFAIL
+  scf
+  ret z          ; as SLFAIL
   ld a,c
 
 SVCMN:

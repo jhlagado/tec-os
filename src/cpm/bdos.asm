@@ -90,6 +90,8 @@ FNCH2:
   ldir
   ld a,1         ; start chained pieces
   ld (CHPOS),a
+
+BIOWBTJ1:
   jp BIOWBT      ; RAM warm-boot hook
 
 ; Discard the chained remainder by
@@ -100,7 +102,7 @@ FNCH2:
 CHDROP:
   xor a
   ld (CHPOS),a
-  jp BIOWBT
+  jr BIOWBTJ1
 
 ; BDOS entry: CALL 0005h with C=function
 ; and DE=parameter. Save SP in OLDSP and
@@ -125,7 +127,7 @@ BENTRY:
   cp 108         ; direct dispatch cases
   jr z,FNRETC    ; 108: return-code slot
   cp 47
-  jp z,FNCHAIN   ; 47: chain
+  jr z,FNCHAIN   ; 47: chain
   cp 44
   jr z,FNMULT    ; 44: count 1 only
   cp 45
@@ -212,7 +214,7 @@ RETWORD:
 ; This entry does not clear CHPOS.
 
 FNZERO:
-  jp BIOWBT      ; RAM warm-boot hook
+  jr BIOWBTJ1    ; RAM warm-boot hook
 
 ; Function 45: set ERRMODE from E and
 ; return A=0. Warm boot resets it to 0.
@@ -284,8 +286,7 @@ FNCIN:
 ; input. Return zero.
 
 FNCOUT:
-  ld a,(PARAM)   ; E: output byte
-  ld c,a
+  ld c,e         ; E: output byte
   call OUTCHAR
   jr RETZERO
 
@@ -300,8 +301,7 @@ FNREAD:
 ; BIOPUN. Return zero.
 
 FNPUNCH:
-  ld a,(PARAM)   ; E: output byte
-  ld c,a
+  ld c,e         ; E: output byte
   call BIOPUN
   jr RETZERO
 
@@ -309,10 +309,9 @@ FNPUNCH:
 ; BIOLST. Return zero.
 
 FNLIST:
-  ld a,(PARAM)   ; E: output byte
-  ld c,a
+  ld c,e         ; E: output byte
   call BIOLST
-  jp RETZERO
+  jr RETZERO
 
 ; Function 6: E=FFh checks CONSTAT.
 ; Return zero if none is ready,
@@ -322,14 +321,14 @@ FNLIST:
 ; contract. Other E values enter DIROUT.
 
 FNDIRECT:
-  ld a,(PARAM)   ; E selects mode
-  cp $FF         ; FFh: direct input
+  ld a,e         ; E selects mode
+  inc a          ; FFh: direct input
   jr nz,DIROUT   ; not FFh: output
   call CONSTAT   ; pending or BIOS ready
   or a
-  jp z,RETZERO   ; no character: zero
+  jr z,RETZERO   ; no character: zero
   call GETCHAR   ; unechoed input
-  jp RETA
+  jr RETA
 
 ; Function 6 output: A is parameter E.
 ; Send it as C directly through BIOCOT.
@@ -337,16 +336,16 @@ FNDIRECT:
 ; or COLUMN update. Return zero.
 
 DIROUT:
-  ld c,a
+  ld c,e
   call BIOCOT    ; RAM console hook
-  jp RETZERO
+  jr RETZERO
 
 ; Function 7: return IOBYTE at 0003h
 ; through RETA.
 
 FNGETIO:
   ld a,(IOBYTE)
-  jp RETA
+  jr RETA
 
 ; Function 8: store E in IOBYTE and
 ; return zero. Console entry points
@@ -354,9 +353,9 @@ FNGETIO:
 ; next call.
 
 FNSETIO:
-  ld a,(PARAM)
+  ld a,e
   ld (IOBYTE),a
-  jp RETZERO
+  jr RETZERO
 
 ; Function 9: print text at DE/PARAM
 ; through OUTCHAR before the first
@@ -365,12 +364,12 @@ FNSETIO:
 ; and BIOS-hook clobbers.
 
 FNPRINT:
-  ld hl,(PARAM)
+  ex de,hl       ; DE: the string
 
 PRLOOP:
   ld a,(hl)
   cp '$'         ; excluded terminator
-  jp z,RETZERO
+  jr z,RETZERO
   inc hl
   push hl        ; save scan position
   ld c,a
@@ -397,7 +396,7 @@ PRLOOP:
 FNLINE:
   ld a,(HHEAD)   ; initial history entry
   ld (HPOS),a    ; HREC starting point
-  ld hl,(PARAM)
+  ex de,hl       ; DE: the buffer
   ld a,(hl)
   ld (LINMAX),a  ; buffer capacity
   inc hl
@@ -412,9 +411,9 @@ LINLOOP:
   call GETCHAR   ; next unechoed key
   ld c,a         ; C: key/echo argument
   cp CR          ; CR/LF completes
-  jp z,LINDONE
+  jr z,LINDONJ1
   cp LF
-  jp z,LINDONE
+  jr z,LINDONJ1
   cp CTRLP       ; ^P: printer toggle
   jr z,LINTGL
   cp BACKSP      ; BS: logical removal
@@ -422,13 +421,13 @@ LINLOOP:
   cp DELETE      ; DEL: rubout echo
   jr z,LINDEL
   cp CTRLC       ; ^C: start-only abort
-  jp z,LINABRT
+  jr z,LINABRT
   cp CTRLE       ; ^E: display newline
-  jp z,LINEOL
+  jr z,LINEOL
   cp CTRLR       ; ^R: retype line
   jp z,LINRETY
   cp CTRLU       ; ^U: discard line
-  jp z,LINCTU
+  jr z,LINCTU
   cp CTRLX       ; ^X: clear logical
                  ; line
   jp z,LINCLEAR
@@ -438,27 +437,24 @@ LINLOOP:
   jr z,LINHIST
 
 LINCHR:
-  ld a,(LINCNT)  ; current logical count
-  ld b,a
-  ld a,(LINMAX)
-  cp b
-  jp z,LINDONE   ; full: echo key only
-  ld a,c
-
+  ld hl,(LINMAX)
+  ld a,l
+  cp h
+  jr z,LINDONJ1  ; full: echo key only
   ld hl,(LINPTR)
-  ld (hl),a
+  ld (hl),c
   inc hl
   ld (LINPTR),hl
-  ld a,b
-  inc a
-  ld (LINCNT),a
+  ld hl,LINCNT
+  inc (hl)
   call ECHOCHAR  ; echo stored byte
-  ld a,(LINCNT)  ; post-store capacity
-  ld b,a
-  ld a,(LINMAX)
-  cp b
+  ld hl,(LINMAX)
+  ld a,l
+  cp h
   jr nz,LINLOOP  ; room for another byte
   ld c,CR        ; capacity end: echo CR
+
+LINDONJ1:
   jp LINDONE
 
 ; ^P toggles LISTEN through TOGLIST and
@@ -490,17 +486,9 @@ LINHIST:
 ; unchanged.
 
 LINBACK:
-  ld a,(LINCNT)
-  or a
-  jr z,LINLOOP   ; empty: unchanged
-  dec a
-  ld (LINCNT),a
-
-  ld hl,(LINPTR)
-  dec hl
-  ld (LINPTR),hl
-  call ERASE1    ; BS-SPACE-BS once
-  jp LINLOOP
+  call LINDROP   ; C: empty, unchanged
+  call nc,ERASE1
+  jr LINLOOP
 
 ; DEL: if nonempty, decrement LINCNT and
 ; LINPTR and echo the removed byte
@@ -508,18 +496,10 @@ LINBACK:
 ; remains. Empty input is unchanged.
 
 LINDEL:
-  ld a,(LINCNT)
-  or a
-  jp z,LINLOOP   ; empty: unchanged
-  dec a
-  ld (LINCNT),a
-
-  ld hl,(LINPTR)
-  dec hl
-  ld (LINPTR),hl
+  call LINDROP   ; C: empty, unchanged
   ld c,(hl)      ; removed byte to echo
-  call ECHOCHAR
-  jp LINLOOP
+  call nc,ECHOCHAR
+  jr LINLOOP
 
 ; ^C: ignore it on a nonempty line. At
 ; the start, store CTRLC through LINPTR,
@@ -529,7 +509,7 @@ LINDEL:
 LINABRT:
   ld a,(LINCNT)  ; start-only abort
   or a
-  jp nz,LINLOOP  ; nonempty: ignore ^C
+  jr nz,LINLOOJ1
 
   ld hl,(LINPTR)
   ld (hl),CTRLC
@@ -548,7 +528,22 @@ LINEOL:
   call ECHOONE   ; display newline
   ld c,LF
   call ECHOONE
+
+LINLOOJ1:
   jp LINLOOP
+
+; ^U: set LINCNT=0 and LINPTR=(PARAM)+2
+; then fall into ^R, which prints #, CR,
+; LF and retypes the now empty line.
+; Old character bytes remain.
+
+LINCTU:
+  xor a
+  ld (LINCNT),a
+  ld hl,(PARAM)
+  inc hl         ; skip max/count bytes
+  inc hl
+  ld (LINPTR),hl
 
 ; ^R: print #, CR, LF and re-echo LINCNT
 ; bytes from the buffer at (PARAM)+2.
@@ -566,12 +561,11 @@ LINRETY:
   inc hl         ; skip max/count bytes
   inc hl
   ld a,(LINCNT)  ; retype byte count
+  or a
+  jr z,RETYX     ; nothing to retype
   ld b,a
 
 RETYLP:
-  ld a,b
-  or a
-  jp z,LINLOOP   ; no more bytes
   ld c,(hl)
   push bc        ; save loop count
   push hl        ; save scan pointer
@@ -580,26 +574,9 @@ RETYLP:
   pop bc
   inc hl
   djnz RETYLP    ; restored byte count
-  jp LINLOOP
 
-; ^U: print #, CR, LF, set LINCNT=0 and
-; LINPTR=(PARAM)+2, then resume input.
-; Old character bytes remain.
-
-LINCTU:
-  ld c,'#'       ; mark discarded line
-  call ECHOONE
-  ld c,CR        ; new display line
-  call ECHOONE
-  ld c,LF
-  call ECHOONE
-  xor a
-  ld (LINCNT),a
-  ld hl,(PARAM)
-  inc hl         ; skip max/count bytes
-  inc hl
-  ld (LINPTR),hl
-  jp LINLOOP
+RETYX:
+  jr LINLOOJ1
 
 ; ^X: call LINERASE to clear logical
 ; input and emit one ERASE1 sequence per
@@ -608,7 +585,7 @@ LINCTU:
 
 LINCLEAR:
   call LINERASE
-  jp LINLOOP
+  jr LINLOOJ1
 
 ; For each byte counted by LINCNT call
 ; ERASE1 and decrement LINCNT/LINPTR.
@@ -620,20 +597,25 @@ LINCLEAR:
 ; buffer bytes remain.
 
 LINERASE:
-  ld a,(LINCNT)  ; remaining byte count
-  or a
-  ret z          ; zero: pointer
-                 ; unchanged
+  call LINDROP
+  ret c          ; zero: all erased
   call ERASE1    ; BS-SPACE-BS once
-  ld a,(LINCNT)
-  dec a
-  ld (LINCNT),a
-
-  ld hl,(LINPTR)
-  dec hl
-
-  ld (LINPTR),hl
   jr LINERASE
+
+; Drop the last byte: decrement LINCNT
+; and LINPTR. Carry and nothing changed
+; when the line is empty. HL=LINPTR
+; either way. Changes AF/HL.
+
+LINDROP:
+  ld hl,(LINPTR)
+  ld a,(LINCNT)
+  sub 1
+  ret c          ; empty
+  ld (LINCNT),a
+  dec hl
+  ld (LINPTR),hl
+  ret
 
 ; Echo completion key C and write LINCNT
 ; to buffer byte 1. Data begins at byte
@@ -663,6 +645,8 @@ LINDONE:
   and b          ; prompt with data
 
   call nz,HSTORE
+
+RETZERJ2:
   jp RETZERO
 
 ; Function 11: return 1 for pending or
@@ -679,14 +663,14 @@ FNSTAT:
   jr nz,STATYES  ; pending: ready
   call BIOCST    ; RAM BIOS readiness
   or a
-  jp z,RETZERO   ; not ready: zero
+  jr z,RETZERJ2  ; not ready: zero
   call BIOCIN    ; capture BIOS byte
-  ld (PENDCHR),a
-  ld a,1
-  ld (PENDING),a
+  call CHKPND    ; pending, A=1
 
 STATYES:
   ld a,1
+
+RETAJ2:
   jp RETA
 
 ; Function 12: CP/M 2.2 version. Return
@@ -695,4 +679,4 @@ STATYES:
 
 FNVERS:
   ld a,$22       ; CP/M 2.2 version
-  jp RETA
+  jr RETAJ2
