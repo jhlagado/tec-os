@@ -159,8 +159,11 @@ for (const kind of ["serial", "glcd"]) {
     const dir = m.command("DIR");
     assert.match(dir, /T\.TMP/);
     assert.match(dir, /HELLO3\.BIN/);
-    // The GLCD board's card also holds its driver and the startup file.
-    assert.match(dir, kind === "serial" ? /\b2 files/ : /\b4 files/);
+    // Counted from the card, which holds MON3.SVC unless the re-entry test
+    // erased it first, and on the GLCD board its driver and startup file too.
+    const names = [...new Set(a().list().map((f) => f.name))];
+    for (const n of names) assert.ok(dir.includes(n), `DIR lists ${n}`);
+    assert.match(dir, new RegExp(`\\b${names.length} files`));
     assert.match(m.command("TYPE B:T.TXT"), /ONE\r\nTWO\r\nTHREE\r\n/);
     m.command("ERA T.TMP");
     assert.ok(!a().list().some((f) => f.name === "T.TMP"), "ERA took the directory entry");

@@ -14,7 +14,7 @@ import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES } from "./lib/machine.mjs";
-import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, romMutant, runFor, services, warmTarget, word } from "./lib/mon3.mjs";
+import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, romMutant, runFor, runTo, services, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -592,6 +592,12 @@ const mon3Variant = memo(async (edits) => {
   return makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc") });
 });
 
+// Steps of drivers/mon3.asm that more than one mutant names: the hook's IM 1,
+// and the IOBYTE's copy in the hook and in EXIT's restore.
+const HOOK_IM1 = "  im 1\n  ld a,TXI\n  out (SDIG),a\n  ld sp,MSTK";
+const HOOK_IO = "  call RESETD    ; vectors rebuilt\n  ld hl,SAVE0\n  ld de,IOBYTE\n";
+const REST_IO = "REST:\n  ld hl,SAVE0\n  ld de,IOBYTE\n";
+
 const SLOTS = [0x08, 0x10, 0x18, 0x20, 0x28, 0x30];
 const DEFAULT_SLOT = [0, 0, 0, 0, 0, 0, 0, 0xc9];
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
@@ -625,10 +631,13 @@ function toPrompt(m, from = m.mark) {
   throw new Error(`no prompt: ${m.text(from)}`);
 }
 
+/** IM 2 and a new IOBYTE, its CON: field kept: the state each exit must put back. Ten bytes. */
+const UNSETTLE = [0xed, 0x5e, 0x3a, 0x03, 0x00, 0xee, 0x54, 0x32, 0x03, 0x00]; // IM 2; LD A,(0003h); XOR 54h; LD (0003h),A
 /** The test programs a session runs. ENTRY is MON3.SVC's execution entry, for REC.BIN. */
 const PROGRAMS = (entry = 0) => ({
-  "RST0.BIN": bin(0xc7), // RST 00h
-  "JP0.BIN": bin(0xc3, 0, 0), // JP 0000h
+  "SET.BIN": bin(UNSETTLE, 0xc9), // and RET
+  "RST0.BIN": bin(UNSETTLE, 0xc7), // and RST 00h
+  "JP0.BIN": bin(UNSETTLE, 0xc3, 0, 0), // and JP 0000h
   "XP.BIN": bin(0x3a, 0x40, 0x00, 0xf6, 0x04, 0xd3, 0xff, 0xc3, 0x00, 0x00), // EXPAND on, JP 0000h
   "REC.BIN": bin(0xcd, entry & 0xff, entry >> 8, 0xc9), // CALL the entry; RET
   "X.COM": bin(0xc9),
@@ -721,8 +730,21 @@ test("KG61 session page zero", async () => {
   leave(m, { mon3: true });
 });
 
-/** Leave a session by HOW, from MON3> on M: the text to the CCP's prompt. */
-function exitBy(m, how) {
+/** Assert that M runs IM 2 and IOBYTE IO's new value: UNSETTLE's work. */
+function unsettled(m, how, io) {
+  assert.equal(m.cpu.cpu.imode, 2, `${how}: the program set IM 2`);
+  assert.equal(m.read(3), io ^ 0x54, `${how}: and a new IOBYTE`);
+}
+
+/** Leave a session by HOW, from MON3> on M: the text to the CCP's prompt. With SETTLE, IM 2 and a new IOBYTE first. */
+function exitBy(m, how, settle = false) {
+  const io = m.read(3);
+  const program = how.endsWith(".BIN");
+  if (settle && !program) {
+    assert.match(line(m, "LOAD SET.BIN").out, /MON3>$/);
+    assert.match(line(m, "GO").out, /MON3>$/);
+    unsettled(m, how, io);
+  }
   m.mark = m.output.length;
   if (how === "EXIT") m.type("EXIT\r");
   else if (how === "^C") m.type("\x03");
@@ -731,6 +753,10 @@ function exitBy(m, how) {
     assert.match(line(m, `LOAD ${how}`).out, /MON3>$/);
     m.mark = m.output.length;
     m.type("GO\r");
+    if (settle) {
+      runTo(m, 0x4000 + UNSETTLE.length);
+      unsettled(m, how, io);
+    }
   }
   return toPrompt(m);
 }
@@ -744,7 +770,7 @@ async function sixExits(svc, exits = EXITS) {
   for (const how of exits) {
     const before = bytesAt(m, 0, 0x100);
     assert.ok(line(m, "MON3.SVC /E").mon3, how);
-    const out = exitBy(m, how);
+    const out = exitBy(m, how, how !== "XP.BIN");
     if (how === "LOAD error") assert.match(out, /E:/, "the BDOS's error on E:");
     const expand = how === "XP.BIN";
     assert.deepEqual(vectorsInto(m, p << 8, (p + 8) << 8), [], `${how}: no vector into MON3.SVC`);
@@ -847,6 +873,26 @@ test("KG61 mutant: a session form starting with C3h is kept by the sweep after t
     ["  ld (de),a      ; the eighth byte\n  inc de\n", "  ld (de),a\n  inc de\n  ld (de),a\n  inc de\n"],
   ]);
   await assert.rejects(sixExits(svc, ["XP.BIN"]), /XP\.BIN: no vector into MON3\.SVC/);
+});
+
+test("KG61 mutant: a hook without IM 1 leaves IM 2 after RST 00h", async () => {
+  const svc = await mon3Variant([[HOOK_IM1, HOOK_IM1.replace("  im 1\n", "")]]);
+  await assert.rejects(sixExits(svc, ["RST0.BIN"]), /RST0\.BIN: IM 1/);
+});
+
+test("KG61 mutant: an EXIT without IM 1 leaves IM 2", async () => {
+  const svc = await mon3Variant([["  di\n  im 1\n  call RESETD\n", "  di\n  call RESETD\n"]]);
+  await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: IM 1/);
+});
+
+test("KG61 mutant: a hook that skips the IOBYTE's copy leaves the program's after JP 0000h", async () => {
+  const svc = await mon3Variant([[HOOK_IO, HOOK_IO.replace("ld de,IOBYTE", "ld de,LBUF")]]);
+  await assert.rejects(sixExits(svc, ["JP0.BIN"]), /JP0\.BIN: 0003h-0004h as before/);
+});
+
+test("KG61 mutant: an EXIT that skips the IOBYTE's copy leaves the program's", async () => {
+  const svc = await mon3Variant([[REST_IO, REST_IO.replace("ld de,IOBYTE", "ld de,LBUF")]]);
+  await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: 0003h-0004h as before/);
 });
 
 test("KG61 mutant: a hook that acts without the session form puts IOBYTE back after CON BAT", async () => {
