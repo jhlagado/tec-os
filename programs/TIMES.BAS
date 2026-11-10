@@ -1,22 +1,22 @@
-10 REM TIMES.BAS, A FIRST BASIC PROGRAM
-20 REM BUILD IT WITH BAZA TIMES,
-30 REM THEN TYPE TIMES TO RUN IT.
-40 PRINT "HELLO FROM BASIC ON TEC-OS."
-50 INPUT "WHAT IS YOUR NAME";N$
-60 PRINT "HI, ";N$;"."
-70 INPUT "PICK A NUMBER, 1 TO 12";N
-80 IF N<1 OR N>12 THEN 100
-90 IF N=INT(N) THEN 120
-100 PRINT "PLEASE PICK 1 TO 12."
-110 GOTO 70
-120 PRINT "THE";N;"TIMES TABLE:"
-130 T=0
-140 FOR I=1 TO 12
-150 P=I*N
-160 PRINT I;TAB(4);"X";N;TAB(9);"=";P
-170 T=T+P
-180 NEXT I
-190 PRINT "THEY ADD UP TO";T
-200 PRINT "THAT IS";T/12;"ON AVERAGE."
-210 PRINT "GOODBYE, ";N$;"!"
-220 END
+10 rem times.bas, a first basic program
+20 rem build it with baza times,
+30 rem then type times to run it.
+40 print "HELLO FROM BASIC ON TEC-OS."
+50 input "WHAT IS YOUR NAME";n$
+60 print "HI, ";n$;"."
+70 input "PICK A NUMBER, 1 TO 12";n
+80 if n<1 or n>12 then 100
+90 if n=int(n) then 120
+100 print "PLEASE PICK 1 TO 12."
+110 goto 70
+120 print "THE";n;"TIMES TABLE:"
+130 t=0
+140 for i=1 to 12
+150 p=i*n
+160 print i;tab(4);"X";n;tab(9);"=";p
+170 t=t+p
+180 next i
+190 print "THEY ADD UP TO";t
+200 print "THAT IS";t/12;"ON AVERAGE."
+210 print "GOODBYE, ";n$;"!"
+220 end
