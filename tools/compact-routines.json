@@ -400,6 +400,11 @@
     "SVLST",
     "REGFIND",
     "REGGEN",
+    "SVCEX",
+    "SVCENT",
+    "EXFIND",
+    "EXREC",
+    "EXMAG",
     "GLCLD",
     "SVCGO",
     "WRDCLR"

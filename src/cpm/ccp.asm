@@ -406,6 +406,10 @@ KEYSK:
 
 ; For exact type SVC call SVCGO directly
 ; without LOADA's user/drive fallback.
+; A first operand that starts with a
+; slash goes to SVCEX: /E enters the
+; service, any other switch is refused.
+; Other operands are ignored.
 ; Success joins STARTED.
 ; Quietly accept failure only for a
 ; startup line (STFLAG nonzero) with
@@ -423,8 +427,14 @@ KEYSK:
   ld a,(CMDFCB+11)
   cp 'C'
   jr nz,CMDCOM
+  ld hl,(ARGSTRT)
+  call SKIPSP    ; first operand
+  cp '/'
+  jp z,SVCEX     ; a switch: /E only
   call SVCGO     ; no LOADA fallback
   jr nc,SVCOK
+
+SVCFAIL:
   ld hl,(SVCRC)  ; L=status, H=INIT A
   ld a,(STFLAG)  ; startup-line flag
   and h          ; startup gates INIT A
@@ -472,12 +482,19 @@ CMDCOM:
 ; to PZLDRV (0=current, 1=A, etc). Set
 ; SP=CSTKTOP, push WBOOT and jump to
 ; TPA=0100h. The normal final RET warm
-; boots through 0000h.
+; boots through 0000h. CMDRN1 takes
+; another entry in HL: SVCEX enters a
+; service's execution entry by it.
 
 CMDRUN:
+  ld hl,TPA      ; transient entry
+
+CMDRN1:
+  push hl        ; the entry
   call PREPPAGE  ; arguments/FCBs/DMA
   ld a,(CMDFCB)  ; source FCB drive byte
   ld (PZLDRV),a  ; publish loaded drive
+  pop de         ; the entry
 
 ; The transient's two-byte return word
 ; is outside default DMA (0080h..00FFh).
@@ -487,7 +504,8 @@ CMDRUN:
   ld sp,CSTKTOP
   ld hl,WBOOT    ; 0000h warm-boot hook
   push hl
-  jp TPA         ; transient entry 0100h
+  ex de,hl       ; HL = the entry
+  jp (hl)        ; transient or service
 
 ; Locate an argument for
 ; parsing/diagnostics. ARGSKIP loads
