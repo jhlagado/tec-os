@@ -134,7 +134,8 @@ SETDEF:
   ld (DEFDPB),hl
   ld hl,(ALVPTR)
   ld (DEFALV),hl
-  jp RETZERO
+  xor a
+  ret
 
 ; Bind drive A=0..15 through LOGIN.
 ; Reuse the tables only when this drive
@@ -213,7 +214,7 @@ FNOPEN:
 
 FNCLSE:
   call CLOSEFCB
-  jr RETAJ1
+  ret
 
 ; Close the FCB at (PARAM) on the
 ; current drive. If S2 bit 7 is set,
@@ -329,9 +330,7 @@ FNSRCHF:
 SETSRCH:
   call SRCHA
   call FINDENT
-
-RETAJ1:
-  jp RETA        ; slot or FFh
+  ret            ; slot or FFh
 
 ; Function 18: continue the saved search
 ; from SRCHIDX with OPENMOD/SRCHFCB. DE
@@ -340,7 +339,7 @@ RETAJ1:
 
 FNSRCHN:
   call FINDENT
-  jr RETAJ1
+  ret
 
 ; Reject read-only drive/file access.
 ; ROFCB checks CHKRO (error 2), then the
@@ -413,7 +412,7 @@ DELDONE:
   ld a,(WRTYPE)
   sub 1          ; none: carry
   sbc a,a        ; FFh none, 0 done
-  jr RETAJ1
+  ret
 
 ; Function 22: reject a read-only drive,
 ; clear caller S2, keep EX and call
@@ -431,7 +430,7 @@ FNMAKE:
   inc hl
   ld (hl),0      ; S2 clear even if full
   call MAKEFCB
-  jr RETAJ1
+  ret
 
 ; Allocate an empty directory slot for
 ; the FCB at (PARAM) on the current
@@ -526,7 +525,7 @@ FNWRITE:
 
   ld (ZEROFIL),a
   call WRITESEQ
-  jp RETA
+  ret
 
 ; Function 30: set attributes in every
 ; current-user/name match. Require a

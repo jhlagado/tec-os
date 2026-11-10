@@ -163,9 +163,7 @@ WRITERC:
 
 FNREADSQ:
   call READSEQ
-
-RETAJ3:
-  jp RETA        ; A result in A and HL
+  ret            ; A result in A and HL
 
 ; Read PARAM's FCB record CR into DMA.
 ; Advance CR after a successful read.
@@ -303,7 +301,7 @@ RANDDONE:
 ; the program through RETA.
 
 RANDRET:
-  jr RETAJ3
+  ret
 
 ; Prepare FCB random record r0-r2:
 ; select its extent and set CR. A write
