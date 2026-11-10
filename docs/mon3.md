@@ -34,7 +34,7 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 3,607 bytes of header and image in **15 pages**: the
+On the starter card it is 3,621 bytes of header and image in **15 pages**: the
 word at `0006h` goes from `B9A4h` to `AA00h`, and the TPA from 47,268 bytes to
 **43,264**. The monitor, its line buffer, its FCB, its saved page zero and its
 stack are all in those pages, above anything a MON-3 program may load into.
@@ -65,7 +65,8 @@ prints `?`.
   record is `:`, a length, an address, a type, its data and its checksum.
   A data record (type 00h) holds at least one byte, and each byte must lie
   where a `.BIN` load may write. Between records only CR and LF may come.
-  The end record (type 01h, no data) must come; after it only CR, LF and 00h,
+  A file must hold at least one data record. The end record (type 01h, no
+  data) must come; after it only CR, LF and 00h,
   up to the text's end: the first 1Ah, or the end of the file's last record.
   Any other type, a bad digit or checksum, a record past FFFFh, or text out
   of place is refused. A disk error during either pass ends the session.
