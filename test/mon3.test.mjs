@@ -14,7 +14,7 @@ import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES } from "./lib/machine.mjs";
-import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, warmTarget, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, code, execFile, figures, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -29,6 +29,8 @@ const memo = (f) => {
 /** MON3.SVC's build: { file, symbols, image, fixups }. */
 const mon3Build = memo(() => mon3Svc());
 const mon3File = async () => (await mon3Build()).file;
+/** The build's pages, (0006h), entry and TPA on the starter card. */
+const FIG = figures(await mon3Build());
 
 
 /** test/programs/svcdemo.asm, no record, with OVER: claims a slot with V_VEC and FLAGS. */
@@ -189,9 +191,9 @@ test("KG59 switch forms", async () => {
   // Two copies of one install name: which to enter is not guessed.
   m.command("MON3.SVC");
   m.command("MON3.SVC");
-  assert.deepEqual(services(m), ["MON3 8", "MON3 8"]);
+  assert.deepEqual(services(m), [FIG.line, FIG.line]);
   refusedUnread(m, "MON3.SVC /E");
-  assert.deepEqual(services(m), ["MON3 8", "MON3 8"]);
+  assert.deepEqual(services(m), [FIG.line, FIG.line]);
   // The same forms as STARTUP.CMD lines.
   const s = boot({ "MON3.SVC": await mon3File(), "STARTUP.CMD": startupFile(...FORMS) });
   assert.equal((s.text().match(/\r\nMON3\.SVC\?\r\n/g) ?? []).length, FORMS.length, "each startup line refused");
@@ -259,11 +261,11 @@ test("KG59 install and re-entry", async () => {
   const m = boot({ "MON3.SVC": await mon3File() });
   let r = typed(m, "MON3.SVC");
   assert.deepEqual([r.mon3, r.code, r.opens], [false, 0, ["MON3.SVC"]], "plain MON3.SVC installs");
-  assert.deepEqual(services(m), ["MON3 8"]);
+  assert.deepEqual(services(m), [FIG.line]);
   assert.doesNotMatch(r.out, /MON3>/, "and never enters");
   r = typed(m, "MON3.SVC X /E");
   assert.deepEqual([r.mon3, r.code], [false, 0], "trailing text after an operand is ignored: installs, no entry");
-  assert.deepEqual(services(m), ["MON3 8", "MON3 8"]);
+  assert.deepEqual(services(m), [FIG.line, FIG.line]);
   m.command("UNLOAD");
   m.command("UNLOAD");
   assert.deepEqual(services(m), []);
@@ -271,13 +273,13 @@ test("KG59 install and re-entry", async () => {
   assert.ok(r.mon3, "/E with nothing installed installs and enters");
   assert.deepEqual(r.opens, ["MON3.SVC"]);
   leave(m, r);
-  assert.deepEqual(services(m), ["MON3 8"]);
+  assert.deepEqual(services(m), [FIG.line]);
   m.command("ERA MON3.SVC");
   r = typed(m, "MON3.SVC /E");
   assert.ok(r.mon3, "re-entry with the file erased");
   assert.deepEqual(r.opens, [], "re-entry opens no file");
   leave(m, r);
-  assert.deepEqual(services(m), ["MON3 8"], "one copy still");
+  assert.deepEqual(services(m), [FIG.line], "one copy still");
 });
 
 /** The page whose image starts at PAGE+25 and the entry it was given, read at the entry: { page, hl }. */
@@ -315,7 +317,7 @@ test("KG59 name rule", async () => {
   assert.equal(enteredAt(m, "M2.SVC /E", [p3, p3 - 8]), p3 - 8, "M2.SVC /E installs and enters the new copy");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   leave(m, { mon3: true });
-  assert.deepEqual(services(m), ["MON3 8", "MON3 8"]);
+  assert.deepEqual(services(m), [FIG.line, FIG.line]);
   assert.equal(enteredAt(m, "MON3.SVC /E", [p3, p3 - 8]), p3, "MON3.SVC /E enters the one named MON3");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   leave(m, { mon3: true });
@@ -383,7 +385,7 @@ test("KG59 relocated entry", async () => {
     const r = typed(m, "REL.SVC /E");
     assert.deepEqual([r.mon3, r.code], [false, 0xff00], "refused at entry");
     assert.match(r.out, /\r\nREL\.SVC\?\r\n/);
-    assert.deepEqual(services(m), ["MON3 8"], "installed once, and kept");
+    assert.deepEqual(services(m), [FIG.line], "installed once, and kept");
     assert.equal(word(m, 6), (top & 0xff00) - 0x800, "(0006h) lower by its eight pages");
   }
   m.command("UNLOAD");
@@ -484,7 +486,7 @@ test("KG59 duplicates unchanged", async () => {
   const m = boot({ "MON3.SVC": await mon3File() });
   m.command("MON3.SVC");
   m.command("MON3.SVC");
-  assert.deepEqual(services(m), ["MON3 8", "MON3 8"]);
+  assert.deepEqual(services(m), [FIG.line, FIG.line]);
 });
 
 // ROM mutants: each is the build's ROM with one test of the /E path
@@ -637,7 +639,7 @@ const setJp = (slot, target) => bin(0x21, slot, 0x00, 0x36, 0xc3, 0x23, 0x36, ta
 
 /** A machine with MON3.SVC (FILE, or the build's) installed, the programs on A:. */
 async function installed(file, extra = {}) {
-  const m = boot({ "MON3.SVC": file ?? (await mon3File()), ...PROGRAMS(0xb129), ...extra });
+  const m = boot({ "MON3.SVC": file ?? (await mon3File()), ...PROGRAMS(FIG.entry), ...extra });
   m.command("MON3.SVC");
   return m;
 }
@@ -805,7 +807,7 @@ async function recursion(svc) {
   svc ??= await mon3Build();
   const m = await installed(svc.file);
   const entry = (pageOf(m) << 8) + 41;
-  assert.equal(entry, 0xb129, "REC.BIN calls the entry at B129h");
+  assert.equal(entry, FIG.entry, `REC.BIN calls the entry at ${FIG.entry.toString(16)}h`);
   assert.ok(line(m, "MON3.SVC /E").mon3);
   assert.match(line(m, "LOAD REC.BIN").out, /MON3>$/);
   const pz = bytesAt(m, 0, 0x100);
@@ -909,7 +911,7 @@ const runnable = (m, svc) => m.read((pageOf(m) << 8) + svc.symbols.RUNOK);
 /** A session on a card with FILES and the programs, MON3.SVC installed and entered. */
 async function inSession(files = {}, opts) {
   const svc = opts?.svc ?? (await mon3Build());
-  const m = boot({ "MON3.SVC": svc.file, ...PROGRAMS(0xb129), ...files }, opts?.machine);
+  const m = boot({ "MON3.SVC": svc.file, ...PROGRAMS(FIG.entry), ...files }, opts?.machine);
   m.command("MON3.SVC");
   const pz = bytesAt(m, 0, 0x100);
   assert.ok(line(m, "MON3.SVC /E").mon3);
@@ -919,7 +921,7 @@ const refused = (r) => /\r\n\?\r\n\r\nMON3>$/.test(r.out);
 const ok = (r) => r.mon3 && !/\r\n\?\r\n/.test(r.out);
 
 test("KG62 bin loads", async () => {
-  const top = 0xb100; // (0006h) with MON3.SVC alone on the starter card
+  const top = FIG.top; // (0006h) with MON3.SVC alone on the starter card
   const full = pattern((top - 0x4000) / 128);
   const low = pattern((0x800 - 0x100) / 128, 1);
   const one = pattern(1, 2);
@@ -935,7 +937,7 @@ test("KG62 bin loads", async () => {
 });
 
 async function refusedLoads(variant) {
-  const top = 0xb100;
+  const top = FIG.top;
   const { m, svc } = await inSession({ "OVER.BIN": pattern((top - 0x4000) / 128 + 1), "THREE.BIN": pattern(3), "FIFTEEN.BIN": pattern(15), "EMPTY.BIN": new Uint8Array(0), "ONE.BIN": pattern(1) }, { svc: variant });
   for (const cmd of [
     "LOAD OVER.BIN", // one record past the top
@@ -1280,8 +1282,9 @@ test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is tak
 // TEC-OS with it installed and no session.
 
 test("KG63 size and tpa", async () => {
+  const C = MON3_CEILING;
   const svc = await mon3Build();
-  assert.ok(svc.image <= 2048, `the header and image, ${svc.image} bytes, within 2,048`);
+  assert.ok(svc.image <= C.bytes, `the header and image, ${svc.image} bytes, within ${C.bytes.toLocaleString("en")}`);
   assert.deepEqual([...svc.file.subarray(12, 15)], [0, 0, 0], "stack use declared: BDOS 0, BIOS 0, CCP 0");
   const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
   if (romBackend() === "tas") {
@@ -1290,16 +1293,19 @@ test("KG63 size and tpa", async () => {
   }
   const m = boot({ "MON3.SVC": svc.file });
   m.command("MON3.SVC");
-  assert.deepEqual(services(m), ["MON3 8"], "eight pages");
-  assert.equal(word(m, 6), 0xb100, "(0006h) B100h on the starter card");
-  assert.equal(word(m, 6) - 0x100, 45056, "TPA 45,056");
-  console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, 8 pages, TPA ${word(m, 6) - 0x100}`);
-  // The fail input: 96 more bytes of buffers take a ninth page.
-  const big = await mon3Variant([["  DS 80\nMSTK:\n", "  DS 80+96\nMSTK:\n"]]);
-  assert.ok(big.image > 2048, "the larger build is over 2,048 bytes");
+  const [line_] = services(m);
+  const pages = Number(line_.split(" ")[1]);
+  assert.deepEqual(services(m), [`MON3 ${pages}`], "one service");
+  assert.ok(pages <= C.pages, `${pages} pages, at most ${C.pages}`);
+  assert.ok(word(m, 6) >= C.top, `(0006h) ${word(m, 6).toString(16)}h, at least ${C.top.toString(16)}h on the starter card`);
+  assert.ok(word(m, 6) - 0x100 >= C.tpa, `TPA ${word(m, 6) - 0x100}, at least ${C.tpa}`);
+  console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, ${pages} pages, TPA ${word(m, 6) - 0x100}`);
+  // The fail input: buffers added to the ceiling and one byte more.
+  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
+  assert.equal(big.image, C.bytes + 1, "the larger build is one byte over the ceiling");
   const b = boot({ "MON3.SVC": big.file });
   b.command("MON3.SVC");
-  assert.deepEqual(services(b), ["MON3 9"], "and takes nine pages");
+  assert.deepEqual(services(b), [`MON3 ${C.pages + 1}`], "and takes a page more than the ceiling");
 });
 
 test("KG63 warm boot and reset", async () => {
@@ -1308,7 +1314,7 @@ test("KG63 warm boot and reset", async () => {
   m.type("\x03");
   m.expect(/\r\nA>$/);
   m.command("X");
-  assert.deepEqual(services(m), ["MON3 8"], "warm boot keeps it");
+  assert.deepEqual(services(m), [FIG.line], "warm boot keeps it");
   assert.ok(line(m, "MON3.SVC /E").mon3, "and it enters");
   leave(m, { mon3: true });
   m.reset();
@@ -1377,7 +1383,7 @@ test("KG63 inactive", { timeout: 3_600_000 }, async () => {
   assert.deepEqual([...passed].sort(), [...names].sort(), "each named test ran and passed");
   const entries = readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l));
   assert.ok(entries.length >= names.length, `${entries.length} machines with MON3.SVC installed`);
-  for (const e of entries) assert.ok(e.entry <= 0xb100, `${e.file}: MON3.SVC installed, (0006h) ${e.entry.toString(16)}h`);
+  for (const e of entries) assert.ok(e.entry <= FIG.top, `${e.file}: MON3.SVC installed, (0006h) ${e.entry.toString(16)}h`);
   assert.equal(r.status, 0);
 });
 
@@ -1409,11 +1415,13 @@ test("KG68 docs agree", async () => {
   // docs/mon3.md's figures.
   const mon3 = doc("mon3.md");
   const svc = await mon3Build();
-  assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **8 pages**`), "the size");
-  assert.ok(mon3.includes("from `B9A4h` to `B100h`, and the TPA from 47,268 bytes to **45,056**"));
+  // The figures as the build gives them.
+  const fig = figures(svc);
+  const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
+  assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
+  assert.ok(mon3.includes(`from \`B9A4h\` to \`${h4(fig.top)}\`, and the TPA from 47,268 bytes to **${fig.tpa.toLocaleString("en")}**`), "(0006h) and the TPA");
   const src = mon3Text();
   const equ = (n) => Number(new RegExp(`^${n} EQU \\$([0-9A-F]+)`, "m").exec(src)[1].replace(/^/, "0x"));
-  const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`| SP | ${h4(equ("MSTK3") - 2)}, holding the return address ${h4(equ("GORET"))} |`), "GO's SP and return");
   for (const [n, name] of [["UINT", "USER_INT"], ["UNMI", "USER_NMI"], ["SYSMD", "SYS_MODE"], ["PROTM", "PROT_MODE"]])
     assert.ok(mon3.includes(`\`${name}\` (${h4(equ(n))})`), `mon3.md: ${name} at ${h4(equ(n))}`);
