@@ -70,8 +70,10 @@ prints `?`.
   up to the text's end: the first 1Ah, or the end of the file's last record.
   Any other type, a bad digit or checksum, a record past FFFFh, or text out
   of place is refused. A disk error during either pass ends the session.
-  `BIG16K.HEX`, 16 KB in 46,093 characters, loads in about 64 million
-  T-states, 16 s at 4 MHz.
+  `BIG16K.HEX`, 16 KB in 46,093 characters, loads in 64,083,813 T-states,
+  16 s at 4 MHz, on the starter card with `MON3.SVC` alone. The figure
+  moves by some tens of thousands of T-states with where the file lies on
+  the card, which other files change.
 - **`GO [addr]`** runs the last good load, or `addr`. With neither it prints
   `?`. It first flushes the cache (BDOS 48), so a program that hangs loses
   nothing written before it ran. Then it does what MON-3's `GO` does: the LCD
