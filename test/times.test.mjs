@@ -24,7 +24,7 @@ const SOURCE = readFileSync(resolve(ROOT, "programs/TIMES.BAS"), "utf8");
 const LIMIT = 400_000_000;
 // TIMES.COM as the pinned BAZA compiles TIMES.BAS: 8,960 bytes. It moves
 // with BAZA.COM and BAZA.RTL, whose runtime it carries.
-const TIMES_COM = "34196b4c364942ef7c28f92b87566ecdb6b55fa0508439894d45136cca8bcde0";
+const TIMES_COM = "cfd128210690ec47858d57c6b61ade7312f5c949fe2606eaf42a299a341def09";
 // A number prints with a space each side, as in Microsoft BASIC, and TAB(4)
 // and TAB(9) line up the X and the = whatever the numbers' widths.
 const TABLE = Array.from({ length: 12 }, (_, i) => `${` ${i + 1} `.padEnd(4)}X 7 `.padEnd(9) + `= ${(i + 1) * 7} `);
@@ -217,5 +217,26 @@ test("a program that claims the display and then fails shows its error on the co
   assert.match(m.text(mark), /\?DIVISION BY ZERO ERROR IN 40/, "the error, printed");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.ok(m.screen().some((l) => /^\?DIVISION BY ZERO ERROR IN 40/.test(l)), `on the screen:\n${m.screen().join("\n")}`);
+  assert.deepEqual(m.violations, []);
+});
+
+// BAZA renames the old TIMES.COM to BZnnnnnn.$$B while the new one goes in. A
+// backup of that name left by an interrupted build must not stop the next.
+test("a leftover BZ000000.$$B doesn't stop BAZA TIMES replacing TIMES.COM", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
+  const image = card();
+  const a = volume(image, "A");
+  const stale = new Uint8Array(128).fill(0xc9);
+  const leftover = new Uint8Array(128).fill(0x55);
+  a.write("TIMES.COM", stale);
+  a.write("BZ000000.$$B", leftover);
+  const m = boot(image, { tms: true, matrix: true, width: 40 });
+  const mark = m.output.length;
+  keys(m, "baza times\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /COM written\r\n/);
+  assert.equal(code(m), 0, "no failure");
+  const after = volume(image, "A");
+  assert.equal(createHash("sha256").update(Buffer.from(after.read("TIMES.COM"))).digest("hex"), TIMES_COM, "the new TIMES.COM");
+  assert.deepEqual(Array.from(after.read("BZ000000.$$B").subarray(0, 128)), Array.from(leftover), "the leftover, as it was");
+  assert.deepEqual(after.list().map((f) => f.name).filter((n) => /\$\$/.test(n)), ["BZ000000.$$B"], "no other temporary file");
   assert.deepEqual(m.violations, []);
 });

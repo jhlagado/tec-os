@@ -199,7 +199,8 @@ test("DEL with no name says ? and fails as ERA with none does", async () => {
 });
 
 test("the built-in DEL comes before a DEL.COM, as ERA before ERA.COM; A:DEL and DEL.COM still run the file", async () => {
-  const m = await machine({ "DEL.COM": SAY, "ERA.COM": SAY });
+  const m = await machine({ "DEL.COM": SAY, "ERA.COM": SAY, "DELETE.COM": SAY });
+  assert.match(m.command("DELETE"), /C\r\n/, "DELETE: a longer word is a file's name, not DEL");
   for (const name of ["DEL", "ERA"]) {
     assert.match(m.command(name), new RegExp(`^${name}\\r\\r\\n\\?\\r\\n`), `${name}: the built-in`);
     assert.match(m.command(`A:${name}`), /C\r\n/, `A:${name}: the file`);
