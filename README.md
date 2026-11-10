@@ -151,7 +151,7 @@ succeeded, as in `TED X.ASM!TAS X!:X`.
 `SAMPLE.ASM` on the starter card is a first program to build and read: `TAS SAMPLE`
 assembles it and `SAMPLE` runs it, printing the screen's size, writing the LCD,
 lighting the digits and beeping through the ROM's services by `abi.inc`'s names.
-`TIMES.BAS` beside it is a first BASIC program, written in lower case: it asks
+`TIMES.BAS` beside it is a first BASIC program, in spaced-out lower case: it asks
 a name and a number and prints that number's times table. `BAZA TIMES` compiles it with the card's
 `BAZA.COM` and `BAZA.RTL` and `TIMES` runs it; in `TED TIMES.BAS`, ^T B and
 ^T R build and run it with BAZA as they do an `.ASM` with TAS.
