@@ -22,8 +22,9 @@ const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const SOURCE = readFileSync(resolve(ROOT, "programs/TIMES.BAS"), "utf8");
 const LIMIT = 400_000_000;
-// TIMES.COM as BAZA compiles TIMES.BAS: 8,960 bytes.
-const TIMES_COM = "76866bbf88a76f9fbadc56b6f039b8081b033bb91147e29c457d0c59e024e405";
+// TIMES.COM as the pinned BAZA compiles TIMES.BAS: 8,960 bytes. It moves
+// with BAZA.COM and BAZA.RTL, whose runtime it carries.
+const TIMES_COM = "34196b4c364942ef7c28f92b87566ecdb6b55fa0508439894d45136cca8bcde0";
 // A number prints with a space each side, as in Microsoft BASIC, and TAB(4)
 // and TAB(9) line up the X and the = whatever the numbers' widths.
 const TABLE = Array.from({ length: 12 }, (_, i) => `${` ${i + 1} `.padEnd(4)}X 7 `.padEnd(9) + `= ${(i + 1) * 7} `);
@@ -191,5 +192,30 @@ test("a compile onto a read-only drive fails with return code FF00h, gives back 
   // A guard only: the emulated read-only volume keeps C: as it was whatever BAZA does.
   assert.deepEqual(volume(image, "C").list().map((f) => f.name), ["TIMES.BAS"], "C: unchanged");
   assert.equal(m.read(4) & 15, 0, "A: still current");
+  assert.deepEqual(m.violations, []);
+});
+
+// A program that claims the PICO9918 through CALL and then stops on an
+// error: BAZA's runtime gives the display back before it prints, so the
+// message shows on the console.
+test("a program that claims the display and then fails shows its error on the console", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
+  const image = card();
+  const program = [
+    "10 rem claim the display, then fail",
+    "20 def call vi = rom 3",
+    "30 call vi, b = 1",
+    "40 print 1 / 0",
+    "",
+  ].join("\n");
+  volume(image, "A").write("CLAIM.BAS", Buffer.from(program), { text: true });
+  const m = boot(image, { tms: true, matrix: true, width: 40 });
+  let mark = m.output.length;
+  keys(m, "baza claim\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /COM written\r\n/);
+  mark = m.output.length;
+  keys(m, "claim\r", "the failed run", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /\?DIVISION BY ZERO ERROR IN 40/, "the error, printed");
+  assert.ok(m.videoConsole(), "the PICO9918 is the console again");
+  assert.ok(m.screen().some((l) => /^\?DIVISION BY ZERO ERROR IN 40/.test(l)), `on the screen:\n${m.screen().join("\n")}`);
   assert.deepEqual(m.violations, []);
 });
