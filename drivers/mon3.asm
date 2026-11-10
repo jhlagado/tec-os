@@ -11,7 +11,7 @@
 
 %INCLUDE "../src/abi.inc"
 
-BDOS EQU $0005
+TPATOP EQU $07   ; the TPA's top page
 IOBYTE EQU $0003
 LATCH EQU LATCHV
 SKEYB EQU $00    ; keypad encoder
@@ -55,7 +55,12 @@ NMIV EQU $0066
 ; and no use of the ROM's stacks. The
 ; entry runs from CSTKTOP as a
 ; transient does, then on its own.
+; The loader writes a JP to the BDOS at
+; the header's start, so the service
+; calls the BDOS there: a program that
+; damages 0005h cannot misdirect it.
 
+BDOS:
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,0,0
   DB 0,0,0
@@ -514,7 +519,7 @@ LSH:
   jr z,LFAIL     ; page zero
   add hl,de      ; HL = the end
   jr c,LFAIL     ; past FFFFh
-  ld a,(BDOS+2)  ; the BDOS's page
+  ld a,(TPATOP)  ; the TPA's top
   cp h
   jr c,LFAIL     ; above it
   jr nz,LS1
