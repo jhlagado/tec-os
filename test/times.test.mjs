@@ -11,6 +11,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
@@ -21,6 +22,8 @@ const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const SOURCE = readFileSync(resolve(ROOT, "programs/TIMES.BAS"), "utf8");
 const LIMIT = 400_000_000;
+// TIMES.COM as BAZA compiles TIMES.BAS: 8,960 bytes.
+const TIMES_COM = "76866bbf88a76f9fbadc56b6f039b8081b033bb91147e29c457d0c59e024e405";
 // A number prints with a space each side, as in Microsoft BASIC, and TAB(4)
 // and TAB(9) line up the X and the = whatever the numbers' widths.
 const TABLE = Array.from({ length: 12 }, (_, i) => `${` ${i + 1} `.padEnd(4)}X 7 `.padEnd(9) + `= ${(i + 1) * 7} `);
@@ -105,7 +108,10 @@ test("BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to t
   const screen = m.screen().map((l) => l.trimEnd());
   while (!screen.at(-1)) screen.pop();
   assert.deepEqual(screen.slice(-RUN.length - 2), [...RUN.map((l) => l.trimEnd()), "", "A>"], "the screen, no line wrapped");
-  assert.ok(volume(image, "A").list().some((f) => f.name === "TIMES.COM"), "TIMES.COM on A:");
+  const com = Buffer.from(volume(image, "A").read("TIMES.COM"));
+  // BAZA's output for this source: a restyle that changes the program's code
+  // changes it.
+  assert.equal(createHash("sha256").update(com).digest("hex"), TIMES_COM, "TIMES.COM's bytes");
   assert.deepEqual(m.violations, []);
 });
 
