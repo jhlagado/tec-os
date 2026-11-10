@@ -162,8 +162,9 @@ Its source, `DEMO.ASM`, is beside it: `TED DEMO.ASM` reads it and `TAS DEMO`
 builds the same `DEMO.COM`. `BOUNCE.BAS`, also on that card only, is Baza's
 sprite game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in
 Graphics I through `call`; tap W, A, S and D to steer the ship, and Q gives the
-display back. A command that names a `.COM` file runs it, and `NAME.SVC`
-installs a service.
+display back. A BASIC program that has claimed the display and stops on an error
+gives it back first, so its message shows. A command that names a `.COM` file
+runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary
 exit, from the volume selected as A:; a keypad key held from reset until the
 prompt skips it, and the console stays where cold boot put it. If the card is
