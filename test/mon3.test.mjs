@@ -12,7 +12,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, romFor, startupFile, volume } from "./lib/fixtures.mjs";
-import { check, pinned } from "./lib/inputs.mjs";
+import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES } from "./lib/machine.mjs";
 import { MON3, PROMPT, bin, bytesAt, card, code, execFile, ks53Census, line, machine, mon3Svc, romMutant, runFor, services, warmTarget, word } from "./lib/mon3.mjs";
 
@@ -810,8 +810,6 @@ test("KG61 recursion", () => recursion());
 
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
-// TIMES.COM as the pinned BAZA compiles programs/TIMES.BAS (test/times.test.mjs).
-const TIMES_COM = "34196b4c364942ef7c28f92b87566ecdb6b55fa0508439894d45136cca8bcde0";
 
 test("KG61 baza and 0038h after", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, async () => {
   check(BAZA);
