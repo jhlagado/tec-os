@@ -798,9 +798,12 @@ UNHK1:
   ret
 
 ; Parse d:name.typ at HL into FCB,
-; cleared first. Carry if no name, or a
-; drive outside A to P. HL ends at the
-; delimiter. Clobbers A, BC and DE.
+; cleared first. Carry if no name, a
+; drive outside A to P, a wildcard, or
+; a name over 8 or a type over 3
+; characters, so that BDOS 15 never
+; sees one. HL ends at the delimiter.
+; Clobbers A, BC and DE.
 
 FCBP:
   ld de,FCB
@@ -842,6 +845,10 @@ FCB1:
   ld de,FCB+1
   ld b,8         ; eight characters
   call FCBF      ; the name
+  ret c          ; a wildcard
+  bit 7,b        ; B below 0: too long
+  scf
+  ret nz
   ld a,(hl)
   cp '.'
   jr nz,FCB2     ; no type
@@ -849,25 +856,40 @@ FCB1:
   ld de,FCB+9
   ld b,3         ; three for the type
   call FCBF      ; the type
+  ret c          ; a wildcard
+  bit 7,b        ; too long
+  scf
+  ret nz
 
 FCB2:
   ld a,(FCB+1)
   cp ' '+1       ; carry: blank
   ret
 
-; Copy up to B bytes of a field.
+; Copy a field at HL to DE, B bytes at
+; most, to a dot or a space or the end.
+; Carry at a ? or *. A longer field is
+; read to its end, B going below zero.
 
 FCBF:
   ld a,(hl)
   cp '.'
-  ret z          ; the name's end
+  ret z          ; the name's end, NC
   cp ' '+1
-  ret c          ; the field's end
+  ccf
+  ret nc         ; the field's end
+  cp '?'
+  scf
+  ret z          ; a wildcard
+  cp '*'
+  scf
+  ret z          ; and the other
+  inc hl
+  dec b          ; room for it?
+  jp m,FCBF      ; no: read past it
   ld (de),a      ; one more in
   inc de
-  inc hl
-  djnz FCBF      ; until it is full
-  ret
+  jr FCBF
 
 ; Read a hex word of one to four digits
 ; at HL into DE. Carry if it has no
