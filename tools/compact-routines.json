@@ -47,7 +47,9 @@
     "LGOOD",
     "OPEN",
     "RANGE",
-    "PREIN"
+    "PREIN",
+    "CSUM",
+    "CHECK"
   ],
   "drivers/mon3api.asm": [
     "R08",

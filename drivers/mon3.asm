@@ -168,6 +168,9 @@ ENT1:
   or a           ; 0038h ours?
   ld de,MNOINT
   call z,PRINT   ; held: say so
+  ld a,(DMG)
+  or a           ; damaged before?
+  call nz,DWARN  ; then say so again
   jp PROMPT
 
 ; Name the held slot. Its digits go
@@ -505,6 +508,13 @@ SKIP1:
 ; A .HEX file goes to the HEX loader.
 
 CLOAD:
+  ld a,(DMG)
+  or a           ; the tables damaged?
+  jr z,CLOAD1
+  call DWARN     ; then no load
+  jp BAD
+
+CLOAD1:
   xor a
   ld (RUNOK),a   ; nothing runnable
   call FCBP      ; the name
@@ -659,6 +669,8 @@ GO2:
   push hl
   ld c,48        ; flush
   call BDOS
+  call CSUM      ; the tables' sum
+  ld (SUMV),de   ; for the return
   ld b,$01       ; clear the LCD
   call LCDCO
   ld b,$D6       ; row 4, column 3
@@ -699,8 +711,9 @@ GO2:
 PREIN:
   di
   ld sp,MSTK     ; our own stack
+  call CHECK     ; before RUNOK goes
   call WSINIT    ; the workspace anew
-  jr MRET
+  jr MRET1
 
 ; A program's RET lands here, through
 ; the latch stub. Every drive's vector
@@ -710,6 +723,9 @@ PREIN:
 MRET:
   di             ; interrupts off
   ld sp,MSTK     ; our own stack
+  call CHECK     ; before any write
+
+MRET1:
   ld a,(LATCH)
   and $FD        ; PROTECT off
   ld (LATCH),a
@@ -721,6 +737,54 @@ MRET:
   ld de,MFF
   call PRINT     ; a form feed
   jp PROMPT
+
+; DE = the sum, modulo 65,536, of the
+; service from its header to SUMEND,
+; and of the RAM BIOS table's 51 bytes
+; with the hook linked. Each is fixed
+; while a program runs. Clobbers A, BC
+; and HL.
+
+CSUM:
+  ld hl,($0001)  ; the warm boot's JP
+  dec hl
+  dec hl
+  dec hl         ; the table's start
+  ld bc,51
+  ld de,0
+  call CSUM1     ; the table
+  ld hl,HDR
+  ld bc,SUMLEN   ; to SUMEND
+
+CSUM1:
+  ld a,(hl)
+  add a,e        ; a byte in
+  ld e,a
+  jr nc,CSUM2
+  inc d          ; and its carry
+
+CSUM2:
+  cpi            ; HL on, BC down
+  jp pe,CSUM1    ; until BC is 0
+  ret
+
+; At a program's return: the sum taken
+; again. A difference sets DMG, and the
+; warning is printed. Clobbers AF, BC,
+; DE and HL.
+
+CHECK:
+  call CSUM
+  ld hl,(SUMV)
+  or a
+  sbc hl,de      ; Z: as at GO
+  ret z
+  ld a,1
+  ld (DMG),a     ; damaged, for good
+
+DWARN:
+  ld de,MDMG
+  jp PRINT       ; the warning
 
 ; BDOS 37 for every drive.
 
@@ -1062,7 +1126,9 @@ MHELD: DB " held: UNLOAD or reset"
   DB 13,10,'$'
 MNOINT: DB "RST 38 held: no"
   DB " interrupts",13,10,'$'
-MBRK: DB "BRK xxxx",13,10,'$'
+MBRK: DB "BRK $"
+MDMG: DB "Tables damaged: EXIT"
+  DB " and reset",13,10,'$'
 MRUN: DB "Running at: ",0
 
 ; State. RUNOK is nonzero after a good
@@ -1089,8 +1155,16 @@ SAVE0: DS 2
 SAVEV: DS $38
 SAVEZ: DS 15
 SAVEN: DS 6
+SUMEND:
+SUMLEN EQU SUMEND-HDR
 
-HEXT: DS 5       ; four digits, a zero
+; Not summed: the sum at GO, the flag a
+; difference sets, kept until a reset,
+; and what the monitor rewrites.
+
+SUMV: DW 0
+DMG: DB 0
+HEXT: DS 5       ; four digits, an end
 LBUF: DB 40      ; BDOS 10's buffer
   DS 42
 FCB: DS 36

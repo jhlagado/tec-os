@@ -890,3 +890,83 @@ for (const [sel, what, edits] of API_MUTANTS) {
   });
 }
 
+// The checksum of the service and the RAM BIOS table, taken at GO and
+// checked at the program's return.
+
+const WARN = "Tables damaged: EXIT and reset";
+/** CHG.BIN: flips bit 0 of the byte at its operand, then returns. */
+const CHG = bin(0x21, 0x00, 0x00, 0x7e, 0xee, 0x01, 0x77, 0xc9); // LD HL,nn; LD A,(HL); XOR 1; LD (HL),A; RET
+
+/** GO with CHG.BIN's operand at TARGET: the text to MON3>. */
+function goChange(m, target) {
+  m.write(0x4001, target & 0xff);
+  m.write(0x4002, target >> 8);
+  m.mark = m.output.length;
+  m.type("GO\r");
+  return toMon3(m, 20_000_000);
+}
+
+/** A session where a program's change at TARGET (from the page P and the table T) must warn. */
+async function damaged(svc, where) {
+  const { m, svc: s } = await inSession({ "CHG.BIN": CHG, "ONE.BIN": bin(0xc9) }, { svc });
+  const p = pageOf(m) << 8;
+  const table = word(m, 1) - 3;
+  const target = { LISTST: table + 15 * 3 + 1, BRK: p + s.symbols.MBRK, OLDWB: p + s.symbols.OLDWB }[where];
+  assert.ok(ok(line(m, "LOAD CHG.BIN")));
+  const out = goChange(m, target);
+  assert.ok(out.includes(WARN), `${where}: the warning (${JSON.stringify(out)})`);
+  for (let i = 0; i < 2; i += 1) {
+    const n = m.opens.length;
+    const r = line(m, "LOAD ONE.BIN");
+    assert.ok(r.out.includes(WARN) && refused(r), `${where}: LOAD warns and is refused (${JSON.stringify(r.out)})`);
+    assert.deepEqual(m.opens.slice(n), [], `${where}: BDOS 15 never called`);
+  }
+  // GO still runs, and puts the byte back; EXIT still runs.
+  assert.ok(goChange(m, target).includes("MON3>"), `${where}: GO runs`);
+  assert.ok(!line(m, "EXIT").mon3, `${where}: EXIT runs`);
+  // Re-entry: the warning before the first MON3>, and LOAD refused.
+  const again = line(m, "MON3.SVC /E");
+  assert.ok(again.mon3 && again.out.includes(WARN), `${where}: the warning at re-entry (${JSON.stringify(again.out)})`);
+  assert.ok(refused(line(m, "LOAD ONE.BIN")), `${where}: LOAD refused after re-entry`);
+  assert.ok(!line(m, "EXIT").mon3);
+}
+
+/** No warning: a program that changes nothing, one that changes the line buffer, and RST 30h twice. */
+async function clean(svc) {
+  const { m, svc: s } = await inSession({ "CHG.BIN": CHG, "RET.BIN": bin(0xc9), "BRK.BIN": bin(0xf7) }, { svc });
+  const p = pageOf(m) << 8;
+  assert.ok(ok(line(m, "LOAD RET.BIN")));
+  m.mark = m.output.length;
+  m.type("GO\r");
+  assert.doesNotMatch(toMon3(m), /Tables damaged/, "RET: no warning");
+  assert.ok(ok(line(m, "LOAD CHG.BIN")));
+  assert.doesNotMatch(goChange(m, p + s.symbols.LBUF + 10), /Tables damaged/, "the line buffer: no warning");
+  assert.ok(ok(line(m, "LOAD BRK.BIN")));
+  for (let i = 0; i < 2; i += 1) {
+    m.mark = m.output.length;
+    m.type("GO\r");
+    const out = toMon3(m);
+    assert.match(out, /BRK 4001\r\n/, `RST 30h ${i + 1}: BRK 4001`);
+    assert.doesNotMatch(out, /Tables damaged/, `RST 30h ${i + 1}: no warning`);
+  }
+  assert.ok(ok(line(m, "LOAD RET.BIN")), "LOAD still runs");
+  assert.ok(!line(m, "EXIT").mon3);
+}
+
+test("KG65 checksum", async () => {
+  for (const where of ["LISTST", "BRK", "OLDWB"]) await damaged(undefined, where);
+  await clean();
+});
+
+const sumMutant = (name, edits, run, pattern) =>
+  test(`KG65 mutant: ${name}`, async () => {
+    const svc = await mon3Variant(edits);
+    await assert.rejects(run(svc), pattern);
+  });
+
+sumMutant("the checksum's compare removed gives no warning", [["  sbc hl,de      ; Z: as at GO\n  ret z\n", "  sbc hl,de      ; Z: as at GO\n  ret\n"]], (svc) => damaged(svc, "LISTST"), /LISTST: the warning/);
+sumMutant("the sum's range cut to the header's 25 bytes misses the BRK text", [["SUMLEN EQU SUMEND-HDR\n", "SUMLEN EQU 25\n"]], (svc) => damaged(svc, "BRK"), /BRK: the warning/);
+sumMutant("the range ending before HOOKAT misses OLDWB", [["SUMLEN EQU SUMEND-HDR\n", "SUMLEN EQU HOOKAT-HDR\n"]], (svc) => damaged(svc, "OLDWB"), /OLDWB: the warning/);
+sumMutant("RST 30h's digits written into its text warn on a clean RST 30h", [["  ld de,HEXT\n  call HLSTR     ; its digits\n", "  ld de,MBRK\n  call HLSTR     ; its digits\n"]], clean, /RST 30h 1/);
+sumMutant("the flag cleared at entry gives no warning at re-entry", [["  ld a,(DMG)\n  or a           ; damaged before?\n", "  xor a\n  ld (DMG),a\n  ld a,(DMG)\n  or a           ; damaged before?\n"]], (svc) => damaged(svc, "LISTST"), /the warning at re-entry/);
+sumMutant("call 2's checksum checked after WSINIT warns", [["  call CHECK     ; before RUNOK goes\n  call WSINIT    ; the workspace anew\n", "  call WSINIT    ; the workspace anew\n  call CHECK     ; before RUNOK goes\n"]], preInit, /no warning/);
