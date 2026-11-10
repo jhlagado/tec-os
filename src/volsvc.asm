@@ -255,12 +255,11 @@ VSLOT:
 
   ld a,(ix+DLEN+1)
   cp $10
-  ld a,2
+  ld a,1
   sbc a,0
   ld hl,DRVSLOT
   ld b,0
   add hl,bc
-  dec a
   cp (hl)
   ccf
   ret

@@ -46,7 +46,7 @@ MOUNT:
   xor a
   call MNBLK
   ld a,MEIO
-  jp nz,MNTERR
+  jr nz,MNTENZ
   call MNHDR
   ld hl,MNBUF
   ld de,FMTMAG
@@ -56,7 +56,7 @@ MNMAG:
   ld a,(de)
   cp (hl)
   ld a,MEMAGIC
-  jp nz,MNTERR
+  jr nz,MNTENZ
   inc hl
   inc de
   djnz MNMAG
@@ -69,43 +69,39 @@ MNMAG:
   ld a,(MNBUF+HMAJOR)
   cp FMTMAJ
   ld a,MEVER
-  jp nz,MNTERR
+  jr nz,MNTENZ
 
   ld hl,(MNBUF+HHDRSZ)
   ld de,HDRSZ
   or a
   sbc hl,de
   ld a,MESIZE
-  jp nz,MNTERR
+  jr nz,MNTENZ
 
   ld hl,(MNBUF+HDSCSZ)
   ld de,DSCSZ
   or a
   sbc hl,de
+
+MNTENZ:
   jp nz,MNTERR
 
   ld hl,(MNBUF+HCOUNT)
-  ld a,h
-  or a
-  ld a,MECOUNT
-  jp nz,MNTERR
-  ld a,l
-  or a
-  ld a,MECOUNT
-  jp z,MNTERR
   ld a,(MNBUF+HMINOR)
   or a
-  ld a,l
-  jr nz,MNCNT1
-  cp MAXVOL0+1
-  jr MNCNT2
+  ld a,MAXVOL0-1
+  jr z,MNCNT1
+  ld a,MAXVOL-1
 
 MNCNT1:
-  cp MAXVOL+1
-
-MNCNT2:
+  dec l          ; count-1: 0 wraps
+  cp l           ; above the limit?
+  inc l
   ld a,MECOUNT
-  jp nc,MNTERR
+  jp c,MNTERR
+  inc h
+  dec h          ; high byte must be 0
+  jr nz,MNTENZ
   ld a,l
   ld (MNTCNT),a
 
@@ -117,7 +113,7 @@ MNCNT2:
   or a
   sbc hl,de
   ld a,MESUM
-  jp nz,MNTERR
+  jr nz,MNTENZ
   call MNHDR
 
 ; Keep the declared container length for
@@ -168,7 +164,7 @@ MNSUMB:
   call MNBLK
   pop bc
   ld a,MEIO
-  jp nz,MNTERR
+  jr nz,MNTEN2
   push bc
   call MNSUM
   pop bc
@@ -179,6 +175,8 @@ MNSUMB:
   or a
   sbc hl,de
   ld a,MESUM
+
+MNTEN2:
   jp nz,MNTERR
 
 ; Check every descriptor, mounted or
@@ -201,44 +199,48 @@ MNDESC:
   ld a,(MNTI)
   call DESCIX
   ld a,MEIO
-  jp nz,MNTERR
+  jr nz,MNTEN2
 
   ld a,(ix+DVOLID)
   or (ix+DVOLID+1)
   or (ix+DVOLID+2)
   or (ix+DVOLID+3)
-  jp z,MNDBAD
+  jr z,MNDBZ
 
   ld a,(ix+DFLAGS)
   and $FF-DFREAD
-  jp nz,MNDBAD
+  jr nz,MNDBNZ
 
   ld a,(ix+DGEOM)
   call GEOFIND
-  jp nz,MNDBAD
+  jr nz,MNDBNZ
   inc hl
   inc hl
   ld a,(hl)
   cp (ix+DLEN)
-  jp nz,MNDBAD
+  jr nz,MNDBNZ
   inc hl
   ld a,(hl)
   cp (ix+DLEN+1)
-  jp nz,MNDBAD
+  jr nz,MNDBNZ
 
   ld a,(ix+DLEN+2)
 
   or (ix+DLEN+3)
-  jp nz,MNDBAD
+  jr nz,MNDBNZ
 
   ld a,(ix+DSTART)
   and ALIGNB-1
+
+MNDBNZ:
   jp nz,MNDBAD
 
   ld a,(ix+DSTART)
   or (ix+DSTART+1)
   or (ix+DSTART+2)
   or (ix+DSTART+3)
+
+MNDBZ:
   jp z,MNDBAD
   push ix
   pop hl
@@ -248,7 +250,6 @@ MNDESC:
   call CMP32
   ld a,MEOVLAP
   jp c,MNTERR
-  ld iy,MNTPRV
 
 ; Store start+length as an exclusive
 ; end. Reject 32-bit wrap or end beyond
@@ -262,40 +263,44 @@ MNDESC:
   ld e,(ix+DLEN)
   ld d,(ix+DLEN+1)
   add hl,de
-  ld (iy+0),l
-  ld (iy+1),h
+  ld (MNTPRV),hl
 
   ld l,(ix+DSTART+2)
   ld h,(ix+DSTART+3)
   ld e,(ix+DLEN+2)
   ld d,(ix+DLEN+3)
   adc hl,de
-  ld (iy+2),l
-  ld (iy+3),h
-  ld a,MERANGE
-  jr c,MNTERR
+  ld (MNTPRV+2),hl
+  jr c,MNSTX
   ld de,MNTPRV
   ld hl,MNTBLK
   call CMP32
-  ld a,MERANGE
-  jr c,MNTERR
+  jr c,MNSTX
   ld a,(SDBYTE)
   or a
   jr z,MNSTOK
-  ld a,(iy+3)
+  ld hl,(MNTPRV+2)
+  ld a,h
   or a
   jr nz,MNSTX
-  ld a,(iy+2)
+  ld a,l
   cp $80
   jr c,MNSTOK
   jr nz,MNSTX
-  ld a,(iy+1)
-  or (iy+0)
+  ld hl,(MNTPRV)
+  ld a,h
+  or l
   jr z,MNSTOK
 
 MNSTX:
   ld a,MERANGE
-  jp MNTERR
+
+MNTEJ:
+  jr MNTERR
+
+MNEMNT:
+  ld a,MEMOUNT
+  jr MNTEJ
 
 MNSTOK:
 
@@ -309,23 +314,20 @@ MNSTOK:
   cp DUNMNT
   jr z,MNNEXT
   cp MAXDRV
-  ld a,MEMOUNT
-  jr nc,MNTERR
+  jr nc,MNEMNT
+  ld e,a         ; the drive
   ld a,(MNTDRV)
   dec a
 
-  cp (ix+DMOUNT)
-  ld a,MEMOUNT
-  jp c,MNTERR
+  cp e
+  jr c,MNEMNT
 
-  ld e,(ix+DMOUNT)
   ld d,0
   ld hl,DRVIDX
   add hl,de
   ld a,(hl)
   or a
-  ld a,MEMOUNT
-  jr nz,MNTERR
+  jr nz,MNEMNT
   ld a,(MNTI)
   inc a
   ld (hl),a
@@ -507,30 +509,14 @@ MNS1:
 ; sums or MNBUF use invalidate the
 ; descriptor contents. Block 0 slots
 ; 1..15 hold indices 0..14, then sixteen
-; descriptors per block. The caller
-; checks the table count.
+; descriptors per block: index+1 is
+; block*16+slot; DSCBLK0 must be 15.
+; The caller checks the table count.
 
 DESCIX:
-  ld c,0
-  sub DSCBLK0
-  jr c,DX0
-  ld b,a
-  rrca
-  rrca
-  rrca
-  rrca
-  and $0F
-  inc a
+  inc a          ; the header is slot 0
   ld c,a
-  ld a,b
-  and $0F
-  jr DX1
-
-DX0:
-
-  add a,DSCBLK0+1
-
-DX1:
+  and $0F        ; slot in the block
   ld l,a
   ld h,0
   add hl,hl
@@ -548,6 +534,11 @@ DX1:
   ld (MNBUF),hl
   call CDI
   ld a,c
+  rrca
+  rrca
+  rrca
+  rrca
+  and $0F        ; block
   call MNBLK
   call CEI
   ret nz
@@ -626,10 +617,9 @@ MNZ:
   ld (hl),0
   inc hl
   djnz MNZ
-  ld de,DIRBUF
-  ld (hl),e
+  ld (hl),LOW(DIRBUF)
   inc hl
-  ld (hl),d
+  ld (hl),HIGH(DIRBUF)
   inc hl
   push hl
   ld a,c
@@ -644,8 +634,7 @@ MNZ:
   inc hl
   ld (hl),d
   inc hl
-  ld de,CSVDUM
-  ld (hl),e
+  ld (hl),LOW(CSVDUM)
   inc hl
-  ld (hl),d
+  ld (hl),HIGH(CSVDUM)
   ret

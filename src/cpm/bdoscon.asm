@@ -113,17 +113,18 @@ DISKMSG:
 ; clearing PENDING. Otherwise tail-jump
 ; through RAM BIOCIN, which normally
 ; waits for input.
-; Clobbers A, flags and input-hook
+; Clobbers A, HL, flags and input-hook
 ; clobbers.
 
 GETCHAR:
 
-  ld a,(PENDING)
+  ld hl,PENDING  ; PENDCHR follows
+  ld a,(hl)
   or a
   jp z,BIOCIN    ; normal BIOS wait
-  xor a          ; consume pending byte
-  ld (PENDING),a
-  ld a,(PENDCHR)
+  ld (hl),0
+  inc hl
+  ld a,(hl)
   ret
 
 ; Return nonzero A for a pending BDOS
@@ -226,7 +227,7 @@ ECHOCON:
 ; >=SPACE increment it and other
 ; controls leave it unchanged. The byte
 ; can wrap at 256, including for DEL.
-; Keep C. Clobber A and flags.
+; Keep C. Clobber A, HL and flags.
 
 ECHOCOL:
   ld a,c
@@ -237,9 +238,8 @@ ECHOCOL:
   cp SPACE
   ret c          ; other control: no
                  ; move
-  ld a,(COLUMN)  ; count displayed byte
-  inc a
-  ld (COLUMN),a
+  ld hl,COLUMN
+  inc (hl)
   ret
 
 ; Echo C through ECHOONE. Expand TAB as
@@ -271,15 +271,15 @@ COLZERO:
 
 ; Decrement logical COLUMN if nonzero.
 ; Leave 0 unchanged. Used by BS
-; accounting and ERASE1. Clobbers A and
-; flags.
+; accounting and ERASE1. Clobbers A, HL
+; and flags.
 
 COLBACK:
-  ld a,(COLUMN)
+  ld hl,COLUMN
+  ld a,(hl)
   or a
   ret z          ; zero stays zero
-  dec a
-  ld (COLUMN),a
+  dec (hl)
   ret
 
 ; Poll through CONSTQ without drawing a
@@ -316,6 +316,8 @@ CHKPRN:
   cp CTRLP
   jr z,TOGLIST   ; ^P: printer toggle
 
+
+CHKPND:
   ld (PENDCHR),a
 
   ld a,1

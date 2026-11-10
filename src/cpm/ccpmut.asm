@@ -9,7 +9,7 @@
 
 CMDERA:
   call ARGSKIP
-  jp z,BADCMD
+  jr z,RENBAD
   call CMDPARSE
   call ENDCHK
   xor a
@@ -43,6 +43,8 @@ ERADRAIN:
 ERAGOT:
   ld a,(ERAANS)
   cp 'Y'
+
+STARTEJ3:
   jp nz,STARTED
   ld a,1
   ld (ERAALL),a
@@ -59,8 +61,13 @@ ERADEL:
   jr z,FILENO
   ld a,(ERAALL)
   or a
-  jp nz,STARTED
+  jr nz,STARTEJ3
+
+MAINLOJ1:
   jp MAINLOOP
+
+RENBAD:
+  jp BADCMD
 
 ; REN NEW=OLD: require unambiguous
 ; complete names with no spaces around
@@ -73,23 +80,23 @@ ERADEL:
 
 CMDREN:
   call ARGSKIP
-  jp z,BADCMD
+  jr z,RENBAD
   cp '='
-  jp z,BADCMD
+  jr z,RENBAD
   ld de,RENFCB
   call FCBPARSE
   call CPCHK
   ld a,(hl)
   cp '='
-  jp nz,BADCMD
+  jr nz,RENBAD
   inc hl
   ld a,(hl)
   or a
-  jp z,BADCMD
+  jr z,RENBAD
   cp SPACE
-  jp z,BADCMD
+  jr z,RENBAD
   cp '='
-  jp z,BADCMD
+  jr z,RENBAD
   call ONENAME
 
   ld hl,CMDFCB
@@ -101,7 +108,7 @@ CMDREN:
   ld b,a
   ld a,(hl)
   or a
-  jp nz,BADCMD
+  jr nz,RENBAD
   ld (hl),b
 
 RENOLD:
@@ -117,12 +124,9 @@ RENOLD:
 ; results MAINLOOP. H is not inspected.
 
 RENTEST:
-  ld de,LOADBUF
-  ld c,26
-  call BDOS
-  ld de,RENFCB
-  ld c,17
-  call BDOS
+  call SETLB
+  call DOSSEQ
+  DB 17*2+1      ; 17: RENFCB
   inc a
   jr nz,RENEXIST
 
@@ -135,7 +139,7 @@ RENTEST:
   DB 23*2+0
   inc a
   jp z,FILENO
-  jp MAINLOOP
+  jr MAINLOJ1
 
 ; Report FILEEX through ERRGO before
 ; rename. ERRGO sets PRGCODE=FF00h.
@@ -239,8 +243,7 @@ CPBAD:
 
 CPGO:
   ld de,DEFDMA
-  ld c,26
-  call BDOS
+  call SETDMA
   call DOSSEQ
   DB 15*2+0
   inc a

@@ -45,7 +45,7 @@ VTOUT:
   cp $20
   jr c,VTCTL
   cp $7F
-  jr nc,VTDONE
+  ret nc
   ld hl,VATTR
   or (hl)
   ld e,a
@@ -88,7 +88,7 @@ VTCTL:
   cp 13
   jr z,VTCR
   cp 10
-  jr z,VTLF0
+  jr z,VTLF
   cp 8
   jr z,VTBS
   cp 9
@@ -96,19 +96,14 @@ VTCTL:
   cp 12
   jr z,VTFF
   cp 27
-  jr nz,VTDONE
+  ret nz
   ld a,1
   ld (ESCST),a
-  jr VTDONE
+  ret
 
 VTCR:
   xor a
-  ld (VCOL),a
-  jr VTDONE
-
-VTLF0:
-  call VTLF
-  jr VTDONE
+  jr VTCOL
 
 VTBS:
   ld a,(VCOL)
@@ -123,10 +118,9 @@ VTBS:
 
 VTBS1:
   or a
-  jr z,VTDONE
+  ret z
   dec a
-  ld (VCOL),a
-  jr VTDONE
+  jr VTCOL
 
 VTTAB:
   ld a,(VCOL)
@@ -141,10 +135,11 @@ VTTAB:
 
 VTFF:
   call VTCLS
-  xor a
-  ld (VROW),a
-  ld (VCOL),a
-  jr VTDONE
+
+VTHOME:
+  ld hl,0        ; VROW and VCOL
+  ld (VROW),hl
+  ret
 
 ; Line feed: at VSBOT delete one row at
 ; VSTOP. Otherwise advance if below the
@@ -167,9 +162,8 @@ VTLF:
   ret
 
 VTLFS:
-  ld a,(VSTOP)   ; delete the region's
-                 ; top line
-  ld c,a
+  dec hl         ; VSTOP is below VSBOT
+  ld c,(hl)
   ld b,1         ; B = 1: one line
   jp VTDLR
 
@@ -183,27 +177,6 @@ VTREGR:
   ld a,(VHGT)
   dec a
   ld (VSBOT),a
-  ret
-
-; Clear all rows through VCLREOL from
-; column 0. Cursor and region stay.
-; Caller supplies valid positive video
-; geometry/vectors and handles claims.
-; Changes AF/BC and driver clobbers,
-; including DE/HL in supplied drivers.
-
-VTCLS:
-  ld b,0
-
-VTCLL:
-  ld c,0
-  push bc
-  call VCLREOL
-  pop bc
-  inc b
-  ld a,(VHGT)
-  cp b
-  jr nz,VTCLL
   ret
 
 ; Escape parser: A=ESCST, C=input byte.
@@ -220,20 +193,19 @@ VTCLL:
 ; grammar. Changes AF/BC/DE/HL.
 
 VTESC:
-  cp 1
+  dec a          ; state 1?
   jr nz,VTPAR
   ld a,c
   cp '['
   ld a,0
   jr nz,VTESCX
-  ld (ESCP1),a
-  dec a
-  ld (ESCP2),a
+  ld hl,$FF00    ; P1=0, P2 absent
+  ld (ESCP1),hl
   ld a,2
 
 VTESCX:
   ld (ESCST),a
-  jp VTDONE
+  ret
 
 VTPAR:
   ld a,c
@@ -259,7 +231,7 @@ VTPD:
   add a,b        ; modulo 256: a large
                  ; value wraps
   ld (hl),a
-  jp VTDONE
+  ret
 
 VTPNOD:
   cp ';'
@@ -267,49 +239,34 @@ VTPNOD:
   xor a
   ld (ESCP2),a
   ld a,3         ; state 3
-  ld (ESCST),a
-  jp VTDONE
+  jr VTESCX
 
 VTPFIN:
-  cp '?'         ; private marker:
-                 ; ignore
-  jp z,VTDONE
   cp $40
-  jp c,VTDONE    ; other intermediates:
+  ret c          ; below 40h, '?' too:
                  ; keep collecting
   xor a          ; a final byte: the
                  ; sequence ends
   ld (ESCST),a
   ld a,c
-  cp 'A'
-  jp z,VTUP
-  cp 'B'
-  jp z,VTDOWN
-  cp 'C'
-  jp z,VTRIGHT
-  cp 'D'
-  jp z,VTLEFT
-  cp 'H'
-  jp z,VTPOS
-  cp 'f'
-  jp z,VTPOS
-  cp 'J'
-  jp z,VTED
-  cp 'K'
-  jp z,VTEL
-  cp 'm'
-  jp z,VTSGR
-  cp '@'
-  jp z,VTICH
-  cp 'P'
-  jp z,VTDCH
-  cp 'L'
-  jp z,VTIL
-  cp 'M'
-  jp z,VTDL
-  cp 'r'
-  jr z,VTREG
-  jp VTDONE
+  ld hl,VTFTAB
+  ld b,VTFCNT
+
+VTFLP:
+  cp (hl)        ; final byte?
+  inc hl
+  jr z,VTFHIT
+  inc hl
+  inc hl
+  djnz VTFLP
+  ret            ; unknown: ignored
+
+VTFHIT:
+  ld a,(hl)
+  inc hl
+  ld h,(hl)
+  ld l,a
+  jp (hl)
 
 ; CSI t;b r: 1-based scroll region.
 ; First 0 means top 0. Second FFh/0 is
@@ -347,18 +304,15 @@ VTREGC:
   ld hl,VHGT
   cp (hl)        ; the bottom off the
                  ; screen: ignored
-  jp nc,VTDONE
+  ret nc
   cp c           ; bottom at or above
                  ; top: ignored
-  jp c,VTDONE
-  jp z,VTDONE
-  ld (VSBOT),a
-  ld a,c
-  ld (VSTOP),a
-  xor a
-  ld (VROW),a
-  ld (VCOL),a
-  jp VTDONE
+  ret c
+  ret z
+  ld h,a         ; VSBOT follows VSTOP
+  ld l,c
+  ld (VSTOP),hl
+  jp VTHOME
 
 ; B=ESCP1, absent/zero changed to 1.
 ; Other byte values stay, including 255.
@@ -390,7 +344,7 @@ VTUP:
 
 VTSETR:
   ld (VROW),a
-  jp VTDONE
+  ret
 
 ; CSI n B: add count to row, saturate
 ; byte overflow before clipping to
@@ -402,7 +356,7 @@ VTDOWN:
   ld a,(VROW)
   add a,b
   jr nc,VTDN1
-  ld a,$FF       ; saturate before
+  sbc a,a        ; carry: FFh
                  ; clipping to the
                  ; dimension
 
@@ -423,7 +377,7 @@ VTRIGHT:
   add a,b
   jr nc,VTRT1    ; past 255: saturate as
                  ; above
-  ld a,$FF
+  sbc a,a        ; carry: FFh
 
 VTRT1:
   ld hl,VWID
@@ -431,7 +385,7 @@ VTRT1:
 
 VTSETC:
   ld (VCOL),a
-  jp VTDONE
+  ret
 
 ; CSI n D: subtract count from column,
 ; saturating at 0. Row and region stay.
@@ -486,10 +440,21 @@ VTPC:
 VTED:
   ld a,(ESCP1)
   cp 2
-  jr z,VTED2
+  jr z,VTCLS
   ld hl,(VROW)
   ld b,l
   ld c,h
+  jr VTEDL
+
+; Clear all rows through VCLREOL from
+; column 0. Cursor and region stay.
+; Caller supplies valid positive video
+; geometry/vectors and handles claims.
+; Changes AF/BC and driver clobbers,
+; including DE/HL in supplied drivers.
+
+VTCLS:
+  ld bc,0
 
 VTEDL:
   push bc
@@ -500,11 +465,7 @@ VTEDL:
   ld a,(VHGT)
   cp b
   jr nz,VTEDL
-  jp VTDONE
-
-VTED2:
-  call VTCLS
-  jp VTDONE
+  ret
 
 ; CSI K ignores parameters: clear from
 ; the cursor cell to the row's end.
@@ -515,8 +476,7 @@ VTEL:
   ld hl,(VROW)
   ld b,l
   ld c,h
-  call VCLREOL
-  jp VTDONE
+  jp VCLREOL
 
 ; CSI m: apply ESCP1 then ESCP2, later
 ; recognised value winning. 0=normal,
@@ -527,25 +487,19 @@ VTSGR:
   ld a,(ESCP1)
   call VTSGR1
   ld a,(ESCP2)
-  call VTSGR1
-  jp VTDONE
 
 ; Attribute A: 0 normal, 7 reverse.
 ; FFh/others leave VATTR unchanged.
-; Changes AF/B. Other registers stay.
+; Changes AF. Other registers stay.
 
 VTSGR1:
-  cp $FF
-  ret z
-  cp 7
-  ld b,$80
-  jr z,VTSGRS
   or a
+  jr z,VTSGRS    ; 0: normal
+  cp 7
   ret nz
-  ld b,a
+  ld a,$80       ; 7: reverse
 
 VTSGRS:
-  ld a,b
   ld (VATTR),a
   ret
 
@@ -573,7 +527,12 @@ VTNC:
   ld b,c
 
 VTNC1:
-  or 1           ; NZ for the caller
+  push bc
+  ld a,(VROW)
+  ld b,a
+  call VRDROW    ; row to LINEBUF
+  pop bc
+  or 1
   ret
 
 VTNCZ:
@@ -592,16 +551,6 @@ LBADR:
   pop de
   ret
 
-; Read cursor row VROW into LINEBUF
-; through VRDROW. Changes AF/B and
-; driver registers, including BC/DE/HL.
-; Caller saves any required count/state.
-
-VTRDC:
-  ld a,(VROW)
-  ld b,a
-  jp VRDROW
-
 ; CSI n @: insert blanks at the cursor,
 ; shift retained cells right, lose those
 ; past the edge. VTNC supplies positive
@@ -613,10 +562,7 @@ VTRDC:
 
 VTICH:
   call VTNC
-  jp z,VTDONE
-  push bc
-  call VTRDC
-  pop bc
+  ret z
   push bc
   ld a,c
   sub b
@@ -654,8 +600,7 @@ VTBLL:
   djnz VTBLL
   ld a,(VROW)
   ld b,a
-  call VWRROW    ; LINEBUF back to row B
-  jp VTDONE
+  jp VWRROW
 
 ; CSI n P: delete cells at the cursor,
 ; shift later cells left and blank the
@@ -667,10 +612,7 @@ VTBLL:
 
 VTDCH:
   call VTNC
-  jp z,VTDONE
-  push bc
-  call VTRDC
-  pop bc
+  ret z
   push bc
   ld a,c
   sub b
@@ -735,15 +677,16 @@ VTNRNO:
 ; and cursor row stays.
 ; Changes AF/BC/DE/HL and driver regs.
 
-VTIL:
-  call VTNR
-  call nz,VTILR
-  jp VTDONE
-
 VTDL:
   call VTNR
-  call nz,VTDLR
-  jp VTDONE
+  ret z
+  jr VTDLR
+
+; CSI L: as CSI M above, into VTILR.
+
+VTIL:
+  call VTNR
+  ret z
 
 ; Insert B>=1 blank rows at C, with
 ; C+B<=VSBOT+1. Begin the row move then
@@ -842,7 +785,7 @@ VTCLRN:
   pop bc
   inc c          ; the next row
   djnz VTCLRN    ; B rows in all
-  jp VTMEND
+  jr VTMEND
 
 ; A=min(A,(HL)-1), positive dimension.
 ; Keeps HL/BC/DE. Changes F.
@@ -884,21 +827,21 @@ VTOWN1:
 CURSHOW:
   call VTOWN
   ret nz
-  ld a,(VCURV)
+  ld hl,VCURV
+  ld a,(hl)
   or a
   ret nz
-  inc a
-  ld (VCURV),a
+  inc (hl)
   jr CURFLIP
 
 CURHIDE:
   call VTOWN
   ret nz
-  ld a,(VCURV)
+  ld hl,VCURV
+  ld a,(hl)
   or a
   ret z
-  xor a
-  ld (VCURV),a
+  ld (hl),0
 
 CURFLIP:
   ld a,(VCOL)    ; no cursor cell while
