@@ -1,11 +1,13 @@
 // TED and BAZA on the starter card's files (KD-262): TED opens TIMES.BAS and
-// ^T B builds it with BAZA and comes back clean, ^T R runs TIMES and comes
-// back after a key, and a line with a syntax error brings TED back on that
-// line from BAZA's THOR.ERR; a project on B: builds with A:'s BAZA, which
-// finds BAZA.RTL on the drive it was loaded from. Emulator evidence. TED.COM,
+// ^T B builds it with BAZA and comes back clean, ^T D says No debugger and
+// chains nothing, ^T R runs TIMES and comes back after a key, and a line with
+// a syntax error brings TED back on that line from BAZA's THOR.ERR, with the
+// last TIMES.COM kept byte for byte; a project on B: builds with A:'s BAZA,
+// which finds BAZA.RTL on the drive it was loaded from. Emulator evidence. TED.COM,
 // BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json), the starter
 // card's bytes (test/starter.test.mjs).
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
@@ -24,6 +26,7 @@ const BAD = "95 PRINT (";
 // TED's text holds CR LF: line 10 starts after nine lines and their ends.
 const LINE10 = SOURCE.split("\n").slice(0, 9).reduce((n, l) => n + l.length + 2, 0);
 
+const sha = (image, drive, name) => createHash("sha256").update(volume(image, drive).read(name)).digest("hex");
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const bytes = (input) => new Uint8Array(readFileSync(input.path));
 const names = (image, drive) => volume(image, drive).list().map((f) => f.name);
@@ -53,7 +56,7 @@ function card(drive) {
   return image;
 }
 
-test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T R runs TIMES, and a syntax error brings TED back on its line", { skip: SKIP, timeout: 1_800_000 }, () => {
+test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No debugger, ^T R runs TIMES, and a syntax error brings TED back on its line", { skip: SKIP, timeout: 1_800_000 }, () => {
   const image = card("A");
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
@@ -68,12 +71,21 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T R runs TI
   assert.ok(!names(image, "A").includes("THOR.ERR"), "no THOR.ERR");
   assert.equal(word(m, CURSOR), 0, "back at the start");
 
+  const files = names(image, "A");
+  mark = m.output.length;
+  keys(m, "\x14d", "^T D", () => /No debugger/.test(status()));
+  assert.doesNotMatch(since(), /A>/, "nothing chained: no prompt");
+  assert.deepEqual(names(image, "A"), files, "nothing written");
+  assert.equal(word(m, CURSOR), 0, "the same place");
+
   mark = m.output.length;
   keys(m, "\x14r", "TIMES's first question", () => /WHAT IS YOUR NAME\? $/.test(since()));
   keys(m, "TEC\r7\r", "the table and the wait", () => /Press a key/.test(since()));
-  assert.match(since(), /A>A:BAZA TIMES\.BAS\r\nCOM written\r\n[^]*A>TIMES\r\nHELLO FROM BASIC ON TEC-OS\.\r\n[^]* 12 X 7 = 84 \r\n[^]*GOODBYE, TEC!\r\n/, "built again, then TIMES ran");
+  assert.match(since(), /A>A:BAZA TIMES\.BAS\r\nCOM written\r\n[^]*A>TIMES\r\nHELLO FROM BASIC ON TEC-OS\.\r\n[^]* 12 X 7  = 84 \r\n[^]*GOODBYE, TEC!\r\n/, "built again, then TIMES ran");
   keys(m, " ", "TED again", () => /L1 C1/.test(status()));
   assert.equal(word(m, CURSOR), 0, "the same place as before ^T R");
+  const good = sha(image, "A", "TIMES.COM");
+  const before = names(image, "A");
 
   // Line 10 becomes "95 PRINT (": in order, but its expression is unfinished.
   keys(m, "\x04".repeat(9), "line 10", () => /L10 C1/.test(status()));
@@ -85,7 +97,8 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T R runs TI
   assert.match(since(), /A>A:BAZA TIMES\.BAS\r\n\?SYNTAX ERROR IN 95\r\n/, "BAZA's message");
   assert.equal(word(m, CURSOR), LINE10, "at the error's line");
   assert.equal(text(image, "A", "TIMES.BAS").split("\n")[9], BAD, "^T B saved first");
-  assert.ok(names(image, "A").includes("TIMES.COM"), "the failed compile leaves the last TIMES.COM");
+  assert.equal(sha(image, "A", "TIMES.COM"), good, "the failed compile leaves the last TIMES.COM as it was");
+  assert.deepEqual(names(image, "A"), before, "no temporary file left, and no THOR.ERR once TED has it");
   keys(m, "\x11", "the prompt", () => since().endsWith("A>"));
   assert.deepEqual(m.violations, []);
 });
