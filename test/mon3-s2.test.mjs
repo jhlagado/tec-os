@@ -10,7 +10,7 @@ import { resolve } from "node:path";
 import { ROOT, volume } from "./lib/fixtures.mjs";
 import { PROGRAMS, realBuild, realProgram } from "./lib/mon3src.mjs";
 import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Sources, mon3Variant, runFor, services, word } from "./lib/mon3.mjs";
-import { compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, mon3Go, referenceHexLoad, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
+import { ROM_HL_ROWS, compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, mon3Go, referenceHexLoad, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
 import { BIG16K, END, HASHES, boot, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
@@ -395,13 +395,13 @@ async function matrixKeys(sides) {
     const de = (r18.regs.d << 8) | r18.regs.e;
     for (const caps of [0x00, 0x80]) {
       const mem = [0x089c, [caps]];
-      keyRows.push(holding(keys, { ...call(53, { regs: { de } }), mem, name: `call 53, ${what}, CAPS_LOCK ${caps}`, skip: ["h", "l"] }));
-      keyRows.push(holding(keys, { ...call(54, { regs: { de, f: r18.regs.f } }), flags: [r18.regs.f], mem, name: `call 54, ${what}, CAPS_LOCK ${caps}`, skip: ["h", "l"] }));
+      keyRows.push(holding(keys, { ...call(53, { regs: { de } }), mem, name: `call 53, ${what}, CAPS_LOCK ${caps}`, romHL: true }));
+      keyRows.push(holding(keys, { ...call(54, { regs: { de, f: r18.regs.f } }), flags: [r18.regs.f], mem, name: `call 54, ${what}, CAPS_LOCK ${caps}`, romHL: true }));
     }
   }
   // 54's repeat: KEY_BUFF the held key and KEY_REPEAT 01h, one call.
   const rA = ref.run(holding([MK.A], { ...call(18), name: "call 18 for A" }), image);
-  keyRows.push(holding([MK.A], { ...call(54, { regs: { de: (rA.regs.d << 8) | rA.regs.e, f: rA.regs.f } }), flags: [rA.regs.f], mem: [0x0889, [rA.regs.e, 0x20, 0x01]], name: "call 54, A repeated", skip: ["h", "l"] }));
+  keyRows.push(holding([MK.A], { ...call(54, { regs: { de: (rA.regs.d << 8) | rA.regs.e, f: rA.regs.f } }), flags: [rA.regs.f], mem: [0x0889, [rA.regs.e, 0x20, 0x01]], name: "call 54, A repeated", romHL: true }));
   bad.push(...compareRows(ref, ses, keyRows));
   return bad;
 }
@@ -430,6 +430,7 @@ async function hello3Matrix(svc) {
 test("KG64 matrix keys", async () => {
   const sides = await theMatrixSides();
   assert.deepEqual(await matrixKeys(sides), []);
+  console.log(`H and L not compared, MON-3's HL in its ROM: ${[...ROM_HL_ROWS].sort().join("; ")}`);
   // Caps through call 54 sets CAPS in the latch, with LATCHV equal.
   const { ses } = sides;
   const image = fixedImage();

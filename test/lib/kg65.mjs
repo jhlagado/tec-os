@@ -247,6 +247,9 @@ export function collapse(list, key = (x) => JSON.stringify(x), max = 64) {
 
 const h2 = (n) => n.toString(16).padStart(2, "0");
 
+/** The rows whose H and L went uncompared because MON-3's HL was in its ROM. */
+export const ROM_HL_ROWS = new Set();
+
 /**
  * The differences between the reference's result R and the session's S for
  * ROW: registers, 0800h-0DFFh, the port writes, the serial bytes and the
@@ -257,6 +260,12 @@ const h2 = (n) => n.toString(16).padStart(2, "0");
 export function differences(row, R, S) {
   const out = [];
   const skip = new Set(row.skip ?? []);
+  // ROW.romHL: H and L not compared where MON-3's HL ends in its ROM.
+  if (row.romHL && ((R.regs.h << 8) | R.regs.l) >= 0xc000) {
+    skip.add("h");
+    skip.add("l");
+    ROM_HL_ROWS.add(row.name);
+  }
   for (const k of ["a", "f", "b", "c", "d", "e", "h", "l", "iy", "sp"]) if (!skip.has(k) && R.regs[k] !== S.regs[k]) out.push(`${k}: ${R.regs[k].toString(16)} vs ${S.regs[k].toString(16)}`);
   for (let i = 0; i < 0x600; i += 1) {
     const a = 0x800 + i;
