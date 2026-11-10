@@ -235,7 +235,8 @@ SEGT:
 
 ; Call 10, scanSegments: one scan of the
 ; six digits from DE, leftmost first.
-; DE+6, A=0. Clobbers B.
+; DE+6, A=0, F as MON-3 leaves it.
+; Clobbers B.
 
 SCANS:
   ld b,$20       ; the leftmost
@@ -255,7 +256,8 @@ SCN1:
   out (SDIG),a   ; off again
   rrc b          ; the next digit
   jr nc,SCN1     ; six digits
-  xor a
+  ld a,0         ; not XOR A: keeps F
+                 ; from RRC B, as MON-3
   out (SSEG),a   ; segments off
   ret
 

@@ -34,7 +34,7 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 3,606 bytes of header and image in **15 pages**: the
+On the starter card it is 3,607 bytes of header and image in **15 pages**: the
 word at `0006h` goes from `B9A4h` to `AA00h`, and the TPA from 47,268 bytes to
 **43,264**. The monitor, its line buffer, its FCB, its saved page zero and its
 stack are all in those pages, above anything a MON-3 program may load into.
@@ -226,8 +226,8 @@ Where the session differs from MON-3, by design:
 
 - Port 01h's bit 6, the serial TX line, stays high in the writes of calls 3,
   10, 34 and 35 and in the digit scans of 11 and `RST 20h`, so the line stays
-  idle. A scan takes 5,601 T against MON-3's 5,495, and call 10 returns F
-  44h where MON-3's is 81h; the tones' periods are MON-3's.
+  idle. A scan takes 5,604 T against MON-3's 5,495, with MON-3's registers
+  and flags; the tones' periods are MON-3's.
 - With the matrix fitted, MON-3 and the session read the matrix, not the
   keypad.
 
