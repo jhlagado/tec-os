@@ -63,6 +63,8 @@ KEYTAB: DB "DIR",0
   DW CMDTYPE
   DB "ERA",0
   DW CMDERA
+  DB "DEL",0
+  DW CMDERA      ; ERA by another name
   DB "REN",0
   DW CMDREN
   DB "SAVE",0

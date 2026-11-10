@@ -145,6 +145,7 @@ serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
 CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
+`DEL` is another name for `ERA`.
 `SERVICES` lists the services loaded and `UNLOAD` removes the last one. A line
 chains commands with `!`, and a piece starting `:` runs only if the last command
 succeeded, as in `TED X.ASM!TAS X!:X`.
