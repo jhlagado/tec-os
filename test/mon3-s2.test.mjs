@@ -9,9 +9,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, volume } from "./lib/fixtures.mjs";
 import { PROGRAMS, realBuild, realProgram } from "./lib/mon3src.mjs";
-import { MON3, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Variant, runFor, services, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Sources, mon3Variant, runFor, services, word } from "./lib/mon3.mjs";
 import { compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, mon3Go, referenceHexLoad, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
-import { BIG16K, END, HASHES, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
+import { BIG16K, END, HASHES, boot, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
 const hex2 = (n) => n.toString(16).toUpperCase().padStart(2, "0");
 
@@ -1119,4 +1119,56 @@ test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
   m.tec1g.applyKey(KAD, true);
   const from = m.output.length;
   assert.throws(() => m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD"), /no MON3> after AD/);
+});
+
+// S2's size: at most 15 pages, 3,840 bytes; (0006h) at least AA00h on the
+// starter card, TPA 43,264, and 42,496 with GLCD.SVC; TAS's file equal to
+// ATOM's; each source file within the style's size, and passing it.
+
+async function sizeAndTpa(svc) {
+  const C = MON3_CEILING;
+  svc ??= await mon3Build();
+  assert.ok(svc.image <= C.bytes, `the header and image, ${svc.image} bytes, within ${C.bytes}`);
+  const m = boot({ "MON3.SVC": svc.file });
+  m.command("MON3.SVC");
+  const pages = Number(services(m)[0].split(" ")[1]);
+  assert.ok(pages <= C.pages, `${pages} pages, at most ${C.pages}`);
+  const top = word(m, 6);
+  assert.ok(top >= C.top && top - 0x100 >= C.tpa, `(0006h) ${top.toString(16)}h, TPA ${top - 0x100}, at least ${C.tpa}`);
+  // The GLCD console's board, whose startup file installs GLCD.SVC.
+  const g = boot({ "MON3.SVC": svc.file }, { matrix: true });
+  assert.deepEqual(services(g).map((l) => l.split(" ")[0]), ["GLCD"], "GLCD.SVC installed");
+  g.command("MON3.SVC");
+  const both = word(g, 6) - 0x100;
+  assert.ok(both >= C.tpaGlcd, `TPA with GLCD.SVC ${both}, at least ${C.tpaGlcd}`);
+  return { pages, tpa: top - 0x100, top, both };
+}
+
+test("KG64 size and tpa", async () => {
+  const svc = await mon3Build();
+  const f = await sizeAndTpa(svc);
+  console.log(`MON3.SVC S2: file ${svc.file.length} bytes, header and image ${svc.image}, ${f.pages} pages, (0006h) ${f.top.toString(16)}h, TPA ${f.tpa}, ${f.both} with GLCD.SVC`);
+  const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
+  if (romBackend() === "tas") {
+    const { assembleMon3 } = await import("../tools/lib/tas-distribution.mjs");
+    assert.deepEqual([...(await assembleMon3(ROOT, await tasAssembler()))], [...svc.file], "TAS's MON3.SVC equals ATOM's");
+  }
+  const { checkCompactSource } = await import("../tools/lib/style-compact.mjs");
+  const routines = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-routines.json"), "utf8"));
+  const exceptions = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-exceptions.json"), "utf8"));
+  for (const [n, text] of Object.entries(mon3Sources())) {
+    const r = checkCompactSource(text, n, routines[`drivers/${n}`], exceptions[`drivers/${n}`]);
+    assert.ok(r.bytes <= 24576, `${n}: ${r.bytes} bytes`);
+    assert.deepEqual(r.faults, [], `${n} passes the style checker`);
+  }
+});
+
+test("KG64 mutant: the build with buffers added to 3,841 bytes takes 16 pages", async () => {
+  const svc = await mon3Build();
+  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${MON3_CEILING.bytes + 1 - svc.image}\nMSTK:\n`]]);
+  assert.equal(big.image, 3841);
+  await assert.rejects(sizeAndTpa(big), /within 3840/);
+  const m = boot({ "MON3.SVC": big.file });
+  m.command("MON3.SVC");
+  assert.deepEqual(services(m), ["MON3 16"], "16 pages");
 });

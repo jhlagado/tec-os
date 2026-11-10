@@ -1435,5 +1435,10 @@ test("KG68 docs agree", async () => {
   const listed = [...mon3.slice(mon3.indexOf("calls implemented:")).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listed, built, "the implemented calls");
   assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes B9A4h–BFFFh/);
-  assert.match(mon3, /Not yet shipped:\*\* HEX loading, the matrix keyboard .*checksum/);
+  // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
+  const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
+  const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];
+  assert.deepEqual([...notBuilt.matchAll(/(\d+) `/g)].map((x) => Number(x[1])).sort((a, b) => a - b), refusedCalls, "the refused calls");
+  for (const n of ["DISFROM", "C_FILENO", "0600h–07FFh", "Z and C set, as a key press gives", "Tables damaged: EXIT and reset"]) assert.ok(mon3.includes(n), `mon3.md: ${n}`);
+  assert.match(mon3, /Not yet shipped:\*\* `RST 18h`'s graphics/);
 });

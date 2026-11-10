@@ -1,8 +1,11 @@
 # MON3.SVC: MON-3 programs on TEC-OS
 
-Status: **S1**, 2026-11-10 (KS53): install, `/E`, `LOAD` of a `.BIN`, `GO`,
-`EXIT` and re-entry, with the first MON-3 calls. `test/mon3.test.mjs` and
-`test/ks53-hello.test.mjs` hold it. All of it is emulator evidence.
+Status: **S2**, 2026-11-10 (KS53): install, `/E`, `LOAD` of a `.BIN` or a
+`.HEX`, `GO`, `EXIT` and re-entry; MON-3's restarts and 46 of its 63
+`RST 10h` calls, the matrix keyboard, and the checksum of TEC-OS's tables on
+a program's return. `test/mon3.test.mjs`, `test/ks53-hello.test.mjs` and
+`test/mon3-s2.test.mjs` hold it, the last comparing each call with MON-3's
+own ROM on the same emulator. All of it is emulator evidence.
 
 `MON3.SVC` is a service (`docs/services.md`) that runs programs written for
 MON-3, the TEC-1G's own monitor, under TEC-OS. The MON-3 it follows is
@@ -164,19 +167,22 @@ them, and the drives are not reset. The hook it leaves behind only takes
 itself out at the next warm boot.
 The next `/E` takes it out first, and `UNLOAD` does too.
 
-## Coverage in S1
+## Coverage in S2
 
-| Entry | MON-3 | In S1 |
+| Entry | MON-3 | In S2 |
 | --- | --- | --- |
 | `RST 00h` | monitor reset | ends the session at `A>` through TEC-OS's warm boot |
-| `RST 08h` | `scanKeysWait` | implemented |
-| `RST 10h` | API, selector in C | the calls below; every other selector up to 62, and any above, shows `displayError` |
+| `RST 08h` | `scanKeysWait` | implemented, keypad and matrix |
+| `RST 10h` | API, selector in C | the calls below; a selector of 63 or more shows `displayError` |
 | `RST 18h` | GLCD API, selector in A | `displayError` (S3) |
-| `RST 20h` | digits, keys, LCD wait | implemented, with MON-3's fall-through flags |
+| `RST 20h` | digits, keys, LCD wait | implemented, keypad and matrix, with MON-3's fall-through flags |
 | `RST 28h` | LCD busy wait | implemented |
 | `RST 30h` | breakpoint | prints `BRK` and the address and returns to `MON3>`. There is no resume |
 | `RST 38h` | `USER_INT` | through `USER_INT`, when 0038h held its default at entry |
 | NMI | `USER_NMI` | through `USER_NMI` at 0066h, in a session |
+
+Each restart reaches its handler 101 T after the `RST`, the interrupt 103 T
+after its acknowledge.
 
 `RST 10h` calls implemented: 0 `softwareID`, 1 `versionID`, 2 `preInit`,
 3 `beepAlways`, 4 `convAToSeg`, 5 `regAToASCII`, 6 `ASCIItoSegment`,
@@ -191,17 +197,48 @@ The next `/E` takes it out first, and `UNLOAD` does too.
 48 `toggleCaps`, 49 `random`, 53 `matrixScanASCII`, 54 `parseMatrixScan`,
 55 `LCDConfirm`, 56 `getGLCDTerm` and 62 `RGBScan`. With the matrix
 keyboard fitted (port 03h's bit 0 set), calls 16 and 17, `RST 08h` and
-`RST 20h` read it at port FEh as MON-3 does. As in MON-3, the dispatch passes AF, BC and HL as the caller
-left them, and IX is lost. `displayError` is MON-3's own refusal: no call
-that isn't built returns as if it had worked. The beep keeps port 01h's bit 6
-high, so the serial line stays idle. The tested program is `HELLO3`
-(`test/programs/hello3.asm`), compared with MON-3's own ROM.
+`RST 20h` read it at port FEh as MON-3 does, a row at a time.
+
+Translated, on TEC-OS's resources: 2 `preInit` sets the workspace up again
+and returns to `MON3>` with nothing runnable, after checking the tables;
+41 `setCaps`, 43 `setProtect` and 48 `toggleCaps` write the latch as `GO`
+takes it, PROTECT and CAPS with the overlay off, and `LATCHV` with it.
+PROTECT set by call 43 takes effect at once, as in MON-3, and the return to
+`MON3>` clears it.
+
+Not built, and refused: deferred 24 `intelHexLoad` (`LOAD name.HEX` reads
+HEX from the card), 27 `sendAssembly`, 31 `menuDriver`, 32 `paramDriver`,
+36 `playTuneMenu`, 46 `RTCAPI`, 47 `menuPop`, 50 `setDisStart`,
+51 `getDisNext`, 52 `getDisassembly` and 57 `setGLCDTerm`; unsupported
+42 `setShadow`, 44 `setExpand`, 58 `loadFromDisk`, 59 `openFile`,
+60 `readSector` and 61 `writeSector`. Each shows `displayError`, waits for a
+key and returns with A the key and Z and C set, as a key press gives:
+MON-3's own convention, so a program sees the refusal only on the digits.
+A refused call leaves its outputs unwritten: `DISFROM` (50 to 52),
+`C_FILENO` (59) and 0600h–07FFh (60). `RTCAPI` answers every function with
+carry and A = B, as MON-3 answers one it lacks, and touches no port.
+
+As in MON-3, the dispatch passes AF, BC and HL as the caller left them, and
+IX is lost. Calls 22 and 23 run at `BAUD`, which a session sets to 001Bh,
+4800 baud, as MON-3 does with no RTC; `RNG_SEED` is seeded from R.
+
+Where the session differs from MON-3, by design:
+
+- Port 01h's bit 6, the serial TX line, stays high in the writes of calls 3,
+  10, 34 and 35 and in the digit scans of 11 and `RST 20h`, so the line stays
+  idle. A scan takes 5,601 T against MON-3's 5,495, and call 10 returns F
+  44h where MON-3's is 81h; the tones' periods are MON-3's.
+- With the matrix fitted, MON-3 and the session read the matrix, not the
+  keypad.
+
+The tested programs are `HELLO3` (`test/programs/hello3.asm`) and five of
+the pinned repository's own: `lcd-test`, `serial`, `matrix-demo`,
+`matrix-demo-rgb` and `matrixz80`, each compared with MON-3's own ROM.
 
 ## Limits
 
-- **Not yet shipped:** HEX loading, the matrix keyboard (calls 18, 53 and 54),
-  the checksum of TEC-OS's tables on a program's return, `RST 18h`'s graphics,
-  and the other `RST 10h` calls. They come in S2 and S3.
+- **Not yet shipped:** `RST 18h`'s graphics and the GLCD terminal (S3), and
+  the deferred calls above.
 - **MON-3's disk calls**, 58 to 61, are not translated to CP/M files.
 - **No recovery from a hang** or from arbitrary memory damage: a program that
   loops needs the reset button. GO's flush keeps what was written before GO.
@@ -209,9 +246,10 @@ high, so the serial line stays idle. The tested program is `HELLO3`
   BDOS entry, the allocation vectors, the workspace and the RAM BIOS table, can
   damage TEC-OS's disk tables. The protections are the flush before `GO`,
   BDOS 37 on every return, at `EXIT` and at every other way out but the
-  EXPAND one, and the latch stub. S2 adds the
-  tables' checksum on return. Nothing snapshots TEC-OS's state around a
-  program.
+  EXPAND one, the latch stub, and the tables' checksum on return. Every BDOS
+  call the service makes goes through its own header, so a program that
+  clears 0005h–0007h does not misdirect it. Nothing snapshots TEC-OS's state
+  around a program.
 - **EXPAND 1 is TEC-OS's cache.** The service doesn't use it, and a program
   that sets EXPAND sees the cache. A call through a restart sets the latch
   back first.
