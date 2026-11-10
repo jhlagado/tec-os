@@ -20,6 +20,26 @@
       "path": "dist/TED.COM",
       "bytes": 12154,
       "sha256": "150a19bd3a63f818de5519432de25b08c5463d7f6d458b0e1169c7c72f2cac42"
+    },
+    "BAZA.COM": {
+      "env": "BAZA_COM",
+      "default": "../baza/dist/BAZA.COM",
+      "source": "jhlagado/baza b6ecccf, dist/BAZA.COM",
+      "repo": "jhlagado/baza",
+      "commit": "b6ecccf53149b988f5768572c3648b00c30e464b",
+      "path": "dist/BAZA.COM",
+      "bytes": 14336,
+      "sha256": "524583acac5b0ca1a5e18c666d4e57336ab341b1f8bd031774efa8353f811af5"
+    },
+    "BAZA.RTL": {
+      "env": "BAZA_RTL",
+      "default": "../baza/dist/BAZA.RTL",
+      "source": "jhlagado/baza b6ecccf, dist/BAZA.RTL",
+      "repo": "jhlagado/baza",
+      "commit": "b6ecccf53149b988f5768572c3648b00c30e464b",
+      "path": "dist/BAZA.RTL",
+      "bytes": 11008,
+      "sha256": "5854bfb69d3b2c8c1799d5c5928378c5f7d1aa40a90da5179832319f4ed51190"
     }
   }
 }
