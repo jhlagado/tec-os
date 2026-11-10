@@ -21,7 +21,8 @@
 
 ; LOAD name.HEX takes no address. HWRT
 ; is 0 for the checking pass and 1 for
-; the writing one.
+; the writing one. A file with no data
+; record is refused: it loads nothing.
 
 CHEX:
   call SKIP
@@ -34,10 +35,14 @@ CHEX1:
   xor a
   ld (FCB+12),a  ; from the file's start
   ld (FCB+32),a
+  ld (HANY),a    ; no data record yet
   call OPEN
   jp z,LFAIL     ; not found
   call HPASS
   jp c,LFAIL     ; a fault: refused
+  ld a,(HANY)
+  or a           ; Z: no data record,
+  jp z,LFAIL     ; so nothing to run
   ld a,(HWRT)
   inc a          ; the next pass
   cp 2
@@ -85,6 +90,7 @@ HREC:
   or b           ; A is 0: Z if B is
   scf
   ret z          ; no bytes in it
+  ld (HANY),a    ; a data record seen
   push de        ; the buffer place
   ld de,(HADR)
   ld l,b

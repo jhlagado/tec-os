@@ -1143,6 +1143,7 @@ RUNAT: DW $4000
 LDAT: DW 0
 HADR: DW 0       ; a HEX record's start
 HWRT: DB 0       ; 1: the writing pass
+HANY: DB 0       ; a data record read
 HSP: DW 0        ; the HEX pass's stack
 HOOKAT: DW 0
 OLDWB: DW 0

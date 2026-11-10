@@ -257,6 +257,7 @@ async function badFiles(P) {
     "AFTEREND.HEX": [...recs, END, one(0x5000)],
     "ENDLEN.HEX": [...recs, record(0, 1, [0])],
     "ENDSUM.HEX": [...recs, ":00000001FE"],
+    "ENDONLY.HEX": [END],
   };
   const out = Object.fromEntries(Object.entries(files).map(([n, ls]) => [n, [lines(ls), true]]));
   // Text other than CR and LF between records, and 00h before the end record.
@@ -328,6 +329,7 @@ const hexMutant = (name, edits, run, pattern) =>
   });
 
 hexMutant("single-pass loading leaves the bad-checksum file's good records written", [["  xor a          ; the checking pass\n", "  ld a,1\n"]], hexRefused, /LOAD BADSUM\.HEX: nothing written/);
+hexMutant("the data-record test removed loads ENDONLY.HEX", [["  ld a,(HANY)\n  or a           ; Z: no data record,\n  jp z,LFAIL     ; so nothing to run\n", ""]], hexRefused, /LOAD ENDONLY\.HEX: \?/);
 hexMutant("the checksum test removed loads BADSUM.HEX", [["  ld a,c\n  or a           ; Z: the sum is 0\n  jr z,HP1       ; good: the next\n  scf\n  ret\n", "  jr HP1\n"]], hexRefused, /LOAD BADSUM\.HEX: \?/);
 hexMutant("the type test removed loads type 02h as data", [["  inc a          ; 00h: data\n  scf\n  ret nz         ; not data\n", ""]], hexRefused, /LOAD TYPE2\.HEX: \?/);
 hexMutant("the per-record range test removed loads into 0800h-08FFh", [["  call RANGE     ; as a .BIN load is\n  pop de\n  ret c          ; out of bounds\n", "  pop de\n"]], hexRefused, /LOAD (WRAP|OVERTOP|UNDER|INTO800|AT8FF)\.HEX: \?/);
