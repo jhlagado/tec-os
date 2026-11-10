@@ -833,6 +833,24 @@ for (const label of ["INIT", "REMOVE"]) {
   });
 }
 
+test("makeSvc copies in a file included below the ORG, and those it includes, and refuses one naming a ROM address", async () => {
+  const dir = mkdtempSync(resolve(ROOT, "build/svc-"));
+  const text = readFileSync(resolve(ROOT, "test/programs/res.asm"), "utf8");
+  // RES.SVC's last line moved to a second file, which includes a third.
+  const lines = text.trimEnd().split("\n");
+  const last = lines.pop();
+  writeFileSync(resolve(dir, "res.asm"), text);
+  writeFileSync(resolve(dir, "split.asm"), `${lines.join("\n")}\n%INCLUDE "inc1.asm"\n`);
+  writeFileSync(resolve(dir, "inc1.asm"), `%INCLUDE "inc2.asm"\n`);
+  writeFileSync(resolve(dir, "inc2.asm"), `${last}\n`);
+  const whole = await makeSvc(resolve(dir, "res.asm"), { work: dir });
+  const split = await makeSvc(resolve(dir, "split.asm"), { work: dir });
+  assert.deepEqual([...split.file], [...whole.file], "the same file from the split source");
+  writeFileSync(resolve(dir, "inc2.asm"), `${last}\nBAD     EQU     $C003\n`);
+  await assert.rejects(makeSvc(resolve(dir, "split.asm"), { work: dir }), /INC2\.ASM names the ROM address \$C003|inc2\.asm names the ROM address \$C003/);
+  rmSync(dir, { recursive: true });
+});
+
 // Restart vectors. The sweep keeps a jump at or above the top's page, at warm
 // boot, after an unload and after a failed INIT; a declared slot that holds a
 // jump refuses the load.

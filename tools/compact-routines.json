@@ -43,7 +43,9 @@
     "FCBF",
     "HEXW",
     "HEXD",
-    "HLSTR",
+    "HLSTR"
+  ],
+  "drivers/mon3api.asm": [
     "R08",
     "R10",
     "R18",

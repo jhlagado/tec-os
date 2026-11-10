@@ -9,7 +9,7 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createTec1gHeadlessSession } from "@jhlagado/debug80-runtime/headless";
 import { makeSvc } from "../../tools/lib/svc.mjs";
@@ -37,6 +37,41 @@ export async function execFile(over = {}) {
 
 /** MON3.SVC from drivers/mon3.asm: { file, symbols (offsets from the header), image }. OPT as makeSvc's. */
 export const mon3Svc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
+
+/** MON3.SVC's source files, drivers/mon3.asm first and then those it includes: { name: text }. */
+export const MON3_FILES = ["mon3.asm", "mon3api.asm", "mon3hex.asm"];
+export function mon3Sources() {
+  const out = {};
+  for (const n of MON3_FILES) {
+    try {
+      out[n] = readFileSync(resolve(ROOT, "drivers", n), "utf8");
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+    }
+  }
+  return out;
+}
+/** The whole source as one text, for reading its tables and constants. */
+export const mon3Text = () => Object.values(mon3Sources()).join("\n");
+
+/**
+ * MON3.SVC built with EDITS ([old, new], each standing once in all its files
+ * together) applied to its source: a mutant or a variant, built beside the
+ * build. OPT as makeSvc's.
+ */
+export async function mon3Variant(edits, opt = {}) {
+  const files = mon3Sources();
+  for (const [old, now] of edits) {
+    const hits = Object.keys(files).filter((n) => files[n].includes(old));
+    const count = hits.reduce((k, n) => k + files[n].split(old).length - 1, 0);
+    assert.equal(count, 1, `the edit's text stands once: ${old}`);
+    files[hits[0]] = files[hits[0]].replace(old, now);
+  }
+  const dir = resolve(ROOT, "build/mon3-variants", sha(JSON.stringify(edits)).slice(0, 16));
+  mkdirSync(dir, { recursive: true });
+  for (const [n, text] of Object.entries(files)) writeFileSync(resolve(dir, n), text.replace('%INCLUDE "../src/abi.inc"', `%INCLUDE "${resolve(ROOT, "src/abi.inc")}"`));
+  return makeSvc(resolve(dir, "mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
+}
 
 // MON-3's addresses, from its listing: where the GO key's handler clears the
 // LCD, the monitor's return address for a program, and its defaults table.

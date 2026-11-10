@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { checkInterfaces, DHLEN, FORMAT, fixupsOf, packSvc } from './svc.mjs';
+import { basename, join } from 'node:path';
+import { checkInterfaces, DHLEN, FORMAT, fixupsOf, includedFiles, packSvc } from './svc.mjs';
 
 export const GLCD_SOURCE = 'drivers/glcd.asm';
 export const MON3_SOURCE = 'drivers/mon3.asm';
@@ -33,6 +33,7 @@ export function relocateGlcd(at1, at2) {
 
 async function assembleService(root, run, source, target) {
   checkInterfaces(readFileSync(join(root, source), 'utf8'), target);
+  for (const file of includedFiles(join(root, source))) checkInterfaces(readFileSync(file, 'utf8'), basename(file));
   const assemble = origin => run({ root, entry: source, origin, target, phase: 'flat' });
   const at1 = await assemble(0x100);
   const at2 = await assemble(0x200);
