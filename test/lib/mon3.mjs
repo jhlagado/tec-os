@@ -16,6 +16,7 @@ import { makeSvc } from "../../tools/lib/svc.mjs";
 import { Machine } from "./machine.mjs";
 import { GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, standardCard, volume, withDisplay } from "./fixtures.mjs";
 import { check, pinned } from "./inputs.mjs";
+import { run as censusRun, watch } from "./census.mjs";
 
 export const MON3_BIN = pinned("MON3.BIN");
 export const HELLO3_SHA = "666ca183a9014e3bb170033afaaf4c6397917dcf3719aa4b43ffb6897ed4d913";
@@ -26,6 +27,12 @@ export async function hello3() {
   const { bytes } = await program("hello3", { base: 0x4000 });
   assert.equal(sha(bytes), HELLO3_SHA, "HELLO3.BIN is the pinned program");
   return Uint8Array.from(bytes);
+}
+
+/** test/programs/svcexec.asm's file with OVER's definitions: a test service with an execution record. */
+export async function execFile(over = {}) {
+  const defs = { V_NRDY: 0, V_NODEV: 0, V_KEEP: 0, FLAGS: 1, RECVER: 1, HDRNAME: '"X       "', ...over };
+  return (await makeSvc(resolve(ROOT, "test/programs/svcexec.asm"), { defs, work: resolve(ROOT, "build/svc") })).file;
 }
 
 /** MON3.SVC from drivers/mon3.asm: { file, symbols (offsets from the header), image }. OPT as makeSvc's. */
@@ -151,7 +158,9 @@ export function line(m, text, { maxCycles = 400_000_000 } = {}) {
   const from = m.output.length;
   m.mark = from;
   m.type(`${text}\r`);
-  m.runUntil(() => m.waitingForInput() && (MON3.test(m.text(from)) || PROMPT.test(m.text(from))), maxCycles, `a prompt after ${text}`);
+  // The CCP's prompt counts once a chained line has no piece left.
+  const chpos = m.sym("CHPOS");
+  m.runUntil(() => m.waitingForInput() && (MON3.test(m.text(from)) || (PROMPT.test(m.text(from)) && m.read(chpos) === 0)), maxCycles, `a prompt after ${text}`);
   const out = m.text(from);
   return { out, mon3: MON3.test(out) };
 }
@@ -197,3 +206,20 @@ export function svcMutant(svc, edit) {
 export const bin = (...bytes) => Uint8Array.from(bytes.flat());
 
 export { GLCD_SVC };
+
+/**
+ * The KS53 lines of the stack census, on the serial console: a refused
+ * switch, /E installing and entering, re-entry, a never-ready /E install
+ * removed, and UNLOAD of MON3.SVC. The census's depths: { bdos, ccp, bios }.
+ */
+export async function ks53Census() {
+  const { rom, symbols } = romFor();
+  const image = card({ "MON3.SVC": (await mon3Svc()).file, "NRDY.SVC": await execFile({ V_NRDY: 1 }) });
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
+  const depths = watch(m);
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  for (const [l, re] of [["MON3.SVC /X\r"], ["MON3.SVC /E\r", MON3], ["EXIT\r"], ["MON3.SVC /E\r", MON3], ["EXIT\r"], ["NRDY.SVC /E\r"], ["UNLOAD\r"]]) censusRun(m, l, re);
+  assert.deepEqual(m.violations, []);
+  return depths();
+}

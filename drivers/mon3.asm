@@ -50,7 +50,9 @@ NMIV EQU $0066
 ; Removable, no dependencies, no claims,
 ; and no use of the ROM's stacks: INIT
 ; and REMOVE make no call, and the hook
-; uses no stack.
+; uses no stack. The entry runs from
+; CSTKTOP as a transient does, and moves
+; to its own stack once its checks pass.
 
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,0,0
