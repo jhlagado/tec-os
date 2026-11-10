@@ -1,7 +1,9 @@
 // The starter card that `npm run media` builds: exactly nine files on A:, each
 // the bytes its source or pin gives, the page's width drivers pinned in its
-// recipe, and it boots to a MOUNT that lists its volumes. Emulator evidence.
-// TED.COM, TAS.COM, BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json).
+// recipe, and it boots to a MOUNT that lists its volumes. The page's card adds
+// DEMO.COM and BOUNCE.BAS, which BAZA compiles and which runs its sprites on
+// the PICO9918. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and
+// BOUNCE.BAS are pinned inputs (test/inputs.json).
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -17,6 +19,8 @@ const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
+const BOUNCE = pinned("BOUNCE.BAS");
+const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip;
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const text = (name) => Buffer.from(readFileSync(resolve(ROOT, "programs", name), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 
@@ -68,15 +72,82 @@ test("the starter card boots, and MOUNT lists its volumes", { skip: TED.skip || 
   assert.deepEqual(m.violations, []);
 });
 
-test("the web page's card is the starter with DEMO.COM, which the starter lacks (KD-170)", { skip: TED.skip || TAS.skip || BAZA.skip || RTL.skip, timeout: 300_000 }, async () => {
-  const { card, recipe } = starter();
+/** The page's card, built from its recipe and dist/'s files. */
+async function pageCard() {
+  starter();
   const page = JSON.parse(readFileSync(resolve(ROOT, "dist/page.recipe.json"), "utf8"));
+  return { page, card: await buildRecipe(page, fileFetcher(resolve(ROOT, "dist"))) };
+}
+
+test("the web page's card is the starter with DEMO.COM and BOUNCE.BAS, which the starter lacks (KD-170)", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+  check(BOUNCE);
+  const { card, recipe } = starter();
+  const { page, card: pc } = await pageCard();
   const demo = (await program("demo")).bytes;
+  // Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
+  const bounce = Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
   const names = (r) => r.components.map((c) => c.name).sort();
-  assert.deepEqual(names(page), [...names(recipe), "DEMO.COM"].sort());
+  assert.deepEqual(names(page), [...names(recipe), "BOUNCE.BAS", "DEMO.COM"].sort());
   assert.equal(page.components.find((c) => c.name === "DEMO.COM").files[0].sha256, sha(demo));
+  assert.equal(page.components.find((c) => c.name === "BOUNCE.BAS").files[0].sha256, sha(bounce));
   assert.match(page.instruction, /DEMO/);
-  assert.equal(volume(card, "A").list().some((f) => f.name === "DEMO.COM"), false, "not on the starter");
-  const onPage = volume(await buildRecipe(page, fileFetcher(resolve(ROOT, "dist"))), "A");
-  assert.equal(sha(onPage.read("DEMO.COM").subarray(0, demo.length)), sha(demo), "on the page's card");
+  assert.match(page.instruction, /BAZA BOUNCE then BOUNCE/);
+  for (const name of ["DEMO.COM", "BOUNCE.BAS"]) assert.equal(volume(card, "A").list().some((f) => f.name === name), false, `${name} not on the starter`);
+  const onPage = volume(pc, "A");
+  assert.equal(sha(onPage.read("DEMO.COM").subarray(0, demo.length)), sha(demo), "DEMO.COM on the page's card");
+  assert.equal(sha(onPage.read("BOUNCE.BAS").subarray(0, bounce.length)), sha(bounce), "BOUNCE.BAS on the page's card");
+});
+
+// BOUNCE.BAS, Baza's CALL demonstration, on the page's card as the Viewer
+// runs it: the PICO9918 at 40 columns and the matrix keyboard. What it
+// checks follows Baza's tools/qualify-call-demo.mjs.
+test("on the page's card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D move the ship, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+  check(BOUNCE);
+  const { card } = await pageCard();
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  const vdp = () => m.tec1g.state.display.tms9918.stateSnapshot();
+  const run = (cycles) => {
+    const end = m.cycles + cycles;
+    m.runUntil(() => m.cycles >= end, cycles + 1_000_000, "BOUNCE running");
+  };
+  const keys = (s, what, done) => {
+    m.enqueueInput(s, "matrix");
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 600_000_000, what);
+  };
+  const text = (registers) => Array.from(registers.slice(0, 8));
+  const console40 = text(vdp().registers);
+  let mark = m.output.length;
+  keys("baza bounce\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /COM written\r\n/);
+  m.enqueueInput("bounce\r", "matrix");
+  m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
+  run(150_000_000);
+  let s = vdp();
+  assert.deepEqual(text(s.registers), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I with 16 x 16 sprites");
+  const title = " BAZA BASIC ON THE PICO9918 ";
+  assert.equal(Buffer.from(s.vram.slice(0x1802, 0x1802 + title.length)).toString("latin1"), title, "the title in the name table");
+  const attrs = (v) => Array.from(v.slice(0x1b00, 0x1b18));
+  const first = attrs(s.vram);
+  assert.deepEqual([2, 3, 6, 7, 10, 11, 14, 15, 18, 19, 20].map((i) => first[i]), [0, 8, 0, 3, 0, 7, 0, 13, 4, 15, 208], "four balls, the ship and the table's end");
+  assert.deepEqual([first[16], first[17]], [150, 120], "the ship at Y 150, X 120");
+  const tap = (k) => {
+    m.typeMatrix(k);
+    run(20_000_000);
+  };
+  for (const k of "DDDD") tap(k);
+  for (const k of "AA") tap(k);
+  for (const k of "WWW") tap(k);
+  tap("S");
+  s = vdp();
+  const moved = attrs(s.vram);
+  assert.deepEqual([moved[16], moved[17]], [150 - 18 + 6, 120 + 24 - 12], "the ship after DDDD AA WWW S");
+  assert.notDeepEqual(moved.slice(0, 16), first.slice(0, 16), "the balls move");
+  mark = m.output.length;
+  m.typeMatrix("Q");
+  m.runUntilChecked(() => m.ready() && /A>$/.test(m.text(mark)), 400_000_000, "the prompt after Q");
+  assert.match(m.text(mark), /THANKS FOR PLAYING\. SCORE -?\d+ \r\n/);
+  assert.deepEqual(text(vdp().registers), console40, "the console's VDP mode back");
+  assert.ok(m.videoConsole(), "the PICO9918 is the console again");
+  assert.ok(m.screen().some((l) => /^THANKS FOR PLAYING\. SCORE/.test(l)), "on the console's screen");
+  assert.deepEqual(m.violations, []);
 });

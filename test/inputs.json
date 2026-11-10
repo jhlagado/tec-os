@@ -40,6 +40,16 @@
       "path": "dist/BAZA.RTL",
       "bytes": 11008,
       "sha256": "5854bfb69d3b2c8c1799d5c5928378c5f7d1aa40a90da5179832319f4ed51190"
+    },
+    "BOUNCE.BAS": {
+      "env": "BOUNCE_BAS",
+      "default": "../baza/examples/BOUNCE.BAS",
+      "source": "jhlagado/baza 6b2b22d, examples/BOUNCE.BAS",
+      "repo": "jhlagado/baza",
+      "commit": "6b2b22d5e6cc002011b4cb035fad53f0ef8b25a0",
+      "path": "examples/BOUNCE.BAS",
+      "bytes": 3474,
+      "sha256": "8ed1bc2c318d0ca04a7ea3c06b00e18265ae2b6f30f0fee11d49bc09c61956b1"
     }
   }
 }

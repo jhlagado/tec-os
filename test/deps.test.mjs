@@ -49,7 +49,7 @@ test("a model reads an older tree's own inputs.json, whatever this tree pins: TE
 
 test("test/inputs.json holds only what a live test reads, each one file with its repo, commit and path", () => {
   const { inputs } = read("test/inputs.json");
-  assert.deepEqual(Object.keys(inputs).sort(), ["BAZA.COM", "BAZA.RTL", "TAS.COM", "TED.COM"], "the four application pins: TED and TAS from Thorium, BAZA and its library from Baza");
+  assert.deepEqual(Object.keys(inputs).sort(), ["BAZA.COM", "BAZA.RTL", "BOUNCE.BAS", "TAS.COM", "TED.COM"], "the five application pins: TED and TAS from Thorium; BAZA, its library and the page card's BOUNCE.BAS from Baza");
   for (const [name, e] of Object.entries(inputs)) {
     assert.match(e.repo, /^[\w-]+\/[\w.-]+$/, name);
     assert.match(e.commit, /^[0-9a-f]{40}$/, `${name}: a full commit`);

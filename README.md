@@ -37,7 +37,7 @@ Node.js 20 or later.
   tas_stage=
   trap 'if [ -n "$tas_stage" ]; then rm -rf "$tas_stage"; fi' EXIT
   npm ci
-  npm run inputs   # pinned TED.COM, TAS.COM, BAZA.COM and BAZA.RTL
+  npm run inputs   # pinned TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
   mkdir -p .inputs
   if [ -d .inputs/tas-host ]; then
     node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
@@ -65,7 +65,7 @@ npm test         # host and emulator tests, several minutes
 The host is pinned to the KS42 runner and its locked Z80 runtime. Setup
 verifies the runner, lock, runtime and TAS executable before moving the
 temporary host into place. Repeating setup verifies the prepared host
-without reinstalling it. `npm run inputs` validates the four application pins
+without reinstalling it. `npm run inputs` validates the five application pins
 and fetches missing inputs into verified temporary files before replacement.
 A failed preparation keeps previous verified files. Assembly uses local
 inputs and makes no downloads.
@@ -77,12 +77,13 @@ page; no test here drives a browser. `playwright` stays pinned in
 the browser that version expects.
 
 Assembly, media and tests select each application input, TED and TAS from
-Thorium and `BAZA.COM` and `BAZA.RTL` from Baza, from an explicit `TED_COM`,
-`TAS_COM`, `BAZA_COM` or `BAZA_RTL`, then `.inputs/NAME`, then the legacy
-sibling paths `../thorium/dist/TED.COM`, `../thorium/dist/TAS.COM`,
-`../baza/dist/BAZA.COM` and `../baza/dist/BAZA.RTL`. `npm run media` needs all
-four to build the starter card; Baza's repository is private, so without
-access to it put its two files in `.inputs/` or a `../baza` checkout. A selected override
+Thorium and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza, from an explicit
+`TED_COM`, `TAS_COM`, `BAZA_COM`, `BAZA_RTL` or `BOUNCE_BAS`, then
+`.inputs/NAME`, then the legacy sibling paths `../thorium/dist/TED.COM`,
+`../thorium/dist/TAS.COM`, `../baza/dist/BAZA.COM`, `../baza/dist/BAZA.RTL` and
+`../baza/examples/BOUNCE.BAS`. `npm run media` needs all five to build the
+cards. Baza's repository is private: without access to it, put the three
+pinned files, from someone who has it, in `.inputs/`. A selected override
 or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
 
@@ -155,7 +156,10 @@ and prints that number's times table. `BAZA TIMES` compiles it with the card's
 `BAZA.COM` and `BAZA.RTL` and `TIMES` runs it; in `TED TIMES.BAS`, ^T B and
 ^T R build and run it with BAZA as they do an `.ASM` with TAS.
 `DEMO.COM`, on the viewer's demo card, shows the hardware: the LCD, the 7-segment digits,
-the 8 × 8 LEDs and the PICO9918 in Graphics I. A command
+the 8 × 8 LEDs and the PICO9918 in Graphics I. `BOUNCE.BAS`, also on that card
+only, is Baza's sprite game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the
+PICO9918 in Graphics I through `CALL`; tap W, A, S and D to steer the ship, and
+Q gives the display back. A command
 that names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary
 exit, from the volume selected as A:; a keypad key held from reset until the
