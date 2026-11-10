@@ -1161,3 +1161,108 @@ test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is tak
   ]);
   await assert.rejects(refusedLoads(svc), /LOAD THREE\.BIN 700: \?/);
 });
+
+// KG63: MON3.SVC's size, its life over warm boot, reset and UNLOAD, and
+// TEC-OS with it installed and no session.
+
+test("KG63 size and tpa", async () => {
+  const svc = await mon3Build();
+  assert.ok(svc.image <= 2048, `the header and image, ${svc.image} bytes, within 2,048`);
+  assert.deepEqual([...svc.file.subarray(12, 15)], [0, 0, 0], "stack use declared: BDOS 0, BIOS 0, CCP 0");
+  const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
+  if (romBackend() === "tas") {
+    const { assembleMon3 } = await import("../tools/lib/tas-distribution.mjs");
+    assert.deepEqual([...(await assembleMon3(ROOT, await tasAssembler()))], [...svc.file], "TAS's MON3.SVC equals ATOM's");
+  }
+  const m = boot({ "MON3.SVC": svc.file });
+  m.command("MON3.SVC");
+  assert.deepEqual(services(m), ["MON3 8"], "eight pages");
+  assert.equal(word(m, 6), 0xb100, "(0006h) B100h on the starter card");
+  assert.equal(word(m, 6) - 0x100, 45056, "TPA 45,056");
+  console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, 8 pages, TPA ${word(m, 6) - 0x100}`);
+  // The fail input: 96 more bytes of buffers take a ninth page.
+  const big = await mon3Variant([["  DS 80\nMSTK:\n", "  DS 80+96\nMSTK:\n"]]);
+  assert.ok(big.image > 2048, "the larger build is over 2,048 bytes");
+  const b = boot({ "MON3.SVC": big.file });
+  b.command("MON3.SVC");
+  assert.deepEqual(services(b), ["MON3 9"], "and takes nine pages");
+});
+
+test("KG63 warm boot and reset", async () => {
+  const m = await installed();
+  m.mark = m.output.length;
+  m.type("\x03");
+  m.expect(/\r\nA>$/);
+  m.command("X");
+  assert.deepEqual(services(m), ["MON3 8"], "warm boot keeps it");
+  assert.ok(line(m, "MON3.SVC /E").mon3, "and it enters");
+  leave(m, { mon3: true });
+  m.reset();
+  m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
+  assert.deepEqual(services(m), [], "a reset removes it");
+  assert.equal(word(m, 6), 0xb9a4);
+});
+
+async function unloads(svc) {
+  svc ??= await mon3Build();
+  for (const how of ["EXIT", "XP.BIN"]) {
+    const m = await installed(svc.file);
+    assert.ok(line(m, "MON3.SVC /E").mon3);
+    exitBy(m, how);
+    m.command("UNLOAD");
+    assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
+    assert.equal(word(m, 6), 0xb9a4, `after ${how}: (0006h) back at B9A4h`);
+    assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
+    assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A>$/, `after ${how}: a .COM exits to the prompt`);
+  }
+}
+test("KG63 unload", () => unloads());
+
+test("KG63 mutant: a REMOVE that leaves the hook has UNLOAD leave the target in freed pages", async () => {
+  const svc = await mon3Variant([["  ld (EXRDY),a   ; not ready first\n  jp UNHOOK\n", "  ld (EXRDY),a   ; not ready first\n  ret\n"]]);
+  await assert.rejects(unloads(svc), /XP\.BIN: the hook is out/);
+});
+
+// The existing tests' bodies, run unchanged in a child process whose every
+// machine installs MON3.SVC from its card's startup file first
+// (test/lib/machine.mjs).
+const INACTIVE = {
+  "test/system.test.mjs": ["BDOS file functions pass the probe", "warm boot clears the restart vectors except jumps into ROM, and a stale RST returns"],
+  "test/tas.test.mjs": ["TAS assembles a program on TEC-OS and the program runs"],
+  "test/svc.test.mjs": ["a jump into a service is kept over warm boot, and RST 38h reaches a kept 0038h"],
+  "test/times.test.mjs": ["with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back, TIMES runs, and the GLCD is still the console"],
+  "test/ted-baza.test.mjs": [
+    "TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No debugger, ^T R runs TIMES, and a syntax error brings TED back on its line",
+    "a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load drive",
+  ],
+};
+
+test("KG63 inactive", { timeout: 3_600_000 }, async () => {
+  const dir = resolve(ROOT, "build/ks53");
+  mkdirSync(dir, { recursive: true });
+  const svcPath = resolve(dir, "MON3.SVC");
+  const log = resolve(dir, "inactive.log");
+  writeFileSync(svcPath, await mon3File());
+  writeFileSync(log, "");
+  const escape = (n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const names = Object.values(INACTIVE).flat();
+  // The child is a test run of its own, reporting TAP, not a child of this one.
+  const { NODE_TEST_CONTEXT, ...env } = process.env;
+  const r = spawnSync(process.execPath, ["--test", "--test-reporter=tap", "--test-concurrency=1", `--test-name-pattern=^(${names.map(escape).join("|")})$`, ...Object.keys(INACTIVE)], {
+    cwd: ROOT,
+    env: { ...env, TECOS_TEST_RESIDENT: svcPath, TECOS_TEST_RESIDENT_LOG: log },
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  const out = r.stdout;
+  const passed = [...out.matchAll(/^ok \d+ - (.*)$/gm)].map((x) => x[1].replace(/ # SKIP.*$/, ""));
+  const failed = [...out.matchAll(/^not ok \d+ - (.*)$/gm)].map((x) => x[1]);
+  assert.deepEqual(failed, [], out.slice(-4000));
+  assert.doesNotMatch(out, /# SKIP/, "none skipped");
+  assert.deepEqual([...passed].sort(), [...names].sort(), "each named test ran and passed");
+  const entries = readFileSync(log, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+  assert.ok(entries.length >= names.length, `${entries.length} machines with MON3.SVC installed`);
+  for (const e of entries) assert.ok(e.entry <= 0xb100, `${e.file}: MON3.SVC installed, (0006h) ${e.entry.toString(16)}h`);
+  assert.equal(r.status, 0);
+});
