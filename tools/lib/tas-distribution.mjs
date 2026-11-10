@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { checkInterfaces, DHLEN, FORMAT, fixupsOf, packSvc } from './svc.mjs';
 
 export const GLCD_SOURCE = 'drivers/glcd.asm';
+export const MON3_SOURCE = 'drivers/mon3.asm';
 
 const relativeSymbols = ({ globals, origin }) => Object.fromEntries([...globals].map(([name, symbol]) => [
   name, { kind: symbol.kind, value: symbol.value - (symbol.kind === 'label' ? origin : 0) },
@@ -30,14 +31,19 @@ export function relocateGlcd(at1, at2) {
   return { at0, symbols, fixups };
 }
 
-export async function assembleGlcd(root, run) {
-  checkInterfaces(readFileSync(join(root, GLCD_SOURCE), 'utf8'), 'GLCD');
-  const assemble = origin => run({ root, entry: GLCD_SOURCE, origin, target: 'GLCD.SVC', phase: 'flat' });
+async function assembleService(root, run, source, target) {
+  checkInterfaces(readFileSync(join(root, source), 'utf8'), target);
+  const assemble = origin => run({ root, entry: source, origin, target, phase: 'flat' });
   const at1 = await assemble(0x100);
   const at2 = await assemble(0x200);
   const { at0, symbols, fixups } = relocateGlcd(at1, at2);
   return packSvc(at0, symbols, fixups).file;
 }
+
+export const assembleGlcd = (root, run) => assembleService(root, run, GLCD_SOURCE, 'GLCD.SVC');
+
+/** MON3.SVC, the MON-3 session service, by the same two flat assemblies. */
+export const assembleMon3 = (root, run) => assembleService(root, run, MON3_SOURCE, 'MON3.SVC');
 
 export async function assembleDistributionCom(root, run, name) {
   assert.ok(name === 'MOUNT.COM' || name === 'DEMO.COM', 'unsupported TAS distribution program');

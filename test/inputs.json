@@ -50,6 +50,16 @@
       "path": "examples/BOUNCE.BAS",
       "bytes": 4177,
       "sha256": "fab92802b94652a2eb85fb931ee3b35669320360db13b7265fb458db610e222b"
+    },
+    "MON3.BIN": {
+      "env": "MON3_BIN",
+      "default": "../debug80-tec1g-mon3/roms/tec1g/mon-3/mon3.bin",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, roms/tec1g/mon-3/mon3.bin",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "roms/tec1g/mon-3/mon3.bin",
+      "bytes": 16384,
+      "sha256": "9eacfdc8ef5937a27a39cf4a10a3479334695b8fb94d1076a58a8306f144c1ac"
     }
   }
 }

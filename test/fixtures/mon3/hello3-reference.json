@@ -1,0 +1,49 @@
+{
+  "at4000": {
+    "a": 255,
+    "b": 1,
+    "c": 0,
+    "de": 49673,
+    "hl": 16384,
+    "sp": 2174,
+    "iff1": 0,
+    "flags": {
+      "S": 0,
+      "Z": 0,
+      "Y": 0,
+      "H": 0,
+      "X": 0,
+      "P": 0,
+      "N": 0,
+      "C": 0
+    },
+    "edges": 64,
+    "row4": "  Running at: 4000  "
+  },
+  "after": {
+    "rows": [
+      "MON-3 ON TEC-OS     ",
+      "LCD BY RST 10H      ",
+      "DIGITS BY RST 20H   ",
+      "KEY BEEPS, AD QUITS "
+    ],
+    "edges": 128,
+    "digits": {
+      "count": 12,
+      "key": 0,
+      "raw": "eb eb c3 eb eb eb"
+    }
+  },
+  "key": {
+    "edges": 64,
+    "digits": {
+      "count": 15,
+      "key": 5,
+      "raw": "a7 eb 47 eb eb eb"
+    }
+  },
+  "back": {
+    "pc": 49673,
+    "sp": 2176
+  }
+}
