@@ -2,8 +2,8 @@
 // reopens a file at every console's size, opens at a line, and runs the round
 // of ^T B, ^T D and ^T R with TAS. Emulator evidence. TED.COM and TAS.COM are
 // pinned inputs (test/inputs.json). CURSOR and TEXCAP are TED's own words,
-// from the listing of Thorium 967678c's build (build/ted/ted.sym), where the
-// language table left the workspace in place; the pin's hash holds them.
+// from the listing of TED's build (build/ted/ted.sym); the workspace at 2400h
+// holds them, and the pin's hash holds the build.
 
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -87,6 +87,36 @@ test("the line argument: TED NOTES.TXT 2 opens at line 2", { skip: TED.skip, tim
   keys(m, "ted notes.txt 2\r", "TED at line 2", () => m.screen()[0] === "hello" && /L2 C1/.test(m.screen()[23]));
   keys(m, "Y\x13", "the save", () => text(image, "A", "NOTES.TXT") === EDITED);
   keys(m, "\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
+});
+
+test("a text file padded with 00h to its record's end, with no ^Z, opens in TED with no error", { skip: TED.skip, timeout: 900_000 }, () => {
+  check(TED);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TED.COM", tedBytes());
+  // As an older copy onto the card made it: CR LF lines, then 00h to 128 bytes.
+  const body = Buffer.from(NOTES.replace(/\n/g, "\r\n"), "latin1");
+  a.write("NOTES.TXT", Buffer.concat([body, Buffer.alloc(128 - body.length)]));
+  const m = boot(image, { tms: true, matrix: true });
+  keys(m, "ted notes.txt\r", "TED", () => m.screen()[0] === "hello" && /NOTES/.test(m.screen()[23]));
+  assert.deepEqual(m.screen().slice(0, 3).map((l) => l.trimEnd()), ["hello", "second line", ""], "the text, and nothing after it");
+  assert.doesNotMatch(m.screen().join("\n"), /error/i);
+  keys(m, "\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
+  assert.deepEqual(m.violations, []);
+});
+
+test("a byte TED refuses stops it with EDIT error 03 and the byte's line and column", { skip: TED.skip, timeout: 900_000 }, () => {
+  check(TED);
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("TED.COM", tedBytes());
+  // 01h, a control TED refuses, at line 3, column 5.
+  a.write("BAD.TXT", Buffer.from("one\ntwo\nthre\x01e\n", "latin1"), { text: true });
+  const m = boot(image, { tms: true, matrix: true });
+  const mark = m.output.length;
+  keys(m, "ted bad.txt\r", "the refusal", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /EDIT error 03 L3 C5/);
+  assert.deepEqual(m.violations, []);
 });
 
 /**

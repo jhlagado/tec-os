@@ -10,7 +10,7 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
 - the owner's 40-column `SAMPLE.ASM`;
 - BASIC and TED's language support (KD-262): BAZA's `BAZA.COM` and
   `BAZA.RTL` from Baza `ae6a00d`, the sample `TIMES.BAS`, and TED from
-  Thorium `967678c`, whose language table builds a `.BAS` with BAZA. The
+  Thorium `b69d544`, whose language table builds a `.BAS` with BAZA. The
   starter card holds nine files; the Viewer's page card adds `DEMO.COM`,
   its source `DEMO.ASM`, and Baza's `BOUNCE.BAS` sprite game. Whether
   `BOUNCE.BAS` also goes on the starter card is open.
