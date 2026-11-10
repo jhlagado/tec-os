@@ -12,9 +12,9 @@
 ; RSTAIL clears ROVEC, logs in A and
 ; publishes its default pointers. LOGIN
 ; can reapply mounted read-only state.
-; Return A=0 through SETDEF and RETA. Any
-; register may change. Errors follow
-; BDERR policy.
+; Return A=0 through SETDEF and RETA.
+; Any register may change. Errors
+; follow BDERR policy.
 
 FNRESET:
   ld hl,WRFLAG   ; one-shot CCP reset
