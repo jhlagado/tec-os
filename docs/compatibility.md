@@ -107,7 +107,9 @@ from CP/M 3's CCP. `COPY SOURCE DEST` is a TEC-OS built-in, and so are these:
   printed.
 
 - `NAME.SVC` installs a service and `SERVICES` lists them, each with its pages.
-  `UNLOAD` removes the lowest. A `.DRV` name is no longer a service: `NAME.DRV`
+  `UNLOAD` removes the lowest. `NAME.SVC /E` enters an installed service's
+  application, installing it first if it isn't in, and any other switch is
+  refused (`docs/services.md`). A `.DRV` name is no longer a service: `NAME.DRV`
   goes down the `.COM` path, runs a `NAME.COM` if there is one, and
   prints `NAME.DRV?` if there is none.
 - After a reset, recognised or not, and not on an ordinary exit, `A:STARTUP.CMD`,
@@ -159,7 +161,10 @@ Warm boot at `0000h`, BDOS vector at `0005h` (target `B9A4h` on the starter card
 below the allocation vectors), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
-`0100h`. The BIOS jump table is at `BF00h`, the top page of EXPAND 0, and
+`0100h`, entered with HL 0100h and DE 0000h, since the CCP's run path is shared
+with `NAME.SVC /E`. CP/M 2.2 promises a program no register at entry, and
+`BAZA.COM` and the programs it compiles read neither (confirmed by P7 for BAZA.COM
+and its output). The BIOS jump table is at `BF00h`, the top page of EXPAND 0, and
 reached through `0001h`. The BDOS calls the BIOS through it, as CP/M 2.2
 does, so a program that replaces an entry there sees the BDOS's own calls,
 its console output, its console reads and the warm boot after `^C` or a disk
@@ -261,8 +266,10 @@ loader refuses a format 3 service, which would call ABI 4's addresses.
 ### Page zero and the workspace
 
 `docs/memory-map.md` gives both. Page zero is CP/M's, with TEC-OS's latch shadow at
-`0040h`; `0041h` to `004Fh` are unused, cleared at cold boot, and the console's state
-is above the RAM BIOS table. The RAM BIOS table is at `BF00h`. The CCP's command line and both its FCBs
+`0040h`; `0041h` to `004Fh` are unused by TEC-OS, cleared at cold boot, and the
+console's state is above the RAM BIOS table. A `MON3.SVC` session holds `0041h` to
+`004Fh`, with the restart slots and the NMI entry, while it runs, and gives them
+back at `EXIT` or warm boot (`docs/mon3.md`). The RAM BIOS table is at `BF00h`. The CCP's command line and both its FCBs
 are kept over warm boot, from `CCPCLR`, and `CHPOS` above the table holds the place in
 a chained line.
 
@@ -275,6 +282,6 @@ a chained line.
 | BDOS | Functions 47, 44, 46 and 99 added, the last three as CP/M 3's: 44 takes a count of 1 only and returns FFh for any other, 46 puts a drive's free records at the DMA address, and 99 returns FFh with nothing changed; function 50 gone. The prompt shows the user number before the drive unless it is 0, as `3A>`. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The GLCD's console is a loaded driver; the PICO9918's console and the font are in the ROM (KS39) | None |
-| Page zero | `0040h` holds `LATCHV` alone; `0041h` to `004Fh` are unused, the console's state moved above the RAM BIOS table (KS36c), and `MAINS` and `EXPANDS` are gone with MAIN 1's count. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
+| Page zero | `0040h` holds `LATCHV` alone; `0041h` to `004Fh` are unused by TEC-OS and held by a `MON3.SVC` session while it runs, the console's state moved above the RAM BIOS table (KS36c), and `MAINS` and `EXPANDS` are gone with MAIN 1's count. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |
 | Workspace | `CHPOS` added and the line kept over warm boot from `CCPCLR` | The workspace left the top page of the TPA |
 | TPA | 47,268 on the starter card with no display or with the PICO9918, and 46,336 with the GLCD's driver: KS36b's block store took `BLKBUF` out of the workspace, and KS39's console block in the BIOS's state took 95 | 45,830 at `7029f57` |
