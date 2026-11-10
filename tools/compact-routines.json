@@ -67,7 +67,15 @@
     "KWAIT",
     "TDLY",
     "DERR",
-    "SCMP"
+    "SCMP",
+    "KBSCAN",
+    "MSCAN",
+    "MSASC",
+    "KSIDX",
+    "PMSCN",
+    "GETCAP",
+    "TOGCAP",
+    "LATSET"
   ],
   "drivers/mon3hex.asm": [
     "CHEX",

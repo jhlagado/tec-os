@@ -21,18 +21,33 @@ SSYS EQU $03     ; key-down bit 6
 LCDI EQU LCDCMD
 LCDD EQU LCDDAT
 TXI EQU $40      ; serial idle bit
+SMATX EQU $FE    ; the matrix, joystick
+SLED EQU $05     ; the 8x8 row select
+SRED EQU $06     ; and its red, green
+SGRN EQU $F8     ; and blue columns
+SBLU EQU $F9
 
 ; MON-3's own addresses.
 
 MSTK3 EQU $0880  ; its stack top
+DISPB EQU $0880  ; the digits' buffer
 CEL EQU $0886    ; defaults go here
 KBUFF EQU $0889
 KPRESS EQU $088A
+KREPT EQU $088B  ; the key's repeat
 KBEEP EQU $088D
+KSEC EQU $088E   ; the second key
+GTERM EQU $088F  ; the GLCD terminal
 UINT EQU $0892   ; IM 1 handler
 UNMI EQU $0894   ; NMI handler
+CAPSL EQU $089C  ; Caps Lock
 SYSMD EQU $089D  ; latch copy
 PROTM EQU $089E
+XPNDM EQU $089F  ; EXPAND's setting
+RNGSD EQU $08B0  ; the random seed
+BAUD EQU $08B1   ; the serial bit time
+DATTO EQU $08C2  ; a dump's end
+DROW EQU $0900   ; a dump's line
 
 ; The latch bits GO takes from SYS_MODE:
 ; PROTECT and CAPS. EXPAND and the bank
