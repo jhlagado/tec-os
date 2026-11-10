@@ -24,6 +24,23 @@
     "DECIMAL",
     "PLACE"
   ],
+  "programs/DEMO.ASM": [
+    "PRINT",
+    "YESNO",
+    "CLOCK",
+    "BCD2",
+    "BCD1",
+    "COUNT",
+    "MKDIG",
+    "SEG",
+    "MKLED",
+    "LEDSCAN",
+    "VDPSET",
+    "BALL",
+    "RANDOM",
+    "STEP",
+    "VWA"
+  ],
   "src/bios.asm": [
     "BHOME",
     "BSETSEC",

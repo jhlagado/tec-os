@@ -38,9 +38,9 @@ export function sourceDigest(path, seen = new Set()) {
 }
 
 
-/** Assemble test/programs/NAME.asm with ATOM, cached by the same digest. */
+/** Assemble test/programs/NAME.asm, or the shipped programs/DEMO.ASM for demo, with ATOM, cached by the same digest. */
 export async function program(name, { base = 0x100 } = {}) {
-  const src = resolve(ROOT, "test/programs", `${name}.asm`);
+  const src = name === "demo" ? resolve(ROOT, "programs/DEMO.ASM") : resolve(ROOT, "test/programs", `${name}.asm`);
   const digest = sourceDigest(src);
   const cacheDir = resolve(ROOT, "build/test-programs");
   const out = resolve(cacheDir, `${name}-${digest}-${base.toString(16)}.bin`);

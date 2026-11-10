@@ -156,7 +156,9 @@ a name and a number and prints that number's times table. `BAZA TIMES` compiles 
 `BAZA.COM` and `BAZA.RTL` and `TIMES` runs it; in `TED TIMES.BAS`, ^T B and
 ^T R build and run it with BAZA as they do an `.ASM` with TAS.
 `DEMO.COM`, on the viewer's demo card, shows the hardware: the LCD, the 7-segment digits,
-the 8 × 8 LEDs and the PICO9918 in Graphics I. `BOUNCE.BAS`, also on that card
+the 8 × 8 LEDs and the PICO9918 in Graphics I. Its source, `DEMO.ASM`, is
+beside it: `TED DEMO.ASM` reads it and `TAS DEMO` builds the same `DEMO.COM`.
+`BOUNCE.BAS`, also on that card
 only, is Baza's sprite game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the
 PICO9918 in Graphics I through `call`; tap W, A, S and D to steer the ship, and
 Q gives the display back. A command

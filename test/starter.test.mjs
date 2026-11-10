@@ -1,8 +1,8 @@
 // The starter card that `npm run media` builds: exactly nine files on A:, each
 // the bytes its source or pin gives, the page's width drivers pinned in its
 // recipe, and it boots to a MOUNT that lists its volumes. The page's card adds
-// DEMO.COM and BOUNCE.BAS, which BAZA compiles and which runs its sprites on
-// the PICO9918. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and
+// DEMO.COM, its source DEMO.ASM, and BOUNCE.BAS, which BAZA compiles and which
+// runs its sprites on the PICO9918. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and
 // BOUNCE.BAS are pinned inputs (test/inputs.json).
 
 import { execFileSync } from "node:child_process";
@@ -79,7 +79,7 @@ async function pageCard() {
   return { page, card: await buildRecipe(page, fileFetcher(resolve(ROOT, "dist"))) };
 }
 
-test("the web page's card is the starter with DEMO.COM and BOUNCE.BAS, which the starter lacks (KD-170)", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the web page's card is the starter with DEMO.COM, DEMO.ASM and BOUNCE.BAS, which the starter lacks", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(BOUNCE);
   const { card, recipe } = starter();
   const { page, card: pc } = await pageCard();
@@ -87,15 +87,18 @@ test("the web page's card is the starter with DEMO.COM and BOUNCE.BAS, which the
   // Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
   const bounce = Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
   const names = (r) => r.components.map((c) => c.name).sort();
-  assert.deepEqual(names(page), [...names(recipe), "BOUNCE.BAS", "DEMO.COM"].sort());
+  assert.deepEqual(names(page), [...names(recipe), "BOUNCE.BAS", "DEMO.ASM", "DEMO.COM"].sort());
   assert.equal(page.components.find((c) => c.name === "DEMO.COM").files[0].sha256, sha(demo));
   assert.equal(page.components.find((c) => c.name === "BOUNCE.BAS").files[0].sha256, sha(bounce));
+  const demoSource = Buffer.from(readFileSync(resolve(ROOT, "programs/DEMO.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
+  assert.equal(page.components.find((c) => c.name === "DEMO.ASM").files[0].sha256, sha(demoSource));
   assert.match(page.instruction, /DEMO/);
   assert.match(page.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
-  for (const name of ["DEMO.COM", "BOUNCE.BAS"]) assert.equal(volume(card, "A").list().some((f) => f.name === name), false, `${name} not on the starter`);
+  for (const name of ["DEMO.COM", "DEMO.ASM", "BOUNCE.BAS"]) assert.equal(volume(card, "A").list().some((f) => f.name === name), false, `${name} not on the starter`);
   const onPage = volume(pc, "A");
   assert.equal(sha(onPage.read("DEMO.COM").subarray(0, demo.length)), sha(demo), "DEMO.COM on the page's card");
   assert.equal(sha(onPage.read("BOUNCE.BAS").subarray(0, bounce.length)), sha(bounce), "BOUNCE.BAS on the page's card");
+  assert.equal(sha(onPage.read("DEMO.ASM").subarray(0, demoSource.length)), sha(demoSource), "DEMO.ASM on the page's card");
 });
 
 // BOUNCE.BAS, Baza's CALL demonstration, on the page's card as the Viewer

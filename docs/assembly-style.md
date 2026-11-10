@@ -6,8 +6,9 @@ a three-letter type and no hyphen. Preserve case-sensitive include paths.
 Historical model inputs, generated includes, font data and notices keep their
 own exact source and provenance; they are not formatting targets.
 
-The ROM sources under `src/`, `drivers/glcd.asm`, `programs/SAMPLE.ASM`, the
-diagnostics in `diag/` and `test/programs/mon3stub.asm` use the compact layout.
+The ROM sources under `src/`, `drivers/glcd.asm`, `programs/SAMPLE.ASM`,
+`programs/DEMO.ASM`, the diagnostics in `diag/` and `test/programs/mon3stub.asm`
+use the compact layout.
 Other live test programs retain their existing layout. A comment edit does not
 authorize a layout or case migration.
 
@@ -45,8 +46,9 @@ Comment changes preserve executable instructions, declarations, literals,
 reserves, native bytes and symbol meanings. Changed source sizes, coordinates,
 source-copy hashes and their consumers need their own correspondence. Source
 comments can be data: the `LATCHV` caption in `src/abi.inc` feeds the memory-map
-document, while raw-source digests affect fixture caches. Shipped `SAMPLE.ASM`
-also changes when its comments change. Never replace functional source with an
+document, while raw-source digests affect fixture caches. Shipped `SAMPLE.ASM` and
+`DEMO.ASM` also change when their comments change, and `test/ks40.test.mjs` pins
+`DEMO.ASM`'s hash. Never replace functional source with an
 older complete file merely because that file's wording was reviewed.
 
 `tools/style-check.mjs` selects the compact checker for its owned sources. The
