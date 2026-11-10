@@ -155,8 +155,8 @@ test("on the page's card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with spr
   assert.deepEqual(m.violations, []);
 });
 
-// The page's card holds the demo as source only: TAS DEMO makes DEMO.COM, the
-// 1,191 bytes cards once shipped, and DEMO runs it.
+// The page's card holds the demo as source only: TAS DEMO makes the pinned
+// 1,191-byte DEMO.COM, and DEMO runs it.
 test("on the page's card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { skip: PAGE_SKIP, timeout: 1_800_000 }, async () => {
   const { card } = await pageCard();
   const m = boot(card, { tms: true, matrix: true, width: 40 });
@@ -167,8 +167,9 @@ test("on the page's card, TAS DEMO builds DEMO.COM and DEMO runs it until a key"
   };
   keys("tas demo\r", "TAS's build", () => m.ready() && /A>$/.test(m.text(mark)));
   assert.match(m.text(mark), /DEMO\.COM written/);
-  const demo = Buffer.from(volume(card, "A").read("DEMO.COM")).subarray(0, 1191);
-  assert.equal(sha(demo), "7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d", "the DEMO.COM cards shipped");
+  const built = Buffer.from(volume(card, "A").read("DEMO.COM"));
+  assert.equal(sha(built.subarray(0, 1191)), "7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d", "the pinned DEMO.COM");
+  assert.ok(built.subarray(1191).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
   mark = m.output.length;
   keys("demo\r", "the demo's loop", () => /Press any key to stop\./.test(m.text(mark)));
   const end = m.cycles + 100_000_000;

@@ -26,7 +26,7 @@ function compareMap(path, actual = JSON.parse(read(candidate, path))) {
 }
 const paths = ['build/tecos/tecos.rom', 'build/tecos/census.json', 'build/diag/diag.rom', 'build/diag/diag.json',
   'dist/tecos.rom', 'dist/starter.img', 'dist/starter.recipe.json', 'dist/page.recipe.json',
-  ...['GLCD.SVC', 'MOUNT.COM', 'DEMO.COM', 'TED.COM', 'TAS.COM', 'SAMPLE.ASM', 'STARTUP.CMD'].map(name => 'dist/files/' + name)];
+  'dist/DEMO.COM', ...['GLCD.SVC', 'MOUNT.COM', 'TED.COM', 'TAS.COM', 'SAMPLE.ASM', 'STARTUP.CMD'].map(name => 'dist/files/' + name)];
 function equalArtifact(actual, expected, path) {
   assert.deepEqual(actual, expected, path);
 }
@@ -58,7 +58,7 @@ changed.set(imageId(changed), 0x3ff6);
 changed.writeUInt16LE(changed.subarray(0, -2).reduce((sum, byte) => (sum + byte) & 0xffff, 0), 0x3ffe);
 assert.throws(() => equalROM(changed, diag), /ROM differs at c007/);
 for (const [name, offset] of [['MOUNT.COM', 65], ['DEMO.COM', -30]]) {
-  const good = read(reference, 'dist/files/' + name);
+  const good = read(reference, name === 'DEMO.COM' ? 'dist/DEMO.COM' : 'dist/files/' + name);
   const bad = Buffer.from(good);
   if (offset >= 0) bad[offset] ^= 1;
   assert.throws(() => equalArtifact(offset < 0 ? bad.subarray(0, offset) : bad, good, name), assert.AssertionError);

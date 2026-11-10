@@ -1,7 +1,7 @@
 // DEMO.ASM, the page card's demo source: TAS DEMO on TEC-OS builds it from
-// the card into the DEMO.COM that cards once shipped, byte for byte, with no
-// include file, since TAS reads only the current drive. Emulator evidence.
-// TAS.COM is a pinned input (test/inputs.json).
+// the card into the pinned DEMO.COM, byte for byte, with no include file,
+// since TAS reads only the current drive. Emulator evidence. TAS.COM is a
+// pinned input (test/inputs.json).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -13,7 +13,7 @@ import { check, pinned } from "./lib/inputs.mjs";
 
 const TAS = pinned("TAS.COM");
 const SOURCE = readFileSync(resolve(ROOT, "programs/DEMO.ASM"), "utf8");
-// The DEMO.COM that cards have shipped: 1,191 bytes.
+// The pinned DEMO.COM: 1,191 bytes.
 const SHIPPED = "7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d";
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
@@ -29,7 +29,7 @@ test("DEMO.ASM stands alone, with abi.inc's names at abi.inc's values, and fits 
   assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
 });
 
-test("TAS DEMO on TEC-OS builds the DEMO.COM that cards shipped", { skip: TAS.skip, timeout: 900_000 }, async () => {
+test("TAS DEMO on TEC-OS builds the pinned DEMO.COM", { skip: TAS.skip, timeout: 900_000 }, async () => {
   check(TAS);
   const image = standardCard();
   const a = volume(image, "A");
