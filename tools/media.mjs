@@ -18,7 +18,7 @@ import { PROFILES } from "./build.mjs";
 import { pageZeroDeclarations } from "./lib/media-source.mjs";
 import { tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 
-import { assembleDistributionCom, assembleGlcd, assembleMon3 } from "./lib/tas-distribution.mjs";
+import { assembleDistributionCom, assembleGlcd, assembleMon3, assembleShell } from "./lib/tas-distribution.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = resolve(ROOT, "dist");
@@ -200,7 +200,7 @@ async function main() {
   for (const p of PROGRAMS) {
     files.push({ ...p, bytes: await program(p.name) });
   }
-  files.push(...await displayFiles(ROOT, () => assembleGlcd(ROOT, run)));
+  files.push(...await displayFiles(ROOT, { assembleGlcd: () => assembleGlcd(ROOT, run), assembleShell: () => assembleShell(ROOT, run) }));
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM or NAME.BAS, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   // SAMPLE.ASM, a first program for TAS, and TIMES.BAS, a first program for
   // BAZA, as CP/M text files.
