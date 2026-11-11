@@ -7,6 +7,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realProgram } from "./lib/mon3src.mjs";
 import { sha } from "./lib/mon3s2.mjs";
+import { referenceSide, sessionSide } from "./lib/kg65.mjs";
+import { REFUSAL_TOP, compareRefusals } from "./lib/kg67.mjs";
 
 // The five GLCD programs, converted with the four rules more and their
 // includes found as pinned inputs, give their pinned binaries; the rules
@@ -41,3 +43,20 @@ for (const [name, why] of [["glcd-3d", /undefined symbol Q033/], ["glcd-demo", /
     await assert.rejects(realProgram(name, { include: false }), why);
   });
 }
+
+// RST 18h's refusals: a selector of 21 to 33, 34 or FFh shows displayError
+// as MON-3's call 11 does, waits for the key and returns as a key press
+// does, and changes nothing else: the latch, 0800h-3DFFh outside DISP_BUFF
+// and the key variables, and the ST7920, which takes no write. MON-3 also
+// refuses 34 and FFh by RST 18h, and those rows are compared with it too.
+
+let refusalSides;
+const theRefusalSides = async () => (refusalSides ??= { ref: await referenceSide(), ses: await sessionSide() });
+
+test("KG67 rst 18h refusals", async () => {
+  const { ref, ses } = await theRefusalSides();
+  const { bad, lowSP } = compareRefusals(ref, ses);
+  assert.deepEqual(bad, []);
+  assert.ok(lowSP > REFUSAL_TOP, `displayError's stack reaches ${lowSP.toString(16)}h, above the compared bytes`);
+  console.log(`RST 18h refusals: 15 selectors, 34 rows; the lowest SP ${lowSP.toString(16)}h`);
+});
