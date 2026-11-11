@@ -310,13 +310,14 @@ LEAD:
   cp '&'
   ret nz         ; HL: the first piece
   ld (PIECE),hl
+  call FOLD      ; as the ROM's words
   ld hl,0
   ld (LPOS),hl   ; none of it runs
   call CRLF      ; after the line
   jp BADW
 
-; Take the piece at HL, folding a..z,
-; and end it at ! or at an & after a
+; Take the piece at HL, as typed, and
+; end it at ! or at an & after a
 ; blank, a space or a tab. The run of
 ; blanks, ! and & that follows is one
 ; separator: & alone makes the next
@@ -337,20 +338,18 @@ SP1:
   cp '!'         ; !: always
   jr z,SPSEP     ; ! always splits
   cp '&'         ; &: if after a
-  jr nz,SP2
+  jr nz,SP3
   ld b,a         ; keep the &
   ld a,c         ; blank
-  cp SPACE+1     ; after a blank?
+  cp SPACE       ; after a space?
+  jr z,SPAMP
+  cp TAB         ; or a tab?
   ld a,b         ; the & again
-  jr c,SPSEP     ; then it splits
+  jr nz,SP3      ; no: it is text
 
-SP2:
-  cp 'a'
-  jr c,SP3       ; below a
-  cp 'z'+1
-  jr nc,SP3      ; above z
-  and $DF        ; fold to upper case
-  ld (hl),a
+SPAMP:
+  ld a,b
+  jr SPSEP       ; then it splits
 
 SP3:
   ld c,a         ; the byte before next
@@ -370,8 +369,10 @@ SPRUN:
   ld a,(hl)      ; the run's next
   or a
   jr z,SPEND     ; separators at the end
-  cp SPACE+1
-  jr c,SPR1      ; a blank
+  cp SPACE
+  jr z,SPR1      ; a space
+  cp TAB
+  jr z,SPR1      ; a tab
   cp '&'         ; & is absorbed
   jr z,SPR1
   cp '!'         ; so is !
@@ -395,11 +396,15 @@ SPEND:
 
 ; COPY, DEL and SERVICES are the
 ; shell's; a first word of type CMD is a
-; script. The table holds each keyword,
+; script. The piece, echoed as typed, is
+; folded first, as the ROM folds a line.
+; The table holds each keyword,
 ; zero-ended, and its handler, entered
 ; with HL after the word.
 
 BUILTIN:
+  ld hl,(PIECE)
+  call FOLD      ; a..z to upper case
   ld de,SHTAB
 
 BI1:
@@ -464,6 +469,24 @@ SCRCHK:
   jr nz,HAND     ; not .CMD
   call CRLF      ; after the line
   jp CMDSCR
+
+; Fold a..z to upper case from HL to
+; the zero. Changes AF and HL.
+
+FOLD:
+  ld a,(hl)
+  or a
+  ret z          ; the piece's end
+  cp 'a'
+  jr c,FD1       ; below a
+  cp 'z'+1
+  jr nc,FD1      ; above z
+  and $DF        ; fold to upper case
+  ld (hl),a
+
+FD1:
+  inc hl
+  jr FOLD
 
 HAND0:
   ld (PIECE),hl
@@ -531,29 +554,26 @@ BW2:
   call PUTC
   call CRLF      ; and a new line
 
-; A built-in's end: the blank line the
-; ROM leaves before its prompt, then
-; the code in DE, FF00h for a failure
-; and 0 for success, then the line goes
-; on with its next piece. SERVICES
-; enters at SVEND, with no blank line,
-; as the ROM's did.
+; A built-in's end: the code in DE,
+; FF00h for a failure and 0 for
+; success, then an empty line to the
+; ROM. It prints the blank line before
+; its prompt, as after its own
+; built-ins, and calls LINE again, so
+; the next piece runs from there and a
+; typed line has the history.
 
 FAILED:
   ld de,FAILCODE
 
 CODED:
-  push de        ; the code across
-  call CRLF      ; the blank line
-  pop de
-
-SVEND:
   ld c,108       ; 108: set the code
   call BDOS      ; set the code
-
-BIEND:
-  ld sp,STKTOP   ; the shell's stack
-  jp LN2         ; the next piece
+  ld hl,(OUTP)
+  ld (hl),0      ; an empty line
+  ld a,(LORG)
+  ld sp,(SAVSP)  ; the CCP's stack
+  ret
 
 BDONE:
   ld de,0
