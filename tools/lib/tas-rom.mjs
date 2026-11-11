@@ -119,12 +119,6 @@ export async function tasAssembler() {
   };
 }
 
-export function romBackend() {
-  const backend = process.env.TECOS_ROM_ASSEMBLER ?? 'tas';
-  assert.ok(backend === 'atom' || backend === 'tas', 'unknown TECOS_ROM_ASSEMBLER: ' + backend);
-  return backend;
-}
-
 export function traceRom(event) {
   const line = JSON.stringify(event);
   console.error('tecos ROM ' + line);

@@ -11,14 +11,12 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { assembleProgram } from "./lib/assemble.mjs";
 import { displayFiles } from "./lib/starter.mjs";
-import { makeSvc } from "./lib/svc.mjs";
 import { buildRecipe, saveImage } from "./tecvol.mjs";
 import { pinnedBytes as readPinnedBytes } from "./lib/pins.mjs";
 import { PROFILES } from "./build.mjs";
 import { pageZeroDeclarations } from "./lib/media-source.mjs";
-import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
+import { tasAssembler, traceRom } from "./lib/tas-rom.mjs";
 
 import { assembleDistributionCom, assembleGlcd, assembleMon3 } from "./lib/tas-distribution.mjs";
 
@@ -173,12 +171,11 @@ loop ${census.serial.txBitCycles}, receive loop ${census.serial.rxBitCycles}.
 
 async function main() {
   const fontNotices = fontPackage(ROOT).notices;
-  const backend = romBackend();
   const builds = Object.keys(PROFILES).map(profile => {
     const dir = resolve(ROOT, "build", profile);
     const mapBytes = readFileSync(resolve(dir, "tecos.d8.json"));
     const map = JSON.parse(mapBytes);
-    if (map.generator?.name !== backend) throw new Error(`main ROM map was not generated with ${backend}; rebuild with the selected assembler`);
+    if (map.generator?.name !== "tas") throw new Error("main ROM map was not generated with tas; rebuild with npm run build");
     const rom = readFileSync(resolve(dir, "tecos.rom"));
     const censusBytes = readFileSync(resolve(dir, "census.json"));
     const census = JSON.parse(censusBytes);
@@ -192,30 +189,19 @@ async function main() {
   const ted = pinnedBytes("TED.COM");
   const baza = pinnedBytes("BAZA.COM");
   const rtl = pinnedBytes("BAZA.RTL");
-  const run = backend === "tas" ? await tasAssembler() : null;
-  async function program(name, source, base = 0x100) {
-    if (run) return assembleDistributionCom(ROOT, run, name);
-    const { bytes } = await assembleProgram(resolve(ROOT, source), { base });
-    traceRom({ backend, phase: "final", target: name, root: ROOT });
-    return bytes;
-  }
+  const run = await tasAssembler();
+  const program = (name) => assembleDistributionCom(ROOT, run, name);
   /** A MON-3 program, whose own ORG puts it at 4000h. */
   async function mon3Program(name, source) {
-    if (run) {
-      const { image, origin } = await run({ root: ROOT, entry: source, origin: 0x4000, phase: "final", target: name, flat: true });
-      if (origin !== 0x4000) throw new Error(`${name} starts at ${hex(origin)}, not 4000h`);
-      return image;
-    }
-    const { bytes } = await assembleProgram(resolve(ROOT, source), { base: 0x4000 });
-    traceRom({ backend, phase: "final", target: name, root: ROOT });
-    return bytes;
+    const { image, origin } = await run({ root: ROOT, entry: source, origin: 0x4000, phase: "final", target: name, flat: true });
+    if (origin !== 0x4000) throw new Error(`${name} starts at ${hex(origin)}, not 4000h`);
+    return image;
   }
   const files = [];
   for (const p of PROGRAMS) {
-    files.push({ ...p, bytes: await program(p.name, p.source, p.base) });
+    files.push({ ...p, bytes: await program(p.name) });
   }
-  files.push(...await displayFiles(ROOT, run ? () => assembleGlcd(ROOT, run) : undefined));
-  if (!run) traceRom({ backend, phase: "final", target: "GLCD.SVC", root: ROOT });
+  files.push(...await displayFiles(ROOT, () => assembleGlcd(ROOT, run)));
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM or NAME.BAS, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
   // SAMPLE.ASM, a first program for TAS, and TIMES.BAS, a first program for
   // BAZA, as CP/M text files.
@@ -231,15 +217,14 @@ async function main() {
   const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
   files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D steer, Q quits", bytes: bounce });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
-  const demo = await program("DEMO.COM", "programs/DEMO.ASM");
+  const demo = await program("DEMO.COM");
   // DEMO.COM is built and checked here, but the card holds only its source:
   // TAS DEMO on the card makes it.
   files.push({ name: "DEMO.ASM", description: "a demonstration of the hardware, LCD, digits, LEDs and PICO9918, as source: TAS DEMO builds DEMO.COM, TED DEMO.ASM reads it", bytes: text("DEMO.ASM") });
   // MON3.SVC, the MON-3 session service, and HELLO3, a MON-3 program that
   // writes the LCD through RST 10h, as source and as the image MON-3 loads at
   // 4000h, assembled as the ROM's programs are.
-  const mon3 = run ? await assembleMon3(ROOT, run) : (await makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc") })).file;
-  if (!run) traceRom({ backend, phase: "final", target: "MON3.SVC", root: ROOT });
+  const mon3 = await assembleMon3(ROOT, run);
   files.push({ name: "MON3.SVC", description: "MON-3 programs on TEC-OS: MON3.SVC /E gives MON3>, where LOAD, GO and EXIT work", bytes: mon3 });
   const hello3 = await mon3Program("HELLO3.BIN", "test/programs/hello3.asm");
   files.push({ name: "HELLO3.BIN", description: "a MON-3 program: at MON3>, LOAD HELLO3.BIN then GO writes the LCD; AD (Esc on the matrix) returns", bytes: hello3 });
@@ -284,7 +269,7 @@ async function main() {
     writeFileSync(resolve(DIST, "tecos.rom"), rom);
     writeFileSync(resolve(DIST, "tecos.d8.json"), mapBytes);
     writeFileSync(resolve(DIST, "tecos.census.json"), censusBytes);
-    traceRom({ backend, phase: "media", target: "tecos.rom", root: dir, sha256 });
+    traceRom({ backend: "tas", phase: "media", target: "tecos.rom", root: dir, sha256 });
   }
   for (const [ref, bytes] of buffers) writeFileSync(resolve(DIST, ref), bytes);
   writeFileSync(resolve(DIST, "DEMO.COM"), demo);
