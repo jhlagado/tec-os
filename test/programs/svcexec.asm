@@ -1,6 +1,7 @@
-; SVCEXEC: a service with an execution record, for NAME.SVC /E's tests.
-; Writer definitions pick the record's version, a ready bit INIT never sets,
-; an INIT that finds no device, and a REMOVE that refuses.
+; SVCEXEC: a service with an execution record, for enter-on-install's tests.
+; Writer definitions pick the record's version, its state bit 1 (ENTER: enter
+; on install), a ready bit INIT never sets, an INIT that finds no device, and
+; a REMOVE that refuses. The entry keeps its A in ENTA.
 ; The entry prints EXEC and the header's name, then acts on the first letter
 ; of its command tail: J jumps to 0000h, B calls BDOS 0, F sets return code
 ; FF00h, P pushes fifteen words and pops them. Each then returns.
@@ -16,7 +17,7 @@ HDR:	DB	'D',SVCFMT,0,FLAGS
         DB      HDRNAME
 ; The execution record: its entry is an offset from HDR, the JP at 41.
         DB      "EX",RECVER
-RDY:    DB      0
+RDY:    DB      ENTER*2
         DW      41
 NAME:   DS      8,' '
         DB      0,1
@@ -33,8 +34,8 @@ INIT:
         LD      BC,8
         LDIR
 %IF !V_NRDY
-        LD      A,1
-        LD      (RDY),A
+        LD      HL,RDY
+        SET     0,(HL)          ; ready, bit 1 kept
 %ENDIF
         LD      HL,0
         XOR     A
@@ -44,10 +45,12 @@ REMOVE:
         SCF                     ; refuses: stays installed
         RET
 %ENDIF
+        LD      HL,RDY
+        RES     0,(HL)
         XOR     A
-        LD      (RDY),A
         RET
-ENTRY:  LD      DE,MSG
+ENTRY:  LD      (ENTA),A        ; FFh from the startup line, else 0
+        LD      DE,MSG
         LD      C,9
         CALL    BDOS
         LD      A,($0082)       ; the tail's first letter
@@ -72,3 +75,4 @@ E4:     POP     HL
         DJNZ    E4
         RET
 MSG:    DB      "EXEC ",HDRNAME,"$"
+ENTA:   DB      0

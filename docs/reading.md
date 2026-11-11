@@ -41,7 +41,8 @@ the generated outputs and evidence cover.
    operations, `bdosrec.asm` for record I/O, `bdosfn.asm` for queries and
    directory iteration, `bdoslog.asm` for directory I/O and drive login and
    `bdoscon.asm` for console helpers and errors. All are in `src/cpm/`.
-   [src/history.asm](../src/history.asm) adds prompt history.
+   The prompt's history, `COPY`, the pager and lines of several commands
+   are `SHELL.SVC`'s, in `drivers/shell.asm` ([docs/shell.md](shell.md)).
 
 5. **Disk path.** Follow a BDOS record request through BIOS into
    [src/cache.asm](../src/cache.asm) and [src/sd.asm](../src/sd.asm).

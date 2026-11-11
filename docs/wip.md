@@ -13,11 +13,11 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
   `BOUNCE.BAS` sprite game, and TED from Thorium `b69d544`, whose language
   table builds a `.BAS` with BAZA.
 - One card (KD-278): the starter card is the Viewer's card too. It holds
-  fifteen files: `BAZA.COM`, `BAZA.RTL`, `BOUNCE.BAS`, `CHAIN.ASM`,
+  sixteen files: `BAZA.COM`, `BAZA.RTL`, `BOUNCE.BAS`, `CHAIN.ASM`,
   `DEMO.ASM`, `GLCD.SVC`, `HELLO3.ASM`, `HELLO3.BIN`, `MON3.SVC`,
-  `MOUNT.COM`, `SAMPLE.ASM`, `STARTUP.CMD`, `TAS.COM`, `TED.COM` and
-  `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
-  `MON3.SVC /E`, then `LOAD HELLO3.BIN` and `GO`, runs a MON-3 program that
+  `MOUNT.COM`, `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`, `TAS.COM`,
+  `TED.COM` and `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
+  `MON3.SVC`, then `LOAD HELLO3.BIN` and `GO`, runs a MON-3 program that
   writes the LCD (KD-277).
 - Several statements on a line (KD-275): TAS from Thorium `3d1e2c0` takes
   them with a `\` between, and the card's `CHAIN.ASM`, Thorium's

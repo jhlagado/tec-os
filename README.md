@@ -12,9 +12,10 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 47,268 bytes on the
-  starter card and at least 46,564 on any card, and 46,336 with the GLCD's
-  driver. EXPAND 1 is TEC-OS's own: its block cache and history. TEC-OS says so at boot and stops if either half
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 47,273 bytes on the
+  starter card with nothing loaded; the card's `STARTUP.CMD` loads the shell,
+  `SHELL.SVC`, which leaves 44,544, and 43,776 with the GLCD's driver too.
+  EXPAND 1 is TEC-OS's own: its block cache. TEC-OS says so at boot and stops if either half
   is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
   with `tecvol`.
@@ -105,8 +106,9 @@ There is one image for every board,
 PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I, which
 `CON PICO 40` and the like switch between; it starts at 40. The GLCD's console
 is a driver, `A:GLCD.SVC`. The web page writes a width chosen as a `CON PICO 40`
-or `CON PICO 32` line at the top of the card's `STARTUP.CMD`, and takes out any
-other `CON PICO` or `CON CRT` line with a width, which would override it.
+or `CON PICO 32` line in the card's `STARTUP.CMD`, after its `SHELL.SVC` line,
+and takes out any other `CON PICO` or `CON CRT` line with a width, which would
+override it.
 
 ## In a web page
 
@@ -152,11 +154,14 @@ the console to the GLCD when the Matrix switch is on. Otherwise it stays on the
 serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
-CP/M commands: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `COPY`, `B:`.
-`DEL` is another name for `ERA`.
-`SERVICES` lists the services loaded and `UNLOAD` removes the last one. A line
-chains commands with `!`, and a piece starting `:` runs only if the last command
-succeeded, as in `TED X.ASM!TAS X!:X`.
+CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `B:`,
+and `UNLOAD`, which removes the last service loaded. The starter card loads the
+shell, `SHELL.SVC` ([docs/shell.md](docs/shell.md)), which adds the history (^W
+and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
+services loaded, `[more]` in `TYPE` and `DIR`, and `.CMD` scripts. Under the
+shell a line joins commands with `!`, which always runs the next, and `&` after
+a blank, which runs it only if the last command succeeded, as in
+`TED X.ASM!TAS X &X`.
 `SAMPLE.ASM` on the starter card is a first program to build and read:
 `TAS SAMPLE` assembles it and `SAMPLE` runs it, printing the screen's size,
 writing the LCD, lighting the digits and beeping through the ROM's services by
@@ -167,7 +172,7 @@ runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
 an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
 `DEMO.COM` and `DEMO` runs it, showing the LCD, the 7-segment digits, the
 8 × 8 LEDs and the PICO9918 in Graphics I, and `TED DEMO.ASM` reads it. `MON3.SVC` runs programs written for MON-3, the
-TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC /E` gives `MON3>`,
+TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC` gives `MON3>`,
 where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
 LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
 keyboard, returns to `MON3>`, and `EXIT` to `A>`. `HELLO3.ASM` is its source,
@@ -184,7 +189,8 @@ back. A BASIC program that has claimed the display and
 stops on an error gives it back first, so its message shows. A command that
 names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary
-exit, from the volume selected as A:; a keypad key held from reset until the
+exit, from the volume selected as A:: the ROM runs its first line, and a shell
+that line loads runs the rest; a keypad key held from reset until the
 prompt skips it, and the console stays where cold boot put it. If the card is
 missing or invalid the LCD shows `CARD?`, and a diagnostic prompt on the console,
 the PICO9918 or the serial terminal, shows the error code and offers a retry. A

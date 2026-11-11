@@ -14,7 +14,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -105,6 +105,9 @@ test("a file read again comes from the cache, with no card read, and the same by
 test("write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns", async () => {
   const run = async (rom) => {
     const image = await load(standardCard(), ["wbtest", "sum"], { "DATA.BIN": DATA });
+    // COPY is the shell's, where the old ROM's was the CCP's. Both cards hold the
+    // shell's files, so that their blocks lie where they do for each ROM.
+    withShell(image);
     const m = start(image, { rom });
     const t = trace(m);
     for (const line of ["SAVE 8 X.COM", "COPY DATA.BIN B:DATA.CPY", "WBTEST", "ERA X.COM", "SAVE 2 B:Y.COM"]) cmd(m, line);
@@ -119,7 +122,7 @@ test("write-through volumes write the card as f49e380 did, block for block, befo
 });
 
 test("on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot", async () => {
-  const image = await load(card(), ["wbtest", "sum"], { "DATA.BIN": DATA });
+  const image = withShell(await load(card(), ["wbtest", "sum"], { "DATA.BIN": DATA })); // COPY is the shell's
   const m = start(image);
   const t = trace(m);
   const tpa = pattern(16 * 256, (i) => i * 3 + 7);

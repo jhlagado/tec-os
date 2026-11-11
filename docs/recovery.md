@@ -39,12 +39,12 @@ or power off before the close leaves depends on where the write went:
   or not: there is no copy to return to.
 
 If a block cannot be written during a program's run, the BIOS returns the
-error, the BDOS says `Bad Sector` and the rest of a chained line goes. A
+error, the BDOS says `Bad Sector` and, under the shell, the rest of the line goes. A
 flush, at a directory write on a volume written behind, at a warm boot, or at
 `MOUNT` or `UNMOUNT`, tries every changed line and goes on to the rest. A
 directory write's flush keeps each data line whose write fails, as above; the
 others drop it, so the card's copy stands. A warm boot whose flush
-dropped a line says `Write lost` once and drops the rest of a chained line as a
+dropped a line says `Write lost` once and drops the rest of the shell's line as a
 BDOS error does; the next warm boot has nothing more to say.
 
 ## What a successful write means
@@ -132,7 +132,7 @@ retained, whatever its other bytes. There is no signature to clear: what proves
 the selection is that the volumes are still on the card.
 
 Only the selection is kept. Page zero, the workspace, services, the registry, the
-cache, open files, the history and the TPA ceiling are all rebuilt, and a reset
+cache, open files, the shell and its history and the TPA ceiling are all rebuilt, and a reset
 starts at user 0 on the serial console, with startup run once from the selected A:.
 
 Each drive's start, length, geometry and flags must match one descriptor of the card

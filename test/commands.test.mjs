@@ -1,23 +1,29 @@
 // What is left of the CCP's own commands once nested levels went: CCP and EXIT
-// are names like any other, UNLOAD is last in, first out, the freed page of
-// EXPAND 1 stays free, DEL is ERA by another name, and a program's and a warm
-// boot's route to the prompt.
-// Emulator evidence.
+// are names like any other, UNLOAD is last in, first out, the freed pages of
+// EXPAND 1 stay free, DEL is ERA by another name under the shell, and a
+// program's and a warm boot's route to the prompt. The minimal ROM CCP's
+// own tests are at the end. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { TEST_CLOCK, boot, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, boot, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
 
-async function machine(files = {}, opts = {}) {
+/** A machine with RES.SVC and FILES on A:; with SHELL, booted with SHELL.SVC holding the prompt. */
+async function machine(files = {}, { shell = false, ...opts } = {}) {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("RES.SVC", await service("res"));
   for (const [n, b] of Object.entries(files)) a.write(n, b);
+  if (shell) withShell(image);
   return boot(image, opts);
 }
 
@@ -48,12 +54,12 @@ test("UNLOAD is refused with no resident, and removes residents last in, first o
 
 test("nothing is kept for a level: the table ends at ABICALL's jump and the page at BE00h is free", async () => {
   const m = await machine({}, { ram96: true });
-  assert.equal(m.sym("HRING"), 0xbd00);
+  assert.equal(m.symbols.get("HRING"), undefined, "no history ring in EXPAND 1: it is the shell's");
   assert.equal(m.sym("ABIEND"), m.sym("ABICALL") + 3);
   assert.deepEqual(m.violations, []);
 });
 
-test("a write to BE00h-BFFFh in EXPAND 1 fails the host's watch, and one to BDFFh, the history's, does not (A12)", async () => {
+test("SH11 a write to BD00h-BFFFh in EXPAND 1 fails the host's watch: the history's page is free", async () => {
   const m = await machine();
   const poke = (a) => {
     // EXPAND 1 in view, one byte written, EXPAND 0 back, from a stub in page zero.
@@ -63,10 +69,8 @@ test("a write to BE00h-BFFFh in EXPAND 1 fails the host's watch, and one to BDFF
     m.runUntil(() => m.pc === 0x6d, 1_000_000, "the stub");
     Object.assign(m.cpu.cpu, { pc, sp });
   };
-  poke(0xbdff);
-  assert.deepEqual(m.expand1Writes, []);
-  for (const a of [0xbe00, 0xbeff, 0xbf00, 0xbfff]) poke(a);
-  assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbe00, 0xbeff, 0xbf00, 0xbfff]);
+  for (const a of [0xbd00, 0xbdff, 0xbe00, 0xbeff, 0xbf00, 0xbfff]) poke(a);
+  assert.deepEqual(m.expand1Writes.map((w) => w.addr), [0xbd00, 0xbdff, 0xbe00, 0xbeff, 0xbf00, 0xbfff]);
   for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // these were asked for
 });
 
@@ -75,7 +79,7 @@ test("startup lines go on after ^C at a program", async () => {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("WAIT.COM", WAIT);
-  a.write("STARTUP.CMD", startupFile("WAIT", "USER 3"));
+  withShell(image, "WAIT", "USER 3"); // the shell runs the lines after its own
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK });
   m.expect(/WAIT\r/, { from: 0, maxCycles: 200_000_000 });
   m.type("\x03");
@@ -156,8 +160,8 @@ test("ERA *.* answered with Return alone erases nothing and takes no second Retu
 
 const code = (m) => word(m, m.sym("PRGCODE"));
 
-test("DEL is ERA by another name: it erases a file, and a file pattern, as ERA does", async () => {
-  const m = await machine();
+test("SH11 DEL is ERA by another name: it erases a file, and a file pattern, as ERA does", async () => {
+  const m = await machine({}, { shell: true });
   for (const n of ["ONE.COM", "TWO.COM", "KEEP.DAT"]) m.command(`SAVE 1 B:${n}`);
   assert.equal(m.command("DEL B:ONE.COM"), "DEL B:ONE.COM\r\r\nA>");
   assert.equal(m.command("ERA B:TWO.COM"), "ERA B:TWO.COM\r\r\nA>");
@@ -169,8 +173,8 @@ test("DEL is ERA by another name: it erases a file, and a file pattern, as ERA d
   assert.deepEqual(m.violations, []);
 });
 
-test("DEL *.* asks ALL (Y/N)? as ERA *.* does: N keeps the files, Y erases them", async () => {
-  const m = await machine();
+test("SH11 DEL *.* asks ALL (Y/N)? as ERA *.* does: N keeps the files, Y erases them", async () => {
+  const m = await machine({}, { shell: true });
   m.command("SAVE 1 B:KEEP.COM");
   const ask = (line, answer) => {
     const from = m.output.length;
@@ -189,8 +193,8 @@ test("DEL *.* asks ALL (Y/N)? as ERA *.* does: N keeps the files, Y erases them"
   assert.match(m.command("DIR B:"), /NO FILE/);
 });
 
-test("DEL with no name says ? and fails as ERA with none does", async () => {
-  const m = await machine();
+test("SH11 DEL with no name says ? and fails as ERA with none does", async () => {
+  const m = await machine({}, { shell: true });
   const era = m.command("ERA");
   const eraCode = code(m);
   assert.equal(m.command("DEL"), era.replace("ERA", "DEL"));
@@ -198,8 +202,8 @@ test("DEL with no name says ? and fails as ERA with none does", async () => {
   assert.equal(eraCode, 0xff00, "a failed built-in");
 });
 
-test("the built-in DEL comes before a DEL.COM, as ERA before ERA.COM; A:DEL and DEL.COM still run the file", async () => {
-  const m = await machine({ "DEL.COM": SAY, "ERA.COM": SAY, "DELETE.COM": SAY });
+test("SH11 the built-in DEL comes before a DEL.COM, as ERA before ERA.COM; A:DEL and DEL.COM still run the file", async () => {
+  const m = await machine({ "DEL.COM": SAY, "ERA.COM": SAY, "DELETE.COM": SAY }, { shell: true });
   assert.match(m.command("DELETE"), /C\r\n/, "DELETE: a longer word is a file's name, not DEL");
   for (const name of ["DEL", "ERA"]) {
     assert.match(m.command(name), new RegExp(`^${name}\\r\\r\\n\\?\\r\\n`), `${name}: the built-in`);
@@ -253,4 +257,151 @@ test("SAVE on a full disk closes the file before NO SPACE: the records written s
   m.command("C:");
   assert.deepEqual(volume(m.sdImage, "C").read("X.COM"), tpa, "the records written, from 0100h");
   assert.deepEqual(m.violations, []);
+});
+
+// --- The minimal ROM CCP ---------------------------------------------------
+
+const ABI_BASE = "56f3923c5a8c2542b221939173fefa0891ec6d75cf2416877f2857c5760fb61b"; // abi.inc before the shell hook
+const sha = (b) => createHash("sha256").update(b).digest("hex");
+const readText = (n) => readFileSync(resolve(ROOT, n), "utf8");
+
+test("SH1 rom figure", () => {
+  const census = () => JSON.parse(readText("build/tecos/census.json"));
+  const first = { ...census(), hash: sha(readFileSync(resolve(ROOT, "build/tecos/tecos.rom"))) };
+  execFileSync(process.execPath, [resolve(ROOT, "tools/build.mjs")], { cwd: ROOT, stdio: "pipe" });
+  const second = { ...census(), hash: sha(readFileSync(resolve(ROOT, "build/tecos/tecos.rom"))) };
+  assert.equal(second.hash, first.hash, "two builds, one image");
+  const { used, free, regions } = first.rom;
+  assert.ok(used <= 14782, `${used} used, the ceiling 14,782`);
+  assert.ok(free >= 1602, `${free} free, at least 1,602`);
+  const gaps = regions.filter((r) => r.label === "free");
+  assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
+  assert.ok(first.ram.tpa.bytes >= 47268, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
+  // abi.inc differs from before the hook by TNSHELL's block and TNCOUNT alone.
+  const abi = readText("src/abi.inc");
+  const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
+  assert.equal(sha(Buffer.from(abi.replace(block, "").replace("TNCOUNT EQU 17", "TNCOUNT EQU 16"), "utf8")), ABI_BASE, "abi.inc changed only by TNSHELL and TNCOUNT");
+  console.log(`ROM ${used} used, ${free} free, TPA ${first.ram.tpa.bytes}, ${first.hash.slice(0, 16)}`);
+});
+
+test("SH1 keytab", () => {
+  const { rom, symbols } = romFor();
+  const names = [];
+  for (let i = symbols.get("KEYTAB") - 0xc000; rom[i]; i += 3) {
+    let n = "";
+    for (; rom[i]; i += 1) n += String.fromCharCode(rom[i]);
+    names.push(n);
+  }
+  assert.deepEqual(names, ["DIR", "TYPE", "ERA", "REN", "SAVE", "USER", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
+});
+
+const LONG = Buffer.from(Array.from({ length: 40 }, (_, i) => `line ${i}\r\n`).join("") + "\x1a", "latin1");
+
+test("SH2 no pause", async () => {
+  const m = await machine({ "L.TXT": LONG }, { matrix: true, tms: true, width: 40 });
+  const t = m.command("TYPE L.TXT", { maxCycles: 900_000_000 });
+  assert.doesNotMatch(t, /\[more\]/, "TYPE lists without pausing");
+  assert.equal((t.match(/line \d+/g) ?? []).length, 40);
+  for (let i = 0; i < 30; i += 1) m.command(`SAVE 0 F${i}.COM`);
+  assert.doesNotMatch(m.command("DIR", { maxCycles: 900_000_000 }), /\[more\]/, "DIR too");
+  assert.equal(m.read(m.sym("VWID")), 40);
+});
+
+const CHAINP = (text) => { const t = Buffer.from(`${text}\0`, "latin1"); return Uint8Array.from([0x21, 0x11, 0x01, 0x11, 0x80, 0x00, 0x01, t.length, 0x00, 0xed, 0xb0, 0x0e, 47, 0xcd, 0x05, 0x00, 0xc9, ...t]); };
+const HELLO = Buffer.from("hello\r\n\x1a", "latin1");
+const bareFiles = { "X.COM": SAY, "H.TXT": HELLO, "CH.COM": CHAINP("TYPE H.TXT"), "CH2.COM": CHAINP("TYPE H.TXT!TYPE H.TXT") };
+
+test("SH3 moved names", async () => {
+  const m = await machine();
+  for (const n of ["COPY H.TXT Y.TXT", "DEL H.TXT", "SERVICES"]) {
+    const word0 = n.split(" ")[0];
+    assert.match(m.command(n), new RegExp(`\\r\\n${word0}\\?\\r\\n`), `${word0}: a name like any other`);
+    assert.equal(code(m), 0xff00);
+  }
+  const c = await machine({ "COPY.COM": SAY, "DEL.COM": SAY, "SERVICES.COM": SAY });
+  for (const n of ["COPY", "DEL", "SERVICES"]) assert.match(c.command(n), /C\r\n/, `${n}.COM runs`);
+});
+
+test("SH3 separators ordinary", async () => {
+  const m = await machine(bareFiles);
+  assert.match(m.command("DIR!TYPE H.TXT"), /DIR!TYPE\?/, "! is an ordinary character");
+  assert.match(m.command("X&TYPE"), /X&TYPE\?/, "and & is");
+  m.command("X !TYPE H.TXT");
+  assert.doesNotMatch(m.text(m.mark ?? 0), /hello/);
+});
+
+test("SH3 cmd runs com", async () => {
+  const m = await machine(bareFiles);
+  assert.match(m.command("X.CMD"), /C\r\n/, "X.CMD runs X.COM");
+  assert.match(m.command("Y.CMD"), /Y\.CMD\?/);
+  assert.equal(code(m), 0xff00);
+});
+
+/** Type LINE and run until the bare prompt reads a line again. */
+function bareAt(m, line) {
+  const from = m.output.length;
+  m.type(`${line}\r`);
+  m.runUntil(() => m.ready() && /\r\n\d*[A-P]>$/.test(m.text(from)), 400_000_000, line);
+  return m.text(from);
+}
+
+test("SH3 47 runs whole", async () => {
+  const m = await machine(bareFiles);
+  assert.match(bareAt(m, "CH"), /A>TYPE H\.TXT\r\nhello/, "echoed after the prompt and run");
+  const t = bareAt(m, "CH2");
+  assert.match(t, /A>TYPE H\.TXT!TYPE H\.TXT\r/, "echoed whole");
+  assert.doesNotMatch(t, /hello/, "one command: TYPE with the tail H.TXT!TYPE H.TXT");
+});
+
+/** The build's ROM with EDIT(bytes, at) applied. */
+function romWith(edit) {
+  const { rom, symbols } = romFor();
+  const bytes = Uint8Array.from(rom);
+  edit(bytes, (n) => symbols.get(n) - 0xc000, symbols);
+  return { rom: bytes, symbols };
+}
+const findIn = (b, from, pat, span = 64) => { for (let i = from; i < from + span; i += 1) if (pat.every((x, j) => x === null || b[i + j] === x)) return i; throw new Error("no pattern"); };
+async function mutantMachine(mut, files) {
+  const image = standardCard();
+  const a = volume(image, "A");
+  for (const [n, b] of Object.entries(files)) a.write(n, b);
+  const m = new Machine({ ...mut, sdImage: image, clock: TEST_CLOCK });
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt");
+  return m;
+}
+
+test("SH3 mutant: revision 0's .CMD refusal stops NAME.COM", async () => {
+  // NOTDRIVE's type test made CMD's: a .CMD goes to the loader, which can't install it.
+  const mut = romWith((b, at) => {
+    const i = findIn(b, at("NOTDRIVE"), [0x11, 0x53, 0x56], 128); // LD DE,'V'*256+'S'
+    b[i + 1] = 0x43; b[i + 2] = 0x4d; // 'M'*256+'C'
+    const j = findIn(b, i, [0xfe, 0x43], 16); // CP 'C'
+    b[j + 1] = 0x44; // 'D'
+  });
+  const m = await mutantMachine(mut, bareFiles);
+  assert.doesNotMatch(m.command("X.CMD"), /C\r\n/);
+});
+
+test("SH3 mutant: revision 0's function 47 guard refuses the line", async () => {
+  const mut = romWith((b, at) => {
+    const i = at("FNCHAIN"); // LD HL,(CURDMA) -> JP FNCHNO
+    const t = at("FNCHNO") + 0xc000;
+    b[i] = 0xc3; b[i + 1] = t & 0xff; b[i + 2] = t >> 8;
+  });
+  const m = await mutantMachine(mut, bareFiles);
+  assert.doesNotMatch(bareAt(m, "CH"), /hello/);
+});
+
+test("SH3 mutant: the bare chained line split at !", async () => {
+  // MLTK1's first test made "a zero or a !" by a jump to the ROM's free tail.
+  const mut = romWith((b, at) => {
+    const i = at("MLTK1"); // LD A,(HL); OR A; JR Z,MLTK3
+    const target = i + 4 + ((b[i + 3] << 24) >> 24); // MLTK3
+    const free = at("CODEEND");
+    const patch = [0x7e, 0xfe, 0x21, 0x20, 0x02, 0xaf, 0x77, 0xb7, 0xca, (target + 0xc000) & 0xff, (target + 0xc000) >> 8, 0xc3, (i + 4 + 0xc000) & 0xff, (i + 4 + 0xc000) >> 8];
+    patch.forEach((v, k) => (b[free + k] = v)); // LD A,(HL); CP '!'; JR NZ,+2; XOR A; LD (HL),A; OR A; JP Z,MLTK3; JP MLTK1+4
+    b[i] = 0xc3; b[i + 1] = (free + 0xc000) & 0xff; b[i + 2] = (free + 0xc000) >> 8; b[i + 3] = 0;
+  });
+  const m = await mutantMachine(mut, bareFiles);
+  assert.match(bareAt(m, "CH2"), /hello/);
 });

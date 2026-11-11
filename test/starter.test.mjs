@@ -1,5 +1,5 @@
 // The starter card that `npm run media` builds, the one card, which the web
-// page runs too: exactly fifteen files on A:, each the bytes its source or
+// page runs too: exactly sixteen files on A:, each the bytes its source or
 // pin gives, and it boots to a MOUNT that lists its volumes. Its BOUNCE.BAS is
 // compiled by BAZA and runs its sprites on the PICO9918, TAS builds DEMO.ASM
 // into the demo, MON3.SVC loads and runs HELLO3.BIN, which writes the LCD,
@@ -14,7 +14,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GLCD_SVC, ROOT, boot, program, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, boot, program, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
@@ -47,7 +47,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly fifteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly sixteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -56,7 +56,8 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
   check(CHAIN);
   const { card, recipe } = starter();
   const want = {
-    "STARTUP.CMD": Buffer.from("GLCD.SVC\r\n\x1a", "latin1"),
+    "STARTUP.CMD": Buffer.from("SHELL.SVC\r\nGLCD.SVC\r\n\x1a", "latin1"),
+    "SHELL.SVC": SHELL_SVC,
     "GLCD.SVC": GLCD_SVC,
     "MOUNT.COM": (await program("mount")).bytes,
     "TAS.COM": readFileSync(TAS.path),
@@ -103,7 +104,7 @@ test("the web page's card is the starter card, byte for byte, its instruction na
   assert.deepEqual(readdirSync(resolve(ROOT, "dist/files")).sort(), recipe.components.map((c) => c.name).sort(), "dist/files holds the recipe's files");
   assert.match(recipe.instruction, /TAS DEMO then DEMO/);
   assert.match(recipe.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
-  assert.match(recipe.instruction, /MON3\.SVC \/E, then LOAD HELLO3\.BIN and GO/);
+  assert.match(recipe.instruction, /MON3\.SVC, then LOAD HELLO3\.BIN and GO/);
   assert.match(recipe.instruction, /TAS CHAIN then CHAIN runs a program written with several statements on a line/);
   assert.match(recipe.instruction, /TED CHAIN\.ASM at 80 columns \(CON PICO 80, or 80 in the width selector\)/);
   assert.ok(!volume(card, "A").list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
@@ -204,7 +205,7 @@ const HELLO3_ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY 
 // after MON3> must not see it.
 function hello3Round(card) {
   const m = boot(card, { tms: true, matrix: true, width: 40 });
-  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
+  assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
   assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
   m.type("GO\r");
   m.runUntilChecked(() => lcdRows(m).join("") === HELLO3_ROWS.join(""), 50_000_000, "HELLO3's lines on the LCD");
@@ -255,7 +256,7 @@ function hello3OnTty(card) {
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   m.command("CON TTY");
   assert.ok(!m.videoConsole(), "the serial terminal is the console");
-  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
+  assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
   assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
   m.type("GO\r");
   m.runUntilChecked(() => lcdRows(m).join("") === HELLO3_ROWS.join(""), 50_000_000, "HELLO3's lines on the LCD");
@@ -294,7 +295,7 @@ test("mutant: a MON3.SVC that waits for the keys whatever the console, and doesn
 function hello3KeyThenEsc(card) {
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   assert.ok(m.videoConsole(), "CRT: is the console");
-  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
+  assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
   assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
   m.type("GO\r");
   m.runUntilChecked(() => lcdRows(m).join("") === HELLO3_ROWS.join(""), 50_000_000, "HELLO3's lines on the LCD");
