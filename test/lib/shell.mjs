@@ -78,10 +78,69 @@ export function owners(m) {
 /** The page of the resident named NAME, 0 for none, as an address. */
 export const pageOf = (m, name = "SHELL") => (owners(m).find((o) => o.name === name)?.page ?? 0) << 8;
 
+/**
+ * The guard under SHELL.SVC's own 32-byte stack. With GUARDS.on, each
+ * machine shellMachine makes lays a pattern there at each prompt, below
+ * the frames in use, and first reads how deep the run since the last
+ * prompt went; each entry's read() gives the deepest of its machine's runs.
+ * Only the build's SHELL.SVC is read: a variant's stack may lie elsewhere.
+ */
+export const GUARDS = { on: false, machines: [] };
+const GUARD = 0xa5;
+const STACK = 32;
+
+function guarded(m) {
+  const g = { m, deepest: 0, page: 0 };
+  // The build's SHELL.SVC takes its stack with LD SP,STKTOP at the build's
+  // STKTOP; a variant laid out otherwise has none such.
+  const known = (p) => {
+    const top = p + SHELL.symbols.STKTOP;
+    for (let a = p; a < p + SHELL.symbols.STKBOT; a += 1) if (m.read(a) === 0x31 && m.read(a + 1) === (top & 0xff) && m.read(a + 2) === top >> 8) return true;
+    return false;
+  };
+  const prompt = () => {
+    const p = pageOf(m);
+    if (!p || !known(p)) return;
+    const base = p + SHELL.symbols.STKBOT;
+    // A fresh install clears its pages: its stack's low half is still zero.
+    const fresh = p !== g.page || Array.from({ length: 8 }, (_, i) => m.read(base + i)).every((b) => b === 0);
+    if (!fresh) {
+      let free = 0;
+      while (free < STACK && m.read(base + free) === GUARD) free += 1;
+      g.deepest = Math.max(g.deepest, STACK - free);
+    }
+    // At its own line input the shell's frames lie above the SP it called
+    // the BDOS with: only the bytes below that are laid.
+    const caller = word(m, m.sym("OLDSP"));
+    const live = caller >= base && caller < base + STACK ? caller : base + STACK;
+    for (let a = base; a < live; a += 1) m.write(a, GUARD);
+    g.page = p;
+  };
+  const ready = m.ready.bind(m);
+  let was = false;
+  m.ready = () => {
+    const r = ready();
+    if (r && !was) prompt();
+    was = r;
+    return r;
+  };
+  g.read = () => {
+    if (g.page && known(g.page) && pageOf(m) === g.page) {
+      const base = g.page + SHELL.symbols.STKBOT;
+      let free = 0;
+      while (free < STACK && m.read(base + free) === GUARD) free += 1;
+      g.deepest = Math.max(g.deepest, STACK - free);
+    }
+    return g.deepest;
+  };
+  GUARDS.machines.push(g);
+}
+
 /** A machine with ROM (default the build's) on IMAGE, run to its first prompt unless NOWAIT. */
 export function shellMachine(image, { rom, symbols, noWait = false, ...opts } = {}) {
   const built = romFor();
   const m = new Machine({ rom: rom ?? built.rom, symbols: symbols ?? built.symbols, sdImage: image, clock: TEST_CLOCK, ...opts });
+  if (GUARDS.on) guarded(m);
   if (!noWait) m.runUntil(() => m.ready(), 900_000_000, "the first prompt");
   return m;
 }
