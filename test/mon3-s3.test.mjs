@@ -173,7 +173,7 @@ for (const [name, edits, why] of [
 
 const K = 78;
 /** The selectors built: MON-3's routines, relocated. */
-const BUILT = [0, 1, 2, 3, 4, 5, 12, 15, 16, 17, 18];
+const BUILT = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20];
 let callSidesMade;
 const theCallSides = async () => (callSidesMade ??= await callSides());
 

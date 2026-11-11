@@ -72,12 +72,12 @@ GAPI:
   DW GCLRT       ; 3 clearTxtLCD
   DW GGRM        ; 4 setGrMode
   DW GTXM        ; 5 setTxtMode
-  DW DERR        ; 6 drawBox
-  DW DERR        ; 7 drawLine
-  DW DERR        ; 8 drawCircle
-  DW DERR        ; 9 drawPixel
-  DW DERR        ; 10 fillBox
-  DW DERR        ; 11 fillCircle
+  DW GBOX        ; 6 drawBox
+  DW GLINE       ; 7 drawLine
+  DW GCIRC       ; 8 drawCircle
+  DW GPIX        ; 9 drawPixel
+  DW GFBOX       ; 10 fillBox
+  DW GFCIRC      ; 11 fillCircle
   DW GPLOT       ; 12 plotToLCD
   DW DERR        ; 13 printString
   DW DERR        ; 14 printChars
@@ -85,8 +85,8 @@ GAPI:
   DW GDLYMS      ; 16 delayMS
   DW GBCLR       ; 17 setBufClear
   DW GBKEEP      ; 18 setBufNoClear
-  DW DERR        ; 19 clearPixel
-  DW DERR        ; 20 flipPixel
+  DW GPCLR       ; 19 clearPixel
+  DW GPFLIP      ; 20 flipPixel
 
 ; The workspace as every MON-3 reset
 ; leaves it, through initLCD: GBUF and
@@ -207,6 +207,432 @@ GTXM:
   ld a,$30       ; the basic set
   out (GLCDI),a
   jp GDLYUS      ; its wait
+
+; Call 6, drawBox: the outline from
+; X0,Y0 in BC to X1,Y1 in DE, by
+; drawPixel, so off-panel points are
+; dropped. Clobbers A and HL.
+
+GBOX:
+  push bc        ; X0,Y0 kept
+
+GBOX1:
+  call GPIX      ; the top, X0 to X1
+  ld a,d         ; X1
+  inc b          ; the next X
+  cp b
+  jr nc,GBOX1    ; up to X1
+  pop bc         ; X0,Y0
+  push bc
+  ld c,e         ; the bottom, at Y1
+
+GBOX2:
+  call GPIX
+  ld a,d         ; X1
+  inc b          ; the next X
+  cp b
+  jr nc,GBOX2    ; up to X1
+  pop bc         ; X0,Y0
+  push bc
+
+GBOX3:
+  call GPIX      ; the left, Y0 to Y1
+  ld a,e         ; Y1
+  inc c          ; the next Y
+  cp c
+  jr nc,GBOX3    ; up to Y1
+  pop bc         ; X0,Y0
+  push bc
+  ld b,d         ; the right, at X1
+
+GBOX4:
+  call GPIX
+  ld a,e         ; Y1
+  inc c          ; the next Y
+  cp c
+  jr nc,GBOX4    ; up to Y1
+  pop bc         ; X0,Y0 back
+  ret
+
+; Call 10, fillBox: every pixel from
+; X0,Y0 in BC to X1,Y1 in DE, a column
+; at a time. Clobbers A, B and HL.
+
+GFBOX:
+  push bc        ; the column's top
+
+GFBOX1:
+  call GPIX      ; down the column
+  ld a,e         ; Y1
+  inc c          ; the next Y
+  cp c
+  jr nc,GFBOX1   ; up to Y1
+  pop bc         ; the column's top
+  ld a,d         ; X1
+  inc b          ; the next column
+  cp b
+  jr nc,GFBOX    ; up to X1
+  ret
+
+; Call 7, drawLine: Bresenham's line
+; from X0,Y0 in BC to X1,Y1 in DE.
+; Nothing is drawn if either end is off
+; the panel. SX and SY are the steps,
+; DX and DY the deltas, DY negative,
+; ERR the error, ENDPT the end.
+; Clobbers A, BC, DE and HL.
+
+GLINE:
+  ld a,c
+  cp $40         ; 64 rows
+  ret nc         ; Y0 off the panel
+  ld a,b
+  cp $80         ; 128 columns
+  ret nc         ; X0 off it
+  ld a,e
+  cp $40
+  ret nc         ; Y1 off it
+  ld a,d
+  cp $80
+  ret nc         ; X1 off it
+  ld h,$01       ; SX: 1 if X0 < X1
+  ld a,b
+  cp d
+  jr c,GLSX
+  ld h,$FF       ; else -1
+
+GLSX:
+  ld a,h
+  ld (SX),a      ; the X step
+  ld h,$01       ; SY: 1 if Y0 < Y1
+  ld a,c
+  cp e
+  jr c,GLSY
+  ld h,$FF       ; else -1
+
+GLSY:
+  ld a,h
+  ld (SY),a      ; the Y step
+  ld (ENDPT),de  ; where the line ends
+  push bc        ; X0,Y0 kept
+  ld l,d
+  ld h,0         ; X1
+  ld c,b
+  ld b,0         ; less X0
+  or a
+  sbc hl,bc
+  call GABS
+  ld (DX),hl     ; DX = |X1-X0|
+  pop bc
+  push bc        ; kept again
+  ld l,e
+  ld h,0         ; Y1
+  ld b,0         ; less Y0
+  or a
+  sbc hl,bc
+  call GABS      ; made positive
+  xor a          ; then negated
+  sub l
+  ld l,a         ; its low byte
+  sbc a,a
+  sub h
+  ld h,a
+  ld (DY),hl     ; DY = -|Y1-Y0|
+  pop bc         ; X0,Y0
+  ld de,(DX)
+  add hl,de
+  ld (ERR),hl    ; ERR = DX+DY
+
+GLINE1:
+  call GPIX      ; the point at BC
+  ld a,(ENDPT+1)
+  cp b           ; X at X1?
+  jr nz,GLINE4   ; not the end
+  ld a,(ENDPT)   ; Y1
+  cp c
+  ret z          ; the end point
+
+GLINE4:
+  ld hl,(ERR)
+  add hl,hl      ; E2 = 2*ERR
+  ld de,(DY)
+  or a           ; no carry in
+  sbc hl,de      ; E2 less DY
+  add hl,de      ; E2 again
+  jp m,GLINE2    ; E2 < DY: X stays
+  push hl
+  ld hl,(ERR)
+  add hl,de
+  ld (ERR),hl    ; ERR += DY
+  ld a,(SX)
+  add a,b
+  ld b,a         ; X += SX
+  pop hl         ; E2 again
+
+GLINE2:
+  ld de,(DX)
+  or a           ; no carry in
+  sbc hl,de      ; E2 less DX
+  add hl,de
+  jr z,GLINE3    ; E2 = DX: step Y
+  jp p,GLINE1    ; E2 > DX: Y stays
+
+GLINE3:
+  ld hl,(ERR)
+  add hl,de
+  ld (ERR),hl    ; ERR += DX
+  ld a,(SY)
+  add a,c
+  ld c,a         ; Y += SY
+  jr GLINE1      ; the next point
+
+; HL made positive. Clobbers A.
+
+GABS:
+  bit 7,h
+  ret z          ; already
+  xor a          ; 0 less HL
+  sub l
+  ld l,a
+  sbc a,a
+  sub h
+  ld h,a         ; its high byte
+  ret
+
+; Call 8, drawCircle: Bresenham's
+; circle about BC, radius E, a point in
+; each quadrant a step. SX holds X,
+; from -R up to 0, SY holds Y, ERR the
+; error and RAD R. Off-panel points
+; are dropped. Clobbers A, DE and HL.
+
+GCIRC:
+  xor a          ; 0 less R
+  sub e
+  ld (SX),a      ; X = -R
+  xor a
+  ld (SY),a      ; Y = 0
+  ld d,$00       ; DE = R
+  ld a,e
+  ld (RAD),de    ; R
+  ex de,hl
+  add hl,hl
+  ex de,hl       ; DE = 2R
+  ld hl,$0002    ; 2 less 2R
+  or a
+  sbc hl,de
+  ld (ERR),hl    ; ERR = 2-2R
+
+GCIRC1:
+  push bc        ; the centre kept
+  ld a,(SX)      ; -X
+  neg
+  add a,b
+  ld b,a         ; XM-X
+  ld a,(SY)
+  add a,c
+  ld c,a         ; YM+Y
+  call GPIX      ; quadrant I
+  pop bc         ; the centre
+  push bc
+  ld a,(SX)
+  add a,b
+  ld b,a         ; XM+X
+  ld a,(SY)      ; -Y
+  neg
+  add a,c
+  ld c,a         ; YM-Y
+  call GPIX      ; quadrant III
+  pop bc         ; the centre
+  push bc
+  ld a,(SY)      ; -Y
+  neg
+  add a,b
+  ld b,a         ; XM-Y
+  ld a,(SX)      ; -X
+  neg
+  add a,c
+  ld c,a         ; YM-X
+  call GPIX      ; quadrant II
+  pop bc         ; the centre
+  push bc
+  ld a,(SY)
+  add a,b
+  ld b,a         ; XM+Y
+  ld a,(SX)
+  add a,c
+  ld c,a         ; YM+X
+  call GPIX      ; quadrant IV
+  pop bc         ; the centre
+  ld hl,(ERR)
+  ld (RAD),hl    ; R = ERR
+  ld a,(SY)      ; Y
+  ld e,a
+  ld d,0         ; DE = Y
+  or a
+  sbc hl,de      ; R less Y
+  add hl,de
+  jr z,GCIRC5    ; R = Y: step Y
+  jp p,GCIRC2    ; R > Y: Y stays
+
+GCIRC5:
+  ld a,(SY)      ; Y
+  inc a
+  ld (SY),a      ; Y += 1
+  add a,a
+  inc a
+  ld e,a
+  ld d,0         ; DE = 2Y+1
+  ld hl,(ERR)
+  add hl,de
+  ld (ERR),hl    ; added to ERR
+
+GCIRC2:
+  ld hl,(RAD)    ; R
+  ld a,(SX)
+  ld d,$FF
+  ld e,a         ; DE = X, negative
+  or a
+  sbc hl,de      ; R less X
+  add hl,de
+  jr z,GCIRC6    ; R = X: test ERR
+  jp p,GCIRC3    ; R > X: step X
+
+GCIRC6:
+  ld hl,(ERR)    ; ERR
+  ld a,(SY)
+  ld d,0
+  ld e,a         ; DE = Y
+  or a
+  sbc hl,de      ; ERR less Y
+  add hl,de
+  jr z,GCIRC4    ; ERR = Y: X stays
+  jp m,GCIRC4    ; ERR < Y: X stays
+
+GCIRC3:
+  ld a,(SX)      ; X
+  inc a
+  ld (SX),a      ; X += 1
+  add a,a
+  inc a
+  ld e,a
+  ld d,$FF       ; DE = 2X+1
+  ld hl,(ERR)
+  add hl,de
+  ld (ERR),hl    ; added to ERR
+
+GCIRC4:
+  ld a,(SX)      ; X reached 0?
+  or a
+  jp nz,GCIRC1   ; until X is 0
+  ret
+
+; Call 11, fillCircle: circles of
+; radius 1 to E about BC. Clobbers A, D
+; and HL.
+
+GFCIRC:
+  ld d,$01       ; the first radius
+
+GFCIR1:
+  push de        ; E: the last
+  ld e,d
+  call GCIRC     ; radius D
+  pop de
+  ld a,e
+  inc d          ; the next radius
+  cp d
+  jr nc,GFCIR1   ; up to E
+  ret
+
+; Call 9, drawPixel: the pixel at X in
+; B (0-127), Y in C (0-63) set; nothing
+; off the panel. Clobbers A and HL.
+
+GPIX:
+  ld a,c
+  cp $40         ; 64 rows
+  ret nc         ; Y off the panel
+  ld a,b
+  cp $80         ; 128 columns
+  ret nc         ; X off it
+  push de        ; kept
+  call GSETB     ; its byte and bit
+  ld a,d
+  or (hl)        ; the bit set
+  ld (hl),a      ; back in the buffer
+  pop de
+  ret
+
+; Call 19, clearPixel: the same, the
+; bit cleared. Clobbers A and HL.
+
+GPCLR:
+  ld a,c
+  cp $40         ; 64 rows
+  ret nc         ; Y off the panel
+  ld a,b
+  cp $80         ; 128 columns
+  ret nc         ; X off it
+  push de        ; kept
+  call GSETB     ; its byte and bit
+  ld a,d
+  cpl
+  and (hl)       ; the bit cleared
+  ld (hl),a      ; back in the buffer
+  pop de
+  ret
+
+; Call 20, flipPixel: the same, the bit
+; flipped. Clobbers A and HL.
+
+GPFLIP:
+  ld a,c
+  cp $40         ; 64 rows
+  ret nc         ; Y off the panel
+  ld a,b
+  cp $80         ; 128 columns
+  ret nc         ; X off it
+  push de        ; kept
+  call GSETB     ; its byte and bit
+  ld a,d
+  xor (hl)       ; the bit flipped
+  ld (hl),a      ; back in the buffer
+  pop de
+  ret
+
+; The pixel at X in B, Y in C: HL at
+; its byte in the buffer at VPORT, D
+; its bit, the leftmost bit 7.
+; Clobbers A and E.
+
+GSETB:
+  ld l,c
+  ld h,$00       ; HL = Y
+  add hl,hl
+  add hl,hl
+  add hl,hl
+  add hl,hl      ; times 16
+  ld de,(VPORT)
+  dec de
+  add hl,de      ; the row, less one
+  ld a,b
+  ld d,$08       ; 8 pixels a byte
+
+GSETB1:
+  inc hl         ; a byte to the right
+  sub d
+  jr nc,GSETB1   ; for each 8 of X
+  cpl            ; 7 less X mod 8
+  ld d,$01       ; bit 0
+  or a
+  ret z          ; it is bit 0
+
+GSETB2:
+  sla d          ; one bit up
+  dec a
+  jr nz,GSETB2   ; the bit moved up
+  ret
 
 ; Call 12, plotToLCD: the buffer at
 ; VPORT to the panel's graphics RAM,
