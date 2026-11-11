@@ -285,8 +285,6 @@ test("KG67 mutant: a routine reading GBUF where MON-3 reads (VPORT)", async () =
 // the fetch at its RET's target: 0049h in a session, MON-3's softBoot. The
 // session's cycles are the reference's and 78 T for each RST 18h.
 
-const ran = {};
-
 /** NAME on both sides to END ("return", or a symbol), R pinned for glcd-maze: { R, S, ref, ses }. */
 async function bothRuns(name, { svc, window } = {}) {
   const { bytes, symbols } = await realBuild(name);
@@ -340,7 +338,7 @@ async function glcdText(svc) {
 }
 
 test("KG67 glcd-text", async () => {
-  ran["glcd-text"] = await glcdText();
+  await glcdText();
 });
 
 /** glcd-demo to HALT_LOOP, 4022h, in a window of 2,000,000 cycles. */
@@ -358,7 +356,7 @@ async function glcdDemo(svc) {
 }
 
 test("KG67 glcd-demo", async () => {
-  ran["glcd-demo"] = await glcdDemo();
+  await glcdDemo();
 });
 
 // glcd-3d by its key script: the nine stops and the return equal, and at the
@@ -383,8 +381,9 @@ test("KG67 glcd-3d", { timeout: 600_000 }, async () => {
 // files as before GO, no service, and (0006h) B9A4h.
 
 test("KG67 reset after", async () => {
-  assert.deepEqual(Object.keys(ran).sort(), ["glcd-demo", "glcd-text"], "each program ran");
-  for (const [name, { ses }] of Object.entries(ran)) {
+  // Each program runs here, to the end its own test reaches.
+  const runs = { "glcd-text": await glcdText(), "glcd-demo": await glcdDemo() };
+  for (const [name, { ses }] of Object.entries(runs)) {
     const { m, before } = ses;
     m.reset();
     m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
