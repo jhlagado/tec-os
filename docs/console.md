@@ -136,8 +136,9 @@ the words its cell touches; scrolling moves the text and redraws each row,
 about 0.25 s at 4 MHz. Every access waits for the busy flag, bounded at 256 polls;
 a byte the controller is not ready for by then is dropped, not sent.
 
-The CCP's `TYPE` and `DIR` use the display size to pause with `[more]` one
-line short of a full screen.
+Under `SHELL.SVC`, `TYPE` and `DIR` use the display size, from `TNINFO`, to pause
+with `[more]` one line short of a full screen ([shell.md](shell.md)). With no
+shell they list without pausing.
 
 The display size is published in the table at `C003h` (the word at
 `INFO`, service 0, returns columns in L and rows in H), so programs such as an editor can lay out

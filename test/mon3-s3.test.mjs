@@ -9,7 +9,7 @@ import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realBuild, realProgram } fr
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, program, volume } from "./lib/fixtures.mjs";
-import { MON3_CEILING, bytesAt, cardMon3, line, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
+import { MON3_CEILING, bytesAt, cardMon3, line, mon3Sources, mon3Variant, services, word, installMon3 } from "./lib/mon3.mjs";
 import { boot, goTo, inSession, mon3Build, sha, toMon3 } from "./lib/mon3s2.mjs";
 import { referenceSide, sessionSide } from "./lib/kg65.mjs";
 import { CALL_ROWS, GORET, glcdOf, MON3_SOFTBOOT, REFUSAL_TOP, callSides, compareCalls, compareRefusals, drive3d, ldarOf, programReference, programSession, regsOf, runToPc, snap } from "./lib/kg67.mjs";
@@ -74,14 +74,14 @@ async function sizeAndTpa(svc) {
   const C = MON3_CEILING;
   assert.ok(svc.image <= C.bytes, `the header and image, ${svc.image} bytes, within ${C.bytes}`);
   const m = boot({ "MON3.SVC": svc.file });
-  m.command("MON3.SVC");
+  installMon3(m);
   const pages = Number(services(m)[0].split(" ")[1]);
   assert.ok(pages <= C.pages, `${pages} pages, at most ${C.pages}`);
   const top = word(m, 6);
   assert.ok(top >= C.top && top - 0x100 >= C.tpa, `(0006h) ${top.toString(16)}h, TPA ${top - 0x100}, at least ${C.tpa}`);
   const g = boot({ "MON3.SVC": svc.file }, { matrix: true });
   assert.deepEqual(services(g).map((l) => l.split(" ")[0]), ["GLCD"], "GLCD.SVC installed");
-  g.command("MON3.SVC");
+  installMon3(g);
   const both = word(g, 6) - 0x100;
   assert.ok(both >= C.tpaGlcd, `TPA with GLCD.SVC ${both}, at least ${C.tpaGlcd}`);
   return { pages, top, tpa: top - 0x100, both };
@@ -110,7 +110,7 @@ test("KG67 mutant: the build with buffers added to 4,609 bytes takes 19 pages", 
   assert.equal(big.image, 4609);
   await assert.rejects(sizeAndTpa(big), /within 4608/);
   const m = boot({ "MON3.SVC": big.file });
-  m.command("MON3.SVC");
+  installMon3(m);
   assert.deepEqual(services(m), ["MON3 19"], "19 pages");
 });
 
@@ -130,11 +130,11 @@ async function workspace(svc) {
   svc ??= await mon3Build();
   // A program that writes 55h at 0A00h and returns.
   const m = boot({ "MON3.SVC": svc.file, "PROG.BIN": Uint8Array.from([0x3e, 0x55, 0x32, 0x00, 0x0a, 0xc9]) });
-  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E installs and enters");
+  assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC installs and enters");
   assert.deepEqual(workspaceDiffers(m).slice(0, 8), [], "install and enter: 0A00h-0E19h zero, VPORT 0A00h");
   assert.ok(!line(m, "EXIT").mon3);
   for (let i = 0; i < REGION[1]; i += 1) m.write(REGION[0] + i, 0xff);
-  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E enters again");
+  assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC enters again");
   assert.deepEqual(workspaceDiffers(m).slice(0, 8), [], "re-entry over FFh: 0A00h-0E19h zero, VPORT 0A00h");
   assert.ok(line(m, "LOAD PROG.BIN").mon3);
   goTo(m, "GO", 0x4000);
@@ -152,7 +152,7 @@ for (const [name, edits, why] of [
   ["the workspace step removed", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"]], /install and enter/],
   ["the workspace step clearing 0E00h-0E19h only", [["  ld hl,GBUF\n  ld de,GBUF+1\n  ld bc,GVEND-GBUF-1\n", "  ld hl,$0E00\n  ld de,$0E01\n  ld bc,GVEND-$0E01\n"]], /0A00h-0E19h zero/],
   ["VPORT left unset", [["  ld hl,GBUF\n  ld (VPORT),hl  ; drawing into GBUF\n", ""]], /VPORT 0A00h/],
-  ["the workspace step moved to INIT", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"], ["  ld hl,EXRDY\n  ld (hl),1      ; ready\n", "  xor a\n  call GWS       ; at install\n  ld hl,EXRDY\n  ld (hl),1      ; ready\n"]], /re-entry over FFh/],
+  ["the workspace step moved to INIT", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"], ["  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n", "  xor a\n  call GWS       ; at install\n  ld hl,EXRDY\n  set 0,(hl)     ; ready, bit 1 kept\n"]], /re-entry over FFh/],
 ]) {
   test(`KG67 mutant: ${name}`, async () => {
     const svc = await mon3Variant(edits);
@@ -374,7 +374,7 @@ test("KG67 glcd-3d", { timeout: 600_000 }, async () => {
 });
 
 // After glcd-text and glcd-demo, which never return, a reset: the card's
-// files as before GO, no service, and (0006h) B9A4h.
+// files as before GO, no service, and (0006h) B9A9h.
 
 test("KG67 reset after", async () => {
   // Each program runs here, to the end its own test reaches.
@@ -387,7 +387,7 @@ test("KG67 reset after", async () => {
     const a = volume(m.image, "A");
     assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);
     assert.deepEqual(services(m), [], `${name}: no service after the reset`);
-    assert.equal(word(m, 6), 0xb9a4, `${name}: (0006h) B9A4h`);
+    assert.equal(word(m, 6), 0xb9a9, `${name}: (0006h) B9A9h`);
   }
 });
 

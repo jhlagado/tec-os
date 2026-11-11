@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from "./lib/historical-font.mjs";
-import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
 assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"750ad7ae1b5cd9ace4837bb264a984857dd54314d5029097f3ce5c0be255bc4c","unchanged historical command list and oracle");
@@ -33,7 +33,8 @@ async function card() {
   for (const n of PROGRAMS) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
-  return withDisplay(image, { matrix: true });
+  // The shell first, as on the starter card: the workload's COPY and [more] are its.
+  return withDisplay(withShell(image, "GLCD.SVC"), { matrix: true });
 }
 
 /** A GLCD board at its first prompt, the GLCD console loaded; or, with
@@ -137,10 +138,11 @@ test("the resident GLCD draws every screen of the workload as the driver did, by
 test("on a GLCD board (0006h) is three pages lower than with the driver, and no more", { timeout: 1_800_000 }, async () => {
   const { m, bdosVector } = await workload;
   assert.equal(m.historicalFont, false, "TPA reading uses production font");
-  // Three pages under the stub's page, the stub being where (0006h) is with no driver. The
-  // reference's own figure, REF.bdosVector - 306h, held until KS36b moved the stub up 479 bytes.
+  // Three pages under the shell's ten, which are under the stub's page. The reference's own
+  // figure, REF.bdosVector - 306h, held until the stub moved up 479 bytes, and the
+  // shell took its ten pages.
   const stub = word(m, m.sym("STUBAD"));
-  assert.equal(bdosVector, ((stub >> 8) - 3) << 8);
+  assert.equal(bdosVector, ((stub >> 8) - 10 - 3) << 8);
 });
 
 test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async () => {

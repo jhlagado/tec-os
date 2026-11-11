@@ -4,7 +4,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 
 const SAY = (text) => {
   // LD DE,MSG / LD C,9 / CALL 5 / RET / MSG: text$
@@ -54,7 +54,7 @@ test("0050h is the drive a program came from: a typed B:NAME, a plain name, the 
   const image = standardCard();
   volume(image, "A").write("SHOW.COM", SHOW);
   volume(image, "B").write("SHOWB.COM", SHOW);
-  const m = boot(image);
+  const m = boot(withShell(image)); // a line of pieces is the shell's
   const shown = (line) => /\r\n(\d)/.exec(m.command(line))?.[1];
   assert.equal(shown("SHOW"), "0", "a plain name: the current drive");
   assert.equal(shown("B:SHOWB"), "2", "B:NAME typed");

@@ -31,7 +31,7 @@ export async function hello3() {
 
 /** test/programs/svcexec.asm's file with OVER's definitions: a test service with an execution record. */
 export async function execFile(over = {}) {
-  const defs = { V_NRDY: 0, V_NODEV: 0, V_KEEP: 0, FLAGS: 1, RECVER: 1, HDRNAME: '"X       "', ...over };
+  const defs = { V_NRDY: 0, V_NODEV: 0, V_KEEP: 0, FLAGS: 1, RECVER: 1, ENTER: 1, HDRNAME: '"X       "', ...over };
   return (await makeSvc(resolve(ROOT, "test/programs/svcexec.asm"), { defs, work: resolve(ROOT, "build/svc") })).file;
 }
 
@@ -204,12 +204,20 @@ export const digitsOf = (m) => hello3Digits(m.tec1g.state.display.digits);
 /** The warm-boot entry's target: the word after the JP that 0001h points to. */
 export const warmTarget = (m) => word(m, word(m, 1) + 1);
 /** SERVICES' lines. */
-export const services = (m) =>
-  m
-    .command("SERVICES")
-    .split("\r\n")
-    .map((l) => l.trim())
-    .filter((l) => /^\S+ \d+$/.test(l));
+/**
+ * The services installed, newest first, as SERVICES lists them: each header's
+ * name and its pages, up to the next owner or the stub's page. Read from the
+ * owner list, since SERVICES is the shell's and a bare machine has none.
+ */
+export function services(m) {
+  const out = [];
+  const stub = m.read(m.sym("STUBAD") + 1);
+  for (let p = m.read(m.sym("SVCHEAD")); p; p = m.read((p << 8) + 8)) {
+    const name = String.fromCharCode(...Array.from({ length: 8 }, (_, i) => m.read((p << 8) + 17 + i) & 0x7f)).replaceAll(" ", "");
+    out.push(`${name} ${(m.read((p << 8) + 8) || stub) - p}`);
+  }
+  return out;
+}
 
 export const PROMPT = /\r\n\d*[A-P]>$/;
 export const MON3 = /MON3>$/;
@@ -269,9 +277,10 @@ export const bin = (...bytes) => Uint8Array.from(bytes.flat());
 export { GLCD_SVC };
 
 /**
- * The NAME.SVC /E lines of the stack census, on the serial console: a refused
- * switch, /E installing and entering, re-entry, a never-ready /E install
- * removed, and UNLOAD of MON3.SVC. The census's depths: { bdos, ccp, bios }.
+ * The enter-on-install lines of the stack census, on the serial console:
+ * MON3.SVC installing and entering, with an old /E as its tail, re-entry, a
+ * never-ready install removed, and UNLOAD of MON3.SVC. The census's depths:
+ * { bdos, ccp, bios }.
  */
 export async function ks53Census() {
   const { rom, symbols } = romFor();
@@ -280,7 +289,14 @@ export async function ks53Census() {
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  for (const [l, re] of [["MON3.SVC /X\r"], ["MON3.SVC /E\r", MON3], ["EXIT\r"], ["MON3.SVC /E\r", MON3], ["EXIT\r"], ["NRDY.SVC /E\r"], ["UNLOAD\r"]]) censusRun(m, l, re);
+  for (const [l, re] of [["MON3.SVC /E\r", MON3], ["EXIT\r"], ["MON3.SVC\r", MON3], ["EXIT\r"], ["NRDY.SVC\r"], ["UNLOAD\r"]]) censusRun(m, l, re);
   assert.deepEqual(m.violations, []);
   return depths();
+}
+
+/** MON3.SVC installed on M: typed, it is entered, and EXIT leaves the session with it installed. */
+export function installMon3(m) {
+  const r = line(m, "MON3.SVC");
+  if (r.mon3) line(m, "EXIT");
+  return r;
 }

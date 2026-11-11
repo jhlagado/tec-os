@@ -1,14 +1,16 @@
-// KS32's chained command line: a line, typed, from STARTUP.CMD or from BDOS
-// function 47, split at !, its rest kept over each program's warm boot and
-// run before any startup line; a piece starting : run only after a command
-// that succeeded; ^C, a BDOS error's exit and a reset dropping the rest; and
-// KE-127's fix. Emulator evidence.
+// The chained command line under SHELL.SVC: a line, typed,
+// from STARTUP.CMD or from BDOS function 47, split at ! and at an & after a
+// blank, its rest kept by the shell over each program's warm boot; a piece
+// after & run only after a command that did not fail; ^C, a BDOS error's exit
+// and a reset dropping the rest; and KE-127's fix. Every card boots with the
+// shell holding the prompt. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { TEST_CLOCK, boot, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { SHELL, pageOf } from "./lib/shell.mjs";
+import { TEST_CLOCK, boot, program, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
 const SAY = (await program("say")).bytes; // prints SAY
 const RC = (await program("rc")).bytes;
@@ -21,18 +23,18 @@ export const chainWith = (bytes) => Uint8Array.from([...CHAIN, ...bytes]);
 /** CHAIN.COM chaining TEXT, ended by a 0. */
 export const chainTo = (text) => chainWith([...raw(text), 0]);
 
-/** A card with the test's programs on A:, and FILES. */
-function card(files = {}, image = standardCard()) {
+/** A card with the test's programs on A:, FILES, and a STARTUP.CMD of SHELL.SVC then STARTUP's lines. */
+function card(files = {}, image = standardCard(), startup = []) {
   const a = volume(image, "A");
   for (const [n, b] of Object.entries({ "SAY.COM": SAY, "RC.COM": RC, "LINE.COM": LINE, ...files })) a.write(n, b);
-  return image;
+  return withShell(image, ...startup);
 }
 
 const chpos = (m) => m.read(m.sym("CHPOS"));
 const code = (m) => m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8);
 const user = (m) => m.read(4) >> 4;
-/** The prompt with nothing left of a chained line and startup finished. */
-const idle = (m, from) => m.ready() && chpos(m) === 0 && /[A-P]>$/.test(m.text(from));
+/** The shell's prompt, reading a typed line: nothing left of a line, a script or startup. */
+const idle = (m, from) => m.ready() && /[A-P]>$/.test(m.text(from));
 
 /** Type LINE and run to the prompt that follows its last piece: the text since. */
 function run(m, line, max = 600_000_000) {
@@ -44,7 +46,7 @@ function run(m, line, max = 600_000_000) {
 
 const count = (text, re) => (text.match(re) ?? []).length;
 
-test("a line of two, three and four pieces runs each in turn, each echoed after its prompt", () => {
+test("SH8 a line of two, three and four pieces runs each in turn, each echoed after its prompt", () => {
   const m = boot(card());
   assert.equal(run(m, "say!say"), "say!say\r\r\nSAY\r\nA>say\r\nSAY\r\nA>");
   assert.equal(count(run(m, "SAY!SAY!SAY"), /\nSAY\r/g), 3);
@@ -53,35 +55,35 @@ test("a line of two, three and four pieces runs each in turn, each echoed after 
   assert.equal(user(m), 3);
 });
 
-test("an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line", () => {
+test("SH8 an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line", () => {
   const m = boot(card());
   assert.equal(run(m, "SAY!! ! !SAY!"), "SAY!! ! !SAY!\r\r\nSAY\r\nA>SAY\r\nSAY\r\nA>");
   assert.equal(run(m, "!!"), "!!\r\r\nA>");
   assert.equal(run(m, "  "), "  \r\r\nA>");
 });
 
-test("a line of 127 characters runs whole: 32 pieces", () => {
+test("SH8 a line of 127 characters runs whole: 32 pieces", () => {
   const m = boot(card());
   const line = `${"SAY!".repeat(31)}SAY`;
   assert.equal(line.length, 127);
   assert.equal(count(run(m, line, 2_000_000_000), /\nSAY\r/g), 32);
 });
 
-test("a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets", () => {
+test("SH8 a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets", () => {
   const m = boot(card({ "HI.COM": SAY }));
   const out = run(m, "USER 0!B:!HI!A:!HI!DIR HI.COM");
   assert.match(out, /A>B:\r\nB>HI\r\nSAY\r\nB>A:\r\nA>HI\r\nSAY\r\nA>DIR HI.COM\r\nHI\.COM\s+\r\n1 file/);
   assert.equal(m.read(4) & 15, 0);
 });
 
-test("a startup line holding ! runs all its pieces before the next startup line", () => {
-  const m = boot(card({ "STARTUP.CMD": startupFile("SAY!USER 2!USER 0", "SAY!USER 5") }));
+test("SH8 a startup line holding ! runs all its pieces before the next startup line", () => {
+  const m = boot(card({}, standardCard(), ["SAY!USER 2!USER 0", "SAY!USER 5"]));
   m.runUntil(() => idle(m, 0), 600_000_000, "the prompt");
   assert.match(m.text(0), /A>SAY!USER 2!USER 0\r\r\nSAY\r\nA>USER 2\r\n2A>USER 0\r\nA>SAY!USER 5\r\r\nSAY\r\nA>USER 5\r\n5A>$/);
   assert.equal(user(m), 5);
 });
 
-test("history gives the chained line back whole, as typed, and it runs again", () => {
+test("SH8 history gives the chained line back whole, as typed, and it runs again", () => {
   const m = boot(card());
   run(m, "say!say!user 2");
   run(m, "USER 0");
@@ -94,33 +96,33 @@ test("history gives the chained line back whole, as typed, and it runs again", (
   assert.equal(user(m), 2);
 });
 
-test(": runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?", () => {
-  const m = boot(card());
-  assert.equal(count(run(m, "SAY!:SAY"), /\nSAY\r/g), 2);
-  assert.equal(count(run(m, "RC 0001!:SAY"), /\nSAY\r/g), 1, "1 is no failure");
-  assert.equal(count(run(m, "RC FEFF!:SAY"), /\nSAY\r/g), 1, "FEFFh is no failure");
-  assert.equal(count(run(m, "RC FF00!:SAY"), /\nSAY\r/g), 0);
-  assert.equal(count(run(m, "RC FFFE!:SAY"), /\nSAY\r/g), 0);
-  const missing = run(m, "NOSUCH!:SAY");
-  assert.match(missing, /NOSUCH\?\r\n\r\nA>:SAY\r\nA>$/);
+test("SH8 & runs a piece after a success, and not after a program's FF00h, FFFEh or NAME?", () => {
+  // PFFFF.COM: PRGCODE set to FFFFh by hand, which function 108 can't set, since it reads the code.
+  const at = romFor().symbols.get("PRGCODE");
+  const m = boot(card({ "PFFFF.COM": Uint8Array.from([0x21, 0xff, 0xff, 0x22, at & 0xff, at >> 8, 0xc9]) }));
+  assert.equal(count(run(m, "SAY &SAY"), /\nSAY\r/g), 2);
+  assert.equal(count(run(m, "RC 0001 &SAY"), /\nSAY\r/g), 1, "1 is no failure");
+  assert.equal(count(run(m, "RC FEFF &SAY"), /\nSAY\r/g), 1, "FEFFh is no failure");
+  assert.equal(count(run(m, "RC FF00 &SAY"), /\nSAY\r/g), 0);
+  assert.equal(count(run(m, "RC FFFE &SAY"), /\nSAY\r/g), 0);
+  const missing = run(m, "NOSUCH &SAY");
+  assert.match(missing, /NOSUCH\?\r\n\r\nA>$/, "the skipped piece is not echoed");
   assert.equal(code(m), 0xff00, "a command not found sets FF00h");
-  assert.equal(count(run(m, ":SAY"), /\nSAY\r/g), 0, "a : that starts a line tests the last command");
-  // FFFFh, which function 108 can't set, since it reads the code: no failure.
-  m.write(m.sym("PRGCODE"), 0xff);
-  m.write(m.sym("PRGCODE") + 1, 0xff);
-  assert.equal(count(run(m, ":SAY"), /\nSAY\r/g), 1, "FFFFh is no failure");
+  const lead = run(m, "&SAY");
+  assert.match(lead, /&SAY\?/, "an & that starts a line is refused: it would test the last line's code");
+  assert.equal(count(lead, /\nSAY\r/g), 0);
+  assert.equal(count(run(m, "PFFFF &SAY"), /\nSAY\r/g), 1, "FFFFh is no failure");
 });
 
-test("after a failed : piece the rest of the line goes, and the prompt comes back", () => {
+test("SH8 after a skipped & piece a later & skips too, and a ! piece runs", () => {
   const m = boot(card());
-  const out = run(m, "RC FF00!:SAY!SAY!USER 6");
+  const out = run(m, "RC FF00 &SAY &SAY!USER 6");
   assert.equal(count(out, /\nSAY\r/g), 0);
-  assert.match(out, /A>:SAY\r\nA>$/);
-  assert.equal(user(m), 0);
-  assert.equal(code(m), 0xff00);
+  assert.match(out, /A>USER 6\r\n6A>$/);
+  assert.equal(user(m), 6);
 });
 
-test("the code is cleared as each piece is taken, before the command is looked for", () => {
+test("SH8 the code is cleared as each piece is taken, before the command is looked for", () => {
   const m = boot(card());
   let entry = null;
   const step = m.step.bind(m);
@@ -128,27 +130,27 @@ test("the code is cleared as each piece is taken, before the command is looked f
     if (m.pc === 0x100 && entry === null) entry = code(m);
     return step();
   };
-  assert.equal(count(run(m, "RC FF00!SAY!:SAY"), /\nSAY\r/g), 2, "SAY's take cleared RC's code");
+  assert.equal(count(run(m, "RC FF00!SAY &SAY"), /\nSAY\r/g), 2, "SAY's take cleared RC's code");
   run(m, "RC FF00");
   entry = null;
   run(m, "SAY");
   assert.equal(entry, 0, "the program starts with the code 0");
   run(m, "RC FF00");
-  assert.equal(count(run(m, "NOSUCH!:SAY"), /\nSAY\r/g), 0, "NAME? sets FF00h, whatever came before");
+  assert.equal(count(run(m, "NOSUCH &SAY"), /\nSAY\r/g), 0, "NAME? sets FF00h, whatever came before");
   run(m, "RC FF00");
-  assert.equal(count(run(m, "USER 0!:SAY"), /\nSAY\r/g), 1, "a built-in that succeeds clears it");
+  assert.equal(count(run(m, "USER 0 &SAY"), /\nSAY\r/g), 1, "a built-in that succeeds clears it");
 });
 
-test("a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file", () => {
+test("SH8 a built-in's error sets FF00h: ERA with no file, a bad REN, TYPE with no file", () => {
   const m = boot(card({ "X.COM": Uint8Array.from([0xc9]) }));
-  assert.equal(count(run(m, "ERA X.COM!:SAY"), /\nSAY\r/g), 1, "a file erased");
+  assert.equal(count(run(m, "ERA X.COM &SAY"), /\nSAY\r/g), 1, "a file erased");
   for (const bad of ["ERA X.COM", "REN NEW.COM=NONE.COM", "REN SAY.COM=RC.COM", "TYPE NONE.TXT", "USER 99"]) {
-    assert.equal(count(run(m, `${bad}!:SAY`), /\nSAY\r/g), 0, bad);
+    assert.equal(count(run(m, `${bad} &SAY`), /\nSAY\r/g), 0, bad);
     assert.equal(code(m), 0xff00, bad);
   }
   assert.equal(count(run(m, "ERA X.COM!SAY"), /\nSAY\r/g), 1, "the walk's leading ERA stops nothing after it");
-  assert.equal(count(run(m, "COPY SAY.COM B:!:SAY"), /\nSAY\r/g), 1, "COPY's success");
-  assert.equal(count(run(m, "COPY NONE.COM B:!:SAY"), /\nSAY\r/g), 0, "COPY's failure");
+  assert.equal(count(run(m, "COPY SAY.COM B: &SAY"), /\nSAY\r/g), 1, "COPY's success");
+  assert.equal(count(run(m, "COPY NONE.COM B: &SAY"), /\nSAY\r/g), 0, "COPY's failure");
 });
 
 /** The page-zero state, stack and DMA a program starts with, at 0100h. */
@@ -170,7 +172,7 @@ function entryState(m) {
   return got;
 }
 
-test("function 47's command starts with the default FCBs, tail, DMA and stack of the same command typed", () => {
+test("SH8 function 47's command starts with the default FCBs, tail, DMA and stack of the same command typed", () => {
   const typed = boot(card());
   const t = entryState(typed);
   run(typed, "SAY B:ONE.TXT TWO.DAT and the rest");
@@ -185,7 +187,7 @@ test("function 47's command starts with the default FCBs, tail, DMA and stack of
   assert.deepEqual(p, t);
 });
 
-test("function 47 copies the command before anything loads: a target that loads over the caller's DMA", () => {
+test("SH8 function 47 copies the command before anything loads: a target that loads over the caller's DMA", () => {
   // BIG.COM: SAY and 1 KiB after it, over CHAIN's string at its end.
   const fixed = Uint8Array.from([...SAY, ...new Uint8Array(1024)]);
   const m = boot(card({ "BIG.COM": fixed, "CHAIN.COM": chainTo("BIG!SAY") }));
@@ -194,19 +196,19 @@ test("function 47 copies the command before anything loads: a target that loads 
   assert.match(out, /A>BIG\r\nSAY\r\nA>SAY\r\nSAY\r\nA>$/);
 });
 
-test("function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on", () => {
+test("SH8 function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on", () => {
   for (const [why, bytes] of [
     ["no 0", [...raw("SAY".padEnd(128, "Y")), 0]],
     ["CR", [...raw("SAY\rSAY"), 0]],
     ["LF", [...raw("SAY\nSAY"), 0]],
   ]) {
     const m = boot(card({ "CHAIN.COM": chainWith(bytes) }));
-    const out = run(m, "CHAIN!:SAY");
-    assert.match(out, /REFUSED\r\n\r\nA>:SAY\r\nSAY\r\nA>$/, why);
+    const out = run(m, "CHAIN &SAY");
+    assert.match(out, /REFUSED\r\n\r\nA>SAY\r\nSAY\r\nA>$/, why);
   }
 });
 
-test("function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt", () => {
+test("SH8 function 47 takes 127 characters, the line's rest replaced, and an empty command ends at the prompt", () => {
   const long = `${"SAY!".repeat(31)}SAY`;
   const m = boot(card({ "CHAIN.COM": chainTo(long), "EMPTY.COM": chainTo("") }));
   assert.equal(count(run(m, "CHAIN!USER 7", 2_000_000_000), /\nSAY\r/g), 32);
@@ -216,7 +218,7 @@ test("function 47 takes 127 characters, the line's rest replaced, and an empty c
   assert.equal(user(m), 0);
 });
 
-test("a chained command missing, unreadable or too large reaches NAME? and the prompt", () => {
+test("SH8 a chained command missing, unreadable or too large reaches NAME? and the prompt", () => {
   const huge = new Uint8Array(0xc000).fill(0xc9);
   const m = boot(card({ "CHAIN.COM": chainTo("NOSUCH"), "C2.COM": chainTo("HUGE"), "C3.COM": chainTo("SAY"), "HUGE.COM": huge }));
   assert.match(run(m, "CHAIN"), /A>NOSUCH\r\nNOSUCH\?\r\n\r\nA>$/);
@@ -237,15 +239,16 @@ test("a chained command missing, unreadable or too large reaches NAME? and the p
   assert.equal(code(m), 0xff00);
 });
 
-test("a chain from a startup line runs before the next startup line, and may hold ! and :", () => {
-  const m = boot(card({ "CHAIN.COM": chainTo("USER 0!RC FF00!:SAY!SAY"), "C2.COM": chainTo("say!:user 4"), "STARTUP.CMD": startupFile("CHAIN", "C2", "USER 3") }));
+test("SH8 a chain from a startup line runs before the next startup line, and may hold ! and &", () => {
+  const m = boot(card({ "CHAIN.COM": chainTo("USER 0!RC FF00 &SAY!SAY"), "C2.COM": chainTo("say &user 4") }, standardCard(), ["CHAIN", "C2", "USER 3"]));
   m.runUntil(() => idle(m, 0), 800_000_000, "the prompt");
   const t = m.text(0);
-  assert.match(t, /A>CHAIN\r\r\n\r\nA>USER 0\r\nA>RC FF00\r\n\r\nA>:SAY\r\nA>C2\r\r\n\r\nA>say\r\nSAY\r\nA>:user 4\r\n4A>USER 3\r\r\n3A>$/);
+  assert.match(t, /A>CHAIN\r[\s\S]*A>USER 0\r\n[\s\S]*A>RC FF00 \r\n[\s\S]*A>SAY\r\nSAY\r\n[\s\S]*A>C2\r[\s\S]*A>say \r\nSAY\r\n[\s\S]*A>user 4\r\n[\s\S]*4A>USER 3\r\r\n3A>$/);
+  assert.equal(count(t, /\nSAY\r/g), 2, "the & piece after RC FF00 skipped");
   assert.equal(user(m), 3);
 });
 
-test("^C at a program's line input drops the rest of the line", () => {
+test("SH8 ^C at a program's line input drops the rest of the line", () => {
   const m = boot(card());
   const from = m.output.length;
   m.type("LINE!SAY!USER 2\r");
@@ -257,7 +260,7 @@ test("^C at a program's line input drops the rest of the line", () => {
   assert.equal(user(m), 0);
 });
 
-test("a BDOS error's exit drops the rest of the line", () => {
+test("SH8 a BDOS error's exit drops the rest of the line", () => {
   const image = card(
     {},
     createContainer([
@@ -291,7 +294,7 @@ const ROX = Uint8Array.from([0x0e, 28, 0xcd, 5, 0, 0x11, 0x5c, 0, 0x0e, 22, 0xcd
 // SEL16.COM: function 14 with E = 16, a drive past P:.
 const SEL16 = Uint8Array.from([0x1e, 16, 0x0e, 14, 0xcd, 5, 0, 0xc9]);
 
-test("a read-only drive's exit drops the rest of the line", () => {
+test("SH8 a read-only drive's exit drops the rest of the line", () => {
   const m = boot(card({ "ROX.COM": ROX }));
   const out = runError(m, "ROX NEW.DAT!SAY!USER 2", /Bdos Err On A: R\/O/);
   assert.equal(count(out, /\nSAY\r/g), 0);
@@ -299,14 +302,14 @@ test("a read-only drive's exit drops the rest of the line", () => {
   assert.equal(volume(m.sdImage, "A").find("NEW.DAT"), undefined, "nothing made");
 });
 
-test("a failed select's exit drops the rest of the line", () => {
+test("SH8 a failed select's exit drops the rest of the line", () => {
   const m = boot(card({ "SEL16.COM": SEL16 }));
   const out = runError(m, "SEL16!SAY!USER 2", /Bdos Err On .: Select/);
   assert.equal(count(out, /\nSAY\r/g), 0);
   assert.equal(user(m), 0);
 });
 
-test("a directory read that fails drops the rest of the line", () => {
+test("SH8 a directory read that fails drops the rest of the line", () => {
   const m = boot(card());
   // The OR A after READDIR's BIORDS, before its JP NZ,BADSECT: A made nonzero once.
   const at = m.sym("BADSECT");
@@ -332,7 +335,7 @@ test("a directory read that fails drops the rest of the line", () => {
   assert.equal(user(m), 0);
 });
 
-test("ERA's read-only file drops the rest of the line", () => {
+test("SH8 ERA's read-only file drops the rest of the line", () => {
   const image = card();
   volume(image, "A").write("R.DAT", new Uint8Array(128), { readOnly: true });
   const m = boot(image);
@@ -342,7 +345,7 @@ test("ERA's read-only file drops the rest of the line", () => {
   assert.ok(volume(m.sdImage, "A").find("R.DAT"), "the file kept");
 });
 
-test("SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
+test("SH8 SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
   const full = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry: "G1M", label: "DIRS", mount: "B" },
@@ -354,7 +357,7 @@ test("SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
   c.write("BIG.DAT", new Uint8Array(c.freeBytes()));
   const m = boot(card({}, full));
   for (const drive of ["B", "C"]) {
-    const out = run(m, `SAVE 1 ${drive}:X.COM!:SAY!USER 2`);
+    const out = run(m, `SAVE 1 ${drive}:X.COM &SAY &USER 2`);
     assert.match(out, /NO SPACE/, drive);
     assert.equal(count(out, /\nSAY\r/g), 0, drive);
     assert.equal(code(m), 0xff00, drive);
@@ -362,7 +365,7 @@ test("SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
   }
 });
 
-test("a write lost at warm boot drops the rest of the line", () => {
+test("SH8 a write lost at warm boot drops the rest of the line", () => {
   const m = boot(card());
   // As the first program starts, a cached line is made dirty and the next card write fails:
   // CWBOOT's flush drops it and says Write lost at the warm boot.
@@ -379,8 +382,8 @@ test("a write lost at warm boot drops the rest of the line", () => {
     if (failNext && m.pc === m.sym("SDWRITE")) [(m.cpu.cpu.a = 5), (m.cpu.cpu.pc = m.sym("SDFAIL")), (failNext = false)];
     return step();
   };
-  const out = run(m, "SAY!:SAY!USER 3");
-  assert.match(out, /^SAY!:SAY!USER 3\r\r\nSAY\r\nWrite lost\r\nA>$/);
+  const out = run(m, "SAY!SAY!USER 3");
+  assert.match(out, /^SAY!SAY!USER 3\r\r\nSAY\r\nWrite lost\r\nA>$/);
   assert.equal(count(out, /\nSAY\r/g), 1);
   assert.equal(user(m), 0);
 });
@@ -405,9 +408,9 @@ function runMore(m, line, key) {
   return m.text(from);
 }
 
-test("^C at TYPE's or DIR's [more] drops the rest of the line", () => {
+test("SH8 ^C at TYPE's or DIR's [more] drops the rest of the line", () => {
   const m = boot(pagedCard());
-  for (const line of ["TYPE LONG.TXT!SAY!USER 2", "TYPE LONG.TXT!:SAY!USER 2", "DIR B:!SAY!USER 2", "DIR B:!:SAY!USER 2"]) {
+  for (const line of ["TYPE LONG.TXT!SAY!USER 2", "TYPE LONG.TXT &SAY!USER 2", "DIR B:!SAY!USER 2", "DIR B: &SAY!USER 2"]) {
     const out = runMore(m, line, "\x03");
     assert.equal(count(out, /\nSAY\r/g), 0, line);
     assert.doesNotMatch(out, /line 30|\d+ files?\b/, line);
@@ -416,20 +419,20 @@ test("^C at TYPE's or DIR's [more] drops the rest of the line", () => {
   }
 });
 
-test("Esc or Q at [more], and ERA *.* answered N, are answers: the code stays 0 and the line goes on", () => {
+test("SH8 Esc or Q at [more], and ERA *.* answered N, are answers: the code stays 0 and the line goes on", () => {
   const m = boot(pagedCard());
   for (const [line, key] of [
-    ["TYPE LONG.TXT!:SAY", "\x1b"],
-    ["TYPE LONG.TXT!:SAY", "q"],
-    ["DIR B:!:SAY", "Q"],
-    ["DIR B:!:SAY", "\x1b"],
+    ["TYPE LONG.TXT &SAY", "\x1b"],
+    ["TYPE LONG.TXT &SAY", "q"],
+    ["DIR B: &SAY", "Q"],
+    ["DIR B: &SAY", "\x1b"],
   ]) {
     const out = runMore(m, line, key);
     assert.equal(count(out, /\nSAY\r/g), 1, `${line} ${JSON.stringify(key)}`);
     assert.equal(code(m), 0, `${line} ${JSON.stringify(key)}`);
   }
   const from = m.output.length;
-  m.type("ERA B:*.*!:SAY\r");
+  m.type("ERA B:*.* &SAY\r");
   m.runUntil(() => m.waitingForInput() && /\(Y\/N\)\?$/.test(m.text(from)), 200_000_000, "ERA's question");
   m.type("N\r");
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
@@ -438,16 +441,18 @@ test("Esc or Q at [more], and ERA *.* answered N, are answers: the code stays 0 
   assert.ok(volume(m.sdImage, "B").find("F0.DAT"), "nothing erased");
 });
 
-test("a reset clears the rest of the line", () => {
+test("SH8 a reset clears the rest of the line", () => {
   const m = boot(card());
   const from = m.output.length;
   m.type("LINE!SAY\r");
   m.runUntil(() => m.waitingForInput() && m.text(from).endsWith("LINE!SAY\r\r\n"), 200_000_000, "LINE's input");
-  assert.notEqual(chpos(m), 0);
+  const lpos = () => { const p = pageOf(m); return p ? m.read(p + SHELL.symbols.LPOS) | (m.read(p + SHELL.symbols.LPOS + 1) << 8) : 0; };
+  assert.notEqual(lpos(), 0, "the shell holds the rest");
   m.reset();
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt after the reset");
   assert.equal(count(m.text(from), /\nSAY\r/g), 0);
   assert.equal(chpos(m), 0);
+  assert.equal(lpos(), 0, "the shell installed afresh");
 });
 
 /** What X.COM, 128 bytes of RET, finds at 0100h and in the tail when it starts. */
@@ -462,17 +467,20 @@ function atEntry(m) {
 }
 const X128 = new Uint8Array(128).fill(0xc9);
 
-test("KE-127: a startup line of 128 characters runs its first 127, and leaves 0100h as loaded", () => {
+test("SH8 KE-127: a startup line of 128 characters runs its first 127, and leaves 0100h as loaded", () => {
   const line = `X ${"A".repeat(126)}`;
   assert.equal(line.length, 128);
-  const m = new Machine({ ...romFor(), sdImage: card({ "X.COM": X128, "STARTUP.CMD": raw(line) }), clock: TEST_CLOCK });
+  // The ROM's own startup line, with no shell.
+  const image = card({ "X.COM": X128 });
+  volume(image, "A").write("STARTUP.CMD", raw(line));
+  const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK });
   const got = atEntry(m);
   m.runUntil(() => idle(m, 0), 400_000_000, "the prompt");
   assert.deepEqual(got, [{ b100: 0xc9, tail: 126, last: 0 }]);
   assert.match(m.text(0), new RegExp(`A>X ${"A".repeat(125)}\\r`));
 });
 
-test("KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded", () => {
+test("SH8 KE-127: the longest tail typed, chained and from function 47, 126, 124 and 126 characters, leaves 0100h as loaded", () => {
   const line = `X ${"B".repeat(125)}`;
   assert.equal(line.length, 127);
   // A piece after a ! can't carry 126 characters in a 127-character line: the chained

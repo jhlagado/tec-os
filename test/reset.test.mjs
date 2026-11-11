@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { Machine } from "./lib/machine.mjs";
-import { ABI, ROOT, TEST_CLOCK, service, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, ROOT, TEST_CLOCK, service, romFor, startupFile, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { makeSvc } from "../tools/lib/svc.mjs";
 import { createContainer, descriptorAt, headerChecksum, tableSum } from "../tools/lib/container.mjs";
 import { format } from "../tools/lib/format.mjs";
@@ -522,7 +522,8 @@ test("startup runs once per reset from the selected A:, at user 0", () => {
 });
 
 test("startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit", () => {
-  const m = remapped(startupCard(["SAY", "USER 3"], { "SAY.COM": SAY }));
+  // The shell runs the lines after its own.
+  const m = remapped(startupCard(["SHELL.SVC", "SAY", "USER 3"], { "SAY.COM": SAY, "SHELL.SVC": SHELL_SVC }));
   const text = reset(m);
   assert.equal(lineCount(text, "USER 3"), 1, "the line after the program's exit");
   m.command("SAY");

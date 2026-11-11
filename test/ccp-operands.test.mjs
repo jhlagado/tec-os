@@ -7,7 +7,11 @@
 // hashes alone. A write to C: was retaken when a read-only volume came to say
 // R/O, ERA *.* when Return alone came to end its answer, COPY's two write
 // errors on B: when the destination came to be closed (KE-179), and SAVE's
-// when its file did (KE-201). SHELLC and SHELLE left with the nested levels. A
+// when its file did (KE-201). SHELLC and SHELLE left with the nested levels.
+// When the shell hook came, every call was the same with each address read as
+// symbol and offset, and the hashes were retaken; COPY's rows, marked shell,
+// are SHELL.SVC's, run with the shell holding the prompt, their output the
+// ROM's COPY's and their calls the shell's. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it. Emulator evidence.
@@ -18,7 +22,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_SVC, ROOT, boot, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, boot, volume, withShell } from "./lib/fixtures.mjs";
 
 const FIXTURE = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/ccp-operands.json"), "utf8"));
 const PROFILE = "debug80";
@@ -126,9 +130,19 @@ function reading(m, fixture) {
 test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
   assert.equal(FIXTURE.profile, PROFILE);
   assert.equal(FIXTURE.inputs.length, 78);
+  const bare = FIXTURE.inputs.filter((r) => !r.shell);
   const m = boot(await card());
-  const rows = reading(m, FIXTURE.inputs);
-  const deep = rows.filter((r, i) => r.peak > FIXTURE.inputs[i].peak);
+  const rows = reading(m, bare);
+  const deep = rows.filter((r, i) => r.peak > bare[i].peak);
+  assert.deepEqual(deep.map((r) => `${r.input}: ${r.peak}`), []);
+});
+
+test("SH11 COPY's operands keep their output and stack under the shell", { timeout: 300_000 }, async () => {
+  const shelled = FIXTURE.inputs.filter((r) => r.shell);
+  assert.equal(shelled.length, 10);
+  const m = boot(withShell(await card()));
+  const rows = reading(m, shelled);
+  const deep = rows.filter((r, i) => r.peak > shelled[i].peak);
   assert.deepEqual(deep.map((r) => `${r.input}: ${r.peak}`), []);
 });
 

@@ -72,8 +72,7 @@ export const runnable = (m, svc) => state(m, svc, "RUNOK");
 export async function inSession(files = {}, { svc, machine: opts, text } = {}) {
   svc ??= await mon3Build();
   const m = boot({ "MON3.SVC": svc.file, ...files }, opts, text);
-  m.command("MON3.SVC");
-  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
+  assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
   return { m, svc };
 }
 
