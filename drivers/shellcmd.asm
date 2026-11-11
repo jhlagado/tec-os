@@ -60,7 +60,7 @@ CMDCOPY:
   ld de,CFCB     ; the destination's
   call CPPARSE   ; the destination
   call ENDCHK    ; nothing after it
-  inc de         ; its name's first
+  inc de         ; the name's first byte
   ld a,(de)
   cp SPACE       ; blank?
   jr nz,CPD1     ; a name was given
@@ -98,10 +98,10 @@ CPGO:
   inc a          ; FFh to zero
   ld de,CPNOSRC
   jr z,CPFAIL    ; FFh: none
-  call DOSSEQ    ; delete it first
-  DB 19*2+1      ; delete the
-  call DOSSEQ    ; destination
-  DB 22*2+1      ; and make it
+  call DOSSEQ
+  DB 19*2+1      ; delete the old one
+  call DOSSEQ
+  DB 22*2+1      ; then make it
   inc a          ; FFh to zero
   ld de,CPNODST
   jr z,CPFAIL    ; FFh: no room
@@ -123,7 +123,7 @@ CPLOOP:
   ld hl,(CCOUNT)
   inc hl         ; one more record
   ld (CCOUNT),hl
-  jr CPLOOP      ; the next
+  jr CPLOOP      ; the next record
 
 ; Close the destination, then print
 ; COPIED and the count in hex.
@@ -237,11 +237,11 @@ PARSEFCB:
   ld a,SPACE     ; blank it
 
 FCBSPC:
-  ld (de),a      ; a blank name, type
-  inc de         ; eleven bytes
-  djnz FCBSPC
+  ld (de),a      ; a blank in the name
+  inc de
+  djnz FCBSPC    ; all eleven bytes
   xor a
-  ld b,24        ; then 24 zero
+  ld b,24        ; 24 zero bytes next
 
 FCBZERO:
   ld (de),a      ; the rest zero
@@ -262,8 +262,8 @@ FCBZERO:
   jr nc,PLEND    ; past P: refused
   inc a
   ld (de),a      ; the drive, 1 for A
-  inc hl         ; past the drive and
-  inc hl         ; its colon
+  inc hl
+  inc hl         ; past 'd:'
 
 FCBNAME:
   inc de
@@ -351,11 +351,11 @@ CHRRET:
   ret
 
 PARSTAR:
-  ld a,'?'       ; star: ? for the
+  ld a,'?'       ; a star means ?s
 
 STARLP:
-  ld (de),a      ; ? for the rest
-  inc de         ; rest of the field
+  ld (de),a      ; to the field's end
+  inc de
   djnz STARLP
   inc hl         ; past the *
 
