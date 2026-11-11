@@ -49,21 +49,21 @@ CTRLN EQU 14
 SPACE EQU 32
 DELETE EQU $7F
 
-; Function 47: replace the chained
-; remainder with text at the DMA address
-; in CURDMA. E is ignored. The text must
-; contain zero within 128 bytes and no
-; CR/LF before it. ! and : are allowed.
-; Validate before changing CMDTXT/CHPOS,
-; then copy all 128 DMA bytes, set
-; CHPOS=1 and jump through BIOWBT. The
-; CCP runs the chain before startup.
-; Invalid input returns A=FFh through
-; RETA with the command unchanged.
-; FNCHNO is also the FFh tail for 44/99.
+; Function 47: make the text at the DMA
+; address in CURDMA the next command
+; line. E is ignored. The text must hold
+; a zero within 128 bytes and no CR/LF
+; before it. Validate before changing
+; CMDTXT/CHPOS, then copy all 128 DMA
+; bytes, set CHPOS bit 0 and jump
+; through BIOWBT. The next prompt runs
+; the line whole, or hands it to the
+; shell's LINE. Invalid input returns
+; A=FFh through RETA with the command
+; unchanged. FNCHNO is also the FFh tail
+; for 44/99.
 
 FNCHAIN:
-
   ld hl,(CURDMA)
   ld b,128       ; terminator bound
 
@@ -88,19 +88,20 @@ FNCH2:
   ld de,CMDTXT
   ld bc,128      ; copy full DMA record
   ldir
-  ld a,1         ; start chained pieces
+  ld a,1         ; a function 47 line
   ld (CHPOS),a
 
 TOBIOWBT:
   jp BIOWBT      ; RAM warm-boot hook
 
-; Discard the chained remainder by
-; clearing CHPOS, then jump through
+; Drop the rest of the current line:
+; set CHPOS bit 1, which the shell reads
+; at its next LINE, then jump through
 ; BIOWBT. The normal warm-boot hook ends
 ; the transient without returning here.
 
 CHDROP:
-  xor a
+  ld a,2         ; the rest is dropped
   ld (CHPOS),a
   jr TOBIOWBT
 
@@ -214,7 +215,7 @@ RETWORD:
 
 ; Function 0: jump through RAM BIOWBT.
 ; The normal hook ends the transient.
-; This entry does not clear CHPOS.
+; This entry leaves CHPOS unchanged.
 
 FNZERO:
   jr TOBIOWBT    ; RAM warm-boot hook
@@ -397,8 +398,6 @@ PRLOOP:
 ; change.
 
 FNLINE:
-  ld a,(HHEAD)   ; initial history entry
-  ld (HPOS),a    ; HREC starting point
   ex de,hl       ; HL: the buffer
   ld a,(hl)
   ld (LINMAX),a  ; buffer capacity
@@ -467,20 +466,25 @@ LINTGL:
   call TOGLIST   ; printer echo toggle
   jr LINLOOP
 
-; C = ^W or ^N. With HFLAG nonzero call
-; HREC for the older/newer history line.
+; C = ^W or ^N. With HFLAG nonzero ask
+; the shell's HREC for the older or
+; newer history line; carry: none.
 ; Otherwise store the control byte
-; through LINCHR.
-; The CCP sets HFLAG=FFh only for typed
-; prompt input.
+; through LINCHR. The CCP sets HFLAG=FFh
+; only for the first line input after a
+; shell's LINE call, so a program's
+; BDOS 10 stores the byte.
 
 LINHIST:
   ld a,(HFLAG)   ; prompt history gate
   or a
   jr z,LINCHR    ; program: ordinary
                  ; byte
-  call HREC      ; ^W older, ^N newer
-  jr LINLOOP
+  ld a,4
+  call SHENT     ; the shell's HREC
+  call VHLJP     ; C: ^W older, ^N newer
+  jr c,TOLINLP   ; carry: none to show
+  jp LINHR       ; show the shell's line
 
 ; BS: if nonempty, decrement LINCNT and
 ; LINPTR and call ERASE1 once. It sends
@@ -502,12 +506,13 @@ LINDEL:
   call LINDROP   ; C: empty, unchanged
   ld c,(hl)      ; removed byte to echo
   call nc,ECHOCHAR
-  jr LINLOOP     ; after its echo
+  jr TOLINLP     ; after its echo
 
 ; ^C: ignore it on a nonempty line. At
 ; the start, store CTRLC through LINPTR,
 ; echo literal ^C and enter CHDROP to
-; discard the chain before warm boot.
+; drop the rest of the line before warm
+; boot.
 
 LINABRT:
   ld a,(LINCNT)  ; start-only abort
@@ -520,7 +525,8 @@ LINABRT:
   call ECHOCHAR
   ld c,'C'
   call ECHOCHAR
-  jp CHDROP      ; drop chain, warm boot
+  jp CHDROP      ; drop the rest, warm
+                 ; boot
 
 ; ^E: send CR/LF through ECHOONE and
 ; continue the same logical line. Store
@@ -624,11 +630,10 @@ LINDROP:
 ; to buffer byte 1. Data begins at byte
 ; 2 and has no appended CR/NUL
 ; terminator.
-; Clear HFLAG before calling HSTORE.
-; Warm boot also clears HFLAG. A
-; nonempty CCP prompt line can be stored
-; unless HSTORE rejects NUL data or a
-; newest duplicate.
+; Clear HFLAG before calling the
+; shell's HSTORE, with DE the data and B
+; its count, for a nonempty line. Warm
+; boot also clears HFLAG.
 ; Return zero. Capacity completion uses
 ; C=CR. The already-full path echoes its
 ; triggering key instead.
@@ -646,10 +651,47 @@ LINDONE:
   ld a,(hl)      ; FFh prompt, 0 program
   ld (hl),0
   and b          ; prompt with data
+  jr z,LINDN1    ; nothing to store
+  ld a,6
+  call SHENT     ; the shell's HSTORE
+  call VHLJP     ; DE: data, B: count
 
-  call nz,HSTORE
+LINDN1:
   xor a
   ret
+
+; Erase the line and show the shell's
+; zero-ended line at HL in its place.
+
+LINHR:
+  push hl        ; the zero-ended line
+  call LINERASE
+  pop hl
+
+; Copy the shell's line into the buffer
+; and echo it, until its zero or the
+; buffer is full.
+
+LINHC:
+  ld a,(hl)
+  or a
+  jp z,LINLOOP   ; the line's end
+  ld c,a         ; C: the byte to store
+  ld de,(LINMAX)
+  ld a,e         ; E=LINMAX, D=LINCNT
+  cp d
+  jp z,LINLOOP   ; full
+  push hl        ; the shell's line
+  ld hl,(LINPTR)
+  ld (hl),c      ; store and advance
+  inc hl
+  ld (LINPTR),hl
+  ld hl,LINCNT
+  inc (hl)       ; one more counted
+  call ECHOCHAR  ; echo the stored byte
+  pop hl
+  inc hl         ; the shell's next byte
+  jr LINHC
 
 ; Function 11: return 1 for pending or
 ; BIOS-ready input, otherwise 0. An

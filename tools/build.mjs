@@ -262,7 +262,6 @@ async function buildProfile(name, assemble) {
     ["VSTOP", "VSBOT"], // CSI r's word store, VTLFS
     ["VROW", "VCOL"], // VTHOME's word store
     ["ESCP1", "ESCP2"], // VTESC's word store
-    ["PGLINE", "PGCOL"], // PGINIT's word store
     ["LINMAX", "LINCNT"], // LINCHR's word load
     ["FSIZE0", "FSIZE1", "FSIZE2"], // SIZECP and PUBRR
     ["CAND0", "CAND1", "CAND2"], // SIZECP, ADDCAND and PUBRR

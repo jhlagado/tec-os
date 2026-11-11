@@ -170,14 +170,6 @@ DIRNCOL:
   DS 1
 DIRNUM:
   DS 2
-PGLINE:
-  DS 1
-PGCOL:
-  DS 1
-PGROWS:
-  DS 1
-PGWID:
-  DS 1
 SAVEPGS:
   DS 1
 SAVEADR:
@@ -236,8 +228,6 @@ LINMAX: DS 1
 LINCNT: DS 1
 HFLAG: DS 1      ; FFh CCP
                  ; prompt/history
-HPOS: DS 1       ; history terminator
-                 ; offset
 CURDRV: DS 1
 DEFDRV: DS 1
 DEFDPB: DS 2
@@ -349,12 +339,6 @@ KBT2: DS 1
 PIVEC: DS 2
 GLVEC: DS 2
 
-; The 256-byte command history ring is
-; at BD00h in EXPAND 1. Cold boot clears
-; it. HHEAD is outside CPMINIT's clear
-; span.
-
-HHEAD: DS 1      ; next-store offset
 
 ; MVCOPY selectors: 0 is the saved
 ; program view, 1 EXPAND 1. Any nonzero
@@ -391,6 +375,7 @@ SVCHEAD:
   DS 1           ; lowest owner page, 0
                  ; none
 SVCGEN: DS 1     ; removal generation
+SHOWN: DS 2      ; the shell's table, 0
 
 ; On SVCLOAD failure (carry set):
 ; SVCRC: 0 refused, 1 failed with pages
@@ -409,11 +394,16 @@ SVCRA: DS 1
 
 STFLAG: DS 1     ; FFh startup, 0 typed
 
-STPOS: DS 1      ; 0 untried, bit7 done
-                 ; else 1-based offset
-STREC: DS 128    ; one 128-byte record
-CHPOS: DS 1      ; CMDTXT offset+1, 0
-                 ; none
+STPOS: DS 1      ; 0 untried, 1 read,
+                 ; 80h done
+CHPOS: DS 1      ; bit 0 a function 47
+                 ; line, bit 1 dropped
+
+; Unused: the startup record is read
+; into LOADBUF. The high state still
+; ends at C000h.
+
+HIFREE: DS 127
 
 ; Relocated page-zero console state.
 ; Access requires the classic bank. INFO

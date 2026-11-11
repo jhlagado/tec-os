@@ -209,6 +209,19 @@ TNLIST EQU 14
 
 TNFONT EQU 15
 
+; SHELL: HL = a shell's table of four
+; words, LINE, PAGE, HREC and HSTORE,
+; or 0 to give the prompt back. Returns
+; HL = the table it replaced, 0 for
+; none. A table must lie in a
+; resident's pages, below the stub's
+; page, with L at most F8h; any other
+; nonzero HL returns TNEBAD with carry
+; and the hook unchanged. BC, IX and IY
+; are kept. Stack bound 4.
+
+TNSHELL EQU 16
+
 ; TNCOUNT is the exclusive service
 ; bound, not callable. Failures return
 ; status A with carry:
@@ -217,7 +230,7 @@ TNFONT EQU 15
 ; failure does not imply unchanged
 ; workspace, cache or hardware.
 
-TNCOUNT EQU 16
+TNCOUNT EQU 17
 
 TNEBAD EQU 1
 

@@ -51,7 +51,12 @@ DIRREADY:
   ld l,a
 
   ld (DIRNUM),hl
-  call PGINIT    ; A=the paging width
+  ld a,(VWID)    ; active video width
+  or a
+  jr nz,DIRW80
+  ld a,80        ; serial width 80
+
+DIRW80:
   ld b,$FF       ; columns that fit
 
 DIRWDIV:
@@ -120,7 +125,7 @@ DIRHEAD:
   ld a,h
   or l
   jr z,DIRNAME   ; first row: no newline
-  call PGCRLF    ; pager row break
+  call LSTCRLF   ; listing row break
 
 STARTC:
   jp c,STARTED   ; abort abandons word
@@ -208,7 +213,7 @@ DIRDONE:
 ; KiB result. Arbitrary 24-bit counts
 ; need not.
 
-  call PGCRLF    ; last row break
+  call LSTCRLF   ; last row break
   jr c,STARTC    ; pager abort
   ld hl,(DIRNUM)
   call PUTDEC    ; decimal visible count
@@ -249,194 +254,36 @@ DIRFK:
   call PUTSTR
   jp STARTED
 
-; TYPE and DIR share geometry-aware page
-; accounting. Pause one row before a
-; full screen. Serial fallback is 80x24.
-; Mask each key with DFh. Value 03h
-; drops remaining chained pieces and
-; stops the listing. Value 1Bh or Q
-; stops only the listing. Other masked
-; values continue.
+; Listing output for DIR's row breaks:
+; CR, then LF through LSTPUT. Carry from
+; either stops the listing.
 
-; Start pager bookkeeping:
-; PGLINE=PGCOL=0, PGROWS=height-1 and
-; PGWID=width. Zero VHGT defaults to 24.
-; Zero VWID to 80 independently. Active
-; video requires supported geometry.
-; Returns A=PGWID. Changes AF/HL.
+LSTCRLF:
+  ld e,CR
+  call LSTPUT
+  ret c          ; propagate stop
+  ld e,LF
 
-PGINIT:
-  ld hl,0        ; PGLINE and PGCOL
-  ld (PGLINE),hl
-  ld a,(VHGT)    ; active video height
+; Listing output for TYPE's bytes: E
+; through the shell's PAGE entry when a
+; shell holds the hook, so the listing
+; can pause there; carry stops it.
+; Without a shell, print E with carry
+; clear, so a bare listing never
+; pauses. Changes AF/DE/HL, and BC on a
+; shell's pause.
+
+LSTPUT:
+  ld a,(SHOWN+1)
   or a
-  jr nz,PGIH
-  ld a,24        ; serial height 24
+  jr z,LSTP0     ; no shell
+  ld a,2
+  call SHENT     ; HL = PAGE
+  jp (hl)        ; its carry stops
 
-PGIH:
-  dec a          ; reserve pause row
-  ld (PGROWS),a
-  ld a,(VWID)    ; active video width
-  or a
-  jr nz,PGIW
-  ld a,80        ; serial width 80
-
-PGIW:
-  ld (PGWID),a
-  ret
-
-; Print CR through PGPUT and propagate
-; carry abort. Otherwise fall into PGPUT
-; with E=LF. LF is output before its
-; pause check. Changes AF/DE/HL and BC
-; on a pause.
-
-PGCRLF:
-  ld e,CR        ; CR first
-  call PGPUT
-  ret c          ; propagate abort
-  ld e,LF        ; fall through with LF
-
-; Print E with pager accounting.
-; Dispatch LF/CR/BS/tab separately.
-; Other bytes below SPACE take no
-; columns. For other bytes at least
-; SPACE, check width before output.
-; At/beyond it call PGNEWL with DE saved
-; and suppress the byte on abort.
-; Otherwise advance PGCOL and output.
-; Carry set stops the listing. Clear
-; continues. Changes AF/DE/HL and BC on
-; pause.
-
-PGPUT:
-  ld a,e
-  cp LF          ; LF: output then count
-  jr z,PGLF
-  cp CR          ; CR: reset column
-  jr z,PGCR
-  cp 8           ; BS: saturating left
-  jr z,PGBS
-  cp 9           ; tab: next multiple 8
-  jr z,PGTAB
-  cp SPACE
-  jr c,PGOUT     ; controls: no column
-  ld a,(PGCOL)   ; current column
-  ld hl,PGWID    ; width threshold
-  cp (hl)
-  jr c,PGINC     ; below width: fits
-  push de        ; keep pending byte
-  call PGNEWL    ; wrap before output
-  pop de
-  ret c          ; abort suppresses byte
-  xor a          ; new line column zero
-
-PGINC:
-  inc a          ; column after byte
-
-PGSETC:
-  ld (PGCOL),a   ; publish column
-
-PGOUT:
-  call PUTCHAR   ; output original E
-  or a           ; continue: carry clear
-  ret
-
-; CR resets PGCOL to zero. BS decrements
-; it only when nonzero. Both output the
-; original control byte through
-; PGSETC/PGOUT and return carry clear.
-
-PGCR:
-  xor a          ; CR column zero
-  jr PGSETC
-
-PGBS:
-  ld a,(PGCOL)
-  or a           ; BS at zero stays
-  jr z,PGOUT
-  dec a          ; BS one column left
-  jr PGSETC
-
-; Set PGCOL=(PGCOL OR 7)+1 in its
-; eight-bit counter and output the tab.
-; No PGNEWL call occurs here. A later
-; byte at least SPACE performs the width
-; check.
-
-PGTAB:
-  ld a,(PGCOL)
-  or 7           ; next multiple of 8
-  inc a
-  jr PGSETC
-
-; Output LF first, then enter PGNEWL.
-; Printable-wrap entry instead checks
-; before outputting its pending
-; character.
-
-PGLF:
-  call PUTCHAR   ; LF before pause
-
-; Begin a line: compare PGLINE+1 with
-; PGROWS. Below threshold count it and
-; reset column/carry. At/above threshold
-; print [more] and poll BDOS 6, E=FFh,
-; until a nonzero key.
-; Save the key across prompt erasure,
-; then mask with DFh. Value 03h enters
-; PGDROP. Value 1Bh or Q enters PGSTOP.
-; Other masked values reset PGLINE/PGCOL
-; to zero. Abort leaves these counters
-; unchanged here. Changes AF/DE/HL and
-; BC on pause.
-
-PGNEWL:
-  ld a,(PGLINE)  ; current line count
-  inc a          ; new line candidate
-  ld hl,PGROWS   ; pause threshold
-  cp (hl)
-  jr c,PGNL1     ; room: keep count
-  ld de,MOREMSG  ; pause prompt
-  call PUTSTR
-
-PGWAIT:
-  ld e,$FF       ; non-echo input
-  ld c,6         ; 6: poll until key
-  call BDOS
-  or a
-  jr z,PGWAIT    ; 0: poll again
-  push af        ; key across erasure
-  ld de,UNMORE   ; erase prompt only
-  call PUTSTR
-  pop af
-  and $DF        ; mask every key
-  cp 3           ; 03h: drop chain
-  jr z,PGDROP
-  cp $1B         ; 1Bh: stop listing
-  jr z,PGSTOP
-  cp 'Q'         ; Q stops listing
-  jr z,PGSTOP
-  xor a          ; continue: page zero
-
-PGNL1:
-  ld (PGLINE),a  ; publish new count
-  xor a          ; reset column/carry
-  ld (PGCOL),a
-  ret
-
-; Masked value 03h clears CHPOS before
-; the shared carry-set return. Values
-; 1Bh/Q leave CHPOS intact and stop only
-; this listing. No STPOS/startup-file
-; position is cleared.
-
-PGDROP:
-  xor a
-  ld (CHPOS),a   ; drop chained pieces
-
-PGSTOP:
-  scf            ; listing abort carry
+LSTP0:
+  call PUTCHAR
+  or a           ; carry clear
   ret
 
 ; Print a field from HL with positive
@@ -513,7 +360,6 @@ CMDTYPE:
   inc a
   jr z,FILENO    ; FFh open: NO FILE
   call SETLB     ; record DMA LOADBUF
-  call PGINIT    ; pager initial state
 
 ; Read CMDFCB's next record through BDOS
 ; 20. On zero set HL=LOADBUF and B=128
@@ -544,7 +390,7 @@ TYPEBYTE:
   ld e,a
   push bc        ; count across pager
   push hl        ; pointer across pager
-  call PGPUT
+  call LSTPUT
   pop hl
   pop bc
   jr c,TYPEEND   ; carry after restore

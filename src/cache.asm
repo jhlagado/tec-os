@@ -554,7 +554,8 @@ CWBX:
 
 ; Warm boot calls CFLALL to try every
 ; dirty line and drop each failure. Any
-; loss clears CHPOS and prints CWMSG
+; loss sets CHPOS bit 1, which drops
+; the rest of the line, and prints CWMSG
 ; before returning to WBOOTR and the
 ; prompt. PUTS replaces the flush flags,
 ; so CWBOOT flags cannot distinguish
@@ -564,7 +565,7 @@ CWBX:
 CWBOOT:
   call CFLALL
   ret z
-  xor a
+  ld a,2         ; the rest is dropped
   ld (CHPOS),a
   ld hl,CWMSG
   jp PUTS

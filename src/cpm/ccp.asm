@@ -95,18 +95,17 @@ STARTED:
   ld de,CRLFMSG
   call PUTSTR
 
-; Prompt and choose a command source.
-; MAINLOOP resets SP=CSTKTOP. SAVEDU
-; supplies the drive and packed four-bit
-; user. Print a nonzero user, drive
-; letter and >.
-; Use CHSKIP's next chain piece,
-; keeping STFLAG. Otherwise clear CHPOS
-; and call STLINE. Set STFLAG=FFh on
-; its carry-clear startup line, or 0
-; on carry-set typed input. Startup
-; enters MLGOT. Typed input sets
-; HFLAG=FFh and uses BDOS 10 on CMDBUF.
+; Take the next line. MAINLOOP resets
+; SP=CSTKTOP; SAVEDU supplies the drive
+; and packed user. A shell holding the
+; hook supplies the line and its origin
+; through SHLINE. Otherwise print a
+; nonzero user, the drive and >, clear
+; CHPOS, and take a function 47 line
+; (CHPOS bit 0), then the one startup
+; line, then a typed line through BDOS
+; 10 on CMDBUF. STFLAG is FFh for the
+; startup line, else 0.
 
 MAINLOOP:
   ld sp,CSTKTOP  ; discard leftover
@@ -115,6 +114,16 @@ MAINLOOP:
 MLREAD:
   call SAVEDU    ; A=drive, B=user bits
   push af        ; save drive for prompt
+  ld a,(SHOWN+1)
+  or a
+  jr z,MLBARE    ; no shell: prompt here
+  pop af
+  call SHLINE    ; the shell's line
+  ld (STFLAG),a  ; its origin
+  ld hl,CMDTXT
+  jr MLSKIP
+
+MLBARE:
   ld a,b
   rrca
   rrca
@@ -133,9 +142,11 @@ MLDRV:
   call PUTCHAR
   ld e,'>'
   call PUTCHAR   ; prompt terminator
-  call CHSKIP    ; chain before startup
-  jr nz,MLECHO   ; NZ: HL is a piece
-  ld (CHPOS),a   ; clear before new line
+  ld hl,CHPOS    ; a function 47 line
+  ld a,(hl)      ; runs whole, as one
+  ld (hl),0      ; command; the flags
+  rrca           ; clear at this prompt
+  jr c,MLCHN
   call STLINE    ; startup before typed
   ccf            ; startup C=0 -> C=1
   sbc a,a        ; FFh startup, 0 typed
@@ -143,18 +154,32 @@ MLDRV:
   jr nz,MLGOT    ; startup already
                  ; copied
   ld de,CMDBUF
-  ld hl,HFLAG    ; typed-input history
-  ld (hl),$FF
   ld c,10        ; 10: counted input
   call BDOS
+  jr MLGOT
 
-; Terminate a new typed/startup line at
-; CMDTXT+(CMDLEN), then use CHSK1 from
-; CMDTXT. CHPOS was cleared before
-; acquisition. Separator-only input
-; enters STARTED. Otherwise enter
-; MLTAKE. BDOS 10 supplies a count, not
-; this zero terminator.
+; Echo the function 47 line at CMDTXT
+; to its zero, then run it as typed.
+
+MLCHN:
+  xor a
+  ld (STFLAG),a  ; typed origin
+  ld hl,CMDTXT
+
+MLCH1:
+  ld a,(hl)
+  or a
+  jr z,MLCH2
+  ld e,a
+  call PUTCHAR   ; keeps HL
+  inc hl
+  jr MLCH1
+
+MLCH2:
+  ld hl,CMDTXT
+  jr MLSKIP
+
+; End the counted line with a zero.
 
 MLGOT:
   ld hl,CMDLEN
@@ -163,80 +188,25 @@ MLGOT:
   inc hl
   add hl,de      ; CMDTXT+(CMDLEN)
   ld (hl),d      ; append own zero
-  ld hl,CMDTXT   ; new line, CHPOS=0
-  call CHSK1
-  jr z,STARTED   ; only separators/end
-  jr MLTAKE
+  ld hl,CMDTXT
 
-; Echo the chained piece at HL up to
-; zero or !, excluding that delimiter.
-; Save and restore its start before
-; MLTAKE. PUTCHAR preserves BC/HL. Other
-; BDOS clobbers may change.
-
-MLECHO:
-  push hl        ; save piece start
-
-MLEC1:
-  ld a,(hl)
+MLSKIP:
+  call SKIPSP
   or a
-  jr z,MLEC2     ; exclude zero
-  cp '!'
-  jr z,MLEC2     ; exclude !
-  ld e,a
-  call PUTCHAR   ; PUTCHAR keeps HL
-  inc hl
-  jr MLEC1
+  jr z,TOSTART   ; an empty line
 
-MLEC2:
-  pop hl
-
-; Dispatch the piece at HL. For leading
-; ':', run only with PRGCODE below FF00h
-; or equal to FFFFh. Otherwise clear
-; CHPOS and join STARTED.
-; Fold ASCII a..z through !/zero.
-; Replace ! with zero and save
-; CHPOS=next offset+1 or 0 at end.
-; Low-byte subtraction computes this
-; bounded offset modulo 256. Save
-; ARGSTRT and clear PRGCODE before
-; lookup.
-; For a lone A:..P: with only trailing
-; spaces, call BDOS 14 and SAVEDU then
-; join STARTED. Other pieces enter
+; Fold a..z to upper case, clear
+; PRGCODE and take a lone A:..P: as a
+; drive change. Other lines enter
 ; NOTDRIVE.
 
 MLTAKE:
-  ld a,(hl)
-  cp ':'
-  jr nz,MLTK0    ; no condition: run
-
-  ld de,(PRGCODE)
-  ld a,d
-  inc a
-  jr nz,MLTKC    ; code high != FFh
-  ld a,e
-  inc a
-  jr z,MLTKC     ; FFFFh: permit
-  xor a          ; failed colon: discard
-  ld (CHPOS),a
-
-TOSTART:
-  jp STARTED
-
-MLTKC:
-  inc hl
-
-MLTK0:
   ld (ARGSTRT),hl
 
 MLTK1:
   ld a,(hl)
   or a
-  jr z,MLTK3     ; zero: no remainder
-  cp '!'
-  jr z,MLTK2     ; !: split piece
+  jr z,MLTK3     ; zero ends the line
   cp 'a'
   jr c,MLTKN     ; below ASCII a
   cp 'z'+1
@@ -248,21 +218,11 @@ MLTKN:
   inc hl
   jr MLTK1
 
-MLTK2:
-  ld (hl),0      ; terminate this piece
-  inc hl
-  ld a,l         ; next offset+1
-
-  sub LOW(CMDTXT-1)
-
 MLTK3:
-  ld (CHPOS),a
   ld hl,0        ; new command success
   ld (PRGCODE),hl
   ld hl,(ARGSTRT)
-  call SKIPSP    ; skip command spaces
-  or a
-  jr z,TOSTART   ; empty colon piece
+  ld a,(hl)
   sub 'A'
   cp 16          ; A..P?
   jr nc,NOTDRIVE
@@ -283,42 +243,53 @@ MLTK3:
   ld c,14        ; 14: select drive
   call BDOS
   call SAVEDU    ; save selected drive
-  jr TOSTART
 
-; Find a nonempty chain piece. CHSKIP
-; with CHPOS=0 returns A=0/Z and leaves
-; HL unchanged. Otherwise start at
-; CMDTXT+(CHPOS)-1. CHSK1 instead starts
-; at input HL.
-; Skip literal SPACE and !. Return NZ
-; with A the first nonzero byte and HL
-; at it, or A=0/Z at the terminator. Do
-; not update CHPOS. DE may change.
+TOSTART:
+  jp STARTED
 
-CHSKIP:
-  ld a,(CHPOS)   ; one-based chain
-                 ; offset
-  or a
-  ret z          ; A=0/Z, HL untouched
-  ld e,a
-  ld d,0
+; Call the shell's LINE entry: A holds
+; CHPOS's flags, then cleared (bit 0 a
+; function 47 line at DE, bit 1 the rest
+; dropped), DE is CMDTXT, and HFLAG lets
+; one BDOS 10 use the history. It
+; writes a zero-ended line at DE and
+; returns A, its origin. B and C are
+; the lowest owner's page and the
+; stub's, for a listing of services.
 
-  ld hl,CMDTXT-1
-  add hl,de
+SHLINE:
+  ld hl,HFLAG
+  ld (hl),$FF    ; history for one line
+  ld a,(STUBAD+1)
+  ld c,a         ; C = the stub's page
+  ld a,(SVCHEAD)
+  ld b,a         ; B = the lowest owner
+  ld hl,CHPOS
+  ld e,(hl)      ; the flags
+  ld (hl),0
+  xor a
+  call SHENT     ; HL = LINE
+  ld a,e
+  ld de,CMDTXT
+  call VHLJP
+  ld hl,CMDTXT+127
+  ld (hl),0      ; the line is bounded
+  ld hl,HFLAG
+  ld (hl),0      ; not for a program
+  ret
 
-CHSK1:
+; HL = word A of the shell's table at
+; SHOWN. The table does not cross a
+; page. Changes AF.
+
+SHENT:
+  ld hl,(SHOWN)
+  add a,l
+  ld l,a
   ld a,(hl)
-  cp SPACE
-  jr z,CHSK2     ; literal spaces
-  cp '!'
-  jr nz,CHSK3    ; not !: test byte
-
-CHSK2:
   inc hl
-  jr CHSK1
-
-CHSK3:
-  or a           ; A=0/Z at end
+  ld h,(hl)
+  ld l,a
   ret
 
 ; Save prompt state at 0004h: query BDOS
@@ -413,10 +384,9 @@ KEYSK:
 ; Quietly accept failure only for a
 ; startup line (STFLAG nonzero) with
 ; SVCRC=1 and SVCRA=TNENODV: INIT found
-; no device. Keep PRGCODE=0 so a
-; following ':' piece can run (KD-173).
-; Typed input and other failures enter
-; BADCMD.
+; no device. PRGCODE stays 0, so a
+; following & piece runs. Typed input
+; and other failures enter BADCMD.
 
   ld hl,(CMDFCB+9)
 
@@ -562,8 +532,7 @@ FCBPARSE:
 ; (CMDSTRT) up to SPACE or zero, append
 ; ? and fall into ERRGO with CRLFMSG.
 ; PUTCHAR preserves traversal HL. ERRGO
-; records failure for conditional
-; chaining.
+; records failure in PRGCODE.
 
 BADCMD:
 
@@ -586,8 +555,8 @@ BADEND:
   ld de,CRLFMSG  ; newline message
 
 ; ERRGO sets PRGCODE=RCFAIL (FF00h), so
-; a following ':' piece drops the
-; remainder. PRTGO prints the
+; the shell skips a following & piece.
+; PRTGO prints the
 ; dollar-ended message at DE and joins
 ; STARTED without itself changing
 ; PRGCODE.
