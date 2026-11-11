@@ -58,7 +58,7 @@ new offset wrappers saved only one byte per site group and were rejected;
 broad dispatch/error redesign overlapped active storage work. This is a
 measured bounded improvement, not a claim that no further reduction exists.
 
-For a later integration check, build the integrated source with ATOM and run
+For a later integration check, build the integrated source with TAS and run
 `node tools/bdos-public-proof.mjs BASELINE_TREE INTEGRATED_TREE RESULT_JSON`.
 `tools/bdos-extra-proof.mjs` accepts the same three arguments and requires
 all selected helper labels and seven failing controls. The pinned baseline
