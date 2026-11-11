@@ -370,6 +370,26 @@ async function mutantMachine(mut, files) {
   return m;
 }
 
+/** DIR on a 40-column PICO9918 with no shell, under ROM (the build's when not given): its first three names' row. */
+function dirAt40(mut) {
+  const image = standardCard();
+  for (const f of ["COPY.COM", "TERM.COM", "PROBE.COM", "MANUAL.TXT", "README.TXT", "X"]) volume(image, "A").write(f, new Uint8Array(300));
+  const m = new Machine({ ...(mut ?? romFor()), sdImage: image, tms: true, matrix: true, clock: TEST_CLOCK });
+  m.runUntil(() => m.ready(), 400_000_000, "the prompt");
+  return m.command("DIR");
+}
+
+test("SH2 mutant: DIR with its own width removed lays out 80 columns on 40", () => {
+  assert.match(dirAt40(), /\r\nCOPY\.COM {5}TERM\.COM {5}PROBE\.COM\r\n/, "three columns at 40, the build's");
+  // DIRREADY's LD A,(VWID) made LD A,80 and a NOP: columns for the serial terminal.
+  const mut = romWith((b, at, symbols) => {
+    const v = symbols.get("VWID");
+    const i = findIn(b, at("DIRREADY"), [0x3a, v & 0xff, v >> 8], 32);
+    b[i] = 0x3e; b[i + 1] = 80; b[i + 2] = 0x00;
+  });
+  assert.doesNotMatch(dirAt40(mut), /\r\nCOPY\.COM {5}TERM\.COM {5}PROBE\.COM\r\n/);
+});
+
 test("SH3 mutant: revision 0's .CMD refusal stops NAME.COM", async () => {
   // NOTDRIVE's type test made CMD's: a .CMD goes to the loader, which can't install it.
   const mut = romWith((b, at) => {
