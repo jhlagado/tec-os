@@ -204,7 +204,7 @@ A routine goes in the ROM when at least one of these holds:
    Only for a few dozen bytes; anything larger goes in an include file.
 
 Everything else lives on the card: utilities as `.COM` files, services as
-`.SVC` files, and code that programs share as ATOM include files. The 8 × 8
+`.SVC` files, and code that programs share as include files for TAS. The 8 × 8
 LEDs, 7-segment patterns and random numbers have no hardware service: `DEMO.COM`
 carries its own.
 
