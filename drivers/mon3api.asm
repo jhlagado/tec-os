@@ -67,9 +67,10 @@ R28A:
   pop af         ; keep the flags
   ret
 
-; RST 30h: a breakpoint. Say where and
-; go back to the MON3> line. The digits
-; go to HEXT, outside the summed bytes.
+; RST 30h: a breakpoint. Go back to the
+; MON3> line as a return, which prints
+; the address. The digits go to HEXT,
+; outside the summed bytes.
 
 R30:
   pop hl
@@ -78,12 +79,7 @@ R30:
   call HLSTR     ; its digits
   ld a,'$'
   ld (de),a      ; for BDOS 9
-  ld de,MBRK
-  call PRINT     ; "BRK "
-  ld de,HEXT
-  call PRINT     ; the address
-  ld de,MCRLF
-  call PRINT
+  ld (BRKF),a    ; nonzero: say BRK
   jp MRET        ; as a return
 
 ; RST 38h: MON-3's interrupt dispatch.

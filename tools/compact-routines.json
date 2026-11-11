@@ -97,6 +97,7 @@
   "drivers/mon3gfx.asm": [
     "R18",
     "GWS",
+    "GRST",
     "GINIT",
     "GCLRB",
     "GCLRG",
