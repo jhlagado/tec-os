@@ -54,7 +54,6 @@
   "drivers/mon3api.asm": [
     "R08",
     "R10",
-    "R18",
     "R20",
     "R28",
     "R30",
@@ -94,6 +93,9 @@
     "PTUNE",
     "STRSER",
     "RGBS"
+  ],
+  "drivers/mon3gfx.asm": [
+    "R18"
   ],
   "drivers/mon3hex.asm": [
     "CHEX",

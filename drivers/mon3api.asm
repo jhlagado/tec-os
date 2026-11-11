@@ -45,12 +45,6 @@ R10X:
   pop af
   jp DERR        ; MON-3's refusal
 
-; RST 18h: the graphics API, not built.
-
-R18:
-  pop hl
-  jp DERR        ; refused
-
 ; RST 20h: scan the digits at DE, then
 ; the keys, then wait for the LCD, as
 ; MON-3's slot runs on into RST 28h.
