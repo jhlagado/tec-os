@@ -204,7 +204,7 @@ test("KG67 rst 18h calls", { timeout: 600_000 }, async () => {
 // session, 175 T under MON-3, for every row.
 
 test("KG67 rst 18h timing", async () => {
-  const r = compareCalls(await theCallSides(), rowsOf([0, 9, 12, 13, 14, 15, 16, 20]));
+  const r = compareCalls(await theCallSides(), rowsOf());
   for (const [sel, set] of Object.entries(r.entry)) assert.deepEqual([...set], ["253/175"], `call ${sel}: the session's T to the routine / MON-3's`);
   for (const [sel, set] of Object.entries(r.extra)) assert.deepEqual([...set], [K], `call ${sel}: ${K} T longer`);
 });

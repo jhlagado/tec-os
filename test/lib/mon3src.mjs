@@ -50,7 +50,7 @@ export const INCLUDES = {
 /** The four GLCD rules, each on. */
 export const RULES = { r7: true, r8: true, r9: true, r10: true };
 
-/** An included file's text from DIR, as KG66's programs find theirs. */
+/** An included file's text from DIR, as the first five programs find theirs. */
 const fromDir = (dir) => (name) => readFileSync(resolve(dir, name), "utf8");
 
 /** An included file's text from its pinned input, by its lib/ path; any other path fails. */
