@@ -280,16 +280,13 @@ Where the session differs from MON-3, by design:
   keypad.
 - Each read of the matrix, by `scanKeys`, `scanKeysWait`, `RST 20h` or
   `matrixScan` (call 18) and the calls built on it, also records the key it
-  found, or FFh for none, in TEC-OS's held-key byte, `KBLAST`
-  (`src/ram.asm`), as TEC-OS's own scan records it. MON-3 has no such byte,
+  found, or FFh for none, in TEC-OS's last matrix key, `KBLAST`, which
+  `abi.inc` publishes (`docs/services.md`), as TEC-OS's own scan records it. MON-3 has no such byte,
   and nothing a program sees changes. While a program runs, TEC-OS's scan
   doesn't run, so without this a host that holds a matrix key until TEC-OS
   has read it, as the Viewer does, would never let it go, and no later key
   would come. Back at `MON3>`, or after `EXIT`, TEC-OS's scan finds a key
-  still held recorded and doesn't take it as a new one. The address is
-  `KBLAST EQU` in `drivers/mon3api.asm`, and media refuses a build whose ROM
-  map puts `KBLAST` anywhere else, so `MON3.SVC` is tied to the ROM it is
-  built with.
+  still held recorded and doesn't take it as a new one.
 
 ## RST 18h: the graphics calls
 

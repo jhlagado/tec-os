@@ -155,6 +155,7 @@ function checkAbi(at, rom) {
   check(table.every((v) => v >= at("ROMCODE") && v < at("CODEEND")), "every service's entry is code");
   const bits = { HWBMTX: "CDMTX", HWBPICO: "CDTMS", HWBGLCD: "CDGLC", HWBRTC: "CDRTC", HWBCLM: "CDCLM", HWBWRD: "CDWRD" };
   for (const [n, cd] of Object.entries(bits)) check(at(n) === at(cd), `abi.inc: ${n} is not ${cd}`);
+  check(at("KBLAST") === at("KBSLOT"), `abi.inc's KBLAST is ${hex(at("KBLAST"))}, the workspace's byte is at ${hex(at("KBSLOT"))}`);
 }
 
 /** abi.inc's PICOREG to PICOWID, and the places a debugger reads, against the
