@@ -63,8 +63,6 @@ KEYTAB: DB "DIR",0
   DW CMDTYPE
   DB "ERA",0
   DW CMDERA
-  DB "DEL",0
-  DW CMDERA      ; ERA by another name
   DB "REN",0
   DW CMDREN
   DB "SAVE",0
@@ -73,12 +71,8 @@ KEYTAB: DB "DIR",0
   DW CMDUSER
   DB "CON",0
   DW CMDCON
-  DB "COPY",0
-  DW CMDCOPY
   DB "UNLOAD",0
   DW CMDUNL
-  DB "SERVICES",0
-  DW CMDSVC
   DB 0
 
 ; FNTAB: functions 0-40. FCBMAP selects
@@ -130,6 +124,10 @@ SVTAB: DW HWSINFO,HWSDIG
 ; 14 and 15
 
   DW SVLST,HWSFONT
+
+; 16
+
+  DW SVSHL
 
 ; Twelve-byte FCB prefixes for CMDFCB:
 ; explicit drive A, eight-byte name and

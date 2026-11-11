@@ -45,10 +45,6 @@ DNAM EQU 17      ; 8 bytes
 DHLEN EQU 25     ; image starts here
 DRECSZ EQU 13    ; registry record bytes
 
-; Last byte of the startup record.
-
-STLAST EQU STREC+127
-
 ; Set PZTOP and the word at 0006h to the
 ; lowest owner's page or the stub
 ; address when no owner remains.

@@ -30,20 +30,6 @@ FILEMSG:
   DB " file, ",'$'
 FREEMSG:
   DB "K free",'$'
-MOREMSG:
-  DB "[more]",'$'
-UNMORE:
-  DB CR,"      ",CR,'$'
-CPNOSRC:
-  DB "NO SOURCE",CR,LF,'$'
-CPNODST:
-  DB "CANNOT MAKE DEST",CR,LF,'$'
-CPWRITE:
-  DB "WRITE ERROR",CR,LF,'$'
-CPCLOSE:
-  DB "CLOSE ERROR",CR,LF,'$'
-CPCOPIED:
-  DB "COPIED ",'$'
 
 ; Six four-byte names: first four have
 ; a colon after three letters, then GLCD

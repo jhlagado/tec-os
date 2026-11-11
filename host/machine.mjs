@@ -233,6 +233,12 @@ export class Machine {
       if (!empty(a)) ram.memWrite(a, value);
     };
     this.conout = symbols.get("BCONOUT");
+    // The buffer of the BDOS 10 line input in progress, -1 for none: set at
+    // FNLINE's entry, cleared at LINDONE and at warm boot's CPMINIT (^C at
+    // the start of a line warm boots from inside the input).
+    this.lineBuf = -1;
+    this.lineAt = symbols.get("FNLINE");
+    this.lineEnds = [symbols.get("LINDONE"), symbols.get("CPMINIT")];
     this.read = (addr) => ram.memRead(addr & 0xffff);
     this.write = (addr, value) => ram.memWrite(addr & 0xffff, value & 0xff);
   }
@@ -257,7 +263,10 @@ export class Machine {
   }
 
   step() {
-    if (this.cpu.cpu.pc === this.conout) this.output.push(this.cpu.cpu.c);
+    const pc = this.cpu.cpu.pc;
+    if (pc === this.conout) this.output.push(this.cpu.cpu.c);
+    else if (pc === this.lineAt) this.lineBuf = (this.cpu.cpu.d << 8) | this.cpu.cpu.e;
+    else if (pc === this.lineEnds[0] || pc === this.lineEnds[1]) this.lineBuf = -1;
     this.mvWatch?.(this.cpu.cpu.pc);
     const result = this.cpu.step();
     const cycles = result.cycles ?? 0;
@@ -334,11 +343,23 @@ export class Machine {
     return false;
   }
 
-  /** True at a prompt with startup's file finished: its position is 80h or above and the CCP is reading a line. */
+  /**
+   * True at a prompt with startup's line taken (its position is 80h or above)
+   * and a command line being read: the CCP's own BDOS 10 on CMDBUF with no
+   * shell holding the hook, or a shell's first BDOS 10 after its LINE call,
+   * while the history gate HFLAG is FFh. A ROM with no shell hook reads only
+   * the gate.
+   */
   ready() {
     const pos = this.symbols.get("STPOS");
     if (pos === undefined) return this.waitingForInput();
-    return this.waitingForInput() && this.read(pos) >= 0x80 && this.read(this.sym("HFLAG")) === 0xff;
+    if (!this.waitingForInput() || this.read(pos) < 0x80) return false;
+    const hflag = this.read(this.sym("HFLAG")) === 0xff;
+    const shown = this.symbols.get("SHOWN");
+    if (shown === undefined) return hflag;
+    if (this.lineBuf < 0) return false;
+    if (this.lineBuf === this.sym("CMDBUF")) return (this.read(shown) | this.read(shown + 1)) === 0;
+    return hflag;
   }
 
   /** True while a video display and the matrix keyboard are the console. */

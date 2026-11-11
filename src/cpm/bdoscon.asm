@@ -38,7 +38,8 @@ BADSECT:
 ; A=L=FFh and B=H=code, preserving CHPOS
 ; (KD-181).
 ; Other modes print, read a key and
-; enter CHDROP to discard the chain. The
+; enter CHDROP to drop the rest of the
+; line. The
 ; normal warm-boot hook ends the
 ; transient. No path resumes the
 ; internal caller.
@@ -61,7 +62,7 @@ BDERR:
 BDDEF:
   call DISKMSG
   call GETCHAR   ; key before abort
-  jp CHDROP      ; discard chained rest
+  jp CHDROP      ; drop the line's rest
 
 ; Validate allocation block DE against
 ; current DPB.DSM before block-to-record
@@ -288,8 +289,9 @@ COLBACK:
 ; it.
 ; ^S waits for a second key to resume.
 ; Only ^C in that second position enters
-; CHDROP to discard the chain and warm
-; boot. Other resume keys are discarded.
+; CHDROP to drop the rest of the line
+; and warm boot. Other resume keys are
+; discarded.
 ; A first key other than ^S goes to
 ; CHKPRN. Clobbers A and
 ; status/input-hook clobbers.
@@ -303,7 +305,8 @@ CHKKEY:
   jr nz,CHKPRN
   call GETCHAR   ; consume resume key
   cp CTRLC       ; resume ^C: abort
-  jp z,CHDROP    ; drop chain, warm boot
+  jp z,CHDROP    ; drop the rest, warm
+                 ; boot
   ret            ; discard resume key
 
 ; Handle output-time key A, already
