@@ -187,7 +187,7 @@ const flagsByte = (fl) => (fl.S << 7) | (fl.Z << 6) | (fl.Y << 5) | (fl.H << 4) 
  * cycles, lowSP, entry }. ENTRY is the cycles from the RST's fetch to the
  * routine's first instruction.
  */
-export function runRow(side, row, f, { top = CALL_TOP, image } = {}) {
+export function runRow(side, row, f, { top = CALL_TOP, image, max = 20_000_000 } = {}) {
   const { m } = side;
   setState(m, row, f, top, image);
   m.glcdWrites = [];
@@ -200,7 +200,7 @@ export function runRow(side, row, f, { top = CALL_TOP, image } = {}) {
     if (sp < lowSP) lowSP = sp;
     if (entry === undefined && m.pc === target) entry = m.cycles - c0;
     return STOPS.includes(m.pc);
-  }, 200_000_000, `${rowName(row)} on ${side.kind}`);
+  }, max, `${rowName(row)} on ${side.kind}`);
   const c = m.cpu.cpu;
   return {
     regs: { a: c.a, f: flagsByte(c.flags), bc: (c.b << 8) | c.c, de: (c.d << 8) | c.e, hl: (c.h << 8) | c.l, iy: c.iy & 0xffff, sp: c.sp & 0xffff },
