@@ -150,5 +150,6 @@ test("the ROM's map refuses a line of several statements, and not a \\ in quotes
   const scan = (text) => () => scanSource(new Map([["rom.asm", Buffer.from(text, "latin1")]]), "rom.asm");
   assert.throws(scan("  nop\r\n  ld a,1 \\ inc b\r\n"), /rom\.asm:2: several statements on a line/);
   assert.throws(scan("START:  ret \\ nop ; two\n"), /rom\.asm:1: several statements on a line/);
+  assert.throws(scan("  ex af,af' \\ nop\n"), /rom\.asm:1: several statements on a line/);
   assert.doesNotThrow(scan("  ld a,'\\\\'   ; a \\ in a comment\n  ex af,af'  ; \\\n  db \"a\\\"\\\\\"\n"));
 });
