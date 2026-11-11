@@ -62,8 +62,7 @@ R18:
   jp (ix)
 
 ; The calls, by number and MON-3's
-; name. Those not built yet go to the
-; error display.
+; name.
 
 GAPI:
   DW GINIT       ; 0 initLCD
@@ -79,8 +78,8 @@ GAPI:
   DW GFBOX       ; 10 fillBox
   DW GFCIRC      ; 11 fillCircle
   DW GPLOT       ; 12 plotToLCD
-  DW DERR        ; 13 printString
-  DW DERR        ; 14 printChars
+  DW GPSTR       ; 13 printString
+  DW GPCHR       ; 14 printChars
   DW GDLYUS      ; 15 delayUS
   DW GDLYMS      ; 16 delayMS
   DW GBCLR       ; 17 setBufClear
@@ -676,6 +675,72 @@ GPLOT4:
   jr z,GPLOT1    ; until row 64
   ret
 
+; Call 13, printString: the zero-ended
+; text after the RST, in text mode, on
+; row C, 0 to 3. It returns past the
+; zero. A row of 4 to 7 reads
+; INIT_BASIC's bytes as the address,
+; as in MON-3, so GINITB follows GROWS.
+; Clobbers A, B, DE and HL.
+
+GPSTR:
+  ld b,c         ; the row
+  call GTXM      ; text mode
+  ld hl,GROWS
+  ld a,b
+  add a,l        ; the row's entry
+  jr nc,GPSTR1
+  inc h          ; with its carry
+
+GPSTR1:
+  ld l,a
+  ld a,(hl)      ; the row's address
+  out (GLCDI),a  ; its DDRAM address
+  call GDLYUS
+  pop hl         ; the text
+
+GPSTR2:
+  ld a,(hl)      ; the next character
+  inc hl
+  or a
+  jr z,GPSTR3    ; its zero
+  out (GLCDD),a  ; a character
+  call GDLYUS
+  jr GPSTR2
+
+GPSTR3:
+  jp (hl)        ; back past the text
+
+; Call 14, printChars: the zero-ended
+; text at HL in text mode, from column
+; word B (0-7) of row C (0-3). HL ends
+; past the zero and DE in GROWS.
+; Clobbers A and DE.
+
+GPCHR:
+  call GTXM      ; text mode
+  ld de,GROWS
+  ld a,c
+  add a,e        ; the row's entry
+  jr nc,GPCHR1
+  inc d          ; with its carry
+
+GPCHR1:
+  ld e,a
+  ld a,(de)      ; the row's address
+  add a,b        ; and the column
+  out (GLCDI),a  ; the DDRAM address
+  call GDLYUS
+
+GPCHR2:
+  ld a,(hl)      ; the next character
+  inc hl
+  or a
+  ret z          ; its zero
+  out (GLCDD),a  ; a character
+  call GDLYUS
+  jr GPCHR2
+
 ; Call 15, delayUS: the wait the ST7920
 ; needs after a byte, about 70 us at
 ; 4 MHz, by delayMS. Clobbers A and DE.
@@ -712,8 +777,11 @@ GBKEEP:
   ld (CLRBUF),a  ; keep after a plot
   ret
 
-; The ST7920's set-up commands: 8-bit
-; and the basic set; display on, no
-; cursor; cursor right; DDRAM clear.
+; Each text row's first DDRAM address,
+; then the ST7920's set-up commands:
+; 8-bit and the basic set; display on,
+; no cursor; cursor right; DDRAM
+; clear.
 
+GROWS: DB $80,$90,$88,$98
 GINITB: DB $30,$0C,$06,$01
