@@ -223,7 +223,11 @@ keyboard fitted (port 03h's bit 0 set), calls 16 and 17, `RST 08h` and
 
 Translated, on TEC-OS's resources, 4 of them: 2 `preInit`, 41 `setCaps`,
 43 `setProtect` and 48 `toggleCaps`. Call 2 sets the workspace up again and
-returns to `MON3>` with nothing runnable, after checking the tables. Calls
+returns to `MON3>` with nothing runnable, after checking the tables. MON-3's
+`preInit` is a hard restart that sets the GLCD up again through `initLCD`;
+the session's call 2 does not. On the GLCD console its return sets the
+panel's modes as any return does, and on any other console it leaves the
+panel as the program left it. Calls
 41, 43 and 48 write the latch as `GO` takes it, PROTECT and CAPS with the
 overlay off, and `LATCHV` with it.
 PROTECT set by call 43 takes effect at once, as in MON-3, and the return to
