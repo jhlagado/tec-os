@@ -388,7 +388,8 @@ KEYSK:
   jr nz,CMDCOM   ; not SV?: COM path
   ld a,(CMDFCB+11)
   cp 'C'
-  jp z,SVCRUN
+  jr nz,CMDCOM   ; SV?: COM path
+  jp SVCRUN
 
 ; A failed install is quiet only for a
 ; startup line (STFLAG nonzero) with
