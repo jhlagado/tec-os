@@ -5,17 +5,26 @@ import { checkInterfaces, DHLEN, FORMAT, fixupsOf, includedFiles, packSvc } from
 
 export const GLCD_SOURCE = 'drivers/glcd.asm';
 export const MON3_SOURCE = 'drivers/mon3.asm';
+export const SHELL_SOURCE = 'drivers/shell.asm';
 
-const relativeSymbols = ({ globals, origin }) => Object.fromEntries([...globals].map(([name, symbol]) => [
-  name, { kind: symbol.kind, value: symbol.value - (symbol.kind === 'label' ? origin : 0) },
+// Each symbol of an assembly at ORIGIN, page-relative: a label, and a
+// constant that moves with the origin, as an EQU naming an address in the
+// service's extra RAM does. MOVED names those constants.
+const relativeSymbols = ({ globals, origin }, moved = new Set()) => Object.fromEntries([...globals].map(([name, symbol]) => [
+  name, { kind: symbol.kind, value: symbol.value - (symbol.kind === 'label' || moved.has(name) ? origin : 0) },
 ]));
+
+/** Constants of two assemblies, at 100h and 200h, that move by the origin's 100h. */
+const movedConstants = (at1, at2) => new Set([...at1.globals].filter(([name, s]) => s.kind === 'constant'
+  && at2.globals.get(name)?.kind === 'constant' && at2.globals.get(name).value - s.value === 0x100).map(([name]) => name));
 
 export function relocateGlcd(at1, at2) {
   assert.equal(at1.origin, 0x100, 'GLCD first origin');
   assert.equal(at2.origin, 0x200, 'GLCD second origin');
   assert.equal(at1.image.length, at2.image.length, 'GLCD flat lengths differ');
   assert.ok(at1.image.length > DHLEN, 'GLCD image has no body');
-  assert.deepEqual(relativeSymbols(at1), relativeSymbols(at2), 'GLCD page-relative symbols differ');
+  const moved = movedConstants(at1, at2);
+  assert.deepEqual(relativeSymbols(at1, moved), relativeSymbols(at2, moved), 'GLCD page-relative symbols differ');
   assert.deepEqual(at1.image.subarray(0, DHLEN), at2.image.subarray(0, DHLEN), 'GLCD header varies with origin');
   assert.ok(at1.image[0] === 0x44 && at1.image[1] === FORMAT && at1.image[2] === 0, 'invalid GLCD header');
   for (const name of ['INIT', 'REMOVE']) {
@@ -45,6 +54,9 @@ export const assembleGlcd = (root, run) => assembleService(root, run, GLCD_SOURC
 
 /** MON3.SVC, the MON-3 session service, by the same two flat assemblies. */
 export const assembleMon3 = (root, run) => assembleService(root, run, MON3_SOURCE, 'MON3.SVC');
+
+/** SHELL.SVC, the resident shell, by the same two flat assemblies. */
+export const assembleShell = (root, run) => assembleService(root, run, SHELL_SOURCE, 'SHELL.SVC');
 
 export async function assembleDistributionCom(root, run, name) {
   assert.ok(name === 'MOUNT.COM' || name === 'DEMO.COM', 'unsupported TAS distribution program');
