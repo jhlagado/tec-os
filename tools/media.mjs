@@ -245,8 +245,10 @@ async function main() {
   files.push({ name: "HELLO3.BIN", description: "a MON-3 program: at MON3>, LOAD HELLO3.BIN then GO writes the LCD; AD (Esc on the matrix) returns", bytes: hello3 });
   files.push({ name: "HELLO3.ASM", description: "HELLO3's source: TAS HELLO3 HELLO3.BIN builds it, TED HELLO3.ASM reads it", bytes: textAt("test/programs/hello3.asm") });
   // CHAIN.ASM, Thorium's demonstration of several statements on a line, a \
-  // between them. Its lines are up to 67 columns wide.
-  files.push({ name: "CHAIN.ASM", description: "a program written with several statements on a line: TAS CHAIN then CHAIN prints LINE 1 to LINE 5, TED CHAIN.ASM reads it at 80 columns", bytes: text("CHAIN.ASM") });
+  // between them, with lines up to 67 columns wide. It is pinned as LF text,
+  // and the card holds it as CP/M text, as BOUNCE.BAS is held.
+  const chain = Buffer.from(pinnedBytes("CHAIN.ASM").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
+  files.push({ name: "CHAIN.ASM", description: "a program written with several statements on a line: TAS CHAIN then CHAIN prints LINE 1 to LINE 5, TED CHAIN.ASM reads it at 80 columns", bytes: chain });
 
   // A recipe's revision rises when its set of files changes, not when a
   // pinned file's bytes change. It is above both the starter's and the

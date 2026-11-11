@@ -21,6 +21,16 @@
       "bytes": 12334,
       "sha256": "4f62239086e63c8dcf8c4b574f4998891fb38568181b83defb07d8cf0526fc69"
     },
+    "CHAIN.ASM": {
+      "env": "CHAIN_ASM",
+      "default": "../thorium/demo/chain/chain.asm",
+      "source": "jhlagado/thorium 3d1e2c0, demo/chain/chain.asm",
+      "repo": "jhlagado/thorium",
+      "commit": "3d1e2c0ea5269e1dfa4138671fab850c158f1670",
+      "path": "demo/chain/chain.asm",
+      "bytes": 881,
+      "sha256": "8b0ba793ee26b4b50b42722e2cca4c2c5ef34bde9550dedd6763b1656b0421f9"
+    },
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
