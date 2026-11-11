@@ -123,6 +123,10 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
     return b.replace(BELOW, (_, q) => inside(q, dirname(path)));
   };
   body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, onDisk(dirname(source), p))}"`) + prelude + body.slice(org).replace(BELOW, (_, p) => inside(p, dirname(source)));
+  // ATOM takes at most 64 KB in one source part, and the files copied in
+  // make one part with the source. A line that holds only a comment is
+  // blanked in the copy: every line keeps its number, and no byte changes.
+  body = body.replace(/^[ \t]*;.*$/gm, "");
   writeFileSync(copy, body);
   const at0 = await assembleAt(copy, 0, work);
   const { bytes: at1, symbols } = await assembleProgram(copy, { base: 0x100 });
