@@ -291,6 +291,14 @@ LATEXP EQU $04   ; EXPAND: EXPAND 1 at
 ; shadow copy of the system latch
 
 LATCHV EQU $0040
+
+; TEC-OS's last matrix key, row * 8 +
+; column, FFh for none. Its scan takes
+; a key as new only when it differs. A
+; service that scans the matrix itself
+; writes the key it found here.
+
+KBLAST EQU $BFEF
 LCDCMD EQU $04   ; command write, busy
                  ; flag and address read
 LCDDAT EQU $84   ; character data

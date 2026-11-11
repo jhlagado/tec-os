@@ -427,6 +427,17 @@ that the ROM doesn't offer; a display driver draws from the ROM's font, which
 in `drivers/`, or `test/programs/svc*.asm`, that names a ROM address; `abi.inc`'s
 names are the way in.
 
+`abi.inc` also publishes two workspace bytes:
+
+- `LATCHV` (`0040h`), the shadow copy of the write-only system latch.
+- `KBLAST` (`BFEFh`), TEC-OS's last matrix key: row × 8 + column, FFh for
+  none. TEC-OS's scan takes a key as new only when it differs from
+  `KBLAST`. A service that scans the matrix itself writes the key it found
+  there, as `MON3.SVC` does, so a key held from a program isn't read again
+  when TEC-OS's scan resumes, and a host that holds a matrix key until
+  TEC-OS has read it lets it go. The build checks that `KBLAST` is the
+  workspace's byte.
+
 ## Restart vectors and interrupts
 
 Memory above the TPA is of three kinds: service resident memory, the workspace with

@@ -138,7 +138,7 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-const BASELINE = { used: 16077, cap: 171, tpa: 47268, abi: "1c687c87d5c4e25d091b9c532a630037b5ce22290e8d6e49f795e071be67a677" };
+const BASELINE = { used: 16077, cap: 171, tpa: 47268, abi: "9354beaaacca491ee3dc5abdc7f521e3064e5b174b1aa59fd632a5bdaa04864e" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));

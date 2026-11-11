@@ -399,12 +399,6 @@ KBBAD:
   or 1           ; NZ: not a key
   ret
 
-; TEC-OS's held-key byte, KBLAST in
-; src/ram.asm: media checks that the
-; ROM's map puts it here.
-
-KBLAST EQU $BFEF
-
 ; Call 18, matrixScan: the matrix by
 ; port FEh, a row a read with B its
 ; row's line. E the last key found,

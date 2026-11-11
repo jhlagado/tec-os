@@ -429,7 +429,7 @@ VHGT: DS 1       ; rows
 ESCST: DS 1      ; escape parser state
 ESCP1: DS 1      ; numeric parameter 1
 ESCP2: DS 1      ; numeric parameter 2
-KBLAST: DS 1     ; held key, FFh none
+KBSLOT: DS 1     ; held key: KBLAST
 VATTR: DS 1      ; 80h reverse video
 VCURV: DS 1      ; 1 logical inversion
 
