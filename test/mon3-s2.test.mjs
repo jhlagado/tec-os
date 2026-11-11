@@ -1118,10 +1118,9 @@ test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
   assert.throws(() => m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD"), /no MON3> after AD/);
 });
 
-// The size, within the ceiling every stage's size test reads (at S2 15
-// pages, 3,840 bytes, (0006h) AA00h; now the third stage's): (0006h) and
-// the TPA on the starter card, alone and with GLCD.SVC; TAS's file equal to
-// ATOM's; each source file within the style's size, and passing it.
+// The size, within the ceiling every size test reads: (0006h) and the TPA
+// on the starter card, alone and with GLCD.SVC; TAS's file equal to ATOM's;
+// each source file within the style's size, and passing it.
 
 async function sizeAndTpa(svc) {
   const C = MON3_CEILING;
@@ -1161,8 +1160,8 @@ test("KG64 size and tpa", async () => {
   }
 });
 
-// The build with buffers added to the ceiling and one byte more: 3,841
-// bytes and 16 pages at S2, and the same one byte over the ceiling since.
+// The build with buffers added to the ceiling and one byte more takes a
+// page more than the ceiling.
 
 test("KG64 mutant: the build with buffers added to 3,841 bytes takes 16 pages", async () => {
   const C = MON3_CEILING;
