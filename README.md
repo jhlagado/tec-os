@@ -37,7 +37,7 @@ Node.js 20 or later.
   tas_stage=
   trap 'if [ -n "$tas_stage" ]; then rm -rf "$tas_stage"; fi' EXIT
   npm ci
-  npm run inputs   # pinned TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
+  npm run inputs   # pinned TED.COM, TAS.COM, CHAIN.ASM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
   mkdir -p .inputs
   if [ -d .inputs/tas-host ]; then
     node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
@@ -65,7 +65,7 @@ npm test         # host and emulator tests, several minutes
 The host is pinned to the KS42 runner and its locked Z80 runtime. Setup
 verifies the runner, lock, runtime and TAS executable before moving the
 temporary host into place. Repeating setup verifies the prepared host
-without reinstalling it. `npm run inputs` validates the five application pins
+without reinstalling it. `npm run inputs` validates the six application pins
 and fetches missing inputs into verified temporary files before replacement.
 A failed preparation keeps previous verified files. Assembly uses local
 inputs and makes no downloads.
@@ -76,13 +76,14 @@ page; no test here drives a browser. `playwright` stays pinned in
 `web/` page that `npm start` serves; `npx playwright install chromium` fetches
 the browser that version expects.
 
-Assembly, media and tests select each application input, TED and TAS from
-Thorium and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza, from an explicit
-`TED_COM`, `TAS_COM`, `BAZA_COM`, `BAZA_RTL` or `BOUNCE_BAS`, then
-`.inputs/NAME`, then the legacy sibling paths `../thorium/dist/TED.COM`,
-`../thorium/dist/TAS.COM`, `../baza/dist/BAZA.COM`, `../baza/dist/BAZA.RTL` and
-`../baza/examples/BOUNCE.BAS`. `npm run media` needs all five to build the
-card. Baza's repository is private: without access to it, put the three
+Assembly, media and tests select each application input, TED, TAS and
+`CHAIN.ASM` from Thorium and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza,
+from an explicit `TED_COM`, `TAS_COM`, `CHAIN_ASM`, `BAZA_COM`, `BAZA_RTL` or
+`BOUNCE_BAS`, then `.inputs/NAME`, then the legacy sibling paths
+`../thorium/dist/TED.COM`, `../thorium/dist/TAS.COM`,
+`../thorium/demo/chain/chain.asm`, `../baza/dist/BAZA.COM`,
+`../baza/dist/BAZA.RTL` and `../baza/examples/BOUNCE.BAS`. `npm run media`
+needs all six to build the card. Baza's repository is private: without access to it, put the three
 pinned files, from someone who has it, in `.inputs/`. A selected override
 or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.

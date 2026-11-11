@@ -24,12 +24,15 @@ const TAS = pinned("TAS.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const BOUNCE = pinned("BOUNCE.BAS");
-const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip;
+const CHAIN = pinned("CHAIN.ASM");
+const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip || CHAIN.skip;
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
 // Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
 const bounceText = () => Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
+// So is Thorium's demo/chain/chain.asm.
+const chainText = () => Buffer.from(readFileSync(CHAIN.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
 
 let built;
 /** The starter card and its recipe, made once by tools/media.mjs. */
@@ -50,6 +53,7 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
   check(BAZA);
   check(RTL);
   check(BOUNCE);
+  check(CHAIN);
   const { card, recipe } = starter();
   const want = {
     "STARTUP.CMD": Buffer.from("GLCD.SVC\r\n\x1a", "latin1"),
@@ -66,7 +70,7 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
     "MON3.SVC": (await mon3Svc()).file,
     "HELLO3.ASM": textAt("test/programs/hello3.asm"),
     "HELLO3.BIN": await hello3(),
-    "CHAIN.ASM": text("CHAIN.ASM"),
+    "CHAIN.ASM": chainText(),
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
@@ -305,7 +309,7 @@ test("on the card after CON PICO 80, TAS CHAIN builds CHAIN.COM, CHAIN prints LI
   mark = m.output.length;
   keys("chain\r", "CHAIN", () => m.ready() && /A>$/.test(m.text(mark)));
   assert.match(m.text(mark), /^chain\r\r?\nLINE 1\r\nLINE 2\r\nLINE 3\r\nLINE 4\r\nLINE 5\r\n\r?\n?A>$/i);
-  const source = readFileSync(resolve(ROOT, "programs/CHAIN.ASM"), "latin1").replace(/\n$/, "").split("\n");
+  const source = readFileSync(CHAIN.path, "latin1").replace(/\n$/, "").split("\n");
   keys("ted chain.asm\r", "TED", () => m.screen()[0].startsWith("; CHAIN:") && /CHAIN/.test(m.screen()[23]));
   assert.deepEqual([m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], [80, 24], "an 80-column console");
   assert.deepEqual(m.screen().slice(0, source.length).map((l) => l.trimEnd()), source, "each line whole");
