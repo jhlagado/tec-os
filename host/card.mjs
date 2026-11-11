@@ -73,43 +73,73 @@ export function prepareCard(image, display, width = 80) {
 }
 
 /**
- * STARTUP.CMD's lines without their display pieces, the rest of each chain kept
- * and a line with nothing left gone. A piece taken out passes its own ":" to the
- * piece after it on its line. A ":" that waited on a piece taken out goes, on its
- * line or first on the next, since it must not wait on what now comes before it.
+ * A line's pieces under the shell's rules: each with the separator before it,
+ * "" for the first, "!" for a run of separators holding a !, and "&" for a run
+ * of & alone. ! always separates; & does only after a space, a tab or another
+ * separator, so an & inside a word is text. A blank before a separator stays
+ * at the end of its piece.
+ */
+function pieces(line) {
+  const out = [];
+  let text = "";
+  let sep = "";
+  for (let i = 0; i < line.length; ) {
+    const c = line[i];
+    if (c === "!" || (c === "&" && (i === 0 || /[ \t]/.test(line[i - 1])))) {
+      let bang = false;
+      for (; i < line.length && /[ \t!&]/.test(line[i]); i += 1) bang ||= line[i] === "!";
+      out.push({ sep, text });
+      [text, sep] = ["", bang ? "!" : "&"];
+    } else {
+      text += c;
+      i += 1;
+    }
+  }
+  out.push({ sep, text });
+  return out;
+}
+
+/**
+ * STARTUP.CMD's lines without their display pieces and without SHELL.SVC, which
+ * setDisplayLine writes first: the rest of each line kept and a line with
+ * nothing left gone. A kept piece keeps the separator before it, so one that
+ * followed a removed piece by & still runs only on success; one that now starts
+ * its line starts unconditionally. An older card's ":" before a kept piece
+ * becomes &, its new form.
  */
 function withoutDisplay(lines) {
   const out = [];
-  let taken = true; // the display lines go first, so a first ":" would depend on them
-  let colon = false; // what the piece after a removed one inherits
   for (const line of lines) {
-    if (line.trim() === "") continue;
     const kept = [];
-    line.split("!").forEach((piece, i) => {
-      const own = /^\s*:/.test(piece);
-      const cond = !taken ? own : i === 0 ? own && colon : colon;
-      if (DISPLAY_PIECE.test(piece.trim())) {
-        taken = true;
-        colon = cond;
-      } else {
-        kept.push(piece.replace(/^(\s*):?/, cond ? "$1:" : "$1"));
-        taken = false;
-      }
-    });
-    if (kept.join("!").trim() !== "") out.push(kept.join("!"));
+    for (const { sep, text } of pieces(line)) {
+      const piece = text.trim().replace(/^:/, "");
+      if (piece === "" || DISPLAY_PIECE.test(piece) || /^SHELL\.SVC$/i.test(piece)) continue;
+      const own = /^\s*:/.test(text) ? "&" : sep;
+      const body = text.replace(/^(\s*):/, "$1");
+      kept.push(kept.length === 0 ? body.trimStart() : `${/[ \t]$/.test(kept.at(-1)) || own === "!" ? "" : " "}${own}${body}`);
+    }
+    if (kept.length) out.push(kept.join(""));
   }
   return out;
 }
 
-/** Make STARTUP.CMD's first line DISPLAY's, leaving the rest: GLCD.SVC for the GLCD, CON PICO WIDTH for every PICO9918 width. True if it changed. */
+/**
+ * Make STARTUP.CMD's first lines SHELL.SVC and DISPLAY's, leaving the rest:
+ * GLCD.SVC for the GLCD, CON PICO WIDTH for every PICO9918 width. The ROM runs
+ * the first line only and the shell the rest, so a card without SHELL.SVC gets
+ * the display's line first. True if it changed.
+ */
 export function setDisplayLine(image, display, width = 80) {
   const a = driveA(image);
-  const had = userZero(a).some((f) => f.name === "STARTUP.CMD");
+  const files = userZero(a);
+  const had = files.some((f) => f.name === "STARTUP.CMD");
+  const shell = files.some((f) => f.name === "SHELL.SVC");
   const old = had ? toLatin1(a.read("STARTUP.CMD")).split("\x1a")[0] : "";
   const rest = withoutDisplay(old.split(/\r?\n/));
   // The chosen display's line alone: CON UC1 loads GLCD.SVC itself, and a line
-  // for it on the page's board with both would only give way (KE-150).
-  const first = display === "tms" ? [`CON PICO ${width}`] : [displayFile(display)];
+  // for it on the page's board with both would only give way.
+  const display1 = display === "tms" ? `CON PICO ${width}` : displayFile(display);
+  const first = shell ? ["SHELL.SVC", display1] : [display1];
   const text = [...first, ...rest].map((l) => `${l}\r\n`).join("");
   if (text === old) return false;
   a.write("STARTUP.CMD", fromLatin1(`${text}\x1a`));
