@@ -36,7 +36,7 @@ export async function execFile(over = {}) {
 }
 
 /** MON3.SVC's SHA-256: the file the card holds, as media writes it. */
-export const MON3_SVC_SHA = "e85342e3f4a21c5e10733543d39742cff9328e27a6ab52050893b5f3d5c41bde";
+export const MON3_SVC_SHA = "53cc78e3ac70bc3eb3b6129b4daaee1f5a0772d5ad802c69a9877376f8d43c25";
 
 /** The card's MON3.SVC, by media's writer: the pinned file, and the same as SVC, the tests' own build. */
 export async function cardMon3(svc) {
