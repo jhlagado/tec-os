@@ -14,7 +14,7 @@ import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, code, execFile, figures, find, KEYAD, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, cardMon3, code, execFile, figures, find, KEYAD, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -1453,11 +1453,7 @@ test("KG63 size and tpa", async () => {
   const svc = await mon3Build();
   assert.ok(svc.image <= C.bytes, `the header and image, ${svc.image} bytes, within ${C.bytes.toLocaleString("en")}`);
   assert.deepEqual([...svc.file.subarray(12, 15)], [0, 0, 0], "stack use declared: BDOS 0, BIOS 0, CCP 0");
-  const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
-  if (romBackend() === "tas") {
-    const { assembleMon3 } = await import("../tools/lib/tas-distribution.mjs");
-    assert.deepEqual([...(await assembleMon3(ROOT, await tasAssembler()))], [...svc.file], "TAS's MON3.SVC equals ATOM's");
-  }
+  await cardMon3(svc);
   const m = boot({ "MON3.SVC": svc.file });
   m.command("MON3.SVC");
   const [line_] = services(m);
