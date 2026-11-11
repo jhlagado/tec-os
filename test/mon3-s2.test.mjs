@@ -1118,8 +1118,9 @@ test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
   assert.throws(() => m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD"), /no MON3> after AD/);
 });
 
-// S2's size: at most 15 pages, 3,840 bytes; (0006h) at least AA00h on the
-// starter card, TPA 43,264, and 42,496 with GLCD.SVC; TAS's file equal to
+// The size, within the ceiling every stage's size test reads (at S2 15
+// pages, 3,840 bytes, (0006h) AA00h; now the third stage's): (0006h) and
+// the TPA on the starter card, alone and with GLCD.SVC; TAS's file equal to
 // ATOM's; each source file within the style's size, and passing it.
 
 async function sizeAndTpa(svc) {
@@ -1144,7 +1145,7 @@ async function sizeAndTpa(svc) {
 test("KG64 size and tpa", async () => {
   const svc = await mon3Build();
   const f = await sizeAndTpa(svc);
-  console.log(`MON3.SVC S2: file ${svc.file.length} bytes, header and image ${svc.image}, ${f.pages} pages, (0006h) ${f.top.toString(16)}h, TPA ${f.tpa}, ${f.both} with GLCD.SVC`);
+  console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, ${f.pages} pages, (0006h) ${f.top.toString(16)}h, TPA ${f.tpa}, ${f.both} with GLCD.SVC`);
   const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
   if (romBackend() === "tas") {
     const { assembleMon3 } = await import("../tools/lib/tas-distribution.mjs");
@@ -1160,12 +1161,16 @@ test("KG64 size and tpa", async () => {
   }
 });
 
+// The build with buffers added to the ceiling and one byte more: 3,841
+// bytes and 16 pages at S2, and the same one byte over the ceiling since.
+
 test("KG64 mutant: the build with buffers added to 3,841 bytes takes 16 pages", async () => {
+  const C = MON3_CEILING;
   const svc = await mon3Build();
-  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${MON3_CEILING.bytes + 1 - svc.image}\nMSTK:\n`]]);
-  assert.equal(big.image, 3841);
-  await assert.rejects(sizeAndTpa(big), /within 3840/);
+  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
+  assert.equal(big.image, C.bytes + 1);
+  await assert.rejects(sizeAndTpa(big), new RegExp(`within ${C.bytes}`));
   const m = boot({ "MON3.SVC": big.file });
   m.command("MON3.SVC");
-  assert.deepEqual(services(m), ["MON3 16"], "16 pages");
+  assert.deepEqual(services(m), [`MON3 ${C.pages + 1}`], `${C.pages + 1} pages`);
 });

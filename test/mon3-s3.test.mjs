@@ -6,7 +6,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realProgram } from "./lib/mon3src.mjs";
-import { sha } from "./lib/mon3s2.mjs";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ROOT } from "./lib/fixtures.mjs";
+import { MON3_CEILING, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
+import { boot, mon3Build, sha } from "./lib/mon3s2.mjs";
 import { referenceSide, sessionSide } from "./lib/kg65.mjs";
 import { REFUSAL_TOP, compareRefusals } from "./lib/kg67.mjs";
 
@@ -59,4 +63,57 @@ test("KG67 rst 18h refusals", async () => {
   assert.deepEqual(bad, []);
   assert.ok(lowSP > REFUSAL_TOP, `displayError's stack reaches ${lowSP.toString(16)}h, above the compared bytes`);
   console.log(`RST 18h refusals: 15 selectors, 34 rows; the lowest SP ${lowSP.toString(16)}h`);
+});
+
+// The size: at most 18 pages, 4,608 bytes of header and image; (0006h) at
+// least A700h on the starter card, so a TPA of at least 42,496, and 41,728
+// with GLCD.SVC; TAS's file equal to ATOM's; each source file within the
+// style's 24,576 bytes, and passing its checker.
+
+async function sizeAndTpa(svc) {
+  const C = MON3_CEILING;
+  assert.ok(svc.image <= C.bytes, `the header and image, ${svc.image} bytes, within ${C.bytes}`);
+  const m = boot({ "MON3.SVC": svc.file });
+  m.command("MON3.SVC");
+  const pages = Number(services(m)[0].split(" ")[1]);
+  assert.ok(pages <= C.pages, `${pages} pages, at most ${C.pages}`);
+  const top = word(m, 6);
+  assert.ok(top >= C.top && top - 0x100 >= C.tpa, `(0006h) ${top.toString(16)}h, TPA ${top - 0x100}, at least ${C.tpa}`);
+  const g = boot({ "MON3.SVC": svc.file }, { matrix: true });
+  assert.deepEqual(services(g).map((l) => l.split(" ")[0]), ["GLCD"], "GLCD.SVC installed");
+  g.command("MON3.SVC");
+  const both = word(g, 6) - 0x100;
+  assert.ok(both >= C.tpaGlcd, `TPA with GLCD.SVC ${both}, at least ${C.tpaGlcd}`);
+  return { pages, top, tpa: top - 0x100, both };
+}
+
+test("KG67 size and tpa", async () => {
+  const svc = await mon3Build();
+  const f = await sizeAndTpa(svc);
+  console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, ${f.pages} pages, ${f.pages * 256 - svc.image} bytes left, (0006h) ${f.top.toString(16)}h, TPA ${f.tpa}, ${f.both} with GLCD.SVC`);
+  const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
+  if (romBackend() === "tas") {
+    const { assembleMon3 } = await import("../tools/lib/tas-distribution.mjs");
+    assert.deepEqual([...(await assembleMon3(ROOT, await tasAssembler()))], [...svc.file], "TAS's MON3.SVC equals ATOM's");
+  }
+  const { checkCompactSource } = await import("../tools/lib/style-compact.mjs");
+  const routines = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-routines.json"), "utf8"));
+  const exceptions = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-exceptions.json"), "utf8"));
+  const files = mon3Sources();
+  assert.deepEqual(Object.keys(files), ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm", "mon3gfx.asm"], "the five source files");
+  for (const [n, text] of Object.entries(files)) {
+    const r = checkCompactSource(text, n, routines[`drivers/${n}`], exceptions[`drivers/${n}`]);
+    assert.ok(r.bytes <= 24576, `${n}: ${r.bytes} bytes`);
+    assert.deepEqual(r.faults, [], `${n} passes the style checker`);
+  }
+});
+
+test("KG67 mutant: the build with buffers added to 4,609 bytes takes 19 pages", async () => {
+  const svc = await mon3Build();
+  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${4609 - svc.image}\nMSTK:\n`]]);
+  assert.equal(big.image, 4609);
+  await assert.rejects(sizeAndTpa(big), /within 4608/);
+  const m = boot({ "MON3.SVC": big.file });
+  m.command("MON3.SVC");
+  assert.deepEqual(services(m), ["MON3 19"], "19 pages");
 });

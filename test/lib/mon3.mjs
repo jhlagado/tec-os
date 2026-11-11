@@ -39,11 +39,11 @@ export async function execFile(over = {}) {
 export const mon3Svc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
 
 /**
- * KG64's ceiling for MON3.SVC on the starter card: header and image, pages,
- * the least (0006h), and the least TPA alone and with GLCD.SVC. KG63's and
- * KG64's size tests read it.
+ * The ceiling for MON3.SVC on the starter card, the third stage's: header
+ * and image, pages, the least (0006h), and the least TPA alone and with
+ * GLCD.SVC. Every stage's size test reads it.
  */
-export const MON3_CEILING = { bytes: 3840, pages: 15, top: 0xaa00, tpa: 43264, tpaGlcd: 42496 };
+export const MON3_CEILING = { bytes: 4608, pages: 18, top: 0xa700, tpa: 42496, tpaGlcd: 41728 };
 
 /** What follows from a build SVC on the starter card: its pages, (0006h), its entry, the TPA and its SERVICES line. */
 export function figures(svc) {
