@@ -163,7 +163,11 @@ TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC /E` gives `MON3>`,
 where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
 LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
 keyboard, returns to `MON3>`, and `EXIT` to `A>`. `HELLO3.ASM` is its source,
-and `TAS HELLO3 HELLO3.BIN` builds it. `BOUNCE.BAS` is Baza's sprite game:
+and `TAS HELLO3 HELLO3.BIN` builds it. `CHAIN.ASM`, Thorium's demonstration, is
+written with several statements on a line, a `\` between them: `TAS CHAIN`
+builds it and `CHAIN` prints `LINE 1` to `LINE 5`. Its lines are up to 67
+columns, so `TED CHAIN.ASM` shows them whole at 80 columns, after
+`CON PICO 80` or with 80 chosen in the Viewer's width selector. `BOUNCE.BAS` is Baza's sprite game:
 `BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in Graphics I
 through `call`; tap W, A, S and D to steer the ship, and Q gives the display
 back. A BASIC program that has claimed the display and
