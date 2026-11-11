@@ -41,7 +41,7 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 4,593 bytes of header and image in **18 pages**: the
+On the starter card it is 4,596 bytes of header and image in **18 pages**: the
 word at `0006h` goes from `B9A4h` to `A700h`, and the TPA from 47,268 bytes to
 **42,496**. With `GLCD.SVC` installed too, as the GLCD console's startup does,
 the TPA is **41,728**. The monitor, its line buffer, its FCB, its saved page
@@ -120,8 +120,9 @@ wait. While a key is held the console is polled (BDOS 6 with E = FFh) and
 what it reads is dropped: TEC-OS's own scan sees the key held, and the
 Viewer, which holds a key until that scan has read it, lets it go. On
 `TTY:` and `BAT:` the console reads only the serial line, so a held key
-can't reach the line and there is no wait: the Viewer never lets a key go
-there, and a wait would never end. Then a form feed gives the console back.
+can't reach the line and there is no wait. The wait's own `scanKeys` also
+records the key in TEC-OS's held-key byte ("Coverage in S2", below), which
+alone keeps a key already held from the line. Then a form feed gives the console back.
 Then come the tables' warning or the breakpoint's `BRK nnnn`, if there is one, then
 `MON3>`, in that order on every console, so that a video console still shows
 the message after the form feed has cleared it. A program that
@@ -277,6 +278,18 @@ Where the session differs from MON-3, by design:
   `2025.16`, not in MON-3's ROM. The strings are MON-3's.
 - With the matrix fitted, MON-3 and the session read the matrix, not the
   keypad.
+- Each read of the matrix, by `scanKeys`, `scanKeysWait`, `RST 20h` or
+  `matrixScan` (call 18) and the calls built on it, also records the key it
+  found, or FFh for none, in TEC-OS's held-key byte, `KBLAST`
+  (`src/ram.asm`), as TEC-OS's own scan records it. MON-3 has no such byte,
+  and nothing a program sees changes. While a program runs, TEC-OS's scan
+  doesn't run, so without this a host that holds a matrix key until TEC-OS
+  has read it, as the Viewer does, would never let it go, and no later key
+  would come. Back at `MON3>`, or after `EXIT`, TEC-OS's scan finds a key
+  still held recorded and doesn't take it as a new one. The address is
+  `KBLAST EQU` in `drivers/mon3api.asm`, and media refuses a build whose ROM
+  map puts `KBLAST` anywhere else, so `MON3.SVC` is tied to the ROM it is
+  built with.
 
 ## RST 18h: the graphics calls
 

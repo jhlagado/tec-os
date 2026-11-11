@@ -235,6 +235,15 @@ async function main() {
   // DEMO.COM is built and checked here, but the card holds only its source:
   // TAS DEMO on the card makes it.
   files.push({ name: "DEMO.ASM", description: "a demonstration of the hardware, LCD, digits, LEDs and PICO9918, as source: TAS DEMO builds DEMO.COM, TED DEMO.ASM reads it", bytes: text("DEMO.ASM") });
+  // MON3.SVC writes TEC-OS's held-key byte, KBLAST, at the address its
+  // source names, so that address must be this ROM's.
+  for (const { profile, mapBytes } of builds) {
+    const kblast = JSON.parse(mapBytes).symbols.find((s) => s.name === "KBLAST");
+    const named = /^KBLAST EQU \$([0-9A-F]{4})\b/m.exec(readFileSync(resolve(ROOT, "drivers/mon3api.asm"), "utf8"));
+    if (!kblast || !named || (kblast.address ?? kblast.value) !== parseInt(named[1], 16)) {
+      throw new Error(`drivers/mon3api.asm's KBLAST is not the ${profile} ROM's`);
+    }
+  }
   // MON3.SVC, the MON-3 session service, and HELLO3, a MON-3 program that
   // writes the LCD through RST 10h, as source and as the image MON-3 loads at
   // 4000h, assembled as the ROM's programs are.

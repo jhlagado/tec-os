@@ -399,13 +399,23 @@ KBBAD:
   or 1           ; NZ: not a key
   ret
 
+; TEC-OS's held-key byte, KBLAST in
+; src/ram.asm: media checks that the
+; ROM's map puts it here.
+
+KBLAST EQU $BFEF
+
 ; Call 18, matrixScan: the matrix by
 ; port FEh, a row a read with B its
 ; row's line. E the last key found,
 ; 00h-3Fh, D the one before or FFh. Z
 ; for one key, or a key with Shift (0),
 ; Ctrl (1) or Fn (2). Clobbers A, BC
-; and HL.
+; and HL. E goes to TEC-OS's KBLAST,
+; as its own scan records the key: so
+; TEC-OS doesn't take a key held from a
+; program as new, and a host that holds
+; a key until TEC-OS reads it lets go.
 
 MSCAN:
   ld l,$FF       ; a row's base, less 1
@@ -435,6 +445,7 @@ MS3:
   rlc b          ; the next row's line
   jr c,MS1       ; eight rows
   ld a,e
+  ld (KBLAST),a  ; the key read
   cp $40
   ret nc         ; no key: NZ
   ld a,d

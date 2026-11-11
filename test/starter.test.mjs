@@ -16,7 +16,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLCD_SVC, ROOT, boot, program, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
-import { find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
+import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 
 const TED = pinned("TED.COM");
@@ -228,11 +228,20 @@ test("on the card, MON3.SVC /E, LOAD HELLO3.BIN and GO write HELLO3's four lines
   hello3Round(Uint8Array.from(starter().card));
 });
 
-test("mutant: a MON3.SVC that doesn't wait for the keys to go up lets Esc reach the line after MON3>", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+/** The service's matrix scan without its LD (KBLAST),A: TEC-OS's held-key byte left as it was. */
+function noRecord(b, at) {
+  const i = find(b, at("MS3"), [0x7b, 0x32, 0xef, 0xbf, 0xfe, 0x40], 16);
+  b.fill(0, i + 1, i + 4);
+}
+
+// The matrix scan's record alone keeps a held Esc from the MON3> line, so this
+// mutant drops it too, to show what the wait does.
+test("mutant: a MON3.SVC that doesn't wait for the keys to go up, nor record them, lets Esc reach the line after MON3>", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
     const i = find(b, at("KEYUP"), [0x3a, 0x8a, 0x08, 0xb7, 0x20], 16);
     b[i + 4] = 0x18; // JR: up, whatever the keys
+    noRecord(b, at);
   });
   const card = Uint8Array.from(starter().card);
   volume(card, "A").write("MON3.SVC", file);
@@ -263,16 +272,53 @@ test("on the card after CON TTY, Esc held as the page holds it returns to MON3> 
   hello3OnTty(Uint8Array.from(starter().card));
 });
 
-test("mutant: a MON3.SVC that waits for the keys whatever the console hangs after CON TTY", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+// The wait's own scan records the key, so the page lets it go and the wait
+// ends: this mutant drops the record too, to show what the console test does.
+test("mutant: a MON3.SVC that waits for the keys whatever the console, and doesn't record them, hangs after CON TTY", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
     const i = find(b, at("KEYUP") - 6, [0x3a, 0x03, 0x00, 0x0f, 0x30], 6);
     b[i + 4] = 0x00; // NOP NOP: the wait on any console
     b[i + 5] = 0x00;
+    noRecord(b, at);
   });
   const card = Uint8Array.from(starter().card);
   volume(card, "A").write("MON3.SVC", file);
   assert.throws(() => hello3OnTty(card), /no MON3> after Esc on TTY/);
+});
+
+// A key, then Esc, on the card at 40 columns on CRT:, each held as the page
+// holds a key, until TEC-OS's held-key byte shows it. While HELLO3 runs, only
+// MON3.SVC's scan reads the matrix, so it must record the key there too, or
+// the 1 is never let go and the Esc never comes.
+function hello3KeyThenEsc(card) {
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  assert.ok(m.videoConsole(), "CRT: is the console");
+  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
+  assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
+  m.type("GO\r");
+  m.runUntilChecked(() => lcdRows(m).join("") === HELLO3_ROWS.join(""), 50_000_000, "HELLO3's lines on the LCD");
+  m.enqueueInput("1", "matrix");
+  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && digitsOf(m).key === 0x01), 20_000_000, "key 1 on HELLO3's digits, and let go");
+  const from = m.output.length;
+  m.enqueueInput("\x1b", "matrix");
+  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.text(from).includes("MON3>")), 50_000_000, "MON3> after 1 and Esc");
+  assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
+  const exit = line(m, "EXIT");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
+  assert.deepEqual(m.violations, []);
+}
+
+test("on the card, a key and then Esc, held as the page holds them, reach HELLO3, which shows the key and returns to MON3>, and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+  hello3KeyThenEsc(Uint8Array.from(starter().card));
+});
+
+test("mutant: a MON3.SVC whose matrix scan doesn't record the key leaves the 1 held, and the Esc never comes", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+  const svc = await mon3Svc();
+  const file = svcMutant(svc, noRecord);
+  const card = Uint8Array.from(starter().card);
+  volume(card, "A").write("MON3.SVC", file);
+  assert.throws(() => hello3KeyThenEsc(card), /no key 1 on HELLO3's digits, and let go/);
 });
 
 // The card's HELLO3.ASM builds on the card into the HELLO3.BIN beside it.
