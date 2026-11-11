@@ -300,15 +300,15 @@ program takes MON-3's time and 78 T more for each `RST 18h`.
 
 At a program's return, when CON: is `UC1:` (IOBYTE AND 3 is 3), the
 session sends the ST7920 `GLCD.SVC`'s own mode bytes, 30h, 0Ch, 01h, 34h
-and 36h, the same as its `GLCMOD`, each followed by 1.6 ms, before the form
-feed. That is the basic set, the display on, DDRAM cleared, the extended set
+and 36h, the same as its `GLCMOD`, each followed by about 2.1 ms (8,389 T at
+4 MHz, MON-3's own count of 0140h), before the form feed. That is the basic set, the display on, DDRAM cleared, the extended set
 and graphics on, so the console's text shows again whatever the program
 left: text mode, or text in DDRAM over the graphics. It runs on every
 return, by `RET`, `RST 30h` or call 2. It runs whenever CON: is `UC1:`,
 whatever driver holds it, and also when `GLCD.SVC` has been removed and
 IOBYTE left at `UC1:`. It reads no status and uses fixed delays, so it
-cannot hang, and with no GLCD fitted its writes go nowhere. It takes about
-8 ms. It leaves the ST7920's reversed lines and scroll as a program set
+cannot hang, and with no GLCD fitted its writes go nowhere. It takes
+41,999 T, about 10.5 ms. It leaves the ST7920's reversed lines and scroll as a program set
 them, as `GLCD.SVC`'s own restore does. `EXIT` needs none of its own: its
 warm boot restores the console's driver.
 

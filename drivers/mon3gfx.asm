@@ -110,8 +110,9 @@ GWS:
 ; At a program's return, with CON: on
 ; UC1: (IOBYTE's low bits 3), GLCD.SVC's
 ; own mode bytes go to the ST7920, each
-; with 1.6 ms, so the console's text is
-; on show after the form feed; the 01h
+; with 2.1 ms (8,389 T at 4 MHz), so
+; the console's text is on show after
+; the form feed; the 01h
 ; clears DDRAM. It reads no status, so
 ; it cannot hang, and with no GLCD the
 ; writes go nowhere. On another console
@@ -130,7 +131,7 @@ GRST:
 GRST1:
   ld a,(hl)
   out (GLCDI),a  ; a mode byte
-  ld de,$0140    ; and 1.6 ms
+  ld de,$0140    ; and 2.1 ms
   call GDLYMS
   inc hl
   djnz GRST1     ; each of them
@@ -157,7 +158,7 @@ GINIT1:
   call GDLYUS    ; and its wait
   inc hl
   djnz GINIT1    ; each of them
-  ld de,$0140    ; 1.6 ms for the clear
+  ld de,$0140    ; 2.1 ms: the clear
   call GDLYMS
   ld hl,GBUF     ; the default buffer
   ld (VPORT),hl  ; drawing into GBUF
