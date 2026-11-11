@@ -1273,6 +1273,19 @@ test("SH13 guard read between prompts", () => {
   assert.ok(deepest > 0 && deepest <= 24, `the shell's own stack: ${deepest} of 32`);
 });
 
+test("SH13 mutant: PAGE's stack 16 bytes lower reads above 24", async () => {
+  // The same size, so the guard reads it: PAGE takes its stack at STKTOP-16.
+  const mut = await shellVariant([["  ld (PGSP),sp   ; the caller's SP\n  ld sp,STKTOP   ; the shell's stack", "  ld (PGSP),sp\n  ld sp,STKTOP-16"]]);
+  assert.equal(mut.file.length, SHELL.file.length, "the same size");
+  const m = shellMachine(shellCard({}, { shell: mut.file }));
+  const at0 = GUARDS.machines.findIndex((x) => x.m === m);
+  assert.ok(at0 >= 0, "the guard reads the variant");
+  const [g] = GUARDS.machines.splice(at0, 1);
+  at(m, "TYPE HELLO.TXT");
+  const deepest = g.read();
+  assert.ok(deepest > 24, `the shell's own stack: ${deepest} of 32, past the bound`);
+});
+
 test("SH13 census with the shell", () => {
   const { stacks, shell } = census(["SHELL.SVC"]);
   console.log(JSON.stringify({ stacks, shell }));
