@@ -41,7 +41,7 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 4,596 bytes of header and image in **18 pages**: the
+On the starter card it is 4,602 bytes of header and image in **18 pages**: the
 word at `0006h` goes from `B9A4h` to `A700h`, and the TPA from 47,268 bytes to
 **42,496**. With `GLCD.SVC` installed too, as the GLCD console's startup does,
 the TPA is **41,728**. The monitor, its line buffer, its FCB, its saved page
@@ -115,14 +115,16 @@ console", below). Two things keep the key that ended the program, AD or
 Esc, off the `MON3>` line. Each read of the matrix records the key in
 `KBLAST` ("Coverage in S2", below), so TEC-OS's scan takes a key still held
 as held, not new, and the Viewer, which holds a key until that scan has
-read it, lets it go. And when CON: is a matrix console, `CRT:` or `UC1:`
-(IOBYTE bit 0 set), the return holds `MON3>` back until MON-3's `scanKeys`
-reports no key, on the keypad or on the matrix, whichever it reads; while a
-key is held the console is polled (BDOS 6 with E = FFh) and what it reads
-is dropped. Two ordinary keys held together read as no key, as they do in
-MON-3, so a chord ends the wait. On `TTY:` and `BAT:` the console reads
-only the serial line, so a held key can't reach the line and there is no
-wait. Then a form feed gives the console back. Then come the tables'
+read it, lets it go. And while CON: is a matrix console, `CRT:` or `UC1:`
+(IOBYTE bit 0 set), the return holds `MON3>` back until no key is down:
+each pass runs MON-3's `scanKeys`, then asks `KBLAST`, which that scan of
+the matrix has just set, for no matrix key at all, chords and keys outside
+the keypad's set included, and `KPRESS` for no keypad key. While a key is
+held the console is polled (BDOS 6 with E = FFh) and what it reads is
+dropped. On `TTY:` and `BAT:` the console reads only the serial line, so a
+held key can't reach the line and there is no wait. The poll can itself
+move CON: from `UC1:` to `TTY:`, when `GLCD.SVC` isn't in, so each pass
+reads the IOBYTE again, and the wait ends there. Then a form feed gives the console back. Then come the tables'
 warning or the breakpoint's `BRK nnnn`, if there is one, then
 `MON3>`, in that order on every console, so that a video console still shows
 the message after the form feed has cleared it. A program that

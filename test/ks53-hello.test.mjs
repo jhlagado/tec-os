@@ -228,8 +228,8 @@ test("KG60 mutant: scanKeys without carry on a new press gives no key beep", { s
 test("KG60 mutant: the return without its key-up wait gives MON3> while Esc is held, GLCD console", { skip }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("KEYUP"), [0x3a, 0x8a, 0x08, 0xb7, 0x20], 16);
-    b[i + 4] = 0x18; // JR: up, whatever the keys
+    const i = find(b, at("KEYUP"), [0x3a, 0x03, 0x00, 0x0f, 0x30], 6);
+    b[i + 4] = 0x18; // JR: no wait, whatever the keys
   });
   const s = await slice("glcd", file);
   assert.throws(() => checkKey(s, RECORDED), /no MON3> while AD is held on the matrix/);

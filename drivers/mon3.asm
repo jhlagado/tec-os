@@ -725,9 +725,7 @@ PREIN:
 ; warning or a breakpoint's address
 ; follows it, so that a video console
 ; still shows it at MON3>. Before the
-; form feed, the keys must be up: the
-; key that ended a program, AD or Esc,
-; must not reach the line.
+; form feed, the keys must be up.
 
 MRET:
   di             ; interrupts off
@@ -746,22 +744,26 @@ MRET1:
   call GRST      ; the GLCD's modes
 
 ; Only CON: on CRT: or UC1: reads a
-; matrix key into a line. MSCAN's
-; KBLAST record keeps a held key off
-; the line and lets the Viewer let it
-; go. This wait holds MON3> back until
-; the keys are up, and BDOS 6 drops
-; what the console reads meanwhile.
+; matrix key into a line, and a poll
+; may move CON: to TTY:, so each pass
+; asks again. MSCAN's KBLAST keeps a
+; held key off the line and lets the
+; Viewer let go; MON3> waits until
+; KBLAST and KPRESS show no key.
 
+KEYUP:
   ld a,(IOBYTE)
   rrca           ; CRT: or UC1:?
   jr nc,KEYSUP   ; no: no wait
-
-KEYUP:
   call SKEYS     ; keypad or matrix
+  ld a,(KBLAST)
+  inc a          ; FFh: no matrix key
+  jr nz,KEYPL
   ld a,(KPRESS)
-  or a           ; NZ: no key down
+  or a           ; NZ: no keypad key
   jr nz,KEYSUP
+
+KEYPL:
   ld e,$FF       ; poll, and drop it
   ld c,6
   call BDOS

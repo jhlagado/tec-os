@@ -14,7 +14,7 @@ import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, code, execFile, figures, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, warmTarget, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, code, execFile, figures, find, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -441,6 +441,93 @@ for (const [board, opts, files, startup] of [
 test("KG59 lower case /e enters", async () => {
   const m = machine(card({ "MON3.SVC": await mon3File() }));
   assert.ok(line(m, "mon3.svc /e").mon3, "mon3.svc /e gives MON3>");
+});
+
+// The return's key-up wait, on the PICO9918 with the matrix, as the page runs
+// it. ESCOUT asks for UC1: with no GLCD.SVC and returns on a key: the wait's
+// console poll moves CON: back to TTY:, where no key reaches the line, so the
+// wait must ask the route again and end. GKEY returns on g, read by calls 18
+// and 54, which leave KPRESS as it was: the wait must judge the whole matrix.
+const VIEW = { tms: true, matrix: true, width: 40 };
+const ESCOUT = bin([0x0e, 0x10, 0xd7, 0x20, 0xfb, 0x3e, 0x03, 0x32, 0x03, 0x00, 0xc9]);
+const GKEY = bin([0x0e, 0x12, 0xd7, 0x0e, 0x36, 0xd7, 0x30, 0xf8, 0xfe, 0x67, 0x20, 0xf4, 0xc9]);
+const ESC_KEY = [1, 4];
+const G_KEY = [5, 2];
+
+/** A session on the page's board with PROG loaded from 4000h and running. */
+function running(file, prog) {
+  const m = machine(card({ "MON3.SVC": file, "P.BIN": prog }), VIEW);
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.match(line(m, "LOAD P.BIN").out, /MON3>$/);
+  m.type("GO\r");
+  runTo(m, 0x4000, 20_000_000);
+  runFor(m, 1_000_000);
+  return m;
+}
+
+/** EXIT, the first line typed after MON3>, gives A> with nothing before it. */
+const cleanExit = (m) => assert.equal(line(m, "EXIT").out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
+
+/** ESCOUT ended by Esc, queued as the host queues a key and then held as a person holds it. */
+function escFallback(file) {
+  const q = running(file, ESCOUT);
+  let from = q.output.length;
+  q.enqueueInput("\x1b", "matrix");
+  q.runUntil(() => (q.pumpInput(), !q.pending?.length && q.waitingForInput() && q.text(from).includes("MON3>")), 20_000_000, "MON3> after the queued Esc");
+  assert.equal(q.read(3) & 3, 0, "CON: back on TTY:");
+  assert.match(q.text(from), /\r\nMON3>$/, "nothing after MON3>");
+  cleanExit(q);
+  const h = running(file, ESCOUT);
+  from = h.output.length;
+  h.tec1g.applyMatrixKey(...ESC_KEY, true);
+  h.runUntil(() => h.waitingForInput() && MON3.test(h.text(from)), 20_000_000, "MON3> on TTY: with Esc still held");
+  h.tec1g.applyMatrixKey(...ESC_KEY, false);
+  runFor(h, 1_000_000);
+  cleanExit(h);
+}
+
+/** GKEY ended by g, held past the return and then let go, and queued as the host queues it. */
+function gExit(file) {
+  const h = running(file, GKEY);
+  let from = h.output.length;
+  h.tec1g.applyMatrixKey(...G_KEY, true);
+  h.runUntil(() => h.pc === 0x0049, 20_000_000, "the return after g");
+  runFor(h, 2_000_000);
+  assert.ok(!h.text(from).includes("MON3>"), "no MON3> while g is held");
+  h.tec1g.applyMatrixKey(...G_KEY, false);
+  h.runUntil(() => h.waitingForInput() && MON3.test(h.text(from)), 20_000_000, "MON3> once g is up");
+  cleanExit(h);
+  const q = running(file, GKEY);
+  from = q.output.length;
+  q.enqueueInput("g", "matrix");
+  q.runUntil(() => (q.pumpInput(), !q.pending?.length && q.waitingForInput() && q.text(from).includes("MON3>")), 30_000_000, "MON3> after the queued g");
+  assert.match(q.text(from), /\r\nMON3>$/, "nothing after MON3>");
+  cleanExit(q);
+}
+
+test("key-up wait: Esc with UC1: asked for and no GLCD.SVC reaches MON3>, the wait asking the route again", async () => {
+  escFallback(await mon3File());
+});
+
+test("key-up wait mutant: the route read once waits on TTY: for the held Esc", async () => {
+  const file = svcMutant(await mon3Build(), (b, at) => {
+    const i = find(b, at("KEYUP"), [0x0e, 0x06, 0xcd, null, null, 0x18], 48);
+    b[i + 6] += 6; // the loop back past the route's test
+  });
+  assert.throws(() => escFallback(file), /no MON3> on TTY: with Esc still held/);
+});
+
+test("key-up wait: g, read by calls 18 and 54, holds MON3> back until it is up, and never reaches the line", async () => {
+  gExit(await mon3File());
+});
+
+test("key-up wait mutant: release judged by KPRESS alone gives MON3> while g is held", async () => {
+  const file = svcMutant(await mon3Build(), (b, at) => {
+    const i = find(b, at("KEYUP"), [0x3a, 0xef, 0xbf, 0x3c, 0x20], 24);
+    b[i + 4] = 0x00; // NOP NOP: KBLAST not asked
+    b[i + 5] = 0x00;
+  });
+  assert.throws(() => gExit(file), /no MON3> while g is held/);
 });
 
 test("KG59 entry contract", async () => {
