@@ -880,6 +880,7 @@
     "SPLIT",
     "BUILTIN",
     "SCRCHK",
+    "FOLD",
     "HAND",
     "CMDDEL",
     "BADW",

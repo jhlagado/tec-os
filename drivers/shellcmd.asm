@@ -8,16 +8,18 @@
 ; lowest owner, B at LINE, upward: its
 ; header's name and its pages, up to
 ; the next owner or the stub's page, C
-; at LINE.
+; at LINE. Each line starts with CR LF,
+; so the ROM's blank line after the
+; last is its line end, as before.
 
 CMDSVC:
-  call CRLF      ; after the line
   ld a,(LOWPG)   ; the lowest owner
 
 SV1:
   or a
   jr z,SV3       ; the list's end
   ld h,a         ; its header page
+  call CRLF      ; a new line, HL kept
   ld l,17        ; the header's name
   ld b,8
   call PUTTRIM   ; its name
@@ -33,15 +35,13 @@ SV1:
 SV2:
   sub h          ; the pages it owns
   call PUTDEC8   ; then the count
-  call CRLF
   pop hl         ; the owner's page
   ld l,8
   ld a,(hl)      ; the next owner
   jr SV1         ; the next owner
 
 SV3:
-  ld de,0
-  jp SVEND       ; no blank line
+  jp BDONE       ; code 0
 
 ; COPY source destination, as the ROM's
 ; was: two unambiguous names, checked
