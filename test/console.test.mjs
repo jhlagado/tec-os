@@ -5,7 +5,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_SVC, TEST_CLOCK, boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
 
 test("with a PICO9918 and the matrix keyboard the screen is the console from the banner on, with no file, and nothing goes to serial (KS39)", () => {
@@ -168,10 +168,11 @@ function numberedLines(n) {
   return Array.from({ length: n }, (_, i) => `line ${String(i + 1).padStart(2, "0")}`).join("\n") + "\n";
 }
 
-test("TYPE pauses a screen at a time on the 8-row GLCD and can be stopped", () => {
-  const image = standardCard();
+test("SH11 TYPE pauses a screen at a time on the 8-row GLCD and can be stopped", () => {
+  const image = withShell(standardCard(), "GLCD.SVC"); // the pager is the shell's
   volume(image, "A").write("LINES.TXT", Buffer.from(numberedLines(20)), { text: true });
   const m = boot(image, { matrix: true });
+  m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 400_000_000, "the GLCD's prompt");
   m.mark = m.output.length;
   m.type("TYPE LINES.TXT\r");
   m.expect(/\[more\]$/);
@@ -188,8 +189,8 @@ test("TYPE pauses a screen at a time on the 8-row GLCD and can be stopped", () =
   assert.deepEqual(m.violations, []);
 });
 
-test("TYPE fills a 24-row, 40-column screen before pausing, and long lines count as wrapped", () => {
-  const image = standardCard();
+test("SH11 TYPE fills a 24-row, 40-column screen before pausing, and long lines count as wrapped", () => {
+  const image = withShell(standardCard());
   const long = "x".repeat(70);
   volume(image, "A").write("WIDE.TXT", Buffer.from(`${long}\n${numberedLines(40)}`), { text: true });
   const m = boot(image, { tms: true, matrix: true, width: 40 });
@@ -203,11 +204,12 @@ test("TYPE fills a 24-row, 40-column screen before pausing, and long lines count
   assert.match(m.expect(/A>$/, { maxCycles: 400_000_000 }), /line 40/);
 });
 
-test("a long DIR pauses too", () => {
-  const image = standardCard();
+test("SH11 a long DIR pauses too", () => {
+  const image = withShell(standardCard(), "GLCD.SVC");
   const a = volume(image, "A");
-  for (let i = 0; i < 30; i += 1) a.write(`F${i}.DAT`, new Uint8Array(1));
+  for (let i = 0; i < 29; i += 1) a.write(`F${i}.DAT`, new Uint8Array(1)); // with SHELL.SVC, GLCD.SVC and STARTUP.CMD, 32
   const m = boot(image, { matrix: true });
+  m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 400_000_000, "the GLCD's prompt");
   m.mark = m.output.length;
   m.type("DIR\r");
   m.expect(/\[more\]$/);

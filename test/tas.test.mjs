@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { DHLEN, makeSvc } from "../tools/lib/svc.mjs";
 import { scanSource } from "../tools/lib/tas-d8.mjs";
-import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TAS = pinned("TAS.COM");
@@ -62,22 +62,22 @@ test("TAS X X.SVC makes a service that loads", { skip: TAS.skip, timeout: 900_00
   const a = volume(image, "A");
   a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
   a.write("RES.ASM", text("test/programs/res.asm"), { text: true });
-  const m = boot(image);
+  const m = boot(withShell(image)); // SERVICES is the shell's
   assert.match(m.command("TAS RES RES.SVC", LONG), /RES\.SVC written/);
   assert.doesNotMatch(m.command("RES.SVC"), /RES\.SVC\?/);
   assert.match(m.command("SERVICES"), /RES\s+1/);
   assert.deepEqual(m.violations, []);
 });
 
-test("a failed build stops TAS BAD!:X through FF00h, with a stale X.COM there", { skip: TAS.skip, timeout: 900_000 }, () => {
+test("a failed build stops TAS BAD &X through FF00h, with a stale X.COM there", { skip: TAS.skip, timeout: 900_000 }, () => {
   check(TAS);
   const image = standardCard();
   const a = volume(image, "A");
   a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
   a.write("BAD.ASM", Buffer.from(HELLO.replace("CALL 5", "CALL NOWHERE")), { text: true });
   a.write("X.COM", Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9])); // prints C
-  const m = boot(image);
-  const said = m.command("TAS BAD!:X", LONG);
+  const m = boot(withShell(image)); // & is the shell's
+  const said = m.command("TAS BAD &X", LONG);
   assert.match(said, /undefined symbol NOWHERE/);
   assert.doesNotMatch(said, /\r\nC\r\n|X\?/);
   assert.equal(m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8), 0xff00);
@@ -91,8 +91,8 @@ test("TAS refuses a read-only output and leaves it as it was", { skip: TAS.skip,
   a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
   a.write("HELLO.ASM", Buffer.from(HELLO), { text: true });
   a.write("HELLO.COM", Uint8Array.from([0xc9]), { readOnly: true });
-  const m = boot(image);
-  assert.match(m.command("TAS HELLO!:USER 3", LONG), /read-only/);
+  const m = boot(withShell(image));
+  assert.match(m.command("TAS HELLO &USER 3", LONG), /read-only/);
   assert.equal(m.read(4) >> 4, 0, "the line stopped");
   assert.equal(volume(image, "A").read("HELLO.COM")[0], 0xc9);
   assert.deepEqual(m.violations, []);

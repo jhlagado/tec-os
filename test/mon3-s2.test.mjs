@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, volume } from "./lib/fixtures.mjs";
 import { PROGRAMS, realBuild, realProgram } from "./lib/mon3src.mjs";
-import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, cardMon3, digitsOf, figures, hello3, line, mon3Sources, mon3Variant, runFor, services, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, cardMon3, digitsOf, figures, hello3, line, mon3Sources, mon3Variant, runFor, services, word, installMon3 } from "./lib/mon3.mjs";
 import { ROM_HL_ROWS, compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, mon3Go, referenceHexLoad, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
 import { BIG16K, END, HASHES, boot, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
@@ -69,7 +69,7 @@ async function bdosDamaged(svc) {
     m.runUntil(() => m.waitingForInput() && PROMPT.test(m.text(from)), 60_000_000, `A> after ${name}`);
     const dir = m.command("DIR");
     for (const f of ["MON3.SVC", ...Object.keys(files)]) assert.match(dir, new RegExp(`\\b${f.split(".")[0]}\\s+${f.split(".")[1]}\\b|\\b${f.replace(".", "\\.")}\\b`), `${name}: DIR lists ${f}`);
-    assert.ok(line(m, "MON3.SVC /E").mon3, `${name}: and the session enters again`);
+    assert.ok(line(m, "MON3.SVC").mon3, `${name}: and the session enters again`);
   }
   assert.ok(ok(line(m, "LOAD RET.BIN")));
   m.mark = m.output.length;
@@ -309,7 +309,7 @@ async function hexDiskError(writing) {
   m.type("\r");
   assert.match(toPrompt(m, from), /Bdos Err On A: Bad Sector\r\nA>$/, "warm boot to A>");
   assert.equal(word(m, word(m, 1) + 1), m.sym("WBOOTR"), "the session ended");
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   assert.equal(runnable(m, svc), 0, "nothing runnable");
   assert.ok(refused(line(m, "GO")), "GO refused at re-entry");
   assert.ok(!line(m, "EXIT").mon3);
@@ -933,7 +933,7 @@ async function damaged(svc, where) {
   assert.ok(goChange(m, target).includes("MON3>"), `${where}: GO runs`);
   assert.ok(!line(m, "EXIT").mon3, `${where}: EXIT runs`);
   // Re-entry: the warning before the first MON3>, and LOAD refused.
-  const again = line(m, "MON3.SVC /E");
+  const again = line(m, "MON3.SVC");
   assert.ok(again.mon3 && again.out.includes(WARN), `${where}: the warning at re-entry (${JSON.stringify(again.out)})`);
   assert.ok(refused(line(m, "LOAD ONE.BIN")), `${where}: LOAD refused after re-entry`);
   assert.ok(!line(m, "EXIT").mon3);
@@ -1088,7 +1088,7 @@ test("KG66 reset after", async () => {
     const a = volume(m.image, "A");
     assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);
     assert.deepEqual(services(m), [], `${name}: no service after the reset`);
-    assert.equal(word(m, 6), 0xb9a4, `${name}: (0006h) B9A4h`);
+    assert.equal(word(m, 6), 0xb9a9, `${name}: (0006h) B9A9h`);
   }
 });
 
@@ -1130,7 +1130,7 @@ async function sizeAndTpa(svc) {
   svc ??= await mon3Build();
   assert.ok(svc.image <= C.bytes, `the header and image, ${svc.image} bytes, within ${C.bytes}`);
   const m = boot({ "MON3.SVC": svc.file });
-  m.command("MON3.SVC");
+  installMon3(m);
   const pages = Number(services(m)[0].split(" ")[1]);
   assert.ok(pages <= C.pages, `${pages} pages, at most ${C.pages}`);
   const top = word(m, 6);
@@ -1138,7 +1138,7 @@ async function sizeAndTpa(svc) {
   // The GLCD console's board, whose startup file installs GLCD.SVC.
   const g = boot({ "MON3.SVC": svc.file }, { matrix: true });
   assert.deepEqual(services(g).map((l) => l.split(" ")[0]), ["GLCD"], "GLCD.SVC installed");
-  g.command("MON3.SVC");
+  installMon3(g);
   const both = word(g, 6) - 0x100;
   assert.ok(both >= C.tpaGlcd, `TPA with GLCD.SVC ${both}, at least ${C.tpaGlcd}`);
   return { pages, tpa: top - 0x100, top, both };
@@ -1169,6 +1169,6 @@ test("KG64 mutant: the build with buffers added to 3,841 bytes takes 16 pages", 
   assert.equal(big.image, C.bytes + 1);
   await assert.rejects(sizeAndTpa(big), new RegExp(`within ${C.bytes}`));
   const m = boot({ "MON3.SVC": big.file });
-  m.command("MON3.SVC");
+  installMon3(m);
   assert.deepEqual(services(m), [`MON3 ${C.pages + 1}`], `${C.pages + 1} pages`);
 });

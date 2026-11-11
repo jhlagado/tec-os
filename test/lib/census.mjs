@@ -46,11 +46,14 @@ export function watch(m) {
  * Type a line and run to the prompt, answering a [more] or an error's key.
  * RE is the prompt: the CCP's unless another, such as a service's, is given.
  */
-export function run(m, line, re = /\r\n[A-P]>$/) {
+const CCP_PROMPT = /\r\n[A-P]>$/;
+export function run(m, line, re = CCP_PROMPT) {
   m.mark = m.output.length;
   m.type(line);
-  // Not the prompt before a chained line's next piece.
-  const prompt = { test: (t) => re.test(t) && m.read(m.sym("CHPOS")) === 0 };
+  // Not the prompt before a line's next piece: the CCP's or the shell's own
+  // line input, as Machine.ready says. Another prompt, such as MON3>, is
+  // taken as it comes.
+  const prompt = { test: (t) => re.test(t) && (re !== CCP_PROMPT || m.ready()) };
   let seen = -1;
   for (let i = 0; i < 400; i += 1) {
     const end = m.cycles + 20_000_000;

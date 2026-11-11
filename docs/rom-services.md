@@ -1,11 +1,11 @@
 # The ROM table and the hardware services
 
 Status: **Built**, ABI 5.1. The *ROM table* is 8 bytes at `C003h`, ending in one jump, `ABICALL`
-at `C008h`, to 16 *numbered services*: 9 *hardware services* in `src/services.asm`, and
-the volumes', the display drivers' hook, the registry's and the font's. `test/hwsvc.test.mjs`
+at `C008h`, to 17 *numbered services*: 9 *hardware services* in `src/services.asm`, and
+the volumes', the display drivers' hook, the registry's, the font's and the shell hook's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,767 bytes (`tecos`) and has 1,617 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,769 bytes (`tecos`) and has 1,615 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -40,8 +40,9 @@ built for ABI 4, is refused by the loader before its INIT runs.
 | `C007h` | `ABIMIN` | ABI minor version, 1: 1 adds `TNFONT` |
 | `C008h` | `ABICALL` | `JP` to the service numbered in C |
 
-EXPAND 1 is TEC-OS's own, and no interface leaves it in view: `BF00h` and `BE00h`
-free, `BD00h` the command history, `BC00h` the block cache's table and
+EXPAND 1 is TEC-OS's own, and no interface leaves it in view: `BF00h`, `BE00h`
+and `BD00h` free (the command history is `SHELL.SVC`'s, in its own pages),
+`BC00h` the block cache's table and
 `8000h–BBFFh` its 30 lines. Cold boot clears EXPAND 1, the cache with it; its
 contents do not survive a reset, and warm boot leaves them.
 
@@ -54,6 +55,19 @@ contents do not survive a reset, and warm boot leaves them.
 The PICO9918's console and the GLCD's driver draw from this copy, built from
 `format/font5x7.txt`; the driver asks for it at `INIT`, and a ROM before ABI 5.1
 refuses the number, and the driver's `INIT` with it. Serial and the LCD need no font.
+
+## The shell hook
+
+| C | Arguments | Returns |
+| --- | --- | --- |
+| 16, `TNSHELL` | HL = a shell's table of four words, `LINE`, `PAGE`, `HREC` and `HSTORE`, or 0 to give the prompt back | Carry clear: HL = the table it replaced, 0 for none, A = 0. Carry set: A = `TNEBAD`, the hook unchanged |
+
+A table must lie in a resident's pages, at or above `PZTOP`'s page and below the
+stub's page, and must not cross a page: L at most F8h. Any other nonzero HL is
+refused. BC, IX and IY are kept and DE changes; it makes no BDOS call and uses
+the dispatcher's stack only. The ROM's CCP then calls `LINE` at every prompt, and
+`TYPE` and `DIR` send their output through `PAGE`. [shell.md](shell.md) sets out
+the contract and `SHELL.SVC`, the shell on the starter card.
 
 ## The registry
 
@@ -158,7 +172,7 @@ unchanged. `docs/services.md` gives a service's rules.
 | | **Total** | | | | **485** |
 
 Numbers 9 to 14 are the volumes', the drivers' hook and the registry's, above and in
-`abi.inc`. Number 15 is `TNFONT`. Every number from 16 (`TNCOUNT`) to 255
+`abi.inc`. Number 15 is `TNFONT` and 16 `TNSHELL`. Every number from 17 (`TNCOUNT`) to 255
 returns status 1 with the other registers
 as they came. Stack is the deepest measured use of the
 caller's stack below the return address.
@@ -227,11 +241,11 @@ carries its own.
 | 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
 | SD driver (`sd.asm`) | 872 | 1 | Stays |
 | Container mount and checks (`vol.asm`, `volsvc.asm`, `volutil.asm`) | 1,335 | 1 | Stays |
-| CCP, with the startup file and `SERVICES` (`cpm/ccp.asm`, `ccpfile.asm`, `ccpmut.asm`, `ccpcmd.asm`) | 2,521 | 2 | Stays |
+| CCP, with the startup file (`cpm/ccp.asm`, `ccpfile.asm`, `ccpmut.asm`, `ccpcmd.asm`) | 2,521 | 2 | Stays, cut to the minimal CCP: one startup line, and `SERVICES` moved to `SHELL.SVC` |
 | BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,846 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 518 | 3, 4 | Stays |
 | Block cache (`cache.asm`) | 714 | 1, 2 | Stays: every read goes through it |
-| Command history (`history.asm`) | 211 | 2 | Stays |
+| Command history (`history.asm`) | 211 | 2 | Moved to `SHELL.SVC` with `COPY`, `DEL`, `SERVICES`, the pager and chained lines; BDOS 10's recall and the shell hook stay ([shell.md](shell.md)) |
 | Service loader, registry and loading the display driver (`loader.asm`) | 744 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes, and
@@ -274,11 +288,11 @@ Programs:
 | `XFER.COM` | Send and receive files over the serial port with checksums |
 | `CARDINFO.COM` | Show the container and volumes from raw card blocks |
 | `TUNE.COM`, `LEDS.COM`, `JOY.COM` | Speaker, LED and joystick tests and demos |
-| `TERM.COM`, `PROBE.COM` | Built from `test/programs`, no longer on the starter card; `COPY` is built into the CCP |
+| `TERM.COM`, `PROBE.COM` | Built from `test/programs`, no longer on the starter card; `COPY` is built into `SHELL.SVC` |
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,617<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,615<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

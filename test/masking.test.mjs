@@ -139,7 +139,7 @@ function erratum(m, addr, regs, read, then = () => {}) {
   return after;
 }
 
-test("the erratum: CDI, HACC and MVCOPY keep interrupts on when P/V is false", () => {
+test("the erratum: CDI and MVCOPY keep interrupts on when P/V is false", () => {
   const m = boot(standardCard());
   const read = m.sym("IFFGET");
   const cdi = (() => {
@@ -147,7 +147,7 @@ test("the erratum: CDI, HACC and MVCOPY keep interrupts on when P/V is false", (
     return 0x0070;
   })();
   assert.equal(erratum(m, cdi, {}, read), true, "CDI and CEI");
-  assert.equal(erratum(m, m.sym("HGET"), { b: 0, l: 0, h: 0xbd }, read), true, "HACC");
+  // HACC went with the history ring, which is SHELL.SVC's, in its own pages.
   m.write(m.sym("XMDST"), 0);
   m.write(m.sym("XMSRC"), 0);
   assert.equal(erratum(m, m.sym("MVCOPY"), { h: 0x40, l: 0, d: 0x41, e: 0, b: 0, c: 1 }, read), true, "MVCOPY");

@@ -12,7 +12,7 @@ import { displayFiles } from "../tools/lib/starter.mjs";
 import { makeSvc } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { screens } from "./lib/pico-workload.mjs";
-import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, boot, fcbType, service, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, boot, fcbType, service, romFor, standardCard, startupFile, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -121,9 +121,10 @@ test("on a board with both displays the starter's startup leaves the CCP stack's
 
 test("a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the field to CRT:, and then names GLCD.SVC takes the GLCD: the fallback puts the field back to TTY: before the line runs (KE-200)", () => {
   const SETCRT = Uint8Array.from([0x3a, 0x03, 0x00, 0xe6, 0xfc, 0xf6, 0x01, 0x32, 0x03, 0x00, 0xc9]); // the IOBYTE's CON: field to CRT:
-  const m = start({ "GLCD.SVC": GLCD_SVC, "SETCRT.COM": SETCRT, "STARTUP.CMD": startupFile("CON CRT", "SETCRT", "GLCD.SVC") }, { tms: false });
+  // The shell runs the lines after its own.
+  const m = start({ "GLCD.SVC": GLCD_SVC, "SHELL.SVC": SHELL_SVC, "SETCRT.COM": SETCRT, "STARTUP.CMD": startupFile("SHELL.SVC", "CON CRT", "SETCRT", "GLCD.SVC") }, { tms: false });
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
-  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD], "GLCD.SVC in, and the console");
+  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD - 0xa00], "GLCD.SVC in, and the console, below the shell's ten pages");
 });
 
 test("a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200)", () => {
@@ -192,7 +193,7 @@ test("the console at 32 columns writes the colours and an empty sprite table", (
 });
 
 /** TPA on the starter card with nothing loaded, and with GLCD.SVC in: its three pages under the stub's page. */
-const TPA_NONE = 47268;
+const TPA_NONE = 47273;
 const TPA_GLCD = 46336;
 
 test("TPA after boot: the ROM's console alone, the GLCD's driver, and both", () => {
@@ -223,12 +224,12 @@ test("a scroll, then ESC[2@ keeps the row it opens", () => {
   assert.equal(shots.find((s) => s.name === "insert characters").screen.some((l) => l === "  abcdef"), true);
 });
 
-test("the starter card boots the ROM's console alone on a board with both, and the GLCD on a board with one", async () => {
+test("the starter card boots the shell and the ROM's console on a board with both, and the shell and the GLCD on a board with one", async () => {
   const files = await displayFiles(ROOT);
-  assert.deepEqual(files.map((f) => f.name), ["GLCD.SVC", "STARTUP.CMD"]);
+  assert.deepEqual(files.map((f) => f.name), ["SHELL.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200)");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE - 169 - 0xa00], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's ten pages under the stub's page");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 
@@ -295,8 +296,8 @@ test("a line left without an end, and a record full to its last byte, run to a p
 });
 
 test("the ROM's console or GLCD.SVC, then CON TTY in the file: the LCD stays silent", () => {
-  for (const lines of [["CON TTY"], ["GLCD.SVC", "CON TTY"]]) {
-    const m = start({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": startupFile(...lines) });
+  for (const lines of [["CON TTY"], ["SHELL.SVC", "GLCD.SVC", "CON TTY"]]) {
+    const m = start({ "GLCD.SVC": GLCD_SVC, "SHELL.SVC": SHELL_SVC, "STARTUP.CMD": startupFile(...lines) });
     assert.equal(m.read(m.sym("CONMOD")), 0, lines[0]);
     assert.equal(lcdRow(m, 3), "", lines[0]);
   }
@@ -720,17 +721,18 @@ test("the web host: a chained startup line loses its display pieces and keeps th
   const a = volume(image, "A");
   a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC!CON PICO 32"));
   assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "CON PICO 80\r\nDIR\r\nDIR!:USER 3\r\n");
+  assert.equal(startupText(image), "CON PICO 80\r\nDIR\r\nDIR!USER 3\r\n");
   assert.equal(prepareCard(image, "tms").changed, false);
 });
 
-test("the web host: a removed piece's colon passes to the piece after it, and one that hung on a display piece goes", () => {
+test("the web host: a kept piece keeps its own separator when one before it goes, and an older card's colon becomes &", () => {
   const cases = [
-    ["X!:PICO.SVC!Y", "X!:Y"],
-    ["X!PICO.SVC!:Y", "X!Y"],
-    ["X!:PICO.SVC!:Y", "X!:Y"],
-    ["X!:PICO.SVC!GLCD.SVC!Y", "X!:Y"],
+    ["X!:PICO.SVC!Y", "X!Y"],
+    ["X!PICO.SVC!:Y", "X &Y"],
+    ["X!:PICO.SVC!:Y", "X &Y"],
+    ["X!:PICO.SVC!GLCD.SVC!Y", "X!Y"],
     ["X!PICO.SVC!:GLCD.SVC!Y", "X!Y"],
+    ["X &PICO.SVC &Y", "X &Y"],
     [":X", "X"],
   ];
   for (const [line, want] of cases) {
@@ -743,11 +745,11 @@ test("the web host: a removed piece's colon passes to the piece after it, and on
   }
 });
 
-test("the web host: a next line's first colon goes with the display piece it hung on, and no colon crosses a line", () => {
+test("the web host: each line's first piece starts unconditionally, an older card's colon there gone", () => {
   const cases = [
     [["PICO.SVC", ":VOLS"], "VOLS"],
-    [["DIR", "PICO.SVC", ":VOLS", ":USER 3"], "DIR\r\nVOLS\r\n:USER 3"],
-    [["X!:PICO.SVC", ":Y"], "X\r\n:Y"],
+    [["DIR", "PICO.SVC", ":VOLS", ":USER 3"], "DIR\r\nVOLS\r\nUSER 3"],
+    [["X!:PICO.SVC", ":Y"], "X\r\nY"],
     [["X!:PICO.SVC", "Y"], "X\r\nY"],
     [["X!PICO.SVC", ":Y"], "X\r\nY"],
   ];
@@ -764,6 +766,7 @@ test("the web host: VOLS on the line after an old PICO.SVC line runs, with no di
   const image = standardCard();
   const a = volume(image, "A");
   a.write("VOLS.COM", Uint8Array.from([0xc9]));
+  a.write("SHELL.SVC", SHELL_SVC); // the shell runs the lines after the first
   a.write("STARTUP.CMD", startupFile("PICO.SVC", ":VOLS"));
   prepareCard(image, "tms");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
@@ -776,9 +779,10 @@ test("the web host: the piece after a display piece loses its colon and runs", (
   const image = standardCard();
   const a = volume(image, "A");
   a.write("VOLS.COM", Uint8Array.from([0xc9]));
+  a.write("SHELL.SVC", SHELL_SVC);
   a.write("STARTUP.CMD", startupFile("PICO.SVC!:VOLS", "DIR!GLCD.SVC!PICO.SVC!:USER 3!:USER 0"));
   prepareCard(image, "tms", "40");
-  assert.equal(startupText(image), "CON PICO 40\r\nVOLS\r\nDIR!USER 3!:USER 0\r\n");
+  assert.equal(startupText(image), "SHELL.SVC\r\nCON PICO 40\r\nVOLS\r\nDIR &USER 3 &USER 0\r\n");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
   m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
   assert.match(m.text(0), />CON PICO 40\r[\s\S]*>VOLS\r/, "VOLS runs after the display's line");
@@ -835,9 +839,9 @@ test("the web host: the page's card boots on the board with both displays with n
   const image = standardCard();
   const a = volume(image, "A");
   for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
-  assert.equal(startupText(image), "GLCD.SVC\r\n", "the starter's own line, for a real board");
+  assert.equal(startupText(image), "SHELL.SVC\r\nGLCD.SVC\r\n", "the starter's own lines, for a real board");
   assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "CON PICO 80\r\n", "the page explicitly selects 80");
+  assert.equal(startupText(image), "SHELL.SVC\r\nCON PICO 80\r\n", "the page explicitly selects 80, after the shell");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: true });
   m.runUntil(() => m.ready() && m.screen().some((l) => /^A>$/.test(l.trim())), 800_000_000, "the prompt");
   assert.doesNotMatch(m.screen().join("\n"), /\?/, "no line refused on the screen");

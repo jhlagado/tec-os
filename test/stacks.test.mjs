@@ -16,7 +16,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
-import { GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, service, startupFile, volume, withDisplay } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, TEST_CLOCK, program, romFor, service, startupFile, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 import { run, watch } from "./lib/census.mjs";
 import { ks53Census, mon3Svc } from "./lib/mon3.mjs";
 
@@ -57,6 +57,9 @@ async function consoleRun(opts, { wb = false } = {}) {
   for (const n of PROGRAMS) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   a.write("DATA.BIN", new Uint8Array(20000).map((_, i) => i & 0xff));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
+  // COPY and the paged TYPE are the shell's: it holds the prompt, the GLCD's
+  // line after its own on a GLCD board.
+  withShell(image, ...(opts.matrix && !opts.tms ? ["GLCD.SVC"] : []));
   withDisplay(image, { tms: false, matrix: false, ...opts });
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
@@ -79,16 +82,16 @@ async function deepPaths(lines, opts = { tms: true, matrix: true }, { files = {}
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  for (const line of lines) run(m, line);
+  for (const line of lines) (Array.isArray(line) ? run(m, ...line) : run(m, line));
   assert.deepEqual(m.violations, []);
   const row3 = String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd();
   return { ...depths(), conmod: m.read(m.sym("CONMOD")), row3 };
 }
 
 /**
- * Chained lines (KS32): pieces split at !, a : piece after a failure, a
- * BDOS error and ^C that drop the rest, and function 47 from a program, its
- * line holding ! and :.
+ * Chained lines under the shell: pieces split at ! and &,
+ * an & piece after a failure, a BDOS error and ^C that drop the rest, and
+ * function 47 from a program, its line holding ! and &.
  */
 async function chainRun() {
   const { rom, symbols } = romFor();
@@ -99,13 +102,14 @@ async function chainRun() {
   ]);
   const a = volume(image, "A");
   for (const n of ["probe", "line"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
-  a.write("CHAIN.COM", Uint8Array.from([...(await program("chain")).bytes, ...Buffer.from("PROBE!DIR B:!:DIR\0", "latin1")]));
+  a.write("CHAIN.COM", Uint8Array.from([...(await program("chain")).bytes, ...Buffer.from("PROBE!DIR B: &DIR\0", "latin1")]));
   a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1}\r\n`).join("") + "\x1a", "latin1"));
+  withShell(image);
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
   const depths = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  for (const line of ["PROBE!DIR!USER 0\r", "ERA NOSUCH.X!:DIR!DIR\r", "CHAIN!PROBE\r", "SAVE 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
+  for (const line of ["PROBE!DIR!USER 0\r", "ERA NOSUCH.X &DIR!DIR\r", "CHAIN!PROBE\r", "SAVE 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
   assert.deepEqual(m.violations, []);
   assert.equal(m.read(m.sym("CHPOS")), 0);
   return depths();
@@ -169,10 +173,10 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     chained: await chainRun(),
     serialPlain: await deepPaths(["TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}),
     resident: await deepPaths(["RES.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}, { files: { "RES.SVC": await service("res") } }),
-    // NAME.SVC /E: a refused switch, install and entry, re-entry, a
-    // never-ready install removed, and UNLOAD; and MON3.SVC resident, then unloaded.
+    // Enter-on-install: install and entry, re-entry, a never-ready install
+    // removed, and UNLOAD; and MON3.SVC resident, then unloaded.
     ks53: await ks53Census(),
-    mon3: await deepPaths(["MON3.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r", "UNLOAD\r"], {}, { files: { "MON3.SVC": (await mon3Svc()).file } }),
+    mon3: await deepPaths([["MON3.SVC\r", /MON3>$/], "EXIT\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r", "UNLOAD\r"], {}, { files: { "MON3.SVC": (await mon3Svc()).file } }),
   };
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
   assert.equal(runs.diagnosticsPico.conmod, 1, "the PICO9918 DIAG run is on CRT:");
@@ -190,7 +194,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; chained lines, typed and from function 47, with a : piece after a failure, a BDOS error and ^C; NAME.SVC /E refused, installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));

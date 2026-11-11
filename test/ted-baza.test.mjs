@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TED = pinned("TED.COM");
@@ -42,7 +42,7 @@ function keys(m, s, what, done) {
   }
 }
 
-/** A card with the starter's TED, BAZA and BAZA.RTL on A:, and TIMES.BAS on DRIVE. */
+/** A card with the starter's TED, BAZA and BAZA.RTL on A:, and TIMES.BAS on DRIVE; SHELL.SVC holds the prompt, so TED's chained lines come back to it. */
 function card(drive) {
   check(TED);
   check(BAZA);
@@ -53,7 +53,7 @@ function card(drive) {
   a.write("BAZA.COM", bytes(BAZA));
   a.write("BAZA.RTL", bytes(RTL));
   volume(image, drive).write("TIMES.BAS", Buffer.from(SOURCE), { text: true });
-  return image;
+  return withShell(image);
 }
 
 test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No debugger, ^T R runs TIMES, and a syntax error brings TED back on its line", { skip: SKIP, timeout: 1_800_000 }, () => {

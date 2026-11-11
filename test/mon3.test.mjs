@@ -1,5 +1,5 @@
-// NAME.SVC /E and MON3.SVC: the switch, the identity of an installed
-// service, the execution entry's contract, MON3.SVC's session and its exits,
+// Enter-on-install and MON3.SVC: an old switch as a tail, the identity of an
+// installed service, the execution entry's contract, MON3.SVC's session and its exits,
 // its loads and what it gives back, its size and its life when no session
 // is active. HELLO3 against MON-3 itself is test/ks53-hello.test.mjs.
 // Emulator evidence.
@@ -11,10 +11,10 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
-import { GLCD_SVC, ROOT, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, SHELL_SVC, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, cardMon3, code, execFile, figures, find, KEYAD, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, cardMon3, code, execFile, figures, find, KEYAD, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word, installMon3 } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -80,7 +80,7 @@ const snapshot = (m) => Uint8Array.from({ length: 0xc000 }, (_, i) => m.read(i))
 
 /**
  * What a typed command changes and a refusal may: the CCP's line, its FCB and
- * scratch, the CCP's stack, the line's history, the serial byte and the
+ * scratch, the CCP's stack, the serial byte and the
  * return code. With LOADED, also what a file's read and a staged load change.
  */
 function exclusions(m, { loaded = false } = {}) {
@@ -88,8 +88,6 @@ function exclusions(m, { loaded = false } = {}) {
   const r = {
     "the CCP's line, FCB and scratch": [s("CCPRAM"), s("BDOSRME")],
     "the CCP's stack": [s("CSTKBAS"), s("CSTKTOP")],
-    "the history": [s("HPOS"), s("HPOS") + 1],
-    HHEAD: [s("HHEAD"), s("HHEAD") + 1],
     RXCHAR: [s("RXCHAR"), s("RXCHAR") + 1],
     PRGCODE: [s("PRGCODE"), s("PRGCODE") + 2],
   };
@@ -138,7 +136,8 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-const BASELINE = { used: 16077, cap: 171, tpa: 47268, abi: "56f3923c5a8c2542b221939173fefa0891ec6d75cf2416877f2857c5760fb61b" };
+// abi.inc and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back).
+const BASELINE = { used: 16077, cap: 171, tpa: 47273, abi: "1a020a1b076c3b7b4282c64ceeb82dad471c3ecbbe883c5d3448a859e0a07413" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
@@ -160,7 +159,7 @@ test("KG58 rom cap", () => {
   const { rom, symbols } = romFor();
   assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 1], "ABI 5.1");
   const m = machine(card());
-  assert.equal(word(m, 6) - 0x100, BASELINE.tpa, "TPA 47,268 with nothing loaded");
+  assert.equal(word(m, 6) - 0x100, BASELINE.tpa, "TPA 47,273 with nothing loaded");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
 });
 
@@ -180,26 +179,22 @@ function refusedUnread(m, text, name = "MON3.SVC") {
 }
 
 test("KG59 switch forms", async () => {
+  // No switch is parsed: each old form is the entry's tail. The first installs
+  // and enters, each later one enters the copy that is in, opening nothing.
   const m = boot({ "MON3.SVC": await mon3File() });
-  for (const f of FORMS) refusedUnread(m, f);
+  for (const [i, f] of FORMS.entries()) {
+    const r = typed(m, f);
+    assert.ok(r.mon3, `${f}: MON3>`);
+    assert.deepEqual(r.opens, i ? [] : ["MON3.SVC"], `${f}: the file read once only`);
+    leave(m, r);
+  }
+  assert.deepEqual(services(m), [FIG.line]);
   // Joined to the name the switch is part of it, and the CCP refuses the name as today.
   const before = snapshot(m);
   const r = typed(m, "MON3.SVC/E");
   assert.match(r.out, /\r\nMON3\.SVC\/E\?\r\n/);
   assert.deepEqual([r.code, r.opens, r.mon3], [0xff00, [], false]);
   assert.deepEqual(differs(m, before, snapshot(m)), []);
-  // Two copies of one install name: which to enter is not guessed.
-  m.command("MON3.SVC");
-  m.command("MON3.SVC");
-  assert.deepEqual(services(m), [FIG.line, FIG.line]);
-  refusedUnread(m, "MON3.SVC /E");
-  assert.deepEqual(services(m), [FIG.line, FIG.line]);
-  // The same forms as STARTUP.CMD lines.
-  const s = boot({ "MON3.SVC": await mon3File(), "STARTUP.CMD": startupFile(...FORMS) });
-  assert.equal((s.text().match(/\r\nMON3\.SVC\?\r\n/g) ?? []).length, FORMS.length, "each startup line refused");
-  assert.deepEqual(s.opens.filter((n) => n.startsWith("MON3")), [], "no startup line opened the file");
-  assert.equal(code(s), 0xff00);
-  assert.deepEqual(services(s), []);
 });
 
 test("KG59 refusal end states", async () => {
@@ -224,25 +219,29 @@ test("KG59 refusal end states", async () => {
     assert.deepEqual(differs(m, before, snapshot(m), { loaded: true }), [], `${text}: nothing else changed`);
     if (rc !== undefined) assert.equal(m.read(m.sym("SVCRC")), rc, `${text}: SVCRC ${rc}`);
   };
-  staged("GLCD.SVC /E", "GLCD.SVC"); // no record
-  staged("V2.SVC /E", "V2.SVC"); // a version-2 record
-  staged("ENT.SVC /E", "ENT.SVC"); // an entry outside the image
-  staged("ENT.SVC", "ENT.SVC", { rc: 0 }); // the plain load is bounded the same way
+  staged("GLCD.SVC", "GLCD.SVC"); // no record, and its INIT finds no matrix keyboard
+  staged("ENT.SVC", "ENT.SVC", { rc: 0 }); // an entry outside the image
+  // A version-2 record is no record: it installs only, and is not entered.
+  const v2 = typed(m, "V2.SVC");
+  assert.deepEqual([v2.mon3, v2.code], [false, 0]);
+  assert.doesNotMatch(v2.out, /EXEC/);
+  assert.equal(services(m).length, 1);
+  m.command("UNLOAD");
   // Installed, never ready, removed by the loader's unload: twice.
   const top = word(m, 6);
   for (let i = 0; i < 2; i += 1) {
-    const r = typed(m, "NRDY.SVC /E");
+    const r = typed(m, "NRDY.SVC");
     assert.match(r.out, /\r\nNRDY\.SVC\?\r\n/);
     assert.deepEqual([r.code, r.mon3, r.opens], [0xff00, false, ["NRDY.SVC"]]);
   }
   assert.deepEqual(services(m), [], "no service listed");
   assert.equal(word(m, 6), top, "(0006h) as before");
   // The stated exception: never ready, and not removed, because REMOVE refuses
-  // or the service is not removable. Each /E installs one more copy.
+  // or the service is not removable. Each typing installs one more copy.
   for (const name of ["KEEP", "FIXED"]) {
     for (let i = 1; i <= 2; i += 1) {
       const t = word(m, 6);
-      const r = typed(m, `${name}.SVC /E`);
+      const r = typed(m, `${name}.SVC`);
       assert.match(r.out, new RegExp(`\\r\\n${name}\\.SVC\\?\\r\\n`));
       assert.deepEqual([r.code, r.mon3], [0xff00, false]);
       assert.equal(services(m).length, i, `${name}: ${i} listed`);
@@ -260,22 +259,15 @@ test("KG59 refusal end states", async () => {
 test("KG59 install and re-entry", async () => {
   const m = boot({ "MON3.SVC": await mon3File() });
   let r = typed(m, "MON3.SVC");
-  assert.deepEqual([r.mon3, r.code, r.opens], [false, 0, ["MON3.SVC"]], "plain MON3.SVC installs");
-  assert.deepEqual(services(m), [FIG.line]);
-  assert.doesNotMatch(r.out, /MON3>/, "and never enters");
-  r = typed(m, "MON3.SVC X /E");
-  assert.deepEqual([r.mon3, r.code], [false, 0], "trailing text after an operand is ignored: installs, no entry");
-  assert.deepEqual(services(m), [FIG.line, FIG.line]);
-  m.command("UNLOAD");
-  m.command("UNLOAD");
-  assert.deepEqual(services(m), []);
-  r = typed(m, "MON3.SVC /E");
-  assert.ok(r.mon3, "/E with nothing installed installs and enters");
-  assert.deepEqual(r.opens, ["MON3.SVC"]);
+  assert.deepEqual([r.mon3, r.opens], [true, ["MON3.SVC"]], "MON3.SVC with nothing installed installs and enters");
   leave(m, r);
   assert.deepEqual(services(m), [FIG.line]);
+  r = typed(m, "MON3.SVC X /E");
+  assert.deepEqual([r.mon3, r.opens], [true, []], "typed again, with any tail, it enters the copy that is in");
+  leave(m, r);
+  assert.deepEqual(services(m), [FIG.line], "one copy");
   m.command("ERA MON3.SVC");
-  r = typed(m, "MON3.SVC /E");
+  r = typed(m, "MON3.SVC");
   assert.ok(r.mon3, "re-entry with the file erased");
   assert.deepEqual(r.opens, [], "re-entry opens no file");
   leave(m, r);
@@ -301,36 +293,36 @@ function pages(m) {
 test("KG59 name rule", async () => {
   const mon3 = await mon3File();
   const m = boot({ "MON3.SVC": mon3, "M2.SVC": mon3, "X.SVC": await execFile(), "GLCD.SVC": GLCD_SVC });
-  m.command("MON3.SVC");
+  installMon3(m);
   const [p3] = pages(m);
   // Another name's record: X installs and its own entry runs.
-  let r = typed(m, "X.SVC /E");
-  assert.match(r.out, /EXEC X {7}/, "X.SVC /E enters X");
+  let r = typed(m, "X.SVC");
+  assert.match(r.out, /EXEC X {7}/, "X.SVC enters X");
   assert.ok(!r.mon3, "not MON3");
   assert.deepEqual(r.opens, ["X.SVC"]);
   m.command("UNLOAD");
   // A file without a record is refused, and MON3 is not entered.
-  r = typed(m, "GLCD.SVC /E");
-  assert.deepEqual([r.mon3, r.code], [false, 0xff00]);
+  r = typed(m, "GLCD.SVC");
+  assert.deepEqual([r.mon3, r.code], [false, 0xff00], "GLCD.SVC: no record, and no matrix for its INIT");
   assert.match(r.out, /\r\nGLCD\.SVC\?\r\n/);
   // A renamed copy is its own service.
-  assert.equal(enteredAt(m, "M2.SVC /E", [p3, p3 - FIG.pages]), p3 - FIG.pages, "M2.SVC /E installs and enters the new copy");
+  assert.equal(enteredAt(m, "M2.SVC", [p3, p3 - FIG.pages]), p3 - FIG.pages, "M2.SVC installs and enters the new copy");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   leave(m, { mon3: true });
   assert.deepEqual(services(m), [FIG.line, FIG.line]);
-  assert.equal(enteredAt(m, "MON3.SVC /E", [p3, p3 - FIG.pages]), p3, "MON3.SVC /E enters the one named MON3");
+  assert.equal(enteredAt(m, "MON3.SVC", [p3, p3 - FIG.pages]), p3, "MON3.SVC enters the one named MON3");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   leave(m, { mon3: true });
-  // With only M2 installed, MON3.SVC /E installs its own copy.
+  // With only M2 installed, MON3.SVC installs its own copy.
   m.reset();
   m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
-  r = typed(m, "M2.SVC /E");
+  r = typed(m, "M2.SVC");
   assert.ok(r.mon3);
   leave(m, r);
   const [p2] = pages(m);
   const n = m.opens.length;
-  assert.equal(enteredAt(m, "MON3.SVC /E", [p2, p2 - FIG.pages]), p2 - FIG.pages, "a new copy, named MON3");
+  assert.equal(enteredAt(m, "MON3.SVC", [p2, p2 - FIG.pages]), p2 - FIG.pages, "a new copy, named MON3");
   m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 400_000_000, "MON3>");
   assert.deepEqual(opensSince(m, n), ["MON3.SVC"]);
   leave(m, { mon3: true });
@@ -350,20 +342,20 @@ test("KG59 name rule", async () => {
 
 test("KG59 drive and user", async () => {
   const m = boot({ "MON3.SVC": await mon3File() });
-  m.command("MON3.SVC");
-  let r = typed(m, "B:MON3.SVC /E");
-  assert.ok(r.mon3, "B:MON3.SVC /E enters A:'s installed copy");
+  installMon3(m);
+  let r = typed(m, "B:MON3.SVC");
+  assert.ok(r.mon3, "B:MON3.SVC enters A:'s installed copy");
   assert.deepEqual(r.opens, []);
   leave(m, r);
   m.command("USER 1");
-  r = typed(m, "MON3.SVC /E");
-  assert.ok(r.mon3, "so does MON3.SVC /E in user 1");
+  r = typed(m, "MON3.SVC");
+  assert.ok(r.mon3, "so does MON3.SVC in user 1");
   assert.deepEqual(r.opens, []);
   leave(m, r);
   m.command("USER 0");
   m.command("UNLOAD");
   const state = loaderState(m);
-  r = typed(m, "B:MON3.SVC /E");
+  r = typed(m, "B:MON3.SVC");
   assert.deepEqual([r.mon3, r.code], [false, 0xff00], "nothing installed and no file on B:");
   assert.match(r.out, /\r\nB:MON3\.SVC\?\r\n/);
   assert.equal(r.opens.length, 1, "B: alone is read: no fallback to A:");
@@ -382,7 +374,7 @@ test("KG59 relocated entry", async () => {
   const m = boot({ "REL.SVC": await relFile() });
   const top = word(m, 6);
   for (let i = 0; i < 2; i += 1) {
-    const r = typed(m, "REL.SVC /E");
+    const r = typed(m, "REL.SVC");
     assert.deepEqual([r.mon3, r.code], [false, 0xff00], "refused at entry");
     assert.match(r.out, /\r\nREL\.SVC\?\r\n/);
     assert.deepEqual(services(m), [FIG.line], "installed once, and kept");
@@ -395,28 +387,30 @@ test("KG59 relocated entry", async () => {
 
 test("KG59 startup quiet path", async () => {
   const nodev = await execFile({ V_NODEV: 1 });
-  const s = boot({ "NODEV.SVC": nodev, "STARTUP.CMD": startupFile("NODEV.SVC /E") });
+  const s = boot({ "NODEV.SVC": nodev, "STARTUP.CMD": startupFile("NODEV.SVC") });
   assert.doesNotMatch(s.text(), /NODEV\.SVC\?|EXEC/, "no message, no entry");
   assert.equal(code(s), 0, "code 0");
   assert.deepEqual(services(s), [], "nothing installed");
   const m = boot({ "NODEV.SVC": nodev });
-  const r = typed(m, "NODEV.SVC /E");
+  const r = typed(m, "NODEV.SVC");
   assert.match(r.out, /\r\nNODEV\.SVC\?\r\n/, "typed, the message");
   assert.equal(r.code, 0xff00);
   assert.deepEqual(services(m), []);
 });
 
-// A good /E from STARTUP.CMD: the board boots to MON3>, and EXIT leaves it as
-// MON3.SVC /E typed at the first A> and EXIT do. On the GLCD console's board
-// the line follows GLCD.SVC's; on the PICO9918 the console is the ROM's.
+// MON3.SVC from STARTUP.CMD: the board boots to MON3>, and EXIT leaves it as
+// MON3.SVC typed at the first A> and EXIT do. On the GLCD console's board the
+// line follows GLCD.SVC's, with SHELL.SVC first to run the lines after the
+// first; on the PICO9918 the console is the ROM's.
 for (const [board, opts, files, startup] of [
   ["GLCD console", { matrix: true }, { "GLCD.SVC": GLCD_SVC }, "GLCD.SVC"],
   ["PICO9918", { matrix: true, tms: true, width: 40 }, {}, null],
 ]) {
-  test(`KG59 startup /E enters, ${board}`, async () => {
+  test(`KG59 startup line enters, ${board}`, async () => {
     const svc = await mon3File();
-    const line1 = startup ? `${startup}!MON3.SVC /E` : "MON3.SVC /E";
-    const image = card({ ...files, "MON3.SVC": svc, "STARTUP.CMD": startupFile(line1) });
+    const lines = startup ? ["SHELL.SVC", startup, "MON3.SVC"] : ["MON3.SVC"];
+    const shell = startup ? { "SHELL.SVC": SHELL_SVC } : {};
+    const image = card({ ...files, ...shell, "MON3.SVC": svc, "STARTUP.CMD": startupFile(...lines) });
     const names = () => volume(image, "A").list().map((f) => [f.name, f.records]);
     const before = names();
     const { width: _width, ...hardware } = opts;
@@ -426,8 +420,8 @@ for (const [board, opts, files, startup] of [
     const exit = line(m, "EXIT");
     assert.ok(!exit.mon3, "EXIT leaves MON3>");
     assert.match(exit.out, /\r\nA>$/);
-    const typedOne = machine(card({ ...files, "MON3.SVC": svc, ...(startup ? { "STARTUP.CMD": startupFile(startup) } : {}) }), opts);
-    assert.ok(line(typedOne, "MON3.SVC /E").mon3);
+    const typedOne = machine(card({ ...files, ...shell, "MON3.SVC": svc, ...(startup ? { "STARTUP.CMD": startupFile("SHELL.SVC", startup) } : {}) }), opts);
+    assert.ok(line(typedOne, "MON3.SVC").mon3);
     assert.ok(!line(typedOne, "EXIT").mon3);
     assert.deepEqual(bytesAt(m, 0, 0x50), bytesAt(typedOne, 0, 0x50), "page zero as with the line typed");
     assert.deepEqual(services(m), services(typedOne), "the services as with the line typed");
@@ -457,7 +451,7 @@ const G_KEY = [5, 2];
 /** A session on the page's board with PROG loaded from 4000h and running. */
 function running(file, prog) {
   const m = machine(card({ "MON3.SVC": file, "P.BIN": prog }), VIEW);
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   assert.match(line(m, "LOAD P.BIN").out, /MON3>$/);
   m.type("GO\r");
   runTo(m, 0x4000, 20_000_000);
@@ -539,7 +533,7 @@ const KPROG = bin([0x0e, 0x10, 0xd7, 0x20, 0xfb, 0xc9]);
 
 function heldThroughKeypad(file) {
   const m = machine(card({ "MON3.SVC": file, "P.BIN": KPROG }), VIEW);
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   assert.match(line(m, "LOAD P.BIN").out, /MON3>$/);
   m.type("GO\r");
   runTo(m, 0x4000, 20_000_000);
@@ -581,7 +575,7 @@ test("KG59 entry contract", async () => {
   const [px] = pages(m);
   const entry = (px << 8) + 41;
   m.mark = m.output.length;
-  m.type("B:X.SVC /E P ONE TWO\r");
+  m.type("B:X.SVC P ONE TWO\r");
   m.runUntil(() => m.pc === entry, 100_000_000, "the entry");
   const c = m.cpu.cpu;
   const sp = c.sp & 0xffff;
@@ -589,7 +583,7 @@ test("KG59 entry contract", async () => {
   assert.equal(sp, m.sym("CSTKTOP") - 2, "SP is CSTKTOP with a word pushed");
   assert.equal(word(m, sp), 0, "the word is 0000h");
   const tail = String.fromCharCode(...bytesAt(m, 0x81, m.read(0x80)));
-  assert.equal(tail, " P ONE TWO", "the tail after /E at 0080h");
+  assert.equal(tail, " P ONE TWO", "the tail after the name at 0080h");
   assert.equal(String.fromCharCode(...bytesAt(m, 0x5d, 11)), "P          ", "005Ch's FCB");
   assert.equal(String.fromCharCode(...bytesAt(m, 0x6d, 11)), "ONE        ", "006Ch's FCB");
   assert.equal(m.read(m.sym("PZLDRV")), 2, "PZLDRV: the command's drive, B:");
@@ -601,18 +595,15 @@ test("KG59 entry contract", async () => {
   assert.ok(guard.every((b) => b === 0xa5), "STKGUARD intact");
   // Each return is a warm boot that keeps the service.
   for (const [tail, how] of [["", "RET"], [" J", "JP 0000h"], [" B", "BDOS 0"]]) {
-    const r = typed(m, `X.SVC /E${tail}`);
+    const r = typed(m, `X.SVC${tail}`);
     assert.match(r.out, /EXEC X/, how);
     assert.ok(PROMPT.test(r.out), `${how}: the CCP's prompt`);
     assert.equal(r.code, 0, `${how}: code 0`);
     assert.deepEqual(services(m), ["X 1"], `${how}: still installed`);
   }
-  // The result is the BDOS 108 code: FF00h skips the : piece.
-  let r = typed(m, "X.SVC /E F!:DIR");
-  assert.equal(r.code, 0xff00);
-  assert.doesNotMatch(r.out, /X\.SVC +\r\n1 file/, "DIR skipped: its piece echoed, no listing");
-  r = typed(m, "X.SVC /E!:DIR");
-  assert.match(r.out, /:DIR\r\nX\.SVC +\r\n1 file/, "with code 0 DIR runs");
+  // The result is the BDOS 108 code, which a shell's & piece tests.
+  assert.equal(typed(m, "X.SVC F").code, 0xff00);
+  assert.equal(typed(m, "X.SVC").code, 0);
 });
 
 test("KG59 stack census", async () => {
@@ -632,14 +623,14 @@ test("KG59 duplicates unchanged", async () => {
   let r = typed(g, "GLCD.SVC");
   assert.match(r.out, /GLCD\.SVC\?/);
   assert.equal(services(g).length, 1);
-  // Twice in startup lines: quiet on CRT:, refused off it.
-  const two = startupFile("GLCD.SVC", "GLCD.SVC");
-  const p = boot({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": two }, { matrix: true, tms: true });
+  // Twice in startup lines, after the shell's, which runs them: quiet on CRT:, refused off it.
+  const two = startupFile("SHELL.SVC", "GLCD.SVC", "GLCD.SVC");
+  const p = boot({ "GLCD.SVC": GLCD_SVC, "SHELL.SVC": SHELL_SVC, "STARTUP.CMD": two }, { matrix: true, tms: true });
   assert.doesNotMatch(p.text(), /GLCD\.SVC\?/, "CON: on CRT:: quiet");
   assert.equal(code(p), 0);
-  const q = boot({ "GLCD.SVC": GLCD_SVC, "STARTUP.CMD": two }, { matrix: true });
+  const q = boot({ "GLCD.SVC": GLCD_SVC, "SHELL.SVC": SHELL_SVC, "STARTUP.CMD": two }, { matrix: true });
   assert.match(q.text(), /GLCD\.SVC\?/, "CON: off CRT:: GLCD.SVC?");
-  assert.equal(services(q).length, 1);
+  assert.deepEqual(services(q).map((l) => l.split(" ")[0]), ["GLCD", "SHELL"]);
   // A service claiming a slot, twice: the slot holds its JP, so refused.
   const claim = (await demoSvc({ V_VEC: 1, VECAT: 0x10, FLAGS: 0x05 })).file;
   const c = boot({ "CLAIM.SVC": claim });
@@ -648,11 +639,11 @@ test("KG59 duplicates unchanged", async () => {
   assert.match(r.out, /CLAIM\.SVC\?/);
   assert.equal(c.read(c.sym("SVCRC")), 0, "SVCRC 0: refused");
   assert.equal(services(c).length, 1);
-  // A plain MON3.SVC twice: two copies.
+  // MON3.SVC twice: one copy, entered twice.
   const m = boot({ "MON3.SVC": await mon3File() });
-  m.command("MON3.SVC");
-  m.command("MON3.SVC");
-  assert.deepEqual(services(m), [FIG.line, FIG.line]);
+  installMon3(m);
+  installMon3(m);
+  assert.deepEqual(services(m), [FIG.line]);
 });
 
 // ROM mutants: each is the build's ROM with one test of the /E path
@@ -667,49 +658,44 @@ const at = (b, from, pattern, span = 64) => {
   return hits[0];
 };
 
-test("KG59 mutant: without the test for text joined to /E, /EX enters", async () => {
+test("KG59 mutant: without SVCRUN's count, one of two copies enters", async () => {
   const mut = romMutant((b, sym) => {
-    const i = at(b, sym("SVCEX"), [0xfe, 0x21, 0x30, null]); // CP SPACE+1; JR NC,SVBAD
-    b[i + 2] = b[i + 3] = 0;
-  });
-  const m = mutantBoot(mut, { "MON3.SVC": await mon3File() });
-  assert.ok(line(m, "MON3.SVC /EX").mon3);
-});
-
-test("KG59 mutant: without EXFIND's count, one of two copies enters", async () => {
-  const mut = romMutant((b, sym) => {
-    const i = at(b, sym("SVCEX"), [0x3d, 0x28, null, 0x3c, 0x20, null]); // DEC A; JR Z,SVCENT; INC A; JR NZ,SVBAD
+    const i = at(b, sym("SVCRUN"), [0x3d, 0x28, null, 0x3c, 0x20, null]); // DEC A; JR Z,SVCENT; INC A; JR NZ,SVBAD
     const target = i + 3 + b[i + 2];
     b[i + 5] = (target - (i + 6)) & 0xff; // JR NZ,SVCENT
   });
-  const m = mutantBoot(mut, { "MON3.SVC": await mon3File() });
-  m.command("MON3.SVC");
-  m.command("MON3.SVC");
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  const m = mutantBoot(mut, { "MON3.SVC": await mon3File(), "M2.SVC": await mon3File() });
+  installMon3(m);
+  installMon3(m);
+  // A second ready copy named MON3, made by hand: M2's record given MON3's name.
+  const r = typed(m, "M2.SVC");
+  leave(m, r);
+  const [p2] = pages(m);
+  for (let i = 0; i < 8; i += 1) m.write((p2 << 8) + 25 + 6 + i, "MON3    ".charCodeAt(i));
+  assert.ok(line(m, "MON3.SVC").mon3);
 });
 
-test("KG59 mutant: without EXREC's ready test, NRDY.SVC /E enters", async () => {
+test("KG59 mutant: without EXREC's ready test, NRDY.SVC enters", async () => {
   const mut = romMutant((b, sym) => {
-    const i = at(b, sym("EXREC"), [0xf6, 0xfe, 0x3c], 16); // OR FEh; INC A
-    b[i] = 0x3e; // LD A,FFh: always ready
-    b[i + 1] = 0xff;
+    const i = at(b, sym("EXREC"), [0x2f, 0xe6, 0x03], 16); // CPL; AND 3
+    b[i] = 0xaf; // XOR A: always ready, and asking to be entered
   });
   const m = mutantBoot(mut, { "NRDY.SVC": await execFile({ V_NRDY: 1 }) });
-  assert.match(line(m, "NRDY.SVC /E").out, /EXEC X/);
+  assert.match(line(m, "NRDY.SVC").out, /EXEC X/);
 });
 
-test("KG59 mutant: without EXFIND's name compare, GLCD.SVC /E and X.SVC /E enter MON3", async () => {
+test("KG59 mutant: without EXFIND's name compare, GLCD.SVC and X.SVC enter MON3", async () => {
   const mut = romMutant((b, sym) => {
     const i = at(b, sym("EXF2"), [0x1a, 0xbe, 0x20, null], 8); // LD A,(DE); CP (HL); JR NZ,EXF3
     b[i + 2] = b[i + 3] = 0;
   });
   const m = mutantBoot(mut, { "MON3.SVC": await mon3File(), "GLCD.SVC": GLCD_SVC, "X.SVC": await execFile() });
-  m.command("MON3.SVC");
-  let r = line(m, "GLCD.SVC /E");
-  assert.ok(r.mon3, "GLCD.SVC /E enters MON3");
+  installMon3(m);
+  let r = line(m, "GLCD.SVC");
+  assert.ok(r.mon3, "GLCD.SVC enters MON3");
   leave(m, r);
-  r = line(m, "X.SVC /E");
-  assert.ok(r.mon3, "X.SVC /E enters MON3, not X");
+  r = line(m, "X.SVC");
+  assert.ok(r.mon3, "X.SVC enters MON3, not X");
   leave(m, r);
 });
 
@@ -720,23 +706,22 @@ test("KG59 mutant: without SVCLOAD's entry bound, a plain ENT.SVC installs", asy
     const i = at(b, sym("SVCLOAD"), [0x2a, entry & 0xff, entry >> 8, 0xcd, svcin & 0xff, svcin >> 8, 0xd8], 96); // LD HL,(entry); CALL SVCIN; RET C
     b[i + 6] = 0;
   });
-  const m = mutantBoot(mut, { "ENT.SVC": patched(await execFile(), (b) => (b[30] = 0x40)) });
+  const m = mutantBoot(mut, { "ENT.SVC": patched(await execFile({ ENTER: 0 }), (b) => (b[30] = 0x40)) });
   const r = typed(m, "ENT.SVC");
   assert.equal(r.code, 0);
   assert.deepEqual(services(m), ["X 1"]);
 });
 
-test("KG59 mutant: without SVCENT's carry test, REL.SVC /E jumps outside the service", async () => {
+test("KG59 mutant: without SVCENT's carry test, REL.SVC jumps outside the service", async () => {
   const mut = romMutant((b, sym) => {
     const i = at(b, sym("SVCENT"), [0x84, 0x38, null], 16); // ADD A,H; JR C,SVBAD
     b[i + 1] = b[i + 2] = 0;
   });
   const m = mutantBoot(mut, { "REL.SVC": await relFile() });
-  m.command("REL.SVC");
-  const [p] = pages(m);
-  m.type("REL.SVC /E\r");
+  m.type("REL.SVC\r");
   const cmdrn1 = m.sym("CMDRN1");
   m.runUntil(() => m.pc === cmdrn1, 100_000_000, "the entry's jump");
+  const [p] = pages(m);
   const hl = (m.cpu.cpu.h << 8) | m.cpu.cpu.l;
   assert.ok(hl < p << 8 || hl >= (p + 8) << 8, `the entry ${hl.toString(16)} is outside the service's pages`);
 });
@@ -806,7 +791,7 @@ const setJp = (slot, target) => bin(0x21, slot, 0x00, 0x36, 0xc3, 0x23, 0x36, ta
 /** A machine with MON3.SVC (FILE, or the build's) installed, the programs on A:. */
 async function installed(file, extra = {}) {
   const m = boot({ "MON3.SVC": file ?? (await mon3File()), ...PROGRAMS(FIG.entry), ...extra });
-  m.command("MON3.SVC");
+  installMon3(m);
   return m;
 }
 
@@ -816,7 +801,7 @@ function refusedAtEntry(m, message) {
   const entry = (p << 8) + 41;
   const service = () => bytesAt(m, p << 8, 0x800);
   m.mark = m.output.length;
-  m.type("MON3.SVC /E\r");
+  m.type("MON3.SVC\r");
   m.runUntil(() => m.pc === entry, 100_000_000, "the entry");
   const [pz, svc] = [bytesAt(m, 0, 0x100), service()];
   const out = toPrompt(m);
@@ -857,7 +842,7 @@ test("KG61 0038h held", async () => {
   m.command("X");
   const held = bytesAt(m, 0x38, 8);
   assert.equal(held[0], 0xc3, "0038h holds the claim's JP");
-  const r = typed(m, "MON3.SVC /E");
+  const r = typed(m, "MON3.SVC");
   assert.ok(r.mon3, "the session starts");
   assert.match(r.out, /RST 38 held: no interrupts\r\n(?:(?!MON3>)[^])*MON3>$/, "the message before the first MON3>");
   assert.deepEqual(bytesAt(m, 0x38, 8), held, "0038h as it was in the session");
@@ -877,7 +862,7 @@ test("KG61 session page zero", async () => {
   const svc = await mon3Build();
   const m = await installed();
   const p = pageOf(m);
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   const want = sessionForm(svc, p);
   for (const [s, form] of Object.entries(want.slots)) assert.deepEqual(bytesAt(m, Number(s), 8), form, `slot ${Number(s).toString(16)}h: E5 21 lo hi C3 41 00`);
   assert.deepEqual(bytesAt(m, 0x41, 15), want.stub, "0041h-004Fh: the stub, GO's return and the RETN");
@@ -927,7 +912,7 @@ async function sixExits(svc, exits = EXITS) {
   const p = pageOf(m);
   for (const how of exits) {
     const before = bytesAt(m, 0, 0x100);
-    assert.ok(line(m, "MON3.SVC /E").mon3, how);
+    assert.ok(line(m, "MON3.SVC").mon3, how);
     const out = exitBy(m, how, how !== "XP.BIN");
     if (how === "LOAD error") assert.match(out, /E:/, "the BDOS's error on E:");
     const expand = how === "XP.BIN";
@@ -944,7 +929,7 @@ async function staleInactive(svc) {
   const m = await installed(svc.file);
   // 0066h lies in the default FCB, which the CCP writes for each command:
   // this tail's type puts "YZ" there, which a hook that acted would put back.
-  assert.ok(line(m, "MON3.SVC /E A.XYZ").mon3);
+  assert.ok(line(m, "MON3.SVC A.XYZ").mon3);
   exitBy(m, "XP.BIN");
   assert.equal(warmTarget(m), (pageOf(m) << 8) + svc.symbols.HOOK, "the EXPAND 1 exit passed the hook");
   m.command("CON BAT");
@@ -960,9 +945,9 @@ test("KG61 stale hook inactive", () => staleInactive());
 async function staleThenEntry(svc) {
   svc ??= await mon3Build();
   const m = await installed(svc.file);
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   exitBy(m, "XP.BIN");
-  assert.ok(line(m, "MON3.SVC /E").mon3, "entry with a stale hook");
+  assert.ok(line(m, "MON3.SVC").mon3, "entry with a stale hook");
   assert.ok(!line(m, "EXIT", { maxCycles: 100_000_000 }).mon3);
   assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A>$/, "a .COM's exit reaches the prompt");
   assert.equal(warmTarget(m), m.sym("WBOOTR"));
@@ -974,7 +959,7 @@ async function recursion(svc) {
   const m = await installed(svc.file);
   const entry = (pageOf(m) << 8) + 41;
   assert.equal(entry, FIG.entry, `REC.BIN calls the entry at ${FIG.entry.toString(16)}h`);
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   assert.match(line(m, "LOAD REC.BIN").out, /MON3>$/);
   const pz = bytesAt(m, 0, 0x100);
   let back = false;
@@ -1001,7 +986,7 @@ test("KG61 baza and 0038h after", { skip: BAZA.skip || RTL.skip, timeout: 900_00
   const image = card({ "MON3.SVC": await mon3File(), "BAZA.COM": readFileSync(BAZA.path), "BAZA.RTL": readFileSync(RTL.path), ...(await claimFiles([0x38])) });
   volume(image, "A").write("TIMES.BAS", readFileSync(resolve(ROOT, "programs/TIMES.BAS")), { text: true });
   const m = countOpens(machine(image));
-  const r = typed(m, "MON3.SVC /E");
+  const r = typed(m, "MON3.SVC");
   assert.ok(r.mon3);
   leave(m, r);
   assert.match(line(m, "BAZA TIMES", { maxCycles: 2_000_000_000 }).out, /COM written\r\n/, "BAZA compiles TIMES after a session");
@@ -1049,7 +1034,7 @@ test("KG61 mutant: a hook that skips the IOBYTE's copy leaves the program's afte
 });
 
 test("KG61 mutant: an EXIT that skips the IOBYTE's copy leaves the program's", async () => {
-  const svc = await mon3Variant([[REST_IO, REST_IO.replace("ld de,IOBYTE  ", "ld de,LBUF    ")]]);
+  const svc = await mon3Variant([[REST_IO, REST_IO.replace("ld de,IOBYTE  ", "ld de,SAVE0   ")]]);
   await assert.rejects(sixExits(svc, ["EXIT"]), /EXIT: 0003h-0004h as before/);
 });
 
@@ -1078,9 +1063,9 @@ const runnable = (m, svc) => m.read((pageOf(m) << 8) + svc.symbols.RUNOK);
 async function inSession(files = {}, opts) {
   const svc = opts?.svc ?? (await mon3Build());
   const m = boot({ "MON3.SVC": svc.file, ...PROGRAMS(FIG.entry), ...files }, opts?.machine);
-  m.command("MON3.SVC");
+  installMon3(m);
   const pz = bytesAt(m, 0, 0x100);
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   return { m, svc, pz };
 }
 const refused = (r) => /\r\n\?\r\n\r\nMON3>$/.test(r.out);
@@ -1143,7 +1128,7 @@ test("KG62 disk error", async () => {
   const out = toPrompt(m, from);
   assert.match(out, /Bdos Err On A: Bad Sector\r\nA>$/, "warm boot to A>");
   assert.equal(warmTarget(m), m.sym("WBOOTR"), "the session ended");
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   assert.equal(runnable(m, svc), 0);
   assert.ok(refused(line(m, "GO")), "nothing runnable at re-entry");
   leave(m, { mon3: true });
@@ -1344,7 +1329,7 @@ async function hangAndReset(svc) {
   const m = machine(image);
   const written = writer("X.X", false).subarray(0x100);
   const onCard = (n) => [...volume(image, "B").read(n).subarray(0, 128)];
-  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.ok(line(m, "MON3.SVC").mon3);
   for (const f of ["WC.BIN", "WU.BIN"]) {
     assert.ok(ok(line(m, `LOAD ${f}`)));
     assert.ok(ok(line(m, "GO")));
@@ -1455,7 +1440,7 @@ test("KG63 size and tpa", async () => {
   assert.deepEqual([...svc.file.subarray(12, 15)], [0, 0, 0], "stack use declared: BDOS 0, BIOS 0, CCP 0");
   await cardMon3(svc);
   const m = boot({ "MON3.SVC": svc.file });
-  m.command("MON3.SVC");
+  installMon3(m);
   const [line_] = services(m);
   const pages = Number(line_.split(" ")[1]);
   assert.deepEqual(services(m), [`MON3 ${pages}`], "one service");
@@ -1467,7 +1452,7 @@ test("KG63 size and tpa", async () => {
   const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
   assert.equal(big.image, C.bytes + 1, "the larger build is one byte over the ceiling");
   const b = boot({ "MON3.SVC": big.file });
-  b.command("MON3.SVC");
+  installMon3(b);
   assert.deepEqual(services(b), [`MON3 ${C.pages + 1}`], "and takes a page more than the ceiling");
 });
 
@@ -1478,24 +1463,24 @@ test("KG63 warm boot and reset", async () => {
   m.expect(/\r\nA>$/);
   m.command("X");
   assert.deepEqual(services(m), [FIG.line], "warm boot keeps it");
-  assert.ok(line(m, "MON3.SVC /E").mon3, "and it enters");
+  assert.ok(line(m, "MON3.SVC").mon3, "and it enters");
   leave(m, { mon3: true });
   m.reset();
   m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   assert.deepEqual(services(m), [], "a reset removes it");
-  assert.equal(word(m, 6), 0xb9a4);
+  assert.equal(word(m, 6), 0xb9a9);
 });
 
 async function unloads(svc) {
   svc ??= await mon3Build();
   for (const how of ["EXIT", "XP.BIN"]) {
     const m = await installed(svc.file);
-    assert.ok(line(m, "MON3.SVC /E").mon3);
+    assert.ok(line(m, "MON3.SVC").mon3);
     exitBy(m, how);
     m.command("UNLOAD");
     assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
-    assert.equal(word(m, 6), 0xb9a4, `after ${how}: (0006h) back at B9A4h`);
+    assert.equal(word(m, 6), 0xb9a9, `after ${how}: (0006h) back at B9A9h`);
     assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
     assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A>$/, `after ${how}: a .COM exits to the prompt`);
   }
@@ -1503,7 +1488,7 @@ async function unloads(svc) {
 test("KG63 unload", () => unloads());
 
 test("KG63 mutant: a REMOVE that leaves the hook has UNLOAD leave the target in freed pages", async () => {
-  const svc = await mon3Variant([["  ld (EXRDY),a   ; not ready first\n  jp UNHOOK\n", "  ld (EXRDY),a   ; not ready first\n  ret\n"]]);
+  const svc = await mon3Variant([["  res 0,(hl)     ; not ready first\n  jp UNHOOK\n", "  res 0,(hl)     ; not ready first\n  ret\n"]]);
   await assert.rejects(unloads(svc), /XP\.BIN: the hook is out/);
 });
 
@@ -1526,7 +1511,8 @@ test("KG63 inactive", { timeout: 3_600_000 }, async () => {
   mkdirSync(dir, { recursive: true });
   const svcPath = resolve(dir, "MON3.SVC");
   const log = resolve(dir, "inactive.log");
-  writeFileSync(svcPath, await mon3File());
+  // Installed only: with bit 1 clear the startup line installs it and enters nothing.
+  writeFileSync(svcPath, (await mon3Variant([["EXRDY: DB 2", "EXRDY: DB 0"]])).file);
   writeFileSync(log, "");
   const escape = (n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const names = Object.values(INACTIVE).flat();
@@ -1550,7 +1536,7 @@ test("KG63 inactive", { timeout: 3_600_000 }, async () => {
   assert.equal(r.status, 0);
 });
 
-// What the docs say about /E and MON3.SVC, read against the build.
+// What the docs say about enter-on-install and MON3.SVC, read against the build.
 
 test("KG68 docs agree", async () => {
   const doc = (n) => readFileSync(resolve(ROOT, "docs", n), "utf8").replace(/\s+/g, " ");
@@ -1568,13 +1554,12 @@ test("KG68 docs agree", async () => {
     assert.ok(services_.includes(`\`${n}\``), `services.md names ${n}`);
     assert.ok(symbols.has(n), `${n} is a build symbol`);
   }
-  for (const f of FORMS.map((x) => x.slice("MON3.SVC ".length))) assert.ok(services_.includes(`\`${f}\``), `services.md names ${f}`);
-  for (const s of ["BC points at the eight-byte name", "The entry is bounded at install", "never becomes ready", "skips that step", "HL is the entry address. A, BC, DE, IX and IY are undefined", "`NAME.SVC X /E` only installs"])
+  for (const s of ["BC points at the eight-byte name", "The entry is bounded at install", "never becomes ready", "Bit 1: enter on install", "A is FFh when the line came from `STARTUP.CMD` and 0 otherwise; HL is the entry address. BC, DE, IX and IY are undefined", "An old `NAME.SVC /E` line enters as before"])
     assert.ok(services_.includes(s), `services.md: ${s}`);
   // 0041h-004Fh, in the map and the compatibility notes.
   assert.match(doc("memory-map.md"), /A `MON3\.SVC` session holds 0041h–004Fh while it runs/);
   assert.match(doc("compatibility.md"), /A `MON3\.SVC` session holds `0041h` to `004Fh`/);
-  assert.match(doc("compatibility.md"), /entered with HL 0100h and DE 0000h/);
+  assert.match(doc("compatibility.md"), /entered with HL 0100h, DE 0000h and A FFh from a startup line/);
   // docs/mon3.md's figures.
   const mon3 = doc("mon3.md");
   const svc = await mon3Build();
@@ -1582,7 +1567,7 @@ test("KG68 docs agree", async () => {
   const fig = figures(svc);
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
-  assert.ok(mon3.includes(`from \`B9A4h\` to \`${h4(fig.top)}\`, and the TPA from 47,268 bytes to **${fig.tpa.toLocaleString("en")}**`), "(0006h) and the TPA");
+  assert.ok(mon3.includes(`from \`B9A9h\` to \`${h4(fig.top)}\`, and the TPA from 47,273 bytes to **${fig.tpa.toLocaleString("en")}**`), "(0006h) and the TPA");
   const src = mon3Text();
   const equ = (n) => Number(new RegExp(`^${n} EQU \\$([0-9A-F]+)`, "m").exec(src)[1].replace(/^/, "0x"));
   assert.ok(mon3.includes(`| SP | ${h4(equ("MSTK3") - 2)}, holding the return address ${h4(equ("GORET"))} |`), "GO's SP and return");
@@ -1600,7 +1585,7 @@ test("KG68 docs agree", async () => {
   const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
   assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
-  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes B9A4h–BFFFh/);
+  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes B9A9h–BFFFh/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
   const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];
