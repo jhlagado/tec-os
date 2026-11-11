@@ -11,9 +11,9 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
-import { GLCD_SVC, ROOT, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
-import { EXPAND1_WRITES } from "./lib/machine.mjs";
+import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, code, execFile, figures, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
@@ -405,6 +405,38 @@ test("KG59 startup quiet path", async () => {
   assert.equal(r.code, 0xff00);
   assert.deepEqual(services(m), []);
 });
+
+// A good /E from STARTUP.CMD: the board boots to MON3>, and EXIT leaves it as
+// MON3.SVC /E typed at the first A> and EXIT do. On the GLCD console's board
+// the line follows GLCD.SVC's; on the PICO9918 the console is the ROM's.
+for (const [board, opts, files, startup] of [
+  ["GLCD console", { matrix: true }, { "GLCD.SVC": GLCD_SVC }, "GLCD.SVC"],
+  ["PICO9918", { matrix: true, tms: true, width: 40 }, {}, null],
+]) {
+  test(`KG59 startup /E enters, ${board}`, async () => {
+    const svc = await mon3File();
+    const line1 = startup ? `${startup}!MON3.SVC /E` : "MON3.SVC /E";
+    const image = card({ ...files, "MON3.SVC": svc, "STARTUP.CMD": startupFile(line1) });
+    const names = () => volume(image, "A").list().map((f) => [f.name, f.records]);
+    const before = names();
+    const { width: _width, ...hardware } = opts;
+    const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...hardware });
+    m.runUntil(() => m.waitingForInput() && MON3.test(m.text(0)), 800_000_000, "MON3> from the startup line");
+    assert.doesNotMatch(m.text(0), /\?\r\n/, "no line refused");
+    const exit = line(m, "EXIT");
+    assert.ok(!exit.mon3, "EXIT leaves MON3>");
+    assert.match(exit.out, /\r\nA>$/);
+    const typedOne = machine(card({ ...files, "MON3.SVC": svc, ...(startup ? { "STARTUP.CMD": startupFile(startup) } : {}) }), opts);
+    assert.ok(line(typedOne, "MON3.SVC /E").mon3);
+    assert.ok(!line(typedOne, "EXIT").mon3);
+    assert.deepEqual(bytesAt(m, 0, 0x50), bytesAt(typedOne, 0, 0x50), "page zero as with the line typed");
+    assert.deepEqual(services(m), services(typedOne), "the services as with the line typed");
+    assert.equal(m.read(m.sym("CONMOD")), typedOne.read(typedOne.sym("CONMOD")), "the console as with the line typed");
+    assert.equal(warmTarget(m), m.sym("WBOOTR"), "the warm-boot entry's target is WBOOTR");
+    assert.deepEqual(names(), before, "the card's files as they were");
+    assert.deepEqual(m.violations, []);
+  });
+}
 
 test("KG59 entry contract", async () => {
   const x = await execFile();
