@@ -13,12 +13,17 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
   `BOUNCE.BAS` sprite game, and TED from Thorium `b69d544`, whose language
   table builds a `.BAS` with BAZA.
 - One card (KD-278): the starter card is the Viewer's card too. It holds
-  fourteen files: `BAZA.COM`, `BAZA.RTL`, `BOUNCE.BAS`, `DEMO.ASM`,
-  `GLCD.SVC`, `HELLO3.ASM`, `HELLO3.BIN`, `MON3.SVC`, `MOUNT.COM`,
-  `SAMPLE.ASM`, `STARTUP.CMD`, `TAS.COM`, `TED.COM` and `TIMES.BAS`.
-  `TAS DEMO` builds `DEMO.ASM` into the demo, and `MON3.SVC /E`, then
-  `LOAD HELLO3.BIN` and `GO`, runs a MON-3 program that writes the LCD
-  (KD-277).
+  fifteen files: `BAZA.COM`, `BAZA.RTL`, `BOUNCE.BAS`, `CHAIN.ASM`,
+  `DEMO.ASM`, `GLCD.SVC`, `HELLO3.ASM`, `HELLO3.BIN`, `MON3.SVC`,
+  `MOUNT.COM`, `SAMPLE.ASM`, `STARTUP.CMD`, `TAS.COM`, `TED.COM` and
+  `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
+  `MON3.SVC /E`, then `LOAD HELLO3.BIN` and `GO`, runs a MON-3 program that
+  writes the LCD (KD-277).
+- Several statements on a line (KD-275): TAS from Thorium `3d1e2c0` takes
+  them with a `\` between, and the card's `CHAIN.ASM`, Thorium's
+  demonstration, is written that way, with lines up to 67 columns for an
+  80-column console. `TAS CHAIN` builds it and `CHAIN` prints `LINE 1` to
+  `LINE 5`. TEC-OS's own sources keep one statement a line.
 
 The boot R1 policy is decided: with a PICO installed, real boot writes the
 selected mode's R1 with the frame interrupt off (KD-258 D1). A ROM-owned

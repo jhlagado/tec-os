@@ -47,9 +47,12 @@ reserves, native bytes and symbol meanings. Changed source sizes, coordinates,
 source-copy hashes and their consumers need their own correspondence. Source
 comments can be data: the `LATCHV` caption in `src/abi.inc` feeds the memory-map
 document, while raw-source digests affect fixture caches. Shipped `SAMPLE.ASM`,
-`DEMO.ASM` and `HELLO3.ASM` (from `test/programs/hello3.asm`) also change when
-their comments change, and `test/ks40.test.mjs` pins `DEMO.ASM`'s and
-`HELLO3.ASM`'s hashes. Never replace functional source with an
+`DEMO.ASM`, `HELLO3.ASM` (from `test/programs/hello3.asm`) and `CHAIN.ASM`
+also change when their comments change, and `test/ks40.test.mjs` pins
+`DEMO.ASM`'s, `HELLO3.ASM`'s and `CHAIN.ASM`'s hashes. `CHAIN.ASM` is
+Thorium's `demo/chain/chain.asm` as it is, in Thorium's chained-line style,
+several statements on a line; it is not one of the compact checker's sources
+and is not edited here. Never replace functional source with an
 older complete file merely because that file's wording was reviewed.
 
 `tools/style-check.mjs` selects the compact checker for its owned sources. The

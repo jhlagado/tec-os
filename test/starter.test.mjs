@@ -1,9 +1,11 @@
 // The starter card that `npm run media` builds, the one card, which the web
-// page runs too: exactly fourteen files on A:, each the bytes its source or
+// page runs too: exactly fifteen files on A:, each the bytes its source or
 // pin gives, and it boots to a MOUNT that lists its volumes. Its BOUNCE.BAS is
 // compiled by BAZA and runs its sprites on the PICO9918, TAS builds DEMO.ASM
-// into the demo, and MON3.SVC loads and runs HELLO3.BIN, which writes the
-// LCD. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
+// into the demo, MON3.SVC loads and runs HELLO3.BIN, which writes the LCD,
+// and TAS builds CHAIN.ASM, written with several statements on a line, into
+// a program that runs, with TED showing its lines whole at 80 columns.
+// Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
 // are pinned inputs (test/inputs.json).
 
 import { execFileSync } from "node:child_process";
@@ -42,7 +44,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly fourteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly fifteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -64,6 +66,7 @@ test("the starter card holds exactly fourteen files, each by its hash, the PICO9
     "MON3.SVC": (await mon3Svc()).file,
     "HELLO3.ASM": textAt("test/programs/hello3.asm"),
     "HELLO3.BIN": await hello3(),
+    "CHAIN.ASM": text("CHAIN.ASM"),
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
@@ -97,6 +100,8 @@ test("the web page's card is the starter card, byte for byte, its instruction na
   assert.match(recipe.instruction, /TAS DEMO then DEMO/);
   assert.match(recipe.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
   assert.match(recipe.instruction, /MON3\.SVC \/E, then LOAD HELLO3\.BIN and GO/);
+  assert.match(recipe.instruction, /TAS CHAIN then CHAIN runs a program written with several statements on a line/);
+  assert.match(recipe.instruction, /TED CHAIN\.ASM at 80 columns \(CON PICO 80, or 80 in the width selector\)/);
   assert.ok(!volume(card, "A").list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
 });
 
@@ -276,5 +281,34 @@ test("on the card, TAS HELLO3 HELLO3.BIN rebuilds HELLO3.BIN as it is", { skip: 
   const built = Buffer.from(volume(card, "A").read("HELLO3.BIN"));
   assert.equal(sha(built.subarray(0, want.length)), sha(want), "the card's HELLO3.BIN");
   assert.ok(built.subarray(want.length).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
+  assert.deepEqual(m.violations, []);
+});
+
+// CHAIN.ASM on the card, on the PICO9918 with the matrix keyboard, after the
+// instruction's CON PICO 80: TAS CHAIN makes Thorium's 43-byte demonstration
+// image, the one its statements give one to a line, CHAIN prints LINE 1 to
+// LINE 5, and TED shows each of its lines whole.
+test("on the card after CON PICO 80, TAS CHAIN builds CHAIN.COM, CHAIN prints LINE 1 to LINE 5, and TED CHAIN.ASM shows every line whole", { skip: PAGE_SKIP, timeout: 1_800_000 }, () => {
+  const card = Uint8Array.from(starter().card);
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  const keys = (s, what, done) => {
+    m.enqueueInput(s, "matrix");
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
+  };
+  keys("con pico 80\r", "CON PICO 80", () => m.ready() && m.read(m.sym("VWID")) === 80);
+  let mark = m.output.length;
+  keys("tas chain\r", "TAS's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /CHAIN\.COM written/);
+  const built = Buffer.from(volume(card, "A").read("CHAIN.COM"));
+  assert.equal(sha(built.subarray(0, 43)), "9af074cd7f1db991184a306ae9974b393ba6dc66c9b53a08a7f6f59cb3865422", "Thorium's CHAIN image");
+  assert.ok(built.subarray(43).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
+  mark = m.output.length;
+  keys("chain\r", "CHAIN", () => m.ready() && /A>$/.test(m.text(mark)));
+  assert.match(m.text(mark), /^chain\r\r?\nLINE 1\r\nLINE 2\r\nLINE 3\r\nLINE 4\r\nLINE 5\r\n\r?\n?A>$/i);
+  const source = readFileSync(resolve(ROOT, "programs/CHAIN.ASM"), "latin1").replace(/\n$/, "").split("\n");
+  keys("ted chain.asm\r", "TED", () => m.screen()[0].startsWith("; CHAIN:") && /CHAIN/.test(m.screen()[23]));
+  assert.deepEqual([m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], [80, 24], "an 80-column console");
+  assert.deepEqual(m.screen().slice(0, source.length).map((l) => l.trimEnd()), source, "each line whole");
+  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
   assert.deepEqual(m.violations, []);
 });
