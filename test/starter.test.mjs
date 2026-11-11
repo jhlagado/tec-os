@@ -14,7 +14,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLCD_SVC, ROOT, boot, program, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
-import { MON3, hello3, lcdRows, line, mon3Svc } from "./lib/mon3.mjs";
+import { find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 
 const TED = pinned("TED.COM");
@@ -190,10 +190,11 @@ const HELLO3_ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY 
 
 // HELLO3 as the card's instruction gives it, on the card as the web page runs
 // it: the PICO9918 at 40 columns and the matrix keyboard, whose Esc MON-3
-// takes as AD. Esc goes up at the program's return, as in
-// test/ks53-hello.test.mjs: held longer, the MON3> line reads it as a key.
-test("on the card, MON3.SVC /E, LOAD HELLO3.BIN and GO write HELLO3's four lines on the LCD, Esc returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
-  const m = boot(Uint8Array.from(starter().card), { tms: true, matrix: true, width: 40 });
+// takes as AD. Esc goes in as the page sends a key, held until TEC-OS's
+// console has read it: the service waits for it to go up, and the line
+// after MON3> must not see it.
+function hello3Round(card) {
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
   assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
   assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
   m.type("GO\r");
@@ -204,16 +205,29 @@ test("on the card, MON3.SVC /E, LOAD HELLO3.BIN and GO write HELLO3's four lines
   m.runUntil(() => m.cycles >= end, 5_000_000, "HELLO3 counting");
   assert.notDeepEqual(digits(), shown, "the count moves on the digits");
   const from = m.output.length;
-  m.tec1g.applyMatrixKey(1, 4, true);
-  m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after Esc");
-  m.tec1g.applyMatrixKey(1, 4, false);
-  m.runUntilChecked(() => m.waitingForInput() && MON3.test(m.text(from)), 50_000_000, "MON3> after Esc");
+  m.enqueueInput("\x1b", "matrix");
+  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.text(from).includes("MON3>")), 50_000_000, "MON3> after Esc");
+  assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   assert.deepEqual(lcdRows(m), HELLO3_ROWS, "the LCD as HELLO3 left it");
   const exit = line(m, "EXIT");
-  assert.ok(!exit.mon3, "EXIT leaves MON3>");
-  assert.match(exit.out, /A>$/);
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.deepEqual(m.violations, []);
+}
+
+test("on the card, MON3.SVC /E, LOAD HELLO3.BIN and GO write HELLO3's four lines on the LCD, Esc returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+  hello3Round(Uint8Array.from(starter().card));
+});
+
+test("mutant: a MON3.SVC that doesn't wait for the keys to go up lets Esc reach the line after MON3>", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+  const svc = await mon3Svc();
+  const file = svcMutant(svc, (b, at) => {
+    const i = find(b, at("KEYUP"), [0x3a, 0x8a, 0x08, 0xb7, 0x20], 16);
+    b[i + 4] = 0x18; // JR: up, whatever the keys
+  });
+  const card = Uint8Array.from(starter().card);
+  volume(card, "A").write("MON3.SVC", file);
+  assert.throws(() => hello3Round(card), /nothing after MON3>/);
 });
 
 // The card's HELLO3.ASM builds on the card into the HELLO3.BIN beside it.
