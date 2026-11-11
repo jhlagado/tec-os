@@ -473,6 +473,16 @@ async function consoleAfterGo(svc) {
     assert.ok(!line(m, "EXIT").mon3);
     assert.deepEqual(unreadable(m, "A>"), [], `${name}: the panel at A> after EXIT`);
   }
+  // Call 2's return runs the restore too: TXT's drawing, then LD C,2 and
+  // RST 10h in place of its RET. On the serial console the panel keeps
+  // the program's text mode and text.
+  const pre = Uint8Array.from([...ret.subarray(0, 0x15), 0x0e, 0x02, 0xd7]);
+  assert.equal(ret[0x15], 0xc9, "TXT ends in RET at 4015h");
+  const g2 = await glcdGo(svc, pre, 0x4000, true);
+  assert.deepEqual(unreadable(g2.m, "MON3>"), [], "call 2: the panel at MON3>");
+  const s2 = await glcdGo(svc, pre, 0x4000, false);
+  const k = glcdOf(s2.m);
+  assert.ok(!k.re && !k.graphics && k.ddram.includes("TEXT LEFT"), `call 2, serial console: the panel as the program left it (${JSON.stringify(k.ddram.trim())})`);
   // The messages follow the restore and the form feed, so they stay on the panel.
   for (const [name, bytes, text] of [["RST 30h", BRK, "BRK 4001"], ["damaged", DAMAGE, WARN]]) {
     for (const matrix of [true, false]) {
