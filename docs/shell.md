@@ -71,7 +71,9 @@ A line is split into pieces at separators, and each piece runs in turn:
 - Each piece after the first is echoed after its own prompt, up to its
   separator. A piece ends before the blanks that come before its separator, so
   `TAS X &X` gives `TAS` the tail ` X`, and `OK<tab>&X` runs `OK` as `OK &X`
-  does.
+  does. Blanks at the end of a line stay, as they do with no shell: a tab
+  there is refused as part of the last word, so `TYPE HELLO.TXT<tab>` gives
+  `HELLO.TXT<tab>?`, as in CP/M 2.2. A script line is read the same way.
 - A line holds at most 127 characters, typed, from a script or by function 47.
   A function 47 line takes the same rules.
 - ^C at a program's line input, a BDOS error's exit and a write lost at warm
