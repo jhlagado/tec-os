@@ -35,6 +35,18 @@ export async function execFile(over = {}) {
   return (await makeSvc(resolve(ROOT, "test/programs/svcexec.asm"), { defs, work: resolve(ROOT, "build/svc") })).file;
 }
 
+/** MON3.SVC's SHA-256: the file the card holds, as media writes it. */
+export const MON3_SVC_SHA = "e85342e3f4a21c5e10733543d39742cff9328e27a6ab52050893b5f3d5c41bde";
+
+/** The card's MON3.SVC, by media's writer: the pinned file, and the same as SVC, the tests' own build. */
+export async function cardMon3(svc) {
+  const { tasAssembler } = await import("../../tools/lib/tas-rom.mjs");
+  const { assembleMon3 } = await import("../../tools/lib/tas-distribution.mjs");
+  const file = await assembleMon3(ROOT, await tasAssembler());
+  assert.equal(sha(file), MON3_SVC_SHA, "the card's MON3.SVC is the pinned file");
+  assert.deepEqual([...svc.file], [...file], "the tests' MON3.SVC is the card's");
+}
+
 /** MON3.SVC from drivers/mon3.asm: { file, symbols (offsets from the header), image }. OPT as makeSvc's. */
 export const mon3Svc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc"), ...opt });
 

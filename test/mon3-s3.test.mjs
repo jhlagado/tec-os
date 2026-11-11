@@ -9,7 +9,7 @@ import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realBuild, realProgram } fr
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, program, volume } from "./lib/fixtures.mjs";
-import { MON3_CEILING, bytesAt, line, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
+import { MON3_CEILING, bytesAt, cardMon3, line, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
 import { boot, goTo, inSession, mon3Build, sha, toMon3 } from "./lib/mon3s2.mjs";
 import { referenceSide, sessionSide } from "./lib/kg65.mjs";
 import { CALL_ROWS, GORET, glcdOf, MON3_SOFTBOOT, REFUSAL_TOP, callSides, compareCalls, compareRefusals, drive3d, ldarOf, programReference, programSession, regsOf, runToPc, snap } from "./lib/kg67.mjs";
@@ -67,7 +67,7 @@ test("KG67 rst 18h refusals", async () => {
 
 // The size: at most 18 pages, 4,608 bytes of header and image; (0006h) at
 // least A700h on the starter card, so a TPA of at least 42,496, and 41,728
-// with GLCD.SVC; TAS's file equal to ATOM's; each source file within the
+// with GLCD.SVC; the card's file, by its pinned hash; each source file within the
 // style's 24,576 bytes, and passing its checker.
 
 async function sizeAndTpa(svc) {
@@ -91,11 +91,7 @@ test("KG67 size and tpa", async () => {
   const svc = await mon3Build();
   const f = await sizeAndTpa(svc);
   console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, ${f.pages} pages, ${f.pages * 256 - svc.image} bytes left, (0006h) ${f.top.toString(16)}h, TPA ${f.tpa}, ${f.both} with GLCD.SVC`);
-  const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
-  if (romBackend() === "tas") {
-    const { assembleMon3 } = await import("../tools/lib/tas-distribution.mjs");
-    assert.deepEqual([...(await assembleMon3(ROOT, await tasAssembler()))], [...svc.file], "TAS's MON3.SVC equals ATOM's");
-  }
+  await cardMon3(svc);
   const { checkCompactSource } = await import("../tools/lib/style-compact.mjs");
   const routines = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-routines.json"), "utf8"));
   const exceptions = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-exceptions.json"), "utf8"));
