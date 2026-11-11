@@ -167,9 +167,11 @@ keyboard, returns to `MON3>`, and `EXIT` to `A>`. `HELLO3.ASM` is its source,
 and `TAS HELLO3 HELLO3.BIN` builds it. `CHAIN.ASM`, Thorium's demonstration, is
 written with several statements on a line, a `\` between them: `TAS CHAIN`
 builds it and `CHAIN` prints `LINE 1` to `LINE 5`. Its lines are up to 67
-columns, so `TED CHAIN.ASM` shows them whole at 80 columns, after
-`CON PICO 80` or with 80 chosen in the Viewer's width selector. `BOUNCE.BAS` is Baza's sprite game:
-`BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in Graphics I
+columns, so `TED CHAIN.ASM` shows them whole at 80 columns: after
+`CON PICO 80`, with 80 chosen in the Viewer's width selector, or with
+`PICO9918, 80 columns` chosen in this web page's ROM menu. At 40 columns TED
+scrolls sideways to show the rest of a line. `BOUNCE.BAS` is Baza's sprite
+game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in Graphics I
 through `call`; tap W, A, S and D to steer the ship, and Q gives the display
 back. A BASIC program that has claimed the display and
 stops on an error gives it back first, so its message shows. A command that
