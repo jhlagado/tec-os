@@ -47,7 +47,7 @@ function stage(root, entry, origin, rom, flat) {
     const row = { name };
     staged.set(file, row);
     row.bytes = Buffer.from(original.toString('latin1').replace(include, (_, before, path, after) => {
-      // ATOM tries the including directory first, then the project root.
+      // An include is found beside the file that names it, else from the source root.
       assert.ok(!posix.isAbsolute(path), 'absolute include path: ' + path);
       const local = posix.normalize(posix.join(posix.dirname(file), path));
       let selected = local;

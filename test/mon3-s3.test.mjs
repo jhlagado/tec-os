@@ -33,8 +33,8 @@ test("KG67 program binaries", async () => {
 // Each rule is needed: without it a program that uses it does not assemble.
 for (const [rule, name, why] of [
   ["r7", "glcd-3d", /undefined symbol Q004/],
-  ["r8", "glcd-maze", /expected a comma/],
-  ["r9", "glcd-demo", /expected an operand/],
+  ["r8", "glcd-maze", /operands are not valid/],
+  ["r9", "glcd-demo", /expected an expression/],
   ["r10", "glcd-demo", /forward reference/],
 ]) {
   test(`KG67 mutant: the conversion without ${rule.toUpperCase()}, ${name} does not assemble`, async () => {
