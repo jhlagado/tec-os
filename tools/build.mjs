@@ -13,8 +13,8 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { format, geometryInfo } from "./lib/format.mjs";
-import { FORMAT, checkInterfaces, makeSvc } from "./lib/svc.mjs";
-import { romBackend, tasAssembler, traceRom } from "./lib/tas-rom.mjs";
+import { FORMAT, checkInterfaces } from "./lib/svc.mjs";
+import { tasAssembler } from "./lib/tas-rom.mjs";
 import { romFontSource } from "./lib/font.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -139,8 +139,6 @@ GEOESZ  EQU     6
   return s;
 }
 
-let currentDefinitions = {};
-
 /** ABI 5's table as the ROM holds it: "TNA", the major, the minor, then JP to
  *  the dispatcher, 8 bytes at abi.inc's addresses, which the ROM includes; the
  *  service table one word a number; INFO's bits CONDEV's. */
@@ -188,22 +186,6 @@ function checkServiceSources() {
   }
   check(checked.includes("drivers/glcd.asm") && checked.includes("test/programs/svcdemo.asm"), `the service sources checked were ${checked.join(", ") || "none"}`);
   return checked;
-}
-
-// The emulated assembler's budget: the ROM took about 1.99 billion cycles at
-// 621201d, against atom-z80's default of 2 billion, so these give it headroom.
-const ATOM_BUDGET = { maxCycles: 4_000_000_000, maxInstructions: 400_000_000 };
-
-async function assembleAtom(phase) {
-  const { assembleAtomProject, materializeAtomGeneration, writeAtomD8 } = await import("atom-z80");
-  const result = await assembleAtomProject({ root: SRC, entry: "rom.asm", definitions: currentDefinitions, ...ATOM_BUDGET });
-  const d8 = writeAtomD8(result.project, result.generation, { base: ROM_START });
-  for (const image of result.generation.images) {
-    check(image.address >= ROM_START, `ROM byte emitted at ${hex(image.address)}`);
-  }
-  const { bytes } = materializeAtomGeneration(result.generation, { base: ROM_START, fill: 0xff });
-  traceRom({ backend: "atom", phase, target: "tecos.rom", root: SRC });
-  return { d8, bytes };
 }
 
 function globals(d8) {
@@ -362,11 +344,8 @@ function refreshDist(outDir, census) {
 
 export async function build() {
   const fontNotices = fontPackage(ROOT).notices;
-  let assemble = assembleAtom;
-  if (romBackend() === "tas") {
-    const run = await tasAssembler();
-    assemble = (phase, origin) => run({ root: SRC, entry: "rom.asm", origin, phase, target: "tecos.rom", rom: true });
-  }
+  const run = await tasAssembler();
+  const assemble = (phase, origin) => run({ root: SRC, entry: "rom.asm", origin, phase, target: "tecos.rom", rom: true });
   const result = [await buildProfile("tecos", assemble)];
   if (existsSync(resolve(ROOT, "dist"))) writeFileSync(resolve(ROOT, "dist/FONT-NOTICES.txt"), fontNotices);
   return result;
