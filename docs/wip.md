@@ -9,11 +9,11 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
 - the Compact font with 40 columns by default;
 - the owner's 40-column `SAMPLE.ASM`;
 - BASIC and TED's language support (KD-262): BAZA's `BAZA.COM` and
-  `BAZA.RTL` from Baza `45b138e`, the sample `TIMES.BAS`, and TED from
-  Thorium `b69d544`, whose language table builds a `.BAS` with BAZA. The
-  starter card holds nine files; the Viewer's page card adds `DEMO.ASM`,
-  which `TAS DEMO` builds into the demo, and Baza's `BOUNCE.BAS` sprite
-  game. Whether `BOUNCE.BAS` also goes on the starter card is open.
+  `BAZA.RTL` from Baza `45b138e`, the sample `TIMES.BAS`, Baza's
+  `BOUNCE.BAS` sprite game, and TED from Thorium `b69d544`, whose language
+  table builds a `.BAS` with BAZA. The starter card holds ten files,
+  `BOUNCE.BAS` among them (KD-267); the Viewer's page card adds `DEMO.ASM`,
+  which `TAS DEMO` builds into the demo.
 
 The boot R1 policy is decided: with a PICO installed, real boot writes the
 selected mode's R1 with the frame interrupt off (KD-258 D1). A ROM-owned
