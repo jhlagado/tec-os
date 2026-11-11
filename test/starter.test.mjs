@@ -230,6 +230,42 @@ test("mutant: a MON3.SVC that doesn't wait for the keys to go up lets Esc reach 
   assert.throws(() => hello3Round(card), /nothing after MON3>/);
 });
 
+// The same after CON TTY, the console the page's serial terminal gives: TEC-OS
+// reads no matrix key there, so the page never lets Esc go, and the return
+// must not wait for it.
+function hello3OnTty(card) {
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  m.command("CON TTY");
+  assert.ok(!m.videoConsole(), "the serial terminal is the console");
+  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
+  assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
+  m.type("GO\r");
+  m.runUntilChecked(() => lcdRows(m).join("") === HELLO3_ROWS.join(""), 50_000_000, "HELLO3's lines on the LCD");
+  const from = m.output.length;
+  m.enqueueInput("\x1b", "matrix");
+  m.runUntilChecked(() => (m.pumpInput(), m.waitingForInput() && m.text(from).includes("MON3>")), 20_000_000, "MON3> after Esc on TTY");
+  assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
+  const exit = line(m, "EXIT");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
+  assert.deepEqual(m.violations, []);
+}
+
+test("on the card after CON TTY, Esc held as the page holds it returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+  hello3OnTty(Uint8Array.from(starter().card));
+});
+
+test("mutant: a MON3.SVC that waits for the keys whatever the console hangs after CON TTY", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+  const svc = await mon3Svc();
+  const file = svcMutant(svc, (b, at) => {
+    const i = find(b, at("KEYUP") - 6, [0x3a, 0x03, 0x00, 0x0f, 0x30], 6);
+    b[i + 4] = 0x00; // NOP NOP: the wait on any console
+    b[i + 5] = 0x00;
+  });
+  const card = Uint8Array.from(starter().card);
+  volume(card, "A").write("MON3.SVC", file);
+  assert.throws(() => hello3OnTty(card), /no MON3> after Esc on TTY/);
+});
+
 // The card's HELLO3.ASM builds on the card into the HELLO3.BIN beside it.
 test("on the card, TAS HELLO3 HELLO3.BIN rebuilds HELLO3.BIN as it is", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const card = Uint8Array.from(starter().card);

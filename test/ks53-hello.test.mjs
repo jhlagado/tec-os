@@ -31,7 +31,7 @@ async function slice(consoleKind, file) {
   b.write("BIG.DAT", BIG);
   b.write("XCOPY.COM", xcopy);
   const m = machine(image, consoleKind === "glcd" ? { matrix: true } : {});
-  const out = { m, image };
+  const out = { m, image, kind: consoleKind };
   out.pageZero = bytesAt(m, 0, 0x50);
   out.entered = line(m, "MON3.SVC /E").mon3;
   out.top = bytesAt(m, 6, 2);
@@ -68,8 +68,9 @@ async function slice(consoleKind, file) {
   key(KEYAD, true);
   const from = m.output.length;
   try {
-    // The return waits for the keys to go up before MON3>: AD is held on
-    // past it, then let go.
+    // On the GLCD console the return waits for the keys to go up before
+    // MON3>; the serial console reads no key, and doesn't wait. AD is held
+    // on past the return, then let go.
     m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after AD");
     runFor(m, 2_000_000);
     out.heldPrompt = MON3.test(m.text(from));
@@ -119,7 +120,8 @@ function checkKey(s, r) {
   assert.equal(s.key.digits.key, 0x05, "key 5 on the right two digits");
   assert.equal(s.key.digits.key, r.key.digits.key);
   assert.ok(Math.abs(s.key.digits.count - r.key.digits.count) <= 2, `the count ${s.key.digits.count} within two steps of ${r.key.digits.count}`);
-  assert.equal(s.heldPrompt, false, "no MON3> while AD is held");
+  if (s.kind === "glcd") assert.equal(s.heldPrompt, false, "no MON3> while AD is held on the matrix");
+  else assert.equal(s.heldPrompt, true, "on the serial console, MON3> while AD is still held");
   assert.ok(s.back, "AD returns to MON3> within 10,000,000 cycles of its release");
 }
 function checkExit(s) {

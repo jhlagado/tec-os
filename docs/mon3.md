@@ -41,7 +41,7 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 4,587 bytes of header and image in **18 pages**: the
+On the starter card it is 4,593 bytes of header and image in **18 pages**: the
 word at `0006h` goes from `B9A4h` to `A700h`, and the TPA from 47,268 bytes to
 **42,496**. With `GLCD.SVC` installed too, as the GLCD console's startup does,
 the TPA is **41,728**. The monitor, its line buffer, its FCB, its saved page
@@ -111,14 +111,18 @@ A program's `RET` comes back to `MON3>`. Interrupts go off, PROTECT is
 cleared, the serial line is idle again, the session's page zero is written
 again, every drive's allocation vector is rebuilt from its directory at its
 next use (BDOS 37), and the GLCD console's panel is set again ("The GLCD
-console", below). Then the return waits until no key is held, on the keypad
-or on the matrix, whichever MON-3's `scanKeys` reads, so the key that ended
-the program, AD or Esc, never reaches the `MON3>` line. While a key is held
-the console is polled (BDOS 6 with E = FFh) and what it reads is dropped:
-TEC-OS's own scan sees the key held, and the Viewer, which holds a key until
-TEC-OS has read it, lets it go. A character typed on the serial terminal
-while a key is held is dropped too. Then a form feed gives the console
-back. Then come the tables' warning or the breakpoint's `BRK nnnn`, if there is one, then
+console", below). When CON: is a matrix console, `CRT:` or `UC1:` (IOBYTE
+bit 0 set), the return then waits until MON-3's `scanKeys` reports no key,
+on the keypad or on the matrix, whichever it reads, so the key that ended
+the program, AD or Esc, never reaches the `MON3>` line. Two ordinary keys
+held together read as no key, as they do in MON-3, so a chord ends the
+wait. While a key is held the console is polled (BDOS 6 with E = FFh) and
+what it reads is dropped: TEC-OS's own scan sees the key held, and the
+Viewer, which holds a key until that scan has read it, lets it go. On
+`TTY:` and `BAT:` the console reads only the serial line, so a held key
+can't reach the line and there is no wait: the Viewer never lets a key go
+there, and a wait would never end. Then a form feed gives the console back.
+Then come the tables' warning or the breakpoint's `BRK nnnn`, if there is one, then
 `MON3>`, in that order on every console, so that a video console still shows
 the message after the form feed has cleared it. A program that
 pushes into MON-3's 128-byte stack, or past it into the TPA below 0800h,
