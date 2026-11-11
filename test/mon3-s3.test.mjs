@@ -5,14 +5,14 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realProgram } from "./lib/mon3src.mjs";
+import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realBuild, realProgram } from "./lib/mon3src.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ROOT } from "./lib/fixtures.mjs";
+import { ROOT, volume } from "./lib/fixtures.mjs";
 import { MON3_CEILING, bytesAt, line, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
 import { boot, goTo, mon3Build, sha, toMon3 } from "./lib/mon3s2.mjs";
 import { referenceSide, sessionSide } from "./lib/kg65.mjs";
-import { CALL_ROWS, REFUSAL_TOP, callSides, compareCalls, compareRefusals } from "./lib/kg67.mjs";
+import { CALL_ROWS, GORET, MON3_SOFTBOOT, REFUSAL_TOP, callSides, compareCalls, compareRefusals, drive3d, ldarOf, programReference, programSession, regsOf, runToPc, snap } from "./lib/kg67.mjs";
 
 // The five GLCD programs, converted with the four rules more and their
 // includes found as pinned inputs, give their pinned binaries; the rules
@@ -159,7 +159,11 @@ for (const [name, edits, why] of [
   ["the workspace step moved to INIT", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"], ["  ld hl,EXRDY\n  ld (hl),1      ; ready\n", "  xor a\n  call GWS       ; at install\n  ld hl,EXRDY\n  ld (hl),1      ; ready\n"]], /re-entry over FFh/],
 ]) {
   test(`KG67 mutant: ${name}`, async () => {
-    await assert.rejects(workspace(await mon3Variant(edits)), why);
+    const svc = await mon3Variant(edits);
+    await assert.rejects(workspace(svc), why);
+    // Without the step glcd-demo meets the TPA's CLRBUF, which clears its
+    // buffer after the plot.
+    if (name === "the workspace step removed") await assert.rejects(glcdDemo(svc), /in the session too|GBUF/);
   });
 }
 
@@ -267,10 +271,146 @@ test("KG67 mutant: one more instruction in the dispatch, 82 T", async () => {
   const sides = await mutantSides(await mon3Variant([["  jp nc,DERR     ; the rest refused\n", "  jp nc,DERR     ; the rest refused\n  nop\n"]]));
   const r = compareCalls(sides, rowsOf([1]));
   assert.deepEqual([...r.extra[1]], [82], "82 T longer, not 78");
+  await assert.rejects(glcdText(sides.ses.svc), /418,666/, "and glcd-text's DONE 6 x 4 T later");
 });
 
 test("KG67 mutant: a routine reading GBUF where MON-3 reads (VPORT)", async () => {
   const sides = await mutantSides(await mon3Variant([["  ld de,(VPORT)\n  dec de\n", "  ld de,GBUF\n  dec de\n"]]));
   const bad = compareCalls(sides, CALL_ROWS.filter(([s, i]) => s === 9)).bad;
   assert.ok(bad.length && bad.every((b) => b.includes("vport 1000")), bad.join("\n"));
+});
+
+// The programs, each loaded by LOAD PROG.BIN and run by GO on the serial
+// console, against the same binary under MON-3's GO. A program's return is
+// the fetch at its RET's target: 0049h in a session, MON-3's softBoot. The
+// session's cycles are the reference's and 78 T for each RST 18h.
+
+const ran = {};
+
+/** NAME on both sides to END ("return", or a symbol), R pinned for glcd-maze: { R, S, ref, ses }. */
+async function bothRuns(name, { svc, window } = {}) {
+  const { bytes, symbols } = await realBuild(name);
+  const ldar = name === "glcd-maze" ? ldarOf([...bytes]) : [];
+  const ref = programReference(bytes, { ldar });
+  const ses = await programSession(bytes, { svc, ldar });
+  const end = (run, back) => {
+    const at = window ? window.at(bytes, symbols) : back;
+    const cycles = runToPc(run, at, window?.cycles ?? 2_000_000_000, `${name} to ${at.toString(16)}h`);
+    return { cycles, rst18: run.count[0x18], rst10: run.count[0x10], end: snap(run.m), regs: regsOf(run.m.cpu.cpu) };
+  };
+  return { R: end(ref, MON3_SOFTBOOT), S: end(ses, GORET), ref, ses, bytes, symbols };
+}
+
+/** The readings compared at a program's end: GBUF, 0E00h-0E19h, graphics RAM, DDRAM and the mode. */
+const panelOf = ({ end }) => ({ gbuf: end.gbuf, vars: end.vars, gdram: end.gdram, ddram: end.ddram, re: end.mode.re, graphics: end.mode.graphics });
+
+async function returning(name, cycles, rsts, opts) {
+  const run = await bothRuns(name, opts);
+  const { R, S } = run;
+  assert.equal(R.rst18, rsts, `${name}: ${rsts} RST 18h under MON-3`);
+  assert.equal(S.rst18, rsts, `${name}: ${rsts} RST 18h in the session`);
+  assert.equal(R.cycles, cycles, `${name}: ${cycles} cycles under MON-3`);
+  assert.equal(S.cycles, cycles + K * rsts, `${name}: ${cycles + K * rsts} cycles in the session`);
+  assert.deepEqual(panelOf(S), panelOf(R), `${name}: the panel and the workspace at the return`);
+  assert.deepEqual(S.regs, R.regs, `${name}: A, BC, DE, HL, IY and SP at the return`);
+  return run;
+}
+
+test("KG67 glcd-mad", { timeout: 600_000 }, async () => {
+  const { R, S } = await returning("glcd-mad", 161_974_159, 783);
+  console.log(`glcd-mad: ${R.cycles} cycles under MON-3, ${S.cycles} in the session, ${S.rst18} RST 18h`);
+});
+
+test("KG67 glcd-maze", { timeout: 600_000 }, async () => {
+  const { R, S } = await returning("glcd-maze", 264_483_566, 21_005);
+  console.log(`glcd-maze: ${R.cycles} cycles under MON-3, ${S.cycles} in the session, ${S.rst18} RST 18h`);
+});
+
+/** glcd-text to DONE in a window of 1,000,000 cycles. */
+async function glcdText(svc) {
+  const run = await bothRuns("glcd-text", { svc, window: { at: (b, s) => s.DONE, cycles: 1_000_000 } });
+  const { R, S } = run;
+  assert.equal(R.cycles, 418_198, "DONE at 418,198 cycles under MON-3");
+  assert.equal(R.rst18, 6, "after 6 RST 18h");
+  assert.equal(S.rst18, 6, "6 RST 18h in the session");
+  assert.equal(S.cycles, 418_198 + 6 * K, "DONE at 418,666 in the session");
+  assert.deepEqual({ ...panelOf(S), gdram: 0 }, { ...panelOf(R), gdram: 0 }, "DDRAM, the mode, GBUF and 0E00h-0E19h at DONE");
+  assert.equal(S.end.mode.re || S.end.mode.graphics, false, "text mode: RE and G clear");
+  return run;
+}
+
+test("KG67 glcd-text", async () => {
+  ran["glcd-text"] = await glcdText();
+});
+
+/** glcd-demo to HALT_LOOP, 4022h, in a window of 2,000,000 cycles. */
+async function glcdDemo(svc) {
+  const loop = (b) => 0x4000 + b.findIndex((x, i) => x === 0x18 && b[i + 1] === 0xfe);
+  const run = await bothRuns("glcd-demo", { svc, window: { at: loop, cycles: 2_000_000 } });
+  const { R, S, bytes } = run;
+  assert.equal(loop(bytes), 0x4022, "HALT_LOOP at 4022h");
+  assert.equal(R.rst18 + R.rst10 + S.rst18 + S.rst10, 0, "no RST on either side");
+  assert.equal(R.cycles, 1_034_874, "HALT_LOOP at 1,034,874 cycles under MON-3");
+  assert.equal(S.cycles, 1_034_874, "HALT_LOOP at 1,034,874 cycles in the session too");
+  assert.equal(R.end.pixels, 442, "442 pixels set under MON-3");
+  assert.deepEqual([S.end.gdram, S.end.gbuf, S.end.vars], [R.end.gdram, R.end.gbuf, R.end.vars], "graphics RAM, GBUF and 0E00h-0E19h at HALT_LOOP");
+  return run;
+}
+
+test("KG67 glcd-demo", async () => {
+  ran["glcd-demo"] = await glcdDemo();
+});
+
+// glcd-3d by its key script: the nine stops and the return equal, and at the
+// return graphics mode with text in DDRAM, the state GRT stands in for on
+// the GLCD console. 792 RST 18h and 16 RST 10h on each side.
+
+test("KG67 glcd-3d", { timeout: 600_000 }, async () => {
+  const { bytes, symbols } = await realBuild("glcd-3d");
+  const ref = programReference(bytes);
+  const R = drive3d(ref, symbols, MON3_SOFTBOOT);
+  const ses = await programSession(bytes);
+  const S = drive3d(ses, symbols, GORET);
+  assert.equal(R.length, 10, "nine stops and the return");
+  assert.deepEqual(S.map((s) => s.at), R.map((s) => s.at));
+  R.forEach((r, i) => assert.deepEqual(S[i], r, `stop ${i} (${r.at}${r.key === undefined ? "" : `, key ${r.key.toString(16)}h`})`));
+  const back = S.at(-1);
+  assert.ok(back.mode.re && back.mode.graphics && back.ddram.trim() !== "", "at the return: graphics mode, with text in DDRAM");
+  for (const [side, c] of [["MON-3", ref.count], ["the session", ses.count]]) assert.deepEqual([c[0x18], c[0x10]], [792, 16], `${side}: 792 RST 18h and 16 RST 10h`);
+});
+
+// After glcd-text and glcd-demo, which never return, a reset: the card's
+// files as before GO, no service, and (0006h) B9A4h.
+
+test("KG67 reset after", async () => {
+  assert.deepEqual(Object.keys(ran).sort(), ["glcd-demo", "glcd-text"], "each program ran");
+  for (const [name, { ses }] of Object.entries(ran)) {
+    const { m, before } = ses;
+    m.reset();
+    m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+    m.runUntil(() => m.ready(), 400_000_000, `the prompt after ${name}'s reset`);
+    const a = volume(m.image, "A");
+    assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);
+    assert.deepEqual(services(m), [], `${name}: no service after the reset`);
+    assert.equal(word(m, 6), 0xb9a4, `${name}: (0006h) B9A4h`);
+  }
+});
+
+test("KG67 mutant: the dispatch jumping with BC still pushed", async () => {
+  const svc = await mon3Variant([["  pop hl\n  pop bc         ; HL and BC back\n  jp (ix)\n", "  pop hl\n  jp (ix)\n"]]);
+  await assert.rejects(glcdText(svc), /glcd-text to|DDRAM/);
+});
+
+test("KG67 mutant: plotToLCD returning at once", { timeout: 600_000 }, async () => {
+  const svc = await mon3Variant([["GPLOT:\n  ld hl,(VPORT)  ; the buffer\n", "GPLOT:\n  ret\n  ld hl,(VPORT)  ; the buffer\n"]]);
+  const { R, S } = await bothRuns("glcd-mad", { svc });
+  assert.notEqual(S.end.gdram, R.end.gdram, "glcd-mad's graphics RAM differs");
+});
+
+test("KG67 mutant: glcd-maze without the R pin", { timeout: 600_000 }, async () => {
+  const { bytes } = await realBuild("glcd-maze");
+  const [ref, ses] = [programReference(bytes), await programSession(bytes)];
+  runToPc(ref, MON3_SOFTBOOT, 2_000_000_000, "glcd-maze under MON-3");
+  runToPc(ses, GORET, 2_000_000_000, "glcd-maze in the session");
+  assert.notEqual(snap(ses.m).gbuf, snap(ref.m).gbuf, "the two sides' GBUF differ");
 });

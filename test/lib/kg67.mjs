@@ -373,3 +373,81 @@ export function compareRefusals(ref, ses, sels = REFUSED18) {
   }
   return { bad, lowSP };
 }
+
+// The programs: each run from 4000h under MON-3's GO, and in a session by
+// LOAD PROG.BIN and GO on the serial console.
+
+/** BYTES under MON-3's GO, at its first fetch of 4000h: { m, count, c0 }. LDAR: R pinned there. */
+export function programReference(bytes, { ldar = [] } = {}) {
+  const { m } = mon3Go(bytes);
+  const count = instrument(m, { ldar });
+  m.runUntil(() => m.pc === 0x4000, 5_000_000, "4000h under MON-3");
+  return { m, count, c0: m.cycles };
+}
+
+/**
+ * BYTES in a session, LOAD PROG.BIN and GO, at its first fetch of 4000h:
+ * { m, count, c0, before }, BEFORE the card's files by digest after the LOAD.
+ * SVC: the service; MACHINE: the machine's options.
+ */
+export async function programSession(bytes, { svc, ldar = [], machine } = {}) {
+  const { m } = await inSession({ "PROG.BIN": bytes }, { svc, machine });
+  const r = line(m, "LOAD PROG.BIN");
+  if (!r.mon3 || /\?/.test(r.out.split("LOAD")[1] ?? "")) throw new Error(`LOAD PROG.BIN: ${r.out}`);
+  const { volume } = await import("./fixtures.mjs");
+  const a = volume(m.image, "A");
+  const before = Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))]));
+  const count = instrument(m, { ldar });
+  goTo(m, "GO", 0x4000, 20_000_000);
+  return { m, count, c0: m.cycles, before };
+}
+
+/** Run RUN (from either side) until PC is AT, at most MAX cycles: the cycles from 4000h. */
+export function runToPc(run, at, max, what) {
+  const { m, c0 } = run;
+  m.runUntil(() => m.pc === at, max + 1, what);
+  const n = m.cycles - c0;
+  if (n > max) throw new Error(`${what}: ${n} cycles, past ${max}`);
+  return n;
+}
+
+// glcd-3d's keys. At the menu's call 17 (MENU+5) a key goes down 200,000
+// cycles later and up at MENU+6. At GET_KEY one call 16 runs with no key, so
+// that scanKeys sees the last release; then the key goes down, and up at
+// GET_KEY+3. A snapshot at each stop, and at the return.
+
+export const SCRIPT_3D = [["menu", 0x0], ["key", 0x4], ["key", 0x4], ["key", 0x4], ["key", 0x8], ["key", 0xc], ["key", 0x10], ["key", 0x0], ["menu", 0x12]];
+const keyOf = (v) => 0x20 + v; // the runtime's keypad code for MON-3's key V
+
+/** glcd-3d on RUN, its symbols S, to its return at BACK: the snapshots. */
+export function drive3d(run, S, back) {
+  const { m } = run;
+  const to = (pc, what) => m.runUntil(() => m.pc === pc, 400_000_000, what);
+  const shots = [];
+  to(S.MENU + 5, "the menu");
+  shots.push({ at: "menu", ...snap(m) });
+  for (const [kind, v] of SCRIPT_3D) {
+    if (kind === "menu") {
+      const end = m.cycles + 200_000;
+      m.runUntil(() => m.cycles >= end, 300_000, "200,000 cycles");
+      m.tec1g.applyKey(keyOf(v), true);
+      to(S.MENU + 6, "after call 17");
+      m.tec1g.applyKey(keyOf(v), false);
+    } else {
+      to(S.GET_KEY + 3, "call 16 with no key");
+      m.tec1g.applyKey(keyOf(v), true);
+      m.step();
+      to(S.GET_KEY + 3, "after call 16");
+      m.tec1g.applyKey(keyOf(v), false);
+    }
+    if (v === 0x12) {
+      to(back, "the return");
+      shots.push({ at: "return", ...snap(m) });
+      break;
+    }
+    const next = v === 0 && kind === "key" ? S.MENU + 5 : S.GET_KEY;
+    to(next, `the stop after key ${v.toString(16)}h`);
+    shots.push({ at: next === S.GET_KEY ? "GET_KEY" : "menu", key: v, ...snap(m) });
+  }
+  return shots;
+}
