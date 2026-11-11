@@ -78,8 +78,7 @@ function memoryMap(census, symbols) {
     span(0x8000, lines * 512, `the block cache's ${lines} lines, 512 bytes each`),
     span(at("CTAB"), lines * 4, "each line's card block, 4 bytes, FFFFFFFFh while empty"),
     span(at("CDIRTY"), lines, "each line's dirty byte, nonzero while the card lacks its changes"),
-    span(at("HRING"), 256, "command history"),
-    span(at("HRING") + 256, 512, "free, watched by the host so that a stray write fails"),
+    span(0xbd00, 768, "free, watched by the host so that a stray write fails"),
   ].join("\n");
   const cacheState = [
     ["SDXB", "LATEXP while a card block goes to or from a cache line"],
@@ -225,7 +224,7 @@ async function main() {
   // writes the LCD through RST 10h, as source and as the image MON-3 loads at
   // 4000h, assembled as the ROM's programs are.
   const mon3 = await assembleMon3(ROOT, run);
-  files.push({ name: "MON3.SVC", description: "MON-3 programs on TEC-OS: MON3.SVC /E gives MON3>, where LOAD, GO and EXIT work", bytes: mon3 });
+  files.push({ name: "MON3.SVC", description: "MON-3 programs on TEC-OS: MON3.SVC gives MON3>, where LOAD, GO and EXIT work", bytes: mon3 });
   const hello3 = await mon3Program("HELLO3.BIN", "test/programs/hello3.asm");
   files.push({ name: "HELLO3.BIN", description: "a MON-3 program: at MON3>, LOAD HELLO3.BIN then GO writes the LCD; AD (Esc on the matrix) returns", bytes: hello3 });
   files.push({ name: "HELLO3.ASM", description: "HELLO3's source: TAS HELLO3 HELLO3.BIN builds it, TED HELLO3.ASM reads it", bytes: textAt("test/programs/hello3.asm") });
@@ -243,7 +242,7 @@ async function main() {
     id: "starter",
     revision: "11",
     name: "TEC-OS starter",
-    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC /E, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. TAS CHAIN then CHAIN runs a program written with several statements on a line; its lines are up to 67 columns, so read it with TED CHAIN.ASM at 80 columns (CON PICO 80, or 80 in the width selector). B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. TAS CHAIN then CHAIN runs a program written with several statements on a line; its lines are up to 67 columns, so read it with TED CHAIN.ASM at 80 columns (CON PICO 80, or 80 in the width selector). B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },

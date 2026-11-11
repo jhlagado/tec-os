@@ -1,5 +1,5 @@
 ; MON3.SVC: a MON-3 session on TEC-OS.
-; MON3.SVC /E installs it and gives a
+; MON3.SVC installs it and gives a
 ; MON3> line: LOAD name.BIN [addr],
 ; GO [addr] and EXIT. A loaded program
 ; finds MON-3's restarts, variables and
@@ -84,11 +84,12 @@ HDR: DB 'D',SVCFMT,0,1
 
 ; The execution record, version 1. Its
 ; entry is an offset from HDR, here 41:
-; the JP below. INIT fills the name and
-; sets ready.
+; the JP below. Bit 1: enter on
+; install. INIT fills the name and
+; sets bit 0, ready.
 
 EXREC: DB "EX",1
-EXRDY: DB 0
+EXRDY: DB 2
   DW 41
 EXNAM: DS 8,' '
   DB 0,1
@@ -109,7 +110,7 @@ INIT:
   ld bc,8        ; into the record
   ldir
   ld hl,EXRDY
-  ld (hl),1      ; ready
+  set 0,(hl)     ; ready, bit 1 kept
   ld hl,0        ; no records
   xor a          ; A=0 and NC
   ret
@@ -119,8 +120,8 @@ INIT:
 ; by UNHOOK. Clobbers DE and HL.
 
 REMOVE:
-  xor a
-  ld (EXRDY),a   ; not ready first
+  ld hl,EXRDY
+  res 0,(hl)     ; not ready first
   jp UNHOOK
 
 ; The execution entry, from the CCP as

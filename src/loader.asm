@@ -731,43 +731,30 @@ REGF3:
   scf
   ret
 
-; NAME.SVC /E: HL is at the slash. Any
-; other switch, or text joined to the E,
-; is refused before a file is read.
-; Enter the one installed service whose
-; ready record holds CMDFCB's name. With
-; none, read and install the file, then
-; enter it. Two or more are refused.
-; A staged file with no record is
-; refused before it installs. A service
-; that never became ready is removed.
-; Refusals enter BADCMD. A failed
-; install enters the CCP's SVCFAIL.
-; Entry joins CMDRN1 with HL = the
-; entry address. Never returns.
+; NAME.SVC: enter the one installed
+; service whose ready record asks to be
+; entered and holds CMDFCB's name, with
+; no file read. With none, install the
+; file; if its record asks, enter it,
+; removing it if it never became ready.
+; Two or more are refused. Text after
+; the name is the entry's tail.
 
-SVCEX:
-  inc hl         ; past the slash
-  ld a,(hl)
-  cp 'E'
-  jr nz,SVBAD    ; unknown switch
-  inc hl
-  ld a,(hl)
-  cp SPACE+1     ; zero or space ends
-  jr nc,SVBAD    ; text joined to /E
-  ld (ARGSTRT),hl
+SVCRUN:
   call EXFIND    ; A=matches, C=page
   dec a
   jr z,SVCENT    ; one: enter it
   inc a
   jr nz,SVBAD    ; two or more
-  call LOADCOM   ; none: stage file
-  jr c,SVBAD     ; no file, or too big
-  ld h,HIGH(DF)
-  call EXMAG     ; staged record?
-  jr nz,SVBAD    ; none: no install
-  call SVCLOAD
+  call SVCGO     ; install
   jp c,SVCFAIL   ; CCP failure path
+  ld a,(SVCHEAD)
+  ld h,a
+  call EXMAG     ; a record?
+  jp nz,STARTED  ; none: installed only
+  inc l
+  bit 1,(hl)     ; enter on install?
+  jp z,STARTED
   call EXFIND    ; ready, same name?
   dec a
   jr z,SVCENT
@@ -840,16 +827,17 @@ EXFE:
   ret
 
 ; Z if page H's image starts with an
-; execution record of version 1 that
-; INIT has set ready. Clobbers A and L.
+; execution record that INIT has set
+; ready and that asks to be entered.
+; Clobbers A and L.
 
 EXREC:
   call EXMAG
   ret nz         ; no record
   inc l
   ld a,(hl)      ; state byte
-  or $FE
-  inc a          ; Z when bit 0 set
+  cpl
+  and 3          ; Z: ready and enter
   ret
 
 ; Z if page H's image starts with "EX"

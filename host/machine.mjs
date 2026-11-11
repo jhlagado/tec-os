@@ -27,7 +27,7 @@ export function symbolsFromD8(d8) {
   return map;
 }
 
-/** Writes to EXPAND 1 at 8000h-BCFFh and BE00h-BFFFh after cold boot's clear, by any machine. */
+/** Writes to EXPAND 1 at 8000h-BCFFh, not by the cache, and to its free pages after cold boot's clear, by any machine. */
 export const EXPAND1_WRITES = [];
 
 export class Machine {
@@ -175,8 +175,9 @@ export class Machine {
     this.cpu.hardware.forceMemWrite = ram96 ? ram.memWrite : hooks.forceMemWrite;
     this.cpu.hardware.isMemoryWritable = hooks.isMemoryWritable;
     // After cold boot's clear of EXPAND 1 (MEMINIT's LDIR reaching BFFFh),
-    // nothing writes the free pages BE00h-BFFFh, and only the block cache
-    // writes its 8000h-BCFFh, below the history ring:
+    // nothing writes the free pages, BD00h-BFFFh (BE00h-BFFFh on a ROM whose
+    // history ring, HRING, is at BD00h), and only the block cache writes its
+    // 8000h-BCFFh:
     // its own code, the card's block loops, the copy core when the cache
     // called it (the return address on entry to MVCOPY in CDI-CEND), and
     // cold boot's setting of
@@ -211,6 +212,7 @@ export class Machine {
       };
     const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b) || (mvForCache && pc >= mvcopy && pc < mvEnd);
     let cleared = false;
+    const freeFrom = symbols.has("HRING") ? 0xbe00 : 0xbd00;
     this.expand1Writes = [];
     this.cpu.hardware.memWrite = (addr, value) => {
       const a = addr & 0xffff;
@@ -219,7 +221,7 @@ export class Machine {
         if (pc >= coldz && pc < coldz + 0x20) cleared = false;
         else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
           if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
-          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= 0xbe00)) { // BE00h-BFFFh: free since KS36a
+          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= freeFrom)) {
             const w = { addr: a, pc };
             this.expand1Writes.push(w);
             if (EXPAND1_WRITES.length < 16) EXPAND1_WRITES.push(w);
