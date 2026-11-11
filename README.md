@@ -160,8 +160,9 @@ succeeded, as in `TED X.ASM!TAS X!:X`.
 `SAMPLE.ASM` on the starter card is a first program to build and read:
 `TAS SAMPLE` assembles it and `SAMPLE` runs it, printing the screen's size,
 writing the LCD, lighting the digits and beeping through the ROM's services by
-`abi.inc`'s names. `TIMES.BAS` beside it is a first BASIC program, in spaced-out
-lower case: it asks a name and a number and prints that number's times table.
+`abi.inc`'s names. `TIMES.BAS` beside it is a first BASIC program, with its
+keywords in capitals and its names in lower case: it asks a name and a number
+and prints that number's times table.
 `BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
 runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
 an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
@@ -179,7 +180,7 @@ columns, so `TED CHAIN.ASM` shows them whole at 80 columns: after
 `PICO9918, 80 columns` chosen in this web page's ROM menu. At 40 columns TED
 scrolls sideways to show the rest of a line. `BOUNCE.BAS` is Baza's sprite
 game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in Graphics I
-through `call`; tap W, A, S and D to steer the ship, and Q gives the display
+through `CALL`; tap W, A, S and D to steer the ship, and Q gives the display
 back. A BASIC program that has claimed the display and
 stops on an error gives it back first, so its message shows. A command that
 names a `.COM` file runs it, and `NAME.SVC` installs a service.

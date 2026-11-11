@@ -1,13 +1,13 @@
 // TIMES.BAS, the starter's first BASIC program: print, input, a for loop
 // and a little arithmetic, in the dialect BAZA compiles: numbered lines in
-// ascending order, in lower case outside its strings, spaced out within 80
-// columns. BAZA builds it on TEC-OS and TIMES runs on the PICO9918 at 40
-// columns, turns away a number outside 1 to 12 and returns to the prompt.
-// With GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it
-// compiles and gives the held JP back, TIMES runs, and the GLCD is still the
-// console. A failed compile's return code stops a chained line, and a
-// compile onto a read-only drive fails through BAZA's own exit. Emulator
-// evidence. BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json).
+// ascending order, spaced out within 80 columns, with keywords in capitals
+// and names in lower case. BAZA builds it on TEC-OS and TIMES runs on the
+// PICO9918 at 40 columns, turns away a number outside 1 to 12 and returns
+// to the prompt. With GLCD.SVC loaded and a JP held in RST 1, BAZA takes
+// RST 1 while it compiles and gives the held JP back, TIMES runs, and the
+// GLCD is still the console. A failed compile's return code stops a chained
+// line, and a compile onto a read-only drive fails through BAZA's own exit.
+// Emulator evidence. BAZA.COM and BAZA.RTL are pinned inputs (test/inputs.json).
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -86,16 +86,23 @@ function buildAndRun(m, during = () => {}) {
   return m.text(mark);
 }
 
-test("TIMES.BAS has ascending line numbers, is lower case outside its strings and fits 80 columns", () => {
+test("TIMES.BAS has ascending line numbers, fits 80 columns, and has its keywords in capitals and its names in lower case", () => {
   const lines = SOURCE.split("\n");
   assert.equal(lines.pop(), "", "ends with a newline");
   const numbers = lines.map((l) => Number(/^(\d+) \S/.exec(l)?.[1]));
   assert.ok(numbers.every((n, i) => n > 0 && (i === 0 || n > numbers[i - 1])), "numbered, ascending");
   assert.ok(lines.every((l) => l.length <= 80), "fits 80 columns");
-  const outside = SOURCE.replace(/"[^"\n]*"/g, '""');
-  assert.equal(outside, outside.toLowerCase(), "lower case outside the strings");
   assert.ok(!SOURCE.includes("\t"), "spacing is independent of tab stops");
-  for (const word of ["rem", "print", "input", "for", "next"]) assert.match(SOURCE, new RegExp(`^\\d+ ${word} `, "m"), word);
+  // Outside strings and REM text, each word is a keyword in capitals or a name in lower case.
+  const KEYWORDS = new Set(["REM", "PRINT", "INPUT", "IF", "OR", "THEN", "GOTO", "INT", "FOR", "TO", "NEXT", "TAB", "END"]);
+  for (const l of lines) {
+    const code = l.replace(/"[^"]*"/g, '""').replace(/\bREM\b.*/, "REM");
+    for (const w of code.match(/[A-Za-z][A-Za-z0-9]*\$?/g) ?? []) {
+      assert.ok(KEYWORDS.has(w) || w === w.toLowerCase(), `${w} in ${l}`);
+    }
+  }
+  for (const word of ["REM", "PRINT", "INPUT", "FOR", "NEXT"]) assert.match(SOURCE, new RegExp(`^\\d+ ${word} `, "m"), word);
+  assert.match(SOURCE, /^\d+ REM [A-Z][^\n]* [a-z]/m, "REM text as sentences");
 });
 
 test("BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to the prompt", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
@@ -142,7 +149,7 @@ test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it com
 // a chained line's : piece is skipped (test/chain.test.mjs).
 test("a failed compile's return code stops a chained line: BAZA BAD!:TIMES runs no TIMES, and BAZA TIMES!:TIMES does", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const image = card();
-  volume(image, "A").write("BAD.BAS", Buffer.from("10 print (\n"), { text: true });
+  volume(image, "A").write("BAD.BAS", Buffer.from("10 PRINT (\n"), { text: true });
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
   keys(m, "baza times!:times\r", "the good chain", () => /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
@@ -182,7 +189,7 @@ test("a compile onto a read-only drive fails with return code FF00h, gives back 
   const out = m.text(mark);
   assert.match(out, /Bdos Err On C: R\/O/, "the BDOS's message, which returns");
   assert.match(out, /File I\/O failed\r\n\r\nA>:type c:times\.bas\r\nA>$/, `BAZA's failure, then the : piece skipped at A>:\n${out}`);
-  assert.doesNotMatch(out, /10 rem/, "TYPE didn't run");
+  assert.doesNotMatch(out, /10 REM/, "TYPE didn't run");
   assert.ok(taken, "BAZA took RST 1 while it compiled");
   assert.deepEqual(rst1(), held, "the held JP after the failure");
   assert.equal(code(m), 0xff00, "the return code, which the skipped piece leaves");
@@ -198,10 +205,10 @@ test("a compile onto a read-only drive fails with return code FF00h, gives back 
 test("a program that claims the display and then fails shows its error on the console", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
   const image = card();
   const program = [
-    "10 rem claim the display, then fail",
-    "20 def call vi = rom 3",
-    "30 call vi, b = 1",
-    "40 print 1 / 0",
+    "10 REM Claim the display, then fail",
+    "20 DEF CALL vi = ROM 3",
+    "30 CALL vi, b = 1",
+    "40 PRINT 1 / 0",
     "",
   ].join("\n");
   volume(image, "A").write("CLAIM.BAS", Buffer.from(program), { text: true });
