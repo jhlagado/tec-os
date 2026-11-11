@@ -318,17 +318,22 @@ LEAD:
 
 ; Take the piece at HL, as typed, and
 ; end it at ! or at an & after a
-; blank, a space or a tab. The run of
+; blank, a space or a tab. The piece
+; ends before the blanks that come
+; before its separator, so a tab there
+; is not left on a name. The run of
 ; blanks, ! and & that follows is one
 ; separator: & alone makes the next
 ; piece conditional (LCOND nonzero),
 ; any ! makes it run. LPOS is the next
 ; piece, or 0 at the line's end. An &
-; inside a word is text. Changes AF, BC
-; and HL.
+; inside a word is text. Changes AF,
+; BC, DE and HL.
 
 SPLIT:
   ld (PIECE),hl  ; this piece
+  ld d,h         ; DE: past the last
+  ld e,l         ; byte not a blank
   ld c,SPACE     ; as after a blank
 
 SP1:
@@ -353,12 +358,23 @@ SPAMP:
 
 SP3:
   ld c,a         ; the byte before next
-  inc hl         ; the next byte
+  cp SPACE
+  jr z,SP4       ; a blank leaves DE
+  cp TAB
+  jr z,SP4
+  ld d,h         ; text: the piece
+  ld e,l         ; goes on past it
+  inc de
+
+SP4:
+  inc hl         ; on to the next byte
   jr SP1
 
 SPSEP:
+  ex de,hl
   ld (hl),0      ; the piece ends
-  inc hl
+  ex de,hl       ; before its blanks
+  inc hl         ; past the separator
   sub '!'        ; ! or & here
   ld b,a         ; 0 for !, else &
 
