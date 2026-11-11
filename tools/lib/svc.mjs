@@ -1,12 +1,11 @@
-// .SVC files. The source is assembled at 0000h and at 0100h, as a PRL is; the
-// bytes that differ by exactly 1 are the fixups. The file is the image made
-// for page 0, its header included, then the dependencies (least version, then
-// an 8-byte name), then the relocation data.
+// .SVC files. The source is assembled by TAS at 0100h and at 0200h, as a PRL
+// is; the bytes that differ by exactly 1 are the fixups. The file is the image
+// made for page 0, its header included, then the dependencies (least version,
+// then an 8-byte name), then the relocation data.
 
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, relative, resolve } from "node:path";
-import { assembleProgram } from "./assemble.mjs";
 import { FORMAT } from "./svc-format.mjs";
 import { ORG_LINE, assembleAt, onDisk } from "./prl.mjs";
 
@@ -106,11 +105,15 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
   const equ = [...Object.entries(defs), ...Object.entries(raw)].filter(([k, v]) => k.length <= 8 && !k.startsWith("V_") && typeof v === "number");
   const prelude = equ.map(([k, v]) => `${k.padEnd(8)}EQU     ${v}\n`).join("");
   const tag = createHash("sha256").update(JSON.stringify(defs)).digest("hex").slice(0, 12);
-  const copy = resolve(work, `${basename(source, ".asm")}-${tag}.asm`);
+  // The copy keeps the source's own name, which TAS takes as a CP/M name.
+  const copyDir = resolve(work, `${basename(source, ".asm")}-${tag}`);
+  const copy = resolve(copyDir, basename(source));
+  // The %IF and string definitions are applied here: TAS takes none from its
+  // command line.
   let body = conditions(text, defs);
   for (const [k, v] of Object.entries(defs)) if (typeof v === "string") body = body.replaceAll(k, v);
-  // ATOM takes %INCLUDE only in a file's header, so those above the ORG go to it
-  // with their paths moved, and one below it, the font placed last, is copied in.
+  // A file included above the ORG, such as abi.inc, stays an %INCLUDE with
+  // its path moved; one below it, such as the font placed last, is copied in.
   const org = body.search(ORG_LINE);
   // An included file may include others; each is held to the interface rule
   // and takes the same %IF and string definitions as the source.
@@ -122,18 +125,18 @@ export async function makeSvc(source, { defs = {}, deps = [], raw = {}, work, re
     for (const [k, v] of Object.entries(defs)) if (typeof v === "string") b = b.replaceAll(k, v);
     return b.replace(BELOW, (_, q) => inside(q, dirname(path)));
   };
-  body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(work, onDisk(dirname(source), p))}"`) + prelude + body.slice(org).replace(BELOW, (_, p) => inside(p, dirname(source)));
-  // ATOM takes at most 64 KB in one source part, and the files copied in
-  // make one part with the source. A line that holds only a comment is
-  // blanked in the copy: every line keeps its number, and no byte changes.
-  body = body.replace(/^[ \t]*;.*$/gm, "");
+  body = body.slice(0, org).replace(/^(%INCLUDE\s+")([^"]+)"/gm, (_, head, p) => `${head}${relative(copyDir, onDisk(dirname(source), p))}"`) + prelude + body.slice(org).replace(BELOW, (_, p) => inside(p, dirname(source)));
+  mkdirSync(copyDir, { recursive: true });
   writeFileSync(copy, body);
-  const at0 = await assembleAt(copy, 0, work);
-  const { bytes: at1, symbols } = await assembleProgram(copy, { base: 0x100 });
+  const { bytes: at1, symbols } = await assembleAt(copy, 0x100, work);
+  const { bytes: at2 } = await assembleAt(copy, 0x200, work);
   if (symbols.INIT === undefined || symbols.REMOVE === undefined) throw new Error(`${source}: INIT and REMOVE required`);
-  if (at0.length !== at1.length) throw new Error(`${source}: the two assemblies differ in length`);
-  const fixups = fixupsOf(at0, at1, DHLEN, basename(source));
-  return { ...packSvc(at0, symbols, fixups, { deps, reloc, relocatedEntry }), copy };
+  if (at1.length !== at2.length) throw new Error(`${source}: the two assemblies differ in length`);
+  const fixups = fixupsOf(at1, at2, DHLEN, basename(source));
+  // The image for page 0: each fixup's byte one less than at 0100h.
+  const at0 = Uint8Array.from(at1);
+  for (const f of fixups) at0[f + DHLEN] -= 1;
+  return packSvc(at0, symbols, fixups, { deps, reloc, relocatedEntry });
 }
 
 /** The offset in the image of an execution record's entry word: "EX", version 1, a state byte, then the word. */

@@ -1,5 +1,5 @@
 // The pinned MON-3 repository's programs, from its src/, each a pinned
-// input, converted for ATOM by these rules:
+// input, converted for TAS by these rules:
 // 0x numbers to $; leading dots dropped from directives; NAME: EQU to NAME
 // EQU; .include inlined; names over 8 characters renamed Q000, Q001 and on,
 // in their sorted (ASCII) order; ORG blocks placed in address order.
@@ -8,7 +8,7 @@
 //  R7  names are matched without case, as MON-3's assembler matches them:
 //      each name outside quotes is taken in upper case before the rename;
 //  R8  an operand that opens with "(" and goes on past its ")" gets "0+"
-//      before it, so ATOM reads an expression, not an indirection;
+//      before it, so TAS reads an expression, not an indirection;
 //  R9  a one-character string in double quotes, as an instruction's operand
 //      (not DB's, DW's or DS's), is written in single quotes;
 //  R10 EQU lines that do not read "$", the location, go before the code, in
