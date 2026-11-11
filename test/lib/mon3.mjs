@@ -53,7 +53,7 @@ export function figures(svc) {
 }
 
 /** MON3.SVC's source files, drivers/mon3.asm first and then those it includes: { name: text }. */
-export const MON3_FILES = ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm"];
+export const MON3_FILES = ["mon3.asm", "mon3api.asm", "mon3io.asm", "mon3hex.asm", "mon3gfx.asm"];
 export function mon3Sources() {
   const out = {};
   for (const n of MON3_FILES) {

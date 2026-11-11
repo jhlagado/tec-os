@@ -1115,6 +1115,7 @@ HEXC:
 %INCLUDE "mon3api.asm"
 %INCLUDE "mon3io.asm"
 %INCLUDE "mon3hex.asm"
+%INCLUDE "mon3gfx.asm"
 
 MPROM: DB 13,10,"MON3>$"
 MCRLF: DB 13,10,'$'
