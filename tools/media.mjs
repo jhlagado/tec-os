@@ -213,6 +213,10 @@ async function main() {
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
   files.push({ name: "BAZA.COM", description: "BAZA, the BASIC compiler: BAZA NAME, NAME.BAS to NAME.COM", bytes: baza });
   files.push({ name: "BAZA.RTL", description: "BAZA's runtime library, which it copies into each program", bytes: rtl });
+  // BOUNCE.BAS, Baza's CALL demonstration, is pinned as LF text: the card
+  // holds it as a CP/M text file, as TIMES.BAS is held.
+  const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
+  files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D steer, Q quits", bytes: bounce });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM", "programs/DEMO.ASM");
   // MON3.SVC, the MON-3 session service, is built and kept beside the ROM. It
@@ -220,9 +224,6 @@ async function main() {
   const mon3 = run ? await assembleMon3(ROOT, run) : (await makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc") })).file;
   if (!run) traceRom({ backend, phase: "final", target: "MON3.SVC", root: ROOT });
   const demoSource = text("DEMO.ASM");
-  // BOUNCE.BAS, Baza's CALL demonstration (P7 BZ-37), pinned as LF text: the
-  // page card holds it as a CP/M text file, as TIMES.BAS is held.
-  const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
 
   // A recipe's revision rises when its set of files changes, not when a
   // pinned file's bytes change. The page's revision is kept separately from
@@ -230,9 +231,9 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "6",
+    revision: "7",
     name: "TEC-OS starter",
-    instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one, or BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit). B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -254,7 +255,6 @@ async function main() {
     components: [
       ...recipe.components,
       { id: "demo-asm", name: "DEMO.ASM", description: "a demonstration of the hardware, LCD, digits, LEDs and PICO9918, as source: TAS DEMO builds DEMO.COM, TED DEMO.ASM reads it", files: [{ name: "DEMO.ASM", url: "files/DEMO.ASM", drive: "A", bytes: demoSource.length, sha256: sha(demoSource) }] },
-      { id: "bounce-bas", name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D steer, Q quits", files: [{ name: "BOUNCE.BAS", url: "files/BOUNCE.BAS", drive: "A", bytes: bounce.length, sha256: sha(bounce) }] },
     ],
   };
   const buffers = new Map(files.map(f => [`files/${f.name}`, f.bytes]));
@@ -277,7 +277,6 @@ async function main() {
   // source: TAS DEMO on the card makes it.
   writeFileSync(resolve(DIST, "DEMO.COM"), demo);
   writeFileSync(resolve(DIST, "MON3.SVC"), mon3);
-  writeFileSync(resolve(FILES, "BOUNCE.BAS"), bounce);
   writeFileSync(resolve(FILES, "DEMO.ASM"), demoSource);
   writeFileSync(resolve(DIST, "abi.inc"), abi);
   writeFileSync(resolve(DIST, "FONT-NOTICES.txt"), fontNotices);
