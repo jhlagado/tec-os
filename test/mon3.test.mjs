@@ -438,6 +438,11 @@ for (const [board, opts, files, startup] of [
   });
 }
 
+test("KG59 lower case /e enters", async () => {
+  const m = machine(card({ "MON3.SVC": await mon3File() }));
+  assert.ok(line(m, "mon3.svc /e").mon3, "mon3.svc /e gives MON3>");
+});
+
 test("KG59 entry contract", async () => {
   const x = await execFile();
   const image = card({ "X.SVC": x });
