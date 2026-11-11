@@ -6,14 +6,14 @@
 // history.test.mjs and chain.test.mjs. Emulator evidence; each mutant is
 // built and run here, one at a time.
 
-import { test } from "node:test";
+import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ABI, GLCD_SVC, ROOT, romFor, service, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 import { execFile, mon3Svc, mon3Variant } from "./lib/mon3.mjs";
 import { run as censusRun, watch } from "./lib/census.mjs";
-import { HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execSvc, find, hellos, hookSvc, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, user, word } from "./lib/shell.mjs";
+import { GUARDS, HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execSvc, find, hellos, hookSvc, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, user, word } from "./lib/shell.mjs";
 import { setDisplayLine } from "../host/card.mjs";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
 
@@ -23,6 +23,14 @@ const S = /\r\nS>$/; // HOOK.SVC's prompt
 const P = /\r\n\d*[A-P]>$/; // the CCP's or SHELL.SVC's
 const M3 = /MON3>$/;
 const sym = SHELL.symbols;
+
+// After every test, the guard under the shell's own stack: each machine's
+// deepest run between prompts leaves a quarter of the 32 bytes unused.
+GUARDS.on = true;
+afterEach(() => {
+  const machines = GUARDS.machines.splice(0);
+  for (const g of machines) assert.ok(g.read() <= 24, `the shell's own stack: ${g.deepest} of 32 between prompts`);
+});
 const hsym = HOOK.symbols;
 const lowest = (m) => m.read(m.sym("SVCHEAD")) << 8;
 const shown = (m) => word(m, m.sym("SHOWN"));
@@ -1221,6 +1229,15 @@ function census(lines, opts) {
   while (own < 32 && m.read(page + sym.STKBOT + own) === 0xa5) own += 1;
   return { stacks, shell: 32 - own };
 }
+
+test("SH13 guard read between prompts", () => {
+  const m = shelled({ "LINE.COM": LINEP });
+  const g = GUARDS.machines.find((x) => x.m === m);
+  assert.ok(g, "the machine's guard is laid");
+  for (const l of ["DIR", "TYPE HELLO.TXT", "F &SAY!SAY", "COPY HELLO.TXT C.TXT", "SERVICES"]) at(m, l);
+  const deepest = g.read();
+  assert.ok(deepest > 0 && deepest <= 24, `the shell's own stack: ${deepest} of 32`);
+});
 
 test("SH13 census with the shell", () => {
   const { stacks, shell } = census(["SHELL.SVC"]);
