@@ -243,7 +243,7 @@ test("SH8 a chain from a startup line runs before the next startup line, and may
   const m = boot(card({ "CHAIN.COM": chainTo("USER 0!RC FF00 &SAY!SAY"), "C2.COM": chainTo("say &user 4") }, standardCard(), ["CHAIN", "C2", "USER 3"]));
   m.runUntil(() => idle(m, 0), 800_000_000, "the prompt");
   const t = m.text(0);
-  assert.match(t, /A>CHAIN\r[\s\S]*A>USER 0\r\n[\s\S]*A>RC FF00\r\n[\s\S]*A>SAY\r\nSAY\r\n[\s\S]*A>C2\r[\s\S]*A>say\r\nSAY\r\n[\s\S]*A>user 4\r\n[\s\S]*4A>USER 3\r\r\n3A>$/);
+  assert.ok(t.endsWith("A>CHAIN\r\r\n\r\nA>USER 0\r\nA>RC FF00\r\n\r\nA>SAY\r\nSAY\r\nA>C2\r\r\n\r\nA>say\r\nSAY\r\nA>user 4\r\n4A>USER 3\r\r\n3A>"), JSON.stringify(t));
   assert.equal(count(t, /\nSAY\r/g), 2, "the & piece after RC FF00 skipped");
   assert.equal(user(m), 3);
 });
