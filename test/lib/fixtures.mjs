@@ -38,12 +38,19 @@ export function sourceDigest(path, seen = new Set()) {
 }
 
 
-/** Assemble test/programs/NAME.asm, or the shipped programs/DEMO.ASM for demo, with TAS, cached by the same digest. */
+/** The pinned TAS.COM's SHA-256, its first 16 digits: a cached program is TAS's at that pin. */
+const TAS_KEY = JSON.parse(readFileSync(resolve(ROOT, "test/inputs.json"), "utf8")).inputs["TAS.COM"].sha256.slice(0, 16);
+
+/**
+ * Assemble test/programs/NAME.asm, or the shipped programs/DEMO.ASM for demo,
+ * with TAS, cached by the same digest and by TAS.COM's pin, so a cache from
+ * another assembler or another TAS is not read.
+ */
 export async function program(name, { base = 0x100 } = {}) {
   const src = name === "demo" ? resolve(ROOT, "programs/DEMO.ASM") : resolve(ROOT, "test/programs", `${name}.asm`);
   const digest = sourceDigest(src);
   const cacheDir = resolve(ROOT, "build/test-programs");
-  const out = resolve(cacheDir, `${name}-${digest}-${base.toString(16)}.bin`);
+  const out = resolve(cacheDir, `${name}-${digest}-${TAS_KEY}-${base.toString(16)}.bin`);
   if (existsSync(out)) {
     return { bytes: readFileSync(out), symbols: JSON.parse(readFileSync(`${out}.json`, "utf8")) };
   }
