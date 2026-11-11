@@ -98,11 +98,18 @@ test("TIMES.BAS has ascending line numbers, fits 80 columns, and has its keyword
   for (const l of lines) {
     const code = l.replace(/"[^"]*"/g, '""').replace(/\bREM\b.*/, "REM");
     for (const w of code.match(/[A-Za-z][A-Za-z0-9]*\$?/g) ?? []) {
-      assert.ok(KEYWORDS.has(w) || w === w.toLowerCase(), `${w} in ${l}`);
+      assert.ok(KEYWORDS.has(w.toUpperCase()) ? w === w.toUpperCase() : w === w.toLowerCase(), `${w} in ${l}`);
     }
   }
   for (const word of ["REM", "PRINT", "INPUT", "FOR", "NEXT"]) assert.match(SOURCE, new RegExp(`^\\d+ ${word} `, "m"), word);
-  assert.match(SOURCE, /^\d+ REM [A-Z][^\n]* [a-z]/m, "REM text as sentences");
+  // REM text is written as sentences: each one starts with a capital, and a
+  // REM line that carries on the sentence of the line before it may not.
+  lines.forEach((l, i) => {
+    if (!/^\d+ REM /.test(l)) return;
+    const before = lines[i - 1] ?? "";
+    const carries = /^\d+ REM /.test(before) && !/[.:]\s*$/.test(before);
+    if (!carries) assert.match(l, /^\d+ REM [A-Z]/, `REM text as a sentence: ${l}`);
+  });
 });
 
 test("BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to the prompt", { skip: BAZA.skip || RTL.skip, timeout: 900_000 }, () => {
