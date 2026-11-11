@@ -107,7 +107,17 @@
     "GDLYUS",
     "GDLYMS",
     "GBCLR",
-    "GBKEEP"
+    "GBKEEP",
+    "GBOX",
+    "GFBOX",
+    "GLINE",
+    "GABS",
+    "GCIRC",
+    "GFCIRC",
+    "GPIX",
+    "GPCLR",
+    "GPFLIP",
+    "GSETB"
   ],
   "drivers/mon3hex.asm": [
     "CHEX",
