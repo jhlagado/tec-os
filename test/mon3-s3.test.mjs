@@ -9,8 +9,8 @@ import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realProgram } from "./lib/m
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT } from "./lib/fixtures.mjs";
-import { MON3_CEILING, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
-import { boot, mon3Build, sha } from "./lib/mon3s2.mjs";
+import { MON3_CEILING, bytesAt, line, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
+import { boot, goTo, mon3Build, sha, toMon3 } from "./lib/mon3s2.mjs";
 import { referenceSide, sessionSide } from "./lib/kg65.mjs";
 import { REFUSAL_TOP, compareRefusals } from "./lib/kg67.mjs";
 
@@ -117,3 +117,48 @@ test("KG67 mutant: the build with buffers added to 4,609 bytes takes 19 pages", 
   m.command("MON3.SVC");
   assert.deepEqual(services(m), ["MON3 19"], "19 pages");
 });
+
+// The graphics workspace at entry: 0A00h-0E19h zero but VPORT, 0A00h, at the
+// first MON3>, (a) when MON3.SVC /E installs and enters, (b) at re-entry
+// after EXIT, with a transient's FFh over the region. A GO, its return and
+// a second GO leave what a program wrote there.
+
+const REGION = [0x0a00, 0x41a];
+const VPORT_AT = 0x0e13 - 0x0a00;
+/** The bytes of 0A00h-0E19h that differ from the entry's: their addresses. */
+function workspaceDiffers(m) {
+  return bytesAt(m, ...REGION).flatMap((b, i) => (b === (i === VPORT_AT + 1 ? 0x0a : 0) ? [] : [(0x0a00 + i).toString(16)]));
+}
+
+async function workspace(svc) {
+  svc ??= await mon3Build();
+  // A program that writes 55h at 0A00h and returns.
+  const m = boot({ "MON3.SVC": svc.file, "PROG.BIN": Uint8Array.from([0x3e, 0x55, 0x32, 0x00, 0x0a, 0xc9]) });
+  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E installs and enters");
+  assert.deepEqual(workspaceDiffers(m).slice(0, 8), [], "install and enter: 0A00h-0E19h zero, VPORT 0A00h");
+  assert.ok(!line(m, "EXIT").mon3);
+  for (let i = 0; i < REGION[1]; i += 1) m.write(REGION[0] + i, 0xff);
+  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E enters again");
+  assert.deepEqual(workspaceDiffers(m).slice(0, 8), [], "re-entry over FFh: 0A00h-0E19h zero, VPORT 0A00h");
+  assert.ok(line(m, "LOAD PROG.BIN").mon3);
+  goTo(m, "GO", 0x4000);
+  m.mark = m.output.length;
+  toMon3(m);
+  goTo(m, "GO", 0x4000);
+  assert.equal(m.read(0x0a00), 0x55, "a second GO keeps the program's byte at 0A00h");
+  assert.deepEqual(workspaceDiffers(m), ["a00"], "and the rest of the region as at entry");
+}
+
+test("KG67 graphics workspace", () => workspace());
+
+const STEP = "  ld (RUNOK),a   ; nothing to run\n  call GWS       ; and a clear GBUF\n";
+for (const [name, edits, why] of [
+  ["the workspace step removed", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"]], /install and enter/],
+  ["the workspace step clearing 0E00h-0E19h only", [["  ld hl,GBUF\n  ld de,GBUF+1\n  ld bc,GVEND-GBUF-1\n", "  ld hl,$0E00\n  ld de,$0E01\n  ld bc,GVEND-$0E01\n"]], /0A00h-0E19h zero/],
+  ["VPORT left unset", [["  ld hl,GBUF\n  ld (VPORT),hl  ; drawing into GBUF\n", ""]], /VPORT 0A00h/],
+  ["the workspace step moved to INIT", [[STEP, "  ld (RUNOK),a   ; nothing to run\n"], ["  ld hl,EXRDY\n  ld (hl),1      ; ready\n", "  xor a\n  call GWS       ; at install\n  ld hl,EXRDY\n  ld (hl),1      ; ready\n"]], /re-entry over FFh/],
+]) {
+  test(`KG67 mutant: ${name}`, async () => {
+    await assert.rejects(workspace(await mon3Variant(edits)), why);
+  });
+}
