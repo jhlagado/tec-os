@@ -239,8 +239,8 @@ function noRecord(b, at) {
 test("mutant: a MON3.SVC that doesn't wait for the keys to go up, nor record them, lets Esc reach the line after MON3>", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("KEYUP"), [0x3a, 0x8a, 0x08, 0xb7, 0x20], 16);
-    b[i + 4] = 0x18; // JR: up, whatever the keys
+    const i = find(b, at("KEYUP"), [0x3a, 0x03, 0x00, 0x0f, 0x30], 6);
+    b[i + 4] = 0x18; // JR: no wait, whatever the keys
     noRecord(b, at);
   });
   const card = Uint8Array.from(starter().card);
@@ -277,7 +277,7 @@ test("on the card after CON TTY, Esc held as the page holds it returns to MON3> 
 test("mutant: a MON3.SVC that waits for the keys whatever the console, and doesn't record them, hangs after CON TTY", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const svc = await mon3Svc();
   const file = svcMutant(svc, (b, at) => {
-    const i = find(b, at("KEYUP") - 6, [0x3a, 0x03, 0x00, 0x0f, 0x30], 6);
+    const i = find(b, at("KEYUP"), [0x3a, 0x03, 0x00, 0x0f, 0x30], 6);
     b[i + 4] = 0x00; // NOP NOP: the wait on any console
     b[i + 5] = 0x00;
     noRecord(b, at);
