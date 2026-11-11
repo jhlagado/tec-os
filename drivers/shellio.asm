@@ -189,10 +189,12 @@ SKIPSB:
   ld a,(hl)      ; the byte
   cp '!'         ; ! is passed over
   jr z,SKB1
+  cp SPACE
+  jr z,SKB1      ; a space
+  cp TAB
+  jr z,SKB1      ; a tab
   or a           ; Z: the line's end
-  ret z          ; the line's end
-  cp SPACE+1
-  ret nc         ; another byte, NZ
+  ret
 
 SKB1:
   inc hl
