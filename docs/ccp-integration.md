@@ -1,5 +1,9 @@
 # CCP integration handoff
 
+This is a record of an earlier CCP. The ROM's CCP is now the minimal one, and
+the history, `COPY`, the pager and chained lines that the figures below measure
+are `SHELL.SVC`'s ([shell.md](shell.md)).
+
 The isolated work is on `ccp-calls`, with `ccp-potential` as the integration
 handoff branch. Main has not been merged or modified. The qualified source
 is `420d8f28899ad9f74b909c3357fe84ff07f226b3`; subsequent changes update

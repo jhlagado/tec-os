@@ -1,6 +1,6 @@
 # MON3.SVC: MON-3 programs on TEC-OS
 
-Status: **S3**, 2026-11-11 (KS53): install, `/E`, `LOAD` of a `.BIN` or a
+Status: **S3**, 2026-11-11 (KS53): install and entry, `LOAD` of a `.BIN` or a
 `.HEX`, `GO`, `EXIT` and re-entry; MON-3's restarts, 46 of its 63
 `RST 10h` calls (42 implemented, 4 translated) and 21 of its 34 `RST 18h`
 graphics calls, the matrix keyboard, the checksum of TEC-OS's tables on a
@@ -23,7 +23,7 @@ source as `HELLO3.ASM`, which `TAS HELLO3 HELLO3.BIN` builds on the card
 ## Install and enter
 
 ```text
-A>MON3.SVC /E
+A>MON3.SVC
 
 MON3>LOAD HELLO3.BIN
 
@@ -34,15 +34,16 @@ MON3>EXIT
 A>
 ```
 
-`MON3.SVC /E` installs the service if it isn't in, and enters it.
-`MON3.SVC` alone installs it and never enters. It stays installed after
-`EXIT`, so `MON3.SVC /E` enters again without reading the file. Warm boot
-keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
-identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
-second copy needs `UNLOAD` first.
+`MON3.SVC` installs the service if it isn't in, and enters it: its execution
+record asks to be entered on install. It stays installed after `EXIT`, so
+`MON3.SVC` enters again without reading the file. Warm boot keeps it, and
+`UNLOAD` or a reset removes it. `docs/services.md` gives the identity rule:
+`B:MON3.SVC` enters the copy installed from A:, and a second copy needs
+`UNLOAD` first. An older card's line with `/E` after the name still enters:
+the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,605 bytes of header and image in **18 pages**: the
-word at `0006h` goes from `B9A4h` to `A700h`, and the TPA from 47,268 bytes to
+On the starter card it is 4,606 bytes of header and image in **18 pages**: the
+word at `0006h` goes from `B9A9h` to `A700h`, and the TPA from 47,273 bytes to
 **42,496**. With `GLCD.SVC` installed too, as the GLCD console's startup does,
 the TPA is **41,728**. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
@@ -165,7 +166,7 @@ MON-3's graphics workspace is set at each entry too, as every MON-3 reset
 leaves it through `initLCD`: `GBUF`, 0A00h–0DFFh, and the graphics calls'
 variables, 0E00h–0E19h, hold zero, except `VPORT` (0E13h), the buffer the
 drawing calls use, which holds 0A00h. `CLRBUF` (0E0Ch) zero is the session's
-choice, as no MON-3 reset writes it. The step runs at `MON3.SVC /E`, after
+choice, as no MON-3 reset writes it. The step runs at each entry by `MON3.SVC`, after
 the service is installed or found, and at call 2. A program's `GO` and its
 return do not run it, as MON-3's `softBoot` does not, so what one program
 leaves there the next one finds.
@@ -185,7 +186,7 @@ No slot starts with a `JP`, so every warm boot's sweep clears them. The RAM
 BIOS table's warm-boot entry points at the service's hook for the session.
 At a warm boot the hook sets IM 1, idles the serial line, resets the drives
 (BDOS 37, on the service's own stack), and puts back the IOBYTE and drive,
-0038h–003Fh, 0041h–004Fh and 0066h as they were before `/E`. The sweep does
+0038h–003Fh, 0041h–004Fh and 0066h as they were before the entry. The sweep does
 0008h–0037h.
 
 Entry is refused, with return code FF00h and nothing changed:
@@ -209,7 +210,7 @@ hooked. The sweep still clears the slots, so no vector is left pointing into
 the service, but the IOBYTE, IM and the NMI entry stay as the program left
 them, and the drives are not reset. The hook it leaves behind only takes
 itself out at the next warm boot.
-The next `/E` takes it out first, and `UNLOAD` does too.
+The next entry takes it out first, and `UNLOAD` does too.
 
 ## Coverage in S2
 
@@ -370,7 +371,7 @@ its two `LD A,R` on both sides. The console's return is tested with
 - **MON-3's disk calls**, 58 to 61, are not translated to CP/M files.
 - **No recovery from a hang** or from arbitrary memory damage: a program that
   loops needs the reset button. GO's flush keeps what was written before GO.
-- **The accepted disk hazard.** A MON-3 program that writes B9A4h–BFFFh, the
+- **The accepted disk hazard.** A MON-3 program that writes B9A9h–BFFFh, the
   BDOS entry, the allocation vectors, the workspace and the RAM BIOS table, can
   damage TEC-OS's disk tables. The protections are the flush before `GO`,
   BDOS 37 on every return, at `EXIT` and at every other way out but the

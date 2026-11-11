@@ -14,7 +14,8 @@ HostMachine.font = fontBytes(resolve(import.meta.dirname, "../.."));
 export { EXPAND1_WRITES, bootMachine } from "../../host/machine.mjs";
 
 // With TECOS_TEST_RESIDENT naming a .SVC file, every machine started on a
-// card installs that service by a first line in A:STARTUP.CMD, so a test's
+// card installs that service by a line in A:STARTUP.CMD, the first or the one
+// after a first SHELL.SVC line, so a test's
 // own steps run with it installed and no session active (test/mon3.test.mjs
 // reruns existing tests that way). TECOS_TEST_RESIDENT_LOG names a file that gets
 // one line for each such machine: the BDOS entry's word at its first prompt.
@@ -27,8 +28,10 @@ function addResident(image) {
   const a = new CpmVolume(volumePayload(image, v), v.g, { readOnly: false });
   const name = basename(RESIDENT).toUpperCase();
   a.write(name, readFileSync(RESIDENT));
-  const startup = a.list().some((f) => f.name === "STARTUP.CMD") ? a.read("STARTUP.CMD", { text: true }) : new Uint8Array(0);
-  a.write("STARTUP.CMD", Buffer.concat([Buffer.from(`${name}\n`, "latin1"), startup]), { text: true });
+  const startup = a.list().some((f) => f.name === "STARTUP.CMD") ? Buffer.from(a.read("STARTUP.CMD", { text: true })) : Buffer.alloc(0);
+  // After a first SHELL.SVC line, so that the shell still loads and runs the rest.
+  const shell = /^SHELL\.SVC\r?\n/i.exec(startup.toString("latin1"))?.[0].length ?? 0;
+  a.write("STARTUP.CMD", Buffer.concat([startup.subarray(0, shell), Buffer.from(`${name}\n`, "latin1"), startup.subarray(shell)]), { text: true });
 }
 
 export class Machine extends HostMachine {

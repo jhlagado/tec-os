@@ -154,7 +154,7 @@ ENTRY:
 ; origin, FFh for a line of STARTUP.CMD
 ; so that its quiet paths hold. The
 ; shell's own built-ins run here and
-; take the next piece.
+; return an empty line.
 
 LINE:
   ld (SAVSP),sp  ; the CCP's stack

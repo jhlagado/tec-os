@@ -1,13 +1,14 @@
-// Command-line history at the CCP prompt: the ring at BD00h in EXPAND 1,
-// ^W and ^N. Emulator evidence, on the serial console.
+// Command-line history at the prompt, moved from the CCP to SHELL.SVC:
+// the ring in the shell's own last page, ^W and ^N, through the
+// ROM's HREC and HSTORE calls. Emulator evidence, on the serial console.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { SHELL, pageOf } from "./lib/shell.mjs";
 
 const W = "\x17";
 const N = "\x0e";
-const RING = 0x3d00; // BD00h, in EXPAND 1's 16K
 
 /** The line in function 10's buffer, once the editor waits for a key. */
 function held(m) {
@@ -19,10 +20,11 @@ function held(m) {
   return String.fromCharCode(...Array.from({ length: n }, (_, i) => m.read(p + 2 + i)));
 }
 
-/** The ring's lines from the newest back, read from EXPAND 1. */
+/** The ring's lines from the newest back, read from the shell's pages. */
 function lines(m) {
-  const ring = m.expand[1].subarray(RING, RING + 256);
-  const head = m.read(m.sym("HHEAD"));
+  const page = pageOf(m);
+  const ring = Uint8Array.from({ length: 256 }, (_, i) => m.read(page + SHELL.symbols.RING + i));
+  const head = m.read(page + SHELL.symbols.HHEAD);
   const out = [];
   let p = (head - 1) & 0xff;
   while (ring[(p - 1) & 0xff] !== 0 && out.length < 256) {
@@ -37,12 +39,12 @@ function lines(m) {
 }
 
 function session(lines_) {
-  const m = boot(standardCard(), { ram96: true });
+  const m = boot(withShell(standardCard()), { ram96: true });
   for (const l of lines_) m.command(l);
   return m;
 }
 
-test("^W recalls the lines typed at the prompt, newest first, and ^N steps forward", () => {
+test("SH11 ^W recalls the lines typed at the prompt, newest first, and ^N steps forward", () => {
   const m = session(["dir", "user 0", "era x.y", "stat"]);
   m.mark = m.output.length;
   m.type(W);
@@ -66,7 +68,7 @@ test("^W recalls the lines typed at the prompt, newest first, and ^N steps forwa
   assert.deepEqual(m.violations, []);
 });
 
-test("a recalled line is erased in place and cut at the buffer's maximum", () => {
+test("SH11 a recalled line is erased in place and cut at the buffer's maximum", () => {
   const m = session(["type " + "a".repeat(40), "dir"]);
   m.mark = m.output.length;
   m.type(W + W);
@@ -80,7 +82,7 @@ test("a recalled line is erased in place and cut at the buffer's maximum", () =>
   assert.equal(m.read(m.sym("LINCNT")), 20);
 });
 
-test("over many lines the ring wraps and every recall is a whole line", () => {
+test("SH11 over many lines the ring wraps and every recall is a whole line", () => {
   let x = 12345;
   const rnd = (n) => ((x = (x * 1103515245 + 12345) & 0x7fffffff), x % n);
   const typed = [];
@@ -90,7 +92,7 @@ test("over many lines the ring wraps and every recall is a whole line", () => {
     while (t.length < len) t += "abcdefghijklmnopqrstuvwxyz0123456789"[rnd(36)];
     typed.push(t);
   }
-  const m = boot(standardCard(), { ram96: true });
+  const m = boot(withShell(standardCard()), { ram96: true });
   const stored = [];
   for (const t of typed) {
     m.command(t);
@@ -102,7 +104,7 @@ test("over many lines the ring wraps and every recall is a whole line", () => {
   }
 });
 
-test("a line repeated, a line holding a 0 and an empty line are not stored", () => {
+test("SH11 a line repeated, a line holding a 0 and an empty line are not stored", () => {
   const m = session(["dir", "dir", "stat", "dir", ""]);
   // The serial port drops NUL, but a console driver need not: a "~" stands
   // for one, made 0 as CONIN returns it.
@@ -118,14 +120,14 @@ test("a line repeated, a line holding a 0 and an empty line are not stored", () 
   assert.deepEqual(lines(m), ["dir", "stat", "dir"]);
 });
 
-test("a program's function 10 takes ^W as a character and its line is not stored", () => {
+test("SH11 a program's function 10 takes ^W as a character and its line is not stored", () => {
   const image = standardCard();
   // LD DE,0180h; LD C,10; CALL 5; RET, with a 20-byte buffer at 0180h.
   const com = new Uint8Array(0x81);
   com.set([0x11, 0x80, 0x01, 0x0e, 0x0a, 0xcd, 0x05, 0x00, 0xc9]);
   com[0x80] = 20;
   volume(image, "A").write("ASK.COM", com);
-  const m = boot(image, { ram96: true });
+  const m = boot(withShell(image), { ram96: true });
   m.command("dir");
   m.mark = m.output.length;
   m.type("ask\r");
@@ -137,7 +139,7 @@ test("a program's function 10 takes ^W as a character and its line is not stored
   assert.deepEqual(lines(m), ["ask", "dir"]);
 });
 
-test("the ring is kept by warm boot and emptied by cold boot", () => {
+test("SH11 the ring is kept by warm boot and emptied by cold boot", () => {
   const m = session(["dir", "type nested.txt", "exit"]);
   m.mark = m.output.length;
   m.type(W + W);
@@ -148,6 +150,7 @@ test("the ring is kept by warm boot and emptied by cold boot", () => {
   assert.equal(held(m), "exit", "kept across ^C");
   m.reset();
   m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  m.runUntil(() => m.ready(), 400_000_000, "the shell's prompt");
   m.type(W);
-  assert.equal(held(m), "", "cold boot empties it");
+  assert.equal(held(m), "", "cold boot empties it: the shell is installed afresh");
 });

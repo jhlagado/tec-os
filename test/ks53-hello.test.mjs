@@ -33,7 +33,7 @@ async function slice(consoleKind, file) {
   const m = machine(image, consoleKind === "glcd" ? { matrix: true } : {});
   const out = { m, image, kind: consoleKind };
   out.pageZero = bytesAt(m, 0, 0x50);
-  out.entered = line(m, "MON3.SVC /E").mon3;
+  out.entered = line(m, "MON3.SVC").mon3;
   out.top = bytesAt(m, 6, 2);
   line(m, "LOAD HELLO3.BIN");
   const e0 = m.edges;
@@ -141,7 +141,7 @@ for (const kind of ["serial", "glcd"]) {
 
   test(`KG60 hello3 at 4000h, ${on}`, { skip }, async () => {
     const s = await theSlice(kind);
-    assert.ok(s.entered, "MON3.SVC /E gives MON3>");
+    assert.ok(s.entered, "MON3.SVC gives MON3>");
     checkAt4000(s, await theReference());
   });
 
@@ -159,7 +159,7 @@ for (const kind of ["serial", "glcd"]) {
     const { m, image } = await theSlice(kind);
     m.command("ERA MON3.SVC");
     assert.ok(!volume(image, "A").list().some((f) => f.name === "MON3.SVC"), "MON3.SVC is off the card");
-    assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E enters with no file");
+    assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC enters with no file");
     assert.match(line(m, "GO").out, /\?\r\n\r\nMON3>$/, "GO with no load is refused");
     assert.ok(!line(m, "EXIT").mon3);
   });

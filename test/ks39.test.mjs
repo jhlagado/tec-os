@@ -158,12 +158,14 @@ test("a debugger reads TPSHOW, TPDRAW and the version through abi.inc's offsets 
   assert.ok([0, m.read(m.sym("PITPG"))].includes(m.read(table + ABI.PICOTPS)));
 });
 
-test("a PICO9918 board booting the starter's display files has the no-display figure's TPA: nothing loaded", async () => {
+test("a PICO9918 board booting the starter's display files has the shell's figure's TPA: the shell alone loaded", async () => {
   const image = standardCard();
   for (const f of await displayFiles(ROOT)) volume(image, "A").write(f.name, f.bytes);
   const pico = start(image, { glcd: false });
-  assert.equal(pico.read(pico.sym("SVCHEAD")), 0, "nothing loaded");
+  const head = pico.read(pico.sym("SVCHEAD"));
+  assert.equal(String.fromCharCode(...Array.from({ length: 5 }, (_, i) => pico.read((head << 8) + 17 + i))), "SHELL", "the shell loaded");
+  assert.equal(pico.read((head << 8) + 8), 0, "and nothing above it: GLCD.SVC gave way");
   const serial = boot(standardCard());
-  assert.equal(word(pico, 6), word(serial, 6));
-  assert.equal(word(serial, 6), word(serial, serial.sym("STUBAD")), "nothing loaded on either");
+  assert.equal(word(serial, 6), word(serial, serial.sym("STUBAD")), "nothing loaded on the serial board");
+  assert.equal(word(pico, 6), (word(serial, 6) & 0xff00) - 0xa00, "the shell's 10 pages below the stub's page");
 });

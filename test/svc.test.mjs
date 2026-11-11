@@ -10,7 +10,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { checkInterfaces, DHLEN, encoders, makeSvc, onDisk } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
 const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
@@ -112,7 +112,6 @@ function ranges(m) {
       "the keyboard's scan": [s("KBMASK"), s("GLVEC")],
       "the terminal's cursor and parser": [s("VROW"), s("VCURV") + 1],
       "RXFULL and RXCHAR": [s("RXFULL"), s("RXCHAR") + 1],
-      HHEAD: [s("HHEAD"), s("HHEAD") + 1],
       "XMDST to MVREST": [s("XMDST"), s("MVREST") + 2],
       LINEBUF: [s("LINEBUF"), s("LINEBUF") + 80],
       "the mount scratch": [s("MNTCNT"), s("LINEBUF")],
@@ -437,17 +436,17 @@ test("an old NAME.DRV is no service: the COM path says NAME.DRV? with nothing lo
   assert.equal(m.read(m.sym("SVCHEAD")), 0, "nothing loaded");
 });
 
-test("SERVICES lists each service and its pages, the newest first, with none and after UNLOAD", async () => {
-  const image = standardCard();
+test("SH11 SERVICES lists each service and its pages, the newest first, with none and after UNLOAD", async () => {
+  const image = withShell(standardCard()); // SERVICES is the shell's, and lists it
   volume(image, "A").write("OK.SVC", (await svc()).file);
   volume(image, "A").write("TWO.SVC", (await svc({ HDRNAME: '"TWO     "', XTRA: 300 })).file);
   const t = bench(boot(image));
-  assert.doesNotMatch(t.m.command("SERVICES"), /\?|DEMO/);
+  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 10\r\nA>$/, "the shell alone");
   t.m.command("OK.SVC");
   t.m.command("TWO.SVC");
-  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\n/);
+  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 10\r\n/);
   t.m.command("UNLOAD");
-  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\n/);
+  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 10\r\n/);
 });
 
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
@@ -469,7 +468,7 @@ test("the relocation data decodes to the same fixups by delta, and a long gap ta
 test("the table has no removal: function 2 is refused and the service stays", async () => {
   const t = await machine();
   t.load((await svc()).file);
-  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 16 }).carry, 1); // past the last, TNFONT
+  assert.equal(t.call(t.m.sym("ABICALL"), { b: 0, c: 17 }).carry, 1); // past the last, TNSHELL
   assert.equal(t.find("DEMO").carry, 0);
 });
 
@@ -973,8 +972,8 @@ test("a service with a vector is gone at a recognised reset, and the vector with
 
 // Nothing a service needs lies below (0006h).
 for (const opts of [{}, { tms: true, matrix: true }]) {
-  test(`a program setting SP from (0006h) leaves SERVICES and UNLOAD working, ${opts.tms ? "PICO" : "serial"}`, async () => {
-    const image = standardCard();
+  test(`SH11 a program setting SP from (0006h) leaves SERVICES and UNLOAD working, ${opts.tms ? "PICO" : "serial"}`, async () => {
+    const image = withShell(standardCard()); // SERVICES is the shell's
     const a = volume(image, "A");
     a.write("ONE.SVC", (await svc({ HDRNAME: '"ONE     "', RECNAME: '"ONE     "' })).file);
     a.write("TWO.SVC", (await svc({ HDRNAME: '"TWO     "', RECNAME: '"TWO     "' })).file);
@@ -997,8 +996,8 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
     if (opts.tms) {
       assert.equal(m.videoConsole(), true, "the ROM's PICO9918 console");
       say("SERVICES");
-      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+A>/, "the loaded two alone: the ROM's console is no service");
-    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\n/);
+      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +10\s+A>/, "the loaded two and the shell: the ROM's console is no service");
+    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 10\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     say("KEEP.SVC");

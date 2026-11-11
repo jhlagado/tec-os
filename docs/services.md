@@ -2,9 +2,10 @@
 
 Status: **Built**, 2026-10-31: the loader, the registry, the commands, startup
 and `GLCD.SVC`; the PICO9918's console moved into the ROM (KS39). 2026-11-10:
-`NAME.SVC /E` and the execution record (KS53 S1).
+the execution record (KS53 S1). 2026-11-11: enter-on-install, the shell
+hook and `SHELL.SVC` ([shell.md](shell.md)).
 `test/svc.test.mjs`, `test/startup.test.mjs`, `test/pico.test.mjs`,
-`test/ks39.test.mjs` and `test/mon3.test.mjs` hold them.
+`test/ks39.test.mjs`, `test/mon3.test.mjs` and `test/shell.test.mjs` hold them.
 
 A *service* is what a `.SVC` file installs: a resident in EXPAND 0, below
 `(0006h)`, in whole pages. It publishes named *records* in the registry and
@@ -48,7 +49,7 @@ With a service in, `(0006h)` is its page's start. The `JP` there goes straight i
 the BDOS, so a BDOS call is two jumps however many services are in, and every field a
 service needs lies at or above that word, where a program that sets SP from it can't
 reach. With none in, `(0006h)` is the stub directly below the allocation vectors,
-`B9A4h` on the starter card and lower on a card with more volumes.
+`B9A9h` on the starter card and lower on a card with more volumes.
 
 Format version 4 has version 1's layout. It rose with ABI 5, as 3 did with ABI 4:
 services test no ABI, and each major moved the table's entries, so the loader
@@ -70,7 +71,7 @@ drive. If the file
 won't read, or the load is refused or fails, the command's name comes back with
 a question mark, as for any command that won't run, with one exception: a line
 from `STARTUP.CMD` whose driver finds its device absent (`INIT` returns
-`TNENODV` with carry) says nothing, and leaves the code 0, so a `:` line after
+`TNENODV` with carry) says nothing, and leaves the code 0, so an `&` piece after
 it runs. Typed, or for any other cause, it says `NAME?` as before. `GLCD.SVC`
 takes the console unless `CRT:`, the ROM's PICO9918 console, is in effect, and
 then gives way to it; in a line from `STARTUP.CMD` with `CON:` at `CRT:`,
@@ -78,58 +79,55 @@ then gives way to it; in a line from `STARTUP.CMD` with `CON:` at `CRT:`,
 and it takes no stack room it would not use (KE-200). Any other service leaves
 the console alone.
 
-`NAME.SVC` only installs, and never enters what it installs. `NAME.SVC /E`
-enters an installed service's execution entry, and installs it first if it
-isn't in: the next section. Text after a first operand that isn't a switch is
-ignored, as before, so `NAME.SVC X /E` only installs. A second `NAME.SVC` of a
-file already in installs a second copy, as it always has: the loader compares
-no name. A service claiming a slot is refused the second time with `SVCRC` 0,
-since the slot holds the first copy's `JP`; a second `GLCD.SVC` fails at its
-`INIT` and says `GLCD.SVC?`, except in a startup line with `CON:` at `CRT:`,
-where it passes quietly as above.
+`NAME.SVC` installs, and enters what it installs only when its execution record
+asks to be entered: the next section. Text after the name is the entry's tail;
+no switch is parsed. A second `NAME.SVC` of a file already in, with no such
+record, installs a second copy, as it always has: the loader compares no name. A
+service claiming a slot is refused the second time with `SVCRC` 0, since the slot
+holds the first copy's `JP`; a second `GLCD.SVC` fails at its `INIT` and says
+`GLCD.SVC?`, except in a startup line with `CON:` at `CRT:`, where it passes
+quietly as above.
 
-`SERVICES` prints one line for each loaded service, the newest first: its name
-and its pages. It walks the owner list, so a service with no record is listed,
-and the ROM's PICO9918 console, which has no pages, is not.
+`SERVICES`, a built-in of `SHELL.SVC`, prints one line for each loaded service,
+the newest first: its name and its pages. It walks the owner list from the
+lowest owner the hook's `LINE` call names, so a service with no record is
+listed, and the ROM's PICO9918 console, which has no pages, is not. With no shell
+it is a name like any other.
 
 `UNLOAD` removes the lowest resident, as below, and answers the same way if it
 can't. It never removes the ROM's PICO9918 console. `GLCD.SVC`'s `REMOVE` gives the
 console back to `CRT:` if the "PICO" record is present.
 
-## Execution: `NAME.SVC /E`
+## Execution: enter on install
 
 A service can carry a resident application, such as `MON3.SVC`'s `MON3>`
-monitor (`docs/mon3.md`), behind an *execution entry*. Three operations stay
-apart: `INIT` installs and registers, the execution entry runs the
-application, and `REMOVE` removes it. Only a service whose image starts with
-an *execution record* can be entered. A registry record is never an entry,
-and no command enters the service loaded last.
-
-**The switch.** `/E` follows the name after a space, and ends at a space or
-the end of the line. What follows it is the application's command tail. Any
-other first operand starting with `/` is refused with `NAME.SVC?` and code
-FF00h before any file is opened: `/X`, `/`, `//E`, `/EX` and `/E5` all are.
-`NAME.SVC/E`, with no space, is a name the CCP refuses as it always has.
+monitor (`docs/mon3.md`) or `SHELL.SVC`'s prompt (`docs/shell.md`), behind an
+*execution entry*. Three operations stay apart: `INIT` installs and registers,
+the execution entry runs the application, and `REMOVE` removes it. Only a
+service whose image starts with an *execution record* whose state has bit 1 is
+entered. A registry record is never an entry.
 
 **The identity rule.** An installed service is named by the eight-byte name of
 the file it was installed from, which its `INIT` copies into its record. The
 command's own file name is compared with that name in each installed
-service's ready record. The header's name and any registry record's name play
-no part, and nor do the drive and the user: `B:MON3.SVC /E` and `MON3.SVC /E`
-in user 1 enter a `MON3` installed from A: and read nothing.
+service's ready record that has bit 1. The header's name and any registry
+record's name play no part, and nor do the drive and the user: `B:MON3.SVC` and
+`MON3.SVC` in user 1 enter a `MON3` installed from A: and read nothing.
 
 1. **One match** is entered. No file is opened, so the file need not still be
    on the card.
 2. **None:** the file is read from the drive named, or the current one, with
-   no fallback to A:, and staged at 0100h. A staged image with no version-1
-   record is refused before anything is installed. The rest installs as
-   `NAME.SVC` does, and is entered if its `INIT` set it ready with that name.
-3. **Two or more** are refused, and neither is chosen. `UNLOAD` until one is
-   left.
+   no fallback to A:, and installs as `NAME.SVC` always has, the console step
+   included. If the new service's record has bit 1, it is entered when its
+   `INIT` set it ready with that name; otherwise the line ends, installed only.
+3. **Two or more** are refused, `NAME.SVC?` with FF00h, and neither is chosen.
+   With bit 1 this can only follow a copy made by hand.
 
 A renamed copy, `M2.SVC`, is a service of its own. To change to another
-version of a service that is in, `UNLOAD` it first: `/E` enters the one
-installed.
+version of a service that is in, `UNLOAD` it first: typing its name enters the
+one installed. A service with no record, or one with bit 1 clear, installs and
+returns, and each typing installs another copy. An old `NAME.SVC /E` line
+enters as before: the `/E` is only a tail.
 
 **The execution record, version 1.** Sixteen bytes at the start of the image,
 file offset 25:
@@ -138,7 +136,7 @@ file offset 25:
 | --- | --- | --- |
 | 0 | 2 | `"EX"`, 45h 58h |
 | 2 | 1 | Its version, 1 |
-| 3 | 1 | Bit 0: ready |
+| 3 | 1 | Bit 0: ready, set by `INIT` last and cleared by `REMOVE` first. Bit 1: enter on install, set in the file; `INIT` and `REMOVE` keep it. Bits 2 to 7: 0 |
 | 4 | 2 | The entry, from the header's start, as `INIT` and `REMOVE` are |
 | 6 | 8 | The name the service was installed by, written by `INIT` |
 | 14 | 2 | The service's own version, for its own use |
@@ -149,65 +147,60 @@ file offset 25:
   page carries, and that service stays installed.
 - **The entry is bounded at install.** The loader refuses a staged record
   whose entry lies outside the image, as it refuses an `INIT` outside it,
-  with `SVCRC` 0, for a plain `NAME.SVC` too.
+  with `SVCRC` 0, for any `NAME.SVC`.
 - **No false record.** A format-4 service without a record must not start its
   image with 45h 58h 01h.
-- **Ready.** `INIT` sets bit 0 last, after the name. `REMOVE` clears it first.
+- **Ready.** `INIT` sets bit 0 alone, last, after the name. `REMOVE` clears bit
+  0 alone, first.
 
-**A `/E` install that never becomes ready** is taken out by the loader's own
-unload, and the line is refused: nothing is listed and `(0006h)` is as before.
-The one exception is a service that is not removable, or whose `REMOVE`
-refuses: it stays installed and the line is refused, so each further `/E`
-installs one more copy. `UNLOAD` or a reset takes them.
+**An install that never becomes ready**, for a record with bit 1, is taken out
+by the loader's own unload, and the line is refused, `NAME.SVC?` with FF00h:
+nothing is listed and `(0006h)` is as before. The one exception is a service
+that is not removable, or whose `REMOVE` refuses: it stays installed and the
+line is refused, so each further typing installs one more copy. `UNLOAD` or a
+reset takes them.
 
-**The console step.** A `NAME.SVC` that installs `GLCD.SVC` then makes the
-GLCD the console. `/E` installs through the loader alone and skips that step,
-so a display driver installed by `/E` doesn't take the console.
-
-**In a startup line** the refusals are the same. The quiet path is too: a `/E`
+**In a startup line** the refusals are the same. The quiet path is too: an
 install whose `INIT` finds no device (`TNENODV` with carry) ends with code 0,
 no message, nothing installed and nothing entered.
 
 **The entry contract.**
 
-- HL is the entry address. A, BC, DE, IX and IY are undefined.
+- A is FFh when the line came from `STARTUP.CMD` and 0 otherwise; HL is the
+  entry address. BC, DE, IX and IY are undefined.
 - SP is `CSTKTOP` with 0000h pushed, as a `.COM` starts. The entry runs where
   a transient does, and should take its own stack at once.
 - Page zero, the FCBs at 005Ch and 006Ch, the tail at 0080h and the DMA are
-  as the CCP makes them for a `.COM`, from the text after `/E`. `PZLDRV` is
+  as the CCP makes them for a `.COM`, from the text after the name. `PZLDRV` is
   the command's drive: 0 for the current drive, 1 for A: and so on.
 - Interrupts are off and the latch is `LATCLAS`.
 - **Return** is `RET`, `JP 0000h` or BDOS 0, each a warm boot that leaves the
   service installed. The result is the BDOS 108 code: an entry that sets
-  FF00h makes a following `:` piece skip.
+  FF00h makes a following `&` piece skip.
 - **Failure:** the entry prints its own message, sets FF00h and returns.
 - **Recursion.** The CCP runs only after a warm boot, and warm boot ends any
   application, so the only second entry is a program calling the entry. The
   entry must refuse that itself.
 
-The stack census includes `/E`'s paths: a refused switch, install then entry,
-re-entry, and a never-ready install removed.
+The stack census includes these paths: install then entry, re-entry, and a
+never-ready install removed.
 
 ## Startup
 
-After a reset, recognised or not, and never on an ordinary exit, `A:STARTUP.CMD`,
-if there is one, runs before the first
-prompt. One record is read once, into RAM: **at most 128 bytes**, and anything
-after them isn't run. The file isn't read again, so a warm boot doesn't repeat
-it and `USER 3` in a line can't affect it. Each prompt takes the next line in place
-of the keyboard, so a program's warm boot and a built-in's return reach the next line
-by the same route. ^C stops the current program, and the next lines still run;
-^C at a program's line input also drops the rest of a line holding `!`, and the
-next startup line runs.
-The line is echoed through BDOS function 9, so a `$` in it ends the echo, though
-the line runs whole. A 127-character line and its CR and `$` take 129 bytes from
-`CMDTXT`: the `$` lands on `BOOTDRV`, which is rewritten before it is read.
+After a reset, recognised or not, and never on an ordinary exit, the ROM runs
+one line of `A:STARTUP.CMD`, if there is one, before the first prompt: the first
+line of its first record that is neither empty nor starting with `;`. The file
+isn't read again, so a warm boot doesn't repeat it. A line ends at CR or LF; ^Z,
+a zero or the record's end ends the file. The line runs its first 127
+characters, with the startup line's quiet paths below. It is echoed through BDOS
+function 9, so a `$` in it ends the echo, though the line runs whole. A
+127-character line and its CR and `$` take 129 bytes from `CMDTXT`: the `$` lands
+on `BOOTDRV`, which is rewritten before it is read.
 
-A line ends at CR or LF, and blank lines are passed over. `^Z`, a zero or the
-128th byte ends the file. A line runs its first 127 characters, so one of 128,
-the whole record, runs without its last; one that starts at the 128th byte isn't
-run. A line that fails prints its usual message and the
-next runs.
+When that line installs `SHELL.SVC`, the shell reads the rest of the file, every
+record, and runs each line with the same quiet paths ([shell.md](shell.md)).
+Without the shell only the first line runs. The starter card's `STARTUP.CMD` is
+`SHELL.SVC`, then `GLCD.SVC`.
 
 **The PICO9918 needs no line.** When the VDP answers the ROM's probe and the
 matrix keyboard is fitted, cold boot starts the ROM's console before the banner
@@ -217,8 +210,8 @@ at 40 columns and sets the IOBYTE's `CON:` field to `CRT:`. `CON PICO 32`,
 a `STARTUP.CMD` width line overrides that default. On a board without the PICO9918
 console the line passes quietly. The ROM is one image for every board.
 
-One card can serve every board: the starter card's `STARTUP.CMD` holds `GLCD.SVC`
-alone. Where there is a GLCD and a matrix keyboard and no PICO9918 console, the
+One card can serve every board: the starter card's `STARTUP.CMD` holds
+`SHELL.SVC` and then `GLCD.SVC`. Where there is a GLCD and a matrix keyboard and no PICO9918 console, the
 line makes the GLCD the console; elsewhere it passes over it quietly and goes on.
 On a board with both displays, `GLCD.SVC`'s line passes over it quietly, since
 `CRT:` keeps the console, and `CON UC1:` then loads it and makes the GLCD the console;
@@ -334,6 +327,15 @@ its limit with a quarter free, which `test/stacks.test.mjs` checks: the BDOS's
 38 of 54, the BIOS's 30 of 40 and the CCP's 24 of 32. A service must stay within
 its declared stack use. `test/svc.test.mjs` checks this with a stack watch.
 The ROM does not enforce the declaration at runtime.
+
+The base's paths include the shell's: the serial, PICO9918 and GLCD runs and the
+lines of pieces run with `SHELL.SVC` holding the prompt, as the starter card
+boots. Its `LINE` and `PAGE` are called on the CCP's stack and move at once to
+the shell's own 32-byte stack; `HREC` and `HSTORE` run on the BDOS's, 6 bytes
+deep. It declares 6, 0 and 0, and `GLCD.SVC` 2, 0 and 6, so the two together
+take the whole of the BDOS's and the CCP's limits ([shell.md](shell.md)).
+`test/shell.test.mjs` runs the census with the shell alone and with `GLCD.SVC`
+and `MON3.SVC`, and reads a guard pattern under the shell's own stack.
 
 A program's stack can't be checked, so a service's own document states what a
 program must leave. On the BDOS's stack a service may not call the BDOS, as

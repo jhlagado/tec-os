@@ -1,5 +1,6 @@
-// The CCP's COPY: to a drive alone, never onto itself, and as COPY.COM in
-// every other case (KS23, KG26 and KG12). Each run starts from a fresh card:
+// SHELL.SVC's COPY, moved from the CCP: to a drive alone, never onto
+// itself, and as COPY.COM in every other case. Each run
+// boots with the shell holding the prompt, from a fresh card:
 // SYSTEM on A:, WORK on B: written behind as on the starter card, ARCHIVE on
 // C:, read-only. The TPA is filled with a pattern before the command and must
 // hold it; then ^C warm boots, so B:'s lines reach the card, before the card
@@ -9,11 +10,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createContainer } from "../tools/lib/container.mjs";
-import { boot, program, volume } from "./lib/fixtures.mjs";
+import { boot, program, volume, withShell } from "./lib/fixtures.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const pattern = (n, seed) => Uint8Array.from({ length: n }, (_, i) => (i * 7 + seed * 31 + (i >> 7)) & 0xff);
-const TPA = [0x0100, 0xb406];
 const tpaByte = (a) => (a * 13 + (a >> 8) * 7 + 0x5a) & 0xff;
 const SIZES = [0, 1, 128, 157, 300];
 const copyCom = (await program("copy")).bytes;
@@ -36,7 +36,7 @@ function card() {
   for (const d of ["A", "B"]) for (const n of SIZES) volume(image, d).write(`S${n}.DAT`, pattern(n * 128, n + d.charCodeAt(0)));
   b.write("E157.DAT", pattern(300 * 128, 99));
   a.write("XCOPY.COM", copyCom);
-  return image;
+  return withShell(image);
 }
 
 /** LINE's output: the lines after its own, without the next prompt. */
@@ -60,6 +60,7 @@ function trial(line, setup = []) {
   const m = boot(image);
   for (const s of setup) run(m, s);
   const before = sha(image);
+  const TPA = [0x0100, m.read(6) | (m.read(7) << 8)]; // below the shell's pages
   for (let a = TPA[0]; a < TPA[1]; a += 1) m.write(a, tpaByte(a));
   const text = run(m, line);
   let tpaChanged = 0;
@@ -77,7 +78,7 @@ for (const [line, from, to, full] of [
   ["COPY X.COM B:.TXT", ["A", "X.COM"], ["B", "X.COM"], "COPY X.COM B:X.COM"],
   ["COPY X.COM B:.*", ["A", "X.COM"], ["B", "X.COM"], "COPY X.COM B:X.COM"],
 ])
-  test(`${line} copies under the source's name, as ${full} does`, () => {
+  test(`SH11 ${line} copies under the source's name, as ${full} does`, () => {
     const t = trial(line);
     const ref = trial(full);
     assert.match(t.text, /^COPIED [0-9A-F]{4}$/);
@@ -100,7 +101,7 @@ for (const [name, line, setup] of [
   ["with text after the destination (KE-179)", "COPY X.DAT B:X.DAT JUNK"],
   ["with a third name after the destination (KE-179)", "COPY X.DAT B:Y.DAT Z.DAT"],
 ])
-  test(`COPY ${name} is a bad command and leaves the card as it was`, () => {
+  test(`SH11 COPY ${name} is a bad command and leaves the card as it was`, () => {
     const t = trial(line, setup);
     assert.equal(t.text, "COPY?");
     assert.ok(t.unchanged, "the card byte for byte, after ^C");
@@ -111,14 +112,14 @@ for (const [line, setup, from, to] of [
   ["COPY X.DAT B:X.DAT", [], ["A", "X.DAT"], ["B", "X.DAT"]],
   ["COPY A:X.DAT X.DAT", ["B:"], ["A", "X.DAT"], ["B", "X.DAT"]],
 ])
-  test(`${line}${setup.length ? " on B:" : " on A:"} still copies`, () => {
+  test(`SH11 ${line}${setup.length ? " on B:" : " on A:"} still copies`, () => {
     const t = trial(line, setup);
     assert.equal(t.text, "COPIED 000C");
     assert.deepEqual(read(t.image, ...to), read(t.image, ...from));
     assert.equal(t.tpaChanged, 0, "the TPA kept");
   });
 
-test("after B: and A:, a plain name is on A: again: a copy works, and one onto itself is refused", () => {
+test("SH11 after B: and A:, a plain name is on A: again: a copy works, and one onto itself is refused", () => {
   const t = trial("COPY X.DAT Y.DAT", ["B:", "A:"]);
   assert.equal(t.text, "COPIED 000C");
   assert.deepEqual(read(t.image, "A", "Y.DAT"), read(t.image, "A", "X.DAT"), "A:Y.DAT made from A:X.DAT");
@@ -132,13 +133,13 @@ for (const [line, to] of [
   ["COPY X.DAT X.DAQ", "X.DAQ"], // only the type's last byte differs
   ["COPY X.DAT Y.DAT", "Y.DAT"], // only the name's first byte
 ])
-  test(`${line} copies: the names differ in one byte`, () => {
+  test(`SH11 ${line} copies: the names differ in one byte`, () => {
     const t = trial(line);
     assert.equal(t.text, "COPIED 000C");
     assert.deepEqual(read(t.image, "A", to), read(t.image, "A", "X.DAT"));
   });
 
-test("every other case leaves the card and prints as COPY.COM does, with the TPA kept", () => {
+test("SH11 every other case leaves the card and prints as COPY.COM does, with the TPA kept", () => {
   const cases = [];
   for (const n of SIZES) cases.push(`S${n}.DAT D${n}.DAT`, `S${n}.DAT B:D${n}.DAT`, `B:S${n}.DAT A:D${n}.DAT`);
   cases.push("S157.DAT B:E157.DAT", "NONE.DAT D.DAT", "S1.DAT C:D1.DAT");
@@ -152,7 +153,7 @@ test("every other case leaves the card and prints as COPY.COM does, with the TPA
   }
 });
 
-test("on a write error COPY closes the destination: the records that fit are in it, their blocks in its entry (KE-179)", () => {
+test("SH11 on a write error COPY closes the destination: the records that fit are in it, their blocks in its entry (KE-179)", () => {
   const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry: "G1M", label: "DATA", mount: "C" },
@@ -161,7 +162,7 @@ test("on a write error COPY closes the destination: the records that fit are in 
   c.write("FILL.DAT", pattern(c.freeBytes() - 4096, 5));
   const room = c.freeBytes();
   volume(image, "A").write("BIG.DAT", pattern(room + 4096, 6));
-  const m = boot(image);
+  const m = boot(withShell(image));
   assert.equal(run(m, "COPY BIG.DAT C:DST.DAT"), "WRITE ERROR");
   run(m, "\x03");
   assert.deepEqual(m.violations, []);

@@ -85,6 +85,21 @@ export const service = async (name) => (await makeSvc(resolve(ROOT, "test/progra
 /** GLCD.SVC, the GLCD console driver, built from drivers/glcd.asm. */
 export const GLCD_SVC = (await makeSvc(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/svc") })).file;
 
+/** SHELL.SVC, the resident shell, built from drivers/shell.asm. */
+export const SHELL_SVC = (await makeSvc(resolve(ROOT, "drivers/shell.asm"), { work: resolve(ROOT, "build/svc") })).file;
+
+/**
+ * IMAGE with SHELL.SVC on A: and a STARTUP.CMD of SHELL.SVC, then LINES, so
+ * that it boots with the shell holding the prompt: the shell runs the lines
+ * after its own, which the ROM alone would not.
+ */
+export function withShell(image, ...lines) {
+  const a = volume(image, "A");
+  a.write("SHELL.SVC", SHELL_SVC);
+  a.write("STARTUP.CMD", startupFile("SHELL.SVC", ...lines));
+  return image;
+}
+
 
 /**
  * The three type bytes in the CCP's FCB after M's last command. A name the
