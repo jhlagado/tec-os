@@ -1,7 +1,7 @@
 // TAS.COM, the assembler the starter card carries, on TEC-OS: a program
 // assembled on the TEC and run; the card's copy, by its pinned hash, with a
 // missing or wrong file refused by the media tool; and drivers/ and svcdemo.asm
-// assembling under TAS to Atom's bytes, compared as the flat image under a .COM
+// assembling under TAS on TEC-OS to their pinned flat images under a .COM
 // type; a .SVC that loads; a failed build's FF00h stopping a chained line; and a
 // read-only output refused. Emulator evidence. TAS.COM is a pinned input
 // (test/inputs.json). And the ROM's map refusing a source line that holds
@@ -13,8 +13,6 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { assembleProgram } from "../tools/lib/assemble.mjs";
-import { makeSvc } from "../tools/lib/svc.mjs";
 import { scanSource } from "../tools/lib/tas-d8.mjs";
 import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
@@ -119,28 +117,27 @@ function underTas(equs, main, files, length) {
   return volume(image, "A").read("ROOT.COM").subarray(0, length);
 }
 
-/** Atom's flat image of SOURCE as makeSvc writes it, by the tree's own tool. */
-async function underAtom(source, opt) {
-  const made = await makeSvc(resolve(ROOT, source), { work: resolve(ROOT, "build/svc"), ...opt });
-  return (await assembleProgram(made.copy)).bytes;
-}
+// The flat images TAS builds from GLCD.SVC's source and from the svcdemo
+// service, by length and SHA-256: a change to either source, or to TAS,
+// shows here.
+const GLCD_FLAT = { bytes: 767, sha256: "aab1ec7be10d3f27fb9eb8c80adb3200e8059468892bbcf92229cb8a23d17278" };
+const SVCDEMO_FLAT = { bytes: 56, sha256: "f95a1d5d3b7e6e25f6c201f055e769977ae94f756f52145205f3a32135c9bf4e" };
+const sha = (b) => createHash("sha256").update(b).digest("hex");
 
 const COMMON = { "ABI.INC": text("src/abi.inc") };
 
-test("GLCD.SVC's source assembles under TAS to Atom's bytes", { skip: TAS.skip, timeout: 900_000 }, async () => {
-  const atom = await underAtom("drivers/glcd.asm", {});
-  const tas = underTas({}, "GLCD.ASM", { ...COMMON, "GLCD.ASM": text("drivers/glcd.asm") }, atom.length);
-  assert.deepEqual([...tas], [...atom]);
+test("GLCD.SVC's source assembles under TAS to its pinned image", { skip: TAS.skip, timeout: 900_000 }, () => {
+  const tas = underTas({}, "GLCD.ASM", { ...COMMON, "GLCD.ASM": text("drivers/glcd.asm") }, GLCD_FLAT.bytes);
+  assert.equal(sha(tas), GLCD_FLAT.sha256);
 });
 
-test("svcdemo.asm assembles under TAS to Atom's bytes", { skip: TAS.skip, timeout: 900_000 }, async () => {
+test("svcdemo.asm assembles under TAS to its pinned image", { skip: TAS.skip, timeout: 900_000 }, () => {
   const flags = [...new Set(readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").match(/\bV_[A-Z]+\b/g))];
   const numbers = { ...Object.fromEntries(flags.map((v) => [v, 0])), VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, RECVER: 2 };
   const name = '"DEMO    "';
-  const atom = await underAtom("test/programs/svcdemo.asm", { defs: { ...numbers, HDRNAME: name, RECNAME: name } });
   const source = readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").replaceAll("HDRNAME", name).replaceAll("RECNAME", name);
-  const tas = underTas(numbers, "SVCDEMO.ASM", { ...COMMON, "SVCDEMO.ASM": Buffer.from(source, "latin1") }, atom.length);
-  assert.deepEqual([...tas], [...atom]);
+  const tas = underTas(numbers, "SVCDEMO.ASM", { ...COMMON, "SVCDEMO.ASM": Buffer.from(source, "latin1") }, SVCDEMO_FLAT.bytes);
+  assert.equal(sha(tas), SVCDEMO_FLAT.sha256);
 });
 
 // The ROM's map gives each source line one statement. TAS takes several on a

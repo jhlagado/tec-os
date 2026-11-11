@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, volume } from "./lib/fixtures.mjs";
 import { PROGRAMS, realBuild, realProgram } from "./lib/mon3src.mjs";
-import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, digitsOf, figures, hello3, line, mon3Sources, mon3Variant, runFor, services, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, cardMon3, digitsOf, figures, hello3, line, mon3Sources, mon3Variant, runFor, services, word } from "./lib/mon3.mjs";
 import { ROM_HL_ROWS, compareRows, fixedImage, keyDown, keyUp, matrixDown, matrixUp, mon3Go, referenceHexLoad, referenceSide, routineOf, sessionSide } from "./lib/kg65.mjs";
 import { BIG16K, END, HASHES, boot, dataRecords, goTo, hexFile, inSession, lines, mon3Build, ok, pageOf, record, refused, runnable, sha, toMon3, toPrompt, tpaBytes, tpaDigest } from "./lib/mon3s2.mjs";
 
@@ -1122,7 +1122,7 @@ test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
 });
 
 // The size, within the ceiling every size test reads: (0006h) and the TPA
-// on the starter card, alone and with GLCD.SVC; TAS's file equal to ATOM's;
+// on the starter card, alone and with GLCD.SVC; the card's file, by its pinned hash;
 // each source file within the style's size, and passing it.
 
 async function sizeAndTpa(svc) {
@@ -1148,11 +1148,7 @@ test("KG64 size and tpa", async () => {
   const svc = await mon3Build();
   const f = await sizeAndTpa(svc);
   console.log(`MON3.SVC: file ${svc.file.length} bytes, header and image ${svc.image}, ${f.pages} pages, (0006h) ${f.top.toString(16)}h, TPA ${f.tpa}, ${f.both} with GLCD.SVC`);
-  const { tasAssembler, romBackend } = await import("../tools/lib/tas-rom.mjs");
-  if (romBackend() === "tas") {
-    const { assembleMon3 } = await import("../tools/lib/tas-distribution.mjs");
-    assert.deepEqual([...(await assembleMon3(ROOT, await tasAssembler()))], [...svc.file], "TAS's MON3.SVC equals ATOM's");
-  }
+  await cardMon3(svc);
   const { checkCompactSource } = await import("../tools/lib/style-compact.mjs");
   const routines = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-routines.json"), "utf8"));
   const exceptions = JSON.parse(readFileSync(resolve(ROOT, "tools/compact-exceptions.json"), "utf8"));
