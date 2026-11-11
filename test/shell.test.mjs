@@ -1241,12 +1241,11 @@ test("SH12 mutant: the last UNLOAD with the sweep removed, under the overwriting
 
 // --- The stack census with the shell ---------------------------------------
 
-/** The census's watch with the shell in: its three stacks, and the shell's own under STKTOP, a guard pattern below. */
+/** The census's watch with the shell in: its three stacks, and the shell's own, which the machine's guard reads. */
 function census(lines, opts) {
   const m = shellMachine(shellCard({ ...WORK, "GLCD.SVC": GLCD_SVC, "MON3.SVC": MON3.file, "LINE.COM": LINEP }, { startup: lines }), { noWait: true, ...opts });
   m.runUntil(() => m.ready() && pageOf(m), 900_000_000, "the prompt");
-  const page = pageOf(m);
-  for (let a = page + sym.STKBOT; a < page + sym.STKTOP; a += 1) m.write(a, 0xa5);
+  const guard = GUARDS.machines.find((g) => g.m === m);
   const done = watch(m);
   if (opts?.glcd) {
     // The GLCD's 8 rows pause most listings: the census's run answers [more].
@@ -1262,10 +1261,7 @@ function census(lines, opts) {
     m.type("\x03");
     m.runUntil(() => m.ready(), 400_000_000, "the prompt after ^C");
   }
-  const stacks = done({ pattern: true });
-  let own = 0;
-  while (own < 32 && m.read(page + sym.STKBOT + own) === 0xa5) own += 1;
-  return { stacks, shell: 32 - own };
+  return { stacks: done({ pattern: true }), shell: guard.read() };
 }
 
 test("SH13 guard read between prompts", () => {
@@ -1281,12 +1277,12 @@ test("SH13 census with the shell", () => {
   const { stacks, shell } = census(["SHELL.SVC"]);
   console.log(JSON.stringify({ stacks, shell }));
   for (const [k, s] of Object.entries(stacks)) assert.ok(s.deepest <= s.reserved * 0.75, `${k}: ${s.deepest} of ${s.reserved}, a quarter free`);
-  assert.ok(shell <= 24, `the shell's own stack: ${shell} of 32`);
+  assert.ok(shell >= 12 && shell <= 24, `the shell's own stack: ${shell} of 32, the docs' 16 within 12 to 24`);
 });
 
 test("SH13 census with the three", () => {
   const { stacks, shell } = census(["SHELL.SVC", "GLCD.SVC"], { matrix: true, glcd: true });
-  assert.ok(shell <= 24, `the shell's own stack: ${shell} of 32`);
+  assert.ok(shell >= 12 && shell <= 24, `the shell's own stack: ${shell} of 32, the docs' 16 within 12 to 24`);
   for (const [k, s] of Object.entries(stacks)) assert.ok(s.deepest <= s.reserved * 0.75, `${k}: ${s.deepest} of ${s.reserved}`);
 });
 
