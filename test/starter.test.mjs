@@ -316,3 +316,29 @@ test("on the card after CON PICO 80, TAS CHAIN builds CHAIN.COM, CHAIN prints LI
   keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
   assert.deepEqual(m.violations, []);
 });
+
+// At the Viewer's 40 columns, TED shows CHAIN.ASM's lines cut at column 40
+// and scrolls sideways to reach the rest: at line 10, column 63, the view
+// shows columns 24 to 63, and back at column 1 it starts at column 1 again.
+test("on the card at 40 columns, TED CHAIN.ASM scrolls sideways along a long line and back", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+  const card = Uint8Array.from(starter().card);
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  const keys = (s, what, done) => {
+    m.enqueueInput(s, "matrix");
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
+  };
+  const source = readFileSync(CHAIN.path, "latin1").replace(/\n$/, "").split("\n");
+  const view = () => m.screen().slice(0, source.length).map((l) => l.trimEnd());
+  const cut = (from) => source.map((l) => l.slice(from, from + 40).trimEnd());
+  keys("ted chain.asm\r", "TED", () => m.screen()[0].startsWith("; CHAIN:") && /L1 C1\b/.test(m.screen()[23]));
+  assert.equal(m.read(m.sym("VWID")), 40, "a 40-column console");
+  assert.deepEqual(view(), cut(0), "each line cut at column 40");
+  keys("\x1b[B".repeat(9), "line 10", () => /L10 C1\b/.test(m.screen()[23]));
+  keys("\x1b[C".repeat(62), "column 63", () => /L10 C63\b/.test(m.screen()[23]));
+  assert.deepEqual(view(), cut(23), "the view of columns 24 to 63");
+  assert.match(m.screen()[9], /; count five lines, numbered fr$/, "line 10's comment in view");
+  keys("\x1b[D".repeat(62), "column 1", () => /L10 C1\b/.test(m.screen()[23]));
+  assert.deepEqual(view(), cut(0), "back to the view from column 1");
+  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
+  assert.deepEqual(m.violations, []);
+});
