@@ -1444,5 +1444,22 @@ test("KG68 docs agree", async () => {
   const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];
   assert.deepEqual([...notBuilt.matchAll(/(\d+) `/g)].map((x) => Number(x[1])).sort((a, b) => a - b), refusedCalls, "the refused calls");
   for (const n of ["DISFROM", "C_FILENO", "0600h–07FFh", "Z and C set, as a key press gives", "Tables damaged: EXIT and reset"]) assert.ok(mon3.includes(n), `mon3.md: ${n}`);
-  assert.match(mon3, /Not yet shipped:\*\* `RST 18h`'s graphics/);
+  assert.match(mon3, /Not built:\*\* `RST 18h`'s calls 21 to 33/);
+  // The TPA with GLCD.SVC as well, three pages less.
+  assert.ok(mon3.includes(`the TPA is **${(fig.tpa - 768).toLocaleString("en")}**`), "the TPA with GLCD.SVC");
+  // The graphics calls the doc lists as built are those of the service's
+  // RST 18h table, and the refused ones the rest of MON-3's 34.
+  const gtable = src.slice(src.indexOf("\nGAPI:")).split("\n\n")[0];
+  const gwords = [...gtable.matchAll(/^\s+DW (\S+)/gm)].map((x) => x[1]);
+  assert.equal(gwords.length, 21, "RST 18h's table: 21 calls");
+  const gbuilt = gwords.flatMap((w, i) => (w === "DERR" ? [] : [i]));
+  assert.deepEqual(listedIn("Graphics calls implemented, 21 of them:"), gbuilt, "the graphics calls implemented");
+  const gref = mon3.slice(mon3.indexOf("Deferred, and refused: 21")).split(". They")[0];
+  assert.deepEqual([...gref.matchAll(/(\d+) `/g)].map((x) => Number(x[1])), Array.from({ length: 13 }, (_, i) => 21 + i), "the graphics calls refused");
+  assert.match(src, /^  cp 21          ; calls 0 to 20$/m, "RST 18h refuses 21 and above");
+  // The GLCD console: GLCD.SVC's bytes, when CON: is UC1:.
+  const glcmod = /^GLCMOD: DB (.*)$/m.exec(readFileSync(resolve(ROOT, "drivers/glcd.asm"), "utf8"))[1];
+  assert.equal(/^GMODE: DB (.*)$/m.exec(src)[1], glcmod, "the restore's bytes are GLCMOD's");
+  assert.ok(mon3.includes(`mode bytes, ${glcmod.split(",").map((b) => `${b.slice(1)}h`).join(", ").replace(/, (\S+)$/, " and $1")}, the same as its \`GLCMOD\``), "mon3.md names GLCMOD's bytes");
+  for (const s of ["when CON: is `UC1:` (IOBYTE AND 3 is 3)", "whatever driver holds it", "It reads no status", "On any other console the panel stays", "`CLRBUF` (0E0Ch) zero is the session's choice"]) assert.ok(mon3.includes(s), `mon3.md: ${s}`);
 });
