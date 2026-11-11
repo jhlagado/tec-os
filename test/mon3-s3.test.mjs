@@ -173,7 +173,7 @@ for (const [name, edits, why] of [
 
 const K = 78;
 /** The selectors built: MON-3's routines, relocated. */
-const BUILT = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20];
+const BUILT = Array.from({ length: 21 }, (_, i) => i);
 let callSidesMade;
 const theCallSides = async () => (callSidesMade ??= await callSides());
 
@@ -194,6 +194,15 @@ test("KG67 rst 18h calls", { timeout: 600_000 }, async () => {
   assert.equal(r.rows, 2 * rowsOf().length);
   assert.ok(r.lowSP > 0x3ef1, `the lowest SP ${r.lowSP.toString(16)}h, above the compared bytes`);
   console.log(`RST 18h calls: ${r.rows} rows equal, each ${K} T longer; the lowest SP ${r.lowSP.toString(16)}h`);
+});
+
+// From the RST's fetch to the routine's first instruction: 253 T in the
+// session, 175 T under MON-3, for every row.
+
+test("KG67 rst 18h timing", async () => {
+  const r = compareCalls(await theCallSides(), rowsOf([0, 9, 12, 13, 14, 15, 16, 20]));
+  for (const [sel, set] of Object.entries(r.entry)) assert.deepEqual([...set], ["253/175"], `call ${sel}: the session's T to the routine / MON-3's`);
+  for (const [sel, set] of Object.entries(r.extra)) assert.deepEqual([...set], [K], `call ${sel}: ${K} T longer`);
 });
 
 // Each selector's mutant, a patch inside its routine, is caught by its rows.
@@ -231,3 +240,37 @@ for (const [sel, name, edits] of MUTANTS.filter(([s]) => BUILT.includes(s))) {
     assert.ok(out.length, `call ${sel}'s rows catch it`);
   });
 }
+
+// The dispatch's mutants.
+
+test("KG67 mutant: the range test 20, selector 20 refused", async () => {
+  const sides = await mutantSides(await mon3Variant([["  cp 21          ; calls 0 to 20\n", "  cp 20          ; calls 0 to 20\n"]]));
+  assert.throws(() => callFailures(sides, [20]), /call 20 .* on session/, "call 20 waits on the error display");
+});
+
+test("KG67 mutant: the range test 22, selector 21 runs the word after the table", async () => {
+  const svc = await mon3Variant([["  cp 21          ; calls 0 to 20\n", "  cp 22          ; calls 0 to 20\n"]]);
+  const { ref } = await theRefusalSides();
+  const ses = await sessionSide({ svc });
+  // A refused RST 18h runs in page zero only at its slot and the latch
+  // stub. The word after the table jumps elsewhere: the run stops there.
+  const step = ses.m.step.bind(ses.m);
+  ses.m.step = () => {
+    const pc = ses.m.pc;
+    if (pc < 0x100 && !(pc >= 0x18 && pc < 0x20) && !(pc >= 0x41 && pc < 0x49)) throw new Error(`the refusal ran at ${pc.toString(16)}h`);
+    return step();
+  };
+  assert.throws(() => compareRefusals(ref, ses, [21]), /the refusal ran at 21h/, "the refusal row for A 21");
+});
+
+test("KG67 mutant: one more instruction in the dispatch, 82 T", async () => {
+  const sides = await mutantSides(await mon3Variant([["  jp nc,DERR     ; the rest refused\n", "  jp nc,DERR     ; the rest refused\n  nop\n"]]));
+  const r = compareCalls(sides, rowsOf([1]));
+  assert.deepEqual([...r.extra[1]], [82], "82 T longer, not 78");
+});
+
+test("KG67 mutant: a routine reading GBUF where MON-3 reads (VPORT)", async () => {
+  const sides = await mutantSides(await mon3Variant([["  ld de,(VPORT)\n  dec de\n", "  ld de,GBUF\n  dec de\n"]]));
+  const bad = compareCalls(sides, CALL_ROWS.filter(([s, i]) => s === 9)).bad;
+  assert.ok(bad.length && bad.every((b) => b.includes("vport 1000")), bad.join("\n"));
+});

@@ -117,7 +117,9 @@
     "GPIX",
     "GPCLR",
     "GPFLIP",
-    "GSETB"
+    "GSETB",
+    "GPSTR",
+    "GPCHR"
   ],
   "drivers/mon3hex.asm": [
     "CHEX",
