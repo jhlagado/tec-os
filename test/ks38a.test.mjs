@@ -1,7 +1,5 @@
-// KG41, KS38a's gate: none of the old file and label names is left in src/.
-// Its other half, the image equal to 7458352's label by label, held at KS38a's
-// landed tip, 7935507; KG42 took its place from KS38b and held at its own
-// landing. The lists are test/model/ks38a/kg41.json's.
+// None of the old file and label names that the renames retired is left in
+// src/. The lists are test/model/ks38a/kg41.json's.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
