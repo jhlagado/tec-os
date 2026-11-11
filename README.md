@@ -57,7 +57,7 @@ After setup, the normal commands need no toolchain environment variables.
 ```sh
 npm run build    # main ROM, map and census
 npm run diag     # board diagnostics for MON3: DIAG.HEX and DIAG.BIN
-npm run media    # ROM, programs, recipes and starter card in dist/
+npm run media    # ROM, programs, recipe and starter card in dist/
 npm run web      # the browser page in web/dist/
 npm test         # host and emulator tests, several minutes
 ```
@@ -82,13 +82,13 @@ Thorium and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza, from an explicit
 `.inputs/NAME`, then the legacy sibling paths `../thorium/dist/TED.COM`,
 `../thorium/dist/TAS.COM`, `../baza/dist/BAZA.COM`, `../baza/dist/BAZA.RTL` and
 `../baza/examples/BOUNCE.BAS`. `npm run media` needs all five to build the
-cards. Baza's repository is private: without access to it, put the three
+card. Baza's repository is private: without access to it, put the three
 pinned files, from someone who has it, in `.inputs/`. A selected override
 or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
 
 TAS is the default assembler for the main ROM, the diagnostics, GLCD.SVC,
-MOUNT.COM and DEMO.COM. The host is selected from `TECOS_TAS_HOST`, then
+MOUNT.COM, DEMO.COM, MON3.SVC and HELLO3.BIN. The host is selected from `TECOS_TAS_HOST`, then
 `.inputs/tas-host`. `TECOS_ROM_ASSEMBLER=atom` selects the ATOM reference
 build and needs no TAS host; the diagnostics always use TAS. Historical builds and test-only assembly
 fixtures retain their explicit ATOM paths. Unknown selections fail.
@@ -116,7 +116,7 @@ the tests use, at 4 MHz, with a TMS9918 screen, the 7-segment digits, the
 screen and type on the matrix keyboard; after `CON TTY`, type in the serial
 terminal instead. The card lives in the browser's IndexedDB and survives reloads.
 "New starter card" builds one from `starter.recipe.json`, checking every
-file's SHA-256. Files can be copied onto and off the card from the page,
+file's SHA-256: the same card as `dist/starter.img`, for there is one card. Files can be copied onto and off the card from the page,
 which resets the TEC-1G so CP/M sees the change.
 
 ## Cards
@@ -156,13 +156,17 @@ writing the LCD, lighting the digits and beeping through the ROM's services by
 lower case: it asks a name and a number and prints that number's times table.
 `BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
 runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
-an `.ASM` with TAS. The viewer's demo card holds `DEMO.ASM`, a tour of the
-hardware: `TAS DEMO` builds `DEMO.COM` and `DEMO` runs it, showing the LCD, the
-7-segment digits, the 8 × 8 LEDs and the PICO9918 in Graphics I, and
-`TED DEMO.ASM` reads it. `BOUNCE.BAS`, on the starter card and on the
-viewer's, is Baza's sprite game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes
-the PICO9918 in Graphics I through `call`; tap W, A, S and D to steer the ship,
-and Q gives the display back. A BASIC program that has claimed the display and
+an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
+`DEMO.COM` and `DEMO` runs it, showing the LCD, the 7-segment digits, the
+8 × 8 LEDs and the PICO9918 in Graphics I, and `TED DEMO.ASM` reads it. `MON3.SVC` runs programs written for MON-3, the
+TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC /E` gives `MON3>`,
+where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
+LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
+keyboard, returns to `MON3>`, and `EXIT` to `A>`. `HELLO3.ASM` is its source,
+and `TAS HELLO3 HELLO3.BIN` builds it. `BOUNCE.BAS` is Baza's sprite game:
+`BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in Graphics I
+through `call`; tap W, A, S and D to steer the ship, and Q gives the display
+back. A BASIC program that has claimed the display and
 stops on an error gives it back first, so its message shows. A command that
 names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary

@@ -1,18 +1,20 @@
-// The starter card that `npm run media` builds: exactly ten files on A:, each
-// the bytes its source or pin gives, the page's width drivers pinned in its
-// recipe, and it boots to a MOUNT that lists its volumes. Its BOUNCE.BAS is
-// compiled by BAZA and runs its sprites on the PICO9918. The page's card adds
-// DEMO.ASM, which TAS builds into the demo. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and
-// BOUNCE.BAS are pinned inputs (test/inputs.json).
+// The starter card that `npm run media` builds, the one card, which the web
+// page runs too: exactly fourteen files on A:, each the bytes its source or
+// pin gives, and it boots to a MOUNT that lists its volumes. Its BOUNCE.BAS is
+// compiled by BAZA and runs its sprites on the PICO9918, TAS builds DEMO.ASM
+// into the demo, and MON3.SVC loads and runs HELLO3.BIN, which writes the
+// LCD. Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
+// are pinned inputs (test/inputs.json).
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { GLCD_SVC, ROOT, boot, program, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
+import { MON3, hello3, lcdRows, line, mon3Svc } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
 
 const TED = pinned("TED.COM");
@@ -22,7 +24,8 @@ const RTL = pinned("BAZA.RTL");
 const BOUNCE = pinned("BOUNCE.BAS");
 const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip;
 const sha = (b) => createHash("sha256").update(b).digest("hex");
-const text = (name) => Buffer.from(readFileSync(resolve(ROOT, "programs", name), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
+const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
+const text = (name) => textAt(`programs/${name}`);
 // Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
 const bounceText = () => Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
 
@@ -39,7 +42,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly ten files, each by its hash, the PICO9918's console being the ROM's (KS39)", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly fourteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -57,6 +60,10 @@ test("the starter card holds exactly ten files, each by its hash, the PICO9918's
     "SAMPLE.ASM": text("SAMPLE.ASM"),
     "TIMES.BAS": text("TIMES.BAS"),
     "BOUNCE.BAS": bounceText(),
+    "DEMO.ASM": text("DEMO.ASM"),
+    "MON3.SVC": (await mon3Svc()).file,
+    "HELLO3.ASM": textAt("test/programs/hello3.asm"),
+    "HELLO3.BIN": await hello3(),
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
@@ -76,32 +83,21 @@ test("the starter card boots, and MOUNT lists its volumes", { skip: PAGE_SKIP, t
   assert.deepEqual(m.violations, []);
 });
 
-/** The page's card, built from its recipe and dist/'s files. */
+/** The card as the web page makes it: from the recipe and dist/'s files. */
 async function pageCard() {
-  starter();
-  const page = JSON.parse(readFileSync(resolve(ROOT, "dist/page.recipe.json"), "utf8"));
-  return { page, card: await buildRecipe(page, fileFetcher(resolve(ROOT, "dist"))) };
+  const { recipe } = starter();
+  return buildRecipe(recipe, fileFetcher(resolve(ROOT, "dist")));
 }
 
-test("the web page's card is the starter with DEMO.ASM, which the starter lacks, and no DEMO.COM", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
-  check(BOUNCE);
+test("the web page's card is the starter card, byte for byte, its instruction naming each program and no DEMO.COM on it", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   const { card, recipe } = starter();
-  const { page, card: pc } = await pageCard();
-  const bounce = bounceText();
-  const names = (r) => r.components.map((c) => c.name).sort();
-  assert.deepEqual(names(page), [...names(recipe), "DEMO.ASM"].sort());
-  assert.ok(names(recipe).includes("BOUNCE.BAS"), "BOUNCE.BAS on the starter");
-  assert.equal(page.components.find((c) => c.name === "BOUNCE.BAS").files[0].sha256, sha(bounce));
-  const demoSource = Buffer.from(readFileSync(resolve(ROOT, "programs/DEMO.ASM"), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
-  assert.equal(page.components.find((c) => c.name === "DEMO.ASM").files[0].sha256, sha(demoSource));
-  assert.match(page.instruction, /TAS DEMO then DEMO/);
-  assert.match(page.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
+  assert.equal(existsSync(resolve(ROOT, "dist/page.recipe.json")), false, "no second recipe");
+  assert.equal(sha(await pageCard()), sha(card), "the recipe's card is dist/starter.img");
+  assert.deepEqual(readdirSync(resolve(ROOT, "dist/files")).sort(), recipe.components.map((c) => c.name).sort(), "dist/files holds the recipe's files");
+  assert.match(recipe.instruction, /TAS DEMO then DEMO/);
   assert.match(recipe.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
-  for (const name of ["DEMO.COM", "DEMO.ASM"]) assert.equal(volume(card, "A").list().some((f) => f.name === name), false, `${name} not on the starter`);
-  const onPage = volume(pc, "A");
-  assert.ok(!onPage.list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
-  assert.equal(sha(onPage.read("BOUNCE.BAS").subarray(0, bounce.length)), sha(bounce), "BOUNCE.BAS on the page's card");
-  assert.equal(sha(onPage.read("DEMO.ASM").subarray(0, demoSource.length)), sha(demoSource), "DEMO.ASM on the page's card");
+  assert.match(recipe.instruction, /MON3\.SVC \/E, then LOAD HELLO3\.BIN and GO/);
+  assert.ok(!volume(card, "A").list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
 });
 
 // BOUNCE.BAS, Baza's CALL demonstration, on a card as the Viewer runs it: the
@@ -158,20 +154,15 @@ function bounceRound(card) {
   assert.deepEqual(m.violations, []);
 }
 
-test("on the starter card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D move the ship, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+test("on the card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D move the ship, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   check(BOUNCE);
   bounceRound(Uint8Array.from(starter().card));
 });
 
-test("on the page's card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D move the ship, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
-  check(BOUNCE);
-  bounceRound((await pageCard()).card);
-});
-
-// The page's card holds the demo as source only: TAS DEMO makes the pinned
+// The card holds the demo as source only: TAS DEMO makes the pinned
 // 1,191-byte DEMO.COM, and DEMO runs it.
-test("on the page's card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { skip: PAGE_SKIP, timeout: 1_800_000 }, async () => {
-  const { card } = await pageCard();
+test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { skip: PAGE_SKIP, timeout: 1_800_000 }, async () => {
+  const card = Uint8Array.from(starter().card);
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   let mark = m.output.length;
   const keys = (s, what, done) => {
@@ -192,5 +183,48 @@ test("on the page's card, TAS DEMO builds DEMO.COM and DEMO runs it until a key"
   m.enqueueInput(" ", "matrix");
   m.runUntilChecked(() => (m.pumpInput(), m.ready() && /Demo stopped\.\r\n[^]*A>$/.test(m.text(mark))), 400_000_000, "the prompt after a key");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
+  assert.deepEqual(m.violations, []);
+});
+
+const HELLO3_ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY RST 20H   ", "KEY BEEPS, AD QUITS "];
+
+// HELLO3 as the card's instruction gives it, on the card as the web page runs
+// it: the PICO9918 at 40 columns and the matrix keyboard, whose Esc MON-3
+// takes as AD. Esc goes up at the program's return, as in
+// test/ks53-hello.test.mjs: held longer, the MON3> line reads it as a key.
+test("on the card, MON3.SVC /E, LOAD HELLO3.BIN and GO write HELLO3's four lines on the LCD, Esc returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+  const m = boot(Uint8Array.from(starter().card), { tms: true, matrix: true, width: 40 });
+  assert.ok(line(m, "MON3.SVC /E").mon3, "MON3.SVC /E gives MON3>");
+  assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
+  m.type("GO\r");
+  m.runUntilChecked(() => lcdRows(m).join("") === HELLO3_ROWS.join(""), 50_000_000, "HELLO3's lines on the LCD");
+  const digits = () => Array.from(m.tec1g.state.display.digits);
+  const shown = digits();
+  const end = m.cycles + 4_000_000;
+  m.runUntil(() => m.cycles >= end, 5_000_000, "HELLO3 counting");
+  assert.notDeepEqual(digits(), shown, "the count moves on the digits");
+  const from = m.output.length;
+  m.tec1g.applyMatrixKey(1, 4, true);
+  m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after Esc");
+  m.tec1g.applyMatrixKey(1, 4, false);
+  m.runUntilChecked(() => m.waitingForInput() && MON3.test(m.text(from)), 50_000_000, "MON3> after Esc");
+  assert.deepEqual(lcdRows(m), HELLO3_ROWS, "the LCD as HELLO3 left it");
+  const exit = line(m, "EXIT");
+  assert.ok(!exit.mon3, "EXIT leaves MON3>");
+  assert.match(exit.out, /A>$/);
+  assert.ok(m.videoConsole(), "the PICO9918 is the console again");
+  assert.deepEqual(m.violations, []);
+});
+
+// The card's HELLO3.ASM builds on the card into the HELLO3.BIN beside it.
+test("on the card, TAS HELLO3 HELLO3.BIN rebuilds HELLO3.BIN as it is", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+  const card = Uint8Array.from(starter().card);
+  const want = await hello3();
+  const m = boot(card);
+  m.command("ERA HELLO3.BIN");
+  assert.match(m.command("TAS HELLO3 HELLO3.BIN", { maxCycles: 3_000_000_000 }), /HELLO3\.BIN written/);
+  const built = Buffer.from(volume(card, "A").read("HELLO3.BIN"));
+  assert.equal(sha(built.subarray(0, want.length)), sha(want), "the card's HELLO3.BIN");
+  assert.ok(built.subarray(want.length).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
   assert.deepEqual(m.violations, []);
 });

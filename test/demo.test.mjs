@@ -1,4 +1,4 @@
-// DEMO.ASM, the page card's demo source: TAS DEMO on TEC-OS builds it from
+// DEMO.ASM, the card's demo source: TAS DEMO on TEC-OS builds it from
 // the card into the pinned DEMO.COM, byte for byte, with no include file,
 // since TAS reads only the current drive. Emulator evidence. TAS.COM is a
 // pinned input (test/inputs.json).
