@@ -96,7 +96,18 @@
   ],
   "drivers/mon3gfx.asm": [
     "R18",
-    "GWS"
+    "GWS",
+    "GINIT",
+    "GCLRB",
+    "GCLRG",
+    "GCLRT",
+    "GGRM",
+    "GTXM",
+    "GPLOT",
+    "GDLYUS",
+    "GDLYMS",
+    "GBCLR",
+    "GBKEEP"
   ],
   "drivers/mon3hex.asm": [
     "CHEX",

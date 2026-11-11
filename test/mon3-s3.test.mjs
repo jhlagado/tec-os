@@ -12,7 +12,7 @@ import { ROOT } from "./lib/fixtures.mjs";
 import { MON3_CEILING, bytesAt, line, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
 import { boot, goTo, mon3Build, sha, toMon3 } from "./lib/mon3s2.mjs";
 import { referenceSide, sessionSide } from "./lib/kg65.mjs";
-import { REFUSAL_TOP, compareRefusals } from "./lib/kg67.mjs";
+import { CALL_ROWS, REFUSAL_TOP, callSides, compareCalls, compareRefusals } from "./lib/kg67.mjs";
 
 // The five GLCD programs, converted with the four rules more and their
 // includes found as pinned inputs, give their pinned binaries; the rules
@@ -160,5 +160,74 @@ for (const [name, edits, why] of [
 ]) {
   test(`KG67 mutant: ${name}`, async () => {
     await assert.rejects(workspace(await mon3Variant(edits)), why);
+  });
+}
+
+// The calls: each row of the table file's inputs for selectors 0 to 20, with
+// F 00h and FFh, gives on MON-3 and in the session equal A, F, BC, DE (not
+// after call 14, which leaves DE in MON-3's ROM), HL, IY and SP; equal bytes
+// in 0800h-3EF1h but 0892h-0895h; equal graphics RAM, DDRAM, RE, G and
+// display bit; and equal writes to ports 07h and 87h with equal cycles
+// between them. Each row is exactly 78 T longer in the session: the restart
+// path and the range test, against MON-3's jump and its own test.
+
+const K = 78;
+/** The selectors built: MON-3's routines, relocated. */
+const BUILT = [0, 1, 2, 3, 4, 5, 12, 15, 16, 17, 18];
+let callSidesMade;
+const theCallSides = async () => (callSidesMade ??= await callSides());
+
+/** The rows of SELS, or all of them. */
+const rowsOf = (sels = BUILT) => CALL_ROWS.filter(([s]) => sels.includes(s) && BUILT.includes(s));
+
+/** What fails for the rows of SELS on SIDES: the rows that differ, and the cycles that are not reference + K. */
+function callFailures(sides, sels) {
+  const r = compareCalls(sides, rowsOf(sels));
+  const out = [...r.bad];
+  for (const [sel, set] of Object.entries(r.extra)) if (set.size !== 1 || !set.has(K)) out.push(`call ${sel}: ${[...set].join(", ")} T more, not ${K}`);
+  return { out, r };
+}
+
+test("KG67 rst 18h calls", { timeout: 600_000 }, async () => {
+  const { out, r } = callFailures(await theCallSides());
+  assert.deepEqual(out, []);
+  assert.equal(r.rows, 2 * rowsOf().length);
+  assert.ok(r.lowSP > 0x3ef1, `the lowest SP ${r.lowSP.toString(16)}h, above the compared bytes`);
+  console.log(`RST 18h calls: ${r.rows} rows equal, each ${K} T longer; the lowest SP ${r.lowSP.toString(16)}h`);
+});
+
+// Each selector's mutant, a patch inside its routine, is caught by its rows.
+
+const MUTANTS = [
+  [0, "INIT_BASIC's 0Ch written 08h", [["GINITB: DB $30,$0C,$06,$01", "GINITB: DB $30,$08,$06,$01"]]],
+  [1, "clearGBUF's count 03FFh written 03FEh", [["  ld bc,$03FF\n  ldir           ; and the other 1,023\n", "  ld bc,$03FE\n  ldir           ; and the other 1,023\n"]]],
+  [2, "clearGrLCD's CP 20H written CP 1FH", [["  cp $20         ; 32 pairs\n", "  cp $1F         ; 32 pairs\n"]]],
+  [3, "clearTxtLCD's count 40h written 3Fh", [["  ld b,$40       ; 64 characters\n", "  ld b,$3F       ; 64 characters\n"]]],
+  [4, "setGrMode's 36h written 34h", [["  ld a,$36       ; and graphics on\n", "  ld a,$34       ; and graphics on\n"]]],
+  [5, "setTxtMode's 30h written 34h", [["  ld a,$30       ; the basic set\n", "  ld a,$34       ; the basic set\n"]]],
+  [6, "drawBox's right-hand loop removed", [["\nGBOX4:\n  call GPIX\n  ld a,e         ; Y1\n  inc c          ; the next Y\n  cp c\n  jr nc,GBOX4    ; up to Y1\n", "\n"]]],
+  [7, "drawLine's ENDPT taken from BC, not DE", [["  ld (ENDPT),de  ; where the line ends\n", "  ld (ENDPT),bc  ; where the line ends\n"]]],
+  [8, "drawCircle's first-quadrant CALL drawPixel removed", [["  call GPIX      ; quadrant I\n", ""]]],
+  [9, "drawPixel's OR (HL) removed", [["  or (hl)        ; the bit set\n", ""]]],
+  [10, "fillBox's outer loop run once", [["  jr nc,GFBOX    ; up to X1\n", ""]]],
+  [11, "fillCircle stopping at radius E-1", [["  jr nc,GFCIR1   ; up to E\n", "  jr nz,GFCIR1   ; up to E\n"]]],
+  [12, "plotToLCD's CLRBUF test inverted", [["  jr z,GPLOT4    ; no: kept\n", "  jr nz,GPLOT4   ; no: kept\n"]]],
+  [13, "printString's ROWS index one higher", [["  ld hl,GROWS\n", "  ld hl,GROWS+1\n"]]],
+  [14, "printChars' ADD A,B removed", [["  add a,b        ; and the column\n", ""]]],
+  [15, "V_DELAY_US 000Bh", [["VDLY EQU $000A", "VDLY EQU $000B"]]],
+  [16, "delayMS's loop with a NOP", [["  dec de         ; one count\n", "  dec de         ; one count\n  nop\n"]]],
+  [17, "setBufClear's JP clearGBUF written RET", [["  jp GCLRB       ; and the buffer\n", "  ret\n"]]],
+  [18, "setBufNoClear writing 01h", [["GBKEEP:\n  xor a          ; zero\n", "GBKEEP:\n  ld a,1\n"]]],
+  [19, "clearPixel's CPL removed", [["  cpl\n  and (hl)       ; the bit cleared\n", "  and (hl)       ; the bit cleared\n"]]],
+  [20, "flipPixel's XOR (HL) written OR (HL)", [["  xor (hl)       ; the bit flipped\n", "  or (hl)        ; the bit flipped\n"]]],
+];
+
+/** Sides with SVC in the session and MON-3 as the reference. */
+const mutantSides = async (svc) => ({ ref: (await theCallSides()).ref, ses: (await callSides({ svc })).ses });
+
+for (const [sel, name, edits] of MUTANTS.filter(([s]) => BUILT.includes(s))) {
+  test(`KG67 mutant: call ${sel}, ${name}`, async () => {
+    const { out } = callFailures(await mutantSides(await mon3Variant(edits)), [sel]);
+    assert.ok(out.length, `call ${sel}'s rows catch it`);
   });
 }
