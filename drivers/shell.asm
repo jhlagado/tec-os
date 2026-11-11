@@ -332,20 +332,20 @@ LEAD:
 
 SPLIT:
   ld (PIECE),hl  ; this piece
-  ld d,h         ; DE: past the last
-  ld e,l         ; byte not a blank
+  ld d,h         ; DE: the piece's end
+  ld e,l         ; none kept yet
   ld c,SPACE     ; as after a blank
 
 SP1:
   ld a,(hl)
   or a
   jr z,SPEND     ; the line's end
-  cp '!'         ; !: always
+  cp '!'         ; a !?
   jr z,SPSEP     ; ! always splits
-  cp '&'         ; &: if after a
+  cp '&'         ; an & after a blank?
   jr nz,SP3
   ld b,a         ; keep the &
-  ld a,c         ; blank
+  ld a,c         ; the byte before it
   cp SPACE       ; after a space?
   jr z,SPAMP
   cp TAB         ; or a tab?
@@ -361,10 +361,10 @@ SP3:
   cp SPACE
   jr z,SP4       ; a blank leaves DE
   cp TAB
-  jr z,SP4
-  ld d,h         ; text: the piece
-  ld e,l         ; goes on past it
-  inc de
+  jr z,SP4       ; so does a tab
+  ld d,h
+  ld e,l
+  inc de         ; DE: past this byte
 
 SP4:
   inc hl         ; on to the next byte
@@ -372,8 +372,8 @@ SP4:
 
 SPSEP:
   ex de,hl
-  ld (hl),0      ; the piece ends
-  ex de,hl       ; before its blanks
+  ld (hl),0      ; the end, at DE
+  ex de,hl
   inc hl         ; past the separator
   sub '!'        ; ! or & here
   ld b,a         ; 0 for !, else &
@@ -460,9 +460,9 @@ BI5:
   ld a,(de)      ; the handler, low
   ld c,a
   inc de
-  ld a,(de)      ; and high
+  ld a,(de)      ; the handler, high
   ld b,a         ; BC = the handler
-  push bc        ; entered by RET, with
+  push bc        ; run by the RET
   ret            ; HL after the word
 
 ; A first word of type CMD is a script:
@@ -494,9 +494,9 @@ FOLD:
   or a
   ret z          ; the piece's end
   cp 'a'
-  jr c,FD1       ; below a
+  jr c,FD1       ; below 'a'
   cp 'z'+1
-  jr nc,FD1      ; above z
+  jr nc,FD1      ; above 'z'
   and $DF        ; fold to upper case
   ld (hl),a
 
@@ -517,11 +517,11 @@ HAND:
 
 HC1:
   ld a,(hl)
-  ld (de),a      ; up to and with its
-  inc hl         ; zero
-  inc de         ; the next
+  ld (de),a      ; copy a byte
+  inc hl
+  inc de
   or a
-  jr nz,HC1
+  jr nz,HC1      ; to the zero, copied
   ld a,(LORG)    ; the line's origin
   ld sp,(SAVSP)  ; the CCP's stack
   ret            ; to the ROM
@@ -534,7 +534,7 @@ CMDDEL:
   ld (hl),'E'    ; rewrite the word
   inc hl
   ld (hl),'R'
-  inc hl         ; the next
+  inc hl
   ld (hl),'A'    ; DEL becomes ERA
   jr HAND
 
@@ -563,7 +563,7 @@ BW1:
   ld e,a         ; print it
   call PUTC
   inc hl
-  jr BW1         ; the next
+  jr BW1         ; to the word's end
 
 BW2:
   ld e,'?'       ; then ?
