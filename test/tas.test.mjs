@@ -13,6 +13,7 @@ import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { DHLEN, makeSvc } from "../tools/lib/svc.mjs";
 import { scanSource } from "../tools/lib/tas-d8.mjs";
 import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
@@ -119,24 +120,37 @@ function underTas(equs, main, files, length) {
 
 // The flat images TAS builds from GLCD.SVC's source and from the svcdemo
 // service, by length and SHA-256: a change to either source, or to TAS,
-// shows here.
+// shows here. Each body, after the header the .SVC writer fills in, is also
+// compared with the same assembly by TAS on the host, so a source edit fails
+// only on the pin.
 const GLCD_FLAT = { bytes: 767, sha256: "aab1ec7be10d3f27fb9eb8c80adb3200e8059468892bbcf92229cb8a23d17278" };
 const SVCDEMO_FLAT = { bytes: 56, sha256: "f95a1d5d3b7e6e25f6c201f055e769977ae94f756f52145205f3a32135c9bf4e" };
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
 const COMMON = { "ABI.INC": text("src/abi.inc") };
 
-test("GLCD.SVC's source assembles under TAS to its pinned image", { skip: TAS.skip, timeout: 900_000 }, () => {
+/** The body of makeSvc's image at 0100h, by TAS on the host: its file's body with each fixup's byte one more. */
+async function onHost(source, opt) {
+  const made = await makeSvc(resolve(ROOT, source), { work: resolve(ROOT, "build/svc"), ...opt });
+  const body = Buffer.from(made.file.subarray(DHLEN, made.image));
+  for (const f of made.fixups) body[f] += 1;
+  return body;
+}
+
+test("GLCD.SVC's source assembles under TAS to its pinned image", { skip: TAS.skip, timeout: 900_000 }, async () => {
   const tas = underTas({}, "GLCD.ASM", { ...COMMON, "GLCD.ASM": text("drivers/glcd.asm") }, GLCD_FLAT.bytes);
+  assert.deepEqual([...tas.subarray(DHLEN)], [...(await onHost("drivers/glcd.asm", {}))], "TAS on TEC-OS gives the host's body");
   assert.equal(sha(tas), GLCD_FLAT.sha256);
 });
 
-test("svcdemo.asm assembles under TAS to its pinned image", { skip: TAS.skip, timeout: 900_000 }, () => {
+test("svcdemo.asm assembles under TAS to its pinned image", { skip: TAS.skip, timeout: 900_000 }, async () => {
   const flags = [...new Set(readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").match(/\bV_[A-Z]+\b/g))];
   const numbers = { ...Object.fromEntries(flags.map((v) => [v, 0])), VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, RECVER: 2 };
   const name = '"DEMO    "';
   const source = readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").replaceAll("HDRNAME", name).replaceAll("RECNAME", name);
   const tas = underTas(numbers, "SVCDEMO.ASM", { ...COMMON, "SVCDEMO.ASM": Buffer.from(source, "latin1") }, SVCDEMO_FLAT.bytes);
+  const host = await onHost("test/programs/svcdemo.asm", { defs: { ...numbers, HDRNAME: name, RECNAME: name } });
+  assert.deepEqual([...tas.subarray(DHLEN)], [...host], "TAS on TEC-OS gives the host's body");
   assert.equal(sha(tas), SVCDEMO_FLAT.sha256);
 });
 
