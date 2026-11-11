@@ -1103,7 +1103,7 @@ test("KG66 mutant: LOAD's BIN read starting one record late", async () => {
 });
 
 test("KG66 mutant: a conversion that leaves ORG blocks in source order", async () => {
-  await assert.rejects(realProgram("matrixz80", { keepOrder: true }), /IMAGE records descend or overlap/);
+  await assert.rejects(realProgram("matrixz80", { keepOrder: true }), /ORG goes backward/);
 });
 
 test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
