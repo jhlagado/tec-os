@@ -4,7 +4,8 @@
 // assembling under TAS to Atom's bytes, compared as the flat image under a .COM
 // type; a .SVC that loads; a failed build's FF00h stopping a chained line; and a
 // read-only output refused. Emulator evidence. TAS.COM is a pinned input
-// (test/inputs.json).
+// (test/inputs.json). And the ROM's map refusing a source line that holds
+// several statements, which it cannot place.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -14,6 +15,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { assembleProgram } from "../tools/lib/assemble.mjs";
 import { makeSvc } from "../tools/lib/svc.mjs";
+import { scanSource } from "../tools/lib/tas-d8.mjs";
 import { ROOT, boot, standardCard, volume } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
@@ -52,7 +54,7 @@ test("the media tool refuses a TAS.COM missing or not as pinned", () => {
   assert.match(missing.stderr, /no TAS\.COM at/);
   const wrong = media(resolve(ROOT, "README.md"));
   assert.notEqual(wrong.status, 0);
-  assert.match(wrong.stderr, /TAS\.COM at .* has sha256 [0-9a-f]+, pinned 45c0cf05/);
+  assert.match(wrong.stderr, /TAS\.COM at .* has sha256 [0-9a-f]+, pinned e648a1d0/);
 });
 
 test("TAS X X.SVC makes a service that loads", { skip: TAS.skip, timeout: 900_000 }, () => {
@@ -139,4 +141,14 @@ test("svcdemo.asm assembles under TAS to Atom's bytes", { skip: TAS.skip, timeou
   const source = readFileSync(resolve(ROOT, "test/programs/svcdemo.asm"), "latin1").replaceAll("HDRNAME", name).replaceAll("RECNAME", name);
   const tas = underTas(numbers, "SVCDEMO.ASM", { ...COMMON, "SVCDEMO.ASM": Buffer.from(source, "latin1") }, atom.length);
   assert.deepEqual([...tas], [...atom]);
+});
+
+// The ROM's map gives each source line one statement. TAS takes several on a
+// line, a \ between them, so the map refuses such a line; a \ in quotes or in
+// a comment is not one.
+test("the ROM's map refuses a line of several statements, and not a \\ in quotes or a comment", () => {
+  const scan = (text) => () => scanSource(new Map([["rom.asm", Buffer.from(text, "latin1")]]), "rom.asm");
+  assert.throws(scan("  nop\r\n  ld a,1 \\ inc b\r\n"), /rom\.asm:2: several statements on a line/);
+  assert.throws(scan("START:  ret \\ nop ; two\n"), /rom\.asm:1: several statements on a line/);
+  assert.doesNotThrow(scan("  ld a,'\\\\'   ; a \\ in a comment\n  ex af,af'  ; \\\n  db \"a\\\"\\\\\"\n"));
 });

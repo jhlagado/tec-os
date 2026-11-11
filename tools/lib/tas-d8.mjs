@@ -102,6 +102,23 @@ function decodeStatements(dbg, staged, end, globalsAt) {
   return { statements, regions, parts };
 }
 
+/** The code of a line, before its comment, with quoted text blanked. */
+function code(text) {
+  let out = '', quote = null;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quote) {
+      if (c === '\\') i++;
+      else if (c === quote) quote = null;
+      out += ' ';
+    } else if (c === ';') break;
+    // A ' after a name character is AF's prime, not a quote.
+    else if (c === '"' || (c === "'" && !/\w/.test(text[i - 1] ?? ' '))) { quote = c; out += ' '; }
+    else out += c;
+  }
+  return out;
+}
+
 function lines(bytes) {
   const result = [];
   let offset = 0;
@@ -135,6 +152,9 @@ export function scanSource(sources, entry) {
         visit(perFile.has(relative) ? relative : inc[1]);
         continue;
       }
+      // The map below gives each line one statement and one region kind, so
+      // a line with several statements, a \ between them, is refused.
+      assert.ok(!code(text).includes('\\'), file + ':' + (i + 1) + ': several statements on a line, which the ROM map cannot place');
       const match = definition.exec(text);
       const kind = match?.[2] ? 'label' : 'constant';
       if (match) {
