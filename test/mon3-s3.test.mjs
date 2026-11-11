@@ -8,11 +8,11 @@ import assert from "node:assert/strict";
 import { GLCD_PROGRAMS, PROGRAMS, RULES, fromInputs, realBuild, realProgram } from "./lib/mon3src.mjs";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ROOT, volume } from "./lib/fixtures.mjs";
+import { ROOT, program, volume } from "./lib/fixtures.mjs";
 import { MON3_CEILING, bytesAt, line, mon3Sources, mon3Variant, services, word } from "./lib/mon3.mjs";
-import { boot, goTo, mon3Build, sha, toMon3 } from "./lib/mon3s2.mjs";
+import { boot, goTo, inSession, mon3Build, sha, toMon3 } from "./lib/mon3s2.mjs";
 import { referenceSide, sessionSide } from "./lib/kg65.mjs";
-import { CALL_ROWS, GORET, MON3_SOFTBOOT, REFUSAL_TOP, callSides, compareCalls, compareRefusals, drive3d, ldarOf, programReference, programSession, regsOf, runToPc, snap } from "./lib/kg67.mjs";
+import { CALL_ROWS, GORET, glcdOf, MON3_SOFTBOOT, REFUSAL_TOP, callSides, compareCalls, compareRefusals, drive3d, ldarOf, programReference, programSession, regsOf, runToPc, snap } from "./lib/kg67.mjs";
 
 // The five GLCD programs, converted with the four rules more and their
 // includes found as pinned inputs, give their pinned binaries; the rules
@@ -414,3 +414,114 @@ test("KG67 mutant: glcd-maze without the R pin", { timeout: 600_000 }, async () 
   runToPc(ses, GORET, 2_000_000_000, "glcd-maze in the session");
   assert.notEqual(snap(ses.m).gbuf, snap(ref.m).gbuf, "the two sides' GBUF differ");
 });
+
+// The console after a program returns. GLCDRET's TXT leaves text mode with
+// text in DDRAM, as glcd-text ends; GRT graphics mode with text left in
+// DDRAM, as glcd-3d returns from its menu.
+
+const GLCDRET_SHA = "a64282737d20d85ab9c2b72ecd1136ce35f5a20b9481aaf5a7e303a0185e7ae8";
+async function glcdret() {
+  const { bytes, symbols } = await program("glcdret", { base: 0x4000 });
+  assert.equal(bytes.length, 59, "GLCDRET.BIN: 59 bytes");
+  assert.equal(sha(Uint8Array.from(bytes)), GLCDRET_SHA, "GLCDRET.BIN: its hash");
+  assert.deepEqual([symbols.TXT, symbols.GRT], [0x4000, 0x4016], "TXT at 4000h, GRT at 4016h");
+  return { bytes: Uint8Array.from(bytes), symbols };
+}
+
+/**
+ * Whether the panel on M can be read at PROMPT: glcdScreen's last row that
+ * is not empty is the prompt; RE and G set, display on, no line reversed
+ * and no scroll; DDRAM 64 spaces, since the ST7920 shows its text over the
+ * graphics. Returns what fails.
+ */
+function unreadable(m, prompt) {
+  const g = glcdOf(m);
+  const rows = m.glcdScreen().filter((l) => l.trim() !== "");
+  const out = [];
+  if (!rows.length || !rows.at(-1).trimEnd().endsWith(prompt)) out.push(`the last row ${JSON.stringify(rows.at(-1))}`);
+  if (!(g.re && g.graphics && g.on)) out.push(`the mode ${JSON.stringify({ re: g.re, graphics: g.graphics, on: g.on })}`);
+  if (g.reverse || g.scroll) out.push("a line reversed or scrolled");
+  if (g.ddram !== " ".repeat(64)) out.push(`DDRAM ${JSON.stringify(g.ddram.trim())}`);
+  return out;
+}
+
+/** BYTES run by GO AT on the GLCD-console board with SVC, to MON3>: the machine and the console's text from GO. */
+async function glcdGo(svc, bytes, at = 0x4000, matrix = true) {
+  const { m } = await inSession({ "PROG.BIN": bytes }, { svc, machine: { matrix } });
+  assert.ok(line(m, "LOAD PROG.BIN").mon3);
+  goTo(m, `GO ${at.toString(16)}`, at, 20_000_000);
+  m.mark = m.output.length;
+  const out = toMon3(m, 2_000_000_000);
+  return { m, out };
+}
+
+const BRK = Uint8Array.from([0xf7, 0xc9]); // RST 30h; RET
+// LD HL,(0001h); LD DE,000Ch; ADD HL,DE; INC (HL); RET: the RAM BIOS
+// table's LIST entry changed.
+const DAMAGE = Uint8Array.from([0x2a, 0x01, 0x00, 0x11, 0x0c, 0x00, 0x19, 0x34, 0xc9]);
+const WARN = "Tables damaged: EXIT and reset";
+
+async function consoleAfterGo(svc) {
+  svc ??= await mon3Build();
+  // The session's mode bytes are GLCD.SVC's GLCMOD.
+  const glcmod = /^GLCMOD: DB (.*)$/m.exec(readFileSync(resolve(ROOT, "drivers/glcd.asm"), "utf8"))[1].split(",").map((x) => parseInt(x.trim().replace("$", ""), 16));
+  assert.deepEqual([...svc.file.subarray(svc.symbols.GMODE, svc.symbols.GMODE + 5)], glcmod, "the restore's bytes are GLCD.SVC's GLCMOD");
+  const { bytes: ret, symbols } = await glcdret();
+  for (const [name, bytes, at] of [["glcd-mad", await realProgram("glcd-mad"), 0x4000], ["TXT", ret, symbols.TXT], ["GRT", ret, symbols.GRT]]) {
+    const { m } = await glcdGo(svc, bytes, at);
+    assert.deepEqual(unreadable(m, "MON3>"), [], `${name}: the panel at MON3>`);
+    assert.ok(!line(m, "EXIT").mon3);
+    assert.deepEqual(unreadable(m, "A>"), [], `${name}: the panel at A> after EXIT`);
+  }
+  // The messages follow the restore and the form feed, so they stay on the panel.
+  for (const [name, bytes, text] of [["RST 30h", BRK, "BRK 4001"], ["damaged", DAMAGE, WARN]]) {
+    for (const matrix of [true, false]) {
+      const { m, out } = await glcdGo(svc, bytes, 0x4000, matrix);
+      const ff = out.indexOf("\f");
+      assert.ok(ff >= 0 && out.indexOf(text) > ff && out.lastIndexOf("MON3>") > out.indexOf(text), `${name}, ${matrix ? "GLCD" : "serial"} console: the form feed, ${text}, then MON3> (${JSON.stringify(out)})`);
+      if (matrix) {
+        const rows = m.glcdScreen().filter((l) => l.trim() !== "");
+        assert.ok(rows.map((r) => r.trim()).join(" ").includes(text), `${name}: ${text} on the panel (${JSON.stringify(rows)})`);
+        assert.ok(rows.at(-1).trimEnd().endsWith("MON3>"), `${name}: MON3> below it`);
+      }
+    }
+  }
+}
+
+test("KG67 console after go", { timeout: 600_000 }, () => consoleAfterGo());
+
+// The serial console keeps the panel, as MON-3's softBoot does: TXT's text
+// mode and DDRAM text stay at MON3>, and glcd-mad's graphics RAM.
+
+async function serialKeeps(svc) {
+  const { bytes: ret, symbols } = await glcdret();
+  const t = await glcdGo(svc, ret, symbols.TXT, false);
+  const g = glcdOf(t.m);
+  assert.ok(!g.re && !g.graphics, "TXT: text mode at MON3>");
+  assert.ok(g.ddram.includes("TEXT LEFT"), `TXT: TEXT LEFT in DDRAM at MON3> (${JSON.stringify(g.ddram.trim())})`);
+  const mad = await programSession(await realProgram("glcd-mad"), { svc });
+  runToPc(mad, GORET, 2_000_000_000, "glcd-mad's return");
+  const atReturn = snap(mad.m).gdram;
+  mad.m.mark = mad.m.output.length;
+  toMon3(mad.m);
+  assert.equal(snap(mad.m).gdram, atReturn, "glcd-mad: the graphics RAM at MON3> as at its return");
+}
+
+test("KG67 serial console keeps the panel", { timeout: 600_000 }, () => serialKeeps());
+
+const RESTORE = "  call GRST      ; the GLCD's modes\n";
+for (const [name, edits, run, why] of [
+  ["the restore removed", [[RESTORE, ""]], consoleAfterGo, /TXT: the panel at MON3>/],
+  ["the restore without its 01h", [["GMODE: DB $30,$0C,$01,$34,$36", "GMODE: DB $30,$0C,$0C,$34,$36"]], async (svc) => {
+    const { bytes, symbols } = await glcdret();
+    const { m } = await glcdGo(svc, bytes, symbols.GRT);
+    assert.deepEqual(unreadable(m, "MON3>"), [], "GRT: the panel at MON3>");
+  }, /DDRAM "MENU TEXT"/],
+  ["a mode byte that differs from GLCD.SVC's GLCMOD", [["GMODE: DB $30,$0C,$01,$34,$36", "GMODE: DB $30,$0C,$01,$34,$37"]], consoleAfterGo, /GLCD.SVC's GLCMOD/],
+  ["the restore made unconditional", [["  cp 3           ; CON: on UC1:?\n  ret nz         ; no: left alone\n", "  cp 3           ; CON: on UC1:?\n"]], serialKeeps, /TXT: text mode at MON3>|TEXT LEFT/],
+  ["the messages printed before the restore and the form feed", [[`${RESTORE}  ld de,MFF\n  call PRINT     ; a form feed\n  ld hl,DMG\n`, "  ld hl,DMG\n"], ["  or a           ; from RST 30h?\n  jp z,PROMPT    ; no\n", "  or a           ; from RST 30h?\n  jr z,MRET4     ; no\n"], ["  ld de,MCRLF\n  call PRINT\n  jp PROMPT\n", `  ld de,MCRLF\n  call PRINT\n\nMRET4:\n${RESTORE}  ld de,MFF\n  call PRINT     ; a form feed\n  jp PROMPT\n`]], consoleAfterGo, /the form feed, BRK 4001, then MON3>/],
+]) {
+  test(`KG67 mutant: ${name}`, { timeout: 600_000 }, async () => {
+    await assert.rejects(run(await mon3Variant(edits)), why);
+  });
+}

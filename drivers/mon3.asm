@@ -719,8 +719,12 @@ PREIN:
 
 ; A program's RET lands here, through
 ; the latch stub. Every drive's vector
-; is rebuilt at its next use, and a
-; form feed gives the console back.
+; is rebuilt at its next use, the GLCD
+; console's panel is set again, and a
+; form feed gives the console back. A
+; warning or a breakpoint's address
+; follows it, so that a video console
+; still shows it at MON3>.
 
 MRET:
   di             ; interrupts off
@@ -736,8 +740,28 @@ MRET1:
   out (SDIG),a   ; TX idle, no digit
   call FORMS     ; page zero again
   call RESETD    ; and the vectors
+  call GRST      ; the GLCD's modes
   ld de,MFF
   call PRINT     ; a form feed
+  ld hl,DMG
+  ld a,(hl)
+  cp 2           ; damaged just now?
+  jr nz,MRET2
+  dec (hl)       ; 1: said, for good
+  call DWARN
+
+MRET2:
+  ld hl,BRKF
+  ld a,(hl)
+  or a           ; from RST 30h?
+  jp z,PROMPT    ; no
+  ld (hl),0      ; said once
+  ld de,MBRK
+  call PRINT     ; "BRK "
+  ld de,HEXT
+  call PRINT     ; the address
+  ld de,MCRLF
+  call PRINT
   jp PROMPT
 
 ; DE = the sum, modulo 65,536, of the
@@ -771,8 +795,9 @@ CSUM2:
   ret
 
 ; At a program's return: the sum taken
-; again. A difference sets DMG, and the
-; warning is printed. Clobbers AF, BC,
+; again. A difference sets DMG to 2,
+; and the return prints the warning
+; after its form feed. Clobbers AF, BC,
 ; DE and HL.
 
 CHECK:
@@ -781,8 +806,11 @@ CHECK:
   or a
   sbc hl,de      ; Z: as at GO
   ret z
-  ld a,1
+  ld a,2
   ld (DMG),a     ; damaged, for good
+  ret
+
+; Print the warning.
 
 DWARN:
   ld de,MDMG
@@ -1164,10 +1192,13 @@ SUMLEN EQU SUMEND-HDR
 
 ; Not summed: the sum at GO, the flag a
 ; difference sets, kept until a reset,
-; and what the monitor rewrites.
+; and what the monitor rewrites. BRKF
+; is nonzero when RST 30h's address
+; waits in HEXT to be printed.
 
 SUMV: DW 0
 DMG: DB 0
+BRKF: DB 0
 HEXT: DS 5       ; four digits, an end
 LBUF: DB 40      ; BDOS 10's buffer
   DS 42

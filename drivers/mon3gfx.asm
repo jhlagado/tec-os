@@ -7,7 +7,10 @@
 ; 1,024 bytes of 16 a row, and copy it
 ; to the ST7920 at plotToLCD. 21 to 33,
 ; the font and the terminal, are not
-; built: docs/mon3.md.
+; built: docs/mon3.md. Also here: the
+; graphics workspace set at each entry,
+; and the GLCD console's modes set at a
+; program's return.
 
 GLCDI EQU $07    ; the ST7920's command
 GLCDD EQU $87    ; and data ports
@@ -103,6 +106,41 @@ GWS:
   ld hl,GBUF
   ld (VPORT),hl  ; drawing into GBUF
   ret
+
+; At a program's return, with CON: on
+; UC1: (IOBYTE's low bits 3), GLCD.SVC's
+; own mode bytes go to the ST7920, each
+; with 1.6 ms, so the console's text is
+; on show after the form feed; the 01h
+; clears DDRAM. It reads no status, so
+; it cannot hang, and with no GLCD the
+; writes go nowhere. On another console
+; the panel stays as the program left
+; it, as under MON-3. Clobbers A, B, DE
+; and HL.
+
+GRST:
+  ld a,(IOBYTE)
+  and 3
+  cp 3           ; CON: on UC1:?
+  ret nz         ; no: left alone
+  ld hl,GMODE
+  ld b,5         ; five bytes
+
+GRST1:
+  ld a,(hl)
+  out (GLCDI),a  ; a mode byte
+  ld de,$0140    ; and 1.6 ms
+  call GDLYMS
+  inc hl
+  djnz GRST1     ; each of them
+  ret
+
+; GLCD.SVC's GLCMOD bytes: the basic
+; set, display on, DDRAM clear, the
+; extended set, graphics on.
+
+GMODE: DB $30,$0C,$01,$34,$36
 
 ; Call 0, initLCD: the ST7920 set up,
 ; VPORT at GBUF, graphics mode with its
