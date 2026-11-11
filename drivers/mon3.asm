@@ -745,6 +745,10 @@ MRET1:
   call RESETD    ; and the vectors
   call GRST      ; the GLCD's modes
 
+  ld a,(IOBYTE)
+  rrca           ; CRT: or UC1:?
+  jr nc,KEYSUP   ; no: no matrix line
+
 KEYUP:
   call SKEYS     ; keypad or matrix
   ld a,(KPRESS)
