@@ -430,9 +430,10 @@ names are the way in.
 `abi.inc` also publishes two workspace bytes:
 
 - `LATCHV` (`0040h`), the shadow copy of the write-only system latch.
-- `KBLAST` (`BFEFh`), TEC-OS's last matrix key: row × 8 + column, FFh for
-  none. TEC-OS's scan takes a key as new only when it differs from
-  `KBLAST`. A service that scans the matrix itself writes the key it found
+- `KBLAST` (`BFEFh`), TEC-OS's last matrix key: the highest-numbered key
+  down, row × 8 + column, FFh for none. TEC-OS's scan takes a key as new
+  only when it differs from `KBLAST`, and skips a row that reads 00h, all
+  eight keys down. A service that scans the matrix itself writes that key
   there, as `MON3.SVC` does, so a key held from a program isn't read again
   when TEC-OS's scan resumes, and a host that holds a matrix key until
   TEC-OS has read it lets it go. The build checks that `KBLAST` is the

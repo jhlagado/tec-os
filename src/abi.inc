@@ -292,11 +292,12 @@ LATEXP EQU $04   ; EXPAND: EXPAND 1 at
 
 LATCHV EQU $0040
 
-; TEC-OS's last matrix key, row * 8 +
+; TEC-OS's last matrix key: the
+; highest-numbered key down, row * 8 +
 ; column, FFh for none. Its scan takes
 ; a key as new only when it differs. A
 ; service that scans the matrix itself
-; writes the key it found here.
+; writes that key here.
 
 KBLAST EQU $BFEF
 LCDCMD EQU $04   ; command write, busy
