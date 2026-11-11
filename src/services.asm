@@ -1,9 +1,10 @@
 ; ABI 5.1 services: CALL ABICALL with
 ; C=number and B/DE/HL=arguments. See
 ; docs/rom-services.md and abi.inc.
-; Hardware 0-8, hook 12 and font 15 are
-; here. Volume and registry calls have
-; their own results and effects.
+; Hardware 0-8, hook 12, font 15 and the
+; shell hook 16 are here. Volume and
+; registry calls have their own results
+; and effects.
 ; Hardware/font/hook use resident state
 ; and caller stack in the classic bank.
 ; No BDOS call. IX/IY, alternates and
@@ -561,3 +562,40 @@ SVDRV2:
   ret c
   xor a
   ret
+
+; SHELL: set the hook's table at SHOWN
+; to HL and return the one it replaces
+; in HL. A table must lie in a
+; resident's pages, at or above PZTOP's
+; page and below the stub's, and must
+; not cross a page: otherwise TNEBAD
+; with the hook unchanged. HL=0 gives
+; the prompt back to the CCP. Changes AF
+; and DE.
+
+SVSHL:
+  ld a,h
+  or l
+  jr z,SVSH1     ; 0: the bare prompt
+  ld a,l
+  cp $F9
+  jr nc,SVSHB    ; it would cross a page
+  ld a,(PZTOP+1)
+  dec a
+  cp h
+  jr nc,SVSHB    ; below the residents
+  ld a,(STUBAD+1)
+  dec a
+  cp h
+  jr c,SVSHB     ; the stub's page, ROM
+
+SVSH1:
+  ld de,(SHOWN)
+  ld (SHOWN),hl
+  ex de,hl
+  xor a
+  ret
+
+SVSHB:
+  ld a,TNEBAD
+  jp HWERR

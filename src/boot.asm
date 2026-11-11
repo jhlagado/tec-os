@@ -124,7 +124,8 @@ DIAGNZ:
 ; active video and full scroll region.
 ; Attempt CWBOOT flush, then enter CCP
 ; with PZDU in C. Failure reports loss
-; and clears CHPOS but still enters CCP.
+; and sets CHPOS's drop bit but still
+; enters CCP.
 ; Never returns.
 
 WBOOTR:
@@ -313,8 +314,11 @@ PZINIT:
   inc hl
   ld (hl),HIGH(BENTRY)
 
-; Sweep 0008h..003Fh after warm boot or
-; service-page release. Keep only JP
+; Sweep after warm boot or service-page
+; release. First drop the shell hook if
+; its table lies below PZTOP's page,
+; where pages were freed. Then sweep
+; 0008h..003Fh: keep only JP
 ; targets strictly greater than PZTOP,
 ; clearing their five trailing bytes.
 ; Equal targets are cleared too. Other
@@ -326,6 +330,14 @@ PZINIT:
 ; AF/BC/HL.
 
 PZSWP:
+  ld a,(SHOWN+1)
+  ld hl,PZTOP+1  ; the table's page
+  cp (hl)
+  jr nc,PZSW1    ; in a resident's pages
+  ld hl,0
+  ld (SHOWN),hl  ; freed: bare prompt
+
+PZSW1:
   ld hl,$0008
 
 RSTCLR:
@@ -376,7 +388,7 @@ STKGN EQU STKGUEND-STKGUARD
 ; Clear CCPCLR..BDOSRME-1 on the BIOS
 ; stack outside that span. Keep
 ; command-line/FCB storage below CCPCLR
-; for chained commands and resident
+; for a function 47 line, and resident
 ; state outside the span. Set
 ; CURDMA=0080h, CMDBUF=127 and guard
 ; bytes=A5h. Clear BUFOK so a prior
