@@ -14,7 +14,11 @@ MON-3's own ROM on the same emulator. All of it is emulator evidence.
 MON-3, the TEC-1G's own monitor, under TEC-OS. The MON-3 it follows is
 `jhlagado/debug80-tec1g-mon3` at `000c052`, whose ROM is the pinned
 `MON3.BIN` the tests compare it with (`test/inputs.json`). Media builds it
-with TAS into `dist/MON3.SVC`, beside the ROM. It is on no card yet.
+with TAS into `dist/MON3.SVC`, beside the ROM, and puts it on the starter
+card, the one card, which the Viewer runs too. Beside it are `HELLO3.BIN`,
+built by TAS from `test/programs/hello3.asm` to load at 4000h, and that
+source as `HELLO3.ASM`, which `TAS HELLO3 HELLO3.BIN` builds on the card
+(`test/starter.test.mjs`).
 
 ## Install and enter
 
@@ -331,6 +335,12 @@ its two `LD A,R` on both sides. The console's return is tested with
 
 ## Limits
 
+- **A key still down at a program's return reaches the `MON3>` line.** The
+  service doesn't wait for the keys to go up, so a matrix key that ends a
+  program, such as Esc taken as AD, is read again by the line if it is held
+  past the return, and that line prints `?`. The Viewer holds a key until
+  TEC-OS reads it, so there the first line typed after Esc prints `?`, and
+  the next one is read as typed.
 - **Not built:** `RST 18h`'s calls 21 to 33, the GLCD terminal and the
   graphics font, and the deferred `RST 10h` calls above. A program that
   calls them sees `displayError`.

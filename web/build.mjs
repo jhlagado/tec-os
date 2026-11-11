@@ -38,8 +38,8 @@ for (const p of PROFILES) {
     .map((s) => ({ name: s.name, address: s.address ?? s.value }));
   writeFileSync(resolve(OUT, `roms/${p}.symbols.json`), JSON.stringify(labels));
 }
-// The page's card is the starter with DEMO.ASM, under the name the page fetches.
-copyFileSync(resolve(ROOT, "dist/page.recipe.json"), resolve(OUT, "starter.recipe.json"));
+// The page runs the starter card, the one card media builds.
+copyFileSync(resolve(ROOT, "dist/starter.recipe.json"), resolve(OUT, "starter.recipe.json"));
 for (const f of readdirSync(resolve(ROOT, "dist/files"))) {
   copyFileSync(resolve(ROOT, "dist/files", f), resolve(OUT, "files", f));
 }

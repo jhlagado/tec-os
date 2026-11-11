@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { fontPackage } from "./lib/font-package.mjs";
 // Produce the release set in dist/: the ROM image, its map and census,
-// the starter programs, a recipe that lists them with their digests, the
-// starter card built from that recipe, and the memory map document.
+// the card's programs, a recipe that lists them with their digests, the
+// starter card built from that recipe, and the memory map document. The
+// starter card is the one card: the Viewer runs it too.
 //
 // Run after npm run build.
 
@@ -198,6 +199,17 @@ async function main() {
     traceRom({ backend, phase: "final", target: name, root: ROOT });
     return bytes;
   }
+  /** A MON-3 program, whose own ORG puts it at 4000h. */
+  async function mon3Program(name, source) {
+    if (run) {
+      const { image, origin } = await run({ root: ROOT, entry: source, origin: 0x4000, phase: "final", target: name, flat: true });
+      if (origin !== 0x4000) throw new Error(`${name} starts at ${hex(origin)}, not 4000h`);
+      return image;
+    }
+    const { bytes } = await assembleProgram(resolve(ROOT, source), { base: 0x4000 });
+    traceRom({ backend, phase: "final", target: name, root: ROOT });
+    return bytes;
+  }
   const files = [];
   for (const p of PROGRAMS) {
     files.push({ ...p, bytes: await program(p.name, p.source, p.base) });
@@ -205,9 +217,10 @@ async function main() {
   files.push(...await displayFiles(ROOT, run ? () => assembleGlcd(ROOT, run) : undefined));
   if (!run) traceRom({ backend, phase: "final", target: "GLCD.SVC", root: ROOT });
   files.push({ name: "TED.COM", description: "TED, the editor: TED NAME.ASM or NAME.BAS, ^S save, ^Q quit, ^T B build, ^T R run", bytes: ted });
-  // SAMPLE.ASM, a first program for TAS (KD-177), and TIMES.BAS, a first
-  // program for BAZA (KD-262), as CP/M text files.
-  const text = (name) => Buffer.from(readFileSync(resolve(ROOT, "programs", name), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
+  // SAMPLE.ASM, a first program for TAS, and TIMES.BAS, a first program for
+  // BAZA, as CP/M text files.
+  const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
+  const text = (name) => textAt(`programs/${name}`);
   files.push({ name: "SAMPLE.ASM", description: "a first program to build: TAS SAMPLE, then SAMPLE", bytes: text("SAMPLE.ASM") });
   files.push({ name: "TIMES.BAS", description: "a first BASIC program: BAZA TIMES, then TIMES", bytes: text("TIMES.BAS") });
   files.push({ name: "TAS.COM", description: "TAS, the assembler: TAS NAME, NAME.ASM to NAME.COM and NAME.DBG", bytes: tas });
@@ -219,21 +232,28 @@ async function main() {
   files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D steer, Q quits", bytes: bounce });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM", "programs/DEMO.ASM");
-  // MON3.SVC, the MON-3 session service, is built and kept beside the ROM. It
-  // is on no card yet.
+  // DEMO.COM is built and checked here, but the card holds only its source:
+  // TAS DEMO on the card makes it.
+  files.push({ name: "DEMO.ASM", description: "a demonstration of the hardware, LCD, digits, LEDs and PICO9918, as source: TAS DEMO builds DEMO.COM, TED DEMO.ASM reads it", bytes: text("DEMO.ASM") });
+  // MON3.SVC, the MON-3 session service, and HELLO3, a MON-3 program that
+  // writes the LCD through RST 10h, as source and as the image MON-3 loads at
+  // 4000h, assembled as the ROM's programs are.
   const mon3 = run ? await assembleMon3(ROOT, run) : (await makeSvc(resolve(ROOT, "drivers/mon3.asm"), { work: resolve(ROOT, "build/svc") })).file;
   if (!run) traceRom({ backend, phase: "final", target: "MON3.SVC", root: ROOT });
-  const demoSource = text("DEMO.ASM");
+  files.push({ name: "MON3.SVC", description: "MON-3 programs on TEC-OS: MON3.SVC /E gives MON3>, where LOAD, GO and EXIT work", bytes: mon3 });
+  const hello3 = await mon3Program("HELLO3.BIN", "test/programs/hello3.asm");
+  files.push({ name: "HELLO3.BIN", description: "a MON-3 program: at MON3>, LOAD HELLO3.BIN then GO writes the LCD; AD (Esc on the matrix) returns", bytes: hello3 });
+  files.push({ name: "HELLO3.ASM", description: "HELLO3's source: TAS HELLO3 HELLO3.BIN builds it, TED HELLO3.ASM reads it", bytes: textAt("test/programs/hello3.asm") });
 
   // A recipe's revision rises when its set of files changes, not when a
-  // pinned file's bytes change. The page's revision is kept separately from
-  // the starter's, since the page adds its own files.
+  // pinned file's bytes change. It is above both the starter's and the
+  // page's, the two recipes this one replaced.
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "7",
+    revision: "10",
     name: "TEC-OS starter",
-    instruction: "At A>, type DIR, then TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one, or BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit). B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC /E, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -245,17 +265,6 @@ async function main() {
       description: f.description,
       files: [{ name: f.name, url: `files/${f.name}`, drive: "A", bytes: f.bytes.length, sha256: sha(f.bytes) }],
     })),
-  };
-  const page = {
-    ...recipe,
-    id: "page",
-    revision: "9",
-    name: "TEC-OS starter, with the demo",
-    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
-    components: [
-      ...recipe.components,
-      { id: "demo-asm", name: "DEMO.ASM", description: "a demonstration of the hardware, LCD, digits, LEDs and PICO9918, as source: TAS DEMO builds DEMO.COM, TED DEMO.ASM reads it", files: [{ name: "DEMO.ASM", url: "files/DEMO.ASM", drive: "A", bytes: demoSource.length, sha256: sha(demoSource) }] },
-    ],
   };
   const buffers = new Map(files.map(f => [`files/${f.name}`, f.bytes]));
   const starter = await buildRecipe(recipe, ref => buffers.get(ref));
@@ -273,20 +282,18 @@ async function main() {
     traceRom({ backend, phase: "media", target: "tecos.rom", root: dir, sha256 });
   }
   for (const [ref, bytes] of buffers) writeFileSync(resolve(DIST, ref), bytes);
-  // DEMO.COM is built and checked here, but the page card holds only its
-  // source: TAS DEMO on the card makes it.
   writeFileSync(resolve(DIST, "DEMO.COM"), demo);
   writeFileSync(resolve(DIST, "MON3.SVC"), mon3);
-  writeFileSync(resolve(FILES, "DEMO.ASM"), demoSource);
   writeFileSync(resolve(DIST, "abi.inc"), abi);
   writeFileSync(resolve(DIST, "FONT-NOTICES.txt"), fontNotices);
   writeFileSync(resolve(DIST, "starter.recipe.json"), JSON.stringify(recipe, null, 2) + "\n");
   saveImage(resolve(DIST, "starter.img"), starter);
-  writeFileSync(resolve(DIST, "page.recipe.json"), JSON.stringify(page, null, 2) + "\n");
+  // The page runs this card: an older build's page recipe goes.
+  rmSync(resolve(DIST, "page.recipe.json"), { force: true });
   writeFileSync(resolve(ROOT, "docs/memory-map.md"), builds.find(({ profile }) => profile === "tecos").mapDocument);
   writeFileSync(figures.path, figures.text);
   writeFileSync(resolve(DIST, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
-  console.log(`dist: ${builds.length} ROM profiles, ${files.length} starter files, starter.img`);
+  console.log(`dist: ${builds.length} ROM profiles, ${files.length} card files, starter.img`);
 }
 
 main().catch((e) => {

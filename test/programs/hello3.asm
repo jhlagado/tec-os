@@ -2,13 +2,18 @@
 ; shows it is alive. It loads and runs
 ; at 4000h, as MON-3 programs do.
 
+; On TEC-OS, type MON3.SVC /E, then
+; LOAD HELLO3.BIN and GO at MON3>.
+; TAS HELLO3 HELLO3.BIN builds it.
+
 ; It writes four lines to the LCD and
 ; beeps, through MON-3's RST 10h calls.
 ; Then it counts in hex on the six
 ; digits, using RST 20h to scan them.
 ; Any key beeps and shows its code on
-; the right two digits. AD returns to
-; the monitor.
+; the right two digits. AD, or Esc on
+; the matrix keyboard, returns to the
+; monitor.
 
 ; MON-3's RST 10h calls: C picks one.
 
