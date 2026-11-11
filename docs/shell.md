@@ -68,9 +68,9 @@ A line is split into pieces at separators, and each piece runs in turn:
   character after blanks and `!` is `&` is refused, `&WORD?` with FF00h, and
   none of it runs: it would test the last line's code.
 - Each piece after the first is echoed after its own prompt, up to its
-  separator. A blank before `&` stays at the end of its piece's tail, as a blank
-  before `!` does: `TAS X &X` gives `TAS` the tail ` X `, which file-name parsing
-  ignores.
+  separator. A piece ends before the blanks that come before its separator, so
+  `TAS X &X` gives `TAS` the tail ` X`, and `OK<tab>&X` runs `OK` as `OK &X`
+  does.
 - A line holds at most 127 characters, typed, from a script or by function 47.
   A function 47 line takes the same rules.
 - ^C at a program's line input, a BDOS error's exit and a write lost at warm
