@@ -120,8 +120,9 @@ width line are not refused. A keypad key held through reset skips the file.
 
 A first line of only spaces or tabs is neither empty nor a comment, so it is
 the ROM's one line, and a `SHELL.SVC` on the line after it never loads. Spaces
-run as an empty line; a tab is refused as a bad name, `?` with FF00h. Keep `SHELL.SVC` on the file's first line, or after
-lines that are empty or start with `;`.
+run as an empty line; a tab is refused as a bad name, `?` with FF00h. Keep
+`SHELL.SVC` on the file's first line, or after lines that are empty or start
+with `;`.
 
 When that line installs `SHELL.SVC`, the shell reads the rest of the file, every
 record, from the line after it, with the same quiet paths. A later `SHELL.SVC`
