@@ -374,34 +374,28 @@ KEYSK:
   call UNAMBIG   ; reject empty/wildcard
   jp c,BADCMD
 
-; For exact type SVC call SVCGO directly
-; without LOADA's user/drive fallback.
-; A first operand that starts with a
-; slash goes to SVCEX: /E enters the
-; service, any other switch is refused.
-; Other operands are ignored.
-; Success joins STARTED.
-; Quietly accept failure only for a
-; startup line (STFLAG nonzero) with
-; SVCRC=1 and SVCRA=TNENODV: INIT found
-; no device. PRGCODE stays 0, so a
-; following & piece runs. Typed input
-; and other failures enter BADCMD.
+; Exact type SVC enters the loader's
+; SVCRUN, without LOADA's user/drive
+; fallback: it enters a service that is
+; in, or installs the file. Other types
+; load as COM, CMD among them, so a
+; typed NAME.CMD with no shell runs
+; NAME.COM.
 
   ld hl,(CMDFCB+9)
-
   ld de,'V'*256+'S'
   sbc hl,de      ; UNAMBIG cleared carry
   jr nz,CMDCOM   ; not SV?: COM path
   ld a,(CMDFCB+11)
   cp 'C'
-  jr nz,CMDCOM
-  ld hl,(ARGSTRT)
-  call SKIPSP    ; first operand
-  cp '/'
-  jp z,SVCEX     ; a switch: /E only
-  call SVCGO     ; no LOADA fallback
-  jr nc,SVCOK
+  jp z,SVCRUN
+
+; A failed install is quiet only for a
+; startup line (STFLAG nonzero) with
+; SVCRC=1 and SVCRA=TNENODV: INIT found
+; no device. PRGCODE stays 0, so a
+; following & piece runs. Typed input
+; and other failures enter BADCMD.
 
 SVCFAIL:
   ld hl,(SVCRC)  ; L=status, H=INIT A
@@ -448,10 +442,12 @@ CMDCOM:
 ; default DMA. Copy CMDFCB's drive byte
 ; to PZLDRV (0=current, 1=A, etc). Set
 ; SP=CSTKTOP, push WBOOT and jump to
-; TPA=0100h. The normal final RET warm
-; boots through 0000h. CMDRN1 takes
-; another entry in HL: SVCEX enters a
-; service's execution entry by it.
+; TPA=0100h with A=STFLAG, FFh for a
+; startup line and 0 otherwise. The
+; normal final RET warm boots through
+; 0000h. CMDRN1 takes another entry in
+; HL: SVCENT enters a service's
+; execution entry by it.
 
 CMDRUN:
   ld hl,TPA      ; transient entry
@@ -472,6 +468,7 @@ CMDRN1:
   ld hl,WBOOT    ; 0000h warm-boot hook
   push hl
   ex de,hl       ; HL = the entry
+  ld a,(STFLAG)  ; FFh: a startup line
   jp (hl)        ; transient or service
 
 ; Locate an argument for
