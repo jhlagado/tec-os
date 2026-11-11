@@ -748,21 +748,17 @@ MRET1:
 ; move CON: to TTY:, so ask each pass.
 ; KBLAST keeps a held key off the line
 ; and lets the Viewer let go. MON3>
-; waits for no key down.
+; waits until every key is up.
 
 KEYUP:
   ld a,(IOBYTE)
   rrca           ; CRT: or UC1:?
   jr nc,KEYSUP   ; no: no wait
   call SKEYS     ; keypad or matrix
-  in a,(SSYS)
-  rrca           ; the matrix read?
-  jr nc,KEYKP
+  call MSCAN     ; KBLAST, fresh
   ld a,(KBLAST)
   inc a          ; FFh: no matrix key
   jr nz,KEYPL
-
-KEYKP:
   ld a,(KPRESS)
   or a           ; NZ: no keypad key
   jr nz,KEYSUP
