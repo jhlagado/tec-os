@@ -724,10 +724,10 @@ PREIN:
 ; form feed gives the console back. A
 ; warning or a breakpoint's address
 ; follows it, so that a video console
-; still shows it at MON3>. First the
-; keys must be up: the key that ended
-; a program, AD or Esc, must not reach
-; the line.
+; still shows it at MON3>. Before the
+; form feed, the keys must be up: the
+; key that ended a program, AD or Esc,
+; must not reach the line.
 
 MRET:
   di             ; interrupts off
@@ -745,18 +745,27 @@ MRET1:
   call RESETD    ; and the vectors
   call GRST      ; the GLCD's modes
 
+; Only a matrix console, CON: on CRT:
+; or UC1:, can read a key as a line's
+; character, so only then is there a
+; wait. While a key is down, BDOS 6
+; polls the console and drops what it
+; reads: TEC-OS's own scan must see the
+; key, since the Viewer holds a key
+; until that scan has read it.
+
   ld a,(IOBYTE)
   rrca           ; CRT: or UC1:?
-  jr nc,KEYSUP   ; no: no matrix line
+  jr nc,KEYSUP   ; no: no wait
 
 KEYUP:
   call SKEYS     ; keypad or matrix
   ld a,(KPRESS)
   or a           ; NZ: no key down
   jr nz,KEYSUP
-  ld e,$FF       ; held: the console
-  ld c,6         ; reads it once, and
-  call BDOS      ; it is dropped
+  ld e,$FF       ; poll, and drop it
+  ld c,6
+  call BDOS
   jr KEYUP
 
 KEYSUP:
