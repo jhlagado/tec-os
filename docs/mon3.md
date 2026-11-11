@@ -1,11 +1,14 @@
 # MON3.SVC: MON-3 programs on TEC-OS
 
-Status: **S2**, 2026-11-10 (KS53): install, `/E`, `LOAD` of a `.BIN` or a
-`.HEX`, `GO`, `EXIT` and re-entry; MON-3's restarts and 46 of its 63
-`RST 10h` calls (42 implemented, 4 translated), the matrix keyboard, and
-the checksum of TEC-OS's tables on a program's return. `test/mon3.test.mjs`, `test/ks53-hello.test.mjs` and
-`test/mon3-s2.test.mjs` hold it, the last comparing each call with MON-3's
-own ROM on the same emulator. All of it is emulator evidence.
+Status: **S3**, 2026-11-11 (KS53): install, `/E`, `LOAD` of a `.BIN` or a
+`.HEX`, `GO`, `EXIT` and re-entry; MON-3's restarts, 46 of its 63
+`RST 10h` calls (42 implemented, 4 translated) and 21 of its 34 `RST 18h`
+graphics calls, the matrix keyboard, the checksum of TEC-OS's tables on a
+program's return, MON-3's graphics workspace at each entry, and the GLCD
+console given back after a program draws. `test/mon3.test.mjs`,
+`test/ks53-hello.test.mjs`, `test/mon3-s2.test.mjs` and
+`test/mon3-s3.test.mjs` hold it, the last two comparing each call with
+MON-3's own ROM on the same emulator. All of it is emulator evidence.
 
 `MON3.SVC` is a service (`docs/services.md`) that runs programs written for
 MON-3, the TEC-1G's own monitor, under TEC-OS. The MON-3 it follows is
@@ -34,10 +37,13 @@ keeps it, and `UNLOAD` or a reset removes it. `docs/services.md` gives the
 identity rule: `B:MON3.SVC /E` enters the copy installed from A:, and a
 second copy needs `UNLOAD` first.
 
-On the starter card it is 3,621 bytes of header and image in **15 pages**: the
-word at `0006h` goes from `B9A4h` to `AA00h`, and the TPA from 47,268 bytes to
-**43,264**. The monitor, its line buffer, its FCB, its saved page zero and its
-stack are all in those pages, above anything a MON-3 program may load into.
+On the starter card it is 4,569 bytes of header and image in **18 pages**: the
+word at `0006h` goes from `B9A4h` to `A700h`, and the TPA from 47,268 bytes to
+**42,496**. With `GLCD.SVC` installed too, as the GLCD console's startup does,
+the TPA is **41,728**. The monitor, its line buffer, its FCB, its saved page
+zero and its stack are all in those pages, above anything a MON-3 program may
+load into. MON-3's graphics buffer and variables are not: they are MON-3's
+own workspace, in the TPA where MON-3 keeps them.
 
 ## Commands
 
@@ -100,7 +106,11 @@ prints `?`.
 A program's `RET` comes back to `MON3>`. Interrupts go off, PROTECT is
 cleared, the serial line is idle again, the session's page zero is written
 again, every drive's allocation vector is rebuilt from its directory at its
-next use (BDOS 37), and a form feed gives the console back. A program that
+next use (BDOS 37), the GLCD console's panel is set again ("The GLCD
+console", below), and a form feed gives the console back. Then come the
+tables' warning or the breakpoint's `BRK nnnn`, if there is one, then
+`MON3>`, in that order on every console, so that a video console still shows
+the message after the form feed has cleared it. A program that
 pushes into MON-3's 128-byte stack, or past it into the TPA below 0800h,
 still comes back: what it overwrote in the TPA is its own loss, and the
 service's pages are untouched.
@@ -113,7 +123,8 @@ the target it replaced) and the RAM BIOS table's 51 bytes, with the hook
 linked. All of these stay fixed while a program runs. When the program
 returns, by `RET`, `RST 30h` or call 2, the sum is taken again before
 anything in it is written. A difference prints
-`Tables damaged: EXIT and reset` and sets a flag that only a reset clears,
+`Tables damaged: EXIT and reset`, after the return's form feed, and sets a
+flag that only a reset clears,
 since a reset also removes the service: every later `LOAD` prints the
 warning again and is refused without opening the file, and each re-entry
 prints it before its first `MON3>`. `GO` and `EXIT` still run. The sum
@@ -128,6 +139,15 @@ MON-3's workspace is where MON-3 keeps it, set at each entry: the signature
 `SYS_MODE` (089Dh) the latch's shadow, and `PROT_MODE` (089Eh) 0. TEC-OS's own
 page zero and `LATCHV` stay TEC-OS's: MON-3's first 256 ROM bytes are never
 copied down.
+
+MON-3's graphics workspace is set at each entry too, as every MON-3 reset
+leaves it through `initLCD`: `GBUF`, 0A00h–0DFFh, and the graphics calls'
+variables, 0E00h–0E19h, hold zero, except `VPORT` (0E13h), the buffer the
+drawing calls use, which holds 0A00h. `CLRBUF` (0E0Ch) zero is the session's
+choice, as no MON-3 reset writes it. The step runs at `MON3.SVC /E`, after
+the service is installed or found, and at call 2. A program's `GO` and its
+return do not run it, as MON-3's `softBoot` does not, so what one program
+leaves there the next one finds.
 
 In a session, and only then, the service holds these bytes of page zero:
 
@@ -177,7 +197,7 @@ The next `/E` takes it out first, and `UNLOAD` does too.
 | `RST 00h` | monitor reset | ends the session at `A>` through TEC-OS's warm boot |
 | `RST 08h` | `scanKeysWait` | implemented, keypad and matrix |
 | `RST 10h` | API, selector in C | the calls below; a selector of 63 or more shows `displayError` |
-| `RST 18h` | GLCD API, selector in A | `displayError` (S3) |
+| `RST 18h` | GLCD API, selector in A | calls 0 to 20, MON-3's own routines; 21 and above show `displayError` |
 | `RST 20h` | digits, keys, LCD wait | implemented, keypad and matrix, with MON-3's fall-through flags |
 | `RST 28h` | LCD busy wait | implemented |
 | `RST 30h` | breakpoint | prints `BRK` and the address and returns to `MON3>`. There is no resume |
@@ -240,14 +260,79 @@ Where the session differs from MON-3, by design:
 - With the matrix fitted, MON-3 and the session read the matrix, not the
   keypad.
 
-The tested programs are `HELLO3` (`test/programs/hello3.asm`) and five of
+## RST 18h: the graphics calls
+
+`RST 18h` takes the call in A, as MON-3 does. The service runs MON-3's own
+routines for calls 0 to 20, in MON-3's order, with only their addresses
+moved, so each leaves the registers, the flags, memory and the ST7920 as
+MON-3's does, and takes MON-3's time from its first instruction to its
+`RET`. They draw into the 1,024-byte buffer at `VPORT`, `GBUF` unless a
+program moves it, and `plotToLCD` copies it to the panel.
+
+Graphics calls implemented, 21 of them: 0 `initLCD`, 1 `clearGBUF`,
+2 `clearGrLCD`, 3 `clearTxtLCD`, 4 `setGrMode`, 5 `setTxtMode`,
+6 `drawBox`, 7 `drawLine`, 8 `drawCircle`, 9 `drawPixel`, 10 `fillBox`,
+11 `fillCircle`, 12 `plotToLCD`, 13 `printString`, 14 `printChars`,
+15 `delayUS`, 16 `delayMS`, 17 `setBufClear`, 18 `setBufNoClear`,
+19 `clearPixel` and 20 `flipPixel`.
+
+Deferred, and refused: 21 `drawGraphic`, 22 `invGraphic`,
+23 `initTerminal`, 24 `sendCharToLCD`, 25 `sendStringToLCD`,
+26 `sendRegToLCD`, 27 `sendHLToLCD`, 28 `setCursor`, 29 `getCursor`,
+30 `displayCursor`, 31 `autoLF`, 32 `underline` and 33 `plotAlways`. They
+share MON-3's 1,536-byte font, its cursor and the terminal's buffers at
+1000h–17BFh, about nine pages more, and the small ones only set or read
+state that the others use, so none is built alone. Each shows `displayError`, waits for a
+key and returns as a key press does, as the refused `RST 10h` calls do;
+a call of 34 or more does the same, as under MON-3. None reports success,
+and none writes the ST7920.
+
+As in MON-3, the routine gets BC, DE and HL as the caller left them and
+returns straight to the caller, and IX is lost. A on entry is not MON-3's
+(the low byte of the routine's address there), but no routine reads it.
+After call 14, DE ends in the service's copy of MON-3's row table, not in
+MON-3's ROM. From the `RST` to the routine's first instruction the session
+takes 253 T, MON-3 175 T: the restart path's 101 T and a 17 T test that
+refuses 21 and above, against MON-3's 21 T jump and its 19 T test. So a
+program takes MON-3's time and 78 T more for each `RST 18h`.
+
+## The GLCD console
+
+At a program's return, when CON: is `UC1:` (IOBYTE AND 3 is 3), the
+session sends the ST7920 `GLCD.SVC`'s own mode bytes, 30h, 0Ch, 01h, 34h
+and 36h, the same as its `GLCMOD`, each followed by 1.6 ms, before the form
+feed. That is the basic set, the display on, DDRAM cleared, the extended set
+and graphics on, so the console's text shows again whatever the program
+left: text mode, or text in DDRAM over the graphics. It runs on every
+return, by `RET`, `RST 30h` or call 2. It runs whenever CON: is `UC1:`,
+whatever driver holds it, and also when `GLCD.SVC` has been removed and
+IOBYTE left at `UC1:`. It reads no status and uses fixed delays, so it
+cannot hang, and with no GLCD fitted its writes go nowhere. It takes about
+8 ms. It leaves the ST7920's reversed lines and scroll as a program set
+them, as `GLCD.SVC`'s own restore does. `EXIT` needs none of its own: its
+warm boot restores the console's driver.
+
+On any other console the panel stays as the program left it, as MON-3's
+`softBoot` leaves it: a program's text mode, its DDRAM text and its
+graphics are still there at `MON3>`.
+
+The tested programs are `HELLO3` (`test/programs/hello3.asm`) and ten of
 the pinned repository's own: `lcd-test`, `serial`, `matrix-demo`,
-`matrix-demo-rgb` and `matrixz80`, each compared with MON-3's own ROM.
+`matrix-demo-rgb` and `matrixz80`, and the GLCD programs `glcd-mad`,
+`glcd-maze`, `glcd-text`, `glcd-3d` and `glcd-demo`, each compared with
+MON-3's own ROM. `glcd-maze` seeds its maze from R, which counts
+instruction fetches and so follows the side; the comparison sets R to 0 at
+its two `LD A,R` on both sides. The console's return is tested with
+`glcd-mad` and `test/programs/glcdret.asm`.
 
 ## Limits
 
-- **Not yet shipped:** `RST 18h`'s graphics and the GLCD terminal (S3), and
-  the deferred calls above.
+- **Not built:** `RST 18h`'s calls 21 to 33, the GLCD terminal and the
+  graphics font, and the deferred `RST 10h` calls above. A program that
+  calls them sees `displayError`.
+- **MON-3's dispatch at 0040h**, which MON-3 copies to RAM, is not there in a
+  session: a program that calls 0040h directly, outside MON-3's restarts, is
+  not supported.
 - **MON-3's disk calls**, 58 to 61, are not translated to CP/M files.
 - **No recovery from a hang** or from arbitrary memory damage: a program that
   loops needs the reset button. GO's flush keeps what was written before GO.
