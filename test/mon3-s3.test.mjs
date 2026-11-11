@@ -528,7 +528,7 @@ for (const [name, edits, run, why] of [
   }, /DDRAM "MENU TEXT"/],
   ["a mode byte that differs from GLCD.SVC's GLCMOD", [["GMODE: DB $30,$0C,$01,$34,$36", "GMODE: DB $30,$0C,$01,$34,$37"]], consoleAfterGo, /GLCD.SVC's GLCMOD/],
   ["the restore made unconditional", [["  cp 3           ; CON: on UC1:?\n  ret nz         ; no: left alone\n", "  cp 3           ; CON: on UC1:?\n"]], serialKeeps, /TXT: text mode at MON3>|TEXT LEFT/],
-  ["the messages printed before the restore and the form feed", [[`${RESTORE}\n; Only a matrix`, "\n; Only a matrix"], ["KEYSUP:\n  ld de,MFF\n  call PRINT     ; a form feed\n  ld hl,DMG\n", "KEYSUP:\n  ld hl,DMG\n"], ["  or a           ; from RST 30h?\n  jp z,PROMPT    ; no\n", "  or a           ; from RST 30h?\n  jr z,MRET4     ; no\n"], ["  ld de,MCRLF\n  call PRINT\n  jp PROMPT\n", `  ld de,MCRLF\n  call PRINT\n\nMRET4:\n${RESTORE}  ld de,MFF\n  call PRINT     ; a form feed\n  jp PROMPT\n`]], consoleAfterGo, /the form feed, BRK 4001, then MON3>/],
+  ["the messages printed before the restore and the form feed", [[`${RESTORE}\n; Only CON: on`, "\n; Only CON: on"], ["KEYSUP:\n  ld de,MFF\n  call PRINT     ; a form feed\n  ld hl,DMG\n", "KEYSUP:\n  ld hl,DMG\n"], ["  or a           ; from RST 30h?\n  jp z,PROMPT    ; no\n", "  or a           ; from RST 30h?\n  jr z,MRET4     ; no\n"], ["  ld de,MCRLF\n  call PRINT\n  jp PROMPT\n", `  ld de,MCRLF\n  call PRINT\n\nMRET4:\n${RESTORE}  ld de,MFF\n  call PRINT     ; a form feed\n  jp PROMPT\n`]], consoleAfterGo, /the form feed, BRK 4001, then MON3>/],
 ]) {
   test(`KG67 mutant: ${name}`, { timeout: 600_000 }, async () => {
     await assert.rejects(run(await mon3Variant(edits)), why);
