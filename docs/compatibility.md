@@ -271,7 +271,9 @@ console's state is above the RAM BIOS table. A `MON3.SVC` session holds `0041h` 
 `004Fh`, with the restart slots and the NMI entry, while it runs, and gives them
 back at `EXIT` or warm boot (`docs/mon3.md`). The RAM BIOS table is at `BF00h`. The CCP's command line and both its FCBs
 are kept over warm boot, from `CCPCLR`, and `CHPOS` above the table holds the place in
-a chained line.
+a chained line. `abi.inc` publishes one workspace byte, `KBLAST` at `BFEFh`: TEC-OS's
+last matrix key, which any service that scans the matrix itself writes
+(`docs/services.md`).
 
 ### What changed since each pin
 
