@@ -146,6 +146,19 @@ test("SH5 line at each prompt", () => {
   assert.equal(calls(), n + 1);
 });
 
+test("SH5 line flags after a BDOS error", () => {
+  const m = shellMachine(shellCard({ "HOOK.SVC": HOOK.file }, { startup: [], image: standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]) }));
+  at(m, "HOOK.SVC", { re: S });
+  m.mark = m.output.length;
+  m.type("SAVE 1 C:X.COM\r");
+  m.runUntil(() => m.waitingForInput() && /Bdos Err On C: R\/O/.test(m.text(m.mark)), 200_000_000, "the error");
+  m.type("\r");
+  m.runUntil(() => m.ready() && S.test(m.text(m.mark)), 200_000_000, "the prompt after the error");
+  assert.equal(hb(m, "FLAGS"), 2, "after a BDOS error's exit: bit 1");
+  at(m, "", { re: S });
+  assert.equal(hb(m, "FLAGS"), 0, "and 0 at the next");
+});
+
 test("SH5 line flags", () => {
   const m = bare({ "LINE.COM": LINEP, "CH.COM": chain("SAY") });
   at(m, "HOOK.SVC", { re: S });
@@ -393,6 +406,23 @@ test("SH6 never ready removed", async () => {
   assert.equal(code(m), 0xff00);
   assert.deepEqual(owners(m), []);
   assert.equal(word(m, 6), top);
+});
+
+test("SH6 never ready removed, from the startup line", async () => {
+  const x = await execFile({ V_NRDY: 1 });
+  const top = word(shellMachine(shellCard({ "X.SVC": x }, { startup: [] })), 6);
+  const m = shellMachine(shellCard({ "X.SVC": x }, { startup: ["X.SVC"] }));
+  assert.match(m.text(0), /A>X\.SVC\r[\s\S]*X\.SVC\?/, "the ROM's one line refused");
+  assert.equal(code(m), 0xff00);
+  assert.deepEqual(owners(m), []);
+  assert.equal(word(m, 6), top, "(0006h) as before");
+  // A later line of the file, run by the shell.
+  const shelledTop = word(shellMachine(shellCard({ "X.SVC": x })), 6);
+  const s = shellMachine(shellCard({ "X.SVC": x }, { startup: ["SHELL.SVC", "X.SVC"] }));
+  assert.match(s.text(0), /A>X\.SVC\r[\s\S]*X\.SVC\?/, "the shell's later line refused");
+  assert.equal(code(s), 0xff00);
+  assert.deepEqual(owners(s).map((o) => o.name), ["SHELL"]);
+  assert.equal(word(s, 6), shelledTop, "(0006h) as with the shell alone");
 });
 
 test("SH6 two refused", async () => {
@@ -781,6 +811,14 @@ test("SH8 lines go on", () => {
   assert.equal(hellos(at(m, "TYPE HELLO.TXT")), 1, "each new line runs whatever the last returned");
   const m2 = pm({ "S.CMD": Buffer.from("F\r\nTYPE HELLO.TXT\r\n\x1a", "latin1") });
   assert.equal(hellos(at(m2, "S.CMD")), 1, "a script's line after a failing line runs");
+});
+
+test("SH8 amp on script lines", () => {
+  const m = pm({ "S.CMD": Buffer.from("F &TYPE HELLO.TXT\r\n&TYPE HELLO.TXT\r\nOK &TYPE HELLO.TXT\r\n\x1a", "latin1") });
+  const t = at(m, "S.CMD");
+  assert.equal(hellos(t), 1, "the & piece after F skipped, the one after OK run");
+  assert.match(t, /&TYPE\?/, "a script line starting & refused");
+  assert.match(t, /\r\nA>OK &TYPE HELLO\.TXT\r+\n\r\nA>TYPE HELLO\.TXT\r\nhello/, "and the next line runs");
 });
 
 test("SH8 colon refused", () => {
