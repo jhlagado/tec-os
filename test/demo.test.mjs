@@ -39,10 +39,10 @@ test("TAS DEMO on TEC-OS builds the pinned DEMO.COM", { skip: TAS.skip, timeout:
   const screen = () => m.screen().map((l) => l.trimEnd());
   m.typeMatrix("tas demo\r");
   m.runUntilChecked(() => m.ready() && screen().some((l) => /^DEMO\.COM written/.test(l)), 3_000_000_000, "TAS's build");
-  const atom = (await program("demo")).bytes;
-  assert.equal(sha(atom), SHIPPED, "ATOM's build of the same source");
-  const built = Buffer.from(volume(image, "A").read("DEMO.COM")).subarray(0, atom.length);
+  const fixture = (await program("demo")).bytes;
+  assert.equal(sha(fixture), SHIPPED, "the test fixture's build of the same source");
+  const built = Buffer.from(volume(image, "A").read("DEMO.COM")).subarray(0, fixture.length);
   assert.equal(sha(built), SHIPPED, "TAS's DEMO.COM on the card");
-  assert.ok(volume(image, "A").read("DEMO.COM").subarray(atom.length).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
+  assert.ok(volume(image, "A").read("DEMO.COM").subarray(fixture.length).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
   assert.deepEqual(m.violations, []);
 });
