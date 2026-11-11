@@ -227,30 +227,31 @@ carries its own.
 | Part | Bytes | Rule | Verdict |
 | --- | ---: | --- | --- |
 | The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
-| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 767 | 1, 2 | Stays |
-| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console, its header dump gone (`boot.asm`) | 732 | 1 | Stays |
-| BIOS, with its entries' interrupt discipline (`bios.asm`) | 404 | 2 | Stays |
-| Serial console (`console.asm`) | 474 | 1, 2 | Stays |
-| Matrix keyboard (`keyboard.asm`) | 247 | 1, 2 | Stays |
-| ANSI terminal (`term.asm`) | 971 | 2 | Stays |
+| Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 710 | 1, 2 | Stays |
+| Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console, its header dump gone (`boot.asm`) | 749 | 1 | Stays |
+| BIOS, with its entries' interrupt discipline (`bios.asm`) | 363 | 2 | Stays |
+| Serial console (`console.asm`) | 444 | 1, 2 | Stays |
+| Matrix keyboard (`keyboard.asm`) | 231 | 1, 2 | Stays |
+| ANSI terminal (`term.asm`) | 800 | 2 | Stays |
 | Video switch and the display drivers' hook (`video.asm`) | 119 | 2 | Stays |
-| PICO9918 text console and graphics (`pico.asm`) | 601 | 1, 2 | Stays: the console from the banner on, its RAM a 95-byte block (KS39) |
+| PICO9918 text console and graphics (`pico.asm`) | 629 | 1, 2 | Stays: the console from the banner on, its RAM a 95-byte block (KS39) |
 | PICO9918 probe (`tms.asm`) | 32 | 1 | Stays |
 | GLCD text console | — | 1, 2 | Moved to `GLCD.SVC`, a driver, loaded by `STARTUP.CMD` |
 | Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: the PICO9918's console reads it and the GLCD's driver through `TNFONT`; serial and the LCD need none |
-| 20 × 4 LCD (`lcd.asm`) | 133 | 2 | Stays |
-| SD driver (`sd.asm`) | 872 | 1 | Stays |
-| Container mount and checks (`vol.asm`, `volsvc.asm`, `volutil.asm`) | 1,335 | 1 | Stays |
-| CCP, with the startup file (`cpm/ccp.asm`, `ccpfile.asm`, `ccpmut.asm`, `ccpcmd.asm`) | 2,521 | 2 | Stays, cut to the minimal CCP: one startup line, and `SERVICES` moved to `SHELL.SVC` |
-| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,846 | 2 | Stays |
+| 20 × 4 LCD (`lcd.asm`) | 132 | 2 | Stays |
+| SD driver (`sd.asm`) | 819 | 1 | Stays |
+| Container mount and checks (`vol.asm`, `volsvc.asm`, `volutil.asm`) | 1,273 | 1 | Stays |
+| CCP, with the startup file (`cpm/ccp.asm`, `ccpfile.asm`, `ccpmut.asm`, `ccpcmd.asm`) | 2,056 | 2 | Stays, cut to the minimal CCP: one startup line, and `SERVICES` moved to `SHELL.SVC` |
+| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,521 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 518 | 3, 4 | Stays |
-| Block cache (`cache.asm`) | 714 | 1, 2 | Stays: every read goes through it |
-| Command history (`history.asm`) | 211 | 2 | Moved to `SHELL.SVC` with `COPY`, `DEL`, `SERVICES`, the pager and chained lines; BDOS 10's recall and the shell hook stay ([shell.md](shell.md)) |
-| Service loader, registry and loading the display driver (`loader.asm`) | 744 | 2 | Stays |
+| Block cache (`cache.asm`) | 707 | 1, 2 | Stays: every read goes through it |
+| Command history (`history.asm`) | — | 2 | Moved to `SHELL.SVC` with `COPY`, `DEL`, `SERVICES`, the pager and chained lines; BDOS 10's recall and the shell hook stay ([shell.md](shell.md)) |
+| Service loader, registry and loading the display driver (`loader.asm`) | 887 | 2 | Stays |
 
-Counted from the build's debug map: each row is its source files' bytes, and
-the data row the block from `ROMDATA` to `ROMCODE`. The rows sum to the
-census's 16,020 bytes used.
+Counted from the build's debug map: each row is its source files' bytes in
+the ROM. The data row and the font row together are the block from `ROMDATA`
+to `ROMCODE`, 1,478 bytes. The rows sum to the build's 14,769 bytes used;
+`history.asm` is no longer in the ROM.
 
 Nothing in the ROM today belongs on the card. The native program calls,
 which had no user, were removed.
