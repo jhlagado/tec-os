@@ -61,7 +61,8 @@ A line is split into pieces at separators, and each piece runs in turn:
   conditional, `A &!B` and `A !&B` run B.
 - A skipped piece leaves the code as it is, so the next `&` tests the same
   code: in `A &B &C` with A failing, B and C are both skipped; in `A &B !C`, C
-  runs.
+  runs. A skipped piece is not echoed: typed after a failed build, `TAS X &X`
+  shows the line, TAS's message and the next prompt, and no `A>X`.
 - A refused command and the built-ins' failures (`NO FILE`, `NO SPACE`, a bad
   `REN` and the rest) set FF00h, as they always have.
 - Each new line runs whatever the last line returned. A line whose first
@@ -75,7 +76,8 @@ A line is split into pieces at separators, and each piece runs in turn:
   A function 47 line takes the same rules.
 - ^C at a program's line input, a BDOS error's exit and a write lost at warm
   boot drop the rest of the line; so does ^C at `[more]`. Esc and `Q` at
-  `[more]` stop only the listing.
+  `[more]` stop only the listing. A drop ends only the current line: a script,
+  or the rest of `STARTUP.CMD`, goes on with its next line.
 
 ### Two departures from CP/M 3
 
