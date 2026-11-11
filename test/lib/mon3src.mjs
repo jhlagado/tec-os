@@ -1,5 +1,5 @@
-// MON-3's real programs: sources from jhlagado/debug80-tec1g-mon3 at
-// 000c052, src/, each a pinned input, converted for ATOM by these rules:
+// The pinned MON-3 repository's programs, from its src/, each a pinned
+// input, converted for ATOM by these rules:
 // 0x numbers to $; leading dots dropped from directives; NAME: EQU to NAME
 // EQU; .include inlined; names over 8 characters renamed Q000, Q001 and on,
 // in their sorted (ASCII) order; ORG blocks placed in address order.

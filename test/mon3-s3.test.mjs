@@ -1,4 +1,4 @@
-// MON3.SVC's third stage: MON-3's RST 18h graphics calls against MON-3's own
+// MON3.SVC's graphics: MON-3's RST 18h graphics calls against MON-3's own
 // ROM, the graphics workspace at entry, the GLCD console after a program
 // returns, the five GLCD programs of the pinned repository, and the size.
 // Emulator evidence.
