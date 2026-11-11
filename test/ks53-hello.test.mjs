@@ -68,17 +68,18 @@ async function slice(consoleKind, file) {
   key(KEYAD, true);
   const from = m.output.length;
   try {
-    // On the matrix, Esc goes up at the program's return, before the
-    // console can read it as a keystroke.
-    if (glcd) m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after AD");
-    if (glcd) key(KEYAD, false);
+    // The return waits for the keys to go up before MON3>: AD is held on
+    // past it, then let go.
+    m.runUntil(() => m.pc === 0x0049, 10_000_000, "the return after AD");
+    runFor(m, 2_000_000);
+    out.heldPrompt = MON3.test(m.text(from));
+    key(KEYAD, false);
     m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD");
     out.back = true;
   } catch {
     out.back = false;
     return out;
   }
-  if (!glcd) key(KEYAD, false);
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the MON3> line's read");
   out.exit = !line(m, "EXIT").mon3;
   out.pageZeroAfter = bytesAt(m, 0, 0x50);
@@ -118,7 +119,8 @@ function checkKey(s, r) {
   assert.equal(s.key.digits.key, 0x05, "key 5 on the right two digits");
   assert.equal(s.key.digits.key, r.key.digits.key);
   assert.ok(Math.abs(s.key.digits.count - r.key.digits.count) <= 2, `the count ${s.key.digits.count} within two steps of ${r.key.digits.count}`);
-  assert.ok(s.back, "AD returns to MON3> within 10,000,000 cycles");
+  assert.equal(s.heldPrompt, false, "no MON3> while AD is held");
+  assert.ok(s.back, "AD returns to MON3> within 10,000,000 cycles of its release");
 }
 function checkExit(s) {
   assert.ok(s.exit, "EXIT reaches the CCP's prompt");

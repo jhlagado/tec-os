@@ -1115,7 +1115,10 @@ test("KG66 mutant: RST 20h without its flags, HELLO3 never quits", async () => {
   runFor(m, 1_000_000);
   m.tec1g.applyKey(KAD, true);
   const from = m.output.length;
-  assert.throws(() => m.runUntil(() => MON3.test(m.text(from)), 10_000_000, "MON3> after AD"), /no MON3> after AD/);
+  // The return waits for AD to go up, so it is the program's return that
+  // must not come.
+  assert.throws(() => m.runUntil(() => m.pc === 0x0049, 10_000_000, "return after AD"), /no return after AD/);
+  assert.doesNotMatch(m.text(from), /MON3>/);
 });
 
 // The size, within the ceiling every size test reads: (0006h) and the TPA

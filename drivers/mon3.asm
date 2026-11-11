@@ -724,7 +724,10 @@ PREIN:
 ; form feed gives the console back. A
 ; warning or a breakpoint's address
 ; follows it, so that a video console
-; still shows it at MON3>.
+; still shows it at MON3>. First the
+; keys must be up: the key that ended
+; a program, AD or Esc, must not reach
+; the line.
 
 MRET:
   di             ; interrupts off
@@ -741,6 +744,18 @@ MRET1:
   call FORMS     ; page zero again
   call RESETD    ; and the vectors
   call GRST      ; the GLCD's modes
+
+KEYUP:
+  call SKEYS     ; keypad or matrix
+  ld a,(KPRESS)
+  or a           ; NZ: no key down
+  jr nz,KEYSUP
+  ld e,$FF       ; held: the console
+  ld c,6         ; reads it once, and
+  call BDOS      ; it is dropped
+  jr KEYUP
+
+KEYSUP:
   ld de,MFF
   call PRINT     ; a form feed
   ld hl,DMG
