@@ -327,8 +327,9 @@ NMIC:
   ret            ; and run
 
 ; MON-3's variables, where MON-3 keeps
-; them. Nothing is runnable.
-; Clobbers AF, BC, DE and HL.
+; them, and its graphics workspace.
+; Nothing is runnable. Clobbers AF, BC,
+; DE and HL.
 
 WSINIT:
   ld hl,SIG      ; MON3.1G, 2025.16
@@ -349,6 +350,7 @@ WSINIT:
   ld (PROTM),a   ; no PROTECT
   ld (PROTM+1),a
   ld (RUNOK),a   ; nothing to run
+  call GWS       ; and a clear GBUF
   ld hl,$001B    ; 4800 baud, as MON-3
   ld (BAUD),hl   ; sets it with no RTC
   ld a,r

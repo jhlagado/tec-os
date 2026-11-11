@@ -95,7 +95,8 @@
     "RGBS"
   ],
   "drivers/mon3gfx.asm": [
-    "R18"
+    "R18",
+    "GWS"
   ],
   "drivers/mon3hex.asm": [
     "CHEX",
