@@ -110,6 +110,86 @@
       "path": "src/matrixz80.asm",
       "bytes": 1093,
       "sha256": "21a5b4ca8c6f50f57836d117a3ec5dc417487d0907d79f5dba090b80838fc1fa"
+    },
+    "MON3 glcd-mad.asm": {
+      "env": "MON3_GLCD_MAD_ASM",
+      "default": "../debug80-tec1g-mon3/src/glcd-mad.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/glcd-mad.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/glcd-mad.asm",
+      "bytes": 13372,
+      "sha256": "211c6466f17bbe1585e37498f70349f5a99a53f310bc6b8cec3231f2c098904c"
+    },
+    "MON3 glcd-maze.asm": {
+      "env": "MON3_GLCD_MAZE_ASM",
+      "default": "../debug80-tec1g-mon3/src/glcd-maze.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/glcd-maze.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/glcd-maze.asm",
+      "bytes": 10989,
+      "sha256": "0460766848c74abc8c7832676357daf1414714f585b5e597248793c03ca963b2"
+    },
+    "MON3 glcd-text.asm": {
+      "env": "MON3_GLCD_TEXT_ASM",
+      "default": "../debug80-tec1g-mon3/src/glcd-text.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/glcd-text.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/glcd-text.asm",
+      "bytes": 1318,
+      "sha256": "80a810a7b209f8accef2e54d95ba6bfd51d00a79f91e2bbc38c7057e804dbe2b"
+    },
+    "MON3 glcd-3d.asm": {
+      "env": "MON3_GLCD_3D_ASM",
+      "default": "../debug80-tec1g-mon3/src/glcd-3d.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/glcd-3d.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/glcd-3d.asm",
+      "bytes": 34634,
+      "sha256": "cb65f6beabbb61027aaa2040d288d910bef286963327c90e55cdd2dfe3473809"
+    },
+    "MON3 glcd-demo.asm": {
+      "env": "MON3_GLCD_DEMO_ASM",
+      "default": "../debug80-tec1g-mon3/src/glcd-demo.asm",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/glcd-demo.asm",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/glcd-demo.asm",
+      "bytes": 711,
+      "sha256": "cfa7d1a20d732ba759dae3f462e52d684f2f66ac1411ecd48253cd6deece985f"
+    },
+    "MON3 glcd_library.z80": {
+      "env": "MON3_GLCD_LIBRARY_Z80",
+      "default": "../debug80-tec1g-mon3/src/lib/glcd_library.z80",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/lib/glcd_library.z80",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/lib/glcd_library.z80",
+      "bytes": 86524,
+      "sha256": "205159613975000b5945496d72f4726ecef7ddd6a44ce0ac32fc2c3ab6f6a1a6"
+    },
+    "MON3 glcd_defs.z80": {
+      "env": "MON3_GLCD_DEFS_Z80",
+      "default": "../debug80-tec1g-mon3/src/lib/glcd_defs.z80",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/lib/glcd_defs.z80",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/lib/glcd_defs.z80",
+      "bytes": 412,
+      "sha256": "e1e7c7197eb17ba62d201a2681a9aa9f81521975debd614a35cbdc8bb2e0f6ad"
+    },
+    "MON3 mon3_api.z80": {
+      "env": "MON3_API_Z80",
+      "default": "../debug80-tec1g-mon3/src/lib/mon3_api.z80",
+      "source": "jhlagado/debug80-tec1g-mon3 000c052, src/lib/mon3_api.z80",
+      "repo": "jhlagado/debug80-tec1g-mon3",
+      "commit": "000c052ab857f8cbfe9deaf7dcd3dd23675744c3",
+      "path": "src/lib/mon3_api.z80",
+      "bytes": 3145,
+      "sha256": "e451fed071a8c999952e8ac0f1bfe797984213255978dfd2c1dfadba5e157f25"
     }
   }
 }
