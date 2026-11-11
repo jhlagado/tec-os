@@ -91,8 +91,15 @@ Input setup fetches the pinned local binary when a legacy sibling is stale.
 TAS assembles everything: the main ROM, the diagnostics, GLCD.SVC, MOUNT.COM,
 DEMO.COM, MON3.SVC and HELLO3.BIN, and the tests' programs and services. It
 runs on the host from Thorium's runner, selected from `TECOS_TAS_HOST`, then
-`.inputs/tas-host`. The models that rebuild an older tree from git need that
-tree's own assembler.
+`.inputs/tas-host`.
+
+The stage models, `tools/ks30-model.mjs` to `tools/ks36a-model.mjs`,
+`tools/ks38b-model.mjs`, `tools/ccp-model.mjs`, `tools/ccp-call-model.mjs` and
+`tools/bdos-model.mjs`, and the records under `test/model/`, are history. A
+model rebuilds an older tree from git with this checkout's `node_modules`, so a
+tree from before TAS built the ROM needs atom-z80 0.3.7 installed here by hand:
+it is no longer a dependency. `tools/ks32-model.mjs` also needs `ATOM.COM`,
+which is no longer a pinned input.
 There is one image for every board,
 `build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
 PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I, which

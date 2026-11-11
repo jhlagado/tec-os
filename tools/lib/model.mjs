@@ -297,10 +297,18 @@ export function svclim(dir) {
 /** The old models' name for svclim. */
 export const drvlim = svclim;
 
+/** The assembler tree DIR builds with: atom-z80's version where its package.json names it, else its pinned TAS.COM. */
+export function assemblerOf(dir) {
+  const atom = JSON.parse(readFileSync(resolve(dir, "package.json"), "utf8")).devDependencies?.["atom-z80"];
+  if (atom) return `ATOM ${atom}`;
+  const tas = JSON.parse(readFileSync(resolve(dir, "test/inputs.json"), "utf8")).inputs["TAS.COM"];
+  return `TAS ${tas.commit.slice(0, 7)}`;
+}
+
 /** The figures' first three keys. */
 export const heading = (reference, landedDir, landed) => ({
   baseline: reference,
-  assembler: `ATOM ${JSON.parse(readFileSync(resolve(landedDir, "package.json"), "utf8")).devDependencies["atom-z80"]}`,
+  assembler: assemblerOf(landedDir),
   prototype: commit(landed),
 });
 
