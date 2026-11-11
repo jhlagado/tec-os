@@ -714,7 +714,12 @@ test("SH8 amp on success", () => {
   assert.equal(runs("ONE &TYPE HELLO.TXT"), 1, "after 1 it runs");
   assert.equal(runs("FFFF &TYPE HELLO.TXT"), 1, "after FFFFh it runs");
   assert.equal(runs("F & TYPE HELLO.TXT"), 0, "& with blanks round it");
-  assert.equal(runs("F\t&TYPE HELLO.TXT"), 0, "a tab before & is a blank");
+  assert.equal(runs("OK X\t&TYPE HELLO.TXT"), 1, "a tab before & is a blank");
+  assert.equal(runs("F X\t&TYPE HELLO.TXT"), 0, "a tab before & is a blank, after a failure");
+  assert.equal(runs("OK\t&TYPE HELLO.TXT"), 1, "the piece ends before the tab: OK runs");
+  const w = at(m, "TYPE HELLO.TXT\t!SAY");
+  assert.equal(hellos(w), 1, "a tab before ! leaves the tail's name whole");
+  assert.doesNotMatch(w, /\?/, "nothing refused");
 });
 
 test("SH8 amp after blank only", () => {
@@ -781,7 +786,7 @@ test("SH8 colon refused", () => {
 test("SH8 echo", () => {
   const m = pm();
   const e = at(m, "OK!TYPE HELLO.TXT &TYPE C.TXT");
-  assert.match(e, /\r\nA>TYPE HELLO\.TXT \r\n/, "echoed after its prompt, up to its separator, the blank before & kept");
+  assert.match(e, /\r\nA>TYPE HELLO\.TXT\r\n/, "echoed after its prompt, up to the blanks before its separator");
   assert.match(e, /\r\nA>TYPE C\.TXT\r\n/);
   assert.doesNotMatch(e, /A>OK!/);
 });
@@ -845,6 +850,16 @@ test("SH8 mutant: the code read once per line", async () => {
   const m = await pmWith([["  ld a,(LCOND)\n  or a\n  jr z,LNRUN     ; after !: it runs", "  ld a,(LCOND)\n  or a\n  jr z,LNRUN\n  ld a,(PDNZ)\n  or a\n  jr nz,LNRUN\n  ld a,1\n  ld (PDNZ),a"]]);
   at(m, "SAY");
   assert.equal(hellos(at(m, "OK &F &TYPE HELLO.TXT")), 1);
+});
+
+test("SH8 mutant: a tab before & taken as text", async () => {
+  const m = await pmWith([["  cp TAB         ; or a tab?\n  ld a,b         ; the & again\n  jr nz,SP3      ; no: it is text", "  ld a,b\n  jr SP3"]]);
+  assert.equal(hellos(at(m, "OK X\t&TYPE HELLO.TXT")), 0);
+});
+
+test("SH8 mutant: a piece keeping the blanks before its separator", async () => {
+  const m = await pmWith([["  ex de,hl\n  ld (hl),0      ; the piece ends\n  ex de,hl       ; before its blanks", "  ld (hl),0"]]);
+  assert.equal(hellos(at(m, "OK\t&TYPE HELLO.TXT")), 0);
 });
 
 test("SH8 mutant: & splitting inside a word", async () => {
