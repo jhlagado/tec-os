@@ -88,11 +88,11 @@ pinned files, from someone who has it, in `.inputs/`. A selected override
 or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
 
-TAS is the default assembler for the main ROM, the diagnostics, GLCD.SVC,
-MOUNT.COM, DEMO.COM, MON3.SVC and HELLO3.BIN. The host is selected from `TECOS_TAS_HOST`, then
-`.inputs/tas-host`. `TECOS_ROM_ASSEMBLER=atom` selects the ATOM reference
-build and needs no TAS host; the diagnostics always use TAS. Historical builds and test-only assembly
-fixtures retain their explicit ATOM paths. Unknown selections fail.
+TAS assembles everything: the main ROM, the diagnostics, GLCD.SVC, MOUNT.COM,
+DEMO.COM, MON3.SVC and HELLO3.BIN, and the tests' programs and services. It
+runs on the host from Thorium's runner, selected from `TECOS_TAS_HOST`, then
+`.inputs/tas-host`. The models that rebuild an older tree from git need that
+tree's own assembler.
 There is one image for every board,
 `build/tecos/tecos.rom`, published as `dist/tecos.rom`. The
 PICO9918's console is in the ROM, at 80 columns, 40, or 32 in Graphics I, which
