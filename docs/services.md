@@ -22,8 +22,8 @@ for it.
 
 A `.SVC` file is the image, made for page 0 with its header at the start, then
 the dependencies, then the relocation data. `tools/lib/svc.mjs` writes one from
-two assemblies. ATOM takes `%INCLUDE` only in a file's header, so the writer copies
-in any `%INCLUDE` below the `ORG`. Records are whole on disk, so a file's end is rounded, and the
+two assemblies by TAS. It applies a test's definitions in a copy of the source,
+into which it copies any `%INCLUDE` below the `ORG`. Records are whole on disk, so a file's end is rounded, and the
 loader ignores what follows its relocation data.
 
 | Offset | Bytes | In the file | In memory |
