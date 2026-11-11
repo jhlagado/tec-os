@@ -904,7 +904,7 @@ test("SH8 mutant: a tab before & taken as text", async () => {
 });
 
 test("SH8 mutant: a piece keeping the blanks before its separator", async () => {
-  const m = await pmWith([["  ex de,hl\n  ld (hl),0      ; the piece ends\n  ex de,hl       ; before its blanks", "  ld (hl),0"]]);
+  const m = await pmWith([["  ex de,hl\n  ld (hl),0      ; the end, at DE\n  ex de,hl", "  ld (hl),0"]]);
   assert.equal(hellos(at(m, "OK\t&TYPE HELLO.TXT")), 0);
 });
 

@@ -118,7 +118,7 @@ SGET:
   ld a,(SEOF)    ; ended before?
   or a
   scf
-  ret nz         ; ended before
+  ret nz         ; carry: no more
   ld a,(SOFF)    ; the byte's offset
   cp 128         ; past the record?
   jr nz,SG0      ; within the record
@@ -136,8 +136,8 @@ SG0:
   ld a,(SLOAD)   ; is it read?
   or a
   jr nz,SG1      ; it is there
-  push de        ; keep the line's
-  push bc        ; pointer, slots
+  push de        ; the line pointer
+  push bc        ; the slots left
   ld de,DEFDMA
   ld c,26        ; 26: set the DMA
   call BDOS      ; DMA 0080h
@@ -222,8 +222,8 @@ PROMPT:
 ; E through BDOS 2, keeping BC and HL.
 
 PUTC:
-  push bc        ; kept across the
-  push hl        ; BDOS call
+  push bc
+  push hl        ; both kept over BDOS
   ld c,2         ; 2: output E
   call BDOS
   pop hl
@@ -233,9 +233,9 @@ PUTC:
 ; CR and LF. Keeps BC and HL.
 
 CRLF:
-  ld e,CR        ; CR, then
+  ld e,CR        ; a carriage return
   call PUTC
-  ld e,LF        ; LF
+  ld e,LF        ; then a line feed
   jr PUTC
 
 ; The dollar-ended string at DE.
@@ -268,7 +268,7 @@ PUTTRIM:
   call PUTC      ; print it
 
 PTSK:
-  inc hl         ; the next
+  inc hl         ; on through the name
   djnz PUTTRIM
   ret
 
@@ -332,10 +332,10 @@ PUTHEX:
 
 PH1:
   and $0F        ; the low nibble
-  add a,$90      ; 0-9 or A-F in
-  daa            ; ASCII, by DAA
-  adc a,$40      ; from DAA's carry
-  daa
+  add a,$90      ; 90h to 9Fh
+  daa            ; A to F: 00h-05h, CY
+  adc a,$40      ; D0h-D9h or 41h-46h
+  daa            ; '0'-'9' or 'A'-'F'
   ld e,a         ; print it
   jr PUTC
 
@@ -413,7 +413,7 @@ PGPUT:
   xor a          ; column 0
 
 PGINC:
-  inc a          ; the column after
+  inc a          ; the next column
 
 PGSETC:
   ld (PGCOL),a
@@ -514,10 +514,10 @@ HREC:
   cp CTRLN
   jr z,HRNEW     ; ^N: newer
   call HSTART    ; this line's start
-  dec l          ; before its start's
+  dec l          ; the older line's zero
   dec l
-  ld a,(hl)      ; the byte before the
-  inc l          ; zero before it
+  ld a,(hl)      ; its last byte, or 0
+  inc l          ; L at its zero
   or a           ; another line?
   scf
   ret z          ; no older line
@@ -547,7 +547,7 @@ HRC:
   jr z,HRE       ; its end
   ld a,(hl)      ; a ring byte
   ld (de),a      ; copied out
-  inc de         ; the next
+  inc de
   inc l          ; within the ring
   jr HRC
 
@@ -581,8 +581,8 @@ HSTO:
   dec a
   ld l,a         ; the newest's zero
   call HSTART    ; its start
-  push de        ; the line and
-  push bc        ; its length
+  push de        ; the line
+  push bc        ; its length, in B
   ld c,0         ; differences
 
 HSCMP:
@@ -594,7 +594,7 @@ HSCMP:
   inc c          ; a difference
 
 HSCMP1:
-  inc de         ; the next
+  inc de
   inc l
   djnz HSCMP     ; all B bytes
 
@@ -614,7 +614,7 @@ HSCMP1:
 HSPUT:
   ld a,(de)      ; a byte of it
   ld (hl),a      ; the line, wrapping
-  inc de         ; the next
+  inc de
   inc l
   djnz HSPUT
   ld (hl),0      ; its zero
