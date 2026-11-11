@@ -49,7 +49,7 @@ test("a model reads an older tree's own inputs.json, whatever this tree pins: TE
 
 test("test/inputs.json holds only what a live test reads, each one file with its repo, commit and path", () => {
   const { inputs } = read("test/inputs.json");
-  assert.deepEqual(Object.keys(inputs).sort(), ["BAZA.COM", "BAZA.RTL", "BOUNCE.BAS", "MON3 lcd-test.asm", "MON3 matrix-demo-rgb.asm", "MON3 matrix-demo.asm", "MON3 matrixz80.asm", "MON3 serial.asm", "MON3.BIN", "TAS.COM", "TED.COM"], "the application pins: TED and TAS from Thorium; BAZA, its library and the starter card's BOUNCE.BAS from Baza; MON-3's ROM, the reference the MON3.SVC tests compare with, and the five MON-3 programs KG66 runs");
+  assert.deepEqual(Object.keys(inputs).sort(), ["BAZA.COM", "BAZA.RTL", "BOUNCE.BAS", "MON3 glcd-3d.asm", "MON3 glcd-demo.asm", "MON3 glcd-mad.asm", "MON3 glcd-maze.asm", "MON3 glcd-text.asm", "MON3 glcd_defs.z80", "MON3 glcd_library.z80", "MON3 lcd-test.asm", "MON3 matrix-demo-rgb.asm", "MON3 matrix-demo.asm", "MON3 matrixz80.asm", "MON3 mon3_api.z80", "MON3 serial.asm", "MON3.BIN", "TAS.COM", "TED.COM"], "the application pins: TED and TAS from Thorium; BAZA, its library and the starter card's BOUNCE.BAS from Baza; MON-3's ROM, the reference the MON3.SVC tests compare with, the five MON-3 programs KG66 runs, and the five GLCD programs KG67 runs with the three files they include");
   for (const [name, e] of Object.entries(inputs)) {
     assert.match(e.repo, /^[\w-]+\/[\w.-]+$/, name);
     assert.match(e.commit, /^[0-9a-f]{40}$/, `${name}: a full commit`);
