@@ -111,19 +111,19 @@ A program's `RET` comes back to `MON3>`. Interrupts go off, PROTECT is
 cleared, the serial line is idle again, the session's page zero is written
 again, every drive's allocation vector is rebuilt from its directory at its
 next use (BDOS 37), and the GLCD console's panel is set again ("The GLCD
-console", below). When CON: is a matrix console, `CRT:` or `UC1:` (IOBYTE
-bit 0 set), the return then waits until MON-3's `scanKeys` reports no key,
-on the keypad or on the matrix, whichever it reads, so the key that ended
-the program, AD or Esc, never reaches the `MON3>` line. Two ordinary keys
-held together read as no key, as they do in MON-3, so a chord ends the
-wait. While a key is held the console is polled (BDOS 6 with E = FFh) and
-what it reads is dropped: TEC-OS's own scan sees the key held, and the
-Viewer, which holds a key until that scan has read it, lets it go. On
-`TTY:` and `BAT:` the console reads only the serial line, so a held key
-can't reach the line and there is no wait. The wait's own `scanKeys` also
-records the key in TEC-OS's held-key byte ("Coverage in S2", below), which
-alone keeps a key already held from the line. Then a form feed gives the console back.
-Then come the tables' warning or the breakpoint's `BRK nnnn`, if there is one, then
+console", below). Two things keep the key that ended the program, AD or
+Esc, off the `MON3>` line. Each read of the matrix records the key in
+`KBLAST` ("Coverage in S2", below), so TEC-OS's scan takes a key still held
+as held, not new, and the Viewer, which holds a key until that scan has
+read it, lets it go. And when CON: is a matrix console, `CRT:` or `UC1:`
+(IOBYTE bit 0 set), the return holds `MON3>` back until MON-3's `scanKeys`
+reports no key, on the keypad or on the matrix, whichever it reads; while a
+key is held the console is polled (BDOS 6 with E = FFh) and what it reads
+is dropped. Two ordinary keys held together read as no key, as they do in
+MON-3, so a chord ends the wait. On `TTY:` and `BAT:` the console reads
+only the serial line, so a held key can't reach the line and there is no
+wait. Then a form feed gives the console back. Then come the tables'
+warning or the breakpoint's `BRK nnnn`, if there is one, then
 `MON3>`, in that order on every console, so that a video console still shows
 the message after the form feed has cleared it. A program that
 pushes into MON-3's 128-byte stack, or past it into the TPA below 0800h,
@@ -281,8 +281,8 @@ Where the session differs from MON-3, by design:
 - Each read of the matrix, by `scanKeys`, `scanKeysWait`, `RST 20h` or
   `matrixScan` (call 18) and the calls built on it, also records the key it
   found, or FFh for none, in TEC-OS's last matrix key, `KBLAST`, which
-  `abi.inc` publishes (`docs/services.md`), as TEC-OS's own scan records it. MON-3 has no such byte,
-  and nothing a program sees changes. While a program runs, TEC-OS's scan
+  `abi.inc` publishes (`docs/services.md`), as TEC-OS's own scan records
+  it. MON-3 has no such byte, and nothing a program sees changes. While a program runs, TEC-OS's scan
   doesn't run, so without this a host that holds a matrix key until TEC-OS
   has read it, as the Viewer does, would never let it go, and no later key
   would come. Back at `MON3>`, or after `EXIT`, TEC-OS's scan finds a key
