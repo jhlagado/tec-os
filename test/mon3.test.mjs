@@ -14,7 +14,7 @@ import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, code, execFile, figures, find, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
+import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, code, execFile, figures, find, KEYAD, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word } from "./lib/mon3.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const memo = (f) => {
@@ -528,6 +528,51 @@ test("key-up wait mutant: release judged by KPRESS alone gives MON3> while g is 
     b[i + 5] = 0x00;
   });
   assert.throws(() => gExit(file), /no MON3> while g is held/);
+});
+
+// When the keypad is the input, the wait judges release by KPRESS alone:
+// KBLAST, which only a matrix scan sets, may hold anything. On the page's
+// board with CON: on CRT:, the Matrix switch goes off while KPROG waits for
+// a key, KBLAST is left at a key, and AD on the keypad ends the program.
+const KPROG = bin([0x0e, 0x10, 0xd7, 0x20, 0xfb, 0xc9]);
+
+function keypadExit(file) {
+  const m = machine(card({ "MON3.SVC": file, "P.BIN": KPROG }), VIEW);
+  assert.ok(line(m, "MON3.SVC /E").mon3);
+  assert.match(line(m, "LOAD P.BIN").out, /MON3>$/);
+  m.type("GO\r");
+  runTo(m, 0x4000, 20_000_000);
+  runFor(m, 1_000_000);
+  m.tec1g.state.input.matrixModeEnabled = false; // the keypad is the input
+  m.write(m.sym("KBLAST"), 0x24);
+  const from = m.output.length;
+  m.tec1g.applyKey(KEYAD, true);
+  m.runUntil(() => m.pc === 0x0049, 20_000_000, "the return after AD");
+  runFor(m, 2_000_000);
+  const held = m.text(from).includes("MON3>");
+  m.tec1g.applyKey(KEYAD, false);
+  m.runUntil(() => m.waitingForInput() && MON3.test(m.text(from)), 20_000_000, "MON3> once AD is up");
+  assert.equal(m.read(3) & 3, 1, "CON: still on CRT:");
+  return { held };
+}
+
+test("key-up wait: with the keypad the input, a KBLAST left at a key doesn't hold MON3> once AD is up", async () => {
+  const r = keypadExit(await mon3File());
+  assert.equal(r.held, false, "no MON3> while AD is held");
+});
+
+// The wait's console poll runs TEC-OS's own scan, which records the matrix's
+// FFh and so clears a KBLAST left at a key: this mutant drops the poll too, to
+// show what the input test does.
+test("key-up wait mutant: KBLAST asked on the keypad too, with no poll, holds MON3> after AD is up", async () => {
+  const file = svcMutant(await mon3Build(), (b, at) => {
+    const i = find(b, at("KEYUP"), [0xdb, 0x03, 0x0f, 0x30], 24);
+    b[i + 3] = 0x00; // NOP NOP: KBLAST whatever the input
+    b[i + 4] = 0x00;
+    const p = find(b, at("KEYUP"), [0x0e, 0x06, 0xcd], 48);
+    b.fill(0, p + 2, p + 5); // NOPs for CALL BDOS
+  });
+  assert.throws(() => keypadExit(file), /no MON3> once AD is up/);
 });
 
 test("KG59 entry contract", async () => {
