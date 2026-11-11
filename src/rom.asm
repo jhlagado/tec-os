@@ -40,6 +40,5 @@
 %INCLUDE "cpm/bdoscon.asm"
 %INCLUDE "services.asm"
 %INCLUDE "cache.asm"
-%INCLUDE "history.asm"
 %INCLUDE "loader.asm"
 %INCLUDE "end.asm"

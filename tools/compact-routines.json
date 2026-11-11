@@ -417,9 +417,9 @@
     "STARTED",
     "MAINLOOP",
     "MLGOT",
-    "MLECHO",
     "MLTAKE",
-    "CHSKIP",
+    "SHLINE",
+    "SHENT",
     "SAVEDU",
     "NOTDRIVE",
     "ARGSKIP",
@@ -457,7 +457,6 @@
     "ISCMD",
     "PUTSTR",
     "PUTCHAR",
-    "CMDSVC",
     "STBOOT",
     "STLINE",
     "SETLB"
@@ -470,11 +469,8 @@
     "DIRNAME",
     "DIRNEXT",
     "DIRDONE",
-    "PGINIT",
-    "PGCRLF",
-    "PGPUT",
-    "PGNEWL",
-    "PGDROP",
+    "LSTCRLF",
+    "LSTPUT",
     "PUTTRIM",
     "PUTDEC",
     "CMDTYPE",
@@ -599,7 +595,8 @@
     "RTCWR",
     "RTCRD",
     "HWSFONT",
-    "SVDRV"
+    "SVDRV",
+    "SVSHL"
   ],
   "src/tables.asm": [
     "BIOSBAS"
@@ -678,10 +675,7 @@
     "ERADEL",
     "CMDREN",
     "RENEXIST",
-    "CPNAME",
-    "CMDCOPY",
-    "DOSSEQ",
-    "CPHEX"
+    "DOSSEQ"
   ],
   "src/volsvc.asm": [
     "RESEL",

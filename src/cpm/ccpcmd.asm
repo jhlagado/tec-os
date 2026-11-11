@@ -744,49 +744,13 @@ PUTCHAR:
   pop bc
   ret
 
-; SERVICES: follow SVCHEAD/DOWN from the
-; lowest resident upward, ending at
-; MAINLOOP on zero. Print the eight-byte
-; name through PUTTRIM and the decimal
-; page span: SVCABV(DOWN) minus this
-; owner's page. Zero DOWN resolves to
-; the stub.
-; Save owner HL across decimal/string
-; output, then reload DOWN.
-
-CMDSVC:
-
-  ld a,(SVCHEAD)
-
-CMDDL:
-  or a
-  jp z,MAINLOOP  ; end of owner chain
-  ld h,a         ; owner name address
-  ld l,DNAM
-  ld b,8         ; eight name bytes
-  call PUTTRIM   ; masked nonspaces
-  ld e,' '       ; page-count separator
-  call PUTCHAR
-  push hl        ; owner page across I/O
-  ld l,DOWN      ; next-owner link
-  ld a,(hl)      ; 0 means stub above
-  call SVCABV    ; upper page boundary
-  sub h          ; owned page count
-  ld l,a
-  ld h,0
-  call PUTDEC    ; decimal span
-  ld de,CRLFMSG
-  call PUTSTR
-  pop hl
-  ld l,DOWN
-  ld a,(hl)      ; reload next owner
-  jr CMDDL
-
 ; Attempt startup only at STPOS=0. Set
 ; 80h before access, then bypass if raw
 ; STSPORT bit 6 is low. Otherwise open
-; A:STARTUP.CMD and read one record into
-; STREC. Failure leaves the finished
+; A:STARTUP.CMD and read its first
+; record into LOADBUF, which nothing
+; else uses before STLINE takes the
+; line. Failure leaves the finished
 ; state. A zero read result sets
 ; STPOS=1.
 ; On the returning I/O path set
@@ -807,8 +771,7 @@ STBOOT:
   ld de,CMDFCB
   ld bc,12       ; 12-byte reference
   ldir
-  ld de,STREC    ; one-record DMA
-  call SETDMA    ; 26: STREC DMA
+  call SETLB     ; 26: LOADBUF DMA
   call DOSSEQ    ; open descriptor
   DB 15*2+0      ; 15: CMDFCB
   inc a
@@ -826,94 +789,85 @@ STBDMA:
   ld (CURDMA),hl
   ret
 
-; Get a startup line from STREC. If
-; STPOS bit 7 is set, return carry with
-; no line. Otherwise require active
-; STPOS=1..7Fh and the same-page record
-; layout. Decode that one-based position
-; and copy at most 127 characters to
-; CMDTXT.
-; Skip blank lines. For nonempty output
-; set CMDLEN/buffer and return carry
-; clear after dollar-string echo.
-; Changes AF/BC/DE/HL.
+; Get the one startup line, once: the
+; first line of the record in LOADBUF
+; that is neither empty nor starting
+; with ;. Zero, 1Ah or the record's end
+; ends the text, and CR or LF a line.
+; At most 127 characters are kept; the
+; rest of the line is read past. A
+; shell loaded by this line reads the
+; rest of the file itself. Carry: no
+; line. Otherwise set CMDLEN, echo the
+; line through PUTSTR and return carry
+; clear. Changes AF/BC/DE/HL.
 
 STLINE:
-  ld hl,STPOS    ; startup position
+  ld hl,STPOS    ; 1: a record waits
   ld a,(hl)
-  rlca           ; finished bit -> carry
-  ret c          ; finished: no line
-  rrca           ; recover position
-
-  add a,LOW(STREC)-1
-  ld l,a         ; same-page layout
-  ld h,HIGH(STREC)
+  dec a
+  scf
+  ret nz         ; none, or done
+  ld (hl),$80    ; done after this one
+  ld hl,LOADBUF
   ld de,CMDTXT
-  ld b,127       ; 127 output slots
+  ld bc,127*256+128
 
-; Scan within the single 128-byte STREC.
-; Check its end before reading. Zero/1Ah
-; ends the source; CR/LF ends a line.
-; Store at most 127 characters, then
-; consume the rest of that line without
-; storing. A final record byte reached
-; within a line can be data.
+; B counts the slots left, C the record
+; bytes left.
 
 STL1:
-  ld a,l
-  cp LOW(STREC+128)
-  jr z,STLE      ; end reached: finish
   ld a,(hl)
   inc hl
   or a
   jr z,STLE      ; zero ends source
   cp 26
   jr z,STLE      ; 1Ah ends source
-  cp 13          ; CR ends line
-  jr z,STL2
-  cp 10          ; LF ends line
-  jr z,STL2
+  cp 13
+  jr z,STLCR     ; CR ends a line
+  cp 10
+  jr z,STLCR     ; LF ends a line
   inc b          ; test full, keep A
   dec b
-  jr z,STL1      ; full: consume only
+  jr z,STLN      ; full: keep no more
   ld (de),a
   inc de
   dec b
-  jr STL1
+
+STLN:
+  dec c
+  jr nz,STL1     ; record bytes left
+  jr STLE
+
+STLCR:
+  ld a,e
+  cp LOW(CMDTXT)
+  jr z,STLN      ; blank so far: skip
+  ld a,(CMDTXT)
+  cp ';'
+  jr nz,STLE     ; a line ends
+  ld de,CMDTXT   ; a comment: restart
+  ld b,127
+  jr STLN
 
 STLE:
-
-; At EOF use STLAST=STREC+127 so the
-; position conversion stores 80h.
-; Otherwise save the next one-based
-; position. Bit 7 marks the finished
-; state. If output is empty retry
-; STLINE.
-; Store CMDLEN and append CR/dollar for
-; PUTSTR echo. An embedded '$' stops
-; echo early. CMDLEN/CMDTXT retain all
-; stored characters. MLGOT replaces the
-; length-boundary CR with zero.
-; At 127 characters the dollar occupies
-; adjacent BOOTDRV, already consumed by
-; CCPENT before STLINE.
-
-  ld l,LOW(STLAST)
-
-STL2:
-  ld a,l
-
-  sub LOW(STREC)-1
-  ld (STPOS),a   ; save position/state
+  ld a,(CMDTXT)
+  cp ';'
+  scf
+  ret z          ; a last comment line
   ld a,e
   sub LOW(CMDTXT)
-  jr z,STLINE    ; skip blank output
+  scf
+  ret z          ; no line
   ld (CMDLEN),a  ; counted input layout
+
+; At 127 characters the dollar lands
+; on BOOTDRV, which CCPENT has used.
+
   ex de,hl
   ld (hl),13     ; CR for echo
   inc hl
   ld (hl),'$'    ; PUTSTR echo end
-
   ld de,CMDTXT
   call PUTSTR    ; stops at embedded $
   or a           ; carry-clear line

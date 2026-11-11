@@ -1,4 +1,4 @@
-; CCP ERA, REN and COPY commands.
+; CCP ERA and REN commands.
 ; ERA: require one complete pattern
 ; before deleting. For eleven '?'
 ; name/type bytes, ask ALLQUERY and
@@ -148,179 +148,14 @@ RENEXIST:
   ld de,FILEEX
   jp ERRGO
 
-; CPNAME parses one unambiguous
-; reference. CPPARSE skips spaces,
-; preserves DE across PARSEFCB and
-; rejects carry through BADCMD. If drive
-; is zero, store (CURDSK AND 0Fh)+1.
-; CPPARSE returns that drive in A.
-; Success leaves HL at the delimiter and
-; DE at the FCB base. CPCHK preserves
-; delimiter HL around UNAMBIG. CPNAME
-; does not preserve CPPARSE's A result.
-
-CPNAME:
-  call CPPARSE
+; CPCHK: reject an empty or wildcard
+; name at (FCBBASE) through BADCMD,
+; keeping HL.
 
 CPCHK:
   call UNAMBIG
-  jr c,CPBAD
+  jp c,BADCMD
   ret
-
-CPPARSE:
-  call SKIPSP
-  push de
-  call PARSEFCB
-  pop de
-  jr c,CPBAD
-  ld a,(de)
-  or a
-  ret nz
-  ld a,(CURDSK)
-  and $0F
-  inc a
-  ld (de),a
-  ret
-
-; COPY source destination: require two
-; unambiguous references and validate
-; the full tail before I/O. Source uses
-; CMDFCB, destination RENFCB. A blank
-; destination name copies all eleven
-; source name/type bytes, replacing any
-; supplied type. Use DEFDMA for 128-byte
-; payloads and DIRNUM for the 16-bit
-; successful-write count.
-
-CMDCOPY:
-
-  ld hl,(ARGSTRT)
-  ld de,CMDFCB
-  call CPNAME
-  ld de,RENFCB
-  call CPPARSE
-  call ENDCHK
-  inc de
-  ld a,(de)
-  cp SPACE
-  jr nz,CPD1
-
-  ld hl,CMDFCB+1
-  ld bc,11
-  ldir
-
-CPD1:
-  call CPCHK
-  ld hl,CMDFCB
-  ld de,RENFCB
-  ld b,12
-
-; Compare twelve raw drive/name/type
-; bytes after default-drive filling. All
-; equal enters BADCMD before I/O. Any
-; difference enters CPGO. Unlike BDOS
-; matching, no name-attribute masking
-; occurs here.
-
-CPSAME:
-  ld a,(de)
-  cp (hl)
-  jr nz,CPGO
-  inc hl
-  inc de
-  djnz CPSAME
-
-CPBAD:
-  jp BADCMD
-
-; Use DMA=0080h and open the source. FFh
-; open reports CPNOSRC through CPFAIL.
-; Delete the destination before making
-; it anew. FFh make reports CPNODST.
-; Clear DIRNUM only after creation.
-; Replacement is destructive before
-; copying begins.
-
-CPGO:
-  ld de,DEFDMA
-  call SETDMA    ; 26: DMA DEFDMA
-  call DOSSEQ
-  DB 15*2+0
-  inc a
-  ld de,CPNOSRC
-  jr z,CPFAIL
-  call DOSSEQ
-  DB 19*2+1
-  call DOSSEQ
-  DB 22*2+1
-  inc a
-  ld de,CPNODST
-  jr z,CPFAIL
-  ld hl,0
-
-  ld (DIRNUM),hl
-
-; Read one source record. Any nonzero
-; returned result, including read
-; errors, enters CPDONE. Write a
-; zero-result record to the destination.
-; A nonzero write enters CPWERR. Count
-; only successful writes, modulo 65536.
-
-CPLOOP:
-  call DOSSEQ
-  DB 20*2+0
-  or a
-  jr nz,CPDONE
-  call DOSSEQ
-  DB 21*2+1
-  or a
-  jr nz,CPWERR
-
-  ld hl,(DIRNUM)
-  inc hl
-  ld (DIRNUM),hl
-  jr CPLOOP
-
-; Close only the destination through
-; function 16. FFh reports CPCLOSE
-; through CPFAIL. Otherwise print COPIED
-; and four hex digits of DIRNUM, high
-; byte first, then CR/LF and PRTGO. No
-; source close is attempted.
-
-CPDONE:
-  call DOSSEQ
-  DB 16*2+1
-  inc a
-  ld de,CPCLOSE
-  jr z,CPFAIL
-
-  ld de,CPCOPIED
-  call PUTSTR
-
-  ld a,(DIRNUM+1)
-  call CPHEX
-  ld a,(DIRNUM)
-  call CPHEX
-  ld de,CRLFMSG
-  jp PRTGO
-
-; After a returned write failure,
-; attempt destination close and ignore
-; its ordinary result. Report CPWRITE
-; through ERRGO. Earlier writes are not
-; undone. BDOS errors can exit
-; nonlocally. CPFAIL takes the message
-; in DE.
-
-CPWERR:
-  call DOSSEQ
-  DB 16*2+1
-  ld de,CPWRITE
-
-CPFAIL:
-  jp ERRGO
 
 ; Call BDOS using the byte after CALL:
 ; function*2 plus FCB selector bit 0.
@@ -347,16 +182,3 @@ DOSSEQ:
 DOSGO:
   jp BDOS
 
-; Print A as two uppercase hex digits
-; through HEXHL. CPHEXC passes each
-; digit in A through E to PUTCHAR/BDOS
-; 2. CPHEX preserves BC and changes
-; AF/DE/HL.
-
-CPHEX:
-  ld hl,CPHEXC
-  jp HEXHL
-
-CPHEXC:
-  ld e,a
-  jp PUTCHAR
