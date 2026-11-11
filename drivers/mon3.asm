@@ -745,14 +745,13 @@ MRET1:
   call RESETD    ; and the vectors
   call GRST      ; the GLCD's modes
 
-; Only a matrix console, CON: on CRT:
-; or UC1:, can read a key as a line's
-; character, so only then is there a
-; wait. While a key is down, BDOS 6
-; polls the console and drops what it
-; reads: TEC-OS's own scan must see the
-; key, since the Viewer holds a key
-; until that scan has read it.
+; Only CON: on CRT: or UC1: reads a
+; matrix key into a line. MSCAN's
+; KBLAST record keeps a held key off
+; the line and lets the Viewer let it
+; go. This wait holds MON3> back until
+; the keys are up, and BDOS 6 drops
+; what the console reads meanwhile.
 
   ld a,(IOBYTE)
   rrca           ; CRT: or UC1:?
