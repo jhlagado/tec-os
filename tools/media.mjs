@@ -214,7 +214,7 @@ async function main() {
   // BOUNCE.BAS, Baza's CALL demonstration, is pinned as LF text: the card
   // holds it as a CP/M text file, as TIMES.BAS is held.
   const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
-  files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D steer, Q quits", bytes: bounce });
+  files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D or the arrow keys steer, Q quits", bytes: bounce });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM");
   // DEMO.COM is built and checked here, but the card holds only its source:
@@ -228,11 +228,6 @@ async function main() {
   const hello3 = await mon3Program("HELLO3.BIN", "test/programs/hello3.asm");
   files.push({ name: "HELLO3.BIN", description: "a MON-3 program: at MON3>, LOAD HELLO3.BIN then GO writes the LCD; AD (Esc on the matrix) returns", bytes: hello3 });
   files.push({ name: "HELLO3.ASM", description: "HELLO3's source: TAS HELLO3 HELLO3.BIN builds it, TED HELLO3.ASM reads it", bytes: textAt("test/programs/hello3.asm") });
-  // CHAIN.ASM, Thorium's demonstration of several statements on a line, a \
-  // between them, with lines up to 67 columns wide. It is pinned as LF text,
-  // and the card holds it as CP/M text, as BOUNCE.BAS is held.
-  const chain = Buffer.from(pinnedBytes("CHAIN.ASM").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
-  files.push({ name: "CHAIN.ASM", description: "a program written with several statements on a line: TAS CHAIN then CHAIN prints LINE 1 to LINE 5, TED CHAIN.ASM reads it at 80 columns", bytes: chain });
 
   // A recipe's revision rises when its set of files changes, not when a
   // pinned file's bytes change. It is above both the starter's and the
@@ -240,9 +235,9 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "11",
+    revision: "12",
     name: "TEC-OS starter",
-    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. TAS CHAIN then CHAIN runs a program written with several statements on a line; its lines are up to 67 columns, so read it with TED CHAIN.ASM at 80 columns (CON PICO 80, or 80 in the width selector). B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
     profile: "tecos",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },

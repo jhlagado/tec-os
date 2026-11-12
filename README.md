@@ -38,7 +38,7 @@ Node.js 20 or later.
   tas_stage=
   trap 'if [ -n "$tas_stage" ]; then rm -rf "$tas_stage"; fi' EXIT
   npm ci
-  npm run inputs   # pinned TED.COM, TAS.COM, CHAIN.ASM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
+  npm run inputs   # pinned TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
   mkdir -p .inputs
   if [ -d .inputs/tas-host ]; then
     node --input-type=module -e 'import { tasAssembler } from "./tools/lib/tas-rom.mjs"; await tasAssembler();'
@@ -66,7 +66,7 @@ npm test         # host and emulator tests, several minutes
 The host is pinned to the KS42 runner and its locked Z80 runtime. Setup
 verifies the runner, lock, runtime and TAS executable before moving the
 temporary host into place. Repeating setup verifies the prepared host
-without reinstalling it. `npm run inputs` validates the six application pins
+without reinstalling it. `npm run inputs` validates the application pins
 and fetches missing inputs into verified temporary files before replacement.
 A failed preparation keeps previous verified files. Assembly uses local
 inputs and makes no downloads.
@@ -77,14 +77,13 @@ page; no test here drives a browser. `playwright` stays pinned in
 `web/` page that `npm start` serves; `npx playwright install chromium` fetches
 the browser that version expects.
 
-Assembly, media and tests select each application input, TED, TAS and
-`CHAIN.ASM` from Thorium and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza,
-from an explicit `TED_COM`, `TAS_COM`, `CHAIN_ASM`, `BAZA_COM`, `BAZA_RTL` or
-`BOUNCE_BAS`, then `.inputs/NAME`, then the legacy sibling paths
-`../thorium/dist/TED.COM`, `../thorium/dist/TAS.COM`,
-`../thorium/demo/chain/chain.asm`, `../baza/dist/BAZA.COM`,
-`../baza/dist/BAZA.RTL` and `../baza/examples/BOUNCE.BAS`. `npm run media`
-needs all six to build the card. Baza's repository is private: without access to it, put the three
+Assembly, media and tests select each application input, TED and TAS from
+Thorium and `BAZA.COM`, `BAZA.RTL` and `BOUNCE.BAS` from Baza, from an
+explicit `TED_COM`, `TAS_COM`, `BAZA_COM`, `BAZA_RTL` or `BOUNCE_BAS`, then
+`.inputs/NAME`, then the legacy sibling paths `../thorium/dist/TED.COM`,
+`../thorium/dist/TAS.COM`, `../baza/dist/BAZA.COM`, `../baza/dist/BAZA.RTL`
+and `../baza/examples/BOUNCE.BAS`. `npm run media` needs all five to build
+the card. Baza's repository is private: without access to it, put the three
 pinned files, from someone who has it, in `.inputs/`. A selected override
 or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
@@ -177,16 +176,10 @@ TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC` gives `MON3>`,
 where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
 LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
 keyboard, returns to `MON3>`, and `EXIT` to `A>`. `HELLO3.ASM` is its source,
-and `TAS HELLO3 HELLO3.BIN` builds it. `CHAIN.ASM`, Thorium's demonstration, is
-written with several statements on a line, a `\` between them: `TAS CHAIN`
-builds it and `CHAIN` prints `LINE 1` to `LINE 5`. Its lines are up to 67
-columns, so `TED CHAIN.ASM` shows them whole at 80 columns: after
-`CON PICO 80`, with 80 chosen in the Viewer's width selector, or with
-`PICO9918, 80 columns` chosen in this web page's ROM menu. At 40 columns TED
-scrolls sideways to show the rest of a line. `BOUNCE.BAS` is Baza's sprite
-game: `BAZA BOUNCE` compiles it, and `BOUNCE` takes the PICO9918 in Graphics I
-through `CALL`; tap W, A, S and D to steer the ship, and Q gives the display
-back. A BASIC program that has claimed the display and
+and `TAS HELLO3 HELLO3.BIN` builds it. `BOUNCE.BAS` is Baza's sprite
+game: `BAZA BOUNCE` compiles it, showing a spinner while it works, and
+`BOUNCE` takes the PICO9918 in Graphics I through `CALL`; tap W, A, S and D,
+or the arrow keys, to steer the ship, and Q gives the display back. A BASIC program that has claimed the display and
 stops on an error gives it back first, so its message shows. A command that
 names a `.COM` file runs it, and `NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary

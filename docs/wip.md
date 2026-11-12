@@ -9,21 +9,19 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
 - the Compact font with 40 columns by default;
 - the owner's 40-column `SAMPLE.ASM`;
 - BASIC and TED's language support (KD-262): BAZA's `BAZA.COM` and
-  `BAZA.RTL` from Baza `0516794`, the sample `TIMES.BAS`, Baza's
-  `BOUNCE.BAS` sprite game, and TED from Thorium `b69d544`, whose language
-  table builds a `.BAS` with BAZA.
+  `BAZA.RTL` from Baza `50dc512`, the sample `TIMES.BAS`, Baza's
+  `BOUNCE.BAS` sprite game, steered by W, A, S and D or the arrow keys,
+  and TED from Thorium `b69d544`, whose language table builds a `.BAS`
+  with BAZA.
 - One card (KD-278): the starter card is the Viewer's card too. It holds
-  sixteen files: `BAZA.COM`, `BAZA.RTL`, `BOUNCE.BAS`, `CHAIN.ASM`,
-  `DEMO.ASM`, `GLCD.SVC`, `HELLO3.ASM`, `HELLO3.BIN`, `MON3.SVC`,
-  `MOUNT.COM`, `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`, `TAS.COM`,
-  `TED.COM` and `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
+  fifteen files: `BAZA.COM`, `BAZA.RTL`, `BOUNCE.BAS`, `DEMO.ASM`,
+  `GLCD.SVC`, `HELLO3.ASM`, `HELLO3.BIN`, `MON3.SVC`, `MOUNT.COM`,
+  `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`, `TAS.COM`, `TED.COM` and
+  `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
   `MON3.SVC`, then `LOAD HELLO3.BIN` and `GO`, runs a MON-3 program that
   writes the LCD (KD-277).
 - Several statements on a line (KD-275): TAS from Thorium `3d1e2c0` takes
-  them with a `\` between, and the card's `CHAIN.ASM`, Thorium's
-  demonstration, is written that way, with lines up to 67 columns for an
-  80-column console. `TAS CHAIN` builds it and `CHAIN` prints `LINE 1` to
-  `LINE 5`. TEC-OS's own sources keep one statement a line.
+  them with a `\` between. TEC-OS's own sources keep one statement a line.
 
 The boot R1 policy is decided: with a PICO installed, real boot writes the
 selected mode's R1 with the frame interrupt off (KD-258 D1). A ROM-owned

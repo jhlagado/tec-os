@@ -21,32 +21,22 @@
       "bytes": 12334,
       "sha256": "4f62239086e63c8dcf8c4b574f4998891fb38568181b83defb07d8cf0526fc69"
     },
-    "CHAIN.ASM": {
-      "env": "CHAIN_ASM",
-      "default": "../thorium/demo/chain/chain.asm",
-      "source": "jhlagado/thorium 3d1e2c0, demo/chain/chain.asm",
-      "repo": "jhlagado/thorium",
-      "commit": "3d1e2c0ea5269e1dfa4138671fab850c158f1670",
-      "path": "demo/chain/chain.asm",
-      "bytes": 881,
-      "sha256": "8b0ba793ee26b4b50b42722e2cca4c2c5ef34bde9550dedd6763b1656b0421f9"
-    },
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza 0516794, dist/BAZA.COM",
+      "source": "jhlagado/baza 50dc512, dist/BAZA.COM",
       "repo": "jhlagado/baza",
-      "commit": "0516794d67a706c64f73bfbc5cb7f4d8df6a8c5d",
+      "commit": "50dc512d13e441b766f3b95a69427095d64c311d",
       "path": "dist/BAZA.COM",
-      "bytes": 13056,
-      "sha256": "ec8fd42a92a46fbbbe0a2b32112a43180e9dbf9d01652191cfa5d0c6568d3038"
+      "bytes": 13184,
+      "sha256": "280ee3720182e3a81329b9c8063374cbeae15cd5c587c064e62b11b047e7a979"
     },
     "BAZA.RTL": {
       "env": "BAZA_RTL",
       "default": "../baza/dist/BAZA.RTL",
-      "source": "jhlagado/baza 0516794, dist/BAZA.RTL",
+      "source": "jhlagado/baza 50dc512, dist/BAZA.RTL",
       "repo": "jhlagado/baza",
-      "commit": "0516794d67a706c64f73bfbc5cb7f4d8df6a8c5d",
+      "commit": "50dc512d13e441b766f3b95a69427095d64c311d",
       "path": "dist/BAZA.RTL",
       "bytes": 12032,
       "sha256": "14d7fd1136ed218ef5b81c02cce04baab8fa0f06a96c3d73b77b339f0a9e58f7"
@@ -54,12 +44,12 @@
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",
       "default": "../baza/examples/BOUNCE.BAS",
-      "source": "jhlagado/baza 0516794, examples/BOUNCE.BAS",
+      "source": "jhlagado/baza 50dc512, examples/BOUNCE.BAS",
       "repo": "jhlagado/baza",
-      "commit": "0516794d67a706c64f73bfbc5cb7f4d8df6a8c5d",
+      "commit": "50dc512d13e441b766f3b95a69427095d64c311d",
       "path": "examples/BOUNCE.BAS",
-      "bytes": 4668,
-      "sha256": "2b2046cab8fd6adf599abb2803359aa0ae49ea9dc40e3ba0f5852d73563e4134"
+      "bytes": 5189,
+      "sha256": "615693a55fb29fd9fd831836443461f82fddca65ae983337e52ecae5b529744c"
     },
     "MON3.BIN": {
       "env": "MON3_BIN",
