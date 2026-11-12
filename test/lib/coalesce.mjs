@@ -1,8 +1,10 @@
-// A: coalescing's machines, shared by test/coalesce.test.mjs and the stack
-// census: a three-volume card, a program's calls made from a stub at 3000h,
-// each card write with its block, the card refusing writes on demand, ROM
-// mutants made by patching the build's image, and the census's flush
-// workload.
+// A: coalescing's machines, shared by test/coalesce.test.mjs, the write-behind
+// rows in test/cache.test.mjs and the stack census: a three-volume card, a
+// program's calls made from a stub at 3000h, each card write with its block,
+// the card refusing writes on demand, ROM mutants made by patching the
+// build's image, and the census's flush workload. The volume on the logged
+// drive is written behind and every other coalesces, so a machine that
+// tests A:'s coalescing is logged on B:.
 
 import assert from "node:assert/strict";
 import { createContainer, findVolume, parseContainer } from "../../tools/lib/container.mjs";
@@ -17,12 +19,12 @@ export const DMA = 0x2000;
 export const BUF = 0x3900;
 export const TOP = 0x3000;
 
-/** SYSTEM on A:, WORK on B: written behind, and ARCHIVE, index 2, on no drive; C: has a slot. */
+/** SYSTEM on A:, WORK on B:, and ARCHIVE, index 2, on no drive; C: has a slot. */
 export const card = () =>
   createContainer(
     [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
-      { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },
+      { geometry: "G8M", label: "WORK", mount: "B" },
       { geometry: "G1M", label: "ARCHIVE", mount: "-" },
     ],
     { drives: 3 },
@@ -41,17 +43,30 @@ export function dirBlocks(image, drive = "A") {
   return new Set(Array.from({ length: n }, (_, i) => v.start + i));
 }
 
+/** Type LOGGED's drive change at M's prompt, unless it is A:, and run to the next prompt. */
+function logOn(m, logged) {
+  if (logged === "A") return;
+  m.type(`${logged}:\r`);
+  m.expect(new RegExp(`${logged}>$`), { maxCycles: 400_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the drive change");
+}
+
+/** An FCB's drive byte for A:: 0, the default drive, when logged on A:, else 1. */
+const driveA = (logged) => (logged === "A" ? 0 : 1);
+
 /**
  * A machine on IMAGE under ROM (the build's when not given), at its first
- * prompt, and the calls a program makes. BUDGET, when given, is the most
+ * prompt after logging on LOGGED (B: unless given), and the calls a program
+ * makes; a name's drive is A: unless given. BUDGET, when given, is the most
  * cycles the machine may run from here: past it every step throws, so a
  * hang fails its test.
  */
-export function rig({ rom, image = card(), budget } = {}) {
+export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   const r0 = rom ?? romFor();
   const m = new Machine({ ...r0, sdImage: image, clock: TEST_CLOCK });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  logOn(m, logged);
   const t = { writes: [], reads: [] };
   const lba = () => word(m, m.sym("SDLBA")) + word(m, m.sym("SDLBA") + 2) * 0x10000;
   const [sdw, sdr] = [m.sym("SDWRITE"), m.sym("SDREAD")];
@@ -80,7 +95,7 @@ export function rig({ rom, image = card(), budget } = {}) {
     const at = word(m, 1) - 3 + off;
     return stub([0xcd, at & 0xff, at >> 8], pump);
   };
-  const name = (n, at = FCB, drive = 0) => [drive, ...Buffer.from(n.padEnd(11)), ...new Array(24).fill(0)].forEach((v, i) => m.write(at + i, v));
+  const name = (n, at = FCB, drive = driveA(logged)) => [drive, ...Buffer.from(n.padEnd(11)), ...new Array(24).fill(0)].forEach((v, i) => m.write(at + i, v));
   const put = (r, salt) => pat(r, salt).forEach((v, k) => m.write(DMA + k, v));
   const setR = (n) => [n & 0xff, n >> 8, 0].forEach((v, i) => m.write(FCB + 33 + i, v));
   const blockOf = (r, at = FCB) => word(m, at + 16 + 2 * (r >> 4));
@@ -122,7 +137,7 @@ export function rig({ rom, image = card(), budget } = {}) {
   /** Press reset and run to the prompt. */
   const reset = () => {
     m.reset();
-    m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
+    m.expect(/[A-P]>$/, { from: m.output.length, maxCycles: 200_000_000 });
     m.runUntil(() => m.ready(), 200_000_000, "the prompt after the reset");
   };
   return { image, m, t, stub, bdos, svc, bios, name, put, setR, blockOf, onCard, state, pending, refuse, warm, reset };
@@ -198,10 +213,10 @@ const jp = (a) => [0xc3, lo(a), hi(a)];
 
 /** The single mutants: the build's ROM with one change each. */
 export const MUTANTS = {
-  /** FNSTAT without its CPOUT. */
+  /** FNSTAT without its CKEY. */
   fnstat: () =>
     mutant((b, at, put, sym) => {
-      expectAt(b, at("FNSTAT"), call(sym("CPOUT")));
+      expectAt(b, at("FNSTAT"), call(sym("CKEY")));
       put(at("FNSTAT"), [0, 0, 0]);
     }),
   /** READDIR without its CPOUT and BADSECT jump. */
@@ -216,10 +231,10 @@ export const MUTANTS = {
       expectAt(b, at("FNCLSE"), [...call(sym("CPOUT")), 0xc2, lo(sym("BADSECT")), hi(sym("BADSECT"))]);
       put(at("FNCLSE"), [0, 0, 0, 0, 0, 0]);
     }),
-  /** BCONIN without its CPOUT. */
+  /** BCONIN without its CKEY. */
   bconin: () =>
     mutant((b, at, put, sym) => {
-      expectAt(b, at("BCONIN"), call(sym("CPOUT")));
+      expectAt(b, at("BCONIN"), call(sym("CKEY")));
       put(at("BCONIN"), [0, 0, 0]);
     }),
   /** BWGET without PUSH BC, CALL CPMOVE, POP BC, RET NZ. */
@@ -228,10 +243,10 @@ export const MUTANTS = {
       expectAt(b, at("BWGET"), [0xc5, ...call(sym("CPMOVE")), 0xc1, 0xc0]);
       put(at("BWGET"), [0, 0, 0, 0, 0, 0]);
     }),
-  /** BWGET marking type 1 (directory) writes to coalesce too: its BIT 0,(HL) and JR NZ,BWTHRU gone. */
+  /** BWGET marking type 1 (directory) writes off the logged drive to coalesce too: its BIT 0,(HL) and JR NZ,BWGO gone. */
   type1: () =>
     mutant((b, at, put, sym) => {
-      const i = at("BWGET") + 14;
+      const i = at("BWGET") + 15;
       expectAt(b, i, [0x21, lo(sym("CWTYPE")), hi(sym("CWTYPE")), 0xcb, 0x46, 0x20, null]);
       put(i + 3, [0, 0, 0, 0]);
     }),
@@ -281,29 +296,97 @@ export const MUTANTS = {
       expectAt(b, i, [...call(sym("CLOOK")), 0x20, null]);
       put(i, [0x3a, lo(sym("CNEXT")), hi(sym("CNEXT")), 0, 0]);
     }),
-  /** BWGET marking a write-behind volume's data writes to coalesce: its BIT 1,(HL) and JR NZ,BWGO gone. */
+  /** BWGET marking the logged drive's data writes to coalesce: its JR Z,BWGO after the BOOTDRV test gone. */
   wbcoalesce: () =>
     mutant((b, at, put, sym) => {
       const i = at("BWGET") + 6;
-      expectAt(b, i, [...call(sym("CURENT")), 0x23, 0xcb, 0x4e, 0x20, null]);
-      put(i + 4, [0, 0, 0, 0]);
+      expectAt(b, i, [0x3a, lo(sym("BOOTDRV")), hi(sym("BOOTDRV")), 0x21, lo(sym("DSKCUR")), hi(sym("DSKCUR")), 0xbe, 0x28, null]);
+      put(i + 7, [0, 0]);
+    }),
+  /** MR2: every console read writing the pending block only, CPOUT in place of each CKEY call. */
+  mr2: () =>
+    mutant((b, at, put, sym) => {
+      const want = call(sym("CKEY"));
+      let n = 0;
+      for (let i = 0; i + 3 <= b.length; i += 1) {
+        if (b[i] === want[0] && b[i + 1] === want[1] && b[i + 2] === want[2]) {
+          put(i, call(sym("CPOUT")));
+          n += 1;
+        }
+      }
+      assert.equal(n, 5, "CKEY's five callers");
+    }),
+  /** MBD: BWGET testing the BDOS's current disk, CURDRV, in place of BOOTDRV. */
+  mbd: () =>
+    mutant((b, at, put, sym) => {
+      const i = at("BWGET") + 6;
+      expectAt(b, i, [0x3a, lo(sym("BOOTDRV")), hi(sym("BOOTDRV"))]);
+      put(i, [0x3a, lo(sym("CURDRV")), hi(sym("CURDRV"))]);
+    }),
+  /** M1: a drive change at the prompt without its CALL VFLUSH, before LD A,B and LD (BOOTDRV),A. */
+  m1: () =>
+    mutant((b, at, put, sym) => {
+      const want = [...call(sym("VFLUSH")), 0x78, 0x32, lo(sym("BOOTDRV")), hi(sym("BOOTDRV"))];
+      const i = Buffer.from(b).indexOf(Buffer.from(want));
+      assert.ok(i > 0, "the drive change's flush");
+      put(i, [0, 0, 0]);
+    }),
+  /**
+   * MDIR: a directory write off the logged drive writing only itself, with
+   * no flush of the other lines first. CWB3's LD A,C and CALL CFLUSH become a
+   * call to code in the free tail that flushes only on the logged drive.
+   */
+  mdir: () =>
+    mutant((b, at, put, sym) => {
+      expectAt(b, at("CWB3"), [0x79, ...call(sym("CFLUSH")), 0xcc, lo(sym("CWRITE")), hi(sym("CWRITE"))]);
+      const tail = at("CODEEND");
+      // LD A,(BOOTDRV); LD HL,DSKCUR; CP (HL); LD A,C; JR Z,+2; CP A; RET; JP CFLUSH
+      put(tail, [0x3a, lo(sym("BOOTDRV")), hi(sym("BOOTDRV")), 0x21, lo(sym("DSKCUR")), hi(sym("DSKCUR")), 0xbe, 0x79, 0x28, 0x02, 0xbf, 0xc9, ...jp(sym("CFLUSH"))]);
+      put(at("CWB3"), [...call(tail + 0xc000), 0]);
+    }),
+  /** MNC: CKEY that never tests CANY, so every console read scans the 30 lines. */
+  mnc: () =>
+    mutant((b, at, put, sym) => {
+      expectAt(b, at("CKEY"), [0x3a, lo(sym("CANY")), hi(sym("CANY")), 0xb7, ...[0xca, lo(sym("CPOUT")), hi(sym("CPOUT"))]]);
+      put(at("CKEY"), [0, 0, 0, 0, 0, 0, 0]);
+    }),
+  /** MTW: CKEY scanning the 30 lines twice, by a call to code in the free tail. */
+  mtw: () =>
+    mutant((b, at, put, sym) => {
+      const i = at("CKEY") + 11;
+      expectAt(b, i, [0x3e, sym("NLINES"), ...call(sym("CFLUSH"))]);
+      const tail = at("CODEEND");
+      // LD A,NLINES; CALL CFLUSH; LD A,NLINES; JP CFLUSH
+      put(tail, [0x3e, sym("NLINES"), ...call(sym("CFLUSH")), 0x3e, sym("NLINES"), ...jp(sym("CFLUSH"))]);
+      put(i, [...call(tail + 0xc000), 0, 0]);
+    }),
+  /** MN: MNFILL copying descriptor byte 15's bit 0 into the drive entry's bit 1 again, by code in the free tail. */
+  mn: () =>
+    mutant((b, at, put, sym) => {
+      const i = at("MNFILL") + 19;
+      expectAt(b, i, [0xdd, 0x7e, 13, 0x77, 0xc9]);
+      const tail = at("CODEEND");
+      // LD A,(IX+15); AND 1; ADD A,A; OR (IX+13); RET
+      put(tail, [0xdd, 0x7e, 15, 0xe6, 1, 0x87, 0xdd, 0xb6, 13, 0xc9]);
+      put(i, call(tail + 0xc000));
     }),
 };
 
 /**
  * The stack census's flush workload under ROM (the build's when not given),
- * in MODE "writing", "refusing" or "removed" (the card out): a block pending
+ * logged on LOGGED (B: unless given, so that A: coalesces), in MODE "writing", "refusing" or "removed" (the card out): a block pending
  * before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS
  * CONIN called directly, BDOS 17 and 48, MOUNT, a B: write and the next
  * block, then an extent change, READDIR inside BDOS 21. The three stacks'
  * depths, each call's depth on the program's stack at TOP, and its cycles.
  */
-export function flushRun(mode, rom) {
+export function flushRun(mode, rom, { logged = "B" } = {}) {
   const r0 = rom ?? romFor();
   const m = new Machine({ ...r0, sdImage: card(), clock: TEST_CLOCK });
   const census = watch(m);
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  logOn(m, logged);
   let low = TOP;
   const step = m.step.bind(m);
   m.step = () => {
@@ -320,7 +403,7 @@ export function flushRun(mode, rom) {
     return m.cycles - t0;
   };
   const bdos = (fn, de = FCB, pump = false) => stub([0x0e, fn, 0x11, de & 0xff, de >> 8, 0xcd, 0x05, 0x00], pump);
-  const name = (n, at = FCB, drive = 0) => [drive, ...Buffer.from(n.padEnd(11)), ...new Array(24).fill(0)].forEach((v, i) => m.write(at + i, v));
+  const name = (n, at = FCB, drive = driveA(logged)) => [drive, ...Buffer.from(n.padEnd(11)), ...new Array(24).fill(0)].forEach((v, i) => m.write(at + i, v));
   const conin = word(m, 1) + 6;
   const abicall = m.sym("ABICALL");
   bdos(45, 0xff);

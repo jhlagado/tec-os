@@ -2,9 +2,7 @@
 // tecvol: create, inspect and edit TEC-OS SD containers.
 //
 //   tecvol create IMAGE --volume G1M:SYSTEM:A [--volume G8M:WORK:B:ro] [--align N] [--drives N]
-//                (more than 8 volumes, or --drives, makes a format 1.1 card;
-//                :wb after the drive writes that volume behind, one at most,
-//                and not with :ro)
+//                (more than 8 volumes, or --drives, makes a format 1.1 card)
 //   tecvol info IMAGE
 //   tecvol verify IMAGE
 //   tecvol dir IMAGE [DRIVE] [--user N]
@@ -84,8 +82,8 @@ export function openVolume(image, info, drive) {
 
 function parseVolumeSpec(spec) {
   const [geometry, label, mount, ...flags] = spec.split(":");
-  for (const f of flags) if (f !== "ro" && f !== "wb") usage(`unknown volume flag :${f}`);
-  return { geometry, label, mount: mount || undefined, readOnly: flags.includes("ro"), writeBehind: flags.includes("wb") };
+  for (const f of flags) if (f !== "ro") usage(`unknown volume flag :${f}`);
+  return { geometry, label, mount: mount || undefined, readOnly: flags.includes("ro") };
 }
 
 /** Fetch a recipe file from a URL or a path relative to the recipe. */
@@ -132,7 +130,7 @@ async function main(argv) {
         }
         console.log(
           `  ${v.drive ?? "-"}: ${v.label.padEnd(11)} id ${v.id} ${v.g.name} start ${v.start} ` +
-            `${v.readOnly ? "ro" : "rw"}${v.writeBehind ? " wb" : ""} ${fs.list().length} file(s), ${free}`,
+            `${v.readOnly ? "ro" : "rw"} ${fs.list().length} file(s), ${free}`,
         );
         for (const issue of issues) console.log(`     problem: ${issue}`);
       }

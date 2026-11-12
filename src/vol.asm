@@ -573,12 +573,11 @@ MNONE:
 
 ; Build an eight-byte drive entry at HL
 ; from descriptor IX: DSTART (4), DLEN
-; (2), DGEOM and DFLAGS OR ((DCACHE AND
-; DCWB)<<1). Read-only stays bit 0.
-; Write-behind becomes bit 1. Keep IX
-; and leave HL at the eighth destination
-; byte. Change AF/BC/DE. No policy or
-; slot validation here.
+; (2), DGEOM and DFLAGS, bit 0
+; read-only. Keep IX and leave HL at
+; the eighth destination byte. Change
+; AF/BC/DE. No policy or slot
+; validation here.
 
 MNFILL:
   ex de,hl
@@ -594,11 +593,7 @@ MNFILL:
   ld (hl),a
   inc hl
 
-  ld a,(ix+DCACHE)
-  and DCWB
-  add a,a
-
-  or (ix+DFLAGS)
+  ld a,(ix+DFLAGS)
   ld (hl),a
   ret
 

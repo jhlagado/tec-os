@@ -238,11 +238,11 @@ async function main() {
     id: "starter",
     revision: "12",
     name: "TEC-OS starter",
-    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. B: is an empty work disk, written behind: press ^C at A> before reset or power off.",
+    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. B: is an empty work disk. The drive you are on is written behind: whenever TEC-OS waits for a key, everything is on the card.",
     profile: "tecos",
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
-      { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },
+      { geometry: "G8M", label: "WORK", mount: "B" },
     ],
     components: files.map((f) => ({
       id: f.name.toLowerCase().replace(/\W/g, "-"),

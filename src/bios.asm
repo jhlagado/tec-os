@@ -332,30 +332,27 @@ BWNEW:
 ; Keep C's pre-read choice. First write
 ; the pending block if this write is to
 ; another block; return NZ if that
-; fails. Selected-drive flag bit 1
-; chooses write-behind. Otherwise a
-; directory write sets CWTYPE bit 7 to
-; write through and a data write sets
-; bit 5 to coalesce. Tail-enter the
-; common CWRBH path.
+; fails. The logged drive, BOOTDRV, is
+; written behind. On any other drive a
+; data write sets CWTYPE bit 5 to
+; coalesce. Every directory write takes
+; the flush-first path, so no entry
+; names data the card lacks. Tail-enter
+; the common CWRBH path.
 
 BWGET:
   push bc
   call CPMOVE
   pop bc
   ret nz
-  call CURENT
-  inc hl
-  bit 1,(hl)
-  jr nz,BWGO
+  ld a,(BOOTDRV)
+  ld hl,DSKCUR
+  cp (hl)
+  jr z,BWGO
   ld hl,CWTYPE
   bit 0,(hl)
-  jr nz,BWTHRU
+  jr nz,BWGO
   set 5,(hl)
-  jr BWGO
-
-BWTHRU:
-  set 7,(hl)
 
 BWGO:
   jp CWRBH
@@ -374,18 +371,18 @@ IFFGET:
   ret
 
 ; Sample IFFGET, disable interrupts and
-; store AF in CIFF. Flag bit 2 in its
-; low byte records the prior enable
-; state. Pair CDI/CEI around a
-; non-nested interval: CIFF is shared
-; storage. Change AF/HL.
+; store its flags in CIFF, whose bit 2
+; records the prior enable state. Pair
+; CDI/CEI around a non-nested interval:
+; CIFF is shared storage. Change AF/HL.
 
 CDI:
   call IFFGET
   di
   push af
   pop hl
-  ld (CIFF),hl
+  ld a,l
+  ld (CIFF),a    ; the flags alone
   ret
 
 ; Read 128 bytes into DSKDMA through the
@@ -404,19 +401,19 @@ BREAD:
 
 ; Write 128 bytes from DSKDMA through
 ; CWRBH. C=0 data, 1 directory, 2 new
-; allocation block's first record. Save
-; CWTYPE before validation. Type 2 or
+; allocation block's first record, kept
+; in CWTYPE before validation. Type 2 or
 ; the exact no-pre-read key permits
-; zero-fill. Otherwise retain/read
-; neighbouring bytes.
-; Write-through success includes card
-; output. Write-behind may defer it to
-; directory writes, warm boot, remount
-; or eviction. BRET returns A=0 success
-; or 1 error and restores saved
-; interrupt state. Change BC/DE/HL/F.
-; A full cache pre-read also changes I.
-; Falls into BRET.
+; zero-fill; otherwise keep neighbouring
+; bytes. A directory write's success
+; includes card output. A data write is
+; held behind on the logged drive and
+; coalesces on any other, so it may wait
+; for a console read, a directory write,
+; warm boot, remount or eviction. Falls
+; into BRET: A=0 success or 1 error,
+; interrupt state restored. Change
+; BC/DE/HL/F, and I on a full pre-read.
 
 BWRITE:
   call CDI

@@ -57,13 +57,13 @@ function csdFor(blocks, highCapacity = true) {
   return csd;
 }
 
-/** The starter card's volumes (tools/media.mjs: SYSTEM G1M on A, WORK G8M on
- *  B, written behind), then `free` blocks of C3h: 245,760 blocks in all, a
- *  card sold as 128 MB. */
+/** The two volumes the starter card began with (SYSTEM G1M on A, WORK G8M on
+ *  B), then `free` blocks of C3h: 245,760 blocks in all, a card sold as
+ *  128 MB. */
 function starterCard(free = 225280) {
   const container = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
-    { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },
+    { geometry: "G8M", label: "WORK", mount: "B" },
   ]);
   const image = new Uint8Array(container.length + free * BLOCK).fill(0xc3);
   image.set(container);

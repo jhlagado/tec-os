@@ -316,32 +316,38 @@ test("tecvol makes and reads format 1.1: more than 8 volumes, a drives field, un
   assert.equal(parseContainer(standardCard()).minor, 0, "a card of 8 or fewer with no drives field stays 1.0");
 });
 
-test("tecvol marks one volume written behind with :wb, and refuses two or one read-only", () => {
+// Byte 15 of a descriptor is reserved: write-behind follows the logged drive,
+// so a card marks no volume, and the tools refuse a caller that still does.
+
+test("S2-5 writeBehind refused", () => {
+  for (const wb of [true, false]) {
+    assert.throws(() => createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B", writeBehind: wb }]), /writeBehind/, `writeBehind: ${wb}`);
+  }
+  const recipe = { schema: "tecos-file-recipe-v1", volumes: [{ geometry: "G1M", label: "SYSTEM", mount: "A", writeBehind: true }], components: [] };
+  return assert.rejects(buildRecipe(recipe, () => null), /writeBehind/, "a recipe that names it");
+});
+
+test("S2-5 :wb refused", () => {
   const dir = mkdtempSync(resolve(tmpdir(), "tecvol-wb-"));
-  const tecvol = (...args) => execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), ...args], { timeout: 5000, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
   const img = resolve(dir, "wb.img");
-  tecvol("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G8M:WORK:B:wb");
-  const info = parseContainer(new Uint8Array(readFileSync(img)));
-  assert.deepEqual(info.volumes.map((v) => v.writeBehind), [false, true]);
-  assert.match(tecvol("info", img), /B: WORK .* rw wb /);
-  for (const [name, specs] of [
-    ["two.img", ["G1M:SYSTEM:A:wb", "G8M:WORK:B:wb"]],
-    ["ro.img", ["G1M:SYSTEM:A", "G8M:WORK:B:ro:wb"]],
-  ])
-    assert.throws(() => tecvol("create", resolve(dir, name), ...specs.flatMap((v) => ["--volume", v])), name);
-  assert.throws(() => createContainer([{ geometry: "G1M", label: "A", mount: "A", writeBehind: true }, { geometry: "G1M", label: "B", writeBehind: true }]), /one volume at most/);
-  assert.throws(() => createContainer([{ geometry: "G1M", label: "A", mount: "A", writeBehind: true, readOnly: true }]), /read-only/);
-  // A card edited to mark a second volume, or with byte 15's other bits set, is refused.
-  const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A", writeBehind: true }, { geometry: "G1M", label: "WORK" }]);
-  const resealed = (at, v) => {
-    const b = image.slice();
-    b[at] = v;
-    const sum = headerChecksum(b.subarray(0, 512));
-    [b[20], b[21]] = [sum & 0xff, sum >> 8];
-    return b;
-  };
-  assert.throws(() => parseContainer(resealed(32 + 32 + 15, 1)), /second volume written behind/);
-  assert.throws(() => parseContainer(resealed(32 + 15, 3)), /unknown cache flags/);
+  const r = spawnSync("node", [resolve(ROOT, "tools/tecvol.mjs"), "create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G8M:WORK:B:wb"], { timeout: 5000, encoding: "utf8" });
+  assert.notEqual(r.status, 0, "refused");
+  assert.match(r.stderr + r.stdout, /unknown volume flag :wb/);
+  assert.equal(existsSync(img), false, "no image made");
+});
+
+test("S2-5 tecvol writes 15 zero", () => {
+  const dir = mkdtempSync(resolve(tmpdir(), "tecvol-15-"));
+  const tecvol = (...args) => execFileSync("node", [resolve(ROOT, "tools/tecvol.mjs"), ...args], { timeout: 5000, encoding: "utf8" });
+  const img = resolve(dir, "c.img");
+  tecvol("create", img, "--volume", "G1M:SYSTEM:A", "--volume", "G8M:WORK:B", "--volume", "G1M:LOCKED:C:ro");
+  const image = new Uint8Array(readFileSync(img));
+  for (let i = 0; i < 3; i += 1) assert.equal(image[desc(i) + 15], 0, `volume ${i}'s byte 15`);
+  assert.equal(D.reserved0.offset, 15, "the format names byte 15 reserved");
+  assert.equal(D.cache, undefined, "and no cache field");
+  assert.doesNotMatch(tecvol("info", img), / wb /, "info names no write-behind volume");
+  const lib = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G1M", label: "LOCKED", readOnly: true }]);
+  assert.deepEqual([lib[desc(0) + 15], lib[desc(1) + 15]], [0, 0], "createContainer writes it zero");
 });
 
 test("npm run build leaves dist/'s ROM, map and census equal to build/'s when dist/ is there (KE-188)", () => {
