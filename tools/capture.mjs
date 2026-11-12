@@ -17,7 +17,7 @@
 // A listing that fills the screen stops at [more] and waits for a key; the
 // run stops there too, and the next LINE is "@key X" for the next screen or
 // ^C to end the listing. The wait for a prompt ends at output ending in a
-// drive letter and >, so a program that prints such text without a prompt
+// drive letter, an optional volume label and >, so a program that prints such text without a prompt
 // ends the wait early.
 //
 // Options:
@@ -76,7 +76,7 @@ const atPrompt = (from) => () => {
   m.pumpInput();
   if (m.pending?.length) return false;
   if (m.waitingForInput() && /\[more\]$/.test(m.text(from))) return true;
-  return m.ready() && /[A-P]>$/.test(m.text(from));
+  return m.ready() && /(?:^|\r\n)\d*[A-P](?::[^\r\n>]*)?>$/.test(m.text(from));
 };
 // A card that won't mount stops at the diagnostic prompt instead, "R retry> "
 // since KS36b dropped the header's dump (KE-172).
