@@ -1,6 +1,6 @@
 // BIOS WRITE and the write type: a newly allocated block is not read before
-// its first write, and every write is on the card when it returns. Emulator
-// evidence, calling the BDOS directly.
+// its first write, and on A:, which coalesces, every record is on the card
+// at the next flush point. Emulator evidence, calling the BDOS directly.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -53,13 +53,14 @@ test("a 16 KiB save reads no data block, only the directory", () => {
   const { image, counts, bdos, name, record } = rig();
   name("SAVE16  DAT");
   assert.notEqual(bdos(22), 0xff);
+  const made = counts.writes;
   for (let r = 0; r < 128; r += 1) {
     record(r);
     assert.equal(bdos(21), 0, `record ${r}`);
   }
   assert.notEqual(bdos(16), 0xff);
   assert.ok(counts.reads <= 2, `${counts.reads} block reads`);
-  assert.equal(counts.writes, 130, "every record, the make and the close written through");
+  assert.equal(counts.writes - made, 33, "after the make, each of the 32 card blocks once, then the directory at the close");
   assert.deepEqual(volume(image, "A").read("SAVE16.DAT"), expected(128));
 });
 
@@ -86,12 +87,14 @@ test("every write is on the card when WRITE returns", () => {
   const data = volume(image, "A").data;
   for (let r = 0; r < 40; r += 1) {
     record(r);
+    assert.equal(bdos(21), 0, `record ${r}`);
+    // BDOS 11, a console read, is a flush point.
     let onCard = null;
-    bdos(21, FCB, () => {
+    bdos(11, 0, () => {
       const at = blockOf(m, r) * 2048 + (r & 15) * 128;
       onCard = data.subarray(at, at + 128);
     });
-    assert.deepEqual(onCard, expected(r + 1).subarray(r * 128), `record ${r} on the card`);
+    assert.deepEqual(onCard, expected(r + 1).subarray(r * 128), `record ${r} on the card at the next flush point`);
   }
 });
 

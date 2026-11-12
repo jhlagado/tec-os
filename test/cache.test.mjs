@@ -1,7 +1,8 @@
 // The block cache (KS21): 30 lines of EXPAND 1 over the card, every volume's
 // reads, and the one volume marked :wb written behind. Reads come back the
-// same and a reread makes no card read; write-through volumes write as
-// f49e380 did; a volume written behind reads back from the cache and from
+// same and a reread makes no card read; volumes not written behind, which
+// coalesce, write each block at most as often as the older fixture ROM did,
+// and in its order; a volume written behind reads back from the cache and from
 // the card after warm boot, keeps its directory behind its data at every
 // cut, keeps the no-pre-read rule safe, serves BLOCK from a dirty line and
 // says when a card has gone; and the ROM before the cache mounts a :wb
@@ -116,9 +117,13 @@ test("write-through volumes write the card as f49e380 did, block for block, befo
   const now = await run();
   const before = await run(oldRom("f49e380"));
   assert.ok(now.bwrites.length > 100, `${now.bwrites.length} BIOS WRITEs`);
-  assert.ok(now.bwrites.every((w) => w.length === 1), "each BIOS WRITE writes its block once before it returns");
-  assert.equal(now.outside, 0, "and nothing else writes the card");
-  assert.deepEqual(now.bwrites, before.bwrites, "the same blocks in the same order as f49e380");
+  // A run of writes to one block, written once by coalescing, is one entry.
+  const runs = (list) => list.filter((b, i) => b !== list[i - 1]);
+  const times = (list) => list.reduce((n, b) => n.set(b, (n.get(b) ?? 0) + 1), new Map());
+  assert.deepEqual(runs(now.writes), runs(before.writes), "the same blocks in the same order as f49e380");
+  const was = times(before.writes);
+  for (const [b, n] of times(now.writes)) assert.ok(n <= was.get(b), `block ${b}: ${n} writes, ${was.get(b)} at f49e380`);
+  assert.ok(now.writes.length < before.writes.length, `${now.writes.length} card writes, ${before.writes.length} at f49e380`);
 });
 
 test("on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot", async () => {
@@ -413,19 +418,39 @@ test("a failed write-through write drops its block's line, so a reread comes fro
   const base = word(m, 1) - 3; // the BIOS jump table
   const bios = (n, bc) => [0x01, bc & 0xff, bc >> 8, 0xcd, (base + 3 * n) & 0xff, (base + 3 * n) >> 8];
   const at = [...bios(9, 1), ...bios(10, 6), ...bios(11, 2), ...bios(12, 0x2000)]; // B:, track 6, sector 2, DMA 2000h
-  stub(m, [...at, ...bios(13, 0)]); // READ: the block now has a line
-  const first = Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
-  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x77);
+  const read = () => {
+    for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0);
+    stub(m, [...at, ...bios(13, 0)]);
+    return Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
+  };
+  const first = read(); // READ: the block now has a line
+  // The card's answer to each write: false takes it.
+  let how = false;
   let n = 0;
-  failing(m, () => (n += 1) && "commit"); // the card takes the record and reports a failure
-  stub(m, [...at, ...bios(14, 0)]); // WRITE
+  failing(m, () => how && (n += 1) && how);
+  // A directory write, type 1, goes through: failing, it drops its line.
+  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x77);
+  how = "commit"; // the card takes the record and reports a failure
+  stub(m, [...at, ...bios(14, 1)]);
   assert.ok(n > 0 && m.cpu.cpu.a !== 0, "the write failed");
-  failing(m, () => false);
-  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0);
-  stub(m, [...at, ...bios(13, 0)]);
-  const got = Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
+  how = false;
+  const got = read();
   assert.notDeepEqual(first, got);
   assert.ok(got.every((v) => v === 0x77), "the card's record, not the line's");
+  // A data write, type 0, is held; its failed flush keeps the line.
+  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x88);
+  stub(m, [...at, ...bios(14, 0)]);
+  assert.equal(m.cpu.cpu.a, 0, "the data write held in its line");
+  n = 0;
+  how = "fail";
+  bdos(m, 11, 0); // a console read: the flush point
+  assert.ok(n > 0, "the flush was tried and failed");
+  how = false;
+  assert.ok(read().every((v) => v === 0x88), "the line's record, kept for retry");
+  assert.equal(runOf(image, 0x88), -1, "and not yet on the card");
+  bdos(m, 48, 0);
+  assert.equal(m.cpu.cpu.a, 0, "function 48 writes it once the card takes writes");
+  assert.notEqual(runOf(image, 0x88), -1);
 });
 
 test("a volume remounted on another drive, with another on its old drive, reads back right", async () => {
@@ -484,10 +509,14 @@ test("function 48 puts the lines written behind on the card, A = 0, and FFh if a
   failing(n, () => "fail");
   bdos(n, 48, 0);
   assert.equal(n.cpu.cpu.a, 0xff, "a failed write: FFh");
-  n.mark = n.output.length;
-  n.cpu.cpu.pc = 0;
-  n.runUntil(() => n.waitingForInput() && /\r\n[A-P]>$/.test(n.text(n.mark)), 400_000_000, "warm boot");
-  assert.doesNotMatch(n.text(n.mark), /Write lost/, "the failed line was dropped and reported by function 48");
+  const warm = () => {
+    n.mark = n.output.length;
+    n.cpu.cpu.pc = 0;
+    n.runUntil(() => n.waitingForInput() && /\r\n[A-P]>$/.test(n.text(n.mark)), 400_000_000, "warm boot");
+    return n.text(n.mark);
+  };
+  assert.match(warm(), /Write lost/, "the failed line was kept, so warm boot, the card still refusing, says Write lost");
+  assert.doesNotMatch(warm(), /Write lost/, "once: the next warm boot says nothing");
 });
 
 test("function 45: FFh returns a BDOS error to the program, A = FFh and H the code, FEh says it first, and warm boot puts the default back (KS36b)", async () => {
@@ -633,10 +662,14 @@ test("function 45's returned error leaves the FCB on the record a sequential wri
   for (let r = 0; r < 3; r += 1) bdos(m, 21, 0x5c);
   bdos(m, 45, 0xff);
   failing(m, (block, data) => data.some((v) => v === 0xc3) && "fail");
+  // B:, written through, coalesces: record 3 goes into the pending block, and
+  // the failure comes at record 4, which moves to the next block.
+  bdos(m, 21, 0x5c);
+  assert.equal(m.cpu.cpu.a, 0, "record 3, in the pending block");
   const before = fcbAt(m, 0x5c);
   bdos(m, 21, 0x5c);
   assert.deepEqual([m.cpu.cpu.a, m.cpu.cpu.h], [0xff, 1], "a disk error, returned");
-  assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 3 next, the record count unraised");
+  assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 4 next, the record count unraised");
 });
 
 test("when every line is dirty and the forced write of the next in turn fails, the next miss doesn't try that write again, and warm boot's flush does (KE-187)", async () => {
