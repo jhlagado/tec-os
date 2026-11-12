@@ -210,6 +210,8 @@ test("a write in place reaches the card before any close, and the recovery guide
   assert.notEqual(r.bdos(15), 0xff, "opened");
   fill(7).forEach((v, k) => m.write(DMA + k, v));
   assert.equal(r.bdos(21), 0, "record 0 written over, and the file never closed");
+  // A: coalesces: the block reaches the card at the next flush point, here a console read.
+  r.bdos(11);
   const onCard = volume(image, "A").read("OLD.DAT");
   assert.deepEqual([...onCard.subarray(0, 128)], [...fill(7)], "the old record is gone from the card already");
   assert.deepEqual([...onCard.subarray(128, 256)], [...old.subarray(128)], "the record not written stays");
