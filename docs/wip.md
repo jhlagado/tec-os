@@ -13,13 +13,19 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
   `BOUNCE.BAS` sprite game, steered by W, A, S and D or the arrow keys,
   and TED from Thorium `a2fe556`, whose language table builds a `.BAS`
   with BAZA.
-- One card (KD-278): the starter card is the Viewer's card too. It holds
-  fifteen files: `BAZA.COM`, `BAZA.RTL`, `BOUNCE.BAS`, `DEMO.ASM`,
-  `GLCD.SVC`, `HELLO3.ASM`, `HELLO3.BIN`, `MON3.SVC`, `MOUNT.COM`,
-  `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`, `TAS.COM`, `TED.COM` and
-  `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
+- One card (KD-278): the starter card is the Viewer's card too. It has four
+  drives and five volumes, SYSTEM on A:, WORK on B:, PROJECTS on C:, and
+  GAMES and SPARE on none, and A: holds fourteen files: `BAZA.COM`,
+  `BAZA.RTL`, `BOUNCE.BAS`, `DEMO.ASM`, `GLCD.SVC`, `HELLO3.ASM`,
+  `HELLO3.BIN`, `MON3.SVC`, `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`,
+  `TAS.COM`, `TED.COM` and `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
   `MON3.SVC`, then `LOAD HELLO3.BIN` and `GO`, runs a MON-3 program that
   writes the LCD (KD-277).
+- Drives and volumes (KD-298, KD-299): under `SHELL.SVC`, `CD` puts a volume
+  on any of the four drives and the prompt shows it; `DIR` gives each file's
+  size, and `CLS`, `ECHO` and `PAUSE` are built in. The drive you are on is
+  written behind, every other volume coalesces, and every key wait writes the
+  cache out. `MOUNT.COM` has left the card.
 - Several statements on a line (KD-275): TAS from Thorium `3d1e2c0` takes
   them with a `\` between. TEC-OS's own sources keep one statement a line.
 

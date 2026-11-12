@@ -8,7 +8,9 @@ has CP/M's built-ins `DIR`, `ERA`, `REN`, `TYPE`, `SAVE` and `USER`, with
 ROM's shell hook. It holds what left the ROM:
 
 - the command history, ^W and ^N;
-- `COPY`, `DEL` and `SERVICES`;
+- `CD`, which puts a volume on a drive, and the drive's volume in the prompt;
+- `DIR` with each file's size, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
+  `PAUSE`;
 - the pager, `[more]` in `TYPE` and `DIR`;
 - lines of several commands joined by `!` and `&`;
 - `.CMD` scripts, and the rest of `STARTUP.CMD`.
@@ -24,8 +26,8 @@ prompt's reading of the volume labels with every cache line changed and
 kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
 pattern laid under it). It declares 6 bytes of the BDOS's stack and none of
 the BIOS's or the CCP's, so `GLCD.SVC` and `MON3.SVC` install beside it. With
-the shell alone the word at 0006h is AA00h on a card of two drives, a TPA of
-43,264 bytes.
+the shell alone the word at 0006h is A700h on the starter card, a TPA of
+42,496 bytes.
 
 ## With no shell
 
@@ -38,7 +40,9 @@ The bare prompt behaves as a CP/M 2.2 CCP:
 - A typed `NAME.CMD` runs `NAME.COM`, and says `NAME.CMD?` if there is none.
 - A function 47 line is echoed after the prompt and runs whole, as one
   command: `TYPE X!TYPE Y` is `TYPE` with the tail `X!TYPE Y`.
-- `DIR` and `TYPE` list without pausing.
+- `DIR` and `TYPE` list without pausing, and `DIR` is the ROM's wide listing.
+- The prompt is the ROM's, `A>`; there is no `CD`, `CLS`, `ECHO` or `PAUSE`,
+  and no command changes a drive's volume.
 - Only the first line of `STARTUP.CMD` runs.
 
 TED's build line, `A:TAS NAME!A:TED`, needs the shell to come back to TED. With
@@ -134,6 +138,106 @@ line enters the shell again and the file goes on from the line after it. Without
 the shell only the first line runs. Typing `STARTUP.CMD` runs the whole file
 again, as a typed script.
 
+## Drives and volumes: `CD`
+
+A: to D: are equal drives, and each holds one of the card's volumes, or none.
+The prompt shows the drive and its volume: `B:GAMES>`, and with a user number
+`3B:GAMES>`; a drive with no volume shows `C:>`. A command not found on the
+current drive runs from A:, as if A: were always on the path.
+
+| Typed | Result |
+| --- | --- |
+| `CD NAME` | puts `NAME` on the current drive, A: included, and shows `d:NAME` |
+| `CD D:NAME` | puts `NAME` on D:; the drive you are on is unchanged |
+| `CD` | the current drive's volume, read from the card again: `B:GAMES` |
+| `CD D:` | D:'s volume, the same way |
+| `CD ?` | each of the card's volumes, in the card's order, with its drive |
+
+`CD` of the volume already on the drive shows it and mounts nothing. A volume
+on another drive is refused, naming that drive (`GAMES is on B:`), since a
+volume is never on two drives; no such volume is `NAME?`; a name of more than
+11 characters, a drive past D: or text after the name or after `?` is `CD?`;
+and a mount the ROM refuses, a volume too large for the drive's slot or a
+cache line that the card will not take, is `CANNOT MOUNT`, the drive keeping
+its volume. Each refusal sets FF00h. To take a volume off a drive, put
+another there: the drive then frees the first.
+
+`CD` uses the ROM's volume services (`TNMOUNT` and `TNDESC`,
+[rom-services.md](rom-services.md)): the mount writes every changed cache line
+first, puts the volume on the drive and resets it, and on the drive you are on
+selects it again. The shell keeps each drive's label, read at its first prompt
+and by `CD` alone, `CD D:` and `CD ?`, and `CD NAME` writes the new one; a
+prompt reads nothing from the card. A program that calls `TNMOUNT` or
+`TNUNMNT` itself leaves the prompt's label stale until `CD` alone reads the
+card again.
+
+The drive you are on is written behind, and logging onto another drive or
+`CD` moves it ([recovery.md](recovery.md)). A program that selects a drive by
+BDOS 14 and comes back with no warm boot leaves the prompt on that drive and
+the logged drive where it was, so the drive shown is written through until the
+next drive change or warm boot; nothing on the starter card does it.
+
+**`CD` on A:.** The commands found on A: follow its volume: after `CD A:WORK`,
+`SAY` is `SAY?`, and `CD A:SYSTEM` brings them back. A reset keeps the drives'
+selection, so after `CD A:` to a volume with no `SHELL.SVC` (`CD A:GAMES` on
+the starter card) a reset gives the bare `A>` on that volume, with no shell and
+no `CD`. Power off and on gives the card's own drives and the shell again; on
+the web page, Power cycle.
+
+**`CD` in a script.** `CD` of the drive a script is read from is refused, `CD?`
+with FF00h, and the script goes on: its next record would be read from another
+volume. `CD C:GAMES` in `STARTUP.CMD` works, and the file goes on. A script's
+own drive is fixed when it opens, so a drive change in a script of more than
+one record still reads it from its own drive.
+
+## `DIR`
+
+`DIR`, `DIR NAME.EXT`, `DIR D:` and `DIR D:F?.DAT` list one file a row, its name
+and type padded and its size in bytes: BDOS 35's records times 128. Then the
+count of files and their bytes, and the drive's free space, BDOS 46's records
+times 128, with its volume:
+
+```
+A:SYSTEM>DIR
+
+SHELL   .SVC    3712
+SAY     .COM     128
+X       .DAT  128128
+3 files, 131968 bytes
+1013760 free on A:SYSTEM
+```
+
+Hidden (SYS) files are passed over, as the ROM's `DIR` does; with none to show
+it says `NO FILE`, with FF00h. A row is 20 columns, within the GLCD's 21, and a
+long listing stops at `[more]`. `DIR /W` is the ROM's wide listing, and with no
+shell `DIR` is the ROM's.
+
+**Its cost.** BDOS 35 scans the whole directory and loses the search, so `DIR`
+calls it only for a file that may have more than one directory entry. One
+search reads every entry and marks the names of those past a file's first in a
+table of 128 marks; a second lists every unmarked file from its own entry; a
+third sizes each marked file by BDOS 35, beginning the search again after
+each. On files of one entry `DIR` is linear and takes about twice `DIR /W`'s
+time, its rows holding about twice the characters: on a G8M volume of 452
+files, 39.8 s against 20.8 s at 4 MHz on the serial console. Each file of more
+than one entry adds a BDOS 35 and a restart, so `DIR` is slower on a volume of
+many large files: a file over 32 KiB on a G8M volume, or over 16 KiB on a G1M,
+has more than one entry. With 100 files of 40 KiB among 352, `DIR` takes 6 times
+`DIR /W`'s time; with 180 of them, 17 times. `DIR /W` is the fast listing
+there.
+
+## `CLS`, `ECHO` and `PAUSE`
+
+- `CLS` sends `ESC [ H ESC [ 2 J`: the PICO9918's screen, the GLCD's or the
+  terminal's then holds only the prompt.
+- `ECHO text` prints the text as typed. The shell folds only a piece's first
+  word to match its built-ins; `COPY`, `CD` and `DIR` fold their own
+  operands, and a piece handed to the ROM is folded by the ROM, so a program's
+  tail is upper case as before.
+- `PAUSE` shows `[more]`, the pager's word, and `PAUSE text` the text; either
+  waits for a key. Any key goes on; ^C ends the script and the rest of the
+  line, with FF00h.
+
 ## The built-ins
 
 - `COPY SOURCE DEST` copies one file, as it did in ROM
@@ -141,6 +245,7 @@ again, as a typed script.
 - `DEL` is `ERA` by another name: the shell hands `ERA` to the ROM.
 - `SERVICES` lists each loaded service, the newest first: its name and its
   pages.
+- `CD`, `DIR`, `CLS`, `ECHO` and `PAUSE`, above.
 - The pager pauses `TYPE` and `DIR` one row before a full screen, with the
   geometry `TNINFO` gives (80 by 24 on the serial terminal).
 - The history ring keeps the lines typed at the prompt; ^W shows the one before

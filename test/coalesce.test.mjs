@@ -761,10 +761,10 @@ test("AC10 mutant: CPOUT with three more pushes passes the BDOS's room and takes
 test("AC11 docs", () => {
   const recovery = readText("docs/recovery.md");
   for (const s of [
-    "every volume not written behind coalesces, A: among them",
+    "every volume not logged coalesces",
     "at most one block, four records, 512 bytes",
     "the directory never names it until the card has it",
-    "while a kept A: or B: line keeps failing, B: directory writes and `MOUNT` refuse until warm boot",
+    "while a kept line keeps failing, every directory write and `MOUNT` refuse until warm boot",
     "reported at the next flush point",
     "Function 48, `MOUNT` and unmount keep",
   ]) assert.ok(recovery.replace(/\s+/g, " ").toLowerCase().includes(s.toLowerCase()), `docs/recovery.md: ${s}`);
