@@ -494,7 +494,7 @@ test("the harness takes the copy core's writes below BD00h as the cache's only w
 /** Where 128 bytes of V lie in IMAGE, or -1. */
 const runOf = (image, v) => Buffer.from(image).indexOf(Buffer.alloc(128, v));
 
-test("function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, which warm boot doesn't say again (KS36b)", async () => {
+test("function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, keeping the failed line, which warm boot then says Write lost for once (KS36b)", async () => {
   const image = card();
   const m = start(image);
   dirty(m);
