@@ -255,7 +255,7 @@ and run.
   to 13,000; the block's write comes at the next flush point, a console read
   or a directory request among them, which then holds them off for about
   240,000 while it writes it. A program's interrupt routine can wait that long.
-- **A: coalesces** (`docs/recovery.md`): a data write returns with its
+- **A volume not written behind coalesces, A: among them** (`docs/recovery.md`): a data write returns with its
   record in the cache, and its block reaches the card at the next flush
   point, a program's console read among them. Some waits are not flush
   points, so the block stays pending while the program waits: a program that
