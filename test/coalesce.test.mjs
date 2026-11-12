@@ -283,7 +283,7 @@ function atKeyWait(rom) {
   return r.state(5);
 }
 
-test("AC3 mutant: BWGET without CPMOVE makes 4 card writes and the file isn't whole", { timeout: 300_000 }, () => {
+test("AC3 mutant: BWGET without CPMOVE leaves records 0 to 3 off the card at the key wait after the next block", { timeout: 300_000 }, () => {
   assert.equal(atKeyWait(), "CCCCC", "the build: every record on the card at the key wait");
   assert.equal(atKeyWait(MUTANTS.cpmove()), "----C", "the mutant: records 0 to 3 left in a line no flush point names");
 });
@@ -304,20 +304,24 @@ const starterCard = () => {
 };
 const traces = new Map();
 /**
- * COMMAND on the starter card, logged on B: so that A: coalesces: its cycles
+ * COMMAND on the starter card, logged on LOGGED, B: unless given, so that A:
+ * coalesces: its cycles
  * from the CR to the prompt, its card writes by block, each with the BDOS
  * function it was made in, and its BDOS 21 calls' cycles. The card's
  * programs must be the pinned ones, since the figures they are held to were
  * measured on them.
  */
-function onStarter(command) {
+function onStarter(command, { logged = "B" } = {}) {
   PINS.forEach(check);
-  if (traces.has(command)) return traces.get(command);
+  const key = `${logged} ${command}`;
+  if (traces.has(key)) return traces.get(key);
   const image = starterCard();
   const m = boot(image, { tms: true, matrix: true, width: 40 });
-  m.mark = m.output.length;
-  m.enqueueInput("B:\r", "matrix");
-  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && PROMPT.test(m.text(m.mark))), 400_000_000, "B:");
+  if (logged !== "A") {
+    m.mark = m.output.length;
+    m.enqueueInput(`${logged}:\r`, "matrix");
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && PROMPT.test(m.text(m.mark))), 400_000_000, `${logged}:`);
+  }
   const [entry, back, sdw, lba] = [m.sym("BENTRY"), m.sym("RETWORD") + 6, m.sym("SDWRITE"), m.sym("SDLBA")];
   const t = { writes: [], fn: [], w21: [] };
   let on = false;
@@ -342,7 +346,7 @@ function onStarter(command) {
   m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && PROMPT.test(m.text(mark))), 4_000_000_000, command);
   on = false;
   const out = { ...t, cycles: m.cycles - t0, text: m.text(mark), dir: dirBlocks(image) };
-  traces.set(command, out);
+  traces.set(key, out);
   return out;
 }
 
@@ -453,7 +457,7 @@ test("AC4 directory last at every cut", () => {
   assert.deepEqual(c.problems, []);
   assert.equal(c.cuts, 20, "20 card writes");
 });
-test("AC4 mutant: BWGET without CPMOVE names records not on the card", { timeout: 300_000 }, () => {
+test("AC4 mutant: BWGET without CPMOVE keeps the directory last but leaves records 0 to 3 off the card at the key wait", { timeout: 300_000 }, () => {
   assert.deepEqual(cuts(MUTANTS.cpmove()).problems, [], "the close's flush-first write keeps the directory last even so");
   assert.equal(atKeyWait(MUTANTS.cpmove()), "----C", "but records 0 to 3 are not on the card at the key wait");
 });
@@ -612,6 +616,19 @@ test("AC7 bounce speed", { skip: CARD_SKIP, timeout: 900_000 }, () => {
   assert.ok(b.cycles <= 0.76 * BOUNCE_BASE, `${((100 * b.cycles) / BOUNCE_BASE).toFixed(1)} % of the shell's landing on this card`);
   assert.ok(mean <= 80_000, `BDOS 21: ${Math.round(mean)} T each, of ${b.w21.length}`);
   console.log(`BAZA BOUNCE: ${b.cycles} T, ${seconds.toFixed(2)} s, ${((100 * b.cycles) / BOUNCE_BASE).toFixed(1)} % of the landing's; ${b.w21.length} BDOS 21 calls, ${Math.round(mean)} T each`);
+});
+
+// The starter card's own case: at A:SYSTEM>, A: written behind. Each command
+// writes its blocks once and closes, so it costs what it does coalesced.
+test("S2-11 starter workloads logged on A:", { skip: CARD_SKIP, timeout: 900_000 }, (t) => {
+  const b = onStarter("baza bounce", { logged: "A" });
+  assert.match(b.text, /COM written\r\n/);
+  const seconds = b.cycles / 4e6;
+  assert.ok(seconds <= 19.5, `BAZA BOUNCE: ${seconds.toFixed(2)} s at 4 MHz`);
+  assert.ok(b.writes.length <= 48, `BAZA BOUNCE: ${b.writes.length} card writes`);
+  const s = onStarter("save 16 x.com", { logged: "A" });
+  assert.ok(s.writes.length <= 10, `SAVE 16 X.COM: ${s.writes.length} card writes`);
+  t.diagnostic(JSON.stringify({ bounce: { seconds: +seconds.toFixed(2), writes: b.writes.length }, save16: { seconds: +(s.cycles / 4e6).toFixed(2), writes: s.writes.length } }));
 });
 
 test("AC7 file speed", () => {

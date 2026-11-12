@@ -752,7 +752,7 @@ test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", asy
 });
 
 test("SH7 mutant: a 128-byte recall buffer takes a sixteenth page", async () => {
-  const mut = await shellVariant([["STKTOP EQU STKBOT+48\n", "STKTOP EQU STKBOT+48+128\n"]]);
+  const mut = await shellVariant([["STKTOP    EQU   STKBOT+48\n", "STKTOP    EQU   STKBOT+48+128\n"]]);
   assert.equal(pages(mut), 16);
 });
 

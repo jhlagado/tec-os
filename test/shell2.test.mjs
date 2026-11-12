@@ -203,6 +203,51 @@ test("S2-6 cd a: and reset", () => {
   assert.ok(pageOf(n) > 0, "the shell installed");
 });
 
+/** CD alone after CD ?, under SHELL (a variant's file): its text. */
+function cdAfterList(shell) {
+  const m = machine({ shell });
+  run(m, "CD ?");
+  return run(m, "CD");
+}
+
+test("S2-6 cd after cd ?", () => {
+  assert.match(cdAfterList(), /^CD\r\r\nA:SYSTEM\r\nA:SYSTEM>$/, "d:NAME alone, no list");
+});
+
+test("S2-6 mutant: the prompt's walk keeping CD ?'s list flag lists the card inside CD's output", async () => {
+  const v = await shellVariant([["  call z,VWALKQ  ; the labels first", "  call z,VWALK"]]);
+  assert.match(cdAfterList(v.file), /WORK +B:/);
+});
+
+/**
+ * On a card of more than a page of volumes, logged on B:, CD ? stopped by ^C
+ * at [more], then a line: the prompts after it, under SHELL (a variant's file).
+ */
+function listStopped(shell) {
+  const vols = [{ geometry: "G1M", label: "SYSTEM", mount: "A" }];
+  for (let i = 1; i < 29; i += 1) vols.push({ geometry: "G1M", label: `V${i}` });
+  vols.push({ geometry: "G1M", label: "LAST", mount: "B" });
+  const m = machine({ image: createContainer(vols, { drives: 4 }), shell });
+  run(m, "B:");
+  m.mark = m.output.length;
+  m.type("CD ?\r");
+  m.runUntil(() => /\[more\]$/.test(m.text(m.mark)), 2_000_000_000, "[more]");
+  m.type("\x03");
+  m.runUntil(() => m.ready() && P.test(m.text(m.mark)), 2_000_000_000, "the prompt");
+  return { stopped: m.text(m.mark), next: run(m, "ECHO x") };
+}
+
+test("S2-6 cd list stopped", () => {
+  const r = listStopped();
+  assert.match(r.stopped, /\r\nB:LAST>$/, "the prompt after the stopped list names B:'s volume");
+  assert.match(r.next, /\r\nB:LAST>$/);
+});
+
+test("S2-6 mutant: a CD ? stopped at [more] leaving its part-read labels valid shows B:>", async () => {
+  const v = await shellVariant([["  jr c,VWSTOP    ; stopped", "  ret c"]]);
+  assert.match(listStopped(v.file).next, /\r\nB:>$/);
+});
+
 // --- S2-4's CD row: a mount whose flush fails --------------------------------
 
 test("S2-4 cd refused on a failed flush", () => {
@@ -667,7 +712,7 @@ test("S2-11 own stack", () => {
 });
 
 test("S2-11 mutant: MS, a 32-byte stack, is overrun on the walk with all 30 lines kept", async () => {
-  const v = await shellVariant([["STKTOP EQU STKBOT+48", "STKTOP EQU STKBOT+32"]]);
+  const v = await shellVariant([["STKTOP    EQU   STKBOT+48", "STKTOP    EQU   STKBOT+32"]]);
   assert.ok(deepestWalk(v).below > 0);
 });
 

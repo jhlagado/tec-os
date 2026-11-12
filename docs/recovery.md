@@ -61,9 +61,9 @@ or power off before the close leaves depends on where the write went:
   holds and hasn't written since the program's last key wait are lost. On any
   other drive the pending block is lost: the records written into it since it
   was last written, at most one block. At the prompt nothing is left: its own
-  console read writes everything. A program that ends without a warm boot, or
-  never waits for a key, can leave lines; press `^C` at the prompt before a
-  reset or taking the card out.
+  console read writes everything, however the program before it ended. Wait
+  for the prompt before a reset or taking the card out; only a program still
+  running that never waits for a key can hold lines.
 - **New allocations.** Blocks a write allocated reach the card as above, but
   until the directory entry is written no entry names them: the file reads
   back without them, and the space is free again at the next login.
@@ -256,11 +256,10 @@ Limits:
 - Identity is extents, not a name: a card with identical extents takes the
   selection, and a card that changed only its default letters keeps it.
 
-**Flush before a reset.** A reset discards dirty lines, a pending block among
-them, and never writes them, to the old card or a new one. At the prompt
-nothing is left, since its console read writes everything; after a program
-that ends without a warm boot, press `^C` at the prompt before a reset or
-taking the card out.
+**Wait for the prompt before a reset.** A reset discards dirty lines, a
+pending block among them, and never writes them, to the old card or a new
+one. At the prompt nothing is left, since its console read writes everything,
+so wait for it before a reset or taking the card out.
 
 **`CD A:` and a reset.** A recognised reset keeps the drives' selection, so
 after `CD A:` to a volume without `SHELL.SVC` (`CD A:GAMES` on the starter

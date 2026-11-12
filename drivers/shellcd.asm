@@ -160,8 +160,8 @@ CDELSE:
   call CRLF
   jp FAILED      ; code FF00h
 
-ISONMSG: DB " is on $"
-CDNOMSG: DB "CANNOT MOUNT$"
+ISONMSG:  DB    " is on $"
+CDNOMSG:  DB    "CANNOT MOUNT$"
 
 ; Walk the card's volumes from index 0,
 ; each described by TNDESC into CFCB,
@@ -314,7 +314,7 @@ CMDCLS:
   call PUTS      ; ESC [H, ESC [2J
   jp BDONE
 
-CLSMSG: DB 27,"[H",27,"[2J$"
+CLSMSG:   DB    27,"[H",27,"[2J$"
 
 ; ECHO text: the text as typed, after
 ; its blanks.

@@ -284,11 +284,11 @@ DRD1:
   call DRVLBL    ; d:NAME
   jp BDONE
 
-NOFMSG: DB "NO FILE$"
-FILESM: DB " files, $"
-FILEM: DB " file, $"
-BYTESM: DB " bytes$"
-FREEM: DB " free on $"
+NOFMSG:   DB    "NO FILE$"
+FILESM:   DB    " files, $"
+FILEM:    DB    " file, $"
+BYTESM:   DB    " bytes$"
+FREEM:    DB    " free on $"
 
 ; The search's next match in A, FFh at
 ; its end. With DRST set the search is

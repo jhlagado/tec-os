@@ -6,6 +6,7 @@
 // holds them, and the pin's hash holds the build.
 
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ROOT, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
@@ -230,6 +231,27 @@ test("TED's text holds at least 28,694 bytes on the starter's files, SHELL.SVC a
     const m = boot(image, board);
     keys(m, "ted x.asm\r", "TED", () => /TED +X\.ASM/.test(m.text(0)));
     assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes ${board.tms ? "on a board with both" : "with no display"}, at least ${floor}`);
+  }
+});
+
+// The smallest system the starter card teaches: the shell, MON3.SVC
+// installed and left by EXIT, then TED. Its room is below the 24,576-byte
+// source limit, so a source at the limit is edited with MON3.SVC unloaded.
+test("TED's text holds at least 24,086 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 23,318 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+  check(TED);
+  const P = /\r\n\d*[A-P](:\S*)?>$/;
+  for (const [board, via, floor] of [[{ glcd: false }, "serial", 24_086], [{ matrix: true, glcd: true }, "matrix", 23_318]]) {
+    const m = boot(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board);
+    const type = (line, done, what) => {
+      const mark = m.output.length;
+      m.enqueueInput(line, via);
+      m.runUntil(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done(m.text(mark))), 2_000_000_000, what);
+    };
+    m.runUntil(() => (m.pumpInput(), m.waitingForInput() && m.ready() && P.test(m.text(0))), 2_000_000_000, "the prompt");
+    type("MON3.SVC\r", (t) => /MON3>\s*$/.test(t), "MON3>");
+    type("EXIT\r", (t) => P.test(t), "EXIT");
+    type("ted x.asm\r", (t) => /TED +X\.ASM/.test(t), "TED");
+    assert.ok(word(m, TEXCAP) >= floor, `${word(m, TEXCAP)} bytes on ${via}, at least ${floor}`);
   }
 });
 

@@ -1420,11 +1420,10 @@ test("KG62 mutant: a hook without BDOS 37 has a new file take a used block after
   await assert.rejects(vectorExchange(svc, true), /intact|cross-link/);
 });
 
-// Equivalent under the key-wait guarantee: GO is typed, so a key read
-// writes every changed line before GO runs, and GO's BDOS 48 finds
-// nothing left. MON3.SVC keeps it for a program that starts a session
-// with no key read.
-test("KG62 mutant: without GO's BDOS 48 the hung program's reset loses the unclosed write", async () => {
+// Equivalent under the key-wait guarantee: MON3.SVC reads its line by BDOS
+// 10, so the key reads before GO write every changed line, and GO's BDOS 48
+// finds nothing left. It stays as a guard; no path is known to need it.
+test("KG62 equivalent mutant: without GO's BDOS 48 the unclosed write is on the card, since MON3's line read writes every line", async () => {
   const svc = await mon3Variant([["  push hl\n  ld c,48        ; flush\n  call BDOS\n", "  push hl\n"]]);
   await hangAndReset(svc);
 });
