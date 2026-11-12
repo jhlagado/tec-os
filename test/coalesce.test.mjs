@@ -259,7 +259,7 @@ test("AC3 mutant: BWGET without CPMOVE makes 4 card writes and the file isn't wh
 
 // The starter card's commands, as the Viewer runs them: the PICO9918 at 40
 // columns and the matrix keyboard.
-const PINS = ["BAZA.COM", "BAZA.RTL", "BOUNCE.BAS", "TAS.COM", "TED.COM", "CHAIN.ASM"].map(pinned);
+const PINS = ["BAZA.COM", "BAZA.RTL", "BOUNCE.BAS", "TAS.COM", "TED.COM"].map(pinned);
 const CARD_SKIP = PINS.some((p) => p.skip);
 let starter;
 const starterCard = () => {
