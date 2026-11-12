@@ -45,7 +45,9 @@ the stable name.
 
 A volume with byte 15 bit 0 set is written behind: TEC-OS keeps its writes
 in the block cache and writes them to the card later (see
-[recovery.md](recovery.md)). One volume at most is written behind, and never
+[recovery.md](recovery.md)). Every other volume coalesces its data writes:
+each card block's run of records is written once, at the next flush point
+(the same page). One volume at most is written behind, and never
 a read-only one; `tecvol create` takes `:wb` after the drive, as in
 `--volume G8M:WORK:B:wb`, and refuses a second one or `:wb` with `:ro`. A
 ROM from before the cache ignores the byte and writes the volume through.

@@ -85,6 +85,7 @@ function memoryMap(census, symbols) {
     ["CNEXT", "the next line in turn"],
     ["CWTYPE", "BIOS WRITE's type, C"],
     ["CIFF", "2 bytes: the flags a BIOS entry found, its interrupt state in P/V"],
+    ["CPEND", "A:'s pending block: its line plus one, 0 for none"],
   ]
     .map(([n, what]) => `| ${hex(at(n))} | \`${n}\` | ${what} |`)
     .join("\n");
