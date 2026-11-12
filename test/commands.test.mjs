@@ -272,8 +272,9 @@ test("SH1 rom figure", () => {
   const second = { ...census(), hash: sha(readFileSync(resolve(ROOT, "build/tecos/tecos.rom"))) };
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
-  assert.ok(used <= 14782, `${used} used, the ceiling 14,782`);
-  assert.ok(free >= 1602, `${free} free, at least 1,602`);
+  // The shell's ceiling, and the 120 bytes A:'s coalescing may add to it.
+  assert.ok(used <= 14782 + 120, `${used} used, the ceiling 14,902`);
+  assert.ok(free >= 1602 - 120, `${free} free, at least 1,482`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47268, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
