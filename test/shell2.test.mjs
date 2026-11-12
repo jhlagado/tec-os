@@ -1,13 +1,14 @@
 // Shell stage 2: SHELL.SVC's CD on four equal drives, the drive and volume
 // in the prompt, DIR with each file's size and its cost, CLS, ECHO and
 // PAUSE, a script's own drive, the shell's size, stacks and TPA, and the
-// console read's cost with write-behind on the logged drive. Emulator
-// evidence; each mutant is built and run here, one at a time.
+// console read's cost with write-behind on the logged drive, and the
+// starter card of four drives. Emulator evidence; each mutant is built and
+// run here, one at a time.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createContainer } from "../tools/lib/container.mjs";
+import { createContainer, descriptorAt, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { GLCD_SVC, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 import { mon3Svc } from "./lib/mon3.mjs";
@@ -767,4 +768,100 @@ test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
   const ms = { type100: type100 / 4000, down40: down40 / 4000, save: save / 4000 };
   t.diagnostic(JSON.stringify(ms));
   for (const k of Object.keys(TED_BASE)) assert.ok(ms[k] / TED_BASE[k] - 1 <= 0.05, `${k}: ${ms[k].toFixed(1)} ms against ${TED_BASE[k]}`);
+});
+
+// --- S2-12 The starter card ------------------------------------------------------
+
+const starterImage = () => new Uint8Array(readFileSync(new URL("../dist/starter.img", import.meta.url)));
+const starterRecipe = () => JSON.parse(readFileSync(new URL("../dist/starter.recipe.json", import.meta.url), "utf8"));
+
+test("S2-12 four drives", () => {
+  const card = starterImage();
+  const info = parseContainer(card);
+  assert.deepEqual([info.minor, info.drives], [1, 4], "container 1.1, the drives field 4");
+  assert.equal(card.length, 13_631_488);
+  assert.equal(starterRecipe().drives, 4, "the recipe asks for them");
+});
+
+test("S2-12 volumes", () => {
+  const card = starterImage();
+  const info = parseContainer(card);
+  assert.deepEqual(info.volumes.map((v) => [v.label, v.g.name, v.drive]), [
+    ["SYSTEM", "G1M", "A"],
+    ["WORK", "G8M", "B"],
+    ["PROJECTS", "G1M", "C"],
+    ["GAMES", "G1M", null],
+    ["SPARE", "G1M", null],
+  ]);
+  for (let i = 0; i < 5; i += 1) assert.equal(card[descriptorAt(i) + 15], 0, `volume ${i}'s byte 15`);
+  for (const d of ["B", "C"]) assert.deepEqual(volume(card, d).list(), [], `${d}: empty`);
+});
+
+test("S2-12 no mount.com", () => {
+  const names = volume(starterImage(), "A").list().map((f) => f.name);
+  assert.ok(!names.includes("MOUNT.COM"));
+  assert.ok(!starterRecipe().components.some((c) => c.name === "MOUNT.COM"));
+  for (const n of ["SHELL.SVC", "STARTUP.CMD", "TED.COM", "TAS.COM", "BAZA.COM", "MON3.SVC"]) assert.ok(names.includes(n), `A: still holds ${n}`);
+  assert.equal(names.length, 14);
+});
+
+test("S2-12 instruction", () => {
+  const t = starterRecipe().instruction;
+  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "The drive you are on is written behind", "whenever TEC-OS waits for a key everything is on the card", "After CD A:", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
+  assert.doesNotMatch(t, /MOUNT/, "and teaches no MOUNT");
+  assert.doesNotMatch(t, /(B:|WORK)[^.]*written behind/, "nor that B: or WORK is written behind");
+  assert.doesNotMatch(t, /At A>/);
+});
+
+test("S2-12 tpa", () => {
+  const card = starterImage();
+  volume(card, "A").write("STARTUP.CMD", Buffer.from("\x1a", "latin1"));
+  const bare = shellMachine(card);
+  assert.equal(word(bare, 6) - 0x100, 46_569, "bare: four drives' vectors");
+  const m = shellMachine(starterImage());
+  assert.equal(word(m, 6) - 0x100, 42_496, "with the shell, the starter card's STARTUP.CMD");
+});
+
+/** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */
+async function recipeCard(recipe) {
+  const { buildRecipe } = await import("../tools/lib/recipe.mjs");
+  const dir = new URL("../dist/", import.meta.url);
+  return buildRecipe(recipe, (url) => new Uint8Array(readFileSync(new URL(url, dir))));
+}
+
+test("S2-12 mutant: the recipe without drives leaves C: a G1M's slot, and CD of WORK onto it is refused", async () => {
+  const run2 = async (recipe) => {
+    const m = shellMachine(await recipeCard(recipe));
+    run(m, "CD B:GAMES");
+    return run(m, "CD C:WORK");
+  };
+  assert.match(await run2(starterRecipe()), /\r\nC:WORK\r\n/, "the card's recipe: WORK goes on C:");
+  const { drives, ...without } = starterRecipe();
+  assert.match(await run2(without), /\r\nCANNOT MOUNT\r\n/);
+});
+
+test("S2-12 old card upgraded", async () => {
+  const { prepareCard } = await import("../host/card.mjs");
+  const starter = starterImage();
+  // A card of before the shell: SYSTEM and WORK, WORK's byte 15 set as the old
+  // recipe set it, the starter's files but the shell, that time's MON3.SVC.
+  const old = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }]);
+  old[descriptorAt(1) + 15] = 1;
+  const sum = headerChecksum(old.subarray(0, 512));
+  [old[20], old[21]] = [sum & 0xff, sum >> 8];
+  const a = volume(old, "A");
+  const s = volume(starter, "A");
+  for (const f of s.list()) if (!["SHELL.SVC", "STARTUP.CMD"].includes(f.name)) a.write(f.name, s.read(f.name));
+  const OLD_MON3 = JSON.parse(readFileSync(new URL("./fixtures/mon3-55f0171.json", import.meta.url), "utf8"));
+  a.write("MON3.SVC", Buffer.from(OLD_MON3.file, "base64"));
+  a.write("STARTUP.CMD", Buffer.from("CON PICO 40\r\n\x1a", "latin1"));
+  a.write("NOTES.TXT", Buffer.from("my own notes\r\n\x1a", "latin1"));
+  const got = prepareCard(old, "tms", "40", starter);
+  assert.equal(got.problem, null);
+  assert.equal(got.changed, true);
+  const m = boot(old, { tms: true, matrix: true, width: 40 });
+  const t = m.command("CD ?", { prompt: P });
+  assert.match(t, /\r\nSYSTEM +A:\r\nWORK +B:\r\nA:SYSTEM>$/, "this stage's shell, the old card's two volumes");
+  assert.equal(m.read(m.sym("DRVTAB") + 8 + 7), 0, "B:'s flags 0");
+  assert.ok(Buffer.from(volume(old, "A").read("NOTES.TXT")).toString("latin1").startsWith("my own notes"), "its files kept");
 });

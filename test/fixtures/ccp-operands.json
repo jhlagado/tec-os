@@ -66,13 +66,13 @@
       "input": "B:",
       "output": "B:\r\r\nB>",
       "calls": "00e1a0132515f6bea4127f4344366bcce767c123257aac1d0a3c1e8793b25af5",
-      "peak": 8
+      "peak": 18
     },
     {
       "input": "A:",
       "output": "A:\r\r\nA>",
       "calls": "e82bc732f8eca17594abe62f4ac5251e5ecb628e21598c836fbe14cfc7d6aa05",
-      "peak": 8
+      "peak": 18
     },
     {
       "input": "TYPE",

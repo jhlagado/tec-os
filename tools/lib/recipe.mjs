@@ -13,7 +13,7 @@ export async function sha256Hex(bytes) {
 /** Fetch, verify and place every file; return the new container image. */
 export async function buildRecipe(recipe, fetchFile) {
   if (recipe.schema !== "tecos-file-recipe-v1") throw new Error(`unsupported recipe schema ${recipe.schema}`);
-  const image = createContainer(recipe.volumes.map((v) => ({ ...v, readOnly: false })));
+  const image = createContainer(recipe.volumes.map((v) => ({ ...v, readOnly: false })), { drives: recipe.drives ?? 0 });
   const info = parseContainer(image);
   for (const component of recipe.components) {
     for (const file of component.files) {

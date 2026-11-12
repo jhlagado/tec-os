@@ -10,6 +10,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { ROOT, boot, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { displayFiles } from "../tools/lib/starter.mjs";
+import { createContainer } from "../tools/lib/container.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 
 const TED = pinned("TED.COM");
@@ -207,12 +208,22 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'
   assert.deepEqual(m.violations, []);
 });
 
-test("TED's text holds at least 30,742 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
+test("TED's text holds at least 28,694 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
   // The starter's display files: on a board with both, GLCD.SVC loads and gives
   // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
-  for (const [board, floor] of [[{ glcd: false }, 30_742], [{ tms: true, matrix: true, glcd: true }, 30_742]]) {
-    const image = standardCard();
+  // The starter card's four drives, as its recipe asks for them.
+  for (const [board, floor] of [[{ glcd: false }, 28_694], [{ tms: true, matrix: true, glcd: true }, 28_694]]) {
+    const image = createContainer(
+      [
+        { geometry: "G1M", label: "SYSTEM", mount: "A" },
+        { geometry: "G8M", label: "WORK", mount: "B" },
+        { geometry: "G1M", label: "PROJECTS", mount: "C" },
+        { geometry: "G1M", label: "GAMES" },
+        { geometry: "G1M", label: "SPARE" },
+      ],
+      { drives: 4 },
+    );
     const a = volume(image, "A");
     for (const f of await displayFiles(ROOT)) a.write(f.name, f.bytes);
     a.write("TED.COM", tedBytes());

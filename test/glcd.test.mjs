@@ -5,6 +5,8 @@
 // the BIOS's CONOUT directly in the 28 bytes it has; and UNLOAD gives the
 // console and the pages back. Emulator evidence.
 // The screens that show SAVE to a read-only volume were retaken: it came to say R/O.
+// Every screen was retaken when the shell's prompt came to name the drive's
+// volume and its DIR to list sizes; the commands are the same.
 // KS48 keeps this historical oracle on its original-font input. Only the
 // historical pixel workload uses a disposable FONT-span restoration. Other
 // GLCD tests and Compact alias/rendering tests use the unmodified production ROM.
@@ -19,7 +21,7 @@ import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
-assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"750ad7ae1b5cd9ace4837bb264a984857dd54314d5029097f3ce5c0be255bc4c","unchanged historical command list and oracle");
+assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"d8417160c03238295582a0653bf483717e4e0b808ceb9195e8030619d8062821","unchanged historical command list and oracle");
 const REF = JSON.parse(referenceBytes);
 // Bind the clone to this build's untouched input, not to a permanent ROM pin.
 const productionInput = romFor();
