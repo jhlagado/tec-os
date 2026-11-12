@@ -249,9 +249,11 @@ CWR9:
   ld a,c
   ret
 
-; CFLALL writes dirty lines and drops
-; failures. CFLUSH excludes line A and
-; retains failed lines for retry
+; CFLALL, for warm boot only, writes
+; dirty lines and drops failures.
+; CFLUSH excludes line A, none when
+; A=NLINES, and retains failed lines for
+; retry
 ; (KE-AR8). Both continue through every
 ; other line and return A=excluded
 ; index, FFh for CFLALL. Z means no
@@ -498,7 +500,8 @@ CWBK1:
 
 ; Copy the record before publishing
 ; dirty state. CWTYPE bit 7 selects
-; write-through first. Otherwise type 1
+; write-through first. Bit 5 makes the
+; line the pending one. Otherwise type 1
 ; selects directory-last flush. Other
 ; writes return A=0/Z with data still
 ; dirty.
@@ -512,8 +515,17 @@ CWB2:
   ld a,(CWTYPE)
   or a
   jp m,CWBT
+  bit 5,a
+  jr nz,CWCO
   rrca
   jr c,CWB3
+  xor a
+  ret
+
+CWCO:
+  ld a,c
+  inc a
+  ld (CPEND),a
   xor a
   ret
 
@@ -551,6 +563,52 @@ CWBX:
   call CDROP
   or 1
   ret
+
+; CPMOVE keeps the pending line when
+; SDLBA is its block, else enters
+; CPFLSH. CPFLSH writes the pending line
+; if it is dirty. Success clears CPEND
+; and returns Z with A=0. Failure keeps
+; the line dirty and pending and returns
+; NZ. Change AF/BC/DE/HL. CWRITE can
+; remap the BIOS request.
+
+CPMOVE:
+  ld a,(CPEND)
+  or a
+  ret z
+  call CLOOK
+  jr nz,CPFLSH
+  inc a
+  ld hl,CPEND
+  cp (hl)
+  ret z
+
+CPFLSH:
+  ld a,(CPEND)
+  or a
+  ret z
+  dec a
+  call CDGET
+  call nz,CWRITE
+  ret nz
+  xor a
+  ld (CPEND),a
+  ret
+
+; CPOUT is CPFLSH for BDOS callers, with
+; CDI/CEI around it. Return A=0/Z, or
+; A=1/NZ when the write failed. Keep DE.
+
+CPOUT:
+  ld a,(CPEND)
+  or a
+  ret z
+  push de
+  call CDI
+  call CPFLSH
+  pop de
+  jp BRET
 
 ; Warm boot calls CFLALL to try every
 ; dirty line and drop each failure. Any

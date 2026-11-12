@@ -329,18 +329,32 @@ BWMASK:
 BWNEW:
   ld c,1
 
-; Keep C's pre-read choice.
-; Selected-drive flag bit 1 chooses
-; write-behind, otherwise set CWTYPE bit
-; 7 for write-through completion.
-; Tail-enter the common CWRBH path.
+; Keep C's pre-read choice. First write
+; the pending block if this write is to
+; another block; return NZ if that
+; fails. Selected-drive flag bit 1
+; chooses write-behind. Otherwise a
+; directory write sets CWTYPE bit 7 to
+; write through and a data write sets
+; bit 5 to coalesce. Tail-enter the
+; common CWRBH path.
 
 BWGET:
+  push bc
+  call CPMOVE
+  pop bc
+  ret nz
   call CURENT
   inc hl
   bit 1,(hl)
   jr nz,BWGO
   ld hl,CWTYPE
+  bit 0,(hl)
+  jr nz,BWTHRU
+  set 5,(hl)
+  jr BWGO
+
+BWTHRU:
   set 7,(hl)
 
 BWGO:

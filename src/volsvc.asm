@@ -361,7 +361,9 @@ VSIN:
 ; and IX=descriptor. Return A=FFh/Z if
 ; all succeeded or none needed, NZ if
 ; any failed. Clean successful lines and
-; drop failed ones. Continue after
+; keep failed ones dirty for retry, so a
+; directory written later cannot name
+; data the card lacks. Continue after
 ; errors. Change AF/HL and mapping
 ; scratch. CWRITE remaps the current
 ; BIOS request, not arbitrary SDLBA.
@@ -378,7 +380,8 @@ VFLUSH:
 ; not exclude NMI.
 
   call CDI
-  call CFLALL
+  ld a,NLINES    ; no line excluded
+  call CFLUSH
   call CEI
   pop ix
   pop de
