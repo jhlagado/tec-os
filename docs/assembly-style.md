@@ -49,9 +49,7 @@ comments can be data: the `LATCHV` caption in `src/abi.inc` feeds the memory-map
 document, while raw-source digests affect fixture caches. Shipped `SAMPLE.ASM`,
 `DEMO.ASM` and `HELLO3.ASM` (from `test/programs/hello3.asm`) also change
 when their comments change, and `test/ks40.test.mjs` pins `DEMO.ASM`'s and
-`HELLO3.ASM`'s hashes. The shipped `CHAIN.ASM` is Thorium's
-`demo/chain/chain.asm`, a pinned input in `test/inputs.json`, not in this
-tree; it is written in Thorium's chained-line style. Never replace functional source with an
+`HELLO3.ASM`'s hashes. Never replace functional source with an
 older complete file merely because that file's wording was reviewed.
 
 `tools/style-check.mjs` selects the compact checker for its owned sources. The

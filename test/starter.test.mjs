@@ -1,10 +1,9 @@
 // The starter card that `npm run media` builds, the one card, which the web
-// page runs too: exactly sixteen files on A:, each the bytes its source or
+// page runs too: exactly fifteen files on A:, each the bytes its source or
 // pin gives, and it boots to a MOUNT that lists its volumes. Its BOUNCE.BAS is
-// compiled by BAZA and runs its sprites on the PICO9918, TAS builds DEMO.ASM
-// into the demo, MON3.SVC loads and runs HELLO3.BIN, which writes the LCD,
-// and TAS builds CHAIN.ASM, written with several statements on a line, into
-// a program that runs, with TED showing its lines whole at 80 columns.
+// compiled by BAZA and runs its sprites on the PICO9918, steered by letters or
+// arrow keys, TAS builds DEMO.ASM into the demo, and MON3.SVC loads and runs
+// HELLO3.BIN, which writes the LCD.
 // Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
 // are pinned inputs (test/inputs.json).
 
@@ -24,15 +23,12 @@ const TAS = pinned("TAS.COM");
 const BAZA = pinned("BAZA.COM");
 const RTL = pinned("BAZA.RTL");
 const BOUNCE = pinned("BOUNCE.BAS");
-const CHAIN = pinned("CHAIN.ASM");
-const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip || CHAIN.skip;
+const PAGE_SKIP = TED.skip || TAS.skip || BAZA.skip || RTL.skip || BOUNCE.skip;
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const textAt = (path) => Buffer.from(readFileSync(resolve(ROOT, path), "utf8").replace(/\n/g, "\r\n") + "\x1a", "latin1");
 const text = (name) => textAt(`programs/${name}`);
 // Baza's examples/BOUNCE.BAS is LF text: the card holds it as CP/M text, as TIMES.BAS.
 const bounceText = () => Buffer.from(readFileSync(BOUNCE.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
-// So is Thorium's demo/chain/chain.asm.
-const chainText = () => Buffer.from(readFileSync(CHAIN.path, "latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
 
 let built;
 /** The starter card and its recipe, made once by tools/media.mjs. */
@@ -47,13 +43,12 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly sixteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly fifteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
   check(RTL);
   check(BOUNCE);
-  check(CHAIN);
   const { card, recipe } = starter();
   const want = {
     "STARTUP.CMD": Buffer.from("SHELL.SVC\r\nGLCD.SVC\r\n\x1a", "latin1"),
@@ -71,7 +66,6 @@ test("the starter card holds exactly sixteen files, each by its hash, the PICO99
     "MON3.SVC": (await mon3Svc()).file,
     "HELLO3.ASM": textAt("test/programs/hello3.asm"),
     "HELLO3.BIN": await hello3(),
-    "CHAIN.ASM": chainText(),
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
@@ -105,8 +99,8 @@ test("the web page's card is the starter card, byte for byte, its instruction na
   assert.match(recipe.instruction, /TAS DEMO then DEMO/);
   assert.match(recipe.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
   assert.match(recipe.instruction, /MON3\.SVC, then LOAD HELLO3\.BIN and GO/);
-  assert.match(recipe.instruction, /TAS CHAIN then CHAIN runs a program written with several statements on a line/);
-  assert.match(recipe.instruction, /TED CHAIN\.ASM at 80 columns \(CON PICO 80, or 80 in the width selector\)/);
+  assert.match(recipe.instruction, /tap W\/A\/S\/D or the arrow keys, Q to quit/);
+  assert.doesNotMatch(recipe.instruction, /CHAIN/);
   assert.ok(!volume(card, "A").list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
 });
 
@@ -129,6 +123,8 @@ function bounceRound(card) {
   let mark = m.output.length;
   keys("baza bounce\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
+  const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
+  assert.equal(sha(com.subarray(0, 20736)), "b524b72c8869f3778eed72c37e829ed027536f42345c882a95034c519852614f", "BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);
@@ -154,6 +150,27 @@ function bounceRound(card) {
   const moved = attrs(s.vram);
   assert.deepEqual([moved[16], moved[17]], [150 - 18 + 6, 120 + 24 - 12], "the ship after DDDD AA WWW S");
   assert.notDeepEqual(moved.slice(0, 16), first.slice(0, 16), "the balls move");
+  // The arrow keys as the Viewer sends them from the PICO9918's screen: the
+  // matrix's own arrow keys, which TEC-OS turns into ESC [ A, B, C or D.
+  const ship = () => {
+    const a = attrs(vdp().vram);
+    return [a[16], a[17]];
+  };
+  for (const [key, name, dy, dx] of [["\x05", "left", 0, -6], ["\x06", "right", 0, 6], ["\x03", "up", -6, 0], ["\x04", "down", 6, 0]]) {
+    const [y, x] = ship();
+    tap(key);
+    assert.deepEqual(ship(), [y + dy, x + dx], `the ship after the ${name} arrow`);
+  }
+  // A sequence that isn't an arrow's moves nothing, and the game goes on.
+  const before = attrs(vdp().vram);
+  m.typeMatrix("\x1b[Z");
+  run(20_000_000);
+  const after = attrs(vdp().vram);
+  assert.deepEqual([after[16], after[17]], [before[16], before[17]], "the ship after ESC [ Z");
+  assert.notDeepEqual(after.slice(0, 16), before.slice(0, 16), "the balls move after ESC [ Z");
+  const [y, x] = ship();
+  tap("\x05");
+  assert.deepEqual(ship(), [y, x - 6], "the left arrow after ESC [ Z");
   mark = m.output.length;
   m.typeMatrix("Q");
   m.runUntilChecked(() => m.ready() && /A>$/.test(m.text(mark)), 400_000_000, "the prompt after Q");
@@ -164,7 +181,7 @@ function bounceRound(card) {
   assert.deepEqual(m.violations, []);
 }
 
-test("on the card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D move the ship, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+test("on the card, BAZA BOUNCE compiles, BOUNCE takes Graphics I with sprites, W/A/S/D and the arrow keys move the ship, ESC [ Z moves nothing, and Q gives the display back at A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   check(BOUNCE);
   bounceRound(Uint8Array.from(starter().card));
 });
@@ -332,60 +349,5 @@ test("on the card, TAS HELLO3 HELLO3.BIN rebuilds HELLO3.BIN as it is", { skip: 
   const built = Buffer.from(volume(card, "A").read("HELLO3.BIN"));
   assert.equal(sha(built.subarray(0, want.length)), sha(want), "the card's HELLO3.BIN");
   assert.ok(built.subarray(want.length).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
-  assert.deepEqual(m.violations, []);
-});
-
-// CHAIN.ASM on the card, on the PICO9918 with the matrix keyboard, after the
-// instruction's CON PICO 80: TAS CHAIN makes Thorium's 43-byte demonstration
-// image, the one its statements give one to a line, CHAIN prints LINE 1 to
-// LINE 5, and TED shows each of its lines whole.
-test("on the card after CON PICO 80, TAS CHAIN builds CHAIN.COM, CHAIN prints LINE 1 to LINE 5, and TED CHAIN.ASM shows every line whole", { skip: PAGE_SKIP, timeout: 1_800_000 }, () => {
-  const card = Uint8Array.from(starter().card);
-  const m = boot(card, { tms: true, matrix: true, width: 40 });
-  const keys = (s, what, done) => {
-    m.enqueueInput(s, "matrix");
-    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
-  };
-  keys("con pico 80\r", "CON PICO 80", () => m.ready() && m.read(m.sym("VWID")) === 80);
-  let mark = m.output.length;
-  keys("tas chain\r", "TAS's build", () => m.ready() && /A>$/.test(m.text(mark)));
-  assert.match(m.text(mark), /CHAIN\.COM written/);
-  const built = Buffer.from(volume(card, "A").read("CHAIN.COM"));
-  assert.equal(sha(built.subarray(0, 43)), "9af074cd7f1db991184a306ae9974b393ba6dc66c9b53a08a7f6f59cb3865422", "Thorium's CHAIN image");
-  assert.ok(built.subarray(43).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
-  mark = m.output.length;
-  keys("chain\r", "CHAIN", () => m.ready() && /A>$/.test(m.text(mark)));
-  assert.match(m.text(mark), /^chain\r\r?\nLINE 1\r\nLINE 2\r\nLINE 3\r\nLINE 4\r\nLINE 5\r\n\r?\n?A>$/i);
-  const source = readFileSync(CHAIN.path, "latin1").replace(/\n$/, "").split("\n");
-  keys("ted chain.asm\r", "TED", () => m.screen()[0].startsWith("; CHAIN:") && /CHAIN/.test(m.screen()[23]));
-  assert.deepEqual([m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], [80, 24], "an 80-column console");
-  assert.deepEqual(m.screen().slice(0, source.length).map((l) => l.trimEnd()), source, "each line whole");
-  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
-  assert.deepEqual(m.violations, []);
-});
-
-// At the Viewer's 40 columns, TED shows CHAIN.ASM's lines cut at column 40
-// and scrolls sideways to reach the rest: at line 10, column 63, the view
-// shows columns 24 to 63, and back at column 1 it starts at column 1 again.
-test("on the card at 40 columns, TED CHAIN.ASM scrolls sideways along a long line and back", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
-  const card = Uint8Array.from(starter().card);
-  const m = boot(card, { tms: true, matrix: true, width: 40 });
-  const keys = (s, what, done) => {
-    m.enqueueInput(s, "matrix");
-    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
-  };
-  const source = readFileSync(CHAIN.path, "latin1").replace(/\n$/, "").split("\n");
-  const view = () => m.screen().slice(0, source.length).map((l) => l.trimEnd());
-  const cut = (from) => source.map((l) => l.slice(from, from + 40).trimEnd());
-  keys("ted chain.asm\r", "TED", () => m.screen()[0].startsWith("; CHAIN:") && /L1 C1\b/.test(m.screen()[23]));
-  assert.equal(m.read(m.sym("VWID")), 40, "a 40-column console");
-  assert.deepEqual(view(), cut(0), "each line cut at column 40");
-  keys("\x1b[B".repeat(9), "line 10", () => /L10 C1\b/.test(m.screen()[23]));
-  keys("\x1b[C".repeat(62), "column 63", () => /L10 C63\b/.test(m.screen()[23]));
-  assert.deepEqual(view(), cut(23), "the view of columns 24 to 63");
-  assert.match(m.screen()[9], /; count five lines, numbered fr$/, "line 10's comment in view");
-  keys("\x1b[D".repeat(62), "column 1", () => /L10 C1\b/.test(m.screen()[23]));
-  assert.deepEqual(view(), cut(0), "back to the view from column 1");
-  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
   assert.deepEqual(m.violations, []);
 });

@@ -26,6 +26,9 @@ const BAD = "95 PRINT (";
 // TED's text holds CR LF: line 10 starts after nine lines and their ends.
 const LINE10 = SOURCE.split("\n").slice(0, 9).reduce((n, l) => n + l.length + 2, 0);
 
+// BAZA's progress spinner, a mark and a backspace each time, taken out of
+// the console's text so that its lines read as they end up on the screen.
+const unspun = (t) => t.replace(/[|\/\\-]\x08/g, "");
 const sha = (image, drive, name) => createHash("sha256").update(volume(image, drive).read(name)).digest("hex");
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const bytes = (input) => new Uint8Array(readFileSync(input.path));
@@ -60,7 +63,7 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No
   const image = card("A");
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
-  const since = () => m.text(mark);
+  const since = () => unspun(m.text(mark));
   const status = () => m.screen()[23];
   keys(m, "ted times.bas\r", "TED", () => /TED +TIMES\.BAS/.test(status()));
 
@@ -107,7 +110,7 @@ test("a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load dr
   const image = card("B");
   const m = boot(image, { tms: true, matrix: true });
   let mark = m.output.length;
-  const since = () => m.text(mark);
+  const since = () => unspun(m.text(mark));
   const status = () => m.screen()[23];
   keys(m, "b:\r", "B:", () => since().endsWith("B>"));
   keys(m, "ted times.bas\r", "A:'s TED on B:'s file", () => /TED +TIMES\.BAS/.test(status()));
