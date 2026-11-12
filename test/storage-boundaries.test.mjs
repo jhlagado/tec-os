@@ -58,6 +58,9 @@ for (const operation of ['describe', 'rejected mount', 'failed descriptor read']
     if (fault) assert.ok(fault.count() > 0);
     assert.equal(m.read(m.sym('BUFOK')), 0);
     writeRecord(m, 0, 1, 0xbb);
+    // A: coalesces: function 48 puts the pending block, both records, on the card.
+    assert.equal(call(m, 5, { c: 48 }), 0);
+    before.fill(0xaa, 0, 128);
     before.fill(0xbb, 128, 256);
     assert.deepEqual(image.slice(offset, offset + 512), before, 'all untouched records survive');
   });
@@ -118,11 +121,10 @@ for (const op of [0, 1]) {
     assert.equal(m.read(0x5000 + 14), 255);
     assert.equal(svc(m, 2, 1, 1), 0);
     assert.equal(m.read(0x5000 + 14), 1, 'old volume remains on B');
-    // KS36b: the flush tried the line and dropped it when its write failed, so the retry has
-    // nothing to write and succeeds, and the card keeps the block it had.
+    // The flush kept the line whose write failed, so the retry writes it and succeeds.
     assert.equal(svc(m, op), 0, 'the retry succeeds');
     const offset = (parseContainer(image).volumes[1].start + 32) * 512;
-    assert.deepEqual(image.slice(offset, offset + 128), card.slice(offset, offset + 128), 'the failed record never reached the card');
+    assert.deepEqual(image.slice(offset, offset + 128), new Uint8Array(128).fill(0x6b), 'the failed record reached the card at the retry');
   });
 }
 
