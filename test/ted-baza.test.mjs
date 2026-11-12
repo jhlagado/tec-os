@@ -1,4 +1,4 @@
-// TED and BAZA on the starter card's files (KD-262): TED opens TIMES.BAS and
+// TED and BAZA on the starter card's files: TED opens TIMES.BAS and
 // ^T B builds it with BAZA and comes back clean, ^T D says No debugger and
 // chains nothing, ^T R runs TIMES and comes back after a key, and a line with
 // a syntax error brings TED back on that line from BAZA's THOR.ERR, with the
@@ -26,9 +26,9 @@ const BAD = "95 PRINT (";
 // TED's text holds CR LF: line 10 starts after nine lines and their ends.
 const LINE10 = SOURCE.split("\n").slice(0, 9).reduce((n, l) => n + l.length + 2, 0);
 
-// BAZA's progress spinner, a mark and a backspace each time, taken out of
-// the console's text so that its lines read as they end up on the screen.
-const unspun = (t) => t.replace(/[|\/\\-]\x08/g, "");
+// BAZA's progress spinner, a mark and a backspace each time, straight after
+// its command line, taken out so that its message reads as the screen shows it.
+const unspun = (t) => t.replace(/(BAZA [^\r]*\r\n)(?:[|\/\\-]\x08)+/g, "$1");
 const sha = (image, drive, name) => createHash("sha256").update(volume(image, drive).read(name)).digest("hex");
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const bytes = (input) => new Uint8Array(readFileSync(input.path));
@@ -69,6 +69,7 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No
 
   mark = m.output.length;
   keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(since()) && /THOR\.PRJ: TIMES\.BAS/.test(status()));
+  assert.match(m.text(mark), /A>A:BAZA TIMES\.BAS\r\n(?:[|\/\\-]\x08)+COM written\r\n/, "BAZA's marks, each covered by the next and the last by its message");
   assert.match(since(), /A>A:BAZA TIMES\.BAS\r\nCOM written\r\n/, "A:'s BAZA, the drive TED was loaded from");
   assert.ok(names(image, "A").includes("TIMES.COM"), "TIMES.COM on A:");
   assert.ok(!names(image, "A").includes("THOR.ERR"), "no THOR.ERR");
