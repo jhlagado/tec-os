@@ -33,15 +33,15 @@ returns to the program with `A = FFh` and `H` its code (1 disk I/O, 2 read-only
 disk, 3 read-only file, 4 select) and no message, and the rest of the line
 stays; with `FEh` the message is said first; any other `E` is the default, the
 message, a key and the program's end. Warm boot puts the default back. Function
-48 is CP/M 3's flush: every changed line of the cache goes to the card, `A = 0`,
-or `FFh` if a write failed, that line then dropped; `E = FFh`'s purge is the same
-flush. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
+48 is CP/M 3's flush: every changed line of the cache goes to the card, A:'s
+pending block among them, `A = 0`, or `FFh` if a write failed, that line then kept
+for the next flush; `E = FFh`'s purge is the same flush. Function 12 still reports 2.2. The probe in `test/programs/probe.asm` checks on TEC-OS:
 
 | Area | Functions | Result |
 | --- | --- | --- |
 | Version | 12 | 2.2 reported |
 | Create, write, close, reopen, read to end | 15, 16, 20, 21, 22 | Pass, across two extent boundaries |
-| Random read and write | 33, 34 | Pass; neighbouring records in the same SD block unchanged, written through or behind |
+| Random read and write | 33, 34 | Pass; neighbouring records in the same SD block unchanged, coalesced or written behind |
 | File size | 35 | Pass; a new extent's size is visible after close, as in CP/M 2.2 |
 | Sparse random write | 34 | Pass |
 | Rename, delete | 23, 19 | Pass |
@@ -249,9 +249,25 @@ and run.
   interrupts off for the whole call and put them back as they found them, so
   that none arrives while EXPAND 1, where the block cache lives, is in view.
   A call that moves one block to or from the card holds them off for about
-  240,000 T-states (60 ms at 4 MHz), and a write-through write that must
-  read its block first for about 490,000 (122 ms); a hit in the cache, for
-  about 5,000. A program's interrupt routine can wait that long.
+  240,000 T-states (60 ms at 4 MHz), and one that must also read a block
+  first for about 490,000 (122 ms); a hit in the cache, for about 5,000. A
+  data write on A: that stays in its block holds them off for about 10,000
+  to 13,000; the block's write comes at the next flush point, a console read
+  or a directory request among them, which then holds them off for about
+  240,000 while it writes it. A program's interrupt routine can wait that long.
+- **A: coalesces** (`docs/recovery.md`): a data write returns with its
+  record in the cache, and its block reaches the card at the next flush
+  point, a program's console read among them. Some waits are not flush
+  points, so the block stays pending while the program waits: a program that
+  waits for a key by polling the BIOS's `CONST` and only then calls `CONIN`;
+  one that waits on reader input, BDOS 3 or the BIOS's `READER`; and one whose
+  resident has replaced `CONIN` in the RAM BIOS table, which takes over its
+  flush. A flush at `CONST` would flush at every BDOS 2 and 9, which test the
+  console's status. A program that writes a directory block through the BIOS
+  with type 0, not 1, has it coalesced like data, as Digital Research's
+  deblocking BIOS holds a type 0 write; the BDOS writes its directory with
+  type 1. A flush that another drive's directory request makes reports
+  `Bad Sector` on that drive, not A:.
 - **Bit-banged serial.** Input that arrives while a program is busy and not
   polling the console is lost. Keys typed while the BDOS is printing are kept
   for the next read, as in CP/M 2.2.

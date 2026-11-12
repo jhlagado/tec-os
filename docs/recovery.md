@@ -4,8 +4,11 @@
 
 TEC-OS keeps 30 card blocks, 15 KiB, in EXPAND 1. Every volume's reads go
 through it: a block read before and still held costs a copy, not a card
-read. A volume marked written behind (byte 15 of its descriptor, `tecvol
-create`'s `:wb`) also keeps its writes there, and the card catches up:
+read. A volume not written behind, A: among them, coalesces its data writes
+there: a run of records into one card block is written once (below, "What a
+successful write means"). A volume marked written behind (byte 15 of its
+descriptor, `tecvol create`'s `:wb`) also keeps its writes there, and the card
+catches up:
 
 - at each write to the volume's directory, which first writes every data
   block the cache holds changed, then the directory block itself, so the
@@ -27,33 +30,87 @@ can reach the card before the close, and nothing is rolled back. What a reset
 or power off before the close leaves depends on where the write went:
 
 - **Unwritten dirty data.** On a volume written behind, changed blocks the cache
-  holds and hasn't written are lost. Press `^C` at the prompt before pressing
-  reset or taking the card out.
-- **New allocations.** Blocks a write allocated reach the card, at once on a
-  volume not written behind, or when the cache writes them, but until the
-  directory entry is written no entry names them: the file reads back without
-  them, and the space is free again at the next login.
+  holds and hasn't written are lost. On A:, and any volume not written behind,
+  the pending block is lost: the records written into it since it was last
+  written, at most one block. Press `^C` at the prompt before pressing reset or
+  taking the card out; the prompt's own console read writes A:'s pending block.
+- **New allocations.** Blocks a write allocated reach the card, at the next
+  flush point on a volume not written behind, or when the cache writes them on
+  one written behind, but until the directory entry is written no entry names
+  them: the file reads back without them, and the space is free again at the
+  next login.
 - **In-place overwrites.** A write into a block the file already had changes that
-  block on the card, at once on a volume not written behind, and when the cache
-  evicts or flushes it on one written behind. The old contents are gone, closed
-  or not: there is no copy to return to.
+  block on the card when the block is written: on a volume not written behind
+  at the next flush point, since the block is the pending one until then, and
+  when the cache evicts or flushes it on one written behind. Until then a reset
+  leaves the old contents on the card. Once written, the old contents are gone,
+  closed or not: there is no copy to return to.
 
 If a block cannot be written during a program's run, the BIOS returns the
 error, the BDOS says `Bad Sector` and, under the shell, the rest of the line goes. A
-flush, at a directory write on a volume written behind, at a warm boot, or at
-`MOUNT` or `UNMOUNT`, tries every changed line and goes on to the rest. A
-directory write's flush keeps each data line whose write fails, as above; the
-others drop it, so the card's copy stands. A warm boot whose flush
+flush, at a directory write on a volume written behind, at function 48, at
+`MOUNT` or `UNMOUNT`, or at a warm boot, tries every changed line and goes on to
+the rest. Function 48, `MOUNT` and unmount keep each line whose write fails,
+as a directory write's flush does: function 48 returns FFh, `MOUNT` and unmount
+refuse and leave the drives as they were, and the line is tried again at the
+next flush. Only warm boot drops a line that still fails. A warm boot whose flush
 dropped a line says `Write lost` once and drops the rest of the shell's line as a
 BDOS error does; the next warm boot has nothing more to say.
+While a kept A: or B: line keeps failing, B: directory writes and `MOUNT` refuse
+until warm boot, since each flushes first; `MOUNT.COM` ends in a warm boot, which
+drops the line. If the card refuses every write, kept lines can fill the cache,
+and reads that need a line then fail too.
 
 ## What a successful write means
 
 Every BIOS write goes into the block's cache line; there is no other buffer.
-On every volume not written behind, the write returns success only after the
-line has gone to the card and the card has accepted the 512-byte block and
-stopped reporting busy. If that write fails, the line is dropped, so the
-next read of the block comes from the card.
+
+**A: coalesces.** Every data write on a volume not written behind (BDOS 21,
+34 and 40, and `SAVE`) goes into its block's cache line, and a run of records
+written into one card block is written once. A write returns when its record
+is in the line. That block, the one pending block, is written to the card at
+the first of: the file's close; any directory request; a write that moves to
+another block; a warm boot; and the program's next console read, BDOS 1, 6
+input, 10 or 11, or the BIOS's `CONIN`. Nothing is left unwritten while a
+program waits for the user at a console read. Function 48, `MOUNT` and unmount
+write it too. Until then a reset or power loss loses the records written into
+that one block since it was last written: at most one block, four records, 512
+bytes, and an in-place update of a closed file is among them. A block the card
+refuses stays pending, and the directory never names it until the card has it.
+
+- **The pending block** is at most one block at a time, the last one a data
+  write went into on a volume not written behind.
+- **A directory request** is any directory record the BDOS reads (open, make,
+  search, delete, rename, attributes, size, login, and the extent change inside
+  a sequential or random write) and any directory write. Selecting a drive
+  already logged in reads no directory and is not one. Any close is one, even
+  of a file that was not changed.
+- **A write that moves to another block** is any BIOS write to another block,
+  on any drive, B: included. BDOS 40's zero fill moves on one block at a time.
+- **The console reads** are BDOS 1, BDOS 6 with E = FFh, 10 and 11, at entry,
+  and the BIOS's `CONIN`, however it is called. Output, BDOS 3 and the BIOS's
+  `CONST` and `READER` are not.
+- **The directory stays last.** A directory write first writes the pending
+  block, then the directory block, so no entry names a block whose data is not
+  on the card. A directory write itself goes to the card before it returns;
+  if it fails, its line is dropped, so the next read of the block comes from
+  the card.
+
+**When the pending block's write fails.** The block stays in its line, still
+pending, at every flush point but warm boot.
+
+- When writing moves on, or at a directory request, the call that made the
+  flush returns the error: `Bad Sector`, or, under function 45's FFh mode,
+  A = FFh and H = 1 with the FCB on the record not written. A close tried again
+  fails again until the card takes the block.
+- Function 48, `MOUNT` and unmount report the failure, as above, and keep the
+  block.
+- At a console read the failure is not reported there: the program gets its
+  key and the block stays pending. It is reported at the next flush point that
+  is not a console read, or by warm boot's `Write lost`. While the card answers
+  but refuses, each console read tries the block again, about 55 ms at 4 MHz.
+- Warm boot tries it once more, and drops it with `Write lost` if it fails.
+
 Writing one 128-byte record reads its block into a line first (unless a line
 already holds it), merges the record and writes the whole block back, so
 neighbouring records are never replaced by stale data. The exception is a
@@ -79,6 +136,9 @@ no journal, so power loss or reset can leave:
   allocation vector rebuilt at the next login. Blocks the file already had and
   were written in place hold the new records: the file reads back mixed, old
   where nothing was written and new where it was, with its old length.
+- **On a volume not written behind, before a flush point.** The pending block's
+  records since it was last written are lost, at most one block; the card keeps
+  its old contents.
 - **On a volume written behind, before a directory write.** The changes since
   the last directory write, warm boot or `MOUNT` that the cache still holds
   unwritten are lost. Some may already be on the card, written when their
@@ -151,8 +211,9 @@ Limits:
 - Identity is extents, not a name: a card with identical extents takes the
   selection, and a card that changed only its default letters keeps it.
 
-**Flush before a reset.** A reset discards dirty lines and never writes them, to the
-old card or a new one. Press `^C` at the prompt before a reset or taking the card out.
+**Flush before a reset.** A reset discards dirty lines, A:'s pending block among
+them, and never writes them, to the old card or a new one. Press `^C` at the prompt
+before a reset or taking the card out.
 
 ## A damaged directory
 
@@ -173,7 +234,9 @@ is a different one. A card put in after that answers no read until reset.
 Press reset after changing cards.
 
 **Lines still dirty when a card comes out are lost.** That holds for the same
-card put back. Only cold boot starts a card, so the first warm boot after the
+card put back, and for A:'s pending block: with the card out, or another or the
+same card put in, every flush point fails, a close returns the error each time,
+and the block is never written onto the card put in. Only cold boot starts a card, so the first warm boot after the
 card comes out says `Write lost` and drops those lines, and a reset discards any
 written behind since. Restarting a card to write to it
 is left out by choice: TEC-OS doesn't read a card's CID, so a different card would
