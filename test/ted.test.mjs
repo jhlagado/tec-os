@@ -248,3 +248,54 @@ test("C:TED from B: edits B:'s file, and ^T B runs C:'s TAS and comes back to C:
   assert.equal(m.read(4) & 15, 1, "the current drive still B:");
   assert.deepEqual(m.violations, []);
 });
+
+// A program that prints its command tail between brackets, so the tail's blanks show.
+const ECHO = ` ORG 100H
+ LD HL,80H
+ LD B,(HL)
+ LD E,'['
+ CALL PUT
+ INC B
+ JR NEXT
+LOOP: INC HL
+ LD E,(HL)
+ CALL PUT
+NEXT: DJNZ LOOP
+ LD E,']'
+PUT: PUSH HL
+ PUSH BC
+ LD C,2
+ CALL 5
+ POP BC
+ POP HL
+ RET
+`;
+
+// THOR.PRJ's ARGS goes on ^T R's run line. The shell splits a line at an &
+// after a blank, so TED stops ARGS there; an & inside a word is text.
+for (const [args, tail, what] of [
+  ["X &HELLO Z", " X", "stops at the & after a blank: the program runs once with X"],
+  ["/M:&HE000 Q&R", " /M:&HE000 Q&R", "keeps an & inside a word"],
+]) {
+  test(`under the shell, ^T R with ARGS ${args} ${what}`, { skip: TED.skip || TAS.skip, timeout: 900_000 }, () => {
+    check(TED);
+    check(TAS);
+    const image = standardCard();
+    const a = volume(image, "A");
+    a.write("TED.COM", tedBytes());
+    a.write("TAS.COM", new Uint8Array(readFileSync(TAS.path)));
+    a.write("HELLO.ASM", Buffer.from(ECHO), { text: true });
+    a.write("THOR.PRJ", Buffer.from(`MAIN   HELLO.ASM\nARGS   ${args}\n`), { text: true });
+    const m = boot(withShell(image), { tms: true, matrix: true });
+    const status = () => m.screen()[23];
+    keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));
+    const mark = m.output.length;
+    keys(m, "\x14r", "the program and the wait", () => /Press a key/.test(m.text(mark)));
+    const out = m.text(mark);
+    keys(m, " ", "TED again", () => /TED +HELLO\.ASM/.test(status()));
+    const shown = tail.replace(/[/.]/g, "\\$&");
+    assert.match(out, new RegExp(`A>HELLO${shown}\\r\\n\\[${shown}\\]\\r\\n`), "the program's line and its tail");
+    assert.equal(out.match(/A>HELLO/g)?.length, 1, "the program runs once");
+    assert.deepEqual(m.violations, []);
+  });
+}
