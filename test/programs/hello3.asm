@@ -2,7 +2,7 @@
 ; shows it is alive. It loads and runs
 ; at 4000h, as MON-3 programs do.
 
-; On TEC-OS, type MON3.SVC /E, then
+; On TEC-OS, type MON3.SVC, then
 ; LOAD HELLO3.BIN and GO at MON3>.
 ; TAS HELLO3 HELLO3.BIN builds it.
 
