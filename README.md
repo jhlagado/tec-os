@@ -179,9 +179,10 @@ keyboard, returns to `MON3>`, and `EXIT` to `A>`. `HELLO3.ASM` is its source,
 and `TAS HELLO3 HELLO3.BIN` builds it. `BOUNCE.BAS` is Baza's sprite
 game: `BAZA BOUNCE` compiles it, showing a spinner while it works, and
 `BOUNCE` takes the PICO9918 in Graphics I through `CALL`; tap W, A, S and D,
-or the arrow keys, to steer the ship, and Q gives the display back. A BASIC program that has claimed the display and
-stops on an error gives it back first, so its message shows. A command that
-names a `.COM` file runs it, and `NAME.SVC` installs a service.
+or the arrow keys, to steer the ship, and Q gives the display back. A BASIC
+program that has claimed the display and stops on an error gives it back
+first, so its message shows. A command that names a `.COM` file runs it, and
+`NAME.SVC` installs a service.
 `A:STARTUP.CMD` runs after a reset, recognised or not, and never on an ordinary
 exit, from the volume selected as A:: the ROM runs its first line, and a shell
 that line loads runs the rest; a keypad key held from reset until the

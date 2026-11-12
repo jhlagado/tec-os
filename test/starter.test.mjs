@@ -124,6 +124,7 @@ function bounceRound(card) {
   keys("baza bounce\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
+  assert.equal(com.length, 20736, "BOUNCE.COM's length");
   assert.equal(sha(com.subarray(0, 20736)), "b524b72c8869f3778eed72c37e829ed027536f42345c882a95034c519852614f", "BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
@@ -349,5 +350,43 @@ test("on the card, TAS HELLO3 HELLO3.BIN rebuilds HELLO3.BIN as it is", { skip: 
   const built = Buffer.from(volume(card, "A").read("HELLO3.BIN"));
   assert.equal(sha(built.subarray(0, want.length)), sha(want), "the card's HELLO3.BIN");
   assert.ok(built.subarray(want.length).every((b) => b === 0 || b === 0x1a), "nothing after the program but the record's padding");
+  assert.deepEqual(m.violations, []);
+});
+
+// At the Viewer's 40 columns, TED shows BOUNCE.BAS's lines cut at column 40
+// and scrolls sideways to reach the rest. At the end of the longest line the
+// view shows the 40 columns that end there, every row cut at the same place,
+// and back at column 1 it starts at column 1 again. A TED that didn't scroll
+// sideways would keep the first 40 columns in view and fail the first check.
+test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longest line and back", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+  check(BOUNCE);
+  const card = Uint8Array.from(starter().card);
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  const keys = (s, what, done) => {
+    m.enqueueInput(s, "matrix");
+    m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
+  };
+  const source = readFileSync(BOUNCE.path, "latin1").replace(/\n$/, "").split("\n");
+  const n = source.reduce((best, l, i) => (l.length > source[best].length ? i : best), 0);
+  const len = source[n].length;
+  assert.ok(len > 40, "a line longer than the screen");
+  const rows = 23;
+  const view = () => m.screen().slice(0, rows).map((l) => l.trimEnd());
+  const cut = (from, top) => source.slice(top, top + rows).map((l) => l.slice(from, from + 40).trimEnd());
+  const status = () => m.screen()[rows];
+  keys("ted bounce.bas\r", "TED", () => /L1 C1\b/.test(status() ?? ""));
+  assert.equal(m.read(m.sym("VWID")), 40, "a 40-column console");
+  assert.deepEqual(view(), cut(0, 0), "each line cut at column 40");
+  const at = (col) => new RegExp(`L${n + 1} C${col}\\b`);
+  // Going down to the line scrolls just far enough to bring it to the last row.
+  const top = Math.max(0, n - (rows - 1));
+  keys("\x1b[B".repeat(n), `line ${n + 1}`, () => at(1).test(status()));
+  assert.deepEqual(view(), cut(0, top), `the rows from line ${top + 1}, cut at column 40`);
+  keys("\x1b[C".repeat(len - 1), `column ${len}`, () => at(len).test(status()));
+  assert.deepEqual(view(), cut(len - 40, top), `the view of columns ${len - 39} to ${len}`);
+  assert.equal(view()[n - top], source[n].slice(len - 40), "the longest line's last 40 columns");
+  keys("\x1b[D".repeat(len - 1), "column 1", () => at(1).test(status()));
+  assert.deepEqual(view(), cut(0, top), "back to the view from column 1");
+  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
   assert.deepEqual(m.violations, []);
 });
