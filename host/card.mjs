@@ -49,21 +49,60 @@ export function cardProblem(image, display) {
   return null;
 }
 
+// A card from before the shell has no SHELL.SVC, and its MON3.SVC, if any, is
+// a build the ROM installs without entering. The starter card's copies of these
+// bring it up to date; the card's other files are the user's and stay.
+const SYSTEM_FILES = ["SHELL.SVC", "MON3.SVC"];
+const UPGRADED = "This card is from before the shell: the page gave it the starter card's SHELL.SVC and MON3.SVC, and put SHELL.SVC first in STARTUP.CMD. Its other files are as they were.";
+
+/** True if BYTES is a service whose execution record asks to be entered on install. */
+function entersOnInstall(bytes) {
+  return bytes.length > 28 && bytes[25] === 0x45 && bytes[26] === 0x58 && bytes[27] === 1 && (bytes[28] & 2) !== 0;
+}
+
 /**
- * Ready the card for DISPLAY at WIDTH: the problem, if any, a note (none now),
- * and whether the card changed. The startup file's first line is set for the
- * display, and nothing else is written; a card from an older TEC-OS keeps its
- * files.
+ * True if the card is from before the shell: A: has no SHELL.SVC, and no
+ * MON3.SVC that is entered on install. A current card whose SHELL.SVC the user
+ * took off has the newer MON3.SVC, and is left without the shell.
  */
-export function prepareCard(image, display, width = 80) {
+export function predatesShell(image) {
+  const a = driveA(image);
+  const files = userZero(a);
+  if (files.some((f) => f.name === "SHELL.SVC")) return false;
+  return !files.some((f) => f.name === "MON3.SVC") || !entersOnInstall(a.read("MON3.SVC"));
+}
+
+/**
+ * Give a card from before the shell STARTER's SHELL.SVC, and STARTER's MON3.SVC
+ * in place of its own if it has one. True if it changed. STARTUP.CMD is
+ * setDisplayLine's, which puts SHELL.SVC first once the card has it.
+ */
+function upgradeSystem(image, starter) {
+  if (!predatesShell(image)) return false;
+  const a = driveA(image);
+  const from = driveA(starter);
+  const had = new Set(userZero(a).map((f) => f.name));
+  for (const name of SYSTEM_FILES) if (name === "SHELL.SVC" || had.has(name)) a.write(name, from.read(name));
+  return true;
+}
+
+/**
+ * Ready the card for DISPLAY at WIDTH: the problem, if any, a note, and whether
+ * the card changed. The startup file's first line is set for the display. Given
+ * STARTER, the current starter card's image, a card from before the shell also
+ * gets the starter's system files, and the note says so. Nothing else is
+ * written; a card from an older TEC-OS keeps its own files.
+ */
+export function prepareCard(image, display, width = 80, starter = null) {
   // The changes are made on a copy, and reach the card only when all are made:
   // a read-only A: or a full directory leaves the card as it was, and it boots so.
   const staged = image.slice();
   try {
     const problem = cardProblem(staged, display);
-    const changed = !problem && setDisplayLine(staged, display, width);
+    const upgraded = !problem && starter !== null && upgradeSystem(staged, starter);
+    const changed = !problem && (setDisplayLine(staged, display, width) || upgraded);
     if (changed) image.set(staged);
-    return { problem, note: null, changed };
+    return { problem, note: upgraded ? UPGRADED : null, changed };
   } catch (e) {
     // The user's read-only mark on STARTUP.CMD stands: write refuses it (KE-AR10),
     // and the page says so rather than force it.
