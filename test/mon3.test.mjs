@@ -1596,7 +1596,7 @@ test("KG68 docs agree", async () => {
   for (const n of ["DISFROM", "C_FILENO", "0600h–07FFh", "Z and C set, as a key press gives", "Tables damaged: EXIT and reset"]) assert.ok(mon3.includes(n), `mon3.md: ${n}`);
   assert.match(mon3, /Not built:\*\* `RST 18h`'s calls 21 to 33/);
   // The TPA with GLCD.SVC as well, three pages less.
-  assert.ok(mon3.includes(`the TPA is **${(fig.tpa - 768).toLocaleString("en")}**`), "the TPA with GLCD.SVC");
+  assert.ok(mon3.includes(`and ${(fig.tpa - 768).toLocaleString("en")} with \`GLCD.SVC\``), "the TPA with GLCD.SVC and no shell");
   // The graphics calls the doc lists as built are those of the service's
   // RST 18h table, and the refused ones the rest of MON-3's 34.
   const gtable = src.slice(src.indexOf("\nGAPI:")).split("\n\n")[0];
