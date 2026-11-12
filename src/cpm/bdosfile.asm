@@ -213,6 +213,8 @@ FNOPEN:
 ; nonlocally.
 
 FNCLSE:
+  call CPOUT     ; data before directory
+  jp nz,BADSECT  ; card refused it
   call CLOSEFCB
   ret
 

@@ -303,8 +303,10 @@ SDXB: DS 1       ; LATEXP for cache line
 
 ; CNEXT is a replacement cursor, not
 ; access-order LRU. CWTYPE is BIOS type
-; with bit 7 for write-through and bit 6
-; for a taken line.
+; with bit 7 for write-through, bit 6
+; for a taken line and bit 5 for a data
+; write held to coalesce. CPEND is the
+; pending line plus one, 0 for none.
 ; CIFF saves AF from IFFGET, including
 ; sampled A and flags/PV. CEI restores
 ; maskable IFF from PV. It does not save
@@ -313,6 +315,7 @@ SDXB: DS 1       ; LATEXP for cache line
 CNEXT: DS 1
 CWTYPE: DS 1
 CIFF: DS 2
+CPEND: DS 1
 
 ; Matrix scan state and pending arrow
 ; bytes. Arrow input returns ESC first
@@ -403,7 +406,7 @@ CHPOS: DS 1      ; bit 0 a function 47
 ; into LOADBUF. The high state still
 ; ends at C000h.
 
-HIFREE: DS 127
+HIFREE: DS 126
 
 ; Relocated page-zero console state.
 ; Access requires the classic bank. INFO
