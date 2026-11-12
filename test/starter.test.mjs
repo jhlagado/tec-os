@@ -18,7 +18,7 @@ import { GLCD_SVC, ROOT, boot, program, volume, SHELL_SVC } from "./lib/fixtures
 import { check, pinned } from "./lib/inputs.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
-import { prepareCard } from "../host/card.mjs";
+import { needsStarter, prepareCard } from "../host/card.mjs";
 
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
@@ -411,6 +411,12 @@ function preShellCard(startup = "CON PICO 40\r\n") {
 }
 const filesOf = (card, drive) => Object.fromEntries(volume(card, drive).list().map((f) => [f.name, sha(volume(card, drive).read(f.name))]));
 const startupOf = (card) => Buffer.from(volume(card, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0];
+/** IMAGE is BEFORE byte for byte; on a difference, the first offset, never a diff of 10 MiB. */
+function sameImage(image, before, what) {
+  if (Buffer.compare(Buffer.from(image.buffer, image.byteOffset, image.length), Buffer.from(before.buffer, before.byteOffset, before.length)) === 0) return;
+  const at = image.findIndex((b, i) => b !== before[i]);
+  assert.fail(`${what}: the card differs at ${at < 0 ? `its length, ${image.length} against ${before.length}` : `${at.toString(16)}h`}`);
+}
 const userFiles = (card) => {
   const { "SHELL.SVC": _s, "MON3.SVC": _m, "STARTUP.CMD": _c, ...rest } = filesOf(card, "A");
   return { A: rest, B: filesOf(card, "B") };
@@ -422,10 +428,11 @@ test("the web host: a card saved before the shell gets the starter's SHELL.SVC a
   const before = userFiles(card);
   const bare = boot(Uint8Array.from(card), { tms: true, matrix: true, width: 40 });
   assert.match(bare.command("SERVICES"), /SERVICES\?/, "unprepared, it boots to the ROM's own prompt");
+  assert.equal(needsStarter(card), true, "the page fetches the starter card for it");
   const got = prepareCard(card, "tms", "40", starter().card);
   assert.equal(got.problem, null);
   assert.equal(got.changed, true);
-  assert.match(got.note, /before the shell.*SHELL\.SVC and MON3\.SVC/);
+  assert.equal(got.note, "This card is from before the shell: the page gave it the starter card's SHELL.SVC and MON3.SVC, and put SHELL.SVC first in STARTUP.CMD. Its other files are as they were.");
   const want = filesOf(starter().card, "A");
   const now = filesOf(card, "A");
   for (const name of ["SHELL.SVC", "MON3.SVC"]) assert.equal(now[name], want[name], `the starter's ${name}`);
@@ -439,10 +446,12 @@ test("the web host: a card saved before the shell gets the starter's SHELL.SVC a
 
 test("the web host: a current card is unchanged by the starter's files, and one whose SHELL.SVC the user erased stays without it", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
   const card = Uint8Array.from(starter().card);
+  assert.equal(needsStarter(card), false, "no starter card fetched for it");
+  assert.equal(needsStarter(new Uint8Array(4096)), false, "nor for a card with no drive A");
   prepareCard(card, "tms", "40");
   const ready = card.slice();
   assert.deepEqual(prepareCard(card, "tms", "40", starter().card), { problem: null, note: null, changed: false });
-  assert.deepEqual(card, ready, "byte for byte");
+  sameImage(card, ready, "byte for byte");
   volume(card, "A").erase("SHELL.SVC");
   const erased = filesOf(card, "A");
   assert.equal(prepareCard(card, "tms", "40", starter().card).note, null);
@@ -453,7 +462,9 @@ test("the web host: a current card is unchanged by the starter's files, and one 
 
 test("the web host: a pre-shell card's own STARTUP.CMD lines follow SHELL.SVC and the display's line and run under the shell, and a read-only one leaves the card as it was", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
   const card = preShellCard("GLCD.SVC\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0");
-  assert.equal(prepareCard(card, "tms", "40", starter().card).changed, true);
+  const prepared = prepareCard(card, "tms", "40", starter().card);
+  assert.equal(prepared.changed, true);
+  assert.match(prepared.note, /its later lines, which the ROM alone never ran, now run under the shell/);
   assert.equal(startupOf(card), "SHELL.SVC\r\nCON PICO 40\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0\r\n");
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   assert.match(m.text(0), />TYPE NOTES\.TXT\r\r\nmy own notes\r\n/, "the user's TYPE ran");
@@ -464,7 +475,54 @@ test("the web host: a pre-shell card's own STARTUP.CMD lines follow SHELL.SVC an
   volume(locked, "A").write("STARTUP.CMD", Buffer.from("CON PICO 40\r\n\x1a", "latin1"), { readOnly: true });
   const before = locked.slice();
   const got = prepareCard(locked, "tms", "40", starter().card);
-  assert.match(got.problem, /STARTUP\.CMD is read-only/);
+  assert.equal(got.problem, null, "its display line is already right");
+  assert.match(got.note, /couldn't add the shell .*STARTUP\.CMD is read-only.*boots without the shell/);
   assert.equal(got.changed, false);
-  assert.deepEqual(locked, before, "no SHELL.SVC without its line: the card boots as it is");
+  sameImage(locked, before, "no SHELL.SVC without its line: the card boots as it is");
+});
+
+test("the web host: a pre-shell card with no MON3.SVC gets SHELL.SVC alone, and only user 0's files count", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
+  const card = preShellCard();
+  volume(card, "A").erase("MON3.SVC");
+  const got = prepareCard(card, "tms", "40", starter().card);
+  assert.match(got.note, /starter card's SHELL\.SVC, and put/, "the note names what was written");
+  assert.equal(volume(card, "A").find("MON3.SVC"), undefined, "no MON3.SVC written onto a card that had none");
+  assert.equal(filesOf(card, "A")["SHELL.SVC"], filesOf(starter().card, "A")["SHELL.SVC"]);
+
+  // Another user's SHELL.SVC and newer MON3.SVC aren't the ROM's: user 0 is upgraded, and they stay.
+  const others = preShellCard();
+  const a = volume(others, "A");
+  const from = volume(starter().card, "A");
+  a.write("SHELL.SVC", from.read("SHELL.SVC"), { user: 2 });
+  a.write("MON3.SVC", from.read("MON3.SVC"), { user: 3 });
+  const theirs = [sha(a.read("SHELL.SVC", { user: 2 })), sha(a.read("MON3.SVC", { user: 3 }))];
+  assert.equal(needsStarter(others), true);
+  assert.match(prepareCard(others, "tms", "40", starter().card).note, /SHELL\.SVC and MON3\.SVC/);
+  const now = filesOf(others, "A");
+  for (const name of ["SHELL.SVC", "MON3.SVC"]) assert.equal(now[name], filesOf(starter().card, "A")[name], `user 0's ${name}, the starter's`);
+  assert.deepEqual([sha(a.read("SHELL.SVC", { user: 2 })), sha(a.read("MON3.SVC", { user: 3 }))], theirs, "users 2 and 3 as they were");
+});
+
+test("the web host: a pre-shell card the shell can't be added to, a read-only MON3.SVC, a full A: or a full directory, gets its display line alone and a note", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
+  const fill = (a) => a.write("FILL.DAT", new Uint8Array(a.freeBytes()));
+  const cases = [
+    ["a read-only MON3.SVC", (a) => a.write("MON3.SVC", Buffer.from(OLD_MON3.file, "base64"), { readOnly: true }), /MON3\.SVC is read-only/],
+    ["a full A:", fill, /disk full/],
+    ["a full directory", (a) => {
+      for (let i = 0; a.list().length < a.entries; i += 1) a.write(`E${i}.DAT`, new Uint8Array());
+    }, /directory full/],
+  ];
+  for (const [what, spoil, why] of cases) {
+    const card = preShellCard("GLCD.SVC\r\nTYPE NOTES.TXT\r\n");
+    spoil(volume(card, "A"));
+    const mon3 = sha(volume(card, "A").read("MON3.SVC"));
+    const got = prepareCard(card, "tms", "40", starter().card);
+    assert.equal(got.problem, null, what);
+    assert.equal(got.changed, true, `${what}: the display's line is set`);
+    assert.match(got.note, /couldn't add the shell/, what);
+    assert.match(got.note, why, what);
+    assert.equal(startupOf(card), "CON PICO 40\r\nTYPE NOTES.TXT\r\n", `${what}: the display's line alone, as with no starter card`);
+    assert.equal(volume(card, "A").find("SHELL.SVC"), undefined, `${what}: no SHELL.SVC`);
+    assert.equal(sha(volume(card, "A").read("MON3.SVC")), mon3, `${what}: its own MON3.SVC`);
+  }
 });
