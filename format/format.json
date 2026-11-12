@@ -33,12 +33,11 @@
       "geometry": { "offset": 12, "size": 1 },
       "flags": { "offset": 13, "size": 1 },
       "mount": { "offset": 14, "size": 1 },
-      "cache": { "offset": 15, "size": 1 },
+      "reserved0": { "offset": 15, "size": 1 },
       "label": { "offset": 16, "size": 11 },
       "reserved1": { "offset": 27, "size": 5 }
     },
     "flags": { "readOnly": 1 },
-    "cacheFlags": { "writeBehind": 1 },
     "unmounted": 255,
     "startAlignBlocks": 8
   },

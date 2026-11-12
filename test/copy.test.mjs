@@ -1,10 +1,11 @@
 // SHELL.SVC's COPY, moved from the CCP: to a drive alone, never onto
 // itself, and as COPY.COM in every other case. Each run
 // boots with the shell holding the prompt, from a fresh card:
-// SYSTEM on A:, WORK on B: written behind as on the starter card, ARCHIVE on
-// C:, read-only. The TPA is filled with a pattern before the command and must
-// hold it; then ^C warm boots, so B:'s lines reach the card, before the card
-// is read. Emulator evidence.
+// SYSTEM on A:, WORK on B: as on the starter card, ARCHIVE on C:, read-only.
+// The logged drive is written behind and the others coalesce. The TPA is
+// filled with a pattern before the command and must hold it; then ^C warm
+// boots, so every line reaches the card, before the card is read. Emulator
+// evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -21,7 +22,7 @@ const copyCom = (await program("copy")).bytes;
 function card() {
   const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
-    { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },
+    { geometry: "G8M", label: "WORK", mount: "B" },
     { geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true },
   ]);
   const a = volume(image, "A");

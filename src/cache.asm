@@ -3,12 +3,13 @@
 ; absolute card-block tags start at
 ; BC00h. Dirty bytes start at BC80h.
 ; FFFFFFFFh means empty. Volume reads
-; use the cache. Drive flag bit 1
-; selects write-behind. Other volumes
-; write through. Write-behind lines may
-; be written for a directory request,
+; use the cache. The logged drive,
+; BOOTDRV, is written behind. Other
+; volumes coalesce. Write-behind lines
+; are written for a directory write,
 ; all-dirty allocation, explicit flush,
-; warm boot or mount change.
+; a console read, a drive change, warm
+; boot or mount change.
 ; Mapped intervals use no stack. Callers
 ; must provide safe bank/interrupt
 ; state. BIOS CDI/CEI disables and
@@ -418,14 +419,12 @@ CRD1:
 ; BWRITE supplies the mapped request,
 ; valid DSKDMA and CWTYPE. Bits 0/1
 ; encode 0 data, 1 directory, 2 new
-; allocation. Bit 7 selects
-; write-through. C=0 retains old bytes,
+; allocation. C=0 retains old bytes,
 ; reading on a miss. C=1 permits
-; zero-fill even on a hit. A newly taken
-; line sets bit 6. Return Z on success,
-; NZ on error. Change AF/BC/DE/HL. A
-; full cache pre-read sets I=0, even if
-; a later write fails.
+; zero-fill even on a hit. Return Z on
+; success, NZ on error. Change
+; AF/BC/DE/HL. A full cache pre-read
+; sets I=0, even if a later write fails.
 
 CWRBH:
   push bc
@@ -436,8 +435,6 @@ CWRBH:
   call CTAKE
   pop bc
   ret nz
-  ld hl,CWTYPE
-  set 6,(hl)
   inc c
   dec c
   jr z,CWBF
@@ -499,12 +496,11 @@ CWBK1:
   ld a,c
 
 ; Copy the record before publishing
-; dirty state. CWTYPE bit 7 selects
-; write-through first. Bit 5 makes the
+; dirty state. CWTYPE bit 5 makes the
 ; line the pending one. Otherwise type 1
 ; selects directory-last flush. Other
-; writes return A=0/Z with data still
-; dirty.
+; writes, held behind, set CANY and
+; return A=0/Z with data still dirty.
 
 CWB2:
   push af
@@ -513,12 +509,12 @@ CWB2:
   call CDSET
   ld c,a
   ld a,(CWTYPE)
-  or a
-  jp m,CWBT
   bit 5,a
   jr nz,CWCO
   rrca
   jr c,CWB3
+  ld a,1
+  ld (CANY),a    ; a line held behind
   xor a
   ret
 
@@ -529,26 +525,12 @@ CWCO:
   xor a
   ret
 
-; Write through before returning.
-; Failure drops the line. Success makes
-; a newly taken line CNEXT again for
-; reuse. A hit does not reset CNEXT.
-
-CWBT:
-  ld a,c
-  call CWRITE
-  jr nz,CWBX
-  ld hl,CWTYPE
-  bit 6,(hl)
-  ret z
-  ld (CNEXT),a
-  cp a
-  ret
-
-; Write-behind directory: flush all
-; other dirty cache lines first. Write
-; this directory last only after
-; success. Failed data remains dirty for
+; A directory write, on any drive:
+; flush all other dirty cache lines
+; first, and write this directory line
+; last only after success, so no entry
+; names data the card lacks. Failed
+; data remains dirty for
 ; retry. Either error drops the current
 ; line and returns NZ with A=line OR 1.
 ; Card bytes may already have changed.
@@ -595,6 +577,35 @@ CPFLSH:
   xor a
   ld (CPEND),a
   ret
+
+; CKEY runs at each console read and
+; writes every dirty line, so nothing
+; waits unwritten while a program waits
+; for a key. A line that fails is kept
+; for retry and not reported. CANY is
+; set when a data write is held behind
+; on the logged drive, and cleared once
+; a flush keeps no line. While it is
+; clear only the pending block can be
+; dirty, and CPOUT's cheaper test
+; writes it. Return A=0/Z, or A=1/NZ
+; when a write failed. Keep DE.
+
+CKEY:
+  ld a,(CANY)
+  or a
+  jp z,CPOUT     ; none held behind
+  push de
+  call CDI
+  ld a,NLINES    ; no line excluded
+  call CFLUSH
+  jr nz,CKY1     ; a line kept
+  xor a
+  ld (CANY),a
+
+CKY1:
+  pop de
+  jp BRET
 
 ; CPOUT is CPFLSH for BDOS callers, with
 ; CDI/CEI around it. Return A=0/Z, or

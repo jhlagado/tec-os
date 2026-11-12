@@ -1321,7 +1321,7 @@ function writer(name, close) {
 async function hangAndReset(svc) {
   svc ??= await mon3Build();
   const { createContainer } = await import("../tools/lib/container.mjs");
-  const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true }]);
+  const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }]);
   const a = volume(image, "A");
   for (const [n, b] of Object.entries({ "MON3.SVC": svc.file, "WC.BIN": writer("F.DAT", true), "WU.BIN": writer("G.DAT", false), "LOOP.BIN": bin(0x18, 0xfe) })) a.write(n, b);
   volume(image, "B").write("F.DAT", new Uint8Array(512).fill(0x11));

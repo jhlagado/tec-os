@@ -1,12 +1,13 @@
-// A: coalesces: a data write on a volume not written behind goes into its
-// block's cache line, and the one pending block reaches the card at the
+// A: coalesces: a data write on a volume not on the logged drive goes into
+// its block's cache line, and the one pending block reaches the card at the
 // file's close, any directory request, a write to another block, a warm
-// boot, a console read, function 48, MOUNT and unmount. The ROM's figures,
-// the flush rule, one card write a block, the directory at every cut,
-// failures and a card changed, a reset with a block pending, the speed, the
-// volume written behind, the program's stack at CONIN, the docs and the
-// version fields. Emulator evidence; each mutant is the build's ROM patched,
-// run here one at a time.
+// boot, a console read, function 48, MOUNT and unmount. The rows that test
+// A:'s coalescing run logged on B:, whose volume is the one written behind.
+// The ROM's figures, the flush rule, one card write a block, the directory
+// at every cut, failures and a card changed, a reset with a block pending,
+// the speed, the logged drive written behind, the program's stack at CONIN,
+// the docs and the version fields. Emulator evidence; each mutant is the
+// build's ROM patched, run here one at a time.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -26,6 +27,12 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // the census's BDOS deepest, BDOS 11 with nothing waiting and BDOS 11 after
 // each of 32 records, in cycles from the stub.
 const LANDING = { used: 14769, tpa: 47273, abi: "1a020a1b076c3b7b4282c64ceeb82dad471c3ecbbe883c5d3448a859e0a07413", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
+
+// The console read's costs before write-behind followed the logged drive,
+// measured with these stubs on the ROM that landed A: coalescing and TED's
+// & stop: BDOS 11 with nothing waiting, and BDOS 11 after each of 32
+// records to A:, logged on B: and logged on A:.
+const COALESCED = { bdos11: 3859, worstOnB: 7_554_875, worstOnA: 7_549_907 };
 
 // --- Every landing keeps the version fields --------------------------------
 
@@ -263,6 +270,8 @@ test("AC3 mutant: BWGET without CPMOVE makes 4 card writes and the file isn't wh
 // The starter card's commands, as the Viewer runs them: the PICO9918 at 40
 // columns and the matrix keyboard.
 const PINS = ["BAZA.COM", "BAZA.RTL", "BOUNCE.BAS", "TAS.COM", "TED.COM"].map(pinned);
+// A prompt, with or without the shell's volume label.
+const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
 const CARD_SKIP = PINS.some((p) => p.skip);
 let starter;
 const starterCard = () => {
@@ -274,16 +283,20 @@ const starterCard = () => {
 };
 const traces = new Map();
 /**
- * COMMAND on the starter card: its cycles from the CR to the prompt, its
- * card writes by block, each with the BDOS function it was made in, and its
- * BDOS 21 calls' cycles. The card's programs must be the pinned ones, since
- * the figures they are held to were measured on them.
+ * COMMAND on the starter card, logged on B: so that A: coalesces: its cycles
+ * from the CR to the prompt, its card writes by block, each with the BDOS
+ * function it was made in, and its BDOS 21 calls' cycles. The card's
+ * programs must be the pinned ones, since the figures they are held to were
+ * measured on them.
  */
 function onStarter(command) {
   PINS.forEach(check);
   if (traces.has(command)) return traces.get(command);
   const image = starterCard();
   const m = boot(image, { tms: true, matrix: true, width: 40 });
+  m.mark = m.output.length;
+  m.enqueueInput("B:\r", "matrix");
+  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && PROMPT.test(m.text(m.mark))), 400_000_000, "B:");
   const [entry, back, sdw, lba] = [m.sym("BENTRY"), m.sym("RETWORD") + 6, m.sym("SDWRITE"), m.sym("SDLBA")];
   const t = { writes: [], fn: [], w21: [] };
   let on = false;
@@ -305,7 +318,7 @@ function onStarter(command) {
   const t0 = m.cycles;
   on = true;
   m.enqueueInput(`${command}\r`, "matrix");
-  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && /A>$/.test(m.text(mark))), 4_000_000_000, command);
+  m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && PROMPT.test(m.text(mark))), 4_000_000_000, command);
   on = false;
   const out = { ...t, cycles: m.cycles - t0, text: m.text(mark), dir: dirBlocks(image) };
   traces.set(command, out);
@@ -313,7 +326,7 @@ function onStarter(command) {
 }
 
 test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
-  const b = onStarter("baza bounce");
+  const b = onStarter("baza a:bounce");
   assert.match(b.text, /COM written\r\n/);
   assert.ok(b.writes.length <= 48, `${b.writes.length} card writes`);
   // BAZA closes its output, writes one more record into the same block and
@@ -328,7 +341,7 @@ test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
 });
 
 test("AC3 save", { skip: CARD_SKIP, timeout: 300_000 }, () => {
-  const s = onStarter("save 16 x.com");
+  const s = onStarter("save 16 a:x.com");
   assert.ok(s.writes.length <= 10, `${s.writes.length} card writes`);
   console.log(`SAVE 16 X.COM: ${s.writes.length} card writes, ${s.cycles} cycles`);
 });
@@ -569,7 +582,7 @@ test("AC6 bdos 40", () => {
 const BOUNCE_BASE = 103_285_677;
 
 test("AC7 bounce speed", { skip: CARD_SKIP, timeout: 900_000 }, () => {
-  const b = onStarter("baza bounce");
+  const b = onStarter("baza a:bounce");
   const seconds = b.cycles / 4e6;
   const mean = b.w21.reduce((s, x) => s + x, 0) / b.w21.length;
   assert.ok(seconds <= 19.5, `${seconds.toFixed(2)} s at 4 MHz`);
@@ -587,20 +600,24 @@ test("AC7 file speed", () => {
 function consoleCost(rom) {
   const r = rig({ rom });
   const t = r.bdos(11, 0).cycles;
-  assert.ok(t - LANDING.bdos11 <= 60, `BDOS 11: ${t} T, ${t - LANDING.bdos11} over the shell's landing`);
+  assert.ok(t - COALESCED.bdos11 <= 60, `BDOS 11: ${t} T, ${t - COALESCED.bdos11} over A: coalescing's`);
   return t;
 }
 
 test("AC7 console cost", () => {
   const t = consoleCost();
-  console.log(`BDOS 11 with nothing pending: ${t} T (+${t - LANDING.bdos11})`);
+  console.log(`BDOS 11 with nothing pending, logged on B:: ${t} T (+${t - COALESCED.bdos11})`);
 });
 test("AC7 mutant: CPOUT without its fast test of CPEND costs BDOS 11 more than 60 T", () => {
-  assert.throws(() => consoleCost(MUTANTS.nofast()), /over the shell's landing/);
+  assert.throws(() => consoleCost(MUTANTS.nofast()), /over A: coalescing's/);
+});
+test("AC7 mutant: CKEY that never tests CANY costs BDOS 11 more than 60 T", () => {
+  assert.throws(() => consoleCost(MUTANTS.mnc()), /over A: coalescing's/);
 });
 
-test("AC7 worst case", () => {
-  const r = rig();
+/** BDOS 11 after each of 32 records to A:, logged on LOGGED: the cycles and the percentage over BASE, which must be at most BOUND. */
+function worstCase(logged, base, bound, rom) {
+  const r = rig({ rom, logged });
   r.name("S11     DAT");
   r.bdos(22);
   r.bdos(26, DMA);
@@ -609,13 +626,33 @@ test("AC7 worst case", () => {
     r.put(k);
     t += r.bdos(21).cycles + r.bdos(11, 0).cycles;
   }
-  const over = (t / LANDING.worst - 1) * 100;
-  assert.ok(over <= 1, `${t} T, ${over.toFixed(2)} % over the shell's landing`);
-  console.log(`BDOS 11 after each of 32 records: ${t} T (+${over.toFixed(2)} %)`);
+  const over = (t / base - 1) * 100;
+  assert.ok(over <= bound, `${t} T, ${over.toFixed(2)} % over A: coalescing's ${base}`);
+  return { t, over };
+}
+
+test("AC7 worst case", () => {
+  const { t, over } = worstCase("B", COALESCED.worstOnB, 1);
+  console.log(`BDOS 11 after each of 32 records, logged on B:: ${t} T (+${over.toFixed(2)} %)`);
+});
+test("AC7 mutant: CKEY that never tests CANY takes the worst case logged on B: past 1 %", () => {
+  assert.throws(() => worstCase("B", COALESCED.worstOnB, 1, MUTANTS.mnc()), /% over/);
+});
+
+// Logged on A:, A: is written behind: each BDOS 11 after a held write scans
+// the lines and writes the record's block. That is the cost of every line
+// being on the card at a key wait.
+test("AC7 worst case logged", () => {
+  const { t, over } = worstCase("A", COALESCED.worstOnA, 5);
+  console.log(`BDOS 11 after each of 32 records, logged on A:: ${t} T (+${over.toFixed(2)} %)`);
+});
+test("AC7 mutant: CKEY scanning twice takes the worst case logged on A: past 5 %", () => {
+  assert.throws(() => worstCase("A", COALESCED.worstOnA, 5, MUTANTS.mtw()), /% over/);
 });
 
 // --- What stays ---------------------------------------------------------------
 
+/** Logged on B:, eight records to B: wait in the cache, held behind, until the close writes them and then its entry. */
 function writtenBehind(rom) {
   const r = rig({ rom });
   r.name("W       DAT", FCB, 2);
@@ -638,26 +675,27 @@ function writtenBehind(rom) {
   assert.ok(same(b.read("W.DAT"), Uint8Array.from(Array.from({ length: 8 }, (_, k) => [...pat(k)]).flat())));
 }
 
-test("AC8 written behind unchanged", { timeout: 300_000 }, () => {
+test("AC8 the logged drive written behind", { timeout: 300_000 }, () => {
   writtenBehind();
-  // COPY, TYPE and DIR under the shell, with B: written behind.
+  // COPY, TYPE and DIR under the shell, logged on A:, which is written
+  // behind, with the copy on B:, which coalesces.
   const image = withShell(card());
   const data = Uint8Array.from({ length: 6000 }, (_, i) => (i * 7 + 1) & 0xff);
   const text = Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join("\r\n") + "\r\n";
   volume(image, "A").write("DATA.BIN", data);
   volume(image, "A").write("T.TXT", Buffer.from(text + "\x1a", "latin1"));
   const m = boot(image);
-  const cmd = (l) => m.command(l, { prompt: /\r\n[A-P]>$/, maxCycles: 2_000_000_000 });
+  const cmd = (l) => m.command(l, { prompt: PROMPT, maxCycles: 2_000_000_000 });
   cmd("COPY DATA.BIN B:DATA.CPY");
   assert.ok(cmd("TYPE T.TXT").includes(text), "TYPE gives the file's text");
   assert.match(cmd("DIR B:"), /DATA\s*\.?\s*CPY/, "DIR lists the copy");
   m.mark = m.output.length;
   m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.ready() && /\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
+  m.runUntil(() => m.ready() && PROMPT.test(m.text(m.mark)), 400_000_000, "warm boot");
   assert.ok(same(volume(image, "B").read("DATA.CPY").subarray(0, data.length), data), "COPY's bytes on the card after warm boot");
   assert.ok(same(volume(image, "A").read("DATA.BIN").subarray(0, data.length), data));
 });
-test("AC8 mutant: BWGET marking a write-behind volume's writes to coalesce leaves B:'s block pending", () => {
+test("AC8 mutant: BWGET marking the logged drive's writes to coalesce leaves B:'s block pending", () => {
   assert.throws(() => writtenBehind(MUTANTS.wbcoalesce()), /nothing pending/);
 });
 
@@ -672,12 +710,19 @@ function checkFlushStacks(runs) {
     assert.ok(run.bdos.deepest <= LANDING.bdosDeepest, `${mode}: the BDOS's deepest ${run.bdos.deepest}, at the shell's landing ${LANDING.bdosDeepest}`);
     assert.ok((run.bdos.deepest + lim) * 4 <= run.bdos.reserved * 3, `${mode}: the BDOS's ${run.bdos.deepest} and the services' limit ${lim} take more than three quarters of ${run.bdos.reserved}`);
     const below = run.programStack["BIOS CONIN"] - 2;
-    assert.ok(below <= 18, `${mode}: CONIN with a block pending takes ${below} bytes below the return address`);
+    assert.ok(below <= 20, `${mode}: CONIN with a block pending takes ${below} bytes below the return address`);
   }
 }
 
+// Logged on A:, CONIN's flush of the lines held behind takes CFLUSH's
+// PUSH BC more than CPOUT, 20 bytes of the 28 a program is given.
 test("AC10 conin stack", { timeout: 300_000 }, () => {
-  const runs = { writing: flushRun("writing"), refusing: flushRun("refusing") };
+  const runs = {
+    writing: flushRun("writing"),
+    refusing: flushRun("refusing"),
+    "writing, logged on A:": flushRun("writing", undefined, { logged: "A" }),
+    "refusing, logged on A:": flushRun("refusing", undefined, { logged: "A" }),
+  };
   checkFlushStacks(runs);
   console.log(JSON.stringify(Object.fromEntries(Object.entries(runs).map(([k, r]) => [k, { bdos: r.bdos.deepest, conin: r.programStack["BIOS CONIN"] - 2 }]))));
 });

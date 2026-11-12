@@ -278,7 +278,7 @@ FNRETG:
 ; change.
 
 FNCIN:
-  call CPOUT     ; write pending block
+  call CKEY      ; write every line
   call GETCHAR   ; pending byte first
   ld c,a
   push af        ; save original byte
@@ -330,7 +330,7 @@ FNDIRECT:
   ld a,e         ; E selects mode
   inc a          ; FFh: direct input
   jr nz,DIROUT   ; not FFh: output
-  call CPOUT     ; write pending block
+  call CKEY      ; write every line
   call CONSTAT   ; pending or BIOS ready
   or a
   ret z          ; A=0: zero
@@ -401,7 +401,7 @@ PRLOOP:
 ; change.
 
 FNLINE:
-  call CPOUT     ; write pending block
+  call CKEY      ; write every line
   ex de,hl       ; HL: the buffer
   ld a,(hl)
   ld (LINMAX),a  ; buffer capacity
@@ -705,7 +705,7 @@ LINHC:
 ; GETCHAR.
 
 FNSTAT:
-  call CPOUT     ; write pending block
+  call CKEY      ; write every line
 
   ld a,(PENDING)
   or a

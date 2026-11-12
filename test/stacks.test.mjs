@@ -1,9 +1,9 @@
 // Stack high-water marks from reset, under the heaviest workloads in the
 // suite, on the serial console, the PICO9918 and the GLCD with the matrix
-// keyboard, on the serial console with B: written behind, on the diagnostic
+// keyboard, on the serial console logged on B:, written behind, on the diagnostic
 // console without a card, serial and on a PICO9918 board, on the CCP's two deepest paths: CON UC1 loading
 // GLCD.SVC on a PICO9918 and matrix board, whose console is the ROM's, and on a GLCD board, and with A:'s
-// pending block written at each flush point, the card taking writes and refusing them. Every memory write
+// pending block written at each flush point, logged on B: and logged on A:, the card taking writes and refusing them. Every memory write
 // is watched; the lowest address written in each stack (other than by an
 // LDIR, which clears the workspace) gives its depth. A keypad NMI is pressed
 // whenever SP reaches a new low in a stack while 0066h holds RETN. TEC-OS
@@ -44,15 +44,16 @@ const COMMANDS = [
   "E:\r",
 ];
 
-// With B: written behind: its lines written inside BIOS WRITE at each
-// directory write, and by warm boot after DIRTY leaves a file unclosed.
-const WRITE_BEHIND = ["SAVE 4 B:S.COM\r", "COPY DATA.BIN B:DATA.CP2\r", "DIRTY\r"];
+// Logged on B:, so that B: is written behind: its lines written inside BIOS
+// WRITE at each directory write, and by warm boot after DIRTY leaves a file
+// unclosed.
+const WRITE_BEHIND = ["B:\r", "SAVE 4 S.COM\r", "COPY A:DATA.BIN DATA.CP2\r", "DIRTY\r", "A:\r"];
 
 async function consoleRun(opts, { wb = false } = {}) {
   const { rom, symbols } = romFor();
   const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
-    { geometry: "G8M", label: "WORK", mount: "B", writeBehind: wb },
+    { geometry: "G8M", label: "WORK", mount: "B" },
     { geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true },
   ]);
   const a = volume(image, "A");
@@ -179,9 +180,12 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     // removed, and UNLOAD; and MON3.SVC resident, then unloaded.
     ks53: await ks53Census(),
     mon3: await deepPaths([["MON3.SVC\r", /MON3>$/], "EXIT\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r", "UNLOAD\r"], {}, { files: { "MON3.SVC": (await mon3Svc()).file } }),
-    // A block pending on A: at each flush point, then an extent change.
+    // A block pending on A: at each flush point, then an extent change,
+    // logged on B:, A: coalescing; and logged on A:, A: written behind.
     flushWriting: flushRun("writing"),
     flushRefusing: flushRun("refusing"),
+    flushWritingLogged: flushRun("writing", undefined, { logged: "A" }),
+    flushRefusingLogged: flushRun("refusing", undefined, { logged: "A" }),
   };
   assert.equal(runs.pico9918.conmod, 1, "the pico9918 run is on CRT:");
   assert.equal(runs.diagnosticsPico.conmod, 1, "the PICO9918 DIAG run is on CRT:");
@@ -199,7 +203,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console with B: written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; a block pending on A: before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, then an extent change, with the card taking writes and refusing them. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console logged on B:, written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; a block pending on A: before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, then an extent change, logged on B: and on A:, with the card taking writes and refusing them. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));
@@ -211,7 +215,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   // the limit together keep a quarter of each stack free (KE-173). SVCLIM is BDOS, BIOS, CCP.
   const { rom, symbols } = romFor();
   const lim = Object.fromEntries(["bdos", "bios", "ccp"].map((k, i) => [k, rom[symbols.get("SVCLIM") - 0xc000 + i]]));
-  const bare = ["serial", "pico9918", "writeBehind", "diagnostics", "diagnosticsPico", "picoRom", "recognisedReset", "chained", "serialPlain", "flushWriting", "flushRefusing"];
+  const bare = ["serial", "pico9918", "writeBehind", "diagnostics", "diagnosticsPico", "picoRom", "recognisedReset", "chained", "serialPlain", "flushWriting", "flushRefusing", "flushWritingLogged", "flushRefusingLogged"];
   for (const k of ["bdos", "ccp", "bios"]) {
     const base = Math.max(...bare.map((r) => runs[r][k].deepest));
     const { reserved } = census[k];

@@ -303,18 +303,19 @@ SDXB: DS 1       ; LATEXP for cache line
 
 ; CNEXT is a replacement cursor, not
 ; access-order LRU. CWTYPE is BIOS type
-; with bit 7 for write-through, bit 6
-; for a taken line and bit 5 for a data
-; write held to coalesce. CPEND is the
-; pending line plus one, 0 for none.
-; CIFF saves AF from IFFGET, including
-; sampled A and flags/PV. CEI restores
-; maskable IFF from PV. It does not save
-; I or exclude NMI.
+; with bit 5 for a data write held to
+; coalesce. CPEND is the pending line
+; plus one, 0 for none. CIFF saves the
+; flags from IFFGET, PV among them. CEI
+; restores maskable IFF from PV. It
+; does not save I or exclude NMI. CANY
+; is set while a data write may be held
+; behind on the logged drive.
 
 CNEXT: DS 1
 CWTYPE: DS 1
-CIFF: DS 2
+CIFF: DS 1
+CANY: DS 1
 CPEND: DS 1
 
 ; Matrix scan state and pending arrow

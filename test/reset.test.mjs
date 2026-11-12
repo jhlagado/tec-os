@@ -6,14 +6,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { gunzipSync } from "node:zlib";
 import { Machine } from "./lib/machine.mjs";
 import { ABI, ROOT, TEST_CLOCK, service, romFor, startupFile, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { makeSvc } from "../tools/lib/svc.mjs";
 import { createContainer, descriptorAt, headerChecksum, tableSum } from "../tools/lib/container.mjs";
 import { format } from "../tools/lib/format.mjs";
+import { MUTANTS } from "./lib/coalesce.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const idx = (m) => Array.from({ length: 4 }, (_, d) => m.read(m.sym("DRVIDX") + d));
@@ -458,15 +461,49 @@ test("a card of 1.1 with drives keeps its selection, and each index past the fir
   assert.deepEqual(idx(m), [18, 2, 0, 0]);
 });
 
-test("a written-behind volume keeps its flag through a reset", () => {
-  const image = card([VOLUMES[0], { ...VOLUMES[1], writeBehind: true }, ...VOLUMES.slice(2)]);
+// Byte 15 of a descriptor is reserved and never read. Cards made before
+// write-behind followed the logged drive mark WORK there; they still mount,
+// WORK's drive entry with flags 0, and a recognised reset keeps them so.
+
+/** The card with WORK's byte 15 at V, resealed. */
+function marked(v) {
+  const out = card();
+  out[descriptorAt(1) + 15] = v;
+  return resum(out, count(out));
+}
+
+/** B:'s drive entry flags on a card with WORK's byte 15 at V, booted under ROM (the build's when not given). */
+function flagsWith(v, rom) {
+  const r = rom ?? romFor();
+  const m = new Machine({ ...r, sdImage: marked(v), clock: TEST_CLOCK });
+  m.expect(/A>$/, { from: 0, maxCycles: 400_000_000 });
+  m.runUntil(() => m.ready(), 400_000_000, "the first prompt");
+  return m.read(m.sym("DRVTAB") + 8 + 7);
+}
+
+test("S2-5 byte 15 at 1 and FFh", () => {
+  for (const v of [1, 0xff]) {
+    const dir = mkdtempSync(resolve(tmpdir(), "byte15-"));
+    const img = resolve(dir, "c.img");
+    writeFileSync(img, marked(v));
+    const verify = spawnSync(process.execPath, [resolve(ROOT, "tools/tecvol.mjs"), "verify", img], { encoding: "utf8" });
+    rmSync(dir, { recursive: true });
+    assert.equal(verify.status, 0, `byte 15 at ${v}: tecvol verify passes (${verify.stdout}${verify.stderr})`);
+    assert.equal(flagsWith(v), 0, `byte 15 at ${v}: B:'s flags 0`);
+  }
+});
+test("S2-5 mutant: MNFILL copying byte 15 into bit 1 gives B: flags 2", () => {
+  assert.equal(flagsWith(1, MUTANTS.mn()), 2);
+});
+
+test("S2-5 reset keeps the selection", () => {
+  const image = marked(0xff);
   const m = machine(image);
-  const flags = m.read(entry(m, 1) + 7);
-  assert.notEqual(flags, 0);
+  assert.equal(m.read(entry(m, 1) + 7), 0, "B:'s flags 0");
   assert.equal(mountOn(m, 0, 2), 0);
   reset(m);
-  assert.deepEqual(idx(m), [3, 2, 0, 0]);
-  assert.equal(m.read(entry(m, 1) + 7), flags);
+  assert.deepEqual(idx(m), [3, 2, 0, 0], "the selection kept");
+  assert.equal(m.read(entry(m, 1) + 7), 0, "B:'s flags still 0");
 });
 
 test("from user 5, a drive and a video console, a reset reaches A:, user 0, on the ROM's console (KS39)", () => {
@@ -595,7 +632,7 @@ test("a held key skips startup on the selected A:", () => {
 });
 
 test("a dirty line is not written to a card of identical extents after a reset", () => {
-  const image = card([VOLUMES[0], { ...VOLUMES[1], writeBehind: true }, ...VOLUMES.slice(2)]);
+  const image = card();
   const m = machine(image);
   // A file written and not closed: what a program holds when the button goes.
   const fcb = 0x2000;

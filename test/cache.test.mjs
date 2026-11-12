@@ -1,13 +1,16 @@
 // The block cache (KS21): 30 lines of EXPAND 1 over the card, every volume's
-// reads, and the one volume marked :wb written behind. Reads come back the
-// same and a reread makes no card read; volumes not written behind, which
+// reads, and the volume on the logged drive written behind. Reads come back
+// the same and a reread makes no card read; volumes not logged, which
 // coalesce, write each block at most as often as the older fixture ROM did,
 // and in its order; a volume written behind reads back from the cache and from
 // the card after warm boot, keeps its directory behind its data at every
 // cut, keeps the no-pre-read rule safe, serves BLOCK from a dirty line and
-// says when a card has gone; and the ROM before the cache mounts a :wb
-// volume written through. The ROMs of f49e380 and 4ea57f7 are fixtures.
-// Emulator evidence.
+// says when a card has gone; and the ROM before the cache mounts a volume
+// marked :wb written through. A test of WORK written behind logs on B:. Then
+// the rules of write-behind on the logged drive: what a program's writes
+// leave in the cache until its key wait, a directory write that writes every
+// other line first, the drive change's flush and byte 15 reserved. The ROMs
+// of f49e380 and 4ea57f7 are fixtures. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -17,6 +20,8 @@ import { createContainer, headerChecksum, parseContainer } from "../tools/lib/co
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
+import { MUTANTS } from "./lib/coalesce.mjs";
+import { at, shellCard, shellMachine } from "./lib/shell.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const pattern = (n, f) => Uint8Array.from({ length: n }, (_, i) => f(i) & 0xff);
@@ -28,12 +33,25 @@ function oldRom(commit) {
   return { rom: Buffer.from(f.rom, "base64"), symbols: new Map(Object.entries(f.symbols).map(([k, v]) => [k.toUpperCase(), v])) };
 }
 
-/** SYSTEM on A:, WORK on B:, written behind when wb. */
-const card = (wb = true) =>
-  createContainer([
+// The cards whose machines start() logs on B:, so that WORK is written behind.
+const ON_B = new WeakSet();
+const loggedOnB = (image) => (ON_B.add(image), image);
+
+/** SYSTEM on A: and WORK on B:; start() logs its machine on B: when wb, so that WORK is written behind. */
+const card = (wb = true) => {
+  const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
-    { geometry: "G8M", label: "WORK", mount: "B", writeBehind: wb },
+    { geometry: "G8M", label: "WORK", mount: "B" },
   ]);
+  return wb ? loggedOnB(image) : image;
+};
+
+/** Type D: at M's prompt and run to the next prompt. */
+function logOn(m, d) {
+  m.mark = m.output.length;
+  m.type(`${d}:\r`);
+  m.runUntil(() => m.ready() && new RegExp(`\\r\\n${d}>$`).test(m.text(m.mark)), 400_000_000, `${d}:`);
+}
 
 async function load(image, names, extra = {}) {
   const a = volume(image, "A");
@@ -42,13 +60,17 @@ async function load(image, names, extra = {}) {
   return image;
 }
 
-/** A machine on IMAGE (with ROM if given), at its first prompt. */
+/** A machine on IMAGE (with ROM if given), at its first prompt: logged on B: if the card asks it. */
 function start(image, { rom, ram96 = false, onSdWrite } = {}) {
-  if (!rom && !onSdWrite) return boot(image, { ram96 });
-  const r = rom ?? romFor();
-  const m = new Machine({ ...r, sdImage: image, clock: TEST_CLOCK, ram96, onSdWrite });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  let m;
+  if (!rom && !onSdWrite) m = boot(image, { ram96 });
+  else {
+    const r = rom ?? romFor();
+    m = new Machine({ ...r, sdImage: image, clock: TEST_CLOCK, ram96, onSdWrite });
+    m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+    m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  }
+  if (ON_B.has(image)) logOn(m, "B");
   return m;
 }
 
@@ -136,12 +158,12 @@ test("on a volume written behind, SAVE, COPY and a program's writes read back fr
   cmd(m, "SAVE 16 B:S.COM");
   assert.ok(t.writes.length - w0 < 16, `${t.writes.length - w0} card writes for 32 records: each block once`);
   assert.match(cmd(m, "SUM B:S.COM"), new RegExp(sumOf(tpa)));
-  cmd(m, "COPY DATA.BIN B:DATA.CPY");
+  cmd(m, "COPY A:DATA.BIN B:DATA.CPY");
   assert.match(cmd(m, "SUM B:DATA.CPY"), new RegExp(sumOf(DATA)));
   assert.match(cmd(m, "WBTEST"), /WB OK/);
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nB>$/);
   const b = volume(image, "B");
   assert.deepEqual(b.read("S.COM"), tpa, "S.COM on the card");
   assert.deepEqual(b.read("DATA.CPY").slice(0, DATA.length), DATA, "DATA.CPY on the card");
@@ -254,7 +276,12 @@ test("the same card put back isn't started: Write lost once, the failed lines dr
 });
 
 test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", async () => {
-  const image = card();
+  // WORK marked :wb in byte 15, as cards were made before the mark was
+  // retired; this ROM is not logged on B:.
+  const image = card(false);
+  image[32 + 32 + 15] = 1;
+  const sum = headerChecksum(image.subarray(0, 512));
+  [image[20], image[21]] = [sum & 0xff, sum >> 8];
   const m = start(image, { rom: oldRom("4ea57f7") });
   const t = trace(m);
   const tpa = pattern(4 * 256, (i) => i ^ 0x3c);
@@ -284,16 +311,18 @@ function failing(m, fail) {
   };
 }
 
-/** SYSTEM on A:, WORK on B: (written behind when wb), and ARCHIVE, index 2, on no drive; C: has a slot. */
-const card3 = (wb = true) =>
-  createContainer(
+/** SYSTEM on A:, WORK on B:, and ARCHIVE, index 2, on no drive; C: has a slot. start() logs on B: when wb. */
+const card3 = (wb = true) => {
+  const image = createContainer(
     [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
-      { geometry: "G8M", label: "WORK", mount: "B", writeBehind: wb },
+      { geometry: "G8M", label: "WORK", mount: "B" },
       { geometry: "G8M", label: "ARCHIVE", mount: "-" },
     ],
     { drives: 3 },
   );
+  return wb ? loggedOnB(image) : image;
+};
 
 /** Type LINE and run to the prompt, answering a BDOS error with ^C. */
 function through(m, line) {
@@ -343,7 +372,7 @@ test("a directory write whose data line fails leaves the card's directory the tr
   assert.deepEqual(m.violations, []);
 });
 
-/** NPR's run on B:, written behind or through; G.DAT's records back from the card. */
+/** NPR's run on B:, written behind (logged on B:) or coalesced; G.DAT's records back from the card. */
 async function nprRun(wb) {
   const image = await load(card(wb), ["npr"]);
   const b = volume(image, "B");
@@ -395,7 +424,7 @@ test("an unclosed file's records reach the card at warm boot", async () => {
   assert.ok(!image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "not on the card yet");
   m.cpu.cpu.pc = 0; // warm boot, as ^C
   m.mark = m.output.length;
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nB>$/);
   assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's four records on the card");
 });
 
@@ -468,8 +497,8 @@ test("a volume remounted on another drive, with another on its old drive, reads 
   assert.deepEqual(m.violations, []);
 });
 
-test("descriptor byte 15's other bits reach no drive flag", async () => {
-  for (const [v, flags] of [[0xfe, 0], [0xff, 2]]) {
+test("descriptor byte 15 reaches no drive flag", async () => {
+  for (const [v, flags] of [[0xfe, 0], [0xff, 0], [1, 0]]) {
     const image = card(false);
     image[32 + 32 + 15] = v;
     const sum = headerChecksum(image.subarray(0, 512));
@@ -716,10 +745,11 @@ for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G
   test(`random writes out of order into a new ${geometry} allocation block, ${wb ? "written behind" : "written through"}, keep every record, from the BDOS and on the card (KE-AR7)`, () => {
     const image = createContainer([
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
-      { geometry, label: "WORK", mount: "B", writeBehind: wb },
+      { geometry, label: "WORK", mount: "B" },
     ]);
     const r = rig(image);
     const m = r.m;
+    if (wb) logOn(m, "B");
     const n = geometry === "G1M" ? 4 : 8; // card blocks of 4 records an allocation block
     const order = [0, 4 * (n - 1), ...Array.from({ length: n - 2 }, (_, i) => 4 * (i + 1)), 4 * (n - 1) + 1];
     const rr = (rec) => [rec & 0xff, rec >> 8, 0].forEach((v, i) => m.write(0x5c + 33 + i, v));
@@ -746,14 +776,15 @@ for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G
 // KE-AR8: a directory write on the volume written behind whose data lines
 // fail leaves those lines dirty and drops only its own, so a close retried
 // fails again until the card takes the data, and warm boot says Write lost.
-/** WB.DAT made on B: (G8M, written behind) and records 0-7 written, with function 45 in FFh mode; the card refuses B:'s data blocks while refuse() says so. */
+/** WB.DAT made on B: (G8M, written behind, logged) and records 0-7 written, with function 45 in FFh mode; the card refuses B:'s data blocks while refuse() says so. */
 function closing(refuse) {
   const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
-    { geometry: "G8M", label: "WORK", mount: "B", writeBehind: true },
+    { geometry: "G8M", label: "WORK", mount: "B" },
   ]);
   const r = rig(image);
   const m = r.m;
+  logOn(m, "B");
   r.call(5, { c: 45, de: 0xff });
   r.fcb(2, "WB      DAT");
   assert.equal(r.bdos(22), 0, "made");
@@ -788,4 +819,307 @@ test("a close whose data lines the card refuses leaves them for warm boot, which
   assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "Write lost, once");
   const f = volume(image, "B").find("WB.DAT");
   assert.ok(!f || f.records === 0, `the card's entry names ${f?.records} records`);
+});
+
+// --- Write-behind follows the logged drive ------------------------------------
+//
+// The volume on the logged drive, the CCP's BOOTDRV, is written behind; every
+// other volume coalesces. Every console read writes every changed line, every
+// directory write writes the other lines first, and a drive change writes
+// the cache before it selects the drive. These rows run on a four-drive card,
+// bare or under SHELL.SVC; each mutant is the build's ROM patched.
+
+const four = () =>
+  createContainer(
+    [
+      { geometry: "G1M", label: "SYSTEM", mount: "A" },
+      { geometry: "G8M", label: "WORK", mount: "B" },
+      { geometry: "G1M", label: "PROJECTS", mount: "C" },
+      { geometry: "G1M", label: "GAMES" },
+      { geometry: "G1M", label: "SPARE" },
+    ],
+    { drives: 4 },
+  );
+// A prompt, bare or under the shell, with or without a volume label.
+const ANY_PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
+const lo = (v) => v & 0xff;
+const hi = (v) => v >> 8;
+
+/**
+ * WK: makes the file its FCB at 005Ch names, writes 32 records (eight
+ * blocks), waits at BDOS 1, then returns by RET or, with JP, by a jump to
+ * the CCP's MAINLOOP, as a program that comes back with no warm boot. PRE is
+ * code run first.
+ */
+const wk = (mainloop, { pre = [], jp = false } = {}) =>
+  Uint8Array.from([
+    ...pre,
+    0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
+    0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
+    0x0e, 1, 0xcd, 0x05, 0x00,
+    ...(jp ? [0xc3, lo(mainloop), hi(mainloop)] : [0xc9]),
+  ]);
+const selectFirst = (d) => [0x1e, d, 0x0e, 14, 0xcd, 0x05, 0x00]; // BDOS 14, E = d
+const pageZeroDrive = (d) => [0x3e, d, 0x32, 0x04, 0x00]; // LD A,d; LD (0004h),A
+
+/** The card refusing every block write while the flag's on is true. */
+function refusing(m) {
+  const sd = m.sd;
+  const commit = sd.commitWrite.bind(sd);
+  const f = { on: false };
+  sd.commitWrite = () => {
+    if (!f.on) return commit();
+    sd.writeState = null;
+    sd.pendingResponse = [0x0d, 0xff];
+    sd.delayBytes = 1;
+  };
+  return f;
+}
+
+/** A four-drive card with FILES on A:, booted under ROM (the build's when not given), bare or with SHELL.SVC: the machine, its card writes and a run to the prompt. */
+function wbMachine(files, { rom, bare = false, image = four() } = {}) {
+  const writes = { n: 0 };
+  shellCard(files, { startup: bare ? [] : ["SHELL.SVC"], image });
+  const m = shellMachine(image, { ...(rom ?? {}), onSdWrite: () => (writes.n += 1) });
+  return { m, writes, image, run: (l) => at(m, l, { re: ANY_PROMPT }) };
+}
+
+/** WK run as LINE, logged on LOGGED: card writes before its BDOS 1, and by the time it waits there. */
+function keyWait(line, { logged = "A", pre, rom } = {}) {
+  const sym = (rom ?? romFor()).symbols;
+  const { m, writes, run } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { pre }) }, { rom });
+  if (logged !== "A") run(`${logged}:`);
+  const n0 = writes.n;
+  m.mark = m.output.length;
+  m.type(`${line}\r`);
+  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
+  const before = writes.n - n0;
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
+  const waiting = writes.n - n0;
+  m.type("x");
+  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
+  return { before, waiting };
+}
+
+const BEHIND = { before: 1, waiting: 9 }; // the make's entry; then eight blocks at the key wait
+const THROUGH = { before: 8, waiting: 9 }; // seven blocks and the make as writing moves on; the last at the key wait
+
+test("S2-3 logged A: behind, B: through", () => {
+  assert.deepEqual(keyWait("A:WK A:W.DAT"), BEHIND, "logged on A:, A:'s eight blocks wait for the key wait");
+  assert.deepEqual(keyWait("A:WK B:W.DAT"), THROUGH, "B: coalesces");
+});
+
+test("S2-3 logged B:", () => {
+  assert.deepEqual(keyWait("A:WK B:W.DAT", { logged: "B" }), BEHIND, "logged on B:, B:'s blocks wait");
+  assert.deepEqual(keyWait("A:WK A:W.DAT", { logged: "B" }), THROUGH, "A: coalesces");
+});
+
+/** The rows of a program's own drives, logged on A:: C: by its FCB, C: by BDOS 14, and 0004h set to B: before writing B:. */
+function programDrives(rom) {
+  return {
+    "C: by its FCB": keyWait("A:WK C:W.DAT", { rom }),
+    "C: by BDOS 14": keyWait("A:WK W.DAT", { pre: selectFirst(2), rom }),
+    "0004h = B:": keyWait("A:WK B:W.DAT", { pre: pageZeroDrive(1), rom }),
+  };
+}
+
+test("S2-3 a program's drives", () => {
+  for (const [what, r] of Object.entries(programDrives())) assert.equal(r.before, 8, `${what}: written through as writing moves on`);
+});
+
+/** Logged on LOGGED, a program writes a record into A:T.DAT's first block and waits at BDOS 1: whether the record is in the card image then. */
+function recordAtKey(logged, rom) {
+  const fncin = (rom ?? romFor()).symbols.get("FNCIN");
+  const code = [
+    0x11, 0x5c, 0x00, 0x0e, 15, 0xcd, 0x05, 0x00, // open
+    0x11, 0x00, 0x02, 0x0e, 26, 0xcd, 0x05, 0x00, // DMA 0200h
+    0xaf, 0x32, 0x7d, 0x00, 0x32, 0x7e, 0x00, 0x32, 0x7f, 0x00, // record 0
+    0x11, 0x5c, 0x00, 0x0e, 34, 0xcd, 0x05, 0x00, // write it in place
+    0x0e, 1, 0xcd, 0x05, 0x00, 0xc9, // wait for a key
+  ];
+  const rec = Array.from({ length: 128 }, (_, i) => 0x41 + (i % 26));
+  const com = new Uint8Array(0x180);
+  com.set(code);
+  com.set(rec, 0x100);
+  const { m, image, run } = wbMachine({ "KW.COM": com, "T.DAT": new Uint8Array(1024).fill(0x30) }, { rom });
+  if (logged === "B") run("B:");
+  m.mark = m.output.length;
+  m.type("A:KW A:T.DAT\r");
+  let entered = false;
+  m.runUntil(() => ((entered ||= m.pc === fncin), entered && m.waitingForInput()), 400_000_000, "BDOS 1");
+  const there = same(volume(image, "A").read("T.DAT").subarray(0, 128), rec);
+  m.type("x");
+  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
+  return there;
+}
+const same = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b)) === 0;
+
+test("S2-3 key wait on every drive", () => {
+  assert.equal(recordAtKey("A"), true, "logged on A:, A: written behind: the record on the card at BDOS 1");
+  assert.equal(recordAtKey("B"), true, "logged on B:, A: coalesced: the record on the card at BDOS 1");
+});
+
+test("S2-3 read-only never", () => {
+  const image = createContainer(
+    [
+      { geometry: "G1M", label: "SYSTEM", mount: "A" },
+      { geometry: "G1M", label: "LOCKED", mount: "C", readOnly: true },
+    ],
+    { drives: 4 },
+  );
+  const { m, writes, run } = wbMachine({}, { image });
+  run("C:");
+  const n0 = writes.n;
+  m.mark = m.output.length;
+  m.type("SAVE 1 X.COM\r");
+  m.runUntil(() => /R\/O/.test(m.text(m.mark)), 200_000_000, "the R/O error");
+  assert.match(m.text(m.mark), /Bdos Err On C: R\/O/);
+  m.type("\r");
+  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 200_000_000, "the prompt");
+  assert.equal(writes.n - n0, 0, "the card sees no write");
+});
+
+test("S2-3 mutant: MR2, the console read writing the pending block only, leaves the logged drive's lines out at the key wait", () => {
+  const rom = MUTANTS.mr2();
+  assert.notDeepEqual(keyWait("A:WK A:W.DAT", { rom }), BEHIND);
+  assert.notDeepEqual(keyWait("A:WK B:W.DAT", { logged: "B", rom }), BEHIND);
+  assert.equal(recordAtKey("A", rom), false, "the record not on the card at BDOS 1");
+});
+
+test("S2-3 mutant: MBD, BWGET testing the BDOS's current disk, writes behind the drive a program selects", () => {
+  const rom = MUTANTS.mbd();
+  assert.notDeepEqual(keyWait("A:WK B:W.DAT", { rom }), THROUGH, "B: written through");
+  const rows = programDrives(rom);
+  assert.ok(Object.values(rows).some((r) => r.before !== 8), JSON.stringify(rows));
+  assert.notEqual(rows["C: by BDOS 14"].before, 8, "C: by BDOS 14 written behind");
+});
+
+/**
+ * Logged on B:, P1 makes B:X.DAT, writes 32 records and returns by JP
+ * MAINLOOP, its FCB kept at 4000h. The card refuses every write from its
+ * return, through the drive change to A: and the prompt's console read.
+ * Then P2, on A:, closes that FCB; the card takes writes again as P2 starts
+ * if RECOVER. The card writes by the close's return, the file's bytes on the
+ * card, and the text.
+ */
+function directoryLast({ bare, recover, rom }) {
+  const sym = (rom ?? romFor()).symbols;
+  const main = sym.get("MAINLOOP");
+  const fcb = [2, ...Buffer.from("X       DAT", "latin1")];
+  while (fcb.length < 36) fcb.push(0);
+  const p1 = Uint8Array.from([
+    0x21, 0x24, 0x01, 0x11, 0x00, 0x40, 0x01, 0x24, 0x00, 0xed, 0xb0, // the FCB to 4000h
+    0x11, 0x00, 0x40, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
+    0xc5, 0x11, 0x00, 0x40, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
+    0xc3, lo(main), hi(main),
+    ...fcb,
+  ]);
+  const p2 = Uint8Array.from([0x11, 0x00, 0x40, 0x0e, 16, 0xcd, 0x05, 0x00, 0x32, 0x00, 0x41, 0xc3, lo(main), hi(main)]);
+  const { m, writes, image, run } = wbMachine({ "P1.COM": p1, "P2.COM": p2 }, { bare, rom });
+  run("B:");
+  const f = refusing(m);
+  m.mark = m.output.length;
+  m.type("A:P1\r");
+  m.runUntil(() => m.pc === main, 400_000_000, "P1's return");
+  f.on = true;
+  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
+  run("A:");
+  const before = writes.n;
+  m.mark = m.output.length;
+  m.type("P2\r");
+  m.runUntil(() => m.pc === 0x0100, 100_000_000, "P2's start");
+  f.on = !recover;
+  let byClose = null;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === 0x0108 && byClose === null) byClose = writes.n - before;
+    return step();
+  };
+  m.runUntil(() => m.waitingForInput() && (ANY_PROMPT.test(m.text(m.mark)) || /Bdos|Bad/.test(m.text(m.mark))), 400_000_000, "after the close");
+  m.step = step;
+  const found = volume(image, "B").find("X.DAT");
+  const data = found ? volume(image, "B").read("X.DAT") : null;
+  return { byClose, data, closeA: m.read(0x4100), text: m.text(m.mark) };
+}
+
+test("S2-4 directory last after a failed drive change", () => {
+  for (const bare of [true, false]) {
+    const r = directoryLast({ bare, recover: true });
+    const how = bare ? "bare" : "under the shell";
+    assert.equal(r.byClose, 9, `${how}: the close writes the 8 data blocks, then the entry`);
+    assert.equal(r.closeA, 0, `${how}: the close succeeds`);
+    assert.equal(r.data?.length, 4096, `${how}: the file's 32 records named`);
+    assert.equal(r.data.filter((b) => b === 0xe5).length, 0, `${how}: and every one on the card`);
+  }
+});
+
+test("S2-4 directory refused while the card refuses", () => {
+  for (const bare of [true, false]) {
+    const r = directoryLast({ bare, recover: false });
+    const how = bare ? "bare" : "under the shell";
+    assert.match(r.text, /Bdos|Bad/, `${how}: the close refused`);
+    assert.ok(!r.data || r.data.length === 0, `${how}: the card's entry names no block of the file`);
+  }
+});
+
+test("S2-4 mutant: MDIR, a directory write off the logged drive not flushing first, names blocks the card lacks at the close", () => {
+  const r = directoryLast({ bare: true, recover: true, rom: MUTANTS.mdir() });
+  assert.equal(r.byClose, 1, "the entry alone by the close's return");
+});
+
+/** From a script, WK writes A:K.DAT and waits with the card refusing, then returns with no warm boot; the card takes writes again; the script's next line is B:. Card writes before BDOS 14 selects B:. */
+function scriptDriveChange(rom) {
+  const sym = (rom ?? romFor()).symbols;
+  const script = Buffer.from("WK A:K.DAT\r\nB:\r\nA:\r\n\x1a", "latin1");
+  const { m, writes } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { jp: true }), "S.CMD": script }, { rom });
+  const f = refusing(m);
+  m.mark = m.output.length;
+  m.type("S.CMD\r");
+  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
+  f.on = true;
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
+  let at14 = null;
+  const n0 = writes.n;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14 && at14 === null) at14 = writes.n - n0;
+    return step();
+  };
+  m.type("x");
+  m.runUntil(() => m.pc === sym.get("MAINLOOP"), 100_000_000, "WK's return");
+  f.on = false;
+  m.runUntil(() => at14 !== null, 400_000_000, "the script's B:");
+  m.step = step;
+  return at14;
+}
+
+test("S2-4 drive change flushes kept lines", () => {
+  assert.equal(scriptDriveChange(), 8, "from a script: the eight kept blocks written before BDOS 14");
+  // Typed, the line's own key reads write the kept lines before the drive change.
+  const sym = romFor().symbols;
+  const { m, writes } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { jp: true }) }, { bare: true });
+  const f = refusing(m);
+  m.mark = m.output.length;
+  m.type("A:WK A:K.DAT\r");
+  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
+  f.on = true;
+  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
+  m.type("x");
+  // WK comes back with no warm boot: the prompt follows its key directly.
+  m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the prompt");
+  f.on = false;
+  let at14 = null;
+  const n0 = writes.n;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14 && at14 === null) at14 = writes.n - n0;
+    return step();
+  };
+  at(m, "B:", { re: ANY_PROMPT });
+  m.step = step;
+  assert.equal(at14, 8, "typed: the kept blocks on the card before the drive is selected");
+});
+
+test("S2-4 mutant: M1, no flush at a drive change, leaves a script's kept lines unwritten as it selects the drive", () => {
+  assert.equal(scriptDriveChange(MUTANTS.m1()), 0);
 });

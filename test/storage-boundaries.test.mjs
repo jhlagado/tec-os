@@ -4,16 +4,22 @@ import { Machine } from './lib/machine.mjs';
 import { ABI, romFor, TEST_CLOCK, volume } from './lib/fixtures.mjs';
 import { createContainer, parseContainer } from '../tools/lib/container.mjs';
 
-function start(opts = {}) {
+/** A machine on a three-volume card at its first prompt, logged on B: when LOGGED is "B". */
+function start({ logged = "A", ...opts } = {}) {
   const image = createContainer([
     { geometry: 'G1M', label: 'SYSTEM', mount: 'A' },
-    { geometry: 'G8M', label: 'WORK', mount: 'B', writeBehind: true },
+    { geometry: 'G8M', label: 'WORK', mount: 'B' },
     { geometry: 'G1M', label: 'OTHER' },
   ], { drives: 4 });
   volume(image, 'A').write('KEEP.DAT', new Uint8Array(128).fill(0xaa));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });
   m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000);
+  if (logged === "B") {
+    m.type("B:\r");
+    m.expect(/B>$/, { maxCycles: 200_000_000 });
+    m.runUntil(() => m.waitingForInput(), 10_000_000);
+  }
   return { m, image };
 }
 const bytes = (m, a, n) => Uint8Array.from({ length: n }, (_, i) => m.read(a + i));
@@ -199,10 +205,11 @@ function mounted(m, d) {
 test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean and with every line dirty, walk the cache with interrupts off, and MOUNT and UNMOUNT write the lines (A3); with every line dirty DESCRIBE returns the card's descriptor and MOUNT installs C: as from a clean cache (KE-AR3)", (t) => {
   const deepest = {};
   const clean = {}; // what each service gives with the cache clean
-  // B: is left dirty: UNMOUNT takes B: away, MOUNT puts OTHER on C:, DESCRIBE reads OTHER's descriptor.
+  // B: is left dirty, logged so that its lines are held behind: UNMOUNT takes
+  // B: away, MOUNT puts OTHER on C:, DESCRIBE reads OTHER's descriptor.
   for (const every of [false, true])
     for (const [name, op, drive, index] of [['UNMOUNT', 1, 1, 0], ['MOUNT', 0, 2, 2], ['DESCRIBE', 2, 0, 2]]) {
-      const { m, image } = start({ ram96: true });
+      const { m, image } = start({ ram96: true, logged: "B" });
       const n = every ? m.sym('NLINES') : 6;
       for (let block = 0; block < n; block += 1) writeAt(m, 4 * block, 0x40 + block);
       if (every) assert.equal(dirtyLines(m), m.sym('NLINES'), 'every line dirty');

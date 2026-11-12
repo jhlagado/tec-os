@@ -237,6 +237,7 @@ MLTK3:
   or a           ; A: the next byte
 
   jr nz,NOTDRIVE
+  call VFLUSH    ; write-behind moves
   ld a,b
   ld (BOOTDRV),a
   ld e,a

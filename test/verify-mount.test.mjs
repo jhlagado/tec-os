@@ -86,9 +86,6 @@ const CHECKS = [
   ["drive assigned twice", (img) => (img[desc(1, "mount")] = 0), "29"],
   ["no volume on A", (img) => (img[desc(0, "mount")] = 0xff), "2A"],
   ["duplicate id", (img) => put32(img, desc(2, "volumeId"), u32(img, desc(1, "volumeId"))), null],
-  ["unknown cache flag", (img) => (img[desc(1, "cache")] = 2), null],
-  ["read-only and written behind", (img) => ((img[desc(1, "flags")] = 1), (img[desc(1, "cache")] = 1)), null],
-  ["two volumes written behind", (img) => ((img[desc(1, "cache")] = 1), (img[desc(2, "cache")] = 1)), null],
 ];
 
 function judge(image, rom) {

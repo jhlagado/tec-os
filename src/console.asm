@@ -216,13 +216,13 @@ CSTYES:
 ; returned character across CURHIDE. The
 ; pending-input path has no explicit
 ; CURHIDE. Changes AF/BC/DE/HL. First
-; write A:'s pending block, so no block
-; waits unwritten while a program that
-; reads through the BIOS waits for a
-; key.
+; write every changed cache line, so no
+; block waits unwritten while a program
+; that reads through the BIOS waits for
+; a key.
 
 BCONIN:
-  call CPOUT
+  call CKEY
   call CONSEL
   call VTFLIP
   ld a,(RXFULL)
