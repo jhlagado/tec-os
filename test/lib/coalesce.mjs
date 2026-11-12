@@ -196,7 +196,7 @@ function expectAt(bytes, i, want) {
 const call = (a) => [0xcd, lo(a), hi(a)];
 const jp = (a) => [0xc3, lo(a), hi(a)];
 
-/** The single mutants, by the names the stage's record gives them. */
+/** The single mutants: the build's ROM with one change each. */
 export const MUTANTS = {
   /** FNSTAT without its CPOUT. */
   fnstat: () =>
@@ -262,6 +262,24 @@ export const MUTANTS = {
       // PUSH BC x3; CALL CPFLSH; POP BC x3; POP DE; JP BRET
       put(tail, [0xc5, 0xc5, 0xc5, ...call(sym("CPFLSH")), 0xc1, 0xc1, 0xc1, 0xd1, ...jp(sym("BRET"))]);
       put(i, [...jp(tail + 0xc000), 0, 0, 0, 0]);
+    }),
+  /** CPOUT without its fast test of CPEND: every call takes CDI, CPFLSH and CEI. */
+  nofast: () =>
+    mutant((b, at, put, sym) => {
+      const p = sym("CPEND");
+      expectAt(b, at("CPOUT"), [0x3a, lo(p), hi(p), 0xb7, 0xc8]);
+      put(at("CPOUT"), [0, 0, 0, 0, 0]);
+    }),
+  /**
+   * CPMOVE keeping the pending block when its line is the next in turn, the
+   * line a miss takes, rather than when the write's block is its tag:
+   * CALL CLOOK made LD A,(CNEXT), and its JR NZ,CPFLSH gone.
+   */
+  byline: () =>
+    mutant((b, at, put, sym) => {
+      const i = at("CPMOVE") + 5;
+      expectAt(b, i, [...call(sym("CLOOK")), 0x20, null]);
+      put(i, [0x3a, lo(sym("CNEXT")), hi(sym("CNEXT")), 0, 0]);
     }),
   /** BWGET marking a write-behind volume's data writes to coalesce: its BIT 1,(HL) and JR NZ,BWGO gone. */
   wbcoalesce: () =>
