@@ -193,7 +193,9 @@ the selection is that the volumes are still on the card.
 
 Only the selection is kept. Page zero, the workspace, services, the registry, the
 cache, open files, the shell and its history and the TPA ceiling are all rebuilt, and a reset
-starts at user 0 on the serial console, with startup run once from the selected A:.
+starts at user 0 on the console cold boot picks, `CRT:` when the PICO9918 answers and the
+matrix keyboard is fitted and the serial terminal otherwise ([console.md](console.md)), with
+startup run once from the selected A:.
 
 Each drive's start, length, geometry and flags must match one descriptor of the card
 now in the socket, and fit the slot that drive has, or the selection is dropped whole

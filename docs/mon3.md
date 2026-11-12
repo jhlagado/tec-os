@@ -42,7 +42,8 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,606 bytes of header and image in **18 pages**: the
+On the starter card it is 4,606 bytes of header and image, 5,032 bytes as a file
+with its relocation data, in **18 pages**: the
 word at `0006h` goes from `B9A9h` to `A700h`, and the TPA from 47,273 bytes to
 **42,496**. With `GLCD.SVC` installed too, as the GLCD console's startup does,
 the TPA is **41,728**. The monitor, its line buffer, its FCB, its saved page
