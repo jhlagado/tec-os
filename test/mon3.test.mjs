@@ -1568,9 +1568,13 @@ test("KG68 docs agree", async () => {
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
   assert.ok(mon3.includes(`from \`B9A9h\` to \`${h4(fig.top)}\`, and the TPA from 47,273 bytes to ${fig.tpa.toLocaleString("en")},`), "(0006h) and the TPA with no shell");
-  // With the shell, as shell.test's SH7 measures them.
-  assert.ok(mon3.includes("from `AF00h` to `9D00h`, and the TPA from 44,544 bytes to **39,936**"), "(0006h) and the TPA with the shell");
-  assert.ok(mon3.includes("`9A00h`, a TPA of **39,168**"), "and with GLCD.SVC too");
+  // With the shell: (0006h) is AF00h with SHELL.SVC alone, as shell.test
+  // measures it, MON3.SVC's pages lower, and GLCD.SVC three pages lower still.
+  const shellTop = 0xaf00;
+  const withMon3 = shellTop - fig.pages * 0x100;
+  const tpa = (top) => (top - 0x100).toLocaleString("en");
+  assert.ok(mon3.includes(`from \`${h4(shellTop)}\` to \`${h4(withMon3)}\`, and the TPA from ${tpa(shellTop)} bytes to **${tpa(withMon3)}**`), "(0006h) and the TPA with the shell");
+  assert.ok(mon3.includes(`\`${h4(withMon3 - 0x300)}\`, a TPA of **${tpa(withMon3 - 0x300)}**`), "and with GLCD.SVC too");
   const src = mon3Text();
   const equ = (n) => Number(new RegExp(`^${n} EQU \\$([0-9A-F]+)`, "m").exec(src)[1].replace(/^/, "0x"));
   assert.ok(mon3.includes(`| SP | ${h4(equ("MSTK3") - 2)}, holding the return address ${h4(equ("GORET"))} |`), "GO's SP and return");

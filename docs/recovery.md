@@ -53,7 +53,9 @@ flush, at a directory write on a volume written behind, at function 48, at
 the rest. Function 48, `MOUNT` and unmount keep each line whose write fails,
 as a directory write's flush does: function 48 returns FFh, `MOUNT` and unmount
 refuse and leave the drives as they were, and the line is tried again at the
-next flush. Only warm boot drops a line that still fails. A warm boot whose flush
+next flush. Only warm boot drops a flushed line that still fails. A directory
+write on a volume written behind whose flush fails returns the error and drops
+its own directory line, unwritten, so the card's directory is read again. A warm boot whose flush
 dropped a line says `Write lost` once and drops the rest of the shell's line as a
 BDOS error does; the next warm boot has nothing more to say.
 While a kept A: or B: line keeps failing, B: directory writes and `MOUNT` refuse
@@ -154,7 +156,8 @@ no journal, so power loss or reset can leave:
   directory entry naming a block whose data is not there. A flush tries every
   line and still writes the rest after one that fails. The failed line stays in
   the cache, to be tried again at the next flush; only warm boot drops a line
-  that still fails, with `Write lost`.
+  that still fails, with `Write lost`. A directory write whose flush fails
+  returns the error and drops its own directory line, unwritten.
 - **During a block write.** One 512-byte block may hold old, new or mixed
   contents. If it is a directory block, up to 16 directory entries can be
   damaged.
