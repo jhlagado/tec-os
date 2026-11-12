@@ -15,7 +15,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ABI, ROOT, SHELL_SVC, boot, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { ABI, ROOT, SHELL_SVC, abiDeclarations, boot, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { BUF, DMA, FCB, FCB2, FCB3, MUTANTS, card, closed8, dirBlocks, flushRun, pat, rig, same, three } from "./lib/coalesce.mjs";
 
@@ -26,7 +26,8 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // The shell's landing, measured on its own build: the ROM, the TPA, abi.inc,
 // the census's BDOS deepest, BDOS 11 with nothing waiting and BDOS 11 after
 // each of 32 records, in cycles from the stub.
-const LANDING = { used: 14769, tpa: 47273, abi: "1a020a1b076c3b7b4282c64ceeb82dad471c3ecbbe883c5d3448a859e0a07413", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
+// abi is the digest of abi.inc's declarations, its comment lines left out.
+const LANDING = { used: 14769, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
 
 // The console read's costs before write-behind followed the logged drive,
 // measured with these stubs on the ROM that landed A: coalescing and TED's
@@ -38,7 +39,7 @@ const COALESCED = { bdos11: 3859, worstOnB: 7_554_875, worstOnA: 7_549_907 };
 
 test("AC12 version fields", () => {
   const inc = readText("src/abi.inc");
-  assert.equal(sha(Buffer.from(inc, "utf8")), LANDING.abi, "abi.inc as at the shell's landing");
+  assert.equal(sha(Buffer.from(abiDeclarations(inc), "utf8")), LANDING.abi, "abi.inc's declarations as at the shell's landing");
   assert.match(inc, /^SVCFMT EQU 4$/m);
   assert.equal(ABI.TNCOUNT, 17);
   const { rom } = romFor();
@@ -261,10 +262,30 @@ test("AC3 16 KiB file", () => checkFile16());
 test("AC3 mutant: CPMOVE keeping the pending block by the line a write would take, not its tag, writes a block more than once", () => {
   assert.throws(() => checkFile16(MUTANTS.byline()), /33 card writes|each once/);
 });
-test("AC3 mutant: BWGET without CPMOVE makes 4 card writes and the file isn't whole", () => {
-  const f = file16(MUTANTS.cpmove());
-  assert.equal(f.writes.length, 4);
-  assert.equal(f.fromCard, false);
+/**
+ * Logged on B:, records 0 to 4 written to A:, the card refusing the write
+ * that moves on to the next block, then the retry once it takes writes, and
+ * BDOS 11: whether each record is on the card at that key wait. Every
+ * directory write writes the other changed lines first, so a close repairs
+ * what a mutant here leaves out; the key wait, before any directory
+ * request, shows it.
+ */
+function atKeyWait(rom) {
+  const r = three({ rom, budget: BOUND });
+  const f = r.refuse();
+  r.put(3);
+  r.bdos(21);
+  r.put(4);
+  r.bdos(21); // the build refuses it: FFh
+  f.on = false;
+  r.bdos(21); // the retry, or a rewrite
+  r.bdos(11, 0);
+  return r.state(5);
+}
+
+test("AC3 mutant: BWGET without CPMOVE makes 4 card writes and the file isn't whole", { timeout: 300_000 }, () => {
+  assert.equal(atKeyWait(), "CCCCC", "the build: every record on the card at the key wait");
+  assert.equal(atKeyWait(MUTANTS.cpmove()), "----C", "the mutant: records 0 to 3 left in a line no flush point names");
 });
 
 // The starter card's commands, as the Viewer runs them: the PICO9918 at 40
@@ -432,8 +453,9 @@ test("AC4 directory last at every cut", () => {
   assert.deepEqual(c.problems, []);
   assert.equal(c.cuts, 20, "20 card writes");
 });
-test("AC4 mutant: BWGET without CPMOVE names records not on the card", () => {
-  assert.ok(cuts(MUTANTS.cpmove()).problems.length > 0);
+test("AC4 mutant: BWGET without CPMOVE names records not on the card", { timeout: 300_000 }, () => {
+  assert.deepEqual(cuts(MUTANTS.cpmove()).problems, [], "the close's flush-first write keeps the directory last even so");
+  assert.equal(atKeyWait(MUTANTS.cpmove()), "----C", "but records 0 to 3 are not on the card at the key wait");
 });
 test("AC4 mutants: FNCLSE and READDIR without their calls still keep the directory last, every directory write passing CPMOVE", () => {
   for (const m of [MUTANTS.fnclse(), MUTANTS.readdir()]) assert.deepEqual(cuts(m).problems, []);
@@ -463,7 +485,8 @@ function movesOn(rom) {
 
 test("AC5 failed flush as writing moves on", { timeout: 300_000 }, () => movesOn());
 test("AC5 mutant: CPFLSH clearing CPEND before the write loses records 0 to 3", { timeout: 300_000 }, () => {
-  assert.throws(() => movesOn(MUTANTS.cpendearly()), /every record on the card|the cycle bound/);
+  assert.equal(atKeyWait(), "CCCCC");
+  assert.equal(atKeyWait(MUTANTS.cpendearly()), "----C", "records 0 to 3 not on the card at the key wait after the retry");
 });
 
 function keepsBlock(rom) {
