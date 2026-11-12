@@ -50,7 +50,7 @@ const card = (wb = true) => {
 function logOn(m, d) {
   m.mark = m.output.length;
   m.type(`${d}:\r`);
-  m.runUntil(() => m.ready() && new RegExp(`\\r\\n${d}>$`).test(m.text(m.mark)), 400_000_000, `${d}:`);
+  m.runUntil(() => m.ready() && new RegExp(`\\r\\n${d}(:\\S*)?>$`).test(m.text(m.mark)), 400_000_000, `${d}:`);
 }
 
 async function load(image, names, extra = {}) {
@@ -67,7 +67,7 @@ function start(image, { rom, ram96 = false, onSdWrite } = {}) {
   else {
     const r = rom ?? romFor();
     m = new Machine({ ...r, sdImage: image, clock: TEST_CLOCK, ram96, onSdWrite });
-    m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+    m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
     m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   }
   if (ON_B.has(image)) logOn(m, "B");
@@ -101,7 +101,7 @@ function trace(m) {
   return t;
 }
 
-const cmd = (m, line) => m.command(line, { prompt: /\r\n[A-P]>$/, maxCycles: 2_000_000_000 });
+const cmd = (m, line) => m.command(line, { prompt: /\r\n[A-P](:\S*)?>$/, maxCycles: 2_000_000_000 });
 const sumOf = (bytes) => {
   const recs = Math.ceil(bytes.length / 128);
   let s = 0;
@@ -163,7 +163,7 @@ test("on a volume written behind, SAVE, COPY and a program's writes read back fr
   assert.match(cmd(m, "WBTEST"), /WB OK/);
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\nB>$/);
+  m.expect(/\r\nB(:\S*)?>$/);
   const b = volume(image, "B");
   assert.deepEqual(b.read("S.COM"), tpa, "S.COM on the card");
   assert.deepEqual(b.read("DATA.CPY").slice(0, DATA.length), DATA, "DATA.CPY on the card");
@@ -239,15 +239,15 @@ test("a card removed with dirty lines leaves the console working, and warm boot 
   m.mark = m.output.length;
   m.cpu.cpu.pc = 0; // warm boot
   let seen = -1;
-  for (let i = 0; i < 200 && !/\r\n[A-P]>$/.test(m.text(m.mark)); i += 1) {
+  for (let i = 0; i < 200 && !/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)); i += 1) {
     const end = m.cycles + 20_000_000;
-    m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
+    m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
     if (m.waitingForInput() && m.output.length === seen) m.type("\r"); // a BDOS error's key
     seen = m.output.length;
   }
   assert.match(m.text(m.mark), /Write lost/);
-  assert.match(m.text(m.mark), /\r\n[A-P]>$/);
-  assert.match(cmd(m, "USER 0"), /\r\n[A-P]>$/, "the console works");
+  assert.match(m.text(m.mark), /\r\n[A-P](:\S*)?>$/);
+  assert.match(cmd(m, "USER 0"), /\r\n[A-P](:\S*)?>$/, "the console works");
 });
 
 test("the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)", async () => {
@@ -259,9 +259,9 @@ test("the same card put back isn't started: Write lost once, the failed lines dr
     m.mark = m.output.length;
     m.cpu.cpu.pc = 0;
     let seen = -1;
-    for (let i = 0; i < 200 && !/\r\n[A-P]>$/.test(m.text(m.mark)); i += 1) {
+    for (let i = 0; i < 200 && !/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)); i += 1) {
       const end = m.cycles + 20_000_000;
-      m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
+      m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
       if (m.waitingForInput() && m.output.length === seen) m.type("\r");
       seen = m.output.length;
     }
@@ -271,7 +271,7 @@ test("the same card put back isn't started: Write lost once, the failed lines dr
   m.swapCard(image);
   assert.doesNotMatch(warm(), /Write lost/, "the failed lines were dropped: nothing is said twice");
   m.reset();
-  m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
   assert.equal(volume(image, "B").read("Q.DAT").length, 0, "the name was on the card, and its records are gone");
 });
 
@@ -330,7 +330,7 @@ function through(m, line) {
   m.type(line);
   for (let i = 0; i < 50; i += 1) {
     m.runUntil(() => m.waitingForInput(), 2_000_000_000, line);
-    if (/\r\n[A-P]>$/.test(m.text(m.mark))) return m.text(m.mark);
+    if (/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))) return m.text(m.mark);
     m.type("\x03");
   }
   throw new Error(`no prompt after ${line}`);
@@ -424,7 +424,7 @@ test("an unclosed file's records reach the card at warm boot", async () => {
   assert.ok(!image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "not on the card yet");
   m.cpu.cpu.pc = 0; // warm boot, as ^C
   m.mark = m.output.length;
-  m.expect(/\r\nB>$/);
+  m.expect(/\r\nB(:\S*)?>$/);
   assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's four records on the card");
 });
 
@@ -541,7 +541,7 @@ test("function 48 puts the lines written behind on the card, A = 0, and FFh if a
   const warm = () => {
     n.mark = n.output.length;
     n.cpu.cpu.pc = 0;
-    n.runUntil(() => n.waitingForInput() && /\r\n[A-P]>$/.test(n.text(n.mark)), 400_000_000, "warm boot");
+    n.runUntil(() => n.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(n.text(n.mark)), 400_000_000, "warm boot");
     return n.text(n.mark);
   };
   assert.match(warm(), /Write lost/, "the failed line was kept, so warm boot, the card still refusing, says Write lost");
@@ -578,7 +578,7 @@ test("function 47's warm boot puts the lines written behind on the card before t
   m.write(0x3000, 0x0e); m.write(0x3001, 47); m.write(0x3002, 0xcd); m.write(0x3003, 0x05); m.write(0x3004, 0x00);
   m.cpu.cpu.sp = 0x3100;
   m.cpu.cpu.pc = 0x3000;
-  m.runUntil(() => m.waitingForInput() && /\nSAY\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "the chained SAY");
+  m.runUntil(() => m.waitingForInput() && /\nSAY\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the chained SAY");
   m.step = step;
   assert.equal(onCard, true, "the records were on the card when the CCP began to load SAY");
 });
@@ -598,7 +598,7 @@ test("a flush tries every line: the first line's write failing, the next still r
   failing(m, (block, data) => data.every((v) => v === 0xc3) && "fail");
   m.mark = m.output.length;
   m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
+  m.runUntil(() => m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
   assert.equal(runOf(image, 0xc3), -1, "the failed line never reached the card");
   assert.notEqual(runOf(image, 0xd4), -1, "the next line did");
   assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1);
@@ -730,7 +730,7 @@ test("when every line is dirty and the forced write of the next in turn fails, t
   assert.equal(tries, 1, "the failed line's write not tried again by a miss");
   m.mark = m.output.length;
   m.cpu.cpu.pc = 0; // warm boot: the line, still dirty, tried by the flush
-  m.runUntil(() => m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
+  m.runUntil(() => m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
   assert.equal(tries, 2, "the flush tried it");
   assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "and said so");
 });

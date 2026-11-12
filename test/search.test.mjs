@@ -64,7 +64,7 @@ test("0050h is the drive a program came from: a typed B:NAME, a plain name, the 
   m.command("A:");
   const from = m.output.length;
   m.type("USER 0!B:SHOWB!SHOW\r");
-  m.runUntil(() => m.ready() && m.read(m.sym("CHPOS")) === 0 && /A>$/.test(m.text(from)), 400_000_000, "the chained line's end");
+  m.runUntil(() => m.ready() && m.read(m.sym("CHPOS")) === 0 && /A(:\S*)?>$/.test(m.text(from)), 400_000_000, "the chained line's end");
   assert.match(m.text(from), /B:SHOWB\r\n2[\s\S]*SHOW\r\n0/, "a chained B:NAME piece, and the piece after it");
   assert.deepEqual(m.violations, []);
 });

@@ -26,7 +26,7 @@ test("replaced CONOUT, CONIN and CONST see the BDOS's console traffic, and ^C re
   m.type("y");
   m.type("hi\r");
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   const out = record(m, 0x4100, 0x4004);
   const inp = record(m, 0x4200, 0x4006);
   assert.ok(out.startsWith("ABCD"), `functions 2, 6 and 9 reach CONOUT: ${JSON.stringify(out)}`);
@@ -43,13 +43,13 @@ test("replaced CONOUT and WBOOT stay in the table across a ^C warm boot", async 
   m.type("HOOK\r");
   m.expect(/ABCD$/);
   for (const keys of ["x", "y", "hi\r", "\x03"]) m.type(keys);
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(m.read(0x4000), 1);
   const before = word(m, 0x4004);
   m.command("DIR"); // built in, so HOOK.COM stays in the TPA
   assert.match(record(m, before, 0x4004), /HOOK\.COM/, "the CCP's DIR after the warm boot writes through the replaced CONOUT");
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(m.read(0x4000), 2, "a second ^C warm boots through the replaced WBOOT");
   assert.deepEqual(m.violations, []);
 });
@@ -60,7 +60,7 @@ test("a BDOS disk error reaches the replaced WBOOT, and its message the replaced
   m.type("HOOK E\r");
   m.runUntil(() => m.waitingForInput(), 400_000_000, "the BDOS error's key");
   m.type("\r");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.match(record(m, 0x4100, 0x4004), /Bdos Err On C:/, "the error message passes through CONOUT");
   assert.equal(m.read(0x4000), 1, "the error's warm boot passes through WBOOT");
   assert.deepEqual(m.violations, []);
@@ -71,7 +71,7 @@ test("JP 0000h and BDOS function 0 reach the replaced WBOOT", async () => {
     const m = await machine();
     m.mark = m.output.length;
     m.type(`HOOK ${tail}\r`);
-    m.expect(/\r\nA>$/);
+    m.expect(/\r\nA(:\S*)?>$/);
     assert.equal(m.read(0x4000), 1, `${how} warm boots through the replaced WBOOT`);
     assert.deepEqual(m.violations, []);
   }
@@ -81,16 +81,16 @@ test("a cold boot puts the ROM's warm-boot entry back in the table", async () =>
   const m = await machine();
   m.mark = m.output.length;
   m.type("HOOK J\r");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   const at = m.sym("RAMBIOS") + 4;
   assert.notEqual(m.read(at) | (m.read(at + 1) << 8), m.sym("WBOOTR"), "hooked");
   m.reset();
-  m.expect(/A>$/, { maxCycles: 80_000_000 });
+  m.expect(/A(:\S*)?>$/, { maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt after reset");
   assert.equal(m.read(at) | (m.read(at + 1) << 8), m.sym("WBOOTR"), "the ROM's entry again");
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(m.read(0x4000), 1, "a ^C after the cold boot no longer reaches the hook");
   assert.deepEqual(m.violations, []);
 });

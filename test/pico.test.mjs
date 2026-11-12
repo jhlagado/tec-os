@@ -38,7 +38,7 @@ function start(files, { key = false, ...opts } = {}) {
     if (m.pc < 8 && m.pc !== 0 && m.pc !== 5 && m.pc !== 6 && m.pc !== 3) m.traps += 1;
     return step();
   };
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "a usable prompt");
   booting = false;
   return m;
@@ -50,7 +50,7 @@ const say = (m, line) => {
   m.mark = m.output.length;
   if (m.videoConsole()) m.typeMatrix(`${line.toLowerCase()}\r`);
   else m.type(`${line}\r`);
-  m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 400_000_000, line);
+  m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, line);
   return m.text(m.mark);
 };
 /** Call ADDR from a stub, with these registers. */
@@ -124,7 +124,7 @@ test("a GLCD-only board whose STARTUP.CMD sets CON CRT, or a program sets the fi
   // The shell runs the lines after its own.
   const m = start({ "GLCD.SVC": GLCD_SVC, "SHELL.SVC": SHELL_SVC, "SETCRT.COM": SETCRT, "STARTUP.CMD": startupFile("SHELL.SVC", "CON CRT", "SETCRT", "GLCD.SVC") }, { tms: false });
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
-  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD - 0xa00], "GLCD.SVC in, and the console, below the shell's ten pages");
+  assert.deepEqual([m.read(m0(m)), m.read(3) & 3, word(m, 6) - 0x100], [UC1, UC1, TPA_GLCD - 0xf00], "GLCD.SVC in, and the console, below the shell's fifteen pages");
 });
 
 test("a both-displays board whose STARTUP.CMD says CON UC1 loads GLCD.SVC and takes it, though CONMOD is still CRT: when TNDRVR runs (KE-200)", () => {
@@ -229,7 +229,7 @@ test("the starter card boots the shell and the ROM's console on a board with bot
   assert.deepEqual(files.map((f) => f.name), ["SHELL.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE - 169 - 0xa00], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's ten pages under the stub's page");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE - 169 - 0xf00], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's fifteen pages under the stub's page");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 
@@ -252,7 +252,7 @@ test("a good retry clears CARD?, and a failed one shows it again", () => {
   image[0] ^= 0xff;
   m.mark = m.output.length;
   m.type("R");
-  m.expect(/A>$/, { maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { maxCycles: 400_000_000 });
   assert.equal(lcdRow(m, 3), "");
   assert.match(lcdRow(m, 0), /^TEC-OS/);
   assert.match(lcdRow(m, 1), /^A: /);
@@ -330,7 +330,7 @@ test("UNLOAD leaves the ROM's console, on CRT: and from serial, and a warm boot 
   m.traps = 0;
   m.cpu.cpu.pc = 0; // a warm boot on serial
   m.mark = m.output.length;
-  m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+  m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
   assert.equal(m.traps, 0);
   say(m, "CON CRT");
   assert.deepEqual([m.read(3) & 3, m.read(m0(m))], [CRT, CRT], "CON CRT takes the ROM's console again");
@@ -352,7 +352,7 @@ test("on UC1: with no PICO driver, boot and a warm boot make no vector call", ()
   assert.equal(m.read(m.sym("CONMOD")), UC1);
   m.cpu.cpu.pc = 0;
   m.mark = m.output.length;
-  m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+  m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
   assert.equal(m.traps, 0);
 });
 
@@ -492,7 +492,7 @@ for (const [cols, r1] of WIDTHS) {
     gfx(m, PICOREG, { a: 0xe2, b: 1 });
     m.cpu.cpu.pc = 0;
     m.mark = m.output.length;
-    m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+    m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
     assert.equal(m.read(m.sym("VCLAIM")), 0, "program exit releases");
     assert.equal(VREG1(m), r1, "warm boot: text mode");
     assert.deepEqual(m.violations, []);
@@ -521,7 +521,7 @@ for (const [cols, r1] of WIDTHS) {
     wreck();
     m.cpu.cpu.pc = 0;
     m.mark = m.output.length;
-    m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+    m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
     patterns("after a warm boot");
   });
 }
@@ -648,7 +648,7 @@ test("the probe needs both patterns: a VDP that answers one way is not present",
   const m = new Machine({ ...romFor(), sdImage: standardCard(), clock: TEST_CLOCK, tms: true, matrix: true });
   const read = m.cpu.hardware.ioRead;
   m.cpu.hardware.ioRead = (port) => ((port & 0xff) === 0xbe ? 0x5a : read(port));
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   assert.equal(m.read(m.sym("CONDEV")) & 2, 0);
 });
 
@@ -770,7 +770,7 @@ test("the web host: VOLS on the line after an old PICO.SVC line runs, with no di
   a.write("STARTUP.CMD", startupFile("PICO.SVC", ":VOLS"));
   prepareCard(image, "tms");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
-  m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
+  m.runUntil(() => m.ready() && /A(:\S*)?>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
   assert.match(m.text(0), />VOLS\r/);
   assert.doesNotMatch(m.text(0), /PICO\.SVC|GLCD\.SVC|VOLS\?/);
 });
@@ -784,7 +784,7 @@ test("the web host: the piece after a display piece loses its colon and runs", (
   prepareCard(image, "tms", "40");
   assert.equal(startupText(image), "SHELL.SVC\r\nCON PICO 40\r\nVOLS\r\nDIR &USER 3 &USER 0\r\n");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
-  m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
+  m.runUntil(() => m.ready() && /A(:\S*)?>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
   assert.match(m.text(0), />CON PICO 40\r[\s\S]*>VOLS\r/, "VOLS runs after the display's line");
   assert.doesNotMatch(m.text(0), /VOLS\?/);
 });
@@ -843,7 +843,7 @@ test("the web host: the page's card boots on the board with both displays with n
   assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true });
   assert.equal(startupText(image), "SHELL.SVC\r\nCON PICO 80\r\n", "the page explicitly selects 80, after the shell");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: true });
-  m.runUntil(() => m.ready() && m.screen().some((l) => /^A>$/.test(l.trim())), 800_000_000, "the prompt");
+  m.runUntil(() => m.ready() && m.screen().some((l) => /^A(:\S*)?>$/.test(l.trim())), 800_000_000, "the prompt");
   assert.doesNotMatch(m.screen().join("\n"), /\?/, "no line refused on the screen");
   assert.doesNotMatch(m.text(0), /GLCD\.SVC\?/);
   assert.deepEqual(m.violations, []);
@@ -853,7 +853,7 @@ test("the web host: the page's card boots on the board with both displays with n
 // can't finish preparing as they are, and the card then boots as it is.
 const bootsToPrompt = (image) => {
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
-  m.runUntil(() => m.ready() && /A>$/.test(m.text(0)), 800_000_000, "the prompt");
+  m.runUntil(() => m.ready() && /A(:\S*)?>$/.test(m.text(0)), 800_000_000, "the prompt");
   return m;
 };
 

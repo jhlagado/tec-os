@@ -16,7 +16,7 @@ function noViolations(m) {
 
 test("cold boot leaves the overlay off, the classic bank selected and the CCP prompting", () => {
   const m = boot(standardCard(), { ramFill: 0x76 });
-  assert.match(m.bootText, /TEC-OS \d+\.\d+ for TEC-1G\r\nA: SYSTEM\s+\r\nB: WORK\s+\r\n\r\nA>$/);
+  assert.match(m.bootText, /TEC-OS \d+\.\d+ for TEC-1G\r\nA: SYSTEM\s+\r\nB: WORK\s+\r\n\r\nA(:\S*)?>$/);
   assert.equal(m.sysCtrl, 0x01);
   assert.equal(m.physicalBank, -1);
   const bdosVector = m.read(6) | (m.read(7) << 8);
@@ -33,7 +33,7 @@ test("reset from a non-default bank and a dirty latch boots cleanly, repeatedly"
   for (const latch of [0x0d, 0x45, 0x7f, 0x83]) {
     m.tec1g.ioHandlers.write(0xff, latch);
     m.reset();
-    assert.match(m.expect(/A>$/, { maxCycles: 80_000_000 }), /TEC-OS/);
+    assert.match(m.expect(/A(:\S*)?>$/, { maxCycles: 80_000_000 }), /TEC-OS/);
     assert.equal(m.sysCtrl, 0x01);
   }
   noViolations(m);
@@ -45,7 +45,7 @@ test("warm boot by ^C keeps the drive and user number", () => {
   m.command("USER 3");
   m.command("SAVE 1 U3.COM");
   m.type("\x03");
-  m.expect(/B>$/);
+  m.expect(/B(:\S*)?>$/);
   assert.match(m.command("DIR"), /U3\.COM/);
   m.command("USER 0");
   assert.match(m.command("DIR"), /NO FILE/);
@@ -75,7 +75,7 @@ test("warm boot clears the restart vectors except jumps into ROM, and a stale RS
     m.type(`RST${v.toString(16).padStart(2, "0")}\r`);
     m.runUntil(() => m.pc === 0x0101 || m.pc === 0x4000 + v || m.pc === 0x4000, 50_000_000, `RST ${v.toString(16)}h`);
     assert.equal(m.pc, 0x0101, `RST ${v.toString(16)}h returns to its caller`);
-    m.expect(/\r\nA>$/);
+    m.expect(/\r\nA(:\S*)?>$/);
   }
   m.type("RST10\r");
   m.runUntil(() => m.pc === HW || m.pc === 0x0101, 50_000_000, "RST 10h");
@@ -98,7 +98,7 @@ test("a cold boot rebuilds page zero once, in warm boot's PZINIT (KE-199)", () =
   let entries = 0;
   m.runUntil(() => {
     if (m.pc === at) entries += 1;
-    return m.ready() && /A>$/.test(m.text(0));
+    return m.ready() && /A(:\S*)?>$/.test(m.text(0));
   }, 400_000_000, "the first prompt");
   assert.equal(entries, 1);
   assert.equal(m.read(0), 0xc3, "page zero's jumps built");
@@ -229,9 +229,9 @@ test("on a card of four 8 MiB volumes the BDOS probe passes", SLOW, async () => 
   const results = out.match(/T\d\d (ok|FAIL)/g);
   assert.equal(results.length, 16);
   assert.deepEqual(results.filter((r) => r.endsWith("FAIL")), []);
-  m.command("D:", { prompt: /\r\nD>$/ });
-  m.command("SAVE 2 X.COM", { prompt: /\r\nD>$/ });
-  assert.match(m.command("DIR", { prompt: /\r\nD>$/ }), /X\.COM/);
+  m.command("D:", { prompt: /\r\nD(:\S*)?>$/ });
+  m.command("SAVE 2 X.COM", { prompt: /\r\nD(:\S*)?>$/ });
+  assert.match(m.command("DIR", { prompt: /\r\nD(:\S*)?>$/ }), /X\.COM/);
   for (const d of ["A", "B", "C", "D"]) assert.deepEqual(volume(image, d).verify(), []);
   noViolations(m);
 });

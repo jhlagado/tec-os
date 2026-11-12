@@ -14,8 +14,8 @@ test("@press sends a key and goes on without a prompt: D, I, R, then Return run 
   writeFileSync(card, standardCard());
   const out = execFileSync(process.execPath, [resolve(ROOT, "tools/capture.mjs"), "--rom", resolve(ROOT, "build/tecos/tecos.rom"), "--card", card, "--", "@press D", "@press I", "@press R", "^M"], { encoding: "utf8" });
   rmSync(dir, { recursive: true });
-  assert.match(out, /A>DIR\n/, "the three keys made one line");
-  assert.match(out, /A>DIR\nNO FILE\nA>/, "and Return ran it, on an empty card");
+  assert.match(out, /A(:\S*)?>DIR\n/, "the three keys made one line");
+  assert.match(out, /A(:\S*)?>DIR\nNO FILE\nA(:\S*)?>/, "and Return ran it, on an empty card");
   assert.doesNotMatch(out, /@PRESS/i);
 });
 

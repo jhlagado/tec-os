@@ -69,8 +69,8 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No
 
   mark = m.output.length;
   keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(since()) && /THOR\.PRJ: TIMES\.BAS/.test(status()));
-  assert.match(m.text(mark), /A>A:BAZA TIMES\.BAS\r\n(?:[|\/\\-]\x08)+COM written\r\n/, "BAZA's marks, each covered by the next and the last by its message");
-  assert.match(since(), /A>A:BAZA TIMES\.BAS\r\nCOM written\r\n/, "A:'s BAZA, the drive TED was loaded from");
+  assert.match(m.text(mark), /A(:\S*)?>A:BAZA TIMES\.BAS\r\n(?:[|\/\\-]\x08)+COM written\r\n/, "BAZA's marks, each covered by the next and the last by its message");
+  assert.match(since(), /A(:\S*)?>A:BAZA TIMES\.BAS\r\nCOM written\r\n/, "A:'s BAZA, the drive TED was loaded from");
   assert.ok(names(image, "A").includes("TIMES.COM"), "TIMES.COM on A:");
   assert.ok(!names(image, "A").includes("THOR.ERR"), "no THOR.ERR");
   assert.equal(word(m, CURSOR), 0, "back at the start");
@@ -78,14 +78,14 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No
   const files = names(image, "A");
   mark = m.output.length;
   keys(m, "\x14d", "^T D", () => /No debugger/.test(status()));
-  assert.doesNotMatch(since(), /A>/, "nothing chained: no prompt");
+  assert.doesNotMatch(since(), /A(:\S*)?>/, "nothing chained: no prompt");
   assert.deepEqual(names(image, "A"), files, "nothing written");
   assert.equal(word(m, CURSOR), 0, "the same place");
 
   mark = m.output.length;
   keys(m, "\x14r", "TIMES's first question", () => /WHAT IS YOUR NAME\? $/.test(since()));
   keys(m, "TEC\r7\r", "the table and the wait", () => /Press a key/.test(since()));
-  assert.match(since(), /A>A:BAZA TIMES\.BAS\r\nCOM written\r\n[^]*A>TIMES\r\nHELLO FROM BASIC ON TEC-OS\.\r\n[^]* 12 X 7  = 84 \r\n[^]*GOODBYE, TEC!\r\n/, "built again, then TIMES ran");
+  assert.match(since(), /A(:\S*)?>A:BAZA TIMES\.BAS\r\nCOM written\r\n[^]*A(:\S*)?>TIMES\r\nHELLO FROM BASIC ON TEC-OS\.\r\n[^]* 12 X 7  = 84 \r\n[^]*GOODBYE, TEC!\r\n/, "built again, then TIMES ran");
   keys(m, " ", "TED again", () => /L1 C1/.test(status()));
   assert.equal(word(m, CURSOR), 0, "the same place as before ^T R");
   const good = sha(image, "A", "TIMES.COM");
@@ -98,12 +98,12 @@ test("TED on TIMES.BAS: ^T B builds with BAZA and comes back clean, ^T D says No
   keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(since()) && /\?SYNTAX ERROR IN 95/.test(status()));
   // The console names BASIC line 95; TED's place, the file's line 10, comes
   // from BAZA's THOR.ERR record, TIMES.BAS:10:1:, which TED takes.
-  assert.match(since(), /A>A:BAZA TIMES\.BAS\r\n\?SYNTAX ERROR IN 95\r\n/, "BAZA's message");
+  assert.match(since(), /A(:\S*)?>A:BAZA TIMES\.BAS\r\n\?SYNTAX ERROR IN 95\r\n/, "BAZA's message");
   assert.equal(word(m, CURSOR), LINE10, "at the error's line");
   assert.equal(text(image, "A", "TIMES.BAS").split("\n")[9], BAD, "^T B saved first");
   assert.equal(sha(image, "A", "TIMES.COM"), good, "the failed compile leaves the last TIMES.COM as it was");
   assert.deepEqual(names(image, "A"), before, "no temporary file left, and no THOR.ERR once TED has it");
-  keys(m, "\x11", "the prompt", () => since().endsWith("A>"));
+  keys(m, "\x11", "the prompt", () => /A(:\S*)?>$/.test(since()));
   assert.deepEqual(m.violations, []);
 });
 
@@ -113,12 +113,12 @@ test("a project on B: builds with A:'s BAZA, which finds BAZA.RTL on its load dr
   let mark = m.output.length;
   const since = () => unspun(m.text(mark));
   const status = () => m.screen()[23];
-  keys(m, "b:\r", "B:", () => since().endsWith("B>"));
+  keys(m, "b:\r", "B:", () => /B(:\S*)?>$/.test(since()));
   keys(m, "ted times.bas\r", "A:'s TED on B:'s file", () => /TED +TIMES\.BAS/.test(status()));
   mark = m.output.length;
   keys(m, "\x14b", "the build's return", () => /TED\r\n/.test(since()) && /THOR\.PRJ: TIMES\.BAS/.test(status()));
   assert.match(since(), /A:BAZA TIMES\.BAS\r\nCOM written\r\n/, "A:'s BAZA");
-  keys(m, "\x11", "the prompt", () => since().endsWith("B>"));
+  keys(m, "\x11", "the prompt", () => /B(:\S*)?>$/.test(since()));
   const onB = names(image, "B");
   assert.ok(onB.includes("TIMES.COM"), `TIMES.COM on B:: ${onB.join(" ")}`);
   assert.ok(!onB.includes("BAZA.RTL") && !onB.includes("THOR.ERR"), onB.join(" "));

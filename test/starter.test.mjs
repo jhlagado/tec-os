@@ -123,7 +123,7 @@ function bounceRound(card) {
   const text = (registers) => Array.from(registers.slice(0, 8));
   const console40 = text(vdp().registers);
   let mark = m.output.length;
-  keys("baza bounce\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  keys("baza bounce\r", "BAZA's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
   assert.equal(com.length, 20736, "BOUNCE.COM's length");
@@ -176,7 +176,7 @@ function bounceRound(card) {
   assert.deepEqual(ship(), [y, x - 6], "the left arrow after ESC [ Z");
   mark = m.output.length;
   m.typeMatrix("Q");
-  m.runUntilChecked(() => m.ready() && /A>$/.test(m.text(mark)), 400_000_000, "the prompt after Q");
+  m.runUntilChecked(() => m.ready() && /A(:\S*)?>$/.test(m.text(mark)), 400_000_000, "the prompt after Q");
   assert.match(m.text(mark), /THANKS FOR PLAYING\. SCORE -?\d+ \r\n/);
   assert.deepEqual(text(vdp().registers), console40, "the console's VDP mode back");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
@@ -199,7 +199,7 @@ test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { ski
     m.enqueueInput(s, "matrix");
     m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && done()), 3_000_000_000, what);
   };
-  keys("tas demo\r", "TAS's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  keys("tas demo\r", "TAS's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /DEMO\.COM written/);
   const built = Buffer.from(volume(card, "A").read("DEMO.COM"));
   assert.equal(sha(built.subarray(0, 1191)), "7514c21df1dfabe11ddfa5ba94df9a40871f197e3e9b9d2e239c2b4988a9482d", "the pinned DEMO.COM");
@@ -211,7 +211,7 @@ test("on the card, TAS DEMO builds DEMO.COM and DEMO runs it until a key", { ski
   assert.deepEqual(Array.from(m.tec1g.state.display.tms9918.stateSnapshot().registers.slice(0, 8)), [0, 0xc2, 6, 0x80, 0, 0x36, 7, 1], "Graphics I on the PICO9918");
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(0, 20)), "TEC-OS hardware demo", "the LCD's first row");
   m.enqueueInput(" ", "matrix");
-  m.runUntilChecked(() => (m.pumpInput(), m.ready() && /Demo stopped\.\r\n[^]*A>$/.test(m.text(mark))), 400_000_000, "the prompt after a key");
+  m.runUntilChecked(() => (m.pumpInput(), m.ready() && /Demo stopped\.\r\n[^]*A(:\S*)?>$/.test(m.text(mark))), 400_000_000, "the prompt after a key");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.deepEqual(m.violations, []);
 });
@@ -240,7 +240,7 @@ function hello3Round(card) {
   assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   assert.deepEqual(lcdRows(m), HELLO3_ROWS, "the LCD as HELLO3 left it");
   const exit = line(m, "EXIT");
-  assert.equal(exit.out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA:SYSTEM>", "EXIT, the first line typed, goes to A>");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.deepEqual(m.violations, []);
 }
@@ -285,7 +285,7 @@ function hello3OnTty(card) {
   m.runUntilChecked(() => (m.pumpInput(), m.waitingForInput() && m.text(from).includes("MON3>")), 20_000_000, "MON3> after Esc on TTY");
   assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   const exit = line(m, "EXIT");
-  assert.equal(exit.out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA:SYSTEM>", "EXIT, the first line typed, goes to A>");
   assert.deepEqual(m.violations, []);
 }
 
@@ -326,7 +326,7 @@ function hello3KeyThenEsc(card) {
   m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.text(from).includes("MON3>")), 50_000_000, "MON3> after 1 and Esc");
   assert.match(m.text(from), /\r\nMON3>$/, "nothing after MON3>");
   const exit = line(m, "EXIT");
-  assert.equal(exit.out, "EXIT\r\r\n\r\nA>", "EXIT, the first line typed, goes to A>");
+  assert.equal(exit.out, "EXIT\r\r\n\r\nA:SYSTEM>", "EXIT, the first line typed, goes to A>");
   assert.deepEqual(m.violations, []);
 }
 
@@ -389,7 +389,7 @@ test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longe
   assert.equal(view()[n - top], source[n].slice(len - 40), "the longest line's last 40 columns");
   keys("\x1b[D".repeat(len - 1), "column 1", () => at(1).test(status()));
   assert.deepEqual(view(), cut(0, top), "back to the view from column 1");
-  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
+  keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A:SYSTEM>")));
   assert.deepEqual(m.violations, []);
 });
 
@@ -468,7 +468,7 @@ test("the web host: a pre-shell card's own STARTUP.CMD lines follow SHELL.SVC an
   assert.equal(startupOf(card), "SHELL.SVC\r\nCON PICO 40\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0\r\n");
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   assert.match(m.text(0), />TYPE NOTES\.TXT\r\r\nmy own notes\r\n/, "the user's TYPE ran");
-  assert.match(m.text(0), />DIR B: &USER 0\r\r\nWORK\.TXT +\r\n[^\n]*\n>?A>USER 0\r\n/, "and the chained line, piece by piece under the shell");
+  assert.match(m.text(0), />DIR B: &USER 0\r\r\n\r\nWORK +\.TXT +\d+\r\n[\s\S]*? free on B:WORK\r\nA(:\S*)?>USER 0\r\n/, "and the chained line, piece by piece under the shell");
   assert.deepEqual(m.violations, []);
 
   const locked = preShellCard();

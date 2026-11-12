@@ -139,7 +139,7 @@ function attempt(r, c, de = FCB) {
   }
   const text = m.text(m.mark);
   m.type(" ");
-  m.expect(/\r\nA>$/, { maxCycles: 100_000_000 });
+  m.expect(/\r\nA(:\S*)?>$/, { maxCycles: 100_000_000 });
   m.runUntil(() => m.ready(), 20_000_000, "the prompt's input");
   return { text };
 }

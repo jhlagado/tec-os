@@ -47,7 +47,7 @@ export function dirBlocks(image, drive = "A") {
 function logOn(m, logged) {
   if (logged === "A") return;
   m.type(`${logged}:\r`);
-  m.expect(new RegExp(`${logged}>$`), { maxCycles: 400_000_000 });
+  m.expect(new RegExp(`${logged}(:\\S*)?>$`), { maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the drive change");
 }
 
@@ -64,7 +64,7 @@ const driveA = (logged) => (logged === "A" ? 0 : 1);
 export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   const r0 = rom ?? romFor();
   const m = new Machine({ ...r0, sdImage: image, clock: TEST_CLOCK });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   logOn(m, logged);
   const t = { writes: [], reads: [] };
@@ -123,7 +123,7 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   /** Start a warm boot by GO() (a jump to 0000h if not given) and run to the prompt, answering a BDOS error's key. The text since. */
   const warm = (go = () => (m.cpu.cpu.pc = 0)) => {
     const mark = m.output.length;
-    const at = () => m.ready() && /\r\n[A-P]>$/.test(m.text(mark));
+    const at = () => m.ready() && /\r\n[A-P](:\S*)?>$/.test(m.text(mark));
     go();
     let seen = -1;
     for (let i = 0; i < 200 && !at(); i += 1) {
@@ -137,7 +137,7 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   /** Press reset and run to the prompt. */
   const reset = () => {
     m.reset();
-    m.expect(/[A-P]>$/, { from: m.output.length, maxCycles: 200_000_000 });
+    m.expect(/[A-P](:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
     m.runUntil(() => m.ready(), 200_000_000, "the prompt after the reset");
   };
   return { image, m, t, stub, bdos, svc, bios, name, put, setR, blockOf, onCard, state, pending, refuse, warm, reset };
@@ -384,7 +384,7 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
   const r0 = rom ?? romFor();
   const m = new Machine({ ...r0, sdImage: card(), clock: TEST_CLOCK });
   const census = watch(m);
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   logOn(m, logged);
   let low = TOP;

@@ -71,8 +71,8 @@ test("function 99, truncate, returns FFh and leaves the file as it was", () => {
 
 test("the prompt shows the user number before the drive unless it is 0, as CP/M 3 does: 3A>", () => {
   const m = boot(card());
-  assert.match(m.command("USER 3"), /\r\n3A>$/);
-  assert.match(m.command("B:"), /\r\n3B>$/);
+  assert.match(m.command("USER 3"), /\r\n3A(:\S*)?>$/);
+  assert.match(m.command("B:"), /\r\n3B(:\S*)?>$/);
   assert.match(m.command("USER 15"), /\r\n15B>$/);
-  assert.match(m.command("USER 0"), /\r\nB>$/);
+  assert.match(m.command("USER 0"), /\r\nB(:\S*)?>$/);
 });

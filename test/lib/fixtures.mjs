@@ -143,7 +143,7 @@ export function boot(sdImage, { width = 80, ramFill = 0, highCapacity = true, tm
   const { rom, symbols } = romFor();
   if (sdImage) withDisplay(sdImage, { tms, matrix, width });
   const m = new Machine({ rom, symbols, sdImage, ramFill, highCapacity, tms, matrix, glcd, ram96, mains, expands, clock: TEST_CLOCK });
-  m.bootText = m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  m.bootText = m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;
 }

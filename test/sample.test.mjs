@@ -43,7 +43,7 @@ test("TAS builds SAMPLE on TEC-OS, and SAMPLE runs on the PICO9918 board and ret
   m.runUntilChecked(() => m.ready() && screen().some((l) => l === "Back to the prompt."), 400_000_000, "SAMPLE's run");
   m.cpu.hardware.ioWrite = io;
   const text = screen().join("\n");
-  assert.match(text, /Hello from TEC-OS\.\nScreen: 80 by 24\nBack to the prompt\.\n\nA>/);
+  assert.match(text, /Hello from TEC-OS\.\nScreen: 80 by 24\nBack to the prompt\.\n\nA(:\S*)?>/);
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(20, 40)), "Hello from SAMPLE   ", "the LCD's second row");
   assert.ok(ports.filter((p) => p === 0x02).length >= 6 * 200, "the digits, 200 passes");
   assert.ok(ports.filter((p) => p === 0x01).length >= 800, "the beep and the digits' select");

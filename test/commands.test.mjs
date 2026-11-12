@@ -132,10 +132,10 @@ test("ERA *.* answered with - erases nothing, and the Return after it ends the a
   m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
   m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
   m.type("-\r"); // 2Dh folds to 0Dh: once it was taken for Return, and the real one reached the prompt
-  m.expect(/A>$/, { from, maxCycles: 50_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 50_000_000 });
   const end = m.cycles + 20_000_000; // time for a stray Return to reach the prompt
   m.runUntil(() => m.cycles >= end, 30_000_000, "a pause");
-  assert.equal((m.text(from).match(/A>/g) ?? []).length, 1, `one prompt after the answer: ${JSON.stringify(m.text(from))}`);
+  assert.equal((m.text(from).match(/A(:\S*)?>/g) ?? []).length, 1, `one prompt after the answer: ${JSON.stringify(m.text(from))}`);
   assert.match(m.command("DIR B:"), /KEEP\.COM/);
 });
 
@@ -147,14 +147,14 @@ test("ERA *.* answered with Return alone erases nothing and takes no second Retu
   m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
   m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
   m.type("\r");
-  m.expect(/A>$/, { from, maxCycles: 50_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 50_000_000 });
   assert.match(m.command("DIR B:"), /KEEP\.COM/);
   const again = m.output.length;
   m.type("ERA B:*.*\r");
   m.expect(/ALL \(Y\/N\)\?/, { from: again, maxCycles: 100_000_000 });
   m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
   m.type("y\r");
-  m.expect(/A>$/, { from: again, maxCycles: 50_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: again, maxCycles: 50_000_000 });
   assert.match(m.command("DIR B:"), /NO FILE/);
 });
 
@@ -163,12 +163,12 @@ const code = (m) => word(m, m.sym("PRGCODE"));
 test("SH11 DEL is ERA by another name: it erases a file, and a file pattern, as ERA does", async () => {
   const m = await machine({}, { shell: true });
   for (const n of ["ONE.COM", "TWO.COM", "KEEP.DAT"]) m.command(`SAVE 1 B:${n}`);
-  assert.equal(m.command("DEL B:ONE.COM"), "DEL B:ONE.COM\r\r\nA>");
-  assert.equal(m.command("ERA B:TWO.COM"), "ERA B:TWO.COM\r\r\nA>");
-  assert.match(m.command("DIR B:"), /^DIR B:\r\r\nKEEP\.DAT *\r\n1 file,/);
+  assert.equal(m.command("DEL B:ONE.COM"), "DEL B:ONE.COM\r\r\nA:SYSTEM>");
+  assert.equal(m.command("ERA B:TWO.COM"), "ERA B:TWO.COM\r\r\nA:SYSTEM>");
+  assert.match(m.command("DIR /W B:"), /^DIR \/W B:\r\r\nKEEP\.DAT *\r\n1 file,/);
   for (const n of ["ONE.COM", "TWO.COM"]) m.command(`SAVE 1 B:${n}`);
   m.command("DEL B:*.COM"); // a pattern short of *.* asks nothing
-  assert.match(m.command("DIR B:"), /^DIR B:\r\r\nKEEP\.DAT *\r\n1 file,/);
+  assert.match(m.command("DIR /W B:"), /^DIR \/W B:\r\r\nKEEP\.DAT *\r\n1 file,/);
   assert.equal(m.command("DEL B:NONE.COM"), m.command("ERA B:NONE.COM").replace("ERA", "DEL"), "a missing file, the same answer");
   assert.deepEqual(m.violations, []);
 });
@@ -182,13 +182,13 @@ test("SH11 DEL *.* asks ALL (Y/N)? as ERA *.* does: N keeps the files, Y erases 
     m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
     m.runUntil(() => m.waitingForInput(), 100_000_000, "the answer");
     m.type(`${answer}\r`);
-    m.expect(/A>$/, { from, maxCycles: 50_000_000 });
+    m.expect(/A(:\S*)?>$/, { from, maxCycles: 50_000_000 });
     return m.text(from);
   };
   const del = ask("DEL B:*.*", "n");
   assert.equal(del, ask("ERA B:*.*", "n").replace("ERA", "DEL"), "the same question and answer");
   assert.equal(code(m), 0, "N is an answer, not a failure");
-  assert.match(m.command("DIR B:"), /KEEP\.COM/);
+  assert.match(m.command("DIR /W B:"), /KEEP\.COM/);
   ask("DEL B:*.*", "y");
   assert.match(m.command("DIR B:"), /NO FILE/);
 });
@@ -230,7 +230,7 @@ test("FNPRINT ends at $", async () => {
   // LD DE,MSG / LD C,9 / CALL 5 / RET / MSG: "AB$CD$"
   const m = await machine({ "P9.COM": Uint8Array.from([0x11, 0x09, 0x01, 0x0e, 0x09, 0xcd, 0x05, 0x00, 0xc9, ...Buffer.from("AB$CD$", "latin1")]) });
   const out = m.command("P9");
-  assert.match(out, /P9\r\r?\nAB\r?\n?A>/);
+  assert.match(out, /P9\r\r?\nAB\r?\n?A(:\S*)?>/);
   assert.doesNotMatch(out, /CD/);
 });
 
@@ -342,15 +342,15 @@ test("SH3 cmd runs com", async () => {
 function bareAt(m, line) {
   const from = m.output.length;
   m.type(`${line}\r`);
-  m.runUntil(() => m.ready() && /\r\n\d*[A-P]>$/.test(m.text(from)), 400_000_000, line);
+  m.runUntil(() => m.ready() && /\r\n\d*[A-P](:\S*)?>$/.test(m.text(from)), 400_000_000, line);
   return m.text(from);
 }
 
 test("SH3 47 runs whole", async () => {
   const m = await machine(bareFiles);
-  assert.match(bareAt(m, "CH"), /A>TYPE H\.TXT\r\nhello/, "echoed after the prompt and run");
+  assert.match(bareAt(m, "CH"), /A(:\S*)?>TYPE H\.TXT\r\nhello/, "echoed after the prompt and run");
   const t = bareAt(m, "CH2");
-  assert.match(t, /A>TYPE H\.TXT!TYPE H\.TXT\r/, "echoed whole");
+  assert.match(t, /A(:\S*)?>TYPE H\.TXT!TYPE H\.TXT\r/, "echoed whole");
   assert.doesNotMatch(t, /hello/, "one command: TYPE with the tail H.TXT!TYPE H.TXT");
 });
 

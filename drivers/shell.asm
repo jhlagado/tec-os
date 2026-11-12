@@ -4,7 +4,9 @@
 ; ROM CCP leaves out: lines of pieces
 ; joined by ! and &, .CMD scripts, the
 ; rest of STARTUP.CMD, COPY, DEL,
-; SERVICES, the pager and the history
+; SERVICES, CD and the volume in the
+; prompt, DIR with sizes, CLS, ECHO,
+; PAUSE, the pager and the history
 ; ring. Every other piece goes back to
 ; the ROM to run. The hook's contract,
 ; the .CMD rules and the separators are
@@ -53,7 +55,7 @@ EXNAM: DS 8,' '
   DB 0,1
 
 ENTRY0:
-  jp ENTRY
+  jr ENTRY
 
 ; The hook's table: LINE, PAGE, HREC
 ; and HSTORE. It must not cross a page,
@@ -410,17 +412,20 @@ SPEND:
   ld (LPOS),hl   ; nothing follows
   ret
 
-; COPY, DEL and SERVICES are the
-; shell's; a first word of type CMD is a
-; script. The piece, echoed as typed, is
-; folded first, as the ROM folds a line.
-; The table holds each keyword,
-; zero-ended, and its handler, entered
-; with HL after the word.
+; COPY, DEL, SERVICES, CD, DIR, CLS,
+; ECHO and PAUSE are the shell's (SHTAB
+; holds each keyword, zero-ended, and
+; its handler, entered with HL after the
+; word); a first word of type CMD is a
+; script. Only the first word is folded
+; to match them, so ECHO keeps the
+; text's case: the ROM folds the rest of
+; a piece it is handed, and a handler
+; folds what it reads.
 
 BUILTIN:
   ld hl,(PIECE)
-  call FOLD      ; a..z to upper case
+  call FOLDW     ; the word, upper case
   ld de,SHTAB
 
 BI1:
@@ -484,15 +489,23 @@ SCRCHK:
   cp 'D'
   jr nz,HAND     ; not .CMD
   call CRLF      ; after the line
-  jp CMDSCR
+  jr CMDSCR
 
 ; Fold a..z to upper case from HL to
-; the zero. Changes AF and HL.
+; the zero, or with FOLDW to the first
+; blank. Changes AF, C and HL.
 
 FOLD:
+  ld c,1         ; stop at the zero
+  jr FD0
+
+FOLDW:
+  ld c,SPACE+1   ; stop at a blank
+
+FD0:
   ld a,(hl)
-  or a
-  ret z          ; the piece's end
+  cp c
+  ret c          ; the end
   cp 'a'
   jr c,FD1       ; below 'a'
   cp 'z'+1
@@ -502,7 +515,7 @@ FOLD:
 
 FD1:
   inc hl
-  jr FOLD
+  jr FD0
 
 HAND0:
   ld (PIECE),hl
@@ -537,15 +550,6 @@ CMDDEL:
   inc hl
   ld (hl),'A'    ; DEL becomes ERA
   jr HAND
-
-SHTAB:
-  DB "COPY",0
-  DW CMDCOPY
-  DB "DEL",0
-  DW CMDDEL
-  DB "SERVICES",0
-  DW CMDSVC
-  DB 0
 
 ; A built-in's refusal: the word at
 ; PIECE up to a blank, then ?, as the
@@ -619,14 +623,53 @@ CMDSCR:
   ld de,SFCB
   ld bc,36
   ldir           ; the script's FCB
+
+; A name with no drive is read from the
+; current one, named in the FCB, so a
+; drive change in the script leaves its
+; next record on its own drive.
+
+  ld a,(SFCB)
+  or a
+  jr nz,CS1      ; a drive named
+  ld a,(CURDSK)
+  and $0F
+  inc a          ; A: is 1
+  ld (SFCB),a
+
+CS1:
   call SOPENF    ; open it
   jr c,BADW      ; no file
   xor a
   ld (SORG),a    ; its lines are typed
   jr BDONE       ; its first line next
 
+; The shell's keywords, each zero-ended
+; with its handler.
+
+SHTAB:
+  DB "COPY",0
+  DW CMDCOPY
+  DB "DEL",0
+  DW CMDDEL
+  DB "SERVICES",0
+  DW CMDSVC
+  DB "CD",0
+  DW CMDCD
+  DB "DIR",0
+  DW CMDDIR
+  DB "CLS",0
+  DW CMDCLS
+  DB "ECHO",0
+  DW CMDECHO
+  DB "PAUSE",0
+  DW CMDPAU
+  DB 0
+
 %INCLUDE "shellcmd.asm"
 %INCLUDE "shellio.asm"
+%INCLUDE "shellcd.asm"
+%INCLUDE "shelldir.asm"
 
 IMGEND:
 
@@ -677,7 +720,7 @@ LCOND EQU PGSP+2
 ; the open script, LBUF typed input: its
 ; capacity, count and LTXT, the text,
 ; which also holds a script's line and
-; a recalled one. The shell's 32-byte
+; a recalled one. The shell's 48-byte
 ; stack is under STKTOP.
 
 CLAIMD EQU LCOND+1
@@ -694,8 +737,54 @@ CFCB EQU PDNZ+1
 SFCB EQU CFCB+36
 LBUF EQU SFCB+36
 LTXT EQU LBUF+2
-STKBOT EQU LBUF+130
-STKTOP EQU STKBOT+32
+
+; LBL holds each drive's volume label,
+; 11 bytes a drive, valid while its
+; first byte is not zero. CDNAME is the
+; label CD seeks, CDDRV its drive; a
+; walk sets CDIDX to the index found
+; plus 1 and CDON to the drive it is
+; on. VIDX is the walk's index, VLIST
+; set to list. DIR: DDRV its drive,
+; DSKIP the matches consumed, DNUM the
+; files shown, DTOT their bytes, DPASS
+; its pass, DRST set to begin the
+; search again, HMAP the marked names.
+; NUMV is a 24-bit number, DIGB its
+; digits. CD prints no number, so
+; CDNAME shares their bytes; a walk
+; only reads it.
+
+; A volume's descriptor, which TNDESC
+; puts in CFCB, has its drive (FFh for
+; none) at DSDRV and its label at DSLBL.
+
+DSDRV EQU CFCB+14
+DSLBL EQU CFCB+16
+
+; DIR searches with CFCB, whose extent
+; byte is CFEX.
+
+CFEX EQU CFCB+12
+
+LBL EQU LBUF+130
+CDDRV EQU LBL+44
+CDIDX EQU CDDRV+1
+CDON EQU CDIDX+1
+VIDX EQU CDON+1
+VLIST EQU VIDX+1
+DDRV EQU VLIST+1
+DSKIP EQU DDRV+1
+DNUM EQU DSKIP+2
+DTOT EQU DNUM+2
+NUMV EQU DTOT+3
+DIGB EQU NUMV+3
+CDNAME EQU NUMV
+DPASS EQU DIGB+9
+DRST EQU DPASS+1
+HMAP EQU DRST+1
+STKBOT EQU HMAP+16
+STKTOP EQU STKBOT+48
 
 ; The ring is the last page, aligned so
 ; that a byte offset in L wraps within

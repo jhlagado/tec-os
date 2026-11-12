@@ -28,7 +28,7 @@ test("warm boot turns the GLCD display and graphics back on", async () => {
   const g = m.tec1g.state.display.glcdCtrl;
   assert.equal(g.glcdDisplayOn, true);
   assert.equal(g.glcdGraphics, true);
-  assert.ok(m.glcdScreen().some((line) => line.startsWith("A>")));
+  assert.ok(m.glcdScreen().some((line) => /^A(:\S*)?>/.test(line)));
   noViolations(m);
 });
 
@@ -46,7 +46,7 @@ test("punch and reader are the serial port, eight bits wide", async () => {
     m.runUntil(() => m.pc === got, 50_000_000, `reception of ${code.toString(16)}`);
     assert.equal(m.cpu.cpu.a, code);
   }
-  const text = m.expect(/\r\nA>$/);
+  const text = m.expect(/\r\nA(:\S*)?>$/);
   assert.match(text, /41 C3 0D \r\n/);
   assert.match(m.serialText(), /PUN41 C3 0D /, "punch and console share the serial line");
   noViolations(m);
@@ -71,7 +71,7 @@ test("DEMO.COM drives the LCD, clock, digits, its own LED scan and a claimed PIC
   const vdp = m.tec1g.state.display.tms9918.stateSnapshot();
   assert.deepEqual([...vdp.registers.slice(0, 8)], [0x00, 0xc2, 0x06, 0x80, 0x00, 0x36, 0x07, 0x01], "Graphics I while claimed");
   m.typeMatrix("x");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   const after = m.tec1g.state.display.tms9918.stateSnapshot();
   assert.deepEqual([...after.registers.slice(0, 2)], [0x04, 0xd0], "80-column text again");
   assert.ok(m.screen().includes("Demo stopped."));

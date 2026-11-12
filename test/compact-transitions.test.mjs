@@ -14,7 +14,7 @@ const word=(m,a)=>m.read(a)|(m.read(a+1)<<8);
 const patterns=font=>Buffer.from(Array.from({length:256},(_,code)=>{const c=code&127,at=c<32?0:(c-32)*8;return [...font.subarray(at,at+8)].map(b=>code&128?b^255:b)}).flat());
 function boot(variant){
  const m=new Machine({rom:read(variant,'build/tecos/tecos.rom'),symbols:symbolsFromD8(JSON.parse(read(variant,'build/tecos/tecos.d8.json'))),sdImage:createContainer([{geometry:'G1M',label:'SYSTEM',mount:'A'}]),tms:true,matrix:true,glcd:false,clock:new Date('2026-01-01T12:00:00Z')});
- m.expect(/A>$/,{from:0,maxCycles:200_000_000});m.runUntil(()=>m.ready(),200_000_000,'raw prompt');return m;
+ m.expect(/A(:\S*)?>$/,{from:0,maxCycles:200_000_000});m.runUntil(()=>m.ready(),200_000_000,'raw prompt');return m;
 }
 function state(m,width,font){
  assert.equal(m.read(m.sym('PIWID')),width,'retained width');assert.equal(m.read(m.sym('VWID')),width,'terminal width');assert.equal(m.read(m.sym('VHGT')),24);

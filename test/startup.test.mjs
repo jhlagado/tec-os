@@ -29,19 +29,19 @@ function start(files, { key = false, shell = false, rom, ...opts } = {}) {
   if (key) m.tec1g.applyKeySilent(0x01, true);
   return m;
 }
-const prompt = (m, max = 400_000_000) => m.runUntil(() => m.ready() && /[A-P]>$/.test(m.text(0)), max, "a usable prompt");
+const prompt = (m, max = 400_000_000) => m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(0)), max, "a usable prompt");
 const user = (m) => m.read(4) >> 4;
 
 test("each line runs, echoed, and a failing one prints its message; a warm boot doesn't run the file", () => {
   const m = start({ "STARTUP.CMD": startupFile("NOSUCH", "", "USER 3", "TYPE HELLO.TXT") }, { shell: true });
   prompt(m);
   const text = m.text(0);
-  assert.match(text, /A>NOSUCH\r\r\nNOSUCH\?/);
-  assert.match(text, /A>TYPE HELLO.TXT\r\r\n/);
+  assert.match(text, /A(:\S*)?>NOSUCH\r\r\nNOSUCH\?/);
+  assert.match(text, /A(:\S*)?>TYPE HELLO.TXT\r\r\n/);
   assert.equal(user(m), 3);
   const mark = m.output.length;
   m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(mark)), 200_000_000, "warm boot");
+  m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(mark)), 200_000_000, "warm boot");
   assert.doesNotMatch(m.text(mark), /USER/);
 });
 
@@ -178,8 +178,8 @@ test("a reset clears the position, so the file runs again", () => {
   prompt(m);
   m.reset();
   const from = m.output.length;
-  m.runUntil(() => m.ready() && /[A-P]>$/.test(m.text(from)), 400_000_000, "the prompt after reset");
-  assert.match(m.text(from), /A>USER 3/);
+  m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(from)), 400_000_000, "the prompt after reset");
+  assert.match(m.text(from), /A(:\S*)?>USER 3/);
 });
 
 /** Each line's output and BDOS calls from MLSKIP, where the CCP takes it, to the next MLREAD. */
@@ -243,12 +243,12 @@ test("an unreadable file reaches a prompt, and what it held doesn't run", () => 
     }
     return step();
   };
-  for (let i = 0; i < 12 && !(m.ready() && /[A-P]>$/.test(m.text(0))); i += 1) {
+  for (let i = 0; i < 12 && !(m.ready() && /[A-P](:\S*)?>$/.test(m.text(0))); i += 1) {
     const end = m.cycles + 20_000_000;
-    m.runUntil(() => m.cycles >= end || (m.ready() && /[A-P]>$/.test(m.text(0))), 40_000_000, "the error's key");
-    if (m.waitingForInput() && !/[A-P]>$/.test(m.text(0))) m.type("\r");
+    m.runUntil(() => m.cycles >= end || (m.ready() && /[A-P](:\S*)?>$/.test(m.text(0))), 40_000_000, "the error's key");
+    if (m.waitingForInput() && !/[A-P](:\S*)?>$/.test(m.text(0))) m.type("\r");
   }
-  assert.ok(m.ready() && /[A-P]>$/.test(m.text(0)));
+  assert.ok(m.ready() && /[A-P](:\S*)?>$/.test(m.text(0)));
   assert.match(m.text(0), /Bad Sector/);
   assert.doesNotMatch(m.text(0), /NEVERRUN/);
   assert.match(m.command("DIR HELLO.TXT"), /HELLO\.TXT/);
@@ -283,7 +283,7 @@ test("a startup file whose program jumps to C000h warm boots once, as a program'
   prompt(m);
   assert.equal(colds, 1, "the first cold boot only");
   assert.equal((m.text(0).match(/TEC-OS /g) ?? []).length, 1, "one banner");
-  assert.match(m.text(0), /A>JUMP\r\r\n\r\nA>$/);
+  assert.match(m.text(0), /A(:\S*)?>JUMP\r\r\n\r\nA(:\S*)?>$/);
 });
 
 // --- The one startup line --------------------------------------------------
@@ -292,7 +292,7 @@ test("SH4 first line", () => {
   const m = start({ "STARTUP.CMD": startupFile("USER 3", "USER 5") });
   prompt(m);
   assert.equal(user(m), 3, "the first line runs, and only it");
-  assert.match(m.text(0), /A>USER 3\r/);
+  assert.match(m.text(0), /A(:\S*)?>USER 3\r/);
   assert.doesNotMatch(m.text(0), /USER 5/);
 });
 
@@ -310,7 +310,7 @@ test("SH4 127", () => {
   const line = `TYPE ${"X".repeat(122)}YY`; // 129 characters
   const m = start({ "STARTUP.CMD": raw(`${line}\r\nUSER 2\r\n`) });
   prompt(m);
-  assert.match(m.text(0), new RegExp(`A>${line.slice(0, 127)}\\r`), "the first 127 characters");
+  assert.match(m.text(0), new RegExp(`A(:\\S*)?>${line.slice(0, 127)}\\r`), "the first 127 characters");
   assert.equal(user(m), 0);
   const r = start({ "STARTUP.CMD": raw(`${"\r\n".repeat(60)}USER 7`) });
   prompt(r);
@@ -329,7 +329,7 @@ test("SH4 warm boot", () => {
   m.command("USER 0");
   const mark = m.output.length;
   m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.ready() && /[A-P]>$/.test(m.text(mark)), 200_000_000, "warm boot");
+  m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(mark)), 200_000_000, "warm boot");
   assert.equal(user(m), 0, "never at a warm boot");
 });
 

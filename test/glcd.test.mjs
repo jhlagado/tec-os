@@ -47,7 +47,7 @@ async function board({ matrix = true, historicalFont = false } = {}) {
   }
   const m = new Machine({ rom, symbols, sdImage: await card(), clock: TEST_CLOCK, matrix });
   m.historicalFont = historicalFont;
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;
 }
@@ -56,7 +56,7 @@ async function board({ matrix = true, historicalFont = false } = {}) {
 function run(m, line) {
   m.mark = m.output.length;
   m.type(line);
-  const prompt = /\r\n[A-P]>$/;
+  const prompt = /\r\n[A-P](:\S*)?>$/;
   let seen = -1;
   for (let i = 0; i < 400; i += 1) {
     const end = m.cycles + 20_000_000;
@@ -138,11 +138,11 @@ test("the resident GLCD draws every screen of the workload as the driver did, by
 test("on a GLCD board (0006h) is three pages lower than with the driver, and no more", { timeout: 1_800_000 }, async () => {
   const { m, bdosVector } = await workload;
   assert.equal(m.historicalFont, false, "TPA reading uses production font");
-  // Three pages under the shell's ten, which are under the stub's page. The reference's own
+  // Three pages under the shell's fifteen, which are under the stub's page. The reference's own
   // figure, REF.bdosVector - 306h, held until the stub moved up 479 bytes, and the
-  // shell took its ten pages.
+  // shell took its pages.
   const stub = word(m, m.sym("STUBAD"));
-  assert.equal(bdosVector, ((stub >> 8) - 10 - 3) << 8);
+  assert.equal(bdosVector, ((stub >> 8) - 15 - 3) << 8);
 });
 
 test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async () => {
@@ -162,7 +162,7 @@ test("UNLOAD gives the console back to serial and the pages to the TPA, and outp
   run(m, "CONOUT\r");
   m.mark = m.output.length;
   m.type("UNLOAD\r");
-  m.runUntil(() => m.waitingForInput() && m.read(m.sym("CONMOD")) === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
+  m.runUntil(() => m.waitingForInput() && m.read(m.sym("CONMOD")) === 0 && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
   assert.equal(word(m, 6), before);
   assert.equal(loaded, (before & 0xff00) - 0x300);
   const s0 = m.serialText().length;
@@ -182,7 +182,7 @@ test("a second GLCD.SVC is refused whole, and the first keeps the console", asyn
   assert.deepEqual([word(m, 6), word(m, m.sym("GLVEC")), m.read(3) & 3], [first, table, 3]);
   m.mark = m.output.length;
   m.type("UNLOAD\r");
-  m.runUntil(() => m.waitingForInput() && m.read(m.sym("CONMOD")) === 0 && /[A-P]>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
+  m.runUntil(() => m.waitingForInput() && m.read(m.sym("CONMOD")) === 0 && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 50_000_000, "the prompt after UNLOAD");
   assert.equal(word(m, m.sym("GLVEC")), 0, "the first gave it back");
   assert.deepEqual(m.violations, []);
 });

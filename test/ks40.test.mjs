@@ -177,7 +177,7 @@ test('KS40 cold legacy storage clears before the primary40 console starts',()=>{
  cold.runUntil(()=>cold.pc===cold.sym('CONINIT'),3_000_000,'CONINIT');assert.equal(shadow(cold),0);
  const m=new Machine({rom:readFileSync(root+'/build/tecos/tecos.rom'),symbols:symbolsFromD8(JSON.parse(readFileSync(root+'/build/tecos/tecos.d8.json'))),sdImage:createContainer([{geometry:'G1M',label:'SYSTEM',mount:'A'}]),tms:true,matrix:true,glcd:false,clock:new Date('2026-01-01T12:00:00Z')});
  const vdp=m.tec1g.state.display.tms9918,consume=vdp.consumeNmi.bind(vdp);vdp.consumeNmi=()=>{consume();return false};
- m.expect(/A>$/,{from:0,maxCycles:200_000_000});m.runUntil(()=>m.ready(),200_000_000,'raw primary40');
+ m.expect(/A(:\S*)?>$/,{from:0,maxCycles:200_000_000});m.runUntil(()=>m.ready(),200_000_000,'raw primary40');
  assert.equal(m.read(m.sym('PIWID')),40);assert.equal(m.read(m.sym('VWID')),40);assert.equal(shadow(m),0);assert.deepEqual(m.violations,[]);
 });
 

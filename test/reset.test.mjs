@@ -62,7 +62,7 @@ function remount(image, i, mount) {
 const warm = (m) => {
   const from = m.output.length;
   m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(from)), 200_000_000, "warm boot");
+  m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(from)), 200_000_000, "warm boot");
 };
 
 /** Call ADDR from a stub in page zero, putting the machine back in its input loop. */
@@ -88,14 +88,14 @@ const mountOn = (m, drive, index) => volSvc(m, 0, drive, index);
 function machine(image = card(), opts = {}) {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, ...opts });
-  m.expect(/A>$/, { from: 0, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the first prompt");
   return m;
 }
 function reset(m) {
   const from = m.output.length;
   m.reset();
-  m.expect(/A>$/, { from, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after the reset");
   return m.text(from);
 }
@@ -272,7 +272,7 @@ test("a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset
   m.swapCard(good);
   from = m.output.length;
   m.type("R");
-  m.expect(/A>$/, { from, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 400_000_000 });
   assert.deepEqual(idx(m), [3, 2, 0, 0], "the retry");
 
   const n = remapped(good);
@@ -286,7 +286,7 @@ test("a card MOUNT refuses reaches DIAG, a retry uses the selection, and a reset
   n.swapCard(good);
   from = n.output.length;
   n.type("R");
-  n.expect(/A>$/, { from, maxCycles: 400_000_000 });
+  n.expect(/A(:\S*)?>$/, { from, maxCycles: 400_000_000 });
   assert.deepEqual(idx(n), DEFAULTS, "RAM with no PZINIT behind it is unrecognised");
 });
 
@@ -313,14 +313,14 @@ test("DIAG's retry uses the selection after another key and after a second failu
   toDiag(m, dead);
   assert.match(atDiag(m, "H"), /^H\r\nR retry> $/, "H only asks again: the header dump went with BLKBUF");
   m.swapCard(good);
-  atDiag(m, "R", /A>$/);
+  atDiag(m, "R", /A(:\S*)?>$/);
   assert.deepEqual(idx(m), [3, 2, 0, 0], "a retry after another key");
 
   const n = remapped(good);
   toDiag(n, dead);
   assert.match(atDiag(n, "R"), /error 21\r\nR retry/, "a second failure");
   n.swapCard(good);
-  atDiag(n, "R", /A>$/);
+  atDiag(n, "R", /A(:\S*)?>$/);
   assert.deepEqual(idx(n), [3, 2, 0, 0], "a retry after a second failure");
 });
 
@@ -332,10 +332,10 @@ test("a card with no default A: under a valid retained A: reaches DIAG, and a re
   m.swapCard(noA);
   const from = m.output.length;
   m.reset();
-  const text = m.expect(new RegExp(`${DIAGP.source}|A>$`), { from, maxCycles: 400_000_000 });
+  const text = m.expect(new RegExp(`${DIAGP.source}|A(:\\S*)?>$`), { from, maxCycles: 400_000_000 });
   assert.match(text, /error 2A\r\nR retry> $/, "MENOA, at DIAG");
   m.swapCard(good);
-  atDiag(m, "R", /A>$/);
+  atDiag(m, "R", /A(:\S*)?>$/);
   assert.deepEqual(idx(m), [3, 2, 0, 0]);
 });
 
@@ -476,7 +476,7 @@ function marked(v) {
 function flagsWith(v, rom) {
   const r = rom ?? romFor();
   const m = new Machine({ ...r, sdImage: marked(v), clock: TEST_CLOCK });
-  m.expect(/A>$/, { from: 0, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the first prompt");
   return m.read(m.sym("DRVTAB") + 8 + 7);
 }
@@ -510,10 +510,10 @@ test("from user 5, a drive and a video console, a reset reaches A:, user 0, on t
   const image = card();
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
-  m.expect(/A>$/, { from: 0, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
   m.command("USER 5");
-  m.command("B:", { prompt: /\r\n5B>$/ });
+  m.command("B:", { prompt: /\r\n5B(:\S*)?>$/ });
   m.write(3, 1);
   m.cpu.hardware.ioWrite(0xbf, 0xc0);
   m.cpu.hardware.ioWrite(0xbf, 0x81);
@@ -567,7 +567,7 @@ test("startup isn't reopened by a program's exit, ^C or a warm boot, and pending
   warm(m);
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\n3A>$/);
+  m.expect(/\r\n3A(:\S*)?>$/);
   assert.equal(lineCount(m.text(0), "USER 3"), 1 + 0);
   assert.equal(m.read(m.sym("STPOS")) >= 0x80, true);
 });
@@ -607,12 +607,12 @@ test("an unreadable STARTUP.CMD on the selected A: leaves a prompt", () => {
   };
   const from = m.output.length;
   m.reset();
-  for (let i = 0; i < 12 && !(m.ready() && /[A-P]>$/.test(m.text(from))); i += 1) {
+  for (let i = 0; i < 12 && !(m.ready() && /[A-P](:\S*)?>$/.test(m.text(from))); i += 1) {
     const end = m.cycles + 20_000_000;
-    m.runUntil(() => m.cycles >= end || (m.ready() && /[A-P]>$/.test(m.text(from))), 40_000_000, "the error's key");
-    if (m.waitingForInput() && !/[A-P]>$/.test(m.text(from))) m.type("\r");
+    m.runUntil(() => m.cycles >= end || (m.ready() && /[A-P](:\S*)?>$/.test(m.text(from))), 40_000_000, "the error's key");
+    if (m.waitingForInput() && !/[A-P](:\S*)?>$/.test(m.text(from))) m.type("\r");
   }
-  assert.ok(m.ready() && /[A-P]>$/.test(m.text(from)));
+  assert.ok(m.ready() && /[A-P](:\S*)?>$/.test(m.text(from)));
   assert.match(m.text(from), /Bad Sector/);
   assert.doesNotMatch(m.text(from), /USER 3/);
   assert.equal(m.read(4), 0);
@@ -623,7 +623,7 @@ test("a held key skips startup on the selected A:", () => {
   const from = m.output.length;
   m.reset();
   m.tec1g.applyKeySilent(0x01, true);
-  m.expect(/A>$/, { from, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after the reset");
   const text = m.text(from);
   assert.doesNotMatch(text, /USER 3/);
@@ -653,7 +653,7 @@ test("a dirty line is not written to a card of identical extents after a reset",
   reset(m);
   assert.deepEqual(writes, []);
   assert.deepEqual([...other].every((v, i) => v === copy[i]), true, "the card byte for byte");
-  assert.doesNotMatch(m.text(0), /Write lost[\s\S]*Write lost[\s\S]*A>$/);
+  assert.doesNotMatch(m.text(0), /Write lost[\s\S]*Write lost[\s\S]*A(:\S*)?>$/);
 });
 
 // RAM left by other ROMs. Each file is a real run's RAM with RES.SVC in, pinned by
@@ -737,7 +737,7 @@ for (const [name, latch] of [["MAIN 1", 0x09], ["EXPAND 1", 0x05], ["both", 0x0d
     const from = m.output.length;
     m.cpu.hardware.ioWrite(0xff, latch);
     m.cpu.cpu.pc = m.sym("COLD");
-    m.expect(/A>$/, { from, maxCycles: 400_000_000 });
+    m.expect(/A(:\S*)?>$/, { from, maxCycles: 400_000_000 });
     m.runUntil(() => m.ready(), 400_000_000, "the prompt");
     assert.deepEqual(idx(m), [3, 2, 0, 0]);
   });

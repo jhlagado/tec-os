@@ -19,7 +19,7 @@ const CRT = 1;
 /** A PICO9918 and matrix board on IMAGE, at its usable prompt. */
 function start(image, opts = {}) {
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, ...opts });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "a usable prompt");
   return m;
 }
@@ -29,7 +29,7 @@ function say(m, line) {
   m.mark = m.output.length;
   if (m.read(3) & 1) m.typeMatrix(`${line}\r`);
   else m.type(`${line}\r`);
-  m.runUntil(() => m.waitingForInput() && /\d*[A-P]>$/.test(m.text(m.mark)), 400_000_000, line);
+  m.runUntil(() => m.waitingForInput() && /\d*[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, line);
   return m.text(m.mark);
 }
 
@@ -116,7 +116,7 @@ test("TNDRVR refuses B = 1, with a table or HL = 0, and the console is unchanged
     assert.deepEqual([r.carry, r.a], [1, ABI.TNEBAD], `HL = ${hl.toString(16)}`);
   }
   assert.deepEqual([m.read(m.sym("CONMOD")), m.read(m.sym("VWID")), word(m, m.sym("PIVEC"))], before);
-  assert.match(say(m, "DIR"), /^DIR\r\r\nNO FILE\r\nA>$/, "the console works");
+  assert.match(say(m, "DIR"), /^DIR\r\r\nNO FILE\r\nA(:\S*)?>$/, "the console works");
 });
 
 const OLD_PICO = "ff5b2c35ec7d648c81ca129532e133103cbc095fa1ce0756c3c6b1b39b1bf287";
@@ -141,7 +141,7 @@ test("CON PICO 40 and CON CRT 32 switch the width, kept over warm boot, and 80 a
     assert.deepEqual([m.read(m.sym("PIWID")), m.read(m.sym("VWID"))], [cols, cols], line);
   }
   m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.waitingForInput() && /A>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
+  m.runUntil(() => m.waitingForInput() && /A(:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
   assert.deepEqual([m.read(m.sym("PIWID")), m.read(m.sym("VWID"))], [32, 32], "kept over warm boot");
   m.reset();
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after reset");
@@ -167,5 +167,5 @@ test("a PICO9918 board booting the starter's display files has the shell's figur
   assert.equal(pico.read((head << 8) + 8), 0, "and nothing above it: GLCD.SVC gave way");
   const serial = boot(standardCard());
   assert.equal(word(serial, 6), word(serial, serial.sym("STUBAD")), "nothing loaded on the serial board");
-  assert.equal(word(pico, 6), (word(serial, 6) & 0xff00) - 0xa00, "the shell's 10 pages below the stub's page");
+  assert.equal(word(pico, 6), (word(serial, 6) & 0xff00) - 0xf00, "the shell's 15 pages below the stub's page");
 });

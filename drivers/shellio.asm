@@ -138,9 +138,7 @@ SG0:
   jr nz,SG1      ; it is there
   push de        ; the line pointer
   push bc        ; the slots left
-  ld de,DEFDMA
-  ld c,26        ; 26: set the DMA
-  call BDOS      ; DMA 0080h
+  call SETDMA    ; DMA 0080h
   ld de,SFCB
   ld c,33        ; 33: random read
   call BDOS      ; read it by number
@@ -214,9 +212,7 @@ PROMPT:
   call nz,PUTDEC8
   pop af         ; drive in the low
   and $0F
-  add a,'A'      ; the drive
-  ld e,a         ; its letter
-  call PUTC
+  call DRVLBL    ; drive and volume
   ld e,'>'       ; then >
 
 ; E through BDOS 2, keeping BC and HL.
@@ -257,19 +253,28 @@ PUTZ:
   jr PUTZ
 
 ; B bytes at HL, each masked to seven
-; bits, the spaces left out: a name.
+; bits: a name, its spaces kept.
+
+PUTN:
+  ld c,0         ; no byte left out
+  jr PT0
+
+; The same with its spaces left out.
 
 PUTTRIM:
+  ld c,SPACE     ; spaces left out
+
+PT0:
   ld a,(hl)      ; the next byte
   and $7F
-  cp SPACE       ; spaces left out
+  cp c           ; left out?
   jr z,PTSK      ; a space: none
   ld e,a
   call PUTC      ; print it
 
 PTSK:
   inc hl         ; on through the name
-  djnz PUTTRIM
+  djnz PT0
   ret
 
 ; A, 0 to 99, in decimal, with no

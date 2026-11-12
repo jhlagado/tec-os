@@ -382,7 +382,7 @@ test("KG67 reset after", async () => {
   for (const [name, { ses }] of Object.entries(runs)) {
     const { m, before } = ses;
     m.reset();
-    m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+    m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
     m.runUntil(() => m.ready(), 400_000_000, `the prompt after ${name}'s reset`);
     const a = volume(m.image, "A");
     assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);

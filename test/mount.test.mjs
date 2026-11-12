@@ -62,7 +62,7 @@ test("a reset keeps the selected volume", async () => {
   m.command("MOUNT B: ARCHIVE");
   const from = m.output.length;
   m.reset();
-  m.expect(/A>$/, { from, maxCycles: 80_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt after reset");
   assert.deepEqual(drvidx(m), [1, 8, 0, 0], "KD-139: the selection, where this read the card's own at KD-47");
   assert.match(m.text(from), /B: ARCHIVE/, "the boot list names the drive, not the card's letter");
@@ -111,17 +111,17 @@ test("on a card of more than 15 volumes, the boot lists and the LCD show each dr
 
 test("unmounting the current drive leaves the prompt on A:, and the next command runs", async () => {
   const m = await machine();
-  assert.match(m.command("B:"), /\r\nB>$/);
+  assert.match(m.command("B:"), /\r\nB(:\S*)?>$/);
   const out = m.command("A:MOUNT B:", { maxCycles: 60_000_000 });
   assert.match(out, /Unmounted/);
   assert.doesNotMatch(out, /Select/);
-  assert.match(out, /\r\nA>$/, "the CCP takes A:");
+  assert.match(out, /\r\nA(:\S*)?>$/, "the CCP takes A:");
   assert.equal(m.read(4), 0x00, "0004h: drive A");
   const dir = m.command("DIR", { maxCycles: 60_000_000 });
   assert.doesNotMatch(dir, /Bdos Err/);
-  assert.match(dir, /\r\nA>$/);
+  assert.match(dir, /\r\nA(:\S*)?>$/);
   assert.match(m.command("MOUNT B: WORK", { maxCycles: 60_000_000 }), /B: WORK/);
-  assert.match(m.command("B:"), /\r\nB>$/, "B: again once it has a volume");
+  assert.match(m.command("B:"), /\r\nB(:\S*)?>$/, "B: again once it has a volume");
 });
 
 test("a warm boot with 0004h on a drive past D: or one with no volume comes back on A:, in the same user", async () => {
@@ -130,7 +130,7 @@ test("a warm boot with 0004h on a drive past D: or one with no volume comes back
     m.write(4, at);
     m.mark = m.output.length;
     m.cpu.cpu.pc = 0;
-    m.expect(/\r\n3?A>$/, { maxCycles: 60_000_000 });
+    m.expect(/\r\n3?A(:\S*)?>$/, { maxCycles: 60_000_000 });
     m.runUntil(() => m.ready(), 20_000_000, "the prompt's input");
     assert.doesNotMatch(m.text(m.mark), /Bdos Err/);
     assert.equal(m.read(4), 0x30, `from ${at.toString(16)}h: user 3, drive A`);

@@ -34,7 +34,7 @@ const chpos = (m) => m.read(m.sym("CHPOS"));
 const code = (m) => m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8);
 const user = (m) => m.read(4) >> 4;
 /** The shell's prompt, reading a typed line: nothing left of a line, a script or startup. */
-const idle = (m, from) => m.ready() && /[A-P]>$/.test(m.text(from));
+const idle = (m, from) => m.ready() && /[A-P](:\S*)?>$/.test(m.text(from));
 
 /** Type LINE and run to the prompt that follows its last piece: the text since. */
 function run(m, line, max = 600_000_000) {
@@ -48,18 +48,18 @@ const count = (text, re) => (text.match(re) ?? []).length;
 
 test("SH8 a line of two, three and four pieces runs each in turn, each echoed after its prompt", () => {
   const m = boot(card());
-  assert.equal(run(m, "say!say"), "say!say\r\r\nSAY\r\nA>say\r\nSAY\r\nA>");
+  assert.equal(run(m, "say!say"), "say!say\r\r\nSAY\r\nA:SYSTEM>say\r\nSAY\r\nA:SYSTEM>");
   assert.equal(count(run(m, "SAY!SAY!SAY"), /\nSAY\r/g), 3);
-  assert.equal(run(m, "SAY!USER 3!USER 0!SAY"), "SAY!USER 3!USER 0!SAY\r\r\nSAY\r\nA>USER 3\r\n3A>USER 0\r\nA>SAY\r\nSAY\r\nA>");
+  assert.equal(run(m, "SAY!USER 3!USER 0!SAY"), "SAY!USER 3!USER 0!SAY\r\r\nSAY\r\nA:SYSTEM>USER 3\r\n3A:SYSTEM>USER 0\r\nA:SYSTEM>SAY\r\nSAY\r\nA:SYSTEM>");
   run(m, "USER 3");
   assert.equal(user(m), 3);
 });
 
 test("SH8 an empty piece, spaces and a trailing ! are passed over; a line of only them is an empty line", () => {
   const m = boot(card());
-  assert.equal(run(m, "SAY!! ! !SAY!"), "SAY!! ! !SAY!\r\r\nSAY\r\nA>SAY\r\nSAY\r\nA>");
-  assert.equal(run(m, "!!"), "!!\r\r\nA>");
-  assert.equal(run(m, "  "), "  \r\r\nA>");
+  assert.equal(run(m, "SAY!! ! !SAY!"), "SAY!! ! !SAY!\r\r\nSAY\r\nA:SYSTEM>SAY\r\nSAY\r\nA:SYSTEM>");
+  assert.equal(run(m, "!!"), "!!\r\r\nA:SYSTEM>");
+  assert.equal(run(m, "  "), "  \r\r\nA:SYSTEM>");
 });
 
 test("SH8 a line of 127 characters runs whole: 32 pieces", () => {
@@ -72,14 +72,14 @@ test("SH8 a line of 127 characters runs whole: 32 pieces", () => {
 test("SH8 a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets", () => {
   const m = boot(card({ "HI.COM": SAY }));
   const out = run(m, "USER 0!B:!HI!A:!HI!DIR HI.COM");
-  assert.match(out, /A>B:\r\nB>HI\r\nSAY\r\nB>A:\r\nA>HI\r\nSAY\r\nA>DIR HI.COM\r\nHI\.COM\s+\r\n1 file/);
+  assert.match(out, /A(:\S*)?>B:\r\nB(:\S*)?>HI\r\nSAY\r\nB(:\S*)?>A:\r\nA(:\S*)?>HI\r\nSAY\r\nA(:\S*)?>DIR HI.COM\r\n(\r\n)?HI +\.COM +128\r\n1 file/);
   assert.equal(m.read(4) & 15, 0);
 });
 
 test("SH8 a startup line holding ! runs all its pieces before the next startup line", () => {
   const m = boot(card({}, standardCard(), ["SAY!USER 2!USER 0", "SAY!USER 5"]));
   m.runUntil(() => idle(m, 0), 600_000_000, "the prompt");
-  assert.match(m.text(0), /A>SAY!USER 2!USER 0\r\r\nSAY\r\nA>USER 2\r\n2A>USER 0\r\nA>SAY!USER 5\r\r\nSAY\r\nA>USER 5\r\n5A>$/);
+  assert.match(m.text(0), /A(:\S*)?>SAY!USER 2!USER 0\r\r\nSAY\r\nA(:\S*)?>USER 2\r\n2A(:\S*)?>USER 0\r\nA(:\S*)?>SAY!USER 5\r\r\nSAY\r\nA(:\S*)?>USER 5\r\n5A(:\S*)?>$/);
   assert.equal(user(m), 5);
 });
 
@@ -106,7 +106,7 @@ test("SH8 & runs a piece after a success, and not after a program's FF00h, FFFEh
   assert.equal(count(run(m, "RC FF00 &SAY"), /\nSAY\r/g), 0);
   assert.equal(count(run(m, "RC FFFE &SAY"), /\nSAY\r/g), 0);
   const missing = run(m, "NOSUCH &SAY");
-  assert.match(missing, /NOSUCH\?\r\n\r\nA>$/, "the skipped piece is not echoed");
+  assert.match(missing, /NOSUCH\?\r\n\r\nA(:\S*)?>$/, "the skipped piece is not echoed");
   assert.equal(code(m), 0xff00, "a command not found sets FF00h");
   const lead = run(m, "&SAY");
   assert.match(lead, /&SAY\?/, "an & that starts a line is refused: it would test the last line's code");
@@ -118,7 +118,7 @@ test("SH8 after a skipped & piece a later & skips too, and a ! piece runs", () =
   const m = boot(card());
   const out = run(m, "RC FF00 &SAY &SAY!USER 6");
   assert.equal(count(out, /\nSAY\r/g), 0);
-  assert.match(out, /A>USER 6\r\n6A>$/);
+  assert.match(out, /A(:\S*)?>USER 6\r\n6A(:\S*)?>$/);
   assert.equal(user(m), 6);
 });
 
@@ -193,7 +193,7 @@ test("SH8 function 47 copies the command before anything loads: a target that lo
   const m = boot(card({ "BIG.COM": fixed, "CHAIN.COM": chainTo("BIG!SAY") }));
   const out = run(m, "CHAIN");
   assert.equal(count(out, /\nSAY\r/g), 2);
-  assert.match(out, /A>BIG\r\nSAY\r\nA>SAY\r\nSAY\r\nA>$/);
+  assert.match(out, /A(:\S*)?>BIG\r\nSAY\r\nA(:\S*)?>SAY\r\nSAY\r\nA(:\S*)?>$/);
 });
 
 test("SH8 function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, and the program goes on", () => {
@@ -204,7 +204,7 @@ test("SH8 function 47 refuses 128 bytes with no 0, a CR and an LF with A = FFh, 
   ]) {
     const m = boot(card({ "CHAIN.COM": chainWith(bytes) }));
     const out = run(m, "CHAIN &SAY");
-    assert.match(out, /REFUSED\r\n\r\nA>SAY\r\nSAY\r\nA>$/, why);
+    assert.match(out, /REFUSED\r\n\r\nA(:\S*)?>SAY\r\nSAY\r\nA(:\S*)?>$/, why);
   }
 });
 
@@ -214,15 +214,15 @@ test("SH8 function 47 takes 127 characters, the line's rest replaced, and an emp
   assert.equal(count(run(m, "CHAIN!USER 7", 2_000_000_000), /\nSAY\r/g), 32);
   assert.equal(user(m), 0, "the rest of the line was replaced");
   const out = run(m, "EMPTY!USER 7");
-  assert.equal(out, "EMPTY!USER 7\r\r\n\r\nA>");
+  assert.equal(out, "EMPTY!USER 7\r\r\n\r\nA:SYSTEM>");
   assert.equal(user(m), 0);
 });
 
 test("SH8 a chained command missing, unreadable or too large reaches NAME? and the prompt", () => {
   const huge = new Uint8Array(0xc000).fill(0xc9);
   const m = boot(card({ "CHAIN.COM": chainTo("NOSUCH"), "C2.COM": chainTo("HUGE"), "C3.COM": chainTo("SAY"), "HUGE.COM": huge }));
-  assert.match(run(m, "CHAIN"), /A>NOSUCH\r\nNOSUCH\?\r\n\r\nA>$/);
-  assert.match(run(m, "C2"), /A>HUGE\r\nHUGE\?\r\n\r\nA>$/);
+  assert.match(run(m, "CHAIN"), /A(:\S*)?>NOSUCH\r\nNOSUCH\?\r\n\r\nA(:\S*)?>$/);
+  assert.match(run(m, "C2"), /A(:\S*)?>HUGE\r\nHUGE\?\r\n\r\nA(:\S*)?>$/);
   // A read that returns an error: LOADCOM's end with A = 2.
   let armed = false;
   const step = m.step.bind(m);
@@ -235,7 +235,7 @@ test("SH8 a chained command missing, unreadable or too large reaches NAME? and t
   m.runUntil(() => m.pc === 0x100, 200_000_000, "C3");
   armed = true;
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
-  assert.match(m.text(from), /A>SAY\r\nSAY\?\r\n\r\nA>$/);
+  assert.match(m.text(from), /A(:\S*)?>SAY\r\nSAY\?\r\n\r\nA(:\S*)?>$/);
   assert.equal(code(m), 0xff00);
 });
 
@@ -243,7 +243,7 @@ test("SH8 a chain from a startup line runs before the next startup line, and may
   const m = boot(card({ "CHAIN.COM": chainTo("USER 0!RC FF00 &SAY!SAY"), "C2.COM": chainTo("say &user 4") }, standardCard(), ["CHAIN", "C2", "USER 3"]));
   m.runUntil(() => idle(m, 0), 800_000_000, "the prompt");
   const t = m.text(0);
-  assert.ok(t.endsWith("A>CHAIN\r\r\n\r\nA>USER 0\r\nA>RC FF00\r\n\r\nA>SAY\r\nSAY\r\nA>C2\r\r\n\r\nA>say\r\nSAY\r\nA>user 4\r\n4A>USER 3\r\r\n3A>"), JSON.stringify(t));
+  assert.ok(t.endsWith("A:SYSTEM>CHAIN\r\r\n\r\nA:SYSTEM>USER 0\r\nA:SYSTEM>RC FF00\r\n\r\nA:SYSTEM>SAY\r\nSAY\r\nA:SYSTEM>C2\r\r\n\r\nA:SYSTEM>say\r\nSAY\r\nA:SYSTEM>user 4\r\n4A:SYSTEM>USER 3\r\r\n3A:SYSTEM>"), JSON.stringify(t));
   assert.equal(count(t, /\nSAY\r/g), 2, "the & piece after RC FF00 skipped");
   assert.equal(user(m), 3);
 });
@@ -255,7 +255,7 @@ test("SH8 ^C at a program's line input drops the rest of the line", () => {
   m.runUntil(() => m.waitingForInput() && m.read(m.sym("HFLAG")) === 0 && m.text(from).endsWith("USER 2\r\r\n"), 200_000_000, "LINE's input");
   m.type("\x03");
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
-  assert.match(m.text(from), /\^C\r\nA>$/);
+  assert.match(m.text(from), /\^C\r\nA(:\S*)?>$/);
   assert.equal(count(m.text(from), /\nSAY\r/g), 0);
   assert.equal(user(m), 0);
 });
@@ -383,7 +383,7 @@ test("SH8 a write lost at warm boot drops the rest of the line", () => {
     return step();
   };
   const out = run(m, "SAY!SAY!USER 3");
-  assert.match(out, /^SAY!SAY!USER 3\r\r\nSAY\r\nWrite lost\r\nA>$/);
+  assert.match(out, /^SAY!SAY!USER 3\r\r\nSAY\r\nWrite lost\r\nA(:\S*)?>$/);
   assert.equal(count(out, /\nSAY\r/g), 1);
   assert.equal(user(m), 0);
 });
