@@ -668,7 +668,7 @@ test("AC11 docs", () => {
     "while a kept A: or B: line keeps failing, B: directory writes and `MOUNT` refuse until warm boot",
     "reported at the next flush point",
     "Function 48, `MOUNT` and unmount keep",
-  ]) assert.ok(recovery.includes(s), `docs/recovery.md: ${s}`);
+  ]) assert.ok(recovery.replace(/\s+/g, " ").toLowerCase().includes(s.toLowerCase()), `docs/recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /returns success only after the\s+line has gone to the card/, "no write on A: returns only when the card has the block");
   assert.doesNotMatch(recovery, /the others drop it/, "no flush but warm boot drops a failed line");
   const compat = readText("docs/compatibility.md");

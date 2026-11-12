@@ -319,8 +319,9 @@ refuses a service that takes a stack's sum past its limit:
 | CCP | 32 | 18 | 18 | 6 |
 
 The base is the deepest use with no resident, on the serial and PICO9918 paths,
-the diagnostic console and a recognised reset; the census is the deepest use of
-all. The BIOS's 18 is warm boot's flush of the lines written behind: cold boot
+the diagnostic console, a recognised reset and A:'s pending block written at each
+flush point, the card taking writes and refusing them; the census is the deepest
+use of all. The BIOS's 18 is warm boot's flush of the lines written behind: cold boot
 mounts and lists the drives on the BDOS's stack, which nothing else uses before
 the CCP runs. A limit is counted from the base, and a stack holds its base and
 its limit with a quarter free, which `test/stacks.test.mjs` checks: the BDOS's

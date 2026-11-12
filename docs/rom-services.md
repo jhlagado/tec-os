@@ -5,7 +5,7 @@ at `C008h`, to 17 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's, the font's and the shell hook's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,769 bytes (`tecos`) and has 1,615 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 14,875 bytes (`tecos`) and has 1,509 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -229,8 +229,8 @@ carries its own.
 | The ROM table and the reset jump (`reset.asm`, `abi.asm`) | 11 | 1 | Stays |
 | Read-only data: messages, keywords, the jump table's source, geometries (`tables.asm`, `gen/geom.asm`, `text.asm`) | 710 | 1, 2 | Stays |
 | Cold and warm boot, the vectors, the drives' listing, the resident layout and the diagnostic console, its header dump gone (`boot.asm`) | 749 | 1 | Stays |
-| BIOS, with its entries' interrupt discipline (`bios.asm`) | 363 | 2 | Stays |
-| Serial console (`console.asm`) | 444 | 1, 2 | Stays |
+| BIOS, with its entries' interrupt discipline (`bios.asm`) | 377 | 2 | Stays |
+| Serial console (`console.asm`) | 447 | 1, 2 | Stays |
 | Matrix keyboard (`keyboard.asm`) | 231 | 1, 2 | Stays |
 | ANSI terminal (`term.asm`) | 800 | 2 | Stays |
 | Video switch and the display drivers' hook (`video.asm`) | 119 | 2 | Stays |
@@ -240,17 +240,17 @@ carries its own.
 | Font, 96 characters, service 15's (`gen/font.asm`) | 768 | 1, 2 | Stays: the PICO9918's console reads it and the GLCD's driver through `TNFONT`; serial and the LCD need none |
 | 20 × 4 LCD (`lcd.asm`) | 132 | 2 | Stays |
 | SD driver (`sd.asm`) | 819 | 1 | Stays |
-| Container mount and checks (`vol.asm`, `volsvc.asm`, `volutil.asm`) | 1,273 | 1 | Stays |
+| Container mount and checks (`vol.asm`, `volsvc.asm`, `volutil.asm`) | 1,275 | 1 | Stays |
 | CCP, with the startup file (`cpm/ccp.asm`, `ccpfile.asm`, `ccpmut.asm`, `ccpcmd.asm`) | 2,056 | 2 | Stays, cut to the minimal CCP: one startup line, and `SERVICES` moved to `SHELL.SVC` |
-| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,521 | 2 | Stays |
+| BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,547 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 518 | 3, 4 | Stays |
-| Block cache (`cache.asm`) | 707 | 1, 2 | Stays: every read goes through it |
+| Block cache (`cache.asm`) | 768 | 1, 2 | Stays: every read goes through it, and A:'s writes coalesce in it |
 | Command history (`history.asm`) | — | 2 | Moved to `SHELL.SVC` with `COPY`, `DEL`, `SERVICES`, the pager and chained lines; BDOS 10's recall and the shell hook stay ([shell.md](shell.md)) |
 | Service loader, registry and loading the display driver (`loader.asm`) | 887 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes in
 the ROM. The data row and the font row together are the block from `ROMDATA`
-to `ROMCODE`, 1,478 bytes. The rows sum to the build's 14,769 bytes used;
+to `ROMCODE`, 1,478 bytes. The rows sum to the build's 14,875 bytes used;
 `history.asm` is no longer in the ROM.
 
 Nothing in the ROM today belongs on the card. The native program calls,
@@ -293,7 +293,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->1,615<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->1,509<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
