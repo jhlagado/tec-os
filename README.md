@@ -126,9 +126,13 @@ screen and type on the matrix keyboard; after `CON TTY`, type in the serial
 terminal instead. The card lives in the browser's IndexedDB and survives reloads.
 "New starter card" builds one from `starter.recipe.json`, checking every
 file's SHA-256: the same card as `dist/starter.img`, for there is one card. A card
-saved before the shell, with no `SHELL.SVC`, gets the starter card's `SHELL.SVC`
-and `MON3.SVC` at power on, with `SHELL.SVC` first in its `STARTUP.CMD` and its
-own lines after; its other files stay as they were. Files can be copied onto and off the card from the page,
+saved before the shell, one with no `SHELL.SVC` and a `MON3.SVC`, if any, that
+the ROM installs without entering, gets the starter card's `SHELL.SVC` at power
+on, and its `MON3.SVC` in place of the old one; a card with none gets none.
+`SHELL.SVC` goes first in its `STARTUP.CMD`, and the card's later lines there,
+which the ROM alone never ran, now run under the shell. Its other files stay as
+they were. If the shell can't be added, for a full A: or a read-only
+`MON3.SVC`, the card gets its display line alone and the page says why. Files can be copied onto and off the card from the page,
 which resets the TEC-1G so CP/M sees the change.
 
 ## Cards

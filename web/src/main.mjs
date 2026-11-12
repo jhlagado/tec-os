@@ -4,7 +4,7 @@
 
 import { Machine, symbolsFromD8 } from "../../host/machine.mjs";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
-import { predatesShell, prepareCard } from "../../host/card.mjs";
+import { needsStarter, prepareCard } from "../../host/card.mjs";
 import { parseContainer, volumePayload } from "../../tools/lib/container.mjs";
 import { CpmVolume } from "../../tools/lib/cpmfs.mjs";
 import { buildRecipe } from "../../tools/lib/recipe.mjs";
@@ -87,9 +87,9 @@ async function powerOnNow() {
   // A card from before the shell takes its system files from the starter card.
   let starter = null;
   try {
-    if (predatesShell(state.card)) starter = await starterCard();
+    if (needsStarter(state.card)) starter = await starterCard();
   } catch {
-    // No drive A, or no starter card to hand: the card boots as it is.
+    // No starter card to hand: the card gets its display line alone.
   }
   const { problem, note, changed } = prepareCard(state.card, state.display, state.width, starter);
   if (changed) state.cardDirty = true;
