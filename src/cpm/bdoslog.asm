@@ -15,7 +15,8 @@
 ; Changes AF/BC/DE/HL and BIOS clobbers.
 
 READDIR:
-
+  call CPOUT     ; data before directory
+  jp nz,BADSECT  ; card refused it
   ld hl,(CURTRK)
 
   ld (DIRTRK),hl
