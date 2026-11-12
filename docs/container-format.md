@@ -36,21 +36,24 @@ are relative to the start of the container.
 | 12 | 1 | Geometry id |
 | 13 | 1 | Flags: bit 0 read-only; other bits must be zero |
 | 14 | 1 | Drive: 0–3 for A–D, FFh not mounted |
-| 15 | 1 | Cache flags: bit 0, the volume is written behind (see below); other bits zero |
+| 15 | 1 | Reserved: written zero, never read (see below) |
 | 16 | 11 | Label, ASCII, space padded |
 | 27 | 5 | Reserved, zero |
 
 The drive letter is a mount assignment, not an identity; the volume id is
 the stable name.
 
-A volume with byte 15 bit 0 set is written behind: TEC-OS keeps its writes
-in the block cache and writes them to the card later (see
-[recovery.md](recovery.md)). Every other volume coalesces its data writes:
-each card block's run of records is written once, at the next flush point
-(the same page). One volume at most is written behind, and never
-a read-only one; `tecvol create` takes `:wb` after the drive, as in
-`--volume G8M:WORK:B:wb`, and refuses a second one or `:wb` with `:ro`. A
-ROM from before the cache ignores the byte and writes the volume through.
+No volume is marked written behind: TEC-OS writes behind the volume on the
+drive you are on, and coalesces the data writes of every other (see
+[recovery.md](recovery.md)). Byte 15 once marked one volume written behind;
+it is reserved now. `tecvol` and the container library write it zero, and
+neither they nor the ROM read it, so a card made with the mark still mounts,
+its drive's flags only the read-only bit. `tecvol create` refuses `:wb` as an
+unknown flag, and `createContainer` refuses a volume that names
+`writeBehind`.
+
+The starter card is 1.1 and asks for four drives, so that `CD` can put any
+of its volumes on any drive (below, "Allocation vectors").
 
 ## The volume table beyond block 0 (1.1)
 
@@ -95,8 +98,7 @@ the error code on the diagnostic console:
 
 The ROM checks the table in one pass, in table order. `tecvol` applies the
 same checks, so a card `tecvol verify` passes mounts, and also requires
-unique ids, known cache flags, at most one volume written behind and never a
-read-only one, at most 8 volumes in 1.0 and unique labels in 1.1, and an image as
+unique ids, at most 8 volumes in 1.0 and unique labels in 1.1, and an image as
 long as the header says. The ROM cannot check the card's capacity; a payload past the
 end of the card fails as an I/O error when it is reached.
 

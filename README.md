@@ -12,9 +12,10 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 47,273 bytes on the
-  starter card with nothing loaded; the card's `STARTUP.CMD` loads the shell,
-  `SHELL.SVC`, which leaves 44,544, and 43,776 with the GLCD's driver too.
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,569 bytes on the
+  starter card with nothing loaded, its four drives' vectors taken; the card's
+  `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 42,496, and 41,728
+  with the GLCD's driver too.
   EXPAND 1 is TEC-OS's own: its block cache. TEC-OS says so at boot and stops if either half
   is missing.
 - An SD card holding a container of CP/M volumes, built and edited on a PC
@@ -88,8 +89,9 @@ pinned files, from someone who has it, in `.inputs/`. A selected override
 or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
 
-TAS assembles everything: the main ROM, the diagnostics, GLCD.SVC, MOUNT.COM,
-DEMO.COM, MON3.SVC and HELLO3.BIN, and the tests' programs and services. It
+TAS assembles everything: the main ROM, the diagnostics, GLCD.SVC,
+SHELL.SVC, DEMO.COM, MON3.SVC and HELLO3.BIN, and the tests' programs and
+services. It
 runs on the host from Thorium's runner, selected from `TECOS_TAS_HOST`, then
 `.inputs/tas-host`.
 
@@ -164,7 +166,12 @@ CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `B:`,
 and `UNLOAD`, which removes the last service loaded. The starter card loads the
 shell, `SHELL.SVC` ([docs/shell.md](docs/shell.md)), which adds the history (^W
 and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
-services loaded, `[more]` in `TYPE` and `DIR`, and `.CMD` scripts. Under the
+services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
+`CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. The starter card has four drives:
+`CD ?` lists its volumes, `CD NAME` puts one on the drive you are on and
+`CD D:NAME` on another, and the prompt shows the drive and its volume,
+`A:SYSTEM>`. The drive you are on is written behind, and whenever TEC-OS
+waits for a key everything is on the card ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
 `TED X.ASM!TAS X &X`. TED, from Thorium `a2fe556` (`TED.COM`
@@ -185,7 +192,7 @@ an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
 TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC` gives `MON3>`,
 where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
 LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
-keyboard, returns to `MON3>`, and `EXIT` to `A>`. `HELLO3.ASM` is its source,
+keyboard, returns to `MON3>`, and `EXIT` to `A:SYSTEM>`. `HELLO3.ASM` is its source,
 and `TAS HELLO3 HELLO3.BIN` builds it. `BOUNCE.BAS` is Baza's sprite
 game: `BAZA BOUNCE` compiles it, showing a spinner while it works, and
 `BOUNCE` takes the PICO9918 in Graphics I through `CALL`; tap W, A, S and D,

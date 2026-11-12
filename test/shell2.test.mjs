@@ -865,3 +865,47 @@ test("S2-12 old card upgraded", async () => {
   assert.equal(m.read(m.sym("DRVTAB") + 8 + 7), 0, "B:'s flags 0");
   assert.ok(Buffer.from(volume(old, "A").read("NOTES.TXT")).toString("latin1").startsWith("my own notes"), "its files kept");
 });
+
+// --- S2-13 The docs ----------------------------------------------------------------
+
+test("S2-13 docs", () => {
+  const read = (n) => readFileSync(new URL(`../${n}`, import.meta.url), "utf8");
+  const flat = (n) => read(n).replace(/\s+/g, " ");
+  const recovery = flat("docs/recovery.md");
+  for (const s of [
+    "The logged drive is written behind",
+    "Every directory write writes the cache first",
+    "Every console read writes every changed line",
+    "| Data on the logged drive's volume (written behind) |",
+    "| Data on any other volume (coalesced) |",
+    "| A directory write, on any volume |",
+    "| Any write to a read-only volume | never: refused |",
+    "A directory write on any volume whose flush fails returns the error and drops its own directory line",
+    "Only warm boot drops a flushed line that still fails",
+    "with all 30 lines kept a poll takes about 1.6 s",
+  ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
+  const shell = flat("docs/shell.md");
+  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives"])
+    assert.ok(shell.includes(s), `shell.md: ${s}`);
+  const container = flat("docs/container-format.md");
+  assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
+  assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
+  const compat = flat("docs/compatibility.md");
+  for (const s of ["46,569 bytes", "42,496", "41,728"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
+  assert.match(flat("docs/mon3.md"), /from `A700h` to `9500h`/);
+  // No doc teaches MOUNT.COM or a volume marked written behind.
+  for (const n of ["README.md", "docs/shell.md", "docs/recovery.md", "docs/compatibility.md", "docs/container-format.md", "docs/rom-services.md", "docs/wip.md", "docs/mon3.md"]) {
+    const t = flat(n);
+    assert.doesNotMatch(t, /MOUNT\.COM (is|on) |type MOUNT|`MOUNT B:/, `${n}: no MOUNT.COM taught`);
+    assert.doesNotMatch(t, /B: is an empty work disk, written behind|B: written behind|WORK[^.]{0,20}written behind/, `${n}: no B: or WORK written behind`);
+    assert.doesNotMatch(t, /`:wb`[^.]*writes|takes `:wb`/, `${n}: no :wb`);
+  }
+  // The brief's comments: bios.asm's above BWRITE, abi.inc's opening.
+  const bios = read("src/bios.asm");
+  const at = bios.indexOf("\n\nBWRITE:");
+  const bw = bios.slice(bios.lastIndexOf("\n\n", at - 1), at);
+  assert.match(bw.replace(/\n; /g, " "), /A directory write's success includes card output/);
+  assert.doesNotMatch(bw, /Write-through success/);
+  assert.match(read("src/abi.inc").replace(/\n; /g, " "), /An interface may also change in place with the version fields unchanged/);
+});

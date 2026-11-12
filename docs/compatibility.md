@@ -2,16 +2,18 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-47,273 bytes (`0100h–B9A8h`) on the starter card with nothing loaded, and at
+46,569 bytes (`0100h–B6E8h`) on the starter card with nothing loaded, and at
 least 46,569 on any card, since cold boot places the BDOS entry below the
-allocation vectors of the volumes mounted. A board with a PICO9918 has the same:
-its console is in the ROM and its RAM in the BIOS's state (KS39). The GLCD's
-driver takes three pages under the stub's page, leaving 46,336 on the starter
-card and 45,568 with four 8 MiB volumes. The starter card loads `SHELL.SVC`,
-which takes ten pages there, leaving 44,544, and 43,776 with the GLCD's driver
-too. The CCP loads a `.COM` up to the start of the page holding the word at
-`0006h`, so the largest it loads on the starter card with nothing loaded is
-47,104 bytes (`0100h–B8FFh`), 169 below the TPA: a program may use the rest. It reports version 2.2.
+allocation vectors of the drives the card asks for: the starter card asks for
+four, each with a vector for an 8 MiB volume. A card of two volumes and no
+drives field gives 47,273. A board with a PICO9918 has the same: its console
+is in the ROM and its RAM in the BIOS's state (KS39). The GLCD's driver takes
+three pages under the stub's page, leaving 45,568 on the starter card. The
+starter card loads `SHELL.SVC`, which takes fifteen pages there, leaving
+42,496, and 41,728 with the GLCD's driver too. The CCP loads a `.COM` up to
+the start of the page holding the word at `0006h`, so the largest it loads on
+the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 233
+below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
 
@@ -152,16 +154,13 @@ In ROM too:
   through reset skips it. A shell it loads runs the rest. `docs/services.md` and
   `docs/shell.md` have the rules.
 
-`MOUNT` lists the card's volumes, and `MOUNT B: NAME` (or an index, as `MOUNT`
-lists them) puts another of the
-card's volumes on a drive, and `MOUNT B:` takes it off; A: is never left
-empty, and a volume is never on two drives. `MOUNT B:` with B: the current
-drive takes it off too, and the next prompt is `A>`: the CCP takes A: at
-warm boot whenever 0004h names a drive with no volume, as no select of it
-could succeed. `MOUNT.COM` is on the starter
-card, using the ROM table's volume services, `TNMOUNT` and `TNUNMNT`. Mounts are for the session: a
-reset keeps them, as long as the card still holds each volume. `docs/recovery.md`
-says how.
+Under `SHELL.SVC`, `CD ?` lists the card's volumes and their drives, `CD NAME`
+puts one on the current drive, A: included, and `CD B:NAME` on another; a
+volume is never on two drives. The prompt shows the drive and its volume,
+`B:GAMES>`. `CD` uses the ROM table's volume services, `TNMOUNT` and `TNDESC`
+(`docs/shell.md`); with no shell no command changes volumes. Mounts are
+for the session: a reset keeps them, as long as the card still holds each
+volume. `docs/recovery.md` says how.
 
 A command runs `NAME.COM` from the current drive, or the drive it names, in the
 current user and, if it isn't there, in user 0; no SYS attribute is needed. When
@@ -237,8 +236,9 @@ and run.
 - **`[more]`** (the shell's). The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 46,564 bytes of TPA, may fail; how much a card gives depends on
-  its volumes, and with the GLCD's driver 45,568 is the least.
+  more than 46,569 bytes of TPA, may fail; how much a card gives depends on
+  its drives and what is loaded. Measured on the starter card: 46,569 bare,
+  42,496 with the shell, and 41,728 with the shell and the GLCD's driver.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,
@@ -251,11 +251,13 @@ and run.
   A call that moves one block to or from the card holds them off for about
   240,000 T-states (60 ms at 4 MHz), and one that must also read a block
   first for about 490,000 (122 ms); a hit in the cache, for about 5,000. A
-  data write on A: that stays in its block holds them off for about 10,000
+  data write that stays in its block holds them off for about 10,000
   to 13,000; the block's write comes at the next flush point, a console read
   or a directory request among them, which then holds them off for about
   240,000 while it writes it. A program's interrupt routine can wait that long.
-- **A volume not written behind coalesces, A: among them** (`docs/recovery.md`): a data write returns with its
+- **The logged drive is written behind, and every other volume coalesces**
+  (`docs/recovery.md`). Every console read writes every changed line, so at a
+  key wait everything is on the card. On a volume not logged a data write returns with its
   record in the cache, and its block reaches the card at the next flush
   point, a program's console read among them. Some waits are not flush
   points, so the block stays pending while the program waits: a program that
