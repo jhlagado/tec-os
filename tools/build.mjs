@@ -201,9 +201,9 @@ function check(condition, message) {
   if (!condition) throw new Error(`placement check failed: ${message}`);
 }
 
-// The DSMs of the volumes on a card, by drive: the starter card (tools/media.mjs)
-// and the largest card, four 8 MiB volumes.
-const CARDS = { starter: [511, 2047], fourG8M: [2047, 2047, 2047, 2047] };
+// Allocation-vector sizes by drive. The starter reserves four full slots,
+// including its empty drive; the two-volume card is the reference layout.
+const CARDS = { twoVolume: [511, 2047], starter: [2047, 2047, 2047, 2047], fourG8M: [2047, 2047, 2047, 2047] };
 
 /** ALVINIT's layout for a card: vectors packed down from WSBASE, the BDOS
  *  entry jump directly below them. */
@@ -269,6 +269,7 @@ async function buildProfile(name, assemble) {
   for (const [trk, sec] of [["DIRTRK", "DIRSEC"], ["IOTRK", "IOSEC"]]) check(at(sec) === at(trk) + 2, `${sec} must be ${trk}+2`);
 
   const starter = cardLayout(at("WSBASE"), CARDS.starter);
+  const reference = cardLayout(at("WSBASE"), CARDS.twoVolume);
   check(starter.entry - 0x100 >= 45830, `the starter card's TPA is ${starter.entry - 0x100} bytes`);
 
   const census = {
@@ -289,15 +290,15 @@ async function buildProfile(name, assemble) {
       ].map(([label, start, end]) => ({ label, start, end, bytes: end - start })),
     },
     ram: {
-      tpa: { start: 0x0100, end: starter.entry, bytes: starter.entry - 0x100, card: "starter" },
-      bdosVector: starter.entry,
+      tpa: { start: 0x0100, end: reference.entry, bytes: reference.entry - 0x100, card: "twoVolume" },
+      bdosVector: reference.entry,
       cards: Object.fromEntries(Object.entries(CARDS).map(([k, dsms]) => [k, cardLayout(at("WSBASE"), dsms)])),
       fixedBase: at("WSBASE"),
       ramBios: at("RAMBIOS"),
       regions: [
-        ["BDOS entry jump, starter card", starter.entry, starter.entry + 3],
-        ["unused", starter.entry + 3, starter.alvBase],
-        ["allocation vectors, starter card", starter.alvBase, at("WSBASE")],
+        ["BDOS entry jump, two-volume reference", reference.entry, reference.entry + 3],
+        ["unused", reference.entry + 3, reference.alvBase],
+        ["allocation vectors, two-volume reference", reference.alvBase, at("WSBASE")],
         ["BIOS disk state and buffers", at("WSBASE"), at("BSTKB")],
         ["BIOS stack", at("BSTKB"), at("BSTK")],
         ["CCP state and stack", at("CCPRAM"), at("CCPRME")],
@@ -336,7 +337,7 @@ function refreshDist(outDir, census) {
   const path = resolve(dist, "manifest.json");
   if (!existsSync(path)) return;
   const manifest = JSON.parse(readFileSync(path, "utf8"));
-  manifest[census.profile] = { sha256: census.sha256, romUsed: census.rom.used, tpaBytes: census.ram.tpa.bytes };
+  manifest[census.profile] = { sha256: census.sha256, romUsed: census.rom.used, tpaBytes: census.ram.cards.starter.tpa };
   writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n");
 }
 
