@@ -3,9 +3,12 @@
 ; minor and JP SVCDSP. Test TNA at
 ; ABITAB and major 5 at ABIMAJ before
 ; calling ABICALL. A new major may
-; renumber services. A minor only
-; appends services. The ROM includes
-; these declarations before emitting the
+; renumber services. A minor appends
+; services. An interface may also change
+; in place with the version fields
+; unchanged, as TNSHELL was appended at
+; minor 1. The ROM includes these
+; declarations before emitting the
 ; table. The build checks its bytes and
 ; addresses.
 

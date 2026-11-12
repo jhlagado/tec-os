@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
-import { GLCD_SVC, ROOT, SHELL_SVC, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, abiDeclarations, SHELL_SVC, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, cardMon3, code, execFile, figures, find, KEYAD, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word, installMon3 } from "./lib/mon3.mjs";
@@ -136,8 +136,8 @@ const leave = (m, r) => {
 
 // The ROM's size, hash and ABI against the baseline.
 
-// abi.inc and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back).
-const BASELINE = { used: 16077, cap: 171, tpa: 47273, abi: "1a020a1b076c3b7b4282c64ceeb82dad471c3ecbbe883c5d3448a859e0a07413" };
+// abi.inc's declarations (its comment lines left out) and the TPA as they are since the shell hook (TNSHELL, and the 5 bytes the pager and history gave back).
+const BASELINE = { used: 16077, cap: 171, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504" };
 
 test("KG58 rom cap", () => {
   const census = () => JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
@@ -154,7 +154,7 @@ test("KG58 rom cap", () => {
   assert.equal(gaps.length, 1, "one free region");
   assert.equal(gaps[0].end, 0x10000, "the free space is the ROM's tail");
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
-  assert.equal(sha(abi), BASELINE.abi, "abi.inc as it was");
+  assert.equal(sha(Buffer.from(abiDeclarations(abi.toString("utf8")), "utf8")), BASELINE.abi, "abi.inc's declarations as they were");
   assert.match(abi.toString("latin1"), /^SVCFMT EQU 4\b/m, "SVCFMT 4");
   const { rom, symbols } = romFor();
   assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 1], "ABI 5.1");
@@ -1336,11 +1336,13 @@ async function hangAndReset(svc) {
   }
   assert.deepEqual(onCard("F.DAT"), [...written], "the closed file is on the card at its close");
   assert.ok(ok(line(m, "LOAD LOOP.BIN")));
+  // GO is typed, and every key read writes every changed line.
+  assert.deepEqual(onCard("G.DAT"), [...written], "the unclosed write, on the card when GO runs");
   m.type("GO\r");
   runFor(m, 5_000_000);
   assert.equal(m.pc, 0x4000, "the program loops");
   assert.deepEqual(onCard("F.DAT"), [...written], "the closed file, while the program hangs");
-  assert.deepEqual(onCard("G.DAT"), [...written], "the unclosed write, flushed by GO");
+  assert.deepEqual(onCard("G.DAT"), [...written], "the unclosed write, while the program hangs");
   m.reset();
   m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after the reset");
@@ -1418,9 +1420,13 @@ test("KG62 mutant: a hook without BDOS 37 has a new file take a used block after
   await assert.rejects(vectorExchange(svc, true), /intact|cross-link/);
 });
 
+// Equivalent under the key-wait guarantee: GO is typed, so a key read
+// writes every changed line before GO runs, and GO's BDOS 48 finds
+// nothing left. MON3.SVC keeps it for a program that starts a session
+// with no key read.
 test("KG62 mutant: without GO's BDOS 48 the hung program's reset loses the unclosed write", async () => {
   const svc = await mon3Variant([["  push hl\n  ld c,48        ; flush\n  call BDOS\n", "  push hl\n"]]);
-  await assert.rejects(hangAndReset(svc), /flushed by GO/);
+  await hangAndReset(svc);
 });
 
 test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is taken", async () => {

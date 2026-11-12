@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, boot, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
+import { ROOT, TEST_CLOCK, abiDeclarations, boot, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
@@ -261,7 +261,7 @@ test("SAVE on a full disk closes the file before NO SPACE: the records written s
 
 // --- The minimal ROM CCP ---------------------------------------------------
 
-const ABI_BASE = "56f3923c5a8c2542b221939173fefa0891ec6d75cf2416877f2857c5760fb61b"; // abi.inc before the shell hook
+const ABI_BASE = "d0e4087d17a2d6761ce7f9e4d1d23472a6142d4b6a6b5b9fd0b5a443f87fc949"; // abi.inc's declarations before the shell hook, its comment lines left out
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const readText = (n) => readFileSync(resolve(ROOT, n), "utf8");
 
@@ -281,7 +281,7 @@ test("SH1 rom figure", () => {
   // abi.inc differs from before the hook by TNSHELL's block and TNCOUNT alone.
   const abi = readText("src/abi.inc");
   const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
-  assert.equal(sha(Buffer.from(abi.replace(block, "").replace("TNCOUNT EQU 17", "TNCOUNT EQU 16"), "utf8")), ABI_BASE, "abi.inc changed only by TNSHELL and TNCOUNT");
+  assert.equal(sha(Buffer.from(abiDeclarations(abi.replace(block, "").replace("TNCOUNT EQU 17", "TNCOUNT EQU 16")), "utf8")), ABI_BASE, "abi.inc's declarations changed only by TNSHELL and TNCOUNT");
   console.log(`ROM ${used} used, ${free} free, TPA ${first.ram.tpa.bytes}, ${first.hash.slice(0, 16)}`);
 });
 
