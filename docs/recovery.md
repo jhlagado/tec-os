@@ -65,7 +65,7 @@ and reads that need a line then fail too.
 
 Every BIOS write goes into the block's cache line; there is no other buffer.
 
-**A: coalesces.** Every data write on a volume not written behind (BDOS 21,
+**Every volume not written behind coalesces, A: among them.** Every data write on a volume not written behind (BDOS 21,
 34 and 40, and `SAVE`) goes into its block's cache line, and a run of records
 written into one card block is written once. A write returns when its record
 is in the line. That block, the one pending block, is written to the card at
@@ -77,6 +77,10 @@ write it too. Until then a reset or power loss loses the records written into
 that one block since it was last written: at most one block, four records, 512
 bytes, and an in-place update of a closed file is among them. A block the card
 refuses stays pending, and the directory never names it until the card has it.
+Measured in emulation at 4 MHz on the starter card, against writing each
+record's block through: `BAZA BOUNCE` building to A: takes 19.04 s with 48
+card writes, against 25.82 s; a 16 KiB file takes 33 card writes, against
+129; and `SAVE 16` 10, against 34.
 
 - **The pending block** is at most one block at a time, the last one a data
   write went into on a volume not written behind.
@@ -148,7 +152,9 @@ no journal, so power loss or reset can leave:
   reach the card one by one in line order and the directory block last, so a
   cut leaves some new data blocks that no entry names, as above, and never a
   directory entry naming a block whose data is not there. A flush tries every
-  line; one whose write fails is dropped and the rest are still written.
+  line and still writes the rest after one that fails. The failed line stays in
+  the cache, to be tried again at the next flush; only warm boot drops a line
+  that still fails, with `Write lost`.
 - **During a block write.** One 512-byte block may hold old, new or mixed
   contents. If it is a directory block, up to 16 directory entries can be
   damaged.

@@ -137,7 +137,7 @@ again, as a typed script.
 - `COPY SOURCE DEST` copies one file, as it did in ROM
   ([compatibility.md](compatibility.md)).
 - `DEL` is `ERA` by another name: the shell hands `ERA` to the ROM.
-- `SERVICES` lists the residents from the lowest owner up, each name and its
+- `SERVICES` lists each loaded service, the newest first: its name and its
   pages.
 - The pager pauses `TYPE` and `DIR` one row before a full screen, with the
   geometry `TNINFO` gives (80 by 24 on the serial terminal).

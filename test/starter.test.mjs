@@ -245,7 +245,7 @@ function hello3Round(card) {
   assert.deepEqual(m.violations, []);
 }
 
-test("on the card, MON3.SVC /E, LOAD HELLO3.BIN and GO write HELLO3's four lines on the LCD, Esc returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
+test("on the card, MON3.SVC, LOAD HELLO3.BIN and GO write HELLO3's four lines on the LCD, Esc returns to MON3> and EXIT to A>", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   hello3Round(Uint8Array.from(starter().card));
 });
 

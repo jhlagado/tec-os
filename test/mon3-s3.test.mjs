@@ -66,7 +66,7 @@ test("KG67 rst 18h refusals", async () => {
 });
 
 // The size: at most 18 pages, 4,608 bytes of header and image; (0006h) at
-// least A700h on the starter card, so a TPA of at least 42,496, and 41,728
+// least A700h on a card with no shell, so a TPA of at least 42,496, and 41,728
 // with GLCD.SVC; the card's file, by its pinned hash; each source file within the
 // style's 24,576 bytes, and passing its checker.
 
@@ -115,7 +115,7 @@ test("KG67 mutant: the build with buffers added to 4,609 bytes takes 19 pages", 
 });
 
 // The graphics workspace at entry: 0A00h-0E19h zero but VPORT, 0A00h, at the
-// first MON3>, (a) when MON3.SVC /E installs and enters, (b) at re-entry
+// first MON3>, (a) when MON3.SVC installs and enters, (b) at re-entry
 // after EXIT, with a transient's FFh over the region. A GO, its return and
 // a second GO leave what a program wrote there.
 

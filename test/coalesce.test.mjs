@@ -693,7 +693,7 @@ test("AC10 mutant: CPOUT with three more pushes passes the BDOS's room and takes
 test("AC11 docs", () => {
   const recovery = readText("docs/recovery.md");
   for (const s of [
-    "A: coalesces",
+    "every volume not written behind coalesces, A: among them",
     "at most one block, four records, 512 bytes",
     "the directory never names it until the card has it",
     "while a kept A: or B: line keeps failing, B: directory writes and `MOUNT` refuse until warm boot",
@@ -702,6 +702,7 @@ test("AC11 docs", () => {
   ]) assert.ok(recovery.replace(/\s+/g, " ").toLowerCase().includes(s.toLowerCase()), `docs/recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /returns success only after the\s+line has gone to the card/, "no write on A: returns only when the card has the block");
   assert.doesNotMatch(recovery, /the others drop it/, "no flush but warm boot drops a failed line");
+  assert.doesNotMatch(recovery, /one whose write fails is dropped/, "nor a flush during a cut");
   const compat = readText("docs/compatibility.md");
   for (const s of ["`CONST`", "reader", "`CONIN`", "type 0"]) assert.ok(compat.includes(s), `docs/compatibility.md names ${s}`);
   assert.doesNotMatch(compat, /that line then dropped/, "function 48 keeps a failed line");

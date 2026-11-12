@@ -43,10 +43,12 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
 On the starter card it is 4,606 bytes of header and image, 5,032 bytes as a file
-with its relocation data, in **18 pages**: the
-word at `0006h` goes from `B9A9h` to `A700h`, and the TPA from 47,273 bytes to
-**42,496**. With `GLCD.SVC` installed too, as the GLCD console's startup does,
-the TPA is **41,728**. The monitor, its line buffer, its FCB, its saved page
+with its relocation data, in **18 pages**. The starter card loads `SHELL.SVC`
+first, so the word at `0006h` goes from `AF00h` to `9D00h`, and the TPA from
+44,544 bytes to **39,936**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `9A00h`, a TPA of **39,168**. On a card with no
+shell, the bare ROM's figures are `B9A9h` to `A700h`, a TPA of 47,273 bytes
+to 42,496, and 41,728 with `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
 own workspace, in the TPA where MON-3 keeps them.
