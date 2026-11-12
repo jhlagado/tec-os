@@ -357,7 +357,7 @@ test("on the card, TAS HELLO3 HELLO3.BIN rebuilds HELLO3.BIN as it is", { skip: 
 // and scrolls sideways to reach the rest. At the end of the longest line the
 // view shows the 40 columns that end there, every row cut at the same place,
 // and back at column 1 it starts at column 1 again. A TED that didn't scroll
-// sideways would keep the first 40 columns in view and fail the first check.
+// sideways would keep the first 40 columns in view and fail the check at the line's end.
 test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longest line and back", { skip: PAGE_SKIP, timeout: 900_000 }, () => {
   check(BOUNCE);
   const card = Uint8Array.from(starter().card);
