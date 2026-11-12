@@ -15,7 +15,9 @@
 // shell's prompt came to name the drive's volume. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
-// that ROM's: nothing may add to it. Emulator evidence.
+// that ROM's: nothing may add to it, but for the drive changes B: and A:,
+// whose peak was restated to 18 when a drive change came to write the cache
+// out first. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
