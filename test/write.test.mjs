@@ -80,7 +80,7 @@ test("a newly allocated block holds zeros in the records not yet written", () =>
   assert.ok(data.subarray(at + 128, at + 512).every((b) => b === 0), "the rest of its SD block is zeros");
 });
 
-test("every write is on the card when WRITE returns", () => {
+test("every write is on the card at the next flush point", () => {
   const { image, m, bdos, name, record } = rig();
   name("THRU    DAT");
   assert.notEqual(bdos(22), 0xff);
