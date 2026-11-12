@@ -15,7 +15,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ABI, ROOT, SHELL_SVC, boot, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
-import { pinned } from "./lib/inputs.mjs";
+import { check, pinned } from "./lib/inputs.mjs";
 import { BUF, DMA, FCB, FCB2, FCB3, MUTANTS, card, closed8, dirBlocks, flushRun, pat, rig, same, three } from "./lib/coalesce.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
@@ -251,6 +251,9 @@ function checkFile16(rom) {
 }
 
 test("AC3 16 KiB file", () => checkFile16());
+test("AC3 mutant: CPMOVE keeping the pending block by the line a write would take, not its tag, writes a block more than once", () => {
+  assert.throws(() => checkFile16(MUTANTS.byline()), /33 card writes|each once/);
+});
 test("AC3 mutant: BWGET without CPMOVE makes 4 card writes and the file isn't whole", () => {
   const f = file16(MUTANTS.cpmove());
   assert.equal(f.writes.length, 4);
@@ -270,35 +273,30 @@ const starterCard = () => {
   return new Uint8Array(starter);
 };
 const traces = new Map();
-// The BDOS functions at which the pending block is written: the console
-// reads, BDOS 6 when E is FFh, and those that read or write the directory.
-const FLUSHERS = new Set([1, 10, 11, 13, 14, 15, 16, 17, 18, 19, 22, 23, 30, 35, 36, 48]);
 /**
  * COMMAND on the starter card: its cycles from the CR to the prompt, its
- * card writes by block, each with the number of flush-point calls made
- * before it, and its BDOS 21 calls' cycles.
+ * card writes by block, each with the BDOS function it was made in, and its
+ * BDOS 21 calls' cycles. The card's programs must be the pinned ones, since
+ * the figures they are held to were measured on them.
  */
 function onStarter(command) {
+  PINS.forEach(check);
   if (traces.has(command)) return traces.get(command);
   const image = starterCard();
   const m = boot(image, { tms: true, matrix: true, width: 40 });
   const [entry, back, sdw, lba] = [m.sym("BENTRY"), m.sym("RETWORD") + 6, m.sym("SDWRITE"), m.sym("SDLBA")];
-  const t = { writes: [], at: [], w21: [] };
-  let flushes = 0;
+  const t = { writes: [], fn: [], w21: [] };
   let on = false;
   let call = null;
   const step = m.step.bind(m);
   m.step = () => {
     const pc = m.pc;
     if (on) {
-      if (pc === entry && !call) {
-        call = { fn: m.cpu.cpu.c, t0: m.cycles };
-        if (FLUSHERS.has(call.fn) || (call.fn === 6 && m.cpu.cpu.e === 0xff)) flushes += 1;
-      }
+      if (pc === entry && !call) call = { fn: m.cpu.cpu.c, t0: m.cycles };
       else if (pc === back && call) [call.fn === 21 && t.w21.push(m.cycles - call.t0), (call = null)];
       if (pc === sdw) {
         t.writes.push(word(m, lba) + word(m, lba + 2) * 0x10000);
-        t.at.push(flushes);
+        t.fn.push(call?.fn ?? -1);
       }
     }
     return step();
@@ -318,12 +316,15 @@ test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
   const b = onStarter("baza bounce");
   assert.match(b.text, /COM written\r\n/);
   assert.ok(b.writes.length <= 48, `${b.writes.length} card writes`);
-  // A data block written again after a flush point counts again: BAZA closes
-  // its output, writes one more record into the same block and closes again.
-  const data = b.writes.map((x, i) => [x, b.at[i]]).filter(([x]) => !b.dir.has(x));
-  const keys = data.map(([x, n]) => `${n}:${x}`);
-  assert.equal(new Set(keys).size, keys.length, "each data block once between flush points");
-  console.log(`BAZA BOUNCE: ${b.writes.length} card writes, ${data.length} of data blocks, ${new Set(data.map(([x]) => x)).size} blocks`);
+  // BAZA closes its output, writes one more record into the same block and
+  // closes again: that block is written at each close, and every other data
+  // block once.
+  const data = b.writes.map((x, i) => [x, b.fn[i]]).filter(([x]) => !b.dir.has(x));
+  const times = data.reduce((n, [x]) => n.set(x, (n.get(x) ?? 0) + 1), new Map());
+  const twice = [...times].filter(([, n]) => n > 1);
+  assert.deepEqual(twice.map(([, n]) => n), [2], "one data block written twice, every other once");
+  assert.deepEqual(data.filter(([x]) => x === twice[0][0]).map(([, fn]) => fn), [16, 16], "the block written twice, once at each close");
+  console.log(`BAZA BOUNCE: ${b.writes.length} card writes, ${data.length} of data blocks, ${times.size} blocks`);
 });
 
 test("AC3 save", { skip: CARD_SKIP, timeout: 300_000 }, () => {
@@ -583,11 +584,19 @@ test("AC7 file speed", () => {
   console.log(`16 KiB file: ${f.cycles} T, ${f.writes.length} card writes`);
 });
 
-test("AC7 console cost", () => {
-  const r = rig();
+function consoleCost(rom) {
+  const r = rig({ rom });
   const t = r.bdos(11, 0).cycles;
   assert.ok(t - LANDING.bdos11 <= 60, `BDOS 11: ${t} T, ${t - LANDING.bdos11} over the shell's landing`);
+  return t;
+}
+
+test("AC7 console cost", () => {
+  const t = consoleCost();
   console.log(`BDOS 11 with nothing pending: ${t} T (+${t - LANDING.bdos11})`);
+});
+test("AC7 mutant: CPOUT without its fast test of CPEND costs BDOS 11 more than 60 T", () => {
+  assert.throws(() => consoleCost(MUTANTS.nofast()), /over the shell's landing/);
 });
 
 test("AC7 worst case", () => {
