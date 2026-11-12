@@ -14,7 +14,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GLCD_SVC, ROOT, boot, program, volume, SHELL_SVC } from "./lib/fixtures.mjs";
+import { GLCD_SVC, ROOT, boot, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
@@ -45,7 +45,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly fifteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly fourteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -56,7 +56,6 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
     "STARTUP.CMD": Buffer.from("SHELL.SVC\r\nGLCD.SVC\r\n\x1a", "latin1"),
     "SHELL.SVC": SHELL_SVC,
     "GLCD.SVC": GLCD_SVC,
-    "MOUNT.COM": (await program("mount")).bytes,
     "TAS.COM": readFileSync(TAS.path),
     "TED.COM": readFileSync(TED.path),
     "BAZA.COM": readFileSync(BAZA.path),
@@ -81,9 +80,9 @@ test("the starter card holds exactly fifteen files, each by its hash, the PICO99
   for (const name of ["PICO.SVC", "PICO40.SVC", "PICO32.SVC"]) assert.equal(existsSync(resolve(ROOT, "dist/files", name)), false, `no ${name} in dist/files`);
 });
 
-test("the starter card boots, and MOUNT lists its volumes", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
+test("the starter card boots, and CD ? lists its volumes", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
   const m = boot(Uint8Array.from(starter().card));
-  assert.match(m.command("MOUNT"), /^00 SYSTEM +G1M A:\r\n01 WORK +G8M B:\r\n/m);
+  assert.match(m.command("CD ?"), /\r\nSYSTEM +A:\r\nWORK +B:\r\nPROJECTS +C:\r\nGAMES *\r\nSPARE *\r\nA:SYSTEM>$/);
   assert.deepEqual(m.violations, []);
 });
 

@@ -1573,12 +1573,16 @@ test("KG68 docs agree", async () => {
   const fig = figures(svc);
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
-  assert.ok(mon3.includes(`from \`B9A9h\` to \`${h4(fig.top)}\`, and the TPA from 47,273 bytes to ${fig.tpa.toLocaleString("en")},`), "(0006h) and the TPA with no shell");
-  // With the shell: (0006h) is AF00h with SHELL.SVC alone, as shell.test
-  // measures it, MON3.SVC's pages lower, and GLCD.SVC three pages lower still.
-  const shellTop = 0xaf00;
-  const withMon3 = shellTop - fig.pages * 0x100;
+  // The starter card asks for four drives, whose vectors take the bare
+  // ROM's word from B9A9h to B6E9h: MON3.SVC's pages go below page B6h.
+  const bare = fig.top - 0x300;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
+  assert.ok(mon3.includes(`from \`B6E9h\` to \`${h4(bare)}\`, and the TPA from 46,569 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
+  // With the shell: (0006h) is A700h with SHELL.SVC alone on the starter
+  // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
+  // three pages lower still.
+  const shellTop = 0xa700;
+  const withMon3 = shellTop - fig.pages * 0x100;
   assert.ok(mon3.includes(`from \`${h4(shellTop)}\` to \`${h4(withMon3)}\`, and the TPA from ${tpa(shellTop)} bytes to **${tpa(withMon3)}**`), "(0006h) and the TPA with the shell");
   assert.ok(mon3.includes(`\`${h4(withMon3 - 0x300)}\`, a TPA of **${tpa(withMon3 - 0x300)}**`), "and with GLCD.SVC too");
   const src = mon3Text();
@@ -1605,8 +1609,8 @@ test("KG68 docs agree", async () => {
   assert.deepEqual([...notBuilt.matchAll(/(\d+) `/g)].map((x) => Number(x[1])).sort((a, b) => a - b), refusedCalls, "the refused calls");
   for (const n of ["DISFROM", "C_FILENO", "0600h–07FFh", "Z and C set, as a key press gives", "Tables damaged: EXIT and reset"]) assert.ok(mon3.includes(n), `mon3.md: ${n}`);
   assert.match(mon3, /Not built:\*\* `RST 18h`'s calls 21 to 33/);
-  // The TPA with GLCD.SVC as well, three pages less.
-  assert.ok(mon3.includes(`and ${(fig.tpa - 768).toLocaleString("en")} with \`GLCD.SVC\``), "the TPA with GLCD.SVC and no shell");
+  // The TPA with GLCD.SVC as well, three pages less, on the starter card.
+  assert.ok(mon3.includes(`and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "the TPA with GLCD.SVC and no shell");
   // The graphics calls the doc lists as built are those of the service's
   // RST 18h table, and the refused ones the rest of MON-3's 34.
   const gtable = src.slice(src.indexOf("\nGAPI:")).split("\n\n")[0];

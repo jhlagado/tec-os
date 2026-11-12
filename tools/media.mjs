@@ -26,9 +26,9 @@ const FILES = resolve(DIST, "files");
 const hex = (v, w = 4) => v.toString(16).toUpperCase().padStart(w, "0") + "h";
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 
-const PROGRAMS = [
-  { name: "MOUNT.COM", source: "test/programs/mount.asm", description: "lists the card's volumes, or mounts one on a drive: MOUNT, MOUNT B: NAME, MOUNT B: INDEX, MOUNT B: to unmount" },
-];
+// Programs assembled from the tree onto the card: none, since SHELL.SVC's
+// CD puts a volume on a drive and lists them.
+const PROGRAMS = [];
 
 /** The pinned NAME's bytes, which the card holds: a file missing or not as pinned is refused. */
 function pinnedBytes(name) {
@@ -236,13 +236,17 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "12",
+    revision: "13",
     name: "TEC-OS starter",
-    instruction: "At A>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A>. B: is an empty work disk. The drive you are on is written behind: whenever TEC-OS waits for a key, everything is on the card.",
+    instruction: "At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. The drive you are on is written behind, and whenever TEC-OS waits for a key everything is on the card. After CD A: to a volume without SHELL.SVC, a reset keeps it; power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
+    drives: 4,
     volumes: [
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
       { geometry: "G8M", label: "WORK", mount: "B" },
+      { geometry: "G1M", label: "PROJECTS", mount: "C" },
+      { geometry: "G1M", label: "GAMES" },
+      { geometry: "G1M", label: "SPARE" },
     ],
     components: files.map((f) => ({
       id: f.name.toLowerCase().replace(/\W/g, "-"),

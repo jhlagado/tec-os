@@ -1,87 +1,87 @@
 {
   "from": "b025dbb",
-  "what": "b025dbb's GLCD driver: the ST7920's graphics RAM, SHA-256 to 16 hex digits, after each command",
+  "what": "the ST7920's graphics RAM, SHA-256 to 16 hex digits, after each command: b025dbb's driver's screens, retaken under the shell once its prompt named the volume",
   "bdosVector": 46854,
   "screens": [
     {
       "line": "PROBE\r",
-      "gdram": "7cdf3f2a5ebcb4cb"
+      "gdram": "079b0f98efe14342"
     },
     {
       "line": "TERM\r",
-      "gdram": "95650617b0eb9876"
+      "gdram": "6a69d440745e6706"
     },
     {
       "line": "TERM S\r",
-      "gdram": "528dc293396e32af"
+      "gdram": "5a6d73717a696edc"
     },
     {
       "line": "INSDEL\r",
-      "gdram": "1da17a6c44eb2a17"
+      "gdram": "a0168847feb752d8"
     },
     {
       "line": "REGION\r",
-      "gdram": "daa1009424f827fc"
+      "gdram": "e1015230e71d233c"
     },
     {
       "line": "FLIP\r",
-      "gdram": "7a498e6e1bf0a632"
+      "gdram": "68bb97d039673be1"
     },
     {
       "line": "VIDMODE\r",
-      "gdram": "72b93fcff40b94f5"
+      "gdram": "a729c5e65503aac1"
     },
     {
       "line": "COPY DATA.BIN B:DATA.CPY\r",
-      "gdram": "efc24163230ddaad"
+      "gdram": "f6945ac3fe8ee09c"
     },
     {
       "line": "DIR B:\r",
-      "gdram": "7d9950f31a4855a8"
+      "gdram": "e539eb8d1063e603"
     },
     {
       "line": "SAVE 4 S.COM\r",
-      "gdram": "63e87fc121277ed8"
+      "gdram": "53fbcb6b48ff4b35"
     },
     {
       "line": "TYPE S.COM\r",
-      "gdram": "fc73f11404353ca4"
+      "gdram": "6e78cbbf6d5edc7a"
     },
     {
       "line": "ERA S.COM\r",
-      "gdram": "e768d21066d36773"
+      "gdram": "9ef6f5669508e9c2"
     },
     {
       "line": "TYPE LINES.TXT\r",
-      "gdram": "c562237b494d6eaf"
+      "gdram": "4db45461bbd9660d"
     },
     {
       "line": "ABC\b\b\u0015XYZ\u0012\u0005Q\r",
-      "gdram": "c4f5159758bdd6f8"
+      "gdram": "ad20d045a87f5b5f"
     },
     {
       "line": "\u0003",
-      "gdram": "f532ea7efaac1863"
+      "gdram": "8044ace9e516822d"
     },
     {
       "line": "SAVE 1 C:X.COM\r",
-      "gdram": "65ad54822728ad1c"
+      "gdram": "132530afda75e575"
     },
     {
       "line": "DIR E:\r",
-      "gdram": "d0bf1c9d19d08fcb"
+      "gdram": "baea10ff7124a9dd"
     },
     {
       "line": "E:\r",
-      "gdram": "dc44bc7bc5ba3fef"
+      "gdram": "5888d5741f99c822"
     },
     {
       "line": "A:\r",
-      "gdram": "9076e2471ceeb2db"
+      "gdram": "2ba5e1e7af89e781"
     },
     {
       "line": "CONOUT\r",
-      "gdram": "b82106de46e05108"
+      "gdram": "a345ebd66baa7e65"
     }
   ]
 }
