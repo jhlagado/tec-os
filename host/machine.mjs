@@ -151,6 +151,9 @@ export class Machine {
     // float high and writes go nowhere.
     const empty = (a) => !windowRam && a >= 0x8000 && a < 0xc000;
     let ram = hooks;
+    // Bit 2 of the latch maps another bank at 8000h-BFFFh, unless ram96 has
+    // no EXPAND 1 for it to map.
+    this.classicOnly = ram96 && expands < 2;
     if (ram96) {
       this.main = Array.from({ length: mains }, () => new Uint8Array(0x8000).fill(ramFill));
       this.expand = Array.from({ length: expands }, () => new Uint8Array(0x4000).fill(ramFill));
@@ -257,6 +260,11 @@ export class Machine {
 
   get sysCtrl() {
     return this.tec1g.state.system.sysCtrl & 0xff;
+  }
+
+  /** True while 8000h-BFFFh holds the classic bank, TEC-OS's own RAM. */
+  get classicBankIn() {
+    return this.classicOnly || (this.sysCtrl & 0x04) === 0;
   }
 
   get physicalBank() {
@@ -520,6 +528,9 @@ export class Machine {
         head.down = true;
         return;
       }
+      // KBLAST is TEC-OS's byte in the classic bank: while a program has
+      // EXPAND 1 in, the byte there is the bank's, so the key stays down.
+      if (!this.classicBankIn) return;
       if (!head.up && this.read(kblast) === head.key) {
         this.tec1g.applyMatrixKey(head.combo.row, head.combo.col, false);
         if (head.mod !== undefined) this.tec1g.applyMatrixKey(0, head.mod, false);

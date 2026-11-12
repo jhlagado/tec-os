@@ -1,7 +1,8 @@
 // EXPAND 1, TEC-OS's own: one RAM check before the banner stops a board
 // without it, cold boot clears it and warm boot leaves it, and the harness
 // sees a program's write there. Function 50, MOVE and XMOVE went in KS36a,
-// and with them MAIN 1's copy and EXPAND 1's warm-boot jump. Emulator evidence.
+// and with them MAIN 1's copy and EXPAND 1's warm-boot jump. The harness's
+// matrix keys read KBLAST only while the classic bank is in. Emulator evidence.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -110,4 +111,24 @@ test("a write to EXPAND 1 by ROM code outside the cache, between CDI and CTADR, 
   assert.ok(m.expand1Writes.length >= 8, `MNFILL's eight bytes at 9000h seen: ${m.expand1Writes.length}`);
   assert.ok(m.expand1Writes.every((w) => w.pc >= mnfill && w.pc < ctadr));
   for (const w of m.expand1Writes) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1); // these were asked for
+});
+
+test("a matrix key the harness holds is let go only on KBLAST in the classic bank, not on EXPAND 1's byte at its address", () => {
+  const m = boot(standardCard(), { matrix: true });
+  const kblast = m.sym("KBLAST");
+  const latch = m.sysCtrl;
+  m.enqueueInput("x", "matrix");
+  m.pumpInput();
+  const head = m.pending[0];
+  assert.ok(head.down, "the key is down");
+  m.cpu.hardware.ioWrite(0xff, latch | 0x04);
+  m.write(kblast, head.key); // EXPAND 1's byte, as if TEC-OS had seen the key
+  m.pumpInput();
+  assert.equal(head.up, undefined, "not let go while EXPAND 1 is in");
+  m.write(kblast, 0xff);
+  m.pumpInput();
+  assert.equal(m.pending.length, 1, "nor taken off the queue");
+  m.cpu.hardware.ioWrite(0xff, latch);
+  assert.notEqual(m.read(kblast), head.key, "the classic bank's KBLAST hasn't seen it");
+  m.runUntil(() => (m.pumpInput(), !m.pending.length && /A>x$/i.test(m.text(0))), 50_000_000, "the key, seen in the classic bank and echoed");
 });
