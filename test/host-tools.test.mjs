@@ -360,8 +360,13 @@ test("npm run build leaves dist/'s ROM, map and census equal to build/'s when di
   for (const path of touched) if (existsSync(path)) kept.set(path, readFileSync(path));
   for (const [, to] of names) writeFileSync(resolve(dist, to), "stale"); // as an older build's media left them
   try {
+    writeFileSync(resolve(dist, "manifest.json"), JSON.stringify({ tecos: { tpaBytes: 47273 } }));
     execFileSync(process.execPath, [resolve(ROOT, "tools/build.mjs")], { timeout: 120000, encoding: "utf8" });
     for (const [from, to] of names) assert.ok(readFileSync(resolve(dist, to)).equals(readFileSync(resolve(ROOT, "build/tecos", from))), `dist/${to} is build/tecos/${from}`);
+    const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
+    const manifest = JSON.parse(readFileSync(resolve(dist, "manifest.json"), "utf8"));
+    assert.equal(manifest.tecos.tpaBytes, census.ram.cards.starter.tpa);
+    assert.equal(manifest.tecos.tpaBytes, 46569, "build keeps the four-drive starter's bare TPA");
   } finally {
     // dist/ as it was found: each file the build may write put back, or removed if it wasn't there
     if (!there) rmSync(dist, { recursive: true });

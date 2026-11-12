@@ -60,6 +60,10 @@ test("AC1 rom and tpa", () => {
   const at = symbols.get("CPEND");
   assert.ok(at >= symbols.get("RAMBIOS") + 51 && at < 0xc000, `CPEND at ${at.toString(16)}, above the RAM BIOS table`);
   assert.equal(census.ram.tpa.bytes, LANDING.tpa, "the TPA as at the shell's landing");
+  assert.equal(census.ram.tpa.card, "twoVolume", "the coalescing reference remains explicit");
+  assert.equal(census.ram.cards.twoVolume.tpa, LANDING.tpa);
+  assert.equal(census.ram.cards.starter.tpa, 46569, "the four-drive starter has its own figure");
+  assert.equal(census.ram.cards.starter.entry, 0xb6e9);
   const m = boot(standardCard());
   assert.equal(word(m, 6) - 0x100, LANDING.tpa, "(0006h) on the card");
   console.log(`ROM ${used} used (+${used - LANDING.used}), ${16384 - used} free, TPA ${census.ram.tpa.bytes}, CPEND ${at.toString(16)}h`);
