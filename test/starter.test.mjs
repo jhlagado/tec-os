@@ -3,7 +3,8 @@
 // pin gives, and it boots to a MOUNT that lists its volumes. Its BOUNCE.BAS is
 // compiled by BAZA and runs its sprites on the PICO9918, steered by letters or
 // arrow keys, TAS builds DEMO.ASM into the demo, and MON3.SVC loads and runs
-// HELLO3.BIN, which writes the LCD.
+// HELLO3.BIN, which writes the LCD. The web host brings a card saved before
+// the shell up to this card's SHELL.SVC and MON3.SVC.
 // Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
 // are pinned inputs (test/inputs.json).
 
@@ -17,6 +18,7 @@ import { GLCD_SVC, ROOT, boot, program, volume, SHELL_SVC } from "./lib/fixtures
 import { check, pinned } from "./lib/inputs.mjs";
 import { digitsOf, find, hello3, lcdRows, line, mon3Svc, svcMutant } from "./lib/mon3.mjs";
 import { buildRecipe, fileFetcher } from "../tools/tecvol.mjs";
+import { prepareCard } from "../host/card.mjs";
 
 const TED = pinned("TED.COM");
 const TAS = pinned("TAS.COM");
@@ -389,4 +391,80 @@ test("on the card at 40 columns, TED BOUNCE.BAS scrolls sideways along its longe
   assert.deepEqual(view(), cut(0, top), "back to the view from column 1");
   keys("\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
   assert.deepEqual(m.violations, []);
+});
+
+// A card the Viewer saved before the shell landed: the starter card's files of
+// that time, with no SHELL.SVC, a MON3.SVC that installs without being
+// entered, and the startup line the page wrote for the PICO9918 at 40 columns.
+const OLD_MON3 = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/mon3-55f0171.json"), "utf8"));
+const NOTES = Buffer.from("my own notes\r\n\x1a", "latin1");
+function preShellCard(startup = "CON PICO 40\r\n") {
+  const card = Uint8Array.from(starter().card);
+  const a = volume(card, "A");
+  a.erase("SHELL.SVC");
+  a.write("MON3.SVC", Buffer.from(OLD_MON3.file, "base64"));
+  a.write("STARTUP.CMD", Buffer.from(`${startup}\x1a`, "latin1"));
+  a.write("NOTES.TXT", NOTES);
+  a.write("SAMPLE.ASM", Buffer.from("; the user's own edit\r\n\x1a", "latin1"));
+  volume(card, "B").write("WORK.TXT", NOTES);
+  return card;
+}
+const filesOf = (card, drive) => Object.fromEntries(volume(card, drive).list().map((f) => [f.name, sha(volume(card, drive).read(f.name))]));
+const startupOf = (card) => Buffer.from(volume(card, "A").read("STARTUP.CMD")).toString("latin1").split("\x1a")[0];
+const userFiles = (card) => {
+  const { "SHELL.SVC": _s, "MON3.SVC": _m, "STARTUP.CMD": _c, ...rest } = filesOf(card, "A");
+  return { A: rest, B: filesOf(card, "B") };
+};
+
+test("the web host: a card saved before the shell gets the starter's SHELL.SVC and MON3.SVC, SHELL.SVC first in STARTUP.CMD, keeps the user's files, and boots with the shell", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
+  const card = preShellCard();
+  assert.equal(OLD_MON3.sha256, sha(Buffer.from(OLD_MON3.file, "base64")), "the fixture's MON3.SVC");
+  const before = userFiles(card);
+  const bare = boot(Uint8Array.from(card), { tms: true, matrix: true, width: 40 });
+  assert.match(bare.command("SERVICES"), /SERVICES\?/, "unprepared, it boots to the ROM's own prompt");
+  const got = prepareCard(card, "tms", "40", starter().card);
+  assert.equal(got.problem, null);
+  assert.equal(got.changed, true);
+  assert.match(got.note, /before the shell.*SHELL\.SVC and MON3\.SVC/);
+  const want = filesOf(starter().card, "A");
+  const now = filesOf(card, "A");
+  for (const name of ["SHELL.SVC", "MON3.SVC"]) assert.equal(now[name], want[name], `the starter's ${name}`);
+  assert.equal(startupOf(card), "SHELL.SVC\r\nCON PICO 40\r\n");
+  assert.deepEqual(userFiles(card), before, "every other file on A: and B: as it was");
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  assert.match(m.command("SERVICES"), /SHELL/, "the shell is in");
+  assert.deepEqual(m.violations, []);
+  assert.deepEqual(prepareCard(card, "tms", "40", starter().card), { problem: null, note: null, changed: false }, "once is enough");
+});
+
+test("the web host: a current card is unchanged by the starter's files, and one whose SHELL.SVC the user erased stays without it", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
+  const card = Uint8Array.from(starter().card);
+  prepareCard(card, "tms", "40");
+  const ready = card.slice();
+  assert.deepEqual(prepareCard(card, "tms", "40", starter().card), { problem: null, note: null, changed: false });
+  assert.deepEqual(card, ready, "byte for byte");
+  volume(card, "A").erase("SHELL.SVC");
+  const erased = filesOf(card, "A");
+  assert.equal(prepareCard(card, "tms", "40", starter().card).note, null);
+  assert.equal(volume(card, "A").find("SHELL.SVC"), undefined, "its newer MON3.SVC says it is a current card: no SHELL.SVC put back");
+  assert.equal(filesOf(card, "A")["MON3.SVC"], erased["MON3.SVC"]);
+  assert.equal(startupOf(card), "CON PICO 40\r\n", "the display's line alone, as for any card without the shell");
+});
+
+test("the web host: a pre-shell card's own STARTUP.CMD lines follow SHELL.SVC and the display's line and run under the shell, and a read-only one leaves the card as it was", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
+  const card = preShellCard("GLCD.SVC\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0");
+  assert.equal(prepareCard(card, "tms", "40", starter().card).changed, true);
+  assert.equal(startupOf(card), "SHELL.SVC\r\nCON PICO 40\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0\r\n");
+  const m = boot(card, { tms: true, matrix: true, width: 40 });
+  assert.match(m.text(0), />TYPE NOTES\.TXT\r\r\nmy own notes\r\n/, "the user's TYPE ran");
+  assert.match(m.text(0), />DIR B: &USER 0\r\r\nWORK\.TXT +\r\n[^\n]*\n>?A>USER 0\r\n/, "and the chained line, piece by piece under the shell");
+  assert.deepEqual(m.violations, []);
+
+  const locked = preShellCard();
+  volume(locked, "A").write("STARTUP.CMD", Buffer.from("CON PICO 40\r\n\x1a", "latin1"), { readOnly: true });
+  const before = locked.slice();
+  const got = prepareCard(locked, "tms", "40", starter().card);
+  assert.match(got.problem, /STARTUP\.CMD is read-only/);
+  assert.equal(got.changed, false);
+  assert.deepEqual(locked, before, "no SHELL.SVC without its line: the card boots as it is");
 });

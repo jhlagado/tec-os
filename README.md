@@ -125,7 +125,10 @@ the tests use, at 4 MHz, with a TMS9918 screen, the 7-segment digits, the
 screen and type on the matrix keyboard; after `CON TTY`, type in the serial
 terminal instead. The card lives in the browser's IndexedDB and survives reloads.
 "New starter card" builds one from `starter.recipe.json`, checking every
-file's SHA-256: the same card as `dist/starter.img`, for there is one card. Files can be copied onto and off the card from the page,
+file's SHA-256: the same card as `dist/starter.img`, for there is one card. A card
+saved before the shell, with no `SHELL.SVC`, gets the starter card's `SHELL.SVC`
+and `MON3.SVC` at power on, with `SHELL.SVC` first in its `STARTUP.CMD` and its
+own lines after; its other files stay as they were. Files can be copied onto and off the card from the page,
 which resets the TEC-1G so CP/M sees the change.
 
 ## Cards
