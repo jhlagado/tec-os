@@ -402,7 +402,7 @@ export class Machine {
   }
 
   /** Type a command line and wait for the next CCP prompt. */
-  command(line, { prompt = /\r\n\d*[A-P]>$/, maxCycles = 400_000_000 } = {}) {
+  command(line, { prompt = /\r\n\d*[A-P](:\S*)?>$/, maxCycles = 400_000_000 } = {}) {
     this.mark = this.output.length;
     this.type(`${line}\r`);
     return this.expect(prompt, { maxCycles });

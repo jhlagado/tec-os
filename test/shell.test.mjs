@@ -20,16 +20,16 @@ import { toLatin1 } from "../tools/lib/bytes.mjs";
 const HOOK = await hookSvc();
 const MON3 = await mon3Svc();
 const S = /\r\nS>$/; // HOOK.SVC's prompt
-const P = /\r\n\d*[A-P]>$/; // the CCP's or SHELL.SVC's
+const P = /\r\n\d*[A-P](:\S*)?>$/; // the CCP's or SHELL.SVC's
 const M3 = /MON3>$/;
 const sym = SHELL.symbols;
 
 // After every test, the guard under the shell's own stack: each machine's
-// deepest run between prompts leaves a quarter of the 32 bytes unused.
+// deepest run between prompts leaves a quarter of the 48 bytes unused.
 GUARDS.on = true;
 afterEach(() => {
   const machines = GUARDS.machines.splice(0);
-  for (const g of machines) assert.ok(g.read() <= 24, `the shell's own stack: ${g.deepest} of 32 between prompts`);
+  for (const g of machines) assert.ok(g.read() <= 36, `the shell's own stack: ${g.deepest} of 48 between prompts`);
 });
 const hsym = HOOK.symbols;
 const lowest = (m) => m.read(m.sym("SVCHEAD")) << 8;
@@ -436,14 +436,14 @@ test("SH6 never ready removed, from the startup line", async () => {
   const x = await execFile({ V_NRDY: 1 });
   const top = word(shellMachine(shellCard({ "X.SVC": x }, { startup: [] })), 6);
   const m = shellMachine(shellCard({ "X.SVC": x }, { startup: ["X.SVC"] }));
-  assert.match(m.text(0), /A>X\.SVC\r[\s\S]*X\.SVC\?/, "the ROM's one line refused");
+  assert.match(m.text(0), /A(:\S*)?>X\.SVC\r[\s\S]*X\.SVC\?/, "the ROM's one line refused");
   assert.equal(code(m), 0xff00);
   assert.deepEqual(owners(m), []);
   assert.equal(word(m, 6), top, "(0006h) as before");
   // A later line of the file, run by the shell.
   const shelledTop = word(shellMachine(shellCard({ "X.SVC": x })), 6);
   const s = shellMachine(shellCard({ "X.SVC": x }, { startup: ["SHELL.SVC", "X.SVC"] }));
-  assert.match(s.text(0), /A>X\.SVC\r[\s\S]*X\.SVC\?/, "the shell's later line refused");
+  assert.match(s.text(0), /A(:\S*)?>X\.SVC\r[\s\S]*X\.SVC\?/, "the shell's later line refused");
   assert.equal(code(s), 0xff00);
   assert.deepEqual(owners(s).map((o) => o.name), ["SHELL"]);
   assert.equal(word(s, 6), shelledTop, "(0006h) as with the shell alone");
@@ -633,8 +633,8 @@ test("SH14 mutant: withoutDisplay keeping its : makes a kept piece a bad name", 
 const pages = (svc) => Math.ceil((svc.image + (svc.file[8] | (svc.file[9] << 8))) / 256);
 
 test("SH7 size", () => {
-  assert.ok(pages(SHELL) <= 10, `SHELL.SVC in 10 pages: ${SHELL.image} + extra`);
-  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 2560);
+  assert.ok(pages(SHELL) <= 15, `SHELL.SVC in 15 pages: ${SHELL.image} + extra`);
+  assert.ok(SHELL.image + (SHELL.file[8] | (SHELL.file[9] << 8)) <= 3840);
   assert.equal(sym.RING % 256, 0, "the ring's page aligned");
 });
 
@@ -710,7 +710,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9a00);
+    assert.equal(word(m, 6), 0x9500);
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -719,7 +719,7 @@ test("SH7 with glcd and mon3", () => {
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9a00);
+    assert.equal(word(m, 6), 0x9500);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -730,18 +730,18 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9a00);
+    assert.equal(word(m, 6), 0x9500);
   }
 });
 
 test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
-  assert.equal(word(m, 6), 0xaf00, "SHELL.SVC alone: TPA 44,544");
+  assert.equal(word(m, 6), 0xaa00, "SHELL.SVC alone: TPA 43,264");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9d00, "with MON3.SVC: 39,936");
+  assert.equal(word(m, 6), 0x9800, "with MON3.SVC: 38,656");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
-  assert.equal(word(g, 6), 0xac00, "with GLCD.SVC: 43,776");
+  assert.equal(word(g, 6), 0xa700, "with GLCD.SVC: 42,496");
 });
 
 test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", async () => {
@@ -751,9 +751,9 @@ test("SH7 mutant: SHELL.SVC declaring 6 on the CCP's stack makes GLCD.SVC?", asy
   assert.match(m.text(0), /GLCD\.SVC\?/);
 });
 
-test("SH7 mutant: a 128-byte recall buffer takes an eleventh page", async () => {
-  const mut = await shellVariant([["STKTOP EQU STKBOT+32\n", "STKTOP EQU STKBOT+32+128\n"]]);
-  assert.equal(pages(mut), 11);
+test("SH7 mutant: a 128-byte recall buffer takes a sixteenth page", async () => {
+  const mut = await shellVariant([["STKTOP EQU STKBOT+48\n", "STKTOP EQU STKBOT+48+128\n"]]);
+  assert.equal(pages(mut), 16);
 });
 
 // --- Pieces, separators and lines ------------------------------------------
@@ -814,7 +814,7 @@ test("SH8 leading amp refused", () => {
   at(m, "OK");
   for (const line of ["&TYPE HELLO.TXT", " !&TYPE HELLO.TXT", "\t&TYPE HELLO.TXT"]) {
     const t = at(m, line);
-    assert.match(t, /\r\n&TYPE\?\r\n\r\nA>$/, `${JSON.stringify(line)}: refused, a blank line before the prompt`);
+    assert.match(t, /\r\n&TYPE\?\r\n\r\nA(:\S*)?>$/, `${JSON.stringify(line)}: refused, a blank line before the prompt`);
     assert.equal(hellos(t), 0, "nothing of it runs");
     assert.equal(code(m), 0xff00);
   }
@@ -842,7 +842,7 @@ test("SH8 amp on script lines", () => {
   const t = at(m, "S.CMD");
   assert.equal(hellos(t), 1, "the & piece after F skipped, the one after OK run");
   assert.match(t, /&TYPE\?/, "a script line starting & refused");
-  assert.match(t, /\r\nA>OK &TYPE HELLO\.TXT\r+\n\r\nA>TYPE HELLO\.TXT\r\nhello/, "and the next line runs");
+  assert.match(t, /\r\nA(:\S*)?>OK &TYPE HELLO\.TXT\r+\n\r\nA(:\S*)?>TYPE HELLO\.TXT\r\nhello/, "and the next line runs");
 });
 
 test("SH8 colon refused", () => {
@@ -856,9 +856,9 @@ test("SH8 colon refused", () => {
 test("SH8 echo", () => {
   const m = pm();
   const e = at(m, "OK!TYPE HELLO.TXT &TYPE C.TXT");
-  assert.match(e, /\r\nA>TYPE HELLO\.TXT\r\n/, "echoed after its prompt, up to the blanks before its separator");
-  assert.match(e, /\r\nA>TYPE C\.TXT\r\n/);
-  assert.doesNotMatch(e, /A>OK!/);
+  assert.match(e, /\r\nA(:\S*)?>TYPE HELLO\.TXT\r\n/, "echoed after its prompt, up to the blanks before its separator");
+  assert.match(e, /\r\nA(:\S*)?>TYPE C\.TXT\r\n/);
+  assert.doesNotMatch(e, /A(:\S*)?>OK!/);
 });
 
 test("SH8 drops", () => {
@@ -892,7 +892,7 @@ test("SH8 ted build line", () => {
   const ted = Uint8Array.from([0x1e, 0x54, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints T
   const m = pm({ "TAS.COM": tas, "TED.COM": ted });
   const t = at(m, "A:TAS NAME!A:TED");
-  assert.match(t, /A>A:TED\r\nT/, "TED runs after a failed build");
+  assert.match(t, /A(:\S*)?>A:TED\r\nT/, "TED runs after a failed build");
 });
 
 const shellWith = (edits) => shellVariant(edits);
@@ -941,7 +941,7 @@ test("SH8 mutant: a leading & testing the last line's code", async () => {
   const m = await pmWith([["  cp '&'\n  ret nz         ; HL: the first piece", "  cp '&'\n  ret nz\n  inc hl\n  ld (LPOS),hl\n  ld a,1\n  ld (LCOND),a\n  jp LN2"]]);
   at(m, "F");
   // The prompt as text: the mutant's skipped line leaves no gate for ready().
-  assert.doesNotMatch(at(m, "&TYPE HELLO.TXT", { re: /A>$/ }), /&TYPE\?/);
+  assert.doesNotMatch(at(m, "&TYPE HELLO.TXT", { re: /A(:\S*)?>$/ }), /&TYPE\?/);
 });
 
 test("SH8 mutant: any nonzero code a failure skips after a program returning 1", async () => {
@@ -975,7 +975,7 @@ test("SH9 127", () => {
   const long = `SAY ${"X".repeat(123)}`; // 127 characters
   const m = pm({ "S.CMD": crlf(`${long}YYYY`, "USER 2") });
   const t = at(m, "S.CMD");
-  assert.match(t, new RegExp(`A>${long}\\r`), "the first 127 kept");
+  assert.match(t, new RegExp(`A(:\\S*)?>${long}\\r`), "the first 127 kept");
   assert.doesNotMatch(t, /XY/);
   assert.equal(user(m), 2, "the rest of the line dropped, the next line read");
 });
@@ -983,15 +983,15 @@ test("SH9 127", () => {
 test("SH9 line ends", () => {
   const m = pm({ "S.CMD": Buffer.from("USER 1\rUSER 2\nUSER 3\r\nUSER 4\n\rUSER 5\r\n\x1a", "latin1") });
   const t = at(m, "S.CMD");
-  assert.equal(count(t, /A>USER \d\r/g), 5, "CR, LF and CR LF each end a line");
+  assert.equal(count(t, /A(:\S*)?>USER \d\r/g), 5, "CR, LF and CR LF each end a line");
   assert.equal(user(m), 5);
 });
 
 test("SH9 passed over", () => {
   const m = pm({ "S.CMD": crlf("; a comment", "", "   ", " ! !", "\t", "TYPE HELLO.TXT") });
   const t = at(m, "S.CMD");
-  assert.doesNotMatch(t, /; a comment|A> |A>\t|A>\r/);
-  assert.equal(count(t, /\r\n\d*A>/g), 2, "one prompt for the line that runs, one after");
+  assert.doesNotMatch(t, /; a comment|A(:\S*)?> |A(:\S*)?>\t|A(:\S*)?>\r/);
+  assert.equal(count(t, /\r\n\d*A(:\S*)?>/g), 2, "one prompt for the line that runs, one after");
   assert.equal(hellos(t), 1);
   const m2 = pm({ "S.CMD": crlf("  ; after blanks") });
   assert.match(at(m2, "S.CMD"), /;\?/, "a ; after blanks is not a comment: the CCP refuses it");
@@ -999,7 +999,7 @@ test("SH9 passed over", () => {
 
 test("SH9 echo", () => {
   const m = pm({ "S.CMD": crlf("SAY!TYPE HELLO.TXT") });
-  assert.match(at(m, "S.CMD"), /A>SAY!TYPE HELLO\.TXT\r/, "the line echoed whole");
+  assert.match(at(m, "S.CMD"), /A(:\S*)?>SAY!TYPE HELLO\.TXT\r/, "the line echoed whole");
 });
 
 test("SH9 where", () => {
@@ -1116,7 +1116,7 @@ test("SH10 mutant: the file started from its first line enters SHELL.SVC again",
   const mut = await shellVariant([["  call SLINE     ; past the ROM's line\n  ret nc", "  or a\n  ret nc"]]);
   const m = shellMachine(shellCard({}, { startup: ["SHELL.SVC", "USER 2"], shell: mut.file }), { noWait: true });
   m.runUntil(() => m.ready(), 900_000_000, "the prompt");
-  assert.equal(count(m.text(0), /A>SHELL\.SVC\r/g), 2);
+  assert.equal(count(m.text(0), /A(:\S*)?>SHELL\.SVC\r/g), 2);
 });
 
 test("SH10 mutant: the rest given typed origin says NODEV.SVC?", async () => {
@@ -1294,7 +1294,7 @@ test("SH13 guard read between prompts", () => {
   assert.ok(g, "the machine's guard is laid");
   for (const l of ["DIR", "TYPE HELLO.TXT", "F &SAY!SAY", "COPY HELLO.TXT C.TXT", "SERVICES"]) at(m, l);
   const deepest = g.read();
-  assert.ok(deepest > 0 && deepest <= 24, `the shell's own stack: ${deepest} of 32`);
+  assert.ok(deepest > 0 && deepest <= 24, `the shell's own stack: ${deepest} of 48`);
 });
 
 test("SH13 mutant: PAGE's stack 16 bytes lower reads above 24", async () => {
@@ -1307,19 +1307,19 @@ test("SH13 mutant: PAGE's stack 16 bytes lower reads above 24", async () => {
   const [g] = GUARDS.machines.splice(at0, 1);
   at(m, "TYPE HELLO.TXT");
   const deepest = g.read();
-  assert.ok(deepest > 24, `the shell's own stack: ${deepest} of 32, past the bound`);
+  assert.ok(deepest > 24, `the shell's own stack: ${deepest} of 48, past the bound`);
 });
 
 test("SH13 census with the shell", () => {
   const { stacks, shell } = census(["SHELL.SVC"]);
   console.log(JSON.stringify({ stacks, shell }));
   for (const [k, s] of Object.entries(stacks)) assert.ok(s.deepest <= s.reserved * 0.75, `${k}: ${s.deepest} of ${s.reserved}, a quarter free`);
-  assert.ok(shell >= 12 && shell <= 24, `the shell's own stack: ${shell} of 32, the docs' 16 within 12 to 24`);
+  assert.ok(shell >= 12 && shell <= 24, `the shell's own stack: ${shell} of 48, the docs' 16 within 12 to 24`);
 });
 
 test("SH13 census with the three", () => {
   const { stacks, shell } = census(["SHELL.SVC", "GLCD.SVC"], { matrix: true, glcd: true });
-  assert.ok(shell >= 12 && shell <= 24, `the shell's own stack: ${shell} of 32, the docs' 16 within 12 to 24`);
+  assert.ok(shell >= 12 && shell <= 24, `the shell's own stack: ${shell} of 48, the docs' 16 within 12 to 24`);
   for (const [k, s] of Object.entries(stacks)) assert.ok(s.deepest <= s.reserved * 0.75, `${k}: ${s.deepest} of ${s.reserved}`);
 });
 
@@ -1365,5 +1365,5 @@ test("SH15 ted build returns", () => {
   const ted2 = Uint8Array.from([0x1e, 0x54, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]);
   const m = pm({ "TAS.COM": tas, "TED.COM": ted, "TED2.COM": ted2 });
   const t = at(m, "TED");
-  assert.match(t, /A>A:TED2\r\nT/, "TED's build line comes back to TED after a failed build");
+  assert.match(t, /A(:\S*)?>A:TED2\r\nT/, "TED's build line comes back to TED after a failed build");
 });

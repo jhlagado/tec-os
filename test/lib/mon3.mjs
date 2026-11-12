@@ -175,7 +175,7 @@ export function machine(image, { rom, symbols, tms = false, matrix = false, widt
   const built = romFor();
   if (image) withDisplay(image, { tms, matrix, width });
   const m = new Machine({ rom: rom ?? built.rom, symbols: symbols ?? built.symbols, sdImage: image, tms, matrix, clock: TEST_CLOCK, ...opts });
-  m.expect(/A>$/, { from: 0, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the first prompt");
   // Speaker edges: changes of bit 7 in writes to port 01h.
   m.edges = 0;
@@ -219,7 +219,7 @@ export function services(m) {
   return out;
 }
 
-export const PROMPT = /\r\n\d*[A-P]>$/;
+export const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
 export const MON3 = /MON3>$/;
 
 /** Type LINE and run to MON3> or the CCP's prompt: the text printed, and which came. */
@@ -287,7 +287,7 @@ export async function ks53Census() {
   const image = card({ "MON3.SVC": (await mon3Svc()).file, "NRDY.SVC": await execFile({ V_NRDY: 1 }) });
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
   const depths = watch(m);
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   for (const [l, re] of [["MON3.SVC /E\r", MON3], ["EXIT\r"], ["MON3.SVC\r", MON3], ["EXIT\r"], ["NRDY.SVC\r"], ["UNLOAD\r"]]) censusRun(m, l, re);
   assert.deepEqual(m.violations, []);

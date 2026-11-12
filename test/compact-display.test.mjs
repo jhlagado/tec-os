@@ -29,7 +29,7 @@ function boot(image,opts={tms:true,matrix:true,glcd:false},variant='combined'){
  const step=m.step.bind(m);
  m.step=()=>{const sp=m.cpu.cpu.sp;for(const [n,[b,t]] of Object.entries(windows))if(sp>=b&&sp<=t)low[n]=Math.min(low[n],sp);return step()};
  m.modelDepths=()=>Object.fromEntries(Object.entries(windows).map(([n,[b,t]])=>[n,{reserved:t-b,deepest:t-low[n]}]));
- m.expect(/A>$/,{from:0,maxCycles:200_000_000});m.runUntil(()=>m.ready(),200_000_000,'first input');
+ m.expect(/A(:\S*)?>$/,{from:0,maxCycles:200_000_000});m.runUntil(()=>m.ready(),200_000_000,'first input');
  return m;
 }
 function call(m,address,regs={}){
@@ -62,7 +62,7 @@ for(const width of [32,40,80]){
  m.command('CON TTY');assert.equal(m.read(m.sym('VWID')),0);assert.equal(m.read(m.sym('VHGT')),0);m.command('CON CRT');assert.equal(m.read(m.sym('PIWID')),width);
  m.command('CON PICO');assert.equal(m.read(m.sym('PIWID')),width);
  const mark=m.output.length;m.cpu.cpu.pc=0;
- m.runUntil(()=>m.ready()&&/A>$/.test(m.text(mark)),200_000_000,'warm preservation');
+ m.runUntil(()=>m.ready()&&/A(:\S*)?>$/.test(m.text(mark)),200_000_000,'warm preservation');
  assert.equal(m.read(m.sym('PIWID')),width);
  m.command('TYPE ROWS.TXT');
  const text=',;Qgjpqy{}';

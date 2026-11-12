@@ -35,20 +35,20 @@ function start(image) {
 
 test("a block past the end of A:'s directory leaves the prompt reachable", () => {
   const m = start(damaged());
-  m.expect(/A>$/, { from: 0, maxCycles: 300_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 300_000_000 });
   assert.doesNotMatch(m.text(0), /Bad Sector/);
 });
 
 test("the file with that block says Bad Sector when it's read, and ERA takes it", () => {
   const m = start(damaged());
-  m.expect(/A>$/, { from: 0, maxCycles: 300_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 300_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   assert.match(m.command("DIR BAD.TXT"), /BAD\.TXT/);
   const from = m.output.length;
   m.type("TYPE BAD.TXT\r");
   m.expect(/Bad Sector/, { from, maxCycles: 100_000_000 });
   m.type("\r");
-  m.expect(/A>$/, { from, maxCycles: 100_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 100_000_000 });
   m.runUntil(() => m.ready(), 100_000_000, "the prompt");
   m.command("ERA BAD.TXT");
   assert.doesNotMatch(m.command("DIR BAD.TXT"), /BAD\.TXT\r\n.*BAD\.TXT/s);
@@ -65,7 +65,7 @@ test("a write to a read-only volume says R/O, and the card is unchanged", () => 
   m.runUntil(() => m.waitingForInput(), 100_000_000, "the error's key");
   assert.doesNotMatch(m.text(from), /Bad Sector/);
   m.type("\r");
-  m.expect(/A>$/, { from, maxCycles: 100_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 100_000_000 });
   assert.ok(before.equals(m.sd.image ?? image));
 });
 

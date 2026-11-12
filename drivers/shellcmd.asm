@@ -53,6 +53,7 @@ SV3:
 
 CMDCOPY:
   push hl        ; the tail
+  call FOLD      ; its names folded
   call CRLF      ; after the line
   pop hl
   ld de,FCBONE   ; the source FCB
@@ -90,9 +91,7 @@ CPBAD:
 ; destructive before copying begins.
 
 CPGO:
-  ld de,DEFDMA
-  ld c,26        ; 26: set the DMA
-  call BDOS      ; DMA 0080h
+  call SETDMA    ; DMA 0080h
   call DOSSEQ
   DB 15*2+0      ; open the source
   inc a          ; FFh to zero

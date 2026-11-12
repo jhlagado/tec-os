@@ -29,8 +29,8 @@ function farCard(start) {
 /** Cold boot on CARD: the mount's error, two hex digits, or "booted". */
 function mountOf(card, highCapacity) {
   const m = new Machine({ ...romFor(), sdImage: card, clock: TEST_CLOCK, highCapacity });
-  const out = m.expect(/R retry> $|A>$/, { from: 0, maxCycles: 200_000_000 });
-  return /A>$/.test(out) ? "booted" : out.match(/error ([0-9A-F]{2})/)?.[1];
+  const out = m.expect(/R retry> $|A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
+  return /A(:\S*)?>$/.test(out) ? "booted" : out.match(/error ([0-9A-F]{2})/)?.[1];
 }
 
 test("a standard card's volume past block 7FFFFFh is refused at mount, error 27, and the card is left as it was (KE-151, KE-158)", () => {
@@ -46,7 +46,7 @@ test("a standard card's volume past block 7FFFFFh is refused at mount, error 27,
 
 test("on a standard card, LBAARG names block 7FFFFFh and refuses 800000h: the bound is exact", () => {
   const m = new Machine({ ...romFor(), sdImage: standardCard(), clock: TEST_CLOCK, highCapacity: false });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
   const cpu = m.cpu.cpu;
   const word32 = (a) => [0, 1, 2, 3].reduce((v, i) => v * 256 + m.read(a + i), 0); // SDARG is sent most significant byte first
@@ -86,7 +86,7 @@ function sdCall(m, entry, lba, buf) {
 test("past the card's image, a read and a write fail and change nothing; a high block doesn't wrap to a low one (KE-155)", () => {
   const image = standardCard();
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, highCapacity: true });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
   const BUF = 0x2000;
   const blocks = image.length / 512;
@@ -122,7 +122,7 @@ function answering(fix) {
 test("a data error token after CMD17 fails the read at once, with SDEDTOK (0Ah), not after 65,536 polls as SDETOK (KE-182)", () => {
   let token = null;
   const m = answering((c) => c.cmd === 17 && token !== null && [0x00, token]);
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first prompt");
   const BUF = 0x2000;
   for (const t of [0x01, 0x08, 0x0f]) {
@@ -142,8 +142,8 @@ test("a data error token after CMD17 fails the read at once, with SDEDTOK (0Ah),
 /** Cold boot on a machine from answering(FIX): "booted", or the error code DIAG shows. */
 function bootOf(fix) {
   const m = answering(fix);
-  const out = m.expect(/R retry> $|A>$/, { from: 0, maxCycles: 200_000_000 });
-  return /A>$/.test(out) ? "booted" : out.match(/error ([0-9A-F]{2})/)?.[1];
+  const out = m.expect(/R retry> $|A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
+  return /A(:\S*)?>$/.test(out) ? "booted" : out.match(/error ([0-9A-F]{2})/)?.[1];
 }
 
 test("SDINIT refuses a card whose CMD8 echo is wrong, in its check pattern or its voltage, with SDEVOLT (KE-183)", () => {

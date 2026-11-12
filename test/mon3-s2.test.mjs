@@ -79,7 +79,7 @@ async function bdosDamaged(svc) {
   assert.ok(refused(line(m, "LOAD ONE.BIN")), "LOAD refused while 0007h holds 0");
   m.mark = m.output.length;
   m.type("EXIT\r");
-  assert.match(toPrompt(m), /A>$/, "EXIT reaches A>");
+  assert.match(toPrompt(m), /A(:\S*)?>$/, "EXIT reaches A>");
 }
 
 test("KG65 bdos page damaged", async () => {
@@ -89,7 +89,7 @@ test("KG65 bdos page damaged", async () => {
 
 test("KG65 mutant: the hook's BDOS 37 through 0005h hangs after RST 00h", async () => {
   const svc = await mon3Variant([["RESETD:\n  ld de,0-1\n  ld c,37\n  jp BDOS\n", "RESETD:\n  ld de,0-1\n  ld c,37\n  jp $0005\n"]]);
-  await assert.rejects(bdosDamaged(svc), /A> after R0\.BIN/);
+  await assert.rejects(bdosDamaged(svc), /A(:\S*)?> after R0\.BIN/);
 });
 
 test("KG65 mutant: LOAD's BDOS 15 through 0005h fails the static check", async () => {
@@ -307,7 +307,7 @@ async function hexDiskError(writing) {
   m.runUntil(() => m.waitingForInput() && /Bad Sector$/.test(m.text(from)), 200_000_000, "the BDOS's error");
   m.sd = sd;
   m.type("\r");
-  assert.match(toPrompt(m, from), /Bdos Err On A: Bad Sector\r\nA>$/, "warm boot to A>");
+  assert.match(toPrompt(m, from), /Bdos Err On A: Bad Sector\r\nA(:\S*)?>$/, "warm boot to A>");
   assert.equal(word(m, word(m, 1) + 1), m.sym("WBOOTR"), "the session ended");
   assert.ok(line(m, "MON3.SVC").mon3);
   assert.equal(runnable(m, svc), 0, "nothing runnable");
@@ -1083,7 +1083,7 @@ test("KG66 reset after", async () => {
   assert.equal(Object.keys(ran).length, 6, "each program ran");
   for (const [name, { m, before }] of Object.entries(ran)) {
     m.reset();
-    m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+    m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
     m.runUntil(() => m.ready(), 400_000_000, `the prompt after ${name}'s reset`);
     const a = volume(m.image, "A");
     assert.deepEqual(Object.fromEntries(a.list().map((f) => [f.name, sha(a.read(f.name))])), before, `${name}: the card's files as before GO`);

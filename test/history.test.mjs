@@ -62,7 +62,7 @@ test("SH11 ^W recalls the lines typed at the prompt, newest first, and ^N steps 
   m.type(W + "\x08" + "u");
   assert.equal(held(m), "stau", "a recalled line can be edited");
   m.type("\r");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.deepEqual(lines(m).slice(0, 2), ["stau", "stat"]);
   assert.equal(m.sysCtrl & 0x04, 0, "EXPAND 0 back in view");
   assert.deepEqual(m.violations, []);
@@ -116,7 +116,7 @@ test("SH11 a line repeated, a line holding a 0 and an empty line are not stored"
   m.runUntil(() => m.pc === ret && m.cpu.cpu.a === 0x7e, 50_000_000, "the ~");
   m.cpu.cpu.a = 0;
   m.type("cd\r");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.deepEqual(lines(m), ["dir", "stat", "dir"]);
 });
 
@@ -133,7 +133,7 @@ test("SH11 a program's function 10 takes ^W as a character and its line is not s
   m.type("ask\r");
   held(m);
   m.type(W + "x\r");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(m.read(0x181), 2);
   assert.deepEqual([m.read(0x182), m.read(0x183)], [0x17, 0x78]);
   assert.deepEqual(lines(m), ["ask", "dir"]);
@@ -145,11 +145,11 @@ test("SH11 the ring is kept by warm boot and emptied by cold boot", () => {
   m.type(W + W);
   assert.equal(held(m), "type nested.txt");
   m.type("\x18\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   m.type(W);
   assert.equal(held(m), "exit", "kept across ^C");
   m.reset();
-  m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the shell's prompt");
   m.type(W);
   assert.equal(held(m), "", "cold boot empties it: the shell is installed afresh");

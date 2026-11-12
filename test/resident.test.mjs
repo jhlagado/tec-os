@@ -28,7 +28,7 @@ function run(m, code) {
 const back = (m) => {
   m.mark = m.output.length;
   m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.waitingForInput() && /\r\nA>$/.test(m.text(m.mark)), 200_000_000, "the prompt");
+  m.runUntil(() => m.waitingForInput() && /\r\nA(:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "the prompt");
 };
 
 test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it", async () => {
@@ -46,7 +46,7 @@ test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps i
   // Warm boots by ^C, JP 0000h and BDOS function 0, and a disk error.
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(word(m, 6), low, "after ^C");
   back(m);
   assert.equal(word(m, 6), low, "after JP 0000h");
@@ -54,13 +54,13 @@ test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps i
   [0x0e, 0x00, 0xcd, 0x05, 0x00].forEach((v, i) => m.write(STUB + i, v));
   m.cpu.cpu.sp = 0x0100;
   m.cpu.cpu.pc = STUB;
-  m.runUntil(() => m.waitingForInput() && /\r\nA>$/.test(m.text(m.mark)), 200_000_000, "BDOS 0");
+  m.runUntil(() => m.waitingForInput() && /\r\nA(:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "BDOS 0");
   assert.equal(word(m, 6), low, "after BDOS function 0");
   m.mark = m.output.length;
   m.type("SAVE 1 C:X.COM\r");
   m.runUntil(() => m.waitingForInput(), 400_000_000, "the disk error");
   m.type("\r");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(word(m, 6), low, "after a disk error");
   const pages = (low >> 8) - 1; // SAVE counts pages from 0100h
   assert.match(m.command(`SAVE ${pages + 1} Y.COM`), /\r\n\d+\?\r\n/, "SAVE stops below the resident");
@@ -95,7 +95,7 @@ test("a cold boot clears every resident", async () => {
   m.command("RES.SVC");
   assert.equal(word(m, 6), (stub & 0xff00) - 0x100);
   m.reset();
-  m.expect(/A>$/, { maxCycles: 80_000_000 });
+  m.expect(/A(:\S*)?>$/, { maxCycles: 80_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt after reset");
   assert.deepEqual([word(m, 6), word(m, m.sym("PZTOP"))], [stub, stub]);
 });

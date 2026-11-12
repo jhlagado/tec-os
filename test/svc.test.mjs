@@ -66,13 +66,13 @@ function bench(m) {
     m.mark = m.output.length;
     c.sp = top;
     c.pc = m.sym("STARTED");
-    m.expect(/\r\n[A-P]>$/, { maxCycles: 200_000_000 });
+    m.expect(/\r\n[A-P](:\S*)?>$/, { maxCycles: 200_000_000 });
     m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt");
   };
   const warmBoot = () => {
     m.mark = m.output.length;
     c.pc = 0;
-    m.runUntil(() => m.waitingForInput() && /\r\n[A-P]>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+    m.runUntil(() => m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
   };
   const find = (name, least = 1) => {
     put(0x300, [...Buffer.from(name.padEnd(8), "latin1")]);
@@ -441,12 +441,12 @@ test("SH11 SERVICES lists each service and its pages, the newest first, with non
   volume(image, "A").write("OK.SVC", (await svc()).file);
   volume(image, "A").write("TWO.SVC", (await svc({ HDRNAME: '"TWO     "', XTRA: 300 })).file);
   const t = bench(boot(image));
-  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 10\r\nA>$/, "the shell alone");
+  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 15\r\nA(:\S*)?>$/, "the shell alone");
   t.m.command("OK.SVC");
   t.m.command("TWO.SVC");
-  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 10\r\n/);
+  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 15\r\n/);
   t.m.command("UNLOAD");
-  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 10\r\n/);
+  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 15\r\n/);
 });
 
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
@@ -482,7 +482,7 @@ test("warm boot keeps a service, and a reset empties both", async () => {
   t.prompt();
   t.m.reset();
   const from = t.m.output.length;
-  t.m.expect(/A>$/, { from, maxCycles: 200_000_000 });
+  t.m.expect(/A(:\S*)?>$/, { from, maxCycles: 200_000_000 });
   assert.deepEqual([t.word(t.m.sym("REGHEAD")), t.m.read(t.m.sym("SVCHEAD"))], [0, 0]);
 });
 
@@ -574,7 +574,7 @@ test("a warm boot from inside REMOVE clears the guard, the service stays, and a 
   t.prompt();
   t.m.mark = t.m.output.length;
   t.m.type("UNLOAD\r");
-  t.m.runUntil(() => t.m.ready() && /[A-P]>$/.test(t.m.text(t.m.mark)), 200_000_000, "the prompt after a warm boot");
+  t.m.runUntil(() => t.m.ready() && /[A-P](:\S*)?>$/.test(t.m.text(t.m.mark)), 200_000_000, "the prompt after a warm boot");
   assert.deepEqual([t.m.read(t.m.sym("SVCBSY")), t.head(), t.word(6)], [0, page, top], "the guard down and the service in");
   assert.equal(t.load((await svc({ HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).file).carry, 0);
   assert.equal(t.word(6), top - ((await svc({ HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).image + 255 >> 8) * 256);
@@ -795,7 +795,7 @@ function entries(m, lo, hi) {
 async function stackRun(depth, declared) {
   const m = new Machine({ ...romFor("debug80"), sdImage: standardCard(), clock: TEST_CLOCK, tms: false, matrix: true });
   m.mark = 0;
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt");
   const t = bench(m);
   const d = await svc({ V_STK: 1, DEPTH: depth, STKB: declared, STKI: declared, STKC: declared });
@@ -965,7 +965,7 @@ test("a service with a vector is gone at a recognised reset, and the vector with
   m.command("VEC.SVC");
   assert.equal(m.read(0x10), 0xc3);
   m.reset();
-  m.expect(/A>$/, { from: m.output.length, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
   assert.deepEqual(slot(m, 0x10), DEFAULT);
   assert.equal(m.read(m.sym("SVCHEAD")), 0);
 });
@@ -985,7 +985,7 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
       m.mark = m.output.length;
       if (m.videoConsole()) m.typeMatrix(`${line.toLowerCase()}\r`);
       else m.type(`${line}\r`);
-      m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 400_000_000, line);
+      m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, line);
       return m.text(m.mark);
     };
     say("ONE.SVC");
@@ -996,8 +996,8 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
     if (opts.tms) {
       assert.equal(m.videoConsole(), true, "the ROM's PICO9918 console");
       say("SERVICES");
-      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +10\s+A>/, "the loaded two and the shell: the ROM's console is no service");
-    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 10\r\n/);
+      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +15\s+A(:\S*)?>/, "the loaded two and the shell: the ROM's console is no service");
+    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 15\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     say("KEEP.SVC");

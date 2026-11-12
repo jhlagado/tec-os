@@ -66,7 +66,7 @@ async function consoleRun(opts, { wb = false } = {}) {
   withDisplay(image, { tms: false, matrix: false, ...opts });
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   const conmod = m.read(m.sym("CONMOD"));
   for (const line of [...COMMANDS, ...(wb ? WRITE_BEHIND : [])]) run(m, line);
@@ -83,7 +83,7 @@ async function deepPaths(lines, opts = { tms: true, matrix: true }, { files = {}
   for (const [name, bytes] of Object.entries(files)) a.write(name, bytes);
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true, tms: false, matrix: false, ...opts });
   const depths = watch(m);
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   for (const line of lines) (Array.isArray(line) ? run(m, ...line) : run(m, line));
   assert.deepEqual(m.violations, []);
@@ -110,7 +110,7 @@ async function chainRun() {
   withShell(image);
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
   const depths = watch(m);
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   for (const line of ["PROBE!DIR!USER 0\r", "ERA NOSUCH.X &DIR!DIR\r", "CHAIN!PROBE\r", "SAVE 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
   assert.deepEqual(m.violations, []);
@@ -127,7 +127,7 @@ async function resetRun() {
     { geometry: "G1M", label: "ALT", mount: "-" },
   ]);
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, highCapacity: true });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   [0x06, 0, 0x0e, 9, 0x1e, 2, 0xcd, m.sym("ABICALL") & 0xff, m.sym("ABICALL") >> 8, 0x18, 0xfe].forEach((v, i) => m.write(0x60 + i, v));
   const { pc, sp } = m.cpu.cpu;
@@ -137,7 +137,7 @@ async function resetRun() {
   const depths = watch(m);
   const from = m.output.length;
   m.reset();
-  m.expect(/A>$/, { from, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the prompt after the reset");
   assert.equal(m.read(m.sym("DRVIDX")), 3, "the reset kept the selection");
   return depths();

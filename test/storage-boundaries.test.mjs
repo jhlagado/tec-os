@@ -13,11 +13,11 @@ function start({ logged = "A", ...opts } = {}) {
   ], { drives: 4 });
   volume(image, 'A').write('KEEP.DAT', new Uint8Array(128).fill(0xaa));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000);
   if (logged === "B") {
     m.type("B:\r");
-    m.expect(/B>$/, { maxCycles: 200_000_000 });
+    m.expect(/B(:\S*)?>$/, { maxCycles: 200_000_000 });
     m.runUntil(() => m.waitingForInput(), 10_000_000);
   }
   return { m, image };

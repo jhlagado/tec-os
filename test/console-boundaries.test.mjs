@@ -116,7 +116,7 @@ for (const board of boards) {
     vreg(m, 7, 0x12);
     m.cpu.cpu.pc = m.sym("WBOOTR");
     m.mark = m.output.length;
-    m.expect(/A>$/, { from: m.mark, maxCycles: 80_000_000 });
+    m.expect(/A(:\S*)?>$/, { from: m.mark, maxCycles: 80_000_000 });
     assert.equal(m.read(m.sym("VCLAIM")), 0, "warm boot releases ownership");
     assert.deepEqual([...m.tec1g.state.display.tms9918.stateSnapshot().registers], defaultRegisters);
     assert.deepEqual(m.violations, []);

@@ -46,7 +46,7 @@ export function watch(m) {
  * Type a line and run to the prompt, answering a [more] or an error's key.
  * RE is the prompt: the CCP's unless another, such as a service's, is given.
  */
-const CCP_PROMPT = /\r\n[A-P]>$/;
+const CCP_PROMPT = /\r\n[A-P](:\S*)?>$/;
 export function run(m, line, re = CCP_PROMPT) {
   m.mark = m.output.length;
   m.type(line);

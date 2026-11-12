@@ -34,7 +34,7 @@ test("cold boot clears EXPAND 1 but for the cache's table; warm boot leaves it",
   m.expand[1][0x2000] = 0x5a;
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(m.expand[1][0x2000], 0x5a, "warm boot leaves it");
   assert.equal(m.expand[1][0x3f03], 0, "and plants nothing");
   assert.deepEqual(m.violations, []);
@@ -89,11 +89,11 @@ test("a program that ends with EXPAND 1 in view warm boots into EXPAND 0, and it
   const from = m.output.length;
   m.cpu.cpu.sp = 0x8000; // clear of the record at 0080h
   m.cpu.cpu.pc = 0x0100;
-  m.expect(/\r\nA>$/, { from });
+  m.expect(/\r\nA(:\S*)?>$/, { from });
   assert.doesNotMatch(m.text(from), /TEC-OS/, "a warm boot, not a cold one");
   assert.equal(m.sysCtrl & 0x04, 0, "EXPAND 0 in view");
   m.reset();
-  m.expect(/\r\nA>$/, { from: 0 });
+  m.expect(/\r\nA(:\S*)?>$/, { from: 0 });
   assert.match(m.command("TYPE B1.TMP"), /B{127}/, "the file's record on the card after a reset");
   assert.deepEqual(m.expand1Writes, []);
 });
@@ -130,5 +130,5 @@ test("a matrix key the harness holds is let go only on KBLAST in the classic ban
   assert.equal(m.pending.length, 1, "nor taken off the queue");
   m.cpu.hardware.ioWrite(0xff, latch);
   assert.notEqual(m.read(kblast), head.key, "the classic bank's KBLAST hasn't seen it");
-  m.runUntil(() => (m.pumpInput(), !m.pending.length && /A>x$/i.test(m.text(0))), 50_000_000, "the key, seen in the classic bank and echoed");
+  m.runUntil(() => (m.pumpInput(), !m.pending.length && /A(:\S*)?>x$/i.test(m.text(0))), 50_000_000, "the key, seen in the classic bank and echoed");
 });

@@ -40,14 +40,14 @@ export function walk(source) {
 
 test("the walk with a source that fails: the prompt comes back with TAS's message, and x doesn't run", { skip: TAS.skip || TED.skip, timeout: 1_800_000 }, () => {
   const w = walk(BAD);
-  assert.deepEqual(w.screen, ["A>tas x", "X.ASM:4:6: undefined symbol NOWHERE", "A>"]);
+  assert.deepEqual(w.screen, ["A:SYSTEM>tas x", "X.ASM:4:6: undefined symbol NOWHERE", "A:SYSTEM>"]);
   assert.equal(w.xCom, true, "the stale X.COM stays, and nothing ran it");
   assert.equal(w.xDbg, false, "a failed build leaves no debug file");
 });
 
 test("the walk with a source that assembles: X runs", { skip: TAS.skip || TED.skip, timeout: 1_800_000 }, () => {
   const w = walk(GOOD);
-  assert.deepEqual(w.screen, ["A>tas x", "X.COM written", "A>x", "X RAN", "A>"]);
+  assert.deepEqual(w.screen, ["A:SYSTEM>tas x", "X.COM written", "A:SYSTEM>x", "X RAN", "A:SYSTEM>"]);
   assert.equal(w.xCom, true);
   assert.equal(w.xDbg, true, "TAS's debug file beside it");
 });

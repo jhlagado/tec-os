@@ -58,7 +58,7 @@ async function board(cols) {
   const image = standardCard();
   volume(image, "A").write("STARTUP.CMD", startupFile(`CON PICO ${cols}`));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "a usable prompt");
   assert.equal(m.read(m.sym("PIWID")), cols);
   return { m, at: (label) => m.sym(label) };

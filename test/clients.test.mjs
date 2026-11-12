@@ -20,7 +20,7 @@ async function machine(edit = () => {}) {
   const a = volume(image, "A");
   for (const n of ["demo", "mount"]) a.write(`${n.toUpperCase()}.COM`, (await program(n)).bytes);
   const m = new Machine({ rom: patched, symbols, sdImage: image, clock: TEST_CLOCK });
-  m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   return m;
 }
@@ -135,7 +135,7 @@ test("a 2d5ce25 PICO.SVC is refused by its format: its name with a question mark
   a.write("PICO.SVC", bytes);
   a.write("STARTUP.CMD", startupFile("PICO.SVC"));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
-  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
   assert.match(m.text(0), /PICO\.SVC\?/);
   assert.deepEqual([m.read(m.sym("SVCRC")), m.read(m.sym("SVCHEAD")), m.read(m.sym("CONMOD"))], [0, 0, 1], "no INIT ran; CRT:, the ROM's");

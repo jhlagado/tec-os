@@ -56,7 +56,7 @@ function editOnTecOs({ tms, cols = 80 }) {
   m.typeMatrix("\x13"); // ^S save
   m.runUntilChecked(() => m.waitingForInput() && text(image, "A", "NOTES.TXT") === EDITED, 400_000_000, "the saved file on the card");
   m.typeMatrix("\x11"); // ^Q quit
-  m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => l.startsWith("A>")), 400_000_000, "the prompt");
+  m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => /^A(:\S*)?>/.test(l)), 400_000_000, "the prompt");
   assert.deepEqual(m.violations, []);
 
   // Power cycle and open it again.
@@ -64,7 +64,7 @@ function editOnTecOs({ tms, cols = 80 }) {
   m.typeMatrix("ted notes.txt\r");
   m.runUntilChecked(() => m.waitingForInput() && screen()[1] === "Ysecond line", 400_000_000, "the saved text");
   m.typeMatrix("\x11");
-  m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => l.startsWith("A>")), 400_000_000, "the prompt");
+  m.runUntilChecked(() => m.waitingForInput() && screen().some((l) => /^A(:\S*)?>/.test(l)), 400_000_000, "the prompt");
 }
 
 for (const cols of [80, 40, 32]) {
@@ -86,7 +86,7 @@ test("the line argument: TED NOTES.TXT 2 opens at line 2", { skip: TED.skip, tim
   const m = boot(image, { tms: true, matrix: true });
   keys(m, "ted notes.txt 2\r", "TED at line 2", () => m.screen()[0] === "hello" && /L2 C1/.test(m.screen()[23]));
   keys(m, "Y\x13", "the save", () => text(image, "A", "NOTES.TXT") === EDITED);
-  keys(m, "\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
+  keys(m, "\x11", "the prompt", () => m.screen().some((l) => /^A(:\S*)?>/.test(l)));
 });
 
 test("a text file padded with 00h to its record's end, with no ^Z, opens in TED with no error", { skip: TED.skip, timeout: 900_000 }, () => {
@@ -101,7 +101,7 @@ test("a text file padded with 00h to its record's end, with no ^Z, opens in TED 
   keys(m, "ted notes.txt\r", "TED", () => m.screen()[0] === "hello" && /NOTES/.test(m.screen()[23]));
   assert.deepEqual(m.screen().slice(0, 3).map((l) => l.trimEnd()), ["hello", "second line", ""], "the text, and nothing after it");
   assert.doesNotMatch(m.screen().join("\n"), /error/i);
-  keys(m, "\x11", "the prompt", () => m.screen().some((l) => l.startsWith("A>")));
+  keys(m, "\x11", "the prompt", () => m.screen().some((l) => /^A(:\S*)?>/.test(l)));
   assert.deepEqual(m.violations, []);
 });
 
@@ -114,7 +114,7 @@ test("a byte TED refuses stops it with EDIT error 03 and the byte's line and col
   a.write("BAD.TXT", Buffer.from("one\ntwo\nthre\x01e\n", "latin1"), { text: true });
   const m = boot(image, { tms: true, matrix: true });
   const mark = m.output.length;
-  keys(m, "ted bad.txt\r", "the refusal", () => m.ready() && /A>$/.test(m.text(mark)));
+  keys(m, "ted bad.txt\r", "the refusal", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /EDIT error 03 L3 C5/);
   assert.deepEqual(m.violations, []);
 });
@@ -138,7 +138,7 @@ function round({ drive = "A", tms = true }) {
   let mark = m.output.length;
   const since = () => m.text(mark);
   const status = () => (tms ? m.screen()[23] : since().split("\x1b[24;1H").at(-1));
-  if (drive !== "A") keys(m, `${drive}:\r`, "the drive", () => since().endsWith(`${drive}>`));
+  if (drive !== "A") keys(m, `${drive}:\r`, "the drive", () => new RegExp(`${drive}(:\\S*)?>$`).test(since()));
   keys(m, "ted hello.asm\r", "TED", () => /TED +HELLO\.ASM/.test(status()));
 
   mark = m.output.length;
@@ -149,7 +149,7 @@ function round({ drive = "A", tms = true }) {
   mark = m.output.length;
   keys(m, "\x14d", "TED after TDB?", () => /TED\r\n/.test(since()) && /L2 C2/.test(status()));
   // Item E: each tool on the line names the load drive, the current one here
-  assert.match(since(), new RegExp(`${drive}>${drive}:TDB HELLO\\r\\n${drive}:TDB\\?\\r\\n\\r\\n${drive}>${drive}:TED\\r\\n`), "the chain's line taken, TDB? and !TED");
+  assert.match(since(), new RegExp(`${drive}(:\\S*)?>${drive}:TDB HELLO\\r\\n${drive}:TDB\\?\\r\\n\\r\\n${drive}(:\\S*)?>${drive}:TED\\r\\n`), "the chain's line taken, TDB? and !TED");
   assert.equal(word(m, CURSOR), 12, "the same place");
 
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
@@ -161,10 +161,10 @@ function round({ drive = "A", tms = true }) {
 
   mark = m.output.length;
   keys(m, "\x14r", "the program and the wait", () => /Press a key/.test(since()));
-  assert.match(since(), new RegExp(`${drive}>HELLO\\r\\nHI\\r\\n`), "HELLO ran");
+  assert.match(since(), new RegExp(`${drive}(:\\S*)?>HELLO\\r\\nHI\\r\\n`), "HELLO ran");
   keys(m, " ", "TED again", () => /L2 C3/.test(status()));
   assert.equal(word(m, CURSOR), 13, "the same place as before ^T R");
-  keys(m, "\x11", "the prompt", () => since().endsWith(`${drive}>`));
+  keys(m, "\x11", "the prompt", () => new RegExp(`${drive}(:\\S*)?>$`).test(since()));
   assert.deepEqual(m.violations, []);
   const names = volume(image, drive).list().map((f) => f.name);
   for (const n of ["HELLO.COM", "HELLO.DBG", "THOR.PRJ", "THOR.SES"]) assert.ok(names.includes(n), `${n} on ${drive}:`);
@@ -199,7 +199,7 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
   keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
-  keys(m, "\x11", "the prompt", () => m.text(mark).endsWith("A>"));
+  keys(m, "\x11", "the prompt", () => /A(:\S*)?>$/.test(m.text(mark)));
   assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
   const onB = volume(image, "B").list().map((f) => f.name);
   assert.ok(onB.includes("HELLO.COM"), `HELLO.COM on B:: ${onB.join(" ")}`);
@@ -233,7 +233,7 @@ test("C:TED from B: edits B:'s file, and ^T B runs C:'s TAS and comes back to C:
   const m = boot(withShell(image), { tms: true, matrix: true });
   const status = () => m.screen()[23];
   let mark = m.output.length;
-  keys(m, "b:\r", "the drive", () => m.text(mark).endsWith("B>"));
+  keys(m, "b:\r", "the drive", () => /B(:\S*)?>$/.test(m.text(mark)));
   keys(m, "c:ted hello.asm\r", "C:'s TED on B:'s file", () => /TED .*HELLO\.ASM/.test(status()));
   mark = m.output.length;
   keys(m, "\x14b", "the failed build's return", () => /TED\r\n/.test(m.text(mark)) && /operands are not valid/.test(status()));
@@ -242,7 +242,7 @@ test("C:TED from B: edits B:'s file, and ^T B runs C:'s TAS and comes back to C:
   keys(m, ";", "the fix", () => /L2 C3/.test(status()));
   mark = m.output.length;
   keys(m, "\x14b", "the good build's return", () => /TED\r\n/.test(m.text(mark)) && /HELLO\.COM written/.test(m.text(mark)));
-  keys(m, "\x11", "the prompt", () => m.text(mark).endsWith("B>"));
+  keys(m, "\x11", "the prompt", () => /B(:\S*)?>$/.test(m.text(mark)));
   assert.equal(text(image, "B", "HELLO.ASM"), FIXED, "saved on B:");
   assert.ok(volume(image, "B").list().some((f) => f.name === "HELLO.COM"), "HELLO.COM on B:");
   assert.equal(m.read(4) & 15, 1, "the current drive still B:");
@@ -294,8 +294,8 @@ for (const [args, tail, what] of [
     const out = m.text(mark);
     keys(m, " ", "TED again", () => /TED +HELLO\.ASM/.test(status()));
     const shown = tail.replace(/[/.]/g, "\\$&");
-    assert.match(out, new RegExp(`A>HELLO${shown}\\r\\n\\[${shown}\\]\\r\\n`), "the program's line and its tail");
-    assert.equal(out.match(/A>HELLO/g)?.length, 1, "the program runs once");
+    assert.match(out, new RegExp(`A(:\\S*)?>HELLO${shown}\\r\\n\\[${shown}\\]\\r\\n`), "the program's line and its tail");
+    assert.equal(out.match(/A(:\S*)?>HELLO/g)?.length, 1, "the program runs once");
     assert.deepEqual(m.violations, []);
   });
 }

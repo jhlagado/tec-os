@@ -38,14 +38,14 @@ for (const [name, opts, files] of [
     for (const [n, bytes] of Object.entries(files)) a.write(n, bytes);
     const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });
     const seen = watch(m);
-    m.expect(/A>$/, { from: 0, maxCycles: 400_000_000 });
+    m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
     m.runUntil(() => m.ready(), 400_000_000, "a usable prompt, after STARTUP.CMD");
     // A line on the console's own keyboard: the matrix's on a display, serial's otherwise.
     const say = (line) => {
       m.mark = m.output.length;
       if (m.read(3) & 1) m.typeMatrix(`${line}\r`);
       else m.type(`${line}\r`);
-      m.runUntil(() => m.waitingForInput() && /\d*[A-P]>$/.test(m.text(m.mark)), 400_000_000, line);
+      m.runUntil(() => m.waitingForInput() && /\d*[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, line);
     };
     for (const line of ["DIR", "TYPE HELLO.TXT", "USER 3", "USER 0", "CON"]) say(line);
     for (let i = 0; i < 30; i += 1) say("DIR HELLO.TXT");

@@ -250,7 +250,7 @@ test("KG59 refusal end states", async () => {
     if (name === "KEEP") {
       // Its REMOVE refuses, so UNLOAD can't take it: reset to go on.
       m.reset();
-      m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+      m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
       m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
     }
   }
@@ -315,7 +315,7 @@ test("KG59 name rule", async () => {
   leave(m, { mon3: true });
   // With only M2 installed, MON3.SVC installs its own copy.
   m.reset();
-  m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   r = typed(m, "M2.SVC");
   assert.ok(r.mon3);
@@ -419,7 +419,7 @@ for (const [board, opts, files, startup] of [
     assert.doesNotMatch(m.text(0), /\?\r\n/, "no line refused");
     const exit = line(m, "EXIT");
     assert.ok(!exit.mon3, "EXIT leaves MON3>");
-    assert.match(exit.out, /\r\nA>$/);
+    assert.match(exit.out, /\r\nA(:\S*)?>$/);
     const typedOne = machine(card({ ...files, ...shell, "MON3.SVC": svc, ...(startup ? { "STARTUP.CMD": startupFile("SHELL.SVC", startup) } : {}) }), opts);
     assert.ok(line(typedOne, "MON3.SVC").mon3);
     assert.ok(!line(typedOne, "EXIT").mon3);
@@ -949,7 +949,7 @@ async function staleThenEntry(svc) {
   exitBy(m, "XP.BIN");
   assert.ok(line(m, "MON3.SVC").mon3, "entry with a stale hook");
   assert.ok(!line(m, "EXIT", { maxCycles: 100_000_000 }).mon3);
-  assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A>$/, "a .COM's exit reaches the prompt");
+  assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A(:\S*)?>$/, "a .COM's exit reaches the prompt");
   assert.equal(warmTarget(m), m.sym("WBOOTR"));
 }
 test("KG61 stale hook then entry", () => staleThenEntry());
@@ -999,7 +999,7 @@ test("KG61 baza and 0038h after", { skip: BAZA.skip || RTL.skip, timeout: 900_00
   ask("TIMES\r", /WHAT IS YOUR NAME\? $/);
   ask("TEC\r", /PICK A NUMBER, 1 TO 12\? $/);
   ask("13\r", /PLEASE PICK 1 TO 12\.\r\nPICK A NUMBER, 1 TO 12\? $/);
-  const out = ask("7\r", /\r\nA>$/);
+  const out = ask("7\r", /\r\nA(:\S*)?>$/);
   assert.match(out, / 7  X 7  = 49 [^]*THEY ADD UP TO 546 [^]*GOODBYE, TEC!/, "TIMES runs");
   // 0038h is the default after the session, so a claim on it loads.
   assert.equal(typed(m, "CLAIM38.SVC").code, 0, "a claim on 0038h loads");
@@ -1126,7 +1126,7 @@ test("KG62 disk error", async () => {
   m.sd = sd; // and put back before the key
   m.type("\r");
   const out = toPrompt(m, from);
-  assert.match(out, /Bdos Err On A: Bad Sector\r\nA>$/, "warm boot to A>");
+  assert.match(out, /Bdos Err On A: Bad Sector\r\nA(:\S*)?>$/, "warm boot to A>");
   assert.equal(warmTarget(m), m.sym("WBOOTR"), "the session ended");
   assert.ok(line(m, "MON3.SVC").mon3);
   assert.equal(runnable(m, svc), 0);
@@ -1284,7 +1284,7 @@ async function vectorExchange(svc, jp0 = false) {
       return m.pc === 0x400e;
     }, 50_000_000, "the program's JP 0000h");
     assert.ok(swapped, "the program exchanged the two bytes, the vector's sum unchanged");
-    assert.match(toPrompt(m), /A>$/, "JP 0000h ends the session");
+    assert.match(toPrompt(m), /A(:\S*)?>$/, "JP 0000h ends the session");
     assert.equal(warmTarget(m), m.sym("WBOOTR"), "the hook is out");
   } else {
     assert.ok(ok(line(m, "GO")));
@@ -1344,7 +1344,7 @@ async function hangAndReset(svc) {
   assert.deepEqual(onCard("F.DAT"), [...written], "the closed file, while the program hangs");
   assert.deepEqual(onCard("G.DAT"), [...written], "the unclosed write, while the program hangs");
   m.reset();
-  m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after the reset");
   assert.deepEqual(onCard("F.DAT"), [...written], "and after the reset");
   assert.deepEqual(onCard("G.DAT"), [...written]);
@@ -1466,13 +1466,13 @@ test("KG63 warm boot and reset", async () => {
   const m = await installed();
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\nA>$/);
+  m.expect(/\r\nA(:\S*)?>$/);
   m.command("X");
   assert.deepEqual(services(m), [FIG.line], "warm boot keeps it");
   assert.ok(line(m, "MON3.SVC").mon3, "and it enters");
   leave(m, { mon3: true });
   m.reset();
-  m.expect(/A>$/, { from: m.output.length, maxCycles: 400_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   assert.deepEqual(services(m), [], "a reset removes it");
   assert.equal(word(m, 6), 0xb9a9);
@@ -1488,7 +1488,7 @@ async function unloads(svc) {
     assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
     assert.equal(word(m, 6), 0xb9a9, `after ${how}: (0006h) back at B9A9h`);
     assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
-    assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A>$/, `after ${how}: a .COM exits to the prompt`);
+    assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A(:\S*)?>$/, `after ${how}: a .COM exits to the prompt`);
   }
 }
 test("KG63 unload", () => unloads());

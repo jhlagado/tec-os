@@ -916,6 +916,7 @@
     "CRLF",
     "PUTS",
     "PUTZ",
+    "PUTN",
     "PUTTRIM",
     "PUTDEC8",
     "PUTHEX",
@@ -926,5 +927,28 @@
     "HREC",
     "HSTART",
     "HSTO"
+  ],
+  "drivers/shellcd.asm": [
+    "CMDCD",
+    "PUTCDN",
+    "VWALKQ",
+    "LBLADR",
+    "DRVLBL",
+    "PUTDRV",
+    "LSTNL",
+    "CMDCLS",
+    "CMDECHO",
+    "CMDPAU"
+  ],
+  "drivers/shelldir.asm": [
+    "CMDDIR",
+    "DSRCH",
+    "DRENT",
+    "HBIT",
+    "SETDMA",
+    "RECB",
+    "PUTNT",
+    "PUTNUM",
+    "DIV10"
   ]
 }

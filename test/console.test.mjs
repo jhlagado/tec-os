@@ -22,7 +22,7 @@ test("with a PICO9918 and the matrix keyboard the screen is the console from the
 
 test("without the matrix keyboard the serial terminal is the console, even with a display", () => {
   const m = boot(standardCard(), { tms: true });
-  assert.match(m.serialText(), /B: WORK *\r\n\r\nA>$/);
+  assert.match(m.serialText(), /B: WORK *\r\n\r\nA(:\S*)?>$/);
   assert.equal(m.read(3) & 3, 0, "IOBYTE CON: is TTY:");
   assert.equal(m.read(m.sym("VWID")), 0, "no screen geometry");
   assert.ok(m.screen().every((line) => line === ""), "the PICO9918 stays blank");
@@ -35,13 +35,13 @@ test("CON switches the console between devices and falls back to serial", () => 
   assert.match(m.command("CON"), /CON: CRT:\r\n/);
   m.mark = m.output.length;
   m.typeMatrix("con uc1:\r");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   assert.equal(m.read(3) & 3, 3);
   assert.deepEqual(m.glcdScreen().slice(0, 3), ["CON: UC1:", "A>", ""]);
   m.mark = m.output.length;
   m.typeMatrix("con tty\r");
-  assert.match(m.expect(/A>$/), /CON: TTY:\r\n/);
-  assert.match(m.serialText(), /CON: TTY:\r\nA>$/);
+  assert.match(m.expect(/A(:\S*)?>$/), /CON: TTY:\r\n/);
+  assert.match(m.serialText(), /CON: TTY:\r\nA(:\S*)?>$/);
   m.command("CON CRT");
   assert.ok(m.screen().some((line) => line === "CON: CRT:"));
   assert.match(m.command("CON XYZ"), /\r\nXYZ\?/);
@@ -74,7 +74,7 @@ test("CRT: without a PICO9918 falls back to the serial terminal", () => {
   assert.equal(m.read(3) & 3, 3, "the GLCD is chosen at boot");
   m.mark = m.output.length;
   m.typeMatrix("con crt\r");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   assert.match(m.serialText(), /CON: TTY:\r\n/, "no description, the mode in effect");
   assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [0, 0], "the field holds the mode taken, TTY:");
   assert.equal(m.symbols.get("CONACT"), undefined, "CONACT is gone");
@@ -85,12 +85,12 @@ test("the matrix keyboard types at the prompt", () => {
   const m = boot(standardCard(), { tms: true, matrix: true });
   m.mark = m.output.length;
   m.typeMatrix("save 1 key.com\r");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   m.command("DIR");
   assert.match(m.screen().join("\n"), /KEY\.COM/);
   m.mark = m.output.length;
   m.typeMatrix("Era \"key.com\r");
-  assert.match(m.expect(/A>$/), /Era "key\.com/);
+  assert.match(m.expect(/A(:\S*)?>$/), /Era "key\.com/);
   assert.deepEqual(m.violations, []);
 });
 
@@ -158,7 +158,7 @@ test("the GLCD is the console when no TMS9918 answers", () => {
   assert.equal(m.glcdScreen().find((l) => l !== ""), "A>");
   m.mark = m.output.length;
   m.typeMatrix("save 1 g.com\r");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   m.command("DIR");
   assert.ok(m.glcdScreen().includes("G.COM"));
   assert.deepEqual(m.violations, []);
@@ -184,7 +184,7 @@ test("SH11 TYPE pauses a screen at a time on the 8-row GLCD and can be stopped",
   screen = m.glcdScreen();
   assert.equal(screen[6], "line 14");
   m.type("q");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   assert.doesNotMatch(m.text(m.mark), /line 15/);
   assert.deepEqual(m.violations, []);
 });
@@ -201,7 +201,7 @@ test("SH11 TYPE fills a 24-row, 40-column screen before pausing, and long lines 
   assert.equal(s[23], "[more]");
   assert.equal(s[22], "line 21", "70 characters take two 40-column lines");
   m.type(" ");
-  assert.match(m.expect(/A>$/, { maxCycles: 400_000_000 }), /line 40/);
+  assert.match(m.expect(/A(:\S*)?>$/, { maxCycles: 400_000_000 }), /line 40/);
 });
 
 test("SH11 a long DIR pauses too", () => {
@@ -211,16 +211,17 @@ test("SH11 a long DIR pauses too", () => {
   const m = boot(image, { matrix: true });
   m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 400_000_000, "the GLCD's prompt");
   m.mark = m.output.length;
-  m.type("DIR\r");
+  // The ROM's listing, which DIR /W gives under the shell.
+  m.type("DIR /W\r");
   m.expect(/\[more\]$/);
   assert.equal(m.glcdScreen()[7], "[more]");
   let all = "";
   let pauses = 1;
   for (;;) {
     m.type(" ");
-    const page = m.expect(/(\[more\]|A>)$/, { maxCycles: 400_000_000 });
+    const page = m.expect(/(\[more\]|A(:\S*)?>)$/, { maxCycles: 400_000_000 });
     all += page;
-    if (page.endsWith("A>")) break;
+    if (/A(:\S*)?>$/.test(page)) break;
     pauses += 1;
   }
   assert.equal(pauses, 4, "31 lines at 7 lines a screen");
@@ -234,7 +235,7 @@ test("matrix arrow keys arrive as ANSI cursor sequences", async () => {
   m.mark = m.output.length;
   m.typeMatrix("keys\r");
   m.typeMatrix("\x03\x05"); // up, left
-  assert.match(m.expect(/A>$/), /1B 5B 41 1B 5B 44 /);
+  assert.match(m.expect(/A(:\S*)?>$/), /1B 5B 41 1B 5B 44 /);
 });
 
 test("the default console is the PICO9918's 80 x 24 text mode", () => {
@@ -286,7 +287,7 @@ test("the cursor shows while a program polls for a key, and goes with the next o
   assert.equal(m.read(m.sym("VCURV")), 1);
   assert.equal(m.cell(row, col), 0xa0, "the reverse image of a space");
   m.typeMatrix("x");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   assert.notEqual(m.cell(row, col), 0xa0, "removed before the next output");
 });
 
@@ -310,7 +311,7 @@ test("a row move on the PICO9918 is built out of sight and shown when the progra
   const page = m.tmsLayout().base;
   m.runUntil(() => m.tmsLayout().base !== page, 100_000_000, "the flip");
   assert.deepEqual(m.screen().slice(0, 3), ["L2", "L3", ""], "the moved rows appear at once");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   assert.deepEqual(m.violations, []);
 });
 
@@ -345,9 +346,9 @@ test("a second row move with no key asked between shows the first before it is b
 test("a GLCD board with no startup file keeps the serial console; CON UC1 with no GLCD.SVC says so on the LCD", () => {
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: standardCard(), matrix: true, clock: TEST_CLOCK });
-  m.expect(/A>$/, { from: 0, maxCycles: 80_000_000 });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
   assert.equal(m.read(3) & 3, 0, "TTY:");
-  assert.match(m.serialText(), /A>$/);
+  assert.match(m.serialText(), /A(:\S*)?>$/);
   m.command("CON UC1");
   assert.equal(m.read(m.sym("CONMOD")), 0, "still the serial terminal");
   assert.equal(String.fromCharCode(...m.tec1g.state.lcdCtrl.lcd.slice(60, 80)).trimEnd(), "GLCD?");
@@ -362,7 +363,7 @@ test("UNLOAD removes the GLCD's resident and the console goes back to serial", (
   assert.equal(word(m.sym("VPUTV")), word(word(m.sym("GLVEC"))), "the vector is its table's");
   m.mark = m.output.length;
   m.typeMatrix("unload\r");
-  m.expect(/A>$/);
+  m.expect(/A(:\S*)?>$/);
   assert.deepEqual([m.read(3) & 3, m.read(m.sym("CONMOD"))], [0, 0], "the field takes the mode in effect, TTY:, when serial serves it");
   assert.equal(m.read(6), stub, "its pages given back to the TPA");
   assert.equal(word(m.sym("GLVEC")), 0, "its table dropped");

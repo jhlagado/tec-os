@@ -12,7 +12,7 @@ import { Machine } from "./machine.mjs";
 import { ROOT, TEST_CLOCK, program, romFor, standardCard, startupFile, volume } from "./fixtures.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
-const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm"];
+const SOURCES = ["shell.asm", "shellcmd.asm", "shellio.asm", "shellcd.asm", "shelldir.asm"];
 
 /** SHELL.SVC from drivers/shell.asm: { file, symbols (offsets from the header), image }. */
 export const shellSvc = () => makeSvc(resolve(ROOT, "drivers/shell.asm"), { work: resolve(ROOT, "build/svc") });
@@ -79,7 +79,7 @@ export function owners(m) {
 export const pageOf = (m, name = "SHELL") => (owners(m).find((o) => o.name === name)?.page ?? 0) << 8;
 
 /**
- * The guard under SHELL.SVC's own 32-byte stack. With GUARDS.on, each
+ * The guard under SHELL.SVC's own 48-byte stack. With GUARDS.on, each
  * machine shellMachine makes lays a pattern there at each prompt, below
  * the frames in use, and first reads how deep the run since the last
  * prompt went; each entry's read() gives the deepest of its machine's runs.
@@ -87,7 +87,7 @@ export const pageOf = (m, name = "SHELL") => (owners(m).find((o) => o.name === n
  */
 export const GUARDS = { on: false, machines: [] };
 const GUARD = 0xa5;
-const STACK = 32;
+const STACK = 48;
 
 function guarded(m) {
   const g = { m, deepest: 0, page: 0 };
@@ -145,7 +145,7 @@ export function shellMachine(image, { rom, symbols, noWait = false, ...opts } = 
   return m;
 }
 
-const PROMPT = /\r\n\d*[A-P]>$/;
+const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
 
 /**
  * Type LINE and run until the next prompt with nothing of it left: the

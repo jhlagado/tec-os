@@ -53,7 +53,7 @@ export function rig(image = standardCard()) {
     const t0 = m.cycles;
     m.mark = m.output.length;
     m.cpu.cpu.pc = 0;
-    m.runUntil(() => m.waitingForInput() && /[A-P]>$/.test(m.text(m.mark)), 200_000_000, "the prompt after a warm boot");
+    m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "the prompt after a warm boot");
     return { t: m.cycles - t0, reads: r.reads };
   };
   return r;

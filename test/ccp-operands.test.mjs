@@ -11,7 +11,8 @@
 // When the shell hook came, every call was the same with each address read as
 // symbol and offset, and the hashes were retaken; COPY's rows, marked shell,
 // are SHELL.SVC's, run with the shell holding the prompt, their output the
-// ROM's COPY's and their calls the shell's. A
+// ROM's COPY's and their calls the shell's; they were retaken when the
+// shell's prompt came to name the drive's volume. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it. Emulator evidence.
@@ -99,7 +100,7 @@ function watch(m) {
 function run(m, line) {
   m.mark = m.output.length;
   m.type(`${line}\r`);
-  const prompt = /\r\n\d*[A-P]>$/;
+  const prompt = /\r\n\d*[A-P](:\S*)?>$/;
   let seen = -1;
   for (let i = 0; i < 200; i += 1) {
     const end = m.cycles + 20_000_000;

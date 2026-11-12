@@ -146,10 +146,10 @@ test("with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it com
   assert.deepEqual(rest(), others, "RST 2 to RST 6 after BAZA and TIMES");
   assert.ok(run.includes(RUN.join("\r\n") + "\r\n"), run);
   assert.ok(m.videoConsole(), "the GLCD is still the console");
-  keys(m, "dir times.*\r", "DIR", () => m.ready());
+  keys(m, "dir /w times.*\r", "DIR", () => m.ready());
   const g = m.glcdScreen();
   assert.ok(g.includes("TIMES.BAS") && g.includes("TIMES.COM"), g.join("\n"));
-  assert.equal(g.filter((l) => l.trim()).at(-1), "A>", "the GLCD's prompt");
+  assert.equal(g.filter((l) => l.trim()).at(-1), "A:SYSTEM>", "the GLCD's prompt");
   assert.deepEqual(m.violations, []);
 });
 
@@ -164,7 +164,7 @@ test("a failed compile's return code stops a chained line: BAZA BAD &TIMES runs 
   assert.match(m.text(mark), /COM written\r\n[^]*HELLO FROM BASIC ON TEC-OS\./, "TIMES ran after a good compile");
   keys(m, "TEC\r7\r", "the prompt", () => m.ready());
   mark = m.output.length;
-  keys(m, "baza bad &times\r", "the failed chain", () => (m.ready() && /A>$/.test(m.text(mark))) || /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
+  keys(m, "baza bad &times\r", "the failed chain", () => (m.ready() && /A(:\S*)?>$/.test(m.text(mark))) || /WHAT IS YOUR NAME\? $/.test(m.text(mark)));
   const out = m.text(mark);
   assert.match(out, /\?SYNTAX ERROR IN 10/, "BAZA's error");
   assert.equal(code(m), 0xff00, "the return code");
@@ -192,11 +192,11 @@ test("a compile onto a read-only drive fails with return code FF00h, gives back 
   m.runUntilChecked(() => {
     m.pumpInput();
     taken ||= rst1().some((b, i) => b !== held[i]);
-    return !m.pending?.length && m.waitingForInput() && m.ready() && /A>$/.test(m.text(mark));
+    return !m.pending?.length && m.waitingForInput() && m.ready() && /A(:\S*)?>$/.test(m.text(mark));
   }, LIMIT, "the failed compile and the prompt");
   const out = m.text(mark);
   assert.match(out, /Bdos Err On C: R\/O/, "the BDOS's message, which returns");
-  assert.match(out, /File I\/O failed\r\n\r\nA>$/, `BAZA's failure, then the & piece skipped:\n${out}`);
+  assert.match(out, /File I\/O failed\r\n\r\nA(:\S*)?>$/, `BAZA's failure, then the & piece skipped:\n${out}`);
   assert.doesNotMatch(out, /10 REM/, "TYPE didn't run");
   assert.ok(taken, "BAZA took RST 1 while it compiled");
   assert.deepEqual(rst1(), held, "the held JP after the failure");
@@ -222,10 +222,10 @@ test("a program that claims the display and then fails shows its error on the co
   volume(image, "A").write("CLAIM.BAS", Buffer.from(program), { text: true });
   const m = boot(image, { tms: true, matrix: true, width: 40 });
   let mark = m.output.length;
-  keys(m, "baza claim\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  keys(m, "baza claim\r", "BAZA's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   mark = m.output.length;
-  keys(m, "claim\r", "the failed run", () => m.ready() && /A>$/.test(m.text(mark)));
+  keys(m, "claim\r", "the failed run", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /\?DIVISION BY ZERO ERROR IN 40/, "the error, printed");
   assert.ok(m.videoConsole(), "the PICO9918 is the console again");
   assert.ok(m.screen().some((l) => /^\?DIVISION BY ZERO ERROR IN 40/.test(l)), `on the screen:\n${m.screen().join("\n")}`);
@@ -243,7 +243,7 @@ test("a leftover BZ000000.$$B doesn't stop BAZA TIMES replacing TIMES.COM", { sk
   a.write("BZ000000.$$B", leftover);
   const m = boot(image, { tms: true, matrix: true, width: 40 });
   const mark = m.output.length;
-  keys(m, "baza times\r", "BAZA's build", () => m.ready() && /A>$/.test(m.text(mark)));
+  keys(m, "baza times\r", "BAZA's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   assert.equal(code(m), 0, "no failure");
   const after = volume(image, "A");

@@ -17,13 +17,15 @@ Every other command it hands back to the ROM to run. The starter card's
 `STARTUP.CMD` starts with `SHELL.SVC`, so the shell is in after every reset.
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
-`SHELL.SVC` takes 10 pages: 2,560 bytes in memory, image and extra RAM
+`SHELL.SVC` takes 15 pages: 3,840 bytes in memory, image and extra RAM
 together. Its history is a 256-byte ring in its own last page. Its own stack
-is 32 bytes, of which the census's workload uses 16 (`test/shell.test.mjs`,
-which reads a guard pattern laid under it). It declares 6
-bytes of the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC`
-and `MON3.SVC` install beside it. With the shell alone the word at 0006h is
-AF00h, a TPA of 44,544 bytes on the starter card.
+is 48 bytes, of which the census's workload uses 16 and the deepest path, the
+prompt's reading of the volume labels with every cache line changed and
+kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
+pattern laid under it). It declares 6 bytes of the BDOS's stack and none of
+the BIOS's or the CCP's, so `GLCD.SVC` and `MON3.SVC` install beside it. With
+the shell alone the word at 0006h is AA00h on a card of two drives, a TPA of
+43,264 bytes.
 
 ## With no shell
 
