@@ -1567,7 +1567,10 @@ test("KG68 docs agree", async () => {
   const fig = figures(svc);
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
-  assert.ok(mon3.includes(`from \`B9A9h\` to \`${h4(fig.top)}\`, and the TPA from 47,273 bytes to **${fig.tpa.toLocaleString("en")}**`), "(0006h) and the TPA");
+  assert.ok(mon3.includes(`from \`B9A9h\` to \`${h4(fig.top)}\`, and the TPA from 47,273 bytes to ${fig.tpa.toLocaleString("en")},`), "(0006h) and the TPA with no shell");
+  // With the shell, as shell.test's SH7 measures them.
+  assert.ok(mon3.includes("from `AF00h` to `9D00h`, and the TPA from 44,544 bytes to **39,936**"), "(0006h) and the TPA with the shell");
+  assert.ok(mon3.includes("`9A00h`, a TPA of **39,168**"), "and with GLCD.SVC too");
   const src = mon3Text();
   const equ = (n) => Number(new RegExp(`^${n} EQU \\$([0-9A-F]+)`, "m").exec(src)[1].replace(/^/, "0x"));
   assert.ok(mon3.includes(`| SP | ${h4(equ("MSTK3") - 2)}, holding the return address ${h4(equ("GORET"))} |`), "GO's SP and return");
