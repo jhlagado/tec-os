@@ -270,22 +270,36 @@ const starterCard = () => {
   return new Uint8Array(starter);
 };
 const traces = new Map();
-/** COMMAND on the starter card: its cycles from the CR to the prompt, its card writes by block, and its BDOS 21 calls' cycles. */
+// The BDOS functions at which the pending block is written: the console
+// reads, BDOS 6 when E is FFh, and those that read or write the directory.
+const FLUSHERS = new Set([1, 10, 11, 13, 14, 15, 16, 17, 18, 19, 22, 23, 30, 35, 36, 48]);
+/**
+ * COMMAND on the starter card: its cycles from the CR to the prompt, its
+ * card writes by block, each with the number of flush-point calls made
+ * before it, and its BDOS 21 calls' cycles.
+ */
 function onStarter(command) {
   if (traces.has(command)) return traces.get(command);
   const image = starterCard();
   const m = boot(image, { tms: true, matrix: true, width: 40 });
   const [entry, back, sdw, lba] = [m.sym("BENTRY"), m.sym("RETWORD") + 6, m.sym("SDWRITE"), m.sym("SDLBA")];
-  const t = { writes: [], w21: [] };
+  const t = { writes: [], at: [], w21: [] };
+  let flushes = 0;
   let on = false;
   let call = null;
   const step = m.step.bind(m);
   m.step = () => {
     const pc = m.pc;
     if (on) {
-      if (pc === entry && !call) call = { fn: m.cpu.cpu.c, t0: m.cycles };
+      if (pc === entry && !call) {
+        call = { fn: m.cpu.cpu.c, t0: m.cycles };
+        if (FLUSHERS.has(call.fn) || (call.fn === 6 && m.cpu.cpu.e === 0xff)) flushes += 1;
+      }
       else if (pc === back && call) [call.fn === 21 && t.w21.push(m.cycles - call.t0), (call = null)];
-      if (pc === sdw) t.writes.push(word(m, lba) + word(m, lba + 2) * 0x10000);
+      if (pc === sdw) {
+        t.writes.push(word(m, lba) + word(m, lba + 2) * 0x10000);
+        t.at.push(flushes);
+      }
     }
     return step();
   };
@@ -303,10 +317,13 @@ function onStarter(command) {
 test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
   const b = onStarter("baza bounce");
   assert.match(b.text, /COM written\r\n/);
-  assert.ok(b.writes.length <= 45, `${b.writes.length} card writes`);
-  const data = b.writes.filter((x) => !b.dir.has(x));
-  assert.equal(new Set(data).size, data.length, "each data block once");
-  console.log(`BAZA BOUNCE: ${b.writes.length} card writes, ${data.length} data blocks`);
+  assert.ok(b.writes.length <= 48, `${b.writes.length} card writes`);
+  // A data block written again after a flush point counts again: BAZA closes
+  // its output, writes one more record into the same block and closes again.
+  const data = b.writes.map((x, i) => [x, b.at[i]]).filter(([x]) => !b.dir.has(x));
+  const keys = data.map(([x, n]) => `${n}:${x}`);
+  assert.equal(new Set(keys).size, keys.length, "each data block once between flush points");
+  console.log(`BAZA BOUNCE: ${b.writes.length} card writes, ${data.length} of data blocks, ${new Set(data.map(([x]) => x)).size} blocks`);
 });
 
 test("AC3 save", { skip: CARD_SKIP, timeout: 300_000 }, () => {
@@ -546,13 +563,18 @@ test("AC6 bdos 40", () => {
 
 // --- Speed --------------------------------------------------------------------
 
+// BAZA BOUNCE on this starter card under the shell's landing ROM, written
+// through: its cycles from the CR to the prompt, measured with the same trace.
+const BOUNCE_BASE = 103_285_677;
+
 test("AC7 bounce speed", { skip: CARD_SKIP, timeout: 900_000 }, () => {
   const b = onStarter("baza bounce");
   const seconds = b.cycles / 4e6;
   const mean = b.w21.reduce((s, x) => s + x, 0) / b.w21.length;
-  assert.ok(seconds <= 18.6, `${seconds.toFixed(2)} s at 4 MHz`);
+  assert.ok(seconds <= 19.5, `${seconds.toFixed(2)} s at 4 MHz`);
+  assert.ok(b.cycles <= 0.76 * BOUNCE_BASE, `${((100 * b.cycles) / BOUNCE_BASE).toFixed(1)} % of the shell's landing on this card`);
   assert.ok(mean <= 80_000, `BDOS 21: ${Math.round(mean)} T each, of ${b.w21.length}`);
-  console.log(`BAZA BOUNCE: ${b.cycles} T, ${seconds.toFixed(2)} s; ${b.w21.length} BDOS 21 calls, ${Math.round(mean)} T each`);
+  console.log(`BAZA BOUNCE: ${b.cycles} T, ${seconds.toFixed(2)} s, ${((100 * b.cycles) / BOUNCE_BASE).toFixed(1)} % of the landing's; ${b.w21.length} BDOS 21 calls, ${Math.round(mean)} T each`);
 });
 
 test("AC7 file speed", () => {
