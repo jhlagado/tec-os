@@ -160,7 +160,10 @@ and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
 services loaded, `[more]` in `TYPE` and `DIR`, and `.CMD` scripts. Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`.
+`TED X.ASM!TAS X &X`. TED, from Thorium `a2fe556` (`TED.COM`
+`c6c8374a`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
+same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
+` X` and runs nothing after it.
 `SAMPLE.ASM` on the starter card is a first program to build and read:
 `TAS SAMPLE` assembles it and `SAMPLE` runs it, printing the screen's size,
 writing the LCD, lighting the digits and beeping through the ROM's services by
