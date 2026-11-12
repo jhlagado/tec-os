@@ -526,3 +526,14 @@ test("the web host: a pre-shell card the shell can't be added to, a read-only MO
     assert.equal(sha(volume(card, "A").read("MON3.SVC")), mon3, `${what}: its own MON3.SVC`);
   }
 });
+
+test("the web host: a pre-shell card that can't show the display chosen, the GLCD with no GLCD.SVC, says so and is left as it was, starter card or not", { skip: PAGE_SKIP, timeout: 300_000 }, () => {
+  const card = preShellCard("GLCD.SVC\r\n");
+  volume(card, "A").erase("GLCD.SVC");
+  const before = card.slice();
+  const got = prepareCard(card, "glcd", "40", starter().card);
+  assert.match(got.problem, /no GLCD\.SVC/);
+  assert.equal(got.note, null);
+  assert.equal(got.changed, false);
+  sameImage(card, before, "no SHELL.SVC and no display line on a card with a problem");
+});
