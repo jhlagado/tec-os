@@ -91,6 +91,45 @@ async function deepPaths(lines, opts = { tms: true, matrix: true }, { files = {}
   return { ...depths(), conmod: m.read(m.sym("CONMOD")), row3 };
 }
 
+/** Bare CD's descriptor, changed-selection and failed-prerequisite paths. */
+function recoveryRun(refusing = false) {
+  const { rom, symbols } = romFor();
+  const image = createContainer([
+    { geometry: "G1M", label: "SYSTEM", mount: "A" },
+    { geometry: "G1M", label: "GAMES" },
+  ], { drives: 4 });
+  const main = symbols.get("MAINLOOP");
+  volume(image, "A").write("WR.COM", Uint8Array.from([
+    0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
+    0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
+    0xc3, main & 0xff, main >> 8,
+  ]));
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, glcd: false });
+  const depths = watch(m);
+  m.runUntil(() => m.ready(), 200_000_000, "bare recovery prompt");
+  run(m, "CD ?\r");
+  if (refusing) {
+    m.mark = m.output.length;
+    m.type("WR W.DAT\r");
+    m.runUntil(() => m.pc === main, 400_000_000, "WR's direct return");
+    m.sd.commitWrite = () => {
+      m.sd.writeState = null;
+      m.sd.pendingResponse = [0x0d, 0xff];
+      m.sd.delayBytes = 1;
+    };
+    m.runUntil(() => m.ready() && /\r\nA>$/.test(m.text(m.mark)), 400_000_000, "pending-write refusal prompt");
+  }
+  run(m, "CD D:GAMES\r");
+  const result = m.read(m.sym("PRGCODE")) | (m.read(m.sym("PRGCODE") + 1) << 8);
+  assert.equal(result, refusing ? 0xff00 : 0);
+  assert.equal(m.read(m.sym("DRVIDX") + 3), refusing ? 0 : 2);
+  assert.match(m.text(m.mark), refusing ? /CD FAILED/ : /D:GAMES/);
+  run(m, "CD D:\r");
+  run(m, "CD A:SYSTEM\r");
+  assert.deepEqual(m.violations, []);
+  return depths();
+}
+
 /**
  * Chained lines under the shell: pieces split at ! and &,
  * an & piece after a failure, a BDOS error and ^C that drop the rest, and
@@ -173,6 +212,8 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     conUc1Glcd: await deepPaths(["CON UC1\r"], { matrix: true }),
     picoRom: await deepPaths(["DIR\r", "CON PICO 40\r", "DIR\r", "CON PICO 32\r", "DIR\r", "CON PICO 80\r"]),
     recognisedReset: await resetRun(),
+    romRecovery: recoveryRun(),
+    romRecoveryRefusing: recoveryRun(true),
     chained: await chainRun(),
     serialPlain: await deepPaths(["TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}),
     resident: await deepPaths(["RES.SVC\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r"], {}, { files: { "RES.SVC": await service("res") } }),
@@ -203,7 +244,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console logged on B:, written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; a block pending on A: before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, then an extent change, logged on B: and on A:, with the card taking writes and refusing them. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console logged on B:, written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; bare CD query, changed selection and failed-prerequisite paths; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; a block pending on A: before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, then an extent change, logged on B: and on A:, with the card taking writes and refusing them. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));
@@ -215,11 +256,11 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
   // the limit together keep a quarter of each stack free (KE-173). SVCLIM is BDOS, BIOS, CCP.
   const { rom, symbols } = romFor();
   const lim = Object.fromEntries(["bdos", "bios", "ccp"].map((k, i) => [k, rom[symbols.get("SVCLIM") - 0xc000 + i]]));
-  const bare = ["serial", "pico9918", "writeBehind", "diagnostics", "diagnosticsPico", "picoRom", "recognisedReset", "chained", "serialPlain", "flushWriting", "flushRefusing", "flushWritingLogged", "flushRefusingLogged"];
+  const bare = ["serial", "pico9918", "writeBehind", "diagnostics", "diagnosticsPico", "picoRom", "recognisedReset", "romRecovery", "romRecoveryRefusing", "chained", "serialPlain", "flushWriting", "flushRefusing", "flushWritingLogged", "flushRefusingLogged"];
   for (const k of ["bdos", "ccp", "bios"]) {
     const base = Math.max(...bare.map((r) => runs[r][k].deepest));
     const { reserved } = census[k];
-    assert.ok((base + lim[k]) * 4 <= reserved * 3, `${k}: the base ${base} and the services' limit ${lim[k]} take more than three quarters of ${reserved}`);
+    assert.ok((base + lim[k] + 2) * 4 <= reserved * 3, `${k}: the base ${base}, services' limit ${lim[k]} and two-byte NMI reserve take more than three quarters of ${reserved}`);
   }
   // docs/services.md's stack table states these figures: it must say what this census measures.
   const doc = readFileSync(resolve(ROOT, "docs/services.md"), "utf8");

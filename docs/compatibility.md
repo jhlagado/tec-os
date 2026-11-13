@@ -2,17 +2,17 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-46,569 bytes (`0100h–B6E8h`) on the starter card with nothing loaded, and at
-least 46,569 on any card, since cold boot places the BDOS entry below the
+46,533 bytes (`0100h–B6C4h`) on the starter card with nothing loaded, and at
+least 46,533 on any card, since cold boot places the BDOS entry below the
 allocation vectors of the drives the card asks for: the starter card asks for
 four, each with a vector for an 8 MiB volume. A card of two volumes and no
-drives field gives 47,273. A board with a PICO9918 has the same: its console
+drives field gives 47,237. A board with a PICO9918 has the same: its console
 is in the ROM and its RAM in the BIOS's state (KS39). The GLCD's driver takes
 three pages under the stub's page, leaving 45,568 on the starter card. The
 starter card loads `SHELL.SVC`, which takes fifteen pages there, leaving
 42,496, and 41,728 with the GLCD's driver too. The CCP loads a `.COM` up to
 the start of the page holding the word at `0006h`, so the largest it loads on
-the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 233
+the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 197
 below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
@@ -154,11 +154,12 @@ In ROM too:
   through reset skips it. A shell it loads runs the rest. `docs/services.md` and
   `docs/shell.md` have the rules.
 
-Under `SHELL.SVC`, `CD ?` lists the card's volumes and their drives, `CD NAME`
-puts one on the current drive, A: included, and `CD B:NAME` on another; a
-volume is never on two drives. The prompt shows the drive and its volume,
-`B:GAMES>`. `CD` uses the ROM table's volume services, `TNMOUNT` and `TNDESC`
-(`docs/shell.md`); with no shell no command changes volumes. Mounts are
+In the bare ROM CCP and under `SHELL.SVC`, `CD ?` lists the card's named
+directories and their drives. `CD NAME` selects one on the current drive,
+A: included, and `CD B:NAME` on another; a
+volume is never on two drives. The shell prompt shows the drive and its
+selection, `B:GAMES>`; the bare prompt stays `B>`. `CD` uses the ROM table's
+volume services, `TNMOUNT` and `TNDESC` (`docs/shell.md`). Selections are
 for the session: a reset keeps them, as long as the card still holds each
 volume. `docs/recovery.md` says how.
 
@@ -183,7 +184,7 @@ neither.
 
 ## Base page
 
-Warm boot at `0000h`, BDOS vector at `0005h` (target `B9A9h` on the starter card, directly
+Warm boot at `0000h`, BDOS vector at `0005h` (target `B6C5h` on the starter card, directly
 below the allocation vectors), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
@@ -236,8 +237,8 @@ and run.
 - **`[more]`** (the shell's). The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 46,569 bytes of TPA, may fail; how much a card gives depends on
-  its drives and what is loaded. Measured on the starter card: 46,569 bare,
+  more than 46,533 bytes of TPA, may fail; how much a card gives depends on
+  its drives and what is loaded. Measured on the starter card: 46,533 bare,
   42,496 with the shell, and 41,728 with the shell and the GLCD's driver.
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call

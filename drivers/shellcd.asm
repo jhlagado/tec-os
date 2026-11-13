@@ -161,7 +161,7 @@ CDELSE:
   jp FAILED      ; code FF00h
 
 ISONMSG:  DB    " is on $"
-CDNOMSG:  DB    "CANNOT MOUNT$"
+CDNOMSG:  DB    "CD FAILED$"
 
 ; Walk the card's volumes from index 0,
 ; each described by TNDESC into CFCB,

@@ -8,13 +8,15 @@ nav_group: "Using the machine"
 # 3. Build a BASIC program
 
 <!-- Source and test contracts checked at TEC-OS
-     c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
+     46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
      programs/TIMES.BAS, test/times.test.mjs and test/ted-baza.test.mjs.
      TED.COM is pinned at Thorium a2fe556 and Baza at 50dc512. The BAZA
      screen was retaken with the landed firmware; outputs taken from strict
      test assertions are labelled as source-derived excerpts, not captures.
      Both full firmware strict passes include the BASIC and TED scenarios.
-     Host-model evidence is retained in Origo's book-shell2 evidence. -->
+     Host-model evidence is retained in Origo's book-recovery-core and
+     book-recovery-host evidence; explicitly historical source/test excerpts
+     retain their stated revisions. -->
 
 BASIC provides another way to write programs on the TEC-1G. The card's
 TIMES.BAS reads a name and number, then prints a multiplication table.
@@ -88,7 +90,7 @@ cycles through `|`, `/`, `-` and `\` at the start of the line. Each is
 followed by a backspace. Completion prints `COM written` over the last
 mark and returns to the prompt:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'BAZA TIMES'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'BAZA TIMES'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -370,5 +372,5 @@ the ship. The matrix arrows send Esc, `[` and a letter from `A` to `D`.
 Lines 950 to 999 translate these sequences to W, S, D or A. Q ends the
 game, restores the display console and prints the score at `A:SYSTEM>`.
 The host-model test checks each of these steps
-(`tools/media.mjs:224-227`, `test/starter.test.mjs:108-189`,
+(`tools/media.mjs:218-221`, `test/starter.test.mjs:103-184`,
 `Baza 50dc512:examples/BOUNCE.BAS:84`, `103-115`).

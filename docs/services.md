@@ -49,7 +49,8 @@ With a service in, `(0006h)` is its page's start. The `JP` there goes straight i
 the BDOS, so a BDOS call is two jumps however many services are in, and every field a
 service needs lies at or above that word, where a program that sets SP from it can't
 reach. With none in, `(0006h)` is the stub directly below the allocation vectors,
-`B9A9h` on the starter card and lower on a card with more volumes.
+`B6C5h` on the four-drive starter card; the two-volume reference card gives
+`B985h`.
 
 Format version 4 has version 1's layout. It rose with ABI 5, as 3 did with ABI 4:
 services test no ABI, and each major moved the table's entries, so the loader
@@ -314,9 +315,9 @@ refuses a service that takes a stack's sum past its limit:
 
 | Stack | Reserved | Base | Census | Limit for services |
 | --- | --- | --- | --- | --- |
-| BDOS | 54 | 30 | 32 | 8 |
-| BIOS | 40 | 18 | 18 | 12 |
-| CCP | 32 | 18 | 18 | 6 |
+| BDOS | 64 | 30 | 32 | 8 |
+| BIOS | 48 | 18 | 18 | 12 |
+| CCP | 48 | 26 | 26 | 6 |
 
 The base is the deepest use with no resident, on the serial and PICO9918 paths,
 the diagnostic console, a recognised reset and A:'s pending block written at each
@@ -325,14 +326,16 @@ use of all. The BIOS's 18 is warm boot's flush of the lines written behind: cold
 mounts and lists the drives on the BDOS's stack, which nothing else uses before
 the CCP runs. A limit is counted from the base, and a stack holds its base and
 its limit with a quarter free, which `test/stacks.test.mjs` checks: the BDOS's
-38 of 54, the BIOS's 30 of 40 and the CCP's 24 of 32. A service must stay within
+40 of 64, the BIOS's 32 of 48 and the CCP's 34 of 48, including a
+two-byte NMI return-frame reserve in each sum. This reserves no arbitrary
+handler body or interrupt reentry. A service must stay within
 its declared stack use. `test/svc.test.mjs` checks this with a stack watch.
 The ROM does not enforce the declaration at runtime.
 
 The base's paths include the shell's: the serial, PICO9918 and GLCD runs and the
 lines of pieces run with `SHELL.SVC` holding the prompt, as the starter card
 boots. Its `LINE` and `PAGE` are called on the CCP's stack and move at once to
-the shell's own 32-byte stack; `HREC` and `HSTORE` run on the BDOS's, 6 bytes
+the shell's own 48-byte stack; `HREC` and `HSTORE` run on the BDOS's, 6 bytes
 deep. It declares 6, 0 and 0, and `GLCD.SVC` 2, 0 and 6, so the two together
 take the whole of the BDOS's and the CCP's limits ([shell.md](shell.md)).
 `test/shell.test.mjs` runs the census with the shell alone and with `GLCD.SVC`

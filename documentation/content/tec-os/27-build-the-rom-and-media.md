@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 27. Build the ROM and media
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -35,15 +36,16 @@ prepares Thorium TED.COM and TAS.COM plus Baza's BAZA.COM, BAZA.RTL
 and BOUNCE.BAS. It also fetches MON-3's `MON3.BIN` and thirteen program
 and library sources. Only tests read those MON-3 inputs when comparing
 `MON3.SVC` with the original (`test/inputs.json:3-193`,
-`docs/mon3.md:13-16`, `docs/mon3.md:358-365`).
+`docs/mon3.md:13-16`, `docs/mon3.md:360-367`).
 
 The current product build selects TAS for every assembly: main ROM,
-board diagnostics, `GLCD.SVC`, `SHELL.SVC`, `DEMO.COM`, `MON3.SVC`,
-`HELLO3.BIN` and test programs and services. It has no atom-z80 dependency
-or alternate assembler selection. Historical trees from before the TAS
+board diagnostics, `GLCD.SVC`, `SHELL.SVC`, `DEMO.COM`, `MON3.SVC` and test
+programs and services. The starter supplies HELLO3.ASM as source.
+`TAS HELLO3 HELLO3.BIN` builds its binary on the guest before MON3 runs it.
+The build has no atom-z80 dependency or alternate assembler selection. Historical trees from before the TAS
 ROM build require manual atom-z80 0.3.7 installation
 (`package.json:14-29`, `tools/build.mjs:344-350`,
-`tools/media.mjs:197-240`, `README.md:91-102`).
+`tools/media.mjs:197-231`, `README.md:91-102`).
 
 Binary and host pins are checked independently. TAS.COM is pinned to
 Thorium `3d1e2c0ea5269e1dfa4138671fab850c158f1670` and its prepared host
@@ -59,7 +61,7 @@ than 128 characters of code, as
 [Chapter 2](02-make-a-small-program.md#several-statements-on-a-line)
 describes. TEC-OS source uses a statement per line within
 that limit. The ROM, `GLCD.SVC`, `MON3.SVC`, `DEMO.COM`, `HELLO3.BIN`
-and test programs therefore retain their earlier `dbee66a` assembly bytes (`docs/compatibility.md:225`). ROM maps assign a statement to each source line. The build therefore
+and test programs therefore retain their earlier `dbee66a` assembly bytes (`docs/compatibility.md:226`). ROM maps assign a statement to each source line. The build therefore
 rejects a `\` outside quotes and comments in ROM source
 (`tools/lib/tas-d8.mjs:105-121`,
 `tools/lib/tas-d8.mjs:155-157`).
@@ -185,19 +187,19 @@ The first four includes establish names before use. `abi.inc` defines
 published interface addresses and numbers. Generated configuration and
 format files supply equates. `layout.asm` names ports, latch values,
 page-zero fields and fixed RAM locations (`src/rom.asm:7-10`,
-`src/layout.asm:9-99`).
+`src/layout.asm:9-100`).
 
 RAM declarations also precede the ROM origin. `ram.asm` first selects
 `WSBASE` and reserves variables and stacks with unfilled `DS`. These
 addresses are not initial data to copy from ROM. Its second origin is
 `RAMBIOS+BIOSLEN`, placing upper state after the 51-byte BIOS table
-(`src/ram.asm:1-18`, `src/ram.asm:285-298`). The build interprets TAS-map
+(`src/ram.asm:1-18`, `src/ram.asm:291-304`). The build interprets TAS-map
 reservations before extracting the ROM extent
 (`tools/lib/tas-d8.mjs:203-208`, `tools/lib/tas-d8.mjs:259-299`).
 
 `reset.asm` then selects `ORG $C000`. `abi.asm`, four data files and
 routine files follow. Consecutive includes keep each CCP, BDOS and volume
-routine group together in the image (`src/rom.asm:12-44`).
+routine group together in the image (`src/rom.asm:12-45`).
 [Chapter 15](15-state-and-memory.md) explains the declared workspace's
 lifetimes independently of assembly order.
 
@@ -239,16 +241,16 @@ and code. Unused space forms a final gap (`src/reset.asm:1-13`,
 | --- | ---: | --- |
 | `C000h–C002h` | 3 | Reset jump |
 | `C003h–C00Ah` | 8 | ROM interface |
-| `C00Bh–C5D0h` | 1,478 | Read-only data |
-| `C5D1h–FA1Ah` | 13,386 | Code |
-| `FA1Bh–FFFFh` | 1,509 | Free |
+| `C00Bh–C5D5h` | 1,483 | Read-only data |
+| `C5D6h–FBCFh` | 13,818 | Code |
+| `FBD0h–FFFFh` | 1,072 | Free |
 
-In the cited build, 14,875 of 16,384 bytes are used. The complete hash is
-`a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1`
+In the cited build, 15,312 of 16,384 bytes are used. The complete hash is
+`ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3`
 (`docs/memory-map.md:1-32`). Census regions use exclusive ends while the
 lookup table prints the final occupied address (`tools/build.mjs:275-290`).
 
-At `C000h`, `JP RSTENT` transfers control into the code, at `C5D1h`. The interface at `C003h` contains `TNA`, major 5, minor 1 and a
+At `C000h`, `JP RSTENT` transfers control into the code, at `C5D6h`. The interface at `C003h` contains `TNA`, major 5, minor 1 and a
 jump at `C008h` to `SVCDSP`. Its exclusive end is `C00Bh`
 (`src/reset.asm:12-13`, `src/abi.asm:9-14`). The boot overlay and entry path
 are explained in [Chapter 16](16-reset-and-boot.md).
@@ -257,7 +259,7 @@ Read-only data spans `ROMDATA` through exclusive `ROMCODE`. It groups
 BIOS jumps, keyboard tables, command names and handlers, BDOS dispatch,
 numbered services, geometry, font and messages under their consumer source
 names. For example, cache message `CWMSG` contains `Write lost`
-(`src/tables.asm:1-14`, `src/tables.asm:38-144`, `src/text.asm:92-96`).
+(`src/tables.asm:1-14`, `src/tables.asm:38-146`, `src/text.asm:92-96`).
 Cold boot copies the BIOS jumps to `BF00h` for execution through RAM
 (`src/boot.asm:108-111`).
 
@@ -301,9 +303,9 @@ The TPA check calculates layout without booting. `cardLayout` packs
 vectors downward from `WSBASE`, using `floor(DSM / 8) + 1` bytes each,
 then reserves the three-byte BDOS stub. Reference DSM values 511 and
 2047 require 64 and 256 bytes, 320 total (`tools/build.mjs:204-213`).
-That two-volume entry at `B9A9h` leaves 47,273 bytes from `0100h`, the
+That two-volume entry at `B985h` leaves 47,237 bytes from `0100h`, the
 build line's reported TPA. Starter's four 256-byte slots instead give
-entry `B6E9h` and 46,569 bytes. Memory map and media manifest describe
+entry `B6C5h` and 46,533 bytes. Memory map and media manifest describe
 starter layout. A different build needs its own census and ceiling.
 
 ## Matching the ROM and media
@@ -320,16 +322,16 @@ figures but leaves card contents and programs for media preparation
 (`tools/build.mjs:328-341`). After success it copies `FONT-NOTICES.txt`
 into existing `dist/` (`tools/build.mjs:348-350`). `npm run media` then
 prepares distribution outputs from the selected build
-(`tools/media.mjs:181-228`).
+(`tools/media.mjs:181-222`).
 
 Media preparation validates the font package before preparing or replacing
 outputs (`tools/media.mjs:181-182`). It checks that the map was
 generated by TAS, then checks ROM length and SHA-256 against the census.
-It assembles GLCD.SVC, SHELL.SVC, DEMO, MON3.SVC and HELLO3.BIN with
-TAS. Recipe preparation also requires valid pinned TED, TAS, BAZA.COM,
-BAZA.RTL and BOUNCE.BAS (`tools/media.mjs:181-240`). HELLO3.BIN is a
-flat image whose own `ORG` must put it at `4000h`, where MON-3 programs
-load (`tools/media.mjs:203-208`). For GLCD.SVC, SHELL.SVC and MON3.SVC, the TAS service writer compares
+It assembles GLCD.SVC, SHELL.SVC, DEMO and MON3.SVC with TAS. Recipe
+preparation also requires valid pinned TED, TAS, BAZA.COM, BAZA.RTL and
+BOUNCE.BAS (`tools/media.mjs:181-231`). HELLO3 is supplied as source only.
+At the CP/M prompt, `TAS HELLO3 HELLO3.BIN` builds its flat image with
+`ORG 4000h` for MON-3 to load (`test/programs/hello3.asm:1-8`). For GLCD.SVC, SHELL.SVC and MON3.SVC, the TAS service writer compares
 flat assemblies at `0100h` and `0200h`. It checks headers and relative
 symbols then packs relocation data (`tools/lib/tas-distribution.mjs:6-59`). The distribution
 COM writer checks DEMO's declared zero-filled buffers
@@ -337,33 +339,34 @@ COM writer checks DEMO's declared zero-filled buffers
 
 The starter recipe requests four equal drive slots. SYSTEM is G1M on A, WORK is G8M on B and PROJECTS is G1M on C.
 G1M volumes GAMES and SPARE remain unassigned. The logged drive is written
-behind. Revision 13 is the only recipe. The web page builds this same card
+behind. Internal revision 14 is the only recipe. The web page builds this same card
 so media no longer writes a separate page recipe.
 
-A holds fourteen files. SHELL.SVC, GLCD and STARTUP supply resident
+A holds thirteen files. SHELL.SVC, GLCD and STARTUP supply resident
 services and startup. TED, TAS and SAMPLE support assembly development.
 BAZA, `BAZA.RTL`, TIMES and pinned BOUNCE.BAS supply the BASIC tools
-and examples. DEMO.ASM is program source. MON3.SVC, HELLO3.BIN and
-HELLO3.ASM supply MON-3 and its sample program.
+and examples. DEMO.ASM is program source. MON3.SVC supplies MON-3 and
+HELLO3.ASM its sample source. A generated HELLO3.BIN is a user file, so a
+system-service upgrade preserves it on an existing saved card.
 
 `STARTUP.CMD` holds two lines, `SHELL.SVC` and then the GLCD
 installation line. Media still builds and checks DEMO.COM but writes it
 beside the card's files, not onto the card, where `TAS DEMO` makes it. It
 also writes a copy of MON3.SVC beside the ROM
-(`tools/media.mjs:209-266`, `tools/media.mjs:282-290`,
+(`tools/media.mjs:203-257`, `tools/media.mjs:273-281`,
 `tools/lib/starter.mjs:10-22`).
 
 Component entries record each
 file's size and SHA-256. Assemblies and recipe construction finish before
-the output replacement begins (`tools/media.mjs:267-275`). Output
+the output replacement begins (`tools/media.mjs:258-266`). Output
 files are replaced individually after those preparation checks. The
 distribution also receives `FONT-NOTICES.txt` as a companion to its
-artifacts, separate from the fourteen card files
-(`tools/media.mjs:286`).
+artifacts, separate from the thirteen card files
+(`tools/media.mjs:277`).
 
 Media also writes `docs/memory-map.md` and refreshes the ROM-space spans
 in `docs/rom-services.md` from the census (`tools/media.mjs:46-65`,
-`tools/media.mjs:291-293`). The image profile is `tecos`. Any other command-line
+`tools/media.mjs:282-284`). The image profile is `tecos`. Any other command-line
 profile name is rejected (`tools/build.mjs:30-33`, `tools/build.mjs:353-366`).
 The same image supports the detected board devices. A responding PICO9918
 with the Matrix switch enabled starts at 40 columns. Explicit 80, 40 and
@@ -373,12 +376,13 @@ with the Matrix switch enabled starts at 40 columns. Explicit 80, 40 and
 
 The final build line reports the reference TPA as well as ROM use:
 
+<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
 ```text
-tecos: ROM 14875/16384 bytes, TPA $0100-$B9A8 (47273 bytes), sha256 a65b6e4523b5f7ba
+tecos: ROM 15312/16384 bytes, TPA $0100-$B984 (47237 bytes), sha256 ac86ad233696d22a
 ```
 
 The displayed hash is a sixteen-digit prefix of full SHA-256
-`a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1`
+`ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3`
 (`tools/build.mjs:278`, `tools/build.mjs:358-361`).
 
 ## HELLO through TED and TAS
@@ -420,7 +424,7 @@ Inserting `1` at the line start creates an assembly error. `^T B` saves
 and supplies the shell chain `A:TAS HELLO.ASM` followed by `A:TED`.
 The PICO9918 displays the resulting diagnostic:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card work.img --board pico --screen 'CON PICO 80' B: '@start TED HELLO.ASM 7' '@press 1' $'@press \x14B' '@run 400'. Console error excerpt; redraw omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card work.img --board pico --screen 'CON PICO 80' B: '@start TED HELLO.ASM 7' '@press 1' $'@press \x14B' '@run 400'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 B:WORK>A:TAS HELLO.ASM
 HELLO.ASM:7:1: expected a label, instruction or directive
@@ -432,7 +436,7 @@ The diagnostic identifies filename, line and column. TED reopens there
 with the message on its status row. This screen retains the intervening
 blank rows so that source and status positions can be compared:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card work.img --board pico --screen 'CON PICO 80' B: '@start TED HELLO.ASM 7' '@press 1' $'@press \x14B' '@run 400'. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card work.img --board pico --screen 'CON PICO 80' B: '@start TED HELLO.ASM 7' '@press 1' $'@press \x14B' '@run 400'. Full screen; trailing empty rows omitted. -->
 ```text
 ; HELLO: print a line and return to the CCP.
 BDOS    EQU     $0005
@@ -464,9 +468,8 @@ The repair uses backspace because the matrix keyboard has no Delete key.
 Right moves beyond `1` and `^H` removes it. `^T R` saves, assembles and
 runs corrected HELLO. TED then waits for a key before redrawing:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card work.img --board pico --screen 'CON PICO 80' B: '@start TED HELLO.ASM 7' '@press 1' $'@press \x14B' '@run 400' $'@press \x1b[C' $'@press \x08' $'@press \x14R' '@run 600'. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card work.img --board pico --screen 'CON PICO 80' B: '@start TED HELLO.ASM 7' '@press 1' $'@press \x14B' '@run 400' $'@press \x1b[C' $'@press \x08' $'@press \x14R' '@run 600'. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
-
 B:WORK>A:TAS HELLO.ASM
 HELLO.COM written
 
@@ -519,7 +522,7 @@ Physical-board use requires installing `work.img` to the card through
 Chapter 6's `tecvol install` procedure. This host-model capture instead
 boots the image and enters `B:`, DIR and HELLO:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card work.img B: DIR HELLO. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card work.img B: DIR HELLO. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

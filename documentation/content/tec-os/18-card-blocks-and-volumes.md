@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 18. Card blocks and volumes
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -153,7 +154,7 @@ only sixteen of B's thirty-two directory blocks. Logging B in reaches the
 missing seventeenth block and reports an error. A's directory is still
 accessible afterwards:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/short.img '@start DIR B:' '@key x' 'DIR A:*.CMD'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/short.img '@start DIR B:' '@key x' 'DIR A:*.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -171,7 +172,7 @@ A:SYSTEM>DIR A:*.CMD
 
 STARTUP .CMD     128
 1 file, 128 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>
 ```
 
@@ -182,7 +183,7 @@ enters its diagnostic prompt when `SDINIT` or `MOUNT` fails
 `printf X | dd of=build/bad.img bs=1 seek=0 conv=notrunc`. The `H` key
 produced another diagnostic prompt:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/bad.img H. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/bad.img H. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 No volume mounted, error 21
@@ -540,7 +541,7 @@ capture, service 11 supplies the descriptor list for `CD ?`. Service 9
 mounts GAMES on the empty D for `CD D:GAMES`. `CD C:WORK` fails because WORK
 is already mounted on B (`drivers/shellcd.asm:99-117`):
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CD ?' 'CD D:GAMES' 'CD C:WORK'. Boot rows included. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD ?' 'CD D:GAMES' 'CD C:WORK'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -568,6 +569,6 @@ A:SYSTEM>
 
 Reserving those slots reduces program memory. Four slots use 1,024 bytes,
 compared with 320 for G1M on A and G8M on B. The starter TPA is therefore
-46,569 bytes, 704 below the two-volume card's 47,273. Format 1.0 reserves
+46,533 bytes, 704 below the two-volume card's 47,237. Format 1.0 reserves
 slots only for drives mounted at cold boot. Later mounts must fit those
 slots, so a G8M payload cannot replace a G1M-sized slot.

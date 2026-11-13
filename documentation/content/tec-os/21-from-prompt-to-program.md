@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 21. From prompt to program
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -26,9 +27,9 @@ It parses a name then runs a built-in or loads a file. Program execution begins 
 ## The minimal CCP and the shell
 
 Command input and program execution are split between the shell and ROM.
-The ROM CCP handles DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD through
+The ROM CCP handles CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD through
 `KEYTAB`. It can also run `.COM` and `.SVC` files, change drive and read a
-line of `STARTUP.CMD` (`src/tables.asm:53-76`, `docs/shell.md:3-5`). The
+line of `STARTUP.CMD` (`src/tables.asm:53-78`, `docs/shell.md:3-5`). The
 starter startup file installs resident `SHELL.SVC` for additional commands.
 Its table includes COPY, DEL, SERVICES, CD, DIR, CLS, ECHO and PAUSE.
 DEL changes its command word to `ERA` before passing the piece to the ROM
@@ -36,7 +37,7 @@ DEL changes its command word to `ERA` before passing the piece to the ROM
 
 The shell extends the prompt through ROM service 16, `TNSHELL`. Its table
 supplies four entries: `LINE`, `PAGE`, `HREC` and `HSTORE`
-(`src/abi.inc:226`, `drivers/shell.asm:61-64`, `docs/shell.md:273-320`).
+(`src/abi.inc:226`, `drivers/shell.asm:61-64`, `docs/shell.md:280-327`).
 `MAINLOOP` checks the hook at every prompt. With a shell installed, `SHLINE`
 calls `LINE` to print the prompt and supply a zero-ended command piece
 plus its origin. `FFh` marks startup input. The ROM executes that piece
@@ -47,7 +48,7 @@ first, then startup input and finally function 10 keyboard input
 (`src/cpm/ccp.asm:97-158`, `src/cpm/ccp.asm:248-294`). The hook also supplies
 paging: TYPE sends every byte and DIR sends row breaks through `PAGE`.
 Without the hook those bytes print directly (`src/cpm/ccpfile.asm:266-288`,
-`docs/shell.md:304-307`). Chapter 22 explains command pieces, Chapter 23
+`docs/shell.md:311-314`). Chapter 22 explains command pieces, Chapter 23
 history and Chapter 26 startup input.
 
 ## Entry from boot
@@ -151,13 +152,13 @@ its own parser and check, `PARSEFCB` and `UNAMBIG` in
 `drivers/shellcmd.asm:221-336`.
 
 Built-in recognition uses the original word at `CMDSTRT`. `KEYTAB` tests
-DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD. The shell handles COPY,
+CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD. The shell handles COPY,
 DEL and SERVICES earlier and passes DEL onward as `ERA`
-(`src/tables.asm:60-76`, `drivers/shell.asm:545-552`). `ISCMD` accepts a
+(`src/tables.asm:60-78`, `drivers/shell.asm:545-552`). `ISCMD` accepts a
 keyword only before space or zero. A drive prefix or type therefore selects
 a program name: `A:DIR` and `DIR.COM` search for `DIR.COM` and fail if it
 is absent (`src/cpm/ccp.asm:351-376`, `src/cpm/ccpcmd.asm:689-708`,
-`src/tables.asm:53-76`).
+`src/tables.asm:53-78`).
 
 A keyword match jumps to its handler. Otherwise the FCB must be
 unambiguous. Type SVC enters `SVCGO` for installation. Every other type
@@ -195,7 +196,7 @@ An explicit drive suppresses that drive-A fallback. In this starter-card
 capture, plain TAS finds A's tool and prints its usage line. `B:TAS`
 searches B alone:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs B: TAS B:TAS. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: TAS B:TAS. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -240,8 +241,8 @@ prints `Bad Sector` and warm-boots before the loader can return
 (`src/cpm/bdoscon.asm:47-64`).
 
 Resident services reduce this load ceiling. Without installed services,
-the starter entry at `B6E9h` gives ceiling `B600h`: 46,336 bytes from
-`0100h`, 233 below the TPA byte limit. Startup installs the shell at
+the starter entry at `B6C5h` gives ceiling `B600h`: 46,336 bytes from
+`0100h`, 197 below the TPA byte limit. Startup installs the shell at
 `A700h`, reducing prompt-time capacity to 42,496 bytes. Each installed
 service moves the entry word and load ceiling to its first page
 (`src/cpm/ccp.asm:637-639`, `src/loader.asm:494-507`).
@@ -270,7 +271,7 @@ node tools/tecvol.mjs put build/ccp.img B build/big.com
 TAS writes the 76-byte ARGS.COM. FITS returned to the prompt and BIG was
 rejected:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: FITS BIG. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: FITS BIG. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -294,7 +295,7 @@ The same fixture separates fallback from directory visibility. Under user
 3, ARGS runs from B's user 0 and TAS from A's user 0. DIR still searches
 only the empty current user area:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -400,7 +401,7 @@ buffers. `PUT` saves BC and HL around function 2. `SHOWFCB` prints eleven
 name/type bytes and `TAIL` follows the length at `0080h`. The capture
 therefore exposes padded FCB names alongside spaces retained in the tail:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -441,10 +442,10 @@ Before entry, the CCP also records the load drive at `0050h` from
 1 because fallback changed the FCB drive byte (`src/cpm/ccp.asm:431-461`).
 
 The initial stack supplies the return route. `CMDRUN` sets SP to
-`CSTKTOP`, pushes `0000h` and jumps to `0100h`. The configured 32-byte
-CCP stack leaves thirty bytes below that return word, with a guard before
-command scratch (`src/cpm/ccp.asm:464-471`, `src/layout.asm:114-115`,
-`src/ram.asm:190-202`). CP/M 2.2's eight levels provide sixteen bytes.
+`CSTKTOP`, pushes `0000h` and jumps to `0100h`. The configured 48-byte
+CCP stack leaves forty-six bytes below that return word, with a guard before
+command scratch (`src/cpm/ccp.asm:464-471`, `src/layout.asm:111-112`,
+`src/ram.asm:196-208`). CP/M 2.2's eight levels provide sixteen bytes.
 [Chapter 15](15-state-and-memory.md) distinguishes these configured sizes
 from measured use and proven bounds.
 
@@ -452,7 +453,7 @@ The final jump uses HL so the same path can enter an installed service
 at its own address. `CMDRUN` first loads HL with `0100h`. Programs therefore
 start here with HL = `0100h`, DE = `0000h` and A = `FFh` for startup input
 or zero otherwise. These are implementation values. CP/M 2.2 guarantees
-no entry register (`src/cpm/ccp.asm:447-473`, `docs/compatibility.md:185-190`).
+no entry register (`src/cpm/ccp.asm:447-473`, `docs/compatibility.md:186-191`).
 
 A top-level RET uses the pushed address to reach warm boot at `0000h`.
 A jump there or function 0 has the same destination (`src/cpm/ccp.asm:469-471`,
@@ -465,7 +466,14 @@ therefore leaves a blank line before the prompt.
 ## The built-in handlers
 
 Built-ins operate through the FCB and DMA interfaces already used by
-programs. The table locates the ROM built-ins and three shell handlers. Ordinary
+programs. ROM CD also supplies volume selection at a bare prompt, allowing
+recovery when A holds a volume without the shell startup. It enters
+`RCMDCD` in `src/cpm/ccpdir.asm`. Queries and named selection preserve the
+current drive and user. Failed selection keeps the old volume and reports
+`CD FAILED` or a more specific name/conflict error
+(`src/cpm/ccpdir.asm:1-173`, `docs/recovery.md:1-23`).
+
+The table locates the file and console handlers plus three shell handlers. Ordinary
 shell DIR lists files by row with byte counts. `DIR /W` delegates to the
 ROM listing described below (`drivers/shelldir.asm:1-35`). Appendix J gives syntax and
 [Appendix D](appendix-d-error-messages.md) gives message recovery:
@@ -545,7 +553,7 @@ the word at `0006h`. On the starter card with the shell installed that byte
 is `A7h`: 166 pages cover `0100h` through `A6FFh`. Both 167 and 320 are
 rejected in this capture (`src/cpm/ccpcmd.asm:266-307`):
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 167 B:X.COM'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 167 B:X.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -602,7 +610,7 @@ path passes quietly. A separated width becomes the error word while a joined
 form names the whole token (`src/cpm/ccpcmd.asm:105-180`). This PICO capture
 shows both:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico 'CON PICO 40' 'CON CRT80' 'CON PICO 50' 'CON TTY 80' 'CON CRT: 32'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico 'CON PICO 40' 'CON CRT80' 'CON PICO 50' 'CON TTY 80' 'CON CRT: 32'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -669,7 +677,7 @@ Chapter 25 explains the registry checks.
 The CCP uses the same CP/M interface as programs: function 10 for line
 input, 15 for file open and 9 for strings through `0005h`. Its code remains
 in ROM while loaded programs occupy the transient program area, or TPA.
-The implementation is assembled from four files (`src/rom.asm:31-35`):
+The implementation is assembled from five files (`src/rom.asm:31-36`):
 
 | File | Work |
 | --- | --- |
@@ -677,16 +685,17 @@ The implementation is assembled from four files (`src/rom.asm:31-35`):
 | `src/cpm/ccpfile.asm` | DIR, TYPE and their output through the shell's pager |
 | `src/cpm/ccpmut.asm` | ERA, REN, a name check and the shared BDOS call helper |
 | `src/cpm/ccpcmd.asm` | Other built-ins, file-name parsing, page-zero preparation and startup |
+| `src/cpm/ccpdir.asm` | Basic directory selection, queries and listing for bare-prompt recovery |
 
-ROM data holds the messages and eight-record `KEYTAB`. Each record
+ROM data holds the messages and nine-record `KEYTAB`. Each record
 contains a zero-ended keyword followed by a handler address. A final zero
-ends the table (`src/tables.asm:53-76`). The CCP occupies 2,056 bytes from
-`CCPBAS` at `DBBBh` through `E3C2h`, immediately before the BDOS.
+ends the table (`src/tables.asm:53-78`). The CCP occupies 2,491 bytes from
+`CCPBAS` at `DBB8h` through `E572h`, immediately before the BDOS.
 
-The corresponding RAM state spans `CCPRAM` at `BCF2h` through `BE76h`.
+The corresponding RAM state spans `CCPRAM` at `BCD6h` through `BE6Ch`.
 `CMDFCB` and `RENFCB` contain parsed references, followed by the command
-buffer. `CCPCLR` at `BDBCh` marks the warm-cleared portion
-(`src/ram.asm:148-180`). `CPMINIT` clears from there through BDOS state,
+buffer. `CCPCLR` at `BDA2h` marks the warm-cleared portion
+(`src/ram.asm:148-186`). `CPMINIT` clears from there through BDOS state,
 preserving the command buffer below it (`src/boot.asm:398-407`). This is
 the retained-line boundary in [Chapter 22](22-chains-across-warm-boot.md).
 [Appendix C](appendix-c-memory-map.md) gives the locations for lookup.

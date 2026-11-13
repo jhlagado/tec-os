@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 15. State and memory inside TEC-OS
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -26,10 +27,10 @@ dismantling its resident environment.
 ROM holds the CCP's command processing, BDOS file and console operations and
 BIOS device routines. RAM holds their changing state. EXPAND 1 stores cache
 buffers outside the TPA
-(`src/rom.asm:17-43`, `src/layout.asm:77-86`, `format/format.json:20-25`,
+(`src/rom.asm:17-44`, `src/layout.asm:78-87`, `format/format.json:20-25`,
 `src/services.asm:1-20`, `src/abi.inc:65-106`). SHELL.SVC reserves fifteen
 pages from the TPA and places its 256-byte history ring in the last
-page (`docs/shell.md:22-30`, `drivers/shell.asm:793-796`).
+page (`docs/shell.md:23-31`, `drivers/shell.asm:793-796`).
 
 ## Two banks at the same addresses
 
@@ -60,7 +61,7 @@ CP/M assigns `0040h–004Fh` to BIOS scratch. TEC-OS uses only `0040h` and
 leaves the remaining fifteen bytes zero after cold boot. Console state is
 above the BIOS table. MVCOPY can reach buffers below `8000h` directly while
 the cache bank is selected because fixed RAM stays visible
-(`src/layout.asm:64-69`, `src/abi.inc:307-309`, `src/ram.asm:411-428`,
+(`src/layout.asm:64-69`, `src/abi.inc:307-309`, `src/ram.asm:417-434`,
 `src/cache.asm:692-699`).
 
 ## The workspace across a program exit
@@ -69,15 +70,15 @@ Each build fixes the workspace layout. BIOS, CCP and BDOS blocks lie below the
 `BF00h` RAM BIOS table and each ends in a stack. SD state, cache controls and
 other retained bytes lie above it. ram.asm reserves this storage with DS. Boot
 code supplies initial values rather than copying workspace bytes out of ROM
-(`src/ram.asm:1-11`, `src/ram.asm:131-139`, `src/ram.asm:196-209`,
-`src/ram.asm:285-297`).
+(`src/ram.asm:1-11`, `src/ram.asm:131-139`, `src/ram.asm:202-215`,
+`src/ram.asm:291-303`).
 
 Cold boot clears WSBASE through WSEND. Warm boot clears only CCPCLR through
 the BDOS block's end. The CCP FCBs and command buffer lie below CCPCLR while
 parser scratch, CCP stack and all BDOS state lie inside the cleared span. This
 placement preserves unexecuted command text across exit while resetting the
 next program's BDOS environment (`src/boot.asm:61-66`, `src/boot.asm:398-418`,
-`src/ram.asm:141-209`).
+`src/ram.asm:141-215`).
 
 Warm boot treats the storage regions as follows:
 
@@ -108,13 +109,13 @@ Above the BIOS table sit the registry, return code and startup position.
 Console storage also retains PICO width. Warm boot can reuse these while
 reconstructing the next environment. Cold boot clears them after reset,
 although recognised volume assignments may be reconstructed
-(`src/ram.asm:37-69`, `src/ram.asm:71-99`, `src/ram.asm:364-414`,
+(`src/ram.asm:37-69`, `src/ram.asm:71-99`, `src/ram.asm:370-420`,
 `src/boot.asm:35-65`, `src/boot.asm:101-104`).
 
 Cold boot copies seventeen three-byte BIOS jumps to `BF00h`. Warm boot
 preserves that copy and therefore preserves replacement entries. Allocation
 vectors are filled when their drives log in. Separately PZINIT rewrites the
-three-byte BDOS entry at every warm boot (`src/layout.asm:98-99`,
+three-byte BDOS entry at every warm boot (`src/layout.asm:99-100`,
 `src/boot.asm:108-111`, `src/boot.asm:310-315`).
 
 The build positions WSBASE so the lower workspace ends at `BF00h`. Retained
@@ -124,7 +125,7 @@ store a program might make. [Appendix
 C](appendix-c-memory-map.md#the-resident-workspace) lists internal variables
 and addresses. Applications obtain dimensions through INFO, which returns VWID
 in L and VHGT in H, instead of reading private variables
-(`tools/build.mjs:218-248`, `src/ram.asm:295-297`, `src/ram.asm:456-458`,
+(`tools/build.mjs:218-248`, `src/ram.asm:301-303`, `src/ram.asm:462-464`,
 `src/services.asm:74-80`).
 
 ## Allocation vectors below the workspace
@@ -140,7 +141,7 @@ A drive's 16-byte disk parameter header, DPH, includes the vector pointer set
 by ALVINIT after mount. ALVINIT subtracts slot sizes from WSBASE in drive
 order. Format 1.1 may specify a nonzero drive count. That reserves 256-byte
 slots from A for the stated count, including unmounted drives. Each slot then
-fits either geometry (`src/layout.asm:117-119`, `src/ram.asm:57-68`,
+fits either geometry (`src/layout.asm:114-116`, `src/ram.asm:57-68`,
 `src/boot.asm:536-563`).
 
 Without a drives field, as on format 1.0 cards, only mounted drives receive
@@ -158,14 +159,14 @@ BENTRY and lowers `0006h` to its base page (`src/boot.asm:106-107`,
 `src/boot.asm:629-634`, `src/boot.asm:300-315`, `src/loader.asm:1-10`,
 `src/loader.asm:337-350`, `src/loader.asm:499-504`).
 
-On the starter card workspace begins at `BAECh`. Four 256-byte vectors occupy
-`B6ECh–BAEBh` and the stub occupies `B6E9h–B6EBh`. This leaves 46,569 TPA
-bytes at `0100h–B6E8h`. A two-volume G1M/G8M card without a drives field needs
-320 vector bytes. Its stub at `B9A9h` leaves 47,273 bytes. Startup's
+On the starter card workspace begins at `BAC8h`. Four 256-byte vectors occupy
+`B6C8h–BAC7h` and the stub occupies `B6C5h–B6C7h`. This leaves 46,533 TPA
+bytes at `0100h–B6C4h`. A two-volume G1M/G8M card without a drives field needs
+320 vector bytes. Its stub at `B985h` leaves 47,237 bytes. Startup's
 fifteen-page SHELL.SVC lowers the starter boundary to `A700h`, or 42,496
 bytes. [Appendix C](appendix-c-memory-map.md#the-cpu-s-address-space) records
-these layouts. The workspace below `BF00h` is 1,044 bytes and warm boot clears
-324 at `BDBCh–BEFFh`. Above the table 205 bytes occupy `BF33h–BFFFh`
+these layouts. The workspace below `BF00h` is 1,080 bytes and warm boot clears
+350 at `BDA2h–BEFFh`. Above the table 205 bytes occupy `BF33h–BFFFh`
 (`docs/memory-map.md:8-22`, `docs/memory-map.md:47-58`,
 `docs/compatibility.md:3-16`). The offered build also enforces the older
 minimum starter TPA of 45,830 bytes (`tools/build.mjs:204-213`,
@@ -198,36 +199,39 @@ Cold boot needs a stack before testing banked RAM. It sets SP to BOOTSTK at
 `8000h`, with pushes going into fixed RAM below. Only after the check and
 workspace clear does it select the BDOS stack at STKTOP. COLDRT resets that
 stack for every diagnostic retry. Initial console setup, banner, mount, drive
-listing and diagnostics use it before CCP entry (`src/layout.asm:94`,
+listing and diagnostics use it before CCP entry (`src/layout.asm:95`,
 `src/boot.asm:35-68`, `src/boot.asm:79-93`, `src/boot.asm:97-113`).
 
 Warm boot must clear the CCP and BDOS stacks without using either. It selects
-EXPAND 0 first and sets SP to BSTK, the 40-byte BIOS stack's top. Later the
-CCP uses its own 32-byte CSTKBAS–CSTKTOP stack. Launch pushes the warm-boot
-word before jumping to `0100h`, leaving 30 bytes for program calls and saves
-(`src/boot.asm:131-144`, `src/layout.asm:113-115`, `src/ram.asm:196-201`,
+EXPAND 0 first and sets SP to BSTK, the 48-byte BIOS stack's top. Later the
+CCP uses its own 48-byte CSTKBAS–CSTKTOP stack. Launch pushes the warm-boot
+word before jumping to `0100h`, leaving 46 bytes for program calls and saves
+(`src/boot.asm:131-144`, `src/layout.asm:110-112`, `src/ram.asm:202-207`,
 `src/cpm/ccp.asm:454-471`).
 
-BDOS entry saves the caller's SP in OLDSP and selects its 54-byte
+BDOS entry saves the caller's SP in OLDSP and selects its 64-byte
 STKBASE–STKTOP stack. Function work and its BIOS calls use that stack. The
 result path reinstates SP so the caller's return word stays on its own stack
-throughout (`src/ram.asm:285-288`, `src/cpm/bdos.asm:124-129`,
+throughout (`src/ram.asm:291-294`, `src/cpm/bdos.asm:124-129`,
 `src/cpm/bdos.asm:210-214`).
 
-An eleven-byte guard lies below the CCP's 32-byte stack, together occupying 43
+An eleven-byte guard lies below the CCP's 48-byte stack, together occupying 59
 bytes. Warm boot fills the guard with `A5h`. Another value proves an overwrite
 but does not identify its source instruction. CP/M's eight call levels plus
-inherited return word use 18 bytes (`src/ram.asm:196-201`,
-`src/boot.asm:409-415`, `src/layout.asm:101-115`).
+inherited return word use 18 bytes (`src/ram.asm:202-207`,
+`src/boot.asm:409-415`, `src/layout.asm:103-112`).
 
-The host-model census records 18 bytes each for BIOS and CCP without services.
-BDOS's maximum over the census is 32. Its no-resident base is 30 across serial
-and PICO paths, diagnostics, recognised reset and A's pending-block flush
-points. Service limits add 8 BDOS bytes, 12 BIOS bytes and 6 CCP bytes to
-their bases. The resulting allowances are 38 of 54, 30 of 40 and 24 of 32
-respectively, leaving at least a quarter free (`docs/services.md:308-330`).
-SHELL's LINE and PAGE switch immediately to its private 32-byte stack. HREC
-and HSTORE account for its declared 6 BDOS bytes (`docs/services.md:332-339`).
+The host-model census records no-resident bases of 18 bytes for BIOS and 26
+for CCP, including bare-ROM CD selection and refusal. BDOS's maximum over the
+census is 32. Its no-resident base is 30 across serial and PICO paths,
+diagnostics, recognised reset and A's pending-block flush points. Service
+limits add 8 BDOS bytes, 12 BIOS bytes and 6 CCP bytes to their bases. With a
+two-byte NMI return-frame reserve the totals are 40 of 64, 32 of 48 and 34 of
+48 respectively, leaving at least a quarter free. These reservations do not
+cover an arbitrary interrupt handler or an interrupt-initiated OS call
+(`docs/services.md:309-333`). SHELL's LINE and PAGE switch immediately to its
+private 48-byte stack. HREC and HSTORE account for its declared 6 BDOS bytes
+(`docs/services.md:335-342`).
 [Appendix C](appendix-c-memory-map.md#the-stacks) lists reservations and
 addresses.
 
@@ -235,11 +239,12 @@ The offered source retains these reservations and limits. SVCLIM bounds
 combined declarations because every service adds depth to its caller's stack.
 The test watches memory writes but excludes LDIR from depth calculation.
 Workloads cover consoles, write-behind, diagnostics, chains and deep CCP
-paths. Assertions require an intact guard and at least a quarter free for both
-measured use and base plus allowance. Source inspection establishes what is
-checked rather than a new passing run (`src/tables.asm:139-144`,
+paths. Assertions require an intact guard and at least a quarter free after
+measured use. They also require that margin after combining each base,
+service allowance and two-byte NMI reserve. Source inspection establishes what
+is checked rather than a new passing run (`src/tables.asm:141-146`,
 `src/loader.asm:225-254`, `src/abi.inc:35-53`, `test/stacks.test.mjs:1-12`,
-`test/stacks.test.mjs:25-46`, `test/stacks.test.mjs:164-229`).
+`test/stacks.test.mjs:25-46`, `test/stacks.test.mjs:203-270`).
 
 The stack test triggers keypad NMI only at a new depth with RETN installed at
 `0066h`. Reported depths exclude the NMI frame since TEC-OS supplies no

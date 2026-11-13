@@ -7,12 +7,13 @@ nav_group: "Using the machine"
 
 # 1. First session
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -40,7 +41,7 @@ with this configuration. Unused blank rows are omitted from the excerpts.
 Power-on starts TEC-OS and displays the system name. The three names below
 it identify the card volumes available for files:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -72,8 +73,9 @@ graphics LCD. In this session it leaves the PICO9918 selected as the
 after the prompt and press Return. The prompt is already on screen, so it
 is not part of the command you enter. The same session produced:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen DIR. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
 ```text
+C: PROJECTS
 
 A>SHELL.SVC
 
@@ -93,10 +95,9 @@ BAZA    .RTL   12032
 BOUNCE  .BAS    5376
 DEMO    .ASM   15360
 MON3    .SVC    5120
-HELLO3  .BIN     256
 HELLO3  .ASM    2176
-14 files, 86272 bytes
-935936 free on A:SYSTEM
+13 files, 86016 bytes
+937984 free on A:SYSTEM
 A:SYSTEM>
 ```
 
@@ -152,8 +153,9 @@ prompt again.
 A drive letter followed by a colon changes the current drive. `B:` selects
 WORK and `A:` returns to SYSTEM. The next excerpt continues after the listing:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen DIR B: A:. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
 ```text
+A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
@@ -171,10 +173,9 @@ BAZA    .RTL   12032
 BOUNCE  .BAS    5376
 DEMO    .ASM   15360
 MON3    .SVC    5120
-HELLO3  .BIN     256
 HELLO3  .ASM    2176
-14 files, 86272 bytes
-935936 free on A:SYSTEM
+13 files, 86016 bytes
+937984 free on A:SYSTEM
 A:SYSTEM>B:
 B:WORK>A:
 A:SYSTEM>
@@ -190,7 +191,7 @@ SAMPLE and the assembler for the next command.
 The command needs only SAMPLE because TAS supplies the file types.
 A completed assembly produces this message:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS SAMPLE'. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TAS SAMPLE'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -215,7 +216,7 @@ only after you assemble it again.
 The command `SAMPLE` loads and starts `SAMPLE.COM`. Its greeting and screen
 size appear before it returns to the prompt:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS SAMPLE' SAMPLE. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TAS SAMPLE' SAMPLE. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -288,9 +289,11 @@ enough width to show each line whole and `CON PICO 40` restores 40 columns.
 [Chapter 7](07-choose-a-console.md) explains console widths.
 
 Programs written for the TEC-1G's MON-3 monitor use a separate service.
-`MON3.SVC` installs that service and displays `MON3>`. At this prompt,
-`LOAD HELLO3.BIN` loads the supplied program and `GO` runs it. HELLO3
-prints four lines on the 20 × 4 LCD through MON-3's calls, then beeps:
+First build the supplied HELLO3.ASM at the CP/M prompt with
+`TAS HELLO3 HELLO3.BIN`. Then `MON3.SVC` installs the service and displays
+`MON3>`. At this prompt, `LOAD HELLO3.BIN` loads the binary you built and
+`GO` runs it. HELLO3 prints four lines on the 20 × 4 LCD through MON-3's
+calls, then beeps:
 
 <!-- TEC-OS b3134cf test/starter.test.mjs:219, the LCD rows the host-model
      test checks, trailing spaces removed. Not a separate capture. -->
@@ -305,6 +308,6 @@ HELLO3 then counts on the digits. A keypress sounds a beep and displays
 its code on the right two digits. With the Matrix switch enabled, the
 service reads the matrix keyboard, so Esc ends the program and returns
 to `MON3>`. With that switch off, AD on the keypad ends it. `EXIT` returns
-to `A:SYSTEM>`. The source is `HELLO3.ASM`, built with
-`TAS HELLO3 HELLO3.BIN`. [Chapter 5](05-drives-and-user-areas.md) explains
+to `A:SYSTEM>`. The starter supplies the source. The binary is the file
+you built above. [Chapter 5](05-drives-and-user-areas.md) explains
 the service and its reserved memory.
