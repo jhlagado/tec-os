@@ -273,9 +273,10 @@ and run.
   `Write pending`, `Cache clear` and `Write error` distinguish retry state.
   There is no timed guarantee while a program retains the CPU. Separate
   public writes can commit separately, even within one block; only updates
-  already received are coalesced. BIOS CONST/raw reader are ordinary entry
-  opportunities, not full drains. Type0 directory writes are treated as data;
-  BDOS metadata uses type1 with data-before-directory ordering. A flush caused
+  already received are coalesced. BIOS `CONST` and the raw reader provide
+  ordinary entry opportunities. `CONIN` drains pending data before waiting,
+  subject to reported failures. BIOS type 0 directory writes are treated as
+  data; BDOS metadata uses type 1 with data-before-directory ordering. A flush caused
   by another drive's directory request can report `Bad Sector` on that drive.
 - **Bit-banged serial.** Input that arrives while a program is busy and not
   polling the console is lost. Keys typed while the BDOS is printing are kept
