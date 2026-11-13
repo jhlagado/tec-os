@@ -463,7 +463,7 @@ CMDRN1:
 
 ; The transient's two-byte return word
 ; is outside default DMA (0080h..00FFh).
-; CCPSTN=32 leaves 30 bytes below it
+; CCPSTN=48 leaves 46 bytes below it
 ; before the stack base.
 
   ld sp,CSTKTOP

@@ -309,8 +309,12 @@ running.
 
 ## Stacks
 
-A service runs on its caller's stack, and that is one of four. Its header
-declares its additional use on each of the three the ROM owns. The loader
+A service normally runs on its caller's stack: an application or one of the
+three ROM operation stacks. Housekeeping temporarily uses its separate
+56-byte worker stack, including console callbacks for notices. That physical
+stack switch keeps the logical caller's restrictions, including BDOS
+nonreentrancy. A service's header declares its additional use on the three
+public ROM operation stacks. The loader
 refuses a service that takes a stack's sum past its limit:
 
 | Stack | Reserved | Base | Census | Limit for services |
@@ -331,6 +335,14 @@ two-byte NMI return-frame reserve in each sum. This reserves no arbitrary
 handler body or interrupt reentry. A service must stay within
 its declared stack use. `test/svc.test.mjs` checks this with a stack watch.
 The ROM does not enforce the declaration at runtime.
+
+Housekeeping uses126 bytes of existing reserved workspace: queue/round/context
+68, a two-byte guard and worker stack56. Its independent console-refusal
+base28 plus BIOS-hook allowance12 and a two-byte NMI frame is42/56, exactly
+the three-quarter ceiling. Synthetic RETN tests reach30 including that frame;
+they cover admitted classic-bank points only. The full stack census also
+watches this worker and its guard. No arbitrary interrupt body or interrupt
+entry into the OS is reserved by these bounds.
 
 The base's paths include the shell's: the serial, PICO9918 and GLCD runs and the
 lines of pieces run with `SHELL.SVC` holding the prompt, as the starter card

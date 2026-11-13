@@ -304,7 +304,7 @@ async function buildProfile(name, assemble) {
         ["CCP state and stack", at("CCPRAM"), at("CCPRME")],
         ["BDOS state and stack", at("BDOSRAM"), at("BDOSRME")],
         ["RAM BIOS table", at("RAMBIOS"), at("SDBYTE")],
-        ["SD, keyboard and GLCD state", at("SDBYTE"), at("WSEND")],
+        ["SD, cache, housekeeping and console state", at("SDBYTE"), at("WSEND")],
         ["unused", at("WSEND"), 0xc000],
       ].map(([label, start, end]) => ({ label, start, end, bytes: end - start })),
       stacks: {
@@ -312,6 +312,7 @@ async function buildProfile(name, assemble) {
         bios: { base: at("BSTKB"), top: at("BSTK"), bytes: at("BSTK") - at("BSTKB") },
         ccp: { base: at("CSTKBAS"), top: at("CSTKTOP"), bytes: at("CSTKTOP") - at("CSTKBAS") },
         bdos: { base: at("STKBASE"), top: at("STKTOP"), bytes: at("STKTOP") - at("STKBASE") },
+        worker: { base: at("HKSTKB"), top: at("HKSTKT"), bytes: at("HKSTKT") - at("HKSTKB") },
       },
     },
   };

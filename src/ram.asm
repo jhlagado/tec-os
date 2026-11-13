@@ -409,11 +409,22 @@ STPOS: DS 1      ; 0 untried, 1 read,
 CHPOS: DS 1      ; bit 0 a function 47
                  ; line, bit 1 dropped
 
-; Unused: the startup record is read
-; into LOADBUF. The high state still
-; ends at C000h.
+; Housekeeping queue, frozen-round snapshot and private worker stack.
+; The high state still ends at C000h.
 
-HIFREE: DS 126
+HKQ: DS 30
+HKROUND: DS 30
+HKCNT: DS 1
+HKRPOS: DS 1
+HKRLEN: DS 1
+HKDEP: DS 1
+HKBUSY: DS 1
+HKERR: DS 1
+HKSP: DS 2
+HKGRD: DS 2
+HKSTKB: DS 56
+HKSTKT:
+HIFREE:
 
 ; Relocated page-zero console state.
 ; Access requires the classic bank. INFO

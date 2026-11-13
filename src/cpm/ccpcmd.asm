@@ -861,8 +861,12 @@ STLE:
   ret z          ; no line
   ld (CMDLEN),a  ; counted input layout
 
-; At 127 characters the dollar lands
-; on BOOTDRV, which CCPENT has used.
+; At 127 characters CR uses the last
+; CMDTXT byte; the dollar uses APIRTPC
+; low. CCP owns no outer hardware/BIOS
+; return here. BDOS echo inherits its
+; own context; a later root API call
+; sets the complete return PC anew.
 
   ex de,hl
   ld (hl),13     ; CR for echo

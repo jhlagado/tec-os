@@ -15,6 +15,7 @@
 ; Changes AF/BC/DE/HL and BIOS clobbers.
 
 READDIR:
+  call HKPOINT
   call CPOUT     ; data before directory
   jp nz,BADSECT  ; card refused it
   ld hl,(CURTRK)

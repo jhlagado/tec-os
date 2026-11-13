@@ -167,6 +167,7 @@ CONSTQ:
 ; count.
 
 OUTCHAR:
+  call HKPOINT
   ld a,c
   cp TAB
   jr nz,OUTONE   ; non-tab output

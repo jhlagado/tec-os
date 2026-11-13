@@ -92,7 +92,13 @@ function memoryMap(census, symbols) {
     ["CWTYPE", "BIOS WRITE's type, C"],
     ["CIFF", "the flags a BIOS entry found, its interrupt state in P/V"],
     ["CANY", "nonzero when a data line may be held behind on the logged drive"],
-    ["CPEND", "the coalesced pending block: its line plus one, 0 for none"],
+    ["CPEND", "the pending block outside the logged drive: its line plus one, 0 for none"],
+    ["HKCNT", "number of dirty first-dirty queue entries"],
+    ["HKRPOS", "next position in the frozen eligibility round"],
+    ["HKRLEN", "number of positions in the frozen round"],
+    ["HKDEP", "logical outer/nested API depth"],
+    ["HKBUSY", "private worker/report callback guard"],
+    ["HKERR", "deferred or reported failed-write episode"],
   ]
     .map(([n, what]) => `| ${hex(at(n))} | \`${n}\` | ${what} |`)
     .join("\n");
@@ -144,11 +150,17 @@ ${pageZeroState()}
 | --- | ---: | --- |
 ${rows(starterRegions)}
 
-The block cache's state, in the SD, keyboard and GLCD state above:
+The block cache and housekeeping state, in classic RAM above:
 
 | Address | Name | Contents |
 | --- | --- | --- |
 ${cacheState}
+
+Housekeeping uses126 previously reserved bytes: two thirty-byte line-index
+queues at \`${hex(at("HKQ"))}\` and \`${hex(at("HKROUND"))}\`, eight context
+bytes, a two-byte guard and its56-byte private stack. The outer hardware/BIOS
+return PC is the separate two-byte \`APIRTPC\` slot at \`${hex(at("APIRTPC"))}\`;
+nested calls inherit that owner. These are internal workspace, not public ABI.
 
 ## EXPAND 1
 
@@ -156,7 +168,7 @@ Cold boot clears it. Programs reach none of it: no TEC-OS interface leaves
 it in view. A program that puts it in view itself and ends without putting
 EXPAND 0 back finds BF03h empty and runs on into the ROM at C000h; the ROM
 tells that from a reset, since the overlay is off, and warm boots, so the
-cache's lines are written as at any exit.
+cache's lines are attempted as at any exit, retaining failed data for retry.
 
 | Addresses | Bytes | Contents |
 | --- | ---: | --- |
@@ -170,6 +182,10 @@ ${expand1}
 | BIOS (warm boot) | ${hex(s.bios.base)}–${hex(s.bios.top - 1)} | ${s.bios.bytes} |
 | CCP | ${hex(s.ccp.base)}–${hex(s.ccp.top - 1)} | ${s.ccp.bytes} |
 | BDOS (and cold boot's mount and DIAG) | ${hex(s.bdos.base)}–${hex(s.bdos.top - 1)} | ${s.bdos.bytes} |
+| Housekeeping private worker | ${hex(s.worker.base)}–${hex(s.worker.top - 1)} | ${s.worker.bytes} |
+
+The worker temporarily owns the physical stack for maintenance and notices;
+logical BDOS nonreentrancy and console-hook restrictions still apply.
 
 ## Serial timing
 

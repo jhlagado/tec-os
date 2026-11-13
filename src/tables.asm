@@ -14,21 +14,21 @@ ROMDATA:
 BIOSBAS:
   jp COLD        ; 00 cold boot
   jp WBOOTR      ; 03 warm boot
-  jp BCONSTC     ; 06
-  jp BCONIN      ; 09
-  jp BCONOUT     ; 0C
-  jp BLIST       ; 0F
-  jp BPUNCH      ; 12
-  jp BREADER     ; 15
-  jp BHOME       ; 18
-  jp BSELDSK     ; 1B
-  jp BSETTRK     ; 1E
-  jp BSETSEC     ; 21
-  jp BSETDMA     ; 24
-  jp BREAD       ; 27
-  jp BWRITE      ; 2A
-  jp BLISTST     ; 2D
-  jp BSECTRN     ; 30
+  jp HKBI2     ; 06
+  jp HKBI3      ; 09
+  jp HKBI4     ; 0C
+  jp HKBI5       ; 0F
+  jp HKBI6      ; 12
+  jp HKBI7     ; 15
+  jp HKBI8       ; 18
+  jp HKBI9     ; 1B
+  jp HKBI10     ; 1E
+  jp HKBI11     ; 21
+  jp HKBI12     ; 24
+  jp HKBI13       ; 27
+  jp HKBI14      ; 2A
+  jp HKBI15     ; 2D
+  jp HKBI16     ; 30
 
 ; Keyboard lookups. Arrow keys 3-6 use
 ; KBARROW after ESC[. KBSPEC has five

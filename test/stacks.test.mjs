@@ -240,7 +240,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     assert.ok(runs.mon3[k].deepest <= runs.serialPlain[k].deepest + more, `MON3.SVC declares ${more} on the ${k} stack`);
   }
   const census = Object.fromEntries(
-    ["bdos", "ccp", "bios"].map((k) => [k, { reserved: runs.serial[k].reserved, deepest: Math.max(...Object.values(runs).map((r) => r[k].deepest)) }]),
+    ["bdos", "ccp", "bios", "worker"].map((k) => [k, { reserved: runs.serial[k].reserved, deepest: Math.max(...Object.values(runs).map((r) => r[k].deepest)) }]),
   );
   census.runs = runs;
   census.workload =
@@ -262,6 +262,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     const { reserved } = census[k];
     assert.ok((base + lim[k] + 2) * 4 <= reserved * 3, `${k}: the base ${base}, services' limit ${lim[k]} and two-byte NMI reserve take more than three quarters of ${reserved}`);
   }
+  assert.ok((census.worker.deepest + 12 + 2) * 4 <= census.worker.reserved * 3, "worker base, BIOS-hook allowance and NMI return reserve keep a quarter free");
   // docs/services.md's stack table states these figures: it must say what this census measures.
   const doc = readFileSync(resolve(ROOT, "docs/services.md"), "utf8");
   for (const [k, name] of [["bdos", "BDOS"], ["bios", "BIOS"], ["ccp", "CCP"]]) {

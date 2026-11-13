@@ -9,7 +9,10 @@
 ; are written for a directory write,
 ; all-dirty allocation, explicit flush,
 ; a console read, a drive change, warm
-; boot or mount change.
+; boot or mount change. Outer API
+; entry also attempts one eligible
+; first-dirty line through HKENTER.
+; Nested operations inherit context.
 ; Mapped intervals use no stack. Callers
 ; must provide safe bank/interrupt
 ; state. BIOS CDI/CEI disables and
@@ -123,7 +126,8 @@ CENT:
 
 CDCLR:
   ld c,0
-  jr CDPUT
+  call CDPUT
+  jp HKDEL
 
 ; Valid line A: CDGET reads its dirty
 ; byte, CDSET writes 1 and CDCLR writes
@@ -138,6 +142,8 @@ CDGET:
 
 CDSET:
   ld c,1
+  call CDPUT
+  jp HKADD
 
 CDPUT:
   push af
@@ -245,78 +251,85 @@ CWRITE:
 
 CWR9:
   ld c,a
+  ld a,(HKERR)
+  or a
+  jr nz,CWRERR
+  inc a
+  ld (HKERR),a
+CWRERR:
   xor a
   inc a
   ld a,c
   ret
 
-; CFLALL, for warm boot only, writes
-; dirty lines and drops failures.
-; CFLUSH excludes line A, none when
-; A=NLINES, and retains failed lines for
-; retry
-; (KE-AR8). Both continue through every
-; other line and return A=excluded
-; index, FFh for CFLALL. Z means no
-; write failed, NZ means at least one
-; did. CWRITE can remap the BIOS
-; request. Change BC/DE/HL/F. Writes can
-; partly complete before an error.
+; A bounded first-dirty pass tries each queued line once. CFLUSH skips
+; line A; NLINES means none. CFLALL is the same no-exclusion pass for warm
+; boot. Failures stay dirty and queued. Return A=excluded and Z only when
+; every attempted write succeeds. Changes BC/DE/HL/F. Directory callers
+; exclude their unpublished metadata until all data prerequisites succeed.
 
 CFLALL:
-  ld a,$FF
+  ld a,NLINES
 
 CFLUSH:
+  push af
+  call HKRESET
+  pop af
   ld c,a
   ld b,0
-  xor a
-
 CFS1:
-  cp c
-  jr z,CFS2
-  push bc
-  call CDGET
-
-  call nz,CWRITE
-  pop bc
-  jr z,CFS2
-  inc b
+  ld a,(HKRPOS)
+  ld hl,HKRLEN
+  cp (hl)
+  jr nc,CFSEND
   ld e,a
-  ld a,c
-  inc a
-  ld a,e
-  jr nz,CFS2
+  ld d,0
+  ld hl,HKROUND
+  add hl,de
+  ld a,(hl)
+  ld hl,HKRPOS
+  inc (hl)
+  cp $FF
+  jr z,CFS1
+  cp c
+  jr z,CFS1
   push bc
-  call CDROP
+  call CWRITE
   pop bc
-
-CFS2:
-  inc a
-  cp NLINES
-  jr c,CFS1
+  jr z,CFS1
+  inc b
+  jr CFS1
+CFSEND:
   ld a,c
   inc b
   dec b
   ret
 
-; Take the first clean line cyclically
-; from valid CNEXT. When all are dirty,
-; write CNEXT first. Return Z with
-; A=line, or NZ on write failure with
-; that line still dirty (KE-187).
-; Advance CNEXT even after failure.
-; The caller must fill/tag the line.
-; Changes AF/BC/DE/HL. Writeback can
-; remap the BIOS request.
+; Take the first clean line cyclically from CNEXT. When all are dirty,
+; make one bounded first-dirty pass, then use any clean slot it freed.
+; Retain every failed line; if none can be freed return NZ and advance
+; CNEXT. Successful allocation returns Z with A=line. The caller fills/tags
+; it. Changes AF/BC/DE/HL; writeback restores the current BIOS mapping.
 
 CTAKE:
+  call CTSCAN
+  jr nz,CTK5
+  ld a,NLINES
+  call CFLUSH
+  call CTSCAN
+  jr nz,CTK5
+  call CTK5
+  or 1
+  ret
+
+; Return A=line and NZ for a clean slot. If none exists, A is the
+; replacement cursor and Z is set. No dirty line is discarded.
+CTSCAN:
   ld b,NLINES
   ld a,(CNEXT)
   add a,CDIRTY-CTAB
   call CTENT
-
   out (SYSLAT),a
-
 CTK1:
   ld a,(hl)
   or a
@@ -326,10 +339,8 @@ CTK1:
   cp CDIRTY-CTAB+NLINES
   jr c,CTK2
   ld l,CDIRTY-CTAB
-
 CTK2:
   djnz CTK1
-
 CTK3:
   ld a,(LATCHV)
   out (SYSLAT),a
@@ -337,11 +348,6 @@ CTK3:
   sub CDIRTY-CTAB
   inc b
   dec b
-  jr nz,CTK5
-  call CWRITE
-  jr z,CTK5
-  call CTK5
-  or 1
   ret
 
 CTK5:
@@ -441,12 +447,14 @@ CWRBH:
 
 ; C=1 clears all 512 bytes, including a
 ; hit. No stack access while mapped.
-; GETKEY records the cleared block
-; before CSET publishes its clean tag.
+; GETKEY records the cleared block.
+; Retag a clean slot, but preserve a
+; dirty hit's queue and round position.
 
 CWB1:
   dec c
   jr nz,CWBK
+  call CDGET
   push af
   call CLADR
   call CXON
@@ -462,7 +470,7 @@ CWB1:
   ld c,2
   call GETKEY
   pop af
-  call CSET
+  call z,CSET
   jr CWB2
 
 CWBF:
@@ -578,18 +586,10 @@ CPFLSH:
   ld (CPEND),a
   ret
 
-; CKEY runs at each console read and
-; writes every dirty line, so nothing
-; waits unwritten while a program waits
-; for a key. A line that fails is kept
-; for retry and not reported. CANY is
-; set when a data write is held behind
-; on the logged drive, and cleared once
-; a flush keeps no line. While it is
-; clear only the pending block can be
-; dirty, and CPOUT's cheaper test
-; writes it. Return A=0/Z, or A=1/NZ
-; when a write failed. Keep DE.
+; Console input drains all held-behind data before waiting. A failed
+; line remains queued; report pending/recovered retry state without changing
+; the flush's result. CANY permits the cheaper pending-line path when only
+; CPEND can be dirty. Return A=0/Z or A=1/NZ; keep DE.
 
 CKEY:
   ld a,(CANY)
@@ -621,23 +621,18 @@ CPOUT:
   pop de
   jp BRET
 
-; Warm boot calls CFLALL to try every
-; dirty line and drop each failure. Any
-; loss sets CHPOS bit 1, which drops
-; the rest of the line, and prints CWMSG
-; before returning to WBOOTR and the
-; prompt. PUTS replaces the flush flags,
-; so CWBOOT flags cannot distinguish
-; loss. Printing may change ordinary
-; registers.
+; Warm boot attempts every pending line and retains failures for retry.
+; Failure drops the rest of a chained command, never the cached data. The
+; private reporter keeps console callbacks from recursively servicing work.
+; Flags do not encode the flush result on return.
 
 CWBOOT:
   call CFLALL
-  ret z
+  jr z,CWBNOTE
   ld a,2         ; the rest is dropped
   ld (CHPOS),a
-  ld hl,CWMSG
-  jp PUTS
+CWBNOTE:
+  jp HKREPORT
 
 CEND:
 

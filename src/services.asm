@@ -26,12 +26,23 @@ TXIDLE EQU $40   ; serial idle,
 ; Dispatch C through SVTAB, preserving
 ; B/C/DE/HL. C>=TNCOUNT returns
 ; TNEBAD with those registers unchanged.
-; RET enters the selected service with
-; the original caller return next on
-; stack. Uses four temporary bytes.
+; An outer call replaces its return word with HKAPIRET; nested calls
+; inherit that context. Dispatch still uses four temporary caller bytes.
 ; Changes AF and service-defined regs.
 
 SVCDSP:
+  ld a,(HKDEP)
+  or a
+  jr nz,SVGO
+  ld a,(HKBUSY)
+  or a
+  jr nz,SVGO
+  call HKENTER
+  ex (sp),hl
+  ld (APIRTPC),hl
+  ld hl,HKAPIRET
+  ex (sp),hl
+SVGO:
   ld a,c
   cp TNCOUNT
   ld a,TNEBAD

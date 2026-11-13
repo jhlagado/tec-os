@@ -172,8 +172,9 @@ services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
 drive and `CD D:NAME` on another. These commands work at the bare ROM prompt
 too, so `CD A:SYSTEM` followed by `SHELL.SVC` restores the shell after
 resetting with GAMES selected on A:. The shell prompt shows the selection,
-`A:SYSTEM>`. The drive you are on is written behind, and whenever TEC-OS
-waits for a key everything is on the card ([docs/recovery.md](docs/recovery.md)). Under the
+`A:SYSTEM>`. OS calls prioritise pending writes; required input drains them
+before waiting, with failed data retained and reported for retry
+([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
 `TED X.ASM!TAS X &X`. TED, from Thorium `a2fe556` (`TED.COM`
