@@ -159,7 +159,7 @@ test("KG58 rom cap", () => {
   const { rom, symbols } = romFor();
   assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 1], "ABI 5.1");
   const m = machine(card());
-  assert.equal(word(m, 6) - 0x100, BASELINE.tpa, "TPA 47,273 with nothing loaded");
+  assert.equal(word(m, 6) - 0x100, 47237, "TPA 47,237 with the shared recovery allocation");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
 });
 
@@ -1474,7 +1474,7 @@ test("KG63 warm boot and reset", async () => {
   m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   assert.deepEqual(services(m), [], "a reset removes it");
-  assert.equal(word(m, 6), 0xb9a9);
+  assert.equal(word(m, 6), 0xb985);
 });
 
 async function unloads(svc) {
@@ -1485,7 +1485,7 @@ async function unloads(svc) {
     exitBy(m, how);
     m.command("UNLOAD");
     assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
-    assert.equal(word(m, 6), 0xb9a9, `after ${how}: (0006h) back at B9A9h`);
+    assert.equal(word(m, 6), 0xb985, `after ${how}: (0006h) back at B985h`);
     assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
     assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A(:\S*)?>$/, `after ${how}: a .COM exits to the prompt`);
   }
@@ -1573,10 +1573,10 @@ test("KG68 docs agree", async () => {
   const h4 = (v) => `${v.toString(16).toUpperCase().padStart(4, "0")}h`;
   assert.ok(mon3.includes(`${svc.image.toLocaleString("en")} bytes of header and image in **${fig.pages} pages**`), "the size");
   // The starter card asks for four drives, whose vectors take the bare
-  // ROM's word from B9A9h to B6E9h: MON3.SVC's pages go below page B6h.
+  // ROM's word from B985h to B6C5h: MON3.SVC's pages go below page B6h.
   const bare = fig.top - 0x300;
   const tpa = (top) => (top - 0x100).toLocaleString("en");
-  assert.ok(mon3.includes(`from \`B6E9h\` to \`${h4(bare)}\`, and the TPA from 46,569 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
+  assert.ok(mon3.includes(`from \`B6C5h\` to \`${h4(bare)}\`, and the TPA from 46,533 bytes to ${tpa(bare)}, and ${tpa(bare - 0x300)} with \`GLCD.SVC\``), "(0006h) and the TPA with no shell");
   // With the shell: (0006h) is A700h with SHELL.SVC alone on the starter
   // card, as shell2.test measures it, MON3.SVC's pages lower, and GLCD.SVC
   // three pages lower still.
@@ -1601,7 +1601,7 @@ test("KG68 docs agree", async () => {
   const listedIn = (head) => [...mon3.slice(mon3.indexOf(head)).split(". ")[0].matchAll(/(\d+) `/g)].map((x) => Number(x[1]));
   assert.deepEqual(listedIn("calls implemented, 42 of them:"), built.filter((i) => !(i in TRANSLATED)), "the implemented calls");
   assert.deepEqual(listedIn("Translated, on TEC-OS's resources, 4 of them:"), Object.keys(TRANSLATED).map(Number), "the translated calls");
-  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes B9A9h–BFFFh/);
+  assert.match(mon3, /accepted disk hazard\.\*\* A MON-3 program that writes from the bare BDOS entry through BFFFh \(`B6C5h` on the starter, `B985h` on the two-volume reference card\)/);
   // The refused calls the doc lists are those the table sends to the error display, and RTCAPI.
   const refusedCalls = words.flatMap((w, i) => ((w === "DERR" && i !== 11) || w === "RTCAPI" ? [i] : []));
   const notBuilt = mon3.slice(mon3.indexOf("Not built, and refused:")).split(". Each")[0];

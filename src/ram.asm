@@ -155,6 +155,12 @@ CMDLEN:
   DS 1
 CMDTXT:
   DS 128
+
+; Outer hardware/BIOS return PC. Nested
+; calls inherit the context; warm boot
+; may abandon it.
+
+APIRTPC: DS 2
 CCPCLR:
 BOOTDRV:
   DS 1
@@ -189,12 +195,12 @@ LOADBUF:
 
 ; A5h guard between CCP scratch and the
 ; downward-growing stack. Guard plus
-; stack occupies 43 bytes. The host
+; stack occupy 59 bytes. The host
 ; stack test checks every guard byte on
 ; its built-in/error-recovery workloads.
 
 STKGUARD:
-  DS 43-CCPSTN
+  DS 11
 STKGUEND:
 CSTKBAS:
   DS CCPSTN

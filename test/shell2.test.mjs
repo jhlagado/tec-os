@@ -156,7 +156,7 @@ test("S2-6 cannot mount", () => {
     { geometry: "G8M", label: "WORK" },
   ]);
   const m = machine({ image });
-  assert.match(run(m, "CD C:WORK"), /\r\nCANNOT MOUNT\r\n/);
+  assert.match(run(m, "CD C:WORK"), /\r\nCD FAILED\r\n/);
   assert.equal(code(m), 0xff00);
   assert.match(run(m, "CD C:"), /\r\nC:PROJECTS\r\n/, "C: keeps its volume");
 });
@@ -167,7 +167,7 @@ test("S2-6 mutant: M3, CD without its other-drive refusal, mounts a volume twice
   run(m, "B:");
   const t = run(m, "CD SYSTEM");
   assert.doesNotMatch(t, /SYSTEM is on A:/);
-  assert.match(t, /CANNOT MOUNT/);
+  assert.match(t, /CD FAILED/);
 });
 
 test("S2-6 mutant: MR, CD of the volume already there going on to mount it, is refused as on another drive", async () => {
@@ -263,7 +263,7 @@ test("S2-4 cd refused on a failed flush", () => {
   m.runUntil(() => m.pc === main, 400_000_000, "WR's return");
   f.on = true;
   m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the prompt");
-  assert.match(run(m, "CD D:SPARE"), /\r\nCANNOT MOUNT\r\n/);
+  assert.match(run(m, "CD D:SPARE"), /\r\nCD FAILED\r\n/);
   assert.equal(code(m), 0xff00);
   f.on = false;
   assert.match(run(m, "CD D:"), /\r\nD:\r\n/, "D: keeps its volume, none");
@@ -854,7 +854,7 @@ test("S2-12 no mount.com", () => {
 
 test("S2-12 instruction", () => {
   const t = starterRecipe().instruction;
-  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "The drive you are on is written behind", "whenever TEC-OS waits for a key everything is on the card", "After CD A:", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
+  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "The drive you are on is written behind", "whenever TEC-OS waits for a key everything is on the card", "After CD A:", "at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
   assert.doesNotMatch(t, /MOUNT/, "and teaches no MOUNT");
   assert.doesNotMatch(t, /(B:|WORK)[^.]*written behind/, "nor that B: or WORK is written behind");
   assert.doesNotMatch(t, /At A>/);
@@ -864,7 +864,7 @@ test("S2-12 tpa", () => {
   const card = starterImage();
   volume(card, "A").write("STARTUP.CMD", Buffer.from("\x1a", "latin1"));
   const bare = shellMachine(card);
-  assert.equal(word(bare, 6) - 0x100, 46_569, "bare: four drives' vectors");
+  assert.equal(word(bare, 6) - 0x100, 46_533, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
   assert.equal(word(m, 6) - 0x100, 42_496, "with the shell, the starter card's STARTUP.CMD");
 });
@@ -884,7 +884,7 @@ test("S2-12 mutant: the recipe without drives leaves C: a G1M's slot, and CD of 
   };
   assert.match(await run2(starterRecipe()), /\r\nC:WORK\r\n/, "the card's recipe: WORK goes on C:");
   const { drives, ...without } = starterRecipe();
-  assert.match(await run2(without), /\r\nCANNOT MOUNT\r\n/);
+  assert.match(await run2(without), /\r\nCD FAILED\r\n/);
 });
 
 test("S2-12 old card upgraded", async () => {
@@ -938,7 +938,7 @@ test("S2-13 docs", () => {
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,569 bytes", "42,496", "41,728"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,533 bytes", "42,496", "41,728"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
   assert.match(flat("docs/mon3.md"), /from `A700h` to `9500h`/);
   // No doc teaches MOUNT.COM or a volume marked written behind.
