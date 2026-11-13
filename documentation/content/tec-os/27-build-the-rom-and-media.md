@@ -131,7 +131,7 @@ retained original inputs and the complete `format/FONT-NOTICES.txt`
 sources, edits and limits of the original glyph attribution
 (`format/FONT-NOTICES.txt:1-47`).
 
-The font occupies `C193h–C492h`. PICO accesses
+The font occupies `C198h–C497h`. PICO accesses
 `FONT` by label and GLCD obtains its address through numbered service 15
 (`src/pico.asm:253-260`, `src/services.asm:510-517`,
 `drivers/glcd.asm:60-64`). The tests use the same font parser
