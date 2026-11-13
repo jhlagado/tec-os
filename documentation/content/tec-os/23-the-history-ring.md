@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 23. The history ring
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -59,7 +60,7 @@ The resident shell lies outside the TPA, in fixed memory or EXPAND
 
 Only prompt input should enter command history. Applications also use
 function 10, so `SHLINE` marks the shell's call with `HFLAG = FFh` and
-clears it after `LINE` returns (`src/cpm/ccp.asm:251-282`, `src/ram.asm:229`).
+clears it after `LINE` returns (`src/cpm/ccp.asm:251-282`, `src/ram.asm:235`).
 `LINE` reads typed input only after pending pieces, startup and script
 input are exhausted (`drivers/shell.asm:236-282`). That prompt read is
 the only function-10 call with the flag set.
@@ -74,7 +75,7 @@ Abandoning an empty prompt with `^C` bypasses that completion path.
 Function 10 reaches `CHDROP` and warm boot before `LINDONE`
 (`src/cpm/bdos.asm:521-533`, `src/cpm/bdos.asm:96-106`). The warm clear
 removes `HFLAG`, preventing the abandoned read from enabling history in
-a later program (`src/boot.asm:398-403`, `src/ram.asm:158-288`).
+a later program (`src/boot.asm:398-403`, `src/ram.asm:164-294`).
 
 A typed chain is stored whole, including `!` and `&`. Taking its pieces
 from shell memory causes no additional history writes. Function 47,
@@ -89,7 +90,7 @@ returns. The shell folds command pieces afterwards (`src/cpm/bdos.asm:654-661`,
 `drivers/shell.asm:426-429`, `drivers/shell.asm:498-518`). Recalling `con`
 in this PICO9918 capture therefore retains lowercase text:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen con $'@start \x17'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen con $'@start \x17'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -127,7 +128,7 @@ differences. A duplicate requires `C = 0` and a final offset equal to
 keeps the existing entry. After two CON commands and `DIR *.CMD`, three
 `^W` presses therefore reach CON then stop: only two entries exist.
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen CON CON 'DIR *.CMD' $'@start \x17\x17\x17'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen CON CON 'DIR *.CMD' $'@start \x17\x17\x17'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -147,7 +148,7 @@ A:SYSTEM>DIR *.CMD
 
 STARTUP .CMD     128
 1 file, 128 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>CON
 CON: CRT:
 A:SYSTEM>
@@ -171,12 +172,12 @@ it wraps into newer text.
 
 The ROM reaches history through the shell table rather than numbered
 ROM services. Its four words are `LINE`, `PAGE`, `HREC` and `HSTORE`
-(`drivers/shell.asm:61-64`, `docs/shell.md:283-315`). `SHENT` reads an
+(`drivers/shell.asm:61-64`, `docs/shell.md:290-322`). `SHENT` reads an
 entry from the registered hook address (`src/cpm/ccp.asm:284-294`).
 
 History hooks run inside function 10 on the BDOS stack. `HREC` and
 `HSTORE` must therefore avoid BDOS calls. The shell declares six bytes of
-BDOS stack use for them (`docs/shell.md:309-310`, `drivers/shell.asm:32-43`).
+BDOS stack use for them (`docs/shell.md:316-317`, `drivers/shell.asm:32-43`).
 
 ## Recall in the line buffer
 
@@ -219,7 +220,7 @@ text, advancing pointer and count until zero or capacity
 After two typed commands, two `^W` presses and Return select CON in this
 capture:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen CON 'TYPE STARTUP.CMD' $'@start \x17\x17'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen CON 'TYPE STARTUP.CMD' $'@start \x17\x17'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -251,7 +252,7 @@ replacement. `@start` sends its keys together with Return
 
 Warm boot retains the ring because it clears resident workspace rather than
 service pages. `CPMINIT` clears `CCPCLR` through exclusive `BDOSRME`
-(`src/boot.asm:398-403`, `src/ram.asm:158-288`). `HFLAG` is cleared but
+(`src/boot.asm:398-403`, `src/ram.asm:164-294`). `HFLAG` is cleared but
 ring text and `HHEAD` survive. The next `LINE` resets recall position
 from that retained head.
 
@@ -259,7 +260,7 @@ Normal exit, function 0 and `^C` at an empty prompt all use warm boot
 (`src/cpm/bdos.asm:216-221`, `src/cpm/bdos.asm:521-533`). Here, `^W` after
 `^C` still recalls CON:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs CON '^C' $'@start \x17'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs CON '^C' $'@start \x17'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -285,7 +286,7 @@ establishing the empty boundary preserved by insertion. Recognised reset
 retains only drive selection, so history is still lost. In this capture,
 `^W` and Return after reset produce empty input:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs CON @reset $'@start \x17'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs CON @reset $'@start \x17'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -320,4 +321,4 @@ then completes empty input and produces another prompt
 UNLOAD also removes history when the shell is the newest service. Its
 pages, including the ring, become available again. At the restored ROM
 prompt nothing sets `HFLAG`, so `^W` and `^N` enter ordinary characters
-(`docs/shell.md:263-267`).
+(`docs/shell.md:270-274`).

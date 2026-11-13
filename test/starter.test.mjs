@@ -1,12 +1,8 @@
-// The starter card that `npm run media` builds, the one card, which the web
-// page runs too: exactly fifteen files on A:, each the bytes its source or
-// pin gives, and it boots to a MOUNT that lists its volumes. Its BOUNCE.BAS is
-// compiled by BAZA and runs its sprites on the PICO9918, steered by letters or
-// arrow keys, TAS builds DEMO.ASM into the demo, and MON3.SVC loads and runs
-// HELLO3.BIN, which writes the LCD. The web host brings a card saved before
-// the shell up to this card's SHELL.SVC and MON3.SVC.
-// Emulator evidence. TED.COM, TAS.COM, BAZA.COM, BAZA.RTL and BOUNCE.BAS
-// are pinned inputs (test/inputs.json).
+// The starter card built by tools/media.mjs is also the Viewer's card:
+// thirteen source/pinned files on A:, booting to the shell. BAZA builds
+// BOUNCE's game, TAS builds DEMO and HELLO3 from source, and MON3.SVC loads
+// HELLO3's generated image. The web host upgrades older system services.
+// Emulator evidence; external programs are pinned in test/inputs.json.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -45,7 +41,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly fourteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly thirteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -66,7 +62,6 @@ test("the starter card holds exactly fourteen files, each by its hash, the PICO9
     "DEMO.ASM": text("DEMO.ASM"),
     "MON3.SVC": (await mon3Svc()).file,
     "HELLO3.ASM": textAt("test/programs/hello3.asm"),
-    "HELLO3.BIN": await hello3(),
   };
   const a = volume(card, "A");
   assert.deepEqual(a.list().map((f) => f.name).sort(), Object.keys(want).sort());
@@ -99,7 +94,7 @@ test("the web page's card is the starter card, byte for byte, its instruction na
   assert.deepEqual(readdirSync(resolve(ROOT, "dist/files")).sort(), recipe.components.map((c) => c.name).sort(), "dist/files holds the recipe's files");
   assert.match(recipe.instruction, /TAS DEMO then DEMO/);
   assert.match(recipe.instruction, /BAZA BOUNCE then BOUNCE for a game on the PICO9918/);
-  assert.match(recipe.instruction, /MON3\.SVC, then LOAD HELLO3\.BIN and GO/);
+  assert.match(recipe.instruction, /TAS HELLO3 HELLO3\.BIN, then MON3\.SVC, LOAD HELLO3\.BIN and GO/);
   assert.match(recipe.instruction, /tap W\/A\/S\/D or the arrow keys, Q to quit/);
   assert.doesNotMatch(recipe.instruction, /CHAIN/);
   assert.ok(!volume(card, "A").list().some((f) => f.name === "DEMO.COM"), "no DEMO.COM: TAS DEMO makes it");
@@ -224,6 +219,7 @@ const HELLO3_ROWS = ["MON-3 ON TEC-OS     ", "LCD BY RST 10H      ", "DIGITS BY 
 // after MON3> must not see it.
 function hello3Round(card) {
   const m = boot(card, { tms: true, matrix: true, width: 40 });
+  assert.match(m.command("TAS HELLO3 HELLO3.BIN", { maxCycles: 3_000_000_000 }), /HELLO3\.BIN written/);
   assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
   assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
   m.type("GO\r");
@@ -275,6 +271,7 @@ function hello3OnTty(card) {
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   m.command("CON TTY");
   assert.ok(!m.videoConsole(), "the serial terminal is the console");
+  assert.match(m.command("TAS HELLO3 HELLO3.BIN", { maxCycles: 3_000_000_000 }), /HELLO3\.BIN written/);
   assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
   assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
   m.type("GO\r");
@@ -314,6 +311,7 @@ test("mutant: a MON3.SVC that waits for the keys whatever the console, and doesn
 function hello3KeyThenEsc(card) {
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   assert.ok(m.videoConsole(), "CRT: is the console");
+  assert.match(m.command("TAS HELLO3 HELLO3.BIN", { maxCycles: 3_000_000_000 }), /HELLO3\.BIN written/);
   assert.ok(line(m, "MON3.SVC").mon3, "MON3.SVC gives MON3>");
   assert.match(line(m, "LOAD HELLO3.BIN").out, /MON3>$/);
   m.type("GO\r");
@@ -341,12 +339,12 @@ test("mutant: a MON3.SVC whose matrix scan doesn't record the key leaves the 1 h
   assert.throws(() => hello3KeyThenEsc(card), /no key 1 on HELLO3's digits, and let go/);
 });
 
-// The card's HELLO3.ASM builds on the card into the HELLO3.BIN beside it.
-test("on the card, TAS HELLO3 HELLO3.BIN rebuilds HELLO3.BIN as it is", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
+// The starter holds only the source; the card's assembler makes the image.
+test("on the card, TAS HELLO3 HELLO3.BIN builds the source-only example", { skip: PAGE_SKIP, timeout: 900_000 }, async () => {
   const card = Uint8Array.from(starter().card);
   const want = await hello3();
   const m = boot(card);
-  m.command("ERA HELLO3.BIN");
+  assert.ok(!volume(card, "A").list().some((f) => f.name === "HELLO3.BIN"), "no prebuilt image");
   assert.match(m.command("TAS HELLO3 HELLO3.BIN", { maxCycles: 3_000_000_000 }), /HELLO3\.BIN written/);
   const built = Buffer.from(volume(card, "A").read("HELLO3.BIN"));
   assert.equal(sha(built.subarray(0, want.length)), sha(want), "the card's HELLO3.BIN");

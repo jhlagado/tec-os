@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 20. A file through the BDOS
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -150,13 +151,13 @@ explains 45. All other numbers above 40 immediately return zero
 (`src/cpm/bdos.asm:145-146`).
 
 A function from 0 to 40 has a routine in `FNTAB`, a table of 41 words
-(`src/tables.asm:83-90`, `src/cpm/bdos.asm:147-154`). Functions 38 and 39,
+(`src/tables.asm:85-92`, `src/cpm/bdos.asm:147-154`). Functions 38 and 39,
 which CP/M 2.2 leaves undefined, return 0.
 
 Some functions take an FCB and work on the drive its first byte names. That
 drive is selected before the routine runs. `FCBMAP` has a bit for each
 function, set for 15, 16, 17, 19 to 23, 30, 33 to 35 and 40
-(`src/tables.asm:91`, `src/cpm/bdos.asm:158-177`). For those `BENTRY` calls
+(`src/tables.asm:93`, `src/cpm/bdos.asm:158-177`). For those `BENTRY` calls
 `FCBSEL`, which reads the FCB's first byte: 0 for the default drive and 1 to
 16 for A to P (`src/cpm/bdosfile.asm:176-195`). A `?` is allowed only for
 function 17, where it selects every entry of the default drive's directory.
@@ -364,7 +365,7 @@ pointers without reading. The DPH state then determines reuse or rescan:
 
 - If the changed flag is set, the drive is taken out of `LOGINV` and put in
   `WARMV`, the vector of drives to rebuild to their mark
-  (`src/ram.asm:237`). At its next selection `LOGIN` builds the vector again
+  (`src/ram.asm:243`). At its next selection `LOGIN` builds the vector again
   but reads the directory only up to the mark (`src/cpm/bdoslog.asm:236-248`).
   The mark covers every entry recorded as used so the scan can omit the
   remaining empty entries.
@@ -407,7 +408,7 @@ that volume's allocation-vector and DPB pointers (`src/cpm/bdosfn.asm:48-53`,
 The file lifecycle is implemented by Portable CP/M's BDOS, written from
 the documented CP/M 2.2 interface without Digital Research source
 (`src/cpm/PROVENANCE.md:3-7`). TEC-OS assembles its six files in this order
-(`src/rom.asm:35-40`):
+(`src/rom.asm:36-41`):
 
 | File | Contents |
 | --- | --- |
@@ -418,21 +419,21 @@ the documented CP/M 2.2 interface without Digital Research source
 | `bdoslog.asm` | the directory records, the login and the allocation vectors |
 | `bdoscon.asm` | the errors and the console's output |
 
-The ROM map places the BDOS between `BDOSBAS` at `E3C3h` and its last
-byte at `F19Dh`, before `SVCDSP`: 3,547 bytes. Chapter 27 describes the ROM
+The ROM map places the BDOS between `BDOSBAS` at `E573h` and its last
+byte at `F34Dh`, before `SVCDSP`: 3,547 bytes. Chapter 27 describes the ROM
 layout. The function table and four disk-error strings also reside in ROM
-(`src/tables.asm:83-91`, `src/text.asm:71-77`). Hooks must therefore use a
+(`src/tables.asm:85-93`, `src/text.asm:71-77`). Hooks must therefore use a
 writable RAM interface.
 
 Writable working state occupies `BDOSRAM` through exclusive `BDOSRME`,
-`BE77h–BEFFh` on the starter card (`src/ram.asm:209-288`). Its top contains
-the 54-byte stack (`src/layout.asm:113`). Warm boot clears this block as
+`BE6Dh–BEFFh` on the starter card (`src/ram.asm:215-294`). Its top contains
+the 64-byte stack (`src/layout.asm:110`). Warm boot clears this block as
 a fresh disk load would, then sets DMA to `0080h` (`src/boot.asm:398-405`).
 
 State needed across warm boots remains outside that cleared block.
 `LOGINV` records built allocation vectors in BIOS workspace (`src/ram.asm:69`).
 `PRGCODE`, function 108's result, sits above the RAM BIOS table and clears
-only at cold boot (`src/ram.asm:366-367`, `src/boot.asm:61-65`). Each DPH
+only at cold boot (`src/ram.asm:372-373`, `src/boot.asm:61-65`). Each DPH
 retains its drive pointers and scan state, following Chapter 18's layout.
 
 BDOS-to-BIOS calls use offsets into the RAM table at `BF00h`
@@ -474,7 +475,7 @@ Returning modes let the program handle the failure. `ERRMODE` = `FFh`
 returns `A` = `FFh` with the error code in `H`, printing nothing and keeping
 the command chain. `FEh` prints first then returns the same result.
 Warm boot clears `ERRMODE`, so every program begins in default mode
-(`src/ram.asm:216-217`). A failed read or write leaves the FCB on the
+(`src/ram.asm:222-223`). A failed read or write leaves the FCB on the
 untransferred record, matching CP/M 3 (`src/cpm/bdosrec.asm:69-82`,
 `src/cpm/bdosrec.asm:220-225`).
 

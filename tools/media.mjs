@@ -200,12 +200,6 @@ async function main() {
   const rtl = pinnedBytes("BAZA.RTL");
   const run = await tasAssembler();
   const program = (name) => assembleDistributionCom(ROOT, run, name);
-  /** A MON-3 program, whose own ORG puts it at 4000h. */
-  async function mon3Program(name, source) {
-    const { image, origin } = await run({ root: ROOT, entry: source, origin: 0x4000, phase: "final", target: name, flat: true });
-    if (origin !== 0x4000) throw new Error(`${name} starts at ${hex(origin)}, not 4000h`);
-    return image;
-  }
   const files = [];
   for (const p of PROGRAMS) {
     files.push({ ...p, bytes: await program(p.name) });
@@ -230,13 +224,10 @@ async function main() {
   // DEMO.COM is built and checked here, but the card holds only its source:
   // TAS DEMO on the card makes it.
   files.push({ name: "DEMO.ASM", description: "a demonstration of the hardware, LCD, digits, LEDs and PICO9918, as source: TAS DEMO builds DEMO.COM, TED DEMO.ASM reads it", bytes: text("DEMO.ASM") });
-  // MON3.SVC, the MON-3 session service, and HELLO3, a MON-3 program that
-  // writes the LCD through RST 10h, as source and as the image MON-3 loads at
-  // 4000h, assembled as the ROM's programs are.
+  // Keep HELLO3 as source: TAS on the card builds its 4000h image before
+  // MON3.SVC loads it. The monitor itself remains ready to enter.
   const mon3 = await assembleMon3(ROOT, run);
   files.push({ name: "MON3.SVC", description: "MON-3 programs on TEC-OS: MON3.SVC gives MON3>, where LOAD, GO and EXIT work", bytes: mon3 });
-  const hello3 = await mon3Program("HELLO3.BIN", "test/programs/hello3.asm");
-  files.push({ name: "HELLO3.BIN", description: "a MON-3 program: at MON3>, LOAD HELLO3.BIN then GO writes the LCD; AD (Esc on the matrix) returns", bytes: hello3 });
   files.push({ name: "HELLO3.ASM", description: "HELLO3's source: TAS HELLO3 HELLO3.BIN builds it, TED HELLO3.ASM reads it", bytes: textAt("test/programs/hello3.asm") });
 
   // A recipe's revision rises when its set of files changes, not when a
@@ -245,9 +236,9 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "13",
+    revision: "14",
     name: "TEC-OS starter",
-    instruction: "At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. The drive you are on is written behind, and whenever TEC-OS waits for a key everything is on the card. After CD A: to a volume without SHELL.SVC, a reset keeps it; power off (Power cycle on the page) gives the card's own drives again.",
+    instruction: "At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, first type TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. The drive you are on is written behind, and whenever TEC-OS waits for a key everything is on the card. After CD A: to a volume without SHELL.SVC, a reset keeps it; at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC to restore the shell. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
     drives: 4,
     volumes: [

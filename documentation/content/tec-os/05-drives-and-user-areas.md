@@ -7,12 +7,13 @@ nav_group: "Using the machine"
 
 # 5. Drives and user areas
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -36,7 +37,7 @@ GAMES and SPARE are present on the card but unassigned. The prompt
 `CD ?` lists the card's volumes, in the card's order, each with the drive it
 is on:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CD ?'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -68,7 +69,7 @@ drive can be named explicitly, as in `DIR B:` or `TYPE A:SAMPLE.ASM`.
 Selecting an empty drive or naming a file on it gives `Select`. This
 starter-card run selects B and then uses empty drive D:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs B: '@start D:' '@key x' '@start DIR D:' '@key x'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: '@start D:' '@key x' '@start DIR D:' '@key x'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -108,7 +109,7 @@ from area 0's listing even on the same volume. This example uses
 `SAVE 1 B:MINE.COM` to copy a page of existing program memory into a
 demonstration file in area 3. No file is created or moved in area 0:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'USER 3' 'SAVE 1 B:MINE.COM' 'DIR B:' TAS 'USER 0' 'DIR B:'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'USER 3' 'SAVE 1 B:MINE.COM' 'DIR B:' TAS 'USER 0' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -173,7 +174,7 @@ current area and area 0 only. Loading from A also leaves the current
 drive unchanged. In this capture, both `A:TAS` and plain `TAS` run
 A's program and print its usage line. The prompt remains on B:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs B: A:TAS TAS STARTUP.CMD. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: A:TAS TAS STARTUP.CMD. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -225,8 +226,9 @@ inside the command processor.
 
 ## Changing a drive's volume
 
-`CD`, a command of the shell, puts a volume on a drive. `CD NAME` puts the
-volume labelled NAME on the current drive, A included. `CD D:NAME` puts it on
+`CD` selects the volume whose directory a drive presents. It works in both
+the bare ROM CCP and the shell. `CD NAME` puts the volume labelled NAME on
+the current drive, A included. `CD D:NAME` puts it on
 D and leaves you where you are. `CD` alone and `CD D:` show a drive's volume,
 read from the card again. A volume is on at most one drive, so `CD` of a
 volume already on another drive is refused and names that drive. To take a
@@ -236,7 +238,7 @@ slot large enough for either geometry, so any volume fits any drive.
 This run assigns GAMES to D, displays that assignment and attempts to
 put WORK on C before listing all volumes:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CD D:GAMES' 'CD D:' 'CD C:WORK' 'CD ?'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD D:GAMES' 'CD D:' 'CD C:WORK' 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -273,7 +275,7 @@ Each rejected command sets the failure return code and skips a following
 
 TEC-OS holds some recent writes in memory in its block cache. Before it
 changes a drive, the mount writes them to the card. If a write fails, the
-mount is refused with `CANNOT MOUNT` and the drive keeps its volume. The
+mount is refused with `CD FAILED` and the drive keeps its volume. The
 same message means the volume is too large for the drive's slot, which can
 happen on a card that reserves slots only for the drives mounted at cold
 boot ([Chapter 15](15-state-and-memory.md#allocation-vectors-below-the-workspace)).
@@ -284,7 +286,7 @@ change to the current drive immediately reselects it to use the new
 volume. The shell fills its prompt-label table at its first prompt
 and updates it through `CD`. A program using ROM mount calls can
 therefore leave an old label displayed. `CD` alone rereads the card
-and updates it (`docs/shell.md:141-191`).
+and updates it (`docs/shell.md:142-198`).
 
 ### CD on drive A
 
@@ -292,9 +294,10 @@ The commands found on A follow its volume, and so does the shell's next
 start. `CD A:GAMES` puts GAMES on A. A program on SYSTEM, such as TAS, is then
 not found, and `CD A:SYSTEM` brings SYSTEM back. A reset keeps the drives'
 selection, so a reset after `CD A:GAMES` starts from GAMES, which has no
-startup file and no shell. The bare prompt `A>` follows and there is no `CD`:
+startup file and no shell. The bare prompt `A>` follows. ROM CD commands
+remain available to restore SYSTEM:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CD A:GAMES' TAS @reset. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD A:GAMES' TAS @reset 'CD ?' 'CD A:SYSTEM' SHELL.SVC. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -316,11 +319,25 @@ A: GAMES
 B: WORK
 C: PROJECTS
 
-A>
+A>CD ?
+
+SYSTEM
+WORK        B:
+PROJECTS    C:
+GAMES       A:
+SPARE
+A>CD A:SYSTEM
+A:SYSTEM
+A>SHELL.SVC
+
+A:SYSTEM>
 ```
 
-Power off and on, or Power cycle on the web page, gives the card's own drives
-and the shell again. A `CD` in a script cannot change the drive the script
+At the bare prompt, use `CD ?`, `CD A:SYSTEM` and `SHELL.SVC` to restore
+the shell. CD preserves the current drive and user area. The starter's shell
+is in user 0; use `USER 0` before loading it if you changed the area.
+Reset starts in user 0. Power cycle restores the card's default drive
+assignments and startup. A `CD` in a script cannot change the drive the script
 is read from: it is refused with `CD?`, and the script goes on.
 
 ## Volume and file protection
@@ -360,7 +377,7 @@ in location, size, geometry and flags and fit the drive's slot.
 This run assigns GAMES to D and then resets. The boot banner and volume
 listing show that D still contains GAMES:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CD D:GAMES' @reset 'CD ?'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD D:GAMES' @reset 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -436,7 +453,7 @@ with PICO9918 selected. Startup installed the shell but its `GLCD.SVC`
 line installed no driver. Typing `GLCD.SVC` at the prompt then installed
 the driver while leaving the PICO9918 selected:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico GLCD.SVC SERVICES UNLOAD SERVICES UNLOAD SERVICES UNLOAD. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico GLCD.SVC SERVICES UNLOAD SERVICES UNLOAD SERVICES UNLOAD. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -490,7 +507,7 @@ instead ends the command with the BDOS's `Bad Sector` message.
 A second graphics LCD driver cannot install over the first. In this
 GLCD-console run, startup had already installed the shell and the driver:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board glcd GLCD.SVC SERVICES. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board glcd GLCD.SVC SERVICES. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -526,7 +543,9 @@ instructions. HELLO3 in [Chapter 1](01-first-session.md) is an example.
 The service supplies supported MON-3 calls while retaining TEC-OS's card
 access and BDOS.
 
-`MON3.SVC` installs the service if necessary and enters its `MON3>` prompt.
+First build the source-only example with `TAS HELLO3 HELLO3.BIN` at the
+CP/M prompt. Then `MON3.SVC` installs the service if necessary and enters
+its `MON3>` prompt.
 `EXIT` ends the session while leaving the service installed. The same
 command can later re-enter it without reading the file again.
 
@@ -562,11 +581,11 @@ line buffer and recovery stack above the MON-3 program's load area.
 The program itself uses MON-3's stack below `0880h`.
 
 On a card with nothing else installed, the BDOS entry address stored
-at `0006h` changes from `B6E9h` to `A400h`. Program memory falls from 46,569 bytes
+at `0006h` changes from `B6C5h` to `A400h`. Program memory falls from 46,533 bytes
 to 41,728, or 40,960 with GLCD.SVC too. On the starter card, the
 shell is already installed. Installing MON3 changes that address from `A700h` to `9500h` and
 reduces program memory from 42,496 to 37,888 bytes. Adding
-GLCD.SVC gives `9200h` and 37,120 bytes (`docs/mon3.md:45-57`).
+GLCD.SVC gives `9200h` and 37,120 bytes (`docs/mon3.md:47-59`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan
@@ -594,7 +613,7 @@ return also sets the panel's modes again, so the console's text shows again
 whatever mode the program left the panel in.
 
 The service cannot recover a program that hangs: the reset button is the
-way out. A program that writes `B6E9h–BFFFh`, which holds the BDOS entry,
+way out. A program that writes `B6C5h–BFFFh`, which holds the BDOS entry,
 the allocation vectors, TEC-OS's workspace and its BIOS table, can damage
 TEC-OS's disk tables. The service writes pending changes before `GO` and
 resets the drives after each return to limit that. Its messages are in

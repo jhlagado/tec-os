@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 16. Reset and boot
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -100,7 +101,7 @@ COLD orders the work accordingly (`src/boot.asm:35-115`):
     (TPA). There are no loaded services yet (`src/boot.asm:106-107`).
 12. The ROM's seventeen BIOS jumps are copied to `BF00h`. Warm boot
     leaves this RAM table in place, including replacement entries
-    (`src/boot.asm:108-111`, `src/layout.asm:98-99`).
+    (`src/boot.asm:108-111`, `src/layout.asm:99-100`).
 13. `SHOWVOL` prints one console line per mounted drive. `LCDVOLS` writes
     the letters and labels of A and B to LCD rows 1 and 2
     (`src/boot.asm:112-113`, `src/boot.asm:496-523`, `src/lcd.asm:104-137`).
@@ -133,9 +134,9 @@ validation rereads required table blocks from the card even if cached
 
 The resident workspace and stacks require `8000h–BFFFh`, with cache storage in
 the other bank. History uses shell pages rather than either fixed bank area
-(`docs/shell.md:22-30`). RAMCHK must establish both bank views before console
+(`docs/shell.md:23-31`). RAMCHK must establish both bank views before console
 initialisation while still using the fixed-RAM stack (`src/boot.asm:420-440`,
-`src/layout.asm:94`).
+`src/layout.asm:95`).
 
 RAMPAT writes `55h` at `8000h` and `AAh` at `BFFFh` before reading either. It
 repeats with the patterns exchanged. A floating bus at an empty U9 socket
@@ -192,7 +193,7 @@ this build's STUBAD location and BENTRY address, so another layout may fail
 Recognition copies the 32-byte drive table to RSLBUF at `0100h`. That
 fixed-RAM buffer survives clearing and diagnostic retries. Failure instead
 marks the saved A geometry zero and uses the card's defaults
-(`src/boot.asm:214-225`, `src/layout.asm:121-134`, `src/volsvc.asm:13-22`).
+(`src/boot.asm:214-225`, `src/layout.asm:118-131`, `src/volsvc.asm:13-22`).
 
 Page-zero jumps are cleared early and restored only after mounting. Reset
 during that interval, including at diagnostics, cannot recognise the previous
@@ -216,7 +217,7 @@ empty even if the card assigns it a volume by default
 Here `CD D:GAMES` assigns GAMES to an empty D. After reset the descriptors
 still match so the boot list includes D:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CD D:GAMES' @reset. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CD D:GAMES' @reset. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -300,7 +301,7 @@ before cancellation (`src/cpm/bdos.asm:103-105`, `src/cpm/bdos.asm:521-531`,
 Prompt input uses function 10 through either the shell's LINE entry or the
 bare CCP. An empty-prompt `^C` therefore takes the same exit:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs '^C'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs '^C'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -336,7 +337,7 @@ Warm boot reconstructs the environment in this sequence:
    span, restores DMA to `0080h`, sets the command maximum to 127 and
    fills the CCP stack guard with `A5h`. It also clears `BUFOK`, invalidating
    the old no-pre-read key (`src/boot.asm:144`, `src/boot.asm:398-418`,
-   `src/ram.asm:141-155`, `src/ram.asm:209-217`).
+   `src/ram.asm:141-155`, `src/ram.asm:215-223`).
 6. `VREST` restores the display mode for a video console. `VTREGR` resets
    the scroll region to the whole screen (`src/boot.asm:145-148`,
    `src/term.asm:172-181`).
@@ -369,8 +370,9 @@ command-source checks. Later warm boots retain its file position
 
 ## Boot costs
 
-The retained measurements below use the host model, serial board and starter
-card. At 4 MHz each 4,000,000 T-states represents a second.
+The retained measurements below use TEC-OS `c4ec0f4` with the host model,
+serial board and starter card. They predate the current stack reservations.
+At 4 MHz each 4,000,000 T-states represents a second.
 
 Cold boot took 1,371,831 T-states from reset's first instruction to CCP entry,
 about 0.34 seconds. MEMINIT used 346,677 mainly clearing EXPAND 1. Container

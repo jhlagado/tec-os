@@ -7,12 +7,13 @@ nav_group: "Reference"
 
 # Appendix D. Error messages
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -146,7 +147,7 @@ explains when they are written and cleared.
 
 Each failure in this section sets the return code to `FF00h`. Under the
 shell an `&` piece after it is then skipped, and a `!` piece still runs
-(`src/cpm/ccp.asm:563-570`, `210-227`, `docs/shell.md:52-88`).
+(`src/cpm/ccp.asm:563-570`, `210-227`, `docs/shell.md:53-89`).
 [Chapter 13](13-results-and-command-chains.md)
 explains the code. COPY, DEL and SERVICES are the
 shell's commands, and the shell prints its own refusals in the same form,
@@ -195,9 +196,9 @@ service gives a distinct cause.
 | `UNLOAD` | The newest service cannot be removed or none exists. Reasons include an active INIT/REMOVE, a mismatched top, a non-removable flag or carry from REMOVE. | Remove services newest first and investigate the retained service. | [Chapter 5](05-drives-and-user-areas.md), `src/cpm/ccpcmd.asm:13-18`, `src/loader.asm:97-114` |
 | `COPY` | A missing/ambiguous name, identical source and destination or text after the destination. The shell checks these conditions. Without the shell `COPY` is an unknown program name. | Give one source and a different destination with no further operand. | `drivers/shellcmd.asm:54-92` |
 | `ERA` | A missing, extra or invalid name. `DEL`, the shell's other name for ERA, fails on the same conditions with the same output. | `ERA NAME` or `DEL NAME`. | `src/cpm/ccpmut.asm:10-14`, `drivers/shell.asm:543-552` |
-| `&WORD` | A typed, script or startup line whose first piece starts with `&`. None of the line runs. | Remove the `&`: a new line runs whatever the last line returned. | `docs/shell.md:74-76` |
-| `:WORD` | A piece starting with CP/M 3's `:` prefix, which TEC-OS does not provide. | Join the pieces with ` &` instead. | `docs/shell.md:90-95` |
-| `NAME.CMD` | Under the shell: no such script on the named or current drive in the current user, a script named inside another script, or a script name with further pieces after it. With no shell a typed `NAME.CMD` runs `NAME.COM`, and this is the program's missing name. | Check the name and drive, and run a script from its own line. | `docs/shell.md:97-119`, `drivers/shell.asm:609-645` |
+| `&WORD` | A typed, script or startup line whose first piece starts with `&`. None of the line runs. | Remove the `&`: a new line runs whatever the last line returned. | `docs/shell.md:75-77` |
+| `:WORD` | A piece starting with CP/M 3's `:` prefix, which TEC-OS does not provide. | Join the pieces with ` &` instead. | `docs/shell.md:91-96` |
+| `NAME.CMD` | Under the shell: no such script on the named or current drive in the current user, a script named inside another script, or a script name with further pieces after it. With no shell a typed `NAME.CMD` runs `NAME.COM`, and this is the program's missing name. | Check the name and drive, and run a script from its own line. | `docs/shell.md:98-120`, `drivers/shell.asm:609-645` |
 | `REN` | Invalid `NEW=OLD` syntax, a missing/ambiguous name or two different explicit drives. | Put a drive on one name or the same drive on both. | `src/cpm/ccpmut.asm:81-116` |
 | `SAVE` | An invalid decimal count, a count of 256 or more, a count reaching the BDOS-entry page or a missing/ambiguous filename. | `SAVE n NAME.COM` with a count within the memory bound. | `src/cpm/ccpcmd.asm:266-307` |
 | `USER` | The argument is not a single number from 0 to 15. | `USER n`. | `src/cpm/ccpcmd.asm:223-246` |
@@ -261,7 +262,7 @@ PICO installable, so its next attempt still leaves no service installed.
 GLCD installs and selects its console. `SERVICES` also fails because that
 command requires the shell:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card old.img --board glcd 'REN PICO.SVC=PICO.DRV' 'REN GLCD.SVC=GLCD.DRV' PICO.SVC GLCD.SVC CON SERVICES. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card old.img --board glcd 'REN PICO.SVC=PICO.DRV' 'REN GLCD.SVC=GLCD.DRV' PICO.SVC GLCD.SVC CON SERVICES. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -313,7 +314,7 @@ With `FEh` the message is printed first and the error returns the same way.
 Returning an error preserves the remaining chain. A sequential read or write
 that returns an error leaves
 the FCB on the record it didn't read or write. Every warm boot puts the default
-back (`src/cpm/bdos.asm:223-235`, `src/ram.asm:216-217`).
+back (`src/cpm/bdos.asm:223-235`, `src/ram.asm:222-223`).
 [Chapter 20](20-a-file-through-the-bdos.md#errors-returned-or-reported) explains them and
 [Appendix A](appendix-a-bdos-functions.md#the-errors) lists them by function.
 
@@ -336,7 +337,7 @@ pending block until its next flush point.
 
 Every console read writes every changed line to the card. Lines remaining
 at warm boot therefore contain later changes or writes that previously
-failed (`docs/recovery.md:1-60`, `docs/recovery.md:98-152`). Warm boot
+failed (`docs/recovery.md:1-82`, `docs/recovery.md:120-174`). Warm boot
 attempts to write each changed block and drops a cache line whose write
 fails. It does not undo earlier successful or partial physical writes.
 Any failure prints the message once and cancels the rest of the command
@@ -361,7 +362,7 @@ the next warm boot are dropped and produce `Write lost`
 
 `MOUNT`, unmount and function 48 retain a failed line for another flush.
 Only warm boot drops a flushed line that still fails
-(`docs/recovery.md:75-96`). Function 48 writes every changed block and
+(`docs/recovery.md:97-118`). Function 48 writes every changed block and
 returns `A` = `FFh` if any write fails
 (`src/cpm/bdos.asm:237-257`). [Chapter 19](19-cache-and-persistence.md)
 explains these paths and the logged-drive policy.
@@ -370,7 +371,7 @@ explains these paths and the logged-drive policy.
 
 A failed `CD` leaves the drive's volume in place. Each rejection sets the
 return code to `FF00h`, so a following `&` piece is skipped
-(`drivers/shellcd.asm:17-165`, `docs/shell.md:141-191`). The shell prints the
+(`drivers/shellcd.asm:17-165`, `docs/shell.md:142-198`). The shell prints the
 messages below.
 [Chapter 5](05-drives-and-user-areas.md#changing-a-drive-s-volume) gives the
 operator commands and [Chapter 18](18-card-blocks-and-volumes.md) explains
@@ -378,17 +379,17 @@ the volume services.
 
 | Message | Cause | Remedy | See |
 | --- | --- | --- | --- |
-| `CD?` | A name of more than 11 characters, a drive past D, text after the name or after `?`, or CD of the drive the running script is read from. A script goes on to its next line. | `CD ?` lists the card's volumes. In a script, put the volume on another drive. | `drivers/shellcd.asm:17-82`, `docs/shell.md:184-191` |
+| `CD?` | A name of more than 11 characters, a drive past D, text after the name or after `?`, or CD of the drive the running script is read from. A script goes on to its next line. | `CD ?` lists the card's volumes. In a script, put the volume on another drive. | `drivers/shellcd.asm:17-82`, `docs/shell.md:194-198` |
 | `NAME?` | No volume on the card has that label. | List the labels with `CD ?`. | `drivers/shellcd.asm:99-103`, `143-152` |
 | `NAME is on B:` | The volume is already on another drive. A volume is never on two drives. | Use that drive, or put another volume there first. | `drivers/shellcd.asm:104-109`, `154-163` |
-| `CANNOT MOUNT` | The ROM's `MOUNT` service refused: the volume is too large for the drive's slot, or the flush before the change failed. The flush keeps a failed line for the next flush and prints no `Write lost` on this path. | Choose a drive whose slot fits, or recover the card if a write failed. | `drivers/shellcd.asm:110-117`, `drivers/shellcd.asm:164`, `src/volsvc.asm:211-265`, `src/volsvc.asm:360-389` |
+| `CD FAILED` | The ROM's `MOUNT` service refused: the volume is too large for the drive's slot, or the flush before the change failed. The flush keeps a failed line for the next flush and prints no `Write lost` on this path. | Choose a drive whose slot fits, or recover the card if a write failed. | `drivers/shellcd.asm:110-117`, `drivers/shellcd.asm:164`, `src/volsvc.asm:211-265`, `src/volsvc.asm:360-389` |
 
 ## TED's load error
 
 The starter card's TED (Thorium `a2fe556`) prints this
 line and returns to the prompt when the file it is opening holds a byte it
 rejects
-(`Thorium a2fe556:README.md:25-30`, `docs/compatibility.md:222`,
+(`Thorium a2fe556:README.md:25-30`, `docs/compatibility.md:223`,
 `test/ted.test.mjs:94-122`). An older TED, Thorium `967678c`, also rejects `00h` padding at the end of a file and gives
 error 03 without a line or column
 (`Thorium 967678c:ted/src/load.asm:48-53`, `121-125`).
@@ -407,13 +408,13 @@ gives for entering a service.
 
 | Message | Cause | Action | See |
 | --- | --- | --- | --- |
-| `?` | The `MON3>` line is not `LOAD`, `GO` or `EXIT` in a form they take. For `LOAD`: a drive beyond P, a name or type too long or holding `?` or `*`, a file not found or empty, bytes outside `0100h` to the BDOS entry's page or inside `0800h–08FFh`, or a fault anywhere in a HEX file. `GO` with no address prints it when no load has ended well. A refused load writes nothing and leaves nothing runnable. | Correct the line, the file or the address. | [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session), `docs/mon3.md:59-96` |
-| `RST nn held: UNLOAD or reset` | At entry a restart slot from `08h` to `30h` holds a `JP`: a service's claim, or a jump into ROM that a program left. The entry is refused with return code FF00h and nothing changed. | `UNLOAD` the service that holds the slot, or reset. | `docs/mon3.md:196-199` |
-| `RST 38 held: no interrupts` | `0038h` held a `JP` at entry, which the session leaves alone. A program's interrupts through MON-3's `USER_INT` are not delivered. | The session runs without them. | `docs/mon3.md:183`, `230` |
-| `MON3 active` | A program in a session called the service's entry. The call returns to the program with FF00h. | None. | `docs/mon3.md:200-201` |
-| `BRK nnnn` | The program ran `RST 30h`, MON-3's breakpoint. The session prints `BRK` with the address and returns to `MON3>`. There is no resume. | None: the session is at `MON3>`. | `docs/mon3.md:136-138`, `229` |
-| `Tables damaged: EXIT and reset` | After the program returned, the checksum over the service and TEC-OS's RAM BIOS table differed from the one `GO` took. Every later `LOAD` prints it again and is refused without opening the file, and each re-entry prints it. `GO` and `EXIT` still run. | `EXIT`, then press reset, which also removes the service. | `docs/mon3.md:144-158`, `drivers/mon3.asm:1191-1192` |
-| MON-3's error display on the digits | The program called an `RST 10h` or `RST 18h` function that the session does not build, or a number beyond MON-3's calls. The call's outputs are not written. | Press a key. The call returns to the program as a key press would. | [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session), `docs/mon3.md:225-226`, `262-272`, `318-327` |
+| `?` | The `MON3>` line is not `LOAD`, `GO` or `EXIT` in a form they take. For `LOAD`: a drive beyond P, a name or type too long or holding `?` or `*`, a file not found or empty, bytes outside `0100h` to the BDOS entry's page or inside `0800h–08FFh`, or a fault anywhere in a HEX file. `GO` with no address prints it when no load has ended well. A refused load writes nothing and leaves nothing runnable. | Correct the line, the file or the address. | [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session), `docs/mon3.md:61-98` |
+| `RST nn held: UNLOAD or reset` | At entry a restart slot from `08h` to `30h` holds a `JP`: a service's claim, or a jump into ROM that a program left. The entry is refused with return code FF00h and nothing changed. | `UNLOAD` the service that holds the slot, or reset. | `docs/mon3.md:198-201` |
+| `RST 38 held: no interrupts` | `0038h` held a `JP` at entry, which the session leaves alone. A program's interrupts through MON-3's `USER_INT` are not delivered. | The session runs without them. | `docs/mon3.md:185`, `232` |
+| `MON3 active` | A program in a session called the service's entry. The call returns to the program with FF00h. | None. | `docs/mon3.md:202-203` |
+| `BRK nnnn` | The program ran `RST 30h`, MON-3's breakpoint. The session prints `BRK` with the address and returns to `MON3>`. There is no resume. | None: the session is at `MON3>`. | `docs/mon3.md:138-140`, `231` |
+| `Tables damaged: EXIT and reset` | After the program returned, the checksum over the service and TEC-OS's RAM BIOS table differed from the one `GO` took. Every later `LOAD` prints it again and is refused without opening the file, and each re-entry prints it. `GO` and `EXIT` still run. | `EXIT`, then press reset, which also removes the service. | `docs/mon3.md:146-160`, `drivers/mon3.asm:1191-1192` |
+| MON-3's error display on the digits | The program called an `RST 10h` or `RST 18h` function that the session does not build, or a number beyond MON-3's calls. The call's outputs are not written. | Press a key. The call returns to the program as a key press would. | [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session), `docs/mon3.md:227-228`, `264-274`, `320-329` |
 
 ## Lines that report no fault
 

@@ -15,14 +15,16 @@ This branch is the TEC-OS release 1 candidate in Origo's release roadmap
   with BAZA.
 - One card (KD-278): the starter card is the Viewer's card too. It has four
   drives and five volumes, SYSTEM on A:, WORK on B:, PROJECTS on C:, and
-  GAMES and SPARE on none, and A: holds fourteen files: `BAZA.COM`,
+  GAMES and SPARE on none, and A: holds thirteen files: `BAZA.COM`,
   `BAZA.RTL`, `BOUNCE.BAS`, `DEMO.ASM`, `GLCD.SVC`, `HELLO3.ASM`,
-  `HELLO3.BIN`, `MON3.SVC`, `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`,
+  `MON3.SVC`, `SAMPLE.ASM`, `SHELL.SVC`, `STARTUP.CMD`,
   `TAS.COM`, `TED.COM` and `TIMES.BAS`. `TAS DEMO` builds `DEMO.ASM` into the demo, and
-  `MON3.SVC`, then `LOAD HELLO3.BIN` and `GO`, runs a MON-3 program that
+  `TAS HELLO3 HELLO3.BIN` builds the source-only example, then
+  `MON3.SVC`, `LOAD HELLO3.BIN` and `GO` run a MON-3 program that
   writes the LCD (KD-277).
-- Drives and volumes (KD-298, KD-299): under `SHELL.SVC`, `CD` puts a volume
-  on any of the four drives and the prompt shows it; `DIR` gives each file's
+- Drives and volumes (KD-298, KD-299): `CD` selects a named directory on any
+  of the four drives, including at the bare ROM prompt; the shell prompt shows
+  that selection; `DIR` gives each file's
   size, and `CLS`, `ECHO` and `PAUSE` are built in. The drive you are on is
   written behind, every other volume coalesces, and every key wait writes the
   cache out. `MOUNT.COM` has left the card.
@@ -34,7 +36,7 @@ selected mode's R1 with the frame interrupt off (KD-258 D1). A ROM-owned
 interrupt dispatcher is next-stage work (KD-259).
 
 The generated ROM, maps and media are built from this source. The ROM is
-`95467cae…`, 15,363 bytes used, and `docs/memory-map.md` and
+`ac86ad23…`, 15,312 bytes used, and `docs/memory-map.md` and
 `docs/rom-services.md` are generated from it. Strict test runs are recorded
 in Origo. All evidence so far comes from emulation; a physical TEC-1G smoke
 test is still owed before release 1 is declared, and KD-262 adds the D5

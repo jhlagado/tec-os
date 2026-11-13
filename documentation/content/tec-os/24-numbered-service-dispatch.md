@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 24. Numbered-service dispatch
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -38,12 +39,12 @@ through `A` with exclusive bound `TNCOUNT`, 17. Loading `TNEBAD` into
 `A` preserves the comparison flags. Numbers 17 and above reach `HWERR`
 without altering `B`, `DE` or `HL` (`src/services.asm:34-38`,
 `src/abi.inc:228-238`). The result is status 1 with carry set and Z clear
-(`src/services.asm:63-66`).
+(`src/services.asm:63-66`, `src/abi.inc:237-238`).
 
 Valid dispatch needs four temporary stack bytes. It pushes `HL` and
 `DE`, doubles the service number in `DE` and adds that offset to `SVTAB`.
 Seventeen address words occupy 34 ROM-data bytes (`src/services.asm:39-46`,
-`src/tables.asm:98-130`). This routine table is separate from the eight-byte
+`src/tables.asm:100-128`, `src/tables.asm:130-132`). This routine table is separate from the eight-byte
 signature/version/jump table at `C003h`.
 
 The selected address replaces a saved word rather than requiring another
@@ -72,11 +73,11 @@ Service numbers group several implementation boundaries. Hardware calls
 0–8 and `FONT`, 15, are in `src/services.asm`. Volumes 9–11 use
 `src/volsvc.asm`, explained in [Chapter 18](18-card-blocks-and-volumes.md).
 `DRVR`, 12, enters `SVDRV` for the display-driver table from
-[Chapter 17](17-console-paths.md). `FIND` and `LIST`, 13–14, enter the
+[Chapter 17](17-console-paths.md) (`src/services.asm:532-564`). `FIND` and `LIST`, 13–14, enter the
 registry in `src/loader.asm`, explained in
 [Chapter 25](25-loading-and-removing-services.md). `SHELL`, 16, installs
 or clears the prompt hook through `SVSHL`
-(`src/tables.asm:98-130`, `src/services.asm:532-610`).
+(`src/tables.asm:100-128`, `src/tables.asm:130-132`, `src/services.asm:532-610`).
 
 The following 442-byte account covers dispatch, generic exits, the nine
 hardware routines and font access. Font data and the other numbered
@@ -101,14 +102,14 @@ sizes.
 
 Programs can inspect console and device state without performing I/O.
 `INFO` returns `CONDEV` OR `VCLAIM` in `B`, `ROMVER` in `DE` and adjacent
-`VWID`/`VHGT` in `L`/`H` (`src/services.asm:74-80`, `src/ram.asm:421-422`).
+`VWID`/`VHGT` in `L`/`H` (`src/services.asm:74-80`, `src/ram.asm:427-428`).
 The dimensions occupy `BFEAh` and `BFEBh` near the workspace's upper end.
 
 The returned bits describe different times. Cold boot probes the clock
 once with `RTCHAS` and sets `CONDEV` bit 3, `CDRTC`, on a response
-(`src/boot.asm:68-72`, `src/layout.asm:73`). `VCLAIM` instead holds the
+(`src/boot.asm:68-72`, `src/layout.asm:74`). `VCLAIM` instead holds the
 current PICO9918 claim as bit 4, `CDCLM` (`src/ram.asm:128`,
-`src/layout.asm:74`). INFO neither repeats the clock probe nor changes
+`src/layout.asm:75`). INFO neither repeats the clock probe nor changes
 the claim.
 
 Status LCD output must also distinguish application text from recovery
@@ -228,7 +229,7 @@ PUTAT uses the selected video driver while preserving the logical
 console cursor position. `PUTAT` checks `VTOWN` then `CONMOD` bit 0.
 A claimed PICO9918 console or non-video mode returns status 2. `CMCRT`
 and `CMUC1` have that mode bit set. Serial and batch have it clear
-(`src/services.asm:299-323`, `src/layout.asm:77-86`). These tests precede
+(`src/services.asm:299-323`, `src/layout.asm:78-87`). These tests precede
 the zero-count case. On an available video console, zero returns before source access
 or cursor-state changes (`src/services.asm:324-325`).
 

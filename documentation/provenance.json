@@ -1,206 +1,206 @@
 {
   "repository": "jhlagado/debug80-docs",
-  "commit": "da974233badc1e7b7aa980dec4c5605168ab03d0",
+  "commit": "eec40d964b35776eb620f1ef83d465f3eca21d34",
   "manuscript": [
     {
       "source": "tec-os/01-first-session.md",
       "destination": "content/tec-os/01-first-session.md",
-      "sha256": "d103411d39bd451c4bc01ec41152cae5f4eef1f68775c570a162d9f1f625dac2"
+      "sha256": "e4b5c6ba19dcd8f0498413456801d0687b15d4a4dc62f02a30d32c3ebe42ebda"
     },
     {
       "source": "tec-os/02-make-a-small-program.md",
       "destination": "content/tec-os/02-make-a-small-program.md",
-      "sha256": "d777484ad22c1ec36aed3248640add802fa3407a4d9b96481ffebd794a5d355b"
+      "sha256": "d56588bb09de7ab59489d03af0a76f24bd4b3848c09e78268036b090748ba402"
     },
     {
       "source": "tec-os/03-build-a-basic-program.md",
       "destination": "content/tec-os/03-build-a-basic-program.md",
-      "sha256": "fb7c533af382c1b23a1f33dfb660b13eb0aca4e14c759e421cb8f08a43b2efe6"
+      "sha256": "85ac6cdb3920c9a234e13687f942121c85bf5ce403f48b087add236341ee6db4"
     },
     {
       "source": "tec-os/04-work-with-files.md",
       "destination": "content/tec-os/04-work-with-files.md",
-      "sha256": "6d962d558352e087fe6aa62f5e95c59e2ed8143218c38eeb842b589c3e39b55d"
+      "sha256": "0455a26feb0c9999762f5a6eab210c9540957828cf2cca5ef36631eee3c46511"
     },
     {
       "source": "tec-os/05-drives-and-user-areas.md",
       "destination": "content/tec-os/05-drives-and-user-areas.md",
-      "sha256": "9e9eddfc66d3e5b9c6f1d736bc846cbaa5d53c4a0a26a943c288e843c4d57b89"
+      "sha256": "5c25cc568e4f84bbcbca2c761ec1348402fefbb37e14c37ef72df9c8f2361ff1"
     },
     {
       "source": "tec-os/06-cards-on-the-pc.md",
       "destination": "content/tec-os/06-cards-on-the-pc.md",
-      "sha256": "c43cc756dfb9fbfcf60fc57eabc18d79553d373501a0fdd4e97f8bcd367c76c2"
+      "sha256": "60ebf522f612b8180327439b523f915fe356c4c062f0bd1f0ce7b52cda5b9a93"
     },
     {
       "source": "tec-os/07-choose-a-console.md",
       "destination": "content/tec-os/07-choose-a-console.md",
-      "sha256": "79be436ad12c7fb7fff73e0d7f8147b93a7270e28311a2b0f83b65501c9a2a89"
+      "sha256": "f35dd2b887088763fb5d0ce133997cb9ddd9fada2f08663a8bb85bc892026653"
     },
     {
       "source": "tec-os/08-commands-at-startup.md",
       "destination": "content/tec-os/08-commands-at-startup.md",
-      "sha256": "77a912b8e0197cf667607b601afe20f0bb6f13f39c656be80a75e71be2496fc4"
+      "sha256": "bccfc9e782974307be731a0c2ffe6406c60759c6a0163c694adcf53558f30411"
     },
     {
       "source": "tec-os/09-call-tec-os.md",
       "destination": "content/tec-os/09-call-tec-os.md",
-      "sha256": "45bf91438144a45be7ecc406a3079a9c62f6d3ba9eb0791c573c8ccec700bfb9"
+      "sha256": "17b0233929350160242ab4b103aa3637d89de90ace3e8970c1d294d6fbb01094"
     },
     {
       "source": "tec-os/10-read-and-write-a-file.md",
       "destination": "content/tec-os/10-read-and-write-a-file.md",
-      "sha256": "8d403436e7d6737c04b5e6112af20f56d75f8f909b22863ba92c99d575a39a59"
+      "sha256": "1e9e22036bbbff4b54cc3554f533e0a5c3e0667b5f2d9980ad1cd436a8e4b7e1"
     },
     {
       "source": "tec-os/11-memory-for-programs.md",
       "destination": "content/tec-os/11-memory-for-programs.md",
-      "sha256": "06fe1d1fdfe6ef75985850cddd80d848711d6f3fa8dc72ec5218440a7daeb87c"
+      "sha256": "196e2ed836bd7d223420c9bcde71f3cb7c2556a3750721afea210c335cf35d99"
     },
     {
       "source": "tec-os/12-use-the-boards-devices.md",
       "destination": "content/tec-os/12-use-the-boards-devices.md",
-      "sha256": "d417f85406435c0266548e1ca4143a54f54cc8a5ed844491bae22f6c4f74dd78"
+      "sha256": "dd79426fb629783d84980c7cc83ea66ad52be99eeb704c674c0a00f65f759d65"
     },
     {
       "source": "tec-os/13-results-and-command-chains.md",
       "destination": "content/tec-os/13-results-and-command-chains.md",
-      "sha256": "49532fc8ea08074ac0a446e8f5e810dd766f1008e3f0b3663a053ac13f42c97f"
+      "sha256": "5f40394bdc2959513b974d9ae369fe3731ca3e699226800d04fae06980e0e281"
     },
     {
       "source": "tec-os/14-write-a-resident-service.md",
       "destination": "content/tec-os/14-write-a-resident-service.md",
-      "sha256": "284fd635bb0fc64552c7bab3952176a13413d4b18ef74319731e597fe50c63ed"
+      "sha256": "65f8d7a24683a7239e5c17e83469956ed40722d00824fab5a5dae4d6f078e905"
     },
     {
       "source": "tec-os/15-state-and-memory.md",
       "destination": "content/tec-os/15-state-and-memory.md",
-      "sha256": "dd7f46a163c401c74f1b9a5a9c71080f4901ba8a388e63b379be1fb4aa1be7cd"
+      "sha256": "456c23a7252b22ee43ff39453f3b0b7cb50413ba44fdbc4b90c47830d030ef74"
     },
     {
       "source": "tec-os/16-reset-and-boot.md",
       "destination": "content/tec-os/16-reset-and-boot.md",
-      "sha256": "97b600129bb8477fb900d5001fbc8d39375475816cbf2263749b1d1153cbf7fc"
+      "sha256": "ad2c907daa0953331ef1e0cdc59a91f87bdae63cc5cc5c48224765e3d41768ca"
     },
     {
       "source": "tec-os/17-console-paths.md",
       "destination": "content/tec-os/17-console-paths.md",
-      "sha256": "4cd6c264c70f976754e55c94d9966f0d3078accefc89f4afbe0a8d9076f64b3c"
+      "sha256": "2bb2dabbd68008a4033d28993b6450677b2606d5df3673ab2b7ccdae2e46e22c"
     },
     {
       "source": "tec-os/18-card-blocks-and-volumes.md",
       "destination": "content/tec-os/18-card-blocks-and-volumes.md",
-      "sha256": "39abe57000469f10f2fa2283464d8c7febcfb60408d476bf01d0dbe23441595f"
+      "sha256": "d0a43805f99c5ee0e9a3df34a876c4b6dad19a9de74ef8ac36ba840ee6f256ec"
     },
     {
       "source": "tec-os/19-cache-and-persistence.md",
       "destination": "content/tec-os/19-cache-and-persistence.md",
-      "sha256": "b249a25ec8e85f70f6eae820efeabb7e1e04f2aa3e4a8d86d4e7ae8eea01e32d"
+      "sha256": "48f7847180283533772de1c96309eb7a5e1f6a9c4ab959d603b16e22b1f5148c"
     },
     {
       "source": "tec-os/20-a-file-through-the-bdos.md",
       "destination": "content/tec-os/20-a-file-through-the-bdos.md",
-      "sha256": "d71639f6ecbb574bff37514ea0815b59595d14371b145a1969577126cb1be165"
+      "sha256": "e4d204961c9b95df4f296d7723f65da5223584f13cd2e63d061fdfe546c7f685"
     },
     {
       "source": "tec-os/21-from-prompt-to-program.md",
       "destination": "content/tec-os/21-from-prompt-to-program.md",
-      "sha256": "601d108aaa76b38978806de7915e2068a369fe977753caf627575ebd5f5f20fe"
+      "sha256": "82b4aefe1cef4e2b773b907d6b0b7f494a8eddd29fe8f8481145d470a7244db6"
     },
     {
       "source": "tec-os/22-chains-across-warm-boot.md",
       "destination": "content/tec-os/22-chains-across-warm-boot.md",
-      "sha256": "33d3c2333795b0450487656895bfd255625df4e9e42bab488bd6895b8eef7284"
+      "sha256": "47f6116e9a88bf9ba7c0529e646023faad874087dfdcd37356b60def41cce75b"
     },
     {
       "source": "tec-os/23-the-history-ring.md",
       "destination": "content/tec-os/23-the-history-ring.md",
-      "sha256": "8e56a012ae0020f4c08d437ed2d1446280c153cde31c0d650bb150b1159f3d2c"
+      "sha256": "c5a8bea3f4e2388f9dd7749dc7a26263f4989dc1cb7095bcd9ba69b1586968df"
     },
     {
       "source": "tec-os/24-numbered-service-dispatch.md",
       "destination": "content/tec-os/24-numbered-service-dispatch.md",
-      "sha256": "4994859071ba0e42c22cdf86176594b645d61dfaa288f9261583d4b7d8e0cd85"
+      "sha256": "d1dc0c3239bc88f601fa87eb51a86014d019dbec3b7a24db8b91ef9bd6d9c1df"
     },
     {
       "source": "tec-os/25-loading-and-removing-services.md",
       "destination": "content/tec-os/25-loading-and-removing-services.md",
-      "sha256": "173acbdd57eee2523886a66c1addd0183d9ce79b2cb97363657520105a3e5547"
+      "sha256": "83a46d26b9d58178caf018746802a14dd9f213646ae8e3ff644fde3df614f0dd"
     },
     {
       "source": "tec-os/26-startup-inside-the-ccp.md",
       "destination": "content/tec-os/26-startup-inside-the-ccp.md",
-      "sha256": "6105c496f15fe158416d0b5a1664f41588882961f104fd78e87753abfc9b119b"
+      "sha256": "245ab57aff6cc5c02b7e6d39df83cf74cd32d62bece6e83bc78f54b893d68304"
     },
     {
       "source": "tec-os/27-build-the-rom-and-media.md",
       "destination": "content/tec-os/27-build-the-rom-and-media.md",
-      "sha256": "94bbecbd0ec75c34985a369e9475207ce4bc6826d41823aa261d2c64bba1adac"
+      "sha256": "11490b09447817fe745e9a6cd106b778d74070cdfc8a46eaab9892136c137da2"
     },
     {
       "source": "tec-os/28-diagnose-the-machine.md",
       "destination": "content/tec-os/28-diagnose-the-machine.md",
-      "sha256": "c7f698ba2bc6f029ca1951f37b8f49896bb3da603b4912c0d02444590256106d"
+      "sha256": "be76b48c9cbe9b545cc9c87b26a51ea3c29be705ee42a30576b4343c70128bf3"
     },
     {
       "source": "tec-os/29-the-host-model-as-evidence.md",
       "destination": "content/tec-os/29-the-host-model-as-evidence.md",
-      "sha256": "83760f214c1c1d8ed3f086d03fc922daeee961f46b8a5bab6b456bc8c507901f"
+      "sha256": "d9ff6a829ce6480e10838e1e2f34e6475a4df857a69544994b0ed39c85afc218"
     },
     {
       "source": "tec-os/appendix-a-bdos-functions.md",
       "destination": "content/tec-os/appendix-a-bdos-functions.md",
-      "sha256": "dc03fb95cffcb42b47174a76e712b1428f43eb8be98df6ddf8943bb4460eb954"
+      "sha256": "f33af5c4c8ccfc487553020a98d3b02df46c996b00cc4afc8d69b03f67d0e6e4"
     },
     {
       "source": "tec-os/appendix-b-rom-services.md",
       "destination": "content/tec-os/appendix-b-rom-services.md",
-      "sha256": "ac09675e26bc267020a7c6e9275c561ea651f3f1c49a9ae02da765781b385688"
+      "sha256": "3083fa6b28bbc6829141d01b42688a784df01e2f13e7146e09c1568c5266eeb3"
     },
     {
       "source": "tec-os/appendix-c-memory-map.md",
       "destination": "content/tec-os/appendix-c-memory-map.md",
-      "sha256": "dd97e5197c49d6a447a2a1538ae9bda5f718538d68f0b3688f00c279fd175039"
+      "sha256": "2f645c04605e3ef24a54aa1be74ffc889e67742b1fac4382d0372d90a0e9e24b"
     },
     {
       "source": "tec-os/appendix-d-error-messages.md",
       "destination": "content/tec-os/appendix-d-error-messages.md",
-      "sha256": "c2c990ce40a754e04279ef482813b89a065641ebc71019255bdaca1daeee054e"
+      "sha256": "875e25d1cbdb42a3a169641a5a938bf44cc5bb12702d184bee521fadde29e460"
     },
     {
       "source": "tec-os/appendix-e-container-format.md",
       "destination": "content/tec-os/appendix-e-container-format.md",
-      "sha256": "adbd3a803e2b5cd9ea09072f0d8c26ed2452aa913aca62be37683aaa36e213f5"
+      "sha256": "afe080e117b6f1d92cf678567bf5ce6db613dcfb0d62f6e963d43a8d17c73fbc"
     },
     {
       "source": "tec-os/appendix-f-tecvol.md",
       "destination": "content/tec-os/appendix-f-tecvol.md",
-      "sha256": "9729adcdee44a57adeb214cf159ddfcd2d57b4ef972a3aa2294fb695bc7c5d12"
+      "sha256": "8dbca63644b0a6a025aef6c055407b183e49f198ad4a3743f17ca6e28d6288cb"
     },
     {
       "source": "tec-os/appendix-g-tec-1g.md",
       "destination": "content/tec-os/appendix-g-tec-1g.md",
-      "sha256": "c98395ae57be5de17bd169929155f0521988f91102c7af53ad61f4db2535cd77"
+      "sha256": "551809b4f17f40b00f7a065e22e5a83bbd32c2c3d035d4abf167068de41b02c1"
     },
     {
       "source": "tec-os/appendix-h-service-file-format.md",
       "destination": "content/tec-os/appendix-h-service-file-format.md",
-      "sha256": "e12e598859a77ff6210d3169d94edac09d215c63b3061eeb7cf66395732fc3a9"
+      "sha256": "6290fd1510845f61d26b4da803b4fd3008c89a7a61364c407d4b4106c4256ef5"
     },
     {
       "source": "tec-os/appendix-i-web-page.md",
       "destination": "content/tec-os/appendix-i-web-page.md",
-      "sha256": "dc79175f8b8835e325248189337dda1b2a2443bec7c1ecca38068fa9fdc5efdb"
+      "sha256": "514149a1814faf92bb08d19b2392af3210ccac94599127ff3e8125c9c2756858"
     },
     {
       "source": "tec-os/appendix-j-command-reference.md",
       "destination": "content/tec-os/appendix-j-command-reference.md",
-      "sha256": "aa36f451ae90b7f9b4d8f743d2f5d1e90c05f33a699a6620212157c59e8f40c4"
+      "sha256": "1b16fffe7ac850a80991cf9f8647ad11dac77257d454621aff32b9a3bfcac9a5"
     },
     {
       "source": "tec-os/index.md",
       "destination": "content/tec-os/index.md",
-      "sha256": "f35a05afa815901f4812eb9ac0b7c78a34004cdb16c0692f3933233315c76d85"
+      "sha256": "204936ef6dea314e7b6be1d75ada1ac6160f7172066f371395568f2cac05e825"
     }
   ],
   "templateFiles": [
@@ -212,5 +212,5 @@
     ".vitepress/theme/page-enhancements.js",
     ".github/workflows/deploy.yml"
   ],
-  "firmwareRevision": "c4ec0f4950446f92b658643ee23b63e2c02bb33b"
+  "firmwareRevision": "46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee"
 }

@@ -7,12 +7,13 @@ nav_group: "Writing programs"
 
 # 10. Read and write a file
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -227,7 +228,7 @@ node tools/tecvol.mjs put work.img B hello.asm --text
 
 The capture runs SHOW once with that source file and once with a missing name:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card work.img B: 'SHOW HELLO.ASM' 'SHOW NOSUCH.TXT'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card work.img B: 'SHOW HELLO.ASM' 'SHOW NOSUCH.TXT'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -316,7 +317,7 @@ The call returns when its record reaches that block's cache line. The block is
 written at the next close, directory request, write to another block, console
 read, function 48 or warm boot. No pending bytes remain during a successful
 flush before a key wait. A reset before a flush point loses at most that
-block's records (`docs/recovery.md:98-138`).
+block's records (`docs/recovery.md:120-160`).
 
 A write result of 1 or 2 can follow earlier successful records. Close that
 partial file and check the close result before reporting progress. A failed
@@ -342,6 +343,6 @@ An ordinary exit attempts to flush pending writes before another program
 loads. Success puts them on the card. Failure drops the failed cache lines,
 reports `Write lost` and cancels the remaining command line. Explicit function
 48 also reports failure but retains a failed line for another flush. Only warm
-boot drops a line that still fails (`docs/recovery.md:75-96`). A later flush
+boot drops a line that still fails (`docs/recovery.md:97-118`). A later flush
 cannot recover bytes already dropped. Reset discards pending cached changes
 and does not finish unclosed work.

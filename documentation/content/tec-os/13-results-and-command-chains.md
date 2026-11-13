@@ -7,12 +7,13 @@ nav_group: "Writing programs"
 
 # 13. Results and command chains
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -30,7 +31,7 @@ prompt and echoes each later command before running it. This is CP/M 3's
 command-chain form. The first captured line runs two commands and the second
 includes empty pieces:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'DIR *.CMD!TYPE STARTUP.CMD' 'cd!!  ! dir b:!'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'DIR *.CMD!TYPE STARTUP.CMD' 'cd!!  ! dir b:!'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -45,7 +46,7 @@ A:SYSTEM>DIR *.CMD!TYPE STARTUP.CMD
 
 STARTUP .CMD     128
 1 file, 128 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>TYPE STARTUP.CMD
 SHELL.SVC
 GLCD.SVC
@@ -68,7 +69,7 @@ before capitalising them. The displayed `dir b:` therefore executes as
 Each piece executes as a complete command. A drive or user-area change carries
 into later pieces. Here `B:` makes B current before COPY creates `NOTES.TXT`:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'B:!COPY A:STARTUP.CMD NOTES.TXT!DIR'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'B:!COPY A:STARTUP.CMD NOTES.TXT!DIR'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -106,7 +107,7 @@ An ampersand after a space, `&`, makes the next piece conditional on success.
 Failure skips that piece without echoing it. Skipping preserves the failure
 result so another `&` also skips. A following `!` executes regardless:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'NOSUCH &DIR *.CMD !DIR *.SVC' 'DIR *.SVC &DIR *.CMD' 'NOSUCH &DIR *.CMD &DIR *.SVC'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'NOSUCH &DIR *.CMD !DIR *.SVC' 'DIR *.SVC &DIR *.CMD' 'NOSUCH &DIR *.CMD &DIR *.SVC'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -126,19 +127,19 @@ SHELL   .SVC    3712
 GLCD    .SVC     896
 MON3    .SVC    5120
 3 files, 9728 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>DIR *.SVC &DIR *.CMD
 
 SHELL   .SVC    3712
 GLCD    .SVC     896
 MON3    .SVC    5120
 3 files, 9728 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>DIR *.CMD
 
 STARTUP .CMD     128
 1 file, 128 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>NOSUCH &DIR *.CMD &DIR *.SVC
 NOSUCH?
 
@@ -160,7 +161,7 @@ A new line starts independently of the preceding result. It cannot begin with
 full. TEC-OS also omits CP/M 3's `:` conditional prefix and rejects a first
 piece beginning with `:` as a bad name:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs '&DIR *.CMD' ':DIR *.CMD'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs '&DIR *.CMD' ':DIR *.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -245,7 +246,7 @@ At `B:WORK>`, `A:TAS EXISTS` and `A:TAS RUN` create `EXISTS.COM` and
 and lists only when the file exists. The capture repeats it before and after
 COPY creates the file:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -336,7 +337,7 @@ lines available.
 Here D has no mounted volume. The key `x` ends the default BDOS error and the
 following CD is cancelled:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs '@start DIR D:!CD' '@key x'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs '@start DIR D:!CD' '@key x'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -400,7 +401,7 @@ zero. Its leading space is permitted and skipped, so `RUN DIR` supplies
 Later pieces were never part of that tail. In `RUN CD!DIR *.COM`, RUN supplies
 ` CD` only. Replacing the original line removes its later DIR:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card chain.img B: 'A:TAS RUN' 'RUN DIR *.COM' 'RUN CD!DIR *.COM' 'RUN NOSUCH!DIR *.COM' RUN. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card chain.img B: 'A:TAS RUN' 'RUN DIR *.COM' 'RUN CD!DIR *.COM' 'RUN NOSUCH!DIR *.COM' RUN. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -489,7 +490,7 @@ TED places file names and `THOR.PRJ`'s `ARGS` value on the command line. It
 truncates either at a shell separator: any `!` or an `&` following a blank.
 Thus `ARGS X &Y` makes `^T R` run once with tail ` X` and nothing afterwards.
 An embedded `&` in `/M:&HE000` remains literal
-(`Thorium a2fe556:README.md:51-58`, `docs/compatibility.md:222`,
+(`Thorium a2fe556:README.md:51-58`, `docs/compatibility.md:223`,
 `test/ted.test.mjs:305-333`).
 
 The load-drive byte at `0050h`, explained in Chapter 11, identifies TED's tool
@@ -529,7 +530,7 @@ node tools/tecvol.mjs put schain.img A startup.cmd --text
 
 On the serial-only model those lines produced:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card schain.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card schain.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
