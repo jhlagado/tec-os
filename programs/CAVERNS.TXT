@@ -1,0 +1,27 @@
+CAVERNS ON TEC-OS -- COMPARISON TRIAL
+
+Select PICO9918 at 80 columns, or use CON PICO 80.
+
+Assembly Caverns80:
+  CAVERNS
+HELP lists commands. Space/Enter continues the story; Q skips.
+SAVE and LOAD use CAVERNS.SAV on the current drive.
+QUIT, then N, returns to the shell.
+
+Experimental BASIC comparison:
+  BAZA CAVBASIC
+  CAVBASIC
+
+The revised BAZA compiles this with the shell loaded. UNLOAD is unnecessary.
+LOOK, LIST, N/S/E/W, I, GET COMPASS, DROP COMPASS, SCORE and QUIT work.
+Use normal tool commands, e.g. KILL TROLL WITH SWORD or OPEN DOOR WITH KEY.
+Answer N to leave or Y to restart. BASIC has no disk saves.
+TED CAVBASIC.BAS reads and edits the source.
+
+This trial shares Caverns80's revised map and completion route. The author's
+preferred original compass and one-use bridge rules are under review while
+the recovered drainage/return route is audited. This is not an archival
+replacement or a final gameplay decision. See docs/caverns-original.md and
+docs/caverns.md in the TEC-OS source tree for evidence and provenance.
+
+Copyright 1982-83 John Hardy. GNU GPL; see the repository LICENSE.
