@@ -1,0 +1,66 @@
+name: Publish TechOS documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'documentation/**'
+      - '.github/workflows/documentation.yml'
+  pull_request:
+    paths:
+      - 'documentation/**'
+      - '.github/workflows/documentation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: documentation-${{ github.event_name == 'pull_request' && github.ref || 'pages' }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: read
+    defaults:
+      run:
+        working-directory: documentation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: documentation/package-lock.json
+      - name: Install documentation dependencies
+        run: npm ci
+      - name: Check source and publishing controls
+        run: npm run check && npm test
+      - name: Build and validate documentation
+        run: npm run build
+      - name: Configure Pages
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+      - name: Upload documentation website
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: documentation/.vitepress/dist
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy documentation
+        id: deployment
+        uses: actions/deploy-pages@v4
