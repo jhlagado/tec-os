@@ -5,6 +5,15 @@ import assert from "node:assert/strict";
 
 const word = (m, address) => m.read(address) | m.read(address + 1) << 8;
 
+/** A bootstrap retry's actual BDOS 1 wait, not an ordinary command prompt. */
+export function recoveryInput(m) {
+  const key = m.symbols.get("CCPRKEY");
+  if (key === undefined || !m.classicBankIn || !m.waitingForInput()) return false;
+  if (m.read(m.sym("ERRMODE")) !== 0xff || m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY"))) return false;
+  const saved = word(m, m.sym("OLDSP"));
+  return saved === m.sym("CSTKTOP") - 4 && word(m, saved) === key + 5;
+}
+
 /** Check an ordinary caller's context, without changing guest state. */
 export function publicContext(m) {
   assert.ok(m.classicBankIn, "public caller requires the classic bank");
@@ -33,6 +42,10 @@ export function finishBarePrompt(m) {
   assert.notEqual(shown, undefined, "this helper does not support older maps without SHOWN");
   assert.equal(word(m, shown), 0, "bare prompt only; no shell input");
   assert.equal(m.read(m.sym("CONMOD")), 0, "serial prompt only");
+  const saved = word(m, m.sym("OLDSP"));
+  assert.equal(saved, m.sym("CSTKTOP") - 2, "ordinary CCP BDOS 10 owns the input");
+  const back = word(m, saved);
+  assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0], "actual counted-input call site");
   assert.equal(m.lineBuf, m.sym("CMDBUF"), "ordinary CCP counted input");
   assert.equal(m.read(m.sym("CMDLEN")), 0, "no partial counted line");
   assert.equal(m.read(m.sym("LINCNT")), 0, "no partial active input");

@@ -11,6 +11,7 @@ import { createContainer, findVolume, parseContainer } from "../../tools/lib/con
 import { Machine } from "./machine.mjs";
 import { TEST_CLOCK, romFor, volume } from "./fixtures.mjs";
 import { watch } from "./census.mjs";
+import { finishBarePrompt, publicContext, recoveryInput } from "./public-caller.mjs";
 
 export const FCB = 0x5c;
 export const FCB2 = 0x3800;
@@ -67,6 +68,7 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   logOn(m, logged);
+  const normalization = finishBarePrompt(m);
   const t = { writes: [], reads: [] };
   const lba = () => word(m, m.sym("SDLBA")) + word(m, m.sym("SDLBA") + 2) * 0x10000;
   const [sdw, sdr] = [m.sym("SDWRITE"), m.sym("SDREAD")];
@@ -80,11 +82,13 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   };
   /** Run CODE from TOP to its final JR $, SP at TOP; pumping queued input if PUMP. */
   const stub = (code, pump = false) => {
+    publicContext(m);
     [...code, 0x18, 0xfe].forEach((v, i) => m.write(TOP + i, v));
     Object.assign(m.cpu.cpu, { sp: TOP, pc: TOP });
     const end = TOP + code.length;
     const t0 = m.cycles;
     m.runUntil(() => (pump && m.pumpInput(), m.pc === end), 400_000_000, "the stub");
+    publicContext(m);
     return { a: m.cpu.cpu.a, h: m.cpu.cpu.h, cycles: m.cycles - t0 };
   };
   const bdos = (fn, de = FCB, pump = false) => stub([0x0e, fn, 0x11, de & 0xff, de >> 8, 0xcd, 0x05, 0x00], pump);
@@ -120,18 +124,13 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
     };
     return f;
   };
-  /** Start a warm boot by GO() (a jump to 0000h if not given) and run to the prompt, answering a BDOS error's key. The text since. */
+  /** Start a warm boot and stop at normal or recovery input. Capture results
+   * before explicitly completing normal input for another synthetic call. */
   const warm = (go = () => (m.cpu.cpu.pc = 0)) => {
     const mark = m.output.length;
-    const at = () => m.ready() && /\r\n[A-P](:\S*)?>$/.test(m.text(mark));
+    const at = () => recoveryInput(m) || (m.ready() && /\r\n\d*[A-P](:\S*)?>$/.test(m.text(mark)));
     go();
-    let seen = -1;
-    for (let i = 0; i < 200 && !at(); i += 1) {
-      const end = m.cycles + 20_000_000;
-      m.runUntil(() => (m.pumpInput(), m.cycles >= end || at()), 30_000_000, "the prompt");
-      if (m.waitingForInput() && m.output.length === seen) m.type("\r");
-      seen = m.output.length;
-    }
+    m.runUntil(() => (m.pumpInput(), at()), 400_000_000, "normal or bootstrap recovery input after warm boot");
     return m.text(mark);
   };
   /** Press reset and run to the prompt. */
@@ -140,7 +139,7 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
     m.expect(/[A-P](:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
     m.runUntil(() => m.ready(), 200_000_000, "the prompt after the reset");
   };
-  return { image, m, t, stub, bdos, svc, bios, name, put, setR, blockOf, onCard, state, pending, refuse, warm, reset };
+  return { image, m, t, normalization, stub, bdos, svc, bios, name, put, setR, blockOf, onCard, state, pending, refuse, warm, reset };
 }
 
 /**
