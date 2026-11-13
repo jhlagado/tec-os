@@ -7,6 +7,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { standardCard } from "./lib/fixtures.mjs";
 import { alv, rebuilt, rig, w } from "./lib/warmboot.mjs";
+import { finishBarePrompt } from "./lib/public-caller.mjs";
 
 test("a warm boot with nothing changed reads no block, in a tenth of the time", () => {
   const r = rig();
@@ -81,6 +82,8 @@ test("a mount on B: then a warm boot scans B's new volume in full", () => {
   const r = rig(standardCard([{ geometry: "G8M", label: "SPARE" }]));
   r.m.command("B:");
   r.m.command("A:");
+  r.m.runUntil(() => r.m.ready(), 20_000_000, "the selected drive's input request");
+  r.commandNormalization = finishBarePrompt(r.m);
   assert.equal(r.call(r.m.sym("ABICALL"), { bc: 0x0109, de: 2 }), 0, "TNMOUNT: SPARE on B:");
   r.warm();
   r.reads = 0;

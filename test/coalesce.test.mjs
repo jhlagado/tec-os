@@ -760,7 +760,7 @@ function checkFlushStacks(runs) {
 }
 
 // Refused work on logged A: keeps CONIN's required CFLUSH path active:
-// 20 bytes below the return address, out of the program's 28-byte allowance.
+// 20 bytes below the return address, the published CONIN caller bound.
 // Healthy entry service can commit the pending line before that path.
 test("AC10 conin stack", { timeout: 300_000 }, () => {
   const runs = {
