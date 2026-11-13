@@ -1,5 +1,5 @@
 ---
-title: TechOS library
+title: tec-os library
 aside: false
 sidebar: false
 ---
@@ -7,7 +7,7 @@ sidebar: false
 <div class="library-hall">
   <Mark class="library-hall__mark" size="46" />
   <p class="library-hall__eyebrow">TEC-1G · CP/M · Z80</p>
-  <h1 class="library-hall__title">The TechOS Library</h1>
+  <h1 class="library-hall__title">The tec-os Library</h1>
   <p class="library-hall__tagline">Books on using TEC-OS and programming the TEC-1G.</p>
 </div>
 

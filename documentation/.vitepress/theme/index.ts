@@ -8,7 +8,7 @@ import BookShelf from './BookShelf.vue';
 import './custom.css';
 
 const Layout = defineComponent({
-  name: 'TechOSLayout',
+  name: 'DocumentationLayout',
   setup() {
     onMounted(enhancePage);
     onContentUpdated(enhancePage);
