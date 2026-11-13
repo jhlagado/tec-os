@@ -28,7 +28,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
 const LANDING = { used: 14769, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
-const RECOVERY = { used: 15315, tpa: 47237, starter: 46533, entry: 0xb6c5 };
+const INTEGRITY = { used: 16016, tpa: 47237, starter: 46533, entry: 0xb6c5 };
 
 // The console read's costs before write-behind followed the logged drive,
 // measured with these stubs on the ROM that landed A: coalescing and TED's
@@ -54,19 +54,19 @@ test("AC12 version fields", () => {
 test("AC1 rom and tpa", () => {
   const census = JSON.parse(readText("build/tecos/census.json"));
   const { used, regions } = census.rom;
-  assert.ok(used <= RECOVERY.used, `${used} used, the recovery ceiling ${RECOVERY.used}`);
+  assert.ok(used <= INTEGRITY.used, `${used} used, the combined integrity ceiling ${INTEGRITY.used}`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   const { symbols } = romFor();
   const at = symbols.get("CPEND");
   assert.ok(at >= symbols.get("RAMBIOS") + 51 && at < 0xc000, `CPEND at ${at.toString(16)}, above the RAM BIOS table`);
-  assert.equal(census.ram.tpa.bytes, RECOVERY.tpa, "the shared recovery allocation");
+  assert.equal(census.ram.tpa.bytes, INTEGRITY.tpa, "the shared recovery allocation");
   assert.equal(census.ram.tpa.card, "twoVolume", "the coalescing reference remains explicit");
-  assert.equal(census.ram.cards.twoVolume.tpa, RECOVERY.tpa);
-  assert.equal(census.ram.cards.starter.tpa, RECOVERY.starter, "the four-drive starter has its own figure");
-  assert.equal(census.ram.cards.starter.entry, RECOVERY.entry);
+  assert.equal(census.ram.cards.twoVolume.tpa, INTEGRITY.tpa);
+  assert.equal(census.ram.cards.starter.tpa, INTEGRITY.starter, "the four-drive starter has its own figure");
+  assert.equal(census.ram.cards.starter.entry, INTEGRITY.entry);
   const m = boot(standardCard());
-  assert.equal(word(m, 6) - 0x100, RECOVERY.tpa, "(0006h) on the card");
+  assert.equal(word(m, 6) - 0x100, INTEGRITY.tpa, "(0006h) on the card");
   console.log(`ROM ${used} used (+${used - LANDING.used}), ${16384 - used} free, TPA ${census.ram.tpa.bytes}, CPEND ${at.toString(16)}h`);
 });
 
@@ -783,12 +783,17 @@ test("AC10 mutant: CPOUT with three more pushes passes the BDOS's room and takes
 test("AC11 docs", () => {
   const recovery = readText("docs/recovery.md");
   for (const s of [
-    "every volume not logged coalesces",
-    "at most one block, four records, 512 bytes",
-    "the directory never names it until the card has it",
-    "while a kept line keeps failing, every directory write and `MOUNT` refuse until warm boot",
-    "reported at the next flush point",
-    "Function 48, `MOUNT` and unmount keep",
+    "each admitted outer BDOS, hardware service or returning BIOS call attempts one eligible dirty block before its normal work",
+    "updates already received merge into that block without duplicating its entry or moving its first-dirty position",
+    "a directory write first tries all other dirty data in a bounded pass, then writes the directory block only if those prerequisites succeeded",
+    "prerequisite or metadata failure rejects and drops that unpublished directory image",
+    "later retries must not publish rejected metadata",
+    "failed acknowledged data remains dirty and queued, including across warm boot",
+    "`Write pending`",
+    "`Cache clear`",
+    "`Write error`",
+    "Enter does not initialise a newly inserted card",
+    "completed browser persistence are separate stages",
   ]) assert.ok(recovery.replace(/\s+/g, " ").toLowerCase().includes(s.toLowerCase()), `docs/recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /returns success only after the\s+line has gone to the card/, "no write on A: returns only when the card has the block");
   assert.doesNotMatch(recovery, /the others drop it/, "no flush but warm boot drops a failed line");
