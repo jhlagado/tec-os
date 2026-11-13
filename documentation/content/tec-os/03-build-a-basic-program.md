@@ -16,19 +16,19 @@ nav_group: "Using the machine"
      Both full firmware strict passes include the BASIC and TED scenarios.
      Host-model evidence is retained in Origo's book-shell2 evidence. -->
 
-The starter card holds a short program in BASIC, TIMES.BAS, beside SAMPLE's
-assembly source. You compile it with BAZA and run it. Then you edit and build
-it in TED with the same keys that Chapter 2 used for BANNER.
+BASIC provides another way to write programs on the TEC-1G. The card's
+TIMES.BAS reads a name and number, then prints a multiplication table.
+You compile it with BAZA and run the resulting program. Changing it in
+TED uses the same edit, build and run cycle as BANNER.
 
-The results described here are from the host model, the software TEC-1G used
-for Chapters 1 and 2. A run of BAZA and TED's BASIC keys on a physical TEC-1G
-has still to be recorded.
+These results use the same software TEC-1G host model as Chapters 1 and 2.
+BAZA and TED's BASIC build keys still need a recorded physical-board run.
 
 ## The BASIC source
 
-TIMES.BAS is on A with the other supplied files. `TYPE TIMES.BAS` prints it
-at the `A:SYSTEM>` prompt. Chapter 4 explains `TYPE` and its pager. The complete
-file is:
+TIMES.BAS is on A beside the supplied tools. `TYPE TIMES.BAS` displays
+the file at `A:SYSTEM>`. Chapter 4 explains this command and its page
+controls. The complete source is:
 
 <!-- TEC-OS 8b69e51 programs/TIMES.BAS, lines 1-22, complete. The starter
      card stores it with CRLF line ends and a final ^Z (tools/media.mjs). -->
@@ -57,61 +57,36 @@ file is:
 220 END
 ```
 
-Each line starts with a line number, and the numbers ascend through the file.
-`REM` lines are remarks for you to read. `PRINT` writes text and numbers,
-`INPUT` prints its question and reads your answer into a variable, `n$` for
-the name and `n` for the number. Lines 80 and 90 send any answer outside 1 to
-12, or with a fraction, to line 100, which asks again. The `FOR` and `NEXT`
-pair repeats lines 150 to 170 for each value of `i` from 1 to 12, printing
-one row of the table and adding it to the total `t`. `TAB` moves the printing
-position to a column so the rows line up.
-
-The program's keywords are in capitals and its variable names in lower case,
-with spaces between its words. Its remarks are written as sentences and its
-quoted text is in capitals. The card's other BASIC program, BOUNCE.BAS, is
-written the same way. Outside quotes, `REM` remarks and `DATA` items, BAZA
-folds letters to capitals and ignores spaces and tabs, so `PRINT` and
-`print` are the same keyword and `n<1` and `n < 1` the same comparison. The
-layout therefore changes how the program reads, not what BAZA compiles: the
-restyled TIMES.BAS compiles to the same TIMES.COM as the earlier all
-lower-case one. The bytes inside quotes are kept as written, which is why
-the program's output is in capitals (`Baza 50dc512:docs/language.md:19`).
-The lexer does the folding and keeps quotes, remarks and `DATA` items as
-they are (`Baza 50dc512:src/lex.asm:17-19`). Commands typed at the prompt, such as
-`BAZA TIMES`, are written in capitals in this book, though the command
-processor also accepts them in lower case. The host-model test types
-`baza times` (`test/times.test.mjs:79`).
+The line numbers increase through the source. `REM` introduces a remark
+and `PRINT` writes text or numbers. `INPUT` displays a question and stores
+the answer in a variable: `n$` for the name and `n` for the number.
+Lines 80 and 90 check for a whole number from 1 to 12. An invalid answer
+goes to line 100 and then back to the input. The `FOR` and `NEXT` loop
+repeats lines 150 to 170 with `i` from 1 to 12. Each repetition prints a
+row and adds its product to `t`. `TAB` aligns the output in columns.
 
 ## A compiler and its library
 
-BAZA is a compiler for classic Microsoft BASIC. It reads the whole source and
-writes a CP/M program, so `BAZA TIMES` turns TIMES.BAS into TIMES.COM. You
-then run TIMES.COM as you ran SAMPLE.COM, and it needs neither the compiler
-nor its library on the card. BAZA has no interactive commands such as `list`
-or `run`: you edit the source as a text file and compile it again. A line
-number that repeats or goes backwards is an error, not a replacement line.
-BAZA also takes a few additions from Microsoft's later BASIC-80 for CP/M:
-`&H` hexadecimal constants and `HEX$`, `MOD` and `\` for the remainder and
-whole-number division, `XOR`, `WAIT port, mask` to wait for a port's bit,
-and `SWAP a, b` to exchange two variables
-(`Baza 50dc512:docs/mbasic.md:10-12`, `:38-50`).
+BAZA compiles classic Microsoft BASIC source into a CP/M executable.
+`BAZA TIMES` reads the whole TIMES.BAS file and writes TIMES.COM. You can
+then run it like SAMPLE.COM, with no compiler or library needed on the
+card. BAZA has no interactive `list` or `run` command. You edit the text
+file and compile it again. A repeated or decreasing line number produces
+an error. Source is compiled as a whole, with no line-replacement operation.
 
-The compiler is two files on A. `BAZA.COM` is the program and `BAZA.RTL` is
-its runtime library, the routines that BAZA copies into each program it
-writes. `BAZA.COM` is a 13,184-byte file that unpacks itself into the
-17,152-byte compiler each time it runs, which adds about a quarter of a
-second to a compile (`Baza 50dc512:docs/size-account.md:3-29`). BAZA reads
-`BAZA.RTL` from the current drive, or from the drive `BAZA.COM` was loaded
-from when the current drive has none. A program on B therefore compiles
-with the supplied files left on A.
+The two compiler files are on A. `BAZA.COM` runs the compiler and
+`BAZA.RTL` contains routines copied into the executable. BAZA reads this
+library from the current drive. If it is absent there, BAZA reads it from
+the drive that supplied `BAZA.COM`. Source on B can therefore be compiled
+with both tools left on A.
 
 ## Compiling and running TIMES
 
-At `A:SYSTEM>`, `BAZA TIMES` reads TIMES.BAS and writes TIMES.COM on the same drive.
-You type the name without a type, as with `TAS SAMPLE`. While it works BAZA
-turns a mark at the start of the line, `|`, `/`, `-` and `\` in turn, each
-followed by a backspace. A successful compile then prints `COM written` over
-the last mark before the prompt returns. The screen then shows:
+At `A:SYSTEM>`, `BAZA TIMES` compiles TIMES.BAS into TIMES.COM on A.
+The name needs no type, as with `TAS SAMPLE`. During compilation a mark
+cycles through `|`, `/`, `-` and `\` at the start of the line. Each is
+followed by a backspace. Completion prints `COM written` over the last
+mark and returns to the prompt:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'BAZA TIMES'. The full screen, with trailing empty rows omitted. -->
 ```text
@@ -134,9 +109,9 @@ A:SYSTEM>
 The marks go only to the console, and the compiled program is the same
 with or without them (`Baza 50dc512:README.md:26-30`).
 
-Typing `TIMES` runs the program. The screen below is the one the TEC-OS host
-model test checks on the 40-column console, with the answers `TEC`, then 13,
-then 7. Its starting `A:SYSTEM>TIMES` line is omitted:
+The command `TIMES` runs TIMES.COM. This 40-column output is checked by
+the TEC-OS host-model test with answers `TEC`, 13 and then 7. The starting
+`A:SYSTEM>TIMES` line is omitted:
 
 <!-- TEC-OS 8b69e51 test/times.test.mjs:28-40, the asserted output, with
      the screen check at :120-122: answers TEC, 13 and 7, trailing spaces
@@ -168,18 +143,18 @@ GOODBYE, TEC!
 A:SYSTEM>
 ```
 
-`INPUT` adds the `? ` after each question. A number prints with a space on
-each side, as in Microsoft BASIC, so `TAB(4)` and `TAB(9)` keep the `X` and
-the `=` in their columns whatever the width of the numbers. The answer 13
-takes the program back to line 70 for another number. After `END` the
-program returns to the prompt.
+`INPUT` adds `? ` after each question. The answer 13 is outside the
+permitted range, so execution returns to line 70 for another number.
+Numbers print with a space on each side, as in Microsoft BASIC. `TAB(4)`
+and `TAB(9)` align `X` and `=` even as the numbers grow wider. `END`
+finishes the program and returns to the prompt.
 
 ## TIMES in TED
 
-`TED TIMES.BAS` opens the source in TED. Editing is the same as for
-BANNER.ASM: the arrow keys, Backspace, `^G`, `^S` to save and `^Q` to quit.
-The `^T` keys take the tools from the type of the file being edited. For an
-`.ASM` file they use TAS, and for a `.BAS` file they use BAZA:
+`TED TIMES.BAS` opens the source for editing. Arrow keys, Backspace and
+`^G` work as they did in BANNER.ASM. `^S` saves and `^Q` quits. The file
+type selects the build tool: TAS for `.ASM` and BAZA for `.BAS`. The
+`^T` sequences are otherwise the same:
 
 | Keys | `.ASM` file | `.BAS` file |
 | --- | --- | --- |
@@ -187,52 +162,46 @@ The `^T` keys take the tools from the type of the file being edited. For an
 | `^T R` | Builds with `TAS`, then runs the program | Builds with `BAZA`, then runs the program |
 | `^T D` | Chains `TDB`, which the starter card does not contain, so the CCP prints `A:TDB?` and TED returns | Shows `No debugger` and runs nothing |
 
-`^T B` on TIMES.BAS saves the file and runs `A:BAZA TIMES.BAS`, naming the
-drive TED was loaded from. The console shows that line and `COM written`
-before TED opens the source again at the place you left. After the first
-good build the status row shows `THOR.PRJ: TIMES.BAS`: TED has recorded
-TIMES.BAS in its project file as the source that the build keys use.
+`^T B` saves TIMES.BAS and runs `A:BAZA TIMES.BAS`. The A prefix is the
+drive that supplied TED. The console displays this command and
+`COM written` before TED reopens the source at your previous position.
+After the first successful build, `THOR.PRJ: TIMES.BAS` appears on the
+status row. TED has recorded TIMES.BAS as the build source in its project
+file.
 
-On the four-drive starter card TED has 28,694 bytes of text room with
-the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
-installed and reduces that room to 24,086 bytes, or 23,318 with the GLCD
-driver too. Unload MON3.SVC before editing a larger source. These are
-host-model measurements (`docs/compatibility.md`).
+`^T R` rebuilds and runs TIMES. TED waits at `Press a key` after the
+program ends, leaving its output visible. A keypress restores the source
+at the same position. `^T D` instead displays `No debugger` in the editor.
+It performs no external command or file write.
 
-`^T R` builds the program again and runs TIMES. When the program ends TED
-waits at `Press a key` so the output stays on the screen, and a key returns
-you to the source at the same place. `^T D` leaves you in the editor with
-`No debugger` on the status row. It runs nothing and writes no file.
-
-From the `B:WORK>` prompt `^T B` builds a TIMES.BAS that you keep on B. TED and
-BAZA are loaded from A and BAZA reads `BAZA.RTL` from A, its load drive.
-TIMES.COM is written on B beside the source.
+The same build works with a source file on B. From `B:WORK>`, TED and
+BAZA load from A and BAZA reads A's `BAZA.RTL`. The result, TIMES.COM,
+is written beside TIMES.BAS on B.
 
 ## A change of your own
 
-Editing A:TIMES.BAS changes the supplied copy on SYSTEM. A copy on B, as in
-Chapter 2, keeps your work on WORK and leaves the original as it was. At the
-`A:SYSTEM>` prompt, COPY makes the copy and prints `COPIED` with the number of
-records. Chapter 4 explains its forms:
+Keeping your version on WORK preserves the supplied source on SYSTEM.
+At `A:SYSTEM>`, this `COPY` command copies TIMES.BAS from A to B and
+reports `COPIED` with the record count. Chapter 4 explains the other forms:
 
 ```text
 A:SYSTEM>COPY A:TIMES.BAS B:TIMES.BAS
 ```
 
-`B:` makes WORK the current drive. At `B:WORK>`, `TED TIMES.BAS` opens your copy,
-with TED loaded from A. Move to line 40, the file's fourth line, and change
-the text between the quotes, keeping the line number, the `PRINT` and both
-quotes. For example:
+`B:` selects WORK. `TED TIMES.BAS` at `B:WORK>` then loads TED from A
+and opens your copy. The greeting is on BASIC line 40, the fourth file
+line. You can change the greeting while keeping the line number, `PRINT`
+and both quotes:
 
 ```text
 40 PRINT "HELLO FROM MY FIRST BASIC."
 ```
 
 `^S` saves the change and `^T B` compiles it with A's BAZA, writing
-TIMES.COM on B. `^T R` builds and runs it in one step, and the program's
-first line is then your new text. The host-model tests ran `^T R` with
-TIMES.BAS on A and the build with it on B. Answer the questions and press a
-key to return to TED.
+TIMES.COM on B. `^T R` builds and runs it with the new greeting. Answering
+the questions completes the program and a further key returns to TED.
+The host-model tests cover `^T R` with TIMES.BAS on A and a build with it
+on B.
 
 `^Q` quits TED and returns to `B:WORK>`. Wait for that prompt before a
 reset or power-off: its console read writes all pending changes on every
@@ -240,11 +209,11 @@ drive. Chapter 1 explains why.
 
 ## A failed compile
 
-A mistake in the source stops the compile. In the model test a line
-`95 PRINT (` was typed at the start of the file's line 10, between lines 90
-and 100. The line number is in order but the expression after `print` is
-unfinished. `^T B` saved the file and BAZA printed its message on the
-console, over its last spinner mark:
+A syntax error stops compilation and returns TED to the faulty line.
+In the model test, inserting `95 PRINT (` before file line 10 placed it
+between BASIC lines 90 and 100. Its number is in order but its expression
+is unfinished. After `^T B` saved the file, BAZA printed this message
+over the last progress mark:
 
 <!-- TEC-OS 8b69e51 test/ted-baza.test.mjs:94-101, the asserted console
      text with the spinner's marks taken out (:29-31). Not a separate
@@ -254,41 +223,76 @@ A:SYSTEM>A:BAZA TIMES.BAS
 ?SYNTAX ERROR IN 95
 ```
 
-The message names BASIC line 95. TED then opened TIMES.BAS with the cursor on
-the file's line 10, where the faulty line is, and the same message on its
-status row. BAZA records the file's line for TED in `THOR.ERR` when TED's
-session file `THOR.SES` is on the current drive, beside the source in these
-examples. TED reads that record
-and removes it. Correct or delete the line, then build again.
+The message names BASIC line 95. TED reopens at file line 10, where that
+BASIC line occurs, and displays the message on its status row. BAZA writes the file position to `THOR.ERR`
+when `THOR.SES` is on the current drive. These examples keep both beside
+the source. TED reads and removes the error record. Correcting or deleting
+the faulty line allows another build.
 
-The failed compile left the earlier TIMES.COM exactly as it was. BAZA writes
-a new program under a temporary name and gives it the name TIMES.COM only
-when the compile succeeds. A failure therefore never leaves a partly
-written TIMES.COM, and the previous one remains until the next successful
-compile replaces it.
+The failed compile leaves the earlier TIMES.COM unchanged. BAZA writes
+to a temporary file and renames it TIMES.COM only after a successful
+compile. A failure therefore leaves the previous complete program in place
+until a successful compile replaces it.
 
-A failed compile also sets the failure return code, as a failed TAS build
-does. Chapter 13 explains return codes and command chains. At the prompt you
-can make running the program depend on the compile:
+Running TIMES after a failed compile would run that earlier version.
+You can prevent this by making execution depend on a successful compile.
+BAZA sets a failure return code, as TAS does, so this conditional command
+line works at the prompt. Chapter 13 explains return codes and chains:
 
 ```text
 A:SYSTEM>BAZA TIMES &TIMES
 ```
 
-`&` after a space starts a second command on the line that runs only if the
-command before it succeeded. After a good compile TIMES runs. After a failed
-one the `TIMES` piece is skipped and the prompt returns, so a program left
-from an earlier compile does not run in its place. The shell, which the
-startup file loads, runs such lines.
+`&` after a space separates a command that runs only after success.
+A successful compile runs TIMES. A failed compile skips TIMES and returns
+to the prompt, leaving the older executable unused. The startup shell
+executes these conditional lines.
+
+## Compiler details
+
+The following details describe source layout and compiler limits. They are
+not needed to compile and change TIMES.
+
+BAZA includes some later Microsoft BASIC-80 forms for CP/M. `&H`
+introduces hexadecimal constants and `HEX$` is also supported. `MOD` computes
+a remainder and `\` performs whole-number division. The additions
+also include `XOR`, `WAIT port, mask` for waiting on a port bit and
+`SWAP a, b` for exchanging variables
+(`Baza 50dc512:docs/mbasic.md:10-12`, `:38-50`).
+
+`BAZA.COM` is a 13,184-byte packed file. Each invocation unpacks it into
+the 17,152-byte compiler, adding about a quarter of a second to a compile
+(`Baza 50dc512:docs/size-account.md:3-29`).
+
+TIMES.BAS uses capital keywords, lower-case variable names and spaces
+between words. Its remarks are sentences and its quoted text is in
+capitals. BOUNCE.BAS uses the same layout. BAZA's lexer folds other
+letters to capitals and ignores spaces and tabs. Quotes, `REM` remarks
+and `DATA` items retain their original bytes
+(`Baza 50dc512:src/lex.asm:17-19`). Thus `PRINT` and `print` select the
+same keyword, while `n<1` and `n < 1` make the same comparison.
+
+This layout leaves the compiled program unchanged. TIMES.BAS produces
+the same TIMES.COM as its earlier all-lower-case source. Text inside
+quotes is preserved, so its greeting prints in capitals
+(`Baza 50dc512:docs/language.md:19`). The book's prompt commands use
+capitals, but lower case also works. The host-model test types
+`baza times` (`test/times.test.mjs:79`).
+
+On the four-drive starter card TED has 28,694 bytes of text room with
+the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
+installed and reduces that room to 24,086 bytes, or 23,318 with the GLCD
+driver too. Unload MON3.SVC before editing a larger source. These are
+host-model measurements (`docs/compatibility.md`).
 
 ## Machine code from BASIC
 
-BAZA has no graphics or sound statements. A program reaches the board's
-devices by calling machine code: a ROM service, an entry of a service in
-memory, or a routine at an address. `DEF CALL` gives the routine a name,
-`CALL` runs it with the registers you list, and `REG` reads a register it
-left afterwards (`Baza 50dc512:docs/call.md:1-6`). Chapter 12 describes the
-ROM services from the assembly side.
+BASIC source can also call the board's devices through machine code.
+This optional route uses a ROM service, a resident service entry or a
+routine at an address because BAZA has no graphics or sound statements.
+`DEF CALL` names the routine, `CALL` runs it with specified registers and
+`REG` reads a resulting register value (`Baza 50dc512:docs/call.md:1-6`).
+Chapter 12 describes these ROM services for assembly programs.
 
 BOUNCE.BAS, a sprite game on the card, does all its drawing this
 way. Three of its lines show the pattern
@@ -302,37 +306,42 @@ way. Three of its lines show the pattern
 170 CALL ft: f = REG("HL"): CALL vw, hl = 256, de = f, bc = 768
 ```
 
-A colon separates statements on one line.
+The colons separate statements written on the same source line.
 
-`ROM 3` names the ROM's video service, `ROM 4` its tone service and
-`ROM 15` the font service. A name can also be a quoted service record with
-a version and an entry number, found when the `DEF CALL` runs, or an
-address (`Baza 50dc512:docs/call.md:16-26`). Each argument of `CALL` loads
-one register: `a`, `b`, `c`, `d`, `e`, `h` and `l` take a byte and `bc`,
-`de` and `hl` a word, or the address of a string variable's bytes. After
-the call `REG("HL")` gives the value the routine left in HL, and
-`REG("CY")` its carry. `CALL` raises no error itself, so a routine that
-reports failure is checked with `REG`
+`ROM 3` selects the video service, `ROM 4` the tone service and
+`ROM 15` the font service. A call definition can also name an address
+or a quoted service record with its version and entry number. The
+record is found when `DEF CALL` executes
+(`Baza 50dc512:docs/call.md:16-26`).
+
+Each `CALL` argument loads a register. `a`, `b`, `c`, `d`, `e`, `h`
+and `l` take a byte. `bc`, `de` and `hl` take a word or the address of
+a string variable's bytes. Afterwards `REG("HL")` reads the resulting
+HL and `REG("CY")` reads carry. A routine's failure result needs an
+explicit `REG` check because `CALL` raises no error itself
 (`Baza 50dc512:docs/call.md:51-64`, `Baza 50dc512:docs/call.md:72-82`).
-Line 170 asks the font service for the
-font's address and copies 768 bytes from it to the PICO9918's memory with
-`vw`. Line 90 defines `vw` as `"PICO", 3, 10`, entry 10 of the PICO
-console's record, which copies RAM to VRAM
+
+Line 170 gets the font address and uses `vw` to copy 768 bytes to
+PICO9918 memory. Line 90 defines `vw` as `"PICO", 3, 10`, entry 10
+of the PICO console record for copying RAM to VRAM
 (`Baza 50dc512:examples/BOUNCE.BAS:10`, `Baza 50dc512:docs/call.md:24-25`).
 
-BAZA's ordinary numbers are 32-bit floating-point values, and their
-arithmetic is slow on a Z80: an addition takes about 3,000 T-states, close
-to a millisecond at 4 MHz. A name ending in `%`, such as `x%`, holds a whole
-number from -32768 to 32767. BAZA compiles a simple statement as short
-16-bit code when every operand in it is an integer variable, a whole number
-from 0 to 32767, or an element of an integer array whose one subscript is
-itself an integer variable or a whole number. The simple statements are a
-copy, one addition, subtraction, multiplication or division, one `\`, `MOD`,
-`AND`, `OR` or `XOR`, an `IF` with one relation, and `FOR` and `NEXT` on an
-integer variable. A quotient is rounded down. Anything else, such as a
-statement with more than one operator, still works, through the
-floating-point routines (`Baza 50dc512:docs/speed.md:3-31`). BOUNCE moves
-its balls this way, one step to a statement
+Ordinary BAZA numbers use 32-bit floating point. An addition takes
+about 3,000 T-states on the Z80, close to a millisecond at 4 MHz. A
+name ending in `%`, such as `x%`, instead holds a whole number from
+-32768 to 32767.
+
+Simple statements compile to short 16-bit code with suitable operands.
+Each operand must be an integer variable, a whole-number constant from
+0 to 32767 or an integer-array element. Such an array element must have
+a single subscript that is itself an integer variable or whole number.
+The supported statements are copies or a single arithmetic operation:
+addition, subtraction, multiplication, division, `\` or `MOD`. They
+also include a single `AND`, `OR` or `XOR`, an `IF` with a single relation
+and `FOR` or `NEXT` using an integer variable. A quotient is rounded
+down. Other forms still use the floating-point routines, including
+statements with several operators (`Baza 50dc512:docs/speed.md:3-31`).
+BOUNCE moves its balls with these simple integer statements
 (`Baza 50dc512:examples/BOUNCE.BAS:47-48`, `62-65`):
 
 <!-- Baza 50dc512 examples/BOUNCE.BAS file lines 62 to 65. -->
@@ -357,9 +366,9 @@ this with a program that claims the display and then divides by zero
 
 On the card, `BAZA BOUNCE` compiles it and `BOUNCE` runs it on
 the PICO9918, which it needs. Tap W, A, S and D, or the arrow keys, to steer
-the ship. The matrix keyboard's arrow keys reach the program as Esc, `[` and
-a letter, `A` to `D`, and lines 950 to 999 read that sequence and treat it
-as W, S, D or A. Q ends the game, gives the display back as the console and
-prints the score at `A:SYSTEM>`. The host-model test checks each of these steps
+the ship. The matrix arrows send Esc, `[` and a letter from `A` to `D`.
+Lines 950 to 999 translate these sequences to W, S, D or A. Q ends the
+game, restores the display console and prints the score at `A:SYSTEM>`.
+The host-model test checks each of these steps
 (`tools/media.mjs:224-227`, `test/starter.test.mjs:108-189`,
 `Baza 50dc512:examples/BOUNCE.BAS:84`, `103-115`).

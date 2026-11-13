@@ -17,42 +17,45 @@ nav_group: "Using the machine"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-BANNER.ASM and its saved outputs stay on B while you read other text. A listing
-helps you choose the file before a command changes it. Long text can be read
-a screenful at a time.
+A saved source file can be read, copied or renamed without rebuilding its
+program. You can keep an original and edit a copy, then erase the copy
+when it is no longer useful. The file listing identifies names before
+you change them. BANNER.ASM and its outputs can remain on B throughout.
 
 ## Names in a listing
 
-`DIR` lists files on the current drive. `DIR B:` lists B without changing the
-current drive. Each entry gives a name and a type, such as `BANNER.ASM`. Names
-appear in columns fitted to the console. The final line reports the number
-listed and the drive's free space in KiB. A KiB is 1,024 bytes.
-`NO FILE` means that no visible file matched the request.
+`DIR` lists the current drive's files. `DIR B:` lists B while leaving
+the current drive selected. The startup shell displays each file on a
+row with its size in bytes.
+The totals below give the file count, combined bytes and free space
+for that drive and volume. `NO FILE` means no visible file matched.
+`DIR /W` selects the ROM's wide listing instead.
 
-A name has up to eight characters followed by a full stop and a type of up to
-three characters. Both the full stop and type can be omitted. A drive letter
-and colon select a file on another drive: `A:SAMPLE.ASM` names the supplied source
-on A. Without that prefix a name refers to the drive in your prompt. DIR is
-built into the command processor that runs each line you enter. TAS is a
-program stored on the card.
+Names follow the same form as BANNER.ASM: up to eight characters, a full
+stop and a type of up to three characters. You can omit the full stop and
+type. A drive prefix selects another location, so `A:SAMPLE.ASM` refers
+to the supplied source on A. Without a prefix, the current drive applies.
+TEC-OS processes DIR as a command without loading a program file.
+Running TAS instead reads its COM file from the card.
 
-A wildcard lets you narrow a listing without typing every complete name.
-`DIR B:*.ASM` lists B's files with type ASM. The `*` matches the rest of the
-name or type in which it occurs. `?` matches one character in its position. For
-example, `G*.*` matches names beginning with G, whatever their type. TYPE, COPY
-and REN each require unambiguous names instead of a wildcard pattern.
-[Appendix J](appendix-j-command-reference.md) gives the complete name rules and
-wildcard forms.
+Wildcards select a group of files for a listing. `DIR B:*.ASM` lists B's
+ASM files. `*` matches the rest of the name or type containing it and `?`
+matches a character at its position. `G*.*` therefore matches names
+beginning with G, with any type. TYPE, COPY and REN require unambiguous
+names. [Appendix J](appendix-j-command-reference.md) gives the complete
+name and wildcard rules.
 
 ## Read a text file
 
-`TYPE A:SAMPLE.ASM` prints the supplied source without changing it. TYPE reads
-text until its first `^Z` end marker or the end of its recorded contents. It
-does not assemble the source or run commands found in a file.
+`TYPE A:SAMPLE.ASM` displays the supplied source without changing it.
+TYPE stops at the first `^Z` text-end marker or the end of the recorded
+contents. Displaying a file neither assembles its source nor executes
+commands written in it.
 
-A short file fits before the next prompt. `STARTUP.CMD` holds the two
-automatic startup commands of Chapter 1. This run on the serial terminal is
-separate from your BANNER session and the 40-column screen below:
+`STARTUP.CMD` is short enough to display before the next prompt. It
+contains the two automatic startup commands from Chapter 1. This serial
+terminal run is separate from both your BANNER session and the later
+40-column capture:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs 'TYPE STARTUP.CMD'. Boot rows included in this complete serial transcript. -->
 ```text
@@ -72,23 +75,22 @@ GLCD.SVC
 A:SYSTEM>
 ```
 
-The file's carriage returns and line feeds end its lines. The extra blank
-line before the prompt is printed by the command processor. TYPE with a missing file
-or no name prints `NO FILE`. A mistyped name therefore gives you a chance to
-check the spelling and try again without changing a file.
+The file's carriage returns and line feeds end each displayed line.
+The command processor adds the blank line before the prompt. A missing
+file or omitted name produces `NO FILE`. Correcting a mistyped name and
+trying TYPE again changes no file.
 
 ## Read a screenful
 
-SAMPLE.ASM is longer than one screen. TYPE and DIR pause with `[more]` on the
-last row rather than scrolling the whole listing away. The pause is the
-shell's, `SHELL.SVC`, which the startup file loads. Without the shell, as
-after the startup bypass of Chapter 8, they list to the end without
-pausing. A long text line that
-wraps at the right edge uses more than one screen row. The prepared 40-column
-PICO console shows 23 rows of listing before the pause.
+SAMPLE.ASM needs more than a screenful. The startup shell pauses TYPE
+and DIR at `[more]` so you can read before continuing. On the prepared
+40-column PICO console, 23 listing rows precede the pause. A long source
+line can wrap across several rows. Without `SHELL.SVC`, as after the
+startup bypass in Chapter 8, these commands continue to the end without
+pausing.
 
-These 24 rows are the complete first paused screen. The command echo has
-already scrolled away:
+The first paused screen contains these 24 rows. The typed command has
+already scrolled off the display:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TYPE A:SAMPLE.ASM'. The full screen, with trailing empty rows omitted. -->
 ```text
@@ -118,8 +120,8 @@ ABICALL   EQU   $C008
 [more]
 ```
 
-Space continues the listing. The pause disappears and the next rows follow. The
-next excerpt contains the full following paused screen, including `[more]`:
+Space clears the pause and displays the next rows. The complete next
+paused screen is:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TYPE A:SAMPLE.ASM' '@key  '. The full screen; trailing empty rows omitted. -->
 ```text
@@ -149,21 +151,21 @@ BDOS      EQU   5
 [more]
 ```
 
-Space continues at each pause until the text ends. Esc, Q or q stops a listing
-before its unread remainder. `^C` stops there too. Each of these keys erases
-`[more]`.
+Space continues at each pause until the end. Esc, Q, q or `^C` ends
+the listing before the remaining text. Each clears `[more]` from the screen.
 
-`^R` at the command prompt marks a hard-to-read line with `#` and reprints
-it on a new line. `^E` starts a new screen line while leaving the command
-being typed intact. Neither key changes a stored file.
+Two prompt keys can help with the line you are typing. `^R` marks it
+with `#` and reprints it on a new line. `^E` starts a new screen line
+without discarding the command. Both affect the display, leaving stored
+files unchanged.
 
 ## Copy, rename and selectively erase
 
-COPY makes another file from a source. COPY, and DEL below, are commands of
-the shell. Without it, typing either one looks for a program of that name
-and normally gives `COPY?` or `DEL?`. The destination can give a new name, a
-drive or both. With a drive alone, as in `COPY STARTUP.CMD B:`, the copy keeps
-the source's name. An existing destination of that name is erased before the
+COPY creates a second file. Its destination can specify a new name, a
+drive or both. A drive alone, as in `COPY STARTUP.CMD B:`, keeps the
+source's name. COPY and the DEL command below require the startup shell.
+Without it, TEC-OS searches for programs with those names and normally
+prints `COPY?` or `DEL?`. An existing destination of that name is erased before the
 replacement is made. Check the source and destination before copying over work
 you need to keep.
 
@@ -171,9 +173,9 @@ A working copy of SAMPLE's source on B gives you a file of your own to read
 or edit. `COPY A:SAMPLE.ASM B:SAMPLE.ASM` names both source and destination.
 Keep an existing B:SAMPLE.ASM rather than overwriting it for this exercise.
 
-The copy below starts at A on a fresh starter card with B empty.
-It is separate from the BANNER session. On your working card, BANNER's files
-have different names. This command writes only B:SAMPLE.ASM:
+This capture uses a fresh starter card with B empty. It is separate
+from the BANNER session. The command writes only B:SAMPLE.ASM, whose
+name differs from the BANNER files on your working card:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'COPY A:SAMPLE.ASM B:SAMPLE.ASM'. The full screen, with trailing empty rows omitted. -->
 ```text
@@ -193,16 +195,16 @@ COPIED 0024
 A:SYSTEM>
 ```
 
-The count after `COPIED` is hexadecimal. Here `0024` means 36 records of
-128 bytes. On the starter card SAMPLE.ASM occupies 4,485 bytes with its line
-ends and end marker, which fits in 36 records. The source on A remains in place. `TYPE B:SAMPLE.ASM` reads the
-new copy without changing the current drive.
+The hexadecimal count `0024` means 36 records of 128 bytes. These
+records contain the 4,485-byte SAMPLE.ASM, including line endings and
+its end marker. The source stays on A. `TYPE B:SAMPLE.ASM` displays
+the copy without selecting B as the current drive.
 
-REN changes a name on the same drive. Its form is `REN NEW=OLD`, with the new
-name first and no spaces around `=`. ERA removes the named file. The shell's
-DEL is another name for ERA: the shell hands the command to ERA. A rename to an
-existing name gives `FILE EXISTS` and changes nothing. Erasing a name that is
-absent gives `NO FILE`.
+REN changes a file's name on its existing drive. `REN NEW=OLD` puts
+the new name first, with no spaces around `=`. An existing new name
+produces `FILE EXISTS` and leaves both files unchanged. ERA removes
+a named file or prints `NO FILE` for an absent one. The shell's DEL
+command invokes ERA with the same arguments.
 
 The following complete example begins on a separate starter card with
 B empty. It does not contain BANNER.ASM, BANNER.COM or BANNER.DBG. Read it as
@@ -254,15 +256,15 @@ STARTUP .CMD     128
 B:WORK>
 ```
 
-`COPIED 0001` reports one 128-byte record copied. The count is hexadecimal:
-`000A` means ten 128-byte records (1,280 bytes). It counts copied records rather
-than space allocated to the file. Space is allocated in larger units, explained
-in [Cards on the PC](06-cards-on-the-pc.md#record-sizes-and-allocated-space).
+`COPIED 0001` means a 128-byte record was copied. `000A` would mean ten
+records, 1,280 bytes. This count describes transferred records. The card
+allocates storage in larger units, explained in
+[Cards on the PC](06-cards-on-the-pc.md#record-sizes-and-allocated-space).
 
-The first REN made NOTES.TXT from COPY.TXT. The next REN left both files alone
-because NOTES.TXT already existed. The first ERA removed NOTES.TXT. The repeated
-ERA found no such file. STARTUP.CMD remained on B and the source on A was not
-renamed or erased.
+The first REN renames COPY.TXT to NOTES.TXT. The second changes nothing
+because NOTES.TXT already exists. ERA then removes NOTES.TXT and its
+repetition reports `NO FILE`. STARTUP.CMD remains on B and the original
+on A is unchanged.
 
 On your working card, retain BANNER.ASM, BANNER.COM and BANNER.DBG. Use an exact
 name when erasing a disposable copy. A selective pattern such as `*.TXT` is
@@ -273,8 +275,9 @@ all-files erase form and its confirmation grammar are in
 
 ## Recognise a failed file command
 
-A failed command does not always mean a damaged card. A missing file, a taken
-name and an invalid argument have different messages:
+A command can fail because a file is missing, a destination name is
+already used or an argument is invalid. These cases do not establish
+card damage. The messages distinguish them:
 
 | Message | Meaning for these commands |
 | --- | --- |
@@ -286,10 +289,10 @@ name and an invalid argument have different messages:
 | `WRITE ERROR` | COPY could not write a record and attempted to close the partial destination. |
 | `CLOSE ERROR` | COPY could not close the completed copy. |
 
-The word before a question mark can be an argument rather than the command. For
-example, TYPE with a wildcard names that invalid argument. COPY instead prints
-`COPY?`. The exact grammar and remaining built-ins are listed in Appendix J.
-[Appendix D](appendix-d-error-messages.md) gives the complete messages, causes
+The word before `?` may be the invalid argument. TYPE with a wildcard
+prints that argument, whereas COPY prints `COPY?`. Appendix J lists
+the exact grammar and other built-ins.
+[Appendix D](appendix-d-error-messages.md) gives complete messages, causes
 and recovery actions.
 
 After COPY's `WRITE ERROR`, a successful close preserves the records already

@@ -17,9 +17,11 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-A memory address needs both a bank and a build identity. This reference
-pairs the map of one build with the source contracts for each region.
-[Chapter 11](11-memory-for-programs.md) explains the program's memory limits.
+The same CPU address can select different RAM through the bank window.
+Build-dependent addresses can also move when the system layout changes.
+These tables identify the bank and build so program space can be
+distinguished from resident storage.
+[Chapter 11](11-memory-for-programs.md) explains program limits and
 [Chapter 15](15-state-and-memory.md) explains resident state and its lifetime.
 
 The address tables describe the `tecos` build at TEC-OS `c4ec0f4`, whose ROM
@@ -71,7 +73,8 @@ drive receives `(DSM >> 3) + 1` bytes. A service lowers `0006h` to its first
 page during installation. `PZTOP` is updated when its pages are committed
 (`src/loader.asm:337-350`, `src/loader.asm:499-504`).
 
-These figures depend on the card and the services loaded:
+The card's drive reservations and installed services determine the remaining
+program space:
 
 | Card | Vectors | Word at `0006h` | TPA |
 | --- | ---: | --- | ---: |
@@ -158,8 +161,9 @@ state is above the RAM BIOS table (`src/layout.asm:64-69`,
 
 ## The resident workspace
 
-The following tables give every address and size on the starter card. A
-row's clearing column names the boot sweeps that reach it. Other routines can still overwrite a retained field.
+The tables below separate resident fields by subsystem. The clearing column
+identifies which boot sweeps reach each field. A retained field can still
+be overwritten by another routine.
 
 | Addresses | Bytes | Contents |
 | --- | ---: | --- |
@@ -236,9 +240,9 @@ the warm clearing sweep for another chained piece.
 | `BE4Ch–BE56h` | 11 | `STKGUARD` | CCP stack guard, `A5h` in each byte | Cold and warm boot. Warm boot then writes `A5h` |
 | `BE57h–BE76h` | 32 | `CSTKBAS` | CCP stack up to exclusive top `CSTKTOP` | Cold and warm boot |
 
-Retention of the line does not guarantee that it runs. Without the shell the
-CCP runs a function 47 line whole. A failed warm-boot flush cancels the line,
-writing 2 to `CHPOS` after dropping failed cache lines
+A retained command line can be cancelled before it runs. With no shell,
+the CCP runs a function 47 line as a whole. A failed warm-boot flush drops
+the failed cache lines and writes 2 to `CHPOS`, cancelling the line
 (`src/cache.asm:266-300`, `src/cache.asm:624-640`).
 [Chapter 22](22-chains-across-warm-boot.md) explains the other cancellation
 paths.
@@ -410,8 +414,9 @@ PRGCODE BF54h
 CHPOS BF66h
 ```
 
-A source change can move build-dependent addresses. Page zero, the cache addresses, RAM BIOS origin `BF00h` and ROM table origin `C003h` are
-fixed by the inspected contract (`src/layout.asm:30-69`, `src/abi.inc:307-309`,
-`src/layout.asm:98-99`,
-`tools/build.mjs:237-248`). A symbol lookup is valid for the artifact
-it reads so a later map needs that build's symbols and identity.
+A symbol lookup describes the artifact whose symbols it reads. Use that
+build's symbol file and identity when inspecting a later map.
+Page zero, the cache addresses, RAM BIOS origin `BF00h` and ROM table
+origin `C003h` are fixed by the inspected contract. Other addresses can move
+with a source change (`src/layout.asm:30-69`, `src/abi.inc:307-309`,
+`src/layout.asm:98-99`, `tools/build.mjs:237-248`).

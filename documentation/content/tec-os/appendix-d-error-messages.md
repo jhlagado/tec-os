@@ -17,10 +17,11 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-An error message identifies the operation that stopped and the recovery still
-available. The tables follow cold boot, the diagnostic prompt, the LCD, the
-command processor and the BDOS, then failures in the block cache and `CD`.
-Ordinary status lines have a separate table at the end.
+A failed command may have changed nothing or left part of a file written.
+Recovery depends on where it stopped. The tables pair each printed message
+with its cause and the action still available. They follow cold boot, the
+diagnostic prompt, the LCD, the command processor and the BDOS, then block
+cache and `CD` failures. Ordinary status lines have a separate table at the end.
 
 In a message `d` stands for a drive letter, `n` for a decimal number, `NAME`
 for a word from the command line, `LABEL` for a volume's label and `nn` for a
@@ -111,13 +112,15 @@ every check in order and
 | `29` | A drive is invalid, exceeds the header's requested drive count or is assigned twice. | `src/vol.asm:307-329` |
 | `2A` | No volume is assigned to drive A. | `src/vol.asm:343-353` |
 
-For `20h`, `R` retries the read. A repeated read failure or a structural fault
-needs card inspection. [Chapter 6](06-cards-on-the-pc.md#recovery-after-a-power-cut)
-gives the copy-first procedure. `tecvol verify` reports container and directory
-faults. `get` also validates the container before extraction so a failed
-container check prevents any file read. `get` does not perform the complete
-directory check that `verify` does. A fresh image can be made with `create`
-and `put` or a starter recipe
+`R` retries a read that failed with `20h`. A repeated read failure or a
+structural fault requires inspection of the card. Preserve a copy before
+changing it, following the procedure in
+[Chapter 6](06-cards-on-the-pc.md#recovery-after-a-power-cut).
+
+`tecvol verify` checks both container and directory faults. `get` validates
+the container before extracting anything, so a failed container check
+prevents a file read. It does not perform `verify`'s complete directory
+check. `create` and `put`, or a starter recipe, can construct a fresh image
 (`tools/tecvol.mjs:71-81`, `113-137`, `157-164`).
 
 The browser uses a high-capacity card model and rejects truncated images
@@ -129,10 +132,10 @@ container bound (`host/machine.mjs:49`, `web/src/main.mjs:604-630`,
 
 ## The LCD's words
 
-TEC-OS writes two words on the 20 × 4 LCD's last row for a board that may
-have no terminal attached.
-[Chapter 26](26-startup-inside-the-ccp.md#recovery-words-and-row-ownership) explains when each
-is written and cleared.
+A board without a terminal can still report a boot or display problem on
+the 20 × 4 LCD. TEC-OS uses its last row for the two words below.
+[Chapter 26](26-startup-inside-the-ccp.md#recovery-words-and-row-ownership)
+explains when they are written and cleared.
 
 | Word | Cause | Remedy | See |
 | --- | --- | --- | --- |
@@ -252,11 +255,11 @@ printf 'PICO.DRV\nGLCD.DRV\n' > startup.cmd
 node tools/tecvol.mjs put old.img A startup.cmd --text
 ```
 
-In the graphics-LCD host-model capture the ROM runs only the startup file's
-first line, which fails, and no shell is installed. After renaming, PICO
-still fails and leaves no installed service. GLCD installs and takes the
-console. `SERVICES` is the shell's command, so without the shell it fails
-too:
+The retained graphics-LCD host-model run starts without a shell. The ROM
+runs only the first startup line and that line fails. Renaming does not make
+PICO installable, so its next attempt still leaves no service installed.
+GLCD installs and selects its console. `SERVICES` also fails because that
+command requires the shell:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card old.img --board glcd 'REN PICO.SVC=PICO.DRV' 'REN GLCD.SVC=GLCD.DRV' PICO.SVC GLCD.SVC CON SERVICES. Boot rows included in this complete serial transcript. -->
 ```text
@@ -326,45 +329,49 @@ back (`src/cpm/bdos.asm:223-235`, `src/ram.asm:216-217`).
 
 ## `Write lost`
 
-`Write lost` applies to the drive you are on, the logged drive, whose writes
-wait in the block cache, and also to the pending block, the one block a
-volume on another drive holds until its next flush point. Every console read
-writes every changed line, so the lines a warm boot can find are those a
-program left between its last key wait and its end, or those the card
-refused (`docs/recovery.md:1-60`, `docs/recovery.md:98-152`). At each warm boot TEC-OS writes every
-changed block in the cache to the card. A line whose write fails is dropped from the cache. This does not undo
-an earlier successful or partial physical write. If any write failed, the
-message is printed once on a line of its own and the rest of a chained
-line is dropped (`src/cache.asm:258-296`,
-`634-640`, `src/text.asm:94`).
+`Write lost` reports a failed warm-boot flush. The affected changes can
+belong to the logged drive or to a volume on another drive. Logged-drive
+writes can remain in the block cache. A different volume can retain a
+pending block until its next flush point.
 
-The cached changes in dropped lines are lost and the next warm boot has
-no such lines left to retry. A directory line is dropped when its write
-or preceding data flush fails. The BDOS reports `Bad Sector` at once. If
-only the directory write failed, its dropped block leaves nothing for the next
-warm boot to retry so that failure alone gives no `Write lost`. The data blocks
-that failed stay dirty in the cache. Another close or flush can retry them.
-The warm boot after the recovery key writes them again and gives `Write lost`
-if writes still fail (`src/cache.asm:258-296`, `546-555`). The file
-that was being written needs writing again, once the card is put right and the
-board reset.
+Every console read writes every changed line to the card. Lines remaining
+at warm boot therefore contain later changes or writes that previously
+failed (`docs/recovery.md:1-60`, `docs/recovery.md:98-152`). Warm boot
+attempts to write each changed block and drops a cache line whose write
+fails. It does not undo earlier successful or partial physical writes.
+Any failure prints the message once and cancels the rest of the command
+line (`src/cache.asm:258-296`, `634-640`, `src/text.asm:94`).
 
-Putting the card back does not itself run `SDINIT`. The card is started at cold
-boot or a diagnostic retry, not at warm boot (`src/boot.asm:92-101`,
-`src/boot.asm:656-667`). If writes still fail at the next warm boot, the changed
-lines are dropped and `Write lost` is printed (`src/cache.asm:266-296`,
-`src/cache.asm:624-640`). `MOUNT`, unmount and function 48 instead keep a
-failed line for the next flush, so only a warm boot drops a flushed line that
-still fails (`docs/recovery.md:75-96`). BDOS function 48 reports a failure to a program at
-once: it writes every changed block and returns `A` = `FFh` if any write failed
+Dropped cached changes are lost. The next warm boot has no copy of them
+to retry. A directory line is dropped when its own write or the preceding
+data flush fails. The BDOS reports `Bad Sector` immediately. When only the directory write fails, its line has been dropped. That
+failure alone causes no `Write lost` at the next warm boot.
+
+Data blocks that fail during a directory operation remain dirty. A later close or flush can retry them.
+The warm boot after the recovery key attempts them again and reports
+`Write lost` if they still fail (`src/cache.asm:258-296`, `546-555`).
+After correcting the card problem and resetting the board, write the
+affected file again.
+
+Reinserting the card does not run `SDINIT`. Card initialisation occurs at
+cold boot or a diagnostic retry, not warm boot
+(`src/boot.asm:92-101`, `src/boot.asm:656-667`). Writes that still fail at
+the next warm boot are dropped and produce `Write lost`
+(`src/cache.asm:266-296`, `src/cache.asm:624-640`).
+
+`MOUNT`, unmount and function 48 retain a failed line for another flush.
+Only warm boot drops a flushed line that still fails
+(`docs/recovery.md:75-96`). Function 48 writes every changed block and
+returns `A` = `FFh` if any write fails
 (`src/cpm/bdos.asm:237-257`). [Chapter 19](19-cache-and-persistence.md)
-explains the mechanism, and which drive is written behind.
+explains these paths and the logged-drive policy.
 
 ## `CD`
 
-The shell's `CD` prints these messages. Each refusal sets the return code to
-`FF00h`, so a following `&` piece is skipped, and the drive keeps the volume
-it had (`drivers/shellcd.asm:17-165`, `docs/shell.md:141-191`).
+A failed `CD` leaves the drive's volume in place. Each rejection sets the
+return code to `FF00h`, so a following `&` piece is skipped
+(`drivers/shellcd.asm:17-165`, `docs/shell.md:141-191`). The shell prints the
+messages below.
 [Chapter 5](05-drives-and-user-areas.md#changing-a-drive-s-volume) gives the
 operator commands and [Chapter 18](18-card-blocks-and-volumes.md) explains
 the volume services.
@@ -410,7 +417,8 @@ gives for entering a service.
 
 ## Lines that report no fault
 
-These lines appear in ordinary runs and need no remedy.
+The following lines report ordinary progress or request input. They do not
+indicate a fault and need no recovery action.
 
 | Line | Meaning | See |
 | --- | --- | --- |

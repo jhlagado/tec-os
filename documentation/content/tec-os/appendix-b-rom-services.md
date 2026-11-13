@@ -17,18 +17,21 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-The eight-byte ROM table at `C003h` has one jump for seventeen numbered
-services. Numbers 0–8 control hardware, 9–11 manage volumes, 12 registers a
-display driver, 13–14 read the registry, 15 returns the console font and 16
-sets the shell hook. The PICO record
-provides a separate table of graphics routines. The complete hardware programs
-are in Chapter 12, the dispatcher explanation in Chapter 24 and the
-resident-service and registry contracts in Chapter 14.
+A program can use the board's displays, keyboard and other hardware through
+TEC-OS services as well as the CP/M file and console calls. The eight-byte
+ROM table at `C003h` contains a jump to seventeen numbered services.
+Numbers 0–8 control hardware, 9–11 manage volumes and 12 registers a
+display driver. Numbers 13–14 read the registry, 15 returns the console font
+and 16 sets the shell hook. Graphics routines have a separate table in the
+PICO record.
 
-This reference gives each service's inputs, results, status and stack bound.
-Host-model costs are given with the build they were measured on, separately
-from the source contracts. A stack bound is an allowance for a caller, not a claim that every
-path uses that many bytes.
+Chapter 12 contains complete hardware programs. Chapter 24 explains the
+numbered dispatcher and Chapter 14 gives the resident-service and registry
+contracts.
+
+Each entry below specifies inputs, results, status and a stack bound for
+the caller. Measured costs name the host-model build separately. A stack
+bound is an allowance to reserve, not a claim that every path reaches it.
 
 ## The ROM table
 
@@ -47,9 +50,10 @@ requiring FONT also checks for minor version 1 or later (`src/abi.inc:1-31, 208-
 | `C007h` | 1 | `ABIMIN` | The minor version, 1 |
 | `C008h` | 3 | `ABICALL` | `JP` to the numbered services |
 
-ABIEND is `C00Bh`, eight bytes after ABITAB. The read-only data block follows
-the ABI table. ABICALL is a JP into the dispatcher rather than an array of fixed
-routine addresses (`src/rom.asm:12-18`, `src/services.asm:24-57`).
+`ABICALL` jumps into the dispatcher. It is not an array of fixed addresses
+for individual routines (`src/rom.asm:12-18`, `src/services.asm:24-57`).
+ABIEND is `C00Bh`, eight bytes after ABITAB, and the read-only data block
+follows the table.
 
 ## Calling a service
 
@@ -105,19 +109,20 @@ results as destroyed (`src/abi.inc:35-69`).
 | 15 | `FONT` | `TNFONT` | nothing | 4 | 184 |
 | 16 | `SHELL` | `TNSHELL` | `HL` = a shell's table or 0 | 4 | |
 
-The names and bounds come from `src/abi.inc:65-234`. The build's ABI check
-compares the fixed table bytes, verifies that the service entries lie in code
-and checks INFO's bits. It does not prove every routine's contract. Media
-generation publishes the include as `dist/abi.inc` (`tools/build.mjs:140-155`,
-`tools/media.mjs:285-292`).
+The names and bounds are defined in `src/abi.inc:65-234`. The build's ABI
+check verifies the fixed table bytes, code locations of service entries and
+INFO's bits. Passing that check does not prove every routine's contract.
+Media generation publishes the include as `dist/abi.inc`
+(`tools/build.mjs:140-155`, `tools/media.mjs:285-292`).
 
 ### Costs and depths
 
-The table's stack figures are current source bounds below the service's return
-address, including dispatcher use. The dispatcher's temporary pushes are gone
-when the selected routine begins so its depth is not added to a routine's
-depth. The caller must allow for its own return word, saved registers and
-nesting too (`src/services.asm:34-57`).
+A caller needs room for both its own saved state and the service call.
+The stack bounds in the table count bytes below the service's return
+address, including dispatcher use. The dispatcher removes its temporary
+pushes before entering the routine, so the two depths are not added
+together. The caller must also allow for its return word, saved registers
+and nested calls (`src/services.asm:34-57`).
 
 The cost figures start at the JP at ABICALL and end after the final RET. A CALL
 adds 17 T-states. Their model provenance is:
@@ -135,10 +140,11 @@ No cost was recorded here for services 9–14 and 16.
 
 ## The hardware services
 
-Numbers 0–8 are implemented in `src/services.asm`. None calls the BDOS. VCLAIM
-holds the PICO claim flag, LCD can clear CONDEV's ROM-word bit and VIDEO release
-can reset the selected console's row and column. These are resident workspace
-changes, not state stored in a transient program
+Hardware calls 0–8 run without the BDOS. Their implementation in
+`src/services.asm` can still change resident state. VCLAIM holds the PICO
+claim flag. LCD can clear CONDEV's ROM-word bit and VIDEO release can reset
+the selected console's row and column. These fields belong to the resident
+workspace, not the transient program
 (`src/services.asm:1-20, 120-230`).
 
 ### 0 INFO
@@ -209,7 +215,7 @@ clears VCLAIM and calls the ROM PICO console's restore routine when that console
 started at cold boot. Mode, font and displayed page are restored. If PICO is
 selected, release also clears its screen and homes its cursor. With the
 Matrix switch disabled the ROM console did not start so release leaves the chip's
-programmed state alone; warm boot first writes 80h to its register 1, blanking it
+programmed state alone. Warm boot first writes 80h to its register 1, blanking it
 (`src/pico.asm:326-362`). Warm boot releases an active claim before rebuilding
 page zero (`src/boot.asm:131-152`, `src/pico.asm:44-68`).
 
@@ -390,10 +396,11 @@ console again. Another selected mode and its screen are preserved
 
 ## The registry
 
-FIND and LIST read published records without calling BDOS or BIOS. They can
-therefore run on the caller's stack within their eight-byte bounds. A record
-contains a link word, an eight-byte name, a version byte and a table address: 13
-bytes in all (`src/loader.asm:44-46, 636-732`).
+FIND and LIST locate tables published by installed services. They read
+records without calling BDOS or BIOS and use the caller's stack within an
+eight-byte bound. Each 13-byte record contains a link word, an eight-byte
+name, a version byte and a table address
+(`src/loader.asm:44-46, 636-732`).
 
 FIND examines at most 256 records. LIST's byte index selects 0–255. The loader
 admits at most 256 records in total and at most 255 from one new service,
@@ -528,9 +535,9 @@ BACK:	DB	"????"		; PICORD fills these four
 %INCLUDE "HWLIB.ASM"
 ```
 
-This host-model VRAM round trip, not a physical-board result, obtains the
-PICO record from the ROM console. The recipe assumes Chapter 14's `svc.img`,
-ABI.INC and HWLIB.ASM preparation:
+The following host-model run writes and reads back VRAM through the ROM
+console's PICO record. It is not a physical-board result. Its preparation
+is Chapter 14's `svc.img`, ABI.INC and HWLIB.ASM.
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card svc.img --board pico B: 'TAS VTEST' VTEST. Boot rows included in this complete serial transcript. -->
 ```text
@@ -575,12 +582,12 @@ The retained sources and modifications are recorded in
 `format/FONT-NOTICES.txt`. The original TEC-OS bitmap's upstream authorship
 remains unresolved (`format/FONT-NOTICES.txt:33-47`).
 
-This build puts FONT at `C193h`. Programs use the returned
-address rather than embedding that coordinate. The PICO console uses the FONT
-label and GLCD.SVC obtains the
-address through this call during INIT (`src/pico.asm:235-277`,
-`drivers/glcd.asm:60-64`). On ABI 5.0 the number is out of range and returns
-status 1 so this GLCD driver's INIT refuses installation there.
+Programs obtain the font's address from this call instead of embedding the
+current build's `C193h`. The PICO console uses the FONT label. GLCD.SVC
+calls FONT during INIT and stores the returned address
+(`src/pico.asm:235-277`, `drivers/glcd.asm:60-64`). ABI 5.0 has no such
+service number and returns status 1, so this GLCD driver rejects
+installation there.
 
 ## The shell hook
 

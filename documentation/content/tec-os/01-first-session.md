@@ -17,27 +17,28 @@ nav_group: "Using the machine"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-Your first session starts with the supplied files. You list them, change drive
-and turn SAMPLE's source into a program you can run. Before finishing you write
-any pending saved changes to the card.
+The starter card contains programs you can use and source files you can
+change. This session begins by finding those files at the command prompt.
+You then build and run SAMPLE, a supplied program, before finishing with
+your saved work written to the card.
 
 ## The prepared machine
 
-The TEC-1G is already prepared with the TEC-OS ROM and starter card. It has the
-required 32 KiB RAM chip in U9, the 4 MHz FAST setting and a PICO9918 display.
+The examples use a TEC-1G prepared with the TEC-OS ROM and starter card.
+It has the required 32 KiB RAM chip in U9, the 4 MHz FAST setting and a
+PICO9918 display.
 The Matrix switch enables the matrix keyboard. The keypad non-maskable
 interrupt (NMI) jumper is off. The display uses the TEC Compact font at
 40 columns and 24 rows. [Appendix G](appendix-g-tec-1g.md) gives the hardware
 preparation details.
 
-The screen examples below are from the host model, a software TEC-1G with that
-configuration. They are text excerpts from its screen with unused blank rows
-left out.
+The screen examples were captured from the host model, a software TEC-1G
+with this configuration. Unused blank rows are omitted from the excerpts.
 
 ## The first prompt
 
-Powering on starts TEC-OS. The screen names the system and the three assigned volumes on
-the starter card:
+Power-on starts TEC-OS and displays the system name. The three names below
+it identify the card volumes available for files:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen. The full screen, with trailing empty rows omitted. -->
 ```text
@@ -54,24 +55,22 @@ A:SYSTEM>GLCD.SVC
 A:SYSTEM>
 ```
 
-A *volume* is a disk's worth of files on the card. SYSTEM is assigned to drive
-A, WORK to drive B and PROJECTS to drive C. The letter before `>` identifies the *current drive*,
-the one used when you name a file without a drive letter. At `A:SYSTEM>` you are
-working on SYSTEM. The prompt is where you type a command.
+A *volume* is a disk's worth of files on the card. SYSTEM is assigned to
+drive A, WORK to drive B and PROJECTS to drive C. The final `A:SYSTEM>` is
+the command prompt. It identifies drive A as the *current drive* and SYSTEM
+as its volume. A file name without a drive letter refers to that drive.
 
-The `SHELL.SVC` and `GLCD.SVC` lines were automatic. They came from the
-card's startup file. `SHELL.SVC` loads the *shell*, a program that stays in
-memory and reads each command line you type. It supplies the recall keys
-below, the pause in long listings and the `COPY` command of Chapter 4. The
-PICO9918 is already the console, the screen and keyboard used for commands,
-so the `GLCD.SVC` line leaves it selected. You begin typing at the final
-`A:SYSTEM>`. The separate 20 × 4 LCD also shows the system name and assigned drives.
+The card's startup file runs `SHELL.SVC` and `GLCD.SVC` automatically.
+The shell reads your command lines. The GLCD line is for an optional
+graphics LCD. In this session it leaves the PICO9918 selected as the
+*console*, the display and keyboard used for commands. You can begin typing at the final `A:SYSTEM>`. The separate
+20 × 4 LCD also displays the system name and assigned drives.
 
 ## Files at the prompt
 
-`DIR` lists the files on the current drive. You type the letters after the
-prompt and press Return. The prompt itself is already on the screen and is
-not part of the command. In the same session the listing was:
+`DIR` lists the files on the current drive. To get this listing, type `DIR`
+after the prompt and press Return. The prompt is already on screen, so it
+is not part of the command you enter. The same session produced:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen DIR. The full screen, with trailing empty rows omitted. -->
 ```text
@@ -101,31 +100,29 @@ HELLO3  .ASM    2176
 A:SYSTEM>
 ```
 
-The listing starts after a blank line and gives one file a row, with its
-size in bytes. Each name has up to eight characters followed by a type of up
-to three characters. A full stop separates the two when you type a name. In
-`SAMPLE.ASM`, SAMPLE is the name and ASM is the type. The `.ASM` file holds
-source text. A `.COM` file holds a program that TEC-OS can run.
+Each row after the blank line names a file and gives its size in bytes.
+A file name has up to eight characters and a type of up to three characters.
+You separate them with a full stop when typing the name. In `SAMPLE.ASM`,
+SAMPLE is the name and ASM is the type. The `.ASM` file contains source
+text. A `.COM` file contains an executable program.
 
-`TAS` is the assembler supplied on the card. It turns source text into a
-program. `TED` is the supplied text editor.
-`BAZA` is a BASIC compiler, which uses its library `BAZA.RTL`, and
-`TIMES.BAS` is a BASIC program for it. The automatic display setup uses
-`GLCD.SVC` and `STARTUP.CMD`, and `SHELL.SVC` is the shell. Leave them as
-supplied for this session. The other files are demonstrations, which
-[More on the card](#more-on-the-card) lists.
+The supplied assembler, `TAS`, turns assembly source into an executable.
+`TED` edits text files. `BAZA` compiles BASIC source such as `TIMES.BAS`
+and uses the library `BAZA.RTL`. The startup files are `SHELL.SVC`,
+`GLCD.SVC` and `STARTUP.CMD`. Leave them as supplied for this session.
+The remaining demonstrations are optional and are listed under
+[More on the card](#more-on-the-card).
 
-The last two lines report the number of files and their bytes, and the free
-space on A with the drive's volume, `A:SYSTEM`. The prompt shows the same
-pair: `A:SYSTEM>` means drive A, holding the volume SYSTEM. The card's WORK
-volume on B starts empty and is available for your files.
+The totals below the files give their combined size and the free space on
+`A:SYSTEM`. This is the same drive and volume shown in the prompt. WORK
+on drive B starts empty, ready for your files.
 
 ## Correcting and recalling a line
 
-You can change a command before Return runs it. Letter case does not change
-the command: `dir` and `DIR` name the same operation. Shift supplies capital
-letters and the symbols above the matrix keyboard's other keys. Each press
-sends one character so holding a key does not repeat it.
+A command runs when you press Return. Until then you can correct what you
+have typed. `dir` and `DIR` perform the same operation. Shift supplies
+capital letters and the symbols above the matrix keyboard's other keys.
+Each press sends a character and holding a key does not repeat it.
 
 Control keys use Ctrl with a letter. `^X` means hold Ctrl while pressing X.
 These command-line actions let you correct a name or start again:
@@ -138,17 +135,17 @@ These command-line actions let you correct a name or start again:
 | `^W` | Brings back the previous command and earlier ones on further presses |
 | `^N` | Moves forward through recalled commands with an empty line past the newest |
 
-Return runs a recalled line just as it runs a newly typed one. You can edit
-its last characters first with Backspace or discard it with `^X`. Recall is
-useful for another `DIR` after a file has changed. It applies at the command
-prompt, not inside an arbitrary program's own input. `^W` and `^N` belong to
-the shell, which keeps the lines you type. Without the shell, as after the
-startup bypass of Chapter 8, the other keys still work and recall does not.
+Recall lets you repeat a command such as `DIR` after changing a file.
+Return runs the recalled line. Before that you can remove its last
+characters with Backspace or discard it with `^X`. The shell stores these
+command lines and supplies `^W` and `^N` at the prompt. Other programs
+have their own input rules. Bypassing startup in Chapter 8 leaves recall
+unavailable, while the other correction keys still work.
 
-A mistyped command can fail with a question mark after its name. The command
-has then finished and the prompt is ready for a corrected line. `^C` at an
-empty prompt starts a *warm boot*, which restarts the command processor and
-returns to the prompt.
+A question mark after a command name can indicate a typing error. You can
+enter the corrected command at the next prompt. `^C` at an empty prompt
+starts a *warm boot*: the command processor restarts and displays the
+prompt again.
 
 ## Drive A and drive B
 
@@ -183,16 +180,15 @@ B:WORK>A:
 A:SYSTEM>
 ```
 
-The current drive supplies the location for a plain file name. The files on A
-remain there when the prompt is on B. Returning to A puts the supplied SAMPLE
-source and assembler on the current drive for the build below.
+Selecting another drive affects lookup for a plain file name. It leaves
+the files themselves in place. Returning to A selects the volume containing
+SAMPLE and the assembler for the next command.
 
 ## Supplied source and a running program
 
-`SAMPLE.ASM` is already on A. `TAS SAMPLE` reads that source and writes the
-program as `SAMPLE.COM`. You type SAMPLE without `.ASM` in the build
-command because TAS supplies the file types. The assembler's completion
-message gives the output file's name:
+`TAS SAMPLE` assembles the supplied `SAMPLE.ASM` into `SAMPLE.COM`.
+The command needs only SAMPLE because TAS supplies the file types.
+A completed assembly produces this message:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS SAMPLE'. The full screen; trailing empty rows omitted. -->
 ```text
@@ -212,12 +208,12 @@ SAMPLE.COM written
 A:SYSTEM>
 ```
 
-The source and program are separate files. An edit to the source affects the
-program only after another assembly. The `.ASM` file remains available to read
-or edit after the build.
+Assembly creates an executable while leaving the `.ASM` source available
+for reading and editing. A later source edit takes effect in the program
+only after you assemble it again.
 
-Typing `SAMPLE` now runs `SAMPLE.COM`. TEC-OS loads the program and starts it.
-The program prints its greeting and screen size then returns to the prompt:
+The command `SAMPLE` loads and starts `SAMPLE.COM`. Its greeting and screen
+size appear before it returns to the prompt:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS SAMPLE' SAMPLE. The full screen; trailing empty rows omitted. -->
 ```text
@@ -242,51 +238,12 @@ Back to the prompt.
 A:SYSTEM>
 ```
 
-The dimensions are 40 columns by 24 rows, matching this console. On the
-separate 20 × 4 LCD SAMPLE writes `Hello from SAMPLE` and its digit output is
-`123456`. The source also includes a short speaker tone.
+SAMPLE reports the console dimensions, 40 columns by 24 rows. It also
+writes `Hello from SAMPLE` on the separate 20 × 4 LCD, displays `123456`
+on the digits and sounds a short speaker tone.
 
-The new `A:SYSTEM>` means the program has finished and you can type another command.
-The same prompt is also the place to finish the session safely.
-
-## More on the card
-
-The other files on A are programs to try in the same way, each with a
-command or two at `A:SYSTEM>`:
-
-| Commands | Result |
-| --- | --- |
-| `TAS DEMO`, then `DEMO` | Builds and runs a tour of the hardware on the LCD, the digits, the 8 × 8 LEDs and the PICO9918, until you press a key. [Chapter 12](12-use-the-boards-devices.md) describes it |
-| `BAZA BOUNCE`, then `BOUNCE` | Compiles and runs a sprite game on the PICO9918. Tap W, A, S and D, or the arrow keys, to steer and Q to quit. [Chapter 3](03-build-a-basic-program.md) describes it |
-
-`TED DEMO.ASM` and `TED BOUNCE.BAS` open those sources. BOUNCE.BAS's
-longest line is 79 columns wide, so at 40 columns TED scrolls sideways to
-show the rest of a line. After `CON PICO 80` it shows every line whole, and
-`CON PICO 40` returns to 40 columns.
-[Chapter 7](07-choose-a-console.md) explains the widths.
-
-`MON3.SVC` runs programs written for MON-3, the TEC-1G's own monitor.
-Typing `MON3.SVC` installs it and gives its prompt, `MON3>`. There
-`LOAD HELLO3.BIN` loads the supplied MON-3 program and `GO` runs it. HELLO3
-writes four lines on the 20 × 4 LCD through MON-3's calls, then beeps:
-
-<!-- TEC-OS b3134cf test/starter.test.mjs:219, the LCD rows the host-model
-     test checks, trailing spaces removed. Not a separate capture. -->
-```text
-MON-3 ON TEC-OS
-LCD BY RST 10H
-DIGITS BY RST 20H
-KEY BEEPS, AD QUITS
-```
-
-It then counts on the digits. Another key beeps and shows its code on the
-right two digits. With the matrix keyboard enabled, as here, the
-service reads the matrix and not the keypad, so Esc on the matrix keyboard
-ends the program and returns to `MON3>`. With the Matrix switch off, AD on
-the keypad does the same. `EXIT` returns to `A:SYSTEM>`. `HELLO3.ASM` is the
-program's source, and `TAS HELLO3 HELLO3.BIN` builds it.
-[Chapter 5](05-drives-and-user-areas.md) explains the service and what it
-keeps in memory.
+At the new `A:SYSTEM>` the program has finished. You can enter another
+command or finish the session using the precautions below.
 
 ## Saved work before reset or removal
 
@@ -298,8 +255,8 @@ though, it first writes every change it holds, on every drive. The prompt
 waits for a key, so at the prompt everything is on the card.
 
 Finish the program and wait for the prompt before switching off, pressing
-reset or removing the card. Only a program still running, one that never
-waits for a key, can hold changes in memory.
+reset or removing the card. A running program may hold new changes
+in memory between key waits.
 
 A `Write lost` message means that some pending changes could not be written.
 The new prompt after that message does not establish successful preservation.
@@ -313,3 +270,41 @@ preserve edits that exist only inside the editor.
 
 The card must be out of the TEC-1G before you change it on a PC. After putting
 it back, press reset before using it again.
+
+## More on the card
+
+You can finish the first session after SAMPLE. For more examples, the
+other files on A use the same build-and-run sequence at `A:SYSTEM>`:
+
+| Commands | Result |
+| --- | --- |
+| `TAS DEMO`, then `DEMO` | Builds and runs a tour of the hardware on the LCD, the digits, the 8 × 8 LEDs and the PICO9918, until you press a key. [Chapter 12](12-use-the-boards-devices.md) describes it |
+| `BAZA BOUNCE`, then `BOUNCE` | Compiles and runs a sprite game on the PICO9918. Tap W, A, S and D, or the arrow keys, to steer and Q to quit. [Chapter 3](03-build-a-basic-program.md) describes it |
+
+`TED DEMO.ASM` and `TED BOUNCE.BAS` open the demonstration sources.
+The longest line in BOUNCE.BAS is 79 columns wide. TED scrolls sideways
+at 40 columns to display the rest of that line. `CON PICO 80` provides
+enough width to show each line whole and `CON PICO 40` restores 40 columns.
+[Chapter 7](07-choose-a-console.md) explains console widths.
+
+Programs written for the TEC-1G's MON-3 monitor use a separate service.
+`MON3.SVC` installs that service and displays `MON3>`. At this prompt,
+`LOAD HELLO3.BIN` loads the supplied program and `GO` runs it. HELLO3
+prints four lines on the 20 × 4 LCD through MON-3's calls, then beeps:
+
+<!-- TEC-OS b3134cf test/starter.test.mjs:219, the LCD rows the host-model
+     test checks, trailing spaces removed. Not a separate capture. -->
+```text
+MON-3 ON TEC-OS
+LCD BY RST 10H
+DIGITS BY RST 20H
+KEY BEEPS, AD QUITS
+```
+
+HELLO3 then counts on the digits. A keypress sounds a beep and displays
+its code on the right two digits. With the Matrix switch enabled, the
+service reads the matrix keyboard, so Esc ends the program and returns
+to `MON3>`. With that switch off, AD on the keypad ends it. `EXIT` returns
+to `A:SYSTEM>`. The source is `HELLO3.ASM`, built with
+`TAS HELLO3 HELLO3.BIN`. [Chapter 5](05-drives-and-user-areas.md) explains
+the service and its reserved memory.
