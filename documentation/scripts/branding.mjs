@@ -13,9 +13,10 @@ export function checkBranding(html, { requireMark = true } = {}) {
   }
   walk(parse(html));
   const errors = [];
-  if (titles.length !== 1 || !/(?:^|\| )tec-os$/.test(titles[0])) errors.push('Page title must end with tec-os');
-  if (sites.length !== 1 || sites[0] !== 'tec-os') errors.push('Open Graph site name must be tec-os');
-  if ((requireMark && !logos.length) || logos.some(label => label !== 'tec-os')) errors.push('Site marks must be labelled tec-os');
+  if (titles.length !== 1 || !/(?:^|\| )TEC-OS$/.test(titles[0])) errors.push('Page title must end with TEC-OS');
+  if (sites.length !== 1 || sites[0] !== 'TEC-OS') errors.push('Open Graph site name must be TEC-OS');
+  if ((requireMark && !logos.length) || logos.some(label => label !== 'TEC-OS')) errors.push('Site marks must be labelled TEC-OS');
   if (/\btech-?os\b/i.test([...text, ...titles, ...sites, ...logos].join(' '))) errors.push('Incorrect site spelling in visible content or metadata');
+  if (/(?<![\w./-])tec-os(?![\w./-])/.test(text.join(' '))) errors.push('Visible branding must use uppercase TEC-OS');
   return errors;
 }
