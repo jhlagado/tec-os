@@ -15,15 +15,17 @@ MON-3, the TEC-1G's own monitor, under TEC-OS. The MON-3 it follows is
 `jhlagado/debug80-tec1g-mon3` at `000c052`, whose ROM is the pinned
 `MON3.BIN` the tests compare it with (`test/inputs.json`). Media builds it
 with TAS into `dist/MON3.SVC`, beside the ROM, and puts it on the starter
-card, the one card, which the Viewer runs too. Beside it are `HELLO3.BIN`,
-built by TAS from `test/programs/hello3.asm` to load at 4000h, and that
-source as `HELLO3.ASM`, which `TAS HELLO3 HELLO3.BIN` builds on the card
+card, the one card, which the Viewer runs too. `HELLO3.ASM` is its source-only
+example, from `test/programs/hello3.asm`. First run `TAS HELLO3 HELLO3.BIN`
+on the card to build the image that MON-3 loads at 4000h
 (`test/starter.test.mjs`).
 
 ## Install and enter
 
 ```text
-A>MON3.SVC
+A:SYSTEM>TAS HELLO3 HELLO3.BIN
+...
+A:SYSTEM>MON3.SVC
 
 MON3>LOAD HELLO3.BIN
 
