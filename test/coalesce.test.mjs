@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ABI, ROOT, SHELL_SVC, abiDeclarations, boot, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
-import { BUF, DMA, FCB, FCB2, FCB3, MUTANTS, card, closed8, dirBlocks, flushRun, pat, rig, same, three } from "./lib/coalesce.mjs";
+import { BUF, DMA, FCB, FCB2, FCB3, MUTANTS, backlog, card, closed8, dirBlocks, flushRun, pat, rig, same, three } from "./lib/coalesce.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 const readText = (n) => readFileSync(resolve(ROOT, n), "utf8");
@@ -137,14 +137,67 @@ const VOLUMES = [
   ["unmount B:", (r) => r.svc(10, 1, 0)],
 ];
 
+/** Full-drain boundaries start with eight acknowledged blocks, not the single
+ * latest update left by healthy ordinary-entry progress. */
+function fullDrainCall([what, call], rom) {
+  const r = backlog({ rom });
+  const { before } = r;
+  const next = before.round.slice(before.position).find(line => line !== 0xff) ?? before.queue[0];
+  const entry = before.entries.find(e => e.line === next);
+  assert.ok(entry, "the frozen round's next eligible line belongs to the retained queue");
+  const first = r.attempts.length;
+  r.backend.refusing = false;
+  const result = call(r);
+  const after = r.cacheState(), made = r.attempts.slice(first);
+  assert.equal(result.a, what === "BDOS 1" || what === "the BIOS's CONIN" ? 0x78 : 0, `${what}: the functional result`);
+  if (what === "BDOS 10") assert.deepEqual([r.m.read(BUF + 1), r.m.read(BUF + 2)], [1, 0x78], "the counted input is returned intact");
+  if (what === "MOUNT C: ARCHIVE") assert.equal(r.m.read(r.m.sym("DRVIDX") + 2), 3);
+  if (what === "unmount B:") assert.equal(r.m.read(r.m.sym("DRVIDX") + 1), 0);
+  assert.deepEqual([after.depth, after.busy], [0, 0], "the public call returns to its outer caller");
+  return { what, r, before, after, made, entry };
+}
+
+function checkFullDrain({ what, r, before, after, made, entry }) {
+  assert.equal(after.queue.length, 0, `${what}: required drain completes all eight blocks`);
+  assert.ok(after.dirty.every(v => !v));
+  assert.deepEqual([after.any, after.pending], [0, 0]);
+  assert.deepEqual(made.map(a => a.block), [entry.block, ...before.entries.filter(e => e.line !== entry.line).map(e => e.block)], "one ordinary entry attempt precedes the first-dirty full pass");
+  assert.ok(made.every(a => a.accepted));
+  for (const [block, expected] of r.expected) assert.deepEqual(r.image.slice(block * 512, (block + 1) * 512), expected, "all thirty-two acknowledged records are on the card");
+}
+
+const fullDrainRows = (rows, rom) => rows.forEach(row => checkFullDrain(fullDrainCall(row, rom)));
+
+function checkMissingDrain(c) {
+  const { r, before, after, made, entry } = c;
+  assert.equal(after.queue.length, 7, "the omitted required drain leaves seven valid blocks");
+  assert.deepEqual(made.map(a => a.block), [entry.block], "ordinary entry alone commits its actual next eligible line");
+  assert.ok(made[0].accepted);
+  assert.deepEqual(after.queue, before.queue.filter(line => line !== entry.line));
+  assert.equal(after.dirty.filter(Boolean).length, 7, "there is no unqueued dirty block");
+  assert.deepEqual(after.entries, before.entries.filter(e => e.line !== entry.line), "the exact intact complement of the entry commit remains queued");
+  for (const e of after.entries) {
+    assert.equal(e.dirty, 1);
+    assert.deepEqual(e.payload, r.expected.get(e.block), "every omitted block remains intact in the queue");
+  }
+  for (const [block, expected] of r.expected) assert.deepEqual(r.image.slice(block * 512, (block + 1) * 512), block === entry.block ? expected : r.original.slice(block * 512, (block + 1) * 512));
+  assert.throws(() => checkFullDrain(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], `${c.what}: required drain completes all eight blocks`);
+    assert.equal(error.actual, 7);
+    assert.equal(error.expected, 0);
+    return true;
+  });
+}
+
 test("AC2 no flush", () => flushRows(NO_FLUSH, "---"));
-test("AC2 console reads flush", () => flushRows(CONSOLE, "CCC"));
-test("AC2 bios conin flushes", () => flushRows(CONIN, "CCC"));
+test("AC2 console reads flush", () => fullDrainRows(CONSOLE));
+test("AC2 bios conin flushes", () => fullDrainRows(CONIN));
 test("AC2 directory requests flush", () => flushRows(DIRECTORY, "CCC"));
 test("AC2 close flushes", () => flushRows(CLOSE, "CCC"));
 test("AC2 next block flushes", () => flushRows(NEXT_BLOCK, "CCC"));
 test("AC2 another drive flushes", () => flushRows(OTHER_DRIVE, "CCC"));
-test("AC2 function 48, mount and unmount", () => flushRows(VOLUMES, "CCC"));
+test("AC2 function 48, mount and unmount", () => fullDrainRows(VOLUMES));
 
 /** After three records, a warm boot started by GO: the card and its writes when it enters the CCP. */
 function warmRow(go) {
@@ -191,8 +244,9 @@ test("AC2 directory last", () => {
   assert.equal(r.pending(), 0, "nothing pending after the close");
 });
 
-test("AC2 mutant: FNSTAT without its call leaves the block pending at BDOS 11", () => {
-  assert.throws(() => flushRows(CONSOLE, "CCC", MUTANTS.fnstat()), /BDOS 11: the three records/);
+test("AC2 mutant: FNSTAT without its call leaves seven blocks after ordinary entry", () => {
+  const c = fullDrainCall(CONSOLE[3], MUTANTS.fnstat());
+  checkMissingDrain(c);
 });
 test("AC2 mutant: READDIR without its call leaves the block pending at BDOS 15, 17 and 35", () => {
   const mut = MUTANTS.readdir();
@@ -201,8 +255,9 @@ test("AC2 mutant: READDIR without its call leaves the block pending at BDOS 15, 
 test("AC2 mutant: FNCLSE without its call leaves the block pending at the unmodified close", () => {
   assert.throws(() => flushRows(CLOSE.slice(1), "CCC", MUTANTS.fnclse()), /unmodified FCB: the three records/);
 });
-test("AC2 mutant: BCONIN without its call leaves the block pending at the BIOS's CONIN", () => {
-  assert.throws(() => flushRows(CONIN, "CCC", MUTANTS.bconin()), /CONIN: the three records/);
+test("AC2 mutant: BCONIN without its call leaves seven blocks after ordinary entry", () => {
+  const c = fullDrainCall(CONIN[0], MUTANTS.bconin());
+  checkMissingDrain(c);
 });
 test("AC2 mutant: BWGET without CPMOVE leaves the block pending at the next block and at the B: write", () => {
   const mut = MUTANTS.cpmove();
