@@ -847,7 +847,7 @@ test("S2-12 no mount.com", () => {
   assert.ok(!names.includes("MOUNT.COM"));
   assert.ok(!starterRecipe().components.some((c) => c.name === "MOUNT.COM"));
   for (const n of ["SHELL.SVC", "STARTUP.CMD", "TED.COM", "TAS.COM", "BAZA.COM", "MON3.SVC"]) assert.ok(names.includes(n), `A: still holds ${n}`);
-  assert.equal(names.length, 14);
+  assert.equal(names.length, 17);
 });
 
 test("S2-12 instruction", () => {

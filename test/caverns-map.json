@@ -1,0 +1,575 @@
+{
+  "source": "jhlagado/caverns80 3c033e9a24f9873389c26c2a3d680cf79a69d6ec",
+  "sha256": "6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb",
+  "exits": [
+    2,
+    0,
+    0,
+    0,
+    0,
+    0,
+    3,
+    4,
+    0,
+    0,
+    5,
+    2,
+    0,
+    0,
+    2,
+    9,
+    0,
+    6,
+    0,
+    3,
+    5,
+    0,
+    7,
+    8,
+    0,
+    0,
+    128,
+    6,
+    0,
+    0,
+    6,
+    0,
+    0,
+    10,
+    4,
+    0,
+    9,
+    11,
+    0,
+    0,
+    10,
+    12,
+    128,
+    128,
+    11,
+    0,
+    13,
+    15,
+    0,
+    14,
+    0,
+    12,
+    13,
+    16,
+    0,
+    0,
+    0,
+    0,
+    12,
+    0,
+    14,
+    18,
+    0,
+    17,
+    0,
+    0,
+    16,
+    0,
+    16,
+    0,
+    23,
+    0,
+    0,
+    0,
+    20,
+    0,
+    0,
+    21,
+    0,
+    0,
+    20,
+    24,
+    0,
+    22,
+    0,
+    23,
+    21,
+    0,
+    22,
+    0,
+    0,
+    18,
+    21,
+    26,
+    0,
+    0,
+    0,
+    0,
+    26,
+    0,
+    24,
+    27,
+    29,
+    25,
+    26,
+    0,
+    0,
+    28,
+    0,
+    0,
+    27,
+    0,
+    30,
+    33,
+    0,
+    26,
+    0,
+    29,
+    0,
+    32,
+    33,
+    0,
+    32,
+    0,
+    0,
+    0,
+    30,
+    31,
+    29,
+    31,
+    34,
+    0,
+    0,
+    0,
+    0,
+    33,
+    0,
+    0,
+    0,
+    36,
+    39,
+    0,
+    35,
+    40,
+    0,
+    35,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    36,
+    38,
+    0,
+    45,
+    48,
+    36,
+    128,
+    0,
+    0,
+    54,
+    42,
+    0,
+    0,
+    41,
+    43,
+    46,
+    38,
+    42,
+    44,
+    0,
+    0,
+    43,
+    0,
+    47,
+    40,
+    0,
+    128,
+    0,
+    43,
+    47,
+    0,
+    0,
+    45,
+    0,
+    46,
+    40,
+    128,
+    0,
+    128,
+    0,
+    0,
+    48,
+    50,
+    0,
+    52,
+    49,
+    51,
+    0,
+    0,
+    50,
+    0,
+    50,
+    0,
+    53,
+    0,
+    54,
+    0,
+    0,
+    52,
+    0,
+    53,
+    0,
+    41
+  ],
+  "dynamicSentinels": {
+    "37": -1,
+    "44": -1,
+    "79": -2,
+    "147": -3,
+    "148": -4,
+    "151": -5,
+    "191": -6
+  },
+  "staticChanges": [
+    {
+      "room": 3,
+      "direction": "N",
+      "old": 2,
+      "new": 0
+    },
+    {
+      "room": 3,
+      "direction": "S",
+      "old": 5,
+      "new": 0
+    },
+    {
+      "room": 3,
+      "direction": "E",
+      "old": 0,
+      "new": 2
+    },
+    {
+      "room": 4,
+      "direction": "N",
+      "old": 2,
+      "new": 0
+    },
+    {
+      "room": 4,
+      "direction": "S",
+      "old": 5,
+      "new": 0
+    },
+    {
+      "room": 4,
+      "direction": "W",
+      "old": 0,
+      "new": 2
+    },
+    {
+      "room": 5,
+      "direction": "W",
+      "old": 3,
+      "new": 0
+    },
+    {
+      "room": 5,
+      "direction": "E",
+      "old": 4,
+      "new": 3
+    },
+    {
+      "room": 10,
+      "direction": "W",
+      "old": 4,
+      "new": 0
+    },
+    {
+      "room": 12,
+      "direction": "S",
+      "old": 13,
+      "new": 0
+    },
+    {
+      "room": 12,
+      "direction": "E",
+      "old": 0,
+      "new": 15
+    },
+    {
+      "room": 13,
+      "direction": "N",
+      "old": 12,
+      "new": 0
+    },
+    {
+      "room": 13,
+      "direction": "S",
+      "old": 12,
+      "new": 14
+    },
+    {
+      "room": 13,
+      "direction": "W",
+      "old": 14,
+      "new": 0
+    },
+    {
+      "room": 14,
+      "direction": "N",
+      "old": 15,
+      "new": 13
+    },
+    {
+      "room": 14,
+      "direction": "E",
+      "old": 13,
+      "new": 0
+    },
+    {
+      "room": 15,
+      "direction": "S",
+      "old": 14,
+      "new": 0
+    },
+    {
+      "room": 15,
+      "direction": "W",
+      "old": 0,
+      "new": 12
+    },
+    {
+      "room": 20,
+      "direction": "N",
+      "old": 21,
+      "new": 0
+    },
+    {
+      "room": 20,
+      "direction": "S",
+      "old": 23,
+      "new": 21
+    },
+    {
+      "room": 21,
+      "direction": "N",
+      "old": 0,
+      "new": 20
+    },
+    {
+      "room": 21,
+      "direction": "E",
+      "old": 20,
+      "new": 22
+    },
+    {
+      "room": 22,
+      "direction": "E",
+      "old": 16,
+      "new": 0
+    },
+    {
+      "room": 23,
+      "direction": "W",
+      "old": 18,
+      "new": 0
+    },
+    {
+      "room": 24,
+      "direction": "E",
+      "old": 18,
+      "new": 0
+    },
+    {
+      "room": 25,
+      "direction": "S",
+      "old": 27,
+      "new": 0
+    },
+    {
+      "room": 25,
+      "direction": "W",
+      "old": 24,
+      "new": 26
+    },
+    {
+      "room": 27,
+      "direction": "N",
+      "old": 18,
+      "new": 26
+    },
+    {
+      "room": 29,
+      "direction": "N",
+      "old": 0,
+      "new": 30
+    },
+    {
+      "room": 30,
+      "direction": "N",
+      "old": 29,
+      "new": 0
+    },
+    {
+      "room": 30,
+      "direction": "S",
+      "old": 31,
+      "new": 29
+    },
+    {
+      "room": 30,
+      "direction": "E",
+      "old": 0,
+      "new": 32
+    },
+    {
+      "room": 31,
+      "direction": "N",
+      "old": 32,
+      "new": 33
+    },
+    {
+      "room": 31,
+      "direction": "W",
+      "old": 0,
+      "new": 32
+    },
+    {
+      "room": 32,
+      "direction": "N",
+      "old": 33,
+      "new": 0
+    },
+    {
+      "room": 32,
+      "direction": "S",
+      "old": 30,
+      "new": 0
+    },
+    {
+      "room": 32,
+      "direction": "W",
+      "old": 0,
+      "new": 30
+    },
+    {
+      "room": 32,
+      "direction": "E",
+      "old": 0,
+      "new": 31
+    },
+    {
+      "room": 33,
+      "direction": "N",
+      "old": 0,
+      "new": 29
+    },
+    {
+      "room": 35,
+      "direction": "E",
+      "old": 0,
+      "new": 36
+    },
+    {
+      "room": 41,
+      "direction": "N",
+      "old": 46,
+      "new": 0
+    },
+    {
+      "room": 41,
+      "direction": "S",
+      "old": 43,
+      "new": 0
+    },
+    {
+      "room": 42,
+      "direction": "N",
+      "old": 46,
+      "new": 0
+    },
+    {
+      "room": 42,
+      "direction": "S",
+      "old": 43,
+      "new": 0
+    },
+    {
+      "room": 44,
+      "direction": "N",
+      "old": 47,
+      "new": 0
+    },
+    {
+      "room": 44,
+      "direction": "S",
+      "old": 47,
+      "new": 0
+    },
+    {
+      "room": 44,
+      "direction": "W",
+      "old": 0,
+      "new": 43
+    },
+    {
+      "room": 44,
+      "direction": "E",
+      "old": 47,
+      "new": 0
+    },
+    {
+      "room": 45,
+      "direction": "N",
+      "old": 0,
+      "new": 47
+    },
+    {
+      "room": 46,
+      "direction": "N",
+      "old": 47,
+      "new": 0
+    },
+    {
+      "room": 46,
+      "direction": "S",
+      "old": 0,
+      "new": 43
+    },
+    {
+      "room": 46,
+      "direction": "E",
+      "old": 47,
+      "new": 0
+    },
+    {
+      "room": 47,
+      "direction": "W",
+      "old": 46,
+      "new": 0
+    },
+    {
+      "room": 47,
+      "direction": "E",
+      "old": 0,
+      "new": 46
+    },
+    {
+      "room": 52,
+      "direction": "E",
+      "old": 50,
+      "new": 0
+    },
+    {
+      "room": 54,
+      "direction": "W",
+      "old": 41,
+      "new": 0
+    },
+    {
+      "room": 54,
+      "direction": "E",
+      "old": 0,
+      "new": 41
+    }
+  ]
+}
