@@ -314,8 +314,22 @@ CFSEND:
 CTAKE:
   call CTSCAN
   jr nz,CTK5
-  ld a,NLINES
-  call CFLUSH
+  call HKRESET
+
+; Pressure needs no exclusion or
+; aggregate result. Tail-writing each
+; frozen entry keeps the public volume
+; services within their caller stack.
+
+CTPASS:
+  ld a,(HKRPOS)
+  ld hl,HKRLEN
+  cp (hl)
+  jr nc,CTDONE
+  call HKONE
+  jr CTPASS
+
+CTDONE:
   call CTSCAN
   jr nz,CTK5
   call CTK5
