@@ -5,7 +5,7 @@ at `C008h`, to 17 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's, the font's and the shell hook's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,908 bytes (`tecos`) and has 476 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 15,920 bytes (`tecos`) and has 464 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -251,14 +251,14 @@ carries its own.
 | CCP, with the startup file (`cpm/ccp.asm`, `ccpdir.asm`, `ccpfile.asm`, `ccpmut.asm`, `ccpcmd.asm`) | 2,491 | 2 | Stays, cut to the minimal CCP: one startup line, and `SERVICES` moved to `SHELL.SVC` |
 | BDOS (`cpm/bdos.asm`, `bdosfile.asm`, `bdosrec.asm`, `bdosfn.asm`, `bdoslog.asm`, `bdoscon.asm`) | 3,559 | 2 | Stays |
 | Numbered services, `TNDRVR`'s among them (`services.asm`) | 541 | 3, 4 | Stays |
-| Block cache (`cache.asm`) | 815 | 1, 2 | Stays: full-block reads and merged dirty records, with cooperative commit priority |
+| Block cache (`cache.asm`) | 827 | 1, 2 | Stays: full-block reads and merged dirty records, with cooperative commit priority |
 | Cooperative queue, private worker and API context (`hk.asm`) | 463 | 1, 2 | Stays: first-dirty progress, retained failures and truthful notices |
 | Command history (`history.asm`) | — | 2 | Moved to `SHELL.SVC` with `COPY`, `DEL`, `SERVICES`, the pager and chained lines; BDOS 10's recall and the shell hook stay ([shell.md](shell.md)) |
 | Service loader, registry and loading the display driver (`loader.asm`) | 887 | 2 | Stays |
 
 Counted from the build's debug map: each row is its source files' bytes in
 the ROM. The data row and the font row together are the block from `ROMDATA`
-to `ROMCODE`, 1,520 bytes. The rows sum to the build's 15,908 bytes used;
+to `ROMCODE`, 1,520 bytes. The rows sum to the build's 15,920 bytes used;
 `history.asm` is no longer in the ROM.
 
 Nothing in the ROM today belongs on the card. The native program calls,
@@ -301,7 +301,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->476<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->464<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16
