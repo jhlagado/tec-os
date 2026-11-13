@@ -116,6 +116,8 @@ On 13 November 2026, the repository was made public and GitHub Pages was
 enabled with GitHub Actions as its source. The documentation build and
 deployment succeeded. The custom domain is `tec-os.org`; its nine DNS-only
 records were applied in Cloudflare and verified through authoritative DNS.
-The HTTP site responds successfully, with checked pages and assets matching
-the deployed build. GitHub's certificate provisioning and HTTPS enforcement
-are pending.
+The published site is [https://tec-os.org/](https://tec-os.org/). GitHub's
+certificate covers the apex and `www` names, and HTTPS enforcement is enabled.
+The apex responds successfully over HTTPS and `www.tec-os.org` redirects to
+the apex. Checked pages and assets match the deployed build. Browser checks
+verified chapter navigation, search and page-specific canonical URLs over HTTPS.
