@@ -49,8 +49,8 @@ bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
 first, so the word at `0006h` goes from `A700h` to `9500h`, and the TPA from
 42,496 bytes to **37,888**. With `GLCD.SVC` installed too, as the GLCD
 console's startup does, it is `9200h`, a TPA of **37,120**. On the starter card
-with no shell, whose four drives take the bare ROM's word to `B6E9h`, it goes
-from `B6E9h` to `A400h`, and the TPA from 46,569 bytes to 41,728, and 40,960 with
+with no shell, whose four drives take the bare ROM's word to `B6C5h`, it goes
+from `B6C5h` to `A400h`, and the TPA from 46,533 bytes to 41,728, and 40,960 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -377,8 +377,10 @@ its two `LD A,R` on both sides. The console's return is tested with
 - **MON-3's disk calls**, 58 to 61, are not translated to CP/M files.
 - **No recovery from a hang** or from arbitrary memory damage: a program that
   loops needs the reset button. GO's flush keeps what was written before GO.
-- **The accepted disk hazard.** A MON-3 program that writes B9A9h–BFFFh, the
-  BDOS entry, the allocation vectors, the workspace and the RAM BIOS table, can
+- **The accepted disk hazard.** A MON-3 program that writes from the bare
+  BDOS entry through BFFFh (`B6C5h` on the starter, `B985h` on the two-volume
+  reference card) can damage the allocation vectors, workspace and RAM BIOS
+  table. It can
   damage TEC-OS's disk tables. The protections are the flush before `GO`,
   BDOS 37 on every return, at `EXIT` and at every other way out but the
   EXPAND one, the latch stub, and the tables' checksum on return. Every BDOS

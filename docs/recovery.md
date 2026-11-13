@@ -1,5 +1,27 @@
 # Write policy and recovery
 
+## Restoring SYSTEM from the bare prompt
+
+If A: presents GAMES rather than SYSTEM, a recognised reset keeps that
+selection and can leave a bare `A>` because GAMES has no shell startup.
+The ROM now provides the same basic CD selection syntax as the shell:
+
+```text
+A>CD ?
+A>CD A:SYSTEM
+A>USER 0
+A>SHELL.SVC
+A:SYSTEM>
+```
+
+`CD ?` lists the available named directories and their assigned drives.
+`CD A:SYSTEM` restores SYSTEM on A: without changing the current drive or
+user area. The starter's shell file is in user 0; there is no hidden
+user-zero search for a service. A reset already starts in user 0, so USER 0
+is only needed if you have changed it. A refused selection reports
+`CD FAILED` or its more specific name/conflict error and keeps the previous
+selection. Power cycle restores the card's default drive assignments.
+
 ## The block cache
 
 TEC-OS keeps 30 card blocks, 15 KiB, in EXPAND 1. Every volume's reads go
@@ -85,7 +107,7 @@ its own directory line, unwritten, so the card's directory is read again. A warm
 dropped a line says `Write lost` once and drops the rest of the shell's line as a
 BDOS error does; the next warm boot has nothing more to say.
 While a kept line keeps failing, every directory write and `MOUNT` refuse
-until warm boot, since each flushes first, and `CD` says `CANNOT MOUNT`. If the
+until warm boot, since each flushes first, and `CD` says `CD FAILED`. If the
 card refuses every write, kept lines can fill the cache, and reads that need
 a line then fail too.
 
@@ -250,9 +272,9 @@ Limits:
 
 - RAM with no warm boot behind it isn't recognised, so a reset at the diagnostic
   prompt or during a boot, rather than `R`, gives the defaults.
-- There is no route back to the defaults but losing RAM: every recognised reset
-  reapplies the selection, and the keypad skip keeps it. A board whose selected A:
-  has no driver stays as it is until the volume is mounted away or power goes.
+- Every recognised reset reapplies the selection, and the keypad skip keeps
+  it. Use the ROM's `CD` to select SYSTEM again if A: has no shell or driver.
+  Power cycle restores all the card's default drive assignments.
 - Identity is extents, not a name: a card with identical extents takes the
   selection, and a card that changed only its default letters keeps it.
 
@@ -263,9 +285,9 @@ so wait for it before a reset or taking the card out.
 
 **`CD A:` and a reset.** A recognised reset keeps the drives' selection, so
 after `CD A:` to a volume without `SHELL.SVC` (`CD A:GAMES` on the starter
-card) a reset gives the bare `A>` on that volume, with no shell and no `CD`.
-Power off and on gives the card's own drives, and the shell, again; on the web
-page, Power cycle.
+card) a reset gives the bare `A>` on that volume. Use `CD ?`, `CD A:SYSTEM`
+and `SHELL.SVC` to restore the shell, as above. Power off and on gives the
+card's own drives and shell again; on the web page, Power cycle.
 
 ## A damaged directory
 

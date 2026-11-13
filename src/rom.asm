@@ -29,6 +29,7 @@
 %INCLUDE "volsvc.asm"
 %INCLUDE "volutil.asm"
 %INCLUDE "cpm/ccp.asm"
+%INCLUDE "cpm/ccpdir.asm"
 %INCLUDE "cpm/ccpfile.asm"
 %INCLUDE "cpm/ccpmut.asm"
 %INCLUDE "cpm/ccpcmd.asm"

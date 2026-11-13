@@ -12,7 +12,7 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,569 bytes on the
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,533 bytes on the
   starter card with nothing loaded, its four drives' vectors taken; the card's
   `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 42,496, and 41,728
   with the GLCD's driver too.
@@ -162,14 +162,16 @@ the console to the GLCD when the Matrix switch is on. Otherwise it stays on the
 serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
-CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `B:`,
+CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `CD`, `B:`,
 and `UNLOAD`, which removes the last service loaded. The starter card loads the
 shell, `SHELL.SVC` ([docs/shell.md](docs/shell.md)), which adds the history (^W
 and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
 services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
 `CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. The starter card has four drives:
-`CD ?` lists its volumes, `CD NAME` puts one on the drive you are on and
-`CD D:NAME` on another, and the prompt shows the drive and its volume,
+`CD ?` lists its named directories, `CD NAME` selects one on the current
+drive and `CD D:NAME` on another. These commands work at the bare ROM prompt
+too, so `CD A:SYSTEM` followed by `SHELL.SVC` restores the shell after
+resetting with GAMES selected on A:. The shell prompt shows the selection,
 `A:SYSTEM>`. The drive you are on is written behind, and whenever TEC-OS
 waits for a key everything is on the card ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
