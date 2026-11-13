@@ -611,8 +611,8 @@ test("KG59 stack census", async () => {
   const { rom, symbols } = romFor();
   const ccpLimit = rom[symbols.get("SVCLIM") - 0xc000 + 2];
   assert.ok(d.ccp.deepest <= 18, `the CCP's stack ${d.ccp.deepest} deep, within its bare 18`);
-  assert.ok(18 + ccpLimit <= 24, `the base and the services' limit ${ccpLimit} within 24 of 32`);
-  assert.ok(d.ccp.deepest <= 24 && d.ccp.reserved === 32);
+  assert.ok(18 + ccpLimit + 2 <= 36, `the base, services' limit ${ccpLimit} and two-byte NMI reserve within 36 of 48`);
+  assert.ok(d.ccp.deepest <= 36 && d.ccp.reserved === 48);
   console.log(JSON.stringify(d));
 });
 

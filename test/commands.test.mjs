@@ -272,12 +272,12 @@ test("SH1 rom figure", () => {
   const second = { ...census(), hash: sha(readFileSync(resolve(ROOT, "build/tecos/tecos.rom"))) };
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
-  // The shell's ceiling, and the 120 bytes A:'s coalescing may add to it.
-  assert.ok(used <= 14782 + 120, `${used} used, the ceiling 14,902`);
-  assert.ok(free >= 1602 - 120, `${free} free, at least 1,482`);
+  // The recovery prefix reserves the shared integrity stack allocation.
+  assert.ok(used <= 15315, `${used} used, the recovery ceiling 15,315`);
+  assert.ok(free >= 1069, `${free} free, at least 1,069`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
-  assert.ok(first.ram.tpa.bytes >= 47268, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
+  assert.ok(first.ram.tpa.bytes >= 47237, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
   // abi.inc differs from before the hook by TNSHELL's block and TNCOUNT alone.
   const abi = readText("src/abi.inc");
   const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
@@ -293,7 +293,7 @@ test("SH1 keytab", () => {
     for (; rom[i]; i += 1) n += String.fromCharCode(rom[i]);
     names.push(n);
   }
-  assert.deepEqual(names, ["DIR", "TYPE", "ERA", "REN", "SAVE", "USER", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
+  assert.deepEqual(names, ["CD", "DIR", "TYPE", "ERA", "REN", "SAVE", "USER", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
 });
 
 const LONG = Buffer.from(Array.from({ length: 40 }, (_, i) => `line ${i}\r\n`).join("") + "\x1a", "latin1");
