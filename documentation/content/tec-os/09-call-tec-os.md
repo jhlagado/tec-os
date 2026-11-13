@@ -17,71 +17,64 @@ nav_group: "Writing programs"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-Your program can read a key, print text or collect a line through the BDOS.
-The same calls work with the selected console so the program uses TEC-OS
-instead of handling the keyboard or display hardware itself.
+A program that prints a prompt and reads an answer needs console input and
+output. The BDOS supplies both through the selected console. Your program can
+use the same calls whether text goes to a serial terminal or a board display.
 
 ## A COM program and its calls
 
-A `.COM` file contains the program's bytes, including any literal data. The
-CCP loads them as they stand at `0100h` and starts execution there. There is
-no executable header to skip. `ORG $0100` places the assembler's labels at
-the addresses where the program will run.
+The CCP loads a `.COM` file at `0100h` and starts its first instruction there.
+The file contains code and literal data with no executable header. `ORG $0100`
+gives labels the addresses they will have after loading.
 
-The CCP processes your command and starts the program. The BDOS provides its
-console and file operations. Beneath those operations, the BIOS drives the
-TEC-1G's devices. Using the BDOS keeps ordinary console calls separate from
-the machine's ports and display drivers. Chapter 11 explains the raw BIOS
-interface and its stack/input contract. Here both input and output use the
-BDOS.
+The CCP starts the program after processing your command. For console and file
+work the program calls the BDOS. The BIOS supplies the device operations
+beneath it. This division lets your program exchange text without handling
+device ports. Chapter 11 explains direct BIOS calls and their different stack
+and input rules. The examples here use the BDOS for both directions.
 
-Registers hold the values passed to a call. `A`, `B`, `C` and `E` each hold a
-byte. `BC`, `DE` and `HL` are 16-bit register pairs, large enough for a memory
-address. To select a BDOS operation, you put its function number in `C` and call
-`0005h`. A byte parameter goes in `E` while an address or word parameter goes in
-`DE`. A byte result is returned in `A` and a word result in `HL`. For example,
-function 2 takes the character in `E` and function 9 takes an address in `DE`.
-In source, `BDOS EQU $0005` gives that call address a name.
+A BDOS call passes values in Z80 registers. `A`, `B`, `C` and `E` each hold a
+byte while the pairs `BC`, `DE` and `HL` hold 16-bit values such as memory
+addresses. Put the function number in `C` and call `0005h`. A byte argument
+goes in `E` and an address or word argument in `DE`. Calls return byte results
+in `A` and word results in `HL`. Thus function 2 takes a character in `E`
+while function 9 takes a string address in `DE`. The definition
+`BDOS EQU $0005` names the entry address in source.
 
 ## Calls, returns and saved values
 
-`CALL` puts the address of the following instruction on the stack before
-entering the routine. `RET` removes that address and resumes execution
-there. The stack is memory addressed by `SP`, the stack pointer. Each return
-address occupies two bytes and each call moves `SP` down by two. A returning
-routine moves it back up by two.
+The program needs a return address for each call. `CALL` stores the following
+instruction's address on the stack and enters the routine. `RET` removes that
+address and resumes there. `SP`, the stack pointer, addresses this memory. A
+call moves it down by two bytes and the matching return moves it up by two.
 
-The CCP also supplies a return address when it starts your program. It puts
-`0000h` on the inherited stack before jumping to `0100h`. A top-level `RET`
-therefore ends the program through the warm-boot jump at `0000h`. Calls within
-the program must return before that last `RET` so it reaches the word supplied
-by the CCP.
+Program entry has a return address too. Before jumping to `0100h` the CCP
+pushes `0000h` onto the inherited stack. A final `RET` reaches the warm-boot
+jump at that address and ends the program. Every earlier call must have
+returned so the final `RET` reaches the CCP's word.
 
-The BDOS may change the registers. A returned value is usable according to
-that function's contract but any other value you still need must be saved
-before the call. CP/M 2.2 defines no register as preserved across every BDOS
-call. TEC-OS's entry uses its own stack internally and restores the caller's
-`SP` when returning. That restores the stack position, not the contents of
-your registers.
+Save a value before calling the BDOS if you still need it afterwards. CP/M 2.2
+guarantees no register across every BDOS call. Only the result documented for
+the particular function can be used without a save. TEC-OS switches to an
+internal stack during the call and restores your `SP` on return. That
+preserves your stack position while allowing register contents to change.
 
-`PUSH` saves a register pair on your stack and moves `SP` down by two. `POP`
-restores a pair and moves it up by two. The most recently pushed pair comes
-off first. For example, saving `HL` then `BC` requires restoring `BC` then
-`HL` before a return. `PUSH AF` saves `A` and the flags together when
-those are the values you need afterwards.
+`PUSH` saves a register pair and moves `SP` down by two bytes. `POP` restores
+a pair and moves it up by two. Restore pairs in reverse order: `HL` then `BC`
+must be popped as `BC` then `HL`. `PUSH AF` preserves `A` together with the
+flags.
 
-The program begins with 30 bytes available below its inherited return word.
-A call uses two of those bytes until it returns. Two saved pairs use another
-four. Balanced calls and saves in a small BDOS program can use that space
-but deeper nesting needs a stack of your own. Chapter 11 explains its
-placement and the exit rule after changing `SP`.
+The inherited stack has 30 bytes below the CCP's return word. A call uses two
+until it returns and two saved pairs use another four. Small programs can fit
+balanced calls and saves in that allowance. Deeper nesting needs a private
+stack. Chapter 11 explains where to put it and how changing `SP` affects
+program exit.
 
 ## Printing a character or string
 
-Function 2 prints the character in `E`. A loop that keeps its text pointer
-in `HL` and its remaining count in `B` must save both across that call. This
-fragment from the SHOW listing assumes the next character is already in
-`A`:
+Function 2 prints the character in `E`. A text loop still needs its pointer
+and count after printing each byte. This fragment saves the pointer in `HL`
+and count in `B` before the call. The character is already in `A`:
 
 ```asm
         PUSH    HL
@@ -93,32 +86,30 @@ fragment from the SHOW listing assumes the next character is already in
         POP     HL
 ```
 
-The restored pointer and count are available for the next loop step. The
-reverse order of the two pops also restores the stack to its position before
-the pushes. Chapter 10 contains the complete SHOW listing and its file
-operations.
+Both values are available when the loop resumes. Restoring the pairs in
+reverse order also balances the stack. Chapter 10 uses this fragment in SHOW's
+complete file-reading loop.
 
-Function 9 sends the string from `DE` up to a `$`, omitting that terminator.
-A carriage return and line feed in the string end a displayed line. Their
-byte values are 13 and 10. A zero byte is not this function's terminator.
-Your source therefore supplies a final `"$"` in the `DB` data used for a
-function-9 call.
+Function 9 prints several characters in a call. `DE` points to a string ending
+with `$` and the terminator is omitted from output. A carriage return followed
+by line feed ends a displayed line. Those bytes are 13 and 10. A zero does not
+terminate this call so the string's `DB` data must include the final `"$"`.
 
 ## Reading a key or an edited line
 
-Function 1 waits for the next key and prints it as well as returning its
-byte in `A`. A single-key choice can use that result directly. An answer
-containing several characters is easier to read with function 10, which
-supplies the line editor.
+Function 1 waits for a key, echoes it and returns its byte in `A`. For a
+single-key choice the returned byte is sufficient. Function 10 collects longer
+answers with line editing.
 
-Function 10 takes a buffer address in `DE`. Its first byte gives the maximum
-character count. The second receives the number entered and the characters
-follow it. A maximum of 20 needs a 22-byte buffer: two control bytes
-followed by the space for input. The returned count defines the text's
-length so it is not automatically a function-9 string.
+Line input needs memory for both the text and its length. Function 10 takes
+the buffer address in `DE`. The first byte sets the maximum character count.
+The call writes the entered count into the second byte and the characters
+after it. A 20-character maximum therefore needs 22 bytes. The count gives the
+returned text's length. It does not have function 9's string terminator.
 
-Save this program as `B:LINE.ASM`. It reads a line, prints a fixed
-acknowledgement and returns to the command prompt:
+The following program reads an answer and prints a fixed acknowledgement
+before returning to the prompt. Saving it as `B:LINE.ASM` supplies the source
+for the build below:
 
 ```asm
 BDOS equ $0005
@@ -144,14 +135,14 @@ BUF: db 20,0
   ds 20
 ```
 
-`BUF` reserves the two control bytes and 20 input bytes. After function 10
-returns, the program loads `DE` and `C` again for function 9. It does not
-depend on their values surviving the input call. `GOT` is a fixed
-acknowledgement, not a copy of the text in `BUF`. The final `RET` uses the
-return word supplied by the CCP.
+`BUF` contains the two control bytes and room for 20 characters. After input
+the program reloads `DE` and `C` for function 9 because their earlier values
+need not survive. `GOT` supplies a fixed acknowledgement. The input remains in
+`BUF` and is not printed again. The final `RET` uses the CCP's inherited
+return word.
 
-On drive B, build it with `TAS LINE`. This serial capture begins at that
-command:
+On drive B, `TAS LINE` builds LINE.COM from that source. The serial capture
+starts with the build:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt from TAS LINE. -->
 ```text
@@ -159,7 +150,8 @@ B:WORK>TAS LINE
 LINE.COM written
 ```
 
-Type `LINE` to run it, then `HELLO` and Return. The same run continues:
+Running `LINE` and entering `HELLO` followed by Return continues the same
+capture:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt from LINE. -->
 ```text
@@ -170,56 +162,52 @@ GOT
 B:WORK>
 ```
 
-Function 10 echoes `HELLO` while reading it. The buffer then holds
-count 5 followed by those five characters. Function 9 prints `GOT`.
-The program's final `RET` reaches warm boot through `0000h`.
+The displayed `HELLO` is function 10's input echo. Its buffer receives count 5
+and the five letters. Function 9 then prints `GOT` and the final `RET` reaches
+warm boot through `0000h`.
 
-Function 10 ends the line at Return, line feed or the buffer's maximum length. The
-editing keys operate as at the command prompt: backspace removes the last
-character, `^X` removes the line and `^R` reprints it. A `^C` on an empty
-line ends the program. Within a nonempty line it is ignored. Command-history
-recall is specific to the CCP prompt. In a program's ordinary function-10
-input, `^W` and `^N` are input bytes rather than recall commands.
+Return, line feed or a full buffer ends function 10's input. Backspace removes
+the last character, `^X` erases the line and `^R` reprints it. A `^C` ends the
+program only on an empty line. It is ignored within a nonempty line. History
+recall belongs to the CCP prompt so `^W` and `^N` are ordinary input bytes in
+a program's function-10 call.
 
 ## Input while output is running
 
-Functions 1, 2, 9 and 10 expand tabs to spaces up to the next multiple of eight
-columns, counted from the last carriage return. They also copy printed output to
-the list device while `^P` has that copy enabled. In CP/M the list device is the
-printer. TEC-OS's normal list routine discards the bytes so toggling the copy
-has no visible effect on the unmodified system.
+Functions 1, 2, 9 and 10 expand tabs to the next eight-column stop measured
+from the last carriage return. They also copy output to the list device while
+`^P` enables that copy. The list device is CP/M's printer interface. TEC-OS
+normally discards its bytes so toggling the copy has no visible effect unless
+that routine has been replaced.
 
 | Key | Effect |
 | --- | --- |
 | `^P` | Turns the copy of console output to the list device on or off |
 
-Functions 2 and 9 check for a key before printing each character. `^S`
-pauses output until the next key. A `^C` used to end that pause terminates
-the program by warm boot. Any other resume key is consumed and has no
-further effect. A `^P` detected during output toggles the copy just as it
-does during line input.
+Output calls also let you pause a long display. Functions 2 and 9 check for
+input before each printed character. `^S` pauses until another key. Resuming
+with `^C` ends the program through warm boot. Any other resume key is
+consumed. A `^P` received outside the pause toggles the list copy as it does
+during line input.
 
-The first other key detected during output is held for the next BDOS console
-read. While that key is pending, no further key is read during output.
-Reading it consumes the pending byte and permits later input to be taken.
-This is a single pending key, not a buffer for a stream typed ahead while
-the program is busy.
+An ordinary key received during output is retained for the next BDOS console
+read. Output continues without reading further keys until that byte has been
+consumed. Its single-byte capacity cannot store a stream typed while the
+program is busy.
 
 ## Direct input and the console functions
 
-Function 6 lets an interactive program handle keys without the BDOS's echo
-and line editing. With `E = FFh`, it returns a waiting byte in `A` or zero
-if none is ready. It neither waits nor prints the key. With any other `E`,
-it prints that byte without the BDOS's tab expansion, pause checking or list
-copy. A full-screen program can use this call for both input and output. The
-selected console still interprets its own control bytes, as Chapter 17
-explains.
+An interactive program can use function 6 to handle keys without echo or line
+editing. With `E = FFh` it polls input, returning a waiting byte in `A` or
+zero. The call neither waits nor echoes. Every other value of `E` is printed
+directly without BDOS tab expansion, pause checking or list copy. Both forms
+suit a full-screen program but the selected console still interprets its own
+control bytes. Chapter 17 explains that terminal processing.
 
-Function 11 reports whether input is ready: `A = 1` for a waiting key,
-otherwise 0. It can read the key internally and hold it for the next BDOS
-input call. This allows you to check for input between other operations
-while keeping all access through the BDOS. The complete set of console calls
-is:
+Function 11 checks readiness while leaving input available for a later BDOS
+read. It returns `A = 1` when a key is waiting and 0 otherwise. Internally it
+can read the key and retain it in the BDOS reserve. These calls cover the
+console operations used here:
 
 | Function | Name | Takes | Returns |
 | --- | --- | --- | --- |
@@ -230,30 +218,30 @@ is:
 | 10 | Read console buffer | `DE`: the buffer | the line in the buffer |
 | 11 | Console status | nothing | `A`: 1 if a key is waiting, else 0 |
 
-Appendix A lists all BDOS functions and their full register and result
-contracts.
+Appendix A gives the full register and result contracts for every BDOS
+function.
 
 ## Returning to the prompt
 
-The prompt normally returns on the drive and in the user area where your
-program started. If that drive is unavailable, it falls back to A.
+An ordinary exit restores the starting drive and user area for the next
+prompt. An unavailable drive falls back to A.
 
-A top-level `RET` with the stack restored ends your program through warm
-boot. A jump to `0000h` or BDOS function 0 also takes that path. Console
-input and error handling can end a program there too:
+With the inherited stack balanced, a top-level `RET` ends the program through
+warm boot. A jump to `0000h` or BDOS function 0 has the same destination.
+Console input and error handling also reach warm boot in these cases:
 
 - `^C` while a function-10 line is empty.
 - `^C` after `^S` has paused output through function 2 or 9.
 - A key pressed after a default-mode BDOS error such as
   `Bdos Err On B: Bad Sector`.
 
-Those exits pass through the BDOS's abort path before warm boot. Chapter 13
-distinguishes their effects on a remaining command chain. Chapter 10 explains
-disk errors and returned error modes alongside file calls.
+These last three exits pass through the BDOS abort path. They have different
+consequences for an unfinished command chain, explained in Chapter 13. Chapter
+10 describes disk errors and the modes that return them to your program.
 
-Warm boot rebuilds the jumps at the bottom of memory and restarts the CCP.
-Services remain installed and the selected console stays in use. Pending card
-writes are flushed before the next load. A successful flush puts them on the
-card while a failure drops the failed lines in the block cache and reports
-`Write lost`. Chapter 16 explains the full warm-boot sequence.
+Warm boot rebuilds the low-memory jumps and restarts the CCP while retaining
+installed services and console selection. It flushes pending card writes
+before another program loads. A successful flush puts those bytes on the card.
+A failed flush drops the failed cache lines and reports `Write lost`. Chapter
+16 traces that sequence.
 

@@ -17,54 +17,50 @@ nav_group: "Writing programs"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-A file call needs both a name and a place in memory for the data. The BDOS
-keeps the file's position in a file control block and transfers its data a
-record at a time. You can use the name prepared from your command line,
-then read the records or make a new file and write them.
+SHOW will print the text file named on its command line. To read it the
+program needs a file name, a position within the file and memory for the
+incoming bytes. The BDOS keeps the name and position in a file control block.
+It transfers the data separately in fixed-size records. Writing uses the same
+two pieces of storage.
 
 ## The name from your command line
 
-`SHOW HELLO.ASM` names a program and the file it should print. The CCP
-starts SHOW at `0100h`, as in Chapter 9. Before that entry it prepares
-arguments in *page zero*, the first 256 bytes of memory, at `0000h–00FFh`.
-Those bytes are below your code and include the BDOS call jump you already
-use at `0005h`.
+In `SHOW HELLO.ASM`, SHOW is the program and HELLO.ASM is its argument. The
+CCP prepares that argument before starting SHOW at `0100h`. Its argument
+storage is in *page zero*, the first 256 bytes at `0000h–00FFh`. This is below
+the program and includes the BDOS jump at `0005h` used in Chapter 9.
 
-The *command tail* is the text after the program's name. Its length is at
-`0080h` and its characters start at `0081h`. They include the space before the
-first argument. The CCP converts letters to capitals before entry so
-`SHOW b:hello.asm x` gives a length of 14 and the text ` B:HELLO.ASM X`. A zero
-follows the tail's last character.
+The text after the program name is the *command tail*. Its length is at
+`0080h` and its characters begin at `0081h`, including the leading space. The
+CCP capitalises letters before program entry. Thus `SHOW b:hello.asm x`
+supplies length 14 and text ` B:HELLO.ASM X`, followed by a zero.
 
-A file call takes separate drive, name and type fields. The CCP prepares
-the first argument as a *file control block*, or FCB, at `005Ch`.
-It is a 36-byte block through
-which the BDOS identifies a file and maintains the state of its operations.
-For a program taking one file name, this default FCB supplies the name
-already separated into fields.
+The BDOS needs a drive, name and type in separate fields. For the first
+argument the CCP has already separated them into a *file control block*, or
+FCB, at `005Ch`. The full FCB occupies 36 bytes. File calls use it to identify
+the file and retain operation state between calls. A program with a file-name
+argument can start with this default FCB.
 
-Its first byte is the drive: 0 for the current drive or 1 to 16 for A to P.
-The next eight bytes are the name and the next three its type, both padded
-with spaces. For `SHOW b:hello.asm x`, the first byte is 2, for B, followed
-by `HELLO   ASM`. There is no full stop in those eleven name/type bytes.
-The BDOS works in the current user area on that drive. The drive codes
-represent CP/M's range, although a drive without a mounted volume gives
-a selection error.
+The drive byte is 0 for the current drive or 1 to 16 for A to P. Eight
+space-padded name bytes follow it and then three type bytes. The example's FCB
+begins with 2 for B and `HELLO ASM`. No full stop separates those fields in
+memory. The file belongs to the current user area on that drive. These drive
+codes cover CP/M's range but selecting an unmounted drive produces a selection
+error.
 
-The second argument has its name fields at `006Ch`. In the same example,
-its first sixteen bytes begin with 0 and `X`, padded with spaces. These
-are overlapping defaults, not two independent 36-byte work areas. Using
-the first FCB changes bytes occupied by the second. A program using both
-names copies the second default's first sixteen bytes into its own cleared
-36-byte FCB before opening the first file. The copied name survives later
-file operations and reuse of the command-tail space.
+The CCP also parses the second name at `006Ch`. For the example its first
+sixteen bytes begin with 0 and a space-padded `X`. This default overlaps the
+first FCB. It is not another independent 36-byte buffer. File operations on
+the first FCB change some of those bytes. A program using both names must copy
+the second default's first sixteen bytes into its own cleared 36-byte FCB
+before opening the first. That copy also survives reuse of the command tail.
 
 ## A file's position in the FCB
 
-A name occupies only the first twelve FCB bytes. The remaining twenty-four
-are needed too, even when your source provides its own name. The BDOS
-transfers file data in 128-byte units called *records*. Its position fields
-select the next record and describe the file's allocated space.
+Reading needs more than the twelve name bytes. A complete FCB includes another
+twenty-four bytes for file state. The BDOS transfers 128-byte units called
+*records*. Position fields identify the next record while other fields
+describe allocated storage:
 
 | FCB byte offset | Contents |
 | --- | --- |
@@ -79,64 +75,61 @@ select the next record and describe the file's allocated space.
 | 32 | `CR`, the current sequential record |
 | 33–35 | `R0`, `R1` and `R2`, the random-record field |
 
-The sequential position is split between an *extent*, a group of 128
-records, and the record within it. `EX` and `S2` identify the extent.
-`CR` selects its next record, normally 0 to 127. At the boundary the BDOS
-moves to the next extent as needed. You keep the complete FCB between
-calls so those updates and its allocation map remain available.
-Appendix A gives the full field contracts and random-record operations.
+Sequential position combines an *extent* of 128 records, identified by `EX`
+and `S2`, with a record within it. `CR` selects the next record within it,
+normally 0 to 127. The BDOS advances to another extent at the boundary.
+Retaining the full FCB between calls preserves this position and the
+allocation map. Appendix A explains the fields and random-record operations.
 
-For the default FCB, byte 32 is at `007Ch`. The CCP clears it before entry.
-SHOW clears it again before the first read. When constructing another FCB,
-clear its state after the drive/name/type fields and set `CR` to 0.
-Opening an FCB leaves `CR` unchanged. Setting it to 0 rewinds only the
-current extent. To reread the whole file after advancing through extents,
-reset `EX`, `S2` and `CR` to 0 before reopening it. `CR` here means
-current record, not the carriage return character used in text.
+In the default FCB, `CR` is byte 32 at `007Ch`. The CCP clears it before entry
+and SHOW clears it again before reading. A newly constructed FCB needs zeroed
+state after its drive/name/type fields and `CR = 0`. Open leaves `CR`
+unchanged. Clearing that byte rewinds the current extent only. To reread from
+the start after crossing extents, clear `EX`, `S2` and `CR` before reopening.
+The FCB field is the current record. The abbreviation for a text carriage
+return has a different meaning.
 
 ## A record buffer
 
-The FCB holds file state while the bytes being read or written go through a
-separate memory buffer. The BDOS calls this the *DMA address*. It is a transfer
-address in your memory, not a request to program a hardware DMA controller.
-Initially it is `0080h`, with room for one 128-byte record. Function 26 changes
-it to the address supplied in `DE`.
+File state stays in the FCB while transferred bytes go through a separate
+buffer. The BDOS calls the buffer's address the *DMA address*. Despite the
+historical name this is a memory transfer address, not a hardware DMA request.
+Its initial value is `0080h`, with space for a 128-byte record. Function 26
+selects another buffer using the address in `DE`.
 
-That default buffer occupies the same space as the command tail. The first
-record read there replaces the tail's length and characters. A program
-that still needs its original argument text copies it elsewhere before
-reading. SHOW needs the parsed FCB instead, which ends before `0080h`.
-Its name and sequential state therefore survive the record transfer.
+A first read into the default buffer overwrites the command tail. Copy any
+argument text still needed before reading. SHOW only needs the parsed FCB,
+which ends below `0080h`, so its name and file position survive the transfer.
 
-Function 15 opens the file named by the FCB in `DE`. On success the BDOS
-copies the relevant directory fields and allocation map into it. The result
-in `A` is 0 to 3, identifying the entry's slot in a directory record.
-`FFh` means no matching file extent was found. Testing for zero alone would
-reject some successful opens.
+Function 15 opens the file through the FCB address in `DE`. It copies
+directory fields and the allocation map into the FCB. A successful result in
+`A` is 0 to 3, the entry's slot in a directory record. `FFh` reports no
+matching file extent. A test for zero alone would wrongly reject three
+successful results.
 
-Function 20 reads the next record into the DMA buffer and advances the
-FCB's current record. Its ordinary result is 0 for a record read or 1
-when there is no next record. These are the two file calls SHOW uses:
+Function 20 reads the next record into the selected DMA buffer and advances
+the FCB position. It returns 0 for a read or 1 when no next record exists.
+SHOW uses these calls:
 
 | Function | Name | Takes | Returns |
 | --- | --- | --- | --- |
 | 15 | Open file | `DE`: the file's FCB | `A`: FFh if there is no such file |
 | 20 | Read sequential | `DE`: the file's FCB | `A`: 0 for a record read, 1 at the end of the file |
 
-A disk I/O error has a separate path, described below. Process the DMA
-buffer only after a successful read. Otherwise it may still hold old data.
-With the default error mode, a disk error prints a message, waits for a key
-and ends the program by warm boot. SHOW below uses that default.
+Only a successful read supplies valid buffer data. Any other result can leave
+bytes from an earlier transfer. Disk I/O errors have the separate path
+described below. Under the default error mode used by SHOW, an error prints a
+message, waits for a key and ends the program through warm boot.
 
-SHOW only reads so it leaves no changed file state to close. A program that
-writes must close its updated FCB before finishing. Warm boot flushes pending
-writes from the block cache but cannot close the program's FCBs. The write
-sequence after SHOW explains how to finish both operations and check them.
+SHOW leaves file data unchanged so its FCB needs no close. A writer must close
+its FCB before exiting. Warm boot flushes cached writes but cannot close FCBs
+left in the program's memory. The write sequence below separates those
+completion steps.
 
 ## SHOW reads a text file
 
-SHOW uses the default FCB and DMA buffer to print the file named after
-its command. Its complete listing is:
+The complete SHOW program reads through the default FCB and DMA buffer, then
+prints the characters it receives:
 
 ```asm
 ; SHOW NAME: print the text file NAME on the console.
@@ -178,39 +171,34 @@ NOFILE: LD      DE,NOMSG
 NOMSG:  DB      "No such file",13,10,"$"
 ```
 
-After open, `INC A` turns `FFh` into zero and sets the zero flag.
-`JR Z` branches to `NOFILE` when that flag is set.
-A successful open continues to `NEXT`. Each iteration reloads `DE` and `C`
-for function 20 rather than depending on registers left by the previous
-call. A zero read result starts `PUT` with the buffer address in `HL` and
-128 bytes to process in `B`.
+After open, `INC A` turns failure's `FFh` into zero and sets the zero flag for
+`JR Z,NOFILE`. Success continues at `NEXT`. The loop reloads `DE` and `C` for
+every function-20 call. It uses no register value left over from the earlier
+call. A zero result starts `PUT` with `HL` pointing to DMA and `B` counting
+128 bytes.
 
-`PUT` passes each character in `E` to function 2. It saves `HL` and `BC`
-on the stack before the call and restores them in reverse order afterwards,
-using the convention from Chapter 9. Those saves preserve the pointer and
-count while the BDOS changes registers. The loop then advances the pointer
-and returns for another record after processing all 128 bytes.
+For each byte `PUT` calls function 2 with the character in `E`. Its `PUSH` and
+`POP` pairs preserve `HL` and `BC` as explained in Chapter 9. The pointer and
+count therefore remain available after output changes registers. After all 128
+bytes the program reads another record.
 
-A CP/M file occupies a whole number of records. Text commonly ends inside
-the final record with `^Z`, byte `1Ah`. SHOW tests for it before printing
-each byte. A text file with no `^Z` ends only when function 20 returns 1.
-`tecvol put --text` appends the marker and fills the rest of the last
-record with it as well.
+CP/M files contain whole records but text can finish partway through the last.
+The conventional marker is `^Z`, byte `1Ah`, which SHOW tests before printing.
+Without that marker SHOW continues until function 20 returns 1. The PC command
+`tecvol put --text` appends `^Z` and pads the final record with it.
 
-`NOFILE` prints `No such file` with function 9. Its `JP BDOS` uses the
-inherited return word instead of adding another return address with CALL.
-The BDOS returns through that word and the program ends. SHOW with no
-argument has a blank name in its FCB, finds no file and prints the same
-message. Reporting success or failure to a later command is a separate
-return-code convention explained in Chapter 13.
+`NOFILE` prints `No such file` through function 9. Its `JP BDOS` adds no stack
+word so the routine returns through the inherited CCP address and ends SHOW.
+With no argument the default name is blank and produces the same message. This
+message alone does not report failure to a later command. Chapter 13 explains
+that return-code convention.
 
 ### The card and output
 
-TAS assembles SHOW to 72 bytes. Its `work.img` is the HELLO starter-card
-copy, whose preparation is in Chapter 27, and `hello.asm` is that HELLO
-source, not the banner exercise. These commands, run in the repository
-root with the TAS host prepared, assemble SHOW on the PC and add it and the
-text file to that card:
+TAS produces a 72-byte SHOW program. The commands below assemble it on the PC
+from the repository root with the TAS host prepared. They then add SHOW and
+HELLO.ASM to `work.img`, the HELLO starter-card copy prepared in Chapter 27.
+Here `hello.asm` is the HELLO source, not the banner exercise:
 
 ```sh
 node --input-type=module -e '
@@ -223,7 +211,7 @@ node tools/tecvol.mjs put work.img B show.com
 node tools/tecvol.mjs put work.img B hello.asm --text
 ```
 
-The capture contains both the successful read and the missing-file case:
+The capture runs SHOW once with that source file and once with a missing name:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card work.img B: 'SHOW HELLO.ASM' 'SHOW NOSUCH.TXT'. Boot rows included in this complete serial transcript. -->
 ```text
@@ -254,23 +242,21 @@ No such file
 B:WORK>
 ```
 
-The first output repeats the HELLO source. The second prints SHOW's own error
-message. The blank line before each returned command prompt is the command
-processor's new line after a program exit.
+The first run prints the HELLO source and the second prints SHOW's error text.
+After either program exit the command processor emits the blank line before
+its next prompt.
 
 ## Making and writing a file
 
-Writing uses an FCB and a DMA buffer in the same way but the state must reach
-the directory before the program finishes. For a new file, prepare all 36 FCB
-bytes: the drive, the space-padded name/type and zeroed state. Choose a name
-that is not already present. Function 22, make file, creates a directory entry.
-It is not a replace-file command.
+A writer must finish the file's directory state as well as transfer its data.
+For a new file prepare all 36 FCB bytes with the drive, space-padded name/type
+and zeroed state. Choose an unused name. Function 22 creates an entry for a
+new file and does not replace an existing file.
 
-For example, a source-derived write sequence for a new `NOTE.TXT` can use
-drive code 0 followed by the name bytes `NOTE    TXT`. The following calls
-assume that FCB and a separate 128-byte buffer already exist in the
-program's memory. Each call reloads its inputs and checks its returned
-result before continuing:
+For `NOTE.TXT` on the current drive the FCB starts with drive code 0 and
+`NOTE TXT`. This source-derived sequence assumes a complete FCB and a separate
+128-byte buffer already allocated in the program. Each call reloads its inputs
+and checks its result before proceeding:
 
 | Step | Call and required result |
 | --- | --- |
@@ -280,70 +266,62 @@ result before continuing:
 | Finish the file state | `C = 16`, `DE` = FCB address. Close succeeds for `A` from 0 to 3. `FFh` means the extent's entry was not found |
 | Flush pending card writes | `C = 48`. `A = 0` reports success. `FFh` reports a failed flush |
 
-The write transfers all 128 buffer bytes, including any unused end.
-For a text line of two letters followed by CR and LF, four bytes hold
-the line and the remaining 124 can be `1Ah`. Binary data instead uses the
-whole record as data, with no special meaning assigned to `1Ah` by the
-file calls. This is a call walkthrough, not a newly captured program run.
+A write transfers every byte of the 128-byte buffer. A two-letter text line
+followed by CR and LF uses four bytes. Its remaining 124 bytes can be `1Ah`. A
+binary file uses those bytes as data with no special interpretation of `1Ah`.
+This sequence describes calls verified from source. It is not a newly captured
+program run.
 
-Function 21 advances `CR` after a successful write and updates the record
-count and allocation state. The next call writes the next sequential
-record. Fill the buffer again for each record. The DMA address remains
-selected until changed. The ordinary write results are 0 for success,
-1 when the directory cannot hold the next extent and 2 when no disk block
-is available. A failed write is not counted as a successfully stored record.
+A successful function 21 updates `CR`, the record count and allocation state.
+Refill the buffer before each following write. The DMA address stays selected
+until another call changes it. Ordinary write results are 0 for success, 1 for
+no directory space for the next extent and 2 for no free disk block. Count a
+record as stored only after success.
 
 ## Close, flush and errors
 
-Closing a modified file copies its updated record count and allocation
-state to the directory. Flushing writes pending cache contents to the card.
-The two operations have different inputs: a flush cannot recover file
-state that was left only in an unclosed FCB. Warm boot flushes the cache
-but does not close the FCBs in a departed program's memory.
+Close copies a modified FCB's record count and allocation state into the
+directory. Flush transfers pending cache contents to the card. A flush cannot
+reconstruct file state left only in an unclosed FCB. Warm boot performs the
+flush but does not close FCBs after a program ends.
 
-On every volume, TEC-OS writes every changed or kept data line
-before writing a directory block. A successful close that issues such a
-write therefore performs that ordering. An
-unmodified FCB can close without a directory write. Function 48 provides
-an explicit flush boundary for pending writes after the file state has
-been closed. Chapter 19 explains the cache's ordering and failure paths.
+Directory writes follow data writes on every volume. Every changed or kept
+data line reaches the card before its directory block. A close that writes the
+directory performs this ordering. An unmodified FCB may close without a
+directory write. Function 48 supplies an explicit flush after closing. Chapter
+19 explains the cache ordering and failures.
 
-On any drive other than the logged drive, TEC-OS holds one pending
-block. A write returns once its record is in that block's cache line, and
-the block reaches the card at the next close, directory request, write to
-another block, console read, function 48 or warm boot. A program that writes
-a file and then waits for a key therefore leaves nothing unwritten while it
-waits. A reset before one of those points loses at most that block's
-records (`docs/recovery.md:98-138`).
+Writes to a drive other than the logged drive share a single pending block.
+The call returns when its record reaches that block's cache line. The block is
+written at the next close, directory request, write to another block, console
+read, function 48 or warm boot. No pending bytes remain during a successful
+flush before a key wait. A reset before a flush point loses at most that
+block's records (`docs/recovery.md:98-138`).
 
-A write that returns 1 or 2 may follow earlier successful records. Close
-the partial file and check the close result before reporting how much was
-written. A close failure does not make the intended file complete. A
-returned disk error also needs handling before you can report partial
-progress.
+A write result of 1 or 2 can follow earlier successful records. Close that
+partial file and check the close result before reporting progress. A failed
+close leaves the intended file incomplete. Handle returned disk errors too
+before reporting how much was stored.
 
-By default, a disk error prints `Bdos Err On`, the drive and the cause.
-The BDOS then waits for a key and ends the program by warm boot.
-Function 45 can request returned errors instead. With `E = FFh`,
-the error returns as `A = FFh` and a code in `H` without printing.
-With `E = FEh`, the message is printed first and the same values return.
-Appendix A lists the causes and full contracts.
+Default disk-error handling prints `Bdos Err On` with the drive and cause,
+waits for a key and warm-boots out of the program. Function 45 selects
+returned errors. With `E = FFh` the call returns `A = FFh` and a code in `H`
+without printing. With `E = FEh` it prints first and returns the same values.
+Appendix A gives the causes and contracts.
 
-The unchanged SHOW listing uses the default error mode. Its nonzero read
-result ends the program. If adapting it to returned disk errors, distinguish
-an error return from ordinary end of file before treating the buffer as
-valid or reporting success. The BDOS resets error mode at warm boot.
+SHOW uses the default mode and exits on a nonzero read result. An adaptation
+using returned errors must distinguish failure from ordinary end of file. It
+must also avoid processing stale buffer data or reporting success after an
+error. Warm boot resets the error mode.
 
-A program can also set file attributes through function 30 using the
-corresponding bits in the FCB's name/type fields. That is how a program can
-set the system attribute discussed with DIR. Attribute operations still require
-checking their result. Appendix A gives their exact bit meanings.
+Function 30 sets file attributes through bits in the FCB's name/type fields. A
+program can use it to set the system attribute described with DIR. Check its
+result as with other file calls. Appendix A defines the attribute bits.
 
-At an ordinary exit, a successful warm-boot flush puts pending changes
-on the card before another program loads. If a write fails there, TEC-OS
-drops the failed cache lines, reports `Write lost` and cancels the remaining
-command line. Explicit function 48 also reports failure, and keeps a failed
-line for the next flush, so only warm boot drops a line that still fails
-(`docs/recovery.md:75-96`). A later successful flush cannot restore bytes
-from a line already dropped. A reset discards pending cached changes rather than finishing
-unclosed work.
+An ordinary exit attempts to flush pending writes before another program
+loads. Success puts them on the card. Failure drops the failed cache lines,
+reports `Write lost` and cancels the remaining command line. Explicit function
+48 also reports failure but retains a failed line for another flush. Only warm
+boot drops a line that still fails (`docs/recovery.md:75-96`). A later flush
+cannot recover bytes already dropped. Reset discards pending cached changes
+and does not finish unclosed work.
