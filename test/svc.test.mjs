@@ -6,11 +6,14 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { checkInterfaces, DHLEN, encoders, makeSvc, onDisk } from "../tools/lib/svc.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, fcbType, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { finishBarePrompt, publicContext, recoveryInput } from "./lib/public-caller.mjs";
+import { finishBareVideoPrompt } from "./lib/video-public-caller.mjs";
 
 const STUB = 0x0060; // JR $, where a call comes back
 const VARIANTS = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
@@ -27,8 +30,28 @@ async function svc(over = {}, opt = {}) {
 }
 const client = (over = {}) => svc({ V_DEP: 1, HDRNAME: '"CLIENT  "', RECNAME: '"CLIENT  "', ...over }, { deps: [{ name: "DEMO", version: 2 }] });
 
-/** The harness around machine M at the prompt. */
-function bench(m) {
+/** Complete only an explicitly owned bare input, outside operation snapshots. */
+function completeInput(m) {
+  assert.ok(m.classicBankIn, "observe the original classic outcome before settling or completing input");
+  const word = at => m.read(at) | (m.read(at + 1) << 8);
+  const before = {
+    pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.output.length,
+    text: m.text(m.mark), cardSHA256: createHash("sha256").update(m.sdImage).digest("hex"),
+    depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")),
+    queue: Array.from({ length: m.read(m.sym("HKCNT")) }, (_, i) => m.read(m.sym("HKQ") + i)),
+    entry: word(6), ceiling: word(m.sym("PZTOP")), registry: word(m.sym("REGHEAD")),
+    head: m.read(m.sym("SVCHEAD")), generation: m.read(m.sym("SVCGEN")), serviceBusy: m.read(m.sym("SVCBSY")),
+  };
+  m.runUntil(() => m.ready() || recoveryInput(m), 400_000_000, "ordinary or recovery input before a separate completion");
+  assert.equal(recoveryInput(m), false, "bootstrap recovery is an outcome, not permission to retry it");
+  const settled = { pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.text(before.output) };
+  const completion = m.videoConsole() ? finishBareVideoPrompt(m) : finishBarePrompt(m);
+  return { before, settled, completion };
+}
+
+/** Direct-loader benches return their initial input before any staging. */
+function bench(m, { direct = false } = {}) {
+  const completions = direct ? [completeInput(m)] : [];
   m.write(STUB, 0x18);
   m.write(STUB + 1, 0xfe);
   const c = m.cpu.cpu;
@@ -39,18 +62,25 @@ function bench(m) {
     m.write(a + 1, v >> 8);
   };
   const put = (at, bytes) => bytes.forEach((b, i) => m.write(at + i, b));
+  const directContext = () => {
+    publicContext(m);
+    assert.ok(m.pc === STUB || m.pc === m.sym("MLGOT"), "a direct caller is parked at a real normal return");
+  };
   // A call as the CCP makes it, from the top of its stack. It ends at the
   // return, or at warm boot's entry to the CCP.
   const call = (addr, regs = {}) => {
+    directContext();
     Object.assign(c, regs);
     poke(top - 2, STUB);
     c.sp = top - 2;
     c.pc = addr;
     m.runUntil(() => m.pc === STUB || m.pc === m.sym("CCPENT"), 60_000_000, `return from ${addr.toString(16)}`);
+    if (m.pc === STUB) publicContext(m);
     return { sp: c.sp, back: m.pc === STUB, carry: c.flags.C, a: c.a, hl: (c.h << 8) | c.l };
   };
   const entry = () => assert.ok(word(6) === word(m.sym("STUBAD")) || (word(6) & 0xff) === 0, "(0006h) is the stub or a page's start");
   const load = (file, end) => {
+    directContext();
     put(0x100, [...file]);
     poke(m.sym("LOADTOP"), end ?? 0x100 + Math.ceil(file.length / 128) * 128);
     const r = { ...call(m.sym("SVCLOAD")), rc: m.read(m.sym("SVCRC")) };
@@ -62,29 +92,46 @@ function bench(m) {
     entry();
     return text;
   };
+  const inputOutcome = (mark) => {
+    m.runUntil(() => recoveryInput(m) || (m.ready() && /\r\n\d*[A-P](:\S*)?>$/.test(m.text(mark))), 400_000_000, "normal or recovery CCP input");
+    return { outcome: recoveryInput(m) ? "recovery" : "normal", text: m.text(mark), pc: m.pc, sp: c.sp, cycles: m.cycles };
+  };
   const prompt = () => {
-    m.mark = m.output.length;
+    directContext();
+    const mark = m.output.length;
+    m.mark = mark;
     c.sp = top;
     c.pc = m.sym("STARTED");
     m.expect(/\r\n[A-P](:\S*)?>$/, { maxCycles: 200_000_000 });
-    m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt");
+    return inputOutcome(mark);
   };
   const warmBoot = () => {
     m.mark = m.output.length;
     c.pc = 0;
-    m.runUntil(() => m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "warm boot");
+    return inputOutcome(m.mark);
+  };
+  const continueWarm = () => {
+    assert.equal(m.pc, m.sym("CCPENT"), "continue the actual nonlocal warm-boot path");
+    m.mark = m.output.length;
+    return inputOutcome(m.mark);
   };
   const find = (name, least = 1) => {
+    directContext();
     put(0x300, [...Buffer.from(name.padEnd(8), "latin1")]);
     return call(m.sym("ABICALL"), { b: least, c: 13, d: 3, e: 0 });
   };
   const nth = (i) => call(m.sym("ABICALL"), { b: i, c: 14 });
   const head = () => m.read(m.sym("SVCHEAD")) << 8;
-  return { m, word, poke, put, call, load, unload, prompt, warmBoot, find, nth, head };
+  const finishInput = () => {
+    const receipt = completeInput(m);
+    completions.push(receipt);
+    return receipt;
+  };
+  return { m, word, poke, put, call, load, unload, prompt, warmBoot, continueWarm, find, nth, head, directContext, finishInput, completions };
 }
 
 async function machine(opts = {}) {
-  return bench(boot(standardCard(), opts));
+  return bench(boot(standardCard(), opts), { direct: true });
 }
 
 const snapshot = (m) => Uint8Array.from({ length: 0xc000 }, (_, i) => m.read(i));
@@ -231,6 +278,7 @@ test("enumerate returns the record itself and the generation", async () => {
   t.load((await svc()).file);
   t.prompt();
   t.unload();
+  t.finishInput();
   t.load((await svc()).file);
   const n = t.nth(0);
   assert.equal(n.hl, t.word(t.m.sym("REGHEAD")));
@@ -266,7 +314,7 @@ test("a chain of 255 records is taken and 256 is refused", async () => {
 // KE-AR4: the registry, the ROM console's PICO record with the services', holds
 // at most 256 records, all that TNFIND walks; a service that would pass that is
 // refused. Counted by walking REGHEAD's links, since TNLIST's index is a byte.
-const picoBoard = async () => bench(boot(standardCard(), { tms: true, matrix: true }));
+const picoBoard = async () => bench(boot(standardCard(), { tms: true, matrix: true }), { direct: true });
 function registry(t) {
   const names = [];
   for (let at = t.word(t.m.sym("REGHEAD")); at && names.length < 600; at = t.word(at)) names.push(String.fromCharCode(...Array.from({ length: 8 }, (_, k) => t.m.read(at + 2 + k))).trimEnd());
@@ -300,6 +348,7 @@ test("a service whose records would take the registry past 256 is refused, and t
   t.prompt();
   assert.doesNotMatch(t.unload(), /UNLOAD\?/);
   assert.deepEqual(registry(t), ["PICO"], "UNLOAD took the first service's records");
+  t.finishInput();
   assert.equal(t.load((await chain(1)).file).carry, 0, "and another loads");
   assert.equal(t.find("PICO").carry, 0);
 });
@@ -478,6 +527,7 @@ test("warm boot keeps a service, and a reset empties both", async () => {
   t.load(d.file);
   t.prompt();
   t.warmBoot();
+  t.finishInput();
   assert.equal(t.find("DEMO").carry, 0);
   t.prompt();
   t.m.reset();
@@ -560,6 +610,7 @@ test("a warm boot inside INIT rolls the ceiling back", async () => {
   t.m.runUntil(() => t.m.waitingForInput(), 200_000_000, "the prompt");
   assert.deepEqual([t.word(6), t.word(t.m.sym("PZTOP")), t.m.read(t.m.sym("SVCBSY"))], [top, pztop, 0]);
   assert.deepEqual(changed(t.m, before, snapshot(t.m), ceiling, ["load", "command"]), []);
+  t.finishInput();
   assert.equal(t.load((await svc()).file).carry, 0, "the guard is down: a load works");
   t.prompt();
   t.unload();
@@ -576,6 +627,7 @@ test("a warm boot from inside REMOVE clears the guard, the service stays, and a 
   t.m.type("UNLOAD\r");
   t.m.runUntil(() => t.m.ready() && /[A-P](:\S*)?>$/.test(t.m.text(t.m.mark)), 200_000_000, "the prompt after a warm boot");
   assert.deepEqual([t.m.read(t.m.sym("SVCBSY")), t.head(), t.word(6)], [0, page, top], "the guard down and the service in");
+  t.finishInput();
   assert.equal(t.load((await svc({ HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).file).carry, 0);
   assert.equal(t.word(6), top - ((await svc({ HDRNAME: '"SECOND  "', RECNAME: '"SECOND  "' })).image + 255 >> 8) * 256);
 });
@@ -611,10 +663,12 @@ test("a dependency present is bound at INIT, and last in is first out", async ()
   const bound = t.word(t.head() + c.symbols.DEPTAB);
   t.prompt();
   t.unload();
+  t.finishInput();
   assert.equal(t.find("CLIENT").carry, 1);
   assert.equal(t.find("DEMO").hl, bound);
   t.prompt();
   t.unload();
+  t.finishInput();
   assert.equal(t.find("DEMO").carry, 1);
 });
 
@@ -626,6 +680,7 @@ test("two services publishing one record: the newest, and removal uncovers the o
   assert.notEqual(t.find("DEMO").hl, older);
   t.prompt();
   t.unload();
+  t.finishInput();
   assert.equal(t.find("DEMO").hl, older);
 });
 
@@ -684,11 +739,15 @@ test("a resident that keeps a pointer past removal runs into freed pages, and th
   t.prompt();
   t.unload();
   assert.ok(t.word(6) > kept, "the pages are the TPA's");
+  t.finishInput();
   assert.equal(t.call(table + 3).a, 1, "the stale bytes still run");
   assert.equal(t.m.read((kept & 0xff00) + demo.symbols.COUNT), 1, "and write the TPA");
   t.put(kept, [0xc3, 0, 0]);
   assert.equal(t.call(table + 3).back, false, "a program's bytes run: here a warm boot");
-  t.prompt();
+  const resumed = t.continueWarm();
+  assert.equal(resumed.outcome, "normal");
+  assert.equal(t.m.read(t.m.sym("SVCBSY")), 0);
+  t.finishInput();
   assert.equal(t.call(table + 6).carry, 1, "the checked call refuses");
 });
 
@@ -797,7 +856,7 @@ async function stackRun(depth, declared) {
   m.mark = 0;
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.waitingForInput(), 10_000_000, "the prompt");
-  const t = bench(m);
+  const t = bench(m, { direct: true });
   const d = await svc({ V_STK: 1, DEPTH: depth, STKB: declared, STKI: declared, STKC: declared });
   const ceiling = t.word(6) & 0xff00;
   const use = entries(m, ceiling - Math.ceil(d.image / 256) * 256, ceiling);
@@ -867,6 +926,7 @@ test("a jump into a service is kept over warm boot, and RST 38h reaches a kept 0
   const base = t.head();
   t.warmBoot();
   assert.deepEqual(slot(t.m, 0x38), [...jp(base + d.symbols.VHAND), 0, 0, 0, 0, 0]);
+  t.finishInput();
   t.put(0x300, [0xff, 0xc9]);
   assert.equal(t.call(0x300).back, true);
   assert.equal(t.m.read(base + d.symbols.RESULT), 0x5a);
@@ -1011,6 +1071,7 @@ test("a BDOS call is two jumps from CALL 5, with no service, one and two", async
   const t = await machine();
   const entry = t.m.sym("BENTRY");
   const count = () => {
+    t.directContext();
     t.put(0x300, [0x0e, 12, 0xcd, 5, 0, 0xc9]); // function 12, CALL 5, RET
     const c = t.m.cpu.cpu;
     t.poke(t.m.sym("CSTKTOP") - 2, STUB);
@@ -1021,6 +1082,8 @@ test("a BDOS call is two jumps from CALL 5, with no service, one and two", async
       t.m.step();
     }
     t.m.runUntil(() => t.m.pc === STUB, 1_000_000, "the return");
+    publicContext(t.m);
+    assert.equal(t.m.cpu.cpu.sp, t.m.sym("CSTKTOP"));
     return seen;
   };
   assert.deepEqual(count(), [5, t.word(t.m.sym("STUBAD"))]);
@@ -1037,6 +1100,7 @@ test("function 47 from INIT rolls the load back, and the chained line runs", asy
   assert.equal(t.load((await svc({ V_CHI: 1, V_CHN: 1 })).file).back, false);
   t.m.runUntil(() => t.m.waitingForInput() && t.m.read(4) >> 4 === 3, 200_000_000, "USER 3");
   assert.deepEqual([t.word(6), t.m.read(t.m.sym("SVCBSY")), t.m.read(t.m.sym("SVCHEAD"))], [top, 0, 0]);
+  t.finishInput();
   assert.equal(t.load((await svc()).file).carry, 0, "the guard is down");
 });
 
