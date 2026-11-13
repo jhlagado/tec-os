@@ -17,71 +17,71 @@ nav_group: "Inside TEC-OS"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-A call to `ABICALL` selects a routine while keeping its arguments in the
-registers. The lookup needs register pairs too. TEC-OS saves those pairs on
-your stack and removes its temporary words before the routine starts
-(`src/services.asm:34-57`). The same entry can therefore dispatch a call
-from a program, the CCP or a resident routine without a separate argument
-buffer.
+Numbered calls let programs use ROM services without embedding routine
+addresses. A call to `ABICALL` must find the selected routine while leaving
+its register arguments intact. The dispatcher saves the pairs needed for
+lookup on the caller's stack then removes them before entry
+(`src/services.asm:34-57`). Programs, the CCP and resident routines can
+therefore use the same call path without an argument buffer.
 
 ## From a number to a routine
 
-`ABICALL` is the jump at `C008h` to `SVCDSP`. It is the last three bytes of the
-eight-byte ROM table. The preceding bytes are the signature `TNA` and
-application binary interface (ABI) major and minor versions 5 and 1
-(`src/abi.asm:9-14`, `src/abi.inc:17-33`). You supply the service number in `C`
-and arguments in `B`, `DE` and `HL`. `A` is never an argument so the dispatcher
-can use it and the flags before saving a register (`src/abi.inc:35-56`).
+The stable entry is the jump at `C008h`, `ABICALL`, which leads to
+`SVCDSP`. It occupies the last three bytes of an eight-byte ROM table.
+Before it are signature `TNA` and ABI version bytes 5 and 1
+(`src/abi.asm:9-14`, `src/abi.inc:17-33`). The caller supplies the number
+in `C` and arguments in `B`, `DE` and `HL`. Since `A` carries no argument,
+dispatch can use it and flags immediately (`src/abi.inc:35-56`).
 
-There are 16 entries, numbered 0 to 15. `SVCDSP` copies `C` to `A` and
-compares it with `TNCOUNT`, 16. The following `LD A,TNEBAD` leaves the
-comparison flags intact. A number of 16 or more branches to `HWERR`
-without changing `B`, `DE` or `HL` (`src/services.asm:34-38`,
-`src/abi.inc:237-238`). The error exit returns status 1 with carry set
-and zero clear (`src/services.asm:63-66`).
+The table has seventeen callable entries, 0–16. `SVCDSP` compares `C`
+through `A` with exclusive bound `TNCOUNT`, 17. Loading `TNEBAD` into
+`A` preserves the comparison flags. Numbers 17 and above reach `HWERR`
+without altering `B`, `DE` or `HL` (`src/services.asm:34-38`,
+`src/abi.inc:228-238`). The result is status 1 with carry set and Z clear
+(`src/services.asm:63-66`).
 
-For a valid number, the dispatcher pushes `HL` and `DE`. It doubles the
-number into `DE` and adds that offset to `SVTAB`. Each entry is a routine
-address so the 16 words occupy 32 bytes in the ROM's data block
-(`src/services.asm:39-46`, `src/tables.asm:98-126`). This table is separate
-from the eight-byte signature/version/jump table at `C003h`.
+Valid dispatch needs four temporary stack bytes. It pushes `HL` and
+`DE`, doubles the service number in `DE` and adds that offset to `SVTAB`.
+Seventeen address words occupy 34 ROM-data bytes (`src/services.asm:39-46`,
+`src/tables.asm:98-130`). This routine table is separate from the eight-byte
+signature/version/jump table at `C003h`.
 
-The selected address is loaded into `HL` and the saved `DE` is popped.
-`EX (SP),HL` then exchanges the routine address with the saved argument
-`HL`. The next `RET` consumes that address and enters the routine. Its
-arguments are back in place and the caller's return word is next on the
-stack. Neither of the dispatcher's saved pairs remains there
+The selected address replaces a saved word rather than requiring another
+call frame. Dispatch loads the address into `HL` and pops argument `DE`.
+`EX (SP),HL` exchanges the address with saved argument `HL`. `RET` then
+consumes that address and enters the routine. The original arguments are
+restored and only the caller's return word remains
 (`src/services.asm:47-57`).
 
-The failure exit `HWERR` leaves `B`, `DE` and `HL` as they are on entry
-to it. It does not restore values changed by the selected routine. It uses
-`OR A` and `SCF` to return a nonzero status with carry set. A routine's
-success path ends with its own `XOR A` and `RET`, returning status 0 with
-zero set and carry clear (`src/services.asm:59-67`,
+Result handling belongs to the selected service. Generic failure exit
+`HWERR` preserves `B`, `DE` and `HL` as they reach that exit. It cannot
+restore changes already made by a routine. `OR A` and `SCF` return nonzero
+status with carry set. Ordinary success uses `XOR A` and `RET` for status
+zero, Z set and carry clear (`src/services.asm:59-67`,
 `src/services.asm:74-82`).
-`FIND` and `LIST` have their own result convention, including the registry
-generation in `A` (`src/abi.inc:185-206`). The ABI preserves `IX`, `IY`
-and the alternate registers except for `MOUNT`, `UNMNT` and `DESC`, which
-may change `IX` and the alternates. For the whole call, use the selected
-service's documented results. Other registers may be destroyed
-(`src/abi.inc:35-56`).
+
+`FIND` and `LIST` instead return registry-specific results, including
+generation in `A` (`src/abi.inc:185-206`). The ABI normally preserves `IX`, `IY`
+and alternate registers. `MOUNT`, `UNMNT` and `DESC` may change `IX` and
+alternates. Other register results must be taken from the selected
+service contract (`src/abi.inc:35-56`).
 
 ## The code behind the table
 
-Services 0 to 8 are the hardware routines in `src/services.asm`.
-`FONT`, 15, is there too. The volume entries 9 to 11 are in
-`src/volsvc.asm`. [Chapter 18](18-card-blocks-and-volumes.md) explains those
-operations. `DRVR`, 12, enters `SVDRV` to install or drop a display-driver
-table. [Chapter 17](17-console-paths.md) explains that table and its
-validation. `FIND` and `LIST`, 13 and 14, enter the registry routines in
-`src/loader.asm`, explained in
-[Chapter 25](25-loading-and-removing-services.md)
-(`src/tables.asm:98-126`, `src/services.asm:532-564`).
+Service numbers group several implementation boundaries. Hardware calls
+0–8 and `FONT`, 15, are in `src/services.asm`. Volumes 9–11 use
+`src/volsvc.asm`, explained in [Chapter 18](18-card-blocks-and-volumes.md).
+`DRVR`, 12, enters `SVDRV` for the display-driver table from
+[Chapter 17](17-console-paths.md). `FIND` and `LIST`, 13–14, enter the
+registry in `src/loader.asm`, explained in
+[Chapter 25](25-loading-and-removing-services.md). `SHELL`, 16, installs
+or clears the prompt hook through `SVSHL`
+(`src/tables.asm:98-130`, `src/services.asm:532-610`).
 
-The code account below totals 442 bytes for the dispatcher, its exits,
-the nine hardware services and the font's access routine. It excludes the
-font data and the other numbered routines. The figures are this build's
-and change with the source.
+The following 442-byte account covers dispatch, generic exits, the nine
+hardware routines and font access. Font data and the other numbered
+services are excluded. These are build-specific figures, not fixed ABI
+sizes.
 
 | Number | Name | Routine | Bytes |
 | ---: | --- | --- | ---: |
@@ -99,43 +99,39 @@ and change with the source.
 
 ## Stored state and the status LCD
 
-`INFO` returns stored state without reading a device. It ORs `CONDEV` with
-`VCLAIM` for the result in `B`, loads `ROMVER` into `DE` and reads the adjacent
-`VWID` and `VHGT` bytes into `L` and `H` (`src/services.asm:74-80`,
-`src/ram.asm:421-422`). In the resident workspace those
-dimensions are at `BFEAh` and `BFEBh`, near its upper end.
+Programs can inspect console and device state without performing I/O.
+`INFO` returns `CONDEV` OR `VCLAIM` in `B`, `ROMVER` in `DE` and adjacent
+`VWID`/`VHGT` in `L`/`H` (`src/services.asm:74-80`, `src/ram.asm:421-422`).
+The dimensions occupy `BFEAh` and `BFEBh` near the workspace's upper end.
 
-The device bits and claim bit have different lifetimes. Cold boot calls
-`RTCHAS` once and sets `CDRTC`, bit 3 of `CONDEV`, if the clock answers
-(`src/boot.asm:68-72`, `src/layout.asm:73`). `VCLAIM` holds `CDCLM`,
-bit 4 in the `INFO` result, while a program has claimed the PICO9918
-(`src/ram.asm:128`, `src/layout.asm:74`). Reading `INFO` does not
-repeat the clock probe or change the claim.
+The returned bits describe different times. Cold boot probes the clock
+once with `RTCHAS` and sets `CONDEV` bit 3, `CDRTC`, on a response
+(`src/boot.asm:68-72`, `src/layout.asm:73`). `VCLAIM` instead holds the
+current PICO9918 claim as bit 4, `CDCLM` (`src/ram.asm:128`,
+`src/layout.asm:74`). INFO neither repeats the clock probe nor changes
+the claim.
 
-Writing the status LCD changes another bit in `CONDEV`. `HWSLCD` first
-checks that the row in `B` is below 4. An invalid row returns `TNEBAD`
-before any write. For row 3 it clears `CDWRD`, which records that the
-bottom row contains a ROM recovery word (`src/services.asm:130-140`).
-Your text can then remain there without a later recovery-word clear
-erasing it (`src/loader.asm:924-943`).
-[Chapter 26](26-startup-inside-the-ccp.md) explains that use of the bottom row.
+Status LCD output must also distinguish application text from recovery
+text. `HWSLCD` first validates row `B` below 4, returning `TNEBAD` before
+writes otherwise. For row 3 it clears `CDWRD` in `CONDEV`, the mark for a
+ROM recovery word (`src/services.asm:130-140`). Later recovery-word cleanup
+then leaves application text intact (`src/loader.asm:924-943`).
+[Chapter 26](26-startup-inside-the-ccp.md) explains the bottom-row use.
 
-`LCDROWS` supplies the row's display address. `HWSLCD` sends that command
-and then writes exactly 20 bytes from `HL`, advancing the pointer after
-each. Every character follows a call to `LCDWAIT`
-(`src/tables.asm:50-51`, `src/services.asm:142-157`). This is fixed-width
-output, including zero bytes. `LCDWAIT` polls the busy flag at most 256
-times so an absent display does not cause an endless wait
+After validation, `LCDROWS` supplies the row address. `HWSLCD` sends it
+then writes exactly twenty bytes from `HL`, advancing after each and
+calling `LCDWAIT` before each character (`src/tables.asm:50-51`,
+`src/services.asm:142-157`). Zero bytes count as output too. `LCDWAIT`
+limits busy polling to 256 attempts, bounding the wait on an absent display
 (`src/lcd.asm:23-39`).
 
 ## Digits and sound on port 01h
 
-The digits, speaker and serial transmitter share port `01h`. A digit
-select or speaker change must keep serial bit 6 high. Both `DIGIT` and
-`TONE` include `TXIDLE`, `40h`, in every value they write there
-(`src/services.asm:1-24`, `src/services.asm:94-116`,
-`src/services.asm:241-262`). Sound and digit output can therefore use
-their own bits without transmitting a false serial start bit.
+Shared port wiring constrains both digit and sound output. Port `01h`
+also carries serial transmission, whose bit 6 must stay high while either
+service changes other bits. Every DIGIT and TONE write includes `TXIDLE`,
+`40h` (`src/services.asm:1-24`, `src/services.asm:94-116`,
+`src/services.asm:241-262`). This avoids a false serial start bit.
 
 `DIGIT` scans six patterns from `HL`, leftmost first. It starts `C` at
 `20h` so only the leftmost select bit is set. Each pattern goes to
@@ -159,12 +155,11 @@ separate from the program-side measurements in
 
 ## Matrix rows and the joystick
 
-`JOY` and `KEYS` read port `FEh`. The `IN A,(C)` instruction puts `B`
-on the upper address lines, where a low bit selects a matrix row.
-`HWSKEYS` begins with `BC` at `FEFEh`. It complements each input byte,
-stores it through `HL` and rotates `B` left for the next row
-(`src/services.asm:280-295`). A pressed key therefore becomes a 1 in
-the returned buffer.
+Keyboard and joystick input share port `FEh`. For `IN A,(C)`, register
+`B` drives upper address lines and a low bit selects a matrix row.
+`HWSKEYS` starts at `BC = FEFEh`, complements each input byte, stores it
+through `HL` then rotates `B` left (`src/services.asm:280-295`). Returned
+1 bits consequently identify pressed keys.
 
 `RLC B` also copies the old top bit to carry. The low select bit reaches
 that position for the eighth read, after which carry is clear and the
@@ -175,13 +170,13 @@ for each pressed input (`src/services.asm:270-295`).
 
 ## Clock transfers
 
-The clock service checks its mode before contacting the DS1302. `B` must
-be 0 for a read or 1 for a write. Other values return `TNEBAD` with the
-clock untouched (`src/services.asm:377-380`). A valid call probes the
-seconds register through `RTCHAS`. A byte below `60h` counts as an answer
-because the seconds are BCD. This is the implemented presence test, not
-full validation of every BCD digit (`src/services.asm:382-385`,
-`src/services.asm:424-441`). An unanswered probe returns `TNENODV`.
+RTC calls validate the operation before device I/O. Mode `B` must be
+0 for read or 1 for write. Other values return `TNEBAD` without touching
+the clock (`src/services.asm:377-380`). Each valid call probes the DS1302
+seconds register with `RTCHAS`. A byte below `60h` counts as a response,
+using the BCD seconds range. This test does not validate every BCD digit
+(`src/services.asm:382-385`, `src/services.asm:424-441`). No response
+returns `TNENODV`.
 
 `RTCCMD` raises the enable line and enters `RTCWR` to send the command.
 `RTCWR` shifts the byte in `D` out least significant bit first, setting
@@ -200,26 +195,24 @@ at cold boot.
 
 ## Display claims and positioned text
 
-A program can change the PICO9918's mode and video memory (VRAM) while the
-console is configured to use it. `VIDEO` records the claim that prevents console
-drawing during that interval. It validates `B` as 0 or 1 before changing
-anything, then requires `CDTMS` in `CONDEV`. Invalid modes return status 1 and
-an absent PICO9918 returns status 2 (`src/services.asm:161-179`).
+A program using PICO9918 VRAM directly must prevent console drawing from
+altering it. `VIDEO` records a claim for that interval. It first validates
+`B` as 0 or 1 then requires `CDTMS` in `CONDEV`. Invalid mode returns
+status 1 and absent PICO9918 returns status 2 before a claim is changed
+(`src/services.asm:161-179`).
 
-For a claim, the routine hides the cursor if `CONMOD` is `CMCRT` and
-stores `CDCLM` in `VCLAIM` (`src/services.asm:181-188`). The terminal's
-`VTOWN` test combines the claim with `CONMOD`. It returns nonzero only
-when the claimed PICO9918 is the console (`src/term.asm:805-822`). A
-claim therefore stops PICO9918 console drawing while output to another
-selected console can continue.
+Claiming hides the cursor when `CONMOD` is `CMCRT` and stores `CDCLM`
+in `VCLAIM` (`src/services.asm:181-188`). `VTOWN` combines mode and claim,
+returning nonzero only for a claimed PICO9918 selected as console
+(`src/term.asm:805-822`). Console drawing on that device stops while output
+to another selected console can continue.
 
-Release returns at once if there is no claim. Otherwise `HWVREL` clears
-`VCLAIM` and reads `PIVEC`. Cold boot sets that pointer to `PIBLK` when
-the PICO9918 responds and the Matrix switch enables the keyboard
-(`src/services.asm:206-214`,
-`src/video.asm:18-24`, `src/pico.asm:53-68`). A zero pointer leaves the
-chip as the program set it. With a table present, release reads the
-fourth word at offset 6 and calls the restore routine through `VHLJP`
+Releasing an absent claim returns immediately. Otherwise `HWVREL` clears
+`VCLAIM` and checks `PIVEC`. Cold boot points it at `PIBLK` when the
+PICO9918 responds and the Matrix switch enables the keyboard
+(`src/services.asm:206-214`, `src/video.asm:18-24`, `src/pico.asm:53-68`).
+Zero leaves the chip in its program-configured state. A present table
+supplies its fourth word, offset 6, for restoration through `VHLJP`
 (`src/services.asm:216-222`, `src/video.asm:61-66`).
 
 The restore routine reinstates the mode, font and displayed page. Release also
@@ -231,14 +224,13 @@ before page zero is rebuilt. A restore during a claim keeps a tracked enable bit
 that the program set through `PICOREG` (`src/boot.asm:131-141`,
 `src/pico.asm:214-236`, `src/pico.asm:326-362`, `src/pico.asm:636-638`). A program's claim ends with its exit.
 
-`PUTAT` writes through the selected video driver while leaving the console
-cursor position unchanged. Its first test is `VTOWN`, followed by the low
-bit of `CONMOD`. A claimed PICO9918 console or a non-video mode returns
-status 2. The low bit is set for `CMCRT` and `CMUC1`, clear for serial
-and batch (`src/services.asm:299-323`, `src/layout.asm:77-86`). These
-tests precede the zero-count return. On an available video console a
-count of zero reads no source and changes no cursor state
-(`src/services.asm:324-325`).
+PUTAT uses the selected video driver while preserving the logical
+console cursor position. `PUTAT` checks `VTOWN` then `CONMOD` bit 0.
+A claimed PICO9918 console or non-video mode returns status 2. `CMCRT`
+and `CMUC1` have that mode bit set. Serial and batch have it clear
+(`src/services.asm:299-323`, `src/layout.asm:77-86`). These tests precede
+the zero-count case. On an available video console, zero returns before source access
+or cursor-state changes (`src/services.asm:324-325`).
 
 For a nonzero count, `PUTAT` hides the cursor before checking the row.
 A row beyond the screen returns status 0 with no text written.
@@ -251,45 +243,42 @@ expires or the right edge is reached (`src/services.asm:327-360`).
 
 ## The ROM font
 
-The display drivers use the ROM's font (`src/pico.asm:253-275`,
-`drivers/glcd.asm:527-555`). `FONT`, service 15, loads its address into
-`HL`, clears `A` and returns (`src/services.asm:510-517`). The font has 96
-characters from code `20h`, each eight bytes in top-to-bottom row order
-(`src/abi.inc:208-213`). Its 768 data bytes are separate from the
-five-byte access routine in the code table.
+Display drivers share the ROM font (`src/pico.asm:253-275`,
+`drivers/glcd.asm:527-555`). Service 15, `FONT`, returns its address in
+`HL` and clears `A` (`src/services.asm:510-517`). The data contains 96
+characters starting at code `20h`, eight bytes each in top-to-bottom row
+order (`src/abi.inc:208-213`). Its 768 bytes are separate from the
+five-byte access routine counted above.
 
-The selected data is TEC Compact from `format/font5x7.txt`. Its parser puts
-each row's five pixels in bits 7–3 and requires eight rows per character
-(`tools/lib/font.mjs:9-35`). The source package checks the selected font
+The selected font is TEC Compact from `format/font5x7.txt`. Parsing
+places five row pixels in bits 7–3 and requires eight rows per character
+(`tools/lib/font.mjs:9-35`). The package check verifies the selected font's
 identity (`tools/lib/font-package.mjs:8-16`).
 
-`GLCD.SVC` calls `FONT` first in `INIT` and stores the returned pointer.
-On a ROM before ABI 5.1, number 15 is beyond the dispatch table. The
-call returns carry set and `INIT` exits with that failure before probing
-the controller (`drivers/glcd.asm:60-68`).
+GLCD installation depends on this service. `INIT` calls FONT first and
+stores its pointer. Before ABI 5.1, service 15 is outside the table and
+returns carry. INIT then exits before probing the controller
+(`drivers/glcd.asm:60-68`).
 
 ## Space on the caller's stack
 
-The hardware routines and `FONT` run on the caller's stack and make no
-BDOS call. Their state changes use resident bytes such as `VCLAIM` and
-`CONDEV`. They can therefore be called from a resident service's `INIT`
-or within a BDOS call without re-entering the BDOS. `MOUNT` and `UNMNT`
-are the exceptions among numbered services: they reset a drive through
-BDOS function 37 and must be called from outside an existing BDOS call
-(`src/services.asm:1-16`, `src/abi.inc:35-56`).
+Hardware calls and FONT use the caller's stack and avoid BDOS calls.
+Resident bytes such as `VCLAIM` and `CONDEV` hold their state. They can
+therefore run from service INIT or inside a BDOS call without re-entering
+BDOS. MOUNT and UNMNT are exceptions: both call function 37 and require
+entry from outside an existing BDOS call (`src/services.asm:1-16`,
+`src/abi.inc:35-56`).
 
-The caller may be a program, the CCP or the BDOS with part of its stack
-already occupied. The byte counts in `abi.inc` bound additional space
-below the caller's return address. They include the dispatcher's two
-pushes, even though those words are gone before the routine begins.
-They are upper bounds, not a claim that every path reaches the limit
-(`src/abi.inc:50-53`). The routines also preserve the caller's interrupt
-state (`src/abi.inc:43-44`).
+A stack bound counts additional space below the caller's return address.
+This applies even when the caller is already using part of the BDOS or
+CCP stack. Bounds in `abi.inc` include the dispatcher's temporary four
+bytes despite their removal before routine entry. They are maxima rather
+than measurements of every path (`src/abi.inc:50-53`). Service calls also
+preserve preceding interrupt state (`src/abi.inc:43-44`).
 
-`JOY`, `KEYS`, `DIGIT`, `TONE` and `FONT` each have a four-byte bound,
-the dispatcher's saved pairs alone (`src/abi.inc:65-113`,
-`src/abi.inc:208-213`). `PUTAT` has the deepest hardware bound at 22
-bytes. Its six saved register bytes remain on the stack during a driver
-call, with the driver's nested drawing calls below them
-(`src/services.asm:348-357`, `src/abi.inc:115-124`). You therefore leave
-22 bytes free to write positioned text and four to sound a tone.
+JOY, KEYS, DIGIT, TONE and FONT each need at most four additional bytes,
+just the dispatcher saves (`src/abi.inc:65-113`, `src/abi.inc:208-213`).
+PUTAT's bound is 22 bytes, the largest hardware bound. Six saved register
+bytes remain while the driver makes nested drawing calls
+(`src/services.asm:348-357`, `src/abi.inc:115-124`). A caller therefore
+needs 22 free bytes for positioned text and four for a tone.

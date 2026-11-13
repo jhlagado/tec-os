@@ -274,8 +274,7 @@ BYTES:	DB	" bytes",13,10,"$"
 PUTDEC emits five decimal digits. DIGIT repeatedly adds a negative power of
 ten to HL until carry stops. It then uses SBC to reverse the last subtraction
 and leave the remainder. Saving HL across function 2 preserves that remainder
-for the next digit. The complete listing retains its original tabs and
-comments.
+for the next digit.
 
 ```sh
 node --input-type=module -e '

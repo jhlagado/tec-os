@@ -17,151 +17,102 @@ nav_group: "Inside TEC-OS"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-The CCP reads your command through the BDOS, parses its name and either runs a
-built-in or loads a file. A program command ends that path with page zero
-prepared and a jump to `0100h`. This chapter follows the code from the command
-prompt to that jump. [Appendix J](appendix-j-command-reference.md) gives the
-exact command grammar.
+Running a command requires more than finding its file. TEC-OS must retain
+the selected drive and user, prepare the arguments and provide a return to
+the prompt. The console command processor, or CCP, obtains a line through the BDOS.
+It parses a name then runs a built-in or loads a file. Program execution begins at `0100h` after page zero is ready.
+[Appendix J](appendix-j-command-reference.md) gives the exact grammar.
 
 ## The minimal CCP and the shell
 
-The ROM's CCP is small, and this chapter follows it. Its `KEYTAB`
-holds DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD, and it still runs a
-`.COM` or a `.SVC`, changes drive and reads one line of `STARTUP.CMD`
-(`src/tables.asm:53-76`, `docs/shell.md:3-5`). The rest is
-in `SHELL.SVC`, a resident service that the starter card's startup file
-installs. Its own table holds COPY, DEL and SERVICES, and DEL rewrites its
-word as `ERA` and hands the piece to the ROM
-(`drivers/shell.asm:545-552`).
+Command input and program execution are split between the shell and ROM.
+The ROM CCP handles DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD through
+`KEYTAB`. It can also run `.COM` and `.SVC` files, change drive and read a
+line of `STARTUP.CMD` (`src/tables.asm:53-76`, `docs/shell.md:3-5`). The
+starter startup file installs resident `SHELL.SVC` for additional commands.
+Its table includes COPY, DEL, SERVICES, CD, DIR, CLS, ECHO and PAUSE.
+DEL changes its command word to `ERA` before passing the piece to the ROM
+(`drivers/shell.asm:545-552`, `drivers/shell.asm:650-667`).
 
-The shell takes the prompt through a hook in the ROM. ROM service 16,
-`TNSHELL`, records a table of four entries in the shell's pages: `LINE`,
-`PAGE`, `HREC` and `HSTORE` (`src/abi.inc:226`,
-`drivers/shell.asm:61-64`, `docs/shell.md:273-320`). At each
-prompt `MAINLOOP` tests the hook. With a shell holding it, `SHLINE` calls
-`LINE`, which prints the prompt, reads or takes the next piece and writes it
-zero-ended into the command buffer with its origin, `FFh` for a line of
-`STARTUP.CMD`. The ROM then runs that piece as a typed line. With no shell
-the ROM prints its own prompt and takes a function 47 line, then its one
-startup line, then a line read with function 10
-(`src/cpm/ccp.asm:97-158`, `src/cpm/ccp.asm:248-294`).
-`TYPE` sends every byte, and `DIR` its row breaks, through `PAGE`, which
-gives the shell's `[more]` pause. With no shell the ROM prints the byte
-(`src/cpm/ccpfile.asm:266-288`, `docs/shell.md:304-307`). Chapter 22 follows
-the shell's lines of pieces, Chapter 23 its history and Chapter 26 the
-startup file.
+The shell extends the prompt through ROM service 16, `TNSHELL`. Its table
+supplies four entries: `LINE`, `PAGE`, `HREC` and `HSTORE`
+(`src/abi.inc:226`, `drivers/shell.asm:61-64`, `docs/shell.md:273-320`).
+`MAINLOOP` checks the hook at every prompt. With a shell installed, `SHLINE`
+calls `LINE` to print the prompt and supply a zero-ended command piece
+plus its origin. `FFh` marks startup input. The ROM executes that piece
+through the ordinary command path.
 
-## Code and working storage
-
-The CCP uses CP/M calls for its ordinary work: function 10 reads a line,
-function 15 opens a file and function 9 prints a string through `0005h`. Its own
-code stays in ROM while program files load into the transient program area
-(TPA). The four source files are assembled in this order (`src/rom.asm:31-35`):
-
-| File | Work |
-| --- | --- |
-| `src/cpm/ccp.asm` | Boot entry, prompt, command dispatch and program loading |
-| `src/cpm/ccpfile.asm` | DIR, TYPE and their output through the shell's pager |
-| `src/cpm/ccpmut.asm` | ERA, REN, a name check and the shared BDOS call helper |
-| `src/cpm/ccpcmd.asm` | Other built-ins, file-name parsing, page-zero preparation and startup |
-
-The messages and `KEYTAB` are in the ROM data block. Each keyword in
-`KEYTAB` has a zero terminator followed by its handler address. A final
-zero ends the table, which holds eight records (`src/tables.asm:53-76`). `CCPBAS` is
-`DBBBh` and the CCP ends at `E3C2h`. Its 2,056 bytes are followed by the BDOS.
-
-The working state is in RAM. `CMDFCB` and `RENFCB` hold parsed file
-references. The command buffer follows them and `CCPCLR` marks the start
-of the state cleared by warm boot (`src/ram.asm:148-180`). The state
-runs from `CCPRAM` at `BCF2h` to `BE76h`, with `CCPCLR` at `BDBCh`.
-`CPMINIT` clears from `CCPCLR` through the BDOS state, leaving the command
-buffer below it intact (`src/boot.asm:398-407`).
-[Chapter 22](22-chains-across-warm-boot.md) explains the retained line.
-[Appendix C](appendix-c-memory-map.md) lists the memory locations.
-
-File operations share a short call helper. A `CALL DOSSEQ` has an inline byte
-containing twice the BDOS function number plus a file control block (FCB)
-selection bit. Bit 0 selects `CMDFCB` when clear and `RENFCB` when set. `DOSSEQ`
-advances the stacked return address past that byte, decodes it into `C` and `DE`
-and jumps to the BDOS. The BDOS returns after the inline byte
-(`src/cpm/ccpmut.asm:172-183`). The CCP uses this form for 18 calls. DIR's searches use functions 17 and 18, TYPE's reads use 20 and ERA's
-deletion uses 19 (`src/cpm/ccpfile.asm:74-75`, `src/cpm/ccpfile.asm:187-189`,
-`src/cpm/ccpfile.asm:371-373`, `src/cpm/ccpmut.asm:57-61`).
-
-The CCP also reads the console geometry and mode, the loader's result
-and the program ceiling at `0007h`. Its direct state includes `SHOWN`, the
-shell's table or 0, `HFLAG` for the shell's history input, `WRFLAG` for the
-disk reset, `STFLAG` for a line's origin, `CHPOS` for a function 47 line and
-a dropped line, and `PRGCODE` for the previous result
-(`src/cpm/ccp.asm:46-158`, `src/cpm/ccp.asm:203-223`).
+Without a shell, the ROM prints its prompt. It takes function 47 input
+first, then startup input and finally function 10 keyboard input
+(`src/cpm/ccp.asm:97-158`, `src/cpm/ccp.asm:248-294`). The hook also supplies
+paging: TYPE sends every byte and DIR sends row breaks through `PAGE`.
+Without the hook those bytes print directly (`src/cpm/ccpfile.asm:266-288`,
+`docs/shell.md:304-307`). Chapter 22 explains command pieces, Chapter 23
+history and Chapter 26 startup input.
 
 ## Entry from boot
 
-The prompt must return to the selected drive and user area after a program
-ends. Both are packed into `0004h`: the user in bits 4 to 7 and the drive
-in bits 0 to 3. Cold boot sets the byte to zero for A and user 0. Warm
-boot preserves it and enters `CCPENT` with the byte in `C`
-(`src/boot.asm:114-115`, `src/boot.asm:150-152`, `src/boot.asm:293-308`).
+Selection must survive the program's exit. Page-zero byte `0004h` packs
+the user into bits 4–7 and the drive into bits 0–3. Cold boot writes zero
+for A and user 0. Warm boot preserves the byte and passes it to `CCPENT`
+in `C` (`src/boot.asm:114-115`, `src/boot.asm:150-152`,
+`src/boot.asm:293-308`).
 
-`CCPENT` establishes the CCP stack and checks the saved drive. A drive
-past D or without a mounted volume becomes A. Otherwise the selection
-would raise `Select` and its warm boot would repeat the failed selection.
-The chosen drive is held in `BOOTDRV` while the disk state is reset
-(`src/cpm/ccp.asm:46-75`).
+`CCPENT` establishes its stack then validates the saved drive. A drive
+past D or with no mounted volume falls back to A. Repeating an invalid
+selection would otherwise cause `Select` and another warm boot. `BOOTDRV`
+holds the chosen drive during disk reset (`src/cpm/ccp.asm:46-75`).
 
-Function 13 resets the disks with `WRFLAG` set, preserving the allocation
-vectors for unchanged drives. Warm boot has cleared the BDOS user variable
-so function 32 restores the saved user. `STBOOT` then handles the first
-record of `A:STARTUP.CMD` once after cold boot. Finally function 14 selects
-the saved drive when it is not A and `STARTED` prints a new line before
-the prompt (`src/cpm/ccp.asm:74-96`, `src/cpm/bdosfile.asm:46-77`).
-[Chapter 20](20-a-file-through-the-bdos.md) explains the allocation-vector
-reset and [Chapter 26](26-startup-inside-the-ccp.md) explains startup.
+The CCP restores disk and user state before requesting another command.
+Function 13 runs with `WRFLAG` set to retain unchanged allocation vectors.
+Function 32 restores the user cleared by warm boot. `STBOOT` handles the
+first record of `A:STARTUP.CMD` once after cold boot. Function 14 then
+reselects a saved drive other than A and `STARTED` prints a newline
+(`src/cpm/ccp.asm:74-96`, `src/cpm/bdosfile.asm:46-77`).
+[Chapter 20](20-a-file-through-the-bdos.md) explains vector reuse and
+[Chapter 26](26-startup-inside-the-ccp.md) explains startup.
 
-A drive left with no volume is the unavailable-drive case. `CD` never
-leaves a drive empty, since it puts one volume in place of another, but a
-program can empty a drive through the ROM's `UNMNT` service. When 0004h then
-names that drive at warm boot, the CCP takes A instead, as no selection of
-the empty drive could succeed (`src/cpm/ccp.asm:74-96`,
-`docs/compatibility.md`).
+A program can create the unavailable-drive case with ROM `UNMNT`.
+`CD` replaces a volume and never leaves its drive empty. If `0004h` names
+an emptied drive on warm boot, the CCP selects A instead
+(`src/cpm/ccp.asm:74-96`, `docs/compatibility.md`).
 
 ## The prompt and its input
 
-`MAINLOOP` resets the stack and calls `SAVEDU` before each prompt. `SAVEDU`
-reads the user with function 32 and the drive with function 25, then packs
-them into `0004h`. With a shell holding the hook, `SHLINE` calls its `LINE`
-entry, which prints the prompt itself. Otherwise the ROM prints a nonzero
-user number in decimal before the drive letter and `>`, giving `A:SYSTEM>` or `3A:SYSTEM>`
-(`src/cpm/ccp.asm:110-144`, `src/cpm/ccp.asm:306-324`). A program's ordinary
-exit preserves that selection. Removing the current volume gives the
-fallback to A described above. Cold reset starts from A and user 0.
+Before each prompt, `MAINLOOP` resets its stack and calls `SAVEDU`.
+Functions 32 and 25 supply user and drive for packing into `0004h`.
+With the shell hook, `LINE` prints the prompt. The bare ROM instead prints
+a nonzero decimal user, the drive letter and `>`, giving `A>` or `3A>`
+(`src/cpm/ccp.asm:110-144`, `src/cpm/ccp.asm:306-324`). Ordinary program
+exit retains that selection. An unmounted current drive falls back to A
+and cold reset begins at A, user 0.
 
-With the shell, the line comes from `LINE`: a remaining piece, the rest of
-the startup file, a script line or a typed line, written zero-ended at
-`CMDTXT` with its origin in `A`. `SHLINE` sets `HFLAG` around the call so
-that the shell's own function 10 call offers history, and bounds the line
-with a zero at the buffer's last byte (`src/cpm/ccp.asm:110-124`,
+Shell input is already a command piece when the ROM receives it.
+`LINE` can supply a remaining piece, startup input, a script line or typed
+input at `CMDTXT`, with origin in `A`. `SHLINE` sets `HFLAG` during the
+call so the shell's function 10 input can use history. It also zeroes the
+buffer's last byte to bound the result (`src/cpm/ccp.asm:110-124`,
 `src/cpm/ccp.asm:251-282`). [Chapter 22](22-chains-across-warm-boot.md)
-explains the shell's order and [Chapter 23](23-the-history-ring.md) storage
-and recall.
+explains source priority and [Chapter 23](23-the-history-ring.md) explains
+history storage and recall.
 
 With no shell, input has three sources in priority order. A function 47
 line flagged in `CHPOS` is echoed and taken whole. Otherwise `STLINE`
-supplies the one startup line, or function 10 reads the keyboard with
+supplies the one startup line or function 10 reads the keyboard with
 `HFLAG` clear (`src/cpm/ccp.asm:126-182`).
 
-`STFLAG` is `FFh` for a startup line and zero for typed input, and with the
-shell it is the origin `LINE` returned. Typed input uses `CMDBUF`, the
+`STFLAG` is `FFh` for startup and zero for typed input. With the shell
+it holds the origin returned by `LINE`. Typed input uses `CMDBUF`, the
 maximum-length byte, followed by `CMDLEN` and 128 bytes at `CMDTXT`. Warm
 boot sets the maximum to 127 (`src/cpm/ccp.asm:141-158`,
 `src/ram.asm:152-157`, `src/boot.asm:406-407`).
 
-`MLSKIP` passes over spaces and returns to the prompt for an empty line.
-`MLTAKE` converts lower-case letters to capitals up to the line's zero and
-clears `PRGCODE` (`src/cpm/ccp.asm:184-223`). The ROM sees no `!` or `&`:
-the shell has already split the line, and with no shell they are ordinary
-characters. [Chapter 13](13-results-and-command-chains.md) explains the
-practical result rules.
+An empty or space-only piece returns to the prompt through `MLSKIP`.
+`MLTAKE` uppercases the zero-ended text and clears `PRGCODE`
+(`src/cpm/ccp.asm:184-223`). Chain separators have already been removed by
+the shell. Without a shell, `!` and `&` remain ordinary characters.
+[Chapter 13](13-results-and-command-chains.md) explains the resulting
+success and chain rules.
 
 ## The parsed command
 
@@ -171,17 +122,17 @@ drive with function 14 and updates `0004h` through `SAVEDU`. A missing volume
 raises `Select` before that update so the error's warm boot restores the
 previous drive (`src/cpm/ccp.asm:224-249`).
 
-Other pieces enter `NOTDRIVE`. It starts a new output line and calls
-`CMDSKIP` to store the word's start in `CMDSTRT`. `CMDPARSE` parses a file
-reference into `CMDFCB`. `ARGSTRT` is then set to its delimiter for the
-handler's arguments. Invalid syntax reaches `BADCMD` before dispatch
-(`src/cpm/ccp.asm:339-348`, `src/cpm/ccp.asm:483-528`).
+A non-drive command enters `NOTDRIVE`. It starts an output line and saves
+the word's beginning in `CMDSTRT` through `CMDSKIP`. `CMDPARSE` fills
+`CMDFCB` and leaves its delimiter in `ARGSTRT` for the handler. Invalid
+syntax reaches `BADCMD` before any dispatch (`src/cpm/ccp.asm:339-348`,
+`src/cpm/ccp.asm:483-528`).
 
-`PARSEFCB` clears all 36 bytes of the destination FCB: zero drive, eleven
-spaces for name and type and zeros for the remainder. Reusing an FCB after
-TYPE therefore starts a later load at record zero. `FCBBASE` records the
-FCB's address while the parser advances `DE`. On return `HL` points to the
-reference's delimiter (`src/cpm/ccpcmd.asm:443-531`).
+Parsing starts from a complete FCB reset. `PARSEFCB` writes a zero drive,
+eleven name/type spaces and zeros through the remaining 36-byte structure.
+A command after TYPE can therefore load from record zero. `FCBBASE` retains
+the base while `DE` advances. Returned `HL` points to the reference's
+delimiter (`src/cpm/ccpcmd.asm:443-531`).
 
 An initial letter and colon set the drive byte to 1 through 16 for A to P.
 The parser fills up to eight name bytes and three type bytes after a dot.
@@ -199,25 +150,23 @@ dispatch use that check (`src/cpm/ccpcmd.asm:581-622`). The shell's COPY has
 its own parser and check, `PARSEFCB` and `UNAMBIG` in
 `drivers/shellcmd.asm:221-336`.
 
-The keyword loop compares the original command text at `CMDSTRT` with
-`KEYTAB`, not the parsed FCB. Its order is DIR, TYPE, ERA, REN, SAVE,
-USER, CON and UNLOAD. COPY, DEL and SERVICES are not in it: the shell
-takes them before the ROM sees the piece, and DEL reaches the ROM as `ERA`
-(`src/tables.asm:60-76`, `drivers/shell.asm:545-552`). `ISCMD` requires a space or zero
-immediately after the keyword. `A:DIR` and `DIR.COM` therefore name a
-program file rather than built-in DIR. Both fail when the selected search
-finds no `DIR.COM` (`src/cpm/ccp.asm:351-376`,
-`src/cpm/ccpcmd.asm:689-708`, `src/tables.asm:53-76`).
+Built-in recognition uses the original word at `CMDSTRT`. `KEYTAB` tests
+DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD. The shell handles COPY,
+DEL and SERVICES earlier and passes DEL onward as `ERA`
+(`src/tables.asm:60-76`, `drivers/shell.asm:545-552`). `ISCMD` accepts a
+keyword only before space or zero. A drive prefix or type therefore selects
+a program name: `A:DIR` and `DIR.COM` search for `DIR.COM` and fail if it
+is absent (`src/cpm/ccp.asm:351-376`, `src/cpm/ccpcmd.asm:689-708`,
+`src/tables.asm:53-76`).
 
-A match jumps to the handler address in the table. With no match the CCP
-requires an unambiguous file name. Type SVC calls `SVCGO` to load and install a
-service. Other types are replaced by COM so `TAS.TXT` searches for `TAS.COM`
-(`src/cpm/ccp.asm:374-428`). A startup service whose INIT reports `TNENODV` has
-the quiet-success exception. Other installation failures reach `BADCMD`
-(`src/cpm/ccp.asm:396-412`). A service whose execution record asks to be
-entered is entered after it installs, or found and entered without a file
-read (`src/loader.asm:734-783`). [Chapter 25](25-loading-and-removing-services.md)
-describes installation.
+A keyword match jumps to its handler. Otherwise the FCB must be
+unambiguous. Type SVC enters `SVCGO` for installation. Every other type
+becomes COM, so `TAS.TXT` searches for `TAS.COM` (`src/cpm/ccp.asm:374-428`).
+During startup, INIT result `TNENODV` is a quiet success. Other install
+failures reach `BADCMD` (`src/cpm/ccp.asm:396-412`). A service execution
+record can also request entry after installation or entry into an existing
+service without reading its file (`src/loader.asm:734-783`).
+[Chapter 25](25-loading-and-removing-services.md) explains installation.
 
 `BADCMD` prints the word at `CMDSTRT` up to space or zero, then `?` and a new
 line. Built-ins can move `CMDSTRT` to an argument. CON moves it again for a
@@ -227,12 +176,299 @@ entry. They finish at `MAINLOOP` or at `STARTED`, which adds a new line first
 (`src/cpm/ccp.asm:464-471`, `src/cpm/ccp.asm:536-570`,
 `src/cpm/ccpcmd.asm:105-111`).
 
+## Program lookup and capacity
+
+A plain program name can reach tools outside the current user area.
+`LOADA` first runs `LOADCOM` on the named or current drive in the current
+user. Only absence permits a user-0 retry, skipped if already in user 0.
+Function 32 changes the user for the attempt then restores it. The file
+needs no system attribute (`src/cpm/ccp.asm:584-609`).
+
+A found but unloadable file stops this search. `LOADCOM` returns carry
+with Z for absence and carry with NZ for load failure. `LOADA` immediately
+returns the latter. Drive A is tried only after absence, only without an
+explicit drive and only when the current drive is not A. The CCP sets the
+FCB drive byte to 1 before calling `LOADA` again. On A, current user still
+precedes user 0 (`src/cpm/ccp.asm:428-440`).
+
+An explicit drive suppresses that drive-A fallback. In this starter-card
+capture, plain TAS finds A's tool and prints its usage line. `B:TAS`
+searches B alone:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs B: TAS B:TAS. Boot rows included in this complete serial transcript. -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM
+B: WORK
+C: PROJECTS
+
+A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
+
+A:SYSTEM>B:
+B:WORK>TAS
+usage: TAS NAME [OUT.TYP]
+
+B:WORK>B:TAS
+B:TAS?
+
+B:WORK>
+```
+
+Service lookup is narrower. `SVCGO` calls `LOADCOM` directly, searching
+the named or current drive in the current user. It does not retry user 0
+or drive A (`src/cpm/ccp.asm:385-395`, `src/loader.asm:901-906`).
+
+After open, loading proceeds through ordinary record reads. `LOADCOM`
+starts at `0100h`. Before every function 20 call, `READSRC` sets DMA with
+function 26. Success advances the destination 128 bytes. EOF or the page
+in `0007h` ends the loop. That byte is the high byte of the entry word
+at `0006h` (`src/cpm/ccp.asm:625-648`, `src/cpm/ccp.asm:713-719`).
+
+An exact fit must be distinguished from an oversized file without
+writing into resident memory. At the ceiling, `LOADLIM` reads a further
+record into workspace `LOADBUF`. EOF confirms a fit. Another record or
+error returns carry with NZ. EOF is also required below the ceiling.
+`LOADOK` stores the rounded end in `LOADTOP` for service loading then
+closes, clearing carry without testing close's result
+(`src/cpm/ccp.asm:659-700`).
+
+An oversized file is therefore a found-file failure, preventing fallback
+to another drive. In default BDOS error mode, a failed card read instead
+prints `Bad Sector` and warm-boots before the loader can return
+(`src/cpm/bdoscon.asm:47-64`).
+
+Resident services reduce this load ceiling. Without installed services,
+the starter entry at `B6E9h` gives ceiling `B600h`: 46,336 bytes from
+`0100h`, 233 below the TPA byte limit. Startup installs the shell at
+`A700h`, reducing prompt-time capacity to 42,496 bytes. Each installed
+service moves the entry word and load ceiling to its first page
+(`src/cpm/ccp.asm:637-639`, `src/loader.asm:494-507`).
+
+The capacity fixture places FITS, BIG and ARGS on B. FITS and BIG contain
+RET followed by zeros. ARGS has the complete listing below and is assembled
+on the PC by TAS, as Chapter 27's HELLO is. FITS has 42,496 bytes and BIG
+has 42,497:
+
+```sh
+node -e 'const b = n => { const x = Buffer.alloc(n); x[0] = 0xC9; return x; };
+require("fs").writeFileSync("build/fits.com", b(42496));
+require("fs").writeFileSync("build/big.com", b(42497));'
+node --input-type=module -e '
+import { writeFileSync } from "node:fs";
+import { assembleProgram } from "./tools/lib/assemble.mjs";
+const [src, out] = process.argv.slice(1);
+writeFileSync(out, (await assembleProgram(src)).bytes);
+' build/args.asm build/args.com
+cp dist/starter.img build/ccp.img
+node tools/tecvol.mjs put build/ccp.img B build/args.com
+node tools/tecvol.mjs put build/ccp.img B build/fits.com
+node tools/tecvol.mjs put build/ccp.img B build/big.com
+```
+
+TAS writes the 76-byte ARGS.COM. FITS returned to the prompt and BIG was
+rejected:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: FITS BIG. Boot rows included in this complete serial transcript. -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM
+B: WORK
+C: PROJECTS
+
+A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
+
+A:SYSTEM>B:
+B:WORK>FITS
+
+B:WORK>BIG
+BIG?
+
+B:WORK>
+```
+
+The same fixture separates fallback from directory visibility. Under user
+3, ARGS runs from B's user 0 and TAS from A's user 0. DIR still searches
+only the empty current user area:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Boot rows included in this complete serial transcript. -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM
+B: WORK
+C: PROJECTS
+
+A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
+
+A:SYSTEM>B:
+B:WORK>USER 3
+3B:WORK>ARGS
+0
+0
+[]
+3B:WORK>TAS
+usage: TAS NAME [OUT.TYP]
+
+3B:WORK>B:TAS
+B:TAS?
+
+3B:WORK>DIR
+NO FILE
+
+3B:WORK>
+```
+
+## Page zero before entry
+
+The loaded program receives both parsed names and the original argument
+tail. `PREPPAGE` fills argument FCBs at `005Ch` and `006Ch`, ignoring
+parse errors. It copies the tail to `0081h`, places its length
+at `0080h` and appends zero. Function 26 resets DMA to `0080h`. The initial
+space belongs to the tail. Spaces before a shell separator have already
+been removed and letters are already uppercase (`src/cpm/ccpcmd.asm:402-440`,
+`drivers/shell.asm:321-373`).
+
+These default buffers overlap. The FCBs begin sixteen bytes apart, so
+parsing the second overwrites the first's last twenty bytes. Tail storage
+at `0080h` also occupies the second FCB's final sixteen bytes. Drive and
+eleven name/type bytes remain intact in both (`src/cpm/ccpcmd.asm:402-440`).
+[Chapter 10](10-read-and-write-a-file.md) explains the complete FCB and
+DMA contracts.
+
+ARGS prints those drive and name fields, then the tail between brackets.
+This complete listing is the `build/args.asm` used in the capacity-card
+recipe above:
+
+```asm
+; ARGS: prints the two FCBs and the command tail that the CCP leaves in
+; page zero: each FCB's drive byte as a digit and its eleven name bytes,
+; then the tail between brackets.
+BDOS    EQU     $0005
+
+        ORG     $0100
+        LD      HL,$005C        ; the first FCB
+        CALL    SHOWFCB
+        LD      HL,$006C        ; the second
+        CALL    SHOWFCB
+        LD      A,'['
+        CALL    PUT
+        LD      HL,$0080        ; the tail's length, then its characters
+        LD      B,(HL)
+TAIL:   LD      A,B
+        OR      A
+        JR      Z,TEND
+        INC     HL
+        LD      A,(HL)
+        CALL    PUT
+        DEC     B
+        JR      TAIL
+TEND:   LD      A,']'
+        JP      PUT
+
+SHOWFCB:LD      A,(HL)          ; the drive: 0 for the current one
+        ADD     A,'0'
+        CALL    PUT
+        LD      A,' '
+        CALL    PUT
+        LD      B,11            ; the name and type, as stored
+NAME:   INC     HL
+        LD      A,(HL)
+        CALL    PUT
+        DJNZ    NAME
+        LD      A,13
+        CALL    PUT
+        LD      A,10
+
+; Print A by function 2, keeping B and HL.
+PUT:    PUSH    HL
+        PUSH    BC
+        LD      E,A
+        LD      C,2
+        CALL    BDOS
+        POP     BC
+        POP     HL
+        RET
+```
+
+The output routine preserves the registers needed to traverse those
+buffers. `PUT` saves BC and HL around function 2. `SHOWFCB` prints eleven
+name/type bytes and `TAIL` follows the length at `0080h`. The capture
+therefore exposes padded FCB names alongside spaces retained in the tail:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Boot rows included in this complete serial transcript. -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM
+B: WORK
+C: PROJECTS
+
+A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
+
+A:SYSTEM>B:
+B:WORK>args one.txt a:*.c
+0 ONE     TXT
+1 ????????C
+[ ONE.TXT A:*.C]
+B:WORK>ARGS X Y ! ARGS
+0 X
+0 Y
+[ X Y]
+B:WORK>ARGS
+0
+0
+[]
+B:WORK>
+```
+
+Drive zero in the first FCB selects the current drive. The second uses
+1 for A. `*.C` expands its name field to eight question marks. The shell
+removes the space before `!` from the `ARGS X Y` piece. With no arguments,
+both names are blank and the tail has zero length
+(`src/cpm/ccpcmd.asm:457-531`, `src/cpm/ccpcmd.asm:632-645`).
+
+## The jump and return
+
+Before entry, the CCP also records the load drive at `0050h` from
+`CMDFCB`. Zero means a plain name found on the current drive. Explicit
+`B:ARGS` preserves FCB drive 2. A plain name found by fallback on A has
+1 because fallback changed the FCB drive byte (`src/cpm/ccp.asm:431-461`).
+
+The initial stack supplies the return route. `CMDRUN` sets SP to
+`CSTKTOP`, pushes `0000h` and jumps to `0100h`. The configured 32-byte
+CCP stack leaves thirty bytes below that return word, with a guard before
+command scratch (`src/cpm/ccp.asm:464-471`, `src/layout.asm:114-115`,
+`src/ram.asm:190-202`). CP/M 2.2's eight levels provide sixteen bytes.
+[Chapter 15](15-state-and-memory.md) distinguishes these configured sizes
+from measured use and proven bounds.
+
+The final jump uses HL so the same path can enter an installed service
+at its own address. `CMDRUN` first loads HL with `0100h`. Programs therefore
+start here with HL = `0100h`, DE = `0000h` and A = `FFh` for startup input
+or zero otherwise. These are implementation values. CP/M 2.2 guarantees
+no entry register (`src/cpm/ccp.asm:447-473`, `docs/compatibility.md:185-190`).
+
+A top-level RET uses the pushed address to reach warm boot at `0000h`.
+A jump there or function 0 has the same destination (`src/cpm/ccp.asm:469-471`,
+`src/cpm/bdos.asm:216-221`). Warm boot flushes the cache before re-entering
+the CCP. Failed writes print `Write lost` and set the drop flag, cancelling
+the shell's remaining pieces (`src/boot.asm:141-152`, `src/cache.asm:634-640`).
+Entry through `STARTED` adds a newline. Output already ending in a newline
+therefore leaves a blank line before the prompt.
+
 ## The built-in handlers
 
-The handlers use the same FCB and DMA interfaces as a disk program. This
-table locates their implementations, the ROM's and the shell's. Appendix J
-gives syntax and [Appendix D](appendix-d-error-messages.md) gives recovery
-from messages.
+Built-ins operate through the FCB and DMA interfaces already used by
+programs. The table locates the ROM built-ins and three shell handlers. Ordinary
+shell DIR lists files by row with byte counts. `DIR /W` delegates to the
+ROM listing described below (`drivers/shelldir.asm:1-35`). Appendix J gives syntax and
+[Appendix D](appendix-d-error-messages.md) gives message recovery:
 
 | Command | Routine | Source |
 | --- | --- | --- |
@@ -250,7 +486,8 @@ from messages.
 
 ### Directory listing and text output
 
-DIR turns a blank name into eleven question marks and sets DMA to `LOADBUF`.
+The ROM DIR handler turns a blank name into eleven question marks and
+sets DMA to `LOADBUF`.
 Functions 17 and 18 return matching directory entries. DIR skips a system
 file by testing bit 7 of the second type byte. Its parsed FCB has extent
 zero so the search returns each file once
@@ -266,20 +503,20 @@ three-byte free-record count by eight to print KiB. The default drive stays
 unchanged. No listed file gives `NO FILE`
 (`src/cpm/ccpfile.asm:198-255`, `src/cpm/bdosfn.asm:55-126`).
 
-Both DIR and TYPE print through `LSTPUT`. With a shell holding the hook it
-sends each byte to the shell's `PAGE` entry, whose carry stops the listing.
-With no shell it prints the byte and returns carry clear, so a bare listing
-never pauses (`src/cpm/ccpfile.asm:261-288`). The pager is the shell's.
-`PGRST` takes its dimensions from `TNINFO` or uses 24 rows and 80 columns for
-serial, and reserves a row for `[more]`. `PGPUT` resets its column at carriage
-return, steps back at backspace and advances to the next multiple of eight at
-a tab. It counts a new line at LF or before a printable character beyond the
-last column (`drivers/shellio.asm:345-449`). At a pause function 6 reads a key
-without echo, and `UNMORE` erases the prompt with CR, six spaces and CR. The
-key mask makes `#` equivalent to `^C` and `;` equivalent to Esc. `^C` and `#`
-drop the rest of the line. Esc, `Q`, `q` and `;` stop only the listing. Other
-keys continue (`drivers/shellio.asm:450-502`). Chapter 22 explains the
-distinction.
+Paging belongs to the shell hook. `LSTPUT` sends DIR and TYPE output to
+`PAGE` and stops on carry. Without a shell it prints directly and returns
+carry clear, so a bare listing never pauses (`src/cpm/ccpfile.asm:261-288`).
+`PGRST` takes dimensions from `TNINFO` or uses serial's 24 rows and 80
+columns, reserving a row for `[more]`.
+
+`PGPUT` resets the column at carriage return, retreats at backspace and
+advances tabs to multiples of eight. LF or a printable character beyond
+the final column counts a newline (`drivers/shellio.asm:345-449`). At a
+pause, function 6 reads without echo. `UNMORE` erases `[more]` with CR,
+six spaces and CR. The key mask maps `#` to `^C` and `;` to Esc. `^C`
+and `#` drop the remaining line. Esc, `Q`, `q` and `;` stop only the
+listing. Other keys continue (`drivers/shellio.asm:450-502`). Chapter 22
+explains why stopping output and cancelling a chain differ.
 
 TYPE opens its file and reads 128-byte records into `LOADBUF`. It prints
 through the pager until `1Ah`, the first Ctrl-Z, or the file's end. It then
@@ -335,12 +572,12 @@ records the partial file. The error path discards the close result so the
 message does not certify that update. Digital Research's CP/M 2.2 SAVE leaves
 the file open on that path (`src/cpm/ccpcmd.asm:309-390`).
 
-SAVE reads the TPA. The other file-operation handlers use resident workspace and
-page-zero buffers so they leave program memory available to save. Loading a COM
-program or a service overwrites that memory, including a GLCD service loaded by
-CON (`src/cpm/ccpcmd.asm:315-360`, `src/loader.asm:862-906`,
-`src/cpm/ccp.asm:625-663`). The shell's COPY uses the DMA at `0080h` and also
-leaves the TPA alone (`drivers/shellcmd.asm:93-94`).
+SAVE can preserve memory left by a previous program because most file
+handlers use resident or page-zero buffers. SAVE reads the TPA itself.
+Loading another COM or service overwrites that memory, including a
+`GLCD.SVC` load caused by CON (`src/cpm/ccpcmd.asm:315-360`,
+`src/loader.asm:862-906`, `src/cpm/ccp.asm:625-663`). Shell COPY uses DMA
+at `0080h` and preserves the TPA (`drivers/shellcmd.asm:93-94`).
 
 ### Selection and consoles
 
@@ -413,304 +650,60 @@ a self-copy and rejects extra operands before opening either file
 
 The copy uses DMA at `0080h` and leaves the TPA untouched. It opens the
 source, erases and makes the destination and transfers records through
-functions 20 and 21. `CCOUNT` counts records and `PUTHEX` prints the count in
-hexadecimal. A write error closes the partial destination before
+functions 20 and 21. `CCOUNT` accumulates the transferred record total for `PUTHEX` to print
+in hexadecimal. A write error closes the partial destination before
 `WRITE ERROR`. Retention of the written records depends on that close
 succeeding. The error path ignores its result (`drivers/shellcmd.asm:93-154`).
 
-SERVICES, the shell's too, walks the owner list from the lowest owner's page,
-which the ROM passes to `LINE` in `B`, upwards, printing each name and
-decimal page count. The page count is the next owner's page, or the stub's
-for the last, less the owner's own (`drivers/shellcmd.asm:15-50`). UNLOAD,
-the ROM's, calls `SVCUNL` for the lowest owner, the newest service. It fails
-there if removal is disallowed or REMOVE returns carry. It does not skip to
-another service (`src/cpm/ccpcmd.asm:13-18`, `src/loader.asm:97-126`).
-Chapter 25 explains the registry and removal checks.
+Service inspection and removal use the same owner order. SERVICES walks
+upwards from the lowest owner's page, passed by the ROM in `B` to `LINE`.
+It prints each name and decimal page count. An owner's size ends at the
+next owner's page or the stub for the final owner (`drivers/shellcmd.asm:15-50`).
+ROM UNLOAD calls `SVCUNL` on the lowest owner, the newest service. Removal
+disallowed by flags or carry from REMOVE stops the operation. It cannot skip
+to an older service (`src/cpm/ccpcmd.asm:13-18`, `src/loader.asm:97-126`).
+Chapter 25 explains the registry checks.
 
-## Program lookup and capacity
+## Code and working storage
 
-A COM command uses `LOADA` on the named drive or the current drive.
-`LOADA` first calls `LOADCOM` in the current user area. Only a missing file
-permits a retry in user 0 and user 0 is skipped when already current.
-Function 32 changes the user before that retry and restores it afterwards.
-No system attribute is required (`src/cpm/ccp.asm:584-609`).
+The CCP uses the same CP/M interface as programs: function 10 for line
+input, 15 for file open and 9 for strings through `0005h`. Its code remains
+in ROM while loaded programs occupy the transient program area, or TPA.
+The implementation is assembled from four files (`src/rom.asm:31-35`):
 
-`LOADCOM` distinguishes absence from an unloadable file with flags. Carry
-and zero mean missing. Carry with NZ means a file was found but could not
-load. `LOADA` returns the latter failure immediately. The CCP retries drive
-A only after absence on the first drive, when no drive was explicit and
-the current drive is not A. It writes 1 into the FCB drive byte and calls
-`LOADA` again. A's current user therefore precedes A's user 0
-(`src/cpm/ccp.asm:428-440`).
+| File | Work |
+| --- | --- |
+| `src/cpm/ccp.asm` | Boot entry, prompt, command dispatch and program loading |
+| `src/cpm/ccpfile.asm` | DIR, TYPE and their output through the shell's pager |
+| `src/cpm/ccpmut.asm` | ERA, REN, a name check and the shared BDOS call helper |
+| `src/cpm/ccpcmd.asm` | Other built-ins, file-name parsing, page-zero preparation and startup |
 
-This starter-card capture contrasts a plain command with an
-explicit B drive. The plain TAS reaches A, and prints its usage line, while
-`B:TAS` stays on B:
+ROM data holds the messages and eight-record `KEYTAB`. Each record
+contains a zero-ended keyword followed by a handler address. A final zero
+ends the table (`src/tables.asm:53-76`). The CCP occupies 2,056 bytes from
+`CCPBAS` at `DBBBh` through `E3C2h`, immediately before the BDOS.
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs B: TAS B:TAS. Boot rows included in this complete serial transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
+The corresponding RAM state spans `CCPRAM` at `BCF2h` through `BE76h`.
+`CMDFCB` and `RENFCB` contain parsed references, followed by the command
+buffer. `CCPCLR` at `BDBCh` marks the warm-cleared portion
+(`src/ram.asm:148-180`). `CPMINIT` clears from there through BDOS state,
+preserving the command buffer below it (`src/boot.asm:398-407`). This is
+the retained-line boundary in [Chapter 22](22-chains-across-warm-boot.md).
+[Appendix C](appendix-c-memory-map.md) gives the locations for lookup.
 
-A>SHELL.SVC
+A shared helper reduces repeated BDOS call setup. After `CALL DOSSEQ`,
+an inline byte encodes twice the function number plus an FCB selection bit.
+Clear bit 0 selects `CMDFCB` and set bit 0 selects `RENFCB`. `DOSSEQ` advances
+the stacked return address past this byte, decodes `C` and `DE` then jumps
+to the BDOS. Return resumes after the byte (`src/cpm/ccpmut.asm:172-183`).
+Eighteen CCP calls use this encoding, including DIR searches 17/18, TYPE
+reads 20 and ERA deletion 19 (`src/cpm/ccpfile.asm:74-75`,
+`src/cpm/ccpfile.asm:187-189`, `src/cpm/ccpfile.asm:371-373`,
+`src/cpm/ccpmut.asm:57-61`).
 
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>B:
-B:WORK>TAS
-usage: TAS NAME [OUT.TYP]
-
-B:WORK>B:TAS
-B:TAS?
-
-B:WORK>
-```
-
-A service command calls `LOADCOM` directly through `SVCGO`. It searches
-only its named or current drive and the current user area. It has neither
-the user-0 retry nor the drive-A fallback
-(`src/cpm/ccp.asm:385-395`, `src/loader.asm:901-906`).
-
-`LOADCOM` opens `CMDFCB` and starts at `0100h`. `READSRC` sets DMA with
-function 26 before each function-20 read. Each successful record advances
-the destination by 128 bytes. The loop stops at EOF or at the page given
-by `0007h`, the high byte of the entry word at `0006h`
-(`src/cpm/ccp.asm:625-648`, `src/cpm/ccp.asm:713-719`).
-
-Reaching that page does not establish that the file is oversized.
-`LOADLIM` reads once more into workspace `LOADBUF`. EOF means an exact
-fit. A further record or another error returns carry with NZ. Below the
-ceiling, `LOADEND` also requires EOF for success. `LOADOK` stores the
-record-rounded end in `LOADTOP` for the service loader then calls close.
-It clears carry without checking close's result
-(`src/cpm/ccp.asm:659-700`). Thus a larger file stops lookup rather than
-falling through to another drive. In the default BDOS error mode a card
-read failure prints `Bad Sector` and warm-boots before this routine returns
-(`src/cpm/bdoscon.asm:47-64`).
-
-With nothing installed the starter card's resident entry is at `B6E9h`. Its
-load ceiling is `B600h`, allowing 46,336 bytes from `0100h`, 233 fewer than
-the TPA's byte-address limit. The startup file installs the shell, whose
-first page is `A700h`, so the starter card's prompt loads at most 42,496
-bytes. An installed service lowers the entry word to
-its first page and lowers the load ceiling with it
-(`src/cpm/ccp.asm:637-639`, `src/loader.asm:494-507`).
-
-The capacity fixture places FITS, BIG and ARGS on B. FITS and BIG contain
-RET followed by zeros. ARGS has the complete listing below and is assembled
-on the PC by TAS, as Chapter 27's HELLO is. FITS has 42,496 bytes and BIG
-has 42,497:
-
-```sh
-node -e 'const b = n => { const x = Buffer.alloc(n); x[0] = 0xC9; return x; };
-require("fs").writeFileSync("build/fits.com", b(42496));
-require("fs").writeFileSync("build/big.com", b(42497));'
-node --input-type=module -e '
-import { writeFileSync } from "node:fs";
-import { assembleProgram } from "./tools/lib/assemble.mjs";
-const [src, out] = process.argv.slice(1);
-writeFileSync(out, (await assembleProgram(src)).bytes);
-' build/args.asm build/args.com
-cp dist/starter.img build/ccp.img
-node tools/tecvol.mjs put build/ccp.img B build/args.com
-node tools/tecvol.mjs put build/ccp.img B build/fits.com
-node tools/tecvol.mjs put build/ccp.img B build/big.com
-```
-
-TAS writes the 76-byte ARGS.COM. FITS returned to the prompt and BIG was
-rejected:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: FITS BIG. Boot rows included in this complete serial transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>B:
-B:WORK>FITS
-
-B:WORK>BIG
-BIG?
-
-B:WORK>
-```
-
-The same fixture also demonstrates user fallback. Under user 3,
-ARGS is found in B's user 0 and TAS in A's user 0. DIR still lists only
-the empty current area:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Boot rows included in this complete serial transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>B:
-B:WORK>USER 3
-3B:WORK>ARGS
-0
-0
-[]
-3B:WORK>TAS
-usage: TAS NAME [OUT.TYP]
-
-3B:WORK>B:TAS
-B:TAS?
-
-3B:WORK>DIR
-NO FILE
-
-3B:WORK>
-```
-
-## Page zero before entry
-
-A successful load reaches `PREPPAGE`. It parses the first two argument
-references into the FCBs at `005Ch` and `006Ch`, ignoring parse errors for those
-program arguments. It then copies the command tail to `0081h`, writes its length
-at `0080h` and appends zero. Function 26 restores DMA to `0080h`. The tail
-includes the initial space. The shell ends a piece before the spaces in front
-of its separator, so they are not in the tail. Its letters have already been
-converted to capitals (`src/cpm/ccpcmd.asm:402-440`, `drivers/shell.asm:321-373`).
-
-The two FCBs start sixteen bytes apart. Parsing the second overwrites the last
-twenty bytes of the first. The tail begins at `0080h` within the second FCB's
-last sixteen bytes so those bytes are shared with tail storage. Each FCB's drive
-and eleven name/type bytes remain intact (`src/cpm/ccpcmd.asm:402-440`). The
-complete FCB and DMA contracts are explained in
-[Chapter 10](10-read-and-write-a-file.md).
-
-ARGS prints those drive and name fields, then the tail between brackets.
-This complete listing is the `build/args.asm` used in the capacity-card
-recipe above:
-
-```asm
-; ARGS: prints the two FCBs and the command tail that the CCP leaves in
-; page zero: each FCB's drive byte as a digit and its eleven name bytes,
-; then the tail between brackets.
-BDOS    EQU     $0005
-
-        ORG     $0100
-        LD      HL,$005C        ; the first FCB
-        CALL    SHOWFCB
-        LD      HL,$006C        ; the second
-        CALL    SHOWFCB
-        LD      A,'['
-        CALL    PUT
-        LD      HL,$0080        ; the tail's length, then its characters
-        LD      B,(HL)
-TAIL:   LD      A,B
-        OR      A
-        JR      Z,TEND
-        INC     HL
-        LD      A,(HL)
-        CALL    PUT
-        DEC     B
-        JR      TAIL
-TEND:   LD      A,']'
-        JP      PUT
-
-SHOWFCB:LD      A,(HL)          ; the drive: 0 for the current one
-        ADD     A,'0'
-        CALL    PUT
-        LD      A,' '
-        CALL    PUT
-        LD      B,11            ; the name and type, as stored
-NAME:   INC     HL
-        LD      A,(HL)
-        CALL    PUT
-        DJNZ    NAME
-        LD      A,13
-        CALL    PUT
-        LD      A,10
-
-; Print A by function 2, keeping B and HL.
-PUT:    PUSH    HL
-        PUSH    BC
-        LD      E,A
-        LD      C,2
-        CALL    BDOS
-        POP     BC
-        POP     HL
-        RET
-```
-
-`PUT` saves BC and HL across function 2, preserving the caller's count and
-pointer. `SHOWFCB` prints eleven name/type bytes and `TAIL` uses the length
-byte at `0080h`. In this capture the parsed names use padded FCB fields
-while the tail preserves the spaces within the piece:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Boot rows included in this complete serial transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>B:
-B:WORK>args one.txt a:*.c
-0 ONE     TXT
-1 ????????C
-[ ONE.TXT A:*.C]
-B:WORK>ARGS X Y ! ARGS
-0 X
-0 Y
-[ X Y]
-B:WORK>ARGS
-0
-0
-[]
-B:WORK>
-```
-
-The first FCB has drive zero for the current drive and the second has 1
-for A. The star in `*.C` expands to eight question marks. `ARGS X Y` loses
-the space before `!`, which the shell leaves off the piece. With no
-arguments both names are blank and the tail length is zero
-(`src/cpm/ccpcmd.asm:457-531`, `src/cpm/ccpcmd.asm:632-645`).
-
-## The jump and return
-
-After `PREPPAGE`, the CCP writes the load drive from `CMDFCB` to `0050h`. Zero
-means a plain name loaded on the current drive. An explicit drive keeps its FCB
-number so `B:ARGS` gives 2. A plain command found by fallback on A gives 1
-because lookup set the FCB byte to A (`src/cpm/ccp.asm:431-461`).
-
-`CMDRUN` resets SP to `CSTKTOP`, pushes `0000h` and jumps to `0100h`.
-The source reserves a 32-byte CCP stack, leaving thirty bytes below that
-return word. A guard separates the stack from command scratch
-(`src/cpm/ccp.asm:464-471`, `src/layout.asm:114-115`,
-`src/ram.asm:190-202`). CP/M 2.2's eight levels provide sixteen bytes.
-[Chapter 15](15-state-and-memory.md) distinguishes configured stack sizes
-from measured use and bounds.
-
-The jump goes through HL, because a service's entry on install uses the
-same path to enter the service at its own address.
-`CMDRUN` loads `0100h` first, so a program starts with HL = `0100h` and
-DE = `0000h`, and with A = `FFh` when its line came from `STARTUP.CMD` and 0
-otherwise. CP/M 2.2 promises a program no register at entry
-(`src/cpm/ccp.asm:447-473`, `docs/compatibility.md:185-190`).
-
-A top-level RET reaches the warm-boot jump at `0000h`. A direct jump there or
-function 0 reaches warm boot too (`src/cpm/ccp.asm:469-471`,
-`src/cpm/bdos.asm:216-221`). Warm boot flushes the block cache before
-re-entering the CCP. A failed flush prints `Write lost` and sets the drop
-flag, so the shell cancels the line's pending pieces (`src/boot.asm:141-152`, `src/cache.asm:634-640`). The CCP enters at
-`STARTED` and prints a new line before its prompt. A program whose output
-already ended with a new line therefore has a blank line before that prompt.
+Other direct state connects the CCP to surrounding services. It reads
+console mode and geometry, the loader result and the program ceiling at
+`0007h`. `SHOWN` is the shell table or zero. `HFLAG` marks history input,
+`WRFLAG` the flagged disk reset and `STFLAG` line origin. `CHPOS` records
+function 47 and dropped-line state. `PRGCODE` stores the previous result
+(`src/cpm/ccp.asm:46-158`, `src/cpm/ccp.asm:203-223`).

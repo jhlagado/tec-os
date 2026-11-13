@@ -19,11 +19,7 @@ nav_group: "Writing programs"
 
 Counting output across several program runs requires code that remains in
 memory after installation. `COUNT.SVC` reserves memory for that code and
-publishes a routine another program can locate. Startup installs SHELL.SVC
-first so SERVICES lists `SHELL 15` beneath newer services and UNLOAD reaches
-it only after removing them ([Chapter 5](05-drives-and-user-areas.md)). The
-examples use [Chapter 6](06-cards-on-the-pc.md)'s PC setup. A separate
-workflow below tests a failed INIT.
+publishes a routine another program can locate.
 
 ## Code that stays
 
@@ -202,6 +198,10 @@ writes that named output and `.SVC` triggers header completion and relocation
 data. Other types produce a flat image except `.DBG` and types beginning with
 `$`, which are rejected. Thus `TAS COUNT COUNT.SVC` replaces any existing
 COUNT.SVC on the drive.
+
+Startup installs SHELL.SVC first so SERVICES lists `SHELL 15` beneath newer
+services and UNLOAD reaches it only after removing them
+([Chapter 5](05-drives-and-user-areas.md)).
 
 The example needs serial or PICO console operation with GLCD absent from
 SERVICES. COUNT plus GLCD exceeds the CCP stack allowance described below.

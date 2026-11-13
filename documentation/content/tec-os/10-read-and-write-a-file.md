@@ -43,7 +43,7 @@ argument can start with this default FCB.
 
 The drive byte is 0 for the current drive or 1 to 16 for A to P. Eight
 space-padded name bytes follow it and then three type bytes. The example's FCB
-begins with 2 for B and `HELLO ASM`. No full stop separates those fields in
+begins with 2 for B and `HELLO   ASM`. No full stop separates those fields in
 memory. The file belongs to the current user area on that drive. These drive
 codes cover CP/M's range but selecting an unmounted drive produces a selection
 error.
@@ -195,10 +195,18 @@ that return-code convention.
 
 ### The card and output
 
-TAS produces a 72-byte SHOW program. The commands below assemble it on the PC
-from the repository root with the TAS host prepared. They then add SHOW and
-HELLO.ASM to `work.img`, the HELLO starter-card copy prepared in Chapter 27.
-Here `hello.asm` is the HELLO source, not the banner exercise:
+The PC assembly recipes here and in Chapter 11 require a prepared TAS host
+and matching distribution files. [Chapter 27's tool
+preparation](27-build-the-rom-and-media.md#prepared-tools-and-selected-assembler)
+describes the host setup and [its media
+preparation](27-build-the-rom-and-media.md#matching-the-rom-and-media) supplies
+`dist/`. The [HELLO
+setup](27-build-the-rom-and-media.md#hello-through-ted-and-tas) creates
+`work.img` and provides `hello.asm` for this recipe.
+
+TAS produces a 72-byte SHOW program. The commands below assemble it from the
+repository root and add SHOW and HELLO.ASM to that card copy. Here `hello.asm`
+is the HELLO source, not the banner exercise:
 
 ```sh
 node --input-type=module -e '
@@ -254,7 +262,7 @@ and zeroed state. Choose an unused name. Function 22 creates an entry for a
 new file and does not replace an existing file.
 
 For `NOTE.TXT` on the current drive the FCB starts with drive code 0 and
-`NOTE TXT`. This source-derived sequence assumes a complete FCB and a separate
+`NOTE    TXT`. This source-derived sequence assumes a complete FCB and a separate
 128-byte buffer already allocated in the program. Each call reloads its inputs
 and checks its result before proceeding:
 
