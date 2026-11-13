@@ -1,10 +1,11 @@
 // BIOS WRITE and the write type: a newly allocated block is not read before
-// its first write, and on A:, which coalesces, every record is on the card
-// at the next flush point. Emulator evidence, calling the BDOS directly.
+// its first write, and admitted API calls service pending data before normal
+// work. Emulator evidence, calling the BDOS directly from a returned input.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { boot, standardCard, volume } from "./lib/fixtures.mjs";
+import { parseContainer } from "../tools/lib/container.mjs";
 import { alv, rig as callRig } from "./lib/warmboot.mjs";
 import { finishBarePrompt, publicContext } from "./lib/public-caller.mjs";
 
@@ -18,14 +19,26 @@ function rig() {
   const image = standardCard();
   const m = boot(image);
   const normalization = finishBarePrompt(m);
-  const counts = { reads: 0, writes: 0 };
+  const counts = { reads: 0, writes: 0, readBlocks: [], commits: [] };
+  const lba = m.sym("SDLBA");
+  const word = at => m.read(at) | (m.read(at + 1) << 8);
   const sdread = m.sym("SDREAD");
   const sdwrite = m.sym("SDWRITE");
   const step = m.step.bind(m);
   m.step = () => {
-    if (m.pc === sdread) counts.reads += 1;
+    if (m.pc === sdread) {
+      counts.reads += 1;
+      counts.readBlocks.push(word(lba) + word(lba + 2) * 0x10000);
+    }
     else if (m.pc === sdwrite) counts.writes += 1;
     return step();
+  };
+  const commit = m.sd.commitWrite.bind(m.sd);
+  m.sd.commitWrite = () => {
+    const { start, buffer } = m.sd.writeState;
+    const payload = Uint8Array.from(buffer);
+    commit();
+    counts.commits.push({ block: start / 512, response: m.sd.pendingResponse[0], matches: Buffer.compare(image.subarray(start, start + 512), payload) === 0 });
   };
   const bdos = (c, de = FCB, after) => {
     publicContext(m);
@@ -58,14 +71,30 @@ test("a 16 KiB save reads no data block, only the directory", () => {
   name("SAVE16  DAT");
   assert.notEqual(bdos(22), 0xff);
   const made = counts.writes;
+  const madeCommits = counts.commits.length;
   for (let r = 0; r < 128; r += 1) {
     record(r);
     assert.equal(bdos(21), 0, `record ${r}`);
   }
+  assert.equal(volume(image, "A").find("SAVE16.DAT").records, 0, "committing data has not published the unclosed extent");
   assert.notEqual(bdos(16), 0xff);
-  assert.ok(counts.reads <= 2, `${counts.reads} block reads`);
-  assert.equal(counts.writes - made, 33, "after the make, each of the 32 card blocks once, then the directory at the close");
   assert.deepEqual(volume(image, "A").read("SAVE16.DAT"), expected(128));
+  assert.ok(counts.reads <= 2, `${counts.reads} block reads`);
+  const a = parseContainer(image).volumes[0];
+  const fs = volume(image, "A");
+  const directories = new Set(Array.from({ length: fs.g.dirBlocks * fs.blockBytes / 512 }, (_, i) => a.start + i));
+  assert.ok(counts.readBlocks.every(block => directories.has(block)), "every SD read addresses the directory, never a data block");
+  assert.equal(counts.commits.length, counts.writes, "every SDWRITE has one actual backend commit");
+  assert.ok(counts.commits.every(({ response, matches }) => response === 0x05 && matches), "each accepted payload actually reached its card block");
+  const saved = counts.commits.slice(madeCommits);
+  assert.ok(saved.length > 1);
+  assert.ok(saved.slice(0, -1).every(({ block }) => !directories.has(block)), "data commits precede metadata");
+  assert.ok(directories.has(saved.at(-1).block), "the final commit publishes directory metadata");
+  const dataWrites = new Map();
+  for (const { block } of saved.slice(0, -1)) dataWrites.set(block, (dataWrites.get(block) ?? 0) + 1);
+  assert.equal(dataWrites.size, 32, "the file occupies 32 card blocks");
+  assert.ok([...dataWrites.values()].every(n => n === 4), "four separately admitted record updates per card block");
+  assert.equal(counts.writes - made, 129, "after make, 128 record updates serviced across API calls, then directory metadata at close");
 });
 
 /** The card block of record R, from the FCB's allocation map (16-bit on G1M). */
