@@ -168,6 +168,81 @@ export function three({ open = false, ...opts } = {}) {
   return r;
 }
 
+/** Eight genuine logged-drive dirty blocks, accepted while the backend refuses
+ * maintenance. Releasing the backend changes no guest state and performs no
+ * extra API call; the caller chooses the boundary that may commit them. */
+export function backlog({ rom } = {}) {
+  const r = rig({ rom, logged: "A" });
+  r.bdos(45, 0xff);
+  assert.equal(r.m.read(r.m.sym("ERRMODE")), 0xff);
+  r.name("P       DAT");
+  assert.notEqual(r.bdos(22).a, 0xff, "make succeeds before fault injection");
+  r.bdos(26, DMA);
+  const original = Uint8Array.from(r.image);
+  const expected = new Map(), attempts = [], statuses = [];
+  const backend = { refusing: true };
+  const commit = r.m.sd.commitWrite.bind(r.m.sd);
+  r.m.sd.commitWrite = () => {
+    const { start, buffer } = r.m.sd.writeState;
+    const block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(expected.has(block), "maintenance attempts an acknowledged data block");
+    assert.deepEqual(payload, expected.get(block), "the attempt contains all updates already acknowledged for that block");
+    const accepted = !backend.refusing;
+    attempts.push({ block, payload, accepted });
+    if (!accepted) {
+      r.m.sd.writeState = null;
+      r.m.sd.pendingResponse = [0x0d, 0xff];
+      r.m.sd.delayBytes = 1;
+      return;
+    }
+    commit();
+    assert.equal(r.m.sd.pendingResponse[0], 0x05);
+    assert.deepEqual(r.image.slice(start, start + 512), payload, "the accepted payload reaches the card");
+  };
+  const start = [...dirBlocks(r.image)][0];
+  for (let rec = 0; rec < 32; rec++) {
+    r.put(rec);
+    const result = r.bdos(21);
+    statuses.push(result.a);
+    assert.equal(result.a, 0, `record ${rec} is accepted despite maintenance refusal`);
+    assert.equal(r.m.read(FCB + 32), rec + 1, "the sequential FCB advances only after acceptance");
+    const block = start + Math.floor((r.blockOf(rec) * 2048 + (rec & 15) * 128) / 512);
+    if (!expected.has(block)) expected.set(block, new Uint8Array(512));
+    expected.get(block).set(pat(rec), (rec & 3) * 128);
+  }
+  const state = () => {
+    assert.equal(r.m.expand, undefined, "the snapshot retains the default physical bank model");
+    assert.ok(r.m.classicBankIn);
+    const classic = r.m.cpu.hardware.memory, cache = r.m.banks[0];
+    assert.equal(cache.length, 0x4000);
+    const get = name => classic[r.m.sym(name)];
+    assert.ok(get("HKCNT") <= r.m.sym("NLINES"));
+    const queue = Array.from({ length: get("HKCNT") }, (_, i) => classic[r.m.sym("HKQ") + i]);
+    const dirty = Array.from(cache.subarray(r.m.sym("CDIRTY") - 0x8000, r.m.sym("CDIRTY") - 0x8000 + r.m.sym("NLINES")));
+    const entries = queue.map(line => {
+      assert.ok(line < r.m.sym("NLINES"));
+      const tag = cache.subarray(r.m.sym("CTAB") - 0x8000 + line * 4, r.m.sym("CTAB") - 0x8000 + (line + 1) * 4);
+      return { line, block: [...tag].reduce((n, b, i) => n + b * 256 ** i, 0), payload: cache.slice(line * 512, (line + 1) * 512), dirty: dirty[line] };
+    });
+    const round = Array.from({ length: get("HKRLEN") }, (_, i) => classic[r.m.sym("HKROUND") + i]);
+    return { queue, entries, dirty, round, position: get("HKRPOS"), any: get("CANY"), pending: get("CPEND"), depth: get("HKDEP"), busy: get("HKBUSY") };
+  };
+  const before = state();
+  assert.equal(expected.size, 8);
+  assert.equal(before.queue.length, 8);
+  assert.equal(new Set(before.queue).size, 8);
+  assert.deepEqual(before.entries.map(e => e.block), [...expected.keys()], "first-dirty order follows the actual accepted blocks");
+  for (const entry of before.entries) {
+    assert.equal(entry.dirty, 1);
+    assert.deepEqual(entry.payload, expected.get(entry.block), "every queued block holds all four acknowledged records");
+  }
+  assert.equal(before.dirty.filter(Boolean).length, 8);
+  assert.deepEqual([before.any, before.pending, before.depth, before.busy], [1, 0, 0, 0]);
+  assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted), "real SPI attempts received refusal");
+  assert.deepEqual(r.image, original, "no acknowledged data reached the refusing card");
+  return { ...r, backend, attempts, statuses, expected, before, original, cacheState: state };
+}
+
 /** F.DAT, eight records, made and closed on A:, then opened again. */
 export function closed8(opts = {}) {
   const r = rig(opts);
