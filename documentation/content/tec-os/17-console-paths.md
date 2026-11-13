@@ -261,8 +261,8 @@ receives. Digit selection shares port `01h`. The line runs at 4800 baud with
 eight data bits, no parity and two stop bits. All timing assumes 4 MHz FAST
 (`src/layout.asm:12-14`, `src/console.asm:10-18`, `tools/build.mjs:26-27`).
 
-TXBYTE saves entry interrupt state and masks interrupts until the byte
-finishes. Nine passes send the start bit and eight data bits from least
+TXBYTE saves entry interrupt state and disables maskable interrupts until the
+byte finishes. Nine passes send the start bit and eight data bits from least
 significant to most significant. SBC A,A forms `00h` or `FFh` from carry and
 AND 40h selects the port level. A pass writes, delays and shifts the next bit
 to carry, costing `49 + 16 × TXDLY` T-states. TXSTOP keeps the line high for
@@ -382,7 +382,7 @@ byte interface.
 
 Serial sends bytes unchanged for the PC terminal to interpret. Video BCONOUT
 instead calls VTOUT, whose terminal processing uses selected display vectors.
-A PICO claim discards console output before that processing
+A claim on the selected PICO console discards output before that processing
 (`src/console.asm:339-393`, `src/term.asm:39-73`, `src/term.asm:810-822`).
 
 The terminal tracks position in VROW and VCOL. Its driver operations write

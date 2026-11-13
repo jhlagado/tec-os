@@ -59,7 +59,7 @@ A:SYSTEM>
 ```
 
 A *piece* is the text between separators or the line's edges. Spaces and
-repeated separators collapse into a single separation. Thus `cd!! ! dir b:!`
+repeated separators collapse into a single separation. Thus `cd!!  ! dir b:!`
 executes two commands while a line containing only spaces and `!` executes
 none. The shell echoes later pieces as typed before capitalising them. The
 displayed `dir b:` therefore executes as `DIR B:`.

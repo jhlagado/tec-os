@@ -24,13 +24,11 @@ values. Following those boundaries explains how a new program starts without
 dismantling its resident environment.
 
 ROM holds the CCP's command processing, BDOS file and console operations and
-BIOS device routines. RAM holds their changing state. The numbered ROM
-interface also reaches the digits, 20 × 4 LCD and speaker. Console output
-selects serial, PICO9918 or graphics LCD. The SD container provides multiple
-volumes and EXPAND 1 stores cache buffers outside the TPA
+BIOS device routines. RAM holds their changing state. EXPAND 1 stores cache
+buffers outside the TPA
 (`src/rom.asm:17-43`, `src/layout.asm:77-86`, `format/format.json:20-25`,
 `src/services.asm:1-20`, `src/abi.inc:65-106`). SHELL.SVC reserves fifteen
-pages below the TPA ceiling and places its 256-byte history ring in the last
+pages from the TPA and places its 256-byte history ring in the last
 page (`docs/shell.md:22-30`, `drivers/shell.asm:793-796`).
 
 ## Two banks at the same addresses
@@ -267,8 +265,8 @@ card (`src/boot.asm:235-252`, `src/cache.asm:258-300`).
 All three resident stacks occupy EXPAND 0's window. Selecting EXPAND 1 hides
 them with the workspace and BIOS table. A PUSH writes the other bank and a POP
 after switching back reads different storage. Calls, returns and interrupts
-use the stack too. Resident routines therefore mask interrupts and retain
-temporary values in registers during EXPAND 1 access. A BIOS cache operation
+use the stack too. Resident routines therefore disable maskable interrupts and
+retain temporary values in registers during EXPAND 1 access. A BIOS cache operation
 stores entry interrupt flags in CIFF rather than on the hidden stack. It
 restores them after switching back (`src/bios.asm:379-446`).
 

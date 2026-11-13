@@ -356,7 +356,7 @@ gave device bits `0Dh`, columns `15h` and rows `08h`, or 21 by 8.
 
 Use INFO's returned dimensions for screen layout. Both are zero for serial
 because TEC-OS cannot read the remote terminal's size. A program may then
-assume 80 by 24 as the CCP does for pagination. Read the dimensions again
+assume 80 by 24 as the shell's pager does. Read the dimensions again
 after changing consoles. `CON UC1` selects the graphics LCD and changes them
 to 21 by 8.
 
@@ -730,7 +730,7 @@ B:WORK>
      --board pico B: "TAS ROWS" "@start ROWS" "@key 5" -->
 The joystick and matrix share inputs. JOY reads port `FEh` with address line
 11 low, the same selection as KEYS row 3. The alternate `5` run therefore
-printed `00 00 00 01 00 00 00 00 JOY 01`. Row-3 keys can set joystick bits and
+printed `00 00 00 01 00 00 00 00  JOY 01`. Row-3 keys can set joystick bits and
 joystick lines appear as row-3 keys, including through console input. Model
 bit 0 produces `5`. Appendix B names the joystick bits for diagnosis.
 
