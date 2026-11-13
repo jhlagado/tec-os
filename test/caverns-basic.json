@@ -1,0 +1,204 @@
+{
+  "sourceSha256": "22b4f005fc5a922728a8826368bc8bc57c9ea81bfae6119193dff8c7b43d1623",
+  "compilerSha256": "41f96c2716274327fd84180b3cadbb277a8d4f7faacf95b0e31fe3fdceb0acc6",
+  "librarySha256": "3c77dccda2221616dd2573183f137d5d4131218b9f024b521982c44b0567bc64",
+  "comSha256": "3fa14ecd2a8223f6118bff0f92810b7f857188f41e6014e7aeec61a18b8c6a37",
+  "comBytes": 38272,
+  "symbols": {
+    "A%": {
+      "address": 38404,
+      "kind": 1,
+      "space": 0
+    },
+    "A0$": {
+      "address": 38468,
+      "kind": 2,
+      "space": 0
+    },
+    "B%": {
+      "address": 38406,
+      "kind": 1,
+      "space": 0
+    },
+    "C0%": {
+      "address": 38408,
+      "kind": 1,
+      "space": 0
+    },
+    "D%": {
+      "address": 38410,
+      "kind": 1,
+      "space": 0
+    },
+    "DI$()": {
+      "address": 38412,
+      "kind": 2,
+      "space": 1
+    },
+    "E%": {
+      "address": 38414,
+      "kind": 1,
+      "space": 0
+    },
+    "EX%()": {
+      "address": 38416,
+      "kind": 1,
+      "space": 1
+    },
+    "F%": {
+      "address": 38418,
+      "kind": 1,
+      "space": 0
+    },
+    "G%": {
+      "address": 38420,
+      "kind": 1,
+      "space": 0
+    },
+    "H%": {
+      "address": 38422,
+      "kind": 1,
+      "space": 0
+    },
+    "IP%()": {
+      "address": 38424,
+      "kind": 1,
+      "space": 1
+    },
+    "IX%": {
+      "address": 38426,
+      "kind": 1,
+      "space": 0
+    },
+    "J%": {
+      "address": 38428,
+      "kind": 1,
+      "space": 0
+    },
+    "K0$": {
+      "address": 38471,
+      "kind": 2,
+      "space": 0
+    },
+    "K1$": {
+      "address": 38474,
+      "kind": 2,
+      "space": 0
+    },
+    "L%": {
+      "address": 38430,
+      "kind": 1,
+      "space": 0
+    },
+    "M%": {
+      "address": 38432,
+      "kind": 1,
+      "space": 0
+    },
+    "N0$": {
+      "address": 38477,
+      "kind": 2,
+      "space": 0
+    },
+    "N1$": {
+      "address": 38480,
+      "kind": 2,
+      "space": 0
+    },
+    "NA$()": {
+      "address": 38434,
+      "kind": 2,
+      "space": 1
+    },
+    "NO$()": {
+      "address": 38436,
+      "kind": 2,
+      "space": 1
+    },
+    "O%": {
+      "address": 38438,
+      "kind": 1,
+      "space": 0
+    },
+    "P%()": {
+      "address": 38440,
+      "kind": 1,
+      "space": 1
+    },
+    "Q%": {
+      "address": 38442,
+      "kind": 1,
+      "space": 0
+    },
+    "R%": {
+      "address": 38444,
+      "kind": 1,
+      "space": 0
+    },
+    "S%": {
+      "address": 38446,
+      "kind": 1,
+      "space": 0
+    },
+    "SI%": {
+      "address": 38448,
+      "kind": 1,
+      "space": 0
+    },
+    "SR%": {
+      "address": 38450,
+      "kind": 1,
+      "space": 0
+    },
+    "SS$": {
+      "address": 38483,
+      "kind": 2,
+      "space": 0
+    },
+    "T%": {
+      "address": 38452,
+      "kind": 1,
+      "space": 0
+    },
+    "U%": {
+      "address": 38454,
+      "kind": 1,
+      "space": 0
+    },
+    "V%": {
+      "address": 38456,
+      "kind": 1,
+      "space": 0
+    },
+    "VE$()": {
+      "address": 38458,
+      "kind": 2,
+      "space": 1
+    },
+    "W%": {
+      "address": 38460,
+      "kind": 1,
+      "space": 0
+    },
+    "X%": {
+      "address": 38462,
+      "kind": 1,
+      "space": 0
+    },
+    "Y%": {
+      "address": 38464,
+      "kind": 1,
+      "space": 0
+    },
+    "Y0$": {
+      "address": 38486,
+      "kind": 2,
+      "space": 0
+    },
+    "Z%": {
+      "address": 38466,
+      "kind": 1,
+      "space": 0
+    }
+  }
+}
