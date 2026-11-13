@@ -42,11 +42,17 @@ the file and retain operation state between calls. A program with a file-name
 argument can start with this default FCB.
 
 The drive byte is 0 for the current drive or 1 to 16 for A to P. Eight
-space-padded name bytes follow it and then three type bytes. The example's FCB
-begins with 2 for B and `HELLO   ASM`. No full stop separates those fields in
-memory. The file belongs to the current user area on that drive. These drive
-codes cover CP/M's range but selecting an unmounted drive produces a selection
-error.
+space-padded name bytes follow it and then three type bytes. The example's
+drive byte is 2 for B. Its eleven name and type bytes have this layout in
+memory:
+
+```text
+HELLO   ASM
+```
+
+No full stop separates those fields. The file belongs to the current user
+area on that drive. These drive codes cover CP/M's range but selecting an
+unmounted drive produces a selection error.
 
 The CCP also parses the second name at `006Ch`. For the example its first
 sixteen bytes begin with 0 and a space-padded `X`. This default overlaps the
@@ -261,8 +267,14 @@ For a new file prepare all 36 FCB bytes with the drive, space-padded name/type
 and zeroed state. Choose an unused name. Function 22 creates an entry for a
 new file and does not replace an existing file.
 
-For `NOTE.TXT` on the current drive the FCB starts with drive code 0 and
-`NOTE    TXT`. This source-derived sequence assumes a complete FCB and a separate
+For `NOTE.TXT` on the current drive the FCB's drive byte is 0. Its eleven name
+and type bytes have this layout in memory:
+
+```text
+NOTE    TXT
+```
+
+The source-derived sequence below assumes a complete FCB and a separate
 128-byte buffer already allocated in the program. Each call reloads its inputs
 and checks its result before proceeding:
 

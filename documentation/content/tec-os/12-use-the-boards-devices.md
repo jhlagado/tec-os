@@ -730,9 +730,15 @@ B:WORK>
      --board pico B: "TAS ROWS" "@start ROWS" "@key 5" -->
 The joystick and matrix share inputs. JOY reads port `FEh` with address line
 11 low, the same selection as KEYS row 3. The alternate `5` run therefore
-printed `00 00 00 01 00 00 00 00  JOY 01`. Row-3 keys can set joystick bits and
-joystick lines appear as row-3 keys, including through console input. Model
-bit 0 produces `5`. Appendix B names the joystick bits for diagnosis.
+printed:
+
+```text
+00 00 00 01 00 00 00 00  JOY 01
+```
+
+Row-3 keys can set joystick bits and joystick lines appear as row-3 keys,
+including through console input. Model bit 0 produces `5`. Appendix B names
+the joystick bits for diagnosis.
 
 ## Claiming the PICO9918
 

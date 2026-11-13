@@ -208,7 +208,7 @@ SERVICES. COUNT plus GLCD exceeds the CCP stack allowance described below.
 Select a working replacement console before removing GLCD. [Chapter
 7](07-choose-a-console.md) explains console switching.
 
-The recipe creates a separate `svc.img` with Chapter 6's host tools. Save
+The recipe creates a separate `svc.img` with [Chapter 6](06-cards-on-the-pc.md)'s host tools. Save
 COUNT as `count.asm` alongside the PC sources. It also needs Chapter 12's
 HWLIB.ASM, Chapter 11's `area.asm` and the `chars.asm` client listed under
 Publishing a record. Each retained capture identifies its run revision:

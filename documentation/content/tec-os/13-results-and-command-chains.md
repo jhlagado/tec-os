@@ -59,10 +59,11 @@ A:SYSTEM>
 ```
 
 A *piece* is the text between separators or the line's edges. Spaces and
-repeated separators collapse into a single separation. Thus `cd!!  ! dir b:!`
-executes two commands while a line containing only spaces and `!` executes
-none. The shell echoes later pieces as typed before capitalising them. The
-displayed `dir b:` therefore executes as `DIR B:`.
+repeated separators collapse into a single separation. The second command
+line entered above therefore executes two commands while a line containing
+only spaces and `!` executes none. The shell echoes later pieces as typed
+before capitalising them. The displayed `dir b:` therefore executes as
+`DIR B:`.
 
 Each piece executes as a complete command. A drive or user-area change carries
 into later pieces. Here `B:` makes B current before COPY creates `NOTES.TXT`:
