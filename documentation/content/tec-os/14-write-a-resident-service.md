@@ -17,55 +17,52 @@ nav_group: "Writing programs"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-`COUNT.SVC` counts console characters after the command that installs it
-has ended. Its hook shows how resident code survives program exits and how
-another program finds a routine inside it. The starter card's startup file
-installs `SHELL.SVC` first, so `SERVICES` also lists `SHELL 15` below the
-newer services and `UNLOAD` removes it only after them
-([Chapter 5](05-drives-and-user-areas.md)). The failed-INIT example has a separate current
-workflow below. Use the PC setup from
-[Chapter 6](06-cards-on-the-pc.md) for their card preparation.
+Counting output across several program runs requires code that remains in
+memory after installation. `COUNT.SVC` reserves memory for that code and
+publishes a routine another program can locate. Startup installs SHELL.SVC
+first so SERVICES lists `SHELL 15` beneath newer services and UNLOAD reaches
+it only after removing them ([Chapter 5](05-drives-and-user-areas.md)). The
+examples use [Chapter 6](06-cards-on-the-pc.md)'s PC setup. A separate
+workflow below tests a failed INIT.
 
 ## Code that stays
 
-A COM program starts at `0100h`. After it ends, a later program can overwrite
-its memory. A resident service occupies reserved pages of 256 bytes and
-remains installed through warm boots. Reset discards it. `UNLOAD` removes
-the newest service only when its flags and removal routine allow that.
-[Chapter 5](05-drives-and-user-areas.md#programs-and-resident-services)
-gives the installation, listing and removal commands.
+Memory loaded from a COM file at `0100h` becomes available for later programs
+after exit. A resident service instead reserves 256-byte pages that survive
+warm boot. Reset discards it. UNLOAD removes only the newest service and only
+when its flags and removal routine permit it. [Chapter
+5](05-drives-and-user-areas.md#programs-and-resident-services) gives the
+commands for installing, listing and removing services.
 
-A driver is a service that operates hardware. A library provides routines
-for programs. The starter's `GLCD.SVC` is a display driver. COUNT hooks the
-console's output routine and also provides a count-reading routine to clients.
+A service may operate hardware as a driver or supply callable routines as a
+library. The starter card's GLCD.SVC is a display driver. COUNT does both a
+hook operation and a library operation: it intercepts console output and
+provides a count-reading routine.
 
-The pages come from the transient program area, or TPA, below the BDOS entry
-jump. Installation lowers the word at `0006h`, the program-memory ceiling
-established in [Chapter 11](11-memory-for-programs.md). The numbered ROM calls
-used in [Chapter 12](12-use-the-boards-devices.md) occupy no service pages and
-do not appear in `SERVICES`. A resident service can publish named records in the
-registry so that programs can find its routines. ROM calls 13 and 14 find and
-enumerate those records.
+Resident pages reduce the TPA available to later programs. Installation lowers
+the word at `0006h` below the BDOS entry jump, following [Chapter
+11](11-memory-for-programs.md)'s memory contract. [Chapter
+12](12-use-the-boards-devices.md)'s numbered ROM routines use no service pages
+and do not appear in SERVICES. A RAM service may publish named registry
+records. ROM calls 13 and 14 find and enumerate those records.
 
-COUNT intercepts output through the BIOS jump table in RAM at `BF00h`. The word
-at `0001h` identifies its `WBOOT` entry and each entry is a three-byte `JP`.
-Warm boot preserves the table. A hook on an entry does its own work and then
-jumps to the target that the entry previously held. The BDOS and CCP send
-console output through `CONOUT` so their characters pass through COUNT. `PUTAT`
-and the ROM's own messages bypass that entry.
+COUNT changes the CONOUT jump in the RAM BIOS table at `BF00h`. The word at
+`0001h` locates WBOOT and each table entry is a three-byte JP. A hook performs
+its work then jumps to the previous target. Since warm boot preserves this
+table, BDOS and CCP output keeps passing through COUNT across program exits.
+PUTAT and private ROM printing bypass CONOUT.
 
-A transient program must restore every BIOS entry it changes before ending,
-including `WBOOT` if it changed that entry. Otherwise a later call can jump into
-overwritten program memory. COUNT instead reserves resident memory for its hook
-and restores the entry when removed. The BDOS's key check during output calls
-ROM `CONST` directly so a hook on the RAM table's `CONST` does not intercept
-that check. [Chapter 17](17-console-paths.md) describes the remaining console
-paths.
+A transient hook would become invalid when another program overwrote its code.
+A transient program must therefore restore every changed BIOS entry before
+exit, including WBOOT. COUNT keeps its hook in reserved pages and restores
+CONOUT during removal. Hook coverage still depends on the route used. BDOS
+output checks call ROM CONST directly so a RAM CONST hook misses those checks.
+[Chapter 17](17-console-paths.md) traces the console paths.
 
 ## COUNT.SVC
 
-This `COUNT.SVC` source hooks `CONOUT`. Its `CHARS` word stores
-the count and its record provides a routine to read that word:
+COUNT stores a word in CHARS, increments it in the CONOUT hook and publishes a
+routine that reads it:
 
 ```asm
 ; COUNT.SVC: count the characters that reach the BIOS's CONOUT, and publish
@@ -134,17 +131,16 @@ CHARS:	DW	0		; the count itself
 
 ### The header
 
-The first 25 bytes are the header. The source declares it at `0100h` with
-the name, flags, extra-memory request and stack declarations. Leave the
-routine offsets, sizes and dependency count zero for the file writer.
-Both pinned TAS and `makeSvc` require labels named `INIT` and `REMOVE`,
-even for a service whose flags prohibit removal.
+The service begins with a 25-byte header at `0100h`. Source supplies its name,
+flags, extra-memory request and stack declarations. Leave routine offsets,
+sizes and dependency count zero for the file writer. Both pinned TAS and
+makeSvc require INIT and REMOVE labels even when removal is prohibited by the
+flags.
 
-`SVCFMT` in `abi.inc` is 4 at the inspected source. The loader checks that
-format together with the initial `D` and rejects every other format. Pinned TAS
-preserves the source's format byte. `makeSvc` overwrites it with 4. TAS writes
-the dependency count only when a `DEPS` label exists so a source without
-dependencies must already contain zero there.
+At the inspected revision SVCFMT is 4. The loader requires both the initial
+`D` and that format. Pinned TAS preserves the source's format byte while
+makeSvc overwrites it with 4. TAS fills the dependency count only with a DEPS
+label, so a source with no dependencies must supply a zero count itself.
 
 | Offset | Bytes | Contents | Written by |
 | ---: | ---: | --- | --- |
@@ -160,68 +156,62 @@ dependencies must already contain zero there.
 | 15 | 2 | `INIT`, from the header's start | the tool |
 | 17 | 8 | The name | the source |
 
-Flags bit 0 permits removal. Bits 1 to 7 claim restart vectors, described
-under Restart vectors below. Extra memory follows the image and is not
-cleared by the loader. Initialise any buffer before reading it. The name
-is eight bytes padded with spaces and is the name printed by `SERVICES`.
+Removal permission is flags bit 0. Bits 1–7 claim restart vectors as described
+below. Extra memory follows the image but the loader does not clear it.
+Initialise buffers before reading them. SERVICES prints the eight-byte
+space-padded header name.
 
-The file contains the header and image, then dependencies, then relocation
-data. The writers convert addresses for page 0, ready for the loader to
-add the actual base page. TAS pads the file to whole 128-byte records and
-the loader ignores bytes after the declared relocation data.
-[Appendix H](appendix-h-service-file-format.md) gives the complete encoding
-and the distinction between the file header and its installed form.
+The file stores header and image first, dependencies next and relocation data
+last. File writers convert addresses for page 0 so the loader can add the
+installation page. TAS pads to 128-byte records. The loader ignores padding
+after the declared relocation data. [Appendix
+H](appendix-h-service-file-format.md) distinguishes this file encoding from
+the installed header.
 
 ### INIT
 
-`INIT` runs after the loader has copied the service into its pages and relocated
-the image. `CONSLOT` finds `CONOUT`'s entry from the word at `0001h`. After the
-`WBOOT` entry come `CONST`, `CONIN` and `CONOUT` so `CONOUT`'s `JP` is at the
-word's value plus 9. The `+ 1` steps past the `JP`'s opcode to the two bytes of
-its target. `INIT` saves those two bytes in `OLDCO` and writes the address of
-`MYCO` over them. All work that can fail must finish before the hook is
-installed. The failure paths below explain the consequences of leaving a hook
-behind.
+INIT runs after copying and relocation. CONSLOT derives CONOUT from the WBOOT
+word at `0001h`: CONST, CONIN and CONOUT follow it, putting CONOUT at +9.
+Another byte skips the JP opcode. INIT copies the old two-byte target to OLDCO
+and replaces it with MYCO. Complete every fallible operation before installing
+that hook. The failure paths below explain why cleanup cannot be assumed.
 
-A return with carry clear reports successful initialisation. `HL` identifies the
-first record for publication or is zero when there are no records. The loader
-checks the records before committing the installation.
+Carry clear returns successful initialisation. HL then names the first record
+to publish or zero for none. The loader validates the proposed records before
+committing the installation.
 
 ### The hook
 
-`MYCO` runs inside every call of the `CONOUT` entry. `CONOUT` takes its
-character in `C`. `MYCO` puts back the one register it uses so the entry it
-replaced runs with the registers it would have had. `MYCO`'s last instruction is
-a `JP` written as data, whose target is the two bytes `INIT` filled in at
-`OLDCO`. The old `CONOUT` therefore returns straight to the caller.
+CONOUT receives its character in C. MYCO saves HL, increments CHARS and
+restores HL before jumping to the previous CONOUT target. That JP is encoded
+as data followed by OLDCO, the target filled during INIT. All registers have
+their original values at the jump and the old routine returns directly to the
+caller.
 
 ### REMOVE
 
-`UNLOAD` calls `REMOVE` to undo the service's changes. COUNT writes the
-two saved bytes back over `CONOUT`'s target. Carry clear permits removal.
-A routine that returns carry set must leave the service and its external
-state usable because the loader keeps it installed.
+COUNT's REMOVE restores CONOUT's two saved target bytes. Carry clear permits
+the loader to release the service. Carry set reports refusal and leaves it
+installed. A refusing routine must therefore leave the service and its
+external state usable.
 
 ## Assembly, installation and measurements
 
-`TAS NAME OUT.TYP` writes the output under the name given. For the output
-type `.SVC` it fills in the header's fields and the relocation data. For any
-other type it writes a flat image, except that it rejects `.DBG` and a type
-that starts with `$`. So `TAS COUNT COUNT.SVC` writes the service, in place
-of any `COUNT.SVC` already on the drive.
+TAS selects service-file output from the explicit type. `TAS NAME OUT.TYP`
+writes that named output and `.SVC` triggers header completion and relocation
+data. Other types produce a flat image except `.DBG` and types beginning with
+`$`, which are rejected. Thus `TAS COUNT COUNT.SVC` replaces any existing
+COUNT.SVC on the drive.
 
-COUNT and GLCD cannot both fit within the declared CCP stack allowance.
-For the COUNT workflow, use the serial or PICO console with GLCD absent
-from `SERVICES`. [Chapter 7](07-choose-a-console.md) explains switching
-consoles. Select a working replacement console before removing GLCD.
-The Stacks section below explains the declarations behind this restriction.
+The example needs serial or PICO console operation with GLCD absent from
+SERVICES. COUNT plus GLCD exceeds the CCP stack allowance described below.
+Select a working replacement console before removing GLCD. [Chapter
+7](07-choose-a-console.md) explains console switching.
 
-The recipe below prepares a separate `svc.img` using the host
-card-tool setup from Chapter 6. Save COUNT's listing as `count.asm` beside
-the other PC sources. `HWLIB.ASM` is the helper from Chapter 12 and
-`area.asm` is Chapter 11's AREA program. `chars.asm`, listed under
-Publishing a record below, reads COUNT's count. The retained captures name
-their specific run revisions:
+The recipe creates a separate `svc.img` with Chapter 6's host tools. Save
+COUNT as `count.asm` alongside the PC sources. It also needs Chapter 12's
+HWLIB.ASM, Chapter 11's `area.asm` and the `chars.asm` client listed under
+Publishing a record. Each retained capture identifies its run revision:
 
 ```sh
 cp dist/starter.img svc.img
@@ -232,7 +222,8 @@ node tools/tecvol.mjs put svc.img B count.asm --text
 node tools/tecvol.mjs put svc.img B chars.asm --text
 ```
 
-This run assembles AREA and CHARS before writing COUNT.SVC:
+The run builds AREA and CHARS, writes COUNT.SVC, then measures installation,
+use and removal:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card svc.img B: 'TAS AREA' 'TAS CHARS' 'TAS COUNT COUNT.SVC' AREA COUNT.SVC SERVICES AREA CHARS CHARS UNLOAD SERVICES AREA CHARS. Boot rows included in this complete serial transcript. -->
 ```text
@@ -285,38 +276,34 @@ no COUNT record
 B:WORK>
 ```
 
-The rest of that same run measured the TPA, installed COUNT, read the count
-twice and removed the service:
 
 
 
-The file has 100 header/image bytes and 11 relocation bytes, and the PC
-writer below gives the same 111-byte total. COUNT occupied one page, as
-`SERVICES` reported. The measured TPA fell by 256 bytes, that page, and
-removal restored them. The shell, installed first, had already taken the
-alignment gap below the BDOS entry stub, which is lost with the first service
-only.
-[Chapter 25](25-loading-and-removing-services.md#the-resident-entry-and-its-pages)
-explains the allocation. These addresses and sizes describe this card's
-layout and are not a memory ceiling for programs to assume.
+COUNT has 100 header/image bytes and 11 relocation bytes. The PC writer below
+produces the same 111-byte total. SERVICES reports a single allocated page and
+AREA shows a 256-byte reduction, restored after UNLOAD. The shell had already
+consumed the first-service alignment gap below the BDOS stub. [Chapter
+25](25-loading-and-removing-services.md#the-resident-entry-and-its-pages)
+explains that allocation. These sizes describe this card rather than a fixed
+program ceiling.
 
-The two CHARS results differed by `18h` (24 characters printed between the
-calls). The hook remained installed across each program's warm boot.
+The CHARS readings increase from `0053` to `0070`, a difference of `1Dh`,
+counting 29 intervening output characters. The hook remains active through
+each program's warm boot.
 
 ### The PC file writer
 
-The repository's `makeSvc` in `tools/lib/svc.mjs` writes service files on
-the PC. It uses TAS and assembles at `0100h` and `0200h`, as a CP/M PRL
-file is made (`tools/lib/svc.mjs:1-4`, `tools/lib/prl.mjs:33-53`). Its input needs an indented
-`ORG $0100` line with no trailing comment. An include such as `%INCLUDE "ABI.INC"` is
-resolved relative to the source file, matching path components without
-regard to case. Copying `abi.inc` into the current directory is sufficient
-only when `count.asm` is there too. The include remains source-adjacent
-even though temporary assembly copies are written under `build/svc`.
+The PC makeSvc writer in `tools/lib/svc.mjs` assembles at `0100h` and `0200h`
+with TAS to derive relocation, as for a CP/M PRL file
+(`tools/lib/svc.mjs:1-4`, `tools/lib/prl.mjs:33-53`). It requires an indented
+`ORG $0100` line without a trailing comment. Includes resolve relative to the
+source with case-insensitive path components. Copying abi.inc to the current
+directory is sufficient only with count.asm there too. Temporary copies under
+`build/svc` retain this source-relative include base.
 
-This PC recipe, run in the repository root with `count.asm` there, writes
-COUNT's 111 meaningful bytes. They equal the first 111 bytes of the 128-byte
-file that the card's `TAS COUNT COUNT.SVC` writes:
+From the repository root, with count.asm there, this recipe writes 111
+meaningful bytes. They match the first 111 bytes of the card TAS's 128-byte
+record-padded service:
 
 ```sh
 cp dist/abi.inc .
@@ -331,43 +318,39 @@ node tools/tecvol.mjs put svc.img B COUNT.SVC
 
 ## Beyond the loader's checks
 
-The loader checks the file layout, dependencies, declared stack use and
-returned records. Those checks cannot establish whether INIT and REMOVE
-restore every external change. Your service must undo its hooks and device
-state before its pages become available to programs again.
+File-layout validation cannot prove hook cleanup. The loader checks
+dependencies, declared stack use and records. INIT and REMOVE must restore
+external pointers and device state before released pages can be reused.
 
 ### The hook as INIT's last act
 
-A hook installed before a later failing operation can leave an entry pointing
-into pages that the loader releases. An ordinary failed INIT is followed
-by a scan of the 17 BIOS jump-table targets. A target in the provisional
-service pages causes the loader to retain those pages with no records and
-clear the flags, making the retained service nonremovable. This scan does
-not cover another pointer, such as a display table registered through ROM
-service 12. INIT must undo that change itself.
+A late INIT failure can strand a previously installed hook. After an ordinary
+failed return the loader scans all 17 BIOS jump targets. A target inside the
+provisional pages forces it to retain them without records and clear their
+flags, making the service nonremovable. The scan excludes other pointers such
+as a service-12 display table. INIT must undo those itself.
 
-A warm boot during INIT bypasses its return path and that scan. The loader
-has temporarily lowered `0006h` but has not committed the new ceiling.
-Warm boot restores the previous ceiling and abandons the installation
-without calling REMOVE. A hook left behind can then reach overwritten
-memory. Complete every operation that can fail before writing the hook
-and return immediately after the final setup.
+Warm boot inside INIT bypasses both its return path and that scan. Although
+`0006h` was lowered provisionally, warm boot restores the prior committed
+ceiling and abandons installation without REMOVE. A leftover hook can then
+point into overwritten memory. Install the hook only after all fallible setup
+and return immediately afterwards.
 
-An accepted BDOS function 47 call from INIT takes this warm-boot path.
-The replacement line is subject to the normal flush and command-chain
-rules in [Chapter 13](13-results-and-command-chains.md). A rejected function
-47 call returns `FFh` to INIT and does not warm-boot. INIT must handle that
-return and continue or report failure as appropriate.
+An accepted function-47 call inside INIT follows this warm-boot abandonment
+path. Its replacement line still depends on [Chapter
+13](13-results-and-command-chains.md)'s flush rules. Rejection returns `FFh`
+without warm boot so INIT must handle that result before continuing or
+reporting failure.
 
 ### A failed INIT
 
-Before returning carry set, INIT must undo everything it changed. A typed
-installation then fails with the file name and a question mark, though a
-default-mode fatal card-read error can end the command earlier. An INIT
-that started an interrupt source must turn it off before reporting failure.
+Before returning carry set, INIT must reverse every external change, including
+disabling any interrupt source it started. Typed installation then prints the
+file name and a question mark. A fatal default-mode card-read error can
+terminate it earlier.
 
-FAIL's INIT returns carry set without changing any external state.
-Save this complete original source as `fail.asm`:
+FAIL tests rejection without any external setup to reverse. Save its complete
+source as `fail.asm`:
 
 ```asm
 ; FAIL.SVC: a service whose INIT returns carry set, so the load fails.
@@ -390,15 +373,13 @@ REMOVE:	OR	A
 	RET
 ```
 
-`SCF` sets carry and `RET` returns to the loader. Since INIT did no setup,
-there is nothing to undo. The loader does not call REMOVE after this return.
-It scans the BIOS targets and releases FAIL's provisional pages because none
-points into them.
+SCF sets carry and RET returns failure. The loader calls REMOVE only after a
+successful INIT. Its BIOS-target scan finds no pointer into FAIL's pages and
+releases them.
 
-The following run uses the PICO9918 console at 40 columns with the Matrix
-switch enabled, on a separate copy of the starter card with `fail.asm`,
-Chapter 11's `area.asm` and the matching `abi.inc` on B. AREA needs no HWLIB
-include. The startup file had installed only the shell:
+The following 40-column PICO run has the Matrix switch enabled. A separate
+starter-card copy holds fail.asm, Chapter 11's area.asm and matching abi.inc
+on B. AREA needs no HWLIB. Startup has installed only the shell:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --card svc2.img B: 'TAS AREA' 'TAS FAIL FAIL.SVC' AREA SERVICES FAIL.SVC AREA. Boot rows included in this complete serial transcript. -->
 ```text
@@ -430,97 +411,84 @@ B:WORK>AREA
 B:WORK>
 ```
 
-The question mark reports the failed installation. AREA printed the same
-42,496-byte TPA before and after it, and FAIL left no resident allocation.
-The attempt04 verification of this workflow, on ROM `fa63989b`, also checked
-the service state directly: INIT returned carry set once, REMOVE was not called and the loader restored
-the complete baseline after its BIOS scan. An INIT that changes hardware or
-hooks must undo those changes before returning carry set.
+The question mark reports rejection and the identical 42,496-byte AREA results
+show no retained allocation. Workflow attempt04 on ROM `fa63989b` also checked
+state directly. INIT returned carry set once and REMOVE never ran. After the
+BIOS scan the complete baseline was restored. Services with real hardware or
+hooks must perform their own rollback before that failed return.
 
-GLCD's INIT reports an absent graphics LCD with carry set and `A` = 2,
-`TNENODV`. Its table registration reports `TNEBAD`, status 1, when the Matrix
-switch is disabled or a GLCD table is already registered. For a startup line
-with CON requesting CRT, registration returns TNENODV. In STARTUP.CMD that INIT
-failure is quiet when cleanup releases the pages. It leaves a zero command
-result so a following `&` piece can run. Retained-page failures, failed file
-validation and rejected records do not receive that exception. A driver that
-finds its device absent can use the same return convention.
-[Chapter 8](08-commands-at-startup.md) describes the startup policy and Chapter
-13 explains conditional pieces.
+GLCD uses carry set with `A = 2`, TNENODV, for an absent display. Registration
+returns TNEBAD, status 1, if Matrix is disabled or a GLCD table already
+exists. A startup CRT request instead gives TNENODV. Startup suppresses that
+failure only when cleanup releases the pages, leaving a success result for a
+following `&`. Retained-page failures, invalid files and rejected records
+receive no quiet exception. Another absent-device driver may use the same
+convention. [Chapter 8](08-commands-at-startup.md) gives startup policy and
+Chapter 13 explains conditional pieces.
 
 ### REMOVE and a hook on a hook
 
-REMOVE restores the target saved by its own INIT. A service installed after
-COUNT would save MYCO as the previous CONOUT target. Output would pass through
-the new hook, then MYCO, then the ROM routine. Removal proceeds from the lowest,
-newest service so its REMOVE restores MYCO before COUNT's REMOVE restores the
-original target. A nonremovable newest service blocks removal of every older
-service.
+Hooks form a chain in installation order. A later CONOUT hook saves MYCO as
+its previous target, then forwards output through MYCO to the ROM routine.
+Removal proceeds from the newest, lowest service so the later REMOVE restores
+MYCO before COUNT restores the original target. A nonremovable newest service
+prevents removal of all older services.
 
-UNLOAD runs REMOVE from the CCP while no transient program is running.
-The loader can also call REMOVE after successful INIT when record checks
-fail. An accepted function 47 call from an UNLOAD removal abandons the
-return path, leaving the service listed. Its queued line still depends on
-the normal warm-boot flush. A rejected call returns to REMOVE. Neither
-case relieves REMOVE of restoring any state it changed before ending or
-reporting refusal.
+UNLOAD invokes REMOVE from the CCP with no transient program running. The
+loader also invokes it when successful INIT is followed by invalid records. An
+accepted function 47 during UNLOAD abandons removal's return path and leaves
+the service listed. Its new line still requires a successful flush. Rejection
+returns to REMOVE. In either case REMOVE remains responsible for restoring
+state before terminating or refusing removal.
 
 ### Restart vectors
 
-COUNT changes no restart vector in page zero. An interrupt or RST handler
-can instead use one of the vectors at `0008h` through `0038h`. Header
-flags bits 1 to 7 claim RST 1 through RST 7. INIT must write the jump
-itself. The loader rejects the load before INIT if a claimed vector already
-starts with `JP`, including a jump into ROM left by an earlier program.
-An unclaimed vector change is outside this conflict check.
+COUNT claims no restart vector. A handler can claim slots `0008h–0038h`
+through header flags bits 1–7, for RST 1–7. INIT writes the jump itself.
+Before INIT the loader rejects a claim whose slot already begins with JP,
+including an old program's jump into ROM. It does not check undeclared vector
+changes.
 
-The page-zero sweep covers `0008h` to `003Fh` at cold and warm boot and
-after removal or failure cleanup that releases the pages. It preserves a
-`JP` only when its target is strictly above the TPA ceiling. The remaining
-five bytes of a preserved vector are cleared. Other vectors become seven
-zeros followed by RET, except `0038h`, which becomes EI, RETI and zeros.
-A resident handler therefore survives warm boot when its entry address is
-above the ceiling.
+Cold and warm boot sweep `0008h–003Fh`, as does removal or failure cleanup
+that frees pages. A JP survives only above the TPA ceiling. Its remaining five
+slot bytes are cleared. Other slots become seven zeros and RET, except
+`0038h`'s EI, RETI and zeros. A resident handler above the ceiling therefore
+survives program exits.
 
-Removal and failure cleanup clear the claimed vectors before sweeping so those
-slots take their defaults even if their jumps target ROM. An unclaimed jump
-outside the released pages can survive the sweep. Your cleanup must restore it.
-Cold and warm boot enter with interrupts disabled. A maskable handler at `0038h`
-receives interrupts only after a program or service enables them with EI.
+Before sweeping released pages the loader clears claimed slots even when they
+point into ROM. An unclaimed jump outside those pages may survive so your
+cleanup must restore it. Cold and warm boot disable maskable interrupts. A
+handler at `0038h` runs only after a program or service enables them with EI.
 
 ### The ROM's addresses
 
-A resident service calls the ROM through the table at `C003h`, using the names
-in `abi.inc`. Internal routine addresses can change between builds. Format 4
-ties a loaded service to major version 5 of the application binary interface
-(ABI) so the service does not need the major-version check that a transient
-client needs. Check the result of a call added in a later minor version. GLCD
-does this for FONT, added in ABI 5.1.
+ROM access uses the fixed `C003h` interface and abi.inc names because internal
+addresses can move. Format 4 already requires ABI major 5, removing the
+transient client's major-check requirement. Calls added in a later minor
+version still need their results checked. GLCD checks FONT, introduced in 5.1.
 
-`makeSvc` checks source text for ROM literals from `$C000` to `$FFFF` and
-`0C000h` to `0FFFFh`, excluding comments. Decimal, binary or differently
-expressed addresses can escape that check. It is a writing constraint, not proof
-that every call uses the interface. Pinned TAS has no equivalent ROM-address
-check. The loader separately blocks nested load or removal while INIT or REMOVE
-is active. Ordinary CCP commands cannot run inside those routines but a direct
-internal call could attempt the operation.
+makeSvc rejects source ROM literals from `$C000–$FFFF` and `0C000h–0FFFFh`
+after excluding comments. Decimal, binary and other expressions can evade this
+text check so it does not prove interface-only access. Pinned TAS has no
+matching check. Separately the loader refuses nested load or removal while
+INIT or REMOVE is active. Those routines cannot run ordinary CCP commands but
+could attempt a direct internal call.
 
 ## Stacks
 
-A service uses its caller's stack. Header bytes 12 to 14 declare the extra bytes
-it can add on the BDOS, BIOS and CCP stacks, in that order. MYCO pushes one word
-while intercepting CONOUT and then pops it before the tail jump. CONOUT can run
-on any of those stacks so COUNT declares 2, 2 and 2.
+A hook adds stack use to its caller. Header bytes 12–14 declare the extra
+bytes on BDOS, BIOS and CCP stacks respectively. MYCO pushes a two-byte word
+and pops it before forwarding output. COUNT declares 2, 2 and 2 because CONOUT
+can execute on all three stacks.
 
-The loader sums the declarations of all installed services. The limits at the
-inspected source are 8 extra bytes on the BDOS stack, 12 on the BIOS stack and 6
-on the CCP stack. GLCD declares 6 for the CCP so GLCD and COUNT cannot both be
-installed with these declarations. On a GLCD-only configuration, startup
-installs GLCD and COUNT then fails with `COUNT.SVC?`. The earlier console
-prerequisite avoids that conflict. The captures here use configurations in which COUNT can load.
+The loader sums installed declarations against limits of 8 BDOS bytes, 12 BIOS
+bytes and 6 CCP bytes at the inspected revision. GLCD declares the full CCP
+allowance of 6 so adding COUNT fails. On a GLCD-only board startup installs
+GLCD and COUNT reports `COUNT.SVC?`. The console prerequisite above avoids
+this conflict in the captured workflows.
 
-CHEAT changes COUNT's BDOS declaration to 9, above the limit even with no
-other service installed. This capture omits its assembly lines:
+CHEAT changes COUNT's BDOS declaration to 9, which exceeds 8 even alone. The
+capture includes the build and rejected load:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card svc.img B: 'TAS CHEAT CHEAT.SVC' CHEAT.SVC SERVICES. Boot rows included in this complete serial transcript. -->
 ```text
@@ -545,22 +513,22 @@ SHELL 15
 B:WORK>
 ```
 
-The shell declares 6 bytes of the BDOS's stack, and even alone CHEAT's 9
-exceed the BDOS's limit of 8.
+SHELL declares 6 BDOS bytes. CHEAT's declaration already fails the limit
+without adding those bytes.
 
-You must calculate those declarations. The loader checks their sums, not the
-code's actual stack use. It cannot check a transient program's private stack
-either so document the space each public routine needs there. A service
-executing on the BDOS stack must not call the BDOS again. In particular, MYCO
-cannot report its count through function 9 from inside the output hook. CHARS
-prints it from outside the hook instead.
+Base declarations on calculated stack use. The loader sums declarations
+without inspecting the code's stack behaviour and cannot validate a transient
+client's private stack. Document the allowance each public routine requires.
+Code already on the BDOS stack must not reenter the BDOS. MYCO therefore
+cannot print through function 9 inside its output hook. The separate CHARS
+client prints the result outside the hook.
 
 ## Publishing a record
 
-CHARS needs COUNT's routine address even though COUNT can load at different
-pages. The registry provides that lookup. It is a linked list whose head is in
-TEC-OS's resident workspace. Each record occupies 13 bytes in its service's
-resident pages:
+CHARS needs a callable address even though COUNT's installation address
+varies. COUNT publishes a named registry record for that purpose. The registry
+head is in resident workspace and its linked records occupy 13 bytes each
+inside service pages:
 
 | Offset | Bytes | Contents |
 | ---: | ---: | --- |
@@ -569,33 +537,31 @@ resident pages:
 | 10 | 1 | Its interface version |
 | 11 | 2 | Its entry table's address |
 
-INIT returns its first record in HL. Link several records through their
-first words and terminate the service's chain with zero. COUNT returns
-its single REC. The loader joins the last record to the previous registry
-head and publishes the first as the new head. It checks both ends of each
-record and the table address against the service's pages. It does not
-check the table's contents or the routines reached through it.
+INIT returns its first record in HL. Multiple records link through their first
+words and end with zero. COUNT supplies REC alone. The loader links the final
+record to the previous head and publishes the new first record. It validates
+the ends of each record and its table address against service pages. Table
+contents and routine targets remain the service's responsibility.
 
-One service can publish at most 255 records and the whole registry can hold at
-most 256. FIND examines at most 256 records. LIST takes a byte index, 0 through
-255. Record rejection calls REMOVE to undo a successful INIT. The typed command
-fails with a question mark but failure does not always free the pages. If REMOVE
-returns carry set, the loader retains the service with no proposed records.
-Successful cleanup is followed by the BIOS-target scan described above, which
-can retain pages as nonremovable. Design REMOVE to work both after publication
-and before publication has succeeded.
+The limits are 255 records per service and 256 in the complete registry. FIND
+visits at most 256 records and LIST uses a byte index from 0 to 255. Rejected
+records cause REMOVE after successful INIT. The typed load fails with a
+question mark but pages may remain. Carry set from REMOVE retains the service
+without the proposed records. Successful cleanup still undergoes the
+BIOS-target scan, which can retain nonremovable pages. REMOVE must work before
+publication as well as after it.
 
-The record's name and version identify the table layout. COUNT version 1 has one
-JP at offset zero, to GETCNT, which returns the count in HL. Later versions can
-append entries while preserving that contract. FIND accepts a record at or above
-the requested minimum version so changing the meaning of an existing entry would
-break older clients despite a successful lookup.
+A name and interface version identify a table's layout. COUNT version 1 places
+a JP to GETCNT at offset zero, returning the count in HL. A compatible later
+version can append entries. FIND accepts any version at or above the client's
+minimum, so changing an existing entry's meaning would break clients that
+still pass the version check.
 
-A client is a program or service that uses a record. For FIND, set C to
-`TNFIND`, service 13, DE to the eight-byte padded name and B to the minimum
-version, then call ABICALL. Carry clear returns the entry table in HL and
-the current registry generation in A. Carry set reports no matching record.
-This CHARS client uses the helpers in HWLIB.ASM:
+A *client* is a program or service calling a published routine. FIND takes
+`C = TNFIND`, service 13, DE pointing to the eight-byte padded name and B
+holding the minimum version. Carry clear returns the table in HL and registry
+generation in A. Carry set means no match. CHARS uses that lookup with
+HWLIB.ASM's helpers:
 
 ```asm
 ; CHARS: print the count that COUNT.SVC publishes, in hex.
@@ -635,20 +601,18 @@ CRLF:	DB	13,10,"$"
 %INCLUDE "HWLIB.ASM"
 ```
 
-The Z80 has no indirect CALL instruction. CALLHL supplies one by jumping
-through HL while leaving its caller's return address on the stack.
-GETCNT therefore returns to the instruction after `CALL CALLHL`.
+Z80 has no indirect CALL instruction. CALLHL jumps through HL with the
+existing return address still on the stack. GETCNT's RET therefore resumes
+after `CALL CALLHL`.
 
-CHKHW checks the ABI signature and major version before the first ROM
-call. A COM file can run on a different system, where `C008h` may contain
-unrelated code. In the run above CHARS prints `no COUNT record` after UNLOAD removes
-COUNT.
+Before lookup CHKHW validates the signature and major version. A COM file may
+be running on another system where `C008h` is unrelated code. After COUNT is
+unloaded the captured CHARS run reports `no COUNT record`.
 
-LIST, service 14 or `TNLIST`, takes the index in B and returns the record
-itself in HL with the generation in A. Carry is set past the last record.
-Newly published records precede older services' records, retaining their
-own linked order. This RECS program prints each record's name,
-version and table address:
+LIST, `TNLIST` or service 14, returns a record address in HL for index B and
+its generation in A. Carry set means the index is past the end. New services
+precede older records while retaining their own linked order. RECS prints each
+name, version and table address:
 
 ```asm
 ; RECS: list the registry, newest record first: each record's name, its
@@ -706,12 +670,10 @@ CRLF:	DB	13,10,"$"
 %INCLUDE "HWLIB.ASM"
 ```
 
-Save that source as `recs.asm` and put it on B with the same `--text`
-card-tool operation used for the other sources. The run below uses the PICO
-board configuration. Startup's GLCD line installs nothing
-while the PICO console is active, leaving stack room for COUNT.
-With COUNT.SVC built by TAS on the card, RECS lists two records. The table
-addresses are this run's:
+Save RECS as `recs.asm` and copy it to B with the same `--text` operation.
+This PICO-model run leaves GLCD uninstalled during startup, preserving stack
+room for COUNT. After TAS builds COUNT.SVC, RECS lists two records at the
+addresses shown:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card svc.img --board pico B: 'TAS COUNT COUNT.SVC' 'TAS RECS' COUNT.SVC RECS. Boot rows included in this complete serial transcript. -->
 ```text
@@ -740,28 +702,26 @@ PICO     version 04 table BBE8
 B:WORK>
 ```
 
-The shell, which publishes no record, is not listed.
+RECS lists published records so it omits SHELL.
 
-PICO is the ROM console's permanent record, registered when that console starts
-at cold boot. UNLOAD cannot remove it. Its graphics entries require the display
-claim described in Chapter 12 and listed in
-[Appendix B](appendix-b-rom-services.md). GLCD publishes no record so it does
-not appear in RECS even when installed.
+The permanent PICO record is registered when the ROM console starts at cold
+boot. UNLOAD cannot remove it. Its graphics entries use [Appendix
+B](appendix-b-rom-services.md)'s claim contract from Chapter 12. GLCD is
+omitted too because its service publishes no record.
 
-FIND returns the first record with the requested name and a sufficient
-version. A newer service's qualifying record hides an older one until
-the newer service is removed. A newer record below the minimum version
-does not hide an older qualifying record.
+FIND selects the first matching name with a sufficient version. A newer
+qualifying record hides the older one until removal. A newer version below the
+client's minimum does not hide an older qualifying record.
 
-RECS's byte-sized INDEX wraps after 255. The two-record listing ends
-normally but a full 256-record registry would wrap to zero and repeat. A client
-intended to enumerate that capacity must stop after processing index 255 rather
-than depend on a further out-of-range LIST call.
+RECS stops correctly with two records but its byte INDEX wraps after 255. At
+the full 256-record capacity it would repeat from zero. A complete enumerator
+must stop after index 255 instead of waiting for a further out-of-range
+result.
 
 ## Depending on another service
 
-A table address remains usable only while its service is resident. Its
-lifetime depends on the client:
+A client can use a table pointer only while the provider remains resident. The
+following lifetime rules distinguish transient clients from services:
 
 - A program may keep it until it exits. UNLOAD runs from the CCP after the
   program has ended.
@@ -772,20 +732,17 @@ lifetime depends on the client:
   survives removal. Find the record for each use or validate a cached pointer
   against the registry generation within its wrap limit.
 
-The generation is a byte incremented by each successful removal. FIND and LIST
-return it in A on success. A different value from the one stored with a pointer
-proves that a removal occurred so discard the cached pointer. The byte wraps
-after 256 removals and the same value can then accompany a stale pointer.
-Installation alone does not increment it. A cache that must follow the newest
-provider must perform a new lookup after additions too, even while its old
-provider remains resident.
+Successful removal increments the byte generation returned by FIND and LIST. A
+different value proves removal occurred and invalidates a cached pointer. An
+equal generation is reliable only within the wrap limit because the byte
+repeats after 256 removals. Installation does not increment it. A cache that
+must follow the newest provider needs a new lookup after additions too.
 
-A dependency is nine bytes: the minimum version followed by the eight-byte
-padded name. In TAS source, place whole dependency entries at the end
-under DEPS. TAS counts them, excludes them from the image and writes them
-after it. The PC writer takes dependencies from the `deps` option to
-makeSvc, not from TAS's trailing DEPS convention. Appendix H gives both
-forms. This NEEDS.SVC binds to COUNT once during INIT:
+A declared dependency stores a minimum version followed by an eight-byte
+padded name, nine bytes in all. TAS takes complete entries under a trailing
+DEPS label, counts them and writes them after the image. makeSvc instead takes
+its `deps` option. Appendix H specifies both forms. NEEDS.SVC declares COUNT
+and binds its table once in INIT:
 
 ```asm
 ; NEEDS.SVC: a service that names COUNT's record as a dependency and binds to
@@ -820,11 +777,10 @@ TABLE:	DW	0		; the table, once found
 DEPS:	DB	1,"COUNT   "	; the least version, then the record's name
 ```
 
-The loader checks each dependency before moving the service or running INIT.
-NEEDS uses the same name and version in its declaration and FIND call so that
-lookup is already satisfied when INIT starts. Without COUNT the installation
-fails before INIT. The run below shows the failed attempt, then installation
-and removal in the required order:
+Dependencies are checked before relocation or INIT. NEEDS uses the same name
+and version for its declaration and FIND call so the record is already
+available at entry. Without COUNT the loader rejects it before INIT. The run
+shows that failure followed by valid installation and removal order:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card svc.img B: 'TAS COUNT COUNT.SVC' 'TAS NEEDS NEEDS.SVC' NEEDS.SVC COUNT.SVC NEEDS.SVC SERVICES UNLOAD UNLOAD SERVICES. Boot rows included in this complete serial transcript. -->
 ```text
@@ -864,6 +820,6 @@ SHELL 15
 B:WORK>
 ```
 
-The first UNLOAD removed NEEDS, the lowest service. Only then could the
-second remove COUNT. NEEDS could retain its pointer because COUNT's pages
-could not be released before NEEDS's own removal.
+UNLOAD removes the lowest service, NEEDS, before COUNT. COUNT's pages cannot
+be freed first so NEEDS may retain its table pointer for its own resident
+lifetime.

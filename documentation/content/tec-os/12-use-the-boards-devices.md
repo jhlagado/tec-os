@@ -17,34 +17,35 @@ nav_group: "Writing programs"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-The BDOS handles files and console text. TEC-OS's numbered ROM calls also let
-your program light the digits, sound the speaker, read the clock or write the
-board's displays. A signature and version check comes before those calls so the
-program can still end safely on another CP/M system.
+A program may need to show a number on the digits, sound a note or draw
+graphics while its console remains usable. The BDOS covers text and files.
+TEC-OS adds numbered ROM calls for the board's devices. Checking their
+signature and version first lets a program exit safely on a CP/M system
+without that interface.
 
 ## Numbered calls and shared ports
 
-A hardware port is an address used by Z80 IN and OUT instructions to read or
-write a device. It is separate from a memory address. Direct port writes can
-affect devices TEC-OS is using at the same time.
+A hardware port is separate from a memory address. Z80 IN and OUT instructions
+use ports to read and write devices. A direct write can also affect a device
+already in use by TEC-OS.
 
-Port `01h` selects a 7-segment digit with bits 0–5, drives the speaker with bit
-7 and carries serial transmission with bit 6. Leaving bit 6 low during a digit
-scan or tone sends noise on a possible console connection. The PICO9918 can also
-be the console so changing its registers can disrupt terminal output. The ROM
-calls keep the serial line idle during digit and tone output and record display
-claims before graphics access.
+Port `01h` combines three uses: bits 0–5 select digits, bit 7 drives the
+speaker and bit 6 transmits serial data. A digit scan or tone that leaves bit
+6 low sends noise to a possible console. PICO9918 graphics share another
+device with console output. The ROM calls hold the serial line idle during
+digit and tone output and record a display claim before graphics access.
 
-These *numbered services* are routines already in ROM. They are different from a
-resident service such as `GLCD.SVC`, which is a file installed in RAM. A
-numbered call selects a routine through an entry address. A resident service can
-itself make such calls. Chapter 14 explains resident programs.
+These routines are *numbered services* already in ROM. A resident service such
+as `GLCD.SVC` is instead a file installed in RAM. Both kinds can participate
+in the same program. A resident service can call a numbered routine through
+its entry address. Chapter 14 explains resident code.
 
 ## The ABI and its entry address
 
-An *application binary interface*, or ABI, specifies entry addresses, register
-arguments and results that compiled programs can use. TEC-OS's fixed interface
-occupies eight bytes at `C003h`, after the reset jump:
+Programs need a stable way to reach routines whose locations may change
+between builds. An *application binary interface*, or ABI, defines that entry
+together with register arguments and results. TEC-OS places its eight-byte
+interface at `C003h`, after the reset jump:
 
 | Address | Name | Contents |
 | --- | --- | --- |
@@ -53,35 +54,34 @@ occupies eight bytes at `C003h`, after the reset jump:
 | `C007h` | `ABIMIN` | the minor version, 1 |
 | `C008h` | `ABICALL` | a jump: the numbered services |
 
-The three letters `TNA` are the *signature*. They distinguish this table from
-unrelated bytes at the same address on another system. `ABIMAJ` and `ABIMIN`
-give its ABI version, 5.1. That is separate from the ROM's product version,
-which INFO reports later.
+The signature `TNA` distinguishes the interface from unrelated bytes at the
+same addresses. `ABIMAJ` and `ABIMIN` identify ABI version 5.1. The ROM
+product version reported by INFO is a separate value.
 
-A program checks the signature and major version before calling `C008h`. The
-major must be exactly 5. A new major may renumber services while a new minor
-adds numbers at the end. Code using the 5.0 calls can therefore run on 5.1. A
-program requiring an added minor-version call must check that version too.
+A caller checks `TNA` and major version 5 before entering `C008h`. Require an
+exact major match because a new major can renumber services. A minor version
+appends service numbers so code using 5.0 calls also runs on 5.1. A program
+using a later addition must check the minor version too.
 
-`ABICALL` is a jump into the dispatcher, not a table of separate fixed routine
-addresses. The selected routines can move between builds. Their numbers,
-argument contracts and the fixed ABI entry remain the interface. The reset jump
-itself also has a fixed location at `C000h`.
+`ABICALL` jumps to a dispatcher that selects by service number. It is not a
+table of fixed addresses for individual routines. Those routines may move
+between builds while the entry, numbers and argument contracts remain stable.
+The reset jump also has a fixed address at `C000h`.
 
-The ROM assembles from `src/abi.inc`, whose public copy is `dist/abi.inc`. The
-examples include it as `ABI.INC` for names such as ABICALL and TNLCD. These
-constants define no executable bytes. `%INCLUDE` inserts the named file's
-contents into the assembly source.
+The ROM and applications use constants from `src/abi.inc`, published as
+`dist/abi.inc`. The examples include it as `ABI.INC` to obtain names such as
+ABICALL and TNLCD. `%INCLUDE` inserts the file's source at that point. Its
+constants emit no executable bytes.
 
 ## Registers, status and stack
 
-Chapter 9 introduced byte registers and register pairs. For a numbered call, C
-selects the service. B is a byte argument and DE or HL can hold word values or
-buffer addresses according to that service's contract. A carries no argument
-because the dispatcher uses it during selection. The program calls ABICALL after
-loading those inputs.
+The register sizes are the same as in Chapter 9. For a numbered call put the
+service number in C. B supplies a byte argument while DE or HL supplies words
+or buffer addresses according to the routine's contract. A cannot carry an
+argument because dispatch changes it. Load the required inputs and call
+ABICALL.
 
-The nine hardware calls, numbers 0–8, return status in A with these flags:
+Hardware calls 0–8 return status in A and set these flags:
 
 | Status | Flags | Meaning |
 | ---: | --- | --- |
@@ -89,14 +89,13 @@ The nine hardware calls, numbers 0–8, return status in A with these flags:
 | 1 | carry set | no such service, an argument out of range or a request rejected with nothing changed |
 | 2 | carry set | the device isn't fitted or isn't the console |
 
-`JP NZ` or `JP C` detects a hardware-call failure. The documented result
-registers hold the outputs. Save any other values the program needs across the
-call rather than depending on their previous contents. Hardware calls preserve
-IX, IY and the alternate registers. Appendix B gives each complete register
-contract.
+For these hardware calls either `JP NZ` or `JP C` detects failure. Use the
+documented result registers and preserve any other values still needed after
+the call. The calls preserve IX, IY and the alternate registers. Appendix B
+gives the individual contracts.
 
-A number from `TNCOUNT`, 17, upwards returns status 1 with B, DE and HL
-unchanged. The hardware numbers identify these routines:
+An invalid number at or above `TNCOUNT`, 17, returns status 1 while preserving
+B, DE and HL. The hardware numbers are:
 
 | Number | `abi.inc` | Does |
 | ---: | --- | --- |
@@ -110,43 +109,42 @@ unchanged. The hardware numbers identify these routines:
 | 7 | `TNPUTAT` | writes text at a screen position on a video console |
 | 8 | `TNRTC` | reads or sets the DS1302 clock |
 
-The other numbers extend the same ABI. Numbers 9–11 mount, unmount and describe
-volumes, as Chapter 18 explains. Number 12 registers the GLCD video-driver
-table. Numbers 13 and 14 find or enumerate named records in the registry
-described in Chapter 14. Those registry calls have their own result convention,
-including a generation in A, so their callers test carry rather than applying
-the hardware status rule. Number 15 returns the ROM font and was added in ABI
-5.1. Number 16, `TNSHELL`, sets the shell hook that Chapter 21 describes
-(`src/abi.inc:208-236`).
+The remaining numbers use the same entry for other interfaces. Calls 9–11
+mount, unmount and describe volumes as explained in Chapter 18. Call 12
+registers a GLCD display table. Calls 13 and 14 find and enumerate registry
+records described in Chapter 14. They return a generation in A on success, so
+test carry for registry calls rather than treating A as hardware status. Call
+15 supplies the font and was added in ABI 5.1. Call 16, `TNSHELL`, installs
+the shell hook described in Chapter 21 (`src/abi.inc:208-236`).
 
-The hardware services use the caller's stack. PUTAT has the largest bound: 22
-bytes below the return address supplied by CALL. That fits the inherited 30-byte
-allowance from Chapter 11 but a caller must also count its own nested calls and
-saved registers. Appendix B lists the individual bounds. These are bounds, not
-newly measured peaks.
+Hardware calls run on the caller's stack. PUTAT's bound is the largest at 22
+bytes below the CALL return address. That fits Chapter 11's inherited 30-byte
+allowance only if the caller's nesting and saves leave enough room. Appendix B
+lists every bound. These figures are documented bounds rather than newly
+measured peaks.
 
-None of the nine hardware services calls the BDOS. They can be called from code
-already inside a BDOS call, such as a BIOS-table hook. This does not apply to
-every numbered service: MOUNT and UNMNT call BDOS function 37 and must be called
-from outside an active BDOS call. Their register-preservation exceptions are
-also listed in Appendix B.
+The nine hardware services make no BDOS calls. They can therefore run inside a
+BDOS operation, for example from a BIOS-table hook. That rule does not cover
+every numbered service. MOUNT and UNMNT call BDOS function 37 and require a
+caller outside an active BDOS call. Appendix B also records their
+register-preservation exceptions.
 
 ## The shared signature check and print routines
 
-CHKHW compares four bytes: `TNA` followed by major version 5. It returns with Z
-set only when all four match. On failure the examples branch to NOTHW, which
-prints a message through BDOS function 9 and ends without using a hardware port.
+Each example first calls CHKHW. It compares `TNA` and major version 5 and
+returns Z only when all four bytes match. On failure NOTHW prints a message
+with BDOS function 9 and exits before any hardware-port access.
 
-The examples share this complete `HWLIB.ASM`. It contains both code
-and data so each program includes it after its own entry code. SAY prints a
-dollar-terminated string. A CALL to SAY returns to its caller while a top-level
-jump to it prints and ends through the inherited return word. LABHEX prints a
-label followed by A in hexadecimal. It saves A and HL across the string output.
-A *nibble* is four bits, half a byte. HEX prints the two nibbles through NIBBLE.
+The shared `HWLIB.ASM` contains that check, printing helpers and their data.
+Include it after the program's entry code because it emits bytes. SAY prints a
+dollar-terminated string. `CALL SAY` returns normally while a top-level jump
+to SAY prints and exits through the inherited return word. LABHEX preserves A
+and HL while printing a label, then prints A in hexadecimal. HEX prints its
+two *nibbles*, the four-bit halves of a byte, through NIBBLE.
 
-A *binary-coded decimal* byte, or BCD byte, stores one decimal digit in each
-nibble. Printing its two nibbles as hexadecimal also displays those decimal
-digits. The clock examples use that representation.
+Clock fields use *binary-coded decimal*, or BCD. Each nibble holds a decimal
+digit. Printing the nibbles as hexadecimal therefore displays the two decimal
+digits unchanged.
 
 ```asm
 ; HWLIB.ASM: routines this chapter's programs share. It goes after a
@@ -207,14 +205,13 @@ TAG:	DB	"TNA",5
 NOTMSG:	DB	"not TEC-OS with ABI 5",13,10,"$"
 ```
 
-The programs below assemble with the starter card's TAS.
 
 ## The board's report
 
-INFO, number 0, reports device state without taking an argument. It returns B's
-device bits, the ROM's version in DE and the console's size in HL. L is the
-column count and H the row count. A program checks these results before using an
-optional device. B's defined bits are:
+INFO, service 0, reports the device state before a program uses optional
+hardware. It takes no argument and returns device bits in B, ROM version in DE
+and console dimensions in HL. L holds columns and H holds rows. B defines
+these bits:
 
 | `B` bit | Value | Set when |
 | ---: | ---: | --- |
@@ -225,10 +222,10 @@ optional device. B's defined bits are:
 | 4 | `10h` | the PICO9918 is claimed |
 | 7 | `80h` | the ROM's word `GLCD?` is on LCD row 3 |
 
-D holds the ROM version's major and E its minor so `0001h` means version 0.1
-rather than ABI 5.1. BOARD prints the report in hexadecimal and then calls
-`TNCOUNT`, the first number past the last service, to demonstrate the
-out-of-range status:
+The version's major byte is D and its minor byte E. Thus `0001h` reports ROM
+version 0.1, separate from ABI 5.1. BOARD prints the report in hexadecimal. It
+also calls `TNCOUNT`, just beyond the valid range, to display a
+rejected-number result:
 
 ```asm
 ; BOARD: print what INFO reports, then what a bad number returns.
@@ -283,9 +280,8 @@ MSGNC:	DB	", carry clear",13,10,"$"
 %INCLUDE "HWLIB.ASM"
 ```
 
-These host commands place ABI.INC, HWLIB.ASM and BOARD.ASM beside each other
-on a copy of the starter card. TAS uses the included files on the card when it
-assembles BOARD:
+These host commands copy ABI.INC, HWLIB.ASM and BOARD.ASM together onto a
+starter-card copy. TAS then reads the includes from that card:
 
 ```sh
 cp dist/starter.img hw.img
@@ -294,11 +290,10 @@ node tools/tecvol.mjs put hw.img B hwlib.asm --text
 node tools/tecvol.mjs put hw.img B board.asm --text
 ```
 
-Each later example's source goes on `hw.img` in the same way. `TAS BOARD` reads
-BOARD.ASM on the current drive and writes BOARD.COM beside it. TAS.COM is on A
-so the program search described in Chapter 5 finds it from B. In the
-serial-model configuration, the clock set INFO's bit 3 and the console size was
-zero:
+The later examples use the same copy operation for their sources. On B,
+`TAS BOARD` writes BOARD.COM beside BOARD.ASM. Chapter 5's search finds
+TAS.COM on A. In this serial-model run INFO reported clock bit 3 and zero
+console dimensions:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card hw.img B: 'TAS BOARD' BOARD. Boot rows included in this complete serial transcript. -->
 ```text
@@ -325,11 +320,11 @@ Number 17: status 01, carry set
 B:WORK>
 ```
 
-The `--board pico` model configuration includes the PICO9918, graphics LCD and
-matrix keyboard. Cold boot selected the PICO console at 40 columns. Its device
-bits were `0Bh` and its size was `28h` by `18h` (40 by 24). The startup
-GLCD.SVC line installed nothing while PICO was the console. This is a host-model
-run, not a browser capture:
+The `--board pico` model includes PICO9918, graphics LCD and matrix keyboard.
+Cold boot selected PICO at 40 columns. INFO reported device byte `0Bh` and
+dimensions `28h` by `18h`, or 40 by 24. Startup's GLCD.SVC installed nothing
+while PICO was selected. This is a host-model capture rather than a browser
+observation:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card hw.img --board pico B: 'TAS BOARD' BOARD. Boot rows included in this complete serial transcript. -->
 ```text
@@ -356,22 +351,22 @@ Number 17: status 01, carry set
 B:WORK>
 ```
 
-In the GLCD-only configuration, `--board glcd`, GLCD.SVC installed and became
-the console. The same report gave device bits `0Dh`, columns `15h` and rows
-`08h`: 21 by 8.
+With `--board glcd`, GLCD.SVC installed as the console driver. The same report
+gave device bits `0Dh`, columns `15h` and rows `08h`, or 21 by 8.
 
-A screen-layout program uses the size INFO returns. With a serial console, both
-values are zero because TEC-OS cannot read the terminal's dimensions. The
-program can use an 80-by-24 assumption, as the CCP does for pagination. A
-console change can alter the values. After CON UC1 selects the graphics LCD,
-INFO gives 21 by 8 so programs that change console must read them again.
+Use INFO's returned dimensions for screen layout. Both are zero for serial
+because TEC-OS cannot read the remote terminal's size. A program may then
+assume 80 by 24 as the CCP does for pagination. Read the dimensions again
+after changing consoles. `CON UC1` selects the graphics LCD and changes them
+to 21 by 8.
 
 ## The LCD and the speaker
 
-The 20 × 4 character LCD is separate from the console. LCD, number 2, writes
-exactly 20 characters from HL to row B, numbered 0–3. Shorter messages need
-space padding. B of 4 or more returns status 1 before any write. LCDMSG uses row
-1 and then calls TONE, number 4, for a beep:
+A status message can use the separate 20 × 4 character LCD while console
+output continues elsewhere. LCD, service 2, copies exactly 20 characters from
+HL to row B, numbered 0–3. Pad a short message with spaces. B at 4 or above
+returns status 1 before writing. LCDMSG writes row 1 and sounds a beep through
+TONE, service 4:
 
 ```asm
 ; LCDMSG: write a row of the 20 x 4 LCD and beep, on TEC-OS only.
@@ -397,7 +392,7 @@ DONE:	DB	"Written and beeped",13,10,"$"
 %INCLUDE "HWLIB.ASM"
 ```
 
-This run requested the character LCD's rows with `--lcd`:
+The capture's `--lcd` option includes the character-LCD rows:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card hw.img --lcd B: 'TAS LCDMSG' LCDMSG. Boot rows included in this complete serial transcript. -->
 ```text
@@ -424,8 +419,8 @@ Hello on the LCD
 B: WORK
 ```
 
-The same run's LCD text showed the message on its second row. The other rows
-retained cold-boot text:
+The LCD portion shows the message on the second row. Cold-boot text remains on
+the other rows:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card hw.img --lcd B: 'TAS LCDMSG' LCDMSG. The complete LCD rows, trailing spaces removed. -->
 ```text
@@ -434,53 +429,52 @@ Hello on the LCD
 B: WORK
 ```
 
-The row remains after program exit. On another ABI major, the signature check
-takes NOTHW instead, printing `not TEC-OS with ABI 5` and leaving the character
-LCD untouched.
+The LCD text survives program exit. On another ABI major the check instead
+branches to NOTHW, prints `not TEC-OS with ABI 5` and leaves the LCD
+unchanged.
 
-Row 3 has a separate ownership mark for the ROM's `GLCD?` message. When GLCD.SVC
-installs, TEC-OS clears that message only while the mark is set. An LCD call
-writing row 3 clears the mark. Later driver installation therefore preserves the
-program's replacement text. Chapter 8 explains the startup message.
+TEC-OS tracks its `GLCD?` message on row 3 with a separate mark. GLCD.SVC
+installation clears that message only while the mark is set. Writing row 3
+through LCD clears the mark so a later driver installation preserves your
+replacement text. Chapter 8 explains when the startup message appears.
 
-TONE toggles port `01h` bit 7. B controls the delay and DE the number of half
-cycles. Between ordinary toggles the delay is 16 × B + 51 T-states. A full cycle
-takes two such intervals. At 4 MHz the frequency is therefore 2,000,000 divided
-by that sum.
+TONE writes the speaker bit, port `01h` bit 7. B sets the delay and DE counts
+half cycles. Instruction time is measured in T-states, or CPU clock periods.
+Each ordinary toggle interval is 16 × B + 51 T-states. Two intervals form a
+full cycle. At 4 MHz the frequency is 2,000,000 divided by that interval.
 
-With B = 120, the interval is 1,971 T-states and the frequency is about 1,015
-Hz. DE = 400 gives about 0.2 seconds, as in LCDMSG. For a duration in seconds,
-the half-cycle count is frequency × 2 × seconds. B = 0 counts as 256, giving
-about 482 Hz, while B = 1 gives about 29,851 Hz. DE = 0 returns immediately
-without sound. These are instruction-derived relationships. Appendix B
-distinguishes the final interval and call overhead.
+For B = 120 the interval is 1,971 T-states and the frequency about 1,015 Hz.
+DE = 400 lasts about 0.2 seconds as in LCDMSG. For a duration in seconds,
+calculate half cycles as frequency × 2 × seconds. B = 0 represents 256 and
+gives about 482 Hz. B = 1 gives about 29,851 Hz. DE = 0 returns without sound.
+These values follow from instructions rather than a hardware measurement.
+Appendix B accounts for the final interval and call overhead.
 
-TONE blocks until its half cycles finish so the caller does no other work during
-the sound. A nonempty tone ends with the speaker off. The routine keeps the
-serial transmit line idle while driving the speaker.
+The caller remains inside TONE until the sound finishes. A nonempty tone ends
+with the speaker off. Throughout it the serial transmit bit remains idle so
+the beep does not transmit console noise.
 
 ## The digits and the clock
 
-The six 7-segment digits share their segment wiring. Port `02h` sets the pattern
-and port `01h` selects which digit lights. A steady-looking display requires
-repeated scans, with each digit lit only during its own turn.
+The six 7-segment digits share segment wires. Port `02h` supplies a pattern
+and port `01h` selects the lit digit. Repeatedly selecting each digit with its
+own pattern gives a steady-looking display.
 
-DIGIT, number 1, scans once through six pattern bytes at HL, leftmost first. It
-turns every digit off at the end. On the host model it takes
-20,660 T-states from the call target to return, about 5.2 ms at 4 MHz. Its
-port writes put 3,348 T-states, about 0.84 ms, between selecting each digit
-and turning it off. The caller repeats the scan and supplies its
-own number-to-segment table.
+DIGIT, service 1, performs a single scan from six pattern bytes at HL,
+leftmost first. All digits are off on return. The host model takes 20,660
+T-states from call target to return, about 5.2 ms at 4 MHz. Each digit stays
+selected for 3,348 T-states between port writes, about 0.84 ms. Your loop
+repeats the call and converts numbers through its own segment-pattern table.
 
-RTC, number 8, transfers seven BCD bytes through HL: seconds, minutes, hours,
-date, month, weekday and year. B = 0 reads and B = 1 sets them. Setting ends
-with the clock's write protection enabled. Any other B gives status 1 without
-changing the clock. A failed clock probe gives status 2. INFO bit 3 separately
-records whether the clock answered at cold boot.
+RTC, service 8, transfers seven BCD bytes at HL in order: seconds, minutes,
+hours, date, month, weekday and year. B = 0 reads and B = 1 sets them. A set
+finishes with write protection enabled. Other B values return status 1 with
+the clock unchanged. A failed clock probe returns status 2. INFO bit 3 records
+the separate cold-boot presence result.
 
-DIGCLK repeats DIGIT and checks for a key with BDOS function 6. Every 32nd pass
-it first reads the clock and converts hours, minutes and seconds into six
-patterns. Its initial counter value makes the first pass read too:
+DIGCLK repeats that scan until BDOS function 6 returns a key. Every 32nd pass
+it reads the clock and converts hours, minutes and seconds into six patterns.
+Initialising the counter to 31 also makes the first pass read the clock:
 
 ```asm
 ; DIGCLK: the time on the 7-segment digits, until a key.
@@ -549,14 +543,13 @@ TIME:	DS	7
 %INCLUDE "HWLIB.ASM"
 ```
 
-DIGIT leaves the digits dark between calls. Other work in the loop reduces the
-time they are lit and can produce visible flicker if it takes too long. DIGCLK
-does a BDOS input check each pass and a clock read every 32nd pass. When it
-exits, the final DIGIT call has already turned the digits off.
+Time spent outside DIGIT leaves the digits dark. A slow loop reduces
+brightness and may flicker. DIGCLK limits clock reads to every 32nd pass while
+checking input each time. Its final scan turns the digits off before exit.
 
-NOW reads the same seven-byte clock buffer and prints its fields in date order.
-The clock stores only two year digits so this example supplies the century text
-`20` itself:
+NOW uses the same seven-byte buffer to print a date and time. The clock
+supplies only two year digits so the example prefixes them with its own `20`
+text:
 
 ```asm
 ; NOW: print the date and time from the clock.
@@ -607,9 +600,9 @@ TIME:	DS	7
 %INCLUDE "HWLIB.ASM"
 ```
 
-PLAN contains field-offset/separator pairs. NOW uses each offset to select a BCD
-byte, prints it through HEX and then prints its separator. The TAS and run
-capture was:
+PLAN pairs each buffer offset with an output separator. NOW selects the BCD
+byte at that offset, prints it through HEX and prints the separator. The
+captured build and run produced:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card hw.img B: 'TAS NOW' NOW. Boot rows included in this complete serial transcript. -->
 ```text
@@ -632,20 +625,19 @@ B:WORK>NOW
 B:WORK>
 ```
 
-That model run began with its clock at 12:00 on 1 November 2026. The clock
-advances with emulated T-states, including those used while TAS assembles. Its
-weekdays start at 1 for Monday so the captured Sunday is `07`.
+This host-model run started at 12:00 on 1 November 2026. Its clock advances
+with emulated T-states, including assembly time. Weekday 1 means Monday in the
+model so Sunday appears as `07`.
 
 ## The keys and the joystick
 
-Character input reports keys one at a time. A game may instead need the matrix
-switches held down during a scan. KEYS, number 6, stores eight row bytes at HL,
-row 0 first, with a 1 for each pressed switch. JOY, number 5, returns active
-joystick lines as 1 bits in B.
+Games often need held-switch state rather than a sequence of characters. KEYS,
+service 6, copies eight matrix rows to HL with row 0 first and a 1 for each
+pressed switch. JOY, service 5, returns active joystick lines as 1 bits in B.
 
-KEYS and JOY always return status 0. They do not test the Matrix switch or
-report device absence. ROWS therefore checks INFO bit 0 before waiting for a
-key, then prints the matrix rows and joystick byte:
+Neither call tests for absence or checks the Matrix switch. KEYS and JOY
+always return status 0. ROWS checks INFO bit 0 before waiting for matrix
+input, then prints the eight rows and joystick byte:
 
 ```asm
 ; ROWS: wait for a key on the matrix keyboard, then print the eight rows
@@ -711,8 +703,7 @@ STICK:	DS	1		; JOY's byte
 %INCLUDE "HWLIB.ASM"
 ```
 
-The `--board pico` configuration has a matrix keyboard. Its `@key` input
-pressed `x`, which is in row 7:
+In the `--board pico` model the `@key` operation held `x`, located in row 7:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card hw.img --board pico B: 'TAS ROWS' '@start ROWS' '@key x'. Boot rows included in this complete serial transcript. -->
 ```text
@@ -737,67 +728,62 @@ B:WORK>
 
 <!-- TEC-OS 8b69e51, the same run with "@key 5": node tools/capture.mjs --card hw.img
      --board pico B: "TAS ROWS" "@start ROWS" "@key 5" -->
-JOY reads port `FEh` with address line 11 low. KEYS selects row 3 in the same
-way so those inputs share wiring. In the alternate `5` run, the row was
-`00 00 00 01 00 00 00 00  JOY 01`. A row-3 matrix key can therefore appear as a
-joystick bit. A joystick line also appears in row 3, including at the console.
-On the model, bit 0 types `5`. Appendix B gives the diagnostic names for the
-joystick bits.
+The joystick and matrix share inputs. JOY reads port `FEh` with address line
+11 low, the same selection as KEYS row 3. The alternate `5` run therefore
+printed `00 00 00 01 00 00 00 00 JOY 01`. Row-3 keys can set joystick bits and
+joystick lines appear as row-3 keys, including through console input. Model
+bit 0 produces `5`. Appendix B names the joystick bits for diagnosis.
 
 ## Claiming the PICO9918
 
-Before using PICO graphics, a program calls VIDEO, number 3, with B = 1 to claim
-the chip. B = 0 releases it. Other values give status 1 without changing the
-claim. When no PICO9918 answered at cold boot, both valid modes return status 2.
+Graphics require a PICO claim before changing the chip. VIDEO, service 3,
+takes B = 1 to claim and B = 0 to release. Other values return status 1
+without changing the flag. Both valid modes return status 2 if no PICO
+answered at cold boot.
 
-While the PICO is claimed, console output to it is discarded. The terminal also
-suppresses its cursor and page flips. The program can set a graphics mode and
-use the chip's video memory (VRAM) through data port `BEh` and control port
-`BFh`. Messages intended for the PICO must be printed before the claim or after
-release. The separate character LCD remains available during the graphics work.
+A claim suppresses console output, cursor drawing and page flips on PICO. The
+program may then select a graphics mode and access video memory, VRAM, through
+data port `BEh` and control port `BFh`. Print PICO console messages before
+claiming or after releasing. The separate character LCD remains available
+throughout.
 
-A release restores the ROM PICO console's mode, font and displayed page when
-that console started at cold boot. If it is the selected console, the release
-also clears the screen and homes the cursor. With the Matrix switch disabled the
-PICO console did not start so release leaves the chip's programmed state alone.
-Warm boot first writes 80h to that chip's register 1, though, which blanks the
-display.
+Release restores the mode, font and displayed page if the ROM PICO console
+started at cold boot. It also clears the screen and homes the cursor when PICO
+is selected. With the Matrix switch disabled that console never started so
+release leaves the programmed display alone. Warm boot still writes 80h to
+register 1 first, blanking the display.
 
-The claim records a flag rather than an owner identity. Warm boot releases it
-through the same path so an exiting program's claim ends too. Release with no
-active claim does nothing and returns status 0.
+The claim is a flag with no owner identity. Warm boot clears it through the
+same path so it ends with the program. Releasing an unclaimed display has no
+effect and returns status 0.
 
-When the ROM PICO console started, it also registered a named PICO record. That
-record supplies the graphics entry table listed in Appendix B. The register,
-fill, write and read entries require a claim. Programs obtain the table through
-the registry rather than fixed internal ROM addresses. The record is
-version 4. It keeps version 3's width entry, which instead requires an
-unclaimed display.
+Starting the ROM PICO console also publishes the named PICO registry record.
+Programs can obtain its graphics entry table through that record instead of
+internal ROM addresses. Appendix B lists the table. Its register, fill, write
+and read entries require a claim. Record version 4 retains version 3's width
+entry, which requires the display to be unclaimed.
 
-FONT, number 15 in ABI 5.1, returns the ROM console font address in HL. It
-contains 96 characters from `20h`, each eight bytes with the top row first.
-The selected data is TEC Compact. Each row has five pixels in bits 7–3. Both
-display drivers use this font. Its address is a result, not a fixed address for
-a program to embed.
+FONT, service 15 added in ABI 5.1, returns the font address in HL. TEC Compact
+has 96 characters beginning at `20h`, each represented by eight bytes from the
+top row down. Five pixels occupy bits 7–3 in each row. Both display drivers
+use it. Obtain its address from the result instead of embedding a ROM address.
 
-DEMO below claims the PICO when INFO bit 1 is set, draws through the ports until
-a key is received and then releases it.
 
 ## Text at a screen position
 
-PUTAT, number 7, writes text at a position without moving the console cursor or
-scrolling. B is the count, HL the character address and D/E the zero-based
-row/column. It bypasses the escape-sequence parser and clips at the right edge.
+Positioned text needs no cursor movement or scrolling. PUTAT, service 7,
+writes B characters from HL at zero-based row D and column E. It bypasses
+escape parsing and clips at the right edge.
 
-A usable video console is required before any count or position succeeds.
-Serial/BAT output and a claimed PICO console return status 2, even for zero
-characters. On an available video console, a count of 0 returns status 0 without
-reading source bytes or changing the cursor image. For a nonzero count, PUTAT
-removes the cursor image before checking the row. A row below the screen writes
-nothing and returns status 0. The next input wait can draw the cursor again.
+PUTAT first requires a usable video console. Serial/BAT and a claimed PICO
+console return status 2 even for a zero count. On an available display a zero
+count succeeds without reading text or changing the cursor image. For nonzero
+text the call removes the cursor image before testing the row. A row below the
+display writes nothing and returns status 0. A later input wait may draw the
+cursor again.
 
-PLACE writes TEC-OS at two positions. The second string has bit 7 set in each
-byte so the display driver draws the reverse images:
+PLACE demonstrates plain and reverse text. It writes TEC-OS twice with bit 7
+set in every byte of the second copy:
 
 ```asm
 ; PLACE: write a word at two screen positions with PUTAT, plain and in
@@ -833,13 +819,12 @@ CRLF:	DB	13,10,"$"
 %INCLUDE "HWLIB.ASM"
 ```
 
-PUTAT sends bytes directly to the display routine. Both the ROM PICO console and
-GLCD.SVC draw `80h–FFh` as reverse images of `00h–7Fh`. The ordinary
-video-console path drops those high bytes, as Chapter 17 explains. Serial
-output transmits all eight bits. This makes PUTAT a direct
-route to reverse characters without an escape sequence. The PICO text capture
-shows both strings alike because its decoder does not report reverse
-presentation:
+PUTAT passes each byte directly to the display routine. PICO and GLCD.SVC
+interpret `80h–FFh` as reverse images of `00h–7Fh`. Ordinary video-console
+output drops those high bytes as Chapter 17 explains. Serial transmits all
+eight bits. PUTAT can therefore select reverse characters without escapes. The
+text decoder used for this PICO capture omits attributes so both copies appear
+alike:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card hw.img --board pico --screen B: 'TAS PLACE' PLACE. The full screen, with trailing empty rows omitted. -->
 ```text
@@ -863,41 +848,40 @@ PUTAT status 00
 B:WORK>
 ```
 
-In this 40-column run the two copies went to rows 10 and 11 at column 30,
-over the ends of the earlier command lines there. The cursor did not move, so
-PLACE's status line and the next prompt appeared below them.
+At 40 columns the copies occupy rows 10 and 11 from column 30, replacing the
+ends of the earlier command lines. PUTAT leaves the cursor where it was so the
+status and next prompt appear below them.
 
-On the 8-row graphics LCD, PLACE's row 10 is below the display so it writes
-nothing and reports status 0. On serial it reports status 2. It also reports 2
-while the PICO is both claimed and the console. A claim on PICO leaves PUTAT
-available on the graphics-LCD console. Portable code checks the ABI before PUTAT
-and retains a BDOS path for status 2.
+On the 8-row GLCD, row 10 is outside the display. PLACE writes nothing and
+reports 0. It reports 2 on serial or when a claimed PICO is the console. A
+PICO claim leaves PUTAT usable on a selected GLCD console. Portable code
+checks the ABI first and retains a BDOS fallback for status 2.
 
-On the host model at 80 columns a PICO PUTAT character costs about an eighth
-of BDOS function 2: one 61-character call takes 30,907 T-states, about 507 a
-character, and function 2 takes 4,030 for one. On the graphics LCD a call of
-15 characters from row 3, column 2 takes about 35,750 T-states a character,
-against about 35,060 for function 2. Pixel drawing dominates both paths. Appendix B retains
-the per-cell figures and their conditions.
+The host model shows a different cost balance on the two displays. At 80
+columns a 61-character PICO PUTAT call takes 30,907 T-states, about 507 per
+character. Function 2 takes 4,030 for a character, roughly eight times as
+much. For 15 GLCD characters starting at row 3 column 2, PUTAT takes about
+35,750 T-states per character against function 2's 35,060. Pixel drawing
+dominates there. Appendix B gives the per-cell figures and measurement
+conditions.
 
 ## DEMO
 
-DEMO combines INFO, TONE, LCD, VIDEO, DIGIT and RTC with its own drawing code.
-It reports devices, beeps with B = 120 and DE = 400 and writes all four
-character-LCD rows. When INFO bit 1 is set, it claims the PICO and sets Graphics
-I through the ports for colour bars and a bouncing ball.
+DEMO combines the individual calls with direct drawing. It reports INFO, beeps
+through TONE with B = 120 and DE = 400 and writes four LCD rows. With INFO bit
+1 set it claims PICO and uses Graphics I through the ports for colour bars and
+a bouncing ball.
 
-Every 32nd loop reads the clock for LCD row 3. Each loop scans a hexadecimal
-counter onto the digits, scans the LED rows, moves the ball when graphics are
-active and polls for a key. On exit it sends dark digit/LED patterns and
-releases an active claim.
+Its main loop scans a hexadecimal counter onto the digits, scans the LED rows,
+moves an active graphics ball and polls input. Every 32nd pass also reads the
+clock for LCD row 3. Exit sends dark patterns to the digits and LEDs and
+releases any active claim.
 
-The source is `programs/DEMO.ASM`, and the one card, which the web page
-also runs, holds that source in place of DEMO.COM. `TAS DEMO` builds
-DEMO.COM on the card, `DEMO` then runs it and `TED DEMO.ASM` opens the source
-(`tools/media.mjs:229-232`, `tools/media.mjs:282-283`,
-`test/demo.test.mjs:1-4`, `test/starter.test.mjs:191-216`). This run builds
-and runs it on the starter card:
+The starter card, also used by the web page, contains `programs/DEMO.ASM` as
+source rather than DEMO.COM. `TAS DEMO` builds the executable on the card and
+`DEMO` runs it. `TED DEMO.ASM` opens the source (`tools/media.mjs:229-232`,
+`tools/media.mjs:282-283`, `test/demo.test.mjs:1-4`,
+`test/starter.test.mjs:191-216`). This capture builds and runs it there:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS DEMO' '@start DEMO' '@key x'. Boot rows included in this complete serial transcript. -->
 ```text
@@ -925,11 +909,10 @@ Demo stopped.
 A:SYSTEM>
 ```
 
-Here `GLCD: no` reports INFO bit 2, not the physical absence of the display. The
-startup GLCD.SVC line installed nothing because PICO was the console. The
-transcript contains the console bytes sent during the run. The PICO showed its
-initial lines before the claim. The same run's text-screen dump after release
-was:
+`GLCD: no` is INFO bit 2's result. It does not establish physical absence.
+Startup installed no GLCD service because PICO was selected. The transcript
+records console bytes, including lines printed before the claim. After release
+the same run's text-screen dump contained:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS DEMO' '@start DEMO' '@key x'. The full screen; trailing empty rows omitted. -->
 ```text
@@ -939,7 +922,6 @@ Demo stopped.
 A:SYSTEM>
 ```
 
-No hardware service scans the 8 × 8 LEDs. DEMO writes those ports itself, one
-pass over eight rows each loop. Appendix G gives their wiring. Those ports carry
-neither the serial transmit line nor console output so those writes do not
-require the shared-port state used by DIGIT or VIDEO.
+DEMO itself scans the 8 × 8 LEDs because no hardware service does so. Each
+loop writes a pass over eight rows using the wiring in Appendix G. Those
+independent ports require no shared-port state like DIGIT or VIDEO.

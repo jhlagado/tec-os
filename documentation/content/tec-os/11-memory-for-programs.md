@@ -17,14 +17,16 @@ nav_group: "Writing programs"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-Your program starts at `0100h` but its upper memory limit depends on the card
-and installed services. Code, buffers and a private stack must fit below that
-limit. The word at `0006h` supplies the boundary when the program runs.
+Before reserving a larger buffer or stack, a program needs its available
+memory limit. The program always begins at `0100h` but the upper boundary
+varies with the card and installed services. Reading the word at `0006h` gives
+the first address beyond the space available for code, data and a private
+stack.
 
 ## Program space and resident memory
 
-TEC-OS requires 64 KiB of RAM: the board's fixed 32 KiB and the 32 KiB chip in
-socket U9. Only half of U9 appears in the Z80's address space at once:
+The physical RAM totals 64 KiB: 32 KiB fixed on the board and another 32 KiB
+in U9. The Z80 sees only half of U9 at a time:
 
 | Addresses | Size | Contents |
 | --- | --- | --- |
@@ -32,54 +34,56 @@ socket U9. Only half of U9 appears in the Z80's address space at once:
 | `8000h–BFFFh` | 16 KiB | EXPAND 0 or EXPAND 1, the two halves of the RAM in socket U9 |
 | `C000h–FFFFh` | 16 KiB | the TEC-OS ROM |
 
-Bit 2 of the system latch at port `FFh` selects the half in that bank window.
-EXPAND 0 is selected when a program starts. That gives 48 KiB of addressable RAM
-below the ROM. EXPAND 1 holds the block cache. Switching it into view removes
-EXPAND 0's contents from the same addresses.
+The window at `8000h–BFFFh` selects a half through system-latch bit 2 at port
+`FFh`. Program entry selects EXPAND 0, giving 48 KiB of RAM below the ROM.
+EXPAND 1 contains the block cache. Selecting it hides EXPAND 0 at the same
+addresses.
 
-Page zero occupies `0000h–00FFh` and contains the CP/M jumps and buffers. The
-*transient program area*, or TPA, begins at `0100h`. Its upper bound is the
-address stored in the jump at `0005h`, read as a word at `0006h`. That address
-is the first byte outside the TPA. Your final usable byte is one below it.
+The program's usable region is the *transient program area*, or TPA. It begins
+at `0100h` above page zero's CP/M jumps and buffers at `0000h–00FFh`. Its
+upper boundary is the address in the jump at `0005h`, available as a word at
+`0006h`. That address is outside the TPA so the last usable byte is
+immediately below it.
 
-Above the TPA are resident services, if any, the BDOS entry stub, the drives'
-allocation vectors and TEC-OS's resident workspace. That workspace holds state
-and stacks for the BIOS, CCP and BDOS. The RAM BIOS jump table is at `BF00h`. A
-write into resident memory can corrupt file allocation or crash the machine.
+Higher RAM is reserved for installed services, the BDOS entry stub, drive
+allocation vectors and resident workspace. The workspace includes BIOS, CCP
+and BDOS state and stacks. The RAM BIOS table is at `BF00h`. Overwriting these
+regions can damage file allocation or crash the machine.
 
-The code of the CCP and BDOS is in ROM. CP/M 2.2 programs sometimes reused the
-RAM occupied by the CCP, which warm boot loaded again from disk. TEC-OS supplies
-no extra RAM that way. The whole TPA below its boundary is already available to
-your program.
+The CCP and BDOS code occupies ROM. Some CP/M 2.2 programs reclaimed the CCP's
+RAM because warm boot would reload it from disk. TEC-OS has no additional CCP
+RAM to reclaim. All available program memory is already included below the TPA
+ceiling.
 
 ## The inherited stack and a private stack
 
-The CCP starts a program with `0000h` on its stack. Balanced calls and saves
-leave that word on top for the final `RET`, as Chapter 9 explained. There are 30
-free bytes below it. That small inherited stack is in the resident workspace
-above the TPA rather than in your own program space.
+The inherited stack is a small reservation in resident workspace above the
+TPA. The CCP places `0000h` on it before program entry, leaving 30 bytes below
+that word. Balanced calls and saves preserve the final `RET` exit described in
+Chapter 9.
 
-A private stack gives you room for deeper calls and saved registers. Reserve its
-bytes within the TPA and set `SP` to the address just beyond them. The stack
-grows downwards so the first `PUSH` uses the top two reserved bytes. Code,
-buffers and the stack must have separate space below the word read from `0006h`.
+Reserve a private stack inside the TPA when you need deeper nesting. Set `SP`
+just beyond its reserved bytes. The first `PUSH` uses the top two reserved
+bytes as the stack grows downwards. Keep the reservation separate from code
+and buffers and wholly below the boundary read at `0006h`.
 
-Changing `SP` leaves the CCP's return word on the old stack. A top-level `RET`
-on the new stack will not use it. Finish with `JP 0000h` or BDOS function 0
-instead. An ordinary `RET` exit is also possible after you reinstate the
-original stack and balance all its calls and saves.
+A new `SP` no longer points to the inherited return word. A final `RET` on
+that stack would read another address. End with `JP 0000h` or BDOS function 0.
+Alternatively restore the original stack and balance its calls and saves
+before using `RET`.
 
-The distinction becomes necessary for direct BIOS calls. Unlike the BDOS, the
-BIOS uses the caller's stack. Its console calls can also enter the terminal and
-display driver on that stack. The KEY example below reserves its own stack
-before any such call.
+Direct BIOS calls also use your stack, unlike BDOS calls. Console BIOS
+routines can enter the terminal and display driver on it. KEY below reserves a
+private stack before making those calls.
 
 ## Memory readings
 
-TOP and AREA read the boundary on the host model. They are assembled on the
-PC by TAS, as Chapter 27 explains, and put on a copy of the starter card.
+TOP and AREA demonstrate the boundary without assuming an address from a
+particular card. Their retained runs use the host model. The programs are
+assembled on the PC with TAS and added to a starter-card copy as described in
+Chapter 27.
 
-TOP prints the address in the word at `0006h`:
+TOP prints the boundary word at `0006h` in hexadecimal:
 
 ```asm
 ; TOP: print the word at 0006h, the first byte above the program area.
@@ -112,13 +116,11 @@ DIGIT1: LD      E,A
 CRLF:   DB      "h",13,10,"$"
 ```
 
-`HEX` prints A's high digit through `DIGIT`, then its low digit. `DIGIT`
-converts a nibble to `0` through `F` and ends with `JP BDOS`. For the high
-digit, the BDOS returns to HEX after CALL DIGIT. The low digit is entered by
-fall-through so its BDOS return goes to HEX's caller. The complete program
-prints the high byte of the boundary before the low byte and appends `h`. These
-commands, run in the repository root, assemble it and prepare a separate copy
-of the starter card:
+TOP prints the high byte first and appends `h`. `HEX` passes each nibble to
+`DIGIT`, which converts it to `0` through `F`. `DIGIT` ends with `JP BDOS`.
+After `CALL DIGIT` that output returns to HEX for the low digit. The low-digit
+fall-through instead returns to HEX's caller. These repository-root commands
+assemble the program and prepare its separate starter-card copy:
 
 ```sh
 node --input-type=module -e '
@@ -131,7 +133,7 @@ cp dist/starter.img mem.img
 node tools/tecvol.mjs put mem.img B top.com
 ```
 
-The serial-only model capture gave:
+On the serial-only host model TOP produced:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card mem.img B:TOP. Boot rows included in this complete serial transcript. -->
 ```text
@@ -150,13 +152,12 @@ A700h
 A:SYSTEM>
 ```
 
-The startup file had installed the shell, whose fifteen pages start at `A700h`.
-On the dual-display configuration the PICO console code is in ROM and the
-startup file's `GLCD.SVC` line installs nothing. `CON UC1` then installed the
-GLCD driver below the shell and lowered the word. The first TOP output and
-the echo of `CON UC1` went to the PICO9918. The reply and second TOP output
-went to the graphics LCD. This is a host-model capture, not a browser or
-physical-board observation:
+The value `A700h` is the base of the shell's fifteen installed pages. In the
+dual-display configuration the PICO console code occupies ROM and startup's
+`GLCD.SVC` installs nothing. A later `CON UC1` loads GLCD below the shell and
+lowers the boundary. In this run the first TOP result and `CON UC1` echo went
+to PICO9918. The reply and second result went to the graphics LCD. The capture
+is from the host model, not a browser or physical board:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --card mem.img B:TOP 'CON UC1' B:TOP. Boot rows included in this complete serial transcript. -->
 ```text
@@ -180,9 +181,9 @@ A400h
 A:SYSTEM>
 ```
 
-The following table gives the starter card's address map with nothing
-installed. The boundary moves with the card and residents so these addresses
-are not constants for programs to use:
+With no services installed the starter card has the following layout. These
+addresses describe that configuration and must not be embedded as program
+limits:
 
 | Addresses | What is there |
 | --- | --- |
@@ -191,11 +192,10 @@ are not constants for programs to use:
 | `B6E9h–BFFFh` | TEC-OS's working memory |
 | `C000h–FFFFh` | The ROM, which holds TEC-OS itself |
 
-The drive and service combinations change that boundary as follows. The
-starter card without its startup file gives the first two rows, the card with
-it the next two. The four-drive card has four G8M volumes, made with
-`tecvol create`, and `TOP.COM`, `GLCD.SVC` and `SHELL.SVC` on A, with no
-startup file:
+The card and services give the boundaries below. The first two rows use the
+starter card without startup and the next two include it. The four-drive
+example has four G8M volumes created with `tecvol create`. A holds `TOP.COM`,
+`GLCD.SVC` and `SHELL.SVC` with no startup file:
 
 | Card | Services | Word at `0006h` | TPA in bytes | Largest `.COM` that loads |
 | --- | --- | --- | ---: | ---: |
@@ -206,30 +206,26 @@ startup file:
 | four G8M volumes | none | `B6E9h` | 46,569 | 46,336 |
 | four G8M volumes | `GLCD.SVC`, `SHELL.SVC` | `A400h` | 41,728 | 41,728 |
 
-A drive's allocation vector holds one bit per allocation block. A set bit marks
-allocated storage. The BDOS can locate free blocks through it without reading
-the directory. A G1M vector occupies 64 bytes and a G8M vector 256 bytes. The
-vectors lie directly below the workspace, with the stub below them. Reserving
-vectors therefore reduces program space. Chapter 18 explains how the card's
-drive count controls those reservations.
+An allocation vector reserves a bit per allocation block so the BDOS can find
+free storage without rereading the directory. A set bit marks a block already
+in use. G1M needs 64 bytes and G8M needs 256. These vectors occupy RAM below
+the workspace and above the BDOS stub. Their reservation reduces TPA space.
+Chapter 18 explains how the card's drive count sets the reservation.
 
-Services reduce the boundary in whole 256-byte pages. Each service ends below
-the page containing the preceding boundary and installs a BDOS jump at its own
-base. The jump at `0005h` then points to that lower address. On the starter
-card with nothing installed, GLCD.SVC occupies `B300h–B5FFh`. Its three pages
-use 768 bytes but also exclude the alignment gap at `B600h–B6E8h`. The total
-reduction is 1,001 bytes. A second service ends below the first and reduces the
-available TPA again. The starter card's startup file installs `SHELL.SVC`,
-which takes fifteen pages and leaves `A700h`, 42,496 bytes, or 41,728 with
-`GLCD.SVC` installed too (`docs/memory-map.md:12-21`, `docs/shell.md:22-30`,
-`docs/compatibility.md:3-16`). The card's `MON3.SVC` takes 18 pages.
-Installed alone it moves the word from `B6E9h` to `A400h`, leaving 41,728
-bytes, and installed after `GLCD.SVC` it leaves 40,960
-(`docs/mon3.md:47-52`). Installed after the shell, as on the starter card,
-it leaves `9500h`, 37,888 bytes, and `9200h`, 37,120 bytes, with `GLCD.SVC`
-too (`docs/mon3.md:45-57`, `test/shell2.test.mjs:719-741`).
+Services allocate whole 256-byte pages below the preceding boundary's page.
+Each installs a BDOS jump at its base and the jump at `0005h` points there. On
+the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
+exclude the alignment gap at `B600h–B6E8h`, reducing the TPA by 1,001 bytes.
+Later services allocate below the first. Startup's fifteen-page `SHELL.SVC`
+leaves `A700h`, or 42,496 bytes. Adding GLCD leaves 41,728
+(`docs/memory-map.md:12-21`, `docs/shell.md:22-30`,
+`docs/compatibility.md:3-16`). MON3.SVC uses 18 pages. Alone it lowers `B6E9h`
+to `A400h`, leaving 41,728 bytes, or 40,960 after GLCD (`docs/mon3.md:47-52`).
+After the shell it leaves `9500h` and 37,888 bytes. Adding GLCD lowers it to
+`9200h` with 37,120 (`docs/mon3.md:45-57`, `test/shell2.test.mjs:719-741`).
 
-AREA reads the boundary and subtracts `0100h` to obtain the size in bytes:
+AREA subtracts the program start, `0100h`, from the boundary to print the
+available byte count:
 
 ```asm
 ; AREA: print the size of the program area in bytes, in decimal.
@@ -275,10 +271,11 @@ DLOOP:	INC	A		; the next digit
 BYTES:	DB	" bytes",13,10,"$"
 ```
 
-PUTDEC prints five decimal digits. Each DIGIT call adds a negative power of ten
-to HL until the addition stops producing carry. At that point the remainder
-would be negative. The final SBC adds back the power subtracted once too often.
-HL is saved across function 2's output. The complete source keeps its tabs and comments.
+PUTDEC emits five decimal digits. DIGIT repeatedly adds a negative power of
+ten to HL until carry stops. It then uses SBC to reverse the last subtraction
+and leave the remainder. Saving HL across function 2 preserves that remainder
+for the next digit. The complete listing retains its original tabs and
+comments.
 
 ```sh
 node --input-type=module -e '
@@ -309,24 +306,22 @@ A:SYSTEM>
 
 ## Loaded file size and working space
 
-The loader reads a COM file from `0100h` in 128-byte records. Its ceiling is the
-start of the 256-byte page containing the boundary address. It probes for end of
-file using `LOADBUF` in the CCP workspace. An extra record is therefore
-not loaded across the program's ceiling. An oversized file gets the same
-name-and-question-mark failure as a missing program.
+The COM loader has a stricter limit than runtime storage. It reads from
+`0100h` in 128-byte records and stops at the start of the 256-byte page
+containing the TPA boundary. Its end-of-file probe uses the CCP's `LOADBUF`
+instead of loading another record across that ceiling. An oversized file fails
+with the same name and question mark as a missing program.
 
-On the starter card with nothing installed, the last loaded record ends at
-`B5FFh`. That allows a 46,336-byte COM file, 233 bytes less than the
-46,569-byte TPA. A
-page-aligned service boundary removes that gap. The loader limit applies to the
-file's record-rounded size. Data allocated after entry can extend to the byte
-below the word at `0006h`.
+On the bare starter card the last loaded record ends at `B5FFh`. The largest
+COM is therefore 46,336 bytes, 233 below the 46,569-byte TPA. A page-aligned
+service boundary has no such gap. This loading limit includes record padding.
+Storage allocated after entry may extend to the byte below the word at
+`0006h`.
 
 ## Page zero and the program's arguments
 
-Chapter 10 used page zero's default file control block (FCB) and command-tail
-buffer. Page zero also holds the return vectors, console selection and BIOS
-scratch:
+Page zero holds more than Chapter 10's FCB and command tail. Its fixed fields
+also provide exit jumps, console selection and BIOS scratch:
 
 | Addresses | Contents |
 | --- | --- |
@@ -343,41 +338,39 @@ scratch:
 | `006Ch–007Bh` | Second argument's name fields, overlapping the first FCB |
 | `0080h–00FFh` | Command tail, then the default DMA buffer |
 
-The CCP stores the current drive and user area at `0004h` before program entry.
-Warm boot uses that byte to restore the selection so changing that byte changes
-the selection used on exit. An unavailable drive falls back to A
-(`src/cpm/ccp.asm:306-324`, `src/cpm/ccp.asm:32-88`).
+Before launching a program the CCP writes the current drive and user area to
+`0004h`. Warm boot restores selection from that byte so a program can supply a
+different exit drive or user area there. A drive that is unavailable falls
+back to A (`src/cpm/ccp.asm:306-324`, `src/cpm/ccp.asm:32-88`).
 
-The tail's first byte is its length and the characters follow it. They are in
-capitals and include the leading space after the command's name. A read into the
-default DMA buffer replaces the tail. A program that still needs it copies it
-before file input. Chapter 10 explains the FCB fields and the overlap between the
-two parsed names.
+The command tail begins with a length byte followed by capitalised text,
+including the space after the command name. A read into the default DMA buffer
+overwrites it. Copy the text before file input if it is still needed. Chapter
+10 explains the parsed FCB names and their overlap.
 
-`0050h` is a different drive value from the current drive at `0004h`. It follows
-CP/M 3's load-drive convention. A plain command loaded from the current drive
-gives 0. A search that finds the program on A gives 1. An explicit prefix
-supplies its drive number so `B:SHOW` at `A:SYSTEM>` leaves 2 there. The current drive
-can remain A throughout that run.
+The load-drive byte at `0050h` records a different value from the current
+drive at `0004h`. It follows CP/M 3's convention: 0 for a plain command found
+on the current drive or 1 for fallback to A. An explicit drive prefix records
+that drive number. Thus `B:SHOW` from `A:SYSTEM>` writes 2 even though A
+remains current.
 
-TED reads `0050h` to prefix the commands it chains. When loaded from A with B
-current, it generates `A:TAS` and `A:TED`. The source remains on B while the
-tools run from A. Chapter 13 explains the chaining interface.
+TED uses that byte when prefixing chained tool names. Loaded from A while B is
+current, it supplies `A:TAS` and `A:TED`. The source stays on B. Chapter 13
+explains how those commands are supplied.
 
 ## SAVE as a memory snapshot
 
-`SAVE` writes bytes already in RAM rather than assembling source. It starts at
-`0100h` and writes a decimal number of 256-byte pages. `SAVE 2 TWO.COM` saves
-the 512 bytes at `0100h–02FFh`. This was CP/M 2.2's route for keeping code
-loaded and patched with a debugger. Zero pages makes an empty file.
+`SAVE` stores bytes already in RAM. It does not assemble source. Its decimal
+count is in 256-byte pages beginning at `0100h`, so `SAVE 2 TWO.COM` stores
+`0100h–02FFh`, or 512 bytes. This was CP/M 2.2's way to retain debugger-loaded
+or patched code. A zero count creates an empty file.
 
-The source bytes are whatever the last program loaded or left there. The count
-must be at most 255 and must stop before the page containing the BDOS entry
-address. Appendix J gives the complete command syntax.
+The saved bytes are whatever a preceding program loaded or left in memory. A
+valid count is at most 255 and ends before the page containing the BDOS entry.
+Appendix J gives the command syntax.
 
-This run used the starter card, whose startup file had installed the shell
-at `A700h`. Its limit is 166 pages. The request for 167 is rejected and
-166 accepted:
+With the startup shell at `A700h`, this starter-card run could save 166 pages.
+The next page would cross the limit so 167 was rejected:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 167 BIG.COM' 'SAVE 166 BIG.COM' DIR. Boot rows included in this complete serial transcript. -->
 ```text
@@ -405,57 +398,56 @@ BIG     .COM   42496
 B:WORK>
 ```
 
-A count above 255 is rejected too: `SAVE 320 X.COM` gives `320?`. SAVE erases an
-existing file of the chosen name before making the new one. A full directory
-produces `NO SPACE` before file creation. If the disk or directory fills after
-some records, SAVE closes the partial file before printing `NO SPACE`. A failed
-close that returns failure also gives `NO SPACE`. A physical disk-write
-error in the default BDOS mode can instead abort to warm boot before SAVE
-receives a result. The successfully closed file retains the records
-written.
+`SAVE 320 X.COM` also fails with `320?` because 320 exceeds 255. SAVE erases
+an existing file of the selected name before creating its replacement. A full
+directory gives `NO SPACE` before creation. If space runs out later, SAVE
+closes the partial file before reporting `NO SPACE`. A returned close failure
+gives that message too. In default BDOS error mode a physical write error can
+instead abort through warm boot. A successfully closed partial file retains
+the records written.
 
-CP/M 2.2's SAVE leaves that partial file open. Its final extent's records may
-then have no directory entry. TEC-OS's close avoids that omission when it
-succeeds. Closing file state and flushing pending card writes remain distinct
-operations, as Chapter 10 explains.
+CP/M 2.2's SAVE leaves a partial file open, which can omit its final extent's
+records from the directory. TEC-OS attempts the close to avoid that loss.
+Closing file state and flushing cached card writes remain separate operations
+as Chapter 10 explains.
 
 ## Restart vectors and interrupts
 
-A program or debugger can use the restart vectors while it runs. Warm boot
-sweeps each eight-byte vector from `0008h` through `003Fh`. It retains a `JP`
-only when its target is strictly above the word at `0006h`, into resident memory
-or ROM. The jump's three bytes remain and its other five bytes are cleared. Any
-other vector becomes seven zero bytes and a `RET`. A restart through a finished
-program's discarded vector then returns.
+Restart vectors are available to a running program or debugger. Warm boot
+sweeps the eight-byte slots at `0008h–003Fh`. It preserves a `JP` only when
+the target is strictly above the boundary word at `0006h`, in resident memory
+or ROM. The jump's three bytes stay and its remaining five are cleared. Every
+other slot receives seven zero bytes and `RET`, allowing a later restart
+through that slot to return.
 
-At `0038h`, TEC-OS installs `EI` followed by `RETI` only if no qualifying jump
-survived. Cold boot sets interrupt mode 1, in which the Z80 enters `0038h` for a
-maskable interrupt. The default handler returns rather than performing device
-work. A retained handler has its own behaviour.
+The default at `0038h` is instead `EI` followed by `RETI`. A qualifying jump
+there is preserved. Cold boot selects interrupt mode 1 so maskable interrupts
+enter at `0038h`. The default returns without device work while a retained
+handler performs its own operation.
 
-Programs start with maskable interrupts disabled by warm boot. A program can
-enable them. TEC-OS temporarily disables them for card-block I/O, serial-byte
-transfers and PICO9918 control-port byte pairs. It then restores the previous
-state. The command history is the shell's, in its own pages, and needs no
+Warm boot starts programs with maskable interrupts disabled. Programs may
+enable them. TEC-OS temporarily masks them for card-block I/O, serial-byte
+transfers and PICO9918 control-port byte pairs. It restores the entry state
+afterwards. The shell's history occupies its resident pages and requires no
 bank switch.
 
-The non-maskable interrupt (NMI) entry at `0066h` lies inside the default FCB.
-With the keypad NMI jumper fitted, a hex-keypad press can execute the FCB's
-bytes as instructions. The supported setup keeps that jumper off. Appendix G
-explains the wiring and the difference between maskable interrupts and NMI.
+The non-maskable interrupt entry, NMI at `0066h`, is inside the default FCB. A
+keypad press with the NMI jumper fitted can execute FCB bytes as instructions.
+The supported setup keeps this jumper off. Appendix G explains the wiring and
+distinguishes NMI from maskable interrupts.
 
 ## The bank window and latch copy
 
-The system latch is write-only. TEC-OS keeps its last value at `0040h`, in
-CP/M's BIOS scratch area. That fixed-RAM copy remains accessible when EXPAND 1
-hides the workspace. The cache routines read it to restore the normal bank. A program that writes port `FFh` must also write the same value to
-`0040h`. Otherwise a later TEC-OS latch write uses the old recorded bits. Leave
-both alone unless the program changes the latch. Cold boot clears page zero and
-initialises the latch copy. TEC-OS does not use `0041h–004Fh` afterwards,
-but a `MON3.SVC` session holds them while it runs and gives them back at
-`EXIT` or warm boot (`docs/memory-map.md:32-39`).
+A write-only latch needs a RAM copy for later updates. TEC-OS keeps the last
+system-latch value at `0040h` in fixed BIOS scratch RAM. Cache routines can
+read it even while EXPAND 1 hides the workspace. Any program writing port
+`FFh` must write the same value to `0040h` or later latch updates will reuse
+stale bits. Leave both untouched unless changing the latch. Cold boot clears
+page zero and initialises the copy. TEC-OS leaves `0041h–004Fh` unused
+afterwards. MON3.SVC reserves those bytes during a session and releases them
+at `EXIT` or warm boot (`docs/memory-map.md:32-39`).
 
-Cold boot clears EXPAND 1 for TEC-OS's cache. It holds
+Cold boot clears EXPAND 1 and prepares the following cache storage
 (`docs/memory-map.md:70-83`):
 
 | Addresses | Contents |
@@ -464,43 +456,40 @@ Cold boot clears EXPAND 1 for TEC-OS's cache. It holds
 | `BC00h–BC9Dh` | the cache's table: the card block each line holds and whether it has changes |
 | `BD00h–BFFFh` | free |
 
-The history of command lines is a 256-byte ring in the last page of
-`SHELL.SVC`, not in this bank.
+The 256-byte command-history ring occupies SHELL.SVC's last page rather than
+this bank.
 
-The free range means unused storage in that bank. It does not extend the TPA or
-supply a bank-allocation interface to a program.
+Unused bank storage is not additional TPA. TEC-OS supplies no program
+bank-allocation interface for the free range.
 
-Selecting EXPAND 1 hides the BDOS entry, BIOS jump table, workspace and any
-program code above `7FFFh`. It also hides the inherited stack and its return
-word. A call through `0005h` then targets cache memory instead of the BDOS.
-Stack operations can read or overwrite banked cache bytes. A write there can
-damage cached data that a later flush sends to the card. A private stack in
-fixed RAM does not make the missing BIOS or BDOS callable.
+Selecting EXPAND 1 hides the BDOS entry, BIOS table, workspace and program
+code above `7FFFh`. The inherited stack and return word disappear too. A call
+through `0005h` then jumps into cache bytes. Stack writes can corrupt data
+that a later flush sends to the card. Putting a private stack in fixed RAM
+does not restore access to the hidden BIOS or BDOS.
 
-There is a limited exit path for a program that jumps to `0000h` with EXPAND 1
-still selected. The page-zero jump targets `BF03h`. That unused part of EXPAND 1
-contains zeros unless something wrote there. Execution runs through those zeros
-into the ROM at `C000h`. The reset entry tests the high address byte at `0002h`
-to distinguish this path from a reset, then takes warm boot. Warm boot restores
-EXPAND 0 and flushes the cache. A failed flush drops failed lines and reports
-`Write lost`, as Chapter 10 explains.
+A limited recovery path exists for `JP 0000h` with EXPAND 1 selected. Its
+page-zero jump enters `BF03h` in the other bank. If untouched, those unused
+bytes are zero and execute through to ROM at `C000h`. The reset entry tests
+the high byte at `0002h` and selects warm boot instead of cold boot. Warm boot
+restores EXPAND 0 and flushes the cache. Failed lines are dropped with
+`Write lost`, as Chapter 10 describes.
 
-That path depends on the bank's bytes and the page-zero jump remaining intact.
-It does not restore cache bytes a program has overwritten. Reset and BIOS
-function 0 instead run cold boot. Reset can stop a crashed or nonterminating
-program but discards pending cached writes. A recognised reset can retain the
-selected volumes when they still match the card. Chapter 16 explains that check.
+Recovery depends on the page-zero jump and bank bytes remaining intact. It
+cannot repair overwritten cache data. Reset and BIOS function 0 take the cold
+path instead. Reset stops a crashed or looping program but discards pending
+writes. It may retain volume assignments after checking them against the card.
+Chapter 16 explains that recognition.
 
 ## The raw BIOS console interface
 
-The memory and stack rules above also apply to direct BIOS calls. The BDOS uses
-three entries of the RAM BIOS jump table for console operations. A program can
-reach them through the word at `0001h`, which points to the second entry, warm
-boot. Subtracting 3 finds the table's base. Each entry is a three-byte jump,
-with cold boot numbered 0 and warm boot numbered 1.
+Direct BIOS access requires the same memory and stack discipline. The BDOS
+console uses three entries of the RAM BIOS table. To locate the table, read
+the word at `0001h` and subtract 3. That word identifies warm boot, entry 1.
+Each table entry is a three-byte jump and cold boot is entry 0.
 
-The implementation places that table at `BF00h` but programs calculate its
-address from page zero rather than hard-coding that location:
+Although this build places the table at `BF00h`, a program derives the base
+from page zero. The console offsets identify these entries:
 
 | BIOS function | Address | Name | Effect |
 | --- | --- | --- | --- |
@@ -508,23 +497,22 @@ address from page zero rather than hard-coding that location:
 | 3 | `BF09h` | `CONIN` | waits for a key and returns it in `A`, with bit 7 clear |
 | 4 | `BF0Ch` | `CONOUT` | prints the character in `C` |
 
-CONIN returns a key without BDOS echo or line editing. Control keys such as
-`^C`, `^S` and `^P` are returned as bytes. CONOUT sends C without BDOS tab
-expansion or output-time key checks. The selected terminal still interprets its
-own control characters.
+CONIN waits and returns a key without echo or line editing. It returns control
+keys such as `^C`, `^S` and `^P` as bytes. CONOUT prints `C` without BDOS tab
+expansion or output-time checks. The terminal still processes its own
+controls.
 
-These calls preserve the interrupt state but may change registers other than
-their documented results. Their cursor, escape and video-attribute state is in
-shared workspace. An interrupt handler must not print through the console. The
-calls and display routines run on the caller's stack. A program that saves
-registers before calling them sets up a private stack rather than adding those
-saves to the small inherited stack.
+BIOS calls preserve interrupt state but may change registers beyond the
+documented results. Cursor, escape and attribute state is shared, so an
+interrupt handler must not print through the console. Console and display
+routines use the caller's stack. Set up a private stack before adding register
+saves to a direct BIOS call.
 
 ## KEY with its own stack
 
-KEY reads through CONIN and prints each key's hexadecimal code through CONOUT
-until Return. Its 64-byte reserved stack is part of the program. `SP` is set to
-STACK, just beyond those reserved bytes, before any call:
+KEY displays each CONIN byte in hexadecimal through CONOUT and stops at
+Return. It reserves a 64-byte private stack and sets `SP` to STACK, the
+address beyond it, before making any call:
 
 ```asm
 ; KEY: read keys through the BIOS and print each one's code in hex, until
@@ -573,18 +561,18 @@ DIGIT1: LD      C,A
 STACK:
 ```
 
-The address in `0001h` is table + 3. Adding 6 obtains CONIN at table + 9 and
-adding another 3 obtains CONOUT at table + `0Ch`. KEY writes those addresses
-into the operands of its own JP instructions. CALL CONIN and CALL CONOUT then
-reach the actual BIOS entries.
+KEY derives CONIN by adding 6 to the warm-boot address at `0001h`, giving
+table + 9. Another 3 gives CONOUT at table + `0Ch`. It patches its own JP
+operands with those addresses. `CALL CONIN` and `CALL CONOUT` then use the
+calculated entries.
 
-KEY saves AF across HEX and the following space output so it can compare the
-original key with Return. HEX saves A across its high-nibble output, then
-converts the low nibble. The final jump to `0000h` ends the program without
-reading a return word from its private stack.
+Saving AF across HEX and the following space preserves the key for comparison
+with Return. HEX also saves A while printing the high nibble before converting
+the low one. KEY ends with a jump to `0000h` because its private stack has no
+CCP return word.
 
-These commands assemble KEY on the PC and put it on drive B of a separate
-starter-card copy:
+These PC commands assemble KEY and put it on B in a separate starter-card
+copy:
 
 ```sh
 node --input-type=module -e '
@@ -597,7 +585,7 @@ cp dist/starter.img con.img
 node tools/tecvol.mjs put con.img B key.com
 ```
 
-This serial capture supplied `a`, `Z`, `^C`, Esc and Return:
+The serial capture supplies `a`, `Z`, `^C`, Esc and Return:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs --card con.img '@start B:KEY' $'@key aZ\x03\x1b\x0d'. Boot rows included in this complete serial transcript. -->
 ```text
@@ -616,14 +604,12 @@ A:SYSTEM>B:KEY
 A:SYSTEM>
 ```
 
-The `^C` is printed as `03` and KEY continues. BDOS function 10 instead ends a
-program when `^C` is the first key of an input line.
+CONIN returns `^C` as `03` and KEY continues. Function-10 BDOS input would
+instead end the program on that key at the start of a line.
 
 ## Input held at the BDOS level
 
-Functions 2, 9 and 11 can read a waiting key and keep it inside the BDOS for the
-next BDOS input call. BIOS CONIN cannot return that pending byte. A function-2
-output call can take a key typed during printing. A subsequent raw CONIN read
-bypasses that byte because it is already held inside the BDOS. Keeping input and
-output at the same level avoids that split. Function 6 supplies direct un-echoed
-BDOS input without a raw BIOS read.
+BDOS functions 2, 9 and 11 may retain a waiting key inside the BDOS. Raw CONIN
+cannot retrieve it. Printing through function 2 then reading through CONIN can
+therefore bypass a key already taken during output. Function 6 supplies
+un-echoed direct input while keeping both directions at the BDOS level.
