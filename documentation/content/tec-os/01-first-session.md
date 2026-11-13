@@ -7,12 +7,13 @@ nav_group: "Using the machine"
 
 # 1. First session
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -39,7 +40,7 @@ left out.
 Powering on starts TEC-OS. The screen names the system and the three assigned volumes on
 the starter card:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -73,8 +74,9 @@ so the `GLCD.SVC` line leaves it selected. You begin typing at the final
 prompt and press Return. The prompt itself is already on the screen and is
 not part of the command. In the same session the listing was:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen DIR. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
 ```text
+C: PROJECTS
 
 A>SHELL.SVC
 
@@ -94,10 +96,9 @@ BAZA    .RTL   12032
 BOUNCE  .BAS    5376
 DEMO    .ASM   15360
 MON3    .SVC    5120
-HELLO3  .BIN     256
 HELLO3  .ASM    2176
-14 files, 86272 bytes
-935936 free on A:SYSTEM
+13 files, 86016 bytes
+937984 free on A:SYSTEM
 A:SYSTEM>
 ```
 
@@ -155,8 +156,9 @@ returns to the prompt.
 A drive letter followed by a colon changes the current drive. `B:` selects
 WORK and `A:` returns to SYSTEM. The next excerpt continues after the listing:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen DIR B: A:. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
 ```text
+A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
@@ -174,10 +176,9 @@ BAZA    .RTL   12032
 BOUNCE  .BAS    5376
 DEMO    .ASM   15360
 MON3    .SVC    5120
-HELLO3  .BIN     256
 HELLO3  .ASM    2176
-14 files, 86272 bytes
-935936 free on A:SYSTEM
+13 files, 86016 bytes
+937984 free on A:SYSTEM
 A:SYSTEM>B:
 B:WORK>A:
 A:SYSTEM>
@@ -194,7 +195,7 @@ program as `SAMPLE.COM`. You type SAMPLE without `.ASM` in the build
 command because TAS supplies the file types. The assembler's completion
 message gives the output file's name:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS SAMPLE'. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TAS SAMPLE'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -219,7 +220,7 @@ or edit after the build.
 Typing `SAMPLE` now runs `SAMPLE.COM`. TEC-OS loads the program and starts it.
 The program prints its greeting and screen size then returns to the prompt:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TAS SAMPLE' SAMPLE. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TAS SAMPLE' SAMPLE. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -266,9 +267,11 @@ show the rest of a line. After `CON PICO 80` it shows every line whole, and
 [Chapter 7](07-choose-a-console.md) explains the widths.
 
 `MON3.SVC` runs programs written for MON-3, the TEC-1G's own monitor.
-Typing `MON3.SVC` installs it and gives its prompt, `MON3>`. There
-`LOAD HELLO3.BIN` loads the supplied MON-3 program and `GO` runs it. HELLO3
-writes four lines on the 20 × 4 LCD through MON-3's calls, then beeps:
+At the CP/M prompt, first type `TAS HELLO3 HELLO3.BIN` to build the
+supplied HELLO3.ASM. Then `MON3.SVC` installs the service and gives its
+prompt, `MON3>`. There `LOAD HELLO3.BIN` loads the binary you built and
+`GO` runs it. HELLO3 writes four lines on the 20 × 4 LCD through MON-3's
+calls, then beeps:
 
 <!-- TEC-OS b3134cf test/starter.test.mjs:219, the LCD rows the host-model
      test checks, trailing spaces removed. Not a separate capture. -->
@@ -283,8 +286,8 @@ It then counts on the digits. Another key beeps and shows its code on the
 right two digits. With the matrix keyboard enabled, as here, the
 service reads the matrix and not the keypad, so Esc on the matrix keyboard
 ends the program and returns to `MON3>`. With the Matrix switch off, AD on
-the keypad does the same. `EXIT` returns to `A:SYSTEM>`. `HELLO3.ASM` is the
-program's source, and `TAS HELLO3 HELLO3.BIN` builds it.
+the keypad does the same. `EXIT` returns to `A:SYSTEM>`. The starter
+supplies the assembly source; the binary is the file you built above.
 [Chapter 5](05-drives-and-user-areas.md) explains the service and what it
 keeps in memory.
 

@@ -7,12 +7,13 @@ nav_group: "Reference"
 
 # Appendix B. The ROM table and hardware services
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -76,7 +77,7 @@ FIND/LIST use carry and return a generation in A on success
 SVTAB holds one word per number. The dispatcher enters that routine with B, DE
 and HL restored and the caller's return address next on the stack. A number from
 TNCOUNT, 17, upwards returns status 1 with B, DE and HL unchanged
-(`src/services.asm:24-57`, `src/tables.asm:93-126`). The
+(`src/services.asm:24-57`, `src/tables.asm:95-128`). The
 invalid-number path takes 58 T-states and uses no stack below that return
 address.
 
@@ -109,7 +110,7 @@ The names and bounds come from `src/abi.inc:65-234`. The build's ABI check
 compares the fixed table bytes, verifies that the service entries lie in code
 and checks INFO's bits. It does not prove every routine's contract. Media
 generation publishes the include as `dist/abi.inc` (`tools/build.mjs:140-155`,
-`tools/media.mjs:285-292`).
+`tools/media.mjs:276-283`).
 
 ### Costs and depths
 
@@ -421,7 +422,7 @@ address and A = generation or carry set past the end. Stack bound: 8 bytes
 When the ROM PICO console starts at cold boot it publishes the permanent
 registry tail `PICO`, version 4, in PIBLK. UNLOAD removes resident owners rather
 than that tail (`src/pico.asm:19-68`, `src/loader.asm:79-126`). On the starter card's layout in
-Appendix C the table is at `BBE8h`, where Chapter 14's RECS run finds it. That is a layout
+Appendix C the table is at `BBC4h`, where Chapter 14's RECS run finds it. That is a layout
 coordinate, not a fixed ABI address. Programs obtain the table through FIND. Its
 first eight words are the display table described under DRVR, followed by five
 entry words:
@@ -532,7 +533,7 @@ This host-model VRAM round trip, not a physical-board result, obtains the
 PICO record from the ROM console. The recipe assumes Chapter 14's `svc.img`,
 ABI.INC and HWLIB.ASM preparation:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card svc.img --board pico B: 'TAS VTEST' VTEST. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card svc.img --board pico B: 'TAS VTEST' VTEST. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -594,6 +595,6 @@ at most `F8h`. Any other nonzero HL returns `TNEBAD`, status 1, with carry and
 the hook unchanged. Otherwise it returns HL = the table it replaced, 0 for
 none, with A = 0 and carry clear. BC, IX and IY are kept and DE changes. It
 makes no BDOS call (`src/services.asm:566-601`, `src/abi.inc:226`,
-`docs/shell.md:273-285`). Numbers from `TNCOUNT`, 17, upwards return status 1
+`docs/shell.md:280-292`). Numbers from `TNCOUNT`, 17, upwards return status 1
 (`src/abi.inc:228-236`). Chapter 21 describes the hook's use, and
 `SHELL.SVC` is its one caller on the starter card.

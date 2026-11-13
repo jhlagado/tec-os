@@ -7,12 +7,13 @@ nav_group: "Writing programs"
 
 # 11. Memory for programs
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -133,7 +134,7 @@ node tools/tecvol.mjs put mem.img B top.com
 
 The serial-only model capture gave:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card mem.img B:TOP. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card mem.img B:TOP. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -158,7 +159,7 @@ the echo of `CON UC1` went to the PICO9918. The reply and second TOP output
 went to the graphics LCD. This is a host-model capture, not a browser or
 physical-board observation:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --card mem.img B:TOP 'CON UC1' B:TOP. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --card mem.img B:TOP 'CON UC1' B:TOP. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -187,8 +188,8 @@ are not constants for programs to use:
 | Addresses | What is there |
 | --- | --- |
 | `0000h–00FFh` | Page zero, with the CP/M jumps and buffers |
-| `0100h–B6E8h` | Your program, up to 46,569 bytes on the starter card |
-| `B6E9h–BFFFh` | TEC-OS's working memory |
+| `0100h–B6C4h` | Your program, up to 46,533 bytes on the starter card |
+| `B6C5h–BFFFh` | TEC-OS's working memory |
 | `C000h–FFFFh` | The ROM, which holds TEC-OS itself |
 
 The drive and service combinations change that boundary as follows. The
@@ -199,11 +200,11 @@ startup file:
 
 | Card | Services | Word at `0006h` | TPA in bytes | Largest `.COM` that loads |
 | --- | --- | --- | ---: | ---: |
-| starter card | none | `B6E9h` | 46,569 | 46,336 |
+| starter card | none | `B6C5h` | 46,533 | 46,336 |
 | starter card | `GLCD.SVC` | `B300h` | 45,568 | 45,568 |
 | starter card | `SHELL.SVC` | `A700h` | 42,496 | 42,496 |
 | starter card | `SHELL.SVC`, `GLCD.SVC` | `A400h` | 41,728 | 41,728 |
-| four G8M volumes | none | `B6E9h` | 46,569 | 46,336 |
+| four G8M volumes | none | `B6C5h` | 46,533 | 46,336 |
 | four G8M volumes | `GLCD.SVC`, `SHELL.SVC` | `A400h` | 41,728 | 41,728 |
 
 A drive's allocation vector holds one bit per allocation block. A set bit marks
@@ -217,17 +218,17 @@ Services reduce the boundary in whole 256-byte pages. Each service ends below
 the page containing the preceding boundary and installs a BDOS jump at its own
 base. The jump at `0005h` then points to that lower address. On the starter
 card with nothing installed, GLCD.SVC occupies `B300h–B5FFh`. Its three pages
-use 768 bytes but also exclude the alignment gap at `B600h–B6E8h`. The total
-reduction is 1,001 bytes. A second service ends below the first and reduces the
+use 768 bytes but also exclude the alignment gap at `B600h–B6C4h`. The total
+reduction is 965 bytes. A second service ends below the first and reduces the
 available TPA again. The starter card's startup file installs `SHELL.SVC`,
 which takes fifteen pages and leaves `A700h`, 42,496 bytes, or 41,728 with
-`GLCD.SVC` installed too (`docs/memory-map.md:12-21`, `docs/shell.md:22-30`,
+`GLCD.SVC` installed too (`docs/memory-map.md:12-22`, `docs/shell.md:23-31`,
 `docs/compatibility.md:3-16`). The card's `MON3.SVC` takes 18 pages.
-Installed alone it moves the word from `B6E9h` to `A400h`, leaving 41,728
+Installed alone it moves the word from `B6C5h` to `A400h`, leaving 41,728
 bytes, and installed after `GLCD.SVC` it leaves 40,960
-(`docs/mon3.md:47-52`). Installed after the shell, as on the starter card,
+(`docs/mon3.md:49-54`). Installed after the shell, as on the starter card,
 it leaves `9500h`, 37,888 bytes, and `9200h`, 37,120 bytes, with `GLCD.SVC`
-too (`docs/mon3.md:45-57`, `test/shell2.test.mjs:719-741`).
+too (`docs/mon3.md:47-59`, `test/shell2.test.mjs:719-741`).
 
 AREA reads the boundary and subtracts `0100h` to obtain the size in bytes:
 
@@ -290,7 +291,7 @@ writeFileSync(out, (await assembleProgram(src)).bytes);
 node tools/tecvol.mjs put mem.img B area.com
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card mem.img B:AREA. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card mem.img B:AREA. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -316,8 +317,8 @@ not loaded across the program's ceiling. An oversized file gets the same
 name-and-question-mark failure as a missing program.
 
 On the starter card with nothing installed, the last loaded record ends at
-`B5FFh`. That allows a 46,336-byte COM file, 233 bytes less than the
-46,569-byte TPA. A
+`B5FFh`. That allows a 46,336-byte COM file, 197 bytes less than the
+46,533-byte TPA. A
 page-aligned service boundary removes that gap. The loader limit applies to the
 file's record-rounded size. Data allocated after entry can extend to the byte
 below the word at `0006h`.
@@ -379,7 +380,7 @@ This run used the starter card, whose startup file had installed the shell
 at `A700h`. Its limit is 166 pages. The request for 167 is rejected and
 166 accepted:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 167 BIG.COM' 'SAVE 166 BIG.COM' DIR. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 167 BIG.COM' 'SAVE 166 BIG.COM' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -453,7 +454,7 @@ hides the workspace. The cache routines read it to restore the normal bank. A pr
 both alone unless the program changes the latch. Cold boot clears page zero and
 initialises the latch copy. TEC-OS does not use `0041h–004Fh` afterwards,
 but a `MON3.SVC` session holds them while it runs and gives them back at
-`EXIT` or warm boot (`docs/memory-map.md:32-39`).
+`EXIT` or warm boot (`docs/memory-map.md:34-41`).
 
 Cold boot clears EXPAND 1 for TEC-OS's cache. It holds
 (`docs/memory-map.md:70-83`):
@@ -599,7 +600,7 @@ node tools/tecvol.mjs put con.img B key.com
 
 This serial capture supplied `a`, `Z`, `^C`, Esc and Return:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card con.img '@start B:KEY' $'@key aZ\x03\x1b\x0d'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card con.img '@start B:KEY' $'@key aZ\x03\x1b\x0d'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

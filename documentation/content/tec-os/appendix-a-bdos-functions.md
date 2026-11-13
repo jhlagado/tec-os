@@ -7,12 +7,13 @@ nav_group: "Reference"
 
 # Appendix A. BDOS functions
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -88,13 +89,13 @@ other register or result flag is promised. Test the returned value rather
 than treating carry as a success flag. The call places a two-byte return
 address on the program's stack, then the BDOS switches to its own stack.
 That stack's declared allocation is 54 bytes
-(`src/cpm/bdos.asm:124-129`, `src/layout.asm:113`).
+(`src/cpm/bdos.asm:124-129`, `src/layout.asm:110`).
 
 A function that takes an FCB uses its first byte to select a drive: 0 for
 the default drive, 1 to 16 for A to P. The FCB is a 36-byte file control
 block, laid out in [Chapter 20](20-a-file-through-the-bdos.md). Selection
 precedes functions 15, 16, 17, 19 to 23, 30, 33 to 35 and 40
-(`src/tables.asm:83-91`, `src/cpm/bdos.asm:156-181`). A `?` in the drive byte
+(`src/tables.asm:85-93`, `src/cpm/bdos.asm:156-181`). A `?` in the drive byte
 is allowed only for function 17. An explicit FCB drive changes the selected
 drive for that operation without changing the logical default. The caller's
 drive byte is left intact (`src/cpm/bdosfile.asm:128-195`).
@@ -189,7 +190,7 @@ clearing all characters restores that abort condition
 (`src/cpm/bdos.asm:499-540`, `553-622`).
 [Chapter 23](23-the-history-ring.md) explains the history storage. The recall works only for the first function 10 after the shell's
 `LINE` call, and the history is the shell's (`src/cpm/bdos.asm:473-490`,
-`docs/shell.md:301-315`). With no shell installed `^W` and `^N` are
+`docs/shell.md:308-322`). With no shell installed `^W` and `^N` are
 characters at the prompt too.
 
 **11 Get console status.** Tests for a waiting character. A character the BIOS
@@ -271,7 +272,7 @@ volume on a drive other than the logged drive, success means the record is in th
 cache's copy of its block. That pending block reaches the card at the next
 close, directory request, write to another block, console read, function 48,
 `MOUNT` or warm boot, and the same holds for functions 34 and 40
-(`docs/recovery.md:98-138`). [Chapter 19](19-cache-and-persistence.md)
+(`docs/recovery.md:120-160`). [Chapter 19](19-cache-and-persistence.md)
 explains the pending block.
 
 **22 Make file.** Creates an empty entry for the FCB's name in the current
@@ -369,7 +370,7 @@ drive's next selection logs it in again with a full directory scan.
 Returns 0.
 
 **38 Access drive** and **39 Free drive.** MP/M's functions, which CP/M 2.2
-does not define. Both do nothing and return 0 (`src/tables.asm:90`).
+does not define. Both do nothing and return 0 (`src/tables.asm:92`).
 
 **40 Write random with zero fill.** Function 34, with each allocation block the
 write newly allocates filled with zeros before the record is written
@@ -389,7 +390,7 @@ error's code in `H`, prints nothing and keeps the rest of a chained line. With
 `E` = `FEh` it prints the message first and then returns in the same way. Any
 other `E` is the default: the message, a key and the end of the program, with
 the rest of a chained line dropped (`src/cpm/bdoscon.asm:47-64`). A warm boot
-puts the default back (`src/boot.asm:398-405`, `src/ram.asm:216-217`). Returns 0.
+puts the default back (`src/boot.asm:398-405`, `src/ram.asm:222-223`). Returns 0.
 A sequential read or write that returns a transfer error leaves
 the FCB on the record it didn't read or write, as in CP/M 3
 (`src/cpm/bdosrec.asm:69-82`, `src/cpm/bdosrec.asm:220-224`).
@@ -430,7 +431,7 @@ through its return value, not the warm-boot `Write lost` path
 **108 Get or set program return code.** With `DE` = `FFFFh`, reads the code.
 With any other `DE`, sets the code to `DE` (`src/cpm/bdos.asm:257-272`). All
 programs share one code. A cold reset clears it to 0 and warm boot keeps it
-(`src/boot.asm:61-65`, `388-407`, `src/ram.asm:366-367`). The
+(`src/boot.asm:61-65`, `388-407`, `src/ram.asm:372-373`). The
 CCP sets the code to 0 as it takes each command and to `FF00h` when a command
 fails. Under the shell a piece after ` &` runs only when the code is outside
 `FF00h` to `FFFEh` (`src/cpm/ccp.asm:220-223`, `563-568`,
@@ -453,7 +454,7 @@ for Digital Research's BDOS encounters these differences:
 
 - The BDOS code is in ROM. Writing to it cannot install a hook. The BDOS
   calls the RAM BIOS jump table, where a program can replace an entry
-  (`src/rom.asm:35-40`, `src/cpm/bdos.asm:12-33`).
+  (`src/rom.asm:36-41`, `src/cpm/bdos.asm:12-33`).
 - Functions 44 to 48, 99 and 108 occupy selected CP/M 3 numbers with the
   limited meanings above. Function 99 returns `FFh` without truncating.
   Every other number above 40 returns 0 without doing anything

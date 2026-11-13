@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 22. Chains across a warm boot
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -28,7 +29,7 @@ runs one command per line and this chapter's mechanism is absent.
 
 Warm boot calls `CPMINIT` to clear the CCP's scratch space and the BDOS's
 state. The clear begins at `CCPCLR` and stops before `BDOSRME`
-(`src/boot.asm:141-152`, `src/boot.asm:398-407`, `src/ram.asm:141-158`).
+(`src/boot.asm:141-152`, `src/boot.asm:398-407`, `src/ram.asm:141-164`).
 Everything a line needs to survive a program's exit is outside that span.
 
 The shell holds the line it is working through. `LTXT` is its text, up to
@@ -50,14 +51,14 @@ program's warm boot there until the next prompt.
 `CHPOS` is above the RAM BIOS table, outside the clear. It holds
 two flags: bit 0 when a function 47 line waits in `CMDTXT`, and bit 1 when
 the rest of the line has been dropped. The 16-bit return code `PRGCODE` is
-in that upper block too (`src/ram.asm:399-404`, `src/ram.asm:366-367`). The
+in that upper block too (`src/ram.asm:405-410`, `src/ram.asm:372-373`). The
 address of the shell's table, `SHOWN`, which tells the ROM a shell holds
-the prompt, is beside them (`src/ram.asm:382`).
+the prompt, is beside them (`src/ram.asm:388`).
 
 Cold boot clears the entire resident workspace from `WSBASE` through the span
 ending at `WSEND`. That includes `CMDTXT`, `CHPOS`, `PRGCODE` and `SHOWN`, and
 cold boot forgets every service, so a reset starts with no shell, no line in
-hand and a zero result (`src/boot.asm:61-65`, `docs/shell.md:269-271`). The
+hand and a zero result (`src/boot.asm:61-65`, `docs/shell.md:276-278`). The
 startup file then installs the shell again.
 
 ## The line and tail limits
@@ -110,7 +111,7 @@ cp dist/starter.img start.img
 node tools/tecvol.mjs put start.img A startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card start.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card start.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -123,7 +124,7 @@ A:SYSTEM>DIR *.CMD &TYPE STARTUP.CMD
 
 STARTUP .CMD     128
 1 file, 128 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>TYPE STARTUP.CMD
 SHELL.SVC
 DIR *.CMD &TYPE STARTUP.CMD
@@ -310,7 +311,7 @@ card-write consequences.
 A drop ends only the current line. A script, or the rest of `STARTUP.CMD`,
 goes on with its next line, since `LINE` falls through to `NEXT` with
 `LPOS` at 0 (`drivers/shell.asm:170-174`, `drivers/shell.asm:243-266`,
-`docs/shell.md:85-88`). A reset instead removes the shell with every other
+`docs/shell.md:86-89`). A reset instead removes the shell with every other
 service and clears the workspace, so cold boot starts with no line.
 
 ## A replacement line from function 47
@@ -333,7 +334,7 @@ next program can overwrite the caller's memory. The line can therefore
 occupy caller memory that the next load will replace. `FNCHAIN` then jumps
 through `BIOWBT`, the RAM BIOS warm-boot entry at `BF03h`. A program that
 replaced that entry receives the call just as for other BDOS warm boots
-(`src/cpm/bdos.asm:94-95`, `src/layout.asm:98-99`).
+(`src/cpm/bdos.asm:94-95`, `src/layout.asm:99-100`).
 
 The normal warm-boot path flushes pending writes before the next prompt.
 Only a successful flush guarantees that those writes reached the card. A
@@ -360,4 +361,4 @@ With no shell, the ROM's prompt takes the function 47 line itself.
 `MLDRV` reads and clears `CHPOS`, and with bit 0 set `MLCHN` echoes
 `CMDTXT` to its zero and runs it whole as one command, so `TYPE X!TYPE Y` is
 `TYPE` with the tail `X!TYPE Y` (`src/cpm/ccp.asm:138-182`,
-`docs/shell.md:41-42`).
+`docs/shell.md:42-43`).

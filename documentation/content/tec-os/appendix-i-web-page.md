@@ -7,12 +7,13 @@ nav_group: "Reference"
 
 # Appendix I. The web page
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -74,7 +75,7 @@ Reset and power-on have different memory effects (`host/machine.mjs:612-621`,
 before restarting. The safe-copy procedure below applies before either one.
 
 The page's card is the starter card, built from the same recipe, with
-fourteen files at recipe revision 13. Among them are the shell, SHELL.SVC,
+thirteen files at recipe revision 14. Among them are the shell, SHELL.SVC,
 which its STARTUP.CMD loads, TIMES.BAS, BAZA.COM and BAZA.RTL for
 [Chapter 3](03-build-a-basic-program.md) and these demonstrations:
 
@@ -83,15 +84,14 @@ which its STARTUP.CMD loads, TIMES.BAS, BAZA.COM and BAZA.RTL for
 | `DEMO.ASM` | The source of DEMO, with no include file. `TAS DEMO` builds DEMO.COM and `DEMO` then runs it, showing the LCD, the digits, the 8 × 8 LEDs and the PICO9918, as [Chapter 12](12-use-the-boards-devices.md) describes. `TED DEMO.ASM` opens the source |
 | `BOUNCE.BAS` | A BASIC sprite game for the PICO9918. `BAZA BOUNCE` compiles it and `BOUNCE` runs it. Tap W, A, S and D, or the arrow keys, to steer and Q to quit |
 | `MON3.SVC` | Runs MON-3 programs. `MON3.SVC` gives `MON3>`, as [Chapter 5](05-drives-and-user-areas.md#a-mon-3-session) describes |
-| `HELLO3.BIN` | A MON-3 program. At `MON3>`, `LOAD HELLO3.BIN` and `GO` write four lines on the LCD and count on the digits. With the matrix keyboard enabled, as on this page, Esc returns to `MON3>`. With the Matrix switch off, AD on the keypad does. `EXIT` returns to `A:SYSTEM>` |
-| `HELLO3.ASM` | HELLO3's source. `TAS HELLO3 HELLO3.BIN` builds it |
+| `HELLO3.ASM` | A MON-3 program's source. At the CP/M prompt, `TAS HELLO3 HELLO3.BIN` builds its binary; then enter `MON3.SVC`. At `MON3>`, `LOAD HELLO3.BIN` and `GO` write four lines on the LCD and count on the digits. With the matrix keyboard enabled, as on this page, Esc returns to `MON3>`. With the Matrix switch off, AD on the keypad does. `EXIT` returns to `A:SYSTEM>` |
 
 The card does not hold DEMO.COM until you build it. BOUNCE needs the
 PICO9918 and draws through `CALL`, as Chapter 3 explains
-(`tools/media.mjs:209-266`, `test/starter.test.mjs:48-393`,
-`test/demo.test.mjs:1-4`, `README.md:165-202`). Building a starter fetches
+(`tools/media.mjs:203-257`, `test/starter.test.mjs:44-391`,
+`test/demo.test.mjs:1-4`, `README.md:165-211`). Building a starter fetches
 each recipe file and checks its byte count and SHA-256 before returning the
-image (`tools/media.mjs:209-268`, `tools/lib/recipe.mjs:14-44`,
+image (`tools/media.mjs:203-259`, `tools/lib/recipe.mjs:14-44`,
 `web/src/main.mjs:60-63`). The file list shows user area, name and size.
 It refreshes every five seconds and after the reset and power-cycle buttons
 (`web/src/main.mjs:580-593`, `web/src/main.mjs:682-695`).

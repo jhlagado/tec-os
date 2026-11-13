@@ -7,12 +7,13 @@ nav_group: "Using the machine"
 
 # 7. Choose a console
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -82,7 +83,7 @@ the console as it was.
 The transcripts in this chapter are host-model captures, not observations of
 a physical board.
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CON XYZ'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'CON XYZ'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -104,7 +105,7 @@ to the serial terminal. You type on the matrix keyboard and see the command
 there. The reply and next prompt appear on the serial terminal. This capture
 shows only the serial output:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --serial 'CON TTY'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --serial 'CON TTY'. Complete serial transcript. -->
 ```text
 CON: TTY:
 A:SYSTEM>
@@ -121,7 +122,7 @@ Chapter 12 explains. Bare `CON CRT` and `CON PICO` retain the selected width
 and any active claim. After the move back the PICO9918 capture shows only the
 reply and prompt:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'CON TTY' 'CON CRT'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'CON TTY' 'CON CRT'. Full screen; trailing empty rows omitted. -->
 ```text
 CON: CRT:
 A:SYSTEM>
@@ -144,7 +145,7 @@ programs. Chapter
 leaves the console where it was and shows `GLCD?` on the 20 × 4 LCD. Here both
 display selections leave a serial-only board on the terminal:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs CON 'CON CRT' 'CON UC1' CON. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs CON 'CON CRT' 'CON UC1' CON. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -172,7 +173,7 @@ and selects the graphics LCD. This host-model capture used both
 displays and the matrix keyboard. Its graphics-LCD text capture showed this
 after the command:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'CON UC1' CON. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'CON UC1' CON. Full screen; trailing empty rows omitted. -->
 ```text
 CON: UC1:
 A:SYSTEM>CON
@@ -185,7 +186,7 @@ PICO9918 if its ROM console started. Otherwise output returns to serial.
 This separate run on a board with both displays selected UC1, listed the
 driver and the shell, removed the driver and reported the resulting console:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico 'CON UC1' SERVICES UNLOAD CON. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico 'CON UC1' SERVICES UNLOAD CON. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -227,7 +228,7 @@ still run when you type them on the serial terminal.
 matrix keyboard is not the input device in `BAT:`. In this run `DIR`
 ran between the two `CON` commands but printed nothing on the terminal:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --serial '@start CON BAT' '@start DIR' 'CON TTY'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --serial '@start CON BAT' '@start DIR' 'CON TTY'. Complete serial transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -262,7 +263,7 @@ and the Matrix switch is enabled. A warm boot keeps the selected width. Reset
 restores 40 before any startup width command runs. This capture selects 32
 columns, runs `TAS` with no name and then lists files across the row:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'CON PICO 32' TAS 'DIR /W'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'CON PICO 32' TAS 'DIR /W'. Full screen; trailing empty rows omitted. -->
 ```text
 CON: CRT:
 A:SYSTEM>TAS
@@ -275,19 +276,19 @@ SAMPLE.ASM   TIMES.BAS
 TAS.COM      BAZA.COM
 BAZA.RTL     BOUNCE.BAS
 DEMO.ASM     MON3.SVC
-HELLO3.BIN   HELLO3.ASM
-14 files, 914K free
+HELLO3.ASM
+13 files, 916K free
 A:SYSTEM>
 ```
 
 `TAS` ended in a warm boot, which kept 32 columns. `DIR /W` fits two names on
 each row here instead of the six in an 80-column listing, so the starter
-card's fourteen files take seven rows.
+card's thirteen files take seven rows.
 
 An unsupported width, a width after another device name or a number joined to
 `CRT` without a space produces a question mark. The console remains as it was:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico 'CON CRT80' 'CON TTY 40' 'CON PICO 50'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico 'CON CRT80' 'CON TTY 40' 'CON PICO 50'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 19. Cache and persistence
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/. READ/SAVE/DIR timings use the measurements retained there.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/. READ/SAVE/DIR timings use the measurements retained there.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -59,7 +60,7 @@ prevents two lines from holding separate copies of the same block
 (`src/cache.asm:49-91`).
 
 The cache's lines and table are in EXPAND 1. Its five bytes of control state are
-in the resident workspace above the RAM BIOS table (`src/ram.asm:304-319`):
+in the resident workspace above the RAM BIOS table (`src/ram.asm:310-325`):
 
 - `CNEXT`, the next line to give out
 - `CWTYPE`, the write type of the current BIOS `WRITE` in its low bits,
@@ -171,13 +172,15 @@ so no shell. The script reads the model's count, `cycles`
 (`host/machine.mjs:284`), twice. The first reading is after `READ
 DATA.BIN` has been typed and echoed, before the Return that ends it. The second
 is at the next prompt. After a cold boot, the command's first run took
-6,617,191 T-states, 1.65 seconds. The next run took 1,317,279, 0.33 seconds,
+6,617,943 T-states, 1.65 seconds. The next run took 1,318,031, 0.33 seconds,
 a fifth of the first. Both figures include loading the program from
-drive A.
+drive A. The trace counts the loader separately: it reads READ.COM's
+one record and its EOF. The program's data loop makes one function-20 call
+per data record, followed by its own EOF call.
 
 The gain depends on which blocks remain in the cache. A 15,360-byte file,
 `BIG.BIN` on a copy of `time.img`, took 2.04 seconds and then 2.10. The
-counts were 8,164,976 and 8,387,689 T-states. `CTAKE`
+counts were 8,165,728 and 8,388,441 T-states. `CTAKE`
 had given up each line before the next read reached it. The file data alone
 occupied all 30 lines, leaving no room for the directory and program blocks
 read along the way.
@@ -191,7 +194,7 @@ at 0004h. A program's function 14 does not move it. Its volume is *written
 behind*: a data write there stays in the cache. A data write on any other
 drive is *coalesced*: the run of records written into one card block is
 written once. A read-only volume takes no write at all
-(`src/bios.asm:329-358`, `src/cpm/ccp.asm:233-245`, `docs/recovery.md:1-17`).
+(`src/bios.asm:329-358`, `src/cpm/ccp.asm:233-245`, `docs/recovery.md:1-39`).
 
 Two rules hold for both kinds:
 
@@ -202,10 +205,10 @@ Two rules hold for both kinds:
 2. **Every console read writes every changed line.** Functions 1, 6 with
    `E = FFh`, 10 and 11 and the BIOS's `CONIN` write every changed line, on
    every drive, before they read. Whenever TEC-OS waits for a key,
-   everything is on the card (`docs/recovery.md:19-31`).
+   everything is on the card (`docs/recovery.md:41-53`).
 
 What a reset or power loss leaves depends on the write
-(`docs/recovery.md:33-40`):
+(`docs/recovery.md:55-62`):
 
 | Write | Reaches the card | A reset before then loses |
 | --- | --- | --- |
@@ -233,9 +236,9 @@ path of every write (`src/bios.asm:329-358`).
 describes, and marks the line dirty. For bit 5, `CWCO` records the line in
 `CPEND`, the line's number plus one, or 0 when no block is pending, and the
 write returns once the record is in the line (`src/cache.asm:497-527`,
-`src/ram.asm:304-319`). This is the *pending block*. At most one block is
+`src/ram.asm:310-325`). This is the *pending block*. At most one block is
 pending, and it reaches the card at the first flush point
-(`docs/recovery.md:98-133`):
+(`docs/recovery.md:120-155`):
 
 - the file's close and any other directory request: an open, make, search,
   delete, rename, attribute change, size, login or the extent change inside
@@ -265,7 +268,7 @@ stays pending. A close or another directory request then returns the error,
 `Bad Sector` or function 45's returned error. A console read does not report
 the failure: the program gets its key and the next flush point that is not a
 console read reports it. Warm boot writes the block once more and drops it
-with `Write lost` (`docs/recovery.md:142-152`).
+with `Write lost` (`docs/recovery.md:164-174`).
 
 The SAVE comparison uses a fresh `time.img` for each run, with the same
 READ and DATA files still on A. SAVE counts 256-byte pages, so 8, 16 and
@@ -334,7 +337,7 @@ pending block can be changed, and `CKEY` goes to `CPOUT`, the cheaper test
 that writes that one block. A program can combine rewrites of a cached block into one card write
 while no flush or eviction intervenes. A directory write or an eviction
 can end that interval before the next key wait
-(`src/cache.asm:581-622`, `src/ram.asm:315-319`).
+(`src/cache.asm:581-622`, `src/ram.asm:321-325`).
 
 Selecting `B:` before the measured command makes the same destination
 the logged drive. On fresh two-volume cards, the results were:
@@ -378,7 +381,7 @@ after it. [Chapter 6](06-cards-on-the-pc.md#recovery-after-a-power-cut)
 describes recovery after that. A cut during the directory block's own write
 can damage any of its 16 entries. Card-reported completion is also not a
 verification of the card's physical power-loss durability
-(`docs/recovery.md:166-167`, `docs/recovery.md:195-197`).
+(`docs/recovery.md:188-189`, `docs/recovery.md:217-219`).
 
 `CWRITE` writes a single line to the card (`src/cache.asm:213-251`). It takes
 the block number from the table and sets `SDXB` so that `SDWRITE` reads its 512
@@ -416,7 +419,7 @@ So `MOUNT`, unmount and function 48 keep a line whose write fails for the next
 flush. Only warm boot's `CFLALL` drops a flushed line that still fails, and a
 directory write on any volume whose flush fails drops its own
 directory line, unwritten, so the card's directory is read again
-(`src/cache.asm:256-301`, `src/cache.asm:538-547`, `docs/recovery.md:75-96`).
+(`src/cache.asm:256-301`, `src/cache.asm:538-547`, `docs/recovery.md:97-118`).
 
 At the prompt every change has already reached the card, since the prompt's
 own console read writes every line. A `^C` there causes a warm boot, whose
@@ -460,7 +463,7 @@ While the card answers but refuses, each console read, polls among them
 line at 4 MHz. With all 30 lines kept a poll takes about 1.6 seconds. A
 program that polls the console while the card refuses runs that slowly until
 the card takes the lines or a warm boot drops them with `Write lost`
-(`docs/recovery.md:92-96`). A reset
+(`docs/recovery.md:114-118`). A reset
 discards the change, still unwritten. While dirty lines stay dirty, fewer
 lines are free for reads. Every `CTAKE` starts with a write once all 30 are
 dirty.
@@ -481,7 +484,7 @@ cp dist/starter.img nodata.img
 truncate -s 2113536 nodata.img
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card nodata.img '@start SAVE 1 B:X.COM' '@key x' 'DIR B:'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card nodata.img '@start SAVE 1 B:X.COM' '@key x' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

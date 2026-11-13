@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 24. Numbered-service dispatch
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -43,7 +44,7 @@ and zero clear (`src/services.asm:63-66`).
 For a valid number, the dispatcher pushes `HL` and `DE`. It doubles the
 number into `DE` and adds that offset to `SVTAB`. Each entry is a routine
 address so the 16 words occupy 32 bytes in the ROM's data block
-(`src/services.asm:39-46`, `src/tables.asm:98-126`). This table is separate
+(`src/services.asm:39-46`, `src/tables.asm:100-128`). This table is separate
 from the eight-byte signature/version/jump table at `C003h`.
 
 The selected address is loaded into `HL` and the saved `DE` is popped.
@@ -76,7 +77,7 @@ table. [Chapter 17](17-console-paths.md) explains that table and its
 validation. `FIND` and `LIST`, 13 and 14, enter the registry routines in
 `src/loader.asm`, explained in
 [Chapter 25](25-loading-and-removing-services.md)
-(`src/tables.asm:98-126`, `src/services.asm:532-564`).
+(`src/tables.asm:100-128`, `src/services.asm:532-564`).
 
 The code account below totals 442 bytes for the dispatcher, its exits,
 the nine hardware services and the font's access routine. It excludes the
@@ -102,14 +103,14 @@ and change with the source.
 `INFO` returns stored state without reading a device. It ORs `CONDEV` with
 `VCLAIM` for the result in `B`, loads `ROMVER` into `DE` and reads the adjacent
 `VWID` and `VHGT` bytes into `L` and `H` (`src/services.asm:74-80`,
-`src/ram.asm:421-422`). In the resident workspace those
+`src/ram.asm:427-428`). In the resident workspace those
 dimensions are at `BFEAh` and `BFEBh`, near its upper end.
 
 The device bits and claim bit have different lifetimes. Cold boot calls
 `RTCHAS` once and sets `CDRTC`, bit 3 of `CONDEV`, if the clock answers
-(`src/boot.asm:68-72`, `src/layout.asm:73`). `VCLAIM` holds `CDCLM`,
+(`src/boot.asm:68-72`, `src/layout.asm:74`). `VCLAIM` holds `CDCLM`,
 bit 4 in the `INFO` result, while a program has claimed the PICO9918
-(`src/ram.asm:128`, `src/layout.asm:74`). Reading `INFO` does not
+(`src/ram.asm:128`, `src/layout.asm:75`). Reading `INFO` does not
 repeat the clock probe or change the claim.
 
 Writing the status LCD changes another bit in `CONDEV`. `HWSLCD` first
@@ -235,7 +236,7 @@ that the program set through `PICOREG` (`src/boot.asm:131-141`,
 cursor position unchanged. Its first test is `VTOWN`, followed by the low
 bit of `CONMOD`. A claimed PICO9918 console or a non-video mode returns
 status 2. The low bit is set for `CMCRT` and `CMUC1`, clear for serial
-and batch (`src/services.asm:299-323`, `src/layout.asm:77-86`). These
+and batch (`src/services.asm:299-323`, `src/layout.asm:78-87`). These
 tests precede the zero-count return. On an available video console a
 count of zero reads no source and changes no cursor state
 (`src/services.asm:324-325`).
