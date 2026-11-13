@@ -26,22 +26,31 @@ nav_exclude: true
      passage that cites an earlier revision names it. Earlier revisions of
      these notes are in the book's history. -->
 
-TEC-OS lets you keep programs and their source as named files on an SD card.
-After power-on the TEC-1G displays a command prompt. From there you can find a
-file, run a program or reopen source that you saved in an earlier session.
-You can change that source in the editor and build another executable on the
-TEC-1G itself.
+TEC-OS is a CP/M-compatible disk operating system for the TEC-1G. It provides
+a working environment for developing and running software on the machine
+itself, with an SD card for storing programs and data.
 
-The supplied tools include TED for editing, TAS for assembly and BAZA for
-BASIC. The first exercises use these tools to save, build and run a program
-before the programming chapters explain its operating-system calls.
+The TEC-1G follows the tradition of microprocessor trainer boards. Its hex
+keypad and ROM monitor give direct access to the processor and memory. You can
+enter machine code, run programs held in ROM or transfer software from a PC
+through the serial port. Developing new software involves repeatedly editing
+source, building a program and testing the result. Keeping that work on the
+machine requires storage that survives power-off and a way to organise and
+retrieve it.
 
-CP/M was a disk operating system used on early microcomputers. TEC-OS
-implements its CP/M 2.2 file and console interfaces. Programs written to
-use those common calls can therefore run on TEC-OS as well as programs
-written specifically for this board. Compatibility depends on the calls
-a program uses, available memory and its console and hardware requirements.
-TEC-OS also provides additional calls for the board's devices.
+TEC-OS uses the SD card as a disk containing source files, executable programs
+and data. From its command prompt you can find and run a program or open a
+file for editing. Programs use operating-system calls to read and write files
+on the card. TED supplies the text editor, TAS the assembler and BAZA the
+BASIC compiler. You can edit, build and test a program on the board without
+transferring each revision from a PC.
+
+CP/M was the standard disk operating system on many microcomputers in the late
+1970s and early 1980s. A large collection of applications, programming tools
+and utilities was written for it. TEC-OS implements the CP/M 2.2 interface so
+existing software can run alongside programs written specifically for the
+TEC-1G. Compatibility depends on the memory available and the operating-system
+calls, terminal features and hardware a program uses.
 
 ## Starting with a prepared machine
 
