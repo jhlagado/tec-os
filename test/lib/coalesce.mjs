@@ -376,8 +376,9 @@ export const MUTANTS = {
  * logged on LOGGED (B: unless given, so that A: coalesces), in MODE "writing", "refusing" or "removed" (the card out): a block pending
  * before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS
  * CONIN called directly, BDOS 17 and 48, MOUNT, a B: write and the next
- * block, then an extent change, READDIR inside BDOS 21. The three stacks'
- * depths, each call's depth on the program's stack at TOP, and its cycles.
+ * block. The accepting run also reaches an extent change inside BDOS 21;
+ * failed runs record accepted writes separately from issued attempts. The
+ * resident/worker stacks, each call's program-stack depth and its cycles.
  */
 export function flushRun(mode, rom, { logged = "B" } = {}) {
   const r0 = rom ?? romFor();
@@ -386,6 +387,7 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   logOn(m, logged);
+  const normalization = finishBarePrompt(m);
   let low = TOP;
   const step = m.step.bind(m);
   m.step = () => {
@@ -394,11 +396,13 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
     return step();
   };
   const stub = (code, pump = false) => {
+    publicContext(m);
     [...code, 0x18, 0xfe].forEach((v, i) => m.write(TOP + i, v));
     Object.assign(m.cpu.cpu, { sp: TOP, pc: TOP });
     const end = TOP + code.length;
     const t0 = m.cycles;
     m.runUntil(() => (pump && m.pumpInput(), m.pc === end), 400_000_000, "the stub");
+    publicContext(m);
     return m.cycles - t0;
   };
   const bdos = (fn, de = FCB, pump = false) => stub([0x0e, fn, 0x11, de & 0xff, de >> 8, 0xcd, 0x05, 0x00], pump);
@@ -421,10 +425,17 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
     };
   }
   let rec = 0;
+  const writeStatuses = [];
   const pend = () => {
     bdos(21);
+    writeStatuses.push(m.cpu.cpu.a);
     rec += 1;
   };
+  const pendingState = () => ({
+    pending: m.read(m.sym("CPEND")), any: m.read(m.sym("CANY")),
+    queued: m.symbols.has("HKCNT") ? m.read(m.sym("HKCNT")) : undefined,
+  });
+  const pendingBefore = {};
   const cycles = {};
   const depth = {};
   const cases = [
@@ -441,15 +452,28 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
   ];
   for (const [what, fn] of cases) {
     pend();
+    pendingBefore[what] = pendingState();
+    assert.ok(pendingBefore[what].queued ?? (pendingBefore[what].pending || pendingBefore[what].any), `${what}: actual dirty work before the public call`);
     low = TOP;
     cycles[what] = fn();
     depth[what] = TOP - low;
   }
   while (rec < 130) pend();
+  const finalWritePosition = { extent: m.read(FCB + 12), record: m.read(FCB + 32) };
+  if (mode === "writing") {
+    assert.deepEqual(writeStatuses, new Array(130).fill(0), "every accepting-run record write succeeded");
+    assert.deepEqual(finalWritePosition, { extent: 1, record: 2 }, "the accepting run really crossed an extent boundary");
+  }
   bdos(16);
+  const closeStatus = m.cpu.cpu.a;
+  pendingBefore["BIOS CONIN after close"] = pendingState();
+  if (mode === "writing") {
+    assert.ok(closeStatus <= 3, "successful CP/M close returns a directory slot from 0 to 3");
+    assert.equal(pendingBefore["BIOS CONIN after close"].queued ?? (pendingBefore["BIOS CONIN after close"].pending || pendingBefore["BIOS CONIN after close"].any), 0, "accepting close drained the queue");
+  }
   low = TOP;
   m.enqueueInput("x");
-  cycles["BIOS CONIN, nothing pending"] = stub([0xcd, conin & 0xff, conin >> 8], true);
-  depth["BIOS CONIN, nothing pending"] = TOP - low;
-  return { ...census(), programStack: depth, cycles };
+  cycles["BIOS CONIN after close"] = stub([0xcd, conin & 0xff, conin >> 8], true);
+  depth["BIOS CONIN after close"] = TOP - low;
+  return { ...census(), programStack: depth, cycles, normalization, pendingBefore, writeStatuses, finalWritePosition, closeStatus };
 }
