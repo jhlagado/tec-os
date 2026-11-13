@@ -4,6 +4,7 @@ import { join, relative } from 'node:path';
 import { parse } from 'parse5';
 import { ROOT, SITE, catalogue, CONTENT, markdownFiles } from './catalogue.mjs';
 import { checkLinks, htmlFiles } from './site-links.mjs';
+import { checkBranding } from './branding.mjs';
 
 const out = join(ROOT, '.vitepress/dist');
 const result = checkLinks(out, SITE);
@@ -19,6 +20,7 @@ for (const file of htmlFiles(out)) {
   const path = relative(out, file);
   assert.ok(!/(?:^|\/)(editorial|_internal|archive|scripts|test)(?:\/|$)/.test(path), 'Private page: ' + path);
   const html = readFileSync(file, 'utf8');
+  assert.deepEqual(checkBranding(html, { requireMark: path !== '404.html' }), [], 'Site branding: ' + path);
   assert.ok(!html.includes('Debug80 Docs'), 'Stale site branding: ' + path);
   const canonicals = [], urls = [];
   function inspect(node) {

@@ -6,6 +6,9 @@ import { catalogue, CONTENT, markdownFiles, ROOT } from './catalogue.mjs';
 
 const books = catalogue();
 const files = markdownFiles(CONTENT);
+for (const file of ['package.json', 'books.json', '.vitepress/config.mts', '.vitepress/theme/Mark.vue', '.vitepress/theme/index.ts', 'content/index.md', 'content/thorium/index.md', 'README.md']) {
+  assert.ok(!/\btech-?os\b/i.test(readFileSync(join(ROOT, file), 'utf8')), 'Incorrect site spelling: ' + file);
+}
 for (const file of files) {
   const path = relative(CONTENT, file);
   assert.ok(!/(^|\/)(editorial|_internal|archive|scripts)(\/|$)/.test(path), 'Private content in publication: ' + path);

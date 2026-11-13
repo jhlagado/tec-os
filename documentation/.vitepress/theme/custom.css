@@ -1,5 +1,5 @@
 /* ============================================================
-   TechOS reading theme.
+   tec-os reading theme.
 
    A technical-manual aesthetic: paper ground, black ink, hairline
    rules, monospace labels, and one strong signal colour per book.
@@ -971,7 +971,7 @@ html {
   }
 }
 
-.volume--techos { --vol-accent: #236c4a; }
+.volume--tec-os { --vol-accent: #236c4a; }
 .volume--thorium { --vol-accent: #14607e; }
 .DocSearch-Button-Keys, .VPNavBarSearch kbd { display: none; }
 @media print { .VPNav, .VPSidebar, .VPDocAside, .VPDocFooter { display: none !important; } .VPContent { padding: 0 !important; } }

@@ -4,7 +4,7 @@ import { catalogue, ROOT, SITE } from '../scripts/catalogue.mjs';
 const books = catalogue();
 
 export default defineConfig({
-  title: 'TechOS',
+  title: 'tec-os',
   description: 'Books and reference material for TEC-OS and the Thorium tools on the TEC-1G.',
   lang: 'en-AU',
   srcDir: 'content',
@@ -22,17 +22,17 @@ export default defineConfig({
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
     ['meta', { name: 'theme-color', content: '#236c4a' }],
-    ['meta', { property: 'og:site_name', content: 'TechOS' }],
+    ['meta', { property: 'og:site_name', content: 'tec-os' }],
     ['meta', { property: 'og:type', content: 'website' }]
   ],
   themeConfig: {
-    siteTitle: 'TechOS',
+    siteTitle: 'tec-os',
     nav: [{ text: 'Library', link: '/' }, ...books.map(book => ({ text: book.label, link: book.link })), { text: 'Thorium', link: '/thorium/' }],
     sidebar: Object.fromEntries(books.map(book => [book.link, book.sidebar])),
     search: { provider: 'local' },
     socialLinks: [{ icon: 'github', link: 'https://github.com/jhlagado/tec-os' }],
     outline: { level: [2, 3] },
-    footer: { message: 'TechOS · TEC-OS and Thorium documentation' }
+    footer: { message: 'tec-os · TEC-OS and Thorium documentation' }
   },
   transformPageData(pageData) {
     if (['default', 'home'].includes(pageData.frontmatter.layout)) delete pageData.frontmatter.layout;

@@ -1,4 +1,4 @@
-# TechOS documentation publishing
+# tec-os documentation publishing
 
 The website is a separate VitePress package in this directory. Its output is
 `.vitepress/dist`. The operating system package and its build commands are

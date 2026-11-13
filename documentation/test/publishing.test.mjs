@@ -5,9 +5,10 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { catalogue } from '../scripts/catalogue.mjs';
 import { checkLinks } from '../scripts/site-links.mjs';
+import { checkBranding } from '../scripts/branding.mjs';
 
 function temporary(run) {
-  const root = mkdtempSync(join(tmpdir(), 'techos-publishing-'));
+  const root = mkdtempSync(join(tmpdir(), 'tec-os-publishing-'));
   try { run(root); } finally { rmSync(root, { recursive: true, force: true }); }
 }
 
@@ -42,3 +43,14 @@ test('built link checks distinguish pages, assets, encoded fragments and absent 
   assert.ok(errors.some(error => error.includes('/missing.svg')));
   assert.ok(errors.some(error => error.includes('/absent.html')));
 }));
+
+test('rendered branding rejects misspellings in titles, metadata, marks and ordinary text', () => {
+  const page = '<html><head><title>First session | tec-os</title><meta property="og:site_name" content="tec-os"></head><body><svg class="mark" aria-label="tec-os"></svg><h1>tec-os library</h1><pre>historical literal: TechOS</pre><script>const old = "Tech-OS";</script></body></html>';
+  assert.deepEqual(checkBranding(page), []);
+  for (const [from, to] of [
+    ['First session | tec-os', 'First session | TechOS'],
+    ['content="tec-os"', 'content="Tech-OS"'],
+    ['aria-label="tec-os"', 'aria-label="TechOS"'],
+    ['tec-os library', 'TechOS library']
+  ]) assert.ok(checkBranding(page.replace(from, to)).length, `${from}: the incorrect spelling must fail`);
+});
