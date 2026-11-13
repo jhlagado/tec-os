@@ -173,7 +173,9 @@ drive and `CD D:NAME` on another. These commands work at the bare ROM prompt
 too, so `CD A:SYSTEM` followed by `SHELL.SVC` restores the shell after
 resetting with GAMES selected on A:. The shell prompt shows the selection,
 `A:SYSTEM>`. OS calls prioritise pending writes; required input drains them
-before waiting, with failed data retained and reported for retry
+before waiting, with failed data retained and reported for retry. If disk
+state cannot be rebuilt, `Disk reset failed` / `Enter retries` waits for an
+Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in

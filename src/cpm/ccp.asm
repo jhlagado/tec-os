@@ -33,15 +33,17 @@ RCFAIL EQU 255*256
 ; page-zero user/drive nibbles. Use
 ; stack CSTKTOP. Validate the drive
 ; through MAXDRV/DRVIDX and fall back to
-; A when unavailable. Fallback A is not
-; checked here.
+; A when unavailable. Disk reset then
+; validates A through the BIOS.
 ; Save BOOTDRV and the four-bit user.
 ; Set one-shot WRFLAG for BDOS 13's
 ; dirty/checksum reset, restore the user
 ; with function 32, call STBOOT and
 ; select non-A BOOTDRV with function 14.
-; Join STARTED. This entry does not
-; return.
+; Returned reset/selection errors stay
+; in the retry console. Join STARTED
+; only with valid disk defaults. This
+; entry does not return.
 
 CCPENT:
   ld sp,CSTKTOP
@@ -73,19 +75,63 @@ CCPDR:
   push af        ; user across reset
   ld hl,WRFLAG   ; dirty/checksum reset
   ld (hl),$FF    ; one-shot WRFLAG
+  ld a,$FF
+  ld (ERRMODE),a ; bootstrap errors return
+
+CCPRST:
   ld c,13        ; 13: reset disks
   call BDOS
+  inc a          ; FFh: reset failed
+  jr z,CCPRERR
   pop af
   ld e,a
   ld c,32        ; 32: restore user
   call BDOS
+  xor a
+  ld (ERRMODE),a ; normal startup policy
   call STBOOT    ; once after cold boot
   ld a,(BOOTDRV)
   or a
   jr z,STARTED   ; A already selected
   ld e,a
+  ld a,$FF
+  ld (ERRMODE),a ; selection can fail too
   ld c,14        ; 14: restore drive
   call BDOS
+  inc a
+  jr nz,CCPRDY
+  ld a,(USERNO)  ; saved user was popped
+  push af        ; same retry stack shape
+
+; No normal command, shell LINE or
+; program starts with incomplete login.
+; Discard only command continuation and
+; incomplete login bits, not dirty data.
+; A buffered cold startup stays pending
+; until saved-drive selection succeeds.
+; APIs 9/1 need no default disk pointers
+; and keep their normal hook/reentry and
+; maintenance rules. No SDINIT here.
+
+CCPRERR:
+  ld hl,0
+  ld (LOGINV),hl
+  ld (WARMV),hl
+  ld a,2
+  ld (CHPOS),a
+  ld de,RSTERR
+  call PUTSTR
+
+CCPRKEY:
+  ld c,1
+  call BDOS
+  cp CR          ; LF/other keys don't retry
+  jr nz,CCPRKEY
+  jr CCPRST      ; nonrecursive explicit retry
+
+CCPRDY:
+  xor a
+  ld (ERRMODE),a ; ordinary command policy
 
 ; Print CRLFMSG before joining MAINLOOP.
 ; Some completion paths enter MAINLOOP
