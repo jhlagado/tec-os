@@ -26,62 +26,49 @@ nav_exclude: true
      passage that cites an earlier revision names it. Earlier revisions of
      these notes are in the book's history. -->
 
-With TEC-OS in its ROM the TEC-1G starts at a command prompt. You can list
-files on an SD card and run a supplied program before using the editor,
-the assembler or the BASIC compiler to make one of your own. TEC-OS provides the CP/M 2.2 programming
-interface and calls for the board's devices.
+TEC-OS lets you keep programs and their source as named files on an SD card.
+After power-on the TEC-1G displays a command prompt. From there you can find a
+file, run a program or reopen source that you saved in an earlier session.
+You can change that source in the editor and build another executable on the
+TEC-1G itself.
+
+The supplied tools include TED for editing, TAS for assembly and BAZA for
+BASIC. The first exercises use these tools to save, build and run a program
+before the programming chapters explain its operating-system calls.
+
+CP/M was a disk operating system used on early microcomputers. TEC-OS
+implements its CP/M 2.2 file and console interfaces. Programs written to
+use those common calls can therefore run on TEC-OS as well as programs
+written specifically for this board. Compatibility depends on the calls
+a program uses, available memory and its console and hardware requirements.
+TEC-OS also provides additional calls for the board's devices.
 
 ## Starting with a prepared machine
 
-The first session uses a 40-column PICO9918 display and the matrix keyboard,
+The first session uses a 40-column PICO9918 display and the matrix keyboard
 with the Matrix switch enabled. The board needs a 32,768-byte RAM chip in U9,
 the 4 MHz FAST setting, the TEC-OS ROM and a prepared starter card. The keypad
 non-maskable interrupt (NMI) jumper is off. SYSTEM is on drive A and WORK is on
-drive B. Hardware preparation is described in
-[Appendix G](appendix-g-tec-1g.md).
+drive B. [Appendix G](appendix-g-tec-1g.md) describes the hardware preparation.
 
-[First session](01-first-session.md) begins with that preparation complete.
-[Make a small program](02-make-a-small-program.md)
-continues with a short banner entered in TED. You save it, build it with TAS,
-change its text and run it again.
-[Build a BASIC program](03-build-a-basic-program.md) compiles the supplied
-TIMES.BAS with BAZA and builds it from TED with the same keys. These sessions
-introduce the keys and commands they use without requiring an earlier CP/M,
-BASIC or assembly course.
+[First session](01-first-session.md) begins at power-on with that preparation
+complete. You find the supplied files and run programs from the card.
+In [Make a small program](02-make-a-small-program.md) you enter a banner in
+TED, save it and assemble it with TAS. Changing its text and running it again
+connects the source file to the result on screen.
+[Build a BASIC program](03-build-a-basic-program.md) uses BAZA to compile
+TIMES.BAS, then uses TED's same build keys. No earlier CP/M or BASIC course
+is required for these sessions.
 
-The banner is a guided copy-and-change exercise. Its instructions and data
-are explained beside the listing. The later programming chapters assume you
-can read a short Z80 listing with labels, registers and branches. They explain
-the TEC-OS call, buffer and stack contracts before examples depend on them.
+You can copy and change the banner without already knowing assembly.
+The explanation beside the listing covers the instructions and data it uses.
+The later programming chapters assume you can read a short Z80 listing with
+labels, registers and branches. Each TEC-OS call, buffer and stack contract
+is explained before an example depends on it.
 
-Serial terminals, the graphics LCD and other display widths have their own
-configuration chapter. The web page is an optional way to use the software
-machine, with its controls and card-saving rules in
-[Appendix I](appendix-i-web-page.md).
-
-## Runs and source
-
-The demonstrations and measurements are from the Debug80 TEC-1G host model,
-a software implementation of the machine. They are not physical-board runs.
-The diagnostics chapter
-separates what a test establishes in software from what a board report can
-establish about that board.
-
-Each chapter records the source revision used to check its claims. A retained
-historical capture also records the revision and inputs that produced it.
-Source references name the file and lines for the stated revision. A source
-change may move those lines even when the assembled program is unchanged.
-When the prose and its stated source disagree, the source is the authority
-and the prose needs correction.
-
-A transcript includes the prompt and the command typed after it, followed by
-the output. It may begin at an already-running prompt. Any other omitted output
-is identified with the example. Control keys are written with a caret: `^C`
-means Ctrl and C together. Reproducing the runs on a PC requires the setup and tools in
-[The host model as evidence](29-the-host-model-as-evidence.md).
-
-Addresses and bytes use hexadecimal with a trailing `h`, as in `0100h`.
-Sizes in bytes are decimal. A KiB is 1,024 bytes and a MiB is 1,024 KiB.
+Other displays and serial terminals have a separate configuration chapter.
+You can also use the software machine in a browser. Its controls and
+card-saving rules are in [Appendix I](appendix-i-web-page.md).
 
 ## Using the machine
 
@@ -141,3 +128,23 @@ Sizes in bytes are decimal. A KiB is 1,024 bytes and a MiB is 1,024 KiB.
 | [H. Service format](appendix-h-service-file-format.md) | Header fields, dependencies and relocation data |
 | [I. Web page](appendix-i-web-page.md) | Controls, input, saved cards and imports |
 | [J. Command reference](appendix-j-command-reference.md) | Exact syntax, names, wildcards and search rules |
+
+## Runs and source
+
+The demonstrations and measurements use the Debug80 TEC-1G host model,
+a software implementation of the machine. They are not physical-board runs.
+The diagnostics chapter distinguishes software-test results from evidence
+collected on a particular board.
+
+Each chapter names the source revision used to check its claims. Historical
+captures also name the revision and inputs that produced them. Each source citation identifies a file and position at that revision.
+Later edits may move the cited passage.
+
+A transcript shows the prompt, the command typed after it and the output.
+It may start at an already-running prompt. Any other omitted output is
+identified beside the example. A caret denotes a control key: `^C` means
+Ctrl and C together. [The host model as evidence](29-the-host-model-as-evidence.md)
+describes the PC setup and tools for reproducing the runs.
+
+Addresses and bytes use hexadecimal with a trailing `h`, as in `0100h`.
+Sizes in bytes are decimal. A KiB is 1,024 bytes and a MiB is 1,024 KiB.

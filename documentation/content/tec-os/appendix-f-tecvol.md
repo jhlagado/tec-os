@@ -17,11 +17,14 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-`tecvol` edits TEC-OS card images on a PC. It creates volumes, inspects their
-files and directories, copies files and writes an image to a physical device.
-Run it from a repository clone as `node tools/tecvol.mjs`. The package also
-names the command `tecvol` (`package.json:11-13`). Chapter 6 gives the working
-procedures and recovery precautions. Appendix E defines the container format.
+A card image is a file you can prepare, inspect and copy on a PC before
+writing it to a physical card. `tecvol` creates its volumes, checks files
+and directories and transfers files in either direction. Its `install`
+command performs the separate physical-device write.
+
+The repository command is `node tools/tecvol.mjs`. The package also names it
+`tecvol` (`package.json:11-13`). Chapter 6 gives working procedures and
+recovery precautions. Appendix E defines the container format.
 
 ## Common rules
 
@@ -64,11 +67,12 @@ status 1. `verify` also returns 1 for reported directory problems
 (`tools/tecvol.mjs:27-31`, `tools/tecvol.mjs:137`,
 `tools/tecvol.mjs:171`, `tools/tecvol.mjs:199-204`).
 
-Image replacement validates the changed bytes in memory, writes a temporary
-file beside the image and renames that file over it. A failure before the
-rename leaves the original image unchanged. It does not reread the temporary
-file or explicitly synchronise it to durable storage. This is distinct from
-`install` writing directly to a device (`tools/tecvol.mjs:63-69`).
+Changes to an image are prepared in memory and validated before replacing
+the file. The tool writes a temporary file beside the image and renames it
+over the original. A failure before that rename leaves the original image
+unchanged. The temporary file is neither reread nor explicitly synchronised
+to durable storage. `install` has a different failure boundary because it
+writes directly to the device (`tools/tecvol.mjs:63-69`).
 
 Never change a card on the PC while TEC-OS is using it. At the board's command
 prompt, a successful `^C` flush must finish before removal. `Write lost` means
@@ -76,10 +80,11 @@ that some changes were dropped. Reset after returning a PC-changed card because
 TEC-OS's cached blocks and allocation maps otherwise describe its old contents.
 Chapter 6 gives the copy-first procedure.
 
-The examples below are runs with prepared `dist/` inputs
-and an existing `build/` directory. Follow their order when constructing the
-worked card. `build/my.img` is this appendix's separate fixture, not Chapter 5's
-four-volume `my.img`. Its figures and hashes belong to this build's media and change with it.
+The examples construct a separate worked card in `build/my.img`. They use
+prepared `dist/` inputs and an existing `build/` directory. Their order is
+significant because later commands use the files created earlier. This is
+not Chapter 5's four-volume `my.img`. Its figures and hashes identify this
+build's media and change with that media.
 
 ## create
 
@@ -151,10 +156,11 @@ These are source-derived reporting rules, not new output added to the
 healthy-card example (`tools/tecvol.mjs:117-136`,
 `tools/lib/cpmfs.mjs:78-89`, `tools/lib/cpmfs.mjs:241-267`).
 
-`verify IMAGE` prints the same report and returns status 1 if any directory
-problem was found. `info` does not turn those reported problems alone into
-a failing status. A malformed container fails either command before its report.
-This header-check example gives status 1, after `dd`'s own report on stderr:
+`verify IMAGE` uses the same report as `info` but returns status 1 when it
+finds a directory problem. `info` does not fail solely for those reported
+problems. Both commands reject a malformed container before reporting its
+volumes. In this header-check example the command returns status 1 after
+`dd` prints its own stderr report:
 
 ```sh
 cp dist/starter.img build/badsum.img
@@ -341,9 +347,10 @@ dd44f1c28c3b9296c6348e5723720dc0088f34d984028f4072e1785e36f3cebe  build/book-fre
 dd44f1c28c3b9296c6348e5723720dc0088f34d984028f4072e1785e36f3cebe  dist/starter.img
 ```
 
-The image construction uses fixed placement, fill bytes and file contents.
-With the same recipe and matching inputs its bytes do not depend on the PC's
-clock. The printed hashes identify this recipe's result at `c4ec0f4`.
+The same recipe and matching inputs produce the same image bytes.
+Placement, fill bytes and file contents are fixed, so the PC's clock does
+not affect construction. The printed hashes identify the result for this
+recipe at `c4ec0f4`.
 
 ## install
 
@@ -362,9 +369,10 @@ requires administrator rights. `--yes` authorises the overwrite, not device
 identification or a backup. The tool does not check whether the named device
 is the intended card. Naming the PC's disk overwrites that disk instead.
 
-This is a direct write, unlike temporary-file replacement. An interrupted
-operation can leave a partial card. Chapter 6 gives the backup and physical card
-transfer procedure.
+The original device contents are overwritten during installation. An
+interruption can therefore leave a partial card. The temporary-file
+replacement used for image edits cannot protect this direct write.
+Chapter 6 gives the backup and physical transfer procedure.
 
 ## The worked card
 

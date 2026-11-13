@@ -17,28 +17,30 @@ nav_group: "Using the machine"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-A copy of the card on your PC lets you extract work and prepare another card
-without changing the original. `tecvol` reads and edits that image, a file
-holding the card's 512-byte blocks in order.
+A card image keeps a copy of your work on the PC. You can extract source
+from it, add files or prepare another card while keeping the original
+unchanged. The `tecvol` tool reads and edits an image as the card's
+512-byte blocks stored in order. This chapter begins with making a copy
+and recovering the BANNER source saved in Chapter 2.
 
 ## The host tools
 
-`tecvol` runs from a clone of the TEC-OS repository with Node.js 20 or later,
-the minimum declared by its `package.json`. The shell commands here use the
-repository root as their working directory. `node tools/tecvol.mjs` runs the
-card tool directly without installing a command on your shell's search path.
-[Appendix F](appendix-f-tecvol.md) gives its complete command syntax.
+`tecvol` needs a clone of the TEC-OS repository and Node.js 20 or later,
+the minimum in `package.json`. The commands below run from the repository
+root. `node tools/tecvol.mjs` invokes the tool directly, so no command
+needs to be installed on the shell's search path.
+[Appendix F](appendix-f-tecvol.md) lists the full syntax.
 
-The examples that use `dist/starter.img` and `dist/files/` require a prepared
-media set made with the matching TEC-OS ROM. These generated files are not
-included in a Git clone. `npm ci` installs the locked host dependencies but
-does not itself produce the ROM or media.
-[Chapter 27](27-build-the-rom-and-media.md) gives the source/input preparation
-and build route through `npm run media`, which writes the ROM, starter image,
-recipes and component files into `dist/`. A host-assembled COM program reaches
-a card through the same `put` command as any other binary. The complete
-PC HELLO recipe and its output are together in Chapter 27. Each example's
-sizes, hashes and free-space totals belong to that example's card.
+Some later examples use `dist/starter.img` or files in `dist/files/`.
+These need a prepared media set for the matching ROM. A Git clone
+contains the source, not these generated files. `npm ci` installs locked
+dependencies. It does not build the ROM or card.
+[Chapter 27](27-build-the-rom-and-media.md) describes input preparation
+and `npm run media`, which writes the ROM, starter image, recipes and
+components to `dist/`. It also contains the complete PC HELLO example.
+A host-built COM file is copied onto a card with the same `put` command
+as another binary. Sizes, hashes and free-space totals here apply to
+the particular example card.
 
 ## A copy before a change
 
@@ -59,8 +61,8 @@ write goes to the named device even if that device contains your PC's files.
 Unmount its filesystems before a raw write so the PC is not also writing
 through a mounted filesystem.
 
-For the 13 MiB starter container, the recovery recipe copies its first
-26,624 blocks and checks the copy:
+The starter container occupies 13 MiB. This recovery command copies its
+first 26,624 blocks into `card.img` and then checks the image:
 
 ```sh
 dd if=/dev/rdiskN of=card.img bs=512 count=26624
@@ -74,10 +76,10 @@ not whether a file still contains the text you intended to save.
 
 ## Listing and extracting saved work
 
-`node tools/tecvol.mjs dir card.img` lists drive A by default, including each
-file's user area and length in bytes, rounded to whole 128-byte records.
-A volume argument names another volume by drive letter, label or id, tried
-in that order. A label or id also reaches a volume that is on no drive.
+`node tools/tecvol.mjs dir card.img` lists A's files with their user
+areas and lengths rounded to 128-byte records. An additional argument
+selects a volume. It is matched as a drive letter first, then as a label
+and finally as an id. A label or id can select an unassigned volume.
 
 `get` copies a named file to the PC. Its optional output-file argument gives the
 destination. A named destination is overwritten if it already exists so use a
@@ -88,27 +90,26 @@ and converts carriage-return/line-feed pairs to line feeds. A lone carriage
 return is retained. Without `^Z`, all recorded bytes undergo that conversion,
 including any padding.
 
-`get` reads user area 0 unless `--user N` selects another. `dir` lists all
-areas unless that option limits it. `N` must be a whole number from 0 to 15.
-Values such as `oops`, `1.5` and `16` stop the command before the image changes.
-Listing and extraction leave `card.img` unchanged.
+`get` selects user area 0 by default, while `dir` lists all areas.
+`--user N` selects an area for either command. N must be a whole number
+from 0 to 15. `oops`, `1.5` and `16` stop the command before any image
+change. Listing and extraction both leave `card.img` unchanged.
 
 ### Recovering BANNER
 
-Chapter 2's saved BANNER can be recovered as raw records or editable PC text.
-This example uses `saved-banner-card.img`, the persisted image after saving the
-edited program, quitting TED and successfully flushing at the prompt. This
-BANNER card began as a fresh starter card, separately from the SAMPLE
-run in Chapter 1. If you continued on the same card, A may also contain
-SAMPLE.COM and SAMPLE.DBG.
+BANNER can be extracted in two forms: raw records or editable PC text.
+This example uses `saved-banner-card.img`, saved after the edited source,
+TED exit and successful prompt flush in Chapter 2. That run began with a
+fresh starter card, separately from Chapter 1's SAMPLE run. Your A may
+also contain SAMPLE.COM and SAMPLE.DBG if you continued on the same card.
 
 A fresh starter image has no BANNER. Use new destinations for the backup and
 extracted files. Neither `card.img` nor the `recovered/` directory may already
 exist.
 
-First make a working copy and compare it with the saved image. The comparison
-prints nothing when the bytes match. Verification then checks that copy's
-container and directories before extraction:
+Extraction begins from a working copy. `cmp` compares it with the saved
+image and prints nothing for equal bytes. `verify` then checks the copy's
+container and directories:
 
 ```sh
 cp saved-banner-card.img card.img
@@ -117,7 +118,7 @@ mkdir recovered
 node tools/tecvol.mjs verify card.img
 ```
 
-The verification succeeds:
+The verified copy has this layout and directory summary:
 
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
@@ -128,15 +129,16 @@ container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wa
   -: SPARE       id 5 G1M start 24576 rw 0 file(s), 1040384 bytes free
 ```
 
-Listing without a volume selects A. The next command lists B, where the
-banner was saved:
+The first command lists A by default. The second selects B, which
+contains the saved banner:
 
 ```sh
 node tools/tecvol.mjs dir card.img
 node tools/tecvol.mjs dir card.img B
 ```
 
-The complete A listing includes TED's project and session files:
+A's complete listing contains the fourteen starter files plus TED's
+project and session files:
 
 ```text
  0 BAZA.COM        13184
@@ -157,9 +159,7 @@ The complete A listing includes TED's project and session files:
  0 TIMES.BAS         640
 ```
 
-These are the starter card's fourteen files and TED's two.
-
-B contains the source, program and debug file:
+B's listing contains the source, executable and debug file:
 
 ```text
  0 BANNER.ASM        384
@@ -167,8 +167,8 @@ B contains the source, program and debug file:
  0 BANNER.DBG        384
 ```
 
-An explicit user-area filter establishes which copy will be read. These
-commands save B's user-0 listing before extracting BANNER in both forms:
+These commands explicitly select user area 0 on B. They save that
+listing before extracting BANNER as raw records and as text:
 
 ```sh
 node tools/tecvol.mjs dir card.img B --user 0 > recovered/B-user0.txt
@@ -178,7 +178,8 @@ node tools/tecvol.mjs get card.img B BANNER.ASM recovered/BANNER.ASM --user 0 --
 wc -c recovered/BANNER.REC recovered/BANNER.ASM
 ```
 
-The filtered listing repeats the three B entries above. The byte counts are:
+The filtered listing contains the same three B entries. `wc` reports
+the extracted file sizes:
 
 ```text
      384 recovered/BANNER.REC
@@ -186,10 +187,10 @@ The filtered listing repeats the three B entries above. The byte counts are:
      657 total
 ```
 
-`BANNER.REC` is the raw PC copy, not another file on B. Its three records
-contain 286 bytes of source with CRLF endings followed by 98 `1Ah` bytes.
-Text extraction stops at the first `1Ah` and changes the 13 CRLF pairs to LF.
-The resulting 273-byte file matches the complete edited source:
+`BANNER.REC` is a PC file containing the three raw records from B.
+They hold 286 bytes of source with CRLF endings, then 98 bytes of `1Ah`
+padding. Text extraction stops at the first `1Ah` and converts 13 CRLF
+pairs to LF. This produces 273 bytes of editable source:
 
 ```sh
 cat recovered/BANNER.ASM
@@ -211,9 +212,9 @@ START:
 MSG: db "Hello from TEC-OS!",13,10,"$"
 ```
 
-A missing name produces an error rather than an empty recovered file. The
-saved user-0 listing contains no `MISSING.ASM`. With that name absent and
-`recovered/MISSING.ASM` still absent, the check is:
+The saved user-0 listing has no `MISSING.ASM`. Requesting that absent
+name tests the failure path. The PC destination `recovered/MISSING.ASM`
+must also be absent before this check:
 
 ```sh
 missing_status=0
@@ -227,35 +228,35 @@ missing get exit: 1
 tecvol: 0/MISSING.ASM not found
 ```
 
-The command produces no standard output and creates no `MISSING.ASM` on the
-PC. Listing and both extractions also leave the image unchanged. Comparing
-the working copy with the saved card after the missing-file check again
-completed without a difference:
+The error is printed on standard error. The command creates no PC
+file named `MISSING.ASM`. Listing and both successful extractions also leave
+the image unchanged. A final comparison after the failure check found
+no difference:
 
 ```sh
 cmp saved-banner-card.img card.img
 ```
 
-The original image remains available alongside the working copy and both
-recovered files. This host-image example does not establish a physical-card
+The saved image, working copy and both extracted files remain available.
+These checks used image files on the host. They establish no physical-card
 read or write.
 
 ## The container and its volumes
 
-The card holds programs, resident services, `STARTUP.CMD` and your files. Each
-drive uses a volume, an ordinary CP/M disk of a fixed size. CP/M 2.2 addresses
-at most 8 MiB on a drive. Most CP/M machines used floppy disks of a few hundred
-KiB while an SD card can hold many volumes.
+Each volume is a fixed-size CP/M disk containing files such as programs,
+services and source. CP/M 2.2 addresses at most 8 MiB per drive. A card
+can hold many volumes, even though only four can be assigned to drives
+at once. This separates the card's capacity from the size of a disk
+available to a CP/M program.
 
-The container records where those volumes are. Its first 512-byte block
-holds a header and the first volume descriptors. A descriptor gives a
-volume's number, label of up to 11 characters, geometry, size, starting block
-and default drive, if any. Further descriptors can occupy blocks after the
-header. A container holds up to 127 volumes, with at most four assigned to
-drives A to D at a time.
+The first 512-byte block contains a header and the first volume
+descriptors. Each descriptor records a volume's number, label of up to
+11 characters, geometry, size, starting block and optional default drive.
+Further descriptors can follow the header block. The container supports
+up to 127 volumes, with up to four assigned to A through D.
 
-`info` prints the container layout and each volume's directory totals. For
-the starter image it prints:
+`info` displays the container layout and directory totals. On the
+prepared starter image this command produces:
 
 ```sh
 node tools/tecvol.mjs info dist/starter.img
@@ -271,15 +272,15 @@ container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wa
 ```
 
 The container occupies 26,624 blocks or 13 MiB. SYSTEM begins at block
-2,048 and occupies 1 MiB. WORK starts at 4,096 and occupies 8 MiB;
+2,048 and occupies 1 MiB. WORK starts at 4,096 and occupies 8 MiB.
 PROJECTS, GAMES and SPARE each occupy another 1 MiB. Each volume begins
 on a multiple of 2,048 blocks, the default alignment. The header requests
 four equal drive slots, including the initially empty D drive.
 
-Each volume line gives its drive, label, number (`id`), geometry and first
-block. `rw` means writable and `ro` means read-only. The remaining fields
-count files and free bytes from the directory. Write-behind follows the
-logged drive; the card does not mark a volume for it.
+A volume row gives its drive, label, number (`id`), geometry and starting
+block. `rw` means writable and `ro` means read-only. File counts and free
+bytes come from the directory. Write-behind applies to the logged drive,
+not a flag stored for the volume.
 
 Cold boot validates the header's name, version and checksum and the volume
 descriptors. A failed check leaves no drive mounted and stops at the
@@ -289,18 +290,19 @@ the codes. [Appendix E](appendix-e-container-format.md) gives every field.
 
 ## Record sizes and allocated space
 
-A geometry specifies the size and directory layout of a volume:
+The two supported geometries specify a volume's capacity, allocation
+unit and directory size:
 
 | Geometry | Size | Allocation block | Directory entries |
 | --- | --- | --- | --- |
 | G1M | 1 MiB | 2 KiB | 256 |
 | G8M | 8 MiB | 4 KiB | 512 |
 
-CP/M reads and writes 128-byte records. Four records fit a 512-byte card block.
-Space is allocated to files in larger allocation blocks so a file with any data
-occupies at least 2 KiB on G1M or 4 KiB on G8M. The one-record `STARTUP.CMD`
-therefore occupies 4 KiB on WORK even though its recorded length is only 128
-bytes.
+Three storage units appear in file sizes. CP/M transfers 128-byte
+records and the card transfers 512-byte blocks, each holding four records.
+Space for a file is reserved in larger allocation blocks. A file with data
+uses at least 2 KiB on G1M or 4 KiB on G8M. A 128-byte STARTUP.CMD on WORK
+therefore uses 4 KiB of allocated space.
 
 One directory entry describes up to 16 KiB on G1M or 32 KiB on G8M.
 A larger file needs further entries. The directory occupies the first
@@ -313,20 +315,20 @@ given its geometry parameters. Appendix E lists those parameters.
 
 ## Replacing files
 
-`put` copies a PC file onto a volume. The PC basename becomes the CP/M name
-in capitals unless an additional name follows the PC path. `--text` converts
-line endings to carriage return and line feed, appends `^Z` and pads the
-last record with `^Z`. Binary padding is zero. These are file conversions,
-not a way to preserve a PC file's original byte length in a CP/M directory.
+`put` copies a PC file onto a volume. Its basename becomes the CP/M name
+in capitals unless you supply another name after the path. For text,
+`--text` converts line endings to CRLF, adds `^Z` and pads the final
+record with `^Z`. Binary files receive zero padding. The CP/M directory
+still records whole records, not the PC file's original byte length.
 
-A text file put without `--text` therefore ends in zero bytes, not `^Z`.
-The starter card's TED (Thorium `a2fe556`) takes a run
-of `00h` that fills the rest of the last record as the end of the file, so
-such a file opens without an error. A byte that TED rejects elsewhere stops
-it at the prompt with `EDIT error 03` and the byte's line and column, as in
-`EDIT error 03 L3 C5` (TEC-OS b3134cf `docs/compatibility.md`, Thorium
-a2fe556 `README.md`). An older TED, Thorium `967678c`, rejects that padding and stops with error 03 without a line or
-column.
+Without `--text`, a text file receives zero padding instead of `^Z`.
+TED on the starter card, Thorium `a2fe556`, recognises trailing `00h`
+through the rest of the last record as the file's end. It opens this
+form without an error. A rejected byte elsewhere ends the editor with
+`EDIT error 03` and its line and column, such as `EDIT error 03 L3 C5`
+(TEC-OS b3134cf `docs/compatibility.md`, Thorium a2fe556 `README.md`).
+The older Thorium `967678c` TED rejects that padding with error 03
+and reports no position.
 
 `era` erases a named file. Like `get`, `put` and `era` use user area 0 unless
 `--user N` selects another.
@@ -345,12 +347,12 @@ described below.
 
 ## Preparing a card of your own
 
-`create` makes a card of your own volumes, empty. This example makes
-`my.img`, with SYSTEM and WORK assigned to A and B and GAMES and SPARE
-initially unassigned. Each `--volume` gives the geometry, label and optional
-drive separated by colons. `:ro` after the drive makes a volume read-only.
-`--drives 4` reserves usable slots for all four drives at cold boot,
-including the two initially empty ones:
+`create` builds an image containing empty volumes. In this example,
+`my.img` has SYSTEM on A, WORK on B and unassigned GAMES and SPARE.
+Each `--volume` argument supplies a geometry, label and optional drive,
+separated by colons. `:ro` after the drive makes the volume read-only.
+`--drives 4` reserves slots for all four drives at cold boot, including
+the two initially empty ones:
 
 ```sh
 node tools/tecvol.mjs create my.img --volume G1M:SYSTEM:A --volume G8M:WORK:B --volume G8M:GAMES --volume G1M:SPARE --drives 4
@@ -360,15 +362,15 @@ node tools/tecvol.mjs create my.img --volume G1M:SYSTEM:A --volume G8M:WORK:B --
 Two volumes cannot share a drive or a label. `--drives` takes a whole number
 from 1 to 4. `--align` replaces the default 2,048-block alignment with a
 positive whole number up to 16,777,215 that is a multiple of 8. An invalid
-value, or a flag it does not know such as `:wb`, stops creation before an
-image is written. No volume is marked written behind: TEC-OS writes behind
-the drive you are on, whatever the card says
+value or unsupported flag such as `:wb` stops creation before an image
+is written. Write-behind applies to the drive you are on, regardless
+of the volume configuration
 ([Chapter 19](19-cache-and-persistence.md)).
 
-The preparation uses the matching media's `dist/files/SHELL.SVC` and
-`dist/files/TAS.COM`. Its other inputs are a startup file that loads the
-shell, so the card has `CD`, and `hello.txt`, containing the line
-`Hello from the PC.` followed by a line feed:
+The image needs the matching media's `dist/files/SHELL.SVC` and
+`dist/files/TAS.COM`. A startup file loads the shell to provide `CD`.
+A short `hello.txt` supplies text for SPARE: `Hello from the PC.` followed
+by a line feed. These commands create the two text inputs:
 
 ```sh
 printf 'SHELL.SVC\n' > startup.cmd
@@ -409,12 +411,11 @@ volumes or an explicit `--drives` count uses format 1.1. Both `info` and
 
 ## Recipes and read-only volumes
 
-A recipe is a JSON description of a whole card. It lists the volumes and
-component files with their byte counts and SHA-256 hashes. `recipe` fetches
-each file from a URL or a path relative to the recipe's directory. It checks
-both size and hash before placing the file in the image. A mismatch stops
-the build. The same recipe with the same matching inputs produces the same
-image bytes.
+A recipe records the inputs for reproducing a complete card. Its JSON
+lists volumes and component files with byte counts and SHA-256 hashes.
+The `recipe` command fetches each component from a URL or a path relative
+to the recipe. A size or hash mismatch stops the build. The same recipe
+and matching inputs produce identical image bytes.
 
 `npm run media` produces `dist/starter.recipe.json` as part of the media
 preparation described in Chapter 27. The card-building command is:
@@ -448,30 +449,30 @@ entry:
 }
 ```
 
-The byte count and hash identify this build's binary. They are not values
-to copy onto a different build's file. The actual recipe accompanying a
-prepared media set records its own component identities.
+This byte count and hash identify the binary used in this build. A
+different binary needs its own values. The recipe supplied with a prepared
+media set records the identities for that set.
 
-A volume declared read-only by `create` stays empty because `put` cannot
-write to it. A recipe can populate a protected volume: it writes the files
-first and applies `"readOnly": true` last. The protection then belongs to
-the whole volume, independently of each file's attributes.
+A recipe can populate a read-only volume by writing its files before
+applying `"readOnly": true`. In contrast, `create` makes an empty
+read-only volume that `put` cannot populate. Volume protection applies
+to all its files independently of their attributes.
 
-The browser's New starter card uses the same `starter.recipe.json`, so the
-page's card and `dist/starter.img` are one card. Its fourteen files on A
-include the shell `SHELL.SVC`, the demo's source `DEMO.ASM`, the BASIC game
-`BOUNCE.BAS`, and `MON3.SVC` with `HELLO3.BIN` and its source `HELLO3.ASM`,
-at recipe revision 13. Media preparation no longer writes a separate page
-recipe (TEC-OS b3134cf `tools/media.mjs`, `web/build.mjs`). `TAS DEMO`
-builds DEMO.COM on the card. The page uses the same size and SHA-256
-checks.
+The browser's New starter card uses `starter.recipe.json` too. The
+page's card and `dist/starter.img` therefore have the same inputs and
+checks. Recipe revision 13 places fourteen files on A, including
+SHELL.SVC, DEMO.ASM and BOUNCE.BAS. It also includes MON3.SVC with
+HELLO3.BIN and HELLO3.ASM. `TAS DEMO` builds DEMO.COM on the card.
+Media preparation writes no separate page recipe
+(TEC-OS b3134cf `tools/media.mjs`, `web/build.mjs`). The browser checks
+the same sizes and SHA-256 hashes.
 
 ## A protection example
 
-The following fixture separates volume protection from a file
-attribute. It uses prepared media files and an existing `build/` directory.
-The commands make writable WORK on B with a read-only `STARTUP.CMD` and
-an empty read-only ARCHIVE volume on C:
+This example separates protection of a volume from protection of a
+file. It requires prepared media files and an existing `build/` directory.
+WORK on B is writable but its STARTUP.CMD is read-only. ARCHIVE on C
+is an empty read-only volume:
 
 ```sh
 node tools/tecvol.mjs create build/errs.img --volume G1M:SYSTEM:A --volume G8M:WORK:B --volume G1M:ARCHIVE:C:ro
@@ -506,7 +507,8 @@ effects and [Appendix D](appendix-d-error-messages.md) gives the messages.
 
 ## Writing the physical card
 
-`install` writes an image to a device from block 0. It requires `--yes`:
+`install` copies an image to a physical device starting at block 0.
+The overwrite requires an explicit `--yes`:
 
 ```sh
 node tools/tecvol.mjs install my.img /dev/rdiskN --yes

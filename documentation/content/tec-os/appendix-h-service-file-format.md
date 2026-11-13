@@ -17,14 +17,15 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-A service file contains the bytes to install, the records it needs and the
-positions that require relocation. Its on-disk header describes that work. The
-loader overwrites some fields after using them so an installed header must be
-read differently from the file header below.
-[Write a resident service](14-write-a-resident-service.md) covers authoring.
+A resident service must fit into the RAM available when it is loaded.
+Its file records the bytes to install, required registry records and
+positions that need relocation. The header describes those operations.
+Some fields are overwritten during installation, so the on-disk header
+below differs from the installed header.
+[Write a resident service](14-write-a-resident-service.md) explains authoring.
 [Loading and removing services](25-loading-and-removing-services.md) follows
-installation and gives the resident header. This reference uses a dump of
-GLCD.SVC to show the file fields and gap encoding together.
+installation and describes the resident header. The GLCD.SVC dump below
+connects the file fields to their relocation encoding.
 
 ## The file
 
@@ -37,11 +38,11 @@ A `.SVC` file has four parts, in this order:
 | Dependencies | 9 bytes for each, the count at offset 2 | The records the service needs |
 | Relocation data | The size at offset 10 | The gap list |
 
-The header and image are assembled together for page 0. Addresses in the
-image therefore count from the header's first byte. The loader moves both
-to a page boundary and adds that page number at each relocation position.
-The card stores the file in whole 128-byte records. Its trailing padding
-is outside the relocation data and is not processed as another gap
+Relocatable image addresses count from the header's first byte.
+The header and image are assembled together for page 0. At installation the loader places them at
+a page boundary and adds that page number at each relocation position.
+The card stores whole 128-byte records, but trailing record padding lies
+outside the relocation data. It is not decoded as another gap
 (`src/loader.asm:267-299`, `src/loader.asm:326-348`).
 
 ## The header
@@ -158,12 +159,15 @@ Image byte 600 is 601 bytes from header byte 24, which is 255 and 255 and 91
 more (`test/svc.test.mjs:461-465`). When the rest is 0, as for image byte 509,
 the last byte is a gap of 0. That fixes the byte the 255s reached.
 
-Every position the list reaches, a gap of 255 included, must lie below the
-size at offset 6, inside the header and image. Otherwise the load fails
-(`src/loader.asm:267-299`). The loader doesn't test for a first gap of 0,
-which fixes header byte 24, the name's last. `makeSvc` never writes one, since
-every fixup it finds lies in the image. The example below shows what such a
-list does.
+Every position reached by a gap must remain inside the header and image,
+below the size at offset 6. This includes the positions reached by a 255
+gap. An out-of-bounds position rejects the load
+(`src/loader.asm:267-299`).
+
+A first gap of 0 is different: it reaches header byte 24, the final name
+byte, so it passes the bounds check. The loader does not reject it.
+`makeSvc` produces no such gap because all its fixups lie in the image.
+The example below shows the resulting name change.
 
 The repository also has bitmap and 16-bit-offset encoders for comparison
 (`tools/lib/svc.mjs:27-35`). `makeSvc` writes the gap list unless its options
@@ -248,10 +252,10 @@ The header's fields are:
 | 15 | `2b 00` | `INIT` at offset `002Bh` |
 | 17 | `47 4c 43 44 20 20 20 20` | The name, `GLCD` |
 
-The dump has no dependencies so its relocation data follows the image
-immediately at offset 767, `2FFh`. The image begins at offset 25, `19h`, with
-the table of words the driver passes through service 12. Its entries include
-`00F2h`, `014Dh` and `0152h`, assembled for page 0.
+GLCD.SVC has no dependencies, so the relocation data begins immediately
+after the image at offset 767, `2FFh`. The image itself begins at offset
+25, `19h`, with the word table passed to service 12. Its entries include
+`00F2h`, `014Dh` and `0152h`, the addresses assembled for page 0.
 
 The first gap, 2, advances from offset 24 to 26, the high byte of `00F2h`. Each
 of the next five 2s reaches the next word's high byte. None of the 69 gaps is

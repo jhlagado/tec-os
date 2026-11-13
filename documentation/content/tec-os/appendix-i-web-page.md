@@ -17,12 +17,14 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-The web page has controls for the emulated board, a serial terminal and a card
-you can save or exchange with the PC. This appendix describes those controls,
-file transfers and the startup changes made for the selected display.
-[Chapter 29](29-the-host-model-as-evidence.md) explains the host model and its
-evidence limits. [Chapter 8](08-commands-at-startup.md) explains using
-STARTUP.CMD and [Chapter 26](26-startup-inside-the-ccp.md) follows its ROM path.
+The browser page lets you use a software TEC-1G and exchange files with
+your PC. The machine's working card and the browser's saved copy are
+separate, so preserving work involves both TEC-OS and the page controls.
+This reference explains input, card transfers and startup preparation for
+the selected display.
+[Chapter 29](29-the-host-model-as-evidence.md) gives the model's evidence
+limits. [Chapter 8](08-commands-at-startup.md) explains STARTUP.CMD and
+[Chapter 26](26-startup-inside-the-ccp.md) follows its ROM path.
 
 ## Serving the page
 
@@ -121,20 +123,23 @@ next key (`web/index.html:36-44`, `web/src/main.mjs:440-535`).
 
 ## Saving the card
 
-The in-memory card and the browser's saved card are separate copies. IndexedDB
-holds the saved image in database `tecos`, store `cards`, key `current`
-(`web/src/store.mjs:6-8`). Startup loads and validates that record. An absent
-record causes the page to build a starter card. A read or parse failure
-instead disables saving for the session, as the notices below describe
-(`web/src/main.mjs:699-713`).
+Closing or reloading the page can discard card bytes that exist only in
+memory. The saved copy is an IndexedDB image in database `tecos`, store
+`cards`, key `current` (`web/src/store.mjs:6-8`). Startup reads and validates
+that record. An absent record causes a fresh starter card to be built.
+A read or parse failure instead disables saving for the session, as the
+notices below explain (`web/src/main.mjs:699-713`).
 
-Writes by TEC-OS mark the model card dirty. A timer attempts a save every
-two seconds when it is dirty and no file import is active. A save takes a
-snapshot for an IndexedDB write transaction and completes when that transaction
-completes (`web/src/main.mjs:103-105`, `web/src/main.mjs:117-121`,
-`web/src/store.mjs:42-59`). Only bytes already in the card image enter that
-snapshot. Pending changes in the ROM's block cache require a successful flush
-first, even if a browser save has succeeded.
+There are two preservation steps. TEC-OS first flushes its block cache
+into the working card image. The browser can then save those image bytes.
+A successful browser save cannot include changes still held in the ROM's
+cache.
+
+Writes by TEC-OS mark the model card dirty. Every two seconds a timer
+attempts a save when the card is dirty and no import is active. Saving
+copies the current image into an IndexedDB write transaction and completes
+with that transaction (`web/src/main.mjs:103-105`,
+`web/src/main.mjs:117-121`, `web/src/store.mjs:42-59`).
 
 Ordinary saves use a single in-flight guard. A save requested during another
 marks the card dirty for a later timer tick. Writes after a snapshot also mark
@@ -224,12 +229,12 @@ Whole-image selection during import is rejected with
 running or paused state when import finishes
 (`web/src/main.mjs:604-607`, `web/src/main.mjs:632-664`).
 
-Power-on startup preparation and import publication take turns through the
-same queue. A display or width change made during import can therefore
-cause a later startup rewrite. That rewrite marks the card dirty and relies
-on a subsequent save. Queue ordering alone does not establish that the stored
-card already includes it. Nor does an import failure undo other queued
-operations (`web/src/main.mjs:67-95`, `web/src/main.mjs:117-121`,
+A successful import does not include startup changes queued after it.
+Power-on preparation and import publication share a queue. A display or
+width change made during import can therefore trigger a later startup
+rewrite. That rewrite marks the card dirty and needs a subsequent save.
+An import failure also leaves other queued operations intact
+(`web/src/main.mjs:67-95`, `web/src/main.mjs:117-121`,
 `web/src/main.mjs:669-680`).
 
 ## Startup preparation
@@ -242,9 +247,9 @@ for startup, and passes the volume's read-only flag to file access
 `host/card.mjs:109-146`). The page writes no display driver. The PICO9918
 console is in ROM and the graphics LCD requires GLCD.SVC on the card.
 
-A card saved before the shell is upgraded at power-on. Such a card has no
-`SHELL.SVC` in A's user 0, and no `MON3.SVC` whose execution record asks to
-be entered on install. For it the page first fetches the starter card, then
+A card saved before the shell was introduced is upgraded at power-on. Such a card has no
+`SHELL.SVC` in A's user 0. Any `MON3.SVC` present also lacks an execution
+record marked for entry on installation. For it the page first fetches the starter card, then
 copies the starter's `SHELL.SVC` onto the card, and the starter's `MON3.SVC`
 in place of the card's own if it has one. A card with no `MON3.SVC` gets
 none. `SHELL.SVC` then goes first in `STARTUP.CMD`, so the card's later

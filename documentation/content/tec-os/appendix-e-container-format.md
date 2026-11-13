@@ -17,12 +17,12 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-A TEC-OS card starts with one container at block 0. Its header identifies
-CP/M volumes by location and geometry. Each volume then holds an ordinary
-CP/M disk. [Cards on the PC](06-cards-on-the-pc.md) covers image operations
-and [Card blocks and volumes](18-card-blocks-and-volumes.md) follows the
-ROM's mount. This reference gives the bytes and validation rules needed
-to decode a container or diagnose a rejected one.
+The ROM must locate a volume before it can read that volume's CP/M disk.
+A TEC-OS card starts with a container at block 0. Its header identifies
+each volume's location and geometry. The bytes and validation rules below
+support image decoders and diagnosis of rejected cards.
+[Cards on the PC](06-cards-on-the-pc.md) explains image operations and
+[Card blocks and volumes](18-card-blocks-and-volumes.md) follows mounting.
 
 `format/format.json` defines the fields and geometries. The build generates
 `src/gen/format.asm` and `src/gen/geom.asm` from it
@@ -105,8 +105,9 @@ labelled `SYSTEM`. Its second, at `40h`, is volume 2,
 starting at block `1000h` (4,096), 16,384 blocks long, geometry 1, on drive B,
 labelled `WORK`.
 
-The drive byte assigns a drive at cold boot. The volume id stays with the
-volume when that assignment changes.
+A drive letter identifies the volume currently assigned to that drive.
+The descriptor's drive byte makes the initial assignment at cold boot.
+The volume id stays with the volume when the drive assignment changes.
 
 Byte 15 is reserved. It once marked one volume written behind. TEC-OS now
 writes behind the volume on the drive you are on and coalesces the data
@@ -173,14 +174,14 @@ below follows the check order so the same code appears more than once.
 | `29h` | A drive byte is neither `FFh` nor 0 to 3, the drive is past the number the drives field gives or two volumes name one drive | `src/vol.asm:307-334` |
 | `2Ah` | No volume is on drive A | `src/vol.asm:343-353` |
 
-Both format versions require ascending, nonoverlapping volumes. Each
-volume must start at or after the previous volume's exclusive end. An
-out-of-order or overlapping descriptor therefore gives `28h`. `tecvol`
-makes the same check on every card
-(`tools/lib/container.mjs:169`). A card whose two descriptors were swapped,
-with its checksum made good, fails `tecvol verify`. The ROM stops at the
-diagnostic prompt with code `28h`. One Node.js command makes such a card,
-`build/swapped.img`, from the starter card:
+A volume must begin at or after the previous volume's exclusive end.
+Both format versions require this ascending, nonoverlapping order.
+An out-of-order or overlapping descriptor produces `28h`. `tecvol` applies
+the same check to every card (`tools/lib/container.mjs:169`).
+
+The following example swaps two starter-card descriptors and repairs the
+checksum. The resulting `build/swapped.img` fails `tecvol verify`, and the
+ROM stops at the diagnostic prompt with code `28h`:
 
 ```sh
 node --input-type=module -e '
@@ -230,11 +231,12 @@ node tools/tecvol.mjs create build/drv2.img --volume G1M:SYSTEM:A --volume G1M:E
 tecvol: volume 1: drive C is past the card's 2 drive(s)
 ```
 
-The host validator also enforces the volume-count limit, descriptor order
-and drive assignments (`tools/lib/container.mjs:127-186`). It cannot test
-the physical card's addressing mode from image bytes alone so the ROM's
-standard-capacity bound remains a separate check. These additional image
-requirements apply in `tecvol`:
+An image validator can check the stored layout but cannot determine the
+physical card's addressing mode from those bytes. The standard-capacity
+bound therefore remains a separate ROM check. The host validator checks
+volume count, descriptor order and drive assignments
+(`tools/lib/container.mjs:127-186`) and applies the additional requirements
+below in `tecvol`:
 
 | `tecvol` also requires |
 | --- |

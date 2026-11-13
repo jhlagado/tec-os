@@ -17,16 +17,17 @@ nav_group: "Using the machine"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-The console is the keyboard you type on and the display TEC-OS answers on. `CON`
-moves that connection between a serial terminal, the PICO9918 and the graphics
-LCD. Its reply is sent through the selected console. `BAT:` discards it.
+The console is the input and output used for commands. You can switch
+from the prepared PICO9918 screen and matrix keyboard to a serial terminal
+or the graphics LCD. `CON` selects the pair. Its reply appears on the
+newly selected display so the next command must use that console's keyboard.
 
 ## Devices and their names
 
-A serial terminal is a terminal program on a PC connected to the board's FTDI
-serial port. The PICO9918 and graphics LCD use the TEC-1G's matrix keyboard. A
-serial terminal can be connected alongside both displays but TEC-OS uses one
-console at a time.
+A serial terminal is a PC terminal program connected to the board's
+FTDI serial port. Both the PICO9918 and graphics LCD use the TEC-1G
+matrix keyboard. All three can be connected but only a selected
+console receives command output and supplies command input.
 
 | Console name | Keys from | Output to |
 | --- | --- | --- |
@@ -35,34 +36,33 @@ console at a time.
 | `UC1:` | matrix keyboard | graphics LCD |
 | `BAT:` | serial port | nowhere |
 
-TEC-OS uses CP/M's device names: `CRT:` names the PICO9918 console and `UC1:`
-the graphics-LCD console. The command also accepts `PICO` for `CRT` and `GLCD`
-for `UC1`. Chapter 17 explains the encoding of those names in memory.
+The PICO9918 console has the CP/M device name `CRT:`. The graphics LCD
+console is `UC1:`. `CON` also accepts the descriptive aliases `PICO`
+and `GLCD`. Chapter 17 explains how these selections are stored in memory.
 
-The PICO9918 has 24 rows at widths of 80, 40 or 32 characters. The 128 × 64
-graphics LCD has 21 columns and 8 rows. The separate 20 × 4 character LCD is
-never the console. At cold boot it shows the version and drives. Programs can
-write to it through the ROM services described in Chapter 12.
+The PICO9918 supports 80, 40 or 32 columns, each with 24 rows. The
+128 × 64 graphics LCD displays 21 columns and 8 rows. The separate
+20 × 4 character LCD displays boot status, not the command console.
+Programs can write to it through the ROM calls in Chapter 12.
 
-A warm boot restarts the command prompt when a program ends and keeps the
-selected console. Reset runs cold boot and selects the console again from the
-board's configuration. A responding PICO9918 and the enabled Matrix switch
-select `CRT:` at 40 columns before the banner. Otherwise the console starts on
-`TTY:`. Chapter 8 explains the startup file that can then load the graphics-LCD
-console.
+A program's warm boot keeps the selected console. Reset performs a
+cold boot and checks the board configuration again. A responding
+PICO9918 with the Matrix switch enabled starts as `CRT:` at 40 columns
+before the banner. Otherwise TEC-OS starts on `TTY:`. A startup file
+can then load the graphics LCD console, as Chapter 8 explains.
 
 ## The serial terminal
 
-The PC terminal settings are 4800 baud, 8 data bits, no parity and 2 stop bits.
-The board's clock must be on FAST, 4 MHz. TEC-OS generates the serial timing in
-software so a different clock setting changes the bit timing. Appendix G lists
-the physical preparation requirements.
+A serial connection needs 4800 baud, 8 data bits, no parity and 2 stop
+bits. The board must run at FAST, 4 MHz, because TEC-OS generates the
+serial timing in software. A different clock changes that timing.
+Appendix G lists the physical preparation requirements.
 
-TEC-OS sends output bytes to the serial terminal unchanged. The PC's terminal
-program interprets control characters and escape sequences. Programs that clear
-the screen or move the cursor need an ANSI-compatible terminal. TEC-OS cannot
-read the terminal's dimensions. Its command listings use 80 columns and 24 rows
-for pagination regardless of the terminal window size.
+Output bytes reach the serial terminal unchanged. The PC terminal
+program interprets control characters and escape sequences, so programs
+that position a cursor or clear the screen need ANSI support. Command
+pagination assumes 80 columns and 24 rows. TEC-OS cannot read the
+terminal window's actual size.
 
 There is no hardware receive buffer on the board. Input is caught only while
 TEC-OS polls the serial line. It polls while waiting for a key and briefly
@@ -73,14 +73,44 @@ paste.
 
 ## Moving between displays
 
-`CON` alone generates a report naming the selected console: `CON: TTY:`,
-`CON: CRT:`, `CON: UC1:` or `CON: BAT:`. The report is discarded in
-`BAT:`. A name after the command selects that console. `CON TTY` and `CON TTY:`
-are equivalent. An invalid name is printed back with a question mark and leaves
-the console as it was.
+`CON` alone reports the selected console as `CON: TTY:`, `CON: CRT:`,
+`CON: UC1:` or `CON: BAT:`. BAT discards that output. A name after CON
+selects the console, with an optional colon. `CON TTY` and `CON TTY:`
+therefore perform the same selection.
 
 The transcripts in this chapter are host-model captures, not observations of
 a physical board.
+
+`CON TTY` entered on the matrix keyboard switches from the PICO9918
+to the serial terminal. The command appears on the old display. Its
+reply and next prompt appear on the new one. Only serial output is
+included in this capture:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --serial 'CON TTY'. Boot rows included in this complete serial transcript. -->
+```text
+CON: TTY:
+A:SYSTEM>
+```
+
+The first serial line is the reply because the boot text appeared on
+the PICO9918. That display keeps its old picture and receives no more
+console output. Input now comes from the PC terminal. `CON CRT` typed
+there restores the matrix keyboard and PICO9918.
+
+Selecting another display clears it and positions the cursor at the
+top left. A program holding a PICO9918 display claim prevents the clear
+until its claim ends, as Chapter 12 explains. Bare `CON CRT` and
+`CON PICO` retain the width and any active claim. Returning to the
+PICO9918 produces only this reply and prompt:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'CON TTY' 'CON CRT'. The full screen, with trailing empty rows omitted. -->
+```text
+CON: CRT:
+A:SYSTEM>
+```
+
+An invalid console name is printed with a question mark. The selection
+remains unchanged, as this separate capture shows:
 
 <!-- TEC-OS c4ec0f4: node tools/capture.mjs 'CON XYZ'. Boot rows included in this complete serial transcript. -->
 ```text
@@ -99,163 +129,13 @@ XYZ?
 A:SYSTEM>
 ```
 
-On a board using the PICO9918 and matrix keyboard, `CON TTY` moves the console
-to the serial terminal. You type on the matrix keyboard and see the command
-there. The reply and next prompt appear on the serial terminal. This capture
-shows only the serial output:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --serial 'CON TTY'. Boot rows included in this complete serial transcript. -->
-```text
-CON: TTY:
-A:SYSTEM>
-```
-
-The boot text went to the PICO9918. The terminal's first line is the reply. The
-PICO9918 keeps its old picture but receives no further console output. Input now
-comes from the serial terminal too. `CON CRT` typed on the PC restores input
-from the matrix keyboard and output to the PICO9918.
-
-Selecting a different display clears it and puts the cursor at the top left. A
-program's claim on the PICO9918 prevents that clear until the claim ends, as
-Chapter 12 explains. Bare `CON CRT` and `CON PICO` retain the selected width
-and any active claim. After the move back the PICO9918 capture shows only the
-reply and prompt:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'CON TTY' 'CON CRT'. The full screen, with trailing empty rows omitted. -->
-```text
-CON: CRT:
-A:SYSTEM>
-```
-
-## An unavailable display
-
-`CRT:` requires the PICO9918 console to have started at cold boot. That needs
-the PICO9918 and the enabled matrix keyboard. Where it did not start, `CON CRT`
-selects the serial terminal and reports `CON: TTY:`.
-
-`UC1:` requires the graphics LCD, the matrix keyboard and the console driver
-`GLCD.SVC`. A driver is a resident service that handles a device. The PICO9918's
-console code is in ROM so selecting it loads no service file. The graphics-LCD
-driver is a file on drive A. It loads into RAM and reduces the space left for
-programs. Chapter
-11 explains that memory boundary.
-
-`CON UC1` loads `GLCD.SVC` from drive A if it is not installed. A failed load
-leaves the console where it was and shows `GLCD?` on the 20 × 4 LCD. Here both
-display selections leave a serial-only board on the terminal:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs CON 'CON CRT' 'CON UC1' CON. Boot rows included in this complete serial transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>CON
-CON: TTY:
-A:SYSTEM>CON CRT
-CON: TTY:
-A:SYSTEM>CON UC1
-CON: TTY:
-A:SYSTEM>CON
-CON: TTY:
-A:SYSTEM>
-```
-
-On a board with both displays cold boot selects the PICO9918. The starter
-card's `GLCD.SVC` startup line then installs nothing. `CON UC1` loads the driver
-and selects the graphics LCD. This host-model capture used both
-displays and the matrix keyboard. Its graphics-LCD text capture showed this
-after the command:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'CON UC1' CON. The full screen, with trailing empty rows omitted. -->
-```text
-CON: UC1:
-A:SYSTEM>CON
-CON: UC1:
-A:SYSTEM>
-```
-
-Removing the graphics-LCD driver while it is the console selects the
-PICO9918 if its ROM console started. Otherwise output returns to serial.
-This separate run on a board with both displays selected UC1, listed the
-driver and the shell, removed the driver and reported the resulting console:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico 'CON UC1' SERVICES UNLOAD CON. Boot rows included in this complete serial transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>CON UC1
-CON: UC1:
-A:SYSTEM>SERVICES
-GLCD 3
-SHELL 15
-A:SYSTEM>UNLOAD
-
-A:SYSTEM>CON
-CON: CRT:
-A:SYSTEM>
-```
-
-`CRT:` in the final report names the PICO9918 console after removal. The
-driver was the newest service, so `UNLOAD` removed it and left the shell.
-
-A board with the graphics LCD and matrix keyboard can also start without a
-terminal. Where no
-PICO9918 console started, the starter card's startup file installs `GLCD.SVC`
-before the first prompt. The graphics LCD is the console from then on. Chapter 8
-explains the startup conditions.
-
-## A silent console and recovery
-
-`BAT:` is CP/M's batch-device name. In TEC-OS it reads the serial port and
-discards console output. After `CON BAT` even the reply disappears. Commands
-still run when you type them on the serial terminal.
-
-`CON TTY` typed blind on that terminal brings the visible console back. The
-matrix keyboard is not the input device in `BAT:`. In this run `DIR`
-ran between the two `CON` commands but printed nothing on the terminal:
-
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --serial '@start CON BAT' '@start DIR' 'CON TTY'. Boot rows included in this complete serial transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>CON BAT
-CON: TTY:
-A:SYSTEM>
-```
-
-The visible reply belongs to `CON TTY`, which also restores serial output. If a
-display goes quiet after a console change, the selected keyboard and display are
-the first things to check. A move to `TTY:` needs the serial terminal for both.
-A move to `CRT:` or `UC1:` needs the matrix keyboard. Reset selects the cold-boot console again but loses pending card writes. A console change lets you
-recover without resetting the machine.
-
 ## Choosing the PICO9918 width
 
-A width after `PICO` or `CRT` sets the PICO9918's width and makes it the
-console. There must be a space before the number. `CON PICO 40` selects 40
-columns and `CON CRT 32` selects 32. Both text widths, 80 and 40, have 24 rows.
-The 32-column width also has 24 rows and uses Graphics I mode. The screen clears
-when the new width takes effect.
+A width command changes the PICO9918 layout and selects it as the
+console. `CON PICO 40` sets 40 columns and `CON CRT 32` sets 32. The
+space before the number is required. Both 80 and 40 columns use text
+mode and 32 columns uses Graphics I. All three have 24 rows. Applying a
+new width clears the screen.
 
 Cold boot starts the PICO9918 console at 40 columns when its probe succeeds
 and the Matrix switch is enabled. A warm boot keeps the selected width. Reset
@@ -280,9 +160,9 @@ HELLO3.BIN   HELLO3.ASM
 A:SYSTEM>
 ```
 
-`TAS` ended in a warm boot, which kept 32 columns. `DIR /W` fits two names on
-each row here instead of the six in an 80-column listing, so the starter
-card's fourteen files take seven rows.
+The warm boot after TAS retains 32 columns. `DIR /W` fits two file
+names per row at this width, compared with six at 80 columns. Fourteen
+files therefore occupy seven rows.
 
 An unsupported width, a width after another device name or a number joined to
 `CRT` without a space produces a question mark. The console remains as it was:
@@ -314,17 +194,134 @@ A width command typed at the prompt also produces a question mark where cold
 boot did not start the PICO9918 console. The same line in `STARTUP.CMD` passes
 quietly on that board, as Chapter 8 explains.
 
+## An unavailable display
+
+`CON CRT` can select the PICO9918 only if its console started at cold
+boot with the matrix keyboard enabled. Otherwise it selects serial
+and reports `CON: TTY:`.
+
+`UC1:` needs the graphics LCD, matrix keyboard and `GLCD.SVC` driver.
+This resident service loads from A into RAM, reducing program space.
+The PICO9918 console is in ROM and requires no service file. Chapter 11
+explains the memory boundary.
+
+`CON UC1` loads `GLCD.SVC` from drive A if it is not installed. A failed load
+leaves the console where it was and shows `GLCD?` on the 20 × 4 LCD. Here both
+display selections leave a serial-only board on the terminal:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs CON 'CON CRT' 'CON UC1' CON. Boot rows included in this complete serial transcript. -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM
+B: WORK
+C: PROJECTS
+
+A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
+
+A:SYSTEM>CON
+CON: TTY:
+A:SYSTEM>CON CRT
+CON: TTY:
+A:SYSTEM>CON UC1
+CON: TTY:
+A:SYSTEM>CON
+CON: TTY:
+A:SYSTEM>
+```
+
+With both displays fitted, cold boot selects the PICO9918 and the
+startup `GLCD.SVC` line installs nothing. `CON UC1` then loads the
+driver and selects the graphics LCD. This host-model text capture used
+both displays and the matrix keyboard:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'CON UC1' CON. The full screen, with trailing empty rows omitted. -->
+```text
+CON: UC1:
+A:SYSTEM>CON
+CON: UC1:
+A:SYSTEM>
+```
+
+Removing the graphics-LCD driver while it is the console selects the
+PICO9918 if its ROM console started. Otherwise output returns to serial.
+This separate run used both displays. It selected UC1, listed the
+services, removed the driver and reported the resulting console:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico 'CON UC1' SERVICES UNLOAD CON. Boot rows included in this complete serial transcript. -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM
+B: WORK
+C: PROJECTS
+
+A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
+
+A:SYSTEM>CON UC1
+CON: UC1:
+A:SYSTEM>SERVICES
+GLCD 3
+SHELL 15
+A:SYSTEM>UNLOAD
+
+A:SYSTEM>CON
+CON: CRT:
+A:SYSTEM>
+```
+
+The final `CRT:` report confirms the return to PICO9918. GLCD was
+the newest service, so its removal leaves the shell installed.
+
+A graphics LCD and matrix keyboard can also be used without a terminal.
+The starter file installs `GLCD.SVC` before the first prompt when no
+PICO9918 console started. The graphics LCD then becomes the console.
+Chapter 8 explains these startup conditions.
+
+## A silent console and recovery
+
+`BAT:` is CP/M's batch-device name. TEC-OS reads its input from serial
+and discards its output. `CON BAT` therefore suppresses its own reply
+but commands typed on the serial terminal still run.
+
+`CON TTY` typed blind on that terminal brings the visible console back. The
+matrix keyboard is not the input device in `BAT:`. In this run `DIR`
+ran between the two `CON` commands but printed nothing on the terminal:
+
+<!-- TEC-OS c4ec0f4: node tools/capture.mjs --serial '@start CON BAT' '@start DIR' 'CON TTY'. Boot rows included in this complete serial transcript. -->
+```text
+TEC-OS 0.1 for TEC-1G
+A: SYSTEM
+B: WORK
+C: PROJECTS
+
+A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
+
+A:SYSTEM>CON BAT
+CON: TTY:
+A:SYSTEM>
+```
+
+The visible reply belongs to `CON TTY`, which also restores serial output. If a
+display goes quiet after a console change, the selected keyboard and display are
+the first things to check. A move to `TTY:` needs the serial terminal for both.
+A move to `CRT:` or `UC1:` needs the matrix keyboard. Reset selects the cold-boot console again but loses pending card writes. A console change lets you
+recover without resetting the machine.
+
 ## The matrix keyboard
 
-`CRT:` and `UC1:` read the matrix keyboard, not the serial terminal. `TTY:` and
-`BAT:` read the serial terminal, not the matrix keyboard. The basic Shift and
-Ctrl combinations were introduced with the first commands. Fn gives the same
-character as the key alone. A modifier pressed alone sends nothing. Two ordinary
-keys held together send nothing either.
+`CRT:` and `UC1:` read the matrix keyboard. `TTY:` and `BAT:` read
+serial instead. Shift and Ctrl work as in the first session. Fn produces
+the same character as the key alone. A modifier alone sends nothing,
+as do two ordinary keys held together.
 
-Caps turns Caps Lock on and off. The CAPS lamp lights while it is on. With Caps
-Lock on letters are capitals with Shift or without it. The `{` key gives `[`
-and the other keys are unchanged.
+Caps toggles Caps Lock and its CAPS lamp. While it is on, letters are
+capitals regardless of Shift. The `{` key produces `[` and the other
+keys keep their usual behaviour.
 
 The arrow keys send standard ANSI sequences. Programs such as `TED` read them on
 the matrix keyboard too. The keyboard lacks `]`, `}`, `` ` `` and `~`. It also
@@ -342,13 +339,12 @@ the scan timing and character encodings.
 
 ## Text and the cursor on a display
 
-On the PICO9918 or graphics LCD, TEC-OS interprets the text itself. Each
-printable character is drawn at the cursor and advances it one column. Control
-characters move the cursor or clear the screen. ANSI sequences provide cursor
-positioning, screen clearing and reverse video. They also insert or delete
-characters and lines. Chapter 17 lists the exact terminal subset. A program
-requiring sequences outside that subset may need a serial terminal with fuller
-ANSI support.
+TEC-OS draws display-console text at the cursor and advances it a
+column for each printable character. Control characters move the cursor
+or clear the screen. Supported ANSI sequences provide these operations
+and reverse video. They also insert or delete characters and lines.
+Chapter 17 lists the exact subset. Programs using other sequences
+may require a serial terminal with fuller ANSI support.
 
 While a program waits for input on a display, the cursor appears as the reverse
 image of the character underneath it. The next output byte removes that cursor.

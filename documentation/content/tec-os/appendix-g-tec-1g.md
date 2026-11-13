@@ -17,15 +17,15 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-TEC-OS shares several ports with the board's displays, serial line and speaker.
-The tables here give the connections its code uses. They also identify the
-places where the host model and the board documents describe different
-hardware. Source inspection establishes the operations the ROM performs, not
-what an untested physical board will return.
+Board preparation and port use need separate checks. The configuration
+below identifies the RAM, clock and input settings TEC-OS requires.
+The port tables then identify the connections its code uses and the places
+where the host model differs from board documentation. Source inspection
+establishes the ROM's operations, not the response of an untested board.
 
-For the prepared board, fit a 32 KiB RAM chip in U9, set the CPU clock to FAST
-with the 4 MHz oscillator and leave the hex-keypad non-maskable interrupt (NMI)
-jumper off. Enable the Matrix switch when using the matrix keyboard. Chapter 28
+The prepared board has a 32 KiB RAM chip in U9 and uses the FAST setting
+with the 4 MHz oscillator. The hex-keypad non-maskable interrupt (NMI)
+jumper stays off. Enable the Matrix switch when using the matrix keyboard. Chapter 28
 describes the board diagnostics, a program that MON-3 loads, and the serial
 log that records what a particular board did.
 
@@ -68,13 +68,13 @@ responding display through `VIDEO`.
 
 ## Port 01h and the serial line
 
-The digit selects, serial output and speaker share one output byte. Bit 6
-must remain high while the serial line is idle. Clearing it looks like the
-start of another serial character. `DIGIT` sets that bit during each digit's
-lit interval and afterwards. `TONE` keeps it set while toggling bit 7
-(`src/services.asm:23-32`, `src/services.asm:95-128`,
-`src/services.asm:233-257`). Programs use those services rather than replacing
-the shared port value. Chapter 12 gives their calling interface.
+A write to port `01h` affects serial output as well as the digits and
+speaker. Bit 6 must stay high while serial is idle. Clearing it resembles
+the start of another serial character. `DIGIT` keeps the bit high during
+and after each digit's lit interval. `TONE` keeps it high while toggling
+speaker bit 7 (`src/services.asm:23-32`, `src/services.asm:95-128`,
+`src/services.asm:233-257`). Programs can use those services to preserve
+the shared serial bit. Chapter 12 gives their calling interface.
 
 The CPU generates the serial bits itself. It sends through `01h` bit 6 and
 receives through `03h` bit 7. The connection uses 4800 baud, eight data bits, no
@@ -82,10 +82,10 @@ parity and two stop bits. The delay counts assume a 4 MHz clock so the board
 requires FAST with the 4 MHz oscillator (`tools/build.mjs:26-27`,
 `tools/build.mjs:39-77`, `src/console.asm:306-331`, `src/console.asm:363-393`).
 
-There is no hardware receive buffer. A byte reaches TEC-OS only while the CPU
-is polling for its start bit and sampling the following bits. A program that
-is busy elsewhere can miss it. Model input queuing does not establish that a
-physical board can receive an uninterrupted paste. Chapter 17 explains the
+Serial reception depends on the CPU polling for the start bit and sampling
+the bits that follow. There is no hardware receive buffer, so a program
+busy elsewhere can miss a byte. The model's input queue does not establish
+that a board can receive an uninterrupted paste. Chapter 17 explains the
 polling and the separate one-byte software reserves.
 
 ## Port 03h and the switches
@@ -137,13 +137,13 @@ which writes `01h` to remove the overlay (`src/reset.asm:1-13`,
 `src/boot.asm:22-40`). Chapter 16 distinguishes this from a program reaching
 the reset entry while EXPAND 1 is selected.
 
-A program writing the latch must also update `0040h`. Otherwise the next
-TEC-OS latch write starts from an obsolete copy. Cache accesses, the only
-TEC-OS use of EXPAND 1, restore that recorded value after using the bank.
-They perform no stack operation while that bank is visible because it hides
-the resident stacks in EXPAND 0 (`src/cache.asm:13-41`,
-`docs/memory-map.md:70-83`). Chapter 15 explains the
-memory boundary.
+The latch shadow must be updated whenever a program writes the latch.
+Otherwise a later TEC-OS write uses an obsolete value from `0040h`.
+Cold boot tests and clears EXPAND 1. During normal operation TEC-OS uses
+it only for the cache. Cache accesses restore the recorded value afterwards
+and perform no stack operation while that bank hides the
+resident EXPAND 0 stacks (`src/cache.asm:13-41`,
+`docs/memory-map.md:70-83`). Chapter 15 explains the memory boundary.
 
 The model decodes bits 3–6 as a further bank field. The board documents
 show them unconnected to U9. TEC-OS uses only bit 2 among bits 2–6.

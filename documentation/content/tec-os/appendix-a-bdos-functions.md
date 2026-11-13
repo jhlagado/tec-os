@@ -17,12 +17,13 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-Use the function number to find its registers in the table, then its effects and
-failure results in the numbered entry. TEC-OS implements the CP/M 2.2 interface
-with selected additions numbered 44 to 48, 99 and 108. Those additions do not
-establish general CP/M 3 compatibility. Unsupported calls are listed at the end.
-[Chapter 20](20-a-file-through-the-bdos.md) explains the file machinery behind
-these contracts and the file control block (FCB).
+BDOS calls give a program a common interface to files and the console.
+The table identifies the registers for each function number. The numbered
+entries then give its effects and failure results. TEC-OS implements the
+CP/M 2.2 interface with selected additions numbered 44 to 48, 99 and 108.
+Those additions do not establish general CP/M 3 compatibility.
+[Chapter 20](20-a-file-through-the-bdos.md) explains the file machinery and
+the file control block (FCB) used by these calls.
 
 | `C` | Name | In | Out |
 | ---: | --- | --- | --- |
@@ -75,19 +76,22 @@ these contracts and the file control block (FCB).
 | 99 | Truncate file | | `A` = `FFh` |
 | 108 | Get or set program return code | `DE` = `FFFFh` or code | `HL` = code or 0 |
 
-These are ordinary results. A disk error can instead abort the call or
-return the error registers described below.
+The table lists ordinary results. A disk error can abort a call or return
+the separate error registers specified under [The errors](#the-errors).
 
 ## Calling a function
 
-A program loads the function number into `C`, loads its argument into `E` or
-`DE` and calls `0005h`. On return `HL` holds the result, `A` copies its low
-byte and `B` copies its high byte (`src/cpm/bdos.asm:194-214`). Byte results
-have 0 in `H` and `B`. An entry that says “returns nothing” returns 0. No
-other register or result flag is promised. Test the returned value rather
-than treating carry as a success flag. The call places a two-byte return
-address on the program's stack, then the BDOS switches to its own stack.
-That stack's declared allocation is 54 bytes
+A BDOS call begins with the function number in `C` and its argument in `E`
+or `DE`. The program then calls `0005h`. The result returns in `HL`, with
+its low byte copied to `A` and its high byte to `B`
+(`src/cpm/bdos.asm:194-214`). A byte result has 0 in `H` and `B`.
+The value is 0 for entries labelled “returns nothing”.
+
+A caller tests the documented result instead of using carry as a general
+success flag. Other registers and result flags have no preservation
+guarantee. The call places its
+two-byte return address on the program's stack. BDOS then switches to its
+own 54-byte stack allocation
 (`src/cpm/bdos.asm:124-129`, `src/layout.asm:113`).
 
 A function that takes an FCB uses its first byte to select a drive: 0 for
@@ -99,9 +103,9 @@ is allowed only for function 17. An explicit FCB drive changes the selected
 drive for that operation without changing the logical default. The caller's
 drive byte is left intact (`src/cpm/bdosfile.asm:128-195`).
 
-The file functions return a directory code in `A` where CP/M 2.2 does: 0 to 3,
-the place in the 128-byte directory record of the entry found or `FFh` for
-none.
+A directory code identifies the entry within a 128-byte directory record.
+File functions that return a directory code use `A`, as in CP/M 2.2.
+Values 0 to 3 identify the entry found. `FFh` means there is none.
 
 ## The errors
 
@@ -122,9 +126,10 @@ or full-directory result listed under a function.
 | 3 | `Bdos Err On d: File R/O` | Function 19 or 23 reached a read-only directory entry or function 21, 34 or 40 received an FCB with that attribute (`src/cpm/bdosfile.asm:355-366`, `393-399`, `539-545`, `610-617`, `src/cpm/bdosrec.asm:280-283`) |
 | 4 | `Bdos Err On d: Select` | An unmounted drive, a drive past D or an FCB's `?` drive outside function 17 (`src/bios.asm:61-92`, `src/cpm/bdosfile.asm:176-195`, `src/cpm/bdoslog.asm:757-760`) |
 
-[Appendix D](appendix-d-error-messages.md#the-bdos-s-errors) gives recovery
-procedures. Earlier or partial physical writes are not rolled back when a
-transfer fails.
+A failed transfer can follow successful or partial physical writes. Those
+writes are not rolled back.
+[Appendix D](appendix-d-error-messages.md#the-bdos-s-errors) gives the
+recovery procedures.
 
 ## The functions
 
@@ -334,9 +339,9 @@ set. The CCP's `USER` command takes 0 to 15 and the byte at `0004h` holds
 only four bits of the number
 (`src/cpm/ccpcmd.asm:223-246`, `src/cpm/ccp.asm:306-324`).
 
-**33 Read random.** Reads the record whose number is in the FCB's `R0` and
-`R1` into the DMA address and leaves the FCB's extent and `CR` at that record
-so that a sequential read after it reads the same record
+**33 Read random.** Reads the record numbered by the FCB's `R0` and `R1`
+into the DMA address. The FCB's extent and `CR` remain at that record, so a
+following sequential read reads it again
 (`src/cpm/bdosrec.asm:243-249`, `src/cpm/bdosrec.asm:317-427`). Returns 0 on
 success. Returns 1 when the record has not been written. Returns 3 when the
 current extent can't be closed. Returns 4 when the extent has not been
@@ -447,9 +452,10 @@ through its jump table, whose warm boot entry is the address at `0001h`
 
 ## Differences from Digital Research's BDOS
 
-Function 12 reports CP/M 2.2. TEC-OS derives from Portable CP/M, an original
-implementation of that interface (`src/cpm/PROVENANCE.md:1-7`). Code written
-for Digital Research's BDOS encounters these differences:
+TEC-OS reports CP/M 2.2 through function 12. Its BDOS derives from Portable
+CP/M, an independent implementation of that interface
+(`src/cpm/PROVENANCE.md:1-7`). Programs written for Digital Research's BDOS
+encounter the following differences.
 
 - The BDOS code is in ROM. Writing to it cannot install a hook. The BDOS
   calls the RAM BIOS jump table, where a program can replace an entry
