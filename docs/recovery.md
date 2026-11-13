@@ -83,6 +83,17 @@ restrictions. A private worker stack does not make BDOS generally reentrant.
 Warm-boot flush failure also drops the remaining chained command text while
 retaining the failed data; it no longer drops data with `Write lost`.
 
+If the bootstrap disk reset or saved-drive selection fails, TEC-OS prints
+`Disk reset failed` and `Enter retries`. This is a recovery console. Press
+Enter to retry the disk reset; normal commands resume once the default disk
+state is valid. Other keys, including LF, do not retry it. Printing and
+reading input still provide housekeeping opportunities. Enter does not
+initialise a newly inserted card. If cold startup was already buffered, it
+waits until recovery succeeds and then runs once. Pausing output with ^S and
+then pressing ^C deliberately warm boots back into recovery; ^C at the retry
+input is ignored. Pending data survives these retries, while reset still
+discards it.
+
 ## What a successful write means
 
 A successful data write can mean its record is accepted into the cache.

@@ -200,6 +200,14 @@ replaced entry stays until reset. A program that damages the table can stop
 warm boot working; reset rebuilds it. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
 The user number survives warm boot.
 
+The CCP bootstrap uses returned errors for its disk reset and saved-drive
+selection. A failure stays at `Disk reset failed` / `Enter retries`, with
+normal commands and shell LINE blocked until a successful Enter retry
+restores valid defaults. Dirty acknowledged data is retained. An already
+buffered cold startup line waits and runs once after recovery. This private
+bootstrap policy does not change an application's function45 error mode or
+make BDOS reentrant.
+
 Warm boot puts the video display back into its console mode: on the
 PICO9918 it reloads registers 0–7 and the font, and on the GLCD it turns the
 display and graphics back on. What a program left on the screen stays until
