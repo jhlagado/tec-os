@@ -54,22 +54,15 @@ calls, terminal features and hardware a program uses.
 
 ## Starting with a prepared machine
 
-The first session uses a 40-column PICO9918 display and the matrix keyboard
+The examples use a 40-column PICO9918 display and the matrix keyboard
 with the Matrix switch enabled. The board needs a 32,768-byte RAM chip in U9,
 the 4 MHz FAST setting, the TEC-OS ROM and a prepared starter card. The keypad
 non-maskable interrupt (NMI) jumper is off. SYSTEM is on drive A and WORK is on
 drive B. [Appendix G](appendix-g-tec-1g.md) describes the hardware preparation.
 
-[First session](01-first-session.md) begins at power-on with that preparation
-complete. You find the supplied files and run programs from the card.
-In [Make a small program](02-make-a-small-program.md) you enter a banner in
-TED, save it and assemble it with TAS. Changing its text and running it again
-connects the source file to the result on screen.
-[Build a BASIC program](03-build-a-basic-program.md) uses BAZA to compile
-TIMES.BAS, then uses TED's same build keys. No earlier CP/M or BASIC course
-is required for these sessions.
-
-You can copy and change the banner without already knowing assembly.
+No previous experience of CP/M or BASIC is needed. You can copy and change
+the [greeting program](02-make-a-small-program.md) without prior assembly
+experience.
 The explanation beside the listing covers the instructions and data it uses.
 The later programming chapters assume you can read a short Z80 listing with
 labels, registers and branches. Each TEC-OS call, buffer and stack contract
