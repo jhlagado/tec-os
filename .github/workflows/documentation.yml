@@ -1,4 +1,4 @@
-name: Publish tec-os documentation
+name: Publish TEC-OS documentation
 
 on:
   push:
