@@ -14,6 +14,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
@@ -779,7 +780,7 @@ for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G
 
 // KE-AR8: a directory write on the volume written behind whose data lines
 // fail leaves those lines dirty and drops only its own, so a close retried
-// fails again until the card takes the data, and warm boot says Write lost.
+// fails again until the card takes the data; warm boot retains pending data.
 /** WB.DAT made on B: (G8M, written behind, logged) and records 0-7 written, with function 45 in FFh mode; the card refuses B:'s data blocks while refuse() says so. */
 function closing(refuse) {
   const image = createContainer([
@@ -799,8 +800,32 @@ function closing(refuse) {
   }
   const b = parseContainer(image).volumes[1];
   const data = (block) => block >= b.start + 32 && block < b.start + b.length; // past G8M's 32 directory blocks
-  failing(m, (block) => refuse() && data(block) && "fail");
-  return { r, m, image };
+  const refusals = [];
+  failing(m, (block, payload) => {
+    if (!refuse() || !data(block)) return;
+    refusals.push({ block, payload: Array.from(payload) });
+    return "fail";
+  });
+  return { r, m, image, refusals };
+}
+
+function pendingWriteState(m, image) {
+  assert.equal(m.expand, undefined, "this observation uses the default physical bank model");
+  assert.ok(m.classicBankIn, "observe the returned caller or actual classic input");
+  const bank = m.banks[0];
+  assert.equal(bank.length, 0x4000);
+  const count = m.read(m.sym("HKCNT"));
+  assert.ok(count <= m.sym("NLINES"));
+  const queue = Array.from({ length: count }, (_, i) => m.read(m.sym("HKQ") + i));
+  const dirtyVector = Array.from(bank.subarray(m.sym("CDIRTY") - 0x8000, m.sym("CDIRTY") - 0x8000 + m.sym("NLINES")));
+  const entries = queue.map(line => {
+    assert.ok(line < m.sym("NLINES"));
+    const tag = Array.from(bank.subarray(m.sym("CTAB") - 0x8000 + line * 4, m.sym("CTAB") - 0x8000 + (line + 1) * 4));
+    return { line, tag, block: tag.reduce((n, b, i) => n + b * 256 ** i, 0), dirty: dirtyVector[line], payload: Array.from(bank.subarray(line * 512, (line + 1) * 512)) };
+  });
+  const ephemeral = Object.fromEntries(["HKRPOS", "HKRLEN", "HKDEP", "HKBUSY", "HKERR", "CPEND", "CANY"].map(name => [name, m.read(m.sym(name))]));
+  ephemeral.round = Array.from({ length: ephemeral.HKRLEN }, (_, i) => m.read(m.sym("HKROUND") + i));
+  return { durable: { queue, dirtyVector, entries }, ephemeral, cardSHA256: createHash("sha256").update(image).digest("hex"), directoryRecords: volume(image, "B").find("WB.DAT")?.records ?? null };
 }
 
 test("a close whose data lines the card refuses fails, and retried fails again until the card takes them, then the file is whole (KE-AR8)", () => {
@@ -817,13 +842,50 @@ test("a close whose data lines the card refuses fails, and retried fails again u
   for (let rec = 0; rec < 8; rec += 1) assert.deepEqual(card.subarray(rec * 128, rec * 128 + 128), recordOf(rec), `record ${rec}, on the card`);
 });
 
-test("a close whose data lines the card refuses leaves them for warm boot, which says Write lost, and the card's directory names no record (KE-AR8)", () => {
-  const { r, m, image } = closing(() => true);
+test("a refused close retains acknowledged data through warm boot without publishing directory records (KE-AR8)", () => {
+  const { r, m, image, refusals } = closing(() => true);
+  const beforeClose = pendingWriteState(m, image);
+  const disk = volume(image, "B");
+  const b = parseContainer(image).volumes[1];
+  const allocated = word(m, 0x5c + 16);
+  const lastBlock = b.start + allocated * disk.blockBytes / 512 + 1;
+  const received = Array.from({ length: 4 }, (_, i) => Array.from(recordOf(i + 4))).flat();
+  assert.equal(beforeClose.durable.entries.length, 1, "earlier API calls committed preceding work; the final updated block remains queued");
+  assert.equal(beforeClose.durable.entries[0].block, lastBlock, "the queued tag identifies records 4 to 7 in this file");
+  assert.deepEqual(beforeClose.durable.entries[0].payload, received, "all acknowledged records in the final block are retained");
+  assert.equal(beforeClose.durable.dirtyVector.filter(Boolean).length, 1, "the full dirty vector has no unobserved dirty line");
+  assert.equal(beforeClose.durable.entries[0].dirty, 1);
+  assert.equal(beforeClose.ephemeral.HKDEP, 0);
+  assert.equal(beforeClose.ephemeral.HKBUSY, 0);
+  assert.notDeepEqual(Array.from(image.subarray(lastBlock * 512 + 384, (lastBlock + 1) * 512)), Array.from(recordOf(7)), "the final acknowledged record is still off-card");
   assert.equal(r.bdos(16), 0xff, "the close fails");
-  r.warm();
-  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "Write lost, once");
+  const beforeWarm = pendingWriteState(m, image);
+  assert.deepEqual(beforeWarm.durable, beforeClose.durable, "failed close preserves queue, tags, all dirty bits and full payload");
+  assert.equal(beforeWarm.cardSHA256, beforeClose.cardSHA256);
+  assert.equal(beforeWarm.ephemeral.HKDEP, 0);
+  assert.equal(beforeWarm.ephemeral.HKBUSY, 0);
+  const refusedBeforeWarm = refusals.length;
+  assert.ok(refusedBeforeWarm > 0, "the close actually reached the refusing backend");
+  const warm = r.warm();
+  const afterWarm = pendingWriteState(m, image);
+  assert.deepEqual(afterWarm.durable, beforeWarm.durable, "warm boot retains all acknowledged data without dropping a line");
+  assert.equal(afterWarm.cardSHA256, beforeWarm.cardSHA256);
+  assert.ok(refusals.length > refusedBeforeWarm, "warm boot also encountered actual backend refusal");
+  assert.ok(refusals.every(({ block, payload }) => block === lastBlock && Buffer.from(payload).equals(Buffer.from(received))), "every refused write contained the complete queued payload");
+  assert.equal(warm.outcome, "normal", "valid default disk state can coexist with retained pending data");
+  assert.equal(warm.text, m.text(m.mark));
+  assert.match(warm.text, /\r\nB>$/);
+  assert.equal(warm.text.match(/Write pending/g)?.length, 1, "one pending notice rather than a loss report");
+  assert.doesNotMatch(warm.text, /Write lost/);
+  assert.equal(afterWarm.ephemeral.HKDEP, 1, "the new counted input owns the API context");
+  assert.equal(afterWarm.ephemeral.HKBUSY, 0);
+  const oldsp = word(m, m.sym("OLDSP"));
+  assert.equal(oldsp, m.sym("CSTKTOP") - 2);
+  const back = word(m, oldsp);
+  assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0], "actual CCP counted-input call site");
   const f = volume(image, "B").find("WB.DAT");
   assert.ok(!f || f.records === 0, `the card's entry names ${f?.records} records`);
+  console.log(JSON.stringify({ scope: "late-armed backend refusal after eight accepted records", queuedBlocks: afterWarm.durable.entries.map(({ block }) => block), refusals: refusals.length, beforeWarmRefusals: refusedBeforeWarm, warm, cardSHA256: afterWarm.cardSHA256, directoryRecords: f?.records ?? null }));
 });
 
 // --- Write-behind follows the logged drive ------------------------------------
