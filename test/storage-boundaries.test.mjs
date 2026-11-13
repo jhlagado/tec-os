@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Machine } from './lib/machine.mjs';
 import { ABI, romFor, TEST_CLOCK, volume } from './lib/fixtures.mjs';
 import { createContainer, parseContainer } from '../tools/lib/container.mjs';
+import { finishBarePrompt, publicContext } from './lib/public-caller.mjs';
 
 /** A machine on a three-volume card at its first prompt, logged on B: when LOGGED is "B". */
 function start({ logged = "A", ...opts } = {}) {
@@ -14,30 +15,41 @@ function start({ logged = "A", ...opts } = {}) {
   volume(image, 'A').write('KEEP.DAT', new Uint8Array(128).fill(0xaa));
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
-  m.runUntil(() => m.waitingForInput(), 10_000_000);
+  m.runUntil(() => m.ready(), 10_000_000);
   if (logged === "B") {
     m.type("B:\r");
     m.expect(/B(:\S*)?>$/, { maxCycles: 200_000_000 });
-    m.runUntil(() => m.waitingForInput(), 10_000_000);
+    m.runUntil(() => m.ready(), 10_000_000);
   }
-  return { m, image };
+  const normalization = finishBarePrompt(m);
+  return { m, image, normalization };
 }
 const bytes = (m, a, n) => Uint8Array.from({ length: n }, (_, i) => m.read(a + i));
 const word = (m, n, v) => { m.write(m.sym(n), v & 255); m.write(m.sym(n) + 1, v >> 8); };
-function call(m, name, regs = {}) {
+function runCall(m, name, regs = {}) {
+  publicContext(m);
   m.write(0x3000, 0); m.write(0x3001, 0x20);
   Object.assign(m.cpu.cpu, { sp: 0x3000, pc: typeof name === 'number' ? name : m.sym(name), ...regs });
   m.runUntil(() => m.pc === 0x2000, 100_000_000, String(name));
+  publicContext(m);
   assert.equal(m.cpu.cpu.sp, 0x3002, 'balanced return to the caller');
   return m.cpu.cpu.a;
+}
+function call(m, name, regs = {}) {
+  assert.ok(name === 5 || name === 'ABICALL', 'a public call uses its actual entry wrapper');
+  return runCall(m, name, regs);
+}
+function privateCall(m, name, regs = {}) {
+  assert.ok(['BSELDSK', 'BWRITE', 'VSDSC'].includes(name), 'private setup names its actual handler');
+  return runCall(m, name, regs);
 }
 // The volume services by their old operation: 0 mount, 1 unmount, 2 describe; drive C.
 const svc = (m, a, c = 1, e = 2) => call(m, 'ABICALL', { b: c, c: [ABI.TNMOUNT, ABI.TNUNMNT, ABI.TNDESC][a], e, h: 0x50, l: 0 });
 function writeRecord(m, drive, sector, value) {
-  call(m, 'BSELDSK', { c: drive });
+  privateCall(m, 'BSELDSK', { c: drive });
   word(m, 'DSKTRK', 2); word(m, 'DSKSEC', sector); word(m, 'DSKDMA', 0x4000);
   for (let i = 0; i < 128; i++) m.write(0x4000 + i, value);
-  assert.equal(call(m, 'BWRITE', { c: 0 }), 0);
+  assert.equal(privateCall(m, 'BWRITE', { c: 0 }), 0);
 }
 function failIO(m, entry) {
   const step = m.step.bind(m);
@@ -178,33 +190,89 @@ for (const fn of [34, 40]) test(`BDOS ${fn} accepts random record 65535 with exa
 });
 
 // A3: MOUNT and UNMOUNT write a drive's dirty lines first. Each volume service's
-// stack stays within abi.inc's bound of 24 bytes below the return address, with
-// the cache clean and with every line dirty, so that taking a line for the
-// table writes one first (KS36b review).
+// stack stays within abi.inc's bound of 24 bytes below the return address,
+// with six or all lines dirty before public entry. Ordinary entry service
+// can free a line before the functional handler reaches table allocation.
 const dirtyLines = (m) => {
   const at = m.sym('CDIRTY') - 0x8000;
   return Array.from({ length: m.sym('NLINES') }, (_, i) => m.expand[1][at + i]).filter(Boolean).length;
 };
+function pressureState(m) {
+  assert.equal(m.expand?.length, 2, 'this pressure fixture uses the explicit two-window physical model');
+  const classic = m.expand[0], cache = m.expand[1];
+  const get = name => classic[m.sym(name) - 0x8000];
+  const count = get('HKCNT');
+  assert.ok(count <= m.sym('NLINES'));
+  const queue = Array.from({ length: count }, (_, i) => classic[m.sym('HKQ') - 0x8000 + i]);
+  const dirty = Array.from(cache.subarray(m.sym('CDIRTY') - 0x8000, m.sym('CDIRTY') - 0x8000 + m.sym('NLINES')));
+  const entries = queue.map(line => {
+    assert.ok(line < m.sym('NLINES'));
+    const tag = Array.from(cache.subarray(m.sym('CTAB') - 0x8000 + line * 4, m.sym('CTAB') - 0x8000 + (line + 1) * 4));
+    return { line, tag, block: tag.reduce((n, b, i) => n + b * 256 ** i, 0), dirty: dirty[line], payload: Array.from(cache.subarray(line * 512, (line + 1) * 512)) };
+  });
+  return { queue, dirty, entries, depth: get('HKDEP'), busy: get('HKBUSY') };
+}
+function pressureBackend(m, image, failed = new Set()) {
+  const attempts = [], commit = m.sd.commitWrite.bind(m.sd);
+  m.sd.commitWrite = () => {
+    const { start, buffer } = m.sd.writeState;
+    const block = start / 512, payload = Array.from(buffer), accepted = !failed.has(block);
+    attempts.push({ block, payload, accepted });
+    if (!accepted) {
+      m.sd.writeState = null;
+      m.sd.pendingResponse = [0x0d, 0xff];
+      m.sd.delayBytes = 1;
+      return;
+    }
+    commit();
+    assert.equal(m.sd.pendingResponse[0], 0x05);
+    assert.deepEqual(Array.from(image.subarray(start, start + 512)), payload, 'the actual accepted payload reached SD');
+  };
+  return attempts;
+}
 /** Record R of B:'s data area, from track 2, holding VALUE. */
 function writeAt(m, r, value) {
-  call(m, 'BSELDSK', { c: 1 });
+  privateCall(m, 'BSELDSK', { c: 1 });
   const dph = m.cpu.cpu.h << 8 | m.cpu.cpu.l;
   const dpb = m.read(dph + 10) | m.read(dph + 11) << 8;
   const spt = m.read(dpb) | m.read(dpb + 1) << 8;
   word(m, 'DSKTRK', 2 + Math.floor(r / spt)); word(m, 'DSKSEC', r % spt); word(m, 'DSKDMA', 0x4000);
   for (let i = 0; i < 128; i++) m.write(0x4000 + i, value);
-  assert.equal(call(m, 'BWRITE', { c: 0 }), 0, `record ${r}`);
+  assert.equal(privateCall(m, 'BWRITE', { c: 0 }), 0, `record ${r}`);
+}
+function seedPressure(m, image) {
+  const b = parseContainer(image).volumes[1], disk = volume(image, 'B');
+  const first = b.start + 2 * disk.d.spt / 4;
+  const requested = Array.from({ length: m.sym('NLINES') }, (_, i) => {
+    const block = first + i;
+    const original = Array.from(image.subarray(block * 512, (block + 1) * 512));
+    const payload = [...original];
+    payload.fill(0x40 + i, 0, 128);
+    return { block, original, payload };
+  });
+  for (let i = 0; i < requested.length; i++) writeAt(m, i * 4, 0x40 + i);
+  const before = pressureState(m);
+  assert.equal(before.queue.length, requested.length);
+  assert.equal(new Set(before.queue).size, requested.length, 'every queue entry names a distinct cache line');
+  assert.equal(new Set(before.entries.map(e => e.block)).size, requested.length, 'every queued absolute tag is distinct');
+  assert.deepEqual(before.entries.map(e => e.block), requested.map(e => e.block), 'the actual queue identifies the requested track-two blocks in first-dirty order');
+  assert.ok(before.dirty.every(v => v === 1));
+  for (let i = 0; i < requested.length; i++) {
+    assert.deepEqual(before.entries[i].payload, requested[i].payload, 'the full queued block matches the acknowledged record and original neighbours');
+    assert.deepEqual(Array.from(image.subarray(requested[i].block * 512, (requested[i].block + 1) * 512)), requested[i].original, 'private setup has not committed the pending block');
+  }
+  return { before, oldCard: new Map(requested.map(e => [e.block, e.original])) };
 }
 /** Drive D's entry in the drive table, and its DPB through BSELDSK. */
 function mounted(m, d) {
   const entry = bytes(m, m.sym('DRVTAB') + 8 * d, 8);
-  call(m, 'BSELDSK', { c: d });
+  privateCall(m, 'BSELDSK', { c: d });
   const dph = m.cpu.cpu.h << 8 | m.cpu.cpu.l;
   return { entry, dpb: dph ? bytes(m, m.read(dph + 10) | m.read(dph + 11) << 8, 15) : null };
 }
-test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean and with every line dirty, walk the cache with interrupts off, and MOUNT and UNMOUNT write the lines (A3); with every line dirty DESCRIBE returns the card's descriptor and MOUNT installs C: as from a clean cache (KE-AR3)", (t) => {
+test("MOUNT, UNMOUNT and DESCRIBE preserve their 24-byte public stack bound and results with six or all lines dirty before entry (A3, KE-AR3)", (t) => {
   const deepest = {};
-  const clean = {}; // what each service gives with the cache clean
+  const partial = {}; // result with six dirty lines before public entry
   // B: is left dirty, logged so that its lines are held behind: UNMOUNT takes
   // B: away, MOUNT puts OTHER on C:, DESCRIBE reads OTHER's descriptor.
   for (const every of [false, true])
@@ -212,7 +280,7 @@ test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean
       const { m, image } = start({ ram96: true, logged: "B" });
       const n = every ? m.sym('NLINES') : 6;
       for (let block = 0; block < n; block += 1) writeAt(m, 4 * block, 0x40 + block);
-      if (every) assert.equal(dirtyLines(m), m.sym('NLINES'), 'every line dirty');
+      assert.equal(dirtyLines(m), n, 'the stated number of lines is dirty before public entry');
       const before = image.slice();
       let low = 0x3000, walkedOn = 0;
       const walk = new Set(['CLOOK', 'CTAKE', 'CFILL'].map((n) => m.sym(n)));
@@ -226,14 +294,14 @@ test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean
       m.cpu.cpu.iff1 = m.cpu.cpu.iff2 = 1; // called with interrupts on
       const got = svc(m, op, drive, index);
       m.step = step;
-      const key = `${name}${every ? ', every line dirty' : ''}`;
+      const key = `${name}, ${every ? 'all' : 'six'} dirty before entry`;
       deepest[key] = 0x3000 - low;
       assert.equal(got, 0, `${key} succeeds`);
       assert.equal(walkedOn, 0, `${key}: the cache walked with interrupts off`);
       // KE-AR3: the table block read into the line taken, not the BIOS's record's block.
       const result = name === 'DESCRIBE' ? { desc: bytes(m, 0x5000, 32) } : name === 'MOUNT' ? mounted(m, 2) : null;
-      if (result && !every) clean[name] = result;
-      if (result && every) assert.deepEqual(result, clean[name], `${key}: as with the cache clean`);
+      if (result && !every) partial[name] = result;
+      if (result && every) assert.deepEqual(result, partial[name], `${key}: same result as the six-dirty reference`);
       if (name === 'DESCRIBE') {
         const card = image.slice(96, 128); // index 2's descriptor in block 0
         assert.deepEqual([...result.desc].filter((_, i) => i !== 14), [...card].filter((_, i) => i !== 14), `${key}: the card's descriptor, but for its drive`);
@@ -247,4 +315,103 @@ test("MOUNT, UNMOUNT and DESCRIBE stay within abi.inc's 24 bytes of stack, clean
     }
   t.diagnostic(`stack below the return address: ${JSON.stringify(deepest)}`);
   for (const [key, d] of Object.entries(deepest)) assert.ok(d > 0 && d <= 24, `${key}: ${d} bytes below the return address`);
+});
+
+for (const failure of ['none', 'head', 'all']) {
+  for (const [name, op, drive, index, handler] of [['MOUNT', 0, 2, 2, 'VSMNT'], ['UNMOUNT', 1, 1, 0, 'VSUNM'], ['DESCRIBE', 2, 0, 2, 'VSDSC']]) {
+    test(`root ${name}, ${failure} backend refusal, preserves pressure results, data and public stack bound`, { timeout: 300_000 }, (t) => {
+      const { m, image } = start({ ram96: true, logged: 'B' });
+      const { before, oldCard } = seedPressure(m, image);
+      const failed = new Set(failure === 'none' ? [] : failure === 'head' ? [before.entries[0].block] : before.entries.map(e => e.block));
+      const table = bytes(m, m.sym('DRVTAB'), 36), dph = bytes(m, m.sym('DPHTAB'), 64);
+      const output = new Uint8Array(32).fill(0xa7);
+      output.forEach((v, i) => m.write(0x5000 + i, v));
+      const attempts = pressureBackend(m, image, failed), handlerStates = [], allocations = [];
+      const step = m.step.bind(m), write = m.cpu.hardware.memWrite;
+      let lowSp = 0x3000, lowWrite = 0x3000, walkedOn = 0;
+      const walks = new Set(['CLOOK', 'CTAKE', 'CFILL'].map(n => m.sym(n)));
+      m.step = () => {
+        if (m.pc === m.sym(handler)) handlerStates.push(pressureState(m));
+        if (m.pc === m.sym('CTAKE')) allocations.push(pressureState(m));
+        if (walks.has(m.pc) && m.cpu.cpu.iff1) walkedOn++;
+        const sp = m.cpu.cpu.sp & 0xffff;
+        if (sp >= 0x2f00 && sp < lowSp) lowSp = sp;
+        return step();
+      };
+      m.cpu.hardware.memWrite = (address, value) => {
+        if (address >= 0x2f00 && address < lowWrite) lowWrite = address;
+        write(address, value);
+      };
+      m.cpu.cpu.iff1 = m.cpu.cpu.iff2 = 1;
+      let result;
+      try { result = svc(m, op, drive, index); }
+      finally { m.step = step; m.cpu.hardware.memWrite = write; }
+      assert.equal(lowSp, lowWrite, 'independent SP and memory-write stack observers agree');
+      assert.ok(0x3000 - lowSp <= 24, 'unchanged public caller bound below return word');
+      assert.equal(walkedOn, 0, 'cache walks exclude maskable interrupts');
+      assert.equal(handlerStates.length, 1);
+      assert.equal(handlerStates[0].depth, 1);
+      assert.equal(handlerStates[0].busy, 0);
+      assert.equal(handlerStates[0].queue.length, failure === 'none' ? m.sym('NLINES') - 1 : m.sym('NLINES'), 'ordinary entry acts before the functional handler');
+      if (op !== 1) {
+        assert.ok(allocations.length > 0, 'descriptor work really reaches cache allocation');
+        assert.equal(allocations[0].queue.length, failure === 'none' ? m.sym('NLINES') - 1 : m.sym('NLINES'));
+      }
+      const succeeds = failure === 'none' || (op === 2 && failure === 'head');
+      assert.equal(result, succeeds ? 0 : ABI.TNEBAD);
+      assert.equal(m.cpu.cpu.flags.C, succeeds ? 0 : 1);
+      const after = pressureState(m);
+      const committed = failure === 'none' && op === 2 ? before.entries.slice(0, 1) : before.entries.filter(e => !failed.has(e.block));
+      const committedBlocks = new Set(committed.map(e => e.block));
+      const retained = before.entries.filter(e => !committedBlocks.has(e.block));
+      assert.deepEqual(after.entries, retained, 'all retained dirty tags and complete acknowledged payloads stay in first-dirty order');
+      assert.equal(after.dirty.filter(Boolean).length, retained.length, 'no hidden dirty line is lost');
+      assert.deepEqual(attempts.filter(a => a.accepted).map(a => a.block), committed.map(e => e.block), 'successful first-dirty progress is ordered and each block commits once');
+      assert.equal(attempts[0].block, before.entries[0].block, 'the actual outer-entry attempt starts with the oldest line');
+      for (const a of attempts) assert.deepEqual(a.payload, before.entries.find(e => e.block === a.block)?.payload, 'backend attempts contain the acknowledged full block');
+      for (const e of before.entries) assert.deepEqual(Array.from(image.subarray(e.block * 512, (e.block + 1) * 512)), committedBlocks.has(e.block) ? e.payload : oldCard.get(e.block));
+      if (!succeeds) {
+        assert.deepEqual(bytes(m, m.sym('DRVTAB'), 36), table);
+        assert.deepEqual(bytes(m, m.sym('DPHTAB'), 64), dph);
+        if (op === 2) assert.deepEqual(bytes(m, 0x5000, 32), output, 'failed descriptor work publishes no output');
+      } else if (op === 0) {
+        assert.equal(m.read(m.sym('DRVIDX') + 2), index + 1);
+        assert.equal(m.read(m.sym('DRVTAB') + 2 * 8 + 6), parseContainer(image).volumes[index].geometry);
+      } else if (op === 1) {
+        assert.ok(bytes(m, m.sym('DRVTAB') + 8, 8).every(v => v === 0));
+      } else {
+        const descriptor = Array.from(image.subarray(32 + index * 32, 64 + index * 32));
+        descriptor[14] = 0xff;
+        assert.deepEqual(Array.from(bytes(m, 0x5000, 32)), descriptor);
+      }
+      t.diagnostic(JSON.stringify({ name, failure, belowReturn: 0x3000 - lowSp, atHandler: handlerStates[0].queue.length, atAllocations: allocations.map(s => s.queue.length), attempts: attempts.map(({ block, accepted }) => ({ block, accepted })), retained: after.queue.length }));
+    });
+  }
+}
+
+test('private DESCRIBE exercises actual all-dirty metadata allocation without an outer-entry worker', { timeout: 300_000 }, (t) => {
+  const { m, image } = start({ ram96: true, logged: 'B' });
+  const { before } = seedPressure(m, image);
+  const attempts = pressureBackend(m, image), allocations = [];
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym('CTAKE')) allocations.push(pressureState(m));
+    return step();
+  };
+  let result;
+  try { result = privateCall(m, 'VSDSC', { b: 0, e: 2, h: 0x50, l: 0 }); }
+  finally { m.step = step; }
+  assert.equal(result, 0);
+  assert.ok(allocations.length > 0);
+  assert.equal(allocations[0].queue.length, m.sym('NLINES'));
+  assert.ok(allocations[0].dirty.every(v => v === 1));
+  assert.equal(allocations[0].depth, 0, 'this is an explicitly private handler, not public dispatch');
+  assert.deepEqual(attempts.map(a => a.block), before.entries.map(e => e.block));
+  assert.ok(attempts.every(a => a.accepted));
+  for (const e of before.entries) assert.deepEqual(Array.from(image.subarray(e.block * 512, (e.block + 1) * 512)), e.payload);
+  assert.equal(pressureState(m).queue.length, 0);
+  const descriptor = Array.from(image.subarray(96, 128));
+  descriptor[14] = 0xff;
+  assert.deepEqual(Array.from(bytes(m, 0x5000, 32)), descriptor);
+  t.diagnostic('private full-pressure allocation reached with all lines dirty; no public caller-stack admission is inferred');
 });
