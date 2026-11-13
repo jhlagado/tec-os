@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 21. From prompt to program
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -26,9 +27,9 @@ exact command grammar.
 ## The minimal CCP and the shell
 
 The ROM's CCP is small, and this chapter follows it. Its `KEYTAB`
-holds DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD, and it still runs a
+holds CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD, and it still runs a
 `.COM` or a `.SVC`, changes drive and reads one line of `STARTUP.CMD`
-(`src/tables.asm:53-76`, `docs/shell.md:3-5`). The rest is
+(`src/tables.asm:53-78`, `docs/shell.md:3-5`). The rest is
 in `SHELL.SVC`, a resident service that the starter card's startup file
 installs. Its own table holds COPY, DEL and SERVICES, and DEL rewrites its
 word as `ERA` and hands the piece to the ROM
@@ -37,7 +38,7 @@ word as `ERA` and hands the piece to the ROM
 The shell takes the prompt through a hook in the ROM. ROM service 16,
 `TNSHELL`, records a table of four entries in the shell's pages: `LINE`,
 `PAGE`, `HREC` and `HSTORE` (`src/abi.inc:226`,
-`drivers/shell.asm:61-64`, `docs/shell.md:273-320`). At each
+`drivers/shell.asm:61-64`, `docs/shell.md:280-327`). At each
 prompt `MAINLOOP` tests the hook. With a shell holding it, `SHLINE` calls
 `LINE`, which prints the prompt, reads or takes the next piece and writes it
 zero-ended into the command buffer with its origin, `FFh` for a line of
@@ -47,7 +48,7 @@ startup line, then a line read with function 10
 (`src/cpm/ccp.asm:97-158`, `src/cpm/ccp.asm:248-294`).
 `TYPE` sends every byte, and `DIR` its row breaks, through `PAGE`, which
 gives the shell's `[more]` pause. With no shell the ROM prints the byte
-(`src/cpm/ccpfile.asm:266-288`, `docs/shell.md:304-307`). Chapter 22 follows
+(`src/cpm/ccpfile.asm:266-288`, `docs/shell.md:311-314`). Chapter 22 follows
 the shell's lines of pieces, Chapter 23 its history and Chapter 26 the
 startup file.
 
@@ -56,7 +57,7 @@ startup file.
 The CCP uses CP/M calls for its ordinary work: function 10 reads a line,
 function 15 opens a file and function 9 prints a string through `0005h`. Its own
 code stays in ROM while program files load into the transient program area
-(TPA). The four source files are assembled in this order (`src/rom.asm:31-35`):
+(TPA). The five source files are assembled in this order (`src/rom.asm:31-36`):
 
 | File | Work |
 | --- | --- |
@@ -64,16 +65,17 @@ code stays in ROM while program files load into the transient program area
 | `src/cpm/ccpfile.asm` | DIR, TYPE and their output through the shell's pager |
 | `src/cpm/ccpmut.asm` | ERA, REN, a name check and the shared BDOS call helper |
 | `src/cpm/ccpcmd.asm` | Other built-ins, file-name parsing, page-zero preparation and startup |
+| `src/cpm/ccpdir.asm` | Basic directory selection, queries and listing for bare-prompt recovery |
 
 The messages and `KEYTAB` are in the ROM data block. Each keyword in
 `KEYTAB` has a zero terminator followed by its handler address. A final
-zero ends the table, which holds eight records (`src/tables.asm:53-76`). `CCPBAS` is
-`DBBBh` and the CCP ends at `E3C2h`. Its 2,056 bytes are followed by the BDOS.
+zero ends the table, which holds nine records (`src/tables.asm:53-78`). `CCPBAS` is
+`DBB8h` and the CCP ends at `E572h`. Its 2,491 bytes are followed by the BDOS.
 
 The working state is in RAM. `CMDFCB` and `RENFCB` hold parsed file
 references. The command buffer follows them and `CCPCLR` marks the start
-of the state cleared by warm boot (`src/ram.asm:148-180`). The state
-runs from `CCPRAM` at `BCF2h` to `BE76h`, with `CCPCLR` at `BDBCh`.
+of the state cleared by warm boot (`src/ram.asm:148-186`). The state
+runs from `CCPRAM` at `BCD6h` to `BE6Ch`, with `CCPCLR` at `BDA2h`.
 `CPMINIT` clears from `CCPCLR` through the BDOS state, leaving the command
 buffer below it intact (`src/boot.asm:398-407`).
 [Chapter 22](22-chains-across-warm-boot.md) explains the retained line.
@@ -200,14 +202,14 @@ its own parser and check, `PARSEFCB` and `UNAMBIG` in
 `drivers/shellcmd.asm:221-336`.
 
 The keyword loop compares the original command text at `CMDSTRT` with
-`KEYTAB`, not the parsed FCB. Its order is DIR, TYPE, ERA, REN, SAVE,
+`KEYTAB`, not the parsed FCB. Its order is CD, DIR, TYPE, ERA, REN, SAVE,
 USER, CON and UNLOAD. COPY, DEL and SERVICES are not in it: the shell
 takes them before the ROM sees the piece, and DEL reaches the ROM as `ERA`
-(`src/tables.asm:60-76`, `drivers/shell.asm:545-552`). `ISCMD` requires a space or zero
+(`src/tables.asm:60-78`, `drivers/shell.asm:545-552`). `ISCMD` requires a space or zero
 immediately after the keyword. `A:DIR` and `DIR.COM` therefore name a
 program file rather than built-in DIR. Both fail when the selected search
 finds no `DIR.COM` (`src/cpm/ccp.asm:351-376`,
-`src/cpm/ccpcmd.asm:689-708`, `src/tables.asm:53-76`).
+`src/cpm/ccpcmd.asm:689-708`, `src/tables.asm:53-78`).
 
 A match jumps to the handler address in the table. With no match the CCP
 requires an unambiguous file name. Type SVC calls `SVCGO` to load and install a
@@ -308,7 +310,7 @@ the word at `0006h`. On the starter card with the shell installed that byte
 is `A7h`: 166 pages cover `0100h` through `A6FFh`. Both 167 and 320 are
 rejected in this capture (`src/cpm/ccpcmd.asm:266-307`):
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 167 B:X.COM'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 167 B:X.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -365,7 +367,7 @@ path passes quietly. A separated width becomes the error word while a joined
 form names the whole token (`src/cpm/ccpcmd.asm:105-180`). This PICO capture
 shows both:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico 'CON PICO 40' 'CON CRT80' 'CON PICO 50' 'CON TTY 80' 'CON CRT: 32'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico 'CON PICO 40' 'CON CRT80' 'CON PICO 50' 'CON TTY 80' 'CON CRT: 32'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -447,7 +449,7 @@ This starter-card capture contrasts a plain command with an
 explicit B drive. The plain TAS reaches A, and prints its usage line, while
 `B:TAS` stays on B:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs B: TAS B:TAS. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: TAS B:TAS. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -490,8 +492,8 @@ falling through to another drive. In the default BDOS error mode a card
 read failure prints `Bad Sector` and warm-boots before this routine returns
 (`src/cpm/bdoscon.asm:47-64`).
 
-With nothing installed the starter card's resident entry is at `B6E9h`. Its
-load ceiling is `B600h`, allowing 46,336 bytes from `0100h`, 233 fewer than
+With nothing installed the starter card's resident entry is at `B6C5h`. Its
+load ceiling is `B600h`, allowing 46,336 bytes from `0100h`, 197 fewer than
 the TPA's byte-address limit. The startup file installs the shell, whose
 first page is `A700h`, so the starter card's prompt loads at most 42,496
 bytes. An installed service lowers the entry word to
@@ -522,7 +524,7 @@ node tools/tecvol.mjs put build/ccp.img B build/big.com
 TAS writes the 76-byte ARGS.COM. FITS returned to the prompt and BIG was
 rejected:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: FITS BIG. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: FITS BIG. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -546,7 +548,7 @@ The same fixture also demonstrates user fallback. Under user 3,
 ARGS is found in B's user 0 and TAS in A's user 0. DIR still lists only
 the empty current area:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -652,7 +654,7 @@ pointer. `SHOWFCB` prints eleven name/type bytes and `TAIL` uses the length
 byte at `0080h`. In this capture the parsed names use padded FCB fields
 while the tail preserves the spaces within the piece:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -693,10 +695,10 @@ number so `B:ARGS` gives 2. A plain command found by fallback on A gives 1
 because lookup set the FCB byte to A (`src/cpm/ccp.asm:431-461`).
 
 `CMDRUN` resets SP to `CSTKTOP`, pushes `0000h` and jumps to `0100h`.
-The source reserves a 32-byte CCP stack, leaving thirty bytes below that
+The source reserves a 48-byte CCP stack, leaving forty-six bytes below that
 return word. A guard separates the stack from command scratch
-(`src/cpm/ccp.asm:464-471`, `src/layout.asm:114-115`,
-`src/ram.asm:190-202`). CP/M 2.2's eight levels provide sixteen bytes.
+(`src/cpm/ccp.asm:464-471`, `src/layout.asm:111-112`,
+`src/ram.asm:196-208`). CP/M 2.2's eight levels provide sixteen bytes.
 [Chapter 15](15-state-and-memory.md) distinguishes configured stack sizes
 from measured use and bounds.
 
@@ -705,7 +707,7 @@ same path to enter the service at its own address.
 `CMDRUN` loads `0100h` first, so a program starts with HL = `0100h` and
 DE = `0000h`, and with A = `FFh` when its line came from `STARTUP.CMD` and 0
 otherwise. CP/M 2.2 promises a program no register at entry
-(`src/cpm/ccp.asm:447-473`, `docs/compatibility.md:185-190`).
+(`src/cpm/ccp.asm:447-473`, `docs/compatibility.md:186-191`).
 
 A top-level RET reaches the warm-boot jump at `0000h`. A direct jump there or
 function 0 reaches warm boot too (`src/cpm/ccp.asm:469-471`,

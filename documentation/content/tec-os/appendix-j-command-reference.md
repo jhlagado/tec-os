@@ -7,12 +7,13 @@ nav_group: "Reference"
 
 # Appendix J. Command reference
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -25,7 +26,7 @@ the line. Later in the line it is ignored. Recall and editing keys are in
 command processor runs the built-ins marked ROM below, and the shell,
 `SHELL.SVC`, which the starter card's startup file installs, adds those
 marked shell, recall, the `[more]` pause, lines of several commands and
-`.CMD` scripts (`docs/shell.md:1-50`). Command names and ordinary program arguments are converted to capitals
+`.CMD` scripts (`docs/shell.md:1-51`). Command names and ordinary program arguments are converted to capitals
 before execution. ECHO and PAUSE keep their text as typed. The command
 echo also retains the case typed.
 [Work with files](04-work-with-files.md) explains the ordinary operations.
@@ -63,7 +64,7 @@ command also requires one name.
 The following retained capture shows an overlong name, a pattern where TYPE
 requires one file and a second argument where DIR accepts only one.
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'DIR VERYLONGNAME.TXT' 'TYPE *.CMD' 'DIR A: B:'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'DIR VERYLONGNAME.TXT' 'TYPE *.CMD' 'DIR A: B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -96,10 +97,10 @@ the causes and recovery actions.
 
 ## Command forms
 
-The ROM holds eight built-ins, DIR, TYPE, ERA, REN, SAVE, USER, CON and
-UNLOAD. The shell adds COPY, DEL, SERVICES, CD, CLS, ECHO and PAUSE, and its
+The ROM holds nine built-ins: CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and
+UNLOAD. The shell adds COPY, DEL, SERVICES, CLS, ECHO and PAUSE, and its
 own DIR, which lists sizes and hands `DIR /W` to the ROM's
-(`src/tables.asm:53-76`, `drivers/shell.asm:650-667`). Drive selection, program launch and service
+(`src/tables.asm:53-78`, `drivers/shell.asm:650-667`). Drive selection, program launch and service
 installation have additional forms handled by the command processor.
 
 | Form | In | Operation |
@@ -125,10 +126,10 @@ installation have additional forms handled by the command processor.
 | `NAME.SVC [ARGS]` | ROM | Load a resident service, and enter its application when it has one |
 | `NAME.CMD` | Shell | Run a script of command lines. Without the shell, run `NAME.COM` |
 
-Without the shell `COPY`, `DEL`, `SERVICES`, `CD`, `CLS`, `ECHO` and `PAUSE`
+Without the shell `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and `PAUSE`
 are names like any other, so each looks for a program of that name and
 normally prints the name with a question mark, and `DIR` is the ROM's wide
-listing (`docs/shell.md:32-51`).
+listing (`docs/shell.md:33-52`).
 
 A built-in name must end at a space or the end of the command piece.
 `DIRX`, `DIR.COM` and `A:DIR` are program commands, not forms of built-in
@@ -159,7 +160,7 @@ X       .DAT  128128
 1013760 free on A:SYSTEM
 ```
 
-This listing is the one `docs/shell.md:193-227` gives. Files of one directory
+This listing is the one `docs/shell.md:200-234` gives. Files of one directory
 entry come first, listed in one pass. A file that may have more entries is
 sized by function 35, which scans the directory, so DIR is slower on a volume
 of many large files: on a G8M volume a file over 32 KiB has more than one
@@ -198,7 +199,7 @@ in hexadecimal (`drivers/shellcmd.asm:54-154`).
 The type-only destination and self-copy cases below were captured on A
 with the starter card.
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'COPY STARTUP.CMD B:.DOC' 'DIR B:' 'COPY A:STARTUP.CMD STARTUP.CMD' 'COPY STARTUP.CMD'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:.DOC' 'DIR B:' 'COPY A:STARTUP.CMD STARTUP.CMD' 'COPY STARTUP.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -271,7 +272,7 @@ disposable file there. It records an `n` answer that leaves the file and a `y`
 answer that erases it. This is a separate demonstration, not the card
 used for BANNER in Chapter 2. `ERA *.*` would erase BANNER too on that card.
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'COPY STARTUP.CMD B:' B: '@start ERA *.*' $'@key n\x0d' DIR '@start ERA *.*' $'@key y\x0d' DIR. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:' B: '@start ERA *.*' $'@key n\x0d' DIR '@start ERA *.*' $'@key y\x0d' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -324,7 +325,7 @@ selection fails. USER accepts a single digit from 0 to 9 or one of 10 to 15.
 Leading-zero forms such as `00` and `03` are rejected. A nonzero user number
 appears before the drive in the command prompt. Under the shell the drive's
 volume follows the drive, as in `A:SYSTEM>` and `3B:GAMES>`, and a drive
-with no volume shows `C:>`. Without the shell the prompt is `A:SYSTEM>`.
+with no volume shows `C:>`. Without the shell the prompt is `A>`.
 
 For a program command the type is replaced by COM, except for SVC. Lookup starts
 on the named drive or the current drive when none is named. On that drive it
@@ -340,8 +341,10 @@ works through the resulting choices.
 
 ### CD
 
-CD is the shell's. It puts one of the card's volumes on a drive, A to D,
-and reports what a drive holds:
+CD changes the directory presented by a drive, selecting a named on-card
+volume. The basic commands work in the bare ROM CCP and in the shell, on
+drives A to D. The shell adds script-drive protection and directory labels
+in its prompts:
 
 | Typed | Result |
 | --- | --- |
@@ -356,16 +359,17 @@ another drive is refused, naming that drive, as `GAMES is on B:`, since a
 volume is never on two drives. No such volume gives `NAME?`. A name of more
 than 11 characters, a drive past D or text after the name or after `?` gives
 `CD?`. A mount the ROM refuses, a volume too large for the drive's slot or a
-cache line the card will not take, gives `CANNOT MOUNT` and the drive keeps
+cache line the card will not take, gives `CD FAILED` and the drive keeps
 its volume. Each refusal sets return code `FF00h`. To take a volume off a
 drive, put another there. CD of the drive a script is read from is refused
-with `CD?` and the script goes on (`docs/shell.md:141-191`).
+with `CD?` and the script goes on (`docs/shell.md:142-198`).
 
 The commands found on A follow its volume. A reset keeps the drives'
 selection, so after CD puts a volume with no `SHELL.SVC` on A, a reset gives
-the bare `A>` with no shell and no CD. Power off and on gives the card's own
-drives and the shell again. Without the shell no command changes a drive's
-volume.
+the bare `A>` on that selection. Use `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
+to restore the shell. CD preserves the user area; if you have changed it, use
+`USER 0` before loading the starter's shell. Power cycle restores the card's
+default drive assignments and startup.
 
 ### CLS, ECHO and PAUSE
 
@@ -374,7 +378,7 @@ holds only the prompt. `ECHO TEXT` prints the text as typed: the shell folds
 only a piece's first word to capitals to match its built-ins, so the text
 keeps its case. `PAUSE` shows `[more]` and `PAUSE TEXT` the text. Either
 waits for a key. Any key goes on, and `^C` ends the script and the rest of
-the line with `FF00h` (`docs/shell.md:229-239`).
+the line with `FF00h` (`docs/shell.md:236-246`).
 
 ### CON
 
@@ -415,16 +419,16 @@ copies installed the command is refused until `UNLOAD` leaves one. Each
 refusal prints the command's name with a question mark, as `MON3.SVC?`, and
 sets return code FF00h. The application ends with a warm boot and its
 service stays installed, so `UNLOAD` removes it as before
-(`docs/services.md:82-89`, `docs/services.md:101-130`,
-`docs/services.md:157-180`, `src/loader.asm:734-783`,
-`docs/shell.md:327-342`). An older card's `MON3.SVC /E` line still enters:
+(`docs/services.md:83-90`, `docs/services.md:102-131`,
+`docs/services.md:158-181`, `src/loader.asm:734-783`,
+`docs/shell.md:334-349`). An older card's `MON3.SVC /E` line still enters:
 the `/E` is only a tail, which the service does not read
-(`docs/mon3.md:42-43`). [Appendix H](appendix-h-service-file-format.md#the-execution-record)
+(`docs/mon3.md:44-45`). [Appendix H](appendix-h-service-file-format.md#the-execution-record)
 gives the record.
 
 `MON3.SVC` gives the `MON3>` line, which BDOS function 10 reads and the
 service converts to capitals. It takes three commands. Anything else prints
-`?` (`docs/mon3.md:37-43`, `docs/mon3.md:59-113`):
+`?` (`docs/mon3.md:39-45`, `docs/mon3.md:61-115`):
 
 | Form | Operation |
 | --- | --- |
@@ -443,13 +447,14 @@ describes the session and
 
 ## Programs on the starter card
 
-The starter card's A holds fourteen files, and the web page runs the same
+The starter card's A holds thirteen files, and the web page runs the same
 card. Nine are programs or sources you use by name at the prompt.
 `SHELL.SVC`, `GLCD.SVC` and `STARTUP.CMD` belong to the startup setup,
-`BAZA.RTL` is read by BAZA and `HELLO3.BIN` is loaded at `MON3>`
-(`tools/media.mjs:29-31`, `tools/media.mjs:209-240`,
-`tools/lib/starter.mjs:10-22`, `README.md:165-202`,
-`test/demo.test.mjs:1-4`, `test/starter.test.mjs:48-393`):
+`BAZA.RTL` is read by BAZA. Build HELLO3.BIN from HELLO3.ASM with TAS
+before loading it at `MON3>`
+(`tools/media.mjs:29-31`, `tools/media.mjs:203-231`,
+`tools/lib/starter.mjs:10-22`, `README.md:165-211`,
+`test/demo.test.mjs:1-4`, `test/starter.test.mjs:44-391`):
 
 | File | Use |
 | --- | --- |
@@ -462,8 +467,7 @@ card. Nine are programs or sources you use by name at the prompt.
 | `BOUNCE.BAS` | A sprite game for the PICO9918, which it needs. `BAZA BOUNCE`, then `BOUNCE`. Tap W, A, S and D, or the arrow keys, to steer and Q to quit |
 | `DEMO.ASM` | The source of DEMO. `TAS DEMO` builds DEMO.COM, then `DEMO` shows the LCD, the 7-segment digits, the 8 × 8 LEDs and the PICO9918. `TED DEMO.ASM` opens the source |
 | `MON3.SVC` | A resident service that runs MON-3 programs. `MON3.SVC` installs it and gives the `MON3>` line |
-| `HELLO3.BIN` | A MON-3 program for `LOAD HELLO3.BIN`, then `GO`, at `MON3>`. It writes four lines on the LCD and counts on the digits until Esc on the matrix keyboard, or AD on the keypad with the Matrix switch off |
-| `HELLO3.ASM` | HELLO3's source, for `TAS HELLO3 HELLO3.BIN` |
+| `HELLO3.ASM` | MON-3 example source. First `TAS HELLO3 HELLO3.BIN`, then `MON3.SVC`, `LOAD HELLO3.BIN` and `GO`. It writes the LCD and counts on the digits until Esc on the matrix keyboard, or AD on the keypad with Matrix off |
 | `SHELL.SVC` | The shell, a resident service: recall, CD, DIR with sizes, COPY, DEL, SERVICES, CLS, ECHO, PAUSE, the `[more]` pause, lines of several commands and `.CMD` scripts |
 | `GLCD.SVC` | The graphics LCD console driver, a resident service |
 | `STARTUP.CMD` | The startup file, holding the lines `SHELL.SVC` and `GLCD.SVC` |
@@ -472,14 +476,14 @@ TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
 `.BAS` file with `BAZA NAME.BAS`. `^T D` chains `TDB NAME` for an `.ASM`
 file, which fails with `A:TDB?` on the starter card, and shows
 `No debugger` for a `.BAS` file
-(`Thorium a2fe556:README.md:14-41`, `docs/compatibility.md:222`).
+(`Thorium a2fe556:README.md:14-41`, `docs/compatibility.md:223`).
 A file name and `THOR.PRJ`'s `ARGS` stop at a `!` or at an `&` after a blank,
 where the shell splits the line, so `ARGS X &Y` gives the program the tail
 ` X` and nothing after it runs (`Thorium a2fe556:README.md:51-58`).
 `TAS` and `BAZA` both set the failure return code `FF00h` when a build
 fails. A failed BAZA compile leaves an existing `NAME.COM` unchanged, and a
 failed TAS build normally keeps its earlier outputs
-(`docs/compatibility.md:224-225`, `Baza 50dc512:README.md:32-37`,
+(`docs/compatibility.md:225-226`, `Baza 50dc512:README.md:32-37`,
 `Thorium 3d1e2c0:docs/language.md:17-20`).
 [Make a small program](02-make-a-small-program.md) and
 [Build a BASIC program](03-build-a-basic-program.md) use them.
@@ -495,7 +499,7 @@ B and C, and in `A &B !C` C runs. A run of separators and blanks is one
 separator, conditional when it holds only `&`. Empty pieces and spaces
 between pieces are ignored. The same 127-character bound applies to the
 whole line, typed, from a script or supplied by function 47
-(`docs/shell.md:52-88`).
+(`docs/shell.md:53-89`).
 
 A program's command tail ends before the blanks in front of its piece's
 separator. Neither a file name nor an argument can contain a literal
@@ -506,7 +510,7 @@ provided, and a piece starting with `:` is refused as a bad name.
 
 Without the shell `!` and `&` are ordinary characters. `DIR!TYPE X` is then
 one word, refused as `DIR!TYPE?`, and a function 47 line runs whole as one
-command (`docs/shell.md:32-50`).
+command (`docs/shell.md:33-51`).
 [Results and command chains](13-results-and-command-chains.md) gives the success
 interval, every drop path and function 47's replacement-line contract.
 
@@ -521,10 +525,10 @@ whose first character is `;` are passed over and not echoed. Every other
 line is echoed whole after the prompt and runs as a typed line. Scripts do
 not nest: a `NAME.CMD` piece inside a script, or one followed by more
 pieces, is refused as `NAME.CMD?` with FF00h. A missing script gives the same
-refusal (`docs/shell.md:97-119`).
+refusal (`docs/shell.md:98-120`).
 
 `STARTUP.CMD` is read the same way after the ROM has run its first line,
 when that line installs the shell. Typing `STARTUP.CMD` runs the whole file
 again as a typed script. Without the shell a typed `NAME.CMD` runs
 `NAME.COM`, and only the first line of `STARTUP.CMD` runs
-(`docs/shell.md:32-50`, `docs/shell.md:121-139`).
+(`docs/shell.md:33-51`, `docs/shell.md:122-140`).

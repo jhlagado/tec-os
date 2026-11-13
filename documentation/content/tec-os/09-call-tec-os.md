@@ -7,12 +7,13 @@ nav_group: "Writing programs"
 
 # 9. Call TEC-OS
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -153,7 +154,7 @@ return word supplied by the CCP.
 On drive B, build it with `TAS LINE`. This serial capture begins at that
 command:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt from TAS LINE. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 B:WORK>TAS LINE
 LINE.COM written
@@ -161,7 +162,7 @@ LINE.COM written
 
 Type `LINE` to run it, then `HELLO` and Return. The same run continues:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt from LINE. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card line.img B: 'TAS LINE' '@start LINE' HELLO. Console excerpt; terminal controls and editor redraw outside the selected span omitted. -->
 ```text
 B:WORK>LINE
 HELLO

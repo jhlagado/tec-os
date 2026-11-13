@@ -7,12 +7,13 @@ nav_group: "Inside TEC-OS"
 
 # 26. Startup inside the CCP
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -29,7 +30,7 @@ outside the warm-boot clear. The practical file setup is in
 ## The ROM's one line
 
 `STPOS` is one byte, and `CHPOS` follows it
-(`src/ram.asm:399-404`). It records progress and completion
+(`src/ram.asm:405-410`). It records progress and completion
 (`src/cpm/ccpcmd.asm:745-790`, `src/cpm/ccpcmd.asm:792-874`):
 
 | `STPOS` | Meaning |
@@ -41,11 +42,11 @@ outside the warm-boot clear. The practical file setup is in
 The byte is above the RAM BIOS table. Warm boot's `CPMINIT` clears from
 `CCPCLR` to `BDOSRME`, below it, so an ordinary program exit preserves it.
 Reset enters `COLD` and clears the whole workspace including `STPOS`. The
-next startup read begins from zero (`src/ram.asm:286-295`,
+next startup read begins from zero (`src/ram.asm:292-301`,
 `src/boot.asm:22-65`, `src/boot.asm:398-403`).
 [Chapter 15](15-state-and-memory.md#the-workspace-across-a-program-exit)
 explains the two clearing spans. The space after `CHPOS`, up to the console
-state, is unused (`src/ram.asm:406-410`).
+state, is unused (`src/ram.asm:412-416`).
 
 A diagnostic retry returns to `COLDRT`, after the cold clear but before
 the CCP has run. `STPOS` is still zero. Once the card mounts, startup can
@@ -85,7 +86,7 @@ recovery route (`test/startup.test.mjs:57-69`, `test/startup.test.mjs:260-273`,
 Without the bypass, `STBOOT` copies twelve bytes from `STFCB` into `CMDFCB`:
 drive byte 1 and `STARTUP CMD`. The rest of the file control block (FCB) is
 still zero from cold boot. Drive byte 1 names A regardless of the current
-drive (`src/tables.asm:137`, `src/cpm/ccpcmd.asm:770-773`,
+drive (`src/tables.asm:139`, `src/cpm/ccpcmd.asm:770-773`,
 `src/ram.asm:148-149`). A recognised reset has already run `RESEL`, so this
 is the volume currently selected as A, not necessarily the card's original
 SYSTEM volume (`src/boot.asm:101-104`, `src/volsvc.asm:1-22`). Chapter 8's
@@ -165,7 +166,7 @@ node tools/tecvol.mjs put dollar.img A startup.cmd --text
 node tools/tecvol.mjs put dollar.img A 'NOTE$.TXT' --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card dollar.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card dollar.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -187,7 +188,7 @@ cp dollar.img dollar2.img
 node tools/tecvol.mjs put dollar2.img A startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card dollar2.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card dollar2.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -203,11 +204,13 @@ A:SYSTEM>
 ```
 
 At the maximum copied length, the echo's CR fills the last byte of 128-byte
-`CMDTXT`. The `$` goes one byte further into `BOOTDRV`, which immediately
-follows it (`src/ram.asm:156-160`, `src/cpm/ccpcmd.asm:864-870`). `BOOTDRV`
-has one reader, in `CCPENT`. That read precedes line extraction and each new
-entry writes `BOOTDRV` before reading it. The temporary `$` is overwritten
-before it can become a drive selection (`src/cpm/ccp.asm:46-88`).
+`CMDTXT`. The `$` goes one byte further into the low byte of `APIRTPC`,
+the reserved two-byte slot immediately after the buffer. `BOOTDRV` follows
+that slot and is untouched (`src/ram.asm:156-166`,
+`src/cpm/ccpcmd.asm:864-870`). This recovery-only firmware does not use
+`APIRTPC`; the temporary terminator therefore occupies unused scratch.
+The source comment still names the previous layout's `BOOTDRV` and needs
+correction when housekeeping starts using the reserved slot.
 
 `MLGOT` replaces the appended CR with zero, and `MLTAKE` capitalises the line
 in place after the echo (`src/cpm/ccp.asm:184-223`). The source test compares
@@ -250,8 +253,8 @@ the position intact, and the next `LINE` goes on with the next line.
 A later `SHELL.SVC` line in the file enters the installed shell again. That
 entry finds the hook already claimed, takes it back and changes nothing else,
 so the file goes on from the line after it (`drivers/shell.asm:128-136`,
-`docs/shell.md:135-139`). Typing `STARTUP.CMD` at the prompt runs the whole
-file again as a typed script, with typed origin (`docs/shell.md:138-139`).
+`docs/shell.md:136-140`). Typing `STARTUP.CMD` at the prompt runs the whole
+file again as a typed script, with typed origin (`docs/shell.md:139-140`).
 
 ## Display loading and console selection
 
@@ -320,9 +323,9 @@ driver is already installed. A failed `SVCGO` instead restores the mode
 from `CONMOD` into the console field with `CONFLD` and writes `GLCD?`
 through `LCDWRD` (`src/loader.asm:873-887`, `src/console.asm:500-510`).
 `LCDWRD` first sets `CDWRD`, bit 7 of `CONDEV`
-(`src/lcd.asm:56-60`, `src/layout.asm:75`). `CONDEV` is
+(`src/lcd.asm:56-60`, `src/layout.asm:76`). `CONDEV` is
 at `BFE7h`. Its stored bits are
-(`src/ram.asm:418`, `src/layout.asm:70-75`):
+(`src/ram.asm:424`, `src/layout.asm:71-76`):
 
 | Bit | Name | Meaning |
 | --- | --- | --- |
@@ -337,7 +340,7 @@ PICO9918. `VIDEO` sets that byte on claim and clears it on release
 (`src/ram.asm:128`, `src/services.asm:186-188`, `208-213`).
 `INFO` combines `CONDEV` with `VCLAIM` using OR and returns the flags in `B`.
 Its returned bit 4 reports the claim rather than a stored bit of `CONDEV`
-(`src/services.asm:74-80`, `src/layout.asm:74`).
+(`src/services.asm:74-80`, `src/layout.asm:75`).
 
 The row may have program text by the next console selection.
 `WRDCLR` returns at once when `CDWRD` is clear. Otherwise it clears the
@@ -376,7 +379,7 @@ registration and the PICO width command when `FIND` returns no console
 in `SVCRA`, beside the result code `SVCRC`. Record rejection after a
 successful `INIT` clears `SVCRA` so the later check cannot accept that
 result as an `INIT` device-absence status (`src/loader.asm:365-370`, `426-430`,
-`src/ram.asm:390-391`).
+`src/ram.asm:396-397`).
 
 The failed-service path reads the two result bytes as a word, `SVCRC`
 in `L` and `SVCRA` in `H`. `AND H` keeps the status only for startup.

@@ -7,12 +7,13 @@ nav_group: "Using the machine"
 
 # 4. Work with files
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -54,7 +55,7 @@ A short file fits before the next prompt. `STARTUP.CMD` holds the two
 automatic startup commands of Chapter 1. This run on the serial terminal is
 separate from your BANNER session and the 40-column screen below:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'TYPE STARTUP.CMD'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'TYPE STARTUP.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -90,7 +91,7 @@ PICO console shows 23 rows of listing before the pause.
 These 24 rows are the complete first paused screen. The command echo has
 already scrolled away:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TYPE A:SAMPLE.ASM'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TYPE A:SAMPLE.ASM'. Full screen; trailing empty rows omitted. -->
 ```text
 ; A first program for TEC-OS. Build it
 ; with TAS SAMPLE. Run it with SAMPLE.
@@ -121,7 +122,7 @@ ABICALL   EQU   $C008
 Space continues the listing. The pause disappears and the next rows follow. The
 next excerpt contains the full following paused screen, including `[more]`:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'TYPE A:SAMPLE.ASM' '@key  '. The full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TYPE A:SAMPLE.ASM' '@key  '. Full screen; trailing empty rows omitted. -->
 ```text
 
 TNINFO    EQU   0
@@ -175,7 +176,7 @@ The copy below starts at A on a fresh starter card with B empty.
 It is separate from the BANNER session. On your working card, BANNER's files
 have different names. This command writes only B:SAMPLE.ASM:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico --screen 'COPY A:SAMPLE.ASM B:SAMPLE.ASM'. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'COPY A:SAMPLE.ASM B:SAMPLE.ASM'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -210,7 +211,7 @@ that separate session, not as a sequence to repeat on your current card. It
 copies A's STARTUP.CMD under two names, renames one copy and erases only
 NOTES.TXT. The listings and free-space figures belong to that card:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'COPY STARTUP.CMD B:' 'COPY STARTUP.CMD B:COPY.TXT' B: DIR 'REN NOTES.TXT=COPY.TXT' 'REN NOTES.TXT=STARTUP.CMD' DIR 'ERA NOTES.TXT' 'ERA NOTES.TXT' DIR. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:' 'COPY STARTUP.CMD B:COPY.TXT' B: DIR 'REN NOTES.TXT=COPY.TXT' 'REN NOTES.TXT=STARTUP.CMD' DIR 'ERA NOTES.TXT' 'ERA NOTES.TXT' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

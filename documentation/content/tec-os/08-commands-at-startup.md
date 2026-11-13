@@ -7,12 +7,13 @@ nav_group: "Using the machine"
 
 # 8. Commands at startup
 
-<!-- Checked against TEC-OS c4ec0f4950446f92b658643ee23b63e2c02bb33b (main),
-     ROM SHA-256 a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1.
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
      raw output/hash receipts are retained in Origo
-     studies/p3-tec-os/evidence/book-shell2/.
+     studies/p3-tec-os/evidence/book-recovery-core/ and
+     studies/p3-tec-os/evidence/book-recovery-host/.
      The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
@@ -38,7 +39,7 @@ next startup. Reset does not finish pending writes.
 
 The starter card's file has two lines:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs 'TYPE STARTUP.CMD'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'TYPE STARTUP.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -82,7 +83,7 @@ cp dist/starter.img lines.img
 node tools/tecvol.mjs put lines.img A startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card lines.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card lines.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -121,7 +122,7 @@ cp dist/starter.img bare.img
 node tools/tecvol.mjs put bare.img A startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card bare.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card bare.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -151,7 +152,7 @@ cp dist/starter.img cut.img
 node tools/tecvol.mjs put cut.img A startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card cut.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card cut.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -176,7 +177,7 @@ cp dist/starter.img long.img
 node tools/tecvol.mjs put long.img A startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card long.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card long.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -189,7 +190,7 @@ A:SYSTEM>DIR *.CMD
 
 STARTUP .CMD     256
 1 file, 256 bytes
-935936 free on A:SYSTEM
+937984 free on A:SYSTEM
 A:SYSTEM>USER 3
 3A:SYSTEM>
 ```
@@ -214,7 +215,7 @@ cp dist/starter.img semi.img
 node tools/tecvol.mjs put semi.img A startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card semi.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card semi.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -275,7 +276,7 @@ printf 'USER 2\n' > startup.cmd
 node tools/tecvol.mjs put spare.img SPARE startup.cmd --text
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card spare.img 'CD A:SPARE' @reset. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -301,10 +302,11 @@ A>USER 2
 
 The reset has kept SPARE on A so the final prompt is the bare `2A>`. SYSTEM
 is no longer mounted, and with it the shell and the tools needed for
-recovery. With no shell there is no `CD` to put SYSTEM back, and a
-recognised reset repeats the retained assignment while it remains valid. A
-power loss clears the retained selection so the next boot uses the header's
-SYSTEM assignment again. On the web page, Power cycle does the same.
+recovery. The ROM's CD remains available: `CD ?` lists the named directories
+and `CD A:SYSTEM` restores SYSTEM. The current user area remains 2, so use
+`USER 0` and then `SHELL.SVC` to load the starter's shell. A recognised reset
+repeats the retained assignment while it remains valid. Power cycle restores
+the header's default drive assignments and startup.
 
 ## Display commands in the file
 
@@ -336,7 +338,7 @@ The capture configurations produce this table:
 The last configuration has no resident GLCD driver after startup.
 `SERVICES` lists only the shell and `CON` reports the ROM console:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --board pico SERVICES CON. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico SERVICES CON. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -374,7 +376,7 @@ The banner and volumes appeared at 40 columns. The width command cleared
 the screen at 32 columns before printing its reply. After `DIR` the PICO
 screen contained:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card w32.img --board pico --screen DIR. The full screen, with trailing empty rows omitted. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card w32.img --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
 ```text
 CON: CRT:
 A:SYSTEM>GLCD.SVC
@@ -393,22 +395,21 @@ BAZA    .RTL   12032
 BOUNCE  .BAS    5376
 DEMO    .ASM   15360
 MON3    .SVC    5120
-HELLO3  .BIN     256
 HELLO3  .ASM    2176
-14 files, 86272 bytes
-935936 free on A:SYSTEM
+13 files, 86016 bytes
+937984 free on A:SYSTEM
 A:SYSTEM>
 ```
 
 [Appendix J](appendix-j-command-reference.md#programs-on-the-starter-card)
-lists the fourteen files.
+lists the thirteen files.
 
 Where the ROM PICO console did not start, a startup width command passes
 quietly. The same command typed there reports the width with `?`, such as
 `32?`. The serial-only run of that same card showed every startup command
 without an error:
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card w32.img. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card w32.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -497,7 +498,7 @@ cp dist/starter.img nostart.img
 node tools/tecvol.mjs era nostart.img A STARTUP.CMD
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card nostart.img --lcd 'CON UC1'. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card nostart.img --lcd 'CON UC1'. Complete captured console transcript and LCD rows. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -525,7 +526,7 @@ node tools/tecvol.mjs put gname.img A dist/files/GLCD.SVC G.SVC
 node tools/tecvol.mjs era gname.img A GLCD.SVC
 ```
 
-<!-- TEC-OS c4ec0f4: node tools/capture.mjs --card gname.img --board glcd --lcd 'CON UC1' G.SVC CON. Boot rows included in this complete serial transcript. -->
+<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card gname.img --board glcd --lcd 'CON UC1' G.SVC CON. Complete captured console transcript and LCD rows. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
