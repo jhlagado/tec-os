@@ -112,8 +112,7 @@ Official references:
 
 ## Hosting status
 
-On 13 November 2026, GitHub Settings displayed: “Upgrade or make this
-repository public to enable Pages.” The repository remains private. The site
-configuration is prepared, but Pages, the custom-domain binding and DNS have
-not been applied by this implementation. Publication requires a hosting
-decision or a GitHub plan that includes private-repository Pages.
+On 13 November 2026, the repository was made public and GitHub Pages was
+enabled with GitHub Actions as its source. A public repository can use the
+free GitHub Pages service. The custom-domain binding for `tec-os.org` is being
+configured. Deployment, DNS and HTTPS verification are pending.
