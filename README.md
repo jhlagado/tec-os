@@ -90,10 +90,10 @@ or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
 
 TAS assembles everything: the main ROM, the diagnostics, GLCD.SVC,
-SHELL.SVC, DEMO.COM, MON3.SVC and HELLO3.BIN, and the tests' programs and
-services. It
+SHELL.SVC, DEMO.COM, MON3.SVC, and the tests' programs and services. It
 runs on the host from Thorium's runner, selected from `TECOS_TAS_HOST`, then
-`.inputs/tas-host`.
+`.inputs/tas-host`. The starter holds HELLO3 as source; TAS builds its
+binary on the card.
 
 The stage models, `tools/ks30-model.mjs` to `tools/ks36a-model.mjs`,
 `tools/ks38b-model.mjs`, `tools/ccp-model.mjs`, `tools/ccp-call-model.mjs` and
@@ -189,11 +189,11 @@ runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
 an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
 `DEMO.COM` and `DEMO` runs it, showing the LCD, the 7-segment digits, the
 8 × 8 LEDs and the PICO9918 in Graphics I, and `TED DEMO.ASM` reads it. `MON3.SVC` runs programs written for MON-3, the
-TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC` gives `MON3>`,
+TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): first build the source-only
+example with `TAS HELLO3 HELLO3.BIN`, then `MON3.SVC` gives `MON3>`,
 where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
 LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
-keyboard, returns to `MON3>`, and `EXIT` to `A:SYSTEM>`. `HELLO3.ASM` is its source,
-and `TAS HELLO3 HELLO3.BIN` builds it. `BOUNCE.BAS` is Baza's sprite
+keyboard, returns to `MON3>`, and `EXIT` to `A:SYSTEM>`. `BOUNCE.BAS` is Baza's sprite
 game: `BAZA BOUNCE` compiles it, showing a spinner while it works, and
 `BOUNCE` takes the PICO9918 in Graphics I through `CALL`; tap W, A, S and D,
 or the arrow keys, to steer the ship, and Q gives the display back. A BASIC
