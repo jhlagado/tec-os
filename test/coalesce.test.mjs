@@ -759,8 +759,9 @@ function checkFlushStacks(runs) {
   }
 }
 
-// Logged on A:, CONIN's flush of the lines held behind takes CFLUSH's
-// PUSH BC more than CPOUT, 20 bytes of the 28 a program is given.
+// Refused work on logged A: keeps CONIN's required CFLUSH path active:
+// 20 bytes below the return address, out of the program's 28-byte allowance.
+// Healthy entry service can commit the pending line before that path.
 test("AC10 conin stack", { timeout: 300_000 }, () => {
   const runs = {
     writing: flushRun("writing"),
@@ -771,11 +772,13 @@ test("AC10 conin stack", { timeout: 300_000 }, () => {
   checkFlushStacks(runs);
   console.log(JSON.stringify(Object.fromEntries(Object.entries(runs).map(([k, r]) => [k, { bdos: r.bdos.deepest, conin: r.programStack["BIOS CONIN"] - 2 }]))));
 });
-test("AC10 mutant: CPOUT with three more pushes passes the BDOS's room and takes 24 bytes at CONIN", { timeout: 300_000 }, () => {
+test("AC10 mutant: extra CPOUT pushes exceed CONIN's caller allowance under refusal", { timeout: 300_000 }, () => {
   const mut = MUTANTS.push3();
-  const runs = { writing: flushRun("writing", mut) };
-  assert.throws(() => checkFlushStacks(runs), /the BDOS's deepest/);
-  assert.equal(runs.writing.programStack["BIOS CONIN"] - 2, 24);
+  // A refusal keeps the private flush active after ordinary entry service.
+  const runs = { refusing: flushRun("refusing", mut) };
+  assert.throws(() => checkFlushStacks(runs), /CONIN with a block pending takes 24 bytes/);
+  assert.equal(runs.refusing.programStack["BIOS CONIN"] - 2, 24);
+  console.log(JSON.stringify({ mutatedRefusal: { bdos: runs.refusing.bdos.deepest, conin: runs.refusing.programStack["BIOS CONIN"] - 2 } }));
 });
 
 // --- Docs ---------------------------------------------------------------------
