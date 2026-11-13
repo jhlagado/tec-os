@@ -1,14 +1,14 @@
 // The stack census's watch: the lowest address written in each of the
-// ROM's three stacks, an NMI pressed at each new depth, and a line typed and
+// resident stacks and private worker, an NMI at each new depth, and a line typed and
 // run to its prompt. test/stacks.test.mjs and test/lib/mon3.mjs's census share it.
 
 import assert from "node:assert/strict";
 
-/** Watch the three resident stacks of `m`, pressing an NMI at each new depth. */
+/** Watch resident/worker stacks, pressing an NMI at each new depth. */
 export function watch(m) {
   const s = (n) => m.sym(n);
   const guardHits = [];
-  const stacks = { bdos: [s("STKBASE"), s("STKTOP")], ccp: [s("CSTKBAS"), s("CSTKTOP")], bios: [s("BSTKB"), s("BSTK")] };
+  const stacks = { bdos: [s("STKBASE"), s("STKTOP")], ccp: [s("CSTKBAS"), s("CSTKTOP")], bios: [s("BSTKB"), s("BSTK")], worker: [s("HKSTKB"), s("HKSTKT")] };
   const low = Object.fromEntries(Object.entries(stacks).map(([k, [, top]]) => [k, top]));
   const lowSp = { ...low };
   const [guard, guardEnd] = [s("STKGUARD"), s("STKGUEND")];
@@ -18,6 +18,7 @@ export function watch(m) {
     const ldir = (m.read(pc) === 0xed && m.read(pc + 1) === 0xb0) || (m.read(pc - 1) === 0xed && m.read(pc) === 0xb0);
     if (!ldir) for (const [k, [b, t]] of Object.entries(stacks)) if (addr >= b && addr < t && addr < low[k]) low[k] = addr;
     if (!ldir && addr >= guard && addr < guardEnd && value !== 0xa5) guardHits.push(addr);
+    if (!ldir && addr >= s("HKGRD") && addr < s("HKGRD") + 2) guardHits.push(addr);
     write(addr, value);
   };
   const step = m.step.bind(m);

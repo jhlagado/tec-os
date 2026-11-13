@@ -317,6 +317,40 @@ test("SH4 127", () => {
   assert.equal(user(r), 7, "the record's end ends an unended line");
 });
 
+test("RIG5 a 127-character startup echo borrows APIRTPC only outside an outer return owner", () => {
+  const line = 'HOLD' + ' '.repeat(123);
+  const m = start({ 'STARTUP.CMD': raw(line + '\r\n'), 'HOLD.COM': Uint8Array.of(0x18, 0xfe) });
+  m.runUntil(() => m.pc === m.sym('STLINE'), 400_000_000, 'startup line entry');
+  assert.equal(m.read(m.sym('HKDEP')), 0);
+  assert.equal(m.read(m.sym('HKBUSY')), 0);
+  m.write(m.sym('APIRTPC'), 0x5a);
+  m.write(m.sym('APIRTPC') + 1, 0xa5);
+  const bootDrive = m.read(m.sym('BOOTDRV'));
+  m.runUntil(() => m.pc === m.sym('BENTRY') && m.cpu.cpu.c === 9 &&
+    (m.cpu.cpu.d << 8 | m.cpu.cpu.e) === m.sym('CMDTXT'), 20_000_000, 'startup echo entry');
+  assert.equal(m.read(m.sym('CMDLEN')), 127);
+  assert.equal(m.read(m.sym('CMDTXT') + 127), 13);
+  assert.equal(m.read(m.sym('APIRTPC')), 0x24, 'dollar terminator uses low return-slot scratch');
+  assert.equal(m.read(m.sym('APIRTPC') + 1), 0xa5);
+  assert.equal(m.read(m.sym('BOOTDRV')), bootDrive);
+  m.runUntil(() => m.pc === 0x100, 400_000_000, 'startup transient entered');
+  assert.ok(m.text(0).includes(line + '\r'), 'all 127 characters echoed');
+  assert.equal(m.read(m.sym('HKDEP')), 0, 'echo has released its BDOS context');
+  const call = (at, target, regs) => {
+    [0xcd, target & 255, target >> 8, 0x18, 0xfe].forEach((b, i) => m.write(at + i, b));
+    Object.assign(m.cpu.cpu, { pc: at, sp: 0x6000 }, regs);
+    m.runUntil(() => m.pc === at + 3, 20_000_000, 'later root API return');
+    assert.equal(m.cpu.cpu.sp, 0x6000);
+    assert.equal(m.read(m.sym('APIRTPC')) | m.read(m.sym('APIRTPC') + 1) << 8, at + 3);
+    assert.equal(m.read(m.sym('HKDEP')), 0);
+    assert.equal(m.read(m.sym('HKBUSY')), 0);
+  };
+  call(0x3000, m.sym('ABICALL'), { c: ABI.TNINFO });
+  call(0x3100, m.sym('RAMBIOS') + 30, { b: 0, c: 3 });
+  assert.equal(m.read(m.sym('BOOTDRV')), bootDrive);
+  assert.deepEqual(m.violations, []);
+});
+
 test("SH4 skip", () => {
   const m = start({ "STARTUP.CMD": startupFile("USER 3") }, { key: true });
   prompt(m);

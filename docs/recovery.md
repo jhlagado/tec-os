@@ -24,215 +24,112 @@ selection. Power cycle restores the card's default drive assignments.
 
 ## The block cache
 
-TEC-OS keeps 30 card blocks, 15 KiB, in EXPAND 1. Every volume's reads go
-through it: a block read before and still held costs a copy, not a card
-read. Its writes follow the drive you are on:
+TEC-OS keeps thirty full 512-byte card blocks in EXPAND1. Read hits still
+avoid SD reads. Each changed block has one dirty-queue entry, identified by
+its complete absolute card-block tag. Updates already received merge into
+that block without duplicating its entry or moving its first-dirty position.
+New-allocation writes zero the untouched records; ordinary overwrites retain
+their neighbours. TEC-OS does not delay a ready write to await future updates.
 
-- **The logged drive is written behind.** The volume on the drive you are on
-  at the prompt, the CCP's logged drive, keeps its writes in the cache, and
-  the card catches up later. Logging onto another drive, or `CD`, moves it:
-  the drive change writes the cache out first. A program's BDOS 14, or its
-  write to 0004h, does not move it before its warm boot.
-- **Every volume not logged coalesces.** A data write on any other drive goes
-  into its block's cache line, and a run of records written into one card
-  block is written once (below, "What a successful write means").
-- A read-only volume is never written behind: its writes are refused.
+**Integrity takes priority at OS calls.** Each admitted outer BDOS, hardware
+service or returning BIOS call attempts one eligible dirty block before its
+normal work. Nested calls inherit that operation instead of starting another
+maintenance pass. The worker owns a private stack and excludes unsafe bank/SD
+spans. Console output and directory scanning have selected additional safe
+points. This is cooperative service, with no timer or wall-clock deadline.
 
-Two rules hold for both kinds, so that each keeps its promise:
+A frozen round records the eligible first-dirty order. A failed line remains
+dirty, but the round advances so other lines can progress. New arrivals join
+the next round; continuously arriving writes cannot indefinitely postpone a
+failed line's next retry. Successful writes remove their entry, invalidating
+its frozen slot before that cache line can be reused.
 
-1. **Every directory write writes the cache first.** On any volume, a
-   directory write first writes every changed data block the cache holds, on
-   every drive, then the directory block itself, so the directory never names
-   a block whose data isn't on the card. If a data block fails, the directory
-   write is refused.
-2. **Every console read writes every changed line.** BDOS 1, 6 input, 10 and
-   11, and the BIOS's `CONIN`, write every line the cache holds changed, on
-   every drive, before they read. Whenever TEC-OS waits for a key, everything
-   is on the card. Between key waits write-behind keeps its gain: a program
-   that writes and rewrites blocks, or two files at once, writes each block
-   once.
+The logged drive can keep multiple changed blocks. Other drives retain their
+existing single pending-block boundary: changing blocks flushes that pending
+block. The ordinary entry attempt now also applies between public calls, so
+four separately issued record writes can require four SD writes. Read caching
+and merging updates already received still help; cross-call write coalescing
+is no longer promised. A read-only volume continues to refuse writes.
 
-What a reset or power loss leaves, by kind of write:
+## Required flushes and failures
 
-| Write | Reaches the card | A reset before then loses |
-| --- | --- | --- |
-| Data on the logged drive's volume (written behind) | at the next console read, directory write on any volume, write that needs a line when all are changed, function 48, drive change, `CD` or warm boot | the changed blocks since the program's last key wait or directory write, up to 30 |
-| Data on any other volume (coalesced) | its pending block at the first of: a console read, any directory request, a write to another block on any drive, function 48, a drive change, `CD`, warm boot | at most one block, 512 bytes |
-| A directory write, on any volume | before the call returns, after every changed and kept data line; refused if one fails | nothing that the call reported done |
-| Any write to a read-only volume | never: refused | — |
+The ordinary one-block attempt supplements required flushes:
 
-On the starter card you start on A:, so A: is written behind while you are
-there: a program's data on A: reaches the card at the program's next key
-wait, directory write or warm boot, not at each write that moves on to
-another block. At most one block is pending on a volume not logged; any write
-to another block writes it first.
+- A directory write first tries all other dirty data in a bounded pass, then
+  writes the directory block only if those prerequisites succeeded. Either
+  prerequisite or metadata failure rejects and drops that unpublished
+  directory image. Later retries must not publish rejected metadata.
+- Console input through BDOS1,6 input,10 or11 and BIOS CONIN drains pending
+  data before waiting. Function48, a close's directory work, directory access,
+  drive/selection changes and warm boot retain their required flush paths.
+- A complete pass attempts each eligible line once and continues after
+  failure. All-dirty allocation can use any clean slot the pass frees. If
+  every line refuses, the operation fails without discarding acknowledged data.
 
-Changed data blocks reach the card in the cache's line order, and the
-directory block after them. A write to the directory that cannot get its
-data to the card, or cannot write itself, drops the cache's copy of that
-directory block, so the card's directory stays the truth and is read again
-next time; the BDOS reports the failed write. A data block that failed stays
-in the cache, still to be written, so a close tried again fails again until
-the card takes the data.
+Failed acknowledged data remains dirty and queued, including across warm
+boot. Required operations preserve their existing error conventions: for
+example function48 returns FFh and a failed selection leaves its assignments
+unchanged. A maintenance failure during an unrelated call does not replace
+that call's functional result; guest notices report the pending write state:
 
-A file is complete once it is closed, which is CP/M's own rule, but a write
-can reach the card before the close, and nothing is rolled back. What a reset
-or power off before the close leaves depends on where the write went:
+- `Write pending`: once while a failed-write episode has dirty data to retry.
+- `Cache clear`: after that reported episode's queue is successfully drained.
+- `Write error`: an otherwise unreported failure has no dirty retry left,
+  such as rejected metadata. This is not reported as successful recovery.
 
-- **Unwritten dirty data.** On the logged drive, changed blocks the cache
-  holds and hasn't written since the program's last key wait are lost. On any
-  other drive the pending block is lost: the records written into it since it
-  was last written, at most one block. At the prompt nothing is left: its own
-  console read writes everything, however the program before it ended. Wait
-  for the prompt before a reset or taking the card out; only a program still
-  running that never waits for a key can hold lines.
-- **New allocations.** Blocks a write allocated reach the card as above, but
-  until the directory entry is written no entry names them: the file reads
-  back without them, and the space is free again at the next login.
-- **In-place overwrites.** A write into a block the file already had changes
-  that block on the card when the block is written. Until then a reset leaves
-  the old contents on the card. Once written, the old contents are gone,
-  closed or not: there is no copy to return to.
-
-If a block cannot be written during a program's run, the BIOS returns the
-error, the BDOS says `Bad Sector` and, under the shell, the rest of the line goes. A
-flush, at a directory write, at function 48, at `MOUNT` or `UNMOUNT` (the
-ROM's mount services, which `CD` uses), at a drive change or at a warm boot,
-tries every changed line and goes on to the rest. Function 48, `MOUNT` and unmount keep each line whose write fails,
-as a directory write's flush does: function 48 returns FFh, `MOUNT` and unmount
-refuse and leave the drives as they were, and the line is tried again at the
-next flush. A drive change goes ahead with the line kept. Only warm boot drops a flushed line that still fails. A
-directory write on any volume whose flush fails returns the error and drops
-its own directory line, unwritten, so the card's directory is read again. A warm boot whose flush
-dropped a line says `Write lost` once and drops the rest of the shell's line as a
-BDOS error does; the next warm boot has nothing more to say.
-While a kept line keeps failing, every directory write and `MOUNT` refuse
-until warm boot, since each flushes first, and `CD` says `CD FAILED`. If the
-card refuses every write, kept lines can fill the cache, and reads that need
-a line then fail too.
-
-**A card that refuses.** Each console read, polls among them (BDOS 6 and 11),
-tries every kept line again, about 55 ms a line at 4 MHz while the card
-answers but refuses: with all 30 lines kept a poll takes about 1.6 s. A
-program that polls the console while the card refuses runs that slowly until
-the card takes the lines or a warm boot drops them with `Write lost`.
+Function45's silent FFh mode defers notices without losing the event. Console
+callbacks must return normally and keep their logical caller's BDOS reentry
+restrictions. A private worker stack does not make BDOS generally reentrant.
+Warm-boot flush failure also drops the remaining chained command text while
+retaining the failed data; it no longer drops data with `Write lost`.
 
 ## What a successful write means
 
-Every BIOS write goes into the block's cache line; there is no other buffer.
+A successful data write can mean its record is accepted into the cache.
+An immediate application stop after that write can still leave old SD bytes.
+The next admitted light call attempts pending work; the guest-stop tests
+distinguish that case from a stop with no further API call. A program that
+hangs without calling the OS can hold data indefinitely. There is no minimum
+call cadence or background progress guarantee.
 
-**Every volume not logged coalesces.** Every data write on a volume not on
-the logged drive (BDOS 21, 34 and 40, and `SAVE`) goes into its block's cache
-line, and a run of records written into one card block is written once. A
-write returns when its record is in the line. That block, the one pending
-block, is written to the card at the first of: the file's close; any
-directory request; a write that moves to another block; a warm boot; a drive
-change; and the program's next console read, BDOS 1, 6 input, 10 or 11, or
-the BIOS's `CONIN`. Nothing is left unwritten while a program waits for the
-user at a console read. Function 48, `MOUNT` and unmount write it too. Until
-then a reset or power loss loses the records written into that one block
-since it was last written: at most one block, four records, 512 bytes, and an
-in-place update of a closed file is among them. A block the card refuses
-stays pending, and the directory never names it until the card has it.
-Measured in emulation at 4 MHz on the starter card, against writing each
-record's block through, logged on B: so that A: coalesces: `BAZA BOUNCE`
-building to A: takes 19.12 s with 48 card writes, against 25.82 s; a 16 KiB
-file takes 33 card writes, against 129; and `SAVE 16` 10, against 34. Logged
-on A:, written behind, the card's commands cost what they did: each writes
-its blocks once and closes.
+Required console input drains the queue, subject to reported errors. BIOS
+CONST and raw reader entry provide ordinary opportunities, not mandatory
+complete drains. A replacement CONIN hook owns the input behaviour it
+replaces. TONE has its entry opportunity and no new long-call deadline.
 
-- **The pending block** is at most one block at a time, the last one a data
-  write went into on a volume not logged.
-- **A directory request** is any directory record the BDOS reads (open, make,
-  search, delete, rename, attributes, size, login, and the extent change inside
-  a sequential or random write) and any directory write. Selecting a drive
-  already logged in reads no directory and is not one. Any close is one, even
-  of a file that was not changed.
-- **A write that moves to another block** is any BIOS write to another block,
-  on any drive. BDOS 40's zero fill moves on one block at a time.
-- **The console reads** are BDOS 1, BDOS 6 with E = FFh, 10 and 11, at entry,
-  and the BIOS's `CONIN`, however it is called. Output, BDOS 3 and the BIOS's
-  `CONST` and `READER` are not.
-- **The directory stays last.** A directory write first writes every changed
-  block, the pending one among them, then the directory block, so no entry
-  names a block whose data is not on the card. A directory write itself goes
-  to the card before it returns; if it fails, its line is dropped, so the next
-  read of the block comes from the card.
-
-**When a block's write fails.** The block stays in its line, still to be
-written, at every flush point but warm boot.
-
-- When writing moves on, or at a directory request, the call that made the
-  flush returns the error: `Bad Sector`, or, under function 45's FFh mode,
-  A = FFh and H = 1 with the FCB on the record not written. A close tried again
-  fails again until the card takes the block.
-- Function 48, `MOUNT` and unmount report the failure, as above, and keep the
-  block.
-- At a console read the failure is not reported there: the program gets its
-  key and the block stays in its line. It is reported at the next flush point
-  that is not a console read, or by warm boot's `Write lost`.
-- Warm boot tries it once more, and drops it with `Write lost` if it fails.
-
-Writing one 128-byte record reads its block into a line first (unless a line
-already holds it), merges the record and writes the whole block back, so
-neighbouring records are never replaced by stale data. The exception is a
-block that holds nothing yet: the first write to a newly allocated block
-(CP/M's write type 2), and the next blocks of that allocation block as a
-program writes on into them. Such a block is not read; its records not yet
-written are zeros.
-
-When a program has asked for BDOS errors to be returned (function 45), a
-sequential read or write that fails leaves the FCB on the record it did not
-read or write, as CP/M 3 does, so the program can try that record again.
-
-Whether a card that has reported completion has also made the data durable
-against power loss is up to the card. That is not verified.
+Closing a modified file completes its directory work under CP/M rules;
+committing record data alone does not finish an unclosed new file's metadata.
+New allocations can reach SD before any directory entry names them. In-place
+overwrites change the old file as each block reaches SD, closed or not:
+there is no journal or rollback. A card's acknowledgement is not proof of
+physical power-loss durability. In the Viewer, guest cache completion and
+completed browser persistence are separate stages.
 
 ## The corruption window
 
-A CP/M file update touches data blocks, then the directory entry. TEC-OS adds
-no journal, so power loss or reset can leave:
+Reset or power loss can still interrupt an update:
 
-- **Between data and directory writes.** Newly allocated blocks hold records
-  that the directory does not list, and their space is free again in the
-  allocation vector rebuilt at the next login. Blocks the file already had and
-  were written in place hold the new records: the file reads back mixed, old
-  where nothing was written and new where it was, with its old length.
-- **On a volume not logged, before a flush point.** The pending block's
-  records since it was last written are lost, at most one block; the card keeps
-  its old contents.
-- **On the logged drive, before a key wait or a directory write.** The changes
-  since the last console read, directory write, warm boot, drive change or
-  `CD` that the cache still holds unwritten are lost. Some may already be on the card, written when their
-  lines were taken for other blocks, so the card can hold a mix of old and new
-  blocks; as above, nothing is rolled back.
-- **During a flush.** The changed data blocks
-  reach the card one by one in line order and the directory block last, so a
-  cut leaves some new data blocks that no entry names, as above, and never a
-  directory entry naming a block whose data is not there. A flush tries every
-  line and still writes the rest after one that fails. The failed line stays in
-  the cache, to be tried again at the next flush; only warm boot drops a line
-  that still fails, with `Write lost`. A directory write whose flush fails
-  returns the error and drops its own directory line, unwritten.
-- **During a block write.** One 512-byte block may hold old, new or mixed
-  contents. If it is a directory block, up to 16 directory entries can be
-  damaged.
-- **During `tecvol` editing on the PC.** `tecvol` writes a complete new image
-  beside the old one and renames it into place, so an interrupted edit leaves
-  the old image intact.
+- Before a dirty block commits, its latest cached records can be lost.
+- Between data and directory writes, new blocks can lack directory entries;
+  an existing file can contain mixed old and new blocks with its old length.
+- During a flush, successful data blocks reach SD in first-dirty order and
+  directory metadata follows its prerequisites. Failed acknowledged data
+  remains available for retry in RAM, including through warm boot.
+- During one SD block write, old, new or mixed contents can remain. A damaged
+  directory block can affect up to sixteen entries.
+- PC-side `tecvol` editing writes a new image beside the old one and renames
+  it into place, so an interrupted edit leaves the old image intact.
 
 ## Recovery procedure
 
-1. Copy the card image to the PC (`dd`, or any raw copy tool) before doing
-   anything else.
-2. Run `tecvol verify IMAGE`. It reports blocks allocated twice, blocks
-   beyond the volume and missing directory extents.
-3. Export what can be read with `tecvol get`, then build a fresh container
-   with `tecvol create` and `tecvol put`, or from a recipe.
-4. Install the new image with `tecvol install IMAGE DEVICE --yes`.
+1. Copy the card image to the PC before making repairs.
+2. Run `tecvol verify IMAGE` to check allocation and directory extents.
+3. Export readable files with `tecvol get`, then build a fresh container with
+   `tecvol create` and `tecvol put`, or from a recipe.
+4. Install the image with `tecvol install IMAGE DEVICE --yes`.
 
-The PC and TEC-OS must never write the same card at the same time. Remove
-the card from the TEC-1G, or hold it in reset, while the PC has it.
+The PC and TEC-OS must never write the same card at the same time. Remove it
+from the TEC-1G, or hold the board in reset, while the PC has it.
 
 ## Three paths
 
@@ -241,7 +138,7 @@ signal doesn't distinguish the last two.
 
 | Path | Volumes | Everything else |
 | --- | --- | --- |
-| Ordinary exit: a program's return, `^C`, or `JP 0000h` | Unchanged | Warm boot: dirty lines written, services and registry kept |
+| Ordinary exit: a program's return, `^C`, or `JP 0000h` | Unchanged | Warm boot: dirty lines attempted, failures retained, services and registry kept |
 | Recognised reset | The selection, each volume checked against the card | Rebuilt |
 | Unrecognised reset | The card's defaults | Rebuilt |
 
@@ -278,10 +175,10 @@ Limits:
 - Identity is extents, not a name: a card with identical extents takes the
   selection, and a card that changed only its default letters keeps it.
 
-**Wait for the prompt before a reset.** A reset discards dirty lines, a
-pending block among them, and never writes them, to the old card or a new
-one. At the prompt nothing is left, since its console read writes everything,
-so wait for it before a reset or taking the card out.
+**Wait for successful writes before reset.** Reset discards dirty lines and
+never writes them to the old card or a new one. Normal prompt input drains
+them, but a prompt after `Write pending` is not proof of completion. Resolve
+the write failure and wait for `Cache clear` before reset or removal.
 
 **`CD A:` and a reset.** A recognised reset keeps the drives' selection, so
 after `CD A:` to a volume without `SHELL.SVC` (`CD A:GAMES` on the starter
@@ -297,24 +194,21 @@ so logging the drive in passes over it, on drive A too. Reading that block says
 
 ## Card removal
 
-**A changed card needs a reset.** The TEC-1G has no card-detect line, and
-TEC-OS initialises the card only at cold boot. Removing the card while
-TEC-OS runs is an I/O error: the next disk access that needs the card fails,
-the BDOS reports `Bad Sector` and warm boots. A read of a block the cache
-holds still succeeds, and a write behind still goes into the cache; the
-warm boot then says `Write lost` for what it could not write. A warm boot keeps the mounts and keeps each
-drive logged in with its allocation vector, so it cannot see that the card
-is a different one. A card put in after that answers no read until reset.
-Press reset after changing cards.
+**A changed card needs a reset.** The TEC-1G has no card-detect line and
+TEC-OS initialises SD only at cold boot. Removing a running card causes I/O
+failures; cache hits can still read and accepted writes can still enter RAM.
+Warm boot retains failed data and warns `Write pending`, but cannot restart
+the card or verify its identity. Inserting the same or another card does not
+make those writes safe or successful. Reset after changing cards discards
+that retained cache. TEC-OS does not read CID and deliberately avoids
+reinitialising an inserted card and replaying data onto a possible stranger.
 
-**Lines still dirty when a card comes out are lost.** That holds for the same
-card put back, and for a pending block: with the card out, or another or the
-same card put in, every flush point fails, a close returns the error each time,
-and the block is never written onto the card put in. Only cold boot starts a card, so the first warm boot after the
-card comes out says `Write lost` and drops those lines, and a reset discards any
-written behind since. Restarting a card to write to it
-is left out by choice: TEC-OS doesn't read a card's CID, so a different card would
-take these lines.
+Persistent refusal can fill the dirty cache. Reads that need a new line then
+fail if a bounded pass frees none; healthy lines can still make progress.
+Input polling's required complete flush can be slow while many lines refuse.
+Warm boot preserves those failed lines rather than using data loss to make
+polling faster. The user must resolve the original backend failure or accept
+that resetting will discard the pending RAM contents.
 
 A warm boot rebuilds a drive's allocation vector from its directory when
 anything has changed it since its last scan: a file written, closed or

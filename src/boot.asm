@@ -123,9 +123,8 @@ DIAGNZ:
 ; CCP/BDOS writable state. Restore
 ; active video and full scroll region.
 ; Attempt CWBOOT flush, then enter CCP
-; with PZDU in C. Failure reports loss
-; and sets CHPOS's drop bit but still
-; enters CCP.
+; with PZDU in C. Failure retains pending data and sets CHPOS's drop
+; bit; a notice follows the active error mode before entering CCP.
 ; Never returns.
 
 WBOOTR:
@@ -133,6 +132,11 @@ WBOOTR:
   ld a,LATCLAS
   ld (LATCHV),a
   out (SYSLAT),a
+  xor a
+  ld (HKDEP),a
+  ld (HKBUSY),a
+  ld (HKRPOS),a
+  ld (HKRLEN),a
   ld sp,BSTK
   call PIICLR    ; end IE before the
                  ; handler sweep

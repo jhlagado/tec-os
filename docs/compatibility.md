@@ -114,7 +114,7 @@ same one. These differ from CP/M 3 in two places:
   starting with `:` is refused as a bad name, with FF00h.
 
 ^C at a program's line input or at `TYPE`'s or `DIR`'s `[more]`, a BDOS
-error's exit, a write lost at warm boot and a reset drop the rest of the line.
+error's exit, a failed write retained at warm boot and a reset drop the rest of the line.
 Esc or Q at `[more]`, and `ERA *.*` answered N, are answers, not failures: they
 leave the code at 0, and the line goes on. The shell's built-ins:
 
@@ -246,31 +246,29 @@ and run.
   which calls the ROM's console status directly so that it draws no cursor.
 - **CCP overwrite.** Programs that expect to reclaim CCP memory below the BDOS
   gain nothing: the CCP is in ROM and its workspace is above the TPA.
-- **Interrupts off across a block.** BIOS `READ` and `WRITE` turn
-  interrupts off for the whole call and put them back as they found them, so
-  that none arrives while EXPAND 1, where the block cache lives, is in view.
-  A call that moves one block to or from the card holds them off for about
-  240,000 T-states (60 ms at 4 MHz), and one that must also read a block
-  first for about 490,000 (122 ms); a hit in the cache, for about 5,000. A
-  data write that stays in its block holds them off for about 10,000
-  to 13,000; the block's write comes at the next flush point, a console read
-  or a directory request among them, which then holds them off for about
-  240,000 while it writes it. A program's interrupt routine can wait that long.
-- **The logged drive is written behind, and every other volume coalesces**
-  (`docs/recovery.md`). Every console read writes every changed line, so at a
-  key wait everything is on the card. On a volume not logged a data write returns with its
-  record in the cache, and its block reaches the card at the next flush
-  point, a program's console read among them. Some waits are not flush
-  points, so the block stays pending while the program waits: a program that
-  waits for a key by polling the BIOS's `CONST` and only then calls `CONIN`;
-  one that waits on reader input, BDOS 3 or the BIOS's `READER`; and one whose
-  resident has replaced `CONIN` in the RAM BIOS table, which takes over its
-  flush. A flush at `CONST` would flush at every BDOS 2 and 9, which test the
-  console's status. A program that writes a directory block through the BIOS
-  with type 0, not 1, has it coalesced like data, as Digital Research's
-  deblocking BIOS holds a type 0 write; the BDOS writes its directory with
-  type 1. A flush that another drive's directory request makes reports
-  `Bad Sector` on that drive, not A:.
+- **Interrupts off in disk-critical spans.** Functional BIOS `READ` and
+  `WRITE` bracket their cache/SD work with CDI/CEI, preserving the incoming
+  maskable-interrupt state. Entry housekeeping uses its own protected span,
+  restores that state and can report before the functional handler begins.
+  Thus a whole public call can include both maintenance and requested I/O.
+  Older emulated per-transfer measurements were about240,000 T-states for
+  one SD transfer (60ms at4MHz),490,000 with a pre-read,5,000 for a read hit
+  and10,000–13,000 for a same-block data copy. Those figures describe the
+  older transfer paths, not bounds on the new complete public call. Pending
+  retries or required full flushes can add multiple SD spans. An interrupt
+  routine must tolerate those critical spans; DI does not exclude NMI.
+- **Cooperative priority writes** ([recovery.md](recovery.md)). Each admitted
+  outer API call attempts one eligible dirty block. Nested calls inherit the
+  context; selected console-output/directory points add bounded opportunities.
+  Required console input and other full-flush boundaries still drain the
+  queue, subject to failures. Failed data remains queued through warm boot;
+  `Write pending`, `Cache clear` and `Write error` distinguish retry state.
+  There is no timed guarantee while a program retains the CPU. Separate
+  public writes can commit separately, even within one block; only updates
+  already received are coalesced. BIOS CONST/raw reader are ordinary entry
+  opportunities, not full drains. Type0 directory writes are treated as data;
+  BDOS metadata uses type1 with data-before-directory ordering. A flush caused
+  by another drive's directory request can report `Bad Sector` on that drive.
 - **Bit-banged serial.** Input that arrives while a program is busy and not
   polling the console is lost. Keys typed while the BDOS is printing are kept
   for the next read, as in CP/M 2.2.
