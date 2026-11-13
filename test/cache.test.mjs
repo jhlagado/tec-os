@@ -20,6 +20,7 @@ import { createContainer, headerChecksum, parseContainer } from "../tools/lib/co
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
+import { finishBarePrompt } from "./lib/public-caller.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
 import { at, shellCard, shellMachine } from "./lib/shell.mjs";
 
@@ -749,7 +750,10 @@ for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G
     ]);
     const r = rig(image);
     const m = r.m;
-    if (wb) logOn(m, "B");
+    if (wb) {
+      logOn(m, "B");
+      r.commandNormalization = finishBarePrompt(m);
+    }
     const n = geometry === "G1M" ? 4 : 8; // card blocks of 4 records an allocation block
     const order = [0, 4 * (n - 1), ...Array.from({ length: n - 2 }, (_, i) => 4 * (i + 1)), 4 * (n - 1) + 1];
     const rr = (rec) => [rec & 0xff, rec >> 8, 0].forEach((v, i) => m.write(0x5c + 33 + i, v));
@@ -785,6 +789,7 @@ function closing(refuse) {
   const r = rig(image);
   const m = r.m;
   logOn(m, "B");
+  r.commandNormalization = finishBarePrompt(m);
   r.call(5, { c: 45, de: 0xff });
   r.fcb(2, "WB      DAT");
   assert.equal(r.bdos(22), 0, "made");

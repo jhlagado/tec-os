@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, standardCard, volume } from "./lib/fixtures.mjs";
 import { alv, rig } from "./lib/warmboot.mjs";
+import { finishBarePrompt, publicContext } from "./lib/public-caller.mjs";
 
 const FCB = 0x005c;
 const FCB2 = 0x0200;
@@ -124,6 +125,7 @@ test("function 13 from user 5 leaves the user number 5, on drive A", () => {
 /** BDOS function C, to its return or to a BDOS error's wait for a key; then the key, and the CCP's prompt. */
 function attempt(r, c, de = FCB) {
   const { m } = r;
+  publicContext(m);
   const cpu = m.cpu.cpu;
   const saved = { pc: cpu.pc, sp: cpu.sp };
   m.write(0x0ffe, 0x00);
@@ -133,6 +135,7 @@ function attempt(r, c, de = FCB) {
   const [cin, cinEnd] = [m.sym("CINLP"), m.sym("CINWE")]; // a wait for a key, not a poll
   m.runUntil(() => m.pc === 0x0f00 || (m.pc >= cin && m.pc < cinEnd), 200_000_000, `BDOS ${c}`);
   if (m.pc === 0x0f00) {
+    publicContext(m);
     const a = cpu.a;
     Object.assign(cpu, saved);
     return { a };
@@ -167,6 +170,12 @@ test("functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the
     const got = attempt(r, fn);
     assert.match(got.text ?? `returned ${got.a}`, /Bdos Err On A: File R\/O/, `function ${name}`);
     assert.equal(Buffer.compare(image, before), 0, `function ${name}: the card unchanged`);
+    const stopped = { pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.text(0) };
+    assert.throws(() => r.bdos(12), /HKDEP: no inherited or busy API context/);
+    assert.deepEqual({ pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.text(0) }, stopped, "rejecting the next direct call neither resumes nor replaces the error's prompt input");
+    const completion = finishBarePrompt(m);
+    assert.equal(completion.before.cycles, stopped.cycles);
+    publicContext(m);
   }
   assert.deepEqual(volume(image, "A").list().map((x) => [x.name, x.readOnly]), [["R.DAT", true]]);
 });

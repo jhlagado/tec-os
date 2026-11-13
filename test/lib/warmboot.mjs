@@ -3,6 +3,7 @@
 // memory or rebuilt by a full scan of the same card.
 
 import { boot, standardCard } from "./fixtures.mjs";
+import { finishBarePrompt, publicContext, recoveryInput } from "./public-caller.mjs";
 
 const BACK = 0x0f00;
 const STACK = 0x1000;
@@ -16,11 +17,12 @@ export const w = (m, a) => m.read(a) | (m.read(a + 1) << 8);
  */
 export function rig(image = standardCard()) {
   const m = boot(image);
+  const normalization = finishBarePrompt(m);
   const cread = m.sym("CREAD");
   const lba = m.sym("SDLBA");
   let last = -1;
   let reads = 0;
-  const r = { m, image };
+  const r = { m, image, normalization };
   Object.defineProperty(r, "reads", {
     get: () => reads,
     set: (v) => [(reads = v), (last = -1)],
@@ -34,6 +36,7 @@ export function rig(image = standardCard()) {
     return step();
   };
   r.call = (addr, { a = 0, c = 0, de = 0, bc } = {}) => {
+    publicContext(m);
     const cpu = m.cpu.cpu;
     const saved = { pc: cpu.pc, sp: cpu.sp };
     m.write(STACK - 2, BACK & 0xff);
@@ -41,20 +44,22 @@ export function rig(image = standardCard()) {
     Object.assign(cpu, { a, c, d: de >> 8, e: de & 0xff, sp: STACK - 2, pc: addr });
     if (bc !== undefined) Object.assign(cpu, { b: bc >> 8, c: bc & 0xff });
     m.runUntil(() => m.pc === BACK, 200_000_000, `the return from ${addr.toString(16)}`);
+    publicContext(m);
     const out = cpu.a;
     Object.assign(cpu, saved);
     return out;
   };
   r.bdos = (fn, de = FCB) => r.call(5, { c: fn, de });
   r.fcb = (drive, name) => [drive, ...Buffer.from(name.padEnd(11)), ...new Array(24).fill(0)].forEach((v, i) => m.write(FCB + i, v));
-  /** JP 0000h, to the CCP waiting for input: T-states and blocks read. */
+  /** JP 0000h to normal or recovery input; snapshot before separate completion. */
   r.warm = () => {
     r.reads = 0;
     const t0 = m.cycles;
     m.mark = m.output.length;
     m.cpu.cpu.pc = 0;
-    m.runUntil(() => m.waitingForInput() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "the prompt after a warm boot");
-    return { t: m.cycles - t0, reads: r.reads };
+    const at = () => recoveryInput(m) || (m.ready() && /\r\n\d*[A-P](:\S*)?>$/.test(m.text(m.mark)));
+    m.runUntil(() => (m.pumpInput(), at()), 400_000_000, "normal or bootstrap recovery input after warm boot");
+    return { t: m.cycles - t0, reads: r.reads, outcome: recoveryInput(m) ? "recovery" : "normal", text: m.text(m.mark) };
   };
   return r;
 }

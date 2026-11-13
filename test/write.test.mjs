@@ -6,6 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { boot, standardCard, volume } from "./lib/fixtures.mjs";
 import { alv, rig as callRig } from "./lib/warmboot.mjs";
+import { finishBarePrompt, publicContext } from "./lib/public-caller.mjs";
 
 const BACK = 0x0f00;
 const STACK = 0x1000;
@@ -16,6 +17,7 @@ const DMA = 0x0080;
 function rig() {
   const image = standardCard();
   const m = boot(image);
+  const normalization = finishBarePrompt(m);
   const counts = { reads: 0, writes: 0 };
   const sdread = m.sym("SDREAD");
   const sdwrite = m.sym("SDWRITE");
@@ -26,12 +28,14 @@ function rig() {
     return step();
   };
   const bdos = (c, de = FCB, after) => {
+    publicContext(m);
     const cpu = m.cpu.cpu;
     const saved = { pc: cpu.pc, sp: cpu.sp };
     m.write(STACK - 2, BACK & 0xff);
     m.write(STACK - 1, BACK >> 8);
     Object.assign(cpu, { c, d: de >> 8, e: de & 0xff, sp: STACK - 2, pc: 0x0005 });
     m.runUntil(() => m.pc === BACK, 200_000_000, `BDOS ${c}`);
+    publicContext(m);
     const a = cpu.a;
     Object.assign(cpu, saved);
     after?.();
@@ -44,7 +48,7 @@ function rig() {
   const record = (r) => {
     for (let k = 0; k < 128; k += 1) m.write(DMA + k, (r * 131 + k * 7 + 1) & 0xff);
   };
-  return { image, m, counts, bdos, name, record };
+  return { image, m, counts, bdos, name, record, normalization };
 }
 
 const expected = (n) => Uint8Array.from({ length: n * 128 }, (_, i) => ((i >> 7) * 131 + (i & 127) * 7 + 1) & 0xff);
