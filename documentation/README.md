@@ -113,6 +113,9 @@ Official references:
 ## Hosting status
 
 On 13 November 2026, the repository was made public and GitHub Pages was
-enabled with GitHub Actions as its source. A public repository can use the
-free GitHub Pages service. The custom-domain binding for `tec-os.org` is being
-configured. Deployment, DNS and HTTPS verification are pending.
+enabled with GitHub Actions as its source. The documentation build and
+deployment succeeded. The custom domain is `tec-os.org`; its nine DNS-only
+records were applied in Cloudflare and verified through authoritative DNS.
+The HTTP site responds successfully, with checked pages and assets matching
+the deployed build. GitHub's certificate provisioning and HTTPS enforcement
+are pending.
