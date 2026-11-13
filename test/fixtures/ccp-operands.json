@@ -5,478 +5,478 @@
     {
       "input": "DIR",
       "output": "DIR\r\r\nHELLO.TXT    KEEP.TXT     BIG.BIN      SHELLC.PRL   SHELLE.PRL  \r\n5 files, 978K free\r\nA>",
-      "calls": "40c7c8fb32abed436d818811992e71a2edb7014898dc7ecd354b6b7772b174c2",
+      "calls": "4d4edfaebc2e38f8644f1873817d92702ee5d0a20b59d65e6802893b28f6e5f5",
       "peak": 16
     },
     {
       "input": "DIR *.TXT",
       "output": "DIR *.TXT\r\r\nHELLO.TXT    KEEP.TXT    \r\n2 files, 978K free\r\nA>",
-      "calls": "b4b013af425512b348d92b945678627c18ddc0cd672c022bac61ffb3dbf62b87",
+      "calls": "a104180fbd78267fd2c9e231176fd4ee3f730bd07ce12051fa108a8a9ea33d92",
       "peak": 16
     },
     {
       "input": "DIR B:",
       "output": "DIR B:\r\r\nFILL0.BIN    FILL1.BIN    FILL2.BIN    FILL3.BIN    FILL4.BIN    FILL5.BIN\r\nFILL6.BIN    FILL7.BIN    FILL8.BIN    FILL9.BIN    FILL10.BIN   FILL11.BIN\r\nFILL12.BIN   FILL13.BIN   FILL14.BIN   TOP0.BIN     TOP1.BIN     TOP2.BIN\r\nTOP3.BIN     TOP4.BIN     TOP5.BIN     TOP6.BIN     TOP7.BIN     TOP8.BIN\r\nTOP9.BIN     TOP10.BIN    TOP11.BIN    TOP12.BIN    TOP13.BIN   \r\n29 files, 0K free\r\nA>",
-      "calls": "8cf43ec75d07de974e0e7a32665fbb754f99794f06c44a34f920ecf1f8024273",
+      "calls": "7b4fe0c671cfbb7ac99d8695cd070dedc74746bfe6de45492441c249ab7429f8",
       "peak": 14
     },
     {
       "input": "DIR NOFILE.TXT",
       "output": "DIR NOFILE.TXT\r\r\nNO FILE\r\nA>",
-      "calls": "7931aeaf908aac2d2ea8820daf1356b4e765ffcc5a087d53cc176de49b949cf4",
+      "calls": "968b1978af62baf6848e152a9d6498d230638d9bd78586ed89157183cba6e8d0",
       "peak": 12
     },
     {
       "input": "DIR <",
       "output": "DIR <\r\r\n<?\r\n\r\nA>",
-      "calls": "f21ab8c6ae0e0360ed36a55f04aaa42de0f7583fb257357714597dea27f3d33e",
+      "calls": "bc1e2f0f38b3712239c325f58cdebf47e02c5214ba41cd3f350d313bf2e1b2a1",
       "peak": 12
     },
     {
       "input": "DIR A B",
       "output": "DIR A B\r\r\nA?\r\n\r\nA>",
-      "calls": "a86cd9df0126567046012f1151e5fbfeadbbc9e3807905d83037af7e1b69ec6f",
+      "calls": "8084d002c8514849bf29cb620541de5bf3ca16f00f82888c31a2e2ce40d3d946",
       "peak": 12
     },
     {
       "input": "DIR HELLO.TXT X",
       "output": "DIR HELLO.TXT X\r\r\nHELLO.TXT?\r\n\r\nA>",
-      "calls": "f4c6d03909e56a027b99f128a7cf35a06ab4d6752a4ef6f55e8f3307ff91da74",
+      "calls": "c76b0b4ef9c20ea8a02d386463e6e0fd521477e78866b5df157c0521ed375b6a",
       "peak": 12
     },
     {
       "input": "<",
       "output": "<\r\r\n<?\r\n\r\nA>",
-      "calls": "f21ab8c6ae0e0360ed36a55f04aaa42de0f7583fb257357714597dea27f3d33e",
+      "calls": "bc1e2f0f38b3712239c325f58cdebf47e02c5214ba41cd3f350d313bf2e1b2a1",
       "peak": 12
     },
     {
       "input": "ABCDEFGHIJ",
       "output": "ABCDEFGHIJ\r\r\nABCDEFGHIJ?\r\n\r\nA>",
-      "calls": "639fee3eb7c01ff1201692d3c58239d69031b8cd04e66c4eb9aa981b5ccd6d95",
+      "calls": "513fd1ae8b0b8495fb66c35fa883d70ba4e2a91dd250e444ead2f6c4b17091bf",
       "peak": 12
     },
     {
       "input": "NOSUCH",
       "output": "NOSUCH\r\r\nNOSUCH?\r\n\r\nA>",
-      "calls": "28076b08fa10a69368a864119984027eea12de3a05f8f2eb0b96f41bf860ad1d",
+      "calls": "c23a7bdc212fb8777157b9e8530cba231ebbcc9adbfe33a8c273d6e3540cc56d",
       "peak": 12
     },
     {
       "input": "B:",
       "output": "B:\r\r\nB>",
-      "calls": "00e1a0132515f6bea4127f4344366bcce767c123257aac1d0a3c1e8793b25af5",
+      "calls": "06e0d679c3b5ae83a7eb35ec05d6baaf4d5674fe6f87508ec79e93d7b7dd964c",
       "peak": 18
     },
     {
       "input": "A:",
       "output": "A:\r\r\nA>",
-      "calls": "e82bc732f8eca17594abe62f4ac5251e5ecb628e21598c836fbe14cfc7d6aa05",
+      "calls": "2146157c0b7482dcd9bff572c8bbf9ae38d37f857647f2c4513bcf6ec729990c",
       "peak": 18
     },
     {
       "input": "TYPE",
       "output": "TYPE\r\r\nNO FILE\r\nA>",
-      "calls": "2565cff1a87d37f6bd1c0a7711cce8eaf03c56cadced62b0531235925f82e731",
+      "calls": "c5152d7765110f819e0835503bf3d8eb7b56815ca6205ca4e3f4a58ffeec627b",
       "peak": 12
     },
     {
       "input": "TYPE HELLO.TXT",
       "output": "TYPE HELLO.TXT\r\r\nhello\r\n\r\nA>",
-      "calls": "8bfc8ccf415239f5e5f73711bf107a8f897ee826a691e4030fac2cf288d4fe37",
+      "calls": "75542b77c945baf97a57cd65c885e1d1edb6c34404e94e6b710135cb414c9131",
       "peak": 14
     },
     {
       "input": "TYPE NOFILE.TXT",
       "output": "TYPE NOFILE.TXT\r\r\nNO FILE\r\nA>",
-      "calls": "297aee1833d0d93e59d6e6aed0f9cba8be6bd9690c85a90543a4f7f7c7370610",
+      "calls": "8795147b27e71aab08bb6659bcd57ff9c5be3cf834182124c03d77c327c4f99e",
       "peak": 14
     },
     {
       "input": "TYPE ABCDEFGHIJ",
       "output": "TYPE ABCDEFGHIJ\r\r\nABCDEFGHIJ?\r\n\r\nA>",
-      "calls": "639fee3eb7c01ff1201692d3c58239d69031b8cd04e66c4eb9aa981b5ccd6d95",
+      "calls": "513fd1ae8b0b8495fb66c35fa883d70ba4e2a91dd250e444ead2f6c4b17091bf",
       "peak": 14
     },
     {
       "input": "TYPE <",
       "output": "TYPE <\r\r\n<?\r\n\r\nA>",
-      "calls": "f21ab8c6ae0e0360ed36a55f04aaa42de0f7583fb257357714597dea27f3d33e",
+      "calls": "bc1e2f0f38b3712239c325f58cdebf47e02c5214ba41cd3f350d313bf2e1b2a1",
       "peak": 14
     },
     {
       "input": "TYPE *.COM",
       "output": "TYPE *.COM\r\r\n*.COM?\r\n\r\nA>",
-      "calls": "5965a327bae68bc6319f324def17f8c344766fe2c146a13d3d203565b794e61a",
+      "calls": "5c3d3c7b3cd756f0b59f8385759a732432aab04d24f9e5a35967d5b82c1471dc",
       "peak": 12
     },
     {
       "input": "TYPE HELLO.TXT X",
       "output": "TYPE HELLO.TXT X\r\r\nHELLO.TXT?\r\n\r\nA>",
-      "calls": "f4c6d03909e56a027b99f128a7cf35a06ab4d6752a4ef6f55e8f3307ff91da74",
+      "calls": "c76b0b4ef9c20ea8a02d386463e6e0fd521477e78866b5df157c0521ed375b6a",
       "peak": 14
     },
     {
       "input": "ERA",
       "output": "ERA\r\r\n?\r\n\r\nA>",
-      "calls": "3b4190f7335fa07cfe16b8d914ac9cb40e0adf6cea5a2c77f2c87b3b4bdbbdbf",
+      "calls": "558f0599f4d8792ecc5d5d7e5767f4ef9f19142bc638a6325deb84307e2dff12",
       "peak": 12
     },
     {
       "input": "ERA NOFILE.TXT",
       "output": "ERA NOFILE.TXT\r\r\nNO FILE\r\nA>",
-      "calls": "807cd8cc22292da5b339125bef9cd76ef4829ccb98325432b79a3f1f83d47db5",
+      "calls": "77da1bac47394c258ed06bfccbb7f1069a2a126ce019d579b0dfd2c754494a48",
       "peak": 12
     },
     {
       "input": "ERA A B",
       "output": "ERA A B\r\r\nA?\r\n\r\nA>",
-      "calls": "a86cd9df0126567046012f1151e5fbfeadbbc9e3807905d83037af7e1b69ec6f",
+      "calls": "8084d002c8514849bf29cb620541de5bf3ca16f00f82888c31a2e2ce40d3d946",
       "peak": 12
     },
     {
       "input": "ERA <",
       "output": "ERA <\r\r\n<?\r\n\r\nA>",
-      "calls": "f21ab8c6ae0e0360ed36a55f04aaa42de0f7583fb257357714597dea27f3d33e",
+      "calls": "bc1e2f0f38b3712239c325f58cdebf47e02c5214ba41cd3f350d313bf2e1b2a1",
       "peak": 12
     },
     {
       "input": "SAVE 1 GONE.TMP",
       "output": "SAVE 1 GONE.TMP\r\r\nA>",
-      "calls": "3c7637ee3fa98a6a6436afb03ca031e5cb89df2dce40809ee8b3606956d036bb",
+      "calls": "ce93d4e391731bf76e236ac1ea5a6ecc62136f8dfb755298a4876418b5e7c6f8",
       "peak": 14
     },
     {
       "input": "ERA GONE.TMP",
       "output": "ERA GONE.TMP\r\r\nA>",
-      "calls": "e9ed4e7c39ea35d4006277d4133eae07b62f8004a1b33b43e4b8f37db4bc99ad",
+      "calls": "c4c7a450221c6ec11653dbf3be6f70193c4a211b360aca3a8b7f6d65bcd83be9",
       "peak": 12
     },
     {
       "input": "ERA *.ZZZ",
       "output": "ERA *.ZZZ\r\r\nNO FILE\r\nA>",
-      "calls": "e9d7e0ac7256f09e536c8297273857f2d7283bd1d79408d1bfd5f823db97597b",
+      "calls": "fd788f214025eeba5a6cdb60d7e85d1f428f4b7163c971e6c45784a0d7072ebc",
       "peak": 12
     },
     {
       "input": "ERA *.*",
       "output": "ERA *.*\r\r\nALL (Y/N)?\r\r\nA>",
-      "calls": "3091f20d87dec37ac0c16e7a771f354e526e3c842b4a9b2c1333871b5b99dad0",
+      "calls": "5d8258db02edb6161e3610d42bee3dc5ccfbc2ddc81022fa2630e4257ea1c5bc",
       "peak": 12
     },
     {
       "input": "REN",
       "output": "REN\r\r\n?\r\n\r\nA>",
-      "calls": "3b4190f7335fa07cfe16b8d914ac9cb40e0adf6cea5a2c77f2c87b3b4bdbbdbf",
+      "calls": "558f0599f4d8792ecc5d5d7e5767f4ef9f19142bc638a6325deb84307e2dff12",
       "peak": 12
     },
     {
       "input": "REN =B",
       "output": "REN =B\r\r\n=B?\r\n\r\nA>",
-      "calls": "e5b3e643661e1315d68a048b2d611c7cae05c75027711c04ccf5108c73623fba",
+      "calls": "8385ebd21fcd45b59e1f95fc7ebfa3074ac33977c9a06ec718c00428f0396d70",
       "peak": 12
     },
     {
       "input": "REN A",
       "output": "REN A\r\r\nA?\r\n\r\nA>",
-      "calls": "a86cd9df0126567046012f1151e5fbfeadbbc9e3807905d83037af7e1b69ec6f",
+      "calls": "8084d002c8514849bf29cb620541de5bf3ca16f00f82888c31a2e2ce40d3d946",
       "peak": 12
     },
     {
       "input": "REN A=",
       "output": "REN A=\r\r\nA=?\r\n\r\nA>",
-      "calls": "c41624c625f27a2e588288851ea8d95da815bf489314fd02ad03998963f0c5dd",
+      "calls": "f7ff9f9a76128087d1fbc6642a4bcd72737ba98f33ff50d1c8f77350f27c067a",
       "peak": 12
     },
     {
       "input": "REN A= B",
       "output": "REN A= B\r\r\nA=?\r\n\r\nA>",
-      "calls": "c41624c625f27a2e588288851ea8d95da815bf489314fd02ad03998963f0c5dd",
+      "calls": "f7ff9f9a76128087d1fbc6642a4bcd72737ba98f33ff50d1c8f77350f27c067a",
       "peak": 12
     },
     {
       "input": "REN A==B",
       "output": "REN A==B\r\r\nA==B?\r\n\r\nA>",
-      "calls": "9107cbbd2c5bdadf6479f421344124bdf6975a57e699b2fa82da338c2a5b7003",
+      "calls": "68c9521e20c6a5d15a4a840c7ad674bae17fb47c8cd4e01989a3790b21747155",
       "peak": 12
     },
     {
       "input": "REN <=B",
       "output": "REN <=B\r\r\n<=B?\r\n\r\nA>",
-      "calls": "259113a2e5296f9afbc5285da8d17de3768d592f1a8beb758e92c8d176d3f2e0",
+      "calls": "8f671d65699df885211a72b2b7333a4cd8edd3b677641b7fee409bc2a25a2221",
       "peak": 12
     },
     {
       "input": "REN *.A=B",
       "output": "REN *.A=B\r\r\n*.A=B?\r\n\r\nA>",
-      "calls": "cfe619340fdb8008e686b6241c135fb51b77d19f1e68d5501fdd3a6e45ce435d",
+      "calls": "a87f576c4c6da85d8a7d1d524ff281f80f22c5069bfa998e9792108edc9fde26",
       "peak": 12
     },
     {
       "input": "REN A=*.B",
       "output": "REN A=*.B\r\r\nA=*.B?\r\n\r\nA>",
-      "calls": "65f209f6584b6cc318edf26462ecd196727f4a49289187024a6ad93851fc07fb",
+      "calls": "129638b4b7b1d800cc1065abba1df8da26a1477bdfc8b70cc8812f47e7a01c66",
       "peak": 12
     },
     {
       "input": "REN A=<",
       "output": "REN A=<\r\r\nA=<?\r\n\r\nA>",
-      "calls": "c9144637013c4d15265d74091d0c2a2ded90c312bce5b333336719a09d63119e",
+      "calls": "37160fde9d4636639d02e20b507663de51b2209024ba372d6c6c7b45afa20491",
       "peak": 14
     },
     {
       "input": "REN A=B C",
       "output": "REN A=B C\r\r\nA=B?\r\n\r\nA>",
-      "calls": "7f9fded1d438dcdc7529bb176f0e717f8d1424fce648408a486c5e500897746b",
+      "calls": "937447a19a93067c6651802c12d8903ba6ce62b837d39d39046e8cda0aadc538",
       "peak": 14
     },
     {
       "input": "REN NEW.TXT=NOFILE.TXT",
       "output": "REN NEW.TXT=NOFILE.TXT\r\r\nNO FILE\r\nA>",
-      "calls": "0c495723f8f3679d3b800ef10a82cc32febcbc10e1b14c1765ad1223ffb69542",
+      "calls": "003dbc72087115b05720f284e4a1c86c094149e9bf228fdd4f2e1f5a1023b7a8",
       "peak": 14
     },
     {
       "input": "REN KEEP.TXT=HELLO.TXT",
       "output": "REN KEEP.TXT=HELLO.TXT\r\r\nFILE EXISTS\r\nA>",
-      "calls": "cc1769f7d76d2b97e37ea0663b2ab30845685005b281c34ae6241738b6b7c192",
+      "calls": "62c11d3042d12dc0edbef5af525f70d0c93662e010267766d0247a0c697a7a43",
       "peak": 14
     },
     {
       "input": "REN NEW.TXT=HELLO.TXT",
       "output": "REN NEW.TXT=HELLO.TXT\r\r\nA>",
-      "calls": "51ac41f25378dc60f303f4ab429f5b25962a49c83daa9d660b21ae742b669daf",
+      "calls": "397be18d60602025cc1367ec569431ea7f6d440374ce8730ed9ad2e9dd7df699",
       "peak": 14
     },
     {
       "input": "REN HELLO.TXT=NEW.TXT",
       "output": "REN HELLO.TXT=NEW.TXT\r\r\nA>",
-      "calls": "a96a77eb6f62b5d1a0ef8d33a9fd86cab782f0efebf909505ec57b1bff8f2f98",
+      "calls": "eb5efd5b8e669cdc49af6caaa78778735d789380e29a2e1bda2ce86bef405ccb",
       "peak": 14
     },
     {
       "input": "USER",
       "output": "USER\r\r\n?\r\n\r\nA>",
-      "calls": "3b4190f7335fa07cfe16b8d914ac9cb40e0adf6cea5a2c77f2c87b3b4bdbbdbf",
+      "calls": "558f0599f4d8792ecc5d5d7e5767f4ef9f19142bc638a6325deb84307e2dff12",
       "peak": 12
     },
     {
       "input": "USER A",
       "output": "USER A\r\r\nA?\r\n\r\nA>",
-      "calls": "a86cd9df0126567046012f1151e5fbfeadbbc9e3807905d83037af7e1b69ec6f",
+      "calls": "8084d002c8514849bf29cb620541de5bf3ca16f00f82888c31a2e2ce40d3d946",
       "peak": 12
     },
     {
       "input": "USER 5 X",
       "output": "USER 5 X\r\r\n5?\r\n\r\nA>",
-      "calls": "6af660c1115440ab3d086261c56d8d26e33ca9bc9bdcaa498845418d9ee8ee95",
+      "calls": "ba610dbdef1a7cd9a83dcdce97535524c228231567a0a8417da679be85cd0cba",
       "peak": 12
     },
     {
       "input": "USER 16",
       "output": "USER 16\r\r\n16?\r\n\r\nA>",
-      "calls": "381c4218cd8199b5473e654f7de98b89b7509173bf3b8feb9bf0b36b5f9fb2ff",
+      "calls": "88e09aa50de9e4ab295a6348bf4f57c08c75fe7fbb1e5051eace82cf8b09eecf",
       "peak": 12
     },
     {
       "input": "USER 1 2",
       "output": "USER 1 2\r\r\n1?\r\n\r\nA>",
-      "calls": "d57d388301aac130f78338a54268790adb4c3cf7d344d5b31068e80a280b4b4c",
+      "calls": "bb0647aecd1f027d1712348827844ebbf3cecff57cf20a10486c58d2a4773d4c",
       "peak": 12
     },
     {
       "input": "USER 5",
       "output": "USER 5\r\r\n5A>",
-      "calls": "3668687dcc34480a12cdb2a626d167491695bf2e9bd56ffece40464cf67c3b00",
+      "calls": "5344dc710e91c63a545cde53c8c918be591fc9e80c3f33ba776e6e62f3055e7b",
       "peak": 14
     },
     {
       "input": "USER 15",
       "output": "USER 15\r\r\n15A>",
-      "calls": "0178c9e4cfeedefe4cbdcc58496dc49ba96d60701de902e11c5d8c2ffa5b2c9f",
+      "calls": "498d4167186eb94a291f18871c5b65a0e8211cdd94d8414bafe02e681405aaaf",
       "peak": 16
     },
     {
       "input": "USER 0",
       "output": "USER 0\r\r\nA>",
-      "calls": "4879419c5582ca4fe9dca74dc06fee4c44faf0c9c44887d3b50cdcf9246fe7bb",
+      "calls": "b7d5bb4088dd6b19dccfcb54e7cfc0f29e8cdd6336a030bfb054f6c1c3a688bf",
       "peak": 12
     },
     {
       "input": "SAVE",
       "output": "SAVE\r\r\n?\r\n\r\nA>",
-      "calls": "3b4190f7335fa07cfe16b8d914ac9cb40e0adf6cea5a2c77f2c87b3b4bdbbdbf",
+      "calls": "558f0599f4d8792ecc5d5d7e5767f4ef9f19142bc638a6325deb84307e2dff12",
       "peak": 12
     },
     {
       "input": "SAVE X",
       "output": "SAVE X\r\r\nX?\r\n\r\nA>",
-      "calls": "a054fc53d3a75fa186ac599e425ee7f986a99945e9bd5ec2f3802a2c24d119f1",
+      "calls": "c3a606a0e146b71e95e4ca88b3f273dda5332990eeb52ba94bde11f2140c55bd",
       "peak": 12
     },
     {
       "input": "SAVE 1",
       "output": "SAVE 1\r\r\n1?\r\n\r\nA>",
-      "calls": "d57d388301aac130f78338a54268790adb4c3cf7d344d5b31068e80a280b4b4c",
+      "calls": "bb0647aecd1f027d1712348827844ebbf3cecff57cf20a10486c58d2a4773d4c",
       "peak": 12
     },
     {
       "input": "SAVE 1 <",
       "output": "SAVE 1 <\r\r\n1?\r\n\r\nA>",
-      "calls": "d57d388301aac130f78338a54268790adb4c3cf7d344d5b31068e80a280b4b4c",
+      "calls": "bb0647aecd1f027d1712348827844ebbf3cecff57cf20a10486c58d2a4773d4c",
       "peak": 14
     },
     {
       "input": "SAVE 1 *.X",
       "output": "SAVE 1 *.X\r\r\n1?\r\n\r\nA>",
-      "calls": "d57d388301aac130f78338a54268790adb4c3cf7d344d5b31068e80a280b4b4c",
+      "calls": "bb0647aecd1f027d1712348827844ebbf3cecff57cf20a10486c58d2a4773d4c",
       "peak": 12
     },
     {
       "input": "SAVE 1 X Y",
       "output": "SAVE 1 X Y\r\r\n1?\r\n\r\nA>",
-      "calls": "d57d388301aac130f78338a54268790adb4c3cf7d344d5b31068e80a280b4b4c",
+      "calls": "bb0647aecd1f027d1712348827844ebbf3cecff57cf20a10486c58d2a4773d4c",
       "peak": 14
     },
     {
       "input": "SAVE 300 S.COM",
       "output": "SAVE 300 S.COM\r\r\n300?\r\n\r\nA>",
-      "calls": "b519adebe6be9705fce03195753834472ed937347b47e6b7f0fbddbbae721b11",
+      "calls": "7b5435a7ee071962143f1fdfe7d2c985360c199a10a4a2dcd5e17266d1988cce",
       "peak": 12
     },
     {
       "input": "SAVE 1 S1.COM",
       "output": "SAVE 1 S1.COM\r\r\nA>",
-      "calls": "ba8e0e9e79a106de0fffd5b9298ed2aea8b733ef62d994a646fbbeb6155edb49",
+      "calls": "ba138c43e2de54a90ea46d78af90497407ecd4ca956dca447864d9791ff4e56e",
       "peak": 14
     },
     {
       "input": "ERA S1.COM",
       "output": "ERA S1.COM\r\r\nA>",
-      "calls": "b351987d1f2e8b1594b8166b223fc2d8eb902f7d2b3cdbe8f0f325b1960cbc3a",
+      "calls": "c913ddc277a031bf9d189a1c3824c8c3f8bb37d1042a1486038b580b98c4d2e9",
       "peak": 12
     },
     {
       "input": "SAVE 1 C:X.COM",
       "output": "SAVE 1 C:X.COM\r\r\n\r\nBdos Err On C: R/O\r\nA>",
-      "calls": "b0076dc659574d11eacd2e5ce5576cde743b757932da910cff1192adfbb828dd",
+      "calls": "e6186b17e7b72275e4a27b9d67fab83f4a1314c17f316235cc42f4a5ff8c6697",
       "peak": 14
     },
     {
       "input": "SAVE 1 B:FULL.COM",
       "output": "SAVE 1 B:FULL.COM\r\r\nNO SPACE\r\nA>",
-      "calls": "2ffcad257e48ed27232bbc4a5710c58e55ef86a8b46b69d7d91bd2784590be69",
+      "calls": "4f9a3fdae816bdb049fd11a84eda2f22a7b21b02497efd1b26864ab68b412bf6",
       "peak": 14
     },
     {
       "input": "CON",
       "output": "CON\r\r\nCON: TTY:\r\nA>",
-      "calls": "05f728270d38e5e83f28beab1c73a023b348be2fa39c8fcec5b5776dd70f1aaa",
+      "calls": "438290f7e6a88fa38738d2026bd8bc61fa6140b6bc6308699a19ba5a4ea32374",
       "peak": 12
     },
     {
       "input": "CON TTY",
       "output": "CON TTY\r\r\nCON: TTY:\r\nA>",
-      "calls": "05f728270d38e5e83f28beab1c73a023b348be2fa39c8fcec5b5776dd70f1aaa",
+      "calls": "438290f7e6a88fa38738d2026bd8bc61fa6140b6bc6308699a19ba5a4ea32374",
       "peak": 12
     },
     {
       "input": "CON TTY:",
       "output": "CON TTY:\r\r\nCON: TTY:\r\nA>",
-      "calls": "05f728270d38e5e83f28beab1c73a023b348be2fa39c8fcec5b5776dd70f1aaa",
+      "calls": "438290f7e6a88fa38738d2026bd8bc61fa6140b6bc6308699a19ba5a4ea32374",
       "peak": 12
     },
     {
       "input": "CON TTY X",
       "output": "CON TTY X\r\r\nX?\r\n\r\nA>",
-      "calls": "a054fc53d3a75fa186ac599e425ee7f986a99945e9bd5ec2f3802a2c24d119f1",
+      "calls": "c3a606a0e146b71e95e4ca88b3f273dda5332990eeb52ba94bde11f2140c55bd",
       "peak": 12
     },
     {
       "input": "CON XYZ",
       "output": "CON XYZ\r\r\nXYZ?\r\n\r\nA>",
-      "calls": "778343c8f4cdeac3ced14e48404261b2b57ae0611c617091ed5026ff91fbc28e",
+      "calls": "fcae351a20c799b63a7ce4c8aaa21332eb7858ccc04838b55e30302bdf92d3e5",
       "peak": 12
     },
     {
       "input": "CON UC1",
       "output": "CON UC1\r\r\nCON: TTY:\r\nA>",
-      "calls": "a2df70eca0a78cb2f744eeb3f910bce1d3144754589e4823258bba8ba5c8c4cd",
+      "calls": "0da318f19d47bea4b80999a43ee70053b6a8e91517f08da69d8bfa51bd40c52a",
       "peak": 14
     },
     {
       "input": "CON TTY",
       "output": "CON TTY\r\r\nCON: TTY:\r\nA>",
-      "calls": "05f728270d38e5e83f28beab1c73a023b348be2fa39c8fcec5b5776dd70f1aaa",
+      "calls": "438290f7e6a88fa38738d2026bd8bc61fa6140b6bc6308699a19ba5a4ea32374",
       "peak": 12
     },
     {
       "input": "COPY",
       "output": "COPY\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "3602a560612c1d460925f54b498ec34f62140c00fa9513c73de217fe51ac40dd",
+      "calls": "a404bc2c5dbbeda0ad49aac0f68c229457cadad30da2dd066be6579f2cf51e5f",
       "peak": 12,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT",
       "output": "COPY HELLO.TXT\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "3602a560612c1d460925f54b498ec34f62140c00fa9513c73de217fe51ac40dd",
+      "calls": "a404bc2c5dbbeda0ad49aac0f68c229457cadad30da2dd066be6579f2cf51e5f",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY <",
       "output": "COPY <\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "3602a560612c1d460925f54b498ec34f62140c00fa9513c73de217fe51ac40dd",
+      "calls": "a404bc2c5dbbeda0ad49aac0f68c229457cadad30da2dd066be6579f2cf51e5f",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT <",
       "output": "COPY HELLO.TXT <\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "3602a560612c1d460925f54b498ec34f62140c00fa9513c73de217fe51ac40dd",
+      "calls": "a404bc2c5dbbeda0ad49aac0f68c229457cadad30da2dd066be6579f2cf51e5f",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT HELLO.TXT",
       "output": "COPY HELLO.TXT HELLO.TXT\r\r\nCOPY?\r\n\r\nA:SYSTEM>",
-      "calls": "3602a560612c1d460925f54b498ec34f62140c00fa9513c73de217fe51ac40dd",
+      "calls": "a404bc2c5dbbeda0ad49aac0f68c229457cadad30da2dd066be6579f2cf51e5f",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY NOFILE.TXT B:",
       "output": "COPY NOFILE.TXT B:\r\r\nNO SOURCE\r\n\r\nA:SYSTEM>",
-      "calls": "fee58d7e9bf2dc92c178b279caf124ed5963248534cb0b630d67b24442e41103",
+      "calls": "96ccc516c962d1fc03c396474f15004e221b150492d4bb85d2e64094a3c6fdfd",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT C:",
       "output": "COPY HELLO.TXT C:\r\r\n\r\nBdos Err On C: R/O\r\nA:SYSTEM>",
-      "calls": "b36856dd8569438653c053f4c989d630bab5887d315bac87bb276e075bc251ea",
+      "calls": "62957bdd59da667d794b0f5ab2d6a7c2e710af28120326abb4639aa9bad0a376",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY BIG.BIN B:",
       "output": "COPY BIG.BIN B:\r\r\nWRITE ERROR\r\n\r\nA:SYSTEM>",
-      "calls": "1f163bb567793ea7d05ba6c8defe5d71cde65edc2fb03c50e3d67f5ba9fb07f7",
+      "calls": "2ecf50b6e93430dd9ca60bf17b8705a7b320381f3ff73294b3465734e564b851",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT B:SMALL.TXT",
       "output": "COPY HELLO.TXT B:SMALL.TXT\r\r\nWRITE ERROR\r\n\r\nA:SYSTEM>",
-      "calls": "0f4957f4a35f36551bb89e041031df8b83ff78dbddbb147f2d8cedb6f1d05787",
+      "calls": "f1e7b8da9bae58430102f459ae206d3cb814778c7f6593682e00d7140a967758",
       "peak": 16,
       "shell": true
     },
     {
       "input": "COPY HELLO.TXT D:",
       "output": "COPY HELLO.TXT D:\r\r\nCANNOT MAKE DEST\r\n\r\nA:SYSTEM>",
-      "calls": "f8092836b4fe7e7a7fc73a1914f333a8af66578571c0b0230beea2d4dcc1cb97",
+      "calls": "4f1c2d8cf098228b2b9a22ab206279c466eb34c873bdc452caaf365ee08f682d",
       "peak": 16,
       "shell": true
     }
@@ -485,7 +485,7 @@
     {
       "input": "CON UC1",
       "output": "CON UC1\r\r\nCON: UC1:\r\nA>",
-      "calls": "e42f330f83b22972d7e5ed15ac6fb8cedde8405ed5c940bda7ea76cfafff3ce2",
+      "calls": "579e54ecf0336027fc33403b1eb36407c48dc0d0b40e4aab55388064dfc99d22",
       "peak": 14
     }
   ]
