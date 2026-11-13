@@ -136,6 +136,18 @@ async function machine(opts = {}) {
 
 const snapshot = (m) => Uint8Array.from({ length: 0xc000 }, (_, i) => m.read(i));
 
+function countedPromptOwner(t) {
+  const { m } = t;
+  assert.ok(m.classicBankIn && m.ready());
+  assert.equal(m.read(m.sym("HKDEP")), 1);
+  assert.equal(m.read(m.sym("HKBUSY")), 0);
+  assert.equal(m.lineBuf, m.sym("CMDBUF"));
+  const oldsp = t.word(m.sym("OLDSP"));
+  assert.equal(oldsp, m.sym("CSTKTOP") - 2);
+  const back = t.word(oldsp);
+  assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+}
+
 /** What a comparison leaves out, by name. */
 function ranges(m) {
   const s = (n) => m.sym(n);
@@ -215,6 +227,12 @@ for (const width of [80, 40, 32]) {
   assert.equal(t.word(6), stub);
   assert.equal(t.m.read(t.m.sym("SVCGEN")), 1, "the generation is raised");
   const gen = t.m.sym("SVCGEN");
+  const rawAfter = snapshot(t.m);
+  assert.equal(before[t.m.sym("HKDEP")], 0);
+  countedPromptOwner(t);
+  assert.deepEqual(changed(t.m, before, rawAfter, ceiling, ["load", "command"], { SVCGEN: [gen, gen + 1] }), [t.m.sym("HKDEP").toString(16)], "the raw final input owns exactly the one additional depth byte");
+  t.finishInput();
+  assert.equal(t.m.read(gen), 1, "separate input completion does not change the removal generation");
   assert.deepEqual(changed(t.m, before, snapshot(t.m), ceiling, ["load", "command"], { SVCGEN: [gen, gen + 1] }), []);
   assert.deepEqual(t.m.violations, []);
   });
@@ -609,8 +627,20 @@ test("a warm boot inside INIT rolls the ceiling back", async () => {
   assert.equal(t.load((await svc({ V_WB: 1 })).file).back, false);
   t.m.runUntil(() => t.m.waitingForInput(), 200_000_000, "the prompt");
   assert.deepEqual([t.word(6), t.word(t.m.sym("PZTOP")), t.m.read(t.m.sym("SVCBSY"))], [top, pztop, 0]);
-  assert.deepEqual(changed(t.m, before, snapshot(t.m), ceiling, ["load", "command"]), []);
+  const rawAfter = snapshot(t.m);
+  assert.equal(before[t.m.sym("HKDEP")], 0);
+  assert.equal(t.m.read(t.m.sym("HKDEP")), 1);
+  assert.equal(t.m.read(t.m.sym("HKBUSY")), 0);
+  assert.equal(t.m.pc, t.m.sym("CSTPOLL"), "the old raw stop is the CRLF output's status poll, before the prompt");
+  const oldsp = t.word(t.m.sym("OLDSP"));
+  assert.equal(oldsp, t.m.sym("CSTKTOP") - 2);
+  const back = t.word(oldsp);
+  assert.equal(back, t.m.sym("STARTED") + 6);
+  assert.deepEqual(Array.from({ length: 6 }, (_, i) => t.m.read(back - 6 + i)), [0x11, t.m.sym("CRLFMSG") & 0xff, t.m.sym("CRLFMSG") >> 8, 0xcd, t.m.sym("PUTSTR") & 0xff, t.m.sym("PUTSTR") >> 8]);
+  assert.deepEqual([t.m.read(t.m.sym("PUTSTR")), t.m.read(t.m.sym("PUTSTR") + 1)], [0x0e, 9], "PUTSTR tail-enters BDOS 9");
+  assert.deepEqual(changed(t.m, before, rawAfter, ceiling, ["load", "command"]), [t.m.sym("HKDEP").toString(16)], "the active output owner is the sole raw non-command difference");
   t.finishInput();
+  assert.deepEqual(changed(t.m, before, snapshot(t.m), ceiling, ["load", "command"]), [], "compare returned root states separately after retaining the original raw output phase");
   assert.equal(t.load((await svc()).file).carry, 0, "the guard is down: a load works");
   t.prompt();
   t.unload();
@@ -711,10 +741,23 @@ for (const [i, field] of [[0, "STKB"], [1, "STKI"], [2, "STKC"]]) {
 
 test("the scan can't see a GLVEC-style vector: INIT failed, pages freed, the vector left", async () => {
   const t = await machine({ tms: true, matrix: true });
-  const x = transaction(t, (await svc({ V_GLVEC: 1 })).file);
+  const d = await svc({ V_GLVEC: 1 });
+  const base = (t.word(6) & 0xff00) - Math.ceil(d.image / 256) * 256;
+  const vector = base + d.symbols.VTAB;
+  const returnPc = base + d.symbols.INIT + 10;
+  const oldReturn = t.word(t.m.sym("APIRTPC")), oldVector = t.word(t.m.sym("GLVEC"));
+  const x = transaction(t, d.file);
   assert.deepEqual([x.r.carry, x.r.rc], [1, 1]);
   assert.notEqual(t.word(t.m.sym("GLVEC")), 0);
-  assert.deepEqual(x.differs(), [t.m.sym("GLVEC").toString(16), (t.m.sym("GLVEC") + 1).toString(16)]);
+  assert.equal(x.r.back, true);
+  publicContext(t.m);
+  assert.deepEqual(Array.from({ length: 12 }, (_, i) => t.m.read(base + d.symbols.INIT + i)), [0x06, 3, 0x21, vector & 0xff, vector >> 8, 0x0e, t.m.sym("TNDRVR"), 0xcd, t.m.sym("ABICALL") & 0xff, t.m.sym("ABICALL") >> 8, 0x37, 0xc9], "the exact INIT call returns to SCF/RET before private rollback");
+  assert.equal(t.word(t.m.sym("GLVEC")), vector);
+  assert.equal(t.word(t.m.sym("APIRTPC")), returnPc, "the completed root call leaves its predicted, now-dead return record");
+  const expected = [[t.m.sym("APIRTPC"), oldReturn, returnPc], [t.m.sym("GLVEC"), oldVector, vector]]
+    .flatMap(([at, old, next]) => [0, 1].filter(i => ((old >> (8 * i)) & 0xff) !== ((next >> (8 * i)) & 0xff)).map(i => at + i))
+    .sort((a, b) => a - b).map(at => at.toString(16));
+  assert.deepEqual(x.differs(), expected, "only the independently predicted return record and dangling vector changed");
 });
 
 test("a program that makes a link a cycle can't loop find or enumerate", async () => {
