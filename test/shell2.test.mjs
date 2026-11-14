@@ -1258,7 +1258,8 @@ test("S2-12 no mount.com", () => {
 
 test("S2-12 instruction", () => {
   const t = starterRecipe().instruction;
-  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "The drive you are on is written behind", "whenever TEC-OS waits for a key everything is on the card", "After CD A:", "at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
+  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "Pending block writes get priority at OS calls and key waits.", "Acknowledged data stays in RAM for retry if its card write fails.", "Follow the program’s normal Save workflow and resolve write errors; browser saving is separate.", "After CD A:", "at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
+  assert.doesNotMatch(t, /whenever TEC-OS waits for a key everything is on the card/, "a key wait must not promise persistence after a refused write");
   assert.doesNotMatch(t, /MOUNT/, "and teaches no MOUNT");
   assert.doesNotMatch(t, /(B:|WORK)[^.]*written behind/, "nor that B: or WORK is written behind");
   assert.doesNotMatch(t, /At A>/);
