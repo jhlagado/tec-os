@@ -31,9 +31,14 @@ Do not generalize a prefix rule to every verb/object as part of this small fix.
 
 ## Comparison policy
 
-As each location or connection is reviewed, compare it with Caverns80 and flag
-encountered differences for discussion. Caverns80 remains a reference attempt,
-not the canonical map; differences are not automatically adopted.
+At every newly visited room or reviewed connection, compare current exits,
+description and relevant conditional gates with Caverns80. Explicitly report
+whether they match or differ. For each difference, record its navigation or
+puzzle effect and an accept/hold/reject recommendation. Prefer the Caverns80
+repair when it removes accidental confusion without harming a deliberate
+puzzle or hazard. This comparison is mandatory throughout the walkthrough,
+including the underground rooms. Caverns80 remains a reference attempt;
+changes still need evaluation rather than automatic wholesale import.
 
 ## Navigation exception policy
 
@@ -230,3 +235,41 @@ Actual Viewer LIST confirms compass, sword, candle and rope. Stopped in room
 to entrance 16, west to torture chamber 23; south/east blocked. No other loose
 object initially occupies room 18. Evidence: build/caverns/review-check2/,
 commands at turns 2–4.
+
+
+Review turn 5 after checkpoint 2: WEST from candle cavern 18 to torture
+chamber 23; stopped at prompt. North leads to corridor 22, east and west both
+return to 18, south blocked. Caverns80 removes the redundant west return,
+keeping east as the reciprocal route (already in full map comparison).
+Correction to guide advice: the red brick has no specific implemented use in
+this BASIC edition (only its noun-table entry and generic item handling).
+Author elected to leave the diamond and brick while continuing exploration.
+
+
+Review turn 6: NORTH into corridor 22. Actual screen describes east-west
+corridor with breeze from east and a sparkling diamond; diamond left alone.
+Current graph: S23, W21, E16 (entrance), N blocked. The S-W-N approach forms a
+local loop west of the entrance rather than implying a surface river crossing.
+Caverns80 blocks 22E16 and describes a south/west bend with breeze from south;
+record this geometry/prose pair together under the full map comparison policy.
+Stopped at room 22; no westward move or item pickup yet.
+
+
+## Current cavern comparison — room 21
+
+After WEST from corridor 22, actual Viewer turn 7 is room 21 (dark cavern).
+
+| Direction | Running BASIC | Caverns80 |
+|---|---|---|
+| North | Blocked | Treasure-door approach 20 |
+| South | Long tunnel 24 | Same long tunnel 24 |
+| West | Blocked | Blocked |
+| East | Treasure-door approach 20 | Return to corridor 22 |
+
+Caverns80 moves the door approach to the north and restores the reciprocal
+east return to the corridor we entered from. Room 20's south return is also
+changed to room 21, completing that reciprocal pair. The door remains gated;
+this repair does not bypass the treasure-door puzzle. Recommend adopting this
+local repair together with its paired room-20 change. Generic dark-cavern
+description remains; visible exit wording is still worth improving. Source
+comparison only; no navigation edit or additional live command executed.
