@@ -1318,10 +1318,10 @@ test("a refused close retains acknowledged data through warm boot without publis
 
 // --- Write-behind follows the logged drive ------------------------------------
 //
-// The volume on the logged drive, the CCP's BOOTDRV, is written behind; every
-// other volume coalesces. Every console read writes every changed line, every
-// directory write writes the other lines first, and a drive change writes
-// the cache before it selects the drive. These rows run on a four-drive card,
+// The logged drive selects held-write ownership; other drives select the
+// pending coalesced line. Outer API entry attempts pending work, console
+// reads drain changed lines, metadata publishes after data, and a drive
+// change requests a flush. These rows run on a four-drive card,
 // bare or under SHELL.SVC; each mutant is the build's ROM patched.
 
 const four = () =>
@@ -1379,47 +1379,210 @@ function wbMachine(files, { rom, bare = false, image = four() } = {}) {
   return { m, writes, image, run: (l) => at(m, l, { re: ANY_PROMPT }) };
 }
 
-/** WK run as LINE, logged on LOGGED: card writes before its BDOS 1, and by the time it waits there. */
-function keyWait(line, { logged = "A", pre, rom } = {}) {
-  const sym = (rom ?? romFor()).symbols;
-  const { m, writes, run } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { pre }) }, { rom });
+const KEYWAIT_PROOFS = new WeakMap();
+
+/** Real WK calls, with expected drive selected by the external case, not guest state. */
+function keyWait(line, { logged = "A", pre = [], rom, target, defaultDrive = logged, pageZeroDrive: expectedPageZero } = {}) {
+  const explicit = /\s([A-P]):/.exec(line)?.[1];
+  target ??= explicit ?? defaultDrive;
+  const drive = target.charCodeAt(0) - 65, expectedDefault = defaultDrive.charCodeAt(0) - 65;
+  const sym = (rom ?? romFor()).symbols, bytes = wk(sym.get("MAINLOOP"), { pre });
+  const made = 0x100 + pre.length + 8, wrote = 0x100 + pre.length + 19;
+  const { m, writes, image, run } = wbMachine({ "WK.COM": bytes }, { rom });
   if (logged !== "A") run(`${logged}:`);
+  assert.equal(volume(image, target).find("W.DAT"), undefined, "the independent target has no pre-existing output file");
+  const expected = new Map(), attempts = [], acknowledgements = [];
+  let entered = 0, make = null, original, committed, input, initialUsed, allocationBytes, f1CallerSP, programmeSP;
+  const allocated = new Map();
+  const driveState = () => {
+    assert.equal(m.read(m.sym("CURDRV")), drive, "working drive matches the independent case");
+    assert.equal(m.read(m.sym("DSKCUR")), drive);
+    const dph = m.sym("DPHTAB") + 16 * drive;
+    assert.equal(word(m, m.sym("DPHPTR")), dph);
+    assert.equal(word(m, m.sym("DPBPTR")), word(m, dph + 10));
+    assert.equal(m.read(m.sym("DEFDRV")), expectedDefault, "explicit FCB work preserves the selected default");
+    assert.equal(word(m, m.sym("DEFDPB")), word(m, m.sym("DPHTAB") + 16 * expectedDefault + 10));
+    assert.equal(m.read(m.sym("BOOTDRV")), logged.charCodeAt(0) - 65, "logged drive comes from the external prompt setup");
+    if (expectedPageZero !== undefined) assert.equal(m.read(4) & 15, expectedPageZero);
+    assert.equal(m.read(0x5c) & 31, explicit ? explicit.charCodeAt(0) - 64 : 0);
+  };
+  const inputOwner = () => {
+    assert.ok(m.classicBankIn);
+    assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+    assert.notEqual(f1CallerSP, undefined);
+    assert.equal(word(m, m.sym("OLDSP")), f1CallerSP);
+    assert.equal(word(m, f1CallerSP), 0x100 + pre.length + 27);
+  };
+  const snapshot = label => {
+    assert.ok(original && input); assert.ok(m.classicBankIn);
+    const state = cacheState(m);
+    for (const entry of state.entries) {
+      assert.ok(expected.has(entry.block), `${label}: no unrelated queued block`);
+      assert.deepEqual(entry.payload, expected.get(entry.block)); assert.equal(entry.dirty, 1);
+    }
+    const missing = [];
+    for (const [block, payload] of expected) {
+      if (!same(image.slice(block * 512, (block + 1) * 512), payload)) {
+        missing.push(block);
+        assert.ok(state.entries.some(entry => entry.block === block), `${label}: every off-card acknowledgment has an owned cache line`);
+      }
+    }
+    assert.deepEqual(image, committed, `${label}: only accepted known versions changed the complete card`);
+    assert.equal(volume(image, target).find("W.DAT").records, 0, "the programme has not closed the file");
+    return { state, missing, cardSHA256: createHash("sha256").update(image).digest("hex") };
+  };
+  const sd = m.sd, commit = sd.commitWrite.bind(sd);
+  sd.commitWrite = () => {
+    if (!original) return commit();
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(expected.has(block), "only a previously acknowledged data block is attempted after MAKE");
+    assert.deepEqual(payload, expected.get(block));
+    commit(); assert.equal(sd.pendingResponse[0], 0x05);
+    committed.set(payload, start); assert.deepEqual(image, committed);
+    attempts.push({ block, payload });
+  };
+  let beforeEntry = null;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === 0x100) {
+      publicContext(m); entered++;
+      assert.equal(entered, 1); programmeSP = m.cpu.cpu.sp;
+      assert.deepEqual(Uint8Array.from({ length: bytes.length }, (_, i) => m.read(0x100 + i)), bytes);
+    }
+    if (entered && defaultDrive !== logged && m.pc === 0x100 + pre.length) {
+      assert.deepEqual(pre, selectFirst(expectedDefault)); publicContext(m);
+      assert.equal(m.cpu.cpu.a, 0, "the explicit programme F14 selection succeeded");
+      assert.equal(m.read(m.sym("DEFDRV")), expectedDefault);
+    }
+    if (entered && m.pc === made) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(make, null); assert.ok(m.cpu.cpu.a <= 3);
+      assert.equal(m.read(0x5c + 32), 0); assert.equal(m.read(0x5c + 15), 0);
+      assert.equal(volume(image, target).find("W.DAT").records, 0);
+      make = { a: m.cpu.cpu.a, fcb: Uint8Array.from({ length: 36 }, (_, i) => m.read(0x5c + i)) };
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 21) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 4); assert.equal(word(m, m.cpu.cpu.sp), wrote);
+      assert.equal((m.cpu.cpu.d << 8) | m.cpu.cpu.e, 0x5c);
+      assert.equal(word(m, m.sym("CURDMA")), 0x80);
+      if (!original) {
+        assert.ok(make); assert.equal(acknowledgements.length, 0); assert.equal(cacheState(m).queue.length, 0);
+        const file = volume(image, target).find("W.DAT"); assert.ok(file && file.records === 0);
+        original = Uint8Array.from(image); committed = Uint8Array.from(image);
+        const initialFS = volume(original, target);
+        initialUsed = new Set(initialFS.usedBlocks()); allocationBytes = initialFS.blockBytes;
+        assert.equal(initialFS.wide, true);
+        input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i));
+        assert.ok(input.some(value => value !== 0), "the last update is not a vacuous all-zero record");
+      }
+      assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), input);
+    }
+    if (entered && m.pc === wrote) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2); driveState();
+      const record = acknowledgements.length;
+      assert.ok(record < 32); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x5c + 32), record + 1);
+      const slot = Math.floor(record / (allocationBytes / 128));
+      assert.ok(slot < 8);
+      const allocation = word(m, 0x5c + 16 + 2 * slot);
+      if (!allocated.has(slot)) {
+        assert.ok(!initialUsed.has(allocation), "a new FCB slot uses storage free in the immutable initial directory");
+        assert.ok(![...allocated.values()].includes(allocation), "distinct FCB slots cannot alias an allocation");
+        allocated.set(slot, allocation);
+      } else assert.equal(allocation, allocated.get(slot), "an allocated slot remains stable");
+      for (const [knownSlot, knownAllocation] of allocated) assert.equal(word(m, 0x5c + 16 + 2 * knownSlot), knownAllocation);
+      const block = fileBlock(m, original, record, 0x5c, target);
+      if (!expected.has(block)) expected.set(block, new Uint8Array(512));
+      expected.get(block).set(input, (record & 3) * 128);
+      acknowledgements.push({ record, a: m.cpu.cpu.a, cr: m.read(0x5c + 32), block, fcb: Uint8Array.from({ length: 36 }, (_, i) => m.read(0x5c + i)) });
+      snapshot(`record ${record} returned`);
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 1) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x100 + pre.length + 27);
+      assert.equal(f1CallerSP, undefined); f1CallerSP = m.cpu.cpu.sp;
+      assert.equal(acknowledgements.length, 32); assert.equal(expected.size, 8); driveState();
+      beforeEntry = snapshot("before F1 ordinary entry");
+      assert.equal(beforeEntry.state.queue.length, 1); assert.equal(beforeEntry.missing.length, 1);
+      const last = acknowledgements.at(-1).block;
+      assert.equal(beforeEntry.state.entries[0].block, last); assert.equal(beforeEntry.missing[0], last);
+      const previous = expected.get(last).slice(); previous.fill(0, 384, 512);
+      assert.deepEqual(image.slice(last * 512, (last + 1) * 512), previous);
+    }
+    return step();
+  };
   const n0 = writes.n;
-  m.mark = m.output.length;
-  m.type(`${line}\r`);
-  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
-  const before = writes.n - n0;
-  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
-  const waiting = writes.n - n0;
+  m.mark = m.output.length; m.type(`${line}\r`);
+  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "real WK BDOS1 body after ordinary entry");
+  assert.ok(beforeEntry); assert.equal(entered, 1); inputOwner();
+  assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), m.sym("RETA"));
+  const before = writes.n - n0, body = snapshot("FNCIN body");
+  assert.equal(body.state.queue.length, 0); assert.deepEqual(body.missing, []);
+  assert.deepEqual(Uint8Array.from({ length: 3 }, (_, i) => m.read(sym.get("FNCIN") + 3 + i)), Uint8Array.from([0xcd, lo(sym.get("GETCHAR")), hi(sym.get("GETCHAR"))]));
+  m.runUntil(() => m.pc === sym.get("GETCHAR"), 100_000_000, "F1's actual GETCHAR call");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 4);
+  assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  const getcharSP = m.cpu.cpu.sp;
+  m.runUntil(() => m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE"), 100_000_000, "F1's actual serial input wait");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, getcharSP);
+  assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  assert.equal(m.read(m.sym("CONMOD")), 0); assert.equal(m.read(m.sym("PENDING")), 0); assert.equal(m.read(m.sym("RXFULL")), 0);
+  const waiting = writes.n - n0, atWait = snapshot("key wait");
+  assert.equal(atWait.state.queue.length, 0); assert.deepEqual(atWait.missing, []);
+  const expectedCard = Uint8Array.from(original);
+  for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
+  assert.deepEqual(image, expectedCard);
   m.type("x");
   m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
-  return { before, waiting };
+  m.step = step;
+  assert.deepEqual(image, expectedCard); assert.equal(cacheState(m).queue.length, 0);
+  assert.deepEqual(volume(image, target).verify(), []); assert.deepEqual(m.violations, []);
+  const state = beforeEntry.state, classification = state.any ? "logged" : "coalesced";
+  assert.deepEqual([state.pending, state.any], state.any ? [0, 1] : [state.entries[0].line + 1, 0]);
+  const result = { before, waiting }, proof = { target, logged, defaultDrive, classification, expectedClassification: target === logged ? "logged" : "coalesced" };
+  KEYWAIT_PROOFS.set(result, proof);
+  console.log(JSON.stringify({ scope: "real WK known-byte/API-boundary measurement", line, ...proof, programmeEntries: entered, makeA: make.a, initialUsedAllocations: [...initialUsed], newAllocations: [...allocated], F1CallerSP: f1CallerSP, GETCHARSP: getcharSP, acknowledgements: acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })), input: Array.from(input), beforeF1Entry: { queue: state.queue, missing: beforeEntry.missing, CPEND: state.pending, CANY: state.any, cardSHA256: beforeEntry.cardSHA256 }, FNCIN: { queue: body.state.queue, missing: body.missing, cardSHA256: body.cardSHA256 }, keyWait: { queue: atWait.state.queue, missing: atWait.missing, cardSHA256: atWait.cardSHA256 }, ...result }));
+  return result;
 }
 
-const BEHIND = { before: 1, waiting: 9 }; // the make's entry; then eight blocks at the key wait
-const THROUGH = { before: 8, waiting: 9 }; // seven blocks and the make as writing moves on; the last at the key wait
+function correctWriteClass(result) {
+  const proof = KEYWAIT_PROOFS.get(result); assert.ok(proof);
+  return proof.classification === proof.expectedClassification;
+}
+
+function expectedWriteClass(result) {
+  assert.equal(correctWriteClass(result), true, "write class follows the independent logged/target case");
+}
+
+const COOPERATIVE = { before: 33, waiting: 33 };
+
+// Historical count target retained only for the unported MR2 probe below.
+const BEHIND = { before: 1, waiting: 9 };
 
 test("S2-3 logged A: behind, B: through", () => {
-  assert.deepEqual(keyWait("A:WK A:W.DAT"), BEHIND, "logged on A:, A:'s eight blocks wait for the key wait");
-  assert.deepEqual(keyWait("A:WK B:W.DAT"), THROUGH, "B: coalesces");
+  const a = keyWait("A:WK A:W.DAT"), b = keyWait("A:WK B:W.DAT");
+  expectedWriteClass(a); expectedWriteClass(b);
+  assert.deepEqual(a, COOPERATIVE, "logged A work is serviced before the real F1 body");
+  assert.deepEqual(b, COOPERATIVE, "nonlogged B work is serviced before the real F1 body");
 });
 
 test("S2-3 logged B:", () => {
-  assert.deepEqual(keyWait("A:WK B:W.DAT", { logged: "B" }), BEHIND, "logged on B:, B:'s blocks wait");
-  assert.deepEqual(keyWait("A:WK A:W.DAT", { logged: "B" }), THROUGH, "A: coalesces");
+  const b = keyWait("A:WK B:W.DAT", { logged: "B" }), a = keyWait("A:WK A:W.DAT", { logged: "B" });
+  expectedWriteClass(b); expectedWriteClass(a);
+  assert.deepEqual(b, COOPERATIVE, "logged B work is serviced before the real F1 body");
+  assert.deepEqual(a, COOPERATIVE, "nonlogged A work is serviced before the real F1 body");
 });
 
 /** The rows of a program's own drives, logged on A:: C: by its FCB, C: by BDOS 14, and 0004h set to B: before writing B:. */
 function programDrives(rom) {
   return {
     "C: by its FCB": keyWait("A:WK C:W.DAT", { rom }),
-    "C: by BDOS 14": keyWait("A:WK W.DAT", { pre: selectFirst(2), rom }),
-    "0004h = B:": keyWait("A:WK B:W.DAT", { pre: pageZeroDrive(1), rom }),
+    "C: by BDOS 14": keyWait("A:WK W.DAT", { pre: selectFirst(2), rom, target: "C", defaultDrive: "C" }),
+    "0004h = B:": keyWait("A:WK B:W.DAT", { pre: pageZeroDrive(1), rom, pageZeroDrive: 1 }),
   };
 }
 
 test("S2-3 a program's drives", () => {
-  for (const [what, r] of Object.entries(programDrives())) assert.equal(r.before, 8, `${what}: written through as writing moves on`);
+  const rows = programDrives();
+  Object.values(rows).forEach(expectedWriteClass);
+  for (const [what, r] of Object.entries(rows)) assert.deepEqual(r, COOPERATIVE, `${what}: known data serviced before the real F1 body`);
 });
 
 /** Logged on LOGGED, a program writes a record into A:T.DAT's first block and waits at BDOS 1: whether the record is in the card image then. */
@@ -1483,10 +1646,14 @@ test("S2-3 mutant: MR2, the console read writing the pending block only, leaves 
 
 test("S2-3 mutant: MBD, BWGET testing the BDOS's current disk, writes behind the drive a program selects", () => {
   const rom = MUTANTS.mbd();
-  assert.notDeepEqual(keyWait("A:WK B:W.DAT", { rom }), THROUGH, "B: written through");
-  const rows = programDrives(rom);
-  assert.ok(Object.values(rows).some((r) => r.before !== 8), JSON.stringify(rows));
-  assert.notEqual(rows["C: by BDOS 14"].before, 8, "C: by BDOS 14 written behind");
+  const nativeB = keyWait("A:WK B:W.DAT"), mutantB = keyWait("A:WK B:W.DAT", { rom });
+  expectedWriteClass(nativeB);
+  assert.equal(correctWriteClass(mutantB), false, "the mutant wrongly retains nonlogged B as logged work");
+  const native = programDrives(), changed = programDrives(rom);
+  for (const what of Object.keys(native)) {
+    expectedWriteClass(native[what]);
+    assert.equal(correctWriteClass(changed[what]), false, `${what}: only the independent logged-drive classification discriminates`);
+  }
 });
 
 /**
