@@ -366,7 +366,7 @@ test("npm run build leaves dist/'s ROM, map and census equal to build/'s when di
     const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
     const manifest = JSON.parse(readFileSync(resolve(dist, "manifest.json"), "utf8"));
     assert.equal(manifest.tecos.tpaBytes, census.ram.cards.starter.tpa);
-    assert.equal(manifest.tecos.tpaBytes, 46569, "build keeps the four-drive starter's bare TPA");
+    assert.equal(manifest.tecos.tpaBytes, 46533, "build keeps the four-drive starter's bare TPA");
   } finally {
     // dist/ as it was found: each file the build may write put back, or removed if it wasn't there
     if (!there) rmSync(dist, { recursive: true });

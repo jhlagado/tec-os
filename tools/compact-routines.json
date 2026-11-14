@@ -950,5 +950,18 @@
     "PUTNT",
     "PUTNUM",
     "DIV10"
+  ],
+  "src/cpm/ccpdir.asm": [
+    "RCMDCD",
+    "RPUTCDN",
+    "RVWALKQ",
+    "RLBLADR",
+    "RDRVLBL",
+    "RPUTDRV",
+    "RLSTNL",
+    "RPUTN",
+    "RPUTTRIM",
+    "RCRLF",
+    "RCFAILR"
   ]
 }

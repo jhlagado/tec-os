@@ -193,7 +193,7 @@ test("the console at 32 columns writes the colours and an empty sprite table", (
 });
 
 /** TPA on the starter card with nothing loaded, and with GLCD.SVC in: its three pages under the stub's page. */
-const TPA_NONE = 47273;
+const TPA_NONE = 47237;
 const TPA_GLCD = 46336;
 
 test("TPA after boot: the ROM's console alone, the GLCD's driver, and both", () => {
@@ -229,7 +229,7 @@ test("the starter card boots the shell and the ROM's console on a board with bot
   assert.deepEqual(files.map((f) => f.name), ["SHELL.SVC", "GLCD.SVC", "STARTUP.CMD"]);
   const set = Object.fromEntries(files.map((f) => [f.name, f.bytes]));
   const pico = start(set);
-  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE - 169 - 0xf00], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's fifteen pages under the stub's page");
+  assert.deepEqual([pico.read(m0(pico)), word(pico, 6) - 0x100], [CRT, TPA_NONE - 133 - 0xf00], "GLCD.SVC out, the ROM's console the console (KE-150, KE-200), the shell's fifteen pages under the stub's page");
   assert.equal(start(set, { tms: false }).read(3) & 3, UC1);
 });
 

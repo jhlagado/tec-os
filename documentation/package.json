@@ -1,0 +1,24 @@
+{
+  "name": "tec-os-documentation",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "vitepress dev --host 127.0.0.1",
+    "build": "vitepress build && node scripts/check-site.mjs",
+    "preview": "vitepress preview --host 127.0.0.1",
+    "check": "node scripts/check-source.mjs",
+    "check:import": "node scripts/check-source.mjs --import",
+    "check:site": "node scripts/check-site.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "gray-matter": "4.0.3",
+    "parse5": "7.3.0",
+    "vitepress": "1.6.4",
+    "vue": "^3.5.13"
+  },
+  "overrides": {
+    "vite": "6.4.6"
+  }
+}

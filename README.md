@@ -12,7 +12,7 @@ ROM table at `C003h`.
   addresses.
 - 64 KiB of RAM: 32 KiB fixed at `0000h–7FFFh` and a 32 KiB chip in U9
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
-  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,569 bytes on the
+  `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,533 bytes on the
   starter card with nothing loaded, its four drives' vectors taken; the card's
   `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 42,496, and 41,728
   with the GLCD's driver too.
@@ -90,10 +90,10 @@ or local file must match its pin and cannot fall through to another file.
 Input setup fetches the pinned local binary when a legacy sibling is stale.
 
 TAS assembles everything: the main ROM, the diagnostics, GLCD.SVC,
-SHELL.SVC, DEMO.COM, MON3.SVC and HELLO3.BIN, and the tests' programs and
-services. It
+SHELL.SVC, DEMO.COM, MON3.SVC, and the tests' programs and services. It
 runs on the host from Thorium's runner, selected from `TECOS_TAS_HOST`, then
-`.inputs/tas-host`.
+`.inputs/tas-host`. The starter holds HELLO3 as source; TAS builds its
+binary on the card.
 
 The stage models, `tools/ks30-model.mjs` to `tools/ks36a-model.mjs`,
 `tools/ks38b-model.mjs`, `tools/ccp-model.mjs`, `tools/ccp-call-model.mjs` and
@@ -162,14 +162,16 @@ the console to the GLCD when the Matrix switch is on. Otherwise it stays on the
 serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
-CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `B:`,
+CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `SAVE`, `USER`, `CON`, `CD`, `B:`,
 and `UNLOAD`, which removes the last service loaded. The starter card loads the
 shell, `SHELL.SVC` ([docs/shell.md](docs/shell.md)), which adds the history (^W
 and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
 services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
 `CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. The starter card has four drives:
-`CD ?` lists its volumes, `CD NAME` puts one on the drive you are on and
-`CD D:NAME` on another, and the prompt shows the drive and its volume,
+`CD ?` lists its named directories, `CD NAME` selects one on the current
+drive and `CD D:NAME` on another. These commands work at the bare ROM prompt
+too, so `CD A:SYSTEM` followed by `SHELL.SVC` restores the shell after
+resetting with GAMES selected on A:. The shell prompt shows the selection,
 `A:SYSTEM>`. The drive you are on is written behind, and whenever TEC-OS
 waits for a key everything is on the card ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
@@ -193,11 +195,11 @@ runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
 an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
 `DEMO.COM` and `DEMO` runs it, showing the LCD, the 7-segment digits, the
 8 × 8 LEDs and the PICO9918 in Graphics I, and `TED DEMO.ASM` reads it. `MON3.SVC` runs programs written for MON-3, the
-TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): `MON3.SVC` gives `MON3>`,
+TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): first build the source-only
+example with `TAS HELLO3 HELLO3.BIN`, then `MON3.SVC` gives `MON3>`,
 where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
 LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
-keyboard, returns to `MON3>`, and `EXIT` to `A:SYSTEM>`. `HELLO3.ASM` is its source,
-and `TAS HELLO3 HELLO3.BIN` builds it. `BOUNCE.BAS` is Baza's sprite
+keyboard, returns to `MON3>`, and `EXIT` to `A:SYSTEM>`. `BOUNCE.BAS` is Baza's sprite
 game: `BAZA BOUNCE` compiles it, showing a spinner while it works, and
 `BOUNCE` takes the PICO9918 in Graphics I through `CALL`; tap W, A, S and D,
 or the arrow keys, to steer the ship, and Q gives the display back. A BASIC
