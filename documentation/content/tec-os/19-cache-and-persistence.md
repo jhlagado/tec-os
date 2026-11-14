@@ -414,6 +414,8 @@ a refused write leaves acknowledged data dirty. The new queue removal and
 error-event bookkeeping accompany that transfer rather than replacing its
 physical byte path (`a40d482:src/cache.asm:219-263`).
 
+<a id="seven-flush-occasions"></a>
+
 ### Required and ordinary opportunities
 
 Ordinary outer BDOS, hardware and returning BIOS calls attempt one eligible
@@ -423,6 +425,8 @@ warm boot, directory publication and valid selection changes keep their own
 bounded flush paths. Invalid or same-selection paths can return earlier.
 These are cooperative opportunities, not a timer or wall-clock deadline
 (`a40d482:docs/recovery.md:33-67`).
+
+<a id="a-failed-flush"></a>
 
 ## A failed write
 
