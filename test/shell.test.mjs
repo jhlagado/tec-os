@@ -17,6 +17,8 @@ import { GUARDS, HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execS
 import { setDisplayLine } from "../host/card.mjs";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
 
+import { pendingSayFiles, pendingSayFailure } from "./lib/pending-say.mjs";
+
 const HOOK = await hookSvc();
 const MON3 = await mon3Svc();
 const S = /\r\nS>$/; // HOOK.SVC's prompt
@@ -159,28 +161,20 @@ test("SH5 line flags after a BDOS error", () => {
   assert.equal(hb(m, "FLAGS"), 0, "and 0 at the next");
 });
 
-test("SH5 line flags after a write lost at warm boot", () => {
-  const m = bare();
+test("SH5 line flags after a retained write fails at warm boot", () => {
+  const m = bare(pendingSayFiles());
   at(m, "HOOK.SVC", { re: S });
-  // As SAY starts, a cached line is made dirty and the next card write fails:
-  // the warm boot's flush drops it and says Write lost.
-  let armed = true;
-  let failNext = false;
-  const step = m.step.bind(m);
-  m.step = () => {
-    if (armed && m.pc === 0x100) {
-      m.cpu.hardware.ioWrite(0xff, 0x05); // EXPAND 1 in view: line 0's dirty byte
-      m.write(m.sym("CDIRTY"), 1);
-      m.cpu.hardware.ioWrite(0xff, 0x01);
-      [armed, failNext] = [false, true];
-    }
-    if (failNext && m.pc === m.sym("SDWRITE")) [(m.cpu.cpu.a = 5), (m.cpu.cpu.pc = m.sym("SDFAIL")), (failNext = false)];
-    return step();
-  };
-  assert.match(at(m, "SAY", { re: S }), /Write lost/);
-  assert.equal(hb(m, "FLAGS"), 2, "after a write lost at warm boot: bit 1");
-  at(m, "", { re: S });
-  assert.equal(hb(m, "FLAGS"), 0, "and 0 at the next");
+  const fault = pendingSayFailure(m, m.sdImage);
+  const out = at(m, "SAY", { re: S });
+  assert.equal((out.match(/Write pending/g) ?? []).length, 1);
+  assert.doesNotMatch(out, /Write lost|NO ACK/);
+  assert.equal(hb(m, "FLAGS"), 2, "a failed warm flush drops continuation: bit 1");
+  fault.assertPending();
+  const next = at(m, "", { re: S });
+  assert.equal(hb(m, "FLAGS"), 0, "the next ordinary line clears the flag");
+  assert.doesNotMatch(next, /Write pending/); fault.assertPending();
+  fault.release(); at(m, "", { re: S }); fault.assertRecovered();
+  assert.equal(hb(m, "FLAGS"), 0);
 });
 
 test("SH5 line flags", () => {
