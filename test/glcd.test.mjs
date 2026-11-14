@@ -2,7 +2,7 @@
 // workload and CONOUT.COM, the ST7920's graphics RAM equals what b025dbb's
 // driver in EXPAND 1 drew (test/glcd-screens.json); (0006h) is three pages
 // lower than it was with the driver; a program on the CCP stack can call
-// the BIOS's CONOUT directly in the 28 bytes it has; and UNLOAD gives the
+// the BIOS's CONOUT within the declared caller-stack space; UNLOAD gives the
 // console and the pages back. Emulator evidence.
 // The screens that show SAVE to a read-only volume were retaken: it came to say R/O.
 // Every screen was retaken when the shell's prompt came to name the drive's
@@ -56,6 +56,7 @@ async function board({ matrix = true, historicalFont = false } = {}) {
 
 /** Type a line and run to the prompt, answering [more] or an error's key. */
 function run(m, line) {
+  m.glcdWorkloadCommand = line;
   m.mark = m.output.length;
   m.type(line);
   const prompt = /\r\n[A-P](:\S*)?>$/;
@@ -77,19 +78,69 @@ function run(m, line) {
  * return address counts. And the lowest address written in the BDOS stack.
  */
 function watch(m) {
-  const entry = m.sym("BCONOUT");
+  const entry = word(m, 1) + 9, privateEntry = m.sym("BCONOUT");
+  assert.equal(entry, m.sym("RAMBIOS") + 12, "the program's live CONOUT table slot");
+  assert.equal(m.read(entry), 0xc3, "the BIOS slot remains an actual jump");
   const [base, top] = [m.sym("STKBASE"), m.sym("STKTOP")];
-  let program = 0;
-  let bdosLow = top;
-  let active = null;
+  const [ccpBase, ccpTop] = [m.sym("CSTKBAS"), m.sym("CSTKTOP")];
+  const apiRet = m.symbols.get("HKAPIRET"), nativeWrapper = m.symbols.get("HKBI4");
+  if (nativeWrapper !== undefined) {
+    const enter = m.sym("HKBENTER");
+    assert.deepEqual(Array.from({ length: 6 }, (_, i) => m.read(nativeWrapper + i)), [0xcd, enter & 255, enter >> 8, 0xc3, privateEntry & 255, privateEntry >> 8], "the complete native wrapper is bound to this map");
+  }
+  let program = 0, bdosLow = top, active = null, legacyActive = null;
+  const calls = [], legacy = { entries: 0, completed: 0, program: 0 };
+  let entries = 0;
   const step = m.step.bind(m);
   m.step = () => {
-    const r = step();
-    const sp = m.cpu.cpu.sp & 0xffff;
-    if (!active && m.pc === entry && word(m, sp) < 0x8000) active = { sp0: sp, ret: word(m, sp), min: sp };
-    else if (active) {
+    const r = step(), pc = m.pc, sp = m.cpu.cpu.sp & 0xffff;
+    // Preserve the former private-body observer as a separately reported
+    // control; its zero result cannot stand in for real caller samples.
+    if (!legacyActive && pc === privateEntry && word(m, sp) < 0x8000) {
+      legacy.entries++;
+      legacyActive = { sp0: sp, ret: word(m, sp), min: sp };
+    } else if (legacyActive) {
+      legacyActive.min = Math.min(legacyActive.min, sp);
+      if (pc === legacyActive.ret && sp === legacyActive.sp0 + 2) {
+        legacy.completed++; legacy.program = Math.max(legacy.program, legacyActive.sp0 + 2 - legacyActive.min); legacyActive = null;
+      }
+    }
+    if (!active && pc === entry && word(m, sp) >= 0x100 && word(m, sp) < 0x8000) {
+      assert.ok(m.classicBankIn);
+      const depth = m.symbols.has("HKDEP") ? m.read(m.sym("HKDEP")) : null;
+      const busy = m.symbols.has("HKBUSY") ? m.read(m.sym("HKBUSY")) : null;
+      const target = word(m, entry + 1);
+      active = { command: m.glcdWorkloadCommand, sp0: sp, ret: word(m, sp), min: sp, depth, busy, target, root: target === nativeWrapper && depth === 0 && busy === 0, privateVisits: [], wrapped: false, apiReturned: false, onCcpStack: sp >= ccpBase && sp < ccpTop };
+      entries++;
+    } else if (active) {
       active.min = Math.min(active.min, sp);
-      if (m.pc === active.ret && sp === active.sp0 + 2) [(program = Math.max(program, active.sp0 + 2 - active.min)), (active = null)];
+      if (pc === privateEntry && active.root) {
+        assert.ok(m.classicBankIn);
+        const visit = { sp, returnPC: word(m, sp), savedCaller: word(m, m.sym("APIRTPC")), depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")) };
+        visit.functional = sp === active.sp0 && visit.returnPC === apiRet;
+        active.privateVisits.push(visit);
+        if (visit.functional) {
+          active.handlerReturn = visit.returnPC; active.savedCaller = visit.savedCaller;
+          assert.equal(active.savedCaller, active.ret);
+          assert.deepEqual([visit.depth, visit.busy], [1, 0]);
+          active.wrapped = true;
+        }
+      }
+      if (pc === apiRet && active.root) {
+        assert.ok(m.classicBankIn); assert.equal(sp, active.sp0 + 2);
+        assert.equal(word(m, m.sym("APIRTPC")), active.ret); active.apiReturned = true;
+      }
+      if (pc === active.ret && sp === active.sp0 + 2) {
+        assert.ok(m.classicBankIn);
+        if (active.root) {
+          assert.ok(active.wrapped && active.apiReturned);
+          assert.deepEqual([m.read(m.sym("HKDEP")), m.read(m.sym("HKBUSY"))], [0, 0]);
+          assert.equal(word(m, active.sp0), active.ret, "the original caller return slot is restored");
+        }
+        if (active.onCcpStack) assert.ok(active.min >= ccpBase, "the actual caller never descends below its CCP stack allocation");
+        active.used = active.sp0 + 2 - active.min;
+        program = Math.max(program, active.used); calls.push(active); active = null;
+      }
     }
     return r;
   };
@@ -100,7 +151,7 @@ function watch(m) {
     if (!ldir && addr >= base && addr < top) bdosLow = Math.min(bdosLow, addr);
     write(addr, value);
   };
-  return () => ({ program, bdos: { reserved: top - base, deepest: top - bdosLow } });
+  return () => ({ program, entries, completed: calls.length, active: active !== null, calls, legacy, bdos: { reserved: top - base, deepest: top - bdosLow } });
 }
 
 async function workloadRun({ historicalFont = false } = {}) {
@@ -147,12 +198,15 @@ test("on a GLCD board (0006h) is three pages lower than with the driver, and no 
   assert.equal(bdosVector, ((stub >> 8) - 15 - 3) << 8);
 });
 
-test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async () => {
+test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async (t) => {
   const { m, depths } = await workload;
   assert.equal(m.historicalFont, false, "CONOUT stack reading uses production font");
   const free = m.sym("CSTKTOP") - 2 - m.sym("CSTKBAS");
   assert.equal(free, m.sym("CCPSTN") - 2, "the stack is CCPSTN, less the return word");
+  assert.ok(depths.entries > 0); assert.equal(depths.completed, depths.entries); assert.equal(depths.active, false);
+  assert.ok(depths.calls.some(c => c.command?.trim().toUpperCase() === "CONOUT" && c.onCcpStack && c.root && c.wrapped && c.apiReturned), "CONOUT.COM makes a real root call on the CCP stack");
   assert.ok(depths.program > 0 && depths.program <= free, `CONOUT took ${depths.program} bytes of a program's ${free}`);
+  t.diagnostic(JSON.stringify(depths));
   const { reserved, deepest } = depths.bdos;
   assert.ok((reserved - deepest) * 4 >= reserved, `the BDOS stack used ${deepest} of ${reserved}`);
 });
