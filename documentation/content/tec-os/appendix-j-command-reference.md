@@ -18,19 +18,21 @@ nav_group: "Reference"
      Baza is the qualified 50dc512 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
-A command line contains a command and its arguments, separated by spaces.
-Return or `^J` ends the line. The maximum is 127 characters and typing the
-last available character also ends it. `^C` cancels only at the start of
-the line. Later in the line it is ignored. Recall and editing keys are in
-[The first session](01-first-session.md). The ROM's
-command processor runs the built-ins marked ROM below, and the shell,
-`SHELL.SVC`, which the starter card's startup file installs, adds those
-marked shell, recall, the `[more]` pause, lines of several commands and
-`.CMD` scripts (`docs/shell.md:1-51`). Command names and ordinary program arguments are converted to capitals
-before execution. ECHO and PAUSE keep their text as typed. The command
-echo also retains the case typed.
-[Work with files](04-work-with-files.md) explains the ordinary operations.
-This appendix gives their exact forms and boundary cases.
+At the prompt you name an operation and its arguments. The exact form
+determines how TEC-OS handles a built-in command, a program or a resident
+service. The entries below give those forms and their boundary
+cases. [Work with files](04-work-with-files.md) explains ordinary use and
+[The first session](01-first-session.md) gives editing and recall keys.
+
+Spaces separate the command from its arguments. Return or `^J` ends the
+line. The limit is 127 characters, and entering the last available character
+ends the line too. `^C` cancels only at the start. It is ignored later.
+
+The ROM runs the commands marked ROM below. The starter card installs the
+shell, `SHELL.SVC`, which adds the shell commands, recall, `[more]`, multiple
+command pieces and `.CMD` scripts (`docs/shell.md:1-51`). Command names and
+ordinary program arguments become capitals before execution. ECHO and
+PAUSE retain their text's case, as does the echoed command.
 
 ## Names and patterns
 
@@ -116,7 +118,7 @@ installation have additional forms handled by the command processor.
 | `USER N` | ROM | Select user area 0 to 15 |
 | `CON [DEVICE [WIDTH]]` | ROM | Report or change the console |
 | `SERVICES` | Shell | List installed services, newest first |
-| `CD [D:][NAME]`, `CD ?` | Shell | Put a volume on a drive, show a drive's volume or list the card's volumes |
+| `CD [D:][NAME]`, `CD ?` | ROM | Put a volume on a drive, show a drive's volume or list the card's volumes |
 | `CLS` | Shell | Clear the screen |
 | `ECHO TEXT` | Shell | Print the text as typed |
 | `PAUSE [TEXT]` | Shell | Print the text or `[more]` and wait for a key |
@@ -126,10 +128,10 @@ installation have additional forms handled by the command processor.
 | `NAME.SVC [ARGS]` | ROM | Load a resident service, and enter its application when it has one |
 | `NAME.CMD` | Shell | Run a script of command lines. Without the shell, run `NAME.COM` |
 
-Without the shell `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and `PAUSE`
-are names like any other, so each looks for a program of that name and
-normally prints the name with a question mark, and `DIR` is the ROM's wide
-listing (`docs/shell.md:33-52`).
+Without the shell, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
+`PAUSE` follow ordinary program lookup. Unless a matching program exists,
+the result is the name followed by a question mark. `DIR` uses the ROM's
+wide listing (`docs/shell.md:33-52`).
 
 A built-in name must end at a space or the end of the command piece.
 `DIRX`, `DIR.COM` and `A:DIR` are program commands, not forms of built-in
@@ -144,11 +146,14 @@ the system attribute. Each file appears once. No match produces `NO FILE`
 with return code `FF00h`. A system file remains available to TYPE and to
 program lookup.
 
-Under the shell, DIR prints a blank line, then one file a row: the name and
-type padded and the size in bytes, BDOS function 35's records times 128, in
-a 20-column row that fits the graphics LCD's 21. Then come the count of files
-and their bytes, and the drive's free bytes, function 46's records times 128,
-with its volume:
+The shell's DIR starts with a blank line and prints a file on each row.
+The padded name and type are followed by its size in bytes, calculated as
+BDOS function 35's record count times 128. Each row is 20 columns wide and
+fits the graphics LCD's 21-column screen.
+
+The totals give the file count and combined byte length. Free space is
+function 46's record count times 128. The final line identifies the drive
+and its volume:
 
 ```text
 A:SYSTEM>DIR
@@ -160,11 +165,12 @@ X       .DAT  128128
 1013760 free on A:SYSTEM
 ```
 
-This listing is the one `docs/shell.md:200-234` gives. Files of one directory
-entry come first, listed in one pass. A file that may have more entries is
-sized by function 35, which scans the directory, so DIR is slower on a volume
-of many large files: on a G8M volume a file over 32 KiB has more than one
-entry, and on a G1M one over 16 KiB. `DIR /W` is then the fast listing.
+The listing is retained from `docs/shell.md:200-234`. Files represented by
+a single directory entry are listed first in a single pass. A file that
+may have more entries is sized through function 35, which scans the directory.
+Many large files therefore make DIR slower. A G8M file exceeds a single
+entry above 32 KiB. On G1M the threshold is 16 KiB. `DIR /W` lists names
+without that sizing work.
 
 `DIR /W`, and DIR without the shell, is the ROM's wide listing. Its last line
 gives the number listed and the free KiB on that drive. A displayed name has
@@ -182,13 +188,12 @@ last record. No name or no matching file produces `NO FILE`.
 
 ### COPY
 
-COPY is the shell's (`drivers/shellcmd.asm:54-219`,
-`docs/compatibility.md:125-133`).
-COPY uses the current user area on both source and destination drives.
-A name without a drive uses the current drive. A destination containing only
-a drive takes the source's complete name and type. A destination with a type
-but no name also takes the source's complete name and type, ignoring that
-destination type. Omitting DEST applies the same rules to a blank destination.
+COPY operates in the current user area on both drives. It is a shell
+command (`drivers/shellcmd.asm:54-219`, `docs/compatibility.md:125-133`).
+A source or destination without a drive uses the current drive. A drive-only
+destination takes the source's full name and type. A type-only destination
+also takes the full source name and type, ignoring the destination type.
+An omitted DEST is a blank destination and follows those same rules.
 
 The resolved source and destination must differ. A self-copy or an argument
 after the destination produces `COPY?` before either file is opened.
@@ -259,11 +264,13 @@ as `*.TXT`, is erased without confirmation. No match produces `NO FILE`
 multi-file erase after some entries have already been erased. The exact
 partial-result cases are in [Appendix D](appendix-d-error-messages.md).
 
-DEL is another name for ERA and is the shell's: the shell rewrites the word as `ERA` and hands the piece to the
-ROM, so it takes the same names and patterns and prints the same
-`ALL (Y/N)?` question. Because a built-in is matched before a program is
-looked up, plain `DEL` under the shell does not run a `DEL.COM`, as plain
-`ERA` never runs an `ERA.COM`. `A:DEL` or `DEL.COM` still runs that file
+The shell implements DEL by replacing the command word with `ERA` and
+passing the piece to the ROM. Both forms accept the same names and
+patterns and print the same `ALL (Y/N)?` question.
+
+Built-in matching precedes program lookup. Plain `DEL` under the shell
+therefore does not run `DEL.COM`, just as plain `ERA` does not run
+`ERA.COM`. `A:DEL` or `DEL.COM` explicitly selects the file
 (`drivers/shell.asm:543-552`, `docs/compatibility.md:121-124`,
 `test/commands.test.mjs:163-213`).
 
@@ -319,13 +326,15 @@ SAVE leaves the file open in that case (`src/cpm/ccpcmd.asm:252-390`).
 
 ### Drives, USER and program lookup
 
-A drive selection is a letter and colon with no other argument. A through D are
-the available TEC-OS drives. The CP/M letters E through P parse as drives but
-selection fails. USER accepts a single digit from 0 to 9 or one of 10 to 15.
-Leading-zero forms such as `00` and `03` are rejected. A nonzero user number
-appears before the drive in the command prompt. Under the shell the drive's
-volume follows the drive, as in `A:SYSTEM>` and `3B:GAMES>`, and a drive
-with no volume shows `C:>`. Without the shell the prompt is `A>`.
+A drive selection consists of a letter and colon, with no other argument.
+A through D are available. CP/M letters E through P parse as drives but
+selection fails. USER accepts 0 to 9 or 10 to 15. Leading-zero forms such
+as `00` and `03` are rejected.
+
+A nonzero user number appears before the drive in the prompt. The shell
+also prints the volume, as in `A:SYSTEM>` and `3B:GAMES>`. A drive with no
+volume appears as `C:>`. Without the shell the prompt is `A>` at user 0 on
+A (`src/cpm/ccp.asm:115-145`).
 
 For a program command the type is replaced by COM, except for SVC. Lookup starts
 on the named drive or the current drive when none is named. On that drive it
@@ -373,12 +382,14 @@ default drive assignments and startup.
 
 ### CLS, ECHO and PAUSE
 
-These are the shell's. `CLS` sends `ESC [ H ESC [ 2 J`, so the screen then
-holds only the prompt. `ECHO TEXT` prints the text as typed: the shell folds
-only a piece's first word to capitals to match its built-ins, so the text
-keeps its case. `PAUSE` shows `[more]` and `PAUSE TEXT` the text. Either
-waits for a key. Any key goes on, and `^C` ends the script and the rest of
-the line with `FF00h` (`docs/shell.md:236-246`).
+`CLS`, `ECHO` and `PAUSE` require the shell. `CLS` sends
+`ESC [ H ESC [ 2 J`, leaving only the prompt on the cleared screen.
+`ECHO TEXT` prints the text as typed. The shell capitalises only the first
+word to match a built-in, preserving the text that follows.
+
+`PAUSE` displays `[more]`. `PAUSE TEXT` displays the text instead. Both
+wait for a key. `^C` ends the script and the remaining line with `FF00h`.
+Any other key continues (`docs/shell.md:236-246`).
 
 ### CON
 
@@ -405,26 +416,31 @@ routine reports failure. The practical installation rules are in
 [Chapter 5](05-drives-and-user-areas.md) and authoring is in
 [Chapter 14](14-write-a-resident-service.md).
 
-`NAME.SVC` also enters a service's application when the
-service has its enter-on-install bit set. Only a service whose image starts
-with an execution record that has its enter bit set has one. On the starter
-card those are `MON3.SVC` and `SHELL.SVC`. Text after the name is the
-application's command tail, and no switch is parsed. A service installed from a file
-of that name is entered without reading the card. Otherwise the file is read
-from the named or current drive and installed, then entered once its `INIT`
-has made it ready. An install that never becomes ready is removed again and
-the command is refused. A service with no such record, such as `GLCD.SVC`,
-only installs, and each typing installs another copy. With two entering
-copies installed the command is refused until `UNLOAD` leaves one. Each
-refusal prints the command's name with a question mark, as `MON3.SVC?`, and
-sets return code FF00h. The application ends with a warm boot and its
-service stays installed, so `UNLOAD` removes it as before
-(`docs/services.md:83-90`, `docs/services.md:102-131`,
-`docs/services.md:158-181`, `src/loader.asm:734-783`,
-`docs/shell.md:334-349`). An older card's `MON3.SVC /E` line still enters:
-the `/E` is only a tail, which the service does not read
-(`docs/mon3.md:44-45`). [Appendix H](appendix-h-service-file-format.md#the-execution-record)
-gives the record.
+`NAME.SVC` enters an application when the service image begins with an
+execution record whose enter-on-install bit is set. The starter card's
+`MON3.SVC` and `SHELL.SVC` have such records. Text after the name is the
+application's command tail. No switch is parsed.
+
+An installed service with a matching ready record is entered without reading the
+card. Otherwise TEC-OS loads the file from the named or current drive,
+installs it and enters it once `INIT` marks the record ready. An install
+that never becomes ready is removed and the command is rejected.
+
+A service without that record, such as `GLCD.SVC`, has only an installation
+path. Repeating its command attempts a fresh installation. The service's
+initialisation checks can still reject it. Two matching entering copies make the
+command ambiguous, so it is rejected until `UNLOAD` leaves one. Each
+rejection prints the command name with a question mark, as `MON3.SVC?`,
+and sets return code FF00h.
+
+The application ends through warm boot while the service stays installed.
+`UNLOAD` can then remove it as before (`docs/services.md:83-90`,
+`docs/services.md:102-131`, `docs/services.md:158-181`,
+`src/loader.asm:734-783`, `docs/shell.md:334-349`). An older card's
+`MON3.SVC /E` line still enters the application. `/E` is a command tail
+that this service ignores (`docs/mon3.md:44-45`).
+[Appendix H](appendix-h-service-file-format.md#the-execution-record)
+gives the record layout.
 
 `MON3.SVC` gives the `MON3>` line, which BDOS function 10 reads and the
 service converts to capitals. It takes three commands. Anything else prints
@@ -447,11 +463,10 @@ describes the session and
 
 ## Programs on the starter card
 
-The starter card's A holds thirteen files, and the web page runs the same
-card. Nine are programs or sources you use by name at the prompt.
-`SHELL.SVC`, `GLCD.SVC` and `STARTUP.CMD` belong to the startup setup,
-`BAZA.RTL` is read by BAZA. Build HELLO3.BIN from HELLO3.ASM with TAS
-before loading it at `MON3>`
+The starter card and the browser page use the same thirteen files on A.
+Nine are programs or sources used by name at the prompt. `SHELL.SVC`,
+`GLCD.SVC` and `STARTUP.CMD` provide startup setup. BAZA reads `BAZA.RTL`
+and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 (`tools/media.mjs:29-31`, `tools/media.mjs:203-231`,
 `tools/lib/starter.mjs:10-22`, `README.md:165-211`,
 `test/demo.test.mjs:1-4`, `test/starter.test.mjs:44-391`):
@@ -477,9 +492,10 @@ TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
 file, which fails with `A:TDB?` on the starter card, and shows
 `No debugger` for a `.BAS` file
 (`Thorium a2fe556:README.md:14-41`, `docs/compatibility.md:223`).
-A file name and `THOR.PRJ`'s `ARGS` stop at a `!` or at an `&` after a blank,
-where the shell splits the line, so `ARGS X &Y` gives the program the tail
-` X` and nothing after it runs (`Thorium a2fe556:README.md:51-58`).
+A file name and `THOR.PRJ`'s `ARGS` end at `!` or at `&` after a blank.
+Those are the shell's line separators. `ARGS X &Y` therefore gives the
+program the tail ` X` and runs nothing after it
+(`Thorium a2fe556:README.md:51-58`).
 `TAS` and `BAZA` both set the failure return code `FF00h` when a build
 fails. A failed BAZA compile leaves an existing `NAME.COM` unchanged, and a
 failed TAS build normally keeps its earlier outputs
@@ -516,16 +532,18 @@ interval, every drop path and function 47's replacement-line contract.
 
 ## Scripts
 
-Under the shell, typing `NAME.CMD` runs the script `NAME.CMD` from the named
-drive, or else the current one, in the current user area, with no fallback to
-A. It is a text file read 128 bytes at a time, ending at `^Z`, a zero or the
-end of its last record. CR, LF or CR LF ends a line, of which the first 127
-characters are kept. Empty lines, lines of blanks and `!` alone, and lines
-whose first character is `;` are passed over and not echoed. Every other
-line is echoed whole after the prompt and runs as a typed line. Scripts do
-not nest: a `NAME.CMD` piece inside a script, or one followed by more
-pieces, is refused as `NAME.CMD?` with FF00h. A missing script gives the same
-refusal (`docs/shell.md:98-120`).
+The shell runs `NAME.CMD` from the named drive or the current drive, in the
+current user area. It makes no fallback search on A.
+
+The script is read 128 bytes at a time. `^Z`, a zero or the end of the last
+record ends the file. CR, LF or CR LF ends a line, of which the first 127
+characters are kept. Empty lines, blank lines and `!` alone are skipped.
+A line beginning with `;` is skipped too. These lines are not echoed.
+Each other line is echoed whole after the prompt and runs as a typed line.
+
+Scripts do not nest. A `NAME.CMD` piece inside a script is rejected as
+`NAME.CMD?` with FF00h. So is a script command followed by more pieces.
+A missing script produces the same rejection (`docs/shell.md:98-120`).
 
 `STARTUP.CMD` is read the same way after the ROM has run its first line,
 when that line installs the shell. Typing `STARTUP.CMD` runs the whole file

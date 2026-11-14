@@ -3,9 +3,6 @@ name: Publish TEC-OS documentation
 on:
   push:
     branches: [main]
-    paths:
-      - 'documentation/**'
-      - '.github/workflows/documentation.yml'
   pull_request:
     paths:
       - 'documentation/**'
