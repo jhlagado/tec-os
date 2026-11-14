@@ -21,7 +21,7 @@ import { createContainer, headerChecksum, parseContainer } from "../tools/lib/co
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
-import { finishBarePrompt, publicContext } from "./lib/public-caller.mjs";
+import { finishBarePrompt, publicContext, recoveryInput } from "./lib/public-caller.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
 import { cacheState, fileBlock, retainedBlocks } from "./lib/cache-pending.mjs";
 import { at, shellCard, shellMachine } from "./lib/shell.mjs";
@@ -791,39 +791,97 @@ test("function 45's returned error leaves the FCB on the record a sequential wri
   assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 4 next, the record count unraised");
 });
 
-test("when every line is dirty and the forced write of the next in turn fails, the next miss doesn't try that write again, and warm boot's flush does (KE-187)", async () => {
-  const image = card();
-  const m = start(image, { ram96: true });
-  prepareCaller(m, "initial synthetic caller");
-  const d = m.sym("CDIRTY") - 0x8000;
-  const table = m.sym("CTAB") - 0x8000;
-  const allDirty = () => Array.from({ length: 30 }, (_, i) => m.expand[1][d + i]).every((v) => v);
-  // B:Q.DAT made and written, not closed, until every line is dirty.
-  [2, ...Buffer.from("Q       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
-  bdos(m, 22, 0x5c);
-  bdos(m, 26, 0x2000);
-  for (let r = 0; r < 128 && !allDirty(); r += 1) {
-    for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, (r * 3 + i) & 0xff);
-    bdos(m, 21, 0x5c);
+test("full dirty-cache pressure retains refused data, frees successful lines, and distinguishes ordinary-entry progress", async () => {
+  for (const mode of ["refuse-all", "refuse-head", "functional-success", "entry-success"]) {
+    const image = card(), m = start(image, { ram96: true });
+    prepareCaller(m, `${mode}: pressure caller`);
+    const p = retainedBlocks({ m, image, call: (fn, de) => bdos(m, fn, de), records: 120, pattern: recordOf });
+    assert.equal(p.before.queue.length, 30); assert.equal(p.acknowledgements.length, 120);
+    const first = p.before.entries[0].block;
+    // All setter opportunities still encounter refusal and retain all thirty.
+    bios(m, 9, 0); bios(m, 10, 20); bios(m, 11, 0); bios(m, 12, 0x2000);
+    assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+    const requested = parseContainer(image).volumes[0].start + 20 * 16;
+    assert.ok(!p.expected.has(requested), "the A read misses every held B data block");
+    const expectedRead = image.slice(requested * 512, requested * 512 + 128);
+    for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0xa6);
+    const iff = mode === "refuse-all" ? 0 : 1;
+    m.cpu.cpu.iff1 = m.cpu.cpu.iff2 = iff;
+    const latch = m.tec1g.state.system.sysCtrl;
+    const from = p.attempts.length, functional = [], takes = [], rounds = [];
+    const step = m.step.bind(m), readBody = m.sym("BREAD"), take = m.sym("CTAKE"), pass = m.sym("CTPASS");
+    assert.deepEqual([m.read(readBody), m.read(readBody + 1), m.read(readBody + 2)], [0xcd, m.sym("CDI") & 255, m.sym("CDI") >> 8]);
+    assert.deepEqual([m.read(take), m.read(take + 1), m.read(take + 2)], [0xcd, m.sym("CTSCAN") & 255, m.sym("CTSCAN") >> 8]);
+    if (mode === "entry-success") p.backend.accepts = () => true;
+    m.step = () => {
+      if (m.pc === readBody) {
+        assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+        assert.equal(word(m, m.sym("APIRTPC")), 0x3003, "the real public BIOS wrapper owns this synthetic return");
+        functional.push(p.state());
+        assert.equal(functional.at(-1).queue.length, mode === "entry-success" ? 29 : 30);
+        if (mode === "functional-success") p.backend.accepts = () => true;
+        if (mode === "refuse-head") p.backend.accepts = block => block !== first;
+      }
+      if (m.pc === take) takes.push(p.state());
+      if (m.pc === pass && m.read(m.sym("HKRPOS")) === 0) rounds.push({ state: p.state(), attemptStart: p.attempts.length });
+      return step();
+    };
+    const entry = word(m, 1) - 3 + 3 * 13;
+    stub(m, [0xcd, entry & 255, entry >> 8]); m.step = step;
+    assert.equal(functional.length, 1); assert.equal(takes.length, 1);
+    assert.equal(m.cpu.cpu.iff1, iff); assert.equal(m.cpu.cpu.iff2, iff);
+    assert.equal(m.tec1g.state.system.sysCtrl, latch); assert.ok(m.classicBankIn);
+    const attempts = p.attempts.slice(from), accepted = attempts.filter(a => a.accepted);
+    if (mode === "entry-success") {
+      assert.equal(rounds.length, 0, "one ordinary-entry commit supplies a clean victim without a pressure pass");
+      assert.equal(accepted.length, 1); assert.equal(p.state().queue.length, 29);
+    } else {
+      assert.equal(rounds.length, 1);
+      assert.deepEqual(rounds[0].state.round, p.before.queue, "one bounded pass freezes every original dirty line");
+      assert.equal(rounds[0].state.entries.length, 30);
+      const pressureAttempts = p.attempts.slice(rounds[0].attemptStart);
+      assert.deepEqual(pressureAttempts.map(a => a.block), [...p.expected.keys()], "each initially eligible block is tried once in first-dirty order");
+      assert.equal(accepted.length, mode === "refuse-all" ? 0 : mode === "refuse-head" ? 29 : 30);
+    }
+    const expectedPartial = Uint8Array.from(p.original);
+    for (const a of accepted) expectedPartial.set(p.expected.get(a.block), a.block * 512);
+    assert.deepEqual(image, expectedPartial, "only successful complete data versions changed the backing card");
+    const state = p.state(), acceptedBlocks = new Set(accepted.map(a => a.block));
+    assert.deepEqual(state.entries, p.before.entries.filter(e => !acceptedBlocks.has(e.block)), "every refused or unserviced line retains its tag and full acknowledged payload");
+    assert.deepEqual([state.pending, state.any, state.depth, state.busy], [0, state.queue.length ? 1 : 0, 0, 0]);
+    if (mode === "refuse-all") {
+      assert.notEqual(m.cpu.cpu.a, 0); assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i)), new Uint8Array(128).fill(0xa6));
+      const beforeWarm = p.attempts.length, mark = m.output.length;
+      const ordinary = () => {
+        if (!m.classicBankIn || !m.ready() || m.read(m.sym("ERRMODE")) !== 0 || m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY"))) return false;
+        const saved = word(m, m.sym("OLDSP")), back = word(m, saved);
+        return saved === m.sym("CSTKTOP") - 2 && m.lineBuf === m.sym("CMDBUF") &&
+          [0x0e, 10, 0xcd, 5, 0].every((v, i) => m.read(back - 5 + i) === v);
+      };
+      m.cpu.cpu.pc = 0;
+      m.runUntil(() => recoveryInput(m) || (ordinary() && /\r\n[A-P](:\S*)?>$/.test(m.text(mark))), 400_000_000, "actual normal or bootstrap input after full refused pressure");
+      const outcome = recoveryInput(m) ? "recovery" : "normal", out = m.text(mark);
+      assert.equal(outcome, "recovery", "a full refusing cache cannot provide a directory victim for warm recovery");
+      assert.equal(out.match(/Write pending/g)?.length, 1); assert.doesNotMatch(out, /Write lost/);
+      assert.ok(p.attempts.length > beforeWarm);
+      assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+      console.log(JSON.stringify({ scope: "full refused pressure warm stop", outcome, text: out, depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")), oldsp: word(m, m.sym("OLDSP")), errorMode: m.read(m.sym("ERRMODE")), queuedBlocks: p.state().entries.map(e => e.block), refusedWarmAttempts: p.attempts.length - beforeWarm }));
+      // A deliberate retry, after capturing recovery ownership and retention.
+      p.backend.accepts = () => true;
+      const retryMark = m.output.length; m.type("\r");
+      m.runUntil(() => ordinary() && /\r\n[A-P](:\S*)?>$/.test(m.text(retryMark)), 400_000_000, "explicit bootstrap CR retry reaches actual ordinary input");
+      assert.doesNotMatch(m.text(retryMark), /Write lost/);
+      assert.deepEqual(image, p.expectedImage); assert.equal(p.state().queue.length, 0);
+      prepareCaller(m, "actual retry result captured before ordinary-input completion");
+    } else {
+      assert.equal(m.cpu.cpu.a, 0); assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i)), expectedRead);
+    }
+    p.backend.accepts = () => true;
+    bdos(m, 48, 0); assert.equal(m.cpu.cpu.a, 0);
+    assert.deepEqual(image, p.expectedImage); assert.equal(p.state().queue.length, 0);
+    assert.equal(volume(image, "B").read("Q.DAT").length, 0, "physical persistence does not publish the unclosed file's record count");
+    assert.deepEqual(m.violations, []);
   }
-  assert.ok(allDirty(), "every line dirty");
-  const line = m.read(m.sym("CNEXT"));
-  const block = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
-  let tries = 0;
-  failing(m, (b) => b === block && (tries += 1) && "fail");
-  const base = word(m, 1) - 3; // the BIOS jump table
-  const bios = (n, bc) => [0x01, bc & 0xff, bc >> 8, 0xcd, (base + 3 * n) & 0xff, (base + 3 * n) >> 8];
-  const read = (track) => (stub(m, [...bios(9, 0), ...bios(10, track), ...bios(11, 0), ...bios(12, 0x2000), ...bios(13, 0)]), m.cpu.cpu.a);
-  assert.notEqual(read(20), 0, "the first miss: the forced write fails, and so does the read");
-  assert.equal(tries, 1, "that line's write tried once");
-  assert.equal(read(21), 0, "the next miss reads");
-  assert.equal(read(22), 0, "and the one after");
-  assert.equal(tries, 1, "the failed line's write not tried again by a miss");
-  m.mark = m.output.length;
-  m.cpu.cpu.pc = 0; // warm boot: the line, still dirty, tried by the flush
-  m.runUntil(() => m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
-  assert.equal(tries, 2, "the flush tried it");
-  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "and said so");
 });
 
 // KE-AR7: a write that reads its block first, to any block but the key's own,
