@@ -44,13 +44,13 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,606 bytes of header and image in **18 pages**, 5,032
+On the starter card it is 4,955 bytes of header and image in **20 pages**, 5,446
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
-first, so the word at `0006h` goes from `A700h` to `9500h`, and the TPA from
-42,496 bytes to **37,888**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `9200h`, a TPA of **37,120**. On the starter card
+first, so the word at `0006h` goes from `A700h` to `9300h`, and the TPA from
+42,496 bytes to **37,376**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `9000h`, a TPA of **36,608**. On the starter card
 with no shell, whose four drives take the bare ROM's word to `B6C5h`, it goes
-from `B6C5h` to `A400h`, and the TPA from 46,533 bytes to 41,728, and 40,960 with
+from `B6C5h` to `A200h`, and the TPA from 46,533 bytes to 41,216, and 40,448 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -61,9 +61,13 @@ own workspace, in the TPA where MON-3 keeps them.
 The line is read by BDOS 10 and made upper case. Anything but these three
 prints `?`.
 
+For both BIN and HEX, selecting a load address only changes byte placement.
+It does not relocate absolute addresses embedded in machine code or data.
+
 - **`LOAD name.BIN [addr]`**, or any type but `HEX`, loads the file at 4000h, or at the hexadecimal
-  `addr`, in whole records. The address has one to four digits and ends at a
-  space or the line's end, and a drive is A: to P:. The name has at most
+  `addr`, in whole records. A successful load remembers this actual base for
+  bare `GO`: `LOAD NAME.BIN 2000` followed by `GO` starts at 2000h. The address has one to four digits and ends at a
+  space or the line's end; only trailing spaces may follow. A drive is A: to P:. The name has at most
   eight characters and the type three, and neither may hold `?` or `*`.
   Anything else prints `?`, and such a name is never looked up. CP/M keeps no byte length, so a file's last
   record loads whole, with its padding. The size is read first. Every byte
@@ -73,27 +77,48 @@ prints `?`.
   load ends well nothing is runnable, so a refused load leaves nothing
   runnable. A disk error during the load ends the session, as any BDOS error
   does.
-- **`LOAD name.HEX`** loads an Intel HEX file at its records' own
-  addresses, and takes no address. The file is read twice, a 128-byte record
-  at a time into 0080h: the first pass checks every record and writes
-  nothing, the second writes them. So a file with any fault prints `?` with
-  nothing written and nothing runnable, and a good one leaves the program
-  runnable at 4000h, `GO`'s default. The digits may be of either case. Each
-  record is `:`, a length, an address, a type, its data and its checksum.
-  A data record (type 00h) holds at least one byte, and each byte must lie
-  where a `.BIN` load may write. Between records only CR and LF may come.
-  A file must hold at least one data record. The end record (type 01h, no
-  data) must come; after it only CR, LF and 00h,
-  up to the text's end: the first 1Ah, or the end of the file's last record.
-  Any other type, a bad digit or checksum, a record past FFFFh, or text out
-  of place is refused. A disk error during either pass ends the session.
-  `BIG16K.HEX`, 16 KB in 46,093 characters, loads in 64,083,813 T-states,
-  16 s at 4 MHz, on the starter card with `MON3.SVC` alone. The figure
-  moves by some tens of thousands of T-states with where the file lies on
-  the card, which other files change.
-- **`GO [addr]`** runs the last good load, or `addr`. With neither it prints
-  `?`. It first flushes the cache (BDOS 48), so a program that hangs loses
-  nothing written before it ran. Then it does what MON-3's `GO` does: the LCD
+- **`LOAD name.HEX [addr]`** loads genuine Intel HEX data at its records'
+  addresses. With an optional one-to-four-digit hexadecimal `addr`, the
+  lowest data address maps to `addr` and every record moves by the same
+  displacement, preserving gaps and record order. This moves bytes only:
+  absolute machine-code addresses and pointers are **not relocated**. Use
+  position-independent code or assemble for the intended destination.
+  Without an override, the records keep their original addresses.
+
+  Before writing any destination byte, MON3 checks the complete file's
+  syntax, counts, checksums, EOF and ranges. Overrides and entry records
+  need a further checking pass before the copy pass. Rejected syntax,
+  checksums or ranges print `?`, leave destination memory unchanged and
+  clear the previous load's runnable state. Page zero, 0800h–08FFh and
+  resident memory remain protected; source and destination arithmetic may
+  not wrap. An override can map a logical origin below 0100h or at FFFFh
+  into allowed memory, provided the complete source and destination fit.
+
+  Digits may be either case. Each record is `:`, a length, a 16-bit
+  address, a type, data and a checksum. Type 00h contains at least one
+  data byte. At least one data record is required. Type 01h must have
+  zero length and address, ending the records. Between records only
+  CR and LF are allowed; after EOF only CR, LF and NUL until the first
+  1Ah or the end of the last CP/M record. A single optional type 05h
+  start-linear-address record may declare an entry: four data bytes,
+  zero record address, upper 16 bits zero. The entry must lie in actual
+  loaded data, not a gap, and follows the same rebase. Types 02h, 03h,
+  04h and all other types are refused. Overlapping data records keep
+  file order, with the later bytes winning.
+
+  Bare `GO` uses that validated entry if present; otherwise it uses the
+  lowest loaded address, after any rebase. The lowest byte is a useful
+  default, not a guarantee of executable code: use `GO addr` to choose
+  another entry. LOAD never runs the code. A disk error during any pass
+  ends the session through the existing BDOS error path. Copying is a
+  stream, so a device failure after copying begins can leave partial data;
+  validation is not a hardware-fault rollback mechanism.
+- **`GO [addr]`** runs the last good load at its remembered entry, or the
+  explicit hexadecimal `addr`. The explicit override applies to this run
+  only; it does not change the remembered load address. With neither it prints
+  `?`. It first attempts to flush the cache (BDOS 48). Failed writes remain
+  pending; GO currently proceeds without checking that status, so it does
+  not guarantee that earlier writes are saved. Then it does what MON-3's `GO` does: the LCD
   cleared and `Running at: nnnn` on row 4, a beep unless `KEY_BEEP` turns it
   off, the latch written from `SYS_MODE` with `PROT_MODE`, and `KEY_BUFF` set
   to FFh. Only the PROTECT and CAPS bits are taken: whatever a program left
@@ -376,7 +401,8 @@ its two `LD A,R` on both sides. The console's return is tested with
   not supported.
 - **MON-3's disk calls**, 58 to 61, are not translated to CP/M files.
 - **No recovery from a hang** or from arbitrary memory damage: a program that
-  loops needs the reset button. GO's flush keeps what was written before GO.
+  loops needs the reset button. GO attempts a flush before entering it;
+  a failed flush still leaves pending writes vulnerable to a reset or crash.
 - **The accepted disk hazard.** A MON-3 program that writes from the bare
   BDOS entry through BFFFh (`B6C5h` on the starter, `B985h` on the two-volume
   reference card) can damage the allocation vectors, workspace and RAM BIOS

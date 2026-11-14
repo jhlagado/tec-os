@@ -124,8 +124,12 @@
   ],
   "drivers/mon3hex.asm": [
     "CHEX",
+    "HSETGO",
+    "HDEST",
     "HPASS",
     "HREC",
+    "HRANGE",
+    "HSTART",
     "HEND",
     "GETB",
     "GETC",

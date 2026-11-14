@@ -136,7 +136,7 @@ test("KG64 mutant: the type-length test removed loads HELLO3.BIN for HELLO3.BINX
 });
 
 // HEX loading. Each good file writes its records' bytes and nothing else in
-// the TPA, and leaves a program runnable at 4000h; each bad one is refused
+// the TPA, and defaults GO to its lowest address; each bad one is refused
 // with nothing written and nothing runnable, also after a good load.
 
 /** The TPA's bytes that differ from BEFORE, outside the [address, bytes] blocks; and the blocks' bytes as loaded. */
@@ -248,8 +248,8 @@ async function badFiles(P) {
     "EMPTYREC.HEX": [record(0x4000, 0, []), END],
     ...Object.fromEntries([2, 3, 4, 5, 6].map((t) => [`TYPE${t}.HEX`, [record(0x4000, t, [0, 0x40]), END]])),
     "WRAP.HEX": [one(0xfff8), END],
-    "OVERTOP.HEX": [one(P - 15), END],
     "UNDER.HEX": [one(0x00f0), END],
+    "OVERTOP.HEX": [one(P - 15), END],
     "INTO800.HEX": [one(0x07f1), END],
     "AT8FF.HEX": [one(0x08ff), END],
     "AFTEROOR.HEX": [one(0x0800), one(0x4000), END],
@@ -279,7 +279,7 @@ async function hexRefused(svc) {
   const files = {};
   for (const [n, [b, t]] of Object.entries(bad)) (t ? text : files)[n] = b;
   const { m } = await inSession(files, { svc, text });
-  for (const cmd of [...Object.keys(bad).map((n) => `LOAD ${n}`), "LOAD GOOD.HEX 5000"]) {
+  for (const cmd of Object.keys(bad).map((n) => `LOAD ${n}`)) {
     assert.ok(ok(line(m, "LOAD GOOD.HEX")), "a good load first");
     const before = tpaDigest(m);
     const r = line(m, cmd);
@@ -292,15 +292,15 @@ async function hexRefused(svc) {
 
 test("KG64 hex refused", () => hexRefused());
 
-/** A disk error in the pass WRITING (0 or 1): the session ends at A>, and nothing is runnable at re-entry. */
+/** A disk error in pass 0 scan, 1 check or 2 copy ends at A>; nothing is runnable at re-entry. */
 async function hexDiskError(writing) {
   const svc = await mon3Build();
   const { m } = await inSession({}, { svc, text: { "BIG16K.HEX": hexFile([[0x4000, BIG16K]]) } });
   const p = pageOf(m) << 8;
   const fcb = p + svc.symbols.FCB;
   m.mark = m.output.length;
-  m.type("LOAD BIG16K.HEX\r");
-  m.runUntil(() => m.read(p + svc.symbols.HWRT) === writing && m.read(fcb + 12) === 1, 200_000_000, `the ${writing ? "second" : "first"} pass's second extent`);
+  m.type(`LOAD BIG16K.HEX${writing === 1 ? " 4000" : ""}\r`);
+  m.runUntil(() => m.read(p + svc.symbols.HWRT) === writing && m.read(fcb + 12) === 1, 200_000_000, `the ${["scan", "check", "copy"][writing]} pass's second extent`);
   const sd = m.sd;
   m.sd = null; // the card taken out
   const from = m.mark;
@@ -318,6 +318,7 @@ async function hexDiskError(writing) {
 test("KG64 hex disk error", async () => {
   await hexDiskError(0);
   await hexDiskError(1);
+  await hexDiskError(2);
 });
 
 // The loader's mutants, each caught by its row.
@@ -328,16 +329,16 @@ const hexMutant = (name, edits, run, pattern) =>
     await assert.rejects(run(svc), pattern);
   });
 
-hexMutant("single-pass loading leaves the bad-checksum file's good records written", [["  xor a          ; the checking pass\n", "  ld a,1\n"]], hexRefused, /LOAD BADSUM\.HEX: nothing written/);
-hexMutant("the data-record test removed loads ENDONLY.HEX", [["  ld a,(HANY)\n  or a           ; Z: no data record,\n  jp z,LFAIL     ; so nothing to run\n", ""]], hexRefused, /LOAD ENDONLY\.HEX: \?/);
-hexMutant("the checksum test removed loads BADSUM.HEX", [["  ld a,c\n  or a           ; Z: the sum is 0\n  jr z,HP1       ; good: the next\n  scf\n  ret\n", "  jr HP1\n"]], hexRefused, /LOAD BADSUM\.HEX: \?/);
-hexMutant("the type test removed loads type 02h as data", [["  inc a          ; 00h: data\n  scf\n  ret nz         ; not data\n", ""]], hexRefused, /LOAD TYPE2\.HEX: \?/);
-hexMutant("the per-record range test removed loads into 0800h-08FFh", [["  call RANGE     ; as a .BIN load is\n  pop de\n  ret c          ; out of bounds\n", "  pop de\n"]], hexRefused, /LOAD (WRAP|OVERTOP|UNDER|INTO800|AT8FF)\.HEX: \?/);
-hexMutant("the end-record requirement removed loads NOEND.HEX", [["  jr z,HP1       ; LF\n  scf            ; anything else\n", "  jr z,HP1       ; LF\n  cp $1A\n  ret z\n  scf\n"]], hexRefused, /LOAD NOEND\.HEX: \?/);
-hexMutant("the after-the-end test removed loads AFTEREND.HEX", [["  jr z,HE1       ; LF\n  scf            ; anything else\n  ret\n", "  jr z,HE1       ; LF\n  jr HE1\n"]], hexRefused, /LOAD AFTEREND\.HEX: \?/);
+hexMutant("single-pass loading leaves the bad-checksum file's good records written", [["  xor a          ; scan and check first\n", "  ld a,2\n"]], hexRefused, /LOAD BADSUM\.HEX: nothing written/);
+hexMutant("the data-record test removed loads ENDONLY.HEX", [["  ld a,(HANY)\n  or a\n  jp z,LFAIL     ; no data was loaded\n", ""]], hexRefused, /LOAD ENDONLY\.HEX: \?/);
+hexMutant("the checksum test removed loads BADSUM.HEX", [["  ld a,c\n  or a\n  jp z,HP1       ; zero sum: next record\n  scf\n  ret\n", "  jr HP1\n"]], hexRefused, /LOAD BADSUM\.HEX: \?/);
+hexMutant("the type test removed loads type 02h as data", [["  or a\n  scf\n  ret nz         ; other types refused\n", ""]], hexRefused, /LOAD TYPE2\.HEX: \?/);
+hexMutant("the per-record range test removed loads into 0800h-08FFh", [["  call RANGE     ; full destination span\n", "  add hl,de\n"]], hexRefused, /LOAD UNDER\.HEX: \?/);
+hexMutant("the end-record requirement removed loads NOEND.HEX", [["  jr z,HP1\n  scf\n", "  jr z,HP1       ; LF\n  cp $1A\n  ret z\n  scf\n"]], hexRefused, /LOAD NOEND\.HEX: \?/);
+hexMutant("the after-the-end test removed loads AFTEREND.HEX", [["  jr z,HE1\n  scf\n  ret\n", "  jr z,HE1       ; LF\n  jr HE1\n"]], hexRefused, /LOAD AFTEREND\.HEX: \?/);
 hexMutant("the lower-case path removed refuses the lower-case HELLO3.HEX", [["  cp 'a'\n  jr c,HEXD1     ; not lower case\n  sub $20        ; a to A\n", ""]], hexLoads, /LOAD LOWER\.HEX/);
-hexMutant("the 00h acceptance after the end record removed refuses the binary-written HELLO3.HEX", [["  ret z          ; the text's end, NC\n  or a\n  jr z,HE1       ; 00h\n", "  ret z          ; the text's end, NC\n"]], hexLoads, /LOAD BINARY\.HEX/);
-hexMutant("the loader reading the file three times misses the time", [["  cp 2\n  jr c,CHEX1     ; then the writing pass\n", "  cp 3\n  jr c,CHEX1     ; then the writing pass\n"]], hexTime, /at most 70,000,000/);
+hexMutant("the 00h acceptance after the end record removed refuses the binary-written HELLO3.HEX", [["  ret z\n  or a\n  jr z,HE1\n", "  ret z\n"]], hexLoads, /LOAD BINARY\.HEX/);
+hexMutant("the loader reading the file three times misses the time", [["  ld a,2         ; plain files: copy\n", "  ld a,1         ; an extra checking pass\n"]], hexTime, /at most 70,000,000/);
 
 // The matrix keyboard, read at port FEh, against MON-3 with the matrix
 // fitted on both sides: calls 16, 17, 18, 53 and 54, RST 08h and RST 20h.
@@ -1093,7 +1094,7 @@ test("KG66 reset after", async () => {
 });
 
 test("KG66 mutant: the HEX loader's second pass writing each record one byte high", async () => {
-  const svc = await mon3Variant([["  ld ix,(HADR)   ; where it goes\n", "  ld ix,(HADR)   ; where it goes\n  inc ix\n"]]);
+  const svc = await mon3Variant([["  ld ix,(HTARG)  ; this record\n", "  ld ix,(HTARG)  ; this record\n  inc ix\n"]]);
   await assert.rejects(matrixProgram("matrixz80", { hex: true, svc }), /from MZ80\.HEX: the first 4,096/);
 });
 
