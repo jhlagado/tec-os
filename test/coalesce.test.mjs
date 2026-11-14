@@ -708,12 +708,10 @@ const starterCard = () => {
 };
 const traces = new Map();
 /**
- * COMMAND on the starter card, logged on LOGGED, B: unless given, so that A:
- * coalesces: its cycles
- * from the CR to the prompt, its card writes by block, each with the BDOS
- * function it was made in, and its BDOS 21 calls' cycles. The card's
- * programs must be the pinned ones, since the figures they are held to were
- * measured on them.
+ * COMMAND on the starter card, logged on LOGGED, B: unless given.
+ * Time the complete matrix-typed command through its next prompt, recording
+ * each card write's owning BDOS call and every acknowledged write return.
+ * Known output and accepted publication are checked before cost or traffic.
  */
 function onStarter(command, { logged = "B" } = {}) {
   PINS.forEach(check);
@@ -779,14 +777,21 @@ function onStarter(command, { logged = "B" } = {}) {
   if (save) {
     assert.equal(file.length, 4096); assert.deepEqual(file, expectedSave, "all sixteen saved pages equal this machine's own pre-command TPA");
   } else {
-    assert.match(text, /COM written\r\n/); assert.equal(file.length, 20736);
-    assert.equal(sha(file), "b524b72c8869f3778eed72c37e829ed027536f42345c882a95034c519852614f", "the complete pinned compiler result");
+    assert.match(text, /COM written\r\n/); assert.equal(file.length, 18944);
+    assert.equal(sha(file), "e478ed1c7101d6156e7588fd5fb7c44c42bfc9378fbcbbcc6cc7248b2d26a620", "the complete pinned compiler result");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);
     assert.deepEqual(c.published, file.slice(0, c.published.length), "every published prefix contains independently known output bytes");
   }
   assert.ok(t.commits.some(c => c.published.length === file.length), "a real commit publishes the complete output");
+  console.log(JSON.stringify({ scope: "new-pin starter command measurement", command, logged,
+    romSHA256: sha(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))),
+    compilerSHA256: sha(readFileSync(PINS[0].path)), runtimeSHA256: sha(readFileSync(PINS[1].path)),
+    fileName, fileBytes: file.length, fileSHA256: sha(file), fileBase64: Buffer.from(file).toString("base64"),
+    cycles, meanF21: mean, matchedF21: t.w21.length, writeEntries: t.writeEntries, w21: t.w21,
+    directoryBlocks: [...dir], writes: t.writes.map((block, i) => ({ block, fn: t.fn[i] })),
+    commits: t.commits.map(c => ({ block: c.block, payloadBase64: Buffer.from(c.payload).toString("base64"), publishedBytes: c.published.length, publishedSHA256: sha(c.published) })), text }));
   const out = { ...t, cycles, text, dir, mean };
   traces.set(key, out);
   return out;
@@ -795,12 +800,9 @@ function onStarter(command, { logged = "B" } = {}) {
 function checkBounceWrites(b) {
   const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
   const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
-  assert.equal(times.size, 41);
-  assert.equal([...times.values()].filter(n => n === 4).length, 40, "forty blocks progress four acknowledged record versions");
-  const twice = [...times].filter(([, n]) => n === 2);
-  assert.equal(twice.length, 1);
-  assert.deepEqual(data.filter(([block]) => block === twice[0][0]).map(([, fn]) => fn), [16, 16], "the final partial block is written at both closes");
-  assert.equal(data.length, 162); assert.equal(b.writes.length - data.length, 6);
+  assert.equal(times.size, 37);
+  assert.ok([...times.values()].every(n => n === 4), "all thirty-seven full blocks progress four acknowledged record versions");
+  assert.equal(data.length, 148); assert.equal(b.writes.length - data.length, 6);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 
@@ -1261,8 +1263,8 @@ test("AC6 bdos 40", () => {
 
 // --- Speed --------------------------------------------------------------------
 
-// BAZA BOUNCE on this starter card under the shell's landing ROM, written
-// through: its cycles from the CR to the prompt, measured with the same trace.
+// Historical whole-command comparison from the shell's landing.
+// Current starter ceilings are checked after the known-output proof.
 const BOUNCE_BASE = 103_285_677;
 
 test("AC7 bounce speed", { skip: CARD_SKIP, timeout: 900_000 }, () => {
