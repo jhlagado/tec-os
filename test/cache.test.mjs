@@ -415,52 +415,68 @@ const card3 = (wb = true) => {
   return wb ? loggedOnB(image) : image;
 };
 
-/** Type LINE and run to the prompt, answering a BDOS error with ^C. */
-function through(m, line) {
-  m.mark = m.output.length;
-  m.type(line);
-  for (let i = 0; i < 50; i += 1) {
-    m.runUntil(() => m.waitingForInput(), 2_000_000_000, line);
-    if (/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))) return m.text(m.mark);
-    m.type("\x03");
-  }
-  throw new Error(`no prompt after ${line}`);
-}
-
-test("a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount", async () => {
-  const image = await load(card3(), ["mount"]);
-  let cuts = 0;
-  const problems = [];
-  const fill = { "F1.DAT": 0xa1, "F2.DAT": 0xb2 };
-  const check = (img) => {
-    cuts += 1;
-    const b = volume(img, "B");
-    problems.push(...b.verify().map((p) => `cut ${cuts}: ${p}`));
-    for (const f of b.list())
-      if (fill[f.name] !== undefined && !b.read(f.name).every((v) => v === fill[f.name])) problems.push(`cut ${cuts}: ${f.name} names another file's data`);
+test("failed data publication retains the block through warm boot and refuses drive reassignment until recovery", async () => {
+  const image = card3(); let cuts = 0;
+  const problems = [], fill = { "F1.DAT": 0xa1, "F2.DAT": 0xb2 };
+  const check = img => {
+    cuts++;
+    const b = volume(img, "WORK");
+    problems.push(...b.verify().map(p => `cut ${cuts}: ${p}`));
+    for (const f of b.list()) if (fill[f.name] !== undefined && !b.read(f.name).every(v => v === fill[f.name])) problems.push(`cut ${cuts}: ${f.name} names data not yet durable`);
   };
-  const m = start(image, { onSdWrite: check });
-  const fillTpa = (v) => {
-    for (let i = 0; i < 12 * 256; i += 1) m.write(0x100 + i, v);
+  const m = start(image, { onSdWrite: check }), fillTpa = value => {
+    for (let i = 0; i < 12 * 256; i++) m.write(0x100 + i, value);
   };
-  fillTpa(0xa1);
-  cmd(m, "SAVE 12 B:F1.DAT");
-  cmd(m, "ERA B:F1.DAT");
-  let bad = null; // the first of F2.DAT's blocks the close's flush writes: it never reaches the card
-  failing(m, (block, data) => {
-    if (bad === null && data.every((v) => v === 0xb2)) bad = block;
-    return block === bad && "fail";
+  fillTpa(0xa1); cmd(m, "SAVE 12 B:F1.DAT");
+  const fs = volume(image, "WORK"), descriptor = parseContainer(image).volumes[1];
+  assert.deepEqual(fs.read("F1.DAT"), new Uint8Array(12 * 256).fill(0xa1));
+  const allocation = fs.find("F1.DAT").entries[0].slots[0][1];
+  const expectedFirst = descriptor.start + allocation * fs.blockBytes / 512;
+  cmd(m, "ERA B:F1.DAT"); assert.equal(fs.find("F1.DAT"), undefined);
+  let bad = null, blocked = true, refusals = 0;
+  failing(m, (block, payload) => {
+    if (bad === null && payload.every(v => v === 0xb2)) bad = block;
+    if (blocked && block === bad) { refusals++; return "fail"; }
   });
-  fillTpa(0xb2);
-  const out = through(m, "SAVE 12 B:F2.DAT\r");
-  assert.notEqual(bad, null, "a data line failed");
-  assert.match(out, /Bad Sector/, "the close's flush failed, and the BDOS says so");
-  assert.equal(out.match(/Write lost/g)?.length, 1, "the failed line was kept dirty by that flush, so warm boot tried it again and says Write lost once (KE-AR8)");
-  through(m, "MOUNT B: ARCHIVE\r");
-  through(m, "MOUNT B: WORK\r");
-  check(image);
-  assert.deepEqual(problems, []);
-  assert.deepEqual(m.violations, []);
+  fillTpa(0xb2); const mark = m.output.length;
+  m.type("SAVE 12 B:F2.DAT\r");
+  const errorOwner = () => m.classicBankIn && m.waitingForInput() && m.read(m.sym("ERRMODE")) === 0 && m.read(m.sym("HKDEP")) === 1 && !m.read(m.sym("HKBUSY")) && word(m, m.cpu.cpu.sp) === m.sym("BDDEF") + 6;
+  m.runUntil(() => errorOwner() && /Bad Sector/.test(m.text(mark)), 2_000_000_000, "actual default BDOS error key after refused close");
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("BDDEF") + 3 + i)), [0xcd, m.sym("GETCHAR") & 255, m.sym("GETCHAR") >> 8]);
+  assert.equal(bad, expectedFirst); assert.ok(refusals > 0);
+  const beforeWarm = cacheState(m), beforeCard = Uint8Array.from(image), payload = new Uint8Array(512).fill(0xb2);
+  assert.equal(beforeWarm.entries.length, 1); assert.equal(beforeWarm.entries[0].block, bad);
+  assert.equal(beforeWarm.entries[0].dirty, 1); assert.deepEqual(beforeWarm.entries[0].payload, payload);
+  assert.notDeepEqual(image.slice(bad * 512, (bad + 1) * 512), payload);
+  assert.equal(fs.find("F2.DAT").records, 0, "failed close published no record count");
+  // Deliberately acknowledge the observed default-error key; no retry loop.
+  m.type("\x03");
+  m.runUntil(() => ordinaryInput(m) && /\r\nB(:\S*)?>$/.test(m.text(mark)), 400_000_000, "error abort reaches actual normal input after warm boot");
+  const out = m.text(mark);
+  assert.match(out, /Bad Sector/); assert.equal(out.match(/Write pending/g)?.length, 1); assert.doesNotMatch(out, /Write lost/);
+  assert.deepEqual(durable(cacheState(m)), durable(beforeWarm)); assert.deepEqual(image, beforeCard);
+  prepareCaller(m, "failed close captured before explicit input completion");
+  assert.deepEqual(durable(cacheState(m)), durable(beforeWarm)); assert.deepEqual(image, beforeCard);
+  const mapping = Array.from({ length: 3 }, (_, i) => m.read(m.sym("DRVIDX") + i));
+  assert.equal(mapping[1], 2);
+  const mount = index => {
+    const at = m.sym("ABICALL"); stub(m, [0x06, 1, 0x0e, 9, 0x1e, index, 0xcd, at & 255, at >> 8]);
+    return { a: m.cpu.cpu.a, carry: m.cpu.cpu.flags.C };
+  };
+  const refusedBefore = refusals;
+  assert.deepEqual(mount(2), { a: 1, carry: 1 }, "archive assignment refuses an incomplete flush");
+  assert.ok(refusals > refusedBefore);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("DRVIDX") + i)), mapping);
+  assert.deepEqual(durable(cacheState(m)), durable(beforeWarm)); assert.deepEqual(image, beforeCard);
+  blocked = false; const beforeRecovery = cuts;
+  assert.deepEqual(mount(2), { a: 0, carry: 0 }); assert.equal(m.read(m.sym("DRVIDX") + 1), 3);
+  assert.equal(cuts - beforeRecovery, 1, "the retained complete block is the only recovered card write");
+  const expectedImage = Uint8Array.from(beforeCard); expectedImage.set(payload, bad * 512);
+  assert.deepEqual(image, expectedImage); assert.equal(cacheState(m).queue.length, 0);
+  assert.deepEqual(mount(1), { a: 0, carry: 0 }); assert.equal(m.read(m.sym("DRVIDX") + 1), 2);
+  assert.deepEqual(image, expectedImage); assert.equal(fs.find("F2.DAT").records, 0, "recovered raw data does not finish an aborted close");
+  assert.deepEqual(problems, []); assert.deepEqual(m.violations, []);
+  console.log(JSON.stringify({ scope: "failed publication and drive assignment", block: bad, refusedAttempts: refusals, acceptedCuts: cuts, recoveryCuts: cuts - beforeRecovery, retainedBeforeWarm: beforeWarm.entries.length, publishedRecords: fs.find("F2.DAT").records, finalBIndex: m.read(m.sym("DRVIDX") + 1) }));
 });
 
 /** NPR's run on B:, written behind (logged on B:) or coalesced; G.DAT's records back from the card. */
