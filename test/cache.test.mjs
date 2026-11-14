@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createContainer, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
+import { createContainer, findVolume, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
@@ -1346,12 +1346,13 @@ const hi = (v) => v >> 8;
  * the CCP's MAINLOOP, as a program that comes back with no warm boot. PRE is
  * code run first.
  */
-const wk = (mainloop, { pre = [], jp = false } = {}) =>
+const wk = (mainloop, { pre = [], jp = false, saveFCB } = {}) =>
   Uint8Array.from([
     ...pre,
     0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
     0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
     0x0e, 1, 0xcd, 0x05, 0x00,
+    ...(saveFCB === undefined ? [] : [0x21, 0x5c, 0, 0x11, lo(saveFCB), hi(saveFCB), 0x01, 36, 0, 0xed, 0xb0]),
     ...(jp ? [0xc3, lo(mainloop), hi(mainloop)] : [0xc9]),
   ]);
 const selectFirst = (d) => [0x1e, d, 0x0e, 14, 0xcd, 0x05, 0x00]; // BDOS 14, E = d
@@ -1382,7 +1383,7 @@ function wbMachine(files, { rom, bare = false, image = four() } = {}) {
 const KEYWAIT_PROOFS = new WeakMap();
 
 /** Observe a real WK programme through its owned F1 body. */
-function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = logged, pageZeroDrive: expectedPageZero, refuseUntilInput = false, jp = false, bare = false, files = {}, launch = line } = {}) {
+function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = logged, pageZeroDrive: expectedPageZero, refuseUntilInput = false, jp = false, saveFCB, bare = false, files = {}, launch = line } = {}) {
   const explicit = /\s([A-P]):/.exec(line)?.[1];
   target ??= explicit ?? defaultDrive;
   const drive = target.charCodeAt(0) - 65, expectedDefault = defaultDrive.charCodeAt(0) - 65;
@@ -1390,7 +1391,7 @@ function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = l
     assert.equal(target, logged, "the retained-backlog case uses actual logged ownership");
     assert.deepEqual(pre, [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], "the programme explicitly selects silent returned errors");
   }
-  const sym = (rom ?? romFor()).symbols, bytes = wk(sym.get("MAINLOOP"), { pre, jp });
+  const sym = (rom ?? romFor()).symbols, bytes = wk(sym.get("MAINLOOP"), { pre, jp, saveFCB });
   const made = 0x100 + pre.length + 8, wrote = 0x100 + pre.length + 19;
   const { m, writes, image, run } = wbMachine({ ...files, "WK.COM": bytes }, { rom, bare });
   if (logged !== "A") run(`${logged}:`);
@@ -1398,7 +1399,7 @@ function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = l
   const expected = new Map(), attempts = [], acknowledgements = [];
   let entered = 0, make = null, original, committed, input, initialUsed, allocationBytes, f1CallerSP, programmeSP;
   const allocated = new Map();
-  let holding = refuseUntilInput, returnedKey = 0;
+  let holding = refuseUntilInput, returnedKey = 0, directory = null;
   const driveState = () => {
     assert.equal(m.read(m.sym("CURDRV")), drive, "working drive matches the independent case");
     assert.equal(m.read(m.sym("DSKCUR")), drive);
@@ -1422,8 +1423,9 @@ function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = l
     assert.ok(original && input); assert.ok(m.classicBankIn);
     const state = cacheState(m);
     for (const entry of state.entries) {
-      assert.ok(expected.has(entry.block), `${label}: no unrelated queued block`);
-      assert.deepEqual(entry.payload, expected.get(entry.block)); assert.equal(entry.dirty, 1);
+      const metadata = directory && entry.block === directory.block;
+      assert.ok(expected.has(entry.block) || metadata, `${label}: no unrelated queued block`);
+      assert.deepEqual(entry.payload, metadata ? directory.payload : expected.get(entry.block)); assert.equal(entry.dirty, 1);
     }
     const missing = [];
     for (const [block, payload] of expected) {
@@ -1433,20 +1435,31 @@ function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = l
       }
     }
     assert.deepEqual(image, committed, `${label}: only accepted known versions changed the complete card`);
-    assert.equal(volume(image, target).find("W.DAT").records, 0, "the programme has not closed the file");
+    assert.equal(volume(image, target).find("W.DAT").records, directory?.published ? 32 : 0, "only the predicted accepted directory publication changes the record count");
     return { state, missing, cardSHA256: createHash("sha256").update(image).digest("hex") };
   };
   const sd = m.sd, commit = sd.commitWrite.bind(sd);
   sd.commitWrite = () => {
     if (!original) return commit();
     const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
-    assert.ok(expected.has(block), "only a previously acknowledged data block is attempted after MAKE");
-    assert.deepEqual(payload, expected.get(block));
+    const metadata = directory && block === directory.block;
+    assert.ok(expected.has(block) || metadata, "only acknowledged data or the independently predicted directory block is attempted");
+    assert.deepEqual(payload, metadata ? directory.payload : expected.get(block));
     const accepted = !holding;
-    if (accepted) { commit(); assert.equal(sd.pendingResponse[0], 0x05); committed.set(payload, start); }
-    else { sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1; }
+    let publication = null;
+    if (metadata && accepted && !directory.published) publication = {
+      block, missingBefore: [...expected].filter(([b, bytes]) => !same(image.slice(b * 512, (b + 1) * 512), bytes)).map(([b]) => b),
+      recordsBefore: volume(image, target).find("W.DAT").records, beforeSHA256: createHash("sha256").update(image).digest("hex") };
+    if (accepted) {
+      commit(); assert.equal(sd.pendingResponse[0], 0x05); committed.set(payload, start);
+      if (metadata) {
+        directory.published = true;
+        if (publication) directory.observe({ ...publication, recordsAfter: volume(image, target).find("W.DAT").records,
+          afterSHA256: createHash("sha256").update(image).digest("hex"), payloadSHA256: createHash("sha256").update(payload).digest("hex") });
+      }
+    } else { sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1; }
     assert.deepEqual(image, committed);
-    attempts.push({ block, payload, accepted });
+    attempts.push({ block, payload, accepted, kind: metadata ? "directory" : "data" });
   };
   let beforeEntry = null;
   const step = m.step.bind(m);
@@ -1538,7 +1551,12 @@ function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = l
   assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), m.sym("RETA"));
   const before = writes.n - n0, body = snapshot("FNCIN body");
   return { m, sym, writes, image, target, logged, defaultDrive, refuseUntilInput, beforeEntry, body, before, n0, expected, original, input, inputOwner, snapshot, attempts, step, entered, make, allocated, initialUsed, f1CallerSP, acknowledgements,
-    get holding() { return holding; }, releaseCard() { holding = false; }, get returnedKey() { return returnedKey; } };
+    get holding() { return holding; }, releaseCard() { holding = false; }, get returnedKey() { return returnedKey; },
+    registerDirectory({ block, payload, observe }) {
+      assert.equal(directory, null); assert.ok(original); assert.ok(!expected.has(block));
+      assert.equal(payload.length, 512); assert.equal(typeof observe, "function");
+      directory = { block, payload: Uint8Array.from(payload), observe, published: false };
+    } };
 }
 
 /** Real WK calls, with expected drive selected by the external case, not guest state. */
@@ -1702,78 +1720,180 @@ test("S2-3 mutant: MBD, BWGET testing the BDOS's current disk, writes behind the
   }
 });
 
-/**
- * Logged on B:, P1 makes B:X.DAT, writes 32 records and returns by JP
- * MAINLOOP, its FCB kept at 4000h. The card refuses every write from its
- * return, through the drive change to A: and the prompt's console read.
- * Then P2, on A:, closes that FCB; the card takes writes again as P2 starts
- * if RECOVER. The card writes by the close's return, the file's bytes on the
- * card, and the text.
- */
+/** Close a genuine off-logged backlog, observing the first metadata publication. */
 function directoryLast({ bare, recover, rom }) {
-  const sym = (rom ?? romFor()).symbols;
-  const main = sym.get("MAINLOOP");
-  const fcb = [2, ...Buffer.from("X       DAT", "latin1")];
-  while (fcb.length < 36) fcb.push(0);
-  const p1 = Uint8Array.from([
-    0x21, 0x24, 0x01, 0x11, 0x00, 0x40, 0x01, 0x24, 0x00, 0xed, 0xb0, // the FCB to 4000h
-    0x11, 0x00, 0x40, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
-    0xc5, 0x11, 0x00, 0x40, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
-    0xc3, lo(main), hi(main),
-    ...fcb,
-  ]);
-  const p2 = Uint8Array.from([0x11, 0x00, 0x40, 0x0e, 16, 0xcd, 0x05, 0x00, 0x32, 0x00, 0x41, 0xc3, lo(main), hi(main)]);
-  const { m, writes, image, run } = wbMachine({ "P1.COM": p1, "P2.COM": p2 }, { bare, rom });
-  run("B:");
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("A:P1\r");
-  m.runUntil(() => m.pc === main, 400_000_000, "P1's return");
-  f.on = true;
-  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
-  run("A:");
-  const before = writes.n;
-  m.mark = m.output.length;
-  m.type("P2\r");
-  m.runUntil(() => m.pc === 0x0100, 100_000_000, "P2's start");
-  f.on = !recover;
-  let byClose = null;
-  const step = m.step.bind(m);
-  m.step = () => {
-    if (m.pc === 0x0108 && byClose === null) byClose = writes.n - before;
-    return step();
+  const symbols = (rom ?? romFor()).symbols, main = symbols.get("MAINLOOP");
+  const p2 = Uint8Array.from([0x1e, 0xfe, 0x0e, 45, 0xcd, 5, 0, 0x11, 0, 0x40, 0x0e, 16, 0xcd, 5, 0, 0x32, 0, 0x41, 0xc3, lo(main), hi(main)]);
+  const session = wkSession("A:WK B:W.DAT", { rom, logged: "B", bare, pre: [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], refuseUntilInput: true, jp: true, saveFCB: 0x4000, files: { "P2.COM": p2 } });
+  const { m, sym, image, expected, original, snapshot, attempts, inputOwner } = session;
+  const held = label => {
+    const cut = snapshot(label);
+    assert.equal(session.holding, true); assert.deepEqual(image, original);
+    assert.deepEqual(cut.state.entries.map(e => e.block), [...expected.keys()]); assert.deepEqual(cut.missing, [...expected.keys()]);
+    assert.equal(cut.state.queue.length, 8); assert.deepEqual([cut.state.pending, cut.state.any], [0, 1]);
+    assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted)); return cut;
   };
-  m.runUntil(() => m.waitingForInput() && (ANY_PROMPT.test(m.text(m.mark)) || /Bdos|Bad/.test(m.text(m.mark))), 400_000_000, "after the close");
-  m.step = step;
-  const found = volume(image, "B").find("X.DAT");
-  const data = found ? volume(image, "B").read("X.DAT") : null;
-  return { byClose, data, closeA: m.read(0x4100), text: m.text(m.mark) };
+  inputOwner(); held("close prefix FNCIN");
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(sym.get("FNCIN") + 3 + i)), [0xcd, lo(sym.get("GETCHAR")), hi(sym.get("GETCHAR"))]);
+  m.runUntil(() => m.pc === sym.get("GETCHAR"), 100_000_000, "close prefix GETCHAR");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  m.runUntil(() => m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE"), 100_000_000, "close prefix owned serial input");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  held("close prefix wait"); m.type("x");
+  m.runUntil(() => m.pc === main, 400_000_000, "real copy-FCB and JP MAINLOOP");
+  publicContext(m); assert.equal(session.returnedKey, 1);
+  const fcb = session.acknowledgements.at(-1).fcb;
+  assert.deepEqual(Uint8Array.from({ length: 36 }, (_, i) => m.read(0x4000 + i)), fcb);
+  held("after actual saved FCB");
+  const beforePrompts = countedPrompts(m, { bare });
+  m.runUntil(() => beforePrompts.ready() && m.text(m.mark).endsWith(bare ? "B>" : "B:WORK>"), 400_000_000, "actual B input while data remains refused");
+  held("B input before drive change"); const bOwner = { ...beforePrompts.owner, pc: m.pc };
+  const bInputId = beforePrompts.count; m.type("A:\r");
+  m.runUntil(() => beforePrompts.ready() && beforePrompts.owner.id > bInputId && m.text(m.mark).endsWith(bare ? "A>" : "A:SYSTEM>"), 400_000_000, "actual A input after failed private flush");
+  held("A input after refused drive change");
+  assert.equal(m.read(sym.get("BOOTDRV")), 0); assert.equal(m.read(sym.get("DEFDRV")), 0);
+  const aOwner = { ...beforePrompts.owner, pc: m.pc };
+  beforePrompts.stop(); m.step = session.step;
+  const fs = volume(original, "B"), file = fs.find("W.DAT");
+  assert.equal(file.entries.length, 1); assert.equal(file.records, 0);
+  const extent = new Uint8Array(20); extent[3] = 32;
+  for (const [slot, allocation] of session.allocated) { extent[4 + 2 * slot] = lo(allocation); extent[5 + 2 * slot] = hi(allocation); }
+  assert.deepEqual(fcb.slice(12, 32), extent, "known extent and free validated allocation map supply metadata independently");
+  const descriptor = findVolume(parseContainer(original), "B"), entryOffset = file.entries[0].index * 32;
+  const directoryBlock = descriptor.start + Math.floor(entryOffset / 512), within = entryOffset % 512;
+  assert.ok(directoryBlock >= descriptor.start && directoryBlock < descriptor.start + fs.g.dirBlocks * fs.blockBytes / 512);
+  const directoryPayload = original.slice(directoryBlock * 512, (directoryBlock + 1) * 512);
+  directoryPayload.set(extent, within + 12);
+  const expectedFile = new Uint8Array(4096); for (let record = 0; record < 32; record++) expectedFile.set(session.input, record * 128);
+  let firstPublication = null;
+  session.registerDirectory({ block: directoryBlock, payload: directoryPayload, observe: event => {
+    assert.equal(firstPublication, null); assert.equal(event.recordsBefore, 0); assert.equal(event.recordsAfter, 32);
+    const data = volume(image, "B").read("W.DAT"); assert.equal(data.length, 4096);
+    firstPublication = { ...event, namedDataComplete: same(data, expectedFile) };
+    assert.equal(firstPublication.namedDataComplete, event.missingBefore.length === 0);
+  } });
+  const finalPrompts = countedPrompts(m, { bare, errorMode: 0xfe });
+  const rootStep = m.step.bind(m); let p2Entries = 0, p2SP, closeCaller = null, release = null, closeA = null, byClose = null;
+  m.step = () => {
+    if (m.pc === 0x100) {
+      publicContext(m); assert.equal(++p2Entries, 1); p2SP = m.cpu.cpu.sp;
+      assert.deepEqual(Uint8Array.from({ length: p2.length }, (_, i) => m.read(0x100 + i)), p2);
+    }
+    if (p2Entries && m.pc === 0x107) { publicContext(m); assert.equal(m.cpu.cpu.sp, p2SP); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(sym.get("ERRMODE")), 0xfe); }
+    if (p2Entries && m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 16) {
+      publicContext(m); assert.equal(closeCaller, null); assert.equal(m.cpu.cpu.sp, p2SP - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x10f);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x4000);
+      assert.deepEqual(Uint8Array.from({ length: 36 }, (_, i) => m.read(0x4000 + i)), fcb);
+      closeCaller = m.cpu.cpu.sp;
+    }
+    if (p2Entries && m.pc === sym.get("FNCLSE")) {
+      assert.notEqual(closeCaller, null); assert.equal(release, null);
+      assert.ok(m.classicBankIn); assert.equal(m.read(sym.get("HKDEP")), 1); assert.equal(m.read(sym.get("HKBUSY")), 0);
+      assert.equal(word(m, sym.get("OLDSP")), closeCaller); assert.equal(word(m, closeCaller), 0x10f);
+      assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), sym.get("RETA"));
+      assert.equal(m.read(sym.get("CURDRV")), 1); assert.equal(m.read(sym.get("BOOTDRV")), 0); assert.equal(m.read(sym.get("DEFDRV")), 0);
+      assert.equal(word(m, sym.get("DPHPTR")), sym.get("DPHTAB") + 16);
+      const cut = held("FNCLSE after ordinary entry still refused");
+      release = { pc: m.pc, callerSP: closeCaller, queue: cut.state.queue, missing: cut.missing, cardSHA256: cut.cardSHA256, refusals: attempts.length, recover };
+      if (recover) session.releaseCard();
+    }
+    if (p2Entries && m.pc === 0x10f) { publicContext(m); assert.equal(m.cpu.cpu.sp, p2SP); assert.equal(closeA, null); closeA = m.cpu.cpu.a; byClose = attempts.filter(a => a.accepted).length; }
+    return rootStep();
+  };
+  m.type("A:P2\r");
+  m.runUntil(() => finalPrompts.ready() && finalPrompts.owner.textAtEntry.endsWith(bare ? "A>" : "A:SYSTEM>"), 400_000_000, "actual A input after close returned");
+  const finalOwner = { ...finalPrompts.owner, pc: m.pc }; m.step = session.step;
+  assert.equal(p2Entries, 1); assert.ok(release); assert.notEqual(closeA, null); assert.equal(m.read(0x4100), closeA);
+  const final = snapshot("after close actual input");
+  if (recover) {
+    assert.equal(closeA, file.entries[0].index % 4); assert.ok(firstPublication);
+    assert.equal(final.state.queue.length, 0); assert.deepEqual(final.missing, []);
+    assert.deepEqual(volume(image, "B").read("W.DAT"), expectedFile);
+    const expectedCard = Uint8Array.from(original); for (const [block, payload] of expected) expectedCard.set(payload, block * 512); expectedCard.set(directoryPayload, directoryBlock * 512);
+    assert.deepEqual(image, expectedCard);
+  } else {
+    assert.equal(closeA, 0xff); assert.equal(firstPublication, null); held("failed close preserves acknowledged ownership");
+    assert.match(m.text(m.mark), /Bdos Err On B: Bad Sector/);
+  }
+  assert.deepEqual(volume(image, "B").verify(), []); assert.deepEqual(m.violations, []);
+  assert.doesNotMatch(m.text(m.mark), /Disk reset failed|Write lost/);
+  console.log(JSON.stringify({ scope: "real WK first directory publication", bare, recover, programmeEntries: session.entered, p2Entries, acknowledgements: session.acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })),
+    initialUsedAllocations: [...session.initialUsed], newAllocations: [...session.allocated], input: Array.from(session.input), bOwner, aOwner, finalOwner, release,
+    directoryBlock, directoryPayloadSHA256: createHash("sha256").update(directoryPayload).digest("hex"), closeA, byClose, firstPublication,
+    accepted: attempts.filter(a => a.accepted).map(a => ({ kind: a.kind, block: a.block })), refusedAttempts: attempts.filter(a => !a.accepted).length,
+    final: { queue: final.state.queue, missing: final.missing, cardSHA256: final.cardSHA256 }, text: m.text(m.mark) }));
+  return { closeA, byClose, firstPublication, records: volume(image, "B").find("W.DAT").records };
 }
 
 test("S2-4 directory last after a failed drive change", () => {
   for (const bare of [true, false]) {
-    const r = directoryLast({ bare, recover: true });
-    const how = bare ? "bare" : "under the shell";
-    assert.equal(r.byClose, 9, `${how}: the close writes the 8 data blocks, then the entry`);
-    assert.equal(r.closeA, 0, `${how}: the close succeeds`);
-    assert.equal(r.data?.length, 4096, `${how}: the file's 32 records named`);
-    assert.equal(r.data.filter((b) => b === 0xe5).length, 0, `${how}: and every one on the card`);
+    const result = directoryLast({ bare, recover: true });
+    assert.equal(result.firstPublication.namedDataComplete, true, "the first published entry names only complete known data");
+    assert.equal(result.records, 32); assert.equal(result.byClose, 9, "eight known data blocks and the directory entry complete before close returns");
   }
 });
 
 test("S2-4 directory refused while the card refuses", () => {
   for (const bare of [true, false]) {
-    const r = directoryLast({ bare, recover: false });
-    const how = bare ? "bare" : "under the shell";
-    assert.match(r.text, /Bdos|Bad/, `${how}: the close refused`);
-    assert.ok(!r.data || r.data.length === 0, `${how}: the card's entry names no block of the file`);
+    const result = directoryLast({ bare, recover: false });
+    assert.equal(result.firstPublication, null); assert.equal(result.records, 0); assert.equal(result.byClose, 0);
   }
 });
 
 test("S2-4 mutant: MDIR, a directory write off the logged drive not flushing first, names blocks the card lacks at the close", () => {
-  const r = directoryLast({ bare: true, recover: true, rom: MUTANTS.mdir() });
-  assert.equal(r.byClose, 1, "the entry alone by the close's return");
+  const native = directoryLast({ bare: true, recover: true }), changed = directoryLast({ bare: true, recover: true, rom: MUTANTS.mdir() });
+  assert.equal(native.firstPublication.namedDataComplete, true, "native positive protects the same first-publication boundary");
+  assert.equal(native.byClose, 9);
+  assert.equal(changed.firstPublication.namedDataComplete, false, "metadata names known records missing at first publication despite later repair");
 });
+
+/** Observe actual bare or shell command input without consuming a key. */
+function countedPrompts(m, { bare, errorMode = 0xff }) {
+  const sym = m.symbols;
+  const shellBase = bare ? 0 : pageOf(m), shellInput = shellBase + SHELL.symbols.LBUF;
+  const expectedInputSP = bare ? sym.get("CSTKTOP") - 2 : shellBase + SHELL.symbols.STKTOP - 2;
+  const expectedInputBuffer = bare ? sym.get("CMDBUF") : shellInput;
+  if (bare) assert.equal(word(m, sym.get("SHOWN")), 0);
+  else {
+    assert.ok(shellBase > 0); assert.equal(word(m, sym.get("SHOWN")), shellBase + SHELL.symbols.TABLE);
+    assert.equal(m.read(shellBase), 0xc3);
+    assert.equal(word(m, shellBase + 1), sym.get("BENTRY"), "the loader installs the real BDOS page entry");
+    assert.equal(m.read(shellBase + 3), 1);
+    assert.equal(word(m, shellBase + 4), SHELL.symbols.REMOVE, "the installed removable header keeps its relative REMOVE offset");
+    assert.equal(String.fromCharCode(...Array.from({ length: 8 }, (_, i) => m.read(shellBase + 17 + i))), "SHELL   ");
+    const prompt = shellBase + SHELL.symbols.PROMPT;
+    assert.deepEqual(Array.from({ length: 16 }, (_, i) => m.read(shellBase + SHELL.symbols.TYPED + i)),
+      [0xcd, lo(prompt), hi(prompt), 0x3e, 127, 0x32, lo(shellInput), hi(shellInput), 0x11, lo(shellInput), hi(shellInput), 0x0e, 10, 0xcd, 5, 0]);
+  }
+  assert.equal(word(m, sym.get("FNTAB") + 20), sym.get("FNLINE"));
+  let inputCall = null, inputCalls = 0;
+  const observeStep = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 10) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, expectedInputSP);
+      const back = word(m, m.cpu.cpu.sp), buffer = m.cpu.cpu.d << 8 | m.cpu.cpu.e;
+      assert.equal(buffer, expectedInputBuffer);
+      assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+      if (bare) {
+        assert.equal(m.read(back), 0x18);
+        const displacement = m.read(back + 1);
+        assert.equal((back + 2 + (displacement < 128 ? displacement : displacement - 256)) & 0xffff, sym.get("MLGOT"));
+      } else assert.equal(back, shellBase + SHELL.symbols.TYPED + 16);
+      inputCall = { id: ++inputCalls, sp: m.cpu.cpu.sp, back, buffer, entered: false, textAtEntry: m.text(m.mark) };
+    }
+    if (inputCall && !inputCall.entered && m.pc === sym.get("FNLINE")) {
+      assert.equal(word(m, sym.get("OLDSP")), inputCall.sp); assert.equal(word(m, inputCall.sp), inputCall.back);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, inputCall.buffer);
+      assert.equal(m.read(sym.get("HKDEP")), 1); assert.equal(m.read(sym.get("HKBUSY")), 0);
+      inputCall.entered = true;
+    }
+    return observeStep();
+  };
+  const ownedPrompt = () => inputCall?.entered && m.classicBankIn && m.ready() && m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE") &&
+    m.read(sym.get("ERRMODE")) === errorMode && m.read(sym.get("HKDEP")) === 1 && m.read(sym.get("HKBUSY")) === 0 &&
+    word(m, sym.get("OLDSP")) === inputCall.sp && word(m, inputCall.sp) === inputCall.back && m.lineBuf === inputCall.buffer;
+  return { ready: ownedPrompt, get count() { return inputCalls; }, get owner() { return inputCall; }, stop() { m.step = observeStep; } };
+}
 
 /** A real refused WK backlog survives through JP MAINLOOP and a drive change. */
 function driveChange({ rom, typed = false, omitted = false } = {}) {
@@ -1807,52 +1927,12 @@ function driveChange({ rom, typed = false, omitted = false } = {}) {
   assert.ok(offset >= 0); assert.equal(Buffer.from(native.rom).indexOf(pattern, offset + 1), -1);
   const site = 0xc000 + offset;
   assert.deepEqual(Array.from({ length: pattern.length }, (_, i) => m.read(site + i)), [...(omitted ? [0, 0, 0] : callBytes), ...suffix]);
-  const shellBase = typed ? 0 : pageOf(m), shellInput = shellBase + SHELL.symbols.LBUF;
-  const expectedInputSP = typed ? sym.get("CSTKTOP") - 2 : shellBase + SHELL.symbols.STKTOP - 2;
-  const expectedInputBuffer = typed ? sym.get("CMDBUF") : shellInput;
-  if (typed) assert.equal(word(m, sym.get("SHOWN")), 0);
-  else {
-    assert.ok(shellBase > 0); assert.equal(word(m, sym.get("SHOWN")), shellBase + SHELL.symbols.TABLE);
-    assert.equal(m.read(shellBase), 0xc3);
-    assert.equal(word(m, shellBase + 1), sym.get("BENTRY"), "the loader installs the real BDOS page entry");
-    assert.equal(m.read(shellBase + 3), 1);
-    assert.equal(word(m, shellBase + 4), SHELL.symbols.REMOVE, "the installed removable header keeps its relative REMOVE offset");
-    assert.equal(String.fromCharCode(...Array.from({ length: 8 }, (_, i) => m.read(shellBase + 17 + i))), "SHELL   ");
-    const prompt = shellBase + SHELL.symbols.PROMPT;
-    assert.deepEqual(Array.from({ length: 16 }, (_, i) => m.read(shellBase + SHELL.symbols.TYPED + i)),
-      [0xcd, lo(prompt), hi(prompt), 0x3e, 127, 0x32, lo(shellInput), hi(shellInput), 0x11, lo(shellInput), hi(shellInput), 0x0e, 10, 0xcd, 5, 0]);
-  }
-  assert.equal(word(m, sym.get("FNTAB") + 20), sym.get("FNLINE"));
-  let inputCall = null, inputCalls = 0;
-  const observeStep = m.step.bind(m);
-  m.step = () => {
-    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 10) {
-      publicContext(m); assert.equal(m.cpu.cpu.sp, expectedInputSP);
-      const back = word(m, m.cpu.cpu.sp), buffer = m.cpu.cpu.d << 8 | m.cpu.cpu.e;
-      assert.equal(buffer, expectedInputBuffer);
-      assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
-      if (typed) {
-        assert.equal(m.read(back), 0x18);
-        const displacement = m.read(back + 1);
-        assert.equal((back + 2 + (displacement < 128 ? displacement : displacement - 256)) & 0xffff, sym.get("MLGOT"));
-      } else assert.equal(back, shellBase + SHELL.symbols.TYPED + 16);
-      inputCall = { id: ++inputCalls, sp: m.cpu.cpu.sp, back, buffer, entered: false };
-    }
-    if (inputCall && !inputCall.entered && m.pc === sym.get("FNLINE")) {
-      assert.equal(word(m, sym.get("OLDSP")), inputCall.sp); assert.equal(word(m, inputCall.sp), inputCall.back);
-      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, inputCall.buffer);
-      assert.equal(m.read(sym.get("HKDEP")), 1); assert.equal(m.read(sym.get("HKBUSY")), 0);
-      inputCall.entered = true;
-    }
-    return observeStep();
-  };
-  const ownedPrompt = () => inputCall?.entered && m.classicBankIn && m.ready() && m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE") &&
-    m.read(sym.get("ERRMODE")) === 0xff && m.read(sym.get("HKDEP")) === 1 && m.read(sym.get("HKBUSY")) === 0 &&
-    word(m, sym.get("OLDSP")) === inputCall.sp && word(m, inputCall.sp) === inputCall.back && m.lineBuf === inputCall.buffer;
+  const prompts = countedPrompts(m, { bare: typed });
+  const ownedPrompt = prompts.ready;
   let typedRelease = null, typedInputOwner = null;
   if (typed) {
     m.runUntil(() => ownedPrompt() && m.text(m.mark).endsWith("A>"), 400_000_000, "the actual bare A API10 owner still refusing");
-    typedInputOwner = { ...inputCall, pc: m.pc, text: m.text(m.mark) };
+    typedInputOwner = { ...prompts.owner, pc: m.pc, text: m.text(m.mark) };
     typedRelease = held("typed prompt before physical recovery");
     assert.equal(m.read(bootDrive), 0); assert.equal(m.read(sym.get("ERRMODE")), 0xff);
     session.releaseCard();
@@ -1871,9 +1951,9 @@ function driveChange({ rom, typed = false, omitted = false } = {}) {
   assert.equal(m.cpu.cpu.sp, sym.get("CSTKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), site + pattern.length);
   const beforeSelect = snapshot("before public F14 ordinary entry"), privateWrites = writes.n - acceptedAtPrivate;
   const completeBeforeSelect = beforeSelect.state.queue.length === 0 && beforeSelect.missing.length === 0;
-  const callsBeforeFinalPrompt = inputCalls;
-  m.runUntil(() => ownedPrompt() && inputCall.id > callsBeforeFinalPrompt && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the actual selected B API10 owner");
-  const finalInputOwner = { ...inputCall, pc: m.pc };
+  const callsBeforeFinalPrompt = prompts.count;
+  m.runUntil(() => ownedPrompt() && prompts.owner.id > callsBeforeFinalPrompt && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the actual selected B API10 owner");
+  const finalInputOwner = { ...prompts.owner, pc: m.pc };
   m.step = session.step;
   assert.equal(session.returnedKey, 1); assert.equal(m.read(bootDrive), 1); assert.equal(m.read(sym.get("DEFDRV")), 1);
   const expectedCard = Uint8Array.from(original); for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
