@@ -27,11 +27,12 @@ the original forty imported manuscript files against their recorded hashes.
 
 ## Books and navigation
 
-`content/tec-os/` contains the existing TEC-OS book. Its introduction,
-29 chapters and ten appendices were imported without wording changes.
-`provenance.json` records the source revision and hashes. The theme was adapted
-from the same publishing system as debug80.com. The reference repository is
-not needed to install or build this site.
+`content/tec-os/` contains the TEC-OS book. Its introduction, 29 chapters and
+ten appendices were originally imported without wording changes. Subsequent
+prose revisions are maintained here. `provenance.json` records the original
+import revision and hashes, not the identities of later authored text. The
+theme was adapted from the same publishing system as debug80.com. The reference
+repository is not needed to install or build this site.
 
 `books.json` is the book catalogue. Each entry names a directory under
 `content/`, its title, navigation label, description and front-matter parent.
@@ -66,8 +67,8 @@ The theme retains the reference's numbered figures and image previews.
 `.github/workflows/documentation.yml` installs from this package's lockfile,
 checks the source, runs the publishing controls and builds the site. It uploads
 **only `documentation/.vitepress/dist`**. Pull requests validate without
-deploying. Changes to documentation on `main`, or a manual dispatch on `main`,
-publish through the `github-pages` environment after Pages is enabled.
+deploying. Every push to `main`, or a manual dispatch on `main`,
+publishes through the `github-pages` environment after Pages is enabled.
 
 In the repository's **Settings → Pages**, select **GitHub Actions** as the
 source. Set the custom domain to **tec-os.org**. The configuration uses the
