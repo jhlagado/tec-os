@@ -881,33 +881,151 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
 // TED's & stop, with the shell of that landing.
 const BASE11 = { nothing: 4928, onB: 8_661_934, onA: 8_859_172 };
 
-/** BDOS 11 with nothing changed, and 32 records to A: each followed by BDOS 11, logged on LOGGED, under ROM: T states. */
+const QUALIFIED_POLL = (() => {
+  const asset = JSON.parse(readFileSync(new URL("./fixtures/rom-qualified-shell2.json", import.meta.url), "utf8"));
+  assert.equal(asset.sourceCommit, "c4ec0f4950446f92b658643ee23b63e2c02bb33b");
+  const rom = Buffer.from(asset.rom, "base64"), entries = Object.entries(asset.symbols).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+  assert.equal(createHash("sha256").update(rom).digest("hex"), "a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1");
+  assert.equal(createHash("sha256").update(JSON.stringify(entries)).digest("hex"), "9d86c0e1825833902eacfeb749612c3d0ef2c9d73f6cc71545f52924a82210e1");
+  assert.ok(!Object.hasOwn(asset.symbols, "HKDEP"));
+  return Object.freeze({ rom, symbols: new Map(entries) });
+})();
+
+/** Exact shell-command intervals and 200-call subtraction, with known data first. */
 function bdos11(logged, rom) {
   const N = 200;
-  const st = Uint8Array.from([0x06, N, 0xc5, 0x0e, 11, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf7, 0xc9]);
+  const st = Uint8Array.from([0x06, N, 0xc5, 0x0e, 11, 0xcd, 5, 0, 0xc1, 0x10, 0xf7, 0xc9]);
   const none = Uint8Array.from([0x06, N, 0xc5, 0, 0, 0, 0, 0, 0xc1, 0x10, 0xf7, 0xc9]);
-  const wr = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
-    0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0x0e, 11, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xef, 0xc9]);
-  const m = shellMachine(shellCard({ "ST.COM": st, "NO.COM": none, "WK.COM": wr }, { image: four() }), rom ?? {});
-  const t = (l) => {
-    const c = m.cycles;
-    run(m, l);
-    return m.cycles - c;
+  const wr = Uint8Array.from([0x11, 0x5c, 0, 0x0e, 22, 0xcd, 5, 0, 0x06, 32,
+    0xc5, 0x11, 0x5c, 0, 0x0e, 21, 0xcd, 5, 0, 0x0e, 11, 0xcd, 5, 0, 0xc1, 0x10, 0xef, 0xc9]);
+  const selected = rom ?? romFor(), image = four(), m = shellMachine(shellCard({ "ST.COM": st, "NO.COM": none, "WK.COM": wr }, { image }), selected);
+  const expectedROM = createHash("sha256").update(selected.rom).digest("hex");
+  assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), expectedROM);
+  assert.equal(m.symbols.has("HKDEP"), rom === QUALIFIED_POLL ? false : true);
+  const page = pageOf(m), top = page + sym.STKTOP, buffer = page + sym.LBUF, back = page + sym.TYPED + 16;
+  assert.equal(word(m, m.sym("SHOWN")), page + sym.TABLE);
+  assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+  const owner = () => m.classicBankIn && m.ready() && quiet(m) && m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE") &&
+    m.read(m.sym("ERRMODE")) === 0 && word(m, m.sym("OLDSP")) === top - 2 && word(m, top - 2) === back && m.lineBuf === buffer &&
+    (!m.symbols.has("HKDEP") || (m.read(m.sym("HKDEP")) === 1 && m.read(m.sym("HKBUSY")) === 0));
+  m.runUntil(owner, 900_000_000, "actual shell input before poll profiles");
+  const commandReceipts = [], sd = m.sd, commit = sd.commitWrite.bind(sd), baseStep = m.step.bind(m);
+  let phase = null;
+  const physical = () => {
+    assert.ok(phase?.original); assert.ok(m.classicBankIn);
+    const bank = m.expand ? m.expand[1] : m.banks[0], entries = [];
+    for (let line = 0; line < m.sym("NLINES"); line++) {
+      if (!bank[m.sym("CDIRTY") - 0x8000 + line]) continue;
+      const offset = m.sym("CTAB") - 0x8000 + line * 4, tag = bank.slice(offset, offset + 4);
+      const block = [...tag].reduce((v, byte, i) => v + byte * 256 ** i, 0), payload = bank.slice(line * 512, (line + 1) * 512);
+      assert.ok(phase.expected.has(block)); assert.deepEqual(payload, phase.expected.get(block)); entries.push({ line, block });
+    }
+    assert.equal(new Set(entries.map(e => e.block)).size, entries.length);
+    const missing = [...phase.expected].filter(([block, bytes]) => Buffer.compare(Buffer.from(image.slice(block * 512, (block + 1) * 512)), Buffer.from(bytes))).map(([block]) => block);
+    for (const block of missing) assert.ok(entries.some(e => e.block === block), "every off-card ACK has its valid dirty owner");
+    if (m.symbols.has("HKDEP")) assert.deepEqual(cacheState(m).entries.map(e => e.block).sort((a, b) => a - b), entries.map(e => e.block).sort((a, b) => a - b));
+    assert.deepEqual(image, phase.committed); assert.equal(volume(image, "A").find("A.DAT").records, 0);
+    return { entries, missing };
   };
-  if (logged === "B") t("B:");
-  t("A:NO");
-  const a = t("A:ST");
-  const b = t("A:NO");
-  return { nothing: Math.round((a - b) / N), worst: t("A:WK A:A.DAT") };
+  sd.commitWrite = () => {
+    assert.ok(phase && phase.kind === "WK", "read-only timing commands do not write the card");
+    if (!phase.original) { commit(); assert.equal(sd.pendingResponse[0], 0x05); phase.makeWrites++; return; }
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(phase.expected.has(block)); assert.deepEqual(payload, phase.expected.get(block)); commit(); assert.equal(sd.pendingResponse[0], 0x05);
+    phase.committed.set(payload, start); assert.deepEqual(image, phase.committed); phase.writes.push({ block, payload });
+  };
+  m.step = () => {
+    if (phase?.code && m.pc === 0x100) {
+      publicContext(m); assert.equal(++phase.entered, 1); phase.active = true; phase.sp = m.cpu.cpu.sp;
+      assert.equal(phase.sp, m.sym("CSTKTOP") - 2); assert.equal(word(m, phase.sp), 0);
+      assert.deepEqual(Uint8Array.from({ length: phase.code.length }, (_, i) => m.read(0x100 + i)), phase.code);
+    }
+    if (phase?.active && m.pc === m.sym("BENTRY")) {
+      publicContext(m);
+      if (m.cpu.cpu.c === 21) {
+        assert.equal(phase.kind, "WK"); assert.equal(m.cpu.cpu.sp, phase.sp - 4); assert.equal(word(m, m.cpu.cpu.sp), 0x113);
+        assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x5c); assert.equal(word(m, m.sym("CURDMA")), 0x80);
+        if (!phase.original) {
+          assert.ok(phase.made); phase.original = Uint8Array.from(image); phase.committed = Uint8Array.from(image);
+          const fs = volume(phase.original, "A"); phase.used = new Set(fs.usedBlocks()); phase.allocationBytes = fs.blockBytes; assert.equal(fs.wide, true);
+          phase.input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)); assert.ok(phase.input.some(Boolean));
+        }
+        assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), phase.input);
+      } else if (m.cpu.cpu.c === 11) {
+        assert.ok(["ST", "WK"].includes(phase.kind)); assert.equal(m.cpu.cpu.sp, phase.sp - 4);
+        assert.equal(word(m, m.cpu.cpu.sp), phase.kind === "ST" ? 0x108 : 0x118);
+      } else { assert.equal(phase.kind, "WK"); assert.equal(m.cpu.cpu.c, 22); assert.equal(m.cpu.cpu.sp, phase.sp - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x108); }
+    }
+    if (phase?.active && phase.kind === "WK" && m.pc === 0x108) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, phase.sp); assert.ok(m.cpu.cpu.a <= 3); assert.equal(phase.made, false); phase.made = true;
+      assert.equal(m.read(0x7c), 0); assert.equal(m.read(0x6b), 0); assert.equal(volume(image, "A").find("A.DAT").records, 0);
+    }
+    if (phase?.active && phase.kind === "WK" && m.pc === 0x113) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, phase.sp - 2); const record = phase.acks.length;
+      assert.ok(record < 32); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x7c), record + 1);
+      assert.equal(m.read(m.sym("CURDRV")), 0); assert.equal(m.read(m.sym("DSKCUR")), 0); assert.equal(m.read(0x5c) & 31, 1);
+      assert.equal(m.read(m.sym("BOOTDRV")), logged === "A" ? 0 : 1); assert.equal(m.read(m.sym("DEFDRV")), logged === "A" ? 0 : 1);
+      assert.equal(word(m, m.sym("DPHPTR")), m.sym("DPHTAB"));
+      const slot = Math.floor(record / (phase.allocationBytes / 128)), allocation = word(m, 0x5c + 16 + slot * 2); assert.ok(slot < 8);
+      if (!phase.allocations.has(slot)) { assert.ok(!phase.used.has(allocation)); assert.ok(![...phase.allocations.values()].includes(allocation)); phase.allocations.set(slot, allocation); }
+      for (const [knownSlot, value] of phase.allocations) assert.equal(word(m, 0x5c + 16 + knownSlot * 2), value);
+      const block = fileBlock(m, phase.original, record, 0x5c, "A"); if (!phase.expected.has(block)) phase.expected.set(block, new Uint8Array(512));
+      phase.expected.get(block).set(phase.input, (record & 3) * 128); phase.acks.push({ record, a: m.cpu.cpu.a, cr: m.read(0x7c), block }); physical();
+    }
+    const pollReturn = phase?.active && ((phase.kind === "ST" && m.pc === 0x108) || (phase.kind === "WK" && m.pc === 0x118));
+    if (pollReturn) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, phase.sp - 2); assert.equal(m.cpu.cpu.a, 0); phase.polls++;
+      assert.ok(phase.polls <= (phase.kind === "ST" ? N : 32));
+      if (phase.kind === "WK") { const cut = physical(); assert.deepEqual(cut.missing, []); assert.deepEqual(cut.entries, []); }
+    }
+    const ending = phase?.active && m.pc === 0x100 + phase.code.length - 1;
+    if (ending) {
+      publicContext(m); assert.equal(m.read(m.pc), 0xc9); assert.equal(m.cpu.cpu.sp, phase.sp); assert.equal(word(m, phase.sp), 0);
+      assert.equal(phase.polls, phase.kind === "ST" ? N : phase.kind === "WK" ? 32 : 0);
+      if (phase.kind === "WK") { assert.equal(phase.acks.length, 32); assert.equal(phase.expected.size, 8); physical(); }
+      phase.active = false; phase.returned++;
+    }
+    const result = baseStep();
+    if (ending) { assert.equal(m.pc, 0); assert.equal(m.cpu.cpu.sp, phase.sp + 2); }
+    return result;
+  };
+  const timed = (line, kind, code) => {
+    assert.ok(owner()); assert.equal(m.read(m.sym("PENDING")), 0); assert.equal(m.read(m.sym("RXFULL")), 0); assert.deepEqual(m.pending ?? [], []);
+    phase = { kind, code, entered: 0, active: false, made: false, makeWrites: 0, returned: 0, polls: 0, acks: [], expected: new Map(), allocations: new Map(), writes: [], before: Uint8Array.from(image) };
+    if (kind === "WK") assert.equal(volume(image, "A").find("A.DAT"), undefined);
+    const start = m.cycles; m.mark = m.output.length; m.type(`${line}\r`);
+    m.runUntil(owner, 900_000_000, "actual next shell input for measured command"); const cycles = m.cycles - start;
+    assert.equal(phase.entered, code ? 1 : 0); assert.equal(phase.returned, code ? 1 : 0);
+    if (kind !== "WK") assert.deepEqual(image, phase.before);
+    else {
+      const expectedCard = Uint8Array.from(phase.original); for (const [block, bytes] of phase.expected) expectedCard.set(bytes, block * 512);
+      assert.deepEqual(image, expectedCard); physical(); assert.equal(phase.makeWrites, 1);
+    }
+    assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []); assert.doesNotMatch(m.text(m.mark), /Bdos Err|Write pending|Write error|Disk reset failed/);
+    const receipt = { line, kind, cycles, entered: phase.entered, returned: phase.returned, polls: phase.polls, makeWrites: phase.makeWrites,
+      acknowledgements: phase.acks, initialUsedAllocations: phase.used && [...phase.used], newAllocations: [...phase.allocations], input: phase.input && Array.from(phase.input),
+      dataWrites: phase.writes.map(w => w.block), cardSHA256: createHash("sha256").update(image).digest("hex"), owner: { pc: m.pc, sp: word(m, m.sym("OLDSP")), back, buffer }, text: m.text(m.mark) };
+    commandReceipts.push(receipt); phase = null; return cycles;
+  };
+  try {
+    if (logged === "B") { timed("B:", null, null); assert.equal(m.read(m.sym("BOOTDRV")), 1); }
+    timed("A:NO", "NO", none); const a = timed("A:ST", "ST", st), b = timed("A:NO", "NO", none);
+    const worst = timed("A:WK A:A.DAT", "WK", wr), result = { nothing: Math.round((a - b) / N), worst };
+    console.log(JSON.stringify({ scope: "real shell 200-call and write-poll measurement", qualified: rom === QUALIFIED_POLL, logged, actualROM_SHA256: expectedROM, shellFileSHA256: createHash("sha256").update(SHELL.file).digest("hex"),
+      N, commands: commandReceipts, ...result })); return result;
+  } finally { m.step = baseStep; sd.commitWrite = commit; }
 }
 
 test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
-  const b = bdos11("B");
-  const a = bdos11("A");
-  t.diagnostic(JSON.stringify({ onB: b, onA: a }));
-  assert.ok(b.nothing - BASE11.nothing <= 60, `nothing changed: ${b.nothing} T, ${b.nothing - BASE11.nothing} over`);
-  assert.ok(b.worst / BASE11.onB - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / BASE11.onB - 1) * 100).toFixed(2)} % over`);
-  assert.ok(a.worst / BASE11.onA - 1 <= 0.05, `logged on A:: ${a.worst} T, ${((a.worst / BASE11.onA - 1) * 100).toFixed(2)} % over`);
+  const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
+  const b = bdos11("B"), a = bdos11("A");
+  t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
+  assert.deepEqual(qualifiedB, { nothing: 4954, worst: 8_735_058 });
+  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_206_025 });
+  for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
+    assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
+  assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
+  assert.ok(a.worst / qualifiedA.worst - 1 <= 0.05, `logged on A:: ${a.worst} T, ${((a.worst / qualifiedA.worst - 1) * 100).toFixed(2)} % over qualified`);
 });
 
 test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_000 }, (t) => {
