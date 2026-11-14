@@ -22,6 +22,8 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  const originalSource=sha(a.read('CAVBASIC.BAS')),originalCom=sha(a.read('CAVBASIC.COM'));
  let m=boot(image,{tms:true,matrix:true,width:80});
  const status=()=>m.screen()[23];
+ keys(m,'con pico 80\r','select the documented console width',()=>m.ready());
+ assert.equal(m.read(m.sym('VWID')),80);
  keys(m,'copy cavbasic.bas cavbook.bas\r','copy original to a working file',()=>m.ready());
  assert.equal(text(a),source);
  keys(m,`ted cavbook.bas ${bannerLine}\r`,'open the banner in TED',()=>/CAVBOOK\.BAS/.test(status())&&status().includes(`L${bannerLine} C1`));
@@ -46,6 +48,7 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  assert.deepEqual(m.violations,[]);
  // Boot the same disk with fresh RAM and reopen, proving saved disk contents.
  m=boot(image,{tms:true,matrix:true,width:80,ramFill:0x76});
+ keys(m,'con pico 80\r','restore 80 columns after power cycle',()=>m.ready());
  keys(m,`ted cavbook.bas ${bannerLine}\r`,'reopen after power cycle',()=>/CAVBOOK\.BAS/.test(status())&&m.screen().some(l=>l.includes(replacement)));
  keys(m,'\x11','finish at the shell',()=>m.ready());
  assert.deepEqual(m.violations,[]);
