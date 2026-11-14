@@ -701,27 +701,51 @@ test("function 45: FFh returns a BDOS error to the program, A = FFh and H the co
   assert.equal(m.read(m.sym("ERRMODE")), 0, "warm boot: the default again");
 });
 
-test("function 47's warm boot puts the lines written behind on the card before the chained program loads (KS36b)", async () => {
-  const image = await load(card(), ["say"]);
-  const m = start(image);
-  prepareCaller(m, "initial synthetic caller");
-  dirty(m);
-  [..."SAY", 0].forEach((v, i) => m.write(0x2100 + i, typeof v === "string" ? v.charCodeAt(0) : v));
+test("function 47 drains genuinely retained blocks before loading the chained program", async () => {
+  const image = await load(card(), ["say"]), m = start(image), say = await program("say");
+  prepareCaller(m, "nonreturning function 47 caller");
+  const p = retainedBlocks({ m, image, call: (fn, de) => bdos(m, fn, de) });
+  const mark = m.output.length;
+  bdos(m, 45, 0xfe);
+  [...Buffer.from("SAY"), 0, ...new Array(124).fill(0)].forEach((v, i) => m.write(0x2100 + i, v));
   bdos(m, 26, 0x2100);
-  let onCard = null;
-  const step = m.step.bind(m);
+  assert.equal(m.read(m.sym("ERRMODE")), 0xfe);
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+  assert.equal(m.text(mark).match(/Write pending/g)?.length, 1, "the deliberately returned-error episode is reported before chaining");
+  const step = m.step.bind(m), chain = m.sym("FNCHAIN"), dma = m.sym("CURDMA");
+  assert.deepEqual([m.read(chain), m.read(chain + 1), m.read(chain + 2)], [0x2a, dma & 255, dma >> 8]);
+  let released = 0, loads = 0, programs = 0;
+  const before = p.attempts.length;
   m.step = () => {
-    if (onCard === null && m.pc === m.sym("LOADCOM")) onCard = runOf(image, 0xc3) !== -1;
+    if (m.pc === chain) {
+      assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+      assert.ok(p.attempts.length > before && p.attempts.slice(before).every(a => !a.accepted), "ordinary entry still encountered refusal");
+      released++; p.backend.accepts = () => true;
+    }
+    if (m.pc === m.sym("LOADCOM")) {
+      publicContext(m); loads++;
+      assert.equal(p.state().queue.length, 0); assert.deepEqual(image, p.expectedImage, "both known blocks are durable before any chained program load");
+    }
+    if (m.pc === 0x100) {
+      publicContext(m); programs++;
+      assert.deepEqual(Uint8Array.from({ length: say.bytes.length }, (_, i) => m.read(0x100 + i)), Uint8Array.from(say.bytes));
+    }
     return step();
   };
-  m.mark = m.output.length;
-  m.write(0x3000, 0x0e); m.write(0x3001, 47); m.write(0x3002, 0xcd); m.write(0x3003, 0x05); m.write(0x3004, 0x00);
   publicContext(m);
-  m.cpu.cpu.sp = 0x3100;
-  m.cpu.cpu.pc = 0x3000;
-  m.runUntil(() => m.waitingForInput() && /\nSAY\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the chained SAY");
+  [0x0e, 47, 0xcd, 0x05, 0x00].forEach((v, i) => m.write(0x3000 + i, v));
+  m.cpu.cpu.sp = 0x3100; m.cpu.cpu.pc = 0x3000;
+  m.runUntil(() => ordinaryInput(m) && /\nSAY\r\nB(:\S*)?>$/.test(m.text(mark)), 400_000_000, "chained SAY returns naturally to actual normal input");
   m.step = step;
-  assert.equal(onCard, true, "the records were on the card when the CCP began to load SAY");
+  assert.equal(released, 1); assert.ok(loads >= 1); assert.equal(programs, 1);
+  assert.deepEqual(p.attempts.filter(a => a.accepted).map(a => a.block), [...p.expected.keys()]);
+  const out = m.text(mark);
+  assert.equal(out.match(/Write pending/g)?.length, 1); assert.equal(out.match(/Cache clear/g)?.length, 1); assert.doesNotMatch(out, /Write lost|Write error/);
+  assert.deepEqual(image, p.expectedImage); assert.equal(p.state().queue.length, 0);
+  assert.equal(volume(image, "B").read("Q.DAT").length, 0);
+  assert.deepEqual(m.violations, []);
+  console.log(JSON.stringify({ scope: "function47 full drain before chained load", functionalEntries: released, loads, programs, committedBlocks: p.attempts.filter(a => a.accepted).map(a => a.block), pendingNotices: out.match(/Write pending/g)?.length ?? 0, recoveredNotices: out.match(/Cache clear/g)?.length ?? 0 }));
 });
 
 test("a warm flush retains a refused first block and commits the next acknowledged block", async () => {
