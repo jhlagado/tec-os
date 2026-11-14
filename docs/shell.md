@@ -2,13 +2,14 @@
 
 The CCP in ROM is minimal. It runs a `.COM` or a `.SVC`, changes drive, and
 has CP/M's built-ins `DIR`, `ERA`, `REN`, `TYPE`, `SAVE` and `USER`, with
-`CON` and `UNLOAD`. It reads one line of `A:STARTUP.CMD` after a reset.
+`CON`, `CD` and `UNLOAD`. It reads one line of `A:STARTUP.CMD` after a reset.
 
 `SHELL.SVC` is a resident service that takes over the prompt through the
 ROM's shell hook. It holds what left the ROM:
 
 - the command history, ^W and ^N;
-- `CD`, which puts a volume on a drive, and the drive's volume in the prompt;
+- the drive's directory selection in the prompt, and `CD` with script-drive
+  protection; the same basic selection commands also work in ROM;
 - `DIR` with each file's size, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
   `PAUSE`;
 - the pager, `[more]` in `TYPE` and `DIR`;
@@ -19,8 +20,8 @@ Every other command it hands back to the ROM to run. The starter card's
 `STARTUP.CMD` starts with `SHELL.SVC`, so the shell is in after every reset.
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
-`SHELL.SVC` takes 15 pages: 3,840 bytes in memory, image and extra RAM
-together. Its history is a 256-byte ring in its own last page. Its own stack
+`SHELL.SVC` occupies 15 pages: a 3,840-byte allocation containing its image
+and extra RAM. Its history is a 256-byte ring in its own last page. Its own stack
 is 48 bytes, of which the census's workload uses 16 and the deepest path, the
 prompt's reading of the volume labels with every cache line changed and
 kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
@@ -41,8 +42,8 @@ The bare prompt behaves as a CP/M 2.2 CCP:
 - A function 47 line is echoed after the prompt and runs whole, as one
   command: `TYPE X!TYPE Y` is `TYPE` with the tail `X!TYPE Y`.
 - `DIR` and `TYPE` list without pausing, and `DIR` is the ROM's wide listing.
-- The prompt is the ROM's, `A>`; there is no `CD`, `CLS`, `ECHO` or `PAUSE`,
-  and no command changes a drive's volume.
+- The prompt is the ROM's, `A>`. `CD` queries, lists and changes directory
+  selections; `CLS`, `ECHO` and `PAUSE` require the shell.
 - Only the first line of `STARTUP.CMD` runs.
 
 TED's build line, `A:TAS NAME!A:TED`, needs the shell to come back to TED. With
@@ -140,7 +141,10 @@ again, as a typed script.
 
 ## Drives and volumes: `CD`
 
-A: to D: are equal drives, and each holds one of the card's volumes, or none.
+CD changes the directory presented by a drive by selecting a named on-card
+volume. A: to D: are equal drives, and each presents one volume, or none.
+The basic commands below also work at the bare ROM CCP; its prompt remains
+`A>` rather than showing the directory label.
 The prompt shows the drive and its volume: `B:GAMES>`, and with a user number
 `3B:GAMES>`; a drive with no volume shows `C:>`. A command not found on the
 current drive runs from A:, as if A: were always on the path.
@@ -158,7 +162,7 @@ on another drive is refused, naming that drive (`GAMES is on B:`), since a
 volume is never on two drives; no such volume is `NAME?`; a name of more than
 11 characters, a drive past D: or text after the name or after `?` is `CD?`;
 and a mount the ROM refuses, a volume too large for the drive's slot or a
-cache line that the card will not take, is `CANNOT MOUNT`, the drive keeping
+cache line that the card will not take, is `CD FAILED`, the drive keeping
 its volume. Each refusal sets FF00h. To take a volume off a drive, put
 another there: the drive then frees the first.
 
@@ -180,9 +184,12 @@ next drive change or warm boot; nothing on the starter card does it.
 **`CD` on A:.** The commands found on A: follow its volume: after `CD A:WORK`,
 `SAY` is `SAY?`, and `CD A:SYSTEM` brings them back. A reset keeps the drives'
 selection, so after `CD A:` to a volume with no `SHELL.SVC` (`CD A:GAMES` on
-the starter card) a reset gives the bare `A>` on that volume, with no shell and
-no `CD`. Power off and on gives the card's own drives and the shell again; on
-the web page, Power cycle.
+the starter card) a reset gives the bare `A>` on that volume. The ROM's `CD`
+remains available. Type `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
+to restore the shell. CD preserves the user area: if it is not user 0, type
+`USER 0` before loading the starter's shell. A reset itself starts in user 0.
+Power off and on gives the card's own drives and the shell again; on the
+web page, Power cycle.
 
 **`CD` in a script.** `CD` of the drive a script is read from is refused, `CD?`
 with FF00h, and the script goes on: its next record would be read from another

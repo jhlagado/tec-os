@@ -67,6 +67,7 @@ DEFDMA EQU $0080
 ; bytes moved above RAMBIOS (KS36c).
 ; PICO state, LINEBUF, VCLAIM and CONMOD
 ; remain below it.
+
 CDMTX EQU $01    ; matrix enabled
 CDTMS EQU $02    ; PICO cold probe
 CDGLC EQU $04    ; GLCD.SVC installed
@@ -98,21 +99,17 @@ BOOTSTK EQU $8000
 RAMBIOS EQU $BF00
 BIOSLEN EQU 17*3
 
-; Resident stack reservations and
-; service room from SVCLIM, with a
-; quarter free (KE-173). Historical bare
-; use: BIOS 18 bytes for warm flush, CCP
-; 18 bytes. A transient's eight call
-; levels plus return word require 18
-; bytes of CCP stack.
-; No NMI frame is counted. The test
-; takes NMI only with RETN at 0066h,
-; which TEC-OS does not install. CCP
-; guard plus stack stays 43 bytes.
 
-BDOSSTN EQU 54
-CCPSTN EQU 32    ; guard + stack stay 43
-BIOSSTN EQU 40
+; Resident stacks reserve recovery and
+; integrity call depth. Keep a quarter
+; free after service allowances and the
+; two-byte NMI frame. No arbitrary
+; handler or interrupt OS reentry is
+; reserved. The CCP guard is separate.
+
+BDOSSTN EQU 64
+CCPSTN EQU 48    ; CCP command stack
+BIOSSTN EQU 48
 
 MAXDRV EQU 4     ; drives A-D
 DPHSZ EQU 16

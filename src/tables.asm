@@ -57,7 +57,9 @@ LCDROWS:
 ; accepts NUL or SPACE after the
 ; keyword.
 
-KEYTAB: DB "DIR",0
+KEYTAB: DB "CD",0
+  DW RCMDCD
+  DB "DIR",0
   DW CMDDIR
   DB "TYPE",0
   DW CMDTYPE

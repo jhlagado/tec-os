@@ -28,6 +28,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 // each of 32 records, in cycles from the stub.
 // abi is the digest of abi.inc's declarations, its comment lines left out.
 const LANDING = { used: 14769, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
+const RECOVERY = { used: 15315, tpa: 47237, starter: 46533, entry: 0xb6c5 };
 
 // The console read's costs before write-behind followed the logged drive,
 // measured with these stubs on the ROM that landed A: coalescing and TED's
@@ -53,19 +54,19 @@ test("AC12 version fields", () => {
 test("AC1 rom and tpa", () => {
   const census = JSON.parse(readText("build/tecos/census.json"));
   const { used, regions } = census.rom;
-  assert.ok(used - LANDING.used <= 120, `${used} used, ${used - LANDING.used} over the shell's landing, the ceiling 120`);
+  assert.ok(used <= RECOVERY.used, `${used} used, the recovery ceiling ${RECOVERY.used}`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   const { symbols } = romFor();
   const at = symbols.get("CPEND");
   assert.ok(at >= symbols.get("RAMBIOS") + 51 && at < 0xc000, `CPEND at ${at.toString(16)}, above the RAM BIOS table`);
-  assert.equal(census.ram.tpa.bytes, LANDING.tpa, "the TPA as at the shell's landing");
+  assert.equal(census.ram.tpa.bytes, RECOVERY.tpa, "the shared recovery allocation");
   assert.equal(census.ram.tpa.card, "twoVolume", "the coalescing reference remains explicit");
-  assert.equal(census.ram.cards.twoVolume.tpa, LANDING.tpa);
-  assert.equal(census.ram.cards.starter.tpa, 46569, "the four-drive starter has its own figure");
-  assert.equal(census.ram.cards.starter.entry, 0xb6e9);
+  assert.equal(census.ram.cards.twoVolume.tpa, RECOVERY.tpa);
+  assert.equal(census.ram.cards.starter.tpa, RECOVERY.starter, "the four-drive starter has its own figure");
+  assert.equal(census.ram.cards.starter.entry, RECOVERY.entry);
   const m = boot(standardCard());
-  assert.equal(word(m, 6) - 0x100, LANDING.tpa, "(0006h) on the card");
+  assert.equal(word(m, 6) - 0x100, RECOVERY.tpa, "(0006h) on the card");
   console.log(`ROM ${used} used (+${used - LANDING.used}), ${16384 - used} free, TPA ${census.ram.tpa.bytes}, CPEND ${at.toString(16)}h`);
 });
 

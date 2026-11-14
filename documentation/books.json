@@ -1,0 +1,10 @@
+[
+  {
+    "id": "tec-os",
+    "title": "TEC-OS on the TEC-1G",
+    "label": "TEC-OS book",
+    "parent": "TEC-OS",
+    "description": "Using the machine, writing programs and understanding the operating system.",
+    "accent": "tec-os"
+  }
+]
