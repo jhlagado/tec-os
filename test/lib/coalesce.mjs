@@ -324,12 +324,23 @@ export const MUTANTS = {
       expectAt(b, i, [0x21, lo(sym("CWTYPE")), hi(sym("CWTYPE")), 0xcb, 0x46, 0x20, null]);
       put(i + 3, [0, 0, 0, 0]);
     }),
-  /** VFLUSH through CFLALL again, dropping failed lines. */
+  /** VFLUSH through the equivalent no-exclusion CFLALL alias. */
   cflall: () =>
     mutant((b, at, put, sym) => {
       const i = at("VFLUSH") + 7;
       expectAt(b, i, [0x3e, sym("NLINES"), ...call(sym("CFLUSH"))]);
       put(i, [...call(sym("CFLALL")), 0, 0]);
+    }),
+  /** Discard acknowledged cache ownership on a real SD write error while
+   * preserving the error return. Physical payload bytes are not erased. */
+  dropFailed: () =>
+    mutant((b, at, put, sym) => {
+      const i = at("CWR9"), tail = at("CODEEND");
+      expectAt(b, i, [0x4f, 0x3a, lo(sym("HKERR")), hi(sym("HKERR")), 0xb7]);
+      const code = [...call(sym("CDROP")), 0x4f, 0x3a, lo(sym("HKERR")), hi(sym("HKERR")), ...jp(sym("CWR9") + 4)];
+      assert.ok(tail + code.length <= b.length, "the error mutation fits the free tail");
+      put(tail, code);
+      put(i, [...jp(sym("CODEEND")), 0]);
     }),
   /** CPFLSH clearing CPEND before the write, by a jump to that code in the free tail. */
   cpendearly: () =>

@@ -17,6 +17,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ABI, ROOT, SHELL_SVC, abiDeclarations, boot, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { check, pinned } from "./lib/inputs.mjs";
+import { recoveryInput } from "./lib/public-caller.mjs";
 import { BUF, DMA, FCB, FCB2, FCB3, MUTANTS, backlog, card, closed8, dirBlocks, flushRun, pat, rig, same, three } from "./lib/coalesce.mjs";
 
 const sha = (b) => createHash("sha256").update(b).digest("hex");
@@ -838,6 +839,108 @@ test("AC4 mutants: FNCLSE and READDIR without their calls still keep the directo
   for (const m of [MUTANTS.fnclse(), MUTANTS.readdir()]) assert.deepEqual(cuts(m).problems, []);
 });
 
+/** A real private next-block request is refused before its data is accepted.
+ * This failure path never reaches CWRBH and leaves the original FCB untouched. */
+function refusedPrivateMove(rom) {
+  const r = three({ open: true, rom });
+  const block = lbaOf(r, 0), line = r.pending() - 1;
+  assert.ok(line >= 0 && line < r.m.sym("NLINES"));
+  const want = new Uint8Array(512);
+  for (let k = 0; k < 3; k++) want.set(pat(k), k * 128);
+  const old = Uint8Array.from(want); old.fill(0, 256);
+  const before = pendingFrame(r, block, line);
+  assert.deepEqual([before.block, before.pending, before.depth, before.busy], [block, line + 1, 0, 0]);
+  assert.deepEqual(before.queue, [line]);
+  assert.equal(before.dirty.filter(Boolean).length, 1);
+  assert.equal(before.dirty[line], 1);
+  assert.deepEqual(before.payload, want); assert.deepEqual(before.card, old);
+  const original = Uint8Array.from(r.image), fcb = Array.from({ length: 36 }, (_, i) => r.m.read(FCB + i));
+  const start = [...dirBlocks(r.image)][0], target = block + 1;
+  const record = (target - start) * 4;
+  const putWord = (name, value) => { r.m.write(r.m.sym(name), value & 255); r.m.write(r.m.sym(name) + 1, value >> 8); };
+  r.put(4); r.m.write(r.m.sym("DSKCUR"), 0);
+  putWord("DSKTRK", Math.floor(record / 64)); putWord("DSKSEC", record % 64); putWord("DSKDMA", DMA);
+  r.refuse();
+  const attempts = [], commit = r.m.sd.commitWrite.bind(r.m.sd);
+  r.m.sd.commitWrite = () => {
+    const { start, buffer } = r.m.sd.writeState;
+    assert.equal(start / 512, block);
+    assert.deepEqual(Uint8Array.from(buffer), want);
+    attempts.push(block);
+    commit();
+    assert.equal(r.m.sd.pendingResponse[0], 0x0d);
+  };
+  const step = r.m.step.bind(r.m);
+  let mapped = 0;
+  r.m.step = () => {
+    assert.notEqual(r.m.pc, r.m.sym("HKENTER"));
+    assert.notEqual(r.m.pc, r.m.sym("CWRBH"), "a refused pending prerequisite cannot accept the new record");
+    if (r.m.pc === r.m.sym("BWGET")) {
+      mapped++;
+      assert.deepEqual([r.m.read(r.m.sym("DSKCUR")), word(r.m, r.m.sym("BLKOFF")), r.m.read(r.m.sym("BLKSLOT")), word(r.m, r.m.sym("SDLBA")) + word(r.m, r.m.sym("SDLBA") + 2) * 65536], [0, target - start, 0, target]);
+    }
+    return step();
+  };
+  const entry = r.m.sym("BWRITE");
+  const result = r.stub([0x0e, 0, 0xcd, entry & 255, entry >> 8]);
+  r.m.step = step;
+  assert.equal(result.a, 1);
+  assert.equal(r.m.cpu.cpu.sp, 0x3000);
+  assert.equal(mapped, 1); assert.deepEqual(attempts, [block]);
+  assert.deepEqual(r.image, original);
+  assert.deepEqual(Array.from({ length: 36 }, (_, i) => r.m.read(FCB + i)), fcb);
+  const after = pendingFrame(r, block, line);
+  assert.deepEqual([after.block, after.depth, after.busy], [block, 0, 0]);
+  assert.deepEqual(after.queue, [line]);
+  assert.equal(after.dirty.filter(Boolean).length, 1); assert.equal(after.dirty[line], 1);
+  assert.deepEqual(after.payload, want); assert.deepEqual(after.card, old);
+  return { r, line, after };
+}
+
+/** Acknowledged data must retain cache ownership after refused maintenance.
+ * The functional result is checked independently, including the deliberately
+ * empty queue seen by function48 in the discard mutation. */
+function refusedPending(what, call, expectedReturn, rom) {
+  const r = three({ open: true, rom });
+  const block = lbaOf(r, 0), line = r.pending() - 1;
+  assert.ok(line >= 0 && line < r.m.sym("NLINES"));
+  const want = new Uint8Array(512);
+  for (let k = 0; k < 3; k++) want.set(pat(k), k * 128);
+  const old = Uint8Array.from(want); old.fill(0, 256);
+  const before = pendingFrame(r, block, line);
+  assert.deepEqual([before.block, before.pending, before.depth, before.busy], [block, line + 1, 0, 0]);
+  assert.deepEqual(before.queue, [line]);
+  assert.equal(before.dirty.filter(Boolean).length, 1); assert.equal(before.dirty[line], 1);
+  assert.deepEqual(before.payload, want); assert.deepEqual(before.card, old);
+  const original = Uint8Array.from(r.image), fault = r.refuse(), attempts = [];
+  const commit = r.m.sd.commitWrite.bind(r.m.sd);
+  r.m.sd.commitWrite = () => {
+    const { start, buffer } = r.m.sd.writeState;
+    assert.equal(start / 512, block);
+    assert.deepEqual(Uint8Array.from(buffer), want);
+    attempts.push(block);
+    commit();
+    assert.equal(r.m.sd.pendingResponse[0], 0x0d);
+  };
+  const result = call(r);
+  r.m.sd.commitWrite = commit;
+  assert.equal(result.a, expectedReturn, `${what}: its actual functional result`);
+  assert.ok(attempts.length > 0, "real backend refusals were reached");
+  assert.deepEqual(r.image, original);
+  const after = pendingFrame(r, block, line);
+  assert.deepEqual([after.depth, after.busy], [0, 0]);
+  assert.deepEqual(after.card, old);
+  return { what, r, fault, line, block, want, old, before, after };
+}
+
+function checkRetainedPending(c) {
+  assert.deepEqual(c.after.queue, [c.line], `${c.what}: acknowledged data retains cache ownership`);
+  assert.equal(c.after.pending, c.line + 1);
+  assert.equal(c.after.block, c.block);
+  assert.equal(c.after.dirty.filter(Boolean).length, 1); assert.equal(c.after.dirty[c.line], 1);
+  assert.deepEqual(c.after.payload, c.want);
+}
+
 // --- Failures and a card changed ---------------------------------------------
 
 // Each machine here may run at most this many cycles, so that a hang fails.
@@ -861,9 +964,17 @@ function movesOn(rom) {
 }
 
 test("AC5 failed flush as writing moves on", { timeout: 300_000 }, () => movesOn());
-test("AC5 mutant: CPFLSH clearing CPEND before the write loses records 0 to 3", { timeout: 300_000 }, () => {
-  assert.equal(atKeyWait(), "CCCCC");
-  assert.equal(atKeyWait(MUTANTS.cpendearly()), "----C", "records 0 to 3 not on the card at the key wait after the retry");
+test("AC5 mutant: early CPEND clear loses the marker of a refused private prerequisite", { timeout: 300_000 }, () => {
+  const checkMarker = c => assert.equal(c.after.pending, c.line + 1, "a refused private write retains its pending marker");
+  checkMarker(refusedPrivateMove());
+  const c = refusedPrivateMove(MUTANTS.cpendearly());
+  assert.equal(c.after.pending, 0, "the independent dirty queue still retains data, but its pending marker was cleared");
+  assert.throws(() => checkMarker(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], "a refused private write retains its pending marker");
+    assert.equal(error.actual, 0); assert.equal(error.expected, c.line + 1);
+    return true;
+  });
 });
 
 function keepsBlock(rom) {
@@ -889,8 +1000,20 @@ function keepsBlock(rom) {
 }
 
 test("AC5 function 48, mount and unmount keep the block", { timeout: 300_000 }, () => keepsBlock());
-test("AC5 mutant: VFLUSH through CFLALL drops the block, and the close names records not on the card", { timeout: 300_000 }, () => {
-  assert.throws(() => keepsBlock(MUTANTS.cflall()), /all three on the card/);
+test("AC5 CFLALL alias retains failures; actual discard fault loses acknowledged ownership", { timeout: 300_000 }, () => {
+  keepsBlock(MUTANTS.cflall());
+  checkRetainedPending(refusedPending("BDOS 48", r => r.bdos(48, 0), 0xff));
+  const c = refusedPending("BDOS 48", r => r.bdos(48, 0), 0, MUTANTS.dropFailed());
+  assert.deepEqual(c.after.queue, []);
+  assert.equal(c.after.pending, 0); assert.ok(c.after.dirty.every(v => !v));
+  assert.equal(c.after.block, 0xffffffff, "the tag was invalidated, not its physical payload erased");
+  assert.deepEqual(c.after.payload, c.want);
+  assert.throws(() => checkRetainedPending(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], "BDOS 48: acknowledged data retains cache ownership");
+    assert.deepEqual(error.actual, []); assert.deepEqual(error.expected, [c.line]);
+    return true;
+  });
 });
 
 test("AC5 console read keeps the block", { timeout: 300_000 }, () => {
@@ -899,37 +1022,81 @@ test("AC5 console read keeps the block", { timeout: 300_000 }, () => {
     ["the BIOS's CONIN", (r) => (r.m.enqueueInput("x"), r.bios(0x09, true)), 0x78],
     ["BDOS 11", (r) => r.bdos(11, 0), 0],
   ]) {
-    const r = three({ budget: BOUND });
-    const f = r.refuse();
-    assert.equal(read(r).a, a, `${what}: its result`);
-    assert.notEqual(r.pending(), 0, `${what}: the block still pending`);
-    assert.equal(r.state(), "---", `${what}: nothing on the card`);
-    f.on = false;
-    assert.equal(r.bdos(16).a, 0, `${what}: the close once the card takes writes`);
-    assert.equal(r.state(), "CCC", `${what}: all three on the card`);
+    const c = refusedPending(what, read, a);
+    checkRetainedPending(c);
+    c.fault.on = false;
+    const closed = c.r.bdos(16);
+    assert.ok(closed.a >= 0 && closed.a <= 3, `${what}: the healthy close succeeds`);
+    assert.deepEqual(volume(c.r.image, "A").read("P.DAT"), c.want.slice(0, 384));
+    assert.deepEqual(volume(c.r.image, "A").verify(), []);
+    assert.equal(c.r.pending(), 0);
   }
 });
 
-test("AC5 card changed", { timeout: 300_000 }, () => {
-  for (const [what, other] of [["another card", () => card()], ["the same card", (img) => img]]) {
-    const r = three({ budget: BOUND });
+test("AC5 card changed retains pending ownership until explicit reset", { timeout: 300_000 }, () => {
+  for (const [what, other] of [["another card", () => card()], ["the same card", img => img]]) {
+    const r = three({ budget: BOUND }), block = lbaOf(r, 0), line = r.pending() - 1;
+    assert.ok(line >= 0 && line < r.m.sym("NLINES"));
+    const want = new Uint8Array(512);
+    for (let k = 0; k < 3; k++) want.set(pat(k), k * 128);
+    const before = pendingFrame(r, block, line);
+    assert.deepEqual(before.payload, want);
+    assert.deepEqual(before.queue, [line]);
+    assert.equal(before.block, block); assert.equal(before.dirty[line], 1);
+    assert.equal(before.dirty.filter(Boolean).length, 1);
+    let initializations = 0, accepted = 0;
+    const dispatch = { warm: 0, diskReset: 0 };
+    const step = r.m.step.bind(r.m);
+    r.m.step = () => {
+      if (r.m.pc === r.m.sym("SDINIT")) initializations++;
+      if (r.m.pc === r.m.sym("WBOOTR")) dispatch.warm++;
+      if (r.m.pc === r.m.sym("FNRESET")) dispatch.diskReset++;
+      return step();
+    };
     r.m.sd = null;
-    assert.equal(r.bdos(11, 0).a, 0, `${what}: BDOS 11 with the card out`);
-    const img = other(r.image);
-    const copy = Uint8Array.from(img);
+    assert.equal(r.bdos(11, 0).a, 0, `${what}: status still returns with the card absent`);
+    const img = other(r.image), copy = Uint8Array.from(img);
     r.m.swapCard(img);
+    assert.equal(r.m.sd.ready, false, "insertion does not initialize the controller");
+    const commit = r.m.sd.commitWrite.bind(r.m.sd);
+    r.m.sd.commitWrite = () => {
+      commit();
+      if (r.m.sd.pendingResponse[0] === 0x05) accepted++;
+    };
     r.m.enqueueInput("x");
-    assert.equal(r.bdos(1, 0, true).a, 0x78, `${what}: BDOS 1 returns its key`);
-    for (const k of ["the close", "the close again"]) {
-      const c = r.bdos(16);
-      assert.deepEqual([c.a, c.h], [0xff, 1], `${what}: ${k} fails`);
+    assert.equal(r.bdos(1, 0, true).a, 0x78, `${what}: input returns its owned key`);
+    for (let n = 0; n < 2; n++) {
+      const closed = r.bdos(16);
+      assert.deepEqual([closed.a, closed.h], [0xff, 1]);
     }
-    assert.match(r.warm(), /Write lost/, `${what}: warm boot says Write lost`);
-    assert.doesNotMatch(r.warm(), /Write lost/, `${what}: the next warm boot nothing`);
-    assert.ok(same(img, copy), `${what}: the card put in unchanged before a reset`);
+    const output = r.warm();
+    assert.match(output, /Write pending/);
+    assert.match(output, /Disk reset failed\r\nEnter retries/);
+    assert.doesNotMatch(output, /Write lost/);
+    assert.ok(recoveryInput(r.m), "this is the actual retry console, not normal command dispatch");
+    const retained = pendingFrame(r, block, line);
+    assert.deepEqual([retained.depth, retained.busy, retained.pending], [1, 0, line + 1]);
+    assert.deepEqual(retained.queue, before.queue); assert.deepEqual(retained.dirty, before.dirty);
+    assert.equal(retained.block, block); assert.deepEqual(retained.payload, want);
+    assert.equal(initializations, 0); assert.equal(accepted, 0);
+    assert.deepEqual(img, copy, "no cached payload is replayed onto the inserted card");
+    const attempts = r.t.writes.length, idleDispatch = { ...dispatch }, until = r.m.cycles + 1_000_000;
+    r.m.runUntil(() => r.m.cycles >= until, 1_100_000, "passive recovery wait without an acknowledgement");
+    r.m.runUntil(() => recoveryInput(r.m), 1_000_000, "the same recovery input owner");
+    assert.equal(r.t.writes.length, attempts, "waiting does not automatically retry");
+    assert.deepEqual(dispatch, idleDispatch, "waiting does not dispatch another warm boot or disk reset");
+    assert.equal(initializations, 0); assert.equal(accepted, 0);
+    const idle = pendingFrame(r, block, line);
+    assert.deepEqual([idle.pending, idle.block, idle.queue, idle.dirty, idle.payload], [retained.pending, retained.block, retained.queue, retained.dirty, retained.payload]);
+    assert.deepEqual(img, copy);
     r.reset();
-    assert.ok(same(img, copy), `${what}: and after the reset's boot`);
-    assert.deepEqual(volume(img, "A").verify(), [], `${what}: the card verifies`);
+    assert.ok(initializations > 0, "the explicit reset now initializes the card");
+    const cold = pendingFrame(r, block, line);
+    assert.deepEqual(cold.queue, []); assert.ok(cold.dirty.every(v => !v));
+    assert.deepEqual([cold.pending, cold.depth, cold.busy], [0, 1, 0]);
+    assert.equal(r.m.lineBuf, r.m.sym("CMDBUF"));
+    assert.deepEqual(img, copy, "the reset boot reads without replaying discarded ownership");
+    assert.deepEqual(volume(img, "A").verify(), []);
   }
 });
 
@@ -947,20 +1114,40 @@ function inPlace(fn, flush, rom) {
   return same(rec, pat(1, 99)) ? "new" : same(rec, pat(1)) ? "old" : "other";
 }
 
-test("AC6 reset loses the pending block", () => {
+test("AC6 reset discards the latest pending update and unclosed metadata", () => {
   assert.equal(inPlace(34, false), "old", "BDOS 34 in place, then reset");
-  const r = three();
+  const r = three(), block = lbaOf(r, 0), line = r.pending() - 1;
+  assert.ok(line >= 0 && line < r.m.sym("NLINES"));
+  const expected = new Uint8Array(512);
+  for (let k = 0; k < 2; k++) expected.set(pat(k), k * 128);
+  const before = pendingFrame(r, block, line);
+  const pending = Uint8Array.from(expected); pending.set(pat(2), 256);
+  assert.deepEqual(before.card, expected); assert.deepEqual(before.payload, pending);
+  assert.deepEqual(before.queue, [line]); assert.equal(before.dirty[line], 1);
   r.reset();
-  assert.ok(named(r) <= 0, "the new file's records not named");
-  assert.equal(Buffer.from(r.image).indexOf(Buffer.from(pat(0))), -1, "no file data on the card");
+  const after = pendingFrame(r, block, line);
+  assert.deepEqual(after.card, expected, "use the captured absolute block, never the reset FCB map");
+  assert.deepEqual(after.queue, []); assert.ok(after.dirty.every(v => !v));
+  assert.equal(after.pending, 0);
+  assert.equal(named(r), 0, "the unclosed new extent still names no records");
   assert.deepEqual(volume(r.image, "A").verify(), []);
 });
 
 test("AC6 reset after a console read", () => {
   assert.equal(inPlace(34, true), "new");
 });
-test("AC6 mutant: FNSTAT without its call gives the old record after BDOS 11", () => {
-  assert.equal(inPlace(34, true, MUTANTS.fnstat()), "old");
+test("AC6 omitted FNSTAT drain leaves seven acknowledged blocks exposed to reset", () => {
+  const c = fullDrainCall(CONSOLE[3], MUTANTS.fnstat());
+  checkMissingDrain(c);
+  const beforeReset = Uint8Array.from(c.r.image);
+  c.r.reset();
+  assert.deepEqual(c.r.image, beforeReset, "reset does not flush the discarded dirty queue");
+  for (const [block, expected] of c.r.expected) assert.deepEqual(c.r.image.slice(block * 512, (block + 1) * 512), block === c.entry.block ? expected : c.r.original.slice(block * 512, (block + 1) * 512), "only the real entry-committed block survived");
+  const after = c.r.cacheState();
+  assert.deepEqual(after.queue, []); assert.ok(after.dirty.every(v => !v));
+  assert.equal(after.pending, 0);
+  assert.equal(named(c.r), 0, "raw record durability does not publish the unclosed file");
+  assert.deepEqual(volume(c.r.image, "A").verify(), []);
 });
 
 test("AC6 bdos 40", () => {
