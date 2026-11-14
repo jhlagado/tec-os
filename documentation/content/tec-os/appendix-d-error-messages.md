@@ -336,6 +336,8 @@ back (`241b438:src/cpm/bdos.asm:225-237`, `241b438:src/ram.asm:222-223`).
 | `Bdos Err On d: Bad Sector` | 1 | A volume extends beyond the card and the card rejects the command. The ROM reports that rejection before transferring block data. The source of a host-model test checks that no image byte changes in this case. | Use a card large enough for the container or build a smaller container with create. | [Chapter 18](18-card-blocks-and-volumes.md), `241b438:src/sd.asm:397-405`, `241b438:src/sd.asm:437-454`, `241b438:src/sd.asm:664-672`, `241b438:test/sd-range.test.mjs:86-107` |
 | `Bdos Err On d: Bad Sector` | 1 | A file's allocation map names a block beyond the volume. Login and delete skip that invalid reference rather than indexing outside the vector. Access to the block fails. | ERA can remove the damaged entry if the required directory writes succeed. Verify a copy before further changes. | [Chapter 20](20-a-file-through-the-bdos.md), `241b438:src/cpm/bdosrec.asm:699-700`, `241b438:src/cpm/bdoslog.asm:577-605`, `241b438:src/cpm/bdoscon.asm:76-92` |
 
+<a id="write-lost"></a>
+
 ## `Write pending`, `Cache clear` and `Write error`
 
 Failed acknowledged data now stays dirty and queued, including through warm
