@@ -189,13 +189,18 @@ writing the LCD, lighting the digits and beeping through the ROM's services by
 `abi.inc`'s names. `TIMES.BAS` beside it is a first BASIC program, with its
 keywords in capitals and its names in lower case: it asks a name and a number
 and prints that number's times table.
-The starter card also includes both Caverns versions: `CAVERNS` runs the
-assembly adventure; `TYPE CAVERNS.TXT` explains the BASIC comparison, which
-compiles under the shell with `BAZA CAVBASIC` (an experimental rule-set trial). Use `CON PICO 80`.
-[Trying Caverns](docs/caverns.md) records the differences and provenance.
 `BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
 runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
-an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
+an `.ASM` with TAS.
+
+The starter card also includes Caverns, the original BASIC adventure refined
+with its author’s approval: `CON PICO 80` selects the documented console, `CAVBASIC`
+runs it and `BAZA CAVBASIC` rebuilds it. `TYPE CAVERNS.TXT` gives the
+playing instructions. The assembly comparison remains in the repository for
+development; it is not another game on the starter.
+[Trying Caverns](docs/caverns.md) records the differences and provenance.
+
+`DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
 `DEMO.COM` and `DEMO` runs it, showing the LCD, the 7-segment digits, the
 8 × 8 LEDs and the PICO9918 in Graphics I, and `TED DEMO.ASM` reads it. `MON3.SVC` runs programs written for MON-3, the
 TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): first build the source-only
