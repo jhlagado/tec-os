@@ -282,49 +282,88 @@ function normalWarm(m) {
 const durable = state => ({ queue: state.queue, entries: state.entries, dirty: state.dirty });
 
 
-test("a card removed with dirty lines leaves the console working, and warm boot says the write was lost", async () => {
-  const m = start(card());
-  prepareCaller(m, "initial synthetic caller");
-  dirty(m);
-  m.sd = null; // the card out
-  m.mark = m.output.length;
-  m.cpu.cpu.pc = 0; // warm boot
-  let seen = -1;
-  for (let i = 0; i < 200 && !/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)); i += 1) {
-    const end = m.cycles + 20_000_000;
-    m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
-    if (m.waitingForInput() && m.output.length === seen) m.type("\r"); // a BDOS error's key
-    seen = m.output.length;
-  }
-  assert.match(m.text(m.mark), /Write lost/);
-  assert.match(m.text(m.mark), /\r\n[A-P](:\S*)?>$/);
-  assert.match(cmd(m, "USER 0"), /\r\n[A-P](:\S*)?>$/, "the console works");
+/** Read-only ordinary counted-input ownership, including its actual call site. */
+function ordinaryInput(m) {
+  if (!m.classicBankIn || !m.ready() || m.read(m.sym("ERRMODE")) !== 0 || m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY"))) return false;
+  const saved = word(m, m.sym("OLDSP")), back = word(m, saved);
+  return saved === m.sym("CSTKTOP") - 2 && m.lineBuf === m.sym("CMDBUF") &&
+    [0x0e, 10, 0xcd, 5, 0].every((v, i) => m.read(back - 5 + i) === v);
+}
+
+function lifecycleWarm(m) {
+  const mark = m.output.length; m.cpu.cpu.pc = 0;
+  m.runUntil(() => recoveryInput(m) || (ordinaryInput(m) && /\r\n[A-P](:\S*)?>$/.test(m.text(mark))), 400_000_000, "actual normal or bootstrap owner after card lifecycle warm");
+  return { outcome: recoveryInput(m) ? "recovery" : "normal", text: m.text(mark) };
+}
+
+/** Observe attempted ROM dispatches without changing card or guest state. */
+function lifecycleTrace(m) {
+  const events = { initializations: 0, writes: 0 };
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("SDINIT")) events.initializations++;
+    if (m.pc === m.sym("SDWRITE")) events.writes++;
+    return step();
+  };
+  return events;
+}
+
+test("a removed card retains acknowledged pending data while the normal console remains usable", async () => {
+  const image = card(), m = start(image);
+  prepareCaller(m, "removed-card caller");
+  const pending = latestBlock(m, image), before = Uint8Array.from(image), events = lifecycleTrace(m);
+  m.swapCard(null);
+  const warm = lifecycleWarm(m);
+  assert.equal(warm.outcome, "normal");
+  assert.equal(warm.text.match(/Write pending/g)?.length, 1); assert.doesNotMatch(warm.text, /Write lost/);
+  assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(image, before);
+  assert.equal(events.initializations, 0); assert.ok(events.writes > 0);
+  const attempted = events.writes, out = cmd(m, "USER 0");
+  m.runUntil(() => ordinaryInput(m), 400_000_000, "USER returns to actual ordinary input without a card");
+  assert.match(out, /\r\n[A-P](:\S*)?>$/); assert.doesNotMatch(out, /Write pending|Write lost/);
+  assert.ok(events.writes > attempted, "normal API activity retries the retained write");
+  assert.equal(events.initializations, 0); assert.equal(m.sd, null);
+  assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(image, before);
+  assert.deepEqual(m.violations, []);
 });
 
-test("the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)", async () => {
-  const image = card();
-  const m = start(image);
-  prepareCaller(m, "initial synthetic caller");
-  dirty(m);
-  m.sd = null; // the card out
-  const warm = () => {
-    m.mark = m.output.length;
-    m.cpu.cpu.pc = 0;
-    let seen = -1;
-    for (let i = 0; i < 200 && !/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)); i += 1) {
-      const end = m.cycles + 20_000_000;
-      m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
-      if (m.waitingForInput() && m.output.length === seen) m.type("\r");
-      seen = m.output.length;
-    }
-    return m.text(m.mark);
-  };
-  assert.match(warm(), /Write lost/);
-  m.swapCard(image);
-  assert.doesNotMatch(warm(), /Write lost/, "the failed lines were dropped: nothing is said twice");
-  m.reset();
-  m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
-  assert.equal(volume(image, "B").read("Q.DAT").length, 0, "the name was on the card, and its records are gone");
+test("same or different reinserted cards remain uninitialized until explicit cold reset", async () => {
+  for (const which of ["same", "different"]) {
+    const image = card(), m = start(image);
+    prepareCaller(m, `${which}: reinsert caller`);
+    const pending = latestBlock(m, image), oldCard = Uint8Array.from(image), events = lifecycleTrace(m);
+    m.swapCard(null);
+    const removed = lifecycleWarm(m);
+    assert.equal(removed.outcome, "normal"); assert.equal(removed.text.match(/Write pending/g)?.length, 1);
+    assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(image, oldCard);
+    const inserted = which === "same" ? image : card();
+    if (which === "different") volume(inserted, "B").write("OTHER.DAT", new Uint8Array(512).fill(0x6e));
+    const insertedBefore = Uint8Array.from(inserted), commits = [];
+    m.swapCard(inserted, { onSdWrite: card => commits.push(createHash("sha256").update(card).digest("hex")) });
+    assert.equal(m.sd.ready, false, "a new controller is not initialized by insertion");
+    const attempted = events.writes, reinserted = lifecycleWarm(m);
+    assert.equal(reinserted.outcome, "normal"); assert.doesNotMatch(reinserted.text, /Write pending|Write lost/);
+    assert.ok(events.writes > attempted); assert.equal(events.initializations, 0); assert.equal(m.sd.ready, false);
+    assert.deepEqual(commits, []); assert.deepEqual(inserted, insertedBefore); assert.deepEqual(image, oldCard);
+    assert.deepEqual(durable(cacheState(m)), durable(pending.state));
+    const beforeEmpty = events.writes, out = cmd(m, "");
+    m.runUntil(() => ordinaryInput(m), 400_000_000, "explicit empty command returns to actual normal input");
+    assert.doesNotMatch(out, /Write pending|Write lost/); assert.ok(events.writes > beforeEmpty);
+    assert.equal(events.initializations, 0); assert.equal(m.sd.ready, false); assert.deepEqual(commits, []);
+    assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(inserted, insertedBefore);
+    const mark = m.output.length; m.reset();
+    m.runUntil(() => ordinaryInput(m) && /\r\nA(:\S*)?>$/.test(m.text(mark)), 200_000_000, "explicit cold reset initializes the inserted card and reaches actual A input");
+    assert.equal(events.initializations, 1); assert.equal(m.sd.ready, true); assert.deepEqual(commits, []);
+    const after = cacheState(m); assert.equal(after.queue.length, 0); assert.ok(after.dirty.every(v => !v));
+    assert.deepEqual([after.pending, after.any, after.busy], [0, 0, 0]);
+    assert.deepEqual(inserted, insertedBefore, "cold reset never replays the old pending block to the inserted card");
+    assert.deepEqual(image, oldCard, "earlier physical versions remain, only the final uncommitted record is lost");
+    assert.notDeepEqual(image.slice(pending.block * 512, (pending.block + 1) * 512), pending.payload);
+    assert.equal(volume(image, "B").read("Q.DAT").length, 0, "unclosed record count was never published");
+    if (which === "different") assert.deepEqual(volume(inserted, "B").read("OTHER.DAT"), new Uint8Array(512).fill(0x6e));
+    console.log(JSON.stringify({ scope: "card reinsert and explicit cold reset", which, initializations: events.initializations, writeAttempts: events.writes, acceptedWrites: commits.length, physicalBlock: pending.block, beforeCold: reinserted.outcome, queueAfterCold: after.queue.length }));
+    assert.deepEqual(m.violations, []);
+  }
 });
 
 test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", async () => {
