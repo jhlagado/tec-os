@@ -15,7 +15,7 @@ import { rig } from "./lib/warmboot.mjs";
 import { finishBarePrompt, publicContext, recoveryInput } from "./lib/public-caller.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
 import { cacheState, fileBlock, retainedBlocks } from "./lib/cache-pending.mjs";
-import { at, shellCard, shellMachine } from "./lib/shell.mjs";
+import { SHELL, at, pageOf, shellCard, shellMachine } from "./lib/shell.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const pattern = (n, f) => Uint8Array.from({ length: n }, (_, i) => f(i) & 0xff);
@@ -1381,8 +1381,8 @@ function wbMachine(files, { rom, bare = false, image = four() } = {}) {
 
 const KEYWAIT_PROOFS = new WeakMap();
 
-/** Real WK calls, with expected drive selected by the external case, not guest state. */
-function keyWait(line, { logged = "A", pre = [], rom, target, defaultDrive = logged, pageZeroDrive: expectedPageZero, refuseUntilInput = false } = {}) {
+/** Observe a real WK programme through its owned F1 body. */
+function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = logged, pageZeroDrive: expectedPageZero, refuseUntilInput = false, jp = false, bare = false, files = {}, launch = line } = {}) {
   const explicit = /\s([A-P]):/.exec(line)?.[1];
   target ??= explicit ?? defaultDrive;
   const drive = target.charCodeAt(0) - 65, expectedDefault = defaultDrive.charCodeAt(0) - 65;
@@ -1390,9 +1390,9 @@ function keyWait(line, { logged = "A", pre = [], rom, target, defaultDrive = log
     assert.equal(target, logged, "the retained-backlog case uses actual logged ownership");
     assert.deepEqual(pre, [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], "the programme explicitly selects silent returned errors");
   }
-  const sym = (rom ?? romFor()).symbols, bytes = wk(sym.get("MAINLOOP"), { pre });
+  const sym = (rom ?? romFor()).symbols, bytes = wk(sym.get("MAINLOOP"), { pre, jp });
   const made = 0x100 + pre.length + 8, wrote = 0x100 + pre.length + 19;
-  const { m, writes, image, run } = wbMachine({ "WK.COM": bytes }, { rom });
+  const { m, writes, image, run } = wbMachine({ ...files, "WK.COM": bytes }, { rom, bare });
   if (logged !== "A") run(`${logged}:`);
   assert.equal(volume(image, target).find("W.DAT"), undefined, "the independent target has no pre-existing output file");
   const expected = new Map(), attempts = [], acknowledgements = [];
@@ -1532,19 +1532,27 @@ function keyWait(line, { logged = "A", pre = [], rom, target, defaultDrive = log
     return step();
   };
   const n0 = writes.n;
-  m.mark = m.output.length; m.type(`${line}\r`);
+  m.mark = m.output.length; m.type(`${launch}\r`);
   m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "real WK BDOS1 body after ordinary entry");
   assert.ok(beforeEntry); assert.equal(entered, 1); inputOwner();
   assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), m.sym("RETA"));
   const before = writes.n - n0, body = snapshot("FNCIN body");
+  return { m, sym, writes, image, target, logged, defaultDrive, refuseUntilInput, beforeEntry, body, before, n0, expected, original, input, inputOwner, snapshot, attempts, step, entered, make, allocated, initialUsed, f1CallerSP, acknowledgements,
+    get holding() { return holding; }, releaseCard() { holding = false; }, get returnedKey() { return returnedKey; } };
+}
+
+/** Real WK calls, with expected drive selected by the external case, not guest state. */
+function keyWait(line, options = {}) {
+  const session = wkSession(line, options);
+  const { m, sym, writes, image, target, logged, defaultDrive, refuseUntilInput, beforeEntry, body, before, n0, expected, original, input, inputOwner, snapshot, attempts, step, entered, make, allocated, initialUsed, f1CallerSP, acknowledgements } = session;
   let release = null;
   if (refuseUntilInput) {
-    assert.equal(holding, true); assert.equal(m.read(m.sym("ERRMODE")), 0xff);
+    assert.equal(session.holding, true); assert.equal(m.read(m.sym("ERRMODE")), 0xff);
     assert.deepEqual(body.state.entries.map(e => e.block), [...expected.keys()]);
     assert.deepEqual(body.missing, [...expected.keys()]); assert.equal(body.state.queue.length, 8);
     assert.deepEqual(image, original); assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted));
     release = { pc: m.pc, callerSP: f1CallerSP, refusedAttempts: attempts.length, queue: body.state.queue.slice(), cardSHA256: body.cardSHA256 };
-    holding = false;
+    session.releaseCard();
   } else { assert.equal(body.state.queue.length, 0); assert.deepEqual(body.missing, []); }
   assert.deepEqual(Uint8Array.from({ length: 3 }, (_, i) => m.read(sym.get("FNCIN") + 3 + i)), Uint8Array.from([0xcd, lo(sym.get("GETCHAR")), hi(sym.get("GETCHAR"))]));
   m.runUntil(() => m.pc === sym.get("GETCHAR"), 100_000_000, "F1's actual GETCHAR call");
@@ -1558,14 +1566,14 @@ function keyWait(line, { logged = "A", pre = [], rom, target, defaultDrive = log
   const waiting = writes.n - n0, atWait = snapshot("key wait");
   const keyDrained = atWait.state.queue.length === 0 && atWait.missing.length === 0;
   if (!refuseUntilInput) { assert.equal(atWait.state.queue.length, 0); assert.deepEqual(atWait.missing, []); }
-  else assert.equal(holding, false);
+  else assert.equal(session.holding, false);
   if (refuseUntilInput) assert.doesNotMatch(m.text(m.mark), /Write pending|Cache clear|Write error|Bdos Err|Disk reset failed/, "silent returned-error mode has not reported a deferred notice at the owned key wait");
   const expectedCard = Uint8Array.from(original);
   for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
   if (!refuseUntilInput || keyDrained) assert.deepEqual(image, expectedCard);
   m.type("x");
   m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
-  m.step = step; assert.equal(returnedKey, 1);
+  m.step = step; assert.equal(session.returnedKey, 1);
   assert.doesNotMatch(m.text(m.mark), /Bdos Err|Bad file|Disk reset failed/);
   assert.deepEqual(image, expectedCard); assert.equal(cacheState(m).queue.length, 0);
   assert.deepEqual(volume(image, target).verify(), []); assert.deepEqual(m.violations, []);
@@ -1573,7 +1581,7 @@ function keyWait(line, { logged = "A", pre = [], rom, target, defaultDrive = log
   assert.deepEqual([state.pending, state.any], state.any ? [0, 1] : [state.entries[0].line + 1, 0]);
   const result = { before, waiting }, proof = { target, logged, defaultDrive, classification, expectedClassification: target === logged ? "logged" : "coalesced", keyDrained, refusedBacklog: refuseUntilInput };
   KEYWAIT_PROOFS.set(result, proof);
-  console.log(JSON.stringify({ scope: "real WK known-byte/API-boundary measurement", line, ...proof, programmeEntries: entered, makeA: make.a, release, acceptedDataWrites: attempts.filter(a => a.accepted).length, refusedDataWrites: attempts.filter(a => !a.accepted).length, returnedKey, text: m.text(m.mark), notices: { pending: (m.text(m.mark).match(/Write pending/g) ?? []).length, clear: (m.text(m.mark).match(/Cache clear/g) ?? []).length, error: (m.text(m.mark).match(/Write error/g) ?? []).length }, initialUsedAllocations: [...initialUsed], newAllocations: [...allocated], F1CallerSP: f1CallerSP, GETCHARSP: getcharSP, acknowledgements: acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })), input: Array.from(input), beforeF1Entry: { queue: state.queue, missing: beforeEntry.missing, CPEND: state.pending, CANY: state.any, cardSHA256: beforeEntry.cardSHA256 }, FNCIN: { queue: body.state.queue, missing: body.missing, cardSHA256: body.cardSHA256 }, keyWait: { queue: atWait.state.queue, missing: atWait.missing, cardSHA256: atWait.cardSHA256 }, ...result }));
+  console.log(JSON.stringify({ scope: "real WK known-byte/API-boundary measurement", line, ...proof, programmeEntries: entered, makeA: make.a, release, acceptedDataWrites: attempts.filter(a => a.accepted).length, refusedDataWrites: attempts.filter(a => !a.accepted).length, returnedKey: session.returnedKey, text: m.text(m.mark), notices: { pending: (m.text(m.mark).match(/Write pending/g) ?? []).length, clear: (m.text(m.mark).match(/Cache clear/g) ?? []).length, error: (m.text(m.mark).match(/Write error/g) ?? []).length }, initialUsedAllocations: [...initialUsed], newAllocations: [...allocated], F1CallerSP: f1CallerSP, GETCHARSP: getcharSP, acknowledgements: acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })), input: Array.from(input), beforeF1Entry: { queue: state.queue, missing: beforeEntry.missing, CPEND: state.pending, CANY: state.any, cardSHA256: beforeEntry.cardSHA256 }, FNCIN: { queue: body.state.queue, missing: body.missing, cardSHA256: body.cardSHA256 }, keyWait: { queue: atWait.state.queue, missing: atWait.missing, cardSHA256: atWait.cardSHA256 }, ...result }));
   return result;
 }
 
@@ -1767,59 +1775,126 @@ test("S2-4 mutant: MDIR, a directory write off the logged drive not flushing fir
   assert.equal(r.byClose, 1, "the entry alone by the close's return");
 });
 
-/** From a script, WK writes A:K.DAT and waits with the card refusing, then returns with no warm boot; the card takes writes again; the script's next line is B:. Card writes before BDOS 14 selects B:. */
-function scriptDriveChange(rom) {
-  const sym = (rom ?? romFor()).symbols;
-  const script = Buffer.from("WK A:K.DAT\r\nB:\r\nA:\r\n\x1a", "latin1");
-  const { m, writes } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { jp: true }), "S.CMD": script }, { rom });
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("S.CMD\r");
-  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
-  f.on = true;
-  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
-  let at14 = null;
-  const n0 = writes.n;
-  const step = m.step.bind(m);
-  m.step = () => {
-    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14 && at14 === null) at14 = writes.n - n0;
-    return step();
+/** A real refused WK backlog survives through JP MAINLOOP and a drive change. */
+function driveChange({ rom, typed = false, omitted = false } = {}) {
+  const script = Buffer.from("WK A:W.DAT\r\nB:\r\n\x1a", "latin1");
+  const session = wkSession("A:WK A:W.DAT", { rom, pre: [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], refuseUntilInput: true, jp: true, bare: typed,
+    ...(typed ? {} : { launch: "S.CMD", files: { "S.CMD": script } }) });
+  const { m, sym, image, writes, original, expected, attempts, inputOwner, snapshot } = session;
+  const held = label => {
+    const cut = snapshot(label);
+    assert.equal(session.holding, true); assert.deepEqual(image, original);
+    assert.deepEqual(cut.state.entries.map(e => e.block), [...expected.keys()]);
+    assert.deepEqual(cut.missing, [...expected.keys()]); assert.equal(cut.state.queue.length, 8);
+    assert.deepEqual([cut.state.pending, cut.state.any], [0, 1]);
+    assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted));
+    return cut;
   };
+  inputOwner(); held("FNCIN before any release");
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(sym.get("FNCIN") + 3 + i)), [0xcd, lo(sym.get("GETCHAR")), hi(sym.get("GETCHAR"))]);
+  m.runUntil(() => m.pc === sym.get("GETCHAR"), 100_000_000, "WK GETCHAR before drive change");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  m.runUntil(() => m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE"), 100_000_000, "WK serial wait before drive change");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  assert.equal(m.read(sym.get("CONMOD")), 0); assert.equal(m.read(sym.get("PENDING")), 0); assert.equal(m.read(sym.get("RXFULL")), 0);
+  held("owned key wait remains refused");
   m.type("x");
-  m.runUntil(() => m.pc === sym.get("MAINLOOP"), 100_000_000, "WK's return");
-  f.on = false;
-  m.runUntil(() => at14 !== null, 400_000_000, "the script's B:");
-  m.step = step;
-  return at14;
+  m.runUntil(() => m.pc === sym.get("MAINLOOP"), 400_000_000, "WK's actual JP MAINLOOP");
+  publicContext(m); assert.equal(session.returnedKey, 1); held("actual programme jump");
+  const native = romFor(), flush = sym.get("VFLUSH"), bootDrive = sym.get("BOOTDRV");
+  const callBytes = [0xcd, lo(flush), hi(flush)], suffix = [0x78, 0x32, lo(bootDrive), hi(bootDrive), 0x5f, 0x0e, 14, 0xcd, 5, 0];
+  const pattern = Buffer.from([...callBytes, ...suffix]), offset = Buffer.from(native.rom).indexOf(pattern);
+  assert.ok(offset >= 0); assert.equal(Buffer.from(native.rom).indexOf(pattern, offset + 1), -1);
+  const site = 0xc000 + offset;
+  assert.deepEqual(Array.from({ length: pattern.length }, (_, i) => m.read(site + i)), [...(omitted ? [0, 0, 0] : callBytes), ...suffix]);
+  const shellBase = typed ? 0 : pageOf(m), shellInput = shellBase + SHELL.symbols.LBUF;
+  const expectedInputSP = typed ? sym.get("CSTKTOP") - 2 : shellBase + SHELL.symbols.STKTOP - 2;
+  const expectedInputBuffer = typed ? sym.get("CMDBUF") : shellInput;
+  if (typed) assert.equal(word(m, sym.get("SHOWN")), 0);
+  else {
+    assert.ok(shellBase > 0); assert.equal(word(m, sym.get("SHOWN")), shellBase + SHELL.symbols.TABLE);
+    assert.equal(m.read(shellBase), 0xc3);
+    assert.equal(word(m, shellBase + 1), sym.get("BENTRY"), "the loader installs the real BDOS page entry");
+    assert.equal(m.read(shellBase + 3), 1);
+    assert.equal(word(m, shellBase + 4), SHELL.symbols.REMOVE, "the installed removable header keeps its relative REMOVE offset");
+    assert.equal(String.fromCharCode(...Array.from({ length: 8 }, (_, i) => m.read(shellBase + 17 + i))), "SHELL   ");
+    const prompt = shellBase + SHELL.symbols.PROMPT;
+    assert.deepEqual(Array.from({ length: 16 }, (_, i) => m.read(shellBase + SHELL.symbols.TYPED + i)),
+      [0xcd, lo(prompt), hi(prompt), 0x3e, 127, 0x32, lo(shellInput), hi(shellInput), 0x11, lo(shellInput), hi(shellInput), 0x0e, 10, 0xcd, 5, 0]);
+  }
+  assert.equal(word(m, sym.get("FNTAB") + 20), sym.get("FNLINE"));
+  let inputCall = null, inputCalls = 0;
+  const observeStep = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 10) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, expectedInputSP);
+      const back = word(m, m.cpu.cpu.sp), buffer = m.cpu.cpu.d << 8 | m.cpu.cpu.e;
+      assert.equal(buffer, expectedInputBuffer);
+      assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+      if (typed) {
+        assert.equal(m.read(back), 0x18);
+        const displacement = m.read(back + 1);
+        assert.equal((back + 2 + (displacement < 128 ? displacement : displacement - 256)) & 0xffff, sym.get("MLGOT"));
+      } else assert.equal(back, shellBase + SHELL.symbols.TYPED + 16);
+      inputCall = { id: ++inputCalls, sp: m.cpu.cpu.sp, back, buffer, entered: false };
+    }
+    if (inputCall && !inputCall.entered && m.pc === sym.get("FNLINE")) {
+      assert.equal(word(m, sym.get("OLDSP")), inputCall.sp); assert.equal(word(m, inputCall.sp), inputCall.back);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, inputCall.buffer);
+      assert.equal(m.read(sym.get("HKDEP")), 1); assert.equal(m.read(sym.get("HKBUSY")), 0);
+      inputCall.entered = true;
+    }
+    return observeStep();
+  };
+  const ownedPrompt = () => inputCall?.entered && m.classicBankIn && m.ready() && m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE") &&
+    m.read(sym.get("ERRMODE")) === 0xff && m.read(sym.get("HKDEP")) === 1 && m.read(sym.get("HKBUSY")) === 0 &&
+    word(m, sym.get("OLDSP")) === inputCall.sp && word(m, inputCall.sp) === inputCall.back && m.lineBuf === inputCall.buffer;
+  let typedRelease = null, typedInputOwner = null;
+  if (typed) {
+    m.runUntil(() => ownedPrompt() && m.text(m.mark).endsWith("A>"), 400_000_000, "the actual bare A API10 owner still refusing");
+    typedInputOwner = { ...inputCall, pc: m.pc, text: m.text(m.mark) };
+    typedRelease = held("typed prompt before physical recovery");
+    assert.equal(m.read(bootDrive), 0); assert.equal(m.read(sym.get("ERRMODE")), 0xff);
+    session.releaseCard();
+    m.type("B:\r");
+  }
+  m.runUntil(() => m.pc === site, 400_000_000, "the actual private drive-change flush site");
+  publicContext(m); assert.equal(m.cpu.cpu.sp, sym.get("CSTKTOP"));
+  assert.equal(m.cpu.cpu.b, 1); assert.equal(m.read(bootDrive), 0);
+  assert.deepEqual(Array.from({ length: pattern.length }, (_, i) => m.read(site + i)), [...(omitted ? [0, 0, 0] : callBytes), ...suffix]);
+  const beforePrivate = typed ? snapshot("typed private site after key reads") : held("script private site before physical recovery");
+  if (typed) { assert.equal(beforePrivate.state.queue.length, 0); assert.deepEqual(beforePrivate.missing, []); }
+  else session.releaseCard();
+  const acceptedAtPrivate = writes.n;
+  m.runUntil(() => m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14, 400_000_000, "public F14 before ordinary entry can repair anything");
+  publicContext(m); assert.equal(m.cpu.cpu.e, 1); assert.equal(m.read(bootDrive), 1);
+  assert.equal(m.cpu.cpu.sp, sym.get("CSTKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), site + pattern.length);
+  const beforeSelect = snapshot("before public F14 ordinary entry"), privateWrites = writes.n - acceptedAtPrivate;
+  const completeBeforeSelect = beforeSelect.state.queue.length === 0 && beforeSelect.missing.length === 0;
+  const callsBeforeFinalPrompt = inputCalls;
+  m.runUntil(() => ownedPrompt() && inputCall.id > callsBeforeFinalPrompt && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the actual selected B API10 owner");
+  const finalInputOwner = { ...inputCall, pc: m.pc };
+  m.step = session.step;
+  assert.equal(session.returnedKey, 1); assert.equal(m.read(bootDrive), 1); assert.equal(m.read(sym.get("DEFDRV")), 1);
+  const expectedCard = Uint8Array.from(original); for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
+  assert.deepEqual(image, expectedCard); assert.equal(cacheState(m).queue.length, 0);
+  assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []);
+  assert.doesNotMatch(m.text(m.mark), /Bdos Err|Bad file|Disk reset failed/);
+  const compact = cut => ({ queue: cut.state.queue, missing: cut.missing, cardSHA256: cut.cardSHA256 });
+  console.log(JSON.stringify({ scope: "real WK private drive-change boundary", typed, omitted, programmeEntries: session.entered, acknowledgements: session.acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })),
+    initialUsedAllocations: [...session.initialUsed], newAllocations: [...session.allocated], input: Array.from(session.input), privateSite: site, opcode: omitted ? [0, 0, 0] : callBytes,
+    typedInputOwner, finalInputOwner, typedRelease: typedRelease && compact(typedRelease), beforePrivate: compact(beforePrivate), beforeSelect: compact(beforeSelect), privateWrites, completeBeforeSelect,
+    acceptedDataWrites: attempts.filter(a => a.accepted).length, refusedDataWrites: attempts.filter(a => !a.accepted).length, text: m.text(m.mark) }));
+  return { completeBeforeSelect, privateWrites };
 }
 
 test("S2-4 drive change flushes kept lines", () => {
-  assert.equal(scriptDriveChange(), 8, "from a script: the eight kept blocks written before BDOS 14");
-  // Typed, the line's own key reads write the kept lines before the drive change.
-  const sym = romFor().symbols;
-  const { m, writes } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { jp: true }) }, { bare: true });
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("A:WK A:K.DAT\r");
-  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
-  f.on = true;
-  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
-  m.type("x");
-  // WK comes back with no warm boot: the prompt follows its key directly.
-  m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the prompt");
-  f.on = false;
-  let at14 = null;
-  const n0 = writes.n;
-  const step = m.step.bind(m);
-  m.step = () => {
-    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14 && at14 === null) at14 = writes.n - n0;
-    return step();
-  };
-  at(m, "B:", { re: ANY_PROMPT });
-  m.step = step;
-  assert.equal(at14, 8, "typed: the kept blocks on the card before the drive is selected");
+  assert.equal(driveChange().completeBeforeSelect, true, "script: known data complete before ordinary public F14 entry");
+  assert.equal(driveChange({ typed: true }).completeBeforeSelect, true, "typed: key reads complete known data before selection");
 });
 
 test("S2-4 mutant: M1, no flush at a drive change, leaves a script's kept lines unwritten as it selects the drive", () => {
-  assert.equal(scriptDriveChange(MUTANTS.m1()), 0);
+  const native = driveChange(), changed = driveChange({ rom: MUTANTS.m1(), omitted: true });
+  assert.equal(native.completeBeforeSelect, true, "native positive reaches the same private boundary with full known data");
+  assert.equal(changed.completeBeforeSelect, false, "the omitted private flush leaves valid owned data off card before F14 entry");
 });
