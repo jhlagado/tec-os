@@ -11,9 +11,9 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createContainer, descriptorAt, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_SVC, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, TEST_CLOCK, boot, romFor, standardCard, volume, withDisplay } from "./lib/fixtures.mjs";
 import { mon3Svc } from "./lib/mon3.mjs";
-import { pinned } from "./lib/inputs.mjs";
+import { check, pinned } from "./lib/inputs.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
 import { cacheState, fileBlock } from "./lib/cache-pending.mjs";
 import { publicContext } from "./lib/public-caller.mjs";
@@ -1139,28 +1139,84 @@ test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_
 const TED_BASE = { type100: 14243.6, down40: 3740.2, save: 855.8 };
 const TED = pinned("TED.COM");
 
-test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
-  const image = standardCard();
-  const a = volume(image, "A");
-  a.write("TED.COM", new Uint8Array(readFileSync(TED.path)));
-  a.write("NOTES.TXT", Buffer.from(Array.from({ length: 60 }, (_, i) => `line ${i} of the file, some text to show`).join("\n") + "\n"), { text: true });
-  const m = boot(image, { tms: true, width: 80, matrix: true });
-  const keys = (s, what) => {
-    const c = m.cycles;
-    m.enqueueInput(s, "matrix");
-    m.runUntil(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput()), 2_000_000_000, what);
-    return m.cycles - c;
+/** Same editor, card and keys on each ROM; measure only at the editor's read loop. */
+function tedCost(selected) {
+  check(TED);
+  const image = standardCard(), lines = Array.from({ length: 60 }, (_, i) => `line ${i} of the file, some text to show`);
+  const initialText = lines.join("\n") + "\n", editedText = "x".repeat(100) + initialText;
+  const initialBytes = Buffer.from(initialText.replace(/\n/g, "\r\n")), editedBytes = Buffer.from(editedText.replace(/\n/g, "\r\n"));
+  const editor = new Uint8Array(readFileSync(TED.path)), a = volume(image, "A");
+  a.write("TED.COM", editor); a.write("NOTES.TXT", Buffer.from(initialText), { text: true });
+  withDisplay(image, { tms: true, width: 80, matrix: true });
+  const originalFiles = new Map(volume(image, "A").list().filter(f => f.name !== "NOTES.TXT").map(f => [f.name, volume(image, "A").read(f.name)]));
+  const m = new Machine({ ...selected, sdImage: image, tms: true, matrix: true, clock: TEST_CLOCK });
+  m.bootText = m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
+  const readLoop = 0x21bf, inputReturn = 0x21c7, wrapperReturn = 0x112, cursor = 0x24ca, length = cursor - 2;
+  assert.deepEqual(editor.slice(0xb, 0x17), Uint8Array.from([0xdd, 0xe5, 0xfd, 0xe5, 0xcd, 5, 0, 0xfd, 0xe1, 0xdd, 0xe1, 0xc9]));
+  assert.deepEqual(editor.slice(readLoop - 0x100, readLoop - 0x100 + 12), Uint8Array.from([0x11, 0xff, 0, 0x0e, 6, 0xcd, 0x0b, 1, 0xb7, 0x28, 0xf5, 0xc9]));
+  const owner = () => {
+    if (!m.classicBankIn || !m.waitingForInput() || m.read(m.sym("ERRMODE")) !== 0) return false;
+    if (m.symbols.has("HKDEP") && (m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY")) !== 0)) return false;
+    const saved = word(m, m.sym("OLDSP")); return word(m, saved) === wrapperReturn && word(m, saved + 6) === inputReturn;
   };
-  m.typeMatrix("ted notes.txt\r");
-  m.runUntilChecked(() => m.waitingForInput() && m.screen()[0].startsWith("line 0"), 800_000_000, "the editor");
-  let type100 = 0;
-  for (const ch of "x".repeat(100)) type100 += keys(ch, "a character");
-  let down40 = 0;
-  for (let i = 0; i < 40; i += 1) down40 += keys("\x04", "down");
-  const save = keys("\x13", "^S");
-  const ms = { type100: type100 / 4000, down40: down40 / 4000, save: save / 4000 };
-  t.diagnostic(JSON.stringify(ms));
-  for (const k of Object.keys(TED_BASE)) assert.ok(ms[k] / TED_BASE[k] - 1 <= 0.05, `${k}: ${ms[k].toFixed(1)} ms against ${TED_BASE[k]}`);
+  const sd = m.sd, commit = sd.commitWrite.bind(sd), step = m.step.bind(m), committed = Uint8Array.from(image), writes = [], keysSeen = [];
+  const descriptor = parseContainer(image).volumes.find(v => v.drive === "A"); assert.ok(descriptor);
+  let phase = "load", entered = 0;
+  sd.commitWrite = () => {
+    assert.ok(phase === "load" || phase === "save", "typing and navigation do not write the card");
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(block >= descriptor.start && block < descriptor.start + descriptor.length);
+    commit(); assert.equal(sd.pendingResponse[0], 0x05); committed.set(payload, start); assert.deepEqual(image, committed);
+    writes.push({ phase, block, payloadBase64: Buffer.from(payload).toString("base64") });
+  };
+  m.step = () => {
+    if (m.pc === 0x100) { publicContext(m); assert.equal(++entered, 1); assert.deepEqual(Uint8Array.from({ length: editor.length }, (_, i) => m.read(0x100 + i)), editor); }
+    return step();
+  };
+  const key = (s, what) => {
+    assert.ok(owner()); assert.deepEqual(m.pending ?? [], []); const start = m.cycles;
+    m.enqueueInput(s, "matrix"); m.runUntil(() => (m.pumpInput(), !m.pending?.length && owner()), 2_000_000_000, what);
+    const cycles = m.cycles - start;
+    keysSeen.push({ key: s.charCodeAt(0), cycles, pc: m.pc, savedSP: word(m, m.sym("OLDSP")), callerReturn: word(m, word(m, m.sym("OLDSP")) + 6), cursor: word(m, cursor), length: word(m, length), status: m.screen()[23] });
+    assert.deepEqual(image, committed); assert.deepEqual(m.violations, []); return cycles;
+  };
+  try {
+    m.typeMatrix("ted notes.txt\r");
+    m.runUntilChecked(() => owner() && m.screen()[0].startsWith("line 0"), 800_000_000, "the actual editor read-loop input");
+    assert.equal(entered, 1); assert.deepEqual([m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], [80, 24]);
+    assert.equal(word(m, cursor), 0); assert.equal(word(m, length), initialBytes.length);
+    assert.equal(Buffer.from(volume(image, "A").read("NOTES.TXT", { text: true })).toString(), initialText);
+    const loadedCard = Uint8Array.from(image); let type100 = 0, down40 = 0; phase = "type";
+    for (let i = 0; i < 100; i++) { type100 += key("x", "an inserted character at the editor read loop"); assert.equal(word(m, cursor), i + 1); assert.equal(word(m, length), initialBytes.length + i + 1); }
+    assert.deepEqual(image, loadedCard); phase = "down";
+    for (let i = 0; i < 40; i++) down40 += key("\x04", "down at the editor read loop");
+    const lineStart = 100 + lines.slice(0, 40).reduce((sum, line) => sum + line.length + 2, 0);
+    assert.ok(word(m, cursor) >= lineStart && word(m, cursor) <= lineStart + lines[40].length); assert.equal(word(m, length), editedBytes.length);
+    assert.match(m.screen()[23], /L41 C/); assert.deepEqual(image, loadedCard);
+    phase = "save"; const save = key("\x13", "save completed at the editor read loop");
+    const fs = volume(image, "A"), saved = fs.read("NOTES.TXT");
+    assert.equal(Buffer.from(fs.read("NOTES.TXT", { text: true })).toString(), editedText);
+    assert.deepEqual(saved.slice(0, editedBytes.length), new Uint8Array(editedBytes)); assert.ok(saved.slice(editedBytes.length).length > 0); assert.ok(saved.slice(editedBytes.length).every(byte => byte === 0x1a));
+    for (const [name, bytes] of originalFiles) assert.deepEqual(fs.read(name), bytes);
+    assert.ok(!fs.list().some(file => /\.(\$\$\$|BAK)$/.test(file.name))); assert.deepEqual(fs.verify(), []);
+    assert.equal(word(m, length), editedBytes.length); assert.ok(owner()); assert.deepEqual(image, committed);
+    const bank = m.expand ? m.expand[1] : m.banks[0]; assert.ok(Array.from(bank.slice(m.sym("CDIRTY") - 0x8000, m.sym("CDIRTY") - 0x8000 + m.sym("NLINES"))).every(byte => byte === 0));
+    if (m.symbols.has("HKDEP")) assert.deepEqual(cacheState(m).queue, []);
+    assert.deepEqual(m.violations, []); const ms = { type100: type100 / 4000, down40: down40 / 4000, save: save / 4000 };
+    console.log(JSON.stringify({ scope: "paired known-content TED editor cost", qualified: selected === QUALIFIED_POLL, actualROM_SHA256: createHash("sha256").update(selected.rom).digest("hex"), editorSHA256: createHash("sha256").update(editor).digest("hex"), inputText: initialText, expectedText: editedText, keys: keysSeen, writes, finalFiles: fs.list().map(file => ({ name: file.name, records: file.records, sha256: createHash("sha256").update(fs.read(file.name)).digest("hex") })), finalCardSHA256: createHash("sha256").update(image).digest("hex"), ms }));
+    return ms;
+  } finally { sd.commitWrite = commit; m.step = step; }
+}
+
+test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
+  const qualified = tedCost(QUALIFIED_POLL), current = tedCost(romFor());
+  t.diagnostic(JSON.stringify({ qualified, current }));
+  assert.deepEqual(qualified, { type100: 14_245.581, down40: 3742.13325, save: 858.5755 });
+  assert.ok(current.type100 / qualified.type100 - 1 <= 0.05, `typing: ${current.type100} ms against qualified ${qualified.type100}`);
+  assert.ok(current.down40 <= 4012.4675, `movement: ${current.down40} ms`);
+  assert.ok(current.save <= 1682.95425, `save: ${current.save} ms`);
 });
 
 // --- S2-12 The starter card ------------------------------------------------------
