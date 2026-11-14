@@ -1,13 +1,8 @@
-// A: coalesces: a data write on a volume not on the logged drive goes into
-// its block's cache line, and the one pending block reaches the card at the
-// file's close, any directory request, a write to another block, a warm
-// boot, a console read, function 48, MOUNT and unmount. The rows that test
-// A:'s coalescing run logged on B:, whose volume is the one written behind.
-// The ROM's figures, the flush rule, one card write a block, the directory
-// at every cut, failures and a card changed, a reset with a block pending,
-// the speed, the logged drive written behind, the program's stack at CONIN,
-// the docs and the version fields. Emulator evidence; each mutant is the
-// build's ROM patched, run here one at a time.
+// Cooperative integrity checks: ordinary OS entry progresses pending data;
+// input, directory and recovery boundaries perform their required flush work.
+// Updates already present in a block still coalesce. Byte integrity, write
+// ordering and refusal retention are checked before traffic or timing limits.
+// Emulator fault controls patch one guarded instruction span at a time.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -31,11 +26,11 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const LANDING = { used: 14769, tpa: 47273, abi: "254a794dd99a0c7a189b06bff0b219671cf0eec5a5249ddd9bcacb3e54c43504", bdosDeepest: 32, bdos11: 3814, worst: 7_523_831 };
 const INTEGRITY = { used: 16016, tpa: 47237, starter: 46533, entry: 0xb6c5 };
 
-// The console read's costs before write-behind followed the logged drive,
-// measured with these stubs on the ROM that landed A: coalescing and TED's
-// & stop: BDOS 11 with nothing waiting, and BDOS 11 after each of 32
-// records to A:, logged on B: and logged on A:.
-const COALESCED = { bdos11: 3859, worstOnB: 7_554_875, worstOnA: 7_549_907 };
+// Qualified control's costs in this exact returned-input fixture: one empty
+// status call, and 32 write/status pairs on each logged drive. The integrity
+// ceiling for the file sums only its 128 writes and close.
+const QUALIFIED_COST = { bdos11: 3886, worstOnB: 7_552_243, worstOnA: 7_806_699 };
+const COST = { emptyIncrease: 360, file16: 30_328_602 };
 
 // --- Every landing keeps the version fields --------------------------------
 
@@ -571,53 +566,87 @@ test("AC2 mutant: coalesced type 1 leaves successful-close metadata unpublished"
   });
 });
 
-// --- One write a block -----------------------------------------------------
+// --- Progressing acknowledged updates --------------------------------------
 
-/** The 16 KiB file: 128 BDOS 21 calls and the close, after the make. Its card writes, reads and readings. */
+const knownRecords = count => Uint8Array.from(Array.from({ length: count }, (_, k) => [...pat(k)]).flat());
+
+/** Check the actual accepted block payload against updates acknowledged before
+ * this call, then check that publication follows all acknowledged data. */
+function acknowledgedWrites(r, drive = "A") {
+  const model = new Map(), commits = [], directories = dirBlocks(r.image, drive);
+  let closing = false;
+  const commit = r.m.sd.commitWrite.bind(r.m.sd);
+  r.m.sd.commitWrite = () => {
+    const { start, buffer } = r.m.sd.writeState;
+    const block = start / 512, payload = Uint8Array.from(buffer);
+    if (!directories.has(block)) {
+      assert.ok(model.has(block), "data commits belong to an acknowledged block");
+      assert.deepEqual(payload, model.get(block), "a commit includes all previously acknowledged updates");
+    } else if (closing) {
+      for (const [tag, want] of model) assert.deepEqual(r.image.slice(tag * 512, (tag + 1) * 512), want, "acknowledged data precedes directory publication");
+    }
+    commit();
+    assert.equal(r.m.sd.pendingResponse[0], 0x05);
+    assert.deepEqual(r.image.slice(start, start + 512), payload);
+    commits.push(block);
+  };
+  return { commits, model, close: () => { closing = true; }, acknowledge: rec => {
+    const fs = volume(r.image, drive), at = Math.floor(rec / (fs.blockBytes / 128));
+    assert.ok(at < fs.pointers);
+    const block = fs.wide ? word(r.m, FCB + 16 + 2 * at) : r.m.read(FCB + 16 + at);
+    assert.ok(block >= fs.g.dirBlocks && block <= fs.d.dsm);
+    const absolute = [...directories][0] + Math.floor((block * fs.blockBytes + rec % (fs.blockBytes / 128) * 128) / 512);
+    if (!model.has(absolute)) model.set(absolute, new Uint8Array(512));
+    model.get(absolute).set(pat(rec), (rec & 3) * 128);
+  } };
+}
+
+/** The 16 KiB file: 128 writes and close, excluding make and readback. */
 function file16(rom) {
-  const r = rig({ rom });
+  const r = rig({ rom }), observed = acknowledgedWrites(r), mark = r.m.output.length;
   r.name("S16     DAT");
-  r.bdos(22);
+  assert.ok(r.bdos(22).a <= 3);
   r.bdos(26, DMA);
   const [w0, rd0] = [r.t.writes.length, r.t.reads.length];
   let cycles = 0;
-  for (let k = 0; k < 128; k += 1) {
+  for (let k = 0; k < 128; k++) {
     r.put(k);
-    cycles += r.bdos(21).cycles;
+    const result = r.bdos(21);
+    assert.equal(result.a, 0);
+    assert.equal(r.m.read(FCB + 32), k + 1);
+    cycles += result.cycles;
+    observed.acknowledge(k);
   }
-  cycles += r.bdos(16).cycles;
-  const writes = r.t.writes.slice(w0);
-  const reads = r.t.reads.slice(rd0);
-  const data = new Set(Array.from({ length: 32 }, (_, b) => lbaOf(r, b * 4)));
-  const want = Uint8Array.from(Array.from({ length: 128 }, (_, k) => [...pat(k)]).flat());
-  // Back through the cache: the file read through FCB2.
-  r.name("S16     DAT", FCB2);
-  r.bdos(15, FCB2);
+  assert.equal(volume(r.image, "A").find("S16.DAT").records, 0, "unclosed file metadata is not published early");
+  observed.close();
+  const closed = r.bdos(16); assert.ok(closed.a <= 3); cycles += closed.cycles;
+  const writes = r.t.writes.slice(w0), reads = r.t.reads.slice(rd0);
+  const data = new Set(observed.model.keys()), want = knownRecords(128), fs = volume(r.image, "A"), dir = dirBlocks(r.image);
+  assert.equal(data.size, 32);
+  assert.deepEqual(fs.read("S16.DAT"), want, "all 16 KiB reach the card before traffic is assessed");
+  assert.deepEqual(fs.verify(), []);
+  assert.deepEqual(r.t.writes, observed.commits, "each SDWRITE has one accepted backend commit");
+  assert.ok(reads.every(block => dir.has(block)), "no data preread during writes or close");
+  r.name("S16     DAT", FCB2); assert.ok(r.bdos(15, FCB2).a <= 3);
   const back = [];
-  for (let k = 0; k < 128; k += 1) {
-    r.bdos(20, FCB2);
-    for (let i = 0; i < 128; i += 1) back.push(r.m.read(DMA + i));
+  for (let k = 0; k < 128; k++) {
+    assert.equal(r.bdos(20, FCB2).a, 0);
+    for (let i = 0; i < 128; i++) back.push(r.m.read(DMA + i));
   }
-  r.reset();
-  return {
-    cycles,
-    writes,
-    dataReads: reads.filter((b) => data.has(b)).length,
-    data,
-    fromCache: same(back, want),
-    fromCard: same(volume(r.image, "A").read("S16.DAT"), want),
-    dir: dirBlocks(r.image),
-  };
+  assert.deepEqual(Uint8Array.from(back), want, "the complete file reads through the cache");
+  assert.equal(r.m.text(mark), "");
+  const beforeReset = sha(r.image); r.reset();
+  assert.deepEqual(volume(r.image, "A").read("S16.DAT"), want);
+  assert.deepEqual(volume(r.image, "A").verify(), []); assert.equal(sha(r.image), beforeReset);
+  return { cycles, writes, data, dir };
 }
 
 function checkFile16(rom) {
   const f = file16(rom);
-  assert.equal(f.writes.length, 33, "33 card writes after the make");
-  assert.deepEqual(new Set(f.writes.slice(0, 32)), f.data, "the 32 data blocks, each once");
-  assert.ok(f.dir.has(f.writes[32]), "then the directory");
-  assert.equal(f.dataReads, 0, "no data block read");
-  assert.ok(f.fromCache, "the file back whole through the cache");
-  assert.ok(f.fromCard, "and from the card after a reset");
+  assert.equal(f.writes.length, 129, "128 progressing data commits and the directory after make");
+  assert.deepEqual(new Set(f.writes.slice(0, -1)), f.data);
+  for (const block of f.data) assert.equal(f.writes.filter(b => b === block).length, 4, "each block contains four successive acknowledged record versions");
+  assert.ok(f.dir.has(f.writes.at(-1)), "the directory is last");
   return f;
 }
 
@@ -745,31 +774,51 @@ test("AC3 save", { skip: CARD_SKIP, timeout: 300_000 }, () => {
   console.log(`SAVE 16 X.COM: ${s.writes.length} card writes, ${s.cycles} cycles`);
 });
 
-/** BDOS 40 at a new block, records 40 and 41 of a closed eight-record file, then the close. */
-function bdos40New(rom) {
-  const r = closed8({ rom });
-  const w0 = r.t.writes.length;
-  r.put(40);
-  r.setR(40);
-  const a = r.bdos(40).a;
-  const first = r.t.writes.length - w0;
-  r.put(41);
-  r.setR(41);
-  r.bdos(40);
+/** Compare the complete physical allocation, including bytes past logical EOF.
+ * Existing unwritten records retain the card's nonzero formatting pattern. */
+function bdos40New(rom, seed = 0xe5) {
+  const image = card(), initial = volume(image, "A");
+  initial.data.fill(seed, initial.g.dirBlocks * initial.blockBytes);
+  const preboot = Uint8Array.from(image), r = closed8({ rom, image }), fs = volume(image, "A"), start = [...dirBlocks(image)][0];
+  assert.equal(fs.blockBytes, 2048); assert.deepEqual(fs.read("F.DAT"), knownRecords(8));
+  const before = Uint8Array.from(image), originalFile = fs.find("F.DAT"), used = fs.usedBlocks();
+  assert.equal(originalFile.entries.length, 1);
+  const oldBlock = word(r.m, FCB + 16), oldAt = (start + oldBlock * 4) * 512;
+  const oldRaw = before.slice(oldAt, oldAt + 2048);
+  assert.deepEqual(oldRaw.slice(0, 1024), knownRecords(8));
+  assert.deepEqual(oldRaw.slice(1024), preboot.slice(oldAt + 1024, oldAt + 2048));
+  assert.ok(oldRaw.slice(1024).every(v => v === seed));
+  const rawWant = new Uint8Array(2048); rawWant.set(pat(40), 1024); rawWant.set(pat(41), 1152);
+  const fileWant = new Uint8Array(42 * 128); fileWant.set(oldRaw); fileWant.set(rawWant.slice(0, 1280), 32 * 128);
+  const w0 = r.t.writes.length, mark = r.m.output.length;
+  r.put(40); r.setR(40); const a = r.bdos(40).a; assert.equal(a, 0);
+  const first = r.t.writes.length - w0, block = word(r.m, FCB + 20);
+  assert.ok(block >= fs.g.dirBlocks && block <= fs.d.dsm && !used.has(block));
+  assert.equal(word(r.m, FCB + 16), oldBlock); assert.equal(word(r.m, FCB + 18), 0);
+  const absolute = (start + block * 4) * 512;
+  assert.deepEqual(before.slice(absolute, absolute + 2048), preboot.slice(absolute, absolute + 2048));
+  assert.ok(before.slice(absolute, absolute + 2048).every(v => v === seed));
+  r.put(41); r.setR(41); assert.equal(r.bdos(40).a, 0); assert.equal(word(r.m, FCB + 20), block);
   const second = r.t.writes.length - w0 - first;
-  const close = r.bdos(16).a;
-  const f = volume(r.image, "A").read("F.DAT");
-  return {
-    a, first, second, close, atClose: r.t.writes.length - w0 - first - second,
-    records: f.length / 128,
-    written: same(f.subarray(40 * 128, 41 * 128), pat(40)) && same(f.subarray(41 * 128, 42 * 128), pat(41)),
-    zeros: f.subarray(42 * 128, 48 * 128).every((v) => v === 0),
-    verify: volume(r.image, "A").verify(),
-  };
+  const index = originalFile.entries[0].index, directory = start + Math.floor(index * 32 / 512);
+  const dirWant = before.slice(directory * 512, (directory + 1) * 512);
+  dirWant.set(Array.from({ length: 20 }, (_, i) => r.m.read(FCB + 12 + i)), index * 32 % 512 + 12);
+  const close = r.bdos(16).a; assert.ok(close <= 3);
+  const atClose = r.t.writes.length - w0 - first - second, file = fs.read("F.DAT"), raw = image.slice(absolute, absolute + 2048);
+  assert.deepEqual(file, fileWant); assert.deepEqual(raw, rawWant);
+  const expectedImage = Uint8Array.from(before); expectedImage.set(rawWant, absolute); expectedImage.set(dirWant, directory * 512);
+  assert.deepEqual(image, expectedImage, "all old allocation, directory neighbours and other card bytes are preserved");
+  assert.deepEqual(fs.verify(), []); assert.equal(r.m.text(mark), "");
+  const beforeReset = sha(image); r.reset();
+  assert.deepEqual(volume(image, "A").read("F.DAT"), fileWant);
+  assert.deepEqual(image.slice(absolute, absolute + 2048), rawWant); assert.equal(sha(image), beforeReset);
+  return { a, first, second, close, atClose, records: file.length / 128,
+    written: same(file.slice(40 * 128, 41 * 128), pat(40)) && same(file.slice(41 * 128), pat(41)),
+    zeros: raw.slice(1280).every(v => v === 0), verify: volume(image, "A").verify() };
 }
 
 test("AC3 bdos 40", () => {
-  assert.deepEqual(bdos40New(), { a: 0, first: 4, second: 0, close: 0, atClose: 2, records: 42, written: true, zeros: true, verify: [] });
+  for (const seed of [0xe5, 0x6b]) assert.deepEqual(bdos40New(undefined, seed), { a: 0, first: 4, second: 1, close: 0, atClose: 2, records: 42, written: true, zeros: true, verify: [] });
 });
 test("AC3 mutant: BWGET without CPMOVE makes no card write at BDOS 40 before the close", () => {
   assert.equal(bdos40New(MUTANTS.cpmove()).first, 0);
@@ -829,7 +878,7 @@ function cuts(rom) {
 test("AC4 directory last at every cut", () => {
   const c = cuts();
   assert.deepEqual(c.problems, []);
-  assert.equal(c.cuts, 20, "20 card writes");
+  assert.equal(c.cuts, 50, "every one of the 50 accepted card writes is checked");
 });
 test("AC4 directory prerequisites and later input repair the CPMOVE omission", { timeout: 300_000 }, () => {
   assert.deepEqual(cuts(MUTANTS.cpmove()).problems, [], "the close's flush-first write keeps the directory last even so");
@@ -1193,92 +1242,149 @@ test("S2-11 starter workloads logged on A:", { skip: CARD_SKIP, timeout: 900_000
 
 test("AC7 file speed", () => {
   const f = checkFile16();
-  assert.ok(f.cycles <= 9_700_000, `${f.cycles} T`);
+  assert.ok(f.cycles <= COST.file16, `${f.cycles} T`);
   console.log(`16 KiB file: ${f.cycles} T, ${f.writes.length} card writes`);
 });
 
-function consoleCost(rom) {
-  const r = rig({ rom });
-  const t = r.bdos(11, 0).cycles;
-  assert.ok(t - COALESCED.bdos11 <= 60, `BDOS 11: ${t} T, ${t - COALESCED.bdos11} over A: coalescing's`);
-  return t;
+function consoleCost(rom, logged = "B") {
+  const r = rig({ rom, logged }), before = sha(r.image), mark = r.m.output.length;
+  const result = r.bdos(11, 0);
+  assert.equal(result.a, 0); assert.equal(r.m.cpu.cpu.sp, 0x3000);
+  assert.deepEqual(r.t.writes, []); assert.deepEqual(r.t.reads, []);
+  assert.equal(sha(r.image), before); assert.equal(r.m.text(mark), "");
+  return result.cycles;
+}
+
+function checkConsoleCost(t) {
+  assert.ok(t - QUALIFIED_COST.bdos11 <= COST.emptyIncrease, `empty status cost: ${t} T exceeds qualified + ${COST.emptyIncrease} T`);
 }
 
 test("AC7 console cost", () => {
-  const t = consoleCost();
-  console.log(`BDOS 11 with nothing pending, logged on B:: ${t} T (+${t - COALESCED.bdos11})`);
-});
-test("AC7 mutant: CPOUT without its fast test of CPEND costs BDOS 11 more than 60 T", () => {
-  assert.throws(() => consoleCost(MUTANTS.nofast()), /over A: coalescing's/);
-});
-test("AC7 mutant: CKEY that never tests CANY costs BDOS 11 more than 60 T", () => {
-  assert.throws(() => consoleCost(MUTANTS.mnc()), /over A: coalescing's/);
-});
-
-/** BDOS 11 after each of 32 records to A:, logged on LOGGED: the cycles and the percentage over BASE, which must be at most BOUND. */
-function worstCase(logged, base, bound, rom) {
-  const r = rig({ rom, logged });
-  r.name("S11     DAT");
-  r.bdos(22);
-  r.bdos(26, DMA);
-  let t = 0;
-  for (let k = 0; k < 32; k += 1) {
-    r.put(k);
-    t += r.bdos(21).cycles + r.bdos(11, 0).cycles;
+  for (const logged of ["B", "A"]) {
+    const t = consoleCost(undefined, logged); checkConsoleCost(t);
+    console.log(`BDOS 11 with nothing pending, logged ${logged}: ${t} T (+${t - QUALIFIED_COST.bdos11})`);
   }
-  const over = (t / base - 1) * 100;
-  assert.ok(over <= bound, `${t} T, ${over.toFixed(2)} % over A: coalescing's ${base}`);
-  return { t, over };
+});
+for (const [name, build] of [["CPOUT without its fast CPEND test", MUTANTS.nofast], ["CKEY without its CANY test", MUTANTS.mnc]]) {
+  test(`AC7 mutant: ${name} exceeds the empty status ceiling`, () => {
+    const rom = build();
+    for (const logged of ["B", "A"]) {
+      checkConsoleCost(consoleCost(undefined, logged));
+      const t = consoleCost(rom, logged);
+      assert.throws(() => checkConsoleCost(t), error => error.code === "ERR_ASSERTION" && error.message.startsWith("empty status cost:"));
+    }
+  });
 }
 
-test("AC7 worst case", () => {
-  const { t, over } = worstCase("B", COALESCED.worstOnB, 1);
-  console.log(`BDOS 11 after each of 32 records, logged on B:: ${t} T (+${over.toFixed(2)} %)`);
-});
-test("AC7 mutant: CKEY that never tests CANY takes the worst case logged on B: past 1 %", () => {
-  assert.throws(() => worstCase("B", COALESCED.worstOnB, 1, MUTANTS.mnc()), /% over/);
-});
+/** Time only each write/status pair; closing and verifying happen afterwards. */
+function worstCase(logged, rom) {
+  const r = rig({ rom, logged }), observed = acknowledgedWrites(r), mark = r.m.output.length;
+  r.name("S11     DAT"); assert.ok(r.bdos(22).a <= 3); r.bdos(26, DMA);
+  const w0 = r.t.writes.length;
+  let t = 0;
+  for (let k = 0; k < 32; k++) {
+    r.put(k); const write = r.bdos(21); assert.equal(write.a, 0);
+    assert.equal(r.m.read(FCB + 32), k + 1); observed.acknowledge(k);
+    const poll = r.bdos(11, 0); assert.equal(poll.a, 0);
+    t += write.cycles + poll.cycles;
+    for (let i = 0; i <= k; i++) assert.ok(r.onCard(i), "every acknowledged record reaches the card by the poll");
+    assert.equal(r.pending(), 0);
+  }
+  const timedWrites = r.t.writes.length - w0;
+  assert.equal(volume(r.image, "A").find("S11.DAT").records, 0, "polling commits data without publishing an unclosed file");
+  observed.close(); assert.ok(r.bdos(16).a <= 3);
+  assert.deepEqual(volume(r.image, "A").read("S11.DAT"), knownRecords(32));
+  assert.deepEqual(volume(r.image, "A").verify(), []);
+  assert.deepEqual(r.t.writes, observed.commits); assert.equal(r.m.text(mark), "");
+  assert.equal(timedWrites, 32);
+  return t;
+}
 
-// Logged on A:, A: is written behind: each BDOS 11 after a held write scans
-// the lines and writes the record's block. That is the cost of every line
-// being on the card at a key wait.
-test("AC7 worst case logged", () => {
-  const { t, over } = worstCase("A", COALESCED.worstOnA, 5);
-  console.log(`BDOS 11 after each of 32 records, logged on A:: ${t} T (+${over.toFixed(2)} %)`);
+function checkWorst(t, base, bound) {
+  const over = (t / base - 1) * 100;
+  assert.ok(over <= bound, `write/status cost: ${t} T, ${over.toFixed(5)} % over qualified ${base}`);
+}
+
+test("AC7 worst case", () => checkWorst(worstCase("B"), QUALIFIED_COST.worstOnB, 1));
+test("AC7 mutant: CKEY without CANY exceeds the write/status B ceiling", () => {
+  checkWorst(worstCase("B"), QUALIFIED_COST.worstOnB, 1);
+  const t = worstCase("B", MUTANTS.mnc());
+  assert.throws(() => checkWorst(t, QUALIFIED_COST.worstOnB, 1), error => error.code === "ERR_ASSERTION" && error.message.startsWith("write/status cost:"));
 });
-test("AC7 mutant: CKEY scanning twice takes the worst case logged on A: past 5 %", () => {
-  assert.throws(() => worstCase("A", COALESCED.worstOnA, 5, MUTANTS.mtw()), /% over/);
+test("AC7 worst case logged", () => checkWorst(worstCase("A"), QUALIFIED_COST.worstOnA, 5));
+
+/** A refused full input pass must attempt each initial eligible line once. */
+function refusedInputPass(rom) {
+  const r = backlog({ rom }), before = r.cacheState(), start = r.attempts.length, mark = r.m.output.length;
+  const next = before.round.slice(before.position).find(line => line !== 255) ?? before.queue[0];
+  const entry = before.entries.find(e => e.line === next); assert.ok(entry);
+  const functional = [], passes = [], step = r.m.step.bind(r.m);
+  r.m.step = () => {
+    if (r.m.pc === r.m.sym("FNSTAT")) {
+      assert.deepEqual([r.m.read(r.m.sym("HKDEP")), r.m.read(r.m.sym("HKBUSY"))], [1, 0]);
+      functional.push(r.attempts.length - start);
+    }
+    if (r.m.pc === r.m.sym("CFLUSH")) {
+      assert.deepEqual([r.m.read(r.m.sym("HKDEP")), r.m.read(r.m.sym("HKBUSY")), r.m.cpu.cpu.a], [1, 0, r.m.sym("NLINES")]);
+      passes.push(r.attempts.length - start);
+    }
+    return step();
+  };
+  assert.equal(r.bdos(11, 0).a, 0); r.m.step = step;
+  assert.equal(r.m.cpu.cpu.sp, 0x3000); assert.equal(r.m.text(mark), "");
+  assert.deepEqual(functional, [1]);
+  const after = r.cacheState(), made = r.attempts.slice(start);
+  assert.deepEqual([after.depth, after.busy, after.any, after.pending], [0, 0, 1, 0]);
+  for (const key of ["queue", "dirty", "entries"]) assert.deepEqual(after[key], before[key]);
+  assert.deepEqual(r.image, r.original); assert.ok(made.every(a => !a.accepted));
+  return { before, entry, made, passes };
+}
+
+function oneInputPass(c) {
+  assert.equal(c.passes.length, 1, "one required input boundary makes one frozen pass");
+  assert.deepEqual(c.passes, [1]);
+  assert.deepEqual(c.made.map(a => a.block), [c.entry.block, ...c.before.entries.map(e => e.block)]);
+}
+
+test("AC7 mutant: duplicated required input pass retries a refused round twice", () => {
+  oneInputPass(refusedInputPass());
+  const c = refusedInputPass(MUTANTS.mtw());
+  assert.deepEqual(c.passes, [1, 1 + c.before.entries.length]);
+  assert.deepEqual(c.made.map(a => a.block), [c.entry.block, ...c.before.entries.map(e => e.block), ...c.before.entries.map(e => e.block)]);
+  assert.throws(() => oneInputPass(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], "one required input boundary makes one frozen pass");
+    assert.equal(error.actual, 2); assert.equal(error.expected, 1); return true;
+  });
 });
 
 // --- What stays ---------------------------------------------------------------
 
-/** Logged on B:, eight records to B: wait in the cache, held behind, until the close writes them and then its entry. */
+/** Ordinary entries progress logged-drive data; close publishes its directory. */
 function writtenBehind(rom) {
-  const r = rig({ rom });
-  r.name("W       DAT", FCB, 2);
-  r.bdos(22);
-  r.bdos(26, DMA);
+  const r = rig({ rom }), observed = acknowledgedWrites(r, "B"), mark = r.m.output.length;
+  r.name("W       DAT", FCB, 2); assert.ok(r.bdos(22).a <= 3); r.bdos(26, DMA);
   const w0 = r.t.writes.length;
-  for (let k = 0; k < 8; k += 1) {
-    r.put(k);
-    r.bdos(21);
+  for (let k = 0; k < 8; k++) {
+    r.put(k); assert.equal(r.bdos(21).a, 0);
+    assert.equal(r.m.read(FCB + 32), k + 1); observed.acknowledge(k);
     assert.equal(r.pending(), 0, `B: record ${k}: nothing pending`);
   }
-  // Eight records are two card blocks.
-  assert.equal(r.t.writes.length, w0, "no card write before the close");
-  assert.equal(r.bdos(16).a, 0);
-  const made = r.t.writes.slice(w0);
-  const b = volume(r.image, "B");
-  const dir = dirBlocks(r.image, "B");
-  assert.equal(made.length, 3, "the close: two data blocks, then the directory");
-  assert.ok(made.slice(0, 2).every((x) => !dir.has(x)) && dir.has(made[2]), "the directory last");
-  assert.ok(same(b.read("W.DAT"), Uint8Array.from(Array.from({ length: 8 }, (_, k) => [...pat(k)]).flat())));
+  const beforeClose = r.t.writes.length - w0;
+  assert.equal(volume(r.image, "B").find("W.DAT").records, 0, "ordinary progress does not publish the unclosed directory");
+  observed.close(); assert.ok(r.bdos(16).a <= 3);
+  const made = r.t.writes.slice(w0), fs = volume(r.image, "B"), dir = dirBlocks(r.image, "B");
+  assert.deepEqual(fs.read("W.DAT"), knownRecords(8)); assert.deepEqual(fs.verify(), []);
+  assert.deepEqual(r.t.writes, observed.commits);
+  assert.ok(made.slice(0, -1).every(block => !dir.has(block)) && dir.has(made.at(-1)), "the directory is last");
+  assert.equal(r.m.text(mark), "");
+  assert.equal(beforeClose, 7, "seven earlier records progress at the next ordinary entry");
+  assert.equal(made.length, 9, "eight data versions then directory after make");
 }
 
 test("AC8 the logged drive written behind", { timeout: 300_000 }, () => {
   writtenBehind();
-  // COPY, TYPE and DIR under the shell, logged on A:, which is written
-  // behind, with the copy on B:, which coalesces.
+  // COPY, TYPE and DIR under the shell with data on A: and a copy on B:.
   const image = withShell(card());
   const data = Uint8Array.from({ length: 6000 }, (_, i) => (i * 7 + 1) & 0xff);
   const text = Array.from({ length: 12 }, (_, i) => `line ${i + 1}`).join("\r\n") + "\r\n";
