@@ -7,7 +7,7 @@ nav_group: "Reference"
 
 # Appendix F. `tecvol`
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -24,12 +24,12 @@ and directories and transfers files in either direction. Its `install`
 command performs the separate physical-device write.
 
 The repository command is `node tools/tecvol.mjs`. The package also names it
-`tecvol` (`package.json:11-13`). Chapter 6 gives working procedures and
+`tecvol` (`241b438:package.json:11-13`). Chapter 6 gives working procedures and
 recovery precautions. Appendix E defines the container format.
 
 ## Common rules
 
-The nine commands have these arguments (`tools/tecvol.mjs:4-15`):
+The nine commands have these arguments (`241b438:tools/tecvol.mjs:4-15`):
 
 ```text
 tecvol create IMAGE --volume G1M:SYSTEM:A [--volume G8M:WORK:B:ro] [--align N] [--drives N]
@@ -45,39 +45,42 @@ tecvol install IMAGE DEVICE --yes
 
 Options can appear anywhere after the command. An unknown `--` option is a
 usage error. Argument parsing checks `--user`, `--align` and `--drives`
-before opening or changing an image (`tools/tecvol.mjs:33-61`). Except for
+before opening or changing an image (`241b438:tools/tecvol.mjs:33-61`). Except for
 `create` and `recipe`, commands open an existing image and validate its
 container first. That validation is separate from the directory checks made
-by `info` and `verify` (`tools/tecvol.mjs:71-80`, `tools/tecvol.mjs:107-195`).
+by `info` and `verify` (`241b438:tools/tecvol.mjs:71-80`, `241b438:tools/tecvol.mjs:107-195`).
 
 `DRIVE` selects a volume by drive letter, with or without a colon, then by
 label and finally by id. The first matching form wins. A label or id reaches
-a volume that has no assigned drive (`tools/lib/container.mjs:194-201`).
+a volume that has no assigned drive (`241b438:tools/lib/container.mjs:194-201`).
 There is no CCP program-search fallback in a host file operation.
 
 `--user N` takes one or two decimal digits with a value from 0 to 15.
 Without it `put`, `get` and `era` use area 0 while `dir` lists all areas.
 A malformed user value stops before the image is opened
-(`tools/tecvol.mjs:45-49`, `tools/tecvol.mjs:105`,
-`tools/tecvol.mjs:140-172`).
+(`241b438:tools/tecvol.mjs:45-49`, `241b438:tools/tecvol.mjs:105`,
+`241b438:tools/tecvol.mjs:140-172`).
 
 Successful commands exit with status 0. A usage error prints its reason and
 the usage line and exits with status 2. An absent file in `era` is a usage
 error too. Other failures print `tecvol: ` and the reason and exit with
 status 1. `verify` also returns 1 for reported directory problems
-(`tools/tecvol.mjs:27-31`, `tools/tecvol.mjs:137`,
-`tools/tecvol.mjs:171`, `tools/tecvol.mjs:199-204`).
+(`241b438:tools/tecvol.mjs:27-31`, `241b438:tools/tecvol.mjs:137`,
+`241b438:tools/tecvol.mjs:171`, `241b438:tools/tecvol.mjs:199-204`).
 
 Changes to an image are prepared in memory and validated before replacing
 the file. The tool writes a temporary file beside the image and renames it
 over the original. A failure before that rename leaves the original image
 unchanged. The temporary file is neither reread nor explicitly synchronised
 to durable storage. `install` has a different failure boundary because it
-writes directly to the device (`tools/tecvol.mjs:63-69`).
+writes directly to the device (`241b438:tools/tecvol.mjs:63-69`).
 
 Never change a card on the PC while TEC-OS is using it. At the board's command
-prompt, a successful `^C` flush must finish before removal. `Write lost` means
-that some changes were dropped. Reset after returning a PC-changed card because
+prompt, close files and await successful writes before removal. A prompt after
+Write pending is insufficient: resolve the original backend refusal and wait
+for Cache clear. Warm boot retains acknowledged data, while cold reset discards
+it. Queue clearance is not FCB closure or browser storage
+(`a40d482:docs/recovery.md:69-117`). Reset after returning a PC-changed card because
 TEC-OS's cached blocks and allocation maps otherwise describe its old contents.
 Chapter 6 gives the copy-first procedure.
 
@@ -90,7 +93,7 @@ build's media and change with that media.
 ## create
 
 `create IMAGE --volume SPEC ...` makes an empty image and rejects an output
-path that already exists (`tools/tecvol.mjs:107-112`). Each `--volume` adds
+path that already exists (`241b438:tools/tecvol.mjs:107-112`). Each `--volume` adds
 one descriptor in the given order:
 
 | Part of `GEOMETRY:LABEL:DRIVE[:ro]` | Meaning |
@@ -110,14 +113,14 @@ be from 1 to 16,777,215 and must also be a multiple of 8. The default is 2,048
 blocks or 1 MiB. A value outside the decimal range gives a usage error. A value
 inside it that is not a multiple of 8 fails container creation with
 `alignment must be a multiple of 8 blocks` and status 1
-(`tools/tecvol.mjs:33-37`, `tools/tecvol.mjs:50-51`,
-`tools/lib/container.mjs:87-97`).
+(`241b438:tools/tecvol.mjs:33-37`, `241b438:tools/tecvol.mjs:50-51`,
+`241b438:tools/lib/container.mjs:87-97`).
 
 `--drives N` takes 1 to 4 and records the number of drive slots to reserve
 at cold boot. Supplying it or requesting more than eight volumes selects
 format 1.1. Otherwise creation uses 1.0. One volume must be assigned to A.
 Each payload is filled with `E5h`, producing an empty CP/M directory and data
-area (`tools/lib/container.mjs:78-122`).
+area (`241b438:tools/lib/container.mjs:78-122`).
 
 This fixture has SYSTEM on A, WORK on B and a read-only ARCHIVE on no drive:
 
@@ -130,7 +133,7 @@ Successful creation prints nothing.
 ## info and verify
 
 `info IMAGE` prints the container and then every volume
-(`tools/tecvol.mjs:113-138`):
+(`241b438:tools/tecvol.mjs:113-138`):
 
 ```sh
 node tools/tecvol.mjs info build/my.img
@@ -155,8 +158,8 @@ At the inspected source, directory faults are printed as `problem:` lines.
 If duplicate allocations or a block beyond DSM prevent a free-space count,
 the volume line says `free unknown` and later volumes are still listed.
 These are source-derived reporting rules, not new output added to the
-healthy-card example (`tools/tecvol.mjs:117-136`,
-`tools/lib/cpmfs.mjs:78-89`, `tools/lib/cpmfs.mjs:241-267`).
+healthy-card example (`241b438:tools/tecvol.mjs:117-136`,
+`241b438:tools/lib/cpmfs.mjs:78-89`, `241b438:tools/lib/cpmfs.mjs:241-267`).
 
 `verify IMAGE` uses the same report as `info` but returns status 1 when it
 finds a directory problem. `info` does not fail solely for those reported
@@ -179,9 +182,9 @@ tecvol: header checksum mismatch
 
 `dir IMAGE [DRIVE]` lists A by default. Each line gives user area, filename and
 record-rounded byte length. `R/O` and `SYS` mark file attributes
-(`tools/tecvol.mjs:140-147`). CP/M records are 128 bytes so the listing includes
-padding rather than a PC file's original byte length. The starter card's A
-directory is:
+(`241b438:tools/tecvol.mjs:140-147`). CP/M records are 128 bytes so the listing includes
+padding rather than a PC file's original byte length. The retained historical starter-card A
+directory example is:
 
 ```sh
 node tools/tecvol.mjs dir dist/starter.img A
@@ -204,27 +207,28 @@ node tools/tecvol.mjs dir dist/starter.img A
  0 TIMES.BAS         640
 ```
 
-SHELL.SVC is 3,660 bytes in `dist/files` and occupies 29 records, 3,712
-bytes, on the card. The thirteen files are those of `tools/media.mjs:203-231` and
-`tools/lib/starter.mjs:10-22`, and STARTUP.CMD holds `SHELL.SVC` and
-`GLCD.SVC` (`test/starter.test.mjs:44-81`).
+In this historical recovery-baseline image, SHELL.SVC is 3,660 bytes in
+`dist/files` and occupies 29 records, 3,712 bytes, on the card. The thirteen
+files are those of `46cf3f1:tools/media.mjs:203-231` and
+`46cf3f1:tools/lib/starter.mjs:10-22`, and STARTUP.CMD holds `SHELL.SVC` and
+`GLCD.SVC` (`46cf3f1:test/starter.test.mjs:44-81`).
 
 ## put
 
 `put IMAGE DRIVE FILE [CPMNAME]` copies a PC file to the selected volume.
 The card name is `CPMNAME` or the capitalised PC basename. The host validates
-that name as an 8.3 spelling (`tools/tecvol.mjs:148-155`,
-`tools/lib/cpmfs.mjs:15-20`).
+that name as an 8.3 spelling (`241b438:tools/tecvol.mjs:148-155`,
+`241b438:tools/lib/cpmfs.mjs:15-20`).
 
 A file of the same name in the same area is replaced unless its read-only
 attribute blocks the operation. `--force` overrides that file attribute but
 never a read-only volume. Insufficient data blocks or directory entries stop
-the copy before the image is replaced (`tools/lib/cpmfs.mjs:180-206`).
+the copy before the image is replaced (`241b438:tools/lib/cpmfs.mjs:180-206`).
 
 Binary files are padded with zero bytes to complete their final record. `--text`
 converts LF and CR LF endings to CR LF, appends `^Z` and pads with `^Z`. `--ro`
 and `--sys` set the two file attributes and `--user N` selects the destination
-area (`tools/lib/cpmfs.mjs:180-188`, `tools/lib/cpmfs.mjs:216-218`). These
+area (`241b438:tools/lib/cpmfs.mjs:180-188`, `241b438:tools/lib/cpmfs.mjs:216-218`). These
 commands make a text file and copy the prepared binaries:
 
 ```sh
@@ -264,14 +268,14 @@ usage: tecvol create|info|verify|dir|put|get|era|recipe|install ... (see tools/t
 `get IMAGE DRIVE CPMNAME [OUTFILE]` extracts a file into OUTFILE or writes
 its bytes to standard output when no output path is supplied. Without `--text`
 it returns whole records, including padding. With it extraction stops at
-the first `^Z` and converts CR LF to LF (`tools/tecvol.mjs:157-165`,
-`tools/lib/cpmfs.mjs:128-150`).
+the first `^Z` and converts CR LF to LF (`241b438:tools/tecvol.mjs:157-165`,
+`241b438:tools/lib/cpmfs.mjs:128-150`).
 
 Each directory entry supplies records only through its recorded extent/count.
 Records not held by an entry remain zero, including holes from sparse random
 writes. A block number above DSM is damaged metadata. Extraction then fails
 with status 1 before writing an output file, with the filename, extent, entry
-and block in the error (`tools/lib/cpmfs.mjs:128-150`).
+and block in the error (`241b438:tools/lib/cpmfs.mjs:128-150`).
 
 ```sh
 node tools/tecvol.mjs get build/my.img A HELLO.TXT --text
@@ -288,7 +292,7 @@ world
 `era IMAGE DRIVE CPMNAME` erases the file in area 0 or the area given by
 `--user`. An absent name gives usage status 2. A read-only file fails with
 status 1 unless `--force` is supplied. The volume itself must be writable
-(`tools/tecvol.mjs:167-173`, `tools/lib/cpmfs.mjs:157-173`).
+(`241b438:tools/tecvol.mjs:167-173`, `241b438:tools/lib/cpmfs.mjs:157-173`).
 
 ```sh
 node tools/tecvol.mjs era build/my.img B TAS.COM
@@ -329,20 +333,22 @@ separately. Volume entries give geometry, label, `mount` and optional
 `readOnly`. A volume naming `writeBehind` is refused: write-behind follows
 the logged drive. Components contain files. File entries give
 name, URL/path, `drive`,
-byte size, SHA-256 and optional user area (`tools/lib/recipe.mjs:14-26`).
+byte size, SHA-256 and optional user area (`241b438:tools/lib/recipe.mjs:14-26`).
 Unlike `create`, this command can replace an existing output image
-(`tools/tecvol.mjs:175-180`).
+(`241b438:tools/tecvol.mjs:175-180`).
 
 An `http://` or `https://` URL is fetched from that address. A relative
 file path is resolved from the recipe's directory. Each fetched component
 must match its size and SHA-256 before placement. Read-only volume flags
-are applied after the files are written (`tools/tecvol.mjs:90-99`,
-`tools/lib/recipe.mjs:14-44`). The web page uses the same recipe function
+are applied after the files are written (`241b438:tools/tecvol.mjs:90-99`,
+`241b438:tools/lib/recipe.mjs:14-44`). The web page uses the same recipe function
 for New starter card.
 
-`npm run media` prepares `dist/starter.recipe.json` and its image. That recipe, at revision 14, is the only one: the web page builds
+The retained recovery-baseline `npm run media` rebuild prepares
+`dist/starter.recipe.json` and its image. That historical recipe, at revision
+14, is the only one for this rebuild: the web page builds
 the same card, and media removes a `dist/page.recipe.json` left by an older
-build (`tools/media.mjs:233-257`, `278-281`). Chapter 27
+build (`46cf3f1:tools/media.mjs:233-257`, `278-281`). Chapter 27
 describes that preparation. The rebuild produced these matching hashes:
 
 ```sh
@@ -365,7 +371,7 @@ recipe at `46cf3f1`.
 
 `install IMAGE DEVICE --yes` validates the image as a container, opens the
 device and writes from offset 0. Without `--yes` it gives a usage error
-(`tools/tecvol.mjs:182-193`).
+(`241b438:tools/tecvol.mjs:182-193`).
 
 ```sh
 node tools/tecvol.mjs install dist/starter.img /dev/rdiskN --yes
