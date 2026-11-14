@@ -193,6 +193,8 @@ C](appendix-c-memory-map.md#page-zero) lists the fields
 (`241b438:src/cpm/ccp.asm:488-520`, `241b438:src/cpm/ccpcmd.asm:392-440`,
 `241b438:src/layout.asm:44-69`, `241b438:src/abi.inc:307-309`).
 
+<a id="four-stacks-for-different-stages"></a>
+
 ## Five stacks for different stages
 
 Cold boot needs a stack before testing banked RAM. It sets SP to BOOTSTK at
