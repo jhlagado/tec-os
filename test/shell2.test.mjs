@@ -7,6 +7,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createContainer, descriptorAt, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
@@ -14,6 +15,8 @@ import { GLCD_SVC, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/
 import { mon3Svc } from "./lib/mon3.mjs";
 import { pinned } from "./lib/inputs.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
+import { cacheState, fileBlock } from "./lib/cache-pending.mjs";
+import { publicContext } from "./lib/public-caller.mjs";
 import { SHELL, at, code, owners, pageOf, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
 
 const P = /\r\n\d*[A-P](:\S*)?>$/;
@@ -670,38 +673,169 @@ test("S2-11 declared stacks", () => {
   assert.deepEqual([...SHELL.file.subarray(12, 15)], [6, 0, 0], "BDOS 6, BIOS 0, CCP 0");
 });
 
-/**
- * The deepest the shell's own stack goes on the prompt's walk with every
- * cache line changed and kept, so that TNDESC's table read must write a
- * line first. WK writes 120 records, 30 blocks, to A:, logged and so held
- * behind; the card refuses from its key wait; it returns with no warm boot,
- * the labels marked unread. The bytes used, and those written below a stack
- * of SIZE, under SHELL (a variant).
- */
+/** A real thirty-block refused queue drives the shell's cold label walk. */
 function deepestWalk(shell = SHELL) {
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }], { drives: 4 });
-  const { symbols } = romFor();
-  const main = symbols.get("MAINLOOP");
-  const wk = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 120,
-    0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
-    0x0e, 1, 0xcd, 0x05, 0x00, 0xc3, main & 0xff, main >> 8]);
+  const { symbols } = romFor(), main = symbols.get("MAINLOOP");
+  const wk = Uint8Array.from([0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0,
+    0x11, 0x5c, 0, 0x0e, 22, 0xcd, 5, 0, 0x06, 120,
+    0xc5, 0x11, 0x5c, 0, 0x0e, 21, 0xcd, 5, 0, 0xc1, 0x10, 0xf4,
+    0x0e, 1, 0xcd, 5, 0, 0xc3, main & 255, main >> 8]);
   const m = shellMachine(shellCard({ "WK.COM": wk }, { image, shell: shell.file }));
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("WK K.DAT\r");
-  m.runUntil(() => m.pc === symbols.get("FNCIN"), 900_000_000, "BDOS 1");
-  f.on = true;
-  m.runUntil(() => m.waitingForInput(), 200_000_000, "the key wait");
-  const s = shell.symbols;
-  const size = s.STKTOP - s.STKBOT;
-  const base = pageOf(m) + s.STKBOT - 16; // 16 bytes below the stack too
-  for (let a = base; a < base + 16 + size; a += 1) m.write(a, 0xa5);
-  m.write(pageOf(m) + s.LBL, 0);
-  m.type("x");
-  m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the prompt");
-  let free = 0;
-  while (free < 16 + size && m.read(base + free) === 0xa5) free += 1;
-  return { used: 16 + size - free, below: Math.max(0, 16 - free) };
+  const s = shell.symbols, page = pageOf(m), top = page + s.STKTOP, bottom = page + s.STKBOT, base = bottom - 16, size = top - bottom;
+  assert.ok(page > 0); assert.equal(word(m, m.sym("SHOWN")), page + s.TABLE);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(page + i)), [0xc3, m.sym("BENTRY") & 255, m.sym("BENTRY") >> 8]);
+  assert.deepEqual(volume(image, "A").read("SHELL.SVC").slice(0, shell.file.length), shell.file);
+  assert.equal(volume(image, "A").find("K.DAT"), undefined);
+  const expected = new Map(), allocations = new Map(), acknowledgements = [], attempts = [];
+  let entered = 0, programmeSP, made = false, original, initialUsed, allocationBytes, input, beforeEntry = null, inputSP;
+  const snapshot = label => {
+    assert.ok(original && input); const state = cacheState(m);
+    assert.deepEqual(image, original, `${label}: no accepted data reached the refusing card`);
+    assert.equal(volume(image, "A").find("K.DAT").records, 0);
+    assert.deepEqual(state.entries.map(e => e.block), [...expected.keys()]);
+    for (const e of state.entries) { assert.equal(e.dirty, 1); assert.deepEqual(e.payload, expected.get(e.block)); }
+    assert.deepEqual([state.pending, state.any], [0, 1]);
+    return state;
+  };
+  const sd = m.sd, commit = sd.commitWrite.bind(sd);
+  sd.commitWrite = () => {
+    if (!original) return commit();
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(expected.has(block)); assert.deepEqual(payload, expected.get(block));
+    sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1;
+    attempts.push({ block, payload }); assert.deepEqual(image, original);
+  };
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === 0x100) {
+      publicContext(m); assert.equal(++entered, 1); programmeSP = m.cpu.cpu.sp;
+      assert.deepEqual(Uint8Array.from({ length: wk.length }, (_, i) => m.read(0x100 + i)), wk);
+    }
+    if (entered && m.pc === 0x107) { publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(m.sym("ERRMODE")), 0xff); }
+    if (entered && m.pc === 0x10f) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.ok(m.cpu.cpu.a <= 3); assert.equal(made, false); made = true;
+      assert.equal(m.read(0x7c), 0); assert.equal(m.read(0x6b), 0); assert.equal(volume(image, "A").find("K.DAT").records, 0);
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 21) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 4); assert.equal(word(m, m.cpu.cpu.sp), 0x11a);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x5c); assert.equal(word(m, m.sym("CURDMA")), 0x80);
+      if (!original) {
+        assert.ok(made); assert.equal(cacheState(m).queue.length, 0); original = Uint8Array.from(image);
+        const fs = volume(original, "A"); initialUsed = new Set(fs.usedBlocks()); allocationBytes = fs.blockBytes;
+        assert.equal(fs.wide, true); input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)); assert.ok(input.some(Boolean));
+      }
+      assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), input);
+    }
+    if (entered && m.pc === 0x11a) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2);
+      const record = acknowledgements.length; assert.ok(record < 120); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x7c), record + 1);
+      for (const name of ["CURDRV", "DSKCUR", "DEFDRV", "BOOTDRV"]) assert.equal(m.read(m.sym(name)), 0, `${name}: independent A case`);
+      assert.equal(word(m, m.sym("DPHPTR")), m.sym("DPHTAB")); assert.equal(word(m, m.sym("DPBPTR")), word(m, m.sym("DPHTAB") + 10)); assert.equal(m.read(0x5c) & 31, 0);
+      const slot = Math.floor(record / (allocationBytes / 128)), allocation = word(m, 0x5c + 16 + 2 * slot); assert.ok(slot < 8);
+      if (!allocations.has(slot)) { assert.ok(!initialUsed.has(allocation)); assert.ok(![...allocations.values()].includes(allocation)); allocations.set(slot, allocation); }
+      for (const [knownSlot, knownAllocation] of allocations) assert.equal(word(m, 0x5c + 16 + knownSlot * 2), knownAllocation);
+      const block = fileBlock(m, original, record, 0x5c, "A"); if (!expected.has(block)) expected.set(block, new Uint8Array(512));
+      expected.get(block).set(input, (record & 3) * 128); acknowledgements.push({ record, a: m.cpu.cpu.a, cr: m.read(0x7c), block }); snapshot(`ACK ${record}`);
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 1) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x122); inputSP = m.cpu.cpu.sp;
+      assert.equal(acknowledgements.length, 120); assert.equal(expected.size, 30); beforeEntry = snapshot("before actual F1 entry"); assert.equal(beforeEntry.queue.length, 30);
+    }
+    return step();
+  };
+  const inputOwner = () => {
+    assert.ok(m.classicBankIn); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+    assert.equal(word(m, m.sym("OLDSP")), inputSP); assert.equal(word(m, inputSP), 0x122);
+  };
+  m.mark = m.output.length; m.type("WK K.DAT\r");
+  m.runUntil(() => m.pc === symbols.get("FNCIN"), 900_000_000, "actual 120-ACK programme F1 body");
+  assert.ok(beforeEntry); inputOwner(); assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), m.sym("RETA"));
+  assert.equal(snapshot("FNCIN after ordinary entry refusal").queue.length, 30); assert.ok(attempts.length > 0);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("FNCIN") + 3 + i)), [0xcd, m.sym("GETCHAR") & 255, m.sym("GETCHAR") >> 8]);
+  m.runUntil(() => m.pc === m.sym("GETCHAR"), 200_000_000, "owned GETCHAR for 120 ACKs"); inputOwner(); assert.equal(word(m, m.cpu.cpu.sp), m.sym("FNCIN") + 6);
+  m.runUntil(() => m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE"), 200_000_000, "owned serial wait for 120 ACKs");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), m.sym("FNCIN") + 6);
+  assert.equal(snapshot("owned input with all thirty retained").queue.length, 30);
+  assert.ok(m.cpu.cpu.sp < base || m.cpu.cpu.sp >= top); assert.ok(inputSP < base || inputSP >= top);
+  for (let address = base; address < top; address++) m.write(address, 0xa5);
+  m.write(page + s.LBL, 0);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(page + s.LINE + 4 + i)), [0x31, top & 255, top >> 8]);
+  assert.deepEqual(Array.from({ length: 12 }, (_, i) => m.read(page + s.VW1 + i)), [0x7b, 0x32, (page + s.VIDX) & 255, (page + s.VIDX) >> 8, 0x21, (page + s.CFCB) & 255, (page + s.CFCB) >> 8, 0x0e, 11, 0xcd, m.sym("ABICALL") & 255, m.sym("ABICALL") >> 8]);
+  const workerBottom = m.sym("HKSTKB"), workerTop = m.sym("HKSTKT"), workerGuard = Array.from({ length: 2 }, (_, i) => m.read(m.sym("HKGRD") + i));
+  assert.equal(workerBottom - m.sym("HKGRD"), 2); assert.equal(workerTop - workerBottom, 56);
+  assert.deepEqual(workerGuard, [0, 0], "cold workspace clear initializes the private guard");
+  let shellLowSP = top, shellLowWrite = top, workerLow = workerTop, shellSamples = 0, frame = null, returnedKey = 0, inputCall = null;
+  const lows = [], workerLows = [], scratchWrites = [], descriptors = []; let pendingDescriptor = null;
+  const write = m.cpu.hardware.memWrite;
+  const stackOpcode = bytes => [0xcd, 0xc4, 0xcc, 0xd4, 0xdc, 0xe4, 0xec, 0xf4, 0xfc, 0xc5, 0xd5, 0xe5, 0xf5, 0xc7, 0xcf, 0xd7, 0xdf, 0xe7, 0xef, 0xf7, 0xff, 0xe3].includes(bytes[0]) || ([0xdd, 0xfd].includes(bytes[0]) && [0xe5, 0xe3].includes(bytes[1]));
+  m.cpu.hardware.memWrite = (address, value) => {
+    if (frame && m.classicBankIn) {
+      const event = { address, value, callbackPC: m.cpu.cpu.pc, ...frame };
+      if (address >= base && address < bottom) scratchWrites.push(event);
+      if (stackOpcode(frame.bytes)) {
+        if (address >= page && address < top && address < shellLowWrite) { shellLowWrite = address; lows.push(event); }
+        if (address >= workerBottom && address < workerTop && address < workerLow) { workerLow = address; workerLows.push(event); }
+      }
+      if (address >= m.sym("HKGRD") && address < m.sym("HKGRD") + 2) assert.fail("private worker touched its guard");
+    }
+    return write(address, value);
+  };
+  const observedStep = m.step.bind(m);
+  m.step = () => {
+    frame = { instructionPC: m.pc, bytes: Array.from({ length: 3 }, (_, i) => m.read(m.pc + i)), sp: m.cpu.cpu.sp, depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")) };
+    if (m.classicBankIn && frame.sp >= page && frame.sp <= top) { shellSamples++; shellLowSP = Math.min(shellLowSP, frame.sp); }
+    if (m.pc === 0x122) { publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0x78); assert.equal(++returnedKey, 1); }
+    if (m.pc === m.sym("ABICALL") && m.cpu.cpu.c === 11) {
+      publicContext(m); assert.equal(pendingDescriptor, null); assert.equal(m.cpu.cpu.e, 0); assert.equal(m.cpu.cpu.h << 8 | m.cpu.cpu.l, page + s.CFCB);
+      assert.equal(word(m, m.cpu.cpu.sp), page + s.VW1 + 12); assert.equal(snapshot("TNDESC real full-cache pressure").queue.length, 30);
+      pendingDescriptor = { sp: m.cpu.cpu.sp, back: word(m, m.cpu.cpu.sp), attempts: attempts.length, allocations: [] };
+    }
+    if (pendingDescriptor && m.pc === m.sym("CTAKE")) {
+      assert.ok(m.classicBankIn); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("CTAKE") + i)), [0xcd, m.sym("CTSCAN") & 255, m.sym("CTSCAN") >> 8]);
+      assert.equal(snapshot("functional CTAKE with every line dirty").queue.length, 30);
+      pendingDescriptor.allocations.push({ pc: m.pc, sp: m.cpu.cpu.sp, attemptsStart: attempts.length, passes: [] });
+    }
+    if (pendingDescriptor && m.pc === m.sym("CTPASS")) {
+      assert.ok(m.classicBankIn); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      const allocation = pendingDescriptor.allocations.at(-1); assert.ok(allocation);
+      const state = snapshot("functional frozen allocation pass"); assert.equal(state.queue.length, 30); assert.deepEqual(state.round, state.queue);
+      assert.equal(state.position, allocation.passes.length); assert.ok(state.position <= 30);
+      assert.equal(attempts.length - allocation.attemptsStart, state.position);
+      allocation.passes.push({ pc: m.pc, sp: m.cpu.cpu.sp, position: state.position, attempts: attempts.length });
+    }
+    if (pendingDescriptor && m.pc === pendingDescriptor.back) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, pendingDescriptor.sp + 2); assert.equal(m.cpu.cpu.flags.C, 1);
+      assert.ok(pendingDescriptor.allocations.length > 0, "functional full-cache allocation ran beyond the ordinary entry attempt");
+      for (const allocation of pendingDescriptor.allocations) assert.deepEqual(allocation.passes.map(p => p.position), Array.from({ length: 31 }, (_, i) => i));
+      assert.ok(attempts.length > pendingDescriptor.attempts); descriptors.push({ ...pendingDescriptor, returnedSP: m.cpu.cpu.sp, carry: m.cpu.cpu.flags.C, attemptsMade: attempts.length - pendingDescriptor.attempts }); pendingDescriptor = null;
+    }
+    if (m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 10) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, top - 2); assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, page + s.LBUF);
+      const back = word(m, m.cpu.cpu.sp); assert.equal(back, page + s.TYPED + 16); assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+      inputCall = { sp: m.cpu.cpu.sp, back, buffer: page + s.LBUF, entered: false, textAtEntry: m.text(m.mark) };
+    }
+    if (inputCall && !inputCall.entered && m.pc === m.sym("FNLINE")) { assert.equal(word(m, m.sym("OLDSP")), inputCall.sp); assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, inputCall.buffer); assert.equal(m.read(m.sym("HKDEP")), 1); inputCall.entered = true; }
+    return observedStep();
+  };
+  try {
+    m.type("x");
+    m.runUntil(() => inputCall?.entered && m.classicBankIn && m.ready() && quiet(m, s) && m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE") &&
+      m.read(m.sym("HKDEP")) === 1 && m.read(m.sym("HKBUSY")) === 0 && m.read(m.sym("ERRMODE")) === 0xff && word(m, m.sym("OLDSP")) === inputCall.sp &&
+      word(m, inputCall.sp) === inputCall.back && m.lineBuf === inputCall.buffer && inputCall.textAtEntry.endsWith(">"), 900_000_000, "actual shell input after full-cache label pressure");
+    assert.equal(returnedKey, 1); assert.ok(descriptors.length > 0); assert.equal(pendingDescriptor, null); assert.ok(shellSamples > 0 && lows.length > 0 && workerLows.length > 0);
+    assert.equal(snapshot("actual prompt retains thirty known blocks").queue.length, 30); assert.deepEqual(Array.from({ length: 2 }, (_, i) => m.read(m.sym("HKGRD") + i)), workerGuard);
+    assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []); assert.doesNotMatch(m.text(m.mark), /Bdos Err|Disk reset failed|Write lost/);
+    let free = 0; while (free < 16 + size && m.read(base + free) === 0xa5) free++;
+    const used = Math.max(top - shellLowSP, top - shellLowWrite), patternUsed = 16 + size - free, below = Math.max(0, used - size);
+    assert.ok(patternUsed <= used); assert.ok(workerTop - workerLow <= workerTop - workerBottom);
+    console.log(JSON.stringify({ scope: "real thirty-block shell walk and private stack measurement", size, used, below, patternUsed, shellSamples, shellLowSP, shellLowWrite, lows, scratchWrites,
+      workerGuardBefore: workerGuard, workerUsed: workerTop - workerLow, workerReserved: workerTop - workerBottom, workerLows, descriptors, inputOwner: { ...inputCall, pc: m.pc }, refusals: attempts.length,
+      queue: cacheState(m).queue, blocks: [...expected.keys()], cardSHA256: createHash("sha256").update(image).digest("hex"), acknowledgements, input: Array.from(input),
+      initialUsedAllocations: [...initialUsed], newAllocations: [...allocations], service: { image: shell.image, fileBase64: Buffer.from(shell.file).toString("base64"), fileSHA256: createHash("sha256").update(shell.file).digest("hex"), symbols: s }, text: m.text(m.mark) }));
+    return { used, below };
+  } finally { m.step = step; m.cpu.hardware.memWrite = write; }
 }
 
 test("S2-11 own stack", () => {
