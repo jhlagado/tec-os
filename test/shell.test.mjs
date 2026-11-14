@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ABI, GLCD_SVC, ROOT, romFor, service, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
-import { execFile, mon3Svc, mon3Variant } from "./lib/mon3.mjs";
+import { MON3_CEILING, execFile, mon3Svc, mon3Variant } from "./lib/mon3.mjs";
 import { run as censusRun, watch } from "./lib/census.mjs";
 import { GUARDS, HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execSvc, find, hellos, hookSvc, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, user, word } from "./lib/shell.mjs";
 import { setDisplayLine } from "../host/card.mjs";
@@ -510,7 +510,7 @@ test("SH14 mon3 record", () => {
   const f = MON3.file;
   assert.deepEqual([...f.subarray(25, 29)], [0x45, 0x58, 1, 2], "version 1, bit 1 set in the file");
   const extra = f[8] | (f[9] << 8);
-  assert.ok(Math.ceil((MON3.image + extra) / 256) <= 18, "within 18 pages");
+  assert.ok(Math.ceil((MON3.image + extra) / 256) <= MON3_CEILING.pages, `within ${MON3_CEILING.pages} pages`);
 });
 
 test("SH14 mon3 enter and again", () => {
@@ -704,7 +704,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9500);
+    assert.equal(word(m, 6), 0x9300);
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -713,7 +713,7 @@ test("SH7 with glcd and mon3", () => {
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9500);
+    assert.equal(word(m, 6), 0x9300);
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -724,7 +724,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9500);
+    assert.equal(word(m, 6), 0x9300);
   }
 });
 
@@ -732,7 +732,7 @@ test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
   assert.equal(word(m, 6), 0xaa00, "SHELL.SVC alone: TPA 43,264");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9800, "with MON3.SVC: 38,656");
+  assert.equal(word(m, 6), 0x9600, "with MON3.SVC: 38,144");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
   assert.equal(word(g, 6), 0xa700, "with GLCD.SVC: 42,496");
