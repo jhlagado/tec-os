@@ -225,9 +225,9 @@ async function main() {
   // holds it as a CP/M text file, as TIMES.BAS is held.
   const bounce = Buffer.from(pinnedBytes("BOUNCE.BAS").toString("latin1").replace(/\r?\n/g, "\r\n") + "\x1a", "latin1");
   files.push({ name: "BOUNCE.BAS", description: "a BASIC game with sprites on the PICO9918: BAZA BOUNCE, then BOUNCE; W/A/S/D or the arrow keys steer, Q quits", bytes: bounce });
-  files.push({ name: "CAVERNS.COM", description: "Caverns80, the CP/M adventure: CON PICO 80, then CAVERNS; HELP for commands, SAVE and LOAD for disk saves", bytes: readFileSync(resolve(ROOT, "programs/CAVERNS.COM")) });
-  files.push({ name: "CAVBASIC.BAS", description: "Caverns in Microsoft BASIC: BAZA CAVBASIC, then CAVBASIC; experimental Caverns80-rule trial, see CAVERNS.TXT", bytes: text("CAVBASIC.BAS") });
-  files.push({ name: "CAVERNS.TXT", description: "Playing and comparing the assembly and BASIC Caverns versions", bytes: text("CAVERNS.TXT") });
+  files.push({ name: "CAVBASIC.COM", description: "Caverns, the original BASIC adventure refined by its author: CAVBASIC; see CAVERNS.TXT", bytes: readFileSync(resolve(ROOT, "programs/CAVBASIC.COM")) });
+  files.push({ name: "CAVBASIC.BAS", description: "Caverns source for BAZA: BAZA CAVBASIC rebuilds the adventure; TED CAVBASIC.BAS reads it", bytes: text("CAVBASIC.BAS") });
+  files.push({ name: "CAVERNS.TXT", description: "Playing Caverns and rebuilding it with BAZA", bytes: text("CAVERNS.TXT") });
   const abi = readFileSync(resolve(ROOT, "src/abi.inc"));
   const demo = await program("DEMO.COM");
   // DEMO.COM is built and checked here, but the card holds only its source:
@@ -248,9 +248,9 @@ async function main() {
   const recipe = {
     schema: "tecos-file-recipe-v1",
     id: "starter",
-    revision: "14",
+    revision: "15",
     name: "TEC-OS starter",
-    instruction: "Type CAVERNS for the adventure, or TYPE CAVERNS.TXT for the BASIC comparison and its memory requirements. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. The drive you are on is written behind, and whenever TEC-OS waits for a key everything is on the card. After CD A: to a volume without SHELL.SVC, a reset keeps it; power off (Power cycle on the page) gives the card's own drives again.",
+    instruction: "Type CAVBASIC for the adventure, BAZA CAVBASIC to rebuild it, or TYPE CAVERNS.TXT for instructions. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, type MON3.SVC, then LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. The drive you are on is written behind, and whenever TEC-OS waits for a key everything is on the card. After CD A: to a volume without SHELL.SVC, a reset keeps it; power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
     drives: 4,
     volumes: [

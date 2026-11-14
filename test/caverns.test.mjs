@@ -44,29 +44,23 @@ function basicGame(){const image=card();volume(image,'A').write('CAVBASIC.COM',c
 function noDeath(out){assert.doesNotMatch(out,/Another adventure|ERROR IN|killed|smashes your skull/i);}
 const tour=[['galar',16],['east',17],['look',17],['west',33],['north',29],['east',26],['east',25],['west',26],['south',27],['east',28],['get rope',28],['down with rope',35],['east',36],['north',39],['west',38],['north',43],['east',44]];
 
-test('both maps have the same 216 exits, all 54 rooms reachable and only the documented puzzle exceptions',()=>{
- assert.equal(sha(read('programs/CAVERNS.COM')),map.sha256);
+test('BASIC preserves all 216 original exits and starting object locations',()=>{
  const source=read('programs/CAVBASIC.BAS').toString();
+ const original=json('test/caverns-original.json');
  const exits=source.split('\n').filter(l=>/^17[4-9]0 DATA |^18[01]0 DATA /.test(l)).flatMap(l=>l.split('DATA ')[1].split(',').map(Number));
- const defaults={'-1':11,'-2':0,'-3':0,'-4':0,'-5':0,'-6':128};
- assert.deepEqual(exits.map(x=>x<0?defaults[x]:x),map.exits);
- for(const [index,sentinel]of Object.entries(map.dynamicSentinels))assert.equal(exits[index],sentinel,'dynamic exit '+index);
- const exceptions=new Set(['1,0,2','19,2,20','37,1,35','39,2,38','43,1,38','49,2,48']),seen=new Set(),opposite=[1,0,3,2];
- for(let room=1;room<=54;room++)for(let dir=0;dir<4;dir++){
-  const dest=map.exits[(room-1)*4+dir];assert.ok(dest===0||dest===128||dest>=1&&dest<=54);
-  if(dest===0||dest===128)continue;const k=[room,dir,dest].join(',');
-  if(exceptions.has(k))seen.add(k);else assert.equal(map.exits[(dest-1)*4+opposite[dir]],room,k);
- }
- assert.deepEqual(seen,exceptions);
- const edges=Array.from({length:55},()=>[]);
- for(let room=1;room<=54;room++)for(const d of map.exits.slice((room-1)*4,room*4))if(d>0&&d<=54)edges[room].push(d);
- for(const [a,b]of [[2,1],[20,19],[35,37],[37,38],[38,39],[38,43],[48,49],[28,35]])edges[a].push(b);
- const reached=new Set([1]),queue=[1];while(queue.length)for(const d of edges[queue.shift()])if(!reached.has(d)){reached.add(d);queue.push(d);}
- assert.equal(reached.size,54);
+ const names={'-1':'H','-2':'T','-3':'E','-4':'W','-5':'G','-6':'D'};
+ assert.deepEqual(exits.map(x=>x<0?names[x]:String(x)),original.originalExits);
+ const ip=source.match(/^1880 DATA (.*)$/m)[1].split(',').map(Number);
+ assert.deepEqual(ip,[36,19,10,14,17,47,8,1,51,45,22,46,54,19,19,19,19,0,34,7,18,15,24,38]);
+ const files=volume(card(),'A').list().map(x=>x.name);
+ assert.ok(!files.includes('CAVERNS.COM'),'assembly comparison is not released on the starter disk');
+ assert.ok(files.includes('CAVBASIC.COM'));
+ assert.equal(sha(volume(card(),'A').read('CAVBASIC.COM')),basic.comSha256);
 });
 
 test('Caverns80 completes for 126 points, tours all 54 rooms and persists the winning save across reboot',{timeout:300_000},()=>{
- const image=card(),m=boot(image,{tms:true,matrix:true,width:80});
+ const image=card();volume(image,'A').write('CAVERNS.COM',read('programs/CAVERNS.COM'));
+ const m=boot(image,{tms:true,matrix:true,width:80});
  keys(m,'con pico 80');assert.match(keys(m,'caverns',question(m)),/darkened room/);
  // Addresses refer to the hash-checked 0.1.1 artifact, exported with its route.
  const s=reference.symbols,visited=new Set([1]);
@@ -85,23 +79,76 @@ test('Caverns80 completes for 126 points, tours all 54 rooms and persists the wi
  assert.deepEqual(m.violations,[]);assert.deepEqual(rebooted.violations,[]);
 });
 
-test('BASIC completes the same quest, exercises every puzzle and visits all 54 rooms without leaking control frames',{timeout:300_000},()=>{
- const m=basicGame(),visited=new Set([1]);
- for(const point of reference.checkpoints){
-  const cmd=point.command;
-  if(cmd.startsWith('kill ')){
-   const id={troll:3,dragon:4,wizard:1,goblin:6,demon:2}[cmd.split(' ')[1]];
-   for(let tries=0;element(m,'P%',id)!==0&&tries<14;tries++)noDeath(keys(m,cmd,question(m)));
-   assert.equal(element(m,'P%',id),0,cmd);continue;
+test('original-based BASIC completes a first-discovery quest for 126 with the refined bridge and bomb',{timeout:300_000},()=>{
+ const m=basicGame(),route=json('test/caverns-refined-route.json'),visited=new Set([1]);
+ let completed=false,attempts=0;
+ for(;attempts<8&&!completed;attempts++){
+  let learned=false,firstSpell=false,died=false;
+  for(const point of route.trace){
+   if(point.command==='galar'&&!firstSpell){assert.ok(learned,'clue visited before first spell');firstSpell=true;}
+   let out;
+   if(point.before===21&&point.after===20&&integer(m,'T%')===0){
+    const objects=Array.from({length:24},(_,i)=>element(m,'P%',i+1));
+    assert.match(keys(m,'use candle',question(m)).replace(/\r?\n/g,''),/nothing around you has changed/);
+    assert.equal(integer(m,'A%'),21);assert.equal(integer(m,'T%'),0);
+    assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),objects);
+   }
+   if(point.command==='use sword'){
+    const id=Array.from({length:6},(_,i)=>i+1).find(i=>element(m,'P%',i)===integer(m,'A%'));
+    assert.ok(id);
+    for(let tries=0;element(m,'P%',id)!==point.objects[id-1]&&tries<22;tries++){
+     out=keys(m,point.command,question(m));
+     if(/smashes your skull/.test(out)){died=true;break;}
+     noDeath(out);
+    }
+   }else{
+    let cmd=point.command;
+    if(cmd==='use rope')cmd='down with rope';
+    if(cmd==='use key')cmd=point.before===2?'open door with key':'open gate with key';
+    if(cmd==='use candle')cmd='light bomb with candle';
+    out=keys(m,cmd,question(m));
+   }
+   if(died)break;
+   noDeath(out);assert.equal(integer(m,'A%'),point.after,point.command);
+   assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),point.objects,point.command);
+   visited.add(point.after);if(point.after===50)learned=true;
+   if(point.command==='use rope'){
+    assert.match(keys(m,'north',question(m)),/can't go that way/);
+    assert.equal(integer(m,'A%'),35,'rope descent has no upward exit');
+   }
+   if(point.command==='get grill'){
+    assert.match(keys(m,'west',question(m)),/can't go that way/);
+    assert.equal(integer(m,'A%'),38,'cell wall closes behind the player');
+   }
+   if(point.command==='get bomb'){
+    const objects=Array.from({length:24},(_,i)=>element(m,'P%',i+1));
+    assert.match(keys(m,'use candle',question(m)).replace(/\r?\n/g,''),/nothing around you has changed/);
+    assert.equal(integer(m,'A%'),51);assert.equal(integer(m,'T%'),0);
+    assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),objects);
+   }
+   if(point.command==='get key'&&point.after===35){
+    assert.equal(Array.from({length:18},(_,i)=>element(m,'P%',i+7)).filter(x=>x===-1).length,11);
+    assert.match(keys(m,'take brick',question(m)),/too many objects/);
+    assert.equal(element(m,'P%',23),35);
+   }
   }
-  const out=keys(m,cmd,question(m));noDeath(out);assert.equal(integer(m,'A%'),point.room,cmd);visited.add(point.room);
+  if(died){assert.match(keys(m,'y',question(m)),/darkened room/);continue;}
+  completed=true;
  }
- assert.equal(integer(m,'S%'),126);
- for(const id of treasures)assert.equal(element(m,'P%',id),1);
- assert.equal(element(m,'P%',9),0,'bomb consumed at the oak door');
- for(const [cmd,room]of tour){const out=keys(m,cmd,question(m));noDeath(out);assert.equal(integer(m,'A%'),room,cmd);visited.add(room);}
- assert.equal(visited.size,54);assert.equal(integer(m,'C0%'),1);
- assert.match(keys(m,'score',question(m)),/126/);assert.deepEqual(m.violations,[]);
+ assert.ok(completed,'possible winning combat outcomes must yield a complete quest');
+ assert.equal(integer(m,'T%'),19);assert.equal(integer(m,'H%'),11);
+ assert.ok(integer(m,'U%')<230,'winning quest fits original candle lifetime');
+ assert.equal(element(m,'P%',9),0);for(const id of treasures)assert.equal(element(m,'P%',id),1);
+ assert.match(keys(m,'score',question(m)),/126/);
+ // Visit the sole remaining room and exercise the original bat relocation.
+ for(const cmd of ['get compass','galar','east'])noDeath(keys(m,cmd,question(m)));
+ assert.equal(integer(m,'A%'),17);visited.add(17);
+ assert.match(keys(m,'west',question(m)),/giant bat picked you up/);
+ assert.equal(integer(m,'A%'),33);assert.equal(element(m,'P%',5),24);
+ assert.equal(visited.size,54,'every room visited using ordinary commands');
+ for(const cmd of ['galar','north','east','north','north','north','west','north','use key','drop compass'])noDeath(keys(m,cmd,question(m)));
+ assert.match(keys(m,'quit',question(m)),/Perfectionist and genius/);
+ keys(m,'n');assert.ok(m.ready());assert.deepEqual(m.violations,[]);
 });
 
 test('BASIC informational commands are free, absent objects stay absent, fatal moves restart cleanly, and exit restores the shell',{timeout:300_000},()=>{
@@ -112,12 +159,28 @@ test('BASIC informational commands are free, absent objects stay absent, fatal m
  assert.match(keys(m,'get sword',question(m)),/Where/);assert.equal(element(m,'P%',20),7);
  assert.match(keys(m,'get compass',question(m)),/darkened room/);
  assert.match(keys(m,'list',question(m)),/compass/);
- for(const cmd of ['n','w','w','s','w'])noDeath(keys(m,cmd,question(m)));
+ for(const cmd of ['n','w','s','s','w'])noDeath(keys(m,cmd,question(m)));
  assert.equal(integer(m,'A%'),7);
  assert.match(keys(m,'w',question(m)),/chasm/);
  assert.match(keys(m,'y',question(m)),/darkened room/);assert.equal(integer(m,'U%'),0);
  assert.match(keys(m,'list',question(m)),/carrying nothing/);
  keys(m,'quit',question(m));keys(m,'n');assert.ok(m.ready());assert.deepEqual(m.violations,[]);
+});
+
+test('BASIC aliases validate presence, missing nouns cannot create objects, and compass loss randomizes directions',{timeout:300_000},()=>{
+ const m=basicGame();
+ for(const cmd of ['take bomb','put grail','with key','using rope','take','put']){
+  const before=Array.from({length:24},(_,i)=>element(m,'P%',i+1));
+  const out=keys(m,cmd,question(m));noDeath(out);
+  assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),before,cmd);
+  assert.equal(integer(m,'A%'),1);
+ }
+ keys(m,'take compass',question(m));assert.equal(element(m,'P%',8),-1);
+ for(const cmd of ['north','put compass','west'])noDeath(keys(m,cmd,question(m)));
+ assert.equal(integer(m,'A%'),3);assert.equal(element(m,'P%',8),2);
+ for(let tries=0;integer(m,'A%')===3&&tries<20;tries++)noDeath(keys(m,'east',question(m)));
+ assert.ok([2,5].includes(integer(m,'A%')),'original room 3 east is blocked; compass loss must redirect it');
+ assert.deepEqual(m.violations,[]);
 });
 
 test('recovered drainage exits reach the hut with an intact bridge, but retain the original return-path gap after collapse',()=>{

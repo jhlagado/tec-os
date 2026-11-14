@@ -1,27 +1,42 @@
-CAVERNS ON TEC-OS -- COMPARISON TRIAL
+CAVERNS -- THE ORIGINAL BASIC ADVENTURE, REFINED FOR TEC-OS
 
 Select PICO9918 at 80 columns, or use CON PICO 80.
+Type CAVBASIC to play. Answer N after QUIT to return to the shell.
 
-Assembly Caverns80:
-  CAVERNS
-HELP lists commands. Space/Enter continues the story; Q skips.
-SAVE and LOAD use CAVERNS.SAV on the current drive.
-QUIT, then N, returns to the shell.
+Your aim is to find the lost treasure of Svartalfheim and bring it back to
+this hut. Treasure left in the hut is worth twice its carried value.
+Find the treasure room, explore the temple and castle, and read their clues.
+The maximum score is 126. There is no automatic ending: use SCORE or QUIT.
 
-Experimental BASIC comparison:
-  BAZA CAVBASIC
-  CAVBASIC
+Commands:
+  NORTH, SOUTH, EAST, WEST (or N/S/E/W)
+  LOOK, LIST (or I), SCORE, QUIT
+  GET COMPASS, TAKE COMPASS, DROP COMPASS, PUT COMPASS
+  USE SWORD, KILL TROLL WITH SWORD
+  USE KEY, OPEN DOOR WITH KEY
+  USE ROPE, DOWN WITH ROPE
+  USE CANDLE, LIGHT BOMB WITH CANDLE
 
-The revised BAZA compiles this with the shell loaded. UNLOAD is unnecessary.
-LOOK, LIST, N/S/E/W, I, GET COMPASS, DROP COMPASS, SCORE and QUIT work.
-Use normal tool commands, e.g. KILL TROLL WITH SWORD or OPEN DOOR WITH KEY.
-Answer N to leave or Y to restart. BASIC has no disk saves.
-TED CAVBASIC.BAS reads and edits the source.
+Take your compass: without it, directions can lead you astray. The paths
+sometimes curve and double back. Opposite directions need not undo a move.
+The string bridge remains usable for the homeward journey. The rope descent
+is one-way. Keep your eyes open for clues that offer another way back.
+A formidable locked entrance suggests the constructive use of explosives.
+Off-target blasts leave your location and surroundings unchanged; the bomb
+remains recoverable. The candle must be lit to ignite it.
 
-This trial shares Caverns80's revised map and completion route. The author's
-preferred original compass and one-use bridge rules are under review while
-the recovered drainage/return route is audited. This is not an archival
-replacement or a final gameplay decision. See docs/caverns-original.md and
-docs/caverns.md in the TEC-OS source tree for evidence and provenance.
+Read or edit the BASIC source with TED CAVBASIC.BAS.
+Rebuild it on this machine with BAZA CAVBASIC, then run CAVBASIC.
+The compiler works with the shell loaded; UNLOAD is unnecessary.
+The compiled game includes its required runtime; it does not load BAZA.RTL.
+There are no disk saves. Y at the ending starts a fresh adventure.
+
+Based on John Hardy's recovered MicroWorld BASIC for the Microbee, refined
+with the author's approval. The original compass, directed map, temple,
+crypt, key and treasure mechanics are retained. Documented fixes normalize
+command aliases and subroutine returns. The bridge and bomb are clarified
+for a complete adventure without knowledge from an earlier failed attempt.
+The separate Caverns80 assembly comparison is retained for development;
+it is not on this starter disk and is not the release's gameplay reference.
 
 Copyright 1982-83 John Hardy. GNU GPL; see the repository LICENSE.
