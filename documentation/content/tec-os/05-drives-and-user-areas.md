@@ -7,7 +7,7 @@ nav_group: "Using the machine"
 
 # 5. Drives and user areas
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -286,7 +286,7 @@ change to the current drive immediately reselects it to use the new
 volume. The shell fills its prompt-label table at its first prompt
 and updates it through `CD`. A program using ROM mount calls can
 therefore leave an old label displayed. `CD` alone rereads the card
-and updates it (`docs/shell.md:142-198`).
+and updates it (`241b438:docs/shell.md:142-198`).
 
 ### CD on drive A
 
@@ -585,7 +585,7 @@ at `0006h` changes from `B6C5h` to `A400h`. Program memory falls from 46,533 byt
 to 41,728, or 40,960 with GLCD.SVC too. On the starter card, the
 shell is already installed. Installing MON3 changes that address from `A700h` to `9500h` and
 reduces program memory from 42,496 to 37,888 bytes. Adding
-GLCD.SVC gives `9200h` and 37,120 bytes (`docs/mon3.md:47-59`).
+GLCD.SVC gives `9200h` and 37,120 bytes (`241b438:docs/mon3.md:47-59`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan

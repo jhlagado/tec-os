@@ -7,7 +7,7 @@ nav_group: "Writing programs"
 
 # 10. Read and write a file
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -312,12 +312,12 @@ directory performs this ordering. An unmodified FCB may close without a
 directory write. Function 48 supplies an explicit flush after closing. Chapter
 19 explains the cache ordering and failures.
 
-Writes to a drive other than the logged drive share a single pending block.
-The call returns when its record reaches that block's cache line. The block is
-written at the next close, directory request, write to another block, console
-read, function 48 or warm boot. No pending bytes remain during a successful
-flush before a key wait. A reset before a flush point loses at most that
-block's records (`docs/recovery.md:120-160`).
+Other drives still share one pending block, while the logged drive may
+hold several dirty lines. Ordinary outer calls also attempt eligible work
+before their own operation. The next same-block write can commit a prior update;
+there is no cross-call batching guarantee. Required input tries to drain pending
+data subject to refusal, so Write pending can remain at a prompt
+(`a40d482:docs/recovery.md:25-78`).
 
 A write result of 1 or 2 can follow earlier successful records. Close that
 partial file and check the close result before reporting progress. A failed
@@ -339,10 +339,11 @@ Function 30 sets file attributes through bits in the FCB's name/type fields. A
 program can use it to set the system attribute described with DIR. Check its
 result as with other file calls. Appendix A defines the attribute bits.
 
-An ordinary exit attempts to flush pending writes before another program
-loads. Success puts them on the card. Failure drops the failed cache lines,
-reports `Write lost` and cancels the remaining command line. Explicit function
-48 also reports failure but retains a failed line for another flush. Only warm
-boot drops a line that still fails (`docs/recovery.md:97-118`). A later flush
-cannot recover bytes already dropped. Reset discards pending cached changes
-and does not finish unclosed work.
+An ordinary exit attempts queued writes before another program loads.
+Failed acknowledged lines stay queued, but continuation is cancelled. Notices
+separately distinguish Write pending, a reported queue's successful Cache clear
+and an otherwise unreported error with no dirty retry. Explicit function 48
+retains its own failure result. Rejected metadata is dropped and never replayed;
+clearing data cannot finish its unclosed FCB or rejected directory update.
+Cold reset discards pending data (`a40d482:src/cache.asm:550-569`,
+`a40d482:src/cache.asm:638-649`, `a40d482:src/hk.asm:204-237`).

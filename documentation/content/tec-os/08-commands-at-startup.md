@@ -7,7 +7,7 @@ nav_group: "Using the machine"
 
 # 8. Commands at startup
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -32,11 +32,18 @@ edit it in TED as in Chapter 2 or use the
 `TYPE A:STARTUP.CMD` displays the saved text for checking. Changes take
 effect at the next reset.
 
-After saving on the board, exit the editor normally before resetting.
-A successful exit flush puts pending changes on the card. `Write lost`
-means that failed cached writes were dropped so the intended file may
-be incomplete. Read back the file and correct it before relying on the
-next startup. Reset does not finish pending writes.
+After saving, exit the editor normally and check the file result. After
+`Write pending`, a prompt alone does not establish a complete file. Resolve
+the original backend failure and await `Cache clear` before reset; queue
+clearance does not repair rejected metadata or finish an unclosed FCB
+(`a40d482:docs/recovery.md:69-117`).
+
+If bootstrap reset or saved-drive selection fails, Disk reset failed / Enter
+retries replaces normal command input. Only CR retries reset; LF, ordinary keys
+and input Ctrl-C do not. A previously buffered cold-start line waits and runs
+once after success, not inside recovery. Printing/input can still service queued
+writes but run no SDINIT and authorise no replay onto an inserted stranger
+(`a40d482:src/cpm/ccp.asm:75-134`).
 
 The starter card's file has two lines:
 

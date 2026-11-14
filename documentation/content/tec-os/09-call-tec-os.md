@@ -7,7 +7,7 @@ nav_group: "Writing programs"
 
 # 9. Call TEC-OS
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -243,6 +243,8 @@ consequences for an unfinished command chain, explained in Chapter 13. Chapter
 Warm boot rebuilds the low-memory jumps and restarts the CCP while retaining
 installed services and console selection. It flushes pending card writes
 before another program loads. A successful flush puts those bytes on the card.
-A failed flush drops the failed cache lines and reports `Write lost`. Chapter
-16 traces that sequence.
+A failed acknowledged line stays queued; continuation is cancelled and
+separate notices describe pending data and later completion. This does not
+close an unclosed file (`a40d482:src/cache.asm:638-649`,
+`a40d482:src/hk.asm:204-237`). Chapter 16 traces that sequence.
 
