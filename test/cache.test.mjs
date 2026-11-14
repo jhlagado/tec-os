@@ -743,39 +743,87 @@ function bios(m, n, bc) {
   return m.cpu.cpu;
 }
 
-test("a BIOS WRITE of type 1 to a directory block no line holds, on the volume written behind with dirty data lines, puts the data on the card first and then the directory (KS36b review)", async () => {
-  const image = await load(card(), [], { "BIG.DAT": pattern(40 * 512, (i) => i) });
-  const runs = (img) => (Buffer.from(img).toString("latin1").match(/\xc3{512}/g) ?? []).length;
-  const writes = [];
-  const m = start(image, { onSdWrite: (img) => writes.push(runs(img)) });
-  prepareCaller(m, "initial synthetic caller");
-  dirty(m);
-  // B:'s first directory record, read by the BIOS into 2400h.
-  const c = bios(m, 9, 1);
-  const dpb = word(m, ((c.h << 8) | c.l) + 10);
-  bios(m, 10, word(m, dpb + 13));
-  bios(m, 11, 0);
-  bios(m, 12, 0x2400);
+test("an uncached BIOS type1 directory publication follows every acknowledged data block", async () => {
+  const big = pattern(40 * 512, i => i), image = await load(card(), [], { "BIG.DAT": big });
+  const cuts = []; let recording = false, cutExpected, directoryBlock, directoryExpected, p, m;
+  m = start(image, { onSdWrite: img => {
+    if (!recording) return;
+    const { start, buffer } = m.sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    if (block === directoryBlock) {
+      for (const [dataBlock, data] of p.expected) assert.deepEqual(img.slice(dataBlock * 512, (dataBlock + 1) * 512), data, "every acknowledged data block is durable before publication");
+      assert.deepEqual(payload, directoryExpected);
+    } else {
+      assert.ok(p.expected.has(block)); assert.deepEqual(payload, p.expected.get(block));
+      assert.equal(volume(img, "B").find("Q.DAT").records, 0, "data commits publish no record count");
+    }
+    cutExpected.set(block === directoryBlock ? directoryExpected : p.expected.get(block), block * 512);
+    assert.deepEqual(img, cutExpected, "every accepted cut changes only the independently predicted complete block");
+    assert.deepEqual(volume(img, "B").verify(), []);
+    cuts.push({ block, payload, records: volume(img, "B").find("Q.DAT").records });
+  } });
+  prepareCaller(m, "uncached directory publication caller");
+  const commit = m.sd.commitWrite.bind(m.sd);
+  p = retainedBlocks({ m, image, call: (fn, de) => bdos(m, fn, de) });
+  const b = volume(image, "B"), descriptor = parseContainer(image).volumes[1], entry = b.find("Q.DAT");
+  assert.equal(entry.entries.length, 1); assert.equal(entry.entries[0].index, 0); assert.equal(entry.records, 0);
+  assert.deepEqual(entry.entries[0].slots, []);
+  directoryBlock = descriptor.start;
+  const originalDirectory = image.slice(directoryBlock * 512, (directoryBlock + 1) * 512);
+  directoryExpected = originalDirectory.slice();
+  directoryExpected[15] = 8;
+  const allocation = word(m, 0x5c + 16);
+  assert.ok(allocation >= b.g.dirBlocks && allocation <= b.d.dsm);
+  directoryExpected[16] = allocation & 255; directoryExpected[17] = allocation >> 8;
+  assert.equal(fileBlock(m, image, 0), [...p.expected.keys()][0]);
+  const selected = bios(m, 9, 1), dpb = word(m, ((selected.h << 8) | selected.l) + 10);
+  assert.equal(word(m, dpb), 64); assert.equal(word(m, dpb + 13), 0);
+  bios(m, 10, 0); bios(m, 11, 0); bios(m, 12, 0x2400);
   assert.equal(bios(m, 13, 0).a, 0);
-  // A:BIG.DAT read through: its 40 blocks take every clean line, the directory's with it.
+  assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2400 + i)), originalDirectory.slice(0, 128));
+  // Independent A reads evict the clean B directory while refusal keeps both B data lines.
   [1, ...Buffer.from("BIG     DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x2100 + i, v));
-  bdos(m, 15, 0x2100);
+  bdos(m, 15, 0x2100); assert.notEqual(m.cpu.cpu.a, 0xff);
   bdos(m, 26, 0x2200);
-  for (let r = 0; r < 160; r += 1) bdos(m, 20, 0x2100);
-  bdos(m, 26, 0x2000);
-  for (let r = 0; r < 4; r += 1) bdos(m, 21, 0x5c); // records 4 to 7: a dirty data line
-  assert.equal(runs(image), 0, "Q.DAT's two blocks dirty, none on the card");
-  const from = writes.length;
-  bios(m, 9, 1);
-  bios(m, 10, word(m, dpb + 13));
-  bios(m, 11, 0);
-  bios(m, 12, 0x2400);
-  assert.equal(bios(m, 14, 1).a, 0, "the directory record written back, type 1");
-  const after = writes.slice(from);
-  assert.ok(after.length >= 3, `the data and the directory reached the card (${after.length} card writes)`);
-  assert.equal(after[0], 1, "a data line first");
-  assert.equal(after.at(-2), 2, "both before the directory, last");
-  assert.deepEqual(m.violations, []);
+  for (let record = 0; record < 160; record++) {
+    bdos(m, 20, 0x2100); assert.equal(m.cpu.cpu.a, 0);
+    assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2200 + i)), big.slice(record * 128, (record + 1) * 128));
+  }
+  const bank = m.banks[0], tags = Array.from({ length: m.sym("NLINES") }, (_, line) => Array.from(bank.slice(m.sym("CTAB") - 0x8000 + line * 4, m.sym("CTAB") - 0x8000 + (line + 1) * 4)).reduce((n, v, i) => n + v * 256 ** i, 0));
+  assert.ok(!tags.includes(directoryBlock), "the directory really misses the cache");
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+  directoryExpected.slice(0, 128).forEach((v, i) => m.write(0x2400 + i, v));
+  bios(m, 9, 1); bios(m, 10, 0); bios(m, 11, 0); bios(m, 12, 0x2400);
+  const dataCommit = m.sd.commitWrite.bind(m.sd);
+  m.sd.commitWrite = () => {
+    const { start, buffer } = m.sd.writeState;
+    if (start / 512 !== directoryBlock) return dataCommit();
+    assert.deepEqual(Uint8Array.from(buffer), directoryExpected);
+    for (const [block, payload] of p.expected) assert.deepEqual(image.slice(block * 512, (block + 1) * 512), payload);
+    commit(); assert.equal(m.sd.pendingResponse[0], 0x05);
+  };
+  const step = m.step.bind(m), body = m.sym("BWRITE"); let released = 0;
+  assert.deepEqual([m.read(body), m.read(body + 1), m.read(body + 2)], [0xcd, m.sym("CDI") & 255, m.sym("CDI") >> 8]);
+  m.step = () => {
+    if (m.pc === body) {
+      assert.equal(m.cpu.cpu.c, 1); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      assert.equal(word(m, m.sym("APIRTPC")), 0x3006);
+      assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+      const now = Array.from({ length: 30 }, (_, line) => Array.from(bank.slice(m.sym("CTAB") - 0x8000 + line * 4, m.sym("CTAB") - 0x8000 + (line + 1) * 4)).reduce((n, v, i) => n + v * 256 ** i, 0));
+      assert.ok(!now.includes(directoryBlock));
+      released++; p.backend.accepts = () => true;
+    }
+    return step();
+  };
+  cutExpected = Uint8Array.from(p.original); recording = true;
+  assert.equal(bios(m, 14, 1).a, 0); m.step = step; recording = false;
+  assert.equal(released, 1); assert.equal(cuts.length, 3);
+  assert.deepEqual(cuts.map(c => c.block), [...p.expected.keys(), directoryBlock]);
+  assert.deepEqual(cuts.map(c => c.records), [0, 0, 8]);
+  const expectedImage = Uint8Array.from(p.expectedImage); expectedImage.set(directoryExpected, directoryBlock * 512);
+  assert.deepEqual(image, expectedImage); assert.equal(p.state().queue.length, 0);
+  assert.deepEqual(b.read("Q.DAT"), Uint8Array.from([...new Uint8Array(512).fill(0xc3), ...new Uint8Array(512).fill(0xd4)]));
+  assert.deepEqual(b.verify(), []); assert.deepEqual(m.violations, []);
+  console.log(JSON.stringify({ scope: "uncached type1 directory publication", directoryBlock, dataBlocks: [...p.expected.keys()], commits: cuts.map(c => ({ block: c.block, records: c.records, sha256: createHash("sha256").update(c.payload).digest("hex") })) }));
 });
 
 /** Card block LBA's reads fail at SDREAD, as a card that won't give it. */
