@@ -444,7 +444,8 @@ gives the record layout.
 
 `MON3.SVC` gives the `MON3>` line, which BDOS function 10 reads and the
 service converts to capitals. It takes three commands. Anything else prints
-`?` (`docs/mon3.md:39-45`, `docs/mon3.md:61-115`):
+`?`. The address forms below follow the later development component
+(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:59-145`):
 
 | Form | Operation |
 | --- | --- |
@@ -486,7 +487,7 @@ and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 | File | Use |
 | --- | --- |
 | `TED.COM` | `TED [NAME.EXT [LINE]]` edits a text file, opening it at `LINE` when one is given. With no name it opens the project's file |
-| `TAS.COM` | `TAS NAME [OUT.TYP]` assembles `NAME.ASM` to `NAME.COM` and `NAME.DBG`, or to `OUT.TYP`, where a type of `SVC` makes a service. A line may hold several statements with `\` between them |
+| `TAS.COM` | `TAS NAME [OUT.TYP]` assembles `NAME.ASM` to `NAME.COM` and `NAME.DBG`, or to `OUT.TYP`, where a type of `SVC` makes a service and an explicit `HEX` writes genuine Intel HEX. A line may hold several statements with `\` between them |
 | `BAZA.COM` | `BAZA NAME` compiles `NAME.BAS`, or `NAME.BAZ` when there is no `.BAS`, to `NAME.COM` on the same drive |
 | `BAZA.RTL` | BAZA's runtime library, read from the current drive or from the drive `BAZA.COM` was loaded from |
 | `SAMPLE.ASM` | Assembly source for `TAS SAMPLE`, then `SAMPLE` |
@@ -498,6 +499,17 @@ and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 | `SHELL.SVC` | The shell, a resident service: recall, CD, DIR with sizes, COPY, DEL, SERVICES, CLS, ECHO, PAUSE, the `[more]` pause, lines of several commands and `.CMD` scripts |
 | `GLCD.SVC` | The graphics LCD console driver, a resident service |
 | `STARTUP.CMD` | The startup file, holding the lines `SHELL.SVC` and `GLCD.SVC` |
+
+`TAS NAME OUT.HEX` retains 16-bit record addresses and unfilled gaps,
+with data checksums and EOF. Later origins must move forward. Explicit fill
+remains data; no entry or extended-address record is invented. Other output
+and debug conventions remain. For example, `TAS PIC PIC.HEX`, then
+`MON3.SVC`, `LOAD PIC.HEX` and `GO` runs at the file's lowest loaded address;
+`LOAD PIC.HEX 5000` maps that lowest address to 5000h. Use position-independent
+code or assemble for the intended destination: moving bytes does not
+relocate embedded addresses. `GO ADDR` remains a one-run entry override
+(`Thorium c81ba68848b72eb6649e76a9e659d5b5596f762d:docs/language.md:167-185`,
+`TEC-OS 2ec05d670a3d6acf813fbd544b3329d48614b92c:test/tas-hex.test.mjs:105-137`).
 
 TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
 `.BAS` file with `BAZA NAME.BAS`. `^T D` chains `TDB NAME` for an `.ASM`

@@ -237,10 +237,10 @@ test("TED's text holds at least 28,694 bytes on the starter's files, SHELL.SVC a
 // The smallest system the starter card teaches: the shell, MON3.SVC
 // installed and left by EXIT, then TED. Its room is below the 24,576-byte
 // source limit, so a source at the limit is edited with MON3.SVC unloaded.
-test("TED's text holds at least 24,086 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 23,318 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+test("TED's text holds at least 23,574 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,806 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
   check(TED);
   const P = /\r\n\d*[A-P](:\S*)?>$/;
-  for (const [board, via, floor] of [[{ glcd: false }, "serial", 24_086], [{ matrix: true, glcd: true }, "matrix", 23_318]]) {
+  for (const [board, via, floor] of [[{ glcd: false }, "serial", 23_574], [{ matrix: true, glcd: true }, "matrix", 22_806]]) {
     const m = boot(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board);
     const type = (line, done, what) => {
       const mark = m.output.length;

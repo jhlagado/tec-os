@@ -1361,7 +1361,7 @@ test("S2-13 docs", () => {
   const compat = flat("docs/compatibility.md");
   for (const s of ["46,533 bytes", "42,496", "41,728"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A700h` to `9500h`/);
+  assert.match(flat("docs/mon3.md"), /from `A700h` to `9300h`/);
   // No doc teaches MOUNT.COM or a volume marked written behind.
   for (const n of ["README.md", "docs/shell.md", "docs/recovery.md", "docs/compatibility.md", "docs/container-format.md", "docs/rom-services.md", "docs/wip.md", "docs/mon3.md"]) {
     const t = flat(n);

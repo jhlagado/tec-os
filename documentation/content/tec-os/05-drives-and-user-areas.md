@@ -538,8 +538,8 @@ are in [Chapter 25](25-loading-and-removing-services.md).
 ## A MON-3 session
 
 `MON3.SVC` runs programs written for the TEC-1G's MON-3 monitor. These
-programs load at `4000h` and call monitor routines through restart
-instructions. HELLO3 in [Chapter 1](01-first-session.md) is an example.
+programs call monitor routines through restart instructions. HELLO3 in
+[Chapter 1](01-first-session.md) is an example, assembled to run at `4000h`.
 The service supplies supported MON-3 calls while retaining TEC-OS's card
 access and BDOS.
 
@@ -555,9 +555,20 @@ capitals or lower case:
 | Command | Effect |
 | --- | --- |
 | `LOAD NAME.BIN [ADDR]` | Loads the file at `4000h`, or at the hexadecimal `ADDR`, in whole records. Any type but `HEX` loads this way |
-| `LOAD NAME.HEX` | Loads an Intel HEX file at its records' own addresses. The file is read twice and every record is checked before any is written |
-| `GO [ADDR]` | Runs the last good load, or the program at `ADDR`, after writing pending card changes |
+| `LOAD NAME.HEX [ADDR]` | Loads Intel HEX at its records' addresses, or maps the lowest data address to `ADDR` while retaining gaps. All validation finishes before copying |
+| `GO [ADDR]` | Attempts a card flush, then runs the last good load at its remembered entry or the explicit `ADDR` for one run |
 | `EXIT` | Ends the session with a warm boot to `A:SYSTEM>` |
+
+`LOAD NAME.BIN 2000` then bare `GO` starts at 2000h; omitted BIN addresses
+still default to 4000h. HEX remembers its lowest loaded address unless a
+validated type 05 entry is present. An optional load base rebases the entry
+with the data; `GO ADDR` overrides it for one run. LOAD never runs automatically,
+and moving bytes does not relocate absolute operands. TAS produces genuine
+HEX with `TAS NAME OUT.HEX`, using data 00/EOF 01 and no entry record. These
+address forms follow the later development components
+(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:59-145`,
+`Thorium c81ba68848b72eb6649e76a9e659d5b5596f762d:docs/language.md:167-185`).
+A failed pre-GO flush can leave writes pending; GO does not check that status.
 
 A load must lie between `0100h` and the page of the BDOS entry in `0006h`,
 outside `0800h–08FFh`, which holds MON-3's stack and variables. Anything
@@ -575,17 +586,20 @@ that ended a program out of the command line. Serial has no such wait.
 ### MON-3 memory and limits
 
 Warm boot preserves MON3.SVC. `UNLOAD` or reset removes it. Its
-4,606-byte header and image occupy 18 pages. With relocation data
-the file occupies 5,032 bytes. These pages hold the service code,
+current 4,955-byte header and image occupy 20 pages. With relocation data
+the file occupies 5,446 bytes. These later measurements belong to the monitor
+at `TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3`; the earlier checked
+header/captures above retain their historical ownership. These pages hold the service code,
 line buffer and recovery stack above the MON-3 program's load area.
 The program itself uses MON-3's stack below `0880h`.
 
 On a card with nothing else installed, the BDOS entry address stored
-at `0006h` changes from `B6C5h` to `A400h`. Program memory falls from 46,533 bytes
-to 41,728, or 40,960 with GLCD.SVC too. On the starter card, the
-shell is already installed. Installing MON3 changes that address from `A700h` to `9500h` and
-reduces program memory from 42,496 to 37,888 bytes. Adding
-GLCD.SVC gives `9200h` and 37,120 bytes (`docs/mon3.md:47-59`).
+at `0006h` changes from `B6C5h` to `A200h`. Program memory falls from 46,533 bytes
+to 41,216, or 40,448 with GLCD.SVC too. On the starter card, the
+shell is already installed. Installing MON3 changes that address from `A700h` to `9300h` and
+reduces program memory from 42,496 to 37,376 bytes. Adding
+GLCD.SVC gives `9000h` and 36,608 bytes
+(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:47-59`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan

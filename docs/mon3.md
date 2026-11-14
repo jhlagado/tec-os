@@ -168,6 +168,46 @@ pushes into MON-3's 128-byte stack, or past it into the TPA below 0800h,
 still comes back: what it overwrote in the TPA is its own loss, and the
 service's pages are untouched.
 
+### Assemble HEX and choose an entry
+
+An explicit `.HEX` output selects Intel HEX in TAS. For example, save this
+position-independent program as `PIC.ASM`:
+
+```asm
+ORG $2000
+LD A,$5A
+JR FINISH
+ORG $2010
+FINISH: RET
+```
+
+```text
+A:SYSTEM>TAS PIC PIC.HEX
+A:SYSTEM>MON3.SVC
+MON3>LOAD PIC.HEX
+MON3>GO
+MON3>LOAD PIC.HEX 5000
+MON3>GO
+```
+
+Both runs return to `MON3>`. The first starts at 2000h; the second at 5000h,
+with its relative jump still reaching the corresponding RET. After the
+second load, `GO 5010` selects that RET for one run; a later bare `GO` still
+starts at 5000h. `LOAD NAME.BIN 2000` followed by `GO` similarly remembers
+2000h. MON3 command addresses are plain hex digits, without `$` or `0x`.
+
+TAS emits 16-bit data00 and EOF01 records, not entry or extended-address
+records. Successive origins before bytes or reservations select the start;
+later origins move forward only. Unfilled DS and ALIGN leave holes, while
+explicit fill, including zero, is data. An empty HEX has only EOF and MON3
+refuses it because there is nothing to load. Other TAS output types and the
+logical addresses in `NAME.DBG` retain their usual behavior. The debug
+checksum describes the logical image, not the ASCII HEX text.
+
+The actual compiler/load/run path is tested on the emulator in
+[test/tas-hex.test.mjs](../test/tas-hex.test.mjs), including shell, GLCD and
+MON3 residency. This is not a physical-board test.
+
 ## The tables' checksum
 
 `GO` sums, modulo 65,536, the service's own bytes from its header to its
