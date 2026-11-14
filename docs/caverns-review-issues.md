@@ -210,3 +210,23 @@ relocation semantics retained. Dragon defeated on the original-map rope route.
 Candle remains in room 18, uncollected. Native fresh-machine comparison passed.
 Actual Viewer launched CAVLOAD CHECK2 and LIST printed all three carried items;
 stopped at its prompt with no exploration commands after loading.
+
+
+## Candle and matches — proposed review refinement
+
+Author requested recording the implausibility of an already-lit candle left
+in the cave. Proposed replacement: find an unlit candle and a box of matches,
+then explicitly light the candle. Track burn time from lighting, rather than
+from total adventure moves before collection. This remains a design note:
+object placement, command syntax, consumption/relighting and timing rules
+need review; no matches or lighting-rule change added to the current build.
+Current source starts C0%=1 and uses global U% thresholds 200/230 for warnings
+and extinction. Checkpoint 2 and its existing candle behavior are unchanged.
+
+
+Live continuation from checkpoint 2: SOUTH to room 18, TAKE CANDLE, LIST.
+Actual Viewer LIST confirms compass, sword, candle and rope. Stopped in room
+18 at the prompt. No westward exploration yet. Source inspection: north goes
+to entrance 16, west to torture chamber 23; south/east blocked. No other loose
+object initially occupies room 18. Evidence: build/caverns/review-check2/,
+commands at turns 2–4.
