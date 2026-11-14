@@ -296,8 +296,8 @@ export const MUTANTS = {
   /** READDIR without its CPOUT and BADSECT jump. */
   readdir: () =>
     mutant((b, at, put, sym) => {
-      expectAt(b, at("READDIR"), [...call(sym("CPOUT")), 0xc2, lo(sym("BADSECT")), hi(sym("BADSECT"))]);
-      put(at("READDIR"), [0, 0, 0, 0, 0, 0]);
+      expectAt(b, at("READDIR"), [...call(sym("HKPOINT")), ...call(sym("CPOUT")), 0xc2, lo(sym("BADSECT")), hi(sym("BADSECT"))]);
+      put(at("READDIR") + 3, [0, 0, 0, 0, 0, 0]);
     }),
   /** FNCLSE without its CPOUT and BADSECT jump. */
   fnclse: () =>
