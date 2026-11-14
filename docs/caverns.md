@@ -123,3 +123,12 @@ The fixture writer captures compiler symbols and emits both the debug copy and
 `programs/CAVBASIC.COM` from an actual compilation. Keep source, binary and
 fixture together. `npm run media` packages their hashes into starter recipe
 revision 16. `npm run web` supplies that same recipe and files to the Viewer.
+
+
+## Development scenario loading
+
+For repeatable review without replaying the opening, see
+[caverns-scenarios.md](caverns-scenarios.md). The separate CAVLOAD launcher
+restores externally generated named checkpoints, including monsters and RNG,
+without increasing the normal game's size. It is development-only and is not
+added to the public starter recipe.

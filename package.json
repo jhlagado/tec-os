@@ -20,7 +20,9 @@
     "media": "node tools/media.mjs",
     "check": "npm run build && npm test && npm run media && npm run web",
     "web": "node web/build.mjs",
-    "inputs": "node tools/inputs.mjs"
+    "inputs": "node tools/inputs.mjs",
+    "caverns:scenarios": "node tools/caverns-scenario.mjs pack",
+    "test:caverns-scenarios": "node --test test/caverns-scenario.test.mjs"
   },
   "devDependencies": {
     "@jhlagado/debug80-runtime": "0.3.3",
