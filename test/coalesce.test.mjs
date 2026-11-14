@@ -190,11 +190,175 @@ function checkMissingDrain(c) {
   });
 }
 
-test("AC2 no flush", () => flushRows(NO_FLUSH, "---"));
+function pendingFrame(r, block, line) {
+  const { m } = r;
+  assert.equal(m.expand, undefined);
+  assert.ok(m.classicBankIn);
+  const cache = m.banks[0];
+  assert.equal(cache.length, 0x4000);
+  const tag = cache.slice(m.sym("CTAB") - 0x8000 + line * 4, m.sym("CTAB") - 0x8000 + (line + 1) * 4);
+  const dirty = Array.from(cache.subarray(m.sym("CDIRTY") - 0x8000, m.sym("CDIRTY") - 0x8000 + m.sym("NLINES")));
+  return {
+    pending: r.pending(),
+    depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")),
+    queue: Array.from({ length: m.read(m.sym("HKCNT")) }, (_, i) => m.read(m.sym("HKQ") + i)),
+    block: [...tag].reduce((n, b, i) => n + b * 256 ** i, 0),
+    payload: cache.slice(line * 512, (line + 1) * 512),
+    dirty, card: r.image.slice(block * 512, (block + 1) * 512),
+  };
+}
+
+function healthyProgress(rows) {
+  for (const [what, call] of rows) {
+    const r = three({ open: true });
+    const block = lbaOf(r, 0), line = r.pending() - 1;
+    assert.ok(line >= 0 && line < r.m.sym("NLINES"));
+    const want = new Uint8Array(512);
+    for (let k = 0; k < 3; k++) want.set(pat(k), k * 128);
+    const old = Uint8Array.from(want); old.fill(0, 256);
+    const before = pendingFrame(r, block, line);
+    assert.equal(before.block, block);
+    assert.deepEqual([before.pending, before.depth, before.busy], [line + 1, 0, 0]);
+    assert.deepEqual(before.queue, [line]);
+    assert.equal(before.dirty.filter(Boolean).length, 1);
+    assert.equal(before.dirty[line], 1);
+    assert.deepEqual(before.payload, want);
+    assert.deepEqual(before.card, old);
+    assert.equal(r.state(), "CC-", "earlier healthy entries committed the first two records");
+    const w0 = r.t.writes.length;
+    const result = call(r);
+    const after = pendingFrame(r, block, line);
+    assert.deepEqual(r.t.writes.slice(w0), what === "nothing" ? [] : [block]);
+    assert.deepEqual(after.card, what === "nothing" ? old : want);
+    const remains = what === "nothing" || what === "a fourth record in the same block";
+    assert.deepEqual(after.queue, remains ? [line] : []);
+    assert.equal(after.dirty.filter(Boolean).length, remains ? 1 : 0);
+    assert.equal(after.pending, remains ? line + 1 : 0);
+    assert.deepEqual([after.depth, after.busy], [0, 0]);
+    if (what === "a fourth record in the same block") {
+      want.set(pat(3), 384);
+      assert.equal(result.a, 0);
+      assert.deepEqual(after.payload, want, "the new fourth record is received after the entry commit");
+      assert.equal(r.onCard(3), false, "that newly received update has had no later opportunity");
+    }
+    if (what === "BDOS 12") assert.equal(result.a, 0x22);
+    if (what === "BDOS 20 of a file already open" || what === "the BIOS's CONST") assert.equal(result.a, 0);
+  }
+}
+
+/** Refuse earlier opportunities, recover at the same instruction boundary in
+ * positive and omitted-prerequisite images, and copy the first cut before
+ * later directory scans can repair it. No continuation or API context is reset. */
+function pendingBoundary([what, call], kind, rom, omitted = false) {
+  const r = three({ open: true, rom });
+  const block = lbaOf(r, 0), line = r.pending() - 1;
+  assert.ok(line >= 0 && line < r.m.sym("NLINES"));
+  const want = new Uint8Array(512);
+  for (let k = 0; k < 3; k++) want.set(pat(k), k * 128);
+  const old = Uint8Array.from(want); old.fill(0, 256);
+  const before = pendingFrame(r, block, line);
+  assert.deepEqual([before.block, before.pending, before.depth, before.busy], [block, line + 1, 0, 0]);
+  assert.deepEqual(before.queue, [line]);
+  assert.equal(before.dirty.filter(Boolean).length, 1);
+  assert.equal(before.dirty[line], 1);
+  assert.deepEqual(before.payload, want);
+  assert.deepEqual(before.card, old);
+  const start = r.m.sym(kind), release = start + (kind === "READDIR" ? 3 : 0), observe = release + 6;
+  const callBytes = name => [0xcd, r.m.sym(name) & 255, r.m.sym(name) >> 8];
+  const tail = omitted ? new Array(6).fill(0) : [...callBytes("CPOUT"), 0xc2, r.m.sym("BADSECT") & 255, r.m.sym("BADSECT") >> 8];
+  const span = [...(kind === "READDIR" ? callBytes("HKPOINT") : []), ...tail];
+  assert.deepEqual(Array.from({ length: span.length }, (_, i) => r.m.read(start + i)), span, "the complete common prerequisite span is bound to this image");
+  const fault = r.refuse(), attempts = [];
+  const commit = r.m.sd.commitWrite.bind(r.m.sd);
+  r.m.sd.commitWrite = () => {
+    const { start, buffer } = r.m.sd.writeState;
+    const payload = Uint8Array.from(buffer), accepted = !fault.on;
+    assert.equal(start / 512, block);
+    assert.deepEqual(payload, want);
+    attempts.push({ block, payload, accepted });
+    commit();
+    if (accepted) {
+      assert.equal(r.m.sd.pendingResponse[0], 0x05);
+      assert.deepEqual(r.image.slice(start, start + 512), want);
+    }
+  };
+  let atRelease, cut;
+  const step = r.m.step.bind(r.m);
+  r.m.step = () => {
+    if (!atRelease && r.m.pc === release) {
+      atRelease = pendingFrame(r, block, line);
+      assert.deepEqual([atRelease.depth, atRelease.busy, atRelease.pending], [1, 0, line + 1]);
+      assert.deepEqual(atRelease.queue, [line]);
+      assert.equal(atRelease.block, block);
+      assert.equal(atRelease.dirty.filter(Boolean).length, 1);
+      assert.deepEqual(atRelease.payload, want);
+      assert.deepEqual(atRelease.card, old);
+      assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted), "earlier real entry/private attempts were refused");
+      fault.on = false;
+    }
+    if (!cut && r.m.pc === observe) cut = { ...pendingFrame(r, block, line), attempts: attempts.slice() };
+    return step();
+  };
+  const result = call(r);
+  r.m.step = step;
+  assert.ok(atRelease && cut, "the common release and first continuation are actually reached");
+  assert.deepEqual([cut.depth, cut.busy], [1, 0], "the copied cut remains inside its original outer API");
+  if (what === "BDOS 35") {
+    assert.equal(result.a, 0xff, "function 35's defined completion value");
+    assert.deepEqual(Array.from({ length: 3 }, (_, i) => r.m.read(FCB2 + 33 + i)), [0, 0, 0], "the missing ZZ file has zero computed random-record size");
+  }
+  else assert.ok(result.a >= 0 && result.a <= 3, `${what}: successful slot/no-write result`);
+  return { what, r, before, atRelease, cut, block, line, want, old };
+}
+
+function checkPendingBoundary(c) {
+  assert.equal(c.cut.pending, 0, `${c.what}: the pending block is committed before the first continuation`);
+  assert.deepEqual(c.cut.queue, []);
+  assert.ok(c.cut.dirty.every(v => !v));
+  assert.equal(c.cut.block, c.block);
+  assert.deepEqual(c.cut.payload, c.want);
+  assert.deepEqual(c.cut.card, c.want);
+  assert.deepEqual(c.cut.attempts.filter(a => a.accepted).map(a => a.block), [c.block]);
+}
+
+function checkOmittedPending(c) {
+  assert.equal(c.cut.pending, c.line + 1);
+  assert.deepEqual(c.cut.queue, [c.line]);
+  assert.equal(c.cut.dirty.filter(Boolean).length, 1);
+  assert.equal(c.cut.dirty[c.line], 1);
+  assert.equal(c.cut.block, c.block);
+  assert.deepEqual(c.cut.payload, c.want);
+  assert.deepEqual(c.cut.card, c.old);
+  assert.ok(c.cut.attempts.every(a => !a.accepted));
+  assert.throws(() => checkPendingBoundary(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], `${c.what}: the pending block is committed before the first continuation`);
+    assert.equal(error.actual, c.line + 1);
+    assert.equal(error.expected, 0);
+    return true;
+  });
+}
+
+test("AC2 healthy ordinary and selected opportunities", () => healthyProgress(NO_FLUSH));
 test("AC2 console reads flush", () => fullDrainRows(CONSOLE));
 test("AC2 bios conin flushes", () => fullDrainRows(CONIN));
-test("AC2 directory requests flush", () => flushRows(DIRECTORY, "CCC"));
-test("AC2 close flushes", () => flushRows(CLOSE, "CCC"));
+test("AC2 directory requests preserve the pending-block prerequisite", () => {
+  for (const row of DIRECTORY) checkPendingBoundary(pendingBoundary(row, "READDIR"));
+});
+test("AC2 close preserves publication and the unmodified pending-block prerequisite", () => {
+  const r = three({ open: true }), w0 = r.t.writes.length;
+  const result = r.bdos(16);
+  assert.ok(result.a >= 0 && result.a <= 3);
+  const made = r.t.writes.slice(w0);
+  assert.equal(made.length, 2);
+  assert.equal(made[0], lbaOf(r, 0));
+  assert.ok(dirBlocks(r.image).has(made[1]));
+  assert.equal(r.pending(), 0);
+  assert.equal(volume(r.image, "A").find("P.DAT").records, 3);
+  assert.deepEqual(volume(r.image, "A").read("P.DAT"), Uint8Array.from([0, 1, 2].flatMap(k => [...pat(k)])));
+  assert.deepEqual(volume(r.image, "A").verify(), []);
+  checkPendingBoundary(pendingBoundary(CLOSE[1], "FNCLSE"));
+});
 test("AC2 next block flushes", () => flushRows(NEXT_BLOCK, "CCC"));
 test("AC2 another drive flushes", () => flushRows(OTHER_DRIVE, "CCC"));
 test("AC2 function 48, mount and unmount", () => fullDrainRows(VOLUMES));
@@ -248,12 +412,16 @@ test("AC2 mutant: FNSTAT without its call leaves seven blocks after ordinary ent
   const c = fullDrainCall(CONSOLE[3], MUTANTS.fnstat());
   checkMissingDrain(c);
 });
-test("AC2 mutant: READDIR without its call leaves the block pending at BDOS 15, 17 and 35", () => {
+test("AC2 mutant: READDIR without its prerequisite leaves the block pending at the first cut", () => {
   const mut = MUTANTS.readdir();
-  for (const row of DIRECTORY) assert.throws(() => flushRows([row], "CCC", mut), new RegExp(`${row[0]}: the three records`));
+  for (const row of DIRECTORY) {
+    const c = pendingBoundary(row, "READDIR", mut, true);
+    checkOmittedPending(c);
+  }
 });
-test("AC2 mutant: FNCLSE without its call leaves the block pending at the unmodified close", () => {
-  assert.throws(() => flushRows(CLOSE.slice(1), "CCC", MUTANTS.fnclse()), /unmodified FCB: the three records/);
+test("AC2 mutant: FNCLSE without its prerequisite leaves the block pending at the unmodified close", () => {
+  const c = pendingBoundary(CLOSE[1], "FNCLSE", MUTANTS.fnclse(), true);
+  checkOmittedPending(c);
 });
 test("AC2 mutant: BCONIN without its call leaves seven blocks after ordinary entry", () => {
   const c = fullDrainCall(CONIN[0], MUTANTS.bconin());
