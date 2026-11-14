@@ -31,6 +31,7 @@ const INTEGRITY = { used: 16016, tpa: 47237, starter: 46533, entry: 0xb6c5 };
 // ceiling for the file sums only its 128 writes and close.
 const QUALIFIED_COST = { bdos11: 3886, worstOnB: 7_552_243, worstOnA: 7_806_699 };
 const COST = { emptyIncrease: 360, file16: 30_328_602 };
+const STARTER_COST = { bounceB: 102_662_703, bounceA: 102_405_719 };
 
 // --- Every landing keeps the version fields --------------------------------
 
@@ -725,16 +726,28 @@ function onStarter(command, { logged = "B" } = {}) {
     m.enqueueInput(`${logged}:\r`, "matrix");
     m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && PROMPT.test(m.text(m.mark))), 400_000_000, `${logged}:`);
   }
-  const [entry, back, sdw, lba] = [m.sym("BENTRY"), m.sym("RETWORD") + 6, m.sym("SDWRITE"), m.sym("SDLBA")];
-  const t = { writes: [], fn: [], w21: [] };
-  let on = false;
-  let call = null;
+  const [entry, retword, sdw, lba] = [m.sym("BENTRY"), m.sym("RETWORD"), m.sym("SDWRITE"), m.sym("SDLBA")];
+  const leave = m.symbols.get("HKLEAVE"), prefix = leave === undefined ? [] : [0xcd, leave & 255, leave >> 8];
+  const returning = [...prefix, 0x7d, 0x44, 0xed, 0x7b, m.sym("OLDSP") & 255, m.sym("OLDSP") >> 8, 0xc9];
+  assert.deepEqual(Array.from({ length: returning.length }, (_, i) => m.read(retword + i)), returning, "the complete measured return span belongs to this ROM");
+  const back = retword + returning.length - 1;
+  const t = { writes: [], fn: [], w21: [], commits: [], writeEntries: 0 };
+  const dir = dirBlocks(image), save = /^save /i.test(command), fileName = save ? "X.COM" : "BOUNCE.COM";
+  const expectedSave = Uint8Array.from({ length: 4096 }, (_, i) => m.read(0x100 + i));
+  let on = false, call = null;
   const step = m.step.bind(m);
   m.step = () => {
     const pc = m.pc;
     if (on) {
+      if (pc === entry && m.cpu.cpu.c === 21) {
+        t.writeEntries++;
+        assert.equal(call, null, "an independent write entry is not hidden inside an unfinished call");
+      }
       if (pc === entry && !call) call = { fn: m.cpu.cpu.c, t0: m.cycles };
-      else if (pc === back && call) [call.fn === 21 && t.w21.push(m.cycles - call.t0), (call = null)];
+      else if (pc === back && call) {
+        if (call.fn === 21) { assert.equal(m.cpu.cpu.a, 0); t.w21.push(m.cycles - call.t0); }
+        call = null;
+      }
       if (pc === sdw) {
         t.writes.push(word(m, lba) + word(m, lba + 2) * 0x10000);
         t.fn.push(call?.fn ?? -1);
@@ -742,35 +755,70 @@ function onStarter(command, { logged = "B" } = {}) {
     }
     return step();
   };
-  const mark = m.output.length;
-  const t0 = m.cycles;
+  const commit = m.sd.commitWrite.bind(m.sd);
+  m.sd.commitWrite = () => {
+    const { start, buffer } = m.sd.writeState, payload = Uint8Array.from(buffer);
+    commit();
+    if (!on) return;
+    assert.equal(m.sd.pendingResponse[0], 0x05);
+    assert.deepEqual(image.slice(start, start + 512), payload);
+    const fs = volume(image, "A"); assert.deepEqual(fs.verify(), []);
+    const published = fs.find(fileName) ? fs.read(fileName) : new Uint8Array();
+    t.commits.push({ block: start / 512, payload, published });
+  };
+  const mark = m.output.length, t0 = m.cycles;
   on = true;
   m.enqueueInput(`${command}\r`, "matrix");
   m.runUntilChecked(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput() && m.ready() && PROMPT.test(m.text(mark))), 4_000_000_000, command);
   on = false;
-  const out = { ...t, cycles: m.cycles - t0, text: m.text(mark), dir: dirBlocks(image) };
+  const cycles = m.cycles - t0, text = m.text(mark), fs = volume(image, "A"), file = fs.read(fileName);
+  assert.deepEqual(fs.verify(), []);
+  assert.deepEqual(t.writes, t.commits.map(c => c.block), "every SDWRITE has one accepted complete backend commit");
+  assert.ok(t.writeEntries > 0); assert.equal(t.w21.length, t.writeEntries);
+  const mean = t.w21.reduce((a, b) => a + b, 0) / t.w21.length; assert.ok(Number.isFinite(mean));
+  if (save) {
+    assert.equal(file.length, 4096); assert.deepEqual(file, expectedSave, "all sixteen saved pages equal this machine's own pre-command TPA");
+  } else {
+    assert.match(text, /COM written\r\n/); assert.equal(file.length, 20736);
+    assert.equal(sha(file), "b524b72c8869f3778eed72c37e829ed027536f42345c882a95034c519852614f", "the complete pinned compiler result");
+  }
+  for (const c of t.commits) {
+    assert.ok(c.published.length <= file.length);
+    assert.deepEqual(c.published, file.slice(0, c.published.length), "every published prefix contains independently known output bytes");
+  }
+  assert.ok(t.commits.some(c => c.published.length === file.length), "a real commit publishes the complete output");
+  const out = { ...t, cycles, text, dir, mean };
   traces.set(key, out);
   return out;
 }
 
+function checkBounceWrites(b) {
+  const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
+  const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
+  assert.equal(times.size, 41);
+  assert.equal([...times.values()].filter(n => n === 4).length, 40, "forty blocks progress four acknowledged record versions");
+  const twice = [...times].filter(([, n]) => n === 2);
+  assert.equal(twice.length, 1);
+  assert.deepEqual(data.filter(([block]) => block === twice[0][0]).map(([, fn]) => fn), [16, 16], "the final partial block is written at both closes");
+  assert.equal(data.length, 162); assert.equal(b.writes.length - data.length, 6);
+  assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
+}
+
+function checkSaveWrites(s) {
+  const data = s.writes.filter(block => !s.dir.has(block)), times = new Map();
+  for (const block of data) times.set(block, (times.get(block) ?? 0) + 1);
+  assert.equal(times.size, 8); assert.ok([...times.values()].every(n => n === 4));
+  assert.equal(data.length, 32); assert.equal(s.writes.length - data.length, 2);
+  assert.ok(s.writes.length <= 34, `${s.writes.length} SAVE card writes`);
+}
+
 test("AC3 bounce writes", { skip: CARD_SKIP, timeout: 900_000 }, () => {
-  const b = onStarter("baza a:bounce");
-  assert.match(b.text, /COM written\r\n/);
-  assert.ok(b.writes.length <= 48, `${b.writes.length} card writes`);
-  // BAZA closes its output, writes one more record into the same block and
-  // closes again: that block is written at each close, and every other data
-  // block once.
-  const data = b.writes.map((x, i) => [x, b.fn[i]]).filter(([x]) => !b.dir.has(x));
-  const times = data.reduce((n, [x]) => n.set(x, (n.get(x) ?? 0) + 1), new Map());
-  const twice = [...times].filter(([, n]) => n > 1);
-  assert.deepEqual(twice.map(([, n]) => n), [2], "one data block written twice, every other once");
-  assert.deepEqual(data.filter(([x]) => x === twice[0][0]).map(([, fn]) => fn), [16, 16], "the block written twice, once at each close");
-  console.log(`BAZA BOUNCE: ${b.writes.length} card writes, ${data.length} of data blocks, ${times.size} blocks`);
+  const b = onStarter("baza a:bounce"); checkBounceWrites(b);
+  console.log(`BAZA BOUNCE: ${b.writes.length} card writes`);
 });
 
 test("AC3 save", { skip: CARD_SKIP, timeout: 300_000 }, () => {
-  const s = onStarter("save 16 a:x.com");
-  assert.ok(s.writes.length <= 10, `${s.writes.length} card writes`);
+  const s = onStarter("save 16 a:x.com"); checkSaveWrites(s);
   console.log(`SAVE 16 X.COM: ${s.writes.length} card writes, ${s.cycles} cycles`);
 });
 
@@ -1219,25 +1267,17 @@ const BOUNCE_BASE = 103_285_677;
 
 test("AC7 bounce speed", { skip: CARD_SKIP, timeout: 900_000 }, () => {
   const b = onStarter("baza a:bounce");
-  const seconds = b.cycles / 4e6;
-  const mean = b.w21.reduce((s, x) => s + x, 0) / b.w21.length;
-  assert.ok(seconds <= 19.5, `${seconds.toFixed(2)} s at 4 MHz`);
-  assert.ok(b.cycles <= 0.76 * BOUNCE_BASE, `${((100 * b.cycles) / BOUNCE_BASE).toFixed(1)} % of the shell's landing on this card`);
-  assert.ok(mean <= 80_000, `BDOS 21: ${Math.round(mean)} T each, of ${b.w21.length}`);
-  console.log(`BAZA BOUNCE: ${b.cycles} T, ${seconds.toFixed(2)} s, ${((100 * b.cycles) / BOUNCE_BASE).toFixed(1)} % of the landing's; ${b.w21.length} BDOS 21 calls, ${Math.round(mean)} T each`);
+  assert.ok(b.cycles <= STARTER_COST.bounceB, `${b.cycles} T, ${(b.cycles / 4e6).toFixed(2)} s at 4 MHz`);
+  assert.ok(b.mean <= 80_000, `BDOS 21: ${Math.round(b.mean)} T each, of ${b.w21.length}`);
+  console.log(`BAZA BOUNCE: ${b.cycles} T, ${((100 * b.cycles) / BOUNCE_BASE).toFixed(2)} % of the historical shell landing; ${b.w21.length} matched BDOS 21 calls, ${Math.round(b.mean)} T each`);
 });
 
-// The starter card's own case: at A:SYSTEM>, A: written behind. Each command
-// writes its blocks once and closes, so it costs what it does coalesced.
+// The starter's same compiler and SAVE workflows, logged on A:SYSTEM.
 test("S2-11 starter workloads logged on A:", { skip: CARD_SKIP, timeout: 900_000 }, (t) => {
-  const b = onStarter("baza bounce", { logged: "A" });
-  assert.match(b.text, /COM written\r\n/);
-  const seconds = b.cycles / 4e6;
-  assert.ok(seconds <= 19.5, `BAZA BOUNCE: ${seconds.toFixed(2)} s at 4 MHz`);
-  assert.ok(b.writes.length <= 48, `BAZA BOUNCE: ${b.writes.length} card writes`);
-  const s = onStarter("save 16 x.com", { logged: "A" });
-  assert.ok(s.writes.length <= 10, `SAVE 16 X.COM: ${s.writes.length} card writes`);
-  t.diagnostic(JSON.stringify({ bounce: { seconds: +seconds.toFixed(2), writes: b.writes.length }, save16: { seconds: +(s.cycles / 4e6).toFixed(2), writes: s.writes.length } }));
+  const b = onStarter("baza bounce", { logged: "A" }); checkBounceWrites(b);
+  assert.ok(b.cycles <= STARTER_COST.bounceA, `BAZA BOUNCE: ${b.cycles} T`);
+  const s = onStarter("save 16 x.com", { logged: "A" }); checkSaveWrites(s);
+  t.diagnostic(JSON.stringify({ bounce: { seconds: +(b.cycles / 4e6).toFixed(2), writes: b.writes.length }, save16: { seconds: +(s.cycles / 4e6).toFixed(2), writes: s.writes.length } }));
 });
 
 test("AC7 file speed", () => {
