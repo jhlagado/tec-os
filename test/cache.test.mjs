@@ -33,6 +33,105 @@ function retireWrites(collector, verified) {
   for (let i = collector.length - 1; i >= 0; i--) if (own.has(collector[i])) collector.splice(i, 1);
 }
 
+const CACHED_MIRROR = Object.freeze({ fixture: "f49e380", romSHA256: "d9f8d2b554e39833139c2912af48ee40e75305be65236590aebf105f175a7a03", mapSHA256: "8da862b2b90499ba422724cf8e8c5d11795ad623abde24682d9f336ceee268e2", phases: Object.freeze(["boot", "WBTEST"]) });
+const PRECACHE_MIRROR = Object.freeze({ fixture: "4ea57f7", romSHA256: "ba898ef83ab625d705f93895e5a1c9fa55bdb25d17d957b746050387ad57d902", mapSHA256: "1d22c573888539564ff1f5b30a9ca45f5a67142f23c9419bd93a362dceb1e546", phases: Object.freeze(["boot"]) });
+
+/** Verify every intended mirror before retiring only its original event identities. */
+function verifyLegacyMirrors(m, selected, observation, definition) {
+  assert.ok(definition === CACHED_MIRROR || definition === PRECACHE_MIRROR);
+  assert.equal(observation.actualRomSHA256, definition.romSHA256);
+  assert.equal(observation.actualSymbolSHA256, definition.mapSHA256);
+  const reference = oldRom(definition.fixture), warmPC = reference.symbols.get("WBOOTR"), vector = reference.symbols.get("BIOWBT");
+  assert.deepEqual(Uint8Array.from(selected.rom), Uint8Array.from(reference.rom));
+  const entries = [...reference.symbols].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+  assert.equal(observation.actualSymbolSHA256, createHash("sha256").update(JSON.stringify(entries)).digest("hex"));
+  const prefix = [0xf3, 0x3e, 5, 0xd3, 255, 0x3e, 0xc3, 0x32, vector & 255, vector >> 8, 0x21, warmPC & 255, warmPC >> 8, 0x22, (vector + 1) & 255, (vector + 1) >> 8, 0x3e, 1, 0x32, 64, 0, 0xd3, 255];
+  assert.deepEqual(Array.from(reference.rom.slice(warmPC - 0xc000, warmPC - 0xc000 + prefix.length)), prefix);
+  assert.deepEqual(observation.warm.map(w => w.phase), definition.phases);
+  const offsets = [0, 1, 3, 5, 7, 10, 13, 16, 18, 21], lengths = [1, 2, 2, 2, 3, 3, 3, 2, 3, 2];
+  for (const warm of observation.warm) {
+    assert.equal(warm.entryPC, warmPC); assert.equal(warm.steps.length, 24);
+    for (let i = 0; i < offsets.length; i++) {
+      const step = warm.steps[i], before = i <= 2 ? 1 : 5, after = i < 2 || i === 9 ? 1 : 5;
+      assert.equal(step.pc, warmPC + offsets[i]); assert.equal(step.nextPC, step.pc + lengths[i]);
+      assert.deepEqual(step.opcode, Array.from(reference.rom.slice(step.pc - 0xc000, step.pc - 0xc000 + 3)));
+      assert.deepEqual([step.sysCtrl, step.afterSysCtrl, step.latch, step.afterLatch], [before, after, 1, 1]);
+      assert.deepEqual([step.physicalBank, step.afterPhysicalBank, step.classic, step.afterClassic, step.expansionView], [before === 1 ? -1 : 0, after === 1 ? -1 : 0, before === 1, after === 1, before === 5]);
+    }
+  }
+  const expectedCount = definition.phases.length * 3;
+  assert.equal(observation.writes.length, expectedCount); assert.equal(m.expand1Writes.length, expectedCount);
+  for (let i = 0; i < expectedCount; i++) {
+    const frame = observation.writes[i], event = m.expand1Writes[i], part = i % 3, warm = Math.floor(i / 3);
+    const instruction = warmPC + (part === 0 ? 7 : 13), value = part === 0 ? 0xc3 : part === 1 ? warmPC & 255 : warmPC >> 8;
+    assert.deepEqual([frame.phase, frame.warm, frame.instructionPC, frame.pc, frame.address, frame.value], [definition.phases[warm], warm, instruction, instruction + 2, vector + part, value]);
+    assert.deepEqual(frame.instructionBytes, Array.from(reference.rom.slice(instruction - 0xc000, instruction - 0xc000 + 3)));
+    assert.deepEqual([frame.sysCtrl, frame.latch, frame.physicalBank, frame.classic, frame.expansionView], [5, 1, 0, false, true]);
+    assert.deepEqual([frame.windowBefore, frame.expand1Before, frame.windowAfter, frame.expand1After], [warm === 0 ? 0 : value, warm === 0 ? 0 : value, value, value]);
+    assert.equal(event.addr, frame.address); assert.equal(event.pc, frame.pc);
+  }
+  retireWrites(EXPAND1_WRITES, m.expand1Writes);
+}
+
+/** Bind passive memory observations before the first step without changing the constructor. */
+function observedStart(image, { rom, profile }) {
+  const selected = rom ?? romFor();
+  const identity = createHash("sha256").update(selected.rom).digest("hex");
+  const observation = { profile, romSHA256: identity, writes: [], warm: [] };
+  const incoming = [...EXPAND1_WRITES];
+  let phase = "boot", m;
+  const descriptor = Object.getOwnPropertyDescriptor(Machine.prototype, "step"), originalStep = Machine.prototype.step;
+  const attached = new Set();
+  Object.defineProperty(Machine.prototype, "step", { configurable: true, writable: true, value: function (...args) {
+    assert.ok(!attached.has(this)); attached.add(this);
+    const machine = this, rawWrite = machine.cpu.hardware.memWrite;
+    const actualROM = Uint8Array.from({ length: selected.rom.length }, (_, i) => machine.read(0xc000 + i));
+    assert.deepEqual(actualROM, Uint8Array.from(selected.rom), "attached hardware ROM matches the selected profile");
+    observation.actualRomSHA256 = createHash("sha256").update(actualROM).digest("hex");
+    const sorted = entries => [...entries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+    const actualSymbols = sorted(machine.symbols), expectedSymbols = sorted(selected.symbols);
+    assert.deepEqual(actualSymbols, expectedSymbols, "the attached runtime map is the selected ROM map");
+    observation.actualSymbolSHA256 = createHash("sha256").update(JSON.stringify(actualSymbols)).digest("hex");
+    observation.symbols = actualSymbols.length;
+    assert.equal(machine.expand, undefined, "this profile uses the default physical bank model");
+    assert.equal(machine.banks[0].length, 0x4000);
+    let warm = null, executing = null;
+    assert.equal(machine.expand1Writes.length, 0, "observer attaches before any guest step");
+    machine.cpu.hardware.memWrite = (address, value) => {
+      const previous = machine.expand1Writes.length;
+      const at = address & 65535, candidate = at >= 0x8000 && at < 0xc000 && (machine.sysCtrl & 4);
+      const frame = candidate ? { phase, warm: warm?.index ?? null, pc: machine.pc, address: at, value: value & 255, sysCtrl: machine.sysCtrl, latch: machine.read(machine.sym("LATCHV")), classic: machine.classicBankIn, physicalBank: machine.physicalBank, expansionView: machine.tec1g.state.system.expandEnabled, windowBefore: machine.read(at), expand1Before: machine.banks[0][at - 0x8000], callbackBytes: [0, 1, 2].map(i => machine.read(machine.pc + i)), instructionPC: executing?.pc ?? null, instructionBytes: executing?.opcode ?? null } : null;
+      rawWrite(address, value);
+      for (const event of machine.expand1Writes.slice(previous)) {
+        assert.ok(frame); assert.equal(event.addr, frame.address); assert.equal(event.pc, frame.pc);
+        frame.windowAfter = machine.read(at); frame.expand1After = machine.banks[0][at - 0x8000];
+        observation.writes.push(frame);
+      }
+    };
+    machine.step = (...inner) => {
+      if (machine.pc === machine.sym("WBOOTR")) {
+        warm = { index: observation.warm.length, phase, entryPC: machine.pc, steps: [] };
+        observation.warm.push(warm);
+      }
+      const frame = warm ? { pc: machine.pc, sp: machine.cpu.cpu.sp, a: machine.cpu.cpu.a, sysCtrl: machine.sysCtrl, latch: machine.read(machine.sym("LATCHV")), physicalBank: machine.physicalBank, classic: machine.classicBankIn, expansionView: machine.tec1g.state.system.expandEnabled, opcode: [0, 1, 2].map(i => machine.read(machine.pc + i)) } : null;
+      executing = frame;
+      let result;
+      try { result = originalStep.apply(machine, inner); } finally { executing = null; }
+      if (frame) {
+        frame.nextPC = machine.pc; frame.afterSysCtrl = machine.sysCtrl; frame.afterLatch = machine.read(machine.sym("LATCHV")); frame.afterPhysicalBank = machine.physicalBank; frame.afterClassic = machine.classicBankIn;
+        warm.steps.push(frame); if (warm.steps.length === 24) warm = null;
+      }
+      return result;
+    };
+    return machine.step(...args);
+  } });
+  try { m = start(image, { rom }); }
+  finally { if (descriptor) Object.defineProperty(Machine.prototype, "step", descriptor); else delete Machine.prototype.step; }
+  assert.equal(attached.size, 1); assert.ok(attached.has(m));
+  const command = line => { phase = line; return cmd(m, line); };
+  return { m, selected, observation, incoming, command };
+}
+
 // The cards whose machines start() logs on B:, so that WORK is written behind.
 const ON_B = new WeakSet();
 const loggedOnB = (image) => (ON_B.add(image), image);
@@ -134,61 +233,8 @@ test("real commands preserve historical block order without increasing write tra
     const sourceData = Uint8Array.from(volume(image, "A").read("DATA.BIN"));
     const expectedData = new Uint8Array(Math.ceil(DATA.length / 128) * 128); expectedData.set(DATA);
     assert.deepEqual(sourceData, expectedData, "complete prepared source including record padding");
-    const profile = rom ? "f49e380 fixture" : "current";
-    const selected = rom ?? romFor();
-    const identity = createHash("sha256").update(selected.rom).digest("hex");
-    const observation = { profile, romSHA256: identity, writes: [], warm: [] };
-    const incoming = [...EXPAND1_WRITES];
-    let phase = "boot", m;
-    const descriptor = Object.getOwnPropertyDescriptor(Machine.prototype, "step"), originalStep = Machine.prototype.step;
-    const attached = new Set();
-    Object.defineProperty(Machine.prototype, "step", { configurable: true, writable: true, value: function (...args) {
-      assert.ok(!attached.has(this)); attached.add(this);
-      const machine = this, rawWrite = machine.cpu.hardware.memWrite;
-      const actualROM = Uint8Array.from({ length: selected.rom.length }, (_, i) => machine.read(0xc000 + i));
-      assert.deepEqual(actualROM, Uint8Array.from(selected.rom), "attached hardware ROM matches the selected profile");
-      observation.actualRomSHA256 = createHash("sha256").update(actualROM).digest("hex");
-      const sorted = entries => [...entries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
-      const actualSymbols = sorted(machine.symbols), expectedSymbols = sorted(selected.symbols);
-      assert.deepEqual(actualSymbols, expectedSymbols, "the attached runtime map is the selected ROM map");
-      observation.actualSymbolSHA256 = createHash("sha256").update(JSON.stringify(actualSymbols)).digest("hex");
-      observation.symbols = actualSymbols.length;
-      assert.equal(machine.expand, undefined, "this profile uses the default physical bank model");
-      assert.equal(machine.banks[0].length, 0x4000);
-      let warm = null, executing = null;
-      assert.equal(machine.expand1Writes.length, 0, "observer attaches before any guest step");
-      machine.cpu.hardware.memWrite = (address, value) => {
-        const previous = machine.expand1Writes.length;
-        const at = address & 65535, candidate = at >= 0x8000 && at < 0xc000 && (machine.sysCtrl & 4);
-        const frame = candidate ? { phase, warm: warm?.index ?? null, pc: machine.pc, address: at, value: value & 255, sysCtrl: machine.sysCtrl, latch: machine.read(machine.sym("LATCHV")), classic: machine.classicBankIn, physicalBank: machine.physicalBank, expansionView: machine.tec1g.state.system.expandEnabled, windowBefore: machine.read(at), expand1Before: machine.banks[0][at - 0x8000], callbackBytes: [0, 1, 2].map(i => machine.read(machine.pc + i)), instructionPC: executing?.pc ?? null, instructionBytes: executing?.opcode ?? null } : null;
-        rawWrite(address, value);
-        for (const event of machine.expand1Writes.slice(previous)) {
-          assert.ok(frame); assert.equal(event.addr, frame.address); assert.equal(event.pc, frame.pc);
-          frame.windowAfter = machine.read(at); frame.expand1After = machine.banks[0][at - 0x8000];
-          observation.writes.push(frame);
-        }
-      };
-      machine.step = (...inner) => {
-        if (machine.pc === machine.sym("WBOOTR")) {
-          warm = { index: observation.warm.length, phase, entryPC: machine.pc, steps: [] };
-          observation.warm.push(warm);
-        }
-        const frame = warm ? { pc: machine.pc, sp: machine.cpu.cpu.sp, a: machine.cpu.cpu.a, sysCtrl: machine.sysCtrl, latch: machine.read(machine.sym("LATCHV")), physicalBank: machine.physicalBank, classic: machine.classicBankIn, expansionView: machine.tec1g.state.system.expandEnabled, opcode: [0, 1, 2].map(i => machine.read(machine.pc + i)) } : null;
-        executing = frame;
-        let result;
-        try { result = originalStep.apply(machine, inner); } finally { executing = null; }
-        if (frame) {
-          frame.nextPC = machine.pc; frame.afterSysCtrl = machine.sysCtrl; frame.afterLatch = machine.read(machine.sym("LATCHV")); frame.afterPhysicalBank = machine.physicalBank; frame.afterClassic = machine.classicBankIn;
-          warm.steps.push(frame); if (warm.steps.length === 24) warm = null;
-        }
-        return result;
-      };
-      return machine.step(...args);
-    } });
-    try { m = start(image, { rom }); }
-    finally { if (descriptor) Object.defineProperty(Machine.prototype, "step", descriptor); else delete Machine.prototype.step; }
-    assert.equal(attached.size, 1); assert.ok(attached.has(m));
-    const command = line => { phase = line; return cmd(m, line); };
+    const { m, selected, observation, incoming, command } = observedStart(image, { rom, profile: rom ? "f49e380 fixture" : "current" });
+    const profile = observation.profile;
     const t = trace(m);
     const snapshot = length => Uint8Array.from({ length }, (_, i) => m.read(0x100 + i));
     const x = snapshot(8 * 256);
@@ -210,40 +256,7 @@ test("real commands preserve historical block order without increasing write tra
     assert.deepEqual(m.violations, []);
     assert.equal(observation.writes.length, m.expand1Writes.length, "all original flagged events remain attributed without deleting any collector entry");
     if (!rom) assert.deepEqual(m.expand1Writes, [], "current firmware has no unexpected expansion writes");
-    else {
-      assert.equal(observation.actualRomSHA256, "d9f8d2b554e39833139c2912af48ee40e75305be65236590aebf105f175a7a03");
-      assert.equal(observation.actualSymbolSHA256, "8da862b2b90499ba422724cf8e8c5d11795ad623abde24682d9f336ceee268e2");
-      const reference = oldRom("f49e380"), warmPC = reference.symbols.get("WBOOTR"), vector = reference.symbols.get("BIOWBT");
-      assert.deepEqual(Uint8Array.from(selected.rom), Uint8Array.from(reference.rom));
-      const entries = [...reference.symbols].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
-      assert.equal(observation.actualSymbolSHA256, createHash("sha256").update(JSON.stringify(entries)).digest("hex"));
-      const prefix = [0xf3, 0x3e, 5, 0xd3, 255, 0x3e, 0xc3, 0x32, vector & 255, vector >> 8, 0x21, warmPC & 255, warmPC >> 8, 0x22, (vector + 1) & 255, (vector + 1) >> 8, 0x3e, 1, 0x32, 64, 0, 0xd3, 255];
-      assert.deepEqual(Array.from(reference.rom.slice(warmPC - 0xc000, warmPC - 0xc000 + prefix.length)), prefix);
-      assert.deepEqual(observation.warm.map(w => w.phase), ["boot", "WBTEST"]);
-      const offsets = [0, 1, 3, 5, 7, 10, 13, 16, 18, 21], lengths = [1, 2, 2, 2, 3, 3, 3, 2, 3, 2];
-      for (const warm of observation.warm) {
-        assert.equal(warm.entryPC, warmPC); assert.equal(warm.steps.length, 24);
-        for (let i = 0; i < offsets.length; i++) {
-          const step = warm.steps[i], before = i <= 2 ? 1 : 5, after = i < 2 || i === 9 ? 1 : 5;
-          assert.equal(step.pc, warmPC + offsets[i]); assert.equal(step.nextPC, step.pc + lengths[i]);
-          assert.deepEqual(step.opcode, Array.from(reference.rom.slice(step.pc - 0xc000, step.pc - 0xc000 + 3)));
-          assert.deepEqual([step.sysCtrl, step.afterSysCtrl, step.latch, step.afterLatch], [before, after, 1, 1]);
-          assert.deepEqual([step.physicalBank, step.afterPhysicalBank, step.classic, step.afterClassic, step.expansionView], [before === 1 ? -1 : 0, after === 1 ? -1 : 0, before === 1, after === 1, before === 5]);
-        }
-      }
-      assert.equal(observation.writes.length, 6); assert.equal(m.expand1Writes.length, 6);
-      for (let i = 0; i < 6; i++) {
-        const frame = observation.writes[i], event = m.expand1Writes[i], part = i % 3, warm = Math.floor(i / 3);
-        const instruction = warmPC + (part === 0 ? 7 : 13), value = part === 0 ? 0xc3 : part === 1 ? warmPC & 255 : warmPC >> 8;
-        assert.deepEqual([frame.phase, frame.warm, frame.instructionPC, frame.pc, frame.address, frame.value], [warm === 0 ? "boot" : "WBTEST", warm, instruction, instruction + 2, vector + part, value]);
-        assert.deepEqual(frame.instructionBytes, Array.from(reference.rom.slice(instruction - 0xc000, instruction - 0xc000 + 3)));
-        assert.deepEqual([frame.sysCtrl, frame.latch, frame.physicalBank, frame.classic, frame.expansionView], [5, 1, 0, false, true]);
-        assert.deepEqual([frame.windowBefore, frame.expand1Before, frame.windowAfter, frame.expand1After], [warm === 0 ? 0 : value, warm === 0 ? 0 : value, value, value]);
-        assert.equal(event.addr, frame.address); assert.equal(event.pc, frame.pc);
-      }
-      // Only this immutable legacy fixture's verified warm vector mirrors are outside the current-firmware contract.
-      retireWrites(EXPAND1_WRITES, m.expand1Writes);
-    }
+    else verifyLegacyMirrors(m, selected, observation, CACHED_MIRROR);
     assert.equal(EXPAND1_WRITES.length, incoming.length);
     incoming.forEach((event, i) => assert.equal(EXPAND1_WRITES[i], event, "unrelated errors retain their identity and order"));
     console.log(JSON.stringify({ scope: "guarded historical memory disposition", profile, actualRomSHA256: observation.actualRomSHA256, actualSymbolSHA256: observation.actualSymbolSHA256, warmEntries: observation.warm.length, retainedLocalWrites: m.expand1Writes.length, preservedIncomingGlobalWrites: incoming.length }));
@@ -488,14 +501,19 @@ test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", a
   image[32 + 32 + 15] = 1;
   const sum = headerChecksum(image.subarray(0, 512));
   [image[20], image[21]] = [sum & 0xff, sum >> 8];
-  const m = start(image, { rom: oldRom("4ea57f7") });
+  const { m, selected, observation, incoming, command } = observedStart(image, { rom: oldRom("4ea57f7"), profile: "4ea57f7 fixture" });
   const t = trace(m);
   const tpa = pattern(4 * 256, (i) => i ^ 0x3c);
   tpa.forEach((v, i) => m.write(0x100 + i, v));
-  cmd(m, "SAVE 4 B:X.COM");
+  command("SAVE 4 B:X.COM");
   assert.ok(t.writes.length >= 8, `${t.writes.length} card writes: one for each of 8 records`);
   assert.deepEqual(volume(image, "B").read("X.COM"), tpa, "on the card before any warm boot");
   assert.deepEqual(m.violations, []);
+  assert.equal(observation.writes.length, m.expand1Writes.length);
+  verifyLegacyMirrors(m, selected, observation, PRECACHE_MIRROR);
+  assert.equal(EXPAND1_WRITES.length, incoming.length);
+  incoming.forEach((event, i) => assert.equal(EXPAND1_WRITES[i], event));
+  console.log(JSON.stringify({ scope: "passive pre-cache historical memory attribution", ...observation, originalFlaggedEvents: m.expand1Writes, remainingGlobalEvents: EXPAND1_WRITES.length }));
 });
 
 /**
