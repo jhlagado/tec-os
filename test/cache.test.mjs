@@ -492,46 +492,59 @@ test("MOUNT writes the dirty lines before it changes a drive", async () => {
   assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's records on the card before the drive changed");
 });
 
-test("a failed write-through write drops its block's line, so a reread comes from the card", async () => {
-  const image = card(false);
-  const m = start(image);
-  prepareCaller(m, "initial synthetic caller");
-  const base = word(m, 1) - 3; // the BIOS jump table
-  const bios = (n, bc) => [0x01, bc & 0xff, bc >> 8, 0xcd, (base + 3 * n) & 0xff, (base + 3 * n) >> 8];
-  const at = [...bios(9, 1), ...bios(10, 6), ...bios(11, 2), ...bios(12, 0x2000)]; // B:, track 6, sector 2, DMA 2000h
+test("a failed raw type1 write rereads the card, while a refused type0 flush retains a genuine dirty cache hit", async () => {
+  const image = card(false), m = start(image);
+  prepareCaller(m, "raw BIOS caller");
+  const t = trace(m), base = word(m, 1) - 3;
+  const biosCode = (n, bc) => [0x01, bc & 255, bc >> 8, 0xcd, (base + 3 * n) & 255, (base + 3 * n) >> 8];
+  const at = [...biosCode(9, 1), ...biosCode(10, 6), ...biosCode(11, 2), ...biosCode(12, 0x2000)];
   const read = () => {
-    for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0);
-    stub(m, [...at, ...bios(13, 0)]);
-    return Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
+    for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0);
+    stub(m, [...at, ...biosCode(13, 0)]); assert.equal(m.cpu.cpu.a, 0);
+    return Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
   };
-  const first = read(); // READ: the block now has a line
-  // The card's answer to each write: false takes it.
-  let how = false;
-  let n = 0;
-  failing(m, () => how && (n += 1) && how);
-  // A directory write, type 1, goes through: failing, it drops its line.
-  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x77);
-  how = "commit"; // the card takes the record and reports a failure
-  stub(m, [...at, ...bios(14, 1)]);
-  assert.ok(n > 0 && m.cpu.cpu.a !== 0, "the write failed");
-  how = false;
-  const got = read();
-  assert.notDeepEqual(first, got);
-  assert.ok(got.every((v) => v === 0x77), "the card's record, not the line's");
-  // A data write, type 0, is held; its failed flush keeps the line.
-  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x88);
-  stub(m, [...at, ...bios(14, 0)]);
-  assert.equal(m.cpu.cpu.a, 0, "the data write held in its line");
-  n = 0;
-  how = "fail";
-  bdos(m, 11, 0); // a console read: the flush point
-  assert.ok(n > 0, "the flush was tried and failed");
-  how = false;
-  assert.ok(read().every((v) => v === 0x88), "the line's record, kept for retry");
-  assert.equal(runOf(image, 0x88), -1, "and not yet on the card");
-  bdos(m, 48, 0);
-  assert.equal(m.cpu.cpu.a, 0, "function 48 writes it once the card takes writes");
-  assert.notEqual(runOf(image, 0x88), -1);
+  const descriptor = parseContainer(image).volumes[1], block = descriptor.start + 6 * 16;
+  const original = image.slice(block * 512, (block + 1) * 512), initialImage = Uint8Array.from(image);
+  assert.deepEqual(read(), original.slice(256, 384));
+  const written77 = original.slice(); written77.fill(0x77, 256, 384);
+  const written88 = original.slice(); written88.fill(0x88, 256, 384);
+  const attempts = [], sd = m.sd, commit = sd.commitWrite.bind(sd);
+  let mode = "commit-error";
+  sd.commitWrite = () => {
+    const { start, buffer } = sd.writeState, payload = Uint8Array.from(buffer);
+    assert.equal(start / 512, block); assert.deepEqual(payload, mode === "commit-error" ? written77 : written88);
+    const event = { block, payload, mode, response: mode === "pass" ? 0x05 : 0x0d };
+    attempts.push(event);
+    if (mode !== "refuse") { commit(); assert.equal(sd.pendingResponse[0], 0x05); assert.deepEqual(image.slice(start, start + 512), payload); }
+    if (mode !== "pass") { sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1; }
+  };
+  for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0x77);
+  stub(m, [...at, ...biosCode(14, 1)]);
+  assert.notEqual(m.cpu.cpu.a, 0); assert.equal(attempts.length, 1);
+  assert.equal(cacheState(m).queue.length, 0);
+  const readsBefore = t.reads;
+  mode = "refuse";
+  assert.deepEqual(read(), new Uint8Array(128).fill(0x77));
+  assert.equal(t.reads, readsBefore + 1, "the reported-error type1 line was invalidated, so reread used SD");
+  const card77 = Uint8Array.from(initialImage); card77.set(written77, block * 512);
+  assert.deepEqual(image, card77);
+  for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0x88);
+  stub(m, [...at, ...biosCode(14, 0)]); assert.equal(m.cpu.cpu.a, 0);
+  const held = cacheState(m); assert.equal(held.entries.length, 1);
+  assert.equal(held.entries[0].block, block); assert.deepEqual(held.entries[0].payload, written88);
+  assert.equal(held.pending, held.entries[0].line + 1); assert.equal(held.any, 0);
+  bdos(m, 11, 0);
+  const beforeHit = t.reads, refusedBeforeHit = attempts.length;
+  assert.deepEqual(read(), new Uint8Array(128).fill(0x88));
+  assert.equal(t.reads, beforeHit, "dirty cache hit made no SDREAD");
+  assert.ok(attempts.length > refusedBeforeHit, "root BIOS opportunities really attempted refused work");
+  assert.ok(attempts.slice(1).every(a => a.mode === "refuse" && a.response === 0x0d));
+  assert.deepEqual(durable(cacheState(m)), durable(held)); assert.deepEqual(image, card77);
+  mode = "pass";
+  bdos(m, 48, 0); assert.equal(m.cpu.cpu.a, 0);
+  assert.equal(attempts.filter(a => a.response === 0x05).length, 1);
+  const card88 = Uint8Array.from(initialImage); card88.set(written88, block * 512);
+  assert.deepEqual(image, card88); assert.equal(cacheState(m).queue.length, 0);
 });
 
 test("a volume remounted on another drive, with another on its old drive, reads back right", async () => {
