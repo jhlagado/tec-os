@@ -1,5 +1,5 @@
 // The starter card built by tools/media.mjs is also the Viewer's card:
-// thirteen source/pinned files on A:, booting to the shell. BAZA builds
+// sixteen source/pinned files on A:, booting to the shell. BAZA builds
 // BOUNCE's game, TAS builds DEMO and HELLO3 from source, and MON3.SVC loads
 // HELLO3's generated image. The web host upgrades older system services.
 // Emulator evidence; external programs are pinned in test/inputs.json.
@@ -41,7 +41,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly thirteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly sixteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -59,6 +59,9 @@ test("the starter card holds exactly thirteen files, each by its hash, the PICO9
     "SAMPLE.ASM": text("SAMPLE.ASM"),
     "TIMES.BAS": text("TIMES.BAS"),
     "BOUNCE.BAS": bounceText(),
+    "CAVBASIC.COM": readFileSync(resolve(ROOT, "programs/CAVBASIC.COM")),
+    "CAVBASIC.BAS": text("CAVBASIC.BAS"),
+    "CAVERNS.TXT": text("CAVERNS.TXT"),
     "DEMO.ASM": text("DEMO.ASM"),
     "MON3.SVC": (await mon3Svc()).file,
     "HELLO3.ASM": textAt("test/programs/hello3.asm"),
@@ -120,8 +123,8 @@ function bounceRound(card) {
   keys("baza bounce\r", "BAZA's build", () => m.ready() && /A(:\S*)?>$/.test(m.text(mark)));
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
-  assert.equal(com.length, 20736, "BOUNCE.COM's length");
-  assert.equal(sha(com.subarray(0, 20736)), "b524b72c8869f3778eed72c37e829ed027536f42345c882a95034c519852614f", "BOUNCE.COM as the pinned BAZA compiles it");
+  assert.equal(com.length, 18944, "BOUNCE.COM's length");
+  assert.equal(sha(com.subarray(0, 18944)), "e478ed1c7101d6156e7588fd5fb7c44c42bfc9378fbcbbcc6cc7248b2d26a620", "BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);
@@ -506,7 +509,7 @@ test("the web host: a pre-shell card the shell can't be added to, a read-only MO
     ["a read-only MON3.SVC", (a) => a.write("MON3.SVC", Buffer.from(OLD_MON3.file, "base64"), { readOnly: true }), /MON3\.SVC is read-only/],
     ["a full A:", fill, /disk full/],
     ["a full directory", (a) => {
-      for (let i = 0; a.list().length < a.entries; i += 1) a.write(`E${i}.DAT`, new Uint8Array());
+      for (let i = 0; a.scan().length < a.entries; i += 1) a.write(`E${i}.DAT`, new Uint8Array());
     }, /directory full/],
   ];
   for (const [what, spoil, why] of cases) {
