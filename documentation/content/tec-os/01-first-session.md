@@ -7,7 +7,7 @@ nav_group: "Using the machine"
 
 # 1. First session
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -41,7 +41,7 @@ with this configuration. Unused blank rows are omitted from the excerpts.
 Power-on starts TEC-OS and displays the system name. The three names below
 it identify the card volumes available for files:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 241b438, ROM c9586263: owned-input stock PICO capture03, boot. 40-column text; right-hand blanks and empty bottom rows omitted. Raw rows/registers/VRAM and receipt: Origo studies/p3-tec-os/evidence/book-stock-pico-capture03/. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -73,11 +73,8 @@ graphics LCD. In this session it leaves the PICO9918 selected as the
 after the prompt and press Return. The prompt is already on screen, so it
 is not part of the command you enter. The same session produced:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen DIR. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS 241b438, ROM c9586263: owned-input stock PICO capture03, dir. 40-column text; right-hand blanks and empty bottom rows omitted. Raw rows/registers/VRAM and receipt: Origo studies/p3-tec-os/evidence/book-stock-pico-capture03/. -->
 ```text
-C: PROJECTS
-
-A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
@@ -91,13 +88,16 @@ SAMPLE  .ASM    4608
 TIMES   .BAS     640
 TAS     .COM   10368
 BAZA    .COM   13184
-BAZA    .RTL   12032
+BAZA    .RTL   12800
 BOUNCE  .BAS    5376
+CAVERNS .TXT    2304
 DEMO    .ASM   15360
 MON3    .SVC    5120
 HELLO3  .ASM    2176
-13 files, 86016 bytes
-937984 free on A:SYSTEM
+CAVBASIC.COM   39680
+CAVBASIC.BAS   18560
+16 files, 147328 bytes
+870400 free on A:SYSTEM
 A:SYSTEM>
 ```
 
@@ -111,7 +111,9 @@ The supplied assembler, `TAS`, turns assembly source into an executable.
 `TED` edits text files. `BAZA` compiles BASIC source such as `TIMES.BAS`
 and uses the library `BAZA.RTL`. The startup files are `SHELL.SVC`,
 `GLCD.SVC` and `STARTUP.CMD`. Leave them as supplied for this session.
-The remaining demonstrations are optional and are listed under
+The current card also includes `CAVBASIC.BAS`, `CAVBASIC.COM` and
+`CAVERNS.TXT`, the BASIC Caverns game and its instructions. The remaining
+demonstrations are optional and are listed under
 [More on the card](#more-on-the-card).
 
 The totals below the files give their combined size and the free space on
@@ -151,7 +153,9 @@ prompt again.
 ## Drive A and drive B
 
 A drive letter followed by a colon changes the current drive. `B:` selects
-WORK and `A:` returns to SYSTEM. The next excerpt continues after the listing:
+WORK and `A:` returns to SYSTEM. The following retained `46cf3f1` excerpt
+shows the same drive commands on the earlier thirteen-file starter. It is
+not a continuation of the current sixteen-file listing above:
 
 <!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
 ```text
@@ -248,20 +252,24 @@ command or finish the session using the precautions below.
 
 ## Saved work before reset or removal
 
-A program can report that it has saved a file while some changes remain in
-memory. TEC-OS holds the writes of the drive you are on in memory and writes
-them to the card later. Resetting the machine or removing power discards
-changes that have not reached the card. Whenever TEC-OS waits for a key,
-though, it first writes every change it holds, on every drive. The prompt
-waits for a key, so at the prompt everything is on the card.
+A program can accept a record into cache before it reaches SD. Ordinary OS
+calls give queued data an opportunity to progress and required input attempts
+to drain it. Cold reset and power loss still discard changes left only in RAM;
+there is no timer that keeps writing while a program owns the CPU
+(`a40d482:docs/recovery.md:25-67`).
 
 Finish the program and wait for the prompt before switching off, pressing
 reset or removing the card. A running program may hold new changes
 in memory between key waits.
 
-A `Write lost` message means that some pending changes could not be written.
-The new prompt after that message does not establish successful preservation.
-Those failed changes have been dropped and cannot be recovered.
+After `Write pending`, the next prompt is not proof of preservation.
+Failed acknowledged data remains in RAM even through warm boot. Resolve the
+failure on the original initialised backend and await `Cache clear` before
+reset. That notice does not close a file, repair rejected metadata, complete
+browser storage or prove physical durability. Reinserting a card is not
+permission to replay retained data onto it
+(`a40d482:docs/recovery.md:69-117`, `a40d482:docs/recovery.md:206-222`).
+
 Keep a separate copy of valuable work. [Chapter 6](06-cards-on-the-pc.md)
 explains card copies and recovery and
 [Appendix D](appendix-d-error-messages.md) explains the failure messages.

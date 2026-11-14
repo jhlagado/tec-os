@@ -7,7 +7,7 @@ nav_group: "Reference"
 
 # Appendix J. Command reference
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -30,7 +30,7 @@ ends the line too. `^C` cancels only at the start. It is ignored later.
 
 The ROM runs the commands marked ROM below. The starter card installs the
 shell, `SHELL.SVC`, which adds the shell commands, recall, `[more]`, multiple
-command pieces and `.CMD` scripts (`docs/shell.md:1-51`). Command names and
+command pieces and `.CMD` scripts (`241b438:docs/shell.md:1-51`). Command names and
 ordinary program arguments become capitals before execution. ECHO and
 PAUSE retain their text's case, as does the echoed command.
 
@@ -49,15 +49,15 @@ name and type fields:
 
 A colon belongs to the optional drive prefix. A full stop or equals sign
 ends the current field. A field longer than its limit is rejected.
-The parser and delimiter checks are in `src/cpm/ccpcmd.asm:457-569`,
-`src/cpm/ccpcmd.asm:602-662` at the stated source revision.
+The parser and delimiter checks are in `241b438:src/cpm/ccpcmd.asm:457-569`,
+`241b438:src/cpm/ccpcmd.asm:602-662` at the stated source revision.
 
 `?` matches one character, including a padding space. `*` fills the rest of its
 field with question marks. Thus `G*.*` is `G???????.???`. Text after a star in
 the same field is ignored so `D*X` and `D*` select the same pattern. A short
 field is padded with spaces. `????.COM` therefore matches names of up to four
 characters with type COM, not every name ending in COM
-(`src/cpm/ccpcmd.asm:546-569`, `src/cpm/ccpcmd.asm:624-645`).
+(`241b438:src/cpm/ccpcmd.asm:546-569`, `241b438:src/cpm/ccpcmd.asm:624-645`).
 
 DIR and ERA use patterns to select files. TYPE, REN and SAVE require
 unambiguous names. COPY requires an unambiguous source and resolved
@@ -102,7 +102,7 @@ the causes and recovery actions.
 The ROM holds nine built-ins: CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and
 UNLOAD. The shell adds COPY, DEL, SERVICES, CLS, ECHO and PAUSE, and its
 own DIR, which lists sizes and hands `DIR /W` to the ROM's
-(`src/tables.asm:53-78`, `drivers/shell.asm:650-667`). Drive selection, program launch and service
+(`241b438:src/tables.asm:53-78`, `241b438:drivers/shell.asm:650-667`). Drive selection, program launch and service
 installation have additional forms handled by the command processor.
 
 | Form | In | Operation |
@@ -131,12 +131,12 @@ installation have additional forms handled by the command processor.
 Without the shell, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
 `PAUSE` follow ordinary program lookup. Unless a matching program exists,
 the result is the name followed by a question mark. `DIR` uses the ROM's
-wide listing (`docs/shell.md:33-52`).
+wide listing (`241b438:docs/shell.md:33-52`).
 
 A built-in name must end at a space or the end of the command piece.
 `DIRX`, `DIR.COM` and `A:DIR` are program commands, not forms of built-in
 DIR. The last searches for `A:DIR.COM`. The keyword comparison uses the
-original command word (`src/cpm/ccpcmd.asm:678-708`).
+original command word (`241b438:src/cpm/ccpcmd.asm:678-708`).
 
 ### DIR and TYPE
 
@@ -165,7 +165,7 @@ X       .DAT  128128
 1013760 free on A:SYSTEM
 ```
 
-The listing is retained from `docs/shell.md:200-234`. Files represented by
+The listing is retained from `241b438:docs/shell.md:200-234`. Files represented by
 a single directory entry are listed first in a single pass. A file that
 may have more entries is sized through function 35, which scans the directory.
 Many large files therefore make DIR slower. A G8M file exceeds a single
@@ -189,7 +189,7 @@ last record. No name or no matching file produces `NO FILE`.
 ### COPY
 
 COPY operates in the current user area on both drives. It is a shell
-command (`drivers/shellcmd.asm:54-219`, `docs/compatibility.md:125-133`).
+command (`241b438:drivers/shellcmd.asm:54-219`, `241b438:docs/compatibility.md:125-133`).
 A source or destination without a drive uses the current drive. A drive-only
 destination takes the source's full name and type. A type-only destination
 also takes the full source name and type, ignoring the destination type.
@@ -199,7 +199,7 @@ The resolved source and destination must differ. A self-copy or an argument
 after the destination produces `COPY?` before either file is opened.
 A valid copy replaces any existing destination file, subject to protection.
 On success `COPIED` is followed by the number of 128-byte records copied,
-in hexadecimal (`drivers/shellcmd.asm:54-154`).
+in hexadecimal (`241b438:drivers/shellcmd.asm:54-154`).
 
 The type-only destination and self-copy cases below were captured on A
 with the starter card.
@@ -248,7 +248,7 @@ or specify the same drive. Thus `REN B:NEW.TXT=OLD.TXT` and
 
 REN checks the new name first. If it already exists, `FILE EXISTS` is printed
 and nothing is renamed. An absent old name produces `NO FILE`
-(`src/cpm/ccpmut.asm:81-149`).
+(`241b438:src/cpm/ccpmut.asm:81-149`).
 
 ### ERA
 
@@ -260,7 +260,7 @@ character is Y or y. Other answers leave the files unchanged.
 
 A pattern whose eleven stored positions are not all question marks, such
 as `*.TXT`, is erased without confirmation. No match produces `NO FILE`
-(`src/cpm/ccpmut.asm:10-67`). Protection and write failures can stop a
+(`241b438:src/cpm/ccpmut.asm:10-67`). Protection and write failures can stop a
 multi-file erase after some entries have already been erased. The exact
 partial-result cases are in [Appendix D](appendix-d-error-messages.md).
 
@@ -271,8 +271,8 @@ patterns and print the same `ALL (Y/N)?` question.
 Built-in matching precedes program lookup. Plain `DEL` under the shell
 therefore does not run `DEL.COM`, just as plain `ERA` does not run
 `ERA.COM`. `A:DEL` or `DEL.COM` explicitly selects the file
-(`drivers/shell.asm:543-552`, `docs/compatibility.md:121-124`,
-`test/commands.test.mjs:163-213`).
+(`241b438:drivers/shell.asm:543-552`, `241b438:docs/compatibility.md:121-124`,
+`241b438:test/commands.test.mjs:163-213`).
 
 The following run starts with an empty B drive and copies one
 disposable file there. It records an `n` answer that leaves the file and a `y`
@@ -322,7 +322,7 @@ An existing file of the same name is erased first. A failed make, write or
 close produces `NO SPACE`. After a write failure SAVE attempts to close the
 file. If the close succeeds, its directory entry retains the records written.
 `NO SPACE` does not confirm that the close succeeded. Digital Research's CP/M 2.2
-SAVE leaves the file open in that case (`src/cpm/ccpcmd.asm:252-390`).
+SAVE leaves the file open in that case (`241b438:src/cpm/ccpcmd.asm:252-390`).
 
 ### Drives, USER and program lookup
 
@@ -334,7 +334,7 @@ as `00` and `03` are rejected.
 A nonzero user number appears before the drive in the prompt. The shell
 also prints the volume, as in `A:SYSTEM>` and `3B:GAMES>`. A drive with no
 volume appears as `C:>`. Without the shell the prompt is `A>` at user 0 on
-A (`src/cpm/ccp.asm:115-145`).
+A (`241b438:src/cpm/ccp.asm:161-191`).
 
 For a program command the type is replaced by COM, except for SVC. Lookup starts
 on the named drive or the current drive when none is named. On that drive it
@@ -344,8 +344,8 @@ after that search. A file in user 0 needs no system attribute.
 If no file is found, a plain command on a drive other than A continues on A
 in the same user order. An explicit drive suppresses that fallback.
 A found file that cannot load stops the search rather than permitting
-another copy on a later drive. These paths are in `src/cpm/ccp.asm:374-440`
-and `src/cpm/ccp.asm:572-623`. [Chapter 5](05-drives-and-user-areas.md)
+another copy on a later drive. These paths are in `241b438:src/cpm/ccp.asm:420-486`
+and `241b438:src/cpm/ccp.asm:618-669`. [Chapter 5](05-drives-and-user-areas.md)
 works through the resulting choices.
 
 ### CD
@@ -371,7 +371,7 @@ than 11 characters, a drive past D or text after the name or after `?` gives
 cache line the card will not take, gives `CD FAILED` and the drive keeps
 its volume. Each refusal sets return code `FF00h`. To take a volume off a
 drive, put another there. CD of the drive a script is read from is refused
-with `CD?` and the script goes on (`docs/shell.md:142-198`).
+with `CD?` and the script goes on (`241b438:docs/shell.md:142-198`).
 
 The commands found on A follow its volume. A reset keeps the drives'
 selection, so after CD puts a volume with no `SHELL.SVC` on A, a reset gives
@@ -389,7 +389,7 @@ word to match a built-in, preserving the text that follows.
 
 `PAUSE` displays `[more]`. `PAUSE TEXT` displays the text instead. Both
 wait for a key. `^C` ends the script and the remaining line with `FF00h`.
-Any other key continues (`docs/shell.md:236-246`).
+Any other key continues (`241b438:docs/shell.md:236-246`).
 
 ### CON
 
@@ -397,7 +397,7 @@ With no argument CON reports the console in effect. The device names are
 TTY, CRT, BAT and UC1, with PICO as an alias for CRT and GLCD for UC1.
 A colon may follow a device name. A width must be separated from CRT or PICO
 by a space and must be 80, 40 or 32. Other devices take no width.
-Extra text is rejected (`src/cpm/ccpcmd.asm:58-214`).
+Extra text is rejected (`241b438:src/cpm/ccpcmd.asm:58-214`).
 
 The reply goes through the selected console and is discarded in BAT mode.
 Selecting an unavailable console can leave or restore another mode so the reply
@@ -434,17 +434,17 @@ rejection prints the command name with a question mark, as `MON3.SVC?`,
 and sets return code FF00h.
 
 The application ends through warm boot while the service stays installed.
-`UNLOAD` can then remove it as before (`docs/services.md:83-90`,
-`docs/services.md:102-131`, `docs/services.md:158-181`,
-`src/loader.asm:734-783`, `docs/shell.md:334-349`). An older card's
+`UNLOAD` can then remove it as before (`241b438:docs/services.md:83-90`,
+`241b438:docs/services.md:102-131`, `241b438:docs/services.md:158-181`,
+`241b438:src/loader.asm:734-783`, `241b438:docs/shell.md:334-349`). An older card's
 `MON3.SVC /E` line still enters the application. `/E` is a command tail
-that this service ignores (`docs/mon3.md:44-45`).
+that this service ignores (`241b438:docs/mon3.md:44-45`).
 [Appendix H](appendix-h-service-file-format.md#the-execution-record)
 gives the record layout.
 
 `MON3.SVC` gives the `MON3>` line, which BDOS function 10 reads and the
 service converts to capitals. It takes three commands. Anything else prints
-`?` (`docs/mon3.md:39-45`, `docs/mon3.md:61-115`):
+`?` (`241b438:docs/mon3.md:39-45`, `241b438:docs/mon3.md:61-115`):
 
 | Form | Operation |
 | --- | --- |
@@ -463,13 +463,14 @@ describes the session and
 
 ## Programs on the starter card
 
-The starter card and the browser page use the same thirteen files on A.
+The historical recovery-baseline starter card and browser page use the
+same thirteen files on A. This table retains that recipe revision14 scope.
 Nine are programs or sources used by name at the prompt. `SHELL.SVC`,
 `GLCD.SVC` and `STARTUP.CMD` provide startup setup. BAZA reads `BAZA.RTL`
 and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
-(`tools/media.mjs:29-31`, `tools/media.mjs:203-231`,
-`tools/lib/starter.mjs:10-22`, `README.md:165-211`,
-`test/demo.test.mjs:1-4`, `test/starter.test.mjs:44-391`):
+(`46cf3f1:tools/media.mjs:29-31`, `46cf3f1:tools/media.mjs:203-231`,
+`46cf3f1:tools/lib/starter.mjs:10-22`, `46cf3f1:README.md:165-211`,
+`46cf3f1:test/demo.test.mjs:1-4`, `46cf3f1:test/starter.test.mjs:44-391`):
 
 | File | Use |
 | --- | --- |
@@ -491,7 +492,7 @@ TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
 `.BAS` file with `BAZA NAME.BAS`. `^T D` chains `TDB NAME` for an `.ASM`
 file, which fails with `A:TDB?` on the starter card, and shows
 `No debugger` for a `.BAS` file
-(`Thorium a2fe556:README.md:14-41`, `docs/compatibility.md:223`).
+(`Thorium a2fe556:README.md:14-41`, `46cf3f1:docs/compatibility.md:223`).
 A file name and `THOR.PRJ`'s `ARGS` end at `!` or at `&` after a blank.
 Those are the shell's line separators. `ARGS X &Y` therefore gives the
 program the tail ` X` and runs nothing after it
@@ -499,7 +500,7 @@ program the tail ` X` and runs nothing after it
 `TAS` and `BAZA` both set the failure return code `FF00h` when a build
 fails. A failed BAZA compile leaves an existing `NAME.COM` unchanged, and a
 failed TAS build normally keeps its earlier outputs
-(`docs/compatibility.md:225-226`, `Baza 50dc512:README.md:32-37`,
+(`46cf3f1:docs/compatibility.md:225-226`, `Baza 50dc512:README.md:32-37`,
 `Thorium 3d1e2c0:docs/language.md:17-20`).
 [Make a small program](02-make-a-small-program.md) and
 [Build a BASIC program](03-build-a-basic-program.md) use them.
@@ -515,7 +516,7 @@ B and C, and in `A &B !C` C runs. A run of separators and blanks is one
 separator, conditional when it holds only `&`. Empty pieces and spaces
 between pieces are ignored. The same 127-character bound applies to the
 whole line, typed, from a script or supplied by function 47
-(`docs/shell.md:53-89`).
+(`241b438:docs/shell.md:53-89`).
 
 A program's command tail ends before the blanks in front of its piece's
 separator. Neither a file name nor an argument can contain a literal
@@ -526,7 +527,7 @@ provided, and a piece starting with `:` is refused as a bad name.
 
 Without the shell `!` and `&` are ordinary characters. `DIR!TYPE X` is then
 one word, refused as `DIR!TYPE?`, and a function 47 line runs whole as one
-command (`docs/shell.md:33-51`).
+command (`241b438:docs/shell.md:33-51`).
 [Results and command chains](13-results-and-command-chains.md) gives the success
 interval, every drop path and function 47's replacement-line contract.
 
@@ -543,10 +544,10 @@ Each other line is echoed whole after the prompt and runs as a typed line.
 
 Scripts do not nest. A `NAME.CMD` piece inside a script is rejected as
 `NAME.CMD?` with FF00h. So is a script command followed by more pieces.
-A missing script produces the same rejection (`docs/shell.md:98-120`).
+A missing script produces the same rejection (`241b438:docs/shell.md:98-120`).
 
 `STARTUP.CMD` is read the same way after the ROM has run its first line,
 when that line installs the shell. Typing `STARTUP.CMD` runs the whole file
 again as a typed script. Without the shell a typed `NAME.CMD` runs
 `NAME.COM`, and only the first line of `STARTUP.CMD` runs
-(`docs/shell.md:33-51`, `docs/shell.md:122-140`).
+(`241b438:docs/shell.md:33-51`, `241b438:docs/shell.md:122-140`).

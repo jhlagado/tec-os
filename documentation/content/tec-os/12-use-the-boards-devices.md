@@ -7,7 +7,7 @@ nav_group: "Writing programs"
 
 # 12. Use the board's devices
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -116,7 +116,7 @@ registers a GLCD display table. Calls 13 and 14 find and enumerate registry
 records described in Chapter 14. They return a generation in A on success, so
 test carry for registry calls rather than treating A as hardware status. Call
 15 supplies the font and was added in ABI 5.1. Call 16, `TNSHELL`, installs
-the shell hook described in Chapter 21 (`src/abi.inc:208-236`).
+the shell hook described in Chapter 21 (`241b438:src/abi.inc:208-236`).
 
 Hardware calls run on the caller's stack. PUTAT's bound is the largest at 22
 bytes below the CALL return address. That fits Chapter 11's inherited 30-byte
@@ -886,9 +886,9 @@ releases any active claim.
 
 The starter card, also used by the web page, contains `programs/DEMO.ASM` as
 source rather than DEMO.COM. `TAS DEMO` builds the executable on the card and
-`DEMO` runs it. `TED DEMO.ASM` opens the source (`tools/media.mjs:223-226`,
-`tools/media.mjs:273-274`, `test/demo.test.mjs:1-4`,
-`test/starter.test.mjs:186-211`). This capture builds and runs it there:
+`DEMO` runs it. `TED DEMO.ASM` opens the source (`46cf3f1:tools/media.mjs:223-226`,
+`46cf3f1:tools/media.mjs:273-274`, `46cf3f1:test/demo.test.mjs:1-4`,
+`46cf3f1:test/starter.test.mjs:186-211`). This capture builds and runs it there:
 
 <!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'TAS DEMO' '@start DEMO' '@key x'. Complete console transcript; the separate trailing raw screen is omitted. -->
 ```text
