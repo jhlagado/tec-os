@@ -920,17 +920,33 @@ test("S2-13 docs", () => {
   const flat = (n) => read(n).replace(/\s+/g, " ");
   const recovery = flat("docs/recovery.md");
   for (const s of [
-    "The logged drive is written behind",
-    "Every directory write writes the cache first",
-    "Every console read writes every changed line",
-    "| Data on the logged drive's volume (written behind) |",
-    "| Data on any other volume (coalesced) |",
-    "| A directory write, on any volume |",
-    "| Any write to a read-only volume | never: refused |",
-    "A directory write on any volume whose flush fails returns the error and drops its own directory line",
-    "Only warm boot drops a flushed line that still fails",
-    "with all 30 lines kept a poll takes about 1.6 s",
+    "Each admitted outer BDOS, hardware service or returning BIOS call attempts one eligible dirty block before its normal work",
+    "Updates already received merge into that block without duplicating its entry or moving its first-dirty position",
+    "TEC-OS does not delay a ready write to await future updates",
+    "A frozen round records the eligible first-dirty order",
+    "New arrivals join the next round; continuously arriving writes cannot indefinitely postpone a failed line's next retry",
+    "Nested calls inherit that operation instead of starting another maintenance pass",
+    "The worker owns a private stack and excludes unsafe bank/SD spans",
+    "This is cooperative service, with no timer or wall-clock deadline",
+    "The logged drive can keep multiple changed blocks",
+    "Other drives retain their existing single pending-block boundary",
+    "cross-call write coalescing is no longer promised",
+    "A read-only volume continues to refuse writes",
+    "A directory write first tries all other dirty data in a bounded pass, then writes the directory block only if those prerequisites succeeded",
+    "Either prerequisite or metadata failure rejects and drops that unpublished directory image",
+    "Later retries must not publish rejected metadata",
+    "Console input through BDOS1,6 input,10 or11 and BIOS CONIN drains pending data before waiting",
+    "A complete pass attempts each eligible line once and continues after failure",
+    "Failed acknowledged data remains dirty and queued, including across warm boot",
+    "A maintenance failure during an unrelated call does not replace that call's functional result",
+    "Function45's silent FFh mode defers notices without losing the event",
+    "A private worker stack does not make BDOS generally reentrant",
+    "Warm-boot flush failure also drops the remaining chained command text while retaining the failed data",
+    "A program that hangs without calling the OS can hold data indefinitely",
+    "committing record data alone does not finish an unclosed new file's metadata",
+    "completed browser persistence are separate stages",
   ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
+  assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
   for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
