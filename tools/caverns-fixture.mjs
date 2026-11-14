@@ -39,4 +39,5 @@ const record={sourceSha256:sha(source),compilerSha256:sha(compiler),librarySha25
 writeFileSync(resolve(ROOT,'test/caverns-basic.json'),JSON.stringify(record,null,2)+'\n');
 mkdirSync(resolve(ROOT,'build/caverns'),{recursive:true});
 writeFileSync(resolve(ROOT,'build/caverns/CAVBASIC.COM'),com);
+writeFileSync(resolve(ROOT,'programs/CAVBASIC.COM'),com);
 console.log(JSON.stringify({bytes:com.length,comSha256:record.comSha256,symbols:Object.keys(symbols).length}));
