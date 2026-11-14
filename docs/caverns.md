@@ -72,6 +72,18 @@ Neither proves that every random outcome wins. That is consistent with the
 agreed fairness requirement: a full-score first-discovery adventure must be
 possible, while combat and geographical hazards retain risks.
 
+The exact book exercise is now covered by `test/caverns-ted.test.mjs`: shell
+COPY, TED editing and explicit save, build, run, game exit, return to TED and
+reopen after a power cycle. The original supplied source and executable remain
+unchanged by that exercise. It is emulator evidence, not a physical-board run.
+
+The compact BASIC header records the original 1982–83 copyright, 1983 Microbee
+edition, 2019 GPL release, original repository, author-approved port, platform
+lineage and recovery credits. Adding those REM lines produced exactly the same
+39,680-byte executable: remarks are skipped before code generation. Numbered
+lines still occupy compile-time line-table space; this does not make source
+comments unlimited.
+
 See [the review walkthrough](caverns-walkthrough.md) for the route and review
 checkpoints. The Viewer is a local test deployment; no public site has been
 published by this work. At `http://127.0.0.1:8765/`, an existing browser card is
@@ -97,18 +109,17 @@ and string arrays once, resets mutable state on replay, and uses integer
 variables for rooms, flags, inventories and loops; RND remains floating point.
 
 BAZA input pins point to local compiler/runtime commit
-`8578fe50fdfc66e16015c54f365d1403825979da`. This compiler change has not been
-published upstream; a fresh checkout needs that sibling build available as
-explained in the input-pin documentation. Native fixture regeneration:
+`8578fe50fdfc66e16015c54f365d1403825979da`. This compiler/runtime commit is published on the BAZA integration branch;
+a fresh Git fetch by its pinned SHA has reproduced both input hashes. Native fixture regeneration:
 
 ```
 node tools/caverns-fixture.mjs ../baza/build/runtime-build.json ../baza/dist
 npm run media
 npm run web
-node --test test/caverns.test.mjs test/starter.test.mjs
+node --test test/caverns.test.mjs test/caverns-ted.test.mjs test/starter.test.mjs
 ```
 
 The fixture writer captures compiler symbols and emits both the debug copy and
 `programs/CAVBASIC.COM` from an actual compilation. Keep source, binary and
 fixture together. `npm run media` packages their hashes into starter recipe
-revision 15. `npm run web` supplies that same recipe and files to the Viewer.
+revision 16. `npm run web` supplies that same recipe and files to the Viewer.
