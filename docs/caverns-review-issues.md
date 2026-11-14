@@ -200,3 +200,13 @@ banner replaced by a native file loader, using the same 39,680-byte image and
 runtime memory requirement. It restores full persistent game state and RNG.
 Named exported records and repository JSON allow fresh-machine recovery.
 No map/parser refinements were applied as part of this facility.
+
+
+## Checkpoint 2 — author review resumed
+
+Named CHECK2.CAV: exact CAVE checkpoint, room 16 just inside the entrance,
+carrying compass, sword and rope. Bridge troll encounter completed; original
+relocation semantics retained. Dragon defeated on the original-map rope route.
+Candle remains in room 18, uncollected. Native fresh-machine comparison passed.
+Actual Viewer launched CAVLOAD CHECK2 and LIST printed all three carried items;
+stopped at its prompt with no exploration commands after loading.

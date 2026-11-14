@@ -1,0 +1,31 @@
+{
+  "turn": 1,
+  "command": "list",
+  "screen": [
+    "",
+    "You are just inside the cave. Sunlight pours into the cave      lighting a path",
+    "to the east and another to the south. I don't   mind saying I'm a bit scared!",
+    "",
+    "? list",
+    "You are carrying",
+    "a useful looking compass , a double bladed sword , a thin and tatty rope ,",
+    "You are just inside the cave. Sunlight pours into the cave      lighting a path",
+    "to the east and another to the south. I don't   mind saying I'm a bit scared!",
+    "",
+    "?",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "screenshot": "/workspace/jhlagado/tec-os/build/caverns/review-check2/001.png"
+}

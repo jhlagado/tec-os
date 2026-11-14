@@ -18,6 +18,7 @@ Open `build/caverns/scenarios.img` using the Viewer's **Open image** control.
 At the TEC-OS prompt, enter one of:
 
 ```
+CAVLOAD CHECK2
 CAVLOAD TROLL
 CAVLOAD SOUTH
 CAVLOAD ROPE
@@ -33,6 +34,9 @@ scenario's actual location; this is ordinary default-FCB file resolution.
 - SOUTH: southern bridge landing after defeating the troll and crossing.
 - ROPE: rope cliff, compass/sword/rope carried, dragon defeated.
 - CAVE: cave entrance, compass/sword/rope carried, candle still ahead.
+- CHECK2: the same state, named **checkpoint 2** for the author's review. The
+  bridge troll encounter is completed; the dragon was also defeated on the
+  original-map route to the rope.
 - CANDLE: cave entrance with the candle also collected.
 
 No additional commands are played automatically after restoring. LOOK and LIST
