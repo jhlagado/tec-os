@@ -1028,13 +1028,109 @@ test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   assert.ok(a.worst / qualifiedA.worst - 1 <= 0.05, `logged on A:: ${a.worst} T, ${((a.worst / qualifiedA.worst - 1) * 100).toFixed(2)} % over qualified`);
 });
 
+/** One real guest status call after thirty-two acknowledged, refused records. */
+function refusedShellInputPass(rom) {
+  const selected = rom ?? romFor(), image = four();
+  const wk = Uint8Array.from([0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0,
+    0x11, 0x5c, 0, 0x0e, 22, 0xcd, 5, 0, 0x06, 32,
+    0xc5, 0x11, 0x5c, 0, 0x0e, 21, 0xcd, 5, 0, 0xc1, 0x10, 0xf4,
+    0x0e, 11, 0xcd, 5, 0, 0x1e, 0, 0x0e, 45, 0xcd, 5, 0, 0xc9]);
+  const m = shellMachine(shellCard({ "PASS.COM": wk }, { image }), selected), page = pageOf(m), top = page + sym.STKTOP;
+  const owner = () => m.classicBankIn && m.ready() && quiet(m) && m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE") &&
+    m.read(m.sym("ERRMODE")) === 0 && word(m, m.sym("OLDSP")) === top - 2 && word(m, top - 2) === page + sym.TYPED + 16 &&
+    m.lineBuf === page + sym.LBUF && m.read(m.sym("HKDEP")) === 1 && m.read(m.sym("HKBUSY")) === 0;
+  m.runUntil(owner, 900_000_000, "actual shell input before refused status call");
+  assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
+  assert.equal(volume(image, "A").find("P.DAT"), undefined);
+  const expected = new Map(), allocations = new Map(), acknowledgements = [], attempts = [], passes = [], functional = [];
+  const sd = m.sd, commit = sd.commitWrite.bind(sd), step = m.step.bind(m);
+  let entered = 0, sp, made = false, original, committed, used, input, allocationBytes, before, start, cut, returned = 0, released = false;
+  const state = () => {
+    const s = cacheState(m); assert.equal(volume(image, "A").find("P.DAT").records, 0);
+    if (!released) {
+      assert.deepEqual(image, original); assert.deepEqual(s.entries.map(e => e.block), [...expected.keys()]);
+      for (const entry of s.entries) { assert.equal(entry.dirty, 1); assert.deepEqual(entry.payload, expected.get(entry.block)); }
+      assert.deepEqual([s.pending, s.any], [0, 1]);
+    } else assert.deepEqual(image, committed);
+    return s;
+  };
+  sd.commitWrite = () => {
+    if (!original) return commit();
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(expected.has(block)); assert.deepEqual(payload, expected.get(block));
+    attempts.push({ block, accepted: released });
+    if (!released) { sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1; assert.deepEqual(image, original); }
+    else { commit(); assert.equal(sd.pendingResponse[0], 0x05); committed.set(payload, start); assert.deepEqual(image, committed); }
+  };
+  m.step = () => {
+    if (m.pc === 0x100) { publicContext(m); assert.equal(++entered, 1); sp = m.cpu.cpu.sp; assert.equal(sp, m.sym("CSTKTOP") - 2); assert.equal(word(m, sp), 0); assert.deepEqual(Uint8Array.from({ length: wk.length }, (_, i) => m.read(0x100 + i)), wk); }
+    if (entered && m.pc === 0x107) { publicContext(m); assert.equal(m.cpu.cpu.sp, sp); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(m.sym("ERRMODE")), 0xff); }
+    if (entered && m.pc === 0x10f) { publicContext(m); assert.equal(m.cpu.cpu.sp, sp); assert.ok(m.cpu.cpu.a <= 3); assert.equal(made, false); made = true; assert.equal(m.read(0x7c), 0); }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 21) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp - 4); assert.equal(word(m, sp - 4), 0x11a); assert.equal(word(m, m.sym("CURDMA")), 0x80);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x5c);
+      if (!original) { assert.ok(made); assert.equal(cacheState(m).queue.length, 0); original = Uint8Array.from(image); committed = Uint8Array.from(image); const fs = volume(original, "A"); used = new Set(fs.usedBlocks()); allocationBytes = fs.blockBytes; assert.equal(fs.wide, true); input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)); assert.ok(input.some(Boolean)); }
+      assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), input);
+    }
+    if (entered && m.pc === 0x11a) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp - 2); const record = acknowledgements.length; assert.ok(record < 32); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x7c), record + 1);
+      for (const name of ["CURDRV", "DSKCUR", "BOOTDRV", "DEFDRV"]) assert.equal(m.read(m.sym(name)), 0);
+      assert.equal(m.read(0x5c) & 31, 0); assert.equal(word(m, m.sym("DPHPTR")), m.sym("DPHTAB"));
+      const slot = Math.floor(record / (allocationBytes / 128)), allocation = word(m, 0x5c + 16 + slot * 2); assert.ok(slot < 8);
+      if (!allocations.has(slot)) { assert.ok(!used.has(allocation)); assert.ok(![...allocations.values()].includes(allocation)); allocations.set(slot, allocation); }
+      for (const [knownSlot, value] of allocations) assert.equal(word(m, 0x5c + 16 + knownSlot * 2), value);
+      const block = fileBlock(m, original, record, 0x5c, "A"); if (!expected.has(block)) expected.set(block, new Uint8Array(512)); expected.get(block).set(input, (record & 3) * 128);
+      acknowledgements.push({ record, a: m.cpu.cpu.a, cr: m.read(0x7c), block }); state();
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 11) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp - 2); assert.equal(word(m, sp - 2), 0x122); assert.equal(acknowledgements.length, 32); assert.equal(expected.size, 8); assert.equal(before, undefined); before = state(); assert.equal(before.queue.length, 8); start = attempts.length;
+    }
+    if (before && !cut && m.pc === m.sym("FNSTAT")) { assert.deepEqual([m.read(m.sym("HKDEP")), m.read(m.sym("HKBUSY"))], [1, 0]); assert.equal(word(m, m.sym("OLDSP")), sp - 2); functional.push(attempts.length - start); }
+    if (before && !cut && m.pc === m.sym("CFLUSH")) { assert.deepEqual([m.read(m.sym("HKDEP")), m.read(m.sym("HKBUSY")), m.cpu.cpu.a], [1, 0, m.sym("NLINES")]); passes.push(attempts.length - start); }
+    if (entered && m.pc === 0x122) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp); assert.equal(m.cpu.cpu.a, 0); assert.ok(before); assert.equal(cut, undefined);
+      const after = state(); for (const key of ["queue", "dirty", "entries"]) assert.deepEqual(after[key], before[key]); assert.deepEqual(functional, [1]);
+      const next = before.round.slice(before.position).find(line => line !== 255) ?? before.queue[0], entry = before.entries.find(e => e.line === next); assert.ok(entry);
+      const pending = attempts.slice(start); assert.ok(pending.every(a => !a.accepted)); assert.ok(passes.length > 0);
+      assert.deepEqual(passes, passes.map((_, i) => 1 + i * 8)); assert.deepEqual(pending.map(a => a.block), [entry.block, ...passes.flatMap(() => before.entries.map(e => e.block))]);
+      cut = { passes: [...passes], attempts: pending, queueBlocks: before.entries.map(e => e.block), entryBlock: entry.block, cardSHA256: createHash("sha256").update(image).digest("hex") };
+      released = true;
+    }
+    const ending = entered && m.pc === 0x129;
+    if (ending) { publicContext(m); assert.ok(cut); assert.equal(m.read(m.sym("ERRMODE")), 0); assert.equal(m.cpu.cpu.sp, sp); assert.equal(word(m, sp), 0); assert.equal(m.read(m.pc), 0xc9); assert.equal(++returned, 1); }
+    const result = step(); if (ending) { assert.equal(m.pc, 0); assert.equal(m.cpu.cpu.sp, sp + 2); } return result;
+  };
+  try {
+    m.mark = m.output.length; m.type("PASS P.DAT\r"); m.runUntil(() => returned && owner(), 900_000_000, "natural programme return and recovered shell input");
+    const expectedCard = Uint8Array.from(original); for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
+    assert.deepEqual(image, expectedCard); assert.deepEqual(cacheState(m).queue, []); assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []);
+    assert.equal(volume(image, "A").find("P.DAT").records, 0); assert.doesNotMatch(m.text(m.mark), /Bdos Err|Disk reset failed/);
+    const result = { scope: "real shell refused status pass", romSHA256: createHash("sha256").update(selected.rom).digest("hex"), acknowledgements, input: [...input], initialUsedAllocations: [...used], newAllocations: [...allocations], cut, returned, finalCardSHA256: createHash("sha256").update(image).digest("hex"), text: m.text(m.mark) };
+    console.log(JSON.stringify(result)); return result;
+  } finally { m.step = step; sd.commitWrite = commit; }
+}
+
+function oneShellInputPass(result) {
+  assert.equal(result.cut.passes.length, 1, "one guest status call makes one frozen required input pass");
+  assert.deepEqual(result.cut.passes, [1]);
+  assert.deepEqual(result.cut.attempts.map(a => a.block), [result.cut.entryBlock, ...result.cut.queueBlocks]);
+}
+
 test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_000 }, (t) => {
-  const mnc = bdos11("B", MUTANTS.mnc());
-  assert.ok(mnc.nothing - BASE11.nothing > 60, `MNC: ${mnc.nothing} T with nothing changed`);
-  assert.ok(mnc.worst / BASE11.onB - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
-  const mtw = bdos11("A", MUTANTS.mtw());
-  assert.ok(mtw.worst / BASE11.onA - 1 > 0.05, `MTW logged on A:: ${mtw.worst}`);
-  t.diagnostic(JSON.stringify({ mnc, mtw }));
+  const nativeB = bdos11("B"), mnc = bdos11("B", MUTANTS.mnc());
+  const nativeA = bdos11("A"), mtw = bdos11("A", MUTANTS.mtw());
+  const nativePass = refusedShellInputPass(), doubled = refusedShellInputPass(MUTANTS.mtw());
+  t.diagnostic(JSON.stringify({ nativeB, mnc, nativeA, mtw, nativePasses: nativePass.cut.passes, mutantPasses: doubled.cut.passes }));
+  assert.ok(nativeB.nothing - 4954 <= 360); assert.ok(nativeB.worst / 8_735_058 - 1 <= 0.01);
+  assert.ok(mnc.nothing - 4954 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
+  assert.ok(mnc.worst / 8_735_058 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
+  assert.ok(nativeA.worst / 9_206_025 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
+  oneShellInputPass(nativePass); assert.equal(doubled.cut.passes.length, 2);
+  assert.equal(doubled.finalCardSHA256, nativePass.finalCardSHA256);
+  assert.throws(() => oneShellInputPass(doubled), error => {
+    assert.equal(error.code, "ERR_ASSERTION"); assert.equal(error.message.split("\n")[0], "one guest status call makes one frozen required input pass");
+    assert.equal(error.actual, 2); assert.equal(error.expected, 1); return true;
+  });
 });
 
 // TED's typing, moving and saving before write-behind followed the logged
