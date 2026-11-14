@@ -1,0 +1,142 @@
+---
+title: TEC-OS
+nav_order: 13
+has_children: true
+nav_exclude: true
+---
+
+# TEC-OS on the TEC-1G
+
+<!-- Checked against TEC-OS 46cf3f1 (main), ROM ac86ad23:
+     15,312 bytes used and 1,072 free. Basic CD recovery is in ROM;
+     SHELL.SVC supplies the richer command environment. The starter has
+     thirteen files and supplies HELLO3.ASM for guest TAS compilation.
+     Actual console, host-tool and cache receipts are retained in Origo
+     studies/p3-tec-os/evidence/book-recovery-core/ and book-recovery-host/.
+     Explicit historical source/test excerpts retain their stated pins.
+     Viewer 3494f4a, published as 3de3198, receives this firmware. -->
+
+TEC-OS is a CP/M-compatible disk operating system for the TEC-1G. It provides
+a working environment for developing and running software on the machine
+itself, with an SD card for storing programs and data.
+
+The TEC-1G follows the tradition of microprocessor trainer boards. Its hex
+keypad and ROM monitor give direct access to the processor and memory. You can
+enter machine code, run programs held in ROM or transfer software from a PC
+through the serial port. Developing new software involves repeatedly editing
+source, building a program and testing the result. Keeping that work on the
+machine requires storage that survives power-off and a way to organise and
+retrieve it.
+
+TEC-OS uses the SD card as a disk containing source files, executable programs
+and data. From its command prompt you can find and run a program or open a
+file for editing. Programs use operating-system calls to read and write files
+on the card. TED supplies the text editor, TAS the assembler and BAZA the
+BASIC compiler. You can edit, build and test a program on the board without
+transferring each revision from a PC.
+
+CP/M was the standard disk operating system on many microcomputers in the late
+1970s and early 1980s. A large collection of applications, programming tools
+and utilities was written for it. TEC-OS implements the CP/M 2.2 interface so
+existing software can run alongside programs written specifically for the
+TEC-1G. Compatibility depends on the memory available and the operating-system
+calls, terminal features and hardware a program uses.
+
+## Starting with a prepared machine
+
+The examples use a 40-column PICO9918 display and the matrix keyboard
+with the Matrix switch enabled. The board needs a 32,768-byte RAM chip in U9,
+the 4 MHz FAST setting, the TEC-OS ROM and a prepared starter card. The keypad
+non-maskable interrupt (NMI) jumper is off. SYSTEM is on drive A and WORK is on
+drive B. [Appendix G](appendix-g-tec-1g.md) describes the hardware preparation.
+
+No previous experience of CP/M or BASIC is needed. You can copy and change
+the [greeting program](02-make-a-small-program.md) without prior assembly
+experience.
+The explanation beside the listing covers the instructions and data it uses.
+The later programming chapters assume you can read a short Z80 listing with
+labels, registers and branches. Each TEC-OS call, buffer and stack contract
+is explained before an example depends on it.
+
+Other displays and serial terminals have a separate configuration chapter.
+You can also use the software machine in a browser. Its controls and
+card-saving rules are in [Appendix I](appendix-i-web-page.md).
+
+## Using the machine
+
+| Chapter | Use |
+| --- | --- |
+| [1. First session](01-first-session.md) | Power on, find files, run supplied SAMPLE and the card's other programs and preserve work |
+| [2. Make a small program](02-make-a-small-program.md) | Enter, save, build, change and run a banner |
+| [3. Build a BASIC program](03-build-a-basic-program.md) | Compile and run TIMES.BAS with BAZA and build it from TED |
+| [4. Work with files](04-work-with-files.md) | Read, copy, rename and erase files and control long listings |
+| [5. Drives and user areas](05-drives-and-user-areas.md) | Locate programs, select volumes, use resident services and run MON-3 programs |
+| [6. Cards on the PC](06-cards-on-the-pc.md) | Copy, check, recover and prepare card images |
+| [7. Choose a console](07-choose-a-console.md) | Select a display or serial terminal and its settings |
+| [8. Commands at startup](08-commands-at-startup.md) | Set up a startup file and bypass it when necessary |
+
+## Writing programs
+
+| Chapter | Use |
+| --- | --- |
+| [9. Call TEC-OS](09-call-tec-os.md) | Read keys and print through the BDOS |
+| [10. Read and write a file](10-read-and-write-a-file.md) | Use file control blocks and record buffers |
+| [11. Memory for programs](11-memory-for-programs.md) | Allocate program space and stacks and use raw BIOS calls |
+| [12. Use the board's devices](12-use-the-boards-devices.md) | Call hardware services and share the display |
+| [13. Results and command chains](13-results-and-command-chains.md) | Report a result and start the next command |
+| [14. Write a resident service](14-write-a-resident-service.md) | Install a hook, publish routines and remove the service |
+
+## Inside TEC-OS
+
+| Chapter | Mechanism |
+| --- | --- |
+| [15. State and memory](15-state-and-memory.md) | Workspace, banks, stacks and state lifetimes |
+| [16. Reset and boot](16-reset-and-boot.md) | Reset recognition, cold boot and warm boot |
+| [17. Console paths](17-console-paths.md) | BIOS routing, keyboard, serial and terminal code |
+| [18. Card blocks and volumes](18-card-blocks-and-volumes.md) | Card commands, container checks and record mapping |
+| [19. Cache and persistence](19-cache-and-persistence.md) | Read reuse, write ordering and failed writes |
+| [20. A file through the BDOS](20-a-file-through-the-bdos.md) | Directory entries, allocation and file operations |
+| [21. From prompt to program](21-from-prompt-to-program.md) | Parsing, lookup and program launch |
+| [22. Chains across a warm boot](22-chains-across-warm-boot.md) | Retained command text and conditional continuation |
+| [23. The history ring](23-the-history-ring.md) | Bounded storage and recall of command lines |
+| [24. Numbered-service dispatch](24-numbered-service-dispatch.md) | Register handling and device routines |
+| [25. Loading and removing services](25-loading-and-removing-services.md) | Relocation, publication and rollback |
+| [26. Startup inside the CCP](26-startup-inside-the-ccp.md) | Reading lines and handling absent displays |
+| [27. Build the ROM and media](27-build-the-rom-and-media.md) | Source, generated data and qualified artifacts |
+| [28. Diagnose the machine](28-diagnose-the-machine.md) | Card errors and the board diagnostics loaded by MON-3 |
+| [29. The host model as evidence](29-the-host-model-as-evidence.md) | Host machine, captures, tests and their limits |
+
+## Reference
+
+| Appendix | Lookup |
+| --- | --- |
+| [A. BDOS functions](appendix-a-bdos-functions.md) | Registers, effects and errors by function number |
+| [B. ROM interfaces](appendix-b-rom-services.md) | Numbered services, the PICO record and font |
+| [C. Memory map](appendix-c-memory-map.md) | Addresses and the state cleared at each boot |
+| [D. Messages and recovery](appendix-d-error-messages.md) | Causes, partial results and next actions |
+| [E. Container format](appendix-e-container-format.md) | Header, descriptors, checks and geometries |
+| [F. tecvol](appendix-f-tecvol.md) | Host commands and options |
+| [G. Hardware preparation](appendix-g-tec-1g.md) | Required setup, ports and hardware constraints |
+| [H. Service format](appendix-h-service-file-format.md) | Header fields, dependencies and relocation data |
+| [I. Web page](appendix-i-web-page.md) | Controls, input, saved cards and imports |
+| [J. Command reference](appendix-j-command-reference.md) | Exact syntax, names, wildcards and search rules |
+
+## Runs and source
+
+The demonstrations and measurements use the Debug80 TEC-1G host model,
+a software implementation of the machine. They are not physical-board runs.
+The diagnostics chapter distinguishes software-test results from evidence
+collected on a particular board.
+
+Each chapter names the source revision used to check its claims. Historical
+captures also name the revision and inputs that produced them. Each source citation identifies a file and position at that revision.
+Later edits may move the cited passage.
+
+A transcript shows the prompt, the command typed after it and the output.
+It may start at an already-running prompt. Any other omitted output is
+identified beside the example. A caret denotes a control key: `^C` means
+Ctrl and C together. [The host model as evidence](29-the-host-model-as-evidence.md)
+describes the PC setup and tools for reproducing the runs.
+
+Addresses and bytes use hexadecimal with a trailing `h`, as in `0100h`.
+Sizes in bytes are decimal. A KiB is 1,024 bytes and a MiB is 1,024 KiB.

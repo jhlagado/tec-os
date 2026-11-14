@@ -8,9 +8,10 @@
 // R/O, ERA *.* when Return alone came to end its answer, COPY's two write
 // errors on B: when the destination came to be closed (KE-179), and SAVE's
 // when its file did (KE-201). SHELLC and SHELLE left with the nested levels.
-// When the shell hook came, every call was the same with each address read as
-// symbol and offset, and the hashes were retaken; COPY's rows, marked shell,
-// are SHELL.SVC's, run with the shell holding the prompt, their output the
+// Raw buffer addresses are part of each call digest, so relocation alone
+// changes it. Fixture updates require paired traces with identical output,
+// logical buffer identities, defined operands, FCB bytes and stack peaks.
+// COPY's rows, marked shell, run with the shell holding the prompt, their output the
 // ROM's COPY's and their calls the shell's; they were retaken when the
 // shell's prompt came to name the drive's volume. A
 // function 9 call is compared by its text, not its address, since the ROM's

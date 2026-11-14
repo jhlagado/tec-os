@@ -1,0 +1,985 @@
+/* ============================================================
+   TEC-OS reading theme.
+
+   A technical-manual aesthetic: paper ground, black ink, hairline
+   rules, monospace labels, and one strong signal colour per book.
+   The schematic diagrams in the books are drawn in the same
+   language - flat fills, thin strokes, small-caps mono labels - so
+   the page and the figures read as one document rather than prose
+   with pictures dropped into it.
+
+   Precision comes from structure: strict rules, a single type
+   scale, numbered plates. Not from ornament.
+   ============================================================ */
+
+:root {
+  /* --- Ground and ink ------------------------------------- */
+  --paper: #f4f4f2;
+  --paper-soft: #ebebe7;
+  --paper-card: #ffffff;
+  --ink: #111417;
+  --ink-2: #2a2f34;
+  --dim: #5f6469;
+  --dim-2: #83888d;
+  --rule: #d6d6d2;
+  --rule-soft: #e3e3df;
+
+  /* --- Signal colour. Each book overrides this. ------------ */
+  --signal: #236c4a;
+  --signal-soft: rgba(35, 108, 74, 0.1);
+
+  /* --- VitePress plumbing --------------------------------- */
+  --vp-c-bg: var(--paper);
+  --vp-c-bg-alt: var(--paper-soft);
+  --vp-c-bg-soft: var(--paper-soft);
+  --vp-c-bg-elv: var(--paper-card);
+  --vp-c-text-1: var(--ink);
+  --vp-c-text-2: var(--ink-2);
+  --vp-c-text-3: var(--dim);
+  --vp-c-divider: var(--rule);
+  --vp-c-border: var(--rule);
+  --vp-c-gutter: var(--rule);
+
+  --vp-c-brand-1: var(--signal);
+  --vp-c-brand-2: var(--signal);
+  --vp-c-brand-3: var(--signal);
+  --vp-c-brand-soft: var(--signal-soft);
+
+  --vp-font-family-base:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Arial, sans-serif;
+  --vp-font-family-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+
+  --vp-code-color: var(--ink);
+  --vp-code-bg: var(--paper-soft);
+  --vp-code-font-size: 0.86em;
+  --vp-code-block-bg: var(--paper-soft);
+
+  --vp-sidebar-bg-color: var(--paper);
+  --vp-nav-bg-color: var(--paper);
+  --vp-local-search-bg: var(--paper-card);
+  --vp-local-search-highlight-bg: var(--signal);
+  --vp-local-search-highlight-text: #fff;
+
+  --vp-nav-height: 60px;
+}
+
+html {
+  font-size: 17px;
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Chrome: nav and sidebar
+   ============================================================ */
+
+/* The masthead sits under a heavy rule - the strongest line on the page. */
+.VPNavBar {
+  border-bottom: 2px solid var(--ink);
+}
+
+.VPNavBar .divider,
+.VPNavBar .divider-line {
+  display: none;
+}
+
+/* When a sidebar is present the default theme also rules off under the title,
+   in the lighter divider colour, and that rule shares its baseline with the
+   masthead's. The result is 200-odd pixels where the grey line paints over the
+   top of the ink one and the masthead rule looks thinner than it does either
+   side of the wordmark. One rule under the masthead, not two. */
+.VPNavBarTitle.has-sidebar .title {
+  border-bottom: 0;
+}
+
+/* The mark. Body in ink, one accent that defaults to the book's signal but
+   can be overridden where the mark sits on a coloured ground. */
+.mark {
+  color: var(--ink);
+  flex: none;
+}
+
+.mark .mark__accent {
+  stroke: var(--mark-accent, var(--signal));
+}
+
+.mark .mark__accent--filled {
+  fill: var(--mark-accent, var(--signal));
+  stroke: none;
+}
+
+/* In the masthead it sits on the wordmark's baseline, at text weight. */
+.VPNavBarTitle .mark {
+  margin-right: 10px;
+  position: relative;
+  top: 1px;
+}
+
+/* On a book's opening page it is a plate, set above the title. */
+.book-plate {
+  display: block;
+  margin: 0 0 18px;
+}
+
+.VPNavBarTitle .title {
+  font-family: var(--vp-font-family-mono);
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.VPNavBarMenuLink,
+.VPNavBarMenuGroup .VPFlyoutButton {
+  font-size: 0.82rem !important;
+  letter-spacing: 0.02em;
+}
+
+/* No keyboard hint on the search button. The shortcut still fires for
+   anyone whose browser lets the page have the key, but Chrome and Safari
+   both claim Cmd-K for the address bar, so advertising it promises
+   something that does not happen for most readers. The button is the
+   reliable way in.
+
+   The selector names the button as well as the keys because VitePress sets
+   display:flex on the two-class form, which outranks a bare class. */
+.DocSearch-Button .DocSearch-Button-Keys {
+  display: none;
+}
+
+.VPSidebar {
+  border-right: 1px solid var(--rule);
+  padding-top: 22px;
+}
+
+/* The book title is a section marker, not a link. */
+.VPSidebarItem.level-0 > .item .text {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.VPSidebarItem.level-0 {
+  padding-bottom: 6px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.VPSidebarItem .item .text {
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.VPSidebarItem.is-link > .item {
+  position: relative;
+}
+
+.VPSidebarItem.is-active > .item .text {
+  color: var(--signal);
+  font-weight: 600;
+}
+
+/* A tick in the margin marks the open chapter. */
+.VPSidebarItem.is-active > .item::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 0.62em;
+  width: 7px;
+  height: 1px;
+  background: var(--signal);
+}
+
+/* ============================================================
+   Document typography
+   ============================================================ */
+
+.vp-doc {
+  color: var(--ink-2);
+  counter-reset: clause;
+}
+
+/* The running head: the chapter's prev / index / next line, set as a thin
+   mono strip above the title instead of as body prose. */
+.vp-doc p.running-head {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  max-width: none;
+  margin: 0 0 1.6rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.vp-doc p.running-head a {
+  color: var(--dim);
+  font-weight: 400;
+  border-bottom: 0;
+}
+
+.vp-doc p.running-head a:hover {
+  color: var(--signal);
+}
+
+/* The volume and folio line. Red, monospaced, tracked wide - the one
+   piece of colour above the title. */
+.page-eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--signal);
+  margin: 0 0 10px;
+}
+
+.page-eyebrow__folio::before {
+  content: "·";
+  margin-right: 12px;
+  color: var(--rule);
+}
+
+.vp-doc h1 {
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1.04;
+  letter-spacing: -0.038em;
+  color: var(--ink);
+  margin-bottom: 0;
+}
+
+/* A short bar, not a full-width rule: the title's datum mark. */
+.vp-doc h1::after {
+  content: "";
+  display: block;
+  width: 56px;
+  height: 3px;
+  background: var(--ink);
+  margin: 16px 0 28px;
+}
+
+/* Section heads carry weight through case and tracking alone. No rule -
+   a rule under every heading is what makes a page look like a template. */
+.vp-doc h2 {
+  font-size: 0.86rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-top: 3.4rem;
+  margin-bottom: 1.1rem;
+  padding: 0;
+  border: 0;
+}
+
+/* Directive and symbol names carry their case as meaning: `.db` assembles and
+   `.DB` is a parse error, so the heading style must not rewrite them. Code
+   spans keep their own case and their own tracking wherever the surrounding
+   text is set in capitals. */
+.vp-doc h2 code,
+.vp-doc th code,
+.vp-doc .custom-block-title code {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.92em;
+}
+
+/* Numbered like clauses in a specification. */
+.vp-doc h2::before {
+  counter-increment: clause;
+  content: counter(clause, decimal-leading-zero);
+  margin-right: 1.1em;
+  color: var(--signal);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* Wide enough for a margin: let the number hang into it. */
+@media (min-width: 1280px) {
+  .vp-doc h2::before {
+    display: inline-block;
+    width: 2.6em;
+    margin: 0 0 0 -2.6em;
+  }
+}
+
+.vp-doc h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.012em;
+  color: var(--ink);
+  margin-top: 2.3rem;
+  margin-bottom: 0.7rem;
+}
+
+.vp-doc h4 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.vp-doc p,
+.vp-doc li {
+  line-height: 1.72;
+}
+
+.vp-doc p {
+  margin: 0 0 1.15rem;
+  max-width: 74ch;
+}
+
+.vp-doc a {
+  color: var(--signal);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid var(--signal-soft);
+  transition: border-color 0.12s ease;
+}
+
+.vp-doc a:hover {
+  border-bottom-color: var(--signal);
+}
+
+.vp-doc strong {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.vp-doc ul,
+.vp-doc ol {
+  max-width: 74ch;
+}
+
+.vp-doc li + li {
+  margin-top: 0.35rem;
+}
+
+.vp-doc hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+  margin: 2.6rem 0;
+}
+
+/* ============================================================
+   Code
+   ============================================================ */
+
+.vp-doc :not(pre) > code {
+  background: var(--paper-soft);
+  border: 1px solid var(--rule-soft);
+  border-radius: 2px;
+  padding: 0.1em 0.34em;
+  color: var(--ink);
+}
+
+.vp-doc div[class*="language-"] {
+  background: var(--paper-soft);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--signal);
+  border-radius: 0;
+  margin: 1.5rem 0;
+}
+
+.vp-doc div[class*="language-"] pre {
+  padding: 16px 0;
+}
+
+.vp-doc div[class*="language-"] code {
+  font-size: 0.8rem;
+  line-height: 1.66;
+}
+
+/* The language tag sits in the corner like a drawing annotation. */
+.vp-doc div[class*="language-"]::before {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim-2);
+  top: 6px;
+  right: 10px;
+}
+
+.vp-doc div[class*="language-"] .copy {
+  border-radius: 2px;
+}
+
+/* ============================================================
+   Figures as plates
+   ============================================================ */
+
+.vp-doc img {
+  display: block;
+  margin: 0;
+  max-width: 100%;
+  background: var(--paper-card);
+}
+
+/* A plate: ruled top and bottom, transparent ground, numbered caption.
+   The figure is not boxed - the two rules and the caption are what
+   place it, exactly as in a printed manual. */
+.vp-doc figure.plate {
+  margin: 2.2rem 0;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  background: transparent;
+  max-width: none;
+}
+
+.vp-doc figure.plate > img {
+  margin: 0 auto;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+/*
+ * Generated SVGs choose their palette from the operating-system preference.
+ * Give them a matching ground when the site's manual theme differs from it.
+ */
+.vp-doc figure.plate > img[src$=".svg"] {
+  background: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .vp-doc figure.plate > img[src$=".svg"] {
+    background: #1c1f22;
+  }
+}
+
+.vp-doc figure.plate > figcaption {
+  margin-top: 14px;
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+.vp-doc figure.plate .plate__num {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--signal);
+  margin-right: 10px;
+}
+
+/* The generated figures are drawn at 720px with 11px labels. Scaling one to
+   fit a 360px phone renders those labels at about 5px, which is not a smaller
+   figure but an unreadable one. So the plate stops scaling at 560px, where
+   the smallest label still lands around 9px, and scrolls sideways instead.
+   The caption stays put while the figure moves under it. */
+.vp-doc figure.plate {
+  overflow-x: auto;
+}
+
+.vp-doc figure.plate > img {
+  min-width: min(560px, 100vw - 2rem);
+}
+
+.vp-doc figure.plate > figcaption {
+  position: sticky;
+  left: 0;
+}
+
+/* Until the client script promotes them, keep lone images from sitting
+   flush against the prose. */
+.vp-doc p:has(> img:only-child) {
+  max-width: none;
+}
+
+/* ============================================================
+   Tables
+   ============================================================ */
+
+.vp-doc table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.6rem 0;
+  font-size: 0.88rem;
+}
+
+/* Rules separate the rows, not banding. */
+.vp-doc tr,
+.vp-doc tr:nth-child(2n) {
+  background: transparent;
+  border: 0;
+}
+
+.vp-doc th {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid var(--ink);
+  padding: 8px 14px 8px 0;
+}
+
+.vp-doc td {
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  padding: 10px 14px 10px 0;
+  vertical-align: top;
+  color: var(--ink-2);
+}
+
+/* ============================================================
+   Quotes and callouts
+   ============================================================ */
+
+.vp-doc blockquote {
+  border-left: 2px solid var(--signal);
+  background: var(--signal-soft);
+  padding: 12px 18px;
+  margin: 1.5rem 0;
+  color: var(--ink-2);
+}
+
+.vp-doc blockquote > p {
+  margin: 0;
+}
+
+.vp-doc .custom-block {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--signal);
+  border-radius: 0;
+  background: var(--paper-card);
+}
+
+.vp-doc .custom-block-title {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   Front page: the shelf of volumes
+   ============================================================ */
+
+.library-hall {
+  padding: 26px 0 8px;
+}
+
+/* The favicon's chip at reading size, drawn inline so it can take the
+   theme's ink and the house signal rather than a baked-in colour. */
+.library-hall__mark {
+  display: block;
+  width: 46px;
+  height: 46px;
+  color: var(--ink);
+  margin: 0 0 20px;
+}
+
+/* Each card names one book, so its mark takes the card's own accent
+   rather than the page's signal. */
+.library-shelf .volume__head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.library-shelf .volume .mark {
+  --mark-accent: var(--vol-accent);
+}
+
+.library-hall__eyebrow {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--signal);
+  margin: 0 0 10px;
+}
+
+.library-hall__title {
+  font-size: 2.4rem;
+  font-weight: 700;
+  letter-spacing: -0.038em;
+  line-height: 1.05;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+
+.library-hall__tagline {
+  font-size: 1.02rem;
+  color: var(--dim);
+  max-width: 62ch;
+  margin: 0 0 6px;
+}
+
+.library-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 18px;
+  margin: 34px 0 10px;
+  padding: 0;
+  list-style: none;
+}
+
+.library-shelf .volume {
+  --spine: var(--vol-accent, var(--signal));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  padding: 20px 20px 22px;
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--spine);
+  border-radius: 0;
+  text-decoration: none;
+  transition:
+    border-color 0.14s ease,
+    transform 0.14s ease;
+}
+
+.library-shelf .volume:hover {
+  border-color: var(--spine);
+  transform: translateY(-2px);
+}
+
+/* A drafting corner tick, the same mark the diagrams use. */
+.library-shelf .volume::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 9px;
+  height: 9px;
+  border-right: 1px solid var(--spine);
+  border-bottom: 1px solid var(--spine);
+}
+
+.library-shelf .volume__tag {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--spine);
+}
+
+.library-shelf .volume__title {
+  font-size: 1.06rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.library-shelf .volume__desc {
+  font-size: 0.86rem;
+  color: var(--dim);
+  line-height: 1.55;
+}
+
+.library-shelf .volume__enter {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--spine);
+  margin-top: 2px;
+}
+
+
+
+
+
+
+
+
+/* ============================================================
+   Mermaid
+   ============================================================ */
+
+.vp-doc .mermaid {
+  margin: 1.9rem 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  text-align: center;
+}
+
+.vp-doc .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.vp-doc .mermaid .node rect,
+.vp-doc .mermaid .node circle,
+.vp-doc .mermaid .node ellipse,
+.vp-doc .mermaid .node polygon {
+  fill: var(--paper-card) !important;
+  stroke: var(--ink) !important;
+  stroke-width: 1.4px !important;
+}
+
+.vp-doc .mermaid .nodeLabel,
+.vp-doc .mermaid .label,
+.vp-doc .mermaid text {
+  fill: var(--ink) !important;
+  color: var(--ink) !important;
+  font-family: var(--vp-font-family-base) !important;
+  font-size: 13px !important;
+}
+
+.vp-doc .mermaid .flowchart-link {
+  stroke: var(--dim) !important;
+  stroke-width: 1.4px !important;
+}
+
+.vp-doc .mermaid marker path {
+  fill: var(--dim) !important;
+  stroke: var(--dim) !important;
+}
+
+.vp-doc .mermaid .edgeLabel,
+.vp-doc .mermaid .edgeLabel span {
+  background: var(--paper) !important;
+  color: var(--dim) !important;
+  font-family: var(--vp-font-family-mono) !important;
+  font-size: 11px !important;
+}
+
+.vp-doc .mermaid .labelBkg {
+  background: var(--paper) !important;
+}
+
+/* ============================================================
+   Intel HEX record diagram (AZM book)
+   ============================================================ */
+
+.vp-doc .intel-hex-diagram {
+  margin: 1.7rem 0;
+  font-family: var(--vp-font-family-mono);
+}
+
+.vp-doc .intel-hex-diagram__record {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.vp-doc .intel-hex-diagram__cell {
+  padding: 8px 10px;
+  border: 1px solid var(--ink);
+  border-right: 0;
+  font-size: 0.82rem;
+  background: var(--paper-card);
+}
+
+.vp-doc .intel-hex-diagram__cell:last-child {
+  border-right: 1px solid var(--ink);
+}
+
+.vp-doc .intel-hex-diagram__cell--mark {
+  background: var(--signal-soft);
+  color: var(--signal);
+  font-weight: 700;
+}
+
+.vp-doc .intel-hex-diagram__cell--length,
+.vp-doc .intel-hex-diagram__cell--type,
+.vp-doc .intel-hex-diagram__cell--checksum {
+  background: var(--paper-soft);
+}
+
+.vp-doc .intel-hex-diagram__labels {
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 6px;
+}
+
+/* ============================================================
+   MON-3 helpers (TEC-1G book)
+   ============================================================ */
+
+.vp-doc .mon3-data-box {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--signal);
+  background: var(--paper-card);
+  padding: 12px 16px;
+  margin: 1.5rem 0;
+}
+
+.vp-doc .mon3-data-box pre {
+  margin: 0;
+  background: transparent;
+}
+
+.vp-doc .mon3-key-emphasis,
+.vp-doc .mon3-address-emphasis {
+  font-family: var(--vp-font-family-mono);
+  font-weight: 700;
+  color: var(--signal);
+}
+
+/* ============================================================
+   Image lightbox
+   ============================================================ */
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(17, 20, 23, 0.9);
+  padding: 32px;
+}
+
+.image-lightbox[hidden] {
+  display: none;
+}
+
+.image-lightbox__figure {
+  margin: 0;
+  max-width: min(1200px, 94vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.image-lightbox__image {
+  max-width: 100%;
+  max-height: 82vh;
+  object-fit: contain;
+  background: var(--paper-card);
+  padding: 12px;
+}
+
+.image-lightbox__image[src$=".svg"] {
+  background: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  .image-lightbox__image[src$=".svg"] {
+    background: #1c1f22;
+  }
+}
+
+.image-lightbox__caption {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.76rem;
+  color: #d8d8d4;
+  text-align: center;
+}
+
+.image-lightbox__close {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  background: transparent;
+  border: 1px solid #6d7278;
+  color: #ececea;
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.image-lightbox__close:hover,
+.image-lightbox__close:focus {
+  border-color: #fff;
+  color: #fff;
+}
+
+.has-image-lightbox {
+  overflow: hidden;
+}
+
+/* ============================================================
+   Misc
+   ============================================================ */
+
+.VPDocFooter {
+  border-top: 1px solid var(--rule);
+}
+
+.pager-link {
+  border: 1px solid var(--rule);
+  border-radius: 0;
+}
+
+.pager-link:hover {
+  border-color: var(--signal);
+}
+
+.pager-link .title {
+  color: var(--signal);
+}
+
+.VPDocAsideOutline .outline-title {
+  font-family: var(--vp-font-family-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.VPDocAsideOutline .outline-link {
+  font-size: 0.8rem;
+}
+
+::selection {
+  background: var(--signal);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  html {
+    font-size: 16px;
+  }
+  .library-hall__title {
+    font-size: 1.9rem;
+  }
+  .vp-doc h1 {
+    font-size: 1.7rem;
+  }
+}
+
+.volume--tec-os { --vol-accent: #236c4a; }
+.volume--thorium { --vol-accent: #14607e; }
+.DocSearch-Button-Keys, .VPNavBarSearch kbd { display: none; }
+@media print { .VPNav, .VPSidebar, .VPDocAside, .VPDocFooter { display: none !important; } .VPContent { padding: 0 !important; } }
+
+@media (max-width: 720px) {
+  .vp-doc table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
