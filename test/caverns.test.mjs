@@ -40,7 +40,7 @@ function compileBasic(){
  }
  return compiled;
 }
-function basicGame(){const image=card();volume(image,'A').write('CAVBASIC.COM',compileBasic());const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'cavbasic',question(m));return m;}
+function basicGame(){const image=card();volume(image,'A').write('CAVBASIC.COM',compileBasic());const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'con pico 80');assert.equal(m.read(m.sym('VWID')),80);keys(m,'cavbasic',question(m));return m;}
 function noDeath(out){assert.doesNotMatch(out,/Another adventure|ERROR IN|killed|smashes your skull/i);}
 const tour=[['galar',16],['east',17],['look',17],['west',33],['north',29],['east',26],['east',25],['west',26],['south',27],['east',28],['get rope',28],['down with rope',35],['east',36],['north',39],['west',38],['north',43],['east',44]];
 
