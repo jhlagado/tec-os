@@ -1,107 +1,114 @@
-# Caverns trials on TEC-OS
+# Caverns on TEC-OS
 
-The starter card and Viewer include the CP/M assembly game CAVERNS.COM, an
-experimental Microsoft BASIC comparison CAVBASIC.BAS, and CAVERNS.TXT with
-instructions. Select the PICO9918 at 80 columns. Both run with the startup
-shell installed; no ROM changes or UNLOAD are needed with the revised BAZA.
+Caverns is now the original BASIC adventure, refined with its author's approval.
+The starter disk's main SYSTEM volume holds **CAVBASIC.COM**, its BAZA source
+**CAVBASIC.BAS**, and **CAVERNS.TXT**. Select PICO9918 at 80 columns and type:
 
 ```
-CAVERNS
+CAVBASIC
 ```
 
-runs Caverns80. HELP lists commands; Space/Enter continues its story, Q skips.
-SAVE and LOAD use CAVERNS.SAV on the current drive. QUIT followed by N exits.
+To rebuild it on the TEC-1 with the shell resident:
 
 ```
 BAZA CAVBASIC
 CAVBASIC
 ```
 
-compiles and runs the BASIC comparison. It accepts full words plus N/S/E/W
-and I: LOOK, LIST, GET COMPASS, DROP COMPASS, SCORE, QUIT, and tool commands
-such as OPEN DOOR WITH KEY and KILL TROLL WITH SWORD. N exits and Y restarts.
-It has no disk save/load and does not duplicate Caverns80's full parser or
-EXAMINE/HELP presentation. The named platforms share a map and winning quest
-in this trial, rather than every command or random outcome.
+The ready-to-run executable is 39,680 bytes, including its selected runtime.
+BAZA.RTL is needed to compile, not to play. TED CAVBASIC.BAS opens the source.
+QUIT followed by N returns to the shell; Y starts a fresh adventure. There is
+no disk SAVE/LOAD facility in this BASIC version.
 
-## Rule-set status
+## Rules and original identity
 
-The current BASIC is a trial of Caverns80's revised rules, not an archival
-replacement. The author prefers the original compass confusion and one-use
-bridge. The original return path is under investigation before a final shared
-rule set is adopted. [The original-game audit](caverns-original.md) records
-the hut/key handler, drainage connections and the remaining reachability issue.
-Passing the present trial's completion test does not settle that design choice.
+The complete original 54-room directed map and object starting locations are
+retained. Paths may curve and double back. Without a compass carried or in the
+current room, compass commands choose random directions. The rope descends
+one way from the balcony into the temple; APE opens the crypt wall, and GALAR
+is the castle-clued return to the cave entrance. The key is left outside a door
+when used. Eleven carried objects are allowed. Sword fatigue accumulates over
+the adventure, and randomness can still kill the player.
 
-## Sizes
+The author's agreed refinements are deliberately small:
 
-| Build | COM bytes |
-| --- | ---: |
-| Assembly Caverns80 0.1.1 | 22,896 |
-| Initial BASIC conversion, old BAZA | 42,240 |
-| Same conversion, finer runtime linking | 38,912 |
-| Table-cached Caverns80-rule BASIC trial | 38,272 |
+- The string bridge remains usable for the return journey. A complete adventure
+  must not require a death/restart or prior knowledge of GALAR.
+- The visible treasure-room entrance explicitly suggests explosives. Using the
+  lit candle and bomb there blasts open the eastern passage, consumes the bomb,
+  and leaves the player outside to enter normally. There is no numerical
+  teleportation. Elsewhere a blast changes neither location nor surroundings;
+  the bomb remains available, avoiding a permanent loss from that experiment.
+- TAKE/PUT/USING/WITH share noun and presence validation with GET/DROP/USE.
+  Missing or remote objects cannot be acquired, banked or used through aliases.
+- Creature descriptions return from their subroutines; room 32 has a description.
 
-The runtime is already linked into the COM. BAZA.RTL is a compile-time library,
-not a second library loaded alongside a running program. The revised compiler
-links RND separately and omits numeric input parsing for string-only INPUT.
-The trial fits the shell's 42,496-byte TPA with room for its runtime allocations.
-The full winning route and 54-room tour run under that shell without memory
-violations. These are emulator measurements, not physical TEC-1G results.
+Small interface conveniences retained from the trial are N/S/E/W, I, SCORE and
+free LOOK/LIST/SCORE. The normal combat risk still applies to action commands
+near hostile creatures. Normal RANDOMIZE makes replay timing affect randomness.
+The original crypt clue uses APE; VARD is not substituted. The original shield
+and pendant do not gain invented combat or magic effects.
 
-## BASIC source changes
+## Validation and walkthrough review
 
-The original line numbers are multiplied by ten; helpers follow the old game.
-The initial conversion replaced Microbee display/input hooks, substring syntax,
-SEARCH, NEXT *variable exits, variable-valued DATA and numbered RESTORE.
-The source already uses integer variables. Fixed map, vocabulary and object
-name tables are now read once into arrays. Simple integer index operations and
-nested integer comparisons avoid several generic floating-point paths.
+`test/caverns-refined-route.json` is an independently source-derived quest
+witness. `test/caverns.test.mjs` drives the real TEC-OS ROM and native BAZA output
+through ordinary keyboard commands. It checks the actual room and all 24 object
+locations against the witness, retries sword attacks until victory, and allows
+fresh adventures after the original random combat death. A successful adventure
+must learn the castle clue before using GALAR, consume one bomb at the entrance,
+return all ten surviving treasures for 126, and visit all 54 rooms. No host-side
+item, location, RNG or puzzle-state writes are used to complete the quest.
 
-Three creature-description subroutines formerly jumped directly to the prompt.
-They now RETURN, so repeated encounters do not leak GOSUB/FOR frames. The
-trial also includes Caverns80's map, retained keys, reusable bridge, literal
-compass directions, persistent waterfall exit, combat fatigue reset, ten-item
-limit, bomb exclusion from scoring and the non-teleporting vault explosion.
-These gameplay choices are explicitly experimental pending the original-rule
-review. Forty repeated LOOKs do not consume turns. Fatal moves, restart and
-exit are exercised through ordinary input.
+Additional checks cover off-target explosions at the castle and northern cavern,
+blocked reverse rope/cell exits, inventory capacity, bat relocation, invalid
+aliases, compass loss, fatal falls, replay and exit. The native compiler rebuild
+is compared byte-for-byte with the shipped executable. The starter recipe and
+Viewer card include the same BASIC executable and source.
 
-## Provenance
+The source-derived witness assumes possible first-strike victories; the native
+run uses real RND and may need repeated sword commands or a fresh adventure.
+Neither proves that every random outcome wins. That is consistent with the
+agreed fairness requirement: a full-score first-discovery adventure must be
+possible, while combat and geographical hazards retain risks.
 
-Copyright 1982–83 John Hardy; GNU GPL. The recovered listing records the 2019
-release. Sources:
+See [the review walkthrough](caverns-walkthrough.md) for the route and review
+checkpoints. The Viewer is a local test deployment; no public site has been
+published by this work. At `http://127.0.0.1:8765/`, an existing browser card is
+kept on reload. To test the refreshed disk, download any card you wish to keep
+with **Download image**, then select **New starter card** and run CAVBASIC.
 
-- [Caverns80](https://github.com/jhlagado/caverns80), commit
-  3c033e9a24f9873389c26c2a3d680cf79a69d6ec, version 0.1.1. The vendored
-  programs/CAVERNS.COM has SHA-256
-  6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb.
-  Its original assembler commit was unavailable. ATOM 0.3.7 built the unchanged
-  source to the identical published COM; the original 58 upstream tests passed.
-- [Recovered BASIC](https://github.com/jhlagado/caverns), commit
-  d60481500140c79da0e6e06719a518c4231c4588, src/caverns.basic.
-- The revised BAZA is a local source pin until publication is authorized.
-  Preparing another workspace requires that BAZA checkout and its dist files,
-  or publishing the pinned commit first.
+## Assembly comparison retained for development
 
-## Repeatable verification
+`programs/CAVERNS.COM` remains the separately preserved Caverns80 0.1.1 artifact,
+22,896 bytes, SHA-256
+`6e4c4154d7136645c18effccfc5d60ca3d59ae7b19a963b389608ecaf18e2dfb`.
+It is deliberately **absent from the starter recipe and Viewer disk**. Its
+regression test installs it into a disposable test image explicitly. Its map
+and later gameplay choices are not the specification for the BASIC release.
+It should only return to a public disk after gameplay parity is established.
+
+## Provenance and reproduction
+
+The archival source is sibling repository `jhlagado/caverns`, commit
+`d60481500140c79da0e6e06719a518c4231c4588`, `src/caverns.basic` and its intro.
+That archival listing is unchanged. The BASIC port caches static DATA in integer
+and string arrays once, resets mutable state on replay, and uses integer
+variables for rooms, flags, inventories and loops; RND remains floating point.
+
+BAZA input pins point to local compiler/runtime commit
+`8578fe50fdfc66e16015c54f365d1403825979da`. This compiler change has not been
+published upstream; a fresh checkout needs that sibling build available as
+explained in the input-pin documentation. Native fixture regeneration:
 
 ```
+node tools/caverns-fixture.mjs ../baza/build/runtime-build.json ../baza/dist
+npm run media
+npm run web
 node --test test/caverns.test.mjs test/starter.test.mjs
-node tools/caverns-fixture.mjs ../baza/build/runtime-build.json
 ```
 
-The fixture command recompiles with real BAZA under TEC-OS and records native
-variable addresses, source/compiler hashes and the output COM hash. It injects
-no gameplay state. Completion tests use ordinary commands, check the same map
-and all ten banked treasures for 126 points, then tour all 54 rooms. The assembly
-test saves the completed game and reloads it after a fresh machine boot. BASIC
-checks restart, inventory, absent objects, fatal movement and free information
-commands, including a long encounter route that detects the earlier frame leak.
-
-Caverns80's broader upstream suite covers combat, clues, examination, parser
-paths, save corruption and recovery, score, counters, stack and full progression.
-The BASIC trial has a smaller documented command set. A completion route and
-feature tests provide evidence for those cases, not an exhaustive proof of all
-possible play histories. Once the original return puzzle is settled, add its
-bridge-loss, compass-loss and alternate-return scenarios to both versions.
+The fixture writer captures compiler symbols and emits both the debug copy and
+`programs/CAVBASIC.COM` from an actual compilation. Keep source, binary and
+fixture together. `npm run media` packages their hashes into starter recipe
+revision 15. `npm run web` supplies that same recipe and files to the Viewer.

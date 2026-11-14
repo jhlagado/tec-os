@@ -63,7 +63,7 @@ test("the starter card holds exactly seventeen files, each by its hash, the PICO
     "SAMPLE.ASM": text("SAMPLE.ASM"),
     "TIMES.BAS": text("TIMES.BAS"),
     "BOUNCE.BAS": bounceText(),
-    "CAVERNS.COM": readFileSync(resolve(ROOT, "programs/CAVERNS.COM")),
+    "CAVBASIC.COM": readFileSync(resolve(ROOT, "programs/CAVBASIC.COM")),
     "CAVBASIC.BAS": text("CAVBASIC.BAS"),
     "CAVERNS.TXT": text("CAVERNS.TXT"),
     "DEMO.ASM": text("DEMO.ASM"),
