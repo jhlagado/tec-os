@@ -24,7 +24,7 @@
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza local 8578fe5, dist/BAZA.COM",
+      "source": "jhlagado/baza 8578fe5, dist/BAZA.COM",
       "repo": "jhlagado/baza",
       "commit": "8578fe50fdfc66e16015c54f365d1403825979da",
       "path": "dist/BAZA.COM",
@@ -34,7 +34,7 @@
     "BAZA.RTL": {
       "env": "BAZA_RTL",
       "default": "../baza/dist/BAZA.RTL",
-      "source": "jhlagado/baza local 8578fe5, dist/BAZA.RTL",
+      "source": "jhlagado/baza 8578fe5, dist/BAZA.RTL",
       "repo": "jhlagado/baza",
       "commit": "8578fe50fdfc66e16015c54f365d1403825979da",
       "path": "dist/BAZA.RTL",

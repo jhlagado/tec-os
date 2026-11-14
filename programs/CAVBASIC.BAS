@@ -1,6 +1,10 @@
-1 REM Caverns, copyright 1982-83 John Hardy. GNU GPL; see CAVERNS.TXT.
-2 REM Original MicroWorld BASIC, refined by its author for TEC-OS and BAZA.
-3 REM Integer tables cached once. See CAVERNS.TXT for rules and provenance.
+1 REM CAVERNS - John Hardy (c) 1982-83. Microbee edition copyright 1983.
+2 REM Dreamcards. GNU GPL release 2019; see CAVERNS.TXT and repository LICENSE.
+3 REM Original: github.com/jhlagado/caverns d604815, src/caverns.basic.
+4 REM Author-approved TEC-OS/BAZA refinements: github.com/jhlagado/tec-os.
+5 REM Origins: ZX81; VIC-20 port with Ken Stone; Microbee MicroWorld BASIC.
+6 REM Recovery: Microbee Software Preservation Project; Alan Laughton (ChickenMan).
+7 REM Tables cached once; integer state. The archival listing is unchanged.
 10 DIM p%(24),ex%(216),ip%(24),na$(24),no$(24),di$(3),ve$(16)
 11 RESTORE:FOR x%=1 TO 216:READ ex%(x%):NEXT x%
 12 FOR x%=1 TO 24:READ na$(x%),no$(x%):NEXT x%
