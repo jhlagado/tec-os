@@ -78,24 +78,6 @@ function lbaOf(r, rec) {
   return start + Math.floor((r.blockOf(rec) * 2048 + (rec & 15) * 128) / 512);
 }
 
-/**
- * After three records, each row's call: whether the three are on the card
- * after it (CCC, or --- if not) and the card writes it made. AFTER is what
- * each row must give.
- */
-function flushRows(rows, after, rom) {
-  for (const [what, call, writes] of rows) {
-    const r = three({ open: true, rom });
-    assert.equal(r.state(), "---", `${what}: not on the card before`);
-    const w0 = r.t.writes.length;
-    call(r);
-    const made = r.t.writes.slice(w0);
-    assert.equal(r.state(), after, `${what}: the three records ${after === "CCC" ? "on" : "not on"} the card`);
-    assert.equal(made.length, writes ?? (after === "CCC" ? 1 : 0), `${what}: card writes`);
-    if (after === "CCC") assert.equal(made[0], lbaOf(r, 0), `${what}: the block written first`);
-  }
-}
-
 const NO_FLUSH = [
   ["nothing", () => {}],
   ["BDOS 2", (r) => r.bdos(2, 0x41)],
@@ -129,8 +111,6 @@ const CLOSE = [
   ["BDOS 16", (r) => r.bdos(16), 2],
   ["BDOS 16 of an unmodified FCB", unmodified],
 ];
-const NEXT_BLOCK = [["records 3 and 4", (r) => (r.put(3), r.bdos(21), r.put(4), r.bdos(21))]];
-const OTHER_DRIVE = [["a write to B:", (r) => (r.put(9), r.bdos(21, FCB3))]];
 const VOLUMES = [
   ["BDOS 48", (r) => r.bdos(48, 0)],
   ["MOUNT C: ARCHIVE", (r) => r.svc(9, 2, 2)],
@@ -339,6 +319,141 @@ function checkOmittedPending(c) {
   });
 }
 
+/** These calls deliberately enter the private BIOS handler. They test the
+ * pending-block protocol inside one logical operation, before any later
+ * public entry can commit or repair its data. */
+function privateWrite(kind, rom) {
+  const image = card();
+  for (const [drive, value] of [["A", 0x6b], ["B", 0x7d]]) {
+    const v = volume(image, drive), off = v.g.dirBlocks * v.blockBytes;
+    v.data.fill(value, off, drive === "A" ? v.data.length : off + 512);
+  }
+  const r = three({ open: true, image, rom });
+  const block = lbaOf(r, 0), line = r.pending() - 1;
+  assert.ok(line >= 0 && line < r.m.sym("NLINES"));
+  const want = new Uint8Array(512);
+  for (let k = 0; k < 3; k++) want.set(pat(k), k * 128);
+  const old = Uint8Array.from(want); old.fill(0, 256);
+  const before = pendingFrame(r, block, line);
+  assert.deepEqual([before.block, before.pending, before.depth, before.busy], [block, line + 1, 0, 0]);
+  assert.deepEqual(before.queue, [line]);
+  assert.equal(before.dirty.filter(Boolean).length, 1);
+  assert.equal(before.dirty[line], 1);
+  assert.deepEqual(before.payload, want);
+  assert.deepEqual(before.card, old);
+  const aStart = [...dirBlocks(image)][0], relative = block - aStart;
+  const key = [r.m.read(r.m.sym("BUFOK")), r.m.read(r.m.sym("BUFDRV")), word(r.m, r.m.sym("BUFBLK"))];
+  assert.deepEqual(key, [2, 0, relative], "the actual no-pre-read key belongs to this A block");
+  if (kind === "same") assert.notEqual(r.m.read(r.m.sym("CNEXT")), line, "the by-line fault must disagree with the real pending tag");
+  const drive = kind === "other" ? "B" : "A", v = volume(image, drive);
+  assert.equal(v.d.spt, 64); assert.equal(v.d.off, 0);
+  const start = [...dirBlocks(image, drive)][0];
+  const targetBlock = kind === "other" ? start + v.g.dirBlocks * v.blockBytes / 512 : block + (kind === "next" ? 1 : 0);
+  const slot = kind === "same" ? 3 : 0, record = (targetBlock - start) * 4 + slot;
+  if (kind === "next") assert.equal(Math.floor((targetBlock - start) * 512 / v.blockBytes), r.blockOf(0), "the next SD block is inside the already allocated file block");
+  const targetOld = image.slice(targetBlock * 512, (targetBlock + 1) * 512);
+  if (kind !== "same") assert.ok(targetOld.every(b => b === (kind === "next" ? 0x6b : 0x7d)));
+  const targetWant = kind === "same" ? Uint8Array.from(want) : kind === "next" ? new Uint8Array(512) : Uint8Array.from(targetOld);
+  const update = kind === "same" ? 3 : kind === "next" ? 4 : 9;
+  targetWant.set(pat(update), slot * 128);
+  r.put(update);
+  const putWord = (name, value) => { r.m.write(r.m.sym(name), value & 255); r.m.write(r.m.sym(name) + 1, value >> 8); };
+  r.m.write(r.m.sym("DSKCUR"), drive === "A" ? 0 : 1);
+  putWord("DSKTRK", Math.floor(record / 64)); putWord("DSKSEC", record % 64); putWord("DSKDMA", DMA);
+  const expectedMap = { drive: drive === "A" ? 0 : 1, track: Math.floor(record / 64), sector: record % 64, dma: DMA, offset: targetBlock - start, slot, absolute: targetBlock, preRead: kind === "next" ? 1 : 0 };
+  const mapping = () => ({ drive: r.m.read(r.m.sym("DSKCUR")), track: word(r.m, r.m.sym("DSKTRK")), sector: word(r.m, r.m.sym("DSKSEC")), dma: word(r.m, r.m.sym("DSKDMA")), offset: word(r.m, r.m.sym("BLKOFF")), slot: r.m.read(r.m.sym("BLKSLOT")), absolute: word(r.m, r.m.sym("SDLBA")) + word(r.m, r.m.sym("SDLBA") + 2) * 65536, preRead: r.m.cpu.cpu.c });
+  const made = [], maps = [];
+  const commit = r.m.sd.commitWrite.bind(r.m.sd);
+  r.m.sd.commitWrite = () => {
+    const { start, buffer } = r.m.sd.writeState;
+    const payload = Uint8Array.from(buffer);
+    assert.equal(start / 512, block);
+    assert.deepEqual(payload, want, "only already received data is committed before the private boundary");
+    commit();
+    assert.equal(r.m.sd.pendingResponse[0], 0x05);
+    assert.deepEqual(image.slice(start, start + 512), want);
+    made.push({ block, payload });
+  };
+  const step = r.m.step.bind(r.m), w0 = r.t.writes.length, rd0 = r.t.reads.length;
+  r.m.step = () => {
+    assert.notEqual(r.m.pc, r.m.sym("HKENTER"), "this test must not silently become an outer API call");
+    if (r.m.pc === r.m.sym("BWGET") || r.m.pc === r.m.sym("CWRBH")) {
+      assert.deepEqual([r.m.read(r.m.sym("HKDEP")), r.m.read(r.m.sym("HKBUSY"))], [0, 0]);
+      const observed = mapping();
+      assert.deepEqual(observed, expectedMap, "writeback must preserve the independently staged mapping and pre-read choice");
+      maps.push({ pc: r.m.pc, ...observed });
+    }
+    return step();
+  };
+  const entry = r.m.sym("BWRITE");
+  const result = r.stub([0x0e, 0, 0xcd, entry & 255, entry >> 8]);
+  r.m.step = step;
+  assert.equal(result.a, 0);
+  assert.equal(r.m.cpu.cpu.sp, 0x3000);
+  assert.deepEqual(maps.map(x => x.pc), [r.m.sym("BWGET"), r.m.sym("CWRBH")]);
+  assert.deepEqual(r.t.writes.slice(w0), made.map(a => a.block));
+  assert.deepEqual(r.t.reads.slice(rd0), kind === "other" ? [targetBlock] : [], "only the other drive needs its own neighbour pre-read");
+  const oldAfter = pendingFrame(r, block, line);
+  const cache = r.m.banks[0];
+  const matches = Array.from({ length: r.m.sym("NLINES") }, (_, i) => i).filter(i => [0, 1, 2, 3].reduce((n, k) => n + cache[r.m.sym("CTAB") - 0x8000 + i * 4 + k] * 256 ** k, 0) === targetBlock);
+  assert.equal(matches.length, 1);
+  const targetLine = matches[0], target = pendingFrame(r, targetBlock, targetLine);
+  assert.deepEqual(target.payload, targetWant);
+  assert.equal(target.dirty[targetLine], 1);
+  return { kind, r, block, line, want, old, before, made, oldAfter, targetBlock, targetLine, target, targetOld, targetWant };
+}
+
+function checkPrivateWrite(c) {
+  assert.equal(c.made.length, c.kind === "same" ? 0 : 1, `${c.kind}: the private pending prerequisite's write count`);
+  assert.deepEqual(c.oldAfter.card, c.kind === "same" ? c.old : c.want);
+  assert.deepEqual(c.target.queue, [c.targetLine]);
+  assert.equal(c.target.dirty.filter(Boolean).length, 1);
+  assert.equal(c.target.pending, c.kind === "other" ? 0 : c.targetLine + 1);
+  assert.deepEqual(c.target.card, c.targetOld, "the new received update has no later public opportunity");
+}
+
+function checkPrivateOmission(c) {
+  assert.equal(c.made.length, 0);
+  assert.deepEqual(c.oldAfter.card, c.old);
+  assert.deepEqual(c.oldAfter.payload, c.want);
+  assert.equal(c.oldAfter.dirty[c.line], 1);
+  assert.deepEqual(c.target.queue, [c.line, c.targetLine]);
+  assert.equal(c.target.dirty.filter(Boolean).length, 2);
+  assert.deepEqual(c.target.card, c.targetOld);
+  assert.throws(() => checkPrivateWrite(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], `${c.kind}: the private pending prerequisite's write count`);
+    assert.equal(error.actual, 0); assert.equal(error.expected, 1);
+    return true;
+  });
+}
+
+function closePublication(rom) {
+  const r = three({ open: true, rom }), w0 = r.t.writes.length;
+  const file = volume(r.image, "A").find("P.DAT");
+  assert.equal(file.records, 0, "the setup has a real unpublished extent");
+  assert.equal(file.entries.length, 1);
+  const offset = file.entries[0].index * 32;
+  const directoryBlock = [...dirBlocks(r.image)][0] + Math.floor(offset / 512);
+  const directoryWant = r.image.slice(directoryBlock * 512, (directoryBlock + 1) * 512);
+  directoryWant.set(Array.from({ length: 20 }, (_, i) => r.m.read(FCB + 12 + i)), offset % 512 + 12);
+  assert.equal(r.state(), "CC-");
+  const result = r.bdos(16);
+  assert.ok(result.a >= 0 && result.a <= 3);
+  return { r, made: r.t.writes.slice(w0), published: volume(r.image, "A").find("P.DAT").records, directoryBlock, directoryWant, want: Uint8Array.from([0, 1, 2].flatMap(k => [...pat(k)])) };
+}
+
+function checkPublication(c) {
+  assert.equal(c.published, 3, "the successful close publishes all three records");
+  assert.equal(c.made.length, 2);
+  assert.equal(c.made[0], lbaOf(c.r, 0));
+  assert.ok(dirBlocks(c.r.image).has(c.made[1]));
+  assert.equal(c.r.pending(), 0);
+  assert.deepEqual(c.r.image.slice(c.directoryBlock * 512, (c.directoryBlock + 1) * 512), c.directoryWant, "the pre-close FCB changes only its own extent fields, preserving all neighbouring entries");
+  assert.deepEqual(volume(c.r.image, "A").read("P.DAT"), c.want);
+  assert.deepEqual(volume(c.r.image, "A").verify(), []);
+}
+
 test("AC2 healthy ordinary and selected opportunities", () => healthyProgress(NO_FLUSH));
 test("AC2 console reads flush", () => fullDrainRows(CONSOLE));
 test("AC2 bios conin flushes", () => fullDrainRows(CONIN));
@@ -346,21 +461,13 @@ test("AC2 directory requests preserve the pending-block prerequisite", () => {
   for (const row of DIRECTORY) checkPendingBoundary(pendingBoundary(row, "READDIR"));
 });
 test("AC2 close preserves publication and the unmodified pending-block prerequisite", () => {
-  const r = three({ open: true }), w0 = r.t.writes.length;
-  const result = r.bdos(16);
-  assert.ok(result.a >= 0 && result.a <= 3);
-  const made = r.t.writes.slice(w0);
-  assert.equal(made.length, 2);
-  assert.equal(made[0], lbaOf(r, 0));
-  assert.ok(dirBlocks(r.image).has(made[1]));
-  assert.equal(r.pending(), 0);
-  assert.equal(volume(r.image, "A").find("P.DAT").records, 3);
-  assert.deepEqual(volume(r.image, "A").read("P.DAT"), Uint8Array.from([0, 1, 2].flatMap(k => [...pat(k)])));
-  assert.deepEqual(volume(r.image, "A").verify(), []);
+  checkPublication(closePublication());
   checkPendingBoundary(pendingBoundary(CLOSE[1], "FNCLSE"));
 });
-test("AC2 next block flushes", () => flushRows(NEXT_BLOCK, "CCC"));
-test("AC2 another drive flushes", () => flushRows(OTHER_DRIVE, "CCC"));
+test("AC2 private same-block merge and next-block prerequisite", () => {
+  for (const kind of ["same", "next"]) checkPrivateWrite(privateWrite(kind));
+});
+test("AC2 private other-drive prerequisite preserves its neighbours", () => checkPrivateWrite(privateWrite("other")));
 test("AC2 function 48, mount and unmount", () => fullDrainRows(VOLUMES));
 
 /** After three records, a warm boot started by GO: the card and its writes when it enters the CCP. */
@@ -427,13 +534,40 @@ test("AC2 mutant: BCONIN without its call leaves seven blocks after ordinary ent
   const c = fullDrainCall(CONIN[0], MUTANTS.bconin());
   checkMissingDrain(c);
 });
-test("AC2 mutant: BWGET without CPMOVE leaves the block pending at the next block and at the B: write", () => {
+test("AC2 mutant: omitted CPMOVE leaves acknowledged data across private block boundaries", () => {
   const mut = MUTANTS.cpmove();
-  assert.throws(() => flushRows(NEXT_BLOCK, "CCC", mut), /records 3 and 4: the three records/);
-  assert.throws(() => flushRows(OTHER_DRIVE, "CCC", mut), /B:: the three records/);
+  for (const kind of ["next", "other"]) {
+    const c = privateWrite(kind, mut);
+    checkPrivateOmission(c);
+  }
 });
-test("AC2 mutant: the coalescing mark on type 1 too makes the close one card write, its directory block pending", () => {
-  assert.throws(() => flushRows(CLOSE.slice(0, 1), "CCC", MUTANTS.type1()), /BDOS 16: card writes/);
+test("AC2 mutant: coalesced type 1 leaves successful-close metadata unpublished", () => {
+  const c = closePublication(MUTANTS.type1());
+  assert.equal(c.published, 0);
+  assert.deepEqual(c.made, [lbaOf(c.r, 0)]);
+  assert.equal(c.r.state(), "CCC", "the data was committed, but its directory was not");
+  const line = c.r.pending() - 1;
+  assert.ok(line >= 0 && line < c.r.m.sym("NLINES"));
+  const cache = c.r.m.banks[0];
+  const block = [0, 1, 2, 3].reduce((n, k) => n + cache[c.r.m.sym("CTAB") - 0x8000 + line * 4 + k] * 256 ** k, 0);
+  assert.ok(dirBlocks(c.r.image).has(block));
+  const pending = pendingFrame(c.r, block, line);
+  assert.equal(block, c.directoryBlock);
+  assert.deepEqual(pending.payload, c.directoryWant, "the complete pending directory matches independently predicted extent fields and original neighbours");
+  assert.deepEqual(pending.queue, [line]);
+  assert.equal(pending.dirty.filter(Boolean).length, 1);
+  assert.equal(pending.dirty[line], 1);
+  const overlay = Uint8Array.from(c.r.image);
+  overlay.set(pending.payload, block * 512);
+  assert.equal(volume(overlay, "A").find("P.DAT").records, 3);
+  assert.deepEqual(volume(overlay, "A").read("P.DAT"), c.want, "the observed pending metadata describes the independently known complete file");
+  assert.deepEqual(volume(overlay, "A").verify(), []);
+  assert.throws(() => checkPublication(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], "the successful close publishes all three records");
+    assert.equal(error.actual, 0); assert.equal(error.expected, 3);
+    return true;
+  });
 });
 
 // --- One write a block -----------------------------------------------------
@@ -487,16 +621,27 @@ function checkFile16(rom) {
 }
 
 test("AC3 16 KiB file", () => checkFile16());
-test("AC3 mutant: CPMOVE keeping the pending block by the line a write would take, not its tag, writes a block more than once", () => {
-  assert.throws(() => checkFile16(MUTANTS.byline()), /33 card writes|each once/);
+test("AC3 mutant: by-line pending comparison unnecessarily commits a private same-block merge", () => {
+  const c = privateWrite("same", MUTANTS.byline());
+  assert.equal(c.made.length, 1);
+  assert.deepEqual(c.oldAfter.card, c.want);
+  assert.deepEqual(c.target.queue, [c.line]);
+  assert.equal(c.target.dirty.filter(Boolean).length, 1);
+  assert.equal(c.target.pending, c.line + 1);
+  assert.throws(() => checkPrivateWrite(c), error => {
+    assert.equal(error.code, "ERR_ASSERTION");
+    assert.equal(error.message.split("\n")[0], "same: the private pending prerequisite's write count");
+    assert.equal(error.actual, 1); assert.equal(error.expected, 0);
+    return true;
+  });
 });
 /**
  * Logged on B:, records 0 to 4 written to A:, the card refusing the write
  * that moves on to the next block, then the retry once it takes writes, and
- * BDOS 11: whether each record is on the card at that key wait. Every
- * directory write writes the other changed lines first, so a close repairs
- * what a mutant here leaves out; the key wait, before any directory
- * request, shows it.
+ * BDOS 11: whether these first five records are on the card at that later
+ * input boundary. Ordinary entries and input can repair an earlier omitted
+ * private prerequisite; the separate private-boundary controls observe it
+ * before that repair. This reading does not compare complete FCB outcomes.
  */
 function atKeyWait(rom) {
   const r = three({ rom, budget: BOUND });
@@ -506,14 +651,14 @@ function atKeyWait(rom) {
   r.put(4);
   r.bdos(21); // the build refuses it: FFh
   f.on = false;
-  r.bdos(21); // the retry, or a rewrite
+  r.bdos(21); // the retry, or a further write if the earlier one succeeded
   r.bdos(11, 0);
   return r.state(5);
 }
 
-test("AC3 mutant: BWGET without CPMOVE leaves records 0 to 3 off the card at the key wait after the next block", { timeout: 300_000 }, () => {
+test("AC3 later public input repairs the private CPMOVE omission", { timeout: 300_000 }, () => {
   assert.equal(atKeyWait(), "CCCCC", "the build: every record on the card at the key wait");
-  assert.equal(atKeyWait(MUTANTS.cpmove()), "----C", "the mutant: records 0 to 3 left in a line no flush point names");
+  assert.equal(atKeyWait(MUTANTS.cpmove()), "CCCCC", "later ordinary entry and input recover queued data; the private-boundary negative is checked separately");
 });
 
 // The starter card's commands, as the Viewer runs them: the PICO9918 at 40
@@ -685,9 +830,9 @@ test("AC4 directory last at every cut", () => {
   assert.deepEqual(c.problems, []);
   assert.equal(c.cuts, 20, "20 card writes");
 });
-test("AC4 mutant: BWGET without CPMOVE keeps the directory last but leaves records 0 to 3 off the card at the key wait", { timeout: 300_000 }, () => {
+test("AC4 directory prerequisites and later input repair the CPMOVE omission", { timeout: 300_000 }, () => {
   assert.deepEqual(cuts(MUTANTS.cpmove()).problems, [], "the close's flush-first write keeps the directory last even so");
-  assert.equal(atKeyWait(MUTANTS.cpmove()), "----C", "but records 0 to 3 are not on the card at the key wait");
+  assert.equal(atKeyWait(MUTANTS.cpmove()), "CCCCC", "the later input has repaired the omitted private boundary, not demonstrated the old loss fault");
 });
 test("AC4 mutants: FNCLSE and READDIR without their calls still keep the directory last, every directory write passing CPMOVE", () => {
   for (const m of [MUTANTS.fnclse(), MUTANTS.readdir()]) assert.deepEqual(cuts(m).problems, []);
