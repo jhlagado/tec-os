@@ -437,3 +437,13 @@ centuries of droppings on the floor, indescribable smell. No loose objects in
 33. West to key cavern 34 and south to passage 31 are unchanged. Caverns80's
 new north return to 29 removes the original blocked return. No map change
 has been applied to the active review build.
+
+
+Remaining bat-loop geometry exception: Caverns80 makes local returns
+reciprocal, but the cycle 29N30,E32,E31,N33,N29 consists only of north/east
+moves. It cannot be embedded as ordinary straight compass-directed passages
+on a consistent geographic plane. Adopt the return repairs, but explicitly
+flag this remaining loop for the author's deliberate-maze decision; do not
+claim that reciprocity alone fixes global geography. The key's direct side
+branch remains accessible without traversing that optional loop. This is a
+potential "seems strange" exception under the author's updated policy.
