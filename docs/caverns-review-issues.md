@@ -371,3 +371,27 @@ multi-level connected water system, but do not prove the precise bearing or
 identity of every visible stretch at room 27. Flag a coherent geographic and
 description audit; do not invent a flow direction or assert this exact ledge
 is directly below a particular surface room without further evidence.
+
+
+CHECK3 live review turns 4–9: returned from ledge 27 to round chamber 26 via
+the old map's N18,W23,N22,W21,S24,S26 detour. No objects collected or creatures
+encountered. This demonstrates the return-path confusion addressed by the
+Caverns80 27N26 correction. Current room is 26. The chamber is described as a
+hidden chamber of Loki's monks; the actual temple is room 35, visible from
+balcony 28 reached east from ledge 27. No ledge-specific puzzle/item exists.
+
+
+## East side cavern — room 25
+
+CHECK3 actual Viewer turn 10: EAST from round room 26 to cavern 25.
+Description only "You are deep in a dark cavern." No objects or creatures.
+Current BASIC: west goes to tunnel 24 (not back to round room 26), south to
+river ledge 27, north/east blocked. Caverns80: west returns to 26; all other
+exits blocked. Recommend its reciprocal west return and removal of the south
+shortcut, while noting the resulting room is an empty atmospheric dead end.
+Room-26 exit destinations matched both versions; this destination room's
+return paths do not. Only EAST was executed; stopped in room 25.
+
+Bat-caves question: the key initially occupies cavern 34 near bat colony 33;
+its special handler opens the hut door at 2 and temple gate at 35. It is useful,
+not merely a scoring pickup. No movement toward the bat region was made.
