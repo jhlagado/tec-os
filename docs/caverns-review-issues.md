@@ -917,3 +917,38 @@ south edge or closed eastern drawbridge. North is the useful next route for
 the waterfall; south is a viewpoint/bridge approach to inspect separately.
 Warn before east at 40, since the current text does not identify the lethal
 edge. Improved exit/hazard wording and the river-viewpoint plan remain pending.
+
+
+## Waterfall — room 45; ledge fairness decision
+
+Author rejected the unwarned fatal east move at ledge 40 as inconsistent.
+Queue 40E128 -> blocked (0), using ordinary safe rejection and a description
+that distinguishes the edge from a passage. Current build remains fatal.
+The southern branch from 40 is not merely information: room 48 is the castle
+viewpoint and eastern drawbridge approach, useful once the drawbridge is
+lowered from room 49. North from 48 safely returns to 40.
+
+CHECK3 live turn 47: NORTH from 40 to waterfall 45. Actual description:
+"You are standing near an enormous waterfall which brings water down from
+the surface, from the river Gioll." A blood-red ruby is listed. No creature.
+Ruby not collected; no action beyond entry has been entered at the waterfall.
+
+Caverns80 description/item placement match. Current 45N/S/W/E = 0,40,0,128;
+Caverns80 = 47,40,0,128. Its added north-to-staircase link reciprocates the
+existing 47S45 return. Adopt this navigation repair under the author's default
+policy: with the rejected 35E36 temple bypass still blocked, this link does
+not bypass the earlier key/gate/crypt/grille sequence. It avoids an unexplained
+backtrack via the cell. The current build has no north exit here yet.
+
+Important original mechanism: while processing a command at 45, BASIC 880
+sets W%=43, enabling cell 38's north exit to drains 43. There is no message or
+visible route clue explaining this remote change. At the just-entered prompt
+that input-time update has not yet happened; leaving or another command will
+apply it. Flag missing discovery text. Caverns80 records the same discovery
+on room display and supplies the visible north stair route. Keep the cell
+connection as a return/shortcut instead of a required unexplained detour.
+
+East from the waterfall is also an unwarned fatal edge in both versions.
+Recommend applying the same safe blocked-direction policy here; flag it as
+a proposed companion correction rather than walking into it. South returns
+to ledge 40; west blocked. Current live review stopped at waterfall 45.
