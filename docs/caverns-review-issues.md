@@ -952,3 +952,33 @@ East from the waterfall is also an unwarned fatal edge in both versions.
 Recommend applying the same safe blocked-direction policy here; flag it as
 a proposed companion correction rather than walking into it. South returns
 to ledge 40; west blocked. Current live review stopped at waterfall 45.
+
+
+## Castle-view ledge — room 48
+
+Author asked for SOUTH, SOUTH from waterfall to find the castle entrance.
+CHECK3 live turns 48–49: SOUTH to ledge 40, SOUTH to castle-view ledge 48.
+Ruby deliberately left uncollected. Actual description: narrow and crumbling
+ledge; magic castle on the opposite side of the river, with the parenthetic
+"Don't ask me why it's magic...I just know it is". No item/creature listed.
+Stopped before any crossing attempt.
+
+Initial exits match Caverns80: north returns safely to 40; west blocked;
+south fatal; east fatal/closed crossing until the drawbridge is available.
+Current BASIC has 48E=D%, initially128, later49. Caverns80 uses the equivalent
+dynamic override. Drawbridge 49 is accessible west from castle courtyard 50;
+processing an action there enables the crossing. This is a useful later
+castle approach/return route, not only an informational room, but it is not
+an available first entry while the drawbridge is raised.
+
+First entry is via the other bank's route 52->50, reached through the drainage/
+conduit/wooden-bridge network. The already-visited waterfall enables cell38N43
+in the current build, so returning via that unhinted connection is the present
+onward route. Caverns80's approved waterfall-to-staircase correction provides
+a more discoverable approach; no such edit is in the live build yet.
+
+Prose should explicitly show the raised drawbridge and absence of a safe
+crossing. Recommend safe blocked moves rather than unwarned east/south death,
+while preserving the eventual east exit when the bridge is lowered. Both
+versions retain the same weak warning/prose and fatal defaults here. No fatal
+command was entered; current review is paused at 48 with compass/sword/candle.
