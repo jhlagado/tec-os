@@ -1,5 +1,9 @@
 # Bat-cave refinement — author-approved approach, proposed layout
 
+> Implemented in the gameplay revision. The plan below is historical; see
+> [current map audit](caverns-map-audit.md) and [current rules](caverns.md).
+
+
 The author approved simplifying this region while keeping a small, recognizable
 maze, and delegated its redesign in the review notes. This document is the
 concrete design for the later gameplay batch. No source, map, checkpoint or

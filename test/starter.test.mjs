@@ -1,5 +1,5 @@
 // The starter card built by tools/media.mjs is also the Viewer's card:
-// sixteen source/pinned files on A:, booting to the shell. BAZA builds
+// fifteen source/pinned files on A:, booting to the shell. BAZA builds
 // BOUNCE's game, TAS builds DEMO and HELLO3 from source, and MON3.SVC loads
 // HELLO3's generated image. The web host upgrades older system services.
 // Emulator evidence; external programs are pinned in test/inputs.json.
@@ -41,7 +41,7 @@ function starter() {
   return built;
 }
 
-test("the starter card holds exactly sixteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
+test("the starter card holds exactly fifteen files, each by its hash, the PICO9918's console being the ROM's", { skip: PAGE_SKIP, timeout: 300_000 }, async () => {
   check(TED);
   check(TAS);
   check(BAZA);
@@ -59,7 +59,6 @@ test("the starter card holds exactly sixteen files, each by its hash, the PICO99
     "SAMPLE.ASM": text("SAMPLE.ASM"),
     "TIMES.BAS": text("TIMES.BAS"),
     "BOUNCE.BAS": bounceText(),
-    "CAVBASIC.COM": readFileSync(resolve(ROOT, "programs/CAVBASIC.COM")),
     "CAVBASIC.BAS": text("CAVBASIC.BAS"),
     "CAVERNS.TXT": text("CAVERNS.TXT"),
     "DEMO.ASM": text("DEMO.ASM"),

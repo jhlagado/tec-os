@@ -1,5 +1,9 @@
 # River viewpoints and underground levels — review proposal
 
+> Historical review. Current exits, descriptions and explicit exceptions are
+> recorded in the [revised map audit](caverns-map-audit.md).
+
+
 The author noted that the first underground river is reached southwards and
 another is later reached eastwards, making the world difficult to picture.
 This is a descriptive/geographic design proposal, not an implemented map edit.

@@ -1,0 +1,36 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+tecos ROM {"backend":"tas","phase":"caverns-loader","target":"tecos","origin":2247,"root":"/workspace/jhlagado/tec-os/programs/caverns","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":1766691}
+✔ scenario launcher fits the original COM and restores all monsters, objects, flags, counters and RNG (933.445208ms)
+✔ real picked-up objects and encounter state survive exported file and fresh boot; RNG continuation matches (4195.081449ms)
+✔ missing, wrong-game, incompatible, truncated and corrupt scenarios are rejected before mutation (8271.701186ms)
+✔ all bundled review checkpoints load exactly in a new machine (12810.381061ms)
+✔ combat fatigue resets on travel and victory, but not blocked moves or missed swings (1987.336806ms)
+✔ checkpoint 8 vault treasures reach the hut through the key and intact bridge (1960.076124ms)
+✔ rope attachment is explicit, removable and usable both ways without a key or light (2755.386967ms)
+✔ waterfall does not operate remote doors; the drain hatch is a persistent physical shortcut (1568.272317ms)
+✔ external scenario writer refuses incomplete or out-of-domain states (3.716262ms)
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+✔ Caverns book exercise: copy, TED edit/save/build/run, exit and reopen after power cycle (10864.136181ms)
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+✔ revised map and source-only starter match the author-approved release (21.702395ms)
+✔ Caverns80 completes for 126 points, tours all 54 rooms and persists the winning save across reboot (5323.885653ms)
+✔ revised BASIC first-discovery quest banks all treasures, walks back from castle and visits all rooms (15500.875447ms)
+✔ BASIC information, aliases, failed requests, compass warning, fatal restart and exit (2696.99524ms)
+✔ historical recovered drainage exits reach the hut with an intact bridge, but retain the original return-path gap after collapse (1.372435ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 71189.853112

@@ -1,5 +1,9 @@
 # Agreed forest refinement plan
 
+> Implemented in the gameplay revision. The plan below is historical; see
+> [current map audit](caverns-map-audit.md) and [current rules](caverns.md).
+
+
 Author instruction during gameplay review: simplify the outdoor/forest geometry in the Caverns80 style, correct misleading descriptions, and explicitly review purposeful exceptions. This is a change plan; the running review game has not been modified.
 
 ## Exact compass changes

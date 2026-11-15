@@ -2,7 +2,7 @@
 // either completion route. The BASIC symbol fixture comes from native BAZA.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {ROOT,boot,volume} from './lib/fixtures.mjs';
@@ -44,18 +44,20 @@ function basicGame(){const image=card();volume(image,'A').write('CAVBASIC.COM',c
 function noDeath(out){assert.doesNotMatch(out,/Another adventure|ERROR IN|killed|smashes your skull/i);}
 const tour=[['galar',16],['east',17],['look',17],['west',33],['north',29],['east',26],['east',25],['west',26],['south',27],['east',28],['get rope',28],['down with rope',35],['east',36],['north',39],['west',38],['north',43],['east',44]];
 
-test('BASIC preserves all 216 original exits and starting object locations',()=>{
- const source=read('programs/CAVBASIC.BAS').toString();
- const original=json('test/caverns-original.json');
- const exits=source.split('\n').filter(l=>/^17[4-9]0 DATA |^18[01]0 DATA /.test(l)).flatMap(l=>l.split('DATA ')[1].split(',').map(Number));
- const names={'-1':'H','-2':'T','-3':'E','-4':'W','-5':'G','-6':'D'};
- assert.deepEqual(exits.map(x=>x<0?names[x]:String(x)),original.originalExits);
- const ip=source.match(/^1880 DATA (.*)$/m)[1].split(',').map(Number);
- assert.deepEqual(ip,[36,19,10,14,17,47,8,1,51,45,22,46,54,19,19,19,19,0,34,7,18,15,24,38]);
+test('revised map and source-only starter match the author-approved release',()=>{
+ const source=read('programs/CAVBASIC.BAS').toString(),revised=json('test/caverns-refined-map.json');
+ const exits=source.split('\n').filter(l=>/^60[0-7]0 DATA /.test(l)).flatMap(l=>l.split('DATA ')[1].split(',').map(Number));
+ assert.deepEqual(exits,revised.exits);assert.equal(exits.length,216);
  const files=volume(card(),'A').list().map(x=>x.name);
- assert.ok(!files.includes('CAVERNS.COM'),'assembly comparison is not released on the starter disk');
- assert.ok(files.includes('CAVBASIC.COM'));
- assert.equal(sha(volume(card(),'A').read('CAVBASIC.COM')),basic.comSha256);
+ assert.ok(!files.includes('CAVERNS.COM'));assert.ok(!files.includes('CAVBASIC.COM'));
+ assert.ok(files.includes('CAVBASIC.BAS'));
+ const gates={'-1':11,'-2':19,'-3':38,'-4':43,'-5':39,'-6':49};
+ const open=revised.exits.map(d=>gates[d]??d),unpaired=[];
+ for(let r=1;r<=54;r++)for(let i=0;i<4;i++){
+  const d=open[(r-1)*4+i];if(d>0&&d<55&&open[(d-1)*4+(i^1)]!==r)unpaired.push([r,i,d]);
+ }
+ assert.deepEqual(unpaired,[[1,0,2]],'only the explicitly self-locking hut door lacks an ordinary reverse exit');
+
 });
 
 test('Caverns80 completes for 126 points, tours all 54 rooms and persists the winning save across reboot',{timeout:300_000},()=>{
@@ -79,111 +81,64 @@ test('Caverns80 completes for 126 points, tours all 54 rooms and persists the wi
  assert.deepEqual(m.violations,[]);assert.deepEqual(rebooted.violations,[]);
 });
 
-test('original-based BASIC completes a first-discovery quest for 126 with the refined bridge and bomb',{timeout:300_000},()=>{
- const m=basicGame(),route=json('test/caverns-refined-route.json'),visited=new Set([1]);
- let completed=false,attempts=0;
- for(;attempts<8&&!completed;attempts++){
-  let learned=false,firstSpell=false,died=false;
-  for(const point of route.trace){
-   if(point.command==='galar'&&!firstSpell){assert.ok(learned,'clue visited before first spell');firstSpell=true;}
-   let out;
-   if(point.before===21&&point.after===20&&integer(m,'T%')===0){
-    const objects=Array.from({length:24},(_,i)=>element(m,'P%',i+1));
-    assert.match(keys(m,'use candle',question(m)).replace(/\r?\n/g,''),/nothing around you has changed/);
-    assert.equal(integer(m,'A%'),21);assert.equal(integer(m,'T%'),0);
-    assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),objects);
-   }
-   if(point.command==='use sword'){
-    const id=Array.from({length:6},(_,i)=>i+1).find(i=>element(m,'P%',i)===integer(m,'A%'));
-    assert.ok(id);
-    for(let tries=0;element(m,'P%',id)!==point.objects[id-1]&&tries<22;tries++){
-     out=keys(m,point.command,question(m));
-     if(/smashes your skull/.test(out)){died=true;break;}
-     noDeath(out);
-    }
-   }else{
-    let cmd=point.command;
-    if(cmd==='use rope')cmd='down with rope';
-    if(cmd==='use key')cmd=point.before===2?'open door with key':'open gate with key';
-    if(cmd==='use candle')cmd='light bomb with candle';
-    out=keys(m,cmd,question(m));
-   }
-   if(died)break;
-   noDeath(out);assert.equal(integer(m,'A%'),point.after,point.command);
-   assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),point.objects,point.command);
-   visited.add(point.after);if(point.after===50)learned=true;
-   if(point.command==='use rope'){
-    assert.match(keys(m,'north',question(m)),/can't go that way/);
-    assert.equal(integer(m,'A%'),35,'rope descent has no upward exit');
-   }
-   if(point.command==='get grill'){
-    assert.match(keys(m,'west',question(m)),/can't go that way/);
-    assert.equal(integer(m,'A%'),38,'cell wall closes behind the player');
-   }
-   if(point.command==='get bomb'){
-    const objects=Array.from({length:24},(_,i)=>element(m,'P%',i+1));
-    assert.match(keys(m,'use candle',question(m)).replace(/\r?\n/g,''),/nothing around you has changed/);
-    assert.equal(integer(m,'A%'),51);assert.equal(integer(m,'T%'),0);
-    assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),objects);
-   }
-   if(point.command==='get key'&&point.after===35){
-    assert.equal(Array.from({length:18},(_,i)=>element(m,'P%',i+7)).filter(x=>x===-1).length,11);
-    assert.match(keys(m,'take brick',question(m)),/too many objects/);
-    assert.equal(element(m,'P%',23),35);
-   }
-  }
-  if(died){assert.match(keys(m,'y',question(m)),/darkened room/);continue;}
-  completed=true;
- }
- assert.ok(completed,'possible winning combat outcomes must yield a complete quest');
- assert.equal(integer(m,'T%'),19);assert.equal(integer(m,'H%'),11);
- assert.ok(integer(m,'U%')<230,'winning quest fits original candle lifetime');
- assert.equal(element(m,'P%',9),0);for(const id of treasures)assert.equal(element(m,'P%',id),1);
- assert.match(keys(m,'score',question(m)),/126/);
- // Visit the sole remaining room and exercise the original bat relocation.
- for(const cmd of ['get compass','galar','east'])noDeath(keys(m,cmd,question(m)));
- assert.equal(integer(m,'A%'),17);visited.add(17);
- assert.match(keys(m,'west',question(m)),/giant bat picked you up/);
- assert.equal(integer(m,'A%'),33);assert.equal(element(m,'P%',5),24);
- assert.equal(visited.size,54,'every room visited using ordinary commands');
- for(const cmd of ['galar','north','east','north','north','north','west','north','use key','drop compass'])noDeath(keys(m,cmd,question(m)));
- assert.match(keys(m,'quit',question(m)),/Perfectionist and genius/);
+test('revised BASIC first-discovery quest banks all treasures, walks back from castle and visits all rooms',{timeout:300000},()=>{
+ const m=basicGame(),visited=new Set([1]),events=[];
+ const room=()=>integer(m,'A%'),obj=i=>element(m,'P%',i);
+ function command(cmd){const before=room(),out=keys(m,cmd,question(m));if(cmd!=='quit')noDeath(out);if(before!==room())assert.ok(out.replace(/\s+/g,'').includes(json('test/caverns-refined-map.json').descriptions[room()].replace(/\s+/g,'')),`room ${room()} description`);visited.add(room());events.push({cmd,before,after:room(),out});return out;}
+ function walk(...cmds){for(const c of cmds)command(c);}
+ function fight(id){assert.equal(obj(id),room());let won=false;for(let i=0;i<22;i++){command('attack creature with sword');if(obj(id)===0){won=true;break;}}assert.ok(won);assert.equal(integer(m,'F%'),0);}
+ walk('take compass','north','west','west','south','west','take sword','east','east','take coin','west','north','east','east','east','east','south');
+ assert.equal(room(),10);
+ const turns=integer(m,'U%');assert.match(command('attack troll'),/With what/);assert.equal(integer(m,'U%'),turns);
+ fight(3);walk('south','east','west');assert.equal(room(),11,'bridge side exits blocked');
+ walk('south','east','take rope','west','west','south');fight(4);
+ walk('south','take candle','east','west');assert.equal(room(),33,'bat carries player to colony');
+ walk('west','take key','west','north','east','east','south','north','east','east','west','south','east');
+ assert.equal(room(),28);assert.match(command('down'),/TIE ROPE/);assert.equal(room(),28);
+ walk('tie rope to rail','down');assert.equal(room(),35);assert.equal(integer(m,'R0%'),1);
+ assert.match(command('north'),/locked/);assert.equal(room(),35);
+ walk('up','down','unlock gate with key');assert.equal(room(),37);assert.equal(obj(19),-1);
+ walk('vard','east','west','east','take grille');
+ assert.match(command('east'),/cannot fit/);assert.equal(room(),38);
+ walk('drop grill','east','south');fight(1);assert.equal(obj(20),-1,'wizard does not confiscate sword');
+ walk('east','north','take ruby','north');fight(6);
+ walk('east','take pearl','south');assert.equal(room(),43);
+ assert.match(command('south'),/latched/);walk('open hatch','south','north','east','west','west','west','west','take stone','south','east','north');
+ assert.equal(room(),50);assert.match(events.at(-1).out,/hzb tzozi/);
+ walk('east','take bomb');const before=Array.from({length:24},(_,i)=>obj(i+1));
+ assert.match(command('light bomb with candle'),/nothing has changed/);assert.deepEqual(Array.from({length:24},(_,i)=>obj(i+1)),before);
+ // The walking return proves GALAR is a convenience, not the escape requirement.
+ walk('west','west','west','north','west','north','west','west','south','up','west','north','north','north');assert.equal(room(),21);
+ walk('galar','north','north','east','north','north','north','west','west');assert.equal(room(),2);
+ assert.match(command('use key'),/Welcome home/);assert.equal(room(),1);assert.equal(obj(19),-1);
+ for(const i of [7,10,12,13])assert.equal(obj(i),1,'treasures bank automatically');
+ walk('galar','south','west','north','take diamond','west','north','light bomb with candle');assert.equal(room(),20);assert.equal(obj(9),0);
+ walk('east');fight(2);walk('take ring','take pendant','take grail','take shield');
+ walk('galar','north','north','east','north','north','north','west','west');
+ assert.match(command('use key'),/quest is complete/);assert.equal(room(),1);
+ assert.equal(integer(m,'S%'),126);assert.equal(integer(m,'H%'),11);
+ for(const id of treasures.filter(i=>i!==8))assert.equal(obj(id),1);
+ assert.equal(obj(8),-1,'useful compass remains carried and is valued at home');
+ assert.equal(visited.size,54);assert.ok(integer(m,'U%')<230);
+ const moves=integer(m,'U%');assert.match(command('score'),/126/);assert.match(command('quit'),/Perfectionist and genius/);
  keys(m,'n');assert.ok(m.ready());assert.deepEqual(m.violations,[]);
+ mkdirSync(ROOT+'/build/caverns',{recursive:true});writeFileSync(ROOT+'/build/caverns/refined-quest.json',JSON.stringify({gameSha256:basic.comSha256,score:126,moves,visited:[...visited].sort((a,b)=>a-b),events,violations:m.violations},null,2)+'\n');
 });
 
-test('BASIC informational commands are free, absent objects stay absent, fatal moves restart cleanly, and exit restores the shell',{timeout:300_000},()=>{
- const m=basicGame();
- for(let i=0;i<40;i++)assert.match(keys(m,'look',question(m)),/darkened room/);
+test('BASIC information, aliases, failed requests, compass warning, fatal restart and exit',{timeout:300000},()=>{
+ const m=basicGame();for(let i=0;i<10;i++)assert.match(keys(m,'look',question(m)),/bark hut/);
  assert.equal(integer(m,'U%'),0);
- assert.match(keys(m,'i',question(m)),/carrying nothing/);
- assert.match(keys(m,'get sword',question(m)),/Where/);assert.equal(element(m,'P%',20),7);
- assert.match(keys(m,'get compass',question(m)),/darkened room/);
- assert.match(keys(m,'list',question(m)),/compass/);
- for(const cmd of ['n','w','s','s','w'])noDeath(keys(m,cmd,question(m)));
- assert.equal(integer(m,'A%'),7);
- assert.match(keys(m,'w',question(m)),/chasm/);
- assert.match(keys(m,'y',question(m)),/darkened room/);assert.equal(integer(m,'U%'),0);
- assert.match(keys(m,'list',question(m)),/carrying nothing/);
+ for(const cmd of ['inventory','invent','list','i'])assert.match(keys(m,cmd,question(m)),/carrying nothing/);
+ assert.match(keys(m,'take sword',question(m)),/Not here/);assert.equal(element(m,'P%',20),7);
+ assert.match(keys(m,'take compass',question(m)),/Taken/);
+ for(const cmd of ['north','west','west','south','west'])noDeath(keys(m,cmd,question(m)));
+ assert.equal(integer(m,'A%'),7);assert.match(keys(m,'west',question(m)),/chasm/);
+ assert.match(keys(m,'y',question(m)),/bark hut/);assert.equal(integer(m,'U%'),0);
+ keys(m,'north',question(m));assert.match(keys(m,'west',question(m)),/lose my bearings/);
  keys(m,'quit',question(m));keys(m,'n');assert.ok(m.ready());assert.deepEqual(m.violations,[]);
 });
 
-test('BASIC aliases validate presence, missing nouns cannot create objects, and compass loss randomizes directions',{timeout:300_000},()=>{
- const m=basicGame();
- for(const cmd of ['take bomb','put grail','with key','using rope','take','put']){
-  const before=Array.from({length:24},(_,i)=>element(m,'P%',i+1));
-  const out=keys(m,cmd,question(m));noDeath(out);
-  assert.deepEqual(Array.from({length:24},(_,i)=>element(m,'P%',i+1)),before,cmd);
-  assert.equal(integer(m,'A%'),1);
- }
- keys(m,'take compass',question(m));assert.equal(element(m,'P%',8),-1);
- for(const cmd of ['north','put compass','west'])noDeath(keys(m,cmd,question(m)));
- assert.equal(integer(m,'A%'),3);assert.equal(element(m,'P%',8),2);
- for(let tries=0;integer(m,'A%')===3&&tries<20;tries++)noDeath(keys(m,'east',question(m)));
- assert.ok([2,5].includes(integer(m,'A%')),'original room 3 east is blocked; compass loss must redirect it');
- assert.deepEqual(m.violations,[]);
-});
-
-test('recovered drainage exits reach the hut with an intact bridge, but retain the original return-path gap after collapse',()=>{
+test('historical recovered drainage exits reach the hut with an intact bridge, but retain the original return-path gap after collapse',()=>{
  const original=json('test/caverns-original.json');
  function reachable(collapsed){
   const state={H:collapsed?128:11,T:19,E:38,W:43,G:39,D:49};

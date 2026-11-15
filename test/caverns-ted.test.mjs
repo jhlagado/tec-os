@@ -19,7 +19,7 @@ function keys(m,s,what,done){
 }
 test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen after power cycle',{timeout:300_000},()=>{
  const image=new Uint8Array(readFileSync(resolve(ROOT,'dist/starter.img'))),a=volume(image,'A');
- const originalSource=sha(a.read('CAVBASIC.BAS')),originalCom=sha(a.read('CAVBASIC.COM'));
+ const originalSource=sha(a.read('CAVBASIC.BAS')),originalCom=sha(readFileSync(resolve(ROOT,'programs/CAVBASIC.COM')));
  let m=boot(image,{tms:true,matrix:true,width:80});
  const status=()=>m.screen()[23];
  keys(m,'con pico 80\r','select the documented console width',()=>m.ready());
@@ -44,7 +44,7 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  keys(m,'\x11','leave TED',()=>m.ready());
  assert.equal(text(a),expected);
  assert.equal(sha(a.read('CAVBASIC.BAS')),originalSource);
- assert.equal(sha(a.read('CAVBASIC.COM')),originalCom);
+ assert.ok(!a.list().some(f=>f.name==='CAVBASIC.COM'),'starter keeps Caverns as source only');
  assert.deepEqual(m.violations,[]);
  // Boot the same disk with fresh RAM and reopen, proving saved disk contents.
  m=boot(image,{tms:true,matrix:true,width:80,ramFill:0x76});

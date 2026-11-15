@@ -1,5 +1,9 @@
 # Reusable rope connection — agreed during author review
 
+> Implemented in the gameplay revision. The plan below is historical; see
+> [current map audit](caverns-map-audit.md) and [current rules](caverns.md).
+
+
 This is the latest approved design for the later gameplay batch. It supersedes
 both the original one-way drop and the subsequent proposal to require the key
 before descent. Current BASIC still uses USE ROPE for its one-way descent;

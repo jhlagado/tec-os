@@ -1,5 +1,9 @@
 # Caverns80 map comparison — author review
 
+> Historical review. Current exits, descriptions and explicit exceptions are
+> recorded in the [revised map audit](caverns-map-audit.md).
+
+
 **Spoilers: engineering review, separate from the player manual.**
 
 Comparison against jhlagado/caverns80 3c033e9a24f9873389c26c2a3d680cf79a69d6ec. All 57 differing initial compass destinations are listed below. Zero is blocked; 128 is fatal. Dynamic gates are compared in their initial state, so this table does not enumerate every state-transition difference.

@@ -1,211 +1,100 @@
-# Caverns development scenarios (load only)
+# Caverns development scenarios (CVB2)
 
-This is a development/testing facility. It adds no SAVE command and no new
-BASIC language feature. The ordinary CAVBASIC.BAS and CAVBASIC.COM are unchanged. Ready-to-use development
-files are retained in programs/caverns/ so they can be recovered from Git
-without rebuilding the launcher.
-It does not apply the pending forest-map or parser refinements.
+Spoilers and test tooling, not part of the starter disk or ordinary game UI.
 
-## Use in the Viewer
-
-Build the development card with:
+Use the development card `build/caverns/scenarios.img` in the Viewer and type:
 
 ```
-node tools/caverns-scenario.mjs pack
+CAVLOAD CHECK8
 ```
 
-Open `build/caverns/scenarios.img` using the Viewer's **Open image** control.
-At the TEC-OS prompt, enter one of:
+CAVLOAD is a testing clone of the qualified BASIC executable. It replaces only
+its opening banner with a native CP/M file loader, after normal array/runtime
+initialisation. It restores the scenario then enters ordinary game code. QUIT
+and Y reload that same scenario; N exits to TEC-OS. There is no in-game SAVE.
+The public starter disk supplies CAVBASIC.BAS for the user to compile, not this
+loader or any scenarios. Repository binaries are verification/development files.
+
+## Build, create and preserve
 
 ```
-CAVLOAD CHECK2
-CAVLOAD CHECK3
-CAVLOAD CHECK4
-CAVLOAD CHECK5
-CAVLOAD CHECK6
-CAVLOAD CHECK7
-CAVLOAD TROLL
-CAVLOAD SOUTH
-CAVLOAD ROPE
-CAVLOAD CAVE
-CAVLOAD CANDLE
-```
-
-The launcher supplies the `.CAV` extension. `CAVLOAD CAVE.CAV` also works.
-The filename may include a CP/M drive prefix. Use the same drive for the
-scenario's actual location; this is ordinary default-FCB file resolution.
-
-- TROLL: bridge approach, compass and sword carried, troll still present.
-- SOUTH: southern bridge landing after defeating the troll and crossing.
-- ROPE: rope cliff, compass/sword/rope carried, dragon defeated.
-- CAVE: cave entrance, compass/sword/rope carried, candle still ahead.
-- CHECK2: the same state, named **checkpoint 2** for the author's review. The
-  bridge troll encounter is completed; the dragon was also defeated on the
-  original-map route to the rope.
-- CANDLE: cave entrance with the candle also collected.
-- CHECK7: drainage entrance/junction after visiting the waterfall. Compass/
-  sword/candle carried, wizard defeated, sword recovered. Cell north passage
-  and grille shaft open; drawbridge still unavailable; key at temple 35, rope
-  at balcony 28. Full live counters and RNG preserved without adjustment.
-- CHECK6: cavern beyond the cell ventilation shaft. Compass/sword/candle
-  carried; grille left on the cell floor, shaft open, crypt seal open. The old
-  build left the key at temple 35; rope remains at balcony 28. Full recorded
-  state is preserved, including the removed-cover versus attached-cover flag.
-- CHECK5: temple floor after the one-way rope descent. Compass/key/sword/candle
-  carried; rope left at balcony 28; north gate still locked. Exact continuation
-  of the recorded review, retaining the absent troll and full RNG/counters.
-- CHECK4: central bat colony, carrying compass/sword/candle/rope. The key
-  remains in the western cavern, uncollected. Exact continuation of CHECK3,
-  retaining its absent troll and all current counters, flags and RNG state.
-- CHECK3: long north–south tunnel, carrying compass/sword/candle/rope. The
-  treasure door is still locked, brick and diamond remain uncollected. The
-  troll is explicitly absent, applying the author-approved permanent defeat
-  to this scenario while the general BASIC rule awaits the review batch.
-
-No additional commands are played automatically after restoring. LOOK and LIST
-show the restored location and inventory. QUIT, then Y, reinitializes the game
-and reloads the same scenario. QUIT, then N, returns to TEC-OS, where another
-CAVLOAD command selects a different scenario. Fatal play also reaches the
-normal replay question, so Y provides a quick retry.
-
-To use the files on another card, copy `build/caverns/CAVLOAD.COM` and the
-chosen `.CAV` files to its writable volume using the Viewer's file importer.
-Download the files or the entire image and keep them outside the emulator and
-container. Viewer browser storage and this workspace's generated files alone
-are not a durable external backup. The scenario JSON inputs and build tools
-are repository sources, so the binary files can also be regenerated after a
-fresh checkout with the qualified compiler artifact available.
-
-## External generation
-
-The editable inputs are `test/caverns-scenarios/*.json`. They were captured
-from actual native execution, including normal pickups and monster combat;
-see `test/caverns-scenario.test.mjs`. To generate a new slot:
-
-```
+npm run caverns:scenarios
 node tools/caverns-scenario.mjs write scenario.json CUSTOM.CAV
 ```
 
-The JSON supplies all 24 object/creature locations and these integer variables:
+JSON inputs live in `test/caverns-scenarios/`; generated `.CAV` files and matching
+`CAVLOAD.COM` are also retained in `programs/caverns/`. Import both into a fresh
+Viewer card. Download the scenario/card outside the browser to survive container
+or browser loss. An image download preserves files, not a running machine.
 
-| Variable | Meaning |
-|---|---|
-| A% | Player room |
-| H% | Bridge destination |
-| D% | Drawbridge destination |
-| W% | Waterfall/temple conditional passage |
-| G% | Grille/shaft passage |
-| T% | Treasure-door passage |
-| E% | Crypt passage |
-| J% | Hut-door state |
-| C0% | Candle lit flag |
-| F% | Cumulative combat fatigue |
-| U% | Move count, also used by candle lifetime |
+The generator requires format `caverns-basic-scenario-2`, the current game's
+full SHA-256, all 24 object locations, all 13 scalar variables below and an
+8-digit nonzero hexadecimal RNG state. It checks ranges, boolean flags and
+that a secured rope is physically at balcony 28. An imported scenario is tied
+to the exact executable hash; old-format or old-build files are rejected.
 
-`objects` lists items 1 through 24 in their original order, including all six
-monsters. A location of -1 means carried; zero means absent. The generator
-checks values and required fields. `rng` is the complete 32-bit BAZA RNG state,
-as eight hexadecimal digits, not just a seed. The source-derived map and
-initial-description tables are immutable and do not belong in a checkpoint.
-Parser scratch variables, derived score and display counters are rebuilt.
+## Available review positions
 
-This tool deliberately permits externally authored hypothetical states, but
-passing validation does not prove that a hypothetical state is reachable by
-normal play. The original bundled checkpoints were reached through game commands. CHECK3
-replays the recorded review commands, then changes only the troll location
-from its old relocation destination (30) to absent (0), as approved by the
-author. Its capture and adjustment are recorded separately in the evidence.
-Walkthrough details belong in this engineering document, not the user manual.
+- TROLL: first bridge fight, compass and sword carried.
+- SOUTH: after crossing; ROPE: rope obtained; CAVE/CHECK2: cave entrance.
+- CANDLE: entrance with candle; CHECK3: long tunnel; CHECK4: bat colony.
+- CHECK5: temple after securing and descending rope; key still carried.
+- CHECK6: beyond the cell shaft; CHECK7: drain junction after wizard victory.
+- CHECK8/VAULT: demon defeated, four vault treasures uncollected.
+- HUT: those four treasures deposited at home; compass, key, sword and candle
+  retained. SCORE is 80 under the revised at-home valuation.
 
-## Format and executable compatibility
+These positions were **explicitly adapted from the earlier review**, not replayed
+as exact new-game witnesses. Adaptation adds secured-rope/gate flags, retains a
+key formerly left by the old unlocking handler, removes defeated respawning
+trolls/transport bats, and moves an untaken candle to the entrance. Existing RNG
+values and turn counters were retained. Historical unmodified captures and
+command logs remain under `docs/evidence/caverns-scenarios`; the current normal
+quest is independently verified without loading scenarios or editing game state.
+Old files have deliberately not been silently accepted by the new loader.
 
-Each `.CAV` is one 128-byte CP/M record:
+## Native record layout
 
-| Offset | Bytes | Field |
+One CP/M record, 128 bytes, little-endian:
+
+| Offset | Bytes | Meaning |
 |---:|---:|---|
-| 0 | 4 | ASCII CVB1 |
-| 4 | 1 | Format 1 |
-| 5 | 1 | Reserved zero |
-| 6 | 2 | Little-endian unsigned byte sum, excluding these two checksum bytes |
-| 8 | 8 | First eight SHA-256 bytes of the qualified original COM |
-| 16 | 48 | 24 signed little-endian object-location words |
-| 64 | 22 | The 11 scalar words in the table above |
-| 86 | 4 | Little-endian RNG state |
-| 90 | 38 | Zero padding |
+| 0 | 4 | ASCII CVB2 |
+| 4 | 1 | Version 2 |
+| 5 | 1 | Zero |
+| 6 | 2 | Unsigned byte sum, excluding offsets 6 and 7 |
+| 8 | 8 | First eight SHA-256 bytes of qualified CAVBASIC.COM |
+| 16 | 48 | 24 signed words, P%(1)..P%(24): absent 0, carried -1, room otherwise |
+| 64 | 26 | The 13 scalar words in order below |
+| 90 | 4 | Exact runtime RNG state |
+| 94 | 34 | Zero padding |
 
-The loader checks the exact header/game identity, record count, checksum,
-player-room bounds and object-location encoding before applying the record.
-The external writer additionally checks scalar domains and nonzero RNG state.
-Do not treat this checksum as cryptographic authentication.
+Scalar order: `A%, H%, D%, W%, G%, T%, E%, J%, C0%, F%, U%, R0%, K0%`.
+A% is room; H% bridge destination; D% drawbridge; W% drain hatch; G% shaft;
+T% treasure door; E% crypt seal; J% retained legacy flag; C0% candle lit;
+F% combat fatigue; U% action turns; R0% rope secured; K0% temple gate unlocked.
+Object IDs are the original 1..24 order in the BASIC DATA and native fixture.
 
-The tool derives addresses from the hash-checked `test/caverns-basic.json`
-fixture and guarded instruction signatures in CAVBASIC.COM. It assembles the
-small launcher with the pinned native TAS, then overlays only the opening
-banner, after normal BASIC initialization and before the first room display.
-It restores the dynamic object array, scalars and the actual BAZA RNG state,
-then enters the ordinary room-display code. No host memory injection is used
-to load a scenario; the running Z80 reads the file through real BDOS calls.
+The loader validates header, identity, length, checksum, player room and basic
+object bounds before applying the record. The external generator additionally
+validates scalar domains and rope consistency; arbitrary handcrafted records
+are development inputs, not a trusted public save format. It uses the ordinary
+CP/M filename/FCB and checks missing, truncated and extra-record files.
 
-CAVLOAD.COM remains 39,680 bytes, with the original runtime footer and TPA
-requirement. The overlay occupies 344 of the banner's 425 bytes. This is a
-COM-specific development launcher, not a compiler feature or an independent
-second implementation of the game. A source/compiler change requires
-regenerating the qualified COM fixture, launcher and scenarios; stale files
-are rejected. The normal welcome/credits remain in the original game and
-source; the testing launcher uses that space for loading instead.
+The current CAVLOAD.COM is 39,808 bytes, identical in length to the game. The
+348-byte overlay fits inside the 388-byte opening banner. No extra runtime or
+resident code is added. `build/caverns/scenario-loader.json` records exact
+addresses and hashes. Full compiler symbols are in `test/caverns-basic.json`.
 
-## Qualification
+## What restoration proves
 
-Run:
+Tests restore objects, defeated creatures, puzzle flags, attachment state,
+counters and RNG into a fresh machine. A proper checkpoint retry intentionally
+repeats the same combat sequence for identical commands. It is not a fresh random
+trial. Tests also cover missing/corrupt/incompatible files, restart, reciprocal
+rope travel without key/light, removing the rope, persistent physical hatch
+opening, and returning CHECK8's treasures to the hut.
 
-```
-node --test test/caverns-scenario.test.mjs
-```
-
-The tests execute the real ROM/BDOS, use exported files on a newly constructed
-card and boot a fresh machine. They compare every persisted field, compare
-the next combat output/RNG continuation, exercise replay, and reject missing,
-wrong-game, incompatible, truncated, extra-record and corrupt files, plus
-invalid room/object encodings. Native capture also reaches the rope and
-candle checkpoints through ordinary game commands.
-
-Actual Chromium Viewer testing opens the development image, restores ROPE,
-downloads CAVE.CAV through the file browser, then imports the downloaded file
-and launcher into an independent browser context with a fresh starter card
-and restores CAVE. Reproduce that trial after packing with:
-
-```
-TEST_CHROMIUM=/usr/bin/chromium node tools/caverns-viewer-trial.mjs ../tec-os-viewer
-```
-
-Omit TEST_CHROMIUM when Playwright's default Chromium is installed.
-Screens and the result record are under
-`build/caverns/scenario-viewer/` when that trial has been run successfully.
-The recorded results are retained in [evidence/caverns-scenarios](evidence/caverns-scenarios/README.md).
-This is emulator/Viewer evidence, not physical TEC-1G qualification.
-
-The public starter-card recipe is not changed by this development facility.
-The assembly game remains outside the public release. Pending gameplay
-refinements are listed in caverns-review-issues.md and the forest plan.
-
-### Fatigue correction and checkpoint 8
-
-The current BASIC build (39,808 bytes) resets sword fatigue on successful
-travel and victory, following Caverns80. Existing checkpoint state values were
-preserved when regenerating their executable identity; the next successful
-move applies the new fatigue rule. Previous evidence records retain the old
-executable identity and describe historical trials.
-
-`CAVLOAD CHECK8` (alias `CAVLOAD VAULT`) restores the actual successful demon
-encounter: room 19, moves 114, fatigue 0, RNG 5fa8feaa, demon absent. Compass,
-sword and candle are carried. Ring, pendant, grail and shield remain in room
-19; bomb is consumed and the treasure passage is open. This is an external
-snapshot from the native TEC-OS emulator, not a new in-game SAVE command.
-The development card contains both names. Restore with the matching rebuilt
-CAVLOAD.COM; old launcher/checkpoint identities remain intentionally incompatible.
-
-`CAVLOAD HUT` restores the completed partial-score return from CHECK8: ring,
-pendant, grail and shield deposited in the hut, compass/sword/candle carried,
-key outside in room 2, score 78/126 when SCORE is entered, moves 139. The
-bridge is intact and the four defeated enemies remain absent. CHECK8 remains
-available for replaying the collection and return.
+The Viewer trial separately imports the development card, exports a scenario,
+and restores it with a matching launcher in a fresh browser context/card.
+Physical TEC-1G testing remains outstanding.

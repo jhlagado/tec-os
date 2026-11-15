@@ -1,5 +1,11 @@
 # Caverns author gameplay review
 
+> Current revision: the author-approved gameplay batch is implemented. Earlier
+> entries below record the running game and proposals at the time. The current
+> specification is [Caverns](caverns.md), with the complete
+> [map/prose audit](caverns-map-audit.md). See the implementation record at the end.
+
+
 Review the running game before batching refinements. Do not restart or advance
 the live review session to implement an issue without the author's direction.
 
@@ -1327,3 +1333,54 @@ edited. Staged records include pre/post state and actual command output:
 [hut entry](evidence/caverns-scenarios/hut-return/home.json),
 [deposit and score](evidence/caverns-scenarios/hut-return/bank.json).
 Development snapshot HUT preserves this state without replacing CHECK8.
+
+## Gameplay batch implemented — current qualification
+
+This supersedes the earlier running-game observations and proposed designs.
+All 54 descriptions were correlated with the revised graph. Ordinary exits
+have opposite returns once gates are opened, except the explicitly self-locking
+hut door. Distant bridge/castle views are distinguished from available paths;
+upper/lower river ledges and the vertical rope transition are named distinctly.
+The complete table and Caverns80 deviations are in caverns-map-audit.md.
+
+Implemented: Caverns80 forest/cave/drain repairs; approved recognisable bat
+loop; reusable bridge and blocked accidental side falls; candle at daylight
+entrance; first-explorer clue; VARD crypt inscription and reversible seal;
+explicit tying and reciprocal rope travel; retained key and wizard sword;
+permanent enemy defeats; grille spelling/alias, removal and size constraint;
+physical drain-side service hatch using OPEN HATCH; no remote waterfall or
+reset-on-temple trigger; inventory aliases; weapon clarification without time
+or retaliation; successful pickup/drop confirmations; warning without compass;
+fatigue resets; hut welcome, automatic treasure deposit, score and ranking,
+full-score completion message and optional continued exploration.
+
+The old unpaired wizard-to-temple shortcut was removed in both directions
+rather than importing Caverns80's puzzle bypass. The walking return retraces
+shaft, cell and crypt to the temple. Its gate stays unlocked after key use.
+The waterfall's visible staircase makes the original dwarf the first-route
+guard into the drains; the hatch becomes a later shortcut. These are explicit
+progression decisions rather than unexplained changes to distant flags.
+
+Implementation layout: concise descriptions in DATA, scanned into one temporary
+string for the current room; no 54-string heap cache. Existing BAZA and RTL
+pins are unchanged. Native compilation fits with shell resident: 39,808-byte
+COM. CAVBASIC.COM is retained for verification but removed from public starter
+recipe 17, which contains BASIC source plus instructions. Assembly remains
+repository/development-only. Developer checkpoint format is now CVB2, storing
+rope/gate state and rejecting old versions/build identities. Review presets
+were explicitly adapted; original evidence captures remain unchanged.
+
+Native quest evidence: 126 points, 135 action turns, all 54 rooms, description
+checks, first discovery of the castle clue before the first spell, full walking
+return from castle without GALAR, automatic intermediate/final banking and
+optional continuation. Commands run through normal input with no host-side
+item/location/RNG writes. Scenario tests separately cover exact RNG continuation,
+malformed records, old version rejection, missing-weapon clarification,
+key/light-free rope recovery, attachment removal and physical hatch persistence.
+TED copy/edit/save/build/run/exit/power-cycle reopen passes. Browser Viewer and
+physical-board evidence are separately identified in the qualification record.
+
+Deferred rather than silently claimed complete: matches/unlit candle and a
+burn clock starting at lighting; stronger startup entropy; actual in-game disk
+saves; physical TEC-1G run; final human review of the revised release. The
+retained 230-action candle lifetime and random combat can still end a game.

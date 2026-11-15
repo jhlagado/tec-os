@@ -1,201 +1,74 @@
-# Caverns walkthrough review
+# Revised Caverns walkthrough
 
-This is the spoiler route for the author-refined original BASIC release.
-Start the local Viewer with a fresh starter card, choose PICO9918 at 80 columns,
-then type `CAVBASIC`. Use `LOOK` and `LIST` freely during review.
+Spoilers: separate from user-manual material. Use the revised BASIC map,
+not historical command logs. The native quest test is the executable record.
 
-## Review checkpoints
+## Preparation and upper caves
 
-| Phase | What to review |
-|---|---|
-| Hut and forest | The objective is clear; compass makes directions reliable; curved paths retain their original behavior. |
-| Outward bridge | The troll is dangerous, but the string bridge permits crossing and remains available for homeward travel. |
-| Upper caves | The treasure-room entrance explicitly suggests explosives. Key and rope are discoverable before the descent. |
-| Temple | Rope descent has no reverse climb. The key opens the crypt and stays behind. APE solves the original word riddle. |
-| Cell and waterfall | The cell has no west return. Removing the grille opens east; a waterfall visit enables the route north into the drains. |
-| Castle | The drains, conduit and wooden bridge reach the castle from behind. Its inscription teaches GALAR; the magazine supplies the bomb. |
-| Treasure room | GALAR returns to the upper caves. Ignite the bomb at the entrance: the door opens, the player stays outside, and east leads to the demon. |
-| Home | Retrieve the key, use GALAR, return across the bridge and unlock the hut. Banking treasures yields 126 points. |
+Take the compass before leaving the hut. From the clearing go west through
+forest to the cliff, south to the riverbank, west for the sword. Return east;
+the outcrop east of the bank holds the optional coin. The visible distant
+bridge has no direct path from that outcrop.
 
-## Command route
+Return north to the cliff, east through forest and clearing, east across the
+clover field to Mount Ymir, then south to the troll. ATTACK TROLL WITH SWORD;
+repeat correct attacks if necessary. Combat can lose. Once defeated it stays
+absent. Cross south twice. Take the rope from the cliff east of the southern
+landing, return west, then west through the oak forest and south to the dragon.
+Defeat it, go south, and take the lit candle at the entrance before going east.
 
-The route includes optional visits for map coverage and a brick pickup/drop for
-inventory testing. The source-derived model takes 160 commands before QUIT
-with six first-strike victories. In the running game, **repeat each `use sword`
-until the enemy is defeated**, then continue. Combat has genuine random risk;
-a losing adventure can be restarted with Y. A successful adventure itself
-does not need a death, replay knowledge or a command exploit.
+The giant bat at the eastern dead end carries you to its colony on your next
+action. LOOK/inventory are safe. The key is west of the colony; alternatively
+enter the bat caves west of the round chamber. The small marked loop is
+optional. From colony go north then east to the round chamber. Its eastern
+side cave is empty; south is the upper river ledge, east from there the balcony.
 
-The native regression follows this route with real randomness, compares all
-object locations, and supplements it with off-target blast, inventory and
-one-way-passage checks. It also visits the remaining bat room after banking
-the treasure, then restores the compass to the hut before checking the ending.
+## Rope, crypt and cell
 
-```text
-get compass
-north
-west
-south
-south
-west
-get sword
-east
-east
-get coin
-west
-north
-east
-east
-south
-use sword
-south
-south
-south
-west
-use sword
-south
-south
-get candle
-west
-north
-get diamond
-west
-south
-south
-east
-west
-get brick
-south
-west
-south
-west
-get key
-east
-south
-north
-south
-north
-east
-north
-east
-north
-north
-north
-get rope
-south
-south
-south
-west
-north
-west
-south
-south
-south
-east
-use rope
-drop brick
-use key
-ape
-east
-get grill
-east
-drop grill
-south
-use sword
-west
-get sword
-use key
-east
-east
-south
-east
-north
-get ruby
-south
-west
-north
-west
-north
-north
-get pearl
-north
-use sword
-south
-south
-west
-north
-west
-north
-east
-north
-south
-south
-west
-north
-west
-north
-west
-west
-west
-get stone
-south
-east
-north
-east
-get bomb
-west
-west
-west
-galar
-south
-west
-north
-west
-east
-use sword
-use candle
-east
-use sword
-drop candle
-drop sword
-get ring
-get pendant
-get grail
-get shield
-galar
-south
-west
-north
-west
-south
-south
-south
-east
-use rope
-get key
-galar
-north
-east
-north
-north
-north
-west
-north
-use key
-drop coin
-drop compass
-drop ruby
-drop diamond
-drop pearl
-drop stone
-drop ring
-drop pendant
-drop grail
-drop shield
-score
-quit
-n
-```
+TIE ROPE TO RAIL stays on the balcony. DOWN reaches the temple; UP can return,
+even without key or light. The north gate requires the key, which is retained.
+The crypt's V/A/R/D stones give VARD; saying it opens the eastern seal both ways.
+Enter east. TAKE GRILLE, then DROP GRILLE, then east through the shaft. The
+removed cover is too wide to carry through. The hatch north is fastened from
+the drain side and cannot yet be used.
 
-The score must be 126, with the “Perfectionist and genius” ranking.
-The separate test-only bat tour is not necessary to finish the adventure.
+## Lower river, drains and castle
+
+South from beyond the shaft reaches the wizard. Defeat him; keep the sword.
+East is the lower river ledge, below temple level. North reaches the waterfall
+and ruby. Visible steps north reach the dwarf; defeat him, then east to the
+pearl chamber and south down the winding passage to the drain junction.
+OPEN HATCH opens the cell shortcut south, permanently and both ways.
+Visiting the waterfall alone changes no hatch or temple state.
+
+The eastern drain branch is a dead end. West through two passages reaches the
+freezing conduit and stone. South follows the service path to the wooden
+bridge; east crosses to the eastern bank; north through the tunnel reaches
+the castle courtyard. The inscription hzb tzozi is Atbash for SAY GALAR.
+East is the powder magazine and bomb. West from the courtyard crosses the
+drawbridge and secures a reciprocal return to the lower river ledge.
+
+A fully walking return is drawbridge west to the ledge, north to the river
+ledge, west to the wizard cavern, north to the shaft, west through cell and
+crypt, south to temple, UP to balcony. The old unpaired direct wizard/temple
+shortcut is removed. GALAR is a fast return to the entrance, not obligatory.
+
+## Treasure room and homecoming
+
+The diamond lies in the corridor north of the torture chamber. From the
+northern cavern, north reaches the treasure door. LIGHT BOMB WITH CANDLE
+opens the eastern passage, consumes the bomb and leaves you outside. Elsewhere
+an explosion changes neither room nor surroundings and retains the bomb.
+
+Enter east, defeat the demon, and take ring, pendant, grail and shield. Use
+GALAR or walk back to the cave entrance. Outside, north reaches the basalt
+clearing, north the mushroom rock, east the southern bridge landing; north
+across the bridge, north to the slopes, west to clovers, west to the hut clearing.
+USE KEY unlocks and enters the hut, retains the key, automatically banks
+carried treasures and prints score/ranking and a welcome.
+
+There are eleven carrying slots. A complete 126-point quest needs an earlier
+banking trip for side treasures before collecting all four vault treasures.
+Equipment stays carried; its counted value doubles while at home. At 126 the
+homecoming announces the completed quest. Lower scores still allow a voluntary
+ending or more exploration. QUIT prints the final ranking; N exits to TEC-OS.

@@ -1,6 +1,6 @@
 {
-  "format": "caverns-basic-scenario-1",
-  "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+  "format": "caverns-basic-scenario-2",
+  "gameSha256": "85d3d03241f964269e872857351d47a168d5dc4b47bb947b6e9e1763b934be16",
   "objects": [
     36,
     19,
@@ -38,7 +38,9 @@
     "J%": 1,
     "C0%": 1,
     "F%": 6,
-    "U%": 37
+    "U%": 37,
+    "R0%": 0,
+    "K0%": 0
   },
   "rng": "4002a021"
 }
