@@ -331,3 +331,17 @@ decrement is a bug. This is already corrected in the running BASIC and all
 current CAVLOAD checkpoints, unlike the still-pending general troll and map
 repairs. Source evidence: CAVBASIC.BAS 1610–1620; documentation caverns.md
 and caverns-original.md. No additional game change or live command required.
+
+
+## Round chamber review — room 26
+
+Actual Viewer CHECK3 continuation turn 2: SOUTH from tunnel 24 to chamber 26.
+Description: large round room, mystical dark-purple walls, chalk star in the
+floor centre, hidden chamber of Loki's monks. No loose objects or creatures
+are listed; initial object table also has none here. No pickups or further
+movement. All four exits match Caverns80: N24 (tunnel), S27 (river ledge),
+W29 (dark cavern), E25 (dark cavern). The room description also matches,
+including the missing space in "staris"; record that as a minor text repair
+rather than a map difference. Exit destinations are source-inspected; only
+SOUTH to 26 was entered live. Visible exit descriptions could be clearer in
+both versions; "a number of exits" does not give their bearings.
