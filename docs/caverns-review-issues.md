@@ -882,3 +882,22 @@ Author regards the wizard's sword effect as an unnecessary complication.
 Record the simpler direction: retain the sword after that victory. The live
 build is unchanged and the sword is currently at temple 35, not carried.
 No further game command entered during this explanation; still at room 36.
+
+
+## Sword recovered; river-access bearings reviewed
+
+Author requested sword recovery and consideration of the river being reached
+southwards earlier versus eastwards now. CHECK3 live turns 39–45: WEST to
+temple 35, TAKE SWORD, LIST, UNLOCK GATE WITH KEY (using the key still present
+there), EAST to crypt's cell, EAST through its still-open shaft, SOUTH back
+to cleared wizard cavern 36. LIST confirmed compass/sword/candle. No creatures
+encountered, no new spell or grille removal required, and no move to ledge 40.
+Current room 36; key still at 35 and rope at 28 under old rules.
+
+Concrete geography review/proposal: caverns-river-geography-plan.md. The first
+ledge is south of round chamber 26; the second is east of wizard cavern 36,
+after the temple descent and intervening crypt/cell passages. Access bearings
+do not determine river flow. Proposed description distinguishes the viewpoints
+and relates them to the northern roof inlet/waterfall fed by Gioll, pending a
+full geography audit. Caverns80 retains the same vague wording at 40, so this
+requires a prose improvement beyond copying the reference map.
