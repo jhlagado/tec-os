@@ -17,6 +17,7 @@ the live review session to implement an issue without the author's direction.
 | KEY-01 | Using the key silently leaves it in the current room while opening the hut door or temple gate and automatically moving the player through. Caverns80 keeps the key carried. | Author approved retaining the key after unlocking; give a specific gate/door confirmation. Not yet changed in the review build. |
 | CRYPT-01 | Replace GAPE/APEX/APE riddle with Caverns80's keeper-name clue and VARD. Restrict opening the eastern seal to the crypt. | Author explicitly approved the Caverns80 replacement. Pending source/description/parser and checkpoint-identity update; running build still uses APE. |
 | SWORD-01 | Wizard victory says the sword crumbles but relocates it to temple 35. Author considers this an unnecessary complication; the sword remains needed for later enemies. | Recommend retaining the carried sword and removing the misleading loss/relocation effect. Caverns80 preserves the same effect, so this is a separate simplification beyond it. Pending source update. |
+| CELL-01 | Crypt seal opens east into cell, but the cell's west exit stays permanently blocked despite the crypt-side passage remaining open. Closure adds forced routing without another puzzle. | Recommend keeping the opened seal traversable both ways, with west back to crypt while the existing seal-open state is true. Caverns80 retains this asymmetry; proposed improvement beyond it. |
 | MEDIA-01 | Ship CAVBASIC.BAS and CAVERNS.TXT on the starter disk, with BAZA tools. Leave CAVBASIC.COM compilation to the user. Keep compiled artifacts for development/identity checks, and keep assembly development-only. | Packaging/tests/Viewer update pending. |
 | SAVE-01 | Add an in-memory save/restore checkpoint first, supporting review and ordinary play; persistent disk saves are a later stage. No such command exists in the BASIC edition. A disk save must serialize game state and version it; an in-memory bookmark lasts only for the current run. Viewer disk downloads are not RAM snapshots. | Superseded during container-loss discussion: author now requests load-only externally generated scenarios. Development launcher implemented and documented in caverns-scenarios.md; no in-game SAVE or in-memory checkpoint added. |
 | NAV-01 | Improve room descriptions to identify visible routes, locked doors and hazards. Keep undiscovered secret exits concealed until their puzzle state reveals them. | Recorded; wording and coverage to review. |
@@ -1058,3 +1059,30 @@ visited; entrance-side bat transport passage not played (source inspected).
 Ruby, diamond and coin deliberately left. Treasure door visited but still
 locked pending bomb. Wizard is defeated and sword recovered; key retention,
 rope ascent and navigation/prose fixes remain pending the implementation batch.
+
+
+## Cell west closure — usefulness and recommended adjustment
+
+Author questioned whether closing the west route is useful. Source shows no
+additional puzzle, item or scoring rule depending on trapping the player.
+The grille still blocks onward east progress even if retreat west is allowed,
+so the closure is unnecessary to preserve that puzzle or the wizard sequence.
+
+It is not even a modelled door-closing event: E% remains 38 after entering the
+cell, so crypt east stays open while cell west is statically zero. The live
+sword-recovery loop re-entered the crypt-to-cell passage without saying APE
+again, confirming the seal never actually reset. Caverns80 keeps the same
+one-way arrangement and contradictory closed-wall description.
+
+Recommend: once VARD opens the seal, retain reciprocal crypt37E38 and cell38W37
+until a new game. Reuse the existing seal-open state for the return condition;
+do not add an independent west flag that can disagree. Update cell description
+to show the open western doorway. A player can retreat to the crypt/temple and,
+under the approved rope repair, climb back to the upper caves. Do not reopen
+the rejected initial temple-east bypass; this return does not skip any puzzle.
+
+Cell east remains a separate grille-removal puzzle; cell north remains the
+separate drainage-shortcut redesign. Describe all visible routes/states
+clearly. This reciprocal west adjustment is a recommendation in response to
+the author's question, not an implemented map edit. No game action entered;
+current live review remains at drainage junction 43/checkpoint 7.
