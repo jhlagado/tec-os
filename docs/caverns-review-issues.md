@@ -1219,3 +1219,34 @@ there, then inspect the opened east passage/demon. Key remains at temple35
 under the old drop rule, so still needs retrieval before a hut-bank finish;
 this is a pending correction, not secretly repaired by teleportation. Optional
 pearl/dwarf, ruby, stone, diamond and coin branches remain deferred.
+
+
+## Treasure door blasted open — room 20
+
+Author requested returning to the treasure room and using the bomb. CHECK3
+live turns 68–73: S18,W23,N22,W21,E20,LIGHT BOMB WITH CANDLE. No repeat troll
+present in the checkpoint-adjusted state. Bomb blast printed: "BOOM! You are
+thrown aside as the blast tears the door from its hinges. When the smoke
+clears, the passage east is open." Door description changed to shattered
+remains beside an open east passage. Player stayed at doorway20; bomb item9
+was consumed, T%=19. No entry east into demon room19 yet.
+
+Caverns80's revised handler also requires bomb/candle, a lit carried candle,
+and location20, then opens east19 and consumes the bomb without transport.
+Its text has the player shelter around a corner as the fuse burns, rather
+than being thrown aside; this is a plausible safety/description refinement
+for review. Unlike our author-approved harmless wrong-place explosion rule,
+Caverns80 refuses a wrong-place detonation without a blast. Keep our explicit
+chosen rule; do not restore room decrement or silently import a different
+wrong-place policy. Existing enhanced BASIC door hint is stronger than the
+reference's "small oak door locked from inside" text.
+
+The important onward route is EAST into the vault/demon encounter. South20->23
+returns to the torture chamber; north20->21 returns to cavern; west blocked.
+Caverns80 repairs the return to south21 and blocks north, as already recorded.
+Stop before entering; warn about combat before attempting treasure pickups.
+
+
+Turn 74 LIST confirms compass, sword and candle only: the bomb is no longer
+carried after its successful use. Current live review remains at doorway20
+with the eastern passage open, before the demon encounter.
