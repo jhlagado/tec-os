@@ -621,3 +621,29 @@ to reopen the hut at room 2 so treasures can be returned for double points.
 Remove the automatic p%(19)=a% drop from the key-use handler in the next
 source batch; preserve the carried location (-1). Verify temple and hut uses,
 inventory confirmation and refreshed scenario state. No live action performed.
+
+
+## Why the current key drop does not make completion impossible
+
+Author asked whether there is an alternative full-score route avoiding the
+temple gate. In the current BASIC, opening that gate is required to reach the
+crypt/lower region and castle. An overapproximated compass graph, granting all
+dynamic passages open plus rope descent/GALAR/hut use, still cannot reach
+rooms 36–54 from temple 35 without the 35->37 key action. Thus even optimistic
+state assumptions do not provide an ordinary gate bypass. Caverns80's 35E36
+addition is precisely the separate bypass already rejected for this section.
+
+The key is not consumed: USE KEY leaves it at 35. It can be recovered on a
+later temple visit, after learning GALAR. The existing completion witness
+(test/caverns-refined-route.json) explicitly does this: trace 62 opens gate
+35->37 and leaves key 35; trace 130 GALAR returns from treasure room to 16;
+131–139 retrace the upper route and reuse the rope at balcony 28 to reach 35;
+140 GET KEY carries it; 141 GALAR returns to 16; 149 USE KEY at 2 enters hut 1.
+This witness is used by the previously qualified native full-score test.
+The dropped rope can be reused while present at balcony 28 (handler 1392),
+so an additional carried rope is not required for that retrieval trip.
+
+Therefore the old mechanic creates an unexplained retrieval chore, rather
+than an irrecoverably lost key or proof that the temple puzzle must be
+bypassed. Retaining the key, as approved, removes that chore while preserving
+the gate/crypt sequence. No game commands entered; still at checkpoint 5.
