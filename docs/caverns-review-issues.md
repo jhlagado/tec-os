@@ -345,3 +345,29 @@ including the missing space in "staris"; record that as a minor text repair
 rather than a map difference. Exit destinations are source-inspected; only
 SOUTH to 26 was entered live. Visible exit descriptions could be clearer in
 both versions; "a number of exits" does not give their bearings.
+
+
+## Subterranean river ledge — room 27
+
+Actual Viewer CHECK3 turn 3: SOUTH from round chamber 26 to river ledge 27.
+Screen: narrow ledge high above a subterranean river, exit east. No loose
+objects or creatures. Stopped; no eastward move yet.
+
+Important Caverns80 correction: north returns to chamber 26, matching the
+southward approach; current BASIC north jumps to candle cavern 18 instead.
+East to balcony 28, south/west blocked, match in both versions. Caverns80
+also explicitly describes passages north and east. Recommend adopting the
+north-return repair and the matching prose together; it removes a shortcut,
+not a puzzle gate, and the repaired upper-cave network remains connected.
+
+Torture chamber 23: source search finds only its descriptive text and generic
+room/item handling, no dedicated object or action. Its role is a junction and
+atmosphere. No hidden payoff should be implied by guide advice.
+
+Author questioned surface river north versus underground river south. Later
+room 45 explicitly says its waterfall brings surface water down from Gioll;
+room 40 mentions water entering through the cavern roof. These support a
+multi-level connected water system, but do not prove the precise bearing or
+identity of every visible stretch at room 27. Flag a coherent geographic and
+description audit; do not invent a flow direction or assert this exact ledge
+is directly below a particular surface room without further evidence.
