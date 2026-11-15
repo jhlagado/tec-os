@@ -982,3 +982,33 @@ crossing. Recommend safe blocked moves rather than unwarned east/south death,
 while preserving the eventual east exit when the bridge is lowered. Both
 versions retain the same weak warning/prose and fatal defaults here. No fatal
 command was entered; current review is paused at 48 with compass/sword/candle.
+
+
+## Drainage junction — room 43
+
+Author asked for north then the next useful direction towards the castle.
+CHECK3 live turns 50–54: N40,W36,N39,W38,N43. Visiting waterfall had enabled
+the previously blocked cell north passage, as source inspection predicted.
+Actual new text: "Somehow you have gotten into the complex drainage system
+of this entire cavern network!!" No item or creature listed. Stopped at 43.
+
+All junction exits match Caverns80: north to pearl chamber 46, south to cell
+38, west to drain passage 42, east to drain branch 44. West is the useful
+castle approach: 43W42,W41,W54 conduit,S53 wooden bridge,E52 riverbank,N50
+courtyard. No NPC on that route. North and east are optional side branches
+for the current no-treasure-focused walkthrough; current east branch forces
+an indirect visit towards dwarf room 47 rather than an ordinary west return.
+
+Caverns80 repairs neighbouring passages: 42 and 41 become a clear east/west
+chain, removing north/south shortcuts; 44 becomes a dead end returning west
+43; 46 returns south43 and west47; 47 returns east46 and south45; conduit54
+returns east41 instead of the original west41 loop. Adopt these navigation
+repairs under the author's default policy; they preserve pearl and dwarf
+placements and do not bypass the temple gate. Later riverbank52 removes its
+duplicate east-to-courtyard shortcut and changes the tunnel bearing to north;
+review its description when reached.
+
+Both versions retain the same generic drain description, so room landmarks
+and visible exit text still need improvement. The waterfall/cell discovery
+needs a player-facing explanation or the approved visible staircase approach,
+not source knowledge. No further west move or side-branch pickup yet.
