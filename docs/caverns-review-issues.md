@@ -9,6 +9,7 @@ the live review session to implement an issue without the author's direction.
 |---|---|---|
 | UI-01 | Support INVENTORY and INVENT for displaying carried objects; retain original LIST and existing I as aliases. Prefer the familiar inventory name in help. | Recorded for implementation after review; not in the running build. |
 | UI-02 | Give concise, action-specific confirmation for successful actions, especially taking/dropping items, e.g. "You take the double-bladed sword." Reuse existing confirmations where adequate. | Future usability enhancement requested by the author, not a bug or a live-session change. |
+| LAMP-01 | Move the candle from inner cavern 18 to daylight entrance 16, visibly available before choosing the eastern bat passage. Add a clear light-needed hint; defer matches/unlit behavior until the lighting refinement is implemented. | Recommended placement refinement during author review; not yet in the running build or old checkpoints. |
 | BOMB-01 | Original detonation subtracted one from the numeric room ID, allowing arbitrary transport and bypass of the locked treasure door. Author explicitly classifies this as an original bug, not an intended puzzle mechanic. | Fixed in the currently qualified BASIC build: no location change; detonation at the visible locked door opens its east passage and consumes the bomb. Elsewhere it leaves location and permanent puzzle state unchanged and retains the bomb. |
 | COMBAT-01 | ATTACK TROLL without an object noun currently triggers immediate lethal retaliation, rather than asking for a weapon. Explicit ATTACK TROLL WITH SWORD and USE SWORD enter combat. | Confirmed by source inspection only; unsafe command not executed. Author-approved correction: ask for the missing weapon rather than punish an incomplete command. Not implemented in the running BASIC build. |
 | MEDIA-01 | Ship CAVBASIC.BAS and CAVERNS.TXT on the starter disk, with BAZA tools. Leave CAVBASIC.COM compilation to the user. Keep compiled artifacts for development/identity checks, and keep assembly development-only. | Packaging/tests/Viewer update pending. |
@@ -19,7 +20,7 @@ the live review session to implement an issue without the author's direction.
 | NAV-04 | Clarify the direction of the visible river where the geography is established. The dark-forest description gives no bearing; establish the river’s course and bends before choosing new wording. | Observation recorded during westward exploration; no compass bearing adopted yet. |
 | NAV-05 | Dark forest west leads to river cliff, and river cliff west leads back to the same dark forest. This two-W loop is a concrete non-reciprocal connection to review under NAV-02. | Confirmed from the current source; Caverns80 repairs this with cliff west blocked and cliff east returning to the forest. Adopted into the forest refinement plan; not yet implemented in the live build. |
 | NAV-06 | Prefer Caverns80 map repairs where evaluation finds no harmful change. The nine outdoor differences remove duplicate shortcuts and make normal return directions consistent; recommend adopting them as a set. | Author explicitly requested forest simplification following Caverns80; exact plan in caverns-forest-refinement-plan.md. Far-side details and purposeful exceptions remain subject to walkthrough review. No live-build changes. |
-| NAV-07 | Evaluate later map repairs for puzzle bypasses, not just reversible exits. Caverns80 adds temple east to wizard cavern and a waterfall/stair/drain connection, creating a compass route from temple to castle without the crypt/cell gates. | Static source-graph finding; significant design change flagged for author discussion, not automatically accepted. |
+| NAV-07 | Evaluate later map repairs for puzzle bypasses, not just reversible exits. Caverns80 adds temple east to wizard cavern and a waterfall/stair/drain connection, creating a compass route from temple to castle without the crypt/cell gates. | Author agreed to keep the initial temple east bypass blocked, preserving the key/gate/crypt sequence. Any later unlocked shortcut needs a separate deliberate design. Other lower-region repairs still require evaluation. |
 | NAV-08 | Clover-field hut bearing and return direction contradict the eastward approach from the clearing. Correct both geometry and description, following the Caverns80 westward return unless a specific problem is found. | Author classifies this as a serious bug, including misleading prose. Not changed in the active build. |
 
 ## Parser finding for UI-01
@@ -542,3 +543,41 @@ flagged NAV-07 puzzle bypass, not a routine geometry fix. Recommend preserving
 the key/gate/crypt progression until an explicitly justified alternative is
 agreed. Caverns80 CMDDOWN also resets sword fatigue; current BASIC keeps it.
 That combat-balance difference is recorded separately, not silently adopted.
+
+
+## Entrance clue, bat transport and candle availability
+
+Author agreed to preserve the temple gate/crypt progression rather than add
+the initial east bypass. Keep current temple east blocked; a shortcut opened
+after solving the section remains a separate possible refinement.
+
+Source inspection: entrance 16 east leads to passage 17, whose wall reads
+"Find the Sacred Key of Thialfi". The transport bat starts there. The clue
+and bat are visible before the next action; LOOK/LIST/SCORE remain safe in
+the current BASIC. On the next non-informational action the bat carries the
+player to colony 33, then relocates itself from 17 to 24. No fight is required.
+This is an alternative entry to the region containing the key at 34.
+
+Without a candle, room 33 prints the darkness message instead of the room
+and loose-object descriptions. Source 70–90 does not automatically kill the
+player or impose a separate random darkness death; compass navigation still
+works. Thus this is an unfair blind-navigation/preparation trap, not an
+instant-death rule. Known hazards or hostile encounters elsewhere can still
+kill the unprepared player; do not claim darkness itself does so here.
+
+Placement recommendation: move candle item 21 from initial room 18 to room 16
+(the daylight entrance), with explicit visible-item text and a hint that the
+passages beyond daylight require a light. This makes it available before
+the east/south choice. Retain the current lit-candle behavior for this interim
+placement change; the separately proposed matches and lighting-time rules
+must be implemented together later. Do not silently make the candle unlit
+without providing a working way to light it.
+
+Caverns80 keeps the same clue, bat-delivery destination and candle placement
+at 18; it does not solve this preparation issue. Its bat carry also resets
+sword fatigue, another recorded combat-balance difference, not part of the
+placement fix. Consider a clear pre-transport warning/safe retreat if needed;
+placement alone makes preparation discoverable but does not force a pickup.
+
+No game command was entered; current review remains at checkpoint 5 on the
+temple floor. Current checkpoints still reflect the old candle placement.
