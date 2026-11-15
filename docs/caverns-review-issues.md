@@ -1172,3 +1172,31 @@ we have spoken GALAR yet: only the inscription has been seen in this session.
 Current position courtyard50, carrying compass/sword/candle. Bomb not yet
 taken; drawbridge still unavailable; key remains35, rope28. Deferred optional
 routes/treasures remain on the prior checklist.
+
+
+## Bomb acquired and drawbridge visited — rooms 51/49
+
+Author requested TAKE BOMB, GO WEST. CHECK3 live turns 61–66: EAST from courtyard
+50 into magazine51, TAKE BOMB, LIST, WEST50, WEST49, LIST. Magazine description
+matches Caverns80 ("powder magazine of this really super castle"); bomb was
+listed and then explicitly confirmed carried. No creature or other item.
+Room51 west returns50; other directions blocked, matching Caverns80.
+
+Drawbridge text: "You are by the drawbridge which has just lowered itself...
+by magic!!" Current exits N/S/W/E = 0,0,48,50 match Caverns80. The final LIST
+processes the current BASIC visit-time update D%=49, making the reverse
+48E49 crossing available too. West now returns to the earlier castle-view
+ledge; east returns courtyard. No crossing or spell was entered after this.
+LIST confirms compass, bomb, sword and candle. Bomb was not lit/consumed.
+
+Current world: wizard/troll/dragon absent; dwarf/pearl route still unvisited;
+key remains temple35, rope28, grille on cell floor with shaft open. We have
+seen and decoded the castle inscription, but have not spoken GALAR in this
+session. Current room49, safely paused at the lowered bridge.
+
+Design consequence to review explicitly before implementation: the approved
+reusable UP rope will allow walking from the lower region back to balcony28
+and upper caves. GALAR will then be a useful fast-travel reward rather than
+the sole intended lower-region escape. This does not bypass the gate/crypt
+sequence on first entry, but changes the magic word's necessity. Do not add
+another arbitrary equipment loss/closure simply to force the spell.
