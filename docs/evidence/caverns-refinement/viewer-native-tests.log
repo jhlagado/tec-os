@@ -1,0 +1,10 @@
+✔ Viewer Caverns disk includes BASIC source only, compiles identically and runs at 80 columns (4197.027446ms)
+✔ the web page's bundle uses no Node globals (78.991365ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4539.922433

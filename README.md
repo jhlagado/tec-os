@@ -186,10 +186,11 @@ writing the LCD, lighting the digits and beeping through the ROM's services by
 `abi.inc`'s names. `TIMES.BAS` beside it is a first BASIC program, with its
 keywords in capitals and its names in lower case: it asks a name and a number
 and prints that number's times table.
-The starter card also includes both Caverns versions: `CAVERNS` runs the
-assembly adventure; `TYPE CAVERNS.TXT` explains the BASIC comparison, which
-compiles under the shell with `BAZA CAVBASIC` (an experimental rule-set trial). Use `CON PICO 80`.
-[Trying Caverns](docs/caverns.md) records the differences and provenance.
+The starter card includes the author-refined Caverns BASIC source and
+`CAVERNS.TXT`. Select `CON PICO 80`, compile with `BAZA CAVBASIC`, then run
+`CAVBASIC`. Its executable is created by the user; the separate assembly
+comparison remains development-only. [Caverns](docs/caverns.md) records the
+current rules, qualification and provenance.
 `BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
 runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
 an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds

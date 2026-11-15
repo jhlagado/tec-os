@@ -1,5 +1,10 @@
 # Original Caverns and the refined BASIC release
 
+> Historical analysis of the recovered game and the earlier bridge/bomb-only
+> build. The following descriptions are not the current release specification.
+> See [current rules](caverns.md) and [current map](caverns-map-audit.md).
+
+
 The recovered MicroWorld BASIC and introduction are the source of truth.
 The current release retains their map, compass, key, rope, magic words and
 inventory rules. The author has approved a reusable string bridge and a

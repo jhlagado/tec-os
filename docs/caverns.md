@@ -73,8 +73,10 @@ physical hatch operation, clarification handling and treasure banking.
 
 The earlier records under `docs/evidence/caverns-scenarios` describe historical
 builds. Current revision records live under `docs/evidence/caverns-refinement`.
-The native tests are emulator evidence. Browser Viewer trials are separately
-labelled; none substitutes for physical-board testing. Gameplay review of this
+The native tests are emulator evidence. The system-Chromium Viewer trial also
+compiled from a fresh source-only card, downloaded a byte-identical COM, played
+the opening and exported/restored a checkpoint in a fresh browser context.
+Its two native Viewer recipe/bundle tests pass. None substitutes for a board run. Gameplay review of this
 revision and a physical TEC-1G run remain the final human checks.
 
 Known limits: eleven carried objects; combat can lose; finite candle lifetime

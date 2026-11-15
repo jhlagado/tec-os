@@ -27,5 +27,15 @@
     "rng": 32487
   },
   "physicalTEC1GTested": false,
-  "viewerTrial": "recorded separately"
+  "viewerTrial": {
+    "tested": true,
+    "browser": "system Chromium, headless",
+    "profile": 80,
+    "sourceOnlyStarterCompiled": true,
+    "downloadedCOMMatchesQualified": true,
+    "exportAndFreshContextRestore": true,
+    "viewerCommit": "346d5c65e3106e4a5196d8e540947832eacf1f40",
+    "tecOSCommit": "8f88b8c597024a4ec676501a657b473994067502",
+    "viewerNativeTests": 2
+  }
 }

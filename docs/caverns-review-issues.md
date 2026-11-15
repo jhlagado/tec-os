@@ -1384,3 +1384,13 @@ Deferred rather than silently claimed complete: matches/unlit candle and a
 burn clock starting at lighting; stronger startup entropy; actual in-game disk
 saves; physical TEC-1G run; final human review of the revised release. The
 retained 230-action candle lifetime and random combat can still end a game.
+
+Browser qualification completed: system Chromium loaded the clean standalone
+Viewer built at 346d5c6, with TEC-OS 8f88b8c. Its fresh starter contains source,
+not COM. Native compilation inside the browser produced the exact qualified
+COM, verified by downloading and comparing bytes. TAKE COMPASS confirmed the
+action; INVENTORY and the revised clearing description worked. The trial then
+restored ROPE, exported CAVE.CAV, and restored it with inventory in a fresh
+browser context/card. See docs/evidence/caverns-refinement/viewer-result.json
+and accompanying screenshots. Both Viewer recipe/native-build and bundle tests
+passed. No public site deployment or physical-board result is claimed.
