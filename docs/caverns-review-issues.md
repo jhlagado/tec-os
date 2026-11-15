@@ -832,3 +832,36 @@ Route comparison: current 39N/S/W/E = 0,36,38,0, same as Caverns80. West returns
 to cell; south reaches wizard cavern 36, where an enemy is still present.
 North/east blocked. Description is generic in both versions. No move into
 the wizard's room yet; warn before combat. Current live review paused at 39.
+
+
+## Wizard encounter — room 36
+
+Author instructed proceeding south and fighting; then requested descriptions.
+CHECK3 Viewer turns 35–37: SOUTH from 39 to wizard cavern 36; two ATTACK WIZARD
+WITH SWORD commands. First missed; second won. Actual description: "You are
+deep in a dark cavern. There, before you in a swirling mist stands an evil
+wizard with his hand held outwards...'Thou shall not pass' he cries."
+
+Victory printed "The sword strikes home and your foe dies...", then "Hey!
+Your sword has just crumbled into dust!!", then a black cloud vaporizes the
+corpse. Current room 36 is clear. No onward movement after the fight.
+
+Important state/text contradiction: BASIC 1531 places sword item 20 at temple
+35, rather than destroying it. Caverns80 explicitly does the same in its
+wizard victory handler. Record for author review: do not claim permanent
+weapon destruction, and do not silently treat the magic item relocation as
+clear from the current message. A later required sword encounter still needs
+this weapon; returning west to temple 35 can recover it. Current key is also
+there under its pending drop correction. Recommend clearer recovery wording
+or an explicit alternative rule, subject to author choice.
+
+Compass exits at 36 match Caverns80: north to passage 39, west to temple 35,
+east to river ledge 40, south blocked. Current description is generic plus the
+wizard encounter; no loose object initially present. Caverns80 additionally
+resets fatigue on victory (and movement), unlike this BASIC. No such combat
+balance change was applied live.
+
+
+Turn 38 LIST explicitly confirms only compass and candle remain carried after
+the wizard fight. Source-derived sword location is temple 35; no move to
+retrieve it has been performed. Key remains at 35 and rope at 28.
