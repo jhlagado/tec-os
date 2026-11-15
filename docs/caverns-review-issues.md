@@ -692,3 +692,22 @@ and APE word with four carved stones, a READ prompt and a VARD clue. This is
 a puzzle/content rewrite, not a map correction to adopt automatically. Keep
 it flagged for the author's review, preserving the current clue until a
 deliberate choice. No riddle answer or READ command has been entered live.
+
+
+## Crypt clue alternatives and spell effect
+
+Author agrees the original G---/---X riddle is weak and asked for Caverns80's
+replacement. Its READ response is: "The keeper stands in four stones, from
+left to right: V, A, R, D. Speak his name, and the eastern seal shall yield."
+It therefore supplies VARD as a keeper's name. This is candidate replacement
+copy/puzzle; do not mark the exact replacement wording approved merely because
+the original was criticized.
+
+Original APE completes GAPE and APEX. Current handler 1260–1270 sets E%=38,
+prints that the crypt's eastern wall slid open, and leaves the player in
+crypt 37. EAST must then be entered to move into cell 38. This is passage
+opening, not teleportation. Caverns80's VARD uses the same destination/effect.
+Its handler additionally checks that the player is actually in the crypt;
+current BASIC can set E% from elsewhere. Recommend location scoping with the
+future clue rewrite. Current running word is still APE. No spell, READ or
+movement command entered during this explanation; still in crypt 37.
