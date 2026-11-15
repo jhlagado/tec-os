@@ -273,3 +273,23 @@ this repair does not bypass the treasure-door puzzle. Recommend adopting this
 local repair together with its paired room-20 change. Generic dark-cavern
 description remains; visible exit wording is still worth improving. Source
 comparison only; no navigation edit or additional live command executed.
+
+
+## Approved correction: defeat the troll permanently
+
+Author rejected the second troll encounter at the treasure-door approach.
+Change BASIC line 1530 so only the bat (z%=5) uses the +10 relocation after a
+successful sword attack. The troll (z%=3) must instead follow normal defeat
+handling, setting p%(3)=0. Keep the victory message and vaporization text.
+This removes the reappearance; do not merely hide the creature description.
+Preserve the bat's independent behavior unless separately reviewed.
+
+For the next gameplay build, verify: troll begins at bridge room 10; victory
+sets its location to zero; entering door approach 20 after that victory has
+no troll encounter; incomplete-command parsing remains a separate correction.
+Regenerate scenario files so checkpoints after the bridge encounter retain a
+zero troll location, and regenerate executable identity/loader fixtures after
+the source change. Current live game and checkpoint binaries still implement
+the old relocation; this approved fix is queued with the walkthrough batch,
+not silently applied to live memory. At turn 8 we remain in cavern 21 after a
+blocked NORTH command. No move into the second troll encounter was made.
