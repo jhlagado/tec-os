@@ -474,3 +474,21 @@ impossible compass loop. Room 34 gains an explicit west connection into the
 optional loop; its key and purpose remain unchanged. No game edit or live
 command performed. Current state remains checkpoint 4 at colony 33, key not
 yet collected. Source inspection confirms no additional regional item/gate.
+
+
+## Key collected and return completed
+
+Author's "do it" continued the walkthrough; no map implementation was made.
+CHECK3 live turns 15–23: WEST to 34, TAKE KEY, LIST, EAST to 33, SOUTH to 31,
+NORTH to 32, SOUTH to 30, NORTH to 29, EAST to round chamber 26. LIST explicitly
+confirmed compass, key, sword, candle and rope. No creatures encountered or
+other objects collected. Current live review is paused in room 26. This
+old-map detour exercises the return problems already covered in the bat plan;
+Caverns80 and the proposed design have different return routes.
+
+Room 34's east return matches Caverns80. Rooms 31/32/30 return differences are
+in the recorded bat-region table; all were traversed in the old build, not
+silently substituted with corrected paths. Room 32 currently prints "a dark
+passage among the bat caves"; Caverns80 uses its generic room description
+entry there. Neither provides the distinctive landmarks now proposed. Record
+the current key-description typo "an old an rusty key" for a copy edit.
