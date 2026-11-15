@@ -19,6 +19,7 @@ At the TEC-OS prompt, enter one of:
 
 ```
 CAVLOAD CHECK2
+CAVLOAD CHECK3
 CAVLOAD TROLL
 CAVLOAD SOUTH
 CAVLOAD ROPE
@@ -38,6 +39,10 @@ scenario's actual location; this is ordinary default-FCB file resolution.
   bridge troll encounter is completed; the dragon was also defeated on the
   original-map route to the rope.
 - CANDLE: cave entrance with the candle also collected.
+- CHECK3: long north–south tunnel, carrying compass/sword/candle/rope. The
+  treasure door is still locked, brick and diamond remain uncollected. The
+  troll is explicitly absent, applying the author-approved permanent defeat
+  to this scenario while the general BASIC rule awaits the review batch.
 
 No additional commands are played automatically after restoring. LOOK and LIST
 show the restored location and inventory. QUIT, then Y, reinitializes the game
@@ -88,7 +93,10 @@ Parser scratch variables, derived score and display counters are rebuilt.
 
 This tool deliberately permits externally authored hypothetical states, but
 passing validation does not prove that a hypothetical state is reachable by
-normal play. The bundled checkpoints were reached through game commands.
+normal play. The original bundled checkpoints were reached through game commands. CHECK3
+replays the recorded review commands, then changes only the troll location
+from its old relocation destination (30) to absent (0), as approved by the
+author. Its capture and adjustment are recorded separately in the evidence.
 Walkthrough details belong in this engineering document, not the user manual.
 
 ## Format and executable compatibility

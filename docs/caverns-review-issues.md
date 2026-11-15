@@ -293,3 +293,33 @@ the source change. Current live game and checkpoint binaries still implement
 the old relocation; this approved fix is queued with the walkthrough batch,
 not silently applied to live memory. At turn 8 we remain in cavern 21 after a
 blocked NORTH command. No move into the second troll encounter was made.
+
+
+## Checkpoint 3 — tunnel after treasure-door review
+
+At door room 20, the repeat troll missed one sword attack and fell on the
+second. Actual Viewer commands then NORTH to 21, SOUTH to long tunnel 24,
+LIST; inventory compass/sword/candle/rope confirmed. Brick and diamond left
+uncollected. Door remains locked. Replayed the exact recorded commands from
+CHECK2 on the native machine to capture every persistent field and RNG.
+Evidence: docs/evidence/caverns-scenarios/check3-captured.json.
+
+Author-approved scenario refinement: set only p%(3) from its old repeat
+relocation destination 30 to zero. CHECK3 therefore keeps the troll removed;
+this adjustment is explicit and is not claimed as an unchanged-game witness.
+Other state: room 24, moves 37, fatigue 6, RNG 4002a021. The general BASIC
+permanent-troll-defeat source edit is still queued for the review batch.
+Fresh-machine comparison of CHECK3 and all other bundled scenarios passed.
+
+Room 24 comparison: both versions have north to 21, south to 26, west blocked.
+Current BASIC additionally has east to candle cavern 18; Caverns80 blocks
+that non-reciprocal shortcut. Both descriptions mention a north–south tunnel
+and faint glow from an eastern wall crack. Recommend blocking the east
+shortcut, retaining the crack as visible scenery; describe north/south as
+actual exits. No additional corridor/temple exploration yet.
+
+
+CHECK3 was then loaded through the actual Viewer using CAVLOAD CHECK3.
+LIST confirmed compass, sword, candle and rope at the tunnel. Current live
+review is paused in room 24, with the author-approved absent-troll checkpoint
+applied. No southward exploration beyond the tunnel has been performed.

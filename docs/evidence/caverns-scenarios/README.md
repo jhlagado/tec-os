@@ -17,3 +17,12 @@ JSON inputs with `npm run caverns:scenarios`.
 
 This is native emulator and real browser evidence. Physical TEC-1G testing
 has not been performed. Existing BASIC map/parser behavior is unchanged.
+
+
+Checkpoint 3 continuation: `check3-captured.json` retains the replayed review
+commands and complete pre-adjustment native state. CHECK3 changes only the
+troll location from 30 to absent (0), following the author's approved removal.
+`check3-tests.log` verifies all seven bundled checkpoints in fresh native
+machines. `check3-viewer.json` and `check3-viewer.png` show the actual Viewer
+restored at the tunnel with compass, sword, candle and rope. No exploration
+command was entered after that reload.

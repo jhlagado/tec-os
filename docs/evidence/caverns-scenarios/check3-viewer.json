@@ -1,0 +1,31 @@
+{
+  "turn": 1,
+  "command": "list",
+  "screen": [
+    "",
+    "You stand in a long tunnel which has been bored out of the rock.It runs from nor",
+    "th to south. A faint glow comes from a narrow   crack in the eastern wall.",
+    "You can also see...",
+    "a red house brick ,",
+    "? list",
+    "You are carrying",
+    "a useful looking compass , a double bladed sword , a small candle , a thin and t",
+    "atty rope ,",
+    "You stand in a long tunnel which has been bored out of the rock.It runs from nor",
+    "th to south. A faint glow comes from a narrow   crack in the eastern wall.",
+    "You can also see...",
+    "a red house brick ,",
+    "?",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "screenshot": "/workspace/jhlagado/tec-os/build/caverns/review-check3/001.png"
+}
