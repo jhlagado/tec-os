@@ -781,3 +781,27 @@ Include a copy-edit pass for typos already observed ("staris", "old an rusty",
 and consistency of names/bearings. Keep compact-screen line wrapping readable.
 This is recorded for the implementation batch; no live text or parser changes
 have been made during this note update.
+
+
+## Grille bulk and leaving it aside — proposed cell refinement
+
+Author suggested preventing passage through the narrow shaft while carrying
+the grille. Record as a proposed physical constraint, not current behavior:
+TAKE GRILLE removes the loose cover; EAST while carrying it explains "The
+grille is too bulky to take through. Put it aside first." No injury or forced
+loss. DROP GRILLE leaves it on the cell floor, confirms the action and leaves
+the opening uncovered; EAST then enters passage 39. No rope is required.
+
+Current BASIC already allows carrying the grille through, and the opening
+stays available after dropping it (G%=39 persists). The object is non-scoring
+and has no special later use; all carried objects cost one slot, with no
+weight calculation. Caverns80 also opens the shaft when the grille is taken
+and has no carried-grille movement restriction. This is a suggested refinement
+beyond both versions; not yet implemented or explicitly adopted as mandatory.
+
+If implementing, distinguish attached cover (P24=38,G=0) from the removed cover
+left on the floor (P24=38,G=39). Description and checkpoint state must preserve
+that distinction; dropping must not be treated as reattaching it. Say the
+cover is loose/removable before the player needs to guess TAKE. Do not add
+other arbitrary equipment restrictions to the shaft. No live commands entered;
+we are still in cell 38 with the grille untouched.
