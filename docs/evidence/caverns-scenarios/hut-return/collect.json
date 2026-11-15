@@ -1,0 +1,123 @@
+{
+  "before": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      19,
+      19,
+      19,
+      19,
+      0,
+      35,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 19,
+      "H%": 11,
+      "D%": 49,
+      "W%": 43,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 114
+    },
+    "rng": "5fa8feaa"
+  },
+  "events": [
+    {
+      "command": "take ring",
+      "text": "take ring\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na magic pendant , a most holy grail , a mirror like shield , \r\n? ",
+      "room": 19
+    },
+    {
+      "command": "take pendant",
+      "text": "take pendant\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na most holy grail , a mirror like shield , \r\n? ",
+      "room": 19
+    },
+    {
+      "command": "take grail",
+      "text": "take grail\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na mirror like shield , \r\n? ",
+      "room": 19
+    },
+    {
+      "command": "take shield",
+      "text": "take shield\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\n\r\n? ",
+      "room": 19
+    },
+    {
+      "command": "list",
+      "text": "list\r\nYou are carrying \r\na useful looking compass , a diamond studded ring , a magic pendant , a most hol\r\ny grail , a mirror like shield , a double bladed sword , a small candle , \r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\n\r\n? ",
+      "room": 19
+    },
+    {
+      "command": "score",
+      "text": "score\r\nYour score is 40  out of 126.\r\n? ",
+      "room": 19
+    }
+  ],
+  "after": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      -1,
+      -1,
+      -1,
+      -1,
+      0,
+      35,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 19,
+      "H%": 11,
+      "D%": 49,
+      "W%": 43,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 118
+    },
+    "rng": "5fa8feaa"
+  },
+  "violations": []
+}

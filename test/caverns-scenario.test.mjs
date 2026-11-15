@@ -84,7 +84,7 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
 });
 
 test('all bundled review checkpoints load exactly in a new machine',{timeout:120000},async()=>{
- for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6','check7','check8','vault']){
+ for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6','check7','check8','vault','hut']){
   const s=JSON.parse(readFileSync(ROOT+'/test/caverns-scenarios/'+name+'.json'));
   const m=boot(await imageWith(s),{tms:true,matrix:true,width:80});
   keys(m,'cavload test',question(m));assertState(m,s);
@@ -117,6 +117,21 @@ test('combat fatigue resets on travel and victory, but not blocked moves or miss
   assert.equal(integer(m,'F%'),i+1,'misses retain encounter fatigue');
  }
  assert.ok(won);assert.deepEqual(m.violations,[]);
+});
+test('checkpoint 8 vault treasures reach the hut through the key and intact bridge',{timeout:120000},async()=>{
+ const s=JSON.parse(readFileSync(ROOT+'/test/caverns-scenarios/check8.json'));
+ const m=boot(await imageWith(s),{tms:true,matrix:true,width:80});
+ keys(m,'cavload test',question(m));
+ const commands=['take ring','take pendant','take grail','take shield',
+  'west','north','south','south','south','east','use rope','take key',
+  'galar','north','east','north','north','north','west','north','use key',
+  'drop ring','drop pendant','drop grail','drop shield','score'];
+ for(const c of commands)assert.doesNotMatch(keys(m,c,question(m)),/Another adventure|ERROR IN|skull|can't see it|too many objects/);
+ const after=snapshot(m);assert.equal(after.variables['A%'],1);
+ assert.equal(after.variables['H%'],11);assert.equal(integer(m,'S%'),78);
+ for(const i of [14,15,16,17])assert.equal(after.objects[i-1],1);
+ assert.equal(after.objects[18],2,'old key handler leaves key outside after unlocking');
+ assert.deepEqual(m.violations,[]);
 });
 test('external scenario writer refuses incomplete or out-of-domain states',()=>{
  const variants=[s=>s.objects.pop(),s=>s.variables['A%']=55,s=>s.variables['C0%']=2,s=>s.variables['F%']=-1,s=>delete s.variables['T%'],s=>s.rng='00000000',s=>s.gameSha256='wrong'];

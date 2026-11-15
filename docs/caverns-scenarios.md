@@ -203,3 +203,9 @@ sword and candle are carried. Ring, pendant, grail and shield remain in room
 snapshot from the native TEC-OS emulator, not a new in-game SAVE command.
 The development card contains both names. Restore with the matching rebuilt
 CAVLOAD.COM; old launcher/checkpoint identities remain intentionally incompatible.
+
+`CAVLOAD HUT` restores the completed partial-score return from CHECK8: ring,
+pendant, grail and shield deposited in the hut, compass/sword/candle carried,
+key outside in room 2, score 78/126 when SCORE is entered, moves 139. The
+bridge is intact and the four defeated enemies remain absent. CHECK8 remains
+available for replaying the collection and return.

@@ -1299,3 +1299,31 @@ of this revision remain outstanding.
 
 Evidence: [retry state and commands](evidence/caverns-scenarios/demon-review/fatigue-reset-result.json)
 and [retry output](evidence/caverns-scenarios/demon-review/fatigue-reset.log).
+
+## Checkpoint 8 return to the hut — completed in native TEC-OS emulator
+
+Author requested only the four vault treasures, then a key-assisted return
+and deposit in the hut. Restored CHECK8; collected ring, pendant, grail and
+shield. SCORE was 40 (38 for these treasures, 2 for the carried compass).
+Returned west20, north21, south24, south26, south27, east28, used the rope to
+35 and retrieved the key that the old gate handler left there. No additional
+combat was needed. GALAR returned to 16; north14, east13, north12, north11,
+north10, west4, north2 reached the hut clearing. USE KEY printed "You opened
+the door" and entered room 1. The bridge remained intact throughout.
+
+Dropped ring, pendant, grail and shield. LOOK lists all four on the hut floor;
+SCORE reports 78/126: 76 for the deposited vault treasures plus 2 for the
+compass still carried. Sword and candle are also carried. Final moves 139,
+fatigue 0; demon, wizard, dragon and troll absent. Key left outside in room 2
+by the still-unrefined unlocking handler. No automatic ending occurred on
+deposit; SCORE verifies the banking goal. This is a successful partial-score
+return, not an all-treasure completion or a claim about the unmodified original.
+
+Each of four native emulator stages used a complete externally captured
+scenario to preserve progress between processes; no state values or RNG were
+edited. Staged records include pre/post state and actual command output:
+[collection](evidence/caverns-scenarios/hut-return/collect.json),
+[key recovery](evidence/caverns-scenarios/hut-return/key.json),
+[hut entry](evidence/caverns-scenarios/hut-return/home.json),
+[deposit and score](evidence/caverns-scenarios/hut-return/bank.json).
+Development snapshot HUT preserves this state without replacing CHECK8.

@@ -1,0 +1,138 @@
+{
+  "before": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      -1,
+      -1,
+      -1,
+      -1,
+      0,
+      35,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 19,
+      "H%": 11,
+      "D%": 49,
+      "W%": 43,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 118
+    },
+    "rng": "5fa8feaa"
+  },
+  "events": [
+    {
+      "command": "west",
+      "text": "west\r\n\r\nThe shattered remains of the door lie beside an open passage to the east.\r\n\r\n? ",
+      "room": 20
+    },
+    {
+      "command": "north",
+      "text": "north\r\n\r\nYou are deep in a dark cavern.\r\n\r\n? ",
+      "room": 21
+    },
+    {
+      "command": "south",
+      "text": "south\r\n\r\nYou stand in a long tunnel which has been bored out of the rock.It runs from nor\r\nth to south. A faint glow comes from a narrow   crack in the eastern wall.\r\nYou can also see...\r\na red house brick , \r\n? ",
+      "room": 24
+    },
+    {
+      "command": "south",
+      "text": "south\r\n\r\nYou are in a large round room with a number of exits. The walls have been painte\r\nd in a mystical dark purple and a big chalk staris drawn in the centre of \r\nthe floor. Note: This is one of the hidden chambers of the      infamous pagan s\r\nect, the monks of Loki. Norse folk believe them to be gods.\r\n\r\n? ",
+      "room": 26
+    },
+    {
+      "command": "south",
+      "text": "south\r\n\r\nYou are standing on a narrow ledge, high above a subterranean   river. There is \r\nan exit to the east. \r\n\r\n? ",
+      "room": 27
+    },
+    {
+      "command": "east",
+      "text": "east\r\n\r\nYou are on a balcony, overlooking a huge cavern which has been  converted into a\r\n pagan temple. Note: this temple has been       dedicated to Loki, the god of\r\nfire, who came to live in Svartalfheim after he had been        banished to exil\r\ne by Odin. Since then he has been waiting       for the `End Of All Things'.\r\nYou can also see...\r\na thin and tatty rope , \r\n? ",
+      "room": 28
+    },
+    {
+      "command": "use rope",
+      "text": "use rope\r\nYou descend the rope, but it drops 10 feet short of the floor.  You jump the res\r\nt of the way.\r\n\r\nYou are in the temple. To the north is a locked gate and on the wall is a giant \r\nstatue of Loki, carved out of the living rock   itself!\r\nYou can also see...\r\nan old an rusty key , \r\n? ",
+      "room": 35
+    },
+    {
+      "command": "take key",
+      "text": "take key\r\n\r\nYou are in the temple. To the north is a locked gate and on the wall is a giant \r\nstatue of Loki, carved out of the living rock   itself!\r\n\r\n? ",
+      "room": 35
+    },
+    {
+      "command": "list",
+      "text": "list\r\nYou are carrying \r\na useful looking compass , a diamond studded ring , a magic pendant , a most hol\r\ny grail , a mirror like shield , an old an rusty key , a double bladed sword , a\r\n small candle , \r\nYou are in the temple. To the north is a locked gate and on the wall is a giant \r\nstatue of Loki, carved out of the living rock   itself!\r\n\r\n? ",
+      "room": 35
+    }
+  ],
+  "after": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      -1,
+      -1,
+      -1,
+      -1,
+      0,
+      -1,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 35,
+      "H%": 11,
+      "D%": 49,
+      "W%": 0,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 126
+    },
+    "rng": "5fa8feaa"
+  },
+  "violations": []
+}

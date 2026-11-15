@@ -1,0 +1,128 @@
+{
+  "before": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      -1,
+      -1,
+      -1,
+      -1,
+      0,
+      2,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 1,
+      "H%": 11,
+      "D%": 49,
+      "W%": 0,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 135
+    },
+    "rng": "5fa8feaa"
+  },
+  "events": [
+    {
+      "command": "drop ring",
+      "text": "drop ring\r\n\r\nYou are standing in a darkened room. There is a door to the     north.\r\nYou can also see...\r\na diamond studded ring , \r\n? ",
+      "room": 1
+    },
+    {
+      "command": "drop pendant",
+      "text": "drop pendant\r\n\r\nYou are standing in a darkened room. There is a door to the     north.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , \r\n? ",
+      "room": 1
+    },
+    {
+      "command": "drop grail",
+      "text": "drop grail\r\n\r\nYou are standing in a darkened room. There is a door to the     north.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , \r\n? ",
+      "room": 1
+    },
+    {
+      "command": "drop shield",
+      "text": "drop shield\r\n\r\nYou are standing in a darkened room. There is a door to the     north.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , \r\n? ",
+      "room": 1
+    },
+    {
+      "command": "list",
+      "text": "list\r\nYou are carrying \r\na useful looking compass , a double bladed sword , a small candle , \r\nYou are standing in a darkened room. There is a door to the     north.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , \r\n? ",
+      "room": 1
+    },
+    {
+      "command": "look",
+      "text": "look\r\n\r\nYou are standing in a darkened room. There is a door to the     north.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , \r\n? ",
+      "room": 1
+    },
+    {
+      "command": "score",
+      "text": "score\r\nYour score is 78  out of 126.\r\n? ",
+      "room": 1
+    }
+  ],
+  "after": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      1,
+      1,
+      1,
+      1,
+      0,
+      2,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 1,
+      "H%": 11,
+      "D%": 49,
+      "W%": 0,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 139
+    },
+    "rng": "5fa8feaa"
+  },
+  "violations": []
+}

@@ -1,0 +1,143 @@
+{
+  "before": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      -1,
+      -1,
+      -1,
+      -1,
+      0,
+      -1,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 35,
+      "H%": 11,
+      "D%": 49,
+      "W%": 0,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 126
+    },
+    "rng": "5fa8feaa"
+  },
+  "events": [
+    {
+      "command": "galar",
+      "text": "galar\r\nSuddenly a magic wind carried you to another place...\r\n\r\nYou are just inside the cave. Sunlight pours into the cave      lighting a path \r\nto the east and another to the south. I don't   mind saying I'm a bit scared!\r\n\r\n? ",
+      "room": 16
+    },
+    {
+      "command": "north",
+      "text": "north\r\n\r\nYou are in a clearing in the forest. An ancient basalt rock      formation tower\r\ns above you. To your south is the entrance of a  VERY interesting cave...\r\nYou can also see the bloody corpse of an enormous dragon.\r\n\r\n? ",
+      "room": 14
+    },
+    {
+      "command": "east",
+      "text": "east\r\n\r\nYou are standing on a rock in the middle of a mighty oak forest.Surrounding you \r\nare thousands of poisonous mushrooms.\r\n\r\n? ",
+      "room": 13
+    },
+    {
+      "command": "north",
+      "text": "north\r\n\r\nYou are on the southern edge of the mighty river, before        the string bridg\r\ne.\r\n\r\n? ",
+      "room": 12
+    },
+    {
+      "command": "north",
+      "text": "north\r\n\r\nYou are halfway across the swaying string bridge. Hold tight!\r\n\r\n? ",
+      "room": 11
+    },
+    {
+      "command": "north",
+      "text": "north\r\n\r\nYou stand on a rocky precipice high above the river, Gioll;     Mt. Ymir stands \r\nto the north. A flimsy string bridge spans the  mighty river.\r\n\r\n? ",
+      "room": 10
+    },
+    {
+      "command": "west",
+      "text": "west\r\n\r\nYou are standing in a field of four-leafed clovers. There is a small hut to the \r\nnorth.\r\n\r\n? ",
+      "room": 4
+    },
+    {
+      "command": "north",
+      "text": "north\r\n\r\nYou are in a forest clearing before a small bark hut. There are no windows, and \r\nlocked door to the south. The latch was engaged when you closed the door.\r\n\r\n? ",
+      "room": 2
+    },
+    {
+      "command": "use key",
+      "text": "use key\r\nYou opened the door.\r\n\r\nYou are standing in a darkened room. There is a door to the     north.\r\n\r\n? ",
+      "room": 1
+    },
+    {
+      "command": "list",
+      "text": "list\r\nYou are carrying \r\na useful looking compass , a diamond studded ring , a magic pendant , a most hol\r\ny grail , a mirror like shield , a double bladed sword , a small candle , \r\nYou are standing in a darkened room. There is a door to the     north.\r\n\r\n? ",
+      "room": 1
+    }
+  ],
+  "after": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      -1,
+      -1,
+      -1,
+      -1,
+      0,
+      2,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 1,
+      "H%": 11,
+      "D%": 49,
+      "W%": 0,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 135
+    },
+    "rng": "5fa8feaa"
+  },
+  "violations": []
+}
