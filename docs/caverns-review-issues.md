@@ -14,6 +14,7 @@ the live review session to implement an issue without the author's direction.
 | COMBAT-01 | ATTACK TROLL without an object noun currently triggers immediate lethal retaliation, rather than asking for a weapon. Explicit ATTACK TROLL WITH SWORD and USE SWORD enter combat. | Confirmed by source inspection only; unsafe command not executed. Author-approved correction: ask for the missing weapon rather than punish an incomplete command. Not implemented in the running BASIC build. |
 | PROGRESS-01 | One-way descent without the key strands a first-time player at the temple's locked gate. GALAR is an unlearned escape at that stage, so it is not a fair solution. | Author approved reciprocal UP via the secured rope, replacing the key-before-descent proposal. Describe rope reaching the floor; preserve the gate puzzle and allow recovery of missing key/candle. Not yet implemented. |
 | KEY-01 | Using the key silently leaves it in the current room while opening the hut door or temple gate and automatically moving the player through. Caverns80 keeps the key carried. | Author approved retaining the key after unlocking; give a specific gate/door confirmation. Not yet changed in the review build. |
+| CRYPT-01 | Replace GAPE/APEX/APE riddle with Caverns80's keeper-name clue and VARD. Restrict opening the eastern seal to the crypt. | Author explicitly approved the Caverns80 replacement. Pending source/description/parser and checkpoint-identity update; running build still uses APE. |
 | MEDIA-01 | Ship CAVBASIC.BAS and CAVERNS.TXT on the starter disk, with BAZA tools. Leave CAVBASIC.COM compilation to the user. Keep compiled artifacts for development/identity checks, and keep assembly development-only. | Packaging/tests/Viewer update pending. |
 | SAVE-01 | Add an in-memory save/restore checkpoint first, supporting review and ordinary play; persistent disk saves are a later stage. No such command exists in the BASIC edition. A disk save must serialize game state and version it; an in-memory bookmark lasts only for the current run. Viewer disk downloads are not RAM snapshots. | Superseded during container-loss discussion: author now requests load-only externally generated scenarios. Development launcher implemented and documented in caverns-scenarios.md; no in-game SAVE or in-memory checkpoint added. |
 | NAV-01 | Improve room descriptions to identify visible routes, locked doors and hazards. Keep undiscovered secret exits concealed until their puzzle state reveals them. | Recorded; wording and coverage to review. |
@@ -699,9 +700,9 @@ deliberate choice. No riddle answer or READ command has been entered live.
 Author agrees the original G---/---X riddle is weak and asked for Caverns80's
 replacement. Its READ response is: "The keeper stands in four stones, from
 left to right: V, A, R, D. Speak his name, and the eastern seal shall yield."
-It therefore supplies VARD as a keeper's name. This is candidate replacement
-copy/puzzle; do not mark the exact replacement wording approved merely because
-the original was criticized.
+It therefore supplies VARD as a keeper's name. This was initially candidate
+copy; the author subsequently explicitly approved adopting the replacement
+(see CRYPT-01 and the cell-entry review below).
 
 Original APE completes GAPE and APEX. Current handler 1260–1270 sets E%=38,
 prints that the crypt's eastern wall slid open, and leaves the player in
@@ -711,3 +712,28 @@ Its handler additionally checks that the player is actually in the crypt;
 current BASIC can set E% from elsewhere. Recommend location scoping with the
 future clue rewrite. Current running word is still APE. No spell, READ or
 movement command entered during this explanation; still in crypt 37.
+
+
+## VARD replacement approved; eastern passage entered
+
+Author approved Caverns80's crypt clue as an improvement and instructed saying
+the current word and proceeding. CHECK3 live turns 29–30: SAY APE printed that
+the crypt's eastern wall slid open; EAST entered cell 38. No further action.
+Current clue/word remain unchanged until the source batch; future replacement
+is VARD with its keeper/four-stones clue and crypt-only activation. Ensure any
+READ prompt is backed by a supported command, or show the clue directly.
+
+Actual cell text: tiny cell, western wall firmly closed again, ventilator
+shaft on the eastern wall. A rusty ventilation grill is listed; no creature.
+The room description matches Caverns80. Initial blocked compass exits and
+conditional overrides also match: north depends on waterfall discovery, east
+opens through removal of the grille, south/west blocked. Caverns80's GET
+handler explicitly opens the same east exit to 39 when taking the grille.
+No item has been taken here; inventory remains compass/sword/candle, key left
+at temple 35 by the old handler, rope at balcony 28.
+
+Additional combat-rule observation while inspecting the reference: Caverns80
+resets sword fatigue after every successful compass move, not just descent or
+bat transport. Current BASIC retains cumulative fatigue. Keep this as a
+separate combat-balance review rather than silently importing it with map or
+clue repairs. No combat has occurred in the lower region so far.
