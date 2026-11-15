@@ -447,3 +447,17 @@ flag this remaining loop for the author's deliberate-maze decision; do not
 claim that reciprocity alone fixes global geography. The key's direct side
 branch remains accessible without traversing that optional loop. This is a
 potential "seems strange" exception under the author's updated policy.
+
+
+## Checkpoint 4 — central bat colony
+
+Author requested preserving current inventory and full game state. CHECK4 is
+an exact replay/capture of the CHECK3 continuation, with no new state edits.
+Room 33, moves 50, fatigue 6, RNG 4002a021. Carried items: compass, sword,
+candle, rope. Troll and dragon absent; transport bat remains at 17. Key is
+still at 34, diamond at 22 and brick at 24. Treasure door is still locked.
+Source JSON and 128-byte CHECK4.CAV are retained with the development files.
+Evidence: docs/evidence/caverns-scenarios/check4-captured.json; live screen
+recorded separately. No command was entered to advance the live session while
+creating this checkpoint. The current live card predates CHECK4's addition;
+restore using the updated scenario card or import CHECK4.CAV into that card.

@@ -1,0 +1,31 @@
+{
+  "turn": 14,
+  "command": "(screen)",
+  "screen": [
+    "",
+    "You stand in a long tunnel which has been bored out of the rock.It runs from nor",
+    "th to south. A faint glow comes from a narrow   crack in the eastern wall.",
+    "You can also see...",
+    "a red house brick ,",
+    "? south",
+    "",
+    "You are in a large round room with a number of exits. The walls have been painte",
+    "d in a mystical dark purple and a big chalk staris drawn in the centre of",
+    "the floor. Note: This is one of the hidden chambers of the      infamous pagan s",
+    "ect, the monks of Loki. Norse folk believe them to be gods.",
+    "",
+    "? west",
+    "",
+    "You are deep in a dark cavern.",
+    "",
+    "? south",
+    "",
+    "You are in the central cave of a giant bat colony. Above you    hundreds of gian",
+    "t bats hang from the ceiling and the floor is   covered in centuries of",
+    "giant bat droppings. Careful where you step! Incidentally, the  smell is indescr",
+    "ibable.",
+    "",
+    "?"
+  ],
+  "screenshot": "/workspace/jhlagado/tec-os/build/caverns/review-check3/014.png"
+}

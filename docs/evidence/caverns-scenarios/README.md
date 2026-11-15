@@ -26,3 +26,10 @@ troll location from 30 to absent (0), following the author's approved removal.
 machines. `check3-viewer.json` and `check3-viewer.png` show the actual Viewer
 restored at the tunnel with compass, sword, candle and rope. No exploration
 command was entered after that reload.
+
+
+Checkpoint 4: `check4-captured.json` records the exact CHECK3 continuation
+commands and native state at the bat colony, with no new state adjustment.
+`check4-live-screen.json` records the corresponding live Viewer screen.
+`check4-tests.log` verifies all eight bundled checkpoints in fresh native
+machines. Inventory, monsters, flags, counters and RNG are compared exactly.
