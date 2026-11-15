@@ -12,6 +12,7 @@ the live review session to implement an issue without the author's direction.
 | LAMP-01 | Move the candle from inner cavern 18 to daylight entrance 16, visibly available before choosing the eastern bat passage. Add a clear light-needed hint; defer matches/unlit behavior until the lighting refinement is implemented. | Recommended placement refinement during author review; not yet in the running build or old checkpoints. |
 | BOMB-01 | Original detonation subtracted one from the numeric room ID, allowing arbitrary transport and bypass of the locked treasure door. Author explicitly classifies this as an original bug, not an intended puzzle mechanic. | Fixed in the currently qualified BASIC build: no location change; detonation at the visible locked door opens its east passage and consumes the bomb. Elsewhere it leaves location and permanent puzzle state unchanged and retains the bomb. |
 | COMBAT-01 | ATTACK TROLL without an object noun currently triggers immediate lethal retaliation, rather than asking for a weapon. Explicit ATTACK TROLL WITH SWORD and USE SWORD enter combat. | Confirmed by source inspection only; unsafe command not executed. Author-approved correction: ask for the missing weapon rather than punish an incomplete command. Not implemented in the running BASIC build. |
+| KEY-01 | Using the key silently leaves it in the current room while opening the hut door or temple gate and automatically moving the player through. Caverns80 keeps the key carried. | Source-confirmed; recommend retaining the key and giving a specific gate/door confirmation. Not yet changed in the review build. |
 | MEDIA-01 | Ship CAVBASIC.BAS and CAVERNS.TXT on the starter disk, with BAZA tools. Leave CAVBASIC.COM compilation to the user. Keep compiled artifacts for development/identity checks, and keep assembly development-only. | Packaging/tests/Viewer update pending. |
 | SAVE-01 | Add an in-memory save/restore checkpoint first, supporting review and ordinary play; persistent disk saves are a later stage. No such command exists in the BASIC edition. A disk save must serialize game state and version it; an in-memory bookmark lasts only for the current run. Viewer disk downloads are not RAM snapshots. | Superseded during container-loss discussion: author now requests load-only externally generated scenarios. Development launcher implemented and documented in caverns-scenarios.md; no in-game SAVE or in-memory checkpoint added. |
 | NAV-01 | Improve room descriptions to identify visible routes, locked doors and hazards. Keep undiscovered secret exits concealed until their puzzle state reveals them. | Recorded; wording and coverage to review. |
@@ -595,3 +596,21 @@ the clue an in-world source. Suggested draft, not final copy:
 Do not add a collectible journal or invent a new puzzle around the inscription.
 Caverns80 retains the same bare wall instruction; this prose refinement goes
 beyond that version. Note only: current game and checkpoint 5 unchanged.
+
+
+## Temple available action and key handling comparison
+
+At current room 35/checkpoint 5, the locked north gate is the intended onward
+puzzle. Current BASIC accepts UNLOCK GATE WITH KEY (WITH routes to tool use)
+or USE KEY, prints "You opened the door", places key item 19 at room 35 and
+moves to crypt 37. This does not persist an ordinary open north exit in the
+map. Crypt south returns to temple 35; do not falsely claim the dropped key
+is permanently inaccessible. The Loki statue has no bespoke interaction or
+collectible; current compass directions remain blocked before a tool action.
+
+Caverns80 requires gate/door plus carried key, prints the appropriate action
+message and moves through, but does NOT drop the key. Recommend its key
+retention as a separate improvement: preserve the nonconsumable key for the
+later hut return and avoid an unexplained item-state change. The temple east
+bypass remains a rejected exception, independently of this useful correction.
+Only source inspection; no live command, item drop or gate opening performed.
