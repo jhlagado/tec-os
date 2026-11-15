@@ -2,6 +2,11 @@
 
 Spoilers: engineering record, separate from the user manual.
 
+[Full map image (PNG)](images/caverns-map.png) · [Zoomable SVG](images/caverns-map.svg).
+All 54 rooms, initial items/creatures, gates, rope and transport are shown.
+Regenerate with `node tools/caverns-map-image.mjs` (Graphviz required).
+The DOT source is retained beside the images.
+
 All 54 room descriptions name the current paths, not the old graph. With
 opened gates, every compass connection has its opposite return except the
 hut's self-locking door: leaving north requires the key to re-enter from the
