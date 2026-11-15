@@ -1130,3 +1130,20 @@ Caverns80 preserves the bridge description but omits the redundant generic
 dark-cavern extra line (53 is absent from DARCAVRO); adopt that prose cleanup.
 Add clear crossing bearings when revising the description. The interesting
 stone remains uncollected in conduit54. Current review paused at 53.
+
+
+## Eastern riverbank — room 52
+
+Author instructed crossing the wooden bridge. CHECK3 live turn 59: EAST53->52.
+Actual description: eastern side of river; small tunnel leads EAST into cliff
+face. No loose object or creature listed. Stopped before entering the tunnel.
+
+Current BASIC N/S/W/E = 50,0,53,50: both north and east reach courtyard 50.
+Caverns80 corrects this to 50,0,53,0 and says the tunnel leads NORTH. Adopt the
+paired map/prose repair: north enters the castle's southern escape/service
+tunnel, west returns to bridge53, south/east blocked. This reciprocates 50S52
+and removes the duplicate east shortcut. It supplies the first castle entrance
+without attempting the raised drawbridge at ledge48.
+
+The useful next command in either build is NORTH. No extra movement or item
+action yet; current room 52, carrying compass/sword/candle.
