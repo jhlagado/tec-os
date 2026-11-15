@@ -1,0 +1,31 @@
+{
+  "turn": 54,
+  "command": "(screen)",
+  "screen": [
+    "",
+    "You are on another ledge high above a subterranean river. The   water flows in t",
+    "hrough a hole in the cavern roof, to the north.",
+    "",
+    "? west",
+    "",
+    "You are deep in a dark cavern.",
+    "",
+    "? north",
+    "",
+    "You are deep in a dark cavern.",
+    "",
+    "? west",
+    "",
+    "You are in a tiny cell. The western wall has now firmly closed  again. There is",
+    "a ventilator shaft on the eastern wall.",
+    "You can also see...",
+    "a rusty ventilation grill ,",
+    "? north",
+    "",
+    "Somehow you have gotten into the complex drainage system of thisentire cavern ne",
+    "twork!!",
+    "",
+    "?"
+  ],
+  "screenshot": "/workspace/jhlagado/tec-os/build/caverns/review-check3/054.png"
+}

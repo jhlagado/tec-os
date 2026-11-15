@@ -58,7 +58,7 @@ export async function packScenarios(){
   writeFileSync(new URL('build/caverns/scenarios/'+slot+'.CAV',root),bytes);
   fs.write(slot+'.CAV',bytes);writeFileSync(new URL('programs/caverns/'+slot+'.CAV',root),bytes);files.push(slot+'.CAV');
  }
- fs.write('CAVLOAD.TXT',Buffer.from('Caverns development scenarios. Not a public release.\nRun CAVLOAD CHECK2 (cave entrance), CHECK3 (long tunnel), CHECK4 (bat colony), CHECK5 (temple), CHECK6 (beyond cell), TROLL, SOUTH, ROPE, CAVE or CANDLE at the TEC-OS prompt.\nQUIT then Y reloads the same scenario; N returns to TEC-OS.\nScenario files match this exact CAVLOAD.COM. Keep exported files outside the emulator.\nThe BASIC game and its original outdoor map are unchanged.\n'),{text:true});
+ fs.write('CAVLOAD.TXT',Buffer.from('Caverns development scenarios. Not a public release.\nRun CAVLOAD CHECK2 (cave entrance), CHECK3 (long tunnel), CHECK4 (bat colony), CHECK5 (temple), CHECK6 (beyond cell), CHECK7 (drains), TROLL, SOUTH, ROPE, CAVE or CANDLE at the TEC-OS prompt.\nQUIT then Y reloads the same scenario; N returns to TEC-OS.\nScenario files match this exact CAVLOAD.COM. Keep exported files outside the emulator.\nThe BASIC game and its original outdoor map are unchanged.\n'),{text:true});
  writeFileSync(new URL('build/caverns/scenarios.img',root),image);
  const manifest={...record,scenarioFiles:files,cardSha256:hash(image).toString('hex')};
  writeFileSync(new URL('build/caverns/scenarios/manifest.json',root),JSON.stringify(manifest,null,2)+'\n');

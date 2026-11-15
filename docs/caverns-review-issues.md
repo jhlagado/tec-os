@@ -1033,3 +1033,28 @@ on visiting temple. Do not simply open 38N43 from the outset without checking
 whether that bypasses the wizard/waterfall progression. This separates a
 reasonable shortcut from an arbitrary map change triggered elsewhere.
 No live move or source change performed; current review remains in drains 43.
+
+
+## Checkpoint 7 — inside the drainage entrance
+
+Author agreed this entrance needs better design and requested a new checkpoint
+while continuing through it. We had already entered via cell38N43; CHECK7
+marks the current position just inside at junction 43, without another move.
+Exact continuation of CHECK3: moves 85, fatigue 8, RNG 541b7cad. Compass,
+sword and candle carried. Wizard/troll/dragon absent; key at temple35, rope28,
+grille on cell floor38. W%=43 and G%=39 preserve both the north drainage
+entrance and east shaft; E%=38 preserves the crypt seal. D%=128 keeps the
+castle drawbridge unavailable. Ruby, pearl, diamond, coin remain uncollected.
+
+Capture and restore are external scenario operations, not a change to the
+unexplained original trigger. Trigger/description redesign remains pending;
+the author chose to use this existing entrance for the live review. Current
+live game stays at 43. West continues through drains towards the conduit.
+
+
+Outstanding routes at checkpoint 7: westward conduit/wooden-bridge/castle
+approach not yet explored; north pearl/dwarf branch and east drain branch not
+visited; entrance-side bat transport passage not played (source inspected).
+Ruby, diamond and coin deliberately left. Treasure door visited but still
+locked pending bomb. Wizard is defeated and sword recovered; key retention,
+rope ascent and navigation/prose fixes remain pending the implementation batch.

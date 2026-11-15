@@ -84,7 +84,7 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
 });
 
 test('all bundled review checkpoints load exactly in a new machine',{timeout:120000},async()=>{
- for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6']){
+ for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6','check7']){
   const s=JSON.parse(readFileSync(ROOT+'/test/caverns-scenarios/'+name+'.json'));
   const m=boot(await imageWith(s),{tms:true,matrix:true,width:80});
   keys(m,'cavload test',question(m));assertState(m,s);
@@ -92,6 +92,11 @@ test('all bundled review checkpoints load exactly in a new machine',{timeout:120
    keys(m,'west',question(m));assert.equal(integer(m,'A%'),38);
    keys(m,'east',question(m));assert.equal(integer(m,'A%'),39);
    assert.equal(integer(m,'G%'),39,'removed grille remains open after reload');
+  }
+  if(name==='check7'){
+   keys(m,'south',question(m));assert.equal(integer(m,'A%'),38);
+   keys(m,'north',question(m));assert.equal(integer(m,'A%'),43);
+   assert.equal(integer(m,'W%'),43,'drainage entrance remains open after reload');
   }
   assert.deepEqual(m.violations,[]);
  }

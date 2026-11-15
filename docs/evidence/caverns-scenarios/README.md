@@ -48,3 +48,10 @@ passage. `check6-live-screen.json` shows the live inventory beyond the shaft.
 `check6-tests.log` verifies all ten bundled scenarios in fresh native machines;
 CHECK6 additionally returns west to the cell and east again, verifying that
 the removed grille on the floor does not close the restored opening.
+
+
+Checkpoint 7: `check7-captured.json` records the complete review continuation
+through the wizard, weapon recovery, waterfall and drainage entrance. The
+live screen is in `check7-live-screen.json`. `check7-tests.log` verifies all
+eleven scenarios in fresh machines; CHECK7 additionally goes south to the
+cell and north back to the drains, verifying the discovered entrance flag.
