@@ -1147,3 +1147,28 @@ without attempting the raised drawbridge at ledge48.
 
 The useful next command in either build is NORTH. No extra movement or item
 action yet; current room 52, carrying compass/sword/candle.
+
+
+## Castle courtyard — room 50
+
+Author requested entering castle. CHECK3 live turn 60: NORTH from riverbank52
+through tunnel into courtyard50. Actual text: magic castle courtyard, "WOW!
+This castle is really something!", inscription 'hzb tzozi', secret escape
+tunnel south. No item or creature listed. No spell or further move entered.
+
+Courtyard exits and base description match Caverns80: E51 powder magazine
+(bomb), W49 drawbridge, S52 return through tunnel, north blocked. The castle's
+west drawbridge side is the useful place to enable the return crossing to
+ledge48; current code treats this as lowering by magic on a visit/action.
+Keep it in the route checklist rather than skipping it after taking the bomb.
+
+Caverns80 adds a contextual READ clue: "Speak the name that lies mirrored in
+the last light of the alphabet, and the ancient path shall open." This helps
+interpret the Atbash inscription (SAY GALAR); current BASIC has no READ helper.
+Record as a separate clue/help improvement for author review, not already
+implemented or adopted merely because room geometry matches. Do not claim
+we have spoken GALAR yet: only the inscription has been seen in this session.
+
+Current position courtyard50, carrying compass/sword/candle. Bomb not yet
+taken; drawbridge still unavailable; key remains35, rope28. Deferred optional
+routes/treasures remain on the prior checklist.
