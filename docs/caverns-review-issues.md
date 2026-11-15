@@ -32,6 +32,10 @@ Do not generalize a prefix rule to every verb/object as part of this small fix.
 
 ## Comparison policy
 
+Author standing decision: adopt Caverns80 navigation corrections by default
+unless evaluation reveals something strange or harmful, in which case flag
+the exception for discussion. Do not silently import unrelated gameplay rules.
+
 At every newly visited room or reviewed connection, compare current exits,
 description and relevant conditional gates with Caverns80. Explicitly report
 whether they match or differ. For each difference, record its navigation or
@@ -395,3 +399,41 @@ return paths do not. Only EAST was executed; stopped in room 25.
 Bat-caves question: the key initially occupies cavern 34 near bat colony 33;
 its special handler opens the hut door at 2 and temple gate at 35. It is useful,
 not merely a scoring pickup. No movement toward the bat region was made.
+
+
+## Bat-cave approach and difficulty review
+
+CHECK3 live turns 11–14: WEST from side cavern 25 to tunnel 24, SOUTH to
+round room 26, WEST to approach cavern 29, SOUTH to bat colony 33. Stopped
+there; no key pickup or further exploration yet. No hostile creature was
+encountered along the approach. The single transport bat remains at 17 in
+this checkpoint; the colony's descriptive bats are not an active enemy.
+
+Author reinforced adopting Caverns80 navigation repairs unless a change seems
+questionable. Room 25 has no item or special interaction; its return repair
+and removal of south shortcut are adopted for the next map batch.
+
+Bat-region source comparison (N,S,W,E):
+
+| Room | Running BASIC | Caverns80 |
+|---|---|---|
+| 29 | 0,33,0,26 | 30,33,0,26 |
+| 30 | 29,31,0,0 | 0,29,0,32 |
+| 31 | 32,0,0,0 | 33,0,32,0 |
+| 32 | 33,30,0,0 | 0,0,30,31 |
+| 33 | 0,31,34,0 | 29,31,34,0 |
+| 34 | 0,0,0,33 | 0,0,0,33 |
+
+Recommend the Caverns80 set: every ordinary link in this region then has its
+opposite return. Key placement at 34 is unchanged. The direct round-room/key
+trip and return takes 6 movement commands in the corrected map, versus 9 in
+the original using the shortest route, and avoids a forced asymmetric loop.
+The optional surrounding loop remains explorable. This is navigation repair,
+not bypassing a puzzle/creature gate. General generic-cavern text remains poor
+for distinguishing rooms; review landmarks without introducing fake exits.
+
+Colony description matches Caverns80: hundreds of giant bats overhead,
+centuries of droppings on the floor, indescribable smell. No loose objects in
+33. West to key cavern 34 and south to passage 31 are unchanged. Caverns80's
+new north return to 29 removes the original blocked return. No map change
+has been applied to the active review build.
