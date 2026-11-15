@@ -12,8 +12,13 @@ No rail, tying state or revised command behavior has been implemented yet.
    player on the balcony. Filler words such as TO need not be significant.
 3. Explain that the rope ends short of the floor, so descent requires a final
    drop and will not permit climbing back. Give this warning before descent.
-4. DOWN commits to the one-way descent, leaving the rope anchored above.
-5. USE ROPE explains the tie-then-DOWN sequence rather than moving the player.
+4. Before DOWN can commit, require the carried key. Describe the locked gate
+   visible below and explain that it is the only onward exit. Without the key,
+   leave the player safely on the balcony: "The only exit below is locked.
+   Better find its key before going down." This preserves the one-way descent
+   without creating a first-discovery dead end.
+5. DOWN then commits to the one-way descent, leaving the rope anchored above.
+6. USE ROPE explains the tie-then-DOWN sequence rather than moving the player.
 
 An incomplete tying request should ask what is missing, without charging a
 turn or changing the world. DOWN without the secured rope should explain the
@@ -47,7 +52,9 @@ Keep that puzzle-bypass decision separate from ordinary return-path repairs.
 - Rail, floor height and available actions are described before they matter.
 - Tying confirms attachment without moving the player.
 - USE ROPE and incomplete commands explain the sequence safely.
-- DOWN requires attachment and performs the existing one-way transition.
+- DOWN requires attachment and the carried key, and performs the existing
+  one-way transition. Missing-key refusal leaves location, rope attachment,
+  inventory and game progression unchanged; it is a safety clarification.
 - Inventory/rope location and attachment state agree before and after descent.
 - New checkpoint records can restore both a tied balcony and the temple floor.
 - Preserve key/gate progression, measure the compiled image and refresh the

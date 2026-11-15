@@ -12,6 +12,7 @@ the live review session to implement an issue without the author's direction.
 | LAMP-01 | Move the candle from inner cavern 18 to daylight entrance 16, visibly available before choosing the eastern bat passage. Add a clear light-needed hint; defer matches/unlit behavior until the lighting refinement is implemented. | Recommended placement refinement during author review; not yet in the running build or old checkpoints. |
 | BOMB-01 | Original detonation subtracted one from the numeric room ID, allowing arbitrary transport and bypass of the locked treasure door. Author explicitly classifies this as an original bug, not an intended puzzle mechanic. | Fixed in the currently qualified BASIC build: no location change; detonation at the visible locked door opens its east passage and consumes the bomb. Elsewhere it leaves location and permanent puzzle state unchanged and retains the bomb. |
 | COMBAT-01 | ATTACK TROLL without an object noun currently triggers immediate lethal retaliation, rather than asking for a weapon. Explicit ATTACK TROLL WITH SWORD and USE SWORD enter combat. | Confirmed by source inspection only; unsafe command not executed. Author-approved correction: ask for the missing weapon rather than punish an incomplete command. Not implemented in the running BASIC build. |
+| PROGRESS-01 | One-way descent without the key strands a first-time player at the temple's locked gate. GALAR is an unlearned escape at that stage, so it is not a fair solution. | Confirmed progression softlock, not immediate scripted death. Proposed safeguard: show the locked gate below from the balcony and refuse descent until the key is carried, retaining the one-way transition and gate puzzle. Not yet implemented. |
 | KEY-01 | Using the key silently leaves it in the current room while opening the hut door or temple gate and automatically moving the player through. Caverns80 keeps the key carried. | Author approved retaining the key after unlocking; give a specific gate/door confirmation. Not yet changed in the review build. |
 | MEDIA-01 | Ship CAVBASIC.BAS and CAVERNS.TXT on the starter disk, with BAZA tools. Leave CAVBASIC.COM compilation to the user. Keep compiled artifacts for development/identity checks, and keep assembly development-only. | Packaging/tests/Viewer update pending. |
 | SAVE-01 | Add an in-memory save/restore checkpoint first, supporting review and ordinary play; persistent disk saves are a later stage. No such command exists in the BASIC edition. A disk save must serialize game state and version it; an in-memory bookmark lasts only for the current run. Viewer disk downloads are not RAM snapshots. | Superseded during container-loss discussion: author now requests load-only externally generated scenarios. Development launcher implemented and documented in caverns-scenarios.md; no in-game SAVE or in-memory checkpoint added. |
@@ -647,3 +648,19 @@ Therefore the old mechanic creates an unexplained retrieval chore, rather
 than an irrecoverably lost key or proof that the temple puzzle must be
 bypassed. Retaining the key, as approved, removes that chore while preserving
 the gate/crypt sequence. No game commands entered; still at checkpoint 5.
+
+
+## One-way descent without key — progression softlock
+
+Author identified the first-discovery trap: temple 35 has no ordinary compass
+exit and the key is its only intended onward action. GALAR technically returns
+to entrance 16, but its clue is later at the castle, so prior knowledge or a
+guess cannot count as a fair recovery. Darkness/blocked moves are not an
+immediate death rule; the issue is being stranded until quitting/restarting.
+
+Recommended safeguard for the agreed rope design: make the locked gate below
+visible in the balcony description; require the key to be carried before DOWN
+commits. Explain the missing-key problem and keep the player safely above.
+Do not restore the rejected temple east bypass or silently make the rope
+climbable. This is a proposed refinement awaiting the author's response, not
+a live code change. Current checkpoint 5 has the key and remains safe.
