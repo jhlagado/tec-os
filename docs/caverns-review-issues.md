@@ -764,3 +764,20 @@ resets sword fatigue after every successful compass move, not just descent or
 bat transport. Current BASIC retains cumulative fatigue. Keep this as a
 separate combat-balance review rather than silently importing it with map or
 clue repairs. No combat has occurred in the lower region so far.
+
+
+## Language and spelling policy — UK English
+
+Author explicitly requests correct spelling and UK, rather than US, English
+in the refined game's player-facing prose, help and supporting documentation.
+Use "ventilation grille" for the metal cover. Current source noun "grill"
+should remain an accepted parser alias when the displayed spelling changes,
+so correcting prose does not break familiar commands. Also accept GRILLE.
+Do not rewrite BASIC language keywords or required system command spellings.
+Preserve the archival recovered listing; apply copy edits to the refined port.
+
+Include a copy-edit pass for typos already observed ("staris", "old an rusty",
+"instuments", "drawf", missing spaces/awkward wrapping), grammar, punctuation
+and consistency of names/bearings. Keep compact-screen line wrapping readable.
+This is recorded for the implementation batch; no live text or parser changes
+have been made during this note update.
