@@ -461,3 +461,16 @@ Evidence: docs/evidence/caverns-scenarios/check4-captured.json; live screen
 recorded separately. No command was entered to advance the live session while
 creating this checkpoint. The current live card predates CHECK4's addition;
 restore using the updated scenario card or import CHECK4.CAV into that card.
+
+
+## Bat-cave redesign approach approved
+
+Author approved a smaller, less frustrating maze and delegated a concrete
+redesign in the notes. See caverns-bat-cave-refinement-plan.md. The key is the
+region's only initial collectible; find it and return to round chamber 26.
+The proposed rectangle keeps all six rooms, reciprocal exits and landmarks,
+retains the short 26W29,S33,W34 key route, and replaces Caverns80's remaining
+impossible compass loop. Room 34 gains an explicit west connection into the
+optional loop; its key and purpose remain unchanged. No game edit or live
+command performed. Current state remains checkpoint 4 at colony 33, key not
+yet collected. Source inspection confirms no additional regional item/gate.
