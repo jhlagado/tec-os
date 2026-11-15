@@ -49,6 +49,15 @@ Caverns80's added east exit from temple 35 is a separate rejected bypass of the
 key/gate/crypt sequence. UP restores access to the upper caves; it does not
 provide an alternative way into the lower temple/castle region.
 
+## Magic-word role
+
+The author explicitly approved this consequence: a reusable UP route makes
+GALAR optional for escape. Keep the spell as a valuable fast-travel reward,
+not a mandatory workaround for a one-way trap. Do not add another arbitrary
+closure or equipment loss to force its use. Verify a complete walking return
+from castle via drawbridge/ledge/wizard cavern/temple/rope/upper caves, while
+retaining the gate and crypt puzzles for first access to the lower region.
+
 ## Acceptance
 
 - Rail, floor-reaching rope and available actions are described consistently.

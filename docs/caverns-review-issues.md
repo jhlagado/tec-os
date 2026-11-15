@@ -1200,3 +1200,22 @@ and upper caves. GALAR will then be a useful fast-travel reward rather than
 the sole intended lower-region escape. This does not bypass the gate/crypt
 sequence on first entry, but changes the magic word's necessity. Do not add
 another arbitrary equipment loss/closure simply to force the spell.
+
+
+## GALAR used; upper caves revisited
+
+Author explicitly agreed to the reusable-rope consequence: GALAR should be an
+optional shortcut in the revised game, not a mandatory escape. Updated the
+canonical rope plan. Current one-way build still uses the learned spell.
+
+CHECK3 live turn 67: GALAR from drawbridge49. Screen described a magic wind
+carrying the player, then daylight cave entrance16. No further movement.
+Carried items remain compass/bomb/sword/candle; no consumption or item change.
+The inscription was seen/decoded in the castle before this first live use.
+
+Next main objective is the upper treasure door20: S18,W23,N22,W21,E20 in this
+current build (future repaired map uses north from21). Light bomb with candle
+there, then inspect the opened east passage/demon. Key remains at temple35
+under the old drop rule, so still needs retrieval before a hut-bank finish;
+this is a pending correction, not secretly repaired by teleportation. Optional
+pearl/dwarf, ruby, stone, diamond and coin branches remain deferred.
