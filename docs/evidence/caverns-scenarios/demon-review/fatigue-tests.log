@@ -1,0 +1,19 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+tecos ROM {"backend":"tas","phase":"caverns-loader","target":"tecos","origin":2082,"root":"/workspace/jhlagado/tec-os/programs/caverns","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":1735857}
+✔ scenario launcher fits the original COM and restores all monsters, objects, flags, counters and RNG (1295.736401ms)
+✔ real picked-up objects and encounter state survive exported file and fresh boot; RNG continuation matches (4699.765241ms)
+✔ missing, wrong-game, incompatible, truncated and corrupt scenarios are rejected before mutation (8629.302523ms)
+✔ all bundled review checkpoints load exactly in a new machine (10964.357542ms)
+✔ combat fatigue resets on travel and victory, but not blocked moves or missed swings (2015.755564ms)
+✔ external scenario writer refuses incomplete or out-of-domain states (3.045207ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 28960.04662

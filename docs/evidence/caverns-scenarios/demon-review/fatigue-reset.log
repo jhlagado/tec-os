@@ -1,0 +1,142 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+east
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+The creature deflects your blow.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+You missed and he deals a blow to your head.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+The foe is stunned but quickly regains his balance.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+You attack but the creature moves aside.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+You attack but the creature moves aside.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+The foe is stunned but quickly regains his balance.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+The foe is stunned but quickly regains his balance.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+The foe is stunned but quickly regains his balance.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+You attack but the creature moves aside.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+You missed and he deals a blow to your head.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , Nearby there lurks...
+a fiery demon , 
+? 
+attack demon with sword
+The sword strikes home and your foe dies...
+
+Suddenly a black cloud descends and the corpse vaporizes into   nothing.
+
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , 
+? 
+list
+You are carrying 
+a useful looking compass , a double bladed sword , a small candle , 
+You are in the legendary treasure room of the black elves of    Svartalfheim. Ev
+ery red-blooded Viking has dreamed of entering  this sacred room.
+You can also see...
+a diamond studded ring , a magic pendant , a most holy grail , a mirror like shi
+eld , 
+? 
+{"room":19,"demon":0,"moves":114,"fatigue":0,"rng":"5fa8feaa"}
+ℹ tests 0
+ℹ suites 0
+ℹ pass 0
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4956.561855

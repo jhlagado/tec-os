@@ -1,0 +1,18 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+✔ BASIC preserves all 216 original exits and starting object locations (34.447931ms)
+✔ Caverns80 completes for 126 points, tours all 54 rooms and persists the winning save across reboot (5383.233236ms)
+✔ original-based BASIC completes a first-discovery quest for 126 with the refined bridge and bomb (20071.021455ms)
+✔ BASIC informational commands are free, absent objects stay absent, fatal moves restart cleanly, and exit restores the shell (2896.876049ms)
+✔ BASIC aliases validate presence, missing nouns cannot create objects, and compass loss randomizes directions (1504.035637ms)
+✔ recovered drainage exits reach the hut with an intact bridge, but retain the original return-path gap after collapse (1.633805ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 30628.360408

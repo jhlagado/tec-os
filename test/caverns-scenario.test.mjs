@@ -84,7 +84,7 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
 });
 
 test('all bundled review checkpoints load exactly in a new machine',{timeout:120000},async()=>{
- for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6','check7']){
+ for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6','check7','check8','vault']){
   const s=JSON.parse(readFileSync(ROOT+'/test/caverns-scenarios/'+name+'.json'));
   const m=boot(await imageWith(s),{tms:true,matrix:true,width:80});
   keys(m,'cavload test',question(m));assertState(m,s);
@@ -100,6 +100,23 @@ test('all bundled review checkpoints load exactly in a new machine',{timeout:120
   }
   assert.deepEqual(m.violations,[]);
  }
+});
+test('combat fatigue resets on travel and victory, but not blocked moves or missed swings',{timeout:120000},async()=>{
+ const objects=[...ip];objects[7]=-1;objects[19]=-1;
+ const m=boot(await imageWith(scenario({'A%':2,'F%':8},objects)),{tms:true,matrix:true,width:80});
+ keys(m,'cavload test',question(m));
+ keys(m,'north',question(m));assert.equal(integer(m,'F%'),8,'blocked exit provides no rest');
+ keys(m,'west',question(m));assert.equal(integer(m,'F%'),0,'successful movement resets fatigue');
+ for(const c of ['north','east','east','south'])keys(m,c,question(m));
+ assert.equal(integer(m,'A%'),10);
+ let won=false;
+ for(let i=0;i<14;i++){
+  const out=keys(m,'attack troll with sword',question(m));
+  assert.doesNotMatch(out,/Another adventure|skull/);
+  if(out.includes('your foe dies')){assert.equal(integer(m,'F%'),0,'victory resets fatigue');won=true;break;}
+  assert.equal(integer(m,'F%'),i+1,'misses retain encounter fatigue');
+ }
+ assert.ok(won);assert.deepEqual(m.violations,[]);
 });
 test('external scenario writer refuses incomplete or out-of-domain states',()=>{
  const variants=[s=>s.objects.pop(),s=>s.variables['A%']=55,s=>s.variables['C0%']=2,s=>s.variables['F%']=-1,s=>delete s.variables['T%'],s=>s.rng='00000000',s=>s.gameSha256='wrong'];

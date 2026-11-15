@@ -187,3 +187,19 @@ This is emulator/Viewer evidence, not physical TEC-1G qualification.
 The public starter-card recipe is not changed by this development facility.
 The assembly game remains outside the public release. Pending gameplay
 refinements are listed in caverns-review-issues.md and the forest plan.
+
+### Fatigue correction and checkpoint 8
+
+The current BASIC build (39,808 bytes) resets sword fatigue on successful
+travel and victory, following Caverns80. Existing checkpoint state values were
+preserved when regenerating their executable identity; the next successful
+move applies the new fatigue rule. Previous evidence records retain the old
+executable identity and describe historical trials.
+
+`CAVLOAD CHECK8` (alias `CAVLOAD VAULT`) restores the actual successful demon
+encounter: room 19, moves 114, fatigue 0, RNG 5fa8feaa, demon absent. Compass,
+sword and candle are carried. Ring, pendant, grail and shield remain in room
+19; bomb is consumed and the treasure passage is open. This is an external
+snapshot from the native TEC-OS emulator, not a new in-game SAVE command.
+The development card contains both names. Restore with the matching rebuilt
+CAVLOAD.COM; old launcher/checkpoint identities remain intentionally incompatible.

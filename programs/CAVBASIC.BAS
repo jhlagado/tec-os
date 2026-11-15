@@ -131,7 +131,7 @@
 1070 IF u%<32767 THEN u%=u%+1
 1071 FOR z%=1 TO 6:IF p%(z%)=a% THEN 1090
 1080 NEXT z%:z%=0: GOTO 1660
-1090 IF z%=5 THEN PRINT "The giant bat picked you up and carried you to another place.":a%=33:r%=0:p%(5)=p%(5)+7:GOTO 50
+1090 IF z%=5 THEN PRINT "The giant bat picked you up and carried you to another place.":a%=33:r%=0:f%=0:p%(5)=p%(5)+7:GOTO 50
 1091 GOTO 1660
 1110 PRINT "AUUUUUGH...you've just been killed by a";na$(z%);no$(z%);"!!":GOTO 1020
 1130 FOR q%=0 TO 3:SS$=di$(q%):GOSUB 3000:IF sr%>0 THEN 1150
@@ -144,10 +144,10 @@
 1190 REM The destination is in b%.
 1200 IF b%=0 THEN  PRINT "You can't go that way"
 1210 IF b%=128 THEN  PRINT "You stumble and fall into the chasm and smash yourself to a pulp on the rocks below.": GOTO 1020
-1220 IF b%>0 THEN a%=b%
+1220 IF b%>0 THEN a%=b%:f%=0
 1230 r%=0: GOTO 50
 1240 SS$=" galar ":GOSUB 3000:IF  sr%=0 THEN 1260
-1250 IF z%>0 THEN 1110 ELSE r%=0:PRINT "Suddenly a magic wind carried you to another place...":a%=16:GOTO 50
+1250 IF z%>0 THEN 1110 ELSE r%=0:f%=0:PRINT "Suddenly a magic wind carried you to another place...":a%=16:GOTO 50
 1260 SS$=" ape ":GOSUB 3000:IF  sr%=0 THEN 1280
 1270 IF z%>0 THEN 1110 ELSE PRINT "Hey! the eastern wall of the crypt slid open...":e%=38:GOTO 50
 1280 IF ac%<>0 THEN 1285
@@ -188,7 +188,7 @@
 1530 PRINT "The sword strikes home and your foe dies...":p%(m%)=-1:IF z%=3 OR z%=5 THEN p%(z%)=p%(z%)+10 ELSE p%(z%)=0
 1531 IF z%=1 THEN PRINT "Hey! Your sword has just crumbled into dust!!":p%(20)=35
 1540 IF z%<>4 THEN  PRINT CHR$(13);CHR$(10);"Suddenly a black cloud descends and the corpse vaporizes into   nothing."
-1550 z%=0
+1550 z%=0:f%=0
 1560 GOTO 50
 1570 IF p%(9)=-1 THEN 1590
 1571 IF p%(9)=a% THEN 1590
@@ -200,7 +200,7 @@
 1612 PRINT "BOOM! You are thrown aside as the blast tears the door from its hinges. When the smoke clears, the passage east is open.":t%=19:r%=0
 1620 p%(9)=0: GOTO 50
 1630 IF a%=28 THEN 1640 ELSE  PRINT "It's too dangerous!!!": GOTO 50
-1640 PRINT "You descend the rope, but it drops 10 feet short of the floor.  You jump the rest of the way.":r%=0:p%(m%)=a%:a%=35: GOTO 50
+1640 PRINT "You descend the rope, but it drops 10 feet short of the floor.  You jump the rest of the way.":r%=0:p%(m%)=a%:a%=35:f%=0: GOTO 50
 1650 PRINT "a";na$(l%);no$(l%);", ";:RETURN
 1660 ac%=0:FOR o%=1 TO 16:SS$=ve$(o%):GOSUB 3000:IF sr%>0 THEN 1690
 1670 NEXT o%

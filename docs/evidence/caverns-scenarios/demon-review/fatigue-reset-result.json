@@ -1,0 +1,167 @@
+{
+  "replay": [
+    "west",
+    "west",
+    "west",
+    "south",
+    "east",
+    "north",
+    "east",
+    "take bomb",
+    "list",
+    "west",
+    "west",
+    "list",
+    "galar",
+    "south",
+    "west",
+    "north",
+    "west",
+    "east",
+    "light bomb with candle",
+    "list"
+  ],
+  "before": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      19,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      19,
+      19,
+      19,
+      19,
+      0,
+      35,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 20,
+      "H%": 11,
+      "D%": 49,
+      "W%": 43,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 102
+    },
+    "rng": "541b7cad"
+  },
+  "events": [
+    {
+      "command": "east",
+      "text": "east\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nThe creature deflects your blow.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nYou missed and he deals a blow to your head.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nThe foe is stunned but quickly regains his balance.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nYou attack but the creature moves aside.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nYou attack but the creature moves aside.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nThe foe is stunned but quickly regains his balance.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nThe foe is stunned but quickly regains his balance.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nThe foe is stunned but quickly regains his balance.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nYou attack but the creature moves aside.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nYou missed and he deals a blow to your head.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "command": "attack demon with sword",
+      "text": "attack demon with sword\r\nThe sword strikes home and your foe dies...\r\n\r\nSuddenly a black cloud descends and the corpse vaporizes into   nothing.\r\n\r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , \r\n? "
+    },
+    {
+      "command": "list",
+      "text": "list\r\nYou are carrying \r\na useful looking compass , a double bladed sword , a small candle , \r\nYou are in the legendary treasure room of the black elves of    Svartalfheim. Ev\r\nery red-blooded Viking has dreamed of entering  this sacred room.\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , \r\n? "
+    }
+  ],
+  "after": {
+    "format": "caverns-basic-scenario-1",
+    "gameSha256": "87874b600c2d344dc782c41d8ff93ffcf5c54ed947e7918b0f84021353bc9056",
+    "objects": [
+      0,
+      0,
+      0,
+      0,
+      17,
+      47,
+      8,
+      -1,
+      0,
+      45,
+      22,
+      46,
+      54,
+      19,
+      19,
+      19,
+      19,
+      0,
+      35,
+      -1,
+      -1,
+      28,
+      24,
+      38
+    ],
+    "variables": {
+      "A%": 19,
+      "H%": 11,
+      "D%": 49,
+      "W%": 43,
+      "G%": 39,
+      "T%": 19,
+      "E%": 38,
+      "J%": 1,
+      "C0%": 1,
+      "F%": 0,
+      "U%": 114
+    },
+    "rng": "5fa8feaa"
+  },
+  "violations": []
+}
