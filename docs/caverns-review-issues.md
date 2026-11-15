@@ -13,6 +13,7 @@ the live review session to implement an issue without the author's direction.
 | BOMB-01 | Original detonation subtracted one from the numeric room ID, allowing arbitrary transport and bypass of the locked treasure door. Author explicitly classifies this as an original bug, not an intended puzzle mechanic. | Fixed in the currently qualified BASIC build: no location change; detonation at the visible locked door opens its east passage and consumes the bomb. Elsewhere it leaves location and permanent puzzle state unchanged and retains the bomb. |
 | COMBAT-01 | ATTACK TROLL without an object noun currently triggers immediate lethal retaliation, rather than asking for a weapon. Explicit ATTACK TROLL WITH SWORD and USE SWORD enter combat. | Confirmed by source inspection only; unsafe command not executed. Author-approved correction: ask for the missing weapon rather than punish an incomplete command. Not implemented in the running BASIC build. |
 | PROGRESS-01 | One-way descent without the key strands a first-time player at the temple's locked gate. GALAR is an unlearned escape at that stage, so it is not a fair solution. | Author approved reciprocal UP via the secured rope, replacing the key-before-descent proposal. Describe rope reaching the floor; preserve the gate puzzle and allow recovery of missing key/candle. Not yet implemented. |
+| PROGRESS-02 | Visiting waterfall 45 enables the cell's north exit; visiting temple 35 disables it again, without a stated physical action or useful message. | Confirmed unexplained remote gate. Preserve required progression while replacing this trigger with a clear physical shortcut/unlock and the Caverns80 waterfall/stair route. Design proposal pending. |
 | KEY-01 | Using the key silently leaves it in the current room while opening the hut door or temple gate and automatically moving the player through. Caverns80 keeps the key carried. | Author approved retaining the key after unlocking; give a specific gate/door confirmation. Not yet changed in the review build. |
 | CRYPT-01 | Replace GAPE/APEX/APE riddle with Caverns80's keeper-name clue and VARD. Restrict opening the eastern seal to the crypt. | Author explicitly approved the Caverns80 replacement. Pending source/description/parser and checkpoint-identity update; running build still uses APE. |
 | SWORD-01 | Wizard victory says the sword crumbles but relocates it to temple 35. Author considers this an unnecessary complication; the sword remains needed for later enemies. | Recommend retaining the carried sword and removing the misleading loss/relocation effect. Caverns80 preserves the same effect, so this is a separate simplification beyond it. Pending source update. |
@@ -1012,3 +1013,23 @@ Both versions retain the same generic drain description, so room landmarks
 and visible exit text still need improvement. The waterfall/cell discovery
 needs a player-facing explanation or the approved visible staircase approach,
 not source knowledge. No further west move or side-branch pickup yet.
+
+
+## Why the cell's north route became available
+
+Author queried "newly available". Exact current trigger: BASIC 880, while
+processing an action in waterfall room 45, sets W%=43. The cell's north exit
+resolves through W%. BASIC 890 resets W%=0 when processing an action in temple
+35. Neither is explained by a switch, door action, discovery message or clear
+room description. This is source-derived guidance, not something the player
+was told; the later live northward move merely confirmed it worked.
+
+Potential repair, not approved yet: keep Caverns80's visible 45N47 route so
+castle/drain access still follows the wizard encounter, then make 43S38 a
+physical shortcut that can be opened from the drain side and remains open.
+Describe a barred north doorway in the cell and an accessible bolt on the
+drain side; reuse the existing gate state if possible. Remove remote reset
+on visiting temple. Do not simply open 38N43 from the outset without checking
+whether that bypasses the wizard/waterfall progression. This separates a
+reasonable shortcut from an arbitrary map change triggered elsewhere.
+No live move or source change performed; current review remains in drains 43.
