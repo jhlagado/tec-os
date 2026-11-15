@@ -74,6 +74,33 @@ to a new room does not print it: LIST is the observable check.
 - Safety/comparison check: riverbank west to crater agrees in both maps. Entering is safe; continuing west from the crater is a fatal exit, disclosed as a safety warning.
 - Screens and command transcript: build/caverns/review/ (local review artifacts).
 
+## Route coverage policy
+
+Author explicitly requested noting important routes so nothing is missed.
+At each significant junction, record and report the onward route, useful side
+trips and items, return paths, blocked/conditional exits, one-way transitions,
+and routes intentionally deferred. Keep an outstanding-route checklist and
+state the current position before advancing. Distinguish actual commands from
+source-derived advice and current-build directions from planned repairs.
+Do not silently pass a useful branch while pursuing the next objective.
+
+### Outstanding route checklist at cell 38
+
+- Current onward obstacle: eastern ventilation grille; its removal opens east
+  to passage 39. Grille not yet touched. No ordinary west return from this cell.
+- Conditional later route: cell north opens toward drainage room 43 after
+  discovering waterfall 45; currently blocked. Revisit its purpose when reached.
+- Passage 39 onward toward wizard cavern 36 and river ledge 40: not yet explored.
+- Entrance-side bat passage 17 and explorer/key clue: inspected in source,
+  not visited during this foot-route walkthrough. Bat colony/key branch was
+  completed on foot; key acquired, later left at temple by old handler.
+- Treasure door 20: visited, bomb hint read; still locked pending castle bomb.
+- Gold coin at river outcrop 8 and diamond in corridor 22: deliberately left
+  uncollected. Brick at tunnel 24 left behind; no specific use implemented.
+- Current return limitations: key at temple 35 and rope at balcony 28;
+  approved retention/ascent fixes are not yet applied. Checkpoint 5 restores
+  the pre-gate state if a return is needed for review.
+
 ## Review safety policy
 
 At the author's request, inspect a proposed move for deterministic fatal exits
