@@ -84,10 +84,16 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
 });
 
 test('all bundled review checkpoints load exactly in a new machine',{timeout:120000},async()=>{
- for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5']){
+ for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5','check6']){
   const s=JSON.parse(readFileSync(ROOT+'/test/caverns-scenarios/'+name+'.json'));
   const m=boot(await imageWith(s),{tms:true,matrix:true,width:80});
-  keys(m,'cavload test',question(m));assertState(m,s);assert.deepEqual(m.violations,[]);
+  keys(m,'cavload test',question(m));assertState(m,s);
+  if(name==='check6'){
+   keys(m,'west',question(m));assert.equal(integer(m,'A%'),38);
+   keys(m,'east',question(m));assert.equal(integer(m,'A%'),39);
+   assert.equal(integer(m,'G%'),39,'removed grille remains open after reload');
+  }
+  assert.deepEqual(m.violations,[]);
  }
 });
 test('external scenario writer refuses incomplete or out-of-domain states',()=>{

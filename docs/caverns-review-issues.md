@@ -796,8 +796,9 @@ Current BASIC already allows carrying the grille through, and the opening
 stays available after dropping it (G%=39 persists). The object is non-scoring
 and has no special later use; all carried objects cost one slot, with no
 weight calculation. Caverns80 also opens the shaft when the grille is taken
-and has no carried-grille movement restriction. This is a suggested refinement
-beyond both versions; not yet implemented or explicitly adopted as mandatory.
+and has no carried-grille movement restriction. This was initially a suggested refinement beyond both versions. The author
+subsequently clarified that the cover is literally wider than its opening;
+record that physical reason for the intended restriction. Not implemented.
 
 If implementing, distinguish attached cover (P24=38,G=0) from the removed cover
 left on the floor (P24=38,G=39). Description and checkpoint state must preserve
@@ -805,3 +806,29 @@ that distinction; dropping must not be treated as reattaching it. Say the
 cover is loose/removable before the player needs to guess TAKE. Do not add
 other arbitrary equipment restrictions to the shaft. No live commands entered;
 we are still in cell 38 with the grille untouched.
+
+
+## Grille left behind; checkpoint 6 beyond the shaft
+
+Author clarified the physical reasoning: the cover is wider than the opening
+it covers, so it cannot be carried through. Planned message: "The grille is
+wider than the shaft. You'll have to leave it behind." Keep this distinct from
+the old generic one-slot inventory rule; no general weight system is added.
+
+Author requested entering and marking checkpoint 6. CHECK3 live turns 31–34:
+TAKE GRILL, DROP GRILL, EAST, LIST. Entered cavern 39. Actual description is
+only "You are deep in a dark cavern." LIST confirms compass/sword/candle.
+No creature or loose object displayed. Grille remains at 38 on the floor;
+G%=39 keeps the eastern shaft open despite the same item room as its initial
+attached location. E%=38 preserves the opened crypt seal. Key remains at 35
+under the old drop rule; rope at 28. Retention/ascent/prose fixes remain queued.
+
+CHECK6 is an exact capture/replay of this recorded continuation with no new
+state edit: A=39, U=67, F=6, RNG 4002a021. Native restore checks the complete
+state plus a WEST-to-cell/EAST-through-shaft round trip, proving the open flag
+survives restoration. Evidence: docs/evidence/caverns-scenarios/check6-*.
+
+Route comparison: current 39N/S/W/E = 0,36,38,0, same as Caverns80. West returns
+to cell; south reaches wizard cavern 36, where an enemy is still present.
+North/east blocked. Description is generic in both versions. No move into
+the wizard's room yet; warn before combat. Current live review paused at 39.

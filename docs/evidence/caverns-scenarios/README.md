@@ -40,3 +40,11 @@ through key pickup and rope descent. `check5-live-screen.json` shows the live
 Viewer on the temple floor with compass/key/sword/candle and rope left above.
 `check5-tests.log` verifies all nine scenarios with exact fresh-machine state
 comparisons. No new state adjustment was made for checkpoint 5.
+
+
+Checkpoint 6: `check6-captured.json` records the actual command continuation
+through the crypt and cell, including removal/drop of the grille and eastward
+passage. `check6-live-screen.json` shows the live inventory beyond the shaft.
+`check6-tests.log` verifies all ten bundled scenarios in fresh native machines;
+CHECK6 additionally returns west to the cell and east again, verifying that
+the removed grille on the floor does not close the restored opening.

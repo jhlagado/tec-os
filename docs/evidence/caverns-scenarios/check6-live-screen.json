@@ -1,0 +1,31 @@
+{
+  "turn": 34,
+  "command": "list",
+  "screen": [
+    "a ventilator shaft on the eastern wall.",
+    "You can also see...",
+    "a rusty ventilation grill ,",
+    "? take grill",
+    "",
+    "You are in a tiny cell. The western wall has now firmly closed  again. There is",
+    "a ventilator shaft on the eastern wall.",
+    "",
+    "? drop grill",
+    "",
+    "You are in a tiny cell. The western wall has now firmly closed  again. There is",
+    "a ventilator shaft on the eastern wall.",
+    "You can also see...",
+    "a rusty ventilation grill ,",
+    "? east",
+    "",
+    "You are deep in a dark cavern.",
+    "",
+    "? list",
+    "You are carrying",
+    "a useful looking compass , a double bladed sword , a small candle ,",
+    "You are deep in a dark cavern.",
+    "",
+    "?"
+  ],
+  "screenshot": "/workspace/jhlagado/tec-os/build/caverns/review-check3/034.png"
+}

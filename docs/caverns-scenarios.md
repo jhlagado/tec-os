@@ -22,6 +22,7 @@ CAVLOAD CHECK2
 CAVLOAD CHECK3
 CAVLOAD CHECK4
 CAVLOAD CHECK5
+CAVLOAD CHECK6
 CAVLOAD TROLL
 CAVLOAD SOUTH
 CAVLOAD ROPE
@@ -41,6 +42,10 @@ scenario's actual location; this is ordinary default-FCB file resolution.
   bridge troll encounter is completed; the dragon was also defeated on the
   original-map route to the rope.
 - CANDLE: cave entrance with the candle also collected.
+- CHECK6: cavern beyond the cell ventilation shaft. Compass/sword/candle
+  carried; grille left on the cell floor, shaft open, crypt seal open. The old
+  build left the key at temple 35; rope remains at balcony 28. Full recorded
+  state is preserved, including the removed-cover versus attached-cover flag.
 - CHECK5: temple floor after the one-way rope descent. Compass/key/sword/candle
   carried; rope left at balcony 28; north gate still locked. Exact continuation
   of the recorded review, retaining the absent troll and full RNG/counters.
