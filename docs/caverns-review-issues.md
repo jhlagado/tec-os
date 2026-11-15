@@ -9,6 +9,7 @@ the live review session to implement an issue without the author's direction.
 |---|---|---|
 | UI-01 | Support INVENTORY and INVENT for displaying carried objects; retain original LIST and existing I as aliases. Prefer the familiar inventory name in help. | Recorded for implementation after review; not in the running build. |
 | UI-02 | Give concise, action-specific confirmation for successful actions, especially taking/dropping items, e.g. "You take the double-bladed sword." Reuse existing confirmations where adequate. | Future usability enhancement requested by the author, not a bug or a live-session change. |
+| BOMB-01 | Original detonation subtracted one from the numeric room ID, allowing arbitrary transport and bypass of the locked treasure door. Author explicitly classifies this as an original bug, not an intended puzzle mechanic. | Fixed in the currently qualified BASIC build: no location change; detonation at the visible locked door opens its east passage and consumes the bomb. Elsewhere it leaves location and permanent puzzle state unchanged and retains the bomb. |
 | COMBAT-01 | ATTACK TROLL without an object noun currently triggers immediate lethal retaliation, rather than asking for a weapon. Explicit ATTACK TROLL WITH SWORD and USE SWORD enter combat. | Confirmed by source inspection only; unsafe command not executed. Author-approved correction: ask for the missing weapon rather than punish an incomplete command. Not implemented in the running BASIC build. |
 | MEDIA-01 | Ship CAVBASIC.BAS and CAVERNS.TXT on the starter disk, with BAZA tools. Leave CAVBASIC.COM compilation to the user. Keep compiled artifacts for development/identity checks, and keep assembly development-only. | Packaging/tests/Viewer update pending. |
 | SAVE-01 | Add an in-memory save/restore checkpoint first, supporting review and ordinary play; persistent disk saves are a later stage. No such command exists in the BASIC edition. A disk save must serialize game state and version it; an in-memory bookmark lasts only for the current run. Viewer disk downloads are not RAM snapshots. | Superseded during container-loss discussion: author now requests load-only externally generated scenarios. Development launcher implemented and documented in caverns-scenarios.md; no in-game SAVE or in-memory checkpoint added. |
@@ -323,3 +324,10 @@ CHECK3 was then loaded through the actual Viewer using CAVLOAD CHECK3.
 LIST confirmed compass, sword, candle and rope at the tunnel. Current live
 review is paused in room 24, with the author-approved absent-troll checkpoint
 applied. No southward exploration beyond the tunnel has been performed.
+
+
+Bomb classification reaffirmed by the author: the original room-number
+decrement is a bug. This is already corrected in the running BASIC and all
+current CAVLOAD checkpoints, unlike the still-pending general troll and map
+repairs. Source evidence: CAVBASIC.BAS 1610–1620; documentation caverns.md
+and caverns-original.md. No additional game change or live command required.
