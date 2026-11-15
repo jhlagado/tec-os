@@ -901,3 +901,19 @@ do not determine river flow. Proposed description distinguishes the viewpoints
 and relates them to the northern roof inlet/waterfall fed by Gioll, pending a
 full geography audit. Caverns80 retains the same vague wording at 40, so this
 requires a prose improvement beyond copying the reference map.
+
+
+## Second underground river ledge — room 40
+
+CHECK3 live turn 46: EAST from cleared wizard cavern 36 to ledge 40. Actual
+screen: "You are on another ledge high above a subterranean river. The water
+flows in through a hole in the cavern roof, to the north." No item or creature
+listed. Stopped without another eastward step.
+
+All current exits and the description match Caverns80: N45 waterfall,
+S48 castle-view ledge, W36 wizard cavern, E128 fatal fall. Ledge 48 north
+returns safely to 40 in both versions; do not confuse that with its fatal
+south edge or closed eastern drawbridge. North is the useful next route for
+the waterfall; south is a viewpoint/bridge approach to inspect separately.
+Warn before east at 40, since the current text does not identify the lethal
+edge. Improved exit/hazard wording and the river-viewpoint plan remain pending.
