@@ -1086,3 +1086,31 @@ separate drainage-shortcut redesign. Describe all visible routes/states
 clearly. This reciprocal west adjustment is a recommendation in response to
 the author's question, not an implemented map edit. No game action entered;
 current live review remains at drainage junction 43/checkpoint 7.
+
+
+## Conduit inspection — room 54
+
+Author questioned justifying the waterfall-triggered opening and requested
+visiting the conduit. Clarify terminology: the remote trigger opens cell38N43,
+not conduit54 itself. There is no sluice/lever action or causal explanation
+in the current program. Do not invent one as an existing fact. A hydraulic
+redesign would require a real action and visible effect; the preferred simple
+proposal remains a local physical shortcut/door with the visible stair route.
+
+CHECK3 live turns 55–57: WEST to drain42, WEST to drain41, WEST into conduit54.
+The first two repeat the generic drainage description. Conduit text: water
+up to the knees, freezing cold, draining into the river; narrow service path
+south. An interesting stone is listed (treasure item13), no creature. Stone
+not collected; stopped in conduit. Current code has no special cold/water
+hazard here beyond ordinary global candle/move rules.
+
+Caverns80 preserves conduit description/item and south route to wooden bridge
+53. It fixes the return to drains41: current BASIC west41/east blocked becomes
+east41/west blocked, reciprocal to 41W54. Recommend/adopt this correction under
+the author's navigation policy. North remains blocked. The source's current
+westward return is not an intentional flow-direction clue.
+
+Onward castle approach is service path SOUTH53, EAST52 to the other bank,
+NORTH50 into the courtyard. This bypasses the raised drawbridge viewpoint,
+not the temple gate puzzle. The skipped pearl/dwarf branch remains available
+for later review. No further movement, item action or source edit yet.
