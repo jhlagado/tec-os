@@ -581,3 +581,17 @@ placement alone makes preparation discoverable but does not force a pickup.
 
 No game command was entered; current review remains at checkpoint 5 on the
 temple floor. Current checkpoints still reflect the old candle placement.
+
+
+## Entrance inscription provenance — author-requested refinement
+
+Author found the bare "Find the Sacred Key of Thialfi" instruction too
+arbitrary and requested framing it as a message from an earlier explorer.
+Describe rough, weathered writing scratched into the rock rather than an
+unexplained narrator instruction. Preserve the key reference while giving
+the clue an in-world source. Suggested draft, not final copy:
+"Scratched into the rock, apparently by an earlier explorer, are the words:
+'Seek the sacred key of Thialfi. I could go no farther without it.'"
+Do not add a collectible journal or invent a new puzzle around the inscription.
+Caverns80 retains the same bare wall instruction; this prose refinement goes
+beyond that version. Note only: current game and checkpoint 5 unchanged.
