@@ -492,3 +492,26 @@ silently substituted with corrected paths. Room 32 currently prints "a dark
 passage among the bat caves"; Caverns80 uses its generic room description
 entry there. Neither provides the distinctive landmarks now proposed. Record
 the current key-description typo "an old an rusty key" for a copy edit.
+
+
+## Temple balcony — room 28
+
+CHECK3 Viewer turns 24–25: SOUTH from round chamber 26 to ledge 27, EAST to
+balcony 28. Actual description: huge cavern converted to a pagan temple,
+dedicated to Loki, exiled by Odin and awaiting the End Of All Things. No
+loose items or hostile creature displayed. Inventory still compass/key/sword/
+candle/rope. Stopped before any rope action.
+
+Balcony compass exits match Caverns80: west to ledge 27; north/south/east
+blocked. Description also matches. The ledge's repaired north return remains
+the already-recorded Caverns80 difference; no new balcony navigation repair.
+Current BASIC USE ROPE is sufficient: handler 1630–1640 moves to temple 35,
+leaves the rope at balcony 28 and describes a final ten-foot drop. There is
+no climb-up return. No separate tie-to-rail requirement should be invented.
+Potential descriptive improvement: explain the temple floor is below and hint
+at a rope descent, with a clear one-way warning before committing; current
+text gives the mythology but no visible descent cue. Not implemented.
+
+The temple region's Caverns80 eastward link is still subject to the previously
+flagged puzzle-bypass review (NAV-07); do not automatically import that link
+while applying ordinary navigation repairs.
