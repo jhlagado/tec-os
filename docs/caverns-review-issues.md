@@ -1114,3 +1114,19 @@ Onward castle approach is service path SOUTH53, EAST52 to the other bank,
 NORTH50 into the courtyard. This bypasses the raised drawbridge viewpoint,
 not the temple gate puzzle. The skipped pearl/dwarf branch remains available
 for later review. No further movement, item action or source edit yet.
+
+
+## Wooden bridge — room 53
+
+Author requested following the conduit. CHECK3 live turn 58: SOUTH from 54 to
+wooden bridge 53. Actual screen: "You stand before a small wooden bridge which
+crosses the river." Then the generic "You are deep in a dark cavern." No item
+or creature listed. Stopped before crossing east.
+
+Both versions have N54 return to conduit, E52 across to the eastern/castle-side
+bank, south/west blocked. No bridge collapse or toll/monster event is coded
+here. This crossing is the useful first castle approach after the drain route.
+Caverns80 preserves the bridge description but omits the redundant generic
+dark-cavern extra line (53 is absent from DARCAVRO); adopt that prose cleanup.
+Add clear crossing bearings when revising the description. The interesting
+stone remains uncollected in conduit54. Current review paused at 53.
