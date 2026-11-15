@@ -48,7 +48,7 @@ These 18 outdoor changes are the Caverns80 repair set for rooms 1–17. The near
 - Map and prose agree on every stated bearing and available normal exit.
 - Ordinary paths reverse consistently; enumerate deliberate one-way/puzzle/fatal exceptions and obtain explicit keep/change decisions.
 - Coin and sword remain accessible and returnable; the near-hut circuit has no accidental loops.
-- Preserve the one-way rope and review lower-region puzzle bypasses separately (NAV-07).
+- Apply the author-approved reusable secured rope connection (see caverns-rope-refinement-plan.md); review lower-region puzzle bypasses separately (NAV-07).
 - Update route fixtures, run the native full-score quest and room coverage, measure compiled size, then rebuild the source-only starter disk and Viewer together.
 - Keep live-session changes out of the current playthrough. Implement after the review batch, retaining its command log and issue list.
 
