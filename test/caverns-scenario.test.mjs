@@ -84,7 +84,7 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
 });
 
 test('all bundled review checkpoints load exactly in a new machine',{timeout:120000},async()=>{
- for(const name of ['troll','south','rope','cave','candle','check2','check3','check4']){
+ for(const name of ['troll','south','rope','cave','candle','check2','check3','check4','check5']){
   const s=JSON.parse(readFileSync(ROOT+'/test/caverns-scenarios/'+name+'.json'));
   const m=boot(await imageWith(s),{tms:true,matrix:true,width:80});
   keys(m,'cavload test',question(m));assertState(m,s);assert.deepEqual(m.violations,[]);

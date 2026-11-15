@@ -33,3 +33,10 @@ commands and native state at the bat colony, with no new state adjustment.
 `check4-live-screen.json` records the corresponding live Viewer screen.
 `check4-tests.log` verifies all eight bundled checkpoints in fresh native
 machines. Inventory, monsters, flags, counters and RNG are compared exactly.
+
+
+Checkpoint 5: `check5-captured.json` records the exact CHECK3 review continuation
+through key pickup and rope descent. `check5-live-screen.json` shows the live
+Viewer on the temple floor with compass/key/sword/candle and rope left above.
+`check5-tests.log` verifies all nine scenarios with exact fresh-machine state
+comparisons. No new state adjustment was made for checkpoint 5.

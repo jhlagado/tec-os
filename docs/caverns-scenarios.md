@@ -21,6 +21,7 @@ At the TEC-OS prompt, enter one of:
 CAVLOAD CHECK2
 CAVLOAD CHECK3
 CAVLOAD CHECK4
+CAVLOAD CHECK5
 CAVLOAD TROLL
 CAVLOAD SOUTH
 CAVLOAD ROPE
@@ -40,6 +41,9 @@ scenario's actual location; this is ordinary default-FCB file resolution.
   bridge troll encounter is completed; the dragon was also defeated on the
   original-map route to the rope.
 - CANDLE: cave entrance with the candle also collected.
+- CHECK5: temple floor after the one-way rope descent. Compass/key/sword/candle
+  carried; rope left at balcony 28; north gate still locked. Exact continuation
+  of the recorded review, retaining the absent troll and full RNG/counters.
 - CHECK4: central bat colony, carrying compass/sword/candle/rope. The key
   remains in the western cavern, uncollected. Exact continuation of CHECK3,
   retaining its absent troll and all current counters, flags and RNG state.

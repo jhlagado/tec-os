@@ -1,0 +1,31 @@
+{
+  "turn": 27,
+  "command": "list",
+  "screen": [
+    "an exit to the east.",
+    "",
+    "? east",
+    "",
+    "You are on a balcony, overlooking a huge cavern which has been  converted into a",
+    " pagan temple. Note: this temple has been       dedicated to Loki, the god of",
+    "fire, who came to live in Svartalfheim after he had been        banished to exil",
+    "e by Odin. Since then he has been waiting       for the `End Of All Things'.",
+    "",
+    "? use rope",
+    "You descend the rope, but it drops 10 feet short of the floor.  You jump the res",
+    "t of the way.",
+    "",
+    "You are in the temple. To the north is a locked gate and on the wall is a giant",
+    "statue of Loki, carved out of the living rock   itself!",
+    "",
+    "? list",
+    "You are carrying",
+    "a useful looking compass , an old an rusty key , a double bladed sword , a small",
+    " candle ,",
+    "You are in the temple. To the north is a locked gate and on the wall is a giant",
+    "statue of Loki, carved out of the living rock   itself!",
+    "",
+    "?"
+  ],
+  "screenshot": "/workspace/jhlagado/tec-os/build/caverns/review-check3/027.png"
+}

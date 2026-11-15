@@ -515,3 +515,30 @@ text gives the mythology but no visible descent cue. Not implemented.
 The temple region's Caverns80 eastward link is still subject to the previously
 flagged puzzle-bypass review (NAV-07); do not automatically import that link
 while applying ordinary navigation repairs.
+
+
+## Rope sequence approved; checkpoint 5 on temple floor
+
+Author agreed to describe a rail, require TIE ROPE TO RAIL, confirm attachment,
+then make DOWN perform the warned one-way descent. USE ROPE should explain the
+sequence. Concrete design: caverns-rope-refinement-plan.md. This is an approved
+future change; the current program/scenario format has no tying state.
+
+Author requested descent now under the existing rule. CHECK3 live turns 26–27:
+USE ROPE described stopping ten feet above the floor and jumping the remainder,
+then entered temple 35; LIST showed compass, key, sword and candle. Rope is
+left at balcony 28. Gate still locked; giant Loki statue described. No active
+creature or loose object displayed. No further command entered.
+
+CHECK5 captures the exact recorded continuation: room 35, moves 61, fatigue 6,
+RNG 4002a021, no new author state adjustment. All nine bundled checkpoints
+passed native fresh-machine full-state comparison. Current live review remains
+on the temple floor. Updated scenario card or CHECK5.CAV import is needed to
+restore this new slot on an older already-loaded card.
+
+Caverns80 comparison: same temple description; it adds east to wizard cavern
+36 while current temple has no compass exit before using the key. This is the
+flagged NAV-07 puzzle bypass, not a routine geometry fix. Recommend preserving
+the key/gate/crypt progression until an explicitly justified alternative is
+agreed. Caverns80 CMDDOWN also resets sword fatigue; current BASIC keeps it.
+That combat-balance difference is recorded separately, not silently adopted.
