@@ -15,6 +15,7 @@ the live review session to implement an issue without the author's direction.
 | PROGRESS-01 | One-way descent without the key strands a first-time player at the temple's locked gate. GALAR is an unlearned escape at that stage, so it is not a fair solution. | Author approved reciprocal UP via the secured rope, replacing the key-before-descent proposal. Describe rope reaching the floor; preserve the gate puzzle and allow recovery of missing key/candle. Not yet implemented. |
 | KEY-01 | Using the key silently leaves it in the current room while opening the hut door or temple gate and automatically moving the player through. Caverns80 keeps the key carried. | Author approved retaining the key after unlocking; give a specific gate/door confirmation. Not yet changed in the review build. |
 | CRYPT-01 | Replace GAPE/APEX/APE riddle with Caverns80's keeper-name clue and VARD. Restrict opening the eastern seal to the crypt. | Author explicitly approved the Caverns80 replacement. Pending source/description/parser and checkpoint-identity update; running build still uses APE. |
+| SWORD-01 | Wizard victory says the sword crumbles but relocates it to temple 35. Author considers this an unnecessary complication; the sword remains needed for later enemies. | Recommend retaining the carried sword and removing the misleading loss/relocation effect. Caverns80 preserves the same effect, so this is a separate simplification beyond it. Pending source update. |
 | MEDIA-01 | Ship CAVBASIC.BAS and CAVERNS.TXT on the starter disk, with BAZA tools. Leave CAVBASIC.COM compilation to the user. Keep compiled artifacts for development/identity checks, and keep assembly development-only. | Packaging/tests/Viewer update pending. |
 | SAVE-01 | Add an in-memory save/restore checkpoint first, supporting review and ordinary play; persistent disk saves are a later stage. No such command exists in the BASIC edition. A disk save must serialize game state and version it; an in-memory bookmark lasts only for the current run. Viewer disk downloads are not RAM snapshots. | Superseded during container-loss discussion: author now requests load-only externally generated scenarios. Development launcher implemented and documented in caverns-scenarios.md; no in-game SAVE or in-memory checkpoint added. |
 | NAV-01 | Improve room descriptions to identify visible routes, locked doors and hazards. Keep undiscovered secret exits concealed until their puzzle state reveals them. | Recorded; wording and coverage to review. |
@@ -865,3 +866,19 @@ balance change was applied live.
 Turn 38 LIST explicitly confirms only compass and candle remain carried after
 the wizard fight. Source-derived sword location is temple 35; no move to
 retrieve it has been performed. Key remains at 35 and rope at 28.
+
+
+## Remaining creatures and sword usefulness
+
+After the wizard victory, the remaining hostile creatures in the live state
+are demon 2 at treasure room 19 and dwarf 6 at stone stairs 47. The transport
+bat 5 remains at passage 17, with no required sword fight. Troll 3 and dragon
+4 are absent in our checkpoint-derived state; wizard 1 is now absent too.
+The native completion witness uses the sword against both dwarf and demon;
+the demon guards required treasure. Do not imply that losing the sword is
+harmless, or that a vague crumbling message explains where to recover it.
+
+Author regards the wizard's sword effect as an unnecessary complication.
+Record the simpler direction: retain the sword after that victory. The live
+build is unchanged and the sword is currently at temple 35, not carried.
+No further game command entered during this explanation; still at room 36.
