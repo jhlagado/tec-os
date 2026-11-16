@@ -7,7 +7,7 @@ nav_group: "Writing programs"
 
 # 11. Memory for programs
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -219,11 +219,11 @@ the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
 exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
 Later services allocate below the first. Startup's fifteen-page `SHELL.SVC`
 leaves `A700h`, or 42,496 bytes. Adding GLCD leaves 41,728
-(`docs/memory-map.md:12-22`, `docs/shell.md:23-31`,
-`docs/compatibility.md:3-16`). MON3.SVC uses 18 pages. Alone it lowers `B6C5h`
-to `A400h`, leaving 41,728 bytes, or 40,960 after GLCD (`docs/mon3.md:49-54`).
+(`241b438:docs/memory-map.md:12-22`, `241b438:docs/shell.md:23-31`,
+`241b438:docs/compatibility.md:3-16`). MON3.SVC uses 18 pages. Alone it lowers `B6C5h`
+to `A400h`, leaving 41,728 bytes, or 40,960 after GLCD (`241b438:docs/mon3.md:49-54`).
 After the shell it leaves `9500h` and 37,888 bytes. Adding GLCD lowers it to
-`9200h` with 37,120 (`docs/mon3.md:47-59`, `test/shell2.test.mjs:719-741`).
+`9200h` with 37,120 (`241b438:docs/mon3.md:47-59`, `241b438:test/shell2.test.mjs:853-875`).
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
@@ -341,7 +341,7 @@ also provide exit jumps, console selection and BIOS scratch:
 Before launching a program the CCP writes the current drive and user area to
 `0004h`. Warm boot restores selection from that byte so a program can supply a
 different exit drive or user area there. A drive that is unavailable falls
-back to A (`src/cpm/ccp.asm:306-324`, `src/cpm/ccp.asm:32-88`).
+back to A (`241b438:src/cpm/ccp.asm:352-370`, `241b438:src/cpm/ccp.asm:32-100`).
 
 The command tail begins with a length byte followed by capitalised text,
 including the space after the command name. A read into the default DMA buffer
@@ -445,10 +445,10 @@ read it even while EXPAND 1 hides the workspace. Any program writing port
 stale bits. Leave both untouched unless changing the latch. Cold boot clears
 page zero and initialises the copy. TEC-OS leaves `0041h–004Fh` unused
 afterwards. MON3.SVC reserves those bytes during a session and releases them
-at `EXIT` or warm boot (`docs/memory-map.md:34-41`).
+at `EXIT` or warm boot (`241b438:docs/memory-map.md:34-41`).
 
 Cold boot clears EXPAND 1 and prepares the following cache storage
-(`docs/memory-map.md:70-83`):
+(`241b438:docs/memory-map.md:83-96`):
 
 | Addresses | Contents |
 | --- | --- |
@@ -472,8 +472,9 @@ A limited recovery path exists for `JP 0000h` with EXPAND 1 selected. Its
 page-zero jump enters `BF03h` in the other bank. If untouched, those unused
 bytes are zero and execute through to ROM at `C000h`. The reset entry tests
 the high byte at `0002h` and selects warm boot instead of cold boot. Warm boot
-restores EXPAND 0 and flushes the cache. Failed lines are dropped with
-`Write lost`, as Chapter 10 describes.
+restores EXPAND 0 and attempts queued data. Failed acknowledged lines remain
+available; continuation is dropped and a separate reporter describes pending
+state (`a40d482:src/cache.asm:638-649`). Chapter 10 explains the file-state limits.
 
 Recovery depends on the page-zero jump and bank bytes remaining intact. It
 cannot repair overwritten cache data. Reset and BIOS function 0 take the cold

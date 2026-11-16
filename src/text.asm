@@ -91,6 +91,11 @@ PICCLR: DB "     ",0
 
 ; ---- cache.asm
 
-CWMSG: DB 13,10,"Write lost",0
+CWMSG: DB 13,10,"Write pending",13,10,0
+HKOKMSG: DB 13,10,"Cache clear",13,10,0
+HKERRMSG: DB 13,10,"Write error",13,10,0
+
+; Disk bootstrap retry, '$'-terminated.
+RSTERR: DB CR,LF,"Disk reset failed",CR,LF,"Enter retries",CR,LF,"$"
 
 ROMCODE:

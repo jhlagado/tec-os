@@ -431,8 +431,11 @@ BWRITE:
 
 BRET:
   ld a,0
-  jr z,CEI
+  jr z,BRNOTE
   inc a
+BRNOTE:
+  call CEI
+  jp HKREPORT
 
 CEI:
   push af

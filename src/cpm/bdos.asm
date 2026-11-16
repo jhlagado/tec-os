@@ -127,6 +127,7 @@ BENTRY:
   ld hl,RETA     ; functions return
   push hl        ; their A by RET
   ld (PARAM),de
+  call HKENTER
   ld a,c
   cp 108         ; direct dispatch cases
   jr z,FNRETC    ; 108: return-code slot
@@ -208,6 +209,7 @@ RETA:
 ; left them.
 
 RETWORD:
+  call HKLEAVE
   ld a,l
   ld b,h
   ld sp,(OLDSP)

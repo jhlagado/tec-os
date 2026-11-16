@@ -7,13 +7,16 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { createContainer, descriptorAt, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_SVC, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, TEST_CLOCK, boot, romFor, standardCard, volume, withDisplay } from "./lib/fixtures.mjs";
 import { mon3Svc } from "./lib/mon3.mjs";
-import { pinned } from "./lib/inputs.mjs";
+import { check, pinned } from "./lib/inputs.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
+import { cacheState, fileBlock } from "./lib/cache-pending.mjs";
+import { publicContext } from "./lib/public-caller.mjs";
 import { SHELL, at, code, owners, pageOf, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
 
 const P = /\r\n\d*[A-P](:\S*)?>$/;
@@ -670,38 +673,169 @@ test("S2-11 declared stacks", () => {
   assert.deepEqual([...SHELL.file.subarray(12, 15)], [6, 0, 0], "BDOS 6, BIOS 0, CCP 0");
 });
 
-/**
- * The deepest the shell's own stack goes on the prompt's walk with every
- * cache line changed and kept, so that TNDESC's table read must write a
- * line first. WK writes 120 records, 30 blocks, to A:, logged and so held
- * behind; the card refuses from its key wait; it returns with no warm boot,
- * the labels marked unread. The bytes used, and those written below a stack
- * of SIZE, under SHELL (a variant).
- */
+/** A real thirty-block refused queue drives the shell's cold label walk. */
 function deepestWalk(shell = SHELL) {
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }], { drives: 4 });
-  const { symbols } = romFor();
-  const main = symbols.get("MAINLOOP");
-  const wk = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 120,
-    0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
-    0x0e, 1, 0xcd, 0x05, 0x00, 0xc3, main & 0xff, main >> 8]);
+  const { symbols } = romFor(), main = symbols.get("MAINLOOP");
+  const wk = Uint8Array.from([0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0,
+    0x11, 0x5c, 0, 0x0e, 22, 0xcd, 5, 0, 0x06, 120,
+    0xc5, 0x11, 0x5c, 0, 0x0e, 21, 0xcd, 5, 0, 0xc1, 0x10, 0xf4,
+    0x0e, 1, 0xcd, 5, 0, 0xc3, main & 255, main >> 8]);
   const m = shellMachine(shellCard({ "WK.COM": wk }, { image, shell: shell.file }));
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("WK K.DAT\r");
-  m.runUntil(() => m.pc === symbols.get("FNCIN"), 900_000_000, "BDOS 1");
-  f.on = true;
-  m.runUntil(() => m.waitingForInput(), 200_000_000, "the key wait");
-  const s = shell.symbols;
-  const size = s.STKTOP - s.STKBOT;
-  const base = pageOf(m) + s.STKBOT - 16; // 16 bytes below the stack too
-  for (let a = base; a < base + 16 + size; a += 1) m.write(a, 0xa5);
-  m.write(pageOf(m) + s.LBL, 0);
-  m.type("x");
-  m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the prompt");
-  let free = 0;
-  while (free < 16 + size && m.read(base + free) === 0xa5) free += 1;
-  return { used: 16 + size - free, below: Math.max(0, 16 - free) };
+  const s = shell.symbols, page = pageOf(m), top = page + s.STKTOP, bottom = page + s.STKBOT, base = bottom - 16, size = top - bottom;
+  assert.ok(page > 0); assert.equal(word(m, m.sym("SHOWN")), page + s.TABLE);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(page + i)), [0xc3, m.sym("BENTRY") & 255, m.sym("BENTRY") >> 8]);
+  assert.deepEqual(volume(image, "A").read("SHELL.SVC").slice(0, shell.file.length), shell.file);
+  assert.equal(volume(image, "A").find("K.DAT"), undefined);
+  const expected = new Map(), allocations = new Map(), acknowledgements = [], attempts = [];
+  let entered = 0, programmeSP, made = false, original, initialUsed, allocationBytes, input, beforeEntry = null, inputSP;
+  const snapshot = label => {
+    assert.ok(original && input); const state = cacheState(m);
+    assert.deepEqual(image, original, `${label}: no accepted data reached the refusing card`);
+    assert.equal(volume(image, "A").find("K.DAT").records, 0);
+    assert.deepEqual(state.entries.map(e => e.block), [...expected.keys()]);
+    for (const e of state.entries) { assert.equal(e.dirty, 1); assert.deepEqual(e.payload, expected.get(e.block)); }
+    assert.deepEqual([state.pending, state.any], [0, 1]);
+    return state;
+  };
+  const sd = m.sd, commit = sd.commitWrite.bind(sd);
+  sd.commitWrite = () => {
+    if (!original) return commit();
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(expected.has(block)); assert.deepEqual(payload, expected.get(block));
+    sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1;
+    attempts.push({ block, payload }); assert.deepEqual(image, original);
+  };
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === 0x100) {
+      publicContext(m); assert.equal(++entered, 1); programmeSP = m.cpu.cpu.sp;
+      assert.deepEqual(Uint8Array.from({ length: wk.length }, (_, i) => m.read(0x100 + i)), wk);
+    }
+    if (entered && m.pc === 0x107) { publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(m.sym("ERRMODE")), 0xff); }
+    if (entered && m.pc === 0x10f) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.ok(m.cpu.cpu.a <= 3); assert.equal(made, false); made = true;
+      assert.equal(m.read(0x7c), 0); assert.equal(m.read(0x6b), 0); assert.equal(volume(image, "A").find("K.DAT").records, 0);
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 21) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 4); assert.equal(word(m, m.cpu.cpu.sp), 0x11a);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x5c); assert.equal(word(m, m.sym("CURDMA")), 0x80);
+      if (!original) {
+        assert.ok(made); assert.equal(cacheState(m).queue.length, 0); original = Uint8Array.from(image);
+        const fs = volume(original, "A"); initialUsed = new Set(fs.usedBlocks()); allocationBytes = fs.blockBytes;
+        assert.equal(fs.wide, true); input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)); assert.ok(input.some(Boolean));
+      }
+      assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), input);
+    }
+    if (entered && m.pc === 0x11a) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2);
+      const record = acknowledgements.length; assert.ok(record < 120); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x7c), record + 1);
+      for (const name of ["CURDRV", "DSKCUR", "DEFDRV", "BOOTDRV"]) assert.equal(m.read(m.sym(name)), 0, `${name}: independent A case`);
+      assert.equal(word(m, m.sym("DPHPTR")), m.sym("DPHTAB")); assert.equal(word(m, m.sym("DPBPTR")), word(m, m.sym("DPHTAB") + 10)); assert.equal(m.read(0x5c) & 31, 0);
+      const slot = Math.floor(record / (allocationBytes / 128)), allocation = word(m, 0x5c + 16 + 2 * slot); assert.ok(slot < 8);
+      if (!allocations.has(slot)) { assert.ok(!initialUsed.has(allocation)); assert.ok(![...allocations.values()].includes(allocation)); allocations.set(slot, allocation); }
+      for (const [knownSlot, knownAllocation] of allocations) assert.equal(word(m, 0x5c + 16 + knownSlot * 2), knownAllocation);
+      const block = fileBlock(m, original, record, 0x5c, "A"); if (!expected.has(block)) expected.set(block, new Uint8Array(512));
+      expected.get(block).set(input, (record & 3) * 128); acknowledgements.push({ record, a: m.cpu.cpu.a, cr: m.read(0x7c), block }); snapshot(`ACK ${record}`);
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 1) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x122); inputSP = m.cpu.cpu.sp;
+      assert.equal(acknowledgements.length, 120); assert.equal(expected.size, 30); beforeEntry = snapshot("before actual F1 entry"); assert.equal(beforeEntry.queue.length, 30);
+    }
+    return step();
+  };
+  const inputOwner = () => {
+    assert.ok(m.classicBankIn); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+    assert.equal(word(m, m.sym("OLDSP")), inputSP); assert.equal(word(m, inputSP), 0x122);
+  };
+  m.mark = m.output.length; m.type("WK K.DAT\r");
+  m.runUntil(() => m.pc === symbols.get("FNCIN"), 900_000_000, "actual 120-ACK programme F1 body");
+  assert.ok(beforeEntry); inputOwner(); assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), m.sym("RETA"));
+  assert.equal(snapshot("FNCIN after ordinary entry refusal").queue.length, 30); assert.ok(attempts.length > 0);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("FNCIN") + 3 + i)), [0xcd, m.sym("GETCHAR") & 255, m.sym("GETCHAR") >> 8]);
+  m.runUntil(() => m.pc === m.sym("GETCHAR"), 200_000_000, "owned GETCHAR for 120 ACKs"); inputOwner(); assert.equal(word(m, m.cpu.cpu.sp), m.sym("FNCIN") + 6);
+  m.runUntil(() => m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE"), 200_000_000, "owned serial wait for 120 ACKs");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), m.sym("FNCIN") + 6);
+  assert.equal(snapshot("owned input with all thirty retained").queue.length, 30);
+  assert.ok(m.cpu.cpu.sp < base || m.cpu.cpu.sp >= top); assert.ok(inputSP < base || inputSP >= top);
+  for (let address = base; address < top; address++) m.write(address, 0xa5);
+  m.write(page + s.LBL, 0);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(page + s.LINE + 4 + i)), [0x31, top & 255, top >> 8]);
+  assert.deepEqual(Array.from({ length: 12 }, (_, i) => m.read(page + s.VW1 + i)), [0x7b, 0x32, (page + s.VIDX) & 255, (page + s.VIDX) >> 8, 0x21, (page + s.CFCB) & 255, (page + s.CFCB) >> 8, 0x0e, 11, 0xcd, m.sym("ABICALL") & 255, m.sym("ABICALL") >> 8]);
+  const workerBottom = m.sym("HKSTKB"), workerTop = m.sym("HKSTKT"), workerGuard = Array.from({ length: 2 }, (_, i) => m.read(m.sym("HKGRD") + i));
+  assert.equal(workerBottom - m.sym("HKGRD"), 2); assert.equal(workerTop - workerBottom, 56);
+  assert.deepEqual(workerGuard, [0, 0], "cold workspace clear initializes the private guard");
+  let shellLowSP = top, shellLowWrite = top, workerLow = workerTop, shellSamples = 0, frame = null, returnedKey = 0, inputCall = null;
+  const lows = [], workerLows = [], scratchWrites = [], descriptors = []; let pendingDescriptor = null;
+  const write = m.cpu.hardware.memWrite;
+  const stackOpcode = bytes => [0xcd, 0xc4, 0xcc, 0xd4, 0xdc, 0xe4, 0xec, 0xf4, 0xfc, 0xc5, 0xd5, 0xe5, 0xf5, 0xc7, 0xcf, 0xd7, 0xdf, 0xe7, 0xef, 0xf7, 0xff, 0xe3].includes(bytes[0]) || ([0xdd, 0xfd].includes(bytes[0]) && [0xe5, 0xe3].includes(bytes[1]));
+  m.cpu.hardware.memWrite = (address, value) => {
+    if (frame && m.classicBankIn) {
+      const event = { address, value, callbackPC: m.cpu.cpu.pc, ...frame };
+      if (address >= base && address < bottom) scratchWrites.push(event);
+      if (stackOpcode(frame.bytes)) {
+        if (address >= page && address < top && address < shellLowWrite) { shellLowWrite = address; lows.push(event); }
+        if (address >= workerBottom && address < workerTop && address < workerLow) { workerLow = address; workerLows.push(event); }
+      }
+      if (address >= m.sym("HKGRD") && address < m.sym("HKGRD") + 2) assert.fail("private worker touched its guard");
+    }
+    return write(address, value);
+  };
+  const observedStep = m.step.bind(m);
+  m.step = () => {
+    frame = { instructionPC: m.pc, bytes: Array.from({ length: 3 }, (_, i) => m.read(m.pc + i)), sp: m.cpu.cpu.sp, depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")) };
+    if (m.classicBankIn && frame.sp >= page && frame.sp <= top) { shellSamples++; shellLowSP = Math.min(shellLowSP, frame.sp); }
+    if (m.pc === 0x122) { publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0x78); assert.equal(++returnedKey, 1); }
+    if (m.pc === m.sym("ABICALL") && m.cpu.cpu.c === 11) {
+      publicContext(m); assert.equal(pendingDescriptor, null); assert.equal(m.cpu.cpu.e, 0); assert.equal(m.cpu.cpu.h << 8 | m.cpu.cpu.l, page + s.CFCB);
+      assert.equal(word(m, m.cpu.cpu.sp), page + s.VW1 + 12); assert.equal(snapshot("TNDESC real full-cache pressure").queue.length, 30);
+      pendingDescriptor = { sp: m.cpu.cpu.sp, back: word(m, m.cpu.cpu.sp), attempts: attempts.length, allocations: [] };
+    }
+    if (pendingDescriptor && m.pc === m.sym("CTAKE")) {
+      assert.ok(m.classicBankIn); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("CTAKE") + i)), [0xcd, m.sym("CTSCAN") & 255, m.sym("CTSCAN") >> 8]);
+      assert.equal(snapshot("functional CTAKE with every line dirty").queue.length, 30);
+      pendingDescriptor.allocations.push({ pc: m.pc, sp: m.cpu.cpu.sp, attemptsStart: attempts.length, passes: [] });
+    }
+    if (pendingDescriptor && m.pc === m.sym("CTPASS")) {
+      assert.ok(m.classicBankIn); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      const allocation = pendingDescriptor.allocations.at(-1); assert.ok(allocation);
+      const state = snapshot("functional frozen allocation pass"); assert.equal(state.queue.length, 30); assert.deepEqual(state.round, state.queue);
+      assert.equal(state.position, allocation.passes.length); assert.ok(state.position <= 30);
+      assert.equal(attempts.length - allocation.attemptsStart, state.position);
+      allocation.passes.push({ pc: m.pc, sp: m.cpu.cpu.sp, position: state.position, attempts: attempts.length });
+    }
+    if (pendingDescriptor && m.pc === pendingDescriptor.back) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, pendingDescriptor.sp + 2); assert.equal(m.cpu.cpu.flags.C, 1);
+      assert.ok(pendingDescriptor.allocations.length > 0, "functional full-cache allocation ran beyond the ordinary entry attempt");
+      for (const allocation of pendingDescriptor.allocations) assert.deepEqual(allocation.passes.map(p => p.position), Array.from({ length: 31 }, (_, i) => i));
+      assert.ok(attempts.length > pendingDescriptor.attempts); descriptors.push({ ...pendingDescriptor, returnedSP: m.cpu.cpu.sp, carry: m.cpu.cpu.flags.C, attemptsMade: attempts.length - pendingDescriptor.attempts }); pendingDescriptor = null;
+    }
+    if (m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 10) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, top - 2); assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, page + s.LBUF);
+      const back = word(m, m.cpu.cpu.sp); assert.equal(back, page + s.TYPED + 16); assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+      inputCall = { sp: m.cpu.cpu.sp, back, buffer: page + s.LBUF, entered: false, textAtEntry: m.text(m.mark) };
+    }
+    if (inputCall && !inputCall.entered && m.pc === m.sym("FNLINE")) { assert.equal(word(m, m.sym("OLDSP")), inputCall.sp); assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, inputCall.buffer); assert.equal(m.read(m.sym("HKDEP")), 1); inputCall.entered = true; }
+    return observedStep();
+  };
+  try {
+    m.type("x");
+    m.runUntil(() => inputCall?.entered && m.classicBankIn && m.ready() && quiet(m, s) && m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE") &&
+      m.read(m.sym("HKDEP")) === 1 && m.read(m.sym("HKBUSY")) === 0 && m.read(m.sym("ERRMODE")) === 0xff && word(m, m.sym("OLDSP")) === inputCall.sp &&
+      word(m, inputCall.sp) === inputCall.back && m.lineBuf === inputCall.buffer && inputCall.textAtEntry.endsWith(">"), 900_000_000, "actual shell input after full-cache label pressure");
+    assert.equal(returnedKey, 1); assert.ok(descriptors.length > 0); assert.equal(pendingDescriptor, null); assert.ok(shellSamples > 0 && lows.length > 0 && workerLows.length > 0);
+    assert.equal(snapshot("actual prompt retains thirty known blocks").queue.length, 30); assert.deepEqual(Array.from({ length: 2 }, (_, i) => m.read(m.sym("HKGRD") + i)), workerGuard);
+    assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []); assert.doesNotMatch(m.text(m.mark), /Bdos Err|Disk reset failed|Write lost/);
+    let free = 0; while (free < 16 + size && m.read(base + free) === 0xa5) free++;
+    const used = Math.max(top - shellLowSP, top - shellLowWrite), patternUsed = 16 + size - free, below = Math.max(0, used - size);
+    assert.ok(patternUsed <= used); assert.ok(workerTop - workerLow <= workerTop - workerBottom);
+    console.log(JSON.stringify({ scope: "real thirty-block shell walk and private stack measurement", size, used, below, patternUsed, shellSamples, shellLowSP, shellLowWrite, lows, scratchWrites,
+      workerGuardBefore: workerGuard, workerUsed: workerTop - workerLow, workerReserved: workerTop - workerBottom, workerLows, descriptors, inputOwner: { ...inputCall, pc: m.pc }, refusals: attempts.length,
+      queue: cacheState(m).queue, blocks: [...expected.keys()], cardSHA256: createHash("sha256").update(image).digest("hex"), acknowledgements, input: Array.from(input),
+      initialUsedAllocations: [...initialUsed], newAllocations: [...allocations], service: { image: shell.image, fileBase64: Buffer.from(shell.file).toString("base64"), fileSHA256: createHash("sha256").update(shell.file).digest("hex"), symbols: s }, text: m.text(m.mark) }));
+    return { used, below };
+  } finally { m.step = step; m.cpu.hardware.memWrite = write; }
 }
 
 test("S2-11 own stack", () => {
@@ -747,42 +881,256 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
 // TED's & stop, with the shell of that landing.
 const BASE11 = { nothing: 4928, onB: 8_661_934, onA: 8_859_172 };
 
-/** BDOS 11 with nothing changed, and 32 records to A: each followed by BDOS 11, logged on LOGGED, under ROM: T states. */
+const QUALIFIED_POLL = (() => {
+  const asset = JSON.parse(readFileSync(new URL("./fixtures/rom-qualified-shell2.json", import.meta.url), "utf8"));
+  assert.equal(asset.sourceCommit, "c4ec0f4950446f92b658643ee23b63e2c02bb33b");
+  const rom = Buffer.from(asset.rom, "base64"), entries = Object.entries(asset.symbols).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+  assert.equal(createHash("sha256").update(rom).digest("hex"), "a65b6e4523b5f7bab612810370ec13d4c0056deeab574acda80ef9a8e5d358d1");
+  assert.equal(createHash("sha256").update(JSON.stringify(entries)).digest("hex"), "9d86c0e1825833902eacfeb749612c3d0ef2c9d73f6cc71545f52924a82210e1");
+  assert.ok(!Object.hasOwn(asset.symbols, "HKDEP"));
+  return Object.freeze({ rom, symbols: new Map(entries) });
+})();
+
+/** Exact shell-command intervals and 200-call subtraction, with known data first. */
 function bdos11(logged, rom) {
   const N = 200;
-  const st = Uint8Array.from([0x06, N, 0xc5, 0x0e, 11, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf7, 0xc9]);
+  const st = Uint8Array.from([0x06, N, 0xc5, 0x0e, 11, 0xcd, 5, 0, 0xc1, 0x10, 0xf7, 0xc9]);
   const none = Uint8Array.from([0x06, N, 0xc5, 0, 0, 0, 0, 0, 0xc1, 0x10, 0xf7, 0xc9]);
-  const wr = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
-    0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0x0e, 11, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xef, 0xc9]);
-  const m = shellMachine(shellCard({ "ST.COM": st, "NO.COM": none, "WK.COM": wr }, { image: four() }), rom ?? {});
-  const t = (l) => {
-    const c = m.cycles;
-    run(m, l);
-    return m.cycles - c;
+  const wr = Uint8Array.from([0x11, 0x5c, 0, 0x0e, 22, 0xcd, 5, 0, 0x06, 32,
+    0xc5, 0x11, 0x5c, 0, 0x0e, 21, 0xcd, 5, 0, 0x0e, 11, 0xcd, 5, 0, 0xc1, 0x10, 0xef, 0xc9]);
+  const selected = rom ?? romFor(), image = four(), m = shellMachine(shellCard({ "ST.COM": st, "NO.COM": none, "WK.COM": wr }, { image }), selected);
+  const expectedROM = createHash("sha256").update(selected.rom).digest("hex");
+  assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), expectedROM);
+  assert.equal(m.symbols.has("HKDEP"), rom === QUALIFIED_POLL ? false : true);
+  const page = pageOf(m), top = page + sym.STKTOP, buffer = page + sym.LBUF, back = page + sym.TYPED + 16;
+  assert.equal(word(m, m.sym("SHOWN")), page + sym.TABLE);
+  assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+  const owner = () => m.classicBankIn && m.ready() && quiet(m) && m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE") &&
+    m.read(m.sym("ERRMODE")) === 0 && word(m, m.sym("OLDSP")) === top - 2 && word(m, top - 2) === back && m.lineBuf === buffer &&
+    (!m.symbols.has("HKDEP") || (m.read(m.sym("HKDEP")) === 1 && m.read(m.sym("HKBUSY")) === 0));
+  m.runUntil(owner, 900_000_000, "actual shell input before poll profiles");
+  const commandReceipts = [], sd = m.sd, commit = sd.commitWrite.bind(sd), baseStep = m.step.bind(m);
+  let phase = null;
+  const physical = () => {
+    assert.ok(phase?.original); assert.ok(m.classicBankIn);
+    const bank = m.expand ? m.expand[1] : m.banks[0], entries = [];
+    for (let line = 0; line < m.sym("NLINES"); line++) {
+      if (!bank[m.sym("CDIRTY") - 0x8000 + line]) continue;
+      const offset = m.sym("CTAB") - 0x8000 + line * 4, tag = bank.slice(offset, offset + 4);
+      const block = [...tag].reduce((v, byte, i) => v + byte * 256 ** i, 0), payload = bank.slice(line * 512, (line + 1) * 512);
+      assert.ok(phase.expected.has(block)); assert.deepEqual(payload, phase.expected.get(block)); entries.push({ line, block });
+    }
+    assert.equal(new Set(entries.map(e => e.block)).size, entries.length);
+    const missing = [...phase.expected].filter(([block, bytes]) => Buffer.compare(Buffer.from(image.slice(block * 512, (block + 1) * 512)), Buffer.from(bytes))).map(([block]) => block);
+    for (const block of missing) assert.ok(entries.some(e => e.block === block), "every off-card ACK has its valid dirty owner");
+    if (m.symbols.has("HKDEP")) assert.deepEqual(cacheState(m).entries.map(e => e.block).sort((a, b) => a - b), entries.map(e => e.block).sort((a, b) => a - b));
+    assert.deepEqual(image, phase.committed); assert.equal(volume(image, "A").find("A.DAT").records, 0);
+    return { entries, missing };
   };
-  if (logged === "B") t("B:");
-  t("A:NO");
-  const a = t("A:ST");
-  const b = t("A:NO");
-  return { nothing: Math.round((a - b) / N), worst: t("A:WK A:A.DAT") };
+  sd.commitWrite = () => {
+    assert.ok(phase && phase.kind === "WK", "read-only timing commands do not write the card");
+    if (!phase.original) { commit(); assert.equal(sd.pendingResponse[0], 0x05); phase.makeWrites++; return; }
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(phase.expected.has(block)); assert.deepEqual(payload, phase.expected.get(block)); commit(); assert.equal(sd.pendingResponse[0], 0x05);
+    phase.committed.set(payload, start); assert.deepEqual(image, phase.committed); phase.writes.push({ block, payload });
+  };
+  m.step = () => {
+    if (phase?.code && m.pc === 0x100) {
+      publicContext(m); assert.equal(++phase.entered, 1); phase.active = true; phase.sp = m.cpu.cpu.sp;
+      assert.equal(phase.sp, m.sym("CSTKTOP") - 2); assert.equal(word(m, phase.sp), 0);
+      assert.deepEqual(Uint8Array.from({ length: phase.code.length }, (_, i) => m.read(0x100 + i)), phase.code);
+    }
+    if (phase?.active && m.pc === m.sym("BENTRY")) {
+      publicContext(m);
+      if (m.cpu.cpu.c === 21) {
+        assert.equal(phase.kind, "WK"); assert.equal(m.cpu.cpu.sp, phase.sp - 4); assert.equal(word(m, m.cpu.cpu.sp), 0x113);
+        assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x5c); assert.equal(word(m, m.sym("CURDMA")), 0x80);
+        if (!phase.original) {
+          assert.ok(phase.made); phase.original = Uint8Array.from(image); phase.committed = Uint8Array.from(image);
+          const fs = volume(phase.original, "A"); phase.used = new Set(fs.usedBlocks()); phase.allocationBytes = fs.blockBytes; assert.equal(fs.wide, true);
+          phase.input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)); assert.ok(phase.input.some(Boolean));
+        }
+        assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), phase.input);
+      } else if (m.cpu.cpu.c === 11) {
+        assert.ok(["ST", "WK"].includes(phase.kind)); assert.equal(m.cpu.cpu.sp, phase.sp - 4);
+        assert.equal(word(m, m.cpu.cpu.sp), phase.kind === "ST" ? 0x108 : 0x118);
+      } else { assert.equal(phase.kind, "WK"); assert.equal(m.cpu.cpu.c, 22); assert.equal(m.cpu.cpu.sp, phase.sp - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x108); }
+    }
+    if (phase?.active && phase.kind === "WK" && m.pc === 0x108) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, phase.sp); assert.ok(m.cpu.cpu.a <= 3); assert.equal(phase.made, false); phase.made = true;
+      assert.equal(m.read(0x7c), 0); assert.equal(m.read(0x6b), 0); assert.equal(volume(image, "A").find("A.DAT").records, 0);
+    }
+    if (phase?.active && phase.kind === "WK" && m.pc === 0x113) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, phase.sp - 2); const record = phase.acks.length;
+      assert.ok(record < 32); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x7c), record + 1);
+      assert.equal(m.read(m.sym("CURDRV")), 0); assert.equal(m.read(m.sym("DSKCUR")), 0); assert.equal(m.read(0x5c) & 31, 1);
+      assert.equal(m.read(m.sym("BOOTDRV")), logged === "A" ? 0 : 1); assert.equal(m.read(m.sym("DEFDRV")), logged === "A" ? 0 : 1);
+      assert.equal(word(m, m.sym("DPHPTR")), m.sym("DPHTAB"));
+      const slot = Math.floor(record / (phase.allocationBytes / 128)), allocation = word(m, 0x5c + 16 + slot * 2); assert.ok(slot < 8);
+      if (!phase.allocations.has(slot)) { assert.ok(!phase.used.has(allocation)); assert.ok(![...phase.allocations.values()].includes(allocation)); phase.allocations.set(slot, allocation); }
+      for (const [knownSlot, value] of phase.allocations) assert.equal(word(m, 0x5c + 16 + knownSlot * 2), value);
+      const block = fileBlock(m, phase.original, record, 0x5c, "A"); if (!phase.expected.has(block)) phase.expected.set(block, new Uint8Array(512));
+      phase.expected.get(block).set(phase.input, (record & 3) * 128); phase.acks.push({ record, a: m.cpu.cpu.a, cr: m.read(0x7c), block }); physical();
+    }
+    const pollReturn = phase?.active && ((phase.kind === "ST" && m.pc === 0x108) || (phase.kind === "WK" && m.pc === 0x118));
+    if (pollReturn) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, phase.sp - 2); assert.equal(m.cpu.cpu.a, 0); phase.polls++;
+      assert.ok(phase.polls <= (phase.kind === "ST" ? N : 32));
+      if (phase.kind === "WK") { const cut = physical(); assert.deepEqual(cut.missing, []); assert.deepEqual(cut.entries, []); }
+    }
+    const ending = phase?.active && m.pc === 0x100 + phase.code.length - 1;
+    if (ending) {
+      publicContext(m); assert.equal(m.read(m.pc), 0xc9); assert.equal(m.cpu.cpu.sp, phase.sp); assert.equal(word(m, phase.sp), 0);
+      assert.equal(phase.polls, phase.kind === "ST" ? N : phase.kind === "WK" ? 32 : 0);
+      if (phase.kind === "WK") { assert.equal(phase.acks.length, 32); assert.equal(phase.expected.size, 8); physical(); }
+      phase.active = false; phase.returned++;
+    }
+    const result = baseStep();
+    if (ending) { assert.equal(m.pc, 0); assert.equal(m.cpu.cpu.sp, phase.sp + 2); }
+    return result;
+  };
+  const timed = (line, kind, code) => {
+    assert.ok(owner()); assert.equal(m.read(m.sym("PENDING")), 0); assert.equal(m.read(m.sym("RXFULL")), 0); assert.deepEqual(m.pending ?? [], []);
+    phase = { kind, code, entered: 0, active: false, made: false, makeWrites: 0, returned: 0, polls: 0, acks: [], expected: new Map(), allocations: new Map(), writes: [], before: Uint8Array.from(image) };
+    if (kind === "WK") assert.equal(volume(image, "A").find("A.DAT"), undefined);
+    const start = m.cycles; m.mark = m.output.length; m.type(`${line}\r`);
+    m.runUntil(owner, 900_000_000, "actual next shell input for measured command"); const cycles = m.cycles - start;
+    assert.equal(phase.entered, code ? 1 : 0); assert.equal(phase.returned, code ? 1 : 0);
+    if (kind !== "WK") assert.deepEqual(image, phase.before);
+    else {
+      const expectedCard = Uint8Array.from(phase.original); for (const [block, bytes] of phase.expected) expectedCard.set(bytes, block * 512);
+      assert.deepEqual(image, expectedCard); physical(); assert.equal(phase.makeWrites, 1);
+    }
+    assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []); assert.doesNotMatch(m.text(m.mark), /Bdos Err|Write pending|Write error|Disk reset failed/);
+    const receipt = { line, kind, cycles, entered: phase.entered, returned: phase.returned, polls: phase.polls, makeWrites: phase.makeWrites,
+      acknowledgements: phase.acks, initialUsedAllocations: phase.used && [...phase.used], newAllocations: [...phase.allocations], input: phase.input && Array.from(phase.input),
+      dataWrites: phase.writes.map(w => w.block), cardSHA256: createHash("sha256").update(image).digest("hex"), owner: { pc: m.pc, sp: word(m, m.sym("OLDSP")), back, buffer }, text: m.text(m.mark) };
+    commandReceipts.push(receipt); phase = null; return cycles;
+  };
+  try {
+    if (logged === "B") { timed("B:", null, null); assert.equal(m.read(m.sym("BOOTDRV")), 1); }
+    timed("A:NO", "NO", none); const a = timed("A:ST", "ST", st), b = timed("A:NO", "NO", none);
+    const worst = timed("A:WK A:A.DAT", "WK", wr), result = { nothing: Math.round((a - b) / N), worst };
+    console.log(JSON.stringify({ scope: "real shell 200-call and write-poll measurement", qualified: rom === QUALIFIED_POLL, logged, actualROM_SHA256: expectedROM, shellFileSHA256: createHash("sha256").update(SHELL.file).digest("hex"),
+      N, commands: commandReceipts, ...result })); return result;
+  } finally { m.step = baseStep; sd.commitWrite = commit; }
 }
 
 test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
-  const b = bdos11("B");
-  const a = bdos11("A");
-  t.diagnostic(JSON.stringify({ onB: b, onA: a }));
-  assert.ok(b.nothing - BASE11.nothing <= 60, `nothing changed: ${b.nothing} T, ${b.nothing - BASE11.nothing} over`);
-  assert.ok(b.worst / BASE11.onB - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / BASE11.onB - 1) * 100).toFixed(2)} % over`);
-  assert.ok(a.worst / BASE11.onA - 1 <= 0.05, `logged on A:: ${a.worst} T, ${((a.worst / BASE11.onA - 1) * 100).toFixed(2)} % over`);
+  const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
+  const b = bdos11("B"), a = bdos11("A");
+  t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
+  assert.deepEqual(qualifiedB, { nothing: 4954, worst: 8_735_058 });
+  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_206_025 });
+  for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
+    assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
+  assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
+  assert.ok(a.worst / qualifiedA.worst - 1 <= 0.05, `logged on A:: ${a.worst} T, ${((a.worst / qualifiedA.worst - 1) * 100).toFixed(2)} % over qualified`);
 });
 
+/** One real guest status call after thirty-two acknowledged, refused records. */
+function refusedShellInputPass(rom) {
+  const selected = rom ?? romFor(), image = four();
+  const wk = Uint8Array.from([0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0,
+    0x11, 0x5c, 0, 0x0e, 22, 0xcd, 5, 0, 0x06, 32,
+    0xc5, 0x11, 0x5c, 0, 0x0e, 21, 0xcd, 5, 0, 0xc1, 0x10, 0xf4,
+    0x0e, 11, 0xcd, 5, 0, 0x1e, 0, 0x0e, 45, 0xcd, 5, 0, 0xc9]);
+  const m = shellMachine(shellCard({ "PASS.COM": wk }, { image }), selected), page = pageOf(m), top = page + sym.STKTOP;
+  const owner = () => m.classicBankIn && m.ready() && quiet(m) && m.pc >= m.sym("CINLP") && m.pc < m.sym("CINWE") &&
+    m.read(m.sym("ERRMODE")) === 0 && word(m, m.sym("OLDSP")) === top - 2 && word(m, top - 2) === page + sym.TYPED + 16 &&
+    m.lineBuf === page + sym.LBUF && m.read(m.sym("HKDEP")) === 1 && m.read(m.sym("HKBUSY")) === 0;
+  m.runUntil(owner, 900_000_000, "actual shell input before refused status call");
+  assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
+  assert.equal(volume(image, "A").find("P.DAT"), undefined);
+  const expected = new Map(), allocations = new Map(), acknowledgements = [], attempts = [], passes = [], functional = [];
+  const sd = m.sd, commit = sd.commitWrite.bind(sd), step = m.step.bind(m);
+  let entered = 0, sp, made = false, original, committed, used, input, allocationBytes, before, start, cut, returned = 0, released = false;
+  const state = () => {
+    const s = cacheState(m); assert.equal(volume(image, "A").find("P.DAT").records, 0);
+    if (!released) {
+      assert.deepEqual(image, original); assert.deepEqual(s.entries.map(e => e.block), [...expected.keys()]);
+      for (const entry of s.entries) { assert.equal(entry.dirty, 1); assert.deepEqual(entry.payload, expected.get(entry.block)); }
+      assert.deepEqual([s.pending, s.any], [0, 1]);
+    } else assert.deepEqual(image, committed);
+    return s;
+  };
+  sd.commitWrite = () => {
+    if (!original) return commit();
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(expected.has(block)); assert.deepEqual(payload, expected.get(block));
+    attempts.push({ block, accepted: released });
+    if (!released) { sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1; assert.deepEqual(image, original); }
+    else { commit(); assert.equal(sd.pendingResponse[0], 0x05); committed.set(payload, start); assert.deepEqual(image, committed); }
+  };
+  m.step = () => {
+    if (m.pc === 0x100) { publicContext(m); assert.equal(++entered, 1); sp = m.cpu.cpu.sp; assert.equal(sp, m.sym("CSTKTOP") - 2); assert.equal(word(m, sp), 0); assert.deepEqual(Uint8Array.from({ length: wk.length }, (_, i) => m.read(0x100 + i)), wk); }
+    if (entered && m.pc === 0x107) { publicContext(m); assert.equal(m.cpu.cpu.sp, sp); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(m.sym("ERRMODE")), 0xff); }
+    if (entered && m.pc === 0x10f) { publicContext(m); assert.equal(m.cpu.cpu.sp, sp); assert.ok(m.cpu.cpu.a <= 3); assert.equal(made, false); made = true; assert.equal(m.read(0x7c), 0); }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 21) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp - 4); assert.equal(word(m, sp - 4), 0x11a); assert.equal(word(m, m.sym("CURDMA")), 0x80);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x5c);
+      if (!original) { assert.ok(made); assert.equal(cacheState(m).queue.length, 0); original = Uint8Array.from(image); committed = Uint8Array.from(image); const fs = volume(original, "A"); used = new Set(fs.usedBlocks()); allocationBytes = fs.blockBytes; assert.equal(fs.wide, true); input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)); assert.ok(input.some(Boolean)); }
+      assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), input);
+    }
+    if (entered && m.pc === 0x11a) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp - 2); const record = acknowledgements.length; assert.ok(record < 32); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x7c), record + 1);
+      for (const name of ["CURDRV", "DSKCUR", "BOOTDRV", "DEFDRV"]) assert.equal(m.read(m.sym(name)), 0);
+      assert.equal(m.read(0x5c) & 31, 0); assert.equal(word(m, m.sym("DPHPTR")), m.sym("DPHTAB"));
+      const slot = Math.floor(record / (allocationBytes / 128)), allocation = word(m, 0x5c + 16 + slot * 2); assert.ok(slot < 8);
+      if (!allocations.has(slot)) { assert.ok(!used.has(allocation)); assert.ok(![...allocations.values()].includes(allocation)); allocations.set(slot, allocation); }
+      for (const [knownSlot, value] of allocations) assert.equal(word(m, 0x5c + 16 + knownSlot * 2), value);
+      const block = fileBlock(m, original, record, 0x5c, "A"); if (!expected.has(block)) expected.set(block, new Uint8Array(512)); expected.get(block).set(input, (record & 3) * 128);
+      acknowledgements.push({ record, a: m.cpu.cpu.a, cr: m.read(0x7c), block }); state();
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 11) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp - 2); assert.equal(word(m, sp - 2), 0x122); assert.equal(acknowledgements.length, 32); assert.equal(expected.size, 8); assert.equal(before, undefined); before = state(); assert.equal(before.queue.length, 8); start = attempts.length;
+    }
+    if (before && !cut && m.pc === m.sym("FNSTAT")) { assert.deepEqual([m.read(m.sym("HKDEP")), m.read(m.sym("HKBUSY"))], [1, 0]); assert.equal(word(m, m.sym("OLDSP")), sp - 2); functional.push(attempts.length - start); }
+    if (before && !cut && m.pc === m.sym("CFLUSH")) { assert.deepEqual([m.read(m.sym("HKDEP")), m.read(m.sym("HKBUSY")), m.cpu.cpu.a], [1, 0, m.sym("NLINES")]); passes.push(attempts.length - start); }
+    if (entered && m.pc === 0x122) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, sp); assert.equal(m.cpu.cpu.a, 0); assert.ok(before); assert.equal(cut, undefined);
+      const after = state(); for (const key of ["queue", "dirty", "entries"]) assert.deepEqual(after[key], before[key]); assert.deepEqual(functional, [1]);
+      const next = before.round.slice(before.position).find(line => line !== 255) ?? before.queue[0], entry = before.entries.find(e => e.line === next); assert.ok(entry);
+      const pending = attempts.slice(start); assert.ok(pending.every(a => !a.accepted)); assert.ok(passes.length > 0);
+      assert.deepEqual(passes, passes.map((_, i) => 1 + i * 8)); assert.deepEqual(pending.map(a => a.block), [entry.block, ...passes.flatMap(() => before.entries.map(e => e.block))]);
+      cut = { passes: [...passes], attempts: pending, queueBlocks: before.entries.map(e => e.block), entryBlock: entry.block, cardSHA256: createHash("sha256").update(image).digest("hex") };
+      released = true;
+    }
+    const ending = entered && m.pc === 0x129;
+    if (ending) { publicContext(m); assert.ok(cut); assert.equal(m.read(m.sym("ERRMODE")), 0); assert.equal(m.cpu.cpu.sp, sp); assert.equal(word(m, sp), 0); assert.equal(m.read(m.pc), 0xc9); assert.equal(++returned, 1); }
+    const result = step(); if (ending) { assert.equal(m.pc, 0); assert.equal(m.cpu.cpu.sp, sp + 2); } return result;
+  };
+  try {
+    m.mark = m.output.length; m.type("PASS P.DAT\r"); m.runUntil(() => returned && owner(), 900_000_000, "natural programme return and recovered shell input");
+    const expectedCard = Uint8Array.from(original); for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
+    assert.deepEqual(image, expectedCard); assert.deepEqual(cacheState(m).queue, []); assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []);
+    assert.equal(volume(image, "A").find("P.DAT").records, 0); assert.doesNotMatch(m.text(m.mark), /Bdos Err|Disk reset failed/);
+    const result = { scope: "real shell refused status pass", romSHA256: createHash("sha256").update(selected.rom).digest("hex"), acknowledgements, input: [...input], initialUsedAllocations: [...used], newAllocations: [...allocations], cut, returned, finalCardSHA256: createHash("sha256").update(image).digest("hex"), text: m.text(m.mark) };
+    console.log(JSON.stringify(result)); return result;
+  } finally { m.step = step; sd.commitWrite = commit; }
+}
+
+function oneShellInputPass(result) {
+  assert.equal(result.cut.passes.length, 1, "one guest status call makes one frozen required input pass");
+  assert.deepEqual(result.cut.passes, [1]);
+  assert.deepEqual(result.cut.attempts.map(a => a.block), [result.cut.entryBlock, ...result.cut.queueBlocks]);
+}
+
 test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_000 }, (t) => {
-  const mnc = bdos11("B", MUTANTS.mnc());
-  assert.ok(mnc.nothing - BASE11.nothing > 60, `MNC: ${mnc.nothing} T with nothing changed`);
-  assert.ok(mnc.worst / BASE11.onB - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
-  const mtw = bdos11("A", MUTANTS.mtw());
-  assert.ok(mtw.worst / BASE11.onA - 1 > 0.05, `MTW logged on A:: ${mtw.worst}`);
-  t.diagnostic(JSON.stringify({ mnc, mtw }));
+  const nativeB = bdos11("B"), mnc = bdos11("B", MUTANTS.mnc());
+  const nativeA = bdos11("A"), mtw = bdos11("A", MUTANTS.mtw());
+  const nativePass = refusedShellInputPass(), doubled = refusedShellInputPass(MUTANTS.mtw());
+  t.diagnostic(JSON.stringify({ nativeB, mnc, nativeA, mtw, nativePasses: nativePass.cut.passes, mutantPasses: doubled.cut.passes }));
+  assert.ok(nativeB.nothing - 4954 <= 360); assert.ok(nativeB.worst / 8_735_058 - 1 <= 0.01);
+  assert.ok(mnc.nothing - 4954 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
+  assert.ok(mnc.worst / 8_735_058 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
+  assert.ok(nativeA.worst / 9_206_025 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
+  oneShellInputPass(nativePass); assert.equal(doubled.cut.passes.length, 2);
+  assert.equal(doubled.finalCardSHA256, nativePass.finalCardSHA256);
+  assert.throws(() => oneShellInputPass(doubled), error => {
+    assert.equal(error.code, "ERR_ASSERTION"); assert.equal(error.message.split("\n")[0], "one guest status call makes one frozen required input pass");
+    assert.equal(error.actual, 2); assert.equal(error.expected, 1); return true;
+  });
 });
 
 // TED's typing, moving and saving before write-behind followed the logged
@@ -791,28 +1139,84 @@ test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_
 const TED_BASE = { type100: 14243.6, down40: 3740.2, save: 855.8 };
 const TED = pinned("TED.COM");
 
-test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
-  const image = standardCard();
-  const a = volume(image, "A");
-  a.write("TED.COM", new Uint8Array(readFileSync(TED.path)));
-  a.write("NOTES.TXT", Buffer.from(Array.from({ length: 60 }, (_, i) => `line ${i} of the file, some text to show`).join("\n") + "\n"), { text: true });
-  const m = boot(image, { tms: true, width: 80, matrix: true });
-  const keys = (s, what) => {
-    const c = m.cycles;
-    m.enqueueInput(s, "matrix");
-    m.runUntil(() => (m.pumpInput(), !m.pending?.length && m.waitingForInput()), 2_000_000_000, what);
-    return m.cycles - c;
+/** Same editor, card and keys on each ROM; measure only at the editor's read loop. */
+function tedCost(selected) {
+  check(TED);
+  const image = standardCard(), lines = Array.from({ length: 60 }, (_, i) => `line ${i} of the file, some text to show`);
+  const initialText = lines.join("\n") + "\n", editedText = "x".repeat(100) + initialText;
+  const initialBytes = Buffer.from(initialText.replace(/\n/g, "\r\n")), editedBytes = Buffer.from(editedText.replace(/\n/g, "\r\n"));
+  const editor = new Uint8Array(readFileSync(TED.path)), a = volume(image, "A");
+  a.write("TED.COM", editor); a.write("NOTES.TXT", Buffer.from(initialText), { text: true });
+  withDisplay(image, { tms: true, width: 80, matrix: true });
+  const originalFiles = new Map(volume(image, "A").list().filter(f => f.name !== "NOTES.TXT").map(f => [f.name, volume(image, "A").read(f.name)]));
+  const m = new Machine({ ...selected, sdImage: image, tms: true, matrix: true, clock: TEST_CLOCK });
+  m.bootText = m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  assert.equal(createHash("sha256").update(Uint8Array.from({ length: 0x4000 }, (_, i) => m.read(0xc000 + i))).digest("hex"), createHash("sha256").update(selected.rom).digest("hex"));
+  const readLoop = 0x21bf, inputReturn = 0x21c7, wrapperReturn = 0x112, cursor = 0x24ca, length = cursor - 2;
+  assert.deepEqual(editor.slice(0xb, 0x17), Uint8Array.from([0xdd, 0xe5, 0xfd, 0xe5, 0xcd, 5, 0, 0xfd, 0xe1, 0xdd, 0xe1, 0xc9]));
+  assert.deepEqual(editor.slice(readLoop - 0x100, readLoop - 0x100 + 12), Uint8Array.from([0x11, 0xff, 0, 0x0e, 6, 0xcd, 0x0b, 1, 0xb7, 0x28, 0xf5, 0xc9]));
+  const owner = () => {
+    if (!m.classicBankIn || !m.waitingForInput() || m.read(m.sym("ERRMODE")) !== 0) return false;
+    if (m.symbols.has("HKDEP") && (m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY")) !== 0)) return false;
+    const saved = word(m, m.sym("OLDSP")); return word(m, saved) === wrapperReturn && word(m, saved + 6) === inputReturn;
   };
-  m.typeMatrix("ted notes.txt\r");
-  m.runUntilChecked(() => m.waitingForInput() && m.screen()[0].startsWith("line 0"), 800_000_000, "the editor");
-  let type100 = 0;
-  for (const ch of "x".repeat(100)) type100 += keys(ch, "a character");
-  let down40 = 0;
-  for (let i = 0; i < 40; i += 1) down40 += keys("\x04", "down");
-  const save = keys("\x13", "^S");
-  const ms = { type100: type100 / 4000, down40: down40 / 4000, save: save / 4000 };
-  t.diagnostic(JSON.stringify(ms));
-  for (const k of Object.keys(TED_BASE)) assert.ok(ms[k] / TED_BASE[k] - 1 <= 0.05, `${k}: ${ms[k].toFixed(1)} ms against ${TED_BASE[k]}`);
+  const sd = m.sd, commit = sd.commitWrite.bind(sd), step = m.step.bind(m), committed = Uint8Array.from(image), writes = [], keysSeen = [];
+  const descriptor = parseContainer(image).volumes.find(v => v.drive === "A"); assert.ok(descriptor);
+  let phase = "load", entered = 0;
+  sd.commitWrite = () => {
+    assert.ok(phase === "load" || phase === "save", "typing and navigation do not write the card");
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(block >= descriptor.start && block < descriptor.start + descriptor.length);
+    commit(); assert.equal(sd.pendingResponse[0], 0x05); committed.set(payload, start); assert.deepEqual(image, committed);
+    writes.push({ phase, block, payloadBase64: Buffer.from(payload).toString("base64") });
+  };
+  m.step = () => {
+    if (m.pc === 0x100) { publicContext(m); assert.equal(++entered, 1); assert.deepEqual(Uint8Array.from({ length: editor.length }, (_, i) => m.read(0x100 + i)), editor); }
+    return step();
+  };
+  const key = (s, what) => {
+    assert.ok(owner()); assert.deepEqual(m.pending ?? [], []); const start = m.cycles;
+    m.enqueueInput(s, "matrix"); m.runUntil(() => (m.pumpInput(), !m.pending?.length && owner()), 2_000_000_000, what);
+    const cycles = m.cycles - start;
+    keysSeen.push({ key: s.charCodeAt(0), cycles, pc: m.pc, savedSP: word(m, m.sym("OLDSP")), callerReturn: word(m, word(m, m.sym("OLDSP")) + 6), cursor: word(m, cursor), length: word(m, length), status: m.screen()[23] });
+    assert.deepEqual(image, committed); assert.deepEqual(m.violations, []); return cycles;
+  };
+  try {
+    m.typeMatrix("ted notes.txt\r");
+    m.runUntilChecked(() => owner() && m.screen()[0].startsWith("line 0"), 800_000_000, "the actual editor read-loop input");
+    assert.equal(entered, 1); assert.deepEqual([m.read(m.sym("VWID")), m.read(m.sym("VHGT"))], [80, 24]);
+    assert.equal(word(m, cursor), 0); assert.equal(word(m, length), initialBytes.length);
+    assert.equal(Buffer.from(volume(image, "A").read("NOTES.TXT", { text: true })).toString(), initialText);
+    const loadedCard = Uint8Array.from(image); let type100 = 0, down40 = 0; phase = "type";
+    for (let i = 0; i < 100; i++) { type100 += key("x", "an inserted character at the editor read loop"); assert.equal(word(m, cursor), i + 1); assert.equal(word(m, length), initialBytes.length + i + 1); }
+    assert.deepEqual(image, loadedCard); phase = "down";
+    for (let i = 0; i < 40; i++) down40 += key("\x04", "down at the editor read loop");
+    const lineStart = 100 + lines.slice(0, 40).reduce((sum, line) => sum + line.length + 2, 0);
+    assert.ok(word(m, cursor) >= lineStart && word(m, cursor) <= lineStart + lines[40].length); assert.equal(word(m, length), editedBytes.length);
+    assert.match(m.screen()[23], /L41 C/); assert.deepEqual(image, loadedCard);
+    phase = "save"; const save = key("\x13", "save completed at the editor read loop");
+    const fs = volume(image, "A"), saved = fs.read("NOTES.TXT");
+    assert.equal(Buffer.from(fs.read("NOTES.TXT", { text: true })).toString(), editedText);
+    assert.deepEqual(saved.slice(0, editedBytes.length), new Uint8Array(editedBytes)); assert.ok(saved.slice(editedBytes.length).length > 0); assert.ok(saved.slice(editedBytes.length).every(byte => byte === 0x1a));
+    for (const [name, bytes] of originalFiles) assert.deepEqual(fs.read(name), bytes);
+    assert.ok(!fs.list().some(file => /\.(\$\$\$|BAK)$/.test(file.name))); assert.deepEqual(fs.verify(), []);
+    assert.equal(word(m, length), editedBytes.length); assert.ok(owner()); assert.deepEqual(image, committed);
+    const bank = m.expand ? m.expand[1] : m.banks[0]; assert.ok(Array.from(bank.slice(m.sym("CDIRTY") - 0x8000, m.sym("CDIRTY") - 0x8000 + m.sym("NLINES"))).every(byte => byte === 0));
+    if (m.symbols.has("HKDEP")) assert.deepEqual(cacheState(m).queue, []);
+    assert.deepEqual(m.violations, []); const ms = { type100: type100 / 4000, down40: down40 / 4000, save: save / 4000 };
+    console.log(JSON.stringify({ scope: "paired known-content TED editor cost", qualified: selected === QUALIFIED_POLL, actualROM_SHA256: createHash("sha256").update(selected.rom).digest("hex"), editorSHA256: createHash("sha256").update(editor).digest("hex"), inputText: initialText, expectedText: editedText, keys: keysSeen, writes, finalFiles: fs.list().map(file => ({ name: file.name, records: file.records, sha256: createHash("sha256").update(fs.read(file.name)).digest("hex") })), finalCardSHA256: createHash("sha256").update(image).digest("hex"), ms }));
+    return ms;
+  } finally { sd.commitWrite = commit; m.step = step; }
+}
+
+test("S2-11 ted cost", { skip: TED.skip, timeout: 900_000 }, (t) => {
+  const qualified = tedCost(QUALIFIED_POLL), current = tedCost(romFor());
+  t.diagnostic(JSON.stringify({ qualified, current }));
+  assert.deepEqual(qualified, { type100: 14_245.581, down40: 3742.13325, save: 858.5755 });
+  assert.ok(current.type100 / qualified.type100 - 1 <= 0.05, `typing: ${current.type100} ms against qualified ${qualified.type100}`);
+  assert.ok(current.down40 <= 4012.4675, `movement: ${current.down40} ms`);
+  assert.ok(current.save <= 1682.95425, `save: ${current.save} ms`);
 });
 
 // --- S2-12 The starter card ------------------------------------------------------
@@ -854,7 +1258,8 @@ test("S2-12 no mount.com", () => {
 
 test("S2-12 instruction", () => {
   const t = starterRecipe().instruction;
-  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "The drive you are on is written behind", "whenever TEC-OS waits for a key everything is on the card", "After CD A:", "at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
+  for (const s of ["A:SYSTEM>", "CD ?", "CD NAME", "CD D:NAME", "Pending block writes get priority at OS calls and key waits.", "Acknowledged data stays in RAM for retry if its card write fails.", "Follow the program’s normal Save workflow and resolve write errors; browser saving is separate.", "After CD A:", "at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC", "Power cycle"]) assert.ok(t.includes(s), `the instruction says ${s}`);
+  assert.doesNotMatch(t, /whenever TEC-OS waits for a key everything is on the card/, "a key wait must not promise persistence after a refused write");
   assert.doesNotMatch(t, /MOUNT/, "and teaches no MOUNT");
   assert.doesNotMatch(t, /(B:|WORK)[^.]*written behind/, "nor that B: or WORK is written behind");
   assert.doesNotMatch(t, /At A>/);
@@ -920,17 +1325,33 @@ test("S2-13 docs", () => {
   const flat = (n) => read(n).replace(/\s+/g, " ");
   const recovery = flat("docs/recovery.md");
   for (const s of [
-    "The logged drive is written behind",
-    "Every directory write writes the cache first",
-    "Every console read writes every changed line",
-    "| Data on the logged drive's volume (written behind) |",
-    "| Data on any other volume (coalesced) |",
-    "| A directory write, on any volume |",
-    "| Any write to a read-only volume | never: refused |",
-    "A directory write on any volume whose flush fails returns the error and drops its own directory line",
-    "Only warm boot drops a flushed line that still fails",
-    "with all 30 lines kept a poll takes about 1.6 s",
+    "Each admitted outer BDOS, hardware service or returning BIOS call attempts one eligible dirty block before its normal work",
+    "Updates already received merge into that block without duplicating its entry or moving its first-dirty position",
+    "TEC-OS does not delay a ready write to await future updates",
+    "A frozen round records the eligible first-dirty order",
+    "New arrivals join the next round; continuously arriving writes cannot indefinitely postpone a failed line's next retry",
+    "Nested calls inherit that operation instead of starting another maintenance pass",
+    "The worker owns a private stack and excludes unsafe bank/SD spans",
+    "This is cooperative service, with no timer or wall-clock deadline",
+    "The logged drive can keep multiple changed blocks",
+    "Other drives retain their existing single pending-block boundary",
+    "cross-call write coalescing is no longer promised",
+    "A read-only volume continues to refuse writes",
+    "A directory write first tries all other dirty data in a bounded pass, then writes the directory block only if those prerequisites succeeded",
+    "Either prerequisite or metadata failure rejects and drops that unpublished directory image",
+    "Later retries must not publish rejected metadata",
+    "Console input through BDOS1,6 input,10 or11 and BIOS CONIN drains pending data before waiting",
+    "A complete pass attempts each eligible line once and continues after failure",
+    "Failed acknowledged data remains dirty and queued, including across warm boot",
+    "A maintenance failure during an unrelated call does not replace that call's functional result",
+    "Function45's silent FFh mode defers notices without losing the event",
+    "A private worker stack does not make BDOS generally reentrant",
+    "Warm-boot flush failure also drops the remaining chained command text while retaining the failed data",
+    "A program that hangs without calling the OS can hold data indefinitely",
+    "committing record data alone does not finish an unclosed new file's metadata",
+    "completed browser persistence are separate stages",
   ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
+  assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
   for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);

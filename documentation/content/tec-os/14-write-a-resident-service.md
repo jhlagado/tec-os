@@ -7,7 +7,7 @@ nav_group: "Writing programs"
 
 # 14. Write a resident service
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -296,7 +296,7 @@ each program's warm boot.
 
 The PC makeSvc writer in `tools/lib/svc.mjs` assembles at `0100h` and `0200h`
 with TAS to derive relocation, as for a CP/M PRL file
-(`tools/lib/svc.mjs:1-4`, `tools/lib/prl.mjs:33-53`). It requires an indented
+(`241b438:tools/lib/svc.mjs:1-4`, `241b438:tools/lib/prl.mjs:33-53`). It requires an indented
 `ORG $0100` line without a trailing comment. Includes resolve relative to the
 source with case-insensitive path components. Copying abi.inc to the current
 directory is sufficient only with count.asm there too. Temporary copies under
@@ -523,6 +523,12 @@ client's private stack. Document the allowance each public routine requires.
 Code already on the BDOS stack must not reenter the BDOS. MYCO therefore
 cannot print through function 9 inside its output hook. The separate CHARS
 client prints the result outside the hook.
+
+Housekeeping notices can temporarily call a hook on the private worker
+stack. That physical switch does not permit BDOS recursion: callbacks retain
+the logical caller's restriction and must return normally. Header declarations
+still describe additional use on the same three public stacks and keep their
+existing limits (`a40d482:docs/services.md:312-345`).
 
 ## Publishing a record
 

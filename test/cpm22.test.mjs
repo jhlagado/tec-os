@@ -10,6 +10,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, standardCard, volume } from "./lib/fixtures.mjs";
 import { alv, rig } from "./lib/warmboot.mjs";
+import { finishBarePrompt, publicContext } from "./lib/public-caller.mjs";
 
 const FCB = 0x005c;
 const FCB2 = 0x0200;
@@ -124,6 +125,7 @@ test("function 13 from user 5 leaves the user number 5, on drive A", () => {
 /** BDOS function C, to its return or to a BDOS error's wait for a key; then the key, and the CCP's prompt. */
 function attempt(r, c, de = FCB) {
   const { m } = r;
+  publicContext(m);
   const cpu = m.cpu.cpu;
   const saved = { pc: cpu.pc, sp: cpu.sp };
   m.write(0x0ffe, 0x00);
@@ -133,6 +135,7 @@ function attempt(r, c, de = FCB) {
   const [cin, cinEnd] = [m.sym("CINLP"), m.sym("CINWE")]; // a wait for a key, not a poll
   m.runUntil(() => m.pc === 0x0f00 || (m.pc >= cin && m.pc < cinEnd), 200_000_000, `BDOS ${c}`);
   if (m.pc === 0x0f00) {
+    publicContext(m);
     const a = cpu.a;
     Object.assign(cpu, saved);
     return { a };
@@ -167,6 +170,12 @@ test("functions 21, 34, 40 and 23 refuse a read-only file with File R/O, and the
     const got = attempt(r, fn);
     assert.match(got.text ?? `returned ${got.a}`, /Bdos Err On A: File R\/O/, `function ${name}`);
     assert.equal(Buffer.compare(image, before), 0, `function ${name}: the card unchanged`);
+    const stopped = { pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.text(0) };
+    assert.throws(() => r.bdos(12), /HKDEP: no inherited or busy API context/);
+    assert.deepEqual({ pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.text(0) }, stopped, "rejecting the next direct call neither resumes nor replaces the error's prompt input");
+    const completion = finishBarePrompt(m);
+    assert.equal(completion.before.cycles, stopped.cycles);
+    publicContext(m);
   }
   assert.deepEqual(volume(image, "A").list().map((x) => [x.name, x.readOnly]), [["R.DAT", true]]);
 });
@@ -210,18 +219,23 @@ test("a write in place reaches the card before any close, and the recovery guide
   assert.notEqual(r.bdos(15), 0xff, "opened");
   fill(7).forEach((v, k) => m.write(DMA + k, v));
   assert.equal(r.bdos(21), 0, "record 0 written over, and the file never closed");
-  // A: coalesces: the block reaches the card at the next flush point, here a console read.
+  // The next admitted call services data; input also retains its required drain.
   r.bdos(11);
   const onCard = volume(image, "A").read("OLD.DAT");
   assert.deepEqual([...onCard.subarray(0, 128)], [...fill(7)], "the old record is gone from the card already");
   assert.deepEqual([...onCard.subarray(128, 256)], [...old.subarray(128)], "the record not written stays");
   const guide = readFileSync(resolve(ROOT, "docs/recovery.md"), "utf8");
   assert.doesNotMatch(guide, /never reaches any card/, "the guide no longer says unclosed data never reaches the card");
-  for (const kind of ["Unwritten dirty data", "New allocations", "In-place overwrites"]) assert.match(guide, new RegExp(`\\*\\*${kind}\\.\\*\\*`), kind);
-  assert.match(guide, /nothing is rolled back/);
+  assert.match(guide, /immediate application stop after that write can still leave old SD bytes/);
+  assert.match(guide, /next admitted light call attempts pending work/);
+  assert.match(guide, /New allocations can reach SD before any directory entry names them/);
+  assert.match(guide, /In-place\s+overwrites change the old file as each block reaches SD, closed or not/);
+  assert.match(guide, /no journal or rollback/);
   // KE-166: before a directory write, a volume written behind may already have some changes on the card, through eviction.
   assert.doesNotMatch(guide, /the card holds the volume as it was then/, "the card isn't said to hold the volume as it was");
-  assert.match(guide, /already be on the card, written when their\s+lines were taken for other blocks/);
+  assert.match(guide, /Before a dirty block commits, its latest cached records can be lost/);
+  assert.match(guide, /Between data and directory writes, new blocks can lack directory entries/);
+  assert.match(guide, /existing file can contain mixed old and new blocks with its old length/);
 });
 
 test("function 22 clears S2 and keeps EX, as CP/M 2.2's make does after clrmodnum, and a random write's make keeps the module it needs (KE-178)", () => {

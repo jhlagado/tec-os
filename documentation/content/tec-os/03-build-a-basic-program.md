@@ -8,7 +8,7 @@ nav_group: "Using the machine"
 # 3. Build a BASIC program
 
 <!-- Source and test contracts checked at TEC-OS
-     46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+     46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      programs/TIMES.BAS, test/times.test.mjs and test/ted-baza.test.mjs.
      TED.COM is pinned at Thorium a2fe556 and Baza at 50dc512. The BAZA
      screen was retaken with the landed firmware; outputs taken from strict
@@ -206,8 +206,10 @@ The host-model tests cover `^T R` with TIMES.BAS on A and a build with it
 on B.
 
 `^Q` quits TED and returns to `B:WORK>`. Wait for that prompt before a
-reset or power-off: its console read writes all pending changes on every
-drive. Chapter 1 explains why.
+reset or power-off. Its read attempts pending writes, but a prompt after
+`Write pending` is insufficient. Resolve the original backend refusal and await
+`Cache clear`; closing the file and browser persistence remain separate
+(`a40d482:docs/recovery.md:69-117`). Chapter 1 explains why.
 
 ## A failed compile
 
@@ -279,13 +281,14 @@ the same TIMES.COM as its earlier all-lower-case source. Text inside
 quotes is preserved, so its greeting prints in capitals
 (`Baza 50dc512:docs/language.md:19`). The book's prompt commands use
 capitals, but lower case also works. The host-model test types
-`baza times` (`test/times.test.mjs:79`).
+`baza times` (`46cf3f1:test/times.test.mjs:79`).
 
 On the four-drive starter card TED has 28,694 bytes of text room with
 the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
 installed and reduces that room to 24,086 bytes, or 23,318 with the GLCD
 driver too. Unload MON3.SVC before editing a larger source. These are
-host-model measurements (`docs/compatibility.md`).
+historical recovery host-model measurements
+(`46cf3f1:docs/compatibility.md:223`).
 
 ## Machine code from BASIC
 
@@ -364,7 +367,7 @@ While a program holds the PICO9918, TEC-OS hides the console. If the
 program then stops on a run-time error, it gives the display back before
 printing, so the message shows at the prompt. The host-model test checks
 this with a program that claims the display and then divides by zero
-(`Baza 50dc512:docs/call.md:66-70`, `test/times.test.mjs:213-233`).
+(`Baza 50dc512:docs/call.md:66-70`, `46cf3f1:test/times.test.mjs:213-233`).
 
 On the card, `BAZA BOUNCE` compiles it and `BOUNCE` runs it on
 the PICO9918, which it needs. Tap W, A, S and D, or the arrow keys, to steer
@@ -372,5 +375,5 @@ the ship. The matrix arrows send Esc, `[` and a letter from `A` to `D`.
 Lines 950 to 999 translate these sequences to W, S, D or A. Q ends the
 game, restores the display console and prints the score at `A:SYSTEM>`.
 The host-model test checks each of these steps
-(`tools/media.mjs:218-221`, `test/starter.test.mjs:103-184`,
+(`46cf3f1:tools/media.mjs:218-221`, `46cf3f1:test/starter.test.mjs:103-184`,
 `Baza 50dc512:examples/BOUNCE.BAS:84`, `103-115`).

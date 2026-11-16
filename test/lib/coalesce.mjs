@@ -11,6 +11,7 @@ import { createContainer, findVolume, parseContainer } from "../../tools/lib/con
 import { Machine } from "./machine.mjs";
 import { TEST_CLOCK, romFor, volume } from "./fixtures.mjs";
 import { watch } from "./census.mjs";
+import { finishBarePrompt, publicContext, recoveryInput } from "./public-caller.mjs";
 
 export const FCB = 0x5c;
 export const FCB2 = 0x3800;
@@ -67,6 +68,7 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   logOn(m, logged);
+  const normalization = finishBarePrompt(m);
   const t = { writes: [], reads: [] };
   const lba = () => word(m, m.sym("SDLBA")) + word(m, m.sym("SDLBA") + 2) * 0x10000;
   const [sdw, sdr] = [m.sym("SDWRITE"), m.sym("SDREAD")];
@@ -80,11 +82,13 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
   };
   /** Run CODE from TOP to its final JR $, SP at TOP; pumping queued input if PUMP. */
   const stub = (code, pump = false) => {
+    publicContext(m);
     [...code, 0x18, 0xfe].forEach((v, i) => m.write(TOP + i, v));
     Object.assign(m.cpu.cpu, { sp: TOP, pc: TOP });
     const end = TOP + code.length;
     const t0 = m.cycles;
     m.runUntil(() => (pump && m.pumpInput(), m.pc === end), 400_000_000, "the stub");
+    publicContext(m);
     return { a: m.cpu.cpu.a, h: m.cpu.cpu.h, cycles: m.cycles - t0 };
   };
   const bdos = (fn, de = FCB, pump = false) => stub([0x0e, fn, 0x11, de & 0xff, de >> 8, 0xcd, 0x05, 0x00], pump);
@@ -120,18 +124,13 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
     };
     return f;
   };
-  /** Start a warm boot by GO() (a jump to 0000h if not given) and run to the prompt, answering a BDOS error's key. The text since. */
+  /** Start a warm boot and stop at normal or recovery input. Capture results
+   * before explicitly completing normal input for another synthetic call. */
   const warm = (go = () => (m.cpu.cpu.pc = 0)) => {
     const mark = m.output.length;
-    const at = () => m.ready() && /\r\n[A-P](:\S*)?>$/.test(m.text(mark));
+    const at = () => recoveryInput(m) || (m.ready() && /\r\n\d*[A-P](:\S*)?>$/.test(m.text(mark)));
     go();
-    let seen = -1;
-    for (let i = 0; i < 200 && !at(); i += 1) {
-      const end = m.cycles + 20_000_000;
-      m.runUntil(() => (m.pumpInput(), m.cycles >= end || at()), 30_000_000, "the prompt");
-      if (m.waitingForInput() && m.output.length === seen) m.type("\r");
-      seen = m.output.length;
-    }
+    m.runUntil(() => (m.pumpInput(), at()), 400_000_000, "normal or bootstrap recovery input after warm boot");
     return m.text(mark);
   };
   /** Press reset and run to the prompt. */
@@ -140,7 +139,7 @@ export function rig({ rom, image = card(), budget, logged = "B" } = {}) {
     m.expect(/[A-P](:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
     m.runUntil(() => m.ready(), 200_000_000, "the prompt after the reset");
   };
-  return { image, m, t, stub, bdos, svc, bios, name, put, setR, blockOf, onCard, state, pending, refuse, warm, reset };
+  return { image, m, t, normalization, stub, bdos, svc, bios, name, put, setR, blockOf, onCard, state, pending, refuse, warm, reset };
 }
 
 /**
@@ -167,6 +166,81 @@ export function three({ open = false, ...opts } = {}) {
     r.bdos(21);
   }
   return r;
+}
+
+/** Eight genuine logged-drive dirty blocks, accepted while the backend refuses
+ * maintenance. Releasing the backend changes no guest state and performs no
+ * extra API call; the caller chooses the boundary that may commit them. */
+export function backlog({ rom } = {}) {
+  const r = rig({ rom, logged: "A" });
+  r.bdos(45, 0xff);
+  assert.equal(r.m.read(r.m.sym("ERRMODE")), 0xff);
+  r.name("P       DAT");
+  assert.notEqual(r.bdos(22).a, 0xff, "make succeeds before fault injection");
+  r.bdos(26, DMA);
+  const original = Uint8Array.from(r.image);
+  const expected = new Map(), attempts = [], statuses = [];
+  const backend = { refusing: true };
+  const commit = r.m.sd.commitWrite.bind(r.m.sd);
+  r.m.sd.commitWrite = () => {
+    const { start, buffer } = r.m.sd.writeState;
+    const block = start / 512, payload = Uint8Array.from(buffer);
+    assert.ok(expected.has(block), "maintenance attempts an acknowledged data block");
+    assert.deepEqual(payload, expected.get(block), "the attempt contains all updates already acknowledged for that block");
+    const accepted = !backend.refusing;
+    attempts.push({ block, payload, accepted });
+    if (!accepted) {
+      r.m.sd.writeState = null;
+      r.m.sd.pendingResponse = [0x0d, 0xff];
+      r.m.sd.delayBytes = 1;
+      return;
+    }
+    commit();
+    assert.equal(r.m.sd.pendingResponse[0], 0x05);
+    assert.deepEqual(r.image.slice(start, start + 512), payload, "the accepted payload reaches the card");
+  };
+  const start = [...dirBlocks(r.image)][0];
+  for (let rec = 0; rec < 32; rec++) {
+    r.put(rec);
+    const result = r.bdos(21);
+    statuses.push(result.a);
+    assert.equal(result.a, 0, `record ${rec} is accepted despite maintenance refusal`);
+    assert.equal(r.m.read(FCB + 32), rec + 1, "the sequential FCB advances only after acceptance");
+    const block = start + Math.floor((r.blockOf(rec) * 2048 + (rec & 15) * 128) / 512);
+    if (!expected.has(block)) expected.set(block, new Uint8Array(512));
+    expected.get(block).set(pat(rec), (rec & 3) * 128);
+  }
+  const state = () => {
+    assert.equal(r.m.expand, undefined, "the snapshot retains the default physical bank model");
+    assert.ok(r.m.classicBankIn);
+    const classic = r.m.cpu.hardware.memory, cache = r.m.banks[0];
+    assert.equal(cache.length, 0x4000);
+    const get = name => classic[r.m.sym(name)];
+    assert.ok(get("HKCNT") <= r.m.sym("NLINES"));
+    const queue = Array.from({ length: get("HKCNT") }, (_, i) => classic[r.m.sym("HKQ") + i]);
+    const dirty = Array.from(cache.subarray(r.m.sym("CDIRTY") - 0x8000, r.m.sym("CDIRTY") - 0x8000 + r.m.sym("NLINES")));
+    const entries = queue.map(line => {
+      assert.ok(line < r.m.sym("NLINES"));
+      const tag = cache.subarray(r.m.sym("CTAB") - 0x8000 + line * 4, r.m.sym("CTAB") - 0x8000 + (line + 1) * 4);
+      return { line, block: [...tag].reduce((n, b, i) => n + b * 256 ** i, 0), payload: cache.slice(line * 512, (line + 1) * 512), dirty: dirty[line] };
+    });
+    const round = Array.from({ length: get("HKRLEN") }, (_, i) => classic[r.m.sym("HKROUND") + i]);
+    return { queue, entries, dirty, round, position: get("HKRPOS"), any: get("CANY"), pending: get("CPEND"), depth: get("HKDEP"), busy: get("HKBUSY") };
+  };
+  const before = state();
+  assert.equal(expected.size, 8);
+  assert.equal(before.queue.length, 8);
+  assert.equal(new Set(before.queue).size, 8);
+  assert.deepEqual(before.entries.map(e => e.block), [...expected.keys()], "first-dirty order follows the actual accepted blocks");
+  for (const entry of before.entries) {
+    assert.equal(entry.dirty, 1);
+    assert.deepEqual(entry.payload, expected.get(entry.block), "every queued block holds all four acknowledged records");
+  }
+  assert.equal(before.dirty.filter(Boolean).length, 8);
+  assert.deepEqual([before.any, before.pending, before.depth, before.busy], [1, 0, 0, 0]);
+  assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted), "real SPI attempts received refusal");
+  assert.deepEqual(r.image, original, "no acknowledged data reached the refusing card");
+  return { ...r, backend, attempts, statuses, expected, before, original, cacheState: state };
 }
 
 /** F.DAT, eight records, made and closed on A:, then opened again. */
@@ -222,8 +296,8 @@ export const MUTANTS = {
   /** READDIR without its CPOUT and BADSECT jump. */
   readdir: () =>
     mutant((b, at, put, sym) => {
-      expectAt(b, at("READDIR"), [...call(sym("CPOUT")), 0xc2, lo(sym("BADSECT")), hi(sym("BADSECT"))]);
-      put(at("READDIR"), [0, 0, 0, 0, 0, 0]);
+      expectAt(b, at("READDIR"), [...call(sym("HKPOINT")), ...call(sym("CPOUT")), 0xc2, lo(sym("BADSECT")), hi(sym("BADSECT"))]);
+      put(at("READDIR") + 3, [0, 0, 0, 0, 0, 0]);
     }),
   /** FNCLSE without its CPOUT and BADSECT jump. */
   fnclse: () =>
@@ -250,12 +324,23 @@ export const MUTANTS = {
       expectAt(b, i, [0x21, lo(sym("CWTYPE")), hi(sym("CWTYPE")), 0xcb, 0x46, 0x20, null]);
       put(i + 3, [0, 0, 0, 0]);
     }),
-  /** VFLUSH through CFLALL again, dropping failed lines. */
+  /** VFLUSH through the equivalent no-exclusion CFLALL alias. */
   cflall: () =>
     mutant((b, at, put, sym) => {
       const i = at("VFLUSH") + 7;
       expectAt(b, i, [0x3e, sym("NLINES"), ...call(sym("CFLUSH"))]);
       put(i, [...call(sym("CFLALL")), 0, 0]);
+    }),
+  /** Discard acknowledged cache ownership on a real SD write error while
+   * preserving the error return. Physical payload bytes are not erased. */
+  dropFailed: () =>
+    mutant((b, at, put, sym) => {
+      const i = at("CWR9"), tail = at("CODEEND");
+      expectAt(b, i, [0x4f, 0x3a, lo(sym("HKERR")), hi(sym("HKERR")), 0xb7]);
+      const code = [...call(sym("CDROP")), 0x4f, 0x3a, lo(sym("HKERR")), hi(sym("HKERR")), ...jp(sym("CWR9") + 4)];
+      assert.ok(tail + code.length <= b.length, "the error mutation fits the free tail");
+      put(tail, code);
+      put(i, [...jp(sym("CODEEND")), 0]);
     }),
   /** CPFLSH clearing CPEND before the write, by a jump to that code in the free tail. */
   cpendearly: () =>
@@ -377,8 +462,9 @@ export const MUTANTS = {
  * logged on LOGGED (B: unless given, so that A: coalesces), in MODE "writing", "refusing" or "removed" (the card out): a block pending
  * before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS
  * CONIN called directly, BDOS 17 and 48, MOUNT, a B: write and the next
- * block, then an extent change, READDIR inside BDOS 21. The three stacks'
- * depths, each call's depth on the program's stack at TOP, and its cycles.
+ * block. The accepting run also reaches an extent change inside BDOS 21;
+ * failed runs record accepted writes separately from issued attempts. The
+ * resident/worker stacks, each call's program-stack depth and its cycles.
  */
 export function flushRun(mode, rom, { logged = "B" } = {}) {
   const r0 = rom ?? romFor();
@@ -387,6 +473,7 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
   logOn(m, logged);
+  const normalization = finishBarePrompt(m);
   let low = TOP;
   const step = m.step.bind(m);
   m.step = () => {
@@ -395,11 +482,13 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
     return step();
   };
   const stub = (code, pump = false) => {
+    publicContext(m);
     [...code, 0x18, 0xfe].forEach((v, i) => m.write(TOP + i, v));
     Object.assign(m.cpu.cpu, { sp: TOP, pc: TOP });
     const end = TOP + code.length;
     const t0 = m.cycles;
     m.runUntil(() => (pump && m.pumpInput(), m.pc === end), 400_000_000, "the stub");
+    publicContext(m);
     return m.cycles - t0;
   };
   const bdos = (fn, de = FCB, pump = false) => stub([0x0e, fn, 0x11, de & 0xff, de >> 8, 0xcd, 0x05, 0x00], pump);
@@ -422,10 +511,17 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
     };
   }
   let rec = 0;
+  const writeStatuses = [];
   const pend = () => {
     bdos(21);
+    writeStatuses.push(m.cpu.cpu.a);
     rec += 1;
   };
+  const pendingState = () => ({
+    pending: m.read(m.sym("CPEND")), any: m.read(m.sym("CANY")),
+    queued: m.symbols.has("HKCNT") ? m.read(m.sym("HKCNT")) : undefined,
+  });
+  const pendingBefore = {};
   const cycles = {};
   const depth = {};
   const cases = [
@@ -442,15 +538,28 @@ export function flushRun(mode, rom, { logged = "B" } = {}) {
   ];
   for (const [what, fn] of cases) {
     pend();
+    pendingBefore[what] = pendingState();
+    assert.ok(pendingBefore[what].queued ?? (pendingBefore[what].pending || pendingBefore[what].any), `${what}: actual dirty work before the public call`);
     low = TOP;
     cycles[what] = fn();
     depth[what] = TOP - low;
   }
   while (rec < 130) pend();
+  const finalWritePosition = { extent: m.read(FCB + 12), record: m.read(FCB + 32) };
+  if (mode === "writing") {
+    assert.deepEqual(writeStatuses, new Array(130).fill(0), "every accepting-run record write succeeded");
+    assert.deepEqual(finalWritePosition, { extent: 1, record: 2 }, "the accepting run really crossed an extent boundary");
+  }
   bdos(16);
+  const closeStatus = m.cpu.cpu.a;
+  pendingBefore["BIOS CONIN after close"] = pendingState();
+  if (mode === "writing") {
+    assert.ok(closeStatus <= 3, "successful CP/M close returns a directory slot from 0 to 3");
+    assert.equal(pendingBefore["BIOS CONIN after close"].queued ?? (pendingBefore["BIOS CONIN after close"].pending || pendingBefore["BIOS CONIN after close"].any), 0, "accepting close drained the queue");
+  }
   low = TOP;
   m.enqueueInput("x");
-  cycles["BIOS CONIN, nothing pending"] = stub([0xcd, conin & 0xff, conin >> 8], true);
-  depth["BIOS CONIN, nothing pending"] = TOP - low;
-  return { ...census(), programStack: depth, cycles };
+  cycles["BIOS CONIN after close"] = stub([0xcd, conin & 0xff, conin >> 8], true);
+  depth["BIOS CONIN after close"] = TOP - low;
+  return { ...census(), programStack: depth, cycles, normalization, pendingBefore, writeStatuses, finalWritePosition, closeStatus };
 }

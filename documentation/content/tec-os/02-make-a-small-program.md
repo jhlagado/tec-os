@@ -7,7 +7,7 @@ nav_group: "Using the machine"
 
 # 2. Make a small program
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -98,10 +98,11 @@ extra line too. It supplies the Delete action on the matrix keyboard, which
 has no separate Delete key. The source is now the complete listing above.
 
 `^S` saves the repaired text. Wait for `Saved` before `^Q` quits TED and
-returns to `A:SYSTEM>`. The prompt's own key read finishes pending card writes.
-The successful return to the prompt establishes preservation only if no
-write-failure message appeared. `Write lost` means some pending changes
-were dropped. Another `^C` cannot recover those changes.
+returns to `A:SYSTEM>`. The prompt's read attempts pending writes. After
+`Write pending`, preserve RAM and resolve the original backend failure before
+awaiting `Cache clear`. A prompt alone does not prove file closure or browser
+preservation; cold reset discards pending data
+(`a40d482:docs/recovery.md:69-117`).
 
 Reopening `A:TED B:BANNER.ASM` reads the saved file and starts at `L1 C1`
 in this session. The deliberate extra line is gone. The corrected text
@@ -215,9 +216,9 @@ unchanged, which is why the edit needs another build.
 ## Saved source and the standalone program
 
 `^Q` quits the editor. Wait for `A:SYSTEM>` before a reset or card removal:
-the prompt's key read writes every changed line. A write-failure
-message has the same consequence as in the earlier save: the prompt alone
-does not prove the file was preserved.
+the key read attempts pending data. After Write pending, resolve the original
+backend failure and await Cache clear before reset; a prompt alone does not
+prove file closure or browser preservation (`a40d482:docs/recovery.md:69-117`).
 
 A fresh machine with new RAM can read the edited source from the saved
 card. `A:TED B:BANNER.ASM` displays the exclamation mark and twelve Down

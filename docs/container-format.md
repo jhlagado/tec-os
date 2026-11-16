@@ -43,8 +43,8 @@ are relative to the start of the container.
 The drive letter is a mount assignment, not an identity; the volume id is
 the stable name.
 
-No volume is marked written behind: TEC-OS writes behind the volume on the
-drive you are on, and coalesces the data writes of every other (see
+No volume carries a write-policy flag. TEC-OS retains per-drive pending
+boundaries and prioritises dirty data cooperatively at OS calls (see
 [recovery.md](recovery.md)). Byte 15 once marked one volume written behind;
 it is reserved now. `tecvol` and the container library write it zero, and
 neither they nor the ROM read it, so a card made with the mark still mounts,

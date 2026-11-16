@@ -221,8 +221,8 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     // removed, and UNLOAD; and MON3.SVC resident, then unloaded.
     ks53: await ks53Census(),
     mon3: await deepPaths([["MON3.SVC\r", /MON3>$/], "EXIT\r", "TYPE STARTUP.CMD\r", "DIR\r", "CON\r", "UNLOAD\r"], {}, { files: { "MON3.SVC": (await mon3Svc()).file } }),
-    // A block pending on A: at each flush point, then an extent change,
-    // logged on B:, A: coalescing; and logged on A:, A: written behind.
+    // Dirty work before each public entry, on both logged drives. Accepting
+    // writes cross an extent; refused attempts retain their actual position.
     flushWriting: flushRun("writing"),
     flushRefusing: flushRun("refusing"),
     flushWritingLogged: flushRun("writing", undefined, { logged: "A" }),
@@ -240,11 +240,11 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     assert.ok(runs.mon3[k].deepest <= runs.serialPlain[k].deepest + more, `MON3.SVC declares ${more} on the ${k} stack`);
   }
   const census = Object.fromEntries(
-    ["bdos", "ccp", "bios"].map((k) => [k, { reserved: runs.serial[k].reserved, deepest: Math.max(...Object.values(runs).map((r) => r[k].deepest)) }]),
+    ["bdos", "ccp", "bios", "worker"].map((k) => [k, { reserved: runs.serial[k].reserved, deepest: Math.max(...Object.values(runs).map((r) => r[k].deepest)) }]),
   );
   census.runs = runs;
   census.workload =
-    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console logged on B:, written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; bare CD query, changed selection and failed-prerequisite paths; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; a block pending on A: before each flush point, BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, then an extent change, logged on B: and on A:, with the card taking writes and refusing them. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
+    "From reset: PROBE, TERM, TERM S, INSDEL, REGION, FLIP, VIDMODE, COPY of 20000 bytes A: to B:, DIR, SAVE, TYPE, ERA, a paged TYPE, the line editor, ^C, a BDOS error on a read-only drive, a select error; on the serial console, the PICO9918 and the GLCD; on the serial console logged on B:, written behind, adding a SAVE and a COPY to B: and a file left unclosed for warm boot to write; the diagnostic console without a card, on serial and on a PICO9918 board, scrolling; CON UC1 loading GLCD.SVC on a PICO9918 and matrix board, and on a GLCD board; the ROM's PICO9918 console through CON PICO 40, 32 and 80; a recognised reset with a remapped A:; bare CD query, changed selection and failed-prerequisite paths; lines of pieces under SHELL.SVC, typed and from function 47, with an & piece after a failure, a BDOS error and ^C; enter-on-install installing, re-entering and removing a never-ready install; and MON3.SVC resident and unloaded; dirty work on A: before each public entry for BDOS 1, 6 input, 10 and 11, a BIOS CONIN, BDOS 17 and 48, MOUNT, a B: write and the next block, logged on B: and on A:; accepting runs prove an extent crossing, while refusal runs retain actual write statuses and positions. COPY and the paged TYPE run under SHELL.SVC. An NMI at each new depth where 0066h holds RETN.";
   mkdirSync(resolve(ROOT, "build"), { recursive: true });
   writeFileSync(resolve(ROOT, "build/stack-census.json"), JSON.stringify(census, null, 2) + "\n");
   console.log(JSON.stringify(census));
@@ -262,6 +262,7 @@ test("each stack keeps a quarter of its reservation free, and every STKGUARD byt
     const { reserved } = census[k];
     assert.ok((base + lim[k] + 2) * 4 <= reserved * 3, `${k}: the base ${base}, services' limit ${lim[k]} and two-byte NMI reserve take more than three quarters of ${reserved}`);
   }
+  assert.ok((census.worker.deepest + 12 + 2) * 4 <= census.worker.reserved * 3, "worker base, BIOS-hook allowance and NMI return reserve keep a quarter free");
   // docs/services.md's stack table states these figures: it must say what this census measures.
   const doc = readFileSync(resolve(ROOT, "docs/services.md"), "utf8");
   for (const [k, name] of [["bdos", "BDOS"], ["bios", "BIOS"], ["ccp", "CCP"]]) {

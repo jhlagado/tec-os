@@ -12,6 +12,8 @@ import { Machine } from "./lib/machine.mjs";
 import { SHELL, pageOf } from "./lib/shell.mjs";
 import { TEST_CLOCK, boot, program, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
+import { pendingSayFiles, pendingSayFailure } from "./lib/pending-say.mjs";
+
 const SAY = (await program("say")).bytes; // prints SAY
 const RC = (await program("rc")).bytes;
 const LINE = (await program("line")).bytes;
@@ -365,26 +367,13 @@ test("SH8 SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
   }
 });
 
-test("SH8 a write lost at warm boot drops the rest of the line", () => {
-  const m = boot(card());
-  // As the first program starts, a cached line is made dirty and the next card write fails:
-  // CWBOOT's flush drops it and says Write lost at the warm boot.
-  let armed = true;
-  let failNext = false;
-  const step = m.step.bind(m);
-  m.step = () => {
-    if (armed && m.pc === 0x100) {
-      m.cpu.hardware.ioWrite(0xff, 0x05); // EXPAND 1 in view: line 0's dirty byte
-      m.write(m.sym("CDIRTY"), 1);
-      m.cpu.hardware.ioWrite(0xff, 0x01);
-      [armed, failNext] = [false, true];
-    }
-    if (failNext && m.pc === m.sym("SDWRITE")) [(m.cpu.cpu.a = 5), (m.cpu.cpu.pc = m.sym("SDFAIL")), (failNext = false)];
-    return step();
-  };
+test("SH8 a failed warm flush retains acknowledged data and drops the rest of the line", () => {
+  const image = card(pendingSayFiles()), m = boot(image), fault = pendingSayFailure(m, image);
   const out = run(m, "SAY!SAY!USER 3");
-  assert.match(out, /^SAY!SAY!USER 3\r\r\nSAY\r\nWrite lost\r\nA(:\S*)?>$/);
-  assert.equal(count(out, /\nSAY\r/g), 1);
+  assert.match(out, /^SAY!SAY!USER 3\r\r\nSAY\r\nWrite pending\r\n\r\nA(:\S*)?>$/);
+  assert.equal(count(out, /\nSAY\r/g), 1); assert.equal(user(m), 0);
+  fault.assertPending();
+  fault.release(); run(m, ""); fault.assertRecovered();
   assert.equal(user(m), 0);
 });
 

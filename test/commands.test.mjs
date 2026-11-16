@@ -272,9 +272,9 @@ test("SH1 rom figure", () => {
   const second = { ...census(), hash: sha(readFileSync(resolve(ROOT, "build/tecos/tecos.rom"))) };
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
-  // The recovery prefix reserves the shared integrity stack allocation.
-  assert.ok(used <= 15315, `${used} used, the recovery ceiling 15,315`);
-  assert.ok(free >= 1069, `${free} free, at least 1,069`);
+  // The combined integrity build keeps the shared stack allocation.
+  assert.ok(used <= 16016, `${used} used, the combined integrity ceiling 16,016`);
+  assert.ok(free >= 368, `${free} free, at least 368`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47237, `TPA ${first.ram.tpa.bytes} with nothing loaded`);

@@ -92,7 +92,13 @@ function memoryMap(census, symbols) {
     ["CWTYPE", "BIOS WRITE's type, C"],
     ["CIFF", "the flags a BIOS entry found, its interrupt state in P/V"],
     ["CANY", "nonzero when a data line may be held behind on the logged drive"],
-    ["CPEND", "the coalesced pending block: its line plus one, 0 for none"],
+    ["CPEND", "the pending block outside the logged drive: its line plus one, 0 for none"],
+    ["HKCNT", "number of dirty first-dirty queue entries"],
+    ["HKRPOS", "next position in the frozen eligibility round"],
+    ["HKRLEN", "number of positions in the frozen round"],
+    ["HKDEP", "logical outer/nested API depth"],
+    ["HKBUSY", "private worker/report callback guard"],
+    ["HKERR", "deferred or reported failed-write episode"],
   ]
     .map(([n, what]) => `| ${hex(at(n))} | \`${n}\` | ${what} |`)
     .join("\n");
@@ -144,11 +150,17 @@ ${pageZeroState()}
 | --- | ---: | --- |
 ${rows(starterRegions)}
 
-The block cache's state, in the SD, keyboard and GLCD state above:
+The block cache and housekeeping state, in classic RAM above:
 
 | Address | Name | Contents |
 | --- | --- | --- |
 ${cacheState}
+
+Housekeeping uses126 previously reserved bytes: two thirty-byte line-index
+queues at \`${hex(at("HKQ"))}\` and \`${hex(at("HKROUND"))}\`, eight context
+bytes, a two-byte guard and its56-byte private stack. The outer hardware/BIOS
+return PC is the separate two-byte \`APIRTPC\` slot at \`${hex(at("APIRTPC"))}\`;
+nested calls inherit that owner. These are internal workspace, not public ABI.
 
 ## EXPAND 1
 
@@ -156,7 +168,7 @@ Cold boot clears it. Programs reach none of it: no TEC-OS interface leaves
 it in view. A program that puts it in view itself and ends without putting
 EXPAND 0 back finds BF03h empty and runs on into the ROM at C000h; the ROM
 tells that from a reset, since the overlay is off, and warm boots, so the
-cache's lines are written as at any exit.
+cache's lines are attempted as at any exit, retaining failed data for retry.
 
 | Addresses | Bytes | Contents |
 | --- | ---: | --- |
@@ -170,6 +182,10 @@ ${expand1}
 | BIOS (warm boot) | ${hex(s.bios.base)}–${hex(s.bios.top - 1)} | ${s.bios.bytes} |
 | CCP | ${hex(s.ccp.base)}–${hex(s.ccp.top - 1)} | ${s.ccp.bytes} |
 | BDOS (and cold boot's mount and DIAG) | ${hex(s.bdos.base)}–${hex(s.bdos.top - 1)} | ${s.bdos.bytes} |
+| Housekeeping private worker | ${hex(s.worker.base)}–${hex(s.worker.top - 1)} | ${s.worker.bytes} |
+
+The worker temporarily owns the physical stack for maintenance and notices;
+logical BDOS nonreentrancy and console-hook restrictions still apply.
 
 ## Serial timing
 
@@ -240,7 +256,7 @@ async function main() {
     id: "starter",
     revision: "17",
     name: "TEC-OS starter",
-    instruction: "Type BAZA CAVBASIC to compile the adventure, then CAVBASIC to play, or TYPE CAVERNS.TXT for instructions. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, first type TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. The drive you are on is written behind, and whenever TEC-OS waits for a key everything is on the card. After CD A: to a volume without SHELL.SVC, a reset keeps it; at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC to restore the shell. Power off (Power cycle on the page) gives the card's own drives again.",
+    instruction: "Type BAZA CAVBASIC to compile the adventure, then CAVBASIC to play, or TYPE CAVERNS.TXT for instructions. At A:SYSTEM>, type TAS DEMO then DEMO to see the hardware (TED DEMO.ASM to read it), BAZA BOUNCE then BOUNCE for a game on the PICO9918 (tap W/A/S/D or the arrow keys, Q to quit), or TAS SAMPLE and SAMPLE to build and run a first program, or BAZA TIMES and TIMES for one in BASIC, or TED SAMPLE.ASM or TED TIMES.BAS to read one. For a MON-3 program, first type TAS HELLO3 HELLO3.BIN, then MON3.SVC, LOAD HELLO3.BIN and GO, and watch the LCD; AD (Esc on the matrix) returns to MON3>, and EXIT to A:SYSTEM>. The card has four drives: CD ? lists its volumes, CD NAME puts one on the drive you are on and CD D:NAME on another; B: (WORK) is an empty work disk. Pending block writes get priority at OS calls and key waits. Acknowledged data stays in RAM for retry if its card write fails. Follow the program’s normal Save workflow and resolve write errors; browser saving is separate. After CD A: to a volume without SHELL.SVC, a reset keeps it; at the bare prompt use CD ?, CD A:SYSTEM and SHELL.SVC to restore the shell. Power off (Power cycle on the page) gives the card's own drives again.",
     profile: "tecos",
     drives: 4,
     volumes: [

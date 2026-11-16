@@ -7,7 +7,7 @@ nav_group: "Using the machine"
 
 # 6. Cards on the PC
 
-<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (main),
+<!-- Checked against TEC-OS 46cf3f1f1c6ea7ff361a568672a41ab1a7e2c1ee (retained recovery baseline),
      ROM SHA-256 ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3.
      Unprefixed source citations use this revision. Explicit historical
      prefixes retain their stated revisions. Host-model capture recipes and
@@ -45,10 +45,13 @@ the particular example card.
 
 ## A copy before a change
 
-Before removing a card from the TEC-1G, wait for the command prompt. Every
-time TEC-OS waits for a key it writes every change it holds, on every drive,
-so at the prompt everything is on the card. `Write lost` means that some
-writes failed, not that the card is up to date.
+Close files normally and wait for the prompt before card removal. After
+`Write pending`, preserve RAM while resolving the original initialised backend
+failure and await `Cache clear`: the prompt alone is insufficient. Warm boot
+retains acknowledged data but cold reset discards it. Queue clearance does not
+close an FCB or guarantee physical durability
+(`a40d482:docs/recovery.md:69-117`).
+
 Never change a card on a PC while TEC-OS is using it. Its cached blocks and
 free-space maps would no longer match the card. Reset after returning a
 PC-changed card to the board. Warm boot retains those old copies in memory.
@@ -332,7 +335,7 @@ TED on the starter card, Thorium `a2fe556`, recognises trailing `00h`
 through the rest of the last record as the file's end. It opens this
 form without an error. A rejected byte elsewhere ends the editor with
 `EDIT error 03` and its line and column, such as `EDIT error 03 L3 C5`
-(TEC-OS b3134cf `docs/compatibility.md`, Thorium a2fe556 `README.md`).
+(`b3134cf:docs/compatibility.md`, `Thorium a2fe556:README.md`).
 The older Thorium `967678c` TED rejects that padding with error 03
 and reports no position.
 
@@ -469,11 +472,11 @@ to all its files independently of their attributes.
 
 The browser's New starter card uses `starter.recipe.json` too. The
 page's card and `dist/starter.img` therefore have the same inputs and
-checks. Recipe revision 14 places thirteen files on A, including
+checks. This historical recipe revision 14 places thirteen files on A, including
 SHELL.SVC, DEMO.ASM and BOUNCE.BAS. It also includes MON3.SVC and
 the source-only HELLO3.ASM example. `TAS DEMO` builds DEMO.COM on the card.
 Media preparation writes no separate page recipe
-(TEC-OS b3134cf `tools/media.mjs`, `web/build.mjs`). The browser checks
+(`b3134cf:tools/media.mjs`, `b3134cf:web/build.mjs`). The browser checks
 the same sizes and SHA-256 hashes.
 
 ## A protection example
@@ -573,8 +576,11 @@ does not write the card.
 
 Open image loads an image file into the browser's card. Download image
 saves that card as a file that the PC tools can inspect or install. Download
-it while TEC-OS waits at its prompt, where every change is already in the
-image. Downloading does not itself write the emulated cache.
+it after closing guest files and successful guest writes. A prompt after
+Write pending is insufficient; resolve the original backend refusal and await
+Cache clear. Downloading does not flush the guest cache or complete its file
+metadata, and browser storage is a separate stage
+(`a40d482:docs/recovery.md:69-117`).
 
 The page also prepares `STARTUP.CMD` for its selected display when it can.
 Keep an untouched copy if you need the original startup text. The exact
@@ -600,27 +606,18 @@ close, some writes may have reached the card and others may remain only in
 memory. A failed close is not proof of preservation and nothing automatically
 restores the old file.
 
-On a drive other than the one you are on, a record write goes into the
-cache's copy of its 512-byte card block and returns. The block reaches the
-card at the next flush point: the file's close, any directory request, a
-write to another block, a console read, function 48, a drive change, `CD` or
-a warm boot.
-A cut before that point loses the records written into that one block since
-it was last written, at most four records, and the card keeps the block's
-old contents. A cut before the directory update can leave newly allocated
-data blocks with no entry naming them. They become free again when TEC-OS
-rebuilds the drive's free-space map. Overwriting a record already in a file
-replaces it when its block is written. A cut can leave new records alongside
-old records that the program had not reached, with no saved copy of the
-original file.
+Off the logged drive, all volumes share one pending-block boundary. The
+logged drive can hold several dirty blocks. Ordinary outer OS calls now attempt
+one eligible line before their own work, so a next same-block record call can
+commit the previous update. Received updates still merge, but four separate
+calls no longer promise a single SD write (`a40d482:docs/recovery.md:25-67`).
 
-On the drive you are on, the logged drive, writes are held behind: a cut
-loses the changes still in the cache, at most those since the program's last
-key wait or directory write. Blocks written early to make cache space and
-blocks written by a completed part of a flush remain on the card. Newly allocated blocks may again have no directory entry.
-Overwritten blocks contain the new data. The directory write follows successful
-data writes so an interrupted flush does not publish a new allocation map before
-those data writes succeed.
+A cut loses uncommitted RAM; earlier physical writes are not undone. New data
+blocks may have no completed directory entry, and an existing file can contain
+mixed old/new blocks under its old length. A directory image rejected because
+its own write or a prerequisite failed is dropped, never replayed later.
+Acknowledged data stays queued through warm boot while RAM survives, but that
+does not finish an unclosed FCB (`a40d482:docs/recovery.md:111-132`).
 
 A cut during a single block write can leave old, new or mixed contents in
 that block. A directory block holds sixteen 32-byte entries, any of which

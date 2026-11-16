@@ -1,27 +1,21 @@
-// The block cache (KS21): 30 lines of EXPAND 1 over the card, every volume's
-// reads, and the volume on the logged drive written behind. Reads come back
-// the same and a reread makes no card read; volumes not logged, which
-// coalesce, write each block at most as often as the older fixture ROM did,
-// and in its order; a volume written behind reads back from the cache and from
-// the card after warm boot, keeps its directory behind its data at every
-// cut, keeps the no-pre-read rule safe, serves BLOCK from a dirty line and
-// says when a card has gone; and the ROM before the cache mounts a volume
-// marked :wb written through. A test of WORK written behind logs on B:. Then
-// the rules of write-behind on the logged drive: what a program's writes
-// leave in the cache until its key wait, a directory write that writes every
-// other line first, the drive change's flush and byte 15 reserved. The ROMs
-// of f49e380 and 4ea57f7 are fixtures. Emulator evidence.
+// Thirty complete card blocks cache reads and acknowledged writes. Outer
+// API entry attempts pending work; required boundaries drain bounded rounds.
+// These tests cover known bytes, metadata publication, failed-write retention,
+// card recovery, caller ownership and isolated historical comparisons.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createContainer, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
+import { createContainer, findVolume, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
+import { finishBarePrompt, publicContext, recoveryInput } from "./lib/public-caller.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
-import { at, shellCard, shellMachine } from "./lib/shell.mjs";
+import { cacheState, fileBlock, retainedBlocks } from "./lib/cache-pending.mjs";
+import { SHELL, at, pageOf, shellCard, shellMachine } from "./lib/shell.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const pattern = (n, f) => Uint8Array.from({ length: n }, (_, i) => f(i) & 0xff);
@@ -31,6 +25,111 @@ const DATA = pattern(6000, (i) => i * 7 + 1);
 function oldRom(commit) {
   const f = JSON.parse(readFileSync(resolve(ROOT, `test/fixtures/rom-${commit}.json`), "utf8"));
   return { rom: Buffer.from(f.rom, "base64"), symbols: new Map(Object.entries(f.symbols).map(([k, v]) => [k.toUpperCase(), v])) };
+}
+
+/** Retire only explicitly verified event objects; preserve foreign errors and order. */
+function retireWrites(collector, verified) {
+  const own = new Set(verified);
+  for (let i = collector.length - 1; i >= 0; i--) if (own.has(collector[i])) collector.splice(i, 1);
+}
+
+const CACHED_MIRROR = Object.freeze({ fixture: "f49e380", romSHA256: "d9f8d2b554e39833139c2912af48ee40e75305be65236590aebf105f175a7a03", mapSHA256: "8da862b2b90499ba422724cf8e8c5d11795ad623abde24682d9f336ceee268e2", phases: Object.freeze(["boot", "WBTEST"]) });
+const PRECACHE_MIRROR = Object.freeze({ fixture: "4ea57f7", romSHA256: "ba898ef83ab625d705f93895e5a1c9fa55bdb25d17d957b746050387ad57d902", mapSHA256: "1d22c573888539564ff1f5b30a9ca45f5a67142f23c9419bd93a362dceb1e546", phases: Object.freeze(["boot"]) });
+
+/** Verify every intended mirror before retiring only its original event identities. */
+function verifyLegacyMirrors(m, selected, observation, definition) {
+  assert.ok(definition === CACHED_MIRROR || definition === PRECACHE_MIRROR);
+  assert.equal(observation.actualRomSHA256, definition.romSHA256);
+  assert.equal(observation.actualSymbolSHA256, definition.mapSHA256);
+  const reference = oldRom(definition.fixture), warmPC = reference.symbols.get("WBOOTR"), vector = reference.symbols.get("BIOWBT");
+  assert.deepEqual(Uint8Array.from(selected.rom), Uint8Array.from(reference.rom));
+  const entries = [...reference.symbols].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+  assert.equal(observation.actualSymbolSHA256, createHash("sha256").update(JSON.stringify(entries)).digest("hex"));
+  const prefix = [0xf3, 0x3e, 5, 0xd3, 255, 0x3e, 0xc3, 0x32, vector & 255, vector >> 8, 0x21, warmPC & 255, warmPC >> 8, 0x22, (vector + 1) & 255, (vector + 1) >> 8, 0x3e, 1, 0x32, 64, 0, 0xd3, 255];
+  assert.deepEqual(Array.from(reference.rom.slice(warmPC - 0xc000, warmPC - 0xc000 + prefix.length)), prefix);
+  assert.deepEqual(observation.warm.map(w => w.phase), definition.phases);
+  const offsets = [0, 1, 3, 5, 7, 10, 13, 16, 18, 21], lengths = [1, 2, 2, 2, 3, 3, 3, 2, 3, 2];
+  for (const warm of observation.warm) {
+    assert.equal(warm.entryPC, warmPC); assert.equal(warm.steps.length, 24);
+    for (let i = 0; i < offsets.length; i++) {
+      const step = warm.steps[i], before = i <= 2 ? 1 : 5, after = i < 2 || i === 9 ? 1 : 5;
+      assert.equal(step.pc, warmPC + offsets[i]); assert.equal(step.nextPC, step.pc + lengths[i]);
+      assert.deepEqual(step.opcode, Array.from(reference.rom.slice(step.pc - 0xc000, step.pc - 0xc000 + 3)));
+      assert.deepEqual([step.sysCtrl, step.afterSysCtrl, step.latch, step.afterLatch], [before, after, 1, 1]);
+      assert.deepEqual([step.physicalBank, step.afterPhysicalBank, step.classic, step.afterClassic, step.expansionView], [before === 1 ? -1 : 0, after === 1 ? -1 : 0, before === 1, after === 1, before === 5]);
+    }
+  }
+  const expectedCount = definition.phases.length * 3;
+  assert.equal(observation.writes.length, expectedCount); assert.equal(m.expand1Writes.length, expectedCount);
+  for (let i = 0; i < expectedCount; i++) {
+    const frame = observation.writes[i], event = m.expand1Writes[i], part = i % 3, warm = Math.floor(i / 3);
+    const instruction = warmPC + (part === 0 ? 7 : 13), value = part === 0 ? 0xc3 : part === 1 ? warmPC & 255 : warmPC >> 8;
+    assert.deepEqual([frame.phase, frame.warm, frame.instructionPC, frame.pc, frame.address, frame.value], [definition.phases[warm], warm, instruction, instruction + 2, vector + part, value]);
+    assert.deepEqual(frame.instructionBytes, Array.from(reference.rom.slice(instruction - 0xc000, instruction - 0xc000 + 3)));
+    assert.deepEqual([frame.sysCtrl, frame.latch, frame.physicalBank, frame.classic, frame.expansionView], [5, 1, 0, false, true]);
+    assert.deepEqual([frame.windowBefore, frame.expand1Before, frame.windowAfter, frame.expand1After], [warm === 0 ? 0 : value, warm === 0 ? 0 : value, value, value]);
+    assert.equal(event.addr, frame.address); assert.equal(event.pc, frame.pc);
+  }
+  retireWrites(EXPAND1_WRITES, m.expand1Writes);
+}
+
+/** Bind passive memory observations before the first step without changing the constructor. */
+function observedStart(image, { rom, profile }) {
+  const selected = rom ?? romFor();
+  const identity = createHash("sha256").update(selected.rom).digest("hex");
+  const observation = { profile, romSHA256: identity, writes: [], warm: [] };
+  const incoming = [...EXPAND1_WRITES];
+  let phase = "boot", m;
+  const descriptor = Object.getOwnPropertyDescriptor(Machine.prototype, "step"), originalStep = Machine.prototype.step;
+  const attached = new Set();
+  Object.defineProperty(Machine.prototype, "step", { configurable: true, writable: true, value: function (...args) {
+    assert.ok(!attached.has(this)); attached.add(this);
+    const machine = this, rawWrite = machine.cpu.hardware.memWrite;
+    const actualROM = Uint8Array.from({ length: selected.rom.length }, (_, i) => machine.read(0xc000 + i));
+    assert.deepEqual(actualROM, Uint8Array.from(selected.rom), "attached hardware ROM matches the selected profile");
+    observation.actualRomSHA256 = createHash("sha256").update(actualROM).digest("hex");
+    const sorted = entries => [...entries].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+    const actualSymbols = sorted(machine.symbols), expectedSymbols = sorted(selected.symbols);
+    assert.deepEqual(actualSymbols, expectedSymbols, "the attached runtime map is the selected ROM map");
+    observation.actualSymbolSHA256 = createHash("sha256").update(JSON.stringify(actualSymbols)).digest("hex");
+    observation.symbols = actualSymbols.length;
+    assert.equal(machine.expand, undefined, "this profile uses the default physical bank model");
+    assert.equal(machine.banks[0].length, 0x4000);
+    let warm = null, executing = null;
+    assert.equal(machine.expand1Writes.length, 0, "observer attaches before any guest step");
+    machine.cpu.hardware.memWrite = (address, value) => {
+      const previous = machine.expand1Writes.length;
+      const at = address & 65535, candidate = at >= 0x8000 && at < 0xc000 && (machine.sysCtrl & 4);
+      const frame = candidate ? { phase, warm: warm?.index ?? null, pc: machine.pc, address: at, value: value & 255, sysCtrl: machine.sysCtrl, latch: machine.read(machine.sym("LATCHV")), classic: machine.classicBankIn, physicalBank: machine.physicalBank, expansionView: machine.tec1g.state.system.expandEnabled, windowBefore: machine.read(at), expand1Before: machine.banks[0][at - 0x8000], callbackBytes: [0, 1, 2].map(i => machine.read(machine.pc + i)), instructionPC: executing?.pc ?? null, instructionBytes: executing?.opcode ?? null } : null;
+      rawWrite(address, value);
+      for (const event of machine.expand1Writes.slice(previous)) {
+        assert.ok(frame); assert.equal(event.addr, frame.address); assert.equal(event.pc, frame.pc);
+        frame.windowAfter = machine.read(at); frame.expand1After = machine.banks[0][at - 0x8000];
+        observation.writes.push(frame);
+      }
+    };
+    machine.step = (...inner) => {
+      if (machine.pc === machine.sym("WBOOTR")) {
+        warm = { index: observation.warm.length, phase, entryPC: machine.pc, steps: [] };
+        observation.warm.push(warm);
+      }
+      const frame = warm ? { pc: machine.pc, sp: machine.cpu.cpu.sp, a: machine.cpu.cpu.a, sysCtrl: machine.sysCtrl, latch: machine.read(machine.sym("LATCHV")), physicalBank: machine.physicalBank, classic: machine.classicBankIn, expansionView: machine.tec1g.state.system.expandEnabled, opcode: [0, 1, 2].map(i => machine.read(machine.pc + i)) } : null;
+      executing = frame;
+      let result;
+      try { result = originalStep.apply(machine, inner); } finally { executing = null; }
+      if (frame) {
+        frame.nextPC = machine.pc; frame.afterSysCtrl = machine.sysCtrl; frame.afterLatch = machine.read(machine.sym("LATCHV")); frame.afterPhysicalBank = machine.physicalBank; frame.afterClassic = machine.classicBankIn;
+        warm.steps.push(frame); if (warm.steps.length === 24) warm = null;
+      }
+      return result;
+    };
+    return machine.step(...args);
+  } });
+  try { m = start(image, { rom }); }
+  finally { if (descriptor) Object.defineProperty(Machine.prototype, "step", descriptor); else delete Machine.prototype.step; }
+  assert.equal(attached.size, 1); assert.ok(attached.has(m));
+  const command = line => { phase = line; return cmd(m, line); };
+  return { m, selected, observation, incoming, command };
 }
 
 // The cards whose machines start() logs on B:, so that WORK is written behind.
@@ -125,15 +224,42 @@ test("a file read again comes from the cache, with no card read, and the same by
   assert.deepEqual(m.violations, []);
 });
 
-test("write-through volumes write the card as f49e380 did, block for block, before each BIOS WRITE returns", async () => {
+test("real commands preserve historical block order without increasing write traffic", async () => {
   const run = async (rom) => {
     const image = await load(standardCard(), ["wbtest", "sum"], { "DATA.BIN": DATA });
     // COPY is the shell's, where the old ROM's was the CCP's. Both cards hold the
     // shell's files, so that their blocks lie where they do for each ROM.
     withShell(image);
-    const m = start(image, { rom });
+    const sourceData = Uint8Array.from(volume(image, "A").read("DATA.BIN"));
+    const expectedData = new Uint8Array(Math.ceil(DATA.length / 128) * 128); expectedData.set(DATA);
+    assert.deepEqual(sourceData, expectedData, "complete prepared source including record padding");
+    const { m, selected, observation, incoming, command } = observedStart(image, { rom, profile: rom ? "f49e380 fixture" : "current" });
+    const profile = observation.profile;
     const t = trace(m);
-    for (const line of ["SAVE 8 X.COM", "COPY DATA.BIN B:DATA.CPY", "WBTEST", "ERA X.COM", "SAVE 2 B:Y.COM"]) cmd(m, line);
+    const snapshot = length => Uint8Array.from({ length }, (_, i) => m.read(0x100 + i));
+    const x = snapshot(8 * 256);
+    command("SAVE 8 X.COM"); assert.deepEqual(volume(image, "A").read("X.COM"), x);
+    command("COPY DATA.BIN B:DATA.CPY");
+    assert.deepEqual(volume(image, "A").read("DATA.BIN"), sourceData, "COPY leaves the independent source unchanged");
+    assert.deepEqual(volume(image, "B").read("DATA.CPY"), sourceData);
+    assert.match(command("WBTEST"), /WB OK/);
+    const seq = volume(image, "B").read("SEQ.DAT"), rnd = volume(image, "B").read("RND.DAT");
+    assert.equal(seq.length, 64 * 128);
+    assert.deepEqual(seq, pattern(64 * 128, i => (i >> 7) * 3 + 1));
+    assert.equal(rnd.length, 101 * 128);
+    for (const record of [0, 40, 100]) assert.deepEqual(rnd.slice(record * 128, (record + 1) * 128), new Uint8Array(128).fill(record ^ 0x5a));
+    command("ERA X.COM"); assert.equal(volume(image, "A").find("X.COM"), undefined);
+    const y = snapshot(2 * 256);
+    command("SAVE 2 B:Y.COM"); assert.deepEqual(volume(image, "B").read("Y.COM"), y);
+    assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(volume(image, "B").verify(), []);
+    assert.deepEqual(volume(image, "A").read("DATA.BIN"), sourceData, "later commands also preserve the source");
+    assert.deepEqual(m.violations, []);
+    assert.equal(observation.writes.length, m.expand1Writes.length, "all original flagged events remain attributed without deleting any collector entry");
+    if (!rom) assert.deepEqual(m.expand1Writes, [], "current firmware has no unexpected expansion writes");
+    else verifyLegacyMirrors(m, selected, observation, CACHED_MIRROR);
+    assert.equal(EXPAND1_WRITES.length, incoming.length);
+    incoming.forEach((event, i) => assert.equal(EXPAND1_WRITES[i], event, "unrelated errors retain their identity and order"));
+    console.log(JSON.stringify({ scope: "guarded historical memory disposition", profile, actualRomSHA256: observation.actualRomSHA256, actualSymbolSHA256: observation.actualSymbolSHA256, warmEntries: observation.warm.length, retainedLocalWrites: m.expand1Writes.length, preservedIncomingGlobalWrites: incoming.length }));
     return t;
   };
   const now = await run();
@@ -145,10 +271,11 @@ test("write-through volumes write the card as f49e380 did, block for block, befo
   assert.deepEqual(runs(now.writes), runs(before.writes), "the same blocks in the same order as f49e380");
   const was = times(before.writes);
   for (const [b, n] of times(now.writes)) assert.ok(n <= was.get(b), `block ${b}: ${n} writes, ${was.get(b)} at f49e380`);
-  assert.ok(now.writes.length < before.writes.length, `${now.writes.length} card writes, ${before.writes.length} at f49e380`);
+  console.log(JSON.stringify({ scope: "historical real-command data and traffic", currentWrites: now.writes.length, historicalWrites: before.writes.length, currentBiosWrites: now.bwrites.length, historicalBiosWrites: before.bwrites.length }));
+  assert.ok(now.writes.length <= before.writes.length, `${now.writes.length} card writes, ${before.writes.length} at f49e380`);
 });
 
-test("on a volume written behind, SAVE, COPY and a program's writes read back from the cache, and from the card after warm boot", async () => {
+test("logged WORK preserves SAVE, COPY and programme bytes within the measured write budget", async () => {
   const image = withShell(await load(card(), ["wbtest", "sum"], { "DATA.BIN": DATA })); // COPY is the shell's
   const m = start(image);
   const t = trace(m);
@@ -156,7 +283,7 @@ test("on a volume written behind, SAVE, COPY and a program's writes read back fr
   tpa.forEach((v, i) => m.write(0x100 + i, v));
   const w0 = t.writes.length;
   cmd(m, "SAVE 16 B:S.COM");
-  assert.ok(t.writes.length - w0 < 16, `${t.writes.length - w0} card writes for 32 records: each block once`);
+  const saveWrites = t.writes.length - w0;
   assert.match(cmd(m, "SUM B:S.COM"), new RegExp(sumOf(tpa)));
   cmd(m, "COPY A:DATA.BIN B:DATA.CPY");
   assert.match(cmd(m, "SUM B:DATA.CPY"), new RegExp(sumOf(DATA)));
@@ -171,8 +298,12 @@ test("on a volume written behind, SAVE, COPY and a program's writes read back fr
   assert.equal(seq.length, 64 * 128);
   for (let r = 0; r < 64; r += 1) assert.ok(seq.slice(r * 128, r * 128 + 128).every((v) => v === ((r * 3 + 1) & 0xff)), `SEQ.DAT record ${r}`);
   const rnd = b.read("RND.DAT");
+  assert.equal(rnd.length, 101 * 128);
   for (const r of [0, 40, 100]) assert.ok(rnd.slice(r * 128, r * 128 + 128).every((v) => v === (r ^ 0x5a)), `RND.DAT record ${r}`);
+  assert.deepEqual(b.verify(), []); assert.deepEqual(volume(image, "A").verify(), []);
   assert.deepEqual(m.violations, []);
+  console.log(JSON.stringify({ scope: "logged G8M B SAVE32 records, full file readback and warm persistence", saveWrites, savedBytes: b.read("S.COM").length, copiedBytes: b.read("DATA.CPY").length, sequentialBytes: seq.length, randomBytes: rnd.length }));
+  assert.ok(saveWrites <= 34, `${saveWrites} card writes for 32 records, budget 34`);
 });
 
 test("at every card write while a file is erased and its blocks reused, the volume verifies and no entry names another file's data", async () => {
@@ -213,12 +344,23 @@ test("a write after the block before it was cleared keeps a block's records that
   assert.deepEqual(m.violations, []);
 });
 
-/** Run code from 3000h to its final JR $ on M. */
+/** Finish a known normal input before this test takes ownership of PC/SP. */
+function prepareCaller(m, reason) {
+  m.runUntil(() => m.ready(), 400_000_000, `${reason}: ordinary input`);
+  const receipt = finishBarePrompt(m);
+  (m.cacheCallerTransitions ??= []).push({ reason, ...receipt });
+  return receipt;
+}
+
+/** Run code from 3000h to its final JR $ on a returned public caller. */
 function stub(m, code) {
+  publicContext(m);
   [...code, 0x18, 0xfe].forEach((v, i) => m.write(0x3000 + i, v));
   m.cpu.cpu.sp = 0x3000;
   m.cpu.cpu.pc = 0x3000;
   m.runUntil(() => m.pc === 0x3000 + code.length, 400_000_000, "the stub");
+  assert.equal(m.cpu.cpu.sp, 0x3000, "the synthetic caller regains its original stack");
+  publicContext(m);
 }
 /** BDOS function FN with DE from a stub. */
 const bdos = (m, fn, de) => stub(m, [0x0e, fn, 0x11, de & 0xff, de >> 8, 0xcd, 0x05, 0x00]);
@@ -227,52 +369,129 @@ const bdos = (m, fn, de) => stub(m, [0x0e, fn, 0x11, de & 0xff, de >> 8, 0xcd, 0
 function dirty(m) {
   [2, ...Buffer.from("Q       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
   bdos(m, 22, 0x5c);
+  assert.notEqual(m.cpu.cpu.a, 0xff, "make acknowledged");
   for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0xc3);
   bdos(m, 26, 0x2000);
-  for (let r = 0; r < 4; r += 1) bdos(m, 21, 0x5c);
+  for (let r = 0; r < 4; r += 1) {
+    bdos(m, 21, 0x5c);
+    assert.equal(m.cpu.cpu.a, 0, `record ${r} acknowledged`);
+    assert.equal(m.read(0x5c + 32), r + 1);
+  }
 }
 
-test("a card removed with dirty lines leaves the console working, and warm boot says the write was lost", async () => {
-  const m = start(card());
+/** Healthy entries committed earlier versions; only the latest update remains. */
+function latestBlock(m, image) {
   dirty(m);
-  m.sd = null; // the card out
-  m.mark = m.output.length;
-  m.cpu.cpu.pc = 0; // warm boot
-  let seen = -1;
-  for (let i = 0; i < 200 && !/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)); i += 1) {
-    const end = m.cycles + 20_000_000;
-    m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
-    if (m.waitingForInput() && m.output.length === seen) m.type("\r"); // a BDOS error's key
-    seen = m.output.length;
-  }
-  assert.match(m.text(m.mark), /Write lost/);
-  assert.match(m.text(m.mark), /\r\n[A-P](:\S*)?>$/);
-  assert.match(cmd(m, "USER 0"), /\r\n[A-P](:\S*)?>$/, "the console works");
+  const block = fileBlock(m, image, 3), payload = new Uint8Array(512).fill(0xc3);
+  const state = cacheState(m);
+  assert.equal(state.entries.length, 1); assert.equal(state.entries[0].block, block);
+  assert.equal(state.entries[0].dirty, 1); assert.deepEqual(state.entries[0].payload, payload);
+  assert.deepEqual([state.pending, state.any, state.depth, state.busy], [0, 1, 0, 0]);
+  const previous = new Uint8Array(512); previous.fill(0xc3, 0, 384);
+  assert.deepEqual(image.slice(block * 512, (block + 1) * 512), previous, "three earlier versions progressed, final record still pending");
+  const expectedImage = Uint8Array.from(image); expectedImage.set(payload, block * 512);
+  return { block, payload, expectedImage, state };
+}
+
+/** Warm boot is a nonreturning operation; stop at normal counted input. */
+function normalWarm(m) {
+  const mark = m.output.length; m.cpu.cpu.pc = 0;
+  const ownedInput = () => {
+    if (!m.classicBankIn || !m.ready() || m.read(m.sym("ERRMODE")) !== 0 || m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY"))) return false;
+    const saved = word(m, m.sym("OLDSP")), back = word(m, saved);
+    return saved === m.sym("CSTKTOP") - 2 && m.lineBuf === m.sym("CMDBUF") &&
+      [0x0e, 10, 0xcd, 5, 0].every((v, i) => m.read(back - 5 + i) === v);
+  };
+  m.runUntil(() => ownedInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(mark)), 400_000_000, "actual ordinary counted input after warm boot");
+  assert.ok(ownedInput());
+  return m.text(mark);
+}
+
+const durable = state => ({ queue: state.queue, entries: state.entries, dirty: state.dirty });
+
+
+/** Read-only ordinary counted-input ownership, including its actual call site. */
+function ordinaryInput(m) {
+  if (!m.classicBankIn || !m.ready() || m.read(m.sym("ERRMODE")) !== 0 || m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY"))) return false;
+  const saved = word(m, m.sym("OLDSP")), back = word(m, saved);
+  return saved === m.sym("CSTKTOP") - 2 && m.lineBuf === m.sym("CMDBUF") &&
+    [0x0e, 10, 0xcd, 5, 0].every((v, i) => m.read(back - 5 + i) === v);
+}
+
+function lifecycleWarm(m) {
+  const mark = m.output.length; m.cpu.cpu.pc = 0;
+  m.runUntil(() => recoveryInput(m) || (ordinaryInput(m) && /\r\n[A-P](:\S*)?>$/.test(m.text(mark))), 400_000_000, "actual normal or bootstrap owner after card lifecycle warm");
+  return { outcome: recoveryInput(m) ? "recovery" : "normal", text: m.text(mark) };
+}
+
+/** Observe attempted ROM dispatches without changing card or guest state. */
+function lifecycleTrace(m) {
+  const events = { initializations: 0, writes: 0 };
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === m.sym("SDINIT")) events.initializations++;
+    if (m.pc === m.sym("SDWRITE")) events.writes++;
+    return step();
+  };
+  return events;
+}
+
+test("a removed card retains acknowledged pending data while the normal console remains usable", async () => {
+  const image = card(), m = start(image);
+  prepareCaller(m, "removed-card caller");
+  const pending = latestBlock(m, image), before = Uint8Array.from(image), events = lifecycleTrace(m);
+  m.swapCard(null);
+  const warm = lifecycleWarm(m);
+  assert.equal(warm.outcome, "normal");
+  assert.equal(warm.text.match(/Write pending/g)?.length, 1); assert.doesNotMatch(warm.text, /Write lost/);
+  assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(image, before);
+  assert.equal(events.initializations, 0); assert.ok(events.writes > 0);
+  const attempted = events.writes, out = cmd(m, "USER 0");
+  m.runUntil(() => ordinaryInput(m), 400_000_000, "USER returns to actual ordinary input without a card");
+  assert.match(out, /\r\n[A-P](:\S*)?>$/); assert.doesNotMatch(out, /Write pending|Write lost/);
+  assert.ok(events.writes > attempted, "normal API activity retries the retained write");
+  assert.equal(events.initializations, 0); assert.equal(m.sd, null);
+  assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(image, before);
+  assert.deepEqual(m.violations, []);
 });
 
-test("the same card put back isn't started: Write lost once, the failed lines dropped, and a reset finds the records gone (KS36b)", async () => {
-  const image = card();
-  const m = start(image);
-  dirty(m);
-  m.sd = null; // the card out
-  const warm = () => {
-    m.mark = m.output.length;
-    m.cpu.cpu.pc = 0;
-    let seen = -1;
-    for (let i = 0; i < 200 && !/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)); i += 1) {
-      const end = m.cycles + 20_000_000;
-      m.runUntil(() => m.cycles >= end || (m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))), 30_000_000, "the prompt");
-      if (m.waitingForInput() && m.output.length === seen) m.type("\r");
-      seen = m.output.length;
-    }
-    return m.text(m.mark);
-  };
-  assert.match(warm(), /Write lost/);
-  m.swapCard(image);
-  assert.doesNotMatch(warm(), /Write lost/, "the failed lines were dropped: nothing is said twice");
-  m.reset();
-  m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 200_000_000 });
-  assert.equal(volume(image, "B").read("Q.DAT").length, 0, "the name was on the card, and its records are gone");
+test("same or different reinserted cards remain uninitialized until explicit cold reset", async () => {
+  for (const which of ["same", "different"]) {
+    const image = card(), m = start(image);
+    prepareCaller(m, `${which}: reinsert caller`);
+    const pending = latestBlock(m, image), oldCard = Uint8Array.from(image), events = lifecycleTrace(m);
+    m.swapCard(null);
+    const removed = lifecycleWarm(m);
+    assert.equal(removed.outcome, "normal"); assert.equal(removed.text.match(/Write pending/g)?.length, 1);
+    assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(image, oldCard);
+    const inserted = which === "same" ? image : card();
+    if (which === "different") volume(inserted, "B").write("OTHER.DAT", new Uint8Array(512).fill(0x6e));
+    const insertedBefore = Uint8Array.from(inserted), commits = [];
+    m.swapCard(inserted, { onSdWrite: card => commits.push(createHash("sha256").update(card).digest("hex")) });
+    assert.equal(m.sd.ready, false, "a new controller is not initialized by insertion");
+    const attempted = events.writes, reinserted = lifecycleWarm(m);
+    assert.equal(reinserted.outcome, "normal"); assert.doesNotMatch(reinserted.text, /Write pending|Write lost/);
+    assert.ok(events.writes > attempted); assert.equal(events.initializations, 0); assert.equal(m.sd.ready, false);
+    assert.deepEqual(commits, []); assert.deepEqual(inserted, insertedBefore); assert.deepEqual(image, oldCard);
+    assert.deepEqual(durable(cacheState(m)), durable(pending.state));
+    const beforeEmpty = events.writes, out = cmd(m, "");
+    m.runUntil(() => ordinaryInput(m), 400_000_000, "explicit empty command returns to actual normal input");
+    assert.doesNotMatch(out, /Write pending|Write lost/); assert.ok(events.writes > beforeEmpty);
+    assert.equal(events.initializations, 0); assert.equal(m.sd.ready, false); assert.deepEqual(commits, []);
+    assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(inserted, insertedBefore);
+    const mark = m.output.length; m.reset();
+    m.runUntil(() => ordinaryInput(m) && /\r\nA(:\S*)?>$/.test(m.text(mark)), 200_000_000, "explicit cold reset initializes the inserted card and reaches actual A input");
+    assert.equal(events.initializations, 1); assert.equal(m.sd.ready, true); assert.deepEqual(commits, []);
+    const after = cacheState(m); assert.equal(after.queue.length, 0); assert.ok(after.dirty.every(v => !v));
+    assert.deepEqual([after.pending, after.any, after.busy], [0, 0, 0]);
+    assert.deepEqual(inserted, insertedBefore, "cold reset never replays the old pending block to the inserted card");
+    assert.deepEqual(image, oldCard, "earlier physical versions remain, only the final uncommitted record is lost");
+    assert.notDeepEqual(image.slice(pending.block * 512, (pending.block + 1) * 512), pending.payload);
+    assert.equal(volume(image, "B").read("Q.DAT").length, 0, "unclosed record count was never published");
+    if (which === "different") assert.deepEqual(volume(inserted, "B").read("OTHER.DAT"), new Uint8Array(512).fill(0x6e));
+    console.log(JSON.stringify({ scope: "card reinsert and explicit cold reset", which, initializations: events.initializations, writeAttempts: events.writes, acceptedWrites: commits.length, physicalBlock: pending.block, beforeCold: reinserted.outcome, queueAfterCold: after.queue.length }));
+    assert.deepEqual(m.violations, []);
+  }
 });
 
 test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", async () => {
@@ -282,14 +501,19 @@ test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", a
   image[32 + 32 + 15] = 1;
   const sum = headerChecksum(image.subarray(0, 512));
   [image[20], image[21]] = [sum & 0xff, sum >> 8];
-  const m = start(image, { rom: oldRom("4ea57f7") });
+  const { m, selected, observation, incoming, command } = observedStart(image, { rom: oldRom("4ea57f7"), profile: "4ea57f7 fixture" });
   const t = trace(m);
   const tpa = pattern(4 * 256, (i) => i ^ 0x3c);
   tpa.forEach((v, i) => m.write(0x100 + i, v));
-  cmd(m, "SAVE 4 B:X.COM");
+  command("SAVE 4 B:X.COM");
   assert.ok(t.writes.length >= 8, `${t.writes.length} card writes: one for each of 8 records`);
   assert.deepEqual(volume(image, "B").read("X.COM"), tpa, "on the card before any warm boot");
   assert.deepEqual(m.violations, []);
+  assert.equal(observation.writes.length, m.expand1Writes.length);
+  verifyLegacyMirrors(m, selected, observation, PRECACHE_MIRROR);
+  assert.equal(EXPAND1_WRITES.length, incoming.length);
+  incoming.forEach((event, i) => assert.equal(EXPAND1_WRITES[i], event));
+  console.log(JSON.stringify({ scope: "passive pre-cache historical memory attribution", ...observation, originalFlaggedEvents: m.expand1Writes, remainingGlobalEvents: EXPAND1_WRITES.length }));
 });
 
 /**
@@ -324,52 +548,68 @@ const card3 = (wb = true) => {
   return wb ? loggedOnB(image) : image;
 };
 
-/** Type LINE and run to the prompt, answering a BDOS error with ^C. */
-function through(m, line) {
-  m.mark = m.output.length;
-  m.type(line);
-  for (let i = 0; i < 50; i += 1) {
-    m.runUntil(() => m.waitingForInput(), 2_000_000_000, line);
-    if (/\r\n[A-P](:\S*)?>$/.test(m.text(m.mark))) return m.text(m.mark);
-    m.type("\x03");
-  }
-  throw new Error(`no prompt after ${line}`);
-}
-
-test("a directory write whose data line fails leaves the card's directory the truth, at every cut, through warm boot and a remount", async () => {
-  const image = await load(card3(), ["mount"]);
-  let cuts = 0;
-  const problems = [];
-  const fill = { "F1.DAT": 0xa1, "F2.DAT": 0xb2 };
-  const check = (img) => {
-    cuts += 1;
-    const b = volume(img, "B");
-    problems.push(...b.verify().map((p) => `cut ${cuts}: ${p}`));
-    for (const f of b.list())
-      if (fill[f.name] !== undefined && !b.read(f.name).every((v) => v === fill[f.name])) problems.push(`cut ${cuts}: ${f.name} names another file's data`);
+test("failed data publication retains the block through warm boot and refuses drive reassignment until recovery", async () => {
+  const image = card3(); let cuts = 0;
+  const problems = [], fill = { "F1.DAT": 0xa1, "F2.DAT": 0xb2 };
+  const check = img => {
+    cuts++;
+    const b = volume(img, "WORK");
+    problems.push(...b.verify().map(p => `cut ${cuts}: ${p}`));
+    for (const f of b.list()) if (fill[f.name] !== undefined && !b.read(f.name).every(v => v === fill[f.name])) problems.push(`cut ${cuts}: ${f.name} names data not yet durable`);
   };
-  const m = start(image, { onSdWrite: check });
-  const fillTpa = (v) => {
-    for (let i = 0; i < 12 * 256; i += 1) m.write(0x100 + i, v);
+  const m = start(image, { onSdWrite: check }), fillTpa = value => {
+    for (let i = 0; i < 12 * 256; i++) m.write(0x100 + i, value);
   };
-  fillTpa(0xa1);
-  cmd(m, "SAVE 12 B:F1.DAT");
-  cmd(m, "ERA B:F1.DAT");
-  let bad = null; // the first of F2.DAT's blocks the close's flush writes: it never reaches the card
-  failing(m, (block, data) => {
-    if (bad === null && data.every((v) => v === 0xb2)) bad = block;
-    return block === bad && "fail";
+  fillTpa(0xa1); cmd(m, "SAVE 12 B:F1.DAT");
+  const fs = volume(image, "WORK"), descriptor = parseContainer(image).volumes[1];
+  assert.deepEqual(fs.read("F1.DAT"), new Uint8Array(12 * 256).fill(0xa1));
+  const allocation = fs.find("F1.DAT").entries[0].slots[0][1];
+  const expectedFirst = descriptor.start + allocation * fs.blockBytes / 512;
+  cmd(m, "ERA B:F1.DAT"); assert.equal(fs.find("F1.DAT"), undefined);
+  let bad = null, blocked = true, refusals = 0;
+  failing(m, (block, payload) => {
+    if (bad === null && payload.every(v => v === 0xb2)) bad = block;
+    if (blocked && block === bad) { refusals++; return "fail"; }
   });
-  fillTpa(0xb2);
-  const out = through(m, "SAVE 12 B:F2.DAT\r");
-  assert.notEqual(bad, null, "a data line failed");
-  assert.match(out, /Bad Sector/, "the close's flush failed, and the BDOS says so");
-  assert.equal(out.match(/Write lost/g)?.length, 1, "the failed line was kept dirty by that flush, so warm boot tried it again and says Write lost once (KE-AR8)");
-  through(m, "MOUNT B: ARCHIVE\r");
-  through(m, "MOUNT B: WORK\r");
-  check(image);
-  assert.deepEqual(problems, []);
-  assert.deepEqual(m.violations, []);
+  fillTpa(0xb2); const mark = m.output.length;
+  m.type("SAVE 12 B:F2.DAT\r");
+  const errorOwner = () => m.classicBankIn && m.waitingForInput() && m.read(m.sym("ERRMODE")) === 0 && m.read(m.sym("HKDEP")) === 1 && !m.read(m.sym("HKBUSY")) && word(m, m.cpu.cpu.sp) === m.sym("BDDEF") + 6;
+  m.runUntil(() => errorOwner() && /Bad Sector/.test(m.text(mark)), 2_000_000_000, "actual default BDOS error key after refused close");
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("BDDEF") + 3 + i)), [0xcd, m.sym("GETCHAR") & 255, m.sym("GETCHAR") >> 8]);
+  assert.equal(bad, expectedFirst); assert.ok(refusals > 0);
+  const beforeWarm = cacheState(m), beforeCard = Uint8Array.from(image), payload = new Uint8Array(512).fill(0xb2);
+  assert.equal(beforeWarm.entries.length, 1); assert.equal(beforeWarm.entries[0].block, bad);
+  assert.equal(beforeWarm.entries[0].dirty, 1); assert.deepEqual(beforeWarm.entries[0].payload, payload);
+  assert.notDeepEqual(image.slice(bad * 512, (bad + 1) * 512), payload);
+  assert.equal(fs.find("F2.DAT").records, 0, "failed close published no record count");
+  // Deliberately acknowledge the observed default-error key; no retry loop.
+  m.type("\x03");
+  m.runUntil(() => ordinaryInput(m) && /\r\nB(:\S*)?>$/.test(m.text(mark)), 400_000_000, "error abort reaches actual normal input after warm boot");
+  const out = m.text(mark);
+  assert.match(out, /Bad Sector/); assert.equal(out.match(/Write pending/g)?.length, 1); assert.doesNotMatch(out, /Write lost/);
+  assert.deepEqual(durable(cacheState(m)), durable(beforeWarm)); assert.deepEqual(image, beforeCard);
+  prepareCaller(m, "failed close captured before explicit input completion");
+  assert.deepEqual(durable(cacheState(m)), durable(beforeWarm)); assert.deepEqual(image, beforeCard);
+  const mapping = Array.from({ length: 3 }, (_, i) => m.read(m.sym("DRVIDX") + i));
+  assert.equal(mapping[1], 2);
+  const mount = index => {
+    const at = m.sym("ABICALL"); stub(m, [0x06, 1, 0x0e, 9, 0x1e, index, 0xcd, at & 255, at >> 8]);
+    return { a: m.cpu.cpu.a, carry: m.cpu.cpu.flags.C };
+  };
+  const refusedBefore = refusals;
+  assert.deepEqual(mount(2), { a: 1, carry: 1 }, "archive assignment refuses an incomplete flush");
+  assert.ok(refusals > refusedBefore);
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("DRVIDX") + i)), mapping);
+  assert.deepEqual(durable(cacheState(m)), durable(beforeWarm)); assert.deepEqual(image, beforeCard);
+  blocked = false; const beforeRecovery = cuts;
+  assert.deepEqual(mount(2), { a: 0, carry: 0 }); assert.equal(m.read(m.sym("DRVIDX") + 1), 3);
+  assert.equal(cuts - beforeRecovery, 1, "the retained complete block is the only recovered card write");
+  const expectedImage = Uint8Array.from(beforeCard); expectedImage.set(payload, bad * 512);
+  assert.deepEqual(image, expectedImage); assert.equal(cacheState(m).queue.length, 0);
+  assert.deepEqual(mount(1), { a: 0, carry: 0 }); assert.equal(m.read(m.sym("DRVIDX") + 1), 2);
+  assert.deepEqual(image, expectedImage); assert.equal(fs.find("F2.DAT").records, 0, "recovered raw data does not finish an aborted close");
+  assert.deepEqual(problems, []); assert.deepEqual(m.violations, []);
+  console.log(JSON.stringify({ scope: "failed publication and drive assignment", block: bad, refusedAttempts: refusals, acceptedCuts: cuts, recoveryCuts: cuts - beforeRecovery, retainedBeforeWarm: beforeWarm.entries.length, publishedRecords: fs.find("F2.DAT").records, finalBIndex: m.read(m.sym("DRVIDX") + 1) }));
 });
 
 /** NPR's run on B:, written behind (logged on B:) or coalesced; G.DAT's records back from the card. */
@@ -402,6 +642,7 @@ test("more than the cache written behind with no directory write between: dirty 
   tpa.forEach((v, i) => m.write(0x100 + i, v));
   cmd(m, "SAVE 63 B:E.COM");
   assert.ok(t.writes.length > 0, "lines written to make room");
+  prepareCaller(m, "SAVE returned before synthetic readback");
   [2, ...Buffer.from("E       COM"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
   bdos(m, 15, 0x5c);
   for (let r = 0; r < 126; r += 1) {
@@ -413,24 +654,22 @@ test("more than the cache written behind with no directory write between: dirty 
   assert.deepEqual(volume(image, "B").read("E.COM"), tpa, "from the card");
 });
 
-test("an unclosed file's records reach the card at warm boot", async () => {
-  const image = card();
-  const m = start(image, { ram96: true });
-  dirty(m);
-  const table = m.sym("CTAB") - 0x8000;
-  const d = m.sym("CDIRTY") - 0x8000;
-  const line = Array.from({ length: 30 }, (_, i) => i).find((i) => m.expand[1][d + i]);
-  const lba = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
-  assert.ok(!image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "not on the card yet");
-  m.cpu.cpu.pc = 0; // warm boot, as ^C
-  m.mark = m.output.length;
-  m.expect(/\r\nB(:\S*)?>$/);
-  assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's four records on the card");
+test("an unclosed file's latest acknowledged block reaches the card at warm boot", async () => {
+  const image = card(), m = start(image, { ram96: true });
+  prepareCaller(m, "healthy pending warm caller");
+  const pending = latestBlock(m, image);
+  assert.doesNotMatch(normalWarm(m), /Write pending|Write lost/);
+  assert.deepEqual(image, pending.expectedImage, "only the final known data version reaches the card");
+  const after = cacheState(m);
+  assert.equal(after.queue.length, 0); assert.ok(after.dirty.every(v => !v));
+  assert.deepEqual([after.pending, after.any, after.busy], [0, 0, 0]);
+  assert.equal(volume(image, "B").read("Q.DAT").length, 0, "physical data persistence does not close an unclosed file");
 });
 
 test("MOUNT writes the dirty lines before it changes a drive", async () => {
   const image = card3();
   const m = start(image, { ram96: true });
+  prepareCaller(m, "initial synthetic caller");
   dirty(m);
   const table = m.sym("CTAB") - 0x8000;
   const d = m.sym("CDIRTY") - 0x8000;
@@ -441,45 +680,59 @@ test("MOUNT writes the dirty lines before it changes a drive", async () => {
   assert.ok(image.slice(lba * 512, lba * 512 + 512).every((v) => v === 0xc3), "Q.DAT's records on the card before the drive changed");
 });
 
-test("a failed write-through write drops its block's line, so a reread comes from the card", async () => {
-  const image = card(false);
-  const m = start(image);
-  const base = word(m, 1) - 3; // the BIOS jump table
-  const bios = (n, bc) => [0x01, bc & 0xff, bc >> 8, 0xcd, (base + 3 * n) & 0xff, (base + 3 * n) >> 8];
-  const at = [...bios(9, 1), ...bios(10, 6), ...bios(11, 2), ...bios(12, 0x2000)]; // B:, track 6, sector 2, DMA 2000h
+test("a failed raw type1 write rereads the card, while a refused type0 flush retains a genuine dirty cache hit", async () => {
+  const image = card(false), m = start(image);
+  prepareCaller(m, "raw BIOS caller");
+  const t = trace(m), base = word(m, 1) - 3;
+  const biosCode = (n, bc) => [0x01, bc & 255, bc >> 8, 0xcd, (base + 3 * n) & 255, (base + 3 * n) >> 8];
+  const at = [...biosCode(9, 1), ...biosCode(10, 6), ...biosCode(11, 2), ...biosCode(12, 0x2000)];
   const read = () => {
-    for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0);
-    stub(m, [...at, ...bios(13, 0)]);
-    return Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
+    for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0);
+    stub(m, [...at, ...biosCode(13, 0)]); assert.equal(m.cpu.cpu.a, 0);
+    return Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i));
   };
-  const first = read(); // READ: the block now has a line
-  // The card's answer to each write: false takes it.
-  let how = false;
-  let n = 0;
-  failing(m, () => how && (n += 1) && how);
-  // A directory write, type 1, goes through: failing, it drops its line.
-  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x77);
-  how = "commit"; // the card takes the record and reports a failure
-  stub(m, [...at, ...bios(14, 1)]);
-  assert.ok(n > 0 && m.cpu.cpu.a !== 0, "the write failed");
-  how = false;
-  const got = read();
-  assert.notDeepEqual(first, got);
-  assert.ok(got.every((v) => v === 0x77), "the card's record, not the line's");
-  // A data write, type 0, is held; its failed flush keeps the line.
-  for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, 0x88);
-  stub(m, [...at, ...bios(14, 0)]);
-  assert.equal(m.cpu.cpu.a, 0, "the data write held in its line");
-  n = 0;
-  how = "fail";
-  bdos(m, 11, 0); // a console read: the flush point
-  assert.ok(n > 0, "the flush was tried and failed");
-  how = false;
-  assert.ok(read().every((v) => v === 0x88), "the line's record, kept for retry");
-  assert.equal(runOf(image, 0x88), -1, "and not yet on the card");
-  bdos(m, 48, 0);
-  assert.equal(m.cpu.cpu.a, 0, "function 48 writes it once the card takes writes");
-  assert.notEqual(runOf(image, 0x88), -1);
+  const descriptor = parseContainer(image).volumes[1], block = descriptor.start + 6 * 16;
+  const original = image.slice(block * 512, (block + 1) * 512), initialImage = Uint8Array.from(image);
+  assert.deepEqual(read(), original.slice(256, 384));
+  const written77 = original.slice(); written77.fill(0x77, 256, 384);
+  const written88 = original.slice(); written88.fill(0x88, 256, 384);
+  const attempts = [], sd = m.sd, commit = sd.commitWrite.bind(sd);
+  let mode = "commit-error";
+  sd.commitWrite = () => {
+    const { start, buffer } = sd.writeState, payload = Uint8Array.from(buffer);
+    assert.equal(start / 512, block); assert.deepEqual(payload, mode === "commit-error" ? written77 : written88);
+    const event = { block, payload, mode, response: mode === "pass" ? 0x05 : 0x0d };
+    attempts.push(event);
+    if (mode !== "refuse") { commit(); assert.equal(sd.pendingResponse[0], 0x05); assert.deepEqual(image.slice(start, start + 512), payload); }
+    if (mode !== "pass") { sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1; }
+  };
+  for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0x77);
+  stub(m, [...at, ...biosCode(14, 1)]);
+  assert.notEqual(m.cpu.cpu.a, 0); assert.equal(attempts.length, 1);
+  assert.equal(cacheState(m).queue.length, 0);
+  const readsBefore = t.reads;
+  mode = "refuse";
+  assert.deepEqual(read(), new Uint8Array(128).fill(0x77));
+  assert.equal(t.reads, readsBefore + 1, "the reported-error type1 line was invalidated, so reread used SD");
+  const card77 = Uint8Array.from(initialImage); card77.set(written77, block * 512);
+  assert.deepEqual(image, card77);
+  for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0x88);
+  stub(m, [...at, ...biosCode(14, 0)]); assert.equal(m.cpu.cpu.a, 0);
+  const held = cacheState(m); assert.equal(held.entries.length, 1);
+  assert.equal(held.entries[0].block, block); assert.deepEqual(held.entries[0].payload, written88);
+  assert.equal(held.pending, held.entries[0].line + 1); assert.equal(held.any, 0);
+  bdos(m, 11, 0);
+  const beforeHit = t.reads, refusedBeforeHit = attempts.length;
+  assert.deepEqual(read(), new Uint8Array(128).fill(0x88));
+  assert.equal(t.reads, beforeHit, "dirty cache hit made no SDREAD");
+  assert.ok(attempts.length > refusedBeforeHit, "root BIOS opportunities really attempted refused work");
+  assert.ok(attempts.slice(1).every(a => a.mode === "refuse" && a.response === 0x0d));
+  assert.deepEqual(durable(cacheState(m)), durable(held)); assert.deepEqual(image, card77);
+  mode = "pass";
+  bdos(m, 48, 0); assert.equal(m.cpu.cpu.a, 0);
+  assert.equal(attempts.filter(a => a.response === 0x05).length, 1);
+  const card88 = Uint8Array.from(initialImage); card88.set(written88, block * 512);
+  assert.deepEqual(image, card88); assert.equal(cacheState(m).queue.length, 0);
 });
 
 test("a volume remounted on another drive, with another on its old drive, reads back right", async () => {
@@ -508,48 +761,88 @@ test("descriptor byte 15 reaches no drive flag", async () => {
   }
 });
 
-test("the harness takes the copy core's writes below BD00h as the cache's only when the cache called it", async () => {
-  const m = start(card(), { ram96: true });
+test("the harness attributes private copy writes without discarding prior or foreign errors", async () => {
+  const incoming = [...EXPAND1_WRITES], m = start(card(), { ram96: true });
   cmd(m, "DIR B:");
   assert.deepEqual(m.expand1Writes, [], "the cache's own copies");
-  m.write(m.sym("XMDST"), 1);
-  m.write(m.sym("XMSRC"), 0);
+  prepareCaller(m, "DIR returned before intentional private copy");
+  const source = Uint8Array.from({ length: 16 }, (_, i) => 0x41 + i);
+  source.forEach((value, i) => m.write(0x2000 + i, value));
+  m.write(m.sym("XMDST"), 1); m.write(m.sym("XMSRC"), 0);
   const mv = m.sym("MVCOPY");
-  stub(m, [0x21, 0x00, 0x90, 0x11, 0x00, 0x20, 0x01, 0x10, 0x00, 0xcd, mv & 0xff, mv >> 8]); // 16 bytes to 9000h, bank 1
-  assert.equal(m.expand1Writes.length, 16, "a copy not called by the cache is reported");
-  EXPAND1_WRITES.splice(0);
+  assert.deepEqual([m.read(mv), m.read(mv + 1), m.read(mv + 2)], [0x78, 0xb1, 0xc8]);
+  stub(m, [0x21, 0x00, 0x90, 0x11, 0x00, 0x20, 0x01, 0x10, 0x00, 0xcd, mv & 255, mv >> 8]);
+  const own = [...m.expand1Writes]; assert.equal(own.length, 16);
+  own.forEach((event, i) => {
+    assert.equal(event.addr, 0x9000 + i);
+    assert.ok(event.pc >= mv && event.pc < m.sym("MVOK") + 2, "each event belongs to the deliberately called copy span");
+  });
+  assert.deepEqual(m.expand[1].slice(0x1000, 0x1010), source);
+  // Lookalike objects from other calls are not the verified events, even when the collector is full.
+  for (const count of [0, 2, 16]) {
+    const foreign = Array.from({ length: count }, (_, i) => ({ ...own[i % own.length] }));
+    const collector = [...foreign, ...own].slice(0, 16);
+    retireWrites(collector, own);
+    assert.equal(collector.length, foreign.length);
+    foreign.forEach((event, i) => assert.equal(collector[i], event));
+    assert.equal(own.length, 16, "local evidence survives collector retirement");
+  }
+  const foreign = [{ ...own[0] }, { ...own[15] }], interleaved = [own[0], foreign[0], ...own.slice(1, 8), foreign[1], ...own.slice(8)];
+  retireWrites(interleaved, own); assert.equal(interleaved.length, 2);
+  assert.equal(interleaved[0], foreign[0]); assert.equal(interleaved[1], foreign[1]);
+  retireWrites(EXPAND1_WRITES, own);
+  assert.equal(EXPAND1_WRITES.length, incoming.length);
+  incoming.forEach((event, i) => assert.equal(EXPAND1_WRITES[i], event));
+  console.log(JSON.stringify({ scope: "identity-only intended private-copy cleanup", intendedLocalWrites: own.length, preservedIncomingGlobalWrites: incoming.length, saturatedForeignEventsPreserved: 16, interleavedForeignEventsPreserved: foreign.length }));
 });
 
 /** Where 128 bytes of V lie in IMAGE, or -1. */
 const runOf = (image, v) => Buffer.from(image).indexOf(Buffer.alloc(128, v));
 
-test("function 48 puts the lines written behind on the card, A = 0, and FFh if a write fails, keeping the failed line, which warm boot then says Write lost for once (KS36b)", async () => {
-  const image = card();
-  const m = start(image);
-  dirty(m);
-  assert.equal(runOf(image, 0xc3), -1, "the records are only in the cache");
-  bdos(m, 48, 0);
-  assert.equal(m.cpu.cpu.a, 0);
-  assert.notEqual(runOf(image, 0xc3), -1, "and on the card after function 48, before any close");
+test("function 48 commits healthy data, reports refused full drains, and retains data through warm boot for retry", async () => {
+  const image = card(), m = start(image);
+  prepareCaller(m, "healthy function 48 caller");
+  const healthy = latestBlock(m, image);
+  bdos(m, 48, 0); assert.equal(m.cpu.cpu.a, 0);
+  assert.deepEqual(image, healthy.expectedImage); assert.equal(cacheState(m).queue.length, 0);
 
-  const failed = card();
-  const n = start(failed);
-  dirty(n);
-  failing(n, () => "fail");
-  bdos(n, 48, 0);
-  assert.equal(n.cpu.cpu.a, 0xff, "a failed write: FFh");
-  const warm = () => {
-    n.mark = n.output.length;
-    n.cpu.cpu.pc = 0;
-    n.runUntil(() => n.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(n.text(n.mark)), 400_000_000, "warm boot");
-    return n.text(n.mark);
+  const failed = card(), n = start(failed);
+  prepareCaller(n, "refused full-drain caller");
+  const p = retainedBlocks({ m: n, image: failed, call: (fn, de) => bdos(n, fn, de) });
+  bdos(n, 48, 0); assert.equal(n.cpu.cpu.a, 0xff, "failed required flush returns FF");
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(failed, p.original);
+  const firstWarm = normalWarm(n);
+  assert.equal(firstWarm.match(/Write pending/g)?.length, 1); assert.doesNotMatch(firstWarm, /Write lost/);
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(failed, p.original);
+  assert.doesNotMatch(normalWarm(n), /Write pending|Write lost/, "the pending episode is reported once");
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(failed, p.original);
+  prepareCaller(n, "snapshot complete, finish input while refusal persists");
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(failed, p.original);
+  let released = 0;
+  const step = n.step.bind(n), at = n.sym("FNFLSH"), target = n.sym("VFLUSH");
+  assert.deepEqual([n.read(at), n.read(at + 1), n.read(at + 2)], [0xcd, target & 255, target >> 8]);
+  const attemptStart = p.attempts.length;
+  n.step = () => {
+    if (n.pc === at) {
+      assert.equal(n.read(n.sym("HKDEP")), 1); assert.equal(n.read(n.sym("HKBUSY")), 0);
+      assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(failed, p.original);
+      released++; p.backend.accepts = () => true;
+    }
+    return step();
   };
-  assert.match(warm(), /Write lost/, "the failed line was kept, so warm boot, the card still refusing, says Write lost");
-  assert.doesNotMatch(warm(), /Write lost/, "once: the next warm boot says nothing");
+  bdos(n, 48, 0); n.step = step;
+  assert.equal(released, 1); assert.equal(n.cpu.cpu.a, 0);
+  const attempts = p.attempts.slice(attemptStart);
+  assert.ok(attempts.some(a => !a.accepted), "ordinary entry encountered refusal before functional release");
+  assert.deepEqual(attempts.filter(a => a.accepted).map(a => a.block), [...p.expected.keys()], "required flush commits both queued blocks");
+  assert.deepEqual(failed, p.expectedImage); assert.equal(p.state().queue.length, 0);
+  assert.ok(p.state().dirty.every(v => !v));
+  assert.deepEqual([p.state().pending, p.state().any, p.state().depth, p.state().busy], [0, 0, 0, 0]);
 });
 
 test("function 45: FFh returns a BDOS error to the program, A = FFh and H the code, FEh says it first, and warm boot puts the default back (KS36b)", async () => {
   const m = start(card());
+  prepareCaller(m, "initial synthetic caller");
   for (const [mode, said] of [[0xff, false], [0xfe, true]]) {
     bdos(m, 45, mode);
     m.mark = m.output.length;
@@ -562,46 +855,73 @@ test("function 45: FFh returns a BDOS error to the program, A = FFh and H the co
   assert.equal(m.read(m.sym("ERRMODE")), 0, "warm boot: the default again");
 });
 
-test("function 47's warm boot puts the lines written behind on the card before the chained program loads (KS36b)", async () => {
-  const image = await load(card(), ["say"]);
-  const m = start(image);
-  dirty(m);
-  [..."SAY", 0].forEach((v, i) => m.write(0x2100 + i, typeof v === "string" ? v.charCodeAt(0) : v));
+test("function 47 drains genuinely retained blocks before loading the chained program", async () => {
+  const image = await load(card(), ["say"]), m = start(image), say = await program("say");
+  prepareCaller(m, "nonreturning function 47 caller");
+  const p = retainedBlocks({ m, image, call: (fn, de) => bdos(m, fn, de) });
+  const mark = m.output.length;
+  bdos(m, 45, 0xfe);
+  [...Buffer.from("SAY"), 0, ...new Array(124).fill(0)].forEach((v, i) => m.write(0x2100 + i, v));
   bdos(m, 26, 0x2100);
-  let onCard = null;
-  const step = m.step.bind(m);
+  assert.equal(m.read(m.sym("ERRMODE")), 0xfe);
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+  assert.equal(m.text(mark).match(/Write pending/g)?.length, 1, "the deliberately returned-error episode is reported before chaining");
+  const step = m.step.bind(m), chain = m.sym("FNCHAIN"), dma = m.sym("CURDMA");
+  assert.deepEqual([m.read(chain), m.read(chain + 1), m.read(chain + 2)], [0x2a, dma & 255, dma >> 8]);
+  let released = 0, loads = 0, programs = 0;
+  const before = p.attempts.length;
   m.step = () => {
-    if (onCard === null && m.pc === m.sym("LOADCOM")) onCard = runOf(image, 0xc3) !== -1;
+    if (m.pc === chain) {
+      assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+      assert.ok(p.attempts.length > before && p.attempts.slice(before).every(a => !a.accepted), "ordinary entry still encountered refusal");
+      released++; p.backend.accepts = () => true;
+    }
+    if (m.pc === m.sym("LOADCOM")) {
+      publicContext(m); loads++;
+      assert.equal(p.state().queue.length, 0); assert.deepEqual(image, p.expectedImage, "both known blocks are durable before any chained program load");
+    }
+    if (m.pc === 0x100) {
+      publicContext(m); programs++;
+      assert.deepEqual(Uint8Array.from({ length: say.bytes.length }, (_, i) => m.read(0x100 + i)), Uint8Array.from(say.bytes));
+    }
     return step();
   };
-  m.mark = m.output.length;
-  m.write(0x3000, 0x0e); m.write(0x3001, 47); m.write(0x3002, 0xcd); m.write(0x3003, 0x05); m.write(0x3004, 0x00);
-  m.cpu.cpu.sp = 0x3100;
-  m.cpu.cpu.pc = 0x3000;
-  m.runUntil(() => m.waitingForInput() && /\nSAY\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the chained SAY");
+  publicContext(m);
+  [0x0e, 47, 0xcd, 0x05, 0x00].forEach((v, i) => m.write(0x3000 + i, v));
+  m.cpu.cpu.sp = 0x3100; m.cpu.cpu.pc = 0x3000;
+  m.runUntil(() => ordinaryInput(m) && /\nSAY\r\nB(:\S*)?>$/.test(m.text(mark)), 400_000_000, "chained SAY returns naturally to actual normal input");
   m.step = step;
-  assert.equal(onCard, true, "the records were on the card when the CCP began to load SAY");
+  assert.equal(released, 1); assert.ok(loads >= 1); assert.equal(programs, 1);
+  assert.deepEqual(p.attempts.filter(a => a.accepted).map(a => a.block), [...p.expected.keys()]);
+  const out = m.text(mark);
+  assert.equal(out.match(/Write pending/g)?.length, 1); assert.equal(out.match(/Cache clear/g)?.length, 1); assert.doesNotMatch(out, /Write lost|Write error/);
+  assert.deepEqual(image, p.expectedImage); assert.equal(p.state().queue.length, 0);
+  assert.equal(volume(image, "B").read("Q.DAT").length, 0);
+  assert.deepEqual(m.violations, []);
+  console.log(JSON.stringify({ scope: "function47 full drain before chained load", functionalEntries: released, loads, programs, committedBlocks: p.attempts.filter(a => a.accepted).map(a => a.block), pendingNotices: out.match(/Write pending/g)?.length ?? 0, recoveredNotices: out.match(/Cache clear/g)?.length ?? 0 }));
 });
 
-test("a flush tries every line: the first line's write failing, the next still reaches the card, and warm boot says Write lost once (KS36b)", async () => {
-  const image = card();
-  const m = start(image);
-  // B:R.DAT, eight records not closed: a block of C3h and one of D4h, two dirty lines.
-  [2, ...Buffer.from("R       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
-  bdos(m, 22, 0x5c);
-  for (const v of [0xc3, 0xd4])
-    for (let r = 0; r < 4; r += 1) {
-      for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, v);
-      bdos(m, 26, 0x2000);
-      bdos(m, 21, 0x5c);
-    }
-  failing(m, (block, data) => data.every((v) => v === 0xc3) && "fail");
-  m.mark = m.output.length;
-  m.cpu.cpu.pc = 0;
-  m.runUntil(() => m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
-  assert.equal(runOf(image, 0xc3), -1, "the failed line never reached the card");
-  assert.notEqual(runOf(image, 0xd4), -1, "the next line did");
-  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1);
+test("a warm flush retains a refused first block and commits the next acknowledged block", async () => {
+  const image = card(), m = start(image);
+  prepareCaller(m, "full-pass fairness caller");
+  const p = retainedBlocks({ m, image, call: (fn, de) => bdos(m, fn, de) });
+  const [first, second] = [...p.expected.keys()];
+  p.backend.accepts = block => block !== first;
+  const from = p.attempts.length, out = normalWarm(m), attempts = p.attempts.slice(from);
+  assert.equal(out.match(/Write pending/g)?.length, 1); assert.doesNotMatch(out, /Write lost/);
+  assert.deepEqual(attempts.filter(a => a.accepted).map(a => a.block), [second]);
+  const refusedFirst = attempts.findIndex(a => a.block === first && !a.accepted), acceptedSecond = attempts.findIndex(a => a.block === second && a.accepted);
+  assert.ok(refusedFirst >= 0 && acceptedSecond > refusedFirst, "the required pass attempts the failed head before the succeeding next block");
+  const expectedPartial = Uint8Array.from(p.original); expectedPartial.set(p.expected.get(second), second * 512);
+  assert.deepEqual(image, expectedPartial);
+  const state = p.state(); assert.equal(state.entries.length, 1);
+  assert.deepEqual(state.entries[0], p.before.entries[0]); assert.equal(state.dirty.filter(Boolean).length, 1);
+  prepareCaller(m, "capture fairness result before finishing normal input");
+  assert.deepEqual(image, expectedPartial); assert.equal(p.state().entries[0].block, first);
+  p.backend.accepts = () => true;
+  bdos(m, 48, 0); assert.equal(m.cpu.cpu.a, 0);
+  assert.deepEqual(image, p.expectedImage); assert.equal(p.state().queue.length, 0);
 });
 
 test("the cold mount reads the table through a cache line, and leaves the TPA as it found it (KS36b)", () => {
@@ -617,38 +937,87 @@ function bios(m, n, bc) {
   return m.cpu.cpu;
 }
 
-test("a BIOS WRITE of type 1 to a directory block no line holds, on the volume written behind with dirty data lines, puts the data on the card first and then the directory (KS36b review)", async () => {
-  const image = await load(card(), [], { "BIG.DAT": pattern(40 * 512, (i) => i) });
-  const runs = (img) => (Buffer.from(img).toString("latin1").match(/\xc3{512}/g) ?? []).length;
-  const writes = [];
-  const m = start(image, { onSdWrite: (img) => writes.push(runs(img)) });
-  dirty(m);
-  // B:'s first directory record, read by the BIOS into 2400h.
-  const c = bios(m, 9, 1);
-  const dpb = word(m, ((c.h << 8) | c.l) + 10);
-  bios(m, 10, word(m, dpb + 13));
-  bios(m, 11, 0);
-  bios(m, 12, 0x2400);
+test("an uncached BIOS type1 directory publication follows every acknowledged data block", async () => {
+  const big = pattern(40 * 512, i => i), image = await load(card(), [], { "BIG.DAT": big });
+  const cuts = []; let recording = false, cutExpected, directoryBlock, directoryExpected, p, m;
+  m = start(image, { onSdWrite: img => {
+    if (!recording) return;
+    const { start, buffer } = m.sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    if (block === directoryBlock) {
+      for (const [dataBlock, data] of p.expected) assert.deepEqual(img.slice(dataBlock * 512, (dataBlock + 1) * 512), data, "every acknowledged data block is durable before publication");
+      assert.deepEqual(payload, directoryExpected);
+    } else {
+      assert.ok(p.expected.has(block)); assert.deepEqual(payload, p.expected.get(block));
+      assert.equal(volume(img, "B").find("Q.DAT").records, 0, "data commits publish no record count");
+    }
+    cutExpected.set(block === directoryBlock ? directoryExpected : p.expected.get(block), block * 512);
+    assert.deepEqual(img, cutExpected, "every accepted cut changes only the independently predicted complete block");
+    assert.deepEqual(volume(img, "B").verify(), []);
+    cuts.push({ block, payload, records: volume(img, "B").find("Q.DAT").records });
+  } });
+  prepareCaller(m, "uncached directory publication caller");
+  const commit = m.sd.commitWrite.bind(m.sd);
+  p = retainedBlocks({ m, image, call: (fn, de) => bdos(m, fn, de) });
+  const b = volume(image, "B"), descriptor = parseContainer(image).volumes[1], entry = b.find("Q.DAT");
+  assert.equal(entry.entries.length, 1); assert.equal(entry.entries[0].index, 0); assert.equal(entry.records, 0);
+  assert.deepEqual(entry.entries[0].slots, []);
+  directoryBlock = descriptor.start;
+  const originalDirectory = image.slice(directoryBlock * 512, (directoryBlock + 1) * 512);
+  directoryExpected = originalDirectory.slice();
+  directoryExpected[15] = 8;
+  const allocation = word(m, 0x5c + 16);
+  assert.ok(allocation >= b.g.dirBlocks && allocation <= b.d.dsm);
+  directoryExpected[16] = allocation & 255; directoryExpected[17] = allocation >> 8;
+  assert.equal(fileBlock(m, image, 0), [...p.expected.keys()][0]);
+  const selected = bios(m, 9, 1), dpb = word(m, ((selected.h << 8) | selected.l) + 10);
+  assert.equal(word(m, dpb), 64); assert.equal(word(m, dpb + 13), 0);
+  bios(m, 10, 0); bios(m, 11, 0); bios(m, 12, 0x2400);
   assert.equal(bios(m, 13, 0).a, 0);
-  // A:BIG.DAT read through: its 40 blocks take every clean line, the directory's with it.
+  assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2400 + i)), originalDirectory.slice(0, 128));
+  // Independent A reads evict the clean B directory while refusal keeps both B data lines.
   [1, ...Buffer.from("BIG     DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x2100 + i, v));
-  bdos(m, 15, 0x2100);
+  bdos(m, 15, 0x2100); assert.notEqual(m.cpu.cpu.a, 0xff);
   bdos(m, 26, 0x2200);
-  for (let r = 0; r < 160; r += 1) bdos(m, 20, 0x2100);
-  bdos(m, 26, 0x2000);
-  for (let r = 0; r < 4; r += 1) bdos(m, 21, 0x5c); // records 4 to 7: a dirty data line
-  assert.equal(runs(image), 0, "Q.DAT's two blocks dirty, none on the card");
-  const from = writes.length;
-  bios(m, 9, 1);
-  bios(m, 10, word(m, dpb + 13));
-  bios(m, 11, 0);
-  bios(m, 12, 0x2400);
-  assert.equal(bios(m, 14, 1).a, 0, "the directory record written back, type 1");
-  const after = writes.slice(from);
-  assert.ok(after.length >= 3, `the data and the directory reached the card (${after.length} card writes)`);
-  assert.equal(after[0], 1, "a data line first");
-  assert.equal(after.at(-2), 2, "both before the directory, last");
-  assert.deepEqual(m.violations, []);
+  for (let record = 0; record < 160; record++) {
+    bdos(m, 20, 0x2100); assert.equal(m.cpu.cpu.a, 0);
+    assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2200 + i)), big.slice(record * 128, (record + 1) * 128));
+  }
+  const bank = m.banks[0], tags = Array.from({ length: m.sym("NLINES") }, (_, line) => Array.from(bank.slice(m.sym("CTAB") - 0x8000 + line * 4, m.sym("CTAB") - 0x8000 + (line + 1) * 4)).reduce((n, v, i) => n + v * 256 ** i, 0));
+  assert.ok(!tags.includes(directoryBlock), "the directory really misses the cache");
+  assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+  directoryExpected.slice(0, 128).forEach((v, i) => m.write(0x2400 + i, v));
+  bios(m, 9, 1); bios(m, 10, 0); bios(m, 11, 0); bios(m, 12, 0x2400);
+  const dataCommit = m.sd.commitWrite.bind(m.sd);
+  m.sd.commitWrite = () => {
+    const { start, buffer } = m.sd.writeState;
+    if (start / 512 !== directoryBlock) return dataCommit();
+    assert.deepEqual(Uint8Array.from(buffer), directoryExpected);
+    for (const [block, payload] of p.expected) assert.deepEqual(image.slice(block * 512, (block + 1) * 512), payload);
+    commit(); assert.equal(m.sd.pendingResponse[0], 0x05);
+  };
+  const step = m.step.bind(m), body = m.sym("BWRITE"); let released = 0;
+  assert.deepEqual([m.read(body), m.read(body + 1), m.read(body + 2)], [0xcd, m.sym("CDI") & 255, m.sym("CDI") >> 8]);
+  m.step = () => {
+    if (m.pc === body) {
+      assert.equal(m.cpu.cpu.c, 1); assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+      assert.equal(word(m, m.sym("APIRTPC")), 0x3006);
+      assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+      const now = Array.from({ length: 30 }, (_, line) => Array.from(bank.slice(m.sym("CTAB") - 0x8000 + line * 4, m.sym("CTAB") - 0x8000 + (line + 1) * 4)).reduce((n, v, i) => n + v * 256 ** i, 0));
+      assert.ok(!now.includes(directoryBlock));
+      released++; p.backend.accepts = () => true;
+    }
+    return step();
+  };
+  cutExpected = Uint8Array.from(p.original); recording = true;
+  assert.equal(bios(m, 14, 1).a, 0); m.step = step; recording = false;
+  assert.equal(released, 1); assert.equal(cuts.length, 3);
+  assert.deepEqual(cuts.map(c => c.block), [...p.expected.keys(), directoryBlock]);
+  assert.deepEqual(cuts.map(c => c.records), [0, 0, 8]);
+  const expectedImage = Uint8Array.from(p.expectedImage); expectedImage.set(directoryExpected, directoryBlock * 512);
+  assert.deepEqual(image, expectedImage); assert.equal(p.state().queue.length, 0);
+  assert.deepEqual(b.read("Q.DAT"), Uint8Array.from([...new Uint8Array(512).fill(0xc3), ...new Uint8Array(512).fill(0xd4)]));
+  assert.deepEqual(b.verify(), []); assert.deepEqual(m.violations, []);
+  console.log(JSON.stringify({ scope: "uncached type1 directory publication", directoryBlock, dataBlocks: [...p.expected.keys()], commits: cuts.map(c => ({ block: c.block, records: c.records, sha256: createHash("sha256").update(c.payload).digest("hex") })) }));
 });
 
 /** Card block LBA's reads fail at SDREAD, as a card that won't give it. */
@@ -669,6 +1038,7 @@ test("function 45's returned error leaves the FCB on the record a sequential rea
   const image = await load(card(false), [], { "R.DAT": pattern(8 * 128, (i) => (i >> 7) + 0x30) });
   const lba = Buffer.from(image).indexOf(Buffer.alloc(128, 0x34)) / 512; // records 4 to 7's block
   const m = start(image);
+  prepareCaller(m, "initial synthetic caller");
   [1, ...Buffer.from("R       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
   bdos(m, 15, 0x5c);
   bdos(m, 26, 0x2000);
@@ -684,6 +1054,7 @@ test("function 45's returned error leaves the FCB on the record a sequential rea
 test("function 45's returned error leaves the FCB on the record a sequential write didn't write, as CP/M 3 does (KS36b review)", async () => {
   const image = await load(card(false), []);
   const m = start(image);
+  prepareCaller(m, "initial synthetic caller");
   [2, ...Buffer.from("W       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
   bdos(m, 22, 0x5c);
   bdos(m, 26, 0x2000);
@@ -701,38 +1072,97 @@ test("function 45's returned error leaves the FCB on the record a sequential wri
   assert.deepEqual(fcbAt(m, 0x5c), before, "the FCB where it was: record 4 next, the record count unraised");
 });
 
-test("when every line is dirty and the forced write of the next in turn fails, the next miss doesn't try that write again, and warm boot's flush does (KE-187)", async () => {
-  const image = card();
-  const m = start(image, { ram96: true });
-  const d = m.sym("CDIRTY") - 0x8000;
-  const table = m.sym("CTAB") - 0x8000;
-  const allDirty = () => Array.from({ length: 30 }, (_, i) => m.expand[1][d + i]).every((v) => v);
-  // B:Q.DAT made and written, not closed, until every line is dirty.
-  [2, ...Buffer.from("Q       DAT"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
-  bdos(m, 22, 0x5c);
-  bdos(m, 26, 0x2000);
-  for (let r = 0; r < 128 && !allDirty(); r += 1) {
-    for (let i = 0; i < 128; i += 1) m.write(0x2000 + i, (r * 3 + i) & 0xff);
-    bdos(m, 21, 0x5c);
+test("full dirty-cache pressure retains refused data, frees successful lines, and distinguishes ordinary-entry progress", async () => {
+  for (const mode of ["refuse-all", "refuse-head", "functional-success", "entry-success"]) {
+    const image = card(), m = start(image, { ram96: true });
+    prepareCaller(m, `${mode}: pressure caller`);
+    const p = retainedBlocks({ m, image, call: (fn, de) => bdos(m, fn, de), records: 120, pattern: recordOf });
+    assert.equal(p.before.queue.length, 30); assert.equal(p.acknowledgements.length, 120);
+    const first = p.before.entries[0].block;
+    // All setter opportunities still encounter refusal and retain all thirty.
+    bios(m, 9, 0); bios(m, 10, 20); bios(m, 11, 0); bios(m, 12, 0x2000);
+    assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+    const requested = parseContainer(image).volumes[0].start + 20 * 16;
+    assert.ok(!p.expected.has(requested), "the A read misses every held B data block");
+    const expectedRead = image.slice(requested * 512, requested * 512 + 128);
+    for (let i = 0; i < 128; i++) m.write(0x2000 + i, 0xa6);
+    const iff = mode === "refuse-all" ? 0 : 1;
+    m.cpu.cpu.iff1 = m.cpu.cpu.iff2 = iff;
+    const latch = m.tec1g.state.system.sysCtrl;
+    const from = p.attempts.length, functional = [], takes = [], rounds = [];
+    const step = m.step.bind(m), readBody = m.sym("BREAD"), take = m.sym("CTAKE"), pass = m.sym("CTPASS");
+    assert.deepEqual([m.read(readBody), m.read(readBody + 1), m.read(readBody + 2)], [0xcd, m.sym("CDI") & 255, m.sym("CDI") >> 8]);
+    assert.deepEqual([m.read(take), m.read(take + 1), m.read(take + 2)], [0xcd, m.sym("CTSCAN") & 255, m.sym("CTSCAN") >> 8]);
+    if (mode === "entry-success") p.backend.accepts = () => true;
+    m.step = () => {
+      if (m.pc === readBody) {
+        assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+        assert.equal(word(m, m.sym("APIRTPC")), 0x3003, "the real public BIOS wrapper owns this synthetic return");
+        functional.push(p.state());
+        assert.equal(functional.at(-1).queue.length, mode === "entry-success" ? 29 : 30);
+        if (mode === "functional-success") p.backend.accepts = () => true;
+        if (mode === "refuse-head") p.backend.accepts = block => block !== first;
+      }
+      if (m.pc === take) takes.push(p.state());
+      if (m.pc === pass && m.read(m.sym("HKRPOS")) === 0) rounds.push({ state: p.state(), attemptStart: p.attempts.length });
+      return step();
+    };
+    const entry = word(m, 1) - 3 + 3 * 13;
+    stub(m, [0xcd, entry & 255, entry >> 8]); m.step = step;
+    assert.equal(functional.length, 1); assert.equal(takes.length, 1);
+    assert.equal(m.cpu.cpu.iff1, iff); assert.equal(m.cpu.cpu.iff2, iff);
+    assert.equal(m.tec1g.state.system.sysCtrl, latch); assert.ok(m.classicBankIn);
+    const attempts = p.attempts.slice(from), accepted = attempts.filter(a => a.accepted);
+    if (mode === "entry-success") {
+      assert.equal(rounds.length, 0, "one ordinary-entry commit supplies a clean victim without a pressure pass");
+      assert.equal(accepted.length, 1); assert.equal(p.state().queue.length, 29);
+    } else {
+      assert.equal(rounds.length, 1);
+      assert.deepEqual(rounds[0].state.round, p.before.queue, "one bounded pass freezes every original dirty line");
+      assert.equal(rounds[0].state.entries.length, 30);
+      const pressureAttempts = p.attempts.slice(rounds[0].attemptStart);
+      assert.deepEqual(pressureAttempts.map(a => a.block), [...p.expected.keys()], "each initially eligible block is tried once in first-dirty order");
+      assert.equal(accepted.length, mode === "refuse-all" ? 0 : mode === "refuse-head" ? 29 : 30);
+    }
+    const expectedPartial = Uint8Array.from(p.original);
+    for (const a of accepted) expectedPartial.set(p.expected.get(a.block), a.block * 512);
+    assert.deepEqual(image, expectedPartial, "only successful complete data versions changed the backing card");
+    const state = p.state(), acceptedBlocks = new Set(accepted.map(a => a.block));
+    assert.deepEqual(state.entries, p.before.entries.filter(e => !acceptedBlocks.has(e.block)), "every refused or unserviced line retains its tag and full acknowledged payload");
+    assert.deepEqual([state.pending, state.any, state.depth, state.busy], [0, state.queue.length ? 1 : 0, 0, 0]);
+    if (mode === "refuse-all") {
+      assert.notEqual(m.cpu.cpu.a, 0); assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i)), new Uint8Array(128).fill(0xa6));
+      const beforeWarm = p.attempts.length, mark = m.output.length;
+      const ordinary = () => {
+        if (!m.classicBankIn || !m.ready() || m.read(m.sym("ERRMODE")) !== 0 || m.read(m.sym("HKDEP")) !== 1 || m.read(m.sym("HKBUSY"))) return false;
+        const saved = word(m, m.sym("OLDSP")), back = word(m, saved);
+        return saved === m.sym("CSTKTOP") - 2 && m.lineBuf === m.sym("CMDBUF") &&
+          [0x0e, 10, 0xcd, 5, 0].every((v, i) => m.read(back - 5 + i) === v);
+      };
+      m.cpu.cpu.pc = 0;
+      m.runUntil(() => recoveryInput(m) || (ordinary() && /\r\n[A-P](:\S*)?>$/.test(m.text(mark))), 400_000_000, "actual normal or bootstrap input after full refused pressure");
+      const outcome = recoveryInput(m) ? "recovery" : "normal", out = m.text(mark);
+      assert.equal(outcome, "recovery", "a full refusing cache cannot provide a directory victim for warm recovery");
+      assert.equal(out.match(/Write pending/g)?.length, 1); assert.doesNotMatch(out, /Write lost/);
+      assert.ok(p.attempts.length > beforeWarm);
+      assert.deepEqual(durable(p.state()), durable(p.before)); assert.deepEqual(image, p.original);
+      console.log(JSON.stringify({ scope: "full refused pressure warm stop", outcome, text: out, depth: m.read(m.sym("HKDEP")), busy: m.read(m.sym("HKBUSY")), oldsp: word(m, m.sym("OLDSP")), errorMode: m.read(m.sym("ERRMODE")), queuedBlocks: p.state().entries.map(e => e.block), refusedWarmAttempts: p.attempts.length - beforeWarm }));
+      // A deliberate retry, after capturing recovery ownership and retention.
+      p.backend.accepts = () => true;
+      const retryMark = m.output.length; m.type("\r");
+      m.runUntil(() => ordinary() && /\r\n[A-P](:\S*)?>$/.test(m.text(retryMark)), 400_000_000, "explicit bootstrap CR retry reaches actual ordinary input");
+      assert.doesNotMatch(m.text(retryMark), /Write lost/);
+      assert.deepEqual(image, p.expectedImage); assert.equal(p.state().queue.length, 0);
+      prepareCaller(m, "actual retry result captured before ordinary-input completion");
+    } else {
+      assert.equal(m.cpu.cpu.a, 0); assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x2000 + i)), expectedRead);
+    }
+    p.backend.accepts = () => true;
+    bdos(m, 48, 0); assert.equal(m.cpu.cpu.a, 0);
+    assert.deepEqual(image, p.expectedImage); assert.equal(p.state().queue.length, 0);
+    assert.equal(volume(image, "B").read("Q.DAT").length, 0, "physical persistence does not publish the unclosed file's record count");
+    assert.deepEqual(m.violations, []);
   }
-  assert.ok(allDirty(), "every line dirty");
-  const line = m.read(m.sym("CNEXT"));
-  const block = [0, 1, 2, 3].reduce((a, k) => a + m.expand[1][table + 4 * line + k] * 256 ** k, 0);
-  let tries = 0;
-  failing(m, (b) => b === block && (tries += 1) && "fail");
-  const base = word(m, 1) - 3; // the BIOS jump table
-  const bios = (n, bc) => [0x01, bc & 0xff, bc >> 8, 0xcd, (base + 3 * n) & 0xff, (base + 3 * n) >> 8];
-  const read = (track) => (stub(m, [...bios(9, 0), ...bios(10, track), ...bios(11, 0), ...bios(12, 0x2000), ...bios(13, 0)]), m.cpu.cpu.a);
-  assert.notEqual(read(20), 0, "the first miss: the forced write fails, and so does the read");
-  assert.equal(tries, 1, "that line's write tried once");
-  assert.equal(read(21), 0, "the next miss reads");
-  assert.equal(read(22), 0, "and the one after");
-  assert.equal(tries, 1, "the failed line's write not tried again by a miss");
-  m.mark = m.output.length;
-  m.cpu.cpu.pc = 0; // warm boot: the line, still dirty, tried by the flush
-  m.runUntil(() => m.waitingForInput() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "warm boot");
-  assert.equal(tries, 2, "the flush tried it");
-  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "and said so");
 });
 
 // KE-AR7: a write that reads its block first, to any block but the key's own,
@@ -749,7 +1179,10 @@ for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G
     ]);
     const r = rig(image);
     const m = r.m;
-    if (wb) logOn(m, "B");
+    if (wb) {
+      logOn(m, "B");
+      r.commandNormalization = finishBarePrompt(m);
+    }
     const n = geometry === "G1M" ? 4 : 8; // card blocks of 4 records an allocation block
     const order = [0, 4 * (n - 1), ...Array.from({ length: n - 2 }, (_, i) => 4 * (i + 1)), 4 * (n - 1) + 1];
     const rr = (rec) => [rec & 0xff, rec >> 8, 0].forEach((v, i) => m.write(0x5c + 33 + i, v));
@@ -775,7 +1208,7 @@ for (const [geometry, wb] of [["G1M", false], ["G1M", true], ["G8M", false], ["G
 
 // KE-AR8: a directory write on the volume written behind whose data lines
 // fail leaves those lines dirty and drops only its own, so a close retried
-// fails again until the card takes the data, and warm boot says Write lost.
+// fails again until the card takes the data; warm boot retains pending data.
 /** WB.DAT made on B: (G8M, written behind, logged) and records 0-7 written, with function 45 in FFh mode; the card refuses B:'s data blocks while refuse() says so. */
 function closing(refuse) {
   const image = createContainer([
@@ -785,6 +1218,7 @@ function closing(refuse) {
   const r = rig(image);
   const m = r.m;
   logOn(m, "B");
+  r.commandNormalization = finishBarePrompt(m);
   r.call(5, { c: 45, de: 0xff });
   r.fcb(2, "WB      DAT");
   assert.equal(r.bdos(22), 0, "made");
@@ -794,8 +1228,32 @@ function closing(refuse) {
   }
   const b = parseContainer(image).volumes[1];
   const data = (block) => block >= b.start + 32 && block < b.start + b.length; // past G8M's 32 directory blocks
-  failing(m, (block) => refuse() && data(block) && "fail");
-  return { r, m, image };
+  const refusals = [];
+  failing(m, (block, payload) => {
+    if (!refuse() || !data(block)) return;
+    refusals.push({ block, payload: Array.from(payload) });
+    return "fail";
+  });
+  return { r, m, image, refusals };
+}
+
+function pendingWriteState(m, image) {
+  assert.equal(m.expand, undefined, "this observation uses the default physical bank model");
+  assert.ok(m.classicBankIn, "observe the returned caller or actual classic input");
+  const bank = m.banks[0];
+  assert.equal(bank.length, 0x4000);
+  const count = m.read(m.sym("HKCNT"));
+  assert.ok(count <= m.sym("NLINES"));
+  const queue = Array.from({ length: count }, (_, i) => m.read(m.sym("HKQ") + i));
+  const dirtyVector = Array.from(bank.subarray(m.sym("CDIRTY") - 0x8000, m.sym("CDIRTY") - 0x8000 + m.sym("NLINES")));
+  const entries = queue.map(line => {
+    assert.ok(line < m.sym("NLINES"));
+    const tag = Array.from(bank.subarray(m.sym("CTAB") - 0x8000 + line * 4, m.sym("CTAB") - 0x8000 + (line + 1) * 4));
+    return { line, tag, block: tag.reduce((n, b, i) => n + b * 256 ** i, 0), dirty: dirtyVector[line], payload: Array.from(bank.subarray(line * 512, (line + 1) * 512)) };
+  });
+  const ephemeral = Object.fromEntries(["HKRPOS", "HKRLEN", "HKDEP", "HKBUSY", "HKERR", "CPEND", "CANY"].map(name => [name, m.read(m.sym(name))]));
+  ephemeral.round = Array.from({ length: ephemeral.HKRLEN }, (_, i) => m.read(m.sym("HKROUND") + i));
+  return { durable: { queue, dirtyVector, entries }, ephemeral, cardSHA256: createHash("sha256").update(image).digest("hex"), directoryRecords: volume(image, "B").find("WB.DAT")?.records ?? null };
 }
 
 test("a close whose data lines the card refuses fails, and retried fails again until the card takes them, then the file is whole (KE-AR8)", () => {
@@ -812,21 +1270,58 @@ test("a close whose data lines the card refuses fails, and retried fails again u
   for (let rec = 0; rec < 8; rec += 1) assert.deepEqual(card.subarray(rec * 128, rec * 128 + 128), recordOf(rec), `record ${rec}, on the card`);
 });
 
-test("a close whose data lines the card refuses leaves them for warm boot, which says Write lost, and the card's directory names no record (KE-AR8)", () => {
-  const { r, m, image } = closing(() => true);
+test("a refused close retains acknowledged data through warm boot without publishing directory records (KE-AR8)", () => {
+  const { r, m, image, refusals } = closing(() => true);
+  const beforeClose = pendingWriteState(m, image);
+  const disk = volume(image, "B");
+  const b = parseContainer(image).volumes[1];
+  const allocated = word(m, 0x5c + 16);
+  const lastBlock = b.start + allocated * disk.blockBytes / 512 + 1;
+  const received = Array.from({ length: 4 }, (_, i) => Array.from(recordOf(i + 4))).flat();
+  assert.equal(beforeClose.durable.entries.length, 1, "earlier API calls committed preceding work; the final updated block remains queued");
+  assert.equal(beforeClose.durable.entries[0].block, lastBlock, "the queued tag identifies records 4 to 7 in this file");
+  assert.deepEqual(beforeClose.durable.entries[0].payload, received, "all acknowledged records in the final block are retained");
+  assert.equal(beforeClose.durable.dirtyVector.filter(Boolean).length, 1, "the full dirty vector has no unobserved dirty line");
+  assert.equal(beforeClose.durable.entries[0].dirty, 1);
+  assert.equal(beforeClose.ephemeral.HKDEP, 0);
+  assert.equal(beforeClose.ephemeral.HKBUSY, 0);
+  assert.notDeepEqual(Array.from(image.subarray(lastBlock * 512 + 384, (lastBlock + 1) * 512)), Array.from(recordOf(7)), "the final acknowledged record is still off-card");
   assert.equal(r.bdos(16), 0xff, "the close fails");
-  r.warm();
-  assert.equal(m.text(m.mark).match(/Write lost/g)?.length, 1, "Write lost, once");
+  const beforeWarm = pendingWriteState(m, image);
+  assert.deepEqual(beforeWarm.durable, beforeClose.durable, "failed close preserves queue, tags, all dirty bits and full payload");
+  assert.equal(beforeWarm.cardSHA256, beforeClose.cardSHA256);
+  assert.equal(beforeWarm.ephemeral.HKDEP, 0);
+  assert.equal(beforeWarm.ephemeral.HKBUSY, 0);
+  const refusedBeforeWarm = refusals.length;
+  assert.ok(refusedBeforeWarm > 0, "the close actually reached the refusing backend");
+  const warm = r.warm();
+  const afterWarm = pendingWriteState(m, image);
+  assert.deepEqual(afterWarm.durable, beforeWarm.durable, "warm boot retains all acknowledged data without dropping a line");
+  assert.equal(afterWarm.cardSHA256, beforeWarm.cardSHA256);
+  assert.ok(refusals.length > refusedBeforeWarm, "warm boot also encountered actual backend refusal");
+  assert.ok(refusals.every(({ block, payload }) => block === lastBlock && Buffer.from(payload).equals(Buffer.from(received))), "every refused write contained the complete queued payload");
+  assert.equal(warm.outcome, "normal", "valid default disk state can coexist with retained pending data");
+  assert.equal(warm.text, m.text(m.mark));
+  assert.match(warm.text, /\r\nB>$/);
+  assert.equal(warm.text.match(/Write pending/g)?.length, 1, "one pending notice rather than a loss report");
+  assert.doesNotMatch(warm.text, /Write lost/);
+  assert.equal(afterWarm.ephemeral.HKDEP, 1, "the new counted input owns the API context");
+  assert.equal(afterWarm.ephemeral.HKBUSY, 0);
+  const oldsp = word(m, m.sym("OLDSP"));
+  assert.equal(oldsp, m.sym("CSTKTOP") - 2);
+  const back = word(m, oldsp);
+  assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0], "actual CCP counted-input call site");
   const f = volume(image, "B").find("WB.DAT");
   assert.ok(!f || f.records === 0, `the card's entry names ${f?.records} records`);
+  console.log(JSON.stringify({ scope: "late-armed backend refusal after eight accepted records", queuedBlocks: afterWarm.durable.entries.map(({ block }) => block), refusals: refusals.length, beforeWarmRefusals: refusedBeforeWarm, warm, cardSHA256: afterWarm.cardSHA256, directoryRecords: f?.records ?? null }));
 });
 
 // --- Write-behind follows the logged drive ------------------------------------
 //
-// The volume on the logged drive, the CCP's BOOTDRV, is written behind; every
-// other volume coalesces. Every console read writes every changed line, every
-// directory write writes the other lines first, and a drive change writes
-// the cache before it selects the drive. These rows run on a four-drive card,
+// The logged drive selects held-write ownership; other drives select the
+// pending coalesced line. Outer API entry attempts pending work, console
+// reads drain changed lines, metadata publishes after data, and a drive
+// change requests a flush. These rows run on a four-drive card,
 // bare or under SHELL.SVC; each mutant is the build's ROM patched.
 
 const four = () =>
@@ -851,12 +1346,13 @@ const hi = (v) => v >> 8;
  * the CCP's MAINLOOP, as a program that comes back with no warm boot. PRE is
  * code run first.
  */
-const wk = (mainloop, { pre = [], jp = false } = {}) =>
+const wk = (mainloop, { pre = [], jp = false, saveFCB } = {}) =>
   Uint8Array.from([
     ...pre,
     0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
     0xc5, 0x11, 0x5c, 0x00, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
     0x0e, 1, 0xcd, 0x05, 0x00,
+    ...(saveFCB === undefined ? [] : [0x21, 0x5c, 0, 0x11, lo(saveFCB), hi(saveFCB), 0x01, 36, 0, 0xed, 0xb0]),
     ...(jp ? [0xc3, lo(mainloop), hi(mainloop)] : [0xc9]),
   ]);
 const selectFirst = (d) => [0x1e, d, 0x0e, 14, 0xcd, 0x05, 0x00]; // BDOS 14, E = d
@@ -884,47 +1380,268 @@ function wbMachine(files, { rom, bare = false, image = four() } = {}) {
   return { m, writes, image, run: (l) => at(m, l, { re: ANY_PROMPT }) };
 }
 
-/** WK run as LINE, logged on LOGGED: card writes before its BDOS 1, and by the time it waits there. */
-function keyWait(line, { logged = "A", pre, rom } = {}) {
-  const sym = (rom ?? romFor()).symbols;
-  const { m, writes, run } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { pre }) }, { rom });
+const KEYWAIT_PROOFS = new WeakMap();
+
+/** Observe a real WK programme through its owned F1 body. */
+function wkSession(line, { logged = "A", pre = [], rom, target, defaultDrive = logged, pageZeroDrive: expectedPageZero, refuseUntilInput = false, jp = false, saveFCB, bare = false, files = {}, launch = line } = {}) {
+  const explicit = /\s([A-P]):/.exec(line)?.[1];
+  target ??= explicit ?? defaultDrive;
+  const drive = target.charCodeAt(0) - 65, expectedDefault = defaultDrive.charCodeAt(0) - 65;
+  if (refuseUntilInput) {
+    assert.equal(target, logged, "the retained-backlog case uses actual logged ownership");
+    assert.deepEqual(pre, [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], "the programme explicitly selects silent returned errors");
+  }
+  const sym = (rom ?? romFor()).symbols, bytes = wk(sym.get("MAINLOOP"), { pre, jp, saveFCB });
+  const made = 0x100 + pre.length + 8, wrote = 0x100 + pre.length + 19;
+  const { m, writes, image, run } = wbMachine({ ...files, "WK.COM": bytes }, { rom, bare });
   if (logged !== "A") run(`${logged}:`);
+  assert.equal(volume(image, target).find("W.DAT"), undefined, "the independent target has no pre-existing output file");
+  const expected = new Map(), attempts = [], acknowledgements = [];
+  let entered = 0, make = null, original, committed, input, initialUsed, allocationBytes, f1CallerSP, programmeSP;
+  const allocated = new Map();
+  let holding = refuseUntilInput, returnedKey = 0, directory = null;
+  const driveState = () => {
+    assert.equal(m.read(m.sym("CURDRV")), drive, "working drive matches the independent case");
+    assert.equal(m.read(m.sym("DSKCUR")), drive);
+    const dph = m.sym("DPHTAB") + 16 * drive;
+    assert.equal(word(m, m.sym("DPHPTR")), dph);
+    assert.equal(word(m, m.sym("DPBPTR")), word(m, dph + 10));
+    assert.equal(m.read(m.sym("DEFDRV")), expectedDefault, "explicit FCB work preserves the selected default");
+    assert.equal(word(m, m.sym("DEFDPB")), word(m, m.sym("DPHTAB") + 16 * expectedDefault + 10));
+    assert.equal(m.read(m.sym("BOOTDRV")), logged.charCodeAt(0) - 65, "logged drive comes from the external prompt setup");
+    if (expectedPageZero !== undefined) assert.equal(m.read(4) & 15, expectedPageZero);
+    assert.equal(m.read(0x5c) & 31, explicit ? explicit.charCodeAt(0) - 64 : 0);
+  };
+  const inputOwner = () => {
+    assert.ok(m.classicBankIn);
+    assert.equal(m.read(m.sym("HKDEP")), 1); assert.equal(m.read(m.sym("HKBUSY")), 0);
+    assert.notEqual(f1CallerSP, undefined);
+    assert.equal(word(m, m.sym("OLDSP")), f1CallerSP);
+    assert.equal(word(m, f1CallerSP), 0x100 + pre.length + 27);
+  };
+  const snapshot = label => {
+    assert.ok(original && input); assert.ok(m.classicBankIn);
+    const state = cacheState(m);
+    for (const entry of state.entries) {
+      const metadata = directory && entry.block === directory.block;
+      assert.ok(expected.has(entry.block) || metadata, `${label}: no unrelated queued block`);
+      assert.deepEqual(entry.payload, metadata ? directory.payload : expected.get(entry.block)); assert.equal(entry.dirty, 1);
+    }
+    const missing = [];
+    for (const [block, payload] of expected) {
+      if (!same(image.slice(block * 512, (block + 1) * 512), payload)) {
+        missing.push(block);
+        assert.ok(state.entries.some(entry => entry.block === block), `${label}: every off-card acknowledgment has an owned cache line`);
+      }
+    }
+    assert.deepEqual(image, committed, `${label}: only accepted known versions changed the complete card`);
+    assert.equal(volume(image, target).find("W.DAT").records, directory?.published ? 32 : 0, "only the predicted accepted directory publication changes the record count");
+    return { state, missing, cardSHA256: createHash("sha256").update(image).digest("hex") };
+  };
+  const sd = m.sd, commit = sd.commitWrite.bind(sd);
+  sd.commitWrite = () => {
+    if (!original) return commit();
+    const { start, buffer } = sd.writeState, block = start / 512, payload = Uint8Array.from(buffer);
+    const metadata = directory && block === directory.block;
+    assert.ok(expected.has(block) || metadata, "only acknowledged data or the independently predicted directory block is attempted");
+    assert.deepEqual(payload, metadata ? directory.payload : expected.get(block));
+    const accepted = !holding;
+    let publication = null;
+    if (metadata && accepted && !directory.published) publication = {
+      block, missingBefore: [...expected].filter(([b, bytes]) => !same(image.slice(b * 512, (b + 1) * 512), bytes)).map(([b]) => b),
+      recordsBefore: volume(image, target).find("W.DAT").records, beforeSHA256: createHash("sha256").update(image).digest("hex") };
+    if (accepted) {
+      commit(); assert.equal(sd.pendingResponse[0], 0x05); committed.set(payload, start);
+      if (metadata) {
+        directory.published = true;
+        if (publication) directory.observe({ ...publication, recordsAfter: volume(image, target).find("W.DAT").records,
+          afterSHA256: createHash("sha256").update(image).digest("hex"), payloadSHA256: createHash("sha256").update(payload).digest("hex") });
+      }
+    } else { sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1; }
+    assert.deepEqual(image, committed);
+    attempts.push({ block, payload, accepted, kind: metadata ? "directory" : "data" });
+  };
+  let beforeEntry = null;
+  const step = m.step.bind(m);
+  m.step = () => {
+    if (m.pc === 0x100) {
+      publicContext(m); entered++;
+      assert.equal(entered, 1); programmeSP = m.cpu.cpu.sp;
+      assert.deepEqual(Uint8Array.from({ length: bytes.length }, (_, i) => m.read(0x100 + i)), bytes);
+    }
+    if (entered && refuseUntilInput && m.pc === 0x100 + pre.length) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0);
+      assert.equal(m.read(m.sym("ERRMODE")), 0xff);
+    }
+    if (entered && m.pc === 0x100 + pre.length + 27) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(m.cpu.cpu.a, 0x78);
+      returnedKey++; assert.equal(returnedKey, 1);
+    }
+    if (entered && defaultDrive !== logged && m.pc === 0x100 + pre.length) {
+      assert.deepEqual(pre, selectFirst(expectedDefault)); publicContext(m);
+      assert.equal(m.cpu.cpu.a, 0, "the explicit programme F14 selection succeeded");
+      assert.equal(m.read(m.sym("DEFDRV")), expectedDefault);
+    }
+    if (entered && m.pc === made) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP); assert.equal(make, null); assert.ok(m.cpu.cpu.a <= 3);
+      assert.equal(m.read(0x5c + 32), 0); assert.equal(m.read(0x5c + 15), 0);
+      assert.equal(volume(image, target).find("W.DAT").records, 0);
+      make = { a: m.cpu.cpu.a, fcb: Uint8Array.from({ length: 36 }, (_, i) => m.read(0x5c + i)) };
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 21) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 4); assert.equal(word(m, m.cpu.cpu.sp), wrote);
+      assert.equal((m.cpu.cpu.d << 8) | m.cpu.cpu.e, 0x5c);
+      assert.equal(word(m, m.sym("CURDMA")), 0x80);
+      if (!original) {
+        assert.ok(make); assert.equal(acknowledgements.length, 0); assert.equal(cacheState(m).queue.length, 0);
+        const file = volume(image, target).find("W.DAT"); assert.ok(file && file.records === 0);
+        original = Uint8Array.from(image); committed = Uint8Array.from(image);
+        const initialFS = volume(original, target);
+        initialUsed = new Set(initialFS.usedBlocks()); allocationBytes = initialFS.blockBytes;
+        assert.equal(initialFS.wide, true);
+        input = Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i));
+        assert.ok(input.some(value => value !== 0), "the last update is not a vacuous all-zero record");
+      }
+      assert.deepEqual(Uint8Array.from({ length: 128 }, (_, i) => m.read(0x80 + i)), input);
+    }
+    if (entered && m.pc === wrote) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2); driveState();
+      const record = acknowledgements.length;
+      assert.ok(record < 32); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(0x5c + 32), record + 1);
+      const slot = Math.floor(record / (allocationBytes / 128));
+      assert.ok(slot < 8);
+      const allocation = word(m, 0x5c + 16 + 2 * slot);
+      if (!allocated.has(slot)) {
+        assert.ok(!initialUsed.has(allocation), "a new FCB slot uses storage free in the immutable initial directory");
+        assert.ok(![...allocated.values()].includes(allocation), "distinct FCB slots cannot alias an allocation");
+        allocated.set(slot, allocation);
+      } else assert.equal(allocation, allocated.get(slot), "an allocated slot remains stable");
+      for (const [knownSlot, knownAllocation] of allocated) assert.equal(word(m, 0x5c + 16 + 2 * knownSlot), knownAllocation);
+      const block = fileBlock(m, original, record, 0x5c, target);
+      if (!expected.has(block)) expected.set(block, new Uint8Array(512));
+      expected.get(block).set(input, (record & 3) * 128);
+      acknowledgements.push({ record, a: m.cpu.cpu.a, cr: m.read(0x5c + 32), block, fcb: Uint8Array.from({ length: 36 }, (_, i) => m.read(0x5c + i)) });
+      snapshot(`record ${record} returned`);
+    }
+    if (entered && m.pc === m.sym("BENTRY") && m.cpu.cpu.c === 1) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, programmeSP - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x100 + pre.length + 27);
+      assert.equal(f1CallerSP, undefined); f1CallerSP = m.cpu.cpu.sp;
+      assert.equal(acknowledgements.length, 32); assert.equal(expected.size, 8); driveState();
+      beforeEntry = snapshot("before F1 ordinary entry");
+      if (refuseUntilInput) {
+        assert.equal(holding, true); assert.equal(m.read(m.sym("ERRMODE")), 0xff);
+        assert.deepEqual(beforeEntry.state.entries.map(e => e.block), [...expected.keys()]);
+        assert.deepEqual(beforeEntry.missing, [...expected.keys()]); assert.equal(beforeEntry.state.queue.length, 8);
+        assert.deepEqual(image, original);
+        assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted), "the real card refused earlier acknowledged updates");
+      } else {
+        assert.equal(beforeEntry.state.queue.length, 1); assert.equal(beforeEntry.missing.length, 1);
+        const last = acknowledgements.at(-1).block;
+        assert.equal(beforeEntry.state.entries[0].block, last); assert.equal(beforeEntry.missing[0], last);
+        const previous = expected.get(last).slice(); previous.fill(0, 384, 512);
+        assert.deepEqual(image.slice(last * 512, (last + 1) * 512), previous);
+      }
+    }
+    return step();
+  };
   const n0 = writes.n;
-  m.mark = m.output.length;
-  m.type(`${line}\r`);
-  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
-  const before = writes.n - n0;
-  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
-  const waiting = writes.n - n0;
-  m.type("x");
-  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
-  return { before, waiting };
+  m.mark = m.output.length; m.type(`${launch}\r`);
+  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "real WK BDOS1 body after ordinary entry");
+  assert.ok(beforeEntry); assert.equal(entered, 1); inputOwner();
+  assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), m.sym("RETA"));
+  const before = writes.n - n0, body = snapshot("FNCIN body");
+  return { m, sym, writes, image, target, logged, defaultDrive, refuseUntilInput, beforeEntry, body, before, n0, expected, original, input, inputOwner, snapshot, attempts, step, entered, make, allocated, initialUsed, f1CallerSP, acknowledgements,
+    get holding() { return holding; }, releaseCard() { holding = false; }, get returnedKey() { return returnedKey; },
+    registerDirectory({ block, payload, observe }) {
+      assert.equal(directory, null); assert.ok(original); assert.ok(!expected.has(block));
+      assert.equal(payload.length, 512); assert.equal(typeof observe, "function");
+      directory = { block, payload: Uint8Array.from(payload), observe, published: false };
+    } };
 }
 
-const BEHIND = { before: 1, waiting: 9 }; // the make's entry; then eight blocks at the key wait
-const THROUGH = { before: 8, waiting: 9 }; // seven blocks and the make as writing moves on; the last at the key wait
+/** Real WK calls, with expected drive selected by the external case, not guest state. */
+function keyWait(line, options = {}) {
+  const session = wkSession(line, options);
+  const { m, sym, writes, image, target, logged, defaultDrive, refuseUntilInput, beforeEntry, body, before, n0, expected, original, input, inputOwner, snapshot, attempts, step, entered, make, allocated, initialUsed, f1CallerSP, acknowledgements } = session;
+  let release = null;
+  if (refuseUntilInput) {
+    assert.equal(session.holding, true); assert.equal(m.read(m.sym("ERRMODE")), 0xff);
+    assert.deepEqual(body.state.entries.map(e => e.block), [...expected.keys()]);
+    assert.deepEqual(body.missing, [...expected.keys()]); assert.equal(body.state.queue.length, 8);
+    assert.deepEqual(image, original); assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted));
+    release = { pc: m.pc, callerSP: f1CallerSP, refusedAttempts: attempts.length, queue: body.state.queue.slice(), cardSHA256: body.cardSHA256 };
+    session.releaseCard();
+  } else { assert.equal(body.state.queue.length, 0); assert.deepEqual(body.missing, []); }
+  assert.deepEqual(Uint8Array.from({ length: 3 }, (_, i) => m.read(sym.get("FNCIN") + 3 + i)), Uint8Array.from([0xcd, lo(sym.get("GETCHAR")), hi(sym.get("GETCHAR"))]));
+  m.runUntil(() => m.pc === sym.get("GETCHAR"), 100_000_000, "F1's actual GETCHAR call");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, m.sym("STKTOP") - 4);
+  assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  const getcharSP = m.cpu.cpu.sp;
+  m.runUntil(() => m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE"), 100_000_000, "F1's actual serial input wait");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, getcharSP);
+  assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  assert.equal(m.read(m.sym("CONMOD")), 0); assert.equal(m.read(m.sym("PENDING")), 0); assert.equal(m.read(m.sym("RXFULL")), 0);
+  const waiting = writes.n - n0, atWait = snapshot("key wait");
+  const keyDrained = atWait.state.queue.length === 0 && atWait.missing.length === 0;
+  if (!refuseUntilInput) { assert.equal(atWait.state.queue.length, 0); assert.deepEqual(atWait.missing, []); }
+  else assert.equal(session.holding, false);
+  if (refuseUntilInput) assert.doesNotMatch(m.text(m.mark), /Write pending|Cache clear|Write error|Bdos Err|Disk reset failed/, "silent returned-error mode has not reported a deferred notice at the owned key wait");
+  const expectedCard = Uint8Array.from(original);
+  for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
+  if (!refuseUntilInput || keyDrained) assert.deepEqual(image, expectedCard);
+  m.type("x");
+  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
+  m.step = step; assert.equal(session.returnedKey, 1);
+  assert.doesNotMatch(m.text(m.mark), /Bdos Err|Bad file|Disk reset failed/);
+  assert.deepEqual(image, expectedCard); assert.equal(cacheState(m).queue.length, 0);
+  assert.deepEqual(volume(image, target).verify(), []); assert.deepEqual(m.violations, []);
+  const state = beforeEntry.state, classification = state.any ? "logged" : "coalesced";
+  assert.deepEqual([state.pending, state.any], state.any ? [0, 1] : [state.entries[0].line + 1, 0]);
+  const result = { before, waiting }, proof = { target, logged, defaultDrive, classification, expectedClassification: target === logged ? "logged" : "coalesced", keyDrained, refusedBacklog: refuseUntilInput };
+  KEYWAIT_PROOFS.set(result, proof);
+  console.log(JSON.stringify({ scope: "real WK known-byte/API-boundary measurement", line, ...proof, programmeEntries: entered, makeA: make.a, release, acceptedDataWrites: attempts.filter(a => a.accepted).length, refusedDataWrites: attempts.filter(a => !a.accepted).length, returnedKey: session.returnedKey, text: m.text(m.mark), notices: { pending: (m.text(m.mark).match(/Write pending/g) ?? []).length, clear: (m.text(m.mark).match(/Cache clear/g) ?? []).length, error: (m.text(m.mark).match(/Write error/g) ?? []).length }, initialUsedAllocations: [...initialUsed], newAllocations: [...allocated], F1CallerSP: f1CallerSP, GETCHARSP: getcharSP, acknowledgements: acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })), input: Array.from(input), beforeF1Entry: { queue: state.queue, missing: beforeEntry.missing, CPEND: state.pending, CANY: state.any, cardSHA256: beforeEntry.cardSHA256 }, FNCIN: { queue: body.state.queue, missing: body.missing, cardSHA256: body.cardSHA256 }, keyWait: { queue: atWait.state.queue, missing: atWait.missing, cardSHA256: atWait.cardSHA256 }, ...result }));
+  return result;
+}
+
+function correctWriteClass(result) {
+  const proof = KEYWAIT_PROOFS.get(result); assert.ok(proof);
+  return proof.classification === proof.expectedClassification;
+}
+
+function expectedWriteClass(result) {
+  assert.equal(correctWriteClass(result), true, "write class follows the independent logged/target case");
+}
+
+const COOPERATIVE = { before: 33, waiting: 33 };
+
 
 test("S2-3 logged A: behind, B: through", () => {
-  assert.deepEqual(keyWait("A:WK A:W.DAT"), BEHIND, "logged on A:, A:'s eight blocks wait for the key wait");
-  assert.deepEqual(keyWait("A:WK B:W.DAT"), THROUGH, "B: coalesces");
+  const a = keyWait("A:WK A:W.DAT"), b = keyWait("A:WK B:W.DAT");
+  expectedWriteClass(a); expectedWriteClass(b);
+  assert.deepEqual(a, COOPERATIVE, "logged A work is serviced before the real F1 body");
+  assert.deepEqual(b, COOPERATIVE, "nonlogged B work is serviced before the real F1 body");
 });
 
 test("S2-3 logged B:", () => {
-  assert.deepEqual(keyWait("A:WK B:W.DAT", { logged: "B" }), BEHIND, "logged on B:, B:'s blocks wait");
-  assert.deepEqual(keyWait("A:WK A:W.DAT", { logged: "B" }), THROUGH, "A: coalesces");
+  const b = keyWait("A:WK B:W.DAT", { logged: "B" }), a = keyWait("A:WK A:W.DAT", { logged: "B" });
+  expectedWriteClass(b); expectedWriteClass(a);
+  assert.deepEqual(b, COOPERATIVE, "logged B work is serviced before the real F1 body");
+  assert.deepEqual(a, COOPERATIVE, "nonlogged A work is serviced before the real F1 body");
 });
 
 /** The rows of a program's own drives, logged on A:: C: by its FCB, C: by BDOS 14, and 0004h set to B: before writing B:. */
 function programDrives(rom) {
   return {
     "C: by its FCB": keyWait("A:WK C:W.DAT", { rom }),
-    "C: by BDOS 14": keyWait("A:WK W.DAT", { pre: selectFirst(2), rom }),
-    "0004h = B:": keyWait("A:WK B:W.DAT", { pre: pageZeroDrive(1), rom }),
+    "C: by BDOS 14": keyWait("A:WK W.DAT", { pre: selectFirst(2), rom, target: "C", defaultDrive: "C" }),
+    "0004h = B:": keyWait("A:WK B:W.DAT", { pre: pageZeroDrive(1), rom, pageZeroDrive: 1 }),
   };
 }
 
 test("S2-3 a program's drives", () => {
-  for (const [what, r] of Object.entries(programDrives())) assert.equal(r.before, 8, `${what}: written through as writing moves on`);
+  const rows = programDrives();
+  Object.values(rows).forEach(expectedWriteClass);
+  for (const [what, r] of Object.entries(rows)) assert.deepEqual(r, COOPERATIVE, `${what}: known data serviced before the real F1 body`);
 });
 
 /** Logged on LOGGED, a program writes a record into A:T.DAT's first block and waits at BDOS 1: whether the record is in the card image then. */
@@ -981,145 +1698,283 @@ test("S2-3 read-only never", () => {
 
 test("S2-3 mutant: MR2, the console read writing the pending block only, leaves the logged drive's lines out at the key wait", () => {
   const rom = MUTANTS.mr2();
-  assert.notDeepEqual(keyWait("A:WK A:W.DAT", { rom }), BEHIND);
-  assert.notDeepEqual(keyWait("A:WK B:W.DAT", { logged: "B", rom }), BEHIND);
-  assert.equal(recordAtKey("A", rom), false, "the record not on the card at BDOS 1");
+  for (const logged of ["A", "B"]) {
+    const options = { logged, pre: [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], refuseUntilInput: true };
+    const line = `A:WK ${logged}:W.DAT`;
+    const native = keyWait(line, options), changed = keyWait(line, { ...options, rom });
+    expectedWriteClass(native); expectedWriteClass(changed);
+    assert.equal(KEYWAIT_PROOFS.get(native).keyDrained, true, `${logged}: native console read drains the actual eight-block backlog`);
+    assert.equal(KEYWAIT_PROOFS.get(changed).keyDrained, false, `${logged}: pending-line-only console read leaves acknowledged blocks owned but off card`);
+  }
 });
 
 test("S2-3 mutant: MBD, BWGET testing the BDOS's current disk, writes behind the drive a program selects", () => {
   const rom = MUTANTS.mbd();
-  assert.notDeepEqual(keyWait("A:WK B:W.DAT", { rom }), THROUGH, "B: written through");
-  const rows = programDrives(rom);
-  assert.ok(Object.values(rows).some((r) => r.before !== 8), JSON.stringify(rows));
-  assert.notEqual(rows["C: by BDOS 14"].before, 8, "C: by BDOS 14 written behind");
+  const nativeB = keyWait("A:WK B:W.DAT"), mutantB = keyWait("A:WK B:W.DAT", { rom });
+  expectedWriteClass(nativeB);
+  assert.equal(correctWriteClass(mutantB), false, "the mutant wrongly retains nonlogged B as logged work");
+  const native = programDrives(), changed = programDrives(rom);
+  for (const what of Object.keys(native)) {
+    expectedWriteClass(native[what]);
+    assert.equal(correctWriteClass(changed[what]), false, `${what}: only the independent logged-drive classification discriminates`);
+  }
 });
 
-/**
- * Logged on B:, P1 makes B:X.DAT, writes 32 records and returns by JP
- * MAINLOOP, its FCB kept at 4000h. The card refuses every write from its
- * return, through the drive change to A: and the prompt's console read.
- * Then P2, on A:, closes that FCB; the card takes writes again as P2 starts
- * if RECOVER. The card writes by the close's return, the file's bytes on the
- * card, and the text.
- */
+/** Close a genuine off-logged backlog, observing the first metadata publication. */
 function directoryLast({ bare, recover, rom }) {
-  const sym = (rom ?? romFor()).symbols;
-  const main = sym.get("MAINLOOP");
-  const fcb = [2, ...Buffer.from("X       DAT", "latin1")];
-  while (fcb.length < 36) fcb.push(0);
-  const p1 = Uint8Array.from([
-    0x21, 0x24, 0x01, 0x11, 0x00, 0x40, 0x01, 0x24, 0x00, 0xed, 0xb0, // the FCB to 4000h
-    0x11, 0x00, 0x40, 0x0e, 22, 0xcd, 0x05, 0x00, 0x06, 32,
-    0xc5, 0x11, 0x00, 0x40, 0x0e, 21, 0xcd, 0x05, 0x00, 0xc1, 0x10, 0xf4,
-    0xc3, lo(main), hi(main),
-    ...fcb,
-  ]);
-  const p2 = Uint8Array.from([0x11, 0x00, 0x40, 0x0e, 16, 0xcd, 0x05, 0x00, 0x32, 0x00, 0x41, 0xc3, lo(main), hi(main)]);
-  const { m, writes, image, run } = wbMachine({ "P1.COM": p1, "P2.COM": p2 }, { bare, rom });
-  run("B:");
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("A:P1\r");
-  m.runUntil(() => m.pc === main, 400_000_000, "P1's return");
-  f.on = true;
-  m.runUntil(() => m.ready() && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the prompt");
-  run("A:");
-  const before = writes.n;
-  m.mark = m.output.length;
-  m.type("P2\r");
-  m.runUntil(() => m.pc === 0x0100, 100_000_000, "P2's start");
-  f.on = !recover;
-  let byClose = null;
-  const step = m.step.bind(m);
-  m.step = () => {
-    if (m.pc === 0x0108 && byClose === null) byClose = writes.n - before;
-    return step();
+  const symbols = (rom ?? romFor()).symbols, main = symbols.get("MAINLOOP");
+  const p2 = Uint8Array.from([0x1e, 0xfe, 0x0e, 45, 0xcd, 5, 0, 0x11, 0, 0x40, 0x0e, 16, 0xcd, 5, 0, 0x32, 0, 0x41, 0xc3, lo(main), hi(main)]);
+  const session = wkSession("A:WK B:W.DAT", { rom, logged: "B", bare, pre: [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], refuseUntilInput: true, jp: true, saveFCB: 0x4000, files: { "P2.COM": p2 } });
+  const { m, sym, image, expected, original, snapshot, attempts, inputOwner } = session;
+  const held = label => {
+    const cut = snapshot(label);
+    assert.equal(session.holding, true); assert.deepEqual(image, original);
+    assert.deepEqual(cut.state.entries.map(e => e.block), [...expected.keys()]); assert.deepEqual(cut.missing, [...expected.keys()]);
+    assert.equal(cut.state.queue.length, 8); assert.deepEqual([cut.state.pending, cut.state.any], [0, 1]);
+    assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted)); return cut;
   };
-  m.runUntil(() => m.waitingForInput() && (ANY_PROMPT.test(m.text(m.mark)) || /Bdos|Bad/.test(m.text(m.mark))), 400_000_000, "after the close");
-  m.step = step;
-  const found = volume(image, "B").find("X.DAT");
-  const data = found ? volume(image, "B").read("X.DAT") : null;
-  return { byClose, data, closeA: m.read(0x4100), text: m.text(m.mark) };
+  inputOwner(); held("close prefix FNCIN");
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(sym.get("FNCIN") + 3 + i)), [0xcd, lo(sym.get("GETCHAR")), hi(sym.get("GETCHAR"))]);
+  m.runUntil(() => m.pc === sym.get("GETCHAR"), 100_000_000, "close prefix GETCHAR");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  m.runUntil(() => m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE"), 100_000_000, "close prefix owned serial input");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  held("close prefix wait"); m.type("x");
+  m.runUntil(() => m.pc === main, 400_000_000, "real copy-FCB and JP MAINLOOP");
+  publicContext(m); assert.equal(session.returnedKey, 1);
+  const fcb = session.acknowledgements.at(-1).fcb;
+  assert.deepEqual(Uint8Array.from({ length: 36 }, (_, i) => m.read(0x4000 + i)), fcb);
+  held("after actual saved FCB");
+  const beforePrompts = countedPrompts(m, { bare });
+  m.runUntil(() => beforePrompts.ready() && m.text(m.mark).endsWith(bare ? "B>" : "B:WORK>"), 400_000_000, "actual B input while data remains refused");
+  held("B input before drive change"); const bOwner = { ...beforePrompts.owner, pc: m.pc };
+  const bInputId = beforePrompts.count; m.type("A:\r");
+  m.runUntil(() => beforePrompts.ready() && beforePrompts.owner.id > bInputId && m.text(m.mark).endsWith(bare ? "A>" : "A:SYSTEM>"), 400_000_000, "actual A input after failed private flush");
+  held("A input after refused drive change");
+  assert.equal(m.read(sym.get("BOOTDRV")), 0); assert.equal(m.read(sym.get("DEFDRV")), 0);
+  const aOwner = { ...beforePrompts.owner, pc: m.pc };
+  beforePrompts.stop(); m.step = session.step;
+  const fs = volume(original, "B"), file = fs.find("W.DAT");
+  assert.equal(file.entries.length, 1); assert.equal(file.records, 0);
+  const extent = new Uint8Array(20); extent[3] = 32;
+  for (const [slot, allocation] of session.allocated) { extent[4 + 2 * slot] = lo(allocation); extent[5 + 2 * slot] = hi(allocation); }
+  assert.deepEqual(fcb.slice(12, 32), extent, "known extent and free validated allocation map supply metadata independently");
+  const descriptor = findVolume(parseContainer(original), "B"), entryOffset = file.entries[0].index * 32;
+  const directoryBlock = descriptor.start + Math.floor(entryOffset / 512), within = entryOffset % 512;
+  assert.ok(directoryBlock >= descriptor.start && directoryBlock < descriptor.start + fs.g.dirBlocks * fs.blockBytes / 512);
+  const directoryPayload = original.slice(directoryBlock * 512, (directoryBlock + 1) * 512);
+  directoryPayload.set(extent, within + 12);
+  const expectedFile = new Uint8Array(4096); for (let record = 0; record < 32; record++) expectedFile.set(session.input, record * 128);
+  let firstPublication = null;
+  session.registerDirectory({ block: directoryBlock, payload: directoryPayload, observe: event => {
+    assert.equal(firstPublication, null); assert.equal(event.recordsBefore, 0); assert.equal(event.recordsAfter, 32);
+    const data = volume(image, "B").read("W.DAT"); assert.equal(data.length, 4096);
+    firstPublication = { ...event, namedDataComplete: same(data, expectedFile) };
+    assert.equal(firstPublication.namedDataComplete, event.missingBefore.length === 0);
+  } });
+  const finalPrompts = countedPrompts(m, { bare, errorMode: 0xfe });
+  const rootStep = m.step.bind(m); let p2Entries = 0, p2SP, closeCaller = null, release = null, closeA = null, byClose = null;
+  m.step = () => {
+    if (m.pc === 0x100) {
+      publicContext(m); assert.equal(++p2Entries, 1); p2SP = m.cpu.cpu.sp;
+      assert.deepEqual(Uint8Array.from({ length: p2.length }, (_, i) => m.read(0x100 + i)), p2);
+    }
+    if (p2Entries && m.pc === 0x107) { publicContext(m); assert.equal(m.cpu.cpu.sp, p2SP); assert.equal(m.cpu.cpu.a, 0); assert.equal(m.read(sym.get("ERRMODE")), 0xfe); }
+    if (p2Entries && m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 16) {
+      publicContext(m); assert.equal(closeCaller, null); assert.equal(m.cpu.cpu.sp, p2SP - 2); assert.equal(word(m, m.cpu.cpu.sp), 0x10f);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, 0x4000);
+      assert.deepEqual(Uint8Array.from({ length: 36 }, (_, i) => m.read(0x4000 + i)), fcb);
+      closeCaller = m.cpu.cpu.sp;
+    }
+    if (p2Entries && m.pc === sym.get("FNCLSE")) {
+      assert.notEqual(closeCaller, null); assert.equal(release, null);
+      assert.ok(m.classicBankIn); assert.equal(m.read(sym.get("HKDEP")), 1); assert.equal(m.read(sym.get("HKBUSY")), 0);
+      assert.equal(word(m, sym.get("OLDSP")), closeCaller); assert.equal(word(m, closeCaller), 0x10f);
+      assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), sym.get("RETA"));
+      assert.equal(m.read(sym.get("CURDRV")), 1); assert.equal(m.read(sym.get("BOOTDRV")), 0); assert.equal(m.read(sym.get("DEFDRV")), 0);
+      assert.equal(word(m, sym.get("DPHPTR")), sym.get("DPHTAB") + 16);
+      const cut = held("FNCLSE after ordinary entry still refused");
+      release = { pc: m.pc, callerSP: closeCaller, queue: cut.state.queue, missing: cut.missing, cardSHA256: cut.cardSHA256, refusals: attempts.length, recover };
+      if (recover) session.releaseCard();
+    }
+    if (p2Entries && m.pc === 0x10f) { publicContext(m); assert.equal(m.cpu.cpu.sp, p2SP); assert.equal(closeA, null); closeA = m.cpu.cpu.a; byClose = attempts.filter(a => a.accepted).length; }
+    return rootStep();
+  };
+  m.type("A:P2\r");
+  m.runUntil(() => finalPrompts.ready() && finalPrompts.owner.textAtEntry.endsWith(bare ? "A>" : "A:SYSTEM>"), 400_000_000, "actual A input after close returned");
+  const finalOwner = { ...finalPrompts.owner, pc: m.pc }; m.step = session.step;
+  assert.equal(p2Entries, 1); assert.ok(release); assert.notEqual(closeA, null); assert.equal(m.read(0x4100), closeA);
+  const final = snapshot("after close actual input");
+  if (recover) {
+    assert.equal(closeA, file.entries[0].index % 4); assert.ok(firstPublication);
+    assert.equal(final.state.queue.length, 0); assert.deepEqual(final.missing, []);
+    assert.deepEqual(volume(image, "B").read("W.DAT"), expectedFile);
+    const expectedCard = Uint8Array.from(original); for (const [block, payload] of expected) expectedCard.set(payload, block * 512); expectedCard.set(directoryPayload, directoryBlock * 512);
+    assert.deepEqual(image, expectedCard);
+  } else {
+    assert.equal(closeA, 0xff); assert.equal(firstPublication, null); held("failed close preserves acknowledged ownership");
+    assert.match(m.text(m.mark), /Bdos Err On B: Bad Sector/);
+  }
+  assert.deepEqual(volume(image, "B").verify(), []); assert.deepEqual(m.violations, []);
+  assert.doesNotMatch(m.text(m.mark), /Disk reset failed|Write lost/);
+  console.log(JSON.stringify({ scope: "real WK first directory publication", bare, recover, programmeEntries: session.entered, p2Entries, acknowledgements: session.acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })),
+    initialUsedAllocations: [...session.initialUsed], newAllocations: [...session.allocated], input: Array.from(session.input), bOwner, aOwner, finalOwner, release,
+    directoryBlock, directoryPayloadSHA256: createHash("sha256").update(directoryPayload).digest("hex"), closeA, byClose, firstPublication,
+    accepted: attempts.filter(a => a.accepted).map(a => ({ kind: a.kind, block: a.block })), refusedAttempts: attempts.filter(a => !a.accepted).length,
+    final: { queue: final.state.queue, missing: final.missing, cardSHA256: final.cardSHA256 }, text: m.text(m.mark) }));
+  return { closeA, byClose, firstPublication, records: volume(image, "B").find("W.DAT").records };
 }
 
 test("S2-4 directory last after a failed drive change", () => {
   for (const bare of [true, false]) {
-    const r = directoryLast({ bare, recover: true });
-    const how = bare ? "bare" : "under the shell";
-    assert.equal(r.byClose, 9, `${how}: the close writes the 8 data blocks, then the entry`);
-    assert.equal(r.closeA, 0, `${how}: the close succeeds`);
-    assert.equal(r.data?.length, 4096, `${how}: the file's 32 records named`);
-    assert.equal(r.data.filter((b) => b === 0xe5).length, 0, `${how}: and every one on the card`);
+    const result = directoryLast({ bare, recover: true });
+    assert.equal(result.firstPublication.namedDataComplete, true, "the first published entry names only complete known data");
+    assert.equal(result.records, 32); assert.equal(result.byClose, 9, "eight known data blocks and the directory entry complete before close returns");
   }
 });
 
 test("S2-4 directory refused while the card refuses", () => {
   for (const bare of [true, false]) {
-    const r = directoryLast({ bare, recover: false });
-    const how = bare ? "bare" : "under the shell";
-    assert.match(r.text, /Bdos|Bad/, `${how}: the close refused`);
-    assert.ok(!r.data || r.data.length === 0, `${how}: the card's entry names no block of the file`);
+    const result = directoryLast({ bare, recover: false });
+    assert.equal(result.firstPublication, null); assert.equal(result.records, 0); assert.equal(result.byClose, 0);
   }
 });
 
 test("S2-4 mutant: MDIR, a directory write off the logged drive not flushing first, names blocks the card lacks at the close", () => {
-  const r = directoryLast({ bare: true, recover: true, rom: MUTANTS.mdir() });
-  assert.equal(r.byClose, 1, "the entry alone by the close's return");
+  const native = directoryLast({ bare: true, recover: true }), changed = directoryLast({ bare: true, recover: true, rom: MUTANTS.mdir() });
+  assert.equal(native.firstPublication.namedDataComplete, true, "native positive protects the same first-publication boundary");
+  assert.equal(native.byClose, 9);
+  assert.equal(changed.firstPublication.namedDataComplete, false, "metadata names known records missing at first publication despite later repair");
 });
 
-/** From a script, WK writes A:K.DAT and waits with the card refusing, then returns with no warm boot; the card takes writes again; the script's next line is B:. Card writes before BDOS 14 selects B:. */
-function scriptDriveChange(rom) {
-  const sym = (rom ?? romFor()).symbols;
-  const script = Buffer.from("WK A:K.DAT\r\nB:\r\nA:\r\n\x1a", "latin1");
-  const { m, writes } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { jp: true }), "S.CMD": script }, { rom });
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("S.CMD\r");
-  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
-  f.on = true;
-  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
-  let at14 = null;
-  const n0 = writes.n;
-  const step = m.step.bind(m);
+/** Observe actual bare or shell command input without consuming a key. */
+function countedPrompts(m, { bare, errorMode = 0xff }) {
+  const sym = m.symbols;
+  const shellBase = bare ? 0 : pageOf(m), shellInput = shellBase + SHELL.symbols.LBUF;
+  const expectedInputSP = bare ? sym.get("CSTKTOP") - 2 : shellBase + SHELL.symbols.STKTOP - 2;
+  const expectedInputBuffer = bare ? sym.get("CMDBUF") : shellInput;
+  if (bare) assert.equal(word(m, sym.get("SHOWN")), 0);
+  else {
+    assert.ok(shellBase > 0); assert.equal(word(m, sym.get("SHOWN")), shellBase + SHELL.symbols.TABLE);
+    assert.equal(m.read(shellBase), 0xc3);
+    assert.equal(word(m, shellBase + 1), sym.get("BENTRY"), "the loader installs the real BDOS page entry");
+    assert.equal(m.read(shellBase + 3), 1);
+    assert.equal(word(m, shellBase + 4), SHELL.symbols.REMOVE, "the installed removable header keeps its relative REMOVE offset");
+    assert.equal(String.fromCharCode(...Array.from({ length: 8 }, (_, i) => m.read(shellBase + 17 + i))), "SHELL   ");
+    const prompt = shellBase + SHELL.symbols.PROMPT;
+    assert.deepEqual(Array.from({ length: 16 }, (_, i) => m.read(shellBase + SHELL.symbols.TYPED + i)),
+      [0xcd, lo(prompt), hi(prompt), 0x3e, 127, 0x32, lo(shellInput), hi(shellInput), 0x11, lo(shellInput), hi(shellInput), 0x0e, 10, 0xcd, 5, 0]);
+  }
+  assert.equal(word(m, sym.get("FNTAB") + 20), sym.get("FNLINE"));
+  let inputCall = null, inputCalls = 0;
+  const observeStep = m.step.bind(m);
   m.step = () => {
-    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14 && at14 === null) at14 = writes.n - n0;
-    return step();
+    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 10) {
+      publicContext(m); assert.equal(m.cpu.cpu.sp, expectedInputSP);
+      const back = word(m, m.cpu.cpu.sp), buffer = m.cpu.cpu.d << 8 | m.cpu.cpu.e;
+      assert.equal(buffer, expectedInputBuffer);
+      assert.deepEqual(Array.from({ length: 5 }, (_, i) => m.read(back - 5 + i)), [0x0e, 10, 0xcd, 5, 0]);
+      if (bare) {
+        assert.equal(m.read(back), 0x18);
+        const displacement = m.read(back + 1);
+        assert.equal((back + 2 + (displacement < 128 ? displacement : displacement - 256)) & 0xffff, sym.get("MLGOT"));
+      } else assert.equal(back, shellBase + SHELL.symbols.TYPED + 16);
+      inputCall = { id: ++inputCalls, sp: m.cpu.cpu.sp, back, buffer, entered: false, textAtEntry: m.text(m.mark) };
+    }
+    if (inputCall && !inputCall.entered && m.pc === sym.get("FNLINE")) {
+      assert.equal(word(m, sym.get("OLDSP")), inputCall.sp); assert.equal(word(m, inputCall.sp), inputCall.back);
+      assert.equal(m.cpu.cpu.d << 8 | m.cpu.cpu.e, inputCall.buffer);
+      assert.equal(m.read(sym.get("HKDEP")), 1); assert.equal(m.read(sym.get("HKBUSY")), 0);
+      inputCall.entered = true;
+    }
+    return observeStep();
   };
+  const ownedPrompt = () => inputCall?.entered && m.classicBankIn && m.ready() && m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE") &&
+    m.read(sym.get("ERRMODE")) === errorMode && m.read(sym.get("HKDEP")) === 1 && m.read(sym.get("HKBUSY")) === 0 &&
+    word(m, sym.get("OLDSP")) === inputCall.sp && word(m, inputCall.sp) === inputCall.back && m.lineBuf === inputCall.buffer;
+  return { ready: ownedPrompt, get count() { return inputCalls; }, get owner() { return inputCall; }, stop() { m.step = observeStep; } };
+}
+
+/** A real refused WK backlog survives through JP MAINLOOP and a drive change. */
+function driveChange({ rom, typed = false, omitted = false } = {}) {
+  const script = Buffer.from("WK A:W.DAT\r\nB:\r\n\x1a", "latin1");
+  const session = wkSession("A:WK A:W.DAT", { rom, pre: [0x1e, 0xff, 0x0e, 45, 0xcd, 5, 0], refuseUntilInput: true, jp: true, bare: typed,
+    ...(typed ? {} : { launch: "S.CMD", files: { "S.CMD": script } }) });
+  const { m, sym, image, writes, original, expected, attempts, inputOwner, snapshot } = session;
+  const held = label => {
+    const cut = snapshot(label);
+    assert.equal(session.holding, true); assert.deepEqual(image, original);
+    assert.deepEqual(cut.state.entries.map(e => e.block), [...expected.keys()]);
+    assert.deepEqual(cut.missing, [...expected.keys()]); assert.equal(cut.state.queue.length, 8);
+    assert.deepEqual([cut.state.pending, cut.state.any], [0, 1]);
+    assert.ok(attempts.length > 0 && attempts.every(a => !a.accepted));
+    return cut;
+  };
+  inputOwner(); held("FNCIN before any release");
+  assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(sym.get("FNCIN") + 3 + i)), [0xcd, lo(sym.get("GETCHAR")), hi(sym.get("GETCHAR"))]);
+  m.runUntil(() => m.pc === sym.get("GETCHAR"), 100_000_000, "WK GETCHAR before drive change");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  m.runUntil(() => m.pc >= sym.get("CINLP") && m.pc < sym.get("CINWE"), 100_000_000, "WK serial wait before drive change");
+  inputOwner(); assert.equal(m.cpu.cpu.sp, sym.get("STKTOP") - 4); assert.equal(word(m, m.cpu.cpu.sp), sym.get("FNCIN") + 6);
+  assert.equal(m.read(sym.get("CONMOD")), 0); assert.equal(m.read(sym.get("PENDING")), 0); assert.equal(m.read(sym.get("RXFULL")), 0);
+  held("owned key wait remains refused");
   m.type("x");
-  m.runUntil(() => m.pc === sym.get("MAINLOOP"), 100_000_000, "WK's return");
-  f.on = false;
-  m.runUntil(() => at14 !== null, 400_000_000, "the script's B:");
-  m.step = step;
-  return at14;
+  m.runUntil(() => m.pc === sym.get("MAINLOOP"), 400_000_000, "WK's actual JP MAINLOOP");
+  publicContext(m); assert.equal(session.returnedKey, 1); held("actual programme jump");
+  const native = romFor(), flush = sym.get("VFLUSH"), bootDrive = sym.get("BOOTDRV");
+  const callBytes = [0xcd, lo(flush), hi(flush)], suffix = [0x78, 0x32, lo(bootDrive), hi(bootDrive), 0x5f, 0x0e, 14, 0xcd, 5, 0];
+  const pattern = Buffer.from([...callBytes, ...suffix]), offset = Buffer.from(native.rom).indexOf(pattern);
+  assert.ok(offset >= 0); assert.equal(Buffer.from(native.rom).indexOf(pattern, offset + 1), -1);
+  const site = 0xc000 + offset;
+  assert.deepEqual(Array.from({ length: pattern.length }, (_, i) => m.read(site + i)), [...(omitted ? [0, 0, 0] : callBytes), ...suffix]);
+  const prompts = countedPrompts(m, { bare: typed });
+  const ownedPrompt = prompts.ready;
+  let typedRelease = null, typedInputOwner = null;
+  if (typed) {
+    m.runUntil(() => ownedPrompt() && m.text(m.mark).endsWith("A>"), 400_000_000, "the actual bare A API10 owner still refusing");
+    typedInputOwner = { ...prompts.owner, pc: m.pc, text: m.text(m.mark) };
+    typedRelease = held("typed prompt before physical recovery");
+    assert.equal(m.read(bootDrive), 0); assert.equal(m.read(sym.get("ERRMODE")), 0xff);
+    session.releaseCard();
+    m.type("B:\r");
+  }
+  m.runUntil(() => m.pc === site, 400_000_000, "the actual private drive-change flush site");
+  publicContext(m); assert.equal(m.cpu.cpu.sp, sym.get("CSTKTOP"));
+  assert.equal(m.cpu.cpu.b, 1); assert.equal(m.read(bootDrive), 0);
+  assert.deepEqual(Array.from({ length: pattern.length }, (_, i) => m.read(site + i)), [...(omitted ? [0, 0, 0] : callBytes), ...suffix]);
+  const beforePrivate = typed ? snapshot("typed private site after key reads") : held("script private site before physical recovery");
+  if (typed) { assert.equal(beforePrivate.state.queue.length, 0); assert.deepEqual(beforePrivate.missing, []); }
+  else session.releaseCard();
+  const acceptedAtPrivate = writes.n;
+  m.runUntil(() => m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14, 400_000_000, "public F14 before ordinary entry can repair anything");
+  publicContext(m); assert.equal(m.cpu.cpu.e, 1); assert.equal(m.read(bootDrive), 1);
+  assert.equal(m.cpu.cpu.sp, sym.get("CSTKTOP") - 2); assert.equal(word(m, m.cpu.cpu.sp), site + pattern.length);
+  const beforeSelect = snapshot("before public F14 ordinary entry"), privateWrites = writes.n - acceptedAtPrivate;
+  const completeBeforeSelect = beforeSelect.state.queue.length === 0 && beforeSelect.missing.length === 0;
+  const callsBeforeFinalPrompt = prompts.count;
+  m.runUntil(() => ownedPrompt() && prompts.owner.id > callsBeforeFinalPrompt && ANY_PROMPT.test(m.text(m.mark)), 400_000_000, "the actual selected B API10 owner");
+  const finalInputOwner = { ...prompts.owner, pc: m.pc };
+  m.step = session.step;
+  assert.equal(session.returnedKey, 1); assert.equal(m.read(bootDrive), 1); assert.equal(m.read(sym.get("DEFDRV")), 1);
+  const expectedCard = Uint8Array.from(original); for (const [block, payload] of expected) expectedCard.set(payload, block * 512);
+  assert.deepEqual(image, expectedCard); assert.equal(cacheState(m).queue.length, 0);
+  assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(m.violations, []);
+  assert.doesNotMatch(m.text(m.mark), /Bdos Err|Bad file|Disk reset failed/);
+  const compact = cut => ({ queue: cut.state.queue, missing: cut.missing, cardSHA256: cut.cardSHA256 });
+  console.log(JSON.stringify({ scope: "real WK private drive-change boundary", typed, omitted, programmeEntries: session.entered, acknowledgements: session.acknowledgements.map(a => ({ record: a.record, a: a.a, cr: a.cr, block: a.block })),
+    initialUsedAllocations: [...session.initialUsed], newAllocations: [...session.allocated], input: Array.from(session.input), privateSite: site, opcode: omitted ? [0, 0, 0] : callBytes,
+    typedInputOwner, finalInputOwner, typedRelease: typedRelease && compact(typedRelease), beforePrivate: compact(beforePrivate), beforeSelect: compact(beforeSelect), privateWrites, completeBeforeSelect,
+    acceptedDataWrites: attempts.filter(a => a.accepted).length, refusedDataWrites: attempts.filter(a => !a.accepted).length, text: m.text(m.mark) }));
+  return { completeBeforeSelect, privateWrites };
 }
 
 test("S2-4 drive change flushes kept lines", () => {
-  assert.equal(scriptDriveChange(), 8, "from a script: the eight kept blocks written before BDOS 14");
-  // Typed, the line's own key reads write the kept lines before the drive change.
-  const sym = romFor().symbols;
-  const { m, writes } = wbMachine({ "WK.COM": wk(sym.get("MAINLOOP"), { jp: true }) }, { bare: true });
-  const f = refusing(m);
-  m.mark = m.output.length;
-  m.type("A:WK A:K.DAT\r");
-  m.runUntil(() => m.pc === sym.get("FNCIN"), 400_000_000, "BDOS 1");
-  f.on = true;
-  m.runUntil(() => m.waitingForInput(), 100_000_000, "the key wait");
-  m.type("x");
-  // WK comes back with no warm boot: the prompt follows its key directly.
-  m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(m.mark)), 400_000_000, "the prompt");
-  f.on = false;
-  let at14 = null;
-  const n0 = writes.n;
-  const step = m.step.bind(m);
-  m.step = () => {
-    if (m.pc === sym.get("BENTRY") && m.cpu.cpu.c === 14 && at14 === null) at14 = writes.n - n0;
-    return step();
-  };
-  at(m, "B:", { re: ANY_PROMPT });
-  m.step = step;
-  assert.equal(at14, 8, "typed: the kept blocks on the card before the drive is selected");
+  assert.equal(driveChange().completeBeforeSelect, true, "script: known data complete before ordinary public F14 entry");
+  assert.equal(driveChange({ typed: true }).completeBeforeSelect, true, "typed: key reads complete known data before selection");
 });
 
 test("S2-4 mutant: M1, no flush at a drive change, leaves a script's kept lines unwritten as it selects the drive", () => {
-  assert.equal(scriptDriveChange(MUTANTS.m1()), 0);
+  const native = driveChange(), changed = driveChange({ rom: MUTANTS.m1(), omitted: true });
+  assert.equal(native.completeBeforeSelect, true, "native positive reaches the same private boundary with full known data");
+  assert.equal(changed.completeBeforeSelect, false, "the omitted private flush leaves valid owned data off card before F14 entry");
 });

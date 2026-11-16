@@ -172,8 +172,11 @@ services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
 drive and `CD D:NAME` on another. These commands work at the bare ROM prompt
 too, so `CD A:SYSTEM` followed by `SHELL.SVC` restores the shell after
 resetting with GAMES selected on A:. The shell prompt shows the selection,
-`A:SYSTEM>`. The drive you are on is written behind, and whenever TEC-OS
-waits for a key everything is on the card ([docs/recovery.md](docs/recovery.md)). Under the
+`A:SYSTEM>`. OS calls prioritise pending writes; required input drains them
+before waiting, with failed data retained and reported for retry. If disk
+state cannot be rebuilt, `Disk reset failed` / `Enter retries` waits for an
+Enter retry before normal commands resume
+([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
 `TED X.ASM!TAS X &X`. TED, from Thorium `a2fe556` (`TED.COM`
@@ -186,14 +189,17 @@ writing the LCD, lighting the digits and beeping through the ROM's services by
 `abi.inc`'s names. `TIMES.BAS` beside it is a first BASIC program, with its
 keywords in capitals and its names in lower case: it asks a name and a number
 and prints that number's times table.
-The starter card includes the author-refined Caverns BASIC source and
+`BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
+runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
+an `.ASM` with TAS.
+
+The starter card also includes the author-refined Caverns BASIC source and
 `CAVERNS.TXT`. Select `CON PICO 80`, compile with `BAZA CAVBASIC`, then run
 `CAVBASIC`. Its executable is created by the user; the separate assembly
 comparison remains development-only. [Caverns](docs/caverns.md) records the
 current rules, qualification and provenance.
-`BAZA TIMES` compiles it with the card's `BAZA.COM` and `BAZA.RTL` and `TIMES`
-runs it; in `TED TIMES.BAS`, ^T B and ^T R build and run it with BAZA as they do
-an `.ASM` with TAS. `DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
+
+`DEMO.ASM` is a tour of the hardware: `TAS DEMO` builds
 `DEMO.COM` and `DEMO` runs it, showing the LCD, the 7-segment digits, the
 8 × 8 LEDs and the PICO9918 in Graphics I, and `TED DEMO.ASM` reads it. `MON3.SVC` runs programs written for MON-3, the
 TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): first build the source-only
