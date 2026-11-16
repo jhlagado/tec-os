@@ -399,9 +399,11 @@ to CCP STARTED where the shell prompt begins. It read no card blocks. CPMINIT
 used 7,222, empty CWBOOT used 8,437 and CCP entry with disk reset used 14,295.
 The clear covered 324 bytes from CCPCLR to just below BDOSRME.
 
-After `SAVE 8 X.COM` on A the same warm interval took 146,209 T-states.
-Rebuilding A's vector through the last used directory entry added roughly
-114,000. Cached directory blocks supplied all reads. An ordinary program's
+After a sixteen-record file was written on A the same warm interval took
+146,209 T-states. That revision's ROM had CP/M's SAVE command, since removed,
+and `SAVE 8 X.COM` wrote the file. Rebuilding A's vector through the last
+used directory entry added roughly 114,000. Cached directory blocks supplied
+all reads. An ordinary program's
 function 13 instead logged A out and scanned the whole directory, taking
 1,063,001 T-states even from cache. First selection of B after cold boot,
 function 14, read 32 directory blocks for its 512 entries and took 9,159,227
