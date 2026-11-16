@@ -95,7 +95,7 @@ recipe revision 17. `test/caverns-basic.json` records the full source, binary,
 compiler and RTL hashes, byte count and native compiler symbol addresses.
 
 Compiler/runtime pins in `test/inputs.json` resolve published BAZA commit
-`52c3956167c8cebe382d342619ec2899913fd18c`. BAZA.COM SHA-256:
+`1d7ecee79ada5ec618c869fe1be0e941f8d8b4cc`. BAZA.COM SHA-256:
 `087d3a4073fe1c2dcd41ccd5e5ca7efcb9f21628c714a2e37986028839c2fa36`.
 BAZA.RTL SHA-256:
 `f79d57328eb152ecba86a9c203f5ead5544a95b07da131c0fd0ad5821d5d5e07`.

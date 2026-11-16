@@ -14,8 +14,8 @@ nav_group: "Reference"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 At the prompt you name an operation and its arguments. The exact form
@@ -509,23 +509,23 @@ and debug conventions remain. For example, `TAS PIC PIC.HEX`, then
 `LOAD PIC.HEX 5000` maps that lowest address to 5000h. Use position-independent
 code or assemble for the intended destination: moving bytes does not
 relocate embedded addresses. `GO ADDR` remains a one-run entry override
-(`Thorium c81ba68848b72eb6649e76a9e659d5b5596f762d:docs/language.md:167-185`,
+(`Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`,
 `TEC-OS 2ec05d670a3d6acf813fbd544b3329d48614b92c:test/tas-hex.test.mjs:105-137`).
 
 TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
 `.BAS` file with `BAZA NAME.BAS`. `^T D` chains `TDB NAME` for an `.ASM`
 file, which fails with `A:TDB?` on the starter card, and shows
 `No debugger` for a `.BAS` file
-(`Thorium a2fe556:README.md:14-41`, `46cf3f1:docs/compatibility.md:223`).
+(`Thorium 20339b8:README.md:14-41`, `46cf3f1:docs/compatibility.md:223`).
 A file name and `THOR.PRJ`'s `ARGS` end at `!` or at `&` after a blank.
 Those are the shell's line separators. `ARGS X &Y` therefore gives the
 program the tail ` X` and runs nothing after it
-(`Thorium a2fe556:README.md:51-58`).
+(`Thorium 20339b8:README.md:51-58`).
 `TAS` and `BAZA` both set the failure return code `FF00h` when a build
 fails. A failed BAZA compile leaves an existing `NAME.COM` unchanged, and a
 failed TAS build normally keeps its earlier outputs
-(`46cf3f1:docs/compatibility.md:225-226`, `Baza 50dc512:README.md:32-37`,
-`Thorium 3d1e2c0:docs/language.md:17-20`).
+(`46cf3f1:docs/compatibility.md:225-226`, `Baza 45f2598:README.md:32-37`,
+`Thorium 2299dfc:docs/language.md:17-20`).
 [Make a small program](02-make-a-small-program.md) and
 [Build a BASIC program](03-build-a-basic-program.md) use them.
 

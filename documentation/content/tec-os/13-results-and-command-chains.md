@@ -14,8 +14,8 @@ nav_group: "Writing programs"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 A build sequence should run a program only after a successful build. An editor
@@ -492,7 +492,7 @@ TED places file names and `THOR.PRJ`'s `ARGS` value on the command line. It
 truncates either at a shell separator: any `!` or an `&` following a blank.
 Thus `ARGS X &Y` makes `^T R` run once with tail ` X` and nothing afterwards.
 An embedded `&` in `/M:&HE000` remains literal
-(`Thorium a2fe556:README.md:51-58`, `241b438:docs/compatibility.md:231`,
+(`Thorium 20339b8:README.md:51-58`, `241b438:docs/compatibility.md:231`,
 `241b438:test/ted.test.mjs:305-333`).
 
 The load-drive byte at `0050h`, explained in Chapter 11, identifies TED's tool

@@ -14,8 +14,8 @@ nav_group: "Inside TEC-OS"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 A successful assembly is useful only with the matching map and media.
@@ -48,7 +48,7 @@ ROM build require manual atom-z80 0.3.7 installation
 `241b438:tools/media.mjs:213-250`, `241b438:README.md:91-102`).
 
 Binary and host pins are checked independently. TAS.COM is pinned to
-Thorium `c81ba68848b72eb6649e76a9e659d5b5596f762d` and its prepared host
+Thorium `0c8adea809ff8752e504bad9c40256e2572f2462` and its prepared host
 to `3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689`. The source README's
 Build and test procedure creates a temporary host, installs locked
 dependencies and verifies it before moving it to `.inputs/tas-host`.
@@ -60,7 +60,7 @@ lock file, locked Z80 runtime and 11,013-byte TAS binary
 The selected TAS also supports explicit Intel HEX output, with original
 16-bit addresses, sparse gaps, checksums and EOF; other output and debug
 conventions stay compatible
-(`Thorium c81ba68848b72eb6649e76a9e659d5b5596f762d:docs/language.md:167-185`).
+(`Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`).
 The source header above retains the earlier capture revision; these named
 compiler facts and the receiving tests identify the later component.
 
