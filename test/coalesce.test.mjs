@@ -777,8 +777,8 @@ function onStarter(command, { logged = "B" } = {}) {
   if (save) {
     assert.equal(file.length, 4096); assert.deepEqual(file, expectedSave, "all sixteen saved pages equal this machine's own pre-command TPA");
   } else {
-    assert.match(text, /COM written\r\n/); assert.equal(file.length, 18944);
-    assert.equal(sha(file), "e478ed1c7101d6156e7588fd5fb7c44c42bfc9378fbcbbcc6cc7248b2d26a620", "the complete pinned compiler result");
+    assert.match(text, /COM written\r\n/); assert.equal(file.length, 18560);
+    assert.equal(sha(file), "0678ddf43a348b0219f03fef2e198562f76d15bfe94b8d253cabb076e751364a", "the complete pinned compiler result");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);
@@ -800,9 +800,12 @@ function onStarter(command, { logged = "B" } = {}) {
 function checkBounceWrites(b) {
   const data = b.writes.map((block, i) => [block, b.fn[i]]).filter(([block]) => !b.dir.has(block));
   const times = data.reduce((n, [block]) => n.set(block, (n.get(block) ?? 0) + 1), new Map());
+  // The independently hash-checked 18,560-byte COM has 145 CP/M records:
+  // 36 complete 512-byte blocks and one final single-record block.
   assert.equal(times.size, 37);
-  assert.ok([...times.values()].every(n => n === 4), "all thirty-seven full blocks progress four acknowledged record versions");
-  assert.equal(data.length, 148); assert.equal(b.writes.length - data.length, 6);
+  assert.deepEqual([...times.values()].sort((a, b) => a - b), [1, ...Array(36).fill(4)],
+    "full blocks progress four acknowledged versions; the final partial block progresses once");
+  assert.equal(data.length, 145); assert.equal(b.writes.length - data.length, 6);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 
