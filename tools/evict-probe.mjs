@@ -3,7 +3,9 @@
 // at the prompt. Prints figures; asserts nothing. node tools/evict-probe.mjs
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ROOT, boot, program, volume } from "../test/lib/fixtures.mjs";
+import { ROOT, boot, program, startupFile, volume } from "../test/lib/fixtures.mjs";
+import { pendingSayFailure, pendingSayFiles } from "../test/lib/pending-say.mjs";
+import { makeSvc } from "./lib/svc.mjs";
 import { CODES, LINEP, SAY, chain, execSvc, owners, word } from "../test/lib/shell.mjs";
 
 const EVBIG = (await program("evbig")).bytes;
@@ -29,10 +31,29 @@ const EXTRA = {
 };
 for (const n of ["S1", "S2", "S3", "S4", "S5"]) EXTRA[`${n}.SVC`] = await svc(n);
 
-function card({ startup = true } = {}) {
+// test/programs/svcdemo.asm: DEMO publishes a registry record, CLIENT binds
+// to it as a dependency, HOOKS replaces the RAM BIOS CONOUT entry and VECS
+// claims restart slot 08h. TP asks to be entered and takes any origin.
+const DEMOV = ["V_FAIL", "V_PROBE", "V_LOAD", "V_UNL", "V_GLVEC", "V_HOOK", "V_HOOKFL", "V_VEC", "V_VECX", "V_VECFL", "V_CHI", "V_CHR", "V_CHN", "V_WB", "V_REMWB", "V_STK", "V_DEP", "V_WILD", "V_LINK", "V_CYCLE", "V_TABLE", "V_NONE", "V_REFUSE", "V_LATE", "V_END", "V_CHAIN", "V_REMWIN", "V_LONG", "V_TWO", "V_HANG"];
+const demo = async (name, over = {}, opt = {}) => {
+  const defs = { ...Object.fromEntries(DEMOV.map((v) => [v, 0])), VECAT: 8, FLAGS: 1, XTRA: 0, STKB: 0, STKI: 0, STKC: 0, DEPTH: 0, HOOKAT: 10, CHAINB: 1, HDRNAME: JSON.stringify(name.padEnd(8)), RECNAME: JSON.stringify(name.padEnd(8)), RECVER: 2, ...over };
+  return (await makeSvc(resolve(ROOT, "test/programs/svcdemo.asm"), { defs, work: resolve(ROOT, "build/svc"), ...opt })).file;
+};
+Object.assign(EXTRA, {
+  "DEMO.SVC": await demo("DEMO"),
+  "CLIENT.SVC": await demo("CLIENT", { V_DEP: 1 }, { deps: [{ name: "DEMO", version: 2 }] }),
+  "HOOKS.SVC": await demo("HOOKS", { V_HOOK: 1 }),
+  "VECS.SVC": await demo("VECS", { V_VEC: 1, FLAGS: 3 }),
+  "TP.SVC": await svc("TP", { ENTER: 1 }),
+  "HOOK.COM": (await program("hook")).bytes,
+  "EVLEFT.COM": (await program("evleft")).bytes,
+});
+
+function card({ startup = true, lines, extra = {} } = {}) {
   const image = new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img")));
   const a = volume(image, "A");
-  for (const [n, b] of Object.entries(EXTRA)) a.write(n, b);
+  for (const [n, b] of Object.entries({ ...EXTRA, ...extra })) a.write(n, b);
+  if (lines) a.write("STARTUP.CMD", startupFile(...lines));
   // A file of one comment line: no startup line runs, so no shell.
   if (!startup) a.write("STARTUP.CMD", Buffer.from(";\r\n\x1a", "latin1"));
   return image;
@@ -56,6 +77,14 @@ function watch(m) {
   m.depth = () => Object.fromEntries(ranges.map(([n, , t]) => [n, t - low[n]]));
   m.lay();
 }
+
+/** The four RAM BIOS targets a program hooks, the registry's head and restart slot 08h. */
+const words = (m) => ({
+  bios: [1, 2, 3, 4].map((i) => hex(word(m, m.sym("RAMBIOS") + 3 * i + 1))).join(" "),
+  registry: hex(word(m, m.sym("REGHEAD"))),
+  rst08: m.read(8) === 0xc3 ? `JP ${hex(word(m, 9))}` : hex(m.read(8)).slice(2),
+  uc1: hex(word(m, m.sym("GLVEC"))),
+});
 
 const state = (m) => ({
   gen: m.read(m.sym("SVCGEN")),
@@ -114,11 +143,19 @@ function run(m, line, { re, max = 900_000_000, atStart, raw } = {}) {
 
 function scenario(name, opts, steps) {
   console.log(`\n== ${name}`);
-  const { startup, ...board } = opts;
-  const m = boot(card({ startup }), board);
+  const { startup, lines, extra, pending, ...board } = opts;
+  const image = card({ startup, lines, extra });
+  const m = boot(image, board);
+  // With pending set, the first write SAY.COM leaves behind is refused by the card until released.
+  if (pending) m.fault = pendingSayFailure(m, image);
   watch(m);
   console.log("boot", JSON.stringify(state(m)));
   for (const step of steps) {
+    if (typeof step === "function") {
+      const said = step(m);
+      if (said !== undefined) console.log("   ", typeof said === "string" ? said : JSON.stringify(said));
+      continue;
+    }
     const [line, opts2] = Array.isArray(step) ? step : [step, {}];
     m.lay();
     const r = run(m, line, opts2);
@@ -131,6 +168,21 @@ function scenario(name, opts, steps) {
 }
 
 const MON3 = [/MON3> ?$/];
+const ANY = { re: />$/ };
+const screens = (m) => {
+  const rows = (f) => { try { return f().filter((l) => l.length).slice(-4); } catch { return null; } };
+  return { pico: rows(() => m.screen()), glcd: rows(() => m.glcdScreen()), matrixKeyboard: m.videoConsole() };
+};
+// Type ^W at the shell's prompt and read what it recalls, then ^X to drop it.
+const recall = (m) => {
+  m.mark = m.output.length;
+  m.type("\x17");
+  for (let i = 0; i < 600_000; i += 1) m.step();
+  const shown = m.text(m.mark);
+  m.type("\x18");
+  for (let i = 0; i < 600_000; i += 1) m.step();
+  return `^W recalls ${JSON.stringify(shown)}`;
+};
 const SCENARIOS = {
   serial: ["serial board: SHELL.SVC only", {}, ["EVBIG", "EVICT EVBIG", "EVICT EVBIG J", "EVICT EVBIG", "EVBIG"]],
   glcd: ["GLCD and matrix keyboard: SHELL.SVC and GLCD.SVC", { matrix: true }, ["EVBIG", "EVICT EVBIG", "EVBIG"]],
@@ -157,6 +209,25 @@ const SCENARIOS = {
   bdos0: ["the evicted program ends by BDOS 0", { matrix: true }, ["EVICT B0", "EVBIG"]],
   reset: ["a reset while the services are out", { matrix: true }, [["EVICT EVBIG", { atStart: (m) => m.reset() }], "EVBIG"]],
   chain: ["the evicted program chains a line by function 47", {}, ["EVICT CH"]],
+  ttychosen: ["GLCD board, the serial terminal chosen with CON TTY:", { matrix: true }, ["CON TTY:", ["EVICT EVBIG", ANY], screens]],
+  bothkept: ["both displays, GLCD.SVC loaded, the PICO9918 kept", { matrix: true, tms: true }, [["GLCD.SVC", ANY], ["EVICT EVBIG", ANY], screens]],
+  bothfail: ["both displays, the GLCD chosen, GLCD.SVC erased by the evicted command", { matrix: true, tms: true }, ["CON UC1:", ["EVICT ERA GLCD.SVC", ANY], screens]],
+  glcdfail: ["GLCD board, GLCD.SVC erased by the evicted command", { matrix: true }, [["EVICT ERA GLCD.SVC", ANY], screens]],
+  conchange: ["both displays, the GLCD chosen, the evicted command is CON TTY:", { matrix: true, tms: true }, ["CON UC1:", ["EVICT CON TTY:", ANY], screens]],
+  apphook: ["a program that leaves RAM BIOS entries in its own image, plain", {}, [words, "HOOK J", words, "SAY"]],
+  apphook2: ["the same program under EVICT", {}, [words, "EVICT HOOK J", words, "SAY"]],
+  leftovers: ["a program that leaves a restart jump and a UC1 table in its image, and tries the shell hook", { matrix: true }, [words, ["EVICT EVLEFT", ANY], words, screens, "EVBIG"]],
+  held: ["services that hold a registry record, a dependency, a RAM BIOS entry and a restart slot", { startup: false }, ["DEMO.SVC", "CLIENT.SVC", "HOOKS.SVC", "VECS.SVC", words, "EVICT EVBIG", words, "EVICT", words]],
+  whole: ["a service that is not removable, installed before the shell: nothing is removed", { lines: ["FIXED.SVC"] }, ["SHELL.SVC", "DIR B:", recall, "EVICT EVBIG !SAY", recall]],
+  rename: ["a service installed from a renamed copy, M2.SVC", {}, ["COPY MON3.SVC M2.SVC", ["M2.SVC", { re: MON3[0] }], "EXIT", "SERVICES", "EVICT EVBIG", "SERVICES", ["M2.SVC", { re: MON3[0] }], "EXIT", "SERVICES"]],
+  otherdrive: ["a service installed from B:Q.SVC, then another file of that name put on A:", {}, ["COPY S1.SVC B:Q.SVC", "B:Q.SVC", "EVICT EVBIG", "COPY S2.SVC Q.SVC", "EVICT EVBIG", "SERVICES"]],
+  svccmd: ["the evicted command would install a service", { matrix: true }, ["DEMO.SVC", "EVICT DEMO.SVC", "EVICT S1.SVC", ["EVICT CON UC1:", ANY], "SERVICES", screens]],
+  nested: ["EVICT inside EVICT's command, both displays, the GLCD chosen", { matrix: true, tms: true }, ["CON UC1:", "EVICT EVICT EVBIG", screens]],
+  origin: ["a service whose entry takes any origin as a call to start", {}, ["TP.SVC", "EVICT EVBIG"]],
+  badcount: ["a count in the record that cannot be one", {}, [(m) => { m.write(m.sym("EVN"), 9); return "EVN set to 9 by the probe"; }, ["", ANY], "EVBIG"]],
+  pending: ["a pending write the card refuses at the evicted program's exit", { pending: true, extra: pendingSayFiles() }, [["EVICT SAY", ANY], (m) => { m.fault.release(); return "the card accepts again"; }, ["", ANY], (m) => { m.fault.assertRecovered(); return "written once"; }]],
+  pending3: ["the same with GLCD.SVC and MON3.SVC to bring back too", { pending: true, matrix: true, extra: pendingSayFiles() }, [["MON3.SVC", { re: MON3[0] }], "EXIT", ["EVICT SAY", ANY], (m) => { m.fault.release(); return "the card accepts again"; }, ["", ANY], (m) => { m.fault.assertRecovered(); return "written once"; }]],
+  mon3go: ["MON3's GO with a pending write the card refuses", { pending: true, extra: pendingSayFiles() }, [["SAY", ANY], ["MON3.SVC", { re: MON3[0] }], ["GO 4000", { re: MON3[0] }], (m) => `card writes tried ${m.fault.attempts.length}, taken ${m.fault.attempts.filter((a) => a.accepted).length}`]],
 };
 const which = process.argv.slice(2);
 for (const [key, [name, opts, steps]] of Object.entries(SCENARIOS)) if (!which.length || which.includes(key)) scenario(name, opts, steps);
