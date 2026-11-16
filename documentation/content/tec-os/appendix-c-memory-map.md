@@ -474,7 +474,7 @@ for (const n of process.argv.slice(1)) {
 
 It prints:
 
-<!-- TEC-OS 6fb1872, ROM 095d829d: host-tool output of the lookup above. -->
+<!-- TEC-OS b6e8383, ROM 095d829d: host-tool output of the lookup above. -->
 ```text
 CMDTXT BD23h
 PRGCODE BF54h
