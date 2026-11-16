@@ -1,6 +1,6 @@
 diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
---- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.826976461 +0000
-+++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.830053701 +0000
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
 @@ -195,26 +195,14 @@
  ; nothing changed. No driver is loaded.
  
@@ -35,8 +35,8 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
  CONLB:
    jr USRBAD      ; the later refusals
 diff -ruN a/src/lcd.asm b/src/lcd.asm
---- a/src/lcd.asm	2026-11-16 11:49:00.827093810 +0000
-+++ b/src/lcd.asm	2026-11-16 11:49:00.829779174 +0000
+--- a/src/lcd.asm
++++ b/src/lcd.asm
 @@ -146,42 +146,6 @@
    jr nz,LCVC1
    ret
@@ -81,8 +81,8 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
  ; attempt HL's zero-terminated text.
  ; Returns B=3; otherwise as LCDROW.
 diff -ruN a/src/tables.asm b/src/tables.asm
---- a/src/tables.asm	2026-11-16 11:49:00.827213096 +0000
-+++ b/src/tables.asm	2026-11-16 11:49:00.829811077 +0000
+--- a/src/tables.asm
++++ b/src/tables.asm
 @@ -58,7 +58,7 @@
  ; flip the cursor, and LCVPUT takes the
  ; 80h that follows as that flip.

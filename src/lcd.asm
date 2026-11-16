@@ -207,10 +207,12 @@ LCD3:
 ; Keeps B/DE; changes AF/C/HL.
 ; Bytes are attempted even if busy.
 ; Nothing is written while the LCD is
-; the console: A=4, Z, HL unchanged.
+; the console: A=4, Z, carry set as
+; after a write, HL unchanged.
 
 LCDROW:
   call LCDCON
+  scf            ; GLCLD's failure sign
   ret z
   push hl
   ld c,0

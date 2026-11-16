@@ -1,6 +1,6 @@
 diff -ruN a/src/console.asm b/src/console.asm
---- a/src/console.asm	2026-11-16 11:49:00.855538229 +0000
-+++ b/src/console.asm	2026-11-16 11:49:23.081220928 +0000
+--- a/src/console.asm
++++ b/src/console.asm
 @@ -98,18 +98,7 @@
    ld h,(hl)
    ld l,a         ; HL = the table
@@ -22,8 +22,8 @@ diff -ruN a/src/console.asm b/src/console.asm
  ; Copy seven vector words VPUTV..VFNV
  ; and geometry. Reset region and publish
 diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
---- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.855685393 +0000
-+++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:23.081380412 +0000
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
 @@ -34,7 +34,7 @@
    jr nz,CONSKIP
    inc b
@@ -164,8 +164,8 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
  ; SAVE n NAME: write n 256-byte TPA
  ; pages from 0100h. Reject eight-bit
 diff -ruN a/src/lcd.asm b/src/lcd.asm
---- a/src/lcd.asm	2026-11-16 11:49:00.855775976 +0000
-+++ b/src/lcd.asm	2026-11-16 11:49:23.081482847 +0000
+--- a/src/lcd.asm
++++ b/src/lcd.asm
 @@ -1,45 +1,17 @@
 -; HD44780 20 x 4 LCD: boot status, and
 -; the console for UC1 while no loaded
@@ -336,7 +336,7 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
  ; Mark row 3 ROM-owned (CDWRD), then
  ; attempt HL's zero-terminated text.
  ; Returns B=3; otherwise as LCDROW.
-@@ -204,24 +71,33 @@
+@@ -204,26 +71,33 @@
  ; Starts at column 0; no 20-column
  ; clipping. Empty text sets the address.
  ; HL stops on zero; A=0, carry set, NZ.
@@ -344,10 +344,12 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
 +; Keeps BC/DE; changes AF/HL.
  ; Bytes are attempted even if busy.
 -; Nothing is written while the LCD is
--; the console: A=4, Z, HL unchanged.
+-; the console: A=4, Z, carry set as
+-; after a write, HL unchanged.
  
  LCDROW:
 -  call LCDCON
+-  scf            ; GLCLD's failure sign
 -  ret z
 +  ld a,b
    push hl
@@ -379,8 +381,8 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
    jr LCDS
  
 diff -ruN a/src/services.asm b/src/services.asm
---- a/src/services.asm	2026-11-16 11:49:00.855856682 +0000
-+++ b/src/services.asm	2026-11-16 11:49:23.081596719 +0000
+--- a/src/services.asm
++++ b/src/services.asm
 @@ -130,9 +130,6 @@
  
  ; LCD: B=row 0-3, HL -> 20 raw bytes.
@@ -427,8 +429,8 @@ diff -ruN a/src/services.asm b/src/services.asm
    djnz HWSLC
    xor a
 diff -ruN a/src/tables.asm b/src/tables.asm
---- a/src/tables.asm	2026-11-16 11:49:00.855867892 +0000
-+++ b/src/tables.asm	2026-11-16 11:49:23.081609874 +0000
+--- a/src/tables.asm
++++ b/src/tables.asm
 @@ -50,18 +50,6 @@
  LCDROWS:
    DB $80,$C0,$94,$D4
@@ -449,8 +451,8 @@ diff -ruN a/src/tables.asm b/src/tables.asm
  ; bytes, NUL, then LE handler word. A
  ; zero at the next keyword ends the
 diff -ruN a/src/text.asm b/src/text.asm
---- a/src/text.asm	2026-11-16 11:49:00.855891348 +0000
-+++ b/src/text.asm	2026-11-16 11:49:23.081658606 +0000
+--- a/src/text.asm
++++ b/src/text.asm
 @@ -31,19 +31,17 @@
  FREEMSG:
    DB "K free",'$'
@@ -477,8 +479,8 @@ diff -ruN a/src/text.asm b/src/text.asm
  ; CCP '$'-terminated output. BADCHARS
  ; is 13 raw bytes without a terminator.
 diff -ruN a/src/video.asm b/src/video.asm
---- a/src/video.asm	2026-11-16 11:49:00.855910290 +0000
-+++ b/src/video.asm	2026-11-16 11:49:23.081689106 +0000
+--- a/src/video.asm
++++ b/src/video.asm
 @@ -18,21 +18,11 @@
  VIDINIT:
    call TMSINIT   ; Z: both patterns

@@ -1,6 +1,6 @@
 diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
---- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.746876103 +0000
-+++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.751051488 +0000
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
 @@ -195,26 +195,14 @@
  ; nothing changed. No driver is loaded.
  

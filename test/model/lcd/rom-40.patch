@@ -1,6 +1,6 @@
 diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
---- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.855685393 +0000
-+++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.857909799 +0000
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
 @@ -195,26 +195,25 @@
  ; nothing changed. No driver is loaded.
  
@@ -45,8 +45,8 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
  CONLB:
    jr USRBAD      ; the later refusals
 diff -ruN a/src/layout.asm b/src/layout.asm
---- a/src/layout.asm	2026-11-16 11:49:00.855765942 +0000
-+++ b/src/layout.asm	2026-11-16 11:49:00.857516751 +0000
+--- a/src/layout.asm
++++ b/src/layout.asm
 @@ -46,6 +46,11 @@
  ; 0-3.
  
@@ -60,8 +60,8 @@ diff -ruN a/src/layout.asm b/src/layout.asm
  
  ; Page-zero JP. Target at 0006h is
 diff -ruN a/src/lcd.asm b/src/lcd.asm
---- a/src/lcd.asm	2026-11-16 11:49:00.855775976 +0000
-+++ b/src/lcd.asm	2026-11-16 11:49:00.857693692 +0000
+--- a/src/lcd.asm
++++ b/src/lcd.asm
 @@ -16,29 +16,38 @@
    cp 4
    ret
@@ -291,7 +291,7 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
    ret
  
  ; Mark row 3 ROM-owned (CDWRD), then
-@@ -221,7 +229,7 @@
+@@ -223,7 +231,7 @@
    ld a,(hl)
    cp 1           ; zero: carry, NZ
    ret c
@@ -301,8 +301,8 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
    jr LCDS
  
 diff -ruN a/src/ram.asm b/src/ram.asm
---- a/src/ram.asm	2026-11-16 11:49:00.855814458 +0000
-+++ b/src/ram.asm	2026-11-16 11:49:00.857539377 +0000
+--- a/src/ram.asm
++++ b/src/ram.asm
 @@ -89,8 +89,8 @@
                   ; entries
  PIREC: DS 13     ; 13-byte registry tail
@@ -315,8 +315,8 @@ diff -ruN a/src/ram.asm b/src/ram.asm
  PITPS: DS 1      ; shown: 0 or PITPG
  PIMV: DS 1       ; 1 builds hidden page
 diff -ruN a/src/services.asm b/src/services.asm
---- a/src/services.asm	2026-11-16 11:49:00.855856682 +0000
-+++ b/src/services.asm	2026-11-16 11:49:00.857429220 +0000
+--- a/src/services.asm
++++ b/src/services.asm
 @@ -160,15 +160,16 @@
    push bc
    ld c,0
@@ -337,8 +337,8 @@ diff -ruN a/src/services.asm b/src/services.asm
    ret
  
 diff -ruN a/src/tables.asm b/src/tables.asm
---- a/src/tables.asm	2026-11-16 11:49:00.855867892 +0000
-+++ b/src/tables.asm	2026-11-16 11:49:00.857714597 +0000
+--- a/src/tables.asm
++++ b/src/tables.asm
 @@ -48,7 +48,8 @@
  LCDSEQ: DB $38,$0C,$06,$01
  

@@ -1,6 +1,6 @@
 diff -ruN a/src/term.asm b/src/term.asm
---- a/src/term.asm	2026-11-16 11:49:00.765803956 +0000
-+++ b/src/term.asm	2026-11-16 11:49:00.767465534 +0000
+--- a/src/term.asm
++++ b/src/term.asm
 @@ -116,7 +116,17 @@
  
  VTBS1:

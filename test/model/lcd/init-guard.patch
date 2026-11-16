@@ -1,6 +1,6 @@
 diff -ruN a/src/lcd.asm b/src/lcd.asm
---- a/src/lcd.asm	2026-11-16 11:49:00.783190291 +0000
-+++ b/src/lcd.asm	2026-11-16 11:49:00.786032868 +0000
+--- a/src/lcd.asm
++++ b/src/lcd.asm
 @@ -34,6 +34,8 @@
  ; console's own cursor does not move.
  

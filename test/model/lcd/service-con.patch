@@ -1,6 +1,6 @@
 diff -ruN a/src/console.asm b/src/console.asm
---- a/src/console.asm	2026-11-16 11:49:00.843302553 +0000
-+++ b/src/console.asm	2026-11-16 11:49:00.845118485 +0000
+--- a/src/console.asm
++++ b/src/console.asm
 @@ -98,18 +98,7 @@
    ld h,(hl)
    ld l,a         ; HL = the table
@@ -22,8 +22,8 @@ diff -ruN a/src/console.asm b/src/console.asm
  ; Copy seven vector words VPUTV..VFNV
  ; and geometry. Reset region and publish
 diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
---- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.843440652 +0000
-+++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.845547531 +0000
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
 @@ -195,13 +195,20 @@
  ; nothing changed. No driver is loaded.
  
@@ -51,8 +51,8 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
    add hl,de
    ld a,c
 diff -ruN a/src/lcd.asm b/src/lcd.asm
---- a/src/lcd.asm	2026-11-16 11:49:00.843549330 +0000
-+++ b/src/lcd.asm	2026-11-16 11:49:00.845334563 +0000
+--- a/src/lcd.asm
++++ b/src/lcd.asm
 @@ -16,14 +16,6 @@
    cp 4
    ret
@@ -166,8 +166,8 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
  ; attempt HL's zero-terminated text.
  ; Returns B=3; otherwise as LCDROW.
 diff -ruN a/src/tables.asm b/src/tables.asm
---- a/src/tables.asm	2026-11-16 11:49:00.843644822 +0000
-+++ b/src/tables.asm	2026-11-16 11:49:00.845352221 +0000
+--- a/src/tables.asm
++++ b/src/tables.asm
 @@ -50,18 +50,6 @@
  LCDROWS:
    DB $80,$C0,$94,$D4
@@ -196,8 +196,8 @@ diff -ruN a/src/tables.asm b/src/tables.asm
  
  ; Initial stack room for services, in
 diff -ruN a/src/video.asm b/src/video.asm
---- a/src/video.asm	2026-11-16 11:49:00.843684864 +0000
-+++ b/src/video.asm	2026-11-16 11:49:00.845217582 +0000
+--- a/src/video.asm
++++ b/src/video.asm
 @@ -18,21 +18,11 @@
  VIDINIT:
    call TMSINIT   ; Z: both patterns

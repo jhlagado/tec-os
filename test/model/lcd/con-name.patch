@@ -1,6 +1,6 @@
 diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
---- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.811590695 +0000
-+++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.814080481 +0000
+--- a/src/cpm/ccpcmd.asm
++++ b/src/cpm/ccpcmd.asm
 @@ -245,6 +245,14 @@
    ld de,CONHDR   ; report after routing
    call PUTSTR    ; output triggers route
