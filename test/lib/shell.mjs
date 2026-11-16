@@ -162,7 +162,6 @@ export function at(m, line, { re = PROMPT, max = 900_000_000 } = {}) {
 }
 
 export const code = (m) => word(m, m.sym("PRGCODE"));
-export const user = (m) => m.read(4) >> 4;
 export const count = (text, re) => (text.match(re) ?? []).length;
 export const hellos = (t) => count(t, /hello\r\nthere/g);
 
