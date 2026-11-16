@@ -850,11 +850,11 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
   };
   assert.equal(tpa(["SHELL.SVC"]).tpa, 41984, "with the shell");
   assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41216, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 36864, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37120, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 36096, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 36352, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -1348,8 +1348,8 @@ test("S2-13 docs", () => {
   const compat = flat("docs/compatibility.md");
   for (const s of ["46,533 bytes", "41,984", "41,216", "**`DIR` before `SAVE`.**", "`DIR /W`, the ROM's listing, uses only the record at 0080h"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A500h` to `9100h`, and the TPA from 41,984 bytes to \*\*36,864\*\*/);
-  assert.match(flat("docs/mon3.md"), /it is `8E00h`, a TPA of \*\*36,096\*\*/);
+  assert.match(flat("docs/mon3.md"), /from `A500h` to `9200h`, and the TPA from 41,984 bytes to \*\*37,120\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `8F00h`, a TPA of \*\*36,352\*\*/);
   // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
   for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
     assert.doesNotMatch(flat(n), /\bprojects? (word|A500h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);

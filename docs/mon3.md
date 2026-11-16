@@ -44,14 +44,14 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 4,955 bytes of header and image in **20 pages**, 5,446
+On the starter card it is 4,781 bytes of header and image in **19 pages**, 5,237
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
-first, so the word at `0006h` goes from `A500h` to `9100h`, and the TPA from
-41,984 bytes to **36,864**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `8E00h`, a TPA of **36,096**, in any order of
+first, so the word at `0006h` goes from `A500h` to `9200h`, and the TPA from
+41,984 bytes to **37,120**. With `GLCD.SVC` installed too, as the GLCD
+console's startup does, it is `8F00h`, a TPA of **36,352**, in any order of
 installing the three. On the starter card
 with no shell, whose four drives take the bare ROM's word to `B6C5h`, it goes
-from `B6C5h` to `A200h`, and the TPA from 46,533 bytes to 41,216, and 40,448 with
+from `B6C5h` to `A300h`, and the TPA from 46,533 bytes to 41,472, and 40,704 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page
 zero and its stack are all in those pages, above anything a MON-3 program may
 load into. MON-3's graphics buffer and variables are not: they are MON-3's
@@ -87,8 +87,8 @@ It does not relocate absolute addresses embedded in machine code or data.
   Without an override, the records keep their original addresses.
 
   Before writing any destination byte, MON3 checks the complete file's
-  syntax, counts, checksums, EOF and ranges. Overrides and entry records
-  need a further checking pass before the copy pass. Rejected syntax,
+  syntax, counts, checksums, EOF and ranges. An override needs a further
+  checking pass before the copy pass. Rejected syntax,
   checksums or ranges print `?`, leave destination memory unchanged and
   clear the previous load's runnable state. Page zero, 0800h–08FFh and
   resident memory remain protected; source and destination arithmetic may
@@ -100,15 +100,15 @@ It does not relocate absolute addresses embedded in machine code or data.
   data byte. At least one data record is required. Type 01h must have
   zero length and address, ending the records. Between records only
   CR and LF are allowed; after EOF only CR, LF and NUL until the first
-  1Ah or the end of the last CP/M record. A single optional type 05h
-  start-linear-address record may declare an entry: four data bytes,
-  zero record address, upper 16 bits zero. The entry must lie in actual
-  loaded data, not a gap, and follows the same rebase. Types 02h, 03h,
-  04h and all other types are refused. Overlapping data records keep
-  file order, with the later bytes winning.
+  1Ah or the end of the last CP/M record. A type 05h start-address
+  record is read and passed over: its digits and checksum must be right,
+  but its length, address field and contents are not examined, it is not
+  data, and it does not set where `GO` starts. Types 02h, 03h, 04h and
+  all other types are refused. Overlapping data records keep file order,
+  with the later bytes winning.
 
-  Bare `GO` uses that validated entry if present; otherwise it uses the
-  lowest loaded address, after any rebase. The lowest byte is a useful
+  Bare `GO` starts at the lowest loaded address, after any rebase. MON3
+  takes no start address from the file. The lowest byte is a useful
   default, not a guarantee of executable code: use `GO addr` to choose
   another entry. LOAD never runs the code. A disk error during any pass
   ends the session through the existing BDOS error path. Copying is a

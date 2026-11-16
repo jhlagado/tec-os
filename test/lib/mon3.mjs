@@ -36,7 +36,7 @@ export async function execFile(over = {}) {
 }
 
 /** MON3.SVC's SHA-256: the file the card holds, as media writes it. */
-export const MON3_SVC_SHA = "c7eec7b6313222c6a46f1f5396dbdf65da831f12726e0dce7de6653b575de6ef";
+export const MON3_SVC_SHA = "9cf63c798f29c6140f02ae59c6fba7bbcf04c66106da912210b69c0babd24cf4";
 
 /** The card's MON3.SVC, by media's writer: the pinned file, and the same as SVC, the tests' own build. */
 export async function cardMon3(svc) {
@@ -55,7 +55,7 @@ export const mon3Svc = (opt = {}) => makeSvc(resolve(ROOT, "drivers/mon3.asm"), 
  * the least (0006h), and the least TPA alone and with GLCD.SVC. Every size
  * test reads it.
  */
-export const MON3_CEILING = { bytes: 5120, pages: 20, top: 0xa500, tpa: 41984, tpaGlcd: 41216 };
+export const MON3_CEILING = { bytes: 4864, pages: 19, top: 0xa600, tpa: 42240, tpaGlcd: 41472 };
 
 /** A build on the two-volume reference card: pages, (0006h), entry, TPA and SERVICES line. */
 export function figures(svc) {
