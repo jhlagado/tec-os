@@ -1,0 +1,69 @@
+diff -ruN a/src/sd.asm b/src/sd.asm
+--- a/src/sd.asm
++++ b/src/sd.asm
+@@ -474,8 +474,6 @@
+   out (SYSLAT),a
+   ld c,SDIO
+   ld de,$0103
+-  xor a
+-  ld i,a
+ 
+ SDRB2:
+   out (c),d      ; bit 7: CLK low, the
+@@ -520,52 +518,10 @@
+   rla
+   rl b
+   ld (hl),b
+-  inc hl
+-  out (c),d      ; second byte: bit 7
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  out (c),d      ; bit 6
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  out (c),d      ; bit 5
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  out (c),d      ; bit 4
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  out (c),d      ; bit 3
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  out (c),d      ; bit 2
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  out (c),d      ; bit 1
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  out (c),d      ; bit 0
+-  out (c),e
+-  in a,(c)
+-  rla
+-  rl b
+-  ld (hl),b
+-  inc hl
+-  ld a,i
+-  dec a
+-  ld i,a
++  inc l          ; a line starts a page
++  jp nz,SDRB2
++  inc h          ; and an even one:
++  bit 0,h        ; two pages a block
+   jp nz,SDRB2
+   out (c),d
+   ld a,(LATCHV)
