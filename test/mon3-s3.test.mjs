@@ -65,9 +65,8 @@ test("KG67 rst 18h refusals", async () => {
   console.log(`RST 18h refusals: 15 selectors, 34 rows; the lowest SP ${lowSP.toString(16)}h`);
 });
 
-// The size: at most 18 pages, 4,608 bytes of header and image; (0006h) at
-// least A700h on a card with no shell, so a TPA of at least 42,496, and 41,728
-// with GLCD.SVC; the card's file, by its pinned hash; each source file within the
+// The size uses the shared ceiling and two-volume reference-card TPA,
+// alone and with GLCD.SVC; the card's file, by its pinned hash; each source file within the
 // style's 24,576 bytes, and passing its checker.
 
 async function sizeAndTpa(svc) {
@@ -104,14 +103,15 @@ test("KG67 size and tpa", async () => {
   }
 });
 
-test("KG67 mutant: the build with buffers added to 4,609 bytes takes 19 pages", async () => {
+test("KG67 mutant: one byte beyond the shared ceiling takes one more page", async () => {
+  const C = MON3_CEILING;
   const svc = await mon3Build();
-  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${4609 - svc.image}\nMSTK:\n`]]);
-  assert.equal(big.image, 4609);
-  await assert.rejects(sizeAndTpa(big), /within 4608/);
+  const big = await mon3Variant([["  DS 80\nMSTK:\n", `  DS 80+${C.bytes + 1 - svc.image}\nMSTK:\n`]]);
+  assert.equal(big.image, C.bytes + 1);
+  await assert.rejects(sizeAndTpa(big), new RegExp(`within ${C.bytes}`));
   const m = boot({ "MON3.SVC": big.file });
   installMon3(m);
-  assert.deepEqual(services(m), ["MON3 19"], "19 pages");
+  assert.deepEqual(services(m), [`MON3 ${C.pages + 1}`], "one page over the ceiling");
 });
 
 // The graphics workspace at entry: 0A00h-0E19h zero but VPORT, 0A00h, at the

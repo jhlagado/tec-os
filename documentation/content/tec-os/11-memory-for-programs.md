@@ -219,11 +219,13 @@ the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
 exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
 Later services allocate below the first. Startup's fifteen-page `SHELL.SVC`
 leaves `A700h`, or 42,496 bytes. Adding GLCD leaves 41,728
-(`241b438:docs/memory-map.md:12-22`, `241b438:docs/shell.md:23-31`,
-`241b438:docs/compatibility.md:3-16`). MON3.SVC uses 18 pages. Alone it lowers `B6C5h`
-to `A400h`, leaving 41,728 bytes, or 40,960 after GLCD (`241b438:docs/mon3.md:49-54`).
-After the shell it leaves `9500h` and 37,888 bytes. Adding GLCD lowers it to
-`9200h` with 37,120 (`241b438:docs/mon3.md:47-59`, `241b438:test/shell2.test.mjs:853-875`).
+(`docs/memory-map.md:12-22`, `docs/shell.md:23-31`,
+`docs/compatibility.md:3-16`). The later MON3 development component uses 20 pages. Alone it lowers
+`B6C5h` to `A200h`, leaving 41,216 bytes, or 40,448 after GLCD. After the shell
+it leaves `9300h` and 37,376 bytes. Adding GLCD lowers it to `9000h` with 36,608 bytes.
+The two extra pages cost 512 bytes compared with the earlier 18-page monitor;
+these current figures are distinct from the earlier checked captures
+(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:47-59`).
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
