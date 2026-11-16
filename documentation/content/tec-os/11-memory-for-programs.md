@@ -376,7 +376,7 @@ after it writes that table. `DIR /W` leaves memory as it was
 With the seventeen-page startup shell at `A500h`, this starter-card run could
 save 164 pages. The next page would cross the limit so 165 was rejected:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 165 BIG.COM' 'SAVE 164 BIG.COM' DIR. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 165 BIG.COM' 'SAVE 164 BIG.COM' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

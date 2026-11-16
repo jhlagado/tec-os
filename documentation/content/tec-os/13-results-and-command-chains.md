@@ -31,7 +31,7 @@ prompt and echoes each later command before running it. This is CP/M 3's
 command-chain form. The first captured line runs two commands and the second
 includes empty pieces:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'DIR *.CMD!TYPE STARTUP.CMD' 'cd!!  ! dir b:!'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'DIR *.CMD!TYPE STARTUP.CMD' 'cd!!  ! dir b:!'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -69,7 +69,7 @@ before capitalising them. The displayed `dir b:` therefore executes as
 Each piece executes as a complete command. A drive or user-area change carries
 into later pieces. Here `B:` makes B current before COPY creates `NOTES.TXT`:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'B:!COPY A:STARTUP.CMD NOTES.TXT!DIR'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'B:!COPY A:STARTUP.CMD NOTES.TXT!DIR'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

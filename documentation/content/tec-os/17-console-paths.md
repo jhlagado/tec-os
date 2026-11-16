@@ -228,7 +228,7 @@ printer. LINERASE repeats that operation for `^X` and history replacement
 In this run `^U` discards a partial command and `^R` reprints a complete
 command before Return:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs $'TYPE X\x15DIR *.CMD' $'DIR *.CMD\x12'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs $'TYPE X\x15DIR *.CMD' $'DIR *.CMD\x12'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM

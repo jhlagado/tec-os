@@ -556,7 +556,7 @@ the word at `0006h`. On the starter card with the shell installed that byte
 is `A5h`: 164 pages cover `0100h` through `A4FFh`. Both 165 and 320 are
 rejected in this capture (`46cf3f1:src/cpm/ccpcmd.asm:266-307`):
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 165 B:X.COM'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 165 B:X.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
