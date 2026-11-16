@@ -21,7 +21,6 @@ CMDCD:
   pop hl
   call SKIPSP    ; A: its first byte
   ld a,(CURDSK)  ; the logged drive
-  and $0F
   ld (CDDRV),a   ; the current drive
   ld a,(hl)      ; after CD's blanks
   or a
