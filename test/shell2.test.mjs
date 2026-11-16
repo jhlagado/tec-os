@@ -1253,7 +1253,9 @@ test("S2-12 no mount.com", () => {
   for (const n of ["SHELL.SVC", "STARTUP.CMD", "TED.COM", "TAS.COM", "BAZA.COM", "MON3.SVC"]) assert.ok(names.includes(n), `A: still holds ${n}`);
   assert.ok(names.includes("HELLO3.ASM"));
   assert.ok(!names.includes("HELLO3.BIN"));
-  assert.equal(names.length, 16);
+  assert.ok(names.includes("CAVBASIC.BAS"));
+  assert.ok(!names.includes("CAVBASIC.COM"), "readers compile the supplied source");
+  assert.equal(names.length, 15);
 });
 
 test("S2-12 instruction", () => {
