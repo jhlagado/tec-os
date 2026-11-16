@@ -215,8 +215,7 @@ FNOPEN:
 FNCLSE:
   call CPOUT     ; data before directory
   jp nz,BADSECT  ; card refused it
-  call CLOSEFCB
-  ret
+  jp CLOSEFCB
 
 ; Close the FCB at (PARAM) on the
 ; current drive. If S2 bit 7 is set,
@@ -332,17 +331,15 @@ FNSRCHF:
 
 SETSRCH:
   call SRCHA
-  call FINDENT
-  ret            ; slot or FFh
 
 ; Function 18: continue the saved search
 ; from SRCHIDX with OPENMOD/SRCHFCB. DE
 ; is not a new FCB argument. Return slot
-; 0..3 or FFh through RETA.
+; 0..3 or FFh through RETA. A new
+; search falls into it.
 
 FNSRCHN:
-  call FINDENT
-  ret
+  jp FINDENT     ; slot or FFh
 
 ; Reject read-only drive/file access.
 ; ROFCB checks CHKRO (error 2), then the
@@ -432,8 +429,7 @@ FNMAKE:
   inc hl
   inc hl
   ld (hl),0      ; S2 clear even if full
-  call MAKEFCB
-  ret
+  jp MAKEFCB
 
 ; Allocate an empty directory slot for
 ; the FCB at (PARAM) on the current
@@ -527,8 +523,7 @@ FNWRITE:
   xor a          ; no new-block fill
 
   ld (ZEROFIL),a
-  call WRITESEQ
-  ret
+  jp WRITESEQ
 
 ; Function 30: set attributes in every
 ; current-user/name match. Require a

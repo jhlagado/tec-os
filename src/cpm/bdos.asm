@@ -336,8 +336,7 @@ FNDIRECT:
   call CONSTAT   ; pending or BIOS ready
   or a
   ret z          ; A=0: zero
-  call GETCHAR   ; unechoed input
-  ret
+  jp GETCHAR     ; unechoed input
 
 ; Function 6 output: E is the byte.
 ; Send it as C directly through BIOCOT.
