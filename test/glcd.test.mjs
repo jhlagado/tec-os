@@ -23,7 +23,7 @@ import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
-assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"4af172005735ae5552fe065bdb10e8080c322e08b68ca81b9ac6dabb0c51f64b","unchanged historical command list and oracle");
+assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"4af172005735ae5552fe065bdb10e8080c322e08b68ca81b9ac6dabb0c51f64b","the historical command list and oracle, with the two DIR screens retaken");
 const REF = JSON.parse(referenceBytes);
 // Bind the clone to this build's untouched input, not to a permanent ROM pin.
 const productionInput = romFor();

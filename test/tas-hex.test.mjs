@@ -66,7 +66,7 @@ async function target(source, stem, constrained, initialFiles = {}) {
   return { m, image, svc };
 }
 
-// The native compiler reserves400 bytes below its actual TPA top. Sample
+// The native compiler reserves 400 bytes below its actual TPA top. Sample
 // its user stack and real BDOS entries only during this command. OS private
 // stacks lie above that top and retain their own existing qualification.
 function compile(m, command) {
@@ -127,7 +127,7 @@ const holes = n => `ORG $2000\nDS 1\nDB 3\n${Array.from({ length: n - 1 }, (_, k
   return `ORG $${(0x2001 + 2 * i).toString(16)}\nDB ${(17 * i + 3) & 255}\n`;
 }).join("")}`;
 
-test("pinned TAS HEX preserves1024 gaps on the real OS with resident services", { skip: TAS.skip, timeout: 900_000 }, async () => {
+test("pinned TAS HEX preserves 1024 gaps on the real OS with resident services", { skip: TAS.skip, timeout: 900_000 }, async () => {
   const { m, image } = await target(holes(1024), "MANY", true);
   assert.match(compile(m, "TAS MANY MANY.HEX"), /MANY\.HEX written/);
   const hex = parse(Buffer.from(volume(image, "A").read("MANY.HEX")));

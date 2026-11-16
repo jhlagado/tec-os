@@ -30,7 +30,7 @@ CHEX1:
   xor a
   ld (FCB+12),a  ; first extent
   ld (FCB+32),a  ; first record
-  ld (HANY),a    ; at least one byte
+  ld (HANY),a    ; no data byte yet
   ld (HSEEN),a   ; entries this pass
   ld (HEHIT),a   ; no data hit yet
   call OPEN
@@ -46,7 +46,7 @@ CHEX1:
   call HSETGO    ; resolve an entry once
   jp c,LFAIL
   ld a,(HOVR)
-  ld b,a         ; bytes in this record
+  ld b,a         ; the override flag
   ld a,(HENTV)
   or b           ; override or entry?
   ld a,2         ; plain files: copy
@@ -153,7 +153,7 @@ HREC:
   or a
   scf
   ret nz         ; other types refused
-  or b           ; override or entry?
+  or b           ; any data bytes?
   scf
   ret z          ; empty data refused
   ld (HANY),a    ; at least one byte

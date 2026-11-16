@@ -11,7 +11,8 @@ saving of 1,328 bytes. The COM is 38,272 bytes, down from 39,680.
 
 At the audited 42,496-byte shell-resident TPA, the 38,248-byte logical image and
 768-byte stack reservation leave 3,480 bytes for dynamic arrays, strings and
-control. These bytes are not all unused after game initialisation.
+control. These bytes are not all unused after game initialisation. The shell
+that lists sizes from a table leaves 41,984 bytes, and so 2,968 of them.
 
 The full BAZA native regression passed 712 cases, and the separate compatibility
 corpus passed 49 expectations. The compiler's retained evidence is in its

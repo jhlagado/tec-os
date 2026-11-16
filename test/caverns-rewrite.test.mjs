@@ -117,12 +117,10 @@ test('rewrite matches baseline output, complete state and RNG across checkpoints
 test('long-input resource behaviour is recorded separately from gameplay equivalence',{timeout:120000},async()=>{
  const [a,b]=await pair(scenario());const input='x'.repeat(254);
  const before=keys(a.m,input),after=keys(b.m,input);
- // Under the fifteen-page shell's 42,496 bytes the baseline ran out of memory here; with no shell it has
- // 46,533 and may take the input, so each game is held to the same two outcomes.
- for(const [x,out]of [[a,before],[b,after]]){
-  if(/OUT OF MEMORY/.test(out))assert.ok(x.m.ready(),'resource failure exits cleanly');
-  else{assert.doesNotMatch(out,/ERROR IN/);assert.equal(scalar(x.m,x.f,'A%'),1);assert.ok(x.m.waitingForInput());}
- }
+ // The baseline's memory limit here was a property of the fifteen-page shell's 42,496 bytes: in the bare 46,533 it takes the line and answers eh?.
+ assert.doesNotMatch(before,/OUT OF MEMORY|ERROR IN/);assert.match(before,/eh\?/);assert.equal(scalar(a.m,a.f,'A%'),1);assert.ok(a.m.waitingForInput());
+ if(/OUT OF MEMORY/.test(after))assert.ok(b.m.ready(),'resource failure exits cleanly');
+ else{assert.doesNotMatch(after,/ERROR IN/);assert.equal(scalar(b.m,b.f,'A%'),1);assert.ok(b.m.waitingForInput());}
  mkdirSync(ROOT+'/build/caverns/rewrite',{recursive:true});
  writeFileSync(ROOT+'/build/caverns/rewrite/input-headroom.json',JSON.stringify({inputBytes:254,baselineOutput:before,rewrittenOutput:after,note:'Resource boundary, excluded from gameplay-equivalence claims; the console may split an overlong input.'},null,2)+'\n');
 });

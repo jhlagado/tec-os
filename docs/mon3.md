@@ -197,7 +197,7 @@ second load, `GO 5010` selects that RET for one run; a later bare `GO` still
 starts at 5000h. `LOAD NAME.BIN 2000` followed by `GO` similarly remembers
 2000h. MON3 command addresses are plain hex digits, without `$` or `0x`.
 
-TAS emits 16-bit data00 and EOF01 records, not entry or extended-address
+TAS emits 16-bit data (00) and end-of-file (01) records, not entry or extended-address
 records. Successive origins before bytes or reservations select the start;
 later origins move forward only. Unfilled DS and ALIGN leave holes, while
 explicit fill, including zero, is data. An empty HEX has only EOF and MON3

@@ -11,7 +11,7 @@ CAVBASIC
 ```
 
 The qualified executable is **38,272 bytes**, including its selected runtime.
-Compilation and play work with the shell resident (TPA 42,496 bytes); no UNLOAD
+Compilation and play work with the shell resident (TPA 41,984 bytes); no UNLOAD
 is needed. BAZA.RTL is required for compilation, not beside the running game.
 Use the PICO9918 console at 80 columns and matrix keyboard input, as tested.
 Physical TEC-1G qualification remains outstanding.
