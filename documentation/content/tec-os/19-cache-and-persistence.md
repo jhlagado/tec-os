@@ -504,8 +504,9 @@ controlled guest tests, not additional console transcripts.
 ### Historical failed-close capture
 
 The following recipe and transcript remain their original firmware's evidence,
-including its discarded-data output. The current observation above retains
-the data instead. Its successful disk reset is distinct from bootstrap
+including its discarded-data output and its DIR row, which that firmware
+printed with the type in a column of its own. The current observation above
+retains the data instead. Its successful disk reset is distinct from bootstrap
 recovery: that console is entered only when the reset or saved-drive
 selection itself fails.
 

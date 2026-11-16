@@ -31,10 +31,7 @@ row: its name and type together, as you would type them, then its size in
 bytes at the right.
 The totals below give the file count, combined bytes and free space
 for that drive and volume. `NO FILE` means no visible file matched.
-`DIR /W` selects the ROM's wide listing instead. Some listings in later
-chapters were captured before the shell joined the name and type: they
-show the type in a column of its own, as `STARTUP .CMD`, with the same
-names and sizes.
+`DIR /W` selects the ROM's wide listing instead.
 
 Names follow the same form as BANNER.ASM: up to eight characters, a full
 stop and a type of up to three characters. You can omit the full stop and

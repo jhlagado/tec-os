@@ -399,16 +399,16 @@ The final directory is:
 node tools/tecvol.mjs dir build/my.img A
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS with the sized DIR (SHELL.SVC 2697cc8d): host-tool output of the command above. -->
 ```text
  0 HELLO.TXT         128
- 0 SHELL.SVC        3712
+ 0 SHELL.SVC        4224
  0 STARTUP.CMD       128
 ```
 
 The same card's TEC-OS capture reads the text and lists all volumes:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/my.img DIR 'TYPE HELLO.TXT' 'CD ?'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card build/my.img DIR 'TYPE HELLO.TXT' 'CD ?'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -418,11 +418,11 @@ A>SHELL.SVC
 
 A:SYSTEM>DIR
 
-HELLO   .TXT     128
-SHELL   .SVC    3712
-STARTUP .CMD     128
-3 files, 3968 bytes
-1032192 free on A:SYSTEM
+HELLO.TXT        128
+SHELL.SVC       4224
+STARTUP.CMD      128
+3 files, 4480 bytes
+1030144 free on A:SYSTEM
 A:SYSTEM>TYPE HELLO.TXT
 hello
 world

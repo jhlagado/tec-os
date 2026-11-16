@@ -397,18 +397,18 @@ node tools/tecvol.mjs put my.img SPARE hello.txt --text
 node tools/tecvol.mjs dir my.img
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS with the sized DIR (SHELL.SVC 2697cc8d): host-tool output of the command above. -->
 ```text
- 0 SHELL.SVC        3712
+ 0 SHELL.SVC        4224
  0 STARTUP.CMD       128
 ```
 
 After those puts, `node tools/tecvol.mjs info my.img` prints this:
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS with the sized DIR (SHELL.SVC 2697cc8d): host-tool output of the command above. -->
 ```text
 container: format 1.1, 38912 blocks (19922944 bytes), 4 volume(s), 4 drive(s) wanted
-  A: SYSTEM      id 1 G1M start 2048 rw 2 file(s), 1034240 bytes free
+  A: SYSTEM      id 1 G1M start 2048 rw 2 file(s), 1032192 bytes free
   B: WORK        id 2 G8M start 4096 rw 0 file(s), 8372224 bytes free
   -: GAMES       id 3 G8M start 20480 rw 1 file(s), 8359936 bytes free
   -: SPARE       id 4 G1M start 36864 rw 1 file(s), 1038336 bytes free
@@ -450,14 +450,14 @@ The recipe's volume list is:
 A file inside a component's `files` list has an entry such as this shell
 entry:
 
-<!-- TEC-OS 46cf3f1: Source-derived SHELL.SVC object from the generated starter recipe. -->
+<!-- TEC-OS with the sized DIR: the SHELL.SVC object of the generated dist/starter.recipe.json. -->
 ```json
 {
   "name": "SHELL.SVC",
   "url": "files/SHELL.SVC",
   "drive": "A",
-  "bytes": 3660,
-  "sha256": "5beea5051f93853f43ac54143665f741a19db6ddba873fe0a2c8834aab31c4c4"
+  "bytes": 4203,
+  "sha256": "2697cc8dc1ce4376ca0e52d552360d95bbfb39c34de40a1bc4fad1dbd735517f"
 }
 ```
 

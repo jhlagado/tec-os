@@ -552,7 +552,7 @@ Physical-board use requires installing `work.img` to the card through
 Chapter 6's `tecvol install` procedure. This host-model capture instead
 boots the image and enters `B:`, DIR and HELLO:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card work.img B: DIR HELLO. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card work.img B: DIR HELLO. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -566,7 +566,7 @@ A:SYSTEM>GLCD.SVC
 A:SYSTEM>B:
 B:WORK>DIR
 
-HELLO   .COM     128
+HELLO.COM        128
 1 file, 128 bytes
 8368128 free on B:WORK
 B:WORK>HELLO

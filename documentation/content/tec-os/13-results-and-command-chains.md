@@ -246,7 +246,7 @@ At `B:WORK>`, `A:TAS EXISTS` and `A:TAS RUN` create `EXISTS.COM` and
 and lists only when the file exists. The capture repeats it before and after
 COPY creates the file:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -277,16 +277,16 @@ GLCD.SVC
 
 B:WORK>DIR *.COM
 
-EXISTS  .COM     128
-RUN     .COM     128
+EXISTS.COM       128
+RUN.COM          128
 2 files, 256 bytes
 8343552 free on B:WORK
 B:WORK>EXISTS NONE.TXT !DIR *.COM
 
 B:WORK>DIR *.COM
 
-EXISTS  .COM     128
-RUN     .COM     128
+EXISTS.COM       128
+RUN.COM          128
 2 files, 256 bytes
 8343552 free on B:WORK
 B:WORK>EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM
@@ -294,8 +294,8 @@ B:WORK>EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM
 B:WORK>USER 0
 B:WORK>DIR *.COM
 
-EXISTS  .COM     128
-RUN     .COM     128
+EXISTS.COM       128
+RUN.COM          128
 2 files, 256 bytes
 8343552 free on B:WORK
 B:WORK>
@@ -403,7 +403,7 @@ zero. Its leading space is permitted and skipped, so `RUN DIR` supplies
 Later pieces were never part of that tail. In `RUN CD!DIR *.COM`, RUN supplies
 ` CD` only. Replacing the original line removes its later DIR:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card chain.img B: 'A:TAS RUN' 'RUN DIR *.COM' 'RUN CD!DIR *.COM' 'RUN NOSUCH!DIR *.COM' RUN. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card chain.img B: 'A:TAS RUN' 'RUN DIR *.COM' 'RUN CD!DIR *.COM' 'RUN NOSUCH!DIR *.COM' RUN. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -422,7 +422,7 @@ B:WORK>RUN DIR *.COM
 
 B:WORK>DIR *.COM
 
-RUN     .COM     128
+RUN.COM          128
 1 file, 128 bytes
 8355840 free on B:WORK
 B:WORK>RUN CD!DIR *.COM

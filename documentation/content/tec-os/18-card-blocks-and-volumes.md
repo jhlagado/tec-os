@@ -154,7 +154,7 @@ only sixteen of B's thirty-two directory blocks. Logging B in reaches the
 missing seventeenth block and reports an error. A's directory is still
 accessible afterwards:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/short.img '@start DIR B:' '@key x' 'DIR A:*.CMD'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card build/short.img '@start DIR B:' '@key x' 'DIR A:*.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -170,9 +170,9 @@ A:SYSTEM>DIR B:
 Bdos Err On B: Bad Sector
 A:SYSTEM>DIR A:*.CMD
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
-937984 free on A:SYSTEM
+909312 free on A:SYSTEM
 A:SYSTEM>
 ```
 
