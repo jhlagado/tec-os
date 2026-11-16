@@ -494,7 +494,7 @@ node tools/tecvol.mjs put build/errs.img A dist/files/SHELL.SVC
 node tools/tecvol.mjs put build/errs.img B dist/files/STARTUP.CMD --ro
 ```
 
-<!-- TEC-OS 6fb1872, ROM 095d829d: node tools/capture.mjs --card build/errs.img SHELL.SVC '@start COPY B:STARTUP.CMD C:' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS b6e8383, ROM 095d829d: node tools/capture.mjs --card build/errs.img SHELL.SVC '@start COPY B:STARTUP.CMD C:' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
