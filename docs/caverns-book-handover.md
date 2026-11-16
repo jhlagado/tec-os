@@ -18,20 +18,21 @@ A separate real Chromium trial compiles the exact expected COM from a fresh
 source-only card, plays opening commands and exports/restores a checkpoint in
 fresh browser storage. Physical TEC-1G testing and final human review remain
 outstanding before calling the public release fully qualified.
-Changes are pushed on integration branches, not claimed merged or publicly
-hosted. The manual may describe tested emulator behaviour with that boundary.
+The qualified changes are merged and pushed to main in BAZA, TEC-OS and the
+Viewer. This is not a claim of public-site deployment or physical-board testing.
+The manual may describe tested emulator behaviour with that boundary.
 
 ## Exact artifacts
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source/card recipe | jhlagado/tec-os, a442f151b58b38c211251272bf40fc64dd195754 |
+| Qualified gameplay/source/card recipe | jhlagado/tec-os, 6f7bf32fbd8672978f188cbaacfa23e0c469cb9a |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
 | Verification executable, not on starter | programs/CAVBASIC.COM; 38,272 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
-| Matching Viewer integration | jhlagado/tec-os-viewer, 12e67f3efe5de8f59cc9b2db56bd99e0e45e93f1 |
+| Matching Viewer integration | jhlagado/tec-os-viewer, ee79d8d |
 | BAZA compiler/runtime pins | jhlagado/baza, 52c3956167c8cebe382d342619ec2899913fd18c, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
@@ -82,6 +83,19 @@ future work. Exact checkpoints intentionally repeat the saved RNG sequence.
 A card-image download is not a game-memory snapshot.
 
 ## Evidence and release scope
+
+The current-main integration records preserve the complete strict run (1,390
+passes and five stale fixture failures), then the passing reruns of all five
+affected checks. Viewer coverage is 201 passing functional checks plus its
+original resource check passing separately with unchanged limits. These are
+combined coverage records, not claims of single all-green full-suite runs.
+
+- [Current-main firmware qualification](evidence/caverns-main-integration/qualification.json).
+- [Fresh matching-main browser trial](evidence/caverns-main-integration/viewer-result.json).
+- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/ee79d8d/docs/evidence/caverns-main-integration/qualification.json).
+
+The earlier compact-emission records below remain the detailed first-increment
+baseline; current-main integration preserves its compiler and game hashes.
 
 - [Current game/scenario/TED tests](evidence/caverns-compact-emission/integration.log).
 - [Compiler and Caverns integration](caverns-compact-emission.md).
