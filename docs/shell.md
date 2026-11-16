@@ -21,12 +21,14 @@ Every other command it hands back to the ROM to run. The starter card's
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
 `SHELL.SVC` occupies 17 pages: a 4,352-byte allocation containing its image
-and extra RAM. Its history is a 256-byte ring in its own last page. Its own
-stack reserves 48 bytes, with a 36-byte maximum-use contract. It declares
-6 bytes of the BDOS's stack and none of the BIOS's or the CCP's. The
-seventeen-page allocation projects word `0006h` at A500h and 41,984 bytes
-of TPA with the shell alone on the starter card; current runtime
-qualification must confirm those projected figures.
+and extra RAM. Its history is a 256-byte ring in its own last page. Its own stack
+is 48 bytes, of which the census's workload uses 16 and the deepest path, the
+prompt's reading of the volume labels with every cache line changed and
+kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
+pattern laid under it); no path may use more than 36. It declares 6 bytes of
+the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
+`MON3.SVC` install beside it. With the shell alone the word at 0006h is A500h
+on the starter card, a TPA of 41,984 bytes.
 
 ## With no shell
 
@@ -218,12 +220,19 @@ two-group directory order. A row remains 20 columns, within the GLCD's 21,
 and long listings stop at `[more]`. `DIR /W` goes directly to the ROM's wide
 listing; with no shell, `DIR` is the ROM's listing too.
 
-**Its cost.** A first search combines each name's extent sizes in a bounded
-transient table. Two normal searches then produce the existing row order,
-without a separate BDOS 35 scan and search restart for each large file.
-The table holds up to 512 distinct names, covering the supported G1M/G8M
-directories. It uses 8512 bytes of the otherwise discardable TPA while this
-builtin runs; it does not add another persistent resident allocation.
+**`DIR` before `SAVE`.** The shell's `DIR` with sizes builds its table of
+names in the TPA, at 0100h–223Fh, so it overwrites a program left there. In
+CP/M 2.2 `DIR` leaves the TPA alone, and loading a program, listing the disk
+and then typing `SAVE n NAME.COM` saves the program. Here that `SAVE` would
+write `DIR`'s table. Use `DIR /W` before `SAVE`: it is the ROM's listing,
+which works in the record at 0080h and leaves the TPA as it was
+(`test/shell2.test.mjs`). With no shell, `DIR` is that listing too.
+
+**Its cost.** A first search combines each name's extent sizes in a table.
+Two more searches then produce the rows, with no BDOS 35 scan and search
+restart for each large file. The table holds up to 512 names, as many as a
+G1M or G8M directory holds. It takes 8,512 bytes of the TPA, 0100h–223Fh,
+while `DIR` runs, and no resident memory.
 
 If that workspace is unavailable or its capacity is exhausted, `DIR`
 restarts its original size-and-search engine before printing any filename

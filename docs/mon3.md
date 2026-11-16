@@ -48,7 +48,8 @@ On the starter card it is 4,955 bytes of header and image in **20 pages**, 5,446
 bytes as a file with its relocation data. The starter card loads `SHELL.SVC`
 first, so the word at `0006h` goes from `A500h` to `9100h`, and the TPA from
 41,984 bytes to **36,864**. With `GLCD.SVC` installed too, as the GLCD
-console's startup does, it is `9000h`, a TPA of **36,608**. On the starter card
+console's startup does, it is `8E00h`, a TPA of **36,096**, in any order of
+installing the three. On the starter card
 with no shell, whose four drives take the bare ROM's word to `B6C5h`, it goes
 from `B6C5h` to `A200h`, and the TPA from 46,533 bytes to 41,216, and 40,448 with
 `GLCD.SVC`. The monitor, its line buffer, its FCB, its saved page

@@ -1,12 +1,10 @@
-// Sized DIR's original workloads and predetermined cost observations.
-// Guest cycles measure the serial workload at 4 MHz. Host timings and
-// deliberately altered services are not production performance claims.
+// Sized DIR's cost against DIR /W on three G8M workloads, and two controls:
+// shells altered to hash every name to one bucket and to keep the legacy
+// engine. Guest cycles at 4 MHz on the serial console; emulator figures.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { gzipSync } from "node:zlib";
+import { readFileSync } from "node:fs";
 import { createContainer } from "../tools/lib/container.mjs";
 import { volume } from "./lib/fixtures.mjs";
 import { cacheState } from "./lib/cache-pending.mjs";
@@ -14,8 +12,6 @@ import { SHELL, at, code, pageOf, shellCard, shellMachine, shellVariant, word } 
 
 const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
-const evidence = process.env.DIR_EVIDENCE;
-let serial = 0;
 
 function hash(name) {
   const [base, ext = ""] = name.split(".");
@@ -54,6 +50,13 @@ function cache(m) {
     tags: Array.from({ length: m.sym("NLINES") }, (_, i) => [...bank.slice(m.sym("CTAB") - 0x8000 + i * 4, m.sym("CTAB") - 0x8000 + i * 4 + 4)]) };
 }
 
+/**
+ * B:WORK, a G8M, with LARGE files of 40 KiB, N of one record and BIG.DAT of
+ * 100 KiB. One DIR /W first, then DIR /W and DIR timed. Both listings are
+ * checked whole before any figure is used: every name, its order, each size,
+ * the count, the total and the free space. Returns the cycles, the BDOS 17,
+ * 18 and 35 calls and the card reads of each timed listing.
+ */
 function timed({ n = 0, large = 0, svc = SHELL, variant = null }) {
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }], { drives: 4 });
   const b = volume(image, "B"), inserted = [];
@@ -70,104 +73,65 @@ function timed({ n = 0, large = 0, svc = SHELL, variant = null }) {
   const wanted = [...inserted.filter(([name]) => !marks.has(hash(name))), ...inserted.filter(([name]) => marks.has(hash(name)))];
   const freeBytes = b.freeBytes();
   shellCard({}, { image, shell: svc.file });
-  const service = { kind: variant ? "variant" : "normal", rawBytes: svc.file.length, rawSha256: sha(svc.file), imageBytes: svc.image,
-    variant: variant ? { ...variant, editsSha256: sha(Buffer.from(JSON.stringify(variant.edits))) } : null };
-  const inputSha256 = sha(image), stem = evidence ? resolve(evidence, `cost-${String(++serial).padStart(3, "0")}`) : null;
-  if (stem) {
-    mkdirSync(evidence, { recursive: true });
-    writeFileSync(`${stem}.input.img.gz`, gzipSync(image));
-    writeFileSync(`${stem}.shell.svc`, svc.file);
-    writeFileSync(`${stem}.prepared.json`, JSON.stringify({ inputBytes: image.length, inputSha256, service, n, large }) + "\n");
-  }
-  let m = null, failure = null, complete = false, current = null, restore = null;
-  const commands = [];
+  const inputSha256 = sha(image);
+  if (!variant) assert.deepEqual(Buffer.from(svc.file), readFileSync(new URL("../dist/files/SHELL.SVC", import.meta.url)), "the card's shell is the one media builds");
+  const m = shellMachine(image, { noWait: true });
+  const quiet = () => {
+    if (!m.classicBankIn || !m.ready()) return false;
+    const p = pageOf(m), s = svc.symbols;
+    return p && !word(m, p + s.LPOS) && !m.read(p + s.SOPEN) && !m.read(p + s.STSKIP);
+  };
+  m.runUntil(() => quiet() && PROMPT.test(m.text(0)), 2_000_000_000, "completed startup prompt");
+  at(m, "B:");
+  assert.ok(m.classicBankIn);
+  assert.equal(cacheState(m).queue.length, 0);
+  const step = m.step.bind(m), read = m.sd.readBlock.bind(m.sd), commit = m.sd.commitWrite.bind(m.sd);
+  let current = null;
+  m.step = () => {
+    if (current && m.pc === m.sym("BENTRY")) {
+      const c = m.cpu.cpu.c;
+      if (c === 17) current.searchFirst++;
+      if (c === 18) current.searchNext++;
+      if (c === 35) current.size++;
+    }
+    return step();
+  };
+  m.sd.readBlock = arg => {
+    const payload = read(arg);
+    if (current) current.sdReads++;
+    return payload;
+  };
+  m.sd.commitWrite = () => {
+    if (current) current.sdWrites++;
+    return commit();
+  };
+  const listing = line => {
+    const record = { line, searchFirst: 0, searchNext: 0, size: 0, sdReads: 0, sdWrites: 0, cacheBefore: cache(m) };
+    const before = Buffer.from(image), start = m.cycles;
+    m.mark = m.output.length;
+    current = record;
+    try {
+      m.type(`${line}\r`);
+      for (;;) {
+        const more = () => /\[more\]$/.test(m.text(m.mark));
+        m.runUntil(() => (m.waitingForInput() && more()) || (quiet() && PROMPT.test(m.text(m.mark))), 20_000_000_000, line);
+        if (!more()) break;
+        const length = m.output.length;
+        m.type(" ");
+        m.runUntil(() => m.output.length > length + 12, 400_000_000, "pager reply");
+      }
+    } finally { current = null; }
+    record.cycles = m.cycles - start;
+    record.cacheAfter = cache(m);
+    assert.deepEqual(Buffer.from(image), before, "a listing leaves the card as it was");
+    assert.deepEqual(m.violations, []);
+    assert.equal(code(m), 0);
+    assert.equal(record.sdWrites, 0, "a listing writes nothing");
+    return { text: m.text(m.mark), record };
+  };
   try {
-    if (!variant) assert.deepEqual(Buffer.from(svc.file), readFileSync(new URL("../dist/files/SHELL.SVC", import.meta.url)));
-    m = shellMachine(image, { noWait: true });
-    const quiet = () => {
-      if (!m.classicBankIn || !m.ready()) return false;
-      const p = pageOf(m), s = svc.symbols;
-      return p && !word(m, p + s.LPOS) && !m.read(p + s.SOPEN) && !m.read(p + s.STSKIP);
-    };
-    m.runUntil(() => quiet() && PROMPT.test(m.text(0)), 2_000_000_000, "completed startup prompt");
-    at(m, "B:");
-    assert.ok(m.classicBankIn);
-    assert.equal(cacheState(m).queue.length, 0);
-    const step = m.step.bind(m), read = m.sd.readBlock.bind(m.sd), commit = m.sd.commitWrite.bind(m.sd);
-    m.step = () => {
-      if (current && m.pc === m.sym("BENTRY")) {
-        const c = m.cpu.cpu.c;
-        if (c === 17) current.searchFirst++;
-        if (c === 18) current.searchNext++;
-        if (c === 35) current.size++;
-      }
-      return step();
-    };
-    m.sd.readBlock = arg => {
-      const payload = read(arg);
-      if (current) {
-        const block = m.sd.resolveAddress(arg) / 512;
-        assert.ok(Number.isInteger(block)); assert.equal(payload.length, 512);
-        current.sdReads++;
-        current.readBlocks.set(block, (current.readBlocks.get(block) ?? 0) + 1);
-      }
-      return payload;
-    };
-    m.sd.commitWrite = () => {
-      const state = m.sd.writeState;
-      const attempt = state ? { start: state.start, bytes: state.buffer.length, sha256: sha(Buffer.from(state.buffer)) } : null;
-      const result = commit();
-      if (current) { current.sdWriteAttempts++; current.writes.push({ ...attempt, accepted: m.sd.pendingResponse[0] === 5 }); }
-      return result;
-    };
-    restore = () => { m.step = step; m.sd.readBlock = read; m.sd.commitWrite = commit; };
-    const listing = (line, role) => {
-      const record = { line, role, searchFirst: 0, searchNext: 0, size: 0, sdReads: 0, sdWriteAttempts: 0, writes: [], readBlocks: new Map(), cacheBefore: cache(m) };
-      const before = Buffer.from(image), start = m.cycles;
-      let commandFailure = null;
-      m.mark = m.output.length;
-      current = record;
-      try {
-        m.type(`${line}\r`);
-        for (;;) {
-          const more = () => /\[more\]$/.test(m.text(m.mark));
-          m.runUntil(() => (m.waitingForInput() && more()) || (quiet() && PROMPT.test(m.text(m.mark))), 20_000_000_000, line);
-          if (!more()) break;
-          const length = m.output.length;
-          m.type(" ");
-          m.runUntil(() => m.output.length > length + 12, 400_000_000, "pager reply");
-        }
-        assert.deepEqual(Buffer.from(image), before);
-        assert.deepEqual(m.violations, []);
-        assert.equal(code(m), 0);
-        assert.equal(record.sdWriteAttempts, 0);
-        return { text: m.text(m.mark), cycles: m.cycles - start, counters: record };
-      } catch (error) { commandFailure = error; throw error; }
-      finally {
-        current = null;
-        const captureErrors = [];
-        const retain = (part, action) => {
-          try { action(); }
-          catch (error) { captureErrors.push({ part, name: error.name, message: error.message }); }
-        };
-        record.cycles = m.cycles - start;
-        record.inputSha256 = sha(before); record.finalSha256 = sha(image);
-        record.readBlocks = [...record.readBlocks].sort((a, b) => a[0] - b[0]);
-        record.error = commandFailure ? { name: commandFailure.name, message: commandFailure.message } : null;
-        record.captureErrors = captureErrors;
-        commands.push(record);
-        retain("result", () => { record.result = code(m); });
-        retain("cache-after", () => { record.cacheAfter = m.classicBankIn ? cache(m) : null; });
-        if (stem) retain("raw console", () => writeFileSync(`${stem}.${role}.console.bin`, Buffer.from(m.text(m.mark), "latin1")));
-        if (captureErrors.length) {
-          console.error(JSON.stringify({ scope: "cost command evidence failure", primary: record.error, captureErrors }));
-          if (!commandFailure) throw new Error(`cost command capture failed: ${JSON.stringify(captureErrors)}`);
-        }
-      }
-    };
-    const preparation = listing("DIR /W", "preparation-wide");
-    const wide = listing("DIR /W", "measured-wide"), sized = listing("DIR", "measured-sized");
-    // All end cycles are already captured; these host checks step no guest.
+    const preparation = listing("DIR /W"), wide = listing("DIR /W"), sized = listing("DIR");
+    // The cycles are taken; these checks step no guest.
     checkWide(preparation.text, inserted, freeBytes);
     checkWide(wide.text, inserted, freeBytes);
     assert.deepEqual(rows(sized.text), wanted, "the complete legacy-partition order and every independently known size");
@@ -175,51 +139,59 @@ function timed({ n = 0, large = 0, svc = SHELL, variant = null }) {
     assert.match(sized.text, new RegExp(`\\r\\n${inserted.length} files, ${total} bytes\\r\\n`));
     assert.match(sized.text, new RegExp(`\\r\\n${freeBytes} free on B:WORK\\r\\n`));
     assert.equal(sha(image), inputSha256);
-    // Functional workload completion; the outer positive cap is checked later.
-    complete = true;
-    return { n, large, files: inserted.length, right: true, dir: sized.cycles / 4000, wide: wide.cycles / 4000,
-      ratio: sized.cycles / wide.cycles, service, commands };
-  } catch (error) { failure = error; throw error; }
-  finally {
-    restore?.();
-    if (stem) {
-      const captureErrors = [];
-      const retain = (part, action) => {
-        try { action(); }
-        catch (error) { captureErrors.push({ part, name: error.name, message: error.message }); }
-      };
-      retain("full console", () => writeFileSync(`${stem}.console.bin`, Buffer.from(m ? m.text(0) : "", "latin1")));
-      if (sha(image) !== inputSha256) retain("changed card", () => writeFileSync(`${stem}.final.img.gz`, gzipSync(image)));
-      retain("metadata", () => writeFileSync(`${stem}.json`, JSON.stringify({ complete: complete && !failure && !captureErrors.length,
-        completionScope: "functional workload only; outer positive cap is checked later",
-        inputBytes: image.length, inputSha256, finalSha256: sha(image), service, n, large,
-        error: failure ? { name: failure.name, message: failure.message } : null, captureErrors, commands }, null, 2) + "\n"));
-      if (captureErrors.length) {
-        console.error(JSON.stringify({ scope: "cost final evidence failure", primary: failure ? String(failure) : null, captureErrors }));
-        if (!failure) throw new Error(`cost final capture failed: ${JSON.stringify(captureErrors)}`);
-      }
-    }
-  }
+    return { n, large, files: inserted.length, marked: inserted.filter(([name]) => marks.has(hash(name))).length,
+      dirMs: sized.record.cycles / 4000, wideMs: wide.record.cycles / 4000, ratio: sized.record.cycles / wide.record.cycles,
+      shell: { bytes: svc.file.length, sha256: sha(svc.file), variant },
+      commands: [preparation.record, wide.record, sized.record] };
+  } finally { m.step = step; m.sd.readBlock = read; m.sd.commitWrite = commit; }
 }
 
-for (const item of [
+/** The fields of a result worth printing: the cache's state stays out of the line. */
+const brief = r => ({ ...r, commands: r.commands.map(({ cacheBefore, cacheAfter, ...c }) => ({ ...c, queued: [cacheBefore.queue.length, cacheAfter.queue.length], dirty: [cacheBefore.any, cacheAfter.any] })) });
+const sizedListing = r => r.commands[2];
+
+const WORKLOADS = [
   { title: "S2-9 g8m time", n: 451, large: 0, cap: 2.5 },
   { title: "S2-9 g8m large files", n: 251, large: 100, cap: 8 },
   { title: "S2-9 g8m all large", n: 0, large: 180, cap: 18 },
-]) test(item.title, { timeout: 1_800_000 }, t => {
-  const result = timed(item);
-  t.diagnostic(JSON.stringify({ scope: "DIR initial cost diagnostic", role: "normal", title: item.title, cap: item.cap, withinHistoricalCap: result.ratio <= item.cap, ...result }));
-  assert.ok(result.ratio <= item.cap, `${result.ratio} exceeds ${item.cap}`);
+];
+// Each workload is measured once: a control reads the same figures its row asserts.
+const measured = new Map();
+const normal = item => {
+  if (!measured.has(item.title)) measured.set(item.title, timed(item));
+  return measured.get(item.title);
+};
+
+// The table engine: the marks search and the two output searches, and no
+// BDOS 35, whatever the files' sizes.
+for (const item of WORKLOADS) test(item.title, { timeout: 1_800_000 }, t => {
+  const result = normal(item);
+  t.diagnostic(JSON.stringify({ title: item.title, cap: item.cap, ...brief(result) }));
+  assert.ok(result.ratio <= item.cap, `DIR ${result.dirMs.toFixed(0)} ms, ${result.ratio.toFixed(2)} times DIR /W's ${result.wideMs.toFixed(0)}, over ${item.cap}`);
+  assert.equal(sizedListing(result).searchFirst, 3, "three searches");
+  assert.equal(sizedListing(result).size, 0, "no BDOS 35");
 });
 
-test("DIR cost observation: one bucket with full keys", { timeout: 1_800_000 }, async t => {
+// The controls. Each first gives the whole listing right, as timed checks,
+// and is then compared with the unaltered shell on the same card. Neither
+// claims a bound of its own: the rows above hold the caps.
+
+test("DIR cost control: one bucket for every name costs more than 128", { timeout: 1_800_000 }, async t => {
   const edits = [["  and $7F        ; 128 two-byte heads", "  xor a          ; one bucket"]];
-  const svc = await shellVariant(edits), result = timed({ n: 451, svc, variant: { label: "one-bucket", edits } });
-  t.diagnostic(JSON.stringify({ scope: "DIR initial cost diagnostic", role: "control", historicalCap: 2.5, exceedsHistoricalCap: result.ratio > 2.5, ...result }));
+  const svc = await shellVariant(edits), base = normal(WORKLOADS[0]);
+  const result = timed({ n: 451, svc, variant: "one bucket" });
+  t.diagnostic(JSON.stringify({ control: "one bucket", normalRatio: base.ratio, overCap: result.ratio > WORKLOADS[0].cap, ...brief(result) }));
+  assert.equal(sizedListing(result).searchFirst, 3, "still the table engine");
+  assert.equal(sizedListing(result).size, 0);
+  assert.ok(sizedListing(result).cycles > sizedListing(base).cycles, `${sizedListing(result).cycles} cycles against ${sizedListing(base).cycles}`);
 });
 
-test("DIR cost observation: aggregation disabled with legacy searches", { timeout: 1_800_000 }, async t => {
+test("DIR cost control: the legacy engine sizes each large file by BDOS 35 and costs more", { timeout: 1_800_000 }, async t => {
   const edits = [["  inc a          ; enable after clearing", "  xor a          ; keep legacy mode"]];
-  const svc = await shellVariant(edits), result = timed({ large: 180, svc, variant: { label: "aggregation-disabled", edits } });
-  t.diagnostic(JSON.stringify({ scope: "DIR initial cost diagnostic", role: "control", historicalCap: 18, exceedsHistoricalCap: result.ratio > 18, ...result }));
+  const svc = await shellVariant(edits), base = normal(WORKLOADS[2]);
+  const result = timed({ large: 180, svc, variant: "legacy engine" });
+  t.diagnostic(JSON.stringify({ control: "legacy engine", normalRatio: base.ratio, overCap: result.ratio > WORKLOADS[2].cap, ...brief(result) }));
+  assert.equal(sizedListing(result).size, result.marked, "one BDOS 35 for each file of more than one entry");
+  assert.ok(sizedListing(result).searchFirst > result.marked, "and a search begun again after each");
+  assert.ok(sizedListing(result).cycles > sizedListing(base).cycles, `${sizedListing(result).cycles} cycles against ${sizedListing(base).cycles}`);
 });
