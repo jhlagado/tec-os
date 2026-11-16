@@ -375,13 +375,23 @@ const SP = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x21, 
   0x11, 0x5c, 0x00, 0x0e, 34, 0xcd, 0x05, 0x00, 0x11, 0x5c, 0x00, 0x0e, 16, 0xcd, 0x05, 0x00, 0xc9]);
 const S35 = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 35, 0xcd, 0x05, 0x00, 0xc9]);
 const bdos35 = (m, name) => (run(m, `S35 ${name}`), m.read(0x7d) | (m.read(0x7e) << 8) | (m.read(0x7f) << 16));
-/** DIR's rows as [name.type, size], past the pager's [more] and its erasing. */
-const rows = (t) =>
-  t
-    .split(/\r\n|\r/)
-    .map((l) => /^(\S+) *\.(\S*) +(\d+)$/.exec(l.replace(/^.*\[more\]/, "").trim()))
-    .filter(Boolean)
-    .map(([, n, ty, s]) => [`${n}.${ty}`, +s]);
+/**
+ * DIR's rows as [name.type, size], past the pager's [more] and its erasing.
+ * A row is twenty columns: the name in twelve, the size in eight. A line
+ * that looks like a row and isn't that wide fails here, so no row is lost.
+ */
+function rows(t) {
+  const found = [];
+  for (const l of t.replaceAll("[more]\r      \r", "").split(/\r\n|\r/)) {
+    const spaced = /^[^:>\x00-\x1f]*\S[^:>\x00-\x1f]* +\d+$/.test(l);
+    const touching = /^[^ .:>\x00-\x1f]{1,8}\.[^ .:>\x00-\x1f]{3}\d+$/.test(l);
+    if (!spaced && !touching) continue;
+    assert.equal(l.length, 20, `a row's width: ${JSON.stringify(l)}`);
+    assert.match(l.slice(12), /^ *\d{1,8}$/, "the size's eight columns");
+    found.push([l.slice(0, 12).trimEnd(), +l.slice(12)]);
+  }
+  return found;
+}
 
 /** Type LINE and run to the prompt, answering each [more] with a space. */
 function listing(m, line) {
@@ -495,6 +505,30 @@ test("S2-9 dir /w", () => {
   assert.match(t, /K free/, "the ROM's wide listing");
   assert.equal(rows(t).length, 0);
   assert.match(run(m, "DIR /X"), /\r\nDIR\?\r\n/, "another switch refused");
+});
+
+// Sized DIR builds its table of names from 0100h, over the program a SAVE
+// would write. DIR /W is the ROM's listing, which works in the record at
+// 0080h and leaves the program where it is.
+test("S2-9 save after dir", () => {
+  const prog = Uint8Array.from({ length: 256 }, (_, i) => i || 0xc9);
+  const image = four();
+  const m = machine({ image, files: { "PROG.COM": prog } });
+  const saved = (name) => [...volume(image, "A").read(name)];
+  const tpa = () => Array.from({ length: 256 }, (_, i) => m.read(0x100 + i));
+  run(m, "PROG");
+  assert.deepEqual(tpa(), [...prog], "the program, loaded and returned");
+  run(m, "DIR /W");
+  assert.deepEqual(tpa(), [...prog], "DIR /W leaves 0100h");
+  run(m, "SAVE 1 WIDE.COM");
+  assert.deepEqual(saved("WIDE.COM"), [...prog], "SAVE after DIR /W writes the program");
+  const names = volume(image, "A").list().length;
+  assert.equal(rows(listing(m, "DIR")).length, names);
+  assert.notDeepEqual(tpa(), [...prog], "sized DIR changes 0100h");
+  assert.equal(word(m, 0x100), names, "its count of names at 0100h");
+  run(m, "SAVE 1 SIZED.COM");
+  assert.notDeepEqual(saved("SIZED.COM"), [...prog], "SAVE after a sized DIR writes DIR's table");
+  assert.deepEqual(saved("SIZED.COM").slice(0, 2), [names, 0]);
 });
 
 test("S2-9 more", () => {
@@ -816,11 +850,11 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
   };
   assert.equal(tpa(["SHELL.SVC"]).tpa, 41984, "with the shell");
   assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41216, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37376, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 36864, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 36608, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 36096, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -964,12 +998,14 @@ function bdos11(logged, rom) {
   } finally { m.step = baseStep; sd.commitWrite = commit; }
 }
 
+// The qualified ROM's readings are taken with this build's SHELL.SVC on the
+// card, so they move with the shell's file: the bounds are over that control.
 test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
-  assert.deepEqual(qualifiedB, { nothing: 4954, worst: 8_735_058 });
-  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_206_025 });
+  assert.deepEqual(qualifiedB, { nothing: 4963, worst: 8_737_742 });
+  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_202_670 });
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
     assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
@@ -1069,10 +1105,10 @@ test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_
   const nativeA = bdos11("A"), mtw = bdos11("A", MUTANTS.mtw());
   const nativePass = refusedShellInputPass(), doubled = refusedShellInputPass(MUTANTS.mtw());
   t.diagnostic(JSON.stringify({ nativeB, mnc, nativeA, mtw, nativePasses: nativePass.cut.passes, mutantPasses: doubled.cut.passes }));
-  assert.ok(nativeB.nothing - 4954 <= 360); assert.ok(nativeB.worst / 8_735_058 - 1 <= 0.01);
-  assert.ok(mnc.nothing - 4954 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
-  assert.ok(mnc.worst / 8_735_058 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
-  assert.ok(nativeA.worst / 9_206_025 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
+  assert.ok(nativeB.nothing - 4963 <= 360); assert.ok(nativeB.worst / 8_737_742 - 1 <= 0.01);
+  assert.ok(mnc.nothing - 4963 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
+  assert.ok(mnc.worst / 8_737_742 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
+  assert.ok(nativeA.worst / 9_202_670 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
   oneShellInputPass(nativePass); assert.equal(doubled.cut.passes.length, 2);
   assert.equal(doubled.finalCardSHA256, nativePass.finalCardSHA256);
   assert.throws(() => oneShellInputPass(doubled), error => {
