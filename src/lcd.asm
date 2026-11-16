@@ -16,25 +16,28 @@ LCDCON:
   cp 4
   ret
 
-; Console restore: the three mode
-; commands again, without the clear, so
-; the screen stays over a warm boot.
+; Console restore: the mode commands and
+; home again, without the clear, so the
+; screen stays over a warm boot and a
+; program's display shift does not.
 
 LCVRST:
-  ld b,3
+  ld b,4
   jr LCDI0
 
-; Attempt LCDSEQ's four commands:
+; Attempt LCDSEQ's five commands:
 ; 8-bit, two-line, display on, cursor
-; off, incrementing writes, clear.
+; off, incrementing writes, home, clear.
+; Nothing while the LCD is the console:
+; a retry after a card error leaves its
+; screen alone.
 ; Changes AF, B, HL; returns B=0 for
-; cold boot's row-zero write. With the
-; LCD as the console this clears its
-; screen once, after the banner; the
-; console's own cursor does not move.
+; cold boot's row-zero write.
 
 LCDINIT:
-  ld b,4
+  call LCDCON
+  ret z
+  ld b,5
 
 ; B commands from LCDSEQ's start.
 

@@ -74,8 +74,9 @@ VTCOL:
 
 ; Control byte A=C: CR sets column 0, LF
 ; moves down without changing column.
-; BS moves left unless column is 0,
-; including from pending wrap.
+; BS moves left, from a pending wrap
+; too, and from column 0 to the end of
+; the row above.
 ; HT reaches the next 8-column stop or
 ; last column. FF clears and homes but
 ; keeps region/attributes. ESC starts
@@ -116,7 +117,22 @@ VTBS:
 
 VTBS1:
   or a
+  jr z,VTBSW
+  dec a
+  jr VTCOL
+
+; At the left edge: to the last column
+; of the row above, so that a line that
+; wrapped is erased back across the
+; wrap. On the top row it stays.
+
+VTBSW:
+  ld hl,VROW
+  ld a,(hl)
+  or a
   ret z
+  dec (hl)
+  ld a,(VWID)
   dec a
   jr VTCOL
 

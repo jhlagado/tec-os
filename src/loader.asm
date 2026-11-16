@@ -861,28 +861,40 @@ EXMAG:
 
 ; Loaded display driver
 
-; CON UC1: load A:GLCD.SVC through SVCGO
-; unless CDGLC is already set.
-; Carry clear: installed. On returned
-; carry-set failure, restore the CON:
-; field to CONMOD and write GLCD? on LCD
-; row 3. Default BDOS disk errors may
-; exit without returning here.
+; CON UC1 and CON GLCD, before the CON
+; field is written. C is 0 for the name
+; GLCD. A driver on UC1 serves CON UC1
+; whatever it is; CON GLCD wants the
+; GLCD's, CDGLC, and is refused through
+; BADCMD when another display's driver
+; holds UC1. With UC1 empty, load
+; A:GLCD.SVC through SVCGO.
+; Carry clear: UC1 is served. Carry set:
+; the load failed, nothing is changed,
+; and GLCD? goes on LCD row 3 unless the
+; LCD is the console. Default BDOS disk
+; errors may exit without returning.
 ; Clobbers AF, BC, DE and HL.
 
 GLCLD:
+  ld a,(GLVEC+1)
+  or a
+  jr z,GLCL1     ; UC1 empty: load
+  inc c
+  dec c
+  ret nz         ; CON UC1: as it is
   ld a,(CONDEV)
   and CDGLC
-  ret nz         ; loaded, carry clear
+  ret nz         ; the GLCD's driver
+  jp BADCMD      ; another display's
+
+GLCL1:
   ld hl,GLCFCB   ; A:GLCD.SVC name
   ld de,CMDFCB
   ld bc,12       ; drive, name and type
   ldir
   call SVCGO
   ret nc         ; installed
-  ld a,(CONMOD)  ; restore current mode
-  ld b,a
-  call CONFLD
   ld hl,GLCMSG   ; GLCD? status word
   jp LCDWRD
 
@@ -907,11 +919,19 @@ SVCGO:
   ret c
   ld a,(SVCHEAD)
   ld hl,GLVEC+1  ; GLCD table page
-  xor (hl)       ; not GLCD: carry clear
+  xor (hl)       ; not UC1's: carry clear
   ret nz
+  ld hl,(GLVEC)
+  ld de,15
+  add hl,de      ; the table's rows
+  ld a,(hl)
+  cp 8
+  jr nz,SVCG1    ; not the GLCD's
   ld hl,CONDEV
   set 2,(hl)     ; CDGLC
-  ld b,CMUC1     ; GLCD console mode
+
+SVCG1:
+  ld b,CMUC1     ; UC1 console mode
   ld a,(CONMOD)  ; keep active PICO
   dec a          ; CMCRT is 1
   jr z,WRDCLR    ; clear status only

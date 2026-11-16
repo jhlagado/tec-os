@@ -41,11 +41,14 @@ KBSPEC: DB $0A,$0D,$0D, $0C,$1B,$1B, $0D,$20,$20, $0E,$27,$22, $3F,$5C,$7C
 KBSHIFT:
   DB "<_>?)!@#$%^&*( : +"
 
-; LCD initialisation commands and
-; row-address commands for caller-valid
-; rows 0-3.
+; LCD initialisation commands: 8-bit and
+; two lines, display on with no cursor,
+; addresses rising, home, clear. The
+; console's restore sends all but the
+; clear. Then the row-address commands
+; for caller-valid rows 0-3.
 
-LCDSEQ: DB $38,$0C,$06,$01
+LCDSEQ: DB $38,$0C,$06,$02,$01
 
 LCDROWS:
   DB $80,$C0,$94,$D4
