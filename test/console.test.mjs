@@ -5,8 +5,15 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { serializeTec1gUpdateFromRuntimeState } from "@jhlagado/debug80-runtime/platforms/tec1g/update-controller";
 import { Machine } from "./lib/machine.mjs";
-import { GLCD_SVC, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { GLCD_SVC, PUT_COM, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
+
+/** A standard card with PUT.COM on A:, for a test that writes a file from the prompt. */
+const putCard = () => {
+  const image = standardCard();
+  volume(image, "A").write("PUT.COM", PUT_COM);
+  return image;
+};
 
 test("with a PICO9918 and the matrix keyboard the screen is the console from the banner on, with no file, and nothing goes to serial (KS39)", () => {
   const m = boot(standardCard(), { tms: true, matrix: true, width: 40 });
@@ -82,9 +89,9 @@ test("CRT: without a PICO9918 falls back to the serial terminal", () => {
 });
 
 test("the matrix keyboard types at the prompt", () => {
-  const m = boot(standardCard(), { tms: true, matrix: true });
+  const m = boot(putCard(), { tms: true, matrix: true });
   m.mark = m.output.length;
-  m.typeMatrix("save 1 key.com\r");
+  m.typeMatrix("put 1 key.com\r");
   m.expect(/A(:\S*)?>$/);
   m.command("DIR");
   assert.match(m.screen().join("\n"), /KEY\.COM/);
@@ -151,13 +158,13 @@ test("DIR lays out names to fit the display and reports free space", () => {
 });
 
 test("the GLCD is the console when no TMS9918 answers", () => {
-  const m = boot(standardCard(), { matrix: true });
+  const m = boot(putCard(), { matrix: true });
   // The banner and the volumes go to serial and the LCD; the CCP's first
   // startup loads GLCD.SVC, and the GLCD is the console from its next prompt.
   assert.match(m.serialText(), /TEC-OS 0\.1 for TEC-1G\r\nA: SYSTEM *\r\nB: WORK/);
   assert.equal(m.glcdScreen().find((l) => l !== ""), "A>");
   m.mark = m.output.length;
-  m.typeMatrix("save 1 g.com\r");
+  m.typeMatrix("put 1 g.com\r");
   m.expect(/A(:\S*)?>$/);
   m.command("DIR");
   assert.ok(m.glcdScreen().includes("G.COM"));
