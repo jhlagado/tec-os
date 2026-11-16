@@ -1,0 +1,19 @@
+✔ the page's card holds BAZA.COM, BAZA.RTL, TIMES.BAS, BOUNCE.BAS and DEMO.ASM on A: (460.600061ms)
+✔ in the page's machine, BAZA TIMES builds TIMES and TIMES runs to the prompt (2227.360732ms)
+✔ in the page's machine, BAZA BOUNCE builds BOUNCE, which takes Graphics I with sprites, moves the ship on taps and on the page's arrow keys and gives A> back on Q (12387.158378ms)
+✔ in the page's machine, TAS DEMO builds DEMO.COM and DEMO runs it until a key (4091.474694ms)
+✔ in the page's machine, DEL erases a file, as ERA does (499.740668ms)
+✔ in the page's machine, a card whose SHELL.SVC was taken off boots to the ROM's bare prompt, where DEL and ! are not the shell's (263.692886ms)
+✔ in the page's machine, SAVE's close puts its file on A: in the card image by the time the prompt shows (610.428305ms)
+✔ in the page's machine, a record a program writes into an existing block of A: is in the card image while the program waits at BDOS 1 (344.3869ms)
+✔ in the page's machine, logged on B:, which is then the drive written behind, a record a program writes into a file there is in the card image while the program waits at BDOS 1 (558.302028ms)
+✔ Viewer Caverns disk includes BASIC source only, compiles identically and runs at 80 columns (8605.788607ms)
+✔ the web page's bundle stays within its size bound and uses no Node globals (93.404241ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 30387.625735

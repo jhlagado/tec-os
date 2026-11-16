@@ -1,6 +1,6 @@
 {
-  "status": "WIP: native game/editor/starter and unchanged I/O gates pass; compiler full regression and Viewer refresh pending",
-  "compilerArtifactCommit": "7a0ddf3cc13eba874d5bcc276ac3f4d46358afdf",
+  "status": "Qualified compact-print compiler integration on source-only starter card",
+  "compilerArtifactCommit": "bffccace3a41f055049ea53984abbcd59f580a75",
   "sourceUnchanged": true,
   "COMBytes": 36736,
   "logicalImageBytes": 36618,
@@ -16,5 +16,16 @@
     "after": 2
   },
   "shellTPA": 42496,
-  "dynamicSpaceBeforeInitialAllocations": 5110
+  "dynamicSpaceBeforeInitialAllocations": 5110,
+  "compilerNativeCases": 714,
+  "compilerNativeCompilations": 552,
+  "compatibilityOracles": 49,
+  "viewerNativeChecks": 11,
+  "freshBrowserCompileMatchesExactCOM": true,
+  "openingCommandsPassed": true,
+  "checkpointExportAndFreshContextRestorePassed": true,
+  "sourceOnlyStarter": true,
+  "assemblyVersionDevelopmentOnly": true,
+  "physicalHardwareTested": false,
+  "publicSiteDeployed": false
 }
