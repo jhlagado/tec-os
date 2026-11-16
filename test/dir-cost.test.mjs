@@ -151,9 +151,9 @@ const brief = r => ({ ...r, commands: r.commands.map(({ cacheBefore, cacheAfter,
 const sizedListing = r => r.commands[2];
 
 const WORKLOADS = [
-  { title: "S2-9 g8m time", n: 451, large: 0, cap: 2.5 },
-  { title: "S2-9 g8m large files", n: 251, large: 100, cap: 8 },
-  { title: "S2-9 g8m all large", n: 0, large: 180, cap: 18 },
+  { title: "S2-9 g8m time", n: 451, large: 0, cap: 2.2 },
+  { title: "S2-9 g8m large files", n: 251, large: 100, cap: 2.5 },
+  { title: "S2-9 g8m all large", n: 0, large: 180, cap: 2.5 },
 ];
 // Each workload is measured once: a control reads the same figures its row asserts.
 const measured = new Map();
@@ -173,8 +173,9 @@ for (const item of WORKLOADS) test(item.title, { timeout: 1_800_000 }, t => {
 });
 
 // The controls. Each first gives the whole listing right, as timed checks,
-// and is then compared with the unaltered shell on the same card. Neither
-// claims a bound of its own: the rows above hold the caps.
+// and is then compared with the unaltered shell on the same card. Each must
+// also go over its row's cap above, so the caps tell these engines from the
+// table engine.
 
 test("DIR cost control: one bucket for every name costs more than 128", { timeout: 1_800_000 }, async t => {
   const edits = [["  and $7F        ; 128 two-byte heads", "  xor a          ; one bucket"]];
@@ -184,6 +185,7 @@ test("DIR cost control: one bucket for every name costs more than 128", { timeou
   assert.equal(sizedListing(result).searchFirst, 3, "still the table engine");
   assert.equal(sizedListing(result).size, 0);
   assert.ok(sizedListing(result).cycles > sizedListing(base).cycles, `${sizedListing(result).cycles} cycles against ${sizedListing(base).cycles}`);
+  assert.ok(result.ratio > WORKLOADS[0].cap, `${result.ratio.toFixed(2)} times DIR /W, over the row's cap of ${WORKLOADS[0].cap}`);
 });
 
 test("DIR cost control: the legacy engine sizes each large file by BDOS 35 and costs more", { timeout: 1_800_000 }, async t => {
@@ -194,4 +196,5 @@ test("DIR cost control: the legacy engine sizes each large file by BDOS 35 and c
   assert.equal(sizedListing(result).size, result.marked, "one BDOS 35 for each file of more than one entry");
   assert.ok(sizedListing(result).searchFirst > result.marked, "and a search begun again after each");
   assert.ok(sizedListing(result).cycles > sizedListing(base).cycles, `${sizedListing(result).cycles} cycles against ${sizedListing(base).cycles}`);
+  assert.ok(result.ratio > WORKLOADS[2].cap, `${result.ratio.toFixed(2)} times DIR /W, over the row's cap of ${WORKLOADS[2].cap}`);
 });
