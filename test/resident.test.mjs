@@ -4,7 +4,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { boot, service, program, standardCard, volume } from "./lib/fixtures.mjs";
+import { PUT_COM, boot, service, program, standardCard, volume } from "./lib/fixtures.mjs";
 
 const STUB = 0x0080;
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
@@ -32,7 +32,7 @@ const back = (m) => {
 };
 
 test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps it", async () => {
-  const m = await machine({ "RES.SVC": await service("res"), "HOOK.COM": (await program("hook")).bytes });
+  const m = await machine({ "RES.SVC": await service("res"), "HOOK.COM": (await program("hook")).bytes, "PUT.COM": PUT_COM });
   const stub = word(m, 6);
   const p1 = (stub >> 8) - 1; // one page below the stub's
   m.command("RES.SVC");
@@ -57,14 +57,17 @@ test("a resident goes below (0006h), chains its BDOS jump, and warm boot keeps i
   m.runUntil(() => m.waitingForInput() && /\r\nA(:\S*)?>$/.test(m.text(m.mark)), 200_000_000, "BDOS 0");
   assert.equal(word(m, 6), low, "after BDOS function 0");
   m.mark = m.output.length;
-  m.type("SAVE 1 C:X.COM\r");
-  m.runUntil(() => m.waitingForInput(), 400_000_000, "the disk error");
+  m.type("PUT 1 C:X.COM\r");
+  m.runUntil(() => m.waitingForInput() && /Bdos Err On C: R\/O/.test(m.text(m.mark)), 400_000_000, "the disk error");
   m.type("\r");
   m.expect(/\r\nA(:\S*)?>$/);
   assert.equal(word(m, 6), low, "after a disk error");
-  const pages = (low >> 8) - 1; // SAVE counts pages from 0100h
-  assert.match(m.command(`SAVE ${pages + 1} Y.COM`), /\r\n\d+\?\r\n/, "SAVE stops below the resident");
-  assert.doesNotMatch(m.command(`SAVE ${pages} Y.COM`), /\?/, "and reaches up to it");
+  // Y.COM fills the TPA from 0100h up to the resident and OVER.COM is a page more. Each is all C9h, so it returns at once.
+  const pages = (low >> 8) - 1;
+  m.command(`PUT ${pages} Y.COM 201`, { maxCycles: 2_000_000_000 });
+  m.command(`PUT ${pages + 1} OVER.COM 201`, { maxCycles: 2_000_000_000 });
+  assert.match(m.command("OVER", { maxCycles: 2_000_000_000 }), /\r\nOVER\?\r\n/, "a program stops below the resident");
+  assert.doesNotMatch(m.command("Y", { maxCycles: 2_000_000_000 }), /\?/, "and reaches up to it");
   assert.deepEqual(m.violations, []);
 });
 
