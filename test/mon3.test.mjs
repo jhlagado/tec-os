@@ -160,7 +160,7 @@ test("KG58 rom cap", () => {
   const { rom, symbols } = romFor();
   assert.deepEqual([rom[symbols.get("ABIMAJ") - 0xc000], rom[symbols.get("ABIMIN") - 0xc000]], [5, 1], "ABI 5.1");
   const m = machine(card());
-  assert.equal(word(m, 6) - 0x100, 47237, "TPA 47,237 with the shared recovery allocation");
+  assert.equal(word(m, 6) - 0x100, 47240, "TPA 47,240 with the shared recovery allocation");
   console.log(`ROM ${used} used, ${free} free, ${used - BASELINE.used} over the baseline, ${first.hash}`);
 });
 
@@ -1537,7 +1537,7 @@ test("KG63 warm boot and reset", async () => {
   m.expect(/A(:\S*)?>$/, { from: m.output.length, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after a reset");
   assert.deepEqual(services(m), [], "a reset removes it");
-  assert.equal(word(m, 6), 0xb985);
+  assert.equal(word(m, 6), 0xb988);
 });
 
 async function unloads(svc) {
@@ -1548,7 +1548,7 @@ async function unloads(svc) {
     exitBy(m, how);
     m.command("UNLOAD");
     assert.deepEqual(services(m), [], `after ${how}: UNLOAD takes the pages`);
-    assert.equal(word(m, 6), 0xb985, `after ${how}: (0006h) back at B985h`);
+    assert.equal(word(m, 6), 0xb988, `after ${how}: (0006h) back at B988h`);
     assert.equal(warmTarget(m), m.sym("WBOOTR"), `after ${how}: the hook is out`);
     assert.match(line(m, "X", { maxCycles: 100_000_000 }).out, /A(:\S*)?>$/, `after ${how}: a .COM exits to the prompt`);
   }

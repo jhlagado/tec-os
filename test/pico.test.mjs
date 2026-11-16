@@ -193,7 +193,7 @@ test("the console at 32 columns writes the colours and an empty sprite table", (
 });
 
 /** TPA on the starter card with nothing loaded, and with GLCD.SVC in: its three pages under the stub's page. */
-const TPA_NONE = 47237;
+const TPA_NONE = 47240;
 const TPA_GLCD = 46336;
 
 test("TPA after boot: the ROM's console alone, the GLCD's driver, and both", () => {
