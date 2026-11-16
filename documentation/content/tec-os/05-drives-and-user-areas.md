@@ -600,7 +600,7 @@ line buffer and recovery stack above the MON-3 program's load area.
 The program itself uses MON-3's stack below `0880h`.
 
 On a card with nothing else installed, the BDOS entry address stored
-at `0006h` changes from `B6C5h` to `A300h`. Program memory falls from 46,533 bytes
+at `0006h` changes from `B6C8h` to `A300h`. Program memory falls from 46,536 bytes
 to 41,472, or 40,704 with GLCD.SVC too. On the starter card, the
 shell is already installed. Installing MON3 changes that address from `A500h` to `9200h` and
 reduces program memory from 41,984 to 37,120 bytes. Adding
@@ -633,7 +633,7 @@ return also sets the panel's modes again, so the console's text shows again
 whatever mode the program left the panel in.
 
 The service cannot recover a program that hangs: the reset button is the
-way out. A program that writes `B6C5h–BFFFh`, which holds the BDOS entry,
+way out. A program that writes `B6C8h–BFFFh`, which holds the BDOS entry,
 the allocation vectors, TEC-OS's workspace and its BIOS table, can damage
 TEC-OS's disk tables. The service writes pending changes before `GO` and
 resets the drives after each return to limit that. Its messages are in

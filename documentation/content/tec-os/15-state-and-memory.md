@@ -159,16 +159,18 @@ BENTRY and lowers `0006h` to its base page (`241b438:src/boot.asm:106-107`,
 `241b438:src/boot.asm:633-638`, `241b438:src/boot.asm:304-319`, `241b438:src/loader.asm:1-10`,
 `241b438:src/loader.asm:337-350`, `241b438:src/loader.asm:499-504`).
 
-On the starter card workspace begins at `BAC8h`. Four 256-byte vectors occupy
-`B6C8h–BAC7h` and the stub occupies `B6C5h–B6C7h`. This leaves 46,533 TPA
-bytes at `0100h–B6C4h`. A two-volume G1M/G8M card without a drives field needs
-320 vector bytes. Its stub at `B985h` leaves 47,237 bytes. Startup's
+On the starter card workspace begins at `BACBh`. Four 256-byte vectors occupy
+`B6CBh–BACAh` and the stub occupies `B6C8h–B6CAh`. This leaves 46,536 TPA
+bytes at `0100h–B6C7h`. A two-volume G1M/G8M card without a drives field needs
+320 vector bytes. Its stub at `B988h` leaves 47,240 bytes. Startup's
 seventeen-page SHELL.SVC lowers the starter boundary to `A500h`, or 41,984
 bytes (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/memory-map.md:18-19`). [Appendix C](appendix-c-memory-map.md#the-cpu-s-address-space) records
-these layouts. The workspace below `BF00h` is 1,080 bytes and warm boot clears
-350 at `BDA2h–BEFFh`. Above the table 205 bytes occupy `BF33h–BFFFh`
+these layouts. The workspace below `BF00h` is 1,077 bytes and warm boot clears
+347 at `BDA5h–BEFFh`. Above the table 205 bytes occupy `BF33h–BFFFh`
 (`241b438:docs/memory-map.md:8-22`, `241b438:docs/memory-map.md:47-58`,
-`241b438:docs/compatibility.md:3-16`). The offered build also enforces the older
+`241b438:docs/compatibility.md:3-16`). The cited revision's figures are three
+bytes lower or larger: its ROM still had SAVE, whose three workspace bytes
+have since gone. The offered build also enforces the older
 minimum starter TPA of 45,830 bytes (`241b438:tools/build.mjs:204-213`,
 `241b438:tools/build.mjs:271-273`).
 

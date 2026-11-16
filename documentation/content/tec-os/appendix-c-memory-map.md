@@ -34,6 +34,13 @@ that describe the bare allocation layout explicitly exclude services. The reside
 addresses come from `build/tecos/tecos.d8.json`. Other builds need their own
 symbol files for build-dependent addresses.
 
+The TPA and resident workspace rows have since been restated for the source
+without the SAVE command, whose ROM SHA-256 begins `095d829d`. Removing SAVE
+took three bytes from the CCP's block. The fields from `DSKCUR` to `DIRNUM`,
+the allocation vectors and the bare BDOS entry are therefore three bytes
+higher than in the `46cf3f1` build. Fields from `ERAANS` up are where they
+were.
+
 ## The CPU's address space
 
 The 64 KiB CPU address space contains fixed RAM, a bank window and ROM
@@ -53,8 +60,8 @@ The starter card's layout with EXPAND 0 selected and no service loaded is:
 | Addresses | Contents |
 | --- | --- |
 | `0000h–00FFh` | Page zero |
-| `0100h–B6C4h` | Transient program area (TPA), 46,533 bytes |
-| `B6C5h–BFFFh` | BDOS entry jump and resident workspace in EXPAND 0 |
+| `0100h–B6C7h` | Transient program area (TPA), 46,536 bytes |
+| `B6C8h–BFFFh` | BDOS entry jump and resident workspace in EXPAND 0 |
 | `C000h–FFFFh` | ROM |
 
 TEC-OS writes the system latch at port `FFh` from its shadow at `0040h`,
@@ -79,11 +86,11 @@ program space:
 
 | Card | Vectors | Word at `0006h` | TPA |
 | --- | ---: | --- | ---: |
-| Starter card, four reserved drive slots | 1,024 bytes | `B6C5h` | 46,533 bytes |
+| Starter card, four reserved drive slots | 1,024 bytes | `B6C8h` | 46,536 bytes |
 | Starter card with `GLCD.SVC` installed | 1,024 bytes | `B300h` | 45,568 bytes |
 | Starter card after `STARTUP.CMD` installs `SHELL.SVC` | 1,024 bytes | `A500h` | 41,984 bytes |
 | Starter card with `SHELL.SVC` and `GLCD.SVC` | 1,024 bytes | `A200h` | 41,216 bytes |
-| Two-volume reference, no drives field, no service | 320 bytes | `B985h` | 47,237 bytes |
+| Two-volume reference, no drives field, no service | 320 bytes | `B988h` | 47,240 bytes |
 
 The shell takes seventeen pages, and its last page holds its 256-byte history ring (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/memory-map.md:8-22`,
 `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/compatibility.md:3-16`, `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:23-31`).
@@ -97,7 +104,8 @@ BDOS reentry permission (`a40d482:docs/services.md:312-345`).
 
 A stock PICO run of the build with the seventeen-page shell reads `PZTOP` and
 the word at `0006h` at the first return from function 13 and at the shell's
-input. They agree at each observation:
+input. They agree at each observation. That build still had SAVE, so its
+bare top is three bytes below the `B6C8h` and 46,536 bytes given above:
 
 | Observed state | Exclusive top | TPA bytes |
 | --- | --- | ---: |
@@ -120,7 +128,10 @@ housekeeping source uses 16,016 bytes/free 368, ROM
 `c95862634ee002bb9a5ef1d3d0ee8ea831e12fda4e96792b36454170aafabf7f`:
 data C00Bh–C61Fh (1,557), code C620h–FE8Fh (14,448), free FE90h–FFFFh
 (368). These source identities are not replacement capture receipts
-(`a40d482:docs/memory-map.md:24-32`).
+(`a40d482:docs/memory-map.md:24-32`). Without SAVE the source uses 15,856
+bytes/free 528, ROM
+`095d829d1278ffd3a26c13c3a8666f80328c1481b54ee4d8b8d4a3acad5d00ef`:
+data C00Bh–C60Fh (1,541), code C610h–FDEFh (14,304), free FDF0h–FFFFh (528).
 
 The ROM occupies these ranges:
 
@@ -201,11 +212,11 @@ be overwritten by another routine.
 
 | Addresses | Bytes | Contents |
 | --- | ---: | --- |
-| `B6C5h–B6C7h` | 3 | BDOS entry jump, `JP BENTRY` |
-| `B6C8h–BAC7h` | 1,024 | Four 256-byte allocation-vector slots |
-| `BAC8h–BCA5h` | 478 | BIOS disk state/buffers, PICO console block, mount scratch and terminal state |
-| `BCA6h–BCD5h` | 48 | BIOS stack |
-| `BCD6h–BE6Ch` | 407 | CCP state and stack |
+| `B6C8h–B6CAh` | 3 | BDOS entry jump, `JP BENTRY` |
+| `B6CBh–BACAh` | 1,024 | Four 256-byte allocation-vector slots |
+| `BACBh–BCA8h` | 478 | BIOS disk state/buffers, PICO console block, mount scratch and terminal state |
+| `BCA9h–BCD8h` | 48 | BIOS stack |
+| `BCD9h–BE6Ch` | 404 | CCP state and stack |
 | `BE6Dh–BEFFh` | 147 | BDOS state and stack |
 | `BF00h–BF32h` | 51 | RAM BIOS table, 17 jumps |
 | `BF33h–BFFFh` | 205 | SD, cache, keyboard, display, loader, startup, chain and console state plus remaining mount scratch |
@@ -214,13 +225,13 @@ The build places `WSBASE` so that the lower workspace ends immediately before
 `BF00h`. Its upper span starts after the 51-byte RAM BIOS table at `BF33h`
 (`241b438:tools/build.mjs:218-248`, `241b438:src/ram.asm:301-303`).
 These spans have fixed addresses across cards. The allocation vectors below
-`WSBASE`, at `BAC8h`, vary with the card.
+`WSBASE`, at `BACBh`, vary with the card.
 
 Cold boot clears the workspace from `WSBASE` up to but excluding `WSEND`.
 Warm boot clears `CCPCLR` up to but excluding `BDOSRME`, then sets the DMA
 address, command-buffer maximum and stack guard. It separately clears `BUFOK`
 (`241b438:src/boot.asm:61-66`, `241b438:src/boot.asm:402-422`).
-Those sweeps are `BAC8h–BFFFh` and `BDA2h–BEFFh` respectively. Warm boot also writes retained fields outside
+Those sweeps are `BACBh–BFFFh` and `BDA5h–BEFFh` respectively. Warm boot also writes retained fields outside
 its clearing span, including `LATCHV` and `SVCBSY`
 (`241b438:src/boot.asm:130-148`).
 
@@ -230,25 +241,25 @@ The declarations are at `241b438:src/ram.asm:15-136`.
 
 | Addresses | Bytes | Name | Contents | Cleared by |
 | --- | ---: | --- | --- | --- |
-| `BAC8h` | 1 | `DSKCUR` | Selected BIOS drive | Cold boot |
-| `BAC9h–BACEh` | 6 | `DSKTRK`, `DSKSEC`, `DSKDMA` | Last track, sector and DMA address set through the BIOS | Cold boot |
-| `BACFh–BAD1h` | 3 | `BLKOFF`, `BLKSLOT` | Block within the volume and 128-byte record within that block | Cold boot |
-| `BAD2h–BAD5h` | 4 | `BUFOK`, `BUFDRV`, `BUFBLK` | Validity flag, drive and block of the write-cleared key | Cold boot. Warm boot also clears `BUFOK` |
-| `BAD6h–BAF5h` | 32 | `DRVTAB` | Four drive entries, 8 bytes each | Cold boot |
-| `BAF6h–BAF9h` | 4 | `DRVIDX` | Volume index + 1 for each drive, 0 for none | Cold boot |
-| `BAFAh–BAFDh` | 4 | `DRVSLOT` | Vector slot per drive, 0 for none, 1 for 64 bytes or 2 for 256 | Cold boot |
-| `BAFEh–BB3Dh` | 64 | `DPHTAB` | Four 16-byte DPHs | Cold boot |
-| `BB3Eh–BB3Fh` | 2 | `LOGINV` | BDOS logged-in drive vector | Cold boot |
-| `BB40h–BBBFh` | 128 | `DIRBUF` | Shared directory buffer | Cold boot |
-| `BBC0h–BBC1h` | 2 | `CSVDUM` | Unused check-vector placeholder | Cold boot |
-| `BBC2h–BBC3h` | 2 | `STUBAD` | BDOS entry jump address | Cold boot |
-| `BBC4h–BC22h` | 95 | `PIBLK` to `PIROWT` | PICO console table, width, registry record, pages, registers and row addresses | Cold boot |
-| `BC23h` | 1 | `MNTCNT` | Mount/volume-service scratch count | Cold boot |
-| `BC24h–BC43h` | 32 | `MNBUF` | Container header or descriptor copied from a cache line | Cold boot |
-| `BC44h–BC93h` | 80 | `LINEBUF` | Display-row scratch for terminal moves and LCD drive rows | Cold boot |
-| `BC94h–BCA1h` | 14 | `VPUTV` to `VFNV` | Seven display-table vectors | Cold boot |
-| `BCA2h–BCA5h` | 4 | `VSTOP` to `CONMOD` | Scroll-region limits, PICO claim and applied console mode | Cold boot |
-| `BCA6h–BCD5h` | 48 | `BSTKB` | BIOS stack up to exclusive top `BSTK` | Cold boot |
+| `BACBh` | 1 | `DSKCUR` | Selected BIOS drive | Cold boot |
+| `BACCh–BAD1h` | 6 | `DSKTRK`, `DSKSEC`, `DSKDMA` | Last track, sector and DMA address set through the BIOS | Cold boot |
+| `BAD2h–BAD4h` | 3 | `BLKOFF`, `BLKSLOT` | Block within the volume and 128-byte record within that block | Cold boot |
+| `BAD5h–BAD8h` | 4 | `BUFOK`, `BUFDRV`, `BUFBLK` | Validity flag, drive and block of the write-cleared key | Cold boot. Warm boot also clears `BUFOK` |
+| `BAD9h–BAF8h` | 32 | `DRVTAB` | Four drive entries, 8 bytes each | Cold boot |
+| `BAF9h–BAFCh` | 4 | `DRVIDX` | Volume index + 1 for each drive, 0 for none | Cold boot |
+| `BAFDh–BB00h` | 4 | `DRVSLOT` | Vector slot per drive, 0 for none, 1 for 64 bytes or 2 for 256 | Cold boot |
+| `BB01h–BB40h` | 64 | `DPHTAB` | Four 16-byte DPHs | Cold boot |
+| `BB41h–BB42h` | 2 | `LOGINV` | BDOS logged-in drive vector | Cold boot |
+| `BB43h–BBC2h` | 128 | `DIRBUF` | Shared directory buffer | Cold boot |
+| `BBC3h–BBC4h` | 2 | `CSVDUM` | Unused check-vector placeholder | Cold boot |
+| `BBC5h–BBC6h` | 2 | `STUBAD` | BDOS entry jump address | Cold boot |
+| `BBC7h–BC25h` | 95 | `PIBLK` to `PIROWT` | PICO console table, width, registry record, pages, registers and row addresses | Cold boot |
+| `BC26h` | 1 | `MNTCNT` | Mount/volume-service scratch count | Cold boot |
+| `BC27h–BC46h` | 32 | `MNBUF` | Container header or descriptor copied from a cache line | Cold boot |
+| `BC47h–BC96h` | 80 | `LINEBUF` | Display-row scratch for terminal moves and LCD drive rows | Cold boot |
+| `BC97h–BCA4h` | 14 | `VPUTV` to `VFNV` | Seven display-table vectors | Cold boot |
+| `BCA5h–BCA8h` | 4 | `VSTOP` to `CONMOD` | Scroll-region limits, PICO claim and applied console mode | Cold boot |
+| `BCA9h–BCD8h` | 48 | `BSTKB` | BIOS stack up to exclusive top `BSTK` | Cold boot |
 
 The write-cleared key identifies a block cleared for a new allocation rather
 than read from the card. Clearing `BUFOK` prevents reuse of the old key.
@@ -258,19 +269,19 @@ A new type-2 write can still clear its block without a pre-read
 ### The CCP's block
 
 The declarations are at `241b438:src/ram.asm:141-208`. `CCPCLR` is
-`BDA2h`. The FCBs and command buffer below it survive
+`BDA5h`. The FCBs and command buffer below it survive
 the warm clearing sweep for another chained piece.
 
 | Addresses | Bytes | Name | Contents | Cleared by |
 | --- | ---: | --- | --- | --- |
-| `BCD6h–BCF9h` | 36 | `CMDFCB` | Command FCB | Cold boot |
-| `BCFAh–BD1Dh` | 36 | `RENFCB` | Second FCB for `REN` and `COPY` | Cold boot |
-| `BD1Eh` | 1 | `CMDBUF` | Function 10 maximum, 127 | Cold boot. Warm boot writes 127 |
-| `BD1Fh` | 1 | `CMDLEN` | Command-line length | Cold boot |
-| `BD20h–BD9Fh` | 128 | `CMDTXT` | Retained command line | Cold boot |
-| `BDA0h–BDA1h` | 2 | `APIRTPC` | Reserved outer hardware/BIOS return context | Cold boot |
-| `BDA2h` | 1 | `BOOTDRV` | Drive selected for CCP entry | Cold and warm boot |
-| `BDA3h–BDB1h` | 15 | `CMDSTRT` to `ERAALL` | Parser pointers and DIR, SAVE and ERA state | Cold and warm boot |
+| `BCD9h–BCFCh` | 36 | `CMDFCB` | Command FCB | Cold boot |
+| `BCFDh–BD20h` | 36 | `RENFCB` | Second FCB for `REN` and `COPY` | Cold boot |
+| `BD21h` | 1 | `CMDBUF` | Function 10 maximum, 127 | Cold boot. Warm boot writes 127 |
+| `BD22h` | 1 | `CMDLEN` | Command-line length | Cold boot |
+| `BD23h–BDA2h` | 128 | `CMDTXT` | Retained command line | Cold boot |
+| `BDA3h–BDA4h` | 2 | `APIRTPC` | Reserved outer hardware/BIOS return context | Cold boot |
+| `BDA5h` | 1 | `BOOTDRV` | Drive selected for CCP entry | Cold and warm boot |
+| `BDA6h–BDB1h` | 12 | `CMDSTRT` to `ERAALL` | Parser pointers and DIR and ERA state | Cold and warm boot |
 | `BDB2h–BE31h` | 128 | `LOADBUF` | CCP scratch record | Cold and warm boot |
 | `BE32h–BE3Ch` | 11 | `STKGUARD` | CCP stack guard, `A5h` in each byte | Cold and warm boot. Warm boot then writes `A5h` |
 | `BE3Dh–BE6Ch` | 48 | `CSTKBAS` | CCP stack up to exclusive top `CSTKTOP` | Cold and warm boot |
@@ -368,7 +379,7 @@ successful INIT sets it to 0 (`241b438:src/loader.asm:426-444`).
 
 The housekeeping rows above use a40d482's internal layout. The 126 bytes
 were already reserved: 68 queue/round/context, guard 2 and worker 56. APIRTPC
-remains the separate existing BDA0h–BDA1h return slot. RXFULL and later console
+remains the separate existing BDA3h–BDA4h return slot. RXFULL and later console
 addresses do not move. Warm entry resets round position/length and abandoned
 API context, not HKQ/HKCNT or acknowledged data
 (`a40d482:src/ram.asm:412-439`, `a40d482:src/boot.asm:135-139`).
@@ -417,7 +428,7 @@ The stack reservations are defined by `BOOTSTK`, `BIOSSTN`, `CCPSTN` and
 | Stack | Addresses | Bytes | Use |
 | --- | --- | ---: | --- |
 | Boot | Below `8000h` | | Cold boot until workspace clearing finishes |
-| BIOS | `BCA6h–BCD5h` | 48 | Warm boot |
+| BIOS | `BCA9h–BCD8h` | 48 | Warm boot |
 | CCP | `BE3Dh–BE6Ch` | 48 | CCP and a program's inherited stack, with `0000h` pushed at launch |
 | BDOS | `BEC0h–BEFFh` | 64 | BDOS functions and their BIOS calls, plus cold boot after workspace clearing |
 | Housekeeping | `BFADh–BFE4h` | 56 | Private write/notice worker, guard BFABh–BFACh |
@@ -463,9 +474,9 @@ for (const n of process.argv.slice(1)) {
 
 It prints:
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS 6fb1872, ROM 095d829d: host-tool output of the lookup above. -->
 ```text
-CMDTXT BD20h
+CMDTXT BD23h
 PRGCODE BF54h
 CHPOS BF66h
 ```

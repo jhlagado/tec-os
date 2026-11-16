@@ -267,7 +267,10 @@ identity. Housekeeping source instead uses 16,016/free 368, ROM
 `c95862634ee002bb9a5ef1d3d0ee8ea831e12fda4e96792b36454170aafabf7f`,
 data C00Bh–C61Fh (1,557), code C620h–FE8Fh (14,448), free FE90h–FFFFh
 (368). These identities do not constitute fresh native-book captures or final
-integration qualification (`a40d482:docs/memory-map.md:24-32`).
+integration qualification (`a40d482:docs/memory-map.md:24-32`). Without the
+SAVE command the source uses 15,856/free 528, ROM
+`095d829d1278ffd3a26c13c3a8666f80328c1481b54ee4d8b8d4a3acad5d00ef`,
+data C00Bh–C60Fh (1,541), code C610h–FDEFh (14,304), free FDF0h–FFFFh (528).
 
 In the cited build, 15,312 of 16,384 bytes are used. The complete hash is
 `ac86ad233696d22a46b4f98a4119c53b718bfe89881952a08e9f92223f3fa1c3`
@@ -331,7 +334,9 @@ then reserves the three-byte BDOS stub. Reference DSM values 511 and
 2047 require 64 and 256 bytes, 320 total (`241b438:tools/build.mjs:204-213`).
 That two-volume entry at `B985h` leaves 47,237 bytes from `0100h`, the
 build line's reported TPA. Starter's four 256-byte slots instead give
-entry `B6C5h` and 46,533 bytes. Memory map and media manifest describe
+entry `B6C5h` and 46,533 bytes. Without SAVE's three workspace bytes the
+build line reports `$0100-$B987 (47240 bytes)`, and the starter entry is
+`B6C8h` with 46,536 bytes. Memory map and media manifest describe
 starter layout. A different build needs its own census and ceiling.
 
 ## Matching the ROM and media

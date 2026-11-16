@@ -52,17 +52,17 @@ Programs must read the full word rather than assume a page boundary.
 
 The first service is allocated below the stub's page. This also removes
 the gap between that page boundary and the stub from the TPA. On
-the starter card, vectors begin at `B6C8h` and the stub at `B6C5h`. A first
-one-page service such as Chapter 14's COUNT costs 453 bytes: 256 for the page
-and 197 for the alignment gap. Later services cost whole pages without another
+the starter card, vectors begin at `B6CBh` and the stub at `B6C8h`. A first
+one-page service such as Chapter 14's COUNT costs 456 bytes: 256 for the page
+and 200 for the alignment gap. Later services cost whole pages without another
 alignment gap. With `GLCD.SVC` as the first service and a possible second
 one, the layout is:
 
 | Addresses | What is there |
 | --- | --- |
-| `B6C8h` up | The allocation vectors, then the resident workspace |
-| `B6C5h–B6C7h` | The stub, `JP BENTRY`, the top with no service in |
-| `B600h–B6C4h` | 197 bytes no service can use |
+| `B6CBh` up | The allocation vectors, then the resident workspace |
+| `B6C8h–B6CAh` | The stub, `JP BENTRY`, the top with no service in |
+| `B600h–B6C7h` | 200 bytes no service can use |
 | `B300h–B5FFh` | `GLCD.SVC`, three pages. `B300h` holds `JP BENTRY` |
 | `B200h–B2FFh` | A second service of one page. `B200h` would hold `JP BENTRY` |
 | `0100h` up | The TPA, its top at the word in `0006h` |
@@ -164,7 +164,7 @@ The loader adds the requested extra memory to the header/image size,
 subtracts one and takes the high byte as the page count minus one. It
 subtracts that count from the page below `PZTOP`. Overflow, borrow or a
 base below `8000h` rejects the load. The resulting page is stored in
-`SLDL` as the relocation delta (`241b438:src/loader.asm:183-195`). With no other service, COUNT's 100 bytes below `B6C5h`
+`SLDL` as the relocation delta (`241b438:src/loader.asm:183-195`). With no other service, COUNT's 100 bytes below `B6C8h`
 select page `B5h`.
 
 ### 2. Dependencies
@@ -201,8 +201,8 @@ by HL. A rejected list can leave the loaded file partly relocated
 
 In `GLCD.SVC` the driver table begins with `00F2h`, `014Dh` and `0152h`.
 Installation at `B300h` changes them to `B3F2h`, `B44Dh` and `B452h` at
-`B319h`. Its 767 header/image bytes occupy three pages. With the 197-byte
-alignment gap, the TPA falls from 46,533 to 45,568 bytes. SERVICES, the shell's command, counts whole reserved pages, including unused
+`B319h`. Its 767 header/image bytes occupy three pages. With the 200-byte
+alignment gap, the TPA falls from 46,536 to 45,568 bytes. SERVICES, the shell's command, counts whole reserved pages, including unused
 bytes in the final page (`46cf3f1:drivers/shellcmd.asm:15-50`).
 
 The PICO-plus-GLCD startup case has another outcome. With CRT already
