@@ -8,7 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ROOT, program, volume } from "./lib/fixtures.mjs";
+import { PUT_COM, ROOT, program, putBytes, volume } from "./lib/fixtures.mjs";
 import { KEY5, KEYAD, MON3, MON3_BIN, bytesAt, card, digitsOf, find, hello3, lcdRows, line, machine, mon3Svc, reference, runFor, runTo, svcMutant, warmTarget } from "./lib/mon3.mjs";
 
 const RECORDED = JSON.parse(readFileSync(resolve(ROOT, "test/fixtures/mon3/hello3-reference.json"), "utf8"));
@@ -25,7 +25,7 @@ const theReference = async () => (ref ??= reference(await hello3()));
 /** The slice on CONSOLE ("serial" or "glcd") with service file SVC: what each step showed. */
 async function slice(consoleKind, file) {
   const xcopy = (await program("copy")).bytes;
-  const image = card({ "MON3.SVC": file, "HELLO3.BIN": await hello3() });
+  const image = card({ "MON3.SVC": file, "HELLO3.BIN": await hello3(), "PUT.COM": PUT_COM });
   const b = volume(image, "B");
   b.write("T.TXT", TEXT);
   b.write("BIG.DAT", BIG);
@@ -166,10 +166,9 @@ for (const kind of ["serial", "glcd"]) {
 
   test(`KG60 tec-os afterwards, ${on}`, { skip }, async () => {
     const { m, image } = await theSlice(kind);
-    const memory = bytesAt(m, 0x100, 0x200);
-    m.command("SAVE 2 T.TMP");
+    m.command("PUT 2 T.TMP");
     const a = () => volume(image, "A");
-    assert.deepEqual([...a().read("T.TMP")], memory, "SAVE 2 wrote 0100h-02FFh, four records");
+    assert.deepEqual(a().read("T.TMP"), putBytes(2), "PUT 2 wrote its four records");
     const dir = m.command("DIR");
     assert.match(dir, /T\.TMP/);
     assert.match(dir, /HELLO3\.BIN/);
