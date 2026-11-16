@@ -7,9 +7,17 @@
 //
 // Each controller keeps a real HD44780's address counter: 00h-27h is its
 // first line and 40h-67h its second, and the counter steps from 27h to 40h
-// and from 67h to 00h. A read of the data port returns the cell and steps
-// the counter, as a write does. Busy lasts 37 microseconds after a command
-// or a data byte and 1.6 ms after clear and home, at 4 MHz.
+// and from 67h to 00h. A read of the data port returns the cell the last
+// address command or read made ready, and steps the counter; a write steps
+// the counter and makes nothing ready, so a read straight after a write
+// returns stale data, as the controller's does. Busy lasts 37 microseconds
+// after a command or a data byte and 1.6 ms after clear and home, at 4 MHz.
+//
+// Lcd40x4Runtime is the same panel built a second way, from two of the
+// Debug80 runtime's own controllers, so that a driver is not tested only
+// against a model written beside it.
+
+import { createTec1gLcdController } from "@jhlagado/debug80-runtime/platforms/tec1g/lcd";
 
 const LINE = 40;
 const BUSY = 148; // 37 microseconds at 4 MHz
@@ -20,6 +28,7 @@ class Hd44780 {
     this.now = now;
     this.ram = new Uint8Array(0x80).fill(0x20);
     this.addr = 0;
+    this.ready = 0x20; // the byte a data read returns
     this.busyUntil = 0;
     this.display = false;
     this.cursor = false;
@@ -45,8 +54,9 @@ class Hd44780 {
   }
 
   readData() {
-    const v = this.ram[this.addr];
+    const v = this.ready;
     this.step();
+    this.ready = this.ram[this.addr];
     this.busy(BUSY);
     return v;
   }
@@ -62,15 +72,22 @@ class Hd44780 {
     if (c === 0x01) {
       this.ram.fill(0x20);
       this.addr = 0;
+      this.ready = this.ram[0];
+      this.shift = 0;
       this.busy(BUSY_CLEAR);
       return;
     }
     if ((c & 0xfe) === 0x02) {
       this.addr = 0;
+      this.ready = this.ram[0];
+      this.shift = 0;
       this.busy(BUSY_CLEAR);
       return;
     }
-    if (c & 0x80) this.addr = c & 0x7f;
+    if (c & 0x80) {
+      this.addr = c & 0x7f;
+      this.ready = this.ram[this.addr];
+    } else if ((c & 0xfc) === 0x18) this.shift = (this.shift ?? 0) + (c & 0x04 ? 1 : -1);
     else if ((c & 0xf8) === 0x08) {
       this.display = (c & 0x04) !== 0;
       this.cursor = (c & 0x02) !== 0;
@@ -92,20 +109,22 @@ class Hd44780 {
  * passes a row's end shows the same text on both.
  */
 export class Lcd20x4 {
-  constructor(now, ports = { cmd: 0x04, dat: 0x84 }) {
-    this.ports = ports;
+  /** aliased: the one controller answers at a 40 x 4 panel's second ports too, as a loose decode would show it. */
+  constructor(now, { aliased = false } = {}) {
+    this.cmd = aliased ? [0x04, 0x0c] : [0x04];
+    this.dat = aliased ? [0x84, 0x8c] : [0x84];
     this.controller = new Hd44780(now);
   }
 
   read(port) {
-    if (port === this.ports.cmd) return this.controller.readStatus();
-    if (port === this.ports.dat) return this.controller.readData();
+    if (this.cmd.includes(port)) return this.controller.readStatus();
+    if (this.dat.includes(port)) return this.controller.readData();
     return undefined;
   }
 
   write(port, value) {
-    if (port === this.ports.cmd) this.controller.writeCommand(value);
-    else if (port === this.ports.dat) this.controller.writeData(value);
+    if (this.cmd.includes(port)) this.controller.writeCommand(value);
+    else if (this.dat.includes(port)) this.controller.writeData(value);
     else return false;
     return true;
   }
@@ -158,6 +177,71 @@ export class Lcd40x4 {
       if (!c.cursor) continue;
       const line = c.addr >= 0x40 ? 1 : 0;
       return { row: i * 2 + line, col: c.addr - line * 0x40 };
+    }
+    return null;
+  }
+}
+
+/**
+ * The 40 x 4 panel from two of the runtime's controllers. Each holds 80
+ * cells as the TEC-1G's four rows of 20: its rows 0 and 2 are the first
+ * line's cells 00h-13h and 14h-27h, its rows 1 and 3 the second line's. Its
+ * address counter steps in that row order, not a real controller's, so a
+ * driver shows the same text here and on Lcd40x4 only if it sends an address
+ * command at least every 20 cells.
+ */
+export class Lcd40x4Runtime {
+  constructor(now, ports = { cmd1: 0x04, dat1: 0x84, cmd2: 0x0c, dat2: 0x8c }) {
+    this.ports = ports;
+    const state = () => ({
+      lcd: Array.from({ length: 80 }, () => 0x20),
+      lcdAddr: 0x80,
+      lcdAddrMode: "ddram",
+      lcdEntryIncrement: true,
+      lcdEntryShift: false,
+      lcdDisplayOn: true,
+      lcdCursorOn: false,
+      lcdCursorBlink: false,
+      lcdDisplayShift: 0,
+      lcdCgram: new Uint8Array(64),
+      lcdCgramAddr: 0,
+      lcdFunction: { dataLength8: true, lines2: true, font5x8: true },
+    });
+    this.states = [state(), state()];
+    this.controllers = this.states.map((st) => createTec1gLcdController(st, { now }, 4_000_000, () => {}));
+  }
+
+  read(port) {
+    const { cmd1, dat1, cmd2, dat2 } = this.ports;
+    if (port === cmd1) return this.controllers[0].readStatus();
+    if (port === dat1) return this.controllers[0].readData();
+    if (port === cmd2) return this.controllers[1].readStatus();
+    if (port === dat2) return this.controllers[1].readData();
+    return undefined;
+  }
+
+  write(port, value) {
+    const { cmd1, dat1, cmd2, dat2 } = this.ports;
+    if (port === cmd1) this.controllers[0].writeCommand(value);
+    else if (port === dat1) this.controllers[0].writeData(value);
+    else if (port === cmd2) this.controllers[1].writeCommand(value);
+    else if (port === dat2) this.controllers[1].writeData(value);
+    else return false;
+    return true;
+  }
+
+  screen() {
+    const line = (st, n) => String.fromCharCode(...st.lcd.slice(n * 20, n * 20 + 20), ...st.lcd.slice(40 + n * 20, 60 + n * 20));
+    const [a, b] = this.states;
+    return [line(a, 0), line(a, 1), line(b, 0), line(b, 1)];
+  }
+
+  cursor() {
+    for (const [i, st] of this.states.entries()) {
+      if (!st.lcdCursorOn) continue;
+      const a = st.lcdAddr & 0x7f;
+      const line = a >= 0x40 ? 1 : 0;
+      return { row: i * 2 + line, col: a - line * 0x40 };
     }
     return null;
   }

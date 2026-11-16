@@ -1,14 +1,22 @@
-; HD44780 character LCD console as a
-; loaded driver for UC1: 20 x 4 on one
-; controller, or 40 x 4 on two, four
-; rows either way. Each row is reached
-; through a table of its controller's
-; port and its first address, so a
-; panel is a table and a width.
+; HD44780 character LCD console for a
+; 40 x 4 panel, as a loaded driver for
+; UC1. Such a panel is two controllers,
+; each with two rows of 40 and its own
+; ports: rows 0 and 1 on the first,
+; rows 2 and 3 on the second. Each row
+; is reached through a table of its
+; controller's port and its first
+; address.
+; Loading the driver asks for 40
+; columns. It installs only when both
+; controllers answer and are not one
+; controller seen at both ports.
 ; The panel's own display memory is the
 ; screen: a scroll reads rows back and
 ; writes them a row up, so the driver
-; keeps no copy of the text.
+; keeps no copy of the text. No
+; transfer runs more than 20 cells past
+; an address command.
 ; Calls use the caller's stack and the
 ; classic bank. Busy polling is bounded
 ; and a byte the panel will not take is
@@ -18,10 +26,13 @@
 
 IOBYTE EQU $0003
 
-; The second controller of a 40 x 4
-; panel, rows 2 and 3. No board has one
-; yet: these ports are the test model's
-; and stand until a board fixes them.
+LCCOLS EQU 40
+LCROWS EQU 4
+
+; The second controller. No board has
+; one yet: these ports are the test
+; panels' and stand until a board fixes
+; them.
 
 LC2CMD EQU $0C
 LC2DAT EQU $8C
@@ -40,37 +51,35 @@ HDR: DB 'D',SVCFMT,0,1
 
 ; Six terminal vectors in ROM order,
 ; then no page-function vector, then
-; columns and rows. INIT sets the
-; columns from the panel it finds.
-; LBUF keeps the returned LINEBUF.
+; columns and rows. LBUF keeps the
+; returned LINEBUF.
 
 VTAB: DW LCPUT,LCGET,LCCLR,LCRST,LCRDR,LCWRR
   DW 0
-COLS: DB 20,4
+  DB LCCOLS,LCROWS
 LBUF: DW 0
 
 ; For each row, its controller's command
 ; port and the command for its first
 ; cell.
 
-LCT20: DB LCDCMD,$80,LCDCMD,$C0,LCDCMD,$94,LCDCMD,$D4
-LCT40: DB LCDCMD,$80,LCDCMD,$C0,LC2CMD,$80,LC2CMD,$C0
+LCTAB: DB LCDCMD,$80,LCDCMD,$C0,LC2CMD,$80,LC2CMD,$C0
 
-; The table in use, the port of the
-; controller that shows the cursor, and
-; 2 while the cursor is shown.
+; The port of the controller that shows
+; the cursor, and 2 while it is shown.
 
-LCTAB: DW LCT20
 LCCPRT: DB LCDCMD
 LCCUR: DB 0
 
 ; Install UC1's hook last. No matrix
-; keyboard or no panel: TNENODV, which a
-; startup line passes over quietly. A
+; keyboard, or not two controllers:
+; TNENODV, which a startup line passes
+; over quietly. Two controllers are
+; proved by giving each its own address
+; and reading both back: one controller
+; at both ports holds only the last. A
 ; table already on UC1, or CRT in a
 ; startup line, fails as TNDRVR says.
-; A second controller that answers
-; makes the panel 40 x 4.
 ; Success: A=0, NC, HL=0, no records.
 ; Changes AF/BC/DE/HL.
 
@@ -80,22 +89,16 @@ INIT:
   bit 0,b        ; the matrix keyboard
   jr z,INIT9
   ld c,LCDCMD
-  call LCWAIT    ; the panel answers?
-  jr c,INIT9
+  ld a,$95       ; address 15h
+  call LCOUT
   ld c,LC2CMD
   ld a,$AA       ; address 2Ah
   call LCOUT
-  call LCWAIT
-  jr c,INIT1     ; no second controller
-  in a,(c)       ; its address counter
-  cp $2A
-  jr nz,INIT1
-  ld hl,LCT40
-  ld (LCTAB),hl
-  ld a,40
-  ld (COLS),a
-
-INIT1:
+  ld e,$2A
+  call INITA     ; the second's
+  ld c,LCDCMD
+  ld e,$15
+  call INITA     ; and the first's
   ld b,3         ; UC1:
   ld hl,VTAB
   ld c,TNDRVR
@@ -105,6 +108,20 @@ INIT1:
   ld hl,0
   or a
   ret
+
+; The controller at port C is ready and
+; its address counter is E, or INIT is
+; left with TNENODV.
+
+INITA:
+  call LCWAIT
+  jr c,INITB
+  in a,(c)
+  cp e
+  ret z
+
+INITB:
+  pop hl         ; INIT's own return
 
 INIT9:
   ld a,TNENODV
@@ -179,7 +196,7 @@ LCOUT:
 ; Keeps B and DE. Changes AF and HL.
 
 LCSEL:
-  ld hl,(LCTAB)
+  ld hl,LCTAB
   ld a,b
   add a,a        ; two bytes a row
   add a,l
@@ -212,16 +229,16 @@ LCHID:
 
 ; Cursor state A, 0 or 2, to the
 ; controller that shows it.
+; Keeps BC, DE and HL.
 
 LCCSET:
   ld (LCCUR),a
   or $0C         ; display on
   push bc
-  ld c,a
-  ld a,(LCCPRT)
   ld b,a
-  ld a,c
-  ld c,b
+  ld a,(LCCPRT)
+  ld c,a
+  ld a,b
   call LCOUT
   pop bc
   ret
@@ -244,7 +261,7 @@ LCPUT:
   call LCHID
   call LCSEL
   ld a,d
-  jp LCOUT
+  jr LCOUT
 
 LCPF:
   push bc
@@ -256,7 +273,7 @@ LCPF:
   xor 2          ; shown, or hidden
   call LCCSET
   pop bc
-  jp LCSEL       ; back on the cell
+  jr LCSEL       ; back on the cell
 
 ; VGET: 0. The terminal reads a cell
 ; only to flip its cursor, and LCPUT
@@ -268,88 +285,102 @@ LCGET:
   ret
 
 ; VCLREOL: row B from column C to its
-; end. C at or past the width, a
-; pending wrap, clears nothing.
-; Changes AF, C, D and HL.
+; end, a cell at a time. C at or past
+; the width, a pending wrap, clears
+; nothing. Keeps B. Changes AF, C, HL.
 
 LCCLR:
-  ld a,(COLS)
-  sub c
-  ret c
-  ret z
-  ld d,a         ; cells to blank
+  ld a,c
+  cp LCCOLS
+  ret nc
   call LCHID
-  call LCSEL
 
 LCC1:
+  push bc
+  call LCSEL
   ld a,' '
   call LCOUT
-  dec d
+  pop bc
+  inc c
+  ld a,c
+  cp LCCOLS
   jr nz,LCC1
   ret
 
 ; VRDROW: row B into LINEBUF, read from
-; the panel. Changes AF, BC and HL.
+; the panel in two runs of 20 cells.
+; Changes AF, BC, DE and HL.
 
 LCRDR:
-  call LCROW
+  call LCHID
+  ld de,(LBUF)
+  ld c,0
+  call LCRD20
+  ld c,20
+
+LCRD20:
+  push bc
+  call LCSEL     ; C = the data port
+  ex de,hl       ; HL = the buffer
+  ld b,20
 
 LCR1:
   call LCWAIT
   ini            ; a cell in, B counts
   jr nz,LCR1
+  ex de,hl
+  pop bc
   ret
 
-; VWRROW: LINEBUF to row B.
-; Changes AF, BC and HL.
+; VWRROW: LINEBUF to row B, the same
+; way. Changes AF, BC, DE and HL.
 
 LCWRR:
-  call LCROW
+  call LCHID
+  ld de,(LBUF)
+  ld c,0
+  call LCWR20
+  ld c,20
+
+LCWR20:
+  push bc
+  call LCSEL
+  ex de,hl
+  ld b,20
 
 LCWR1:
   call LCWAIT
   outi           ; a cell out
   jr nz,LCWR1
-  ret
-
-; Address row B's first cell. Returns
-; HL=LINEBUF, B=columns, C=data port.
-
-LCROW:
-  call LCHID
-  ld c,0
-  call LCSEL
-  ld hl,(LBUF)
-  ld a,(COLS)
-  ld b,a
+  ex de,hl
+  pop bc
   ret
 
 ; VREST: each controller's modes again:
 ; 8-bit and two lines, addresses rising,
-; display on with no cursor. The text
-; stays, so a warm boot keeps the
-; screen. Changes AF, BC and HL.
+; display on with no cursor, home. The
+; text stays, so a warm boot keeps the
+; screen. Changes AF, C and HL.
 
 LCRST:
   xor a
   ld (LCCUR),a
-  ld hl,(LCTAB)
-  ld c,(hl)      ; rows 0 and 1
+  ld c,LCDCMD
   call LCMODE
-  ld de,4
-  add hl,de
-  ld a,(hl)      ; rows 2 and 3
-  cp c
-  ret z          ; the same controller
-  ld c,a
+  ld c,LC2CMD
 
 LCMODE:
-  ld a,$38
+  ld hl,LCSEQ
+
+LCM1:
+  ld a,(hl)
+  or a
+  ret z
   call LCOUT
-  ld a,$06
-  call LCOUT
-  ld a,$0C
-  jp LCOUT
+  inc hl
+  jr LCM1
+
+LCSEQ: DB $38,$06,$0C,$02,0
 
 LCBYTE: DB 0     ; byte over the wait
 

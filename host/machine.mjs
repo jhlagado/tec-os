@@ -14,7 +14,7 @@ import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
 import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap";
 import { Ds1302 } from "@jhlagado/debug80-runtime/platforms/tec1g/ds1302";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
-import { Lcd20x4, Lcd40x4 } from "./lcd40.mjs";
+import { Lcd20x4, Lcd40x4, Lcd40x4Runtime } from "./lcd40.mjs";
 
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
@@ -48,9 +48,11 @@ export class Machine {
    * (4000h-7FFFh) behave as before.
    * lcd: false for a machine with no character LCD: its busy flag never
    * clears. lcd40: true for a 40 x 4 panel on two controllers in place of the
-   * runtime's 20 x 4 (host/lcd40.mjs), read through lcd40Screen(). lcdReal:
+   * runtime's 20 x 4 (host/lcd40.mjs), or "runtime" for the same panel made
+   * of two of the runtime's controllers; read through lcd40Screen(). lcdReal:
    * true for a 20 x 4 panel whose address counter steps as a real
-   * controller's does, read through the same call.
+   * controller's does, or "aliased" for that panel answering at the 40 x 4's
+   * second ports as well; read through the same call.
    */
   constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, glcd = true, lcd = true, lcd40 = false, lcdReal = false, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
     this.symbols = symbols;
@@ -125,7 +127,8 @@ export class Machine {
       };
     }
     const base = this.tec1g.ioHandlers;
-    this.lcd40 = lcd40 ? new Lcd40x4(() => machine.cycles) : lcdReal ? new Lcd20x4(() => machine.cycles) : null;
+    const now = () => machine.cycles;
+    this.lcd40 = lcd40 === "runtime" ? new Lcd40x4Runtime(now) : lcd40 ? new Lcd40x4(now) : lcdReal ? new Lcd20x4(now, { aliased: lcdReal === "aliased" }) : null;
     const io = {
       read: (port) => {
         const p = port & 0xff;
