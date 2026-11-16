@@ -13,6 +13,11 @@
 // the workspace, so the CCP's FCBs and line buffer are three bytes higher.
 // Traces from the ROM before and after paired on every row: the same output,
 // operands, FCB bytes and stack peaks, and each address the same buffer.
+// USER's eight rows left with USER, and every row's calls were retaken again:
+// the CCP no longer asks function 32 for the area at each entry, so that call
+// is gone from each line, function 25's call after it carries another stale E,
+// which is no operand of it, and the shell's line buffer and COPY's FCB are
+// 21 bytes lower. Traces paired as before, on every row.
 // Raw buffer addresses are part of each call digest, so relocation alone
 // changes it. Fixture updates require paired traces with identical output,
 // logical buffer identities, defined operands, FCB bytes and stack peaks.
@@ -111,7 +116,7 @@ function watch(m) {
 function run(m, line) {
   m.mark = m.output.length;
   m.type(`${line}\r`);
-  const prompt = /\r\n\d*[A-P](:\S*)?>$/;
+  const prompt = /\r\n[A-P](:\S*)?>$/;
   let seen = -1;
   for (let i = 0; i < 200; i += 1) {
     const end = m.cycles + 20_000_000;
@@ -141,7 +146,7 @@ function reading(m, fixture) {
 
 test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
   assert.equal(FIXTURE.profile, PROFILE);
-  assert.equal(FIXTURE.inputs.length, 67);
+  assert.equal(FIXTURE.inputs.length, 59);
   const bare = FIXTURE.inputs.filter((r) => !r.shell);
   const m = boot(await card());
   const rows = reading(m, bare);

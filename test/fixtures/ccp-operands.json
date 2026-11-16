@@ -255,54 +255,6 @@
       "peak": 14
     },
     {
-      "input": "USER",
-      "output": "USER\r\r\n?\r\n\r\nA>",
-      "calls": "183dc67df116149ce41df0ee2ae18d4b5292b29af3641156576c3dc1cf7127a3",
-      "peak": 12
-    },
-    {
-      "input": "USER A",
-      "output": "USER A\r\r\nA?\r\n\r\nA>",
-      "calls": "c9d05b59a2dd092005593fc307c4129c8a49c3e521bde2c5dd2a9da6a8032bea",
-      "peak": 12
-    },
-    {
-      "input": "USER 5 X",
-      "output": "USER 5 X\r\r\n5?\r\n\r\nA>",
-      "calls": "7e0969c0103d4d5436e5c5d70d7a7b532fee31b8c04228651eee3fa0514588a1",
-      "peak": 12
-    },
-    {
-      "input": "USER 16",
-      "output": "USER 16\r\r\n16?\r\n\r\nA>",
-      "calls": "71c7051d83784e0c1c66d091208ea2b657fcf1634b00025263fc15246142ddbf",
-      "peak": 12
-    },
-    {
-      "input": "USER 1 2",
-      "output": "USER 1 2\r\r\n1?\r\n\r\nA>",
-      "calls": "29618b7394d1313c24c142f64fa2edd8c4752648251b526a1ea448ff6563906e",
-      "peak": 12
-    },
-    {
-      "input": "USER 5",
-      "output": "USER 5\r\r\n5A>",
-      "calls": "1e82b724be48d0dd10253484f54f9ef5b5b9d6953bc85220aacd793f7ba7a9d5",
-      "peak": 14
-    },
-    {
-      "input": "USER 15",
-      "output": "USER 15\r\r\n15A>",
-      "calls": "70419e9667782f049b41838a5af50cc2df282eef253080ef665d676ad86bbbd2",
-      "peak": 16
-    },
-    {
-      "input": "USER 0",
-      "output": "USER 0\r\r\nA>",
-      "calls": "45f56cf2ca8eb2d3e314c8aa98b6ef612852cebb7a07c1ebd3566273af318db8",
-      "peak": 12
-    },
-    {
       "input": "CON",
       "output": "CON\r\r\nCON: TTY:\r\nA>",
       "calls": "6c32db20738add79d87ea0568b23a49bad3ffce866345f47124b908971afc2a9",
