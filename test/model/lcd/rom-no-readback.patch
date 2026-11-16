@@ -1,0 +1,94 @@
+diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
+--- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.826976461 +0000
++++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.830053701 +0000
+@@ -195,26 +195,14 @@
+ ; nothing changed. No driver is loaded.
+ 
+ CONLCD:
+-  ld hl,(GLVEC)
+-  ld a,h
+-  or l
+-  jr nz,CONLT    ; a loaded driver's
+-  ld hl,LCVTAB   ; none: the ROM's
+-
+-CONLT:
+-  ld de,14       ; columns, then rows
+-  add hl,de
++  ld a,(GLVEC+1)
++  or a
++  jr nz,CONLB    ; a driver holds UC1
+   ld a,c
+   or a
+-  jr z,CONLR     ; no width asked
+-  cp (hl)
+-  jr nz,CONLB    ; not this panel's
+-
+-CONLR:
+-  inc hl
+-  ld a,(hl)
+-  cp 4
+-  jr z,CONLOK    ; UC1 is an LCD
++  jr z,CONLOK    ; no width asked
++  cp 20
++  jr z,CONLOK
+ 
+ CONLB:
+   jr USRBAD      ; the later refusals
+diff -ruN a/src/lcd.asm b/src/lcd.asm
+--- a/src/lcd.asm	2026-11-16 11:49:00.827093810 +0000
++++ b/src/lcd.asm	2026-11-16 11:49:00.829779174 +0000
+@@ -146,42 +146,6 @@
+   jr nz,LCVC1
+   ret
+ 
+-; Console row read: row B into LINEBUF,
+-; from the panel's own display memory,
+-; which is the only copy of the screen.
+-; Changes AF, BC and HL.
+-
+-LCVRD:
+-  call LCVROW
+-
+-LCVR1:
+-  call LCDWAIT
+-  ini            ; a cell in, B counts
+-  jr nz,LCVR1
+-  ret
+-
+-; Console row write: LINEBUF to row B.
+-; Changes AF, BC and HL.
+-
+-LCVWR:
+-  call LCVROW
+-
+-LCVW1:
+-  call LCDWAIT
+-  outi           ; a cell out
+-  jr nz,LCVW1
+-  ret
+-
+-; Address row B's first cell. Returns
+-; HL=LINEBUF, B=20 cells, C=data port.
+-
+-LCVROW:
+-  ld c,0
+-  call LCSEL
+-  ld hl,LINEBUF
+-  ld bc,20*256+LCDDAT
+-  ret
+-
+ ; Mark row 3 ROM-owned (CDWRD), then
+ ; attempt HL's zero-terminated text.
+ ; Returns B=3; otherwise as LCDROW.
+diff -ruN a/src/tables.asm b/src/tables.asm
+--- a/src/tables.asm	2026-11-16 11:49:00.827213096 +0000
++++ b/src/tables.asm	2026-11-16 11:49:00.829811077 +0000
+@@ -58,7 +58,7 @@
+ ; flip the cursor, and LCVPUT takes the
+ ; 80h that follows as that flip.
+ 
+-LCVTAB: DW LCVPUT,HWSPX,LCVCLR,LCVRST,LCVRD,LCVWR
++LCVTAB: DW LCVPUT,HWSPX,LCVCLR,LCVRST,HWSPX,HWSPX
+   DW 0
+   DB 20,4
+ 

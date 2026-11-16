@@ -1,0 +1,13 @@
+diff -ruN a/src/services.asm b/src/services.asm
+--- a/src/services.asm	2026-11-16 11:49:00.797962448 +0000
++++ b/src/services.asm	2026-11-16 11:49:00.799482477 +0000
+@@ -146,9 +146,6 @@
+   cp 4
+   ld a,TNEBAD
+   jr nc,HWERR
+-  call LCDCON
+-  ld a,TNENODV
+-  jr z,HWERR
+   push hl
+   ld a,b
+   cp 3

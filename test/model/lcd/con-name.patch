@@ -1,0 +1,18 @@
+diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
+--- a/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.811590695 +0000
++++ b/src/cpm/ccpcmd.asm	2026-11-16 11:49:00.814080481 +0000
+@@ -245,6 +245,14 @@
+   ld de,CONHDR   ; report after routing
+   call PUTSTR    ; output triggers route
+   ld a,(CONMOD)  ; effective mode
++  cp CMUC1
++  jr nz,CONSH0
++  call LCDCON    ; UC1 as the LCD
++  ld a,CMUC1
++  jr nz,CONSH0
++  inc a          ; its own name
++
++CONSH0:
+   add a,a        ; four bytes per name
+   add a,a
+   ld l,a
