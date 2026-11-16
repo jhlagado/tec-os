@@ -865,6 +865,12 @@
     "INTDSP",
     "APITAB"
   ],
+  "test/programs/put.asm": [
+    "START",
+    "FILE",
+    "WORD",
+    "NUM"
+  ],
   "drivers/shell.asm": [
     "INIT",
     "REMOVE",
