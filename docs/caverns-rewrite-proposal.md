@@ -8,6 +8,15 @@ bugs would not be silently reintroduced as a supposed fidelity requirement.
 The most useful change is separation of responsibilities, not necessarily a
 new language. BAZA BASIC can still be the delivered, reader-editable example.
 
+## Author requirement: line-number spacing
+
+The rewritten BASIC listing must use the normal spacing of **10**: 10, 20,
+30, and so on. Leave the intervening numbers available for readers to insert
+experimental lines without repeatedly renumbering the program. Any future
+line-number generator must default to that spacing; compact numbering must
+not consume the insertion space. This requirement applies to the future
+rewrite, not an unsolicited renumbering of the currently qualified source.
+
 1. **Explicit state.** One documented record for room, object locations,
    creatures, gates, attached rope, candle clock, score-relevant possessions
    and RNG. Immutable descriptions/connections/treasure values remain separate.
