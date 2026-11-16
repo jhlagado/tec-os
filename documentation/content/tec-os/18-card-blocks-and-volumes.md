@@ -334,9 +334,11 @@ entry now also attempts an eligible line (`a40d482:src/cache.asm:527-601`,
 Sequential new allocation can still avoid pre-reads and received records
 preserve their neighbours. Entry service can commit the preceding update between
 public calls, however, so four separately issued records can cause four SD writes.
-The old SAVE 8 X.COM receipt—six writes for sixteen records including directory
-updates—remains historical, not current housekeeping traffic. Retake its exact
-byte/file-length checks before pricing the new call path
+The old receipt for a sixteen-record file—six writes including directory
+updates—remains historical, not current housekeeping traffic. It was taken
+with `SAVE 8 X.COM`, a ROM command that has since been removed. Measure a
+sixteen-record file again, with exact byte and file-length checks, before
+pricing the new call path
 (`a40d482:docs/recovery.md:25-67`).
 
 ## Bytes on the card interface
@@ -572,6 +574,6 @@ A:SYSTEM>
 
 Reserving those slots reduces program memory. Four slots use 1,024 bytes,
 compared with 320 for G1M on A and G8M on B. The starter TPA is therefore
-46,533 bytes, 704 below the two-volume card's 47,237. Format 1.0 reserves
+46,536 bytes, 704 below the two-volume card's 47,240. Format 1.0 reserves
 slots only for drives mounted at cold boot. Later mounts must fit those
 slots, so a G8M payload cannot replace a G1M-sized slot.

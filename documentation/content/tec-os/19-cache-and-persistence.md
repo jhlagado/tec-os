@@ -125,8 +125,9 @@ reads on A hit. Scanning the empty WORK directory produces 32 misses and
 96 hits.
 
 Lookup alone is much cheaper than those complete BIOS calls. `CLOOK`
-takes 264 T-states for a line-0 hit in the READ workload. Across READ, SAVE
-and directory workloads, misses take 1,977–2,021. The trace distinguishes
+takes 264 T-states for a line-0 hit in the READ workload. Across the READ and
+directory workloads and the historical SAVE workload described below, misses
+take 1,977–2,021. The trace distinguishes
 hit and miss through the saved Z flag.
 
 The copy cost depends on the DMA address. `CRDREC` and `CWRREC` select
@@ -296,8 +297,11 @@ globally drain every dirty line (`a40d482:docs/recovery.md:69-84`,
 ### Historical off-drive SAVE costs
 
 The following retained SAVE timings, committed-byte observations and write
-counts describe their old firmware, not current housekeeping traffic. Keep
-their 8/16/160-page workloads and byte/EOF checks for fresh measurements.
+counts describe their old firmware, not current housekeeping traffic. SAVE
+was a ROM command of that firmware, CP/M 2.2's, which wrote memory pages from
+`0100h` to a file. It has since left the ROM. Fresh measurements need a
+program that writes the same 8, 16 and 160 pages, with the same byte and
+end-of-file checks.
 
 The recorded SAVE runs each start from a fresh `time.img` containing READ
 and DATA on A. SAVE counts 256-byte pages. Counts 8, 16 and 160 therefore
@@ -361,8 +365,9 @@ required boundaries (`a40d482:src/cache.asm:603-636`).
 ### Historical logged-drive SAVE costs
 
 The comparison and line-number ordering below remain their original measured
-receipts. New first-dirty service changes traffic and scheduling; fresh results
-must preserve these workloads and actual saved bytes.
+receipts, taken with the same removed SAVE command. New first-dirty service
+changes traffic and scheduling; fresh results must write the same page counts
+and check the bytes written.
 
 Selecting `B:` first changes the policy for the same destination. The
 fresh two-volume card measurements compare both cases:
@@ -459,12 +464,13 @@ fails if a bounded pass frees no slot (`a40d482:docs/recovery.md:206-222`).
 
 ### Current retained-data observation
 
-With the current `241b438` ROM and sixteen-file starter, the same shortened
+With ROM `095d829d` and its fifteen-file starter, the same shortened
 card still has a readable WORK directory, while its first data block is
-outside the backend. The capture sends `SAVE 1 B:X.COM`, acknowledges its
-error with one explicit `x`, then sends `DIR B:`. No further key is supplied.
+outside the backend. The capture sends `COPY STARTUP.CMD B:X.CMD`, acknowledges
+its error with one explicit `x`, then sends `DIR B:`. No further key is
+supplied.
 
-<!-- TEC-OS 241b438, ROM c9586263: owned-input serial capture02. CR overwrites are rendered as by tools/capture.mjs; one initial empty line and right-hand blanks omitted. Exact actions, raw bytes, caller/return/DIR events, cache and receipts: Origo studies/p3-tec-os/evidence/book-owned-dir-capture02/. -->
+<!-- TEC-OS 6fb1872, ROM 095d829d: node tools/capture.mjs --card nodata.img '@start COPY STARTUP.CMD B:X.CMD' '@key x' '@start DIR B:'. Complete captured console transcript. The cache's state after each step was read from the same host model. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -475,7 +481,7 @@ A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
-A:SYSTEM>SAVE 1 B:X.COM
+A:SYSTEM>COPY STARTUP.CMD B:X.CMD
 
 Write pending
 
@@ -485,11 +491,10 @@ A:SYSTEM>DIR B:
 Bdos Err On B: Bad Sector
 ```
 
-The `x` belongs to SAVE's close-error acknowledgement. Warm boot retains the
+The `x` acknowledges COPY's disk error. Warm boot retains the
 failed block and successfully rebuilds the disk state, so the normal shell
 can read the next command. That prompt does not certify that the write reached
-the card. The observed typed-line return and native shell handler show that
-`DIR B:` really runs; it then encounters another Bad Sector and waits for an
+the card. `DIR B:` then runs. It encounters another Bad Sector and waits for an
 acknowledgement. The capture ends there, not at a successful listing or a
 repaired card.
 
@@ -548,7 +553,8 @@ X       .COM       0
 A:SYSTEM>
 ```
 
-In this historical capture, `SAVE` creates X.COM's empty directory entry before
+In this historical capture `SAVE 1`, the removed ROM command writing one
+256-byte page of memory, creates X.COM's empty directory entry before
 buffering two records.
 Close then fails to flush their data block and reports `Bad Sector`. After
 the recovery key, `x` here, warm boot retries the block then drops it with
