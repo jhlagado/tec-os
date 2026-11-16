@@ -224,26 +224,23 @@ CONLOK:
   call CONFLD
   jr CONSHOW
 
-; Select B through CONFLD. UC1 first
-; calls GLCLD to reuse/load a driver,
-; with C=0 for the name GLCD. If it
-; returns carry the CON field is not
-; written and nothing has changed.
-; CONHDR output triggers routing.
+; Select B through CONFLD. UC1 calls
+; GLCLD to reuse/load a driver, with
+; C=0 for the name GLCD. The field is
+; written first, so that a driver loaded
+; by a startup line finds UC1 asked for.
+; After a failure GLCLD copies the
+; then-current CONMOD back into the CON
+; bits. CONHDR output triggers routing.
 ; Report resulting CONMOD and enter
 ; MAINLOOP. Cold PISTART skips PIVEC
 ; setup when CDMTX is clear.
 
 CONFL:
+  call CONFLD    ; write requested mode
   ld a,b
   cp CMUC1       ; UC1 wants a display
-  jr nz,CONFL1
-  call GLCLD     ; load/reuse driver
-  jr c,CONSHOW   ; none: nothing changed
-  ld b,CMUC1     ; GLCLD took B
-
-CONFL1:
-  call CONFLD    ; write requested mode
+  call z,GLCLD   ; load/reuse driver
 
 CONSHOW:
   ld de,CONHDR   ; report after routing

@@ -861,19 +861,21 @@ EXMAG:
 
 ; Loaded display driver
 
-; CON UC1 and CON GLCD, before the CON
+; CON UC1 and CON GLCD, after the CON
 ; field is written. C is 0 for the name
 ; GLCD. A driver on UC1 serves CON UC1
 ; whatever it is; CON GLCD wants the
-; GLCD's, CDGLC, and is refused through
-; BADCMD when another display's driver
-; holds UC1. With UC1 empty, load
-; A:GLCD.SVC through SVCGO.
+; GLCD's, CDGLC, and when another
+; display's driver holds UC1 the field
+; is put back and BADCMD refuses it.
+; With UC1 empty, load A:GLCD.SVC
+; through SVCGO.
 ; Carry clear: UC1 is served. Carry set:
-; the load failed, nothing is changed,
-; and GLCD? goes on LCD row 3 unless the
-; LCD is the console. Default BDOS disk
-; errors may exit without returning.
+; the load failed, the field is put back
+; to CONMOD, and GLCD? goes on LCD row 3
+; unless the LCD is the console. Default
+; BDOS disk errors may exit without
+; returning here.
 ; Clobbers AF, BC, DE and HL.
 
 GLCLD:
@@ -886,7 +888,8 @@ GLCLD:
   ld a,(CONDEV)
   and CDGLC
   ret nz         ; the GLCD's driver
-  jp BADCMD      ; another display's
+  call GLCRF     ; another display's
+  jp BADCMD
 
 GLCL1:
   ld hl,GLCFCB   ; A:GLCD.SVC name
@@ -895,8 +898,17 @@ GLCL1:
   ldir
   call SVCGO
   ret nc         ; installed
+  call GLCRF
   ld hl,GLCMSG   ; GLCD? status word
   jp LCDWRD
+
+; The CON field back to the mode in
+; effect. Changes AF and B.
+
+GLCRF:
+  ld a,(CONMOD)
+  ld b,a
+  jp CONFLD
 
 ; Read the service named by CMDFCB and
 ; install it. If its page contains
