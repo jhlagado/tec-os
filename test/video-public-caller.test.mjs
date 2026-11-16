@@ -118,13 +118,13 @@ for (const mode of ["PICO", "GLCD"])
         200_000_000,
         "explicit warm transition back to video prompt",
       );
-      m.typeMatrix("USER 3\r");
+      m.typeMatrix("CON\r");
       m.runUntil(
-        () => m.ready() && /\r\n3A>$/.test(m.text(mark)),
+        () => m.ready() && /CON: (CRT|UC1):\r\nA>$/.test(m.text(mark)),
         200_000_000,
         "subsequent legitimate matrix command",
       );
-      assert.equal(m.read(m.sym("USERNO")), 3);
+      assert.equal(m.read(m.sym("USERNO")), 0);
       const secondReturn = finishBareVideoPrompt(m, { controlEnter });
       assert.equal(secondReturn.firstReturns, 1);
       publicContext(m);

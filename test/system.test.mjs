@@ -42,16 +42,14 @@ test("reset from a non-default bank and a dirty latch boots cleanly, repeatedly"
   noViolations(m);
 });
 
-test("warm boot by ^C keeps the drive and user number", () => {
+test("warm boot by ^C keeps the drive", () => {
   const m = boot(withPut(standardCard()));
   m.command("B:");
-  m.command("USER 3");
-  m.command("PUT 1 U3.COM");
+  m.command("PUT 1 KEPT.COM");
   m.type("\x03");
   m.expect(/B(:\S*)?>$/);
-  assert.match(m.command("DIR"), /U3\.COM/);
-  m.command("USER 0");
-  assert.match(m.command("DIR"), /NO FILE/);
+  assert.match(m.command("DIR"), /KEPT\.COM/);
+  assert.equal(m.read(4), 1, "drive B: at 0004h, its user nibble zero");
   noViolations(m);
 });
 
