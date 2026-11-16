@@ -246,8 +246,8 @@ prints `Bad Sector` and warm-boots before the loader can return
 (`241b438:src/cpm/bdoscon.asm:47-64`).
 
 Resident services reduce this load ceiling. Without installed services,
-the starter entry at `B6C5h` gives ceiling `B600h`: 46,336 bytes from
-`0100h`, 197 below the TPA byte limit. Startup installs the shell at
+the starter entry at `B6C8h` gives ceiling `B600h`: 46,336 bytes from
+`0100h`, 200 below the TPA byte limit. Startup installs the shell at
 `A500h`, reducing prompt-time capacity to 41,984 bytes. Each installed
 service moves the entry word and load ceiling to its first page
 (`241b438:src/cpm/ccp.asm:683-685`, `241b438:src/loader.asm:494-507`).
@@ -659,9 +659,9 @@ account the CCP occupies 2,491 bytes from `CCPBAS` at `DBB8h` through
 `E572h`, immediately before the BDOS. These sizes and addresses do not
 reprice or locate the later bootstrap implementation.
 
-The corresponding RAM state spans `CCPRAM` at `BCD6h` through `BE6Ch`.
+The corresponding RAM state spans `CCPRAM` at `BCD9h` through `BE6Ch`.
 `CMDFCB` and `RENFCB` contain parsed references, followed by the command
-buffer. `CCPCLR` at `BDA2h` marks the warm-cleared portion
+buffer. `CCPCLR` at `BDA5h` marks the warm-cleared portion
 (`241b438:src/ram.asm:148-186`). `CPMINIT` clears from there through BDOS state,
 preserving the command buffer below it (`241b438:src/boot.asm:402-411`). This is
 the retained-line boundary in [Chapter 22](22-chains-across-warm-boot.md).
