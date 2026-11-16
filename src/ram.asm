@@ -156,6 +156,16 @@ CMDLEN:
 CMDTXT:
   DS 128
 
+; A line left for the bare prompt by a
+; shell that had itself unloaded: a flag
+; byte, nonzero while it waits, then the
+; zero-ended text. It follows the line
+; buffer a shell's LINE is given, and
+; cold boot clears it.
+
+RSTLN:
+  DS RSTLEN
+
 ; Outer hardware/BIOS return PC. Nested
 ; calls inherit the context; warm boot
 ; may abandon it.

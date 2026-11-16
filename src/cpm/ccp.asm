@@ -188,6 +188,12 @@ MLDRV:
   call PUTCHAR
   ld e,'>'
   call PUTCHAR   ; prompt terminator
+  ld hl,RSTLN    ; a line a shell left
+  ld a,(hl)      ; runs first, once:
+  or a           ; it brings the shell
+  ld (hl),0      ; back, and LD and INC
+  inc hl         ; keep the flags
+  jr nz,MLCHA
   ld hl,CHPOS    ; a function 47 line
   ld a,(hl)      ; runs whole, as one
   ld (hl),0      ; command; the flags
@@ -206,11 +212,15 @@ MLDRV:
 
 ; Echo the function 47 line at CMDTXT
 ; to its zero, then run it as typed.
+; MLCHA takes the line at HL instead.
 
 MLCHN:
+  ld hl,CMDTXT
+
+MLCHA:
   xor a
   ld (STFLAG),a  ; typed origin
-  ld hl,CMDTXT
+  push hl        ; the line's start
 
 MLCH1:
   ld a,(hl)
@@ -222,7 +232,7 @@ MLCH1:
   jr MLCH1
 
 MLCH2:
-  ld hl,CMDTXT
+  pop hl
   jr MLSKIP
 
 ; End the counted line with a zero.
