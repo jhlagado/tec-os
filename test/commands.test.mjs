@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { PUT_COM, ROOT, TEST_CLOCK, abiDeclarations, boot, putBytes, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
+import { AREA_COM, PUT_COM, ROOT, TEST_CLOCK, abiDeclarations, boot, marked, putBytes, service, romFor, standardCard, startupFile, volume, withMarks, withShell } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
@@ -26,7 +26,7 @@ async function machine(files = {}, { shell = false, ...opts } = {}) {
   return boot(image, opts);
 }
 
-for (const name of ["CCP", "EXIT", "SAVE"]) {
+for (const name of ["CCP", "EXIT", "SAVE", "USER"]) {
   test(`${name} says so with no file, and runs a file of that name`, async () => {
     const none = await machine();
     assert.match(none.command(name), new RegExp(`${name}\\?`));
@@ -78,12 +78,12 @@ test("startup lines go on after ^C at a program", async () => {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("WAIT.COM", WAIT);
-  withShell(image, "WAIT", "USER 3"); // the shell runs the lines after its own
+  withShell(withMarks(image, 3), "WAIT", "TYPE 3"); // the shell runs the lines after its own
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK });
   m.expect(/WAIT\r/, { from: 0, maxCycles: 200_000_000 });
   m.type("\x03");
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
-  assert.equal(m.read(4) >> 4, 3, "the next line ran");
+  assert.equal(marked(m), 3, "the next line ran");
 });
 
 test("ERA frees each directory entry's blocks once", async () => {
@@ -267,7 +267,7 @@ test("SH1 keytab", () => {
     for (; rom[i]; i += 1) n += String.fromCharCode(rom[i]);
     names.push(n);
   }
-  assert.deepEqual(names, ["CD", "DIR", "TYPE", "ERA", "REN", "USER", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
+  assert.deepEqual(names, ["CD", "DIR", "TYPE", "ERA", "REN", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
 });
 
 test("SAVE is no built-in: SAVE 1 X.COM says SAVE?, fails and writes no file, at the ROM's prompt and at the shell's", async () => {

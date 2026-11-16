@@ -1141,7 +1141,7 @@ test("function 47 from INIT rolls the load back, and the chained line runs", asy
   const t = await machine();
   const top = t.word(6);
   assert.equal(t.load((await svc({ V_CHI: 1, V_CHN: 1 })).file).back, false);
-  t.m.runUntil(() => t.m.waitingForInput() && t.m.read(4) >> 4 === 3, 200_000_000, "USER 3");
+  t.m.runUntil(() => t.m.waitingForInput() && /CON: TTY:\r\n/.test(t.m.text(0)), 200_000_000, "the chained CON");
   assert.deepEqual([t.word(6), t.m.read(t.m.sym("SVCBSY")), t.m.read(t.m.sym("SVCHEAD"))], [top, 0, 0]);
   t.finishInput();
   assert.equal(t.load((await svc()).file).carry, 0, "the guard is down");
@@ -1154,7 +1154,7 @@ test("function 47 from REMOVE keeps the service listed, and the chained line run
   const page = t.head();
   t.m.mark = t.m.output.length;
   t.m.type("UNLOAD\r");
-  t.m.runUntil(() => t.m.waitingForInput() && t.m.read(4) >> 4 === 3, 200_000_000, "USER 3");
+  t.m.runUntil(() => t.m.waitingForInput() && /CON: TTY:\r\n/.test(t.m.text(t.m.mark)), 200_000_000, "the chained CON");
   assert.deepEqual([t.m.read(t.m.sym("SVCBSY")), t.head()], [0, page]);
 });
 

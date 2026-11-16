@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { gunzipSync } from "node:zlib";
 import { Machine } from "./lib/machine.mjs";
-import { ABI, ROOT, TEST_CLOCK, service, romFor, startupFile, volume, SHELL_SVC } from "./lib/fixtures.mjs";
+import { ABI, MARKS, ROOT, TEST_CLOCK, marked as lastMark, service, romFor, startupFile, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { makeSvc } from "../tools/lib/svc.mjs";
 import { createContainer, descriptorAt, headerChecksum, tableSum } from "../tools/lib/container.mjs";
 import { format } from "../tools/lib/format.mjs";
@@ -506,14 +506,13 @@ test("S2-5 reset keeps the selection", () => {
   assert.equal(m.read(entry(m, 1) + 7), 0, "B:'s flags still 0");
 });
 
-test("from user 5, a drive and a video console, a reset reaches A:, user 0, on the ROM's console (KS39)", () => {
+test("from another drive and a video console, a reset reaches A:, user 0, on the ROM's console (KS39)", () => {
   const image = card();
   const { rom, symbols } = romFor();
   const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true });
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt");
-  m.command("USER 5");
-  m.command("B:", { prompt: /\r\n5B(:\S*)?>$/ });
+  m.command("B:", { prompt: /\r\nB(:\S*)?>$/ });
   m.write(3, 1);
   m.cpu.hardware.ioWrite(0xbf, 0xc0);
   m.cpu.hardware.ioWrite(0xbf, 0x81);
@@ -541,39 +540,41 @@ test("a default drive within MNTDRV boots", () => {
 // Startup from the selected A:.
 function startupCard(lines, more = {}) {
   const image = card();
-  volume(image, "SYSTEM").write("STARTUP.CMD", startupFile("USER 9"));
+  const system = volume(image, "SYSTEM");
+  system.write("STARTUP.CMD", startupFile("TYPE 9"));
+  system.write("9", MARKS[9]);
   const a = volume(image, "ALT");
   a.write("STARTUP.CMD", startupFile(...lines));
-  for (const [n, b] of Object.entries(more)) a.write(n, b);
+  for (const [n, b] of Object.entries({ 3: MARKS[3], ...more })) a.write(n, b);
   return image;
 }
 const lineCount = (text, line) => (text.match(new RegExp(line, "g")) ?? []).length;
 
 test("startup runs once per reset from the selected A:, at user 0", () => {
-  const m = remapped(startupCard(["USER 3"]));
-  assert.equal(m.read(4) >> 4, 9, "the default A:'s file, at first");
+  const m = remapped(startupCard(["TYPE 3"]));
+  assert.equal(lastMark(m), 9, "the default A:'s file, at first");
   const text = reset(m);
-  assert.equal(lineCount(text, "USER 3"), 1);
-  assert.doesNotMatch(text, /USER 9/);
-  assert.equal(m.read(4) >> 4, 3);
+  assert.equal(lineCount(text, "TYPE 3"), 1);
+  assert.doesNotMatch(text, /TYPE 9/);
+  assert.equal(lastMark(m), 3);
 });
 
 test("startup isn't reopened by a program's exit, ^C or a warm boot, and pending lines go on across an exit", () => {
   // The shell runs the lines after its own.
-  const m = remapped(startupCard(["SHELL.SVC", "SAY", "USER 3"], { "SAY.COM": SAY, "SHELL.SVC": SHELL_SVC }));
+  const m = remapped(startupCard(["SHELL.SVC", "SAY", "TYPE 3"], { "SAY.COM": SAY, "SHELL.SVC": SHELL_SVC }));
   const text = reset(m);
-  assert.equal(lineCount(text, "USER 3"), 1, "the line after the program's exit");
+  assert.equal(lineCount(text, "TYPE 3"), 1, "the line after the program's exit");
   m.command("SAY");
   warm(m);
   m.mark = m.output.length;
   m.type("\x03");
-  m.expect(/\r\n3A(:\S*)?>$/);
-  assert.equal(lineCount(m.text(0), "USER 3"), 1 + 0);
+  m.expect(/\r\nA(:\S*)?>$/);
+  assert.equal(lineCount(m.text(0), "TYPE 3"), 1 + 0);
   assert.equal(m.read(m.sym("STPOS")) >= 0x80, true);
 });
 
 test("startup is marked before it opens", () => {
-  const m = remapped(startupCard(["USER 3"]));
+  const m = remapped(startupCard(["TYPE 3"]));
   const step = m.step.bind(m);
   let seen = null;
   m.step = () => {
@@ -586,7 +587,7 @@ test("startup is marked before it opens", () => {
 
 test("a selected A: with no STARTUP.CMD reaches a serial prompt", () => {
   const image = card();
-  volume(image, "SYSTEM").write("STARTUP.CMD", startupFile("USER 9"));
+  volume(image, "SYSTEM").write("STARTUP.CMD", startupFile("TYPE 9"));
   const m = remapped(image);
   reset(m);
   assert.equal(m.read(4), 0);
@@ -594,9 +595,9 @@ test("a selected A: with no STARTUP.CMD reaches a serial prompt", () => {
 });
 
 test("an unreadable STARTUP.CMD on the selected A: leaves a prompt", () => {
-  const image = startupCard(["USER 3"]);
+  const image = startupCard(["TYPE 3"]);
   const m = remapped(image);
-  const lba = Math.floor(Buffer.from(image.buffer, image.byteOffset, image.length).indexOf("USER 3\r\n\x1a") / 512);
+  const lba = Math.floor(Buffer.from(image.buffer, image.byteOffset, image.length).indexOf("TYPE 3\r\n\x1a") / 512);
   const step = m.step.bind(m);
   m.step = () => {
     if (m.pc === m.sym("SDREAD")) {
@@ -614,19 +615,19 @@ test("an unreadable STARTUP.CMD on the selected A: leaves a prompt", () => {
   }
   assert.ok(m.ready() && /[A-P](:\S*)?>$/.test(m.text(from)));
   assert.match(m.text(from), /Bad Sector/);
-  assert.doesNotMatch(m.text(from), /USER 3/);
+  assert.doesNotMatch(m.text(from), /TYPE 3/);
   assert.equal(m.read(4), 0);
 });
 
 test("a held key skips startup on the selected A:", () => {
-  const m = remapped(startupCard(["USER 3"]));
+  const m = remapped(startupCard(["TYPE 3"]));
   const from = m.output.length;
   m.reset();
   m.tec1g.applyKeySilent(0x01, true);
   m.expect(/A(:\S*)?>$/, { from, maxCycles: 400_000_000 });
   m.runUntil(() => m.ready(), 400_000_000, "the prompt after the reset");
   const text = m.text(from);
-  assert.doesNotMatch(text, /USER 3/);
+  assert.doesNotMatch(text, /TYPE 3/);
   assert.equal(m.read(4) >> 4, 0);
   assert.deepEqual(idx(m), [3, 2, 0, 0], "the skip keeps the selection");
 });

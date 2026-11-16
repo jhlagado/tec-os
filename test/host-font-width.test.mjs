@@ -12,9 +12,9 @@ const card=()=>createContainer([{geometry:'G1M',label:'SYSTEM',mount:'A'}]);
 const startup=image=>Buffer.from(disk(image).read('STARTUP.CMD')).toString().split('\x1a')[0];
 function mapping(prepare,set){
  for(const width of [32,40,80]){
-  const image=card();disk(image).write('STARTUP.CMD',Buffer.from('CON CRT 32\r\nDIR!PICO.SVC!:USER 3\r\n\x1a'));// an older card's : becomes &
+  const image=card();disk(image).write('STARTUP.CMD',Buffer.from('CON CRT 32\r\nDIR!PICO.SVC!:DIR B:\r\n\x1a'));// an older card's : becomes &
   assert.deepEqual(prepare(image,'tms',width),{problem:null,note:null,changed:true});
-  assert.equal(startup(image),`CON PICO ${width}\r\nDIR &USER 3\r\n`);
+  assert.equal(startup(image),`CON PICO ${width}\r\nDIR &DIR B:\r\n`);
   assert.equal(prepare(image,'tms',width).changed,false);assert.equal(set(image,'tms',width),false);
  }
  const implicit=card();prepare(implicit,'tms');assert.equal(startup(implicit),'CON PICO 80\r\n','public default80');
