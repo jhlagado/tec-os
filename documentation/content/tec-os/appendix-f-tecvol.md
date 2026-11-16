@@ -183,35 +183,37 @@ tecvol: header checksum mismatch
 `dir IMAGE [DRIVE]` lists A by default. Each line gives user area, filename and
 record-rounded byte length. `R/O` and `SYS` mark file attributes
 (`241b438:tools/tecvol.mjs:140-147`). CP/M records are 128 bytes so the listing includes
-padding rather than a PC file's original byte length. The retained historical starter-card A
-directory example is:
+padding rather than a PC file's original byte length. The starter card's A
+directory is:
 
 ```sh
 node tools/tecvol.mjs dir dist/starter.img A
 ```
 
-<!-- TEC-OS 46cf3f1: Host-tool output; exact raw receipts in Origo book-recovery-host. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): host-tool output of the command above. -->
 ```text
  0 BAZA.COM        13184
- 0 BAZA.RTL        12032
+ 0 BAZA.RTL        12928
  0 BOUNCE.BAS       5376
+ 0 CAVBASIC.BAS    18816
+ 0 CAVERNS.TXT      2688
  0 DEMO.ASM        15360
  0 GLCD.SVC          896
  0 HELLO3.ASM       2176
- 0 MON3.SVC         5120
+ 0 MON3.SVC         5504
  0 SAMPLE.ASM       4608
- 0 SHELL.SVC        3712
+ 0 SHELL.SVC        4224
  0 STARTUP.CMD       128
- 0 TAS.COM         10368
+ 0 TAS.COM         11136
  0 TED.COM         12416
  0 TIMES.BAS         640
 ```
 
-In this historical recovery-baseline image, SHELL.SVC is 3,660 bytes in
-`dist/files` and occupies 29 records, 3,712 bytes, on the card. The thirteen
-files are those of `46cf3f1:tools/media.mjs:203-231` and
-`46cf3f1:tools/lib/starter.mjs:10-22`, and STARTUP.CMD holds `SHELL.SVC` and
-`GLCD.SVC` (`46cf3f1:test/starter.test.mjs:44-81`).
+In this image SHELL.SVC is 4,203 bytes in `dist/files` and occupies 33
+records, 4,224 bytes, on the card. The fifteen files are those of
+`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:tools/media.mjs:219-249` and
+`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:tools/lib/starter.mjs:11-22`, and STARTUP.CMD holds `SHELL.SVC` and
+`GLCD.SVC` (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:test/starter.test.mjs:44-52`).
 
 ## put
 

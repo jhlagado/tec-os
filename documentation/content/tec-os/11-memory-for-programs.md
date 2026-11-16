@@ -368,7 +368,10 @@ or patched code. A zero count creates an empty file.
 
 The saved bytes are whatever a preceding program loaded or left in memory. A
 valid count is at most 255 and ends before the page containing the BDOS entry.
-Appendix J gives the command syntax.
+Appendix J gives the command syntax. The shell's `DIR` with sizes is one such
+preceding program: it builds its table of names at `0100h`–`223Fh`, so a SAVE
+after it writes that table. `DIR /W` leaves memory as it was
+(`TEC-OS 8cecea97ea483d69ea1febf92ee4970b2301f24c:docs/shell.md:223-229`).
 
 With the seventeen-page startup shell at `A500h`, this starter-card run could
 save 164 pages. The next page would cross the limit so 165 was rejected:

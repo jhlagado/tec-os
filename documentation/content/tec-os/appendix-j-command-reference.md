@@ -171,6 +171,14 @@ about twice `DIR /W`'s time, 40.6 s against 21.5 s for 452 files on a G8M
 volume at 4 MHz on the serial console
 (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:223-235`).
 
+That table is built in program memory, at `0100h`–`223Fh`. CP/M 2.2's DIR
+leaves program memory alone, so there a program can be loaded, the disk
+listed and the program then written out with SAVE. Under the shell, DIR
+with sizes overwrites the program, and a SAVE after it writes DIR's table.
+Use `DIR /W` before SAVE: the ROM's listing works in the record at `0080h`
+and leaves the program as it was
+(`TEC-OS 8cecea97ea483d69ea1febf92ee4970b2301f24c:docs/shell.md:223-229`).
+
 `DIR /W`, and DIR without the shell, is the ROM's wide listing. Its last line
 gives the number listed and the free KiB on that drive. A displayed name has
 a 13-column field except at the end of a row. The number of names per row
@@ -315,7 +323,9 @@ writes that many 256-byte pages starting at `0100h`. A count of 0 makes an empty
 file. The count must be less than the high byte of the word at `0006h` so the
 saved pages stop below the resident entry's page.
 [Memory for programs](11-memory-for-programs.md) gives the memory boundary and
-the complete capacity example.
+the complete capacity example. SAVE writes whatever those pages hold when it
+runs. The shell's DIR with sizes uses the first 33 of them, so list with
+`DIR /W` between loading a program and saving it ([DIR and TYPE](#dir-and-type)).
 
 An existing file of the same name is erased first. A failed make, write or
 close produces `NO SPACE`. After a write failure SAVE attempts to close the
@@ -455,14 +465,14 @@ service converts to capitals. It takes three commands. Anything else prints
 
 After `LOAD NAME.BIN 2000`, bare `GO` starts at 2000h. BIN without
 an address still defaults to 4000h. HEX defaults to its lowest loaded
-address, or a validated type05 entry if present; an optional load base
+address, or a validated type 05 entry if present; an optional load base
 rebases that entry too. `GO ADDR` overrides the entry for one run. LOAD
 never runs automatically. A refused load clears readiness and leaves
 destination memory unchanged. All records and rebased ranges are checked
 before copying. A device error during the copy can leave partial data and
-ends the session; it is distinct from validation refusal. Type05 must name
-actual loaded data in the 16-bit address space. Data00, EOF01 and entry05
-are the only supported record types. The load address changes byte placement,
+ends the session; it is distinct from validation refusal. A type 05 record
+must name actual loaded data in the 16-bit address space. Data (00), end of
+file (01) and entry (05) are the only supported record types. The load address changes byte placement,
 not embedded machine-code addresses.
 
 The drive is A to P. The name has at most eight characters and the type
