@@ -201,7 +201,7 @@ using no return-code call. Reset clears it too.
 
 Command-processor failures set `FF00h`, including missing commands, load
 failures and rejected service installations. Their messages include `NAME?`,
-`NO FILE`, `FILE EXISTS`, `NO SPACE` and COPY errors. Declining `ERA *.*` with
+`NO FILE`, `FILE EXISTS` and COPY errors. Declining `ERA *.*` with
 `N` counts as success because nothing was erased. Startup's quiet
 absent-device rule is explained below.
 
