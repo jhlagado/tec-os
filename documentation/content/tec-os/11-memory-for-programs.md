@@ -224,7 +224,7 @@ leaves `A500h`, or 41,984 bytes. Adding GLCD leaves 41,216
 `B6C5h` to `A300h`, leaving 41,472 bytes, or 40,704 after GLCD. After the
 shell it leaves `9200h` and 37,120 bytes. Adding GLCD lowers it
 to `8F00h` with 36,352 bytes, in any order of installing the three
-(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/mon3.md:47-58`).
+(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:47-58`).
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
@@ -371,7 +371,7 @@ valid count is at most 255 and ends before the page containing the BDOS entry.
 Appendix J gives the command syntax. The shell's `DIR` with sizes is one such
 preceding program: it builds its table of names at `0100h`–`223Fh`, so a SAVE
 after it writes that table. `DIR /W` leaves memory as it was
-(`TEC-OS 8cecea97ea483d69ea1febf92ee4970b2301f24c:docs/shell.md:223-229`).
+(`TEC-OS df0e269b376e45cdf7859b842c4a44e44cbca7da:docs/shell.md:223-229`).
 
 With the seventeen-page startup shell at `A500h`, this starter-card run could
 save 164 pages. The next page would cross the limit so 165 was rejected:

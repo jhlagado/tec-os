@@ -288,7 +288,7 @@ the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
 installed, and TED then has 23,318 bytes, or 22,550 with the GLCD driver
 too. Unload MON3.SVC before editing a larger source. These are host-model
 measurements with the seventeen-page shell and the nineteen-page monitor
-(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/compatibility.md:233`).
+(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/compatibility.md:233`).
 
 ## Machine code from BASIC
 

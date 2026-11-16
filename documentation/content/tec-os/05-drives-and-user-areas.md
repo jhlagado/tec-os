@@ -567,7 +567,7 @@ address for one run. LOAD never runs automatically,
 and moving bytes does not relocate absolute operands. TAS produces genuine
 HEX with `TAS NAME OUT.HEX`, using data 00/EOF 01 and no entry record. These
 address forms follow the later development components
-(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/mon3.md:60-143`,
+(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:60-143`,
 `Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`).
 GO flushes the cache before it runs anything. If a write fails, the data
 stays queued, GO prints `?` and no program starts. It runs once the card has
@@ -591,7 +591,7 @@ that ended a program out of the command line. Serial has no such wait.
 Warm boot preserves MON3.SVC. `UNLOAD` or reset removes it. Its
 current 4,781-byte header and image occupy 19 pages. With relocation data
 the file occupies 5,237 bytes. These later measurements belong to the monitor
-at `TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9`; the earlier checked
+at `TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e`; the earlier checked
 header/captures above retain their historical ownership. These pages hold the service code,
 line buffer and recovery stack above the MON-3 program's load area.
 The program itself uses MON-3's stack below `0880h`.
@@ -602,7 +602,7 @@ to 41,472, or 40,704 with GLCD.SVC too. On the starter card, the
 shell is already installed. Installing MON3 changes that address from `A500h` to `9200h` and
 reduces program memory from 41,984 to 37,120 bytes. Adding
 GLCD.SVC gives `8F00h` and 36,352 bytes
-(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/mon3.md:47-58`).
+(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:47-58`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan

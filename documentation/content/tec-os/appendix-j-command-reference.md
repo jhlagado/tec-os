@@ -177,7 +177,7 @@ listed and the program then written out with SAVE. Under the shell, DIR
 with sizes overwrites the program, and a SAVE after it writes DIR's table.
 Use `DIR /W` before SAVE: the ROM's listing works in the record at `0080h`
 and leaves the program as it was
-(`TEC-OS 8cecea97ea483d69ea1febf92ee4970b2301f24c:docs/shell.md:223-229`).
+(`TEC-OS df0e269b376e45cdf7859b842c4a44e44cbca7da:docs/shell.md:223-229`).
 
 `DIR /W`, and DIR without the shell, is the ROM's wide listing. Its last line
 gives the number listed and the free KiB on that drive. A displayed name has
@@ -454,7 +454,7 @@ gives the record layout.
 `MON3.SVC` gives the `MON3>` line, which BDOS function 10 reads and the
 service converts to capitals. It takes three commands. Anything else prints
 `?`. The address forms below follow the later development component
-(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/mon3.md:60-143`):
+(`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:60-143`):
 
 | Form | Operation |
 | --- | --- |
