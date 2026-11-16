@@ -1,9 +1,10 @@
 // Actual TEC-OS launch + complete externally generated state, including RNG.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {ROOT,boot,volume} from './lib/fixtures.mjs';
 import {buildLauncher,encodeScenario,scalarNames,layout} from '../tools/caverns-scenario.mjs';
+mkdirSync(ROOT+'/build/caverns/scenario-test-captures',{recursive:true});
 const basic=JSON.parse(readFileSync(ROOT+'/test/caverns-basic.json'));
 const ip=[36,19,10,14,17,47,8,1,51,45,22,46,54,19,19,19,19,0,34,7,16,15,24,38];
 const defaults={'A%':1,'H%':11,'D%':128,'W%':0,'G%':0,'T%':0,'E%':0,'J%':0,'C0%':1,'F%':0,'U%':0,'R0%':0,'K0%':0};
@@ -41,17 +42,17 @@ test('real picked-up objects and encounter state survive exported file and fresh
  const m=boot(image,{tms:true,matrix:true,width:80});keys(m,'cavbasic',question(m));
  for(const command of ['take compass','north','west','west','south','west','take sword','east','north','east','east','east','east','south'])keys(m,command,question(m));
  const s=snapshot(m);assert.equal(s.variables['A%'],10);assert.equal(s.objects[7],-1);assert.equal(s.objects[19],-1);
- const file=encodeScenario(s);writeFileSync(ROOT+'/build/caverns/scenarios/TROLL.CAV',file);
- writeFileSync(ROOT+'/build/caverns/scenarios/troll.json',JSON.stringify(s,null,2)+'\n');
+ const file=encodeScenario(s);writeFileSync(ROOT+'/build/caverns/scenario-test-captures/TROLL.CAV',file);
+ writeFileSync(ROOT+'/build/caverns/scenario-test-captures/troll.json',JSON.stringify(s,null,2)+'\n');
  // This new card is constructed independently: only exported scenario bytes
  // and launcher bytes are carried across, no CPU/RAM state or old disk object.
- const fresh=await imageWith(null);volume(fresh,'A').write('TROLL.CAV',new Uint8Array(readFileSync(ROOT+'/build/caverns/scenarios/TROLL.CAV')));
+ const fresh=await imageWith(null);volume(fresh,'A').write('TROLL.CAV',new Uint8Array(readFileSync(ROOT+'/build/caverns/scenario-test-captures/TROLL.CAV')));
  const n=boot(fresh,{tms:true,matrix:true,width:80});keys(n,'cavload troll',question(n));assertState(n,s);
  const a=keys(m,'attack troll with sword',question(m));const b=keys(n,'attack troll with sword',question(n));
  assert.equal(b,a,'same next combat result and text after restoring RNG');assert.deepEqual(snapshot(n),snapshot(m));
  // Replay after death/QUIT uses the normal restart path and reloads the slot.
  keys(n,'quit',question(n));keys(n,'y',question(n));assertState(n,s);
- const capture=name=>{const state=snapshot(n);writeFileSync(ROOT+'/build/caverns/scenarios/'+name.toLowerCase()+'.json',JSON.stringify(state,null,2)+'\n');writeFileSync(ROOT+'/build/caverns/scenarios/'+name+'.CAV',encodeScenario(state));return state;};
+ const capture=name=>{const state=snapshot(n);writeFileSync(ROOT+'/build/caverns/scenario-test-captures/'+name.toLowerCase()+'.json',JSON.stringify(state,null,2)+'\n');writeFileSync(ROOT+'/build/caverns/scenario-test-captures/'+name+'.CAV',encodeScenario(state));return state;};
  const fight=(id)=>{for(let tries=0;snapshot(n).objects[id-1]===integer(n,'A%')&&tries<14;tries++)assert.doesNotMatch(keys(n,'use sword',question(n)),/Another adventure|skull/);assert.notEqual(snapshot(n).objects[id-1],integer(n,'A%'));};
  fight(3);keys(n,'south',question(n));keys(n,'south',question(n));capture('SOUTH');
  keys(n,'east',question(n));keys(n,'take rope',question(n));capture('ROPE');keys(n,'west',question(n));keys(n,'west',question(n));keys(n,'south',question(n));fight(4);

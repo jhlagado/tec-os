@@ -72,7 +72,8 @@ restoration, deterministic RNG continuation, attachment/removal of the rope,
 physical hatch operation, clarification handling and treasure banking.
 
 The earlier records under `docs/evidence/caverns-scenarios` describe historical
-builds. Current revision records live under `docs/evidence/caverns-refinement`.
+builds. The gameplay revision records live under `docs/evidence/caverns-refinement`;
+the later text-only landmark pass is under `docs/evidence/caverns-wording-pass`.
 The native tests are emulator evidence. The system-Chromium Viewer trial also
 compiled from a fresh source-only card, downloaded a byte-identical COM, played
 the opening and exported/restored a checkpoint in a fresh browser context.

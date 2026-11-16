@@ -1,6 +1,7 @@
 # TEC-OS Book: BASIC Caverns handover
 
-This is the current practical-manual handover. Walkthrough spoilers are in
+This is the current practical-manual handover, including the description-only
+landmark pass (no exit or gameplay changes). Walkthrough spoilers are in
 [caverns-walkthrough.md](caverns-walkthrough.md), not this teaching outline.
 
 ## Readiness
@@ -21,21 +22,21 @@ hosted. The manual may describe tested emulator behaviour with that boundary.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source/card recipe | jhlagado/tec-os, 8f88b8c597024a4ec676501a657b473994067502 |
+| Qualified gameplay/source/card recipe | jhlagado/tec-os, 652a1626cd1d2d0f5ad7dce6de3dbd4a03159723 |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
 | Verification executable, not on starter | programs/CAVBASIC.COM; 39,808 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
-| Matching Viewer integration | jhlagado/tec-os-viewer, 346d5c65e3106e4a5196d8e540947832eacf1f40 |
+| Matching Viewer integration | jhlagado/tec-os-viewer, 289794684fa6b274e5ae2e6ba69f9557126552bd |
 | BAZA compiler/runtime pins | jhlagado/baza, 8578fe50fdfc66e16015c54f365d1403825979da, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 
 Compiler SHA-256: 41f96c2716274327fd84180b3cadbb277a8d4f7faacf95b0e31fe3fdceb0acc6.
 Runtime SHA-256: 3c77dccda2221616dd2573183f137d5d4131218b9f024b521982c44b0567bc64.
-Source SHA-256: 185bb4709672a498586078f440138495781afa375406dcf0c3561ab9cd629f5f.
-Executable SHA-256: 85d3d03241f964269e872857351d47a168d5dc4b47bb947b6e9e1763b934be16.
+Source SHA-256: 19040160f8f20217d80fa8d587d2966f7d372d4e83d5ff7a945ecc6bae96b7c2.
+Executable SHA-256: e767cd3060635fff1f4356bd2673ee3f2ef0fd0ab172a278511e1485c9300ec7.
 No BAZA/compiler change was required for this gameplay batch. RTL is linked
 selectively into the COM; its 12,800-byte file is not loaded beside the game.
 
@@ -75,12 +76,13 @@ A card-image download is not a game-memory snapshot.
 
 ## Evidence and release scope
 
-- [Native build and tests](evidence/caverns-refinement/native-tests.log).
+- [Latest native game/scenario/TED tests](evidence/caverns-wording-pass/native-tests.log).
+- [Latest build](evidence/caverns-wording-pass/build.log).
 - [Exact build record](evidence/caverns-refinement/native-build.log).
 - [Starter tests](evidence/caverns-refinement/starter-tests.log).
-- [Viewer native tests](evidence/caverns-refinement/viewer-native-tests.log).
-- [Real browser trial](evidence/caverns-refinement/viewer-result.json).
-- [Qualification summary](evidence/caverns-refinement/qualification.json).
+- [Latest Viewer native tests](evidence/caverns-wording-pass/viewer-native-tests.log).
+- [Latest real browser trial](evidence/caverns-wording-pass/viewer-result.json).
+- [Latest qualification summary](evidence/caverns-wording-pass/qualification.json).
 - [Map/prose audit, spoilers](caverns-map-audit.md).
 
 BASIC Caverns is the intended public worked example. Only CAVBASIC.BAS and

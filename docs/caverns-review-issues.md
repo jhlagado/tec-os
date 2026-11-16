@@ -1412,3 +1412,10 @@ All 216 exit entries are unchanged. Native build remains 39,808 bytes; all
 actual room descriptions checked. Supporting records live under
  docs/evidence/caverns-wording-pass/. This is not the proposed architectural
 rewrite, and changes no parser, random, inventory, puzzle or scoring rule.
+
+The description-only build also passes the two native Viewer recipe/bundle
+tests and the actual Chromium compile/play/export/fresh-restore trial. During
+qualification, test captures were separated from packaged scenario outputs:
+regression tests no longer overwrite build/caverns/scenarios/CAVE.CAV with a
+new-game witness. The browser compares its exported checkpoint to the packaged
+repository artifact. This fixes a test-artifact collision, not game behaviour.

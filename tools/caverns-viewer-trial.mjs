@@ -32,7 +32,7 @@ await cmd(a.page,'quit');await cmd(a.page,'n',false);
 await a.page.locator('#openimg').setInputFiles(root+'/build/caverns/scenarios.img');await a.page.waitForFunction(()=>document.querySelector('#filelist').textContent.includes('CAVLOAD.COM'));await ready(a.page);
 const rope=await cmd(a.page,'cavload rope');assert.ok(rope.some(l=>l.includes('southern bank')));
 const inventory=await cmd(a.page,'list');assert.ok(/tatty\s+rope/.test(inventory.join(' ')));await a.page.locator('#tms').screenshot({path:out+'/rope.png'});
-const download=a.page.waitForEvent('download');await a.page.locator('#filelist tr').filter({hasText:'CAVE.CAV'}).getByRole('button',{name:'Download'}).click();const d=await download;await d.saveAs(out+'/CAVE.CAV');assert.deepEqual(readFileSync(out+'/CAVE.CAV'),readFileSync(root+'/build/caverns/scenarios/CAVE.CAV'));await a.context.close();
+const download=a.page.waitForEvent('download');await a.page.locator('#filelist tr').filter({hasText:'CAVE.CAV'}).getByRole('button',{name:'Download'}).click();const d=await download;await d.saveAs(out+'/CAVE.CAV');assert.deepEqual(readFileSync(out+'/CAVE.CAV'),readFileSync(root+'/programs/caverns/CAVE.CAV'));await a.context.close();
 // Independent browser storage and a fresh starter card, importing only the
 // exported scenario and development launcher, with no old machine/card RAM.
 const b=await setup();await b.page.locator('#putfile').setInputFiles([root+'/build/caverns/CAVLOAD.COM',out+'/CAVE.CAV']);await b.page.waitForFunction(()=>document.querySelector('#filelist').textContent.includes('CAVLOAD.COM'));await ready(b.page);

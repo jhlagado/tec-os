@@ -17,5 +17,15 @@
   "nativeTestsPassed": 15,
   "score": 126,
   "roomsVisited": 54,
-  "exitTableUnchanged": true
+  "exitTableUnchanged": true,
+  "gameCommit": "652a1626cd1d2d0f5ad7dce6de3dbd4a03159723",
+  "viewerCommit": "289794684fa6b274e5ae2e6ba69f9557126552bd",
+  "viewerNativeTestsPassed": 2,
+  "nonDescriptionSourceUnchanged": true,
+  "nonDescriptionSourceSha256": "cd8db88def7b201e14f27f5b735dc8ee5d53fcffa787cc0908e7d33c9e3f02ea",
+  "gameplayBaseline": "8f88b8c",
+  "browserTrialPassed": true,
+  "browserCompileMatchesQualifiedCOM": true,
+  "browserCheckpointExportAndFreshRestore": true,
+  "scenarioCaptureIsolationTestPassed": true
 }

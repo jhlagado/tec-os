@@ -7,8 +7,8 @@ not historical command logs. The native quest test is the executable record.
 
 Take the compass before leaving the hut. From the clearing go west through
 forest to the cliff, south to the riverbank, west for the sword. Return east;
-the outcrop east of the bank holds the optional coin. The visible distant
-bridge has no direct path from that outcrop.
+the outcrop east of the bank holds the optional coin. The distant string bridge is visible broadly south-east, but no path follows
+it from the outcrop: return west and take the forest detour.
 
 Return north to the cliff, east through forest and clearing, east across the
 clover field to Mount Ymir, then south to the troll. ATTACK TROLL WITH SWORD;
