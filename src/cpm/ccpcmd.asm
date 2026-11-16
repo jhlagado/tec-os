@@ -45,8 +45,10 @@ EVI1:
   ld a,c
   cp EVMAX
   jr z,TOBADCMD  ; one too many
+  call EVSLOT    ; keeps BC
   push bc
-  ld de,LOADBUF  ; its line, built here
+  push hl        ; its line's start
+  ex de,hl       ; DE = the line
   ld h,b
   ld l,DFLG
   bit 0,(hl)
@@ -74,16 +76,12 @@ EVI3:
   ld hl,EVTYPE   ; .SVC and the zero
   ld bc,5
   ldir
-  ld hl,LOADBUF
+  pop hl
   call CMDPARSE  ; is its file there?
   call DOSSEQ
   DB 15*2+0      ; 15: CMDFCB
   inc a
   jr z,TOBADCMD  ; no entry for it
-  pop bc
-  push bc
-  ld a,c
-  call EVPUT     ; the line into its slot
   pop bc
   inc c
   ld h,b
@@ -108,6 +106,20 @@ EVIGO:
   ld hl,(ARGSTRT)
   jp MLSKIP      ; the command, or none
 
+; HL = the record's slot A, 0 to
+; EVMAX-1. Keeps BC. Changes AF and DE.
+
+EVSLOT:
+  add a,a
+  add a,a
+  add a,a
+  add a,a        ; EVSLEN is 16
+  ld e,a
+  ld d,0
+  ld hl,EVREC
+  add hl,de
+  ret
+
 ; UNLOAD: call SVCUNL without validating
 ; arguments. Carry clear enters STARTED.
 ; Carry enters BADCMD. Loader prechecks
@@ -121,39 +133,6 @@ CMDUNL:
 
 TOBADCMD:
   jp BADCMD
-
-; HL = the record's slot A, 0 to
-; EVMAX-1. Keeps BC. Changes AF and DE.
-
-EVSLOT:
-  add a,a
-  add a,a
-  add a,a
-  add a,a        ; EVSLEN is 16
-  ld l,a
-  ld h,HIGH(EVREC)
-  ret
-
-; LOADBUF's line into slot A, in EXPAND 1.
-
-EVPUT:
-  call EVSLOT
-  ld de,LOADBUF
-  ld bc,$0001    ; to EXPAND 1
-  jr EVMV
-
-; Slot A's line into LOADBUF.
-
-EVGET:
-  call EVSLOT
-  ex de,hl
-  ld hl,LOADBUF
-  ld bc,$0100    ; from EXPAND 1
-
-EVMV:
-  ld (XMDST),bc
-  ld bc,EVSLEN
-  jp MVCOPY
 
 ; Retry the next console name. Input DE
 ; is the differing table byte, C

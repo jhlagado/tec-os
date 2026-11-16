@@ -248,8 +248,7 @@ MLREST:
   jr z,MLRCON    ; all tried
   ld a,(hl)
   dec a          ; this one's slot
-  call EVGET     ; its line
-  ld hl,LOADBUF
+  call EVSLOT    ; HL = its line
   ld a,1
   ld (STFLAG),a  ; a restoration
   jp NOTDRL

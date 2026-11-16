@@ -118,7 +118,6 @@ BIOSSTN EQU 48
 
 EVMAX EQU 4      ; services recorded
 EVSLEN EQU 16    ; a slot's bytes
-EVREC EQU $BD00  ; the slots, in EXPAND 1
 
 MAXDRV EQU 4     ; drives A-D
 DPHSZ EQU 16
