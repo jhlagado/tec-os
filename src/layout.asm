@@ -117,7 +117,7 @@ BIOSSTN EQU 48
 ; zero: 15 bytes at most.
 
 EVMAX EQU 4      ; services recorded
-EVSLEN EQU 9     ; a slot's bytes
+EVSLEN EQU 16    ; a slot's bytes
 
 MAXDRV EQU 4     ; drives A-D
 DPHSZ EQU 16
