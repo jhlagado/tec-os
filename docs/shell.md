@@ -220,6 +220,14 @@ two-group directory order. A row remains 20 columns, within the GLCD's 21,
 and long listings stop at `[more]`. `DIR /W` goes directly to the ROM's wide
 listing; with no shell, `DIR` is the ROM's listing too.
 
+**`DIR` before `SAVE`.** The shell's `DIR` with sizes builds its table of
+names in the TPA, at 0100h–223Fh, so it overwrites a program left there. In
+CP/M 2.2 `DIR` leaves the TPA alone, and loading a program, listing the disk
+and then typing `SAVE n NAME.COM` saves the program. Here that `SAVE` would
+write `DIR`'s table. Use `DIR /W` before `SAVE`: it is the ROM's listing,
+which works in the record at 0080h and leaves the TPA as it was
+(`test/shell2.test.mjs`). With no shell, `DIR` is that listing too.
+
 **Its cost.** A first search combines each name's extent sizes in a table.
 Two more searches then produce the rows, with no BDOS 35 scan and search
 restart for each large file. The table holds up to 512 names, as many as a

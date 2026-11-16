@@ -83,7 +83,9 @@ file, as CP/M 2.2's does, so a program can make it read-write again.
 `DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the
 syntax of the CP/M 2.2 CCP, are in ROM, with `CON` and `UNLOAD`. `DIR`'s output
 is TEC-OS's own: `NAME.EXT` columns that fit the display, then the file count
-and free space. Programs that parse DR's `DIR` layout will not find it. `SAVE`
+and free space. Programs that parse DR's `DIR` layout will not find it. The
+shell's `DIR` with sizes also uses the TPA, which CP/M's does not: see
+[Known incompatibilities](#known-incompatibilities). `SAVE`
 on a full disk or directory differs from CP/M 2.2's, which prints its error with
 the file left open and its records in no directory entry: TEC-OS's closes the
 file first, keeping the records written, as `COPY` does, then prints `NO SPACE`.
@@ -248,6 +250,12 @@ and run.
   more than 46,533 bytes of TPA, may fail; how much a card gives depends on
   its drives and what is loaded. Measured on the starter card: 46,533 bare,
   41,984 with the shell, and 41,216 with the shell and the GLCD's driver.
+- **`DIR` before `SAVE`.** In CP/M 2.2 the built-in `DIR` leaves the TPA
+  alone, so a program loaded there can still be written out with `SAVE` after
+  a listing. The shell's `DIR` with sizes builds its table of names at
+  0100h–223Fh and overwrites that program: a `SAVE` after it writes the
+  table. `DIR /W`, the ROM's listing, uses only the record at 0080h and is
+  safe before `SAVE`, as is `DIR` with no shell (`test/shell2.test.mjs`).
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,
