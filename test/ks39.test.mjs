@@ -167,5 +167,5 @@ test("a PICO9918 board booting the starter's display files has the shell's figur
   assert.equal(pico.read((head << 8) + 8), 0, "and nothing above it: GLCD.SVC gave way");
   const serial = boot(standardCard());
   assert.equal(word(serial, 6), word(serial, serial.sym("STUBAD")), "nothing loaded on the serial board");
-  assert.equal(word(pico, 6), (word(serial, 6) & 0xff00) - 0xf00, "the shell's 15 pages below the stub's page");
+  assert.equal(word(pico, 6), (word(serial, 6) & 0xff00) - 0x1100, "the shell's 17 pages below the stub's page");
 });

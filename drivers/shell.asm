@@ -749,7 +749,8 @@ LTXT EQU LBUF+2
 ; DSKIP the matches consumed, DNUM the
 ; files shown, DTOT their bytes, DPASS
 ; its pass, DRST set to begin the
-; search again, HMAP the marked names.
+; search again, DFAST the table mode,
+; HMAP the marked names.
 ; NUMV is a 24-bit number, DIGB its
 ; digits. CD prints no number, so
 ; CDNAME shares their bytes; a walk
@@ -782,7 +783,8 @@ DIGB      EQU   NUMV+3
 CDNAME    EQU   NUMV
 DPASS     EQU   DIGB+9
 DRST      EQU   DPASS+1
-HMAP      EQU   DRST+1
+DFAST     EQU   DRST+1
+HMAP      EQU   DFAST+1
 STKBOT    EQU   HMAP+16
 STKTOP    EQU   STKBOT+48
 

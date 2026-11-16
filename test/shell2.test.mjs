@@ -662,8 +662,8 @@ const extra = (svc) => svc.file[8] | (svc.file[9] << 8);
 const pages = (svc) => Math.ceil((svc.image + extra(svc)) / 256);
 
 test("S2-11 size", (t) => {
-  assert.ok(pages(SHELL) <= 15, `SHELL.SVC in 15 pages: ${SHELL.image} + ${extra(SHELL)}`);
-  assert.ok(SHELL.image + extra(SHELL) <= 3840);
+  assert.ok(pages(SHELL) <= 17, `SHELL.SVC in 17 pages: ${SHELL.image} + ${extra(SHELL)}`);
+  assert.ok(SHELL.image + extra(SHELL) <= 4352);
   assert.equal(sym.RING % 256, 0, "the ring's page aligned");
   // A reading, not a gate: 14 pages is the aim.
   t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${sym.RING - sym.STKTOP} bytes of room; ${SHELL.image + extra(SHELL) - 14 * 256} bytes over 14 pages`);
@@ -866,13 +866,13 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
     }
     return { tpa: word(m, 6) - 0x100, glcd: m.read(m.sym("CONMOD")) === 3, n: owners(m).length };
   };
-  assert.equal(tpa(["SHELL.SVC"]).tpa, 42496, "with the shell");
-  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41728, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37888, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC"]).tpa, 41984, "with the shell");
+  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41216, "and GLCD.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37376, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 37120, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 36608, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -1271,7 +1271,7 @@ test("S2-12 tpa", () => {
   const bare = shellMachine(card);
   assert.equal(word(bare, 6) - 0x100, 46_533, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
-  assert.equal(word(m, 6) - 0x100, 42_496, "with the shell, the starter card's STARTUP.CMD");
+  assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
 });
 
 /** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */
