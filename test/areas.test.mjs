@@ -95,3 +95,60 @@ test("a file a program leaves in area 3 is not listed, typed, erased or run from
   was.command("AREA 3 LEFT.DAT");
   assert.match(was.command("DIR"), /LEFT\.DAT/, "a ROM that keeps the area lists it: the check above fails there");
 });
+
+// The figures of the build before USER left, with SAVE already gone: its ROM,
+// its TPA rows and the command path's T-states, each measured as below.
+const WAS = {
+  used: 15856,
+  tpa: { twoVolume: 47240, starter: 46536 },
+  path: { bare: { warm: 84569, program: 112340 }, shell: { warm: 184380, program: 117583 } },
+};
+
+test("without USER the ROM is smaller, SHELL.SVC is 15 pages and no TPA row is smaller", () => {
+  const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
+  assert.ok(census.rom.used < WAS.used, `${census.rom.used} bytes used, fewer than ${WAS.used}`);
+  assert.deepEqual([census.rom.used, census.rom.free], [15713, 671], "the ROM's bytes used and free");
+  for (const row of ["twoVolume", "starter"]) assert.ok(census.ram.cards[row].tpa >= WAS.tpa[row], `${row}: TPA ${census.ram.cards[row].tpa}`);
+  const top = (m) => m.read(6) | (m.read(7) << 8);
+  const bare = top(boot(card())), shelled = top(boot(card({ shell: true })));
+  const pages = (bare >> 8) - (shelled >> 8);
+  assert.equal(pages, 15, "the pages SHELL.SVC takes from the TPA");
+  assert.ok(pages <= 17, "no more than 17");
+  assert.equal(shelled - 0x100, 43264, "the TPA under the shell on the two-volume card, as before");
+});
+
+/** T-states from a warm boot's first instruction to the prompt, and from a typed command to its program's first instruction. */
+function path(m) {
+  const prompt = () => m.ready() && /\r\n[A-P](:\S*)?>$/.test(m.text(m.mark));
+  m.command("X"); // once, so that the directory and the file are in the cache
+  m.runUntil(() => m.ready(), 50_000_000, "the prompt");
+  m.mark = m.output.length;
+  let from = m.cycles;
+  m.cpu.cpu.pc = 0;
+  m.runUntil(prompt, 400_000_000, "the prompt after a warm boot");
+  const warm = m.cycles - from;
+  m.mark = m.output.length;
+  from = m.cycles;
+  m.type("X\r");
+  m.runUntil(() => m.pc === 0x100, 400_000_000, "the program's first instruction");
+  return { warm, program: m.cycles - from };
+}
+
+test("the ordinary command path is no slower without USER: to the prompt after a warm boot, and from a typed command to the program", (t) => {
+  const now = {}, kept = {};
+  for (const shell of [false, true]) {
+    const image = () => {
+      const made = standardCard();
+      volume(made, "A").write("X.COM", Uint8Array.from([0xc9]));
+      return shell ? withShell(made) : made;
+    };
+    now[shell ? "shell" : "bare"] = path(boot(image()));
+    kept[shell ? "shell" : "bare"] = path(before(image()));
+  }
+  t.diagnostic(JSON.stringify({ now, was: WAS.path, kept }));
+  for (const k of ["bare", "shell"]) {
+    assert.ok(now[k].warm <= WAS.path[k].warm, `${k}: ${now[k].warm} T-states from a warm boot to the prompt, ${WAS.path[k].warm} before`);
+    assert.ok(now[k].program <= WAS.path[k].program, `${k}: ${now[k].program} T-states from a typed command to the program, ${WAS.path[k].program} before`);
+    assert.ok(kept[k].warm > WAS.path[k].warm, `${k}: the ROM kept from before, which sets the area at each entry, is over that figure to the prompt: ${kept[k].warm}`);
+  }
+});
