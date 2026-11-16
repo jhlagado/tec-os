@@ -151,7 +151,7 @@ async function chainRun() {
   const depths = watch(m);
   m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
   m.runUntil(() => m.ready(), 200_000_000, "the first input request");
-  for (const line of ["PROBE!DIR!USER 0\r", "ERA NOSUCH.X &DIR!DIR\r", "CHAIN!PROBE\r", "PUT 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
+  for (const line of ["PROBE!DIR!CON\r", "ERA NOSUCH.X &DIR!DIR\r", "CHAIN!PROBE\r", "PUT 1 C:X.COM!PROBE\r", "LINE!PROBE\r", "\x03"]) run(m, line);
   assert.deepEqual(m.violations, []);
   assert.equal(m.read(m.sym("CHPOS")), 0);
   return depths();

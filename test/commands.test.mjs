@@ -247,8 +247,8 @@ test("SH1 rom figure", () => {
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
   // The combined integrity build keeps the shared stack allocation.
-  assert.ok(used <= 15856, `${used} used, the combined integrity ceiling 15,856`);
-  assert.ok(free >= 528, `${free} free, at least 528`);
+  assert.ok(used <= 15713, `${used} used, the combined integrity ceiling 15,713`);
+  assert.ok(free >= 671, `${free} free, at least 671`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
   assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
