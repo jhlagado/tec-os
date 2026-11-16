@@ -3,19 +3,16 @@
 ; preparation, output wrappers, service
 ; listing and startup record handling.
 
-; UNLOAD: call SVCUNL. Carry enters
-; BADCMD. Loader prechecks may refuse
-; before REMOVE. The loader handles hook
-; calls and page/registry release. Text
-; after the word then runs as a command
-; of its own, so a shell can unload
-; itself and name what runs next.
+; UNLOAD: call SVCUNL without validating
+; arguments. Carry clear enters STARTED.
+; Carry enters BADCMD. Loader prechecks
+; may refuse before REMOVE. The loader
+; handles hook calls and page/registry
+; release.
 
 CMDUNL:
   call SVCUNL
-  jr c,TOBADCMD
-  ld hl,(ARGSTRT)
-  jp MLSKIP      ; the rest, or none
+  jp nc,STARTED  ; NC: unload completed
 
 TOBADCMD:
   jp BADCMD

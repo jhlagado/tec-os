@@ -111,12 +111,6 @@ BDOSSTN EQU 64
 CCPSTN EQU 48    ; CCP command stack
 BIOSSTN EQU 48
 
-; The line a shell leaves for the bare
-; prompt: its flag and 63 bytes of
-; zero-ended text.
-
-RSTLEN EQU 64
-
 MAXDRV EQU 4     ; drives A-D
 DPHSZ EQU 16
 DRVESZ EQU 8     ; drive entry bytes
