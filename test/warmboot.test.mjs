@@ -18,9 +18,12 @@ test("a warm boot with nothing changed reads no block, in a tenth of the time", 
   assert.deepEqual(alv(r.m, 0), before);
 });
 
-test("after SAVE the warm boot rebuilds A from its directory up to the mark", () => {
+test("after a file is written and closed the warm boot rebuilds A from its directory up to the mark", () => {
   const r = rig();
-  r.m.command("SAVE 8 X.COM");
+  r.fcb(1, "X       COM");
+  assert.notEqual(r.bdos(22), 0xff);
+  for (let i = 0; i < 16; i += 1) assert.equal(r.bdos(21), 0);
+  assert.notEqual(r.bdos(16), 0xff);
   const x = r.warm();
   assert.ok(x.reads >= 1 && x.reads < 16, `${x.reads} blocks`);
   assert.deepEqual(alv(r.m, 0), rebuilt(r.image, 0));
