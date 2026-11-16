@@ -485,34 +485,39 @@ the same sizes and SHA-256 hashes.
 
 This example separates protection of a volume from protection of a
 file. It requires prepared media files and an existing `build/` directory.
-WORK on B is writable but its STARTUP.CMD is read-only. ARCHIVE on C
-is an empty read-only volume:
+SYSTEM on A holds only the shell, for its COPY. WORK on B is writable but
+its STARTUP.CMD is read-only. ARCHIVE on C is an empty read-only volume:
 
 ```sh
 node tools/tecvol.mjs create build/errs.img --volume G1M:SYSTEM:A --volume G8M:WORK:B --volume G1M:ARCHIVE:C:ro
+node tools/tecvol.mjs put build/errs.img A dist/files/SHELL.SVC
 node tools/tecvol.mjs put build/errs.img B dist/files/STARTUP.CMD --ro
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/errs.img '@start SAVE 1 C:X.COM' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS 6fb1872, ROM 095d829d: node tools/capture.mjs --card build/errs.img SHELL.SVC '@start COPY B:STARTUP.CMD C:' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
 B: WORK
 C: ARCHIVE     (read-only)
 
-A>SAVE 1 C:X.COM
+A>SHELL.SVC
+
+A:SYSTEM>COPY B:STARTUP.CMD C:
 
 Bdos Err On C: R/O
-A>ERA B:STARTUP.CMD
+A:SYSTEM>ERA B:STARTUP.CMD
 
 Bdos Err On B: File R/O
-A>DIR B:
-STARTUP.CMD
-1 file, 8172K free
-A>
+A:SYSTEM>DIR B:
+
+STARTUP .CMD     128
+1 file, 128 bytes
+8368128 free on B:WORK
+A:SYSTEM>
 ```
 
-`SAVE` made no file on C and `ERA` left B's file in place. In the default
+`COPY` made no file on C and `ERA` left B's file in place. In the default
 BDOS error mode each message waits for a key before ending the command.
 Here the capture supplies `x`. A program can also make a drive temporarily
 read-only. Warm boot clears that temporary protection

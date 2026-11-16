@@ -104,12 +104,13 @@ all drives. A nonzero area appears before the prompt's drive letter, as
 in CP/M 3: `3A:SYSTEM>` is area 3 on drive A. TEC-OS starts in area 0,
 which contains all the starter files.
 
-File commands use the selected area. A file created in area 3 is absent
-from area 0's listing even on the same volume. This example uses
-`SAVE 1 B:MINE.COM` to copy a page of existing program memory into a
-demonstration file in area 3. No file is created or moved in area 0:
+File commands use the selected area. A file made in one area is absent
+from another area's listing even on the same volume. This example copies
+STARTUP.CMD to WORK while area 0 is selected, then looks for it from
+area 3. A file saved while area 3 is selected, from TED for instance,
+belongs to area 3 and is absent from area 0 in the same way:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'USER 3' 'SAVE 1 B:MINE.COM' 'DIR B:' TAS 'USER 0' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS 6fb1872, ROM 095d829d: node tools/capture.mjs 'COPY STARTUP.CMD B:' 'DIR B:' 'USER 3' 'DIR B:' TAS 'USER 0'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -120,20 +121,22 @@ A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
-A:SYSTEM>USER 3
-3A:SYSTEM>SAVE 1 B:MINE.COM
-3A:SYSTEM>DIR B:
+A:SYSTEM>COPY STARTUP.CMD B:
+COPIED 0001
 
-MINE.COM         256
-1 file, 256 bytes
+A:SYSTEM>DIR B:
+
+STARTUP.CMD      128
+1 file, 128 bytes
 8368128 free on B:WORK
+A:SYSTEM>USER 3
+3A:SYSTEM>DIR B:
+NO FILE
+
 3A:SYSTEM>TAS
 usage: TAS NAME [OUT.TYP]
 
 3A:SYSTEM>USER 0
-A:SYSTEM>DIR B:
-NO FILE
-
 A:SYSTEM>
 ```
 
