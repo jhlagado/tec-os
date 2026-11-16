@@ -241,9 +241,9 @@ unchanged therefore returns the zero established at piece entry.
 `ERRGO` stores `RCFAIL`, or `FF00h`, before printing the error message.
 `BADCMD` echoes the failed command or argument with a question mark and falls
 through to that store (`241b438:src/cpm/ccp.asm:26-30`, `241b438:src/cpm/ccp.asm:582-614`).
-`NO FILE` from `FILENO`, `FILE EXISTS` from REN and `NO SPACE` from SAVE all
-use `ERRGO` (`241b438:src/cpm/ccpfile.asm:412-420`, `241b438:src/cpm/ccpmut.asm:144-149`,
-`241b438:src/cpm/ccpcmd.asm:383-390`). Missing programs, failed loads and
+`NO FILE` from `FILENO` and `FILE EXISTS` from REN both use `ERRGO`
+(`241b438:src/cpm/ccpfile.asm:412-420`, `241b438:src/cpm/ccpmut.asm:144-149`).
+Missing programs, failed loads and
 unsuccessful service installations reach `BADCMD` too. Startup's quiet
 absent-device service path instead returns through `SVCOK` with the initial
 zero (`241b438:src/cpm/ccp.asm:442-458`). The shell's `BADW` prints its refusals in

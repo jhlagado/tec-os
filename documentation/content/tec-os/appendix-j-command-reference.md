@@ -59,7 +59,7 @@ field is padded with spaces. `????.COM` therefore matches names of up to four
 characters with type COM, not every name ending in COM
 (`241b438:src/cpm/ccpcmd.asm:546-569`, `241b438:src/cpm/ccpcmd.asm:624-645`).
 
-DIR and ERA use patterns to select files. TYPE, REN and SAVE require
+DIR and ERA use patterns to select files. TYPE and REN require
 unambiguous names. COPY requires an unambiguous source and resolved
 destination, with the blank-destination rules below. A program or service
 command also requires one name.
@@ -99,7 +99,7 @@ the causes and recovery actions.
 
 ## Command forms
 
-The ROM holds nine built-ins: CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and
+The ROM holds eight built-ins: CD, DIR, TYPE, ERA, REN, USER, CON and
 UNLOAD. The shell adds COPY, DEL, SERVICES, CLS, ECHO and PAUSE, and its
 own DIR, which lists sizes and hands `DIR /W` to the ROM's
 (`241b438:src/tables.asm:53-78`, `241b438:drivers/shell.asm:650-667`). Drive selection, program launch and service
@@ -114,7 +114,6 @@ installation have additional forms handled by the command processor.
 | `REN NEW=OLD` | ROM | Rename one file on one drive |
 | `ERA PATTERN` | ROM | Erase matching files |
 | `DEL PATTERN` | Shell | Erase matching files, as another name for ERA |
-| `SAVE N NAME` | ROM | Save N memory pages from `0100h` |
 | `USER N` | ROM | Select user area 0 to 15 |
 | `CON [DEVICE [WIDTH]]` | ROM | Report or change the console |
 | `SERVICES` | Shell | List installed services, newest first |
@@ -127,6 +126,12 @@ installation have additional forms handled by the command processor.
 | `NAME [ARGS]` | ROM | Load a COM program and pass its arguments |
 | `NAME.SVC [ARGS]` | ROM | Load a resident service, and enter its application when it has one |
 | `NAME.CMD` | Shell | Run a script of command lines. Without the shell, run `NAME.COM` |
+
+CP/M 2.2's SAVE, which wrote memory pages from `0100h` to a file, is not
+provided. The cited revision's table still held it. It has since left the
+ROM and `SAVE` is now an unknown command unless a program has that name.
+Nothing on the card needs it: TAS and BAZA write their COM files, TED saves
+text and MON3.SVC loads and runs programs itself.
 
 Without the shell, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
 `PAUSE` follow ordinary program lookup. Unless a matching program exists,
@@ -170,14 +175,6 @@ size in a table, so a large file costs no more than a small one: DIR takes
 about twice `DIR /W`'s time, 40.6 s against 21.5 s for 452 files on a G8M
 volume at 4 MHz on the serial console
 (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:223-235`).
-
-That table is built in program memory, at `0100h`–`223Fh`. CP/M 2.2's DIR
-leaves program memory alone, so there a program can be loaded, the disk
-listed and the program then written out with SAVE. Under the shell, DIR
-with sizes overwrites the program, and a SAVE after it writes DIR's table.
-Use `DIR /W` before SAVE: the ROM's listing works in the record at `0080h`
-and leaves the program as it was
-(`TEC-OS df0e269b376e45cdf7859b842c4a44e44cbca7da:docs/shell.md:223-229`).
 
 `DIR /W`, and DIR without the shell, is the ROM's wide listing. Its last line
 gives the number listed and the free KiB on that drive. A displayed name has
@@ -315,23 +312,6 @@ NO FILE
 
 B:WORK>
 ```
-
-### SAVE
-
-SAVE takes a decimal count from 0 to 255 and one unambiguous file name. It
-writes that many 256-byte pages starting at `0100h`. A count of 0 makes an empty
-file. The count must be less than the high byte of the word at `0006h` so the
-saved pages stop below the resident entry's page.
-[Memory for programs](11-memory-for-programs.md) gives the memory boundary and
-the complete capacity example. SAVE writes whatever those pages hold when it
-runs. The shell's DIR with sizes uses the first 33 of them, so list with
-`DIR /W` between loading a program and saving it ([DIR and TYPE](#dir-and-type)).
-
-An existing file of the same name is erased first. A failed make, write or
-close produces `NO SPACE`. After a write failure SAVE attempts to close the
-file. If the close succeeds, its directory entry retains the records written.
-`NO SPACE` does not confirm that the close succeeded. Digital Research's CP/M 2.2
-SAVE leaves the file open in that case (`241b438:src/cpm/ccpcmd.asm:252-390`).
 
 ### Drives, USER and program lookup
 
