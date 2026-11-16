@@ -9,11 +9,11 @@ BASIC rewrite, landmark wording corrections and compact compiler emission. Walkt
 Qualified in the native TEC-OS emulator: compile with the shell resident;
 126-point quest; all 54 rooms and displayed descriptions; automatic homecoming;
 reversible rope/gates; complete checkpoint restoration; TED edit/save/build/run,
-exit and reopen after power cycle. The compact compiler passes 712 native
+exit and reopen after power cycle. The compact compiler passes 714 native
 regression cases and 49 independent control/arithmetic expectations. Current
-TEC-OS checks include 15 game/scenario/TED tests, a 480-command comparison in
+TEC-OS checks include 16 game/scenario/TED tests, a 480-command comparison in
 36 scenarios, native insertion of line 151 without renumbering and 19 starter
-checks. Three Viewer native/bundle checks cover Caverns, BOUNCE and the bundle.
+checks. Eleven Viewer native/bundle checks cover Caverns, BOUNCE and the bundle.
 A separate real Chromium trial compiles the exact expected COM from a fresh
 source-only card, plays opening commands and exports/restores a checkpoint in
 fresh browser storage. Physical TEC-1G testing and final human review remain
@@ -26,23 +26,23 @@ The manual may describe tested emulator behaviour with that boundary.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source/card recipe | jhlagado/tec-os, 6f7bf32fbd8672978f188cbaacfa23e0c469cb9a |
+| Qualified gameplay/source/card recipe | jhlagado/tec-os, bb705351d32c0db0a241519840eb7ac260bdfaa3 |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
-| Verification executable, not on starter | programs/CAVBASIC.COM; 38,272 bytes |
+| Verification executable, not on starter | programs/CAVBASIC.COM; 36,736 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
-| Matching Viewer integration | jhlagado/tec-os-viewer, ee79d8d |
-| BAZA compiler/runtime pins | jhlagado/baza, 52c3956167c8cebe382d342619ec2899913fd18c, dist/BAZA.COM and dist/BAZA.RTL |
+| Matching Viewer integration | jhlagado/tec-os-viewer, f64eed44526c81578b57b511da2afeff60762bb4 |
+| BAZA compiler/runtime pins | jhlagado/baza, bffccace3a41f055049ea53984abbcd59f580a75, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 
-Compiler SHA-256: 087d3a4073fe1c2dcd41ccd5e5ca7efcb9f21628c714a2e37986028839c2fa36.
-Runtime SHA-256: f79d57328eb152ecba86a9c203f5ead5544a95b07da131c0fd0ad5821d5d5e07.
+Compiler SHA-256: c9625842dceee5f68361cbb14c43c2aecbe65defd49536880d1613159a29d123.
+Runtime SHA-256: 64510ae26d654bcc4329f302b184ff507ee164bee905aa17d35eb3cac018ce9e.
 Source SHA-256: f64fdb84ead251e3e49590c4c156d7951afc52fb02ffad959cf819b20760b9e0.
-Executable SHA-256: 4c2a29c643dc13999cebcddf45f5743bfb025e060185b0327b5929468a3677b8.
+Executable SHA-256: c2ce4aecfae8a4439e0a7fb37d92b2427d8e5afb728e843caf0704fea5fd9fcd.
 The rewrite itself required no compiler change. Subsequent compact source-location
-emission reduces the executable while preserving diagnostics. Engine authoring source
+emission and shared literal/newline helpers reduce the executable while preserving diagnostics. Engine authoring source
 and world data are separate; the supplied BAS uses ten-step numbering,
 uppercase keywords and lowercase variables. Native compilation needs no generator. RTL is linked
 selectively into the COM; its 12,928-byte file is not loaded beside the game.
@@ -72,8 +72,8 @@ that browser trial. No physical-board claim applies to either.
 ## Requirements and limits
 
 Tested console: PICO9918 at 80 columns, matrix keyboard input. Shell-resident
-TPA: 42,496 bytes; COM: 38,272 bytes; logical image: 38,248 bytes. After
-reserving 768 bytes for the CPU stack, 3,480 bytes remain for dynamic arrays,
+TPA: 42,496 bytes; COM: 36,736 bytes; logical image: 36,618 bytes. After
+reserving 768 bytes for the CPU stack, 5,110 bytes remain for dynamic arrays,
 strings and control. This space is used during initialisation and play. The no-shell TPA is 46,533 bytes, but this example does not need it.
 Growth is constrained; use the small banner change, not a large library feature.
 There are eleven carrying slots, finite candle life and random combat risk.
@@ -84,7 +84,26 @@ A card-image download is not a game-memory snapshot.
 
 ## Evidence and release scope
 
-The current-main integration records preserve the complete strict run (1,390
+The current print-helper increment passes 714 compiler cases (552 successful
+native compilations), 49 independent compatibility expectations, 14 checkpoint/
+differential tests, 34 game/editor/starter tests, three unchanged write/speed
+gates and eleven Viewer native/bundle tests. The real Chromium trial compiles
+the exact smaller COM and restores an exported checkpoint in fresh storage.
+No BASIC source or game rules changed. The 16-command measured route used 1.2%
+fewer cycles and two collections versus five; this is not a general speed claim.
+The 16-byte shared-core increase costs space in programs without literal prints.
+
+- [Print-helper integration qualification](evidence/caverns-print-helpers/qualification.json).
+- [Exact size and TPA audit](evidence/caverns-print-helpers/size.json).
+- [Native game/editor/starter checks](evidence/caverns-print-helpers/integration-tests.log).
+- [Checkpoint comparison tests](evidence/caverns-print-helpers/game-tests.log).
+- [Fresh-browser trial](evidence/caverns-print-helpers/viewer-result.json).
+- [Compiler qualification](https://github.com/jhlagado/baza/blob/bffccace3a41f055049ea53984abbcd59f580a75/docs/evidence/print-helpers/qualification.json).
+
+The records below document the preceding main integration and first size
+increment; their historical binary hashes and measurements remain unchanged.
+
+The preceding main-integration records preserve the complete strict run (1,390
 passes and five stale fixture failures), then the passing reruns of all five
 affected checks. Viewer coverage is 201 passing functional checks plus its
 original resource check passing separately with unchanged limits. These are
@@ -92,7 +111,7 @@ combined coverage records, not claims of single all-green full-suite runs.
 
 - [Current-main firmware qualification](evidence/caverns-main-integration/qualification.json).
 - [Fresh matching-main browser trial](evidence/caverns-main-integration/viewer-result.json).
-- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/ee79d8d/docs/evidence/caverns-main-integration/qualification.json).
+- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/f64eed44526c81578b57b511da2afeff60762bb4/docs/evidence/caverns-main-integration/qualification.json).
 
 The earlier compact-emission records below remain the detailed first-increment
 baseline; current-main integration preserves its compiler and game hashes.
