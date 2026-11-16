@@ -319,7 +319,9 @@ LCRDR:
   ld c,20
 
 LCRD20:
-  push bc
+  ld a,b
+  ld (LCROWN),a  ; the row, kept off
+                 ; the stack
   call LCSEL     ; C = the data port
   ex de,hl       ; HL = the buffer
   ld b,20
@@ -328,8 +330,11 @@ LCR1:
   call LCWAIT
   ini            ; a cell in, B counts
   jr nz,LCR1
+
+LCR2:
   ex de,hl
-  pop bc
+  ld a,(LCROWN)
+  ld b,a
   ret
 
 ; VWRROW: LINEBUF to row B, the same
@@ -343,7 +348,8 @@ LCWRR:
   ld c,20
 
 LCWR20:
-  push bc
+  ld a,b
+  ld (LCROWN),a
   call LCSEL
   ex de,hl
   ld b,20
@@ -352,9 +358,7 @@ LCWR1:
   call LCWAIT
   outi           ; a cell out
   jr nz,LCWR1
-  ex de,hl
-  pop bc
-  ret
+  jr LCR2
 
 ; VREST: each controller's modes again:
 ; 8-bit and two lines, addresses rising,
@@ -383,5 +387,6 @@ LCM1:
 LCSEQ: DB $38,$06,$0C,$02,0
 
 LCBYTE: DB 0     ; byte over the wait
+LCROWN: DB 0     ; row over a transfer
 
 IMGEND:

@@ -77,15 +77,6 @@ diff -ruN a/src/cache.asm b/src/cache.asm
  
  CWRBH:
    push bc
-@@ -605,7 +608,7 @@
- CKEY:
-   ld a,(CANY)
-   or a
--  jr z,CPOUT     ; none held behind
-+  jp z,CPOUT     ; none held behind
-   push de
-   call CDI
-   ld a,NLINES    ; no line excluded
 diff -ruN a/src/console.asm b/src/console.asm
 --- a/src/console.asm
 +++ b/src/console.asm
@@ -246,7 +237,7 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
  
  ; FIND PICO at minimum PICOWVER through
  ; TNFIND. Keep the width across
-@@ -177,73 +167,40 @@
+@@ -177,69 +167,39 @@
    ld l,a
    ld a,b
    call VHLJP     ; width call: A=B
@@ -285,12 +276,6 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
 -  jr z,CONLR     ; no width asked
 -  cp (hl)
 -  jr nz,CONLB    ; not this panel's
--
--CONLR:
--  inc hl
--  ld a,(hl)
--  cp 4
--  jr z,CONLOK    ; UC1 is an LCD
 +  ld (ARGSTRT),hl
 +  ld hl,LCDFCB
 +  ld de,CMDFCB
@@ -298,26 +283,33 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
 +  ldir
 +  jp SVCRUN
  
+-CONLR:
+-  inc hl
+-  ld a,(hl)
+-  cp 4
+-  jr z,CONLOK    ; UC1 is an LCD
+-
 -CONLB:
 -  jr USRBAD      ; the later refusals
-+CONNW:
-+  call ENDCHK    ; name-only suffix
- 
+-
 -CONLOK:
 -  ld b,CMUC1
 -  call CONFLD
 -  jr CONSHOW
--
--; Select B through CONFLD. UC1 first
--; calls GLCLD to reuse/load a driver,
--; with C=0 for the name GLCD. If it
--; returns carry the CON field is not
--; written and nothing has changed.
--; CONHDR output triggers routing.
++CONNW:
++  call ENDCHK    ; name-only suffix
+ 
+ ; Select B through CONFLD. UC1 calls
+-; GLCLD to reuse/load a driver, with
+-; C=0 for the name GLCD. The field is
+-; written first, so that a driver loaded
+-; by a startup line finds UC1 asked for.
+-; After a failure GLCLD copies the
+-; then-current CONMOD back into the CON
+-; bits. CONHDR output triggers routing.
 -; Report resulting CONMOD and enter
 -; MAINLOOP. Cold PISTART skips PIVEC
 -; setup when CDMTX is clear.
-+; Select B through CONFLD. UC1 calls
 +; GLCLD to reuse/load GLCD. After a
 +; returned failure, GLCLD copies
 +; then-current CONMOD through B into CON
@@ -329,22 +321,14 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
 +; CDMTX is clear.
  
  CONFL:
--  ld a,b
--  cp CMUC1       ; UC1 wants a display
--  jr nz,CONFL1
--  call GLCLD     ; load/reuse driver
--  jr c,CONSHOW   ; none: nothing changed
--  ld b,CMUC1     ; GLCLD took B
--
--CONFL1:
    call CONFLD    ; write requested mode
-+  ld a,b
+   ld a,b
+-  cp CMUC1       ; UC1 wants a display
 +  cp CMUC1       ; UC1 requires GLCD
-+  call z,GLCLD   ; load/reuse driver
+   call z,GLCLD   ; load/reuse driver
  
  CONSHOW:
-   ld de,CONHDR   ; report after routing
-@@ -302,8 +259,7 @@
+@@ -299,8 +259,7 @@
    jr CONMAIN
  
  USRBAD:
@@ -614,23 +598,25 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
 diff -ruN a/src/loader.asm b/src/loader.asm
 --- a/src/loader.asm
 +++ b/src/loader.asm
-@@ -861,40 +861,28 @@
+@@ -861,55 +861,31 @@
  
  ; Loaded display driver
  
--; CON UC1 and CON GLCD, before the CON
+-; CON UC1 and CON GLCD, after the CON
 -; field is written. C is 0 for the name
 -; GLCD. A driver on UC1 serves CON UC1
 -; whatever it is; CON GLCD wants the
--; GLCD's, CDGLC, and is refused through
--; BADCMD when another display's driver
--; holds UC1. With UC1 empty, load
--; A:GLCD.SVC through SVCGO.
+-; GLCD's, CDGLC, and when another
+-; display's driver holds UC1 the field
+-; is put back and BADCMD refuses it.
+-; With UC1 empty, load A:GLCD.SVC
+-; through SVCGO.
 -; Carry clear: UC1 is served. Carry set:
--; the load failed, nothing is changed,
--; and GLCD? goes on LCD row 3 unless the
--; LCD is the console. Default BDOS disk
--; errors may exit without returning.
+-; the load failed, the field is put back
+-; to CONMOD, and GLCD? goes on LCD row 3
+-; unless the LCD is the console. Default
+-; BDOS disk errors may exit without
+-; returning here.
 +; CON UC1: load A:GLCD.SVC through SVCGO
 +; unless CDGLC is already set.
 +; Carry clear: installed. On returned
@@ -650,7 +636,8 @@ diff -ruN a/src/loader.asm b/src/loader.asm
    ld a,(CONDEV)
    and CDGLC
 -  ret nz         ; the GLCD's driver
--  jp BADCMD      ; another display's
+-  call GLCRF     ; another display's
+-  jp BADCMD
 -
 -GLCL1:
 +  ret nz         ; loaded, carry clear
@@ -660,13 +647,25 @@ diff -ruN a/src/loader.asm b/src/loader.asm
    ldir
    call SVCGO
    ret nc         ; installed
+-  call GLCRF
 +  ld a,(CONMOD)  ; restore current mode
 +  ld b,a
 +  call CONFLD
    ld hl,GLCMSG   ; GLCD? status word
    jp LCDWRD
  
-@@ -919,19 +907,11 @@
+-; The CON field back to the mode in
+-; effect. Changes AF and B.
+-
+-GLCRF:
+-  ld a,(CONMOD)
+-  ld b,a
+-  jp CONFLD
+-
+ ; Read the service named by CMDFCB and
+ ; install it. If its page contains
+ ; GLCD.SVC's table, clear the ROM's LCD
+@@ -931,19 +907,11 @@
    ret c
    ld a,(SVCHEAD)
    ld hl,GLVEC+1  ; GLCD table page
