@@ -198,20 +198,11 @@ SKB1:
   inc hl
   jr SKIPSB
 
-; The prompt: the user if not 0, the
-; drive and >, from 0004h.
+; The prompt: the drive at 0004h, its
+; volume and >.
 
 PROMPT:
-  ld a,(CURDSK)  ; 0004h: user, drive
-  push af
-  rrca           ; user to the low
-  rrca
-  rrca
-  rrca           ; the user, high
-  and $0F        ; 0: none shown
-  call nz,PUTDEC8
-  pop af         ; drive in the low
-  and $0F
+  ld a,(CURDSK)  ; 0004h: the drive
   call DRVLBL    ; drive and volume
   ld e,'>'       ; then >
 
@@ -278,9 +269,9 @@ PTSK:
   ret
 
 ; A, 0 to 99, in decimal, with no
-; leading zero: a user number or a
-; service's pages, below 58. PDNZ is
-; set once a digit is printed.
+; leading zero: a service's pages,
+; below 58. PDNZ is set once a digit is
+; printed.
 
 PUTDEC8:
   ld b,a         ; the value

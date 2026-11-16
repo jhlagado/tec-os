@@ -60,8 +60,7 @@ DR2:
   ld a,(CFCB)    ; the drive named
   dec a          ; A: is 1, to 0
   jp p,DR3       ; a drive named
-  ld a,(CURDSK)  ; none: the
-  and $0F        ; the current drive
+  ld a,(CURDSK)  ; else the current
 
 DR3:
   ld (DDRV),a

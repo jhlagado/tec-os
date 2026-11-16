@@ -182,7 +182,6 @@ CPPARSE:
   or a
   ret nz         ; a drive was named
   ld a,(CURDSK)
-  and $0F        ; the current drive
   inc a          ; the current drive
   ld (de),a
   ret

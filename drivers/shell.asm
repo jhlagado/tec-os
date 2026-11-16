@@ -633,7 +633,6 @@ CMDSCR:
   or a
   jr nz,CS1      ; a drive named
   ld a,(CURDSK)
-  and $0F
   inc a          ; A: is 1
   ld (SFCB),a
 
