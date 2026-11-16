@@ -1,0 +1,25 @@
+{
+  "scope": "Native compiled output and exact matching compiler build coordinates",
+  "before": {
+    "file": "build/print-helpers/baseline/CAVBASIC.COM",
+    "sha256": "4c2a29c643dc13999cebcddf45f5743bfb025e060185b0327b5929468a3677b8",
+    "fileBytes": 38272,
+    "logicalBytes": 38248,
+    "legacyLiteralSites": 194,
+    "inlineLiteralSites": 0,
+    "newlineCalls": 0,
+    "coreBytes": 354
+  },
+  "after": {
+    "file": "../tec-os/programs/CAVBASIC.COM",
+    "sha256": "c2ce4aecfae8a4439e0a7fb37d92b2427d8e5afb728e843caf0704fea5fd9fcd",
+    "fileBytes": 36736,
+    "logicalBytes": 36618,
+    "legacyLiteralSites": 0,
+    "inlineLiteralSites": 98,
+    "newlineCalls": 96,
+    "coreBytes": 370
+  },
+  "logicalSaving": 1630,
+  "fileSaving": 1536
+}

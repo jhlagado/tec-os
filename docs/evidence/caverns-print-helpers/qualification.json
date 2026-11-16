@@ -1,0 +1,8 @@
+{
+  "status": "WIP candidate fixtures; compiler regression and release input pin refresh pending",
+  "compilerArtifactCommit": "7a0ddf3cc13eba874d5bcc276ac3f4d46358afdf",
+  "sourceUnchanged": true,
+  "COMBytes": 36736,
+  "logicalImageBytes": 36618,
+  "scenarioFormat": "CVB2 unchanged; identities/checksums refreshed only"
+}
