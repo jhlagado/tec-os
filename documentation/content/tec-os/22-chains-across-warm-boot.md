@@ -83,7 +83,7 @@ code. The independent load-drive byte at `0050h` lies below the tail
 ## The next command source
 
 Each prompt rebuilds the handoff from this retained state. `MAINLOOP`
-restores the CCP stack and `SAVEDU` packs drive and user at `0004h`.
+restores the CCP stack and stores the drive at `0004h`.
 With the hook installed, `SHLINE` sets `HFLAG`, passes `CHPOS` in A,
 clears the flags and calls `LINE` with `DE` pointing to `CMDTXT`
 (`241b438:src/cpm/ccp.asm:156-170`, `241b438:src/cpm/ccp.asm:297-328`). `LINE` switches
@@ -105,12 +105,12 @@ the next file line. A program started during startup can supply function
 shell installation:
 
 ```sh
-printf 'SHELL.SVC\nDIR *.CMD &TYPE STARTUP.CMD\nNOSUCH.SVC &CD\nUSER 0\n' > startup.cmd
+printf 'SHELL.SVC\nDIR *.CMD &TYPE STARTUP.CMD\nNOSUCH.SVC &CD\nCON\n' > startup.cmd
 cp dist/starter.img start.img
 node tools/tecvol.mjs put start.img A startup.cmd --text
 ```
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs --card start.img. Complete captured console transcript. -->
+<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card start.img. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -123,23 +123,24 @@ A:SYSTEM>DIR *.CMD &TYPE STARTUP.CMD
 
 STARTUP.CMD      128
 1 file, 128 bytes
-909312 free on A:SYSTEM
+911360 free on A:SYSTEM
 A:SYSTEM>TYPE STARTUP.CMD
 SHELL.SVC
 DIR *.CMD &TYPE STARTUP.CMD
 NOSUCH.SVC &CD
-USER 0
+CON
 
 A:SYSTEM>NOSUCH.SVC &CD
 NOSUCH.SVC?
 
-A:SYSTEM>USER 0
+A:SYSTEM>CON
+CON: TTY:
 A:SYSTEM>
 ```
 
 Successful DIR permits TYPE before the next startup line. Missing
 `NOSUCH.SVC` makes its conditional CD disappear without an echo. The shell
-then runs `USER 0` from the following line. Returning to file input depends
+then runs `CON` from the following line. Returning to file input depends
 on `LPOS` becoming zero, regardless of the previous result
 (`46cf3f1:drivers/shell.asm:200-266`).
 
@@ -341,7 +342,7 @@ most 127 bytes from `CMDTXT` to `LTXT`, marks typed origin and starts at
 `LEAD`. Its first piece runs whatever the calling program's code was and
 its later pieces follow the rules above (`241b438:drivers/shell.asm:176-198`).
 Register `E` selects no additional operation in this implementation. The
-next command uses the drive and user area from `0004h`, passed in `C` by
+next command uses the drive from `0004h`, passed in `C` by
 warm boot (`241b438:src/boot.asm:154-156`, `241b438:src/cpm/ccp.asm:48-134`).
 
 The copied line replaces the old text and position, removing every old
