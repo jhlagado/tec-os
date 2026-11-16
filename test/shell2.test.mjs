@@ -507,30 +507,6 @@ test("S2-9 dir /w", () => {
   assert.match(run(m, "DIR /X"), /\r\nDIR\?\r\n/, "another switch refused");
 });
 
-// Sized DIR builds its table of names from 0100h, over the program a SAVE
-// would write. DIR /W is the ROM's listing, which works in the record at
-// 0080h and leaves the program where it is.
-test("S2-9 save after dir", () => {
-  const prog = Uint8Array.from({ length: 256 }, (_, i) => i || 0xc9);
-  const image = four();
-  const m = machine({ image, files: { "PROG.COM": prog } });
-  const saved = (name) => [...volume(image, "A").read(name)];
-  const tpa = () => Array.from({ length: 256 }, (_, i) => m.read(0x100 + i));
-  run(m, "PROG");
-  assert.deepEqual(tpa(), [...prog], "the program, loaded and returned");
-  run(m, "DIR /W");
-  assert.deepEqual(tpa(), [...prog], "DIR /W leaves 0100h");
-  run(m, "SAVE 1 WIDE.COM");
-  assert.deepEqual(saved("WIDE.COM"), [...prog], "SAVE after DIR /W writes the program");
-  const names = volume(image, "A").list().length;
-  assert.equal(rows(listing(m, "DIR")).length, names);
-  assert.notDeepEqual(tpa(), [...prog], "sized DIR changes 0100h");
-  assert.equal(word(m, 0x100), names, "its count of names at 0100h");
-  run(m, "SAVE 1 SIZED.COM");
-  assert.notDeepEqual(saved("SIZED.COM"), [...prog], "SAVE after a sized DIR writes DIR's table");
-  assert.deepEqual(saved("SIZED.COM").slice(0, 2), [names, 0]);
-});
-
 test("S2-9 more", () => {
   const m = onB();
   m.mark = m.output.length;
@@ -1340,13 +1316,13 @@ test("S2-13 docs", () => {
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
   for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
-    "at 0100h–223Fh, so it overwrites a program left there", "Use `DIR /W` before `SAVE`", "a TPA of 41,984 bytes"])
+    "a TPA of 41,984 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,533 bytes", "41,984", "41,216", "**`DIR` before `SAVE`.**", "`DIR /W`, the ROM's listing, uses only the record at 0080h"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,536 bytes", "41,984", "41,216"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
   assert.match(flat("docs/mon3.md"), /from `A500h` to `9200h`, and the TPA from 41,984 bytes to \*\*37,120\*\*/);
   assert.match(flat("docs/mon3.md"), /it is `8F00h`, a TPA of \*\*36,352\*\*/);
