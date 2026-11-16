@@ -4,9 +4,9 @@
     "TAS.COM": {
       "env": "TAS_COM",
       "default": "../thorium/dist/TAS.COM",
-      "source": "jhlagado/thorium c81ba68, dist/TAS.COM",
+      "source": "jhlagado/thorium 0c8adea, dist/TAS.COM",
       "repo": "jhlagado/thorium",
-      "commit": "c81ba68848b72eb6649e76a9e659d5b5596f762d",
+      "commit": "0c8adea809ff8752e504bad9c40256e2572f2462",
       "path": "dist/TAS.COM",
       "bytes": 11013,
       "sha256": "8e1f0efb662e5d6bab5e2b7f9479bc60d6f989d07fb22d11c9ffc70e2f5ed359"
@@ -14,9 +14,9 @@
     "TED.COM": {
       "env": "TED_COM",
       "default": "../thorium/dist/TED.COM",
-      "source": "jhlagado/thorium a2fe556, dist/TED.COM",
+      "source": "jhlagado/thorium 20339b8, dist/TED.COM",
       "repo": "jhlagado/thorium",
-      "commit": "a2fe5563658056f3dab7986b4ef861d1ea05426a",
+      "commit": "20339b89b5c2e5767367b18d31c323352c5bc39c",
       "path": "dist/TED.COM",
       "bytes": 12335,
       "sha256": "c6c8374a8f3499e974503083e543738db4ad13aff96a7ae3c52c717d220a5573"
@@ -24,9 +24,9 @@
     "BAZA.COM": {
       "env": "BAZA_COM",
       "default": "../baza/dist/BAZA.COM",
-      "source": "jhlagado/baza bffccac, dist/BAZA.COM",
+      "source": "jhlagado/baza 74c4382, dist/BAZA.COM",
       "repo": "jhlagado/baza",
-      "commit": "bffccace3a41f055049ea53984abbcd59f580a75",
+      "commit": "74c438207f787685f961dd972a3a5289f679ddba",
       "path": "dist/BAZA.COM",
       "bytes": 13184,
       "sha256": "c9625842dceee5f68361cbb14c43c2aecbe65defd49536880d1613159a29d123"
@@ -34,9 +34,9 @@
     "BAZA.RTL": {
       "env": "BAZA_RTL",
       "default": "../baza/dist/BAZA.RTL",
-      "source": "jhlagado/baza bffccac, dist/BAZA.RTL",
+      "source": "jhlagado/baza 74c4382, dist/BAZA.RTL",
       "repo": "jhlagado/baza",
-      "commit": "bffccace3a41f055049ea53984abbcd59f580a75",
+      "commit": "74c438207f787685f961dd972a3a5289f679ddba",
       "path": "dist/BAZA.RTL",
       "bytes": 12928,
       "sha256": "64510ae26d654bcc4329f302b184ff507ee164bee905aa17d35eb3cac018ce9e"
@@ -44,9 +44,9 @@
     "BOUNCE.BAS": {
       "env": "BOUNCE_BAS",
       "default": "../baza/examples/BOUNCE.BAS",
-      "source": "jhlagado/baza 50dc512, examples/BOUNCE.BAS",
+      "source": "jhlagado/baza 45f2598, examples/BOUNCE.BAS",
       "repo": "jhlagado/baza",
-      "commit": "50dc512d13e441b766f3b95a69427095d64c311d",
+      "commit": "45f2598465e0a2670f0f8d78ae7430089671e6bf",
       "path": "examples/BOUNCE.BAS",
       "bytes": 5189,
       "sha256": "615693a55fb29fd9fd831836443461f82fddca65ae983337e52ecae5b529744c"

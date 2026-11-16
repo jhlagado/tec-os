@@ -1,7 +1,7 @@
 {
   "status": "native-and-viewer-emulator-qualified",
   "tecosArtifactCommit": "a442f151b58b38c211251272bf40fc64dd195754",
-  "bazaCommit": "52c3956167c8cebe382d342619ec2899913fd18c",
+  "bazaCommit": "1d7ecee79ada5ec618c869fe1be0e941f8d8b4cc",
   "viewerCommit": "12e67f3efe5de8f59cc9b2db56bd99e0e45e93f1",
   "sourceSha256": "f64fdb84ead251e3e49590c4c156d7951afc52fb02ffad959cf819b20760b9e0",
   "comSha256": "4c2a29c643dc13999cebcddf45f5743bfb025e060185b0327b5929468a3677b8",

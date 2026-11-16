@@ -14,8 +14,8 @@ nav_group: "Using the machine"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 A card image keeps a copy of your work on the PC. You can extract source
@@ -331,12 +331,12 @@ record with `^Z`. Binary files receive zero padding. The CP/M directory
 still records whole records, not the PC file's original byte length.
 
 Without `--text`, a text file receives zero padding instead of `^Z`.
-TED on the starter card, Thorium `a2fe556`, recognises trailing `00h`
+TED on the starter card, Thorium `20339b8`, recognises trailing `00h`
 through the rest of the last record as the file's end. It opens this
 form without an error. A rejected byte elsewhere ends the editor with
 `EDIT error 03` and its line and column, such as `EDIT error 03 L3 C5`
-(`b3134cf:docs/compatibility.md`, `Thorium a2fe556:README.md`).
-The older Thorium `967678c` TED rejects that padding with error 03
+(`b3134cf:docs/compatibility.md`, `Thorium 20339b8:README.md`).
+The older Thorium `cc4044b` TED rejects that padding with error 03
 and reports no position.
 
 `era` erases a named file. Like `get`, `put` and `era` use user area 0 unless

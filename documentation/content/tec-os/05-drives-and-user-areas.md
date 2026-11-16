@@ -14,8 +14,8 @@ nav_group: "Using the machine"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 You can keep separate groups of files on the same card. A volume is a
@@ -567,7 +567,7 @@ and moving bytes does not relocate absolute operands. TAS produces genuine
 HEX with `TAS NAME OUT.HEX`, using data 00/EOF 01 and no entry record. These
 address forms follow the later development components
 (`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:59-145`,
-`Thorium c81ba68848b72eb6649e76a9e659d5b5596f762d:docs/language.md:167-185`).
+`Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`).
 A failed pre-GO flush can leave writes pending; GO does not check that status.
 
 A load must lie between `0100h` and the page of the BDOS entry in `0006h`,
