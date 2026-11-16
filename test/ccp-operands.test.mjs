@@ -5,9 +5,14 @@
 // was retaken when modules left, again when GLCD.SVC took its font, six
 // records longer, and again when the type in its FCBs became SVC, those two
 // hashes alone. A write to C: was retaken when a read-only volume came to say
-// R/O, ERA *.* when Return alone came to end its answer, COPY's two write
-// errors on B: when the destination came to be closed (KE-179), and SAVE's
-// when its file did (KE-201). SHELLC and SHELLE left with the nested levels.
+// R/O, ERA *.* when Return alone came to end its answer, and COPY's two write
+// errors on B: when the destination came to be closed (KE-179). SHELLC and
+// SHELLE left with the nested levels. SAVE's eleven rows left with SAVE, and
+// the row that made GONE.TMP for ERA became a REN of a placeholder file. The
+// calls of every row but the shell's were retaken then: SAVE's two cells left
+// the workspace, so the CCP's FCBs and line buffer are three bytes higher.
+// Traces from the ROM before and after paired on every row: the same output,
+// operands, FCB bytes and stack peaks, and each address the same buffer.
 // Raw buffer addresses are part of each call digest, so relocation alone
 // changes it. Fixture updates require paired traces with identical output,
 // logical buffer identities, defined operands, FCB bytes and stack peaks.
@@ -136,7 +141,7 @@ function reading(m, fixture) {
 
 test("the built-ins' operands keep their output, BDOS calls and stack", { timeout: 300_000 }, async () => {
   assert.equal(FIXTURE.profile, PROFILE);
-  assert.equal(FIXTURE.inputs.length, 78);
+  assert.equal(FIXTURE.inputs.length, 67);
   const bare = FIXTURE.inputs.filter((r) => !r.shell);
   const m = boot(await card());
   const rows = reading(m, bare);
