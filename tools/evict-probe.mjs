@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, boot, program, volume } from "../test/lib/fixtures.mjs";
-import { SAY, chain, execSvc, owners, word } from "../test/lib/shell.mjs";
+import { CODES, SAY, chain, execSvc, owners, word } from "../test/lib/shell.mjs";
 
 const EVBIG = (await program("evbig")).bytes;
 const CLOCK = 4_000_000;
@@ -17,6 +17,9 @@ const svc = async (name, over = {}) => (await execSvc({ ENTER: 0, HDRNAME: JSON.
 const EXTRA = {
   "EVBIG.COM": EVBIG,
   "SAY.COM": SAY,
+  "F.COM": CODES["F.COM"],
+  "ONE.COM": CODES["ONE.COM"],
+  "CHF.COM": chain("F &SAY"),
   "CH.COM": chain("EVBIG !SAY"),
   "KEEP.SVC": await svc("KEEP", { V_KEEP: 1 }),
   "FIXED.SVC": await svc("FIXED", { FLAGS: 0 }),
@@ -146,6 +149,7 @@ const SCENARIOS = {
   bare: ["no shell: the bare prompt, two services", { startup: false }, ["S1.SVC", "S2.SVC", "EVBIG", "EVICT EVBIG", "EVBIG"]],
   cardout: ["the card taken out while the evicted program runs", {}, [["EVICT EVBIG", { atStart: (m) => m.swapCard(null), re: />$/ }]]],
   cardout2: ["the card taken out, the shell's blocks no longer in the cache", {}, ["COPY BAZA.COM B:X.COM", "COPY BAZA.RTL B:Y.RTL", ["EVICT EVBIG", { atStart: (m) => m.swapCard(null), re: /Bad Sector$/ }], ["", { re: />$/ }], ["EVBIG", { re: /Bad Sector$|>$/ }]]],
+  code: ["the evicted command's return code after the services are back", {}, ["EVICT ONE", "EVICT F", "EVICT CHF"]],
   chain: ["the evicted program chains a line by function 47", {}, ["EVICT CH"]],
 };
 const which = process.argv.slice(2);
