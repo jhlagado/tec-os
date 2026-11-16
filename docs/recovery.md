@@ -9,16 +9,13 @@ The ROM now provides the same basic CD selection syntax as the shell:
 ```text
 A>CD ?
 A>CD A:SYSTEM
-A>USER 0
 A>SHELL.SVC
 A:SYSTEM>
 ```
 
 `CD ?` lists the available named directories and their assigned drives.
-`CD A:SYSTEM` restores SYSTEM on A: without changing the current drive or
-user area. The starter's shell file is in user 0; there is no hidden
-user-zero search for a service. A reset already starts in user 0, so USER 0
-is only needed if you have changed it. A refused selection reports
+`CD A:SYSTEM` restores SYSTEM on A: without changing the current drive.
+A refused selection reports
 `CD FAILED` or its more specific name/conflict error and keeps the previous
 selection. Power cycle restores the card's default drive assignments.
 

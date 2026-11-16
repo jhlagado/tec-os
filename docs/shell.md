@@ -1,7 +1,7 @@
 # The shell: SHELL.SVC and the ROM's shell hook
 
 The CCP in ROM is minimal. It runs a `.COM` or a `.SVC`, changes drive, and
-has CP/M's built-ins `DIR`, `ERA`, `REN`, `TYPE` and `USER`, with
+has CP/M's built-ins `DIR`, `ERA`, `REN` and `TYPE`, with
 `CON`, `CD` and `UNLOAD`. It reads one line of `A:STARTUP.CMD` after a reset.
 
 `SHELL.SVC` is a resident service that takes over the prompt through the
@@ -99,9 +99,8 @@ A line is split into pieces at separators, and each piece runs in turn:
 
 Typed with the shell, `NAME.CMD` runs a script:
 
-1. The file is read from the drive named, else the current one, in the current
-   user, with no fallback to A:. With no file the shell says `NAME.CMD?`, with
-   FF00h.
+1. The file is read from the drive named, else the current one, with no
+   fallback to A:. With no file the shell says `NAME.CMD?`, with FF00h.
 2. It is text, read 128 bytes at a time, as many records as it has. It ends at
    1Ah, a zero byte or the end of its last record.
 3. A line ends at CR, LF or CR LF. Its first 127 characters are kept; the rest of
@@ -145,8 +144,8 @@ CD changes the directory presented by a drive by selecting a named on-card
 volume. A: to D: are equal drives, and each presents one volume, or none.
 The basic commands below also work at the bare ROM CCP; its prompt remains
 `A>` rather than showing the directory label.
-The prompt shows the drive and its volume: `B:GAMES>`, and with a user number
-`3B:GAMES>`; a drive with no volume shows `C:>`. A command not found on the
+The prompt shows the drive and its volume: `B:GAMES>`; a drive with no volume
+shows `C:>`. A command not found on the
 current drive runs from A:, as if A: were always on the path.
 
 | Typed | Result |
@@ -186,8 +185,7 @@ next drive change or warm boot; nothing on the starter card does it.
 selection, so after `CD A:` to a volume with no `SHELL.SVC` (`CD A:GAMES` on
 the starter card) a reset gives the bare `A>` on that volume. The ROM's `CD`
 remains available. Type `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
-to restore the shell. CD preserves the user area: if it is not user 0, type
-`USER 0` before loading the starter's shell. A reset itself starts in user 0.
+to restore the shell.
 Power off and on gives the card's own drives and the shell again; on the
 web page, Power cycle.
 
