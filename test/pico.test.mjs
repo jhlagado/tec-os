@@ -261,7 +261,7 @@ test("a good retry clears CARD?, and a failed one shows it again", () => {
 const BAD = new Uint8Array(200).fill(0x55);
 for (const [name, files, opts] of [
   ["no STARTUP.CMD", {}, {}],
-  ["a file with no display line", { "STARTUP.CMD": startupFile("USER 0") }, {}],
+  ["a file with no display line", { "STARTUP.CMD": startupFile("DIR") }, {}],
   ["a missing PICO.SVC", { "STARTUP.CMD": startupFile("PICO.SVC") }, {}],
   ["a bad PICO.SVC", { "PICO.SVC": BAD, "STARTUP.CMD": startupFile("PICO.SVC") }, {}],
   ["a skip past the file", { "STARTUP.CMD": startupFile("CON TTY") }, { key: true }],
@@ -288,7 +288,7 @@ test("GLCLD returns carry through LCDROW when GLCD.SVC won't load", () => {
 
 test("a line left without an end, and a record full to its last byte, run to a prompt on the ROM's console, the LCD saying nothing", () => {
   const raw = (text) => Buffer.from(text, "latin1");
-  for (const [file, ran] of [[raw("PICO.SVC\x1a"), /PICO\.SVC\?/], [raw("USER 1\r\n".repeat(15) + "\r".repeat(6) + "\r\n"), />USER 1\r/]]) {
+  for (const [file, ran] of [[raw("PICO.SVC\x1a"), /PICO\.SVC\?/], [raw("DIR A:\r\n".repeat(15) + "\r".repeat(6) + "\r\n"), />DIR A:\r/]]) {
     const m = start({ "STARTUP.CMD": file });
     assert.match(m.text(0), ran, "the line runs");
     assert.deepEqual([m.read(m0(m)), lcdRow(m, 3)], [CRT, ""]);
@@ -305,7 +305,7 @@ test("the ROM's console or GLCD.SVC, then CON TTY in the file: the LCD stays sil
 
 test("the LCD stays silent with no PICO9918, and with no matrix keyboard", () => {
   for (const opts of [{ tms: false }, { matrix: false }]) {
-    const m = start({ "STARTUP.CMD": startupFile("USER 0") }, opts);
+    const m = start({ "STARTUP.CMD": startupFile("DIR") }, opts);
     assert.equal(lcdRow(m, 3), "", JSON.stringify(opts));
   }
 });
@@ -703,9 +703,9 @@ test("the web host: a card whose STARTUP.CMD is read-only keeps it, and the page
 test("the web host: a user's CON CRT width line goes with the page's own, so the selector's width stands", () => {
   const image = standardCard();
   const a = volume(image, "A");
-  a.write("STARTUP.CMD", startupFile("CON CRT 32", "DIR!CON CRT: 40!USER 3", "con pico 40"));
+  a.write("STARTUP.CMD", startupFile("CON CRT 32", "DIR!CON CRT: 40!DIR B:", "con pico 40"));
   assert.deepEqual(prepareCard(image, "tms", "80"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "CON PICO 80\r\nDIR!USER 3\r\n", "explicit 80 line");
+  assert.equal(startupText(image), "CON PICO 80\r\nDIR!DIR B:\r\n", "explicit 80 line");
   a.write("STARTUP.CMD", startupFile("CON CRT 32", "DIR"));
   prepareCard(image, "tms", "40");
   assert.equal(startupText(image), "CON PICO 40\r\nDIR\r\n", "the selector's 40 alone");
@@ -719,9 +719,9 @@ const startupText = (image) => Buffer.from(volume(image, "A").read("STARTUP.CMD"
 test("the web host: a chained startup line loses its display pieces and keeps the rest", () => {
   const image = standardCard();
   const a = volume(image, "A");
-  a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!USER 3", "PICO40.SVC!CON PICO 32"));
+  a.write("STARTUP.CMD", startupFile("PICO.SVC!GLCD.SVC!DIR", "DIR!:GLCD.SVC!DIR B:", "PICO40.SVC!CON PICO 32"));
   assert.deepEqual(prepareCard(image, "tms"), { problem: null, note: null, changed: true });
-  assert.equal(startupText(image), "CON PICO 80\r\nDIR\r\nDIR!USER 3\r\n");
+  assert.equal(startupText(image), "CON PICO 80\r\nDIR\r\nDIR!DIR B:\r\n");
   assert.equal(prepareCard(image, "tms").changed, false);
 });
 
@@ -748,7 +748,7 @@ test("the web host: a kept piece keeps its own separator when one before it goes
 test("the web host: each line's first piece starts unconditionally, an older card's colon there gone", () => {
   const cases = [
     [["PICO.SVC", ":VOLS"], "VOLS"],
-    [["DIR", "PICO.SVC", ":VOLS", ":USER 3"], "DIR\r\nVOLS\r\nUSER 3"],
+    [["DIR", "PICO.SVC", ":VOLS", ":DIR B:"], "DIR\r\nVOLS\r\nDIR B:"],
     [["X!:PICO.SVC", ":Y"], "X\r\nY"],
     [["X!:PICO.SVC", "Y"], "X\r\nY"],
     [["X!PICO.SVC", ":Y"], "X\r\nY"],
@@ -780,9 +780,9 @@ test("the web host: the piece after a display piece loses its colon and runs", (
   const a = volume(image, "A");
   a.write("VOLS.COM", Uint8Array.from([0xc9]));
   a.write("SHELL.SVC", SHELL_SVC);
-  a.write("STARTUP.CMD", startupFile("PICO.SVC!:VOLS", "DIR!GLCD.SVC!PICO.SVC!:USER 3!:USER 0"));
+  a.write("STARTUP.CMD", startupFile("PICO.SVC!:VOLS", "DIR!GLCD.SVC!PICO.SVC!:DIR B:!:DIR A:"));
   prepareCard(image, "tms", "40");
-  assert.equal(startupText(image), "SHELL.SVC\r\nCON PICO 40\r\nVOLS\r\nDIR &USER 3 &USER 0\r\n");
+  assert.equal(startupText(image), "SHELL.SVC\r\nCON PICO 40\r\nVOLS\r\nDIR &DIR B: &DIR A:\r\n");
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, tms: true, matrix: true, glcd: false });
   m.runUntil(() => m.ready() && /A(:\S*)?>$/.test(m.text(0)), 800_000_000, "the prompt after the file");
   assert.match(m.text(0), />CON PICO 40\r[\s\S]*>VOLS\r/, "VOLS runs after the display's line");
