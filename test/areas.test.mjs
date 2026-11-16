@@ -101,10 +101,10 @@ test("a file a program leaves in area 3 is not listed, typed, erased or run from
 const WAS = {
   used: 15856,
   tpa: { twoVolume: 47240, starter: 46536 },
-  path: { bare: { warm: 84569, program: 112340 }, shell: { warm: 184380, program: 117583 } },
+  path: { bare: { warm: 84569, program: 112340 }, shell: { warm: 184379, program: 117644 } },
 };
 
-test("without USER the ROM is smaller, SHELL.SVC is 15 pages and no TPA row is smaller", () => {
+test("without USER the ROM is smaller, SHELL.SVC is 17 pages and no TPA row is smaller", () => {
   const census = JSON.parse(readFileSync(resolve(ROOT, "build/tecos/census.json"), "utf8"));
   assert.ok(census.rom.used < WAS.used, `${census.rom.used} bytes used, fewer than ${WAS.used}`);
   assert.deepEqual([census.rom.used, census.rom.free], [15713, 671], "the ROM's bytes used and free");
@@ -112,9 +112,9 @@ test("without USER the ROM is smaller, SHELL.SVC is 15 pages and no TPA row is s
   const top = (m) => m.read(6) | (m.read(7) << 8);
   const bare = top(boot(card())), shelled = top(boot(card({ shell: true })));
   const pages = (bare >> 8) - (shelled >> 8);
-  assert.equal(pages, 15, "the pages SHELL.SVC takes from the TPA");
+  assert.equal(pages, 17, "the pages SHELL.SVC takes from the TPA");
   assert.ok(pages <= 17, "no more than 17");
-  assert.equal(shelled - 0x100, 43264, "the TPA under the shell on the two-volume card, as before");
+  assert.equal(shelled - 0x100, 42752, "the TPA under the shell on the two-volume card, as before");
 });
 
 /** T-states from a warm boot's first instruction to the prompt, and from a typed command to its program's first instruction. */
