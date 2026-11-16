@@ -14,7 +14,7 @@ ROM table at `C003h`.
   whose two halves, EXPAND 0 and EXPAND 1, share the window at
   `8000h–BFFFh`. CP/M programs get a TPA from `0100h` of 46,533 bytes on the
   starter card with nothing loaded, its four drives' vectors taken; the card's
-  `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 42,496, and 41,728
+  `STARTUP.CMD` loads the shell, `SHELL.SVC`, which leaves 41,984, and 41,216
   with the GLCD's driver too.
   EXPAND 1 is TEC-OS's own: its block cache. TEC-OS says so at boot and stops if either half
   is missing.
@@ -179,7 +179,7 @@ Enter retry before normal commands resume
 ([docs/recovery.md](docs/recovery.md)). Under the
 shell a line joins commands with `!`, which always runs the next, and `&` after
 a blank, which runs it only if the last command succeeded, as in
-`TED X.ASM!TAS X &X`. TED, from Thorium `a2fe556` (`TED.COM`
+`TED X.ASM!TAS X &X`. TED, from Thorium `20339b8` (`TED.COM`
 `c6c8374a`, 12,335 bytes), stops a file name and `THOR.PRJ`'s `ARGS` at the
 same `!` and `&`, so a project's `ARGS X &Y` gives ^T R's program the tail
 ` X` and runs nothing after it.
@@ -206,7 +206,11 @@ TEC-1G's monitor ([docs/mon3.md](docs/mon3.md)): first build the source-only
 example with `TAS HELLO3 HELLO3.BIN`, then `MON3.SVC` gives `MON3>`,
 where `LOAD HELLO3.BIN` and `GO` run `HELLO3`, which writes four lines on the
 LCD through MON-3's calls and counts on the digits. AD, or Esc on the matrix
-keyboard, returns to `MON3>`, and `EXIT` to `A:SYSTEM>`. `BOUNCE.BAS` is Baza's sprite
+keyboard, returns to `MON3>`, and `EXIT` to `A:SYSTEM>`. `LOAD` puts a `.BIN`
+at 4000h, or at an address given after the name, as in `LOAD NAME.BIN 2000`,
+and a bare `GO` starts where the last load went. `TAS NAME NAME.HEX` writes
+Intel HEX, which `LOAD NAME.HEX` places at the addresses in the file, or
+moved to an address given after the name. `BOUNCE.BAS` is Baza's sprite
 game: `BAZA BOUNCE` compiles it, showing a spinner while it works, and
 `BOUNCE` takes the PICO9918 in Graphics I through `CALL`; tap W, A, S and D,
 or the arrow keys, to steer the ship, and Q gives the display back. A BASIC

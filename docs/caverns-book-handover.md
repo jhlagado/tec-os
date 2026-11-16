@@ -26,14 +26,14 @@ The manual may describe tested emulator behaviour with that boundary.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source/card recipe | jhlagado/tec-os, bb705351d32c0db0a241519840eb7ac260bdfaa3 |
+| Qualified gameplay/source/card recipe | jhlagado/tec-os, 485bf24f15de668da748e5598eb850fe20f4ae99 |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
 | Verification executable, not on starter | programs/CAVBASIC.COM; 36,736 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
-| Matching Viewer integration | jhlagado/tec-os-viewer, f64eed44526c81578b57b511da2afeff60762bb4 |
-| BAZA compiler/runtime pins | jhlagado/baza, bffccace3a41f055049ea53984abbcd59f580a75, dist/BAZA.COM and dist/BAZA.RTL |
+| Matching Viewer integration | jhlagado/tec-os-viewer, 5e7bb9dc8ede62fcb7fe1650043e1e33e3cc26c4 |
+| BAZA compiler/runtime pins | jhlagado/baza, 74c438207f787685f961dd972a3a5289f679ddba, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 
@@ -98,7 +98,7 @@ The 16-byte shared-core increase costs space in programs without literal prints.
 - [Native game/editor/starter checks](evidence/caverns-print-helpers/integration-tests.log).
 - [Checkpoint comparison tests](evidence/caverns-print-helpers/game-tests.log).
 - [Fresh-browser trial](evidence/caverns-print-helpers/viewer-result.json).
-- [Compiler qualification](https://github.com/jhlagado/baza/blob/bffccace3a41f055049ea53984abbcd59f580a75/docs/evidence/print-helpers/qualification.json).
+- [Compiler qualification](https://github.com/jhlagado/baza/blob/74c438207f787685f961dd972a3a5289f679ddba/docs/evidence/print-helpers/qualification.json).
 
 The records below document the preceding main integration and first size
 increment; their historical binary hashes and measurements remain unchanged.
@@ -111,7 +111,7 @@ combined coverage records, not claims of single all-green full-suite runs.
 
 - [Current-main firmware qualification](evidence/caverns-main-integration/qualification.json).
 - [Fresh matching-main browser trial](evidence/caverns-main-integration/viewer-result.json).
-- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/f64eed44526c81578b57b511da2afeff60762bb4/docs/evidence/caverns-main-integration/qualification.json).
+- [Viewer qualification](https://github.com/jhlagado/tec-os-viewer/blob/5e7bb9dc8ede62fcb7fe1650043e1e33e3cc26c4/docs/evidence/caverns-main-integration/qualification.json).
 
 The earlier compact-emission records below remain the detailed first-increment
 baseline; current-main integration preserves its compiler and game hashes.

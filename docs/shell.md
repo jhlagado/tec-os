@@ -20,15 +20,15 @@ Every other command it hands back to the ROM to run. The starter card's
 `STARTUP.CMD` starts with `SHELL.SVC`, so the shell is in after every reset.
 A key held through reset skips `STARTUP.CMD`, and the bare prompt comes back.
 
-`SHELL.SVC` occupies 15 pages: a 3,840-byte allocation containing its image
+`SHELL.SVC` occupies 17 pages: a 4,352-byte allocation containing its image
 and extra RAM. Its history is a 256-byte ring in its own last page. Its own stack
 is 48 bytes, of which the census's workload uses 16 and the deepest path, the
 prompt's reading of the volume labels with every cache line changed and
 kept, 34 (`test/shell.test.mjs` and `test/shell2.test.mjs`, which read a guard
-pattern laid under it). It declares 6 bytes of the BDOS's stack and none of
-the BIOS's or the CCP's, so `GLCD.SVC` and `MON3.SVC` install beside it. With
-the shell alone the word at 0006h is A700h on the starter card, a TPA of
-42,496 bytes.
+pattern laid under it); no path may use more than 36. It declares 6 bytes of
+the BDOS's stack and none of the BIOS's or the CCP's, so `GLCD.SVC` and
+`MON3.SVC` install beside it. With the shell alone the word at 0006h is A500h
+on the starter card, a TPA of 41,984 bytes.
 
 ## With no shell
 
@@ -199,39 +199,46 @@ one record still reads it from its own drive.
 
 ## `DIR`
 
-`DIR`, `DIR NAME.EXT`, `DIR D:` and `DIR D:F?.DAT` list one file a row, its name
-and type padded and its size in bytes: BDOS 35's records times 128. Then the
-count of files and their bytes, and the drive's free space, BDOS 46's records
-times 128, with its volume:
+`DIR`, `DIR NAME.EXT`, `DIR D:` and `DIR D:F?.DAT` list one file per row,
+with the complete filename followed by its size in bytes. The filename is
+left-aligned in twelve columns, with no gap before its real extension;
+an extensionless name has no trailing dot. The size is right-aligned in
+another eight columns. For example:
 
 ```
-A:SYSTEM>DIR
-
-SHELL   .SVC    3712
-SAY     .COM     128
-X       .DAT  128128
-3 files, 131968 bytes
-1013760 free on A:SYSTEM
+SHELL.SVC       4224
+SAY.COM          128
+X.DAT         128128
 ```
 
-Hidden (SYS) files are passed over, as the ROM's `DIR` does; with none to show
-it says `NO FILE`, with FF00h. A row is 20 columns, within the GLCD's 21, and a
-long listing stops at `[more]`. `DIR /W` is the ROM's wide listing, and with no
-shell `DIR` is the ROM's.
+Sizes have the same meaning as BDOS 35: the highest logical end record times
+128, including sparse extents and the final record's padding. The summary
+gives the file count and total bytes, then free space from BDOS 46 times 128
+and the drive's volume. Hidden (SYS) files are omitted, as in the ROM's
+`DIR`; no visible match gives `NO FILE` with FF00h. Rows retain the existing
+two-group directory order. A row remains 20 columns, within the GLCD's 21,
+and long listings stop at `[more]`. `DIR /W` goes directly to the ROM's wide
+listing; with no shell, `DIR` is the ROM's listing too.
 
-**Its cost.** BDOS 35 scans the whole directory and loses the search, so `DIR`
-calls it only for a file that may have more than one directory entry. One
-search reads every entry and marks the names of those past a file's first in a
-table of 128 marks; a second lists every unmarked file from its own entry; a
-third sizes each marked file by BDOS 35, beginning the search again after
-each. On files of one entry `DIR` is linear and takes about twice `DIR /W`'s
-time, its rows holding about twice the characters: on a G8M volume of 452
-files, 39.8 s against 20.8 s at 4 MHz on the serial console. Each file of more
-than one entry adds a BDOS 35 and a restart, so `DIR` is slower on a volume of
-many large files: a file over 32 KiB on a G8M volume, or over 16 KiB on a G1M,
-has more than one entry. With 100 files of 40 KiB among 352, `DIR` takes 6 times
-`DIR /W`'s time; with 180 of them, 17 times. `DIR /W` is the fast listing
-there.
+**Its cost.** A first search combines each name's extent sizes in a table.
+Two more searches then produce the rows, with no BDOS 35 scan and search
+restart for each large file. The table holds up to 512 names, as many as a
+G1M or G8M directory holds. It takes 8,512 bytes of the TPA, 0100h–223Fh,
+while `DIR` runs, and no resident memory.
+
+`DIR` takes about twice `DIR /W`'s time, its rows holding about twice the
+characters, whatever the files' sizes. On a G8M volume at 4 MHz on the serial
+console: 452 files, all but one of a single record, 40.6 s against 21.5 s; 352
+files, 100 of them of 40 KiB, 32.3 s against 16.9 s; 181 files, 180 of them of
+40 KiB, 17.9 s against 9.0 s (`test/dir-cost.test.mjs`). So a file over 32 KiB
+on a G8M volume, or over 16 KiB on a G1M, which has more than one directory
+entry, no longer slows `DIR`. `DIR /W` is the fast listing, at half the time.
+
+If that workspace is unavailable or its capacity is exhausted, `DIR`
+restarts its original size-and-search engine before printing any filename
+row. This fallback preserves the result and can take longer. Invalid table
+state is reported as `DIR STATE` with FF00h; a missing size is never silently
+reported as zero. Ordinary drive and read errors keep their BDOS handling.
 
 ## `CLS`, `ECHO` and `PAUSE`
 

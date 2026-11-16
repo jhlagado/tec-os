@@ -209,12 +209,12 @@ test("TED B:HELLO.ASM from A: opens B:'s file, and ^T B builds it on B: with A:'
   assert.deepEqual(m.violations, []);
 });
 
-test("TED's text holds at least 28,694 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
+test("TED's text holds at least 28,182 bytes on the starter's files, SHELL.SVC among them, with no display and on a board with both displays as it boots", { skip: TED.skip, timeout: 900_000 }, async () => {
   check(TED);
   // The starter's display files: on a board with both, GLCD.SVC loads and gives
   // way to the ROM's PICO9918 console, so one driver is loaded (the figures).
   // The starter card's four drives, as its recipe asks for them.
-  for (const [board, floor] of [[{ glcd: false }, 28_694], [{ tms: true, matrix: true, glcd: true }, 28_694]]) {
+  for (const [board, floor] of [[{ glcd: false }, 28_182], [{ tms: true, matrix: true, glcd: true }, 28_182]]) {
     const image = createContainer(
       [
         { geometry: "G1M", label: "SYSTEM", mount: "A" },
@@ -237,10 +237,10 @@ test("TED's text holds at least 28,694 bytes on the starter's files, SHELL.SVC a
 // The smallest system the starter card teaches: the shell, MON3.SVC
 // installed and left by EXIT, then TED. Its room is below the 24,576-byte
 // source limit, so a source at the limit is edited with MON3.SVC unloaded.
-test("TED's text holds at least 24,086 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 23,318 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
+test("TED's text holds at least 23,062 bytes on the starter card with MON3.SVC resident under the shell, on serial, and 22,294 with GLCD.SVC too", { skip: TED.skip, timeout: 900_000 }, () => {
   check(TED);
   const P = /\r\n\d*[A-P](:\S*)?>$/;
-  for (const [board, via, floor] of [[{ glcd: false }, "serial", 24_086], [{ matrix: true, glcd: true }, "matrix", 23_318]]) {
+  for (const [board, via, floor] of [[{ glcd: false }, "serial", 23_062], [{ matrix: true, glcd: true }, "matrix", 22_294]]) {
     const m = boot(new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img"))), board);
     const type = (line, done, what) => {
       const mark = m.output.length;

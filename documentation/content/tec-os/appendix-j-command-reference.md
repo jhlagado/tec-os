@@ -14,8 +14,8 @@ nav_group: "Reference"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 At the prompt you name an operation and its arguments. The exact form
@@ -147,30 +147,29 @@ with return code `FF00h`. A system file remains available to TYPE and to
 program lookup.
 
 The shell's DIR starts with a blank line and prints a file on each row.
-The padded name and type are followed by its size in bytes, calculated as
-BDOS function 35's record count times 128. Each row is 20 columns wide and
-fits the graphics LCD's 21-column screen.
-
-The totals give the file count and combined byte length. Free space is
-function 46's record count times 128. The final line identifies the drive
-and its volume:
+The name and type come first, joined by a full stop as you type them and
+padded to twelve columns; a name with no type has no full stop. The size in
+bytes follows, right-aligned in eight columns. It has BDOS function 35's
+meaning: the file's highest record, plus one, times 128. Each row is 20
+columns wide and fits the graphics LCD's 21-column screen:
 
 ```text
-A:SYSTEM>DIR
-
-SHELL   .SVC    3712
-SAY     .COM     128
-X       .DAT  128128
-3 files, 131968 bytes
-1013760 free on A:SYSTEM
+SHELL.SVC       4224
+SAY.COM          128
+X.DAT         128128
 ```
 
-The listing is retained from `241b438:docs/shell.md:200-234`. Files represented by
-a single directory entry are listed first in a single pass. A file that
-may have more entries is sized through function 35, which scans the directory.
-Many large files therefore make DIR slower. A G8M file exceeds a single
-entry above 32 KiB. On G1M the threshold is 16 KiB. `DIR /W` lists names
-without that sizing work.
+These rows are the example in `TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:200-212`.
+After the rows, the totals give the file count and combined byte length.
+Free space is function 46's record count times 128, on a final line that
+identifies the drive and its volume. Files
+represented by a single directory entry are listed first, then those that
+may have more. A G8M file exceeds a single entry above 32 KiB. On G1M the
+threshold is 16 KiB. A first search of the directory gathers each name's
+size in a table, so a large file costs no more than a small one: DIR takes
+about twice `DIR /W`'s time, 40.6 s against 21.5 s for 452 files on a G8M
+volume at 4 MHz on the serial console
+(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:223-235`).
 
 `DIR /W`, and DIR without the shell, is the ROM's wide listing. Its last line
 gives the number listed and the free KiB on that drive. A displayed name has
@@ -204,7 +203,7 @@ in hexadecimal (`241b438:drivers/shellcmd.asm:54-154`).
 The type-only destination and self-copy cases below were captured on A
 with the starter card.
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:.DOC' 'DIR B:' 'COPY A:STARTUP.CMD STARTUP.CMD' 'COPY STARTUP.CMD'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'COPY STARTUP.CMD B:.DOC' 'DIR B:' 'COPY A:STARTUP.CMD STARTUP.CMD' 'COPY STARTUP.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -220,7 +219,7 @@ COPIED 0001
 
 A:SYSTEM>DIR B:
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
 8368128 free on B:WORK
 A:SYSTEM>COPY A:STARTUP.CMD STARTUP.CMD
@@ -279,7 +278,7 @@ disposable file there. It records an `n` answer that leaves the file and a `y`
 answer that erases it. This is a separate demonstration, not the card
 used for BANNER in Chapter 2. `ERA *.*` would erase BANNER too on that card.
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:' B: '@start ERA *.*' $'@key n\x0d' DIR '@start ERA *.*' $'@key y\x0d' DIR. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'COPY STARTUP.CMD B:' B: '@start ERA *.*' $'@key n\x0d' DIR '@start ERA *.*' $'@key y\x0d' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -298,7 +297,7 @@ B:WORK>ERA *.*
 ALL (Y/N)?n
 B:WORK>DIR
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
 8368128 free on B:WORK
 B:WORK>ERA *.*
@@ -444,14 +443,27 @@ gives the record layout.
 
 `MON3.SVC` gives the `MON3>` line, which BDOS function 10 reads and the
 service converts to capitals. It takes three commands. Anything else prints
-`?` (`241b438:docs/mon3.md:39-45`, `241b438:docs/mon3.md:61-115`):
+`?`. The address forms below follow the later development component
+(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:59-145`):
 
 | Form | Operation |
 | --- | --- |
 | `LOAD [D:]NAME[.TYP] [ADDR]` | Load the file at `4000h`, or at `ADDR`, one to four hexadecimal digits, in whole records. Any type but `HEX` loads this way |
-| `LOAD [D:]NAME.HEX` | Load an Intel HEX file at its records' addresses. It takes no address |
+| `LOAD [D:]NAME.HEX [ADDR]` | Load Intel HEX at its records' addresses; optional `ADDR` maps the lowest data address there, preserving gaps. Absolute addresses inside code are not relocated |
 | `GO [ADDR]` | Run the last good load, or the program at `ADDR` |
 | `EXIT` | Restore page zero, reset the drives and warm boot to `A:SYSTEM>` |
+
+After `LOAD NAME.BIN 2000`, bare `GO` starts at 2000h. BIN without
+an address still defaults to 4000h. HEX defaults to its lowest loaded
+address, or a validated type05 entry if present; an optional load base
+rebases that entry too. `GO ADDR` overrides the entry for one run. LOAD
+never runs automatically. A refused load clears readiness and leaves
+destination memory unchanged. All records and rebased ranges are checked
+before copying. A device error during the copy can leave partial data and
+ends the session; it is distinct from validation refusal. Type05 must name
+actual loaded data in the 16-bit address space. Data00, EOF01 and entry05
+are the only supported record types. The load address changes byte placement,
+not embedded machine-code addresses.
 
 The drive is A to P. The name has at most eight characters and the type
 three, and neither may hold `?` or `*`. Such a name is refused with `?`
@@ -475,7 +487,7 @@ and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 | File | Use |
 | --- | --- |
 | `TED.COM` | `TED [NAME.EXT [LINE]]` edits a text file, opening it at `LINE` when one is given. With no name it opens the project's file |
-| `TAS.COM` | `TAS NAME [OUT.TYP]` assembles `NAME.ASM` to `NAME.COM` and `NAME.DBG`, or to `OUT.TYP`, where a type of `SVC` makes a service. A line may hold several statements with `\` between them |
+| `TAS.COM` | `TAS NAME [OUT.TYP]` assembles `NAME.ASM` to `NAME.COM` and `NAME.DBG`, or to `OUT.TYP`, where a type of `SVC` makes a service and an explicit `HEX` writes genuine Intel HEX. A line may hold several statements with `\` between them |
 | `BAZA.COM` | `BAZA NAME` compiles `NAME.BAS`, or `NAME.BAZ` when there is no `.BAS`, to `NAME.COM` on the same drive |
 | `BAZA.RTL` | BAZA's runtime library, read from the current drive or from the drive `BAZA.COM` was loaded from |
 | `SAMPLE.ASM` | Assembly source for `TAS SAMPLE`, then `SAMPLE` |
@@ -488,20 +500,31 @@ and HELLO3.BIN is built from HELLO3.ASM before loading it at `MON3>`
 | `GLCD.SVC` | The graphics LCD console driver, a resident service |
 | `STARTUP.CMD` | The startup file, holding the lines `SHELL.SVC` and `GLCD.SVC` |
 
+`TAS NAME OUT.HEX` retains 16-bit record addresses and unfilled gaps,
+with data checksums and EOF. Later origins must move forward. Explicit fill
+remains data; no entry or extended-address record is invented. Other output
+and debug conventions remain. For example, `TAS PIC PIC.HEX`, then
+`MON3.SVC`, `LOAD PIC.HEX` and `GO` runs at the file's lowest loaded address;
+`LOAD PIC.HEX 5000` maps that lowest address to 5000h. Use position-independent
+code or assemble for the intended destination: moving bytes does not
+relocate embedded addresses. `GO ADDR` remains a one-run entry override
+(`Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`,
+`TEC-OS 2ec05d670a3d6acf813fbd544b3329d48614b92c:test/tas-hex.test.mjs:105-137`).
+
 TED's `^T B` and `^T R` build an `.ASM` file with `TAS NAME.ASM` and a
 `.BAS` file with `BAZA NAME.BAS`. `^T D` chains `TDB NAME` for an `.ASM`
 file, which fails with `A:TDB?` on the starter card, and shows
 `No debugger` for a `.BAS` file
-(`Thorium a2fe556:README.md:14-41`, `46cf3f1:docs/compatibility.md:223`).
+(`Thorium 20339b8:README.md:14-41`, `46cf3f1:docs/compatibility.md:223`).
 A file name and `THOR.PRJ`'s `ARGS` end at `!` or at `&` after a blank.
 Those are the shell's line separators. `ARGS X &Y` therefore gives the
 program the tail ` X` and runs nothing after it
-(`Thorium a2fe556:README.md:51-58`).
+(`Thorium 20339b8:README.md:51-58`).
 `TAS` and `BAZA` both set the failure return code `FF00h` when a build
 fails. A failed BAZA compile leaves an existing `NAME.COM` unchanged, and a
 failed TAS build normally keeps its earlier outputs
-(`46cf3f1:docs/compatibility.md:225-226`, `Baza 50dc512:README.md:32-37`,
-`Thorium 3d1e2c0:docs/language.md:17-20`).
+(`46cf3f1:docs/compatibility.md:225-226`, `Baza 45f2598:README.md:32-37`,
+`Thorium 2299dfc:docs/language.md:17-20`).
 [Make a small program](02-make-a-small-program.md) and
 [Build a BASIC program](03-build-a-basic-program.md) use them.
 

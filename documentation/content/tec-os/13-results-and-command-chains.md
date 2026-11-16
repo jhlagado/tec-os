@@ -14,8 +14,8 @@ nav_group: "Writing programs"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 A build sequence should run a program only after a successful build. An editor
@@ -31,7 +31,7 @@ prompt and echoes each later command before running it. This is CP/M 3's
 command-chain form. The first captured line runs two commands and the second
 includes empty pieces:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'DIR *.CMD!TYPE STARTUP.CMD' 'cd!!  ! dir b:!'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'DIR *.CMD!TYPE STARTUP.CMD' 'cd!!  ! dir b:!'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -44,9 +44,9 @@ A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>DIR *.CMD!TYPE STARTUP.CMD
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
-937984 free on A:SYSTEM
+909312 free on A:SYSTEM
 A:SYSTEM>TYPE STARTUP.CMD
 SHELL.SVC
 GLCD.SVC
@@ -69,7 +69,7 @@ before capitalising them. The displayed `dir b:` therefore executes as
 Each piece executes as a complete command. A drive or user-area change carries
 into later pieces. Here `B:` makes B current before COPY creates `NOTES.TXT`:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'B:!COPY A:STARTUP.CMD NOTES.TXT!DIR'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'B:!COPY A:STARTUP.CMD NOTES.TXT!DIR'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -86,7 +86,7 @@ COPIED 0001
 
 B:WORK>DIR
 
-NOTES   .TXT     128
+NOTES.TXT        128
 1 file, 128 bytes
 8368128 free on B:WORK
 B:WORK>
@@ -107,7 +107,7 @@ An ampersand after a space, `&`, makes the next piece conditional on success.
 Failure skips that piece without echoing it. Skipping preserves the failure
 result so another `&` also skips. A following `!` executes regardless:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'NOSUCH &DIR *.CMD !DIR *.SVC' 'DIR *.SVC &DIR *.CMD' 'NOSUCH &DIR *.CMD &DIR *.SVC'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'NOSUCH &DIR *.CMD !DIR *.SVC' 'DIR *.SVC &DIR *.CMD' 'NOSUCH &DIR *.CMD &DIR *.SVC'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -123,23 +123,23 @@ NOSUCH?
 
 A:SYSTEM>DIR *.SVC
 
-SHELL   .SVC    3712
-GLCD    .SVC     896
-MON3    .SVC    5120
-3 files, 9728 bytes
-937984 free on A:SYSTEM
+SHELL.SVC       4224
+GLCD.SVC         896
+MON3.SVC        5504
+3 files, 10624 bytes
+909312 free on A:SYSTEM
 A:SYSTEM>DIR *.SVC &DIR *.CMD
 
-SHELL   .SVC    3712
-GLCD    .SVC     896
-MON3    .SVC    5120
-3 files, 9728 bytes
-937984 free on A:SYSTEM
+SHELL.SVC       4224
+GLCD.SVC         896
+MON3.SVC        5504
+3 files, 10624 bytes
+909312 free on A:SYSTEM
 A:SYSTEM>DIR *.CMD
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
-937984 free on A:SYSTEM
+909312 free on A:SYSTEM
 A:SYSTEM>NOSUCH &DIR *.CMD &DIR *.SVC
 NOSUCH?
 
@@ -492,7 +492,7 @@ TED places file names and `THOR.PRJ`'s `ARGS` value on the command line. It
 truncates either at a shell separator: any `!` or an `&` following a blank.
 Thus `ARGS X &Y` makes `^T R` run once with tail ` X` and nothing afterwards.
 An embedded `&` in `/M:&HE000` remains literal
-(`Thorium a2fe556:README.md:51-58`, `241b438:docs/compatibility.md:231`,
+(`Thorium 20339b8:README.md:51-58`, `241b438:docs/compatibility.md:231`,
 `241b438:test/ted.test.mjs:305-333`).
 
 The load-drive byte at `0050h`, explained in Chapter 11, identifies TED's tool

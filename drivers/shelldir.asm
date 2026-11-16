@@ -6,14 +6,14 @@
 ; DIR /W is the ROM's wide listing. DIR
 ; [d:][name] lists each match not
 ; hidden, one a row: its name and its
-; size, BDOS 35's records times 128.
-; Then the count and the bytes, the
-; drive's free space by BDOS 46 and its
-; volume. BDOS 35 scans the directory
-; and loses the search, so only a file
-; that may have more than one entry is
-; sized by it: docs/shell.md gives the
-; cost.
+; size, the maximum end record times
+; 128. An extent prepass builds a
+; transient name/size table, followed
+; by the existing two output passes.
+; Without table space the original
+; BDOS 35/restart engine remains.
+; Then the count and bytes, free space
+; by BDOS 46, and the drive's volume.
 
 CMDDIR:
   call SKIPSP    ; to the operand
@@ -67,6 +67,9 @@ DR3:
   ld (DDRV),a
   inc a          ; from 1
   ld (CFCB),a    ; named, from 1
+  call DAGINIT   ; table or legacy mode
+
+DRCLEAR:
   ld hl,0
   ld (DNUM),hl   ; no file shown
   ld (DTOT),hl   ; no bytes
@@ -85,8 +88,9 @@ DRH0:
 ; pattern, EX '?'. An entry past a
 ; file's first, EX or S2 nonzero, marks
 ; its name's hash: such a file may hold
-; more than one entry, and only BDOS 35
-; sizes it.
+; more than one entry. The same scan
+; aggregates exact per-name maxima
+; when the transient table is available.
 
   ld a,'?'       ; '?' as EX:
   ld (CFEX),a    ; every extent
@@ -98,6 +102,14 @@ DRH1:
   inc a
   jr z,DRH3      ; the end
   call DRENT     ; HL: the entry
+  push hl
+  ld a,(DFAST)
+  or a           ; table mode: its
+                 ; maximum first, then
+                 ; the HMAP mark
+  call nz,DAGADD
+  pop hl
+  jr c,DRFALL    ; before any output
   push hl
   ld de,12       ; to EX
   add hl,de
@@ -120,11 +132,16 @@ DRH2:
 
 ; Pass A lists, from its first entry,
 ; each file whose name is not marked:
-; one entry, RC records. Pass B lists
-; the marked ones by BDOS 35, which
-; replaces the search state, so the
-; search is begun again after each and
-; passes over the DSKIP matches taken.
+; one entry, RC records. Pass B uses
+; the aggregate maximum. The fallback
+; uses BDOS 35, which replaces search
+; state: it restarts and skips the
+; DSKIP matches already taken.
+
+DRFALL:
+  xor a
+  ld (DFAST),a
+  jp DRCLEAR
 
 DRH3:
   xor a          ; EX 0:
@@ -165,7 +182,7 @@ DRN1:
 
 ; The file's name into FCBONE, and its
 ; records into FCBONE's random record:
-; RC in pass A, BDOS 35's in pass B.
+; RC in pass A, the maximum in pass B.
 
   push hl        ; the entry
   ld a,(CFCB)    ; its drive
@@ -187,25 +204,26 @@ DRN1:
   jr DRN3        ; listed
 
 DRN2:
+  ld a,(DFAST)
+  or a
+  jr nz,DRAGG
   call DOSSEQ    ; 35: its size
   DB 35*2+0      ; its size
   ld a,1
   ld (DRST),a    ; the search again
+  jr DRN3
 
-; A row: the name and type padded, the
+DRAGG:
+  call DAGGET
+
+; A row: the complete filename, the
 ; size eight wide, and the size into
 ; DTOT.
 
 DRN3:
   call LSTNL     ; the row's start
   jp c,BDONE     ; stopped
-  ld hl,FCBONE+1
-  ld b,8         ; its 8 bytes
-  call PUTN      ; the name
-  ld e,'.'       ; then a dot
-  call PUTC
-  ld b,3         ; its 3 bytes
-  call PUTN      ; the type
+  call DRNAME
   ld hl,FCBONE+33
   call RECB      ; NUMV: its bytes
   ld hl,NUMV     ; into DTOT
@@ -476,3 +494,454 @@ DV2:
   ld (NUMV+2),a
   ld a,c         ; the remainder
   ret
+
+
+; Print FCBONE's masked filename in
+; twelve columns: trim trailing
+; base/type padding, use a dot only with
+; a type, pad after the whole name.
+; Keeps the FCB. Changes AF, BC, DE and
+; HL.
+
+DRNAME:
+  ld c,12        ; whole filename width
+  ld hl,FCBONE+1
+  ld b,8
+  call DRTRIM    ; right padding only
+  call DRPART    ; consume printed width
+  ld hl,FCBONE+9
+  ld b,3
+  call DRTRIM    ; right padding only
+  ld a,b
+  or a           ; empty type: no dot
+  jr z,DRPAD
+  ld e,'.'
+  call PUTC
+  dec c          ; dot uses one column
+  call DRPART    ; consume printed width
+
+DRPAD:
+  ld a,c
+  or a           ; no padding at width 0
+  ret z
+  ld e,SPACE
+  call PUTC      ; BC preserves width
+  dec c          ; one padding column
+  jr DRPAD
+
+; HL is a field start, B its positive
+; width. Return B trimmed at the right,
+; possibly zero, with HL and C kept.
+; Attributes are masked before the space
+; test. Changes AF and DE.
+
+DRTRIM:
+  push hl        ; keep field start
+  ld e,b         ; bounded field width
+  ld d,0         ; ignore old D
+  add hl,de      ; start after the field
+
+DRTR1:
+  dec hl
+  ld a,(hl)
+  and $7F        ; type attributes too
+  cp SPACE       ; only rightmost spaces
+  jr nz,DRTR2    ; interior spaces stay
+  djnz DRTR1     ; all spaces gives B=0
+
+DRTR2:
+  pop hl         ; start even when empty
+  ret
+
+; Print B masked bytes at HL; B=0 prints
+; none. Advance HL and reduce C by the
+; printed width. PUTC keeps BC/HL.
+; Changes AF and DE too.
+
+DRPART:
+  ld a,b
+  or a           ; DJNZ(0) is not empty
+  ret z          ; no speculative byte
+
+DRPT1:
+  ld a,(hl)
+  and $7F        ; keep the old masking
+  ld e,a
+  call PUTC      ; keeps BC and HL
+  dec c          ; interior spaces count
+  inc hl
+  djnz DRPT1     ; only trimmed prefix
+  ret
+
+; Private transient header, bucket heads
+; and nodes. Each node has key[11],
+; max[3], next[2]. DNEXT is derived from
+; count at lookup, not retained between
+; commands.
+
+DCOUNT EQU $0100
+DNEXT  EQU $0102
+DKEY   EQU $0104
+DCAND  EQU DKEY+11
+DHASH  EQU DCAND+3
+DLINK  EQU DHASH+1
+DWHIT  EQU DLINK+2
+DHEAD  EQU $0140
+DNODE  EQU $0240
+DLIMIT EQU $2240
+
+; Choose table mode only if word 0006h
+; admits the whole workspace. Mode zero
+; uses the legacy engine without reading
+; this header. C on refusal, NC on
+; success; changes AF, BC, DE and HL.
+
+DAGINIT:
+  xor a          ; refusal keeps mode 0
+  ld (DFAST),a
+  ld hl,($0006)
+  ld de,DLIMIT   ; exclusive table end
+  or a           ; unsigned room check
+  sbc hl,de
+  ret c          ; no TPA writes yet
+  ld hl,DHEAD
+  ld de,DHEAD+1
+  ld bc,255      ; first byte plus 255
+  ld (hl),0      ; null bucket links
+  ldir           ; BC=0; A remains zero
+  ld (DCOUNT),bc
+  inc a          ; enable after clearing
+  ld (DFAST),a
+  ret
+
+; HL is an entry/FCB, before its eleven
+; name bytes. Write DKEY and DHASH, with
+; attributes masked and the legacy
+; rotate/XOR hash. Return HL at EX.
+; Changes AF, BC and DE.
+
+DAGKEY:
+  inc hl         ; past user/drive byte
+  ld de,DKEY     ; masked full identity
+  ld b,11        ; all eight plus three
+  xor a          ; same HMAP hash seed
+
+DAK1:
+  rlca           ; legacy hash rotation
+  ld c,a         ; hash across masking
+  ld a,(hl)
+  and $7F        ; attributes share keys
+  ld (de),a
+  xor c          ; hash is not identity
+  inc hl
+  inc de
+  djnz DAK1      ; HL ends at EX
+  ld (DHASH),a   ; bucket uses low seven
+  ret
+
+; HL is at EX. Write DCAND as unsigned
+; 24-bit ((S2&63)*32+(EX&31))*128+RC. S1
+; is ignored; RC is not clamped. Return
+; HL at RC; changes AF, BC and DE.
+
+DAGREC:
+  ld a,(hl)
+  and $1F        ; ignore reserved EX
+  ld d,a
+  ld e,0         ; EX bit 0 goes here
+  srl d          ; EX bits 1..4
+  rr e           ; EX bit 0 at bit 7
+  inc hl
+  inc hl
+  ld a,(hl)
+  and $3F        ; logical S2 bits
+  rlca
+  rlca
+  rlca
+  rlca
+  ld c,a         ; swapped S2 nibbles
+  and $F0        ; S2 low four in middle
+  or d           ; disjoint EX bits
+  ld d,a
+  ld a,c
+  and 3          ; S2 high two
+  ld b,a         ; third record byte
+  inc hl
+  ld a,(hl)
+  add a,e        ; unsigned RC, no clamp
+  ld e,a
+  jr nc,DAR1     ; no low-byte carry
+  inc d          ; carry into middle
+  jr nz,DAR1     ; middle did not wrap
+  inc b          ; carry into high byte
+
+DAR1:
+  ld (DCAND),de  ; low and middle
+  ld a,b         ; high byte, with
+                 ; any RC carry
+  ld (DCAND+2),a
+  ret
+
+; Validate DCOUNT, then derive DNEXT
+; anew as the exclusive allocated end.
+; Return BC=count, bounded by 512. DNEXT
+; is scratch, not independent allocation
+; state. Changes AF, DE and HL; bad
+; count exits through DAGBAD.
+
+DAGVALID:
+  ld hl,(DCOUNT)
+  ld de,513      ; allow exactly 512
+  or a           ; unsigned count check
+  sbc hl,de
+  jr nc,DAGBAD   ; reject before shifts
+  add hl,de      ; the count again
+  ld b,h         ; BC: the visit
+  ld c,l         ; budget, 16 bits
+  add hl,hl      ; sixteen-byte nodes
+  add hl,hl
+  add hl,hl
+  add hl,hl
+  ld de,DNODE    ; exclude header/heads
+  add hl,de      ; count times 16 + base
+  ld (DNEXT),hl  ; fresh for this lookup
+  ret
+
+; Nonlocal DIR fault: ERRMSG reports
+; failure and restores the outer
+; caller's stack. Never return a missing
+; key as size zero. No success summary
+; is printed.
+
+DAGBAD:
+  ld de,DAGMSG
+  jp ERRMSG      ; does not return here
+DAGMSG: DB "DIR STATE$"
+
+; Look up DKEY/DHASH. NC: HL points at
+; its maximum. C: DLINK is the empty
+; head/next word for insertion. Validate
+; aligned allocated pointers and bound
+; visits by DCOUNT. Faults exit through
+; DAGBAD. Changes AF, BC and DE.
+
+DAGFIND:
+  call DAGVALID  ; bounds before links
+  ld a,(DHASH)
+  and $7F        ; 128 two-byte heads
+  ld l,a
+  ld h,0         ; unsigned hash index
+  add hl,hl      ; word-sized heads
+  ld de,DHEAD    ; head, not node
+  add hl,de
+
+DAF1:
+  ld (DLINK),hl  ; empty link for insert
+  ld e,(hl)
+  inc hl
+  ld d,(hl)
+  ld a,d
+  or e           ; null includes head
+  scf            ; missing, not corrupt
+  ret z          ; DLINK is still empty
+  ld a,b
+  or c           ; budget before visit
+  jr z,DAGBAD    ; cycles cannot loop
+  dec bc         ; one allocated visit
+  ex de,hl       ; linked node address
+  ld a,l
+  and 15         ; a node's first byte,
+  jr nz,DAGBAD   ; never an interior one
+  ld de,DNODE    ; node lower bound
+  or a
+  sbc hl,de
+  jr c,DAGBAD    ; header is not a node
+  add hl,de      ; restore node address
+  ld de,(DNEXT)  ; derived allocated end
+  or a
+  sbc hl,de
+  jr nc,DAGBAD   ; free nodes excluded
+  add hl,de      ; restore node address
+  push bc        ; visits, kept across
+                 ; the key comparison
+  push hl        ; base if key differs
+  ld de,DKEY
+  ld b,11        ; hash is not identity
+
+DAF2:
+  ld a,(de)
+  cp (hl)        ; all masked key bytes
+  jr nz,DAF3     ; next in same bucket
+  inc de
+  inc hl         ; ends at maximum low
+  djnz DAF2
+  pop de         ; discard saved base
+  pop bc         ; restore visit budget
+  or a           ; matched, return NC
+  ret
+
+DAF3:
+  pop hl         ; back to node base
+  pop bc
+  ld de,14       ; its next-link word
+  add hl,de
+  jr DAF1        ; budget stays bounded
+
+; Maximise the three-byte value at HL
+; with the candidate at DE. Borrow runs
+; low to high; INC and DJNZ keep carry.
+; Equality may copy identical bytes.
+; Return NC; changes AF, BC, DE and HL.
+
+DAGMAX:
+  push hl        ; destination low
+  push de        ; candidate low
+  ld b,3         ; little-endian 24 bits
+  xor a          ; initial borrow clear
+
+DAM1:
+  ld a,(de)
+  sbc a,(hl)     ; propagate borrow
+  inc hl         ; INC16 keeps carry
+  inc de         ; so does this INC16
+  djnz DAM1      ; DJNZ keeps carry
+  pop hl         ; source low again
+  pop de         ; destination low again
+  jr c,DAMEND    ; candidate was smaller
+  ld bc,3        ; equality copy is safe
+  ldir           ; maximum, never sum
+
+DAMEND:
+  or a           ; both paths return NC
+  ret
+
+; HL is an extent entry. Coalesce its
+; end record, or insert its full key. C
+; means full: restart the legacy prepass
+; before any row. Otherwise NC. Bad
+; state exits through DAGBAD. Changes
+; AF, BC, DE and HL.
+
+DAGADD:
+  call DAGKEY    ; full masked key/hash
+  call DAGREC    ; exact extent end
+  call DAGFIND   ; also derives end
+  jr c,DAANEW    ; key not yet present
+  ld de,DCAND    ; header candidate
+  jp DAGMAX      ; coalesce same key
+
+DAANEW:
+  ld hl,(DNEXT)  ; count-derived slot
+  ld de,DLIMIT   ; fixed reservation end
+  or a           ; only full returns C
+  sbc hl,de
+  jr nc,DAAFULL  ; equal means full
+  ld de,(DNEXT)  ; validated new node
+  ld hl,DKEY     ; key then candidate
+  ld bc,14       ; leave link separate
+  ldir           ; filled before linked
+  xor a          ; null new tail
+  ld (de),a
+  inc de
+  ld (de),a
+  ld bc,(DNEXT)  ; new node base
+  ld hl,(DLINK)  ; empty head/next word
+  ld (hl),c      ; publish filled node
+  inc hl         ; the link's high byte
+  ld (hl),b      ; full sixteen-bit link
+
+; The count alone records what is
+; allocated: each lookup derives DNEXT
+; from it.
+
+  ld hl,(DCOUNT)
+  inc hl         ; one more name
+  ld (DCOUNT),hl
+  or a           ; only full returns C
+  ret
+
+DAAFULL:
+  scf            ; complete fallback
+  ret
+
+; Read FCBONE's marked-name maximum into
+; its random-record bytes. A literal
+; question mark keeps BDOS size's
+; wildcard meaning. Missing keys are
+; faults. Changes AF, BC, DE and HL.
+
+DAGGET:
+  ld hl,FCBONE
+  call DAGKEY    ; from copied anchor
+  ld hl,DKEY     ; already masked
+  ld b,11        ; literal wildcard test
+
+DAGQ:
+  ld a,(hl)
+  cp '?'         ; raw wildcard anchor
+  jr z,DAGWILD   ; not an exact-key size
+  inc hl
+  djnz DAGQ
+  call DAGFIND   ; ordinary marked key
+  jp c,DAGBAD    ; missing: a fault,
+                 ; never a zero size
+  ld de,FCBONE+33
+  ld bc,3        ; random record width
+  ldir           ; maximum to caller FCB
+  ret
+
+; Maximise over occupied keys matching
+; DKEY's masked wildcard pattern. A real
+; zero-sized match is distinct from no
+; match. Writes FCBONE random record and
+; DWHIT; changes AF, BC, DE and HL.
+
+DAGWILD:
+  call DAGVALID  ; bounds occupied scan
+  xor a          ; empty maximum, and
+  ld (DWHIT),a   ; no hit yet: a hit of
+                 ; size zero differs
+  ld (FCBONE+33),a
+  ld (FCBONE+34),a
+  ld (FCBONE+35),a
+  ld hl,DNODE    ; not bucket heads
+
+DAW1:
+  ld a,b
+  or c           ; full occupied count
+  jr z,DAWEND    ; never uninitialised
+  push bc        ; count across matcher
+  push hl        ; node base for advance
+  ld de,DKEY     ; wildcard pattern
+  ld b,11        ; same width as BDOS
+
+DAW2:
+  ld a,(de)
+  cp '?'
+  jr z,DAW3      ; one-position wildcard
+  cp (hl)        ; other bytes exact
+  jr nz,DAWNEXT  ; not this full key
+
+DAW3:
+  inc hl
+  inc de
+  djnz DAW2      ; all eleven must match
+  ex de,hl       ; candidate is node max
+  ld hl,FCBONE+33
+  call DAGMAX    ; unsigned maximum
+  ld a,1         ; even zero is a hit
+  ld (DWHIT),a
+
+DAWNEXT:
+  pop hl         ; occupied node base
+  pop bc         ; full remaining count
+  ld de,16       ; fixed node stride
+  add hl,de
+  dec bc         ; bounded linear scan
+  jr DAW1
+
+DAWEND:
+  ld a,(DWHIT)
+  or a           ; any match?
+  ret nz         ; its size, even zero
+  jp DAGBAD      ; none: the fault

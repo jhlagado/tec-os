@@ -14,8 +14,8 @@ nav_group: "Writing programs"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 Before reserving a larger buffer or stack, a program needs its available
@@ -217,13 +217,18 @@ Services allocate whole 256-byte pages below the preceding boundary's page.
 Each installs a BDOS jump at its base and the jump at `0005h` points there. On
 the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
 exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
-Later services allocate below the first. Startup's fifteen-page `SHELL.SVC`
-leaves `A700h`, or 42,496 bytes. Adding GLCD leaves 41,728
+Later services allocate below the first. In this chapter's captures startup's
+`SHELL.SVC` has fifteen pages and leaves `A700h`, or 42,496 bytes; adding GLCD
+leaves 41,728
 (`241b438:docs/memory-map.md:12-22`, `241b438:docs/shell.md:23-31`,
-`241b438:docs/compatibility.md:3-16`). MON3.SVC uses 18 pages. Alone it lowers `B6C5h`
-to `A400h`, leaving 41,728 bytes, or 40,960 after GLCD (`241b438:docs/mon3.md:49-54`).
-After the shell it leaves `9500h` and 37,888 bytes. Adding GLCD lowers it to
-`9200h` with 37,120 (`241b438:docs/mon3.md:47-59`, `241b438:test/shell2.test.mjs:853-875`).
+`241b438:docs/compatibility.md:3-16`). The shell that lists sizes from a table
+has seventeen pages. It leaves `A500h`, or 41,984 bytes, and 41,216 with GLCD,
+so on a current card each shell-loaded figure in those captures is 512 bytes
+lower (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`). MON3.SVC uses 20 pages. Alone it lowers
+`B6C5h` to `A200h`, leaving 41,216 bytes, or 40,448 after GLCD. After the
+seventeen-page shell it leaves `9100h` and 36,864 bytes. Adding GLCD lowers it
+to `8E00h` with 36,096 bytes, in any order of installing the three
+(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/mon3.md:47-58`).
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
@@ -369,10 +374,10 @@ The saved bytes are whatever a preceding program loaded or left in memory. A
 valid count is at most 255 and ends before the page containing the BDOS entry.
 Appendix J gives the command syntax.
 
-With the startup shell at `A700h`, this starter-card run could save 166 pages.
-The next page would cross the limit so 167 was rejected:
+With the seventeen-page startup shell at `A500h`, this starter-card run could
+save 164 pages. The next page would cross the limit so 165 was rejected:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 167 BIG.COM' 'SAVE 166 BIG.COM' DIR. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 165 BIG.COM' 'SAVE 164 BIG.COM' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -385,15 +390,15 @@ A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>B:
 B:WORK>SAVE 2 TWO.COM
-B:WORK>SAVE 167 BIG.COM
-167?
+B:WORK>SAVE 165 BIG.COM
+165?
 
-B:WORK>SAVE 166 BIG.COM
+B:WORK>SAVE 164 BIG.COM
 B:WORK>DIR
 
-TWO     .COM     512
-BIG     .COM   42496
-2 files, 43008 bytes
+TWO.COM          512
+BIG.COM        41984
+2 files, 42496 bytes
 8323072 free on B:WORK
 B:WORK>
 ```

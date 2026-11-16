@@ -74,7 +74,7 @@ test("SH8 a line of 127 characters runs whole: 32 pieces", () => {
 test("SH8 a piece may be a built-in, a drive change or a .COM found on A:, and keeps the drive and user it sets", () => {
   const m = boot(card({ "HI.COM": SAY }));
   const out = run(m, "USER 0!B:!HI!A:!HI!DIR HI.COM");
-  assert.match(out, /A(:\S*)?>B:\r\nB(:\S*)?>HI\r\nSAY\r\nB(:\S*)?>A:\r\nA(:\S*)?>HI\r\nSAY\r\nA(:\S*)?>DIR HI.COM\r\n(\r\n)?HI +\.COM +128\r\n1 file/);
+  assert.match(out, /A(:\S*)?>B:\r\nB(:\S*)?>HI\r\nSAY\r\nB(:\S*)?>A:\r\nA(:\S*)?>HI\r\nSAY\r\nA(:\S*)?>DIR HI.COM\r\n(\r\n)?HI\.COM {11}128\r\n1 file/);
   assert.equal(m.read(4) & 15, 0);
 });
 

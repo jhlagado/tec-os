@@ -14,8 +14,8 @@ nav_group: "Reference"
      raw output/hash receipts are retained in Origo
      studies/p3-tec-os/evidence/book-recovery-core/ and
      studies/p3-tec-os/evidence/book-recovery-host/.
-     The tool inputs are the pinned TAS host 3d16b30 and TED a2fe556;
-     Baza is the qualified 50dc512 payload. Source-derived excerpts are
+     The tool inputs are the pinned TAS host 3d16b30 and TED 20339b8;
+     Baza is the qualified 45f2598 payload. Source-derived excerpts are
      labelled separately from console captures. -->
 
 A failed command may have changed nothing or left part of a file written.
@@ -400,13 +400,13 @@ the volume services.
 
 ## TED's load error
 
-The starter card's TED (Thorium `a2fe556`) prints this
+The starter card's TED (Thorium `20339b8`) prints this
 line and returns to the prompt when the file it is opening holds a byte it
 rejects
-(`Thorium a2fe556:README.md:25-30`, `241b438:docs/compatibility.md:231`,
-`241b438:test/ted.test.mjs:94-122`). An older TED, Thorium `967678c`, also rejects `00h` padding at the end of a file and gives
+(`Thorium 20339b8:README.md:25-30`, `241b438:docs/compatibility.md:231`,
+`241b438:test/ted.test.mjs:94-122`). An older TED, Thorium `cc4044b`, also rejects `00h` padding at the end of a file and gives
 error 03 without a line or column
-(`Thorium 967678c:ted/src/load.asm:48-53`, `121-125`).
+(`Thorium cc4044b:ted/src/load.asm:48-53`, `121-125`).
 
 | Message | Cause | Action |
 | --- | --- | --- |

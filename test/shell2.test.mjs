@@ -375,13 +375,23 @@ const SP = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 22, 0xcd, 0x05, 0x00, 0x21, 
   0x11, 0x5c, 0x00, 0x0e, 34, 0xcd, 0x05, 0x00, 0x11, 0x5c, 0x00, 0x0e, 16, 0xcd, 0x05, 0x00, 0xc9]);
 const S35 = Uint8Array.from([0x11, 0x5c, 0x00, 0x0e, 35, 0xcd, 0x05, 0x00, 0xc9]);
 const bdos35 = (m, name) => (run(m, `S35 ${name}`), m.read(0x7d) | (m.read(0x7e) << 8) | (m.read(0x7f) << 16));
-/** DIR's rows as [name.type, size], past the pager's [more] and its erasing. */
-const rows = (t) =>
-  t
-    .split(/\r\n|\r/)
-    .map((l) => /^(\S+) *\.(\S*) +(\d+)$/.exec(l.replace(/^.*\[more\]/, "").trim()))
-    .filter(Boolean)
-    .map(([, n, ty, s]) => [`${n}.${ty}`, +s]);
+/**
+ * DIR's rows as [name.type, size], past the pager's [more] and its erasing.
+ * A row is twenty columns: the name in twelve, the size in eight. A line
+ * that looks like a row and isn't that wide fails here, so no row is lost.
+ */
+function rows(t) {
+  const found = [];
+  for (const l of t.replaceAll("[more]\r      \r", "").split(/\r\n|\r/)) {
+    const spaced = /^[^:>\x00-\x1f]*\S[^:>\x00-\x1f]* +\d+$/.test(l);
+    const touching = /^[^ .:>\x00-\x1f]{1,8}\.[^ .:>\x00-\x1f]{3}\d+$/.test(l);
+    if (!spaced && !touching) continue;
+    assert.equal(l.length, 20, `a row's width: ${JSON.stringify(l)}`);
+    assert.match(l.slice(12), /^ *\d{1,8}$/, "the size's eight columns");
+    found.push([l.slice(0, 12).trimEnd(), +l.slice(12)]);
+  }
+  return found;
+}
 
 /** Type LINE and run to the prompt, answering each [more] with a space. */
 function listing(m, line) {
@@ -421,8 +431,14 @@ test("S2-9 sizes are bdos 35's", () => {
   assert.deepEqual(rows(run(m, "DIR B:BIG.DAT")), [["BIG.DAT", 102400]], "four G8M entries");
 });
 
-test("S2-9 mutant: M4, the size from the entry with no BDOS 35, misses the sparse file's", async () => {
-  const v = await shellVariant([["  call DOSSEQ    ; 35: its size\n  DB 35*2+0      ; its size", "  ld hl,0\n  ld (FCBONE+34),hl"]]);
+// BDOS 35 sizes a marked file only in the legacy engine now, so M4 is
+// built on a shell held in that engine: one that finds no room for the table.
+const LEGACY = ["  ld hl,($0006)\n", "  ld hl,$223F\n"];
+
+test("S2-9 mutant: M4, the legacy engine's size from the entry with no BDOS 35, misses the sparse file's", async () => {
+  const legacy = await shellVariant([LEGACY]);
+  assert.deepEqual(rows(run(sized(legacy.file), "DIR X.DAT")), [["X.DAT", 128128]], "the legacy engine, by BDOS 35");
+  const v = await shellVariant([LEGACY, ["  call DOSSEQ    ; 35: its size\n  DB 35*2+0      ; its size", "  ld hl,0\n  ld (FCBONE+34),hl"]]);
   assert.notDeepEqual(rows(run(sized(v.file), "DIR X.DAT")), [["X.DAT", 128128]]);
 });
 
@@ -512,66 +528,8 @@ test("S2-9 bare dir", () => {
   assert.equal(rows(t).length, 0);
 });
 
-// The timed rows: B:WORK, a G8M, the names differing only in their digits;
-// emulator cycles at 4 MHz on the serial console, [more] answered at once.
-
-/** On B:, LARGE files of 40 KiB (two entries each), N of one record and BIG.DAT of 100 KiB: DIR's and DIR /W's milliseconds, and whether every size is right. */
-function timed({ n = 0, large = 0, shell } = {}) {
-  const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }], { drives: 4 });
-  const b = volume(image, "B");
-  for (let i = 0; i < large; i += 1) b.write(`L${String(i).padStart(4, "0")}.DAT`, new Uint8Array(40 * 1024).fill(3));
-  for (let i = 0; i < n; i += 1) b.write(`F${String(i).padStart(4, "0")}.DAT`, new Uint8Array(128).fill(1));
-  b.write("BIG.DAT", new Uint8Array(100 * 1024).fill(2));
-  const m = machine({ image, shell });
-  run(m, "B:");
-  listing(m, "DIR /W");
-  let c = m.cycles;
-  listing(m, "DIR /W");
-  const wide = (m.cycles - c) / 4000;
-  c = m.cycles;
-  const t = listing(m, "DIR");
-  const dir = (m.cycles - c) / 4000;
-  const want = (name) => (name.startsWith("L") ? 40960 : name.startsWith("F") ? 128 : name === "BIG.DAT" ? 102400 : -1);
-  const list = rows(t);
-  return { dir, wide, ratio: dir / wide, files: list.length, right: list.length === n + large + 1 && list.every(([nm, s]) => s === want(nm)) };
-}
-
-test("S2-9 g8m time", { timeout: 1_800_000 }, (t) => {
-  const r = timed({ n: 451 });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.right, "every size right");
-  assert.ok(r.ratio <= 2.5, `DIR ${r.dir.toFixed(0)} ms, ${r.ratio.toFixed(2)} times DIR /W's ${r.wide.toFixed(0)}`);
-});
-
-test("S2-9 mutant: the summed hash puts names that differ in their digits on few marks, past 2.5 times DIR /W", { timeout: 1_800_000 }, async (t) => {
-  const v = await shellVariant([["  rlca           ; rotated\n  ld c,a\n  ld a,(hl)      ; the name's byte\n  and $7F        ; no attribute\n  xor c", "  ld c,a\n  ld a,(hl)\n  and $7F\n  add a,c"]]);
-  const r = timed({ n: 451, shell: v.file });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.ratio > 2.5, `${r.ratio.toFixed(2)}`);
-});
-
-test("S2-9 g8m large files", { timeout: 1_800_000 }, (t) => {
-  const r = timed({ n: 251, large: 100 });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.right, "every size right");
-  assert.ok(r.ratio <= 8, `DIR ${r.dir.toFixed(0)} ms, ${r.ratio.toFixed(2)} times DIR /W's ${r.wide.toFixed(0)}`);
-});
-
-test("S2-9 g8m all large", { timeout: 1_800_000 }, (t) => {
-  const r = timed({ large: 180 });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.right, "every size right");
-  assert.ok(r.ratio <= 18, `DIR ${r.dir.toFixed(0)} ms, ${r.ratio.toFixed(2)} times DIR /W's ${r.wide.toFixed(0)}`);
-});
-
-// Pass B beginning the search again twice for each marked file: one more
-// walk over the matches taken, each time.
-test("S2-9 mutant: pass B restarting twice for each file takes the 180 large files past 18 times DIR /W", { timeout: 3_600_000 }, async (t) => {
-  const v = await shellVariant([["  ld a,1\n  ld (DRST),a    ; the search again", "  ld a,1\n  ld (DRST),a\n  call DSRCH\n  ld a,1\n  ld (DRST),a"]]);
-  const r = timed({ large: 180, shell: v.file });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.ratio > 18, `${r.ratio.toFixed(2)}`);
-});
+// The timed rows, DIR against DIR /W on a G8M, are in dir-cost.test.mjs with
+// their two cost controls.
 
 // --- S2-10 CLS, ECHO and PAUSE ------------------------------------------------
 
@@ -662,8 +620,8 @@ const extra = (svc) => svc.file[8] | (svc.file[9] << 8);
 const pages = (svc) => Math.ceil((svc.image + extra(svc)) / 256);
 
 test("S2-11 size", (t) => {
-  assert.ok(pages(SHELL) <= 15, `SHELL.SVC in 15 pages: ${SHELL.image} + ${extra(SHELL)}`);
-  assert.ok(SHELL.image + extra(SHELL) <= 3840);
+  assert.ok(pages(SHELL) <= 17, `SHELL.SVC in 17 pages: ${SHELL.image} + ${extra(SHELL)}`);
+  assert.ok(SHELL.image + extra(SHELL) <= 4352);
   assert.equal(sym.RING % 256, 0, "the ring's page aligned");
   // A reading, not a gate: 14 pages is the aim.
   t.diagnostic(`image ${SHELL.image}, file ${SHELL.file.length}, extra RAM ${extra(SHELL)}, ${pages(SHELL)} pages, ${sym.RING - sym.STKTOP} bytes of room; ${SHELL.image + extra(SHELL) - 14 * 256} bytes over 14 pages`);
@@ -866,13 +824,13 @@ test("S2-11 tpa figures", { timeout: 600_000 }, async () => {
     }
     return { tpa: word(m, 6) - 0x100, glcd: m.read(m.sym("CONMOD")) === 3, n: owners(m).length };
   };
-  assert.equal(tpa(["SHELL.SVC"]).tpa, 42496, "with the shell");
-  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41728, "and GLCD.SVC");
-  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 37888, "and MON3.SVC");
+  assert.equal(tpa(["SHELL.SVC"]).tpa, 41984, "with the shell");
+  assert.equal(tpa(["SHELL.SVC", "GLCD.SVC"]).tpa, 41216, "and GLCD.SVC");
+  assert.equal(tpa(["SHELL.SVC", "MON3.SVC"]).tpa, 36864, "and MON3.SVC");
   // The three together on a GLCD board, in three orders, the GLCD the console.
   for (const [startup, typed] of [[["SHELL.SVC", "GLCD.SVC", "MON3.SVC"], []], [["SHELL.SVC", "MON3.SVC", "GLCD.SVC"], []], [["GLCD.SVC"], ["SHELL.SVC", "MON3.SVC"]]]) {
     const r = tpa(startup, typed);
-    assert.deepEqual(r, { tpa: 37120, glcd: true, n: 3 }, startup.concat(typed).join(", "));
+    assert.deepEqual(r, { tpa: 36096, glcd: true, n: 3 }, startup.concat(typed).join(", "));
   }
 });
 
@@ -1016,12 +974,14 @@ function bdos11(logged, rom) {
   } finally { m.step = baseStep; sd.commitWrite = commit; }
 }
 
+// The qualified ROM's readings are taken with this build's SHELL.SVC on the
+// card, so they move with the shell's file: the bounds are over that control.
 test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
-  assert.deepEqual(qualifiedB, { nothing: 4954, worst: 8_735_058 });
-  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_206_025 });
+  assert.deepEqual(qualifiedB, { nothing: 4963, worst: 8_737_742 });
+  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_202_670 });
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
     assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
@@ -1121,10 +1081,10 @@ test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_
   const nativeA = bdos11("A"), mtw = bdos11("A", MUTANTS.mtw());
   const nativePass = refusedShellInputPass(), doubled = refusedShellInputPass(MUTANTS.mtw());
   t.diagnostic(JSON.stringify({ nativeB, mnc, nativeA, mtw, nativePasses: nativePass.cut.passes, mutantPasses: doubled.cut.passes }));
-  assert.ok(nativeB.nothing - 4954 <= 360); assert.ok(nativeB.worst / 8_735_058 - 1 <= 0.01);
-  assert.ok(mnc.nothing - 4954 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
-  assert.ok(mnc.worst / 8_735_058 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
-  assert.ok(nativeA.worst / 9_206_025 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
+  assert.ok(nativeB.nothing - 4963 <= 360); assert.ok(nativeB.worst / 8_737_742 - 1 <= 0.01);
+  assert.ok(mnc.nothing - 4963 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
+  assert.ok(mnc.worst / 8_737_742 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
+  assert.ok(nativeA.worst / 9_202_670 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
   oneShellInputPass(nativePass); assert.equal(doubled.cut.passes.length, 2);
   assert.equal(doubled.finalCardSHA256, nativePass.finalCardSHA256);
   assert.throws(() => oneShellInputPass(doubled), error => {
@@ -1273,7 +1233,7 @@ test("S2-12 tpa", () => {
   const bare = shellMachine(card);
   assert.equal(word(bare, 6) - 0x100, 46_533, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
-  assert.equal(word(m, 6) - 0x100, 42_496, "with the shell, the starter card's STARTUP.CMD");
+  assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
 });
 
 /** A card of the drives field's absence, built from the starter recipe without it: its machine under the shell. */
@@ -1355,15 +1315,20 @@ test("S2-13 docs", () => {
   ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
-  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives"])
+  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
+    "a TPA of 41,984 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,533 bytes", "42,496", "41,728"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,533 bytes", "41,984", "41,216"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A700h` to `9500h`/);
+  assert.match(flat("docs/mon3.md"), /from `A500h` to `9100h`, and the TPA from 41,984 bytes to \*\*36,864\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `8E00h`, a TPA of \*\*36,096\*\*/);
+  // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
+  for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
+    assert.doesNotMatch(flat(n), /\bprojects? (word|A500h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);
   // No doc teaches MOUNT.COM or a volume marked written behind.
   for (const n of ["README.md", "docs/shell.md", "docs/recovery.md", "docs/compatibility.md", "docs/container-format.md", "docs/rom-services.md", "docs/wip.md", "docs/mon3.md"]) {
     const t = flat(n);

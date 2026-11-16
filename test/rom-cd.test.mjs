@@ -138,7 +138,7 @@ for (const user of [0, 3]) test(user ? "RIG3 reset recovery from user 3 has no h
   }
   command(m, "SHELL.SVC", /A:SYSTEM>$/);
   assert.ok(pageOf(m));
-  assert.equal(word(m, 6) - 256, 42496);
+  assert.equal(word(m, 6) - 256, 41984);
   const powered = boot(image);
   assert.equal(selections(powered)[0], 1, "power cycle uses the card defaults");
   assert.ok(pageOf(powered));
