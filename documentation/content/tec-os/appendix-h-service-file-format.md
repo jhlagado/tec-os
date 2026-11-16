@@ -192,7 +192,7 @@ writeFileSync("GAPZERO.SVC", out);
 node tools/tecvol.mjs put svc.img B GAPZERO.SVC
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card svc.img B: GAPZERO.SVC SERVICES. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card svc.img B: GAPZERO.SVC SERVICES. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -207,15 +207,15 @@ A:SYSTEM>B:
 B:WORK>GAPZERO.SVC
 
 B:WORK>SERVICES
-COUNTF 1
-SHELL 15
+COUNTD 1
+SHELL 17
 B:WORK>
 ```
 
-In this run the service loaded at page `A6h`, below the shell. The inserted
-zero gap changed header byte 24 from a space, `20h`, to `C6h`. The shell's
+In this run the service loaded at page `A4h`, below the shell. The inserted
+zero gap changed header byte 24 from a space, `20h`, to `C4h`. The shell's
 `PUTTRIM` masks bit 7 (`46cf3f1:drivers/shellio.asm:264-283`) so the name prints with
-an `F`.
+a `D`.
 
 ## GLCD.SVC
 

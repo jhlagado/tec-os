@@ -173,7 +173,7 @@ The host-model configurations give these startup results:
 With both displays configured, startup leaves no resident GLCD driver.
 `SERVICES` lists only the shell and `CON` reports CRT:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico SERVICES CON. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board pico SERVICES CON. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -185,7 +185,7 @@ A>SHELL.SVC
 A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>SERVICES
-SHELL 15
+SHELL 17
 A:SYSTEM>CON
 CON: CRT:
 A:SYSTEM>

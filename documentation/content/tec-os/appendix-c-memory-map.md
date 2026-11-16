@@ -81,12 +81,12 @@ program space:
 | --- | ---: | --- | ---: |
 | Starter card, four reserved drive slots | 1,024 bytes | `B6C5h` | 46,533 bytes |
 | Starter card with `GLCD.SVC` installed | 1,024 bytes | `B300h` | 45,568 bytes |
-| Starter card after `STARTUP.CMD` installs `SHELL.SVC` | 1,024 bytes | `A700h` | 42,496 bytes |
-| Starter card with `SHELL.SVC` and `GLCD.SVC` | 1,024 bytes | `A400h` | 41,728 bytes |
+| Starter card after `STARTUP.CMD` installs `SHELL.SVC` | 1,024 bytes | `A500h` | 41,984 bytes |
+| Starter card with `SHELL.SVC` and `GLCD.SVC` | 1,024 bytes | `A200h` | 41,216 bytes |
 | Two-volume reference, no drives field, no service | 320 bytes | `B985h` | 47,237 bytes |
 
-The shell takes fifteen pages, and its last page holds its 256-byte history ring (`241b438:docs/memory-map.md:8-22`,
-`241b438:docs/compatibility.md:3-16`, `241b438:docs/shell.md:23-31`).
+The shell takes seventeen pages, and its last page holds its 256-byte history ring (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/memory-map.md:8-22`,
+`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/compatibility.md:3-16`, `TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`).
 
 Housekeeping preserves the bare/reference/shell TPA and public stack sizes
 already allocated by recovery. Its private worker's refusal account is 28+12+2
@@ -95,22 +95,23 @@ BDOS reentry permission (`a40d482:docs/services.md:312-345`).
 
 ## Current stock PICO observation
 
-The current `241b438` stock PICO capture reads the accepted `PZTOP` and the
-word at `0006h` after actual normal function-13 returns and at the owned shell
+A stock PICO run of the build with the seventeen-page shell reads `PZTOP` and
+the word at `0006h` at the first return from function 13 and at the shell's
 input. They agree at each observation:
 
 | Observed state | Exclusive top | TPA bytes |
 | --- | --- | ---: |
 | Initial disk reset, no resident service | `B6C5h` | 46,533 |
-| SHELL resident after startup | `A700h` | 42,496 |
-| After the native `DIR` command | `A700h` | 42,496 |
+| SHELL resident after startup | `A500h` | 41,984 |
+| After the shell's `DIR` command | `A500h` | 41,984 |
 
-These are read-only host-model observations, retained in Origo's
-`book-stock-pico-capture03` event, screen and receipt files. The PICO console
-is supplied by ROM; the echoed GLCD startup attempt does not leave GLCD
-resident in this measured state. The older GLCD-only, mixed-service and
-reference-card rows above retain their original measurement scope. No new
-stack-depth or interrupt-hook allowance is inferred from this table.
+These are read-only host-model observations. The PICO console is supplied by
+ROM; the echoed GLCD startup attempt does not leave GLCD resident in this
+measured state. `DIR` builds its table of names in the program area while it
+runs and gives the boundary back unchanged. The GLCD-only and reference-card
+rows above keep their earlier measurements, which the shell's size does not
+touch. No new stack-depth or interrupt-hook allowance is inferred from this
+table.
 
 ## The ROM
 

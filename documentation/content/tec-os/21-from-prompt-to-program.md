@@ -245,19 +245,19 @@ prints `Bad Sector` and warm-boots before the loader can return
 Resident services reduce this load ceiling. Without installed services,
 the starter entry at `B6C5h` gives ceiling `B600h`: 46,336 bytes from
 `0100h`, 197 below the TPA byte limit. Startup installs the shell at
-`A700h`, reducing prompt-time capacity to 42,496 bytes. Each installed
+`A500h`, reducing prompt-time capacity to 41,984 bytes. Each installed
 service moves the entry word and load ceiling to its first page
 (`241b438:src/cpm/ccp.asm:683-685`, `241b438:src/loader.asm:494-507`).
 
 The capacity fixture places FITS, BIG and ARGS on B. FITS and BIG contain
 RET followed by zeros. ARGS has the complete listing below and is assembled
-on the PC by TAS, as Chapter 27's HELLO is. FITS has 42,496 bytes and BIG
-has 42,497:
+on the PC by TAS, as Chapter 27's HELLO is. FITS has 41,984 bytes and BIG
+has 41,985:
 
 ```sh
 node -e 'const b = n => { const x = Buffer.alloc(n); x[0] = 0xC9; return x; };
-require("fs").writeFileSync("build/fits.com", b(42496));
-require("fs").writeFileSync("build/big.com", b(42497));'
+require("fs").writeFileSync("build/fits.com", b(41984));
+require("fs").writeFileSync("build/big.com", b(41985));'
 node --input-type=module -e '
 import { writeFileSync } from "node:fs";
 import { assembleProgram } from "./tools/lib/assemble.mjs";
@@ -273,7 +273,7 @@ node tools/tecvol.mjs put build/ccp.img B build/big.com
 TAS writes the 76-byte ARGS.COM. FITS returned to the prompt and BIG was
 rejected:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: FITS BIG. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card build/ccp.img B: FITS BIG. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -297,7 +297,7 @@ The same fixture separates fallback from directory visibility. Under user
 3, ARGS runs from B's user 0 and TAS from A's user 0. DIR still searches
 only the empty current user area:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -403,7 +403,7 @@ buffers. `PUT` saves BC and HL around function 2. `SHOWFCB` prints eleven
 name/type bytes and `TAIL` follows the length at `0080h`. The capture
 therefore exposes padded FCB names alongside spaces retained in the tail:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card build/ccp.img B: 'args one.txt a:*.c' 'ARGS X Y ! ARGS'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -553,10 +553,10 @@ the new name at offset 17 for function 23. An absent old name gives
 SAVE converts a decimal page count with a carry check at every arithmetic
 step. It rejects values above 255 and counts reaching the high byte of
 the word at `0006h`. On the starter card with the shell installed that byte
-is `A7h`: 166 pages cover `0100h` through `A6FFh`. Both 167 and 320 are
+is `A5h`: 164 pages cover `0100h` through `A4FFh`. Both 165 and 320 are
 rejected in this capture (`46cf3f1:src/cpm/ccpcmd.asm:266-307`):
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 167 B:X.COM'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 165 B:X.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -570,8 +570,8 @@ A:SYSTEM>GLCD.SVC
 A:SYSTEM>SAVE 320 B:X.COM
 320?
 
-A:SYSTEM>SAVE 167 B:X.COM
-167?
+A:SYSTEM>SAVE 165 B:X.COM
+165?
 
 A:SYSTEM>
 ```

@@ -200,7 +200,7 @@ data. Other types produce a flat image except `.DBG` and types beginning with
 `$`, which are rejected. Thus `TAS COUNT COUNT.SVC` replaces any existing
 COUNT.SVC on the drive.
 
-Startup installs SHELL.SVC first so SERVICES lists `SHELL 15` beneath newer
+Startup installs SHELL.SVC first so SERVICES lists `SHELL 17` beneath newer
 services and UNLOAD reaches it only after removing them
 ([Chapter 5](05-drives-and-user-areas.md)).
 
@@ -226,7 +226,7 @@ node tools/tecvol.mjs put svc.img B chars.asm --text
 The run builds AREA and CHARS, writes COUNT.SVC, then measures installation,
 use and removal:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card svc.img B: 'TAS AREA' 'TAS CHARS' 'TAS COUNT COUNT.SVC' AREA COUNT.SVC SERVICES AREA CHARS CHARS UNLOAD SERVICES AREA CHARS. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card svc.img B: 'TAS AREA' 'TAS CHARS' 'TAS COUNT COUNT.SVC' AREA COUNT.SVC SERVICES AREA CHARS CHARS UNLOAD SERVICES AREA CHARS. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -248,15 +248,15 @@ B:WORK>TAS COUNT COUNT.SVC
 COUNT.SVC written
 
 B:WORK>AREA
-42496 bytes
+41984 bytes
 
 B:WORK>COUNT.SVC
 
 B:WORK>SERVICES
 COUNT 1
-SHELL 15
+SHELL 17
 B:WORK>AREA
-42240 bytes
+41728 bytes
 
 B:WORK>CHARS
 count 0053
@@ -267,9 +267,9 @@ count 0070
 B:WORK>UNLOAD
 
 B:WORK>SERVICES
-SHELL 15
+SHELL 17
 B:WORK>AREA
-42496 bytes
+41984 bytes
 
 B:WORK>CHARS
 no COUNT record
@@ -382,7 +382,7 @@ The following 40-column PICO run has the Matrix switch enabled. A separate
 starter-card copy holds fail.asm, Chapter 11's area.asm and matching abi.inc
 on B. AREA needs no HWLIB. Startup has installed only the shell:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --card svc2.img B: 'TAS AREA' 'TAS FAIL FAIL.SVC' AREA SERVICES FAIL.SVC AREA. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board pico --card svc2.img B: 'TAS AREA' 'TAS FAIL FAIL.SVC' AREA SERVICES FAIL.SVC AREA. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -390,6 +390,8 @@ B: WORK
 C: PROJECTS
 
 A>SHELL.SVC
+
+A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>B:
 B:WORK>TAS AREA
@@ -399,20 +401,20 @@ B:WORK>TAS FAIL FAIL.SVC
 FAIL.SVC written
 
 B:WORK>AREA
-42496 bytes
+41984 bytes
 
 B:WORK>SERVICES
-SHELL 15
+SHELL 17
 B:WORK>FAIL.SVC
 FAIL.SVC?
 
 B:WORK>AREA
-42496 bytes
+41984 bytes
 
 B:WORK>
 ```
 
-The question mark reports rejection and the identical 42,496-byte AREA results
+The question mark reports rejection and the identical 41,984-byte AREA results
 show no retained allocation. Workflow attempt04 on ROM `fa63989b` also checked
 state directly. INIT returned carry set once and REMOVE never ran. After the
 BIOS scan the complete baseline was restored. Services with real hardware or
@@ -491,7 +493,7 @@ this conflict in the captured workflows.
 CHEAT changes COUNT's BDOS declaration to 9, which exceeds 8 even alone. The
 capture includes the build and rejected load:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card svc.img B: 'TAS CHEAT CHEAT.SVC' CHEAT.SVC SERVICES. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card svc.img B: 'TAS CHEAT CHEAT.SVC' CHEAT.SVC SERVICES. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -510,7 +512,7 @@ B:WORK>CHEAT.SVC
 CHEAT.SVC?
 
 B:WORK>SERVICES
-SHELL 15
+SHELL 17
 B:WORK>
 ```
 
@@ -682,7 +684,7 @@ This PICO-model run leaves GLCD uninstalled during startup, preserving stack
 room for COUNT. After TAS builds COUNT.SVC, RECS lists two records at the
 addresses shown:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card svc.img --board pico B: 'TAS COUNT COUNT.SVC' 'TAS RECS' COUNT.SVC RECS. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card svc.img --board pico B: 'TAS COUNT COUNT.SVC' 'TAS RECS' COUNT.SVC RECS. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -703,7 +705,7 @@ RECS.COM written
 B:WORK>COUNT.SVC
 
 B:WORK>RECS
-COUNT    version 01 table A65F
+COUNT    version 01 table A45F
 PICO     version 04 table BBC4
 
 B:WORK>
@@ -789,7 +791,7 @@ and version for its declaration and FIND call so the record is already
 available at entry. Without COUNT the loader rejects it before INIT. The run
 shows that failure followed by valid installation and removal order:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card svc.img B: 'TAS COUNT COUNT.SVC' 'TAS NEEDS NEEDS.SVC' NEEDS.SVC COUNT.SVC NEEDS.SVC SERVICES UNLOAD UNLOAD SERVICES. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card svc.img B: 'TAS COUNT COUNT.SVC' 'TAS NEEDS NEEDS.SVC' NEEDS.SVC COUNT.SVC NEEDS.SVC SERVICES UNLOAD UNLOAD SERVICES. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -817,13 +819,13 @@ B:WORK>NEEDS.SVC
 B:WORK>SERVICES
 NEEDS 1
 COUNT 1
-SHELL 15
+SHELL 17
 B:WORK>UNLOAD
 
 B:WORK>UNLOAD
 
 B:WORK>SERVICES
-SHELL 15
+SHELL 17
 B:WORK>
 ```
 

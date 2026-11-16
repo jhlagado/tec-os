@@ -136,7 +136,7 @@ node tools/tecvol.mjs put mem.img B top.com
 
 On the serial-only host model TOP produced:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card mem.img B:TOP. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card mem.img B:TOP. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -148,19 +148,19 @@ A>SHELL.SVC
 A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>B:TOP
-A700h
+A500h
 
 A:SYSTEM>
 ```
 
-The value `A700h` is the base of the shell's fifteen installed pages. In the
+The value `A500h` is the base of the shell's seventeen installed pages. In the
 dual-display configuration the PICO console code occupies ROM and startup's
 `GLCD.SVC` installs nothing. A later `CON UC1` loads GLCD below the shell and
 lowers the boundary. In this run the first TOP result and `CON UC1` echo went
 to PICO9918. The reply and second result went to the graphics LCD. The capture
 is from the host model, not a browser or physical board:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --card mem.img B:TOP 'CON UC1' B:TOP. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board pico --card mem.img B:TOP 'CON UC1' B:TOP. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -172,12 +172,12 @@ A>SHELL.SVC
 A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>B:TOP
-A700h
+A500h
 
 A:SYSTEM>CON UC1
 CON: UC1:
 A:SYSTEM>B:TOP
-A400h
+A200h
 
 A:SYSTEM>
 ```
@@ -202,10 +202,10 @@ example has four G8M volumes created with `tecvol create`. A holds `TOP.COM`,
 | --- | --- | --- | ---: | ---: |
 | starter card | none | `B6C5h` | 46,533 | 46,336 |
 | starter card | `GLCD.SVC` | `B300h` | 45,568 | 45,568 |
-| starter card | `SHELL.SVC` | `A700h` | 42,496 | 42,496 |
-| starter card | `SHELL.SVC`, `GLCD.SVC` | `A400h` | 41,728 | 41,728 |
+| starter card | `SHELL.SVC` | `A500h` | 41,984 | 41,984 |
+| starter card | `SHELL.SVC`, `GLCD.SVC` | `A200h` | 41,216 | 41,216 |
 | four G8M volumes | none | `B6C5h` | 46,533 | 46,336 |
-| four G8M volumes | `GLCD.SVC`, `SHELL.SVC` | `A400h` | 41,728 | 41,728 |
+| four G8M volumes | `GLCD.SVC`, `SHELL.SVC` | `A200h` | 41,216 | 41,216 |
 
 An allocation vector reserves a bit per allocation block so the BDOS can find
 free storage without rereading the directory. A set bit marks a block already
@@ -217,16 +217,12 @@ Services allocate whole 256-byte pages below the preceding boundary's page.
 Each installs a BDOS jump at its base and the jump at `0005h` points there. On
 the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
 exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
-Later services allocate below the first. In this chapter's captures startup's
-`SHELL.SVC` has fifteen pages and leaves `A700h`, or 42,496 bytes; adding GLCD
-leaves 41,728
-(`241b438:docs/memory-map.md:12-22`, `241b438:docs/shell.md:23-31`,
-`241b438:docs/compatibility.md:3-16`). The shell that lists sizes from a table
-has seventeen pages. It leaves `A500h`, or 41,984 bytes, and 41,216 with GLCD,
-so on a current card each shell-loaded figure in those captures is 512 bytes
-lower (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`). MON3.SVC uses 20 pages. Alone it lowers
+Later services allocate below the first. Startup's seventeen-page `SHELL.SVC`
+leaves `A500h`, or 41,984 bytes. Adding GLCD leaves 41,216
+(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/memory-map.md:12-22`, `TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`,
+`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/compatibility.md:3-16`). MON3.SVC uses 20 pages. Alone it lowers
 `B6C5h` to `A200h`, leaving 41,216 bytes, or 40,448 after GLCD. After the
-seventeen-page shell it leaves `9100h` and 36,864 bytes. Adding GLCD lowers it
+shell it leaves `9100h` and 36,864 bytes. Adding GLCD lowers it
 to `8E00h` with 36,096 bytes, in any order of installing the three
 (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/mon3.md:47-58`).
 
@@ -292,7 +288,7 @@ writeFileSync(out, (await assembleProgram(src)).bytes);
 node tools/tecvol.mjs put mem.img B area.com
 ```
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --card mem.img B:AREA. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --card mem.img B:AREA. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -304,7 +300,7 @@ A>SHELL.SVC
 A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>B:AREA
-42496 bytes
+41984 bytes
 
 A:SYSTEM>
 ```

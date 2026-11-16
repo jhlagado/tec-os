@@ -453,7 +453,7 @@ with PICO9918 selected. Startup installed the shell but its `GLCD.SVC`
 line installed no driver. Typing `GLCD.SVC` at the prompt then installed
 the driver while leaving the PICO9918 selected:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico GLCD.SVC SERVICES UNLOAD SERVICES UNLOAD SERVICES UNLOAD. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board pico GLCD.SVC SERVICES UNLOAD SERVICES UNLOAD SERVICES UNLOAD. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -468,11 +468,11 @@ A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>SERVICES
 GLCD 3
-SHELL 15
+SHELL 17
 A:SYSTEM>UNLOAD
 
 A:SYSTEM>SERVICES
-SHELL 15
+SHELL 17
 A:SYSTEM>UNLOAD
 
 A>SERVICES
@@ -484,7 +484,7 @@ UNLOAD?
 A>
 ```
 
-The driver occupies three pages and the shell fifteen. The first `UNLOAD`
+The driver occupies three pages and the shell seventeen. The first `UNLOAD`
 removed the driver, the newest service, and the second removed the shell.
 `SERVICES` then had no shell to run it and became an unknown command. The
 last `UNLOAD` had nothing to remove. `UNLOAD?` also appears when the newest
@@ -507,7 +507,7 @@ instead ends the command with the BDOS's `Bad Sector` message.
 A second graphics LCD driver cannot install over the first. In this
 GLCD-console run, startup had already installed the shell and the driver:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board glcd GLCD.SVC SERVICES. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board glcd GLCD.SVC SERVICES. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -523,7 +523,7 @@ GLCD.SVC?
 
 A:SYSTEM>SERVICES
 GLCD 3
-SHELL 15
+SHELL 17
 A:SYSTEM>
 ```
 
