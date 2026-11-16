@@ -40,6 +40,9 @@ The starter disk remains source-only for Caverns: CAVBASIC.BAS and CAVERNS.TXT,
 with BAZA.COM/BAZA.RTL for readers to compile it. CAVBASIC.COM and the assembly
 version remain development artifacts, excluded from the starter disk.
 
-Viewer refresh and physical TEC-1G qualification are separate records; this
-native evidence alone does not establish either. Literal-print compaction,
+The refreshed Viewer passed [native/bundle checks](evidence/caverns-compact-emission/viewer-native-tests.log)
+and an [actual Chromium fresh-card build/play/checkpoint trial](evidence/caverns-compact-emission/viewer-result.json).
+The [qualification record](evidence/caverns-compact-emission/qualification.json)
+pins the exact compiler, TEC-OS and Viewer revisions. Physical TEC-1G testing
+and public main/site deployment remain outstanding. Literal-print compaction,
 integer DATA payloads and native file channels are not implemented by this change.

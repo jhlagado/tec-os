@@ -1,0 +1,11 @@
+✔ in the page's machine, BAZA BOUNCE builds BOUNCE, which takes Graphics I with sprites, moves the ship on taps and on the page's arrow keys and gives A> back on Q (9374.601088ms)
+✔ Viewer Caverns disk includes BASIC source only, compiles identically and runs at 80 columns (3413.902382ms)
+✔ the web page's bundle uses no Node globals (60.6265ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13032.667297

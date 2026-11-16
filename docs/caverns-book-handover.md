@@ -1,7 +1,7 @@
 # TEC-OS Book: BASIC Caverns handover
 
 This is the current practical-manual handover, including the behaviour-preserving
-BASIC rewrite and the earlier landmark wording corrections. Walkthrough spoilers are in
+BASIC rewrite, landmark wording corrections and compact compiler emission. Walkthrough spoilers are in
 [caverns-walkthrough.md](caverns-walkthrough.md), not this teaching outline.
 
 ## Readiness
@@ -9,12 +9,15 @@ BASIC rewrite and the earlier landmark wording corrections. Walkthrough spoilers
 Qualified in the native TEC-OS emulator: compile with the shell resident;
 126-point quest; all 54 rooms and displayed descriptions; automatic homecoming;
 reversible rope/gates; complete checkpoint restoration; TED edit/save/build/run,
-exit and reopen after power cycle. Eighteen game/scenario/TED/rewrite tests pass, plus a native test inserting
-line 151 without renumbering and nineteen starter-card tests. Two Viewer recipe/bundle tests pass. A separate real
-Chromium trial compiled from a fresh source-only card to the exact expected
-COM, played opening commands, and exported/restored a checkpoint in fresh
-browser storage. Physical TEC-1G testing and final human review of the revised
-adventure remain outstanding before calling the public release fully qualified.
+exit and reopen after power cycle. The compact compiler passes 712 native
+regression cases and 49 independent control/arithmetic expectations. Current
+TEC-OS checks include 15 game/scenario/TED tests, a 480-command comparison in
+36 scenarios, native insertion of line 151 without renumbering and 19 starter
+checks. Three Viewer native/bundle checks cover Caverns, BOUNCE and the bundle.
+A separate real Chromium trial compiles the exact expected COM from a fresh
+source-only card, plays opening commands and exports/restores a checkpoint in
+fresh browser storage. Physical TEC-1G testing and final human review remain
+outstanding before calling the public release fully qualified.
 Changes are pushed on integration branches, not claimed merged or publicly
 hosted. The manual may describe tested emulator behaviour with that boundary.
 
@@ -22,25 +25,26 @@ hosted. The manual may describe tested emulator behaviour with that boundary.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source/card recipe | jhlagado/tec-os, fe0df27d4f5caf5bd1b1146deefe198f980db6c7 |
+| Qualified gameplay/source/card recipe | jhlagado/tec-os, a442f151b58b38c211251272bf40fc64dd195754 |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
-| Verification executable, not on starter | programs/CAVBASIC.COM; 39,680 bytes |
+| Verification executable, not on starter | programs/CAVBASIC.COM; 38,272 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
-| Matching Viewer integration | jhlagado/tec-os-viewer, c0d1fdea6e8bfc84d574149f3ede9d45e7f85805 |
-| BAZA compiler/runtime pins | jhlagado/baza, 8578fe50fdfc66e16015c54f365d1403825979da, dist/BAZA.COM and dist/BAZA.RTL |
+| Matching Viewer integration | jhlagado/tec-os-viewer, 12e67f3efe5de8f59cc9b2db56bd99e0e45e93f1 |
+| BAZA compiler/runtime pins | jhlagado/baza, 52c3956167c8cebe382d342619ec2899913fd18c, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 
-Compiler SHA-256: 41f96c2716274327fd84180b3cadbb277a8d4f7faacf95b0e31fe3fdceb0acc6.
-Runtime SHA-256: 3c77dccda2221616dd2573183f137d5d4131218b9f024b521982c44b0567bc64.
+Compiler SHA-256: 087d3a4073fe1c2dcd41ccd5e5ca7efcb9f21628c714a2e37986028839c2fa36.
+Runtime SHA-256: f79d57328eb152ecba86a9c203f5ead5544a95b07da131c0fd0ad5821d5d5e07.
 Source SHA-256: f64fdb84ead251e3e49590c4c156d7951afc52fb02ffad959cf819b20760b9e0.
-Executable SHA-256: 841e208da7603054ed3e86d9f52a58c7de87f0a7a4c29e5d1f41599971733ee0.
-No BAZA/compiler change was required for the rewrite. Engine authoring source
+Executable SHA-256: 4c2a29c643dc13999cebcddf45f5743bfb025e060185b0327b5929468a3677b8.
+The rewrite itself required no compiler change. Subsequent compact source-location
+emission reduces the executable while preserving diagnostics. Engine authoring source
 and world data are separate; the supplied BAS uses ten-step numbering,
 uppercase keywords and lowercase variables. Native compilation needs no generator. RTL is linked
-selectively into the COM; its 12,800-byte file is not loaded beside the game.
+selectively into the COM; its 12,928-byte file is not loaded beside the game.
 
 ## Tested user exercise
 
@@ -67,8 +71,9 @@ that browser trial. No physical-board claim applies to either.
 ## Requirements and limits
 
 Tested console: PICO9918 at 80 columns, matrix keyboard input. Shell-resident
-TPA: 42,496 bytes; COM: 39,680, leaving 2,816 bytes for runtime working space
-and stack. The no-shell TPA is 46,533 bytes, but this example does not need it.
+TPA: 42,496 bytes; COM: 38,272 bytes; logical image: 38,248 bytes. After
+reserving 768 bytes for the CPU stack, 3,480 bytes remain for dynamic arrays,
+strings and control. This space is used during initialisation and play. The no-shell TPA is 46,533 bytes, but this example does not need it.
 Growth is constrained; use the small banner change, not a large library feature.
 There are eleven carrying slots, finite candle life and random combat risk.
 The candle is still found lit; matches and a burn clock starting on lighting
@@ -78,17 +83,17 @@ A card-image download is not a game-memory snapshot.
 
 ## Evidence and release scope
 
-- [Latest native game/scenario/TED tests](evidence/caverns-rewrite/native-tests.log).
-- [Latest build](evidence/caverns-rewrite/native-build.log).
-- [Exact build record](evidence/caverns-rewrite/native-build.log).
-- [Starter tests](evidence/caverns-rewrite/starter-tests.log).
-- [Latest Viewer native tests](evidence/caverns-rewrite/viewer-native-tests.log).
-- [Latest real browser trial](evidence/caverns-rewrite/viewer-result.json).
-- [Latest qualification summary](evidence/caverns-rewrite/qualification.json).
-- [Strict baseline comparison](evidence/caverns-rewrite/differential.json):
+- [Current game/scenario/TED tests](evidence/caverns-compact-emission/integration.log).
+- [Compiler and Caverns integration](caverns-compact-emission.md).
+- [Starter tests](evidence/caverns-compact-emission/starter.log).
+- [Viewer native tests](evidence/caverns-compact-emission/viewer-native-tests.log).
+- [Real browser trial](evidence/caverns-compact-emission/viewer-result.json).
+- [Qualification summary](evidence/caverns-compact-emission/qualification.json).
+- [Strict baseline comparison](evidence/caverns-compact-emission/differential.json):
   480 commands, 36 scenarios, all persisted state and RNG checked.
-- [Reader line-insertion experiment](evidence/caverns-rewrite/reader-insertion.log).
-- [Fresh checkout packs matching scenarios](evidence/caverns-rewrite/fresh-checkout-pack.log).
+- [Reader line-insertion experiment](evidence/caverns-compact-emission/reader-insertion.log).
+- [Native size/link audit](evidence/caverns-compact-emission/size.json).
+- [Measured timing and string collection](evidence/caverns-compact-emission/timing.json).
 - [Engine and authoring structure](caverns-engine.md).
 - [Map/prose audit, spoilers](caverns-map-audit.md).
 

@@ -1,5 +1,10 @@
 # Caverns native code and TPA size audit
 
+This document retains the pre-optimisation 39,680-byte baseline. For the current
+38,272-byte build and qualification, see [compact emission](caverns-compact-emission.md).
+The audit tool measures its current checkout; use the historical baseline commit
+to reproduce the older numbers below.
+
 Read-only investigation prompted by the author's priority: shrink compiled
 BASIC before adding file handling; consider shell unloading separately.
 No compiler/runtime or gameplay optimisation is implemented by this audit.
