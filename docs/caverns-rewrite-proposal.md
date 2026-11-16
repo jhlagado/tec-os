@@ -17,6 +17,17 @@ line-number generator must default to that spacing; compact numbering must
 not consume the insertion space. This requirement applies to the future
 rewrite, not an unsolicited renumbering of the currently qualified source.
 
+## Author requirement: readable BASIC casing
+
+Use **UPPERCASE keywords** (`IF`, `THEN`, `FOR`, `NEXT`, `GOSUB`, etc.) and
+**UPPERCASE named constants**. Use **lowercase variable names**, retaining their
+BASIC type suffixes, for example `room%`, `score%` and `command$`. Preserve the
+intended case inside strings and game prose; a style pass must not rewrite
+messages or alter gameplay. Named constants in any authoring/generation layer
+follow the same uppercase rule, without assuming BAZA supports a new CONST
+statement. Apply these conventions together with ten-step line numbering to
+the future rewrite. No blanket recasing of the qualified listing is requested.
+
 1. **Explicit state.** One documented record for room, object locations,
    creatures, gates, attached rope, candle clock, score-relevant possessions
    and RNG. Immutable descriptions/connections/treasure values remain separate.
