@@ -224,11 +224,11 @@ leaves 41,728
 `241b438:docs/compatibility.md:3-16`). The shell that lists sizes from a table
 has seventeen pages. It leaves `A500h`, or 41,984 bytes, and 41,216 with GLCD,
 so on a current card each shell-loaded figure in those captures is 512 bytes
-lower (`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/shell.md:23-31`). MON3.SVC uses 20 pages. Alone it lowers
+lower (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`). MON3.SVC uses 20 pages. Alone it lowers
 `B6C5h` to `A200h`, leaving 41,216 bytes, or 40,448 after GLCD. After the
 seventeen-page shell it leaves `9100h` and 36,864 bytes. Adding GLCD lowers it
 to `8E00h` with 36,096 bytes, in any order of installing the three
-(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/mon3.md:47-58`).
+(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/mon3.md:47-58`).
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
@@ -372,10 +372,7 @@ or patched code. A zero count creates an empty file.
 
 The saved bytes are whatever a preceding program loaded or left in memory. A
 valid count is at most 255 and ends before the page containing the BDOS entry.
-Appendix J gives the command syntax. The shell's `DIR` with sizes is one such
-preceding program: it builds its table of names at `0100h`–`223Fh`, so a SAVE
-after it writes that table. `DIR /W` leaves memory as it was
-(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/shell.md:223-229`).
+Appendix J gives the command syntax.
 
 With the seventeen-page startup shell at `A500h`, this starter-card run could
 save 164 pages. The next page would cross the limit so 165 was rejected:
