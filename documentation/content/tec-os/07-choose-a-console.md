@@ -143,7 +143,7 @@ and the Matrix switch is enabled. A warm boot keeps the selected width. Reset
 restores 40 before any startup width command runs. This capture selects 32
 columns, runs `TAS` with no name and then lists files across the row:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen 'CON PICO 32' TAS 'DIR /W'. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs --board pico --screen 'CON PICO 32' TAS 'DIR /W'. Full screen; trailing empty rows omitted. -->
 ```text
 CON: CRT:
 A:SYSTEM>TAS
@@ -155,15 +155,16 @@ STARTUP.CMD  TED.COM
 SAMPLE.ASM   TIMES.BAS
 TAS.COM      BAZA.COM
 BAZA.RTL     BOUNCE.BAS
+CAVBASIC.BAS CAVERNS.TXT
 DEMO.ASM     MON3.SVC
 HELLO3.ASM
-13 files, 916K free
+15 files, 888K free
 A:SYSTEM>
 ```
 
 The warm boot after TAS retains 32 columns. `DIR /W` fits two file
-names per row at this width, compared with six at 80 columns. Thirteen
-files therefore occupy seven rows.
+names per row at this width, compared with six at 80 columns. Fifteen
+files therefore occupy eight rows.
 
 An unsupported width, a width after another device name or a number joined to
 `CRT` without a space produces a question mark. The console remains as it was:
