@@ -227,7 +227,6 @@ const SCENARIOS = {
   badcount: ["a count in the record that cannot be one", {}, [(m) => { m.write(m.sym("EVN"), 9); return "EVN set to 9 by the probe"; }, ["", ANY], "EVBIG"]],
   pending: ["a pending write the card refuses at the evicted program's exit", { pending: true, extra: pendingSayFiles() }, [["EVICT SAY", ANY], (m) => { m.fault.release(); return "the card accepts again"; }, ["", ANY], (m) => { m.fault.assertRecovered(); return "written once"; }]],
   pending3: ["the same with GLCD.SVC and MON3.SVC to bring back too", { pending: true, matrix: true, extra: pendingSayFiles() }, [["MON3.SVC", { re: MON3[0] }], "EXIT", ["EVICT SAY", ANY], (m) => { m.fault.release(); return "the card accepts again"; }, ["", ANY], (m) => { m.fault.assertRecovered(); return "written once"; }]],
-  mon3go: ["MON3's GO with a pending write the card refuses", { pending: true, extra: pendingSayFiles() }, [["SAY", ANY], ["MON3.SVC", { re: MON3[0] }], ["GO 4000", { re: MON3[0] }], (m) => `card writes tried ${m.fault.attempts.length}, taken ${m.fault.attempts.filter((a) => a.accepted).length}`]],
 };
 const which = process.argv.slice(2);
 for (const [key, [name, opts, steps]] of Object.entries(SCENARIOS)) if (!which.length || which.includes(key)) scenario(name, opts, steps);

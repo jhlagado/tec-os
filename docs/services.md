@@ -454,8 +454,8 @@ it works with a shell or at the bare prompt.
 1. Every resident is checked, and nothing is removed yet. There may be no more
    than four. Each must be removable. Each must have a directory entry now for
    the file it was installed from: the drive and the name the loader kept in
-   its header, in the user number in force. Any failure is `EVICT?` with
-   FF00h, and nothing has changed.
+   its header, in the prompt's user area. Any failure is `EVICT?` with FF00h,
+   and nothing has changed.
 2. Each is removed, the lowest first, as `UNLOAD` removes it. A `REMOVE` that
    refuses ends in `EVICT?` too, and those already out come back.
 3. The command runs as a line typed at the ROM's prompt. While it runs no
