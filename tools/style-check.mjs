@@ -2,7 +2,7 @@
 // Compact assembly checks (tools/lib/style-compact.mjs) on the ROM sources, the
 // drivers and the diagnostics: src/ and its subfolders, drivers/, diag/ (the
 // gen/ folders excluded), SAMPLE.ASM, DEMO.ASM, the diagnostics' MON3 stub and the
-// tests' PUT.COM. Prints each file's figures and, with --faults, each fault.
+// tests' AREA.COM and PUT.COM. Prints each file's figures and, with --faults, each fault.
 //
 //   node tools/style-check.mjs [--json FILE] [--faults] [--strict] [FILE...]
 //
@@ -33,7 +33,7 @@ export function sources(root = ROOT) {
   walk("src");
   walk("drivers");
   walk("diag");
-  out.push("programs/SAMPLE.ASM", "programs/DEMO.ASM", "test/programs/mon3stub.asm", "test/programs/put.asm");
+  out.push("programs/SAMPLE.ASM", "programs/DEMO.ASM", "test/programs/mon3stub.asm", "test/programs/area.asm", "test/programs/put.asm");
   return out;
 }
 
