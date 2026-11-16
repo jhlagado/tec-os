@@ -167,9 +167,7 @@ and `UNLOAD`, which removes the last service loaded. The starter card loads the
 shell, `SHELL.SVC` ([docs/shell.md](docs/shell.md)), which adds the history (^W
 and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
 services loaded, `[more]` in `TYPE` and `DIR`, `DIR` with each file's size,
-`CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. That `DIR` builds its table in the
-TPA, so before a `SAVE` use `DIR /W`, the ROM's listing, which leaves a loaded
-program as it was. The starter card has four drives:
+`CLS`, `ECHO`, `PAUSE` and `.CMD` scripts. The starter card has four drives:
 `CD ?` lists its named directories, `CD NAME` selects one on the current
 drive and `CD D:NAME` on another. These commands work at the bare ROM prompt
 too, so `CD A:SYSTEM` followed by `SHELL.SVC` restores the shell after
