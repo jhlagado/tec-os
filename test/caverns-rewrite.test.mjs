@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {ROOT,boot,volume} from './lib/fixtures.mjs';
+import {ROOT,boot,startupFile,volume} from './lib/fixtures.mjs';
 import {buildLauncher,encodeScenario,scalarNames,layout} from '../tools/caverns-scenario.mjs';
 const read=p=>readFileSync(ROOT+'/'+p),json=p=>JSON.parse(read(p));
 const basic=json('test/caverns-basic.json'),old=json('test/fixtures/caverns-baseline/fixture.json');
@@ -31,6 +31,9 @@ async function pair(s){
   const image=new Uint8Array(read('dist/starter.img')),a=volume(image,'A');
   a.write('CAVLOAD.COM',read(baseline?'test/fixtures/caverns-baseline/CAVLOAD.COM':'build/caverns/CAVLOAD.COM'));
   a.write('TEST.CAV',baseline?encodeOld(s):encodeScenario(s));
+  // The 39,808-byte baseline needs the 42,496 bytes the fifteen-page shell left, and the shell with sized DIR
+  // leaves 41,984, so the baseline alone runs with no shell loaded, in the bare ROM's 46,533.
+  if(baseline)a.write('STARTUP.CMD',startupFile('GLCD.SVC'));
   const m=boot(image,{tms:true,matrix:true,width:80});const out=keys(m,'cavload test');machines.push({m,f:baseline?old:basic,l:baseline?oldLayout:l,out});
  }
  assert.equal(normal(machines[1].out),normal(machines[0].out),'initial description');
@@ -114,9 +117,12 @@ test('rewrite matches baseline output, complete state and RNG across checkpoints
 test('long-input resource behaviour is recorded separately from gameplay equivalence',{timeout:120000},async()=>{
  const [a,b]=await pair(scenario());const input='x'.repeat(254);
  const before=keys(a.m,input),after=keys(b.m,input);
- assert.match(before,/OUT OF MEMORY/);
- if(/OUT OF MEMORY/.test(after))assert.ok(b.m.ready(),'resource failure exits cleanly');
- else{assert.doesNotMatch(after,/ERROR IN/);assert.equal(scalar(b.m,b.f,'A%'),1);assert.ok(b.m.waitingForInput());}
+ // Under the fifteen-page shell's 42,496 bytes the baseline ran out of memory here; with no shell it has
+ // 46,533 and may take the input, so each game is held to the same two outcomes.
+ for(const [x,out]of [[a,before],[b,after]]){
+  if(/OUT OF MEMORY/.test(out))assert.ok(x.m.ready(),'resource failure exits cleanly');
+  else{assert.doesNotMatch(out,/ERROR IN/);assert.equal(scalar(x.m,x.f,'A%'),1);assert.ok(x.m.waitingForInput());}
+ }
  mkdirSync(ROOT+'/build/caverns/rewrite',{recursive:true});
  writeFileSync(ROOT+'/build/caverns/rewrite/input-headroom.json',JSON.stringify({inputBytes:254,baselineOutput:before,rewrittenOutput:after,note:'Resource boundary, excluded from gameplay-equivalence claims; the console may split an overlong input.'},null,2)+'\n');
 });
