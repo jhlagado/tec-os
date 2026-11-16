@@ -136,7 +136,7 @@ REMOVE:
 ; take them and give the MON3> line.
 
 ENTRY:
-  cp 1           ; a restoration?
+  dec a          ; 1: a restoration
   ret z          ; installed, no MON3>
   call ACTIVE    ; Z: in a session
   ld de,MBUSY    ; MON3 active
