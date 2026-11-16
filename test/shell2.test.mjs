@@ -421,8 +421,14 @@ test("S2-9 sizes are bdos 35's", () => {
   assert.deepEqual(rows(run(m, "DIR B:BIG.DAT")), [["BIG.DAT", 102400]], "four G8M entries");
 });
 
-test("S2-9 mutant: M4, the size from the entry with no BDOS 35, misses the sparse file's", async () => {
-  const v = await shellVariant([["  call DOSSEQ    ; 35: its size\n  DB 35*2+0      ; its size", "  ld hl,0\n  ld (FCBONE+34),hl"]]);
+// BDOS 35 sizes a marked file only in the legacy engine now, so M4 is
+// built on a shell held in that engine: one that finds no room for the table.
+const LEGACY = ["  ld hl,($0006)\n", "  ld hl,$223F\n"];
+
+test("S2-9 mutant: M4, the legacy engine's size from the entry with no BDOS 35, misses the sparse file's", async () => {
+  const legacy = await shellVariant([LEGACY]);
+  assert.deepEqual(rows(run(sized(legacy.file), "DIR X.DAT")), [["X.DAT", 128128]], "the legacy engine, by BDOS 35");
+  const v = await shellVariant([LEGACY, ["  call DOSSEQ    ; 35: its size\n  DB 35*2+0      ; its size", "  ld hl,0\n  ld (FCBONE+34),hl"]]);
   assert.notDeepEqual(rows(run(sized(v.file), "DIR X.DAT")), [["X.DAT", 128128]]);
 });
 
@@ -512,66 +518,8 @@ test("S2-9 bare dir", () => {
   assert.equal(rows(t).length, 0);
 });
 
-// The timed rows: B:WORK, a G8M, the names differing only in their digits;
-// emulator cycles at 4 MHz on the serial console, [more] answered at once.
-
-/** On B:, LARGE files of 40 KiB (two entries each), N of one record and BIG.DAT of 100 KiB: DIR's and DIR /W's milliseconds, and whether every size is right. */
-function timed({ n = 0, large = 0, shell } = {}) {
-  const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }], { drives: 4 });
-  const b = volume(image, "B");
-  for (let i = 0; i < large; i += 1) b.write(`L${String(i).padStart(4, "0")}.DAT`, new Uint8Array(40 * 1024).fill(3));
-  for (let i = 0; i < n; i += 1) b.write(`F${String(i).padStart(4, "0")}.DAT`, new Uint8Array(128).fill(1));
-  b.write("BIG.DAT", new Uint8Array(100 * 1024).fill(2));
-  const m = machine({ image, shell });
-  run(m, "B:");
-  listing(m, "DIR /W");
-  let c = m.cycles;
-  listing(m, "DIR /W");
-  const wide = (m.cycles - c) / 4000;
-  c = m.cycles;
-  const t = listing(m, "DIR");
-  const dir = (m.cycles - c) / 4000;
-  const want = (name) => (name.startsWith("L") ? 40960 : name.startsWith("F") ? 128 : name === "BIG.DAT" ? 102400 : -1);
-  const list = rows(t);
-  return { dir, wide, ratio: dir / wide, files: list.length, right: list.length === n + large + 1 && list.every(([nm, s]) => s === want(nm)) };
-}
-
-test("S2-9 g8m time", { timeout: 1_800_000 }, (t) => {
-  const r = timed({ n: 451 });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.right, "every size right");
-  assert.ok(r.ratio <= 2.5, `DIR ${r.dir.toFixed(0)} ms, ${r.ratio.toFixed(2)} times DIR /W's ${r.wide.toFixed(0)}`);
-});
-
-test("S2-9 mutant: the summed hash puts names that differ in their digits on few marks, past 2.5 times DIR /W", { timeout: 1_800_000 }, async (t) => {
-  const v = await shellVariant([["  rlca           ; rotated\n  ld c,a\n  ld a,(hl)      ; the name's byte\n  and $7F        ; no attribute\n  xor c", "  ld c,a\n  ld a,(hl)\n  and $7F\n  add a,c"]]);
-  const r = timed({ n: 451, shell: v.file });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.ratio > 2.5, `${r.ratio.toFixed(2)}`);
-});
-
-test("S2-9 g8m large files", { timeout: 1_800_000 }, (t) => {
-  const r = timed({ n: 251, large: 100 });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.right, "every size right");
-  assert.ok(r.ratio <= 8, `DIR ${r.dir.toFixed(0)} ms, ${r.ratio.toFixed(2)} times DIR /W's ${r.wide.toFixed(0)}`);
-});
-
-test("S2-9 g8m all large", { timeout: 1_800_000 }, (t) => {
-  const r = timed({ large: 180 });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.right, "every size right");
-  assert.ok(r.ratio <= 18, `DIR ${r.dir.toFixed(0)} ms, ${r.ratio.toFixed(2)} times DIR /W's ${r.wide.toFixed(0)}`);
-});
-
-// Pass B beginning the search again twice for each marked file: one more
-// walk over the matches taken, each time.
-test("S2-9 mutant: pass B restarting twice for each file takes the 180 large files past 18 times DIR /W", { timeout: 3_600_000 }, async (t) => {
-  const v = await shellVariant([["  ld a,1\n  ld (DRST),a    ; the search again", "  ld a,1\n  ld (DRST),a\n  call DSRCH\n  ld a,1\n  ld (DRST),a"]]);
-  const r = timed({ large: 180, shell: v.file });
-  t.diagnostic(JSON.stringify(r));
-  assert.ok(r.ratio > 18, `${r.ratio.toFixed(2)}`);
-});
+// The timed rows, DIR against DIR /W on a G8M, are in dir-cost.test.mjs with
+// their two cost controls.
 
 // --- S2-10 CLS, ECHO and PAUSE ------------------------------------------------
 
