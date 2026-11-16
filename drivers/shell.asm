@@ -139,36 +139,9 @@ ENTRY:
   ld (PREV),hl   ; kept for REMOVE
   ld a,b         ; FFh: startup
   inc a
-  jr nz,ENTAIL   ; typed: no startup
+  ret nz         ; typed: no startup
   dec a
   ld (STSKIP),a  ; read the rest next
-  ret
-
-; A tail is a line for the first
-; prompt: the pieces that bring back
-; the services evicted with this shell.
-; They run with origin 1, so a service
-; entered by one starts no session.
-
-ENTAIL:
-  ld hl,DEFDMA   ; the tail's count
-  ld a,(hl)
-  or a
-  ret z          ; no tail
-  ld c,a
-  ld b,0
-  inc hl
-  ld de,LTXT
-  ldir           ; the tail
-  xor a
-  ld (de),a      ; zero-ended
-  ld (LCOND),a   ; its first piece runs
-  inc a
-  ld (LORG),a    ; a restoration
-  ld hl,LTXT
-  call SKIPSB
-  ret z          ; blanks only
-  ld (LPOS),hl
   ret
 
 ; LINE, called by the ROM at each
@@ -194,9 +167,6 @@ LINE:
   call PGRST     ; each command's pager
   ld a,(HHEAD)
   ld (HPOS),a    ; recall from newest
-  ld a,(EVST)    ; an eviction in hand
-  or a           ; goes on first
-  jp nz,EVLINE
   pop af
   bit 1,a        ; dropped?
   jr z,LN1       ; nothing dropped
@@ -674,256 +644,6 @@ CS1:
   ld (SORG),a    ; its lines are typed
   jr BDONE       ; its first line next
 
-; EVICT command: this shell and every
-; service installed after it leave for
-; one command, and come back at the
-; prompt after it. The line that brings
-; them back, A:SHELL.SVC and a piece for
-; each of the others, oldest first,
-; goes in the ROM's buffer after the
-; line buffer, which the bare prompt
-; runs once. The others go by UNLOAD
-; lines handed to the ROM one at a
-; time; the last line is UNLOAD and
-; the command, so that nothing returns
-; here once this shell has gone.
-
-CMDEVI:
-  call SKIPSP
-  or a
-  jp z,BADW      ; no command
-  ld (EVCMD),hl
-  ld a,(SOPEN)
-  or a
-  jp nz,BADW     ; not from a script
-  call CRLF
-  call EVBUF     ; HL = the flag
-  inc hl
-  ex de,hl       ; DE = the text
-  ld hl,EXNAM    ; this shell's file
-  call EVPUT
-  ld a,SPACE
-  ld (de),a
-  inc de
-  xor a
-  ld (EVLEFT),a
-  ld c,HIGH(HDR) ; from this shell down
-
-EV1:
-  ld a,(LOWPG)
-  cp c
-  jr z,EV4       ; none newer
-
-EV2:
-  ld h,a         ; the owner whose
-  ld l,8         ; next is that one
-  ld a,(hl)
-  cp c
-  jr nz,EV2
-  ld c,h
-  ld l,3
-  bit 0,(hl)     ; removable?
-  jp z,BADW
-  ld l,17        ; its header's name
-  call EVPUT
-  push de
-  push bc
-  ld hl,(EVPC)   ; its file must open
-  ld de,CFCB
-  call PARSEFCB
-  ld de,CFCB
-  ld c,15
-  call BDOS
-  pop bc
-  pop de
-  inc a
-  jp z,BADW      ; nothing to reload
-  ld a,'!'
-  ld (de),a
-  inc de
-  ld hl,EVLEFT
-  inc (hl)
-  jr EV1
-
-EV4:
-  ld a,($0003)   ; the console field
-  cpl
-  and 3
-  jr nz,EV5      ; not the GLCD
-  ld hl,EVCON
-  ld bc,8
-  ldir           ; CON UC1: last
-
-EV5:
-  xor a
-  ld (de),a      ; the line's end
-  call EVBUF
-  ld a,e
-  sub l          ; the line's bytes
-  cp 63
-  jp nc,BADW     ; too many to hold
-  ld a,1
-  ld (EVST),a
-  jr EVSTEP
-
-; LINE's entry while an eviction is in
-; hand. The last line's code says
-; whether its UNLOAD went. A refusal,
-; or this shell still here after its
-; own UNLOAD, ends the eviction: the
-; services already out come back.
-
-EVLINE:
-  pop af         ; LINE's flags
-  ld de,QUERY
-  ld c,108
-  call BDOS
-  ld a,h
-  inc a
-  jr z,EVBACK    ; FFxxh: refused
-  ld a,(EVST)
-  dec a
-  jr nz,EVBACK   ; its own UNLOAD
-
-EVSTEP:
-  ld hl,EVLEFT
-  ld a,(hl)
-  or a
-  jr z,EVLAST    ; only this shell
-  dec (hl)
-  ld hl,EVUNL
-  jp HAND0       ; UNLOAD, alone
-
-; UNLOAD and the command, with the line
-; that brings the services back set.
-
-EVLAST:
-  call EVBUF
-  ld (hl),1      ; it waits
-  ld a,2
-  ld (EVST),a
-  ld hl,EVUNL
-  ld de,(OUTP)
-  ld bc,6
-  ldir
-  ld a,SPACE
-  ld (de),a
-  inc de
-  ld hl,(EVCMD)
-  ld b,120       ; the buffer's room
-
-EVL1:
-  ld a,(hl)
-  ld (de),a
-  inc hl
-  inc de
-  or a
-  jr z,EVL2
-  djnz EVL1
-  xor a
-  ld (de),a      ; cut at the room
-
-EVL2:
-  xor a          ; typed origin
-  ld sp,(SAVSP)
-  ret
-
-; Bring back the services that went:
-; the last pieces of the line, one for
-; each UNLOAD that ran, as a line of
-; this shell's own.
-
-EVBACK:
-  call EVBUF
-  xor a
-  ld (hl),a      ; the line waits no more
-  ld (EVST),a
-  ld a,(EVLEFT)
-  ld b,a         ; pieces to pass over
-  inc hl
-
-EVB1:
-  ld a,(hl)      ; past this shell's
-  inc hl         ; own name
-  cp SPACE
-  jr nz,EVB1
-  inc b
-
-EVB2:
-  dec b
-  jr z,EVB4
-
-EVB3:
-  ld a,(hl)      ; past one piece
-  inc hl
-  cp '!'
-  jr nz,EVB3
-  jr EVB2
-
-EVB4:
-  ld de,LTXT
-  ld bc,64
-  ldir
-  ld hl,LTXT
-  ld (LPOS),hl
-  xor a
-  ld (LCOND),a
-  inc a
-  ld (LORG),a    ; a restoration
-  ld de,EVMSG
-  call PUTS
-  ld de,FAILCODE
-  ld c,108
-  call BDOS
-  jp LN2
-
-; HL = the flag of the ROM's buffer
-; after the line buffer. Changes BC.
-
-EVBUF:
-  ld hl,(OUTP)
-  ld bc,128
-  add hl,bc
-  ret
-
-; A:, the name of eight at HL with its
-; blanks left out, and .SVC, to DE.
-; EVPC keeps the piece's start.
-
-EVPUT:
-  ld (EVPC),de
-  ex de,hl
-  ld (hl),'A'
-  inc hl
-  ld (hl),':'
-  inc hl
-  ex de,hl
-  ld b,8
-
-EVP1:
-  ld a,(hl)
-  cp SPACE
-  jr z,EVP2
-  ld (de),a
-  inc de
-  inc hl
-  djnz EVP1
-
-EVP2:
-  ld hl,EVTYP
-  push bc
-  ld bc,4
-  ldir
-  pop bc
-  xor a
-  ld (de),a      ; ended for the open
-  ret
-
-EVUNL: DB "UNLOAD",0
-EVTYP: DB ".SVC"
-EVCON: DB "CON UC1:"
-EVMSG: DB "EVICT stopped",CR,LF,'$'
-
 ; The shell's keywords, each zero-ended
 ; with its handler.
 
@@ -944,8 +664,6 @@ SHTAB:
   DW CMDECHO
   DB "PAUSE",0
   DW CMDPAU
-  DB "EVICT",0
-  DW CMDEVI
   DB 0
 
 %INCLUDE "shellcmd.asm"
@@ -1006,11 +724,7 @@ LCOND EQU PGSP+2
 ; stack is under STKTOP.
 
 CLAIMD EQU LCOND+1
-EVST EQU CLAIMD+1
-EVLEFT EQU EVST+1
-EVCMD EQU EVLEFT+1
-EVPC EQU EVCMD+2
-FCBBASE EQU EVPC+2
+FCBBASE EQU CLAIMD+1
 CCOUNT EQU FCBBASE+2
 HHEAD EQU CCOUNT+2
 HPOS EQU HHEAD+1
