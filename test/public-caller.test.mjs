@@ -46,12 +46,12 @@ test("RIG4 root fixture commits a real write on the next light call and preserve
   const commandEntry = r.warm();
   assert.match(commandEntry, /\r\nB>$/);
   assert.equal(recoveryInput(r.m), false);
-  r.m.command("USER 3");
-  r.m.runUntil(() => r.m.ready(), 20_000_000, "user command prompt");
+  assert.match(r.m.command("CON"), /CON: TTY:/);
+  r.m.runUntil(() => r.m.ready(), 20_000_000, "the command's prompt");
   const command = rejectedActiveInput(r);
   const completedCommand = finishBarePrompt(r.m);
   assert.equal(completedCommand.before.cycles, command.cycles);
-  assert.equal(r.bdos(32, 0xff).a, 3);
+  assert.equal(r.bdos(32, 0xff).a, 0, "the command processor's area");
 
   const warmText = r.warm();
   assert.equal(recoveryInput(r.m), false);
@@ -107,14 +107,14 @@ test("RIG4 shared file caller preserves root results and explicit command-to-cal
   const warm = r.warm();
   assert.equal(warm.outcome, "normal");
   assert.equal(warm.text, m.text(m.mark));
-  m.command("USER 3");
+  m.command("CON");
   m.runUntil(() => m.ready(), 20_000_000, "the command's input request");
   const stopped = { pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.text(0), reads: r.reads, image: sha(r.image) };
   assert.throws(() => r.bdos(12), /HKDEP: no inherited or busy API context/);
   assert.deepEqual({ pc: m.pc, sp: m.cpu.cpu.sp, cycles: m.cycles, output: m.text(0), reads: r.reads, image: sha(r.image) }, stopped);
   const completion = finishBarePrompt(m);
   assert.equal(completion.before.cycles, stopped.cycles);
-  assert.equal(r.bdos(32, 0xff), 3);
+  assert.equal(r.bdos(32, 0xff), 0, "the command processor's area");
   publicContext(m);
 });
 

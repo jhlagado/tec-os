@@ -124,16 +124,16 @@ test("unmounting the current drive leaves the prompt on A:, and the next command
   assert.match(m.command("B:"), /\r\nB(:\S*)?>$/, "B: again once it has a volume");
 });
 
-test("a warm boot with 0004h on a drive past D: or one with no volume comes back on A:, in the same user", async () => {
+test("a warm boot with 0004h on a drive past D: or one with no volume comes back on A:, in user area 0", async () => {
   const m = await machine();
   for (const at of [0x35, 0x32]) {
     m.write(4, at);
     m.mark = m.output.length;
     m.cpu.cpu.pc = 0;
-    m.expect(/\r\n3?A(:\S*)?>$/, { maxCycles: 60_000_000 });
+    m.expect(/\r\nA(:\S*)?>$/, { maxCycles: 60_000_000 });
     m.runUntil(() => m.ready(), 20_000_000, "the prompt's input");
     assert.doesNotMatch(m.text(m.mark), /Bdos Err/);
-    assert.equal(m.read(4), 0x30, `from ${at.toString(16)}h: user 3, drive A`);
+    assert.equal(m.read(4), 0x00, `from ${at.toString(16)}h: drive A, and 0004h's user nibble not kept`);
   }
 });
 

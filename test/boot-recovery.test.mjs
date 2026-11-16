@@ -161,7 +161,7 @@ function pendingFailure(kind) {
   const prompt = () => r.m.ready() && /\r\n[A-P](:\S*)?>$/.test(r.m.text(mark));
   const recovery = () =>
     counts.FNCIN > 0 &&
-    word(r.m, r.m.sym("OLDSP")) === r.m.sym("CSTKTOP") - 4 &&
+    word(r.m, r.m.sym("OLDSP")) === r.m.sym("CSTKTOP") - 2 &&
     word(r.m, word(r.m, r.m.sym("OLDSP"))) === r.m.sym("CCPRKEY") + 5 &&
     classic(r.m, r.m.sym("ERRMODE")) === 0xff &&
     classic(r.m, r.m.sym("HKDEP")) === 1 &&
@@ -346,7 +346,7 @@ function outputEscape(kind) {
   const prompt = () => r.m.ready() && /\r\n[A-P](:\S*)?>$/.test(r.m.text(mark));
   const recovery = () =>
     counts.FNCIN > 0 &&
-    word(r.m, r.m.sym("OLDSP")) === r.m.sym("CSTKTOP") - 4 &&
+    word(r.m, r.m.sym("OLDSP")) === r.m.sym("CSTKTOP") - 2 &&
     word(r.m, word(r.m, r.m.sym("OLDSP"))) === r.m.sym("CCPRKEY") + 5 &&
     classic(r.m, r.m.sym("ERRMODE")) === 0xff &&
     classic(r.m, r.m.sym("HKDEP")) === 1 &&
@@ -461,10 +461,6 @@ function backendRecovery(user) {
     undefined,
     "this probe uses the default base-memory/expansion-window model",
   );
-  if (user) {
-    r.m.command("USER " + user);
-    r.m.runUntil(() => r.m.ready(), 20_000_000, "user prompt");
-  }
   if (r.m.ready()) finishBarePrompt(r.m);
   publicContext(r.m);
   assert.equal(r.m.read(r.m.sym("HKDEP")), 0);
@@ -557,7 +553,7 @@ function backendRecovery(user) {
     r.m.ready() && /\r\n\d*[A-P](:\S*)?>$/.test(r.m.text(mark));
   const recovery = () =>
     counts.FNCIN > 0 &&
-    word(r.m, r.m.sym("OLDSP")) === r.m.sym("CSTKTOP") - 4 &&
+    word(r.m, r.m.sym("OLDSP")) === r.m.sym("CSTKTOP") - 2 &&
     word(r.m, word(r.m, r.m.sym("OLDSP"))) === r.m.sym("CCPRKEY") + 5 &&
     classic(r.m, r.m.sym("ERRMODE")) === 0xff &&
     classic(r.m, r.m.sym("HKDEP")) === 1 &&
@@ -695,9 +691,8 @@ function backendRecovery(user) {
 
 function delayedStartup(syntheticNMI) {
   const image = card();
-  volume(image, "A").write("STARTUP.CMD", Buffer.from("USER 7\r\n"), {
+  volume(image, "A").write("STARTUP.CMD", Buffer.from("CON\r\n"), {
     text: true,
-    user: 3,
   });
   const imageBefore = sha(image);
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK });
@@ -714,7 +709,8 @@ function delayedStartup(syntheticNMI) {
   assert.equal(m.sd.ready, true);
   assert.equal(m.expand, undefined);
   // Exercise the documented CCP entry register contract at a genuine cold
-  // bootstrap boundary; user3/B is intentional input, not a normal cold default.
+  // bootstrap boundary; B is intentional input, not a normal cold default, and
+  // the 3 in the user nibble is there to be ignored.
   m.cpu.cpu.c = 0x31;
   if (syntheticNMI) {
     m.write(0x66, 0xed);
@@ -767,7 +763,7 @@ function delayedStartup(syntheticNMI) {
     named("ERRMODE") === 0xff &&
     named("HKDEP") === 1 &&
     named("HKBUSY") === 0 &&
-    word(m.sym("OLDSP")) === m.sym("CSTKTOP") - 4 &&
+    word(m.sym("OLDSP")) === m.sym("CSTKTOP") - 2 &&
     word(word(m.sym("OLDSP"))) === m.sym("CCPRKEY") + 5 &&
     m.waitingForInput();
   const start = m.cycles,
@@ -776,12 +772,12 @@ function delayedStartup(syntheticNMI) {
     recovery,
     "saved B selection failure enters recovery after buffering startup",
   );
-  assert.equal(named("USERNO"), 3);
+  assert.equal(named("USERNO"), 0, "the entry byte's user nibble is not taken");
   assert.equal(named("STPOS"), 1, "startup is buffered, pending, not executed");
   const load = Array.from({ length: 128 }, (_, i) =>
     byte(m.sym("LOADBUF") + i),
   );
-  assert.equal(Buffer.from(load).subarray(0, 8).toString(), "USER 7\r\n");
+  assert.equal(Buffer.from(load).subarray(0, 5).toString(), "CON\r\n");
   assert.deepEqual(
     [
       counts.FNRESET,
@@ -827,7 +823,7 @@ function delayedStartup(syntheticNMI) {
       "each failed selection reaches one refused SPI B-directory read",
     );
     assert.equal(m.cpu.cpu.sp, recoverySP);
-    assert.equal(named("USERNO"), 3);
+    assert.equal(named("USERNO"), 0);
     assert.equal(named("STPOS"), 1);
     assert.deepEqual(
       Array.from({ length: 128 }, (_, i) => byte(m.sym("LOADBUF") + i)),
@@ -848,11 +844,11 @@ function delayedStartup(syntheticNMI) {
   refuse = false;
   m.type("\r");
   run(
-    () => m.ready() && /\r\n7B>$/.test(m.text(mark)),
+    () => m.ready() && /CON: TTY:\r\nB>$/.test(m.text(mark)),
     "buffered startup executes after valid saved-drive restoration",
   );
   assert.equal(named("ERRMODE"), 0);
-  assert.equal(named("USERNO"), 7, "delayed USER7 startup executed");
+  assert.equal(named("USERNO"), 0, "the delayed startup line ran, in area 0");
   assert.equal(named("DEFDRV"), 1);
   const dph = m.sym("DPHTAB") + 16;
   assert.equal(word(m.sym("DEFDPB")), word(dph + 10));
@@ -958,7 +954,7 @@ function selectionRefusal() {
     named("ERRMODE") === 255 &&
     named("HKDEP") === 1 &&
     named("HKBUSY") === 0 &&
-    word(m.sym("OLDSP")) === m.sym("CSTKTOP") - 4 &&
+    word(m.sym("OLDSP")) === m.sym("CSTKTOP") - 2 &&
     word(word(m.sym("OLDSP"))) === m.sym("CCPRKEY") + 5 &&
     m.waitingForInput();
   const mark = m.output.length,
@@ -1017,9 +1013,8 @@ for (const kind of ["same", "other"]) {
   test(`RIG4/5 recovery output escape preserves dirty data on ${kind} card`, () =>
     outputEscape(kind));
 }
-for (const user of [0, 3])
-  test(`RIG4/5 explicit bootstrap retry commits retained data and restores user ${user} on B`, () =>
-    backendRecovery(user));
+test("RIG4/5 explicit bootstrap retry commits retained data and restores B in user area 0", () =>
+  backendRecovery(0));
 for (const nmi of [false, true])
   test(`RIG4/5 saved-drive failure delays startup with ${nmi ? "minimal RETN NMI" : "base"} stack reserve`, () =>
     delayedStartup(nmi));
