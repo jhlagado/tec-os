@@ -99,7 +99,7 @@ the causes and recovery actions.
 
 ## Command forms
 
-The ROM holds eight built-ins: CD, DIR, TYPE, ERA, REN, USER, CON and
+The ROM holds seven built-ins: CD, DIR, TYPE, ERA, REN, CON and
 UNLOAD. The shell adds COPY, DEL, SERVICES, CLS, ECHO and PAUSE, and its
 own DIR, which lists sizes and hands `DIR /W` to the ROM's
 (`241b438:src/tables.asm:53-78`, `241b438:drivers/shell.asm:650-667`). Drive selection, program launch and service
@@ -114,7 +114,6 @@ installation have additional forms handled by the command processor.
 | `REN NEW=OLD` | ROM | Rename one file on one drive |
 | `ERA PATTERN` | ROM | Erase matching files |
 | `DEL PATTERN` | Shell | Erase matching files, as another name for ERA |
-| `USER N` | ROM | Select user area 0 to 15 |
 | `CON [DEVICE [WIDTH]]` | ROM | Report or change the console |
 | `SERVICES` | Shell | List installed services, newest first |
 | `CD [D:][NAME]`, `CD ?` | ROM | Put a volume on a drive, show a drive's volume or list the card's volumes |
@@ -133,6 +132,11 @@ ROM and `SAVE` is now an unknown command unless a program has that name.
 Nothing on the card needs it: TAS and BAZA write their COM files, TED saves
 text and MON3.SVC loads and runs programs itself.
 
+CP/M 2.2's USER is not provided either, and left the ROM with SAVE. The
+command processor works in user area 0 only. A program may select another
+area while it runs, but a file it leaves there cannot be listed, erased or
+run from the prompt. Named volumes and `CD` keep groups of files apart.
+
 Without the shell, `COPY`, `DEL`, `SERVICES`, `CLS`, `ECHO` and
 `PAUSE` follow ordinary program lookup. Unless a matching program exists,
 the result is the name followed by a question mark. `DIR` uses the ROM's
@@ -146,7 +150,7 @@ original command word (`241b438:src/cpm/ccpcmd.asm:678-708`).
 ### DIR and TYPE
 
 DIR accepts no argument, a drive alone or one pattern with an optional
-drive. It lists the current user area's matching files except those with
+drive. It lists user area 0's matching files except those with
 the system attribute. Each file appears once. No match produces `NO FILE`
 with return code `FF00h`. A system file remains available to TYPE and to
 program lookup.
@@ -192,7 +196,7 @@ last record. No name or no matching file produces `NO FILE`.
 
 ### COPY
 
-COPY operates in the current user area on both drives. It is a shell
+COPY operates in user area 0 on both drives. It is a shell
 command (`241b438:drivers/shellcmd.asm:54-219`, `241b438:docs/compatibility.md:125-133`).
 A source or destination without a drive uses the current drive. A drive-only
 destination takes the source's full name and type. A type-only destination
@@ -313,25 +317,23 @@ NO FILE
 B:WORK>
 ```
 
-### Drives, USER and program lookup
+### Drives and program lookup
 
 A drive selection consists of a letter and colon, with no other argument.
 A through D are available. CP/M letters E through P parse as drives but
-selection fails. USER accepts 0 to 9 or 10 to 15. Leading-zero forms such
-as `00` and `03` are rejected.
+selection fails.
 
-A nonzero user number appears before the drive in the prompt. The shell
-also prints the volume, as in `A:SYSTEM>` and `3B:GAMES>`. A drive with no
-volume appears as `C:>`. Without the shell the prompt is `A>` at user 0 on
+The shell's prompt shows the drive and its volume, as in `A:SYSTEM>` and
+`B:GAMES>`. A drive with no
+volume appears as `C:>`. Without the shell the prompt is `A>` on
 A (`241b438:src/cpm/ccp.asm:161-191`).
 
 For a program command the type is replaced by COM, except for SVC. Lookup starts
-on the named drive or the current drive when none is named. On that drive it
-searches the current user area followed by user 0. The current user is restored
-after that search. A file in user 0 needs no system attribute.
+on the named drive or the current drive when none is named. The file needs
+no system attribute.
 
-If no file is found, a plain command on a drive other than A continues on A
-in the same user order. An explicit drive suppresses that fallback.
+If no file is found, a plain command on a drive other than A continues on
+A. An explicit drive suppresses that fallback.
 A found file that cannot load stops the search rather than permitting
 another copy on a later drive. These paths are in `241b438:src/cpm/ccp.asm:420-486`
 and `241b438:src/cpm/ccp.asm:618-669`. [Chapter 5](05-drives-and-user-areas.md)
@@ -365,8 +367,7 @@ with `CD?` and the script goes on (`241b438:docs/shell.md:142-198`).
 The commands found on A follow its volume. A reset keeps the drives'
 selection, so after CD puts a volume with no `SHELL.SVC` on A, a reset gives
 the bare `A>` on that selection. Use `CD ?`, `CD A:SYSTEM` and `SHELL.SVC`
-to restore the shell. CD preserves the user area; if you have changed it, use
-`USER 0` before loading the starter's shell. Power cycle restores the card's
+to restore the shell. Power cycle restores the card's
 default drive assignments and startup.
 
 ### CLS, ECHO and PAUSE
@@ -397,8 +398,8 @@ alternatives and recovery actions are in
 ### Resident services
 
 A command ending in SVC installs the named file from the current drive or
-an explicitly named drive, in the current user area only. It uses neither
-the COM search's retry in user 0 nor its fallback to drive A.
+an explicitly named drive only. It does not use the COM search's fallback
+to drive A.
 SERVICES, the shell's, lists installed names and page counts. UNLOAD acts on
 the newest service. Removal fails if that service is not removable or its removal
 routine reports failure. The practical installation rules are in
@@ -547,8 +548,8 @@ interval, every drop path and function 47's replacement-line contract.
 
 ## Scripts
 
-The shell runs `NAME.CMD` from the named drive or the current drive, in the
-current user area. It makes no fallback search on A.
+The shell runs `NAME.CMD` from the named drive or the current drive. It
+makes no fallback search on A.
 
 The script is read 128 bytes at a time. `^Z`, a zero or the end of the last
 record ends the file. CR, LF or CR LF ends a line, of which the first 127

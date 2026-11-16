@@ -342,9 +342,8 @@ drive it is the new volume's at once, as for function 27.
 **32 Set or get user code.** With `E` = `FFh`, reads the user number. With any
 other `E`, sets the user number to the low five bits of `E`, as in CP/M 2.2
 (`241b438:src/cpm/bdosfn.asm:162-177`). Returns the user number in `A` or 0 after a
-set. The CCP's `USER` command takes 0 to 15 and the byte at `0004h` holds
-only four bits of the number
-(`241b438:src/cpm/ccpcmd.asm:223-246`, `241b438:src/cpm/ccp.asm:352-370`).
+set. The area lasts while the program runs: warm boot clears it, and the
+command processor works in area 0 only.
 
 **33 Read random.** Reads the record numbered by the FCB's `R0` and `R1`
 into the DMA address. The FCB's extent and `CR` remain at that record, so a
