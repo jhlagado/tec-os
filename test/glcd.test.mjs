@@ -7,6 +7,8 @@
 // The screens that show SAVE to a read-only volume were retaken: it came to say R/O.
 // Every screen was retaken when the shell's prompt came to name the drive's
 // volume and its DIR to list sizes; the commands are the same.
+// The two screens that show DIR B:'s rows were retaken when DIR came to print
+// the name and type together; the other eighteen are as they were.
 // KS48 keeps this historical oracle on its original-font input. Only the
 // historical pixel workload uses a disposable FONT-span restoration. Other
 // GLCD tests and Compact alias/rendering tests use the unmodified production ROM.
@@ -21,7 +23,7 @@ import {restoreHistoricalFont,validateHistoricalFont,historicalFontContext} from
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
-assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"d8417160c03238295582a0653bf483717e4e0b808ceb9195e8030619d8062821","unchanged historical command list and oracle");
+assert.equal(createHash("sha256").update(referenceBytes).digest("hex"),"4af172005735ae5552fe065bdb10e8080c322e08b68ca81b9ac6dabb0c51f64b","unchanged historical command list and oracle");
 const REF = JSON.parse(referenceBytes);
 // Bind the clone to this build's untouched input, not to a permanent ROM pin.
 const productionInput = romFor();
@@ -191,11 +193,11 @@ test("the resident GLCD draws every screen of the workload as the driver did, by
 test("on a GLCD board (0006h) is three pages lower than with the driver, and no more", { timeout: 1_800_000 }, async () => {
   const { m, bdosVector } = await workload;
   assert.equal(m.historicalFont, false, "TPA reading uses production font");
-  // Three pages under the shell's fifteen, which are under the stub's page. The reference's own
+  // Three pages under the shell's seventeen, which are under the stub's page. The reference's own
   // figure, REF.bdosVector - 306h, held until the stub moved up 479 bytes, and the
   // shell took its pages.
   const stub = word(m, m.sym("STUBAD"));
-  assert.equal(bdosVector, ((stub >> 8) - 15 - 3) << 8);
+  assert.equal(bdosVector, ((stub >> 8) - 17 - 3) << 8);
 });
 
 test("a program on the CCP stack calls CONOUT directly in what the stack leaves it, CCPSTN less the return word, and the BDOS stack keeps a quarter free", { timeout: 1_800_000 }, async (t) => {
