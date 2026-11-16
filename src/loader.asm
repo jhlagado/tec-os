@@ -35,6 +35,7 @@ DOLD EQU 6       ; saved REGHEAD
 DXTR EQU 8       ; extra RAM after image
 DOWN EQU 8       ; previous owner page
 DREL EQU 10      ; relocation bytes
+DDRV EQU 10      ; install drive letter
 DSTK EQU 12      ; BDOS/BIOS/CCP stacks
 
 ; DSTK: declared stack use in the file,
@@ -324,6 +325,22 @@ SVCMN:
   add hl,de      ; the next slot
   or a           ; claims remain?
   jr nz,SVCMC
+
+; The file's own identity goes into the
+; header in place of what the build put
+; there: the letter of the drive it was
+; read from, which is the BDOS's bound
+; drive after LOADCOM's close, and the
+; name it was read by. EVICT brings a
+; service back by these.
+
+  ld a,(CURDRV)
+  add a,'A'
+  ld (DF+DDRV),a
+  ld hl,CMDFCB+1
+  ld de,DF+DNAM
+  ld bc,8
+  ldir
 
 ; Save copy size before DOLD overwrites
 ; DSIZ.
@@ -901,6 +918,23 @@ GLCLD:
 SVCGO:
   xor a          ; clear load status
   ld (SVCRC),a
+
+; While EVICT's services are out nothing
+; installs but a restoration, whose
+; line has STFLAG 1: a service the
+; evicted command installed would take
+; a returning one's page, or be its
+; second copy.
+
+  ld a,(EVN)
+  or a
+  jr z,SVCG1
+  ld a,(STFLAG)
+  dec a
+  scf
+  ret nz         ; refused, SVCRC 0
+
+SVCG1:
   call LOADCOM   ; stage at 0100h
   ret c
   call SVCLOAD

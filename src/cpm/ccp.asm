@@ -163,6 +163,8 @@ MLREAD:
   ld a,(hl)      ; out go back first
   or a
   jr nz,MLREST
+
+MLNORM:
   ld a,c         ; the drive again
   push af        ; save drive for prompt
   ld a,(SHOWN+1)
@@ -172,7 +174,7 @@ MLREAD:
   call SHLINE    ; the shell's line
   ld (STFLAG),a  ; its origin
   ld hl,CMDTXT
-  jr MLSKIP
+  jp MLSKIP
 
 MLBARE:
   ld a,b
@@ -212,34 +214,67 @@ MLDRV:
 ; Bring back one service EVICT removed,
 ; the oldest left, before any prompt, a
 ; shell's LINE or a function 47 line.
-; It is counted off before it is tried,
-; so a line that fails is not tried
-; again. With the last, IOBYTE goes back
-; to what EVICT found, and the console
-; follows it at the next console call.
-; The line runs as a typed one would,
-; but with STFLAG 1: an execution entry
-; then gets A=1 and must not start a
-; session of its own. It joins the
-; dispatch past the new line and past
-; the reset of PRGCODE, so the evicted
-; command's code is still there when
-; every service is back.
+; EVN is one more than the services
+; still out. A count that cannot be one
+; is cleared and nothing runs. With no
+; service resident, whatever the
+; program left behind goes first:
+; EVHOME. The service is counted off
+; before it is tried, so a line that
+; fails is not tried again. The line
+; runs as a typed one would, but with
+; STFLAG 1: an execution entry then gets
+; A=1 and must not start a session of
+; its own. It joins the dispatch past
+; the new line and past the reset of
+; PRGCODE, so the evicted command's
+; code is still there afterwards.
+; The last pass, with every service
+; tried, puts IOBYTE back to what EVICT
+; found, and the console follows it at
+; the next console call. It is left
+; alone when that names UC1 and no UC1
+; table is registered: its driver did
+; not come back.
 
 MLREST:
-  dec a          ; this service's slot
-  ld (hl),a
-  jr nz,MLRS1
-  inc hl         ; EVCON
-  ld b,(hl)
-  ld hl,IOBYTE
-  ld (hl),b      ; the console as found
-
-MLRS1:
+  cp EVMAX+2
+  jr nc,MLRBAD   ; not a count
+  push af
+  ld a,(SVCHEAD)
+  or a
+  call z,EVHOME  ; nothing resident
+  pop af
+  ld hl,EVN
+  dec a
+  ld (hl),a      ; counted off
+  jr z,MLRCON    ; all tried
+  dec a          ; this one's slot
   call EVSLOT    ; HL = its line
   ld a,1
   ld (STFLAG),a  ; a restoration
   jp NOTDRL
+
+MLRCON:
+  inc hl         ; EVCON
+  ld a,(hl)
+  cpl
+  and 3          ; UC1 asked for?
+  jr nz,MLRC1
+  ld a,(GLVEC+1)
+  or a
+  jr z,MLRX      ; and not there
+
+MLRC1:
+  ld a,(hl)
+  ld (IOBYTE),a  ; the console as found
+
+MLRX:
+  jp MLNORM
+
+MLRBAD:
+  ld (hl),0
+  jr MLRX
 
 ; Echo the function 47 line at CMDTXT
 ; to its zero, then run it as typed.

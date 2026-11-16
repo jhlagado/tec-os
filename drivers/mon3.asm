@@ -448,8 +448,10 @@ CMD2:
   ret            ; to the handler
 
 BAD:
-  ld de,MQ
-  call PRINT     ; a question mark
+  ld de,MQ       ; a question mark
+
+BAD1:
+  call PRINT
   jr PROMPT
 
 ; Match the keyword at DE, zero-ended,
@@ -656,9 +658,11 @@ DMA80:
 
 ; GO [addr]: the last good load, or the
 ; address given, run as MON-3's GO runs
-; it (docs/mon3.md). Try to flush the
-; cache first. Failed writes stay
-; pending, not guaranteed saved.
+; it (docs/mon3.md). The cache is
+; flushed first. If a write is refused
+; the program does not run: a crash or
+; a reset in it would lose what the
+; card has not taken.
 
 CGO:
   jr z,GO1       ; no address
@@ -677,6 +681,9 @@ GO2:
   push hl
   ld c,48        ; flush
   call BDOS
+  or a
+  ld de,MPEND
+  jp nz,BAD1     ; a write refused
   call CSUM      ; the tables' sum
   ld (SUMV),de   ; for the return
   ld b,$01       ; clear the LCD
@@ -1189,6 +1196,7 @@ HEXC:
 MPROM: DB 13,10,"MON3>$"
 MCRLF: DB 13,10,'$'
 MQ: DB "?",13,10,'$'
+MPEND: DB "Write pending",13,10,'$'
 MFF: DB 12,'$'
 MBUSY: DB "MON3 active",13,10,'$'
 MRST: DB "RST $"

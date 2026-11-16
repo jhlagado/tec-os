@@ -146,9 +146,10 @@ CCPRAM EQU BIOSRME
 ; again as needed. Cold boot clears all.
 
 ; What EVICT removed, kept by warm boot
-; and cleared by cold boot. EVN counts
-; the services still to bring back,
-; EVCON is IOBYTE as EVICT found it, and
+; and cleared by cold boot. EVN is 0,
+; or one more than the services still
+; to bring back; EVCON is IOBYTE as
+; EVICT found it; and
 ; EVREC holds each one's line, the first
 ; removed in the first slot, so the last
 ; slot counted is the oldest service and

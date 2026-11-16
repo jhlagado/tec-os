@@ -3,60 +3,65 @@
 ; preparation, output wrappers, service
 ; listing and startup record handling.
 
-; UNLOAD: call SVCUNL without validating
-; arguments. Carry clear enters STARTED.
-; Carry enters BADCMD. Loader prechecks
-; may refuse before REMOVE. The loader
-; handles hook calls and page/registry
-; release.
-
-CMDUNL:
-  call SVCUNL
-  jp nc,STARTED  ; NC: unload completed
-
-TOBADCMD:
-  jp BADCMD
-
 ; EVICT command: remove every resident
-; service, the lowest first, then run
-; the command, which gets the whole
-; TPA. Each service's line, A:NAME.SVC
-; from its header's name, goes into the
-; record before it is removed, and its
-; file must open on A: now, so that a
-; changed volume refuses here and not
-; after the program. MLREST brings
-; them back at the next prompt, whether
-; the command ran, failed or was not
-; found. A service that will not go, a
-; missing file or a fifth service ends
-; in BADCMD with those already removed
-; coming back. EVICT alone removes them
-; and brings them back at once.
+; service, the lowest first, run the
+; command with the whole TPA, and let
+; MLREST bring them back at the next
+; prompt, whether the command ran,
+; failed or was not found.
+; First every resident is checked and
+; nothing is removed: there may be no
+; more than EVMAX, each must be
+; removable, and each one's line,
+; d:NAME.SVC from the drive and name
+; the loader kept in its header, goes
+; into its slot and must name a
+; directory entry now. Any refusal is
+; BADCMD with every service still in.
+; Then they go. A REMOVE that refuses
+; is BADCMD too, and those already out
+; come back.
+; EVN is one more than the services
+; out: the last pass puts the console
+; back. With services already out, an
+; EVICT inside EVICT's command, only
+; the command runs.
 
 CMDEVI:
-  ld a,(IOBYTE)
-  ld (EVCON),a   ; the console now
-
-EVI1:
-  ld a,(SVCHEAD)
-  or a
-  jr z,EVIGO     ; all out
-  ld b,a         ; the lowest's page
   ld hl,EVN
   ld a,(hl)
+  or a
+  jr nz,EVIGO    ; already out
+  inc hl         ; EVCON
+  ld a,(IOBYTE)
+  ld (hl),a      ; the console now
+  ld a,(SVCHEAD)
+  ld c,0         ; slots written
+
+EVI1:
+  or a
+  jr z,EVI5      ; every one checked
+  ld b,a         ; this one's page
+  ld a,c
   cp EVMAX
-  jr z,TOBADCMD  ; no slot for it
-  call EVSLOT
+  jr z,TOBADCMD  ; one too many
+  call EVSLOT    ; keeps BC
+  push bc
   push hl        ; its line's start
-  ld (hl),'A'
-  inc hl
-  ld (hl),':'
-  inc hl
   ex de,hl       ; DE = the line
   ld h,b
-  ld l,DNAM      ; the header's name
-  ld b,8
+  ld l,DFLG
+  bit 0,(hl)
+  jr z,TOBADCMD  ; not removable
+  ld l,DDRV
+  ld a,(hl)      ; its drive's letter
+  ld (de),a
+  inc de
+  ld a,':'
+  ld (de),a
+  inc de
+  ld l,DNAM      ; the name it was
+  ld b,8         ; installed by
 
 EVI2:
   ld a,(hl)
@@ -72,23 +77,38 @@ EVI3:
   ld bc,5
   ldir
   pop hl
-  call CMDPARSE  ; its file, on A:
+  call CMDPARSE  ; is its file there?
   call DOSSEQ
   DB 15*2+0      ; 15: CMDFCB
   inc a
-  jr z,TOBADCMD  ; not there to reload
+  jr z,TOBADCMD  ; no entry for it
+  pop bc
+  inc c
+  ld h,b
+  ld l,DOWN
+  ld a,(hl)      ; the next owner up
+  jr EVI1
+
+EVI5:
+  ld hl,EVN
+  inc (hl)       ; the console's pass
+
+EVI6:
+  ld a,(SVCHEAD)
+  or a
+  jr z,EVIGO     ; all out
   call SVCUNL
   jr c,TOBADCMD  ; it will not go
   ld hl,EVN
-  inc (hl)       ; recorded and out
-  jr EVI1
+  inc (hl)       ; one more to return
+  jr EVI6
 
 EVIGO:
   ld hl,(ARGSTRT)
   jp MLSKIP      ; the command, or none
 
 ; HL = the record's slot A, 0 to
-; EVMAX-1. Changes AF and DE.
+; EVMAX-1. Keeps BC. Changes AF and DE.
 
 EVSLOT:
   add a,a
@@ -100,6 +120,20 @@ EVSLOT:
   ld hl,EVREC
   add hl,de
   ret
+
+; UNLOAD: call SVCUNL without validating
+; arguments. Carry clear enters STARTED.
+; Carry enters BADCMD. Loader prechecks
+; may refuse before REMOVE. The loader
+; handles hook calls and page/registry
+; release.
+
+CMDUNL:
+  call SVCUNL
+  jp nc,STARTED  ; NC: unload completed
+
+TOBADCMD:
+  jp BADCMD
 
 ; Retry the next console name. Input DE
 ; is the differing table byte, C
