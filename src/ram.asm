@@ -149,19 +149,18 @@ CCPRAM EQU BIOSRME
 ; and cleared by cold boot. EVN is 0,
 ; or one more than the services still
 ; to bring back; EVCON is IOBYTE as
-; EVICT found it; and
-; EVREC holds each one's line, the first
-; removed in the first slot, so the last
-; slot counted is the oldest service and
+; EVICT found it. Each one's line is in
+; EVREC, in EXPAND 1, the first removed
+; in the first slot, so the last slot
+; counted is the oldest service and
 ; goes back first. EVCON follows EVN.
-; The record is ahead of the FCBs: the
+; The two are ahead of the FCBs: the
 ; two bytes after CMDTXT stay APIRTPC,
 ; which a full startup line's echo
 ; borrows.
 
 EVN: DS 1
 EVCON: DS 1
-EVREC: DS EVMAX*EVSLEN
 
 CMDFCB:
   DS 36

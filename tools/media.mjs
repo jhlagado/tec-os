@@ -84,7 +84,9 @@ function memoryMap(census, symbols) {
     span(0x8000, lines * 512, `the block cache's ${lines} lines, 512 bytes each`),
     span(at("CTAB"), lines * 4, "each line's card block, 4 bytes, FFFFFFFFh while empty"),
     span(at("CDIRTY"), lines, "each line's dirty byte, nonzero while the card lacks its changes"),
-    span(0xbd00, 768, "free, watched by the host so that a stray write fails"),
+    span(0xbd00, at("EVREC") - 0xbd00, "free, watched by the host so that a stray write fails"),
+    span(at("EVREC"), at("EVMAX") * at("EVSLEN"), `\`EVICT\`'s record: the line that brings each service back, ${at("EVMAX")} of ${at("EVSLEN")} bytes`),
+    span(at("EVREC") + at("EVMAX") * at("EVSLEN"), 0xc000 - at("EVREC") - at("EVMAX") * at("EVSLEN"), "free, watched in the same way"),
   ].join("\n");
   const cacheState = [
     ["SDXB", "LATEXP while a card block goes to or from a cache line"],

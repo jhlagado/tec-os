@@ -53,6 +53,8 @@ FILEEX:
   DB "FILE EXISTS",'$'
 NOSPACE:
   DB "NO SPACE",'$'
+EVWAY:
+  DB " in the way",'$'
 ALLQUERY:
   DB "ALL (Y/N)?",'$'
 BADCHARS:

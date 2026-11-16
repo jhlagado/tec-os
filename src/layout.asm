@@ -114,10 +114,17 @@ BIOSSTN EQU 48
 ; EVICT's record: one slot for each
 ; service it removes, holding the line
 ; that brings it back, A:NAME.SVC and a
-; zero: 15 bytes at most.
+; zero: 15 bytes at most. The slots are
+; in EXPAND 1, in one page, above the
+; cache and clear of BD00h-BDFFh, which
+; the host keeps for a ROM with a
+; history ring there, and of BF00h up,
+; which must stay empty for a program
+; that ends with EXPAND 1 in view.
 
 EVMAX EQU 4      ; services recorded
 EVSLEN EQU 16    ; a slot's bytes
+EVREC EQU $BE00  ; the slots
 
 MAXDRV EQU 4     ; drives A-D
 DPHSZ EQU 16

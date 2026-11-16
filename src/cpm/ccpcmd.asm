@@ -14,13 +14,13 @@
 ; more than EVMAX, each must be
 ; removable, and each one's line,
 ; d:NAME.SVC from the drive and name
-; the loader kept in its header, goes
-; into its slot and must name a
-; directory entry now. Any refusal is
-; BADCMD with every service still in.
-; Then they go. A REMOVE that refuses
-; is BADCMD too, and those already out
-; come back.
+; the loader kept in its header, must
+; name a directory entry now and goes
+; into its slot. A refusal names the
+; service in the way, with every
+; service still in. Then they go. A
+; REMOVE that refuses is named too,
+; and those already out come back.
 ; EVN is one more than the services
 ; out: the last pass puts the console
 ; back. With services already out, an
@@ -31,7 +31,16 @@ CMDEVI:
   ld hl,EVN
   ld a,(hl)
   or a
-  jr nz,EVIGO    ; already out
+  jr z,EVI0
+
+; Services are out, or were already:
+; the command, or none.
+
+EVIGO:
+  ld hl,(ARGSTRT)
+  jp MLSKIP
+
+EVI0:
   ld c,a         ; no slot written yet
   inc hl         ; EVCON
   ld a,(IOBYTE)
@@ -44,15 +53,13 @@ EVI1:
   ld b,a         ; this one's page
   ld a,c
   cp EVMAX
-  jr z,TOBADCMD  ; one too many
-  call EVSLOT    ; keeps BC
+  jr z,EVIHEAD   ; one too many
   push bc
-  push hl        ; its line's start
-  ex de,hl       ; DE = the line
+  ld de,LOADBUF  ; its line, built here
   ld h,b
   ld l,DFLG
   bit 0,(hl)
-  jr z,TOBADCMD  ; not removable
+  jr z,EVIBAD    ; not removable
   ld l,DDRV
   ld a,(hl)      ; its drive's letter
   ld (de),a
@@ -76,12 +83,16 @@ EVI3:
   ld hl,EVTYPE   ; .SVC and the zero
   ld bc,5
   ldir
-  pop hl
+  ld hl,LOADBUF
   call CMDPARSE  ; is its file there?
   call DOSSEQ
   DB 15*2+0      ; 15: CMDFCB
+  pop bc         ; its page and slot
   inc a
-  jr z,TOBADCMD  ; no entry for it
+  jr z,EVIBAD    ; no entry for it
+  push bc
+  ld a,c
+  call EVPUT     ; the line into its slot
   pop bc
   inc c
   ld h,b
@@ -100,25 +111,34 @@ EVI5:
   jr z,EVIGO     ; all out
   call SVCUNL
   jr nc,EVI5     ; gone: count it
-  jr TOBADCMD    ; it will not go
 
-EVIGO:
-  ld hl,(ARGSTRT)
-  jp MLSKIP      ; the command, or none
+; The newest service is in the way: it
+; will not go, or it is one too many.
 
-; HL = the record's slot A, 0 to
-; EVMAX-1. Keeps BC. Changes AF and DE.
+EVIHEAD:
+  ld a,(SVCHEAD)
+  ld b,a
 
-EVSLOT:
-  add a,a
-  add a,a
-  add a,a
-  add a,a        ; EVSLEN is 16
+; Refuse, naming the service on page B
+; as SERVICES lists it.
+
+EVIBAD:
+  ld h,b
+  ld l,DNAM
+  ld b,8
+
+EVIB1:
+  ld a,(hl)
+  cp SPACE
+  jr z,EVIB2     ; a shorter name
   ld e,a
-  ld d,0
-  ld hl,EVREC
-  add hl,de
-  ret
+  call PUTCHAR   ; keeps BC and HL
+  inc hl
+  djnz EVIB1
+
+EVIB2:
+  ld de,EVWAY    ; in the way
+  jp ERRGO
 
 ; UNLOAD: call SVCUNL without validating
 ; arguments. Carry clear enters STARTED.
@@ -133,6 +153,39 @@ CMDUNL:
 
 TOBADCMD:
   jp BADCMD
+
+; HL = the record's slot A, 0 to
+; EVMAX-1. Keeps BC. Changes AF and DE.
+
+EVSLOT:
+  add a,a
+  add a,a
+  add a,a
+  add a,a        ; EVSLEN is 16
+  ld l,a
+  ld h,HIGH(EVREC)
+  ret
+
+; LOADBUF's line into slot A, in EXPAND 1.
+
+EVPUT:
+  call EVSLOT
+  ld de,LOADBUF
+  ld bc,$0001    ; to EXPAND 1
+  jr EVMV
+
+; Slot A's line into LOADBUF.
+
+EVGET:
+  call EVSLOT
+  ex de,hl
+  ld hl,LOADBUF
+  ld bc,$0100    ; from EXPAND 1
+
+EVMV:
+  ld (XMDST),bc
+  ld bc,EVSLEN
+  jp MVCOPY
 
 ; Retry the next console name. Input DE
 ; is the differing table byte, C

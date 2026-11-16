@@ -454,10 +454,12 @@ it works with a shell or at the bare prompt.
 1. Every resident is checked, and nothing is removed yet. There may be no more
    than four. Each must be removable. Each must have a directory entry now for
    the file it was installed from: the drive and the name the loader kept in
-   its header, in the prompt's user area. Any failure is `EVICT?` with FF00h,
-   and nothing has changed.
+   its header, in the prompt's user area. A failure names the service in the
+   way, as `SERVICES` lists it: `GLCD in the way`, with FF00h, and nothing has
+   changed. With more than four, the one named is the newest, the one
+   `UNLOAD` removes.
 2. Each is removed, the lowest first, as `UNLOAD` removes it. A `REMOVE` that
-   refuses ends in `EVICT?` too, and those already out come back.
+   refuses is named in the same way, and those already out come back.
 3. The command runs as a line typed at the ROM's prompt. While it runs no
    service installs: `NAME.SVC` and `CON UC1:` are refused.
 4. At the next prompt, whatever way the command ended, each service is
@@ -467,6 +469,17 @@ it works with a shell or at the bare prompt.
    FF00h, the line to type again, and the next service is tried.
 5. Last, the IOBYTE goes back to what it was when `EVICT` was typed, unless
    that names `UC1:` and no UC1 driver came back.
+
+A service comes back from the drive letter and name it was installed from, on
+the volume that drive shows when the command returns. A command that puts
+another volume on the drive with `CD` brings back that volume's file of the
+name, or none.
+
+The lines that bring the services back are kept in EXPAND 1, four of 16 bytes
+at BE00h, outside the TPA and outside the classic workspace; the count and the
+saved IOBYTE are two bytes of the workspace. A command that puts EXPAND 1 in
+view and overwrites them gets each line refused as a command that is not
+there, and the ROM's prompt.
 
 With no service resident at step 4, the ROM first gives the RAM BIOS table
 its own entries and drops a UC1 table registered through `TNDRVR`: either

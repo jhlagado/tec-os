@@ -184,7 +184,11 @@ export class Machine {
     // its own code, the card's block loops, the copy core when the cache
     // called it (the return address on entry to MVCOPY in CDI-CEND), and
     // cold boot's setting of
-    // its table. Any other write there, until the
+    // its table. On a ROM with EVICT, the record's slots in the free pages
+    // (EVREC, EVMAX slots of EVSLEN bytes) are written by the copy core when
+    // EVICT's check of the residents called it (the return address on entry
+    // to MVCOPY in CMDEVI-EVIHEAD), and by nothing else. Any other write
+    // there, until the
     // next cold boot (COLD clearing page zero), is kept in expand1Writes and
     // in EXPAND1_WRITES, for the whole process.
     const meminit = symbols.get("MEMINIT");
@@ -205,15 +209,21 @@ export class Machine {
       .map(([a, b]) => [symbols.get(a), b ? symbols.get(b) : after(a)]);
     const [cdi, cend, mvcopy] = [cache, "CEND", "MVCOPY"].map((n) => symbols.get(n)); // cdi: the cache's start
     const mvEnd = symbols.has("MVOK") ? symbols.get("MVOK") + 2 : undefined; // MVCOPY ends at MVOK's RET
+    const [evrec, evFrom, evTo] = ["EVREC", "CMDEVI", "EVIHEAD"].map((n) => symbols.get(n));
+    const evEnd = evrec === undefined ? undefined : evrec + symbols.get("EVMAX") * symbols.get("EVSLEN");
     let mvForCache = false;
+    let mvForEvict = false;
     if (mvcopy !== undefined && cdi !== undefined)
       this.mvWatch = (pc) => {
         if (pc !== mvcopy) return;
         const sp = this.cpu.cpu.sp;
         const ret = ram.memRead(sp) | (ram.memRead((sp + 1) & 0xffff) << 8);
         mvForCache = ret >= cdi && ret < cend;
+        mvForEvict = evrec !== undefined && ret >= evFrom && ret < evTo;
       };
-    const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b) || (mvForCache && pc >= mvcopy && pc < mvEnd);
+    const inCopy = (pc) => pc >= mvcopy && pc < mvEnd;
+    const cacheWrite = (pc) => writers.some(([a, b]) => pc >= a && pc < b) || (mvForCache && inCopy(pc));
+    const recordWrite = (a, pc) => mvForEvict && a >= evrec && a < evEnd && inCopy(pc);
     let cleared = false;
     const freeFrom = symbols.has("HRING") ? 0xbe00 : 0xbd00;
     this.expand1Writes = [];
@@ -224,7 +234,7 @@ export class Machine {
         if (pc >= coldz && pc < coldz + 0x20) cleared = false;
         else if (a >= 0x8000 && a < 0xc000 && expands > 1 && system.sysCtrl & 0x04) {
           if (pc >= meminit && pc <= clearEnd) cleared ||= a === 0xbfff;
-          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= freeFrom)) {
+          else if (cleared && (a < 0xbd00 ? !cacheWrite(pc) : a >= freeFrom && !recordWrite(a, pc))) {
             const w = { addr: a, pc };
             this.expand1Writes.push(w);
             if (EXPAND1_WRITES.length < 16) EXPAND1_WRITES.push(w);

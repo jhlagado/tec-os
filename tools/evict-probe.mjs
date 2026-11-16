@@ -4,6 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, boot, program, startupFile, volume } from "../test/lib/fixtures.mjs";
+import { EXPAND1_WRITES } from "../test/lib/machine.mjs";
 import { pendingSayFailure, pendingSayFiles } from "../test/lib/pending-say.mjs";
 import { makeSvc } from "./lib/svc.mjs";
 import { CODES, LINEP, SAY, chain, execSvc, owners, word } from "../test/lib/shell.mjs";
@@ -47,12 +48,22 @@ Object.assign(EXTRA, {
   "TP.SVC": await svc("TP", { ENTER: 1 }),
   "HOOK.COM": (await program("hook")).bytes,
   "EVLEFT.COM": (await program("evleft")).bytes,
+  "EVWIPE.COM": (await program("evwipe")).bytes,
+  "XCOPY.COM": (await program("copy")).bytes,
+  "SUM.COM": (await program("sum")).bytes,
+  // Larger than the cache's thirty 512-byte lines.
+  "BIG.BIN": Uint8Array.from({ length: 24_000 }, (_, i) => (i * 7) & 0xff),
 });
 
-function card({ startup = true, lines, extra = {} } = {}) {
+function card({ startup = true, lines, extra = {}, games = {} } = {}) {
   const image = new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img")));
   const a = volume(image, "A");
   for (const [n, b] of Object.entries({ ...EXTRA, ...extra })) a.write(n, b);
+  // Files for the volume labelled GAMES, which CD A:GAMES puts on A:.
+  if (Object.keys(games).length) {
+    const g = volume(image, "GAMES");
+    for (const [n, b] of Object.entries(games)) g.write(n, b);
+  }
   if (lines) a.write("STARTUP.CMD", startupFile(...lines));
   // A file of one comment line: no startup line runs, so no shell.
   if (!startup) a.write("STARTUP.CMD", Buffer.from(";\r\n\x1a", "latin1"));
@@ -85,6 +96,20 @@ const words = (m) => ({
   rst08: m.read(8) === 0xc3 ? `JP ${hex(word(m, 9))}` : hex(m.read(8)).slice(2),
   uc1: hex(word(m, m.sym("GLVEC"))),
 });
+
+/**
+ * EVICT's record: the slots' lines as EXPAND 1 holds them. Read with the
+ * classic bank in view, when the host keeps EXPAND 1's bytes in banks[0].
+ */
+const record = (m) => {
+  const at = m.sym("EVREC") - 0x8000;
+  const len = m.sym("EVSLEN");
+  return Array.from({ length: m.sym("EVMAX") }, (_, i) => {
+    const slot = Array.from((m.expand ? m.expand[1] : m.banks[0]).slice(at + len * i, at + len * (i + 1)));
+    const end = slot.indexOf(0);
+    return Buffer.from(slot.slice(0, end < 0 ? len : end)).toString("latin1");
+  }).join("|");
+};
 
 const state = (m) => ({
   gen: m.read(m.sym("SVCGEN")),
@@ -132,10 +157,13 @@ function run(m, line, { re, max = 900_000_000, atStart, raw } = {}) {
     if (m.pc === 0x100) {
       if (!began && atStart) atStart(m);
       // What the program finds: its top, the console, and no word left pointing at freed pages.
-      during = { top: hex(word(m, 6)), iobyte: m.read(3), conmod: m.read(m.sym("CONMOD")), owners: owners(m).length, dangling: dangling(m, before & 0xff00, word(m, m.sym("STUBAD"))) };
+      during = { top: hex(word(m, 6)), iobyte: m.read(3), conmod: m.read(m.sym("CONMOD")), owners: owners(m).length, dangling: dangling(m, before & 0xff00, word(m, m.sym("STUBAD"))), evn: m.read(m.sym("EVN")), record: record(m) };
       began = m.cycles;
       exit = 0;
-    } else if (m.pc === wboot && began && !exit) exit = m.cycles;
+    } else if (m.pc === wboot && began && !exit) {
+      exit = m.cycles;
+      during.recordAtExit = record(m);
+    }
     return done();
   }, max, `the prompt after ${line}`);
   return { text: m.text(m.mark), total: m.cycles - start, afterExit: exit ? m.cycles - exit : null, toStart: began ? began - start : null, during };
@@ -143,8 +171,8 @@ function run(m, line, { re, max = 900_000_000, atStart, raw } = {}) {
 
 function scenario(name, opts, steps) {
   console.log(`\n== ${name}`);
-  const { startup, lines, extra, pending, ...board } = opts;
-  const image = card({ startup, lines, extra });
+  const { startup, lines, extra, games, pending, wipes, ...board } = opts;
+  const image = card({ startup, lines, extra, games });
   const m = boot(image, board);
   // With pending set, the first write SAY.COM leaves behind is refused by the card until released.
   if (pending) m.fault = pendingSayFailure(m, image);
@@ -164,6 +192,10 @@ function scenario(name, opts, steps) {
     console.log("   ", JSON.stringify(r.text));
   }
   console.log("violations", JSON.stringify(m.violations));
+  // Writes to EXPAND 1 that the host's watch does not allow. A scenario
+  // whose program makes them on purpose says so with wipes.
+  console.log("expand 1 writes", JSON.stringify(m.expand1Writes.map((w) => hex(w.addr)).filter((a, i, all) => i === 0 || i === all.length - 1)), m.expand1Writes.length);
+  if (wipes) for (const w of m.expand1Writes) if (EXPAND1_WRITES.includes(w)) EXPAND1_WRITES.splice(EXPAND1_WRITES.indexOf(w), 1);
   return m;
 }
 
@@ -225,6 +257,12 @@ const SCENARIOS = {
   nested: ["EVICT inside EVICT's command, both displays, the GLCD chosen", { matrix: true, tms: true }, ["CON UC1:", "EVICT EVICT EVBIG", screens]],
   origin: ["a service whose entry takes any origin as a call to start", {}, ["TP.SVC", "EVICT EVBIG"]],
   badcount: ["a count in the record that cannot be one", {}, [(m) => { m.write(m.sym("EVN"), 9); return "EVN set to 9 by the probe"; }, ["", ANY], "EVBIG"]],
+  cachework: ["the record while the evicted program fills and empties the cache", { matrix: true }, [["MON3.SVC", { re: MON3[0] }], "EXIT", "EVICT XCOPY BIG.BIN NEW.BIN", "EVICT SUM NEW.BIN", "EVICT ERA NEW.BIN", "SERVICES"]],
+  wipez: ["a program overwrites the record in EXPAND 1 with zeros", { wipes: true }, ["S1.SVC", ["EVICT EVWIPE Z", ANY], ["SHELL.SVC", ANY], "SERVICES", "EVICT EVBIG"]],
+  wipef: ["the same with FFh", { wipes: true }, ["S1.SVC", ["EVICT EVWIPE F", ANY], ["SHELL.SVC", ANY], "SERVICES", "EVICT EVBIG"]],
+  wipex: ["the same with the letter X", { wipes: true }, ["S1.SVC", ["EVICT EVWIPE X", ANY], ["SHELL.SVC", ANY], "SERVICES", "EVICT EVBIG"]],
+  wipe3: ["the same with three services out, on the GLCD board", { wipes: true, matrix: true }, [["MON3.SVC", { re: MON3[0] }], "EXIT", ["EVICT EVWIPE X", ANY], screens]],
+  volume: ["the evicted command puts another volume on A:, with another Q.SVC on it", { extra: { "Q.SVC": EXTRA["S1.SVC"] }, games: { "Q.SVC": EXTRA["DEMO.SVC"] } }, ["Q.SVC", "SERVICES", words, ["EVICT CD A:GAMES", ANY], words, ["DIR", ANY], ["CD A:SYSTEM", ANY], ["SHELL.SVC", ANY], "SERVICES"]],
   pending: ["a pending write the card refuses at the evicted program's exit", { pending: true, extra: pendingSayFiles() }, [["EVICT SAY", ANY], (m) => { m.fault.release(); return "the card accepts again"; }, ["", ANY], (m) => { m.fault.assertRecovered(); return "written once"; }]],
   pending3: ["the same with GLCD.SVC and MON3.SVC to bring back too", { pending: true, matrix: true, extra: pendingSayFiles() }, [["MON3.SVC", { re: MON3[0] }], "EXIT", ["EVICT SAY", ANY], (m) => { m.fault.release(); return "the card accepts again"; }, ["", ANY], (m) => { m.fault.assertRecovered(); return "written once"; }]],
 };
