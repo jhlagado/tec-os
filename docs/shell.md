@@ -234,6 +234,14 @@ restart for each large file. The table holds up to 512 names, as many as a
 G1M or G8M directory holds. It takes 8,512 bytes of the TPA, 0100h–223Fh,
 while `DIR` runs, and no resident memory.
 
+`DIR` takes about twice `DIR /W`'s time, its rows holding about twice the
+characters, whatever the files' sizes. On a G8M volume at 4 MHz on the serial
+console: 452 files, all but one of a single record, 40.6 s against 21.5 s; 352
+files, 100 of them of 40 KiB, 32.3 s against 16.9 s; 181 files, 180 of them of
+40 KiB, 17.9 s against 9.0 s (`test/dir-cost.test.mjs`). So a file over 32 KiB
+on a G8M volume, or over 16 KiB on a G1M, which has more than one directory
+entry, no longer slows `DIR`. `DIR /W` is the fast listing, at half the time.
+
 If that workspace is unavailable or its capacity is exhausted, `DIR`
 restarts its original size-and-search engine before printing any filename
 row. This fallback preserves the result and can take longer. Invalid table

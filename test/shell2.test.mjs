@@ -1339,15 +1339,20 @@ test("S2-13 docs", () => {
   ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
-  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives"])
+  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
+    "at 0100h–223Fh, so it overwrites a program left there", "Use `DIR /W` before `SAVE`", "a TPA of 41,984 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");
   assert.match(container, /\| 15 \| 1 \| Reserved: written zero, never read/);
   assert.doesNotMatch(container, /--volume [^ ]*:wb/, "no :wb taught");
   const compat = flat("docs/compatibility.md");
-  for (const s of ["46,533 bytes", "42,496", "41,728"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
+  for (const s of ["46,533 bytes", "41,984", "41,216", "**`DIR` before `SAVE`.**", "`DIR /W`, the ROM's listing, uses only the record at 0080h"]) assert.ok(compat.includes(s), `compatibility.md: ${s}`);
   assert.doesNotMatch(compat, /46,564|45,568 is the least/, "the old ceiling's figures gone");
-  assert.match(flat("docs/mon3.md"), /from `A700h` to `9300h`/);
+  assert.match(flat("docs/mon3.md"), /from `A500h` to `9100h`, and the TPA from 41,984 bytes to \*\*36,864\*\*/);
+  assert.match(flat("docs/mon3.md"), /it is `8E00h`, a TPA of \*\*36,096\*\*/);
+  // The figures are measured ones: no doc speaks of a projection or of a qualification still to come.
+  for (const n of ["README.md", "docs/shell.md", "docs/compatibility.md", "docs/memory-map.md", "docs/mon3.md"])
+    assert.doesNotMatch(flat(n), /\bprojects? (word|A500h|text|41,|these)|projected|projections?\b|pending (current )?runtime|qualification must confirm|to be confirmed/i, `${n}: measured figures, stated plainly`);
   // No doc teaches MOUNT.COM or a volume marked written behind.
   for (const n of ["README.md", "docs/shell.md", "docs/recovery.md", "docs/compatibility.md", "docs/container-format.md", "docs/rom-services.md", "docs/wip.md", "docs/mon3.md"]) {
     const t = flat(n);

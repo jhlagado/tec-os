@@ -467,7 +467,7 @@ test("the web host: a pre-shell card's own STARTUP.CMD lines follow SHELL.SVC an
   assert.equal(startupOf(card), "SHELL.SVC\r\nCON PICO 40\r\nTYPE NOTES.TXT\r\nDIR B: &USER 0\r\n");
   const m = boot(card, { tms: true, matrix: true, width: 40 });
   assert.match(m.text(0), />TYPE NOTES\.TXT\r\r\nmy own notes\r\n/, "the user's TYPE ran");
-  assert.match(m.text(0), />DIR B: &USER 0\r\r\n\r\nWORK +\.TXT +\d+\r\n[\s\S]*? free on B:WORK\r\nA(:\S*)?>USER 0\r\n/, "and the chained line, piece by piece under the shell");
+  assert.match(m.text(0), />DIR B: &USER 0\r\r\n\r\nWORK\.TXT +\d+\r\n[\s\S]*? free on B:WORK\r\nA(:\S*)?>USER 0\r\n/, "and the chained line, piece by piece under the shell");
   assert.deepEqual(m.violations, []);
 
   const locked = preShellCard();
