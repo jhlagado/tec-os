@@ -1,0 +1,7 @@
+
+> tec-os@0.1.0 build
+> node tools/build.mjs
+
+tecos ROM {"backend":"tas","phase":"probe","target":"tecos.rom","origin":32768,"root":"/workspace/jhlagado/tec-os/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":96648310}
+tecos ROM {"backend":"tas","phase":"final","target":"tecos.rom","origin":47816,"root":"/workspace/jhlagado/tec-os/src","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":94991650}
+tecos: ROM 16016/16384 bytes, TPA $0100-$B984 (47237 bytes), sha256 c95862634ee002bb

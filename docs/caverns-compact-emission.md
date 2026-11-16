@@ -46,3 +46,13 @@ The [qualification record](evidence/caverns-compact-emission/qualification.json)
 pins the exact compiler, TEC-OS and Viewer revisions. Physical TEC-1G testing
 and public main/site deployment remain outstanding. Literal-print compaction,
 integer DATA payloads and native file channels are not implemented by this change.
+
+## Integration with current main
+
+The combined implementation preserves the cooperative cache/recovery firmware
+from main and the source-only Caverns/compiler work. See the
+[main-integration qualification](evidence/caverns-main-integration/qualification.json).
+The full strict run exercised 1,395 checks; its five stale binary/card expectations
+were corrected and all affected checks passed on targeted reruns. The record
+retains the original failed log as well as the passing reruns and unchanged
+resource ceilings; it does not claim a single fresh all-green full invocation.

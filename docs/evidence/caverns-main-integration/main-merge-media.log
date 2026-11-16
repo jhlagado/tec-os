@@ -1,0 +1,13 @@
+
+> tec-os@0.1.0 media
+> node tools/media.mjs
+
+tecos ROM {"backend":"tas","phase":"flat","target":"GLCD.SVC","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"flat","target":"GLCD.SVC","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"flat","target":"SHELL.SVC","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18773855}
+tecos ROM {"backend":"tas","phase":"flat","target":"SHELL.SVC","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18773529}
+tecos ROM {"backend":"tas","phase":"final","target":"DEMO.COM","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4966918}
+tecos ROM {"backend":"tas","phase":"flat","target":"MON3.SVC","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":24227210}
+tecos ROM {"backend":"tas","phase":"flat","target":"MON3.SVC","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":24226908}
+tecos ROM {"backend":"tas","phase":"media","target":"tecos.rom","root":"/workspace/jhlagado/tec-os/build/tecos","sha256":"c95862634ee002bb9a5ef1d3d0ee8ea831e12fda4e96792b36454170aafabf7f"}
+dist: 1 ROM profiles, 15 card files, starter.img

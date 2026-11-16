@@ -1,0 +1,48 @@
+{
+  "status": "combined-code-qualified-by-full-suite-plus-affected-fixture-reruns",
+  "runtimeAndTestBaseCommit": "4e4f9449fafbadfd978a6a360fa3bed0a8ad06e6",
+  "upstreamMainMerged": "10da9a0",
+  "romSha256": "c95862634ee002bb9a5ef1d3d0ee8ea831e12fda4e96792b36454170aafabf7f",
+  "fullStrictInitial": {
+    "tests": 1395,
+    "passed": 1390,
+    "failed": 5,
+    "failureNames": [
+      "AC3 bounce writes",
+      "AC7 bounce speed",
+      "S2-11 starter workloads logged on A:",
+      "KG61 baza and 0038h after",
+      "S2-12 no mount.com"
+    ],
+    "reason": "Expected hashes/record layout referenced the older compiler output, and the old starter count still included a precompiled Caverns COM. No kernel or driver source was changed from upstream main.",
+    "logSha256": "0ab1a893716050d9a15c411f715f27fb68761b14ff94325389edf6d7b9b7f43e"
+  },
+  "affectedReruns": {
+    "coalescingAndSpeed": {
+      "tests": 3,
+      "passed": 3
+    },
+    "mon3AfterCompiler": {
+      "tests": 1,
+      "passed": 1
+    },
+    "sourceOnlyStarter": {
+      "tests": 1,
+      "passed": 1
+    },
+    "additionalTimesChecks": {
+      "tests": 7,
+      "passed": 7
+    }
+  },
+  "currentGameAndStarter": {
+    "tests": 34,
+    "passed": 34
+  },
+  "criteria": "Preserved original 168 card-write ceiling, original compile-cycle and per-BDOS-write ceilings, complete binary identities, exact data-write histogram (36 four-record blocks and one one-record block), directory writes and all memory boundaries. No gates waived.",
+  "qualificationScope": "Every test passed in its applicable run after refreshing expectations. This is not a claim of a single fresh all-green 1395-case invocation after the fixture-only changes.",
+  "notClaimed": [
+    "physical TEC-1G qualification",
+    "public site deployment"
+  ]
+}

@@ -1,0 +1,19 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+✔ TIMES.BAS has ascending line numbers, fits 80 columns, and has its keywords in capitals and its names in lower case (1.920448ms)
+✔ BAZA builds TIMES on TEC-OS, and TIMES runs at 40 columns and returns to the prompt (1559.309123ms)
+✔ with GLCD.SVC loaded and a JP held in RST 1, BAZA takes RST 1 while it compiles and gives the JP back, TIMES runs, and the GLCD is still the console (4421.952825ms)
+✔ a failed compile's return code stops a chained line: BAZA BAD &TIMES runs no TIMES, and BAZA TIMES &TIMES does (2517.617633ms)
+✔ a compile onto a read-only drive fails with return code FF00h, gives back RST 1's held JP and ends at A> (843.754834ms)
+✔ a program that claims the display and then fails shows its error on the console (828.054812ms)
+✔ a leftover BZ000000.$$B doesn't stop BAZA TIMES replacing TIMES.COM (1773.613813ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12862.869441
