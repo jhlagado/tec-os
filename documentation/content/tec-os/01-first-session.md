@@ -73,33 +73,33 @@ graphics LCD. In this session it leaves the PICO9918 selected as the
 after the prompt and press Return. The prompt is already on screen, so it
 is not part of the command you enter. The same session produced:
 
-<!-- Current source-only starter, ROM c9586263: native PICO 40-column capture. Commands and raw rows: docs/evidence/caverns-main-integration/starter-directory.json. Right-hand blanks and empty bottom rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board pico --screen DIR. The PICO9918's 40-column screen from the DIR line; right-hand blanks and empty bottom rows omitted. -->
 ```text
 A:SYSTEM>DIR
 
-SHELL   .SVC    3712
-GLCD    .SVC     896
-STARTUP .CMD     128
-TED     .COM   12416
-SAMPLE  .ASM    4608
-TIMES   .BAS     640
-TAS     .COM   10368
-BAZA    .COM   13184
-BAZA    .RTL   12928
-BOUNCE  .BAS    5376
-CAVERNS .TXT    2688
-DEMO    .ASM   15360
-MON3    .SVC    5120
-HELLO3  .ASM    2176
+SHELL.SVC       4224
+GLCD.SVC         896
+STARTUP.CMD      128
+TED.COM        12416
+SAMPLE.ASM      4608
+TIMES.BAS        640
+TAS.COM        11136
+BAZA.COM       13184
+BAZA.RTL       12928
+BOUNCE.BAS      5376
+CAVERNS.TXT     2688
+DEMO.ASM       15360
+MON3.SVC        5504
+HELLO3.ASM      2176
 CAVBASIC.BAS   18816
-15 files, 108416 bytes
-911360 free on A:SYSTEM
+15 files, 110080 bytes
+909312 free on A:SYSTEM
 A:SYSTEM>
 ```
 
 Each row after the blank line names a file and gives its size in bytes.
 A file name has up to eight characters and a type of up to three characters.
-You separate them with a full stop when typing the name. In `SAMPLE.ASM`,
+The listing shows them as you type them, separated by a full stop. In `SAMPLE.ASM`,
 SAMPLE is the name and ASM is the type. The `.ASM` file contains source
 text. A `.COM` file contains an executable program.
 
@@ -150,33 +150,32 @@ prompt again.
 ## Drive A and drive B
 
 A drive letter followed by a colon changes the current drive. `B:` selects
-WORK and `A:` returns to SYSTEM. The following retained `46cf3f1` excerpt
-shows the same drive commands on the earlier thirteen-file starter. It is
-not a continuation of the current sixteen-file listing above:
+WORK and `A:` returns to SYSTEM. This screen follows the listing above
+with both drive commands:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board pico --screen DIR B: A:. Full screen; trailing empty rows omitted. -->
 ```text
-A>SHELL.SVC
-
 A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>DIR
 
-SHELL   .SVC    3712
-GLCD    .SVC     896
-STARTUP .CMD     128
-TED     .COM   12416
-SAMPLE  .ASM    4608
-TIMES   .BAS     640
-TAS     .COM   10368
-BAZA    .COM   13184
-BAZA    .RTL   12032
-BOUNCE  .BAS    5376
-DEMO    .ASM   15360
-MON3    .SVC    5120
-HELLO3  .ASM    2176
-13 files, 86016 bytes
-937984 free on A:SYSTEM
+SHELL.SVC       4224
+GLCD.SVC         896
+STARTUP.CMD      128
+TED.COM        12416
+SAMPLE.ASM      4608
+TIMES.BAS        640
+TAS.COM        11136
+BAZA.COM       13184
+BAZA.RTL       12928
+BOUNCE.BAS      5376
+CAVERNS.TXT     2688
+DEMO.ASM       15360
+MON3.SVC        5504
+HELLO3.ASM      2176
+CAVBASIC.BAS   18816
+15 files, 110080 bytes
+909312 free on A:SYSTEM
 A:SYSTEM>B:
 B:WORK>A:
 A:SYSTEM>

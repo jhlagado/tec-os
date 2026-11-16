@@ -217,15 +217,18 @@ Services allocate whole 256-byte pages below the preceding boundary's page.
 Each installs a BDOS jump at its base and the jump at `0005h` points there. On
 the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
 exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
-Later services allocate below the first. Startup's fifteen-page `SHELL.SVC`
-leaves `A700h`, or 42,496 bytes. Adding GLCD leaves 41,728
-(`docs/memory-map.md:12-22`, `docs/shell.md:23-31`,
-`docs/compatibility.md:3-16`). The later MON3 development component uses 20 pages. Alone it lowers
-`B6C5h` to `A200h`, leaving 41,216 bytes, or 40,448 after GLCD. After the shell
-it leaves `9300h` and 37,376 bytes. Adding GLCD lowers it to `9000h` with 36,608 bytes.
-The two extra pages cost 512 bytes compared with the earlier 18-page monitor;
-these current figures are distinct from the earlier checked captures
-(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:47-59`).
+Later services allocate below the first. In this chapter's captures startup's
+`SHELL.SVC` has fifteen pages and leaves `A700h`, or 42,496 bytes; adding GLCD
+leaves 41,728
+(`241b438:docs/memory-map.md:12-22`, `241b438:docs/shell.md:23-31`,
+`241b438:docs/compatibility.md:3-16`). The shell that lists sizes from a table
+has seventeen pages. It leaves `A500h`, or 41,984 bytes, and 41,216 with GLCD,
+so on a current card each shell-loaded figure in those captures is 512 bytes
+lower (`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/shell.md:23-31`). MON3.SVC uses 20 pages. Alone it lowers
+`B6C5h` to `A200h`, leaving 41,216 bytes, or 40,448 after GLCD. After the
+seventeen-page shell it leaves `9100h` and 36,864 bytes. Adding GLCD lowers it
+to `8E00h` with 36,096 bytes, in any order of installing the three
+(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/mon3.md:47-58`).
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
@@ -369,12 +372,15 @@ or patched code. A zero count creates an empty file.
 
 The saved bytes are whatever a preceding program loaded or left in memory. A
 valid count is at most 255 and ends before the page containing the BDOS entry.
-Appendix J gives the command syntax.
+Appendix J gives the command syntax. The shell's `DIR` with sizes is one such
+preceding program: it builds its table of names at `0100h`–`223Fh`, so a SAVE
+after it writes that table. `DIR /W` leaves memory as it was
+(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/shell.md:223-229`).
 
-With the startup shell at `A700h`, this starter-card run could save 166 pages.
-The next page would cross the limit so 167 was rejected:
+With the seventeen-page startup shell at `A500h`, this starter-card run could
+save 164 pages. The next page would cross the limit so 165 was rejected:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 167 BIG.COM' 'SAVE 166 BIG.COM' DIR. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 165 BIG.COM' 'SAVE 164 BIG.COM' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -387,15 +393,15 @@ A:SYSTEM>GLCD.SVC
 
 A:SYSTEM>B:
 B:WORK>SAVE 2 TWO.COM
-B:WORK>SAVE 167 BIG.COM
-167?
+B:WORK>SAVE 165 BIG.COM
+165?
 
-B:WORK>SAVE 166 BIG.COM
+B:WORK>SAVE 164 BIG.COM
 B:WORK>DIR
 
-TWO     .COM     512
-BIG     .COM   42496
-2 files, 43008 bytes
+TWO.COM          512
+BIG.COM        41984
+2 files, 42496 bytes
 8323072 free on B:WORK
 B:WORK>
 ```

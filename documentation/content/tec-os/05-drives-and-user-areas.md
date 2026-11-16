@@ -109,7 +109,7 @@ from area 0's listing even on the same volume. This example uses
 `SAVE 1 B:MINE.COM` to copy a page of existing program memory into a
 demonstration file in area 3. No file is created or moved in area 0:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'USER 3' 'SAVE 1 B:MINE.COM' 'DIR B:' TAS 'USER 0' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'USER 3' 'SAVE 1 B:MINE.COM' 'DIR B:' TAS 'USER 0' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -124,7 +124,7 @@ A:SYSTEM>USER 3
 3A:SYSTEM>SAVE 1 B:MINE.COM
 3A:SYSTEM>DIR B:
 
-MINE    .COM     256
+MINE.COM         256
 1 file, 256 bytes
 8368128 free on B:WORK
 3A:SYSTEM>TAS
@@ -596,10 +596,10 @@ The program itself uses MON-3's stack below `0880h`.
 On a card with nothing else installed, the BDOS entry address stored
 at `0006h` changes from `B6C5h` to `A200h`. Program memory falls from 46,533 bytes
 to 41,216, or 40,448 with GLCD.SVC too. On the starter card, the
-shell is already installed. Installing MON3 changes that address from `A700h` to `9300h` and
-reduces program memory from 42,496 to 37,376 bytes. Adding
-GLCD.SVC gives `9000h` and 36,608 bytes
-(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:47-59`).
+shell is already installed. Installing MON3 changes that address from `A500h` to `9100h` and
+reduces program memory from 41,984 to 36,864 bytes. Adding
+GLCD.SVC gives `8E00h` and 36,096 bytes
+(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/mon3.md:47-58`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan

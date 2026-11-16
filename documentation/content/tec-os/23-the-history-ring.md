@@ -128,7 +128,7 @@ differences. A duplicate requires `C = 0` and a final offset equal to
 keeps the existing entry. After two CON commands and `DIR *.CMD`, three
 `^W` presses therefore reach CON then stop: only two entries exist.
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs --board pico --screen CON CON 'DIR *.CMD' $'@start \x17\x17\x17'. Full screen; trailing empty rows omitted. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs --board pico --screen CON CON 'DIR *.CMD' $'@start \x17\x17\x17'. Full screen; trailing empty rows omitted. -->
 ```text
 
 TEC-OS 0.1 for TEC-1G
@@ -146,9 +146,9 @@ A:SYSTEM>CON
 CON: CRT:
 A:SYSTEM>DIR *.CMD
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
-937984 free on A:SYSTEM
+909312 free on A:SYSTEM
 A:SYSTEM>CON
 CON: CRT:
 A:SYSTEM>
