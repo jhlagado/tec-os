@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { PUT_COM, ROOT, TEST_CLOCK, abiDeclarations, boot, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
+import { PUT_COM, ROOT, TEST_CLOCK, abiDeclarations, boot, putBytes, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
@@ -278,6 +278,25 @@ test("SAVE is no built-in: SAVE 1 X.COM says SAVE?, fails and writes no file, at
     assert.equal(volume(m.sdImage, "A").find("X.COM"), undefined, "no file");
     assert.deepEqual(m.violations, []);
   }
+});
+
+test("PUT.COM, the tests' file writer: n pages of a ramp, or of a fill byte, and the usage with no file for a bad operand", async () => {
+  const m = await machine({ "PUT.COM": PUT_COM });
+  const a = () => volume(m.sdImage, "A");
+  assert.equal(m.command("PUT 3 RAMP.DAT"), "PUT 3 RAMP.DAT\r\r\n\r\nA>", "nothing printed");
+  assert.deepEqual(a().read("RAMP.DAT"), putBytes(3));
+  assert.deepEqual([...a().read("RAMP.DAT").slice(126, 131)], [126, 127, 1, 2, 3], "byte k of record r is r + k");
+  m.command("PUT 2 B:FILL.DAT 165");
+  assert.deepEqual(volume(m.sdImage, "B").read("FILL.DAT"), putBytes(2, 165), "every byte the fill");
+  m.command("PUT 1 RAMP.DAT 7");
+  assert.deepEqual(a().read("RAMP.DAT"), putBytes(1, 7), "an old file of the name is replaced");
+  m.command("PUT 0 NONE.DAT");
+  assert.equal(a().read("NONE.DAT").length, 0, "no pages: an empty file");
+  for (const line of ["PUT", "PUT 2", "PUT X BAD.DAT", "PUT 256 BAD.DAT", "PUT 1 BAD.DAT 256", "PUT 1 BAD.DAT 2X"]) {
+    assert.match(m.command(line), /\r\nPUT n NAME \[v\]\r\n/, `${line}: the usage`);
+    assert.equal(a().find("BAD.DAT"), undefined, `${line}: no file`);
+  }
+  assert.deepEqual(m.violations, []);
 });
 
 const LONG = Buffer.from(Array.from({ length: 40 }, (_, i) => `line ${i}\r\n`).join("") + "\x1a", "latin1");
