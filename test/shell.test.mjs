@@ -11,7 +11,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ABI, GLCD_SVC, ROOT, romFor, service, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
-import { execFile, mon3Svc, mon3Variant } from "./lib/mon3.mjs";
+import { MON3_CEILING, execFile, mon3Svc, mon3Variant } from "./lib/mon3.mjs";
 import { run as censusRun, watch } from "./lib/census.mjs";
 import { GUARDS, HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execSvc, find, hellos, hookSvc, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, user, word } from "./lib/shell.mjs";
 import { setDisplayLine } from "../host/card.mjs";
@@ -510,7 +510,7 @@ test("SH14 mon3 record", () => {
   const f = MON3.file;
   assert.deepEqual([...f.subarray(25, 29)], [0x45, 0x58, 1, 2], "version 1, bit 1 set in the file");
   const extra = f[8] | (f[9] << 8);
-  assert.ok(Math.ceil((MON3.image + extra) / 256) <= 18, "within 18 pages");
+  assert.ok(Math.ceil((MON3.image + extra) / 256) <= MON3_CEILING.pages, `within ${MON3_CEILING.pages} pages`);
 });
 
 test("SH14 mon3 enter and again", () => {

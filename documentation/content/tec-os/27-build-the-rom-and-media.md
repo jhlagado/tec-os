@@ -48,13 +48,21 @@ ROM build require manual atom-z80 0.3.7 installation
 `241b438:tools/media.mjs:213-250`, `241b438:README.md:91-102`).
 
 Binary and host pins are checked independently. TAS.COM is pinned to
-Thorium `3d1e2c0ea5269e1dfa4138671fab850c158f1670` and its prepared host
+Thorium `c81ba68848b72eb6649e76a9e659d5b5596f762d` and its prepared host
 to `3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689`. The source README's
 Build and test procedure creates a temporary host, installs locked
 dependencies and verifies it before moving it to `.inputs/tas-host`.
 Repeating preparation validates an existing host. Checks cover the runner,
-lock file, locked Z80 runtime and 10,343-byte TAS binary
-(`241b438:tools/lib/tas-rom.mjs:10-11`, `241b438:test/inputs.json:4-13`).
+lock file, locked Z80 runtime and 11,013-byte TAS binary
+(`TEC-OS 2ec05d670a3d6acf813fbd544b3329d48614b92c:tools/lib/tas-rom.mjs:10-11`,
+`TEC-OS 2ec05d670a3d6acf813fbd544b3329d48614b92c:test/inputs.json:4-13`).
+
+The selected TAS also supports explicit Intel HEX output, with original
+16-bit addresses, sparse gaps, checksums and EOF; other output and debug
+conventions stay compatible
+(`Thorium c81ba68848b72eb6649e76a9e659d5b5596f762d:docs/language.md:167-185`).
+The source header above retains the earlier capture revision; these named
+compiler facts and the receiving tests identify the later component.
 
 The following `46cf3f1` assembler-transition account is historical,
 including its byte-equivalence comparison. This TAS takes several statements
@@ -62,8 +70,11 @@ on a line and rejects a line with more
 than 128 characters of code, as
 [Chapter 2](02-make-a-small-program.md#several-statements-on-a-line)
 describes. TEC-OS source uses a statement per line within
-that limit. The ROM, `GLCD.SVC`, `MON3.SVC`, `DEMO.COM`, `HELLO3.BIN`
-and test programs therefore retain their earlier `dbee66a` assembly bytes (`46cf3f1:docs/compatibility.md:226`). ROM maps assign a statement to each source line. The build therefore
+that limit. The earlier statement-parser change from `dbee66a` preserved
+the then-current ROM, driver and example images. The current compiler-pin
+change likewise preserves the ROM and MON3 bytes from the preceding
+`56a3c6aa2e837eb24fa3a61df621f3830e8259d3` development component; the
+MON3 address feature changed the service separately. ROM maps assign a statement to each source line. The build therefore
 rejects a `\` outside quotes and comments in ROM source
 (`46cf3f1:tools/lib/tas-d8.mjs:105-121`,
 `46cf3f1:tools/lib/tas-d8.mjs:155-157`).

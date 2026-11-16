@@ -511,6 +511,8 @@ SKIP1:
 ; A .HEX file goes to the HEX loader.
 
 CLOAD:
+  xor a
+  ld (RUNOK),a   ; nothing runnable
   ld a,(DMG)
   or a           ; the tables damaged?
   jr z,CLOAD1
@@ -518,8 +520,6 @@ CLOAD:
   jp BAD
 
 CLOAD1:
-  xor a
-  ld (RUNOK),a   ; nothing runnable
   call FCBP      ; the name
   jp c,BAD       ; no name
   push hl        ; the text
@@ -651,9 +651,9 @@ DMA80:
 
 ; GO [addr]: the last good load, or the
 ; address given, run as MON-3's GO runs
-; it (docs/mon3.md). The cache is
-; flushed first, so a program that
-; hangs loses nothing written.
+; it (docs/mon3.md). Try to flush the
+; cache first. Failed writes stay
+; pending, not guaranteed saved.
 
 CGO:
   jr z,GO1       ; no address
@@ -1084,8 +1084,8 @@ FCBF:
 ; Read a hex word of one to four digits
 ; at HL into DE. Carry if it has no
 ; digit, a fifth digit, or anything but
-; a space or the end after it. HL ends
-; past it. Clobbers A and B.
+; trailing spaces and the line's end
+; after it. Clobbers A and B.
 
 HEXW:
   ld de,0
@@ -1115,6 +1115,10 @@ HEXW2:
   ld a,(hl)
   cp ' '+1       ; a space or the end
   ccf            ; carry: text joined
+  ret c
+  call SKIP      ; no further operand
+  ret z
+  scf
   ret
 
 ; A hex digit's value from A, either
@@ -1202,10 +1206,6 @@ RUNOK: DB 0
 INT38: DB 0
 RUNAT: DW $4000
 LDAT: DW 0
-HADR: DW 0       ; a HEX record's start
-HWRT: DB 0       ; 1: the writing pass
-HANY: DB 0       ; a data record read
-HSP: DW 0        ; the HEX pass's stack
 HOOKAT: DW 0
 OLDWB: DW 0
 

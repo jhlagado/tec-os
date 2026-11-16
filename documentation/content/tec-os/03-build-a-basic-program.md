@@ -285,10 +285,13 @@ capitals, but lower case also works. The host-model test types
 
 On the four-drive starter card TED has 28,694 bytes of text room with
 the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
-installed and reduces that room to 24,086 bytes, or 23,318 with the GLCD
-driver too. Unload MON3.SVC before editing a larger source. These are
-historical recovery host-model measurements
-(`46cf3f1:docs/compatibility.md:223`).
+installed. With the current 20-page development monitor, TED has 23,574 bytes,
+or 22,806 with the GLCD driver too. The earlier 18-page monitor measurements
+were 24,086/23,318; the two extra pages account for the 512-byte reduction,
+with the TED image unchanged. Unload MON3.SVC before editing a larger source.
+These are paired emulator observations for the monitor at
+`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3`, not physical-board
+measurements (`docs/compatibility.md`).
 
 ## Machine code from BASIC
 
