@@ -166,13 +166,13 @@ test("LC-4 a typed line: echo, backspace, ^U, ^R, and the cursor where the next 
   assert.equal(lcd(m).lcdAddr, 0xd4 + 5);
   m.type("\bR");
   until(m, (r) => r[3] === "A>DIR", "the backspace");
-  m.type("\x15USER 0");
-  until(m, (r) => r[3] === "USER 0", "^U");
+  m.type("\x15CON");
+  until(m, (r) => r[3] === "CON", "^U");
   assert.equal(rows(m)[2], "A>DIR#");
   m.type("\x12");
-  until(m, (r) => r[2] === "USER 0#" && r[3] === "USER 0", "^R");
+  until(m, (r) => r[2] === "CON#" && r[3] === "CON", "^R");
   m.type("\r");
-  m.expect(/A>$/);
+  m.expect(/CON: UC1:\r\nA>$/);
   assert.equal(lcd(m).lcdCursorOn, true);
 });
 
@@ -431,7 +431,7 @@ test("LC-11 a panel that never answers costs bounded time and leaves the console
   assert.equal(m.read(m.sym("CONMOD")), 3);
   const from = m.cycles;
   m.command("TYPE S.TXT");
-  console.log(`LC-11: ${m.cycles - from} T-states`);
-  assert.ok(m.cycles - from < 15_000_000, `${m.cycles - from} T-states for five lines and their scrolls`);
+  // 11,639,530 measured: the bound is a quarter over it.
+  assert.ok(m.cycles - from < 14_600_000, `${m.cycles - from} T-states for five lines and their scrolls`);
   assert.match(m.command("CON TTY"), /CON: TTY:/);
 });
