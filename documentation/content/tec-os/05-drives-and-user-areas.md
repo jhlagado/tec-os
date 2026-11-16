@@ -19,8 +19,8 @@ nav_group: "Using the machine"
      labelled separately from console captures. -->
 
 You can keep separate groups of files on the same card. A volume is a
-complete disk of files, assigned to a drive letter. Within a volume, user
-areas separate further groups. These locations affect file commands and
+complete disk of files, assigned to a drive letter, and `CD` chooses which
+volume a drive shows. These locations affect file commands and
 program lookup. A tool can therefore be available even when DIR omits it.
 The final sections explain resident services, which occupy memory as
 well as having a file on the card.
@@ -98,19 +98,20 @@ returned-error option for programs.
 
 ## User areas
 
-Each file belongs to a user area numbered 0 through 15. This separates
-groups of files within the same volume. `USER 3` selects area 3 across
-all drives. A nonzero area appears before the prompt's drive letter, as
-in CP/M 3: `3A:SYSTEM>` is area 3 on drive A. TEC-OS starts in area 0,
-which contains all the starter files.
+CP/M gives every file a user area numbered 0 through 15, a way to keep
+groups of files apart within one volume. TEC-OS stores the area with each
+file, as CP/M does, but its prompt works in area 0 only. There is no `USER`
+command and the prompt shows no area number. All the starter files are in
+area 0.
 
-File commands use the selected area. A file made in one area is absent
-from another area's listing even on the same volume. This example copies
-STARTUP.CMD to WORK while area 0 is selected, then looks for it from
-area 3. A file saved while area 3 is selected, from TED for instance,
-belongs to area 3 and is absent from area 0 in the same way:
+A CP/M program can still select another area while it runs, and the files
+it makes there stay apart from those in area 0. When the program ends, the
+prompt is back in area 0. A file left in another area therefore cannot be
+listed, erased or run from the prompt. In this example NOTES.TXT is in area
+3 of WORK, put there from the PC with `tecvol put card.img B NOTES.TXT
+--text --user 3`. Neither `DIR` nor `TYPE` finds it:
 
-<!-- TEC-OS 6fb1872, ROM 095d829d: node tools/capture.mjs 'COPY STARTUP.CMD B:' 'DIR B:' 'USER 3' 'DIR B:' TAS 'USER 0'. Complete captured console transcript. -->
+<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card build/area.img 'DIR B:' 'TYPE B:NOTES.TXT'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -121,60 +122,41 @@ A>SHELL.SVC
 
 A:SYSTEM>GLCD.SVC
 
-A:SYSTEM>COPY STARTUP.CMD B:
-COPIED 0001
-
 A:SYSTEM>DIR B:
-
-STARTUP.CMD      128
-1 file, 128 bytes
-8368128 free on B:WORK
-A:SYSTEM>USER 3
-3A:SYSTEM>DIR B:
 NO FILE
 
-3A:SYSTEM>TAS
-usage: TAS NAME [OUT.TYP]
-
-3A:SYSTEM>USER 0
+A:SYSTEM>TYPE B:NOTES.TXT
+NO FILE
 A:SYSTEM>
 ```
 
-`TAS` still runs from area 3 because program lookup also checks area 0.
-COPY operates within the current user area, so it cannot transfer
-files to another. The PC command `tecvol put --user N` places a file in a selected
-area, as [Chapter 6](06-cards-on-the-pc.md) explains. `USER` requires a
-number from 0 to 15. An omitted or out-of-range number produces `?`.
+The PC tools reach every area: `tecvol dir` lists them all, and `--user N`
+selects one for `get`, `put` and `era`, as [Chapter 6](06-cards-on-the-pc.md)
+explains. To keep groups of files apart on the machine itself, use named
+volumes. `CD` puts another volume on a drive, as the sections below show.
 
 The system attribute is a separate property of a file. `DIR` omits system
-files as well as files outside the current area. A system file remains
-available to `TYPE` and other file commands in its area and a program
-command can run it. The attribute does not make the file available in
-every user area or protect it against modification.
+files. A system file remains available to `TYPE` and other file commands
+and a program command can run it. The attribute does not protect the file
+against modification.
 
 ## Program lookup
 
 A command that is not built in normally names a COM file. The search
 begins on its explicit drive, or the current drive if none is named.
-It checks the current user area first and then area 0 if those differ.
-Area 0 lookup requires no system attribute and leaves your selected
-area unchanged.
 
 A name without a drive prefix can also find a tool on A. That search
-begins only after both areas on the current drive contain no matching
-file. On A, the current area again precedes area 0. At `3B>`, `TOOL`
-uses this order:
+begins only after the current drive has no matching file. At `B:WORK>`,
+`TOOL` uses this order:
 
 | Search | File |
 | --- | --- |
-| 1 | B, area 3: `TOOL.COM` |
-| 2 | B, area 0: `TOOL.COM` |
-| 3 | A, area 3: `TOOL.COM` |
-| 4 | A, area 0: `TOOL.COM` |
+| 1 | B: `TOOL.COM` |
+| 2 | A: `TOOL.COM` |
 
-An explicit drive restricts lookup to that drive. `B:TOOL` checks B's
-current area and area 0 only. Loading from A also leaves the current
-drive unchanged. In this capture, both `A:TAS` and plain `TAS` run
+An explicit drive restricts lookup to that drive. `B:TOOL` checks B
+only. Loading from A also leaves the current drive unchanged. In this
+capture, both `A:TAS` and plain `TAS` run
 A's program and print its usage line. The prompt remains on B:
 
 <!-- TEC-OS 46cf3f1: node tools/capture.mjs B: A:TAS TAS STARTUP.CMD. Complete captured console transcript. -->
@@ -209,13 +191,13 @@ so its command fails. `A:STARTUP.CMD` would run A's script again.
 The ROM alone treats `.CMD` like another extension and searches for COM.
 
 SVC files have a narrower search. A service command reads only the
-current user area on the named or current drive. At `B:WORK>` you must
+named or current drive. At `B:WORK>` you must
 therefore name the starter driver as `A:GLCD.SVC`. `CON UC1` also names
 A's driver explicitly when loading it. The resident-service examples
 below explain installation and removal.
 
 Lookup stops when a file is found but cannot load. A `TOOL.COM` too large
-on B is not skipped for a smaller copy on A or in another area. An absent
+on B is not skipped for a smaller copy on A. An absent
 file or an oversized program prints the command name with a question mark.
 A card-read failure in the default error mode gives `Bad Sector` and ends
 the command through the BDOS instead. It does not print that question mark.
@@ -337,9 +319,8 @@ A:SYSTEM>
 ```
 
 At the bare prompt, use `CD ?`, `CD A:SYSTEM` and `SHELL.SVC` to restore
-the shell. CD preserves the current drive and user area. The starter's shell
-is in user 0; use `USER 0` before loading it if you changed the area.
-Reset starts in user 0. Power cycle restores the card's default drive
+the shell. CD preserves the current drive. Power cycle restores the
+card's default drive
 assignments and startup. A `CD` in a script cannot change the drive the script
 is read from: it is refused with `CD?`, and the script goes on.
 
