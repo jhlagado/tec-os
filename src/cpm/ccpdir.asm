@@ -25,9 +25,9 @@ RCMDCD:
   ld (RCDDRV),a  ; the current drive
   ld a,(hl)      ; after CD's blanks
   or a
-  jp z,RCDALONE  ; CD alone
+  jr z,RCDALONE  ; CD alone
   cp '?'         ; a question?
-  jp z,RCDLIST   ; CD ?
+  jr z,RCDLIST   ; CD ?
   inc hl
   ld a,(hl)      ; a drive's colon
   dec hl         ; after one letter?
