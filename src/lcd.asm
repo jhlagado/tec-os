@@ -27,13 +27,13 @@ LCVRST:
 ; Attempt LCDSEQ's four commands:
 ; 8-bit, two-line, display on, cursor
 ; off, incrementing writes, clear.
-; Nothing while the LCD is the console.
 ; Changes AF, B, HL; returns B=0 for
-; cold boot's row-zero write.
+; cold boot's row-zero write. With the
+; LCD as the console this clears its
+; screen once, after the banner; the
+; console's own cursor does not move.
 
 LCDINIT:
-  call LCDCON
-  ret z
   ld b,4
 
 ; B commands from LCDSEQ's start.
@@ -68,18 +68,26 @@ LCDWX:
 
 ; Console put: A at row B, column C.
 ; The panel has no reverse video, so
-; bit 7 is dropped. The hardware cursor
-; is on while the terminal shows its
-; cursor (VCURV), and the address goes
-; back to the cell, where the cursor
-; then stands. Changes AF, E and HL.
+; bit 7 is dropped. 80h alone is the
+; terminal's cursor flip, since the
+; console's get returns 0: nothing is
+; written, the hardware cursor goes on
+; while the terminal shows its cursor
+; (VCURV) and off otherwise, and the
+; address returns to the cell, where
+; that cursor stands.
+; Changes AF, E and HL.
 
 LCVPUT:
+  cp $80
+  jr z,LCVP1     ; a cursor flip
   and $7F
   ld e,a
   call LCSEL
   ld a,e
-  call LCDD
+  jr LCDD
+
+LCVP1:
   ld a,(VCURV)
   add a,a        ; 0Ch, or 0Eh shown
   or $0C
@@ -116,16 +124,6 @@ LCDD:
   call LCDWAIT
   pop af
   out (LCDDAT),a
-  ret
-
-; Console get: A = the cell at row B,
-; column C, read from the panel.
-; Changes F and HL.
-
-LCVGET:
-  call LCSEL
-  call LCDWAIT
-  in a,(LCDDAT)
   ret
 
 ; Console clear: row B from column C to

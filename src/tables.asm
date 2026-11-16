@@ -53,8 +53,12 @@ LCDROWS:
 ; The LCD console's table, as CONSWV
 ; copies one: six terminal words, no
 ; page function, columns and rows.
+; Its get is HWSPX, which returns 0:
+; the terminal reads a cell only to
+; flip the cursor, and LCVPUT takes the
+; 80h that follows as that flip.
 
-LCVTAB: DW LCVPUT,LCVGET,LCVCLR,LCVRST,LCVRD,LCVWR
+LCVTAB: DW LCVPUT,HWSPX,LCVCLR,LCVRST,LCVRD,LCVWR
   DW 0
   DB 20,4
 
