@@ -29,13 +29,18 @@ limits. [Chapter 8](08-commands-at-startup.md) explains STARTUP.CMD and
 
 ## The current standalone Viewer
 
-The [live standalone Viewer](https://jhlagado.github.io/tec-os-viewer/) was
+The previous separately qualified [live standalone Viewer](https://jhlagado.github.io/tec-os-viewer/) was
 qualified at Viewer `adf713b` with TEC-OS `241b438` for this update. Its
 [build details](https://jhlagado.github.io/tec-os-viewer/build-info.json)
 identify the deployed commits. A new session defaults to 40 columns; valid
-saved 32-, 40- or 80-column choices are retained. Its sixteen-file starter
-includes BASIC Caverns; choose PICO9918 at 80 columns to run `CAVBASIC` and
-read `CAVERNS.TXT` for instructions.
+saved 32-, 40- or 80-column choices are retained. That deployment had a
+sixteen-file starter including a precompiled BASIC Caverns game.
+
+The current repository starter has fifteen files and supplies Caverns as source.
+Choose PICO9918 at 80 columns, compile with `BAZA CAVBASIC`, then run
+`CAVBASIC`; read `CAVERNS.TXT` for instructions. A merge into main is not
+evidence that the live site has been redeployed. The live build details
+identify the version actually running there.
 
 The standalone project is built from the separate `tec-os-viewer` repository;
 its README gives the build commands. The `241b438:web/` source references and

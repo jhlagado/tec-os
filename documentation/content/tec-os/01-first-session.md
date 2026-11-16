@@ -73,11 +73,8 @@ graphics LCD. In this session it leaves the PICO9918 selected as the
 after the prompt and press Return. The prompt is already on screen, so it
 is not part of the command you enter. The same session produced:
 
-<!-- TEC-OS 241b438, ROM c9586263: owned-input stock PICO capture03, dir. 40-column text; right-hand blanks and empty bottom rows omitted. Raw rows/registers/VRAM and receipt: Origo studies/p3-tec-os/evidence/book-stock-pico-capture03/. -->
+<!-- Current source-only starter, ROM c9586263: native PICO 40-column capture. Commands and raw rows: docs/evidence/caverns-main-integration/starter-directory.json. Right-hand blanks and empty bottom rows omitted. -->
 ```text
-
-A:SYSTEM>GLCD.SVC
-
 A:SYSTEM>DIR
 
 SHELL   .SVC    3712
@@ -88,16 +85,15 @@ SAMPLE  .ASM    4608
 TIMES   .BAS     640
 TAS     .COM   10368
 BAZA    .COM   13184
-BAZA    .RTL   12800
+BAZA    .RTL   12928
 BOUNCE  .BAS    5376
-CAVERNS .TXT    2304
+CAVERNS .TXT    2688
 DEMO    .ASM   15360
 MON3    .SVC    5120
 HELLO3  .ASM    2176
-CAVBASIC.COM   39680
-CAVBASIC.BAS   18560
-16 files, 147328 bytes
-870400 free on A:SYSTEM
+CAVBASIC.BAS   18816
+15 files, 108416 bytes
+911360 free on A:SYSTEM
 A:SYSTEM>
 ```
 
@@ -111,8 +107,9 @@ The supplied assembler, `TAS`, turns assembly source into an executable.
 `TED` edits text files. `BAZA` compiles BASIC source such as `TIMES.BAS`
 and uses the library `BAZA.RTL`. The startup files are `SHELL.SVC`,
 `GLCD.SVC` and `STARTUP.CMD`. Leave them as supplied for this session.
-The current card also includes `CAVBASIC.BAS`, `CAVBASIC.COM` and
-`CAVERNS.TXT`, the BASIC Caverns game and its instructions. The remaining
+The current card also includes `CAVBASIC.BAS` and `CAVERNS.TXT`, the BASIC
+Caverns source and its instructions. Select `CON PICO 80`, compile it with
+`BAZA CAVBASIC`, then run `CAVBASIC`. The remaining
 demonstrations are optional and are listed under
 [More on the card](#more-on-the-card).
 

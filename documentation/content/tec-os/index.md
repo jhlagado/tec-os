@@ -45,7 +45,7 @@ calls, terminal features and hardware a program uses.
 The current cooperative housekeeping implementation is qualified at TEC-OS
 `241b438`: operating-system calls give pending data a bounded chance to reach
 the card, and failed acknowledged data remains available for retry. The
-current starter has sixteen files, including the BASIC Caverns game.
+current source-only starter has fifteen files, including the BASIC Caverns source.
 [Chapter 1](01-first-session.md) shows its fresh PICO boot and directory;
 [Chapter 19](19-cache-and-persistence.md#current-retained-data-observation)
 shows what happens when the card refuses a write.

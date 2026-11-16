@@ -1,0 +1,37 @@
+{
+  "scope": "Native TEC-OS emulator, source-only current starter, PICO9918 40-column screen after GLCD.SVC then DIR",
+  "romSha256": "c95862634ee002bb9a5ef1d3d0ee8ea831e12fda4e96792b36454170aafabf7f",
+  "recipeSha256": "20a1ed57bd5e9bf5f210f39eebb7f296f7dc931becb2debe0559c43e9dbfce47",
+  "commands": [
+    "GLCD.SVC",
+    "DIR"
+  ],
+  "screen": [
+    "A:SYSTEM>GLCD.SVC",
+    "",
+    "A:SYSTEM>GLCD.SVC",
+    "",
+    "A:SYSTEM>DIR",
+    "",
+    "SHELL   .SVC    3712",
+    "GLCD    .SVC     896",
+    "STARTUP .CMD     128",
+    "TED     .COM   12416",
+    "SAMPLE  .ASM    4608",
+    "TIMES   .BAS     640",
+    "TAS     .COM   10368",
+    "BAZA    .COM   13184",
+    "BAZA    .RTL   12928",
+    "BOUNCE  .BAS    5376",
+    "CAVERNS .TXT    2688",
+    "DEMO    .ASM   15360",
+    "MON3    .SVC    5120",
+    "HELLO3  .ASM    2176",
+    "CAVBASIC.BAS   18816",
+    "15 files, 108416 bytes",
+    "911360 free on A:SYSTEM",
+    "A:SYSTEM>"
+  ],
+  "stdout": "GLCD.SVC\r\r\n\r\nA:SYSTEM>DIR\r\r\n\r\nSHELL   .SVC    3712\r\nGLCD    .SVC     896\r\nSTARTUP .CMD     128\r\nTED     .COM   12416\r\nSAMPLE  .ASM    4608\r\nTIMES   .BAS     640\r\nTAS     .COM   10368\r\nBAZA    .COM   13184\r\nBAZA    .RTL   12928\r\nBOUNCE  .BAS    5376\r\nCAVERNS .TXT    2688\r\nDEMO    .ASM   15360\r\nMON3    .SVC    5120\r\nHELLO3  .ASM    2176\r\nCAVBASIC.BAS   18816\r\n15 files, 108416 bytes\r\n911360 free on A:SYSTEM\r\nA:SYSTEM>",
+  "violations": []
+}
