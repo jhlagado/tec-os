@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
-import { GLCD_SVC, ROOT, abiDeclarations, SHELL_SVC, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
+import { GLCD_SVC, PUT_COM, ROOT, abiDeclarations, SHELL_SVC, TEST_CLOCK, putBytes, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
 import { cacheState } from "./lib/cache-pending.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
@@ -1266,7 +1266,7 @@ async function vectorExchange(svc, jp0 = false) {
   const data = { "DATA1.DAT": pattern(128, 3), "DATA2.DAT": pattern(64, 4) };
   const tail = jp0 ? [0xc3, 0x00, 0x00] : [0xc9];
   const exch = bin(0x3a, 0, 0, 0x47, 0x3a, 0, 0, 0x32, 0, 0, 0x78, 0x32, 0, 0, ...tail); // A=(x); B=A; A=(y); (x)=A; (y)=B
-  const { m } = await inSession({ ...data, "EXCH.BIN": exch }, { svc });
+  const { m } = await inSession({ ...data, "EXCH.BIN": exch, "PUT.COM": PUT_COM }, { svc });
   assert.ok(ok(line(m, "LOAD EXCH.BIN")));
   const v = vectorA(m);
   const free = v.bytes.findIndex((b) => b !== 0xff); // the byte holding the first free block
@@ -1293,12 +1293,11 @@ async function vectorExchange(svc, jp0 = false) {
     assert.equal(vectorA(m).bytes.reduce((a, b) => a + b, 0), sum, "the vector's sum unchanged");
     leave(m, { mon3: true });
   }
+  // Three new files of 16 records, each filled with its own byte.
   const saved = {};
-  for (const [n, seed] of [["N1.COM", 5], ["N2.COM", 6], ["N3.COM", 7]]) {
-    const bytes = pattern(16, seed);
-    bytes.forEach((b, i) => m.write(0x100 + i, b));
-    assert.doesNotMatch(m.command(`SAVE 8 ${n}`), /\?/);
-    saved[n] = bytes;
+  for (const [n, fill] of [["N1.COM", 5], ["N2.COM", 6], ["N3.COM", 7]]) {
+    assert.doesNotMatch(m.command(`PUT 8 ${n} ${fill}`), /\?|NO SPACE/);
+    saved[n] = putBytes(8, fill);
   }
   const a = volume(m.sdImage, "A");
   assert.deepEqual(a.verify(), [], "the card's directory holds no cross-link");
