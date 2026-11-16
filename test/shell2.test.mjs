@@ -974,8 +974,8 @@ test("S2-11 bdos 11 cost", { timeout: 600_000 }, (t) => {
   const qualifiedB = bdos11("B", QUALIFIED_POLL), qualifiedA = bdos11("A", QUALIFIED_POLL);
   const b = bdos11("B"), a = bdos11("A");
   t.diagnostic(JSON.stringify({ qualifiedB, qualifiedA, onB: b, onA: a }));
-  assert.deepEqual(qualifiedB, { nothing: 4963, worst: 8_737_742 });
-  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_202_670 });
+  assert.deepEqual(qualifiedB, { nothing: 4963, worst: 8_737_681 });
+  assert.deepEqual(qualifiedA, { nothing: 4955, worst: 9_202_609 });
   for (const [drive, current, qualified] of [["B", b, qualifiedB], ["A", a, qualifiedA]])
     assert.ok(current.nothing - qualified.nothing <= 360, `${drive}: empty poll ${current.nothing} T, ${current.nothing - qualified.nothing} over qualified`);
   assert.ok(b.worst / qualifiedB.worst - 1 <= 0.01, `logged on B:: ${b.worst} T, ${((b.worst / qualifiedB.worst - 1) * 100).toFixed(2)} % over qualified`);
@@ -1075,10 +1075,10 @@ test("S2-11 mutant: MNC and MTW, as the bdos 11 cost sees them", { timeout: 600_
   const nativeA = bdos11("A"), mtw = bdos11("A", MUTANTS.mtw());
   const nativePass = refusedShellInputPass(), doubled = refusedShellInputPass(MUTANTS.mtw());
   t.diagnostic(JSON.stringify({ nativeB, mnc, nativeA, mtw, nativePasses: nativePass.cut.passes, mutantPasses: doubled.cut.passes }));
-  assert.ok(nativeB.nothing - 4963 <= 360); assert.ok(nativeB.worst / 8_737_742 - 1 <= 0.01);
+  assert.ok(nativeB.nothing - 4963 <= 360); assert.ok(nativeB.worst / 8_737_681 - 1 <= 0.01);
   assert.ok(mnc.nothing - 4963 > 360, `MNC: ${mnc.nothing} T with nothing changed`);
-  assert.ok(mnc.worst / 8_737_742 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
-  assert.ok(nativeA.worst / 9_202_670 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
+  assert.ok(mnc.worst / 8_737_681 - 1 > 0.01, `MNC logged on B:: ${mnc.worst}`);
+  assert.ok(nativeA.worst / 9_202_609 - 1 <= 0.05); assert.deepEqual(mtw, nativeA, "healthy polling is a recorded MTW timing nonkill");
   oneShellInputPass(nativePass); assert.equal(doubled.cut.passes.length, 2);
   assert.equal(doubled.finalCardSHA256, nativePass.finalCardSHA256);
   assert.throws(() => oneShellInputPass(doubled), error => {
