@@ -222,7 +222,7 @@ separate stage and housekeeping does not by itself deliver later Viewer controls
 It uppercases their names while reading them. The import then joins the
 card-operation queue and stages the files on a copy of the card current at
 that turn. These staged writes validate each CP/M 8.3 name and use user 0
-of the selected volume, regardless of the ROM's current user area.
+of the selected volume, where the prompt works.
 The file list can show other user areas but there is no import user-area
 selector
 (`241b438:web/src/main.mjs:632-651`, `241b438:tools/lib/cpmfs.mjs:15-20`,

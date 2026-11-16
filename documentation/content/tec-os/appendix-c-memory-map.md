@@ -35,8 +35,9 @@ addresses come from `build/tecos/tecos.d8.json`. Other builds need their own
 symbol files for build-dependent addresses.
 
 The TPA and resident workspace rows have since been restated for the source
-without the SAVE command, whose ROM SHA-256 begins `095d829d`. Removing SAVE
-took three bytes from the CCP's block. The fields from `DSKCUR` to `DIRNUM`,
+without the SAVE and USER commands, whose ROM SHA-256 begins `e3478808`.
+Removing SAVE took three bytes from the CCP's block; removing USER took
+none. The fields from `DSKCUR` to `DIRNUM`,
 the allocation vectors and the bare BDOS entry are therefore three bytes
 higher than in the `46cf3f1` build. Fields from `ERAANS` up are where they
 were.
@@ -128,10 +129,10 @@ housekeeping source uses 16,016 bytes/free 368, ROM
 `c95862634ee002bb9a5ef1d3d0ee8ea831e12fda4e96792b36454170aafabf7f`:
 data C00Bh–C61Fh (1,557), code C620h–FE8Fh (14,448), free FE90h–FFFFh
 (368). These source identities are not replacement capture receipts
-(`a40d482:docs/memory-map.md:24-32`). Without SAVE the source uses 15,856
-bytes/free 528, ROM
-`095d829d1278ffd3a26c13c3a8666f80328c1481b54ee4d8b8d4a3acad5d00ef`:
-data C00Bh–C60Fh (1,541), code C610h–FDEFh (14,304), free FDF0h–FFFFh (528).
+(`a40d482:docs/memory-map.md:24-32`). Without SAVE and USER the source uses 15,713
+bytes/free 671, ROM
+`e34788081c7565462d5bca52b50714cb30dbe491fa487f8327fb6a0b26de36a8`:
+data C00Bh–C608h (1,534), code C609h–FD60h (14,168), free FD61h–FFFFh (671).
 
 The ROM occupies these ranges:
 
@@ -164,7 +165,7 @@ These fixed addresses identify the current page-zero contracts
 | --- | --- |
 | `0000h` | `JP BF03h`, warm boot through the RAM BIOS table |
 | `0003h` | IOBYTE. TEC-OS applies its console field in bits 0 and 1 |
-| `0004h` | Current drive in bits 0–3 and user number in bits 4–7 |
+| `0004h` | Current drive in bits 0–3. Bits 4–7, CP/M's user number, are zero |
 | `0005h` | `JP` through the word at `0006h`, to the BDOS entry jump or lowest service page |
 | `0008h–0037h` | Restart vectors 1–6. Each defaults to seven zeros followed by `RET`, unless a `JP` target is strictly above `PZTOP` |
 | `0038h` | Restart 7 and mode 1 interrupt entry. Defaults to `EI`, `RETI` unless a qualifying `JP` remains |
@@ -190,7 +191,7 @@ hook still targets them so failure alone does not imply slot release
 (`241b438:src/loader.asm:97-126`, `241b438:src/loader.asm:436-475`,
 `241b438:src/loader.asm:520-540`).
 
-The CCP records the drive/user byte for its command prompt. Before program
+The CCP records the drive byte for its command prompt. Before program
 launch it writes both FCBs, then the command tail and default DMA address, then
 the load-drive byte (`241b438:src/cpm/ccp.asm:352-370`,
 `241b438:src/cpm/ccpcmd.asm:392-440`, `241b438:src/cpm/ccp.asm:488-520`). The
