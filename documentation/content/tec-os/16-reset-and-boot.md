@@ -105,7 +105,7 @@ COLD orders the work accordingly (`241b438:src/boot.asm:35-115`):
 13. `SHOWVOL` prints one console line per mounted drive. `LCDVOLS` writes
     the letters and labels of A and B to LCD rows 1 and 2
     (`241b438:src/boot.asm:112-113`, `241b438:src/boot.asm:500-527`, `241b438:src/lcd.asm:104-137`).
-14. Page zero's drive/user byte receives A and user 0. Execution continues
+14. Page zero's drive byte receives A, with user area 0. Execution continues
     into warm boot, whose `PZINIT` builds page zero once
     (`241b438:src/boot.asm:114-148`).
 
@@ -263,7 +263,7 @@ D](appendix-d-error-messages.md#write-lost) gives failed-write recovery rules
 Program code can overwrite page zero, so every completed boot rebuilds its
 entry jumps. PZINIT writes JP BF03h at `0000h`, the PZTOP jump at `0005h` and
 JP BENTRY at the stub. Cold and warm paths share this operation. It preserves
-IOBYTE at `0003h` and drive/user at `0004h` (`241b438:src/boot.asm:114-148`,
+IOBYTE at `0003h` and the drive at `0004h` (`241b438:src/boot.asm:114-148`,
 `241b438:src/boot.asm:297-319`).
 
 PZSWP then sweeps restart slots at `0008h–003Fh`. A JP survives only above
@@ -346,7 +346,7 @@ Warm boot reconstructs the environment in this sequence:
    reporter distinguishes pending data, a successfully drained reported episode
    and an otherwise unreported error without a dirty retry
    (`a40d482:src/cache.asm:638-649`, `a40d482:src/hk.asm:204-237`).
-8. `CCPENT` receives the page-zero drive/user byte in `C`
+8. `CCPENT` receives the page-zero drive byte in `C`
    (`241b438:src/boot.asm:154-156`).
 
 BUFOK clearing prevents an old continuation key from skipping a required block
@@ -376,7 +376,7 @@ LF, ordinary keys and input Ctrl-C do not. Output pause Ctrl-S/Ctrl-C remains
 a deliberate warm-boot escape (`a40d482:src/cpm/ccp.asm:75-134`).
 Printing/input may still service writes before Enter. No SDINIT or card identity
 check occurs here: Enter is not permission to replay onto an inserted card.
-Saved user and non-A drive are restored after success. A cold-start record
+A saved non-A drive is restored after success. A cold-start record
 already buffered before saved-drive refusal waits and runs once afterward,
 not inside recovery. Cold mount's R retry diagnostic remains separate.
 

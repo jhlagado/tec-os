@@ -62,15 +62,15 @@ output-pause Ctrl-S/Ctrl-C escape remains. Printing/input still provide queue
 opportunities, but never SDINIT or permission to replay onto a newly inserted
 card (`a40d482:src/cpm/ccp.asm:75-134`).
 If STBOOT already buffered a cold-start line before saved-drive refusal, that
-record remains pending and runs once after successful saved-user/drive recovery.
+record remains pending and runs once after successful saved-drive recovery.
 CHPOS continuation cancellation does not consume it. The existing one-shot and
 keypad bypass below remain in force; the new failure states need fresh captures.
 
 ## The first read and the bypass
 
-`CCPENT` calls `STBOOT` after disk reset and user restoration but before
+`CCPENT` calls `STBOOT` after disk reset but before
 selecting the entry drive (`241b438:src/cpm/ccp.asm:32-134`). Cold boot initialises
-page zero for A and user 0. Warm boot passes that byte onward, so the
+page zero for A. The CCP works in user area 0 only, so the
 initial startup open uses user 0 (`241b438:src/boot.asm:114-115`,
 `241b438:src/boot.asm:153-156`). Subsequent `STBOOT` calls return immediately
 because `STPOS` is nonzero (`241b438:src/cpm/ccpcmd.asm:760-764`).

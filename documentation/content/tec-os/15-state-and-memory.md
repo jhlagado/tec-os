@@ -179,7 +179,7 @@ minimum starter TPA of 45,830 bytes (`241b438:tools/build.mjs:204-213`,
 Page zero supplies entry points at fixed addresses. After cold boot clears all
 256 bytes, PZINIT writes JP BF03h at `0000h` and the PZTOP jump at `0005h`.
 Warm boot repeats them and rewrites the stub while retaining IOBYTE at `0003h`
-and drive/user at `0004h` (`241b438:src/boot.asm:52-59`, `241b438:src/boot.asm:304-319`).
+and the drive at `0004h` (`241b438:src/boot.asm:52-59`, `241b438:src/boot.asm:304-319`).
 
 Restart slots have a separate lifetime rule. A sweep retains a JP only above
 PZTOP, in resident memory or ROM. Other slots become seven zero bytes and RET.
