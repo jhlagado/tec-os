@@ -104,10 +104,9 @@ DRH1:
   call DRENT     ; HL: the entry
   push hl
   ld a,(DFAST)
-  or a
-
-; Coalesce before the HMAP marks.
-
+  or a           ; table mode: its
+                 ; maximum first, then
+                 ; the HMAP mark
   call nz,DAGADD
   pop hl
   jr c,DRFALL    ; before any output
@@ -678,10 +677,8 @@ DAGREC:
 
 DAR1:
   ld (DCAND),de  ; low and middle
-
-; high includes RC carry
-
-  ld a,b
+  ld a,b         ; high byte, with
+                 ; any RC carry
   ld (DCAND+2),a
   ret
 
@@ -698,12 +695,9 @@ DAGVALID:
   or a           ; unsigned count check
   sbc hl,de
   jr nc,DAGBAD   ; reject before shifts
-  add hl,de      ; count times 16 + base
-  ld b,h         ; full visit budget
-
-; not an eight-bit count
-
-  ld c,l
+  add hl,de      ; the count again
+  ld b,h         ; BC: the visit
+  ld c,l         ; budget, 16 bits
   add hl,hl      ; sixteen-byte nodes
   add hl,hl
   add hl,hl
@@ -756,11 +750,8 @@ DAF1:
   dec bc         ; one allocated visit
   ex de,hl       ; linked node address
   ld a,l
-  and 15         ; whole aligned node
-
-; never an interior byte
-
-  jr nz,DAGBAD
+  and 15         ; a node's first byte,
+  jr nz,DAGBAD   ; never an interior one
   ld de,DNODE    ; node lower bound
   or a
   sbc hl,de
@@ -771,10 +762,8 @@ DAF1:
   sbc hl,de
   jr nc,DAGBAD   ; free nodes excluded
   add hl,de      ; restore node address
-
-; visits across key loop
-
-  push bc
+  push bc        ; visits, kept across
+                 ; the key comparison
   push hl        ; base if key differs
   ld de,DKEY
   ld b,11        ; hash is not identity
@@ -850,10 +839,7 @@ DAANEW:
   ld de,(DNEXT)  ; validated new node
   ld hl,DKEY     ; key then candidate
   ld bc,14       ; leave link separate
-
-; fill before publishing
-
-  ldir
+  ldir           ; filled before linked
   xor a          ; null new tail
   ld (de),a
   inc de
@@ -861,13 +847,15 @@ DAANEW:
   ld bc,(DNEXT)  ; new node base
   ld hl,(DLINK)  ; empty head/next word
   ld (hl),c      ; publish filled node
-  inc hl         ; derive end next time
+  inc hl         ; the link's high byte
   ld (hl),b      ; full sixteen-bit link
 
-; authoritative count
+; The count alone records what is
+; allocated: each lookup derives DNEXT
+; from it.
 
   ld hl,(DCOUNT)
-  inc hl         ; derive end next time
+  inc hl         ; one more name
   ld (DCOUNT),hl
   or a           ; only full returns C
   ret
@@ -895,10 +883,8 @@ DAGQ:
   inc hl
   djnz DAGQ
   call DAGFIND   ; ordinary marked key
-
-; never missing-size zero
-
-  jp c,DAGBAD
+  jp c,DAGBAD    ; missing: a fault,
+                 ; never a zero size
   ld de,FCBONE+33
   ld bc,3        ; random record width
   ldir           ; maximum to caller FCB
@@ -912,11 +898,9 @@ DAGQ:
 
 DAGWILD:
   call DAGVALID  ; bounds occupied scan
-  xor a          ; empty maximum, no hit
-
-; zero-sized hit differs
-
-  ld (DWHIT),a
+  xor a          ; empty maximum, and
+  ld (DWHIT),a   ; no hit yet: a hit of
+                 ; size zero differs
   ld (FCBONE+33),a
   ld (FCBONE+34),a
   ld (FCBONE+35),a
@@ -958,12 +942,6 @@ DAWNEXT:
 
 DAWEND:
   ld a,(DWHIT)
-  or a           ; distinguish no match
-
-; a real size, even zero
-
-  ret nz
-
-; far nonreturning fault
-
-  jp DAGBAD
+  or a           ; any match?
+  ret nz         ; its size, even zero
+  jp DAGBAD      ; none: the fault
