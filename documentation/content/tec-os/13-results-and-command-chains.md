@@ -107,7 +107,7 @@ An ampersand after a space, `&`, makes the next piece conditional on success.
 Failure skips that piece without echoing it. Skipping preserves the failure
 result so another `&` also skips. A following `!` executes regardless:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'NOSUCH &DIR *.CMD !DIR *.SVC' 'DIR *.SVC &DIR *.CMD' 'NOSUCH &DIR *.CMD &DIR *.SVC'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'NOSUCH &DIR *.CMD !DIR *.SVC' 'DIR *.SVC &DIR *.CMD' 'NOSUCH &DIR *.CMD &DIR *.SVC'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -125,15 +125,15 @@ A:SYSTEM>DIR *.SVC
 
 SHELL.SVC       4224
 GLCD.SVC         896
-MON3.SVC        5504
-3 files, 10624 bytes
+MON3.SVC        5248
+3 files, 10368 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>DIR *.SVC &DIR *.CMD
 
 SHELL.SVC       4224
 GLCD.SVC         896
-MON3.SVC        5504
-3 files, 10624 bytes
+MON3.SVC        5248
+3 files, 10368 bytes
 909312 free on A:SYSTEM
 A:SYSTEM>DIR *.CMD
 

@@ -556,19 +556,22 @@ capitals or lower case:
 | --- | --- |
 | `LOAD NAME.BIN [ADDR]` | Loads the file at `4000h`, or at the hexadecimal `ADDR`, in whole records. Any type but `HEX` loads this way |
 | `LOAD NAME.HEX [ADDR]` | Loads Intel HEX at its records' addresses, or maps the lowest data address to `ADDR` while retaining gaps. All validation finishes before copying |
-| `GO [ADDR]` | Attempts a card flush, then runs the last good load at its remembered entry or the explicit `ADDR` for one run |
+| `GO [ADDR]` | Flushes the card cache, then runs the last good load at its remembered address or the explicit `ADDR` for one run. While a write is pending it prints `?` and runs nothing |
 | `EXIT` | Ends the session with a warm boot to `A:SYSTEM>` |
 
 `LOAD NAME.BIN 2000` then bare `GO` starts at 2000h; omitted BIN addresses
-still default to 4000h. HEX remembers its lowest loaded address unless a
-validated type 05 entry is present. An optional load base rebases the entry
-with the data; `GO ADDR` overrides it for one run. LOAD never runs automatically,
+still default to 4000h. HEX remembers its lowest loaded address, moved with
+the data when a load base is given. MON3 takes no start address from the
+file: a type 05 record is read and passed over, and `GO ADDR` chooses another
+address for one run. LOAD never runs automatically,
 and moving bytes does not relocate absolute operands. TAS produces genuine
 HEX with `TAS NAME OUT.HEX`, using data 00/EOF 01 and no entry record. These
 address forms follow the later development components
-(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:59-145`,
+(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/mon3.md:60-143`,
 `Thorium 0c8adea809ff8752e504bad9c40256e2572f2462:docs/language.md:167-185`).
-A failed pre-GO flush can leave writes pending; GO does not check that status.
+GO flushes the cache before it runs anything. If a write fails, the data
+stays queued, GO prints `?` and no program starts. It runs once the card has
+taken the write and the console shows `Cache clear`.
 
 A load must lie between `0100h` and the page of the BDOS entry in `0006h`,
 outside `0800h–08FFh`, which holds MON-3's stack and variables. Anything
@@ -586,20 +589,20 @@ that ended a program out of the command line. Serial has no such wait.
 ### MON-3 memory and limits
 
 Warm boot preserves MON3.SVC. `UNLOAD` or reset removes it. Its
-current 4,955-byte header and image occupy 20 pages. With relocation data
-the file occupies 5,446 bytes. These later measurements belong to the monitor
-at `TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3`; the earlier checked
+current 4,781-byte header and image occupy 19 pages. With relocation data
+the file occupies 5,237 bytes. These later measurements belong to the monitor
+at `TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9`; the earlier checked
 header/captures above retain their historical ownership. These pages hold the service code,
 line buffer and recovery stack above the MON-3 program's load area.
 The program itself uses MON-3's stack below `0880h`.
 
 On a card with nothing else installed, the BDOS entry address stored
-at `0006h` changes from `B6C5h` to `A200h`. Program memory falls from 46,533 bytes
-to 41,216, or 40,448 with GLCD.SVC too. On the starter card, the
-shell is already installed. Installing MON3 changes that address from `A500h` to `9100h` and
-reduces program memory from 41,984 to 36,864 bytes. Adding
-GLCD.SVC gives `8E00h` and 36,096 bytes
-(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/mon3.md:47-58`).
+at `0006h` changes from `B6C5h` to `A300h`. Program memory falls from 46,533 bytes
+to 41,472, or 40,704 with GLCD.SVC too. On the starter card, the
+shell is already installed. Installing MON3 changes that address from `A500h` to `9200h` and
+reduces program memory from 41,984 to 37,120 bytes. Adding
+GLCD.SVC gives `8F00h` and 36,352 bytes
+(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/mon3.md:47-58`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan

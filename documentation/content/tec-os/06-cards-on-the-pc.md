@@ -124,7 +124,7 @@ node tools/tecvol.mjs verify card.img
 
 The verified copy has this layout and directory summary:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): host-tool output of the commands above. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the commands above. -->
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
   A: SYSTEM      id 1 G1M start 2048 rw 17 file(s), 905216 bytes free
@@ -145,7 +145,7 @@ node tools/tecvol.mjs dir card.img B
 A's complete listing contains the fifteen starter files plus TED's
 project and session files:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): host-tool output of the commands above. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the commands above. -->
 ```text
  0 BAZA.COM        13184
  0 BAZA.RTL        12928
@@ -155,7 +155,7 @@ project and session files:
  0 DEMO.ASM        15360
  0 GLCD.SVC          896
  0 HELLO3.ASM       2176
- 0 MON3.SVC         5504
+ 0 MON3.SVC         5248
  0 SAMPLE.ASM       4608
  0 SHELL.SVC        4224
  0 STARTUP.CMD       128
@@ -272,7 +272,7 @@ prepared starter image this command produces:
 node tools/tecvol.mjs info dist/starter.img
 ```
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): host-tool output of the command above. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): host-tool output of the command above. -->
 ```text
 container: format 1.1, 26624 blocks (13631488 bytes), 5 volume(s), 4 drive(s) wanted
   A: SYSTEM      id 1 G1M start 2048 rw 15 file(s), 909312 bytes free

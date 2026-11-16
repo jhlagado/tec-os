@@ -285,10 +285,10 @@ capitals, but lower case also works. The host-model test types
 
 On the four-drive starter card TED has 28,182 bytes of text room with
 the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
-installed, and TED then has 23,062 bytes, or 22,294 with the GLCD driver
+installed, and TED then has 23,318 bytes, or 22,550 with the GLCD driver
 too. Unload MON3.SVC before editing a larger source. These are host-model
-measurements with the seventeen-page shell and the twenty-page monitor
-(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/compatibility.md:231`).
+measurements with the seventeen-page shell and the nineteen-page monitor
+(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/compatibility.md:233`).
 
 ## Machine code from BASIC
 

@@ -454,25 +454,26 @@ gives the record layout.
 `MON3.SVC` gives the `MON3>` line, which BDOS function 10 reads and the
 service converts to capitals. It takes three commands. Anything else prints
 `?`. The address forms below follow the later development component
-(`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3:docs/mon3.md:59-145`):
+(`TEC-OS 9ad40da5ad46da08d2795fccb31e17052a3a39e9:docs/mon3.md:60-143`):
 
 | Form | Operation |
 | --- | --- |
 | `LOAD [D:]NAME[.TYP] [ADDR]` | Load the file at `4000h`, or at `ADDR`, one to four hexadecimal digits, in whole records. Any type but `HEX` loads this way |
 | `LOAD [D:]NAME.HEX [ADDR]` | Load Intel HEX at its records' addresses; optional `ADDR` maps the lowest data address there, preserving gaps. Absolute addresses inside code are not relocated |
-| `GO [ADDR]` | Run the last good load, or the program at `ADDR` |
+| `GO [ADDR]` | Run the last good load, or the program at `ADDR`. While a write is pending, print `?` and run nothing |
 | `EXIT` | Restore page zero, reset the drives and warm boot to `A:SYSTEM>` |
 
 After `LOAD NAME.BIN 2000`, bare `GO` starts at 2000h. BIN without
 an address still defaults to 4000h. HEX defaults to its lowest loaded
-address, or a validated type 05 entry if present; an optional load base
-rebases that entry too. `GO ADDR` overrides the entry for one run. LOAD
+address, moved with the data when a load base is given. No start address
+is taken from the file. `GO ADDR` chooses another address for one run. LOAD
 never runs automatically. A refused load clears readiness and leaves
 destination memory unchanged. All records and rebased ranges are checked
 before copying. A device error during the copy can leave partial data and
-ends the session; it is distinct from validation refusal. A type 05 record
-must name actual loaded data in the 16-bit address space. Data (00), end of
-file (01) and entry (05) are the only supported record types. The load address changes byte placement,
+ends the session; it is distinct from validation refusal. Data (00) and end
+of file (01) are the record types that load. A type 05 record is read and
+passed over: its checksum must be right, and it does not set where `GO`
+starts. Every other type is refused. The load address changes byte placement,
 not embedded machine-code addresses.
 
 The drive is A to P. The name has at most eight characters and the type
