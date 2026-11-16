@@ -10,7 +10,7 @@ BAZA CAVBASIC
 CAVBASIC
 ```
 
-The qualified executable is **39,680 bytes**, including its selected runtime.
+The qualified executable is **38,272 bytes**, including its selected runtime.
 Compilation and play work with the shell resident (TPA 42,496 bytes); no UNLOAD
 is needed. BAZA.RTL is required for compilation, not beside the running game.
 Use the PICO9918 console at 80 columns and matrix keyboard input, as tested.
@@ -95,11 +95,13 @@ recipe revision 17. `test/caverns-basic.json` records the full source, binary,
 compiler and RTL hashes, byte count and native compiler symbol addresses.
 
 Compiler/runtime pins in `test/inputs.json` resolve published BAZA commit
-`8578fe50fdfc66e16015c54f365d1403825979da`. BAZA.COM SHA-256:
-`41f96c2716274327fd84180b3cadbb277a8d4f7faacf95b0e31fe3fdceb0acc6`.
+`52c3956167c8cebe382d342619ec2899913fd18c`. BAZA.COM SHA-256:
+`087d3a4073fe1c2dcd41ccd5e5ca7efcb9f21628c714a2e37986028839c2fa36`.
 BAZA.RTL SHA-256:
-`3c77dccda2221616dd2573183f137d5d4131218b9f024b521982c44b0567bc64`.
-No compiler/runtime change was required for the structural rewrite. The engine
+`f79d57328eb152ecba86a9c203f5ead5544a95b07da131c0fd0ad5821d5d5e07`.
+The structural rewrite itself required no compiler/runtime change. A subsequent
+compact source-location optimisation reduces the COM by 1,408 bytes on disk;
+see [compiler integration evidence](caverns-compact-emission.md). The engine
 and world data are separated, with ten-step numbering and the requested casing.
 See [engine structure and authoring](caverns-engine.md). Descriptions
 are scanned from compact DATA into one temporary string rather than retaining

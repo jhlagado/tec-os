@@ -81,8 +81,8 @@ validates scalar domains and rope consistency; arbitrary handcrafted records
 are development inputs, not a trusted public save format. It uses the ordinary
 CP/M filename/FCB and checks missing, truncated and extra-record files.
 
-The current CAVLOAD.COM is 39,680 bytes, identical in length to the game. The
-348-byte overlay fits inside the 388-byte opening banner. No extra runtime or
+The current CAVLOAD.COM is 38,272 bytes, identical in length to the game. The
+348-byte overlay fits inside the 374-byte opening banner. No extra runtime or
 resident code is added. `build/caverns/scenario-loader.json` records exact
 addresses and hashes. Full compiler symbols are in `test/caverns-basic.json`. Its explicit
 `stateSymbols` mapping connects the legacy CVB2 fields to the rewrite's actual

@@ -1,0 +1,33 @@
+{
+  "gameSha256": "4c2a29c643dc13999cebcddf45f5743bfb025e060185b0327b5929468a3677b8",
+  "fileBytes": 38272,
+  "applicationCodeAndData": 30377,
+  "runtimeCodeAndWorkspace": 7770,
+  "scalarCells": 88,
+  "entryJump": 3,
+  "footer": 10,
+  "padding": 24,
+  "sourceContextSites": 669,
+  "sourceContextBytes": 4683,
+  "dataBlocks": 46,
+  "encodedDATABytes": 7096,
+  "DATAstringBytes": 4499,
+  "otherLiteralTextBytes": 2996,
+  "remainingApplicationInstructionsAndInlineMetadata": 15602,
+  "flags": {
+    "math": 253,
+    "numericDisplay": 1,
+    "arraySelection": 1,
+    "valSelection": 0,
+    "stringSelection": 1,
+    "dataSelection": 1,
+    "inputSelection": 2,
+    "fnSelection": 0,
+    "mfSelection": 0,
+    "rndSelection": 1
+  },
+  "shellTPA": 42496,
+  "bareTPA": 46533,
+  "serviceOutput": "services\r\r\nSHELL 15\r\nA:SYSTEM>",
+  "unloadOutput": "unload\r\r\n\r\nA>"
+}

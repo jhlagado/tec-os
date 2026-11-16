@@ -1,0 +1,10 @@
+{
+  "gameSha256": "4c2a29c643dc13999cebcddf45f5743bfb025e060185b0327b5929468a3677b8",
+  "launcherSha256": "e4bcf100848447b70b3c41e8317b1bb2dc180feb6fc8eced6906aaa6c13e18ea",
+  "launcherBytes": 38272,
+  "overlayBytes": 348,
+  "availableOverlayBytes": 374,
+  "entry": 709,
+  "resume": 1083,
+  "rng": 30983
+}

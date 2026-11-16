@@ -28,7 +28,16 @@ export function encodeScenario(s){
  let sum=0;for(let i=0;i<128;i++)if(i!==6&&i!==7)sum+=out[i];out.writeUInt16LE(sum,6);return out;
 }
 export function layout(){
- function line(n){const found=[];for(let i=0;i<game.length-9;i++)if(game[i]===0x11&&game.readUInt16LE(i+1)===n&&game[i+3]===1&&game.readUInt16LE(i+4)===0&&game[i+6]===0xcd)found.push(i+256);assert.equal(found.length,1,'unique BASIC line '+n);return found[0];}
+ function line(n){
+  const found=[];
+  for(let i=0;i<game.length-9;i++){
+   const legacy=game[i]===0x11&&game.readUInt16LE(i+1)===n&&game[i+3]===1&&game.readUInt16LE(i+4)===0&&game[i+6]===0xcd;
+   const target=game.readUInt16LE(i+1)-256;
+   const compact=game[i]===0xcd&&game.readUInt16LE(i+3)===n&&game.readUInt16LE(i+5)===0&&target>=0&&game.subarray(target,target+10).equals(Buffer.from([0xe3,0x5e,0x23,0x56,0x23,0x4e,0x23,0x46,0x23,0xe3]));
+   if(legacy||compact)found.push(i+256);
+  }
+  assert.equal(found.length,1,'unique BASIC line '+n);return found[0];
+ }
  const seeds=[];for(let i=0;i<game.length-12;i++)if(game[i]===0x21&&game.readUInt16LE(i+1)===0x1234&&game[i+3]===0x22&&game[i+6]===0x21&&game.readUInt16LE(i+7)===0x5a4a&&game[i+9]===0x22){assert.equal(game.readUInt16LE(i+10),game.readUInt16LE(i+4)+2);seeds.push(game.readUInt16LE(i+4));}
  assert.equal(seeds.length,1,'unique qualified runtime RNG initializer');
  return {entry:line(basic.entries?.banner??30),resume:line(basic.entries?.resume??50),rng:seeds[0]};

@@ -1,0 +1,36 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+tecos ROM {"backend":"tas","phase":"caverns-loader","target":"tecos","origin":709,"root":"/workspace/scratch/caverns-compact/programs/caverns","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":1765929}
+✔ scenario launcher fits the original COM and restores all monsters, objects, flags, counters and RNG (1292.789075ms)
+✔ real picked-up objects and encounter state survive exported file and fresh boot; RNG continuation matches (4967.661918ms)
+✔ missing, wrong-game, incompatible, truncated and corrupt scenarios are rejected before mutation (9227.189576ms)
+✔ all bundled review checkpoints load exactly in a new machine (15056.080441ms)
+✔ combat fatigue resets on travel and victory, but not blocked moves or missed swings (2618.431682ms)
+✔ checkpoint 8 vault treasures reach the hut through the key and intact bridge (2518.66341ms)
+✔ rope attachment is explicit, removable and usable both ways without a key or light (3070.969756ms)
+✔ waterfall does not operate remote doors; the drain hatch is a persistent physical shortcut (2386.916732ms)
+✔ external scenario writer refuses incomplete or out-of-domain states (3.569096ms)
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+✔ Caverns book exercise: copy, TED edit/save/build/run, exit and reopen after power cycle (15132.392269ms)
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/scratch/caverns-compact","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+✔ revised map and source-only starter match the author-approved release (65.71571ms)
+✔ Caverns80 completes for 126 points, tours all 54 rooms and persists the winning save across reboot (7535.187296ms)
+✔ revised BASIC first-discovery quest banks all treasures, walks back from castle and visits all rooms (17253.114453ms)
+✔ BASIC information, aliases, failed requests, compass warning, fatal restart and exit (2807.145301ms)
+✔ historical recovered drainage exits reach the hut with an intact bridge, but retain the original return-path gap after collapse (1.176445ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 87381.554727
