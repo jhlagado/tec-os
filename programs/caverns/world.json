@@ -1,0 +1,827 @@
+{
+  "baselineCommit": "7118774e0a8674008d3e10f6df0abd5193b4c134",
+  "rooms": [
+    {
+      "id": 1,
+      "key": "HUT",
+      "description": "Inside the bark hut. The door leads north to the clearing.",
+      "exits": {
+        "north": 2,
+        "south": 0,
+        "west": 0,
+        "east": 0
+      }
+    },
+    {
+      "id": 2,
+      "key": "HUT_CLEARING",
+      "description": "Hut clearing: locked door south, forest west, clover field east.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 3,
+        "east": 4
+      }
+    },
+    {
+      "id": 3,
+      "key": "DARK_FOREST",
+      "description": "Forest path: clearing east, river cliff west. Water glints through the trees.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 5,
+        "east": 2
+      }
+    },
+    {
+      "id": 4,
+      "key": "CLOVER_FIELD",
+      "description": "Clover field: the hut clearing is west; Mount Ymir's slopes lie east.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 2,
+        "east": 9
+      }
+    },
+    {
+      "id": 5,
+      "key": "RIVER_CLIFF",
+      "description": "Cliff above the Gioll: forest east; a path descends south to the bank.",
+      "exits": {
+        "north": 0,
+        "south": 6,
+        "west": 0,
+        "east": 3
+      }
+    },
+    {
+      "id": 6,
+      "key": "RIVERBANK",
+      "description": "Riverbank: cliff north, crater west, rocky outcrop east.",
+      "exits": {
+        "north": 5,
+        "south": 0,
+        "west": 7,
+        "east": 8
+      }
+    },
+    {
+      "id": 7,
+      "key": "CRATER",
+      "description": "The Gioll pours into a crater. West is a fatal drop. The safe path returns east.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 128,
+        "east": 6
+      }
+    },
+    {
+      "id": 8,
+      "key": "OUTCROP",
+      "description": "A distant string bridge is visible south-east, beyond the trees. Reach it via the forest; return west.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 6,
+        "east": 0
+      }
+    },
+    {
+      "id": 9,
+      "key": "YMIR_SLOPES",
+      "description": "Windy slopes of Mount Ymir: clover field west, bridge approach south.",
+      "exits": {
+        "north": 0,
+        "south": 10,
+        "west": 4,
+        "east": 0
+      }
+    },
+    {
+      "id": 10,
+      "key": "BRIDGE_APPROACH",
+      "description": "The string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.",
+      "exits": {
+        "north": 9,
+        "south": 11,
+        "west": 0,
+        "east": 0
+      }
+    },
+    {
+      "id": 11,
+      "key": "STRING_BRIDGE",
+      "description": "On the swaying string bridge. Follow it north or south; no footing east or west.",
+      "exits": {
+        "north": 10,
+        "south": 12,
+        "west": 0,
+        "east": 0
+      }
+    },
+    {
+      "id": 12,
+      "key": "SOUTH_LANDING",
+      "description": "Southern bank: string bridge north, oak forest west, rope cliff east.",
+      "exits": {
+        "north": 11,
+        "south": 0,
+        "west": 13,
+        "east": 15
+      }
+    },
+    {
+      "id": 13,
+      "key": "MUSHROOM_ROCK",
+      "description": "A rock amid poisonous mushrooms: bridge landing east, basalt clearing south.",
+      "exits": {
+        "north": 0,
+        "south": 14,
+        "west": 0,
+        "east": 12
+      }
+    },
+    {
+      "id": 14,
+      "key": "BASALT_CLEARING",
+      "description": "Basalt clearing: oak forest north, cave entrance south.",
+      "exits": {
+        "north": 13,
+        "south": 16,
+        "west": 0,
+        "east": 0
+      }
+    },
+    {
+      "id": 15,
+      "key": "ROPE_CLIFF",
+      "description": "A shelf above the Gioll's southern bank. The path west returns to the bridge landing.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 12,
+        "east": 0
+      }
+    },
+    {
+      "id": 16,
+      "key": "ENTRANCE",
+      "description": "Daylit cave entrance: outside north, passages south and east. Take a light first.",
+      "exits": {
+        "north": 14,
+        "south": 18,
+        "west": 0,
+        "east": 17
+      }
+    },
+    {
+      "id": 17,
+      "key": "EXPLORER_PASSAGE",
+      "description": "An explorer scratched: Seek the sacred key of Thialfi. The passage returns west.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 16,
+        "east": 0
+      }
+    },
+    {
+      "id": 18,
+      "key": "ENTRANCE_CAVERN",
+      "description": "Entrance cavern: daylight north, old torture chamber west.",
+      "exits": {
+        "north": 16,
+        "south": 0,
+        "west": 23,
+        "east": 0
+      }
+    },
+    {
+      "id": 19,
+      "key": "TREASURE_ROOM",
+      "description": "The legendary treasure room of the black elves of Svartalfheim. Only exit: west.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 20,
+        "east": 0
+      }
+    },
+    {
+      "id": 20,
+      "key": "TREASURE_DOOR",
+      "description": "Treasure doorway: south returns to the northern cavern.",
+      "exits": {
+        "north": 0,
+        "south": 21,
+        "west": 0,
+        "east": -2
+      }
+    },
+    {
+      "id": 21,
+      "key": "NORTH_CAVERN",
+      "description": "Northern cavern: treasure door north, corridor east, long tunnel south.",
+      "exits": {
+        "north": 20,
+        "south": 24,
+        "west": 0,
+        "east": 22
+      }
+    },
+    {
+      "id": 22,
+      "key": "CORRIDOR",
+      "description": "Draughty corridor: cavern west, torture chamber south.",
+      "exits": {
+        "north": 0,
+        "south": 23,
+        "west": 21,
+        "east": 0
+      }
+    },
+    {
+      "id": 23,
+      "key": "TORTURE_CHAMBER",
+      "description": "An old torture chamber, stained with blood. Corridor north; entrance cavern east.",
+      "exits": {
+        "north": 22,
+        "south": 0,
+        "west": 0,
+        "east": 18
+      }
+    },
+    {
+      "id": 24,
+      "key": "LONG_TUNNEL",
+      "description": "Long tunnel: cavern north, round chamber south. A sealed crack glows faintly east.",
+      "exits": {
+        "north": 21,
+        "south": 26,
+        "west": 0,
+        "east": 0
+      }
+    },
+    {
+      "id": 25,
+      "key": "SIDE_CAVE",
+      "description": "Empty side cave. The only exit is west to the round chamber.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 26,
+        "east": 0
+      }
+    },
+    {
+      "id": 26,
+      "key": "ROUND_CHAMBER",
+      "description": "Loki's round chamber: tunnel north, upper ledge south, bat caves west, side cave east.",
+      "exits": {
+        "north": 24,
+        "south": 27,
+        "west": 29,
+        "east": 25
+      }
+    },
+    {
+      "id": 27,
+      "key": "UPPER_LEDGE",
+      "description": "Upper ledge above an underground river: round chamber north, temple balcony east.",
+      "exits": {
+        "north": 26,
+        "south": 0,
+        "west": 0,
+        "east": 28
+      }
+    },
+    {
+      "id": 28,
+      "key": "BALCONY",
+      "description": "Temple balcony: sturdy stone rail, floor below. West returns to the upper ledge.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 27,
+        "east": 0
+      }
+    },
+    {
+      "id": 29,
+      "key": "BAT_JUNCTION",
+      "description": "Draughty junction: round chamber east, bat colony south, forked pillar west.",
+      "exits": {
+        "north": 0,
+        "south": 33,
+        "west": 30,
+        "east": 26
+      }
+    },
+    {
+      "id": 30,
+      "key": "FORKED_PILLAR",
+      "description": "Forked stone pillar: junction east, pale chamber west.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 32,
+        "east": 29
+      }
+    },
+    {
+      "id": 31,
+      "key": "LOW_PASSAGE",
+      "description": "Low, dripping passage: pale chamber north, key chamber east.",
+      "exits": {
+        "north": 32,
+        "south": 0,
+        "west": 0,
+        "east": 34
+      }
+    },
+    {
+      "id": 32,
+      "key": "PALE_CHAMBER",
+      "description": "Pale limestone chamber: forked pillar east, low passage south.",
+      "exits": {
+        "north": 0,
+        "south": 31,
+        "west": 0,
+        "east": 30
+      }
+    },
+    {
+      "id": 33,
+      "key": "BAT_COLONY",
+      "description": "Bat colony: mind the droppings! Junction north, key chamber west.",
+      "exits": {
+        "north": 29,
+        "south": 0,
+        "west": 34,
+        "east": 0
+      }
+    },
+    {
+      "id": 34,
+      "key": "KEY_CHAMBER",
+      "description": "Key chamber: bat colony east, low passage west.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 31,
+        "east": 33
+      }
+    },
+    {
+      "id": 35,
+      "key": "TEMPLE",
+      "description": "Loki's temple: gate north, balcony overhead.",
+      "exits": {
+        "north": 37,
+        "south": 0,
+        "west": 0,
+        "east": 0
+      }
+    },
+    {
+      "id": 36,
+      "key": "WIZARD_CAVERN",
+      "description": "Lower cavern: shaft north, lower river ledge east.",
+      "exits": {
+        "north": 39,
+        "south": 0,
+        "west": 0,
+        "east": 40
+      }
+    },
+    {
+      "id": 37,
+      "key": "CRYPT",
+      "description": "Crypt: temple gate south, sealed passage east. Four stones name its keeper.",
+      "exits": {
+        "north": 0,
+        "south": 35,
+        "west": 0,
+        "east": -3
+      }
+    },
+    {
+      "id": 38,
+      "key": "CELL",
+      "description": "Cell: crypt west, shaft east, service hatch north. Its latch is on the drain side.",
+      "exits": {
+        "north": -4,
+        "south": 0,
+        "west": 37,
+        "east": -5
+      }
+    },
+    {
+      "id": 39,
+      "key": "SHAFT",
+      "description": "Beyond the shaft: cell west, lower cavern south.",
+      "exits": {
+        "north": 0,
+        "south": 36,
+        "west": 38,
+        "east": 0
+      }
+    },
+    {
+      "id": 40,
+      "key": "LOWER_LEDGE",
+      "description": "Lower river ledge: cavern west. Paths lead north to the waterfall and south to a river bend. East is a sheer edge.",
+      "exits": {
+        "north": 45,
+        "south": 48,
+        "west": 36,
+        "east": 0
+      }
+    },
+    {
+      "id": 41,
+      "key": "WEST_DRAIN",
+      "description": "Straight drain: conduit west, passage east towards the junction.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 54,
+        "east": 42
+      }
+    },
+    {
+      "id": 42,
+      "key": "MIDDLE_DRAIN",
+      "description": "Straight drain: conduit west, junction east.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 41,
+        "east": 43
+      }
+    },
+    {
+      "id": 43,
+      "key": "DRAIN_JUNCTION",
+      "description": "Drain junction: a winding path north leads to the pearl chamber. Branch east, conduit west; OPEN HATCH south.",
+      "exits": {
+        "north": 46,
+        "south": 38,
+        "west": 42,
+        "east": 44
+      }
+    },
+    {
+      "id": 44,
+      "key": "BLIND_DRAIN",
+      "description": "Blind drainage branch: return west to the junction.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 43,
+        "east": 0
+      }
+    },
+    {
+      "id": 45,
+      "key": "WATERFALL",
+      "description": "The Gioll falls through the roof. Stone steps climb north; the lower ledge is south. No safe footing east.",
+      "exits": {
+        "north": 47,
+        "south": 40,
+        "west": 0,
+        "east": 0
+      }
+    },
+    {
+      "id": 46,
+      "key": "PEARL_CHAMBER",
+      "description": "Pearl-white chamber: steps west; a winding path south leads to the drain junction.",
+      "exits": {
+        "north": 0,
+        "south": 43,
+        "west": 47,
+        "east": 0
+      }
+    },
+    {
+      "id": 47,
+      "key": "STONE_STEPS",
+      "description": "Top of the stone steps: waterfall south, pearl-white chamber east.",
+      "exits": {
+        "north": 0,
+        "south": 45,
+        "west": 0,
+        "east": 46
+      }
+    },
+    {
+      "id": 48,
+      "key": "CASTLE_VIEW",
+      "description": "At a river bend, the castle is visible across the water east. Return north, or cross the drawbridge east. No path south.",
+      "exits": {
+        "north": 40,
+        "south": 0,
+        "west": 0,
+        "east": -6
+      }
+    },
+    {
+      "id": 49,
+      "key": "DRAWBRIDGE",
+      "description": "Drawbridge: river ledge west, castle courtyard east. Crossing secures the bridge.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 48,
+        "east": 50
+      }
+    },
+    {
+      "id": 50,
+      "key": "COURTYARD",
+      "description": "Castle courtyard: hzb tzozi. Drawbridge west, magazine east; tunnel south to bank.",
+      "exits": {
+        "north": 0,
+        "south": 52,
+        "west": 49,
+        "east": 51
+      }
+    },
+    {
+      "id": 51,
+      "key": "MAGAZINE",
+      "description": "Powder magazine: return west to the courtyard.",
+      "exits": {
+        "north": 0,
+        "south": 0,
+        "west": 50,
+        "east": 0
+      }
+    },
+    {
+      "id": 52,
+      "key": "EAST_BANK",
+      "description": "Eastern riverbank: castle tunnel north, wooden bridge west.",
+      "exits": {
+        "north": 50,
+        "south": 0,
+        "west": 53,
+        "east": 0
+      }
+    },
+    {
+      "id": 53,
+      "key": "WOODEN_BRIDGE",
+      "description": "Wooden bridge: eastern bank east, conduit service path north.",
+      "exits": {
+        "north": 54,
+        "south": 0,
+        "west": 0,
+        "east": 52
+      }
+    },
+    {
+      "id": 54,
+      "key": "CONDUIT",
+      "description": "Freezing conduit: drains east, service path south to the wooden bridge.",
+      "exits": {
+        "north": 0,
+        "south": 53,
+        "west": 0,
+        "east": 41
+      }
+    }
+  ],
+  "objects": [
+    {
+      "id": 1,
+      "key": "WIZARD",
+      "adjective": "n evil",
+      "noun": " wizard ",
+      "initial": 36,
+      "value": 0
+    },
+    {
+      "id": 2,
+      "key": "DEMON",
+      "adjective": " fiery",
+      "noun": " demon ",
+      "initial": 19,
+      "value": 0
+    },
+    {
+      "id": 3,
+      "key": "TROLL",
+      "adjective": "n axe wielding",
+      "noun": " troll ",
+      "initial": 10,
+      "value": 0
+    },
+    {
+      "id": 4,
+      "key": "DRAGON",
+      "adjective": " fire breathing",
+      "noun": " dragon ",
+      "initial": 14,
+      "value": 0
+    },
+    {
+      "id": 5,
+      "key": "BAT",
+      "adjective": " giant",
+      "noun": " bat ",
+      "initial": 17,
+      "value": 0
+    },
+    {
+      "id": 6,
+      "key": "DWARF",
+      "adjective": "n old and gnarled",
+      "noun": " dwarf ",
+      "initial": 47,
+      "value": 0
+    },
+    {
+      "id": 7,
+      "key": "COIN",
+      "adjective": " gold",
+      "noun": " coin ",
+      "initial": 8,
+      "value": 1
+    },
+    {
+      "id": 8,
+      "key": "COMPASS",
+      "adjective": " useful looking",
+      "noun": " compass ",
+      "initial": 1,
+      "value": 2
+    },
+    {
+      "id": 9,
+      "key": "BOMB",
+      "adjective": " home made",
+      "noun": " bomb ",
+      "initial": 51,
+      "value": 3
+    },
+    {
+      "id": 10,
+      "key": "RUBY",
+      "adjective": " blood red",
+      "noun": " ruby ",
+      "initial": 45,
+      "value": 4
+    },
+    {
+      "id": 11,
+      "key": "DIAMOND",
+      "adjective": " sparkling",
+      "noun": " diamond ",
+      "initial": 22,
+      "value": 5
+    },
+    {
+      "id": 12,
+      "key": "PEARL",
+      "adjective": " moon-like",
+      "noun": " pearl ",
+      "initial": 46,
+      "value": 6
+    },
+    {
+      "id": 13,
+      "key": "STONE",
+      "adjective": "n interesting",
+      "noun": " stone ",
+      "initial": 54,
+      "value": 7
+    },
+    {
+      "id": 14,
+      "key": "RING",
+      "adjective": " diamond studded",
+      "noun": " ring ",
+      "initial": 19,
+      "value": 8
+    },
+    {
+      "id": 15,
+      "key": "PENDANT",
+      "adjective": " magic",
+      "noun": " pendant ",
+      "initial": 19,
+      "value": 9
+    },
+    {
+      "id": 16,
+      "key": "GRAIL",
+      "adjective": " most holy",
+      "noun": " grail ",
+      "initial": 19,
+      "value": 10
+    },
+    {
+      "id": 17,
+      "key": "SHIELD",
+      "adjective": " mirror like",
+      "noun": " shield ",
+      "initial": 19,
+      "value": 11
+    },
+    {
+      "id": 18,
+      "key": "BOX",
+      "adjective": " nondescript black",
+      "noun": " box ",
+      "initial": 0,
+      "value": 0
+    },
+    {
+      "id": 19,
+      "key": "KEY",
+      "adjective": "n old and rusty",
+      "noun": " key ",
+      "initial": 34,
+      "value": 0
+    },
+    {
+      "id": 20,
+      "key": "SWORD",
+      "adjective": " double-bladed",
+      "noun": " sword ",
+      "initial": 7,
+      "value": 0
+    },
+    {
+      "id": 21,
+      "key": "CANDLE",
+      "adjective": " small lit",
+      "noun": " candle ",
+      "initial": 16,
+      "value": 0
+    },
+    {
+      "id": 22,
+      "key": "ROPE",
+      "adjective": " thin and tatty",
+      "noun": " rope ",
+      "initial": 15,
+      "value": 0
+    },
+    {
+      "id": 23,
+      "key": "BRICK",
+      "adjective": " red house",
+      "noun": " brick ",
+      "initial": 24,
+      "value": 0
+    },
+    {
+      "id": 24,
+      "key": "GRILLE",
+      "adjective": " rusty ventilation",
+      "noun": " grille ",
+      "initial": 38,
+      "value": 0
+    }
+  ],
+  "directions": [
+    " north ",
+    " south ",
+    " west ",
+    " east "
+  ],
+  "verbs": [
+    " take ",
+    " put ",
+    " using ",
+    " with ",
+    " cut ",
+    " break ",
+    " unlock ",
+    " open ",
+    " kill ",
+    " attack ",
+    " light ",
+    " burn ",
+    " up ",
+    " down ",
+    " jump ",
+    " swim ",
+    " tie ",
+    " untie ",
+    " vard ",
+    " galar ",
+    " look ",
+    " list ",
+    " score ",
+    " quit ",
+    " inventory ",
+    " invent "
+  ]
+}

@@ -1,0 +1,910 @@
+{
+  "gameSha256": "841e208da7603054ed3e86d9f52a58c7de87f0a7a4c29e5d1f41599971733ee0",
+  "score": 126,
+  "moves": 136,
+  "visited": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54
+  ],
+  "events": [
+    {
+      "cmd": "take compass",
+      "before": 1,
+      "after": 1,
+      "out": "take compass\r\nTaken: a useful looking compass , \r\n\r\nInside the bark hut. The door leads north to the clearing.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 1,
+      "after": 2,
+      "out": "north\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 2,
+      "after": 3,
+      "out": "west\r\n\r\nForest path: clearing east, river cliff west. Water glints through the trees.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 3,
+      "after": 5,
+      "out": "west\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 5,
+      "after": 6,
+      "out": "south\r\n\r\nRiverbank: cliff north, crater west, rocky outcrop east.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 6,
+      "after": 7,
+      "out": "west\r\n\r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\nYou can also see...\r\na double-bladed sword , \r\n? "
+    },
+    {
+      "cmd": "take sword",
+      "before": 7,
+      "after": 7,
+      "out": "take sword\r\nTaken: a double-bladed sword , \r\n\r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 7,
+      "after": 6,
+      "out": "east\r\n\r\nRiverbank: cliff north, crater west, rocky outcrop east.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 6,
+      "after": 8,
+      "out": "east\r\n\r\nA distant string bridge is visible south-east, beyond the trees. Reach it via th\r\ne forest; return west.\r\nYou can also see...\r\na gold coin , \r\n? "
+    },
+    {
+      "cmd": "take coin",
+      "before": 8,
+      "after": 8,
+      "out": "take coin\r\nTaken: a gold coin , \r\n\r\nA distant string bridge is visible south-east, beyond the trees. Reach it via th\r\ne forest; return west.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 8,
+      "after": 6,
+      "out": "west\r\n\r\nRiverbank: cliff north, crater west, rocky outcrop east.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 6,
+      "after": 5,
+      "out": "north\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 5,
+      "after": 3,
+      "out": "east\r\n\r\nForest path: clearing east, river cliff west. Water glints through the trees.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 3,
+      "after": 2,
+      "out": "east\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 2,
+      "after": 4,
+      "out": "east\r\n\r\nClover field: the hut clearing is west; Mount Ymir's slopes lie east.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 4,
+      "after": 9,
+      "out": "east\r\n\r\nWindy slopes of Mount Ymir: clover field west, bridge approach south.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 9,
+      "after": 10,
+      "out": "south\r\n\r\nThe string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.\r\nNearby there lurks...\r\nan axe wielding troll , \r\n? "
+    },
+    {
+      "cmd": "attack troll",
+      "before": 10,
+      "after": 10,
+      "out": "attack troll\r\nWith what weapon?\r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 10,
+      "after": 10,
+      "out": "attack creature with sword\r\nYou attack but the creature moves aside.\r\n\r\nThe string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.\r\nNearby there lurks...\r\nan axe wielding troll , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 10,
+      "after": 10,
+      "out": "attack creature with sword\r\nYou attack but the creature moves aside.\r\n\r\nThe string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.\r\nNearby there lurks...\r\nan axe wielding troll , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 10,
+      "after": 10,
+      "out": "attack creature with sword\r\nThe sword strikes home and your foe dies.\r\nA black cloud descends and the corpse vaporises.\r\n\r\nThe string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 10,
+      "after": 11,
+      "out": "south\r\n\r\nOn the swaying string bridge. Follow it north or south; no footing east or west.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 11,
+      "after": 11,
+      "out": "east\r\nYou can't go that way\r\n\r\nOn the swaying string bridge. Follow it north or south; no footing east or west.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 11,
+      "after": 11,
+      "out": "west\r\nYou can't go that way\r\n\r\nOn the swaying string bridge. Follow it north or south; no footing east or west.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 11,
+      "after": 12,
+      "out": "south\r\n\r\nSouthern bank: string bridge north, oak forest west, rope cliff east.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 12,
+      "after": 15,
+      "out": "east\r\n\r\nA shelf above the Gioll's southern bank. The path west returns to the bridge lan\r\nding.\r\nYou can also see...\r\na thin and tatty rope , \r\n? "
+    },
+    {
+      "cmd": "take rope",
+      "before": 15,
+      "after": 15,
+      "out": "take rope\r\nTaken: a thin and tatty rope , \r\n\r\nA shelf above the Gioll's southern bank. The path west returns to the bridge lan\r\nding.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 15,
+      "after": 12,
+      "out": "west\r\n\r\nSouthern bank: string bridge north, oak forest west, rope cliff east.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 12,
+      "after": 13,
+      "out": "west\r\n\r\nA rock amid poisonous mushrooms: bridge landing east, basalt clearing south.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 13,
+      "after": 14,
+      "out": "south\r\n\r\nBasalt clearing: oak forest north, cave entrance south.\r\nA sleeping dragon wakes and breathes jets of fire.\r\nNearby there lurks...\r\na fire breathing dragon , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 14,
+      "after": 14,
+      "out": "attack creature with sword\r\nYou missed and he deals a blow to your head.\r\n\r\nBasalt clearing: oak forest north, cave entrance south.\r\nA sleeping dragon wakes and breathes jets of fire.\r\nNearby there lurks...\r\na fire breathing dragon , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 14,
+      "after": 14,
+      "out": "attack creature with sword\r\nThe sword strikes home and your foe dies.\r\n\r\nBasalt clearing: oak forest north, cave entrance south.\r\nYou can also see the bloody corpse of an enormous dragon.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 14,
+      "after": 16,
+      "out": "south\r\n\r\nDaylit cave entrance: outside north, passages south and east. Take a light first\r\n.\r\nYou can also see...\r\na small lit candle , \r\n? "
+    },
+    {
+      "cmd": "take candle",
+      "before": 16,
+      "after": 16,
+      "out": "take candle\r\nTaken: a small lit candle , \r\n\r\nDaylit cave entrance: outside north, passages south and east. Take a light first\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 16,
+      "after": 17,
+      "out": "east\r\n\r\nAn explorer scratched: Seek the sacred key of Thialfi. The passage returns west.\r\n\r\nNearby there lurks...\r\na giant bat , \r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 17,
+      "after": 33,
+      "out": "west\r\nThe giant bat carries you to its colony.\r\n\r\nBat colony: mind the droppings! Junction north, key chamber west.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 33,
+      "after": 34,
+      "out": "west\r\n\r\nKey chamber: bat colony east, low passage west.\r\nYou can also see...\r\nan old and rusty key , \r\n? "
+    },
+    {
+      "cmd": "take key",
+      "before": 34,
+      "after": 34,
+      "out": "take key\r\nTaken: an old and rusty key , \r\n\r\nKey chamber: bat colony east, low passage west.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 34,
+      "after": 31,
+      "out": "west\r\n\r\nLow, dripping passage: pale chamber north, key chamber east.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 31,
+      "after": 32,
+      "out": "north\r\n\r\nPale limestone chamber: forked pillar east, low passage south.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 32,
+      "after": 30,
+      "out": "east\r\n\r\nForked stone pillar: junction east, pale chamber west.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 30,
+      "after": 29,
+      "out": "east\r\n\r\nDraughty junction: round chamber east, bat colony south, forked pillar west.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 29,
+      "after": 33,
+      "out": "south\r\n\r\nBat colony: mind the droppings! Junction north, key chamber west.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 33,
+      "after": 29,
+      "out": "north\r\n\r\nDraughty junction: round chamber east, bat colony south, forked pillar west.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 29,
+      "after": 26,
+      "out": "east\r\n\r\nLoki's round chamber: tunnel north, upper ledge south, bat caves west, side cave\r\n east.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 26,
+      "after": 25,
+      "out": "east\r\n\r\nEmpty side cave. The only exit is west to the round chamber.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 25,
+      "after": 26,
+      "out": "west\r\n\r\nLoki's round chamber: tunnel north, upper ledge south, bat caves west, side cave\r\n east.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 26,
+      "after": 27,
+      "out": "south\r\n\r\nUpper ledge above an underground river: round chamber north, temple balcony east\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 27,
+      "after": 28,
+      "out": "east\r\n\r\nTemple balcony: sturdy stone rail, floor below. West returns to the upper ledge.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "down",
+      "before": 28,
+      "after": 28,
+      "out": "down\r\nTIE ROPE TO RAIL first.\r\n? "
+    },
+    {
+      "cmd": "tie rope to rail",
+      "before": 28,
+      "after": 28,
+      "out": "tie rope to rail\r\nRope secured to rail; it reaches the floor.\r\n\r\nTemple balcony: sturdy stone rail, floor below. West returns to the upper ledge.\r\n\r\nThe secured rope reaches the floor. Use UP or DOWN.\r\nYou can also see...\r\na thin and tatty rope , \r\n? "
+    },
+    {
+      "cmd": "down",
+      "before": 28,
+      "after": 35,
+      "out": "down\r\nYou climb down to the temple floor.\r\n\r\nLoki's temple: gate north, balcony overhead.\r\nThe secured rope reaches the floor. Use UP or DOWN.\r\nNorth gate locked.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 35,
+      "after": 35,
+      "out": "north\r\nThe gate is locked. Use the key.\r\n? "
+    },
+    {
+      "cmd": "up",
+      "before": 35,
+      "after": 28,
+      "out": "up\r\nYou climb up to the balcony.\r\n\r\nTemple balcony: sturdy stone rail, floor below. West returns to the upper ledge.\r\n\r\nThe secured rope reaches the floor. Use UP or DOWN.\r\nYou can also see...\r\na thin and tatty rope , \r\n? "
+    },
+    {
+      "cmd": "down",
+      "before": 28,
+      "after": 35,
+      "out": "down\r\nYou climb down to the temple floor.\r\n\r\nLoki's temple: gate north, balcony overhead.\r\nThe secured rope reaches the floor. Use UP or DOWN.\r\nNorth gate locked.\r\n\r\n? "
+    },
+    {
+      "cmd": "unlock gate with key",
+      "before": 35,
+      "after": 37,
+      "out": "unlock gate with key\r\nYou opened the door.\r\n\r\nCrypt: temple gate south, sealed passage east. Four stones name its keeper.\r\nStones read V, A, R, D. Speak the name.\r\n\r\n? "
+    },
+    {
+      "cmd": "vard",
+      "before": 37,
+      "after": 37,
+      "out": "vard\r\nThe seal slides open both ways.\r\n\r\nCrypt: temple gate south, sealed passage east. Four stones name its keeper.\r\nEast seal open.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 37,
+      "after": 38,
+      "out": "east\r\n\r\nCell: crypt west, shaft east, service hatch north. Its latch is on the drain sid\r\ne.\r\nRemove the grille; leave it here. It cannot fit through.\r\nYou can also see...\r\na rusty ventilation grille , \r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 38,
+      "after": 37,
+      "out": "west\r\n\r\nCrypt: temple gate south, sealed passage east. Four stones name its keeper.\r\nEast seal open.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 37,
+      "after": 38,
+      "out": "east\r\n\r\nCell: crypt west, shaft east, service hatch north. Its latch is on the drain sid\r\ne.\r\nRemove the grille; leave it here. It cannot fit through.\r\nYou can also see...\r\na rusty ventilation grille , \r\n? "
+    },
+    {
+      "cmd": "take grille",
+      "before": 38,
+      "after": 38,
+      "out": "take grille\r\nTaken: a rusty ventilation grille , \r\n\r\nCell: crypt west, shaft east, service hatch north. Its latch is on the drain sid\r\ne.\r\nEast shaft open.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 38,
+      "after": 38,
+      "out": "east\r\nThe grille cannot fit. DROP GRILLE first.\r\n? "
+    },
+    {
+      "cmd": "drop grill",
+      "before": 38,
+      "after": 38,
+      "out": "drop grill\r\nDropped: a rusty ventilation grille , \r\n\r\nCell: crypt west, shaft east, service hatch north. Its latch is on the drain sid\r\ne.\r\nEast shaft open.\r\nYou can also see...\r\na rusty ventilation grille , \r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 38,
+      "after": 39,
+      "out": "east\r\n\r\nBeyond the shaft: cell west, lower cavern south.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 39,
+      "after": 36,
+      "out": "south\r\n\r\nLower cavern: shaft north, lower river ledge east.\r\nAn evil wizard bars the way. He cries: Thou shalt not pass!\r\nNearby there lurks...\r\nan evil wizard , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 36,
+      "after": 36,
+      "out": "attack creature with sword\r\nThe sword strikes home and your foe dies.\r\nA black cloud descends and the corpse vaporises.\r\n\r\nLower cavern: shaft north, lower river ledge east.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 36,
+      "after": 40,
+      "out": "east\r\n\r\nLower river ledge: cavern west. Paths lead north to the waterfall and south to a\r\n river bend. East is a sheer edge.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 40,
+      "after": 45,
+      "out": "north\r\n\r\nThe Gioll falls through the roof. Stone steps climb north; the lower ledge is so\r\nuth. No safe footing east.\r\nYou can also see...\r\na blood red ruby , \r\n? "
+    },
+    {
+      "cmd": "take ruby",
+      "before": 45,
+      "after": 45,
+      "out": "take ruby\r\nTaken: a blood red ruby , \r\n\r\nThe Gioll falls through the roof. Stone steps climb north; the lower ledge is so\r\nuth. No safe footing east.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 45,
+      "after": 47,
+      "out": "north\r\n\r\nTop of the stone steps: waterfall south, pearl-white chamber east.\r\nAn old dwarf guards the steps, raising his dagger.\r\nNearby there lurks...\r\nan old and gnarled dwarf , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 47,
+      "after": 47,
+      "out": "attack creature with sword\r\nThe creature deflects your blow.\r\n\r\nTop of the stone steps: waterfall south, pearl-white chamber east.\r\nAn old dwarf guards the steps, raising his dagger.\r\nNearby there lurks...\r\nan old and gnarled dwarf , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 47,
+      "after": 47,
+      "out": "attack creature with sword\r\nThe sword strikes home and your foe dies.\r\nA black cloud descends and the corpse vaporises.\r\n\r\nTop of the stone steps: waterfall south, pearl-white chamber east.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 47,
+      "after": 46,
+      "out": "east\r\n\r\nPearl-white chamber: steps west; a winding path south leads to the drain junctio\r\nn.\r\nYou can also see...\r\na moon-like pearl , \r\n? "
+    },
+    {
+      "cmd": "take pearl",
+      "before": 46,
+      "after": 46,
+      "out": "take pearl\r\nTaken: a moon-like pearl , \r\n\r\nPearl-white chamber: steps west; a winding path south leads to the drain junctio\r\nn.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 46,
+      "after": 43,
+      "out": "south\r\n\r\nDrain junction: a winding path north leads to the pearl chamber. Branch east, co\r\nnduit west; OPEN HATCH south.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 43,
+      "after": 43,
+      "out": "south\r\nThe hatch is latched. OPEN HATCH.\r\n? "
+    },
+    {
+      "cmd": "open hatch",
+      "before": 43,
+      "after": 43,
+      "out": "open hatch\r\nYou lift the latch. The hatch opens both ways.\r\n\r\nDrain junction: a winding path north leads to the pearl chamber. Branch east, co\r\nnduit west; OPEN HATCH south.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 43,
+      "after": 38,
+      "out": "south\r\n\r\nCell: crypt west, shaft east, service hatch north. Its latch is on the drain sid\r\ne.\r\nEast shaft open.\r\nYou can also see...\r\na rusty ventilation grille , \r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 38,
+      "after": 43,
+      "out": "north\r\n\r\nDrain junction: a winding path north leads to the pearl chamber. Branch east, co\r\nnduit west; OPEN HATCH south.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 43,
+      "after": 44,
+      "out": "east\r\n\r\nBlind drainage branch: return west to the junction.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 44,
+      "after": 43,
+      "out": "west\r\n\r\nDrain junction: a winding path north leads to the pearl chamber. Branch east, co\r\nnduit west; OPEN HATCH south.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 43,
+      "after": 42,
+      "out": "west\r\n\r\nStraight drain: conduit west, junction east.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 42,
+      "after": 41,
+      "out": "west\r\n\r\nStraight drain: conduit west, passage east towards the junction.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 41,
+      "after": 54,
+      "out": "west\r\n\r\nFreezing conduit: drains east, service path south to the wooden bridge.\r\nYou can also see...\r\nan interesting stone , \r\n? "
+    },
+    {
+      "cmd": "take stone",
+      "before": 54,
+      "after": 54,
+      "out": "take stone\r\nTaken: an interesting stone , \r\n\r\nFreezing conduit: drains east, service path south to the wooden bridge.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 54,
+      "after": 53,
+      "out": "south\r\n\r\nWooden bridge: eastern bank east, conduit service path north.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 53,
+      "after": 52,
+      "out": "east\r\n\r\nEastern riverbank: castle tunnel north, wooden bridge west.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 52,
+      "after": 50,
+      "out": "north\r\n\r\nCastle courtyard: hzb tzozi. Drawbridge west, magazine east; tunnel south to ban\r\nk.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 50,
+      "after": 51,
+      "out": "east\r\n\r\nPowder magazine: return west to the courtyard.\r\nYou can also see...\r\na home made bomb , \r\n? "
+    },
+    {
+      "cmd": "take bomb",
+      "before": 51,
+      "after": 51,
+      "out": "take bomb\r\nTaken: a home made bomb , \r\n\r\nPowder magazine: return west to the courtyard.\r\n\r\n? "
+    },
+    {
+      "cmd": "light bomb with candle",
+      "before": 51,
+      "after": 51,
+      "out": "light bomb with candle\r\nBOOM! Smoke clears: nothing has changed.\r\n\r\nPowder magazine: return west to the courtyard.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 51,
+      "after": 50,
+      "out": "west\r\n\r\nCastle courtyard: hzb tzozi. Drawbridge west, magazine east; tunnel south to ban\r\nk.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 50,
+      "after": 49,
+      "out": "west\r\n\r\nDrawbridge: river ledge west, castle courtyard east. Crossing secures the bridge\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 49,
+      "after": 48,
+      "out": "west\r\n\r\nAt a river bend, the castle is visible across the water east. Return north, or c\r\nross the drawbridge east. No path south.\r\nEast drawbridge lowered.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 48,
+      "after": 40,
+      "out": "north\r\n\r\nLower river ledge: cavern west. Paths lead north to the waterfall and south to a\r\n river bend. East is a sheer edge.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 40,
+      "after": 36,
+      "out": "west\r\n\r\nLower cavern: shaft north, lower river ledge east.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 36,
+      "after": 39,
+      "out": "north\r\n\r\nBeyond the shaft: cell west, lower cavern south.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 39,
+      "after": 38,
+      "out": "west\r\n\r\nCell: crypt west, shaft east, service hatch north. Its latch is on the drain sid\r\ne.\r\nEast shaft open.\r\nYou can also see...\r\na rusty ventilation grille , \r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 38,
+      "after": 37,
+      "out": "west\r\n\r\nCrypt: temple gate south, sealed passage east. Four stones name its keeper.\r\nEast seal open.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 37,
+      "after": 35,
+      "out": "south\r\n\r\nLoki's temple: gate north, balcony overhead.\r\nThe secured rope reaches the floor. Use UP or DOWN.\r\nNorth gate open.\r\n\r\n? "
+    },
+    {
+      "cmd": "up",
+      "before": 35,
+      "after": 28,
+      "out": "up\r\nYou climb up to the balcony.\r\n\r\nTemple balcony: sturdy stone rail, floor below. West returns to the upper ledge.\r\n\r\nThe secured rope reaches the floor. Use UP or DOWN.\r\nYou can also see...\r\na thin and tatty rope , \r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 28,
+      "after": 27,
+      "out": "west\r\n\r\nUpper ledge above an underground river: round chamber north, temple balcony east\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 27,
+      "after": 26,
+      "out": "north\r\n\r\nLoki's round chamber: tunnel north, upper ledge south, bat caves west, side cave\r\n east.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 26,
+      "after": 24,
+      "out": "north\r\n\r\nLong tunnel: cavern north, round chamber south. A sealed crack glows faintly eas\r\nt.\r\nYou can also see...\r\na red house brick , \r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 24,
+      "after": 21,
+      "out": "north\r\n\r\nNorthern cavern: treasure door north, corridor east, long tunnel south.\r\n\r\n? "
+    },
+    {
+      "cmd": "galar",
+      "before": 21,
+      "after": 16,
+      "out": "galar\r\nSuddenly a magic wind carried you to another place...\r\n\r\nDaylit cave entrance: outside north, passages south and east. Take a light first\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 16,
+      "after": 14,
+      "out": "north\r\n\r\nBasalt clearing: oak forest north, cave entrance south.\r\nYou can also see the bloody corpse of an enormous dragon.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 14,
+      "after": 13,
+      "out": "north\r\n\r\nA rock amid poisonous mushrooms: bridge landing east, basalt clearing south.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 13,
+      "after": 12,
+      "out": "east\r\n\r\nSouthern bank: string bridge north, oak forest west, rope cliff east.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 12,
+      "after": 11,
+      "out": "north\r\n\r\nOn the swaying string bridge. Follow it north or south; no footing east or west.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 11,
+      "after": 10,
+      "out": "north\r\n\r\nThe string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 10,
+      "after": 9,
+      "out": "north\r\n\r\nWindy slopes of Mount Ymir: clover field west, bridge approach south.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 9,
+      "after": 4,
+      "out": "west\r\n\r\nClover field: the hut clearing is west; Mount Ymir's slopes lie east.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 4,
+      "after": 2,
+      "out": "west\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+    },
+    {
+      "cmd": "use key",
+      "before": 2,
+      "after": 1,
+      "out": "use key\r\nYou opened the door.\r\nWelcome home! Your treasures are safe.\r\nYour score is 46  out of 126.\r\nRanking:\r\nExperienced loser\r\nQUIT to finish, or leave to seek more treasure.\r\n\r\nInside the bark hut. The door leads north to the clearing.\r\nYou can also see...\r\na gold coin , a blood red ruby , a moon-like pearl , an interesting stone , \r\n? "
+    },
+    {
+      "cmd": "galar",
+      "before": 1,
+      "after": 16,
+      "out": "galar\r\nSuddenly a magic wind carried you to another place...\r\n\r\nDaylit cave entrance: outside north, passages south and east. Take a light first\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "south",
+      "before": 16,
+      "after": 18,
+      "out": "south\r\n\r\nEntrance cavern: daylight north, old torture chamber west.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 18,
+      "after": 23,
+      "out": "west\r\n\r\nAn old torture chamber, stained with blood. Corridor north; entrance cavern east\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 23,
+      "after": 22,
+      "out": "north\r\n\r\nDraughty corridor: cavern west, torture chamber south.\r\nYou can also see...\r\na sparkling diamond , \r\n? "
+    },
+    {
+      "cmd": "take diamond",
+      "before": 22,
+      "after": 22,
+      "out": "take diamond\r\nTaken: a sparkling diamond , \r\n\r\nDraughty corridor: cavern west, torture chamber south.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 22,
+      "after": 21,
+      "out": "west\r\n\r\nNorthern cavern: treasure door north, corridor east, long tunnel south.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 21,
+      "after": 20,
+      "out": "north\r\n\r\nTreasure doorway: south returns to the northern cavern.\r\nEast: iron-bound door, barred within. Try explosives.\r\n\r\n? "
+    },
+    {
+      "cmd": "light bomb with candle",
+      "before": 20,
+      "after": 20,
+      "out": "light bomb with candle\r\nBOOM! The door is torn from its hinges. The passage east is open.\r\n\r\nTreasure doorway: south returns to the northern cavern.\r\nEast doorway blasted open.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 20,
+      "after": 19,
+      "out": "east\r\n\r\nThe legendary treasure room of the black elves of Svartalfheim. Only exit: west.\r\n\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , Nearby there lurks...\r\na fiery demon , \r\n? "
+    },
+    {
+      "cmd": "attack creature with sword",
+      "before": 19,
+      "after": 19,
+      "out": "attack creature with sword\r\nThe sword strikes home and your foe dies.\r\nA black cloud descends and the corpse vaporises.\r\n\r\nThe legendary treasure room of the black elves of Svartalfheim. Only exit: west.\r\n\r\nYou can also see...\r\na diamond studded ring , a magic pendant , a most holy grail , a mirror like shi\r\neld , \r\n? "
+    },
+    {
+      "cmd": "take ring",
+      "before": 19,
+      "after": 19,
+      "out": "take ring\r\nTaken: a diamond studded ring , \r\n\r\nThe legendary treasure room of the black elves of Svartalfheim. Only exit: west.\r\n\r\nYou can also see...\r\na magic pendant , a most holy grail , a mirror like shield , \r\n? "
+    },
+    {
+      "cmd": "take pendant",
+      "before": 19,
+      "after": 19,
+      "out": "take pendant\r\nTaken: a magic pendant , \r\n\r\nThe legendary treasure room of the black elves of Svartalfheim. Only exit: west.\r\n\r\nYou can also see...\r\na most holy grail , a mirror like shield , \r\n? "
+    },
+    {
+      "cmd": "take grail",
+      "before": 19,
+      "after": 19,
+      "out": "take grail\r\nTaken: a most holy grail , \r\n\r\nThe legendary treasure room of the black elves of Svartalfheim. Only exit: west.\r\n\r\nYou can also see...\r\na mirror like shield , \r\n? "
+    },
+    {
+      "cmd": "take shield",
+      "before": 19,
+      "after": 19,
+      "out": "take shield\r\nTaken: a mirror like shield , \r\n\r\nThe legendary treasure room of the black elves of Svartalfheim. Only exit: west.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "galar",
+      "before": 19,
+      "after": 16,
+      "out": "galar\r\nSuddenly a magic wind carried you to another place...\r\n\r\nDaylit cave entrance: outside north, passages south and east. Take a light first\r\n.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 16,
+      "after": 14,
+      "out": "north\r\n\r\nBasalt clearing: oak forest north, cave entrance south.\r\nYou can also see the bloody corpse of an enormous dragon.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 14,
+      "after": 13,
+      "out": "north\r\n\r\nA rock amid poisonous mushrooms: bridge landing east, basalt clearing south.\r\n\r\n? "
+    },
+    {
+      "cmd": "east",
+      "before": 13,
+      "after": 12,
+      "out": "east\r\n\r\nSouthern bank: string bridge north, oak forest west, rope cliff east.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 12,
+      "after": 11,
+      "out": "north\r\n\r\nOn the swaying string bridge. Follow it north or south; no footing east or west.\r\n\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 11,
+      "after": 10,
+      "out": "north\r\n\r\nThe string bridge crosses the Gioll southwards. Mount Ymir's slopes are north.\r\n\r\n? "
+    },
+    {
+      "cmd": "north",
+      "before": 10,
+      "after": 9,
+      "out": "north\r\n\r\nWindy slopes of Mount Ymir: clover field west, bridge approach south.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 9,
+      "after": 4,
+      "out": "west\r\n\r\nClover field: the hut clearing is west; Mount Ymir's slopes lie east.\r\n\r\n? "
+    },
+    {
+      "cmd": "west",
+      "before": 4,
+      "after": 2,
+      "out": "west\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+    },
+    {
+      "cmd": "use key",
+      "before": 2,
+      "after": 1,
+      "out": "use key\r\nYou opened the door.\r\nWelcome home! Your treasures are safe.\r\nYour score is 126  out of 126.\r\nRanking:\r\nPerfectionist and genius!!\r\nAll treasure home. Your quest is complete!\r\nQUIT to finish, or leave to seek more treasure.\r\n\r\nInside the bark hut. The door leads north to the clearing.\r\nYou can also see...\r\na gold coin , a blood red ruby , a sparkling diamond , a moon-like pearl , an in\r\nteresting stone , a diamond studded ring , a magic pendant , a most holy grail ,\r\n a mirror like shield , \r\n? "
+    },
+    {
+      "cmd": "score",
+      "before": 1,
+      "after": 1,
+      "out": "score\r\nYour score is 126  out of 126.\r\n? "
+    },
+    {
+      "cmd": "quit",
+      "before": 1,
+      "after": 1,
+      "out": "quit\r\n\r\nScore: 126  out of a possible 126 points in 136  moves.\r\nRanking:\r\nPerfectionist and genius!!\r\nAnother adventure?\r\n? "
+    }
+  ],
+  "violations": []
+}

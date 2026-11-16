@@ -1,0 +1,309 @@
+# Authoring source: @LABEL targets and {UPPERCASE_CONSTANTS} are resolved by
+# tools/caverns-source.mjs. Distributed CAVBASIC.BAS needs only native BAZA.
+REM CAVERNS - John Hardy (c) 1982-83. Microbee edition copyright 1983.
+REM Dreamcards. GNU GPL release 2019; see CAVERNS.TXT and repository LICENSE.
+REM Original: github.com/jhlagado/caverns d604815, src/caverns.basic.
+REM Origins: ZX81; VIC-20 port with Ken Stone; Microbee MicroWorld BASIC.
+REM Recovery: Microbee Software Preservation Project; Alan Laughton (ChickenMan).
+REM Author-approved TEC-OS rewrite. The archival listing is unchanged.
+REM Insert experimental lines between these ten-step line numbers.
+REM State: rm room, ob objects, db drawbridge, ht hatch, sh shaft, td door.
+REM State: cr crypt, cl candle, ft fatigue, tu turns, rp tied rope, gt gate.
+REM hb and jf retain reserved CVB2 checkpoint fields. Integers use %.
+DIM ob%(24),ex%(216),il%(48),ad$(24),no$(24),di$(3),ve$(26)
+GOSUB @LOAD_TABLES
+@NEW_GAME:
+CLS
+GOSUB @RESET_STATE
+@BANNER:
+PRINT "DREAMCARDS presents..."
+PRINT "CAVERNS by John Hardy (c) 1983":PRINT "GNU Public License, 2019":ft%=0:tu%=0
+PRINT "Bring treasure home for double points. Take the compass!":PRINT "LOOK describes, INVENTORY lists, SCORE totals, QUIT finishes."
+@GAME_LOOP:
+REM Apply view-time candle events before rendering; rendering changes no world state.
+GOSUB @PREPARE_VIEW
+GOSUB @DESCRIBE_ROOM
+@COMMAND_LOOP:
+GOSUB @READ_COMMAND
+GOSUB @PARSE_COMMAND
+IF vb%={VERB_LOOK} THEN @GAME_LOOP
+IF vb%={VERB_SCORE} THEN GOSUB @COMPUTE_SCORE:PRINT "Your score is";sc%;" out of 126.":GOTO @COMMAND_LOOP
+IF vb%={VERB_LIST} THEN GOSUB @INVENTORY:GOTO @GAME_LOOP
+IF vb%={VERB_QUIT} THEN @END_ADVENTURE
+REM rs is the result; tc is turn cost. Clarifications are free.
+rs%=0:tc%=0:ac%=0:GOSUB @SPECIAL_ACTION
+IF rs%=0 THEN tc%=1:rs%={REDISPLAY}:GOSUB @FIND_FOE:IF fo%={ITEM_BAT} THEN GOSUB @BAT_TRANSPORT ELSE GOSUB @EXECUTE_COMMAND
+GOSUB @ADVANCE_TURN
+IF rs%={FINISH} THEN @END_ADVENTURE
+IF rs%={PROMPT} THEN @COMMAND_LOOP
+GOTO @GAME_LOOP
+@END_ADVENTURE:
+GOSUB @COMPUTE_SCORE
+PRINT:PRINT "Score:";sc%;" out of a possible 126 points in";tu%;" moves.":GOSUB @RANKING:PRINT "Another adventure?"
+@PLAY_AGAIN:
+INPUT yn$:IF yn$="N" OR yn$="n" THEN END ELSE IF yn$="Y" OR yn$="y" THEN GOTO @NEW_GAME ELSE GOTO @PLAY_AGAIN
+END
+
+@LOAD_TABLES:
+REM Immutable il: 1..24 starting locations, 25..48 values. Descriptions use one string.
+RESTORE:FOR ix%=1 TO {ROOM_COUNT}:READ ds$:NEXT ix%
+FOR ix%=1 TO 216:READ ex%(ix%):NEXT ix%
+FOR ix%=1 TO {OBJECT_COUNT}:READ ad$(ix%),no$(ix%):NEXT ix%
+FOR ix%=1 TO {INITIAL_DATA_COUNT}:READ il%(ix%):NEXT ix%
+FOR ix%=0 TO 3:READ di$(ix%):NEXT ix%
+FOR ix%=1 TO 26:READ ve$(ix%):NEXT ix%:RETURN
+@RESET_STATE:
+hb%={ROOM_STRING_BRIDGE}:db%={FATAL}:ht%=0:sh%=0:td%=0:cr%=0:jf%=0:rp%=0:gt%=0
+FOR ix%=1 TO {OBJECT_COUNT}:ob%(ix%)=il%(ix%):NEXT ix%
+RANDOMIZE
+rm%={ROOM_HUT}:cl%=1:fo%=0:it%=0:ft%=0:RETURN
+@ADVANCE_TURN:
+IF tc%=1 THEN IF tu%<32767 THEN tu%=tu%+1
+RETURN
+@FIND_FOE:
+FOR fo%=1 TO 6:IF ob%(fo%)=rm% THEN RETURN
+NEXT fo%:fo%=0:RETURN
+
+@PREPARE_VIEW:
+REM The historical candle clock is checked only where the player could see.
+vs%=1:ce%=0
+IF rm%<18 THEN @VIEW_CLOCK
+IF cl%<>1 THEN vs%=0:RETURN
+IF ob%({ITEM_CANDLE})=rm% THEN @VIEW_CLOCK
+IF ob%({ITEM_CANDLE})<>{CARRIED} THEN vs%=0:RETURN
+@VIEW_CLOCK:
+IF cl%=1 THEN IF tu%=201 THEN ce%=1
+IF cl%=0 OR tu%<230 THEN RETURN
+cl%=0:ce%=2:RETURN
+@DESCRIBE_ROOM:
+PRINT
+IF vs%=0 THEN PRINT "It's very dark, too dark to see anything...I'm scared!":GOTO @DESCRIBE_FOES
+RESTORE:FOR ix%=1 TO rm%:READ ds$:NEXT ix%:PRINT ds$
+IF rm%={ROOM_TREASURE_DOOR} THEN IF td%=0 THEN PRINT "East: iron-bound door, barred within. Try explosives." ELSE PRINT "East doorway blasted open."
+IF rm%={ROOM_BALCONY} OR rm%={ROOM_TEMPLE} THEN IF rp%=1 THEN PRINT "The secured rope reaches the floor. Use UP or DOWN."
+IF rm%={ROOM_TEMPLE} THEN IF gt% THEN PRINT "North gate open." ELSE PRINT "North gate locked."
+IF rm%={ROOM_CRYPT} THEN IF cr% THEN PRINT "East seal open." ELSE PRINT "Stones read V, A, R, D. Speak the name."
+IF rm%={ROOM_CELL} THEN IF sh% THEN PRINT "East shaft open." ELSE PRINT "Remove the grille; leave it here. It cannot fit through."
+IF rm%={ROOM_CASTLE_VIEW} THEN IF db%={FATAL} THEN PRINT "East drawbridge raised; seek another entrance." ELSE PRINT "East drawbridge lowered."
+IF rm%={ROOM_BASALT_CLEARING} THEN IF ob%({ITEM_DRAGON})={ABSENT} THEN PRINT "You can also see the bloody corpse of an enormous dragon."
+IF ce%=1 THEN PRINT "Your candle is growing dim."
+IF ce%=2 THEN PRINT "Your candle has gone out."
+qt%=0
+FOR li%={FIRST_ITEM} TO {OBJECT_COUNT}
+IF ob%(li%)<>rm% THEN @NEXT_VISIBLE_ITEM
+IF qt%=0 THEN PRINT "You can also see..."
+qt%=1:GOSUB @PRINT_OBJECT
+@NEXT_VISIBLE_ITEM:
+NEXT li%
+@DESCRIBE_FOES:
+qt%=0:FOR li%=1 TO 6:IF ob%(li%)=rm% THEN qt%=qt%+1:GOSUB @FOE_INTRO
+NEXT li%:IF qt%=0 THEN @ROOM_PROMPT
+PRINT "Nearby there lurks..."
+FOR li%=1 TO 6:IF ob%(li%)=rm% THEN GOSUB @PRINT_OBJECT
+NEXT li%
+@ROOM_PROMPT:
+PRINT:RETURN
+@PRINT_OBJECT:
+PRINT "a";ad$(li%);no$(li%);", ";:RETURN
+@FOE_INTRO:
+IF li%={ITEM_WIZARD} THEN PRINT "An evil wizard bars the way. He cries: Thou shalt not pass!":RETURN
+IF li%={ITEM_DRAGON} THEN PRINT "A sleeping dragon wakes and breathes jets of fire.":RETURN
+IF li%={ITEM_DWARF} THEN PRINT "An old dwarf guards the steps, raising his dagger."
+RETURN
+@INVENTORY:
+PRINT "You are carrying ";:qt%=0
+FOR li%={FIRST_ITEM} TO {OBJECT_COUNT}
+IF ob%(li%)<>{CARRIED} THEN @NEXT_CARRIED_ITEM
+IF qt%=0 THEN PRINT
+qt%=1:GOSUB @PRINT_OBJECT
+@NEXT_CARRIED_ITEM:
+NEXT li%
+IF qt%=0 THEN PRINT "nothing."
+RETURN
+
+@READ_COMMAND:
+REM Normalise once; whole words and alias precedence match the qualified game.
+INPUT cm$:IF cm$="" THEN @READ_COMMAND ELSE cm$=" "+cm$+" "
+FOR ix%=1 TO LEN(cm$):cc%=ASC(MID$(cm$,ix%,1)):IF cc%>64 THEN IF cc%<91 THEN cm$=LEFT$(cm$,ix%-1)+CHR$(cc%+32)+MID$(cm$,ix%+1)
+NEXT ix%
+IF cm$=" n " THEN cm$=" north "
+IF cm$=" s " THEN cm$=" south "
+IF cm$=" w " THEN cm$=" west "
+IF cm$=" e " THEN cm$=" east "
+IF cm$=" i " THEN cm$=" list "
+RETURN
+@PARSE_COMMAND:
+FOR it%={FIRST_ITEM} TO {OBJECT_COUNT}:wd$=no$(it%):GOSUB @FIND_WORD:IF mp%>0 THEN @PARSE_VERB
+NEXT it%:it%=0
+IF it%=0 THEN wd$=" grill ":GOSUB @FIND_WORD:IF mp%>0 THEN it%={ITEM_GRILLE}
+@PARSE_VERB:
+FOR vb%=1 TO 26:wd$=ve$(vb%):GOSUB @FIND_WORD:IF mp%>0 THEN @VERB_ALIAS
+NEXT vb%:vb%=0:RETURN
+@VERB_ALIAS:
+IF vb%={VERB_ATTACK} THEN vb%={VERB_KILL} ELSE IF vb%>24 THEN vb%={VERB_LIST}
+RETURN
+@FIND_WORD:
+mp%=0:FOR si%=1 TO LEN(cm$)-LEN(wd$)+1
+IF MID$(cm$,si%,LEN(wd$))=wd$ THEN mp%=si%:RETURN
+NEXT si%:RETURN
+
+@SPECIAL_ACTION:
+REM Validate free clarifications; complete rope/hatch actions return a turn cost.
+IF vb%={VERB_KILL} THEN IF it%<>{ITEM_SWORD} THEN PRINT "With what weapon?":rs%={PROMPT}:RETURN
+IF vb%={VERB_TIE} THEN @TIE_ROPE ELSE IF vb%={VERB_UNTIE} THEN @UNTIE_ROPE
+IF rm%={ROOM_BALCONY} THEN IF vb%={VERB_DOWN} THEN @CLIMB_DOWN
+IF rm%={ROOM_TEMPLE} THEN IF vb%={VERB_UP} THEN @CLIMB_UP
+IF vb%={VERB_OPEN} AND rm%={ROOM_DRAIN_JUNCTION} THEN wd$=" hatch ":GOSUB @FIND_WORD:IF mp%>0 THEN @OPEN_HATCH
+IF ob%({ITEM_GRILLE})={CARRIED} THEN IF rm%={ROOM_CELL} OR rm%={ROOM_SHAFT} THEN rs%={PROMPT}:wd$=" east ":IF rm%={ROOM_SHAFT} THEN wd$=" west "
+IF rs%={PROMPT} THEN GOSUB @FIND_WORD:IF mp%>0 THEN PRINT "The grille cannot fit. DROP GRILLE first.":RETURN ELSE rs%=0
+RETURN
+@TIE_ROPE:
+rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} THEN PRINT "There is no suitable rail here.":RETURN
+IF it%<>{ITEM_ROPE} THEN PRINT "Tie what?":RETURN
+wd$=" rail ":GOSUB @FIND_WORD:IF mp%=0 THEN PRINT "Tie it to what? Try the rail.":RETURN
+IF ob%({ITEM_ROPE})<>{CARRIED} THEN PRINT "You must be carrying the rope.":RETURN
+ob%({ITEM_ROPE})={ROOM_BALCONY}:rp%=1:PRINT "Rope secured to rail; it reaches the floor.":GOTO @SPECIAL_DONE
+@UNTIE_ROPE:
+rs%={PROMPT}:IF rm%<>{ROOM_BALCONY} OR rp%=0 THEN PRINT "No secured rope here.":RETURN
+rp%=0:PRINT "Rope untied on balcony.":GOTO @SPECIAL_DONE
+@CLIMB_DOWN:
+rs%={PROMPT}:IF rp%=0 THEN PRINT "TIE ROPE TO RAIL first.":RETURN
+rm%={ROOM_TEMPLE}:ft%=0:PRINT "You climb down to the temple floor.":GOTO @SPECIAL_DONE
+@CLIMB_UP:
+rs%={PROMPT}:IF rp%=0 THEN PRINT "There is no secured rope above you.":RETURN
+rm%={ROOM_BALCONY}:ft%=0:PRINT "You climb up to the balcony.":GOTO @SPECIAL_DONE
+@OPEN_HATCH:
+ht%={ROOM_DRAIN_JUNCTION}:PRINT "You lift the latch. The hatch opens both ways."
+@SPECIAL_DONE:
+tc%=1:rs%={REDISPLAY}:RETURN
+
+@EXECUTE_COMMAND:
+REM Dispatch has no jumps into the input loop; every action returns one result.
+IF vb%>18 THEN @SPELL_OR_OBJECT ELSE IF vb%=0 THEN @DIRECTION_OR_OBJECT
+IF vb%={VERB_KILL} THEN ac%=3:GOTO @OBJECT_ACTION
+IF vb%<5 THEN ac%=vb%:IF ac%>3 THEN ac%=3
+IF vb%<5 THEN @OBJECT_ACTION ELSE IF fo%>0 THEN @CREATURE_KILLS
+IF vb%<7 THEN PRINT "Nothing happens!"
+IF vb%>6 THEN IF vb%<13 THEN PRINT "Please tell me how."
+IF vb%>12 THEN PRINT "I can't!"
+PRINT:rs%={PROMPT}:RETURN
+@DIRECTION_OR_OBJECT:
+FOR cn%=0 TO 3:wd$=di$(cn%):GOSUB @FIND_WORD:IF mp%>0 THEN @MOVE
+NEXT cn%
+@SPELL_OR_OBJECT:
+IF vb%={VERB_GALAR} THEN @TELEPORT
+IF vb%={VERB_VARD} THEN @CRYPT_WORD
+GOTO @OBJECT_ACTION
+@MOVE:
+IF fo%>0 THEN @CREATURE_KILLS
+IF ob%({ITEM_COMPASS})={CARRIED} THEN @DESTINATION ELSE IF ob%({ITEM_COMPASS})=rm% THEN @DESTINATION
+PRINT "Without the compass, I lose my bearings!":cn%=INT(RND(1)*4)
+@DESTINATION:
+ei%=rm%*4+cn%-3:nx%=ex%(ei%):GOSUB @RESOLVE_EXIT
+IF rm%={ROOM_TEMPLE} THEN IF nx%={ROOM_CRYPT} AND gt%=0 THEN PRINT "The gate is locked. Use the key.":rs%={PROMPT}:RETURN
+IF rm%={ROOM_DRAIN_JUNCTION} THEN IF nx%={ROOM_CELL} AND ht%=0 THEN PRINT "The hatch is latched. OPEN HATCH.":rs%={PROMPT}:RETURN
+IF rm%={ROOM_DRAWBRIDGE} THEN IF nx%={ROOM_COURTYARD} OR nx%={ROOM_CASTLE_VIEW} THEN db%={ROOM_DRAWBRIDGE}
+IF nx%=0 THEN PRINT "You can't go that way"
+IF nx%={FATAL} THEN PRINT "You fall into the chasm and die.":rs%={FINISH}:RETURN
+IF nx%>0 THEN rm%=nx%:ft%=0
+RETURN
+@RESOLVE_EXIT:
+IF nx%=-1 THEN nx%=hb%:RETURN
+IF nx%=-2 THEN nx%=td%:RETURN
+IF nx%=-3 THEN nx%=cr%:RETURN
+IF nx%=-4 THEN nx%=ht%:RETURN
+IF nx%=-5 THEN nx%=sh%:RETURN
+IF nx%=-6 THEN IF db%={FATAL} THEN nx%=0:RETURN ELSE nx%=db%:RETURN
+RETURN
+@TELEPORT:
+IF fo%>0 THEN @CREATURE_KILLS
+ft%=0:PRINT "Suddenly a magic wind carried you to another place...":rm%={ROOM_ENTRANCE}:RETURN
+@CRYPT_WORD:
+IF rm%<>{ROOM_CRYPT} THEN PRINT "Nothing happens here.":RETURN
+PRINT "The seal slides open both ways.":cr%={ROOM_CELL}:RETURN
+@BAT_TRANSPORT:
+PRINT "The giant bat carries you to its colony.":rm%={ROOM_BAT_COLONY}:ft%=0:ob%({ITEM_BAT})=0:RETURN
+@CREATURE_KILLS:
+PRINT "The creature kills you.":rs%={FINISH}:RETURN
+
+@OBJECT_ACTION:
+IF ac%<>0 THEN @VALIDATE_OBJECT
+ac%=3:wd$=" get ":GOSUB @FIND_WORD:IF mp%>0 THEN ac%=1:GOTO @VALIDATE_OBJECT
+wd$=" drop ":GOSUB @FIND_WORD:IF mp%>0 THEN ac%=2
+@VALIDATE_OBJECT:
+IF it%<1 THEN IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT "eh?":RETURN
+IF ob%(it%)={CARRIED} THEN @OBJECT_PRESENT
+IF ob%(it%)=rm% THEN @OBJECT_PRESENT ELSE IF fo%>0 THEN @CREATURE_KILLS ELSE PRINT "Not here.":RETURN
+@OBJECT_PRESENT:
+IF fo%=0 THEN @APPLY_OBJECT
+IF ac%=3 THEN IF it%={ITEM_SWORD} THEN IF ob%({ITEM_SWORD})={CARRIED} THEN @USE_TOOL
+GOTO @CREATURE_KILLS
+@APPLY_OBJECT:
+IF ac%=1 THEN @TAKE_OBJECT ELSE IF ac%=2 THEN @DROP_OBJECT ELSE GOTO @USE_TOOL
+@TAKE_OBJECT:
+cn%=0:FOR ix%={FIRST_ITEM} TO {OBJECT_COUNT}:IF ob%(ix%)={CARRIED} THEN cn%=cn%+1
+NEXT ix%:IF cn%>10 THEN PRINT "You cannot carry more.":RETURN
+ob%(it%)={CARRIED}:IF it%={ITEM_GRILLE} THEN sh%={ROOM_SHAFT}
+IF it%={ITEM_ROPE} THEN rp%=0
+PRINT "Taken: ";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN
+@DROP_OBJECT:
+ob%(it%)=rm%:PRINT "Dropped: ";:li%=it%:GOSUB @PRINT_OBJECT:PRINT:RETURN
+@USE_TOOL:
+IF it%={ITEM_BOMB} THEN wd$=" candle ":GOSUB @FIND_WORD:IF mp%>0 THEN it%={ITEM_CANDLE}
+IF it%<{ITEM_KEY} THEN @CANNOT_USE ELSE IF it%>{ITEM_ROPE} THEN @CANNOT_USE
+IF ob%(it%)<>{CARRIED} THEN IF ob%(it%)<>rm% THEN PRINT "Where? I can't see it.":RETURN
+ON it%-18 GOTO @UNLOCK,@SWORD,@CANDLE,@ROPE_HELP
+@CANNOT_USE:
+PRINT "How am I supposed to use it?":RETURN
+@UNLOCK:
+IF rm%<>{ROOM_HUT_CLEARING} THEN IF rm%<>{ROOM_TEMPLE} THEN PRINT "It won't open!":RETURN
+PRINT "You opened the door.":IF rm%={ROOM_HUT_CLEARING} THEN rm%={ROOM_HUT}:GOSUB @HOMECOMING:RETURN ELSE gt%=1:rm%={ROOM_CRYPT}:RETURN
+@SWORD:
+IF fo%=0 THEN PRINT "But there's nothing to kill...":RETURN
+IF ob%({ITEM_SWORD})<>{CARRIED} THEN PRINT "You aren't carrying that.":RETURN
+ft%=ft%+1:IF RND(1)*7+15>ft% THEN @SWORD_RESULT
+PRINT "You swing with your sword but miss and the creature smashes your skull.":rs%={FINISH}:RETURN
+@SWORD_RESULT:
+IF RND(1)<.38 THEN @VICTORY
+li%=INT(RND(1)*4):IF fo%={ITEM_BAT} THEN @BAT_TRANSPORT
+IF li%=0 THEN PRINT "You attack but the creature moves aside."
+IF li%=1 THEN PRINT "The creature deflects your blow."
+IF li%=2 THEN PRINT "The foe is stunned but quickly regains his balance."
+IF li%=3 THEN PRINT "You missed and he deals a blow to your head."
+RETURN
+@VICTORY:
+PRINT "The sword strikes home and your foe dies.":ob%(fo%)=0
+IF fo%<>{ITEM_DRAGON} THEN PRINT "A black cloud descends and the corpse vaporises."
+fo%=0:ft%=0:RETURN
+@CANDLE:
+IF ob%({ITEM_BOMB})={CARRIED} THEN @IGNITE ELSE IF ob%({ITEM_BOMB})=rm% THEN @IGNITE
+PRINT "Nothing to ignite here. Keep your candle safe.":RETURN
+@IGNITE:
+IF cl%<>1 THEN PRINT "The candle is out; you need a flame.":RETURN
+IF rm%<>{ROOM_TREASURE_DOOR} THEN PRINT "BOOM! Smoke clears: nothing has changed.":RETURN
+IF td%={ROOM_TREASURE_ROOM} THEN PRINT "The passage is already open. Save your bomb.":RETURN
+PRINT "BOOM! The door is torn from its hinges. The passage east is open.":td%={ROOM_TREASURE_ROOM}:ob%({ITEM_BOMB})=0:RETURN
+@ROPE_HELP:
+PRINT "TIE ROPE TO RAIL at the balcony, then DOWN; UP returns.":rs%={PROMPT}:RETURN
+
+@COMPUTE_SCORE:
+sc%=0:FOR ix%={FIRST_ITEM} TO {LAST_TREASURE}
+qt%=il%(ix%+{VALUE_OFFSET}):IF ob%(ix%)={CARRIED} THEN IF rm%={ROOM_HUT} THEN sc%=sc%+qt%*2 ELSE sc%=sc%+qt%
+IF ob%(ix%)={ROOM_HUT} THEN sc%=sc%+qt%*2
+NEXT ix%:RETURN
+@RANKING:
+PRINT "Ranking:"
+IF sc%<20 THEN PRINT "Hopeless beginner":RETURN
+IF sc%<50 THEN PRINT "Experienced loser":RETURN
+IF sc%<100 THEN PRINT "Average Viking":RETURN
+IF sc%<126 THEN PRINT "Excellent...but you've left something behind!":RETURN
+IF sc%=126 THEN PRINT "Perfectionist and genius!!"
+RETURN
+@HOMECOMING:
+PRINT "Welcome home! Your treasures are safe."
+FOR ix%={FIRST_ITEM} TO {LAST_TREASURE}:IF ix%<>{ITEM_COMPASS} THEN IF ix%<>{ITEM_BOMB} THEN IF ob%(ix%)={CARRIED} THEN ob%(ix%)={ROOM_HUT}
+NEXT ix%:GOSUB @COMPUTE_SCORE:PRINT "Your score is";sc%;" out of 126.":GOSUB @RANKING
+IF sc%=126 THEN PRINT "All treasure home. Your quest is complete!"
+PRINT "QUIT to finish, or leave to seek more treasure.":RETURN
+END
+@WORLD_DATA

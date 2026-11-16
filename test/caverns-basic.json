@@ -1,203 +1,239 @@
 {
-  "sourceSha256": "19040160f8f20217d80fa8d587d2966f7d372d4e83d5ff7a945ecc6bae96b7c2",
+  "entries": {
+    "banner": 150,
+    "resume": 190
+  },
+  "stateSymbols": {
+    "A%": "RM%",
+    "H%": "HB%",
+    "D%": "DB%",
+    "W%": "HT%",
+    "G%": "SH%",
+    "T%": "TD%",
+    "E%": "CR%",
+    "J%": "JF%",
+    "C0%": "CL%",
+    "F%": "FT%",
+    "U%": "TU%",
+    "R0%": "RP%",
+    "K0%": "GT%",
+    "P%()": "OB%()",
+    "S%": "SC%"
+  },
+  "sourceSha256": "f64fdb84ead251e3e49590c4c156d7951afc52fb02ffad959cf819b20760b9e0",
   "compilerSha256": "41f96c2716274327fd84180b3cadbb277a8d4f7faacf95b0e31fe3fdceb0acc6",
   "librarySha256": "3c77dccda2221616dd2573183f137d5d4131218b9f024b521982c44b0567bc64",
-  "comSha256": "e767cd3060635fff1f4356bd2673ee3f2ef0fd0ab172a278511e1485c9300ec7",
-  "comBytes": 39808,
+  "comSha256": "841e208da7603054ed3e86d9f52a58c7de87f0a7a4c29e5d1f41599971733ee0",
+  "comBytes": 39680,
   "symbols": {
-    "A%": {
-      "address": 39967,
-      "kind": 1,
-      "space": 0
-    },
-    "A0$": {
-      "address": 40037,
-      "kind": 2,
-      "space": 0
-    },
     "AC%": {
-      "address": 39969,
+      "address": 39734,
       "kind": 1,
       "space": 0
     },
-    "B%": {
-      "address": 39971,
-      "kind": 1,
-      "space": 0
-    },
-    "C0%": {
-      "address": 39973,
-      "kind": 1,
-      "space": 0
-    },
-    "D%": {
-      "address": 39975,
-      "kind": 1,
-      "space": 0
-    },
-    "D0$": {
-      "address": 40040,
-      "kind": 2,
-      "space": 0
-    },
-    "DI$()": {
-      "address": 39977,
+    "AD$()": {
+      "address": 39736,
       "kind": 2,
       "space": 1
     },
-    "E%": {
-      "address": 39979,
+    "CC%": {
+      "address": 39738,
+      "kind": 1,
+      "space": 0
+    },
+    "CE%": {
+      "address": 39740,
+      "kind": 1,
+      "space": 0
+    },
+    "CL%": {
+      "address": 39742,
+      "kind": 1,
+      "space": 0
+    },
+    "CM$": {
+      "address": 39810,
+      "kind": 2,
+      "space": 0
+    },
+    "CN%": {
+      "address": 39744,
+      "kind": 1,
+      "space": 0
+    },
+    "CR%": {
+      "address": 39746,
+      "kind": 1,
+      "space": 0
+    },
+    "DB%": {
+      "address": 39748,
+      "kind": 1,
+      "space": 0
+    },
+    "DI$()": {
+      "address": 39750,
+      "kind": 2,
+      "space": 1
+    },
+    "DS$": {
+      "address": 39813,
+      "kind": 2,
+      "space": 0
+    },
+    "EI%": {
+      "address": 39752,
       "kind": 1,
       "space": 0
     },
     "EX%()": {
-      "address": 39981,
+      "address": 39754,
       "kind": 1,
       "space": 1
     },
-    "F%": {
-      "address": 39983,
+    "FO%": {
+      "address": 39756,
       "kind": 1,
       "space": 0
     },
-    "G%": {
-      "address": 39985,
+    "FT%": {
+      "address": 39758,
       "kind": 1,
       "space": 0
     },
-    "H%": {
-      "address": 39987,
+    "GT%": {
+      "address": 39760,
       "kind": 1,
       "space": 0
     },
-    "IP%()": {
-      "address": 39989,
+    "HB%": {
+      "address": 39762,
+      "kind": 1,
+      "space": 0
+    },
+    "HT%": {
+      "address": 39764,
+      "kind": 1,
+      "space": 0
+    },
+    "IL%()": {
+      "address": 39766,
       "kind": 1,
       "space": 1
+    },
+    "IT%": {
+      "address": 39768,
+      "kind": 1,
+      "space": 0
     },
     "IX%": {
-      "address": 39991,
+      "address": 39770,
       "kind": 1,
       "space": 0
     },
-    "J%": {
-      "address": 39993,
+    "JF%": {
+      "address": 39772,
       "kind": 1,
       "space": 0
     },
-    "K0%": {
-      "address": 39995,
+    "LI%": {
+      "address": 39774,
       "kind": 1,
       "space": 0
     },
-    "L%": {
-      "address": 39997,
+    "MP%": {
+      "address": 39776,
       "kind": 1,
       "space": 0
-    },
-    "M%": {
-      "address": 39999,
-      "kind": 1,
-      "space": 0
-    },
-    "NA$()": {
-      "address": 40001,
-      "kind": 2,
-      "space": 1
     },
     "NO$()": {
-      "address": 40003,
+      "address": 39778,
       "kind": 2,
       "space": 1
     },
-    "O%": {
-      "address": 40005,
+    "NX%": {
+      "address": 39780,
       "kind": 1,
       "space": 0
     },
-    "P%()": {
-      "address": 40007,
+    "OB%()": {
+      "address": 39782,
       "kind": 1,
       "space": 1
     },
-    "PF%": {
-      "address": 40009,
+    "QT%": {
+      "address": 39784,
       "kind": 1,
       "space": 0
     },
-    "Q%": {
-      "address": 40011,
+    "RM%": {
+      "address": 39786,
       "kind": 1,
       "space": 0
     },
-    "R0%": {
-      "address": 40013,
+    "RP%": {
+      "address": 39788,
       "kind": 1,
       "space": 0
     },
-    "S%": {
-      "address": 40015,
+    "RS%": {
+      "address": 39790,
+      "kind": 1,
+      "space": 0
+    },
+    "SC%": {
+      "address": 39792,
+      "kind": 1,
+      "space": 0
+    },
+    "SH%": {
+      "address": 39794,
       "kind": 1,
       "space": 0
     },
     "SI%": {
-      "address": 40017,
+      "address": 39796,
       "kind": 1,
       "space": 0
     },
-    "SR%": {
-      "address": 40019,
+    "TC%": {
+      "address": 39798,
       "kind": 1,
       "space": 0
     },
-    "SS$": {
-      "address": 40043,
-      "kind": 2,
-      "space": 0
-    },
-    "T%": {
-      "address": 40021,
+    "TD%": {
+      "address": 39800,
       "kind": 1,
       "space": 0
     },
-    "U%": {
-      "address": 40023,
+    "TU%": {
+      "address": 39802,
       "kind": 1,
       "space": 0
     },
-    "V%": {
-      "address": 40025,
+    "VB%": {
+      "address": 39804,
       "kind": 1,
       "space": 0
     },
     "VE$()": {
-      "address": 40027,
+      "address": 39806,
       "kind": 2,
       "space": 1
     },
-    "W%": {
-      "address": 40029,
+    "VS%": {
+      "address": 39808,
       "kind": 1,
       "space": 0
     },
-    "X%": {
-      "address": 40031,
-      "kind": 1,
-      "space": 0
-    },
-    "Y%": {
-      "address": 40033,
-      "kind": 1,
-      "space": 0
-    },
-    "Y0$": {
-      "address": 40046,
+    "WD$": {
+      "address": 39816,
       "kind": 2,
       "space": 0
     },
-    "Z%": {
-      "address": 40035,
-      "kind": 1,
+    "YN$": {
+      "address": 39819,
+      "kind": 2,
       "space": 0
     }
   }

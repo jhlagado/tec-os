@@ -25,8 +25,8 @@ function keys(m,text,done=()=>m.ready()){
 }
 const question=m=>()=>m.waitingForInput()&&m.text().endsWith('? ');
 const word=(m,p)=>m.read(p)|m.read(p+1)<<8;
-const integer=(m,n)=>word(m,basic.symbols[n].address)<<16>>16;
-const element=(m,n,i)=>{const b=word(m,basic.symbols[n+'()'].address);assert.equal(m.read(b),1);return word(m,b+4+2*i)<<16>>16;};
+const integer=(m,n)=>word(m,basic.symbols[basic.stateSymbols?.[n]??n].address)<<16>>16;
+const element=(m,n,i)=>{const b=word(m,basic.symbols[basic.stateSymbols?.[n+'()']??n+'()'].address);assert.equal(m.read(b),1);return word(m,b+4+2*i)<<16>>16;};
 let compiled;
 function compileBasic(){
  if(!compiled){
@@ -46,7 +46,8 @@ const tour=[['galar',16],['east',17],['look',17],['west',33],['north',29],['east
 
 test('revised map and source-only starter match the author-approved release',()=>{
  const source=read('programs/CAVBASIC.BAS').toString(),revised=json('test/caverns-refined-map.json');
- const exits=source.split('\n').filter(l=>/^60[0-7]0 DATA /.test(l)).flatMap(l=>l.split('DATA ')[1].split(',').map(Number));
+ const labels=json('programs/caverns/source-map.json').labels;
+ const exits=source.split('\n').filter(l=>Number(l.split(' ')[0])>=labels.EXIT_DATA&&Number(l.split(' ')[0])<labels.OBJECT_DATA).flatMap(l=>l.split('DATA ')[1].split(',').map(Number));
  assert.deepEqual(exits,revised.exits);assert.equal(exits.length,216);
  const files=volume(card(),'A').list().map(x=>x.name);
  assert.ok(!files.includes('CAVERNS.COM'));assert.ok(!files.includes('CAVBASIC.COM'));

@@ -10,7 +10,7 @@ BAZA CAVBASIC
 CAVBASIC
 ```
 
-The qualified executable is **39,808 bytes**, including its selected runtime.
+The qualified executable is **39,680 bytes**, including its selected runtime.
 Compilation and play work with the shell resident (TPA 42,496 bytes); no UNLOAD
 is needed. BAZA.RTL is required for compilation, not beside the running game.
 Use the PICO9918 console at 80 columns and matrix keyboard input, as tested.
@@ -23,7 +23,7 @@ COPY CAVBASIC.BAS CAVBOOK.BAS
 TED CAVBOOK.BAS
 ```
 
-Change the line 30 banner from `DREAMCARDS presents...` to
+Change the presentation banner (line 150 in this listing) from `DREAMCARDS presents...` to
 `TEC-OS Book presents`. Keep the line number, PRINT and quotation marks.
 Ctrl-S saves, Ctrl-T B builds, and Ctrl-T R builds/runs. In the game, QUIT,
 then N, exits; dismiss TED's return pause to resume editing. Ctrl-Q leaves
@@ -99,21 +99,28 @@ Compiler/runtime pins in `test/inputs.json` resolve published BAZA commit
 `41f96c2716274327fd84180b3cadbb277a8d4f7faacf95b0e31fe3fdceb0acc6`.
 BAZA.RTL SHA-256:
 `3c77dccda2221616dd2573183f137d5d4131218b9f024b521982c44b0567bc64`.
-No compiler/runtime change was required for this gameplay revision. Descriptions
+No compiler/runtime change was required for the structural rewrite. The engine
+and world data are separated, with ten-step numbering and the requested casing.
+See [engine structure and authoring](caverns-engine.md). Descriptions
 are scanned from compact DATA into one temporary string rather than retaining
 54 extra strings or compiling 54 conditional printing branches.
 
 ```
+node tools/caverns-source.mjs
 node tools/caverns-fixture.mjs ../baza/build/runtime-build.json ../baza/dist
 npm run media
 npm run caverns:scenarios
 npm run web
-node --test test/caverns.test.mjs test/caverns-scenario.test.mjs test/caverns-ted.test.mjs
+node --test test/caverns.test.mjs test/caverns-scenario.test.mjs test/caverns-ted.test.mjs test/caverns-rewrite.test.mjs
 ```
 
 The archival source remains in `jhlagado/caverns` at
 `d60481500140c79da0e6e06719a518c4231c4588`, `src/caverns.basic`.
 The compact REM header preserves copyright, provenance and recovery credits.
+
+The pre-rewrite binary and source are frozen for comparison under
+`test/fixtures/caverns-baseline/`; they are not supplied on the starter card.
+Current rewrite evidence is in `docs/evidence/caverns-rewrite/`.
 
 ## Development and spoiler records
 

@@ -10,7 +10,9 @@ import {ROOT,boot,volume} from './lib/fixtures.mjs';
 const source=readFileSync(resolve(ROOT,'programs/CAVBASIC.BAS'),'utf8');
 const original='DREAMCARDS presents...',replacement='TEC-OS Book presents';
 const expected=source.replace(original,replacement);
-const bannerLine=source.split('\n').findIndex(l=>l.startsWith('30 PRINT '))+1;
+const bannerLine=source.split('\n').findIndex(l=>l.includes('PRINT \"DREAMCARDS presents...\"'))+1;
+const bannerNumber=source.split('\n')[bannerLine-1].split(' ')[0];
+const bannerPrefix=source.split('\n')[bannerLine-1].indexOf(original);
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const text=a=>Buffer.from(a.read('CAVBOOK.BAS',{text:true})).toString();
 function keys(m,s,what,done){
@@ -27,10 +29,10 @@ test('Caverns book exercise: copy, TED edit/save/build/run, exit and reopen afte
  keys(m,'copy cavbasic.bas cavbook.bas\r','copy original to a working file',()=>m.ready());
  assert.equal(text(a),source);
  keys(m,`ted cavbook.bas ${bannerLine}\r`,'open the banner in TED',()=>/CAVBOOK\.BAS/.test(status())&&status().includes(`L${bannerLine} C1`));
- // Cursor is at the beginning of `30 PRINT "..."`: ten right arrows reach
- // the first literal character. Move through the old text and backspace it.
- keys(m,'\x1b[C'.repeat(10+original.length)+'\x08'.repeat(original.length)+replacement+'\x13','edit and save banner',()=>text(a)!==source);
- assert.equal(text(a).split('\n').find(l=>l.startsWith('30 ')),expected.split('\n').find(l=>l.startsWith('30 ')));
+ // The banner prefix comes from the generated listing. Move to the literal,
+ // then through its old text and backspace it.
+ keys(m,'\x1b[C'.repeat(bannerPrefix+original.length)+'\x08'.repeat(original.length)+replacement+'\x13','edit and save banner',()=>text(a)!==source);
+ assert.equal(text(a).split('\n').find(l=>l.startsWith(bannerNumber+' ')),expected.split('\n').find(l=>l.startsWith(bannerNumber+' ')));
  assert.equal(text(a),expected);
  let mark=m.output.length;
  keys(m,'\x14b','TED builds Caverns and returns',()=>/COM written/.test(m.text(mark))&&/CAVBOOK\.BAS/.test(status()));

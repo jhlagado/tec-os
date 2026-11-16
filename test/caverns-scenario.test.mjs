@@ -15,9 +15,9 @@ function keys(m,text,done=()=>m.ready()){
 }
 const question=m=>()=>m.waitingForInput()&&m.text().endsWith('? ');
 const word=(m,p)=>m.read(p)|m.read(p+1)<<8;
-const integer=(m,n)=>word(m,basic.symbols[n].address)<<16>>16;
+const integer=(m,n)=>word(m,basic.symbols[basic.stateSymbols?.[n]??n].address)<<16>>16;
 function snapshot(m){
- const p=word(m,basic.symbols['P%()'].address)+6;
+ const p=word(m,basic.symbols[basic.stateSymbols?.['P%()']??'P%()'].address)+6;
  return scenario(Object.fromEntries(scalarNames.map(n=>[n,integer(m,n)])),Array.from({length:24},(_,i)=>word(m,p+i*2)<<16>>16),Buffer.from(Array.from({length:4},(_,i)=>m.read(layout().rng+i))).reverse().toString('hex'));
 }
 function assertState(m,s){assert.deepEqual(snapshot(m),s);}
@@ -78,7 +78,7 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
    volume(image,'A').write('BAD.CAV',b);
   }
   const m=boot(image,{tms:true,matrix:true,width:80});const out=keys(m,'cavload bad');assert.match(out,/Invalid\/missing scenario/,kind);
-  assert.equal(integer(m,'A%'),1,kind);const p=word(m,basic.symbols['P%()'].address)+6;
+  assert.equal(integer(m,'A%'),1,kind);const p=word(m,basic.symbols[basic.stateSymbols?.['P%()']??'P%()'].address)+6;
   assert.deepEqual(Array.from({length:24},(_,i)=>word(m,p+i*2)<<16>>16),ip,kind);assert.deepEqual(m.violations,[]);
  }
 });

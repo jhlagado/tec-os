@@ -1419,3 +1419,39 @@ qualification, test captures were separated from packaged scenario outputs:
 regression tests no longer overwrite build/caverns/scenarios/CAVE.CAV with a
 new-game witness. The browser compares its exported checkpoint to the packaged
 repository artifact. This fixes a test-artifact collision, not game behaviour.
+
+## Behaviour-preserving BASIC rewrite
+
+The author authorised the structural rewrite after requiring line numbers in
+normal ten-step spacing, uppercase keywords/constants and lowercase variables.
+The frozen pre-rewrite source/COM/native loader/debug fixture are retained in
+ test/fixtures/caverns-baseline/. The rewritten source is generated from a
+labelled engine plus world data, but the distributed BAS is ordinary editable
+BASIC and compiles natively without the generator.
+
+Implemented: one dispatcher, explicit result/turn cost, one turn-advancement
+point, side-effect-free recognition/rendering, separately prepared candle
+legacy events, named movement/object/tool/combat/puzzle/score routines, immutable
+room/object tables with explicit treasure values, and mapped checkpoint state.
+All 285 delivered lines use 10,20,30,... spacing. Variables use short lowercase
+names because BAZA identifies only the first two characters; named authoring
+constants are uppercase and expand to numeric literals. No compiler or RTL
+change was made. Published source still contains original credits/provenance.
+
+Final COM is 39,680 bytes, 128 smaller than the 39,808-byte baseline. All 18
+native tests pass. Strict native-binary comparisons matched 480 commands in
+36 scenarios, checking exact output (apart from newline/source-error-line
+normalisation), all objects, all persisted fields and RNG after each command.
+A matched seeded full quest used 145 turns; a separate normal-start quest
+scored 126 in 136 turns and visited all 54 rooms. Startup RANDOMIZE can differ
+with instruction timing; compared games use the same external seed, never
+live game-state/RNG patching. Long-input memory behaviour is tested separately:
+the baseline failed with OUT OF MEMORY, while this rewrite handled that input.
+This resource improvement is not disguised as exact error-for-error equivalence.
+
+The map, descriptions, puzzles, accepted command semantics, ordinary failure
+turn costs and intentional random combat risks are preserved. The wire layout
+stays CVB2; actual compiler symbols/addresses and protected executable hashes
+are refreshed. Current implementation details: docs/caverns-engine.md. Current
+records: docs/evidence/caverns-rewrite/. Historic proposal/wording records above
+remain historical rather than descriptions of unimplemented work.

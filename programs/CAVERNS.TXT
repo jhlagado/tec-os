@@ -7,6 +7,8 @@ On the starter disk's main SYSTEM volume:
 
 Caverns is supplied as BASIC source. BAZA creates your executable.
 TED CAVBASIC.BAS opens it for reading or editing; Ctrl-S saves the file.
+Lines are numbered in tens, leaving room to insert your experiments.
+Keywords are UPPERCASE and variables lowercase.
 To preserve the original, COPY CAVBASIC.BAS CAVBOOK.BAS and edit that copy.
 The compiled game includes its selected runtime. BAZA.RTL is needed to
 compile, not to run. No UNLOAD is needed.

@@ -1,8 +1,8 @@
-# A behaviour-preserving Caverns rewrite: proposal only
+# Caverns BASIC rewrite: accepted design
 
 The author asked how we would organise this game if writing it afresh while
-keeping the same gameplay. No rewrite is implemented or authorised by this
-analysis. The current author-approved rules would be the baseline; the archival
+keeping the same gameplay. The author subsequently authorised implementation; see
+[caverns-engine.md](caverns-engine.md) for the implemented structure and evidence. The current author-approved rules would be the baseline; the archival
 bugs would not be silently reintroduced as a supposed fidelity requirement.
 
 The most useful change is separation of responsibilities, not necessarily a
@@ -14,8 +14,7 @@ The rewritten BASIC listing must use the normal spacing of **10**: 10, 20,
 30, and so on. Leave the intervening numbers available for readers to insert
 experimental lines without repeatedly renumbering the program. Any future
 line-number generator must default to that spacing; compact numbering must
-not consume the insertion space. This requirement applies to the future
-rewrite, not an unsolicited renumbering of the currently qualified source.
+not consume the insertion space. This requirement is implemented throughout the rewritten listing.
 
 ## Author requirement: readable BASIC casing
 
@@ -26,7 +25,7 @@ intended case inside strings and game prose; a style pass must not rewrite
 messages or alter gameplay. Named constants in any authoring/generation layer
 follow the same uppercase rule, without assuming BAZA supports a new CONST
 statement. Apply these conventions together with ten-step line numbering to
-the future rewrite. No blanket recasing of the qualified listing is requested.
+the rewritten listing, without changing the case of game prose.
 
 1. **Explicit state.** One documented record for room, object locations,
    creatures, gates, attached rope, candle clock, score-relevant possessions

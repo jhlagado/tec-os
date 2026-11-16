@@ -22,7 +22,9 @@
     "web": "node web/build.mjs",
     "inputs": "node tools/inputs.mjs",
     "caverns:scenarios": "node tools/caverns-scenario.mjs pack",
-    "test:caverns-scenarios": "node --test test/caverns-scenario.test.mjs"
+    "test:caverns-scenarios": "node --test test/caverns-scenario.test.mjs",
+    "caverns:source": "node tools/caverns-source.mjs",
+    "test:caverns-rewrite": "node --test test/caverns-rewrite.test.mjs"
   },
   "devDependencies": {
     "@jhlagado/debug80-runtime": "0.3.3",

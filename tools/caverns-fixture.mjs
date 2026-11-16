@@ -32,10 +32,11 @@ m.step=()=>{
 };
 m.enqueueInput('baza cavbasic\r','matrix');
 m.runUntilChecked(()=>{m.pumpInput();return !m.pending?.length&&m.ready();},800_000_000,'native Caverns compile');
-assert.match(m.text(),/COM written/);assert.ok(symbols?.['P%()']);
-const com=a.read('CAVBASIC.COM');assert.ok(com.length<40000);
+assert.match(m.text(),/COM written/);assert.ok(symbols?.['OB%()']);
+const com=a.read('CAVBASIC.COM');assert.ok(com.length<40000,`Caverns executable ${com.length} bytes must stay below 40000`);
 assert.deepEqual(m.violations,[]);
-const record={sourceSha256:sha(source),compilerSha256:sha(compiler),librarySha256:sha(rtl),comSha256:sha(com),comBytes:com.length,symbols};
+const sourceMap=JSON.parse(readFileSync(resolve(ROOT,'programs/caverns/source-map.json')));
+const record={entries:{banner:sourceMap.banner,resume:sourceMap.resume},stateSymbols:sourceMap.stateSymbols,sourceSha256:sha(source),compilerSha256:sha(compiler),librarySha256:sha(rtl),comSha256:sha(com),comBytes:com.length,symbols};
 writeFileSync(resolve(ROOT,'test/caverns-basic.json'),JSON.stringify(record,null,2)+'\n');
 mkdirSync(resolve(ROOT,'build/caverns'),{recursive:true});
 writeFileSync(resolve(ROOT,'build/caverns/CAVBASIC.COM'),com);
