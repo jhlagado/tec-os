@@ -66,7 +66,7 @@ only spaces and `!` executes none. The shell echoes later pieces as typed
 before capitalising them. The displayed `dir b:` therefore executes as
 `DIR B:`.
 
-Each piece executes as a complete command. A drive or user-area change carries
+Each piece executes as a complete command. A drive change carries
 into later pieces. Here `B:` makes B current before COPY creates `NOTES.TXT`:
 
 <!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'B:!COPY A:STARTUP.CMD NOTES.TXT!DIR'. Complete captured console transcript. -->
@@ -246,7 +246,7 @@ At `B:WORK>`, `A:TAS EXISTS` and `A:TAS RUN` create `EXISTS.COM` and
 and lists only when the file exists. The capture repeats it before and after
 COPY creates the file:
 
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM'. Complete captured console transcript. -->
+<!-- TEC-OS 30e6528, ROM e3478808: node tools/capture.mjs --card chain.img B: 'A:TAS EXISTS' 'A:TAS RUN' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'COPY A:STARTUP.CMD NOTES.TXT' 'EXISTS NOTES.TXT &TYPE NOTES.TXT &DIR *.COM' 'EXISTS NONE.TXT !DIR *.COM' 'EXISTS NONE.TXT &DIR *.COM !CD &DIR *.COM'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -289,9 +289,10 @@ EXISTS.COM       128
 RUN.COM          128
 2 files, 256 bytes
 8343552 free on B:WORK
-B:WORK>EXISTS NONE.TXT &DIR *.COM !USER 0 &DIR *.COM
+B:WORK>EXISTS NONE.TXT &DIR *.COM !CD &DIR *.COM
 
-B:WORK>USER 0
+B:WORK>CD
+B:WORK
 B:WORK>DIR *.COM
 
 EXISTS.COM       128
@@ -307,7 +308,7 @@ Once COPY creates NOTES.TXT both conditional pieces run.
 
 
 `EXISTS NONE.TXT !DIR *.COM` runs DIR despite failure. In the final chain the
-first conditional DIR skips. `!USER 0` then runs successfully, resetting the
+first conditional DIR skips. `!CD` then runs successfully, resetting the
 result to 0 so the final `&DIR *.COM` executes.
 
 Set a failure code whenever your program's task fails, including after
@@ -448,8 +449,8 @@ The replacement may contain up to 127 characters including `!` and `&`. Its
 first piece executes independently of the departing program's result. The
 shell then applies the ordinary piece rules. An initial `&` is rejected.
 Immediate copying permits source text in memory that the next program will
-reuse. TEC-OS ignores the E parameter used by CP/M 3's function 47. Drive and
-user selection comes from `0004h` as on an ordinary exit.
+reuse. TEC-OS ignores the E parameter used by CP/M 3's function 47. The
+drive comes from `0004h` as on an ordinary exit.
 
 Without SHELL.SVC the ROM echoes and executes the supplied line as a single
 command. `TYPE X!TYPE Y` then invokes TYPE with the literal tail `X!TYPE Y`.
