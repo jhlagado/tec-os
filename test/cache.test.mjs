@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createContainer, findVolume, headerChecksum, parseContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, boot, program, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
+import { PUT_COM, ROOT, TEST_CLOCK, boot, program, putBytes, romFor, standardCard, volume, withShell } from "./lib/fixtures.mjs";
 import { rig } from "./lib/warmboot.mjs";
 import { finishBarePrompt, publicContext, recoveryInput } from "./lib/public-caller.mjs";
 import { MUTANTS } from "./lib/coalesce.mjs";
@@ -33,7 +33,7 @@ function retireWrites(collector, verified) {
   for (let i = collector.length - 1; i >= 0; i--) if (own.has(collector[i])) collector.splice(i, 1);
 }
 
-const CACHED_MIRROR = Object.freeze({ fixture: "f49e380", romSHA256: "d9f8d2b554e39833139c2912af48ee40e75305be65236590aebf105f175a7a03", mapSHA256: "8da862b2b90499ba422724cf8e8c5d11795ad623abde24682d9f336ceee268e2", phases: Object.freeze(["boot", "WBTEST"]) });
+const CACHED_MIRROR = Object.freeze({ fixture: "f49e380", romSHA256: "d9f8d2b554e39833139c2912af48ee40e75305be65236590aebf105f175a7a03", mapSHA256: "8da862b2b90499ba422724cf8e8c5d11795ad623abde24682d9f336ceee268e2", phases: Object.freeze(["boot", "PUT 8 X.COM", "WBTEST", "PUT 2 B:Y.COM"]) });
 const PRECACHE_MIRROR = Object.freeze({ fixture: "4ea57f7", romSHA256: "ba898ef83ab625d705f93895e5a1c9fa55bdb25d17d957b746050387ad57d902", mapSHA256: "1d22c573888539564ff1f5b30a9ca45f5a67142f23c9419bd93a362dceb1e546", phases: Object.freeze(["boot"]) });
 
 /** Verify every intended mirror before retiring only its original event identities. */
@@ -226,7 +226,7 @@ test("a file read again comes from the cache, with no card read, and the same by
 
 test("real commands preserve historical block order without increasing write traffic", async () => {
   const run = async (rom) => {
-    const image = await load(standardCard(), ["wbtest", "sum"], { "DATA.BIN": DATA });
+    const image = await load(standardCard(), ["wbtest", "sum", "put"], { "DATA.BIN": DATA });
     // COPY is the shell's, where the old ROM's was the CCP's. Both cards hold the
     // shell's files, so that their blocks lie where they do for each ROM.
     withShell(image);
@@ -236,9 +236,7 @@ test("real commands preserve historical block order without increasing write tra
     const { m, selected, observation, incoming, command } = observedStart(image, { rom, profile: rom ? "f49e380 fixture" : "current" });
     const profile = observation.profile;
     const t = trace(m);
-    const snapshot = length => Uint8Array.from({ length }, (_, i) => m.read(0x100 + i));
-    const x = snapshot(8 * 256);
-    command("SAVE 8 X.COM"); assert.deepEqual(volume(image, "A").read("X.COM"), x);
+    command("PUT 8 X.COM"); assert.deepEqual(volume(image, "A").read("X.COM"), putBytes(8));
     command("COPY DATA.BIN B:DATA.CPY");
     assert.deepEqual(volume(image, "A").read("DATA.BIN"), sourceData, "COPY leaves the independent source unchanged");
     assert.deepEqual(volume(image, "B").read("DATA.CPY"), sourceData);
@@ -249,8 +247,7 @@ test("real commands preserve historical block order without increasing write tra
     assert.equal(rnd.length, 101 * 128);
     for (const record of [0, 40, 100]) assert.deepEqual(rnd.slice(record * 128, (record + 1) * 128), new Uint8Array(128).fill(record ^ 0x5a));
     command("ERA X.COM"); assert.equal(volume(image, "A").find("X.COM"), undefined);
-    const y = snapshot(2 * 256);
-    command("SAVE 2 B:Y.COM"); assert.deepEqual(volume(image, "B").read("Y.COM"), y);
+    command("PUT 2 B:Y.COM"); assert.deepEqual(volume(image, "B").read("Y.COM"), putBytes(2));
     assert.deepEqual(volume(image, "A").verify(), []); assert.deepEqual(volume(image, "B").verify(), []);
     assert.deepEqual(volume(image, "A").read("DATA.BIN"), sourceData, "later commands also preserve the source");
     assert.deepEqual(m.violations, []);
@@ -275,16 +272,15 @@ test("real commands preserve historical block order without increasing write tra
   assert.ok(now.writes.length <= before.writes.length, `${now.writes.length} card writes, ${before.writes.length} at f49e380`);
 });
 
-test("logged WORK preserves SAVE, COPY and programme bytes within the measured write budget", async () => {
-  const image = withShell(await load(card(), ["wbtest", "sum"], { "DATA.BIN": DATA })); // COPY is the shell's
+test("logged WORK preserves PUT, COPY and programme bytes within the measured write budget", async () => {
+  const image = withShell(await load(card(), ["wbtest", "sum", "put"], { "DATA.BIN": DATA })); // COPY is the shell's
   const m = start(image);
   const t = trace(m);
-  const tpa = pattern(16 * 256, (i) => i * 3 + 7);
-  tpa.forEach((v, i) => m.write(0x100 + i, v));
+  const put = putBytes(16);
   const w0 = t.writes.length;
-  cmd(m, "SAVE 16 B:S.COM");
-  const saveWrites = t.writes.length - w0;
-  assert.match(cmd(m, "SUM B:S.COM"), new RegExp(sumOf(tpa)));
+  cmd(m, "PUT 16 B:S.COM");
+  const putWrites = t.writes.length - w0;
+  assert.match(cmd(m, "SUM B:S.COM"), new RegExp(sumOf(put)));
   cmd(m, "COPY A:DATA.BIN B:DATA.CPY");
   assert.match(cmd(m, "SUM B:DATA.CPY"), new RegExp(sumOf(DATA)));
   assert.match(cmd(m, "WBTEST"), /WB OK/);
@@ -292,7 +288,7 @@ test("logged WORK preserves SAVE, COPY and programme bytes within the measured w
   m.type("\x03");
   m.expect(/\r\nB(:\S*)?>$/);
   const b = volume(image, "B");
-  assert.deepEqual(b.read("S.COM"), tpa, "S.COM on the card");
+  assert.deepEqual(b.read("S.COM"), put, "S.COM on the card");
   assert.deepEqual(b.read("DATA.CPY").slice(0, DATA.length), DATA, "DATA.CPY on the card");
   const seq = b.read("SEQ.DAT");
   assert.equal(seq.length, 64 * 128);
@@ -302,12 +298,12 @@ test("logged WORK preserves SAVE, COPY and programme bytes within the measured w
   for (const r of [0, 40, 100]) assert.ok(rnd.slice(r * 128, r * 128 + 128).every((v) => v === (r ^ 0x5a)), `RND.DAT record ${r}`);
   assert.deepEqual(b.verify(), []); assert.deepEqual(volume(image, "A").verify(), []);
   assert.deepEqual(m.violations, []);
-  console.log(JSON.stringify({ scope: "logged G8M B SAVE32 records, full file readback and warm persistence", saveWrites, savedBytes: b.read("S.COM").length, copiedBytes: b.read("DATA.CPY").length, sequentialBytes: seq.length, randomBytes: rnd.length }));
-  assert.ok(saveWrites <= 34, `${saveWrites} card writes for 32 records, budget 34`);
+  console.log(JSON.stringify({ scope: "logged G8M B PUT 32 records, full file readback and warm persistence", putWrites, putBytes: b.read("S.COM").length, copiedBytes: b.read("DATA.CPY").length, sequentialBytes: seq.length, randomBytes: rnd.length }));
+  assert.ok(putWrites <= 34, `${putWrites} card writes for 32 records, budget 34`);
 });
 
 test("at every card write while a file is erased and its blocks reused, the volume verifies and no entry names another file's data", async () => {
-  const image = await load(card(), []);
+  const image = await load(card(), ["put"]);
   let cuts = 0;
   const problems = [];
   const fill = { "F1.DAT": 0xa1, "F2.DAT": 0xb2 };
@@ -319,16 +315,13 @@ test("at every card write while a file is erased and its blocks reused, the volu
       if (fill[f.name] !== undefined && !b.read(f.name).every((v) => v === fill[f.name])) problems.push(`cut ${cuts}: ${f.name} names another file's data`);
   };
   const m = start(image, { onSdWrite: check });
-  const saveFilled = (name, v) => {
-    for (let i = 0; i < 12 * 256; i += 1) m.write(0x100 + i, v);
-    cmd(m, `SAVE 12 B:${name}`);
-  };
-  saveFilled("F1.DAT", 0xa1);
+  const putFilled = (name, v) => cmd(m, `PUT 12 B:${name} ${v}`);
+  putFilled("F1.DAT", 0xa1);
   const blocks = (n) => volume(image, "B").find(n).entries.flatMap((e) => [...e.slots].map(([, k]) => k));
   const f1 = blocks("F1.DAT");
   cmd(m, "ERA B:F1.DAT");
   const at = cuts;
-  saveFilled("F2.DAT", 0xb2);
+  putFilled("F2.DAT", 0xb2);
   assert.ok(cuts - at >= 4, `${cuts - at} cuts while F2.DAT reuses the blocks`);
   assert.deepEqual(blocks("F2.DAT").slice(0, 1), f1.slice(0, 1), "F2.DAT took F1.DAT's blocks");
   assert.deepEqual(problems, []);
@@ -505,7 +498,7 @@ test("the ROM before the cache, 4ea57f7, mounts a :wb volume written through", a
   const t = trace(m);
   const tpa = pattern(4 * 256, (i) => i ^ 0x3c);
   tpa.forEach((v, i) => m.write(0x100 + i, v));
-  command("SAVE 4 B:X.COM");
+  command("SAVE 4 B:X.COM"); // this ROM's own built-in, which ends with no warm boot
   assert.ok(t.writes.length >= 8, `${t.writes.length} card writes: one for each of 8 records`);
   assert.deepEqual(volume(image, "B").read("X.COM"), tpa, "on the card before any warm boot");
   assert.deepEqual(m.violations, []);
@@ -549,7 +542,7 @@ const card3 = (wb = true) => {
 };
 
 test("failed data publication retains the block through warm boot and refuses drive reassignment until recovery", async () => {
-  const image = card3(); let cuts = 0;
+  const image = await load(card3(), ["put"]); let cuts = 0;
   const problems = [], fill = { "F1.DAT": 0xa1, "F2.DAT": 0xb2 };
   const check = img => {
     cuts++;
@@ -557,10 +550,8 @@ test("failed data publication retains the block through warm boot and refuses dr
     problems.push(...b.verify().map(p => `cut ${cuts}: ${p}`));
     for (const f of b.list()) if (fill[f.name] !== undefined && !b.read(f.name).every(v => v === fill[f.name])) problems.push(`cut ${cuts}: ${f.name} names data not yet durable`);
   };
-  const m = start(image, { onSdWrite: check }), fillTpa = value => {
-    for (let i = 0; i < 12 * 256; i++) m.write(0x100 + i, value);
-  };
-  fillTpa(0xa1); cmd(m, "SAVE 12 B:F1.DAT");
+  const m = start(image, { onSdWrite: check });
+  cmd(m, "PUT 12 B:F1.DAT 161");
   const fs = volume(image, "WORK"), descriptor = parseContainer(image).volumes[1];
   assert.deepEqual(fs.read("F1.DAT"), new Uint8Array(12 * 256).fill(0xa1));
   const allocation = fs.find("F1.DAT").entries[0].slots[0][1];
@@ -571,8 +562,8 @@ test("failed data publication retains the block through warm boot and refuses dr
     if (bad === null && payload.every(v => v === 0xb2)) bad = block;
     if (blocked && block === bad) { refusals++; return "fail"; }
   });
-  fillTpa(0xb2); const mark = m.output.length;
-  m.type("SAVE 12 B:F2.DAT\r");
+  const mark = m.output.length;
+  m.type("PUT 12 B:F2.DAT 178\r");
   const errorOwner = () => m.classicBankIn && m.waitingForInput() && m.read(m.sym("ERRMODE")) === 0 && m.read(m.sym("HKDEP")) === 1 && !m.read(m.sym("HKBUSY")) && word(m, m.cpu.cpu.sp) === m.sym("BDDEF") + 6;
   m.runUntil(() => errorOwner() && /Bad Sector/.test(m.text(mark)), 2_000_000_000, "actual default BDOS error key after refused close");
   assert.deepEqual(Array.from({ length: 3 }, (_, i) => m.read(m.sym("BDDEF") + 3 + i)), [0xcd, m.sym("GETCHAR") & 255, m.sym("GETCHAR") >> 8]);
@@ -635,23 +626,26 @@ test("a block that needs no pre-read reaches the card with its unwritten records
 });
 
 test("more than the cache written behind with no directory write between: dirty lines evicted, and the file the same from the cache and from the card", async () => {
-  const image = card();
+  const image = await load(card(), ["put"]);
   const m = start(image);
   const t = trace(m);
-  const tpa = pattern(63 * 256, (i) => (i * 11 + (i >> 9)) ^ 0x5a); // 15.75 KiB: 32 blocks, one extent
-  tpa.forEach((v, i) => m.write(0x100 + i, v));
-  cmd(m, "SAVE 63 B:E.COM");
-  assert.ok(t.writes.length > 0, "lines written to make room");
-  prepareCaller(m, "SAVE returned before synthetic readback");
+  const put = putBytes(63); // 15.75 KiB: 32 blocks, one extent
+  const closing = (await program("put")).symbols.CLOSE;
+  m.mark = m.output.length;
+  m.type("PUT 63 B:E.COM\r");
+  m.runUntil(() => m.pc === closing, 2_000_000_000, "PUT's close, with every record written");
+  assert.ok(t.writes.length > 0, "lines written to make room, before the close and PUT's warm boot");
+  m.expect(/\r\nB(:\S*)?>$/, { maxCycles: 2_000_000_000 });
+  prepareCaller(m, "PUT returned before synthetic readback");
   [2, ...Buffer.from("E       COM"), ...new Array(24).fill(0)].forEach((v, i) => m.write(0x5c + i, v));
   bdos(m, 15, 0x5c);
   for (let r = 0; r < 126; r += 1) {
     bdos(m, 26, 0x4000 + r * 128);
     bdos(m, 20, 0x5c);
   }
-  const back = Uint8Array.from({ length: tpa.length }, (_, i) => m.read(0x4000 + i));
-  assert.deepEqual(back, tpa, "from the cache");
-  assert.deepEqual(volume(image, "B").read("E.COM"), tpa, "from the card");
+  const back = Uint8Array.from({ length: put.length }, (_, i) => m.read(0x4000 + i));
+  assert.deepEqual(back, put, "from the cache");
+  assert.deepEqual(volume(image, "B").read("E.COM"), put, "from the card");
 });
 
 test("an unclosed file's latest acknowledged block reaches the card at warm boot", async () => {
@@ -1684,11 +1678,11 @@ test("S2-3 read-only never", () => {
     ],
     { drives: 4 },
   );
-  const { m, writes, run } = wbMachine({}, { image });
+  const { m, writes, run } = wbMachine({ "PUT.COM": PUT_COM }, { image });
   run("C:");
   const n0 = writes.n;
   m.mark = m.output.length;
-  m.type("SAVE 1 X.COM\r");
+  m.type("PUT 1 X.COM\r");
   m.runUntil(() => /R\/O/.test(m.text(m.mark)), 200_000_000, "the R/O error");
   assert.match(m.text(m.mark), /Bdos Err On C: R\/O/);
   m.type("\r");
