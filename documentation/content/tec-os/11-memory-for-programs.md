@@ -189,8 +189,8 @@ limits:
 | Addresses | What is there |
 | --- | --- |
 | `0000h–00FFh` | Page zero, with the CP/M jumps and buffers |
-| `0100h–B6C4h` | Your program, up to 46,533 bytes on the starter card |
-| `B6C5h–BFFFh` | TEC-OS's working memory |
+| `0100h–B6C7h` | Your program, up to 46,536 bytes on the starter card |
+| `B6C8h–BFFFh` | TEC-OS's working memory |
 | `C000h–FFFFh` | The ROM, which holds TEC-OS itself |
 
 The card and services give the boundaries below. The first two rows use the
@@ -200,11 +200,11 @@ example has four G8M volumes created with `tecvol create`. A holds `TOP.COM`,
 
 | Card | Services | Word at `0006h` | TPA in bytes | Largest `.COM` that loads |
 | --- | --- | --- | ---: | ---: |
-| starter card | none | `B6C5h` | 46,533 | 46,336 |
+| starter card | none | `B6C8h` | 46,536 | 46,336 |
 | starter card | `GLCD.SVC` | `B300h` | 45,568 | 45,568 |
 | starter card | `SHELL.SVC` | `A500h` | 41,984 | 41,984 |
 | starter card | `SHELL.SVC`, `GLCD.SVC` | `A200h` | 41,216 | 41,216 |
-| four G8M volumes | none | `B6C5h` | 46,533 | 46,336 |
+| four G8M volumes | none | `B6C8h` | 46,536 | 46,336 |
 | four G8M volumes | `GLCD.SVC`, `SHELL.SVC` | `A200h` | 41,216 | 41,216 |
 
 An allocation vector reserves a bit per allocation block so the BDOS can find
@@ -216,15 +216,19 @@ Chapter 18 explains how the card's drive count sets the reservation.
 Services allocate whole 256-byte pages below the preceding boundary's page.
 Each installs a BDOS jump at its base and the jump at `0005h` points there. On
 the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
-exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
+exclude the alignment gap at `B600h–B6C7h`, reducing the TPA by 968 bytes.
 Later services allocate below the first. Startup's seventeen-page `SHELL.SVC`
 leaves `A500h`, or 41,984 bytes. Adding GLCD leaves 41,216
 (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/memory-map.md:12-22`, `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:23-31`,
 `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/compatibility.md:3-16`). MON3.SVC uses 19 pages. Alone it lowers
-`B6C5h` to `A300h`, leaving 41,472 bytes, or 40,704 after GLCD. After the
+`B6C8h` to `A300h`, leaving 41,472 bytes, or 40,704 after GLCD. After the
 shell it leaves `9200h` and 37,120 bytes. Adding GLCD lowers it
 to `8F00h` with 36,352 bytes, in any order of installing the three
 (`TEC-OS 1f1117336b7a9bb468b4efc9c6b1c1fd81bff53e:docs/mon3.md:47-58`).
+The cited revisions give `B6C5h` and 46,533 bytes for the bare starter card.
+The ROM has since lost its SAVE command and the three workspace bytes SAVE
+used, so the bare boundary and TPA are three bytes higher. A service's
+page-aligned boundary is unchanged.
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:
@@ -314,7 +318,7 @@ instead of loading another record across that ceiling. An oversized file fails
 with the same name and question mark as a missing program.
 
 On the bare starter card the last loaded record ends at `B5FFh`. The largest
-COM is therefore 46,336 bytes, 197 below the 46,533-byte TPA. A page-aligned
+COM is therefore 46,336 bytes, 200 below the 46,536-byte TPA. A page-aligned
 service boundary has no such gap. This loading limit includes record padding.
 Storage allocated after entry may extend to the byte below the word at
 `0006h`.
@@ -358,62 +362,6 @@ remains current.
 TED uses that byte when prefixing chained tool names. Loaded from A while B is
 current, it supplies `A:TAS` and `A:TED`. The source stays on B. Chapter 13
 explains how those commands are supplied.
-
-## SAVE as a memory snapshot
-
-`SAVE` stores bytes already in RAM. It does not assemble source. Its decimal
-count is in 256-byte pages beginning at `0100h`, so `SAVE 2 TWO.COM` stores
-`0100h–02FFh`, or 512 bytes. This was CP/M 2.2's way to retain debugger-loaded
-or patched code. A zero count creates an empty file.
-
-The saved bytes are whatever a preceding program loaded or left in memory. A
-valid count is at most 255 and ends before the page containing the BDOS entry.
-Appendix J gives the command syntax. The shell's `DIR` with sizes is one such
-preceding program: it builds its table of names at `0100h`–`223Fh`, so a SAVE
-after it writes that table. `DIR /W` leaves memory as it was
-(`TEC-OS df0e269b376e45cdf7859b842c4a44e44cbca7da:docs/shell.md:223-229`).
-
-With the seventeen-page startup shell at `A500h`, this starter-card run could
-save 164 pages. The next page would cross the limit so 165 was rejected:
-
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs B: 'SAVE 2 TWO.COM' 'SAVE 165 BIG.COM' 'SAVE 164 BIG.COM' DIR. Complete captured console transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>B:
-B:WORK>SAVE 2 TWO.COM
-B:WORK>SAVE 165 BIG.COM
-165?
-
-B:WORK>SAVE 164 BIG.COM
-B:WORK>DIR
-
-TWO.COM          512
-BIG.COM        41984
-2 files, 42496 bytes
-8323072 free on B:WORK
-B:WORK>
-```
-
-`SAVE 320 X.COM` also fails with `320?` because 320 exceeds 255. SAVE erases
-an existing file of the selected name before creating its replacement. A full
-directory gives `NO SPACE` before creation. If space runs out later, SAVE
-closes the partial file before reporting `NO SPACE`. A returned close failure
-gives that message too. In default BDOS error mode a physical write error can
-instead abort through warm boot. A successfully closed partial file retains
-the records written.
-
-CP/M 2.2's SAVE leaves a partial file open, which can omit its final extent's
-records from the directory. TEC-OS attempts the close to avoid that loss.
-Closing file state and flushing cached card writes remain separate operations
-as Chapter 10 explains.
 
 ## Restart vectors and interrupts
 
