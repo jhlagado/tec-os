@@ -16,8 +16,9 @@
 // USER's eight rows left with USER, and every row's calls were retaken again:
 // the CCP no longer asks function 32 for the area at each entry, so that call
 // is gone from each line, function 25's call after it carries another stale E,
-// which is no operand of it, and the shell's line buffer and COPY's FCB are
-// 21 bytes lower. Traces paired as before, on every row.
+// which is no operand of it, the CCP's FCBs and line buffer are three bytes
+// higher, and the seventeen-page shell's line buffer and COPY's FCB are 21
+// bytes lower. Traces from main and this build paired as before, every row.
 // Raw buffer addresses are part of each call digest, so relocation alone
 // changes it. Fixture updates require paired traces with identical output,
 // logical buffer identities, defined operands, FCB bytes and stack peaks.
