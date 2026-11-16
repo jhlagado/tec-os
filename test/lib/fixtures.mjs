@@ -67,6 +67,16 @@ export async function program(name, { base = 0x100 } = {}) {
   return { bytes, symbols };
 }
 
+/**
+ * PUT.COM, from test/programs/put.asm: PUT n NAME [v] writes NAME as n
+ * 256-byte pages through the BDOS, for a test that needs a file of a known
+ * size on the machine.
+ */
+export const PUT_COM = (await program("put")).bytes;
+
+/** What PUT n NAME writes: byte k of record r is r+k; with V, what PUT n NAME V writes: every byte V. */
+export const putBytes = (pages, v) => Uint8Array.from({ length: pages * 256 }, (_, i) => (v ?? (i >> 7) + (i & 127)) & 0xff);
+
 /** A two-volume container: A is G1M SYSTEM, B is G8M WORK, plus extras. */
 export function standardCard(extra = []) {
   return createContainer([
