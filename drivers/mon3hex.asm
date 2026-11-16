@@ -3,14 +3,16 @@
 ; An override maps the lowest data
 ; address to its requested base. A
 ; further checking pass validates all
-; rebased ranges and any entry address.
-; Absolute machine operands are not
-; relocated. The last pass copies data.
+; rebased ranges. Absolute machine
+; operands are not relocated. The last
+; pass copies data. GO's address is the
+; lowest data address, rebased with the
+; data: an entry record in the file is
+; read and passed over.
 
 CHEX:
   xor a
   ld (HOVR),a    ; no base override
-  ld (HENTV),a   ; no declared entry
   call SKIP      ; optional destination
   jr z,HXARGS    ; retain file addresses
   call HEXW      ; the binary-load form
@@ -31,8 +33,6 @@ CHEX1:
   ld (FCB+12),a  ; first extent
   ld (FCB+32),a  ; first record
   ld (HANY),a    ; no data byte yet
-  ld (HSEEN),a   ; entries this pass
-  ld (HEHIT),a   ; no data hit yet
   call OPEN
   jp z,LFAIL     ; no file at this pass
   call HPASS     ; whole file, to EOF
@@ -43,50 +43,29 @@ CHEX1:
   ld a,(HWRT)
   or a
   jr nz,HXAFTER  ; a later pass
-  call HSETGO    ; resolve an entry once
-  jp c,LFAIL
+  call HSETGO    ; GO's address, once
   ld a,(HOVR)
-  ld b,a         ; the override flag
-  ld a,(HENTV)
-  or b           ; override or entry?
+  or a           ; a base override?
   ld a,2         ; plain files: copy
   jr z,CHEX1
-  dec a          ; check rebased/entry
+  dec a          ; check rebased ranges
   jr CHEX1
 
 HXAFTER:
   cp 1           ; validating or copied?
   jr nz,HXDONE
-  ld a,(HENTV)
-  or a
-  jr z,HXCOPY    ; no entry to check
-  ld a,(HEHIT)   ; entry in real data?
-  or a
-  jp z,LFAIL     ; entry falls in a gap
-
-HXCOPY:
   ld a,2         ; final copying pass
   jr CHEX1
 
 HXDONE:
-  ld hl,(HGO)    ; selected GO address
+  ld hl,(HGO)    ; GO's address
   jp LGOOD
 
-; GO uses a declared entry, else the
-; lowest data address after rebasing.
+; GO uses the lowest data address, or
+; the requested base when the data is
+; rebased. Changes AF and HL.
 
 HSETGO:
-  ld a,(HENTV)
-  or a
-  jr z,HBASEGO   ; no declared entry
-  ld de,(HENTRY)
-  call HDEST
-  ret c
-  ld (HGO),de    ; resolved entry
-  ld hl,1        ; check one entry byte
-  jp RANGE       ; a safe loaded address
-
-HBASEGO:
   ld hl,(HMIN)   ; original lowest byte
   ld a,(HOVR)
   or a
@@ -94,8 +73,7 @@ HBASEGO:
   ld hl,(HBASE)  ; lowest destination
 
 HBASE1:
-  ld (HGO),hl    ; remember the default
-  or a
+  ld (HGO),hl    ; remember it
   ret
 
 ; DE's logical address rebased without
@@ -148,8 +126,8 @@ HREC:
   call GETB
   cp 1           ; end-of-file record
   jp z,HEND
-  cp 5
-  jp z,HSTART    ; linear start address
+  cp 5           ; an entry record is
+  jr z,HSKIP     ; read, not acted on
   or a
   scf
   ret nz         ; other types refused
@@ -169,6 +147,17 @@ HREC:
 HC1:
   call GETB      ; validate, do not copy
   djnz HC1
+  jr HSUM
+
+; An entry record's bytes are summed
+; like any record's and then dropped:
+; its length and address fields may
+; hold anything.
+
+HSKIP:
+  inc b
+  dec b          ; no bytes to read?
+  jr nz,HC1
   jr HSUM
 
 HW1:
@@ -225,83 +214,7 @@ HRMAP:
   ld (HTARG),de  ; resolved destination
   ld l,b
   ld h,0
-  call RANGE     ; full destination span
-  ret c
-  ld a,(HWRT)
-  dec a          ; checking pass only
-  ret nz
-  ld a,(HENTV)
-  or a
-  ret z
-  push hl        ; data range end
-  ld hl,(HGO)    ; selected GO address
-  or a
-  sbc hl,de      ; below its start?
-  pop hl
-  jr c,HRNONE    ; entry precedes data
-  ld de,(HGO)
-  or a
-  sbc hl,de
-  jr c,HRNONE
-  jr z,HRNONE    ; end is exclusive
-  ld a,1
-  ld (HEHIT),a   ; entry found in bytes
-
-HRNONE:
-  or a           ; no match is no fault
-  ret
-
-; Type 05 has a zero record address,
-; four bytes, and a 16-bit entry. One
-; entry record is allowed per file.
-
-HSTART:
-  ld a,b
-  cp 4           ; four entry bytes
-  scf
-  ret nz         ; wrong record length
-  ld hl,(HADR)   ; record address
-  ld a,h
-  or l
-  scf
-  ret nz         ; nonzero record field
-  ld a,(HSEEN)   ; duplicate entry?
-  or a
-  scf
-  ret nz         ; second entry record
-  inc a
-  ld (HSEEN),a   ; one entry per pass
-  call GETB
-  or a
-  scf
-  ret nz         ; above the Z80 space
-  call GETB      ; next high entry byte
-  or a
-  scf
-  ret nz         ; entry above FFFFh
-  call GETB
-  ld (HTEMP+1),a
-  call GETB
-  ld (HTEMP),a   ; entry low byte
-  ld a,(HWRT)
-  or a
-  jr z,HSTSAVE   ; scan owns the entry
-  push de        ; the text cursor
-  ld hl,(HTEMP)
-  ld de,(HENTRY)
-  or a
-  sbc hl,de
-  pop de         ; restore text cursor
-  scf
-  ret nz         ; changed entry
-  jp HSUM
-
-HSTSAVE:
-  ld hl,(HTEMP)
-  ld (HENTRY),hl
-  ld a,1         ; remember entry status
-  ld (HENTV),a   ; entry supplied
-  jp HSUM
+  jp RANGE       ; full destination span
 
 ; EOF is exactly 00 0000 01 FF. After
 ; it only line ends and CP/M padding
@@ -399,7 +312,7 @@ HREAD:
   ld (de),a      ; the end: 1Ah
   ret
 
-; HEX scan, rebase and entry state.
+; HEX scan and rebase state.
 
 HADR: DW 0       ; a HEX record's start
 HWRT: DB 0       ; scan, check or copy
@@ -407,11 +320,6 @@ HANY: DB 0       ; a data record read
 HSP: DW 0        ; the HEX pass's stack
 HMIN: DW 0       ; lowest data address
 HBASE: DW 0      ; requested new base
-HGO: DW 0        ; resolved entry
-HENTRY: DW 0
+HGO: DW 0        ; GO's address
 HTARG: DW 0      ; this record's target
-HTEMP: DW 0      ; checking entry bytes
 HOVR: DB 0       ; a base was supplied
-HENTV: DB 0      ; an entry was declared
-HSEEN: DB 0      ; entry seen this pass
-HEHIT: DB 0      ; entry occurs in data

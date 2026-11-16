@@ -246,7 +246,7 @@ async function badFiles(P) {
     "BADSUM.HEX": [...recs.slice(0, -1), badSum, END],
     "BADDIG.HEX": [...recs.slice(0, -1), last.slice(0, 11) + "G" + last.slice(12), END],
     "EMPTYREC.HEX": [record(0x4000, 0, []), END],
-    ...Object.fromEntries([2, 3, 4, 5, 6].map((t) => [`TYPE${t}.HEX`, [record(0x4000, t, [0, 0x40]), END]])),
+    ...Object.fromEntries([2, 3, 4, 6].map((t) => [`TYPE${t}.HEX`, [record(0x4000, t, [0, 0x40]), END]])),
     "WRAP.HEX": [one(0xfff8), END],
     "UNDER.HEX": [one(0x00f0), END],
     "OVERTOP.HEX": [one(P - 15), END],
@@ -258,6 +258,8 @@ async function badFiles(P) {
     "ENDLEN.HEX": [...recs, record(0, 1, [0])],
     "ENDSUM.HEX": [...recs, ":00000001FE"],
     "ENDONLY.HEX": [END],
+    // An entry record is passed over and is not data.
+    "ENTONLY.HEX": [record(0x4000, 5, [0, 0x40]), END],
   };
   const out = Object.fromEntries(Object.entries(files).map(([n, ls]) => [n, [lines(ls), true]]));
   // Text other than CR and LF between records, and 00h before the end record.
@@ -333,7 +335,7 @@ hexMutant("single-pass loading leaves the bad-checksum file's good records writt
 hexMutant("the data-record test removed loads ENDONLY.HEX", [["  ld a,(HANY)\n  or a\n  jp z,LFAIL     ; no data was loaded\n", ""]], hexRefused, /LOAD ENDONLY\.HEX: \?/);
 hexMutant("the checksum test removed loads BADSUM.HEX", [["  ld a,c\n  or a\n  jp z,HP1       ; zero sum: next record\n  scf\n  ret\n", "  jr HP1\n"]], hexRefused, /LOAD BADSUM\.HEX: \?/);
 hexMutant("the type test removed loads type 02h as data", [["  or a\n  scf\n  ret nz         ; other types refused\n", ""]], hexRefused, /LOAD TYPE2\.HEX: \?/);
-hexMutant("the per-record range test removed loads into 0800h-08FFh", [["  call RANGE     ; full destination span\n", "  add hl,de\n"]], hexRefused, /LOAD UNDER\.HEX: \?/);
+hexMutant("the per-record range test removed loads into 0800h-08FFh", [["  jp RANGE       ; full destination span\n", "  add hl,de\n  ret\n"]], hexRefused, /LOAD UNDER\.HEX: \?/);
 hexMutant("the end-record requirement removed loads NOEND.HEX", [["  jr z,HP1\n  scf\n", "  jr z,HP1       ; LF\n  cp $1A\n  ret z\n  scf\n"]], hexRefused, /LOAD NOEND\.HEX: \?/);
 hexMutant("the after-the-end test removed loads AFTEREND.HEX", [["  jr z,HE1\n  scf\n  ret\n", "  jr z,HE1       ; LF\n  jr HE1\n"]], hexRefused, /LOAD AFTEREND\.HEX: \?/);
 hexMutant("the lower-case path removed refuses the lower-case HELLO3.HEX", [["  cp 'a'\n  jr c,HEXD1     ; not lower case\n  sub $20        ; a to A\n", ""]], hexLoads, /LOAD LOWER\.HEX/);
