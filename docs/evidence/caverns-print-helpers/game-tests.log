@@ -1,0 +1,32 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+tecos ROM {"backend":"tas","phase":"caverns-loader","target":"tecos","origin":36864,"root":"/workspace/jhlagado/tec-os/programs/caverns","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":1763548}
+✔ rewritten listing uses ten-step numbering, lowercase variables, uppercase keywords and reproducible world data (51.49304ms)
+✔ rewrite matches baseline output, complete state and RNG across checkpoints and boundary cases (266311.088066ms)
+✔ long-input resource behaviour is recorded separately from gameplay equivalence (12696.835054ms)
+✔ a reader can insert a BASIC line in the ten-step gap and compile without renumbering (16584.312112ms)
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+tecos ROM {"backend":"tas","phase":"caverns-loader","target":"tecos","origin":36864,"root":"/workspace/jhlagado/tec-os/programs/caverns","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":1763548}
+✔ scenario launcher preserves public addresses and restores all monsters, objects, flags, counters and RNG (1700.419976ms)
+✔ real picked-up objects and encounter state survive exported file and fresh boot; RNG continuation matches (8896.994054ms)
+✔ missing, wrong-game, incompatible, truncated and corrupt scenarios are rejected before mutation (15390.076325ms)
+✔ all bundled review checkpoints load exactly in a new machine (24026.312401ms)
+✔ combat fatigue resets on travel and victory, but not blocked moves or missed swings (3285.86217ms)
+✔ checkpoint 8 vault treasures reach the hut through the key and intact bridge (3675.097814ms)
+✔ rope attachment is explicit, removable and usable both ways without a key or light (6320.918086ms)
+✔ waterfall does not operate remote doors; the drain hatch is a persistent physical shortcut (3783.710553ms)
+✔ external scenario writer refuses incomplete or out-of-domain states (4.115123ms)
+✔ launcher rejects damaged runtime footer and startup contracts (1.03819ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 365290.379499

@@ -1,0 +1,45 @@
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"glcd.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":4382306}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":256,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18677174}
+tecos ROM {"backend":"tas","phase":"program","target":"shell.asm","origin":512,"root":"/workspace/jhlagado/tec-os","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":18676848}
+{
+  "gameSha256": "c2ce4aecfae8a4439e0a7fb37d92b2427d8e5afb728e843caf0704fea5fd9fcd",
+  "fileBytes": 36736,
+  "applicationCodeAndData": 28731,
+  "runtimeCodeAndWorkspace": 7786,
+  "scalarCells": 88,
+  "entryJump": 3,
+  "footer": 10,
+  "padding": 118,
+  "sourceContextSites": 669,
+  "sourceContextBytes": 4683,
+  "dataBlocks": 46,
+  "encodedDATABytes": 7096,
+  "DATAstringBytes": 4499,
+  "otherLiteralTextBytes": 2996,
+  "remainingApplicationInstructionsAndInlineMetadata": 13956,
+  "flags": {
+    "math": 253,
+    "numericDisplay": 1,
+    "arraySelection": 1,
+    "valSelection": 0,
+    "stringSelection": 1,
+    "dataSelection": 1,
+    "inputSelection": 2,
+    "fnSelection": 0,
+    "mfSelection": 0,
+    "rndSelection": 1
+  },
+  "shellTPA": 42496,
+  "bareTPA": 46533,
+  "serviceOutput": "services\r\r\nSHELL 15\r\nA:SYSTEM>",
+  "unloadOutput": "unload\r\r\n\r\nA>"
+}
+ℹ tests 0
+ℹ suites 0
+ℹ pass 0
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 12032.3999

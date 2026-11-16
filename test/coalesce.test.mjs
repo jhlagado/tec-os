@@ -778,7 +778,7 @@ function onStarter(command, { logged = "B" } = {}) {
     assert.equal(file.length, 4096); assert.deepEqual(file, expectedSave, "all sixteen saved pages equal this machine's own pre-command TPA");
   } else {
     assert.match(text, /COM written\r\n/); assert.equal(file.length, 18560);
-    assert.equal(sha(file), "0678ddf43a348b0219f03fef2e198562f76d15bfe94b8d253cabb076e751364a", "the complete pinned compiler result");
+    assert.equal(sha(file), "dd26e6882d6b1c34c1a27709cdac961bd7da65e130c9f0d771f6ec3f7d9a883a", "the complete pinned compiler result");
   }
   for (const c of t.commits) {
     assert.ok(c.published.length <= file.length);

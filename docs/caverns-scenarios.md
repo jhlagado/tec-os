@@ -87,7 +87,7 @@ runtime's footer pointer are patched in the public image. The footer's image
 end moves with it, so normal startup and allocation account for the extra
 memory. The CPU stack reserve and all existing game code/data/cell addresses
 stay unchanged. The public game is neither padded nor enlarged. This build's
-development COM is 38,656 bytes versus the 38,272-byte public COM (record
+development COM is 36,992 bytes versus the 36,736-byte public COM (record
 padding included); future compiler sizes are recorded by the generator.
 `build/caverns/scenario-loader.json` records exact addresses, sizes and hashes.
 Full compiler symbols are in `test/caverns-basic.json`. Its explicit

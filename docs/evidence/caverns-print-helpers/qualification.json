@@ -1,8 +1,20 @@
 {
-  "status": "WIP candidate fixtures; compiler regression and release input pin refresh pending",
+  "status": "WIP: native game/editor/starter and unchanged I/O gates pass; compiler full regression and Viewer refresh pending",
   "compilerArtifactCommit": "7a0ddf3cc13eba874d5bcc276ac3f4d46358afdf",
   "sourceUnchanged": true,
   "COMBytes": 36736,
   "logicalImageBytes": 36618,
-  "scenarioFormat": "CVB2 unchanged; identities/checksums refreshed only"
+  "scenarioFormat": "CVB2 unchanged; identities/checksums refreshed only",
+  "gameScenarioComparisonTests": 14,
+  "integrationTests": 34,
+  "compilerWriteAndSpeedChecks": 3,
+  "differentialCommands": 480,
+  "differentialScenarios": 36,
+  "gameRoutePercentCycleChange": -1.2242768451110053,
+  "gameRouteGCs": {
+    "before": 5,
+    "after": 2
+  },
+  "shellTPA": 42496,
+  "dynamicSpaceBeforeInitialAllocations": 5110
 }

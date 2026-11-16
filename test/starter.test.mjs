@@ -123,7 +123,7 @@ function bounceRound(card) {
   assert.match(m.text(mark), /COM written\r\n/);
   const com = Buffer.from(volume(card, "A").read("BOUNCE.COM"));
   assert.equal(com.length, 18560, "BOUNCE.COM's length");
-  assert.equal(sha(com), "0678ddf43a348b0219f03fef2e198562f76d15bfe94b8d253cabb076e751364a", "BOUNCE.COM as the pinned BAZA compiles it");
+  assert.equal(sha(com), "dd26e6882d6b1c34c1a27709cdac961bd7da65e130c9f0d771f6ec3f7d9a883a", "BOUNCE.COM as the pinned BAZA compiles it");
   m.enqueueInput("bounce\r", "matrix");
   m.runUntil(() => (m.pumpInput(), !m.pending?.length), 50_000_000, "the command line");
   run(150_000_000);

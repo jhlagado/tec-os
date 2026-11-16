@@ -1,0 +1,24 @@
+tecos ROM {"backend":"tas","phase":"caverns-loader","target":"tecos","origin":36864,"root":"/workspace/jhlagado/tec-os/programs/caverns","runner":"3d16b30cb8ed7deccc0a8b0b04f1b961e29f5689","tstates":1763548}
+{
+  gameSha256: 'c2ce4aecfae8a4439e0a7fb37d92b2427d8e5afb728e843caf0704fea5fd9fcd',
+  launcherSha256: 'a469c4b157ca4a29c228e23bfca2546062bb63795dc4c1a017d1121fb38dd309',
+  launcherBytes: 36992,
+  patchBytes: 3,
+  loaderCodeBytes: 348,
+  loaderOrigin: 36864,
+  footerAddress: 37212,
+  imageEnd: 37222,
+  entry: 702,
+  resume: 991,
+  rng: 29353,
+  scenarioFiles: [
+    'CANDLE.CAV', 'CAVE.CAV',
+    'CHECK2.CAV', 'CHECK3.CAV',
+    'CHECK4.CAV', 'CHECK5.CAV',
+    'CHECK6.CAV', 'CHECK7.CAV',
+    'CHECK8.CAV', 'HUT.CAV',
+    'ROPE.CAV',   'SOUTH.CAV',
+    'TROLL.CAV',  'VAULT.CAV'
+  ],
+  cardSha256: '2e319b3895a652f37f5b51785a8e7212e5afddf0513651882d6dc3f31685d08f'
+}
