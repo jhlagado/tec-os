@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT, boot, program, volume } from "../test/lib/fixtures.mjs";
-import { CODES, SAY, chain, execSvc, owners, word } from "../test/lib/shell.mjs";
+import { CODES, LINEP, SAY, chain, execSvc, owners, word } from "../test/lib/shell.mjs";
 
 const EVBIG = (await program("evbig")).bytes;
 const CLOCK = 4_000_000;
@@ -20,6 +20,9 @@ const EXTRA = {
   "F.COM": CODES["F.COM"],
   "ONE.COM": CODES["ONE.COM"],
   "CHF.COM": chain("F &SAY"),
+  "LINE.COM": LINEP,
+  // LD C,0 then JP 0005h: an exit by BDOS 0.
+  "B0.COM": Uint8Array.from([0x0e, 0x00, 0xc3, 0x05, 0x00]),
   "CH.COM": chain("EVBIG !SAY"),
   "KEEP.SVC": await svc("KEEP", { V_KEEP: 1 }),
   "FIXED.SVC": await svc("FIXED", { FLAGS: 0 }),
@@ -86,7 +89,7 @@ function dangling(m, from, to) {
  * the program's exit, the first warm boot after it started at 0100h, to
  * that prompt.
  */
-function run(m, line, { re, max = 900_000_000, atStart } = {}) {
+function run(m, line, { re, max = 900_000_000, atStart, raw } = {}) {
   const start = m.cycles;
   let began = 0;
   let exit = 0;
@@ -94,7 +97,7 @@ function run(m, line, { re, max = 900_000_000, atStart } = {}) {
   const before = word(m, 6);
   const wboot = m.sym("WBOOTR");
   m.mark = m.output.length;
-  m.type(`${line}\r`);
+  m.type(raw ? line : `${line}\r`);
   const done = re ? () => m.waitingForInput() && re.test(m.text(m.mark)) : () => m.ready();
   m.runUntil(() => {
     if (m.pc === 0x100) {
@@ -150,6 +153,9 @@ const SCENARIOS = {
   cardout: ["the card taken out while the evicted program runs", {}, [["EVICT EVBIG", { atStart: (m) => m.swapCard(null), re: />$/ }]]],
   cardout2: ["the card taken out, the shell's blocks no longer in the cache", {}, ["COPY BAZA.COM B:X.COM", "COPY BAZA.RTL B:Y.RTL", ["EVICT EVBIG", { atStart: (m) => m.swapCard(null), re: /Bad Sector$/ }], ["", { re: />$/ }], ["EVBIG", { re: /Bad Sector$|>$/ }]]],
   code: ["the evicted command's return code after the services are back", {}, ["EVICT ONE", "EVICT F", "EVICT CHF"]],
+  ctrlc: ["^C at the evicted program's line input", { matrix: true }, [["EVICT LINE", { re: /\n$/ }], ["\x03", { raw: true }], "EVBIG"]],
+  bdos0: ["the evicted program ends by BDOS 0", { matrix: true }, ["EVICT B0", "EVBIG"]],
+  reset: ["a reset while the services are out", { matrix: true }, [["EVICT EVBIG", { atStart: (m) => m.reset() }], "EVBIG"]],
   chain: ["the evicted program chains a line by function 47", {}, ["EVICT CH"]],
 };
 const which = process.argv.slice(2);
