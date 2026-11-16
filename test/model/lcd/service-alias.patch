@@ -1,3 +1,91 @@
+diff -ruN a/src/bios.asm b/src/bios.asm
+--- a/src/bios.asm
++++ b/src/bios.asm
+@@ -391,6 +391,7 @@
+ ; saved state and returns A=0 success or
+ ; 1 error. DMA is needed only through
+ ; this call. Change BC/DE/HL and flags.
++; A full cache fill also changes I.
+ 
+ BREAD:
+   call CDI
+@@ -412,7 +413,7 @@
+ ; warm boot, remount or eviction. Falls
+ ; into BRET: A=0 success or 1 error,
+ ; interrupt state restored. Change
+-; BC/DE/HL/F.
++; BC/DE/HL/F, and I on a full pre-read.
+ 
+ BWRITE:
+   call CDI
+diff -ruN a/src/boot.asm b/src/boot.asm
+--- a/src/boot.asm
++++ b/src/boot.asm
+@@ -74,20 +74,6 @@
+ COLDNC:
+   ld hl,BANNER
+   call PUTS
+-
+-; No PICO console: the banner went to
+-; serial. Now ask for UC1, the LCD with
+-; the matrix keyboard. Without the
+-; keyboard the next console call falls
+-; back to TTY and writes that back.
+-
+-  ld hl,IOBYTE
+-  ld a,(hl)
+-  or a
+-  jr nz,COLDU
+-  ld (hl),CMUC1
+-
+-COLDU:
+   call MEMINIT
+ 
+ ; Cold card setup and DIAG retry reset
+diff -ruN a/src/cache.asm b/src/cache.asm
+--- a/src/cache.asm
++++ b/src/cache.asm
+@@ -183,7 +183,8 @@
+ ; tags it clean and returns Z with
+ ; A=line. Failure drops it and returns
+ ; NZ with A=line OR 1.
+-; Change BC/DE/HL/F.
++; Change BC/DE/HL/F. A full payload read
++; also sets I=0.
+ 
+ CFILL:
+   push af
+@@ -418,8 +419,9 @@
+ ; takes and fills a line first,
+ ; returning NZ on either failure. Only
+ ; success copies the record and returns
+-; A=0/Z. Change BC/DE/HL/F. BREAD/CDI
+-; supplies bank/interrupt discipline.
++; A=0/Z. Change BC/DE/HL/F. A full cache
++; fill also sets I=0. BREAD/CDI supplies
++; bank/interrupt discipline.
+ 
+ CREAD:
+   call CLOOK
+@@ -441,7 +443,8 @@
+ ; reading on a miss. C=1 permits
+ ; zero-fill even on a hit. Return Z on
+ ; success, NZ on error. Change
+-; AF/BC/DE/HL.
++; AF/BC/DE/HL. A full cache pre-read
++; sets I=0, even if a later write fails.
+ 
+ CWRBH:
+   push bc
+@@ -605,7 +608,7 @@
+ CKEY:
+   ld a,(CANY)
+   or a
+-  jr z,CPOUT     ; none held behind
++  jp z,CPOUT     ; none held behind
+   push de
+   call CDI
+   ld a,NLINES    ; no line excluded
 diff -ruN a/src/console.asm b/src/console.asm
 --- a/src/console.asm
 +++ b/src/console.asm
@@ -21,6 +109,86 @@ diff -ruN a/src/console.asm b/src/console.asm
  
  ; Copy seven vector words VPUTV..VFNV
  ; and geometry. Reset region and publish
+diff -ruN a/src/cpm/bdos.asm b/src/cpm/bdos.asm
+--- a/src/cpm/bdos.asm
++++ b/src/cpm/bdos.asm
+@@ -336,7 +336,8 @@
+   call CONSTAT   ; pending or BIOS ready
+   or a
+   ret z          ; A=0: zero
+-  jp GETCHAR     ; unechoed input
++  call GETCHAR   ; unechoed input
++  ret
+ 
+ ; Function 6 output: E is the byte.
+ ; Send it as C directly through BIOCOT.
+diff -ruN a/src/cpm/bdosfile.asm b/src/cpm/bdosfile.asm
+--- a/src/cpm/bdosfile.asm
++++ b/src/cpm/bdosfile.asm
+@@ -215,7 +215,8 @@
+ FNCLSE:
+   call CPOUT     ; data before directory
+   jp nz,BADSECT  ; card refused it
+-  jp CLOSEFCB
++  call CLOSEFCB
++  ret
+ 
+ ; Close the FCB at (PARAM) on the
+ ; current drive. If S2 bit 7 is set,
+@@ -331,15 +332,17 @@
+ 
+ SETSRCH:
+   call SRCHA
++  call FINDENT
++  ret            ; slot or FFh
+ 
+ ; Function 18: continue the saved search
+ ; from SRCHIDX with OPENMOD/SRCHFCB. DE
+ ; is not a new FCB argument. Return slot
+-; 0..3 or FFh through RETA. A new
+-; search falls into it.
++; 0..3 or FFh through RETA.
+ 
+ FNSRCHN:
+-  jp FINDENT     ; slot or FFh
++  call FINDENT
++  ret
+ 
+ ; Reject read-only drive/file access.
+ ; ROFCB checks CHKRO (error 2), then the
+@@ -429,7 +432,8 @@
+   inc hl
+   inc hl
+   ld (hl),0      ; S2 clear even if full
+-  jp MAKEFCB
++  call MAKEFCB
++  ret
+ 
+ ; Allocate an empty directory slot for
+ ; the FCB at (PARAM) on the current
+@@ -523,7 +527,8 @@
+   xor a          ; no new-block fill
+ 
+   ld (ZEROFIL),a
+-  jp WRITESEQ
++  call WRITESEQ
++  ret
+ 
+ ; Function 30: set attributes in every
+ ; current-user/name match. Require a
+diff -ruN a/src/cpm/bdosrec.asm b/src/cpm/bdosrec.asm
+--- a/src/cpm/bdosrec.asm
++++ b/src/cpm/bdosrec.asm
+@@ -162,7 +162,8 @@
+ ; result through RETA.
+ 
+ FNREADSQ:
+-  jp READSEQ     ; A result in A and HL
++  call READSEQ
++  ret            ; A result in A and HL
+ 
+ ; Read PARAM's FCB record CR into DMA.
+ ; Advance CR after a successful read.
 diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
 --- a/src/cpm/ccpcmd.asm
 +++ b/src/cpm/ccpcmd.asm
@@ -78,7 +246,7 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
  
  ; FIND PICO at minimum PICOWVER through
  ; TNFIND. Keep the width across
-@@ -177,52 +167,23 @@
+@@ -177,73 +167,40 @@
    ld l,a
    ld a,b
    call VHLJP     ; width call: A=B
@@ -117,6 +285,12 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
 -  jr z,CONLR     ; no width asked
 -  cp (hl)
 -  jr nz,CONLB    ; not this panel's
+-
+-CONLR:
+-  inc hl
+-  ld a,(hl)
+-  cp 4
+-  jr z,CONLOK    ; UC1 is an LCD
 +  ld (ARGSTRT),hl
 +  ld hl,LCDFCB
 +  ld de,CMDFCB
@@ -124,25 +298,53 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
 +  ldir
 +  jp SVCRUN
  
--CONLR:
--  inc hl
--  ld a,(hl)
--  cp 4
--  jr z,CONLOK    ; UC1 is an LCD
--
 -CONLB:
 -  jr USRBAD      ; the later refusals
--
++CONNW:
++  call ENDCHK    ; name-only suffix
+ 
 -CONLOK:
 -  ld b,CMUC1
 -  call CONFLD
 -  jr CONSHOW
-+CONNW:
-+  call ENDCHK    ; name-only suffix
+-
+-; Select B through CONFLD. UC1 first
+-; calls GLCLD to reuse/load a driver,
+-; with C=0 for the name GLCD. If it
+-; returns carry the CON field is not
+-; written and nothing has changed.
+-; CONHDR output triggers routing.
+-; Report resulting CONMOD and enter
+-; MAINLOOP. Cold PISTART skips PIVEC
+-; setup when CDMTX is clear.
++; Select B through CONFLD. UC1 calls
++; GLCLD to reuse/load GLCD. After a
++; returned failure, GLCLD copies
++; then-current CONMOD through B into CON
++; bits, keeping other IOBYTE fields. It
++; reads no pre-call snapshot. CONHDR
++; output triggers routing. Report
++; resulting CONMOD and enter MAINLOOP.
++; Cold PISTART skips PIVEC setup when
++; CDMTX is clear.
  
- ; Select B through CONFLD. UC1 calls
- ; GLCLD to reuse/load GLCD. After a
-@@ -298,8 +259,7 @@
+ CONFL:
+-  ld a,b
+-  cp CMUC1       ; UC1 wants a display
+-  jr nz,CONFL1
+-  call GLCLD     ; load/reuse driver
+-  jr c,CONSHOW   ; none: nothing changed
+-  ld b,CMUC1     ; GLCLD took B
+-
+-CONFL1:
+   call CONFLD    ; write requested mode
++  ld a,b
++  cp CMUC1       ; UC1 requires GLCD
++  call z,GLCLD   ; load/reuse driver
+ 
+ CONSHOW:
+   ld de,CONHDR   ; report after routing
+@@ -302,8 +259,7 @@
    jr CONMAIN
  
  USRBAD:
@@ -152,10 +354,34 @@ diff -ruN a/src/cpm/ccpcmd.asm b/src/cpm/ccpcmd.asm
  
  ; SAVE n NAME: write n 256-byte TPA
  ; pages from 0100h. Reject eight-bit
+diff -ruN a/src/cpm/ccpdir.asm b/src/cpm/ccpdir.asm
+--- a/src/cpm/ccpdir.asm
++++ b/src/cpm/ccpdir.asm
+@@ -25,9 +25,9 @@
+   ld (RCDDRV),a  ; the current drive
+   ld a,(hl)      ; after CD's blanks
+   or a
+-  jr z,RCDALONE  ; CD alone
++  jp z,RCDALONE  ; CD alone
+   cp '?'         ; a question?
+-  jr z,RCDLIST   ; CD ?
++  jp z,RCDLIST   ; CD ?
+   inc hl
+   ld a,(hl)      ; a drive's colon
+   dec hl         ; after one letter?
+@@ -271,7 +271,7 @@
+   ret nc         ; past D:
+   call RLBLADR
+   ld b,11
+-  jr RPUTTRIM    ; the label
++  jp RPUTTRIM    ; the label
+ 
+ ; Drive A as its letter and a colon.
+ 
 diff -ruN a/src/lcd.asm b/src/lcd.asm
 --- a/src/lcd.asm
 +++ b/src/lcd.asm
-@@ -1,45 +1,17 @@
+@@ -1,48 +1,17 @@
 -; HD44780 20 x 4 LCD: boot status, and
 -; the console for UC1 while no loaded
 -; driver holds it. Cold boot uses row 0
@@ -174,29 +400,33 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
 -  cp 4
 -  ret
 -
--; Console restore: the three mode
--; commands again, without the clear, so
--; the screen stays over a warm boot.
+-; Console restore: the mode commands and
+-; home again, without the clear, so the
+-; screen stays over a warm boot and a
+-; program's display shift does not.
 +; HD44780 20 x 4 status LCD.
 +; Cold boot uses row 0 for the banner
 +; and rows 1/2 for A: and B: labels.
  
 -LCVRST:
--  ld b,3
+-  ld b,4
 -  jr LCDI0
  
- ; Attempt LCDSEQ's four commands:
+-; Attempt LCDSEQ's five commands:
++; Attempt LCDSEQ's four commands:
  ; 8-bit, two-line, display on, cursor
- ; off, incrementing writes, clear.
+-; off, incrementing writes, home, clear.
+-; Nothing while the LCD is the console:
+-; a retry after a card error leaves its
+-; screen alone.
++; off, incrementing writes, clear.
  ; Changes AF, B, HL; returns B=0 for
--; cold boot's row-zero write. With the
--; LCD as the console this clears its
--; screen once, after the banner; the
--; console's own cursor does not move.
-+; cold boot's row-zero write.
+ ; cold boot's row-zero write.
  
  LCDINIT:
--  ld b,4
+-  call LCDCON
+-  ret z
+-  ld b,5
 -
 -; B commands from LCDSEQ's start.
 -
@@ -206,7 +436,7 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
  
  LCDI:
    ld a,(hl)
-@@ -66,45 +38,6 @@
+@@ -69,45 +38,6 @@
    pop bc
    ret
  
@@ -252,7 +482,7 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
  ; Output command A after the bounded
  ; wait, even if still busy. Keeps AF,
  ; BC, DE and HL.
-@@ -116,72 +49,6 @@
+@@ -119,72 +49,6 @@
    out (LCDCMD),a
    ret
  
@@ -325,7 +555,7 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
  ; Mark row 3 ROM-owned (CDWRD), then
  ; attempt HL's zero-terminated text.
  ; Returns B=3; otherwise as LCDROW.
-@@ -204,26 +71,33 @@
+@@ -207,26 +71,33 @@
  ; Starts at column 0; no 20-column
  ; clipping. Empty text sets the address.
  ; HL stops on zero; A=0, carry set, NZ.
@@ -369,6 +599,201 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
    inc hl
    jr LCDS
  
+@@ -235,7 +106,10 @@
+ ; failure leaves that row unchanged.
+ ; LINEBUF is scroll scratch: no console
+ ; call while its label text is live.
+-; Changes AF, BC, DE, HL, IX.
++; Changes AF, BC, DE, HL, IX. A physical
++; descriptor fill can also change I;
++; completed fills leave I=0, but reuse
++; and early failure need not.
+ 
+ LCDVOLS:
+   ld c,0
+diff -ruN a/src/loader.asm b/src/loader.asm
+--- a/src/loader.asm
++++ b/src/loader.asm
+@@ -861,40 +861,28 @@
+ 
+ ; Loaded display driver
+ 
+-; CON UC1 and CON GLCD, before the CON
+-; field is written. C is 0 for the name
+-; GLCD. A driver on UC1 serves CON UC1
+-; whatever it is; CON GLCD wants the
+-; GLCD's, CDGLC, and is refused through
+-; BADCMD when another display's driver
+-; holds UC1. With UC1 empty, load
+-; A:GLCD.SVC through SVCGO.
+-; Carry clear: UC1 is served. Carry set:
+-; the load failed, nothing is changed,
+-; and GLCD? goes on LCD row 3 unless the
+-; LCD is the console. Default BDOS disk
+-; errors may exit without returning.
++; CON UC1: load A:GLCD.SVC through SVCGO
++; unless CDGLC is already set.
++; Carry clear: installed. On returned
++; carry-set failure, restore the CON:
++; field to CONMOD and write GLCD? on LCD
++; row 3. Default BDOS disk errors may
++; exit without returning here.
+ ; Clobbers AF, BC, DE and HL.
+ 
+ GLCLD:
+-  ld a,(GLVEC+1)
+-  or a
+-  jr z,GLCL1     ; UC1 empty: load
+-  inc c
+-  dec c
+-  ret nz         ; CON UC1: as it is
+   ld a,(CONDEV)
+   and CDGLC
+-  ret nz         ; the GLCD's driver
+-  jp BADCMD      ; another display's
+-
+-GLCL1:
++  ret nz         ; loaded, carry clear
+   ld hl,GLCFCB   ; A:GLCD.SVC name
+   ld de,CMDFCB
+   ld bc,12       ; drive, name and type
+   ldir
+   call SVCGO
+   ret nc         ; installed
++  ld a,(CONMOD)  ; restore current mode
++  ld b,a
++  call CONFLD
+   ld hl,GLCMSG   ; GLCD? status word
+   jp LCDWRD
+ 
+@@ -919,19 +907,11 @@
+   ret c
+   ld a,(SVCHEAD)
+   ld hl,GLVEC+1  ; GLCD table page
+-  xor (hl)       ; not UC1's: carry clear
++  xor (hl)       ; not GLCD: carry clear
+   ret nz
+-  ld hl,(GLVEC)
+-  ld de,15
+-  add hl,de      ; the table's rows
+-  ld a,(hl)
+-  cp 8
+-  jr nz,SVCG1    ; not the GLCD's
+   ld hl,CONDEV
+   set 2,(hl)     ; CDGLC
+-
+-SVCG1:
+-  ld b,CMUC1     ; UC1 console mode
++  ld b,CMUC1     ; GLCD console mode
+   ld a,(CONMOD)  ; keep active PICO
+   dec a          ; CMCRT is 1
+   jr z,WRDCLR    ; clear status only
+diff -ruN a/src/sd.asm b/src/sd.asm
+--- a/src/sd.asm
++++ b/src/sd.asm
+@@ -389,11 +389,10 @@
+ ; Read SDLBA into 512 writable bytes at
+ ; HL. SDXB=0 or LATEXP selects the
+ ; buffer bank. Return A=0/Z or SDE*/NZ.
+-; Store A in SDERR. Change F/BC/DE/HL.
+-; HL starts an even page, as SDRBLK
+-; needs. Caller supplies safe
+-; bank/interrupt state. CRC bytes are
+-; consumed unchecked.
++; Store A in SDERR. Change F/BC/DE/HL. A
++; full payload sets I=0. Caller supplies
++; safe bank/interrupt state. CRC bytes
++; are consumed unchecked.
+ 
+ SDREAD:
+   push hl
+@@ -459,16 +458,10 @@
+ 
+ ; After start token with CS/CLK low,
+ ; read 512 bytes to writable HL with
+-; MOSI high. HL must be the start of an
+-; even page: the loop reads a byte a
+-; pass and ends when HL reaches the
+-; next even page, so any other buffer
+-; reads the wrong count. A cache line
+-; is such a buffer, and the build
+-; checks the diagnostics' three.
+-; SDXB=0/LATEXP selects LATCHV OR SDXB
+-; view. Return HL advanced and CLK low.
+-; Change AF/BC/DE. I is not used.
++; MOSI high. SDXB=0/LATEXP selects
++; LATCHV OR SDXB view. I counts 256
++; two-byte passes. Return HL advanced,
++; I=0 and CLK low. Change AF/BC/DE.
+ ; Restore LATCHV before RET. The mapped
+ ; loop uses no stack. Caller supplies
+ ; interrupt protection.
+@@ -481,6 +474,8 @@
+   out (SYSLAT),a
+   ld c,SDIO
+   ld de,$0103
++  xor a
++  ld i,a
+ 
+ SDRB2:
+   out (c),d      ; bit 7: CLK low, the
+@@ -525,10 +520,52 @@
+   rla
+   rl b
+   ld (hl),b
+-  inc l          ; 256 bytes a page
+-  jp nz,SDRB2
+-  inc h          ; the buffer's second
+-  bit 0,h        ; page is the odd one
++  inc hl
++  out (c),d      ; second byte: bit 7
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  out (c),d      ; bit 6
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  out (c),d      ; bit 5
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  out (c),d      ; bit 4
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  out (c),d      ; bit 3
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  out (c),d      ; bit 2
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  out (c),d      ; bit 1
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  out (c),d      ; bit 0
++  out (c),e
++  in a,(c)
++  rla
++  rl b
++  ld (hl),b
++  inc hl
++  ld a,i
++  dec a
++  ld i,a
+   jp nz,SDRB2
+   out (c),d
+   ld a,(LATCHV)
 diff -ruN a/src/services.asm b/src/services.asm
 --- a/src/services.asm
 +++ b/src/services.asm
@@ -420,7 +845,23 @@ diff -ruN a/src/services.asm b/src/services.asm
 diff -ruN a/src/tables.asm b/src/tables.asm
 --- a/src/tables.asm
 +++ b/src/tables.asm
-@@ -50,18 +50,6 @@
+@@ -41,30 +41,15 @@
+ KBSHIFT:
+   DB "<_>?)!@#$%^&*( : +"
+ 
+-; LCD initialisation commands: 8-bit and
+-; two lines, display on with no cursor,
+-; addresses rising, home, clear. The
+-; console's restore sends all but the
+-; clear. Then the row-address commands
+-; for caller-valid rows 0-3.
++; LCD initialisation commands and
++; row-address commands for caller-valid
++; rows 0-3.
+ 
+-LCDSEQ: DB $38,$0C,$06,$02,$01
++LCDSEQ: DB $38,$0C,$06,$01
+ 
  LCDROWS:
    DB $80,$C0,$94,$D4
  
@@ -439,7 +880,7 @@ diff -ruN a/src/tables.asm b/src/tables.asm
  ; Built-in command records: keyword
  ; bytes, NUL, then LE handler word. A
  ; zero at the next keyword ends the
-@@ -148,6 +136,7 @@
+@@ -151,6 +136,7 @@
  ; three-byte type.
  
  GLCFCB: DB 1,"GLCD    SVC"
@@ -447,6 +888,44 @@ diff -ruN a/src/tables.asm b/src/tables.asm
  STFCB: DB 1,"STARTUP CMD"
  
  ; Initial stack room for services, in
+diff -ruN a/src/term.asm b/src/term.asm
+--- a/src/term.asm
++++ b/src/term.asm
+@@ -74,9 +74,8 @@
+ 
+ ; Control byte A=C: CR sets column 0, LF
+ ; moves down without changing column.
+-; BS moves left, from a pending wrap
+-; too, and from column 0 to the end of
+-; the row above.
++; BS moves left unless column is 0,
++; including from pending wrap.
+ ; HT reaches the next 8-column stop or
+ ; last column. FF clears and homes but
+ ; keeps region/attributes. ESC starts
+@@ -117,22 +116,7 @@
+ 
+ VTBS1:
+   or a
+-  jr z,VTBSW
+-  dec a
+-  jr VTCOL
+-
+-; At the left edge: to the last column
+-; of the row above, so that a line that
+-; wrapped is erased back across the
+-; wrap. On the top row it stays.
+-
+-VTBSW:
+-  ld hl,VROW
+-  ld a,(hl)
+-  or a
+   ret z
+-  dec (hl)
+-  ld a,(VWID)
+   dec a
+   jr VTCOL
+ 
 diff -ruN a/src/text.asm b/src/text.asm
 --- a/src/text.asm
 +++ b/src/text.asm
@@ -469,26 +948,104 @@ diff -ruN a/src/text.asm b/src/text.asm
 diff -ruN a/src/video.asm b/src/video.asm
 --- a/src/video.asm
 +++ b/src/video.asm
-@@ -18,21 +18,11 @@
- VIDINIT:
-   call TMSINIT   ; Z: both patterns
-                  ; match.
--  jr nz,VIDLCD
-+  ret nz
-   ld hl,CONDEV
-   set 1,(hl)     ; CDTMS.
-   jp PISTART
+@@ -161,14 +161,6 @@
+   ld (hl),e
+   inc hl
+   ld (hl),d
+-
+-; If this mode is in effect, as UC1 is
+-; while the LCD serves it, choose the
+-; console again at the next call, so
+-; the new table takes it.
+-
+-  ld a,l
+-  call VIDHF1
+   ld hl,LINEBUF
+   or a
+   ret
+diff -ruN a/src/vol.asm b/src/vol.asm
+--- a/src/vol.asm
++++ b/src/vol.asm
+@@ -36,7 +36,8 @@
+ ; drive A mounted, or an ME* code/NZ
+ ; with DRVTAB, DRVIDX and BUFOK clear.
+ ; Use MNBUF/MNT* and the shared cache.
+-; Change AF/BC/DE/HL/IX.
++; Change AF/BC/DE/HL/IX. Full
++; metadata reads also set I=0.
  
--; No PICO: ask for UC1, the LCD with the
--; matrix keyboard. Without the keyboard
--; the first console call falls back to
--; TTY and writes that back.
--
--VIDLCD:
--  ld a,CMUC1
--  ld (IOBYTE),a
--  ret
--
- ; Character and clear calls through the
- ; selected driver. No local pointer,
- ; coordinate or claim check.
+ MOUNT:
+   call UNMOUNT
+@@ -369,8 +370,9 @@
+ ; Otherwise refill it from the card.
+ ; Return A=0/Z with MNTLN/MNTCB set, or
+ ; NZ with MNTCB=FFh. Change AF/BC/DE/HL.
+-; Caller supplies safe bank/stack state
+-; and maskable exclusion. DI does not
++; A full payload fill sets I=0. Caller
++; supplies safe bank/stack state and
++; maskable exclusion. DI does not
+ ; exclude NMI.
+ 
+ MNBLK:
+@@ -502,9 +504,10 @@
+ ; shared MNBUF. Return A=0/Z, carry
+ ; clear and IX=MNBUF, or NZ without a
+ ; valid IX result on read failure.
+-; Change AF/BC/DE/HL. Later metadata
+-; reads, sums or MNBUF use invalidate
+-; the descriptor contents. Block 0 slots
++; Change AF/BC/DE/HL. A full metadata
++; fill sets I=0. Later metadata reads,
++; sums or MNBUF use invalidate the
++; descriptor contents. Block 0 slots
+ ; 1..15 hold indices 0..14, then sixteen
+ ; descriptors per block: index+1 is
+ ; block*16+slot; DSCBLK0 must be 15.
+diff -ruN a/src/volsvc.asm b/src/volsvc.asm
+--- a/src/volsvc.asm
++++ b/src/volsvc.asm
+@@ -7,8 +7,8 @@
+ ; Success retains slots and TPA.
+ ; RSLIDX/RSLTMP are scratch. Cold caller
+ ; supplies maskable exclusion. Change
+-; AF/BC/DE/HL/IX. No public A/flag
+-; result.
++; AF/BC/DE/HL/IX. Full metadata reads
++; set I=0. No public A/flag result.
+ 
+ RESEL:
+ 
+@@ -158,8 +158,9 @@
+ ; writable bytes. Return A=0/Z, carry
+ ; clear, or A=TNEBAD/carry with Z
+ ; unspecified. Keep IY. Other registers
+-; and alternates may change. Stack
+-; bound: 24 bytes below return, dispatch
++; and alternates may change. Full
++; metadata reads set I=0. Stack bound:
++; 24 bytes below return, dispatch
+ ; included. Mount/unmount call public
+ ; BDOS with no active caller BDOS call.
+ 
+@@ -366,6 +367,8 @@
+ ; errors. Change AF/HL and mapping
+ ; scratch. CWRITE remaps the current
+ ; BIOS request, not arbitrary SDLBA.
++; This write-only path leaves
++; I unchanged.
+ 
+ VFLUSH:
+   push bc
+@@ -414,8 +417,9 @@
+ ; drive or FFh for none. Range failure
+ ; gives A=FFh/NZ. Read failure gives NZ
+ ; without a valid IX result. Keep BC/DE.
+-; Change AF/HL/IX and MNTI/MNBUF. The
+-; descriptor lasts until later scratch
++; Change AF/HL/IX and MNTI/MNBUF. A full
++; metadata fill sets I=0. The descriptor
++; lasts until later metadata scratch
+ ; use. No rollback or
+ ; reentrancy protection.
+ 

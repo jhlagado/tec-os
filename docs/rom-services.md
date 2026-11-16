@@ -5,7 +5,7 @@ at `C008h`, to 17 *numbered services*: 9 *hardware services* in `src/services.as
 the volumes', the display drivers' hook, the registry's, the font's and the shell hook's. `test/hwsvc.test.mjs`
 calls each hardware service with its arguments in the registers and measures its stack. `DEMO.COM`, which `TAS DEMO` builds from the starter card's `DEMO.ASM`, shows them.
 
-The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,016 bytes (`tecos`) and has 368 free,
+The ROM is 16 KiB. <!-- media: rom-space -->It holds 16,164 bytes (`tecos`) and has 220 free,
 in one gap after the code at the end of the ROM.<!-- end --> This
 document sets out what earns a place in it, the entry point that
 gives programs the TEC-1G's hardware, and what belongs on the card instead.
@@ -148,6 +148,14 @@ That46-byte allocation is distinct from the published per-call stack bounds.
 A program using extra stack state sets up its own stack first. The routines
 run with the caller's interrupt state; an interrupt handler must not print
 through the console.
+
+A table of four rows is taken to be a character LCD's. While it is the console
+the ROM writes no banner, drive label or status word to the LCD, the `LCD`
+service (2) returns `TNENODV` with nothing written, and `CON LCD` selects it. A
+display of four rows that is not the LCD must not register as four.
+
+A table registered while `UC1:` is the mode in effect takes the console at the
+next console call.
 
 `TNDRVR` returns `LINEBUF`'s address in HL, where the row routines read and write a
 row, with A = 0 and carry clear. It returns `TNEBAD` with carry and nothing changed for
@@ -301,7 +309,7 @@ Programs:
 
 ## Next in the ROM
 
-For the <!-- media: rom-free -->368<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
+For the <!-- media: rom-free -->220<!-- end --> bytes left at the end of the ROM: a resident monitor with Intel HEX
 loading. The integer arithmetic once planned here was settled by what calls
 it: a 16 ÷ 16 divide (`DIV16`) is in the BDOS, where it splits record
 numbers into track and sector, and `PUTDEC` uses it; a multiply, a 32 ÷ 16

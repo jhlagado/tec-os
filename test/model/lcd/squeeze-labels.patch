@@ -1,7 +1,7 @@
 diff -ruN a/src/boot.asm b/src/boot.asm
 --- a/src/boot.asm
 +++ b/src/boot.asm
-@@ -110,7 +110,6 @@
+@@ -124,7 +124,6 @@
    ld bc,BIOSLEN
    ldir
    call SHOWVOL
@@ -12,7 +12,7 @@ diff -ruN a/src/boot.asm b/src/boot.asm
 diff -ruN a/src/lcd.asm b/src/lcd.asm
 --- a/src/lcd.asm
 +++ b/src/lcd.asm
-@@ -227,41 +227,6 @@
+@@ -230,38 +230,6 @@
    inc hl
    jr LCDS
  
@@ -21,10 +21,7 @@ diff -ruN a/src/lcd.asm b/src/lcd.asm
 -; failure leaves that row unchanged.
 -; LINEBUF is scroll scratch: no console
 -; call while its label text is live.
--; Changes AF, BC, DE, HL, IX. A physical
--; descriptor fill can also change I;
--; completed fills leave I=0, but reuse
--; and early failure need not.
+-; Changes AF, BC, DE, HL, IX.
 -
 -LCDVOLS:
 -  ld c,0
