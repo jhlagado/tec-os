@@ -10,9 +10,8 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { createContainer } from "../tools/lib/container.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
-import { ROOT, TEST_CLOCK, abiDeclarations, boot, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
+import { PUT_COM, ROOT, TEST_CLOCK, abiDeclarations, boot, service, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const SAY = Uint8Array.from([0x1e, 0x43, 0x0e, 0x02, 0xcd, 0x05, 0x00, 0xc9]); // prints C
@@ -27,7 +26,7 @@ async function machine(files = {}, { shell = false, ...opts } = {}) {
   return boot(image, opts);
 }
 
-for (const name of ["CCP", "EXIT"]) {
+for (const name of ["CCP", "EXIT", "SAVE"]) {
   test(`${name} says so with no file, and runs a file of that name`, async () => {
     const none = await machine();
     assert.match(none.command(name), new RegExp(`${name}\\?`));
@@ -107,9 +106,9 @@ test("NAME.DRV runs NAME.COM if there is one, and says NAME.DRV? only with no pr
 });
 
 test("REN takes one drive from either name, and a name on another drive is refused", async () => {
-  const m = await machine({ "SAME.DAT": SAY });
-  m.command("SAVE 1 B:OLD.COM");
-  m.command("SAVE 1 B:X.COM");
+  const m = await machine({ "SAME.DAT": SAY, "PUT.COM": PUT_COM });
+  m.command("PUT 1 B:OLD.COM");
+  m.command("PUT 1 B:X.COM");
   assert.match(m.command("REN X.COM=B:OLD.COM"), /FILE EXISTS/);
   assert.match(m.command("DIR B:"), /OLD\.COM[\s\S]*2 files/);
   m.command("REN Y.COM=B:OLD.COM");
@@ -125,8 +124,8 @@ test("REN takes one drive from either name, and a name on another drive is refus
 });
 
 test("ERA *.* answered with - erases nothing, and the Return after it ends the answer (KE-149)", async () => {
-  const m = await machine();
-  m.command("SAVE 1 B:KEEP.COM");
+  const m = await machine({ "PUT.COM": PUT_COM });
+  m.command("PUT 1 B:KEEP.COM");
   const from = m.output.length;
   m.type("ERA B:*.*\r");
   m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
@@ -140,8 +139,8 @@ test("ERA *.* answered with - erases nothing, and the Return after it ends the a
 });
 
 test("ERA *.* answered with Return alone erases nothing and takes no second Return", async () => {
-  const m = await machine();
-  m.command("SAVE 1 B:KEEP.COM");
+  const m = await machine({ "PUT.COM": PUT_COM });
+  m.command("PUT 1 B:KEEP.COM");
   const from = m.output.length;
   m.type("ERA B:*.*\r");
   m.expect(/ALL \(Y\/N\)\?/, { from, maxCycles: 100_000_000 });
@@ -161,12 +160,12 @@ test("ERA *.* answered with Return alone erases nothing and takes no second Retu
 const code = (m) => word(m, m.sym("PRGCODE"));
 
 test("SH11 DEL is ERA by another name: it erases a file, and a file pattern, as ERA does", async () => {
-  const m = await machine({}, { shell: true });
-  for (const n of ["ONE.COM", "TWO.COM", "KEEP.DAT"]) m.command(`SAVE 1 B:${n}`);
+  const m = await machine({ "PUT.COM": PUT_COM }, { shell: true });
+  for (const n of ["ONE.COM", "TWO.COM", "KEEP.DAT"]) m.command(`PUT 1 B:${n}`);
   assert.equal(m.command("DEL B:ONE.COM"), "DEL B:ONE.COM\r\r\nA:SYSTEM>");
   assert.equal(m.command("ERA B:TWO.COM"), "ERA B:TWO.COM\r\r\nA:SYSTEM>");
   assert.match(m.command("DIR /W B:"), /^DIR \/W B:\r\r\nKEEP\.DAT *\r\n1 file,/);
-  for (const n of ["ONE.COM", "TWO.COM"]) m.command(`SAVE 1 B:${n}`);
+  for (const n of ["ONE.COM", "TWO.COM"]) m.command(`PUT 1 B:${n}`);
   m.command("DEL B:*.COM"); // a pattern short of *.* asks nothing
   assert.match(m.command("DIR /W B:"), /^DIR \/W B:\r\r\nKEEP\.DAT *\r\n1 file,/);
   assert.equal(m.command("DEL B:NONE.COM"), m.command("ERA B:NONE.COM").replace("ERA", "DEL"), "a missing file, the same answer");
@@ -174,8 +173,8 @@ test("SH11 DEL is ERA by another name: it erases a file, and a file pattern, as 
 });
 
 test("SH11 DEL *.* asks ALL (Y/N)? as ERA *.* does: N keeps the files, Y erases them", async () => {
-  const m = await machine({}, { shell: true });
-  m.command("SAVE 1 B:KEEP.COM");
+  const m = await machine({ "PUT.COM": PUT_COM }, { shell: true });
+  m.command("PUT 1 B:KEEP.COM");
   const ask = (line, answer) => {
     const from = m.output.length;
     m.type(`${line}\r`);
@@ -234,31 +233,6 @@ test("FNPRINT ends at $", async () => {
   assert.doesNotMatch(out, /CD/);
 });
 
-test("SAVE refuses a count past 255 as any bad count, whichever doubling carries (KE-174)", async () => {
-  const m = await machine();
-  for (const n of [320, 640, 256, 999]) {
-    assert.match(m.command(`SAVE ${n} B:BIG.COM`), new RegExp(`\\r\\n${n}\\?\\r\\n`), `SAVE ${n} refused`);
-    assert.match(m.command("DIR B:"), /NO FILE/, `SAVE ${n} wrote nothing`);
-  }
-});
-
-test("SAVE on a full disk closes the file before NO SPACE: the records written stay in the directory, as COPY's do (KE-201)", () => {
-  const image = createContainer([
-    { geometry: "G1M", label: "SYSTEM", mount: "A" },
-    { geometry: "G1M", label: "DATA", mount: "C" },
-  ]);
-  const c = volume(image, "C");
-  c.write("FILL.DAT", new Uint8Array(c.freeBytes() - 4096));
-  const room = c.freeBytes();
-  const m = boot(image);
-  for (let a = 0x100; a < 0x100 + 32 * 256; a += 1) m.write(a, (a * 7 + (a >> 8)) & 0xff);
-  const tpa = Uint8Array.from({ length: room }, (_, i) => m.read(0x100 + i));
-  assert.match(m.command("SAVE 32 C:X.COM"), /NO SPACE/);
-  m.command("C:");
-  assert.deepEqual(volume(m.sdImage, "C").read("X.COM"), tpa, "the records written, from 0100h");
-  assert.deepEqual(m.violations, []);
-});
-
 // --- The minimal ROM CCP ---------------------------------------------------
 
 const ABI_BASE = "d0e4087d17a2d6761ce7f9e4d1d23472a6142d4b6a6b5b9fd0b5a443f87fc949"; // abi.inc's declarations before the shell hook, its comment lines left out
@@ -273,11 +247,11 @@ test("SH1 rom figure", () => {
   assert.equal(second.hash, first.hash, "two builds, one image");
   const { used, free, regions } = first.rom;
   // The combined integrity build keeps the shared stack allocation.
-  assert.ok(used <= 16016, `${used} used, the combined integrity ceiling 16,016`);
-  assert.ok(free >= 368, `${free} free, at least 368`);
+  assert.ok(used <= 15856, `${used} used, the combined integrity ceiling 15,856`);
+  assert.ok(free >= 528, `${free} free, at least 528`);
   const gaps = regions.filter((r) => r.label === "free");
   assert.deepEqual(gaps.map((g) => g.end), [0x10000], "one contiguous free tail");
-  assert.ok(first.ram.tpa.bytes >= 47237, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
+  assert.ok(first.ram.tpa.bytes >= 47240, `TPA ${first.ram.tpa.bytes} with nothing loaded`);
   // abi.inc differs from before the hook by TNSHELL's block and TNCOUNT alone.
   const abi = readText("src/abi.inc");
   const block = abi.match(/; SHELL: [\s\S]*?\nTNSHELL EQU 16\n\n/)[0];
@@ -293,17 +267,27 @@ test("SH1 keytab", () => {
     for (; rom[i]; i += 1) n += String.fromCharCode(rom[i]);
     names.push(n);
   }
-  assert.deepEqual(names, ["CD", "DIR", "TYPE", "ERA", "REN", "SAVE", "USER", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
+  assert.deepEqual(names, ["CD", "DIR", "TYPE", "ERA", "REN", "USER", "CON", "UNLOAD"], "KEYTAB holds the minimal CCP's built-ins and nothing else");
+});
+
+test("SAVE is no built-in: SAVE 1 X.COM says SAVE?, fails and writes no file, at the ROM's prompt and at the shell's", async () => {
+  for (const shell of [false, true]) {
+    const m = await machine({}, { shell });
+    assert.match(m.command("SAVE 1 X.COM"), /^SAVE 1 X\.COM\r\r\nSAVE\?\r\n/, shell ? "the shell" : "the ROM");
+    assert.equal(code(m), 0xff00, "a failed command");
+    assert.equal(volume(m.sdImage, "A").find("X.COM"), undefined, "no file");
+    assert.deepEqual(m.violations, []);
+  }
 });
 
 const LONG = Buffer.from(Array.from({ length: 40 }, (_, i) => `line ${i}\r\n`).join("") + "\x1a", "latin1");
 
 test("SH2 no pause", async () => {
-  const m = await machine({ "L.TXT": LONG }, { matrix: true, tms: true, width: 40 });
+  const m = await machine({ "L.TXT": LONG, "PUT.COM": PUT_COM }, { matrix: true, tms: true, width: 40 });
   const t = m.command("TYPE L.TXT", { maxCycles: 900_000_000 });
   assert.doesNotMatch(t, /\[more\]/, "TYPE lists without pausing");
   assert.equal((t.match(/line \d+/g) ?? []).length, 40);
-  for (let i = 0; i < 30; i += 1) m.command(`SAVE 0 F${i}.COM`);
+  for (let i = 0; i < 30; i += 1) m.command(`PUT 0 F${i}.COM`);
   assert.doesNotMatch(m.command("DIR", { maxCycles: 900_000_000 }), /\[more\]/, "DIR too");
   assert.equal(m.read(m.sym("VWID")), 40);
 });
