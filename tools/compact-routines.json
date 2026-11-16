@@ -949,7 +949,20 @@
     "RECB",
     "PUTNT",
     "PUTNUM",
-    "DIV10"
+    "DIV10",
+    "DRNAME",
+    "DRTRIM",
+    "DRPART",
+    "DAGINIT",
+    "DAGKEY",
+    "DAGREC",
+    "DAGVALID",
+    "DAGBAD",
+    "DAGFIND",
+    "DAGMAX",
+    "DAGADD",
+    "DAGGET",
+    "DAGWILD"
   ],
   "src/cpm/ccpdir.asm": [
     "RCMDCD",
