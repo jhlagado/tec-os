@@ -47,8 +47,8 @@ EVI1:
   jr z,TOBADCMD  ; one too many
   call EVSLOT    ; keeps BC
   push bc
-  push hl        ; its line's start
-  ex de,hl       ; DE = the line
+  push hl        ; its slot
+  ex de,hl       ; DE = the slot
   ld h,b
   ld l,DFLG
   bit 0,(hl)
@@ -57,26 +57,11 @@ EVI1:
   ld a,(hl)      ; its drive's letter
   ld (de),a
   inc de
-  ld a,':'
-  ld (de),a
-  inc de
   ld l,DNAM      ; the name it was
-  ld b,8         ; installed by
-
-EVI2:
-  ld a,(hl)
-  cp SPACE
-  jr z,EVI3      ; a shorter name
-  ld (de),a
-  inc hl
-  inc de
-  djnz EVI2
-
-EVI3:
-  ld hl,EVTYPE   ; .SVC and the zero
-  ld bc,5
+  ld bc,8        ; installed by
   ldir
   pop hl
+  call EVLINE    ; its line
   call CMDPARSE  ; is its file there?
   call DOSSEQ
   DB 15*2+0      ; 15: CMDFCB
@@ -110,10 +95,11 @@ EVIGO:
 ; EVMAX-1. Keeps BC. Changes AF and DE.
 
 EVSLOT:
+  ld e,a
   add a,a
   add a,a
   add a,a
-  add a,a        ; EVSLEN is 16
+  add a,e        ; EVSLEN is 9
   ld e,a
   ld d,0
   ld hl,EVREC
@@ -133,6 +119,34 @@ CMDUNL:
 
 TOBADCMD:
   jp BADCMD
+
+; The slot at HL as a line in LOADBUF:
+; d:NAME.SVC and a zero. Returns HL =
+; LOADBUF.
+
+EVLINE:
+  ld de,LOADBUF
+  ldi            ; the drive's letter
+  ld a,':'
+  ld (de),a
+  inc de
+  ld b,8
+
+EVL1:
+  ld a,(hl)
+  cp SPACE
+  jr z,EVL2      ; a shorter name
+  ld (de),a
+  inc hl
+  inc de
+  djnz EVL1
+
+EVL2:
+  ld hl,EVTYPE   ; .SVC and the zero
+  ld bc,5
+  ldir
+  ld hl,LOADBUF
+  ret
 
 ; Retry the next console name. Input DE
 ; is the differing table byte, C
