@@ -235,10 +235,7 @@ LCDS:
 ; failure leaves that row unchanged.
 ; LINEBUF is scroll scratch: no console
 ; call while its label text is live.
-; Changes AF, BC, DE, HL, IX. A physical
-; descriptor fill can also change I;
-; completed fills leave I=0, but reuse
-; and early failure need not.
+; Changes AF, BC, DE, HL, IX.
 
 LCDVOLS:
   ld c,0

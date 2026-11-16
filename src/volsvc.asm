@@ -7,8 +7,8 @@
 ; Success retains slots and TPA.
 ; RSLIDX/RSLTMP are scratch. Cold caller
 ; supplies maskable exclusion. Change
-; AF/BC/DE/HL/IX. Full metadata reads
-; set I=0. No public A/flag result.
+; AF/BC/DE/HL/IX. No public A/flag
+; result.
 
 RESEL:
 
@@ -158,9 +158,8 @@ RSEQ2:
 ; writable bytes. Return A=0/Z, carry
 ; clear, or A=TNEBAD/carry with Z
 ; unspecified. Keep IY. Other registers
-; and alternates may change. Full
-; metadata reads set I=0. Stack bound:
-; 24 bytes below return, dispatch
+; and alternates may change. Stack
+; bound: 24 bytes below return, dispatch
 ; included. Mount/unmount call public
 ; BDOS with no active caller BDOS call.
 
@@ -367,8 +366,6 @@ VSIN:
 ; errors. Change AF/HL and mapping
 ; scratch. CWRITE remaps the current
 ; BIOS request, not arbitrary SDLBA.
-; This write-only path leaves
-; I unchanged.
 
 VFLUSH:
   push bc
@@ -417,9 +414,8 @@ VCL1:
 ; drive or FFh for none. Range failure
 ; gives A=FFh/NZ. Read failure gives NZ
 ; without a valid IX result. Keep BC/DE.
-; Change AF/HL/IX and MNTI/MNBUF. A full
-; metadata fill sets I=0. The descriptor
-; lasts until later metadata scratch
+; Change AF/HL/IX and MNTI/MNBUF. The
+; descriptor lasts until later scratch
 ; use. No rollback or
 ; reentrancy protection.
 

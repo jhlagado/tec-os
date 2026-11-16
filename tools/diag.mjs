@@ -151,6 +151,8 @@ export async function buildDiag() {
   };
   check(at("VARS") === VARS, "variables must start at 1000h");
   check(at("VARSEND") <= LOAD, `variables end at ${hex(at("VARSEND"))}, past 3FFFh`);
+  // src/sd.asm's SDRBLK reads from the start of an even page to the next.
+  for (const n of ["BUFA", "BUFB", "BUFS"]) check(at(n) % 0x200 === 0, `${n} must start an even page for SDRBLK, not at ${hex(at(n))}`);
   check(at("START") === LOAD, "START must be at 4000h");
   check(at("PROGEND") === r.end, "PROGEND must end the image");
   check(at("PROGEND") < CODE_TOP - 1, `code and tables end at ${hex(at("PROGEND"))}, past 7FFEh`);

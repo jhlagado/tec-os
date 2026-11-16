@@ -183,8 +183,7 @@ CLADR:
 ; tags it clean and returns Z with
 ; A=line. Failure drops it and returns
 ; NZ with A=line OR 1.
-; Change BC/DE/HL/F. A full payload read
-; also sets I=0.
+; Change BC/DE/HL/F.
 
 CFILL:
   push af
@@ -419,9 +418,8 @@ CREC:
 ; takes and fills a line first,
 ; returning NZ on either failure. Only
 ; success copies the record and returns
-; A=0/Z. Change BC/DE/HL/F. A full cache
-; fill also sets I=0. BREAD/CDI supplies
-; bank/interrupt discipline.
+; A=0/Z. Change BC/DE/HL/F. BREAD/CDI
+; supplies bank/interrupt discipline.
 
 CREAD:
   call CLOOK
@@ -443,8 +441,7 @@ CRD1:
 ; reading on a miss. C=1 permits
 ; zero-fill even on a hit. Return Z on
 ; success, NZ on error. Change
-; AF/BC/DE/HL. A full cache pre-read
-; sets I=0, even if a later write fails.
+; AF/BC/DE/HL.
 
 CWRBH:
   push bc

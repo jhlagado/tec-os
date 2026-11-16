@@ -389,10 +389,11 @@ TOSETARG:
 ; Read SDLBA into 512 writable bytes at
 ; HL. SDXB=0 or LATEXP selects the
 ; buffer bank. Return A=0/Z or SDE*/NZ.
-; Store A in SDERR. Change F/BC/DE/HL. A
-; full payload sets I=0. Caller supplies
-; safe bank/interrupt state. CRC bytes
-; are consumed unchecked.
+; Store A in SDERR. Change F/BC/DE/HL.
+; HL starts an even page, as SDRBLK
+; needs. Caller supplies safe
+; bank/interrupt state. CRC bytes are
+; consumed unchecked.
 
 SDREAD:
   push hl
@@ -458,10 +459,16 @@ SDRNG:
 
 ; After start token with CS/CLK low,
 ; read 512 bytes to writable HL with
-; MOSI high. SDXB=0/LATEXP selects
-; LATCHV OR SDXB view. I counts 256
-; two-byte passes. Return HL advanced,
-; I=0 and CLK low. Change AF/BC/DE.
+; MOSI high. HL must be the start of an
+; even page: the loop reads a byte a
+; pass and ends when HL reaches the
+; next even page, so any other buffer
+; reads the wrong count. A cache line
+; is such a buffer, and the build
+; checks the diagnostics' three.
+; SDXB=0/LATEXP selects LATCHV OR SDXB
+; view. Return HL advanced and CLK low.
+; Change AF/BC/DE. I is not used.
 ; Restore LATCHV before RET. The mapped
 ; loop uses no stack. Caller supplies
 ; interrupt protection.
@@ -474,8 +481,6 @@ SDRBLK:
   out (SYSLAT),a
   ld c,SDIO
   ld de,$0103
-  xor a
-  ld i,a
 
 SDRB2:
   out (c),d      ; bit 7: CLK low, the
@@ -520,52 +525,10 @@ SDRB2:
   rla
   rl b
   ld (hl),b
-  inc hl
-  out (c),d      ; second byte: bit 7
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  out (c),d      ; bit 6
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  out (c),d      ; bit 5
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  out (c),d      ; bit 4
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  out (c),d      ; bit 3
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  out (c),d      ; bit 2
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  out (c),d      ; bit 1
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  out (c),d      ; bit 0
-  out (c),e
-  in a,(c)
-  rla
-  rl b
-  ld (hl),b
-  inc hl
-  ld a,i
-  dec a
-  ld i,a
+  inc l          ; 256 bytes a page
+  jp nz,SDRB2
+  inc h          ; the buffer's second
+  bit 0,h        ; page is the odd one
   jp nz,SDRB2
   out (c),d
   ld a,(LATCHV)
