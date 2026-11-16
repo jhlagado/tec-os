@@ -31,17 +31,19 @@ FILEMSG:
 FREEMSG:
   DB "K free",'$'
 
-; Six four-byte names: first four have
-; a colon after three letters, then GLCD
-; and PICO. GLCD=UC1, PICO=CRT.
-; PICO plus four spaces at offset 20 is
+; Seven four-byte names: the first five
+; have a colon after three letters, then
+; GLCD and PICO. GLCD=UC1, PICO=CRT, and
+; LCD is UC1 with the LCD as its panel.
+; PICO plus four spaces at offset 24 is
 ; the eight-byte registry key.
 
 CONNAMS:
 
   DB "TTY:CRT:"
   DB "BAT:UC1:"
-  DB "GLCDPICO    "
+  DB "LCD:GLCD"
+  DB "PICO    "
 
 ; CCP '$'-terminated output. BADCHARS
 ; is 13 raw bytes without a terminator.

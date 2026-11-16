@@ -98,7 +98,18 @@ CONSWO:
   ld h,(hl)
   ld l,a         ; HL = the table
   or h
-  jr z,CONSWT    ; none: TTY
+  jr nz,CONSWV
+
+; No table. CRT falls back to TTY. UC1
+; is then the LCD's own console, which
+; needs the matrix keyboard.
+
+  bit 1,b        ; UC1 is 3, CRT 1
+  jr z,CONSWT
+  ld a,(CONDEV)
+  rrca           ; CDMTX
+  jr nc,CONSWT
+  ld hl,LCVTAB
 
 ; Copy seven vector words VPUTV..VFNV
 ; and geometry. Reset region and publish

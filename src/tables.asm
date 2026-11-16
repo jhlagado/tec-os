@@ -50,6 +50,14 @@ LCDSEQ: DB $38,$0C,$06,$01
 LCDROWS:
   DB $80,$C0,$94,$D4
 
+; The LCD console's table, as CONSWV
+; copies one: six terminal words, no
+; page function, columns and rows.
+
+LCVTAB: DW LCVPUT,LCVGET,LCVCLR,LCVRST,LCVRD,LCVWR
+  DW 0
+  DB 20,4
+
 ; Built-in command records: keyword
 ; bytes, NUL, then LE handler word. A
 ; zero at the next keyword ends the

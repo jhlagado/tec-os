@@ -1,17 +1,45 @@
-; HD44780 20 x 4 status LCD.
-; Cold boot uses row 0 for the banner
-; and rows 1/2 for A: and B: labels.
+; HD44780 20 x 4 LCD: boot status, and
+; the console for UC1 while no loaded
+; driver holds it. Cold boot uses row 0
+; for the banner and rows 1/2 for A: and
+; B: labels. While the LCD is the
+; console it owns all four rows, and the
+; status writers and the raw-row service
+; leave it alone.
 
+; Z while the LCD is the console: only
+; its console has four rows. A=VHGT.
+; Keeps BC, DE and HL.
+
+LCDCON:
+  ld a,(VHGT)
+  cp 4
+  ret
+
+; Console restore: the three mode
+; commands again, without the clear, so
+; the screen stays over a warm boot.
+
+LCVRST:
+  ld b,3
+  jr LCDI0
 
 ; Attempt LCDSEQ's four commands:
 ; 8-bit, two-line, display on, cursor
 ; off, incrementing writes, clear.
+; Nothing while the LCD is the console.
 ; Changes AF, B, HL; returns B=0 for
 ; cold boot's row-zero write.
 
 LCDINIT:
-  ld hl,LCDSEQ
+  call LCDCON
+  ret z
   ld b,4
+
+; B commands from LCDSEQ's start.
+
+LCDI0:
+  ld hl,LCDSEQ
 
 LCDI:
   ld a,(hl)
@@ -38,6 +66,37 @@ LCDWX:
   pop bc
   ret
 
+; Console put: A at row B, column C.
+; The panel has no reverse video, so
+; bit 7 is dropped. The hardware cursor
+; is on while the terminal shows its
+; cursor (VCURV), and the address goes
+; back to the cell, where the cursor
+; then stands. Changes AF, E and HL.
+
+LCVPUT:
+  and $7F
+  ld e,a
+  call LCSEL
+  ld a,e
+  call LCDD
+  ld a,(VCURV)
+  add a,a        ; 0Ch, or 0Eh shown
+  or $0C
+  call LCDC
+
+; Address row B, column C: B=0..3,
+; C below 20. LCDROWS lies in one page.
+; Keeps BC and DE. Changes AF and HL.
+
+LCSEL:
+  ld hl,LCDROWS
+  ld a,b
+  add a,l
+  ld l,a
+  ld a,(hl)
+  add a,c        ; the cell's address
+
 ; Output command A after the bounded
 ; wait, even if still busy. Keeps AF,
 ; BC, DE and HL.
@@ -47,6 +106,82 @@ LCDC:
   call LCDWAIT
   pop af
   out (LCDCMD),a
+  ret
+
+; Output data A the same way. The
+; display steps to the next column.
+
+LCDD:
+  push af
+  call LCDWAIT
+  pop af
+  out (LCDDAT),a
+  ret
+
+; Console get: A = the cell at row B,
+; column C, read from the panel.
+; Changes F and HL.
+
+LCVGET:
+  call LCSEL
+  call LCDWAIT
+  in a,(LCDDAT)
+  ret
+
+; Console clear: row B from column C to
+; its end. C at or past the width, a
+; pending wrap, clears nothing.
+; Changes AF, E and HL.
+
+LCVCLR:
+  ld a,(VWID)
+  sub c
+  ret c
+  ret z
+  ld e,a         ; cells to blank
+  call LCSEL
+
+LCVC1:
+  ld a,' '
+  call LCDD
+  dec e
+  jr nz,LCVC1
+  ret
+
+; Console row read: row B into LINEBUF,
+; from the panel's own display memory,
+; which is the only copy of the screen.
+; Changes AF, BC and HL.
+
+LCVRD:
+  call LCVROW
+
+LCVR1:
+  call LCDWAIT
+  ini            ; a cell in, B counts
+  jr nz,LCVR1
+  ret
+
+; Console row write: LINEBUF to row B.
+; Changes AF, BC and HL.
+
+LCVWR:
+  call LCVROW
+
+LCVW1:
+  call LCDWAIT
+  outi           ; a cell out
+  jr nz,LCVW1
+  ret
+
+; Address row B's first cell. Returns
+; HL=LINEBUF, B=20 cells, C=data port.
+
+LCVROW:
+  ld c,0
+  call LCSEL
+  ld hl,LINEBUF
+  ld bc,20*256+LCDDAT
   ret
 
 ; Mark row 3 ROM-owned (CDWRD), then
@@ -71,33 +206,24 @@ LCD3:
 ; Starts at column 0; no 20-column
 ; clipping. Empty text sets the address.
 ; HL stops on zero; A=0, carry set, NZ.
-; Keeps BC/DE; changes AF/HL.
+; Keeps B/DE; changes AF/C/HL.
 ; Bytes are attempted even if busy.
+; Nothing is written while the LCD is
+; the console: A=4, Z, HL unchanged.
 
 LCDROW:
-  ld a,b
+  call LCDCON
+  ret z
   push hl
-  ld hl,LCDROWS
-  add a,l
-  ld l,a
-  jr nc,LCDR1
-  inc h          ; table page carry
-
-LCDR1:
-  ld a,(hl)
+  ld c,0
+  call LCSEL
   pop hl
-  call LCDC
 
 LCDS:
   ld a,(hl)
   cp 1           ; zero: carry, NZ
   ret c
-  call LCDWAIT
-  ld a,(hl)      ; LCDWAIT took A
-
-; the display steps to the next column
-
-  out (LCDDAT),a
+  call LCDD
   inc hl
   jr LCDS
 

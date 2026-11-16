@@ -18,10 +18,20 @@
 VIDINIT:
   call TMSINIT   ; Z: both patterns
                  ; match.
-  ret nz
+  jr nz,VIDLCD
   ld hl,CONDEV
   set 1,(hl)     ; CDTMS.
   jp PISTART
+
+; No PICO: ask for UC1, the LCD with the
+; matrix keyboard. Without the keyboard
+; the first console call falls back to
+; TTY and writes that back.
+
+VIDLCD:
+  ld a,CMUC1
+  ld (IOBYTE),a
+  ret
 
 ; Character and clear calls through the
 ; selected driver. No local pointer,
