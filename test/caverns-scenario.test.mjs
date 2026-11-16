@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {ROOT,boot,volume} from './lib/fixtures.mjs';
-import {buildLauncher,encodeScenario,scalarNames,layout} from '../tools/caverns-scenario.mjs';
+import {buildLauncher,encodeScenario,scalarNames,layout,runtimeFooter} from '../tools/caverns-scenario.mjs';
 mkdirSync(ROOT+'/build/caverns/scenario-test-captures',{recursive:true});
 const basic=JSON.parse(readFileSync(ROOT+'/test/caverns-basic.json'));
 const ip=[36,19,10,14,17,47,8,1,51,45,22,46,54,19,19,19,19,0,34,7,16,15,24,38];
@@ -28,13 +28,23 @@ async function imageWith(s,name='TEST'){
  v.write('CAVLOAD.COM',readFileSync(ROOT+'/build/caverns/CAVLOAD.COM'));
  if(s)v.write(name+'.CAV',encodeScenario(s));return image;
 }
-test('scenario launcher fits the original COM and restores all monsters, objects, flags, counters and RNG',{timeout:120000},async()=>{
+test('scenario launcher preserves public addresses and restores all monsters, objects, flags, counters and RNG',{timeout:120000},async()=>{
  const objects=[0,29,20,0,24,0,1,-1,-1,-1,1,1,1,1,1,1,1,0,-1,-1,-1,-1,0,39];
  const s=scenario({'A%':50,'D%':49,'W%':43,'G%':39,'T%':19,'E%':38,'J%':1,'C0%':0,'F%':12,'U%':222},objects,'12345678');
  const image=await imageWith(s),m=boot(image,{tms:true,matrix:true,width:80});
  const out=keys(m,'cavload test',question(m));
  assert.match(out,/dark|courtyard/i);assertState(m,s);
- assert.equal(launcher.launcherBytes,basic.comBytes,'no added game image or TPA bytes');
+ const game=readFileSync(ROOT+'/programs/CAVBASIC.COM'),patched=readFileSync(ROOT+'/build/caverns/CAVLOAD.COM');
+ const before=runtimeFooter(game),after=runtimeFooter(patched);
+ assert.equal(launcher.patchBytes,3);
+ assert.equal(after.address,before.address+launcher.loaderCodeBytes);
+ assert.equal(after.start,before.start);
+ assert.equal(patched.readUInt16LE(layout().entry-255),before.address,'banner jumps to appended loader');
+ const restored=Buffer.from(patched.subarray(0,before.offset));
+ game.copy(restored,layout().entry-256,layout().entry-256,layout().entry-253);
+ game.copy(restored,before.cell,before.cell,before.cell+2);
+ assert.deepEqual(restored,game.subarray(0,before.offset),'all other public code, literals and cells unchanged');
+ assert.equal(patched.readUInt16LE(after.offset+6),game.readUInt16LE(before.offset+6),'stack reserve unchanged');
  assert.deepEqual(m.violations,[]);
 });
 test('real picked-up objects and encounter state survive exported file and fresh boot; RNG continuation matches',{timeout:120000},async()=>{
@@ -162,4 +172,12 @@ test('waterfall does not operate remote doors; the drain hatch is a persistent p
 test('external scenario writer refuses incomplete or out-of-domain states',()=>{
  const variants=[s=>s.objects.pop(),s=>s.variables['A%']=55,s=>s.variables['C0%']=2,s=>s.variables['F%']=-1,s=>delete s.variables['T%'],s=>s.rng='00000000',s=>s.gameSha256='wrong',s=>s.variables['R0%']=2,s=>s.variables['K0%']=-1];
  for(const change of variants){const s=scenario();change(s);assert.throws(()=>encodeScenario(s));}
+});
+
+test('launcher rejects damaged runtime footer and startup contracts',()=>{
+ const game=readFileSync(ROOT+'/programs/CAVBASIC.COM'),f=runtimeFooter(game);
+ for(const at of [0,f.start-256,f.offset,f.offset+4,f.offset+7,f.offset+8]){
+  const bad=Buffer.from(game);bad[at]^=0xff;
+  assert.throws(()=>runtimeFooter(bad),'corrupt field '+at);
+ }
 });

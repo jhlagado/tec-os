@@ -1,0 +1,13 @@
+{
+  "gameSha256": "4c2a29c643dc13999cebcddf45f5743bfb025e060185b0327b5929468a3677b8",
+  "launcherSha256": "49393e930ed6465283ada5f01f761d59aa1c141449b77001ecd299dc947169ec",
+  "launcherBytes": 38656,
+  "patchBytes": 3,
+  "loaderCodeBytes": 348,
+  "loaderOrigin": 38494,
+  "footerAddress": 38842,
+  "imageEnd": 38852,
+  "entry": 709,
+  "resume": 1083,
+  "rng": 30983
+}

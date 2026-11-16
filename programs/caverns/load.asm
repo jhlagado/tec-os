@@ -1,7 +1,7 @@
-; Development-only scenario launcher overlay. Runs after normal BASIC setup.
-; The build tool replaces only the opening banner, leaving game code/data intact.
-; Default CP/M FCB supplies the named .SAV. Records are read/validated before
-; applying any state. No code remains resident beyond the original COM image.
+; Development scenario launcher. Runs after normal BASIC setup.
+; A jump at the banner enters this code appended before the runtime footer.
+; Default CP/M FCB supplies the named .CAV. Records are read/validated before
+; applying any state. The public game code and data retain their addresses.
         ORG $0100
         %INCLUDE "load.inc"
 ENTRY:  PUSH IX

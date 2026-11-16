@@ -1,0 +1,12 @@
+{
+  "scope": "Development launcher appended before relocated runtime footer; public game unchanged",
+  "nativeCommand": "node --test --test-concurrency=1 test/caverns-scenario.test.mjs test/caverns-rewrite.test.mjs",
+  "tests": 14,
+  "passed": 14,
+  "differentialCommands": 480,
+  "differentialScenarios": 36,
+  "publicCodeDataAddressesPreserved": true,
+  "stackReserveBytes": 768,
+  "browserTrial": "Fresh source-only compile, opening play, exported checkpoint restored in independent context/card",
+  "physicalHardwareTested": false
+}

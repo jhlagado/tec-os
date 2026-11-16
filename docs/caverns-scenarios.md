@@ -8,9 +8,9 @@ Use the development card `build/caverns/scenarios.img` in the Viewer and type:
 CAVLOAD CHECK8
 ```
 
-CAVLOAD is a testing clone of the qualified BASIC executable. It replaces only
-its opening banner with a native CP/M file loader, after normal array/runtime
-initialisation. It restores the scenario then enters ordinary game code. QUIT
+CAVLOAD is a testing clone of the qualified BASIC executable. It patches a three-byte jump at
+its opening banner to a native CP/M file loader appended before a relocated
+runtime footer, after normal array/runtime initialisation. It restores the scenario then enters ordinary game code. QUIT
 and Y reload that same scenario; N exits to TEC-OS. There is no in-game SAVE.
 The public starter disk supplies CAVBASIC.BAS for the user to compile, not this
 loader or any scenarios. Repository binaries are verification/development files.
@@ -81,10 +81,16 @@ validates scalar domains and rope consistency; arbitrary handcrafted records
 are development inputs, not a trusted public save format. It uses the ordinary
 CP/M filename/FCB and checks missing, truncated and extra-record files.
 
-The current CAVLOAD.COM is 38,272 bytes, identical in length to the game. The
-348-byte overlay fits inside the 374-byte opening banner. No extra runtime or
-resident code is added. `build/caverns/scenario-loader.json` records exact
-addresses and hashes. Full compiler symbols are in `test/caverns-basic.json`. Its explicit
+The loader no longer needs to fit inside the opening banner. Its 348 bytes are
+appended before the runtime footer; only a three-byte banner jump and the
+runtime's footer pointer are patched in the public image. The footer's image
+end moves with it, so normal startup and allocation account for the extra
+memory. The CPU stack reserve and all existing game code/data/cell addresses
+stay unchanged. The public game is neither padded nor enlarged. This build's
+development COM is 38,656 bytes versus the 38,272-byte public COM (record
+padding included); future compiler sizes are recorded by the generator.
+`build/caverns/scenario-loader.json` records exact addresses, sizes and hashes.
+Full compiler symbols are in `test/caverns-basic.json`. Its explicit
 `stateSymbols` mapping connects the legacy CVB2 fields to the rewrite's actual
 lowercase source variables. The wire format and room/object identities are
 unchanged; compiler addresses and protected executable identities are refreshed.
