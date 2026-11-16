@@ -928,13 +928,13 @@ SVCGO:
 
   ld a,(EVN)
   or a
-  jr z,SVCG1
+  jr z,EVLOAD
   ld a,(STFLAG)
   dec a
   scf
   ret nz         ; refused, SVCRC 0
 
-SVCG1:
+EVLOAD:
   call LOADCOM   ; stage at 0100h
   ret c
   call SVCLOAD

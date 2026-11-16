@@ -240,15 +240,13 @@ MLDRV:
 MLREST:
   cp EVMAX+2
   jr nc,MLRBAD   ; not a count
-  push af
   ld a,(SVCHEAD)
   or a
   call z,EVHOME  ; nothing resident
-  pop af
   ld hl,EVN
-  dec a
-  ld (hl),a      ; counted off
+  dec (hl)       ; counted off
   jr z,MLRCON    ; all tried
+  ld a,(hl)
   dec a          ; this one's slot
   call EVSLOT    ; HL = its line
   ld a,1

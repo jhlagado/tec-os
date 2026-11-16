@@ -32,11 +32,11 @@ CMDEVI:
   ld a,(hl)
   or a
   jr nz,EVIGO    ; already out
+  ld c,a         ; no slot written yet
   inc hl         ; EVCON
   ld a,(IOBYTE)
   ld (hl),a      ; the console now
   ld a,(SVCHEAD)
-  ld c,0         ; slots written
 
 EVI1:
   or a
@@ -89,19 +89,18 @@ EVI3:
   ld a,(hl)      ; the next owner up
   jr EVI1
 
+; EVN counts one for the console's pass,
+; then one for each service as it goes.
+
 EVI5:
   ld hl,EVN
-  inc (hl)       ; the console's pass
-
-EVI6:
+  inc (hl)
   ld a,(SVCHEAD)
   or a
   jr z,EVIGO     ; all out
   call SVCUNL
-  jr c,TOBADCMD  ; it will not go
-  ld hl,EVN
-  inc (hl)       ; one more to return
-  jr EVI6
+  jr nc,EVI5     ; gone: count it
+  jr TOBADCMD    ; it will not go
 
 EVIGO:
   ld hl,(ARGSTRT)
