@@ -84,6 +84,39 @@ class Hd44780 {
   }
 }
 
+/**
+ * The TEC-1G's 20 x 4 panel on one controller with a real address counter:
+ * rows 0 and 2 are the first line's cells 00h-13h and 14h-27h, rows 1 and 3
+ * the second line's 40h-53h and 54h-67h, so a write past row 0's end lands on
+ * row 2. The runtime's panel steps to row 1 there. A console that never
+ * passes a row's end shows the same text on both.
+ */
+export class Lcd20x4 {
+  constructor(now, ports = { cmd: 0x04, dat: 0x84 }) {
+    this.ports = ports;
+    this.controller = new Hd44780(now);
+  }
+
+  read(port) {
+    if (port === this.ports.cmd) return this.controller.readStatus();
+    if (port === this.ports.dat) return this.controller.readData();
+    return undefined;
+  }
+
+  write(port, value) {
+    if (port === this.ports.cmd) this.controller.writeCommand(value);
+    else if (port === this.ports.dat) this.controller.writeData(value);
+    else return false;
+    return true;
+  }
+
+  screen() {
+    const r = this.controller.ram;
+    const text = (from) => String.fromCharCode(...r.subarray(from, from + 20));
+    return [text(0x00), text(0x40), text(0x14), text(0x54)];
+  }
+}
+
 /** The panel: ports is { cmd1, dat1, cmd2, dat2 }. */
 export class Lcd40x4 {
   constructor(now, ports = { cmd1: 0x04, dat1: 0x84, cmd2: 0x0c, dat2: 0x8c }) {

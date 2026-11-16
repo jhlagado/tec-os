@@ -87,6 +87,18 @@ test("LC-3 a scroll moves the rows by reading the panel's own memory", () => {
   assert.ok(m.lcdReads - before >= 5 * 3 * 20, `${m.lcdReads - before} cells read back`);
 });
 
+test("LC-3 the screen is the same on a panel whose address counter steps as a real controller's does", () => {
+  const files = { "S.TXT": text(["row one", "12345678901234567890AB", "row three", "row four", "row five"]) };
+  const runtime = start({ matrix: true, files });
+  const real = start({ matrix: true, lcdReal: true, files });
+  for (const m of [runtime, real]) {
+    m.command("TYPE S.TXT");
+    m.command("DIR");
+  }
+  assert.deepEqual(real.lcd40Screen().map((l) => l.trimEnd()), rows(runtime));
+  assert.deepEqual([rows(runtime)[0], rows(runtime)[3]], ["A>DIR", "A>"]);
+});
+
 test("LC-4 a typed line: echo, backspace, ^U, ^R, and the cursor where the next key goes", () => {
   const m = start({ matrix: true });
   m.type("DIX");

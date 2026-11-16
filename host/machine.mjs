@@ -14,7 +14,7 @@ import { createZ80Runtime } from "@jhlagado/debug80-runtime/z80/runtime";
 import { getMatrixCombosForAscii } from "@jhlagado/debug80-runtime/platforms/tec1g/matrix-keymap";
 import { Ds1302 } from "@jhlagado/debug80-runtime/platforms/tec1g/ds1302";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
-import { Lcd40x4 } from "./lcd40.mjs";
+import { Lcd20x4, Lcd40x4 } from "./lcd40.mjs";
 
 const MODIFIER_KEY = { shift: 0, ctrl: 1, fn: 2 };
 
@@ -48,9 +48,11 @@ export class Machine {
    * (4000h-7FFFh) behave as before.
    * lcd: false for a machine with no character LCD: its busy flag never
    * clears. lcd40: true for a 40 x 4 panel on two controllers in place of the
-   * runtime's 20 x 4 (host/lcd40.mjs), read through lcd40Screen().
+   * runtime's 20 x 4 (host/lcd40.mjs), read through lcd40Screen(). lcdReal:
+   * true for a 20 x 4 panel whose address counter steps as a real
+   * controller's does, read through the same call.
    */
-  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, glcd = true, lcd = true, lcd40 = false, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
+  constructor({ rom, symbols, sdImage, highCapacity = true, ramFill = 0x00, tms = false, matrix = false, glcd = true, lcd = true, lcd40 = false, lcdReal = false, windowRam = true, rtc = true, clock, ram96 = false, mains = 2, expands = 2, onSdWrite }) {
     this.symbols = symbols;
     // output: every byte the BIOS was asked to put on the console, whichever
     // device is in use. serial: the bytes that left the serial port.
@@ -123,7 +125,7 @@ export class Machine {
       };
     }
     const base = this.tec1g.ioHandlers;
-    this.lcd40 = lcd40 ? new Lcd40x4(() => machine.cycles) : null;
+    this.lcd40 = lcd40 ? new Lcd40x4(() => machine.cycles) : lcdReal ? new Lcd20x4(() => machine.cycles) : null;
     const io = {
       read: (port) => {
         const p = port & 0xff;
@@ -497,7 +499,7 @@ export class Machine {
     return [0, 1, 2, 3].map((r) => String.fromCharCode(...d.slice(r * 20, r * 20 + 20)));
   }
 
-  /** The 40 x 4 panel's four rows, on a machine made with lcd40. */
+  /** The host panel's four rows, on a machine made with lcd40 or lcdReal. */
   lcd40Screen() {
     return this.lcd40.screen();
   }
