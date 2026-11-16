@@ -13,7 +13,10 @@
 // logical buffer identities, defined operands, FCB bytes and stack peaks.
 // COPY's rows, marked shell, run with the shell holding the prompt, their output the
 // ROM's COPY's and their calls the shell's; they were retaken when the
-// shell's prompt came to name the drive's volume. A
+// shell's prompt came to name the drive's volume, and their digests again
+// when the shell came to seventeen pages and its buffers moved: paired
+// traces held the output, every call's operands and FCB bytes, each buffer
+// by its name in the shell, and the stack peaks. A
 // function 9 call is compared by its text, not its address, since the ROM's
 // data moves when the table grows. The CCP's peak is read per command against
 // that ROM's: nothing may add to it, but for the drive changes B: and A:,

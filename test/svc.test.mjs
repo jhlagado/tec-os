@@ -508,12 +508,12 @@ test("SH11 SERVICES lists each service and its pages, the newest first, with non
   volume(image, "A").write("OK.SVC", (await svc()).file);
   volume(image, "A").write("TWO.SVC", (await svc({ HDRNAME: '"TWO     "', XTRA: 300 })).file);
   const t = bench(boot(image));
-  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 15\r\nA(:\S*)?>$/, "the shell alone");
+  assert.match(t.m.command("SERVICES"), /^SERVICES\r\r\nSHELL 17\r\nA(:\S*)?>$/, "the shell alone");
   t.m.command("OK.SVC");
   t.m.command("TWO.SVC");
-  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 15\r\n/);
+  assert.match(t.m.command("SERVICES"), /TWO 2\r\nDEMO 1\r\nSHELL 17\r\n/);
   t.m.command("UNLOAD");
-  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 15\r\n/);
+  assert.match(t.m.command("SERVICES"), /SERVICES\r\r\nDEMO 1\r\nSHELL 17\r\n/);
 });
 
 test("a demonstration file is 60 bytes: a 25-byte header, 31 of image, 4 of relocation", async () => {
@@ -1099,8 +1099,8 @@ for (const opts of [{}, { tms: true, matrix: true }]) {
     if (opts.tms) {
       assert.equal(m.videoConsole(), true, "the ROM's PICO9918 console");
       say("SERVICES");
-      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +15\s+A(:\S*)?>/, "the loaded two and the shell: the ROM's console is no service");
-    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 15\r\n/);
+      assert.match(m.screen().join("\n"), /TWO +\d+\s+ONE +\d+\s+SHELL +17\s+A(:\S*)?>/, "the loaded two and the shell: the ROM's console is no service");
+    } else assert.match(say("SERVICES"), /TWO +\d+\r\nONE +\d+\r\nSHELL 17\r\n/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     assert.doesNotMatch(say("UNLOAD"), /UNLOAD\?/);
     say("KEEP.SVC");
