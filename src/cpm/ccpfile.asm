@@ -204,7 +204,7 @@ DIRDONE:
 ; Print the visible count, singular only
 ; for one. Query BDOS 46 for the
 ; explicit CMDFCB drive (1..16 mapped to
-; 0..15) or CURDSK's low nibble. Current
+; 0..15) or CURDSK's drive. Current
 ; DMA LOADBUF receives a 24-bit
 ; free-record count.
 ; Shift right three for KiB and print HL
@@ -232,7 +232,6 @@ DIRSUM2:
   dec a          ; FCB 1..16 -> 0..15
   jp p,DIRFREE   ; explicit drive
   ld a,(CURDSK)  ; saved default drive
-  and $0F        ; remove user nibble
 
 DIRFREE:
   ld e,a         ; 0-based query drive
