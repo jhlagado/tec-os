@@ -114,7 +114,7 @@ It does not relocate absolute addresses embedded in machine code or data.
   ends the session through the existing BDOS error path. Copying is a
   stream, so a device failure after copying begins can leave partial data;
   validation is not a hardware-fault rollback mechanism.
-- **`GO [addr]`** runs the last good load at its remembered entry, or the
+- **`GO [addr]`** runs the last good load at its remembered address, or the
   explicit hexadecimal `addr`. The explicit override applies to this run
   only; it does not change the remembered load address. With neither it prints
   `?`. It first flushes the cache (BDOS 48). If a write fails, GO prints
