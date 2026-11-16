@@ -332,7 +332,7 @@ also provide exit jumps, console selection and BIOS scratch:
 | --- | --- |
 | `0000h–0002h` | Jump to the BIOS warm-boot entry at `BF03h` |
 | `0003h` | IOBYTE, the CP/M device-selection byte described in Chapter 17 |
-| `0004h` | Current drive in bits 0–3 and user area in bits 4–7 |
+| `0004h` | Current drive in bits 0–3. Bits 4–7, CP/M's user area, are zero |
 | `0005h–0007h` | BDOS jump, with the TPA boundary in its address word |
 | `0008h–0037h` | Restart vectors for `RST 08h` through `RST 30h` |
 | `0038h–003Ah` | Default `EI`/`RETI` for interrupt mode 1, unless a qualifying jump is retained |
@@ -343,9 +343,10 @@ also provide exit jumps, console selection and BIOS scratch:
 | `006Ch–007Bh` | Second argument's name fields, overlapping the first FCB |
 | `0080h–00FFh` | Command tail, then the default DMA buffer |
 
-Before launching a program the CCP writes the current drive and user area to
-`0004h`. Warm boot restores selection from that byte so a program can supply a
-different exit drive or user area there. A drive that is unavailable falls
+Before launching a program the CCP writes the current drive to `0004h`,
+with a zero user nibble. Warm boot restores the drive from that byte so a
+program can supply a different exit drive there. The user nibble is not
+read: every prompt is in user area 0. A drive that is unavailable falls
 back to A (`241b438:src/cpm/ccp.asm:352-370`, `241b438:src/cpm/ccp.asm:32-100`).
 
 The command tail begins with a length byte followed by capitalised text,

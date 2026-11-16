@@ -19,7 +19,7 @@ nav_group: "Inside TEC-OS"
      labelled separately from console captures. -->
 
 Running a command requires more than finding its file. TEC-OS must retain
-the selected drive and user, prepare the arguments and provide a return to
+the selected drive, prepare the arguments and provide a return to
 the prompt. The console command processor, or CCP, obtains a line through the BDOS.
 It parses a name then runs a built-in or loads a file. Program execution begins at `0100h` after page zero is ready.
 [Appendix J](appendix-j-command-reference.md) gives the exact grammar.
@@ -27,12 +27,12 @@ It parses a name then runs a built-in or loads a file. Program execution begins 
 ## The minimal CCP and the shell
 
 Command input and program execution are split between the shell and ROM.
-The ROM CCP handles CD, DIR, TYPE, ERA, REN, USER, CON and UNLOAD through
+The ROM CCP handles CD, DIR, TYPE, ERA, REN, CON and UNLOAD through
 `KEYTAB`. It can also run `.COM` and `.SVC` files, change drive and read a
 line of `STARTUP.CMD` (`241b438:src/tables.asm:53-78`, `241b438:docs/shell.md:3-5`). The
-cited revision's table also holds SAVE, CP/M 2.2's command that wrote memory
-pages to a file. SAVE has since left the ROM, and the name is now looked up
-as a program like any other. The
+cited revision's table also holds SAVE and USER, CP/M 2.2's commands that
+wrote memory pages to a file and selected a user area. Both have since left
+the ROM, and each name is now looked up as a program like any other. The
 starter startup file installs resident `SHELL.SVC` for additional commands.
 Its table includes COPY, DEL, SERVICES, CD, DIR, CLS, ECHO and PAUSE.
 DEL changes its command word to `ERA` before passing the piece to the ROM
@@ -56,9 +56,11 @@ history and Chapter 26 startup input.
 
 ## Entry from boot
 
-Selection must survive the program's exit. Page-zero byte `0004h` packs
-the user into bits 4–7 and the drive into bits 0–3. Cold boot writes zero
-for A and user 0. Warm boot preserves the byte and passes it to `CCPENT`
+The drive must survive the program's exit. Page-zero byte `0004h` holds it
+in bits 0–3. Bits 4–7 are CP/M's user number, which the CCP keeps zero: it
+works in user area 0 only, where the cited revision carried a user number
+there. Cold boot writes zero for A. Warm boot preserves the byte and passes
+it to `CCPENT`
 in `C` (`241b438:src/boot.asm:114-115`, `241b438:src/boot.asm:154-156`,
 `241b438:src/boot.asm:297-312`).
 
@@ -67,9 +69,10 @@ past D or with no mounted volume falls back to A. Repeating an invalid
 selection would otherwise cause `Select` and another warm boot. `BOOTDRV`
 holds the chosen drive during disk reset (`241b438:src/cpm/ccp.asm:48-77`).
 
-The CCP restores disk and user state before requesting another command.
+The CCP restores disk state before requesting another command.
 Function 13 runs with `WRFLAG` set to retain unchanged allocation vectors.
-Function 32 restores the user cleared by warm boot. `STBOOT` handles the
+Warm boot has cleared the user number with the BDOS's state and the CCP
+leaves it at 0, so every prompt is in area 0. `STBOOT` handles the
 first record of `A:STARTUP.CMD` once after cold boot. Function 14 then
 attempts to reselect a saved drive other than A. Only after reset and
 selection succeed does `STARTED` print a newline. A returned failure stays
@@ -85,13 +88,13 @@ an emptied drive on warm boot, the CCP selects A instead
 
 ## The prompt and its input
 
-Before each prompt, `MAINLOOP` resets its stack and calls `SAVEDU`.
-Functions 32 and 25 supply user and drive for packing into `0004h`.
+Before each prompt, `MAINLOOP` resets its stack and stores the drive
+from function 25 at `0004h`, with a zero user nibble.
 With the shell hook, `LINE` prints the prompt. The bare ROM instead prints
-a nonzero decimal user, the drive letter and `>`, giving `A>` or `3A>`
+the drive letter and `>`, giving `A>`
 (`241b438:src/cpm/ccp.asm:156-190`, `241b438:src/cpm/ccp.asm:352-370`). Ordinary program
-exit retains that selection. An unmounted current drive falls back to A
-and cold reset begins at A, user 0.
+exit retains the drive. An unmounted current drive falls back to A
+and cold reset begins at A.
 
 Shell input is already a command piece when the ROM receives it.
 `LINE` can supply a remaining piece, startup input, a script line or typed
@@ -157,7 +160,7 @@ its own parser and check, `PARSEFCB` and `UNAMBIG` in
 `241b438:drivers/shellcmd.asm:221-336`.
 
 Built-in recognition uses the original word at `CMDSTRT`. `KEYTAB` tests
-CD, DIR, TYPE, ERA, REN, USER, CON and UNLOAD. The shell handles COPY,
+CD, DIR, TYPE, ERA, REN, CON and UNLOAD. The shell handles COPY,
 DEL and SERVICES earlier and passes DEL onward as `ERA`
 (`241b438:src/tables.asm:60-78`, `241b438:drivers/shell.asm:545-552`). `ISCMD` accepts a
 keyword only before space or zero. A drive prefix or type therefore selects
@@ -184,18 +187,17 @@ entry. They finish at `MAINLOOP` or at `STARTED`, which adds a new line first
 
 ## Program lookup and capacity
 
-A plain program name can reach tools outside the current user area.
-`LOADA` first runs `LOADCOM` on the named or current drive in the current
-user. Only absence permits a user-0 retry, skipped if already in user 0.
-Function 32 changes the user for the attempt then restores it. The file
-needs no system attribute (`241b438:src/cpm/ccp.asm:630-655`).
+A plain program name can reach tools on drive A. The CCP first runs
+`LOADCOM` on the named or current drive. The file needs no system
+attribute.
 
 A found but unloadable file stops this search. `LOADCOM` returns carry
-with Z for absence and carry with NZ for load failure. `LOADA` immediately
-returns the latter. Drive A is tried only after absence, only without an
-explicit drive and only when the current drive is not A. The CCP sets the
-FCB drive byte to 1 before calling `LOADA` again. On A, current user still
-precedes user 0 (`241b438:src/cpm/ccp.asm:474-486`).
+with Z for absence and carry with NZ for load failure. Drive A is tried
+only after absence, only without an explicit drive and only when the
+current drive is not A. The CCP sets the FCB drive byte to 1 before calling
+`LOADCOM` again (`241b438:src/cpm/ccp.asm:474-486`). The cited revision
+made each attempt through `LOADA`, which also looked in user area 0 from
+another area. That search left with USER.
 
 An explicit drive suppresses that drive-A fallback. In this starter-card
 capture, plain TAS finds A's tool and prints its usage line. `B:TAS`
@@ -223,8 +225,7 @@ B:WORK>
 ```
 
 Service lookup is narrower. `SVCGO` calls `LOADCOM` directly, searching
-the named or current drive in the current user. It does not retry user 0
-or drive A (`241b438:src/cpm/ccp.asm:431-441`, `241b438:src/loader.asm:901-906`).
+the named or current drive. It does not retry drive A (`241b438:src/cpm/ccp.asm:431-441`, `241b438:src/loader.asm:901-906`).
 
 After open, loading proceeds through ordinary record reads. `LOADCOM`
 starts at `0100h`. Before every function 20 call, `READSRC` sets DMA with
@@ -294,39 +295,6 @@ B:WORK>BIG
 BIG?
 
 B:WORK>
-```
-
-The same fixture separates fallback from directory visibility. Under user
-3, ARGS runs from B's user 0 and TAS from A's user 0. DIR still searches
-only the empty current user area:
-
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs --card build/ccp.img B: 'USER 3' ARGS TAS B:TAS DIR. Complete captured console transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>B:
-B:WORK>USER 3
-3B:WORK>ARGS
-0
-0
-[]
-3B:WORK>TAS
-usage: TAS NAME [OUT.TYP]
-
-3B:WORK>B:TAS
-B:TAS?
-
-3B:WORK>DIR
-NO FILE
-
-3B:WORK>
 ```
 
 ## Page zero before entry
@@ -475,7 +443,7 @@ Built-ins operate through the FCB and DMA interfaces already used by
 programs. ROM CD also supplies volume selection at a bare prompt, allowing
 recovery when A holds a volume without the shell startup. It enters
 `RCMDCD` in `src/cpm/ccpdir.asm`. Queries and named selection preserve the
-current drive and user. Failed selection keeps the old volume and reports
+current drive. Failed selection keeps the old volume and reports
 `CD FAILED` or a more specific name/conflict error
 (`241b438:src/cpm/ccpdir.asm:1-173`, `241b438:docs/recovery.md:1-23`).
 
@@ -490,7 +458,6 @@ ROM listing described below (`241b438:drivers/shelldir.asm:1-35`). Appendix J gi
 | TYPE | `CMDTYPE` | `241b438:src/cpm/ccpfile.asm:354-420` |
 | ERA | `CMDERA` | `241b438:src/cpm/ccpmut.asm:10-67` |
 | REN | `CMDREN` | `241b438:src/cpm/ccpmut.asm:81-153` |
-| USER | `CMDUSER` | `241b438:src/cpm/ccpcmd.asm:223-260` |
 | CON | `CMDCON` | `241b438:src/cpm/ccpcmd.asm:55-220` |
 | UNLOAD | `CMDUNL` | `241b438:src/cpm/ccpcmd.asm:13-18`, `241b438:src/loader.asm:97-126` |
 | COPY, the shell's | `CMDCOPY` | `241b438:drivers/shellcmd.asm:54-154` |
@@ -554,8 +521,7 @@ the new name at offset 17 for function 23. An absent old name gives
 
 ### Selection and consoles
 
-USER validates a single digit 0 to 9 or a two-digit value 10 to 15 and
-calls function 32. CON uses its device-name table to set the IOBYTE console
+CON uses its device-name table to set the IOBYTE console
 field through `CONFLD`. PICO aliases CRT and GLCD aliases UC1. Selecting
 UC1 calls `GLCLD` to load `GLCD.SVC` from A if required. A failed load puts
 the field back to the active mode (`241b438:src/cpm/ccpcmd.asm:55-220`,

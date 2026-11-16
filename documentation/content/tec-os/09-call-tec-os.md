@@ -224,8 +224,8 @@ function.
 
 ## Returning to the prompt
 
-An ordinary exit normally restores the starting drive and user area for the
-next prompt. An unavailable drive falls back to A.
+An ordinary exit normally restores the starting drive for the next prompt,
+in user area 0. An unavailable drive falls back to A.
 
 With the inherited stack balanced, a top-level `RET` ends the program through
 warm boot. A jump to `0000h` or BDOS function 0 has the same destination.
