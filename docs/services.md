@@ -112,8 +112,8 @@ entered. A registry record is never an entry.
 the file it was installed from, which its `INIT` copies into its record. The
 command's own file name is compared with that name in each installed
 service's ready record that has bit 1. The header's name and any registry
-record's name play no part, and nor do the drive and the user: `B:MON3.SVC` and
-`MON3.SVC` in user 1 enter a `MON3` installed from A: and read nothing.
+record's name play no part, and nor does the drive: `B:MON3.SVC` enters a
+`MON3` installed from A: and reads nothing.
 
 1. **One match** is entered. No file is opened, so the file need not still be
    on the card.

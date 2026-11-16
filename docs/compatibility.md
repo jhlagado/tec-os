@@ -61,9 +61,9 @@ file of 128 records has one directory entry.
 
 Function 32 keeps the low five bits of any `E` but FFh, as CP/M 2.2's does:
 user numbers 0–31 reach the directory, and no `E` makes the user E5h, the
-user byte of an erased entry. The CCP's `USER` takes 0–15, and 0004h holds
-four bits of the user, so a program that leaves user 16 or more finds the
-next prompt in that number's low four bits.
+user byte of an erased entry. A program's areas last while it runs: warm
+boot clears the user number, so every prompt is in area 0, and the CCP keeps
+0004h's user nibble zero.
 
 Function 13 resets the disks and selects drive A, and leaves the user number
 as it is, as CP/M 2.2's does.
@@ -80,13 +80,20 @@ file, as CP/M 2.2's does, so a program can make it read-write again.
 
 ## Command processor
 
-`DIR`, `ERA`, `REN`, `TYPE`, `USER` and drive changes, with the
+`DIR`, `ERA`, `REN`, `TYPE` and drive changes, with the
 syntax of the CP/M 2.2 CCP, are in ROM, with `CON` and `UNLOAD`. `DIR`'s output
 is TEC-OS's own: `NAME.EXT` columns that fit the display, then the file count
 and free space. Programs that parse DR's `DIR` layout will not find it.
 `SAVE` is a CP/M 2.2 built-in that TEC-OS does not provide: typed, it is an
 unknown command. Nothing needs it, since TAS and BAZA write their `.COM`
 files, TED saves text and `MON3.SVC` loads and runs programs itself.
+`USER` is the other CP/M 2.2 built-in TEC-OS does not provide. The command
+processor works in user area 0 only: the prompt shows no user number, and
+every return to the prompt is in area 0, whatever area a program set. Function
+32 and the user byte of a directory entry are CP/M 2.2's, so a program that
+uses areas while it runs still works. The one consequence is that files a
+program leaves in another area cannot be listed, erased or run from the
+prompt. Named volumes and `CD` are the way to keep groups of files apart.
 `SUBMIT` is not supported; `.CMD` scripts are `SHELL.SVC`'s.
 
 `SHELL.SVC`, a resident service on the starter card and the first line of its
@@ -122,7 +129,7 @@ leave the code at 0, and the line goes on. The shell's built-ins:
   (Y/N)?` question. A built-in comes before a program of its name, so `DEL`
   under the shell doesn't run a `DEL.COM`, as `ERA` never runs an `ERA.COM`;
   `A:DEL` or `DEL.COM` still runs the file.
-- `COPY SOURCE DEST` copies one file within the current user. `DEST` may be a
+- `COPY SOURCE DEST` copies one file. `DEST` may be a
   drive alone, `COPY X.COM B:`, or a blank name with a type, `COPY X.COM B:.TXT`
   or `COPY X.COM B:.*`: each takes the source's whole name, so all three make
   `B:X.COM`. A destination that names the source, on the same drive after the
@@ -163,11 +170,10 @@ volume services, `TNMOUNT` and `TNDESC` (`docs/shell.md`). Selections are
 for the session: a reset keeps them, as long as the card still holds each
 volume. `docs/recovery.md` says how.
 
-A command runs `NAME.COM` from the current drive, or the drive it names, in the
-current user and, if it isn't there, in user 0; no SYS attribute is needed. When
-there is none there, no drive was named and the current drive isn't A:, it runs
-A:'s `NAME.COM` (KD-169), from the current user and then user 0, so `TED` and
-`TAS` run from B:; the current drive and user stay as they were. `B:NAME` looks
+A command runs `NAME.COM` from the current drive, or the drive it names; no
+SYS attribute is needed. When there is none there, no drive was named and the
+current drive isn't A:, it runs A:'s `NAME.COM` (KD-169), so `TED` and
+`TAS` run from B:; the current drive stays as it was. `B:NAME` looks
 on B: only. A `.PRL` file is not run: it is a `.COM` with a 256-byte header,
 and none is on the starter card or written by the tools.
 
@@ -186,7 +192,7 @@ neither.
 
 Warm boot at `0000h`, BDOS vector at `0005h` (target `B6C8h` on the starter card, directly
 below the allocation vectors), IOBYTE at
-`0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
+`0003h` (stored, not acted on), the drive at `0004h` with the user nibble zero, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
 `0100h`, entered with HL 0100h, DE 0000h and A FFh from a startup line or 0
 otherwise, since the CCP's run path is shared with a service's entry. CP/M 2.2 promises a program no register at entry, and
@@ -198,7 +204,7 @@ its console output, its console reads and the warm boot after `^C` or a disk
 error. Cold boot builds the table and warm boot leaves it alone, so a
 replaced entry stays until reset. A program that damages the table can stop
 warm boot working; reset rebuilds it. A program may return by `RET`, by `JP 0000h` or by BDOS function 0.
-The user number survives warm boot.
+The user number does not survive warm boot: every program starts in area 0.
 
 The CCP bootstrap uses returned errors for its disk reset and saved-drive
 selection. A failure stays at `Disk reset failed` / `Enter retries`, with
@@ -256,6 +262,10 @@ and run.
   gain nothing: the CCP is in ROM and its workspace is above the TPA.
 - **No `SAVE`.** CP/M 2.2's built-in that wrote memory pages to a file is not
   provided, as the command processor's section says.
+- **No `USER`.** The prompt is always in user area 0. A program that sets an
+  area with function 32 and exits finds the next prompt, and the next
+  program, in area 0, and the files it left in another area cannot be listed,
+  erased or run from the prompt.
 - **Interrupts off in disk-critical spans.** Functional BIOS `READ` and
   `WRITE` bracket their cache/SD work with CDI/CEI, preserving the incoming
   maskable-interrupt state. Entry housekeeping uses its own protected span,
@@ -336,7 +346,7 @@ last matrix key, which any service that scans the matrix itself writes
 | --- | --- | --- |
 | ROM table | Moved from `FF00h` to `C003h` and from ABI 2.6 to 5.0: 8 bytes, the signature, the versions and one jump to 15 numbered services. `XMOVE`, `MOVE`, the nested CCP entries, the counts, the low mark, the console size's address and the font's address left it | The table was added |
 | Hardware services | 19 numbered from 0 became 9 numbered from 0: `INFO`, `DIGIT`, `LCD`, `VIDEO`, `TONE`, `JOY`, `KEYS`, `PUTAT`, `RTC`, then mount, unmount, describe, the drivers' hook, find and list as 9 to 14. A number past 14 returns status 1 | Added |
-| BDOS | Functions 47, 44, 46 and 99 added, the last three as CP/M 3's: 44 takes a count of 1 only and returns FFh for any other, 46 puts a drive's free records at the DMA address, and 99 returns FFh with nothing changed; function 50 gone. The prompt shows the user number before the drive unless it is 0, as `3A>`. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
+| BDOS | Functions 47, 44, 46 and 99 added, the last three as CP/M 3's: 44 takes a count of 1 only and returns FFh for any other, 46 puts a drive's free records at the DMA address, and 99 returns FFh with nothing changed; function 50 gone. The command processor stays in user area 0, with no `USER` and no `SAVE`. The CCP sets function 108's code to FF00h on a failed command. A write that needs an extent a full directory can't hold returns 1 at record 128; function 32 keeps five bits; function 13 leaves the user; a read-only file refuses writes and renames with `File R/O`; a warm boot takes A: when 0004h names a drive with no volume | 50 and 108 added, and hooks through the RAM BIOS table |
 | Command line | `!` and `:` in typed, startup and chained lines, a 127-character cut, and a program's tail no longer carries `!`. `STARTUP.CMD` added. `.DRV`, `NAME.DRV` and `DRIVERS` came after the pin too, and became `.SVC`, `NAME.SVC` and `SERVICES` | History and `COPY` added |
 | Service format | Format 4 and the type `.SVC` are new: at the pin a driver was a PRL in EXPAND 1. The GLCD's console is a loaded driver; the PICO9918's console and the font are in the ROM (KS39) | None |
 | Page zero | `0040h` holds `LATCHV` alone; `0041h` to `004Fh` are unused by TEC-OS and held by a `MON3.SVC` session while it runs, the console's state moved above the RAM BIOS table (KS36c), and `MAINS` and `EXPANDS` are gone with MAIN 1's count. `0050h` holds the drive the CCP loaded the running program from, as CP/M 3 does: 0 for the current drive, 1 for A: and so on, and 1 when it was found on A: by the search. After a warm boot a jump left at `0038h` to a page at or above the top's is kept, a jump left into a service is kept, and `003Bh` to `003Fh` are cleared. A clean boot's page zero differs only in the word at `0006h` | State moved there |

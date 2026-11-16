@@ -82,7 +82,7 @@ Prefixes are local clues. Their meaning depends on the module.
 | `CON*`, `KB*` | Console routing and matrix-keyboard routines in `console.asm` and `keyboard.asm`. |
 | `VT*` | Terminal/display operations and gates in `term.asm` and `video.asm`. |
 | `PI*`, `TMS*` | PICO state, tables and console routines in `ram.asm` and `pico.asm`. These names are not all callable entries. |
-| `CMD*` | CCP command handlers, such as `CMDUSER` in `ccpcmd.asm`. |
+| `CMD*` | CCP command handlers, such as `CMDCON` in `ccpcmd.asm`. |
 | `FN*` | BDOS function handlers, such as `FNOPEN` in `bdosfile.asm`. |
 | `SVC*` | Resident-service loading, removal and registry state in `loader.asm` and `ram.asm`. |
 | `PZ*` | Page-zero setup, sweep and boundary state in `boot.asm`, `loader.asm` and `ram.asm`. |

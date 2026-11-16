@@ -162,7 +162,7 @@ the console to the GLCD when the Matrix switch is on. Otherwise it stays on the
 serial terminal: connect
 the FTDI port at 4800 baud, 8 data bits, no parity, 2 stop bits. `CON TTY`
 moves the console to the serial terminal and `CON CRT` or `CON UC1` back.
-CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `USER`, `CON`, `CD`, `B:`,
+CP/M commands in ROM: `DIR`, `TYPE`, `ERA`, `REN`, `CON`, `CD`, `B:`,
 and `UNLOAD`, which removes the last service loaded. The starter card loads the
 shell, `SHELL.SVC` ([docs/shell.md](docs/shell.md)), which adds the history (^W
 and ^N), `COPY`, `DEL` (another name for `ERA`), `SERVICES`, which lists the
