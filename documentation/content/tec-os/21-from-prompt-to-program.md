@@ -27,9 +27,12 @@ It parses a name then runs a built-in or loads a file. Program execution begins 
 ## The minimal CCP and the shell
 
 Command input and program execution are split between the shell and ROM.
-The ROM CCP handles CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD through
+The ROM CCP handles CD, DIR, TYPE, ERA, REN, USER, CON and UNLOAD through
 `KEYTAB`. It can also run `.COM` and `.SVC` files, change drive and read a
 line of `STARTUP.CMD` (`241b438:src/tables.asm:53-78`, `241b438:docs/shell.md:3-5`). The
+cited revision's table also holds SAVE, CP/M 2.2's command that wrote memory
+pages to a file. SAVE has since left the ROM, and the name is now looked up
+as a program like any other. The
 starter startup file installs resident `SHELL.SVC` for additional commands.
 Its table includes COPY, DEL, SERVICES, CD, DIR, CLS, ECHO and PAUSE.
 DEL changes its command word to `ERA` before passing the piece to the ROM
@@ -148,13 +151,13 @@ field positions with question marks and skips text to the delimiter.
 the complete exclusion list, padding rules and accepted command forms.
 
 `UNAMBIG` checks the stored FCB through `FCBBASE`. It rejects a blank name or
-any question mark in the eleven name/type positions. TYPE, REN, SAVE and program
+any question mark in the eleven name/type positions. TYPE, REN and program
 dispatch use that check (`241b438:src/cpm/ccpcmd.asm:581-622`). The shell's COPY has
 its own parser and check, `PARSEFCB` and `UNAMBIG` in
 `241b438:drivers/shellcmd.asm:221-336`.
 
 Built-in recognition uses the original word at `CMDSTRT`. `KEYTAB` tests
-CD, DIR, TYPE, ERA, REN, SAVE, USER, CON and UNLOAD. The shell handles COPY,
+CD, DIR, TYPE, ERA, REN, USER, CON and UNLOAD. The shell handles COPY,
 DEL and SERVICES earlier and passes DEL onward as `ERA`
 (`241b438:src/tables.asm:60-78`, `241b438:drivers/shell.asm:545-552`). `ISCMD` accepts a
 keyword only before space or zero. A drive prefix or type therefore selects
@@ -487,7 +490,6 @@ ROM listing described below (`241b438:drivers/shelldir.asm:1-35`). Appendix J gi
 | TYPE | `CMDTYPE` | `241b438:src/cpm/ccpfile.asm:354-420` |
 | ERA | `CMDERA` | `241b438:src/cpm/ccpmut.asm:10-67` |
 | REN | `CMDREN` | `241b438:src/cpm/ccpmut.asm:81-153` |
-| SAVE | `CMDSAVE` | `241b438:src/cpm/ccpcmd.asm:266-390` |
 | USER | `CMDUSER` | `241b438:src/cpm/ccpcmd.asm:223-260` |
 | CON | `CMDCON` | `241b438:src/cpm/ccpcmd.asm:55-220` |
 | UNLOAD | `CMDUNL` | `241b438:src/cpm/ccpcmd.asm:13-18`, `241b438:src/loader.asm:97-126` |
@@ -534,7 +536,7 @@ through the pager until `1Ah`, the first Ctrl-Z, or the file's end. It then
 closes the file. No name or a missing file produces `NO FILE`
 (`241b438:src/cpm/ccpfile.asm:354-420`).
 
-### Erase, rename and save
+### Erase and rename
 
 ERA tests all eleven stored name/type bytes for question marks before
 printing `ALL (Y/N)?`. Function 1 reads the first echoed answer byte.
@@ -549,46 +551,6 @@ from either reference and different explicit drives are rejected. Function
 Otherwise REN copies twelve bytes from `RENFCB` to `CMDFCB+16`, placing
 the new name at offset 17 for function 23. An absent old name gives
 `NO FILE` (`241b438:src/cpm/ccpmut.asm:81-149`).
-
-SAVE converts a decimal page count with a carry check at every arithmetic
-step. It rejects values above 255 and counts reaching the high byte of
-the word at `0006h`. On the starter card with the shell installed that byte
-is `A5h`: 164 pages cover `0100h` through `A4FFh`. Both 165 and 320 are
-rejected in this capture (`46cf3f1:src/cpm/ccpcmd.asm:266-307`):
-
-<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 1cdc614e): node tools/capture.mjs 'SAVE 320 B:X.COM' 'SAVE 165 B:X.COM'. Complete captured console transcript. -->
-```text
-TEC-OS 0.1 for TEC-1G
-A: SYSTEM
-B: WORK
-C: PROJECTS
-
-A>SHELL.SVC
-
-A:SYSTEM>GLCD.SVC
-
-A:SYSTEM>SAVE 320 B:X.COM
-320?
-
-A:SYSTEM>SAVE 165 B:X.COM
-165?
-
-A:SYSTEM>
-```
-
-SAVE erases an existing file, makes it again and writes two 128-byte records per
-page from `0100h`. A failed make, write or close gives `NO SPACE`. After a
-failed write it attempts close before reporting the error. A successful close
-records the partial file. The error path discards the close result so the
-message does not certify that update. Digital Research's CP/M 2.2 SAVE leaves
-the file open on that path (`241b438:src/cpm/ccpcmd.asm:309-390`).
-
-SAVE can preserve memory left by a previous program because most file
-handlers use resident or page-zero buffers. SAVE reads the TPA itself.
-Loading another COM or service overwrites that memory, including a
-`GLCD.SVC` load caused by CON (`241b438:src/cpm/ccpcmd.asm:315-360`,
-`241b438:src/loader.asm:862-906`, `241b438:src/cpm/ccp.asm:671-709`). Shell COPY uses DMA
-at `0080h` and preserves the TPA (`241b438:drivers/shellcmd.asm:93-94`).
 
 ### Selection and consoles
 
