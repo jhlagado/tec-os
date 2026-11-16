@@ -220,7 +220,11 @@ MLDRV:
 ; The line runs as a typed one would,
 ; but with STFLAG 1: an execution entry
 ; then gets A=1 and must not start a
-; session of its own.
+; session of its own. It joins the
+; dispatch past the new line and past
+; the reset of PRGCODE, so the evicted
+; command's code is still there when
+; every service is back.
 
 MLREST:
   dec a          ; this service's slot
@@ -235,7 +239,7 @@ MLRS1:
   call EVSLOT    ; HL = its line
   ld a,1
   ld (STFLAG),a  ; a restoration
-  jr MLSKIP
+  jp NOTDRL
 
 ; Echo the function 47 line at CMDTXT
 ; to its zero, then run it as typed.
@@ -421,6 +425,10 @@ NOTDRIVE:
   call PUTSTR
 
   ld hl,(ARGSTRT)
+
+; MLREST joins here with its line at HL.
+
+NOTDRL:
   call CMDSKIP   ; diagnostic word start
   call CMDPARSE  ; first word -> CMDFCB
 

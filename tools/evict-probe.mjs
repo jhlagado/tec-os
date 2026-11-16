@@ -23,10 +23,12 @@ const EXTRA = {
 };
 for (const n of ["S1", "S2", "S3", "S4", "S5"]) EXTRA[`${n}.SVC`] = await svc(n);
 
-function card() {
+function card({ startup = true } = {}) {
   const image = new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img")));
   const a = volume(image, "A");
   for (const [n, b] of Object.entries(EXTRA)) a.write(n, b);
+  // A file of one comment line: no startup line runs, so no shell.
+  if (!startup) a.write("STARTUP.CMD", Buffer.from(";\r\n\x1a", "latin1"));
   return image;
 }
 
@@ -64,7 +66,7 @@ const state = (m) => ({
  * the program's exit, the first warm boot after it started at 0100h, to
  * that prompt.
  */
-function run(m, line, { re, max = 900_000_000 } = {}) {
+function run(m, line, { re, max = 900_000_000, atStart } = {}) {
   const start = m.cycles;
   let began = 0;
   let exit = 0;
@@ -74,6 +76,7 @@ function run(m, line, { re, max = 900_000_000 } = {}) {
   const done = re ? () => m.waitingForInput() && re.test(m.text(m.mark)) : () => m.ready();
   m.runUntil(() => {
     if (m.pc === 0x100) {
+      if (!began && atStart) atStart(m);
       began = m.cycles;
       exit = 0;
     } else if (m.pc === wboot && began && !exit) exit = m.cycles;
@@ -84,7 +87,8 @@ function run(m, line, { re, max = 900_000_000 } = {}) {
 
 function scenario(name, opts, steps) {
   console.log(`\n== ${name}`);
-  const m = boot(card(), opts);
+  const { startup, ...board } = opts;
+  const m = boot(card({ startup }), board);
   watch(m);
   console.log("boot", JSON.stringify(state(m)));
   for (const step of steps) {
@@ -115,6 +119,11 @@ const SCENARIOS = {
   keep: ["a REMOVE that refuses, with a service below it", {}, ["KEEP.SVC", "S1.SVC", "EVICT EVBIG", "SERVICES"]],
   five: ["five services: one more than the record holds", {}, ["S1.SVC", "S2.SVC", "S3.SVC", "S4.SVC", "EVICT EVBIG", "SERVICES"]],
   four: ["four services: the record full", {}, ["S1.SVC", "S2.SVC", "S3.SVC", "EVICT EVBIG", "SERVICES"]],
+  user: ["another user number, where the files are not", {}, ["USER 1", "EVICT A:EVBIG", "USER 0", "EVBIG"]],
+  pieces: ["pieces after EVICT's on the line", {}, ["EVICT EVBIG !SAY", "SAY"]],
+  bare: ["no shell: the bare prompt, two services", { startup: false }, ["S1.SVC", "S2.SVC", "EVBIG", "EVICT EVBIG", "EVBIG"]],
+  cardout: ["the card taken out while the evicted program runs", {}, [["EVICT EVBIG", { atStart: (m) => m.swapCard(null), re: />$/ }]]],
+  cardout2: ["the card taken out, the shell's blocks no longer in the cache", {}, ["COPY BAZA.COM B:X.COM", "COPY BAZA.RTL B:Y.RTL", ["EVICT EVBIG", { atStart: (m) => m.swapCard(null), re: /Bad Sector$/ }], ["", { re: />$/ }], ["EVBIG", { re: /Bad Sector$|>$/ }]]],
   chain: ["the evicted program chains a line by function 47", {}, ["EVICT CH"]],
 };
 const which = process.argv.slice(2);
