@@ -254,6 +254,8 @@ and run.
   which calls the ROM's console status directly so that it draws no cursor.
 - **CCP overwrite.** Programs that expect to reclaim CCP memory below the BDOS
   gain nothing: the CCP is in ROM and its workspace is above the TPA.
+- **No `SAVE`.** CP/M 2.2's built-in that wrote memory pages to a file is not
+  provided, as the command processor's section says.
 - **Interrupts off in disk-critical spans.** Functional BIOS `READ` and
   `WRITE` bracket their cache/SD work with CDI/CEI, preserving the incoming
   maskable-interrupt state. Entry housekeeping uses its own protected span,
