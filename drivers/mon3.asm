@@ -126,6 +126,9 @@ REMOVE:
 
 ; The execution entry, from the CCP as
 ; a transient, or called by a program.
+; A=1 is the ROM bringing the service
+; back after EVICT: installed again,
+; with no session, so return at once.
 ; A second entry, or a restart slot
 ; that holds a JP, is refused on the
 ; caller's stack with nothing changed.
@@ -133,6 +136,8 @@ REMOVE:
 ; take them and give the MON3> line.
 
 ENTRY:
+  cp 1           ; a restoration?
+  ret z          ; installed, no MON3>
   call ACTIVE    ; Z: in a session
   ld de,MBUSY    ; MON3 active
   jr z,REFUSE    ; so refuse it

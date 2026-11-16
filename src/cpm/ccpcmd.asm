@@ -17,6 +17,90 @@ CMDUNL:
 TOBADCMD:
   jp BADCMD
 
+; EVICT command: remove every resident
+; service, the lowest first, then run
+; the command, which gets the whole
+; TPA. Each service's line, A:NAME.SVC
+; from its header's name, goes into the
+; record before it is removed, and its
+; file must open on A: now, so that a
+; changed volume refuses here and not
+; after the program. MLREST brings
+; them back at the next prompt, whether
+; the command ran, failed or was not
+; found. A service that will not go, a
+; missing file or a fifth service ends
+; in BADCMD with those already removed
+; coming back. EVICT alone removes them
+; and brings them back at once.
+
+CMDEVI:
+  ld a,(IOBYTE)
+  ld (EVCON),a   ; the console now
+
+EVI1:
+  ld a,(SVCHEAD)
+  or a
+  jr z,EVIGO     ; all out
+  ld b,a         ; the lowest's page
+  ld hl,EVN
+  ld a,(hl)
+  cp EVMAX
+  jr z,TOBADCMD  ; no slot for it
+  call EVSLOT
+  push hl        ; its line's start
+  ld (hl),'A'
+  inc hl
+  ld (hl),':'
+  inc hl
+  ex de,hl       ; DE = the line
+  ld h,b
+  ld l,DNAM      ; the header's name
+  ld b,8
+
+EVI2:
+  ld a,(hl)
+  cp SPACE
+  jr z,EVI3      ; a shorter name
+  ld (de),a
+  inc hl
+  inc de
+  djnz EVI2
+
+EVI3:
+  ld hl,EVTYPE   ; .SVC and the zero
+  ld bc,5
+  ldir
+  pop hl
+  call CMDPARSE  ; its file, on A:
+  call DOSSEQ
+  DB 15*2+0      ; 15: CMDFCB
+  inc a
+  jr z,TOBADCMD  ; not there to reload
+  call SVCUNL
+  jr c,TOBADCMD  ; it will not go
+  ld hl,EVN
+  inc (hl)       ; recorded and out
+  jr EVI1
+
+EVIGO:
+  ld hl,(ARGSTRT)
+  jp MLSKIP      ; the command, or none
+
+; HL = the record's slot A, 0 to
+; EVMAX-1. Changes AF and DE.
+
+EVSLOT:
+  add a,a
+  add a,a
+  add a,a
+  add a,a        ; EVSLEN is 16
+  ld e,a
+  ld d,0
+  ld hl,EVREC
+  add hl,de
+  ret
+
 ; Retry the next console name. Input DE
 ; is the differing table byte, C
 ; includes the unconsumed suffix, B is

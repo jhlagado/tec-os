@@ -75,6 +75,8 @@ KEYTAB: DB "CD",0
   DW CMDCON
   DB "UNLOAD",0
   DW CMDUNL
+  DB "EVICT",0
+  DW CMDEVI
   DB 0
 
 ; FNTAB: functions 0-40. FCBMAP selects
@@ -136,6 +138,11 @@ SVTAB: DW HWSINFO,HWSDIG
 ; three-byte type.
 
 GLCFCB: DB 1,"GLCD    SVC"
+
+; The end of a line that brings a
+; service back.
+
+EVTYPE: DB ".SVC",0
 STFCB: DB 1,"STARTUP CMD"
 
 ; Initial stack room for services, in

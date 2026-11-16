@@ -111,6 +111,14 @@ BDOSSTN EQU 64
 CCPSTN EQU 48    ; CCP command stack
 BIOSSTN EQU 48
 
+; EVICT's record: one slot for each
+; service it removes, holding the line
+; that brings it back, A:NAME.SVC and a
+; zero: 15 bytes at most.
+
+EVMAX EQU 4      ; services recorded
+EVSLEN EQU 16    ; a slot's bytes
+
 MAXDRV EQU 4     ; drives A-D
 DPHSZ EQU 16
 DRVESZ EQU 8     ; drive entry bytes

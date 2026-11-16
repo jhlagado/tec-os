@@ -159,6 +159,11 @@ MAINLOOP:
 
 MLREAD:
   call SAVEDU    ; A=drive, B=user bits
+  ld hl,EVN      ; services EVICT took
+  ld a,(hl)      ; out go back first
+  or a
+  jr nz,MLREST
+  ld a,c         ; the drive again
   push af        ; save drive for prompt
   ld a,(SHOWN+1)
   or a
@@ -203,6 +208,34 @@ MLDRV:
   ld c,10        ; 10: counted input
   call BDOS
   jr MLGOT
+
+; Bring back one service EVICT removed,
+; the oldest left, before any prompt, a
+; shell's LINE or a function 47 line.
+; It is counted off before it is tried,
+; so a line that fails is not tried
+; again. With the last, IOBYTE goes back
+; to what EVICT found, and the console
+; follows it at the next console call.
+; The line runs as a typed one would,
+; but with STFLAG 1: an execution entry
+; then gets A=1 and must not start a
+; session of its own.
+
+MLREST:
+  dec a          ; this service's slot
+  ld (hl),a
+  jr nz,MLRS1
+  inc hl         ; EVCON
+  ld b,(hl)
+  ld hl,IOBYTE
+  ld (hl),b      ; the console as found
+
+MLRS1:
+  call EVSLOT    ; HL = its line
+  ld a,1
+  ld (STFLAG),a  ; a restoration
+  jr MLSKIP
 
 ; Echo the function 47 line at CMDTXT
 ; to its zero, then run it as typed.

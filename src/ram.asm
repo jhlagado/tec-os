@@ -156,6 +156,19 @@ CMDLEN:
 CMDTXT:
   DS 128
 
+; What EVICT removed, kept by warm boot
+; and cleared by cold boot. EVN counts
+; the services still to bring back,
+; EVCON is IOBYTE as EVICT found it, and
+; EVREC holds each one's line, the first
+; removed in the first slot, so the last
+; slot counted is the oldest service and
+; goes back first. EVCON follows EVN.
+
+EVN: DS 1
+EVCON: DS 1
+EVREC: DS EVMAX*EVSLEN
+
 ; Outer hardware/BIOS return PC. Nested
 ; calls inherit the context; warm boot
 ; may abandon it.
