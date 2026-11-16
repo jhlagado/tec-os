@@ -95,13 +95,16 @@ recipe revision 17. `test/caverns-basic.json` records the full source, binary,
 compiler and RTL hashes, byte count and native compiler symbol addresses.
 
 Compiler/runtime pins in `test/inputs.json` resolve published BAZA commit
-`1d7ecee79ada5ec618c869fe1be0e941f8d8b4cc`. BAZA.COM SHA-256:
-`087d3a4073fe1c2dcd41ccd5e5ca7efcb9f21628c714a2e37986028839c2fa36`.
+`5f6b58d07b70e570bc993cfc430ec0196f4855d0`. BAZA.COM SHA-256:
+`c4088acee056d0c46bce0f9d77ade7706e67f851c3b963a19d7415f5f423363e`.
 BAZA.RTL SHA-256:
-`f79d57328eb152ecba86a9c203f5ead5544a95b07da131c0fd0ad5821d5d5e07`.
+`edf1a19dca59b88aa8d10a54834933cb630b368e9effbbcf89f5b68d6dc64f08`.
 The structural rewrite itself required no compiler/runtime change. A subsequent
 compact source-location optimisation reduces the COM by 1,408 bytes on disk;
-see [compiler integration evidence](caverns-compact-emission.md). The engine
+see [compiler integration evidence](caverns-compact-emission.md). Shared print
+helpers then made it 36,736 bytes, and the compact-code compiler at `5f6b58d`
+(direct jumps, equality compares, inline numeric literals and digit-only whole
+numbers in `DATA`; Baza's `docs/compact-code.md`) makes it 33,280. The engine
 and world data are separated, with ten-step numbering and the requested casing.
 See [engine structure and authoring](caverns-engine.md). Descriptions
 are scanned from compact DATA into one temporary string rather than retaining

@@ -26,26 +26,28 @@ The manual may describe tested emulator behaviour with that boundary.
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source/card recipe | jhlagado/tec-os, 485bf24f15de668da748e5598eb850fe20f4ae99 |
+| Qualified gameplay/source | jhlagado/tec-os, 485bf24f15de668da748e5598eb850fe20f4ae99 |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
-| Verification executable, not on starter | programs/CAVBASIC.COM; 36,736 bytes |
+| Verification executable, not on starter | programs/CAVBASIC.COM; 33,280 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
 | Matching Viewer integration | jhlagado/tec-os-viewer, 5e7bb9dc8ede62fcb7fe1650043e1e33e3cc26c4 |
-| BAZA compiler/runtime pins | jhlagado/baza, 74c438207f787685f961dd972a3a5289f679ddba, dist/BAZA.COM and dist/BAZA.RTL |
+| BAZA compiler/runtime pins | jhlagado/baza, 5f6b58d07b70e570bc993cfc430ec0196f4855d0, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 
-Compiler SHA-256: c9625842dceee5f68361cbb14c43c2aecbe65defd49536880d1613159a29d123.
-Runtime SHA-256: 64510ae26d654bcc4329f302b184ff507ee164bee905aa17d35eb3cac018ce9e.
+Compiler SHA-256: c4088acee056d0c46bce0f9d77ade7706e67f851c3b963a19d7415f5f423363e.
+Runtime SHA-256: edf1a19dca59b88aa8d10a54834933cb630b368e9effbbcf89f5b68d6dc64f08.
 Source SHA-256: f64fdb84ead251e3e49590c4c156d7951afc52fb02ffad959cf819b20760b9e0.
-Executable SHA-256: c2ce4aecfae8a4439e0a7fb37d92b2427d8e5afb728e843caf0704fea5fd9fcd.
+Executable SHA-256: 25501ede99c5dc22d228ae7839378e9da5ab371ca112df0167fac4d63a08879f.
 The rewrite itself required no compiler change. Subsequent compact source-location
-emission and shared literal/newline helpers reduce the executable while preserving diagnostics. Engine authoring source
+emission, shared literal/newline helpers and the compact-code compiler (direct jumps,
+equality compares, inline numeric literals, digit-only whole numbers in DATA)
+reduce the executable while preserving diagnostics. Engine authoring source
 and world data are separate; the supplied BAS uses ten-step numbering,
 uppercase keywords and lowercase variables. Native compilation needs no generator. RTL is linked
-selectively into the COM; its 12,928-byte file is not loaded beside the game.
+selectively into the COM; its 13,056-byte file is not loaded beside the game.
 
 ## Tested user exercise
 
@@ -72,8 +74,8 @@ that browser trial. No physical-board claim applies to either.
 ## Requirements and limits
 
 Tested console: PICO9918 at 80 columns, matrix keyboard input. Shell-resident
-TPA: 41,984 bytes; COM: 36,736 bytes; logical image: 36,618 bytes. After
-reserving 768 bytes for the CPU stack, 4,598 bytes remain for dynamic arrays,
+TPA: 41,984 bytes; COM: 33,280 bytes; logical image: 33,259 bytes. After
+reserving 768 bytes for the CPU stack, 7,957 bytes remain for dynamic arrays,
 strings and control. This space is used during initialisation and play. The no-shell TPA is 46,533 bytes, but this example does not need it.
 Growth is constrained; use the small banner change, not a large library feature.
 There are eleven carrying slots, finite candle life and random combat risk.
