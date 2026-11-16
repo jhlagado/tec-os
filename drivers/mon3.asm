@@ -651,9 +651,9 @@ DMA80:
 
 ; GO [addr]: the last good load, or the
 ; address given, run as MON-3's GO runs
-; it (docs/mon3.md). Try to flush the
-; cache first. Failed writes stay
-; pending, not guaranteed saved.
+; it (docs/mon3.md). The cache is
+; flushed first: if a write fails, GO
+; is refused and the data stays queued.
 
 CGO:
   jr z,GO1       ; no address
@@ -672,6 +672,8 @@ GO2:
   push hl
   ld c,48        ; flush
   call BDOS
+  or a           ; a write failed?
+  jp nz,BAD      ; then no program
   call CSUM      ; the tables' sum
   ld (SUMV),de   ; for the return
   ld b,$01       ; clear the LCD

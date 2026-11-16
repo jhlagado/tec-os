@@ -13,6 +13,7 @@ import { resolve } from "node:path";
 import { makeSvc, packSvc } from "../tools/lib/svc.mjs";
 import { GLCD_SVC, ROOT, abiDeclarations, SHELL_SVC, TEST_CLOCK, romFor, startupFile, volume } from "./lib/fixtures.mjs";
 import { TIMES_COM, check, pinned } from "./lib/inputs.mjs";
+import { cacheState } from "./lib/cache-pending.mjs";
 import { EXPAND1_WRITES, Machine } from "./lib/machine.mjs";
 import { MON3, MON3_CEILING, PROMPT, bin, bytesAt, card, cardMon3, code, execFile, figures, find, KEYAD, ks53Census, line, machine, mon3Svc, mon3Text, mon3Variant as libVariant, romMutant, runFor, runTo, services, svcMutant, warmTarget, word, installMon3 } from "./lib/mon3.mjs";
 
@@ -1420,12 +1421,74 @@ test("KG62 mutant: a hook without BDOS 37 has a new file take a used block after
   await assert.rejects(vectorExchange(svc, true), /intact|cross-link/);
 });
 
-// Equivalent under the key-wait guarantee: MON3.SVC reads its line by BDOS
+// Equivalent while the card takes writes: MON3.SVC reads its line by BDOS
 // 10, so the key reads before GO write every changed line, and GO's BDOS 48
-// finds nothing left. It stays as a guard; no path is known to need it.
+// finds nothing left. On a card that refuses writes its answer is what
+// refuses GO: the case after this one.
 test("KG62 equivalent mutant: without GO's BDOS 48 the unclosed write is on the card, since MON3's line read writes every line", async () => {
-  const svc = await mon3Variant([["  push hl\n  ld c,48        ; flush\n  call BDOS\n", "  push hl\n"]]);
+  const svc = await mon3Variant([["  push hl\n  ld c,48        ; flush\n  call BDOS\n  or a           ; a write failed?\n  jp nz,BAD      ; then no program\n", "  push hl\n"]]);
   await hangAndReset(svc);
+});
+
+/** WR.COM: write the 128 bytes at 0180h as record 0 of the file named on its line, and return without closing it. */
+function pendingWriter() {
+  const call = (fn, de) => [0x11, de & 0xff, de >> 8, 0x0e, fn, 0xcd, 0x05, 0x00];
+  const p = new Uint8Array(0x100);
+  p.set([...call(26, 0x0180), ...call(15, 0x005c), ...call(21, 0x005c), 0xc9]);
+  for (let i = 0; i < 128; i += 1) p[0x80 + i] = 0xa0 + (i & 15);
+  return p;
+}
+
+// A write is left pending by a card that refuses it. GO's flush fails, so GO
+// starts nothing and the block stays queued; when the card takes writes the
+// block is written once, and GO then runs the load it was refused.
+async function goWithWritePending(svc) {
+  svc ??= await mon3Build();
+  const program = pendingWriter(), data = [...program.subarray(0x80)], old = new Array(128).fill(0x11);
+  const image = card({ "MON3.SVC": svc.file, "RET.BIN": bin(0xc9), "WR.COM": program, "DATA.BIN": Uint8Array.from(old) });
+  const m = machine(image);
+  const onCard = () => [...volume(image, "A").read("DATA.BIN").subarray(0, 128)];
+  const sd = m.sd, commit = sd.commitWrite.bind(sd);
+  let refuse = true, accepted = 0, entered = 0;
+  sd.commitWrite = () => {
+    if (!refuse) { accepted += 1; return commit(); }
+    sd.writeState = null; sd.pendingResponse = [0x0d, 0xff]; sd.delayBytes = 1;
+  };
+  const step = m.step.bind(m);
+  m.step = () => { if (m.pc === 0x4000) entered += 1; return step(); };
+  const queued = () => cacheState(m).entries.map((e) => ({ block: e.block, bytes: [...e.payload] }));
+
+  assert.match(line(m, "WR DATA.BIN").out, /Write pending/, "the write is refused and stays pending");
+  const pending = queued();
+  assert.equal(pending.length, 1, "one block queued");
+  assert.ok([0, 128, 256, 384].some((at) => data.every((b, i) => pending[0].bytes[at + i] === b)), "it holds the program's record");
+  assert.ok(line(m, "MON3.SVC").mon3);
+  assert.ok(ok(line(m, "LOAD RET.BIN")));
+  assert.equal(runnable(m, svc), 1, "the load is runnable");
+
+  const go = line(m, "GO");
+  assert.equal(entered, 0, "GO starts no program while the write is pending");
+  assert.ok(refused(go), `GO is refused: ${JSON.stringify(go.out)}`);
+  assert.deepEqual(queued(), pending, "the same block is still queued");
+  assert.equal(accepted, 0, "nothing written");
+  assert.deepEqual(onCard(), old, "the card as it was");
+  assert.equal(runnable(m, svc), 1, "the load stays runnable");
+
+  refuse = false;
+  assert.match(line(m, "").out, /Cache clear/, "the card takes the write at the next key wait");
+  assert.equal(accepted, 1, "written once");
+  assert.deepEqual(queued(), [], "nothing queued");
+  assert.deepEqual(onCard(), data, "the record is on the card");
+  assert.ok(ok(line(m, "GO")), "GO runs the load");
+  assert.equal(entered, 1, "the program entered once");
+  assert.equal(accepted, 1, "and nothing more written");
+  leave(m, { mon3: true });
+}
+test("GO is refused while a write is pending and runs once the card has taken it", () => goWithWritePending());
+
+test("mutant: GO ignoring the flush's answer starts the program with the write still queued", async () => {
+  const svc = await mon3Variant([["  or a           ; a write failed?\n  jp nz,BAD      ; then no program\n", ""]]);
+  await assert.rejects(goWithWritePending(svc), /GO starts no program while the write is pending/);
 });
 
 test("KG62 mutant: without the 0800h-08FFh test a load into MON-3's stack is taken", async () => {
