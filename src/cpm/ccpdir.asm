@@ -13,15 +13,14 @@ RDSDRV EQU RCFCB+14
 RDSLBL EQU RCFCB+16
 
 ; Parse CD's query, list or selection.
-; Preserve current drive and user;
-; failed selection keeps the old volume.
+; Preserve the current drive; failed
+; selection keeps the old volume.
 ; Uses LOADBUF and changes all.
 
 RCMDCD:
   ld hl,(ARGSTRT)
   call SKIPSP    ; A: its first byte
   ld a,(CURDSK)  ; the logged drive
-  and $0F
   ld (RCDDRV),a  ; the current drive
   ld a,(hl)      ; after CD's blanks
   or a

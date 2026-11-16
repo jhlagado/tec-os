@@ -1,4 +1,4 @@
-; CCP built-ins UNLOAD/CON/USER,
+; CCP built-ins UNLOAD/CON,
 ; file-reference parsing, page-zero
 ; preparation, output wrappers, service
 ; listing and startup record handling.
@@ -209,45 +209,7 @@ CONSH1:
   djnz CONSH1
   ld de,CRLFMSG
   call PUTSTR
-
-CONMAIN:
   jp MAINLOOP
-
-; USER: require one decimal number 0..15
-; with no non-space suffix. Pass E=B to
-; BDOS 32 and enter MAINLOOP.
-; Invalid/missing input enters BADCMD.
-; This command range is narrower than
-; the five-bit BDOS setter.
-
-CMDUSER:
-  call ARGSKIP   ; decimal operand
-  sub '0'
-  cp 10          ; a digit must lead
-  jr nc,USRBAD
-  ld b,a         ; tens or units
-  inc hl
-  ld a,(hl)
-  sub '0'        ; optional second digit
-  cp 10
-  jr nc,USERDONE
-  cp 6           ; only 10..15
-  jr nc,USRBAD
-  dec b          ; after a leading 1
-  jr nz,USRBAD
-  add a,10       ; 10..15
-  ld b,a
-  inc hl
-
-USERDONE:
-  call ENDCHK    ; validate entire token
-  ld e,b
-  ld c,32        ; 32: set user
-  call BDOS
-  jr CONMAIN
-
-USRBAD:
-  jp BADCMD      ; USER refusals
 
 ; Prepare transient page zero after a
 ; successful load. Input (ARGSTRT) is

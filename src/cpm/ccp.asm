@@ -30,16 +30,16 @@ TPA EQU $0100
 RCFAIL EQU 255*256
 
 ; Enter on cold/warm boot with C holding
-; page-zero user/drive nibbles. Use
-; stack CSTKTOP. Validate the drive
-; through MAXDRV/DRVIDX and fall back to
-; A when unavailable. Disk reset then
-; validates A through the BIOS.
-; Save BOOTDRV and the four-bit user.
-; Set one-shot WRFLAG for BDOS 13's
-; dirty/checksum reset, restore the user
-; with function 32, call STBOOT and
+; page zero's drive byte: only its low
+; nibble is read. Use stack CSTKTOP.
+; Validate the drive through
+; MAXDRV/DRVIDX and fall back to A when
+; unavailable. Save BOOTDRV, set
+; one-shot WRFLAG for BDOS 13's
+; dirty/checksum reset, call STBOOT and
 ; select non-A BOOTDRV with function 14.
+; The user number is 0: warm boot
+; cleared it with the BDOS's state.
 ; Returned reset/selection errors stay
 ; in the retry console. Join STARTED
 ; only with valid disk defaults. This
@@ -66,13 +66,6 @@ CCPDA:
 CCPDR:
 
   ld (BOOTDRV),a
-  ld a,c
-  rrca           ; user high -> low
-  rrca
-  rrca
-  rrca
-  and $0F
-  push af        ; user across reset
   ld hl,WRFLAG   ; dirty/checksum reset
   ld (hl),$FF    ; one-shot WRFLAG
   ld a,$FF
@@ -83,10 +76,6 @@ CCPRST:
   call BDOS
   inc a          ; FFh: reset failed
   jr z,CCPRERR
-  pop af
-  ld e,a
-  ld c,32        ; 32: restore user
-  call BDOS
   xor a
   ld (ERRMODE),a ; normal startup policy
   call STBOOT    ; once after cold boot
@@ -100,8 +89,6 @@ CCPRST:
   call BDOS
   inc a
   jr nz,CCPRDY
-  ld a,(USERNO)  ; saved user was popped
-  push af        ; same retry stack shape
 
 ; No normal command, shell LINE or
 ; program starts with incomplete login.
@@ -142,11 +129,11 @@ STARTED:
   call PUTSTR
 
 ; Take the next line. MAINLOOP resets
-; SP=CSTKTOP; SAVEDU supplies the drive
-; and packed user. A shell holding the
-; hook supplies the line and its origin
-; through SHLINE. Otherwise print a
-; nonzero user, the drive and >, clear
+; SP=CSTKTOP; SAVEDRV puts the drive at
+; 0004h. A shell holding the hook
+; supplies the line and its origin
+; through SHLINE. Otherwise print the
+; drive and >, clear
 ; CHPOS, and take a function 47 line
 ; (CHPOS bit 0), then the one startup
 ; line, then a typed line through BDOS
@@ -158,31 +145,17 @@ MAINLOOP:
                  ; stack
 
 MLREAD:
-  call SAVEDU    ; A=drive, B=user bits
-  push af        ; save drive for prompt
+  call SAVEDRV   ; the drive, at 0004h
   ld a,(SHOWN+1)
   or a
   jr z,MLBARE    ; no shell: prompt here
-  pop af
   call SHLINE    ; the shell's line
   ld (STFLAG),a  ; its origin
   ld hl,CMDTXT
   jr MLSKIP
 
 MLBARE:
-  ld a,b
-  rrca
-  rrca
-  rrca
-  rrca
-  or a
-  jr z,MLDRV     ; user 0: no number
-  ld l,a
-  ld h,0
-  call PUTDEC    ; decimal user prefix
-
-MLDRV:
-  pop af
+  ld a,(CURDSK)
   add a,'A'      ; drive letter
   ld e,a
   call PUTCHAR
@@ -289,7 +262,7 @@ MLTK3:
   ld e,a
   ld c,14        ; 14: select drive
   call BDOS
-  call SAVEDU    ; save selected drive
+  call SAVEDRV   ; save selected drive
 
 TOSTART:
   jp STARTED
@@ -339,34 +312,17 @@ SHENT:
   ld l,a
   ret
 
-; Save prompt state at 0004h: query BDOS
-; user 32, shift its low nibble into B
-; bits 4..7 and preserve B over
-; default-drive query 25. Pack both into
-; CURDSK and return drive in A/C.
-; The saved user is four bits, even
-; though BDOS accepts five. Normal USER
-; input is 0..15. DE/HL/F may change
+; Save the prompt's drive at 0004h:
+; query the default drive through BDOS
+; 25 and store it whole, so the byte's
+; user nibble is always zero. Return the
+; drive in A. BC/DE/HL/F may change
 ; through BDOS.
 
-SAVEDU:
-  ld e,$FF
-  ld c,32        ; 32: query user
-  call BDOS
-  add a,a        ; low user nibble -> B
-  add a,a
-  add a,a
-  add a,a
-  ld b,a
-  push bc        ; user across drive
-                 ; call
+SAVEDRV:
   ld c,25        ; 25: logical default
   call BDOS
-  pop bc
-  ld c,a
-  or b
-  ld (CURDSK),a  ; packed page-zero byte
-  ld a,c
+  ld (CURDSK),a  ; drive, user nibble 0
   ret
 
 ; Dispatch the uppercased zero-ended
@@ -422,8 +378,8 @@ KEYSK:
   jp c,BADCMD
 
 ; Exact type SVC enters the loader's
-; SVCRUN, without LOADA's user/drive
-; fallback: it enters a service that is
+; SVCRUN, without CMDCOM's fallback to
+; A: it enters a service that is
 ; in, or installs the file. Other types
 ; load as COM, CMD among them, so a
 ; typed NAME.CMD with no shell runs
@@ -458,12 +414,12 @@ SVCOK:
   jp STARTED     ; normal newline entry
 
 ; Load a COM image: force type COM and
-; call LOADA on the named/default drive.
-; Carry clear enters CMDRUN. Carry/NZ
-; rejects unloadable input. Carry/Z may
-; retry A only for an unqualified name
-; when PZDU's drive is not A. LOADA
-; controls each drive's user-0 retry.
+; call LOADCOM on the named/default
+; drive. Carry clear enters CMDRUN.
+; Carry/NZ rejects unloadable input.
+; Carry/Z, no such file, retries on A
+; only for an unqualified name when
+; PZDU's drive is not A.
 
 CMDCOM:
   ld hl,'O'*256+'C'
@@ -471,7 +427,7 @@ CMDCOM:
   ld a,'M'       ; type COM
 
   ld (CMDFCB+11),a
-  call LOADA     ; first drive/user try
+  call LOADCOM   ; named/current drive
   jr nc,CMDRUN   ; carry clear: loaded
   jr nz,BADCMD   ; carry/NZ: reject
   ld hl,CMDFCB   ; carry/Z: retry check
@@ -479,10 +435,10 @@ CMDCOM:
   or a
   jr nz,BADCMD   ; explicit drive: stop
   ld a,(PZDU)    ; saved prompt drive
-  and $0F
+  or a
   jr z,BADCMD    ; already A: stop
   inc (hl)       ; FCB drive 1=A
-  call LOADA     ; A, user then user 0
+  call LOADCOM   ; the same name on A
   jr c,BADCMD    ; retry failed
 
 ; After a successful load, PREPPAGE
@@ -615,45 +571,6 @@ PRTGO:
   call PUTSTR    ; dollar-ended message
   jp STARTED
 
-; Retry LOADCOM's carry/Z (FFh-open)
-; classification under user 0 when
-; PZDU's saved user is nonzero. On
-; success or carry/NZ return
-; immediately.
-; No SYS attribute is required (A7).
-; Preserve the retried A/flags over
-; restoring the saved user through BDOS
-; 32 on a returning path. Nonlocal
-; aborts do not reach that restore.
-; Changes BC/DE/HL.
-
-LOADA:
-  call LOADCOM
-  ret nc         ; loaded: no fallback
-  ret nz         ; unloadable: stop
-  ld a,(PZDU)    ; saved prompt user
-  and $F0
-  scf
-  ret z          ; user 0: no retry
-  push af
-  ld e,0
-  ld c,32
-  call BDOS
-  call LOADCOM   ; same drive/file
-  pop bc         ; saved user in B
-  push af        ; retry result across
-                 ; set
-  ld a,b
-  rrca           ; saved nibble -> E
-  rrca
-  rrca
-  rrca
-  ld e,a
-  ld c,32
-  call BDOS
-  pop af
-  ret
-
 ; Load CMDFCB through public BDOS
 ; FCB/DMA calls. Open with function 15:
 ; Classify FFh open as carry/Z without
@@ -739,7 +656,7 @@ LOADOK:
 ; Return a non-EOF read failure: input
 ; NZ comes from LOADEND's CP 1. SCF sets
 ; carry and keeps NZ, suppressing
-; LOADA's missing-file fallback.
+; CMDCOM's missing-file fallback.
 
 LOADBAD:
   scf

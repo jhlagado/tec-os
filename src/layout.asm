@@ -41,9 +41,10 @@ CTAB EQU $BC00   ; four-byte LBA keys
 CDIRTY EQU $BC80
 NLINES EQU 30    ; cache lines
 
-; CP/M 2.2 base-page fields. PZDU packs
-; user in bits 4-7 and drive in bits
-; 0-3.
+; CP/M 2.2 base-page fields. PZDU holds
+; the drive in bits 0-3. CP/M's user
+; bits 4-7 are zero: the CCP stays in
+; user area 0.
 
 IOBYTE EQU $0003
 PZDU EQU $0004
