@@ -10,7 +10,7 @@ import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ABI, GLCD_SVC, ROOT, romFor, service, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, PUT_COM, ROOT, romFor, service, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 import { MON3_CEILING, execFile, mon3Svc, mon3Variant } from "./lib/mon3.mjs";
 import { run as censusRun, watch } from "./lib/census.mjs";
 import { GUARDS, HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execSvc, find, hellos, hookSvc, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, user, word } from "./lib/shell.mjs";
@@ -149,10 +149,10 @@ test("SH5 line at each prompt", () => {
 });
 
 test("SH5 line flags after a BDOS error", () => {
-  const m = shellMachine(shellCard({ "HOOK.SVC": HOOK.file }, { startup: [], image: standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]) }));
+  const m = shellMachine(shellCard({ "HOOK.SVC": HOOK.file, "PUT.COM": PUT_COM }, { startup: [], image: standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]) }));
   at(m, "HOOK.SVC", { re: S });
   m.mark = m.output.length;
-  m.type("SAVE 1 C:X.COM\r");
+  m.type("PUT 1 C:X.COM\r");
   m.runUntil(() => m.waitingForInput() && /Bdos Err On C: R\/O/.test(m.text(m.mark)), 200_000_000, "the error");
   m.type("\r");
   m.runUntil(() => m.ready() && S.test(m.text(m.mark)), 200_000_000, "the prompt after the error");
