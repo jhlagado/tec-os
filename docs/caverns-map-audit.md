@@ -16,15 +16,16 @@ clearing. The native quest visits every room and checks its displayed prose.
 
 - Hut clearing 2 connects west to forest 3 and east to clovers 4. The hut is
   south of the clearing; the route back from clovers is west.
-- Outcrop 8 sees a bridge upriver, without claiming a compass bearing for
-  the river's course or providing a direct route there. West is its only exit.
+- Outcrop 8 sees the string bridge broadly south-east, consistent with the
+  corrected surface route. Reaching it requires a detour via the forest; west
+  is the only exit from the outcrop. No water-flow direction is asserted.
 - Balcony 28 and temple 35 are vertically connected by the secured rope.
   UP/DOWN are separate from compass movement.
 - Ledge 27 is the upper river viewpoint; ledge 40 is below temple level.
   The directions used to approach them do not describe the direction of flow.
 - The route between drain junction 43 and pearl chamber 46 winds and changes
   height. The north/south exits are the beginnings of that passage, not a claim
-  that the caverns form a rectangular grid. Its return is explicitly retraceable.
+  that the caverns form a rectangular grid. Its return is explicitly retraceable; no precise westward bend is claimed.
 - Viewpoint 48 sees the castle across the lower river to the east. The raised
   drawbridge is a visible, initially blocked eastern crossing. The first route
   goes through conduit 54, service path 53, wooden bridge, eastern bank 52
@@ -92,14 +93,14 @@ rooms; the reference applies some of these dynamically in machine code.
 | 5 | blocked | 6 | blocked | 3 | Cliff above the Gioll: forest east; a path descends south to the bank. |
 | 6 | 5 | blocked | 7 | 8 | Riverbank: cliff north, crater west, rocky outcrop east. |
 | 7 | blocked | blocked | warned fatal drop | 6 | The Gioll pours into a crater. West is a fatal drop. The safe path returns east. |
-| 8 | blocked | blocked | 6 | blocked | Rocky outcrop: a bridge is visible upriver, but unreachable from here. Return west. |
+| 8 | blocked | blocked | 6 | blocked | A distant string bridge is visible south-east, beyond the trees. Reach it via the forest; return west. |
 | 9 | blocked | 10 | 4 | blocked | Windy slopes of Mount Ymir: clover field west, bridge approach south. |
 | 10 | 9 | 11 | blocked | blocked | The string bridge crosses the Gioll southwards. Mount Ymir's slopes are north. |
 | 11 | 10 | 12 | blocked | blocked | On the swaying string bridge. Follow it north or south; no footing east or west. |
 | 12 | 11 | blocked | 13 | 15 | Southern bank: string bridge north, oak forest west, rope cliff east. |
 | 13 | blocked | 14 | blocked | 12 | A rock amid poisonous mushrooms: bridge landing east, basalt clearing south. |
 | 14 | 13 | 16 | blocked | blocked | Basalt clearing: oak forest north, cave entrance south. |
-| 15 | blocked | blocked | 12 | blocked | A shelf overlooks the river. West returns to the southern bridge landing. |
+| 15 | blocked | blocked | 12 | blocked | A shelf above the Gioll's southern bank. The path west returns to the bridge landing. |
 | 16 | 14 | 18 | blocked | 17 | Daylit cave entrance: outside north, passages south and east. Take a light first. |
 | 17 | blocked | blocked | 16 | blocked | An explorer scratched: Seek the sacred key of Thialfi. The passage returns west. |
 | 18 | 16 | blocked | 23 | blocked | Entrance cavern: daylight north, old torture chamber west. |
@@ -124,15 +125,15 @@ rooms; the reference applies some of these dynamically in machine code.
 | 37 | blocked | 35 | blocked | gate → 38 | Crypt: temple gate south, sealed passage east. Four stones name its keeper. |
 | 38 | gate → 43 | blocked | 37 | gate → 39 | Cell: crypt west, shaft east, service hatch north. Its latch is on the drain side. |
 | 39 | blocked | 36 | 38 | blocked | Beyond the shaft: cell west, lower cavern south. |
-| 40 | 45 | 48 | 36 | blocked | Lower river ledge, below temple level: waterfall north, castle view south, cavern west. East is a sheer edge. |
+| 40 | 45 | 48 | 36 | blocked | Lower river ledge: cavern west. Paths lead north to the waterfall and south to a river bend. East is a sheer edge. |
 | 41 | blocked | blocked | 54 | 42 | Straight drain: conduit west, passage east towards the junction. |
 | 42 | blocked | blocked | 41 | 43 | Straight drain: conduit west, junction east. |
-| 43 | 46 | 38 | 42 | 44 | Drain junction: winding path north, branch east, conduit west, service hatch south. OPEN HATCH lifts its latch. |
+| 43 | 46 | 38 | 42 | 44 | Drain junction: a winding path north leads to the pearl chamber. Branch east, conduit west; OPEN HATCH south. |
 | 44 | blocked | blocked | 43 | blocked | Blind drainage branch: return west to the junction. |
-| 45 | 47 | 40 | blocked | blocked | Gioll water falls from the roof. Steps north climb to the drains; ledge south. No safe footing east. |
-| 46 | blocked | 43 | 47 | blocked | Pearl-white chamber: steps west; a winding path south bends west to the drain junction. |
+| 45 | 47 | 40 | blocked | blocked | The Gioll falls through the roof. Stone steps climb north; the lower ledge is south. No safe footing east. |
+| 46 | blocked | 43 | 47 | blocked | Pearl-white chamber: steps west; a winding path south leads to the drain junction. |
 | 47 | blocked | 45 | blocked | 46 | Top of the stone steps: waterfall south, pearl-white chamber east. |
-| 48 | 40 | blocked | blocked | gate → 49 | Castle viewpoint: ledge north; castle across the river east, reached by drawbridge. No path south. |
+| 48 | 40 | blocked | blocked | gate → 49 | At a river bend, the castle is visible across the water east. Return north, or cross the drawbridge east. No path south. |
 | 49 | blocked | blocked | 48 | 50 | Drawbridge: river ledge west, castle courtyard east. Crossing secures the bridge. |
 | 50 | blocked | 52 | 49 | 51 | Castle courtyard: hzb tzozi. Drawbridge west, magazine east; tunnel south to bank. |
 | 51 | blocked | blocked | 50 | blocked | Powder magazine: return west to the courtyard. |

@@ -1394,3 +1394,21 @@ restored ROPE, exported CAVE.CAV, and restored it with inventory in a fresh
 browser context/card. See docs/evidence/caverns-refinement/viewer-result.json
 and accompanying screenshots. Both Viewer recipe/native-build and bundle tests
 passed. No public site deployment or physical-board result is claimed.
+
+## Description-only landmark pass
+
+Author narrowed further geography work to wording: distant bearings should
+approximately correlate with the route, without another map redesign.
+Updated rooms 8, 15, 40, 43, 45, 46 and 48 only. The outcrop sees the bridge
+broadly south-east but requires a forest detour; neither upriver nor upstream
+is claimed. The lower ledge's southern path leads to a bend, where the castle
+is visible east; it does not put the castle itself south. The waterfall's steps
+climb north without claiming the whole drain network lies north. Winding
+passages identify the route and destination without an invented westward bend.
+The rope shelf is explicitly above the Gioll's southern bank.
+
+All 216 exit entries are unchanged. Native build remains 39,808 bytes; all
+15 game/scenario/TED tests pass, including a 126-point, all-54-room quest with
+actual room descriptions checked. Supporting records live under
+ docs/evidence/caverns-wording-pass/. This is not the proposed architectural
+rewrite, and changes no parser, random, inventory, puzzle or scoring rule.
