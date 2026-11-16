@@ -283,15 +283,12 @@ quotes is preserved, so its greeting prints in capitals
 capitals, but lower case also works. The host-model test types
 `baza times` (`46cf3f1:test/times.test.mjs:79`).
 
-On the four-drive starter card TED has 28,694 bytes of text room with
+On the four-drive starter card TED has 28,182 bytes of text room with
 the shell loaded. Leaving a MON-3 session with `EXIT` keeps `MON3.SVC`
-installed. With the current 20-page development monitor, TED has 23,574 bytes,
-or 22,806 with the GLCD driver too. The earlier 18-page monitor measurements
-were 24,086/23,318; the two extra pages account for the 512-byte reduction,
-with the TED image unchanged. Unload MON3.SVC before editing a larger source.
-These are paired emulator observations for the monitor at
-`TEC-OS 56a3c6aa2e837eb24fa3a61df621f3830e8259d3`, not physical-board
-measurements (`docs/compatibility.md`).
+installed, and TED then has 23,062 bytes, or 22,294 with the GLCD driver
+too. Unload MON3.SVC before editing a larger source. These are host-model
+measurements with the seventeen-page shell and the twenty-page monitor
+(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/compatibility.md:233`).
 
 ## Machine code from BASIC
 

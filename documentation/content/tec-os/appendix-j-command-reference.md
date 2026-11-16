@@ -147,30 +147,38 @@ with return code `FF00h`. A system file remains available to TYPE and to
 program lookup.
 
 The shell's DIR starts with a blank line and prints a file on each row.
-The padded name and type are followed by its size in bytes, calculated as
-BDOS function 35's record count times 128. Each row is 20 columns wide and
-fits the graphics LCD's 21-column screen.
+The name and type come first, joined by a full stop as you type them and
+padded to twelve columns; a name with no type has no full stop. The size in
+bytes follows, right-aligned in eight columns. It has BDOS function 35's
+meaning: the file's highest record, plus one, times 128. Each row is 20
+columns wide and fits the graphics LCD's 21-column screen.
 
 The totals give the file count and combined byte length. Free space is
 function 46's record count times 128. The final line identifies the drive
 and its volume:
 
 ```text
-A:SYSTEM>DIR
-
-SHELL   .SVC    3712
-SAY     .COM     128
-X       .DAT  128128
-3 files, 131968 bytes
-1013760 free on A:SYSTEM
+SHELL.SVC       4224
+SAY.COM          128
+X.DAT         128128
 ```
 
-The listing is retained from `241b438:docs/shell.md:200-234`. Files represented by
-a single directory entry are listed first in a single pass. A file that
-may have more entries is sized through function 35, which scans the directory.
-Many large files therefore make DIR slower. A G8M file exceeds a single
-entry above 32 KiB. On G1M the threshold is 16 KiB. `DIR /W` lists names
-without that sizing work.
+These rows are the example in `TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/shell.md:200-212`. Files
+represented by a single directory entry are listed first, then those that
+may have more. A G8M file exceeds a single entry above 32 KiB. On G1M the
+threshold is 16 KiB. A first search of the directory gathers each name's
+size in a table, so a large file costs no more than a small one: DIR takes
+about twice `DIR /W`'s time, 40.6 s against 21.5 s for 452 files on a G8M
+volume at 4 MHz on the serial console
+(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/shell.md:231-243`).
+
+That table is built in program memory, at `0100h`–`223Fh`. CP/M 2.2's DIR
+leaves program memory alone, so there a program can be loaded, the disk
+listed and the program then written out with SAVE. Under the shell, DIR
+with sizes overwrites the program, and a SAVE after it writes DIR's table.
+Use `DIR /W` before SAVE: the ROM's listing works in the record at `0080h`
+and leaves the program as it was
+(`TEC-OS d3d64c824e869c266146344dab555e8d9aeea828:docs/shell.md:223-229`).
 
 `DIR /W`, and DIR without the shell, is the ROM's wide listing. Its last line
 gives the number listed and the free KiB on that drive. A displayed name has
@@ -204,7 +212,7 @@ in hexadecimal (`241b438:drivers/shellcmd.asm:54-154`).
 The type-only destination and self-copy cases below were captured on A
 with the starter card.
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:.DOC' 'DIR B:' 'COPY A:STARTUP.CMD STARTUP.CMD' 'COPY STARTUP.CMD'. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'COPY STARTUP.CMD B:.DOC' 'DIR B:' 'COPY A:STARTUP.CMD STARTUP.CMD' 'COPY STARTUP.CMD'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -220,7 +228,7 @@ COPIED 0001
 
 A:SYSTEM>DIR B:
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
 8368128 free on B:WORK
 A:SYSTEM>COPY A:STARTUP.CMD STARTUP.CMD
@@ -279,7 +287,7 @@ disposable file there. It records an `n` answer that leaves the file and a `y`
 answer that erases it. This is a separate demonstration, not the card
 used for BANNER in Chapter 2. `ERA *.*` would erase BANNER too on that card.
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:' B: '@start ERA *.*' $'@key n\x0d' DIR '@start ERA *.*' $'@key y\x0d' DIR. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'COPY STARTUP.CMD B:' B: '@start ERA *.*' $'@key n\x0d' DIR '@start ERA *.*' $'@key y\x0d' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -298,7 +306,7 @@ B:WORK>ERA *.*
 ALL (Y/N)?n
 B:WORK>DIR
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
 8368128 free on B:WORK
 B:WORK>ERA *.*
@@ -316,7 +324,9 @@ writes that many 256-byte pages starting at `0100h`. A count of 0 makes an empty
 file. The count must be less than the high byte of the word at `0006h` so the
 saved pages stop below the resident entry's page.
 [Memory for programs](11-memory-for-programs.md) gives the memory boundary and
-the complete capacity example.
+the complete capacity example. SAVE writes whatever those pages hold when it
+runs. The shell's DIR with sizes uses the first 33 of them, so list with
+`DIR /W` between loading a program and saving it ([DIR and TYPE](#dir-and-type)).
 
 An existing file of the same name is erased first. A failed make, write or
 close produces `NO SPACE`. After a write failure SAVE attempts to close the

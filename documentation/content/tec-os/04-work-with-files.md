@@ -27,10 +27,14 @@ you change them. BANNER.ASM and its outputs can remain on B throughout.
 
 `DIR` lists the current drive's files. `DIR B:` lists B while leaving
 the current drive selected. The startup shell displays each file on a
-row with its size in bytes.
+row: its name and type together, as you would type them, then its size in
+bytes at the right.
 The totals below give the file count, combined bytes and free space
 for that drive and volume. `NO FILE` means no visible file matched.
-`DIR /W` selects the ROM's wide listing instead.
+`DIR /W` selects the ROM's wide listing instead. Some listings in later
+chapters were captured before the shell joined the name and type: they
+show the type in a column of its own, as `STARTUP .CMD`, with the same
+names and sizes.
 
 Names follow the same form as BANNER.ASM: up to eight characters, a full
 stop and a type of up to three characters. You can omit the full stop and
@@ -213,7 +217,7 @@ that separate session, not as a sequence to repeat on your current card. It
 copies A's STARTUP.CMD under two names, renames one copy and erases only
 NOTES.TXT. The listings and free-space figures belong to that card:
 
-<!-- TEC-OS 46cf3f1: node tools/capture.mjs 'COPY STARTUP.CMD B:' 'COPY STARTUP.CMD B:COPY.TXT' B: DIR 'REN NOTES.TXT=COPY.TXT' 'REN NOTES.TXT=STARTUP.CMD' DIR 'ERA NOTES.TXT' 'ERA NOTES.TXT' DIR. Complete captured console transcript. -->
+<!-- TEC-OS with the sized DIR (ROM c9586263, starter card 104e7e5d): node tools/capture.mjs 'COPY STARTUP.CMD B:' 'COPY STARTUP.CMD B:COPY.TXT' B: DIR 'REN NOTES.TXT=COPY.TXT' 'REN NOTES.TXT=STARTUP.CMD' DIR 'ERA NOTES.TXT' 'ERA NOTES.TXT' DIR. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -233,8 +237,8 @@ COPIED 0001
 A:SYSTEM>B:
 B:WORK>DIR
 
-STARTUP .CMD     128
-COPY    .TXT     128
+STARTUP.CMD      128
+COPY.TXT         128
 2 files, 256 bytes
 8364032 free on B:WORK
 B:WORK>REN NOTES.TXT=COPY.TXT
@@ -242,8 +246,8 @@ B:WORK>REN NOTES.TXT=STARTUP.CMD
 FILE EXISTS
 B:WORK>DIR
 
-STARTUP .CMD     128
-NOTES   .TXT     128
+STARTUP.CMD      128
+NOTES.TXT        128
 2 files, 256 bytes
 8364032 free on B:WORK
 B:WORK>ERA NOTES.TXT
@@ -251,7 +255,7 @@ B:WORK>ERA NOTES.TXT
 NO FILE
 B:WORK>DIR
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
 8368128 free on B:WORK
 B:WORK>
