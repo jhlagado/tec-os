@@ -2,17 +2,17 @@
 
 TEC-OS runs unmodified COM programs that use the documented CP/M 2.2
 interfaces, size themselves from the BDOS address at `0006h` and fit the TPA:
-46,533 bytes (`0100h–B6C4h`) on the starter card with nothing loaded, and at
-least 46,533 on any card, since cold boot places the BDOS entry below the
+46,536 bytes (`0100h–B6C7h`) on the starter card with nothing loaded, and at
+least 46,536 on any card, since cold boot places the BDOS entry below the
 allocation vectors of the drives the card asks for: the starter card asks for
 four, each with a vector for an 8 MiB volume. A card of two volumes and no
-drives field gives 47,237. A board with a PICO9918 has the same: its console
+drives field gives 47,240. A board with a PICO9918 has the same: its console
 is in the ROM and its RAM in the BIOS's state (KS39). The GLCD's driver takes
 three pages under the stub's page, leaving 45,568 on the starter card. The
 starter card loads `SHELL.SVC`, which takes seventeen pages there, leaving
 41,984, and 41,216 with the GLCD's driver too. The CCP loads a `.COM` up to
 the start of the page holding the word at `0006h`, so the largest it loads on
-the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 197
+the starter card with nothing loaded is 46,336 bytes (`0100h–B5FFh`), 200
 below the TPA: a program may use the rest. It reports version 2.2.
 
 ## BDOS functions
@@ -50,7 +50,7 @@ for the next flush; `E = FFh`'s purge is the same flush. Function 12 still repor
 | Wildcard search | 17 | Pass |
 | User areas | 32 | Pass; files in one user area are invisible from another |
 | Drive selection | 14, 25 | Pass |
-| Read-only volume | 22 via `SAVE`, 29 | `Bdos Err On C: R/O`; card unchanged. Function 29 lists the volume once its drive has been selected |
+| Read-only volume | 22, 29 | `Bdos Err On C: R/O`; card unchanged. Function 29 lists the volume once its drive has been selected |
 
 A sequential write (21) moves to the next extent when it needs it, as CP/M
 2.2's does: the write of record 128 of an extent, not the write of record
@@ -80,15 +80,13 @@ file, as CP/M 2.2's does, so a program can make it read-write again.
 
 ## Command processor
 
-`DIR`, `ERA`, `REN`, `SAVE`, `TYPE`, `USER` and drive changes, with the
+`DIR`, `ERA`, `REN`, `TYPE`, `USER` and drive changes, with the
 syntax of the CP/M 2.2 CCP, are in ROM, with `CON` and `UNLOAD`. `DIR`'s output
 is TEC-OS's own: `NAME.EXT` columns that fit the display, then the file count
-and free space. Programs that parse DR's `DIR` layout will not find it. The
-shell's `DIR` with sizes also uses the TPA, which CP/M's does not: see
-[Known incompatibilities](#known-incompatibilities). `SAVE`
-on a full disk or directory differs from CP/M 2.2's, which prints its error with
-the file left open and its records in no directory entry: TEC-OS's closes the
-file first, keeping the records written, as `COPY` does, then prints `NO SPACE`.
+and free space. Programs that parse DR's `DIR` layout will not find it.
+`SAVE` is a CP/M 2.2 built-in that TEC-OS does not provide: typed, it is an
+unknown command. Nothing needs it, since TAS and BAZA write their `.COM`
+files, TED saves text and `MON3.SVC` loads and runs programs itself.
 `SUBMIT` is not supported; `.CMD` scripts are `SHELL.SVC`'s.
 
 `SHELL.SVC`, a resident service on the starter card and the first line of its
@@ -186,7 +184,7 @@ neither.
 
 ## Base page
 
-Warm boot at `0000h`, BDOS vector at `0005h` (target `B6C5h` on the starter card, directly
+Warm boot at `0000h`, BDOS vector at `0005h` (target `B6C8h` on the starter card, directly
 below the allocation vectors), IOBYTE at
 `0003h` (stored, not acted on), user and drive at `0004h`, default FCBs at
 `005Ch` and `006Ch`, command tail and default DMA at `0080h`, programs at
@@ -247,15 +245,9 @@ and run.
 - **`[more]`** (the shell's). The key is tested with `AND DFh`, so `#` and `;` stop a listing as
   ^C, Esc and Q do.
 - **TPA ceiling.** Programs that assume a BDOS at a fixed high address, or
-  more than 46,533 bytes of TPA, may fail; how much a card gives depends on
-  its drives and what is loaded. Measured on the starter card: 46,533 bare,
+  more than 46,536 bytes of TPA, may fail; how much a card gives depends on
+  its drives and what is loaded. Measured on the starter card: 46,536 bare,
   41,984 with the shell, and 41,216 with the shell and the GLCD's driver.
-- **`DIR` before `SAVE`.** In CP/M 2.2 the built-in `DIR` leaves the TPA
-  alone, so a program loaded there can still be written out with `SAVE` after
-  a listing. The shell's `DIR` with sizes builds its table of names at
-  0100h–223Fh and overwrites that program: a `SAVE` after it writes the
-  table. `DIR /W`, the ROM's listing, uses only the record at 0080h and is
-  safe before `SAVE`, as is `DIR` with no shell (`test/shell2.test.mjs`).
 - **BDOS internals.** Programs that patch the BDOS or BIOS code fail: both are
   in ROM. The BIOS jump table in RAM is the place to hook. The one BDOS call
   that does not go through it is the check for `^S` while the BDOS writes,

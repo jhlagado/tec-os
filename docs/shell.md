@@ -1,7 +1,7 @@
 # The shell: SHELL.SVC and the ROM's shell hook
 
 The CCP in ROM is minimal. It runs a `.COM` or a `.SVC`, changes drive, and
-has CP/M's built-ins `DIR`, `ERA`, `REN`, `TYPE`, `SAVE` and `USER`, with
+has CP/M's built-ins `DIR`, `ERA`, `REN`, `TYPE` and `USER`, with
 `CON`, `CD` and `UNLOAD`. It reads one line of `A:STARTUP.CMD` after a reset.
 
 `SHELL.SVC` is a resident service that takes over the prompt through the
@@ -70,7 +70,7 @@ A line is split into pieces at separators, and each piece runs in turn:
   code: in `A &B &C` with A failing, B and C are both skipped; in `A &B !C`, C
   runs. A skipped piece is not echoed: typed after a failed build, `TAS X &X`
   shows the line, TAS's message and the next prompt, and no `A>X`.
-- A refused command and the built-ins' failures (`NO FILE`, `NO SPACE`, a bad
+- A refused command and the built-ins' failures (`NO FILE`, `FILE EXISTS`, a bad
   `REN` and the rest) set FF00h, as they always have.
 - Each new line runs whatever the last line returned. A line whose first
   character after blanks and `!` is `&` is refused, `&WORD?` with FF00h, and
@@ -219,14 +219,6 @@ and the drive's volume. Hidden (SYS) files are omitted, as in the ROM's
 two-group directory order. A row remains 20 columns, within the GLCD's 21,
 and long listings stop at `[more]`. `DIR /W` goes directly to the ROM's wide
 listing; with no shell, `DIR` is the ROM's listing too.
-
-**`DIR` before `SAVE`.** The shell's `DIR` with sizes builds its table of
-names in the TPA, at 0100h–223Fh, so it overwrites a program left there. In
-CP/M 2.2 `DIR` leaves the TPA alone, and loading a program, listing the disk
-and then typing `SAVE n NAME.COM` saves the program. Here that `SAVE` would
-write `DIR`'s table. Use `DIR /W` before `SAVE`: it is the ROM's listing,
-which works in the record at 0080h and leaves the TPA as it was
-(`test/shell2.test.mjs`). With no shell, `DIR` is that listing too.
 
 **Its cost.** A first search combines each name's extent sizes in a table.
 Two more searches then produce the rows, with no BDOS 35 scan and search
