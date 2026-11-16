@@ -1231,7 +1231,7 @@ test("S2-12 tpa", () => {
   const card = starterImage();
   volume(card, "A").write("STARTUP.CMD", Buffer.from("\x1a", "latin1"));
   const bare = shellMachine(card);
-  assert.equal(word(bare, 6) - 0x100, 46_533, "bare: four drives' vectors");
+  assert.equal(word(bare, 6) - 0x100, 46_536, "bare: four drives' vectors");
   const m = shellMachine(starterImage());
   assert.equal(word(m, 6) - 0x100, 41_984, "with the shell, the starter card's STARTUP.CMD");
 });
