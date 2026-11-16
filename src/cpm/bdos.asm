@@ -302,7 +302,8 @@ FNCOUT:
 ; BIORDR and return it through RETA.
 
 FNREAD:
-  jp BIORDR      ; RAM reader hook
+  call BIORDR    ; RAM reader hook
+  ret
 
 ; Function 4: send E as C through RAM
 ; BIOPUN. Return zero.
@@ -335,7 +336,8 @@ FNDIRECT:
   call CONSTAT   ; pending or BIOS ready
   or a
   ret z          ; A=0: zero
-  jp GETCHAR     ; unechoed input
+  call GETCHAR   ; unechoed input
+  ret
 
 ; Function 6 output: E is the byte.
 ; Send it as C directly through BIOCOT.
@@ -447,7 +449,13 @@ LINCHR:
   ld a,l         ; LINMAX, H=LINCNT
   cp h
   jr z,TOLINDON  ; full: echo key only
-  call LINPUT    ; store and echo
+  ld hl,(LINPTR)
+  ld (hl),c
+  inc hl
+  ld (LINPTR),hl
+  ld hl,LINCNT
+  inc (hl)
+  call ECHOCHAR  ; echo stored byte
   ld hl,(LINMAX)
   ld a,l         ; post-store capacity
   cp h
@@ -531,7 +539,10 @@ LINABRT:
 ; no byte and leave its count unchanged.
 
 LINEOL:
-  call LINNL     ; display newline
+  ld c,CR
+  call ECHOONE   ; display newline
+  ld c,LF
+  call ECHOONE
 
 TOLINLP:
   jp LINLOOP
@@ -557,7 +568,10 @@ LINCTU:
 LINRETY:
   ld c,'#'       ; mark retyped line
   call ECHOONE
-  call LINNL     ; new display line
+  ld c,CR        ; new display line
+  call ECHOONE
+  ld c,LF
+  call ECHOONE
   ld hl,(PARAM)
   inc hl         ; skip max/count bytes
   inc hl
@@ -674,30 +688,16 @@ LINHC:
   cp d
   jp z,LINLOOP   ; full
   push hl        ; the shell's line
-  call LINPUT    ; store and echo
-  pop hl
-  inc hl         ; the shell's next byte
-  jr LINHC
-
-; Store C at LINPTR, count it and echo
-; it.
-
-LINPUT:
   ld hl,(LINPTR)
-  ld (hl),c
+  ld (hl),c      ; store and advance
   inc hl
   ld (LINPTR),hl
   ld hl,LINCNT
-  inc (hl)
-  jp ECHOCHAR
-
-; CR and LF through ECHOONE.
-
-LINNL:
-  ld c,CR
-  call ECHOONE
-  ld c,LF
-  jp ECHOONE
+  inc (hl)       ; one more counted
+  call ECHOCHAR  ; echo the stored byte
+  pop hl
+  inc hl         ; the shell's next byte
+  jr LINHC
 
 ; Function 11: return 1 for pending or
 ; BIOS-ready input, otherwise 0. An

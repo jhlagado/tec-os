@@ -608,7 +608,7 @@ CPFLSH:
 CKEY:
   ld a,(CANY)
   or a
-  jr z,CPOUT     ; none held behind
+  jp z,CPOUT     ; none held behind
   push de
   call CDI
   ld a,NLINES    ; no line excluded
