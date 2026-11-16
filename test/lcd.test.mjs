@@ -431,7 +431,7 @@ test("LC-11 a panel that never answers costs bounded time and leaves the console
   assert.equal(m.read(m.sym("CONMOD")), 3);
   const from = m.cycles;
   m.command("TYPE S.TXT");
-  // 11,639,530 measured: the bound is a quarter over it.
+  // 11,635,414 measured: the bound is a quarter over it.
   assert.ok(m.cycles - from < 14_600_000, `${m.cycles - from} T-states for five lines and their scrolls`);
   assert.match(m.command("CON TTY"), /CON: TTY:/);
 });
