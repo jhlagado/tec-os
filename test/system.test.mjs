@@ -4,11 +4,14 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
-import { boot, program, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { PUT_COM, boot, program, putBytes, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 import { createContainer, headerChecksum } from "../tools/lib/container.mjs";
 import { format } from "../tools/lib/format.mjs";
 
 const SLOW = { timeout: 900_000 };
+
+/** IMAGE with PUT.COM on A:, for a test that writes a file from the prompt. */
+const withPut = (image) => (volume(image, "A").write("PUT.COM", PUT_COM), image);
 
 function noViolations(m) {
   assert.deepEqual(m.violations, [], "no writes to ROM or under the boot overlay");
@@ -40,10 +43,10 @@ test("reset from a non-default bank and a dirty latch boots cleanly, repeatedly"
 });
 
 test("warm boot by ^C keeps the drive and user number", () => {
-  const m = boot(standardCard());
+  const m = boot(withPut(standardCard()));
   m.command("B:");
   m.command("USER 3");
-  m.command("SAVE 1 U3.COM");
+  m.command("PUT 1 U3.COM");
   m.type("\x03");
   m.expect(/B(:\S*)?>$/);
   assert.match(m.command("DIR"), /U3\.COM/);
@@ -166,8 +169,8 @@ test("the ROM rejects an invalid container before mounting anything", () => {
 });
 
 test("a standard-capacity card (byte addressing) works", () => {
-  const m = boot(standardCard(), { highCapacity: false });
-  m.command("SAVE 3 SC.COM");
+  const m = boot(withPut(standardCard()), { highCapacity: false });
+  m.command("PUT 3 SC.COM");
   assert.match(m.command("DIR"), /SC\.COM/);
   noViolations(m);
 });
@@ -197,7 +200,7 @@ const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 
 test("cold boot packs each drive's allocation vector, DSM / 8 + 1 bytes, below the workspace and puts the BDOS entry below them", () => {
   for (const card of CARDS) {
-    const m = boot(createContainer(card.volumes));
+    const m = boot(withPut(createContainer(card.volumes)));
     const entry = word(m, 6);
     assert.equal(entry, card.entry, card.name);
     assert.equal(m.read(entry), 0xc3, `${card.name}: JP at the entry`);
@@ -213,16 +216,17 @@ test("cold boot packs each drive's allocation vector, DSM / 8 + 1 bytes, below t
     assert.ok(entry + 3 <= end, `${card.name}: the entry jump is below every vector`);
     assert.ok(entry - 6 >= 0x100, `${card.name}: the six bytes below the entry are in the TPA`);
     const page = entry >> 8;
-    m.write(0x0100, 0xc9); // TOP.COM returns at once: the rest is whatever cold boot left
-    assert.doesNotMatch(m.command(`SAVE ${page - 1} TOP.COM`), /\?/, `${card.name}: SAVE up to the entry's page`);
-    assert.match(m.command(`SAVE ${page} OVER.COM`), /\r\n\d+\?\r\n/, `${card.name}: SAVE of the entry's page refused`);
-    m.command("TOP");
+    // TOP.COM fills the TPA up to the entry's page and OVER.COM is a page more. Each is all C9h, so it returns at once.
+    m.command(`PUT ${page - 1} TOP.COM 201`, { maxCycles: 2_000_000_000 });
+    m.command(`PUT ${page} OVER.COM 201`, { maxCycles: 2_000_000_000 });
+    assert.doesNotMatch(m.command("TOP", { maxCycles: 2_000_000_000 }), /\?/, `${card.name}: a program up to the entry's page loads and runs`);
+    assert.match(m.command("OVER", { maxCycles: 2_000_000_000 }), /\r\nOVER\?\r\n/, `${card.name}: a program that reaches the entry's page is refused`);
     noViolations(m);
   }
 });
 
 test("on a card of four 8 MiB volumes the BDOS probe passes", SLOW, async () => {
-  const image = createContainer(CARDS[2].volumes);
+  const image = withPut(createContainer(CARDS[2].volumes));
   volume(image, "A").write("PROBE.COM", (await program("probe")).bytes);
   const m = boot(image);
   const out = m.command("PROBE", { maxCycles: 2_000_000_000 });
@@ -230,27 +234,27 @@ test("on a card of four 8 MiB volumes the BDOS probe passes", SLOW, async () => 
   assert.equal(results.length, 16);
   assert.deepEqual(results.filter((r) => r.endsWith("FAIL")), []);
   m.command("D:", { prompt: /\r\nD(:\S*)?>$/ });
-  m.command("SAVE 2 X.COM", { prompt: /\r\nD(:\S*)?>$/ });
+  m.command("PUT 2 X.COM", { prompt: /\r\nD(:\S*)?>$/ });
   assert.match(m.command("DIR", { prompt: /\r\nD(:\S*)?>$/ }), /X\.COM/);
   for (const d of ["A", "B", "C", "D"]) assert.deepEqual(volume(image, d).verify(), []);
   noViolations(m);
 });
 
-test("DIR with only a drive lists that drive, and SAVE writes to a drive named", () => {
-  const image = standardCard();
+test("DIR with only a drive lists that drive, and a file written to a drive named is on it", () => {
+  const image = withPut(standardCard());
   volume(image, "B").write("PC.DAT", new Uint8Array(128));
   const m = boot(image);
   assert.match(m.command("DIR B:"), /PC\.DAT/, "a file the PC put on B:");
-  m.command("SAVE 2 B:X.COM");
+  m.command("PUT 2 B:X.COM");
   assert.match(m.command("DIR B:"), /PC\.DAT\s+X\.COM/);
   assert.match(m.command("DIR B:*.COM"), /X\.COM/);
-  assert.match(m.command("DIR"), /NO FILE/, "A: is untouched");
+  assert.match(m.command("DIR"), /^DIR\r\r\nPUT\.COM\s+\r\n1 file,/, "A: has no new file");
   assert.equal(volume(image, "B").read("X.COM").length, 512);
   noViolations(m);
 });
 
 test("text and binary files cross between the PC and TEC-OS, and survive power loss", SLOW, async () => {
-  const image = standardCard();
+  const image = withPut(standardCard());
   const a = volume(image, "A");
   const binary = new Uint8Array(5000).map((_, i) => (i * 37 + 11) & 0xff);
   a.write("COPY.COM", (await program("copy")).bytes);
@@ -259,8 +263,7 @@ test("text and binary files cross between the PC and TEC-OS, and survive power l
   let m = boot(image);
   assert.match(m.command("TYPE NOTES.TXT"), /First line\r\nSecond line\r\n/);
   assert.match(m.command("COPY PATTERN.BIN B:PATTERN.CPY", { maxCycles: 400_000_000 }), /COPIED 0028/);
-  m.command("SAVE 2 MEM.BIN");
-  const ram = Uint8Array.from({ length: 512 }, (_, i) => m.read(0x100 + i));
+  m.command("PUT 2 MEM.BIN");
   m.command("REN NOTES.OLD=NOTES.TXT");
   m.command("ERA COPY.COM");
   noViolations(m);
@@ -274,7 +277,7 @@ test("text and binary files cross between the PC and TEC-OS, and survive power l
 
   const b = volume(image, "B");
   assert.deepEqual(b.read("PATTERN.CPY").subarray(0, binary.length), binary);
-  assert.deepEqual(volume(image, "A").read("MEM.BIN"), ram);
+  assert.deepEqual(volume(image, "A").read("MEM.BIN"), putBytes(2), "the file TEC-OS wrote, read on the PC");
   assert.equal(Buffer.from(volume(image, "A").read("NOTES.OLD", { text: true })).toString(), "First line\nSecond line\n");
   noViolations(m);
 });
@@ -389,12 +392,12 @@ test("sparse files and a block written after a reopen survive on both volumes", 
 });
 
 test("a read-only volume refuses writes without changing it", () => {
-  const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
+  const image = withPut(standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]));
   const before = Buffer.from(image);
   const m = boot(image);
   assert.match(m.bootText, /C: ARCHIVE\s+\(read-only\)/);
   m.mark = m.output.length;
-  m.type("SAVE 1 C:X.COM\r");
+  m.type("PUT 1 C:X.COM\r");
   assert.match(m.expect(/Bdos Err On C:.*$/), /Bdos Err On C/);
   assert.ok(Buffer.from(image).equals(before), "card unchanged");
 });
