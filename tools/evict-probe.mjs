@@ -52,6 +52,8 @@ function watch(m) {
 }
 
 const state = (m) => ({
+  gen: m.read(m.sym("SVCGEN")),
+  code: hex(word(m, m.sym("PRGCODE"))),
   top: hex(word(m, 6)),
   tpa: word(m, 6) - 0x100,
   owners: owners(m).map((o) => `${o.name}@${o.page.toString(16)}`).join(" "),
@@ -62,6 +64,21 @@ const state = (m) => ({
 });
 
 /**
+ * OS-owned words that point into FROM..TO: the shell hook, the console's
+ * tables and vectors, the registry's head, the RAM BIOS table's targets
+ * and the restart slots' jumps.
+ */
+function dangling(m, from, to) {
+  const hit = [];
+  const see = (name, v) => { if (v >= from && v < to) hit.push(`${name}=${hex(v)}`); };
+  for (const n of ["SHOWN", "GLVEC", "PIVEC", "REGHEAD", "VPUTV", "VGETV", "VCLRV", "VRSTV", "VRDRV", "VWRRV", "VFNV"]) see(n, word(m, m.sym(n)));
+  for (let i = 0; i < 17; i += 1) see(`BIOS${i}`, word(m, m.sym("RAMBIOS") + 3 * i + 1));
+  for (let a = 8; a < 0x40; a += 8) if (m.read(a) === 0xc3) see(`RST${a.toString(16)}`, word(m, a + 1));
+  see("SVCHEAD", m.read(m.sym("SVCHEAD")) << 8);
+  return hit;
+}
+
+/**
  * Type LINE and run to the next ready prompt. The cycles in all, and from
  * the program's exit, the first warm boot after it started at 0100h, to
  * that prompt.
@@ -70,6 +87,8 @@ function run(m, line, { re, max = 900_000_000, atStart } = {}) {
   const start = m.cycles;
   let began = 0;
   let exit = 0;
+  let during = null;
+  const before = word(m, 6);
   const wboot = m.sym("WBOOTR");
   m.mark = m.output.length;
   m.type(`${line}\r`);
@@ -77,12 +96,14 @@ function run(m, line, { re, max = 900_000_000, atStart } = {}) {
   m.runUntil(() => {
     if (m.pc === 0x100) {
       if (!began && atStart) atStart(m);
+      // What the program finds: its top, the console, and no word left pointing at freed pages.
+      during = { top: hex(word(m, 6)), iobyte: m.read(3), conmod: m.read(m.sym("CONMOD")), owners: owners(m).length, dangling: dangling(m, before & 0xff00, word(m, m.sym("STUBAD"))) };
       began = m.cycles;
       exit = 0;
     } else if (m.pc === wboot && began && !exit) exit = m.cycles;
     return done();
   }, max, `the prompt after ${line}`);
-  return { text: m.text(m.mark), total: m.cycles - start, afterExit: exit ? m.cycles - exit : null, toStart: began ? began - start : null };
+  return { text: m.text(m.mark), total: m.cycles - start, afterExit: exit ? m.cycles - exit : null, toStart: began ? began - start : null, during };
 }
 
 function scenario(name, opts, steps) {
@@ -96,6 +117,7 @@ function scenario(name, opts, steps) {
     m.lay();
     const r = run(m, line, opts2);
     console.log(JSON.stringify(line), JSON.stringify({ ...state(m), totalMs: ms(r.total), toStartMs: r.toStart && ms(r.toStart), afterExitMs: r.afterExit && ms(r.afterExit), stacks: m.depth() }));
+    if (r.during) console.log("    at 0100h", JSON.stringify(r.during));
     console.log("   ", JSON.stringify(r.text));
   }
   console.log("violations", JSON.stringify(m.violations));

@@ -14,6 +14,8 @@ export function watch(m) {
   const [guard, guardEnd] = [s("STKGUARD"), s("STKGUEND")];
   const write = m.cpu.hardware.memWrite;
   m.cpu.hardware.memWrite = (addr, value) => {
+    // With EXPAND 1 in view these addresses are the cache's tables, not the stacks.
+    if (!m.classicBankIn) return write(addr, value);
     const pc = m.cpu.cpu.pc;
     const ldir = (m.read(pc) === 0xed && m.read(pc + 1) === 0xb0) || (m.read(pc - 1) === 0xed && m.read(pc) === 0xb0);
     if (!ldir) for (const [k, [b, t]] of Object.entries(stacks)) if (addr >= b && addr < t && addr < low[k]) low[k] = addr;
