@@ -54,8 +54,8 @@ Build and test procedure creates a temporary host, installs locked
 dependencies and verifies it before moving it to `.inputs/tas-host`.
 Repeating preparation validates an existing host. Checks cover the runner,
 lock file, locked Z80 runtime and 11,013-byte TAS binary
-(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:tools/lib/tas-rom.mjs:10-11`,
-`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:test/inputs.json:4-13`).
+(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:tools/lib/tas-rom.mjs:10-11`,
+`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:test/inputs.json:4-13`).
 
 This TAS also writes Intel HEX when the output name ends in `.HEX`, as in
 `TAS NAME NAME.HEX`: data records at the source's own 16-bit addresses with
@@ -75,7 +75,7 @@ that limit. The ROM, `GLCD.SVC`, `MON3.SVC`, `DEMO.COM`, `HELLO3.BIN`
 and test programs therefore kept their earlier `dbee66a` assembly bytes (`46cf3f1:docs/compatibility.md:226`).
 The TAS pinned now likewise assembles the ROM, `SHELL.SVC` and `MON3.SVC` to
 the same bytes as the TAS before it
-(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/compatibility.md:234`). ROM maps assign a statement to each source line. The build therefore
+(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/compatibility.md:234`). ROM maps assign a statement to each source line. The build therefore
 rejects a `\` outside quotes and comments in ROM source
 (`46cf3f1:tools/lib/tas-d8.mjs:105-121`,
 `46cf3f1:tools/lib/tas-d8.mjs:155-157`).

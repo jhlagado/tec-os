@@ -30,7 +30,7 @@ buffers outside the TPA
 (`241b438:src/rom.asm:17-45`, `241b438:src/layout.asm:78-87`, `241b438:format/format.json:20-25`,
 `241b438:src/services.asm:1-20`, `241b438:src/abi.inc:65-106`). SHELL.SVC reserves seventeen
 pages from the TPA and places its 256-byte history ring in the last
-page (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`, `TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:drivers/shell.asm:791-798`).
+page (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:23-31`, `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:drivers/shell.asm:791-798`).
 
 ## Two banks at the same addresses
 
@@ -164,7 +164,7 @@ On the starter card workspace begins at `BAC8h`. Four 256-byte vectors occupy
 bytes at `0100h–B6C4h`. A two-volume G1M/G8M card without a drives field needs
 320 vector bytes. Its stub at `B985h` leaves 47,237 bytes. Startup's
 seventeen-page SHELL.SVC lowers the starter boundary to `A500h`, or 41,984
-bytes (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/memory-map.md:18-19`). [Appendix C](appendix-c-memory-map.md#the-cpu-s-address-space) records
+bytes (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/memory-map.md:18-19`). [Appendix C](appendix-c-memory-map.md#the-cpu-s-address-space) records
 these layouts. The workspace below `BF00h` is 1,080 bytes and warm boot clears
 350 at `BDA2h–BEFFh`. Above the table 205 bytes occupy `BF33h–BFFFh`
 (`241b438:docs/memory-map.md:8-22`, `241b438:docs/memory-map.md:47-58`,

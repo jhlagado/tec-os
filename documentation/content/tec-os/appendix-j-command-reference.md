@@ -159,7 +159,7 @@ SAY.COM          128
 X.DAT         128128
 ```
 
-These rows are the example in `TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:200-212`.
+These rows are the example in `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:200-212`.
 After the rows, the totals give the file count and combined byte length.
 Free space is function 46's record count times 128, on a final line that
 identifies the drive and its volume. Files
@@ -169,7 +169,7 @@ threshold is 16 KiB. A first search of the directory gathers each name's
 size in a table, so a large file costs no more than a small one: DIR takes
 about twice `DIR /W`'s time, 40.6 s against 21.5 s for 452 files on a G8M
 volume at 4 MHz on the serial console
-(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:223-235`).
+(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:223-235`).
 
 `DIR /W`, and DIR without the shell, is the ROM's wide listing. Its last line
 gives the number listed and the free KiB on that drive. A displayed name has

@@ -219,12 +219,12 @@ the bare starter card GLCD.SVC occupies `B300h–B5FFh`. Its 768 bytes also
 exclude the alignment gap at `B600h–B6C4h`, reducing the TPA by 965 bytes.
 Later services allocate below the first. Startup's seventeen-page `SHELL.SVC`
 leaves `A500h`, or 41,984 bytes. Adding GLCD leaves 41,216
-(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/memory-map.md:12-22`, `TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`,
-`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/compatibility.md:3-16`). MON3.SVC uses 20 pages. Alone it lowers
+(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/memory-map.md:12-22`, `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:23-31`,
+`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/compatibility.md:3-16`). MON3.SVC uses 20 pages. Alone it lowers
 `B6C5h` to `A200h`, leaving 41,216 bytes, or 40,448 after GLCD. After the
 shell it leaves `9100h` and 36,864 bytes. Adding GLCD lowers it
 to `8E00h` with 36,096 bytes, in any order of installing the three
-(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/mon3.md:47-58`).
+(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/mon3.md:47-58`).
 
 AREA subtracts the program start, `0100h`, from the boundary to print the
 available byte count:

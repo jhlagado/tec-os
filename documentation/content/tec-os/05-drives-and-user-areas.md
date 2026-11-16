@@ -599,7 +599,7 @@ to 41,216, or 40,448 with GLCD.SVC too. On the starter card, the
 shell is already installed. Installing MON3 changes that address from `A500h` to `9100h` and
 reduces program memory from 41,984 to 36,864 bytes. Adding
 GLCD.SVC gives `8E00h` and 36,096 bytes
-(`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/mon3.md:47-58`).
+(`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/mon3.md:47-58`).
 
 The return-to-prompt key handling uses TEC-OS's `KBLAST` state. Each
 MON3 matrix read stores the detected key there. A later TEC-OS scan

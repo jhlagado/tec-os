@@ -85,8 +85,8 @@ program space:
 | Starter card with `SHELL.SVC` and `GLCD.SVC` | 1,024 bytes | `A200h` | 41,216 bytes |
 | Two-volume reference, no drives field, no service | 320 bytes | `B985h` | 47,237 bytes |
 
-The shell takes seventeen pages, and its last page holds its 256-byte history ring (`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/memory-map.md:8-22`,
-`TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/compatibility.md:3-16`, `TEC-OS 9e5c1959741c23f3839ae7430daf076de8c65e37:docs/shell.md:23-31`).
+The shell takes seventeen pages, and its last page holds its 256-byte history ring (`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/memory-map.md:8-22`,
+`TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/compatibility.md:3-16`, `TEC-OS 42cc820f8d5bf031076f9cbacf3b9d707e51ec31:docs/shell.md:23-31`).
 
 Housekeeping preserves the bare/reference/shell TPA and public stack sizes
 already allocated by recovery. Its private worker's refusal account is 28+12+2
