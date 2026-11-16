@@ -5,7 +5,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
-import { TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
+import { PUT_COM, TEST_CLOCK, boot, romFor, standardCard, volume } from "./lib/fixtures.mjs";
 
 const SECTOR = 512;
 
@@ -57,10 +57,11 @@ test("the file with that block says Bad Sector when it's read, and ERA takes it"
 
 test("a write to a read-only volume says R/O, and the card is unchanged", () => {
   const image = standardCard([{ geometry: "G1M", label: "ARCHIVE", mount: "C", readOnly: true }]);
+  volume(image, "A").write("PUT.COM", PUT_COM);
   const before = Buffer.from(image);
   const m = boot(image);
   const from = m.output.length;
-  m.type("SAVE 1 C:NEW.COM\r");
+  m.type("PUT 1 C:NEW.COM\r");
   m.expect(/Bdos Err On C: R\/O/, { from, maxCycles: 100_000_000 });
   m.runUntil(() => m.waitingForInput(), 100_000_000, "the error's key");
   assert.doesNotMatch(m.text(from), /Bad Sector/);
