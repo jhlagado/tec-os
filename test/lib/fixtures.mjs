@@ -74,6 +74,30 @@ export async function program(name, { base = 0x100 } = {}) {
  */
 export const PUT_COM = (await program("put")).bytes;
 
+/**
+ * AREA.COM, from test/programs/area.asm: AREA [n [NAME]] reads or sets the
+ * user area through BDOS function 32. The command processor stays in area 0,
+ * so a test of the BDOS's areas reaches another through this program.
+ */
+export const AREA_COM = (await program("area")).bytes;
+
+/**
+ * IMAGE with a marker file on A: for each of NS: the file named N holds the
+ * line #N, so the built-in TYPE N prints it. A test that needs a built-in it
+ * can tell ran, and which ran last, runs TYPE N and reads marked().
+ */
+export function withMarks(image, ...ns) {
+  const a = volume(image, "A");
+  for (const n of ns) a.write(String(n), MARKS[n]);
+  return image;
+}
+
+/** The marker files 0 to 15 by name, for a card's file list. */
+export const MARKS = Object.fromEntries(Array.from({ length: 16 }, (_, n) => [String(n), Buffer.from(`#${n}\r\n\x1a`, "latin1")]));
+
+/** The number of the last marker M's console has printed since FROM: 0 if none. */
+export const marked = (m, from = 0) => Number((m.text(from).match(/^#(\d+)\r$/gm) ?? ["#0"]).at(-1).slice(1));
+
 /** What PUT n NAME writes: byte k of record r is r+k; with V, what PUT n NAME V writes: every byte V. */
 export const putBytes = (pages, v) => Uint8Array.from({ length: pages * 256 }, (_, i) => (v ?? (i >> 7) + (i & 127)) & 0xff);
 
