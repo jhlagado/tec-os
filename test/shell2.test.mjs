@@ -328,12 +328,6 @@ test("S2-8 prompt", () => {
   assert.match(run(m, ""), /\r\nB:>$/, "d:>");
 });
 
-test("S2-8 prompt with user", () => {
-  const m = machine();
-  run(m, "B:");
-  assert.match(run(m, "USER 3"), /\r\n3B:WORK>$/);
-});
-
 test("S2-8 bare prompt", () => {
   const image = four();
   shellCard({}, { image, startup: [] });
@@ -1315,7 +1309,7 @@ test("S2-13 docs", () => {
   ]) assert.ok(recovery.includes(s), `recovery.md: ${s}`);
   assert.doesNotMatch(recovery, /Only warm boot drops a flushed line that still fails/, "warm boot retains failed acknowledged data");
   const shell = flat("docs/shell.md");
-  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`3B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
+  for (const s of ["`CD NAME`", "`CD D:NAME`", "`CD ?`", "`B:GAMES>`", "`C:>`", "`CLS`", "`ECHO text`", "`PAUSE`", "`DIR /W` is the fast listing", "a file over 32 KiB on a G8M volume", "leaves the prompt's label stale", "BDOS 14 and comes back with no warm boot", "Power off and on gives the card's own drives",
     "a TPA of 41,984 bytes"])
     assert.ok(shell.includes(s), `shell.md: ${s}`);
   const container = flat("docs/container-format.md");

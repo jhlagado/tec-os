@@ -10,10 +10,10 @@ import { afterEach, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ABI, GLCD_SVC, PUT_COM, ROOT, romFor, service, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
+import { ABI, GLCD_SVC, MARKS, PUT_COM, ROOT, marked, romFor, service, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 import { MON3_CEILING, execFile, mon3Svc, mon3Variant } from "./lib/mon3.mjs";
 import { run as censusRun, watch } from "./lib/census.mjs";
-import { GUARDS, HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execSvc, find, hellos, hookSvc, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, user, word } from "./lib/shell.mjs";
+import { GUARDS, HELLO, LINEP, SHELL, at, cardVariant, chain, code, count, execSvc, find, hellos, hookSvc, owners, pageOf, romMutant, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
 import { setDisplayLine } from "../host/card.mjs";
 import { toLatin1 } from "../tools/lib/bytes.mjs";
 
@@ -134,7 +134,7 @@ test("SH5 line at each prompt", () => {
   at(m, "HOOK.SVC", { re: S });
   const calls = () => hw(m, "LINES");
   let n = calls();
-  for (const line of ["USER 0", "B:", "A:", "", "DIR B.TXT", "SAY"]) {
+  for (const line of ["CON", "B:", "A:", "", "DIR B.TXT", "SAY"]) {
     at(m, line, { re: S });
     assert.equal(calls(), n + 1, `one LINE call after ${JSON.stringify(line)}`);
     n = calls();
@@ -753,7 +753,7 @@ test("SH7 mutant: a 128-byte recall buffer takes an eighteenth page", async () =
 // --- Pieces, separators and lines ------------------------------------------
 
 /** A machine with the shell and the code setters, at its first prompt. */
-const pm = (files = {}) => shelled({ "LINE.COM": LINEP, ...files });
+const pm = (files = {}) => shelled({ "LINE.COM": LINEP, ...MARKS, ...files });
 
 test("SH8 bang always", () => {
   const m = pm();
@@ -892,7 +892,7 @@ test("SH8 ted build line", () => {
 const shellWith = (edits) => shellVariant(edits);
 async function pmWith(edits, files = {}) {
   const mut = await shellWith(edits);
-  return shellMachine(shellCard({ "LINE.COM": LINEP, ...files }, { startup: ["SHELL.SVC"], shell: mut.file }));
+  return shellMachine(shellCard({ "LINE.COM": LINEP, ...MARKS, ...files }, { startup: ["SHELL.SVC"], shell: mut.file }));
 }
 
 test("SH8 mutant: & acting as ! runs a failing piece's next", async () => {
@@ -949,36 +949,36 @@ const crlf = (...lines) => Buffer.from(lines.join("\r\n") + "\r\n\x1a", "latin1"
 
 test("SH9 records", () => {
   const pad = Array.from({ length: 6 }, (_, i) => `; padding ${i} to pass one record`);
-  const script = crlf("USER 1", ...pad, "USER 2", ...pad, ...pad, "USER 3");
+  const script = crlf("TYPE 1", ...pad, "TYPE 2", ...pad, ...pad, "TYPE 3");
   assert.ok(script.length > 256, "three records");
   const m = pm({ "S.CMD": script });
   at(m, "S.CMD");
-  assert.equal(user(m), 3, "every record's lines run");
-  const m2 = pm({ "Z.CMD": Buffer.from("USER 4\r\n\x1aUSER 5\r\n", "latin1"), "Y.CMD": Buffer.from("USER 6\r\n\0USER 7\r\n", "latin1"), "W.CMD": Buffer.from("USER 8", "latin1") });
+  assert.equal(marked(m), 3, "every record's lines run");
+  const m2 = pm({ "Z.CMD": Buffer.from("TYPE 4\r\n\x1aTYPE 5\r\n", "latin1"), "Y.CMD": Buffer.from("TYPE 6\r\n\0TYPE 7\r\n", "latin1"), "W.CMD": Buffer.from("TYPE 8", "latin1") });
   at(m2, "Z.CMD");
-  assert.equal(user(m2), 4, "1Ah ends it");
-  at(m2, "USER 0"); // the scripts are in user 0's directory
+  assert.equal(marked(m2), 4, "1Ah ends it");
+  at(m2, "TYPE 0"); // the marker back to 0
   at(m2, "Y.CMD");
-  assert.equal(user(m2), 6, "a zero ends it");
-  at(m2, "USER 0");
+  assert.equal(marked(m2), 6, "a zero ends it");
+  at(m2, "TYPE 0");
   at(m2, "W.CMD");
-  assert.equal(user(m2), 8, "the last record's end ends an unended line");
+  assert.equal(marked(m2), 8, "the last record's end ends an unended line");
 });
 
 test("SH9 127", () => {
   const long = `SAY ${"X".repeat(123)}`; // 127 characters
-  const m = pm({ "S.CMD": crlf(`${long}YYYY`, "USER 2") });
+  const m = pm({ "S.CMD": crlf(`${long}YYYY`, "TYPE 2") });
   const t = at(m, "S.CMD");
   assert.match(t, new RegExp(`A(:\\S*)?>${long}\\r`), "the first 127 kept");
   assert.doesNotMatch(t, /XY/);
-  assert.equal(user(m), 2, "the rest of the line dropped, the next line read");
+  assert.equal(marked(m), 2, "the rest of the line dropped, the next line read");
 });
 
 test("SH9 line ends", () => {
-  const m = pm({ "S.CMD": Buffer.from("USER 1\rUSER 2\nUSER 3\r\nUSER 4\n\rUSER 5\r\n\x1a", "latin1") });
+  const m = pm({ "S.CMD": Buffer.from("TYPE 1\rTYPE 2\nTYPE 3\r\nTYPE 4\n\rTYPE 5\r\n\x1a", "latin1") });
   const t = at(m, "S.CMD");
-  assert.equal(count(t, /A(:\S*)?>USER \d\r/g), 5, "CR, LF and CR LF each end a line");
-  assert.equal(user(m), 5);
+  assert.equal(count(t, /A(:\S*)?>TYPE \d\r/g), 5, "CR, LF and CR LF each end a line");
+  assert.equal(marked(m), 5);
 });
 
 test("SH9 passed over", () => {
@@ -997,42 +997,39 @@ test("SH9 echo", () => {
 });
 
 test("SH9 where", () => {
-  const image = shellCard({}, { startup: ["SHELL.SVC"] });
-  volume(image, "B").write("S.CMD", crlf("USER 4"));
-  volume(image, "A").write("T.CMD", crlf("USER 5"));
+  const image = shellCard(MARKS, { startup: ["SHELL.SVC"] });
+  volume(image, "B").write("S.CMD", crlf("TYPE 4"));
+  volume(image, "A").write("T.CMD", crlf("TYPE 5"));
   const m = shellMachine(image);
   at(m, "B:S.CMD");
-  assert.equal(user(m), 4, "the drive named");
-  at(m, "USER 0");
+  assert.equal(marked(m), 4, "the drive named");
+  at(m, "TYPE 0");
   at(m, "B:");
   assert.match(at(m, "T.CMD"), /T\.CMD\?/, "the current drive, no fallback to A:");
   assert.equal(code(m), 0xff00);
   at(m, "A:");
-  at(m, "USER 1");
-  assert.match(at(m, "T.CMD"), /T\.CMD\?/, "the current user");
-  at(m, "USER 0");
   at(m, "T.CMD");
-  assert.equal(user(m), 5);
+  assert.equal(marked(m), 5);
 });
 
 test("SH9 no nesting", () => {
-  const m = pm({ "S.CMD": crlf("T.CMD", "USER 3"), "T.CMD": crlf("USER 9") });
+  const m = pm({ "S.CMD": crlf("T.CMD", "TYPE 3"), "T.CMD": crlf("TYPE 9") });
   const t = at(m, "S.CMD");
   assert.match(t, /T\.CMD\?/, "a script piece inside a script is refused");
-  assert.equal(user(m), 3, "and the next line runs");
+  assert.equal(marked(m), 3, "and the next line runs");
 });
 
 test("SH9 pieces after", () => {
-  const m = pm({ "S.CMD": crlf("USER 9") });
-  const t = at(m, "S.CMD!USER 2");
+  const m = pm({ "S.CMD": crlf("TYPE 9") });
+  const t = at(m, "S.CMD!TYPE 2");
   assert.match(t, /S\.CMD\?/);
-  assert.equal(user(m), 2, "the ! piece after it runs");
+  assert.equal(marked(m), 2, "the ! piece after it runs");
 });
 
 test("SH9 tail", () => {
-  const m = pm({ "S.CMD": crlf("USER 6") });
+  const m = pm({ "S.CMD": crlf("TYPE 6") });
   at(m, "S.CMD ANY TEXT");
-  assert.equal(user(m), 6);
+  assert.equal(marked(m), 6);
 });
 
 test("SH9 typed origin", () => {
@@ -1042,9 +1039,9 @@ test("SH9 typed origin", () => {
 
 test("SH9 mutant: one record read only", async () => {
   const pad = Array.from({ length: 6 }, (_, i) => `; padding ${i} to pass one record`);
-  const m = await pmWith([["  xor a          ; offset 0\n  ld (SOFF),a\n  ld (SLOAD),a   ; not read yet", "  ld a,l\n  or h\n  jp nz,SGEND\n  ld (SOFF),a\n  ld (SLOAD),a"]], { "S.CMD": crlf("USER 1", ...pad, "USER 2") });
+  const m = await pmWith([["  xor a          ; offset 0\n  ld (SOFF),a\n  ld (SLOAD),a   ; not read yet", "  ld a,l\n  or h\n  jp nz,SGEND\n  ld (SOFF),a\n  ld (SLOAD),a"]], { "S.CMD": crlf("TYPE 1", ...pad, "TYPE 2") });
   at(m, "S.CMD");
-  assert.equal(user(m), 1);
+  assert.equal(marked(m), 1);
 });
 
 test("SH9 mutant: ; after blanks taken as a comment", async () => {
@@ -1054,39 +1051,39 @@ test("SH9 mutant: ; after blanks taken as a comment", async () => {
 
 // --- The rest of STARTUP.CMD -----------------------------------------------
 
-/** A machine booting STARTUP.CMD of LINES, run until its prompt with USER u. */
+/** A machine booting STARTUP.CMD of LINES, on a card with the marker files, run until its prompt. */
 function boots(lines, files = {}, opts = {}) {
-  const m = shellMachine(shellCard(files, { startup: lines }), { noWait: true, ...opts });
+  const m = shellMachine(shellCard({ ...MARKS, ...files }, { startup: lines }), { noWait: true, ...opts });
   m.runUntil(() => m.ready(), 900_000_000, "the prompt after startup");
   return m;
 }
 
 test("SH10 the rest runs", () => {
   const pad = Array.from({ length: 6 }, (_, i) => `; padding ${i} to pass one record`);
-  const m = boots(["SHELL.SVC", "; the rest", "TYPE HELLO.TXT", ...pad, "USER 2!USER 5"]);
-  assert.equal(user(m), 5, "every later line, from every record");
+  const m = boots(["SHELL.SVC", "; the rest", "TYPE HELLO.TXT", ...pad, "TYPE 2!TYPE 5"]);
+  assert.equal(marked(m), 5, "every later line, from every record");
   assert.equal(hellos(m.text(0)), 1, "once");
 });
 
 test("SH10 shell again runs the rest once", () => {
-  const m = boots(["SHELL.SVC", "TYPE HELLO.TXT", "SHELL.SVC", "USER 2"]);
+  const m = boots(["SHELL.SVC", "TYPE HELLO.TXT", "SHELL.SVC", "TYPE 2"]);
   assert.equal(hellos(m.text(0)), 1);
-  assert.equal(user(m), 2, "the file goes on after the second SHELL.SVC");
+  assert.equal(marked(m), 2, "the file goes on after the second SHELL.SVC");
   assert.equal(owners(m).length, 1);
 });
 
 test("SH10 quiet paths", () => {
-  const m = boots(["SHELL.SVC", "NODEV.SVC", "USER 3"], { "NODEV.SVC": GLCD_SVC }, { glcd: false });
+  const m = boots(["SHELL.SVC", "NODEV.SVC", "TYPE 3"], { "NODEV.SVC": GLCD_SVC }, { glcd: false });
   assert.doesNotMatch(m.text(0), /NODEV\.SVC\?/, "the startup line's quiet path for an absent device");
-  assert.equal(user(m), 3);
+  assert.equal(marked(m), 3);
 });
 
 test("SH10 key skips", () => {
-  const m = shellMachine(shellCard({}, { startup: ["SHELL.SVC", "USER 3"] }), { noWait: true });
+  const m = shellMachine(shellCard(MARKS, { startup: ["SHELL.SVC", "TYPE 3"] }), { noWait: true });
   m.tec1g.applyKeySilent(0x01, true); // a keypad key held through reset
   m.runUntil(() => m.ready(), 900_000_000, "the prompt");
   assert.equal(pageOf(m), 0, "the shell is not in");
-  assert.equal(user(m), 0, "nothing ran");
+  assert.equal(marked(m), 0, "nothing ran");
 });
 
 test("SH10 warm boot", () => {
@@ -1096,19 +1093,19 @@ test("SH10 warm boot", () => {
 });
 
 test("SH10 no shell one line", () => {
-  const m = boots(["USER 3", "USER 5"], {});
-  assert.equal(user(m), 3, "without the shell only the first line runs");
+  const m = boots(["TYPE 3", "TYPE 5"], {});
+  assert.equal(marked(m), 3, "without the shell only the first line runs");
 });
 
 test("SH10 mutant: the rest started at every entry loops", async () => {
   const mut = await shellVariant([["  ld a,(CLAIMD)  ; the first claim?\n  or a\n  ret nz         ; not the first entry", "  ld a,(CLAIMD)\n  or a\n  ld (PREV),hl\n  ld a,b\n  inc a\n  ret nz\n  dec a\n  ld (STSKIP),a\n  ret"]]);
-  const m = shellMachine(shellCard({}, { startup: ["SHELL.SVC", "TYPE HELLO.TXT", "SHELL.SVC", "USER 2"], shell: mut.file }), { noWait: true });
-  assert.throws(() => m.runUntil(() => m.ready() && user(m) === 2 && hellos(m.text(0)) === 1, 300_000_000, "the end"));
+  const m = shellMachine(shellCard(MARKS, { startup: ["SHELL.SVC", "TYPE HELLO.TXT", "SHELL.SVC", "TYPE 2"], shell: mut.file }), { noWait: true });
+  assert.throws(() => m.runUntil(() => m.ready() && marked(m) === 2 && hellos(m.text(0)) === 1, 300_000_000, "the end"));
 });
 
 test("SH10 mutant: the file started from its first line enters SHELL.SVC again", async () => {
   const mut = await shellVariant([["  call SLINE     ; past the ROM's line\n  ret nc", "  or a\n  ret nc"]]);
-  const m = shellMachine(shellCard({}, { startup: ["SHELL.SVC", "USER 2"], shell: mut.file }), { noWait: true });
+  const m = shellMachine(shellCard(MARKS, { startup: ["SHELL.SVC", "TYPE 2"], shell: mut.file }), { noWait: true });
   m.runUntil(() => m.ready(), 900_000_000, "the prompt");
   assert.equal(count(m.text(0), /A(:\S*)?>SHELL\.SVC\r/g), 2);
 });
