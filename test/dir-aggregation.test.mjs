@@ -3,19 +3,12 @@
 // public BDOS caller. These are emulator tests, not board measurements.
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
-import { gzipSync } from "node:zlib";
+import { readFileSync } from "node:fs";
 import { createContainer } from "../tools/lib/container.mjs";
 import { GLCD_SVC, volume } from "./lib/fixtures.mjs";
 import { SHELL, GUARDS, shellCard, shellMachine, shellVariant, pageOf, at, code, word } from "./lib/shell.mjs";
 
 const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
-const digest = bytes => createHash("sha256").update(bytes).digest("hex");
-const evidence = process.env.DIR_EVIDENCE;
-let serial = 0;
-let fixtureSerial = 0;
 GUARDS.on = true;
 after(() => {
   for (const guard of GUARDS.machines) assert.ok(guard.read() <= 36, `private shell stack used ${guard.read()} of 48`);
@@ -33,7 +26,13 @@ function rawEntry(v, i, { name, ex = 0, s1 = 0, s2 = 0, rc = 0, user = 0, system
   for (const n of attributes) entry[1 + n] |= 0x80;
 }
 
-function fresh({ geometry = "G8M", entries = [], files = {}, bFiles = {}, svc = SHELL, variant = null, startup = ["SHELL.SVC"], opts = {} } = {}) {
+/**
+ * A four-drive card with SYSTEM on A: and WORK, of GEOMETRY, on B:, whose
+ * directory starts with ENTRIES as raw entries and then holds BFILES. FILES
+ * go on A: with the shell, SVC's file; VARIANT says SVC is an altered shell.
+ * The machine at its first prompt, the image and B:'s volume.
+ */
+function fresh({ geometry = "G8M", entries = [], files = {}, bFiles = {}, svc = SHELL, variant = false, startup = ["SHELL.SVC"], opts = {} } = {}) {
   const image = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry, label: "WORK", mount: "B" },
@@ -42,49 +41,15 @@ function fresh({ geometry = "G8M", entries = [], files = {}, bFiles = {}, svc = 
   entries.forEach((entry, i) => rawEntry(b, i, entry));
   for (const [name, bytes] of Object.entries(bFiles)) b.write(name, bytes);
   shellCard(files, { image, shell: svc.file, startup });
-  const svcIdentity = { kind: variant ? "variant" : "normal", rawBytes: svc.file.length, rawSha256: digest(svc.file), imageBytes: svc.image,
-    variant: variant ? { ...variant, editsSha256: digest(Buffer.from(JSON.stringify(variant.edits))) } : null };
-  let stem = null, m = null, failure = null, bootComplete = false;
-  const inputSha256 = digest(image);
-  if (evidence) {
-    mkdirSync(evidence, { recursive: true });
-    stem = resolve(evidence, `fixture-${String(++fixtureSerial).padStart(3, "0")}`);
-    writeFileSync(`${stem}.input.img.gz`, gzipSync(image));
-    writeFileSync(`${stem}.shell.svc`, svc.file);
-    writeFileSync(`${stem}.json`, JSON.stringify({ phase: "prepared-before-machine", inputBytes: image.length, inputSha256, svc: svcIdentity }) + "\n");
-  }
-  try {
-    // Evidence already owns the actual card and SVC if this identity fails.
-    if (!variant) assert.deepEqual(Buffer.from(svc.file), readFileSync(new URL("../dist/files/SHELL.SVC", import.meta.url)), "normal fixture uses the exact media shell");
-    m = shellMachine(image, { ...opts, noWait: true });
-    m.shellSymbols = svc.symbols;
-    m.testSvc = svcIdentity;
-    m.runUntil(() => {
-      if (!m.classicBankIn || !m.ready()) return false;
-      const p = pageOf(m), s = svc.symbols;
-      return p && !word(m, p + s.LPOS) && !m.read(p + s.SOPEN) && !m.read(p + s.STSKIP) && PROMPT.test(m.text(0));
-    }, 2_000_000_000, "the completed startup prompt");
-    assert.deepEqual(m.violations, []);
-    bootComplete = true;
-    return { m, image, b };
-  } catch (error) {
-    failure = error;
-    throw error;
-  } finally {
-    if (stem) {
-      try {
-        writeFileSync(`${stem}.boot.console.bin`, Buffer.from(m ? m.text(0) : "", "latin1"));
-        writeFileSync(`${stem}.json`, JSON.stringify({ phase: "boot-ended", bootComplete, machineConstructed: m !== null, inputBytes: image.length, inputSha256,
-          finalSha256: digest(image), svc: svcIdentity, pc: m?.pc ?? null, sp: m?.cpu.cpu.sp ?? null,
-          error: failure ? { name: failure.name, message: failure.message } : null }, null, 2) + "\n");
-        if (digest(image) !== inputSha256) writeFileSync(`${stem}.boot.final.img.gz`, gzipSync(image));
-      } catch (captureError) {
-        if (!failure) throw captureError;
-        console.error(JSON.stringify({ scope: "fixture evidence-write failure", primary: { name: failure.name, message: failure.message },
-          captureError: { name: captureError.name, message: captureError.message } }));
-      }
-    }
-  }
+  if (!variant) assert.deepEqual(Buffer.from(svc.file), readFileSync(new URL("../dist/files/SHELL.SVC", import.meta.url)), "the card's shell is the one media builds");
+  const m = shellMachine(image, { ...opts, noWait: true });
+  m.runUntil(() => {
+    if (!m.classicBankIn || !m.ready()) return false;
+    const p = pageOf(m), s = svc.symbols;
+    return p && !word(m, p + s.LPOS) && !m.read(p + s.SOPEN) && !m.read(p + s.STSKIP) && PROMPT.test(m.text(0));
+  }, 2_000_000_000, "the completed startup prompt");
+  assert.deepEqual(m.violations, []);
+  return { m, image, b };
 }
 
 function rows(text) {
@@ -104,10 +69,14 @@ function rows(text) {
 }
 const pairs = text => rows(text).map(([name, bytes]) => [name, bytes]);
 
+/**
+ * Type LINE and answer each [more] with a space, to the prompt: the text,
+ * the BDOS 17, 18 and 35 calls, the cycles and the return code. HOOK runs
+ * before each instruction. The card must come out as it went in.
+ */
 function list(m, line = "DIR B:", { via = "serial", hook } = {}) {
   const before = Buffer.from(m.sdImage), counters = { searchFirst: 0, searchNext: 0, size: 0 };
   const start = m.cycles, step = m.step.bind(m);
-  let error = null, complete = false;
   m.mark = m.output.length;
   m.step = () => {
     if (m.pc === m.sym("BENTRY")) {
@@ -129,42 +98,11 @@ function list(m, line = "DIR B:", { via = "serial", hook } = {}) {
       type(" ");
       m.runUntil(() => m.output.length > n + 12, 400_000_000, "the pager reply");
     }
-    complete = true;
     assert.deepEqual(Buffer.from(m.sdImage), before, "read-only DIR preserves the complete card");
     assert.deepEqual(m.violations, []);
     return { text: m.text(m.mark), counters, cycles: m.cycles - start, result: code(m) };
-  } catch (failure) {
-    error = { name: failure.name, message: failure.message };
-    throw failure;
   } finally {
     m.step = step;
-    if (evidence) {
-      const stem = resolve(evidence, `dir-${String(++serial).padStart(3, "0")}`);
-      const captureErrors = [];
-      let parsedRows = null, rowParseFailure = null;
-      const retain = (part, action) => {
-        try { action(); }
-        catch (failure) { captureErrors.push({ part, name: failure.name, message: failure.message }); }
-      };
-      retain("directory", () => mkdirSync(evidence, { recursive: true }));
-      retain("input", () => writeFileSync(`${stem}.input.img.gz`, gzipSync(before)));
-      retain("raw console", () => writeFileSync(`${stem}.console.bin`, Buffer.from(m.text(m.mark), "latin1")));
-      try { parsedRows = pairs(m.text(m.mark)); }
-      catch (failure) { rowParseFailure = failure; }
-      retain("metadata", () => writeFileSync(`${stem}.json`, JSON.stringify({ line, via,
-        complete: complete && !error && !rowParseFailure && !captureErrors.length, error,
-        rowParseError: rowParseFailure ? { name: rowParseFailure.name, message: rowParseFailure.message } : null,
-        captureErrors, counters, cycles: m.cycles - start, result: code(m), pc: m.pc, sp: m.cpu.cpu.sp,
-        svc: m.testSvc, inputBytes: before.length, inputSha256: digest(before), finalSha256: digest(m.sdImage), rows: parsedRows }, null, 2) + "\n"));
-      if (captureErrors.length || rowParseFailure) {
-        console.error(JSON.stringify({ scope: "DIR evidence finalization", primary: error,
-          rowParseError: rowParseFailure ? { name: rowParseFailure.name, message: rowParseFailure.message } : null, captureErrors }));
-        if (!error) {
-          if (rowParseFailure) throw rowParseFailure;
-          throw new Error(`DIR evidence capture failed: ${JSON.stringify(captureErrors)}`);
-        }
-      }
-    }
   }
 }
 
@@ -196,12 +134,13 @@ function colliding(n) {
 }
 
 test("DIR table: filename and size fields remain twenty columns", () => {
-  const want = [["SHELL.SVC", 128], ["ABCDEFGH.XYZ", 256], ["README", 384]];
+  // A blank inside a name or a type is part of it: only the padding at the right is dropped.
+  const want = [["SHELL.SVC", 128], ["ABCDEFGH.XYZ", 256], ["README", 384], ["A B.C D", 512]];
   const { m } = fresh({ entries: want.map(([name, bytes]) => ({ name, rc: bytes / 128 })) });
   const r = list(m);
   assert.deepEqual(pairs(r.text), want);
   assert.deepEqual(rows(r.text).map(row => row[2]), want.map(([name, bytes]) => name.padEnd(12) + String(bytes).padStart(8)));
-  assert.match(r.text, /3 files, 768 bytes/);
+  assert.match(r.text, /4 files, 1280 bytes/);
   assert.equal(r.result, 0);
   assert.throws(() => rows(`${r.text}\r\nEXTRA.DAT 1\r\n`), /filename row width/, "malformed extra rows cannot be filtered out");
 });
@@ -287,7 +226,7 @@ test("DIR table: fast path starts three searches and never BDOS 35", () => {
 test("DIR table: refused workspace uses legacy without TPA writes", async () => {
   const edits = [["  ld hl,($0006)\n", "  ld hl,$223F\n"]];
   const svc = await shellVariant(edits);
-  const { m } = fresh({ svc, variant: { label: "forced-low-workspace", edits }, geometry: "G1M", entries: [{ name: "X.DAT", rc: 1 }, { name: "X.DAT", ex: 1, rc: 2 }] });
+  const { m } = fresh({ svc, variant: true, geometry: "G1M", entries: [{ name: "X.DAT", rc: 1 }, { name: "X.DAT", ex: 1, rc: 2 }] });
   const check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), [["X.DAT", 16640]]);
@@ -298,11 +237,12 @@ test("DIR table: refused workspace uses legacy without TPA writes", async () => 
 test("DIR table: capacity fallback restarts before printing rows", async () => {
   const edits = [["DLIMIT EQU $2240", "DLIMIT EQU $0250"]];
   const svc = await shellVariant(edits);
-  const { m } = fresh({ svc, variant: { label: "forced-one-node-capacity", edits }, entries: [{ name: "A.DAT", rc: 1 }, { name: "B.DAT", rc: 2 }, { name: "C.DAT", rc: 3 }] });
+  const { m } = fresh({ svc, variant: true, entries: [{ name: "A.DAT", rc: 1 }, { name: "B.DAT", rc: 2 }, { name: "C.DAT", rc: 3 }] });
   const check = tableGuard(m), r = list(m);
   check();
   assert.deepEqual(pairs(r.text), [["A.DAT", 128], ["B.DAT", 256], ["C.DAT", 384]]);
   assert.match(r.text, /3 files, 768 bytes/);
+  assert.deepEqual([r.text.match(/ files?, /g).length, r.text.match(/ free on /g).length], [1, 1], "one summary and one free line after the restart");
   assert.ok(Array.from({ length: 0x1ff0 }, (_, i) => m.read(0x250 + i)).every(value => value === 0xa5));
   assert.equal(m.read(pageOf(m) + svc.symbols.DFAST), 0);
 });
@@ -359,6 +299,127 @@ test("DIR table: all 512 colliding keys stay within the reservation", { timeout:
   t.diagnostic(JSON.stringify({ scope: "functional maximal-chain observation", files: 512, cycles: r.cycles, counters: r.counters }));
   assert.equal(r.counters.searchFirst, 3);
   assert.equal(r.counters.size, 0);
+});
+
+// The table keeps each name's greatest end record, whatever the order of its
+// entries. LATER.DAT's greatest comes after its first entry and EARLY.DAT's
+// before it, so a shell that keeps the first it meets gets LATER.DAT wrong
+// and one that keeps the last gets EARLY.DAT wrong.
+test("DIR table mutant: without the maximum, a file is sized by its first entry or its last", async () => {
+  const entries = [
+    { name: "LATER.DAT", rc: 128 }, { name: "EARLY.DAT", ex: 2, rc: 9 },
+    { name: "LATER.DAT", ex: 2, rc: 9 }, { name: "EARLY.DAT", rc: 128 },
+  ];
+  const right = [["LATER.DAT", 33920], ["EARLY.DAT", 33920]];
+  const normal = list(fresh({ geometry: "G1M", entries }).m);
+  assert.deepEqual(pairs(normal.text), right);
+  assert.equal(normal.counters.size, 0, "from the table, not BDOS 35");
+  const first = await shellVariant([["  jp DAGMAX      ; coalesce same key", "  ret"]]);
+  const kept = list(fresh({ geometry: "G1M", entries, svc: first, variant: true }).m);
+  assert.deepEqual(pairs(kept.text), [["LATER.DAT", 16384], ["EARLY.DAT", 33920]], "the first entry met");
+  assert.equal(kept.counters.size, 0);
+  const last = await shellVariant([["  jr c,DAMEND    ; candidate was smaller\n", ""]]);
+  const taken = list(fresh({ geometry: "G1M", entries, svc: last, variant: true }).m);
+  assert.deepEqual(pairs(taken.text), [["LATER.DAT", 33920], ["EARLY.DAT", 16384]], "the last entry met");
+  assert.equal(taken.counters.size, 0);
+});
+
+// The maximum compares three bytes with a borrow from the low byte up, and
+// an entry's end record carries from RC into the middle and high bytes.
+// Each file's entries are in an order that a comparison of one byte alone,
+// or a lost borrow or carry, would get wrong.
+test("DIR table: the maximum's borrow and the end record's carry cross all three bytes", () => {
+  const end = ({ ex = 0, s2 = 0, rc = 0 }) => ((s2 & 63) * 32 + (ex & 31)) * 128 + rc;
+  const files = {
+    // 000101h then 00007Fh: the later low byte is greater, the value less.
+    "LOWKEEP.DAT": [{ ex: 2, rc: 1 }, { rc: 127 }],
+    // 00007Fh then 000101h: the later low byte is less, the value greater.
+    "LOWTAKE.DAT": [{ rc: 127 }, { ex: 2, rc: 1 }],
+    // 010000h then 00FFFFh, and the other way about: the borrow reaches the high byte.
+    "MIDKEEP.DAT": [{ s2: 16 }, { ex: 31, s2: 15, rc: 127 }, { rc: 1 }],
+    "MIDTAKE.DAT": [{ rc: 1 }, { ex: 31, s2: 15, rc: 127 }, { s2: 16 }],
+    // 020001h and 01FFFFh: the high bytes differ.
+    "TOPKEEP.DAT": [{ s2: 32, rc: 1 }, { ex: 31, s2: 31, rc: 127 }, { rc: 1 }],
+    "TOPTAKE.DAT": [{ rc: 1 }, { ex: 31, s2: 31, rc: 127 }, { s2: 32, rc: 1 }],
+    // 000100h twice, by two routes, then 0000FFh: equal values, then a lesser one.
+    "EQUAL.DAT": [{ rc: 1 }, { ex: 1, rc: 128 }, { ex: 2 }, { ex: 1, rc: 127 }],
+    // RC 128 on 00FF80h: a carry through the middle byte into the high.
+    "CARRY.DAT": [{ rc: 1 }, { ex: 31, s2: 15, rc: 128 }],
+  };
+  const names = Object.keys(files), entries = [];
+  for (let i = 0; i < 4; i++) for (const name of names) if (files[name][i]) entries.push({ name, ...files[name][i] });
+  const want = new Map(names.map(name => [name, (Math.max(...files[name].map(end)) * 128) & 0xffffff]));
+  assert.deepEqual([want.get("MIDKEEP.DAT"), want.get("TOPKEEP.DAT"), want.get("EQUAL.DAT"), want.get("CARRY.DAT")], [8388608, 128, 32768, 8388608]);
+  const { m } = fresh({ geometry: "G1M", entries }), r = list(m);
+  assert.equal(pairs(r.text).length, names.length);
+  assert.deepEqual(new Map(pairs(r.text)), want);
+  assert.equal(r.counters.size, 0);
+});
+
+test("DIR table: no name and 511 names stay within the reservation", { timeout: 900_000 }, () => {
+  {
+    const { m } = fresh(), check = tableGuard(m), r = list(m);
+    check();
+    assert.deepEqual(pairs(r.text), []);
+    assert.match(r.text, /NO FILE/);
+    assert.equal(r.result, 0xff00);
+    assert.equal(word(m, 0x100), 0, "the table's count");
+  }
+  const names = Array.from({ length: 511 }, (_, i) => `N${String(i).padStart(4, "0")}.DAT`);
+  const { m } = fresh({ entries: names.map((name, i) => ({ name, ex: 1, rc: i & 127 })) }), check = tableGuard(m), r = list(m);
+  check();
+  assert.deepEqual(pairs(r.text), names.map((name, i) => [name, (128 + (i & 127)) * 128]));
+  assert.equal(word(m, 0x100), 511);
+  assert.equal(word(m, 0x102), 0x2230, "one node's room left");
+  assert.equal(r.counters.searchFirst, 3);
+  assert.equal(r.counters.size, 0);
+});
+
+// A row is twenty columns: within the GLCD's 21 and the PICO9918's 40. On
+// each, every row shown when [more] waits is one whole line of the screen.
+test("DIR table: rows and [more] on the GLCD and the PICO9918", () => {
+  const small = Array.from({ length: 30 }, (_, i) => [`F${String(i).padStart(2, "0")}.DAT`, (i + 1) * 128]);
+  small.push(["README", 384]);
+  // A full 8.3 name with an eight-digit size: the two fields touch.
+  const big = ["ABCDEFGH.XYZ", 12345600];
+  const entries = small.map(([name, bytes]) => ({ name, rc: bytes / 128 }));
+  entries.push({ name: big[0], rc: 1 }, { name: big[0], ex: 17, s2: 23, rc: 66 });
+  // The big file's mark puts it, and any name sharing that mark, in the second group.
+  const marked = ([name]) => hash(name) === hash(big[0]);
+  const want = [...small.filter(f => !marked(f)), ...small.filter(marked), big];
+  const whole = new Set(want.map(([name, bytes]) => name.padEnd(12) + String(bytes).padStart(8)));
+  for (const [label, opts, screen, startup, files, console] of [
+    ["GLCD", { matrix: true, glcd: true }, m => m.glcdScreen(), ["SHELL.SVC", "GLCD.SVC"], { "GLCD.SVC": GLCD_SVC }, 3],
+    ["PICO9918", { tms: true, matrix: true }, m => m.screen(), ["SHELL.SVC"], {}, null],
+  ]) {
+    const { m } = fresh({ geometry: "G1M", entries, files, startup, opts });
+    if (console !== null) assert.equal(m.read(m.sym("CONMOD")), console, `${label} is the console`);
+    const pages = [];
+    m.mark = m.output.length;
+    m.typeMatrix("DIR B:\r");
+    for (;;) {
+      const more = () => /\[more\]$/.test(m.text(m.mark));
+      m.runUntil(() => (m.waitingForInput() && more()) || (m.ready() && PROMPT.test(m.text(m.mark))), 20_000_000_000, `DIR B: on the ${label}`);
+      if (!more()) break;
+      pages.push(screen(m).map(l => l.trimEnd()).filter(Boolean));
+      const n = m.output.length;
+      m.typeMatrix(" ");
+      m.runUntil(() => m.output.length > n + 12, 400_000_000, "the pager reply");
+    }
+    const text = m.text(m.mark);
+    assert.deepEqual(pairs(text), want, label);
+    assert.match(text, /32 files, 12405504 bytes/, label);
+    assert.equal(code(m), 0);
+    assert.ok(pages.length > 0, `${label}: [more] waited`);
+    for (const page of pages) {
+      assert.equal(page.at(-1), "[more]", `${label}: ${JSON.stringify(page)}`);
+      const shown = page.filter(l => whole.has(l));
+      assert.ok(shown.length >= 2, `${label}: rows above [more]: ${JSON.stringify(page)}`);
+      // A row broken across lines would leave a line that starts as a row does, or one of digits alone.
+      for (const l of page.slice(0, -1)) assert.ok(whole.has(l) || (!want.some(([name]) => l.startsWith(name)) && !/^\d+$/.test(l.trim())), `${label}: ${JSON.stringify(l)}`);
+    }
+    assert.deepEqual(m.violations, []);
+  }
 });
 
 test("DIR table: valid sparse and large files agree with public BDOS 35", t => {
