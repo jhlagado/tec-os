@@ -111,30 +111,6 @@ DIAGNZ:
   xor a
   ld (PZDU),a
 
-; Give the RAM BIOS table the ROM's
-; entries and drop a registered UC1
-; table. Cold boot calls it, and MLREST
-; before it brings back the first
-; evicted service: with no service
-; resident, any other entry or table
-; belongs to a program that has gone,
-; and its image is about to be loaded
-; over. Warm boot keeps both, so this
-; is not for a program's ordinary exit.
-; Changes AF/BC/DE/HL.
-
-EVHOME:
-  ld hl,BIOSBAS
-  ld de,RAMBIOS
-  ld bc,BIOSLEN
-  ldir
-  ld a,(GLVEC+1)
-  or a
-  ret z          ; no table registered
-  ld a,CMUC1
-  ld hl,0
-  jp VIDHOOK     ; dropped, C clear
-
 ; Warm boot: disable maskable IRQs.
 ; Select LATCLAS, update LATCHV, then
 ; load BSTK in that bank. Release
@@ -690,3 +666,27 @@ DGLOOP:
   cp 'R'
   jp z,COLDRT
   jr DGLOOP
+
+; Give the RAM BIOS table the ROM's
+; entries and drop a registered UC1
+; table. Cold boot calls it, and MLREST
+; before it brings back the first
+; evicted service: with no service
+; resident, any other entry or table
+; belongs to a program that has gone,
+; and its image is about to be loaded
+; over. Warm boot keeps both, so this
+; is not for a program's ordinary exit.
+; Changes AF/BC/DE/HL.
+
+EVHOME:
+  ld hl,BIOSBAS
+  ld de,RAMBIOS
+  ld bc,BIOSLEN
+  ldir
+  ld a,(GLVEC+1)
+  or a
+  ret z          ; no table registered
+  ld a,CMUC1
+  ld hl,0
+  jp VIDHOOK     ; dropped, C clear

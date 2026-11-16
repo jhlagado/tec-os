@@ -36,10 +36,10 @@ loader ignores what follows its relocation data.
 | 4 | 2 | `REMOVE`, from the header's start | The same |
 | 6 | 2 | Header and image, in bytes | The registry's head before it |
 | 8 | 2 | Extra memory after the image, not cleared | Low byte: the owner before it, a page, 0 at the last |
-| 10 | 2 | Relocation data, in bytes | Unused |
+| 10 | 2 | Relocation data, in bytes | Low byte: the letter of the drive the file was installed from. High byte unused |
 | 12 | 3 | Stack use: BDOS, BIOS, CCP | Each stack's room left below this service |
 | 15 | 2 | `INIT`, from the header's start | Unused |
-| 17 | 8 | Name, padded with spaces | The same |
+| 17 | 8 | Name, padded with spaces | The name the file was installed by, which `SERVICES` lists and `EVICT` brings it back by |
 | 25 | | The image | |
 
 The header is 25 bytes and goes into memory with the image, the loader writing
@@ -98,6 +98,9 @@ it is a name like any other.
 `UNLOAD` removes the lowest resident, as below, and answers the same way if it
 can't. It never removes the ROM's PICO9918 console. `GLCD.SVC`'s `REMOVE` gives the
 console back to `CRT:` if the "PICO" record is present.
+
+`EVICT command` removes every resident, runs the command with the whole TPA
+and brings the residents back at the next prompt: "Eviction", below.
 
 ## Execution: enter on install
 
@@ -167,8 +170,14 @@ no message, nothing installed and nothing entered.
 
 **The entry contract.**
 
-- A is FFh when the line came from `STARTUP.CMD` and 0 otherwise; HL is the
+- A is the line's origin: FFh when it came from `STARTUP.CMD`, 01h when the
+  ROM is bringing the service back after `EVICT`, and 0 otherwise. HL is the
   entry address. BC, DE, IX and IY are undefined.
+- **An entry given 01h** does only what makes the service usable again, as a
+  shell claims its hook. It starts no session, reads no startup file, waits
+  for no key and prints nothing: the user did not type its name. An entry
+  compares A with FFh and with 01h by value. One that takes any non-zero A
+  for a startup line mistakes a restoration for one.
 - SP is `CSTKTOP` with 0000h pushed, as a `.COM` starts. The entry runs where
   a transient does, and should take its own stack at once.
 - Page zero, the FCBs at 005Ch and 006Ch, the tail at 0080h and the DMA are
@@ -436,6 +445,35 @@ Otherwise the registry and owner heads go back to what they were before it, the
 generation rises, and `PZTOP` and `(0006h)` go back to the top before it. The slots
 the service claimed and any vector into its pages then take their defaults. Warm
 boot keeps services and the registry; a reset empties both.
+
+## Eviction
+
+`EVICT command` gives one command the residents' memory. It is the ROM's, so
+it works with a shell or at the bare prompt.
+
+1. Every resident is checked, and nothing is removed yet. There may be no more
+   than four. Each must be removable. Each must have a directory entry now for
+   the file it was installed from: the drive and the name the loader kept in
+   its header, in the user number in force. Any failure is `EVICT?` with
+   FF00h, and nothing has changed.
+2. Each is removed, the lowest first, as `UNLOAD` removes it. A `REMOVE` that
+   refuses ends in `EVICT?` too, and those already out come back.
+3. The command runs as a line typed at the ROM's prompt. While it runs no
+   service installs: `NAME.SVC` and `CON UC1:` are refused.
+4. At the next prompt, whatever way the command ended, each service is
+   installed again from its file, the oldest first, so each is back on the
+   page it had. A service whose execution record asks to be entered is
+   entered with A = 01h. A file that will not load is `d:NAME.SVC?` with
+   FF00h, the line to type again, and the next service is tried.
+5. Last, the IOBYTE goes back to what it was when `EVICT` was typed, unless
+   that names `UC1:` and no UC1 driver came back.
+
+With no service resident at step 4, the ROM first gives the RAM BIOS table
+its own entries and drops a UC1 table registered through `TNDRVR`: either
+could only belong to the command that has ended, and its image is about to be
+loaded over. A service's own state, such as the shell's history, is not kept:
+the service starts as new. A reset while the residents are out forgets them,
+and `STARTUP.CMD` runs as at any reset.
 
 ## Rules for a source
 

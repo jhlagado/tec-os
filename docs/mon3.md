@@ -117,9 +117,9 @@ It does not relocate absolute addresses embedded in machine code or data.
 - **`GO [addr]`** runs the last good load at its remembered entry, or the
   explicit hexadecimal `addr`. The explicit override applies to this run
   only; it does not change the remembered load address. With neither it prints
-  `?`. It first attempts to flush the cache (BDOS 48). Failed writes remain
-  pending; GO currently proceeds without checking that status, so it does
-  not guarantee that earlier writes are saved. Then it does what MON-3's `GO` does: the LCD
+  `?`. It first flushes the cache (BDOS 48). If the card refuses a write, GO
+  says `Write pending` and does not run the program: the line stays pending,
+  and GO can be typed again once the card takes it. Then it does what MON-3's `GO` does: the LCD
   cleared and `Running at: nnnn` on row 4, a beep unless `KEY_BEEP` turns it
   off, the latch written from `SYS_MODE` with `PROT_MODE`, and `KEY_BUFF` set
   to FFh. Only the PROTECT and CAPS bits are taken: whatever a program left
@@ -442,8 +442,9 @@ its two `LD A,R` on both sides. The console's return is tested with
   not supported.
 - **MON-3's disk calls**, 58 to 61, are not translated to CP/M files.
 - **No recovery from a hang** or from arbitrary memory damage: a program that
-  loops needs the reset button. GO attempts a flush before entering it;
-  a failed flush still leaves pending writes vulnerable to a reset or crash.
+  loops needs the reset button. GO flushes the cache before entering it and
+  refuses to run while a write is still pending, so a reset or a crash in the
+  program loses nothing the card had not already refused.
 - **The accepted disk hazard.** A MON-3 program that writes from the bare
   BDOS entry through BFFFh (`B6C5h` on the starter, `B985h` on the two-volume
   reference card) can damage the allocation vectors, workspace and RAM BIOS
