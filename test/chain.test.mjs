@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { createContainer } from "../tools/lib/container.mjs";
 import { Machine } from "./lib/machine.mjs";
 import { SHELL, pageOf } from "./lib/shell.mjs";
-import { TEST_CLOCK, boot, program, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
+import { PUT_COM, TEST_CLOCK, boot, program, romFor, standardCard, startupFile, volume, withShell } from "./lib/fixtures.mjs";
 
 import { pendingSayFiles, pendingSayFailure } from "./lib/pending-say.mjs";
 
@@ -264,7 +264,7 @@ test("SH8 ^C at a program's line input drops the rest of the line", () => {
 
 test("SH8 a BDOS error's exit drops the rest of the line", () => {
   const image = card(
-    {},
+    { "PUT.COM": PUT_COM },
     createContainer([
       { geometry: "G1M", label: "SYSTEM", mount: "A" },
       { geometry: "G1M", label: "WORK", mount: "B" },
@@ -273,7 +273,7 @@ test("SH8 a BDOS error's exit drops the rest of the line", () => {
   );
   const m = boot(image);
   const from = m.output.length;
-  m.type("SAVE 1 C:X.COM!SAY!USER 2\r");
+  m.type("PUT 1 C:X.COM!SAY!USER 2\r");
   m.runUntil(() => m.waitingForInput() && /Bdos Err/.test(m.text(from)), 200_000_000, "the error");
   m.type("\r");
   m.runUntil(() => idle(m, from), 400_000_000, "the prompt");
@@ -347,7 +347,7 @@ test("SH8 ERA's read-only file drops the rest of the line", () => {
   assert.ok(volume(m.sdImage, "A").find("R.DAT"), "the file kept");
 });
 
-test("SH8 SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
+test("SH8 PUT's NO SPACE sets FF00h by function 108: a full directory and a full disk", () => {
   const full = createContainer([
     { geometry: "G1M", label: "SYSTEM", mount: "A" },
     { geometry: "G1M", label: "DIRS", mount: "B" },
@@ -357,9 +357,9 @@ test("SH8 SAVE's NO SPACE sets FF00h: a full directory and a full disk", () => {
   for (let i = 0; i < 256; i += 1) b.write(`F${i}.DAT`, new Uint8Array(1));
   const c = volume(full, "C");
   c.write("BIG.DAT", new Uint8Array(c.freeBytes()));
-  const m = boot(card({}, full));
+  const m = boot(card({ "PUT.COM": PUT_COM }, full));
   for (const drive of ["B", "C"]) {
-    const out = run(m, `SAVE 1 ${drive}:X.COM &SAY &USER 2`);
+    const out = run(m, `PUT 1 ${drive}:X.COM &SAY &USER 2`);
     assert.match(out, /NO SPACE/, drive);
     assert.equal(count(out, /\nSAY\r/g), 0, drive);
     assert.equal(code(m), 0xff00, drive);
