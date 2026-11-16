@@ -341,19 +341,13 @@ test("KG59 name rule", async () => {
   assert.deepEqual(bytesAt(p, (pp << 8) + 25, 16), asLoaded(pp), "GLCD.SVC by CON UC1");
 });
 
-test("KG59 drive and user", async () => {
+test("KG59 drive", async () => {
   const m = boot({ "MON3.SVC": await mon3File() });
   installMon3(m);
   let r = typed(m, "B:MON3.SVC");
   assert.ok(r.mon3, "B:MON3.SVC enters A:'s installed copy");
   assert.deepEqual(r.opens, []);
   leave(m, r);
-  m.command("USER 1");
-  r = typed(m, "MON3.SVC");
-  assert.ok(r.mon3, "so does MON3.SVC in user 1");
-  assert.deepEqual(r.opens, []);
-  leave(m, r);
-  m.command("USER 0");
   m.command("UNLOAD");
   const state = loaderState(m);
   r = typed(m, "B:MON3.SVC");

@@ -439,8 +439,8 @@ test("a removed card retains acknowledged pending data while the normal console 
   assert.equal(warm.text.match(/Write pending/g)?.length, 1); assert.doesNotMatch(warm.text, /Write lost/);
   assert.deepEqual(durable(cacheState(m)), durable(pending.state)); assert.deepEqual(image, before);
   assert.equal(events.initializations, 0); assert.ok(events.writes > 0);
-  const attempted = events.writes, out = cmd(m, "USER 0");
-  m.runUntil(() => ordinaryInput(m), 400_000_000, "USER returns to actual ordinary input without a card");
+  const attempted = events.writes, out = cmd(m, "CON");
+  m.runUntil(() => ordinaryInput(m), 400_000_000, "CON returns to actual ordinary input without a card");
   assert.match(out, /\r\n[A-P](:\S*)?>$/); assert.doesNotMatch(out, /Write pending|Write lost/);
   assert.ok(events.writes > attempted, "normal API activity retries the retained write");
   assert.equal(events.initializations, 0); assert.equal(m.sd, null);
