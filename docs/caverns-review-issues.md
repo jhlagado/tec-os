@@ -1455,3 +1455,13 @@ stays CVB2; actual compiler symbols/addresses and protected executable hashes
 are refreshed. Current implementation details: docs/caverns-engine.md. Current
 records: docs/evidence/caverns-rewrite/. Historic proposal/wording records above
 remain historical rather than descriptions of unimplemented work.
+
+Rewrite integration completed: the source-only Viewer compiled the rewritten
+BAS to byte-identical COM, played the opening and exported/restored a checkpoint
+in a fresh context/card. Both native Viewer checks passed. A separate native
+reader experiment inserted line 151 without changing other numbers and compiled
+and ran successfully. Nineteen starter tests passed. A fresh checkout also
+packs all matching developer scenarios; their regenerated JSON identities are
+committed alongside the ready CAV files. The final evidence and updated book
+handover distinguish all these checks from physical TEC-1G testing, which is
+still outstanding. No public site deployment or main-branch merge is claimed.
