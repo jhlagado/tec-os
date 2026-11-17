@@ -34,12 +34,12 @@ for(const shell of [false,true])for(const matrix of [false,true]){
  });
 }
 
-test('buffered line input consumes CSI modifiers and every SS3 final without storing them',()=>{
+test('buffered line input consumes CSI modifiers and SS3 navigation and function keys',()=>{
  const m=fixture(true);
  m.type('TYPE ');
  assert.equal(held(m),'TYPE ');
  const mark=m.output.length;
- m.type('\x1b[1;5A\x1b[1;2B\x1b[C\x1b[D\x1bOH\x1bOF\x1bOP\x1bOQ\x1bOR\x1bOS');
+ m.type('\x1b[1;5A\x1b[1;2B\x1b[C\x1b[D\x1b[1~\x1b[3~\x1bOH\x1bOF\x1bOP\x1bOQ\x1bOR\x1bOS');
  assert.equal(held(m),'TYPE ');
  assert.equal(m.text(mark),'');
  m.type('ONE.TXT\r');
