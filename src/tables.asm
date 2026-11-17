@@ -123,9 +123,9 @@ SVTAB: DW HWSINFO,HWSDIG
 
   DW SVLST,HWSFONT
 
-; 16
+; 16 and 17
 
-  DW SVSHL
+  DW SVSHL,HWSRING
 
 ; Twelve-byte FCB prefixes for CMDFCB:
 ; explicit drive A, eight-byte name and

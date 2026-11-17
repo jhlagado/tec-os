@@ -492,18 +492,60 @@ PGSTOP:
 MOREMSG: DB "[more]$"
 UNMORE: DB CR,"      ",CR,'$'
 
-; HREC, on the BDOS's stack inside line
-; input: C = ^W, older, or ^N, newer.
+; HREC and HSTORE are called inside the
+; shell's own line input, on the BDOS's
+; stack: each moves to the shell's,
+; below TYPED's frame, the only one it
+; holds then. The ring is EXPAND 1's
+; history page, reached a byte at a
+; time through the ROM's RINGIO, whose
+; address INIT puts in RIO.
+
+HREC:
+  ld hl,HREC0    ; ^W or ^N
+  jr HSWAP
+
+HSTO:
+  ld hl,HSTO0    ; a typed line
+
+HSWAP:
+  ld (HSP),sp    ; the BDOS's stack
+  ld sp,STKTOP-2 ; under TYPED's frame
+  call JPHL      ; HREC0 or HSTO0
+  ld sp,(HSP)    ; back, flags kept
+  ret
+
+JPHL:
+  jp (hl)
+
+; The ring's byte L in A: RGET reads it,
+; RPUT writes A. H becomes the page's;
+; BC, DE and L are kept.
+
+RGET:
+  or a           ; no carry: read
+
+RIO:
+  jp 0           ; RINGIO, from INIT
+
+RPUT:
+  scf            ; carry: write
+  jr RIO
+
+; HREC0: C = ^W, older, or ^N, newer.
 ; Carry: nothing to show. Otherwise HL
 ; = the line, zero-ended, copied to
 ; LTXT, which is the line being edited:
 ; the ROM erases that line, then copies
 ; this one over it, byte for byte in
 ; place. The ring holds zero-ended
-; lines; HPOS ends the one shown.
+; lines; HPOS ends the one shown. A
+; walk is bounded, whatever a program
+; left in the page: a line is at most
+; 127 bytes, and ^N looks at most 256
+; ahead.
 
-HREC:
-  ld h,HIGH(RING)
+HREC0:
   ld a,(HPOS)    ; the line shown
   ld l,a
   ld a,c         ; which key?
@@ -512,7 +554,7 @@ HREC:
   call HSTART    ; this line's start
   dec l          ; the older line's zero
   dec l
-  ld a,(hl)      ; its last byte, or 0
+  call RGET      ; its last byte, or 0
   inc l          ; L at its zero
   or a           ; another line?
   scf
@@ -524,12 +566,16 @@ HRNEW:
   cp l
   scf            ; carry: none
   ret z          ; at the newest
+  ld b,0         ; at most 256 ahead
 
 HRNEW1:
   inc l          ; the next line's
-  ld a,(hl)      ; end, at its zero
+  call RGET      ; end, at its zero
   or a
-  jr nz,HRNEW1   ; to the next's end
+  jr z,HRSHOW    ; its end
+  djnz HRNEW1    ; on to it
+  scf            ; no zero: none
+  ret
 
 HRSHOW:
   ld a,l         ; its end
@@ -541,7 +587,7 @@ HRC:
   ld a,(HPOS)    ; the line's end
   cp l
   jr z,HRE       ; its end
-  ld a,(hl)      ; a ring byte
+  call RGET      ; a ring byte
   ld (de),a      ; copied out
   inc de
   inc l          ; within the ring
@@ -554,25 +600,29 @@ HRE:
   ret
 
 ; L to the first byte of the ring's
-; line that ends at L.
+; line that ends at L, at most 127
+; bytes back. Changes AF and C.
 
 HSTART:
+  ld c,127       ; a line's most
+
+HS1:
   dec l          ; the byte before
-  ld a,(hl)
+  call RGET
   inc l
   or a           ; its zero?
   ret z          ; the zero before it
   dec l          ; go back one
-  jr HSTART
+  dec c
+  jr nz,HS1      ; to the line's most
+  ret
 
-; HSTORE, on the BDOS's stack: DE = a
-; typed line, B = its length. Store it
-; unless it holds a zero or repeats the
-; newest, then clear the oldest lines
-; it overwrote.
+; HSTO0: DE = a typed line, B = its
+; length. Store it unless it holds a
+; zero or repeats the newest, then
+; clear the oldest lines it overwrote.
 
-HSTO:
-  ld h,HIGH(RING)
+HSTO0:
   ld a,(HHEAD)   ; the newest's
   dec a
   ld l,a         ; the newest's zero
@@ -585,7 +635,10 @@ HSCMP:
   ld a,(de)      ; the line's byte
   or a           ; zero?
   jr z,HSKEEP    ; a zero: not stored
-  cp (hl)        ; the newest's
+  call RGET      ; the newest's
+  ex de,hl
+  cp (hl)        ; against the line's
+  ex de,hl
   jr z,HSCMP1
   inc c          ; a difference
 
@@ -609,11 +662,12 @@ HSCMP1:
 
 HSPUT:
   ld a,(de)      ; a byte of it
-  ld (hl),a      ; the line, wrapping
+  call RPUT      ; the line, wrapping
   inc de
   inc l
   djnz HSPUT
-  ld (hl),0      ; its zero
+  xor a
+  call RPUT      ; its zero
   inc l          ; past the zero
   ld a,l         ; the new head
   ld (HHEAD),a   ; the next store
@@ -622,9 +676,12 @@ HSPUT:
 ; overwritten, to its zero.
 
 HSCLR:
-  ld a,(hl)      ; a stale byte
-  ld (hl),0      ; cleared
+  call RGET      ; a stale byte
+  ld b,a
+  xor a
+  call RPUT      ; cleared
   inc l
+  ld a,b
   or a           ; its zero?
   jr nz,HSCLR
   ret

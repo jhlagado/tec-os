@@ -527,6 +527,53 @@ HWSFONT:
   xor a
   ret
 
+; TNRING (17): HL=RINGIO, the direct
+; entry to the history page. Changes
+; AF. Other registers stay.
+
+HWSRING:
+  ld hl,RINGIO
+  xor a
+  ret
+
+; RINGIO: byte L of the history page,
+; HRING in EXPAND 1. Carry: write A
+; there; no carry: read it into A. No
+; stack is touched while EXPAND 1 is in
+; view, with interrupts held off.
+; Returns H=HIGH(HRING), keeps BC, DE
+; and L and the interrupt state; F
+; changes.
+
+RINGIO:
+  push bc
+  ld h,HIGH(HRING)
+  ld b,a         ; the byte to write
+  sbc a,a        ; FFh: write, 0: read
+  ld c,a
+  call IFFGET    ; P/V: interrupts on
+  di
+  push af
+  ld a,(LATCHV)
+  or LATEXP
+  out (SYSLAT),a ; EXPAND 1 in view
+  inc c          ; Z: a write
+  jr nz,RIO1
+  ld (hl),b      ; the byte written
+
+RIO1:
+  ld b,(hl)      ; and read back
+  ld a,(LATCHV)
+  out (SYSLAT),a ; the program's view
+  pop af
+  jp po,RIO2     ; they were off
+  ei
+
+RIO2:
+  ld a,b         ; the byte
+  pop bc
+  ret
+
 ; TNDRVR: B=3 (UC1), HL=eight-word
 ; table or 0 to drop. Other B: TNEBAD.
 ; CRT uses the ROM table.

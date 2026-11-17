@@ -1,4 +1,4 @@
-; Public TEC-OS ABI 5.1: eight bytes at
+; Public TEC-OS ABI 5.2: eight bytes at
 ; C003h..C00Ah, containing TNA, major,
 ; minor and JP SVCDSP. Test TNA at
 ; ABITAB and major 5 at ABIMAJ before
@@ -20,7 +20,7 @@ ABITAB EQU $C003
 
 ABIMAJ EQU $C006
 
-; minor version, 1
+; minor version, 2
 
 ABIMIN EQU $C007
 
@@ -225,6 +225,21 @@ TNFONT EQU 15
 
 TNSHELL EQU 16
 
+; RING: HL = RINGIO, a ROM routine for
+; the history page, BD00h-BDFFh in
+; EXPAND 1, which belongs to the shell
+; that holds the hook. Call RINGIO
+; itself, not through ABICALL: L is
+; the byte's offset; carry writes A
+; there, no carry reads it into A. It
+; returns H=BDh, keeps BC, DE, L and the
+; interrupt state, and holds
+; interrupts off while EXPAND 1 is in
+; view. Added at ABI minor 2. Stack
+; bound 4; RINGIO's own 6.
+
+TNRING EQU 17
+
 ; TNCOUNT is the exclusive service
 ; bound, not callable. Failures return
 ; status A with carry:
@@ -233,7 +248,7 @@ TNSHELL EQU 16
 ; failure does not imply unchanged
 ; workspace, cache or hardware.
 
-TNCOUNT EQU 17
+TNCOUNT EQU 18
 
 TNEBAD EQU 1
 

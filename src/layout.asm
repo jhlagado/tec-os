@@ -41,6 +41,15 @@ CTAB EQU $BC00   ; four-byte LBA keys
 CDIRTY EQU $BC80
 NLINES EQU 30    ; cache lines
 
+; EXPAND 1's history page, for the shell
+; that holds the hook, through RINGIO.
+; It shares its page with nothing: the
+; cache's tables end below it, and the
+; page above is free. Cold boot clears
+; it with the rest of EXPAND 1.
+
+HRING EQU $BD00
+
 ; CP/M 2.2 base-page fields. PZDU holds
 ; the drive in bits 0-3. CP/M's user
 ; bits 4-7 are zero: the CCP stays in

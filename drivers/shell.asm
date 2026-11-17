@@ -32,13 +32,13 @@ FAILCODE EQU 255*256
 ; The writer fills INIT, REMOVE, size
 ; and relocation. XTRA bytes of extra
 ; RAM follow the image. Declared stack
-; use: BDOS 6 (HREC and HSTORE), BIOS
-; 0, CCP 0: LINE and PAGE move at once
-; to the shell's own stack.
+; use: BDOS 0, BIOS 0, CCP 0: LINE,
+; PAGE, HREC and HSTORE move at once to
+; the shell's own stack.
 
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,XTRA,0
-  DB 6,0,0
+  DB 0,0,0
   DW 0
   DB "SHELL   "
 
@@ -65,21 +65,36 @@ TABLE: DW LINE,PAGE,HREC,HSTO
 
 ; BC points at the eight-byte name the
 ; loader read the file by. Keep it in
-; the record, clear the extra RAM and
-; set ready last. Returns no records:
-; HL=0, A=0, NC. Clobbers BC and DE.
+; the record, clear the extra RAM, take
+; RINGIO from the ROM, clear the ring
+; and set ready last. Returns no
+; records: HL=0, A=0, NC; a ROM with no
+; TNRING refuses the install with its
+; carry. Clobbers BC and DE.
 
 INIT:
-  ld h,b
-  ld l,c         ; HL = the name
+  push bc        ; the name
+  ld c,TNRING
+  call ABICALL   ; HL = RINGIO
+  pop de
+  ret c          ; no ring: refused
+  ld (RIO+1),hl  ; RIO jumps there
+  ex de,hl       ; HL = the name
   ld de,EXNAM    ; the record's name
   ld bc,8        ; into the record
   ldir
-  ld hl,VARS     ; state, buffers, ring
+  ld hl,VARS     ; state and buffers
   ld de,VARS+1   ; a byte at a time
   ld bc,CLRLEN
   ld (hl),0      ; all zero
   ldir
+  ld l,b         ; L = 0, the ring's
+
+IN1:
+  xor a
+  call RPUT      ; each byte zero
+  inc l
+  jr nz,IN1      ; all 256
   ld hl,EXRDY
   set 0,(hl)     ; ready, bit 1 kept
   ld hl,0        ; no records
@@ -748,7 +763,9 @@ LCOND EQU PGSP+2
 ; FCBBASE: the FCB the parser fills.
 ; CCOUNT: COPY's records. The ring's
 ; HHEAD is its next store and HPOS the
-; end of the line recalled. The pager's
+; end of the line recalled; HSP holds
+; the BDOS's SP while HREC or HSTORE
+; runs. The pager's
 ; PGLINE and PGCOL count, PGROWS and
 ; PGWID are its page. PDNZ: a decimal
 ; digit printed. CFCB is COPY's
@@ -764,7 +781,8 @@ FCBBASE EQU CLAIMD+1
 CCOUNT EQU FCBBASE+2
 HHEAD EQU CCOUNT+2
 HPOS EQU HHEAD+1
-PGLINE EQU HPOS+1
+HSP EQU HPOS+1
+PGLINE EQU HSP+2
 PGCOL EQU PGLINE+1
 PGROWS EQU PGCOL+1
 PGWID EQU PGROWS+1
@@ -800,11 +818,6 @@ CDNAME    EQU   VLIST+1
 STKBOT    EQU   CDNAME+11
 STKTOP    EQU   STKBOT+48
 
-; The ring is the last page, aligned so
-; that a byte offset in L wraps within
-; it.
-
-RING EQU ((STKTOP+255)/256)*256
-XEND EQU RING+256
+XEND EQU STKTOP
 XTRA EQU XEND-IMGEND
 CLRLEN EQU XEND-VARS-1
