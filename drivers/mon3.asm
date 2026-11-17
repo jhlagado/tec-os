@@ -100,8 +100,8 @@ ENTRY0:
 ; BC points at the eight-byte name the
 ; loader read the file by. Keep it in
 ; the record and set ready last.
-; Returns no records: HL=0, A=0, NC.
-; Clobbers BC and DE.
+; Returns MREC, A=0, NC. Clobbers BC
+; and DE.
 
 INIT:
   ld h,b
@@ -111,7 +111,7 @@ INIT:
   ldir
   ld hl,EXRDY
   set 0,(hl)     ; ready, bit 1 kept
-  ld hl,0        ; no records
+  ld hl,MREC     ; MON3GFX.SVC's record
   xor a          ; A=0 and NC
   ret
 
@@ -1181,7 +1181,6 @@ HEXC:
 %INCLUDE "mon3api.asm"
 %INCLUDE "mon3io.asm"
 %INCLUDE "mon3hex.asm"
-%INCLUDE "mon3gfx.asm"
 
 MPROM: DB 13,10,"MON3>$"
 MCRLF: DB 13,10,'$'

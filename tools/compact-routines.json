@@ -95,6 +95,9 @@
     "RGBS"
   ],
   "drivers/mon3gfx.asm": [
+    "INIT",
+    "REMOVE",
+    "HCOPY",
     "R18",
     "GWS",
     "GRST",

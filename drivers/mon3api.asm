@@ -949,3 +949,36 @@ CONFT: DB "Press 'C' to Confirm",0
 GETGT:
   ld a,(GTERM)
   ret
+
+; RST 18h, the graphics workspace at
+; each entry and the panel at a
+; program's return: MON3GFX.SVC's to
+; take. Its INIT writes a JP over each
+; three bytes, and its REMOVE puts them
+; back. Without it RST 18h goes to the
+; error display, as a call MON-3 lacks
+; does, and the two do nothing. MREC's
+; table.
+
+R18:
+  jp R18N        ; MON3GFX's refusals
+
+GWS:
+  ret            ; at each entry
+  DW 0
+
+GRST:
+  ret            ; at a program's end
+  DW 0
+
+R18N:
+  pop hl         ; the caller's HL
+  jp DERR
+
+; The record MON3GFX.SVC's dependency
+; names: MON3, version 1, its table the
+; three hooks above.
+
+MREC: DW 0
+  DB "MON3    ",1
+  DW R18

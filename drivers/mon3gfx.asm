@@ -1,8 +1,9 @@
-; MON3.SVC: MON-3's graphics API for
-; the 128x64 GLCD, RST 18h, included by
-; mon3.asm. Calls 0 to 20 are MON-3's
-; own routines, in its order, so each
-; gives MON-3's results in MON-3's time.
+; MON3GFX.SVC: MON-3's graphics API for
+; the 128x64 GLCD, RST 18h, in a
+; MON3.SVC session. Calls 0 to 20 are
+; MON-3's own routines, in its order,
+; so each gives MON-3's results in
+; MON-3's time.
 ; They draw into the buffer at VPORT,
 ; 1,024 bytes of 16 a row, and copy it
 ; to the ST7920 at plotToLCD. 21 to 33,
@@ -11,10 +12,91 @@
 ; graphics workspace set at each entry,
 ; and the GLCD console's modes set at a
 ; program's return.
+;
+; It depends on MON3.SVC: the restart,
+; the entry and the return are that
+; session's, and so is the error
+; display. INIT finds MON3's record and
+; points its three hooks here; REMOVE
+; gives them back. The dependency puts
+; MON3.SVC above it, so last in, first
+; out takes this one first.
 
+%INCLUDE "../src/abi.inc"
+
+IOBYTE EQU $0003
 GLCDI EQU $07    ; the ST7920's command
 GLCDD EQU $87    ; and data ports
 VDLY EQU $000A   ; delayUS's count
+
+  ORG $0100
+
+; Removable, no claims, no use of the
+; ROM's stacks: the calls run on a
+; MON-3 program's stack. The writer
+; adds the dependency, MON3 version 1.
+
+HDR: DB 'D',SVCFMT,0,1
+  DW 0,0,0,0
+  DB 0,0,0
+  DW 0
+  DB "MON3GFX "
+
+; MON3's table: RST 18h's hook, then
+; the entry's and the return's. A
+; second copy finds our JP at the
+; second, and is refused. The hooks as
+; found go to SAVEH, whose first three
+; are MON3's own RST 18h, the error
+; display. Returns no records: HL=0,
+; A=0, NC. Clobbers BC and DE.
+
+INIT:
+  ld de,MON3N
+  ld bc,$0100+TNFIND
+  call ABICALL   ; HL = MON3's table
+  ret c
+  ld (MTAB),hl
+  ld de,SAVEH
+  ld bc,9        ; the hooks as found
+  ldir
+  ld a,(SAVEH+3)
+  cp $C3         ; taken already?
+  ld a,TNEBAD
+  scf
+  ret z
+  ld hl,HOOKS
+  jr HCOPY       ; ours, last
+
+; MON3's hooks as INIT found them.
+; Returns A=0, NC. Clobbers BC, DE and
+; HL.
+
+REMOVE:
+  ld hl,SAVEH
+
+; Nine bytes from HL over MON3's hooks.
+; Returns HL=0, A=0, NC.
+
+HCOPY:
+  ld de,(MTAB)
+  ld bc,9
+  ldir
+  ld h,b
+  ld l,c         ; HL=0: no records
+  xor a
+  ret
+
+; What INIT writes over MON3's hooks.
+
+HOOKS:
+  jp R18
+  jp GWS
+  jp GRST
+
+MON3N: DB "MON3    "
+MTAB: DW 0
+SAVEH: DS 9
 
 ; MON-3's graphics workspace: the
 ; buffer the drawing calls use, then
@@ -41,12 +123,14 @@ GVEND EQU $0E1A  ; the variables' end
 ; returns to the caller, and
 ; printString finds its text at the
 ; return address. A call past 20 goes
-; to the error display.
+; to MON3's own RST 18h, the error
+; display, with the caller's HL still
+; on the stack.
 
 R18:
-  pop hl         ; the caller's HL
   cp 21          ; calls 0 to 20
-  jp nc,DERR     ; the rest refused
+  jp nc,SAVEH    ; the rest refused
+  pop hl         ; the caller's HL
   push bc
   push hl        ; kept for the call
   ld hl,GAPI
