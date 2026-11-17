@@ -410,7 +410,7 @@ claim first, re-read the geometry and redraw. A debugger's name-table R2 is
 `0Fh` at 80 columns and `0Ch` at 40 or 32. The public table and state offsets
 remain those of version 3. Width-only clients can still request at least 3;
 a debugger using the version-4 guarantees requests at least 4 and diagnoses
-or falls back on an older record. ABI remains 5.1.
+or falls back on an older record. The record's version did not change at ABI 5.2.
 
 While the caller holds the existing `VIDEO` claim, a supported `PICOREG` write
 to register 1 tracks its IE bit. Raw port writes remain untracked. Restore,
@@ -440,8 +440,8 @@ boot keeps services and the registry; a reset empties both.
 ## Rules for a source
 
 A service calls the ROM table and nothing else, and carries what it needs
-that the ROM doesn't offer; a display driver draws from the ROM's font, which
-`TNFONT` returns. The build refuses a source
+that the ROM doesn't offer; a display driver draws from the ROM's font, whose
+glyphs `TNGLYPH` gives. The build refuses a source
 in `drivers/`, or `test/programs/svc*.asm`, that names a ROM address; `abi.inc`'s
 names are the way in.
 
