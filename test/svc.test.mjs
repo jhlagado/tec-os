@@ -1090,6 +1090,61 @@ test("a service with a vector is gone at a recognised reset, and the vector with
   assert.equal(m.read(m.sym("SVCHEAD")), 0);
 });
 
+// The rule's mutants (Origo KD-434, lean-rom-mon3 gates RC-2 to RC-4), each a
+// byte patch of the build's ROM found from a symbol, and the row each fails.
+function patched(bytes, from, find, put) {
+  const at = bytes.indexOf(Buffer.from(find), from);
+  assert.ok(at >= from && at < from + 0x80, `the mutant's bytes ${Buffer.from(find).toString("hex")}`);
+  Buffer.from(put).copy(bytes, at);
+}
+async function mutantMachine(patch) {
+  const { rom, symbols } = romFor();
+  const bytes = Buffer.from(rom);
+  patch(bytes, (n) => symbols.get(n) - 0xc000);
+  const m = new Machine({ rom: bytes, symbols, sdImage: standardCard(), clock: TEST_CLOCK });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 80_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  return bench(m, { direct: true });
+}
+const sweptLow = async (t) => {
+  t.load((await svc()).file);
+  t.prompt();
+  LOW6.forEach((at) => pokes(t, at, jp(t.m.sym("ABICALL"))));
+  t.warmBoot();
+  return LOW6.every((at) => slot(t.m, at).every((b, i) => b === DEFAULT[i]));
+};
+const claimRefused = async (t) => {
+  const r = t.load((await svc({ FLAGS: 0x03 })).file);
+  return r.carry === 1 && r.rc === 0;
+};
+const unloadFrees = async (t) => {
+  t.load((await svc({ V_VEC: 1, VECAT: 0x38, FLAGS: 0x81 })).file);
+  t.prompt();
+  pokes(t, 0x38, jp(t.m.sym("ABICALL")));
+  t.unload();
+  return slot(t.m, 0x38).every((b, i) => b === DEFAULT38[i]);
+};
+const keptAbove = async (t) => {
+  t.load((await svc()).file);
+  t.prompt();
+  const at = ((t.head() >> 8) << 8) + 1;
+  pokes(t, 0x38, jp(at));
+  t.warmBoot();
+  return slot(t.m, 0x38)[0] === 0xc3;
+};
+for (const [name, patch, scenario] of [
+  ["M1 the sweep stopping after RST 1", (b, at) => patched(b, at("RSTZERO"), [0xfe, 0x38, 0x20], [0xfe, 0x10, 0x20]), sweptLow],
+  ["M5 the sweep stopping before RST 6", (b, at) => patched(b, at("RSTZERO"), [0xfe, 0x38, 0x20], [0xfe, 0x30, 0x20]), sweptLow],
+  ["M2 a claim of RST 1 to 6 let through", (b, at) => patched(b, at("SVCMOV"), [0x37, 0xc0], [0x37, 0x00]), claimRefused],
+  ["M3 the release not clearing 0038h", (b, at) => patched(b, at("SVCFRE"), [0x32, 0x38, 0x00], [0x00, 0x00, 0x00]), unloadFrees],
+  ["M4 the keep test at 0038h inverted", (b, at) => patched(b, at("RSTZERO"), [0x3f, 0xd0], [0x3f, 0xd8]), keptAbove],
+]) {
+  test(`restart mutant ${name}: the build passes the row and the mutant fails it`, async () => {
+    assert.equal(await scenario(await machine()), true, "the build");
+    assert.equal(await scenario(await mutantMachine(patch)), false, "the mutant");
+  });
+}
+
 test("a file claiming RST 1 says NAME.SVC? at the prompt and installs nothing", async () => {
   const image = standardCard();
   volume(image, "A").write("RST1.SVC", (await svc({ FLAGS: 0x03 })).file);
