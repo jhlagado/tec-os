@@ -522,7 +522,7 @@ export class Machine {
       this.runUntil(() => this.read(kblast) === key, maxCycles, `matrix key ${JSON.stringify(ch)}`);
       this.tec1g.applyMatrixKey(combo.row, combo.col, false);
       if (mod !== undefined) this.tec1g.applyMatrixKey(0, mod, false);
-      this.runUntil(() => this.read(kblast) === 0xff, maxCycles, `release of ${JSON.stringify(ch)}`);
+      this.runUntil(() => this.read(kblast) === 0xff || !this.videoConsole(), maxCycles, `release of ${JSON.stringify(ch)}`);
     }
   }
 
@@ -565,7 +565,7 @@ export class Machine {
         head.up = true;
         return;
       }
-      if (head.up && this.read(kblast) === 0xff) p.shift();
+      if (head.up && (this.read(kblast) === 0xff || !this.videoConsole())) p.shift();
       return;
     }
     if (!head.sent) {

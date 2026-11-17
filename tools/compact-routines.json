@@ -995,5 +995,18 @@
     "RPUTTRIM",
     "RCRLF",
     "RCFAILR"
+  ],
+  "src/conmode.asm": [
+    "CONSAVE",
+    "CONDIFF",
+    "CONASK",
+    "CONROLL",
+    "CONTEND",
+    "CONREP",
+    "KEYWT",
+    "KEYUP",
+    "KWSPOLL",
+    "STCHOOSE",
+    "STBYP"
   ]
 }

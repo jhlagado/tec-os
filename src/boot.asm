@@ -86,6 +86,8 @@ COLDNC:
   ld a,CMUC1
   ld (IOBYTE),a
   call MEMINIT
+  call CONSEL
+  call STCHOOSE  ; before card access
 
 ; Cold card setup and DIAG retry reset
 ; SP to STKTOP, the BDOS stack (KE-173).

@@ -33,6 +33,7 @@
 %INCLUDE "cpm/ccpfile.asm"
 %INCLUDE "cpm/ccpmut.asm"
 %INCLUDE "cpm/ccpcmd.asm"
+%INCLUDE "conmode.asm"
 %INCLUDE "cpm/bdos.asm"
 %INCLUDE "cpm/bdosfile.asm"
 %INCLUDE "cpm/bdosrec.asm"

@@ -257,7 +257,7 @@ test("LC-5 CON LCD and CON LCD 20 select it; CON LCD 40 is refused with nothing 
   assert.deepEqual(rows(m).slice(-2), ["CON: UC1:", "A>"]);
   assert.match(con(m, "CON PICO"), /CON: CRT:/);
   assert.match(con(m, "CON LCD 20"), /CON: UC1:/);
-  assert.match(m.command("CON LCD 40"), /\r\n40\?\r\n/);
+  assert.match(m.command("CON LCD 40"), /LCD40\?/);
   assert.equal(m.read(m.sym("CONMOD")), 3, "still the LCD");
   assert.deepEqual(geometry(m), [20, 4]);
   for (const line of ["CON LCD 2", "CON LCD 200", "CON LCD20", "CON LCDX"]) assert.match(m.command(line), /\?\r\n/, line);
@@ -301,8 +301,8 @@ test("LC-5 UC1 asked for with no keyboard, and CRT with no PICO9918, fall back t
   assert.match(none.command("CON LCD"), /CON: TTY:/);
   assert.match(none.command("CON UC1"), /CON: TTY:/);
   const lcdBoard = start({ matrix: true });
-  assert.match(con(lcdBoard, "CON CRT"), /CON: TTY:/);
-  assert.equal(lcdBoard.read(lcdBoard.sym("CONMOD")), 0);
+  assert.match(lcdBoard.command("CON CRT"), /CRT\?/);
+  assert.equal(lcdBoard.read(lcdBoard.sym("CONMOD")), 3, "unavailable PICO leaves LCD intact");
 });
 
 test("LC-6 the raw row service is refused while the LCD is the console, and works again after CON TTY", () => {
@@ -609,5 +609,88 @@ test("LC-20 an invalid command clears its transaction so the recovery hotkey sti
   assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
   hotkey(m);
   assert.equal(m.read(m.sym("CONMOD")), 1);
+  assert.deepEqual(m.violations, []);
+});
+
+
+test("LC-20 a low serial line has the same finite recovery window", () => {
+  const m = start({ matrix: true });
+  const from = asked(m, "CON TTY");
+  const read = m.cpu.hardware.ioRead;
+  m.cpu.hardware.ioRead = (port) => (port & 0xff) === 3 ? read(port) & 0x7f : read(port);
+  const seconds = (backOnLcd(m) - from) / CLOCK;
+  assert.ok(seconds >= 9.5 && seconds <= 10.5, `low line: ${seconds} seconds`);
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 held command Enter does not confirm the new console", () => {
+  const m = start({ matrix: true, tms: true });
+  m.mark = m.output.length;
+  m.typeMatrix("CON CRT");
+  m.tec1g.applyMatrixKey(1, 2, true); // Enter, held through the question
+  m.runUntil(() => m.waitingForInput() && /Press a key$/.test(m.text(m.mark)), 200_000_000, "the new console question");
+  backOnLcd(m);
+  m.tec1g.applyMatrixKey(1, 2, false);
+  assert.equal(m.read(m.sym("CONMOD")), 3);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-20 stale console bytes and arrow tails are not confirmation", () => {
+  const m = start({ matrix: true, tms: true });
+  const step = m.step.bind(m);
+  let seeded = false;
+  m.step = () => {
+    if (!seeded && m.pc === m.sym("KEYWT") && m.read(m.sym("CONMOD")) === 1) {
+      seeded = true;
+      m.write(m.sym("RXFULL"), 0xff);
+      m.write(m.sym("RXCHAR"), 27);
+      m.write(m.sym("KBTN"), 2);
+      m.write(m.sym("KBT1"), 91);
+      m.write(m.sym("KBT2"), 65);
+    }
+    return step();
+  };
+  asked(m, "CON CRT");
+  backOnLcd(m);
+  assert.ok(seeded);
+  assert.equal(m.read(m.sym("KBTN")), 0);
+  assert.equal(m.read(m.sym("RXFULL")), 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-23 startup console choice works before a missing card and confirms its target", () => {
+  const m = start({ matrix: true, tms: true, card: false });
+  m.expect(/L=LCD C=CRT S=TTY$/, { from: 0, maxCycles: 200_000_000 });
+  m.typeMatrix("C");
+  m.expect(/Press a key$/, { maxCycles: 200_000_000 });
+  m.typeMatrix(" ");
+  m.expect(/R retry> $/, { maxCycles: 200_000_000 });
+  assert.equal(m.read(m.sym("CONMOD")), 1);
+  assert.deepEqual(geometry(m), [80, 24]);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-22 Fn bypass is latched before card access and survives its early release", () => {
+  const { rom, symbols } = romFor();
+  const image = standardCard();
+  volume(image, "A").write("STARTUP.CMD", startupFile("TYPE MARK.TXT"));
+  volume(image, "A").write("MARK.TXT", text(["SHOULD NOT RUN"]));
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true, glcd: false });
+  m.tec1g.applyMatrixKey(0, 2, true);
+  m.runUntil(() => m.pc === m.sym("COLDRT"), 100_000_000, "bypass latched before card access");
+  assert.equal(m.read(m.sym("CONOLD")) & 0x40, 0x40);
+  m.tec1g.applyMatrixKey(0, 2, false);
+  m.expect(/A>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the prompt");
+  assert.doesNotMatch(m.text(), /L=LCD|SHOULD NOT RUN/);
+  assert.equal(m.read(m.sym("CONOLD")), 0);
+  assert.deepEqual(m.violations, []);
+});
+
+test("LC-23 program return does not replay the cold console choice", () => {
+  const m = start({ matrix: true, files: { "RETURN.COM": Uint8Array.of(0xc9) } });
+  assert.doesNotMatch(m.command("RETURN"), /L=LCD C=CRT S=TTY/);
+  assert.equal(m.read(m.sym("CONOLD")) & 0x80, 0);
   assert.deepEqual(m.violations, []);
 });
