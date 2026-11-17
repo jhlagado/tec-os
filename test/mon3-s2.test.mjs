@@ -1073,7 +1073,13 @@ async function matrixProgram(name, { hex = false, svc } = {}) {
   const run = await programSession(name, bytes, { hex, svc });
   const ref = mon3Go(bytes);
   ref.m.runUntil(() => ref.m.pc === 0x4000, 5_000_000, `${name} at 4000h under MON-3`);
-  assert.deepEqual(matrixWrites({ m: run.m }), matrixWrites(ref), `${name}${hex ? " from MZ80.HEX" : ""}: the first 4,096 8x8 writes as under MON-3`);
+  const actual = matrixWrites({ m: run.m }), expected = matrixWrites(ref);
+  const context = `${name}${hex ? " from MZ80.HEX" : ""}: the first 4,096 8x8 writes as under MON-3`;
+  assert.equal(actual.length, 4096, context);
+  assert.equal(expected.length, 4096, context);
+  // Keep every ordered comparison. A bad program needs only the first
+  // differing pair in its diagnostic, rather than a diff of both full logs.
+  for (let i = 0; i < 4096; i++) assert.deepEqual(actual[i], expected[i], `${context}, write ${i}`);
   return run;
 }
 
@@ -1097,7 +1103,13 @@ test("KG66 reset after", async () => {
 
 test("KG66 mutant: the HEX loader's second pass writing each record one byte high", async () => {
   const svc = await mon3Variant([["  ld ix,(HTARG)  ; this record\n", "  ld ix,(HTARG)  ; this record\n  inc ix\n"]]);
-  await assert.rejects(matrixProgram("matrixz80", { hex: true, svc }), /from MZ80\.HEX: the first 4,096/);
+  await assert.rejects(matrixProgram("matrixz80", { hex: true, svc }), (error) => {
+    assert.match(error.message, /from MZ80\.HEX: the first 4,096.*write \d+/);
+    assert.ok(Array.isArray(error.actual) && Array.isArray(error.expected));
+    assert.equal(error.actual.length, 2, "one actual port/value pair");
+    assert.equal(error.expected.length, 2, "one expected port/value pair");
+    return true;
+  });
 });
 
 test("KG66 mutant: LOAD's BIN read starting one record late", async () => {
