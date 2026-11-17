@@ -182,7 +182,9 @@ than row count. A registered four-row terminal remains a separate device.
 `CON UC1` selects the registered table when one exists, otherwise ROM LCD.
 It does not load a driver.
 
-Registration leaves an explicitly selected ROM LCD in use. The auxiliary
+Startup registration preserves the selected base console. Ordinary
+registration selects its new table when UC1 is active, or retains TTY/CRT
+and sets the auxiliary preference for a later UC1 request. The auxiliary
 selector is separate from GLVEC. A selected registered-driver route is
 reselected when its table changes. Removing that driver returns UC1 to LCD
 and invalidates the saved transaction identity. A later installation at the

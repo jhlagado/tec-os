@@ -7,6 +7,8 @@
 
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 import { check, pinned } from "./lib/inputs.mjs";
 import assert from "node:assert/strict";
 import { Machine } from "./lib/machine.mjs";
@@ -291,13 +293,22 @@ test("LC-5 LCD remains selectable with GLCD loaded and UC1 selects its registere
   assert.deepEqual(m.violations, []);
 });
 
-test("LC-5 a program registering UC1 under LCD leaves the selected LCD intact", () => {
-  const m = start({ matrix: true, files: { "REG.COM": register(10, 5) } });
+test("LC-5 a running COM can register UC1 and write through its table before returning", () => {
+  const code = [0x21, 0x80, 0x01, 0x11, 0, 0x80, 0x01, 33, 0, 0xed, 0xb0,
+    0x06, 3, 0x21, 0, 0x80, 0x0e, ABI.TNDRVR, 0xcd, ABI.ABICALL & 255, ABI.ABICALL >> 8,
+    0x32, 0x30, 0x01, 0x1e, 88, 0x0e, 2, 0xcd, 5, 0,
+    0x3a, 0x20, 0x80, 0x32, 0x31, 0x01, 0xc9];
+  while (code.length < 0x80) code.push(0);
+  for (let i = 0; i < 7; i++) code.push(0x10, 0x80);
+  code.push(16, 4, 0x21, 0x20, 0x80, 0x34, 0xc9);
+  while (code.length < 0xa1) code.push(0);
+  const m = start({ matrix: true, files: { "REG.COM": Uint8Array.from(code) } });
   m.command("REG");
   assert.equal(m.read(0x130), 0, "registered");
+  assert.ok(m.read(0x131) > 0, "the running COM's output called its new table");
   assert.equal(m.read(m.sym("GLVEC")) | m.read(m.sym("GLVEC") + 1) << 8, 0x8000);
-  assert.deepEqual(geometry(m), [20, 4], "LCD still selected");
-  assert.equal(m.read(m.sym("CONAUX")), 0);
+  assert.deepEqual(geometry(m), [16, 4]);
+  assert.equal(m.read(m.sym("CONAUX")), 1);
   assert.equal(m.read(m.sym("CONMOD")), 3);
 });
 
@@ -340,8 +351,11 @@ test("LC-6 once the LCD is the console no status text is written: the labels, GL
 test("LC-6 selected registered tables allow raw LCD access at four or eight rows", () => {
   for (const height of [4, 8]) {
     const m = start({ matrix: true, files: { "REG.COM": register(16, height), "RAW.COM": RAWLCD } });
+    m.command("RAW");
+    assert.equal(m.read(0x130), ABI.TNENODV);
     m.command("REG");
-    assert.equal(m.read(m.sym("CONAUX")), 0, "registration retains the LCD");
+    assert.equal(m.read(m.sym("CONAUX")), 1, "ordinary registration selects the driver");
+    con(m, "CON LCD");
     m.command("RAW");
     assert.equal(m.read(0x130), ABI.TNENODV);
     con(m, "CON UC1");
@@ -879,4 +893,38 @@ for (const [name, byte, firstStop] of [["NUL", 0, 1], ["bad stop", 0x41, 0]]) {
       assert.deepEqual(m.violations, []);
     });
   }
+}
+
+
+let generatedStarter;
+const starterInputs = ["TAS.COM", "TED.COM", "BAZA.COM", "BAZA.RTL", "BOUNCE.BAS"].map(pinned);
+for (const choice of ["L", "S", "C"]) {
+  test(`LC-23 the actual generated starter preserves cold ${choice} selection through its service loads`, { skip: starterInputs.find((p) => p.skip)?.skip, timeout: 300_000 }, () => {
+    for (const input of starterInputs) check(input);
+    if (!generatedStarter) {
+      execFileSync(process.execPath, ["tools/media.mjs"], { cwd: ROOT, stdio: "ignore" });
+      generatedStarter = new Uint8Array(readFileSync(resolve(ROOT, "dist/starter.img")));
+    }
+    const card = generatedStarter.slice();
+    assert.equal(Buffer.from(volume(card, "A").read("STARTUP.CMD", { text: true })).toString(), "SHELL.SVC\nGLCD.SVC\n");
+    const { rom, symbols } = romFor();
+    const m = new Machine({ rom, symbols, sdImage: card, clock: TEST_CLOCK, matrix: true, tms: true, glcd: true });
+    m.expect(/L=LCD C=CRT S=TTY$/, { from: 0, maxCycles: 200_000_000 });
+    m.typeMatrix(choice);
+    if (choice !== "L") {
+      m.runUntil(() => m.waitingForInput() && /Press a key$/.test(m.text(0)), 200_000_000, "the target's question");
+      m.type(" ");
+    }
+    m.expect(/A:SYSTEM>$/, { from: 0, maxCycles: 300_000_000 });
+    m.runUntil(() => m.ready(), 100_000_000, "the actual starter shell's prompt");
+    const mode = { L: 3, S: 0, C: 1 }[choice];
+    assert.equal(m.read(m.sym("CONMOD")), mode);
+    if (choice !== "S") assert.deepEqual(geometry(m), choice === "L" ? [20, 4] : [40, 24]);
+    assert.ok(m.read(m.sym("SHOWN") + 1), "the generated shell is installed");
+    if (choice !== "C") {
+      assert.ok(m.read(m.sym("GLVEC") + 1), "startup GLCD registered without taking the base route");
+      assert.equal(m.read(m.sym("CONAUX")), 0);
+    }
+    assert.deepEqual(m.violations, []);
+  });
 }

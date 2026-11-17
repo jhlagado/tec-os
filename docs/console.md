@@ -174,8 +174,9 @@ loads or reuses the driver and requests its selection. CON UC1 selects an
 already registered auxiliary table, or ROM LCD when no table exists. It
 loads no file.
 
-TNDRVR registers the UC1 table independently of LCD selection. Registration
-alone does not take an explicitly selected LCD. Removing the active driver
+Startup TNDRVR registration preserves the chosen base console. Ordinary
+registration restores UC1 install/select/use behaviour: an active UC1 route
+selects the new table, while TTY and CRT retain their current device. Removing the active driver
 returns UC1 to LCD. Removing it while LCD is selected keeps LCD selected.
 A saved console transaction identifies the former live installation. Dropping
 that driver invalidates the identity, so rollback cannot call reclaimed code

@@ -162,13 +162,17 @@ VIDHOOK:
   inc hl
   ld (hl),d
 
-; Registration does not take the LCD.
-; Only a selected registered route
-; needs its vectors copied again.
+; Startup keeps its chosen base route.
+; Ordinary registration retains the
+; legacy install/select/use contract:
+; prefer the new table on UC1, without
+; changing active TTY or CRT.
 
-  ld a,(CONAUX)
+  ld a,(STFLAG)
   or a
-  jr z,VIDHRET
+  jr nz,VIDHRET
+  ld a,1
+  ld (CONAUX),a
   ld a,l
   call VIDHF1
 
