@@ -87,7 +87,12 @@ test('missing, wrong-game, incompatible, truncated and corrupt scenarios are rej
    }
    volume(image,'A').write('BAD.CAV',b);
   }
-  const m=boot(image,{tms:true,matrix:true,width:80});const out=keys(m,'cavload bad');assert.match(out,/Invalid\/missing scenario/,kind);
+  // The game's START takes RST 1 to 5 before the loader runs, so a refusal
+  // gives them back: a JP held in RST 1, which a warm boot's sweep keeps.
+  const m=boot(image,{tms:true,matrix:true,width:80}),abicall=m.sym('ABICALL'),held=[0xc3,abicall&255,abicall>>8];
+  held.forEach((v,i)=>m.write(8+i,v));
+  const out=keys(m,'cavload bad');assert.match(out,/Invalid\/missing scenario/,kind);
+  assert.deepEqual([0,1,2].map(i=>m.read(8+i)),held,kind+': the JP held in RST 1');
   assert.equal(integer(m,'A%'),1,kind);const p=word(m,basic.symbols[basic.stateSymbols?.['P%()']??'P%()'].address)+6;
   assert.deepEqual(Array.from({length:24},(_,i)=>word(m,p+i*2)<<16>>16),ip,kind);assert.deepEqual(m.violations,[]);
  }

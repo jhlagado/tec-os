@@ -136,7 +136,10 @@ MATCH:  LD A,(DE)
         RET
 FILE:   LD DE,$5C
         JP 5
-FAIL:   LD DE,MESSAGE
+; The game's START has claimed RST 1 to 5: give them back, as its own
+; exits do, before the message and the warm boot.
+FAIL:   CALL RSTBACK
+        LD DE,MESSAGE
         LD C,9
         CALL 5
         JP 0

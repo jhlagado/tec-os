@@ -6,6 +6,7 @@ import {dirname,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {ROOT,boot,volume} from '../test/lib/fixtures.mjs';
+import {restartVectors} from './caverns-scenario.mjs';
 const buildPath=process.argv[2]??ROOT+'/../baza/build/runtime-build.json';
 const br=JSON.parse(fs.readFileSync(buildPath));
 const compilerDir=process.argv[3]??dirname(buildPath);
@@ -18,10 +19,22 @@ const source=fs.readFileSync(ROOT+'/programs/CAVBASIC.BAS','utf8'),b=fs.readFile
 const footer=b.lastIndexOf(Buffer.from('BZ01')),end=b.readUInt16LE(footer+4),rtstart=b.readUInt16LE(footer+8),runtime=rtstart-(templateStart-0x103),cells=Math.min(...Object.values(f.symbols).map(s=>s.address));
 const hook=runtime-0x103+br.templateAddresses.setSource;let hooks=0,contextBytes=0;
 const lines=new Set(source.trim().split('\n').map(s=>Number(s.split(' ')[0])));
+// A source-context site sets the line and statement: LD DE,line; LD BC,statement;
+// CALL hook (legacy, 9 bytes); CALL hook, DW line, DW statement (compact, 7);
+// RST 1, DW line for a line's first statement (3); RST 2, DW line, DB statement
+// for a later one (4). The restart forms count only when the image has the
+// runtime's RST 1 to 5 table. Sites follow the source, so each one's line and
+// statement must come after the last one's.
+const restarts=restartVectors(b);let last=[-1,-1];
 for(let i=3;i<runtime-256-8;i++){
  const legacy=b[i]===0x11&&lines.has(b.readUInt16LE(i+1))&&b[i+3]===1&&b[i+6]===0xcd&&b.readUInt16LE(i+7)===hook;
  const compact=b[i]===0xcd&&b.readUInt16LE(i+1)===hook&&lines.has(b.readUInt16LE(i+3));
- if(legacy||compact){hooks++;contextBytes+=legacy?9:7;}
+ const first=restarts&&b[i]===0xcf&&lines.has(b.readUInt16LE(i+1));
+ const later=restarts&&b[i]===0xd7&&lines.has(b.readUInt16LE(i+1));
+ if(!(legacy||compact||first||later))continue;
+ const site=legacy?[b.readUInt16LE(i+1),b.readUInt16LE(i+4)]:compact?[b.readUInt16LE(i+3),b.readUInt16LE(i+5)]:[b.readUInt16LE(i+1),first?0:b[i+3]];
+ assert.ok(site[0]>last[0]||site[0]===last[0]&&site[1]>last[1],`source context ${site} at ${(i+256).toString(16)} after ${last}`);
+ last=site;hooks++;contextBytes+=legacy?9:compact?7:first?3:4;
 }
 let dataBytes=0,dataText=0,dataBlocks=0,otherText=0;
 for(const line of source.trim().split('\n')){
