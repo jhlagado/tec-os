@@ -8,7 +8,7 @@ import { readFileSync } from "node:fs";
 import { createContainer } from "../tools/lib/container.mjs";
 import { volume } from "./lib/fixtures.mjs";
 import { cacheState } from "./lib/cache-pending.mjs";
-import { SHELL, at, code, pageOf, shellCard, shellMachine, shellVariant, word } from "./lib/shell.mjs";
+import { DIRCOM, SHELL, at, code, dirVariant, pageOf, shellCard, shellMachine, word } from "./lib/shell.mjs";
 
 const PROMPT = /\r\n\d*[A-P](:\S*)?>$/;
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
@@ -57,7 +57,9 @@ function cache(m) {
  * the count, the total and the free space. Returns the cycles, the BDOS 17,
  * 18 and 35 calls and the card reads of each timed listing.
  */
-function timed({ n = 0, large = 0, svc = SHELL, variant = null }) {
+// Sized DIR is A:DIR.COM since KD-435: the controls are DIR.COM variants,
+// where they were shell variants, and the card holds the DIR.COM timed.
+function timed({ n = 0, large = 0, svc = SHELL, dir = DIRCOM, variant = null }) {
   const image = createContainer([{ geometry: "G1M", label: "SYSTEM", mount: "A" }, { geometry: "G8M", label: "WORK", mount: "B" }], { drives: 4 });
   const b = volume(image, "B"), inserted = [];
   for (let i = 0; i < large; i++) {
@@ -72,9 +74,10 @@ function timed({ n = 0, large = 0, svc = SHELL, variant = null }) {
   const marks = new Set(inserted.filter(([, bytes]) => bytes > 128).map(([name]) => hash(name)));
   const wanted = [...inserted.filter(([name]) => !marks.has(hash(name))), ...inserted.filter(([name]) => marks.has(hash(name)))];
   const freeBytes = b.freeBytes();
-  shellCard({}, { image, shell: svc.file });
+  shellCard({ "DIR.COM": dir.bytes }, { image, shell: svc.file });
   const inputSha256 = sha(image);
   if (!variant) assert.deepEqual(Buffer.from(svc.file), readFileSync(new URL("../dist/files/SHELL.SVC", import.meta.url)), "the card's shell is the one media builds");
+  if (!variant) assert.deepEqual(Buffer.from(dir.bytes), readFileSync(new URL("../dist/files/DIR.COM", import.meta.url)), "the card's DIR.COM is the one media builds");
   const m = shellMachine(image, { noWait: true });
   const quiet = () => {
     if (!m.classicBankIn || !m.ready()) return false;
@@ -141,7 +144,7 @@ function timed({ n = 0, large = 0, svc = SHELL, variant = null }) {
     assert.equal(sha(image), inputSha256);
     return { n, large, files: inserted.length, marked: inserted.filter(([name]) => marks.has(hash(name))).length,
       dirMs: sized.record.cycles / 4000, wideMs: wide.record.cycles / 4000, ratio: sized.record.cycles / wide.record.cycles,
-      shell: { bytes: svc.file.length, sha256: sha(svc.file), variant },
+      shell: { bytes: svc.file.length, sha256: sha(svc.file), variant }, dir: { bytes: dir.bytes.length, sha256: sha(dir.bytes) },
       commands: [preparation.record, wide.record, sized.record] };
   } finally { m.step = step; m.sd.readBlock = read; m.sd.commitWrite = commit; }
 }
@@ -179,8 +182,8 @@ for (const item of WORKLOADS) test(item.title, { timeout: 1_800_000 }, t => {
 
 test("DIR cost control: one bucket for every name costs more than 128", { timeout: 1_800_000 }, async t => {
   const edits = [["  and $7F        ; 128 two-byte heads", "  xor a          ; one bucket"]];
-  const svc = await shellVariant(edits), base = normal(WORKLOADS[0]);
-  const result = timed({ n: 451, svc, variant: "one bucket" });
+  const dir = await dirVariant(edits), base = normal(WORKLOADS[0]);
+  const result = timed({ n: 451, dir, variant: "one bucket" });
   t.diagnostic(JSON.stringify({ control: "one bucket", normalRatio: base.ratio, overCap: result.ratio > WORKLOADS[0].cap, ...brief(result) }));
   assert.equal(sizedListing(result).searchFirst, 3, "still the table engine");
   assert.equal(sizedListing(result).size, 0);
@@ -190,8 +193,8 @@ test("DIR cost control: one bucket for every name costs more than 128", { timeou
 
 test("DIR cost control: the legacy engine sizes each large file by BDOS 35 and costs more", { timeout: 1_800_000 }, async t => {
   const edits = [["  inc a          ; enable after clearing", "  xor a          ; keep legacy mode"]];
-  const svc = await shellVariant(edits), base = normal(WORKLOADS[2]);
-  const result = timed({ large: 180, svc, variant: "legacy engine" });
+  const dir = await dirVariant(edits), base = normal(WORKLOADS[2]);
+  const result = timed({ large: 180, dir, variant: "legacy engine" });
   t.diagnostic(JSON.stringify({ control: "legacy engine", normalRatio: base.ratio, overCap: result.ratio > WORKLOADS[2].cap, ...brief(result) }));
   assert.equal(sizedListing(result).size, result.marked, "one BDOS 35 for each file of more than one entry");
   assert.ok(sizedListing(result).searchFirst > result.marked, "and a search begun again after each");
