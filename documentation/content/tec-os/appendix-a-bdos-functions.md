@@ -204,6 +204,13 @@ clearing all characters restores that abort condition
 `b95b2a9:docs/shell.md:308-322`). With no shell installed `^W` and `^N` are
 characters at the prompt too.
 
+Function 10 consumes terminal key sequences before storing or echoing them.
+Arrows leave the line and displayed cursor unchanged. A lone Escape is
+ignored. `ESC [` and `ESC O` begin sequences, including when typed manually.
+CR and editing controls recover from an incomplete prefix. Raw character
+input remains available to editors and games
+(`004a099:src/cpm/bdos.asm:424-427`, `004a099:src/cpm/bdos.asm:709-737`).
+
 **11 Get console status.** Tests for a waiting character. A character the BIOS
 has is read and kept for the next input call (`b95b2a9:src/cpm/bdos.asm:709-722`).
 Returns 1 in `A` if a character is waiting and 0 if not.
@@ -484,6 +491,10 @@ encounter the following differences.
   `b95b2a9:src/cpm/bdoscon.asm:298-323`).
 - Function 10 uses `^W` and `^N` for history only at the CCP's prompt. A
   program receives those keys as characters (`b95b2a9:src/cpm/bdos.asm:484-488`).
+- Function 10 discards CSI and SS3 terminal key sequences rather than storing
+  their escape bytes. This applies to prompt and program line input. Raw
+  BIOS and BDOS character input retain their byte behaviour
+  (`004a099:src/cpm/bdos.asm:709-737`).
 - Neither geometry uses the check vector: both set CKS to 0. This mechanism
   therefore does not detect a card exchanged while TEC-OS is running
   (`b95b2a9:format/format.json:51`, `b95b2a9:format/format.json:58`). Follow the card-change procedure in
