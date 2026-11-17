@@ -123,7 +123,7 @@ function underTas(equs, main, files, length) {
 // shows here. Each body, after the header the .SVC writer fills in, is also
 // compared with the same assembly by TAS on the host, so a source edit fails
 // only on the pin.
-const GLCD_FLAT = { bytes: 767, sha256: "aab1ec7be10d3f27fb9eb8c80adb3200e8059468892bbcf92229cb8a23d17278" };
+const GLCD_FLAT = { bytes: 768, sha256: "ac90edaa62e8d930342c0cbe0fbc92660448b22537e85298e7ea9a4d858cfb94" };
 const SVCDEMO_FLAT = { bytes: 56, sha256: "f95a1d5d3b7e6e25f6c201f055e769977ae94f756f52145205f3a32135c9bf4e" };
 const sha = (b) => createHash("sha256").update(b).digest("hex");
 

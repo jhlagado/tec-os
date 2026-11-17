@@ -14,6 +14,7 @@ import { Machine } from "./lib/machine.mjs";
 import { screens } from "./lib/pico-workload.mjs";
 import { ABI, GLCD_SVC, ROOT, TEST_CLOCK, boot, fcbType, service, romFor, standardCard, startupFile, volume, SHELL_SVC } from "./lib/fixtures.mjs";
 import { createContainer } from "../tools/lib/container.mjs";
+import { callTimes, runLine } from "./lib/call-time.mjs";
 
 const word = (m, a) => m.read(a) | (m.read(a + 1) << 8);
 const m0 = (m) => m.sym("CONMOD");
@@ -891,4 +892,17 @@ test("the web host: a full directory leaves the card as it was, and it boots (KE
   assert.deepEqual(image, before);
   const m = bootsToPrompt(image);
   assert.deepEqual([m.read(m0(m)), m.read(m.sym("VWID"))], [CRT, 40], "the unchanged card boots at the cold width");
+});
+
+// FL-10 (Origo KD-436): the pattern load goes glyph by glyph through FNTGLY.
+// 146,793 T at 782b007, from the 768-byte table; each load here within 240,000.
+test("the pattern load through FNTGLY takes at most 240,000 T at each width", () => {
+  const m = boot(standardCard(), { tms: true, matrix: true, width: 40 });
+  const calls = callTimes(m, () => m.sym("TMSSET"));
+  for (const w of [80, 40, 32]) {
+    calls.length = 0;
+    runLine(m, `CON PICO ${w}`);
+    assert.equal(calls.length, 1, `CON PICO ${w}: one pattern load`);
+    assert.ok(calls[0] <= 240_000, `CON PICO ${w}: ${calls[0]} T`);
+  }
 });

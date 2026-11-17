@@ -1,34 +1,29 @@
 // KG24(c)'s original bitmap input, without changing the selected production ROM.
+// The ROM's font is packed and only FNTGLY reads it, so the original font goes in
+// at FNTGLY: while a substitution is on, each call returns the original font's
+// eight rows for B, by FNTGLY's contract, and FNTGLY itself never runs.
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 const sha=b=>createHash('sha256').update(b).digest('hex');
-export function historicalFontContext(image,symbols) {
-  const start=symbols.get('PISTART')-0xc000,end=symbols.get('TMSWID')-0xc000,call=symbols.get('TMSW');
-  const pattern=Buffer.from([0x3e,40,0xcd,call&255,call>>8]);
-  const found=Buffer.from(image).indexOf(pattern,start);assert.ok(found>=start&&found<end,'cold40 setup operand');
-  assert.equal(Buffer.from(image).indexOf(pattern,found+1),-1,'unique cold setup');
-  return {selectedSha256:sha(image),coldOperands:[symbols.get('PITPL')-0xc000+14,found+1]};
+export const ORIGINAL_SHA='43eb0ec9a8513a670df112948435801b9ae91874e1d17f1283d8990e586e0fb0';
+/** The eight rows FNTGLY's contract gives for B from a 768-byte font. */
+export function glyphRows(font,b) {
+  const plain=b&127,at=plain<32?0:(plain-32)*8;
+  return Array.from(font.subarray(at,at+8),v=>b&128?v^255:v);
 }
-export function validateHistoricalFont(selected,restored,at,original,context) {
-  assert.ok(selected instanceof Uint8Array,'selected ROM required');
-  assert.match(context.selectedSha256,/^[0-9a-f]{64}$/);
-  assert.equal(sha(selected),context.selectedSha256,'selected production identity');
-  assert.ok(Number.isInteger(at)&&at>=0&&at+768<=selected.length,'mapped FONT span');
+/** Serve FNTGLY's calls on machine M from ORIGINAL. Returns the call count. */
+export function substituteHistoricalFont(m,original) {
   assert.ok(original instanceof Uint8Array,'original font required');assert.equal(original.length,768,'original font size');
-  assert.equal(sha(original),'43eb0ec9a8513a670df112948435801b9ae91874e1d17f1283d8990e586e0fb0','original font identity');
-  assert.equal(sha(selected.subarray(at,at+768)),'5d732cefca4013fe6082728a00cae5e3aceaf3e6eb99aaa31e0289c0b3efe1d8','selected FONT identity');
-  assert.equal(restored.length,selected.length);
-  assert.deepEqual(Buffer.from(restored.subarray(0,at)),Buffer.from(selected.subarray(0,at)),'unchanged native prefix');
-  assert.deepEqual(Buffer.from(restored.subarray(at+768)),Buffer.from(selected.subarray(at+768)),'unchanged native suffix');
-  assert.deepEqual(Buffer.from(restored.subarray(at,at+768)),Buffer.from(original),'exact historical font bytes');
-  assert.equal([...restored.keys()].filter(i=>restored[i]!==selected[i]).length,427,'registered font changes only');
-  for(const operand of context.coldOperands){assert.equal(selected[operand],40);assert.equal(restored[operand],40,'retained cold40 operand')}
-  return {fontAt:at+0xc000,fontBytes:768,changedBytes:427,originalSha256:sha(original),restoredSha256:sha(restored)};
-}
-export function restoreHistoricalFont(selected,at,original,context) {
-  const before=Buffer.from(selected),restored=Buffer.from(selected);
-  assert.ok(original instanceof Uint8Array,'original font required');
-  Buffer.from(original).copy(restored,at);validateHistoricalFont(selected,restored,at,original,context);
-  assert.deepEqual(Buffer.from(selected),before,'source ROM buffer unchanged');
-  return restored;
+  assert.equal(sha(original),ORIGINAL_SHA,'original font identity');
+  const entry=m.sym('FNTGLY'),cpu=m.cpu.cpu,prev=m.mvWatch;let calls=0;
+  m.mvWatch=(pc)=>{
+    if(pc===entry){
+      let hl=(cpu.h<<8)|cpu.l;
+      for(const v of glyphRows(original,cpu.b))m.write(hl++,v);
+      cpu.h=(hl>>8)&255;cpu.l=hl&255;cpu.a=0;cpu.flags.Z=1;cpu.flags.C=0;cpu.flags.S=0;
+      cpu.pc=m.read(cpu.sp)|(m.read(cpu.sp+1)<<8);cpu.sp=(cpu.sp+2)&0xffff;calls++;
+    }
+    prev?.(cpu.pc);
+  };
+  return ()=>calls;
 }

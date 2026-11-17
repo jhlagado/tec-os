@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {execFileSync} from 'node:child_process';
 import {fontPackage,validateFontNotices} from '../tools/lib/font-package.mjs';
 import {validateMain,validateNotices,validateCurrentFont} from './lib/font-validation.mjs';
+import {fontGlyphs,packFont,unpackFont} from '../tools/lib/font.mjs';
 const root=resolve(import.meta.dirname,'..'),read=f=>readFileSync(join(root,f));
 const data=JSON.parse(read('test/fixtures/compact-font/native.json'));
 const font=read('format/tec-compact/export/tec-compact.bin');
@@ -44,4 +45,18 @@ test('TEC Compact complete notices survive source and media and reject omissions
   'Source notice: Public domain font.  Share and enjoy.\n',
  ]){assert.ok(text.includes(remove));const b=Buffer.from(text.replace(remove,''));assert.throws(()=>validateNotices({source:b,dist:b},context),/canonical/);assert.throws(()=>validateFontNotices(b),/complete/)}
  for(const key of ['dist'])assert.throws(()=>validateNotices({...actual,[key]:Buffer.from('incomplete')},context),/notices equal/);
+});
+
+// The ROM's packed font (Origo KD-436): four bytes a glyph and four wide glyphs.
+// The build refuses a font the packing cannot give back.
+test('the packing gives the font back, and refuses a sixth column or a fifth wide glyph',()=>{
+ const glyphs=fontGlyphs(root),pack=packFont(glyphs);
+ assert.equal(pack.packed.length,384);
+ assert.deepEqual(pack.codes,[0x23,0x24,0x2b,0x7f],'#, $, + and 7Fh light a fifth column');
+ assert.deepEqual(pack.masks,[0x14,0x04,0x08,0xff],'their rows, bit 7 the top');
+ assert.deepEqual(unpackFont(pack),glyphs,'unpacked, the font');
+ const sixth=glyphs.map(g=>[...g]);sixth[0x41-0x20][3]|=0x04;
+ assert.throws(()=>packFont(sixth),/sixth column/);
+ const fifth=glyphs.map(g=>[...g]);fifth[0x41-0x20][3]|=0x08;
+ assert.throws(()=>packFont(fifth),/5 glyphs with a fifth column/);
 });
