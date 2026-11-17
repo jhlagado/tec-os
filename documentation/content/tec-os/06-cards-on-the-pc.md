@@ -494,7 +494,7 @@ node tools/tecvol.mjs put build/errs.img A dist/files/SHELL.SVC
 node tools/tecvol.mjs put build/errs.img B dist/files/STARTUP.CMD --ro
 ```
 
-<!-- TEC-OS b6e8383, ROM 095d829d: node tools/capture.mjs --card build/errs.img SHELL.SVC '@start COPY B:STARTUP.CMD C:' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
+<!-- TEC-OS d473360, ROM e3478808: node tools/capture.mjs --card build/errs.img SHELL.SVC '@start COPY B:STARTUP.CMD C:' '@key x' '@start ERA B:STARTUP.CMD' '@key x' 'DIR B:'. Complete captured console transcript. -->
 ```text
 TEC-OS 0.1 for TEC-1G
 A: SYSTEM
@@ -511,7 +511,7 @@ A:SYSTEM>ERA B:STARTUP.CMD
 Bdos Err On B: File R/O
 A:SYSTEM>DIR B:
 
-STARTUP .CMD     128
+STARTUP.CMD      128
 1 file, 128 bytes
 8368128 free on B:WORK
 A:SYSTEM>
