@@ -23,9 +23,9 @@ Changes made for ROM residency in TEC-OS:
   and the BDOS's `IOBYTE` equate now comes from `src/layout.asm`.
 - The transient load ceiling uses the page of the BDOS entry jump, the byte
   at `0007h`, instead of the CCP origin. The `SAVE` built-in is removed.
-- The CCP now keeps the CP/M 2.2 user/drive byte at `0004h` (user in bits 4–7)
-  through `SAVEDU`, restores the user number on entry, and masks the user bits
-  when printing the drive in `DIR`.
+- The `USER` built-in is removed: the CCP works in user area 0 only. It keeps
+  the drive at `0004h` with the user bits zero through `SAVEDRV`, which also
+  puts the BDOS back in user area 0 before each prompt.
 - `LOGIN` no longer rescans the directory when the BDOS rebinds a drive that
   is already logged in. Portable CP/M rescanned on every change of drive,
   which is correct but cost 32 SD block reads per switch on an 8 MiB volume.
