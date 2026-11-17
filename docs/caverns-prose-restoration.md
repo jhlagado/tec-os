@@ -19,7 +19,7 @@ The public source is CAVERNS.BAS and BAZA writes CAVERNS.COM. The assembly build
 is preserved as CAVASM.COM, outside the starter card, to avoid a name collision.
 The card still supplies only source and instructions, not the compiled game.
 
-The first native build is 37,376 bytes, below the 40,000-byte ceiling. Full quest,
+The first native build is 37,248 bytes, below the 40,000-byte ceiling. Full quest,
 checkpoint/state/RNG, TED exercise, card and Viewer checks are in progress.
 The earlier two 1,432-pass strict runs apply to the preceding text, not this
 restoration; their records remain unchanged.

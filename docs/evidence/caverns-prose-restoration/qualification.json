@@ -1,19 +1,20 @@
 {
-  "status": "WIP: native compile and first differential/checkpoint checks pass; final refreshed game/TED/card/Viewer checks pending",
+  "status": "WIP: source prose reviewed against gate states; two fresh combined strict runs pending",
   "sourceFile": "programs/CAVERNS.BAS",
   "comFile": "programs/CAVERNS.COM",
   "compiler": "eee4ee6846add13c0ea120fbf2de8be0ec08c0b1",
-  "comBytes": 37376,
-  "logicalBytes": 37255,
+  "comBytes": 37248,
+  "logicalBytes": 37177,
   "shellTPA": 41984,
   "stackBytes": 768,
-  "dynamicBeforeInitialAllocations": 3961,
+  "dynamicBeforeInitialAllocations": 4039,
   "proseBytesBefore": 3856,
   "proseBytesAfter": 10706,
   "descriptionLinesMax": 79,
-  "sourceSha256": "b2e62b3bb501f657948f001ad4335eed9be9549ec81d8a6d98db3ce6d46c0c53",
-  "comSha256": "27f61ac267dee17c696f502bf5d9400448fede330211246d8f7ebaea5e8553a2",
+  "sourceSha256": "b9bb843da998b757297831e46fbacd7e4de405d995807ee462351332e5c5e880",
+  "comSha256": "d2ad7340741da02f5f5553875128b14f23bfb9f9db6d9c55e8be5d033f152301",
   "assemblyArtifact": "programs/CAVASM.COM",
   "starterSourceOnly": true,
-  "physicalHardwareTested": false
+  "physicalHardwareTested": false,
+  "stoppedCombinedRun": "Stopped without claiming qualification to remove a stale barred-door assertion in room prose; existing dynamic door message retained."
 }

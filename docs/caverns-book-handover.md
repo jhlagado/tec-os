@@ -30,7 +30,7 @@ Physical TEC-1G testing and final human gameplay review remain outstanding.
 | Restored source and rendering change | jhlagado/tec-os, 5af4bf7447771cbb109e97a030e3bd5d4f3e0f6e |
 | Current firmware integration | jhlagado/tec-os, ae61d294; current main merged for qualification |
 | Source on SYSTEM | programs/CAVERNS.BAS |
-| Verification executable, excluded from starter | programs/CAVERNS.COM; 37,376 bytes |
+| Verification executable, excluded from starter | programs/CAVERNS.COM; 37,248 bytes |
 | Exact source, compiler, RTL, executable identities | test/caverns-basic.json |
 | Player instructions on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume recipe and image | dist/starter.recipe.json, revision 17; dist/starter.img |
@@ -85,8 +85,8 @@ input. Descriptions are word-wrapped into lines of at most 79 characters.
 Counted DATA lines preserve paragraphs longer than BASIC's 255-byte single
 string limit. Forty-column prose layout is not the current qualification target.
 
-The shell-resident TPA is 41,984 bytes. The executable occupies 37,376 file bytes
-and 37,255 logical bytes; reserving a 768-byte CPU stack leaves 3,961 bytes for
+The shell-resident TPA is 41,984 bytes. The executable occupies 37,248 file bytes
+and 37,177 logical bytes; reserving a 768-byte CPU stack leaves 4,039 bytes for
 dynamic allocations before initialisation. Arrays, strings and control frames
 consume that space during play. Bare-ROM TPA is 46,536 bytes, but the example
 runs with the shell resident. Large source experiments can still exceed memory.

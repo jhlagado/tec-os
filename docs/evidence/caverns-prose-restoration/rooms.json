@@ -106,7 +106,7 @@
     },
     {
       "room": 18,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Entrance cavern: daylight north, old torture chamber west.",
       "restored": "You are deep in a dark cavern. Daylight filters in from the cave entrance to the north. A passage leads west into what appears to be an old torture chamber."
     },
@@ -120,11 +120,12 @@
       "room": 20,
       "original": "You can see a small oak door to the east. It has been locked from the inside. The fuse burnt away and....BOOM!!....the explosion blew you out of the way (Lucky!)",
       "abbreviated": "Treasure doorway: south returns to the northern cavern.",
-      "restored": "You stand before an oak door in the eastern wall, its heavy timber bound with iron. It looks formidable; there is no obvious way through a door barred from within. Perhaps explosives would help. The passage south returns to the cavern."
+      "restored": "You stand before an oak doorway in the eastern wall, its heavy timber bound with iron. The entrance looks formidable. The passage south returns to the cavern.",
+      "reconciliation": "Locked/open state is described only by the existing dynamic message, avoiding a false blocked-door claim after the blast."
     },
     {
       "room": 21,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Northern cavern: treasure door north, corridor east, long tunnel south.",
       "restored": "You are deep in a dark cavern north of the long tunnel. A passage leads north to an oak doorway, and a draught comes from the corridor to the east. The long tunnel stretches south into the darkness."
     },
@@ -148,7 +149,7 @@
     },
     {
       "room": 25,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Empty side cave. The only exit is west to the round chamber.",
       "restored": "You are deep in a dark cavern. This small side cave is empty and very quiet. Its only passage leads west, back to the large round chamber."
     },
@@ -172,19 +173,19 @@
     },
     {
       "room": 29,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Draughty junction: round chamber east, bat colony south, forked pillar west.",
       "restored": "You are deep in a dark cavern where the passages meet. A draught stirs the air. The round chamber lies to the east, a bat colony to the south, and a forked stone pillar marks the passage west."
     },
     {
       "room": 30,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Forked stone pillar: junction east, pale chamber west.",
       "restored": "You are deep in a dark cavern beside a forked stone pillar. The junction lies to the east, and a passage continues west into a pale limestone chamber."
     },
     {
       "room": 31,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Low, dripping passage: pale chamber north, key chamber east.",
       "restored": "You are deep in a dark cavern. Water drips from the roof of this low passage. It leads north to a pale limestone chamber and east to another chamber beyond."
     },
@@ -202,7 +203,7 @@
     },
     {
       "room": 34,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Key chamber: bat colony east, low passage west.",
       "restored": "You are deep in a dark cavern beyond the bat colony. Passages lead east towards the roosting bats and west into a low, dripping passage."
     },
@@ -214,7 +215,7 @@
     },
     {
       "room": 36,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Lower cavern: shaft north, lower river ledge east.",
       "restored": "You are deep in a dark cavern below the temple. A narrow shaft opens to the north, while a passage east leads towards the sound of an underground river."
     },
@@ -232,7 +233,7 @@
     },
     {
       "room": 39,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Beyond the shaft: cell west, lower cavern south.",
       "restored": "You are deep in a dark cavern just beyond the ventilation shaft. The shaft leads west into the cell, and a passage continues south into a lower cavern."
     },
@@ -244,25 +245,25 @@
     },
     {
       "room": 41,
-      "original": "",
+      "original": "Somehow you have gotten into the complex drainage system of this entire cavern network!!",
       "abbreviated": "Straight drain: conduit west, passage east towards the junction.",
       "restored": "Somehow you have found your way into the complex drainage system of this entire cavern network! This straight drain leads west to a freezing conduit and east along the passage towards a junction."
     },
     {
       "room": 42,
-      "original": "",
+      "original": "Somehow you have gotten into the complex drainage system of this entire cavern network!!",
       "abbreviated": "Straight drain: conduit west, junction east.",
       "restored": "You are in the complex drainage system of the cavern network. The straight passage runs between the conduit to the west and a junction to the east."
     },
     {
       "room": 43,
-      "original": "",
+      "original": "Somehow you have gotten into the complex drainage system of this entire cavern network!!",
       "abbreviated": "Drain junction: a winding path north leads to the pearl chamber. Branch east, conduit west; OPEN HATCH south.",
       "restored": "You are at a junction in the complex drainage system of the cavern network. A winding passage leads north towards a pearl-white chamber. A branch leads east, and the drain west returns to the conduit. To the south is the cell's service hatch; you can OPEN HATCH here."
     },
     {
       "room": 44,
-      "original": "",
+      "original": "Somehow you have gotten into the complex drainage system of this entire cavern network!!",
       "abbreviated": "Blind drainage branch: return west to the junction.",
       "restored": "You are in a blind branch of the cavern's complex drainage system. There is no way onwards; the drain west returns to the junction."
     },
@@ -274,7 +275,7 @@
     },
     {
       "room": 46,
-      "original": "",
+      "original": "You are deep in a dark cavern.",
       "abbreviated": "Pearl-white chamber: steps west; a winding path south leads to the drain junction.",
       "restored": "You are deep in a dark cavern whose walls shine pearl-white in your light. Stone steps lie to the west. A winding passage leads south, changing height as it makes its way to a junction in the drains."
     },

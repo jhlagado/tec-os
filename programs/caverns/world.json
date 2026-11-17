@@ -213,7 +213,7 @@
     {
       "id": 20,
       "key": "TREASURE_DOOR",
-      "description": "You stand before an oak door in the eastern wall, its heavy timber bound with iron. It looks formidable; there is no obvious way through a door barred from within. Perhaps explosives would help. The passage south returns to the cavern.",
+      "description": "You stand before an oak doorway in the eastern wall, its heavy timber bound with iron. The entrance looks formidable. The passage south returns to the cavern.",
       "exits": {
         "north": 0,
         "south": 21,
