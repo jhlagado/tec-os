@@ -307,6 +307,8 @@ clear, or carry set to refuse, leaving everything as it was. It may be called
 after a record check failed. `UNLOAD` calls it, from the CCP, so no program is
 running.
 
+Neither `INIT` nor `REMOVE` need restore the user area: the prompt after them is in area 0.
+
 ## Stacks
 
 A service normally runs on its caller's stack: an application or one of the

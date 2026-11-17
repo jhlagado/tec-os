@@ -347,7 +347,7 @@ the `R/O` and `File R/O` messages wait for a key before ending the command.
 
 ## The drives after a reset
 
-An ordinary program exit retains the current drive and user area.
+An ordinary program exit retains the current drive, in user area 0.
 Removing the current drive's volume makes the next prompt use A. Reset
 starts on A in area 0, although the volume assignments may survive.
 

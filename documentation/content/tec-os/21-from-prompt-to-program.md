@@ -127,7 +127,7 @@ success and chain rules.
 
 A drive selection is handled before keyword dispatch. `MLTAKE` recognises a
 letter A to P followed by a colon and only spaces after it. It selects that
-drive with function 14 and updates `0004h` through `SAVEDU`. A missing volume
+drive with function 14 and updates `0004h` through `SAVEDRV`. A missing volume
 raises `Select` before that update so the error's warm boot restores the
 previous drive (`241b438:src/cpm/ccp.asm:270-295`).
 
