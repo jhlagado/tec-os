@@ -21,6 +21,9 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Machine } from "./lib/machine.mjs";
 import {substituteHistoricalFont} from "./lib/historical-font.mjs";
+import { callTimes, runLine } from "./lib/call-time.mjs";
+import { GLCD_SVC } from "./lib/fixtures.mjs";
+import { makeSvc } from "../tools/lib/svc.mjs";
 import { ROOT, TEST_CLOCK, fcbType, program, romFor, standardCard, volume, withDisplay, withShell } from "./lib/fixtures.mjs";
 
 const referenceBytes = readFileSync(resolve(ROOT, "test/glcd-screens.json"));
@@ -280,4 +283,32 @@ test("a GLCD that stops coming ready is sent nothing: GLCC and GLCDW drop a byte
   run(m, "\r");
   assert.equal(sent, 0, "a GLCD stuck busy is sent no byte");
   assert.deepEqual(m.violations, []);
+});
+
+// FL-11, FL-12 and FL-14 (Origo KD-436): GLCD.SVC draws a word's glyphs at a
+// time through TNGLYPH. At 782b007, from the table: a character 34,354 T, a row
+// of text 174,161 T, and 767 bytes in 3 pages.
+test("GLCD.SVC's time: a character no slower than from the table, a row within 210,000 T, a row of 21 # within 215,000", { timeout: 1_800_000 }, async () => {
+  const image = standardCard();
+  const a = volume(image, "A");
+  a.write("LINES.TXT", Buffer.from(Array.from({ length: 30 }, (_, i) => `line ${i + 1} of the text file\r\n`).join("") + "\x1a", "latin1"));
+  a.write("HASH.TXT", Buffer.from(Array.from({ length: 12 }, () => `${"#".repeat(21)}\r\n`).join("") + "\x1a", "latin1"));
+  withDisplay(image, { matrix: true });
+  const { rom, symbols } = romFor();
+  const m = new Machine({ rom, symbols, sdImage: image, clock: TEST_CLOCK, matrix: true });
+  m.expect(/A(:\S*)?>$/, { from: 0, maxCycles: 200_000_000 });
+  m.runUntil(() => m.ready(), 200_000_000, "the first input request");
+  const svc = await makeSvc(resolve(ROOT, "drivers/glcd.asm"), { work: resolve(ROOT, "build/svc") });
+  const base = m.read(7) << 8;
+  const put = callTimes(m, () => base + svc.symbols.GLCPUT);
+  const row = callTimes(m, () => base + svc.symbols.GLCROW);
+  runLine(m, "TYPE LINES.TXT");
+  const mean = put.reduce((x, y) => x + y, 0) / put.length;
+  assert.ok(put.length > 700 && mean <= 34_354, `${put.length} characters, mean ${Math.round(mean)} T`);
+  assert.ok(row.length > 400 && Math.max(...row) <= 210_000, `${row.length} rows of text, at most ${Math.max(...row)} T`);
+  row.length = 0;
+  runLine(m, "TYPE HASH.TXT");
+  assert.ok(row.length > 0 && Math.max(...row) <= 215_000, `rows of #, at most ${Math.max(...row)} T`);
+  const bytes = GLCD_SVC[6] | (GLCD_SVC[7] << 8);
+  assert.ok(bytes <= 768, `GLCD.SVC's header and image ${bytes} bytes, within 3 pages`);
 });
