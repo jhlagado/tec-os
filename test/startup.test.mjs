@@ -11,7 +11,7 @@ import { Machine } from "./lib/machine.mjs";
 import { ABI, GLCD_SVC, MARKS, ROOT, SHELL_SVC, TEST_CLOCK, marked, program, romFor, standardCard, startupFile, volume } from "./lib/fixtures.mjs";
 
 /** A machine at reset with FILES on A:; with SHELL, SHELL.SVC there and first in STARTUP.CMD. */
-function start(files, { key = false, shell = false, rom, ...opts } = {}) {
+function start(files, { key = false, fn = false, shell = false, rom, ...opts } = {}) {
   const image = standardCard();
   const a = volume(image, "A");
   a.write("HELLO.TXT", Buffer.from("hello\r\n\x1a", "latin1"));
@@ -23,10 +23,12 @@ function start(files, { key = false, shell = false, rom, ...opts } = {}) {
   if (rom) {
     const m = new Machine({ ...rom, sdImage: image, clock: TEST_CLOCK, ...opts });
     if (key) m.tec1g.applyKeySilent(0x01, true);
+    if (fn) m.tec1g.applyMatrixKey(0, 2, true);
     return m;
   }
   const m = new Machine({ ...romFor(), sdImage: image, clock: TEST_CLOCK, ...opts });
   if (key) m.tec1g.applyKeySilent(0x01, true);
+  if (fn) m.tec1g.applyMatrixKey(0, 2, true);
   return m;
 }
 const prompt = (m, max = 400_000_000) => m.runUntil(() => m.ready() && /[A-P](:\S*)?>$/.test(m.text(0)), max, "a usable prompt");
@@ -74,7 +76,7 @@ for (const [name, opts, said] of [["no GLCD", { matrix: true, glcd: false }, fal
     assert.equal(/GLCD\.SVC\?/.test(m.text(0)), said);
     assert.equal(m.read(m.sym("SVCRC")), 1, "INIT ran and refused");
     assert.equal(m.read(m.sym("SVCHEAD")), 0);
-    assert.equal(m.read(3) & 3, 0, "TTY:");
+    assert.equal(m.read(3) & 3, opts.matrix ? 3 : 0, opts.matrix ? "UC1:, the LCD, as at every reset with the matrix keyboard" : "TTY:");
   });
 }
 
@@ -354,6 +356,15 @@ test("SH4 skip", () => {
   const m = start({ "STARTUP.CMD": startupFile("TYPE 3") }, { key: true });
   prompt(m);
   assert.equal(marked(m), 0, "a key held through reset skips the line");
+});
+
+test("SH4 skip from the matrix keyboard: Fn held through reset skips the line as a keypad key does", () => {
+  const m = start({ "STARTUP.CMD": startupFile("TYPE 3") }, { fn: true, matrix: true, glcd: false });
+  prompt(m);
+  assert.equal(marked(m), 0, "Fn held through reset skips the line");
+  const free = start({ "STARTUP.CMD": startupFile("TYPE 3") }, { matrix: true, glcd: false });
+  prompt(free);
+  assert.equal(marked(free), 3, "without Fn the line runs");
 });
 
 test("SH4 warm boot", () => {

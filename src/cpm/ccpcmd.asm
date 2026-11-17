@@ -694,11 +694,16 @@ PUTCHAR:
 
 ; Attempt startup only at STPOS=0. Set
 ; 80h before access, then bypass if raw
-; STSPORT bit 6 is low. Otherwise open
-; A:STARTUP.CMD and read its first
-; record into LOADBUF, which nothing
-; else uses before STLINE takes the
-; line. Failure leaves the finished
+; STSPORT bit 6 is low (a keypad key
+; held through reset) or the matrix
+; keyboard's Fn is held, so a board with
+; only the matrix keyboard can skip a
+; bad STARTUP.CMD too. With no matrix
+; keyboard the row reads high.
+; Otherwise open A:STARTUP.CMD and read
+; its first record into LOADBUF, which
+; nothing else uses before STLINE takes
+; the line. Failure leaves the finished
 ; state. A zero read result sets
 ; STPOS=1.
 ; On the returning I/O path set
@@ -715,6 +720,10 @@ STBOOT:
   in a,(STSPORT)
   and $40        ; bit 6 bypass test
   ret z          ; low: bypass startup
+  ld bc,$FEFE    ; matrix row 0
+  in a,(c)
+  and $04        ; Fn, low while held
+  ret z          ; held: bypass too
   ld hl,STFCB    ; A:STARTUP.CMD
   ld de,CMDFCB
   ld bc,12       ; 12-byte reference
