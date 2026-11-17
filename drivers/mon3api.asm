@@ -983,18 +983,32 @@ MREC: DW 0
   DB "MON3    ",1
   DW R18
 
-; GFX: chain MON3GFX.SVC, then MON3.SVC,
+; GFX: chain MON3GFX.SVC, from the drive
+; MON3.SVC was typed from (0050h, or the
+; current drive for 0), then MON3.SVC,
 ; by function 47. Its warm boot ends the
 ; session; the shell runs the two
 ; pieces, and the second enters again
 ; with the graphics in. A loaded
 ; program must be loaded again.
 
+LDRV EQU $0050   ; the command's drive
+
 CGFX:
+  ld a,(LDRV)
+  or a
+  jr nz,CGFX1    ; A: 1, B: 2 and on
+  ld a,(IOBYTE+1)
+  and $0F        ; the current drive
+  inc a
+
+CGFX1:
+  add a,'A'-1
+  ld (MGFX),a    ; its letter
   ld de,MGFX
   ld c,26        ; the line as the DMA
   call BDOS
   ld c,47        ; chained after a
   jp BDOS        ; warm boot
 
-MGFX: DB "MON3GFX.SVC!MON3.SVC",0
+MGFX: DB "A:MON3GFX.SVC!MON3.SVC",0

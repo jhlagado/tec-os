@@ -44,7 +44,7 @@ record asks to be entered on install. It stays installed after `EXIT`, so
 `UNLOAD` first. An older card's line with `/E` after the name still enters:
 the `/E` is only a tail, which `MON3.SVC` doesn't read.
 
-On the starter card it is 3,928 bytes of header and image in **16 pages**, 4,318
+On the starter card it is 3,947 bytes of header and image in **16 pages**, 4,338
 bytes as a file with its relocation data. MON-3's graphics are a service of
 their own, `MON3GFX.SVC`, 1,023 bytes in 4 pages (below). The starter card loads
 `SHELL.SVC` first, so the word at `0006h` goes from `A500h` to `9500h`, and the
@@ -387,13 +387,15 @@ It is loaded explicitly, with `MON3.SVC` installed:
 
 - **At the prompt:** `MON3.SVC`, `EXIT`, `MON3GFX.SVC`, then `MON3.SVC` enters with
   the graphics in.
-- **From `MON3>`:** `GFX` chains `MON3GFX.SVC!MON3.SVC` by function 47: its warm boot
+- **From `MON3>`:** `GFX` chains `X:MON3GFX.SVC!MON3.SVC` by function 47, X the drive
+  `MON3.SVC` was typed from (0050h, or the current drive when that is 0): its warm boot
   ends the session, the shell runs the two pieces, and `MON3>` comes back with the
-  graphics in. A loaded program must be loaded again: the file is staged at 0100h
+  graphics in. Typed as `B:MON3.SVC` for a `MON3.SVC` installed from A:, it looks on B:. A loaded program must be loaded again: the file is staged at 0100h
   and the new pages lie below `MON3.SVC`'s, where a program may have been. With no
   shell the line runs whole and ends at the prompt with the graphics in.
-- **Not from `STARTUP.CMD` after `MON3.SVC`:** that line enters its session, and the
-  session's `EXIT` ends the file, so the line after it never runs.
+- **From `STARTUP.CMD`, after `MON3.SVC`:** that line enters its session at boot,
+  without the graphics; at its `EXIT` the shell goes on with the file and loads
+  `MON3GFX.SVC`, and a `MON3.SVC` line after it enters again with them.
 
 **Without `MON3GFX.SVC`** every `RST 18h` shows `displayError` on the digits,
 waits for a key and returns to the program as a key press does, as MON-3 does

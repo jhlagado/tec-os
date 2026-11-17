@@ -5,7 +5,9 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SHELL_SVC } from "./lib/fixtures.mjs";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ROOT, SHELL_SVC } from "./lib/fixtures.mjs";
 import { MON3, bytesAt, card, line, machine, mon3GfxSvc, mon3Svc, services, word } from "./lib/mon3.mjs";
 
 const mon3 = await mon3Svc();
@@ -105,3 +107,34 @@ test("MG-6 GFX at MON3> chains MON3GFX.SVC and MON3.SVC under the shell, and a s
     assert.deepEqual(run(m, "P1.BIN"), { shown: false, waited: false, ran: true });
   }
 });
+
+test("MG-6b GFX takes MON3GFX.SVC from the drive MON3.SVC was typed from: logged on B:, A:MON3.SVC", () => {
+  const image = card({ ...FILES, "STARTUP.CMD": Buffer.from("SHELL.SVC\r\n\x1a", "latin1") });
+  const m = machine(image);
+  line(m, "B:");
+  assert.ok(line(m, "A:MON3.SVC").mon3);
+  m.mark = m.output.length;
+  m.type("GFX\r");
+  m.runUntil(() => m.waitingForInput() && MON3.test(m.text(m.mark)), 200_000_000, "MON3> after GFX");
+  assert.match(m.text(m.mark), /A:MON3GFX\.SVC/, "the chained line names A:");
+  assert.doesNotMatch(m.text(m.mark), /MON3GFX\.SVC\?/);
+  assert.deepEqual(services(m), ["MON3GFX 4", "MON3 16", "SHELL 17"]);
+});
+
+// The starter card's TPA, the word at 0006h less 0100h, with MON3.SVC alone and
+// with MON3GFX.SVC too: 768 bytes more than the 19-page MON3.SVC gave without
+// the graphics, 256 less with them.
+const STARTER = resolve(ROOT, "dist/starter.img");
+for (const [board, opts, want] of [["PICO9918", { matrix: true, tms: true }, [41984, 37888, 36864]], ["GLCD", { matrix: true }, [41216, 37120, 36096]], ["serial", {}, [41984, 37888, 36864]]]) {
+  test(`MG-7 the starter card's TPA, ${board}: at the prompt, with MON3.SVC, with MON3GFX.SVC`, { skip: !existsSync(STARTER) && "no dist/starter.img: run media" }, () => {
+    const m = machine(Uint8Array.from(readFileSync(STARTER)), opts);
+    const tpa = () => word(m, 6) - 0x100;
+    const got = [tpa()];
+    assert.ok(line(m, "MON3.SVC").mon3);
+    line(m, "EXIT");
+    got.push(tpa());
+    assert.doesNotMatch(line(m, "MON3GFX.SVC").out, /\?/);
+    got.push(tpa());
+    assert.deepEqual(got, want);
+  });
+}

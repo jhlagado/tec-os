@@ -704,7 +704,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(0)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "SHELL,GLCD,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3, "the GLCD the console");
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9500); // MON3.SVC 16 pages without its graphics
   }
   {
     const m = glcdBoard(["SHELL.SVC", "MON3.SVC", "GLCD.SVC"]);
@@ -713,7 +713,7 @@ test("SH7 with glcd and mon3", () => {
     m.type("EXIT\r");
     m.runUntil(() => m.ready() && m.read(m.sym("CONMOD")) === 3, 900_000_000, "GLCD.SVC after EXIT");
     assert.equal(names(m), "SHELL,MON3,GLCD");
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9500); // MON3.SVC 16 pages without its graphics
   }
   {
     const m = glcdBoard(["GLCD.SVC"]);
@@ -724,7 +724,7 @@ test("SH7 with glcd and mon3", () => {
     m.runUntil(() => M3.test(m.text(m.mark)) && m.waitingForInput(), 900_000_000, "MON3>");
     assert.equal(names(m), "GLCD,SHELL,MON3");
     assert.equal(m.read(m.sym("CONMOD")), 3);
-    assert.equal(word(m, 6), 0x9200);
+    assert.equal(word(m, 6), 0x9500); // MON3.SVC 16 pages without its graphics
   }
 });
 
@@ -732,7 +732,7 @@ test("SH7 tpa figures", () => {
   const m = shelled({ "MON3.SVC": MON3.file });
   assert.equal(word(m, 6), 0xa800, "SHELL.SVC alone: TPA 42,752");
   at(m, "MON3.SVC", { re: M3 });
-  assert.equal(word(m, 6), 0x9500, "with MON3.SVC: 37,888");
+  assert.equal(word(m, 6), 0x9800, "with MON3.SVC, 16 pages: 38,656");
   const g = glcdBoard(["SHELL.SVC", "GLCD.SVC"]);
   g.runUntil(() => g.ready() && g.read(g.sym("CONMOD")) === 3, 900_000_000, "the GLCD's prompt");
   assert.equal(word(g, 6), 0xa500, "with GLCD.SVC: 41,984");
