@@ -119,7 +119,7 @@ TNKEYS EQU 6
 ; Zero count reads no source and leaves
 ; cursor state alone. Clip to screen and
 ; right edge, preserving cursor
-; coordinates. Stack bound 22.
+; coordinates. Stack bound 24.
 
 TNPUTAT EQU 7
 

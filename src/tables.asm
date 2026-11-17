@@ -144,7 +144,7 @@ STFCB: DB 1,"STARTUP CMD"
 ; subtracts each declaration before INIT
 ; and stores the remaining room.
 
-SVCLIM: DB 8,12,6
+SVCLIM: DB 12,12,6
 
 ; CSI final bytes for VTPFIN's scan:
 ; each byte is followed by its handler.

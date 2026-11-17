@@ -548,10 +548,12 @@ FNTG1:
   ld h,0
   add hl,hl
   add hl,hl      ; four bytes a glyph
-  push de
-  ld de,FONT
-  add hl,de
-  pop de
+  ld a,l
+  add a,LOW(FONT)
+  ld l,a
+  ld a,h
+  adc a,HIGH(FONT)
+  ld h,a         ; HL at its bytes
   ld b,4         ; two rows a byte
 
 FNTG2:

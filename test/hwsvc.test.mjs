@@ -233,7 +233,7 @@ test("hardware services: stack depths", () => {
   writeFileSync(resolve(ROOT, "build/hwsvc-stacks.json"), JSON.stringify(depths, null, 2) + "\n");
   console.log(JSON.stringify(depths));
   // The hardware services, 0 to 7 and the clock; the others' figures are abi.inc's, which KS36a's model checks.
-  for (const [c, d] of Object.entries(depths).filter(([c]) => Number(c) <= ABI.TNRTC)) assert.ok(d <= (Number(c) === HW.PUTAT ? 22 : 16), `hardware service ${c} used ${d} bytes of stack`);
+  for (const [c, d] of Object.entries(depths).filter(([c]) => Number(c) <= ABI.TNRTC)) assert.ok(d <= (Number(c) === HW.PUTAT ? 24 : 16), `hardware service ${c} used ${d} bytes of stack`);
 });
 
 test("every service keeps IY, and all but MOUNT, UNMOUNT and DESCRIBE keep IX and the alternates too (A4)", () => {

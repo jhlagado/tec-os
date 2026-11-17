@@ -26,11 +26,11 @@ IOBYTE EQU $0003
 ; Removable format-4 header, no deps.
 ; Writer fills REMOVE, size, relocation
 ; and INIT. Extra RAM is zero. Declared
-; stack use: BDOS 2, BIOS 0, CCP 6.
+; stack use: BDOS 6, BIOS 0, CCP 6.
 
 HDR: DB 'D',SVCFMT,0,1
   DW 0,0,0,0
-  DB 2,0,6
+  DB 6,0,6
   DW 0
   DB "GLCD    "
 
@@ -352,7 +352,39 @@ GLCW1:
   add a,a
   add a,a
   ld (GLY),a     ; its first pixel row
-  call GLFILL
+
+; The word's characters from GLROWP's
+; row: each one's eight rows from the
+; ROM into GLCACH, eight bytes apart.
+; GLOFF counts them; GLCCMP sets it
+; afresh.
+
+  call GLSPAN
+  ld a,(hl)      ; the first character
+  inc hl
+  ld b,(hl)      ; and how many
+  ld hl,(GLROWP)
+  add a,l
+  ld l,a
+  jr nc,GLFL1    ; text-row page carry
+  inc h
+
+GLFL1:
+  ld de,GLCACH
+  ld a,b
+  ld (GLOFF),a
+
+GLFL2:
+  ld b,(hl)      ; the character
+  ex de,hl
+  ld c,TNGLYPH
+  call ABICALL   ; its rows, HL on
+  ex de,hl       ; DE the next slot
+  inc hl
+  ld a,(GLOFF)
+  dec a
+  ld (GLOFF),a
+  jr nz,GLFL2
   ld c,8
 
 GLCW2:
@@ -387,37 +419,6 @@ GLSPAN:
   ld l,a
   ret nc
   inc h          ; table page carry
-  ret
-
-; Word GLW's characters from GLROWP's
-; row: each one's eight rows from the
-; ROM into GLCACH, eight bytes apart.
-; Changes AF/BC/DE/HL.
-
-GLFILL:
-  call GLSPAN
-  ld a,(hl)      ; the first character
-  inc hl
-  ld b,(hl)      ; and how many
-  ld hl,(GLROWP)
-  add a,l
-  ld l,a
-  jr nc,GLFL1    ; text-row page carry
-  inc h
-
-GLFL1:
-  ld de,GLCACH
-
-GLFL2:
-  push bc
-  ld b,(hl)      ; the character
-  ex de,hl
-  ld c,TNGLYPH
-  call ABICALL   ; its rows, HL on
-  ex de,hl       ; DE the next slot
-  inc hl
-  pop bc
-  djnz GLFL2
   ret
 
 ; Address valid GLY=0..63/GLW=0..7.

@@ -319,7 +319,7 @@ refuses a service that takes a stack's sum past its limit:
 
 | Stack | Reserved | Base | Census | Limit for services |
 | --- | --- | --- | --- | --- |
-| BDOS | 64 | 30 | 32 | 8 |
+| BDOS | 64 | 30 | 36 | 12 |
 | BIOS | 48 | 18 | 18 | 12 |
 | CCP | 48 | 26 | 26 | 6 |
 
@@ -330,7 +330,7 @@ use of all. The BIOS's 18 is warm boot's flush of the lines written behind: cold
 mounts and lists the drives on the BDOS's stack, which nothing else uses before
 the CCP runs. A limit is counted from the base, and a stack holds its base and
 its limit with a quarter free, which `test/stacks.test.mjs` checks: the BDOS's
-40 of 64, the BIOS's 32 of 48 and the CCP's 34 of 48, including a
+44 of 64, the BIOS's 32 of 48 and the CCP's 34 of 48, including a
 two-byte NMI return-frame reserve in each sum. This reserves no arbitrary
 handler body or interrupt reentry. A service must stay within
 its declared stack use. `test/svc.test.mjs` checks this with a stack watch.
@@ -348,8 +348,9 @@ The base's paths include the shell's: the serial, PICO9918 and GLCD runs and the
 lines of pieces run with `SHELL.SVC` holding the prompt, as the starter card
 boots. Its `LINE` and `PAGE` are called on the CCP's stack and move at once to
 the shell's own 48-byte stack; `HREC` and `HSTORE` run on the BDOS's, 6 bytes
-deep. It declares 6, 0 and 0, and `GLCD.SVC` 2, 0 and 6, so the two together
-take the whole of the BDOS's and the CCP's limits ([shell.md](shell.md)).
+deep. It declares 6, 0 and 0, and `GLCD.SVC` 6, 0 and 6, so the two together
+take the whole of the BDOS's 12 and the CCP's 6 ([shell.md](shell.md)). `GLCD.SVC`'s
+6 on the BDOS's stack is the call for each glyph it draws (`TNGLYPH`).
 `test/shell.test.mjs` runs the census with the shell alone and with `GLCD.SVC`
 and `MON3.SVC`, and reads a guard pattern under the shell's own stack.
 

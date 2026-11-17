@@ -523,9 +523,10 @@ for (const coalesced of [false, true]) {
     assert.equal(word(r.m, r.m.sym("APIRTPC")), 12291);
   });
 }
-for (const [name, fn, bound] of [["INFO", 0, 6], ["JOY", 5, 4], ["FONT", 15, 4]]) {
+// GLYPH, 17, writes reversed A's eight rows at 5000h; FONT, 15, is refused from ABI 5.2.
+for (const [name, fn, bound, regs] of [["INFO", 0, 6], ["JOY", 5, 4], ["GLYPH", 17, 4, { b: 0xc1, h: 0x50, l: 0 }]]) {
   test("RIG4/5 " + ("root " + name + " hardware preserves published small stack bound"), () => {
-    const r = fixture(), result = r.call(r.m.sym("ABICALL"), { c: fn });
+    const r = fixture(), result = r.call(r.m.sym("ABICALL"), { c: fn, ...regs });
     assert.equal(result.a, 0);
     assert.equal(result.flags.C, 0);
     const belowReturn = r.stack.callerDeepest - 2;
