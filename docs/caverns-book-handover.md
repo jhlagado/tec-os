@@ -9,7 +9,7 @@ BASIC rewrite, landmark wording corrections and compact compiler emission. Walkt
 Qualified in the native TEC-OS emulator: compile with the shell resident;
 126-point quest; all 54 rooms and displayed descriptions; automatic homecoming;
 reversible rope/gates; complete checkpoint restoration; TED edit/save/build/run,
-exit and reopen after power cycle. The compact-code compiler passes 714 native
+exit and reopen after power cycle. The restart-vector compiler passes 720 native
 regression cases and 49 independent control/arithmetic expectations (Baza's
 `docs/compact-code.md`). Current TEC-OS checks include 16 game/scenario/TED
 tests, a 480-command comparison in 36 scenarios, native insertion of line 151

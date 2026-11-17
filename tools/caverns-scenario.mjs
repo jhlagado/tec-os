@@ -40,10 +40,10 @@ export function restartVectors(bytes){
 }
 // The runtime's routine that exchanges RST 1 to 5 with that table: PUSH BC,
 // PUSH DE, LD HL,0008h, LD DE,table, LD B,5. Every exit of the program
-// calls it to give the old vectors back. 0 for a build that claims none,
-// where a CALL 0 is the warm boot that follows anyway.
+// calls it to give the old vectors back. A launcher requires the table:
+// calling address zero here would skip its failure diagnostic.
 export function restartSwap(bytes){
- const table=restartVectors(bytes);if(!table)return 0;
+ const table=restartVectors(bytes);assert.ok(table,'scenario launcher requires a runtime restart table');
  const code=Buffer.from([0xc5,0xd5,0x21,8,0,0x11,table.address&255,table.address>>8,6,5]),at=bytes.indexOf(code);
  assert.ok(at>=0&&bytes.indexOf(code,at+1)<0,'one restart vector exchange');return at+256;
 }
