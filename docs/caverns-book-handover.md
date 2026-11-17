@@ -6,42 +6,41 @@ BASIC rewrite, landmark wording corrections and compact compiler emission. Walkt
 
 ## Readiness
 
-Qualified in the native TEC-OS emulator: compile with the shell resident;
-126-point quest; all 54 rooms and displayed descriptions; automatic homecoming;
-reversible rope/gates; complete checkpoint restoration; TED edit/save/build/run,
-exit and reopen after power cycle. The compact-code compiler passes 714 native
-regression cases and 49 independent control/arithmetic expectations (Baza's
-`docs/compact-code.md`). Current TEC-OS checks include 16 game/scenario/TED
-tests, a 480-command comparison in 36 scenarios, native insertion of line 151
-without renumbering and 19 starter checks. Eleven Viewer native/bundle checks
-cover Caverns, BOUNCE and the bundle, and a separate real Chromium trial
-compiles the exact expected COM from a fresh source-only card, plays opening
-commands and exports/restores a checkpoint in fresh browser storage; both were
-taken with the print-helper compiler and are not yet repeated with this one. Physical TEC-1G testing and final human review remain
-outstanding before calling the public release fully qualified.
-The qualified changes are merged and pushed to main in BAZA, TEC-OS and the
-Viewer. This is not a claim of public-site deployment or physical-board testing.
-The manual may describe tested emulator behaviour with that boundary.
+The latest BAZA pair (`eee4ee6`) is under TEC-OS integration qualification.
+Twenty native game/scenario/rewrite/TED checks pass: the 126-point quest,
+all 54 rooms and displayed descriptions, homecoming, reversible rope/gates,
+checkpoint restoration, a 480-command comparison in 36 scenarios, and TED
+edit/save/build/run/exit/reopen after power cycle. Two service-loaded Ctrl+C
+checks also pass. Eleven Viewer native/bundle checks and a fresh Chromium trial
+pass with this pair, including exact compilation and checkpoint restoration
+in fresh storage. Two complete strict TEC-OS runs are still pending; this
+candidate is pushed on `caverns-baza-qualification`, with the receiving Viewer
+on `caverns-baza-viewer`, and is not yet qualified on main.
+
+Physical TEC-1G testing and final human review remain outstanding before
+calling the public release fully qualified. Browser qualification does not
+establish public-site deployment. Historical qualification below remains tied
+to its original compiler and binary.
 
 ## Exact artifacts
 
 | Artifact | Repository / pin / path |
 |---|---|
-| Qualified gameplay/source | jhlagado/tec-os, 485bf24f15de668da748e5598eb850fe20f4ae99 |
+| Qualified gameplay/source | jhlagado/tec-os, `caverns-baza-qualification`; exact source hash below |
 | Source supplied on SYSTEM | programs/CAVBASIC.BAS |
-| Verification executable, not on starter | programs/CAVBASIC.COM; 33,280 bytes |
+| Verification executable, not on starter | programs/CAVBASIC.COM; 29,056 bytes |
 | Source/binary/compiler/RTL hashes | test/caverns-basic.json |
 | Instructions supplied on SYSTEM | programs/CAVERNS.TXT |
 | Main-volume starter recipe | dist/starter.recipe.json, revision 17; image dist/starter.img |
-| Matching Viewer integration | jhlagado/tec-os-viewer, 5e7bb9dc8ede62fcb7fe1650043e1e33e3cc26c4 |
-| BAZA compiler/runtime pins | jhlagado/baza, 5f6b58d07b70e570bc993cfc430ec0196f4855d0, dist/BAZA.COM and dist/BAZA.RTL |
+| Matching Viewer integration | jhlagado/tec-os-viewer, `caverns-baza-viewer` at 0a58aae4904ef146fe21346e561c11fcdfb3e28e |
+| BAZA compiler/runtime pins | jhlagado/baza, eee4ee6846add13c0ea120fbf2de8be0ec08c0b1, dist/BAZA.COM and dist/BAZA.RTL |
 | Supporting editor/compiler/runtime | TED.COM, BAZA.COM, BAZA.RTL on SYSTEM, pinned by test/inputs.json |
 | Scenario tools, development only | tools/caverns-scenario.mjs; programs/caverns/CAVLOAD.COM and *.CAV |
 
-Compiler SHA-256: c4088acee056d0c46bce0f9d77ade7706e67f851c3b963a19d7415f5f423363e.
-Runtime SHA-256: edf1a19dca59b88aa8d10a54834933cb630b368e9effbbcf89f5b68d6dc64f08.
+Compiler SHA-256: f8d4b8944be95451faa7aa0bc99e611f6793b7d4a8e413344e951e26ede07498.
+Runtime SHA-256: 29c07740630069921f93581c8527d5db057c63a073a95b37c7a020df92ae5e38.
 Source SHA-256: f64fdb84ead251e3e49590c4c156d7951afc52fb02ffad959cf819b20760b9e0.
-Executable SHA-256: 25501ede99c5dc22d228ae7839378e9da5ab371ca112df0167fac4d63a08879f.
+Executable SHA-256: 0c0d74e09bbb0bafee43a22e75d2dab3c3fa69071c96cd94e77a4e6d9464117e.
 The rewrite itself required no compiler change. Subsequent compact source-location
 emission, shared literal/newline helpers and the compact-code compiler (direct jumps,
 equality compares, inline numeric literals, digit-only whole numbers in DATA)
@@ -75,8 +74,8 @@ that browser trial. No physical-board claim applies to either.
 ## Requirements and limits
 
 Tested console: PICO9918 at 80 columns, matrix keyboard input. Shell-resident
-TPA: 41,984 bytes; COM: 33,280 bytes; logical image: 33,259 bytes. After
-reserving 768 bytes for the CPU stack, 7,957 bytes remain for dynamic arrays,
+TPA: 41,984 bytes; COM: 29,056 bytes; logical image: 28,946 bytes. After
+reserving 768 bytes for the CPU stack, 12,270 bytes remain for dynamic arrays,
 strings and control. This space is used during initialisation and play. The no-shell TPA is 46,533 bytes, but this example does not need it.
 Growth is constrained; use the small banner change, not a large library feature.
 There are eleven carrying slots, finite candle life and random combat risk.
@@ -87,7 +86,24 @@ A card-image download is not a game-memory snapshot.
 
 ## Evidence and release scope
 
-The current compact-code increment pins BAZA at Baza `5f6b58d`. GOTO, GOSUB and
+The current candidate pins BAZA at `eee4ee6`: compact restart-based source
+coordinates and printing, short constant-bound FOR setup, and shared numeric
+publishing. It produces a 29,056-byte COM, 4,224 file bytes and 4,313 logical
+bytes smaller than the preceding 33,280-byte build. No BASIC source or game
+rule changed. The 16-command timing route is 1.8% slower, with zero string
+collections instead of one. This is a route measurement, not a general speed
+claim. The compiler's existing RST 6 exception remains unchanged.
+
+- [Current integration and measurements](caverns-baza-shared-publish.md).
+- [Current qualification status](evidence/caverns-baza-shared-publish/qualification.json).
+- [Game/editor comparison checks](evidence/caverns-baza-shared-publish/game-tests.log).
+- [Service-loaded vector checks](evidence/caverns-baza-shared-publish/vector-tests.log).
+- [Current size audit](evidence/caverns-baza-shared-publish/size.json).
+- [Current fresh-browser trial](evidence/caverns-baza-shared-publish/viewer-result.json).
+
+The following paragraphs document preceding compiler increments; their sizes,
+commit pins and test counts are historical. The preceding compact-code
+increment pinned BAZA at `5f6b58d`. GOTO, GOSUB and
 THEN n are direct jumps, integer = and <> skip the sign-bit turn, FOR and DIM
 drop repeated slot-top resets, a numeric literal is CALL NUMLIT with its tag
 address and f32 bytes inline, and a whole number in DATA keeps only its digits.

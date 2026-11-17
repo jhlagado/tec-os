@@ -73,3 +73,11 @@ paired pins, service-loaded vector checks, two strict TEC-OS runs, review,
 then Viewer/book integration. The two fresh complete strict runs are pending.
 The [qualification record](evidence/caverns-baza-shared-publish/qualification.json)
 tracks their actual outcomes and the complete retained logs.
+
+Origo was fetched at `5b3720a1c1f10cd2f51b2f5f782519d250c550a4`.
+Its Phase 3b roadmap supplies this integration checklist; its study status and
+coordination summaries still describe earlier November work. Baza cites
+Origo KD-434 for the restart-vector allocation, but that decision is absent
+from the fetched main decision records. This is a provenance gap, not evidence
+that a new RST 6 policy was approved here. No Origo policy or release version
+was changed during this integration.
