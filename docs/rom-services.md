@@ -67,6 +67,12 @@ through the same routine, and the GLCD's driver asks for each glyph it draws; a 
 before ABI 5.2 refuses number 17 and the driver's `INIT` with it. Serial and the LCD
 need no font.
 
+The starter card carries a TEC-OS adaptation of the pinned Baza BOUNCE
+example. Its font setup calls service 17 for each character from 32 to 127
+through an eight-byte string buffer. Media generation checks the upstream
+file's hash before changing those lines and converting it to CP/M text.
+The upstream source and compiler pins remain unchanged.
+
 **An older `GLCD.SVC` on a card** asks for 15 at `INIT`, gets the refusal and is
 refused itself: its startup line says `GLCD.SVC?`, and a board with only the GLCD has
 no GLCD console, its prompt on the serial terminal and the LCD. Copy this build's
