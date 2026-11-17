@@ -1,0 +1,221 @@
+{
+  "baseline": {
+    "startup": {
+      "command": "cavbasic",
+      "cycles": 21387808,
+      "gcCalls": 0,
+      "output": "cavbasic\r\r\n\u001b[2J\u001b[HDREAMCARDS presents...\r\nCAVERNS by John Hardy (c) 1983\r\nGNU Public License, 2019\r\nBring treasure home for double points. Take the compass!\r\nLOOK describes, INVENTORY lists, SCORE totals, QUIT finishes.\r\n\r\nInside the bark hut. The door leads north to the clearing.\r\nYou can also see...\r\na useful looking compass , \r\n? "
+    },
+    "events": [
+      {
+        "command": "take compass",
+        "cycles": 1340293,
+        "gcCalls": 0,
+        "output": "take compass\r\nTaken: a useful looking compass , \r\n\r\nInside the bark hut. The door leads north to the clearing.\r\n\r\n? "
+      },
+      {
+        "command": "inventory",
+        "cycles": 2920886,
+        "gcCalls": 0,
+        "output": "inventory\r\nYou are carrying \r\na useful looking compass , \r\nInside the bark hut. The door leads north to the clearing.\r\n\r\n? "
+      },
+      {
+        "command": "north",
+        "cycles": 2022011,
+        "gcCalls": 0,
+        "output": "north\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 1901658,
+        "gcCalls": 0,
+        "output": "west\r\n\r\nForest path: clearing east, river cliff west. Water glints through the trees.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 1882157,
+        "gcCalls": 0,
+        "output": "west\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "south",
+        "cycles": 2022603,
+        "gcCalls": 0,
+        "output": "south\r\n\r\nRiverbank: cliff north, crater west, rocky outcrop east.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 2143501,
+        "gcCalls": 0,
+        "output": "west\r\n\r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\nYou can also see...\r\na double-bladed sword , \r\n? "
+      },
+      {
+        "command": "take sword",
+        "cycles": 2240881,
+        "gcCalls": 0,
+        "output": "take sword\r\nTaken: a double-bladed sword , \r\n\r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\n\r\n? "
+      },
+      {
+        "command": "inventory",
+        "cycles": 3483613,
+        "gcCalls": 0,
+        "output": "inventory\r\nYou are carrying \r\na useful looking compass , a double-bladed sword , \r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\n\r\n? "
+      },
+      {
+        "command": "east",
+        "cycles": 1982323,
+        "gcCalls": 1,
+        "output": "east\r\n\r\nRiverbank: cliff north, crater west, rocky outcrop east.\r\n\r\n? "
+      },
+      {
+        "command": "north",
+        "cycles": 2022468,
+        "gcCalls": 0,
+        "output": "north\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 2001384,
+        "gcCalls": 0,
+        "output": "west\r\nYou can't go that way\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "north",
+        "cycles": 2142525,
+        "gcCalls": 0,
+        "output": "north\r\nYou can't go that way\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "east",
+        "cycles": 1921813,
+        "gcCalls": 0,
+        "output": "east\r\n\r\nForest path: clearing east, river cliff west. Water glints through the trees.\r\n\r\n? "
+      },
+      {
+        "command": "east",
+        "cycles": 1881713,
+        "gcCalls": 0,
+        "output": "east\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+      },
+      {
+        "command": "look",
+        "cycles": 1661067,
+        "gcCalls": 0,
+        "output": "look\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+      }
+    ],
+    "totalGarbageCollections": 1,
+    "totalCommandCycles": 33570896
+  },
+  "candidate": {
+    "startup": {
+      "command": "cavbasic",
+      "cycles": 18725804,
+      "gcCalls": 0,
+      "output": "cavbasic\r\r\n\u001b[2J\u001b[HDREAMCARDS presents...\r\nCAVERNS by John Hardy (c) 1983\r\nGNU Public License, 2019\r\nBring treasure home for double points. Take the compass!\r\nLOOK describes, INVENTORY lists, SCORE totals, QUIT finishes.\r\n\r\nInside the bark hut. The door leads north to the clearing.\r\nYou can also see...\r\na useful looking compass , \r\n? "
+    },
+    "events": [
+      {
+        "command": "take compass",
+        "cycles": 1340302,
+        "gcCalls": 0,
+        "output": "take compass\r\nTaken: a useful looking compass , \r\n\r\nInside the bark hut. The door leads north to the clearing.\r\n\r\n? "
+      },
+      {
+        "command": "inventory",
+        "cycles": 3000905,
+        "gcCalls": 0,
+        "output": "inventory\r\nYou are carrying \r\na useful looking compass , \r\nInside the bark hut. The door leads north to the clearing.\r\n\r\n? "
+      },
+      {
+        "command": "north",
+        "cycles": 2061930,
+        "gcCalls": 0,
+        "output": "north\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 1941148,
+        "gcCalls": 0,
+        "output": "west\r\n\r\nForest path: clearing east, river cliff west. Water glints through the trees.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 1921747,
+        "gcCalls": 0,
+        "output": "west\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "south",
+        "cycles": 2061228,
+        "gcCalls": 0,
+        "output": "south\r\n\r\nRiverbank: cliff north, crater west, rocky outcrop east.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 2181278,
+        "gcCalls": 0,
+        "output": "west\r\n\r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\nYou can also see...\r\na double-bladed sword , \r\n? "
+      },
+      {
+        "command": "take sword",
+        "cycles": 2282161,
+        "gcCalls": 0,
+        "output": "take sword\r\nTaken: a double-bladed sword , \r\n\r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\n\r\n? "
+      },
+      {
+        "command": "inventory",
+        "cycles": 3582257,
+        "gcCalls": 0,
+        "output": "inventory\r\nYou are carrying \r\na useful looking compass , a double-bladed sword , \r\nThe Gioll pours into a crater. West is a fatal drop. The safe path returns east.\r\n\r\n\r\n? "
+      },
+      {
+        "command": "east",
+        "cycles": 1921348,
+        "gcCalls": 0,
+        "output": "east\r\n\r\nRiverbank: cliff north, crater west, rocky outcrop east.\r\n\r\n? "
+      },
+      {
+        "command": "north",
+        "cycles": 2081178,
+        "gcCalls": 0,
+        "output": "north\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "west",
+        "cycles": 2042348,
+        "gcCalls": 0,
+        "output": "west\r\nYou can't go that way\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "north",
+        "cycles": 2181642,
+        "gcCalls": 0,
+        "output": "north\r\nYou can't go that way\r\n\r\nCliff above the Gioll: forest east; a path descends south to the bank.\r\n\r\n? "
+      },
+      {
+        "command": "east",
+        "cycles": 1960888,
+        "gcCalls": 0,
+        "output": "east\r\n\r\nForest path: clearing east, river cliff west. Water glints through the trees.\r\n\r\n? "
+      },
+      {
+        "command": "east",
+        "cycles": 1921417,
+        "gcCalls": 0,
+        "output": "east\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+      },
+      {
+        "command": "look",
+        "cycles": 1701731,
+        "gcCalls": 0,
+        "output": "look\r\n\r\nHut clearing: locked door south, forest west, clover field east.\r\n\r\n? "
+      }
+    ],
+    "totalGarbageCollections": 0,
+    "totalCommandCycles": 34183508
+  },
+  "commandCycleIncrease": 612612,
+  "commandPercentIncrease": 1.8248306509304868,
+  "scope": "Native TEC-OS console command-to-prompt timings; includes console and OS work. No combat or clock-seed equivalence claim."
+}

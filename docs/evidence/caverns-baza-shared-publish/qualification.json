@@ -1,5 +1,5 @@
 {
-  "status": "WIP: 20 game checks and 2 service-loaded Ctrl-C vector controls pass; two strict runs and Viewer trial pending",
+  "status": "WIP: full routes, vector controls, Viewer and original write/speed gates pass; two fresh strict runs pending",
   "compilerCommit": "eee4ee6",
   "COMBytes": 29056,
   "logicalBytes": 28946,
@@ -8,5 +8,15 @@
   "dynamicSpaceBeforeInitialAllocations": 12270,
   "plan": "Origo studies/p3-tec-os/release-roadmap.md, Phase 3b",
   "focusedGameTests": 20,
-  "serviceLoadedVectorTests": 2
+  "serviceLoadedVectorTests": 2,
+  "coalesceChecks": 3,
+  "viewerNativeTests": 11,
+  "freshBrowserTrialPassed": true,
+  "initialStrictAttempt": "Stopped after two stale directory-write-count expectations; both affected checks and speed gate pass after exact count correction",
+  "directoryWrites": {
+    "oldTwoExtentOutput": 6,
+    "newSingleExtentOutput": 3
+  },
+  "maximumWriteLimitUnchanged": 168,
+  "timingPercentChange": 1.8248306509304868
 }

@@ -805,7 +805,8 @@ function checkBounceWrites(b) {
   assert.equal(times.size, 32);
   assert.deepEqual([...times.values()].sort((a,b)=>a-b), [1,...Array(31).fill(4)],
     "full blocks progress four acknowledged versions; the final block progresses once");
-  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 6);
+  // One CP/M extent requires three directory commits; larger output used two.
+  assert.equal(data.length, 125); assert.equal(b.writes.length - data.length, 3);
   assert.ok(b.writes.length <= 168, `${b.writes.length} BOUNCE card writes`);
 }
 
