@@ -1,6 +1,6 @@
 {
   "status": "Qualified compact-print compiler integration on source-only starter card",
-  "compilerArtifactCommit": "74c438207f787685f961dd972a3a5289f679ddba",
+  "compilerArtifactCommit": "daed994b43392a1ccc7cddf3cb1e4070207182fa",
   "sourceUnchanged": true,
   "COMBytes": 36736,
   "logicalImageBytes": 36618,

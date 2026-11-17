@@ -114,7 +114,7 @@ The 16-byte shared-core increase costs space in programs without literal prints.
 - [Native game/editor/starter checks](evidence/caverns-print-helpers/integration-tests.log).
 - [Checkpoint comparison tests](evidence/caverns-print-helpers/game-tests.log).
 - [Fresh-browser trial](evidence/caverns-print-helpers/viewer-result.json).
-- [Compiler qualification](https://github.com/jhlagado/baza/blob/74c438207f787685f961dd972a3a5289f679ddba/docs/evidence/print-helpers/qualification.json).
+- [Compiler qualification](https://github.com/jhlagado/baza/blob/daed994b43392a1ccc7cddf3cb1e4070207182fa/docs/evidence/print-helpers/qualification.json).
 
 The records below document the preceding main integration and first size
 increment; their historical binary hashes and measurements remain unchanged.
